@@ -487,12 +487,7 @@ const SELF_ELEVATION_GUARDED: ReadonlySet<string> = new Set([
  * the self-service profile editor (tool_user_admin) exists to change exactly
  * these (DEDALO_FULL_USER_NAME/USER_EMAIL/USER_PASSWORD/USER_IMAGE_TIPO).
  */
-const SELF_EDITABLE_COMPONENTS: ReadonlySet<string> = new Set([
-	'dd452',
-	'dd134',
-	'dd133',
-	'dd522',
-]);
+const SELF_EDITABLE_COMPONENTS: ReadonlySet<string> = new Set(['dd452', 'dd134', 'dd133', 'dd522']);
 
 /**
  * The dd128 OWN-USER-RECORD rules (PHP component_common::

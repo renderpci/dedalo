@@ -73,6 +73,7 @@ const TRIPWIRES = [
 	'test/unit/matrix_index_asset_policy_agreement.test.ts',
 	'test/unit/temporal_instance_tripwire.test.ts',
 	'test/unit/client_caller_chain_tripwire.test.ts',
+	'test/unit/tools_cache_invalidation.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

@@ -1,0 +1,91 @@
+/**
+ * tool_export.get_export_grid — the SQO section gate (PHP tool_export
+ * ::get_export_grid runs assert_section_permission(section_tipo, 1) AND
+ * assert_section_array_permission($sqo->section_tipo, 1)).
+ *
+ * The declarative module gate covers only `options.section_tipo`. The SQO
+ * carries its OWN section list, supplied by the same caller, and the assembler's
+ * principal scoping is the per-record PROJECTS filter (dd170) — a different
+ * boundary from the dd774 section grant. So without the handler assertion, a
+ * caller who passes the first gate on a section they can read could name a
+ * section they cannot read inside `sqo.section_tipo` and export it.
+ */
+
+import { describe, expect, test } from 'bun:test';
+import type { Principal } from '../../src/core/security/permissions.ts';
+import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import type { ToolActionContext } from '../../src/core/tools/module.ts';
+import { toolExportGetExportGrid } from '../../tools/tool_export/server/tool_export.ts';
+import { mustGet } from '../helpers/assert.ts';
+
+const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
+
+const contextOf = (
+	options: Record<string, unknown>,
+	principal: Principal = SUPERUSER,
+): ToolActionContext =>
+	({ principal, userId: principal.userId, options, background: false }) as ToolActionContext;
+
+const baseOptions = (sqo: Record<string, unknown> | undefined): Record<string, unknown> => ({
+	section_tipo: 'test3',
+	lang: 'lg-spa',
+	data_format: 'value',
+	breakdown: 'default',
+	ar_ddo_to_export: [
+		{ path: [{ section_tipo: 'test3', component_tipo: 'test52', name: 'test52' }] },
+	],
+	...(sqo === undefined ? {} : { sqo }),
+});
+
+describe('tool_export module surface', () => {
+	test('both actions are READ-gated on the section', async () => {
+		const loaded = await getLoadedTool('tool_export');
+		const actions = loaded?.module.apiActions ?? {};
+		expect(Object.keys(actions).sort()).toEqual(['components_with_parent', 'get_export_grid']);
+		for (const name of ['get_export_grid', 'components_with_parent']) {
+			const spec = mustGet(actions[name], name);
+			expect(spec.permission).toBe('section');
+			expect(spec.minLevel).toBe(1);
+		}
+		// An export is a synchronous stream/buffer, never a background job.
+		expect(loaded?.module.backgroundRunnable).toBeUndefined();
+	});
+});
+
+describe('get_export_grid — sqo section targets are gated', () => {
+	test('an sqo naming a section the caller cannot read is refused', async () => {
+		const response = await toolExportGetExportGrid(
+			contextOf(
+				baseOptions({ section_tipo: ['test3'], limit: 1, offset: 0 }),
+				// A principal with no grants at all: dd774 read on 'test3' is 0.
+				NO_ACCESS,
+			),
+		);
+		expect(response.result).toBe(false);
+		expect(response.errors).toContain('unauthorized');
+	});
+
+	test('a non-string sqo section entry is refused (fail closed)', async () => {
+		const response = await toolExportGetExportGrid(
+			contextOf(baseOptions({ section_tipo: [{ evil: true }], limit: 1, offset: 0 })),
+		);
+		expect(response.result).toBe(false);
+		expect(response.errors).toContain('unauthorized');
+	});
+
+	test('an authorized caller still gets the grid (the gate is not a blanket deny)', async () => {
+		const response = await toolExportGetExportGrid(
+			contextOf(baseOptions({ section_tipo: ['test3'], limit: 0, offset: 0 })),
+		);
+		expect(response.result).not.toBe(false);
+		const grid = response.result as { columns?: unknown[]; rows?: unknown[] };
+		expect(Array.isArray(grid.columns)).toBe(true);
+		expect((grid.columns ?? []).length).toBeGreaterThan(0);
+	});
+
+	test('no sqo at all keeps working (the engine defaults to options.section_tipo)', async () => {
+		const response = await toolExportGetExportGrid(contextOf(baseOptions(undefined)));
+		expect(response.result).not.toBe(false);
+	});
+});

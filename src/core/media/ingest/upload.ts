@@ -91,8 +91,17 @@ function extensionOf(fileName: string): string {
 	return dot > 0 ? fileName.slice(dot + 1).toLowerCase() : '';
 }
 
-/** A stable, sanitized staged base name derived from the client file name. */
-function stagedTmpName(fileName: string): string {
+/**
+ * A stable, sanitized staged base name derived from the client file name.
+ *
+ * EXPORTED because it is the only way a later request can find what this
+ * receiver wrote: the batch importers (tool_import_marc21 / tool_import_zotero)
+ * are handed the client's `files_data[].name` and must reproduce the exact same
+ * transform to locate the staged file. It is NOT a confinement primitive — a
+ * `..` name survives it unchanged, so every caller still resolves against the
+ * staging dir and rejects anything that escapes it.
+ */
+export function stagedTmpName(fileName: string): string {
 	const base = fileName.split('/').pop() ?? fileName;
 	const cleaned = base.replace(/[^A-Za-z0-9_.\-]/g, '_');
 	return cleaned === '' ? 'upload.bin' : cleaned;

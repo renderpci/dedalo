@@ -132,13 +132,30 @@ export function resolveTranscriberProvider(engine: string): {
 	}
 }
 
-/** Resolve the {uri, key} for a transcriber engine from tool config (dd996). */
+/**
+ * Resolve the {uri, key} for a transcriber engine from tool config (dd996).
+ *
+ * `getToolConfig` returns the tool's config already RESOLVED per key — the
+ * effective value under the option name, with any `{value, client, …}` wrapper
+ * unwrapped. So the entry list is `toolConfig.transcriber_config` (an array).
+ * The nested `config.transcriber_config.value` form is PHP's raw config-item
+ * shape (`tool_common::get_config` returns the whole item, and the PHP tool then
+ * read `->config->…` off an ARRAY — which yielded null, so the PHP remote path
+ * never resolved a uri/key either). Both are accepted; the flat one is the shape
+ * this engine actually produces.
+ */
 export function resolveTranscriberConfig(
 	toolConfig: Record<string, unknown>,
 	engine: string,
 ): { uri: string; key: string } | null {
-	const configs = (toolConfig?.config as { transcriber_config?: { value?: unknown[] } } | undefined)
+	const flat = toolConfig?.transcriber_config;
+	const nested = (toolConfig?.config as { transcriber_config?: { value?: unknown[] } } | undefined)
 		?.transcriber_config?.value;
+	// Tolerate an un-unwrapped `{value:[…]}` under the flat key too (a config
+	// layer that stored the prop object rather than its value).
+	const configs = Array.isArray(flat)
+		? flat
+		: ((flat as { value?: unknown } | undefined)?.value ?? nested);
 	if (!Array.isArray(configs)) return null;
 	const entry = configs.find(
 		(item) =>

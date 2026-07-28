@@ -1,8 +1,10 @@
 /**
  * tool_export server module — flat-table (export_tabulator) data export.
  *
- * get_export_grid: READ export. Requires level >= 1 on the exported section (the
- * handler additionally asserts read on every SQO target inside the grid build).
+ * get_export_grid: READ export. Requires level >= 1 on the exported section; the
+ * handler additionally asserts level >= 1 on EVERY `options.sqo.section_tipo`
+ * entry (PHP assert_section_array_permission — the SQO's section list is a
+ * separate, caller-supplied target set).
  *
  * components_with_parent: ontology-only lookup (which relation components point
  * at a section carrying a component_relation_parent) for the per-column

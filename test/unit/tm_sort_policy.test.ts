@@ -106,7 +106,9 @@ describe('time machine (dd15) sort policy', () => {
 		for (const column of new Set(Object.values(TM_ORDER_COLUMN))) {
 			const sql = buildTmOrderSql(column, 'DESC');
 			expect(sql.startsWith('tm."' + column + '"'), column + ' not qualified: ' + sql).toBe(true);
-			expect(/(^|[ ,])(?!tm\.)[a-z_]+ (ASC|DESC)/.test(sql), 'bare identifier in: ' + sql).toBe(false);
+			expect(/(^|[ ,])(?!tm\.)[a-z_]+ (ASC|DESC)/.test(sql), 'bare identifier in: ' + sql).toBe(
+				false,
+			);
 		}
 	});
 
@@ -137,9 +139,8 @@ describe('time machine (dd15) sort policy', () => {
 		// exception because its rows carry their own PK.
 		// dd1001 is an ordinary section's component_section_id "Id" column — the
 		// exact shape that must KEEP ordering by section_id.
-		const path = (await runWithRequestLangs(
-			{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
-			() => buildOrderPath('dd1001', 'dd1003'),
+		const path = (await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
+			buildOrderPath('dd1001', 'dd1003'),
 		)) as { column?: string; component_tipo?: string }[];
 		expect(path[0]?.component_tipo).toBe('dd1001');
 		expect(path[0]?.column).toBe('section_id');

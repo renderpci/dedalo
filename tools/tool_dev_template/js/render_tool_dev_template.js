@@ -115,8 +115,8 @@ render_tool_dev_template.prototype.edit = async function(options) {
 * Demo buttons:
 *  - test_button  : reads self.main_element.data.value from the in-memory instance
 *    and displays it as pretty-printed JSON via ui.load_item_with_spinner.
-*  - test_button2 : calls self.get_some_data_from_server() (routes to the PHP
-*    get_component_data API action) and displays the result.
+*  - test_button2 : calls self.get_some_data_from_server() (routes to the
+*    server module's 'read_demo' action) and displays the result.
 *  - test_button3 : spawns a generic service_upload widget, subscribes to the
 *    'upload_file_done_' + self.id event, then calls self.file_upload_handler on
 *    completion and tears down the service instance.
@@ -247,7 +247,7 @@ const get_content_data = async function(self) {
 	//  1. Instantiates and renders a service_upload widget (allowed: zip, kml).
 	//  2. Subscribes to the 'upload_file_done_' + self.id event that service_upload
 	//     fires once the file transfer is complete.
-	//  3. In the handler: calls self.file_upload_handler (PHP: handle_upload_file),
+	//  3. In the handler: calls self.file_upload_handler (server action: write_demo),
 	//     destroys the service_upload widget, and shows a confirmation message.
 		const test_button3 = ui.create_dom_element({
 			element_type	: 'button',
@@ -379,7 +379,7 @@ const get_content_data = async function(self) {
 						// event process_uploaded_file_done_
 						// tool_upload fires this event after the server finishes processing
 						// (encoding, thumbnail generation, etc.) — not just after the raw
-						// HTTP transfer completes.  api_response here is the PHP result object.
+						// HTTP transfer completes.  api_response here is the server result object.
 							const fn_process_done = async function(api_response) {
 
 								// close modal. This action also destroys the tool
@@ -403,8 +403,8 @@ const get_content_data = async function(self) {
 
 									if (files_info) {
 										// display available files list
-										// (!) Note that if your config.php file definition contains
-										// the constant 'DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', other formats
+										// (!) Note that if this install's config defines
+										// DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS, other formats
 										// than default JPG will be available to use (like PNG, AVIF ...)
 										// @see DOCU https://dedalo.dev/docs/config/config/#defining-alternative-image-extensions-of-image-files
 										ui.create_dom_element({

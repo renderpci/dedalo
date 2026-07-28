@@ -20,7 +20,9 @@ describe('is_filter_empty', () => {
 	});
 
 	test('leaf with empty-string q (unentered value) is empty, no crash', () => {
-		const filter = { $and: [{ path: [{ section_tipo: 'dd15' }], q: '', q_operator: '', lang: null }] };
+		const filter = {
+			$and: [{ path: [{ section_tipo: 'dd15' }], q: '', q_operator: '', lang: null }],
+		};
 		expect(is_filter_empty(filter)).toBe(true);
 	});
 
@@ -35,16 +37,15 @@ describe('is_filter_empty', () => {
 	});
 
 	test('leaf with a real value is NOT empty', () => {
-		const filter = { $and: [{ path: [1], q: [{ id: 1, value: '5' }], q_operator: null, lang: 'es' }] };
+		const filter = {
+			$and: [{ path: [1], q: [{ id: 1, value: '5' }], q_operator: null, lang: 'es' }],
+		};
 		expect(is_filter_empty(filter)).toBe(false);
 	});
 
 	test('nested groups: empty everywhere is empty', () => {
 		const filter = {
-			$and: [
-				{ path: [1], q: '', lang: null },
-				{ $or: [{ path: [2], q: null, lang: null }] },
-			],
+			$and: [{ path: [1], q: '', lang: null }, { $or: [{ path: [2], q: null, lang: null }] }],
 		};
 		expect(is_filter_empty(filter)).toBe(true);
 	});

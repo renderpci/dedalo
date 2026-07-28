@@ -127,16 +127,26 @@ const paint_status = async function(self, container) {
 		parent			: container
 	})
 	states.forEach(state => {
-		const counts = { missing:0, stale:0, orphaned:0 }
+		// 'foreign' (WC-060): a source record whose ontology7 declares a DIFFERENT tld
+		// than the section it sits in. Without a bucket here such a tld rendered a red
+		// 'check failed' with an EMPTY reason — on the one panel built to diagnose it.
+		const counts = { missing:0, stale:0, orphaned:0, foreign:0 }
 		;(state.drift || []).forEach(d => { counts[d.kind] = (counts[d.kind]||0)+1 })
+		// A kind this client does not know yet must still render a reason, never a
+		// blank one: count anything unrecognised rather than dropping it.
+		const known = ['missing','stale','orphaned','foreign']
+		const other = (state.drift || []).filter(d => known.indexOf(d.kind) === -1).length
+		const reasons = [
+			counts.missing  ? counts.missing  + ' missing'  : '',
+			counts.stale    ? counts.stale    + ' stale'    : '',
+			counts.orphaned ? counts.orphaned + ' orphaned' : '',
+			counts.foreign  ? counts.foreign  + ' misfiled' : '',
+			other           ? other + ' other' : '',
+			state.mainNodeOk ? '' : 'no main node'
+		].filter(Boolean).join(', ')
 		const detail = state.inSync
 			? 'in sync (' + state.matrixNodes + ' node' + (state.matrixNodes===1?'':'s') + ')'
-			: [
-				counts.missing  ? counts.missing  + ' missing'  : '',
-				counts.stale    ? counts.stale    + ' stale'    : '',
-				counts.orphaned ? counts.orphaned + ' orphaned' : '',
-				state.mainNodeOk ? '' : 'no main node'
-			].filter(Boolean).join(', ')
+			: (reasons || 'out of sync')
 
 		const item = ui.create_dom_element({
 			element_type	: 'li',

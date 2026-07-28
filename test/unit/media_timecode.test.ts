@@ -4,9 +4,12 @@
  * avoid collisions (PHP replace_tc_codes).
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
 import { replaceTimecodes } from '../../src/core/media/tools/timecode.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 describe('replaceTimecodes (PHP replace_tc_codes)', () => {
 	test('positive offset shifts every mark', () => {
@@ -40,7 +43,243 @@ describe('replaceTimecodes (PHP replace_tc_codes)', () => {
 describe('tool_tc module', () => {
 	test('loads with a record-scope write gate', async () => {
 		const loaded = await getLoadedTool('tool_tc');
-		expect(loaded?.module.apiActions.change_all_timecodes?.permission).toBe('record');
+		expect(loaded?.module.apiActions.change_all_timecodes?.permission).toBe('record_tipo');
 		expect(loaded?.module.apiActions.change_all_timecodes?.minLevel).toBe(2);
+		// A bulk rewrite of a whole transcription is not offered as a background
+		// job — nothing may be background-runnable that the gate above does not
+		// already cover (TOOLS_SPEC gate 7 runs BEFORE the fork).
+		expect(loaded?.module.backgroundRunnable).toBeUndefined();
+	});
+});
+
+/**
+ * change_all_timecodes ARGUMENT VALIDATION (audit 2026-07-28). Every case here
+ * returns before the save loop, so the drive is read-only — the point is that a
+ * malformed bulk-rewrite request can never reach saveComponentData.
+ */
+describe('tool_tc change_all_timecodes validation', () => {
+	const principal: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+
+	async function drive(
+		options: Record<string, unknown>,
+	): Promise<{ result: unknown; msg: string }> {
+		const loaded = await getLoadedTool('tool_tc');
+		return loaded!.module.apiActions.change_all_timecodes!.handler({
+			principal,
+			userId: -1,
+			options,
+			background: false,
+		});
+	}
+
+	test('the locator triple AND lang are required', async () => {
+		const expected = 'component_tipo, section_tipo, a positive section_id and lang are required';
+		expect((await drive({})).msg).toBe(expected);
+		expect((await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167' })).msg).toBe(expected);
+		expect(
+			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 0 })).msg,
+		).toBe(expected);
+		expect(
+			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: -3 })).msg,
+		).toBe(expected);
+		// PHP `empty($lang)` — a missing/blank lang is a MALFORMED request, never a
+		// silent lg-nolan default (which would address a slice the caller never named).
+		expect(
+			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 3 })).msg,
+		).toBe(expected);
+		expect(
+			(await drive({ component_tipo: 'rsc36', section_tipo: 'rsc167', section_id: 3, lang: '' }))
+				.msg,
+		).toBe(expected);
+	});
+
+	test('a non-numeric offset is refused', async () => {
+		expect(
+			(
+				await drive({
+					component_tipo: 'rsc36',
+					section_tipo: 'rsc167',
+					section_id: 1,
+					lang: 'lg-spa',
+					offset_seconds: 'later',
+				})
+			).msg,
+		).toBe('offset_seconds must be a number');
+	});
+
+	test('an unknown component / missing record fails cleanly (no save)', async () => {
+		expect(
+			(
+				await drive({
+					component_tipo: 'nope999',
+					section_tipo: 'rsc167',
+					section_id: 1,
+					lang: 'lg-spa',
+				})
+			).msg,
+		).toBe('component or section not found');
+		expect(
+			(
+				await drive({
+					component_tipo: 'rsc36',
+					section_tipo: 'rsc167',
+					section_id: 99999999,
+					lang: 'lg-spa',
+				})
+			).msg,
+		).toBe('record not found');
+	});
+});
+
+/**
+ * change_all_timecodes THE WRITE (audit 2026-07-28, group B) — driven on a real
+ * scratch record (test2 → matrix_test, reserved high ids), because the three
+ * defects closed here are only observable against stored data:
+ *
+ *  1. ATOMICITY: PHP did ONE set_data_lang() + save() for the whole item set; the
+ *     port saved once PER ITEM, so a mid-loop failure left the transcription
+ *     HALF-OFFSET. The mechanical proof is the Time Machine row count: one
+ *     invocation must append exactly ONE audit row however many items it rewrites.
+ *  2. The `key` filter indexes the LANG SLICE (PHP get_data_lang runs
+ *     array_values, so $raw_key is 0..n-1 WITHIN the slice), not the full stored
+ *     array — and the returned map is keyed by that same slice index.
+ *  3. `result` is the audit map whenever the request was well-formed, even when
+ *     nothing moved (PHP returns $ar_replaced unconditionally); `false` is
+ *     reserved for an actual failure.
+ *
+ * The seed deliberately puts the OTHER language FIRST, so slice index 0 and full
+ * array index 0 are different items — a port that indexes the wrong array cannot
+ * pass by coincidence.
+ */
+describe('tool_tc change_all_timecodes — the write', () => {
+	const SECTION_TIPO = 'test2';
+	const TABLE = 'matrix_test';
+	const COMPONENT_TIPO = 'dd1005'; // component_text_area, ontology-translatable, string column
+	const SECTION_ID = 906101;
+	const principal: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+
+	type Item = { id: number; lang: string; value: string };
+	const SEED: Item[] = [
+		{ id: 1, lang: 'lg-eng', value: 'EN [TC_00:00:10.000_TC]' },
+		{ id: 2, lang: 'lg-spa', value: 'ES-A [TC_00:01:00.000_TC]' },
+		{ id: 3, lang: 'lg-spa', value: 'ES-B [TC_00:02:00.000_TC]' },
+		{ id: 4, lang: 'lg-fra', value: 'FR without marks' },
+	];
+
+	async function seed(): Promise<void> {
+		await createScratchRecord(SECTION_TIPO, SECTION_ID, {
+			string: { [COMPONENT_TIPO]: SEED },
+		});
+	}
+
+	async function storedItems(): Promise<Item[]> {
+		const rows = (await sql.unsafe(
+			`SELECT string->'${COMPONENT_TIPO}' AS items FROM "${TABLE}"
+			 WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION_TIPO, SECTION_ID],
+		)) as { items: Item[] | null }[];
+		return rows[0]?.items ?? [];
+	}
+
+	function itemValue(items: Item[], id: number): string | undefined {
+		return items.find((item) => item.id === id)?.value;
+	}
+
+	async function tmCount(): Promise<number> {
+		const rows = (await sql`
+			SELECT count(*)::int AS n FROM matrix_time_machine
+			WHERE section_tipo = ${SECTION_TIPO} AND section_id = ${SECTION_ID}
+		`) as { n: number }[];
+		return rows[0]?.n ?? 0;
+	}
+
+	async function drive(
+		options: Record<string, unknown>,
+	): Promise<{ result: unknown; msg: string }> {
+		const loaded = await getLoadedTool('tool_tc');
+		return loaded!.module.apiActions.change_all_timecodes!.handler({
+			principal,
+			userId: -1,
+			options,
+			background: false,
+		});
+	}
+
+	function optionsFor(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+		return {
+			component_tipo: COMPONENT_TIPO,
+			section_tipo: SECTION_TIPO,
+			section_id: SECTION_ID,
+			lang: 'lg-spa',
+			offset_seconds: 5,
+			key: null,
+			...overrides,
+		};
+	}
+
+	beforeAll(seed);
+	afterAll(() => cleanScratchRecord(SECTION_TIPO, SECTION_ID, TABLE));
+
+	test('the whole lang slice is offset in ONE save (one TM row) and keyed by slice index', async () => {
+		await seed();
+		await sql`DELETE FROM matrix_time_machine
+			WHERE section_tipo = ${SECTION_TIPO} AND section_id = ${SECTION_ID}`;
+
+		const response = await drive(optionsFor());
+
+		// The audit map is keyed by the LANG-SLICE index (0,1), not by the stored
+		// array index (1,2) — the lg-eng item at position 0 is not in the slice.
+		expect(response.result).toEqual({
+			'0': { '00:01:00.000': '00:01:05.000' },
+			'1': { '00:02:00.000': '00:02:05.000' },
+		});
+
+		const items = await storedItems();
+		expect(itemValue(items, 2)).toBe('ES-A [TC_00:01:05.000_TC]');
+		expect(itemValue(items, 3)).toBe('ES-B [TC_00:02:05.000_TC]');
+		// Sibling languages are untouched by a lang-sliced write.
+		expect(itemValue(items, 1)).toBe('EN [TC_00:00:10.000_TC]');
+		expect(itemValue(items, 4)).toBe('FR without marks');
+
+		// ATOMICITY: two items rewritten, ONE save → exactly ONE audit row.
+		expect(await tmCount()).toBe(1);
+	});
+
+	test("the 'key' filter selects within the lang slice (key 0 = the FIRST lg-spa item)", async () => {
+		await seed();
+		const response = await drive(optionsFor({ key: 0 }));
+
+		expect(response.result).toEqual({ '0': { '00:01:00.000': '00:01:05.000' } });
+
+		const items = await storedItems();
+		expect(itemValue(items, 2)).toBe('ES-A [TC_00:01:05.000_TC]');
+		// key 0 addressed slice[0]; slice[1] and the other langs are untouched.
+		expect(itemValue(items, 3)).toBe('ES-B [TC_00:02:00.000_TC]');
+		expect(itemValue(items, 1)).toBe('EN [TC_00:00:10.000_TC]');
+	});
+
+	test('a well-formed request that moves nothing returns the MAP, not false', async () => {
+		await seed();
+		await sql`DELETE FROM matrix_time_machine
+			WHERE section_tipo = ${SECTION_TIPO} AND section_id = ${SECTION_ID}`;
+		const before = await storedItems();
+
+		// lg-fra holds a single mark-free item: PHP still returns $ar_replaced
+		// (one empty entry per processed key).
+		const response = await drive(optionsFor({ lang: 'lg-fra' }));
+		expect(response.result).toEqual({ '0': {} });
+
+		// …and, unlike PHP, a no-op does NOT rewrite the record: no audit row, no
+		// falsified modified stamp (documented divergence, WC-061).
+		expect(await storedItems()).toEqual(before);
+		expect(await tmCount()).toBe(0);
+	});
+
+	test('an empty lang slice is a well-formed no-op, not an error', async () => {
+		await seed();
+		const before = await storedItems();
+		const response = await drive(optionsFor({ lang: 'lg-deu' }));
+		expect(response.result).toEqual({});
+		expect(await storedItems()).toEqual(before);
 	});
 });

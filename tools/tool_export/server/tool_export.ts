@@ -20,11 +20,41 @@ import { getNode } from '../../../src/core/ontology/resolver.ts';
 import { getParentTipo } from '../../../src/core/relations/children.ts';
 import { buildRequestConfigForElement } from '../../../src/core/relations/request_config/build.ts';
 import { extractSqoSectionTipos } from '../../../src/core/relations/request_config/explicit.ts';
+import { getPermissions } from '../../../src/core/security/permissions.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
 import { exportGridUnified } from '../../../src/diffusion/export/index.ts';
 
-/** Build the export grid through the unified engine (see module doc). */
+/**
+ * Build the export grid through the unified engine (see module doc).
+ *
+ * GATE (SEC-024 §9.2, PHP tool_export::get_export_grid): the declarative module
+ * gate asserts read on `options.section_tipo` only. PHP ALSO runs
+ * `assert_section_array_permission($sqo->section_tipo, 1)` — the SQO carries its
+ * own section list and it does not have to be the one that passed the first
+ * gate, so exporting a section the caller cannot read was one options key away.
+ * The assembler's principal scoping is the per-record projects filter (dd170),
+ * a different boundary from the dd774 section grant, so it does not cover this.
+ */
 export async function toolExportGetExportGrid(context: ToolActionContext): Promise<ToolResponse> {
+	const sqoSections = (context.options.sqo as { section_tipo?: unknown } | undefined)?.section_tipo;
+	const targets = Array.isArray(sqoSections)
+		? sqoSections
+		: sqoSections === undefined || sqoSections === null
+			? []
+			: [sqoSections];
+	for (const target of targets) {
+		const sectionTipo = typeof target === 'string' ? target : '';
+		if (
+			sectionTipo === '' ||
+			(await getPermissions(context.principal, sectionTipo, sectionTipo)) < 1
+		) {
+			return {
+				result: false,
+				msg: 'Error. Insufficient permissions on an sqo section target',
+				errors: ['unauthorized'],
+			};
+		}
+	}
 	return exportGridUnified(context);
 }
 

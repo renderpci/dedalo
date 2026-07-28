@@ -15,7 +15,11 @@
  * - `meta`: [{count: maxItemId}] per COPIED component tipo (the re-save loop's
  *   counter shape — array-wrapped, PHP canonical);
  * - Time Machine: one audit row per copied component tipo with the DATA-LANG
- *   slice of the copied value (nolan slice for non-translatable components).
+ *   slice of the copied value (nolan slice for non-translatable components);
+ * - save event: fired ONCE, LAST (this writer bypasses the record_write.ts
+ *   chokepoint, so it invalidates for itself — a duplicated dd1324 row clones a
+ *   tool's name + active flag into the registry). Gated by
+ *   test/unit/tools_cache_invalidation.test.ts.
  *
  * Media-file duplication (physical file copies + files_info refresh) is now
  * wired (engineering/MEDIA_SPEC.md Phase B): for every copied media component the
@@ -38,6 +42,7 @@ import { resolveMediaPathOptions } from '../../media/ontology_path.ts';
 import type { MediaIdentity } from '../../media/path.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
 import { getMatrixTableFromTipo, getTranslatableByTipo } from '../../ontology/resolver.ts';
+import { fireSaveEvent } from '../../section_record/save_event.ts';
 import {
 	CREATED_BY_USER,
 	CREATED_DATE,
@@ -237,6 +242,19 @@ export async function duplicateSectionRecord(
 			}
 		}
 	}
+
+	// 7. Cache invalidation: this writer inserts through matrix_write DIRECTLY,
+	//    so it never passes the record_write.ts chokepoint that fires for every
+	//    other write — it must fire for itself (PHP duplicate() closes with
+	//    $new_section_record->save(), which calls save_event). ONE fire, LAST:
+	//    the caches must be dropped after the copy, the media refresh and the
+	//    observer cascade have all landed, or a concurrent read repopulates them
+	//    with a half-built duplicate. Load-bearing for dd1324/dd996/dd234, where
+	//    the duplicate clones a tool's name AND active flag into the registry:
+	//    without this the tool is wrong in every user's menu until restart
+	//    (no TTL since the cutover). Not tx-wrapped here, and fireSaveEvent
+	//    self-defers its listener fan-out if a caller wraps us in one.
+	await fireSaveEvent(sectionTipo);
 
 	return newSectionId;
 }

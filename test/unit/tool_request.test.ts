@@ -10,14 +10,17 @@
  * non-admin denial (ledgered), target mismatch, missing params.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import { dispatchToolRequest } from '../../src/core/tools/dispatch.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
+
+const REAL_RECORD_SCOPE = { ...realRecordScope };
 
 const SECTION_TIPO = 'test2';
 const COMPONENT_TIPO = 'numisdata16'; // input_text (string column) — the standing test fixture tipo
@@ -64,6 +67,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+	// mock.module is process-GLOBAL and mock.restore() does not revert it.
+	mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE);
 	await cleanScratchRecord(SECTION_TIPO, recordId);
 });
 
@@ -109,6 +114,9 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 	});
 
 	test('apply_value rejects a TM row that does not match the target', async () => {
+		// (!) Assert on the MESSAGE, not just the 'invalid_request' code: the
+		// missing-parameter branch returns the same code, so a code-only
+		// assertion would pass even if the target-match check were deleted.
 		const mismatched = await dispatchToolRequest(
 			SUPERUSER,
 			-1,
@@ -116,7 +124,41 @@ describe('dd_tools_api.tool_request (Phase 6 gate)', () => {
 			applyOptions({ section_id: recordId + 1 }),
 		);
 		expect(mismatched.result).toBe(false);
-		expect(mismatched.errors).toContain('invalid_request');
+		expect(mismatched.msg).toBe('Error. TM row does not match the requested target');
+
+		// Same section+record, WRONG component tipo: a snapshot of numisdata16
+		// must never be restorable into another component's slot.
+		const otherTipo = await dispatchToolRequest(
+			SUPERUSER,
+			-1,
+			APPLY_SOURCE,
+			applyOptions({ tipo: 'numisdata17' }),
+		);
+		expect(otherTipo.result).toBe(false);
+		expect(otherTipo.msg).toBe('Error. TM row does not match the requested target');
+
+		// And the live value is still v2 — nothing was restored by either.
+		expect(JSON.stringify(await liveValue())).toContain('TM-RESTORE-V2');
+	});
+
+	test('apply_value refuses a record outside the caller scope (SEC-024 §9.4)', async () => {
+		// The declarative 'tipo' gate authorizes the (section_tipo, tipo) SCHEMA
+		// pair only; the caller-supplied section_id needs its own projects-scope
+		// assertion, which the TM row lookup does not apply. Deny it and assert
+		// the live value is untouched.
+		mock.module('../../src/core/security/record_scope.ts', () => ({
+			...REAL_RECORD_SCOPE,
+			principalCanAccessRecord: async () => false,
+		}));
+		try {
+			const before = await liveValue();
+			const denied = await dispatchToolRequest(SUPERUSER, -1, APPLY_SOURCE, applyOptions());
+			expect(denied.result).toBe(false);
+			expect(denied.errors).toContain('unauthorized');
+			expect(await liveValue()).toEqual(before);
+		} finally {
+			mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE);
+		}
 	});
 
 	test('apply_value restores the v1 snapshot into the live record', async () => {

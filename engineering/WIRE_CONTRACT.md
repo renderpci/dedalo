@@ -2724,3 +2724,65 @@ new activity row after a temporal save, and carries a CANARY — a real save on 
 scratch twin — proving those same three probes can see a write, so "nothing
 changed" cannot pass vacuously. Mutation-proved: deleting the temporal branch from
 `dd_core_api.ts` turns it red.
+
+## WC-060 — `inspect_ontologies`: a misfiled source record is drift kind `foreign`, not a phantom `missing`
+
+`dd_ontology(tld)` is the projection of `matrix_ontology` section `<tld>0`, but a node's
+tipo AND tld come from the RECORD's `ontology7`, not from the section it sits in.
+`parseMatrixNodes(tld)` did not filter by tld while `storedNodes(tld)` read
+`WHERE tld = $1`, so a record with a typo'd `ontology7` (live: `actv0/127` declares
+`"act"`) parsed into another tld's namespace and could never appear in `stored`. It was
+reported `missing` FOREVER, re-upserted by every reconcile — breaking the module's own
+idempotency claim — and **written into the other tld's namespace** by a per-tld
+operation, where `deleteTldNodes(tld)` could never take it back. `reconcile_ontologies`
+therefore reported a permanent FALSE failure for a TLD it could never fix.
+
+Both sides of the diff are now scoped to the inspected tld. Wire additions, all
+backward-compatible:
+
+- `states[].drift[].kind` gains **`'foreign'`** (`diffColumns:['tld']`), plus optional
+  `source` (`'<section_tipo>/<section_id>'`) and `declaredTld`;
+- `states[].foreignNodes` (count) is new;
+- `states[].matrixNodes` now counts the tld's OWN nodes only — unchanged for every tld
+  with no misfiled record.
+
+Existing kinds are byte-unchanged. `ensureOntology`/`rebuildOntology` now REFUSE the
+cross-namespace write and name the culprit.
+
+**Client (closed same day):** `render_tool_ontology_parser.js` counted drift kinds by
+name (`{missing, stale, orphaned}`) and its detail join had no `foreign` term, so a
+foreign-only tld rendered a red "check failed" with an EMPTY reason — on the one panel
+built to diagnose exactly this. It now renders `N misfiled`, counts any kind it does not
+recognise as `N other`, and falls back to `out of sync` rather than an empty reason, so a
+future kind can never blank the panel again.
+
+Gate: `test/unit/ontology_state_foreign_tld.test.ts`.
+
+## WC-061 — `tool_tc::change_all_timecodes`: atomic slice write, slice-indexed audit map, `lang` required
+
+Three divergences from `class.tool_tc.php`, closed together.
+
+1. **The write is ATOMIC per component.** PHP built the whole rewritten element set and
+   issued ONE `set_data_lang($new_data, $lang)` + `save()`. The port called
+   `saveComponentData` once PER ITEM — each its own transaction, each its own Time
+   Machine row — so a failure part-way through a multi-paragraph transcription COMMITTED
+   a half-offset document and returned a success-shaped envelope for the prefix that
+   landed. Nothing on the wire distinguished it from a complete run, and every committed
+   prefix is indistinguishable from a legitimate edit in the TM UI. The handler now
+   issues a single `set_data` carrying the rebuilt lang slice.
+2. **`options.key` and the returned map are keyed by the LANG-SLICE index**, not the
+   full stored-array index (PHP `get_data_lang` → `array_values`). On a multi-lang
+   component the old indexing selected and reported the WRONG element. Latent in
+   practice — the client always sends `key: null` — but the returned `changesByKey`
+   keys change shape for any caller that does send one.
+3. **`lang` is now REQUIRED** (PHP `empty($lang)`) instead of silently defaulting to
+   `lg-nolan`, and `result` is the audit map on every successful path instead of
+   `false`. (The map-instead-of-`false` half is parity RESTORATION, not a divergence —
+   PHP assigns and returns it unconditionally.)
+
+One deliberate new divergence: a request that changes nothing skips the write entirely,
+so it mints no Time Machine row and no falsified `modified` stamp — the same
+formulation as WC-059.
+
+Gate: `test/unit/media_timecode.test.ts` (atomicity pinned as a TM row count on a
+scratch `test2` record seeded so slice index 0 ≠ array index 0).

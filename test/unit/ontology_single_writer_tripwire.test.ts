@@ -20,7 +20,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dir, '../..');
-const SEARCH_ROOTS = ['src', 'tools'];
+/** `scripts` too — an operator script wiping a tld is the same second authority. */
+const SEARCH_ROOTS = ['src', 'tools', 'scripts'];
 
 /** deleteTldNodes importers that are NOT "some new module wipes a tld". */
 const DELETE_TLD_ALLOWLIST = new Set([

@@ -285,17 +285,34 @@ component half, and one declaring `tipo` silently drops the record half. Until
 2026-07-28 the whole media family declared `record`, which meant **a user with
 section write who was explicitly denied level 2 on one media component could
 still delete its files, rotate it, remux it or bulk-rewrite its transcription**
-— twelve actions across five tools (`tool_media_versions` ×7, `tool_image_rotation`,
-`tool_tc`, `tool_pdf_extractor`, `tool_posterframe` ×2). `tool_upload` deliberately
-stays `record`: its PHP twin asserts no tipo. PHP asserted both at every one of those doors
+— **eleven** actions across five tools (`tool_media_versions` ×7, `tool_image_rotation`,
+`tool_tc`, `tool_pdf_extractor`, `tool_posterframe.create_identifying_image`).
+PHP asserted both at every one of those doors
 (`assert_tipo_permission` + `assert_record_in_user_scope`).
+
+**Two actions deliberately stay `record`.** `tool_upload.process_uploaded_file` —
+its PHP twin asserts no tipo. `tool_posterframe.get_ar_identifying_image` — its
+handler and client send only `section_tipo`/`section_id`, and PHP gates it
+`assert_section_permission(1)` + `assert_record_in_user_scope`
+(`class.tool_posterframe.php:382-384`). It was briefly flipped to `record_tipo` on
+2026-07-28 and that made it **unsatisfiable for every caller, global admins
+included** — the gate demanded a component the payload never carries. **A gate the
+real payload cannot satisfy is a broken action, not a strict one**, and asserting
+the permission STRING in a test does not catch it; the reachability test below does.
 
 The component key is `options.tipo`, with `options.component_tipo` accepted as
 its alias — exactly what `resolveMediaToolContext` and the tc/pdf handlers read.
+**Supplying BOTH keys with DIFFERENT values is a denial** (`conflicting component
+target`): handlers did not all read the aliases in the same order, so an ambiguous
+payload could be authorized against one component and acted on in another. Refusing
+it makes the gate order-independent.
+
 Gated by `test/unit/tools_record_tipo_permission.test.ts`, which pins both halves
 independently (section-write-but-component-denied is refused; granted-component-
-on-an-out-of-scope-record is refused) and asserts those twelve actions still
-declare it. The exemplar demonstrates it as `component_write_demo`.
+on-an-out-of-scope-record is refused), pins the both-keys-conflict denial, asserts
+those eleven actions still declare it, and REACHABILITY-checks that the payload each
+caller actually sends clears its own gate. The exemplar demonstrates it as
+`component_write_demo`.
 
 ### THE RULE: a batch action takes its scope from the REQUEST, or refuses
 

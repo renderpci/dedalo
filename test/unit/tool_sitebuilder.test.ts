@@ -86,6 +86,12 @@ beforeAll(async () => {
 			if (url.pathname === '/v1/sites/demo/publish') {
 				return Response.json({ release: 'r1', url: 'http://prod/demo/' });
 			}
+			if (url.pathname.startsWith('/v1/sites/') && req.method === 'DELETE') {
+				return Response.json({
+					deleted: url.pathname.split('/')[3],
+					purged_prod: url.searchParams.get('purge_prod') === 'true',
+				});
+			}
 			if (url.pathname === '/v1/audit') {
 				return Response.json({ data: [{ action: 'publish', site: 'demo' }] });
 			}
@@ -190,6 +196,62 @@ describe('tool_sitebuilder proxy', () => {
 		expect(admin.result).toMatchObject({ release: 'r1' });
 	});
 
+	/**
+	 * The delete_site gate (audit §4.3). The line is drawn where the daemon draws it:
+	 * `deleteSite(slug, purgeProd)` (site_builder src/sites/workspace.ts) unconditionally
+	 * removes the WORKSPACE + preprod copy — builder-owned state that create_site/build
+	 * (ungated beyond the tool grant) produced, and whose prod release history survives, so
+	 * re-creating the slug restores rollback. Only `purgeProd` touches config.PROD_ROOT: it
+	 * deletes the LIVE copy and its .releases history. That is the destructive half of
+	 * publish, so it takes publish's gate — publisher AND an explicit confirm — because a
+	 * user who cannot take a site live must not be able to take it down, and an unconfirmed
+	 * call must not be able to either.
+	 */
+	test('delete_site without purge_prod is ordinary tool work for any grantee', async () => {
+		const res = await tool.apiActions.delete_site!.handler(ctx(PLAIN, { slug: 'demo' }));
+		expect(res.result).toMatchObject({ deleted: 'demo', purged_prod: false });
+		const req = lastRequest();
+		expect(req.method).toBe('DELETE');
+		expect(req.path).toBe('/v1/sites/demo');
+		expect(req.body).toMatchObject({ actor: { user_id: 9 } });
+	});
+
+	test('delete_site --purge_prod is refused to a plain user and never reaches the daemon', async () => {
+		const before = requests.length;
+		const denied = await tool.apiActions.delete_site!.handler(
+			ctx(PLAIN, { slug: 'demo', purge_prod: true, confirm: true }),
+		);
+		expect(denied.result).toBe(false);
+		expect(denied.errors).toContain('site_builder_rejected');
+		// Fails closed BEFORE the proxy call: the daemon trusts us entirely, so a refusal
+		// that still sent the DELETE would have purged production anyway.
+		expect(requests.length).toBe(before);
+	});
+
+	test('delete_site --purge_prod requires an explicit confirm, even for a developer', async () => {
+		const before = requests.length;
+		const res = await tool.apiActions.delete_site!.handler(
+			ctx(DEV, { slug: 'demo', purge_prod: true }),
+		);
+		expect(res.result).toBe(false);
+		expect(res.errors).toContain('site_builder_rejected');
+		expect(requests.length).toBe(before);
+	});
+
+	test('delete_site --purge_prod is allowed to a developer and a global admin, confirmed', async () => {
+		const dev = await tool.apiActions.delete_site!.handler(
+			ctx(DEV, { slug: 'demo', purge_prod: true, confirm: true }),
+		);
+		expect(dev.result).toMatchObject({ deleted: 'demo', purged_prod: true });
+		expect(lastRequest().path).toBe('/v1/sites/demo?purge_prod=true');
+
+		const admin = await tool.apiActions.delete_site!.handler(
+			ctx(ADMIN, { slug: 'demo', purge_prod: true, confirm: true }),
+		);
+		expect(admin.result).toMatchObject({ purged_prod: true });
+		expect(lastRequest().path).toBe('/v1/sites/demo?purge_prod=true');
+	});
+
 	test('get_audit is developer/admin-gated', async () => {
 		const denied = await tool.apiActions.get_audit!.handler(ctx(PLAIN, {}));
 		expect(denied.result).toBe(false);
@@ -232,6 +294,26 @@ describe('tool_sitebuilder proxy', () => {
 		const res = await tool.apiActions.list_sites!.handler(ctx(DEV, {}));
 		expect(res.errors).toContain('site_builder_unconfigured');
 		siteBuilder.url = savedUrl;
+	});
+
+	test('an id carrying a dot-segment is refused before it can rewrite the daemon path', async () => {
+		// `..` passes the character class but the URL parser resolves it away:
+		// /v1/sessions/../stop → /v1/stop. Refuse it at the seam, and never reach the daemon.
+		const before = requests.length;
+		for (const id of ['..', 'a/../b', '..%2e', 'x..y']) {
+			const stop = await tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: id }));
+			expect(stop.result, id).toBe(false);
+			expect(stop.errors, id).toContain('site_builder_rejected');
+		}
+		const build = await tool.apiActions.get_build!.handler(
+			ctx(DEV, { slug: 'demo', build_id: '..' }),
+		);
+		expect(build.result).toBe(false);
+		const stream = await tool.apiActions.session_stream!.handler(ctx(DEV, { session_id: '..' }));
+		expect(stream.result).toBe(false);
+		expect(stream.stream).toBeUndefined();
+		// Nothing reached the daemon.
+		expect(requests.length).toBe(before);
 	});
 
 	test('session_stream forwards the SSE bytes and sets the anti-buffering header', async () => {

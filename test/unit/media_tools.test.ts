@@ -24,6 +24,7 @@ import {
 	getFilesInfoCore,
 	rotateVersionCore,
 } from '../../src/core/media/tools/versions.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_tools_${process.pid}`;
@@ -215,6 +216,91 @@ describe('tool_pdf_extractor core', () => {
 	});
 });
 
+/**
+ * Handler-level ARGUMENT VALIDATION for the destructive media actions (audit
+ * 2026-07-28). Every one of these resolves its media context from the DB and
+ * then bails BEFORE touching the filesystem, so the drive is read-only — which
+ * is exactly the property being pinned: a malformed destructive request must
+ * fail on the argument, never half-run. The gates themselves are declarative
+ * and asserted in the surface test below.
+ */
+describe('media tool handlers reject malformed destructive requests', () => {
+	const principal: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+	const IMAGE = { tipo: 'rsc29', section_tipo: 'rsc170', section_id: 1 };
+	const AV = { tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 };
+
+	async function drive(
+		toolName: string,
+		action: string,
+		options: Record<string, unknown>,
+	): Promise<{ result: unknown; msg: string }> {
+		const loaded = await getLoadedTool(toolName);
+		const spec = loaded?.module.apiActions[action];
+		if (spec === undefined) throw new Error(`missing action ${toolName}.${action}`);
+		return spec.handler({ principal, userId: -1, options, background: false });
+	}
+
+	test('tool_media_versions: a delete without a quality is refused', async () => {
+		expect((await drive('tool_media_versions', 'delete_quality', IMAGE)).msg).toBe(
+			'delete_quality: missing quality',
+		);
+		expect((await drive('tool_media_versions', 'delete_version', IMAGE)).msg).toBe(
+			'delete_version: missing quality',
+		);
+	});
+
+	test('tool_media_versions: conform_headers without a quality is refused', async () => {
+		expect((await drive('tool_media_versions', 'conform_headers', AV)).msg).toBe(
+			'conform_headers: missing quality',
+		);
+	});
+
+	test('tool_media_versions: rotate needs both a quality and finite degrees', async () => {
+		expect((await drive('tool_media_versions', 'rotate', IMAGE)).msg).toBe(
+			'rotate: missing quality',
+		);
+		expect((await drive('tool_media_versions', 'rotate', { ...IMAGE, quality: '1.5MB' })).msg).toBe(
+			'rotate: missing degrees',
+		);
+		expect(
+			(await drive('tool_media_versions', 'rotate', { ...IMAGE, quality: '1.5MB', degrees: 'x' }))
+				.msg,
+		).toBe('rotate: invalid degrees');
+	});
+
+	test('every media_versions action refuses a non-media component', async () => {
+		for (const action of [
+			'get_files_info',
+			'build_version',
+			'sync_files',
+			'delete_version',
+			'delete_quality',
+			'conform_headers',
+			'rotate',
+		]) {
+			// rsc36 is a component_text_area — the media context resolve must refuse it.
+			const response = await drive('tool_media_versions', action, {
+				tipo: 'rsc36',
+				section_tipo: 'rsc167',
+				section_id: 1,
+				quality: '1.5MB',
+				degrees: 90,
+			});
+			expect(response.result).toBe(false);
+			expect(response.msg).toContain('is not a media component');
+		}
+	});
+
+	test('tool_image_rotation refuses a non-image component before any write', async () => {
+		const response = await drive('tool_image_rotation', 'apply_rotation', {
+			...AV,
+			rotation_degrees: 90,
+		});
+		expect(response.result).toBe(false);
+		expect(response.msg).toBe('rotation is image-only');
+	});
+});
+
 describe('media tool server modules load with the right surface', () => {
 	test('tool_media_versions exposes the versions actions with record gates', async () => {
 		const loaded = await getLoadedTool('tool_media_versions');
@@ -231,20 +317,36 @@ describe('media tool server modules load with the right surface', () => {
 				'sync_files',
 			].sort(),
 		);
-		expect(actions.build_version!.permission).toBe('record');
+		expect(actions.build_version!.permission).toBe('record_tipo');
 		expect(actions.build_version!.minLevel).toBe(2);
 		expect(actions.get_files_info!.minLevel).toBe(1);
 		// component-specific mutations are WRITE-gated like the rest.
 		expect(actions.conform_headers!.minLevel).toBe(2);
 		expect(actions.rotate!.minLevel).toBe(2);
-		expect(loaded!.module.backgroundRunnable).toContain('build_version');
+		// build_version is the ONLY background-runnable action: the gate runs
+		// before the fork, so anything added here must stay permission-gated.
+		expect(loaded!.module.backgroundRunnable).toEqual(['build_version']);
+		// every mutating action is level 2; only the read is level 1.
+		for (const action of [
+			'build_version',
+			'sync_files',
+			'delete_version',
+			'delete_quality',
+			'conform_headers',
+			'rotate',
+		]) {
+			expect(actions[action]?.permission).toBe('record_tipo');
+			expect(actions[action]?.minLevel).toBe(2);
+		}
 	});
 
 	test('tool_image_rotation + tool_pdf_extractor load', async () => {
 		const rot = await getLoadedTool('tool_image_rotation');
 		expect(rot?.module.apiActions.apply_rotation?.minLevel).toBe(2);
+		expect(rot?.module.apiActions.apply_rotation?.permission).toBe('record_tipo');
+		expect(rot?.module.backgroundRunnable).toBeUndefined();
 		const pdfTool = await getLoadedTool('tool_pdf_extractor');
-		expect(pdfTool?.module.apiActions.get_pdf_data?.permission).toBe('record');
+		expect(pdfTool?.module.apiActions.get_pdf_data?.permission).toBe('record_tipo');
 		expect(pdfTool?.module.apiActions.get_pdf_data?.minLevel).toBe(1);
 	});
 });

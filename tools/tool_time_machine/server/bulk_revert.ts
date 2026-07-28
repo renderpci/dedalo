@@ -7,7 +7,9 @@
  *
  * PERMISSION: module gate is section/level-2 on the request seed; because a batch
  * can span sections/components, EACH matched row is re-gated on its own
- * (section_tipo, tipo) inside the loop (skip-on-fail, never abort — PHP parity).
+ * (section_tipo, tipo) SCHEMA pair AND on per-record scope (SEC-024 §9.4 — the
+ * TM search applies no projects filter) inside the loop (skip-on-fail, never
+ * abort — PHP parity).
  *
  * Write path: the VERIFIED apply_value direct path (persistRecordKeys +
  * recordTimeMachine), NOT saveComponentData — only it threads the bulk id.
@@ -26,6 +28,7 @@ import {
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
@@ -43,9 +46,19 @@ interface TmRow {
 
 /**
  * Given a component's TM history ordered id DESC (newest first) and the batch's
- * bulk_process_id, return the pre-batch data: the row immediately OLDER than the
- * batch row. When the batch row is the component's oldest/only row (the batch was
- * its first-ever change), the pre-batch state is empty (PHP sub_n_rows===1 → []).
+ * bulk_process_id, return the pre-batch data: the row immediately OLDER than
+ * EVERY row belonging to the batch.
+ *
+ * (!) Skipping ALL of the batch's rows — not just the first one — is the PHP
+ * shape: its inner loop `continue`s on each row whose bulk_process_id matches,
+ * so a batch that touched the same component twice (a CSV import carrying the
+ * record twice, a multi-lang run) still reverts to the value from BEFORE the
+ * batch. Taking `idx + 1` blindly restored a value the batch itself wrote.
+ *
+ * `found:false` means "no pre-batch state could be determined" and the caller
+ * MUST NOT write: PHP's loop simply runs off the end and saves nothing. The one
+ * case where an empty value IS written is the component's first-ever change
+ * (PHP sub_n_rows===1 → []).
  */
 export function preBulkState(
 	historyDesc: readonly { bulk_process_id: number | null; data: unknown }[],
@@ -53,8 +66,19 @@ export function preBulkState(
 ): { data: unknown; found: boolean } {
 	const idx = historyDesc.findIndex((row) => Number(row.bulk_process_id) === targetBulkId);
 	if (idx === -1) return { data: [], found: false };
-	const older = historyDesc[idx + 1];
-	return { data: older ? older.data : [], found: true };
+	// PHP sub_n_rows===1: the batch change is the only history row → blank it.
+	if (historyDesc.length === 1) return { data: [], found: true };
+	let older = idx + 1;
+	while (
+		older < historyDesc.length &&
+		Number(historyDesc[older]?.bulk_process_id) === targetBulkId
+	) {
+		older += 1;
+	}
+	const row = historyDesc[older];
+	// Every row belongs to the batch (and there is more than one): PHP writes
+	// nothing rather than blanking the component.
+	return row === undefined ? { data: [], found: false } : { data: row.data, found: true };
 }
 
 /** Best-effort dd800 bulk-process record + label so this revert is itself revertible. */
@@ -131,7 +155,14 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				continue;
 			}
 			// Per-row (section_tipo, tipo) WRITE gate — skip on fail, never abort (PHP).
-			if ((await getPermissions(principal, row.section_tipo, row.tipo)) < 2) {
+			// SEC-024 §9.4 is the SECOND half: the batch row set comes from a TM
+			// search that applies NO projects filter, so a bulk id may name records
+			// outside the caller's scope. PHP asserts both here; only the schema
+			// half was ported.
+			if (
+				(await getPermissions(principal, row.section_tipo, row.tipo)) < 2 ||
+				!(await principalCanAccessRecord(row.section_tipo, row.section_id, principal))
+			) {
 				errors.push(`permissions_denied: ${row.section_tipo}/${row.tipo}#${row.section_id}`);
 				continue;
 			}
@@ -142,7 +173,13 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				 WHERE tipo = $1 AND section_tipo = $2 AND section_id = $3 ORDER BY id DESC`,
 				[row.tipo, row.section_tipo, row.section_id],
 			)) as { bulk_process_id: number | null; data: unknown }[];
-			const { data: revertData } = preBulkState(history, bulkProcessId);
+			const { data: revertData, found } = preBulkState(history, bulkProcessId);
+			if (!found) {
+				// No determinable pre-batch state — PHP saves nothing rather than
+				// blanking the component. Surfaced, never silent.
+				errors.push(`no pre-batch state: ${row.section_tipo}/${row.tipo}#${row.section_id}`);
+				continue;
+			}
 
 			const column = getColumnNameByModel(model);
 			const table = await getMatrixTableFromTipo(row.section_tipo);

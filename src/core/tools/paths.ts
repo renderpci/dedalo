@@ -161,10 +161,42 @@ export function getAdditionalToolsUrlMap(): Record<string, string> {
 }
 
 /**
+ * Confine `restPath` under `baseDir` and return the CANONICAL absolute path, or
+ * null to 404. Two checks, both required:
+ *
+ *  1. LEXICAL — `resolve` normalizes `..`, so a traversal is caught before the
+ *     filesystem is touched at all;
+ *  2. CANONICAL (realpath) — the resolved target is realpath'd and re-checked
+ *     against the realpath'd base, so a SYMLINK inside the tree cannot point out
+ *     of it. This is the check the lexical one cannot make: `resolve()` does not
+ *     follow links, so `<tool>/js/x.json -> ../../../package.json` normalizes to
+ *     a path that is legitimately under the tool dir and used to be served
+ *     (found 2026-07-28 — the "realpath-confined" claim was true of loader.ts and
+ *     only lexically true here). It matters because a tool package in an
+ *     ADDITIONAL root is third-party code: dropping in a symlink must not turn
+ *     the asset route into an arbitrary-file reader.
+ *
+ * The BASE is realpath'd too, so a legitimately symlinked tool directory
+ * (`tools/tool_x -> /opt/tool_x`, a normal deployment shape) keeps working —
+ * only escapes OUT of the resolved package are refused.
+ */
+function confineUnder(baseDir: string, restPath: string): string | null {
+	const canonicalBase = safeRealpath(baseDir);
+	if (canonicalBase === null) return null;
+	const requested = resolve(canonicalBase, restPath);
+	if (requested !== canonicalBase && !requested.startsWith(canonicalBase + sep)) return null;
+	if (!existsSync(requested)) return null;
+	const canonical = safeRealpath(requested);
+	if (canonical === null) return null;
+	if (canonical !== canonicalBase && !canonical.startsWith(canonicalBase + sep)) return null;
+	return canonical;
+}
+
+/**
  * Resolve a request path `/dedalo/tools/<name>/<rest>` (or an additional-root
  * URL) to a confined absolute asset path, or null when it must 404. Fail-closed:
- * denies the `server/` subtree, path traversal, and anything not under the
- * owning root's canonical directory.
+ * denies the `server/` subtree, path traversal, symlink escapes, and anything
+ * not under the owning root's canonical directory.
  */
 export function resolveToolAssetPath(name: string, restPath: string): string | null {
 	if (!/^tool_[a-z0-9_]+$/.test(name)) return null;
@@ -173,12 +205,7 @@ export function resolveToolAssetPath(name: string, restPath: string): string | n
 	// Deny the server/ subtree outright (never serve TS server code).
 	const firstSegment = restPath.split('/').filter(Boolean)[0];
 	if (firstSegment === 'server') return null;
-	const toolDir = resolve(root.path, name);
-	const fullPath = resolve(toolDir, restPath);
-	// Canonical confinement: the resolved path must stay under the tool dir.
-	if (fullPath !== toolDir && !fullPath.startsWith(toolDir + sep)) return null;
-	if (!existsSync(fullPath)) return null;
-	return fullPath;
+	return confineUnder(resolve(root.path, name), restPath);
 }
 
 /**
@@ -187,10 +214,5 @@ export function resolveToolAssetPath(name: string, restPath: string): string | n
  * lives in core (src/core/tools/client/) and is served under its own core URL.
  */
 export function resolveToolCommonAssetPath(restPath: string): string | null {
-	const fullPath = resolve(TOOL_COMMON_CLIENT_DIR, restPath);
-	if (fullPath !== TOOL_COMMON_CLIENT_DIR && !fullPath.startsWith(TOOL_COMMON_CLIENT_DIR + sep)) {
-		return null;
-	}
-	if (!existsSync(fullPath)) return null;
-	return fullPath;
+	return confineUnder(TOOL_COMMON_CLIENT_DIR, restPath);
 }

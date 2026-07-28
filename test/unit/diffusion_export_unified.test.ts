@@ -374,10 +374,30 @@ describe('P6 export — facade seam tripwire', () => {
 	});
 
 	test('the handler is a PURE facade — no legacy escape, no second build', () => {
-		// The body of the handler must be a single delegation to the engine.
-		expect(source).toMatch(
-			/export async function toolExportGetExportGrid\(context: ToolActionContext\): Promise<ToolResponse> \{\s*\n\s*return exportGridUnified\(context\);\s*\n\}/,
+		// The invariant is ONE BUILD PATH, not a one-line body: the handler may
+		// GATE (SEC-024 §9.2 asserts read on every sqo.section_tipo — PHP does the
+		// same, imperatively, because the declarative kind cannot see inside the
+		// SQO), but it must never build a grid itself. So: every `return` in the
+		// handler is either the single delegation or a refusal envelope.
+		const start = source.indexOf(
+			'export async function toolExportGetExportGrid(context: ToolActionContext): Promise<ToolResponse> {',
 		);
+		expect(start).toBeGreaterThan(-1);
+		const end = source.indexOf('\n}', start);
+		expect(end).toBeGreaterThan(start);
+		const body = source.slice(start, end);
+
+		const returns = body.match(/\breturn\b[^;]*/g) ?? [];
+		expect(returns.length).toBeGreaterThan(0);
+		for (const statement of returns) {
+			const isDelegation = statement.includes('exportGridUnified(context)');
+			const isRefusal = statement.includes('result: false');
+			expect(isDelegation || isRefusal).toBe(true);
+		}
+		// Exactly ONE delegation, and it is the handler's last statement.
+		expect(body.match(/exportGridUnified\(/g)?.length).toBe(1);
+		expect(body.trimEnd().endsWith('return exportGridUnified(context);')).toBe(true);
+
 		// The deleted kill-switch must not regrow.
 		expect(source).not.toContain('DEDALO_EXPORT_UNIFIED');
 		// No SQL/resolver machinery may live in the tool file again.

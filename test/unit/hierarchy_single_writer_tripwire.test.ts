@@ -27,7 +27,12 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dir, '../..');
-const SEARCH_ROOTS = ['src', 'tools'];
+/**
+ * `scripts` is scanned too: an operator script is exactly where a second
+ * "just provision it / just fix the locator" writer appears, and it runs
+ * against a production DB with no review path.
+ */
+const SEARCH_ROOTS = ['src', 'tools', 'scripts'];
 
 /** The module that owns the invariant. */
 const OWNER = 'src/core/ontology/hierarchy_state.ts';
@@ -67,7 +72,10 @@ describe('hierarchy consistency has one writer', () => {
 		for (const file of sourceFiles()) {
 			const rel = relative(REPO_ROOT, file);
 			if (rel === OWNER || rel === PROVISIONER) continue;
-			if (/\bgenerateVirtualSection\s*\(/.test(code(readFileSync(file, 'utf8')))) {
+			// The NAME, not the call site: `import { generateVirtualSection as gvs }`
+			// followed by `gvs(...)` is the same second writer, and a call-shaped
+			// regex (`generateVirtualSection\s*\(`) waved it straight through.
+			if (/\bgenerateVirtualSection\b/.test(code(readFileSync(file, 'utf8')))) {
 				offenders.push(rel);
 			}
 		}
@@ -82,10 +90,18 @@ describe('hierarchy consistency has one writer', () => {
 			const body = code(readFileSync(file, 'utf8'));
 			// A WRITE is a persist call whose key is the general-term tipo. Reads (the tree,
 			// the request_config resolver, the inspector) are free.
+			//
+			// THREE shapes, because the raw-matrix one is not the likely one: a new
+			// writer reaches for saveComponentData (THE component write path), and
+			// the original updateMatrixKeyData-only regex never saw it.
 			const writesRootTerm =
-				/updateMatrixKeyData\([^)]*?(HIERARCHY_GENERAL_TERM|'hierarchy45'|'hierarchy59')/s.test(
+				/updateMatrixKeyData\([^)]*?(HIERARCHY_GENERAL_TERM|HIERARCHY_GENERAL_TERM_MODEL|'hierarchy45'|'hierarchy59')/s.test(
 					body,
-				) || /\bwrite\(\s*'relation',\s*HIERARCHY_GENERAL_TERM/.test(body);
+				) ||
+				/componentTipo:\s*(HIERARCHY_GENERAL_TERM|HIERARCHY_GENERAL_TERM_MODEL|'hierarchy45'|'hierarchy59')/.test(
+					body,
+				) ||
+				/\bwrite\(\s*'relation',\s*HIERARCHY_GENERAL_TERM/.test(body);
 			if (writesRootTerm) offenders.push(rel);
 		}
 		expect(offenders).toEqual([]);

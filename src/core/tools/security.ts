@@ -31,8 +31,10 @@ const DEFAULT_MIN_LEVEL = 2; // PHP default: write
 /**
  * Enforce one action's declarative permission spec against the request options
  * and the caller. Returns {ok:true} to proceed or a fail result to return to the
- * client. The four permission kinds mirror PHP tool_security exactly; a null
- * permission is "listed but gated inside the handler" and always passes here.
+ * client. The permission kinds mirror PHP tool_security's assert_* helpers; a
+ * null permission is "listed but gated inside the handler" and always passes
+ * here. Note that PHP composed its asserts freely per method, so a TS kind may
+ * stand for a COMBINATION ('record_tipo' = the tipo pair + the record scope).
  */
 export async function assertActionPermission(
 	spec: ToolActionSpec,
@@ -102,6 +104,47 @@ export async function assertActionPermission(
 			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
 			// Per-record scope: the record must be visible under the caller's
 			// projects filter (PHP assert_record_in_user_scope). Global admins skip.
+			if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
+				return fail('record is out of the user scope', ['unauthorized']);
+			}
+			return { ok: true };
+		}
+
+		case 'record_tipo': {
+			// BOTH halves of PHP's SEC-024 door on a COMPONENT OF A RECORD:
+			//   assert_tipo_permission($section_tipo, $component_tipo, $level)
+			//   assert_record_in_user_scope($section_tipo, (int)$section_id)
+			// 'tipo' expresses only the first, 'record' only the second (and its
+			// level check is section-vs-section, so it never consults the component
+			// at all). Every media-family action needs both: without the pair half a
+			// user explicitly denied write on ONE media component can still delete
+			// its files, rotate, remux or bulk-rewrite it through the section grant.
+			// The component key is `tipo` with `component_tipo` as its alias —
+			// exactly what resolveMediaToolContext and the tc/pdf handlers read.
+			const sectionTipo = validTipo(options.section_tipo);
+			// AMBIGUITY IS A DENIAL. The two keys are aliases, but handlers do not all
+			// read them in the same order (tool_tc read `component_tipo ?? tipo` while
+			// this gate reads `tipo ?? component_tipo`). A payload carrying BOTH keys
+			// with DIFFERENT values would then be authorized against one component and
+			// acted on in another — the precise hole this kind exists to close. Refusing
+			// the ambiguous request makes the gate order-independent, so no handler's
+			// key preference can diverge from what was actually authorized.
+			const tipoKey = options.tipo;
+			const componentTipoKey = options.component_tipo;
+			if (
+				tipoKey !== undefined &&
+				componentTipoKey !== undefined &&
+				String(tipoKey) !== String(componentTipoKey)
+			) {
+				return fail('conflicting component target', ['invalid_request']);
+			}
+			const componentTipo = validTipo(tipoKey ?? componentTipoKey);
+			const sectionId = Number(options.section_id);
+			if (sectionTipo === null || componentTipo === null || !Number.isFinite(sectionId)) {
+				return fail('invalid permission target', ['invalid_request']);
+			}
+			const level = await getPermissions(principal, sectionTipo, componentTipo);
+			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
 			if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
 				return fail('record is out of the user scope', ['unauthorized']);
 			}

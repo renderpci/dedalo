@@ -245,6 +245,16 @@ export async function runAutomaticTranslation(
 		]);
 	}
 
+	// PHP asserts BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124):
+	// assert_tipo_permission(section_tipo, component_tipo, 2) — the SCHEMA pair,
+	// which a section-level check does not imply when the component carries its
+	// own dd774 grant — and assert_record_in_user_scope(section_tipo,
+	// section_id). The 'record' gate below is the second half only, so the pair
+	// is asserted explicitly first.
+	const { getPermissions } = await import('../security/permissions.ts');
+	if ((await getPermissions(ctx.principal, sectionTipo, componentTipo)) < 2) {
+		return fail('insufficient permissions on the target component', ['unauthorized']);
+	}
 	const { assertActionPermission } = await import('./security.ts');
 	const gate = await assertActionPermission(
 		{
@@ -285,13 +295,30 @@ export async function runAutomaticTranslation(
 		: fail(outcome.msg);
 }
 
-/** Resolve the {uri, key} for an engine from a tool's translator_config (dd996). */
+/**
+ * Resolve the {uri, key} for an engine from a tool's translator_config (dd996).
+ *
+ * SHAPE: `getToolConfig` resolves options FLAT — one key per option, already
+ * unwrapped — so the entry list is `toolConfig.translator_config` (an array).
+ * The nested `config.translator_config.value` form is PHP's raw config-item
+ * shape and is TOLERATED as legacy, but reading ONLY it (as this did until
+ * 2026-07-28) meant the resolver never matched what the caller actually passes:
+ * every automatic_translation failed with "Translator config is not defined"
+ * while the tests fed the nested shape by hand and stayed green. Same bug, same
+ * fix, as resolveTranscriberConfig one subsystem over.
+ */
 export function resolveTranslatorConfig(
 	toolConfig: Record<string, unknown>,
 	engine: string,
 ): { uri: string; key: string } | null {
-	const configs = (toolConfig?.config as { translator_config?: { value?: unknown[] } } | undefined)
+	const flat = toolConfig?.translator_config;
+	const nested = (toolConfig?.config as { translator_config?: { value?: unknown[] } } | undefined)
 		?.translator_config?.value;
+	// Tolerate an un-unwrapped `{value:[…]}` under the flat key too (a config
+	// layer that stored the prop object rather than its value).
+	const configs = Array.isArray(flat)
+		? flat
+		: ((flat as { value?: unknown } | undefined)?.value ?? nested);
 	if (!Array.isArray(configs)) return null;
 	const entry = configs.find(
 		(item) =>

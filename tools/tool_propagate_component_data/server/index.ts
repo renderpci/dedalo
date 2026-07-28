@@ -11,6 +11,12 @@
  * — there is no single record — so this uses `permission: null` + an imperative
  * getPermissions gate (the declarative record/tipo gates target one record/tipo).
  *
+ * BACKGROUND: the handler publishes a throttled progress frame per record (the
+ * `msg | section_label | counter of total | id:` line the client's SSE reader
+ * renders) and honors `ctx.signal` at the loop boundary, so the panel's Stop
+ * button really stops the batch — a partial run keeps its bulk_process_id and
+ * stays revertible.
+ *
  * The value decision (replace/delete/add + locator matching) is the tested pure
  * core `propagate.ts`; the write path mirrors the verified tool_time_machine
  * apply_value (persistRecordKeys + recordTimeMachine, NOT saveComponentData —
@@ -153,9 +159,35 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 	const bulkLabel = String(options.bulk_process_label ?? `Propagate ${action} to ${componentTipo}`);
 	const bulkProcessId = await createBulkProcess(bulkLabel, userId);
 
+	// Live progress + cooperative cancellation. The copied client renders
+	// data.msg | data.section_label | data.counter of data.total | id:
+	// data.current.section_id (render_tool_propagate_component_data.js
+	// compound_msg) and its Stop button posts dd_utils_api::stop_process, which
+	// aborts the executor's per-job AbortSignal. Neither was wired: a batch over
+	// tens of thousands of records showed no progress and could not be stopped.
+	// Throttled — every publish rewrites the pfile mirror (PHP print_cli parity).
+	const publish = ctx.publishProgress ?? ((): void => {});
+	const PROGRESS_MS = 250;
+	let lastPublish = 0;
+	let stopped = false;
+	publish({
+		msg: `Processing ${action}: ${componentTipo}`,
+		is_running: true,
+		counter: 0,
+		total: rows.length,
+		section_label: sectionLabel,
+	});
+
 	const errors: string[] = [];
 	let counter = 0;
 	for (const row of rows) {
+		// Finish the current record, never abort mid-write (tool_update_cache
+		// precedent). The partial run keeps its bulk_process_id, so whatever it
+		// did write stays revertible through tool_time_machine.
+		if (ctx.signal?.aborted === true) {
+			stopped = true;
+			break;
+		}
 		try {
 			const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
 			const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
@@ -164,6 +196,18 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 			const langSlice = translatable ? filterItemsByLang(allItems, lang) : allItems;
 			const { final, changed } = applyPropagation(langSlice, action, propagateValue, withRelations);
 			counter += 1;
+			const now = Date.now();
+			if (counter === rows.length || now - lastPublish >= PROGRESS_MS) {
+				lastPublish = now;
+				publish({
+					msg: `Processing ${action}: ${componentTipo}`,
+					is_running: true,
+					counter,
+					total: rows.length,
+					section_label: sectionLabel,
+					current: { section_tipo: row.section_tipo, section_id: row.section_id },
+				});
+			}
 			if (!changed) continue;
 
 			// Merge the mutated lang slice back into the full multi-lang array.
@@ -206,12 +250,14 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 
 	return {
 		result: true,
-		msg: `OK. ${action} data of '${componentTipo}' in section '${sectionLabel}' ${errors.length === 0 ? 'successfully' : 'done with warnings'}.`,
+		msg: `${stopped ? 'STOPPED.' : 'OK.'} ${action} data of '${componentTipo}' in section '${sectionLabel}' ${errors.length === 0 ? 'successfully' : 'done with warnings'}. ${counter} of ${rows.length} record(s) processed.`,
 		errors,
 		action,
 		section_label: sectionLabel,
 		total,
 		counter,
+		records: rows.length,
+		stopped,
 		bulk_process_id: bulkProcessId,
 	};
 }
