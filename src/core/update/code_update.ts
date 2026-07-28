@@ -246,6 +246,15 @@ export async function updateCode(
 		response.errors.push('file.url and file.version are required');
 		return response;
 	}
+	// CMD-06 (2026-07-28 audit): `version` is used downstream as a path segment,
+	// and parseVersionString/compareVersionArrays NaN-short-circuit — so a
+	// traversal value like `../../x` could slip the linear-upgrade gate. Require a
+	// strict numeric-dotted form up front so it can never be a path or an option.
+	if (!/^\d+(\.\d+){1,3}$/.test(version)) {
+		response.msg = 'Error. Malformed release version';
+		response.errors.push('version must be a numeric dotted release (e.g. 7.0.1)');
+		return response;
+	}
 	const target = parseVersionString(version);
 	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, target);
 	if (linear !== null) {
