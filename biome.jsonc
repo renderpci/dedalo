@@ -75,6 +75,12 @@
 			"tools/tool_qr/lib/**",
 			"tools/tool_lang/translators/browser_transformer/**",
 			"tools/tool_transcription/transcribers/browser_whisper/**",
+			// The transcription tool's shared recognition modules (VAD, repetition
+			// clean-up, paragraph grouping). Browser-served Worker assets on the same
+			// client conventions as the rest of the tool's JS — and imported UNCHANGED
+			// by the server and the test gates, which is the point: one implementation,
+			// no build step. Their .d.ts siblings ARE linted.
+			"tools/*/transcribers/lib/*.js",
 			// Documentation bundle (prebuilt site assets, not server source; renamed
 			// docs_v7 → docs in the 2026-07-10 docs-tree split).
 			"docs/**",
