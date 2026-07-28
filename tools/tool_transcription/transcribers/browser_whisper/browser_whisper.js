@@ -1,269 +1,517 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global self*/
 /*eslint no-undef: "error"*/
 
 
 /**
 * BROWSER_WHISPER
-* Web Worker module that runs an in-browser automatic speech recognition (ASR)
-* pipeline using Hugging Face Transformers.js and a Whisper ONNX model.
+* Web Worker that runs speech recognition ENTIRELY IN THE BROWSER via
+* Transformers.js and an ONNX Whisper model. The audio never leaves the machine —
+* which is the whole point for oral-history interviews holding personal data.
 *
-* This file is always loaded as a Web Worker (never as a plain ES module in the
-* main thread) because:
-*   - AudioContext / audio decoding is done on the caller side and the resulting
-*     raw Float32Array is transferred via postMessage.
-*   - Long-running WASM/WebGPU inference blocks the main thread; isolating it in
-*     a Worker keeps the UI responsive.
+* It is always a Worker, never a plain module: audio decoding needs AudioContext
+* (main thread only, so the caller decodes and transfers the PCM), and WASM/WebGPU
+* inference would otherwise freeze the UI for the length of the recording.
 *
-* Message protocol (caller → worker):
-*   postMessage({ options: { model, audio_file, language, device } })
+* HOW IT TRANSCRIBES (and why it is not the obvious way).
+* The obvious way — hand the model the whole recording and let it cut every 30
+* seconds with a 5-second overlap — is what produced the repeated words this
+* rewrite fixes. Blind cuts land inside words, so the windows must overlap, and
+* the overlap gets transcribed twice; and the silence inside those windows is the
+* single most reliable trigger of Whisper's repetition loops. Instead:
 *
-* Message protocol (worker → caller):
-*   { status: 'init',              data: { progress, status, device } }
-*   { status: 'on_chunk_start',    data: '' }
-*   { status: 'callback_function', data: <partial transcript string> }
-*   { status: 'end',               data: <Array of transcript segment objects> }
+*   1. VAD (lib/vad.js) finds where somebody is actually speaking and plans decode
+*      windows that start and end AT PAUSES — no overlap needed, and long silences
+*      are never sent to the model at all;
+*   2. each window is decoded independently, with anti-loop decoding parameters
+*      (see DEFAULT_DECODE) and no conditioning on the previous window, so one
+*      looping window cannot poison the next;
+*   3. a window whose output still looks like a loop is RETRIED up the temperature
+*      ladder — the same fallback reference Whisper implementations use — and the
+*      least repetitive attempt wins;
+*   4. whatever survives goes through lib/transcript_postprocess.js, the
+*      deterministic net for the repetitions no decoding parameter prevents.
 *
-* Transcript segment shape (element of the returned array):
-*   {
-*     text     : string,    // raw recognised text for the segment
-*     start    : string,    // timecode 'HH:MM:SS.mmm'
-*     end      : string,    // timecode 'HH:MM:SS.mmm'
-*     dd_format: string     // Dédalo TC-tagged string '[TC_HH:MM:SS.mmm_TC]text'
-*   }
+* MESSAGE PROTOCOL (caller → worker):
+*   { action:'transcribe', options:{ audio, sample_rate, language, model, device,
+*                                    dtype, decode, vad, postprocess } }
+*   { action:'abort' }   — stop after the current window and return what is done
 *
-* Exports (on self):
-*   self.onmessage       — entry point; dispatches to self.transcribe
-*   self.transcribe      — ASR pipeline runner
-*   self.seconds_to_tc   — seconds→timecode formatter
+* MESSAGE PROTOCOL (worker → caller):
+*   { status:'init',         data:{ progress, status, device, file } }
+*   { status:'plan',         data:{ windows, speech_seconds, duration } }
+*   { status:'window_start', data:{ index, total, from, to, done_seconds, speech_seconds } }
+*   { status:'partial',      data:{ text } }          live tokens (greedy only)
+*   { status:'progress',     data:{ segments, done_seconds, speech_seconds } }
+*   { status:'end',          data:{ segments, aborted } }
+*   { status:'error',        data:{ message } }
+*
+* SEGMENT SHAPE returned to the caller: { text, start, end } with times in SECONDS
+* from the start of the recording. Formatting (paragraphs, timecode marks) is NOT
+* done here — the caller applies lib/paragraphs.js, so the archivist can change
+* paragraph rules without re-running the recogniser.
 */
 
-// imports
-import { pipeline, WhisperTextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
+// The ASR runtime. Served from the engine's own client-lib registry
+// (/dedalo/lib/transformers/), never from a CDN: an archive may be air-gapped,
+// and a request to a third party would leak WHEN a record is transcribed.
+import { pipeline, WhisperTextStreamer, env } from '/dedalo/lib/transformers/dist/transformers.js';
+
+import { clean_transcript, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
+import { plan_windows, total_speech_seconds } from '../lib/vad.js';
+
+
+/**
+* DEFAULT_DECODE
+* Decoding parameters, quality-first. Every one of them exists to stop the decoder
+* looping; they cost speed and buy correctness, which is the trade this tool wants.
+*
+*   num_beams            — beam search explores alternatives instead of committing
+*                          to the first token; a loop is rarely the best BEAM, so
+*                          this alone removes many of them. Greedy (1) is faster
+*                          and is what live token streaming requires.
+*   repetition_penalty   — down-weights tokens already produced.
+*   no_repeat_ngram_size — forbids repeating any n-gram of this length verbatim.
+*                          Kept at 4: shorter would forbid ordinary speech
+*                          ("no, no, no"), longer would miss short loops.
+*   temperature ladder   — retry values for a window that came back degenerate.
+*/
+export const DEFAULT_DECODE = {
+	num_beams				: 4,
+	repetition_penalty		: 1.15,
+	no_repeat_ngram_size	: 4,
+	temperature_ladder		: [0.2, 0.4, 0.6, 0.8],
+	max_retries				: 3
+};
+
+
+/** Sample rate the caller must resample to — Whisper's only accepted input rate. */
+const REQUIRED_SAMPLE_RATE = 16000;
+
+/** Set by the 'abort' message; checked between windows. */
+let aborted = false;
 
 
 /**
 * ONMESSAGE
-* Entry-point handler for messages sent by the caller (main thread).
-* Reads `e.data.options`, delegates to `self.transcribe`, then posts the
-* final result back as `{ status: 'end', data: <transcripts array> }`.
+* Entry point. Dispatches on `action` and always answers with exactly one terminal
+* message ('end' or 'error'), so the caller's promise can never hang.
 *
-* `e.data` shape:
-* {
-*   options: {
-*     audio_file : {Float32Array} — raw 16 kHz mono PCM (decoded on the caller side)
-*     language   : {string}       — BCP-47 / tld2 code, e.g. 'en', 'es', 'fr'
-*     model      : {string}       — HuggingFace model ID compatible with Transformers.js
-*     device     : {string}       — 'webgpu' (default) or 'wasm'
-*   }
-* }
-*
-* (!) The caller must decode the audio file to a Float32Array BEFORE posting it
-* to the worker because AudioContext is not available inside a Worker scope.
-*
-* @param {MessageEvent} e - Worker message event
+* @param {MessageEvent} e
 * @returns {Promise<void>}
 */
 self.onmessage = async (e) => {
-	// const t1 = performance.now()
 
-	// options
-		const options	= e.data.options // object of options to sent to the function
+	const data = e.data || {};
 
-	// fire function
-		const response = await self.transcribe( options )
+	// The cancel signal: flip the flag and return. The running window finishes
+	// (there is no way to interrupt an inference call) and the loop stops after it,
+	// so the user still keeps everything transcribed so far.
+	if (data.action==='abort') {
+		aborted = true;
+		return;
+	}
 
-	self.postMessage({
-		status: 'end',
-		data: response
-	});
+	try {
+		const segments = await self.transcribe( data.options || {} );
+
+		self.postMessage({
+			status	: 'end',
+			data	: {
+				segments	: segments,
+				aborted		: aborted
+			}
+		});
+	} catch (error) {
+		self.postMessage({
+			status	: 'error',
+			data	: { message: (error && error.message) ? error.message : String(error) }
+		});
+	}
 }//end onmessage
 
+
+/**
+* RESOLVE_DTYPE
+* The quantisation used for the encoder and the decoder.
+*
+* THIS IS THE SETTING THAT CAUSED THE REPEATED WORDS. The previous code forced a
+* 4-bit (`q4`) decoder for every model whose id contained 'large' or 'medium' —
+* and 'large' is the shipped default — while 4-bit quantisation of Whisper's
+* DECODER is the best-known trigger of repetition loops. The encoder tolerates
+* quantisation far better than the decoder, so they are chosen separately, and the
+* catalog may override per model.
+*
+* @param {string} model - model id
+* @param {Object} [override] - {encoder_model, decoder_model_merged} from the catalog
+* @returns {Object} the Transformers.js dtype map
+*/
+function resolve_dtype( model, override ) {
+
+	if (override && override.encoder_model && override.decoder_model_merged) {
+		return {
+			encoder_model			: override.encoder_model,
+			decoder_model_merged	: override.decoder_model_merged
+		};
+	}
+
+	const heavy = model.includes('large') || model.includes('medium');
+
+	return {
+		// fp16 halves the encoder's memory at no measurable accuracy cost.
+		encoder_model			: heavy ? 'fp16' : 'fp32',
+		// q4f16 keeps 4-bit weights but 16-bit activations — the accuracy of the
+		// decoder's arithmetic is what a loop is sensitive to.
+		decoder_model_merged	: heavy ? 'q4f16' : 'fp32'
+	};
+}//end resolve_dtype
+
+
+/**
+* CONFIGURE_SOURCES
+* Point Transformers.js at THIS INSTALL for everything it loads at runtime: the
+* model weights and the onnxruntime WASM binaries.
+*
+* Out of the box the library fetches both from public CDNs. For an archive that
+* runs the recogniser locally *because* the recordings are confidential, that is
+* the wrong default twice over: it fails outright with no outbound internet, and
+* where there is internet it tells a third party when a record is being worked on.
+*
+* `model_host` is normally the engine's own model store (/dedalo/ai_models/). An
+* install that has internet and prefers on-demand downloads can opt back in to the
+* public hub — explicitly, never silently.
+*
+* @param {Object} [sources]
+* @param {string} [sources.model_host] - base URL of the model store
+* @param {boolean} [sources.allow_hub] - allow the public model hub as a fallback
+* @param {string} [sources.wasm_path] - base URL of the onnxruntime WASM binaries
+* @returns {void}
+*/
+function configure_sources( sources ) {
+
+	const options = sources || {};
+
+	// onnxruntime WASM binaries, served from the client-lib registry.
+	const wasm_path = options.wasm_path || '/dedalo/lib/onnxruntime/dist/';
+	if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
+		env.backends.onnx.wasm.wasmPaths = new URL( wasm_path, self.location.origin ).href;
+	}
+
+	if (options.allow_hub===true) {
+		// Explicit opt-in: leave the library's own hub defaults in place.
+		return;
+	}
+
+	// Model weights from this install only. `remoteHost` + `remotePathTemplate`
+	// make '<host><model>/…' the resolved URL of every model file.
+	env.allowRemoteModels	= true;	// "remote" here means our own origin
+	env.allowLocalModels	= false;	// (a browser has no local filesystem anyway)
+	env.remoteHost			= new URL( options.model_host || '/dedalo/ai_models/', self.location.origin ).href;
+	env.remotePathTemplate	= '{model}/';
+	env.useBrowserCache		= true;	// a second transcription must not re-download
+}//end configure_sources
+
+
+/**
+* LOAD_PIPELINE
+* Build the ASR pipeline, preferring WebGPU and falling back to WASM.
+*
+* The fallback is automatic on purpose: the device used to be a checkbox the user
+* had to understand, and an unchecked box on a machine without WebGPU meant a
+* failure instead of a slower run.
+*
+* @param {string} model
+* @param {string} requested_device - 'webgpu' | 'wasm' | 'auto'
+* @param {Object} dtype
+* @returns {Promise<{transcriber:Object, device:string}>}
+*/
+async function load_pipeline( model, requested_device, dtype, sources ) {
+
+	configure_sources( sources );
+
+	const progress_callback = ({ progress, status, file }) => {
+		self.postMessage({
+			status	: 'init',
+			data	: {
+				progress	: progress,
+				status		: status,
+				file		: file,
+				device		: requested_device
+			}
+		});
+	};
+
+	const webgpu_available = typeof navigator!=='undefined' && navigator.gpu!==undefined;
+	const device = (requested_device==='auto' || requested_device===undefined)
+		? (webgpu_available ? 'webgpu' : 'wasm')
+		: requested_device;
+
+	try {
+		const transcriber = await pipeline('automatic-speech-recognition', model, {
+			device				: device,
+			dtype				: dtype,
+			progress_callback	: progress_callback
+		});
+		return { transcriber: transcriber, device: device };
+	} catch (error) {
+		if (device==='wasm') {
+			throw error;
+		}
+		// WebGPU can fail late (out of memory, buffer mapping) on machines that
+		// advertise it. Slower is a better answer than failed.
+		console.warn('[browser_whisper] WebGPU pipeline failed, falling back to WASM:', error);
+		const transcriber = await pipeline('automatic-speech-recognition', model, {
+			device				: 'wasm',
+			dtype				: dtype,
+			progress_callback	: progress_callback
+		});
+		return { transcriber: transcriber, device: 'wasm' };
+	}
+}//end load_pipeline
+
+
+/**
+* DECODE_WINDOW
+* Run the recogniser over ONE window of audio and return its segments, with
+* timestamps already shifted to the whole recording's timeline.
+*
+* @param {Object} params
+* @param {Object} params.transcriber - the loaded pipeline
+* @param {Float32Array} params.samples - this window's PCM
+* @param {number} params.offset - the window's start, in seconds
+* @param {string} params.language
+* @param {Object} params.decode - resolved decoding parameters
+* @param {number} params.temperature - 0 for the first attempt, then the ladder
+* @param {boolean} params.stream - emit live tokens (greedy attempts only)
+* @returns {Promise<Array<Object>>} segments {text, start, end}
+*/
+async function decode_window({ transcriber, samples, offset, language, decode, temperature, stream }) {
+
+	// Live token streaming is only available while decoding greedily — beam search
+	// has no single running hypothesis to show. When beams are on, the caller's
+	// progress comes from the per-window messages instead.
+	const streamer = (stream===true)
+		? new WhisperTextStreamer( transcriber.tokenizer, {
+			callback_function: (text) => {
+				self.postMessage({ status: 'partial', data: { text: text } });
+			}
+		})
+		: undefined;
+
+	const options = {
+		language				: language,
+		task					: 'transcribe',
+		return_timestamps		: true,
+		// No chunking here: a window is already shorter than the model's context,
+		// and it starts and ends at a pause.
+		num_beams				: temperature>0 ? 1 : decode.num_beams,
+		do_sample				: temperature>0,
+		temperature				: temperature>0 ? temperature : undefined,
+		repetition_penalty		: decode.repetition_penalty,
+		no_repeat_ngram_size	: decode.no_repeat_ngram_size,
+		// Each window is decoded independently: a loop in one cannot seed the next.
+		condition_on_prev_tokens: false
+	};
+	if (streamer!==undefined) {
+		options.streamer = streamer;
+	}
+
+	const output = await transcriber( samples, options );
+	const chunks = Array.isArray(output?.chunks) ? output.chunks : [];
+
+	if (chunks.length===0) {
+		const text = (output?.text || '').trim();
+		return text===''
+			? []
+			: [{ text: text, start: offset, end: null }];
+	}
+
+	return chunks.map( chunk => {
+		const start	= Array.isArray(chunk.timestamp) ? chunk.timestamp[0] : null;
+		const end	= Array.isArray(chunk.timestamp) ? chunk.timestamp[1] : null;
+		return {
+			text	: chunk.text,
+			start	: typeof start==='number' ? offset + start : offset,
+			end		: typeof end==='number' ? offset + end : null
+		};
+	});
+}//end decode_window
+
+
+/**
+* TRANSCRIBE_WINDOW
+* Decode one window, and retry it up the temperature ladder while the result looks
+* like a repetition loop. The least repetitive attempt is the one kept.
+*
+* Retrying rather than dropping matters for an archive: a looped window usually
+* still contains real speech, and silently discarding it would leave a hole in the
+* transcript that nobody can see.
+*
+* @param {Object} params - as decode_window, minus `temperature`
+* @returns {Promise<Array<Object>>} segments
+*/
+async function transcribe_window( params ) {
+
+	const decode	= params.decode;
+	const ladder	= [0].concat( decode.temperature_ladder.slice(0, decode.max_retries) );
+
+	let best		= null;
+	let best_score	= Number.POSITIVE_INFINITY;
+
+	for (let attempt = 0; attempt < ladder.length; attempt++) {
+
+		const temperature	= ladder[attempt];
+		const segments		= await decode_window( Object.assign({}, params, {
+			temperature	: temperature,
+			// Only the first, greedy-or-beam attempt streams: a retry would
+			// otherwise re-print the same window's text in the status line.
+			stream		: attempt===0 && params.stream===true && decode.num_beams<=1
+		}));
+
+		const text	= segments.map( segment => segment.text ).join(' ');
+		const score	= repetition_score( text );
+
+		if (score<best_score) {
+			best		= segments;
+			best_score	= score;
+		}
+
+		if (!is_degenerate( text )) {
+			return segments;
+		}
+	}
+
+	return best===null ? [] : best;
+}//end transcribe_window
 
 
 /**
 * TRANSCRIBE
-* Builds a Transformers.js Whisper ASR pipeline, runs it over the supplied
-* Float32Array audio, and returns a fully annotated transcript array.
-*
-* Pipeline configuration:
-*   - dtype: large/medium models use fp16 encoder + q4 merged decoder (memory
-*     saving); smaller models use fp32 throughout for accuracy.
-*   - Sliding-window chunking: 30-second chunks with 5-second stride overlap
-*     so words cut at chunk boundaries are recovered from the overlapping region.
-*   - Greedy decoding (top_k=0, do_sample=false) for deterministic output.
-*   - return_timestamps:true forces Whisper to emit per-segment start/end times.
-*
-* During processing the function streams intermediate results back via
-* postMessage so the UI can show live progress (see `streamer` callbacks).
+* The pipeline runner: plan windows, decode them one by one, clean up, return.
 *
 * @param {Object} options
-* @param {string} options.model       - HuggingFace model ID (e.g. 'onnx-community/whisper-large-v3-ONNX')
-* @param {Float32Array} options.audio_file - 16 kHz mono PCM audio samples
-* @param {string} [options.language='en'] - tld2 language code for the audio
-* @param {string} [options.device='webgpu'] - inference backend; 'webgpu' or 'wasm'
-* @returns {Promise<Array<{text:string, start:string, end:string, dd_format:string}>>}
+* @param {Float32Array} options.audio - mono PCM at 16 kHz (decoded by the caller)
+* @param {number} [options.sample_rate=16000]
+* @param {string} [options.language='en'] - ISO 639-1 code
+* @param {string} options.model - model id resolved by the catalog
+* @param {string} [options.device='auto'] - 'auto' | 'webgpu' | 'wasm'
+* @param {Object} [options.dtype] - per-model quantisation override
+* @param {Object} [options.decode] - overrides of DEFAULT_DECODE
+* @param {Object} [options.vad] - overrides of the VAD defaults
+* @param {Object} [options.postprocess] - overrides of the clean-up defaults
+* @returns {Promise<Array<Object>>} cleaned segments {text, start, end}
 */
 self.transcribe = async function( options ) {
 
-	// sort variables
-		const model			= options.model;
-		const audio_file	= options.audio_file;
-		const language		= options.language || 'en'; //or 'spanish', 'french', etc.
-		const device 		= options.device || 'webgpu'; // 'wasm' or 'webgpu'
+	aborted = false;
 
-	// Initialize the Whisper pipeline
-		const transcriber = await pipeline('automatic-speech-recognition', model,  {
-			device: device,//'webgpu',
-			dtype: {
-				encoder_model:
-					( model.includes('large') || model.includes('medium') )
-						? "fp16"
-						: "fp32",
-				decoder_model_merged:
-					( model.includes('large') || model.includes('medium') )
-						? 'q4'
-						: 'fp32'
-			},
+	const audio			= options.audio || options.audio_file;
+	const sample_rate	= options.sample_rate || REQUIRED_SAMPLE_RATE;
+	const language		= options.language || 'en';
+	const model			= options.model;
+	const decode		= Object.assign({}, DEFAULT_DECODE, options.decode || {});
 
-			// show the status in the browser
-			progress_callback: ({ progress, status, file }) => {
-				self.postMessage({
-					status: 'init',
-					data: {
-						progress,
-						status,
-						device
-					}
-				});
+	if (!audio || audio.length===0) {
+		throw new Error('No audio was supplied to the transcriber');
+	}
+	if (!model) {
+		throw new Error('No model was supplied to the transcriber');
+	}
+
+	// 1. Plan the decode windows BEFORE loading the model: planning is cheap, and
+	// a recording with no speech at all should not download 1.5 GB of weights.
+	const windows		= plan_windows( audio, sample_rate, options.vad );
+	const speech_seconds= total_speech_seconds( windows );
+
+	self.postMessage({
+		status	: 'plan',
+		data	: {
+			windows			: windows.length,
+			speech_seconds	: speech_seconds,
+			duration		: audio.length / sample_rate
+		}
+	});
+
+	if (windows.length===0) {
+		return [];
+	}
+
+	// 2. Load the model.
+	const dtype						= resolve_dtype( model, options.dtype );
+	const { transcriber, device }	= await load_pipeline(
+		model,
+		options.device || 'auto',
+		dtype,
+		options.sources
+	);
+
+	self.postMessage({
+		status	: 'init',
+		data	: { status: 'ready', device: device, progress: 100 }
+	});
+
+	// 3. Decode window by window.
+	// A resumed run starts with what the interrupted one already produced, and
+	// skips every window that lies entirely behind that point — an archivist whose
+	// browser died 50 minutes into an interview does not transcribe it twice.
+	const resume_seconds	= typeof options.resume_seconds==='number' ? options.resume_seconds : 0;
+	const collected			= Array.isArray(options.resume_segments) ? options.resume_segments.slice() : [];
+	let done_seconds		= 0;
+
+	for (let index = 0; index < windows.length; index++) {
+
+		if (aborted===true) {
+			break;
+		}
+
+		const window	= windows[index];
+
+		if (window.end<=resume_seconds) {
+			done_seconds += (window.end - window.start);
+			continue;
+		}
+		const from		= Math.max( 0, Math.floor(window.start * sample_rate) );
+		const to		= Math.min( audio.length, Math.ceil(window.end * sample_rate) );
+
+		self.postMessage({
+			status	: 'window_start',
+			data	: {
+				index			: index,
+				total			: windows.length,
+				from			: window.start,
+				to				: window.end,
+				done_seconds	: done_seconds,
+				speech_seconds	: speech_seconds
 			}
 		});
 
-	// cut the audio file to be processed
-	const chunk_length_s	= 30;
-	// overlapping between audio files (improve the result of the transcription when the chunk cut in middle of word)
-	const stride_length_s	= 5;
-	// every chunk is a object with the text
-	const ar_chunks = [];
-	// create the Text processor for Whisper (streamer)
-	// WhisperTextStreamer emits decoded token strings incrementally so the UI can
-	// display partial results while inference is still running.
-	const streamer = new WhisperTextStreamer(transcriber.tokenizer, {
-		// when the chunk start empty its text
-		on_chunk_start: (chunkIndex) => {
-			ar_chunks.push({
-				text	: ""
-			})
-
-			self.postMessage({
-				status: 'on_chunk_start',
-				data: ''
-			});
-		},
-		// every time that a token is ready (as word processed) show it.
-		callback_function: (text) => {
-			const chunk_text = ar_chunks.at(-1).text += text;
-
-			self.postMessage({
-				status: 'callback_function',
-				data: chunk_text
-			});
-			// console.log("text:",ar_chunks.at(-1).text);
-		},
-		// token_callback_function: (token) => {
-		//   // console.log(`Generated token: ${token}`);
-		// },
-		// on_chunk_end: (chunkIndex) => {
-		// 	 const current = ar_chunks.at(-1);
-
-		// 	 current.end = chunkIndex + current.offset
-
-		// 	 console.log("text:",ar_chunks.at(-1).text);
-		// },
-		// on_finalize: () => {
-		// 	nodes.status_container.innerHTML = 'Transcription finalized.';
-		// 	console.log('Transcription finalized.');
-		// }
-	 });
-
-	// Final processed chunks
-	// Every chunk is a object with the text and the start and end time in seconds
-	const transcripts = [];
-	const { chunks } = await transcriber( audio_file, {
-
-		// Greedy
-			top_k		: 0, //The number of highest probability vocabulary tokens to keep for top-k-filtering.
-			do_sample	: false, // Whether or not to use sampling ; use greedy decoding otherwise.
-
-		// Sliding window
-			chunk_length_s	: 30, // set the chunk length
-			stride_length_s	: 5, // set the overlapping between chunks (better when the chunk cut in middle of phrase)
-
-		// Language and task
+		const segments = await transcribe_window({
+			transcriber	: transcriber,
+			samples		: audio.subarray( from, to ),
+			offset		: window.start,
 			language	: language,
-			task		: 'transcribe', // or 'translate' (to English)
+			decode		: decode,
+			stream		: true
+		});
 
-		// Return timestamps
-			return_timestamps		: true,
-			force_full_sequences	: false,
+		collected.push(...segments);
+		done_seconds += (window.end - window.start);
 
-		// control the process
-			streamer : streamer
+		// Incremental result: the caller persists this so a closed tab can resume
+		// instead of starting the whole interview again.
+		self.postMessage({
+			status	: 'progress',
+			data	: {
+				segments		: clean_transcript( collected, options.postprocess ),
+				done_seconds	: done_seconds,
+				speech_seconds	: speech_seconds
+			}
+		});
+	}
 
-	});
-
-	// Add global time offset to each segment
-	// segment.timestamp is [startSeconds, endSeconds] as returned by Whisper.
-	// Each segment is mapped to the Dédalo dd_format string that component_text_area
-	// understands: '[TC_HH:MM:SS.mmm_TC]text'.
-		const timed_chunks = chunks.map(segment => ({
-			text		: segment.text,
-			start		: self.seconds_to_tc (segment.timestamp[0]),
-			end			: self.seconds_to_tc (segment.timestamp[1]),
-			dd_format	: `[TC_${self.seconds_to_tc(segment.timestamp[0])}_TC]${segment.text}`
-		}));
-
-	// Insert the chunk with correct time code into the transcripts
-		transcripts.push(...timed_chunks);
-
-	return transcripts;
-}
-
-
-
-/**
-* SECONDS_TO_TC
-* Converts a floating-point seconds value (as returned by Whisper's timestamp
-* output) into a Dédalo timecode string with millisecond precision.
-*
-* Example:
-*   seconds_to_tc(5.6)    → '00:00:05.600'
-*   seconds_to_tc(3661.5) → '01:01:01.500'
-*
-* (!) `total_seconds` may be null/undefined for the last chunk's end timestamp
-* when Whisper cannot determine the end of audio; callers should guard for that
-* case if they need a strict string.
-*
-* @param {number} total_seconds - Duration in seconds (may include fractional part)
-* @returns {string} Timecode string in 'HH:MM:SS.mmm' format
-*/
-self.seconds_to_tc = function( total_seconds ) {
-
-	const hours			= Math.floor(total_seconds / 3600);
-	const minutes		= Math.floor((total_seconds % 3600) / 60);
-	const seconds		= Math.floor(total_seconds % 60);
-	const milliseconds	= Math.round((total_seconds % 1) * 1000);
-
-	// add 0 to the value from 2 to 02
-	const pad = (num, length = 2) => num.toString().padStart(length, '0');
-
-	// set the time code format with semicolon between values as 01:02:05.546
-	const tc = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(milliseconds, 3)}`
-
-	return tc;
-}//end seconds_to_tc
-
-
+	// 4. The deterministic clean-up (loops, boundary duplication, timing repair).
+	return clean_transcript( collected, options.postprocess );
+}//end transcribe
 
 
 // @license-end

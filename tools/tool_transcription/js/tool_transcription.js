@@ -72,6 +72,7 @@
 	import { common, create_source } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../../core/tools_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
+	import { parse_transcript, segments_to_html } from '../transcribers/lib/paragraphs.js'
 
 
 
@@ -489,66 +490,55 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 
 /**
 * AUTOMATIC_TRANSCRIPTION
-* Create a transformer pipeline with Whisper
-* using a browser WASM transcribe and save the resulting value
+* Transcribe the record's audio IN THE BROWSER and return the text ready for the
+* transcription component.
 *
-* This is the client-side (browser) transcription path.  It:
-*   1. Requests the server to produce a 16 kHz mono WAV file suitable for Whisper
-*      (action `create_transcribable_audio_file`) via dd_tools_api.
-*   2. Fetches the resulting audio file, decodes it with the Web Audio API at 16 kHz,
-*      and extracts the Float32Array from channel 0.
-*   3. Spawns a Web Worker (`browser_whisper.js`) that loads the chosen ONNX Whisper
-*      model and processes the audio.  The worker communicates back via `onmessage`
-*      with a status field:
-*        'init'              — model loading progress (0–100 %) or 'ready'
-*        'on_chunk_start'    — a new audio chunk is about to be decoded
-*        'callback_function' — intermediate word/phrase results (streaming display)
-*        'end'               — final transcription array; triggers parse_dedalo_format
-*   4. After the worker finishes, sends a cleanup request to delete the server-side
-*      temporary audio file (`delete_transcribable_audio_file`).
-*   5. Resolves the outer Promise with the `parse_dedalo_format` result — an array
-*      containing a single HTML string ready to be passed to
-*      `transcription_component.set_value(0, response[0])`.
+* The audio never leaves the machine: the server only extracts a 16 kHz mono WAV
+* from the media original, and every step after that happens here. That is what
+* makes the tool usable on interviews holding personal data, in institutions with
+* no cloud contract and often no outbound internet at all.
 *
-* Device selection: when `nodes.transcriber_device_checkbox` is checked, the worker
-* runs in WASM mode (CPU-only); unchecked = WebGPU.  WASM mode only supports small
-* models because large ONNX models exceed the browser RAM limit for ArrayBuffer transfers.
+* The flow:
+*   1. ask the server for the transcribable WAV (`create_transcribable_audio_file`);
+*   2. fetch it, decode it at 16 kHz through the Web Audio API and TRANSFER the
+*      samples to the worker (transferring, not copying — a 90-minute interview is
+*      ~350 MB of float samples and copying it doubles that for no reason);
+*   3. let the worker plan speech windows, transcribe them and report progress;
+*   4. format the result into paragraphs (lib/paragraphs.js) and resolve;
+*   5. delete the throwaway WAV — on EVERY exit path, including failure and cancel.
 *
-* The server-preparation request uses a 3600-second timeout because large video files
-* may take significant time to re-encode.  The same timeout is applied to the cleanup
-* request (fire-and-forget: the Promise is not awaited).
+* Partial results are written to IndexedDB as they arrive, so closing the window
+* mid-job no longer throws the work away: the next run resumes from where it got to.
 *
-* (!) Status container DOM output uses `textContent` throughout to prevent XSS from
-* worker-supplied transcription fragments (SEC-031 markers in render_tool_transcription.js).
+* (!) Status output uses textContent throughout: worker output is recognised
+* speech and may contain HTML characters (SEC-031).
 *
-* @param {Object} options - Transcription configuration
-* @param {string} options.transcriber_engine - Engine name selected by the user (e.g. 'local')
-* @param {string} options.transcriber_quality - ONNX model identifier (e.g. 'Xenova/whisper-small')
-* @param {string} options.source_lang - Dédalo language tag of the audio, e.g. 'lg-spa'; mapped
-*   to a two-letter ISO 639-1 code (tld2) before being passed to the Whisper worker
-* @param {Object} options.nodes - DOM node references held by the render layer:
-*   nodes.status_container             {HTMLElement} — status display area
-*   nodes.button_automatic_transcription {HTMLElement} — the trigger button (disabled during job)
-*   nodes.transcriber_device_checkbox  {HTMLInputElement} — WASM mode toggle
-* @returns {Promise<Array>} Resolves with the parse_dedalo_format result: an array of one
-*   HTML string, e.g. ['<p>[TC_00:00:01.000_TC] Hello world</p>'].
+* @param {Object} options
+* @param {string} options.transcriber_quality - model id from the catalog
+* @param {string} options.source_lang - Dédalo lang tag ('lg-spa'), mapped to ISO 639-1 here
+* @param {Object} [options.format_options] - paragraph/timecode options (lib/paragraphs.js)
+* @param {Object} [options.decode] - decoding overrides (lib/browser_whisper DEFAULT_DECODE)
+* @param {string} [options.device] - 'auto' (default) | 'webgpu' | 'wasm'
+* @param {Object} options.nodes - DOM nodes held by the render layer:
+*   nodes.status_container, nodes.button_automatic_transcription
+* @returns {Promise<Array>} single-element array with the HTML for component_text_area
 */
 tool_transcription.prototype.automatic_transcription = async function(options) {
 
 	const self = this
 
 	// options
-		const transcriber_engine	= options.transcriber_engine
 		const transcriber_quality	= options.transcriber_quality
 		const nodes					= options.nodes
+		const source_lang			= options.source_lang // self.transcription_component.lang
+		const format_options		= options.format_options || {}
 
-	// source lang
-		const source_lang 			= options.source_lang // self.transcription_component.lang
-
-	// transcribe worker
-		const transcribe_worker = new Worker( '../../tools/tool_transcription/transcribers/browser_whisper/browser_whisper.js', {
-			type : 'module'
-		})
+	// The key partial results are stored under. Per record AND per component, so
+	// two transcriptions open at once never overwrite each other's progress.
+		const resume_id = 'transcription_partial_'
+			+ self.media_component.section_tipo + '_'
+			+ self.media_component.section_id + '_'
+			+ self.transcription_component.tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -566,218 +556,418 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				}
 			}
 		}
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
+
+	/**
+	* SET_STATUS
+	* Write a line of plain text into the status area (never HTML — see SEC-031).
+	*/
+		const set_status = function(text) {
 			nodes.status_container.classList.remove('hide')
-			nodes.status_container.classList.add('loading_status')
-			// SEC-XSS-007: i18n label is plain text; textContent avoids HTML parsing.
-			nodes.status_container.textContent = self.get_tool_label('processing_audio') || 'Processing audio...'
+			nodes.status_container.textContent = text
+		}
+
+	/**
+	* SET_ERROR
+	* Show an error and give the button back, so a failed run can be retried.
+	* The message may contain a server path, so it is built as a text node.
+	*/
+		const set_error = function(message) {
+			console.error('[tool_transcription]', message);
+			nodes.status_container.classList.remove('loading_status')
+			nodes.status_container.replaceChildren()
+			const err_div = document.createElement('div')
+			err_div.className = 'error'
+			err_div.textContent = message
+			nodes.status_container.appendChild(err_div)
+			if (nodes.button_automatic_transcription) {
+				nodes.button_automatic_transcription.classList.remove('disable')
+			}
+		}
+
+	/**
+	* DELETE_AUDIO
+	* Remove the server-side throwaway WAV.
+	*
+	* This is deliberately called on EVERY exit path. It used to run only on
+	* success, which left a copy of the interview audio on disk after any error,
+	* cancel or closed tab — the one file in this flow that must not linger.
+	*/
+		const delete_audio = function() {
+			const cleanup_rqo = {
+				dd_api	: 'dd_tools_api',
+				action	: 'tool_request',
+				source	: create_source(self, 'delete_transcribable_audio_file'),
+				options	: rqo.options
+			}
 			data_manager.request({
-				body : rqo,
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 3600 secs waiting response
+				body	: cleanup_rqo,
+				retries	: 1,
+				timeout	: 3600 * 1000
 			})
-			.then(async function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> transcription_component API response:",'DEBUG',response);
-				}
-
-				// error converting audio file
-					if (!response?.result) {
-						const msg = response?.msg || 'Error converting audio'
-						console.error(msg);
-						// SEC-031: build error node via DOM, msg may include attacker-controlled file/path
-						nodes.status_container.replaceChildren()
-						const err_div = document.createElement('div')
-						err_div.className = 'error'
-						err_div.textContent = msg
-						nodes.status_container.appendChild(err_div)
-						nodes.button_automatic_transcription.classList.remove('disable');
-						return false;
-					}
-
-				// set the lang of the transcription
-					const json_langs = self.json_langs || await get_json_langs() || []
-					if (json_langs.length<1) {
-						const msg = 'Error. Expected array of json_langs but empty result is obtained'
-						console.error(msg + ' :', json_langs);
-						// SEC-031: same as above
-						nodes.status_container.replaceChildren()
-						const err_div = document.createElement('div')
-						err_div.className = 'error'
-						err_div.textContent = msg
-						nodes.status_container.appendChild(err_div)
-					}
-					// Map the Dédalo lang tag (e.g. 'lg-spa') to a two-letter ISO code
-					// ('es') that the Whisper model accepts as its `language` hint.
-					const lang_obj	= json_langs.find(item => item.dd_lang===source_lang)
-					const lang		= lang_obj
-						? lang_obj.tld2
-						: 'en'
-
-					if(SHOW_DEBUG===true) {
-						console.log('Automatic_transcription source lang:', lang);
-					}
-
-				// Manage the worker answers
-				// it could be the status of the process or the final transcription data
-				transcribe_worker.onmessage = function(e) {
-					const status	= e.data.status
-					const data		= e.data.data
-
-					switch (status) {
-						case 'init':
-
-							const progress	= data.progress;
-							const status	= data.status;
-							const device	= data.device;
-
-							// 'webgpu' path uses 'setting_up' label; 'wasm' (CPU) uses 'procesing'
-							const procesing_label = device==='webgpu' ? 'setting_up' : 'procesing';
-
-							// set the label for all status as initializing and the ready to Setting_up
-							// both labels are translated into the tool config.
-							const label = status==='ready'
-								? self.get_tool_label( procesing_label )
-								: self.get_tool_label( 'initializing' )
-
-							// Show download progress as percentage; omit when not available
-							const loaded = (progress)
-								? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
-								: (status==='ready')
-									? ''
-									: ' : 00%'
-							const procesing = `${label}${loaded}`;
-							// SEC-031: label is i18n; status text only.
-							nodes.status_container.textContent = procesing;
-
-							break;
-						// on new chunk start empty the status_container, new phrase will be processed
-						case 'on_chunk_start':
-							nodes.status_container.textContent = '';
-							nodes.status_container.classList.remove('loading_status')
-
-							break;
-						//every time that a word is processed and ready it is set at end of the phrase
-						case 'callback_function':
-							nodes.status_container.classList.remove('loading_status')
-							// SEC-031: worker output may contain HTML chars from speech recognition.
-							nodes.status_container.textContent = data;
-
-							break;
-						// final data as returned as array of objects with a dd_format parameter.
-						case 'end':
-							transcribe_worker.terminate()
-
-								// Parse the final dedalo format
-								// join all paragraphs into a valid value for component_text_area
-								const final_tr_response = parse_dedalo_format(data)
-
-							// delete audio file
-								rqo.source.action = 'delete_transcribable_audio_file'
-
-								data_manager.request({
-									body : rqo,
-									retries : 1, // one try only
-									timeout : 3600 * 1000 // 3600 secs waiting final_tr_response
-								})
-
-							resolve( final_tr_response )
-							break;
-					}
-				}
-				transcribe_worker.onerror = function(e) {
-					console.error('Worker error [transcribe]:', e);
-					// SEC-031: static error label; built via DOM for consistency.
-					nodes.status_container.replaceChildren()
-					const err_div = document.createElement('div')
-					err_div.className = 'error'
-					err_div.textContent = 'Worker error [transcribe]'
-					nodes.status_container.appendChild(err_div)
-				}
-
-				// Process the audio file to be sent to Worker
-				// Used as module is possible send the URI, but as worker the AudioContext is not available
-				// Re-sample the audio to exactly 16 kHz (Whisper's required sample rate) using
-				// the Web Audio API; then extract the mono Float32Array from channel 0.
-				const audio_buffer	= await fetch(response.result).then(res => res.arrayBuffer());
-				const audio_ctx		= new AudioContext({ sampleRate: 16000 });
-				const audio_data	= await audio_ctx.decodeAudioData(audio_buffer);
-				const audio_chanel	= audio_data.getChannelData(0)
-
-				const options = {
-					audio_file	: audio_chanel,
-					language	: lang,
-					model		: transcriber_quality, //'onnx-community/whisper-large-v3-ONNX',// Xenova/whisper-small',
-					device		: nodes.transcriber_device_checkbox.checked ? 'wasm' : 'webgpu'
-				}
-
-				// init the worker for transcription
-				transcribe_worker.postMessage({
-					options	: options
-				})
+			.catch(function(error){
+				console.error('[tool_transcription] could not delete the temporary audio file:', error);
 			})
+		}
+
+	// Server-side audio preparation. Long, because a large video has to be
+	// re-encoded before anything can be transcribed.
+		const response = await data_manager.request({
+			body	: rqo,
+			retries	: 1, // one try only
+			timeout	: 3600 * 1000 // 3600 secs waiting response
 		})
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> transcription_component API response:",'DEBUG',response);
+		}
+		if (!response?.result) {
+			set_error( response?.msg || 'Error converting audio' )
+			return false
+		}
+
+	// Map the Dédalo lang tag ('lg-spa') to the ISO 639-1 code ('es') the model
+	// takes as its language hint.
+		const json_langs	= self.json_langs || await get_json_langs() || []
+		const lang_obj		= json_langs.find(item => item.dd_lang===source_lang)
+		const lang			= lang_obj ? lang_obj.tld2 : 'en'
+		if (json_langs.length<1) {
+			console.error('Error. Expected array of json_langs but empty result is obtained :', json_langs);
+		}
+		if(SHOW_DEBUG===true) {
+			console.log('Automatic_transcription source lang:', lang);
+		}
+
+	// Where the browser may load the model from. The browser cannot read the
+	// install's configuration, so it asks: the store URL, whether a public hub is
+	// permitted (normally NOT — these are personal recordings), and whether the
+	// store actually holds anything. Without that last fact a missing model fails
+	// as an opaque 404 from inside the ONNX runtime.
+		const sources_response	= await self.get_model_sources()
+		const sources			= (sources_response && sources_response.result)
+			? sources_response.result
+			: { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true }
+
+		if (sources.store_ready===false && sources.allow_hub!==true) {
+			set_error(
+				self.get_tool_label('model_store_empty')
+				|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).'
+			)
+			delete_audio()
+			return false
+		}
+
+	// Anything already transcribed in a previous, interrupted run.
+		const saved_partial	= await data_manager.get_local_db_data( resume_id, 'status' )
+		const resume		= (saved_partial && saved_partial.model===transcriber_quality && Array.isArray(saved_partial.segments))
+			? saved_partial
+			: null
+
+	// The worker. Held on the instance so the cancel button can reach it.
+		const transcribe_worker = new Worker(
+			'../../tools/tool_transcription/transcribers/browser_whisper/browser_whisper.js',
+			{ type : 'module' }
+		)
+		self.transcribe_worker = transcribe_worker
+
+	return new Promise(async function(resolve){
+
+		set_status( self.get_tool_label('processing_audio') || 'Processing audio...' )
+		nodes.status_container.classList.add('loading_status')
+
+		let speech_seconds = 0
+
+		/**
+		* FINISH
+		* The single exit: stop the worker, delete the audio, drop the saved
+		* partial and hand the formatted text back. Written once so no path can
+		* forget the clean-up.
+		*/
+		const finish = function(segments) {
+
+			transcribe_worker.terminate()
+			self.transcribe_worker = null
+			delete_audio()
+			data_manager.set_local_db_data({ id: resume_id, segments: [], model: null }, 'status')
+
+			nodes.status_container.classList.remove('loading_status')
+
+			resolve([ segments_to_html( segments, format_options ) ])
+		}
+
+		transcribe_worker.onmessage = function(e) {
+
+			const status	= e.data.status
+			const data		= e.data.data
+
+			switch (status) {
+
+				// Model download / compilation.
+				case 'init': {
+					const label = data.status==='ready'
+						? self.get_tool_label( data.device==='webgpu' ? 'setting_up' : 'procesing' )
+						: self.get_tool_label( 'initializing' )
+					const loaded = (data.progress)
+						? ` : ${parseInt(data.progress).toString().padStart(2, 0)}%`
+						: (data.status==='ready' ? '' : ' : 00%')
+					set_status( `${label}${loaded}` )
+					break;
+				}
+
+				// The window plan: from here on there is a real denominator for
+				// progress, instead of "still working".
+				case 'plan':
+					speech_seconds = data.speech_seconds
+					break;
+
+				case 'window_start': {
+					nodes.status_container.classList.remove('loading_status')
+					const percent = speech_seconds>0
+						? Math.min( 99, Math.round((data.done_seconds / speech_seconds) * 100) )
+						: 0
+					set_status( `${self.get_tool_label('procesing') || 'Processing'} : ${percent}%` )
+					break;
+				}
+
+				// Live tokens while a window is decoded (greedy decoding only).
+				case 'partial':
+					nodes.status_container.classList.remove('loading_status')
+					// SEC-031: worker output is recognised speech; text only.
+					nodes.status_container.textContent = data.text
+					break;
+
+				// A window finished: persist so a closed tab can resume.
+				case 'progress':
+					data_manager.set_local_db_data({
+						id			: resume_id,
+						segments	: data.segments,
+						model		: transcriber_quality,
+						updated		: Date.now()
+					}, 'status')
+					break;
+
+				case 'end':
+					finish( data.segments )
+					break;
+
+				case 'error':
+					transcribe_worker.terminate()
+					self.transcribe_worker = null
+					delete_audio()
+					set_error( data.message )
+					resolve( false )
+					break;
+			}
+		}
+
+		transcribe_worker.onerror = function(e) {
+			transcribe_worker.terminate()
+			self.transcribe_worker = null
+			delete_audio()
+			set_error( 'Worker error [transcribe]: ' + (e.message || '') )
+			resolve( false )
+		}
+
+		try {
+			// Decode to exactly 16 kHz mono — Whisper's only accepted input rate.
+			// AudioContext is unavailable inside a Worker, so this must happen here.
+			const audio_buffer	= await fetch_audio( self );
+			const audio_ctx		= new AudioContext({ sampleRate: 16000 });
+			const audio_data	= await audio_ctx.decodeAudioData(audio_buffer);
+			const audio_chanel	= audio_data.getChannelData(0)
+
+			transcribe_worker.postMessage(
+				{
+					action	: 'transcribe',
+					options	: {
+						audio			: audio_chanel,
+						sample_rate		: 16000,
+						language		: lang,
+						model			: transcriber_quality,
+						device			: options.device || 'auto',
+						dtype			: options.dtype,
+						decode			: options.decode,
+						sources			: sources,
+						resume_segments	: resume ? resume.segments : undefined,
+						resume_seconds	: resume ? resume_seconds_of( resume.segments ) : 0
+					}
+				},
+				// Transfer the samples instead of copying them: for a long
+				// interview the copy alone can exhaust the tab's memory.
+				[ audio_chanel.buffer ]
+			);
+		} catch (error) {
+			transcribe_worker.terminate()
+			self.transcribe_worker = null
+			delete_audio()
+			set_error( 'Could not decode the audio: ' + error.message )
+			resolve( false )
+		}
+	});
 
 }//end automatic_transcription
 
 
 
 /**
-* PARSE_DEDALO_FORMAT
-* Process the segments into the HTML format supported by Dédalo with the time code tag format
-* every segment is enclosed by a paragraph a <p> element
+* FETCH_AUDIO
+* Read the speech-recognition audio for this record, from the ENGINE's own origin.
 *
-* Converts an array of Whisper segment objects into the value shape expected by
-* `component_text_area.set_value`: an array with a single HTML string element.
+* NOT the media URL. `DEDALO_MEDIA_WEB_BASE` is frequently an absolute URL on a
+* different host or port than the application (a separate Apache, a CDN), and
+* protected media additionally needs a cookie the browser will not send
+* cross-site — so reading it from here failed with a bare "TypeError: Failed to
+* fetch", the same origin mismatch that makes a subtitle track refuse to load
+* ("Domains, protocols and ports must match").
 *
-* Each segment's `dd_format` string already contains the Dédalo timecode tag:
-*   '[TC_HH:MM:SS.mmm_TC] transcribed text'
-* This function wraps each such string in a `<p>` element and concatenates all
-* paragraphs into a single `innerHTML` string.
+* The engine serves this one temporary file itself, same-origin, behind its
+* session + record-permission gate (src/core/media/tools/transcription_audio.ts).
 *
-* A DocumentFragment + temporary div are used to build the DOM safely before
-* serialising to HTML; this avoids string concatenation XSS risks when `dd_format`
-* values contain special characters from recognised speech.
-*
-* @param {Array} transcripts - Array of segment objects from the Whisper worker 'end' event:
-*   [ { dd_format: '[TC_00:00:05.600_TC] My transcription' }, … ]
-* @returns {Array} data - Single-element array containing the complete HTML string:
-*   [ '<p>[TC_00:00:05.600_TC] My transcription</p><p>…</p>' ]
-* Dédalo transcription format as HTML:
-* <p>
-* 	[TC_00:00:05.600_TC] My transcription
-* <\p>
+* @param {Object} self - the tool instance (its media_component locates the file)
+* @returns {Promise<ArrayBuffer>} the raw audio bytes
 */
-const parse_dedalo_format = function( transcripts ){
+const fetch_audio = async function( self ) {
 
-	const transcripts_length = transcripts.length;
+	const params = new URLSearchParams({
+		section_tipo	: self.media_component.section_tipo,
+		section_id		: self.media_component.section_id,
+		component_tipo	: self.media_component.tipo
+	})
 
-	// creating a fragment to storage all nodes
-	const fragment = new DocumentFragment();
-
-	for (let i = 0; i < transcripts_length; i++) {
-		// create the text node with the transcription
-		const current_text_node = document.createTextNode(transcripts[i].dd_format)
-
-		// create the paragraph to enclose the text fragment
-		const current_node = document.createElement("p");
-
-		// add the text to the paragraph
-		current_node.appendChild(current_text_node)
-		// add to the fragment
-		fragment.appendChild(current_node)
+	const response = await fetch(`/dedalo/tools/tool_transcription/audio?${params.toString()}`)
+	if (!response.ok) {
+		throw new Error(`the audio file could not be read (HTTP ${response.status})`)
 	}
 
-	// Create a temporary container to insert the fragment and get the final HTML
-	const temp_div = document.createElement('div');
-	temp_div.appendChild(fragment);
+	return await response.arrayBuffer()
+}//end fetch_audio
 
-	// create a valid data for the component_text_area
-	const data = [ temp_div.innerHTML ]
 
-	return data;
-}// end parse_dedalo_format
+
+/**
+* RESUME_SECONDS_OF
+* How far a saved partial transcript reached — the point the worker resumes from.
+*
+* The end of the last segment, not the count of segments: windows are planned on
+* the audio timeline, so seconds are the only meaningful cursor.
+*
+* @param {Array} segments
+* @returns {number} seconds
+*/
+const resume_seconds_of = function( segments ) {
+
+	if (!Array.isArray(segments) || segments.length===0) {
+		return 0
+	}
+
+	const last = segments[segments.length - 1]
+
+	return (typeof last.end==='number')
+		? last.end
+		: (typeof last.start==='number' ? last.start : 0)
+}//end resume_seconds_of
+
+
+
+/**
+* GET_MODEL_SOURCES
+* Ask the server where in-browser models may be loaded from.
+*
+* The answer is install configuration the browser is about to act on: the model
+* store URL, whether falling back to a public model hub is allowed (off by
+* default — the recordings are personal data and an air-gapped archive must
+* work), and whether the store has been seeded at all.
+*
+* @returns {Promise<Object>} { result: { model_host, allow_hub, store_ready } }
+*/
+tool_transcription.prototype.get_model_sources = async function() {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'get_model_sources'),
+		options	: {}
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not read the model sources:', error);
+		return false
+	}
+}//end get_model_sources
+
+
+
+/**
+* REGROUP_PARAGRAPHS
+* Re-paragraph the transcription that is ALREADY in the component.
+*
+* Transcripts made before the paragraph grouper existed (and any transcript whose
+* owner wants a different timecode density) are a wall of five-second fragments,
+* one per recogniser segment. This reads the stored text back into segments —
+* the timecode marks are the only structure needed to do that — and rebuilds it
+* with the current paragraph rules. Nothing is re-recognised, so it is instant
+* and cannot change a single word.
+*
+* The value goes back through set_value, i.e. the normal component save: the
+* previous text stays in the time machine like any other edit.
+*
+* @param {Object} [options]
+* @param {Object} [options.format_options] - paragraph/timecode options (lib/paragraphs.js)
+* @param {number} [options.key=0] - which value of the component to rebuild
+* @returns {boolean} false when there is nothing to regroup
+*/
+tool_transcription.prototype.regroup_paragraphs = function(options) {
+
+	const self		= this
+	const opts		= options || {}
+	const key		= opts.key || 0
+	const entries	= (self.transcription_component.data || {}).entries || []
+	const current	= (entries[key] || {}).value || ''
+
+	if (current.trim()===''){
+		return false
+	}
+
+	const segments = parse_transcript( current )
+	if (segments.length===0) {
+		return false
+	}
+
+	self.transcription_component.set_value(
+		key,
+		segments_to_html( segments, opts.format_options || {} )
+	)
+
+	return true
+}//end regroup_paragraphs
+
+
+
+/**
+* ABORT_TRANSCRIPTION
+* Cancel a running browser transcription, keeping what is already done.
+*
+* The worker cannot be interrupted mid-inference, so it is ASKED to stop: it
+* finishes the window it is on and answers with an 'end' message carrying every
+* segment recognised so far, which then travels the normal path into the text
+* component. Terminating the worker outright would throw that away.
+*
+* @returns {boolean} true when there was something to cancel
+*/
+tool_transcription.prototype.abort_transcription = function() {
+
+	const self = this
+
+	if (!self.transcribe_worker) {
+		return false
+	}
+
+	self.transcribe_worker.postMessage({ action: 'abort' })
+
+	return true
+}//end abort_transcription
 
 
 

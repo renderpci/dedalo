@@ -32,9 +32,14 @@
  * state).
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { config } from '../../../src/config/config.ts';
+import {
+	AI_MODEL_URL_PREFIX,
+	modelHubAllowed,
+	modelStoreAvailable,
+} from '../../../src/core/ai/model_store.ts';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { probeFormat } from '../../../src/core/media/engine/ffmpeg.ts';
@@ -70,6 +75,7 @@ import type {
 } from '../../../src/core/tools/module.ts';
 import { assertActionPermission } from '../../../src/core/tools/security.ts';
 import {
+	LOCAL_ASR_ENGINE,
 	mapTranscriberEngine,
 	pollTranscriptionCompletion,
 	resolveTranscriberConfig,
@@ -249,14 +255,31 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 			section_tipo: mediaDdo.section_tipo,
 			section_id: mediaDdo.section_id,
 		});
-		const audioRel = await ensureAudioQuality(spec, identity, pathOpts);
-		const audioUrl = externalMediaUrl(audioRel);
+
+		// Two ways to hand a recogniser the audio, and the choice is not cosmetic:
+		//  - an EXTERNAL service fetches a public URL (and so needs one to exist);
+		//  - the institution's OWN box is POSTed the bytes of the speech-optimised
+		//    WAV, so the recording is never published anywhere. That WAV is a
+		//    throwaway derivative, deleted by the completion poll.
+		const isLocalEngine = engine === LOCAL_ASR_ENGINE;
+		const audioRel = isLocalEngine
+			? await ensureTranscribableAudio(spec, identity, pathOpts)
+			: await ensureAudioQuality(spec, identity, pathOpts);
+		const audioPath = isLocalEngine
+			? absoluteFromRelative(audioRel, pathOpts.mediaRoot)
+			: undefined;
+		// An on-premise engine never receives a URL; asking for one would throw
+		// when DEDALO_MEDIA_EXPORT_BASE is unset, which is the normal state of an
+		// install that publishes nothing.
+		const audioUrl = isLocalEngine ? '' : externalMediaUrl(audioRel);
+
 		const result = await provider({
 			uri: cfg.uri,
 			key: cfg.key,
 			engine: mappedEngine,
 			quality,
 			audioUrl,
+			audioPath,
 			langTld2: getAlpha2FromCode(sourceLang) ?? '',
 			userId: ctx.userId,
 			entityName: config.entity,
@@ -278,6 +301,10 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 					url: cfg.uri,
 					lang: sourceLang,
 					av_url: audioUrl,
+					// The throwaway WAV the on-premise engine was fed. The poll
+					// deletes it when the job ends, whichever way it ends — this
+					// file is a copy of an interview and must not linger.
+					cleanup_path: audioPath,
 					engine: mappedEngine,
 					user_id: ctx.userId,
 					entity_name: config.entity,
@@ -313,6 +340,7 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 	const o = ctx.options;
 	const ddo = (o.transcription_ddo ?? {}) as MediaDdo;
 	const lang = String(o.lang ?? '');
+	const cleanupPath = String(o.cleanup_path ?? '');
 	const outcome = await pollTranscriptionCompletion({
 		status: {
 			uri: String(o.url ?? ''),
@@ -332,6 +360,21 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 		},
 		userId: ctx.userId,
 	});
+
+	// The job is over (saved, failed or given up on): drop the temporary audio.
+	// Unconditional on purpose — the one previous cleanup path ran on success
+	// only, which left a copy of the recording on disk after every failure.
+	if (cleanupPath !== '' && existsSync(cleanupPath)) {
+		try {
+			unlinkSync(cleanupPath);
+		} catch (error) {
+			console.error(
+				`[tool_transcription] could not delete the temporary audio ${cleanupPath}:`,
+				error,
+			);
+		}
+	}
+
 	return { result: outcome.result, msg: outcome.msg, errors: outcome.result ? [] : [outcome.msg] };
 }
 
@@ -578,9 +621,39 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
 	}
 }
 
+/**
+ * get_model_sources — where the BROWSER engine may load its model from.
+ *
+ * The browser cannot read the install's configuration, so without this the
+ * operator switches (`DEDALO_AI_MODEL_STORE`, `DEDALO_AI_MODEL_ALLOW_HUB`) would
+ * be inert and the worker would be guessing. It answers three facts:
+ *   model_host  — the store URL to load weights from (this install's own);
+ *   allow_hub   — whether falling back to a public model hub is permitted
+ *                 (default NO: the recordings are personal data, and an
+ *                 air-gapped archive must work);
+ *   store_ready — whether the store actually has anything in it, so the tool can
+ *                 say "ask your administrator to seed the model store" instead of
+ *                 failing with a 404 from inside the ONNX runtime.
+ *
+ * No record is addressed and nothing is written; the answer is install
+ * configuration the logged-in user's own browser is about to act on.
+ */
+async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
+	return {
+		result: {
+			model_host: AI_MODEL_URL_PREFIX,
+			allow_hub: modelHubAllowed(),
+			store_ready: modelStoreAvailable(),
+		},
+		msg: 'OK',
+		errors: [],
+	};
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_transcription',
 	apiActions: {
+		get_model_sources: { permission: null, handler: getModelSources },
 		create_transcribable_audio_file: { permission: null, handler: createTranscribableAudioFile },
 		delete_transcribable_audio_file: { permission: null, handler: deleteTranscribableAudioFile },
 		automatic_transcription: { permission: null, handler: automaticTranscription },
