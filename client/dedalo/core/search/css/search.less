@@ -358,11 +358,23 @@
 							// fn_add_mask sets mask-size:contain; the box here is the
 							// full column height (see .search_buttons_container .button),
 							// so cap the glyph or it scales to the whole button.
-							.button.reload,
-							.button.show_all {
+							.button.reload {
 								flex-grow: 1;
 								-webkit-mask-size: 1.9em;
 										mask-size: 1.9em;
+							}
+
+							// v6 parity: text-only "Show all". The generic .show_all icon
+							// class masks the box (.button&) and prepends a glyph (button&);
+							// both are dropped here so the label is what renders.
+							.button.show_all {
+								flex-grow: 1;
+								-webkit-mask-image: none;
+										mask-image: none;
+
+								&:before {
+									content: none;
+								}
 							}
 						}
 

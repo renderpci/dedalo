@@ -625,10 +625,12 @@ render_search.prototype.render_search_buttons = function(){
 			// Close search div
 			toggle_search_panel(self) // toggle to open from default state close
 		}
+		// v6 parity: a plain text button (no icon). The .show_all icon class is
+		// neutralized inside .reset_group (search.less) so only the text shows.
 		const show_all_button = ui.create_dom_element({
-			element_type	: 'span',
+			element_type	: 'button',
 			class_name		: 'button show_all',
-			title			: get_label.show_all || 'Show all',
+			inner_html		: get_label.show_all || 'Show all',
 			parent			: reset_group
 		})
 		show_all_button.addEventListener('mousedown', show_all_fn)
