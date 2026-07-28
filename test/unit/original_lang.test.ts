@@ -153,6 +153,102 @@ describe('edit context carries options.related_component_lang', () => {
 	});
 });
 
+describe('tag rendering survives the forcing (the lost-tags regression)', () => {
+	const TAGGED = '<p>[TC_00:00:01.000_TC]Text en català</p>';
+	let vlcaCatId = 0; // rsc263=vlca, transcript typed under lg-cat (equivalence sibling)
+	let fraCatId = 0; // rsc263=fra (no equivalence), transcript under lg-cat → fallback path
+
+	beforeAll(async () => {
+		const vlca = (await getLangSectionIdByCode('lg-vlca')) ?? 0;
+		const fra = (await getLangSectionIdByCode('lg-fra')) ?? 0;
+		expect(vlca).toBeGreaterThan(0);
+		expect(fra).toBeGreaterThan(0);
+
+		vlcaCatId = await insertMatrixRecordWithCounter(TABLE, SECTION, {
+			relation: {
+				[SELECT_LANG]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_tipo: 'lg1',
+						section_id: String(vlca),
+						from_component_tipo: SELECT_LANG,
+					},
+				],
+			},
+			string: {
+				[TEXT_AREA]: [
+					{ id: 1, value: null, lang: 'lg-spa' },
+					{ id: 1, value: TAGGED, lang: 'lg-cat' },
+				],
+			},
+		});
+		fraCatId = await insertMatrixRecordWithCounter(TABLE, SECTION, {
+			relation: {
+				[SELECT_LANG]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_tipo: 'lg1',
+						section_id: String(fra),
+						from_component_tipo: SELECT_LANG,
+					},
+				],
+			},
+			string: { [TEXT_AREA]: [{ id: 1, value: TAGGED, lang: 'lg-cat' }] },
+		});
+	});
+
+	afterAll(async () => {
+		if (vlcaCatId > 0) await deleteMatrixRecord(TABLE, SECTION, vlcaCatId);
+		if (fraCatId > 0) await deleteMatrixRecord(TABLE, SECTION, fraCatId);
+	});
+
+	async function listItem(sectionId: number) {
+		const rqo = {
+			action: 'read',
+			source: { tipo: SECTION, section_tipo: SECTION, mode: 'list', lang: 'lg-spa' },
+			sqo: {
+				section_tipo: [SECTION],
+				filter_by_locators: [{ section_tipo: SECTION, section_id: String(sectionId) }],
+				limit: 1,
+				offset: 0,
+			},
+		} as unknown as Rqo;
+		const { data } = await readSection(rqo);
+		return data.find(
+			(entry) =>
+				(entry as { tipo?: string }).tipo === TEXT_AREA &&
+				(entry as { section_id?: unknown }).section_id === sectionId,
+		) as
+			| { lang?: string; entries?: { value?: unknown }[]; fallback_value?: { value?: unknown }[] }
+			| undefined;
+	}
+
+	test('the forcing follows the EQUIVALENCE sibling that holds the text (506 shape)', async () => {
+		// rsc263 says Valencian; the transcript was typed under Catalan — the same
+		// language. Forcing the literal vlca slice (empty) stranded the text in the
+		// UNRENDERED fallback: visible, but with raw [TC_…] literals. The forced
+		// lang must be the sibling that actually holds the text.
+		const item = await listItem(vlcaCatId);
+		expect(item?.lang).toBe('lg-cat');
+		const value = String(item?.entries?.find((entry) => entry?.value)?.value ?? '');
+		expect(value).toContain('<img');
+		expect(value).not.toContain('[TC_00:00:01.000_TC]Text'); // rendered, not raw
+	});
+
+	test('a genuine cross-lang FALLBACK is tag-rendered too', async () => {
+		// Original is French (no equivalence with Catalan): the cat text correctly
+		// stays a fallback — but a LIST fallback must carry the same tag rendering
+		// as a list value, never raw [TC_…] literals.
+		const item = await listItem(fraCatId);
+		expect(item?.lang).toBe('lg-fra');
+		expect(item?.entries ?? []).toEqual([]);
+		const fallback = String(item?.fallback_value?.find((entry) => entry?.value)?.value ?? '');
+		expect(fallback).toContain('<img');
+	});
+});
+
 describe('list emission forces the original language', () => {
 	async function listRead(sectionId: number) {
 		const rqo = {
