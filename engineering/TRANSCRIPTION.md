@@ -137,6 +137,31 @@ An engine route serving this file was written and DELETED on 2026-07-28: it made
 the tool work on a split-origin dev box by streaming the WAV from Bun, which is
 exactly what §1 forbids. If it reappears, that is the bug.
 
+## The original language (rsc263)
+
+Interviews in one installation are recorded in different languages, so AV
+sections carry a `component_select_lang` ("Original language", rsc263): a
+locator into the languages section (lg1). The engine forces the transcription
+text_area to that per-record language (v6 `get_original_lang`, ported
+2026-07-28):
+
+- **Edit contexts** (the get_data route and section edit reads) carry
+  `context.options.related_component_lang` = `'lg-<code>'`; the transcription /
+  indexation / lang tools read it to open the component in the interview's own
+  language — which is also what seeds the recogniser's language hint.
+- **List values** emit in the original language (the item's `lang` follows), so
+  a list of interviews shows each transcript in its own language instead of an
+  empty current-lang slice.
+- Resolution: `src/core/components/component_text_area/original_lang.ts`
+  (ontology-related select_lang → lg1 locator →
+  `select_lang.ts::getLangCodeBySectionId`). A record without a value, or a
+  text_area whose ontology relates no select_lang, is never forced — behaviour
+  is byte-identical to before.
+- This RESTORES PHP behaviour (no WIRE_CONTRACT entry); the context stamp is
+  per-request (clone-before-stamp — never in the cached structural core), and
+  the list forcing is the `resolveEmitLang` emit-hook facet.
+- Gate: `test/unit/original_lang.test.ts`.
+
 ## Transcript shape
 
 Recognisers emit subtitle-sized segments. What is stored is an interview
