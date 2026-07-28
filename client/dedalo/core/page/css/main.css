@@ -9814,7 +9814,7 @@ body.is_ontology_server .menu > .content_data {
   position: relative;
 }
 .wrapper_dd_grid.view_indexation .top_container {
-  background-color: var(--color_white);
+  background-color: var(--color_grey_14);
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -9823,7 +9823,6 @@ body.is_ontology_server .menu > .content_data {
   z-index: 2;
 }
 .wrapper_dd_grid.view_indexation .top_container .filter_section_container {
-  background-color: var(--color_white);
   margin-left: 4rem;
   padding-top: 1.02rem;
   padding-bottom: 1rem;
