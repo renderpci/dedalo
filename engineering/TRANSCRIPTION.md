@@ -36,8 +36,15 @@ a public hub.
   extension allowlist (`.onnx`, `.onnx_data`, `.json`, `.bin`, `.data`, `.txt`,
   `.model`, `.wasm`), realpath confinement, plain 404 for everything else.
   Immutable cache headers — a model id *is* its version.
-- **Seeding**: `bun run scripts/fetch_ai_models.ts --list | <model-id> | --all`
-  where there is a network; an rsync of the directory where there is not.
+- **Seeding**: three doors, ONE downloader (`src/core/ai/model_fetch.ts`):
+  the operator CLI `bun run scripts/fetch_ai_models.ts --list | <model-id> | --all`;
+  the tool's `download_model` action (global admin only, catalog names only —
+  the id becomes a hub URL path and a store directory, so free-form input is
+  refused; runs as a background job); and an rsync of the directory for an
+  air-gapped install. The catalog of offerable models is the tool's registered
+  `transcriber_quality` (seeded from `register.json` via the tools registry —
+  re-import the registry after editing it, or the picker keeps serving the old
+  list).
 - **Escape hatch**: `DEDALO_AI_MODEL_ALLOW_HUB=true` lets the browser fall back to
   a public hub. Off by default, and wrong for any collection holding personal
   data.
@@ -94,6 +101,42 @@ It applies to `local_whisper` alone; `babel_transcriber` keeps the strict guard
 regardless, and the cloud metadata address (169.254.169.254) is refused either
 way. `test/unit/transcription_local_asr.test.ts` asserts both directions.
 
+## Getting the audio to the recogniser
+
+The in-browser recogniser reads the whole `audio_tr` WAV before it transcribes
+(~170 MB for a 90-minute interview). **The web server serves those bytes** — the
+engine never does. This is not a preference: installs hold single AV files of
+16-32 GB and the media path must stay `sendfile` with Range intact
+(`engineering/MEDIA_PROTECTION.md` §1, *"never put an application process in the
+media-serving path"*). Authorisation is the existing Rule A marker cookie
+(`dedalo_media_auth`), which every logged-in user already carries.
+
+The requirement that follows is a DEPLOYMENT one:
+
+> The media base must be readable from the application's own page.
+
+- **Same origin** (the production layout: one reverse proxy in front of both) —
+  nothing to configure.
+- **Different origin** — a separate media host, a CDN, or a development box with
+  the app on one port and media on another (`DEDALO_MEDIA_WEB_BASE` pointing at
+  `http://host:8080/dedalo/media` while the app answers on `:3500`) — that host
+  must send CORS headers for the app's origin, or the browser refuses the read.
+  The same restriction shows up as a subtitle track failing with *"Domains,
+  protocols and ports must match"*.
+
+  Apache, on the media vhost:
+
+  ```apache
+  SetEnvIf Origin "^https?://your-app-host(:[0-9]+)?$" APP_ORIGIN=$0
+  Header set Access-Control-Allow-Origin %{APP_ORIGIN}e env=APP_ORIGIN
+  Header set Access-Control-Allow-Credentials true
+  Header append Vary Origin
+  ```
+
+An engine route serving this file was written and DELETED on 2026-07-28: it made
+the tool work on a split-origin dev box by streaming the WAV from Bun, which is
+exactly what §1 forbids. If it reappears, that is the bug.
+
 ## Transcript shape
 
 Recognisers emit subtitle-sized segments. What is stored is an interview
@@ -141,7 +184,7 @@ and rumbling input is what makes a recogniser hallucinate in the first place.
 |---|---|
 | `test/unit/no_remote_code_tripwire.test.ts` | no client/tool code loads from a third-party host (tripwire index) |
 | `test/unit/ai_model_store.test.ts` | the store serves models and is fail-closed everywhere else |
-| `test/unit/transcription_local_asr.test.ts` | the private-address exemption, both directions; audio travels as bytes |
+| `test/unit/transcription_local_asr.test.ts` | the private-address exemption, both directions; audio travels as bytes to the on-prem engine |
 | `test/unit/transcript_postprocess.test.ts` | decoder repetition dies, real speech survives |
 | `test/unit/transcript_paragraphs.test.ts` | paragraph grouping, the three timecode modes, and that the `.vtt` still tracks |
 | `test/unit/transcript_vad.test.ts` | where the cuts land; no window exceeds the model context; unreadable audio still transcribes |

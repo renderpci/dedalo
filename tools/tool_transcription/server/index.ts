@@ -35,9 +35,11 @@
 import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { config } from '../../../src/config/config.ts';
+import { downloadModel } from '../../../src/core/ai/model_fetch.ts';
 import {
 	AI_MODEL_URL_PREFIX,
 	modelHubAllowed,
+	modelInstalled,
 	modelStoreAvailable,
 } from '../../../src/core/ai/model_store.ts';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
@@ -639,28 +641,149 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
  * configuration the logged-in user's own browser is about to act on.
  */
 async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
+	// Which catalog models are actually USABLE right now. Without this the picker
+	// happily offers a model nobody downloaded, and the run dies deep inside the
+	// ONNX runtime with "Could not locate file: …/config.json" — a message that
+	// tells an archivist nothing and an administrator almost nothing.
+	const installed: string[] = [];
+	try {
+		// getToolConfig returns the EFFECTIVE config — a flat map of key → resolved
+		// value — so `transcriber_quality` IS the catalog array.
+		const toolConfig = await getToolConfig('tool_transcription');
+		const raw = toolConfig?.transcriber_quality;
+		const entries = Array.isArray(raw)
+			? raw
+			: ((raw as { value?: unknown[] } | undefined)?.value ?? null);
+		if (Array.isArray(entries)) {
+			for (const raw of entries) {
+				if (raw === null || typeof raw !== 'object') continue;
+				const entry = raw as { name?: unknown; tier?: unknown; dtype?: Record<string, string> };
+				if (typeof entry.name !== 'string') continue;
+				if (entry.tier !== undefined && entry.tier !== 'browser') continue;
+				if (modelInstalled(entry.name, entry.dtype)) installed.push(entry.name);
+			}
+		}
+	} catch (error) {
+		// A missing/!unreadable catalog must not break the transcription flow: the
+		// client falls back to offering everything, exactly as it did before.
+		console.error('[tool_transcription] could not read the model catalog:', error);
+	}
+
 	return {
 		result: {
 			model_host: AI_MODEL_URL_PREFIX,
 			allow_hub: modelHubAllowed(),
 			store_ready: modelStoreAvailable(),
+			installed,
 		},
 		msg: 'OK',
 		errors: [],
 	};
 }
 
+/** The background download action name (allowlisted, never client-routable). */
+const BACKGROUND_DOWNLOAD_ACTION = 'background_download_model';
+
+/**
+ * Read the LIVE model catalog (transcriber_quality) as typed entries.
+ * getToolConfig returns the effective config — a flat map — but the raw
+ * property-object form is tolerated like everywhere else in this module.
+ */
+async function readModelCatalog(): Promise<
+	{ name: string; tier?: string; size_mb?: number; dtype?: Record<string, string> }[]
+> {
+	const toolConfig = await getToolConfig('tool_transcription');
+	const raw = toolConfig?.transcriber_quality;
+	const entries = Array.isArray(raw)
+		? raw
+		: ((raw as { value?: unknown[] } | undefined)?.value ?? []);
+	return entries.filter(
+		(entry): entry is { name: string } =>
+			entry !== null &&
+			typeof entry === 'object' &&
+			typeof (entry as { name?: unknown }).name === 'string',
+	) as { name: string; tier?: string; size_mb?: number; dtype?: Record<string, string> }[];
+}
+
+/**
+ * download_model — seed one catalog model into the local store, from the UI.
+ *
+ * Before this, seeding required shell access (`scripts/fetch_ai_models.ts`) —
+ * out of reach for the administrator of a hosted install, whose users saw every
+ * uninstalled model greyed out with "ask your administrator" and no way for that
+ * administrator to act.
+ *
+ * GATES, in order:
+ *  - GLOBAL ADMIN only. This makes the server fetch ~1 GB from the public hub
+ *    and write it to disk — an operator act, not a cataloguer's.
+ *  - The model must be IN THE CATALOG. The id becomes a URL path on the hub and
+ *    a directory under the store; free-form input would let a request download
+ *    arbitrary repos or write outside the intended folder. Catalog names only.
+ *
+ * The download runs as a DETACHED background job (it can take many minutes;
+ * identity captured at enqueue time), and the client polls `get_model_sources`
+ * until the model turns up in `installed`. Note the deliberate asymmetry with
+ * DEDALO_AI_MODEL_ALLOW_HUB: that flag governs the BROWSER streaming weights at
+ * inference time (a per-recording privacy leak); this is the server seeding its
+ * own store once, on an explicit admin request.
+ */
+async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
+	if (ctx.principal?.isGlobalAdmin !== true) {
+		return fail('Only a global administrator can download models');
+	}
+
+	const model = String(ctx.options.model ?? '');
+	const entry = (await readModelCatalog()).find(
+		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
+	);
+	if (entry === undefined) {
+		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+	}
+	if (modelInstalled(entry.name, entry.dtype)) {
+		return { result: true, msg: 'OK. Model already installed', errors: [] };
+	}
+
+	const loaded = await getLoadedTool('tool_transcription');
+	if (loaded === undefined) {
+		return fail('tool module not loaded — cannot schedule the download');
+	}
+	scheduleBackground(
+		loaded,
+		BACKGROUND_DOWNLOAD_ACTION,
+		{ permission: null, handler: backgroundDownloadModel },
+		{ model: entry.name, dtype: entry.dtype },
+		ctx.principal,
+		ctx.userId,
+	);
+	return { result: true, msg: 'OK. Download started', errors: [] };
+}
+
+/** The detached download job. Reads its whole world from the enqueue-time options. */
+async function backgroundDownloadModel(ctx: ToolActionContext): Promise<ToolResponse> {
+	const model = String(ctx.options.model ?? '');
+	const dtype = (ctx.options.dtype ?? undefined) as Record<string, string> | undefined;
+	console.log(`[tool_transcription] downloading model '${model}' into the local store…`);
+	const report = await downloadModel(model, dtype, { quiet: true });
+	if (report.ok) {
+		console.log(`[tool_transcription] model '${model}' installed (${report.files.length} files)`);
+		return { result: true, msg: `OK. Model installed: ${model}`, errors: [] };
+	}
+	console.error(`[tool_transcription] model download FAILED for '${model}':`, report.errors);
+	return { result: false, msg: report.errors.join('; '), errors: report.errors };
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_transcription',
 	apiActions: {
 		get_model_sources: { permission: null, handler: getModelSources },
+		download_model: { permission: null, handler: downloadModelAction },
 		create_transcribable_audio_file: { permission: null, handler: createTranscribableAudioFile },
 		delete_transcribable_audio_file: { permission: null, handler: deleteTranscribableAudioFile },
 		automatic_transcription: { permission: null, handler: automaticTranscription },
 		check_server_transcriber_status: { permission: null, handler: checkServerTranscriberStatus },
 		build_subtitles_file: { permission: null, handler: buildSubtitlesFile },
 	},
-	// The completion poll is background-only: allowlisted here, absent from
-	// apiActions (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.
-	backgroundRunnable: [BACKGROUND_POLL_ACTION],
+	// Background-only actions: allowlisted here, absent from apiActions
+	// (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.
+	backgroundRunnable: [BACKGROUND_POLL_ACTION, BACKGROUND_DOWNLOAD_ACTION],
 };

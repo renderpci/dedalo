@@ -1408,6 +1408,67 @@ const render_automatic_transcription = function (options) {
 				})
 				//save the pointer
 					nodes.transcriber_engine_quality = transcriber_engine_quality
+
+				/**
+				* APPLY_INSTALLED_MODELS
+				* Mark the models that are NOT in the install's model store, and offer
+				* the download for them.
+				*
+				* A model the archivist can pick but nobody downloaded fails deep inside
+				* the ONNX runtime with "Could not locate file: …/config.json" — after
+				* the audio has been prepared, and with a message that helps no one. The
+				* store is the authority on what can actually run, so the picker asks it.
+				*
+				* Uninstalled models stay SELECTABLE on purpose: selecting one is how an
+				* administrator reaches the Download button below (and how anyone else
+				* discovers which models exist and asks for them). The transcription run
+				* itself still refuses an uninstalled model up front.
+				*/
+				const not_installed_suffix = ` — ${self.get_tool_label('not_installed') || 'not installed'}`
+				let installed_models = null
+
+				const apply_installed_models = function( installed ) {
+
+					if (!Array.isArray(installed)) {
+						return
+					}
+					installed_models = installed
+
+					for (let i = 0; i < transcriber_engine_quality.options.length; i++) {
+						const option	= transcriber_engine_quality.options[i]
+						const present	= installed.includes(option.value)
+						const marked	= option.text.endsWith(not_installed_suffix)
+						if (!present && !marked) {
+							option.text = `${option.text}${not_installed_suffix}`
+						}
+						if (present && marked) {
+							option.text = option.text.slice(0, -not_installed_suffix.length)
+						}
+					}
+
+					update_download_button()
+				}
+
+				/**
+				* UPDATE_DOWNLOAD_BUTTON
+				* Show the download control exactly when the SELECTED model is missing
+				* from the store. The server gates the action (global admin only), so
+				* showing the button to everyone leaks nothing — a non-admin who clicks
+				* it gets the refusal that tells them who to ask.
+				*/
+				const update_download_button = function() {
+					const selected	= transcriber_engine_quality.value
+					const missing	= Array.isArray(installed_models) && !installed_models.includes(selected)
+					button_download_model.classList.toggle('hide', !missing)
+				}
+
+				// Ask the server which models are usable, once, while the rest renders.
+				self.get_model_sources().then(function(response){
+					if (response && response.result) {
+						apply_installed_models( response.result.installed )
+					}
+				})
+
 				const quality_value = transcriber_quality.value
 				for (let i = 0; i < quality_value.length; i++) {
 
@@ -1433,18 +1494,85 @@ const render_automatic_transcription = function (options) {
 							id		: quality_id,
 							value	: transcriber_engine_quality.value
 						}, 'status')
+						update_download_button()
 					})
+
+			// Download the selected model into the install's store, from the UI.
+			// The server gates it (global admin + catalog names only) and runs the
+			// download as a background job; here we start it and poll until the
+			// store reports the model usable. Before this button, seeding required
+			// shell access to the server — out of reach for a hosted install's admin.
+				const button_download_model = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light button_download_model hide',
+					inner_html		: self.get_tool_label('download_model') || 'Download model',
+					parent			: quality_label
+				})
+				button_download_model.addEventListener('click', function(e){
+					e.stopPropagation()
+					const model = transcriber_engine_quality.value
+					button_download_model.classList.add('disable')
+
+					self.download_model( model ).then(function(response){
+						if (!response || response.result===false) {
+							button_download_model.classList.remove('disable')
+							ui.show_message(
+								automatic_transcription_container,
+								(response && response.msg) || 'Download failed',
+								'error'
+							)
+							return
+						}
+
+						nodes.status_container.classList.remove('hide')
+						// SEC-031: i18n label, plain text only.
+						nodes.status_container.textContent =
+							self.get_tool_label('downloading_model')
+							|| 'Downloading the model… this can take several minutes.'
+
+						// Poll until installed. Bounded: a download that outlives the
+						// cap is not declared failed — the job keeps running server-side
+						// and the next tool open will find the model in place.
+						let polls = 0
+						const poll = setInterval(function(){
+							if (++polls > 360) { // ~30 min at 5 s
+								clearInterval(poll)
+								button_download_model.classList.remove('disable')
+								nodes.status_container.textContent =
+									self.get_tool_label('download_still_running')
+									|| 'Still downloading — the model will appear when it finishes.'
+								return
+							}
+							self.get_model_sources().then(function(sources){
+								const installed = (sources && sources.result && Array.isArray(sources.result.installed))
+									? sources.result.installed
+									: []
+								if (installed.includes(model)) {
+									clearInterval(poll)
+									button_download_model.classList.remove('disable')
+									apply_installed_models( installed )
+									nodes.status_container.textContent =
+										self.get_tool_label('model_ready') || 'Model installed.'
+								}
+							})
+						}, 5000)
+					})
+				})
 
 					data_manager.get_local_db_data(
 						quality_id,
 						'status'
-					).then(function( quality_saved ){
+					).then(async function( quality_saved ){
 						if(quality_saved && quality_saved.value){
 							transcriber_engine_quality.value = quality_saved.value
 						}
-						// Re-apply the device restrictions: the saved model may be one
-						// the currently selected device cannot run.
+						// Re-apply both restrictions: a SAVED choice may be a model the
+						// current device cannot run, or one that is no longer installed.
 						apply_device_limits()
+						const sources = await self.get_model_sources()
+						if (sources && sources.result) {
+							apply_installed_models( sources.result.installed )
+						}
 					})
 			}//end if(transcriber_quality)
 

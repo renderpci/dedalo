@@ -293,6 +293,43 @@ describe('the config-hash idempotency guard', () => {
 		expect(readFileSync(paths.htaccess, 'utf8')).not.toBe(firstText);
 	});
 
+	test('an .htaccess ADDON never makes the nginx conf permanently stale', () => {
+		// MEDIA_HTACCESS_ADDONS is Apache syntax and reaches the .htaccess only —
+		// buildNginxConf never sees it. Both files used to be judged by the
+		// addons-INCLUSIVE hash, so the moment an install configured any addon the
+		// nginx conf could never match: rewritten on every login, and reported
+		// "out of date" forever by the media_control widget. A permanent false
+		// alarm is how operators learn to ignore the widget.
+		setServerState({ media_access_mode: 'private' });
+		process.env.MEDIA_HTACCESS_ADDONS = JSON.stringify([
+			'<IfModule mod_headers.c>',
+			'\tHeader always set Access-Control-Allow-Origin "http://app.example.org"',
+			'</IfModule>',
+		]);
+		try {
+			writeRuleFiles();
+			const paths = ruleFilePaths();
+			expect(paths).not.toBeNull();
+			if (paths === null) return;
+
+			// The addon reached the file it belongs in, and only that one.
+			expect(readFileSync(paths.htaccess, 'utf8')).toContain('Access-Control-Allow-Origin');
+			expect(readFileSync(paths.nginx, 'utf8')).not.toContain('Access-Control-Allow-Origin');
+
+			// BOTH report up to date, and a second run rewrites neither.
+			const status = getRulesStatus();
+			expect(status.htaccess.up_to_date).toBe(true);
+			expect(status.nginx.up_to_date).toBe(true);
+
+			const nginxWrite = statSync(paths.nginx).mtimeMs;
+			writeRuleFiles();
+			expect(statSync(paths.nginx).mtimeMs).toBe(nginxWrite);
+		} finally {
+			// biome-ignore lint/performance/noDelete: unsetting an env var is the point
+			delete process.env.MEDIA_HTACCESS_ADDONS;
+		}
+	});
+
 	test('getRulesStatus reports up_to_date honestly', () => {
 		setServerState({ media_access_mode: 'private' });
 		writeRuleFiles();

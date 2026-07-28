@@ -22,41 +22,10 @@
  * the tool reports plainly rather than silently reaching for the internet.
  */
 
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { modelStoreRoot } from '../src/core/ai/model_store.ts';
-
-/** Where model files are fetched from when an operator asks for a download. */
-const HUB_BASE = 'https://huggingface.co';
-
-/** Files every model needs regardless of quantisation. */
-const COMMON_FILES: readonly string[] = [
-	'config.json',
-	'generation_config.json',
-	'preprocessor_config.json',
-	'tokenizer.json',
-	'tokenizer_config.json',
-];
-
-/** Files a model may legitimately lack (not every repo ships every one). */
-const OPTIONAL_FILES: readonly string[] = ['generation_config.json', 'preprocessor_config.json'];
-
-/**
- * Transformers.js quantisation → ONNX filename suffix. This mapping is why the
- * seeder reads the catalog instead of guessing: the browser asks for exactly the
- * variant the catalog's `dtype` names, and seeding any other one leaves the store
- * looking full while every transcription 404s.
- */
-const DTYPE_SUFFIX: Readonly<Record<string, string>> = {
-	fp32: '',
-	fp16: '_fp16',
-	q4: '_q4',
-	q4f16: '_q4f16',
-	q8: '_quantized',
-	int8: '_int8',
-	uint8: '_uint8',
-	bnb4: '_bnb4',
-};
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { COMMON_FILES, OPTIONAL_FILES, downloadModel } from '../src/core/ai/model_fetch.ts';
+import { modelFiles, modelStoreRoot } from '../src/core/ai/model_store.ts';
 
 interface CatalogModel {
 	id: string;
@@ -113,18 +82,15 @@ function readCatalog(): CatalogModel[] {
 		});
 }
 
-/** The exact file list one catalog entry needs in the store. */
+/**
+ * The exact file list one catalog entry needs in the store.
+ *
+ * Derived from the ENGINE's own helper, so what this script downloads and what
+ * the engine reports as "installed" can never disagree — the failure mode that
+ * bug produces is a store that looks full while every transcription 404s.
+ */
 function filesFor(model: CatalogModel): string[] {
-	const files = [...COMMON_FILES];
-	const dtype = model.dtype ?? { encoder_model: 'fp32', decoder_model_merged: 'fp32' };
-	for (const [part, quant] of Object.entries(dtype)) {
-		const suffix = DTYPE_SUFFIX[quant];
-		if (suffix === undefined) {
-			throw new Error(`${model.id}: unknown dtype '${quant}' for ${part}`);
-		}
-		files.push(`onnx/${part}${suffix}.onnx`);
-	}
-	return files;
+	return [...COMMON_FILES, ...modelFiles(model.dtype).filter((file) => file !== 'config.json')];
 }
 
 function usage(): void {
@@ -151,71 +117,6 @@ function listCatalog(): void {
 	console.log('\n✓ = ready to use (all files the catalog asks for are present)');
 }
 
-/**
- * Download one file unless it is already there. Returns false when it is absent
- * upstream (an optional file this model does not publish).
- *
- * Uses `curl` rather than fetch(): these are multi-hundred-megabyte files behind
- * a CDN redirect, and curl gives resume, retry and a progress bar for free —
- * where Bun's fetch was observed to stall outright on the hub. Falls back to
- * fetch when curl is absent, so the script still works on a box without it.
- */
-async function fetchFile(modelId: string, file: string, store: string): Promise<boolean> {
-	const target = join(store, modelId, file);
-	if (existsSync(target) && statSync(target).size > 0) {
-		console.log(`  = ${file} (already present)`);
-		return true;
-	}
-
-	const url = `${HUB_BASE}/${modelId}/resolve/main/${file}`;
-	mkdirSync(dirname(target), { recursive: true });
-
-	if (haveCurl()) {
-		console.log(`  ↓ ${file}`);
-		// -f: a 404 is a failure, not an HTML page written to disk.
-		// -L: follow the CDN redirect. -C -: resume a partial file.
-		const proc = Bun.spawnSync(
-			['curl', '-fL', '-C', '-', '--retry', '3', '--progress-bar', '-o', target, url],
-			{ stdout: 'inherit', stderr: 'inherit' },
-		);
-		if (!proc.success) {
-			// curl leaves a zero-length file behind on a 404; do not let it look cached.
-			if (existsSync(target) && statSync(target).size === 0) rmSync(target);
-			if (OPTIONAL_FILES.includes(file)) {
-				console.log(`  - ${file} (not published for this model)`);
-				return false;
-			}
-			throw new Error(`${file}: download failed from ${url}`);
-		}
-		console.log(`  + ${file} (${(statSync(target).size / 1024 / 1024).toFixed(1)} MB)`);
-		return true;
-	}
-
-	const response = await fetch(url);
-	if (!response.ok) {
-		if (OPTIONAL_FILES.includes(file)) {
-			console.log(`  - ${file} (not published for this model)`);
-			return false;
-		}
-		throw new Error(`${file}: HTTP ${response.status} from ${url}`);
-	}
-	await Bun.write(target, response);
-	console.log(`  + ${file} (${(statSync(target).size / 1024 / 1024).toFixed(1)} MB)`);
-	return true;
-}
-
-/** Whether curl is on PATH (checked once). */
-let curlChecked: boolean | null = null;
-function haveCurl(): boolean {
-	if (curlChecked === null) {
-		curlChecked = Bun.spawnSync(['curl', '--version'], {
-			stdout: 'ignore',
-			stderr: 'ignore',
-		}).success;
-	}
-	return curlChecked;
-}
-
 async function fetchModel(modelId: string, store: string): Promise<void> {
 	console.log(`\n${modelId} → ${join(store, modelId)}`);
 
@@ -229,19 +130,16 @@ async function fetchModel(modelId: string, store: string): Promise<void> {
 		console.log('  (not in the catalog — fetching the default fp32 files)');
 	}
 
-	let gotWeights = false;
-	for (const file of filesFor(model)) {
-		const ok = await fetchFile(modelId, file, store);
-		if (ok && file.endsWith('.onnx')) gotWeights = true;
-	}
-
-	// A model with no weights is a FAILED seed, not a quiet success: the browser
-	// would then fail at transcription time, which is the surprise this store
-	// exists to prevent.
-	if (!gotWeights) {
-		throw new Error(
-			`${modelId}: no ONNX weights were found upstream. Check the model id and the catalog dtype, or copy the model directory in by hand.`,
-		);
+	// The SAME downloader the admin UI action uses (src/core/ai/model_fetch.ts) —
+	// two download paths would drift on the file list or the quantisation.
+	const report = await downloadModel(model.id, model.dtype, {
+		store,
+		quiet: false,
+		onFile: (file) => console.log(`  ↓ ${file}`),
+	});
+	for (const file of report.skipped) console.log(`  - ${file} (not published for this model)`);
+	if (!report.ok) {
+		throw new Error(report.errors.join('\n'));
 	}
 }
 
@@ -270,7 +168,6 @@ if (models.length === 0) {
 	process.exit(1);
 }
 
-mkdirSync(store, { recursive: true });
 for (const modelId of models) {
 	await fetchModel(modelId, store);
 }

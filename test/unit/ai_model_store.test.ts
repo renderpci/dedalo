@@ -19,7 +19,9 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	AI_MODEL_URL_PREFIX,
+	modelFiles,
 	modelHubAllowed,
+	modelInstalled,
 	modelStoreAvailable,
 	resolveModelPath,
 } from '../../src/core/ai/model_store.ts';
@@ -100,5 +102,41 @@ describe('the public hub is opt-in', () => {
 			// biome-ignore lint/performance/noDelete: unsetting an env var is the point
 			delete process.env.DEDALO_AI_MODEL_ALLOW_HUB;
 		}
+	});
+});
+
+describe('"installed" means USABLE, not merely present', () => {
+	// The picker offers what this says is installed, and refuses what it does not.
+	// The bug it exists to stop: a store holding a model's config and the WRONG
+	// quantisation looks full, so the browser is offered a model that fails deep
+	// inside the ONNX loader with "Could not locate file: …/config.json" — after
+	// the audio has already been prepared.
+	test('the file list follows the catalog dtype, never a guess', () => {
+		expect(modelFiles({ encoder_model: 'fp16', decoder_model_merged: 'q4f16' })).toEqual([
+			'config.json',
+			'onnx/encoder_model_fp16.onnx',
+			'onnx/decoder_model_merged_q4f16.onnx',
+		]);
+		// No dtype declared = the repo's plain fp32 files.
+		expect(modelFiles()).toEqual([
+			'config.json',
+			'onnx/encoder_model.onnx',
+			'onnx/decoder_model_merged.onnx',
+		]);
+	});
+
+	test('a model whose weights are a DIFFERENT quantisation is not installed', () => {
+		// The fixture store holds config.json + onnx/encoder_model.onnx only.
+		expect(modelInstalled(MODEL, { encoder_model: 'fp32' })).toBe(true);
+		// Same model, asking for the fp16 variant nobody downloaded:
+		expect(modelInstalled(MODEL, { encoder_model: 'fp16' })).toBe(false);
+		// Config present but the decoder missing entirely:
+		expect(modelInstalled(MODEL, { encoder_model: 'fp32', decoder_model_merged: 'fp32' })).toBe(
+			false,
+		);
+	});
+
+	test('an unknown model is never installed', () => {
+		expect(modelInstalled('nobody/at-all', { encoder_model: 'fp32' })).toBe(false);
 	});
 });

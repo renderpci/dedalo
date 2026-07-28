@@ -27,7 +27,7 @@
  * HTTP — seeding is an operator action, not an engine action.
  */
 
-import { existsSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
@@ -52,6 +52,80 @@ const SERVABLE_EXTENSIONS: ReadonlySet<string> = new Set([
 	'.model',
 	'.wasm',
 ]);
+
+/**
+ * Transformers.js quantisation → ONNX filename suffix.
+ *
+ * THE single copy: the seeding script downloads by it and the "is this model
+ * installed" check below reads by it, so a store can never look full while the
+ * browser asks for a file that was never fetched.
+ */
+export const DTYPE_SUFFIX: Readonly<Record<string, string>> = {
+	fp32: '',
+	fp16: '_fp16',
+	q4: '_q4',
+	q4f16: '_q4f16',
+	q8: '_quantized',
+	int8: '_int8',
+	uint8: '_uint8',
+	bnb4: '_bnb4',
+};
+
+/** The config every model needs before anything else can load. */
+const REQUIRED_CONFIG = 'config.json';
+
+/**
+ * The exact files one catalog entry needs in the store to be USABLE — its config
+ * plus the ONNX weights for the quantisation the catalog declares. A model whose
+ * config is present but whose weights are the wrong variant is NOT installed, and
+ * saying so here is what stops the browser failing later with "Could not locate
+ * file" from inside the ONNX runtime.
+ */
+export function modelFiles(dtype?: Record<string, string>): string[] {
+	const parts = dtype ?? { encoder_model: 'fp32', decoder_model_merged: 'fp32' };
+	const files = [REQUIRED_CONFIG];
+	for (const [part, quant] of Object.entries(parts)) {
+		const suffix = DTYPE_SUFFIX[quant];
+		if (suffix === undefined) continue; // an unknown dtype is a catalog bug, not a missing file
+		files.push(`onnx/${part}${suffix}.onnx`);
+	}
+	return files;
+}
+
+/**
+ * True when the browser can actually LOAD this model from the store.
+ *
+ * With a `dtype` (the catalog's declaration) the check is exact: those files, or
+ * not installed. WITHOUT one — an older registered catalog that predates the
+ * per-model quantisation, which is what a live install has until the tools
+ * registry is re-imported — an exact check would be a guess, and guessing fp32
+ * would report every store empty. So the fallback asks the weaker but true
+ * question: is there a config and at least one encoder AND one decoder variant?
+ */
+export function modelInstalled(modelId: string, dtype?: Record<string, string>): boolean {
+	const root = modelStoreRoot();
+	const present = (file: string): boolean => {
+		const path = resolve(root, modelId, file);
+		try {
+			return existsSync(path) && statSync(path).size > 0;
+		} catch {
+			return false;
+		}
+	};
+
+	if (dtype !== undefined) return modelFiles(dtype).every(present);
+
+	if (!present(REQUIRED_CONFIG)) return false;
+	let weights: string[];
+	try {
+		weights = readdirSync(resolve(root, modelId, 'onnx'));
+	} catch {
+		return false;
+	}
+	const has = (prefix: string): boolean =>
+		weights.some((file) => file.startsWith(prefix) && file.endsWith('.onnx'));
+	return has('encoder_model') && has('decoder_model_merged');
+}
 
 /**
  * The store root. `DEDALO_AI_MODEL_STORE` when set (absolute, or relative to the

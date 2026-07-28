@@ -158,8 +158,19 @@ export function resolveTranscriberConfig(
 	toolConfig: Record<string, unknown>,
 	engine: string,
 ): { uri: string; key: string } | null {
-	const configs = (toolConfig?.config as { transcriber_config?: { value?: unknown[] } } | undefined)
+	// `getToolConfig` returns the EFFECTIVE config: a flat map of key → resolved
+	// value, so `transcriber_config` is already the array of entries. This used to
+	// read `toolConfig.config.transcriber_config.value` — a shape getToolConfig
+	// never produces — so every lookup returned null and no server-side engine
+	// could ever find its uri/key ("Transcriber config is not defined for '…'").
+	// Its test passed because the fixture was written to the same wrong shape.
+	// The nested form is still accepted: an install that stores the raw property
+	// object (rather than the resolved value) reads the same either way.
+	const flat = toolConfig?.transcriber_config;
+	const nested = (toolConfig?.config as { transcriber_config?: { value?: unknown[] } } | undefined)
 		?.transcriber_config?.value;
+	const wrapped = (toolConfig?.transcriber_config as { value?: unknown[] } | undefined)?.value;
+	const configs = Array.isArray(flat) ? flat : Array.isArray(wrapped) ? wrapped : nested;
 	if (!Array.isArray(configs)) return null;
 	const entry = configs.find(
 		(item) =>

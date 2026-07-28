@@ -699,12 +699,29 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 
 	const qualities = mode === 'publication' ? getPublicQualities() : [];
 	const addons = getAddonLines();
-	const hash = getConfigHash(mode, qualities, addons);
 
-	const artifacts: Array<{ path: string; text: string }> = [
-		{ path: paths.htaccess, text: buildHtaccess(mode, qualities, addons) },
-		{ path: paths.nginx, text: buildNginxConf(mode, qualities) },
-		{ path: paths.nginxMap, text: buildNginxMap() },
+	// EACH ARTIFACT CARRIES ITS OWN HASH, because they are not shaped by the same
+	// inputs: MEDIA_HTACCESS_ADDONS is Apache syntax and reaches the .htaccess
+	// only — buildNginxConf never sees it, and embeds `getConfigHash(mode,
+	// qualities, [])` accordingly.
+	//
+	// Comparing both files against the addons-inclusive hash (which this did until
+	// 2026-07-28) means that the moment an install configures ANY addon, the nginx
+	// file can never match: it is rewritten on every login, and the media_control
+	// widget reports it permanently "out of date" — a false alarm of exactly the
+	// kind that teaches operators to ignore the widget.
+	const artifacts: Array<{ path: string; text: string; hash: string }> = [
+		{
+			path: paths.htaccess,
+			text: buildHtaccess(mode, qualities, addons),
+			hash: getConfigHash(mode, qualities, addons),
+		},
+		{
+			path: paths.nginx,
+			text: buildNginxConf(mode, qualities),
+			hash: getConfigHash(mode, qualities, []),
+		},
+		{ path: paths.nginxMap, text: buildNginxMap(), hash: '' },
 	];
 
 	for (const artifact of artifacts) {
@@ -717,7 +734,7 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 		}
 		if (existsSync(artifact.path)) {
 			const current = readFileSync(artifact.path, 'utf8');
-			if (current.includes(`# config-hash: ${hash}`)) continue;
+			if (current.includes(`# config-hash: ${artifact.hash}`)) continue;
 		}
 		writeFileSync(artifact.path, artifact.text);
 	}
@@ -731,13 +748,17 @@ export function getRulesStatus(): { htaccess: RuleFileStatus; nginx: RuleFileSta
 	const paths = ruleFilePaths();
 	const mode = resolveMediaAccessMode();
 
-	const statusOf = (path: string | null): RuleFileStatus => {
+	// Same per-artifact rule as writeRuleFiles: the .htaccess is shaped by
+	// MEDIA_HTACCESS_ADDONS, the nginx conf is not. Judging both by the
+	// addons-inclusive hash reported the nginx file as out of date forever on any
+	// install that configured an addon.
+	const statusOf = (path: string | null, withAddons: boolean): RuleFileStatus => {
 		const exists = path !== null && existsSync(path);
 		if (mode === false || path === null) {
 			return { path, exists, up_to_date: null };
 		}
 		const qualities = mode === 'publication' ? getPublicQualities() : [];
-		const hash = getConfigHash(mode, qualities, getAddonLines());
+		const hash = getConfigHash(mode, qualities, withAddons ? getAddonLines() : []);
 		return {
 			path,
 			exists,
@@ -746,8 +767,8 @@ export function getRulesStatus(): { htaccess: RuleFileStatus; nginx: RuleFileSta
 	};
 
 	return {
-		htaccess: statusOf(paths?.htaccess ?? null),
-		nginx: statusOf(paths?.nginx ?? null),
+		htaccess: statusOf(paths?.htaccess ?? null, true),
+		nginx: statusOf(paths?.nginx ?? null, false),
 	};
 }
 

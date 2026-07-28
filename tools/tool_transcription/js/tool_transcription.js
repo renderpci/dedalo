@@ -40,10 +40,11 @@
 *                         (e.g. Babel); the client polls for completion via
 *                         `check_server_transcriber_status`.
 *
-* Both paths resolve to a `dd_format` array of paragraph objects:
-*   [ { dd_format: '[TC_00:00:05.600_TC] My transcription' }, … ]
-* which `parse_dedalo_format` converts to the `component_text_area` value shape
-* (an array containing a single HTML string).
+* The browser path resolves to the `component_text_area` value shape — an array
+* holding one HTML string of TC-tagged paragraphs, built by the shared
+* `transcribers/lib/paragraphs.js` (`segments_to_html`); the server path writes
+* the same shape server-side. An empty recognition NEVER becomes a value: it
+* resolves `false`, so the existing transcript is never overwritten by nothing.
 *
 * Subtitle generation
 * -------------------
@@ -585,6 +586,42 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		}
 
 	/**
+	* PAGE_CLEANUP
+	* Delete the server-side WAV when the tool WINDOW is closed mid-job.
+	*
+	* Every in-page exit path calls delete_audio below — but a closed tab runs
+	* none of them, and the interview audio would sit on the server until someone
+	* re-ran and completed a transcription of the same record. `data_manager`
+	* cannot be trusted during unload (its promise machinery may never run), so
+	* this is a bare `keepalive` fetch: the one request shape browsers promise to
+	* finish after the page is gone. Best-effort by nature; the CSRF token rides
+	* along because the API requires it (SEC-008).
+	*/
+		const page_cleanup = function() {
+			try {
+				const csrf = (typeof page_globals!=='undefined' && page_globals.csrf_token)
+					? page_globals.csrf_token
+					: null
+				fetch('/dedalo/core/api/v1/json/', {
+					method		: 'POST',
+					credentials	: 'same-origin',
+					keepalive	: true,
+					headers		: csrf
+						? { 'Content-Type': 'application/json', 'X-Dedalo-Csrf-Token': csrf }
+						: { 'Content-Type': 'application/json' },
+					body		: JSON.stringify({
+						dd_api	: 'dd_tools_api',
+						action	: 'tool_request',
+						source	: create_source(self, 'delete_transcribable_audio_file'),
+						options	: rqo.options
+					})
+				})
+			} catch (error) {
+				// the tab is going away; nothing left to report to
+			}
+		}
+
+	/**
 	* DELETE_AUDIO
 	* Remove the server-side throwaway WAV.
 	*
@@ -593,6 +630,9 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	* cancel or closed tab — the one file in this flow that must not linger.
 	*/
 		const delete_audio = function() {
+			// the in-page exit ran; the unload hook is no longer needed
+			window.removeEventListener('pagehide', page_cleanup)
+
 			const cleanup_rqo = {
 				dd_api	: 'dd_tools_api',
 				action	: 'tool_request',
@@ -623,6 +663,9 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			set_error( response?.msg || 'Error converting audio' )
 			return false
 		}
+		// From here a WAV of the interview exists on the server: arm the unload
+		// hook so even a closed window deletes it.
+		window.addEventListener('pagehide', page_cleanup)
 
 	// Map the Dédalo lang tag ('lg-spa') to the ISO 639-1 code ('es') the model
 	// takes as its language hint.
@@ -646,11 +689,21 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			? sources_response.result
 			: { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true }
 
-		if (sources.store_ready===false && sources.allow_hub!==true) {
-			set_error(
-				self.get_tool_label('model_store_empty')
-				|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).'
-			)
+		// Refuse EARLY and specifically when the chosen model is not in the store.
+		// Left to the runtime, this fails as "Could not locate file: …/config.json"
+		// from inside the ONNX loader — after the audio has been prepared, and with
+		// a message that names neither the model nor what to do about it.
+		// `installed` absent = an older server that cannot tell (allow, as before);
+		// an EMPTY array is a real answer: nothing is installed.
+		const model_ready	= !Array.isArray(sources.installed)
+			|| sources.installed.includes(transcriber_quality)
+
+		if (sources.allow_hub!==true && (sources.store_ready===false || !model_ready)) {
+			const message = (sources.store_ready===false)
+				? (self.get_tool_label('model_store_empty')
+					|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).')
+				: `${self.get_tool_label('model_not_installed') || 'This model is not installed on this server'}: ${transcriber_quality}`
+			set_error( message )
 			delete_audio()
 			return false
 		}
@@ -680,6 +733,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		* The single exit: stop the worker, delete the audio, drop the saved
 		* partial and hand the formatted text back. Written once so no path can
 		* forget the clean-up.
+		*
+		* AN EMPTY RESULT NEVER BECOMES A VALUE. With no segments — a cancel before
+		* the first window finished, or a recording in which the detector found no
+		* speech — resolving [''] would make the caller set_value('') and SAVE,
+		* silently erasing whatever transcript the component already held. Nothing
+		* recognised means nothing to write, and the run reports why instead.
 		*/
 		const finish = function(segments) {
 
@@ -689,6 +748,15 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			data_manager.set_local_db_data({ id: resume_id, segments: [], model: null }, 'status')
 
 			nodes.status_container.classList.remove('loading_status')
+
+			if (!Array.isArray(segments) || segments.length===0) {
+				set_error(
+					self.get_tool_label('no_speech_recognized')
+					|| 'No speech was recognized — the existing text was left untouched.'
+				)
+				resolve( false )
+				return
+			}
 
 			resolve([ segments_to_html( segments, format_options ) ])
 		}
@@ -769,9 +837,18 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		try {
 			// Decode to exactly 16 kHz mono — Whisper's only accepted input rate.
 			// AudioContext is unavailable inside a Worker, so this must happen here.
-			const audio_buffer	= await fetch_audio( self );
+			const audio_buffer	= await fetch_audio( response.result );
 			const audio_ctx		= new AudioContext({ sampleRate: 16000 });
-			const audio_data	= await audio_ctx.decodeAudioData(audio_buffer);
+			let audio_data
+			try {
+				audio_data = await audio_ctx.decodeAudioData(audio_buffer);
+			} finally {
+				// Close the context IMMEDIATELY: the decoded AudioBuffer outlives it,
+				// and browsers cap live AudioContexts per page (Chrome: 6) — without
+				// this, the sixth transcription in the same tool window fails to
+				// construct one at all.
+				audio_ctx.close().catch(function(){ /* already closed */ })
+			}
 			const audio_chanel	= audio_data.getChannelData(0)
 
 			transcribe_worker.postMessage(
@@ -809,32 +886,40 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 /**
 * FETCH_AUDIO
-* Read the speech-recognition audio for this record, from the ENGINE's own origin.
+* Read the speech-recognition audio the server just prepared.
 *
-* NOT the media URL. `DEDALO_MEDIA_WEB_BASE` is frequently an absolute URL on a
-* different host or port than the application (a separate Apache, a CDN), and
-* protected media additionally needs a cookie the browser will not send
-* cross-site — so reading it from here failed with a bare "TypeError: Failed to
-* fetch", the same origin mismatch that makes a subtitle track refuse to load
-* ("Domains, protocols and ports must match").
+* THE WEB SERVER SERVES THESE BYTES, never the engine. Installs hold single AV
+* files of 16-32 GB, so the media path must stay Apache/nginx `sendfile` with
+* Range intact — engineering/MEDIA_PROTECTION.md §1: "never put an application
+* process in the media-serving path". A logged-in user already carries the
+* `dedalo_media_auth` cookie (Rule A), which is what authorises this read.
 *
-* The engine serves this one temporary file itself, same-origin, behind its
-* session + record-permission gate (src/core/media/tools/transcription_audio.ts).
+* The one requirement that follows: the media base must be reachable from the
+* application's own page. Same origin is the production layout and needs nothing;
+* a media host on a DIFFERENT origin (a separate Apache/CDN, or a dev box with
+* the app on one port and media on another) must send CORS headers for the app's
+* origin, or the browser refuses the read — the same restriction that makes a
+* subtitle track fail with "Domains, protocols and ports must match". The error
+* below says so, because the raw failure is an unexplained "Failed to fetch".
 *
-* @param {Object} self - the tool instance (its media_component locates the file)
+* @param {string} url - the media URL returned by create_transcribable_audio_file
 * @returns {Promise<ArrayBuffer>} the raw audio bytes
 */
-const fetch_audio = async function( self ) {
+const fetch_audio = async function( url ) {
 
-	const params = new URLSearchParams({
-		section_tipo	: self.media_component.section_tipo,
-		section_id		: self.media_component.section_id,
-		component_tipo	: self.media_component.tipo
-	})
+	let response
+	try {
+		response = await fetch( url, { credentials: 'include' } )
+	} catch (error) {
+		throw new Error(
+			`the audio file could not be read from ${url} (${error.message}). `
+			+ 'If the media server is on another host or port than the application, it must allow '
+			+ "cross-origin reads from this page's origin."
+		)
+	}
 
-	const response = await fetch(`/dedalo/tools/tool_transcription/audio?${params.toString()}`)
 	if (!response.ok) {
-		throw new Error(`the audio file could not be read (HTTP ${response.status})`)
+		throw new Error(`the audio file could not be read (HTTP ${response.status}) from ${url}`)
 	}
 
 	return await response.arrayBuffer()
@@ -896,6 +981,38 @@ tool_transcription.prototype.get_model_sources = async function() {
 		return false
 	}
 }//end get_model_sources
+
+
+
+/**
+* DOWNLOAD_MODEL
+* Ask the server to download one catalog model into the install's own store.
+*
+* Admin-gated and validated SERVER-side (global admin, catalog names only); the
+* download runs as a background job there. The caller polls get_model_sources
+* until the model shows up in `installed`.
+*
+* @param {string} model - catalog model id (e.g. 'onnx-community/whisper-medium-ONNX')
+* @returns {Promise<Object|false>} the API response, or false on transport failure
+*/
+tool_transcription.prototype.download_model = async function( model ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'download_model'),
+		options	: { model: model }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not start the model download:', error);
+		return false
+	}
+}//end download_model
 
 
 

@@ -115,6 +115,8 @@ describe('tool_transcription module', () => {
 			'check_server_transcriber_status',
 			'create_transcribable_audio_file',
 			'delete_transcribable_audio_file',
+			// Admin-gated in-UI model seeding (validated against the catalog).
+			'download_model',
 			// Where the BROWSER engine may load its model from. The browser cannot
 			// read the install's configuration, so the operator's model-store and
 			// hub-fallback settings would otherwise be inert.
@@ -135,11 +137,46 @@ describe('tool_transcription module', () => {
 		expect(mustGet(actions.build_subtitles_file, 'build_subtitles_file').permission).toBeNull();
 	});
 
-	test('the background poll is allowlisted but NOT client-routable', async () => {
+	test('the background actions are allowlisted but NOT client-routable', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
-		expect(loaded!.module.backgroundRunnable).toEqual(['check_background_transcriber_status']);
+		expect(loaded!.module.backgroundRunnable).toEqual([
+			'check_background_transcriber_status',
+			'background_download_model',
+		]);
 		// absent from apiActions — an action not in the map is unroutable.
 		expect(loaded!.module.apiActions.check_background_transcriber_status).toBeUndefined();
+		expect(loaded!.module.apiActions.background_download_model).toBeUndefined();
+	});
+
+	test('download_model refuses everyone but a global administrator', async () => {
+		// The action makes the SERVER fetch ~1 GB from the public hub and write it
+		// to disk — an operator act. The refusal must run before any catalog read.
+		const loaded = await getLoadedTool('tool_transcription');
+		const handler = loaded!.module.apiActions.download_model!.handler;
+		const response = await handler({
+			principal: stubPrincipal, // not an admin
+			userId: 7,
+			options: { model: 'onnx-community/whisper-large-v3-turbo' },
+			background: false,
+		});
+		expect(response.result).toBe(false);
+		expect(response.msg).toContain('administrator');
+	});
+
+	test('download_model refuses a model that is not in the catalog', async () => {
+		// The id becomes a hub URL path and a store directory — free-form input
+		// would download arbitrary repos or write outside the intended folder.
+		const loaded = await getLoadedTool('tool_transcription');
+		const handler = loaded!.module.apiActions.download_model!.handler;
+		const admin: Principal = { userId: 1, isGlobalAdmin: true, isDeveloper: false };
+		const response = await handler({
+			principal: admin,
+			userId: 1,
+			options: { model: '../../evil/path' },
+			background: false,
+		});
+		expect(response.result).toBe(false);
+		expect(response.msg).toContain('not in the transcriber catalog');
 	});
 });
 
@@ -415,16 +452,45 @@ describe('remote ASR seam', () => {
 		expect(resolveTranscriberProvider('whisper_x').provider).toBeNull();
 		expect(resolveTranscriberProvider('whisper_x').error).toContain('not implemented');
 	});
-	test('resolveTranscriberConfig finds engine uri/key', () => {
-		const toolConfig = {
-			config: {
-				transcriber_config: { value: [{ name: 'babel_transcriber', uri: 'u', key: 'k' }] },
-			},
+	test('resolveTranscriberConfig reads the shape getToolConfig ACTUALLY returns', () => {
+		// getToolConfig returns the EFFECTIVE config: a flat map of key → resolved
+		// value. The lookup used to read `config.transcriber_config.value`, a shape
+		// it never produces, so no server-side engine could ever find its uri/key —
+		// and the old fixture here was written to that same wrong shape, so the gate
+		// stayed green while the feature was dead. This asserts the real one first.
+		const effective = {
+			transcriber_config: [{ name: 'babel_transcriber', uri: 'u', key: 'k' }],
 		};
-		expect(resolveTranscriberConfig(toolConfig, 'babel_transcriber')).toEqual({
+		expect(resolveTranscriberConfig(effective, 'babel_transcriber')).toEqual({
 			uri: 'u',
 			key: 'k',
 		});
+
+		// The raw-property forms an install may store are still accepted.
+		expect(
+			resolveTranscriberConfig(
+				{ transcriber_config: { value: [{ name: 'local_whisper', uri: 'u2', key: 'k2' }] } },
+				'local_whisper',
+			),
+		).toEqual({ uri: 'u2', key: 'k2' });
+		expect(
+			resolveTranscriberConfig(
+				{
+					config: {
+						transcriber_config: { value: [{ name: 'babel_transcriber', uri: 'u', key: 'k' }] },
+					},
+				},
+				'babel_transcriber',
+			),
+		).toEqual({ uri: 'u', key: 'k' });
+
 		expect(resolveTranscriberConfig({}, 'babel_transcriber')).toBeNull();
+		// An entry missing either half is not usable config.
+		expect(
+			resolveTranscriberConfig(
+				{ transcriber_config: [{ name: 'babel_transcriber', uri: 'u' }] },
+				'babel_transcriber',
+			),
+		).toBeNull();
 	});
 });

@@ -45,6 +45,7 @@ The **Transcription** button attaches to media components — audiovisual, image
 | Device | Automatic (recommended), GPU, or the slower compatible mode. Automatic detects what your browser can do and falls back on its own. |
 | Paragraphs | How much timecode detail the transcript carries. *Paragraphs with time marks* (default) reads as prose and keeps enough marks for accurate subtitles; *Paragraphs, one mark each* is the cleanest text; *One mark per phrase* is the old cue-list behaviour. |
 | Rebuild paragraphs | Re-groups the transcription already in the text area under the current paragraph setting. Nothing is re-recognized and no word changes — useful for transcripts made before paragraphs existed. |
+| Download model | Shown when the selected model is marked *not installed*. An administrator can press it to download that model into the installation's own store (it runs on the server and can take several minutes); everyone else sees who to ask. |
 | Characters per line | The maximum line length used when building the `.vtt` subtitle file. |
 
 ## Tips and gotchas
@@ -56,7 +57,7 @@ The **Transcription** button attaches to media components — audiovisual, image
     When the browser engine is used, the recognizer runs inside your browser tab, and the recording never leaves your machine. Keep the window open while it works; if you do close it, the job stops but the text recognized so far is kept and the next run continues from there. A GPU-capable browser is much faster.
 
 !!! info "Nothing is uploaded, and nothing is downloaded from outside"
-    The browser engine keeps the audio on your machine, and the models themselves come from your own installation rather than from an internet service — so it works in an archive with no outside connection, and no third party learns which recordings you are working on. If the model list is empty, ask your administrator to seed the model store.
+    The browser engine keeps the audio on your machine, and the models themselves come from your own installation rather than from an internet service — so it works in an archive with no outside connection, and no third party learns which recordings you are working on. Models marked *not installed* can be added by an administrator with the **Download model** button (or from the server with `scripts/fetch_ai_models.ts`; an air-gapped archive copies the model folder in instead).
 
 !!! tip "Repeated words"
     Recognizers sometimes get stuck and repeat a word or phrase, especially over silence, background noise or unclear speech. The tool now cuts the audio at real pauses, decodes with anti-repetition settings and cleans up whatever still slips through, so this should be rare. If you still see it, try a different model — *Parakeet* cannot produce that kind of loop at all — or improve the source audio.

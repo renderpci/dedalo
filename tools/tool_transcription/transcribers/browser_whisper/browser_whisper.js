@@ -257,8 +257,16 @@ async function load_pipeline( model, requested_device, dtype, sources ) {
 		if (device==='wasm') {
 			throw error;
 		}
-		// WebGPU can fail late (out of memory, buffer mapping) on machines that
-		// advertise it. Slower is a better answer than failed.
+		// The fallback exists for DEVICE failures — WebGPU can die late (out of
+		// memory, buffer mapping) on machines that advertise it, and slower is a
+		// better answer than failed. A failure to FETCH the model is not that: the
+		// files are equally absent on WASM, so retrying re-downloads everything
+		// that did arrive and then fails identically, doubling the wait before the
+		// user sees the real error.
+		const message = (error && error.message) ? error.message : String(error);
+		if (/could not locate file|failed to fetch|status code 404/i.test(message)) {
+			throw error;
+		}
 		console.warn('[browser_whisper] WebGPU pipeline failed, falling back to WASM:', error);
 		const transcriber = await pipeline('automatic-speech-recognition', model, {
 			device				: 'wasm',

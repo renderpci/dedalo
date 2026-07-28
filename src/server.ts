@@ -46,10 +46,6 @@ import {
 	resolveMediaAccessMode,
 	writeRuleFiles,
 } from './core/media/protection.ts';
-import {
-	TRANSCRIPTION_AUDIO_PATH,
-	handleTranscriptionAudio,
-} from './core/media/tools/transcription_audio.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
 // resolves a component model. Keep this explicit even though other imports
@@ -649,19 +645,6 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/core/tools_common/')) {
 		const toolCommonResponse = await serveToolCommonRequest(url.pathname, request);
 		if (toolCommonResponse !== null) return toolCommonResponse;
-	}
-
-	// The speech-recognition audio, served from the APP's own origin behind the
-	// engine's session + record gate. The ordinary media URL is frequently on a
-	// different origin (and behind the media cookie and the web-server protection
-	// rules), none of which the in-browser recogniser can satisfy — see the handler.
-	//
-	// ORDER IS LOAD-BEARING: this path lives under `/dedalo/tools/tool_transcription/`,
-	// which is also the tool's STATIC ASSET space. The asset route below resolves it
-	// as a file inside the tool package, finds none and returns its own 404 — so
-	// placing this after it makes the route unreachable (it was, until 2026-07-28).
-	if (request.method === 'GET' && url.pathname === TRANSCRIPTION_AUDIO_PATH) {
-		return handleTranscriptionAudio(request, url);
 	}
 
 	// Tool package assets (served from the repo `tools/` roots, NOT the copied
