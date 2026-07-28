@@ -37,6 +37,7 @@ import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import type {
 	ToolActionContext,
 	ToolResponse,
@@ -157,6 +158,25 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 	let counter = 0;
 	for (const row of rows) {
 		try {
+			// TOOLS-01 (2026-07-28 audit): authorize EVERY write target on the
+			// ROW's ACTUAL (section, component) — NOT the client-declared gate pair
+			// checked once above. The SQO rows can address a different section than
+			// section_tipo, incl. a non-projects-gated one (dd128 users) that
+			// buildSearchSql does not narrow; without this a tool-granted editor
+			// could write dd515 (developer) / dd133 (password) onto records they
+			// cannot reach → self-escalation to admin. principalCanAccessRecord also
+			// refuses section_id < 1 (the root user) before the admin bypass. Both
+			// helpers pass a global admin through, so this only gates non-admins.
+			if (!(await principalCanAccessRecord(row.section_tipo, row.section_id, principal))) {
+				errors.push(`section_id ${row.section_id}: out of the user scope`);
+				continue;
+			}
+			if ((await getPermissions(principal, row.section_tipo, componentTipo)) < 2) {
+				errors.push(
+					`section_id ${row.section_id}: no write permission on ${row.section_tipo}/${componentTipo}`,
+				);
+				continue;
+			}
 			const table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
 			const record = await readMatrixRecord(table, row.section_tipo, row.section_id);
 			const allItems =
