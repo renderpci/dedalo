@@ -13707,7 +13707,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_stage {
   position: relative;
   height: 100%;
-  min-width: 940px;
+  min-width: 1010px;
   border: 1px solid var(--border_default);
   border-radius: 14px;
   box-shadow: 0 1px 3px var(--shadow_default);
