@@ -257,6 +257,16 @@ export async function runAutomaticTranslation(
 	);
 	if (!gate.ok) return fail(gate.msg, gate.errors);
 
+	// TOOLS-10 (2026-07-28 audit): PHP asserted write on the (section, COMPONENT)
+	// pair, but the 'record' gate above only checks SECTION-level write + record
+	// scope. Add the component-level check (shared by tool_lang + tool_lang_multi)
+	// so a user with section write but NOT write on THIS component cannot
+	// translate-overwrite it. Global admins pass getPermissions anyway.
+	const { getPermissions } = await import('../security/permissions.ts');
+	if ((await getPermissions(ctx.principal, sectionTipo, componentTipo)) < 2) {
+		return fail('insufficient permissions on the target component', ['unauthorized']);
+	}
+
 	const { provider, error: providerError } = resolveTranslationProvider(engine);
 	if (provider === null) return fail(providerError ?? 'unknown translator engine');
 
