@@ -56,9 +56,8 @@ export async function assertActionPermission(
 			const sectionTipo = validTipo(options.section_tipo);
 			if (sectionTipo === null) return fail('invalid section target', ['invalid_request']);
 			const level = await getPermissions(principal, sectionTipo, sectionTipo);
-			return level >= minLevel
-				? { ok: true }
-				: fail('insufficient permissions on target', ['unauthorized']);
+			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
+			return scopeIfRecordTargeted(sectionTipo, options, principal);
 		}
 
 		case 'section_list': {
@@ -87,9 +86,8 @@ export async function assertActionPermission(
 				return fail('invalid permission target', ['invalid_request']);
 			}
 			const level = await getPermissions(principal, sectionTipo, tipo);
-			return level >= minLevel
-				? { ok: true }
-				: fail('insufficient permissions on target', ['unauthorized']);
+			if (level < minLevel) return fail('insufficient permissions on target', ['unauthorized']);
+			return scopeIfRecordTargeted(sectionTipo, options, principal);
 		}
 
 		case 'record': {
@@ -111,6 +109,28 @@ export async function assertActionPermission(
 		default:
 			return fail('unknown permission kind', ['invalid_request']);
 	}
+}
+
+/**
+ * TOOLS-05 (2026-07-28 audit): a section/tipo-level grant is NOT authority to
+ * touch a specific record outside the caller's projects filter. When a
+ * section/tipo-gated action ALSO names a concrete existing record (a positive
+ * section_id in the payload — tm restore, import_files overwrite, marc21/zotero),
+ * the record must be in scope, exactly as the `record` kind requires. A create
+ * (no section_id, or a non-positive one) has no prior record to scope-check and
+ * passes — the section-level write grant is its whole authorization.
+ */
+async function scopeIfRecordTargeted(
+	sectionTipo: string,
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<PermissionCheck> {
+	const sectionId = Number(options.section_id);
+	if (!Number.isInteger(sectionId) || sectionId < 1) return { ok: true };
+	if (!principal.isGlobalAdmin && !(await isRecordInScope(sectionTipo, sectionId, principal))) {
+		return fail('record is out of the user scope', ['unauthorized']);
+	}
+	return { ok: true };
 }
 
 /** Validate a value as a tipo, returning null (not throwing) on failure. */

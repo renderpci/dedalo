@@ -244,6 +244,14 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 		const denied = await gateRecordWrite(transcriptionDdo, ctx);
 		if (denied !== null) return denied;
 
+		// TOOLS-06 (2026-07-28 audit): ALSO gate READ on the media SOURCE.
+		// Transcription reads the audio CONTENT of media_ddo — without this a
+		// caller who can write their OWN transcription target could transcribe the
+		// restricted audio of ANY AV record (one they cannot read) into a record
+		// they control. Read level 1 + record-in-scope on the source media record.
+		const mediaDenied = await gateRecord(mediaDdo, ctx, 1);
+		if (mediaDenied !== null) return mediaDenied;
+
 		const { provider, error: providerError } = resolveTranscriberProvider(engine);
 		if (provider === null) return fail(providerError ?? 'unknown transcriber engine');
 		// Config entry is looked up by the ORIGINAL engine name; the POSTed

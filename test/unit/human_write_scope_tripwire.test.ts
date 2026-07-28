@@ -70,3 +70,22 @@ describe('TOOLS-02 — export applies the read ACL before it reads records', () 
 		).toBe(true);
 	});
 });
+
+describe('TOOLS-05 — section/tipo-gated tool actions scope a targeted record', () => {
+	const src = read('src/core/tools/security.ts');
+	test('scopeIfRecordTargeted is applied on the section AND tipo kinds', () => {
+		expect(src.includes('async function scopeIfRecordTargeted')).toBe(true);
+		// Both the section and tipo cases end by delegating to it.
+		const calls =
+			src.split('return scopeIfRecordTargeted(sectionTipo, options, principal)').length - 1;
+		expect(calls).toBeGreaterThanOrEqual(2);
+		expect(src.includes('isRecordInScope(sectionTipo, sectionId, principal)')).toBe(true);
+	});
+});
+
+describe('TOOLS-06 — transcription gates READ on the media source', () => {
+	const src = read('tools/tool_transcription/server/index.ts');
+	test('automatic_transcription gates the media_ddo source, not only the write target', () => {
+		expect(src.includes('gateRecord(mediaDdo, ctx, 1)')).toBe(true);
+	});
+});
