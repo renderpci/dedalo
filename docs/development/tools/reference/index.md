@@ -27,7 +27,7 @@ Every remotely callable server action is declared as a key of the module's **`ap
 - `show_in_inspector` — button in the section **inspector** panel
 - `show_in_component` — button inline on the matching **component**
 
-Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 12 of the 36 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
+Section-level tools surface on the section itself. A tool's own `isAvailable(context)` hook (when its module declares one) gives it the last word on whether to appear for a given element. Many tools are **UI-only** (all behavior is client-side, no remote API actions — 13 of the 37 in-repo tools ship no `server/` package at all); others dispatch server actions through `this.tool_request(...)`.
 
 !!! note "No base class"
     There is no `tool_common` base *class* on the server — the shared machinery (registry, loader, dispatch, security, config, cache) lives in `src/core/tools/` and is invoked BY the framework around a tool's handlers, not inherited by them. On the **client**, `tool_common` is a real JS prototype base (`src/core/tools/client/js/tool_common.js`) that every tool wires into via `wire_tool`.
@@ -87,6 +87,7 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 
 | Tool | Purpose | Reference |
 | --- | --- | --- |
+| `tool_identify` | Ranks the records most likely to be the same type as an open record, under the section's identification profile, with a per-criterion breakdown and thumbnails; UI-only over `dd_identify_api` | [reference](tool_identify.md) |
 | `tool_propagate_component_data` | Batch replace/add/delete of component data across records matched by an SQO, with bulk-process audit and time-machine reversion; CLI-runnable | [reference](tool_propagate_component_data.md) |
 | `tool_time_machine` | Audit/history view and reversion of record and component changes over time | [reference](tool_time_machine.md) |
 | `tool_update_cache` | Bulk cache regeneration/clean for components, chunked with progress tracking and background execution | [reference](tool_update_cache.md) |
@@ -116,4 +117,4 @@ Section-level tools surface on the section itself. A tool's own `isAvailable(con
 | `tool_qr` | Base/build sample tool (not for production use); UI-only | [reference](tool_qr.md) |
 
 !!! note "Counting the tools"
-    The directory `tools/` contains exactly 36 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). All 36 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 24 of the 36 ship a `server/index.ts` package (including `tool_dev_template`); the other 12 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`.
+    The directory `tools/` contains exactly 37 entries, all of them real tools — there is no `tool_common` directory (the shared machinery lives in `src/core/tools/`). All 37 are listed in the tables above; `tool_dev_template` is the developer scaffold/reference implementation, listed under *Misc / internal*. 24 of the 37 ship a `server/index.ts` package (including `tool_dev_template`); the other 13 are client-only (no `server/` directory at all): `tool_assistant`, `tool_cataloging`, `tool_dd_label`, `tool_diffusion`, `tool_identify`, `tool_indexation`, `tool_numisdata_epigraphy`, `tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`, `tool_tr_print`, `tool_user_admin`.

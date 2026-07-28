@@ -76,6 +76,7 @@ Turn audio/video and documents into searchable, indexed text.
 
 Batch edits, history and maintenance across many records at once.
 
+- **[Identify](using_identify.md)** — find the records most likely to be the same type as the one you have open, with the reason for every candidate.
 - **[Propagate component data](using_propagate_component_data.md)** — replace, add or delete a component's data across every record that matches a search.
 - **[Time machine](using_time_machine.md)** — browse the full change history of a record or component and revert to any past state.
 - **[Update cache](using_update_cache.md)** — regenerate or clean component caches in bulk *(administrator)*.

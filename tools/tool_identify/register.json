@@ -1,0 +1,421 @@
+{
+	"$schema": "../../src/core/tools/client/register.schema.json",
+	"name": "tool_identify",
+	"version": "1.0.0",
+	"label": {
+		"lg-eng": "Identify",
+		"lg-spa": "Identificar",
+		"lg-cat": "Identificar",
+		"lg-fra": "Identifier",
+		"lg-deu": "Identifizieren",
+		"lg-ita": "Identificare",
+		"lg-por": "Identificar"
+	},
+	"description": {
+		"lg-eng": "Find the records most likely to be the same type as this one, with the per-criterion reason for every candidate.",
+		"lg-spa": "Encuentra los registros con más probabilidad de ser del mismo tipo que este, con el motivo por criterio de cada candidato."
+	},
+	"developer": "Dédalo team",
+	"affected_models": ["section"],
+	"show_in_inspector": true,
+	"show_in_component": false,
+	"active": true,
+	"properties": { "open_as": "modal" },
+	"labels": [
+		{ "lang": "lg-eng", "name": "identify_title", "value": "Identification candidates" },
+		{ "lang": "lg-spa", "name": "identify_title", "value": "Candidatos de identificación" },
+
+		{ "lang": "lg-eng", "name": "identify_seed", "value": "Comparing against" },
+		{ "lang": "lg-spa", "name": "identify_seed", "value": "Comparando con" },
+
+		{ "lang": "lg-eng", "name": "identify_profile", "value": "Profile" },
+		{ "lang": "lg-spa", "name": "identify_profile", "value": "Perfil" },
+
+		{ "lang": "lg-eng", "name": "identify_search", "value": "Find matches" },
+		{ "lang": "lg-spa", "name": "identify_search", "value": "Buscar coincidencias" },
+
+		{ "lang": "lg-eng", "name": "identify_searching", "value": "Comparing records…" },
+		{ "lang": "lg-spa", "name": "identify_searching", "value": "Comparando registros…" },
+
+		{ "lang": "lg-eng", "name": "identify_no_results", "value": "No candidate scored high enough to be reported. That is an answer, not a failure: nothing in the readable corpus shares this record's identifying features." },
+		{ "lang": "lg-spa", "name": "identify_no_results", "value": "Ningún candidato ha puntuado lo suficiente para mostrarse. Eso es una respuesta, no un fallo: nada en el corpus legible comparte los rasgos identificativos de este registro." },
+
+		{ "lang": "lg-eng", "name": "identify_verdict_same_type", "value": "Same type" },
+		{ "lang": "lg-spa", "name": "identify_verdict_same_type", "value": "Mismo tipo" },
+
+		{ "lang": "lg-eng", "name": "identify_verdict_candidate", "value": "Candidate" },
+		{ "lang": "lg-spa", "name": "identify_verdict_candidate", "value": "Candidato" },
+
+		{ "lang": "lg-eng", "name": "identify_verdict_weak", "value": "Weak" },
+		{ "lang": "lg-spa", "name": "identify_verdict_weak", "value": "Débil" },
+
+		{ "lang": "lg-eng", "name": "identify_agreed", "value": "Agreed" },
+		{ "lang": "lg-spa", "name": "identify_agreed", "value": "Coincide" },
+
+		{ "lang": "lg-eng", "name": "identify_differed", "value": "Differed" },
+		{ "lang": "lg-spa", "name": "identify_differed", "value": "Difiere" },
+
+		{ "lang": "lg-eng", "name": "identify_unrecorded", "value": "Not recorded" },
+		{ "lang": "lg-spa", "name": "identify_unrecorded", "value": "Sin registrar" },
+
+		{ "lang": "lg-eng", "name": "identify_unrecorded_note", "value": "Neither record states this, so it could not agree or differ. It is absence, not disagreement, and it did not lower the score." },
+		{ "lang": "lg-spa", "name": "identify_unrecorded_note", "value": "Ningún registro lo consigna, así que no pudo coincidir ni diferir. Es ausencia, no desacuerdo, y no ha bajado la puntuación." },
+
+		{ "lang": "lg-eng", "name": "identify_restricted", "value": "Not readable by you" },
+		{ "lang": "lg-spa", "name": "identify_restricted", "value": "No legible para ti" },
+
+		{ "lang": "lg-eng", "name": "identify_restricted_note", "value": "You do not have permission to read this field, so it was neither compared nor shown. This says nothing about whether the records state a value: the score was simply computed without it." },
+		{ "lang": "lg-spa", "name": "identify_restricted_note", "value": "No tienes permiso para leer este campo, así que no se ha comparado ni se muestra. Esto no dice nada sobre si los registros consignan un valor: la puntuación se ha calculado sin él." },
+
+		{ "lang": "lg-eng", "name": "identify_weight", "value": "weight" },
+		{ "lang": "lg-spa", "name": "identify_weight", "value": "peso" },
+
+		{ "lang": "lg-eng", "name": "identify_descriptive", "value": "descriptive — shown, not scored" },
+		{ "lang": "lg-spa", "name": "identify_descriptive", "value": "descriptivo — se muestra, no puntúa" },
+
+		{ "lang": "lg-eng", "name": "identify_gate", "value": "gate — required, not part of the score" },
+		{ "lang": "lg-spa", "name": "identify_gate", "value": "filtro — obligatorio, no cuenta en la puntuación" },
+
+		{ "lang": "lg-eng", "name": "identify_gate_note", "value": "This criterion decides who gets compared at all: every candidate listed agreed on it. That is why its weight is left out of the score — it ranks nothing." },
+		{ "lang": "lg-spa", "name": "identify_gate_note", "value": "Este criterio decide quién entra en la comparación: todos los candidatos de la lista coinciden en él. Por eso su peso queda fuera de la puntuación — no ordena nada." },
+
+		{ "lang": "lg-eng", "name": "identify_blind_criteria", "value": "This record states nothing for the criteria below, so they could not discriminate. The score was computed without them." },
+		{ "lang": "lg-spa", "name": "identify_blind_criteria", "value": "Este registro no consigna nada para los criterios siguientes, así que no pudieron discriminar. La puntuación se ha calculado sin ellos." },
+
+		{ "lang": "lg-eng", "name": "identify_restricted_criteria", "value": "You do not have permission to read the criteria below, so they were neither compared nor shown. The scores here were computed without them and are partial: a colleague with more permissions may see a different number for the same records." },
+		{ "lang": "lg-spa", "name": "identify_restricted_criteria", "value": "No tienes permiso para leer los criterios siguientes, así que no se han comparado ni se muestran. Las puntuaciones se han calculado sin ellos y son parciales: un colega con más permisos puede ver una cifra distinta para los mismos registros." },
+
+		{ "lang": "lg-eng", "name": "identify_more_available", "value": "More candidates exist than were scored: the pool cap stopped the comparison. This list is not the whole corpus." },
+		{ "lang": "lg-spa", "name": "identify_more_available", "value": "Existen más candidatos de los que se han puntuado: el límite del conjunto detuvo la comparación. Esta lista no es todo el corpus." },
+
+		{ "lang": "lg-eng", "name": "identify_no_image", "value": "No image available" },
+		{ "lang": "lg-spa", "name": "identify_no_image", "value": "Sin imagen disponible" },
+
+		{ "lang": "lg-eng", "name": "identify_open_record", "value": "Open this record" },
+		{ "lang": "lg-spa", "name": "identify_open_record", "value": "Abrir este registro" },
+
+		{ "lang": "lg-eng", "name": "identify_no_profile", "value": "This section has no identification profile configured, so there is nothing to compare on. Ask an administrator to add one to the section's ontology properties." },
+		{ "lang": "lg-spa", "name": "identify_no_profile", "value": "Esta sección no tiene un perfil de identificación configurado, así que no hay nada con lo que comparar. Pide a un administrador que añada uno a las propiedades de ontología de la sección." },
+
+		{ "lang": "lg-eng", "name": "identify_invalid_profile", "value": "This section's identification profile could not be read, so no comparison was attempted. The exact problem is below — it needs an administrator." },
+		{ "lang": "lg-spa", "name": "identify_invalid_profile", "value": "No se ha podido leer el perfil de identificación de esta sección, así que no se ha intentado ninguna comparación. El problema exacto está abajo — necesita un administrador." },
+
+		{ "lang": "lg-eng", "name": "identify_forbidden", "value": "You do not have permission to read this record, so it cannot be identified." },
+		{ "lang": "lg-spa", "name": "identify_forbidden", "value": "No tienes permiso para leer este registro, así que no puede identificarse." },
+
+		{ "lang": "lg-eng", "name": "identify_missing_seed", "value": "This tool must be opened from a saved record — there is no record to compare." },
+		{ "lang": "lg-spa", "name": "identify_missing_seed", "value": "Esta herramienta debe abrirse desde un registro guardado — no hay registro que comparar." },
+
+		{ "lang": "lg-eng", "name": "identify_failed", "value": "The identification request failed. Nothing was compared." },
+		{ "lang": "lg-spa", "name": "identify_failed", "value": "La petición de identificación ha fallado. No se ha comparado nada." },
+
+		{ "lang": "lg-eng", "name": "identify_invalid_source", "value": "The panel asked for a proposal source this server does not define. Nothing was proposed." },
+		{ "lang": "lg-spa", "name": "identify_invalid_source", "value": "El panel ha pedido una fuente de propuestas que este servidor no define. No se ha propuesto nada." },
+
+		{ "lang": "lg-eng", "name": "identify_proposals_title", "value": "Suggested values" },
+		{ "lang": "lg-spa", "name": "identify_proposals_title", "value": "Valores sugeridos" },
+
+		{ "lang": "lg-eng", "name": "identify_propose", "value": "Suggest values" },
+		{ "lang": "lg-spa", "name": "identify_propose", "value": "Sugerir valores" },
+
+		{ "lang": "lg-eng", "name": "identify_proposing", "value": "Looking for suggestions…" },
+		{ "lang": "lg-spa", "name": "identify_proposing", "value": "Buscando sugerencias…" },
+
+		{ "lang": "lg-eng", "name": "identify_no_proposals", "value": "No value is being suggested for this record. The lines above say why for each source." },
+		{ "lang": "lg-spa", "name": "identify_no_proposals", "value": "No se sugiere ningún valor para este registro. Las líneas de arriba explican el motivo de cada fuente." },
+
+		{ "lang": "lg-eng", "name": "identify_vision_optin", "value": "Also ask the vision model" },
+		{ "lang": "lg-spa", "name": "identify_vision_optin", "value": "Preguntar también al modelo de visión" },
+
+		{ "lang": "lg-eng", "name": "identify_vision_note", "value": "The vision model runs only when you ask for it: it costs money and, depending on this installation, sends the record's photograph off this host." },
+		{ "lang": "lg-spa", "name": "identify_vision_note", "value": "El modelo de visión solo se ejecuta si lo pides: cuesta dinero y, según la instalación, envía la fotografía del registro fuera de este servidor." },
+
+		{ "lang": "lg-eng", "name": "identify_source_vote", "value": "Corpus" },
+		{ "lang": "lg-spa", "name": "identify_source_vote", "value": "Corpus" },
+
+		{ "lang": "lg-eng", "name": "identify_source_vision", "value": "Model" },
+		{ "lang": "lg-spa", "name": "identify_source_vision", "value": "Modelo" },
+
+		{ "lang": "lg-eng", "name": "identify_source_vote_ran", "value": "Values that records like this one already record." },
+		{ "lang": "lg-spa", "name": "identify_source_vote_ran", "value": "Valores que ya consignan registros como este." },
+
+		{ "lang": "lg-eng", "name": "identify_source_vision_ran", "value": "A vision model read this record's photograph." },
+		{ "lang": "lg-spa", "name": "identify_source_vision_ran", "value": "Un modelo de visión ha leído la fotografía de este registro." },
+
+		{ "lang": "lg-eng", "name": "identify_neighbours_considered", "value": "readable neighbour(s) could vote." },
+		{ "lang": "lg-spa", "name": "identify_neighbours_considered", "value": "vecino(s) legible(s) han podido votar." },
+
+		{ "lang": "lg-eng", "name": "identify_vote_claim", "value": "readable record(s) like this one already record this value. Nothing was inferred and no model was used." },
+		{ "lang": "lg-spa", "name": "identify_vote_claim", "value": "registro(s) legible(s) como este ya consignan este valor. No se ha inferido nada ni se ha usado ningún modelo." },
+
+		{ "lang": "lg-eng", "name": "identify_vision_claim", "value": "No record attests this. A vision model was shown this record's photograph and suggested it from the profile's own list of allowed values." },
+		{ "lang": "lg-spa", "name": "identify_vision_claim", "value": "Ningún registro lo atestigua. Se ha mostrado la fotografía de este registro a un modelo de visión, que lo ha sugerido a partir de la lista de valores permitidos del propio perfil." },
+
+		{ "lang": "lg-eng", "name": "identify_egress_external", "value": "this model runs off this host, so the photograph was sent to it" },
+		{ "lang": "lg-spa", "name": "identify_egress_external", "value": "este modelo se ejecuta fuera de este servidor, así que se le ha enviado la fotografía" },
+
+		{ "lang": "lg-eng", "name": "identify_egress_local", "value": "this model runs on this host; the photograph did not leave it" },
+		{ "lang": "lg-spa", "name": "identify_egress_local", "value": "este modelo se ejecuta en este servidor; la fotografía no ha salido de él" },
+
+		{ "lang": "lg-eng", "name": "identify_vision_image", "value": "the picture it looked at" },
+		{ "lang": "lg-spa", "name": "identify_vision_image", "value": "la imagen que ha mirado" },
+
+		{ "lang": "lg-eng", "name": "identify_discarded", "value": "Discarded model answer:" },
+		{ "lang": "lg-spa", "name": "identify_discarded", "value": "Respuesta del modelo descartada:" },
+
+		{ "lang": "lg-eng", "name": "identify_distribution", "value": "The neighbours were divided:" },
+		{ "lang": "lg-spa", "name": "identify_distribution", "value": "Los vecinos estaban divididos:" },
+
+		{ "lang": "lg-eng", "name": "identify_confidence", "value": "confidence" },
+		{ "lang": "lg-spa", "name": "identify_confidence", "value": "confianza" },
+
+		{ "lang": "lg-eng", "name": "identify_date_central", "value": "central" },
+		{ "lang": "lg-spa", "name": "identify_date_central", "value": "central" },
+
+		{ "lang": "lg-eng", "name": "identify_no_value", "value": "(no readable value)" },
+		{ "lang": "lg-spa", "name": "identify_no_value", "value": "(sin valor legible)" },
+
+		{ "lang": "lg-eng", "name": "identify_writes_into", "value": "writes into" },
+		{ "lang": "lg-spa", "name": "identify_writes_into", "value": "escribe en" },
+
+		{ "lang": "lg-eng", "name": "identify_accept", "value": "Accept" },
+		{ "lang": "lg-spa", "name": "identify_accept", "value": "Aceptar" },
+
+		{ "lang": "lg-eng", "name": "identify_accepted", "value": "Saved:" },
+		{ "lang": "lg-spa", "name": "identify_accepted", "value": "Guardado:" },
+
+		{ "lang": "lg-eng", "name": "identify_accept_failed", "value": "The value could not be saved. Nothing was written." },
+		{ "lang": "lg-spa", "name": "identify_accept_failed", "value": "No se ha podido guardar el valor. No se ha escrito nada." },
+
+		{ "lang": "lg-eng", "name": "identify_reject", "value": "Dismiss" },
+		{ "lang": "lg-spa", "name": "identify_reject", "value": "Descartar" },
+
+		{ "lang": "lg-eng", "name": "identify_reject_note", "value": "Hides this suggestion until the panel is reopened. Nothing is recorded." },
+		{ "lang": "lg-spa", "name": "identify_reject_note", "value": "Oculta esta sugerencia hasta que se vuelva a abrir el panel. No se registra nada." },
+
+		{ "lang": "lg-eng", "name": "identify_readonly", "value": "Read-only here." },
+		{ "lang": "lg-spa", "name": "identify_readonly", "value": "Solo lectura aquí." },
+
+		{ "lang": "lg-eng", "name": "identify_open_target", "value": "Open" },
+		{ "lang": "lg-spa", "name": "identify_open_target", "value": "Abrir" },
+
+		{ "lang": "lg-eng", "name": "identify_clusters_title", "value": "Groups in this batch" },
+		{ "lang": "lg-spa", "name": "identify_clusters_title", "value": "Grupos de este lote" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_run", "value": "Group these records" },
+		{ "lang": "lg-spa", "name": "identify_cluster_run", "value": "Agrupar estos registros" },
+
+		{ "lang": "lg-eng", "name": "identify_clusters_scope", "value": "Compares the records of your current filter — up to" },
+		{ "lang": "lg-spa", "name": "identify_clusters_scope", "value": "Compara los registros de tu filtro actual — hasta" },
+
+		{ "lang": "lg-eng", "name": "identify_clustering", "value": "Comparing the whole batch…" },
+		{ "lang": "lg-spa", "name": "identify_clustering", "value": "Comparando todo el lote…" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_considered", "value": "record(s) compared." },
+		{ "lang": "lg-spa", "name": "identify_cluster_considered", "value": "registro(s) comparados." },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_thresholds", "value": "Thresholds:" },
+		{ "lang": "lg-spa", "name": "identify_cluster_thresholds", "value": "Umbrales:" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_signal_image", "value": "images" },
+		{ "lang": "lg-spa", "name": "identify_cluster_signal_image", "value": "imágenes" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_signal_criteria", "value": "criteria" },
+		{ "lang": "lg-spa", "name": "identify_cluster_signal_criteria", "value": "criterios" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_no_criteria_leg", "value": "—" },
+		{ "lang": "lg-spa", "name": "identify_cluster_no_criteria_leg", "value": "—" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_truncated", "value": "More records matched than were compared: the pool cap stopped the run. These groups describe the first" },
+		{ "lang": "lg-spa", "name": "identify_cluster_truncated", "value": "Han coincidido más registros de los comparados: el límite del conjunto ha detenido la ejecución. Estos grupos describen los primeros" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_stopped", "value": "The run was stopped before it finished. These groups are partial." },
+		{ "lang": "lg-spa", "name": "identify_cluster_stopped", "value": "La ejecución se detuvo antes de terminar. Estos grupos son parciales." },
+
+		{ "lang": "lg-eng", "name": "identify_no_clusters", "value": "Nothing grouped: no two records in this batch were similar enough to link. That is an answer, not a failure." },
+		{ "lang": "lg-spa", "name": "identify_no_clusters", "value": "No se ha agrupado nada: ningún par de registros de este lote se parece lo suficiente. Eso es una respuesta, no un fallo." },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_members", "value": "records" },
+		{ "lang": "lg-spa", "name": "identify_cluster_members", "value": "registros" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_confidence", "value": "mean link" },
+		{ "lang": "lg-spa", "name": "identify_cluster_confidence", "value": "enlace medio" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_shape", "value": "Directly linked pairs" },
+		{ "lang": "lg-spa", "name": "identify_cluster_shape", "value": "Pares enlazados directamente" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_hops", "value": "longest chain" },
+		{ "lang": "lg-spa", "name": "identify_cluster_hops", "value": "cadena más larga" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_weakest", "value": "weakest link" },
+		{ "lang": "lg-spa", "name": "identify_cluster_weakest", "value": "enlace más débil" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_chaining", "value": "This group is held together by a chain: some members are similar to each other only through other members. Read the links before accepting it whole." },
+		{ "lang": "lg-spa", "name": "identify_cluster_chaining", "value": "Este grupo se sostiene por una cadena: algunos miembros solo se parecen entre sí a través de otros miembros. Lee los enlaces antes de aceptarlo entero." },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_agreed_on", "value": "They all agree on" },
+		{ "lang": "lg-spa", "name": "identify_cluster_agreed_on", "value": "Todos coinciden en" },
+
+		{ "lang": "lg-eng", "name": "identify_consensus_agreed", "value": "agreed" },
+		{ "lang": "lg-spa", "name": "identify_consensus_agreed", "value": "coinciden" },
+
+		{ "lang": "lg-eng", "name": "identify_consensus_partial", "value": "partial" },
+		{ "lang": "lg-spa", "name": "identify_consensus_partial", "value": "parcial" },
+
+		{ "lang": "lg-eng", "name": "identify_consensus_differs", "value": "differs" },
+		{ "lang": "lg-spa", "name": "identify_consensus_differs", "value": "difiere" },
+
+		{ "lang": "lg-eng", "name": "identify_consensus_unrecorded", "value": "not recorded" },
+		{ "lang": "lg-spa", "name": "identify_consensus_unrecorded", "value": "sin registrar" },
+
+		{ "lang": "lg-eng", "name": "identify_consensus_counts", "value": "readable members state it" },
+		{ "lang": "lg-spa", "name": "identify_consensus_counts", "value": "miembros legibles lo consignan" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_representative", "value": "Most central" },
+		{ "lang": "lg-spa", "name": "identify_cluster_representative", "value": "Más central" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_links", "value": "link(s) hold this group together" },
+		{ "lang": "lg-spa", "name": "identify_cluster_links", "value": "enlace(s) mantienen unido este grupo" },
+
+		{ "lang": "lg-eng", "name": "identify_cluster_singletons", "value": "record(s) grouped with nothing." },
+		{ "lang": "lg-spa", "name": "identify_cluster_singletons", "value": "registro(s) no se han agrupado con nada." },
+
+		{ "lang": "lg-eng", "name": "identify_no_type_section", "value": "This collection keeps no canonical Type records, so a group cannot be promoted into one. Grouping still works — there is simply nothing to promote into." },
+		{ "lang": "lg-spa", "name": "identify_no_type_section", "value": "Esta colección no mantiene registros de Tipo canónicos, así que un grupo no puede promoverse a ninguno. Agrupar sigue funcionando — sencillamente no hay adónde promover." },
+
+		{ "lang": "lg-eng", "name": "identify_no_link_component", "value": "The identification profile does not say which component links a record to its Type, so nothing can be attached. This needs an administrator — the engine refuses to guess which component that is." },
+		{ "lang": "lg-spa", "name": "identify_no_link_component", "value": "El perfil de identificación no indica qué componente enlaza un registro con su Tipo, así que no se puede vincular nada. Esto necesita un administrador — el motor se niega a adivinar qué componente es." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_readonly", "value": "Groups cannot be promoted to a Type from here:" },
+		{ "lang": "lg-spa", "name": "identify_promote_readonly", "value": "Desde aquí no se pueden promover grupos a un Tipo:" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_available", "value": "Groups can be promoted to a Type record in section" },
+		{ "lang": "lg-spa", "name": "identify_promote_available", "value": "Los grupos pueden promoverse a un registro de Tipo en la sección" },
+
+		{ "lang": "lg-eng", "name": "identify_promote", "value": "Promote to a Type…" },
+		{ "lang": "lg-spa", "name": "identify_promote", "value": "Promover a un Tipo…" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_loading", "value": "Reading the group's current Types…" },
+		{ "lang": "lg-spa", "name": "identify_promote_loading", "value": "Leyendo los Tipos actuales del grupo…" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_component", "value": "The link is written into" },
+		{ "lang": "lg-spa", "name": "identify_promote_component", "value": "El enlace se escribe en" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_revealed_by", "value": "derived from the profile's criteria:" },
+		{ "lang": "lg-spa", "name": "identify_promote_revealed_by", "value": "derivado de los criterios del perfil:" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_target", "value": "Link every member to" },
+		{ "lang": "lg-spa", "name": "identify_promote_target", "value": "Enlazar cada miembro a" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_already_linked", "value": "member(s) of this group already link to it" },
+		{ "lang": "lg-spa", "name": "identify_promote_already_linked", "value": "miembro(s) de este grupo ya lo enlazan" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_existing_none", "value": "No member of this group links to a Type yet." },
+		{ "lang": "lg-spa", "name": "identify_promote_existing_none", "value": "Ningún miembro de este grupo enlaza todavía con un Tipo." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_other", "value": "Another existing Type, by record id" },
+		{ "lang": "lg-spa", "name": "identify_promote_other", "value": "Otro Tipo existente, por id de registro" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_check", "value": "Check" },
+		{ "lang": "lg-spa", "name": "identify_promote_check", "value": "Comprobar" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_bad_id", "value": "Not a record id." },
+		{ "lang": "lg-spa", "name": "identify_promote_bad_id", "value": "No es un id de registro." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_not_found", "value": "No readable record with that id exists in the Type section, so nothing can be attached to it. Check the id." },
+		{ "lang": "lg-spa", "name": "identify_promote_not_found", "value": "No existe ning\u00fan registro legible con ese id en la secci\u00f3n de Tipos, as\u00ed que no se puede enlazar nada con \u00e9l. Comprueba el id." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_check_first", "value": "Check the record id first, so you can see which Type it is." },
+		{ "lang": "lg-spa", "name": "identify_promote_check_first", "value": "Comprueba antes el id del registro, para ver de qué Tipo se trata." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_new", "value": "A NEW Type record in" },
+		{ "lang": "lg-spa", "name": "identify_promote_new", "value": "Un NUEVO registro de Tipo en" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_new_name", "value": "Name for the new Type (optional)" },
+		{ "lang": "lg-spa", "name": "identify_promote_new_name", "value": "Nombre del nuevo Tipo (opcional)" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_new_name_note", "value": "The new Type record is created empty: this section's title is not a plain text field you may write from here, so open the record afterwards and name it." },
+		{ "lang": "lg-spa", "name": "identify_promote_new_name_note", "value": "El nuevo registro de Tipo se crea vacío: el título de esta sección no es un campo de texto que puedas escribir desde aquí, así que abre el registro después y ponle nombre." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_no_create", "value": "You may not create records in the Type section, so a new Type cannot be minted here." },
+		{ "lang": "lg-spa", "name": "identify_promote_no_create", "value": "No tienes permiso para crear registros en la sección de Tipos, así que no se puede crear un Tipo nuevo desde aquí." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_pick_target", "value": "Choose which Type the members will be linked to." },
+		{ "lang": "lg-spa", "name": "identify_promote_pick_target", "value": "Elige a qué Tipo se enlazarán los miembros." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_review", "value": "Review what will be written" },
+		{ "lang": "lg-spa", "name": "identify_promote_review", "value": "Revisar lo que se va a escribir" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_review_new", "value": "a NEW Type record created in" },
+		{ "lang": "lg-spa", "name": "identify_promote_review_new", "value": "un NUEVO registro de Tipo creado en" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_review_1", "value": "This will write" },
+		{ "lang": "lg-spa", "name": "identify_promote_review_1", "value": "Esto va a escribir" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_review_2", "value": "into the component" },
+		{ "lang": "lg-spa", "name": "identify_promote_review_2", "value": "en el componente" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_review_3", "value": "of these" },
+		{ "lang": "lg-spa", "name": "identify_promote_review_3", "value": "de estos" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_review_4", "value": "records. Members already linked to it are skipped and reported." },
+		{ "lang": "lg-spa", "name": "identify_promote_review_4", "value": "registros. Los miembros ya enlazados se omiten y se informan." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_confirm", "value": "Write to" },
+		{ "lang": "lg-spa", "name": "identify_promote_confirm", "value": "Escribir en" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_confirm_records", "value": "records" },
+		{ "lang": "lg-spa", "name": "identify_promote_confirm_records", "value": "registros" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_cancel", "value": "Cancel" },
+		{ "lang": "lg-spa", "name": "identify_promote_cancel", "value": "Cancelar" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_close", "value": "Close" },
+		{ "lang": "lg-spa", "name": "identify_promote_close", "value": "Cerrar" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_writing", "value": "Writing…" },
+		{ "lang": "lg-spa", "name": "identify_promote_writing", "value": "Escribiendo…" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_creating", "value": "Creating the Type record…" },
+		{ "lang": "lg-spa", "name": "identify_promote_creating", "value": "Creando el registro de Tipo…" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_create_failed", "value": "The Type record could not be created, so nothing was linked. Nothing was written." },
+		{ "lang": "lg-spa", "name": "identify_promote_create_failed", "value": "No se ha podido crear el registro de Tipo, así que no se ha enlazado nada. No se ha escrito nada." },
+
+		{ "lang": "lg-eng", "name": "identify_promote_name_failed", "value": "The new Type record was created but could not be named — open it and name it by hand:" },
+		{ "lang": "lg-spa", "name": "identify_promote_name_failed", "value": "El nuevo registro de Tipo se ha creado pero no se ha podido nombrar — ábrelo y ponle nombre a mano:" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_attached", "value": "linked" },
+		{ "lang": "lg-spa", "name": "identify_promote_attached", "value": "enlazado" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_already", "value": "already linked" },
+		{ "lang": "lg-spa", "name": "identify_promote_already", "value": "ya enlazado" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_failed", "value": "FAILED" },
+		{ "lang": "lg-spa", "name": "identify_promote_failed", "value": "HA FALLADO" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_unconfirmed", "value": "UNCONFIRMED" },
+		{ "lang": "lg-spa", "name": "identify_promote_unconfirmed", "value": "SIN CONFIRMAR" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_summary_attached", "value": "linked" },
+		{ "lang": "lg-spa", "name": "identify_promote_summary_attached", "value": "enlazados" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_summary_already", "value": "already linked (nothing written)" },
+		{ "lang": "lg-spa", "name": "identify_promote_summary_already", "value": "ya enlazados (no se ha escrito nada)" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_summary_failed", "value": "FAILED" },
+		{ "lang": "lg-spa", "name": "identify_promote_summary_failed", "value": "HAN FALLADO" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_summary_unconfirmed", "value": "UNCONFIRMED (the server accepted the save but did not report what it wrote \u2014 open those records and check)" },
+		{ "lang": "lg-spa", "name": "identify_promote_summary_unconfirmed", "value": "SIN CONFIRMAR (el servidor acept\u00f3 el guardado pero no ha informado de lo que escribi\u00f3 \u2014 abre esos registros y compru\u00e9balo)" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_open_type", "value": "Open the Type record" },
+		{ "lang": "lg-spa", "name": "identify_promote_open_type", "value": "Abrir el registro de Tipo" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_retry", "value": "Retry the" },
+		{ "lang": "lg-spa", "name": "identify_promote_retry", "value": "Reintentar los" },
+
+		{ "lang": "lg-eng", "name": "identify_promote_retry_failed", "value": "that failed" },
+		{ "lang": "lg-spa", "name": "identify_promote_retry_failed", "value": "que han fallado" }
+	]
+}

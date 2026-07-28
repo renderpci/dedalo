@@ -41,6 +41,7 @@ import { componentPortalApiActions } from './handlers/dd_component_portal_api.ts
 import { coreApiActions } from './handlers/dd_core_api.ts';
 import { diffusionApiActions } from './handlers/dd_diffusion_api.ts';
 import { errorReportApiActions } from './handlers/dd_error_report_api.ts';
+import { identifyApiActions } from './handlers/dd_identify_api.ts';
 import { mcpApiActions } from './handlers/dd_mcp_api.ts';
 import { toolsApiActions } from './handlers/dd_tools_api.ts';
 import { tsApiActions } from './handlers/dd_ts_api.ts';
@@ -132,6 +133,11 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
 	dd_ts_api: tsApiActions,
 	dd_utils_api: utilsApiActions,
 	dd_rag_api: ragApiActions,
+	// Object identification (src/core/identify): find the records that share a
+	// seed's identifying features. Authenticated + CSRF-gated like every other
+	// class here; the RESULTS are ACL-gated inside the engine (the principal runs
+	// through both the pool query and the per-candidate record read).
+	dd_identify_api: identifyApiActions,
 	// Error-report intake (WC-017, TS-only): ONE pre-auth action, reachable
 	// only where DEDALO_ERROR_REPORT_RECEIVER is on (Gate 1c below).
 	dd_error_report_api: errorReportApiActions,

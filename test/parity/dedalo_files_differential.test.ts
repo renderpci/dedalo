@@ -70,14 +70,17 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *    excluded from sync_client.sh like diffusion_server_control;
  *  - tool_sitebuilder + site_builder_status widget (WC-035) — the site-builder
  *    subsystem, a TS-native addition (proxy tool + ops widget for the
- *    standalone publication/site_builder daemon).
+ *    standalone publication/site_builder daemon);
+ *  - tool_identify (WC-054) — the object-identification curator panel
+ *    (engineering/IDENTIFY_SPEC.md), TS-native with no PHP twin.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
 		entry.url.startsWith('/dedalo/tools/tool_error_report/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/') ||
 		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
-		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/')
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/') ||
+		entry.url.startsWith('/dedalo/tools/tool_identify/')
 	);
 }
 

@@ -1,0 +1,982 @@
+/**
+* TOOL_IDENTIFY
+*
+* Authoring LESS source. Compiled by `bun run css:build` into the committed
+* tool_identify.css / .css.map twins (css_build_tripwire gates the match).
+* Loaded on tool init.
+*
+* Everything is scoped under `.wrapper_tool.tool_identify` (plus the modal /
+* window header rule at the bottom) so no rule can leak into the core client.
+*/
+
+// imports
+@import (once) '../../../client/dedalo/core/page/css/layout/vars';
+
+// local vars
+:root {
+	--tool_identify: #3f7f8c;
+	--tool_identify_border: #356b76;
+	--tool_identify_soft: #eaf2f4;
+	--identify_agreed: #1b7d2c;
+	--identify_differed: #b3341f;
+	--identify_unrecorded: #8a8f96;
+	// "you may not read this" is NOT "nobody recorded this", so it does not
+	// borrow the unrecorded grey: a distinct hue plus a DOTTED rule (unrecorded
+	// is dashed) keeps the two apart even in monochrome.
+	--identify_restricted: #6f6a7d;
+	// the two proposal sources. They are NOT a good/bad pair: they are two
+	// different kinds of claim, and the colour is one of the four signals
+	// (colour, badge word, rule style, block content) that keep them apart.
+	--identify_vote: #2f6f4f;
+	--identify_vote_soft: #e9f3ee;
+	--identify_vision: #7a4fb0;
+	--identify_vision_soft: #f2ecfa;
+}
+@tool_color : var(--tool_identify);
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_identify {
+
+	.spinner {
+		background-color: @tool_color;
+	}
+
+	>.content_data {
+		padding		: 1rem;
+		min-width	: 34rem;
+		max-width	: 60rem;
+
+		// ── the picture ─────────────────────────────────────────────────────
+		// Identification is a visual task, so the seed and every candidate carry
+		// a thumbnail. `.empty` is the NEUTRAL placeholder used both when the
+		// server sent no URL (no preview component, or no generated derivative)
+		// and when an <img> failed to load — never a broken-image icon.
+		.identify_thumb {
+			flex			: 0 0 auto;
+			display			: flex;
+			align-items		: center;
+			justify-content	: center;
+			overflow		: hidden;
+			border			: 1px solid var(--border_default, #e6e6e6);
+			border-radius	: var(--radius-md, 0.25rem);
+			background		: var(--color_grey_13, #e6e6e6);
+
+			>img {
+				width		: 100%;
+				height		: 100%;
+				object-fit	: cover;
+				display		: block;
+			}
+
+			&.seed		{ width : 4.6rem; height : 4.6rem; }
+			&.candidate	{ width : 3.4rem; height : 3.4rem; }
+
+			// neutral placeholder: a muted frame with a small picture glyph, so an
+			// absent photograph reads as "not photographed", not as a failure
+			&.empty {
+				background		: repeating-linear-gradient(
+									45deg,
+									rgba(0, 0, 0, 0.03),
+									rgba(0, 0, 0, 0.03) 6px,
+									rgba(0, 0, 0, 0.06) 6px,
+									rgba(0, 0, 0, 0.06) 12px
+								);
+				border-style	: dashed;
+
+				&::after {
+					content		: '▢';
+					color		: var(--identify_unrecorded);
+					font-size	: 1.1em;
+					line-height	: 1;
+				}
+			}
+
+			&.clickable {
+				cursor : pointer;
+			}
+		}
+
+		// ── seed / profile summary ──────────────────────────────────────────
+		.identify_summary {
+			display			: flex;
+			flex-wrap		: wrap;
+			align-items		: center;
+			gap				: 0.4rem 1.6rem;
+			margin			: 0 0 0.8rem 0;
+			padding			: 0.6rem 0.8rem;
+			background		: var(--tool_identify_soft);
+			border-left		: 3px solid @tool_color;
+			border-radius	: var(--radius-md, 0.25rem);
+			line-height		: 1.5;
+		}
+		.identify_summary_item {
+			display	: flex;
+			gap		: 0.4rem;
+		}
+		.identify_summary_label {
+			color		: var(--fg_muted, #7f7f7f);
+			font-size	: 0.85em;
+			text-transform : uppercase;
+			letter-spacing : 0.03em;
+			align-self	: center;
+		}
+		.identify_summary_value {
+			font-weight : bold;
+		}
+
+		// ── toolbar ─────────────────────────────────────────────────────────
+		.identify_toolbar {
+			display			: flex;
+			align-items		: center;
+			gap				: 0.8rem;
+			margin			: 0 0 0.8rem 0;
+		}
+		// the seed record was edited while the tool was open, so the ranking on
+		// screen was computed from values that may no longer hold
+		.identify_search.identify_stale {
+			box-shadow	: 0 0 0 2px var(--color_orange, #f8b544);
+		}
+
+		// ── notices: the tool's honesty surfaces ────────────────────────────
+		// `blind` and `more` exist so the ranked list cannot quietly over-claim;
+		// `decline` carries a normal, non-error answer (e.g. no_profile).
+		.identify_notice {
+			margin			: 0 0 0.8rem 0;
+			padding			: 0.6rem 0.8rem;
+			border-radius	: var(--radius-md, 0.25rem);
+			line-height		: 1.45;
+			font-size		: 0.95em;
+		}
+		.identify_notice.blind {
+			background	: rgba(0, 0, 0, 0.04);
+			border-left	: 3px dashed var(--identify_unrecorded);
+			color		: var(--fg_default, #353535);
+		}
+		// a claim about the READER, not about the data: dotted, and its own hue, so
+		// it can never be read as the `blind` notice above.
+		.identify_notice.restricted {
+			background	: rgba(111, 106, 125, 0.08);
+			border-left	: 3px dotted var(--identify_restricted);
+			color		: var(--fg_default, #353535);
+		}
+		.identify_notice.more {
+			background	: var(--color_hilite_3, #faf7df);
+			border-left	: 3px solid var(--color_orange, #f8b544);
+		}
+		.identify_notice.decline {
+			background	: var(--tool_identify_soft);
+			border-left	: 3px solid @tool_color;
+		}
+		.identify_notice.failure {
+			background	: rgba(179, 52, 31, 0.08);
+			border-left	: 3px solid var(--identify_differed);
+		}
+		// neutral statement of fact (the bounds a clustering run happened under,
+		// where a promotion may land). Not a problem and not an offer.
+		.identify_notice.info {
+			background	: rgba(0, 0, 0, 0.03);
+			border-left	: 3px solid var(--tool_identify_border);
+		}
+		.identify_notice_detail {
+			display		: block;
+			margin-top	: 0.4rem;
+			font-family	: monospace;
+			font-size	: 0.9em;
+			white-space	: pre-wrap;
+			word-break	: break-word;
+		}
+		.identify_blind_list {
+			margin	: 0.4rem 0 0 1.2rem;
+			padding	: 0;
+		}
+
+		// ── candidate list ──────────────────────────────────────────────────
+		// `.identify_results` is the container the spinner writes into;
+		// `.identify_results_list` is the node the render returns into it.
+		.identify_results,
+		.identify_results_list {
+			display			: flex;
+			flex-direction	: column;
+			gap				: 0.6rem;
+		}
+
+		.identify_candidate {
+			border			: 1px solid var(--border_default, #e6e6e6);
+			border-left		: 5px solid var(--identify_unrecorded);
+			border-radius	: var(--radius-md, 0.25rem);
+			background		: var(--bg_surface, #ffffff);
+		}
+		.identify_candidate.verdict_same_type	{ border-left-color : var(--color_success, #28a745); }
+		.identify_candidate.verdict_candidate	{ border-left-color : var(--color_orange_dedalo, #f78a1c); }
+		.identify_candidate.verdict_weak		{ border-left-color : var(--color_grey_9, #aaaaaa); }
+
+		.identify_candidate_head {
+			display		: flex;
+			align-items	: center;
+			gap			: 0.6rem;
+			padding		: 0.5rem 0.7rem;
+			border-bottom : 1px solid var(--border_default, #e6e6e6);
+		}
+
+		// verdict badge: the three verdicts must never be told apart by score alone
+		.identify_verdict {
+			flex			: 0 0 auto;
+			padding			: 0.15rem 0.55rem;
+			border-radius	: var(--radius-pill, 999px);
+			font-size		: 0.8em;
+			font-weight		: bold;
+			text-transform	: uppercase;
+			letter-spacing	: 0.04em;
+			color			: var(--color_white, #ffffff);
+			background		: var(--color_grey_9, #aaaaaa);
+			white-space		: nowrap;
+		}
+		.verdict_same_type	>.identify_candidate_head >.identify_verdict { background : var(--color_success, #28a745); }
+		.verdict_candidate	>.identify_candidate_head >.identify_verdict { background : var(--color_orange_dedalo, #f78a1c); }
+		.verdict_weak		>.identify_candidate_head >.identify_verdict { background : var(--color_grey_9, #aaaaaa); }
+
+		.identify_candidate_title {
+			flex			: 1 1 auto;
+			min-width		: 0;
+			font-weight		: bold;
+			line-height		: 1.3;
+			cursor			: pointer;
+			overflow-wrap	: anywhere;
+
+			&:hover {
+				text-decoration : underline;
+			}
+		}
+		.identify_candidate_locator {
+			display		: block;
+			font-weight	: normal;
+			font-size	: 0.82em;
+			color		: var(--fg_muted, #7f7f7f);
+			font-family	: monospace;
+		}
+
+		.identify_score {
+			flex		: 0 0 auto;
+			display		: flex;
+			align-items	: center;
+			gap			: 0.4rem;
+		}
+		.identify_score_value {
+			font-variant-numeric : tabular-nums;
+			font-weight	: bold;
+		}
+		.identify_score_bar {
+			width			: 4.5rem;
+			height			: 0.4rem;
+			background		: var(--color_grey_13, #e6e6e6);
+			border-radius	: var(--radius-pill, 999px);
+			overflow		: hidden;
+		}
+		.identify_score_fill {
+			display			: block;
+			height			: 100%;
+			background		: @tool_color;
+			border-radius	: var(--radius-pill, 999px);
+		}
+
+		.identify_open {
+			flex		: 0 0 auto;
+			cursor		: pointer;
+		}
+
+		// ── the per-criterion breakdown: the point of the feature ───────────
+		// Always rendered inline, never behind a toggle: a bare score is either
+		// ignored or trusted far past what it means.
+		.identify_outcomes {
+			display			: flex;
+			flex-direction	: column;
+			margin			: 0;
+			padding			: 0.3rem 0.7rem 0.5rem 0.7rem;
+		}
+		.identify_outcome {
+			display			: flex;
+			align-items		: baseline;
+			gap				: 0.5rem;
+			padding			: 0.3rem 0 0.3rem 0.5rem;
+			border-left		: 3px solid transparent;
+			line-height		: 1.4;
+		}
+		.identify_outcome + .identify_outcome {
+			border-top : 1px solid var(--field_rule, rgba(27, 31, 36, 0.08));
+		}
+		.identify_outcome.agreed		{ border-left-color : var(--identify_agreed); }
+		.identify_outcome.differed		{ border-left-color : var(--identify_differed); }
+		// ABSENCE, not disagreement: dashed + muted, never the failure colour.
+		.identify_outcome.unrecorded {
+			border-left-style	: dashed;
+			border-left-color	: var(--identify_unrecorded);
+			color				: var(--fg_muted, #7f7f7f);
+		}
+
+		// NOT readable by this caller: dotted (vs the unrecorded dash) and its own
+		// hue. The value may well be there — this row says nothing about the data.
+		.identify_outcome.restricted {
+			border-left-style	: dotted;
+			border-left-color	: var(--identify_restricted);
+			color				: var(--fg_muted, #7f7f7f);
+		}
+
+		.identify_outcome_mark {
+			flex		: 0 0 1.1rem;
+			text-align	: center;
+			font-weight	: bold;
+		}
+		.identify_outcome.agreed	>.identify_outcome_mark { color : var(--identify_agreed); }
+		.identify_outcome.differed	>.identify_outcome_mark { color : var(--identify_differed); }
+		.identify_outcome.unrecorded>.identify_outcome_mark { color : var(--identify_unrecorded); }
+		.identify_outcome.restricted>.identify_outcome_mark { color : var(--identify_restricted); }
+
+		.identify_outcome_body {
+			flex		: 1 1 auto;
+			min-width	: 0;
+		}
+		.identify_outcome_label {
+			font-weight : bold;
+		}
+		.identify_outcome_state {
+			margin-left	: 0.4rem;
+			font-size	: 0.85em;
+			text-transform : uppercase;
+			letter-spacing : 0.03em;
+		}
+		.identify_outcome.agreed	>.identify_outcome_body >.identify_outcome_label >.identify_outcome_state { color : var(--identify_agreed); }
+		.identify_outcome.differed	>.identify_outcome_body >.identify_outcome_label >.identify_outcome_state { color : var(--identify_differed); }
+		.identify_outcome.unrecorded>.identify_outcome_body >.identify_outcome_label >.identify_outcome_state { color : var(--identify_unrecorded); }
+		.identify_outcome.restricted>.identify_outcome_body >.identify_outcome_label >.identify_outcome_state { color : var(--identify_restricted); }
+
+		.identify_outcome_detail {
+			display		: block;
+			font-size	: 0.92em;
+			white-space	: pre-wrap;
+			word-break	: break-word;
+		}
+		.identify_outcome_note {
+			display		: block;
+			font-size	: 0.88em;
+			font-style	: italic;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_outcome_weight {
+			flex		: 0 0 auto;
+			font-size	: 0.82em;
+			color		: var(--fg_muted, #7f7f7f);
+			white-space	: nowrap;
+			font-variant-numeric : tabular-nums;
+		}
+		// the GATE: the profile's strongest criterion, which is out of the score
+		// precisely because every candidate had to pass it. Muted grey here would
+		// put it beside "descriptive — shown, not scored", which is its opposite.
+		.identify_outcome_weight.gate {
+			color			: var(--tool_identify_border);
+			font-weight		: bold;
+			text-transform	: uppercase;
+			letter-spacing	: 0.03em;
+		}
+
+		// ── proposals: "AI proposes, human confirms" ────────────────────────
+		// The panel's whole job is that a CORPUS CONSENSUS and a MODEL'S GUESS
+		// never look alike. Four independent signals carry that, so losing one
+		// (a colour-blind curator, a monochrome print) does not lose the
+		// distinction: the badge WORD, the border COLOUR, the rule STYLE (solid
+		// vs dotted) and the block CONTENT (a list of citing records vs a quoted
+		// sentence next to a photograph).
+		.identify_proposals {
+			display			: flex;
+			flex-direction	: column;
+			gap				: 0.5rem;
+			margin			: 0 0 1.2rem 0;
+			padding			: 0.7rem 0.8rem;
+			border			: 1px solid var(--border_default, #e6e6e6);
+			border-radius	: var(--radius-md, 0.25rem);
+			background		: var(--bg_surface, #ffffff);
+		}
+		.identify_proposals_head {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.8rem;
+		}
+		.identify_proposals_title {
+			font-weight		: bold;
+			text-transform	: uppercase;
+			letter-spacing	: 0.04em;
+			font-size		: 0.9em;
+			margin-right	: auto;
+		}
+		// the opt-in for the paid / possibly-egressing source
+		.identify_vision_optin {
+			display		: flex;
+			align-items	: center;
+			gap			: 0.35rem;
+			cursor		: pointer;
+			font-size	: 0.92em;
+			color		: var(--identify_vision);
+		}
+		.identify_vision_note {
+			font-size	: 0.85em;
+			font-style	: italic;
+			color		: var(--fg_muted, #7f7f7f);
+			line-height	: 1.4;
+		}
+		.identify_propose {
+			cursor : pointer;
+
+			&.identify_stale {
+				box-shadow : 0 0 0 2px var(--identify_vision);
+			}
+		}
+
+		// per-source outcome lines (including the "you did not ask for it" one)
+		.identify_source_notice {
+			padding			: 0.4rem 0.6rem;
+			border-radius	: var(--radius-md, 0.25rem);
+			font-size		: 0.9em;
+			line-height		: 1.45;
+			background		: rgba(0, 0, 0, 0.03);
+			border-left		: 3px solid var(--identify_unrecorded);
+
+			&.vote.ran		{ border-left-color : var(--identify_vote);   background : var(--identify_vote_soft); }
+			&.vision.ran	{ border-left-color : var(--identify_vision); background : var(--identify_vision_soft); border-left-style : dotted; }
+			&.declined		{ color : var(--fg_muted, #7f7f7f); }
+		}
+		.identify_source_text {
+			margin-left : 0.4rem;
+		}
+		.identify_skipped_list,
+		.identify_discarded_list {
+			margin	: 0.3rem 0 0 1.1rem;
+			padding	: 0;
+			font-size : 0.94em;
+		}
+		.identify_discarded_list {
+			color : var(--identify_differed);
+		}
+
+		// the badge: the WORD that names the kind of claim
+		.identify_source_badge {
+			flex			: 0 0 auto;
+			padding			: 0.1rem 0.5rem;
+			border-radius	: var(--radius-pill, 999px);
+			font-size		: 0.75em;
+			font-weight		: bold;
+			text-transform	: uppercase;
+			letter-spacing	: 0.05em;
+			color			: var(--color_white, #ffffff);
+			white-space		: nowrap;
+
+			&.vote		{ background : var(--identify_vote); }
+			&.vision	{ background : var(--identify_vision); }
+		}
+
+		.identify_proposals_cards {
+			display			: flex;
+			flex-direction	: column;
+			gap				: 0.6rem;
+		}
+
+		.identify_proposal {
+			border			: 1px solid var(--border_default, #e6e6e6);
+			border-left		: 5px solid var(--identify_unrecorded);
+			border-radius	: var(--radius-md, 0.25rem);
+			padding			: 0.5rem 0.7rem;
+
+			// a corpus consensus: SOLID rule, the vote colour
+			&.source_vote {
+				border-left-color	: var(--identify_vote);
+				border-left-style	: solid;
+			}
+			// a model's guess: DOTTED rule, the vision colour. The dotted rule is
+			// the signal that survives a monochrome screen.
+			&.source_vision {
+				border-left-color	: var(--identify_vision);
+				border-left-style	: dotted;
+				background			: var(--identify_vision_soft);
+			}
+			&.accepted {
+				border-left-color	: var(--identify_agreed);
+				border-left-style	: solid;
+			}
+		}
+		.identify_proposal_head {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.5rem;
+		}
+		.identify_proposal_criterion {
+			font-weight		: bold;
+			margin-right	: auto;
+		}
+		.identify_proposal_value {
+			margin			: 0.35rem 0;
+			font-size		: 1.15em;
+			font-weight		: bold;
+			overflow-wrap	: anywhere;
+		}
+		.identify_proposal_value_parts {
+			margin-left	: 0.5rem;
+			font-size	: 0.75em;
+			font-weight	: normal;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+
+		.identify_confidence {
+			flex		: 0 0 auto;
+			display		: flex;
+			align-items	: center;
+			gap			: 0.35rem;
+			font-size	: 0.85em;
+		}
+		.identify_confidence_label {
+			color			: var(--fg_muted, #7f7f7f);
+			text-transform	: uppercase;
+			letter-spacing	: 0.03em;
+		}
+		.identify_confidence_value {
+			font-weight				: bold;
+			font-variant-numeric	: tabular-nums;
+		}
+		.identify_confidence_bar {
+			width			: 4rem;
+			height			: 0.35rem;
+			background		: var(--color_grey_13, #e6e6e6);
+			border-radius	: var(--radius-pill, 999px);
+			overflow		: hidden;
+		}
+		.identify_confidence_fill {
+			display			: block;
+			height			: 100%;
+			border-radius	: var(--radius-pill, 999px);
+			background		: var(--identify_unrecorded);
+		}
+		.source_vote	>.identify_proposal_head >.identify_confidence >.identify_confidence_bar >.identify_confidence_fill { background : var(--identify_vote); }
+		.source_vision	>.identify_proposal_head >.identify_confidence >.identify_confidence_bar >.identify_confidence_fill { background : var(--identify_vision); }
+
+		// ── the provenance block: what a curator must read before confirming ──
+		.identify_provenance {
+			margin			: 0.4rem 0;
+			padding			: 0.45rem 0.6rem;
+			border-radius	: var(--radius-md, 0.25rem);
+			font-size		: 0.92em;
+			line-height		: 1.45;
+
+			&.vote		{ background : var(--identify_vote_soft); }
+			&.vision	{ background : rgba(122, 79, 176, 0.08); }
+		}
+		.identify_provenance_claim {
+			font-weight : bold;
+		}
+		.identify_provenance_reason,
+		.identify_provenance_model {
+			margin-top	: 0.2rem;
+			color		: var(--fg_muted, #7f7f7f);
+			font-size	: 0.94em;
+		}
+		// the model's own words, marked AS a quote so nobody reads them as the
+		// system's own statement
+		.identify_provenance_quote {
+			margin		: 0.35rem 0 0 0;
+			padding		: 0.3rem 0.6rem;
+			border-left	: 3px solid var(--identify_vision);
+			font-style	: italic;
+			white-space	: pre-wrap;
+			word-break	: break-word;
+
+			&::before	{ content : '“'; }
+			&::after	{ content : '”'; }
+		}
+		.identify_provenance_image {
+			display		: flex;
+			align-items	: center;
+			gap			: 0.5rem;
+			margin-top	: 0.4rem;
+		}
+		.identify_provenance_image_label {
+			font-size	: 0.9em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+
+		// the citing neighbours: the vote's checkable half
+		.identify_evidence_list {
+			margin	: 0.35rem 0 0 0;
+			padding	: 0;
+			list-style : none;
+		}
+		.identify_evidence {
+			display		: flex;
+			align-items	: baseline;
+			gap			: 0.4rem;
+			padding		: 0.12rem 0;
+		}
+		.identify_evidence_title {
+			cursor : pointer;
+
+			&:hover {
+				text-decoration : underline;
+			}
+		}
+		.identify_evidence_locator {
+			font-family	: monospace;
+			font-size	: 0.82em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_distribution {
+			display		: flex;
+			flex-wrap	: wrap;
+			align-items	: baseline;
+			gap			: 0.4rem;
+			margin-top	: 0.35rem;
+			font-size	: 0.9em;
+		}
+		.identify_distribution_label {
+			color : var(--fg_muted, #7f7f7f);
+		}
+		.identify_distribution_entry {
+			padding			: 0.05rem 0.4rem;
+			border-radius	: var(--radius-pill, 999px);
+			background		: rgba(0, 0, 0, 0.06);
+			font-variant-numeric : tabular-nums;
+		}
+
+		// ── actions ─────────────────────────────────────────────────────────
+		.identify_proposal_actions {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.5rem;
+			margin-top	: 0.35rem;
+		}
+		.identify_proposal_target {
+			margin-right : auto;
+			font-family	: monospace;
+			font-size	: 0.82em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_accept,
+		.identify_reject,
+		.identify_open_target {
+			cursor : pointer;
+		}
+		// a proposal that cannot be written HERE. Not an error: the value simply
+		// belongs somewhere else (multi_hop) or is not this caller's to write.
+		.identify_proposal_blocked {
+			flex-basis		: 100%;
+			padding			: 0.35rem 0.6rem;
+			border-left		: 3px dashed var(--identify_unrecorded);
+			background		: rgba(0, 0, 0, 0.03);
+			font-size		: 0.9em;
+			line-height		: 1.45;
+
+			&.multi_hop {
+				border-left-color	: var(--color_orange, #f8b544);
+			}
+		}
+		.identify_proposal_error {
+			flex-basis	: 100%;
+			color		: var(--identify_differed);
+			font-size	: 0.9em;
+		}
+		.identify_proposal_accepted {
+			color		: var(--identify_agreed);
+			font-weight	: bold;
+		}
+
+		// ── clusters ────────────────────────────────────────────────────────
+		// The batch half: groups inside a set of records, and the promotion of a
+		// group to a canonical Type. Nothing here runs (or writes) until asked.
+		.identify_clusters {
+			margin			: 0 0 1rem 0;
+			padding			: 0.7rem 0.8rem;
+			border			: 1px solid var(--border_default, #e6e6e6);
+			border-radius	: var(--radius-md, 0.25rem);
+			background		: var(--bg_surface, #ffffff);
+		}
+		.identify_clusters_head {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.6rem;
+		}
+		.identify_clusters_title {
+			font-weight	: bold;
+			margin-right: auto;
+		}
+		.identify_cluster_run	{ cursor : pointer; }
+		.identify_clusters_scope {
+			margin		: 0.3rem 0 0.6rem 0;
+			font-size	: 0.9em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_clusters_list,
+		.identify_clusters_cards {
+			display			: flex;
+			flex-direction	: column;
+			gap				: 0.6rem;
+		}
+
+		.identify_cluster {
+			border			: 1px solid var(--border_default, #e6e6e6);
+			border-left		: 5px solid var(--identify_agreed);
+			border-radius	: var(--radius-md, 0.25rem);
+			padding			: 0.6rem 0.8rem;
+			background		: var(--bg_surface, #ffffff);
+
+			// a group held together by a CHAIN reads as one: single linkage put it
+			// together through intermediaries, and that is what the border says
+			&.chained {
+				border-left-color	: var(--color_orange, #f8b544);
+				border-left-style	: dashed;
+			}
+		}
+		.identify_cluster_head {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.5rem;
+		}
+		.identify_cluster_size {
+			font-weight	: bold;
+			font-size	: 1.05em;
+		}
+		.identify_cluster_signal {
+			padding			: 0.05rem 0.45rem;
+			border-radius	: var(--radius-pill, 999px);
+			font-size		: 0.78em;
+			text-transform	: uppercase;
+			letter-spacing	: 0.04em;
+			color			: #ffffff;
+			background		: var(--identify_vision);
+
+			&.criteria { background : var(--identify_vote); }
+		}
+		.identify_cluster_confidence {
+			margin-left	: auto;
+			font-variant-numeric : tabular-nums;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_cluster_shape {
+			margin		: 0.25rem 0;
+			font-size	: 0.88em;
+			color		: var(--fg_muted, #7f7f7f);
+			font-variant-numeric : tabular-nums;
+		}
+		.identify_cluster_agreed {
+			margin		: 0.25rem 0;
+			color		: var(--identify_agreed);
+		}
+
+		.identify_consensus_list,
+		.identify_members_list,
+		.identify_links_list,
+		.identify_singletons_list,
+		.identify_promote_results {
+			margin	: 0.3rem 0 0 0;
+			padding	: 0;
+			list-style : none;
+		}
+		.identify_consensus {
+			display		: flex;
+			align-items	: baseline;
+			flex-wrap	: wrap;
+			gap			: 0.4rem;
+			padding		: 0.15rem 0;
+			font-size	: 0.92em;
+			border-left	: 3px solid transparent;
+			padding-left: 0.4rem;
+
+			&.agreed		{ border-left-color : var(--identify_agreed); }
+			&.partial		{ border-left-color : var(--color_orange, #f8b544); }
+			&.differs		{ border-left-color : var(--identify_differed); }
+			// absence, NEVER disagreement: dashed and muted, like the outcome rows
+			&.unrecorded	{ border-left : 3px dashed var(--identify_unrecorded); color : var(--fg_muted, #7f7f7f); }
+		}
+		.identify_consensus_label	{ font-weight : 500; }
+		.identify_consensus_state	{ text-transform : uppercase; font-size : 0.8em; letter-spacing : 0.03em; }
+		.identify_consensus_value	{ font-family : monospace; }
+		.identify_consensus_counts	{ margin-left : auto; color : var(--fg_muted, #7f7f7f); font-size : 0.88em; }
+
+		.identify_cluster_representative {
+			margin		: 0.3rem 0;
+			font-size	: 0.9em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_member,
+		.identify_promote_result {
+			display		: flex;
+			align-items	: baseline;
+			flex-wrap	: wrap;
+			gap			: 0.4rem;
+			padding		: 0.1rem 0;
+			font-size	: 0.92em;
+		}
+		.identify_member_title,
+		.identify_promote_result_title {
+			cursor			: pointer;
+			text-decoration	: underline dotted;
+		}
+		.identify_member_locator,
+		.identify_promote_result_detail {
+			font-family	: monospace;
+			font-size	: 0.85em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_links {
+			margin-top : 0.35rem;
+			font-size	: 0.9em;
+
+			>summary { cursor : pointer; color : var(--fg_muted, #7f7f7f); }
+		}
+		.identify_link {
+			padding-left	: 0.4rem;
+			border-left		: 3px solid var(--identify_vision);
+
+			&.criteria { border-left-color : var(--identify_vote); }
+		}
+		.identify_singletons {
+			padding-top	: 0.4rem;
+			font-size	: 0.92em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_singletons_label { font-style : italic; }
+
+		// ── promotion ───────────────────────────────────────────────────────
+		// A bulk mutation of curatorial data, so the flow is choose → review →
+		// confirm, and every member gets a visible outcome.
+		.identify_promote {
+			margin-top	: 0.5rem;
+			padding-top	: 0.5rem;
+			border-top	: 1px solid var(--border_default, #e6e6e6);
+		}
+		.identify_promote_actions {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.5rem;
+			margin-top	: 0.4rem;
+		}
+		.identify_promote_button,
+		.identify_promote_review,
+		.identify_promote_confirm,
+		.identify_promote_cancel,
+		.identify_promote_check,
+		.identify_promote_retry,
+		.identify_promote_open_type {
+			cursor : pointer;
+		}
+		.identify_promote_form:not(:empty) {
+			margin-top		: 0.5rem;
+			padding			: 0.6rem 0.8rem;
+			border			: 1px solid var(--tool_identify_border);
+			border-radius	: var(--radius-md, 0.25rem);
+			background		: var(--tool_identify_soft);
+		}
+		.identify_promote_link,
+		.identify_promote_target {
+			display			: flex;
+			flex-direction	: column;
+			gap				: 0.25rem;
+			margin-bottom	: 0.6rem;
+		}
+		.identify_promote_link_label,
+		.identify_promote_target_label {
+			font-weight	: bold;
+			font-size	: 0.92em;
+		}
+		.identify_promote_link_option,
+		.identify_promote_option {
+			display		: flex;
+			align-items	: baseline;
+			flex-wrap	: wrap;
+			gap			: 0.4rem;
+			cursor		: pointer;
+		}
+		.identify_promote_link_name {
+			font-family	: monospace;
+		}
+		.identify_promote_revealed,
+		.identify_promote_option_note,
+		.identify_promote_new_note,
+		.identify_promote_option_none {
+			font-size	: 0.86em;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		.identify_promote_other_row,
+		.identify_promote_new_row {
+			display		: flex;
+			align-items	: center;
+			flex-wrap	: wrap;
+			gap			: 0.4rem;
+			margin		: 0.15rem 0 0.35rem 1.4rem;
+		}
+		.identify_promote_other_found {
+			font-weight	: bold;
+
+			// the Check refused: the id names no readable record, and the confirm
+			// step stays unarmed. Loud, because the alternative is a curator
+			// reading a plain "numisdata3 / 4321" as a found Type.
+			&.failure { color : var(--identify_differed); font-weight : normal; }
+		}
+		// THE CONFIRMATION. Deliberately loud: it states what will be written, to
+		// how many records, and names them.
+		.identify_promote_review {
+			margin-top		: 0.6rem;
+			padding			: 0.6rem 0.8rem;
+			border			: 2px solid var(--color_orange, #f8b544);
+			border-radius	: var(--radius-md, 0.25rem);
+			background		: var(--color_hilite_3, #faf7df);
+		}
+		.identify_promote_review_sentence {
+			font-weight		: bold;
+			line-height		: 1.45;
+		}
+		.identify_promote_progress {
+			font-variant-numeric : tabular-nums;
+			color		: var(--fg_muted, #7f7f7f);
+		}
+		// A RUN IN PROGRESS. Every control in the block is disabled for the
+		// duration (render_tool_identify_clusters: lock_flow_controls); this only
+		// makes that visible — a frozen panel with no explanation reads as broken.
+		.identify_promote.identify_promote_running,
+		.identify_promote_running {
+			opacity	: 0.85;
+			cursor	: progress;
+		}
+		// the four per-member outcomes, told apart WITHOUT reading the words
+		.identify_promote_result {
+			border-left		: 3px solid transparent;
+			padding-left	: 0.4rem;
+
+			&.attached		{ border-left-color : var(--identify_agreed); }
+			&.already		{ border-left : 3px dashed var(--identify_unrecorded); color : var(--fg_muted, #7f7f7f); }
+			&.failed		{ border-left-color : var(--identify_differed); background : rgba(179, 52, 31, 0.06); }
+			// accepted by the server, but the server said nothing about WHAT it
+			// wrote: neither a success nor a failure, and never drawn as either
+			&.unconfirmed	{ border-left-color : var(--color_orange, #f8b544); background : rgba(248, 181, 68, 0.10); }
+		}
+		.identify_promote_result_mark {
+			width		: 1.1rem;
+			text-align	: center;
+			font-weight	: bold;
+		}
+		.identify_promote_result.attached	.identify_promote_result_mark { color : var(--identify_agreed); }
+		.identify_promote_result.failed		.identify_promote_result_mark { color : var(--identify_differed); }
+		.identify_promote_result.unconfirmed .identify_promote_result_mark { color : var(--color_orange, #f8b544); }
+		.identify_promote_result_state {
+			text-transform	: uppercase;
+			font-size		: 0.78em;
+			letter-spacing	: 0.03em;
+		}
+
+	}//end content_data
+}//end wrapper_tool
+
+// modal and new window header tool modification
+.tool_header.tool_identify {
+	background-color: @tool_color;
+}
