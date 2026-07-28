@@ -11,7 +11,6 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-// @ts-expect-error — vanilla client ES module, no types
 import { is_filter_empty } from '../../client/dedalo/core/search/js/search_utils.js';
 
 describe('is_filter_empty', () => {

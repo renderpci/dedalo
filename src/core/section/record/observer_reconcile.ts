@@ -11,7 +11,7 @@
  */
 
 import { sql } from '../../db/postgres.ts';
-import { getMatrixTableFromTipo, getNode } from '../../ontology/resolver.ts';
+import { getMatrixTableFromTipo, getNode, getNodesWithProperty } from '../../ontology/resolver.ts';
 import { recomputeExternalRelation } from './observers.ts';
 
 const SYSTEM_USER_ID = -1;
@@ -49,10 +49,7 @@ async function discoverTuples(
 	onlyObserver: string | null,
 	onlySection: string | null,
 ): Promise<ReconcileTuple[]> {
-	const observedRows = (await sql.unsafe(
-		`SELECT tipo, properties FROM dd_ontology WHERE properties ? 'observers'`,
-		[],
-	)) as { tipo: string; properties: { observers?: unknown } }[];
+	const observedRows = await getNodesWithProperty('observers');
 	const tuples: ReconcileTuple[] = [];
 	const seen = new Set<string>();
 	for (const observed of observedRows) {

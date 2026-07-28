@@ -8846,11 +8846,18 @@ body.is_ontology_server .menu > .content_data {
   padding-left: 0.25em;
   padding-right: 0.25em;
 }
-.wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .reset_group .button.reload,
-.wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .reset_group .button.show_all {
+.wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .reset_group .button.reload {
   flex-grow: 1;
   -webkit-mask-size: 1.9em;
   mask-size: 1.9em;
+}
+.wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .reset_group .button.show_all {
+  flex-grow: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .reset_group .button.show_all:before {
+  content: none;
 }
 .wrapper_search > .search_global_container > .search_container_selection .search_group_container > .search_buttons_container > .button.submit {
   background-color: var(--color_green_success);
