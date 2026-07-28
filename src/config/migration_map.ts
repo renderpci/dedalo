@@ -611,6 +611,9 @@ export const NEW_IN_V7: readonly string[] = [
 	// In-browser inference (transcription, translation): where the model weights
 	// live, and whether a public hub may be used at all. No v6 equivalent — v6 had
 	// no local AI. See engineering/TRANSCRIPTION.md.
+	// Language equivalence classes (Català===Valencià etc.) — hardcoded case
+	// statements in v6 (lang::get_label_lang), a declared config in v7.
+	'DEDALO_LANG_EQUIVALENCES',
 	'DEDALO_AI_MODEL_STORE',
 	'DEDALO_AI_MODEL_ALLOW_HUB',
 	// The named exemption that lets a transcription server live on the LAN.

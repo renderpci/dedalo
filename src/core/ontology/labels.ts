@@ -11,6 +11,7 @@
 
 import { config } from '../../config/config.ts';
 import { sql } from '../db/postgres.ts';
+import { translationLangOf } from '../resolve/lang_alias.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
@@ -39,6 +40,18 @@ export function resolveLabel(
 	if (term === null || typeof term !== 'object') return null;
 	const termMap = term as Record<string, string>;
 	if (typeof termMap[lang] === 'string' && termMap[lang] !== '') return termMap[lang] as string;
+	// Declared language equivalence (PHP lang::get_label_lang via RecordObj_dd:
+	// ontology terms are authored in the canonical member — Català — and the
+	// other members read it). Without this step a Valencian interface fell to
+	// the first-non-empty scan below, i.e. an ARBITRARY language.
+	const translationLang = translationLangOf(lang);
+	if (
+		translationLang !== null &&
+		typeof termMap[translationLang] === 'string' &&
+		termMap[translationLang] !== ''
+	) {
+		return termMap[translationLang] as string;
+	}
 	// First non-empty entry, PHP fallback.
 	for (const value of Object.values(termMap)) {
 		if (typeof value === 'string' && value !== '') return value;
@@ -100,10 +113,14 @@ export async function termByTipo(tipo: string, lang: string): Promise<string> {
 		SELECT term FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
 	`) as { term: Record<string, string> | null }[];
 	const term = rows[0]?.term ?? null;
+	// The declared language equivalence slots between the requested lang and the
+	// structure lang, same as resolveLabel (Valencià reads the Català term).
+	const translationLang = term === null ? null : translationLangOf(lang);
 	const resolved =
 		term === null
 			? tipo
 			: (term[lang] ??
+				(translationLang !== null ? term[translationLang] : undefined) ??
 				term[ONTOLOGY_STRUCTURE_LANG] ??
 				Object.values(term).find((value) => value) ??
 				tipo);

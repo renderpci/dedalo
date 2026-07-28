@@ -367,6 +367,16 @@ export interface LangConfig {
 	readonly dataLangDefault: string;
 	/** Show/hide the data-lang selector menu (PHP DEDALO_DATA_LANG_SELECTOR). */
 	readonly dataLangSelector: boolean;
+	/**
+	 * Language EQUIVALENCE classes (DEDALO_LANG_EQUIVALENCES): groups of lg-*
+	 * codes that are the same language under different names — shipped default
+	 * [['lg-cat','lg-vlca']] (Català === Valencià). The FIRST member of each
+	 * class is the canonical TRANSLATION source (ontology terms and UI labels
+	 * are authored there; the others read it — PHP lang::get_label_lang), while
+	 * DATA fallback treats all members as mutual preferred fallbacks. Consumed
+	 * through resolve/lang_alias.ts, never read raw.
+	 */
+	readonly equivalences: readonly (readonly string[])[];
 }
 
 /** Feature switches mirrored from the PHP features.php domain. */
@@ -722,6 +732,39 @@ for (const [retired, replacement] of Object.entries(RETIRED_ENV_KEYS)) {
  * it is a fresh, unconfigured machine (install mode), where the required keys
  * carry sentinels so the install wizard can boot.
  */
+/**
+ * Parse DEDALO_LANG_EQUIVALENCES: a JSON array of arrays of lg-* codes, e.g.
+ * [["lg-cat","lg-vlca"]]. Groups keep their declared order (first member = the
+ * canonical translation source); singleton or malformed groups are dropped, and
+ * an unparseable value logs and yields no equivalences at all.
+ */
+function parseLangEquivalences(configured: string | undefined): readonly (readonly string[])[] {
+	if (configured === undefined || configured.trim() === '') return Object.freeze([]);
+	try {
+		const parsed: unknown = JSON.parse(configured.trim());
+		if (Array.isArray(parsed)) {
+			return Object.freeze(
+				parsed
+					.filter((group): group is unknown[] => Array.isArray(group))
+					.map((group) =>
+						Object.freeze(
+							group.filter(
+								(code): code is string => typeof code === 'string' && code.startsWith('lg-'),
+							),
+						),
+					)
+					.filter((group) => group.length > 1),
+			);
+		}
+	} catch {
+		/* fall through to the loud refusal */
+	}
+	console.error(
+		'[config] DEDALO_LANG_EQUIVALENCES must be a JSON array of arrays of lg-* codes — ignoring the value.',
+	);
+	return Object.freeze([]);
+}
+
 export const config: DedaloConfig = Object.freeze({
 	installMode: INSTALL_MODE,
 	entity: requireString('ENTITY'),
@@ -774,6 +817,11 @@ export const config: DedaloConfig = Object.freeze({
 		applicationLangsDefault: requireString('DEDALO_APPLICATION_LANGS_DEFAULT'),
 		dataLangDefault: requireString('DEDALO_DATA_LANG_DEFAULT'),
 		dataLangSelector: readString('DEDALO_DATA_LANG_SELECTOR') === 'true',
+		// Equivalence classes. Parsed here (not readJsonArray, whose String()
+		// element coercion would flatten the nested groups); a malformed value
+		// refuses loudly and falls back to no equivalences rather than silently
+		// ungrouping languages.
+		equivalences: parseLangEquivalences(readString('DEDALO_LANG_EQUIVALENCES')),
 	}),
 	features: Object.freeze({
 		lockComponents: readString('DEDALO_LOCK_COMPONENTS') === 'true',
