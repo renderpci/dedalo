@@ -755,17 +755,60 @@ export async function buildStructureContext(options: {
 			permissions,
 			properties: core.properties,
 			principal: options.principal,
+			// PHP's $simple flag (get_structure_context_simple): the start action
+			// and the search-filter panel build sections WITHOUT tools/buttons.
+			// addRequestConfig:false is this codebase's established marker for it.
+			simple: options.addRequestConfig === false,
 		});
 	}
 
-	// Component/area tools (PHP common::get_tools): components get the
+	// Component/area/menu tools (PHP common::get_tools): components get the
 	// 'all_components' catch-all + affected_models/tipos + requirement_translatable
 	// (gated by the component's translatable flag); areas match via
 	// affected_models('area') or an affected_tipos entry (e.g.
-	// tool_ontology_parser → dd5). Admin path only, same as sections
-	// (non-admin security-tools-profile filter ledgered).
+	// tool_ontology_parser → dd5). getElementTools applies the per-user
+	// user_tools membership filter itself (PHP get_tools iterates
+	// get_user_tools), so a tool the actor's profile denies never gets here.
+	//
+	// THE GATE IS **MODE**, NEVER PERMISSIONS (PHP build_structure_context
+	// :1865): a component gets its toolbar in every mode EXCEPT list; a
+	// section/area gets one in list too. `common::get_tools()` (:4023) holds no
+	// permission check whatsoever — authorization is the per-user user_tools
+	// list it iterates, not the element's level. A `permissions >= 3` gate here
+	// would mean SUPERUSER-ONLY, because only userId -1 reaches 3 (the profile
+	// matrix tops out at 2, global admins included), and it would silently
+	// empty every toolbar for every real user — the tool_user_admin avatar
+	// (dd522, uploaded FROM its toolbar) is the visible casualty. The frozen
+	// oracle refutes such a gate outright: PHP shipped tools at permissions 2
+	// (sqo_differential dd560 dataframe/edit) and at 1 (tm_component_history
+	// dd452/tm), and never for a component in list mode.
+	//
+	// The MENU is the third stamping site and takes NO gate at all: PHP
+	// overrides the builder in class.menu.php (menu::get_structure_context :461)
+	// and always populates tools, so the list-mode exclusion above must not
+	// reach it (readMenu renders at mode 'list'). Its one ontology-bound tool is
+	// tool_user_admin (dd1324 affected_tipos = ['dd85'], always_active), which
+	// the client opens from context.tools when the user clicks their name in the
+	// header (menu.js open_tool_user_admin_handler) — an empty array makes that
+	// link inert.
+	//
+	// The other half of PHP's condition is `$simple===false`: the start action
+	// and the search-filter panel build their elements through
+	// get_structure_context_simple, which skips tools entirely (the frozen start
+	// fixture ships `tools: []` on its section context). addRequestConfig:false
+	// is this codebase's marker for that simple build — but it does NOT apply to
+	// the menu, which PHP start builds with the FULL override
+	// (dd_core_api.php:379 `$menu->get_structure_context()`).
+	//
+	// Gated by test/unit/component_tools_stamp.test.ts + test/unit/menu_tools.test.ts.
 	const isComponentModel = core.model.startsWith('component_');
-	if ((isComponentModel || isAreaModel(core.model)) && permissions >= 3) {
+	const isAreaElement = isAreaModel(core.model);
+	const isMenuModel = core.model === 'menu';
+	const simple = options.addRequestConfig === false;
+	if (
+		isMenuModel ||
+		(!simple && (isAreaElement || (isComponentModel && options.mode !== 'list')))
+	) {
 		const { getElementTools } = await import('../tools/registry.ts');
 		// The tool APPLIES gate reads the EFFECTIVE properties (an rqo override
 		// replaces the ontology's, PHP set_properties before get_tools).

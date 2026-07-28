@@ -86,6 +86,54 @@ kinds + a null-spec action, `backgroundRunnable`, `isAvailable`, lifecycle hooks
 
 `dd_tools_api.user_tools` returns the caller's authorized toolbar contexts.
 
+### Where a toolbar is STAMPED onto a context
+
+**The stamp is gated on MODE and on PHP's `$simple`. NEVER on permissions.**
+`common::get_tools()` (`class.common.php:4023`) contains no permission check at
+all — authorization is the per-user `get_user_tools()` list it iterates. The
+caller's condition (`build_structure_context:1865`) is:
+
+```php
+$simple===false && ((($model==='section' || str_starts_with($model,'area')) && $mode==='list') || $mode!=='list')
+```
+
+A `permissions >= 3` gate would mean **superuser-only**: only userId `-1` ever
+reaches 3 (`getPermissions` short-circuits it; the profile matrix tops out at 2,
+global admins included), so every real user would get an empty toolbar
+everywhere. The frozen oracle refutes such a gate — PHP shipped tools at
+permissions **2** (`sqo_differential` dd560 dataframe/edit) and **1**
+(`tm_component_history` dd452/tm). The perm-1 empties in the store are all
+`start` responses, i.e. the SIMPLE build, not a level effect.
+
+`$simple` is `addRequestConfig === false` in this port (the `start` action and
+the search-filter panel). Four stamping sites — miss one and that element
+silently ships `tools: []`:
+
+| Element | Gets a toolbar when | Notes |
+|---|---|---|
+| component (`component_*`) | not simple **and** `mode !== 'list'` | `all_components` catch-all + `requirement_translatable`. |
+| area (`area`/`area_*`) | not simple (any mode) | matches via `affected_models('area')` or an `affected_tipos` entry. |
+| section | not simple (any mode) — `section/context.ts` | via `getSectionTools`; the section clause of the PHP condition covers list too. |
+| **menu** (`dd85`) | **always** | PHP overrides the builder (`menu::get_structure_context`) and `start` calls that override too (`dd_core_api.php:379`), so neither the list-mode nor the simple exclusion reaches it. Its one bound tool is `tool_user_admin` (`affected_tipos:['dd85']`, `always_active`) — the client opens it from `context.tools` when the user clicks their name (`menu.js open_tool_user_admin_handler`), and suppresses the click for `root` client-side. |
+
+Whatever the site, `getElementTools` first drops every tool the ACTOR's
+`user_tools` does not contain — PHP's `get_tools()` iterates
+`get_user_tools($user_id)`, so a tool the profile denies can never reach a
+toolbar. The actor comes from the request scope (`security/request_context.ts`
+= PHP's `logged_user_id()`); no scope (internal resolutions, background warmups,
+harnesses) and global admins mean no filter, the same posture `ddoIsAuthorized`
+takes. Clicking a tool re-authorizes independently (`tools/dispatch.ts` gate 4,
+`dd_core_api` start), so this filter is a wire-correctness rule, not the access
+control — but omitting it ships buttons that 403.
+
+The per-user grant lookup is cached (`profileToolGrantsCache`, a
+`createDataCache` keyed by userId, exactly like `permissions.ts`
+`permissionsTableCache`), because the stamp needs it once per ELEMENT. It is
+dropped on any dd128 (profile assignment) or dd234 (grants) write via the
+save-event channel AND by `invalidateAllToolCaches()`.
+
+Gated by `test/unit/component_tools_stamp.test.ts` + `test/unit/menu_tools.test.ts`.
+
 ## Background execution (`src/core/tools/background.ts`)
 
 A `background_running` request runs the handler inside the **process-job registry**

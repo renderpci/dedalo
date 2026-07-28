@@ -59,6 +59,7 @@ import {
 	getSectionPermissions,
 	inheritSubdatumPermission,
 	resolveComponentContextPermission,
+	resolveOwnUserRecordPermission,
 } from '../security/permissions.ts';
 import { pickReadSource } from './read_source.ts';
 import { prefetchRecords } from './record_loader.ts';
@@ -108,10 +109,34 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 	const readTargetSection = source.section_tipo ?? callerTipo;
 	const capForReadTarget = (level: number): number =>
 		level > 1 && isConsultationOnlySection(readTargetSection) ? 1 : level;
-	const elementPermissions = async (elementSection: string, elementTipo: string): Promise<number> =>
-		capForReadTarget(
-			principal === undefined ? 3 : await getPermissions(principal, elementSection, elementTipo),
+	// dd128 OWN-USER-RECORD override (PHP component_common::
+	// get_component_permissions → resolve_component_read_permission, which EVERY
+	// component instance's stamp goes through). It both upgrades the four
+	// self-editable components (name/password/email/image → 2, what makes
+	// tool_user_admin's self-service editor work for a user whose profile grants
+	// nothing on dd128) and downgrades the guarded ones (own security-admin flag
+	// → 1 always; profile/developer/username/section_id → 1 for a non-global-admin,
+	// the anti-self-elevation half). The save door already consults the same
+	// resolver; without it here the read stamp and the write gate disagree.
+	//
+	// Scoped to ddos of the READ TARGET section: only then is source.section_id
+	// the element's own record id. A cross-section subdatum that happens to be a
+	// dd128 component (the Activity 'Who' column's dd132) carries the id of ITS
+	// row, not the read target's, so it must keep the matrix level.
+	const ownRecordSectionId = source.section_id;
+	const elementPermissions = async (
+		elementSection: string,
+		elementTipo: string,
+	): Promise<number> => {
+		if (principal === undefined) return capForReadTarget(3);
+		const ownLevel =
+			elementSection === readTargetSection
+				? resolveOwnUserRecordPermission(principal, elementSection, elementTipo, ownRecordSectionId)
+				: null;
+		return capForReadTarget(
+			ownLevel ?? (await getPermissions(principal, elementSection, elementTipo)),
 		);
+	};
 
 	// Sources may OWN the structure-context (the dd15 TM source does — its columns
 	// are client-driven, not ontology-derived). When present, skip the generic
