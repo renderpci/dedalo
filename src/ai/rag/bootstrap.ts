@@ -16,6 +16,7 @@
  * indexer.reconcileSection; nothing schedules it automatically).
  */
 
+import { registerMediaIngestHook } from '../../core/media/ingest/ingest_event.ts';
 import { registerRagRecordHook } from '../../core/section_record/save_event.ts';
 import { RagQueue, defaultMatrixQueryer, ensureRagQueueTable } from './queue.ts';
 import { isRagEnabled } from './rag_enabled.ts';
@@ -24,6 +25,7 @@ import { isRagEnabled } from './rag_enabled.ts';
 export function initRagHooks(): void {
 	if (!isRagEnabled()) {
 		registerRagRecordHook(null);
+		registerMediaIngestHook(null);
 		return;
 	}
 	// enqueue-only queue: the save path never indexes (the drain does), so no
@@ -31,6 +33,15 @@ export function initRagHooks(): void {
 	const queue = new RagQueue(defaultMatrixQueryer());
 	registerRagRecordHook((event) =>
 		queue.enqueue({ sectionTipo: event.sectionTipo, sectionId: event.sectionId }, event.kind),
+	);
+	// Uploads do not go through the record save path (files_info is written
+	// directly, with no save event), so new media needs its own notification or
+	// a photo stays unindexed until the record happens to be edited again.
+	// It rides the SAME per-record marker: the queue is keyed
+	// (section_tipo, section_id) with no modality, and indexRecord fans out to
+	// both halves — so nothing about the queue or the drain changes.
+	registerMediaIngestHook((event) =>
+		queue.enqueue({ sectionTipo: event.sectionTipo, sectionId: event.sectionId }, 'index'),
 	);
 	ensureRagQueueTable().catch((error) =>
 		console.error('[rag] queue table init failed (enqueues will no-op until fixed):', error),

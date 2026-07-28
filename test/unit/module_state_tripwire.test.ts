@@ -90,6 +90,15 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/relations/select_lang.ts:resolvedLangsCache',
 	'core/area/color.ts:crcTable',
 	'core/section_record/save_event.ts:ragRecordHook',
+	// Media-ingest registration seam (ragRecordHook precedent, same shape and
+	// same lifecycle): a single boot-registered function slot notifying that a
+	// record's media changed on disk. An upload does not go through the record
+	// save path — files_info is written directly and fires no save event — so
+	// without this seam new media is never noticed. It holds a FUNCTION, set
+	// once at boot from initRagHooks; request identity can never land in it,
+	// and the event it carries states its own identity explicitly precisely
+	// because the upload path has no ALS scope open.
+	'core/media/ingest/ingest_event.ts:mediaIngestHook',
 	// S2-20 inversion seam: the component registry registers its model lookup
 	// (alias/column fields) into the ontology resolver at module load — a
 	// boot-stable function slot (same shape as ragRecordHook above), never

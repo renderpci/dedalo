@@ -596,6 +596,18 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_RAG_SEMANTIC_BREAKPOINT_THRESHOLD',
 	'DEDALO_RAG_RRF_K',
 	'DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS',
+	// The image layer (object photographs). DEDALO_RAG_IMAGE_EGRESS_POLICY is the
+	// institution's own switch for whether those images may be embedded off-host.
+	'DEDALO_RAG_MEDIA_ENABLED',
+	'DEDALO_RAG_MULTIMODAL_PROVIDER',
+	'DEDALO_RAG_MULTIMODAL_MODEL',
+	'DEDALO_RAG_MULTIMODAL_ENDPOINT',
+	'DEDALO_RAG_MULTIMODAL_API_KEY',
+	'DEDALO_RAG_IMAGE_EGRESS_POLICY',
+	'DEDALO_RAG_IMAGE_MAX_PX',
+	'DEDALO_RAG_IMAGE_HYBRID',
+	'DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY',
+	'DEDALO_RAG_CHARACTERIZE_TOP_K',
 	// In-browser inference (transcription, translation): where the model weights
 	// live, and whether a public hub may be used at all. No v6 equivalent — v6 had
 	// no local AI. See engineering/TRANSCRIPTION.md.

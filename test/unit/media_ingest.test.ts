@@ -12,6 +12,11 @@ import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { addFile, sanitizeSegment, stagingDir } from '../../src/core/media/ingest/add_file.ts';
+import {
+	type MediaIngestEvent,
+	fireMediaIngestEvent,
+	registerMediaIngestHook,
+} from '../../src/core/media/ingest/ingest_event.ts';
 import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import { MediaJobManager, mediaJobs } from '../../src/core/media/jobs.ts';
 import {
@@ -160,24 +165,76 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 	test.if(HAVE_MAGICK)('image ingest builds derivatives and returns files_info', async () => {
 		await stageImage('up2.jpg', '2500x1800');
 		const id2: MediaIdentity = { ...identity, sectionId: 43 };
-		const result = await processUploadedFile({
-			spec: image,
-			identity: id2,
-			pathOpts,
-			userId: USER_ID,
-			keyDir: 'kd1',
-			tmpName: 'up2.jpg',
-			extension: 'jpg',
+		// An upload never goes through the record save path, so this event is the
+		// ONLY notification that a record gained media (see ingest_event.ts).
+		const ingestEvents: MediaIngestEvent[] = [];
+		registerMediaIngestHook((event) => {
+			ingestEvents.push(event);
 		});
-		expect(result.jobId).toBeNull(); // image is synchronous
-		const qualities = new Set(result.filesInfo.map((e) => e.quality));
-		expect(qualities.has('original')).toBe(true);
-		expect(qualities.has('1.5MB')).toBe(true);
-		expect(qualities.has('thumb')).toBe(true);
-		// every entry points at a real file
-		for (const e of result.filesInfo) {
-			expect(existsSync(`${ROOT}${e.file_path}`)).toBe(true);
+		// try/finally: the hook is a GLOBAL. A failing assertion below used to skip
+		// the unregister and leak this listener into every later test in the suite.
+		try {
+			const result = await processUploadedFile({
+				spec: image,
+				identity: id2,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up2.jpg',
+				extension: 'jpg',
+			});
+			expect(result.jobId).toBeNull(); // image is synchronous
+			const qualities = new Set(result.filesInfo.map((e) => e.quality));
+			expect(qualities.has('original')).toBe(true);
+			expect(qualities.has('1.5MB')).toBe(true);
+			expect(qualities.has('thumb')).toBe(true);
+			// every entry points at a real file
+			for (const e of result.filesInfo) {
+				expect(existsSync(`${ROOT}${e.file_path}`)).toBe(true);
+			}
+			// Fired once, after the derivatives exist — a listener's whole job is to
+			// read them, so an event that arrived earlier would be useless.
+			expect(ingestEvents).toEqual([
+				{
+					componentTipo: id2.componentTipo,
+					sectionTipo: id2.sectionTipo,
+					sectionId: 43,
+					model: 'component_image',
+				},
+			]);
+		} finally {
+			registerMediaIngestHook(null);
 		}
+	});
+
+	test('a listener that throws can never fail an upload', async () => {
+		registerMediaIngestHook(() => {
+			throw new Error('indexer exploded');
+		});
+		try {
+			await expect(
+				fireMediaIngestEvent({
+					componentTipo: 'rsc29',
+					sectionTipo: 'rsc170',
+					sectionId: 44,
+					model: 'component_image',
+				}),
+			).resolves.toBeUndefined();
+		} finally {
+			registerMediaIngestHook(null);
+		}
+	});
+
+	test('no listener registered is a silent no-op', async () => {
+		registerMediaIngestHook(null);
+		await expect(
+			fireMediaIngestEvent({
+				componentTipo: 'rsc29',
+				sectionTipo: 'rsc170',
+				sectionId: 45,
+				model: 'component_image',
+			}),
+		).resolves.toBeUndefined();
 	});
 
 	test.if(HAVE_FFMPEG)(

@@ -311,13 +311,18 @@ export function getPublicQualities(): string[] {
 }
 
 /**
- * The hard filter itself, as a PURE function over an arbitrary list — this is the
- * security-critical half of getPublicQualities(), so it is directly callable (and
- * directly testable) rather than reachable only through the frozen config catalog.
+ * Every quality name that identifies a MASTER/work copy on this install — the
+ * archival originals and the retouched work copies. Installs rename these
+ * tiers, so nothing may hardcode 'original'/'modified'.
+ *
+ * ONE definition, deliberately: the web-serving filter below uses it to decide
+ * what may be exposed, and any other subsystem that reads bytes off the media
+ * tree (the RAG image source feeding an embedder) uses the same set to decide
+ * what it may open. Two copies would drift, and the drift would be silent until
+ * something shipped a master.
  */
-export function filterPublicQualities(configured: readonly string[]): string[] {
-	// Every quality name that identifies a MASTER/work copy on this install.
-	const forbidden = new Set<string>([
+export function masterQualities(): ReadonlySet<string> {
+	return new Set<string>([
 		'original',
 		'modified',
 		config.media.image.originalQuality,
@@ -327,6 +332,20 @@ export function filterPublicQualities(configured: readonly string[]): string[] {
 		config.media.threeD.originalQuality,
 		config.media.imageQualityRetouched,
 	]);
+}
+
+/** Whether a BARE quality tier name is an archival master. */
+export function isMasterQuality(quality: string): boolean {
+	return masterQualities().has(quality.replace(/^\/+|\/+$/g, ''));
+}
+
+/**
+ * The hard filter itself, as a PURE function over an arbitrary list — this is the
+ * security-critical half of getPublicQualities(), so it is directly callable (and
+ * directly testable) rather than reachable only through the frozen config catalog.
+ */
+export function filterPublicQualities(configured: readonly string[]): string[] {
+	const forbidden = masterQualities();
 
 	const qualities: string[] = [];
 	for (const raw of configured) {

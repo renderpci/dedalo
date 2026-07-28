@@ -3385,6 +3385,235 @@ DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS=oh1,rsc45
 
 ---
 
+### Enabling image search
+
+DEDALO_RAG_MEDIA_ENABLED `bool`
+
+The master switch for the IMAGE half of semantic search: visual similarity between
+objects, a typed question answered with photographs, and the neighbour-based
+characterization of an uncatalogued piece. With the default `false` those three actions
+decline as unavailable and nothing else changes — the text side of semantic search is
+untouched.
+
+It sits *inside* semantic search rather than beside it, so `DEDALO_RAG_ENABLED` must be on
+as well. For meaningful results it also needs a joint image-and-text embedding service
+(`DEDALO_RAG_MULTIMODAL_ENDPOINT`): with the switch on and no service configured the
+pipeline still runs end to end on a built-in, network-free stand-in whose vectors are
+reproducible but not semantic — right for trying the feature out, wrong for a real
+collection.
+
+```bash
+DEDALO_RAG_MEDIA_ENABLED=true
+```
+
+*Default: false*
+
+---
+
+### Defining the image embedding provider
+
+DEDALO_RAG_MULTIMODAL_PROVIDER `string`
+
+Which service turns an image into a vector — and, the load-bearing part, whether that
+service runs on your own machine. `local` (the default) declares an on-premise image
+embedder; **any other value declares an external one**, whose every call carries the image
+itself off your server.
+
+That declaration is what `DEDALO_RAG_IMAGE_EGRESS_POLICY` acts on: while the policy is at
+its default, naming an external provider here is refused as a configuration error rather
+than quietly honoured. So name the service you actually run — `local` for a container of
+your own, the vendor's name for a hosted one. Calling a hosted service `local` does not
+make it one; it only disables the check.
+
+```bash
+DEDALO_RAG_MULTIMODAL_PROVIDER="local"
+```
+
+*Default: local*
+
+---
+
+### Defining the image embedding model
+
+DEDALO_RAG_MULTIMODAL_MODEL `string`
+
+The model name Dédalo asks the image embedding service for. It must be a **joint**
+image-and-text model (CLIP, SigLIP, jina-clip and their kin): both of its towers share one
+vector space, and that shared space is what lets a typed question retrieve a photograph. A
+text-only embedder cannot stand in here — the text-side `DEDALO_RAG_EMBEDDING_MODEL` is a
+separate, independent choice.
+
+Like its text twin, it **partitions** the stored vectors. Changing it on a populated
+installation therefore does not convert the existing image index: the images must be
+embedded again under the new model before image searches see them. The default
+`"clip-ViT-B-32"` is small enough to serve from a modest machine.
+
+```bash
+DEDALO_RAG_MULTIMODAL_MODEL="clip-ViT-B-32"
+```
+
+*Default: clip-ViT-B-32*
+
+---
+
+### Defining the image embedding endpoint
+
+DEDALO_RAG_MULTIMODAL_ENDPOINT `string`
+
+The base URL of the image embedding service. Dédalo posts images to
+`{endpoint}/image` and query text to `{endpoint}/text`, and expects the vectors back; a
+failed or mis-shaped response is skipped whole rather than stored as a partial batch, so a
+sick service degrades the results but never corrupts the index.
+
+Empty by default, and empty is meaningful: with no endpoint the image layer falls back to
+a built-in, network-free stand-in, so the whole pipeline stays exercisable offline —
+reproducible vectors that are not semantic. Any installation that wants real image search
+sets one.
+
+```bash
+DEDALO_RAG_MULTIMODAL_ENDPOINT="http://127.0.0.1:8089"
+```
+
+*Default: (empty)*
+
+---
+
+### Defining the image embedding credential
+
+DEDALO_RAG_MULTIMODAL_API_KEY `string`
+
+The bearer token Dédalo sends to the image embedding service. A container you run
+yourself usually needs none; a hosted service always does.
+
+It is a secret — keep it in `../private/.env`, never in a repository. Unset by default,
+and unset simply means the request carries no authorization header. Setting it does not by
+itself permit images to leave the host: that decision is
+`DEDALO_RAG_IMAGE_EGRESS_POLICY`.
+
+```bash
+DEDALO_RAG_MULTIMODAL_API_KEY="sk-..."
+```
+
+*Default: (unset)*
+
+---
+
+### Deciding whether object images may leave the host
+
+DEDALO_RAG_IMAGE_EGRESS_POLICY `string`
+
+Whether the photographs of your objects may be sent to an embedding service outside your
+server. It is the institution's own decision, stated once:
+
+* `local_only` (the default) — images are embedded only by a provider declared `local`
+  (`DEDALO_RAG_MULTIMODAL_PROVIDER`). Configuring an external one while this policy holds
+  is refused loudly as a configuration error, so no image leaves the building through an
+  oversight in a settings file.
+* `allow_external` — an external provider is permitted, because the institution has
+  decided its material may be processed by a third party. Know what that means in
+  practice: the image bytes are transmitted to that service on every embedding call.
+
+The policy governs the **provider**, not the record — it is a switch you hold, not a
+hidden restriction on what may be published. Which record *text* may reach an external
+language model is a separate question, answered by
+`DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT` and
+`DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS`. An unrecognized value is treated as
+`local_only` and logged, so a typo can never open the gate.
+
+```bash
+DEDALO_RAG_IMAGE_EGRESS_POLICY="local_only"
+```
+
+*Default: local_only*
+
+---
+
+### Defining the embedded image size
+
+DEDALO_RAG_IMAGE_MAX_PX `int`
+
+The longest side, in pixels, of the copy of an image that is sent to the embedding
+service. A larger original is downscaled into that box first; one already inside it is sent
+untouched. The original file on disk is never modified.
+
+512 is what the usual joint models actually consume — pushing a 6000-pixel master through
+gains nothing and costs bandwidth, memory and time on every call. Raise it only for a model
+that genuinely accepts a larger input. A value below 1 disables the downscale and sends the
+original as it is.
+
+```bash
+DEDALO_RAG_IMAGE_MAX_PX=512
+```
+
+*Default: 512*
+
+---
+
+### Defining the default image similarity mode
+
+DEDALO_RAG_IMAGE_HYBRID `bool`
+
+Whether an object-similarity search combines the visual match with a lexical one over
+the object's own descriptive context, when the request does not say which mode it wants.
+
+Keep the default `true` for a heritage collection: pure visual similarity confuses a
+bronze coin with a bronze button, and the descriptive leg is what tells them apart. Set it
+to `false` where the image *is* the record (a photographic archive, a fabric-pattern
+collection) and the surrounding text would only blur the result. A request may still ask
+for either mode explicitly — this decides only what happens when it does not.
+
+```bash
+DEDALO_RAG_IMAGE_HYBRID=true
+```
+
+*Default: true*
+
+---
+
+### Defining the near-duplicate threshold
+
+DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY `float`
+
+How alike two images must be, on a 0-to-1 similarity scale, before a near-duplicate
+search reports them as the same thing. It applies only to a request that explicitly asks
+for near duplicates; ordinary similarity searches are unaffected.
+
+0.93 is deliberately severe, because the question it answers is "has this object been
+photographed and catalogued twice?" — a looser floor turns that into "these two coins look
+alike", a different and much longer list. Lower it if genuine re-photographs (different
+lighting, a different rig) are being missed; raise it if merely similar pieces still creep
+in.
+
+```bash
+DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY=0.93
+```
+
+*Default: 0.93*
+
+---
+
+### Defining the characterization neighbourhood
+
+DEDALO_RAG_CHARACTERIZE_TOP_K `int`
+
+How many visually nearest already-catalogued objects are consulted when Dédalo proposes
+a typology, a period or a material for an uncatalogued one. The proposal is an aggregate of
+what those neighbours are catalogued as — never a generated guess — and it is returned for
+a cataloguer to accept or reject: the engine writes nothing.
+
+20 balances the two failure modes. Too few neighbours and a single oddly-photographed piece
+dominates the proposal; too many and the neighbourhood drifts away from the object,
+diluting a real signal with distant matches. A missing or non-integer value falls back to
+it.
+
+```bash
+DEDALO_RAG_CHARACTERIZE_TOP_K=20
+```
+
+*Default: 20*
+
+---
+
 ### Defining the embedding service timeout
 
 DEDALO_RAG_PROVIDER_TIMEOUT `int`

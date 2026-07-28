@@ -25,7 +25,7 @@
  */
 
 import { config } from '../../config/config.ts';
-import { readEnv } from '../../config/env.ts';
+import { envSnapshot } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import type { ApiResult } from '../../core/api/response.ts';
 import { isValidTipo } from '../../core/concepts/ontology.ts';
@@ -249,24 +249,6 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 
 const mediaDisabled = (): ApiResult => envelope(false, 'RAG media is disabled', ['media_disabled']);
 
-/** Assemble the DEDALO_RAG_* image env from readEnv (process env > private .env). */
-function mediaEnv(): Record<string, string | undefined> {
-	const keys = [
-		'DEDALO_RAG_MEDIA_ENABLED',
-		'DEDALO_RAG_MULTIMODAL_PROVIDER',
-		'DEDALO_RAG_MULTIMODAL_MODEL',
-		'DEDALO_RAG_MULTIMODAL_ENDPOINT',
-		'DEDALO_RAG_MULTIMODAL_API_KEY',
-		'DEDALO_RAG_IMAGE_MAX_PX',
-		'DEDALO_RAG_IMAGE_HYBRID',
-		'DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY',
-		'DEDALO_RAG_CHARACTERIZE_TOP_K',
-	];
-	const env: Record<string, string | undefined> = {};
-	for (const key of keys) env[key] = readEnv(key);
-	return env;
-}
-
 function readSeed(options: Record<string, unknown> | undefined): {
 	sectionTipo: string;
 	sectionId: number;
@@ -298,7 +280,12 @@ function buildMediaStack(): {
 	cfg: MultimodalRuntimeConfig;
 	objectRetrieval: ObjectRetrieval;
 } | null {
-	const env = mediaEnv();
+	// ONE snapshot for both reads (envSnapshot applies the documented precedence:
+	// real process environment over ../private/.env). The image keys themselves are
+	// read — and declared, and documented — in multimodal_config.ts + catalog/ai.ts;
+	// the hand-kept key list this used to assemble was invisible to the config census
+	// and is gone.
+	const env = envSnapshot();
 	if (!isMediaEnabled(env)) return null;
 	const cfg = multimodalConfigFromEnv(env);
 	return { cfg, objectRetrieval: new ObjectRetrieval(buildMultimodalProvider(cfg)) };
@@ -317,7 +304,17 @@ async function similarObjectsAction(rqo: Rqo, context: RagApiContext): Promise<A
 
 	const ragConfig = new RagConfig(defaultOntologyPort());
 	const scope = optionScope(rqo.options) ?? (await ragConfig.getCompareScope(seed.sectionTipo));
-	const mode: SimilarityMode = rqo.options?.similarity_mode === 'visual' ? 'visual' : 'hybrid';
+	// The request may name a mode; when it does not, the installation's default
+	// decides (DEDALO_RAG_IMAGE_HYBRID, true ⇒ hybrid — which is what a heritage
+	// collection wants, since pure visual similarity confuses a bronze coin with a
+	// bronze button).
+	const requestedMode = rqo.options?.similarity_mode;
+	const mode: SimilarityMode =
+		requestedMode === 'visual' || requestedMode === 'hybrid'
+			? requestedMode
+			: stack.cfg.imageHybrid
+				? 'hybrid'
+				: 'visual';
 	const view = optionString(rqo.options, 'view') || null;
 	const nearDup = rqo.options?.near_duplicate === true ? stack.cfg.nearDuplicateSimilarity : null;
 	const hits = await stack.objectRetrieval.findSimilarObjects(principal, seed, {

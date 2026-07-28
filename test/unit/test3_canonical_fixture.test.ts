@@ -24,6 +24,7 @@
 import { describe, expect, test } from 'bun:test';
 import { MATRIX_JSONB_COLUMNS } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { ddDateToSeconds } from '../../src/core/media/file_date.ts';
 import { getColumnNameByModel, getOrderedSubtree } from '../../src/core/ontology/resolver.ts';
 import { readComponentData } from '../../src/core/section/read.ts';
 import {
@@ -153,6 +154,49 @@ describe('1. fixture ↔ manifest (no DB)', () => {
 			const used = fixture.records.some((rec) => populatedAnywhere(rec, tipo));
 			expect(used, `extra tipo ${tipo} unused — remove its entry`).toBe(true);
 		}
+	});
+
+	/**
+	 * A date item stores BOTH its fields and a precomputed ordinal `time`, and the
+	 * search engine compares only the ordinal (builder_date emits
+	 * `@.start.time <op> t`). So a stamp that disagrees with its own fields makes a
+	 * record unfindable by the date it displays, and findable by a date it does
+	 * not: this fixture used to carry year 1628 stamped on the year-628 scale, and
+	 * an exact search for 1628-06-09 returned nothing while 0628-06-09 returned it.
+	 *
+	 * The interactive save path re-stamps every date item, so real records heal
+	 * themselves on the next edit — but the seed re-injects this fixture verbatim
+	 * on every suite reset, so nothing here heals. Hence a gate rather than a fix.
+	 */
+	test('every date stamp agrees with its own fields', () => {
+		const disagreements: string[] = [];
+		const check = (label: string, part: unknown): void => {
+			if (part === null || typeof part !== 'object') return;
+			const date = part as { time?: unknown; year?: unknown };
+			if (typeof date.time !== 'number' || typeof date.year !== 'number') return;
+			const expected = ddDateToSeconds(date as Parameters<typeof ddDateToSeconds>[0]);
+			if (date.time !== expected) {
+				disagreements.push(`${label}: stored ${date.time}, fields give ${expected}`);
+			}
+		};
+
+		for (const rec of fixture.records) {
+			const dateColumn = (rec as Record<string, unknown>).date;
+			if (dateColumn === null || typeof dateColumn !== 'object') continue;
+			for (const [tipo, items] of Object.entries(dateColumn as Record<string, unknown>)) {
+				for (const [index, item] of (Array.isArray(items) ? items : []).entries()) {
+					if (item === null || typeof item !== 'object') continue;
+					for (const container of ['start', 'end', 'period'] as const) {
+						check(
+							`${(rec as { section_id?: unknown }).section_id}/${tipo}[${index}].${container}`,
+							(item as Record<string, unknown>)[container],
+						);
+					}
+				}
+			}
+		}
+
+		expect(disagreements, disagreements.join('\n')).toEqual([]);
 	});
 });
 

@@ -32,6 +32,18 @@ import { type Chunk, type ChunkOpts, chunk } from './chunker.ts';
 import { type OntologyPort, RAG_GROUP_PREFIX, RagConfig, defaultOntologyPort } from './config.ts';
 import { type EmbedDoc, type ResolveEmbedDocsInput, resolveEmbedDocs } from './embed_source.ts';
 import { type EmbeddingProvider, getEmbeddingProvider } from './embedding_provider.ts';
+import {
+	type ExtractedImage,
+	buildImageContextSummary,
+	extractImageForEmbedding,
+	imageSourceHash,
+} from './image_source.ts';
+import {
+	buildMultimodalProvider,
+	isMediaEnabled,
+	multimodalConfigFromEnv,
+} from './multimodal_config.ts';
+import type { MultimodalEmbeddingProvider } from './multimodal_embedding_provider.ts';
 import type { EmbeddingRow, RecordLocator } from './types.ts';
 import {
 	deleteRecordModality,
@@ -44,7 +56,11 @@ import {
 
 /** The vector-store surface the indexer needs (injectable for unit tests). */
 export interface RagStore {
-	diffHashes(locator: RecordLocator, model: string): Promise<Map<string, string>>;
+	diffHashes(
+		locator: RecordLocator,
+		model: string,
+		modality?: string,
+	): Promise<Map<string, string>>;
 	upsertEmbeddingRows(rows: EmbeddingRow[]): Promise<void>;
 	deleteStale(
 		locator: RecordLocator,
@@ -52,6 +68,7 @@ export interface RagStore {
 		lang: string,
 		model: string,
 		validCount: number,
+		modality?: string,
 	): Promise<number>;
 	deleteRecordModality(locator: RecordLocator, modality: string): Promise<void>;
 	deleteRecord(locator: RecordLocator): Promise<void>;
@@ -74,14 +91,203 @@ export interface RagIndexerDeps {
 	resolveDocs: (input: ResolveEmbedDocsInput) => Promise<EmbedDoc[]>;
 	/** Best-effort record display label for the chunker's contextual header. */
 	recordTitle: (sectionTipo: string, lang: string) => Promise<string>;
+	/**
+	 * The IMAGE half. Absent when media indexing is switched off, in which case
+	 * the image pass is a no-op that touches nothing. Injected (rather than read
+	 * from env here) so the indexer stays env-free and unit-testable.
+	 */
+	image?: RagImageDeps;
+}
+
+/** Everything the image pass needs, all injectable. */
+export interface RagImageDeps {
+	provider: MultimodalEmbeddingProvider;
+	extract: (input: {
+		componentTipo: string;
+		sectionTipo: string;
+		sectionId: number;
+		maxPx: number;
+	}) => Promise<ExtractedImage | null>;
+	contextSummary: (input: {
+		sectionTipo: string;
+		sectionId: number;
+		metadata: Record<string, string>;
+		dataLang: string;
+	}) => Promise<string>;
+	/** Longest-side cap for the encoder input. */
+	maxPx: number;
+	/** Whether this install permits images to reach an EXTERNAL provider. */
+	allowExternal: boolean;
 }
 
 export class RagIndexer {
 	constructor(private readonly deps: RagIndexerDeps) {}
 
-	/** Index one record (TEXT). Alias kept parallel to the eventual text+image split. */
+	/**
+	 * Index one record: text and images are INDEPENDENT halves, both always
+	 * attempted, and the record only succeeds when both do. A failing image
+	 * embedder must not stop text from converging, and vice versa — but either
+	 * failing must keep the queue marker so the record is retried.
+	 */
 	async indexRecord(locator: RecordLocator): Promise<boolean> {
-		return this.indexRecordText(locator);
+		const textOk = await this.indexRecordText(locator);
+		const imageOk = await this.indexRecordImages(locator);
+		return textOk && imageOk;
+	}
+
+	/**
+	 * Index one record's IMAGES: one vector per declared media component, in the
+	 * multimodal model's own partition. Returns true on success or a clean no-op,
+	 * false on a RETRYABLE failure.
+	 *
+	 * Structurally the twin of {@link indexRecordText}: embed OUTSIDE any
+	 * transaction, then one short flush. The two never collide because their
+	 * models differ, and `model` is the partition key.
+	 */
+	async indexRecordImages(locator: RecordLocator): Promise<boolean> {
+		if (locator.sectionId < 1 || locator.sectionTipo === '') return false;
+
+		const image = this.deps.image;
+		// Media off: leave whatever is stored alone. Toggling a feature flag must
+		// never be a destructive operation on someone's index.
+		if (image === undefined) return true;
+
+		const declared = await this.deps.config.getContextImages(locator.sectionTipo);
+		if (declared.length === 0) {
+			// Not opted in — or the descriptor lost its images. Converge by pruning.
+			try {
+				await this.deps.store.deleteRecordModality(locator, 'image');
+				return true;
+			} catch {
+				return false;
+			}
+		}
+
+		// The institution's egress policy, applied where bytes would actually
+		// leave the host. Refusing here (rather than pruning) keeps an existing
+		// index intact while the policy is off.
+		if (image.provider.isExternal() && !image.allowExternal) {
+			console.warn(
+				`[rag_image] skipping ${locator.sectionTipo}/${locator.sectionId}: external provider not permitted by policy`,
+			);
+			return true;
+		}
+
+		const model = image.provider.model();
+		const metadata = await this.deps.config.getContextMetadata(locator.sectionTipo);
+
+		let existingHashes: Map<string, string>;
+		let contextSummary: string;
+		try {
+			existingHashes = await this.deps.store.diffHashes(locator, model, 'image');
+			contextSummary = await image.contextSummary({
+				sectionTipo: locator.sectionTipo,
+				sectionId: locator.sectionId,
+				metadata,
+				dataLang: this.deps.langs[0] ?? this.deps.nolan,
+			});
+		} catch {
+			return false; // retryable: matrix/store read failed
+		}
+
+		// Phase 1: extract + embed (slow) OUTSIDE any transaction.
+		const pendingUpserts: EmbeddingRow[] = [];
+		const pendingStale: Array<[string, string, number]> = [];
+		const liveKeys = new Set<string>();
+		let embedFailure = false;
+
+		for (const declaredImage of declared) {
+			const componentTipo = declaredImage.tipo;
+			const lang = this.deps.nolan; // an image has no language
+			liveKeys.add(`${componentTipo}|${lang}`);
+
+			const extracted = await image.extract({
+				componentTipo,
+				sectionTipo: locator.sectionTipo,
+				sectionId: locator.sectionId,
+				maxPx: image.maxPx,
+			});
+			if (extracted === null) {
+				// No readable derivative — prune anything stored for it before. The
+				// extractor logs the cases that are misconfiguration rather than
+				// bad luck (master-only tier, non-image tipo, translatable media),
+				// because this prune cannot distinguish them and must not be the
+				// only trace a component left.
+				pendingStale.push([componentTipo, lang, 0]);
+				continue;
+			}
+
+			const sourceHash = imageSourceHash(extracted.bytesHash, contextSummary);
+			const key = `${componentTipo}|${lang}|0`;
+			if (existingHashes.get(key) === sourceHash) {
+				// Unchanged: no provider call, no write — just keep it alive.
+				pendingStale.push([componentTipo, lang, 1]);
+				continue;
+			}
+
+			const vectors = await image.provider.embedImage([extracted.base64]);
+			const vector = vectors[0];
+			if (vectors.length !== 1 || vector === undefined || vector.length === 0) {
+				// The provider returns [] rather than a partial batch on any failure.
+				embedFailure = true; // retry the record; write nothing, prune nothing
+				continue;
+			}
+
+			pendingUpserts.push({
+				sectionTipo: locator.sectionTipo,
+				sectionId: locator.sectionId,
+				componentTipo,
+				lang,
+				chunkIndex: 0, // one vector per image component
+				provider: image.provider.provider(),
+				model,
+				dimension: vector.length,
+				embedding: vector,
+				sourceHash,
+				// The only text an image row carries — the hybrid lexical leg.
+				sourceText: contextSummary,
+				tokenCount: null,
+				modality: 'image',
+				sourceKind: 'image_visual',
+				egressClass: 'public',
+				parentKey: `${locator.sectionTipo}_${locator.sectionId}`,
+				// snake_case: these keys are read back by the retrieval and API
+				// layers (chunk_meta.view, chunk_meta.thumb_url).
+				chunkMeta: {
+					media_tipo: componentTipo,
+					view: declaredImage.view ?? null,
+					quality: extracted.quality,
+					thumb_url: extracted.thumbUrl,
+					width: extracted.width,
+					height: extracted.height,
+				},
+			});
+			pendingStale.push([componentTipo, lang, 1]);
+		}
+
+		// Orphan sweep: image components dropped from the descriptor.
+		for (const storedKey of existingHashes.keys()) {
+			const [ct, lg] = storedKey.split('|', 2) as [string, string];
+			if (!liveKeys.has(`${ct}|${lg}`)) pendingStale.push([ct, lg, 0]);
+		}
+
+		if (pendingUpserts.length === 0 && pendingStale.length === 0) {
+			return !embedFailure;
+		}
+
+		// Phase 2: flush.
+		try {
+			if (pendingUpserts.length > 0) {
+				await this.deps.store.upsertEmbeddingRows(pendingUpserts);
+			}
+			for (const [ct, lg, cnt] of pendingStale) {
+				await this.deps.store.deleteStale(locator, ct, lg, model, cnt, 'image');
+			}
+		} catch {
+			return false; // retryable: the vector store write failed
+		}
+
+		return !embedFailure;
 	}
 
 	/**
@@ -115,7 +321,7 @@ export class RagIndexer {
 				langs: this.deps.langs,
 				nolan: this.deps.nolan,
 			});
-			existingHashes = await this.deps.store.diffHashes(locator, model);
+			existingHashes = await this.deps.store.diffHashes(locator, model, 'text');
 		} catch {
 			return false; // retryable: matrix/store read failed
 		}
@@ -167,6 +373,19 @@ export class RagIndexer {
 					continue;
 				}
 				const dimension = vectors[0]?.length ?? 0;
+				// The COUNT matching is not enough: a provider can return a
+				// right-length batch with a hole in it (a sidecar that partially
+				// failed), and a hole reaching the store is not a bad vector but a
+				// NULL one — it violates the embedding not-null constraint and takes
+				// the whole record's flush down with it. Every vector must be a
+				// full-width row or the record is retried.
+				const usable = vectors.every(
+					(vector) => Array.isArray(vector) && vector.length === dimension && dimension > 0,
+				);
+				if (!usable) {
+					embedFailure = true;
+					continue;
+				}
 				for (let v = 0; v < toEmbedIdx.length; v++) {
 					const c = chunks[toEmbedIdx[v] as number] as Chunk;
 					pendingUpserts.push({
@@ -226,7 +445,7 @@ export class RagIndexer {
 				await this.deps.store.upsertEmbeddingRows(pendingUpserts);
 			}
 			for (const [ct, lg, cnt] of pendingStale) {
-				await this.deps.store.deleteStale(locator, ct, lg, model, cnt);
+				await this.deps.store.deleteStale(locator, ct, lg, model, cnt, 'text');
 			}
 		} catch {
 			return false; // retryable: the vector store write failed
@@ -331,5 +550,42 @@ export function buildRagIndexer(): RagIndexer {
 		nolan,
 		resolveDocs: resolveEmbedDocs,
 		recordTitle: async (sectionTipo, lang) => (await getTermByTipo(sectionTipo, lang)) ?? '',
+		...(buildImageDeps() ?? {}),
 	});
+}
+
+/**
+ * The image half of the indexer, or nothing when media indexing is off. Spread
+ * into the deps so a disabled install carries no image dependency at all rather
+ * than a half-built one.
+ */
+function buildImageDeps(): { image: RagImageDeps } | null {
+	if (!isMediaEnabled()) return null;
+	const cfg = multimodalConfigFromEnv();
+
+	let provider: MultimodalEmbeddingProvider;
+	try {
+		// Throws when the configured provider is external but the institution's
+		// policy is local_only — a configuration error, stated loudly.
+		provider = buildMultimodalProvider(cfg);
+	} catch (error) {
+		// Disable the IMAGE half only. A misconfigured image policy must not
+		// stop text indexing: that would turn a narrow config mistake into a
+		// silent, total loss of search.
+		console.error(`[rag] image indexing disabled — ${String(error)}`);
+		return null;
+	}
+
+	return {
+		image: {
+			provider,
+			extract: extractImageForEmbedding,
+			contextSummary: buildImageContextSummary,
+			maxPx: cfg.imageMaxPx,
+			// The institution's decision, not ours. Kept as a runtime check too:
+			// the build-time assert only sees the CONFIGURED provider, and this
+			// is the last gate before bytes are handed over.
+			allowExternal: cfg.imageEgressPolicy === 'allow_external',
+		},
+	};
 }
