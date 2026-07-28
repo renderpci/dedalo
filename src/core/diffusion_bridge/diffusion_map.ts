@@ -20,6 +20,7 @@
 
 import { readEnv } from '../../config/env.ts';
 import { sql } from '../db/postgres.ts';
+import { requireSqlIdentifier } from '../db/sql_identifier.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { type OntologySubtreeNode, getOrderedSubtree } from '../ontology/resolver.ts';
 
@@ -473,8 +474,23 @@ async function buildDiffusionTargets(): Promise<Map<string, DiffusionSqlTarget[]
 	// section by db|table
 	for (const hit of pending) {
 		const list = map.get(hit.section) ?? [];
-		const databaseName = hit.element.database ?? '';
-		const tableName = hit.table ?? '';
+		// DIFF-A (2026-07-28 audit): sanitize the ontology-label database/table
+		// names through the SAME chokepoint the publish plan uses
+		// (requireSqlIdentifier), so delete targets are byte-identical to what was
+		// published. Previously these were the RAW labels, so a node labelled `Web`
+		// was deleted from `` `Web` `` while publish had created `web` → errno 1146,
+		// counted as a successful unpublish, record left live. A label publish would
+		// REJECT was never created, so skip it here too (keeps the two in lockstep).
+		let databaseName: string;
+		let tableName: string;
+		try {
+			databaseName = hit.element.database
+				? requireSqlIdentifier(hit.element.database, 'database')
+				: '';
+			tableName = hit.table ? requireSqlIdentifier(hit.table, 'table') : '';
+		} catch {
+			continue;
+		}
 		const exists = list.some(
 			(t) =>
 				t.element_tipo === hit.element.realTipo &&

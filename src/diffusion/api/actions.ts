@@ -45,6 +45,7 @@ import {
 	progressDataFromJob,
 	sseResponseHeaders,
 } from '../jobs/sse.ts';
+import { diffusionResolveLevels } from '../plan/compile.ts';
 
 /** Old-engine cadences (pinned): 2s state re-send on diffuse; 15s ":\n" on status. */
 const DIFFUSE_HEARTBEAT_MS = 2000;
@@ -265,7 +266,26 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 			: `process_diffusion_${principal.userId}_${elementTipo}_${sectionTipo}`;
 
 	const estimatedTotal = Number(options.total ?? 0) || 0;
-	const { process_id: _clientLabel, ...runnerOptions } = options;
+	const { process_id: _clientLabel, ...rawRunnerOptions } = options;
+
+	// DIFF-B (2026-07-28 audit): the job spec is server-authoritative for the
+	// publication SCOPE, not only the SQO. A read-level caller must not be able to
+	// (a) switch OFF the fail-closed per-record publication gate, nor (b) expand a
+	// one-record run into a transitive-closure publication of the relation graph.
+	const runnerOptions: Record<string, unknown> = { ...rawRunnerOptions };
+	// (a) skip_publication_state_check is a GLOBAL-ADMIN operation — strip it for
+	// everyone else (a non-admin can never publish embargoed/draft records).
+	if (!principal.isGlobalAdmin) {
+		delete runnerOptions.skip_publication_state_check;
+	}
+	// (b) clamp the recursion budget to the configured server ceiling; a non-
+	// positive / absent value falls back to the plan default at run time.
+	const requestedLevels = Number(runnerOptions.levels);
+	if (Number.isFinite(requestedLevels) && requestedLevels > 0) {
+		runnerOptions.levels = Math.min(requestedLevels, diffusionResolveLevels());
+	} else {
+		delete runnerOptions.levels;
+	}
 
 	const { job } = await enqueueDiffusionJob({
 		ownerUserId: principal.userId,
