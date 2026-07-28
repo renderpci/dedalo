@@ -22,13 +22,15 @@
 *     Each entry is an IRI object from the main component_iri component.
 *   self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology — string|null
 *     Optional ontology tipo override; when absent, null is passed to get_rdf_data.
-*   self.caller.caller.caller — section instance to refresh after a successful import.
+*   The owning section instance (resolved by model via get_caller_by_model) is
+*     refreshed after a successful import.
 */
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
+	import {get_caller_by_model} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -248,10 +250,13 @@ const get_content_data_edit = async function(self) {
 					// update list
 						// self.load_section(section_tipo)
 
-					// Walk up the caller chain three levels to reach the parent section
-					// instance and trigger a refresh so newly imported data appears in the UI.
-					// Caller chain: tool → component → portal/section → section.
-						const section = self.caller.caller.caller
+					// Reach the owning section and refresh it so newly imported data
+					// appears in the UI. Resolved by MODEL, not by depth: the depth
+					// differs by surface (an edit-mode component reaches its section
+					// through a section_group, a list cell through a section_record),
+					// and get_caller_by_model is cycle-safe — tool_common's window
+					// path sets caller.caller = self, which would hang a naive walk.
+						const section = get_caller_by_model(self, 'section')
 						if (section) {
 							section.refresh()
 						}

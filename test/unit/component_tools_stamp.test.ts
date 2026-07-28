@@ -98,6 +98,26 @@ describe('component toolbar stamp is gated on MODE, not on permissions', () => {
 		expect(await toolNamesOf(USER_IMAGE_TIPO, USERS_SECTION, 'list', 3)).toEqual([]);
 	});
 
+	test('the list-mode exclusion STAYS — the per-cell edit modal is the supported route', async () => {
+		// Read this before "fixing" list mode on the server. The same component, the
+		// same section, the same permissions: list is empty by contract, edit is not.
+		// A user reaching a component tool from a section LIST does it by clicking
+		// the cell (component_common activate_edit_in_list → ui.render_edit_modal),
+		// which builds a FRESH instance at mode 'edit' and does a real read — so it
+		// lands on the branch below and gets a full toolbar, with no server change.
+		//
+		// Stamping tools in list mode instead would be wrong three times over: it is
+		// oracle-pinned (PHP never shipped them for a component in list mode), it
+		// would put a toolbar in every grid cell, and it would not even work —
+		// tool_common takes main_element.mode from the CALLER, so the propagate
+		// tool's editable clone would render as a read-only list cell with nothing
+		// to type into.
+		const inList = await toolNamesOf(USER_IMAGE_TIPO, USERS_SECTION, 'list', 3);
+		const inEdit = await toolNamesOf(USER_IMAGE_TIPO, USERS_SECTION, 'edit', 3);
+		expect(inList).toEqual([]);
+		expect(inEdit.length).toBeGreaterThan(0);
+	});
+
 	test('a SECTION keeps its toolbar at permissions 2, in list AND edit mode', async () => {
 		// PHP fixture: section contexts ship tools in list ('dd15' → tool_export),
 		// edit and related_list. Only the `start` (simple) builds are empty.

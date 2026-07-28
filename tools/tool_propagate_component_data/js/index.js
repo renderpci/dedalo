@@ -25,7 +25,8 @@
 *   - delete  : remove matching entries from each record's field
 *
 * The set of target records is determined by the SQO currently active on the
-* parent section (obtained via self.caller.caller?.caller). When no filter is
+* owning section, resolved by MODEL (resolve_propagate_section) so that both the
+* edit view and the list view's per-cell edit modal work. When no filter is
 * active the operation targets all records in the section; in that case the
 * operator must pass a second confirmation dialog before the request is sent.
 *

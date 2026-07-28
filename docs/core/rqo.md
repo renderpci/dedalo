@@ -192,7 +192,7 @@ Identity of the calling element — built client-side by `create_source()` (`cor
 | `lang` | `string` | Data language (`lg-eng`, `lg-nolan`, ...) |
 | `view` | `string` | View variant (`default`, `line`, `mosaic`, ...) |
 | `matrix_id`, `data_source` | optional | Time machine: address a specific matrix row / `'tm'` data source |
-| `is_temporal` | `bool` optional | Temporal instances (e.g. `tool_propagate_component_data`) |
+| `is_temporal` | `bool` optional | Marks a tool's throwaway editable clone (`tool_propagate_component_data`, `service_tmp_section`, the `component_text_area` pickers). Such an instance **addresses no record**: the `section_id` it carries is a client sentinel, not an address. `save` resolves and echoes the applied value **without persisting**; `read` resolves context/datalist with an empty value; `create`/`duplicate`/`delete` refuse it. See WC-059 |
 | `caller_dataframe` | `object` optional | Dataframe pairing info (see component_dataframe docs) |
 | `value` | `array` optional | Values to resolve (portal in search mode) |
 

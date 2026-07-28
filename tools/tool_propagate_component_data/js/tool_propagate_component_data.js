@@ -26,11 +26,17 @@
 *   'delete'  — remove matching entries from every record.
 *
 * Caller chain expected by this tool:
-*   self.caller           → the tool_button / component_json that opened it
-*   self.caller.caller    → (tool_button) the component being propagated
-*   self.caller.caller?.caller → the parent section instance (must be model
-*                                'section', mode 'edit') whose active SQO
-*                                defines the set of records to update.
+*   self.caller  → the component being propagated (the toolbar that opened it)
+*   …            → its owning SECTION, whose active SQO defines the record set.
+*
+* (!) The section is resolved by MODEL, never by depth — see
+* resolve_propagate_section in render_tool_propagate_component_data.js. The depth
+* differs by surface: an edit-mode component reaches its section through a
+* section_group, while a list cell opened in the per-cell edit modal reaches it
+* through a section_record. Both are two links; a portal-embedded component is
+* further still and is REFUSED (its nearest section owns a different record set).
+* The resolved section is snapshotted onto self.propagate_section by the render
+* pass, and this module reads that snapshot — never re-walking.
 *
 * Main exports:
 *   tool_propagate_component_data — constructor (prototype chain below)
@@ -206,9 +212,15 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 * Creates, configures, and saves a temporary interactive clone of `main_element`
 * that the user edits to define the value they want to propagate.
 *
-* The clone is instantiated with `is_temporal:true` and a synthetic section_id of 1
-* so that save() writes to the server-side temporal/session store rather than to any
-* real section record. A unique `id_variant` (`'propagate_' + Date.now()`) prevents
+* The clone is instantiated with `is_temporal:true` and a sentinel section_id of 1.
+* (!) The sentinel is NOT an address. The server's save door recognises
+* `is_temporal` and RESOLVES + ECHOES the value without persisting anything (WC-059,
+* src/core/section/record/temporal.ts) — there is no server-side temporal store, and
+* the value that ultimately gets propagated is read from this clone's client-side
+* `data.entries` (see propagate_component_data below), never read back from a server.
+* PHP did have such a store (matrix_temp_manager); the TS engine deliberately does
+* not, and until 2026-07-28 the missing store meant this save landed on the REAL
+* record 1 of the target section. A unique `id_variant` (`'propagate_' + Date.now()`) prevents
 * instance-registry collisions when the tool is opened multiple times in a session.
 *
 * The clone's `context` is a deep copy of main_element.context so it inherits the
@@ -340,9 +352,13 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'propagate_component_data')
 
-	// section. Get current SQO
-		const section	= self.caller.caller?.caller
-		const sqo		= section.rqo && section.rqo.sqo
+	// section. The SAME section the render layer resolved and counted against
+	// (self.total). Read the SNAPSHOT rather than re-walking the caller chain:
+	// re-resolving here could land on a different section if the DOM changed
+	// between render and click, and the total would then belong to one section
+	// while the sqo belonged to another.
+		const section	= self.propagate_section
+		const sqo		= section && section.rqo && section.rqo.sqo
 			? clone(section.rqo.sqo)
 			: null
 

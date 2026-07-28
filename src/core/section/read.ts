@@ -29,7 +29,7 @@ import { config as dedaloConfig } from '../../config/config.ts';
 import { type EmitHookContext, getEmitHook } from '../components/emit_hooks.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
-import type { Rqo } from '../concepts/rqo.ts';
+import { type Rqo, isTemporalSource } from '../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
@@ -443,8 +443,13 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// rejects via the identifier allowlist. Without this guard, dragging any dd15
 	// field into the search panel threw and every filter rendered "Invalid
 	// component". A real numeric id (incl. 0 and root -1) still reads normally.
+	// A TEMPORAL instance (source.is_temporal — a tool's throwaway editable
+	// clone, WC-059) is the second no-record case: its section_id is a client
+	// sentinel (1), so reading it would serve a STRANGER'S record as the clone's
+	// starting value. Same resolution as the synthetic search id — context and
+	// datalist, empty value.
 	const numericSectionId = Number(sectionId);
-	const hasRecordId = !Number.isNaN(numericSectionId);
+	const hasRecordId = !Number.isNaN(numericSectionId) && !isTemporalSource(source);
 
 	// Time Machine preview override (PHP component_common::get_data data_source
 	// ='tm' branch, dd_core_api :2372-2383): the tool_time_machine preview pane
@@ -477,7 +482,11 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			// TM preview of a component whose live record is gone (restored-from-
 			// deletion history): PHP still plays back the snapshot, so materialize an
 			// empty virtual record to carry the override. No override ⇒ PHP empty shell.
-			if (tmOverride === null) return [];
+			// A TEMPORAL instance (WC-059) also lands here with no record, but must
+			// get the EMPTY record rather than the empty shell: the clone is an
+			// editable widget, and the client's `self.data = data || {}` leaves it
+			// with no entries array at all when the item is missing.
+			if (tmOverride === null && !isTemporalSource(source)) return [];
 			const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
 			literalRecord = makeVirtualRecord(sectionTipo, Number(sectionId));
 		}
@@ -609,7 +618,17 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		// of the bare, datalist-less item the generic search branch returns, which
 		// left the filter blank (render_search_component_publication iterates
 		// data.datalist).
-		if ((source.mode ?? 'edit') === 'search' && isSelectOrFilterFamily) {
+		// A TEMPORAL instance (WC-059) reaches here for the SAME reason — it
+		// addresses no record — but in mode 'edit', so it needs its own clause or
+		// the `return []` below blanks it. `service_tmp_section`'s staging form is
+		// built almost entirely from this family (component_select / _filter /
+		// _radio_button, all mode 'edit'): an empty answer leaves `self.data = {}`
+		// and the widget renders ZERO options, which nothing can then repair —
+		// nothing can be picked, so no save echo ever arrives.
+		if (
+			((source.mode ?? 'edit') === 'search' || isTemporalSource(source)) &&
+			isSelectOrFilterFamily
+		) {
 			const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
 			record = makeVirtualRecord(sectionTipo, 0);
 		} else {
@@ -624,6 +643,13 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			// zeros kept) so String(el.section_id)===String(self.section_id) matches.
 			if ((source.mode ?? 'edit') === 'search') {
 				return [buildDataItem(tipo, sectionTipo, sectionId, 'search', lang, [])];
+			}
+			// TEMPORAL (WC-059): same contract, the clone's own mode. The client
+			// resolves its item by the stringified section_id, so the SENTINEL is
+			// echoed verbatim — an item with entries:[] is what makes the widget
+			// render empty rather than not render at all.
+			if (isTemporalSource(source)) {
+				return [buildDataItem(tipo, sectionTipo, sectionId, source.mode ?? 'edit', lang, [])];
 			}
 			return [];
 		}

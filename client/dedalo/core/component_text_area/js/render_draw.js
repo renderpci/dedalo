@@ -144,7 +144,10 @@ export const render_draw = async function(options) {
 	// reference_component
 	// A transient (is_temporal: true) portal component is spun up so the user can
 	// search and select a thesaurus concept without creating a persistent record.
-	// section_id is forced to 1 as a placeholder — no real section backs this instance.
+	// section_id is forced to 1 as a SENTINEL — no real section backs this instance,
+	// and the server's save/read doors treat it as record-less rather than as an
+	// address (WC-059, src/core/section/record/temporal.ts). There is no
+	// server-side temporal store in the TS engine.
 		const instance_options = {
 			model			: references_component_model,
 			tipo			: references_component_tipo,

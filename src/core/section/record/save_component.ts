@@ -127,9 +127,28 @@ export interface SaveResult {
 	observersData?: unknown[];
 }
 
+/**
+ * PHP lang-slice gate — supports_translation && !is_relation (PHP
+ * update_data_value :4110-4126/:4169-4180 conditions): only the literal
+ * translation-supporting CLASSES (registry classSupportsTranslation, PHP
+ * component_string_common subclasses + iri) slice their data by language;
+ * relation/locator classes never do. The ontology `translatable` flag alone
+ * would mis-slice: an ontology-non-translatable input_text still slices, on the
+ * lg-nolan lang PHP normalizes to at instantiation (__construct :677; read-path
+ * twin: resolve/component_data.ts effective-lang rule).
+ *
+ * Exported because the TEMPORAL door (./temporal.ts) applies the same delta in
+ * memory and must slice identically — two copies of this predicate would drift
+ * into two different notions of "the current language".
+ */
+export function isLangSlicedModel(model: string): boolean {
+	const descriptor = getComponentModel(model);
+	return descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
+}
+
 /** COMP-02: numeric-string ids normalize to int, else strict matching
  * appends duplicates instead of updating. */
-function normalizeItemId(id: unknown): unknown {
+export function normalizeItemId(id: unknown): unknown {
 	return typeof id === 'string' && /^\d+$/.test(id) ? Number.parseInt(id, 10) : id;
 }
 
@@ -140,7 +159,11 @@ function normalizeItemId(id: unknown): unknown {
  * the entry at position `key` in each group, and returns the first valid
  * positive numeric id found. Null when nothing resolves (a fresh id is minted).
  */
-function getIdFromKey(items: unknown[], key: number, skipLangs: readonly string[]): number | null {
+export function getIdFromKey(
+	items: unknown[],
+	key: number,
+	skipLangs: readonly string[],
+): number | null {
 	const grouped = new Map<string, { id?: unknown }[]>();
 	for (const item of items) {
 		if (item === null || typeof item !== 'object') continue;
@@ -181,7 +204,7 @@ function getIdFromKey(items: unknown[], key: number, skipLangs: readonly string[
  * every slice item, so the same object reference is never stored at two array
  * positions.
  */
-function applyUpdate(
+export function applyUpdate(
 	items: unknown[],
 	change: ChangedDataItem,
 	sliceLang: string | null,
@@ -392,17 +415,8 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 	const translatable = await getTranslatableByTipo(componentTipo);
 
-	// PHP lang-slice gate — supports_translation && !is_relation (PHP
-	// update_data_value :4110-4126/:4169-4180 conditions): only the literal
-	// translation-supporting CLASSES (registry classSupportsTranslation, PHP
-	// component_string_common subclasses + iri) slice their data by language;
-	// relation/locator classes never do. The ontology `translatable` flag alone
-	// would mis-slice: an ontology-non-translatable input_text still slices, on
-	// the lg-nolan lang PHP normalizes to at instantiation (__construct :677;
-	// read-path twin: resolve/component_data.ts effective-lang rule).
-	const descriptor = getComponentModel(model);
-	const langSliced =
-		descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
+	// PHP lang-slice gate (isLangSlicedModel above — shared with the temporal door).
+	const langSliced = isLangSlicedModel(model);
 	const effectiveLang = translatable || model === 'component_iri' ? lang : 'lg-nolan';
 
 	// SERIALIZED read-modify-write (S1-02, DEC-01: deliberately STRONGER than

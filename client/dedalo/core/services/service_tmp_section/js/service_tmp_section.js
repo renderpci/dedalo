@@ -8,15 +8,22 @@
 * SERVICE_TMP_SECTION
 *
 * Lightweight service that instantiates a virtual "temporary section" composed
-* of one or more real Dédalo components backed by the temporal data handler
-* (matrix_temp_manager) instead of the standard database matrix.
+* of one or more real Dédalo components that address NO record.
 *
 * This pattern is used by import tools (tool_import_marc21, tool_import_zotero,
 * tool_import_files, …) to show a live edit interface where the user fills in
 * component values before the actual import is triggered. Because no real
 * section_id exists yet, a sentinel value of 1 is used as a fake record identifier
-* and `is_temporal: true` is set on each child component so that reads/writes go
-* through matrix_temp_manager rather than the persistent database.
+* and `is_temporal: true` is set on each child component.
+*
+* (!) The sentinel is NOT an address, and there is NO server-side temporal store in
+* the TS engine (PHP had matrix_temp_manager; it was not ported). The server's save
+* door recognises `is_temporal` and RESOLVES + ECHOES each change without persisting
+* it, and its read door serves an empty value rather than record 1's (WC-059,
+* src/core/section/record/temporal.ts). Values live in the client until the caller
+* harvests them with get_components_data and the import is actually triggered.
+* Until 2026-07-28 the missing store meant every keystroke here wrote to the REAL
+* record 1 of the component's section.
 *
 * Lifecycle (mirrors the standard Dédalo instance lifecycle):
 *   init → build → (caller renders via service_tmp_section.edit) → get_components_data

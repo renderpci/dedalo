@@ -18,7 +18,7 @@
 
 import { denied } from '../api/response.ts';
 import type { ApiResult } from '../api/response.ts';
-import type { Rqo } from '../concepts/rqo.ts';
+import { type Rqo, isTemporalSource } from '../concepts/rqo.ts';
 import { type Principal, getPermissions } from '../security/permissions.ts';
 import { readSection } from './read.ts';
 
@@ -188,8 +188,17 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// non-admins (search is enabled for all users). Skip ONLY non-numeric ids;
 		// every real numeric id — including non-positive ones (0, root -1) — stays
 		// gated, so no record reach is opened (principalCanAccessRecord blocks < 1).
+		// TEMPORAL instances are exempt for the same reason as the synthetic
+		// search ids (WC-059): the sentinel `section_id: 1` addresses no record,
+		// so gating on it would blank a tool's editable clone for every user who
+		// happens to be out of scope for a record the clone never reads.
+		// readComponentData resolves it record-independently.
 		const recordId = Number(source.section_id);
-		if (typeof source.section_tipo === 'string' && !Number.isNaN(recordId)) {
+		if (
+			typeof source.section_tipo === 'string' &&
+			!Number.isNaN(recordId) &&
+			!isTemporalSource(source)
+		) {
 			const { principalCanAccessRecord } = await import('../security/record_scope.ts');
 			if (!(await principalCanAccessRecord(source.section_tipo, recordId, principal))) {
 				return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };

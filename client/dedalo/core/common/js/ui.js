@@ -3923,6 +3923,19 @@ export const ui = {
 			const callback	= options.callback // function optional
 			const lang		= options.lang // string optional
 			const on_close	= options.on_close // function optional
+			// caller. The ancestor the modal instance hangs from. Defaults to the
+			// LIST instance's OWN caller (the section_record), which makes the modal
+			// instance a SIBLING of the cell it edits rather than its child.
+			//
+			// Why sibling and not child: the modal exposes the component's FULL
+			// edit-mode toolbar, and several tools still walk a FIXED number of
+			// caller links to reach their section. Sibling depth reproduces edit
+			// mode exactly (component → section_group → section becomes
+			// component → section_record → section), so those keep working; hanging
+			// the modal off `self` would add a link and break all of them at once.
+			// It is also the more durable pointer: the section_record outlives the
+			// cell instance, which change_mode destroys when it swaps views.
+			const caller	= options.caller ?? self.caller ?? null
 
 		// header
 			const header = ui.create_dom_element({
@@ -3950,8 +3963,18 @@ export const ui = {
 				section_id		: self.section_id,
 				mode			: 'edit',
 				view			: null,
-				lang			: lang || self.lang
+				lang			: lang || self.lang,
+				section_lang	: self.section_lang,
+				caller			: caller
 			})
+			// caller. Re-assert AFTER get_instance. `caller` is NOT part of the
+			// instance key (instances.js key_order) and the cache-hit path returns
+			// the stored instance without re-running init — so re-opening this modal
+			// would otherwise reuse an instance still pointing at the caller captured
+			// on the FIRST open, which any re-search has since destroyed. Without
+			// this line the feature works once and then silently stops finding the
+			// section: the worst possible failure shape.
+			instance.caller = caller
 			await instance.build(true)
 			const node = await instance.render()
 			if(node) {

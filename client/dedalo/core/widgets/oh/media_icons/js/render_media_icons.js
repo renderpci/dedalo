@@ -65,7 +65,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {open_tool} from '../../../../../core/tools_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../../../common/js/utils/index.js'
+	import {get_caller_by_model, object_to_url_vars, open_window} from '../../../../common/js/utils/index.js'
 
 
 
@@ -249,7 +249,7 @@ const get_content_data_edit = async function(self) {
 *
 *   .value.tr    — "TR" transcription link. If `data.transcription.tool_context`
 *                  is present, clicking calls `open_tool` passing the tool_context
-*                  and `self.caller.caller.caller` as the section caller.
+*                  and the owning section (get_caller_by_model) as the caller.
 *
 *   .value.in    — "IN" indexation link, same pattern as TR.
 *
@@ -262,8 +262,10 @@ const get_content_data_edit = async function(self) {
 * `tool_context` is truthy.  When `tool_context` is null/undefined (tool not
 * registered for the current user) the element is rendered but is inert.
 *
-* The caller chain `self.caller.caller.caller` is expected to resolve to the
-* owning section instance (widget → component_info → component → section).
+* The owning section is resolved by MODEL via get_caller_by_model, never by
+* walking a fixed number of caller links: the depth differs by surface (an
+* edit-mode component reaches its section through a section_group, a list cell
+* through a section_record), and the helper is cycle-safe.
 *
 * @param {number}  i           - IPO index (0-based), used to disambiguate rows
 *   when multiple IPO entries share the same locator.
@@ -389,7 +391,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 				// open_tool (tool_common)
 				open_tool({
 					tool_context	: tool_context,
-					caller			: self.caller.caller.caller // section
+					caller			: get_caller_by_model(self, 'section')
 				})
 			})
 		}
@@ -410,7 +412,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 				// open_tool (tool_common)
 				open_tool({
 					tool_context	: tool_context,
-					caller			: self.caller.caller.caller // section
+					caller			: get_caller_by_model(self, 'section')
 				})
 			})
 		}
@@ -431,7 +433,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 				// open_tool (tool_common)
 				open_tool({
 					tool_context	: tool_context,
-					caller			: self.caller.caller.caller // section
+					caller			: get_caller_by_model(self, 'section')
 				})
 			})
 		}

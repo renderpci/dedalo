@@ -71,6 +71,8 @@ const TRIPWIRES = [
 	'test/unit/rag_index_scope_tripwire.test.ts',
 	'test/unit/labels_tripwire.test.ts',
 	'test/unit/matrix_index_asset_policy_agreement.test.ts',
+	'test/unit/temporal_instance_tripwire.test.ts',
+	'test/unit/client_caller_chain_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

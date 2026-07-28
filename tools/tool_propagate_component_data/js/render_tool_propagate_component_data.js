@@ -9,6 +9,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {is_filter_empty} from '../../../core/search/js/search.js'
+	import {get_caller_by_model} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -55,6 +56,85 @@ export const render_tool_propagate_component_data = function() {
 
 	return true
 }//end render_tool_propagate_component_data
+
+
+
+/**
+* SECTION MODES this tool accepts.
+*
+* An ALLOWLIST, deliberately — not a negation. Section modes are a closed set
+* (section.js validate_mode: edit | list | list_thesaurus | solved | tm), and only
+* these two carry an `rqo.sqo` that describes a real, current record set:
+*
+*   'edit' — the sqo_session of the list the user came from (section.js:654-678)
+*   'list' — literally the search the user is looking at, when the tool is opened
+*            from the per-cell edit modal (component_common activate_edit_in_list)
+*
+* 'tm' is a time-machine query and 'solved' is not a user search; propagating
+* against either would write a set the user never chose. 'list_thesaurus' needs no
+* entry — section.js normalises it to 'list' on build, before any cell is
+* clickable. A future mode is refused by default, which is the point of a list.
+*/
+export const ALLOWED_SECTION_MODES = ['edit', 'list']
+
+/**
+* RESOLVE_PROPAGATE_SECTION
+* Find the section whose current search this tool should propagate across.
+*
+* Resolved by MODEL, never by DEPTH. The depth genuinely differs by surface:
+*   edit mode : tool → component → section_group  → section
+*   list mode : tool → component → section_record → section   (the edit modal)
+* — so the historical `self.caller.caller?.caller` walk resolved a section_group
+* in list mode and the tool refused to open. `get_caller_by_model` is also
+* cycle-safe, which a hand-rolled loop would not be: tool_common's window path
+* sets `caller.caller = self`, making the chain circular and a naive walk hang
+* the tab.
+*
+* Two things are then checked, and both matter:
+*
+*  - the section must be one this tool accepts (ALLOWED_SECTION_MODES);
+*  - the section must be the one the component BELONGS to. A component inside a
+*    portal reaches the OUTER section, whose sqo describes a DIFFERENT record set
+*    — propagating against it would write the wrong records. The old fixed-depth
+*    walk refused that case by accident (it landed on a section_group); this
+*    refuses it on purpose.
+*
+* Exported for unit testing: the resolution is pure over the caller chain, so it
+* can be driven with synthetic instances instead of a live DOM.
+*
+* @param {Object} self - the tool instance
+* @returns {{section: Object|null, reason: string}} the resolved section, or null
+*   plus the user-facing reason it was refused.
+*/
+export const resolve_propagate_section = function(self) {
+
+	const component = self?.caller || null
+	if (!component) {
+		return {section: null, reason: 'Caller section is unavailable'}
+	}
+
+	const nearest = get_caller_by_model(component, 'section')
+	if (!nearest) {
+		return {section: null, reason: 'Caller section is unavailable'}
+	}
+
+	// Ownership: the nearest section must be the component's own.
+	if (component.section_tipo && nearest.tipo !== component.section_tipo) {
+		return {
+			section	: null,
+			reason	: 'This component belongs to a different section than the one open here. Open its own section to propagate.'
+		}
+	}
+
+	if (!ALLOWED_SECTION_MODES.includes(nearest.mode)) {
+		return {
+			section	: null,
+			reason	: 'Sorry. Only edit and list modes are allowed. This tool works on the current search of a section.'
+		}
+	}
+
+	return {section: nearest, reason: ''}
+}//end resolve_propagate_section
 
 
 
@@ -151,24 +231,47 @@ const get_content_data = async function(self) {
 		const local_db_id	= 'process_propagate_component_data'
 		const lock_items	= []; // nodes to lock on process data
 
+	// section. Resolve the section that OWNS this component (see
+	// resolve_propagate_section) and snapshot it, so the click handler and this
+	// render pass can never disagree about which section's SQO is the target.
+	// FIRST, before any DOM: everything below is about that section, and a refusal
+	// must replace the whole panel rather than half-build it.
+		const resolution = resolve_propagate_section(self)
+		const section = resolution.section
+		self.propagate_section = section
+		if (!section) {
+			console.error('Ignored call. Unable to get valid section. caller:', self.caller);
+			const content_data = ui.tool.build_content_data(self)
+			content_data.appendChild(ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				inner_html		: resolution.reason
+			}))
+			return content_data
+		}
+
 	// section_info
 		const section_info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_info',
 			parent			: fragment
 		})
-		// section_name
+		// section_name / section_tipo — the SECTION's, not the component's. These
+		// two nodes are class-named for the section and sat in a `section_info`
+		// block while showing the component's label and tipo, which is actively
+		// misleading in a dialog that is about to rewrite every matched record.
+		// The component's own label still appears where it belongs, in the
+		// "content will be added/removed from the field: X" line below.
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'section_name',
-				inner_html		: self.caller.label,
+				inner_html		: section.label,
 				parent			: section_info
 			})
-		// section_tipo
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'section_tipo',
-				inner_html		: self.caller.tipo,
+				inner_html		: section.tipo,
 				parent			: section_info
 			})
 
@@ -191,34 +294,6 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 		lock_items.push(buttons_container)
-
-	// info_text
-		// Caller chain: tool → component (caller) → section_group (caller.caller) → section (caller.caller.caller).
-		// The tool is only meaningful when it lives inside a section that is in edit mode.
-		const section = self.caller.caller?.caller
-		if (!section || section.model!=='section' || section.mode!=='edit') {
-			console.error('Ignored call. Unable to get valid section. caller:', self.caller);
-			console.log('section:', section);
-			const content_data = ui.tool.build_content_data(self)
-			let label = ''
-			switch (true) {
-				case !section:
-					label = 'Caller section is unavailable'
-					break;
-				case section.model!=='section':
-					label = 'Caller is ' + section.model + '. This tool only works in the context of editing sections.'
-					break;
-				case section.mode!=='edit':
-					label = 'Sorry. Only edit mode is allowed. This tool only works in the context of editing sections.'
-					break;
-			}
-			content_data.appendChild(ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg',
-				inner_html		: label
-			}))
-			return content_data
-		}
 
 	// filter. Check the filter to know if the user has apply some filter or if will apply to all records
 		const sqo_filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
@@ -314,6 +389,18 @@ const get_content_data = async function(self) {
 					event_manager.subscribe('process_done', (el) => {
 						if (el.pid ===  api_response.pid) {
 							button.classList.remove('button_spinner')
+							// Refresh the section the run just rewrote. In edit mode
+							// this was invisible — one record on screen, and the
+							// tool's own on_close refresh covered it. Opened from a
+							// LIST cell it is the first thing the user sees: every
+							// visible row still shows the pre-propagation value until
+							// something re-reads. Guarded because a section may have
+							// been closed while the background job ran.
+							if (typeof section?.refresh === 'function') {
+								section.refresh().catch((error) => {
+									console.warn('Could not refresh section after propagation:', error);
+								})
+							}
 						}
 					})
 				})
