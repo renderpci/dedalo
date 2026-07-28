@@ -22,16 +22,57 @@ import { stat } from 'node:fs/promises';
 import { extname } from 'node:path';
 
 /**
- * Baseline security response headers (L6) applied to every response. `nosniff`
- * stops MIME-confusion; the frame/referrer headers are safe defaults that don't
- * risk breaking the vendored client (a full Content-Security-Policy is left to
- * the reverse proxy, which can be tuned/tested against the client without a
- * redeploy). Single definition — server.ts and tools/serving.ts import it.
+ * The enforcing Content-Security-Policy for app responses (XSS-02, 2026-07-28
+ * audit). The SECURITY-CRITICAL property is the ABSENCE of `'unsafe-inline'`
+ * (and `'unsafe-hashes'`) from `script-src`: that is what neutralises stored
+ * XSS — an injected `<img onerror=…>` / inline `<script>` / `javascript:` URL
+ * (component_text_area is CKEditor rich-text, so HTML rides the wire) cannot
+ * execute, exactly the compensating control the retired PHP engine shipped and
+ * the TS rewrite had dropped. Enforced in-process here (deterministic — not
+ * dependent on a reverse-proxy `mod_headers`).
+ *
+ * Allowances mirror the client's real needs (proven by the PHP policy):
+ * `style-src 'unsafe-inline'` (CKEditor + inline style=), external map-tile
+ * hosts in `img-src` (Leaflet), `blob:`/`data:` for generated media, workers
+ * from `blob:`. Two IMPROVEMENTS over the PHP policy: (1) NO third-party origin
+ * in `script-src`/`connect-src` — the jsdelivr/huggingface allowances are gone,
+ * aligning with the no-remote-code invariant (RC-01); local in-browser models
+ * (browser_whisper) load from this install's own /dedalo/ai_models store.
+ * `'unsafe-eval'` stays for the onnxruntime/transformers WASM glue (the active
+ * transcription feature) — it does NOT weaken the XSS control above (that rests
+ * on no-unsafe-inline); tightening it to `'wasm-unsafe-eval'` is a follow-up
+ * once the in-browser AI tools are verified under it. The importmap hash is the
+ * sha256 of the ONE inline script the page ships (index.html importmap); the
+ * xss_csp_tripwire recomputes it so an edit to that block cannot silently break
+ * module resolution.
+ */
+export const APP_CSP =
+	"default-src 'self'; " +
+	"script-src 'self' 'unsafe-eval' blob: 'sha256-YeRfUXP7gY4V7v/uefS4JIBm3BthshUSvAd69Hmer+U='; " +
+	"worker-src 'self' blob:; " +
+	"style-src 'self' 'unsafe-inline'; " +
+	"img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; " +
+	"media-src 'self' blob:; " +
+	"font-src 'self' data:; " +
+	"connect-src 'self' blob:; " +
+	"frame-src 'self' blob:; " +
+	"frame-ancestors 'self'; " +
+	"object-src 'none'; " +
+	"base-uri 'self'; " +
+	"form-action 'self'";
+
+/**
+ * Baseline security response headers (L6) applied to every app response.
+ * `nosniff` stops MIME-confusion; the frame/referrer headers are safe defaults;
+ * the CSP (APP_CSP) is the XSS-02 control. Media responses spread these FIRST
+ * and then their own stricter `default-src 'none'; sandbox` CSP, which wins.
+ * Single definition — server.ts and tools/serving.ts import it.
  */
 export const SECURITY_HEADERS: Record<string, string> = {
 	'X-Content-Type-Options': 'nosniff',
 	'X-Frame-Options': 'SAMEORIGIN',
 	'Referrer-Policy': 'strict-origin-when-cross-origin',
+	'Content-Security-Policy': APP_CSP,
 };
 
 /** Re-synced-in-place text/code assets: always revalidate (cheap 304s). */

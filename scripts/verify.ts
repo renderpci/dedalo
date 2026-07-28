@@ -72,6 +72,7 @@ const TRIPWIRES = [
 	'test/unit/labels_tripwire.test.ts',
 	'test/unit/no_remote_code_tripwire.test.ts',
 	'test/unit/install_seal_tripwire.test.ts',
+	'test/unit/xss_csp_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 
