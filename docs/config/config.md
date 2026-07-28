@@ -301,6 +301,32 @@ DEDALO_DATA_LANG_DEFAULT="lg-spa"
 
 ---
 
+### Declaring language equivalences
+
+DEDALO_LANG_EQUIVALENCES `json`
+
+Groups of language codes that are the same language under different names. The shipped
+default declares Català and Valencià as one language, matching how earlier Dédalo versions
+treated them.
+
+The FIRST code of each group is the canonical *translation source*: ontology terms and
+interface labels are authored there, and the other members read those translations (a
+Valencian interface shows the Catalan term rather than an arbitrary language). For record
+DATA the members are mutual preferred fallbacks in both directions: a user browsing in
+Catalan sees a transcript that exists only in Valencian, and vice versa, before the
+install-default fallback applies.
+
+Add groups for other equivalences your collection needs; an empty array `[]` turns the
+mechanism off entirely.
+
+```bash
+DEDALO_LANG_EQUIVALENCES='[["lg-cat","lg-vlca"]]'
+```
+
+*Default: [["lg-cat","lg-vlca"]]*
+
+---
+
 ### Defining data language selector
 
 DEDALO_DATA_LANG_SELECTOR `bool`

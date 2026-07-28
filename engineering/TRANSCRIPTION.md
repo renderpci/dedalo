@@ -161,6 +161,11 @@ text_area to that per-record language (v6 `get_original_lang`, ported
   per-request (clone-before-stamp — never in the cached structural core), and
   the list forcing is the `resolveEmitLang` emit-hook facet.
 - Gate: `test/unit/original_lang.test.ts`.
+- Related: `DEDALO_LANG_EQUIVALENCES` (resolve/lang_alias.ts) declares
+  same-language classes (Català===Valencià). Ontology terms and UI labels read
+  the canonical member's translation; DATA fallback prefers class siblings in
+  both directions — a Catalan menu shows a Valencian-only transcript before the
+  install default applies. Gate: `test/unit/lang_alias.test.ts`.
 
 ## Transcript shape
 
