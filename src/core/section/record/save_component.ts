@@ -374,12 +374,22 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// (component_password::Save → hash_password); this is that gate. It sits here, at
 	// the write engine, precisely so EVERY door funnels through it — the client API,
 	// the MCP tools, the agent change-plan and import alike.
-	const changedData =
-		model === 'component_password'
-			? await (await import('../../security/password_hash.ts')).hashPasswordChanges(
-					request.changedData,
-				)
-			: request.changedData;
+	// XSS-01 (2026-07-28 audit): component_text_area is CKEditor rich text stored
+	// verbatim — sanitize it on the way in (strip script/style/on*=/js: URLs,
+	// keep formatting) so a stored payload never rides the wire. Defense in depth
+	// behind the enforcing CSP; sits here at the write engine so EVERY door
+	// (client API, MCP, change-plan, import) funnels through it, exactly like the
+	// password hash gate below.
+	let changedData = request.changedData;
+	if (model === 'component_password') {
+		changedData = await (await import('../../security/password_hash.ts')).hashPasswordChanges(
+			request.changedData,
+		);
+	} else if (model === 'component_text_area') {
+		changedData = (await import('../../security/html_sanitize.ts')).sanitizeRichTextChanges(
+			request.changedData,
+		);
+	}
 	const mappedColumn = getColumnNameByModel(model);
 	if (mappedColumn === null || !MATRIX_JSONB_COLUMNS.includes(mappedColumn as MatrixJsonbColumn)) {
 		return { ok: false, message: `no matrix column for model '${model}'` };
