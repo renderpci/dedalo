@@ -26,8 +26,10 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dir, '../..');
-const SCAN_ROOTS = ['client/dedalo', 'tools'];
-const SCAN_EXTENSIONS = new Set(['.js', '.mjs', '.html']);
+// Widened 2026-07-28 (W1-02): src/ + .ts are scanned too — a remote code load
+// is a remote code load wherever it lives, and the AI serving path is TS.
+const SCAN_ROOTS = ['client/dedalo', 'tools', 'src'];
+const SCAN_EXTENSIONS = new Set(['.js', '.mjs', '.html', '.ts']);
 
 /**
  * Code-loading statements pointing at an absolute http(s) URL. Each pattern is
@@ -94,6 +96,33 @@ describe('no remote code: the client and tools load code only from this install'
 			}
 		}
 
+		expect(offenders).toEqual([]);
+	});
+
+	test('every in-browser AI runtime pins onnxruntime WASM locally (RC-01, W1-02)', () => {
+		// transformers.js loads its onnxruntime WASM glue (.mjs + .wasm) from
+		// cdn.jsdelivr.net BY DEFAULT unless env.backends.onnx.wasm.wasmPaths is
+		// pointed at a local path. That remote load is INVISIBLE to the URL
+		// patterns above (there is no literal import URL — it is a library
+		// default), so it gets its own invariant: any file importing the
+		// transformers runtime MUST set wasmPaths. This is the exact hole the RC-01
+		// finding walked through (tool_lang's browser_transformer set remoteHost
+		// but never wasmPaths, so the runtime came from the CDN).
+		const offenders: string[] = [];
+		for (const root of SCAN_ROOTS) {
+			for (const file of walk(join(REPO_ROOT, root))) {
+				const source = readFileSync(file, 'utf8');
+				const importsTransformers =
+					/\bimport\b[^;]*\bfrom\s*['"`][^'"`]*transformers\.js['"`]/.test(source);
+				if (!importsTransformers) continue;
+				if (!/wasmPaths\s*=/.test(source)) {
+					offenders.push(
+						`${relative(REPO_ROOT, file)}: imports transformers.js but never sets ` +
+							'env.backends.onnx.wasm.wasmPaths → onnxruntime WASM falls back to the CDN',
+					);
+				}
+			}
+		}
 		expect(offenders).toEqual([]);
 	});
 
