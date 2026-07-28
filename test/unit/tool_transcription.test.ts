@@ -115,6 +115,10 @@ describe('tool_transcription module', () => {
 			'check_server_transcriber_status',
 			'create_transcribable_audio_file',
 			'delete_transcribable_audio_file',
+			// Where the BROWSER engine may load its model from. The browser cannot
+			// read the install's configuration, so the operator's model-store and
+			// hub-fallback settings would otherwise be inert.
+			'get_model_sources',
 		]);
 		// permission: null → each handler gates imperatively against its ddo.
 		expect(
@@ -257,15 +261,38 @@ describe('ASR write-back (process_file port)', () => {
 		expect(secondsToTc(59)).toBe('00:00:59.000');
 	});
 
-	test('segmentsToTcText builds the PHP TC-tagged paragraph text', () => {
+	test('segmentsToTcText groups segments into paragraphs', () => {
+		// Two consecutive segments of one answer: ONE paragraph, one time mark.
+		// (It used to be one paragraph per segment — a cue list, not a transcript.)
 		const segments = [
-			{ start: 1.85, text: ' Can you say me...' },
-			{ start: 3.45, text: ' blah blah...' },
+			{ start: 1.85, end: 3.45, text: ' Can you say me...' },
+			{ start: 3.45, end: 6, text: ' blah blah...' },
 		];
 		expect(segmentsToTcText(segments)).toBe(
-			'[TC_00:00:01.850_TC] Can you say me...<p>[TC_00:00:03.450_TC] blah blah...',
+			'<p>[TC_00:00:01.850_TC]Can you say me... blah blah...</p>',
 		);
 		expect(segmentsToTcText([])).toBe('');
+	});
+
+	test('segmentsToTcText breaks a paragraph at a silence', () => {
+		const segments = [
+			{ start: 0, end: 4, text: 'Primera respuesta' },
+			{ start: 20, end: 24, text: 'Segunda respuesta' },
+		];
+		expect(segmentsToTcText(segments)).toBe(
+			'<p>[TC_00:00:00.000_TC]Primera respuesta</p><p>[TC_00:00:20.000_TC]Segunda respuesta</p>',
+		);
+	});
+
+	test('segmentsToTcText honours the caller’s timecode density', () => {
+		const segments = [
+			{ start: 0, end: 4, text: 'uno' },
+			{ start: 4, end: 8, text: 'dos' },
+		];
+		// 'segment' reproduces the historical one-mark-per-segment output.
+		expect(segmentsToTcText(segments, { tc_mode: 'segment' })).toBe(
+			'<p>[TC_00:00:00.000_TC]uno</p><p>[TC_00:00:04.000_TC]dos</p>',
+		);
 	});
 
 	test('hasExistingTranscription: any item in the target lang blocks the save', () => {
