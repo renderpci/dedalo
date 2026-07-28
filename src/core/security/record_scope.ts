@@ -73,18 +73,30 @@ export async function principalCanAccessRecord(
 }
 
 /**
- * Drop inverse-reference hits a principal cannot reach (AUTHZ-05). The inverse
- * scan (search_related.findInverseReferences) is a shared low-level primitive
- * that runs over 'all' owning sections with NO principal — many system paths
- * (diffusion resolve, observers, children) depend on it staying unscoped. So
- * the USER-FACING doors (the relation-list panel + its paginator count) must
- * scope the hits HERE before emitting existence / labels / counts: a hit is
- * kept only when the caller (a) holds a read grant on the referencing SECTION
- * and (b) has the referencing RECORD inside their projects filter. Before this,
- * a non-admin holding only the HOST record's read grant enumerated referencing
- * records in sections + projects they had zero access to. Global admins are
- * unscoped (the current, correct behavior). One getPermissions per distinct
- * section (cached); one isRecordInScope per surviving hit.
+ * Drop record hits a principal cannot reach (AUTHZ-05) — the LIST-shaped twin of
+ * {@link principalCanAccessRecord}. A hit survives only when the caller (a)
+ * holds a read grant on its SECTION and (b) has the RECORD inside their projects
+ * filter. Global admins are unscoped (the current, correct behavior). One
+ * getPermissions per distinct section (cached); one isRecordInScope per
+ * surviving hit.
+ *
+ * NAMED for the door it was written at: the inverse scan
+ * (search_related.findInverseReferences) is a shared low-level primitive that
+ * runs over 'all' owning sections with NO principal — many system paths
+ * (diffusion resolve, observers, children) depend on it staying unscoped — so
+ * the USER-FACING doors (the relation-list panel + its paginator count) scope
+ * its output here before emitting existence / labels / counts. Before this, a
+ * non-admin holding only the HOST record's read grant enumerated referencing
+ * records in sections + projects they had zero access to.
+ *
+ * The RULE is general, so the function is too: any deliberately unscoped scan
+ * (an inverse-reference walk, a vector hit list, an identification candidate
+ * pool) gates through this one implementation at its user-facing door — import
+ * it as {@link scopeRecordHits} when the caller is not inverse references. The
+ * boundary must never be re-decided per caller.
+ *
+ * Deliberately silent about what it dropped: a "n hidden" count is an existence
+ * oracle for records the caller may not see.
  */
 export async function scopeInverseReferenceHits<
 	T extends { section_tipo: string; section_id: number },
@@ -104,3 +116,11 @@ export async function scopeInverseReferenceHits<
 	}
 	return out;
 }
+
+/**
+ * The name callers that are NOT inverse references import
+ * {@link scopeInverseReferenceHits} by (the identification candidate pool is the
+ * first). An ALIAS, never a copy: one implementation of the rule, two readable
+ * doors — and the AUTHZ-05 tripwire keeps pinning the original export.
+ */
+export const scopeRecordHits = scopeInverseReferenceHits;

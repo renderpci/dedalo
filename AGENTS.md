@@ -86,6 +86,7 @@ When in doubt: if a gate reads it or a consumer needs it, it is `engineering/`.
 | `engineering/WIRE_CONTRACT.md` | Ledgered wire-shape divergences from PHP (WC-nn). |
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. |
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). |
+| `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. |
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. |
 | `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. |
 | `engineering/PRODUCTION.md` | Ops: supervision, socket, backups, health. |
