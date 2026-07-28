@@ -284,9 +284,19 @@ export async function dispatchWidgetRequest(
 		return failed('invalid widget', [`Invalid widget name: ${widgetId}`]);
 	}
 
-	// Gate 4: explicit method registry.
-	const handler = module.apiActions?.[method];
-	if (handler === undefined) {
+	// Gate 4: explicit method registry. Resolve with Object.hasOwn + a
+	// typeof-function guard (OPS-03/TOOLS-11, 2026-07-28 audit): a bare
+	// `apiActions?.[method]` would let a prototype-chain key (`__proto__`,
+	// `constructor`, `toString`) reflect an inherited Object method as a
+	// "handler" — the API-01 vector the prior audit closed in dispatch.ts but
+	// not here.
+	const handler =
+		typeof method === 'string' &&
+		module.apiActions !== undefined &&
+		Object.hasOwn(module.apiActions, method)
+			? module.apiActions[method]
+			: undefined;
+	if (typeof handler !== 'function') {
 		return failed(`widget method not allowed: ${method}`, ['unauthorized_method']);
 	}
 
