@@ -21,7 +21,13 @@
  */
 
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
+
+/** A model id / file segment: word chars, dot, slash, hyphen — and NEVER `..`. */
+const SAFE_MODEL_SEGMENT = /^[A-Za-z0-9._/-]+$/;
+function isSafeModelSegment(value: string): boolean {
+	return value !== '' && SAFE_MODEL_SEGMENT.test(value) && !value.split('/').includes('..');
+}
 import { modelFiles, modelStoreRoot } from './model_store.ts';
 
 /** Where model files are fetched from when a download is requested. */
@@ -82,7 +88,16 @@ async function fetchOneFile(
 	store: string,
 	quiet: boolean,
 ): Promise<boolean> {
+	// MODEL-01 (2026-07-28 audit): modelId/file flow into BOTH the hub URL and the
+	// on-disk path (join(store, modelId, file)). Reject traversal / URL-breaking
+	// segments so a crafted id cannot write outside the store or rewrite the fetch
+	// target, and confirm the resolved path stays under the store. (HUB_BASE is a
+	// pinned https:// constant. A full content checksum needs a per-file hash
+	// manifest, which the hub does not ship here — tracked separately.)
+	if (!isSafeModelSegment(modelId) || !isSafeModelSegment(file)) return false;
 	const target = join(store, modelId, file);
+	const storeRoot = resolve(store);
+	if (!resolve(target).startsWith(storeRoot + sep)) return false;
 	if (existsSync(target) && statSync(target).size > 0) return true;
 
 	const url = `${HUB_BASE}/${modelId}/resolve/main/${file}`;
