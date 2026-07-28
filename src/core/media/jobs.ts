@@ -436,6 +436,17 @@ export class MediaJobManager {
 		return frameOf(record);
 	}
 
+	/**
+	 * The owner user id stamped on a job (TOOLS-09 owner-scoping): a number when
+	 * owned, null when the job carries no user data, or undefined when the id is
+	 * unknown. The job id is PREDICTABLE (kind_pid_counter), so status callers must
+	 * confirm ownership rather than treat the id as an unguessable capability.
+	 */
+	ownerOf(id: string): number | null | undefined {
+		const record = this.status(id);
+		return record === null ? undefined : (record.user_id ?? null);
+	}
+
 	/** Request cancellation. Returns true when the job was live. */
 	stop(id: string): boolean {
 		const controller = this.controllers.get(id);

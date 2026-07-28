@@ -579,6 +579,15 @@ export async function compileElementPlan(
 			diagnostics.errors.push(
 				`missing properties->diffusion->service_name (required for ${format} file paths)`,
 			);
+		} else if (!/^[A-Za-z0-9_-]{1,64}$/.test(serviceName)) {
+			// DIFF-D (2026-07-28 audit): serviceName becomes a filesystem DIRECTORY
+			// segment (writers/files.ts formatTargetDir), so a `../../..`-style label
+			// would escape the diffusion files root on write/unlink. The 'sql' branch
+			// already ran requireSqlIdentifier; the file branch had only an
+			// empty-check. Reject at compile/validate time (loud, before any run).
+			diagnostics.errors.push(
+				`invalid properties->diffusion->service_name ${JSON.stringify(serviceName)} — must match ^[A-Za-z0-9_-]{1,64}$`,
+			);
 		} else {
 			target = { kind: 'files', serviceName };
 		}

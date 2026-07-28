@@ -67,6 +67,14 @@ async function mediaJobStatus(ctx: ToolActionContext): Promise<ToolResponse> {
 			errors: ['invalid_request'],
 		};
 	}
+	// TOOLS-09 (2026-07-28 audit): the job id is PREDICTABLE (kind_pid_counter),
+	// not an unguessable capability — so scope the status to the job's OWNER. A
+	// non-owner (non-admin) gets the same not-found as an unknown id, so the
+	// response is not an existence oracle either.
+	const owner = mediaJobs.ownerOf(jobId);
+	if (!ctx.principal.isGlobalAdmin && owner != null && owner !== ctx.userId) {
+		return notFound(`unknown media job: ${jobId}`);
+	}
 	const frame = mediaJobs.frame(jobId);
 	if (frame === null) return notFound(`unknown media job: ${jobId}`);
 	return {
