@@ -20,6 +20,7 @@
 
 import { stat } from 'node:fs/promises';
 import { extname } from 'node:path';
+import { config } from '../../config/config.ts';
 
 /**
  * The enforcing Content-Security-Policy for app responses (XSS-02, 2026-07-28
@@ -46,15 +47,42 @@ import { extname } from 'node:path';
  * xss_csp_tripwire recomputes it so an edit to that block cannot silently break
  * module resolution.
  */
+/**
+ * The install's OWN media origin, when `DEDALO_MEDIA_WEB_BASE` is an absolute
+ * URL on a different origin than the app (a separate Apache/nginx or CDN
+ * serving `/dedalo/media` — the recommended production layout). The browser
+ * loads video/audio/posterframes/subtitles from it, and the transcription tool
+ * fetches the recognition WAV from it, so it must appear in `media-src`,
+ * `img-src` and `connect-src` — WITHOUT it, a split-origin install plays no
+ * media at all ("violates media-src 'self'", observed live 2026-07-29, the day
+ * after this CSP landed). `script-src` NEVER gets it: media hosts serve bytes,
+ * not code, and the stored-XSS control must not depend on the media server's
+ * hygiene. Empty string when the base is relative (same-origin) — the common
+ * dev case, where 'self' already covers it.
+ */
+export const MEDIA_CSP_ORIGIN: string = (() => {
+	const base = config.media.webBase;
+	if (!/^https?:\/\//.test(base)) return '';
+	try {
+		return new URL(base).origin;
+	} catch {
+		return '';
+	}
+})();
+
+/** Append the configured media origin to one directive's source list. */
+const withMedia = (sources: string): string =>
+	MEDIA_CSP_ORIGIN === '' ? sources : `${sources} ${MEDIA_CSP_ORIGIN}`;
+
 export const APP_CSP =
 	"default-src 'self'; " +
 	"script-src 'self' 'unsafe-eval' blob: 'sha256-YeRfUXP7gY4V7v/uefS4JIBm3BthshUSvAd69Hmer+U='; " +
 	"worker-src 'self' blob:; " +
 	"style-src 'self' 'unsafe-inline'; " +
-	"img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; " +
-	"media-src 'self' blob:; " +
+	`img-src ${withMedia("'self' data: blob:")} *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; ` +
+	`media-src ${withMedia("'self' blob:")}; ` +
 	"font-src 'self' data:; " +
-	"connect-src 'self' blob:; " +
+	`connect-src ${withMedia("'self' blob:")}; ` +
 	"frame-src 'self' blob:; " +
 	"frame-ancestors 'self'; " +
 	"object-src 'none'; " +
