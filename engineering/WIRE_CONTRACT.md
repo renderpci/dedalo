@@ -2858,7 +2858,73 @@ user — meaningless since the cutover retired that engine. Its two client files
 tree; the frozen oracle still censuses them. Filtered from BOTH sides
 (`isPhpUserRemovalEntry`), the same pattern as the WC-030 runtime_info merge.
 
-## WC-065 — `get_diffusion_info` node `connection_status` is `{result,msg}|null` (2026-07-29)
+## WC-065 — `related_search` response + text_area `tags_persons`/`related_sections` restored, TS-native shape (2026-07-29)
+
+The v6 transcription helpers feed — `data.tags_persons` (the per-person insert
+buttons / Ctrl+N shortcuts of the persons modal) and `data.related_sections`
+(the modal's record grouping, the tools' parent-record `<select>`, the
+tr_print header) — was never produced by the TS server. Restored (emit hook on
+`component_text_area` EDIT data, gated on ontology `properties.tags_persons`;
+dispatch route for `source.action:'related_search'` in
+`section/read_facade.ts`; producer `src/core/resolve/related_sections.ts` +
+`src/core/components/component_text_area/tags_persons.ts`), with a NORMALIZED
+shape rather than PHP's mixed one:
+
+- the sections item uses the **`value`** key (`{typo:'sections', tipo,
+  section_tipo:[], value:[locators]}`) — the key the shipped v6-era CLIENT
+  reads (`render_persons_list`, `render_related_list`). Late-PHP
+  `sections_json.php` had switched this envelope to `entries`, a shape that
+  client could never read — the TS server serves the client's contract, not
+  the frozen PHP one;
+- the sections item is **ALWAYS present**, `value: []` on zero hits (PHP
+  omitted it, which made the persons modal bail even when the host record's
+  own persons existed);
+- **every `section_id` in the payload is a STRING** — the clients group with
+  strict `===` against string ids (`instances.js` section_id is a string);
+  PHP emitted mixed int/string;
+- per-column data entries carry `{model, tipo, section_tipo, section_id,
+  value: string[]}` — flat resolveCellValue strings (0..1 elements), which
+  the two primary consumers `join(' | ')` raw. `tool_tr_print` (which
+  expected `{value}[]` objects) got a one-line accommodation
+  (`item?.value ?? item`);
+- context lists, per referencing section, the SECTION entry FIRST
+  (`{model:'section', tipo, section_tipo, label}`), then one
+  `{model, tipo, section_tipo, label}` entry per relation-list column —
+  column source = `getRelationListColumns` (section_map `relation_list`
+  scope, else the legacy `relation_list` ontology node), the same source the
+  Referencias panel uses;
+- `tags_persons` elements are the PHP shape verbatim (`{type:'person',
+  section_tipo, section_id (owning record), tag, role, full_name, state,
+  tag_id, label, data:{person locator}}`), tag bytes identical to
+  `TR::build_tag` on real data (label defensively '-'→'_' + 22-char capped,
+  which PHP skipped — the grammar requires it);
+- the person LABEL is the TARGET SECTION's own label, not a hardcode: it
+  resolves through the standard term resolver (`getTermByLocator`, scope
+  `default` with the main/thesaurus/relation_list fallback walk) against the
+  people section's section_map (rsc197 → rsc1023) — the same label every
+  relation list shows for that record, in the section's own component order
+  and `fields_separator`. Initials generalize PHP's 3+2+2 rule to that word
+  order (first word 3 chars + next two words 2 chars each). PHP instead
+  hardcoded `rsc85`/`rsc86` for every install (`get_tag_person_label
+  $ar_tipos`); that pair survives only as the fallback for a target section
+  whose section_map resolves no term scope.
+
+Gates: `test/unit/tags_persons.test.ts`,
+`test/unit/read_facade_routing.test.ts` (related_search block).
+
+## WC-066 — text_area `toolbar_buttons` note-gating fix (2026-07-29)
+
+The server-gated CKEditor toolbar extras (`context.toolbar_buttons`:
+button_person / button_note / reference / button_draw / button_geo) are now
+emitted by the TS edit context (`resolve/structure_context.ts`). DELIBERATE
+divergence from PHP `component_text_area_json.php:36-81`: **`button_note`
+gates on `properties.tags_notes`** — the config the note flow actually reads —
+where PHP gated it on `tags_persons` (and pushed it a second time with a
+related geolocation); the TS list is deduped. On the shipped ontology (rsc36
+declares both) the output is identical bytes. Gate:
+`test/unit/tags_persons.test.ts` (toolbar_buttons block).
+
+# WC-067 — `get_diffusion_info` node `connection_status` is `{result,msg}|null` (2026-07-29)
 
 - **Date:** 2026-07-29 (tool_diffusion accordion showed an EMPTY "Connection
   status" value; root-caused the same day).
@@ -2936,7 +3002,7 @@ tree; the frozen oracle still censuses them. Filtered from BOTH sides
   type pin, and the memo is allowlisted with its lifecycle in
   `test/unit/module_state_tripwire.test.ts`.
 
-## WC-066 — `get_diffusion_info` node `parents[]` carries `label` (+ `type`) (2026-07-29)
+## WC-068 — `get_diffusion_info` node `parents[]` carries `label` (+ `type`) (2026-07-29)
 
 - **Date:** 2026-07-29 (same-day sibling of WC-065: the accordion panel HEADER
   rendered empty).
@@ -2968,7 +3034,7 @@ tree; the frozen oracle still censuses them. Filtered from BOTH sides
   items, `realTipo` never present, a null label staying null, and the client
   welding pins on `:493`/`:462`/`:484`.
 
-## WC-067 — `dd_diffusion_api::follow_queue`, the admin queue stream (2026-07-29)
+## WC-069 — `dd_diffusion_api::follow_queue`, the admin queue stream (2026-07-29)
 
 - **Date:** 2026-07-29.
 - **Decision:** add an eighth `dd_diffusion_api` action — a global-admin SSE
@@ -3064,7 +3130,7 @@ tree; the frozen oracle still censuses them. Filtered from BOTH sides
   `test/unit/diffusion_queue_stream.test.ts` (quiet-when-unchanged, membership
   marker, heartbeat-on-idle, deadline, error frame, refusal frame).
 
-### WC-067 addendum — the client consumer (2026-07-29)
+### WC-070 addendum — the client consumer (2026-07-29)
 
 Recorded with the frame because the consumer's constraints are what the frame
 shape is FOR, and a future editor reading only the wire half would not see them.
@@ -3107,7 +3173,7 @@ shape is FOR, and a future editor reading only the wire half would not see them.
   `test/unit/diffusion_queue_stream.test.ts` (the aggregate's three honesty
   rules, asserted on the pure model).
 
-## WC-068 — `dataframe_control` does not answer `get_widget_value` (2026-07-29)
+## WC-071 — `dataframe_control` does not answer `get_widget_value` (2026-07-29)
 
 - **Date:** 2026-07-29 (found by root-causing a `[db] slow query 2309ms`
   line naming `FROM "matrix"`; diagnosed and fixed the same day).
@@ -3158,7 +3224,7 @@ shape is FOR, and a future editor reading only the wire half would not see them.
   walked in full for zero matches. Those are separate changes; this one only
   stops the scan from running when nobody asked for it.
 
-## WC-069 — `dataframe_control` reports COVERAGE, and cannot claim a completeness it did not earn (2026-07-29)
+## WC-072 — `dataframe_control` reports COVERAGE, and cannot claim a completeness it did not earn (2026-07-29)
 
 - **Date:** 2026-07-29 (same-day follow-on to WC-068).
 - **What changed.** `run_check` / `run_fix` gain three result fields:
@@ -3211,7 +3277,7 @@ shape is FOR, and a future editor reading only the wire half would not see them.
   error each force `complete:false`; `no_relation_column` does not (structural,
   proven by the column check); empty coverage fails closed.
 
-## WC-070 — `database_info.get_value` carries a `statistics` health verdict (2026-07-29)
+## WC-073 — `database_info.get_value` carries a `statistics` health verdict (2026-07-29)
 
 - **Date:** 2026-07-29.
 - **What changed.** `database_info.get_value` result gains one additive,

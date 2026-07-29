@@ -24,7 +24,12 @@
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { COMMON_FILES, OPTIONAL_FILES, downloadModel } from '../src/core/ai/model_fetch.ts';
+import {
+	COMMON_FILES,
+	DIARIZATION_COMMON_FILES,
+	OPTIONAL_FILES,
+	downloadModel,
+} from '../src/core/ai/model_fetch.ts';
 import { modelFiles, modelStoreRoot } from '../src/core/ai/model_store.ts';
 
 interface CatalogModel {
@@ -33,6 +38,8 @@ interface CatalogModel {
 	note: string;
 	/** Per-part quantisation from the catalog; absent = the repo's default files. */
 	dtype?: Record<string, string>;
+	/** 'diarization' downloads a different file set (no tokenizer, mandatory preprocessor). */
+	kind?: 'asr' | 'diarization';
 }
 
 /**
@@ -51,35 +58,65 @@ function readCatalog(): CatalogModel[] {
 	const register = JSON.parse(readFileSync(registerPath, 'utf8')) as {
 		misc?: Record<string, { value?: Record<string, { value?: unknown[] }> }[]>;
 	};
-	const entries = register.misc?.dd1633?.[0]?.value?.transcriber_quality?.value;
+	const configValue = register.misc?.dd1633?.[0]?.value as
+		| Record<string, { value?: unknown }>
+		| undefined;
+	const entries = configValue?.transcriber_quality?.value;
 	if (!Array.isArray(entries)) {
 		throw new Error(
 			'no transcriber_quality catalog found in tools/tool_transcription/register.json',
 		);
 	}
-	return entries
-		.filter(
-			(entry): entry is { name: string; tier?: string } =>
-				entry !== null &&
-				typeof entry === 'object' &&
-				typeof (entry as { name?: unknown }).name === 'string',
-		)
-		.filter((entry) => entry.tier === undefined || entry.tier === 'browser')
-		.map((entry) => {
-			const model = entry as {
-				name: string;
-				label?: string;
-				notes?: string;
-				size_mb?: number;
-				dtype?: Record<string, string>;
-			};
-			return {
-				id: model.name,
-				label: model.label ?? model.name,
-				note: `${model.notes ?? ''}${model.size_mb !== undefined ? ` (~${model.size_mb} MB)` : ''}`.trim(),
-				dtype: model.dtype,
-			};
-		});
+	// The speaker-detection models ride the same catalog listing: same store,
+	// same downloader, their own file profile (kind: 'diarization'). Two
+	// slots: segmentation (who speaks when) + the voice-fingerprint embedding
+	// (same voice = same id across the whole recording).
+	const diarizationModels: CatalogModel[] = [];
+	for (const slot of ['diarization_model', 'diarization_embedding_model']) {
+		const entry = configValue?.[slot]?.value as
+			| {
+					name?: string;
+					label?: string;
+					notes?: string;
+					size_mb?: number;
+					dtype?: Record<string, string>;
+			  }
+			| undefined;
+		if (entry !== undefined && typeof entry.name === 'string') {
+			diarizationModels.push({
+				id: entry.name,
+				label: entry.label ?? entry.name,
+				note: `${entry.notes ?? ''}${entry.size_mb !== undefined ? ` (~${entry.size_mb} MB)` : ''}`.trim(),
+				dtype: entry.dtype,
+				kind: 'diarization',
+			});
+		}
+	}
+	return diarizationModels.concat(
+		entries
+			.filter(
+				(entry): entry is { name: string; tier?: string } =>
+					entry !== null &&
+					typeof entry === 'object' &&
+					typeof (entry as { name?: unknown }).name === 'string',
+			)
+			.filter((entry) => entry.tier === undefined || entry.tier === 'browser')
+			.map((entry) => {
+				const model = entry as {
+					name: string;
+					label?: string;
+					notes?: string;
+					size_mb?: number;
+					dtype?: Record<string, string>;
+				};
+				return {
+					id: model.name,
+					label: model.label ?? model.name,
+					note: `${model.notes ?? ''}${model.size_mb !== undefined ? ` (~${model.size_mb} MB)` : ''}`.trim(),
+					dtype: model.dtype,
+				};
+			}),
+	);
 }
 
 /**
@@ -90,7 +127,8 @@ function readCatalog(): CatalogModel[] {
  * bug produces is a store that looks full while every transcription 404s.
  */
 function filesFor(model: CatalogModel): string[] {
-	return [...COMMON_FILES, ...modelFiles(model.dtype).filter((file) => file !== 'config.json')];
+	const common = model.kind === 'diarization' ? DIARIZATION_COMMON_FILES : COMMON_FILES;
+	return [...common, ...modelFiles(model.dtype).filter((file) => file !== 'config.json')];
 }
 
 function usage(): void {
@@ -107,9 +145,10 @@ function listCatalog(): void {
 	console.log(`store: ${store}${existsSync(store) ? '' : '  (does not exist yet)'}\n`);
 	for (const model of readCatalog()) {
 		// Present means USABLE: every file the catalog's dtype asks for is there.
+		const optional = model.kind === 'diarization' ? [] : OPTIONAL_FILES;
 		const present = filesFor(model).every(
 			(file) =>
-				OPTIONAL_FILES.includes(file) ||
+				optional.includes(file) ||
 				(existsSync(join(store, model.id, file)) && statSync(join(store, model.id, file)).size > 0),
 		);
 		console.log(`  ${present ? '✓' : ' '} ${model.id}\n      ${model.label} — ${model.note}`);
@@ -136,6 +175,9 @@ async function fetchModel(modelId: string, store: string): Promise<void> {
 		store,
 		quiet: false,
 		onFile: (file) => console.log(`  ↓ ${file}`),
+		...(model.kind === 'diarization'
+			? { commonFiles: DIARIZATION_COMMON_FILES, optionalFiles: [] as string[] }
+			: {}),
 	});
 	for (const file of report.skipped) console.log(`  - ${file} (not published for this model)`);
 	if (!report.ok) {

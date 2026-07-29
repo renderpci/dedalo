@@ -123,6 +123,13 @@ export interface StructureContextEntry extends StructureContextCore {
 	sqo_session?: unknown;
 	/** Media components only: the upload/quality descriptor (PHP context->features). */
 	features?: unknown;
+	/** component_text_area edit only (PHP component_text_area_json.php:36-81):
+	 * the server-gated CKEditor toolbar extras (button_person/button_note/
+	 * reference/button_draw/button_geo) the client appends to the base toolbar.
+	 * Property-gated (tags_persons/tags_notes/…); `[]` when none apply — PHP
+	 * emits the empty array in edit mode too. See WC-066 for the note-gating
+	 * divergence. */
+	toolbar_buttons?: string[];
 	/** component_section_id only: the parent section's display colour (PHP
 	 * component_section_id_json.php default branch, ontology_node::get_color →
 	 * section properties.color ?? '#b9b9b9'). The client paints it as the wrapper
@@ -1083,6 +1090,45 @@ export async function buildStructureContext(options: {
 	) {
 		const { buildTextAreaFeatures } = await import('../section/text_area_features.ts');
 		entry.features = await buildTextAreaFeatures();
+
+		// toolbar_buttons (PHP component_text_area_json.php:36-81): the client
+		// edit view appends context.toolbar_buttons to the CKEditor toolbar
+		// (view_default_edit_text_area.js:446-455; button_lang is client-always).
+		// Property-gated, PHP order (person, note, reference, draw, geo).
+		// DELIBERATE divergence (WC-066): button_note gates on
+		// properties.tags_notes — the config create_note_tag actually needs —
+		// not on tags_persons (the v6 gating quirk), and the list is deduped
+		// (PHP could push button_note twice). Identical output on the shipped
+		// ontology (rsc36 → ['button_person','button_note']).
+		// Per-(tipo,mode), record-independent → cache-safe: stamped on the
+		// fresh entry like `features`, never on the cached core.
+		const tagProps = entry.properties as {
+			tags_persons?: unknown;
+			tags_notes?: unknown;
+			tags_reference?: unknown;
+			tags_draw?: unknown;
+		} | null;
+		const toolbarButtons: string[] = [];
+		if (tagProps?.tags_persons !== undefined && tagProps.tags_persons !== null) {
+			toolbarButtons.push('button_person');
+		}
+		if (tagProps?.tags_notes !== undefined && tagProps.tags_notes !== null) {
+			toolbarButtons.push('button_note');
+		}
+		if (tagProps?.tags_reference !== undefined && tagProps.tags_reference !== null) {
+			toolbarButtons.push('reference');
+		}
+		if (tagProps?.tags_draw !== undefined && tagProps.tags_draw !== null) {
+			toolbarButtons.push('button_draw');
+		}
+		// A related component_geolocation adds the geo tag button (PHP :72-81)
+		// and note-taking with it (deduped here).
+		const { relatedTipoByModel } = await import('../ontology/resolver.ts');
+		if ((await relatedTipoByModel(options.tipo, 'component_geolocation')) !== null) {
+			toolbarButtons.push('button_geo');
+			if (!toolbarButtons.includes('button_note')) toolbarButtons.push('button_note');
+		}
+		entry.toolbar_buttons = toolbarButtons;
 	}
 
 	// target_sections (PHP component_<relation>_json set_target_sections, e.g.

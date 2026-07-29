@@ -47,6 +47,15 @@ export const OPTIONAL_FILES: readonly string[] = [
 	'preprocessor_config.json',
 ];
 
+/**
+ * The common files of a DIARIZATION model (pyannote segmentation): no
+ * tokenizer, no generation config — but the preprocessor config is REQUIRED
+ * (AutoProcessor cannot build without it), so unlike the ASR list nothing
+ * here is optional. Callers pass these via DownloadOptions when the catalog
+ * entry declares `kind: 'diarization'`.
+ */
+export const DIARIZATION_COMMON_FILES: readonly string[] = ['preprocessor_config.json'];
+
 export interface DownloadOptions {
 	/** Target store root; defaults to the configured one. */
 	store?: string;
@@ -54,6 +63,12 @@ export interface DownloadOptions {
 	quiet?: boolean;
 	/** Called before each file starts (for logging/progress). */
 	onFile?: (file: string) => void;
+	/** Per-model-kind file lists: the non-weight files to fetch (default
+	 * COMMON_FILES, the ASR set) and which of the wanted files may 404 without
+	 * failing the seed (default OPTIONAL_FILES). A diarization model passes
+	 * DIARIZATION_COMMON_FILES and an empty optional list. */
+	commonFiles?: readonly string[];
+	optionalFiles?: readonly string[];
 }
 
 export interface DownloadReport {
@@ -157,7 +172,8 @@ export async function downloadModel(
 	mkdirSync(store, { recursive: true });
 
 	// modelFiles carries config.json + the weights; union in the common files.
-	const wanted = [...new Set([...COMMON_FILES, ...modelFiles(dtype)])];
+	const wanted = [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])];
+	const optional = options.optionalFiles ?? OPTIONAL_FILES;
 
 	let gotWeights = false;
 	for (const file of wanted) {
@@ -168,7 +184,7 @@ export async function downloadModel(
 			if (file.endsWith('.onnx')) gotWeights = true;
 			continue;
 		}
-		if (OPTIONAL_FILES.includes(file)) {
+		if (optional.includes(file)) {
 			report.skipped.push(file);
 			continue;
 		}

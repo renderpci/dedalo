@@ -41,9 +41,8 @@ export function truncateHtml(
 	// than `length` — for any non-adversarial markup ratio, so a real preview is
 	// unchanged while the worst case is bounded to a few hundred ms.
 	const MAX_SCAN_CHARS = 16 * 1024;
-	// biome-ignore lint/style/noParameterAssign: a deliberate input clamp — every later read must see the bounded text, and a shadow variable invites using the unbounded one
 	if (text.length > MAX_SCAN_CHARS) {
-		// biome-ignore lint/style/noParameterAssign: see above
+		// biome-ignore lint/style/noParameterAssign: a deliberate input clamp — every later read must see the bounded text, and a shadow variable invites using the unbounded one
 		text = text.slice(0, MAX_SCAN_CHARS);
 	}
 

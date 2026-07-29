@@ -185,6 +185,103 @@ sentence ends, capped so a monologue still breaks up.
 - `parse_transcript` reads stored text back into segments, so an existing
   transcript can be re-paragraphed without re-recognising a word.
 
+## The transcription helpers (speakers / language / note tags)
+
+The editing helpers an oral-history transcription needs — insert a SPEAKER tag
+(`[person-a-1-DyaDa-data:{'…person locator…'}:data]`), an in-text LANGUAGE tag,
+a NOTE tag backed by a notes record — are owned by **`component_text_area`'s
+edit view**, not by the tool: the tool hosts the component and the component's
+CKEditor toolbar brings the buttons (v6 worked the same way; the v7 client kept
+the whole tag UI). The server feed, restored 2026-07-29 (WC-065/WC-066):
+
+- WHICH components hold the speakers is ontology data: the text_area's
+  `properties.tags_persons`, keyed by related-section tipo (`oh1` → informants
+  portal `oh24`, state `a`; the AV record's own crew autocompletes, state `b`).
+  The emit hook stamps `tags_persons` + `related_sections` on EDIT data items
+  (`component_text_area/tags_persons.ts`, `resolve/related_sections.ts`).
+  The person LABEL comes from the target people section's OWN definition: its
+  section_map term (scope `default`, standard fallback walk — rsc197 declares
+  it in rsc1023) resolved through `getTermByLocator`, i.e. the same label a
+  relation list shows for that record; initials apply the 3+2+2 rule to that
+  word order. The PHP-hardcoded `rsc85`/`rsc86` pair survives only as the
+  fallback for a people section with no section_map term.
+- `context.toolbar_buttons` (structure_context.ts) gates the buttons
+  server-side from the same properties; `button_lang` is client-always and
+  feeds off the project langs, `button_note` creates its backing record in the
+  notes section (`features` bag).
+- The tools' parent-record `<select>` and the persons-modal grouping ride the
+  `source.action:'related_search'` read (read_facade.ts), same producer.
+
+Wire shapes and the deliberate divergences from PHP are ledgered in
+`WIRE_CONTRACT.md` WC-065 (all-string section_ids, sections item always
+present, `value: string[]` cells) and WC-066 (note-button gating).
+
+## Speaker detection (diarization)
+
+The browser tier can detect WHO speaks WHEN and open each speaker turn in the
+stored text with the right person tag — same privacy posture as the
+recognition itself: the audio never leaves the machine, the model comes from
+the install's own store.
+
+- **Models** (two, both required for coherent detection — the admin Download
+  button and the seeder fetch both; `get_model_sources` reports
+  `diarization: {name, embedding_name, size_mb, installed}` with `installed`
+  true only when BOTH are in the store):
+  - `onnx-community/pyannote-segmentation-3.0` (~6 MB, slot
+    `diarization_model`): WHO speaks WHEN, per chunk;
+  - `onnx-community/wespeaker-voxceleb-resnet34-LM` (~26 MB, slot
+    `diarization_embedding_model`): VOICE FINGERPRINTS — the same voice keeps
+    the same speaker id across the whole recording. Without it, identity
+    falls back to overlap co-activity stitching, which is coherent on short
+    clips but FRAGMENTS one voice into several detected speakers on long
+    interviews (observed live on an 87-minute recording).
+  Separate catalog slots (never entries of the ASR quality picker); same
+  store, same seeding doors; diarization file profile (no tokenizer, the
+  preprocessor config is MANDATORY — `DIARIZATION_COMMON_FILES` in
+  `src/core/ai/model_fetch.ts`).
+- **Worker** (`browser_whisper.js diarize_audio`): runs after the last decode
+  window, on WASM always (small recurrent model; CPU is faster than the
+  WebGPU backend's op support is reliable). Long chunks (5 min) with a
+  conversational overlap (30 s); the pure post-processing — cross-chunk
+  identity stitching by co-activity, segment attribution, per-speaker stats —
+  lives in `transcribers/lib/diarize.js` (bun-tested,
+  `test/unit/transcript_diarize.test.ts`). GLOBAL identity: each chunk-local
+  voice is fingerprinted once (its longest turn, centered, capped at 10 s)
+  and duration-weighted agglomerative clustering over cosine similarity
+  (threshold `cluster_similarity`, default 0.5) merges the same voice across
+  the whole recording; fingerprint-less groups are never merged by guessing.
+  STRICTLY BEST-EFFORT at every stage: embedding failure falls back to
+  overlap stitching, diarization failure emits `diarize_error` and the
+  transcript arrives without speakers, never lost.
+- **Turn marking and identity are SEPARATE steps** (the placeholder flow):
+  a run with detection saves IMMEDIATELY, opening every detected turn with a
+  PLACEHOLDER tag — `[person-a-1-P1-data::data]`, normal person-tag grammar,
+  the EMPTY data payload is what marks it unresolved. No dialog blocks the
+  save; the draft is reviewable at once, and a wrongly placed tag is
+  ordinary editable content (move it, delete it, change it) BEFORE any
+  identity is bound.
+- **Identity is a HUMAN decision, deferred.** No voice print says who a
+  voice belongs to, and enrolling biometric voice prints is exactly what
+  this tool avoids. "Assign speakers" (`tool_transcription.js
+  assign_speakers` — auto-offered after a run, reopenable any time) reads
+  every distinct person tag out of the STORED text (placeholders first,
+  bound ones preselected), offers the `tags_persons` people with listen jump
+  points (each tag sits beside a TC mark), and applies the binding as a
+  DETERMINISTIC whole-tag swap through the normal save path — TM keeps the
+  pre-binding version, re-binding later is the same swap again. Two
+  placeholders may bind to one person; an unbound placeholder stays.
+- **Stored shape**: the (placeholder or bound) person tag opens the first
+  paragraph of each speaker TURN, right after the paragraph's TC mark — the
+  v6 byte layout; a same-speaker run split by paragraph caps carries the tag
+  once (`paragraphs.js segments_to_html` `speaker_tags`). Numeric speaker
+  ids never leak into the stored text.
+- **Known limits**: up to 3 concurrent voices (the model's powerset);
+  overlapping speech attributes to the dominant voice; a voice absent from a
+  chunk overlap opens a NEW detected speaker rather than guessing (the
+  mapping dialog merges it back — with the embedding model installed this is
+  rare). The sidecar contract can still gain a `diarize` flag for
+  WhisperX-style boxes.
+
 ## Why the transcripts used to repeat words
 
 Recorded for the next person who touches this. Five causes, all fixed 2026-07-28:

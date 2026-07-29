@@ -19,7 +19,7 @@ import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { APP_CSP, SECURITY_HEADERS } from '../../src/core/api/static_asset.ts';
+import { APP_CSP, MEDIA_CSP_ORIGIN, SECURITY_HEADERS } from '../../src/core/api/static_asset.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 
@@ -38,11 +38,33 @@ describe('XSS-02 — enforcing app CSP', () => {
 	});
 
 	test('no third-party origin in script-src / connect-src (no-remote-code, RC-01)', () => {
-		for (const name of ['script-src', 'connect-src']) {
-			for (const src of directive(APP_CSP, name)) {
-				expect(src.includes('://'), `${name} must not allow a remote origin: ${src}`).toBe(false);
-			}
+		// script-src: ABSOLUTE — code loads from this app origin only, ever.
+		for (const src of directive(APP_CSP, 'script-src')) {
+			expect(src.includes('://'), `script-src must not allow a remote origin: ${src}`).toBe(false);
 		}
+		// connect-src: the ONE tolerated origin is the install's OWN configured
+		// media host (DEDALO_MEDIA_WEB_BASE — split-origin installs fetch the
+		// transcription WAV from it). It is config-derived, never hardcoded, and
+		// nothing else with a scheme may appear.
+		for (const src of directive(APP_CSP, 'connect-src')) {
+			if (src === MEDIA_CSP_ORIGIN && MEDIA_CSP_ORIGIN !== '') continue;
+			expect(src.includes('://'), `connect-src must not allow a remote origin: ${src}`).toBe(false);
+		}
+	});
+
+	test('the configured media origin reaches media/img/connect — and never script', () => {
+		if (MEDIA_CSP_ORIGIN === '') {
+			// Same-origin install: 'self' covers media; nothing to add anywhere.
+			expect(APP_CSP.includes('http://')).toBe(false);
+			return;
+		}
+		for (const name of ['media-src', 'img-src', 'connect-src']) {
+			expect(
+				directive(APP_CSP, name),
+				`${name} must carry the configured media origin (split-origin installs play no media without it)`,
+			).toContain(MEDIA_CSP_ORIGIN);
+		}
+		expect(directive(APP_CSP, 'script-src')).not.toContain(MEDIA_CSP_ORIGIN);
 	});
 
 	test('the importmap hash matches index.html (edit without rehash = no boot)', () => {

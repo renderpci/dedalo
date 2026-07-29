@@ -1884,8 +1884,12 @@ const render_persons_list = function(self, text_editor, i) {
 						})
 				}//end if check the section
 
-				// get the people for every section, self section and related sections
-				const ar_persons_for_this_section = ar_persons.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)
+				// get the people for every section, self section and related sections.
+				// section_id compared as strings: the wire ids are strings (WC-065),
+				// but the SELF group's id comes from the instance, which the tool
+				// instantiation path types as a number — strict === dropped the
+				// host record's own persons (interviewer/crew) from the modal.
+				const ar_persons_for_this_section = ar_persons.filter(el => el.section_tipo === current_locator.section_tipo && String(el.section_id) === String(current_locator.section_id))
 				for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
 					const current_person = ar_persons_for_this_section[j] // toString(ar_component_data[j].value)

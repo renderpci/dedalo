@@ -73,7 +73,8 @@
 	import { common, create_source } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../../core/tools_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
-	import { parse_transcript, segments_to_html } from '../transcribers/lib/paragraphs.js'
+	import { parse_transcript, segments_to_html, tc_to_seconds } from '../transcribers/lib/paragraphs.js'
+	import { ui } from '../../../core/common/js/ui.js'
 
 
 
@@ -264,7 +265,17 @@ tool_transcription.prototype.build = async function(autoload=false) {
 							self.transcription_component.lang = self.transcription_component.context.options.related_component_lang
 							// set source land
 							self.source_lang = self.transcription_component.lang
-							// build again to force download data
+							// build again to force download data.
+							// (!) build() MEMOIZES: on status 'built' it returns
+							// without fetching anything, so the lang change alone
+							// left the instance carrying the MENU lang's data — the
+							// editor opened blank whenever the original language
+							// differed (and stayed blank after a save). refresh()
+							// is the post-render tool; here, pre-render, the build
+							// state is reset so build(true) really reloads in the
+							// original language.
+							self.transcription_component.status = 'initialized'
+							self.transcription_component._build_waiter = null
 							await self.transcription_component.build(true)
 							if(SHOW_DEBUG===true) {
 								console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
@@ -758,6 +769,32 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				return
 			}
 
+			// Speaker detection ran? Every detected turn is opened with a
+			// PLACEHOLDER person tag (P1, P2, … — empty data payload =
+			// unresolved) and the text saves IMMEDIATELY: turn marking is
+			// mechanical, identity is not. The archivist reviews/corrects the
+			// tags in the editor like any content, then binds identities
+			// whenever they want with "Assign speakers" (assign_speakers) —
+			// a deterministic tag swap through the normal save path.
+			const has_speakers = segments.some( segment => segment.speaker!==undefined )
+			if (has_speakers) {
+				const speaker_order = []
+				for (const segment of segments) {
+					if (segment.speaker!==undefined && !speaker_order.includes(segment.speaker)) {
+						speaker_order.push( segment.speaker )
+					}
+				}
+				const speaker_tags = {}
+				for (let i = 0; i < speaker_order.length; i++) {
+					speaker_tags[speaker_order[i]] = build_placeholder_tag( i + 1 )
+				}
+				resolve([ segments_to_html( segments, Object.assign({}, format_options, {
+					speaker_prefix	: false, // numeric ids never leak into the text
+					speaker_tags	: speaker_tags
+				}) ) ])
+				return
+			}
+
 			resolve([ segments_to_html( segments, format_options ) ])
 		}
 
@@ -812,6 +849,31 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					}, 'status')
 					break;
 
+				// Speaker detection (after the last window): its own progress line.
+				case 'diarize_init': {
+					const label = self.get_tool_label('detecting_speakers') || 'Detecting speakers'
+					const loaded = data.progress ? ` : ${parseInt(data.progress).toString().padStart(2, 0)}%` : ''
+					set_status( `${label}${loaded}` )
+					break;
+				}
+
+				case 'diarize_progress': {
+					const percent = data.duration>0
+						? Math.min( 99, Math.round((data.done_seconds / data.duration) * 100) )
+						: 0
+					set_status( `${self.get_tool_label('detecting_speakers') || 'Detecting speakers'} : ${percent}%` )
+					break;
+				}
+
+				// Best-effort: the transcript arrives without speakers; say so.
+				case 'diarize_error':
+					console.warn('[tool_transcription] speaker detection failed:', data.message);
+					set_status(
+						self.get_tool_label('speaker_detection_failed')
+						|| 'Speaker detection failed — the transcription continues without speaker tags.'
+					)
+					break;
+
 				case 'end':
 					finish( data.segments )
 					break;
@@ -863,6 +925,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 						dtype			: options.dtype,
 						decode			: options.decode,
 						sources			: sources,
+						// Speaker detection: the pyannote segmentation model from the
+						// SAME local store — set only when the archivist asked for it
+						// and the model is installed (the render layer checked).
+						diarize			: options.detect_speakers || undefined,
 						resume_segments	: resume ? resume.segments : undefined,
 						resume_seconds	: resume ? resume_seconds_of( resume.segments ) : 0
 					}
@@ -1052,6 +1118,255 @@ tool_transcription.prototype.save_transcription = function( html ) {
 		refresh : true
 	})
 }//end save_transcription
+
+
+
+/**
+* BUILD_PLACEHOLDER_TAG
+* The UNRESOLVED speaker tag: the normal person-tag grammar with an EMPTY data
+* payload — that emptiness is what marks it assignable later. The label P<n>
+* renders on the tag badge, so the draft reads "P1 … P2 …" until identities
+* are bound.
+*
+* @param {number} n - detected speaker number (1-based)
+* @returns {string} e.g. '[person-a-1-P1-data::data]'
+*/
+export const build_placeholder_tag = function( n ) {
+
+	return `[person-a-${n}-P${n}-data::data]`
+}//end build_placeholder_tag
+
+
+/**
+* ASSIGN_SPEAKERS
+* Bind identities to the speaker tags of the STORED transcription — any time,
+* not only right after a run.
+*
+* THE FLOW THIS SERVES. A run with speaker detection saves IMMEDIATELY, with a
+* placeholder tag (P1, P2, …) opening every detected turn. The archivist can
+* correct the draft in the editor first — move a tag the detector misplaced,
+* delete a false one, add a missed one — because until identities are bound
+* the tags are just content. THEN this dialog binds them: it reads every
+* distinct person tag out of the stored text (placeholders first, already
+* resolved ones preselected), offers the record's own people, and applies the
+* binding as a DETERMINISTIC TAG SWAP saved through the normal save path —
+* the time machine keeps the pre-binding version, and re-binding a person to
+* somebody else later is the same swap again.
+*
+* Identity is a human decision by design: no voice print ever says WHO a
+* voice belongs to.
+*
+* @param {Object} [options]
+* @param {number} [options.key=0] - which value of the component to bind
+* @param {string} [options.value] - the text to scan, when the caller already
+*   holds it (the just-saved run) — the component's stored entries otherwise.
+*   Right after a save the instance refresh is still in flight, so the
+*   auto-offer MUST pass the html it saved instead of racing the refresh.
+* @param {Array<Object>} [options.persons] - the tags_persons feed, when the
+*   caller captured it before a save (same refresh race as options.value).
+* @returns {Promise<boolean|null>} true = a binding was saved; null = the
+*   dialog opened but was cancelled/closed (tags untouched); false = nothing
+*   to offer (no speaker tags in the text, or no persons declared)
+*/
+tool_transcription.prototype.assign_speakers = function( options ) {
+
+	const self	= this
+	const opts	= options || {}
+	const key	= opts.key || 0
+
+	const persons = Array.isArray(opts.persons) && opts.persons.length>0
+		? opts.persons
+		: ((self.transcription_component && self.transcription_component.data
+			&& Array.isArray(self.transcription_component.data.tags_persons))
+				? self.transcription_component.data.tags_persons
+				: [])
+	const entries	= ((self.transcription_component && self.transcription_component.data) || {}).entries || []
+	const value		= (typeof opts.value==='string' && opts.value!=='')
+		? opts.value
+		: ((entries[key] || {}).value || '')
+
+	// Every DISTINCT person tag in the stored text. The label field never
+	// carries '-' (the tag field separator) and the data payload uses single
+	// quotes, so this scan is exact.
+	const TAG_RE	= /\[person-([a-z])-([0-9]{1,6})-([^-]{0,22}?)-data:(.*?):data\]/g
+	const found		= new Map() // tag string -> descriptor
+	let match
+	while ((match = TAG_RE.exec( value ))!==null) {
+		const tag = match[0]
+		let entry = found.get( tag )
+		if (!entry) {
+			entry = { tag: tag, label: match[3], data: match[4], count: 0, indexes: [] }
+			found.set( tag, entry )
+		}
+		entry.count++
+		if (entry.indexes.length<2) {
+			entry.indexes.push( match.index )
+		}
+	}
+	if (found.size===0 || persons.length===0) {
+		return Promise.resolve( false )
+	}
+
+	// Listen jump points: every tag sits right after a TC mark, so the nearest
+	// preceding mark IS the turn's time.
+	const tc_marks = [...value.matchAll(/\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(?:\.[0-9]{1,3})?)_TC\]/g)]
+		.map( m => ({ index: m.index, seconds: tc_to_seconds( m[1] ) }) )
+	const seconds_at = function( idx ) {
+		let best = null
+		for (const mark of tc_marks) {
+			if (mark.index<=idx) best = mark.seconds
+			else break
+		}
+		return best
+	}
+
+	// Preselect resolved tags: their data locator matches a tags_persons entry.
+	const person_index_of = function( data_string ) {
+		if (!data_string) {
+			return ''
+		}
+		try {
+			const locator = JSON.parse( data_string.replace(/'/g, '"') )
+			const idx = persons.findIndex( person => person.data
+				&& person.data.section_tipo===locator.section_tipo
+				&& String(person.data.section_id)===String(locator.section_id) )
+			return idx===-1 ? '' : String(idx)
+		} catch (error) {
+			return ''
+		}
+	}
+
+	// Placeholders (empty data) first — they are the ones waiting.
+	const rows = [...found.values()].sort( (a, b) => (a.data==='' ? 0 : 1) - (b.data==='' ? 0 : 1) )
+
+	return new Promise(function(resolve){
+
+		let resolved = false
+		const finish = function(result, modal) {
+			if (resolved) return
+			resolved = true
+			if (modal) modal.close()
+			resolve( result )
+		}
+
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content transcription_speakers_map'
+		})
+
+		const selects = [] // [{row, select, initial}]
+		for (const row of rows) {
+
+			const row_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'speaker_row',
+				parent			: body
+			})
+
+			// The TAG ITSELF, rendered as its badge — the archivist is binding
+			// exactly what they see in the text. Occurrence count as tooltip.
+			const badge = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'speaker_label',
+				parent			: row_node
+			})
+			badge.title = `${row.count} ×`
+			badge.insertAdjacentHTML( 'afterbegin', self.transcription_component.tags_to_html( row.tag ) )
+
+			for (const idx of row.indexes) {
+				const seconds = seconds_at( idx )
+				if (seconds===null) continue
+				const jump = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light speaker_listen',
+					inner_html		: `▶ ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`,
+					parent			: row_node
+				})
+				jump.addEventListener('click', function(e){
+					e.stopPropagation()
+					if (self.media_component && typeof self.media_component.go_to_time==='function') {
+						self.media_component.go_to_time({ seconds: seconds })
+						if (self.media_component.video && typeof self.media_component.video.play==='function') {
+							self.media_component.video.play()
+						}
+					}
+				})
+			}
+
+			const person_select = ui.create_dom_element({
+				element_type	: 'select',
+				parent			: row_node
+			})
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: '',
+				inner_html		: self.get_tool_label('no_person_tag') || '— unassigned —',
+				parent			: person_select
+			})
+			for (let j = 0; j < persons.length; j++) {
+				const person = persons[j]
+				ui.create_dom_element({
+					element_type	: 'option',
+					value			: String(j),
+					inner_html		: `${person.full_name}${person.role ? ` (${person.role})` : ''}`,
+					parent			: person_select
+				})
+			}
+			const initial = person_index_of( row.data )
+			person_select.value = initial
+			selects.push({ row: row, select: person_select, initial: initial })
+		}
+
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content transcription_speakers_map_footer'
+		})
+		const button_apply = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_apply_speakers',
+			inner_html		: self.get_tool_label('assign_speakers') || 'Assign speakers',
+			parent			: footer
+		})
+		const button_cancel = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_skip_speakers',
+			inner_html		: self.get_tool_label('cancel') || 'Cancel',
+			parent			: footer
+		})
+
+		const modal = ui.attach_to_modal({
+			header		: self.get_tool_label('speakers_detected') || 'Speakers',
+			body		: body,
+			footer		: footer,
+			size		: 'small',
+			on_close	: function() {
+				finish( null, null ) // cancelled: nothing saved, tags stay as they are
+			}
+		})
+
+		button_apply.addEventListener('click', function(e){
+			e.stopPropagation()
+			// The binding: swap every changed tag, ALL occurrences, one save.
+			let new_value	= value
+			let changed		= false
+			for (const item of selects) {
+				if (item.select.value==='' || item.select.value===item.initial) continue
+				const person = persons[parseInt(item.select.value)]
+				if (!person || typeof person.tag!=='string') continue
+				new_value	= new_value.split( item.row.tag ).join( person.tag )
+				changed		= true
+			}
+			if (changed) {
+				self.save_transcription( new_value )
+			}
+			finish( changed, modal )
+		})
+		button_cancel.addEventListener('click', function(e){
+			e.stopPropagation()
+			finish( null, modal )
+		})
+	})
+}//end assign_speakers
 
 
 

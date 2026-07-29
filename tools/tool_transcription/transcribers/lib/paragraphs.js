@@ -349,9 +349,17 @@ export function build_paragraph_text( paragraph, options ) {
 	const opts		= Object.assign({}, DEFAULT_OPTIONS, options || {});
 	const segments	= Array.isArray(paragraph.segments) ? paragraph.segments : [];
 
-	const prefix = (opts.speaker_prefix===true && paragraph.speaker!==undefined && paragraph.speaker!=='')
+	// A person TAG for this paragraph (the transcription speaker mapping):
+	// `speaker_tag` is the ready-made wire tag string ('[person-a-1-…-data:…]')
+	// the caller resolved for THIS paragraph — placed right after the opening
+	// TC mark, the position v6 transcriptions used. The tag contains no
+	// HTML-escapable characters (its data payload uses single quotes by
+	// construction), so it survives segments_to_html's escaping intact.
+	const tag = typeof opts.speaker_tag==='string' ? opts.speaker_tag : '';
+
+	const prefix = tag + ((opts.speaker_prefix===true && paragraph.speaker!==undefined && paragraph.speaker!=='')
 		? `${paragraph.speaker}: `
-		: '';
+		: '');
 
 	if (segments.length===0) {
 		return `[TC_${seconds_to_tc(paragraph.start)}_TC]${prefix}${paragraph.text || ''}`;
@@ -413,10 +421,36 @@ export function build_paragraph_text( paragraph, options ) {
 */
 export function segments_to_html( segments, options ) {
 
-	const paragraphs = group_paragraphs( segments, options );
+	const opts			= options || {};
+	const paragraphs	= group_paragraphs( segments, opts );
+
+	// `speaker_tags` maps a segment speaker id to a ready-made person tag
+	// string. The tag is emitted at every SPEAKER TURN — the first paragraph
+	// of each run of same-speaker paragraphs — never repeated while the same
+	// person keeps talking across paragraph breaks (the v6 convention).
+	const speaker_tags	= (opts.speaker_tags && typeof opts.speaker_tags==='object') ? opts.speaker_tags : null;
+	// A person tag REPLACES the plain-text "SPEAKER: " prefix: with a mapping,
+	// the diarization label (an integer) must never leak into the stored text.
+	const base_opts		= speaker_tags!==null
+		? Object.assign({}, opts, { speaker_prefix: false })
+		: opts;
+	let previous_speaker= undefined;
 
 	return paragraphs
-		.map( paragraph => `<p>${escape_html( build_paragraph_text( paragraph, options ) )}</p>` )
+		.map( paragraph => {
+			let tag = '';
+			if (speaker_tags!==null && paragraph.speaker!==undefined && paragraph.speaker!==previous_speaker) {
+				const mapped = speaker_tags[paragraph.speaker];
+				if (typeof mapped==='string' && mapped!=='') {
+					tag = mapped;
+				}
+			}
+			if (paragraph.speaker!==undefined) {
+				previous_speaker = paragraph.speaker;
+			}
+			const text = build_paragraph_text( paragraph, tag==='' ? base_opts : Object.assign({}, base_opts, { speaker_tag: tag }) );
+			return `<p>${escape_html( text )}</p>`;
+		})
 		.join('');
 }//end segments_to_html
 

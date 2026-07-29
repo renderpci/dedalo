@@ -34,30 +34,47 @@
 *
 * MESSAGE PROTOCOL (caller → worker):
 *   { action:'transcribe', options:{ audio, sample_rate, language, model, device,
-*                                    dtype, decode, vad, postprocess } }
+*                                    dtype, decode, vad, postprocess,
+*                                    diarize:{ model, tuning } } }
 *   { action:'abort' }   — stop after the current window and return what is done
 *
 * MESSAGE PROTOCOL (worker → caller):
-*   { status:'init',         data:{ progress, status, device, file } }
-*   { status:'plan',         data:{ windows, speech_seconds, duration } }
-*   { status:'window_start', data:{ index, total, from, to, done_seconds, speech_seconds } }
-*   { status:'partial',      data:{ text } }          live tokens (greedy only)
-*   { status:'progress',     data:{ segments, done_seconds, speech_seconds } }
-*   { status:'end',          data:{ segments, aborted } }
-*   { status:'error',        data:{ message } }
+*   { status:'init',             data:{ progress, status, device, file } }
+*   { status:'plan',             data:{ windows, speech_seconds, duration } }
+*   { status:'window_start',     data:{ index, total, from, to, done_seconds, speech_seconds } }
+*   { status:'partial',          data:{ text } }      live tokens (greedy only)
+*   { status:'progress',         data:{ segments, done_seconds, speech_seconds } }
+*   { status:'diarize_init',     data:{ progress, status, file } }
+*   { status:'diarize_progress', data:{ done_seconds, duration } }
+*   { status:'diarize_error',    data:{ message } }   best-effort: run continues
+*   { status:'end',              data:{ segments, aborted } }
+*   { status:'error',            data:{ message } }
 *
 * SEGMENT SHAPE returned to the caller: { text, start, end } with times in SECONDS
-* from the start of the recording. Formatting (paragraphs, timecode marks) is NOT
-* done here — the caller applies lib/paragraphs.js, so the archivist can change
-* paragraph rules without re-running the recogniser.
+* from the start of the recording — plus `speaker` (integer) when speaker
+* detection ran (options.diarize, the pyannote segmentation model from the
+* install's own store). Formatting (paragraphs, timecode marks, person tags) is
+* NOT done here — the caller applies lib/paragraphs.js, so the archivist can
+* change paragraph rules or the speaker mapping without re-running the
+* recogniser.
 */
 
 // The ASR runtime. Served from the engine's own client-lib registry
 // (/dedalo/lib/transformers/), never from a CDN: an archive may be air-gapped,
 // and a request to a third party would leak WHEN a record is transcribed.
-import { pipeline, WhisperTextStreamer, env } from '/dedalo/lib/transformers/dist/transformers.js';
+// AutoProcessor/AutoModelForAudioFrameClassification are the DIARIZATION half:
+// the runtime ships the pyannote segmentation model classes natively.
+import {
+	pipeline,
+	WhisperTextStreamer,
+	env,
+	AutoProcessor,
+	AutoModel,
+	AutoModelForAudioFrameClassification
+} from '/dedalo/lib/transformers/dist/transformers.js';
 
-import { clean_transcript, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
+import { DEFAULT_DIARIZE, assign_speakers_to_segments, cluster_speaker_turns, stitch_diarization_chunks } from '../lib/diarize.js';
+import { clean_transcript, has_time_regression, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
 import { plan_windows, total_speech_seconds } from '../lib/vad.js';
 
 
@@ -402,14 +419,19 @@ async function transcribe_window( params ) {
 		}
 
 		const text	= segments.map( segment => segment.text ).join(' ');
-		const score	= repetition_score( text );
+		// A timestamp REGRESSION is degeneration too: the model looped and
+		// re-emitted earlier content with broken time tokens (backwards
+		// timecodes + duplicated sentences in the transcript). Rank such an
+		// attempt far below any monotonic one, and retry.
+		const regressed	= has_time_regression( segments );
+		const score		= repetition_score( text ) + (regressed ? 1 : 0);
 
 		if (score<best_score) {
 			best		= segments;
 			best_score	= score;
 		}
 
-		if (!is_degenerate( text )) {
+		if (!is_degenerate( text ) && !regressed) {
 			return segments;
 		}
 	}
@@ -420,6 +442,190 @@ async function transcribe_window( params ) {
 	}
 	return best;
 }//end transcribe_window
+
+
+/**
+* DIARIZE_AUDIO
+* Run the speaker-segmentation model over the whole recording and return
+* global speaker turns [{speaker, start, end}].
+*
+* Runs on WASM deliberately: the model is small (a few MB — SincNet + BiLSTM),
+* CPU decodes it far faster than real time, and its recurrent graph is exactly
+* the kind WebGPU backends reject with late, confusing errors. The audio is
+* decoded in LONG chunks with a conversational overlap; the identity stitching
+* and its limits are documented in lib/diarize.js.
+*
+* @param {Float32Array} audio - mono PCM at 16 kHz (the transcriber's buffer)
+* @param {number} sample_rate
+* @param {Object} options
+* @param {string} options.model - diarization model id from the catalog
+* @param {Object} [options.sources] - as configure_sources
+* @param {Object} [options.tuning] - DEFAULT_DIARIZE overrides
+* @returns {Promise<Array<Object>>} turns
+*/
+async function diarize_audio( audio, sample_rate, options ) {
+
+	configure_sources( options.sources );
+
+	const tuning		= Object.assign({}, DEFAULT_DIARIZE, options.tuning || {});
+	const chunk_len		= Math.max( 1, Math.floor(tuning.chunk_seconds * sample_rate) );
+	const overlap_len	= Math.max( 0, Math.floor(tuning.overlap_seconds * sample_rate) );
+	const step			= Math.max( 1, chunk_len - overlap_len );
+
+	const progress_callback = ({ progress, status, file }) => {
+		self.postMessage({
+			status	: 'diarize_init',
+			data	: { progress: progress, status: status, file: file }
+		});
+	};
+
+	const processor	= await AutoProcessor.from_pretrained( options.model, { progress_callback: progress_callback } );
+	const model		= await AutoModelForAudioFrameClassification.from_pretrained( options.model, {
+		device				: 'wasm',
+		dtype				: 'fp32',
+		progress_callback	: progress_callback
+	});
+
+	const chunks = [];
+	for (let from = 0; from < audio.length; from += step) {
+
+		if (aborted===true) {
+			break;
+		}
+
+		const to		= Math.min( audio.length, from + chunk_len );
+		const samples	= audio.subarray( from, to );
+		const inputs	= await processor( samples );
+		const { logits }= await model( inputs );
+		// Per-frame powerset classes → local turns {id, start, end, confidence},
+		// times in seconds RELATIVE to this chunk.
+		const turns		= processor.post_process_speaker_diarization( logits, samples.length )[0] || [];
+
+		chunks.push({
+			offset	: from / sample_rate,
+			// The post-processing labels silence as id -1 on some builds; only
+			// real speaker ids enter the stitcher.
+			turns	: turns.filter( turn => typeof turn.id==='number' ? turn.id>=0 : true )
+		});
+
+		self.postMessage({
+			status	: 'diarize_progress',
+			data	: {
+				done_seconds	: Math.min( audio.length, to ) / sample_rate,
+				duration		: audio.length / sample_rate
+			}
+		});
+
+		if (to>=audio.length) {
+			break;
+		}
+	}
+
+	// GLOBAL identity. With the voice-fingerprint model available, every
+	// chunk-local speaker is embedded and clustered across the WHOLE
+	// recording — the same voice keeps the same speaker id however far apart
+	// its turns are. Without it (or if it fails), fall back to co-activity
+	// overlap stitching: coherent on short clips, known to fragment voices on
+	// long ones (that is exactly what the embedding model exists to fix).
+	if (options.embedding_model) {
+		try {
+			const groups = await embed_speaker_groups( audio, sample_rate, chunks, {
+				model	: options.embedding_model,
+				tuning	: tuning
+			});
+			return cluster_speaker_turns( groups, tuning );
+		} catch (error) {
+			console.warn('[browser_whisper] voice-fingerprint clustering failed — falling back to overlap stitching:', error);
+		}
+	}
+	return stitch_diarization_chunks( chunks, tuning );
+}//end diarize_audio
+
+
+/**
+* EMBED_SPEAKER_GROUPS
+* One voice fingerprint per CHUNK-LOCAL speaker: the segmentation model is
+* consistent within a chunk, so all of a local speaker's turns are one voice —
+* its longest clean turn (centered, capped) is fingerprinted once. That keeps
+* the embedding count at (chunks × voices), not (turns), and feeds
+* cluster_speaker_turns' duration-weighted clustering.
+*
+* @param {Float32Array} audio - the full recording PCM
+* @param {number} sample_rate
+* @param {Array<Object>} chunks - [{offset, turns:[{id, start, end}]}] chunk-relative
+* @param {Object} options - { model, tuning }
+* @returns {Promise<Array<Object>>} groups for cluster_speaker_turns
+*/
+async function embed_speaker_groups( audio, sample_rate, chunks, options ) {
+
+	const progress_callback = ({ progress, status, file }) => {
+		self.postMessage({
+			status	: 'diarize_init',
+			data	: { progress: progress, status: status, file: file }
+		});
+	};
+
+	const processor	= await AutoProcessor.from_pretrained( options.model, { progress_callback: progress_callback } );
+	const model		= await AutoModel.from_pretrained( options.model, {
+		device				: 'wasm',
+		dtype				: 'fp32',
+		progress_callback	: progress_callback
+	});
+
+	const embed = async function( start_seconds, end_seconds ) {
+		const max		= options.tuning.embed_max_seconds;
+		const duration	= end_seconds - start_seconds;
+		// Centered cap: the middle of a long turn is its cleanest speech.
+		const from_s	= duration>max ? start_seconds + (duration - max) / 2 : start_seconds;
+		const to_s		= duration>max ? from_s + max : end_seconds;
+		const from		= Math.max( 0, Math.floor(from_s * sample_rate) );
+		const to		= Math.min( audio.length, Math.ceil(to_s * sample_rate) );
+		if (to - from < sample_rate * 0.3) {
+			return null; // too little audio to fingerprint honestly
+		}
+		const inputs	= await processor( audio.subarray(from, to) );
+		const output	= await model( inputs );
+		const tensor	= output.embeddings ?? output.logits ?? Object.values(output)[0];
+		return tensor && tensor.data ? Array.from( tensor.data ) : null;
+	};
+
+	const groups = [];
+	for (let k = 0; k < chunks.length; k++) {
+
+		const chunk		= chunks[k];
+		const by_local	= new Map(); // local id -> absolute turns
+		for (const turn of chunk.turns) {
+			if (typeof turn.start!=='number' || typeof turn.end!=='number' || turn.end<=turn.start) continue;
+			const absolute = { start: chunk.offset + turn.start, end: chunk.offset + turn.end };
+			const list = by_local.get( turn.id );
+			if (list===undefined) by_local.set( turn.id, [absolute] );
+			else list.push( absolute );
+		}
+
+		for (const turns of by_local.values()) {
+			// Fingerprint the LONGEST turn of this local voice.
+			const longest = turns.reduce( (best, turn) =>
+				(turn.end - turn.start)>(best.end - best.start) ? turn : best );
+			let embedding = null;
+			try {
+				embedding = await embed( longest.start, longest.end );
+			} catch (error) {
+				console.warn('[browser_whisper] fingerprint failed for turn at', longest.start, error);
+			}
+			groups.push({ turns: turns, embedding: embedding });
+		}
+
+		self.postMessage({
+			status	: 'diarize_progress',
+			data	: {
+				done_seconds	: Math.min( (k + 1) / chunks.length, 1 ) * (audio.length / sample_rate),
+				duration		: audio.length / sample_rate
+			}
+		});
+	}
+
+	return groups;
+}//end embed_speaker_groups
 
 
 /**
@@ -553,7 +759,33 @@ self.transcribe = async function( options ) {
 	}
 
 	// 4. The deterministic clean-up (loops, boundary duplication, timing repair).
-	return clean_transcript( collected, options.postprocess );
+	const cleaned = clean_transcript( collected, options.postprocess );
+
+	// 5. Speaker detection (optional): attribute each segment to a speaker turn.
+	// STRICTLY BEST-EFFORT — a diarization failure must never cost the
+	// transcription: the segments are returned without speakers and the caller
+	// is told, loudly, through 'diarize_error'.
+	if (options.diarize && options.diarize.model && cleaned.length>0) {
+		try {
+			const turns = await diarize_audio( audio, sample_rate, {
+				model			: options.diarize.model,
+				// voice-fingerprint model (global identity across the whole
+				// recording); absent = overlap stitching only
+				embedding_model	: options.diarize.embedding_model,
+				sources			: options.sources,
+				tuning			: options.diarize.tuning
+			});
+			return assign_speakers_to_segments( cleaned, turns );
+		} catch (error) {
+			console.warn('[browser_whisper] speaker detection failed — transcript kept without speakers:', error);
+			self.postMessage({
+				status	: 'diarize_error',
+				data	: { message: (error && error.message) ? error.message : String(error) }
+			});
+		}
+	}
+
+	return cleaned;
 }//end transcribe
 
 

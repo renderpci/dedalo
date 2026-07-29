@@ -58,7 +58,7 @@ export interface RelationListResult {
 }
 
 /** The grid column tipos of one referencing section (see module doc step 2). */
-async function getRelationListColumns(sectionTipo: string): Promise<string[]> {
+export async function getRelationListColumns(sectionTipo: string): Promise<string[]> {
 	// section_map 'relation_list' scope (strict — the scope key is read
 	// directly, no SCOPE_FALLBACK walk), resolved through the canonical
 	// virtual-aware cached accessor (S2-27).

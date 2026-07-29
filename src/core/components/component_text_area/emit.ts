@@ -112,7 +112,7 @@ export const textAreaEmitHook: ComponentEmitHook = {
 		});
 	},
 
-	decorateItem(item: DataItem, context: EmitHookContext): void {
+	async decorateItem(item: DataItem, context: EmitHookContext): Promise<void> {
 		if (!('fallback_value' in item)) {
 			item.fallback_value = null;
 		}
@@ -128,5 +128,47 @@ export const textAreaEmitHook: ComponentEmitHook = {
 				return { ...typedEntry, value: renderListString(typedEntry.value) };
 			});
 		}
+
+		// EDIT items of a text_area whose ontology declares
+		// `properties.tags_persons` carry the transcription person helpers (PHP
+		// component_text_area_json.php:130-189): `tags_persons` (the per-person
+		// insert buttons / Ctrl+<n> feed) and `related_sections` (the persons
+		// modal's record grouping + the print header). Property-gated: the
+		// common case costs one cached ontology lookup and returns here.
+		// Dynamic imports keep the cold path lazy and add no static edge into
+		// the emit_hooks registry SCC.
+		if (context.ddoMode !== 'edit') return;
+		const { getEffectivePropertiesByTipo } = await import('../../ontology/alias.ts');
+		const props = (await getEffectivePropertiesByTipo(context.ddo.tipo)) as {
+			tags_persons?: Record<string, import('./tags_persons.ts').TagsPersonsConfigEntry[]>;
+		} | null;
+		if (props?.tags_persons === undefined || props.tags_persons === null) return;
+
+		const { buildRelatedSections } = await import('../../resolve/related_sections.ts');
+		// NOTE the emit path carries no principal (EmitHookContext has none), so
+		// this embedded related_sections is unscoped — ledgered in
+		// rewrite/LEDGER.md; the dispatch route (read_facade related_search) IS
+		// principal-scoped.
+		const related = await buildRelatedSections(
+			[{ section_tipo: context.row.section_tipo, section_id: context.row.section_id }],
+			{
+				callerTipo: context.row.section_tipo,
+				lang: context.defaultLang,
+				sectionTipos: 'all',
+				limit: false,
+			},
+		);
+		const sectionsEntry = related.data.find(
+			(entry) => (entry as { typo?: string }).typo === 'sections',
+		) as { value?: { section_tipo: string; section_id: string }[] } | undefined;
+
+		const { buildTagsPersons } = await import('./tags_persons.ts');
+		item.related_sections = related;
+		item.tags_persons = await buildTagsPersons(
+			props.tags_persons,
+			context.row,
+			context.record,
+			sectionsEntry?.value ?? [],
+		);
 	},
 };

@@ -68,7 +68,16 @@ export const DEFAULT_OPTIONS = {
 
 	// degeneracy detection (the temperature-fallback / drop decision)
 	degenerate_min_words		: 8,	// too short to judge
-	degenerate_score			: 0.55	// repetition_score above this = looped
+	degenerate_score			: 0.55,	// repetition_score above this = looped
+
+	// noise detection (non-speech garbage: letter-spam chains, punctuation
+	// cascades — what the model emits over music/room tone the VAD let through)
+	noise_min_chars				: 12,	// shorter texts are never judged noise
+	noise_letter_ratio			: 0.45,	// letters+digits below this share = not language
+
+	// temporal monotonicity (a degenerating model re-emits EARLIER content with
+	// regressed timestamp tokens — time only moves forward in a real recording)
+	time_regression_tolerance	: 2.0	// seconds of backwards jitter tolerated
 };
 
 
@@ -243,6 +252,89 @@ export function collapse_repeated_ngrams( text, options ) {
 }//end collapse_repeated_ngrams
 
 
+/** Single letters chained by separators — 'M-M-M-T-A-D-C-…', 'B-b b a n' tails.
+* Whisper's signature output over non-speech audio; never natural language
+* (real spelled-out acronyms are short — the 4-link minimum spares them). */
+const LETTER_SPAM_RE = /(?:[\p{L}][-–—.·,]\s?){4,}[\p{L}]?/gu;
+
+/** Punctuation cascades — ', , ,, ,' / '. ,!' runs with nothing said. */
+const PUNCT_RUN_RE = /(?:[,.;:!?¡¿…'"«»()\-–—]\s*){3,}/g;
+
+/**
+* LETTER_RATIO
+* The share of letters+digits among the non-space characters — the cheapest
+* language-vs-garbage signal there is. Real speech in any language sits far
+* above 0.5; punctuation cascades and separator spam sit far below.
+*
+* @param {string} text
+* @returns {number} 0..1 (1 for empty input — nothing to condemn)
+*/
+export function letter_ratio( text ) {
+
+	const compact = String(text ?? '').replace(/\s+/g, '');
+	if (compact.length===0) {
+		return 1;
+	}
+
+	const letters = compact.match(/[\p{L}\p{N}]/gu);
+	return (letters ? letters.length : 0) / compact.length;
+}//end letter_ratio
+
+
+/**
+* IS_NOISE_TEXT
+* True when a text is NON-SPEECH GARBAGE rather than looped speech: letter-spam
+* chains, punctuation cascades, or a letters share too low to be language.
+* This is the failure mode `repetition_score` is structurally blind to — the
+* spam is one giant hyphen-joined token (a single 'unique word'), and lone
+* punctuation tokens have no comparable form at all.
+*
+* @param {string} text
+* @param {Object} [options] - see DEFAULT_OPTIONS (noise_min_chars, noise_letter_ratio)
+* @returns {boolean}
+*/
+export function is_noise_text( text, options ) {
+
+	const opts		= Object.assign({}, DEFAULT_OPTIONS, options || {});
+	const normalized= normalize_spacing( text );
+
+	if (normalized.length<opts.noise_min_chars) {
+		// Too short to condemn — except the degenerate pure-punctuation case,
+		// which carries no language at any length.
+		return normalized.length>0 && letter_ratio( normalized )===0;
+	}
+
+	if (letter_ratio( normalized )<opts.noise_letter_ratio) {
+		return true;
+	}
+
+	// A long spam chain dominating the text: strip it and see what remains.
+	const without = normalized.replace(LETTER_SPAM_RE, ' ').replace(/\s+/g, ' ').trim();
+	return without.length < normalized.length * 0.3;
+}//end is_noise_text
+
+
+/**
+* STRIP_NOISE_RUNS
+* Excise non-speech garbage EMBEDDED in an otherwise real segment: the model
+* often degenerates mid-segment ('…it was unbelievable. Mm-H. M-M-M-T-A-D-…'),
+* and dropping the whole segment would take the real sentence with it.
+* Letter-spam chains are removed outright; punctuation cascades collapse to a
+* single mark.
+*
+* @param {string} text
+* @returns {string}
+*/
+export function strip_noise_runs( text ) {
+
+	return normalize_spacing(
+		String(text ?? '')
+			.replace(LETTER_SPAM_RE, ' ')
+			.replace(PUNCT_RUN_RE, (run) => `${run.trim()[0]} `)
+	);
+}//end strip_noise_runs
+
+
 /**
 * REPETITION_SCORE
 * How repetitive a text is, from 0 (every word distinct) to ~1 (one word forever).
@@ -284,9 +376,16 @@ export function repetition_score( text ) {
 */
 export function is_degenerate( text, options ) {
 
-	const opts	= Object.assign({}, DEFAULT_OPTIONS, options || {});
-	const words	= split_words( text );
+	const opts = Object.assign({}, DEFAULT_OPTIONS, options || {});
 
+	// Non-speech garbage first: it is degeneracy regardless of word counts, and
+	// repetition_score cannot see it (a spam chain is ONE token; punctuation has
+	// no comparable form).
+	if (is_noise_text( text, opts )) {
+		return true;
+	}
+
+	const words = split_words( text );
 	if (words.length<opts.degenerate_min_words) {
 		return false;
 	}
@@ -391,6 +490,42 @@ function is_duplicate_segment( segment, previous, opts ) {
 
 
 /**
+* HAS_TIME_REGRESSION
+* True when any segment starts EARLIER than the furthest point already reached,
+* beyond the jitter tolerance. Time only moves forward in a recording; a
+* regression means the model degenerated and re-emitted earlier content with
+* broken timestamp tokens (observed live: a window whose tail jumped from
+* 29:29 back to 29:15 and re-transcribed twenty seconds of speech). Used by
+* the worker as a RETRY trigger — a re-decode usually comes back clean.
+*
+* @param {Array<Object>} segments
+* @param {Object} [options] - see DEFAULT_OPTIONS (time_regression_tolerance)
+* @returns {boolean}
+*/
+export function has_time_regression( segments, options ) {
+
+	const opts = Object.assign({}, DEFAULT_OPTIONS, options || {});
+
+	if (!Array.isArray(segments)) {
+		return false;
+	}
+
+	let front = Number.NEGATIVE_INFINITY;
+	for (const segment of segments) {
+		const start	= typeof segment?.start==='number' ? segment.start : null;
+		const end	= typeof segment?.end==='number' ? segment.end : start;
+		if (start===null) continue;
+		if (start < front - opts.time_regression_tolerance) {
+			return true;
+		}
+		if (end!==null && end>front) front = end;
+		else if (start>front) front = start;
+	}
+	return false;
+}//end has_time_regression
+
+
+/**
 * CLEAN_TRANSCRIPT
 * The entry point: run the whole clean-up pipeline over an ASR segment array.
 *
@@ -419,14 +554,29 @@ export function clean_transcript( segments, options ) {
 	}
 
 	const cleaned = [];
+	// The furthest point transcribed so far — the monotonicity front. A segment
+	// starting behind it (beyond the jitter tolerance) is a degeneration
+	// artifact: the model looped and re-emitted EARLIER content with broken
+	// timestamp tokens. Dropping it removes both the disordered timecodes and
+	// the duplicated re-transcription in one rule.
+	let time_front = Number.NEGATIVE_INFINITY;
 
 	for (let i = 0; i < segments.length; i++) {
 
 		const source = segments[i] || {};
 
-		// 1 + 2. normalise and collapse in-segment loops
-		let text = collapse_repeated_ngrams( normalize_spacing( source.text ), opts );
-		if (text==='') {
+		// 0. temporal monotonicity
+		const source_start = typeof source.start==='number' ? source.start : null;
+		if (source_start!==null && source_start < time_front - opts.time_regression_tolerance) {
+			continue;
+		}
+
+		// 1 + 2. normalise, excise embedded non-speech garbage (letter-spam
+		// chains, punctuation cascades — the model's output over music/room
+		// tone), then collapse in-segment loops. A segment that was ONLY noise
+		// disappears here.
+		let text = collapse_repeated_ngrams( strip_noise_runs( source.text ), opts );
+		if (text==='' || is_noise_text( text, opts )) {
 			continue;
 		}
 
@@ -468,6 +618,10 @@ export function clean_transcript( segments, options ) {
 		}
 
 		cleaned.push( segment );
+		const advance = typeof segment.end==='number' ? segment.end : segment.start;
+		if (typeof advance==='number' && advance>time_front) {
+			time_front = advance;
+		}
 	}
 
 	// 5. timing repair

@@ -1,0 +1,141 @@
+/**
+ * Related-sections payload — the "which records point at me" read the tools
+ * issue as `source.action:'related_search'` + `sqo.mode:'related'` (PHP
+ * dd_core_api `case 'related_search'` → sections::get_instance 'related_list').
+ * Consumers (all in the TS-owned client, shapes pinned by WC-065):
+ *  - tool_transcription's parent-record <select> (render_tool_transcription.js
+ *    render_related_list) and tool_indexation's twin;
+ *  - component_text_area's persons modal grouping (view_default_edit_text_area
+ *    render_persons_list) — also embedded in edit data as
+ *    `related_sections` by the text_area emit hook;
+ *  - tool_tr_print's header block.
+ *
+ * Wire law (WC-065 — the v6-CLIENT shape, which is what the shipped client
+ * reads; late-PHP sections_json emitted `entries`, unreadable by this client):
+ *  - data[0] is ALWAYS the sections item `{typo:'sections', tipo, section_tipo,
+ *    value:[locators]}` — even with zero hits (`value: []`), so the persons
+ *    modal still renders the host record's own persons;
+ *  - every section_id in the payload is a STRING (the clients group with
+ *    strict `===` against string ids);
+ *  - per-column data entries carry `value: string[]` (flat resolveCellValue
+ *    strings, 0..1 elements) — the clients `join(' | ')` them raw;
+ *  - context lists, per referencing section, the SECTION entry FIRST (the
+ *    clients `find` by section_tipo and expect the section label), then one
+ *    `{model, tipo, section_tipo, label}` entry per relation-list column.
+ */
+
+import { termByTipo } from '../ontology/labels.ts';
+import { getModelByTipo } from '../ontology/resolver.ts';
+import { findInverseReferences } from '../search/search_related.ts';
+import type { Principal } from '../security/permissions.ts';
+import { getRelationListColumns, resolveCellValue } from './relation_list.ts';
+import { currentDataLang } from './request_lang.ts';
+
+export interface RelatedSectionsResult {
+	context: Record<string, unknown>[];
+	data: Record<string, unknown>[];
+}
+
+export interface RelatedSectionsOptions {
+	/** Stamped on the sections item as `tipo` (the caller's source.tipo). */
+	callerTipo: string;
+	lang?: string;
+	/** sqo.section_tipo axis — narrows the OWNING sections; 'all' = every. */
+	sectionTipos?: string[] | 'all';
+	/** sqo.limit — caps referencing records; false/undefined = all. */
+	limit?: number | false;
+	offset?: number;
+	/**
+	 * The caller (AUTHZ-05). When present, referencing records outside the
+	 * caller's read grant are dropped before any label or value is emitted.
+	 * Undefined (internal callers) applies NO filter — the dispatch route
+	 * ALWAYS passes it (the emit-hook path is ledgered, see rewrite/LEDGER.md).
+	 */
+	principal?: Principal;
+}
+
+export async function buildRelatedSections(
+	locators: { section_tipo: string; section_id: number | string }[],
+	options: RelatedSectionsOptions,
+): Promise<RelatedSectionsResult> {
+	// Request-scoped data lang backstop (S2-28), never a hardcoded lang.
+	const lang = options.lang ?? currentDataLang();
+
+	let hits = await findInverseReferences(
+		locators.map((l) => ({ section_tipo: l.section_tipo, section_id: String(l.section_id) })),
+		{
+			sectionTipos: options.sectionTipos ?? 'all',
+			limit: options.limit ?? false,
+			offset: options.offset,
+		},
+	);
+	if (options.principal !== undefined) {
+		const { scopeInverseReferenceHits } = await import('../security/record_scope.ts');
+		hits = await scopeInverseReferenceHits(hits, options.principal);
+	}
+
+	// Distinct referencing records (the index has one row per relation edge;
+	// a record referencing the host twice must list once).
+	const seenRecords = new Set<string>();
+	const records: { section_tipo: string; section_id: string }[] = [];
+	for (const hit of hits) {
+		const key = `${hit.section_tipo}_${hit.section_id}`;
+		if (seenRecords.has(key)) continue;
+		seenRecords.add(key);
+		records.push({ section_tipo: hit.section_tipo, section_id: String(hit.section_id) });
+	}
+
+	const context: Record<string, unknown>[] = [];
+	const data: Record<string, unknown>[] = [
+		// The sections item — ALWAYS present, first (see module doc wire law).
+		{
+			typo: 'sections',
+			tipo: options.callerTipo,
+			section_tipo: [] as string[],
+			value: records,
+		},
+	];
+
+	const unresolved: string[] = [];
+	const columnsBySection = new Map<string, string[]>();
+	for (const record of records) {
+		// First sight of a section: SECTION context entry, then its columns.
+		let columns = columnsBySection.get(record.section_tipo);
+		if (columns === undefined) {
+			columns = await getRelationListColumns(record.section_tipo);
+			columnsBySection.set(record.section_tipo, columns);
+			context.push({
+				model: 'section',
+				tipo: record.section_tipo,
+				section_tipo: record.section_tipo,
+				label: await termByTipo(record.section_tipo, lang),
+			});
+			for (const columnTipo of columns) {
+				context.push({
+					model: (await getModelByTipo(columnTipo)) ?? '',
+					tipo: columnTipo,
+					section_tipo: record.section_tipo,
+					label: await termByTipo(columnTipo, lang),
+				});
+			}
+		}
+		for (const columnTipo of columns) {
+			const value = await resolveCellValue(
+				record.section_tipo,
+				Number(record.section_id),
+				columnTipo,
+				lang,
+				unresolved,
+			);
+			data.push({
+				model: (await getModelByTipo(columnTipo)) ?? '',
+				tipo: columnTipo,
+				section_tipo: record.section_tipo,
+				section_id: record.section_id,
+				value: value === null || value === '' ? [] : [value],
+			});
+		}
+	}
+
+	return { context, data };
+}

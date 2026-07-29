@@ -13,7 +13,7 @@ export interface TranscriptSegment {
 	start?: number | null;
 	end?: number | null;
 	/** Diarization label, when the engine produced one. */
-	speaker?: string;
+	speaker?: string | number;
 	/** Word-level timings, carried through untouched. */
 	words?: unknown[];
 }
@@ -28,12 +28,16 @@ export interface ParagraphOptions {
 	max_chars?: number;
 	anchor_seconds?: number;
 	speaker_prefix?: boolean;
+	/** speaker id → ready-made person tag string, emitted at each speaker turn. */
+	speaker_tags?: Record<string | number, string>;
+	/** One paragraph's resolved tag (internal; set by segments_to_html). */
+	speaker_tag?: string;
 }
 
 export interface Paragraph {
 	start: number;
 	end: number | null;
-	speaker?: string;
+	speaker?: string | number;
 	text: string;
 	segments: TranscriptSegment[];
 }
