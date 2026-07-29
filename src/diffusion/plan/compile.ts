@@ -459,8 +459,13 @@ async function compileSectionPlan(
 		diagnostics.warnings.push(`global_table_maps:${tableNode.tipo}`);
 	}
 
+	// Columns come from the table node's DIRECT children (oracle
+	// dd_diffusion_api::process_datum :996 — get_ar_children is first-level
+	// only). childrenTipos is the RECURSIVE UI list: using it makes a nested
+	// table node's fields columns of its PARENT table, which collides whenever
+	// both declare the same field label ('Duplicate column name').
 	const fields: FieldPlan[] = [];
-	for (const fieldTipo of tableNode.childrenTipos) {
+	for (const fieldTipo of tableNode.directChildrenTipos) {
 		const fieldPlan = await compileFieldPlan(
 			tree,
 			fieldTipo,

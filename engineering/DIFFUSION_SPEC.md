@@ -117,6 +117,23 @@ Study these in the reference trees, then re-express their *semantics*:
   ontology node **labels** (alias-aware); field model → SQL column type
   (field_date→DATE, field_int→INT, field_varchar→VARCHAR(n),
   field_text→TEXT+FULLTEXT...).
+- **A table's columns are its DIRECT children — never the recursive list.**
+  The oracle reads `ontology_node::get_ar_children` (`v7 .../core/api/v1/common/
+  class.dd_diffusion_api.php:996`), documented "direct (first-level only) child
+  tipos" (`.../core/ontology_engine/class.ontology_node.php:1225`); an alias
+  prepends its TARGET's direct children so alias-own children come last and
+  override (`:1017-1018`). A `table` node may CONTAIN another `table` node
+  (mdcat `documentales` → `documentales_portal`, 9 such pairs), so the
+  *recursive* child list — which PHP builds "to populate the fields list for
+  the UI" (`class.diffusion_utils.php:320`) and which
+  `VirtualTreeNode.childrenTipos` mirrors — drags the nested table's fields
+  into the PARENT table and emits a duplicate column when both declare the same
+  field label. The plan compiler therefore reads `directChildrenTipos`;
+  `childrenTipos` is for the info panel only (`diffusion/api/info.ts`, the twin
+  of PHP `get_section_diffusion_nodes`). Note the oracle applies NO model
+  filter: the nested `table` node itself still becomes a column (default TEXT)
+  unless it declares `properties->exclude_column`. Gate:
+  `test/unit/diffusion_nested_table_columns.test.ts`.
 - **ddo_map chains** — per-field resolution paths
   (`{tipo,parent,section_tipo:'self',fn?...}`); terminal components yield
   values, relation components yield locators that are BOTH recursed per the

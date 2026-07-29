@@ -87,9 +87,23 @@ export interface VirtualTreeNode {
 	/**
 	 * Merged RECURSIVE children (PHP: own recursive children + the real node's
 	 * recursive children whose label is not already taken by an own child).
-	 * For a table node these are its field nodes — the SectionPlan field list.
+	 * This is the UI/info list ONLY — PHP builds it "to populate the fields list
+	 * for the UI" (diffusion_utils :320). NEVER use it as a column source: see
+	 * directChildrenTipos.
 	 */
 	childrenTipos: string[];
+	/**
+	 * DIRECT children — the COLUMN source for a table node (PHP
+	 * dd_diffusion_api::process_datum :996 `ontology_node::get_ar_children`,
+	 * which is first-level only; :1017-1018 prepends the alias target's direct
+	 * children so alias-own children come LAST and override).
+	 *
+	 * A table node may itself contain a nested `table` node (mdcat364
+	 * 'documentales' → mdcat367 'documentales_portal'), so the recursive list
+	 * would drag the nested table's fields into the parent table and collide on
+	 * a shared column name.
+	 */
+	directChildrenTipos: string[];
 	/**
 	 * Related 'section' tipos of the node, with the PHP fallback: when the
 	 * (alias) node declares none, the REAL node's section relations are used
@@ -439,6 +453,18 @@ export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree 
 			relatedSections = await index.relatedByModel(resolved.realTipo, 'section');
 		}
 
+		// Direct children in the ORACLE's column order (dd_diffusion_api :1017-
+		// 1018): the alias target's children FIRST, the alias's own children
+		// LAST so they override a repeated name. Deduped (PHP array_unique).
+		const ownDirect = await index.childTipos(currentTipo);
+		const directChildrenTipos = [
+			...new Set(
+				resolved.isAlias && resolved.realTipo !== null
+					? [...(await index.childTipos(resolved.realTipo)), ...ownDirect]
+					: ownDirect,
+			),
+		];
+
 		nodes.push({
 			tipo: resolved.tipo,
 			model: resolved.model,
@@ -448,6 +474,7 @@ export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree 
 			isAlias: resolved.isAlias,
 			parents: path,
 			childrenTipos: mergedChildren,
+			directChildrenTipos,
 			relatedSections,
 		});
 
@@ -465,8 +492,10 @@ export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree 
 		const newPath = [pathItem, ...path];
 
 		// Recurse into DIRECT children (own + the real node's when aliased),
-		// deduped (PHP array_unique :366).
-		const directChildren = [...(await index.childTipos(currentTipo))];
+		// deduped (PHP array_unique :366). NOTE the walk order is own-FIRST here,
+		// unlike directChildrenTipos above (:1017 is the column order, :366 the
+		// descent order) — both are the oracle's, in their own places.
+		const directChildren = [...ownDirect];
 		if (resolved.isAlias && resolved.realTipo !== null) {
 			directChildren.push(...(await index.childTipos(resolved.realTipo)));
 		}
