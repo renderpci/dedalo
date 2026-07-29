@@ -819,9 +819,19 @@
             "value": "अद्यावधिक गरिएका अभिलेखहरू"
           },
           {
+            "lang": "lg-eus",
+            "name": "updated_records",
+            "value": "Eguneratutako erregistroak"
+          },
+          {
             "lang": "lg-nep",
             "name": "empty_value",
             "value": "खाली"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "empty_value",
+            "value": "Hutsik"
           },
           {
             "lang": "lg-nep",
@@ -829,9 +839,19 @@
             "value": "मानहरू बदल्नुहोस्"
           },
           {
+            "lang": "lg-eus",
+            "name": "do_replace",
+            "value": "Ordeztu balioak"
+          },
+          {
             "lang": "lg-nep",
             "name": "successfully",
             "value": "सफलतापूर्वक"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "successfully",
+            "value": "Behar bezala"
           },
           {
             "lang": "lg-nep",
@@ -839,9 +859,19 @@
             "value": "सबै"
           },
           {
+            "lang": "lg-eus",
+            "name": "all_records",
+            "value": "Guztiak"
+          },
+          {
             "lang": "lg-nep",
             "name": "will_replaced_all_records",
             "value": "सबै रेकर्डहरू प्रतिस्थापन गरिनेछ!"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "will_replaced_all_records",
+            "value": "Erregistro guztiak ordeztuko dira!"
           },
           {
             "lang": "lg-nep",
@@ -849,14 +879,29 @@
             "value": "सामग्री थप्नुहोस्"
           },
           {
+            "lang": "lg-eus",
+            "name": "tool_do_add",
+            "value": "Gehitu edukia"
+          },
+          {
             "lang": "lg-nep",
             "name": "content_will_be_added_removed",
             "value": "सामग्री फिल्डबाट थपिने वा हटाइनेछ: {0} हालको रेकर्डहरूमा {1}"
           },
           {
+            "lang": "lg-eus",
+            "name": "content_will_be_added_removed",
+            "value": "Edukia eremuan gehituko edo kenduko da: {0} s uneko {1} erregistroetan"
+          },
+          {
             "lang": "lg-nep",
             "name": "tool_do_delete",
             "value": "सामग्री मेटाउनुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "tool_do_delete",
+            "value": "Ezabatu edukia"
           },
           {
             "lang": "lg-eng",
@@ -904,6 +949,11 @@
             "value": "डाटा प्रसार"
           },
           {
+            "lang": "lg-eus",
+            "name": "bulk_process_label",
+            "value": "Datuen hedapena"
+          },
+          {
             "lang": "lg-eng",
             "name": "replace",
             "value": "Replace"
@@ -921,7 +971,7 @@
           {
             "lang": "lg-eus",
             "name": "replace",
-            "value": ""
+            "value": "Ordeztu"
           },
           {
             "lang": "lg-por",
@@ -954,6 +1004,11 @@
             "value": "प्रतिस्थापन गर्नुहोस्"
           },
           {
+            "lang": "lg-eus",
+            "name": "replace",
+            "value": "Ordeztu"
+          },
+          {
             "lang": "lg-eng",
             "name": "add",
             "value": "Add"
@@ -971,7 +1026,7 @@
           {
             "lang": "lg-eus",
             "name": "add",
-            "value": ""
+            "value": "Gehitu"
           },
           {
             "lang": "lg-deu",
@@ -1002,6 +1057,11 @@
             "lang": "lg-nep",
             "name": "add",
             "value": "थप्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "add",
+            "value": "Gehitu"
           },
           {
             "lang": "lg-eng",
@@ -1047,6 +1107,11 @@
             "lang": "lg-nep",
             "name": "delete",
             "value": "मेटाउन"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "delete",
+            "value": "Ezabatu"
           }
         ]
       }

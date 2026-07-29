@@ -217,8 +217,11 @@ export async function buildOrderPath(
 ): Promise<OrderPathStep[]> {
 	// Activity "When" (WC-044): matrix_activity is append-only, so When-order
 	// ≡ section_id order. Emit the direct-column shortcut instead of the
-	// component step — the assembler orders by the indexed section_id column,
+	// component step — the assembler orders by an indexed structural column,
 	// never the dd547 date jsonpath (a full-table sort at production scale).
+	// (WC-054: the assembler then re-expresses that structural order on the
+	// ("timestamp", id) index, the only shape a When date FILTER can be served
+	// with. The PATH stays section_id — it is the client-facing answer.)
 	// name/model stay cosmetic (the client renders them in the header only).
 	if (sectionTipo === ACTIVITY_SECTION_TIPO && componentTipo === ACTIVITY_WHEN_TIPO) {
 		const step = await stepFor(componentTipo, sectionTipo);

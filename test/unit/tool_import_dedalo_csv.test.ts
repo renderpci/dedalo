@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { ddDateToSeconds } from '../../src/core/media/file_date.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import type { ImportFileReport, ImportProgressFrame } from '../../src/core/tools/import_wire.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
@@ -138,9 +139,10 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 			[SCRATCH_ID],
 		);
 		for (const id of bulkProcessIds) {
-			await sql.unsafe(`DELETE FROM matrix_dd WHERE section_tipo = 'dd800' AND section_id = $1`, [
-				id,
-			]);
+			await sql.unsafe(
+				`DELETE FROM matrix_notes WHERE section_tipo = 'dd800' AND section_id = $1`,
+				[id],
+			);
 			await sql.unsafe(
 				`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd800' AND section_id = $1`,
 				[id],
@@ -249,7 +251,19 @@ describe('import_files writes the mapped columns (scratch record, cleaned up)', 
 			[SCRATCH_ID],
 		)) as { items: { start?: Record<string, number> }[] }[];
 		const stored = rows[0]?.items ?? [];
-		expect(stored[0]?.start).toEqual({ day: 26, month: 10, year: 2023 });
+		// The PERSISTED shape carries the virtual-calendar sort key: PHP
+		// component_date::save() calls add_time() on every non-empty item, and the TS
+		// twin does the same in save_component.ts (addTimeToDateItem). Every
+		// PHP-written date row in a live install has it, so a stored date WITHOUT
+		// `time` is the bug — it cannot be range-searched or ordered.
+		expect(stored[0]?.start).toEqual({
+			day: 26,
+			month: 10,
+			year: 2023,
+			time: ddDateToSeconds({ day: 26, month: 10, year: 2023 }),
+		});
+		// Pinned literal: 2023*372*86400 + 9*31*86400 + 25*86400 (0-based month/day).
+		expect(stored[0]?.start?.time).toBe(65047104000);
 	});
 
 	test('a v6 multi-language export cell imports EVERY language (set_data_lang parity)', async () => {

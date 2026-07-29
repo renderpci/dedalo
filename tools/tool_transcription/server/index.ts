@@ -428,15 +428,29 @@ async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<Too
 			};
 		}
 
-		// Rebuild av_url EXACTLY as automatic_transcription does (same context
-		// resolution, same quality ensure, same URL builder) — the transcriber
-		// backend identifies the job by this URL, so it must match byte-for-byte.
+		// Rebuild av_url EXACTLY as automatic_transcription submitted it (same
+		// context resolution, same URL builder) — the transcriber backend
+		// identifies the job by this URL, so it must match byte-for-byte.
 		const { spec, identity, pathOpts } = await resolveMediaToolContext({
 			component_tipo: ddo.component_tipo,
 			section_tipo: ddo.section_tipo,
 			section_id: ddo.section_id,
 		});
-		const audioRel = await ensureAudioQuality(spec, identity, pathOpts);
+		if (spec.model !== 'component_av') {
+			return fail(
+				`check_server_transcriber_status: '${String(ddo.component_tipo)}' is not component_av`,
+			);
+		}
+		// PURE path build (PHP: $component->get_url('audio')) — a READ-gated poll
+		// must NEVER transcode. Only automatic_transcription ENSURES the audio
+		// quality, and that action is WRITE-gated.
+		const audioRel = buildMediaLocation(
+			spec,
+			identity,
+			'audio',
+			spec.defaultExtension,
+			pathOpts,
+		).relativePath;
 
 		const result = await provider({
 			uri: cfg.uri,
@@ -448,6 +462,18 @@ async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<Too
 			pid: pid as string | number,
 			deleteResult: false,
 		});
+
+		// The transcriber is EXTERNAL: an unreachable server, an HTTP error or a
+		// blocked (SSRF) URI comes back as the provider's `{result:false, msg}`
+		// envelope, NOT as a thrown error. Report it as a FAILURE — WC-007 rewrites
+		// the msg on the SUCCESS branch only; a down ASR server must never read OK.
+		if (result === null || result === undefined) {
+			return fail('Transcriber server returned no status');
+		}
+		if (typeof result === 'object' && (result as { result?: unknown }).result === false) {
+			const detail = String((result as { msg?: unknown }).msg ?? 'transcriber request failed');
+			return fail(detail);
+		}
 
 		// WC-007: truthful success msg (PHP leaves its initial error msg on success).
 		return { result, msg: 'OK. Request done [check_server_transcriber_status]', errors: [] };

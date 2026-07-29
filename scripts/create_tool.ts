@@ -14,7 +14,7 @@
  */
 
 import { cpSync, existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 const TOOLS_ROOT = resolve(import.meta.dir, '../tools');
 const TEMPLATE = 'tool_dev_template';
@@ -41,8 +41,13 @@ if (existsSync(targetDir)) {
 	process.exit(1);
 }
 
-// 1. Copy the template package.
-cpSync(resolve(TOOLS_ROOT, TEMPLATE), targetDir, { recursive: true });
+// 1. Copy the template package. Dotfiles are skipped: the only ones that turn up
+// in the template tree are OS junk (.DS_Store), and step 2 rewrites every copied
+// file as UTF-8 text — which would corrupt a binary one.
+cpSync(resolve(TOOLS_ROOT, TEMPLATE), targetDir, {
+	recursive: true,
+	filter: (source) => !basename(source).startsWith('.'),
+});
 
 // 2. Rename template identifiers in every file, and rename template-named files.
 function renameInTree(dir: string): void {

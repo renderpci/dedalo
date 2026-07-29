@@ -241,6 +241,31 @@ async function matchFreeName(
 	return matches;
 }
 
+/**
+ * The permission targets of the two MATCHER actions (the 'section_list' gate).
+ *
+ * Both read records — the SOURCE record and, more importantly, the TARGET
+ * section's stored filename values — and neither posts a top-level
+ * `section_tipo` in the shape its handler understands. A plain 'section' spec
+ * therefore (a) missed the target section entirely on `..._from_souce`, so the
+ * section whose data is actually read was ungated, and (b) denied
+ * `get_media_section_match` outright ("invalid section target"), because that
+ * handler only ever receives `target_filename.section_tipo`.
+ *
+ * NOTE the action name `get_media_section_match_from_souce` keeps PHP's typo:
+ * it is the literal API_ACTIONS entry of the oracle
+ * (class.tool_import_files.php :74) and therefore a WIRE fact, not a slip.
+ */
+export function matchFromSourceSectionTipos(options: Record<string, unknown>): unknown[] {
+	const target = options.target_section_tipo;
+	return [options.section_tipo, ...(target === undefined ? [] : [target])];
+}
+
+export function matchFreeNameSectionTipos(options: Record<string, unknown>): unknown[] {
+	const targetFilename = (options.target_filename ?? {}) as { section_tipo?: unknown };
+	return targetFilename.section_tipo === undefined ? [] : [targetFilename.section_tipo];
+}
+
 /** get_media_section_match_from_souce: relation-driven match (PHP parity). */
 async function getMediaSectionMatchFromSource(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
@@ -899,12 +924,20 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 export const tool: ToolServerModule = {
 	name: 'tool_import_files',
 	apiActions: {
+		// Both matchers READ record data out of the TARGET section, which rides
+		// inside the payload — so the gate is declared over the payload targets.
 		get_media_section_match_from_souce: {
-			permission: 'section',
+			permission: 'section_list',
 			minLevel: 1,
+			sectionTipos: matchFromSourceSectionTipos,
 			handler: getMediaSectionMatchFromSource,
 		},
-		get_media_section_match: { permission: 'section', minLevel: 1, handler: getMediaSectionMatch },
+		get_media_section_match: {
+			permission: 'section_list',
+			minLevel: 1,
+			sectionTipos: matchFreeNameSectionTipos,
+			handler: getMediaSectionMatch,
+		},
 		file_processor: { permission: 'section', minLevel: 2, handler: fileProcessor },
 		import_files: { permission: 'tipo', minLevel: 2, handler: importFiles },
 	},

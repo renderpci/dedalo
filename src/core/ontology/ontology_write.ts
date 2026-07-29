@@ -577,16 +577,37 @@ async function readTypologyTermItems(typologyId: number): Promise<Record<string,
 
 export interface SetRecordsTarget {
 	sectionTipo: string;
-	/** Present → edit mode (single record); absent/null → list mode (all records). */
+	/** Edit mode: the ONE record to process. */
 	sectionId?: number | null;
+	/**
+	 * List mode: the EXPLICIT record ids to process — the caller's resolved scope
+	 * (e.g. a request SQO's matched set). An empty array is a refusal, never
+	 * "everything".
+	 */
+	sectionIds?: readonly number[];
+	/**
+	 * Deliberate WHOLE-SECTION rebuild. Opt-in and greppable ON PURPOSE: this is
+	 * the only way to reach the unbounded scan, so no request that merely OMITS a
+	 * parameter can trigger it. Internal rebuild callers only (an ontology-file
+	 * import re-deriving a whole TLD's flat index) — never a user-facing action.
+	 */
+	wholeSection?: boolean;
 	userId?: number;
 }
 
 /**
  * Sync matrix ontology records into dd_ontology (PHP set_records_in_dd_ontology).
- * Edit mode processes one record; list mode processes every record of the section
- * (ordered by section_id — the TS full-section scan, see LEDGER). Partial success:
- * result=true when at least one record processed.
+ * Partial success: result=true when at least one record processed.
+ *
+ * SCOPE IS EXPLICIT OR IT IS REFUSED (WC-043). PHP list mode rebuilt the SQO from
+ * the session and FAILED CLOSED when it was missing ('Not sqo_session found from
+ * id: …', writing nothing). TS has no session-SQO twin, and the port filled the
+ * gap with an unbounded `WHERE section_tipo = $1` scan — fail-OPEN where PHP was
+ * fail-CLOSED, and the same shape as the 2026-07-19 runaway WC-043 closed for
+ * tool_update_cache (measured reach here: 12,172 records across four sections,
+ * foreground, behind a client that gives up at 60s while the server keeps
+ * writing). A caller now states its scope: one id, an explicit id list, or
+ * `wholeSection: true`.
  */
 export async function setRecordsInDdOntology(
 	target: SetRecordsTarget,
@@ -606,16 +627,25 @@ export async function setRecordsInDdOntology(
 		return response;
 	}
 
-	// Resolve the record ids to process.
+	// Resolve the record ids to process — see the scope contract in the doc above.
 	let ids: number[];
 	if (target.sectionId !== undefined && target.sectionId !== null) {
 		ids = [Number(target.sectionId)];
-	} else {
+	} else if (target.sectionIds !== undefined) {
+		ids = target.sectionIds.map((id) => Number(id));
+	} else if (target.wholeSection === true) {
 		const rows = (await sql.unsafe(
 			`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id ASC`,
 			[target.sectionTipo],
 		)) as { section_id: number }[];
 		ids = rows.map((row) => Number(row.section_id));
+	} else {
+		// No scope stated: refuse LOUDLY rather than guess "all" (WC-043).
+		response.errors.push(
+			'no scope: pass sectionId, an explicit sectionIds list, or wholeSection:true',
+		);
+		response.msg = `Error. Refusing an unscoped write over '${target.sectionTipo}' (WC-043)`;
+		return response;
 	}
 	response.total = ids.length;
 

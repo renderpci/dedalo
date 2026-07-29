@@ -901,7 +901,7 @@
    cover input/textarea/select, so restore a visible :focus-visible ring here. */
 	input[type='text'], input[type='number'], input[type='url'], input[type='password'], button[type='submit'], textarea, select, .contenteditable {
 		&:focus-visible {
-			outline: 2px solid var(--focus_ring);
+			outline: 1.5px solid var(--focus_ring);
 			outline-offset: 1px;
 		}
 	}
@@ -921,7 +921,7 @@
 	// Gives every interactive element a single, theme-aware ring on keyboard
 	// focus without touching each component file.
 	:where(a, button, [role="button"], summary, [tabindex]):focus-visible {
-		outline: 2px solid var(--focus_ring);
+		outline: 1.5px solid var(--focus_ring);
 		outline-offset: 1px;
 	}
 

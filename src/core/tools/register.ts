@@ -59,6 +59,20 @@ export interface ImportReportItem {
 	diff: string[];
 	/** True when the tool ships a loadable server module. */
 	hasServerModule: boolean;
+	/**
+	 * The dd1354 active state this run writes (or would write): the caller's
+	 * `activeOverrides[name]` when given, else the register.json declaration.
+	 * `false` on an item that bailed before its record was parsed — nothing is
+	 * written for those, so the field only describes attempted writes.
+	 */
+	active: boolean;
+	/**
+	 * The version the register.json declares (`null` when the item bailed before
+	 * parsing). Consumers used to read a `record.version` that this interface
+	 * never carried, so every report showed `version: null` — the widget response
+	 * and the install wizard's per-tool rows alike.
+	 */
+	version: string | null;
 }
 
 // The tool components grouped by their matrix column (fixed contract — avoids a
@@ -411,8 +425,24 @@ async function readRegistryByName(
 	return map;
 }
 
+/**
+ * Force a record's dd1354 ACTIVE radio to `active`, replacing whatever
+ * register.json declared. The ADMIN's on-screen choice — not the tool author's
+ * file — is authoritative for a tool the install already knows (register_tools
+ * widget, WC-057): without this every import re-stamped `active=1` from the
+ * file and silently re-enabled tools the admin had turned off.
+ *
+ * Applied BEFORE validateRegister/projectIdentity, so the value flows into both
+ * the dry-run diff (which then reports 'active') and the write.
+ */
+export function applyActiveOverride(record: ToolRecord, active: boolean): void {
+	const relation = (record.relation ?? {}) as NonNullable<ToolRecord['relation']>;
+	relation[TIPO.ACTIVE] = [boolLocator(active, TIPO.ACTIVE)];
+	record.relation = relation;
+}
+
 /** List valid tool directories across all roots (first-root-wins). */
-function listToolDirectories(): { name: string; dir: string }[] {
+export function listToolDirectories(): { name: string; dir: string }[] {
 	const seen = new Set<string>();
 	const dirs: { name: string; dir: string }[] = [];
 	for (const root of getRoots()) {
@@ -437,9 +467,16 @@ function listToolDirectories(): { name: string; dir: string }[] {
  * Reconcile the tools registry. Dry-run (default) validates every tool and
  * reports whether the shared dd1324 registry already matches — writing nothing.
  * A real write runs only when config.tools.enableRegistryImport is true.
+ *
+ * `activeOverrides` (name → active) forces the dd1354 ACTIVE radio per tool,
+ * outranking the register.json declaration — see applyActiveOverride. A tool
+ * absent from the map keeps whatever its file declares.
  */
-export async function importTools(options: { dryRun?: boolean } = {}): Promise<ImportReportItem[]> {
+export async function importTools(
+	options: { dryRun?: boolean; activeOverrides?: Record<string, boolean> } = {},
+): Promise<ImportReportItem[]> {
 	const dryRun = options.dryRun ?? !config.tools.enableRegistryImport;
+	const activeOverrides = options.activeOverrides ?? {};
 	const registry = await readRegistryByName();
 	const report: ImportReportItem[] = [];
 
@@ -454,6 +491,8 @@ export async function importTools(options: { dryRun?: boolean } = {}): Promise<I
 			inRegistry: registry.has(name),
 			diff: [],
 			hasServerModule: (await getLoadedTool(name)) !== undefined,
+			active: false,
+			version: null,
 		};
 
 		// Read + detect + convert.
@@ -489,6 +528,14 @@ export async function importTools(options: { dryRun?: boolean } = {}): Promise<I
 		// convertAuthoringToV7 does not set the empty `data` column that
 		// validateRegister requires; the column-keyed dumps already have it.
 		if (record.data === undefined) record.data = {};
+
+		// The admin's per-tool ACTIVE choice wins over the file, before both the
+		// diff and the write so each sees the same value.
+		const override = activeOverrides[name];
+		if (override !== undefined) applyActiveOverride(record, override);
+		item.active = radioYes(record, TIPO.ACTIVE);
+		const declaredVersion = getItems(record, TIPO.VERSION)?.[0]?.value;
+		item.version = typeof declaredVersion === 'string' ? declaredVersion : null;
 
 		item.errors.push(...validateRegister(record, name));
 		item.valid = item.errors.length === 0;

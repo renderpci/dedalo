@@ -117,8 +117,7 @@ describe('no remote code: the client and tools load code only from this install'
 				if (!importsTransformers) continue;
 				if (!/wasmPaths\s*=/.test(source)) {
 					offenders.push(
-						`${relative(REPO_ROOT, file)}: imports transformers.js but never sets ` +
-							'env.backends.onnx.wasm.wasmPaths → onnxruntime WASM falls back to the CDN',
+						`${relative(REPO_ROOT, file)}: imports transformers.js but never sets env.backends.onnx.wasm.wasmPaths → onnxruntime WASM falls back to the CDN`,
 					);
 				}
 			}

@@ -26,8 +26,9 @@ a folder into an additional root (see *Roots*) and register it; core is never
 edited.
 
 `tools/` is **TS-owned**: it was seeded once from the PHP client tool tree and now
-diverges deliberately. `scripts/sync_client.sh` no longer syncs it (only
-`client/dedalo/core` + `lib`).
+diverges deliberately. Since the 2026-07-11 cutover `scripts/sync_client.sh` is
+RETIRED and refuses to run at all — every client tree, `tools/` included, is
+primary TS-owned source and is edited in place.
 
 ## Server module contract (`src/core/tools/module.ts`)
 
@@ -43,7 +44,8 @@ interface ToolServerModule {
   onRemove?: () => Promise<void>;
 }
 interface ToolActionSpec {
-  permission: 'section' | 'section_list' | 'tipo' | 'record' | 'developer' | null;  // declarative gate
+  // declarative gate — see "Choosing a permission kind" below for record/tipo/record_tipo
+  permission: 'section'|'section_list'|'tipo'|'record'|'record_tipo'|'developer'|null;
   minLevel?: number;                            // dd774 level (1 read / 2 write / 3 admin), default 2
   sectionTipos?: (options) => unknown[];        // REQUIRED for 'section_list': the batch's targets
   handler: (context: ToolActionContext) => Promise<ToolResponse>;
@@ -65,8 +67,18 @@ body). There is **no reflection**: a method exists on the API only if it is a
 property of `apiActions`, and the handler is a typed function, so PHP's
 "public + static + `(object $options)`" gates are structural here.
 
-`tools/tool_dev_template/server/index.ts` is the exemplar (all four permission
-kinds + a null-spec action, `backgroundRunnable`, `isAvailable`, lifecycle hooks).
+`tools/tool_dev_template/server/index.ts` is the exemplar: EVERY permission kind
+the contract declares (`section`, `section_list` + its `sectionTipos` extractor,
+`tipo`, `record`, `record_tipo` — as `component_write_demo` — and `developer`)
+plus a null-spec action, `backgroundRunnable`, the background-only
+`publishProgress` / `signal` seams, `isAvailable` and the lifecycle hooks. For
+which kind an action should declare, see *Choosing a permission kind* below —
+that section is the one home of the record/tipo/record_tipo decision.
+`test/unit/tool_dev_template.test.ts` pins the list mechanically against the
+permission union PARSED out of `module.ts`, so an exemplar that drifts from the
+contract fails rather than propagating the drift into every scaffolded tool, and
+`test/unit/tools_spec_sync.test.ts` holds the union quoted above to that same
+source (this paragraph and the code block are checked, not trusted).
 
 ## Dispatch gate chain (`src/core/tools/dispatch.ts`)
 
@@ -81,10 +93,107 @@ kinds + a null-spec action, `backgroundRunnable`, `isAvailable`, lifecycle hooks
 5. the tool must have a **loaded server module** (PHP class-file resolve);
 6. the method must be in `apiActions` (PHP API_ACTIONS allowlist);
 7. the declarative permission gate must pass — **before** any background fork;
-8. execute directly, or (when `options.background_running === true`) via the
-   background executor, which additionally enforces `backgroundRunnable`.
+8. execute directly, or (when `options.background_running === true` — the
+   BOOLEAN, a truthy string does not fork) via the background executor, which
+   additionally enforces `backgroundRunnable`.
+
+**Every gate is tripwired.** `test/unit/tools_dispatch.test.ts` carries one case
+per gate, each written so that DELETING that gate makes it fail — the messages are
+asserted, not just `result:false`, because a later gate would refuse the same
+input for a different reason and a shape-only assertion would stay green. Gate 7
+additionally has an ORDER case: a background request whose permission fails must
+come back as the DENIAL with no job handle, since a denial raised after the fork
+is invisible to the caller.
 
 `dd_tools_api.user_tools` returns the caller's authorized toolbar contexts.
+
+### Where a toolbar is STAMPED onto a context
+
+**The stamp is gated on MODE and on PHP's `$simple`. NEVER on permissions.**
+`common::get_tools()` (`class.common.php:4023`) contains no permission check at
+all — authorization is the per-user `get_user_tools()` list it iterates. The
+caller's condition (`build_structure_context:1865`) is:
+
+```php
+$simple===false && ((($model==='section' || str_starts_with($model,'area')) && $mode==='list') || $mode!=='list')
+```
+
+A `permissions >= 3` gate would mean **superuser-only**: only userId `-1` ever
+reaches 3 (`getPermissions` short-circuits it; the profile matrix tops out at 2,
+global admins included), so every real user would get an empty toolbar
+everywhere. The frozen oracle refutes such a gate — PHP shipped tools at
+permissions **2** (`sqo_differential` dd560 dataframe/edit) and **1**
+(`tm_component_history` dd452/tm). The perm-1 empties in the store are all
+`start` responses, i.e. the SIMPLE build, not a level effect.
+
+`$simple` is `addRequestConfig === false` in this port (the `start` action and
+the search-filter panel). Four stamping sites — miss one and that element
+silently ships `tools: []`:
+
+| Element | Gets a toolbar when | Notes |
+|---|---|---|
+| component (`component_*`) | not simple **and** `mode !== 'list'` | `all_components` catch-all + `requirement_translatable`. The list exclusion STAYS — see "Reaching a component tool from a section LIST" below. |
+| area (`area`/`area_*`) | not simple (any mode) | matches via `affected_models('area')` or an `affected_tipos` entry. |
+| section | not simple (any mode) — `section/context.ts` | via `getSectionTools`; the section clause of the PHP condition covers list too. |
+| **menu** (`dd85`) | **always** | PHP overrides the builder (`menu::get_structure_context`) and `start` calls that override too (`dd_core_api.php:379`), so neither the list-mode nor the simple exclusion reaches it. Its one bound tool is `tool_user_admin` (`affected_tipos:['dd85']`, `always_active`) — the client opens it from `context.tools` when the user clicks their name (`menu.js open_tool_user_admin_handler`), and suppresses the click for `root` client-side. |
+
+Whatever the site, `getElementTools` first drops every tool the ACTOR's
+`user_tools` does not contain — PHP's `get_tools()` iterates
+`get_user_tools($user_id)`, so a tool the profile denies can never reach a
+toolbar. The actor comes from the request scope (`security/request_context.ts`
+= PHP's `logged_user_id()`); no scope (internal resolutions, background warmups,
+harnesses) and global admins mean no filter, the same posture `ddoIsAuthorized`
+takes. Clicking a tool re-authorizes independently (`src/core/tools/dispatch.ts` gate 4,
+`dd_core_api` start), so this filter is a wire-correctness rule, not the access
+control — but omitting it ships buttons that 403.
+
+### Reaching a component tool from a section LIST
+
+The list exclusion above says a component in `mode:'list'` ships `tools: []`. That
+is oracle-pinned and stays. It does NOT mean component tools are unreachable from
+a list — the route is the **per-cell edit modal**, and it needs no server change:
+
+1. the user clicks a list cell → `activate_edit_in_list`
+   (`client/dedalo/core/component_common/js/component_common.js`);
+2. `ui.render_edit_modal` builds a **fresh instance at `mode:'edit'`** and calls
+   `build(true)`, i.e. a real `read`;
+3. that read is an ordinary edit-mode build, so the component gets its **full
+   toolbar** from the table above.
+
+Do not "fix" list mode by stamping tools in list. It is refuted three ways: PHP
+never shipped them for a component in list mode; it would put a toolbar in every
+grid cell; and it would not even work — `tool_common.init` takes
+`main_element.mode` from the CALLER, so a tool like
+`tool_propagate_component_data` would build its editable clone as a **read-only
+list cell** with nothing to type into. Pinned by
+`test/unit/component_tools_stamp.test.ts` ("the list-mode exclusion STAYS").
+
+**What a tool must NOT assume: the caller-chain DEPTH.** A component reaches its
+owning section through a `section_group` in edit mode but through a
+`section_record` from a list cell, and a portal-embedded component reaches an
+OUTER section that owns a different record set. Resolve by MODEL —
+`get_caller_by_model(instance, 'section')`, which is also cycle-safe
+(`tool_common`'s window path sets `caller.caller = self`, so a hand-rolled walk
+hangs the tab). A fixed-depth walk is exactly why
+`tool_propagate_component_data` was unusable from a section list in this engine
+and in the PHP oracle before it. Gated by
+`test/unit/client_caller_chain_tripwire.test.ts`.
+
+The modal instance is made a **sibling** of the cell it edits (its `caller` is the
+cell's own caller), so the distance to the section matches edit mode and tools
+that still walk a fixed depth keep working. `caller` is not part of the instance
+key, and `get_instance`'s cache-hit path skips `init`, so it must be re-asserted
+after every `get_instance` — otherwise a reopened modal points at a caller a
+re-search already destroyed, and the tool works once and then silently stops
+finding its section.
+
+The per-user grant lookup is cached (`profileToolGrantsCache`, a
+`createDataCache` keyed by userId, exactly like `permissions.ts`
+`permissionsTableCache`), because the stamp needs it once per ELEMENT. It is
+dropped on any dd128 (profile assignment) or dd234 (grants) write via the
+save-event channel AND by `invalidateAllToolCaches()`.
+
+Gated by `test/unit/component_tools_stamp.test.ts` + `test/unit/menu_tools.test.ts`.
 
 ## Background execution (`src/core/tools/background.ts`)
 
@@ -157,6 +266,95 @@ about (`get_job_events`) and gets the report on the terminal frame.
 So reload-recovery is: *ask which of my jobs is running → subscribe to it.* Enforced
 by `test/unit/local_db_stores_tripwire.test.ts`.
 
+### Choosing a permission kind: `record` vs `tipo` vs `record_tipo`
+
+PHP composed its asserts freely per method, so a TS kind may stand for a
+COMBINATION. The one that matters:
+
+| the action targets | kind | asserts |
+|---|---|---|
+| a section | `section` | level on `options.section_tipo` |
+| a component (no record) | `tipo` | level on the (section, component) PAIR |
+| a record | `record` | SECTION level + the record's project scope |
+| **a COMPONENT OF A RECORD** | **`record_tipo`** | **the PAIR + the record's project scope** |
+
+`record` resolves `getPermissions(principal, sectionTipo, sectionTipo)` — a
+*section*-level right. It never consults the component tipo. So an action that
+names both a component and a record id and declares `record` silently drops the
+component half, and one declaring `tipo` silently drops the record half. Until
+2026-07-28 the whole media family declared `record`, which meant **a user with
+section write who was explicitly denied level 2 on one media component could
+still delete its files, rotate it, remux it or bulk-rewrite its transcription**
+— **eleven** actions across five tools (`tool_media_versions` ×7, `tool_image_rotation`,
+`tool_tc`, `tool_pdf_extractor`, `tool_posterframe.create_identifying_image`).
+PHP asserted both at every one of those doors
+(`assert_tipo_permission` + `assert_record_in_user_scope`).
+
+**Two actions deliberately stay `record`.** `tool_upload.process_uploaded_file` —
+its PHP twin asserts no tipo. `tool_posterframe.get_ar_identifying_image` — its
+handler and client send only `section_tipo`/`section_id`, and PHP gates it
+`assert_section_permission(1)` + `assert_record_in_user_scope`
+(`class.tool_posterframe.php:382-384`). It was briefly flipped to `record_tipo` on
+2026-07-28 and that made it **unsatisfiable for every caller, global admins
+included** — the gate demanded a component the payload never carries. **A gate the
+real payload cannot satisfy is a broken action, not a strict one**, and asserting
+the permission STRING in a test does not catch it; the reachability test below does.
+
+The component key is `options.tipo`, with `options.component_tipo` accepted as
+its alias — exactly what `resolveMediaToolContext` and the tc/pdf handlers read.
+**Supplying BOTH keys with DIFFERENT values is a denial** (`conflicting component
+target`): handlers did not all read the aliases in the same order, so an ambiguous
+payload could be authorized against one component and acted on in another. Refusing
+it makes the gate order-independent.
+
+Gated by `test/unit/tools_record_tipo_permission.test.ts`, which pins both halves
+independently (section-write-but-component-denied is refused; granted-component-
+on-an-out-of-scope-record is refused), pins the both-keys-conflict denial, asserts
+those eleven actions still declare it, and REACHABILITY-checks that the payload each
+caller actually sends clears its own gate. The exemplar demonstrates it as
+`component_write_demo`.
+
+### THE RULE: a batch action takes its scope from the REQUEST, or refuses
+
+An action that writes over a SET of records must be told which set. An absent scope
+parameter must never widen into "every record of the section" — that default has now
+produced two runaways: `tool_update_cache` swept a 438k-record section that the
+client displayed as "Records: 1" (2026-07-19, WC-043), and
+`tool_ontology::set_records_in_dd_ontology` rewrote whole sections (12,172 records
+across the audited install) where PHP had failed CLOSED (2026-07-28, WC-058).
+
+The pattern both now follow: the client sends a deep clone of the caller list's LIVE
+`sqo`; the handler refuses when it is absent/malformed, sanitizes it
+(`sanitizeClientSqo`), strips pagination so the whole MATCHED set is processed rather
+than the visible page, and resolves it to explicit ids. An unfiltered list still
+matches the whole section — but EXPLICITLY, and the number the user was shown is the
+number the run touches.
+
+Where a genuine full-section rebuild is required by an INTERNAL caller, it declares
+itself (`setRecordsInDdOntology({wholeSection:true})`) — opt-in and greppable, so no
+request that merely omits a parameter can reach it.
+
+### THE COROLLARY: a tool's throwaway clone addresses NO record
+
+The same law one layer lower (2026-07-28, WC-059). A tool that needs an editable
+component the user can type into — the propagate tool's value widget,
+`service_tmp_section`'s staging form, the `component_text_area` pickers — builds a
+CLONE and marks it `is_temporal`. The clone has no record, so the client stamps a
+sentinel `section_id` (1) on it.
+
+**A client-supplied record id on an instance that declares itself record-less is a
+wire field, never an address.** PHP honored the flag with a scratch store; the TS
+port dropped the store but kept accepting the id, so the sentinel resolved to the
+real record 1 of whatever section the tool was opened on — overwritten, Time-Machined
+and activity-logged on every single tool open, for a whole engine generation.
+
+A record-less instance therefore RESOLVES and ECHOES (`resolveTemporalSave`) and the
+record-lifecycle doors refuse it outright. Do not add a second store; do not make a
+write engine polymorphic over "real vs scratch". If a tool needs a value the user can
+edit, the value lives in the client until the tool commits it deliberately — which is
+exactly what `tool_propagate_component_data` already does (it propagates
+`component_to_propagate.data.entries`, straight from client memory).
+
 ## Loading (`src/core/tools/loader.ts`)
 
 At first use, the loader scans the roots in priority order, and for every dir
@@ -165,6 +363,9 @@ validates the exported `tool` against the contract. First root wins name
 collisions (reported). The import specifier is never request-influenced — it is
 built from an allowlisted root path + a name that already matched the pattern,
 and the canonical path is confined under the root before import (TOCTOU-safe).
+Gated by `test/unit/tools_path_confinement.test.ts`: a traversal-shaped name is a
+registry MISS (never a dynamic import), and every loaded tool's `dir` is under a
+declared root.
 
 **Editing `server/` code requires a server restart** (Bun module cache). Running
 the registration widget refreshes the DB registry and rescans for NEW tool dirs,
@@ -188,20 +389,26 @@ handler):
 
 - `/dedalo/core/tools_common/*` → `src/core/tools/client/` (the tool_common client
   base). It lives in CORE, not the tools tree, and is served under a **core URL**;
-  every importer (16 core client files + 39 tool client files) points here
-  directly (`…/core/tools_common/js/tool_common.js`). The 16 core files are
-  PHP-synced, so `sync_client.sh` re-applies the `tools/tool_common/` →
-  `core/tools_common/` rewrite after each sync (idempotent) — hand edits are never
-  lost.
-- `/dedalo/tools/<tool>/*` → the tool's assets over the roots, realpath-confined,
+  every importer (18 core client files + 44 tool client files, and
+  `client/dedalo/core/page/css/main.less`) points here directly
+  (`…/core/tools_common/js/tool_common.js`). Since the cutover those files are
+  TS-owned primary source — there is no sync step to re-apply anything, so the
+  path is simply edited where it is wrong.
+- `/dedalo/tools/<tool>/*` → the tool's assets over the roots, **realpath**-confined,
   **refusing the `server/` subtree and any non-asset extension**. `register.json`
-  IS servable (public registry data). Everything fails closed (404).
+  IS servable (public registry data). Everything fails closed (404) — one identical
+  body for a private path, an absent file and an unknown tool, so the route is
+  never an existence oracle.
 
-> Inert reference (ledgered): `client/dedalo/core/page/css/main.less` still
-> `@import`s the old `tools/tool_common/css/tool_common` path. The TS engine has
-> no LESS build step (CSS is pre-compiled and served), so this compile-time import
-> is never executed; the served `main.css` already contains tool_common's styles.
-> Wire the new path only if a LESS build is added.
+Confinement is TWO checks, and both are load-bearing: `resolve()` normalizes `..`
+lexically, and the result is then realpath'd and re-checked against the realpath'd
+package dir. Only the second catches a SYMLINK inside a package pointing out of it
+(`<tool>/js/x.json -> ../../../package.json` normalizes to a path legitimately
+under the tool dir). That matters because a package in an ADDITIONAL root is
+third-party code, so the difference is an arbitrary-file reader. The base is
+realpath'd too, so a legitimately symlinked tool directory keeps working. Gated by
+`test/unit/tools_path_confinement.test.ts` (found + closed 2026-07-28; the
+"realpath-confined" claim had been true of `loader.ts` and only lexically true here).
 
 The client env exposes `DEDALO_TOOLS_URL` (`/dedalo/tools`) and, for
 additional-root tools only, `DEDALO_TOOLS_URLS` (name → base URL);
@@ -223,21 +430,64 @@ format (`components` key → v6, not supported this wave; `name` key → authori
 converted; column-keyed → pass-through), validates it (zod for authoring +
 `validateRegister` mirroring PHP), and reconciles the dd1324 registry.
 
-**Shared-DB safety.** dd1324 is shared with the live PHP install. `importTools`
-defaults to **dry-run** (`config.tools.enableRegistryImport = false`): it
-validates every tool and reports, per tool, whether the registry already reflects
-its declared identity (empty diff = no-op) — writing nothing. The area_maintenance
-"Register tools" widget runs this dry-run.
+**Two callers, two postures — know which one you are reading.**
 
-**Write-parity gate (before enabling writes).** The parity test
+`importTools({dryRun})` still defaults to **dry-run** whenever the caller passes
+no `dryRun`, because `config.tools.enableRegistryImport` defaults to `false`
+(`TOOLS_ENABLE_REGISTRY_IMPORT` unset). A dry run validates every tool and
+reports, per tool, whether the registry already reflects its declared identity
+(empty diff = no-op) — writing nothing. That is the posture the parity gate and
+every incidental caller get.
+
+The area_maintenance **"Register tools" widget does NOT take that path any more.**
+Its action is `gated()`, and `engineOwnsInstall()` has been unconditionally `true`
+since the 2026-07-11 cutover, so the OPEN branch always runs and it calls
+`importTools({dryRun:false, activeOverrides})` explicitly — a REAL write,
+independent of `enableRegistryImport`. That is deliberate: WC-057's Active column
+is a write control and would be meaningless against a dry run. The frozen
+dry-run/diff branch survives as `whenClosed` and is reachable only by forcing the
+gate shut (`test/unit/register_tools_widget.test.ts` exercises both). The
+`enableRegistryImport` flag now governs only the callers that do NOT pass
+`dryRun` — it is no longer the switch that decides whether the admin's button
+writes.
+
+**Per-tool activation (WC-057).** `importTools({activeOverrides})` takes a
+`name → boolean` map that forces each tool's dd1354 ACTIVE radio
+(`applyActiveOverride`), applied before validation and the diff so it reaches
+both. It is the "Register tools" widget's Active column: the panel seeds its
+checkboxes from the registry and posts them back as `options.tools_active`, so
+**the admin's on-screen state outranks the register.json declaration** for any
+tool the install already registered — without this, the 36 `register.json` files
+declaring `active:1` re-enabled deactivated tools on every import. A tool absent from the
+map keeps its file declaration; that is the path the installer
+(`registerInstallTools`) and every non-widget caller take. Because dd1354 gates
+`getUserTools`, unchecking a tool removes it from every user's menu on the next
+import (caches are invalidated by the same run).
+
+The panel itself (`get_value`) JOINS the registry with the scanned directories,
+so it can never offer a checkbox over a tool the import cannot reach: a row
+whose directory is gone is flagged `on_disk:false` (the client disables its
+checkbox) and a directory with no registry row is flagged
+`'Not registered tool'`. Gated by `test/unit/register_tools_panel.test.ts` — it
+asserts the JOIN itself (every scanned directory is offered a row, rows are unique
+and sorted, both checkbox fields are booleans, `on_disk` agrees with the scanner
+and a `false` one carries the 'Not found on disk' warning) rather than any
+install's particular rows. NOTE the `on_disk:false` branch is DATA-DEPENDENT: it
+asserts nothing unless the DB under test has a registry row with no directory —
+the live install does (an extra row against 36 directories), the suite DB may not.
+
+**Registry-drift gate.** The parity test
 `test/parity/tools_register_differential.test.ts` asserts that a TS dry-run import
-is a **no-op** against the PHP-populated registry (every seeded tool valid, in the
-registry, empty diff). Only after that is green — plus one manual scratch-DB
-write-parity run (snapshot dd1324 after a PHP import, reset, TS import with the
-flag on, diff normalized only for created dates) — may
-`TOOLS_ENABLE_REGISTRY_IMPORT=true` be documented as supported. The write path
-(`writeRegistryRecord`) writes the identity columns; the dd1353 simple-tool-object
-cache blob and ontology tipo renumeration are ledgered for that milestone.
+is a **no-op** against the registry: every seeded tool valid, present (except the
+named `TS_ONLY_TOOLS`), and diff-free. It calls `importTools({dryRun:true})`
+directly — no oracle credentials, no `describe.if`, so it cannot go vacuously
+green — which also means it is only meaningful against a DB whose dd1324 is
+populated. Its `dry-run writes nothing` case asserts the report's `dryRun` FLAG,
+not a before/after snapshot of dd1324; treat it as a labelling check, not proof of
+a no-op. The write path (`writeRegistryRecord`) writes the identity columns; the
+dd1353 simple-tool-object cache blob and ontology tipo renumeration remain
+ledgered. Scratch-DB round-trip parity for that writer lives in
+`test/unit/tools_register_write.test.ts`.
 
 **TS-only tools (`TS_ONLY_TOOLS`).** A tool that exists ONLY in this engine's
 `tools/` tree (no PHP class — e.g. `tool_error_report`, WC-019) can never satisfy
@@ -271,6 +521,40 @@ authorized, then returns `buildToolElementContext(name)` — the full tool conte
 (tipo/lang/labels/description/developer + the client-visible `config`). Byte-parity
 gated (`test/parity/tool_element_context_differential.test.ts`).
 
+## Tool labels (`get_tool_label`)
+
+A tool's OWN UI strings live in its `register.json` — `misc.dd1372` (column-keyed
+dump) or the top-level `labels[]` array (authoring format) — as
+`{lang, name, value}` entries. This is the tool-local counterpart of the global
+`src/core/labels/` catalog (WC-034: a string used by exactly ONE tool and
+tool-specific in meaning belongs here; generic vocabulary stays global).
+
+**`register.json` is a SEED, not the runtime source.** Labels are served from
+`matrix_tools`; editing the file changes nothing until the "Register tools"
+maintenance widget re-imports it.
+
+**SINGLE-LANG SERVING CONTRACT.** `buildToolElementContext`
+(`src/core/tools/registry.ts`) emits ONLY the entries whose `lang` equals the
+request's application lang, and an EMPTY array when the tool has no label in that
+lang. A key missing in the requested lang is omitted, never substituted from
+another lang. PHP behaved identically — frozen in
+`test/parity/fixtures/oracle_harvest/tool_element_context_differential.json`,
+where every emitted label carries the single requested lang.
+
+Consequently the client resolver `get_tool_label`
+(`src/core/tools/client/js/tool_common.js`) is a plain name lookup: a name match
+IS the right language. A miss returns `null`, which every call site handles with
+its own `|| 'literal'` English fallback — so an untranslated lang shows the
+literal rather than another language's string. (This replaced a three-tier
+current-lang / install-default / any-lang priority chain whose second and third
+tiers a single-lang payload made unreachable; it only implied a fallback the wire
+could never deliver.)
+
+Widening the filter to several langs is a WIRE CHANGE: it needs a
+`WIRE_CONTRACT.md` entry, a re-cut of the frozen fixture, and the client resolver
+taught to choose. Gated by `test/unit/tool_context_labels_lang.test.ts` (seeds its
+own scratch tool row, so it does not depend on what the install has registered).
+
 ## Scaffolding
 
 `bun run scripts/create_tool.ts --name=tool_x --label="X" [--models=a,b]` copies
@@ -282,17 +566,76 @@ tools" widget to reconcile it.
 
 `src/core/tools/cache.ts::invalidateAllToolCaches()` is THE single entry point
 (clears the registry reader, config caches, paths memo, and the loaded-tools
-registry). Call it after any dd1324 / dd996 / dd234 write. The registry reader
-also carries a TTL (`config.tools.registryCacheTtlMs`) because the PHP engine
-writes those sections without notifying us.
+registry). Call it after any dd1324 / dd996 / dd234 write.
 
-## Migrated endpoints
+Two routes reach it, and between them they cover every write the engine makes:
 
-`tool_export.get_export_grid` and `tool_time_machine.apply_value` (plus
-`tool_ontology`, `tool_ontology_parser`, `tool_hierarchy`) now live in their
-`tools/<name>/server/` packages. The other ~29 tools have client code present but
-no server module yet (a warning at registration, `unauthorized_method` at
-dispatch) — each is a drop-in `server/index.ts` away.
+- the section write chokepoint — `record_write.ts` and `delete_record.ts` call
+  `fireSaveEvent(sectionTipo)`, whose switch maps those three tipos here;
+- `importTools` invalidates for itself, because `writeRegistryRecord` calls
+  `matrix_write` directly and never passes the chokepoint.
+
+**TRIPWIRED** by `test/unit/tools_cache_invalidation.test.ts` — it is in the
+tripwire index (`engineering/TRIPWIRES.md` = `scripts/verify.ts` TRIPWIRES), so it
+runs on every `bun run scripts/verify.ts`, not only when a tools file changes. The
+routing is asserted behaviourally (the memoized roots array and loaded-module Map
+must be REBUILT after a dd1324/dd996/dd234 save event, and must NOT be after any
+other section), and the entry point's totality at source level (every reset the
+four cache-owning modules export is called from it) — the two caches with no
+externally observable identity would otherwise be gated by nothing. It was
+promoted to a tripwire on 2026-07-28: with the TTL gone (below), a missed hop is
+permanent staleness, which is tripwire-grade.
+
+Since the cutover the engine is the single writer, so this is invalidation-only:
+there is no TTL and no restart-after-external-write rule.
+`TOOLS_REGISTRY_CACHE_TTL_MS` / `config.tools.registryCacheTtlMs` survives in the
+config catalog but is **read by nothing** — the coexistence-era S2-09 TTL it fed
+was deleted with the PHP engine.
+
+## Server-module coverage (2026-07-28)
+
+**25 of the 37 tool packages ship a `server/index.ts`; 12 do not.** The 12 have
+client code only: registration warns (`no server module: tool_request will refuse
+this tool`) and dispatch refuses at gate 5 (`tool has no server module`,
+`unauthorized_method`).
+
+**None of the 12 is a gap, and that registration warning is INFORMATIONAL, not a
+TODO** (2026-07-28 audit — the opposite reading is what produced a whole wrong
+starting premise). A tool needs a server module only if it has a remote surface,
+and these do not: **no client in the 12 posts `tool_request` at all**, while all
+24 server-backed tools do — a clean bimodal split, gated by
+`test/unit/tools_spec_sync.test.ts`. The PHP oracle agrees: all 12 twins declared
+`public const API_ACTIONS = [];` verbatim. They reach the server through the core
+APIs (`dd_core_api`, `dd_ts_api`, `dd_diffusion_api`, `dd_mcp_api`) plus the
+framework action `dd_tools_api::user_tools`; `tool_qr` never leaves the browser.
+So do NOT "finish" one by scaffolding a server module — adding an unreachable
+`apiActions` map is new attack surface, not coverage.
+
+WITH a server module (25): `tool_dev_template`, `tool_error_report`,
+`tool_export`, `tool_hierarchy`, `tool_identify`, `tool_image_rotation`,
+`tool_import_dedalo_csv`, `tool_import_files`, `tool_import_marc21`,
+`tool_import_rdf`, `tool_import_zotero`, `tool_lang`, `tool_lang_multi`,
+`tool_media_versions`, `tool_ontology`, `tool_ontology_parser`,
+`tool_pdf_extractor`, `tool_posterframe`, `tool_propagate_component_data`,
+`tool_sitebuilder`, `tool_tc`, `tool_time_machine`, `tool_transcription`,
+`tool_update_cache`, `tool_upload`.
+
+WITHOUT one (12): `tool_assistant`, `tool_cataloging`, `tool_dd_label`,
+`tool_diffusion`, `tool_indexation`, `tool_numisdata_epigraphy`,
+`tool_numisdata_order_coins`, `tool_print`, `tool_qr`, `tool_subtitles`,
+`tool_tr_print`, `tool_user_admin`.
+
+Two of the 12 additionally carry core wiring a reader would otherwise look for in
+the (absent) module: `tool_diffusion`'s availability has a core fallback in
+`registry.ts` (the diffusion section-map walk), and `tool_user_admin` is the
+install's only `always_active` tool. `tool_user_admin`'s server-side rules are
+not a tool surface either — the dd128 own-record permission table lives in
+`src/core/security/permissions.ts` (`resolveOwnUserRecordPermission`), enforced
+at the read stamp and at the `dd_core_api::save` write gate.
+
+The registry can hold MORE rows than there are directories — a dd1324 row whose
+package is gone is legal and is what the panel's `on_disk:false` flag exists for
+(the live install carries one). It is inert at dispatch: gate 5 refuses it.
 
 ### tool_hierarchy — a tool that OWNS no logic (2026-07-14)
 
@@ -334,8 +677,23 @@ where the hierarchy `ensure` converges a fixed shape.
 
 ## Files
 
-- Machinery: `src/core/tools/{module,types,ontology_map,registry,paths,loader,security,dispatch,config,cache,background,register,register_schema}.ts` + `client/`.
+- Machinery: `src/core/tools/{module,types,ontology_map,registry,paths,loader,security,dispatch,config,cache,background,job_status,register,register_schema,section_tool_context,import_wire}.ts` + `client/`.
 - Serving: `src/core/tools/serving.ts`, wired in `src/server.ts`.
 - Dispatch entry: `src/core/api/dispatch.ts` (`dd_tools_api` + the get_element_context tool branch).
-- Widget: `src/core/resolve/widget_request.ts` (`register_tools`).
-- Tests: `test/unit/tools_{static_serving,loader,security,dispatch,config,background,register_validate}.test.ts`, `test/unit/tool_request.test.ts`, `test/parity/{user_tools,section_tools,component_tools,tool_export,tool_element_context,tools_register}_differential.test.ts`.
+- Widget: `src/core/area_maintenance/widgets/register_tools.ts`, dispatched by
+  `src/core/area_maintenance/widgets/registry.ts` behind
+  `dd_area_maintenance_api::widget_request`
+  (`src/core/api/handlers/dd_area_maintenance_api.ts`). There is no
+  `src/core/resolve/widget_request.ts` — earlier revisions of this doc named one.
+- Scaffolder: `scripts/create_tool.ts`.
+- Machinery tests (`test/unit/`): `tools_dispatch` (the 8 gates), `tools_security`,
+  `tools_record_tipo_permission`, `tools_path_confinement`, `tools_static_serving`,
+  `tools_loader`, `tools_spec_sync` (this document's facts),
+  `tools_cache_invalidation` (a TRIPWIRE), `tools_config`, `tools_background`,
+  `tools_register_validate`, `tools_register_write`, `tool_request`,
+  `tool_job_status`, `tool_dev_template` (the exemplar's contract),
+  `tool_context_labels_lang`, `section_tool_context`, `user_tools_nonadmin`,
+  `register_tools_widget`, `register_tools_panel`, `dd_tools_api_stream_headers`,
+  `local_db_stores_tripwire`.
+- Machinery parity (`test/parity/`): `{user_tools,section_tools,component_tools,tool_element_context,tools_register,section_tool_start,tool_component_read}_differential.test.ts`.
+  Per-tool differentials (e.g. `tool_export_*_differential`) live with their tool, not here.

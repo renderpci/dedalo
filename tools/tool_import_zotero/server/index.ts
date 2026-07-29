@@ -1,14 +1,31 @@
 /**
- * tool_import_zotero server module (PHP tool_import_zotero). import_files reads the
- * staged Zotero RDF/XML export, parses it with the from-scratch RDF/XML parser
- * (rdf_xml.ts, no 3rd-party lib), applies the field-map (tool_config.config.main:
- * RDF predicate → component tipo), and imports the mapped records through the
- * shared executor (the same write path the CSV/MARC21 imports scratch-twin-verify).
+ * tool_import_zotero server module (PHP tool_import_zotero). import_files reads
+ * each staged Zotero export, applies the field-map, and imports the mapped
+ * records through the shared executor (the same write path the CSV/MARC21
+ * imports scratch-twin-verify).
+ *
+ * STAGED-FILE WIRE (PHP :167-193): the client posts `key_dir` ONCE at the TOP
+ * LEVEL of options and each `files_data[]` entry carries only the
+ * service_dropzone descriptor `{name, size, …}`. The staged path is therefore
+ * rebuilt as `<staging root>/<ctx.userId>/<sanitized key_dir>/<staged name>` —
+ * never from a client-supplied directory — and re-confined under the user's
+ * staging dir (PHP sanitize_key_dir + safe_upload_target). PHP filters the
+ * batch to `.json` files; other uploads (PDF attachments) are handled inline.
+ *
+ * (!) NOT FUNCTIONAL — ESCALATED (see the tools audit report). A Zotero export
+ * is CSL-JSON (PHP: `json_decode(file_get_contents(...))`), not RDF/XML, and
+ * the field-map lives in `config.map` as `{name, ddo_map:[{tipo, section_tipo}]}`
+ * entries — NOT as the `{predicate, component_tipo}` pairs read below out of
+ * `config.main`. With any real tool configuration `readFieldMap` returns an
+ * empty map and the action refuses the batch. Re-porting the parser + the map
+ * + PHP's three-priority record resolution is a rewrite, not a patch; only the
+ * path-confinement half is repaired here.
  */
 
 import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
-import { config } from '../../../src/config/config.ts';
+import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
+import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
 import { type MappedRecord, importMappedRecords } from '../../../src/core/tools/import_execute.ts';
 import type {
 	ToolActionContext,
@@ -37,31 +54,32 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
 		const o = ctx.options;
 		const sectionTipo = String(o.section_tipo ?? '');
-		const filesData = (o.files_data ?? []) as {
-			name?: string;
-			tmp_name?: string;
-			key_dir?: string;
-		}[];
+		const filesData = (o.files_data ?? []) as { name?: string }[];
 		if (sectionTipo === '' || filesData.length === 0)
 			return fail('Missing section_tipo or files_data');
 		const map = readFieldMap(o.tool_config);
 		if (map.length === 0) return fail('Missing Zotero field-map (tool_config.config.main)');
 
-		const root = config.media.rootPath;
-		if (root === null) throw new Error('media root is not configured');
-		const stagingBase = resolve(root, config.media.upload.tmpSubdir);
+		// key_dir is TOP-LEVEL and server-sanitized; the dir is rebuilt from the
+		// CURRENT user id, so no payload can reach another user's staged uploads.
+		const dir = stagingDir(ctx.userId, String(o.key_dir ?? ''));
 
 		const errors: string[] = [];
 		const mapped: MappedRecord[] = [];
 		for (const file of filesData) {
-			const staged = resolve(
-				stagingBase,
-				String(ctx.userId),
-				String(file.key_dir ?? ''),
-				String(file.tmp_name ?? ''),
-			);
-			if (!staged.startsWith(stagingBase + sep) || !existsSync(staged)) {
-				errors.push(`${file.name}: staged file not found`);
+			const name = String(file.name ?? '');
+			// PHP: the batch is filtered to .json (the Zotero export) — the other
+			// dropzone entries are attachments, not records.
+			if (!name.toLowerCase().endsWith('.json')) continue;
+			// The name goes through the SAME transform the upload receiver applied,
+			// then the resolved path is re-confined ('..' survives that transform).
+			const staged = resolve(dir, stagedTmpName(name));
+			if (!staged.startsWith(dir + sep)) {
+				errors.push(`${name}: invalid file name`);
+				continue;
+			}
+			if (!existsSync(staged)) {
+				errors.push(`${name}: staged file not found`);
 				continue;
 			}
 			const { subjects } = parseRdfXml(await Bun.file(staged).text());

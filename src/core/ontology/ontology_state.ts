@@ -33,6 +33,22 @@
  * So `stored(tld=es) − parsed − {the es0 main node}` is exactly the orphans, and the
  * grouper is never a false orphan.
  *
+ * MISFILED SOURCE RECORDS (drift kind `foreign`). A node's tipo AND tld come from the RECORD's
+ * own `ontology7` value, not from the section it sits in — so a typo there (live: `actv0/127`
+ * declares `ontology7="act"`) parses a record of section `es0` into a node of ANOTHER tld.
+ * BOTH sides of the diff are therefore scoped to the inspected tld: `parseMatrixNodes` keeps
+ * only `node.tld === tld` exactly as `storedNodes` reads `WHERE tld = $1`. The rejects are NOT
+ * dropped — they surface as drift kind `foreign` naming the SOURCE RECORD (`es0/127 declares
+ * tld 'act'`), which is the only thing an operator can act on. Without that scoping the foreign
+ * node could never appear in `stored`, so it was reported `missing` forever (an unfixable false
+ * failure), re-upserted on every run (breaking idempotency), and WRITTEN into the other tld's
+ * namespace by a per-tld operation — where `deleteTldNodes(tld)` could never take it back.
+ * Neither writer here touches a byte outside the tld it was asked about: cleaning up a node the
+ * old bug leaked into tld X is X's own reconcile (it sees it as an orphan). The comparison is
+ * EXACT, not case- or whitespace-insensitive: `ontology7 = "ES"` is a misfiled record too, and
+ * saying so beats silently minting an `ES7` tipo. Gated by
+ * test/unit/ontology_state_foreign_tld.test.ts.
+ *
  * SINGLE WRITER: nothing outside this module wipe-and-rebuilds a TLD's dd_ontology. The
  * legacy `regenerateRecordsInDdOntology` is retired onto `rebuildOntology`. Guarded by
  * test/unit/ontology_single_writer_tripwire.test.ts.
@@ -57,24 +73,35 @@ import { parseSectionRecordToOntologyNode } from './parser.ts';
 import { getMatrixTableFromTipo } from './resolver.ts';
 import { mapTldToTargetSectionTipo, safeTld } from './tld.ts';
 
-/** One node's place in the diff. */
-export type OntologyDriftKind = 'missing' | 'stale' | 'orphaned';
+/**
+ * One node's place in the diff. `foreign` is not a dd_ontology state at all — it is a SOURCE
+ * record of this tld's section whose `ontology7` declares a different tld, so it can never be
+ * part of this tld's projection. Reconcile refuses it and names it; only a data fix clears it.
+ */
+export type OntologyDriftKind = 'missing' | 'stale' | 'orphaned' | 'foreign';
 
 export interface OntologyDriftItem {
+	/** The node tipo. For `foreign`, the tipo the misfiled record parses INTO (other tld). */
 	tipo: string;
 	kind: OntologyDriftKind;
-	/** For `stale`: which columns differ. Empty for missing/orphaned. */
+	/** For `stale`: which columns differ. `['tld']` for `foreign`. Empty for missing/orphaned. */
 	diffColumns: string[];
+	/** `foreign` only: the offending source record, `<section_tipo>/<section_id>`. */
+	source?: string;
+	/** `foreign` only: the tld its `ontology7` declares (verbatim). */
+	declaredTld?: string;
 }
 
 export interface OntologyState {
 	tld: string | null;
-	/** Count of matrix records that parsed into a node. */
+	/** Count of matrix records that parsed into a node OF THIS TLD (the projection size). */
 	matrixNodes: number;
 	/** Count of dd_ontology rows currently stored for the tld. */
 	storedNodes: number;
 	/** The `<tld>0` main node exists in dd_ontology. */
 	mainNodeOk: boolean;
+	/** Count of source records of this tld's section that declare ANOTHER tld (misfiled). */
+	foreignNodes: number;
 	drift: OntologyDriftItem[];
 	/** No drift and the main node is present → dd_ontology matches its source. */
 	inSync: boolean;
@@ -91,21 +118,58 @@ export interface EnsureOntologyResult {
 
 /* ------------------------------------------------------------------ reads */
 
-/** Parse every matrix record of the TLD into a node map keyed by tipo. */
-async function parseMatrixNodes(tld: string): Promise<Map<string, DdOntologyNode>> {
+/** A source record of this tld's section whose `ontology7` names a DIFFERENT tld. */
+interface ForeignRecord {
+	/** The tipo it parses into — in the other tld's namespace. */
+	tipo: string;
+	/** The tld its `ontology7` declares, verbatim. */
+	declaredTld: string;
+	/** `<section_tipo>/<section_id>` — the record the operator must fix. */
+	source: string;
+}
+
+interface ParsedMatrixNodes {
+	/** Nodes that belong to the inspected tld, keyed by tipo — the projection. */
+	own: Map<string, DdOntologyNode>;
+	/** Records of the same section that parsed into ANOTHER tld (see the module header). */
+	foreign: ForeignRecord[];
+}
+
+/**
+ * Parse every matrix record of the TLD's section, SPLIT by the tld the record declares.
+ * `own` is scoped exactly as `storedNodes` (`tld = $1`) so the two sides of the diff cover the
+ * same namespace; `foreign` carries the misfiled records so they are diagnosed, not chased.
+ */
+async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	const sectionTipo = mapTldToTargetSectionTipo(tld);
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	const map = new Map<string, DdOntologyNode>();
-	if (table === null) return map;
+	const own = new Map<string, DdOntologyNode>();
+	const foreign: ForeignRecord[] = [];
+	if (table === null) return { own, foreign };
 	const rows = (await sql.unsafe(
 		`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id ASC`,
 		[sectionTipo],
 	)) as { section_id: number }[];
 	for (const row of rows) {
-		const node = await parseSectionRecordToOntologyNode(sectionTipo, Number(row.section_id));
-		if (node !== null) map.set(node.tipo, node);
+		const sectionId = Number(row.section_id);
+		const node = await parseSectionRecordToOntologyNode(sectionTipo, sectionId);
+		if (node === null) continue;
+		if (node.tld !== tld) {
+			foreign.push({
+				tipo: node.tipo,
+				declaredTld: node.tld ?? '',
+				source: `${sectionTipo}/${sectionId}`,
+			});
+			continue;
+		}
+		own.set(node.tipo, node);
 	}
-	return map;
+	return { own, foreign };
+}
+
+/** The operator-facing line for one misfiled record: what is wrong, where, and that nothing ran. */
+function foreignError(item: ForeignRecord, tld: string): string {
+	return `${item.source} declares tld '${item.declaredTld}' (parses to node '${item.tipo}'), not '${tld}' — fix the record's ontology7; nothing was written for it`;
 }
 
 /** Read every dd_ontology row for the TLD, keyed by tipo. */
@@ -205,11 +269,12 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 			matrixNodes: 0,
 			storedNodes: 0,
 			mainNodeOk: false,
+			foreignNodes: 0,
 			drift: [],
 			inSync: false,
 		};
 	}
-	const parsed = await parseMatrixNodes(tld);
+	const { own: parsed, foreign } = await parseMatrixNodes(tld);
 	const stored = await storedNodes(tld);
 	const mainTipo = `${tld}0`;
 	const mainNodeOk = (stored.get(mainTipo)?.is_main ?? false) === true;
@@ -229,12 +294,24 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 		if (tipo === mainTipo) continue;
 		if (!parsed.has(tipo)) drift.push({ tipo, kind: 'orphaned', diffColumns: [] });
 	}
+	// Misfiled source records: real drift (the tld cannot be a faithful projection while one
+	// exists) that no writer can clear — only editing the record's ontology7 does.
+	for (const item of foreign) {
+		drift.push({
+			tipo: item.tipo,
+			kind: 'foreign',
+			diffColumns: ['tld'],
+			source: item.source,
+			declaredTld: item.declaredTld,
+		});
+	}
 
 	return {
 		tld,
 		matrixNodes: parsed.size,
 		storedNodes: stored.size,
 		mainNodeOk,
+		foreignNodes: foreign.length,
 		drift,
 		inSync: drift.length === 0 && mainNodeOk,
 	};
@@ -258,8 +335,12 @@ async function ensureMainNode(tld: string, userId: number): Promise<{ error: str
 /**
  * Converge ONE TLD's dd_ontology to its matrix source — INCREMENTALLY. The only
  * non-destructive writer: it upserts what is missing/stale and deletes what is
- * orphaned, so the runtime ontology is never momentarily empty. Idempotent: a TLD
- * already in sync reports `applied: []`.
+ * orphaned, so the runtime ontology is never momentarily empty.
+ *
+ * IDEMPOTENT, UNCONDITIONALLY: a TLD already in sync reports `applied: []`, and so does a
+ * second run over a TLD that CANNOT reach sync (a misfiled source record — see the module
+ * header). Everything this function writes lands inside `tld`'s own namespace, so a re-run
+ * always sees its own effect; a write it could not observe would be re-applied forever.
  */
 export async function ensureOntology(rawTld: string, userId = -1): Promise<EnsureOntologyResult> {
 	const applied: string[] = [];
@@ -276,9 +357,14 @@ export async function ensureOntology(rawTld: string, userId = -1): Promise<Ensur
 		};
 	}
 
-	const parsed = await parseMatrixNodes(tld);
+	const { own: parsed, foreign } = await parseMatrixNodes(tld);
 	const stored = await storedNodes(tld);
 	const mainTipo = `${tld}0`;
+
+	// 0. misfiled source records — REFUSED, never chased. Writing them would put a node in
+	// another tld's namespace (and this tld could never see it again, so every run would
+	// re-upsert it). They are reported as an error naming the record an operator can fix.
+	for (const item of foreign) errors.push(foreignError(item, tld));
 
 	// 1. upsert missing + stale (parse is authoritative — dd_ontology is its projection).
 	for (const [tipo, node] of parsed) {
@@ -322,7 +408,13 @@ export async function ensureOntology(rawTld: string, userId = -1): Promise<Ensur
 			? applied.length === 0
 				? `Ontology '${tld}' is already in sync`
 				: `Ontology '${tld}' reconciled`
-			: `Ontology '${tld}' is still out of sync`,
+			: // Name the cause the operator can act on: a misfiled record is a DATA fix, not
+				// something a re-run will ever converge.
+				state.foreignNodes > 0
+				? `Ontology '${tld}': ${state.foreignNodes} source record(s) declare another tld — ${foreign
+						.map((item) => `${item.source} → '${item.declaredTld}'`)
+						.join(', ')}`
+				: `Ontology '${tld}' is still out of sync`,
 		errors,
 		state,
 		applied,
@@ -354,7 +446,12 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Ensu
 	try {
 		await withTransaction(async () => {
 			// Parse BEFORE the wipe: a bad record aborts the tx with the live data intact.
-			const parsed = await parseMatrixNodes(tld);
+			const { own: parsed, foreign } = await parseMatrixNodes(tld);
+			// Misfiled records are reported, never rebuilt: `deleteTldNodes(tld)` below scopes
+			// the wipe to THIS tld, so writing a foreign node would plant a row this rebuild
+			// could never take back. A misfiled record does not block the tld's own rebuild —
+			// it only keeps the result honest (result=false while the source stays wrong).
+			for (const item of foreign) errors.push(foreignError(item, tld));
 			await deleteTldNodes(tld);
 			for (const node of parsed.values()) {
 				await upsertDdOntologyNode(node);
@@ -378,7 +475,11 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Ensu
 	const state = await inspectOntology(tld);
 	return {
 		result: state.inSync,
-		msg: state.inSync ? `Ontology '${tld}' rebuilt` : `Ontology '${tld}' rebuilt with drift`,
+		msg: state.inSync
+			? `Ontology '${tld}' rebuilt`
+			: state.foreignNodes > 0
+				? `Ontology '${tld}' rebuilt; ${state.foreignNodes} source record(s) declare another tld and were skipped`
+				: `Ontology '${tld}' rebuilt with drift`,
 		errors,
 		state,
 		applied,

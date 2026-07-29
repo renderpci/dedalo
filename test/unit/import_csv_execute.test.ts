@@ -23,6 +23,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { ddDateToSeconds } from '../../src/core/media/file_date.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import type { ImportFileReport } from '../../src/core/tools/import_wire.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
@@ -57,7 +58,7 @@ afterAll(async () => {
 		ID,
 	]);
 	for (const id of bulkProcessIds) {
-		await sql.unsafe(`DELETE FROM matrix_dd WHERE section_tipo = 'dd800' AND section_id = $1`, [
+		await sql.unsafe(`DELETE FROM matrix_notes WHERE section_tipo = 'dd800' AND section_id = $1`, [
 			id,
 		]);
 		await sql.unsafe(
@@ -135,8 +136,17 @@ describe('metadata columns get the dual write, with the modified stamp suppresse
 		}[];
 		const row = rows[0];
 
-		// 1. the audit COMPONENT carries the imported date (the edit view reads this)
-		expect(row?.created_component?.[0]?.start).toEqual({ day: 21, month: 5, year: 1998 });
+		// 1. the audit COMPONENT carries the imported date (the edit view reads this).
+		// The PERSISTED shape also carries the virtual-calendar sort key: PHP
+		// component_date::save() runs add_time() on every non-empty item and the TS
+		// twin does the same (save_component.ts → addTimeToDateItem), so a stored
+		// date WITHOUT `time` is the bug — it cannot be ordered or range-searched.
+		expect(row?.created_component?.[0]?.start).toEqual({
+			day: 21,
+			month: 5,
+			year: 1998,
+			time: ddDateToSeconds({ day: 21, month: 5, year: 1998 }),
+		});
 
 		// 2. the record's own `data` METADATA carries it too (list views read THIS).
 		// Writing only the component leaves a record whose edit view says 1998 while
@@ -146,7 +156,12 @@ describe('metadata columns get the dual write, with the modified stamp suppresse
 		// 3. THE SUPPRESSION: the imported modified_date survived. Every other column
 		// of this row was saved AFTER it; without skipModifiedStamp each of those
 		// saves re-stamps dd201 with "now", silently destroying the value we imported.
-		expect(row?.modified_component?.[0]?.start).toEqual({ day: 3, month: 4, year: 2001 });
+		expect(row?.modified_component?.[0]?.start).toEqual({
+			day: 3,
+			month: 4,
+			year: 2001,
+			time: ddDateToSeconds({ day: 3, month: 4, year: 2001 }),
+		});
 	});
 });
 

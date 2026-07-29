@@ -638,8 +638,8 @@ sitebuilder_controller.prototype.toast = function(text) {
 sitebuilder_controller.prototype.label = function(name, fallback) {
 
 	const self = this
-	if (self.tool && typeof self.tool.get_label === 'function') {
-		const value = self.tool.get_label(name)
+	if (self.tool && typeof self.tool.get_tool_label === 'function') {
+		const value = self.tool.get_tool_label(name)
 		if (value) return value
 	}
 	return fallback

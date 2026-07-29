@@ -1,0 +1,251 @@
+/**
+ * tool_propagate_component_data — HANDLER drive (the pure replace/delete/add
+ * core is gated separately in propagate_component_data.test.ts).
+ *
+ * What this pins, on real scratch records (test2, matrix_test, high ids):
+ *  - the imperative tipo-pair WRITE gate (permission: null on the spec, so the
+ *    handler is the ONLY gate — a non-admin must be refused before any write);
+ *  - the count-drift ceiling (live result wider than the client total aborts
+ *    and touches nothing);
+ *  - a real replace across several records: value written, TM row appended,
+ *    every TM row carrying the run's bulk_process_id (that id is what makes the
+ *    batch revertible through tool_time_machine.bulk_revert_process);
+ *  - live PROGRESS frames and cooperative ABORT — a backgroundRunnable action
+ *    whose client shows a progress line and offers a Stop button must publish
+ *    and must stop. Neither was wired before 2026-07-28.
+ *
+ * The dd800 bulk-process record the run mints is deleted in afterAll.
+ */
+
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
+import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
+import { mustGet } from '../helpers/assert.ts';
+import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
+
+const SECTION_TIPO = 'test2';
+const COMPONENT_TIPO = 'numisdata16'; // component_input_text (string column)
+const LANG = 'lg-spa';
+const IDS = [905101, 905102, 905103];
+const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
+
+const mintedBulkIds: number[] = [];
+
+async function handler(): Promise<(ctx: ToolActionContext) => Promise<ToolResponse>> {
+	const loaded = await getLoadedTool('tool_propagate_component_data');
+	expect(loaded).not.toBeNull();
+	return mustGet(loaded?.module.apiActions.propagate_component_data, 'propagate_component_data')
+		.handler;
+}
+
+function contextOf(
+	options: Record<string, unknown>,
+	extra: Partial<ToolActionContext> = {},
+): ToolActionContext {
+	return {
+		principal: SUPERUSER,
+		userId: -1,
+		options,
+		background: false,
+		...extra,
+	} as ToolActionContext;
+}
+
+function optionsFor(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+	return {
+		section_tipo: SECTION_TIPO,
+		component_tipo: COMPONENT_TIPO,
+		action: 'replace',
+		lang: LANG,
+		total: IDS.length,
+		propagate_data_value: [{ lang: LANG, value: 'PROPAGATED' }],
+		sqo: {
+			section_tipo: [SECTION_TIPO],
+			filter_by_locators: IDS.map((id) => ({
+				section_tipo: SECTION_TIPO,
+				section_id: String(id),
+			})),
+		},
+		...overrides,
+	};
+}
+
+async function liveValues(): Promise<Record<number, unknown>> {
+	const rows = (await sql.unsafe(
+		`SELECT section_id, string->'${COMPONENT_TIPO}' AS items FROM matrix_test
+		 WHERE section_tipo = $1 AND section_id IN (${IDS.join(',')})`,
+		[SECTION_TIPO],
+	)) as { section_id: number; items: unknown }[];
+	const out: Record<number, unknown> = {};
+	for (const row of rows) out[Number(row.section_id)] = row.items;
+	return out;
+}
+
+async function seed(): Promise<void> {
+	for (const id of IDS) {
+		await createScratchRecord(SECTION_TIPO, id, {
+			string: { [COMPONENT_TIPO]: [{ id: 1, lang: LANG, value: `ORIGINAL-${id}` }] },
+		});
+	}
+}
+
+beforeAll(seed);
+
+afterAll(async () => {
+	for (const id of IDS) await cleanScratchRecord(SECTION_TIPO, id);
+	for (const bulkId of mintedBulkIds) {
+		await sql`DELETE FROM matrix_notes WHERE section_tipo = 'dd800' AND section_id = ${bulkId}`;
+	}
+});
+
+describe('propagate_component_data — gates', () => {
+	test('the imperative tipo-pair gate refuses a non-admin and writes NOTHING', async () => {
+		const before = await liveValues();
+		const run = await handler();
+		const response = await run(contextOf(optionsFor(), { principal: NO_ACCESS, userId: 999999 }));
+		expect(response.result).toBe(false);
+		expect(response.errors).toContain('unauthorized');
+		expect(await liveValues()).toEqual(before);
+	});
+
+	test('missing/invalid parameters are refused before any search', async () => {
+		const run = await handler();
+		for (const bad of [
+			optionsFor({ action: 'obliterate' }),
+			optionsFor({ component_tipo: '' }),
+			{ ...optionsFor(), sqo: undefined },
+		]) {
+			const response = await run(contextOf(bad));
+			expect(response.result).toBe(false);
+			expect(response.errors).toContain('invalid_request');
+		}
+	});
+
+	test("'add' is refused on a mono-value model", async () => {
+		const run = await handler();
+		// component_select is in COMPONENTS_MONOVALUE; test2 has no select child,
+		// so use the section's own dd-level select if present — otherwise assert
+		// the guard through a model that IS mono-value on this install.
+		const monoTipo = (await sql`
+			SELECT tipo FROM dd_ontology WHERE model = 'component_text_area' LIMIT 1
+		`) as { tipo: string }[];
+		const tipo = monoTipo[0]?.tipo;
+		expect(typeof tipo).toBe('string');
+		const response = await run(contextOf(optionsFor({ component_tipo: tipo, action: 'add' })));
+		expect(response.result).toBe(false);
+		expect(response.errors).toContain('invalid_request');
+	});
+
+	test('count drift (live wider than the client total) aborts and writes NOTHING', async () => {
+		const before = await liveValues();
+		const run = await handler();
+		const response = await run(contextOf(optionsFor({ total: 1 })));
+		expect(response.result).toBe(false);
+		expect(response.errors).toContain('count_drift');
+		expect(await liveValues()).toEqual(before);
+	});
+});
+
+describe('propagate_component_data — the write', () => {
+	test('replace writes every matched record + a bulk-tagged TM row each', async () => {
+		const run = await handler();
+		const response = await run(contextOf(optionsFor()));
+		expect(response.result).toBe(true);
+		expect(response.counter).toBe(IDS.length);
+		const bulkId = response.bulk_process_id as number | null;
+		if (typeof bulkId === 'number') mintedBulkIds.push(bulkId);
+
+		const values = await liveValues();
+		for (const id of IDS) {
+			expect(values[id]).toEqual([{ lang: LANG, value: 'PROPAGATED' }]);
+		}
+
+		// One TM row per record, all carrying the run's bulk_process_id — the
+		// handle bulk_revert_process needs.
+		const tm = (await sql.unsafe(
+			`SELECT section_id, bulk_process_id FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})`,
+			[SECTION_TIPO, COMPONENT_TIPO],
+		)) as { section_id: number; bulk_process_id: number | null }[];
+		expect(tm.length).toBe(IDS.length);
+		for (const row of tm) expect(row.bulk_process_id).toBe(bulkId);
+	});
+
+	test('a second identical run is a NO-OP (changed:false skips the save)', async () => {
+		const run = await handler();
+		const tmBefore = (await sql.unsafe(
+			`SELECT count(*)::int AS c FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})`,
+			[SECTION_TIPO, COMPONENT_TIPO],
+		)) as { c: number }[];
+		const response = await run(contextOf(optionsFor()));
+		expect(response.result).toBe(true);
+		if (typeof response.bulk_process_id === 'number') {
+			mintedBulkIds.push(response.bulk_process_id);
+		}
+		const tmAfter = (await sql.unsafe(
+			`SELECT count(*)::int AS c FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND tipo = $2 AND section_id IN (${IDS.join(',')})`,
+			[SECTION_TIPO, COMPONENT_TIPO],
+		)) as { c: number }[];
+		expect(tmAfter[0]?.c).toBe(tmBefore[0]?.c as number);
+	});
+});
+
+describe('propagate_component_data — background wire', () => {
+	test('publishes progress frames the client panel can render', async () => {
+		await seed(); // undo the replace above so this run changes something
+		const frames: Record<string, unknown>[] = [];
+		const run = await handler();
+		const response = await run(
+			contextOf(optionsFor({ propagate_data_value: [{ lang: LANG, value: 'PROGRESS-RUN' }] }), {
+				background: true,
+				publishProgress: (data) => {
+					frames.push(data as Record<string, unknown>);
+				},
+			}),
+		);
+		expect(response.result).toBe(true);
+		if (typeof response.bulk_process_id === 'number') {
+			mintedBulkIds.push(response.bulk_process_id);
+		}
+		// The fields render_tool_propagate_component_data.js compound_msg reads.
+		expect(frames.length).toBeGreaterThan(1);
+		const last = frames[frames.length - 1] as Record<string, unknown>;
+		expect(typeof last.msg).toBe('string');
+		expect(last.total).toBe(IDS.length);
+		expect(last.counter).toBe(IDS.length);
+		expect((last.current as { section_id?: number } | undefined)?.section_id).toBe(
+			IDS[IDS.length - 1] as number,
+		);
+	});
+
+	test('an aborted signal stops the batch mid-run and leaves the rest untouched', async () => {
+		await seed();
+		const controller = new AbortController();
+		const run = await handler();
+		const response = await run(
+			contextOf(optionsFor({ propagate_data_value: [{ lang: LANG, value: 'ABORTED-RUN' }] }), {
+				background: true,
+				signal: controller.signal,
+				// Abort as soon as the FIRST record has been processed.
+				publishProgress: (data) => {
+					if ((data as { counter?: number }).counter === 1) controller.abort();
+				},
+			}),
+		);
+		expect(response.result).toBe(true);
+		expect(response.stopped).toBe(true);
+		expect(response.counter).toBe(1);
+		if (typeof response.bulk_process_id === 'number') {
+			mintedBulkIds.push(response.bulk_process_id);
+		}
+		const values = await liveValues();
+		expect(values[IDS[0] as number]).toEqual([{ lang: LANG, value: 'ABORTED-RUN' }]);
+		// The records the abort skipped keep their seeded value.
+		expect(values[IDS[2] as number]).toEqual([{ id: 1, lang: LANG, value: `ORIGINAL-${IDS[2]}` }]);
+	});
+});

@@ -471,6 +471,63 @@ export function inheritSubdatumPermission(childLevel: number, callerLevel: numbe
 const METADATA_TIPOS: ReadonlySet<string> = new Set(Object.values(AUDIT_TIPOS));
 
 /**
+ * dd128 own-record components PHP forces to READ for a non-global-admin, so a
+ * user cannot hand themselves a profile, the developer flag, a new username or
+ * a different section_id through the ordinary save API (DEDALO_USER_PROFILE_TIPO,
+ * DEDALO_USER_DEVELOPER_TIPO, DEDALO_USER_NAME_TIPO, 'dd330').
+ */
+const SELF_ELEVATION_GUARDED: ReadonlySet<string> = new Set([
+	PROFILE_SELECT_COMPONENT,
+	DEVELOPER_COMPONENT,
+	'dd132',
+	'dd330',
+]);
+/**
+ * dd128 own-record components PHP forces to WRITE regardless of the matrix —
+ * the self-service profile editor (tool_user_admin) exists to change exactly
+ * these (DEDALO_FULL_USER_NAME/USER_EMAIL/USER_PASSWORD/USER_IMAGE_TIPO).
+ */
+const SELF_EDITABLE_COMPONENTS: ReadonlySet<string> = new Set(['dd452', 'dd134', 'dd133', 'dd522']);
+
+/**
+ * The dd128 OWN-USER-RECORD rules (PHP component_common::
+ * resolve_component_read_permission, class.component_common.php:3547-3577).
+ * Returns the FORCED level, or null when the branch does not apply and the
+ * caller must fall through to the matrix.
+ *
+ * This is a WRITE gate as much as a display stamp: PHP reaches it from both the
+ * read stamp and `component_common::save`'s `get_component_permissions() < 2`
+ * check, so every door onto a dd128 component must consult it. Missing the
+ * DOWNGRADE half is a privilege-escalation hole (self-assign a profile or the
+ * developer flag); missing the UPGRADE half breaks the profile editor for every
+ * ordinary user, because dd128 is not a project-assigned section and most
+ * profiles therefore grant 0 on it.
+ *
+ * PHP guards the whole branch with `!empty($user_id)`, so user id 0 — the
+ * "no logged user" sentinel — is deliberately skipped here too.
+ */
+export function resolveOwnUserRecordPermission(
+	principal: Principal,
+	sectionTipo: string,
+	tipo: string,
+	sectionId: number | string | null | undefined,
+): number | null {
+	if (sectionTipo !== USERS_SECTION) return null;
+	if (sectionId === null || sectionId === undefined) return null;
+	// PHP: !empty($user_id) — 0 is "not logged in", never an own-record match.
+	if (principal.userId === 0) return null;
+	const recordId = Number(sectionId);
+	if (!Number.isInteger(recordId) || recordId !== principal.userId) return null;
+
+	// Order matters: the security-administrator downgrade is UNCONDITIONAL in
+	// PHP — a global admin may not raise their own global-admin flag either.
+	if (tipo === GLOBAL_ADMIN_COMPONENT) return 1;
+	if (SELF_ELEVATION_GUARDED.has(tipo) && principal.isGlobalAdmin === false) return 1;
+	if (SELF_EDITABLE_COMPONENTS.has(tipo)) return 2;
+	return null;
+}
+
+/**
  * Context-stamp permission for ONE component element (PHP component_common::
  * resolve_component_read_permission, class.component_common.php:3512-3540).
  * SEARCH mode grants every logged user level 2 on: the thesaurus template
@@ -479,9 +536,11 @@ const METADATA_TIPOS: ReadonlySet<string> = new Set(Object.values(AUDIT_TIPOS));
  * 'search_<n>' ids — PHP (int)-casts them to 0). Everything else — and every
  * non-search mode — resolves through the matrix.
  *
- * NOT PORTED (ledgered gap): PHP's non-search DOWNGRADES on the actor's own
- * dd128 user record (security-administrator forced read, self-elevation guards
- * on profile/developer/username) — TS stamps the plain matrix level there.
+ * NON-SEARCH resolves the actor's own dd128 user record through
+ * `resolveOwnUserRecordPermission` first (PHP's forced read on the
+ * security-administrator flag, the self-elevation guards on
+ * profile/developer/username/section_id, and the forced write on the
+ * self-editable name/email/password/image) before falling through to the matrix.
  */
 export async function resolveComponentContextPermission(
 	principal: Principal,
@@ -499,6 +558,12 @@ export async function resolveComponentContextPermission(
 			const numericId = Number(sectionId);
 			if (Number.isNaN(numericId) || numericId === 0) return 2;
 		}
+	} else {
+		// PHP evaluates the own-record cases only after the search branch has
+		// returned, and they DOWNGRADE as well as upgrade — so they run even when
+		// the matrix already grants a level.
+		const ownRecordLevel = resolveOwnUserRecordPermission(principal, sectionTipo, tipo, sectionId);
+		if (ownRecordLevel !== null) return ownRecordLevel;
 	}
 	return getPermissions(principal, sectionTipo, tipo);
 }

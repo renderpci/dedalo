@@ -14,6 +14,11 @@
  *
  * created_date / the dd199 date are wall-clock values — the only non-reproducible
  * fields; a differential must normalize them.
+ *
+ * This writer inserts through db/matrix_write.ts DIRECTLY — it does NOT pass the
+ * record_write.ts chokepoint — so it fires the save event itself (PHP
+ * section_record::create() does the same). Gated by
+ * test/unit/tools_cache_invalidation.test.ts.
  */
 
 import { config } from '../../../config/config.ts';
@@ -25,6 +30,7 @@ import {
 } from '../../db/matrix_write.ts';
 import { sql } from '../../db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
+import { fireSaveEvent } from '../../section_record/save_event.ts';
 
 /** Audit component tipos (PHP section::get_metadata_definition + relation types). */
 export const CREATED_BY_USER = 'dd200';
@@ -166,9 +172,29 @@ export async function createSectionRecord(
 		relation: { [CREATED_BY_USER]: [auditUserLocator(userId, CREATED_BY_USER)] },
 		date: { [CREATED_DATE]: [auditDateItem(now)] },
 	};
-	return sectionId === undefined
-		? insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)
-		: insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns, {
-				onConflict: options.conflictTolerant === true ? 'ignore' : 'throw',
-			});
+	const newSectionId =
+		sectionId === undefined
+			? await insertMatrixRecordWithCounter(table, sectionTipo, jsonbColumns)
+			: await insertMatrixRecordWithExplicitId(table, sectionTipo, sectionId, jsonbColumns, {
+					onConflict: options.conflictTolerant === true ? 'ignore' : 'throw',
+				});
+
+	// Cache invalidation: like duplicate_record.ts this writer inserts through
+	// matrix_write DIRECTLY, so it never passes the record_write.ts chokepoint
+	// that fires for every other write. PHP fires here too (section_record::
+	// create() :2074 → save_event()), and a create is a real cache input: the
+	// record now EXISTS, which is what the data-derived caches (datalist option
+	// lists, authorized projects, hierarchy targets …) enumerate.
+	// For the three tool sections a bare create is inert TODAY — every tools
+	// reader skips a nameless row and fetchActiveToolRows filters on the dd1354
+	// active relation, neither of which a fresh record carries — but "inert
+	// because of what the readers happen to select" is not an invariant anyone
+	// maintains; "every dd1324/dd996/dd234 write reaches invalidateAllToolCaches"
+	// is. Over-invalidation is cheap and harmless; a missed hop is permanent
+	// staleness. Fired unconditionally, including the conflictTolerant no-op
+	// (the S1-02 materialize-on-save race loser) — that path is inside a
+	// transaction and fireSaveEvent self-defers its listener fan-out there.
+	await fireSaveEvent(sectionTipo);
+
+	return newSectionId;
 }

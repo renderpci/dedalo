@@ -587,7 +587,7 @@ template {
   --shadow-2: 0 2px 6px var(--shadow_default);
   --shadow-3: 0 4px 12px var(--shadow_default);
   --shadow-4: 0 4px 8px var(--shadow_default), 0 6px 20px var(--shadow_default);
-  --shadow-focus: 0 0 0 3px var(--focus_ring_weak);
+  --shadow-focus: 0 0 0 2px var(--focus_ring_weak);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --transition-fast: 120ms var(--ease-standard);
@@ -1828,7 +1828,7 @@ button[type='submit']:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 .contenteditable:focus-visible {
-  outline: 2px solid var(--focus_ring);
+  outline: 1.5px solid var(--focus_ring);
   outline-offset: 1px;
 }
 /* selection + scrollbar polish (theme-token driven, both themes)
@@ -1842,7 +1842,7 @@ html {
 /* keyboard focus: global fallback
    ------------------------------------------------------- */
 :where(a, button, [role="button"], summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--focus_ring);
+  outline: 1.5px solid var(--focus_ring);
   outline-offset: 1px;
 }
 /* reduced motion
@@ -8561,7 +8561,7 @@ body.is_ontology_server .menu > .content_data {
   flex-wrap: wrap;
 }
 .search_component:hover {
-  z-index: 2;
+  z-index: 4;
 }
 .search_component > .wrapper_component {
   flex-grow: 1;
@@ -9821,7 +9821,7 @@ body.is_ontology_server .menu > .content_data {
   position: relative;
 }
 .wrapper_dd_grid.view_indexation .top_container {
-  background-color: var(--color_white);
+  background-color: var(--color_grey_14);
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -9830,7 +9830,6 @@ body.is_ontology_server .menu > .content_data {
   z-index: 2;
 }
 .wrapper_dd_grid.view_indexation .top_container .filter_section_container {
-  background-color: var(--color_white);
   margin-left: 4rem;
   padding-top: 1.02rem;
   padding-bottom: 1rem;
@@ -10195,7 +10194,7 @@ body.is_ontology_server .menu > .content_data {
   min-width: 25rem;
   opacity: 0;
   transition: opacity 0.08s ease-in-out;
-  z-index: 1;
+  z-index: 6;
 }
 .wrapper_service_autocomplete.search {
   background-color: transparent;
@@ -12509,7 +12508,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * area_development
 *
-* Only use to set general thesaurus styles, not dynamic rows
+* Only use to set general development styles, not dynamic rows
 * Specific CSS for ts_object must be written in ts_object.less
 *
 * Included from main.less file
@@ -13714,7 +13713,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_maintenance > .content_data.maintenance_v2 .maintenance_map .map_stage {
   position: relative;
   height: 100%;
-  min-width: 940px;
+  min-width: 1010px;
   border: 1px solid var(--border_default);
   border-radius: 14px;
   box-shadow: 0 1px 3px var(--shadow_default);
@@ -15241,7 +15240,41 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * banner and the response block are widget-specific.
 */
 .wrapper_widget.register_tools .dd_table {
-  grid-template-columns: minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+  grid-template-columns: 5.5rem minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+}
+.wrapper_widget.register_tools .active_th {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.wrapper_widget.register_tools .active_td {
+  display: flex;
+  align-items: center;
+}
+.wrapper_widget.register_tools .checkbox_selector {
+  margin: 0;
+  cursor: pointer;
+}
+.wrapper_widget.register_tools .checkbox_selector:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.wrapper_widget.register_tools .dd_tr.inactive .dd_td {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--fg_default) 45%, transparent);
+}
+.wrapper_widget.register_tools .dd_tr.inactive .active_td {
+  opacity: 1;
+  text-decoration: none;
+}
+.wrapper_widget.register_tools .active_summary {
+  margin-left: 0.6rem;
+  color: var(--fg_muted);
+  font-size: 0.85em;
+}
+.wrapper_widget.register_tools .active_summary:empty {
+  display: none;
 }
 .wrapper_widget.register_tools .info_text.error {
   margin-top: 0.75rem;
@@ -15267,6 +15300,100 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.register_tools .body_response:empty {
   display: none;
+}
+.wrapper_widget.register_tools .register_report {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  white-space: normal;
+}
+.wrapper_widget.register_tools .register_report .report_headline {
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.wrapper_widget.register_tools .register_report .report_headline.state_ok .report_icon {
+  color: var(--color_success);
+}
+.wrapper_widget.register_tools .register_report .report_headline.state_failed .report_icon {
+  color: var(--color_danger);
+}
+.wrapper_widget.register_tools .register_report .report_counters {
+  margin-top: 0.15rem;
+  color: var(--fg_muted);
+  font-size: 0.85rem;
+}
+.wrapper_widget.register_tools .register_report .report_block {
+  margin-top: 0.85rem;
+}
+.wrapper_widget.register_tools .register_report .report_block .report_block_title {
+  margin-bottom: 0.3rem;
+  color: var(--fg_muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.wrapper_widget.register_tools .register_report .report_block.errors .report_block_title {
+  color: var(--color_danger);
+}
+.wrapper_widget.register_tools .register_report .report_row {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.register_tools .register_report .report_row:first-child {
+  border-top: 0;
+}
+.wrapper_widget.register_tools .register_report .report_tool {
+  flex: 0 0 12rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+.wrapper_widget.register_tools .register_report .report_row.note_row .report_tool {
+  flex: 0 0 3rem;
+  color: var(--fg_muted);
+  text-align: right;
+}
+.wrapper_widget.register_tools .register_report .report_detail {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+}
+.wrapper_widget.register_tools .register_report .report_names {
+  margin-top: 0.15rem;
+  color: var(--fg_muted);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.75rem;
+  word-break: break-word;
+}
+.wrapper_widget.register_tools .register_report .report_chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.wrapper_widget.register_tools .register_report .report_chips .dd_badge {
+  padding: 0.1rem 0.5rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  background-color: color-mix(in srgb, var(--fg_default) 8%, transparent);
+  border: 1px solid var(--border_default);
+  border-radius: 999px;
+}
+.wrapper_widget.register_tools .register_report .report_raw {
+  margin-top: 0.9rem;
+}
+.wrapper_widget.register_tools .register_report .report_raw summary {
+  color: var(--fg_muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.wrapper_widget.register_tools .register_report .report_raw .pre {
+  margin-top: 0.4rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
 }
 /**
 * sqo_test_environment
@@ -16112,7 +16239,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * area_publication
 *
-* Only use to set general thesaurus styles, not dynamic rows
+* Only use to set general publication styles, not dynamic rows
 * Specific CSS for ts_object must be written in ts_object.less
 *
 * Included from main.less file
@@ -16120,7 +16247,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 /**
 * area_resource
 *
-* Only use to set general thesaurus styles, not dynamic rows
+* Only use to set general resource styles, not dynamic rows
 * Specific CSS for ts_object must be written in ts_object.less
 *
 * Included from main.less file
@@ -16242,13 +16369,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   cursor: pointer;
   opacity: 0.5;
 }
-.area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::active,
-.area_ontology > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::active {
+.area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name:active,
+.area_ontology > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name:active {
   background-color: var(--color_grey_9);
   color: var(--color_white);
 }
 .area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::after,
 .area_ontology > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name::after {
+  content: "";
   right: 0.33rem;
 }
 .area_thesaurus > .content_data > .thesaurus_list_wrapper > .thesaurus_type_block > .typology_name.up,

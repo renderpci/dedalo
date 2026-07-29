@@ -27,6 +27,7 @@
  * on any axis returns the same 'job_not_found' — no existence oracle.
  */
 
+import { mayStreamJob } from '../api/job_stream.ts';
 import { mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getBackgroundJob, listBackgroundJobs } from './background.ts';
@@ -67,12 +68,17 @@ async function mediaJobStatus(ctx: ToolActionContext): Promise<ToolResponse> {
 			errors: ['invalid_request'],
 		};
 	}
-	// TOOLS-09 (2026-07-28 audit): the job id is PREDICTABLE (kind_pid_counter),
-	// not an unguessable capability — so scope the status to the job's OWNER. A
-	// non-owner (non-admin) gets the same not-found as an unknown id, so the
-	// response is not an existence oracle either.
-	const owner = mediaJobs.ownerOf(jobId);
-	if (!ctx.principal.isGlobalAdmin && owner != null && owner !== ctx.userId) {
+	// OWNERSHIP (fail-closed, the same rule get_process_status and get_job_events
+	// apply): ids are DERIVED (kind_pid_counter), so they are guessable. The
+	// registry this reads is SHARED with the background tool executor, whose job
+	// frames carry the handler's full report as `data` — a CSV import's per-record
+	// result, not "operational shape". Without this check any caller authorized
+	// for the mounting tool could read another user's report by guessing its id.
+	// Unowned records (the AV transcodes: user_id null) stay readable, which is
+	// the path this action exists for.
+	const record = mediaJobs.status(jobId);
+	if (record !== null && !mayStreamJob(record, ctx.principal)) {
+		// The same answer a non-existent job gets — no existence oracle.
 		return notFound(`unknown media job: ${jobId}`);
 	}
 	const frame = mediaJobs.frame(jobId);
@@ -92,9 +98,10 @@ async function mediaJobStatus(ctx: ToolActionContext): Promise<ToolResponse> {
 /**
  * The mountable action spec for the media job status wire. permission null is
  * deliberate and documented: dispatch gates 1-4 already require an
- * authenticated user authorized for the mounting tool; the job id itself is an
- * unguessable capability minted by an action that DID pass a 'record' write
- * gate, and the frame exposes no record data beyond the job's own file paths.
+ * authenticated user authorized for the mounting tool, and the handler applies
+ * the job-record OWNERSHIP rule itself (mayStreamJob) — there is no section /
+ * record target in the payload for a declarative gate to read, and the id is
+ * NOT a secret (jobs.ts: ids are derived, hence guessable).
  */
 export const MEDIA_JOB_STATUS_ACTION: ToolActionSpec = {
 	permission: null,

@@ -402,14 +402,29 @@
             "value": "डाटा देखाउनुहोस्"
           },
           {
+            "lang": "lg-eus",
+            "name": "show_data",
+            "value": "Erakutsi datuak"
+          },
+          {
             "lang": "lg-nep",
             "name": "sync_data",
             "value": "डेटा सिंक गर्नुहोस्"
           },
           {
+            "lang": "lg-eus",
+            "name": "sync_data",
+            "value": "Sinkronizatu datuak"
+          },
+          {
             "lang": "lg-nep",
             "name": "files_info_is_unsync",
             "value": "फाइल जानकारी डेटा सिंक छैन"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "files_info_is_unsync",
+            "value": "Fitxategien informazioa ez dago sinkronizatuta"
           },
           {
             "lang": "lg-eng",
@@ -429,7 +444,7 @@
           {
             "lang": "lg-eus",
             "name": "delete_normalized_files",
-            "value": ""
+            "value": "Ezabatu normalizatutako fitxategiak"
           },
           {
             "lang": "lg-por",
@@ -462,6 +477,11 @@
             "value": "सामान्यीकृत फाइलहरू मेटाउनुहोस्"
           },
           {
+            "lang": "lg-eus",
+            "name": "delete_normalized_files",
+            "value": "Ezabatu normalizatutako fitxategiak"
+          },
+          {
             "lang": "lg-eng",
             "name": "regenerate",
             "value": "Regenerate files"
@@ -484,7 +504,7 @@
           {
             "lang": "lg-eus",
             "name": "regenerate",
-            "value": ""
+            "value": "Birsortu fitxategiak"
           },
           {
             "lang": "lg-fra",
@@ -510,6 +530,11 @@
             "lang": "lg-nep",
             "name": "regenerate",
             "value": "फाइलहरू पुन: उत्पन्न गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "regenerate",
+            "value": "Birsortu fitxategiak"
           },
           {
             "lang": "lg-eng",

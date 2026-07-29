@@ -884,7 +884,15 @@
 			"drop": "DROP INDEX IF EXISTS \"{$table}_timestamp_composite_idx\"",
 			"sample": "SELECT * FROM matrix_activity WHERE (\"timestamp\" >= '2024-12-04' AND \"timestamp\" < '2024-12-05') AND relation @> '{\"dd543\":[{\"section_tipo\":\"dd128\",\"section_id\":\"1\"}]}'",
 			"name": "matrix_activity_timestamp_composite_idx",
-			"info": "Used to search by timestamp, ordered id ascendant. Used by diffusion_section_stats:get_interval_raw_activity_data"
+			"info": "Used to search by timestamp, ordered id ascendant. Used by diffusion_section_stats:get_interval_raw_activity_data. Since WC-054 it is also THE dd542 list index: every dd542 sort is insertion order, emitted as (\"timestamp\" <dir>, id <dir>), which this index serves outright with no sort node."
+		},
+		{
+			"tables": ["matrix_activity"],
+			"add": "CREATE INDEX IF NOT EXISTS {$table}_who_ts_idx ON {$table} ((relation->'dd543'->0->>'section_id'), (relation->'dd543'->0->>'section_tipo'), \"timestamp\" DESC, id DESC);",
+			"drop": "DROP INDEX IF EXISTS \"{$table}_who_ts_idx\"",
+			"sample": "SELECT section_id, id FROM matrix_activity WHERE relation->'dd543'->0->>'section_id' = '1' AND relation->'dd543'->0->>'section_tipo' = 'dd128' ORDER BY \"timestamp\" DESC, id DESC LIMIT 25",
+			"name": "matrix_activity_who_ts_idx",
+			"info": "dd542 Activity 'Who' (dd543) search. Leading ACTOR equality + the trailing (timestamp, id) sort key, so ONE index answers both the filter and the list order and a page is O(LIMIT) for every actor (1.1-4.3 ms measured on a 32.9M-row log across 1k / 52k / 206k / 8.1M-row actors; containment ranged 90 ms to >300 s and no single plan choice was right for all). Requires the matching emitter (search/builders/builder_relation.ts buildActivityWhoFragment) — a relation @> predicate cannot use it — and the single-actor invariant gated by activity_log_single_actor.test.ts. WC-056."
 		},
 		{
 			"tables": ["matrix_time_machine"],

@@ -74,11 +74,21 @@ export interface ToolActionContext {
  *  - 'tipo'         → level `minLevel` on options.section_tipo + options.tipo;
  *  - 'record'       → section level + the record (numeric options.section_id) must
  *                     be inside the caller's project scope;
+ *  - 'record_tipo'  → BOTH: level `minLevel` on the (section_tipo, component tipo)
+ *                     PAIR *and* the record scope. This is the gate for an action
+ *                     targeting a COMPONENT OF A RECORD (the whole media family).
+ *                     'tipo' and 'record' each express only one half, and picking
+ *                     either silently drops the other — which is how a user denied
+ *                     level 2 on one media component could still delete its files;
  *  - 'developer'    → caller must be a developer (no section target asserted);
  *  - null           → listed but ungated here (the handler gates imperatively).
+ *
+ * Choosing between them: does the action name a component AND a record id? Then
+ * it is 'record_tipo'. PHP asserted both at every such door
+ * (assert_tipo_permission + assert_record_in_user_scope).
  */
 export interface ToolActionSpec {
-	permission: 'section' | 'section_list' | 'tipo' | 'record' | 'developer' | null;
+	permission: 'section' | 'section_list' | 'tipo' | 'record' | 'record_tipo' | 'developer' | null;
 	/** dd774 level required on the target (1=read, 2=write, 3=admin). Default 2. */
 	minLevel?: number;
 	/**

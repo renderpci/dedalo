@@ -23,9 +23,9 @@
 *       `view_window`.
 *   - `load_component` — utility to asynchronously instantiate and build a component
 *       inside a tool, managing the tool's `ar_instances` registry.
-*   - `get_tool_label` (private) — language-priority label resolver bound to
-*       `this.context.labels` of the tool instance; assigned as `self.get_tool_label`
-*       so each tool can call it on its own context.
+*   - `get_tool_label` (private) — label resolver bound to `this.context.labels`
+*       of the tool instance; assigned as `self.get_tool_label` so each tool can
+*       call it on its own context.
 *
 * Lifecycle (for every tool instance):
 *   1. `init(options)`  — seeds properties; rebuilds caller from URL `raw_data` when
@@ -1424,18 +1424,23 @@ const view_window = async function(options) {
 
 /**
 * GET_TOOL_LABEL
-* Language-priority label resolver bound as `self.get_tool_label` on every tool
-* instance.  Looks up `label_name` in `this.context.labels` (the array of label
-* objects loaded from the tool's registered context) and returns the value in the
-* best available language.
+* Label resolver bound as `self.get_tool_label` on every tool instance. Looks up
+* `label_name` in `this.context.labels` — the label array of the tool's registered
+* context — and returns its value.
 *
-* Priority order (highest first):
-*   1. `page_globals.dedalo_application_lang`  — the active UI language
-*   2. `page_globals.dedalo_application_langs_default` — the installation default
-*   3. Any other language present in the labels array
+* SERVING CONTRACT: `context.labels` is already localised. The server
+* (buildToolElementContext, src/core/tools/registry.ts) emits ONLY the entries
+* whose `lang` equals the request's application lang, and an EMPTY array when the
+* tool has no label in that lang — PHP behaved identically (frozen in
+* test/parity/fixtures/oracle_harvest/tool_element_context_differential.json) and
+* test/unit/tool_context_labels_lang.test.ts gates it. So there is nothing here to
+* choose between languages: a name match IS the right language, and a miss means
+* the label is untranslated for this lang, which the call site handles with its
+* own `|| 'literal'` fallback.
 *
-* The search is a single linear pass that tracks all three candidates; once
-* a `lang_current` match is found, iteration stops immediately (break).
+* (This replaced a three-tier current-lang / install-default / any-lang priority
+* chain. With a single-lang payload the second and third tiers were unreachable,
+* so the chain only implied a fallback the wire could never deliver.)
 *
 * If the resolved label value contains `%s` placeholders, the variadic `...rest`
 * arguments are interpolated via `printf`.
@@ -1447,8 +1452,8 @@ const view_window = async function(options) {
 *   e.g. 'indexation_tool' or 'save_button'
 * @param {...string} rest - Additional positional arguments passed to `printf` for
 *   `%s` placeholder substitution in the resolved label value
-* @returns {string|null} The localised (and printf-interpolated) label string, or
-*   null when no entry for `label_name` is found or `this.context.labels` is absent
+* @returns {string|null} The (printf-interpolated) label string, or null when no
+*   entry for `label_name` is found or `this.context.labels` is absent
 */
 const get_tool_label = function(label_name, ...rest) {
 
@@ -1457,32 +1462,7 @@ const get_tool_label = function(label_name, ...rest) {
 		return null
 	}
 
-	// single-pass: match by priority (current lang > default lang > any lang)
-	const lang_current	= page_globals.dedalo_application_lang
-	const lang_default	= page_globals.dedalo_application_langs_default
-
-	let found_current	= null
-	let found_default	= null
-	let found_any		= null
-
-	const len = tool_labels.length
-	for (let i = 0; i < len; i++) {
-		const el = tool_labels[i]
-		if (el.name !== label_name) continue
-
-		if (!found_any) {
-			found_any = el
-		}
-		if (!found_default && el.lang === lang_default) {
-			found_default = el
-		}
-		if (!found_current && el.lang === lang_current) {
-			found_current = el
-			break // highest priority, no need to continue
-		}
-	}
-
-	const found = found_current || found_default || found_any
+	const found = tool_labels.find(el => el.name === label_name)
 
 	return found
 		? printf(found.value, ...rest)

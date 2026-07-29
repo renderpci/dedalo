@@ -180,6 +180,44 @@ async function runOnPool<T>(execute: () => Promise<T>, describeQuery: () => stri
 }
 
 /**
+ * Run ONE deliberately long maintenance statement with no statement_timeout —
+ * REINDEX / VACUUM / DROP INDEX CONCURRENTLY on a production-scale table
+ * (WC-055).
+ *
+ * WHY IT EXISTS. `DB_STATEMENT_TIMEOUT_MS` is a POOL-WIDE GUC: it bounds a
+ * runaway search (an unindexed `~*` over a 33M-row log has no other ceiling —
+ * it cannot abort early and the client disconnecting does not cancel it), but
+ * the same ceiling would abort the maintenance actions that are SUPPOSED to run
+ * for minutes. That conflict is why the setting shipped disabled and unused.
+ * These statements opt OUT explicitly instead, so the ceiling can finally be
+ * set for the request traffic it exists to protect.
+ *
+ * The GUC is cleared on a RESERVED connection, never on a pooled one: a plain
+ * `SET` persists for the life of the connection, so issuing it on the pool
+ * would silently un-bound every later request that happened to be handed that
+ * same connection. The reservation is released in a finally, and the connection
+ * carries the cleared GUC only for the reserved span. Reserve is ungated by the
+ * acquire semaphore by design (see the POOL ACQUIRE GATE note above), so a long
+ * VACUUM does not hold a gate slot either.
+ *
+ * NOT for anything request-driven: a statement that can run unbounded on demand
+ * is exactly what the ceiling exists to prevent. Admin-triggered maintenance
+ * only.
+ */
+export async function runWithoutStatementTimeout(
+	statement: string,
+	params: (string | number | null)[] = [],
+): Promise<unknown[]> {
+	const reserved = await sql.reserve();
+	try {
+		await reserved.unsafe('SET statement_timeout = 0', []);
+		return (await reserved.unsafe(statement, params)) as unknown[];
+	} finally {
+		reserved.release();
+	}
+}
+
+/**
  * The ambient transaction connection for the current async context, if any.
  *
  * PHP runs each request on ONE pinned connection, so a value written earlier in

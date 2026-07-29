@@ -1017,6 +1017,45 @@ tool_transcription.prototype.download_model = async function( model ) {
 
 
 /**
+* SAVE_TRANSCRIPTION
+* Persist an automatic-transcription result as THE transcription of the
+* component's current language: always item id 1, replacing whatever it held.
+*
+* This deliberately does NOT go through set_value(0, …): that helper derives
+* the target item from `self.data.entries` — the tab's transient state, which
+* after an hour of inference can be stale or empty. When it was, the save went
+* out id-less, the server (faithfully to the shared-id slice semantics)
+* appended a NEW item with a minted id, and the editor — bound to item 1 —
+* showed nothing while the transcript sat in item 2 (live: rsc167/528,
+* 2026-07-28). A transcription is by contract the lang's single main text, so
+* the tool STATES the slot instead of deriving it.
+*
+* @param {string} html - the TC-tagged paragraph HTML for component_text_area
+* @returns {Promise} the component's change_value promise (normal save + refresh)
+*/
+tool_transcription.prototype.save_transcription = function( html ) {
+
+	const self		= this
+	const component	= self.transcription_component
+
+	return component.change_value({
+		changed_data : [Object.freeze({
+			action	: 'update',
+			id		: 1,
+			key		: 0,
+			value	: {
+				id		: 1,
+				lang	: component.lang,
+				value	: html
+			}
+		})],
+		refresh : true
+	})
+}//end save_transcription
+
+
+
+/**
 * REGROUP_PARAGRAPHS
 * Re-paragraph the transcription that is ALREADY in the component.
 *

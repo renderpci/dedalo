@@ -71,7 +71,7 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *  - tool_sitebuilder + site_builder_status widget (WC-035) — the site-builder
  *    subsystem, a TS-native addition (proxy tool + ops widget for the
  *    standalone publication/site_builder daemon);
- *  - tool_identify (WC-054) — the object-identification curator panel
+ *  - tool_identify (WC-062) — the object-identification curator panel
  *    (engineering/IDENTIFY_SPEC.md), TS-native with no PHP twin.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
@@ -107,6 +107,27 @@ function isRuntimeInfoRenameEntry(entry: ManifestEntry): boolean {
  * BOTH sides of the set compare, like the WC-013 pattern. */
 function isLangFileEntry(entry: ManifestEntry): boolean {
 	return entry.url.startsWith('/dedalo/core/common/js/lang/');
+}
+
+/** TS-native core client files with no PHP twin (WC-063): the design-line
+ * toggle (design.js/design-init.js) and the idle-session countdown
+ * (session_expiry.js, behaviour ledgered under WC-051). Filtered from BOTH
+ * sides; the every-TS-url-resolves gate still proves they serve. */
+function isTsNativeCoreFileEntry(entry: ManifestEntry): boolean {
+	return (
+		entry.url === '/dedalo/core/page/js/design.js' ||
+		entry.url === '/dedalo/core/page/js/design-init.js' ||
+		entry.url === '/dedalo/core/common/js/session_expiry.js' ||
+		entry.url === '/dedalo/core/search/js/preset_scope.js' ||
+		entry.url === '/dedalo/core/search/js/render_semantic.js'
+	);
+}
+
+/** The php_user maintenance widget administered the PHP engine's system user —
+ * meaningless since the cutover (WC-064). The frozen oracle still censuses its
+ * files; the TS tree no longer has them. Same pattern as WC-030. */
+function isPhpUserRemovalEntry(entry: ManifestEntry): boolean {
+	return entry.url.startsWith('/dedalo/core/area_maintenance/widgets/php_user/');
 }
 
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
@@ -179,7 +200,9 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isToolAssistantEntry(entry) &&
 			!isTsOnlyEntry(entry) &&
 			!isRuntimeInfoRenameEntry(entry) &&
-			!isLangFileEntry(entry);
+			!isLangFileEntry(entry) &&
+			!isTsNativeCoreFileEntry(entry) &&
+			!isPhpUserRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
@@ -204,6 +227,8 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			'render_tool_assistant.js',
 			'tool_assistant.css',
 			'tool_assistant.js',
+			// the UI-label bridge added with the WC-033 label catalogs
+			'tool_labels.js',
 		]);
 	});
 

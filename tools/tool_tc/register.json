@@ -314,14 +314,74 @@
             "value": "Fehler. Leerer Offsetwert"
           },
           {
+            "lang": "lg-eus",
+            "name": "empty_offset_value",
+            "value": "Errorea. Desplazamendu-balioa hutsik"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "empty_offset_value",
+            "value": "Erreur. Valeur de décalage vide"
+          },
+          {
+            "lang": "lg-por",
+            "name": "empty_offset_value",
+            "value": "Erro. Valor de deslocamento vazio"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "empty_offset_value",
+            "value": "Errore. Valore di offset vuoto"
+          },
+          {
             "lang": "lg-deu",
             "name": "apply",
             "value": "Anwenden"
           },
           {
+            "lang": "lg-eus",
+            "name": "apply",
+            "value": "Aplikatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "apply",
+            "value": "Appliquer"
+          },
+          {
+            "lang": "lg-por",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "apply",
+            "value": "Applicare"
+          },
+          {
             "lang": "lg-deu",
             "name": "offset_in_seconds",
             "value": "Offset in Sekunden"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "offset_in_seconds",
+            "value": "Desplazamendua segundotan"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "offset_in_seconds",
+            "value": "Décalage en secondes"
+          },
+          {
+            "lang": "lg-por",
+            "name": "offset_in_seconds",
+            "value": "Deslocamento em segundos"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "offset_in_seconds",
+            "value": "Offset in secondi"
           }
         ]
       }

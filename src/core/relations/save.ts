@@ -167,6 +167,17 @@ export async function applyAddNewElement(
 	componentTipo: string,
 	sectionTipo: string,
 	sectionId: number,
+	options?: {
+		/**
+		 * Skip the HOST record read that seeds the new target's project filter.
+		 * Set by the TEMPORAL door (section/record/temporal.ts): a temporal
+		 * instance addresses no record, so there is no host to inherit from and
+		 * `sectionId` is a sentinel — reading it would read a stranger's record.
+		 * The filter then falls through to the default project locator below,
+		 * which is the same fallback a host with an empty filter already takes.
+		 */
+		skipHostFilterRead?: boolean;
+	},
 ): Promise<{ items: unknown[]; sectionId: number } | null> {
 	if (targetSectionTipo === '') return null;
 	const { getComponentFilterTipo, getMatrixTableFromTipo } = await import(
@@ -177,7 +188,8 @@ export async function applyAddNewElement(
 
 	// host project filter (or the default project locator)
 	let filterData: Record<string, unknown>[] = [];
-	const hostFilterTipo = await getComponentFilterTipo(sectionTipo);
+	const hostFilterTipo =
+		options?.skipHostFilterRead === true ? null : await getComponentFilterTipo(sectionTipo);
 	if (hostFilterTipo !== null) {
 		const hostTable = await getMatrixTableFromTipo(sectionTipo);
 		const hostRecord =

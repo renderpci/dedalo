@@ -4,9 +4,10 @@
  * Every action here forwards to the daemon (daemon_client.ts) with the shared bearer
  * token and the acting user's identity. The engine is where authorization happens: the
  * tool grant (dd1324 active + profile-granted, enforced by dispatch before these run) is
- * the gate for building sites; `publish` and `get_audit` additionally require a developer
- * or global admin, checked imperatively here. The daemon trusts these decisions and
- * records the actor.
+ * the gate for building sites; every action that reaches PRODUCTION — `publish`,
+ * `get_audit`, and `delete_site` when `purge_prod` is asked for — additionally requires a
+ * developer or global admin, checked imperatively here. The daemon trusts these decisions
+ * and records the actor.
  *
  * `session_stream` is the one streaming action: it returns a ReadableStream that forwards
  * the daemon's SSE bytes verbatim through the existing tool-dispatch stream seam, with
@@ -82,27 +83,36 @@ function requireSlug(options: Record<string, unknown>): string {
  * Validate an id-shaped option (session_id, build_id) before it becomes a path segment:
  * bounded length, path-safe characters only. Same purpose as requireSlug — no untrusted
  * value reaches the daemon URL.
+ *
+ * `.` is allowed inside an id, so the dot-segment `..` must be refused EXPLICITLY: the
+ * WHATWG URL parser resolves it away, so `session_id: '..'` would turn
+ * `/v1/sessions/../stop` into `/v1/stop` and let a caller aim at a daemon route the tool
+ * never meant to expose. Fail closed on any id carrying a dot-segment.
  */
 function requireId(options: Record<string, unknown>, key: string): string {
 	const id = String(options[key] ?? '');
-	if (id.length === 0 || id.length > 200 || /[^A-Za-z0-9._-]/.test(id)) {
+	if (id.length === 0 || id.length > 200 || /[^A-Za-z0-9._-]/.test(id) || id.includes('..')) {
 		throw new SiteBuilderError('site_builder_rejected', `Invalid ${key}.`);
 	}
 	return id;
 }
 
 /**
- * The imperative publish gate. Building a site needs only the tool grant, but pushing it
- * live (publish, and reading the publish audit) additionally requires a developer or
- * global admin — enforced here because dispatch's permission check is `null` for these
- * actions (the finer rule cannot be expressed as a static permission).
+ * The imperative production gate. Building a site needs only the tool grant, but every
+ * action that touches PRODUCTION — publish, the publish audit trail, and the `purge_prod`
+ * half of delete_site — additionally requires a developer or global admin. Enforced here
+ * because dispatch's permission check is `null` for these actions (the finer rule cannot
+ * be expressed as a static permission), and because the daemon trusts the engine's
+ * decision entirely.
+ *
+ * Gated by `test/unit/tool_sitebuilder.test.ts` (one test per gated action).
  */
-function assertPublisher(principal: Principal): void {
+function assertPublisher(
+	principal: Principal,
+	message = 'Publishing requires developer or administrator permission.',
+): void {
 	if (!principal.isDeveloper && !principal.isGlobalAdmin) {
-		throw new SiteBuilderError(
-			'site_builder_rejected',
-			'Publishing requires developer or administrator permission.',
-		);
+		throw new SiteBuilderError('site_builder_rejected', message);
 	}
 }
 
@@ -165,11 +175,37 @@ async function createSite(context: ToolActionContext): Promise<ToolResponse> {
  * DELETE /v1/sites/:slug — remove a site. `purge_prod` is opt-in and only appended when
  * strictly true, so an absent or falsy value never accidentally tears down the published
  * copy.
+ *
+ * Split gate, drawn where the daemon draws it (`deleteSite(slug, purgeProd)` in the
+ * daemon's sites/workspace.ts):
+ *  - the plain delete removes the WORKSPACE and the preprod copy — builder-owned state
+ *    that create_site/build (ungated beyond the tool grant) produced. Production bytes are
+ *    untouched, and the prod `.releases` history survives, so re-creating the slug restores
+ *    releases/rollback. Ordinary tool work: tool grant only.
+ *  - `purge_prod` is the ONLY path here that touches the daemon's PROD_ROOT: it deletes the
+ *    live copy AND its release history — irreversible, and the destructive half of publish.
+ *    It therefore takes publish's exact double gate (publisher + explicit confirm): a user
+ *    who cannot take a site live must not be able to take it down, and an unconfirmed call
+ *    must not either. Both checks run BEFORE the proxy call, because the daemon executes
+ *    whatever the engine sends.
  */
 async function deleteSite(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
+		const purgeProd = context.options.purge_prod === true;
+		if (purgeProd) {
+			assertPublisher(
+				context.principal,
+				'Removing the published site requires developer or administrator permission.',
+			);
+			if (context.options.confirm !== true) {
+				throw new SiteBuilderError(
+					'site_builder_rejected',
+					'Removing the published site must be confirmed.',
+				);
+			}
+		}
 		const slug = requireSlug(context.options);
-		const purge = context.options.purge_prod === true ? '?purge_prod=true' : '';
+		const purge = purgeProd ? '?purge_prod=true' : '';
 		return ok(await daemonJson('DELETE', `/v1/sites/${slug}${purge}`, actorFor(context)));
 	});
 }
@@ -361,6 +397,7 @@ export const tool: ToolServerModule = {
 		get_status: { permission: null, handler: getStatus },
 		list_sites: { permission: null, handler: listSites },
 		create_site: { permission: null, handler: createSite },
+		// purge_prod half gated imperatively (developer OR global admin + confirm).
 		delete_site: { permission: null, handler: deleteSite },
 		session_start: { permission: null, handler: sessionStart },
 		session_message: { permission: null, handler: sessionMessage },

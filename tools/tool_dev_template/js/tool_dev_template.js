@@ -13,18 +13,19 @@
  * To create a real tool from this template either copy the whole directory and
  * replace every 'tool_dev_template' occurrence with your tool name, or run the
  * scaffolder (preferred):
- *   php tools/tool_common/cli/create_tool.php --name=tool_myorg_mytool --label="My tool"
+ *   bun run scripts/create_tool.ts --name=tool_myorg_mytool --label="My tool"
  *
  * Full documentation: docs/development/tools/ — in particular:
  *   - js_lifecycle.md   : client-side contract (init / build / render / destroy)
- *   - server_contract.md: PHP API_ACTIONS map and permission gates
+ *   - server_contract.md: the ToolServerModule apiActions map and permission gates
  *   - register_json.md  : tool registration and ddo_map configuration
  *
  * This file defines:
  *   - `tool_dev_template` constructor — instance property declarations
  *   - Prototype lifecycle methods: init, build
  *   - Prototype action methods that wrap server calls via tool_request:
- *       get_some_data_from_server, file_upload_handler, run_background_demo
+ *       get_some_data_from_server (read_demo), file_upload_handler (write_demo),
+ *       run_background_demo (long_job, background)
  *   - A reference-only prototype method: load_component_sample
  *
  * The concrete render logic lives in render_tool_dev_template.js; the standard
@@ -211,19 +212,20 @@ tool_dev_template.prototype.build = async function(autoload=false) {
 
 /**
 * GET_SOME_DATA_FROM_SERVER
-* Sample tool→server READ call. Dispatches action 'get_component_data' to the
-* PHP static method tool_dev_template::get_component_data($options) via the
-* tool_request helper inherited from tool_common.
+* Sample tool→server READ call. Dispatches action 'read_demo' to the tool's
+* server module (tools/tool_dev_template/server/index.ts) via the tool_request
+* helper inherited from tool_common.
 *
-* The server method is declared in API_ACTIONS with a 'tipo' read gate
-* (min_level 1). The framework validates that gate before the PHP method runs —
-* the client does not need to add extra permission checks here.
+* The action is declared in the module's apiActions with a 'tipo' read gate
+* (minLevel 1). The framework validates that gate BEFORE the handler runs — the
+* client does not need to add extra permission checks here. An action name that
+* is not a key of apiActions is refused with errors:['unauthorized_method'].
 *
 * Server response shape (response.result when successful):
-*   { model: string, component_tipo: string, component_data: * }
+*   { section_tipo: string, tipo: string, read: true }
 *
 * In your own tool, rename to reflect the actual operation, and adapt the
-* options payload to match the corresponding PHP method signature.
+* options payload to the handler's expected options.
 *
 * @returns {Promise<Object>} API response envelope {result, msg, errors}
 */
@@ -232,12 +234,11 @@ tool_dev_template.prototype.get_some_data_from_server = async function() {
 	const self = this
 
 	const response = await self.tool_request({
-		action	: 'get_component_data',
+		action	: 'read_demo',
 		options	: {
-			component_tipo	: self.main_element.tipo,
+			tipo			: self.main_element.tipo,
 			section_id		: self.main_element.section_id,
-			section_tipo	: self.main_element.section_tipo,
-			config			: self.context.config
+			section_tipo	: self.main_element.section_tipo
 		}
 	})
 
@@ -259,12 +260,14 @@ tool_dev_template.prototype.get_some_data_from_server = async function() {
 *   2. When service_upload finishes, it fires 'upload_file_done_{tool.id}'.
 *   3. The render's event listener calls this method, passing the event
 *      payload (which contains file_data from service_upload).
-*   4. This method forwards file_data to the server via tool_request so the
-*      PHP handler (handle_upload_file) can move/process the file.
+*   4. This method forwards file_data to a WRITE action of the tool's own server
+*      module so the handler can move/process the file.
 *
-* The server method is declared in API_ACTIONS with a 'tipo' write gate
-* (min_level 2). The server further validates that the resolved file path
-* stays inside DEDALO_UPLOAD_TMP_DIR (path-traversal defense).
+* (!) The template has no upload handler of its own — it posts to the generic
+* 'write_demo' action ('record' gate, minLevel 2) purely to show the shape of the
+* call. In YOUR tool add a real action to apiActions (e.g. handle_upload_file,
+* 'record'/2) and point this method at it; a handler that resolves an uploaded
+* path MUST confine it inside the upload tmp dir (path-traversal defense).
 *
 * options.file_data shape (produced by service_upload):
 *   { name: string, key_dir: string, tmp_name: string, … }
@@ -278,12 +281,11 @@ tool_dev_template.prototype.file_upload_handler = async function(options) {
 	const self = this
 
 	const response = await self.tool_request({
-		action	: 'handle_upload_file',
+		action	: 'write_demo',
 		options	: {
-			component_tipo	: self.main_element.tipo,
+			tipo			: self.main_element.tipo,
 			section_id		: self.main_element.section_id,
 			section_tipo	: self.main_element.section_tipo,
-			config			: self.context.config,
 			file_data		: options.file_data
 		}
 	})
@@ -301,37 +303,40 @@ tool_dev_template.prototype.file_upload_handler = async function(options) {
 * RUN_BACKGROUND_DEMO
 * Sample background execution via the tool_request helper.
 *
-* When `background: true` is passed, tool_request tells the server to detach
-* the action as a separate CLI process via process_runner.php. The HTTP call
-* returns immediately with response.result = { pid: number }, allowing the
-* UI to stay responsive while the long-running PHP method executes offline.
+* When `background: true` is passed, tool_request tells the server to run the
+* action inside the engine's IN-PROCESS job registry. The HTTP call answers
+* immediately with { job_id, background_job_id, pid, pfile }, so the UI stays
+* responsive while the handler runs.
 *
-* The server-side method (long_process_demo) must appear in BOTH:
-*   - API_ACTIONS      — so dd_tools_api can dispatch it (HTTP path)
-*   - BACKGROUND_RUNNABLE — so process_runner.php can execute it (CLI path)
+* The server-side action (long_job) must appear in BOTH:
+*   - apiActions          — so dd_tools_api can dispatch it at all
+*   - backgroundRunnable  — the second allowlist the background executor enforces
 *
-* (!) The CLI background path bypasses dd_tools_api, so the PHP method gates
-* its own developer-only permission as defense in depth. See class.tool_dev_template.php.
+* (!) The declarative permission gate runs BEFORE the fork, so a denial is still
+* observable to the caller; the executor does NOT re-run it afterwards.
 *
-* Progress feedback for truly long operations should use a polling endpoint
-* or a WebSocket; the background pid alone only confirms detachment.
+* Progress: subscribe to the job with dd_utils_api::get_job_events (PUSH) and
+* read each frame's `data` — that is what the handler's ctx.publishProgress
+* writes, and the terminal frame's `data` is the handler's return value. Do NOT
+* persist job_id client-side: the SERVER owns job state (see TOOLS_SPEC.md);
+* a reloading client asks get_background_jobs which of its jobs is running.
 *
-* @returns {Promise<Object>} API response envelope; result.pid on success
+* @returns {Promise<Object>} API response envelope; result.job_id on success
 */
 tool_dev_template.prototype.run_background_demo = async function() {
 
 	const self = this
 
 	const response = await self.tool_request({
-		action		: 'long_process_demo',
+		action		: 'long_job',
 		background	: true,
 		options		: {
-			iterations : 3
+			section_tipo : self.main_element.section_tipo
 		}
 	})
 
 	if(SHOW_DEVELOPER===true) {
-		dd_console("-> run_background_demo API response (pid):",'DEBUG',response);
+		dd_console("-> run_background_demo API response (job):",'DEBUG',response);
 	}
 
 	return response

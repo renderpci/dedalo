@@ -245,6 +245,11 @@
             "lang": "lg-por",
             "name": "create_identify_image",
             "value": "Criar imagem identificativa"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "create_identify_image",
+            "value": "पहिचान गर्ने छवि सिर्जना गर्नुहोस्"
           }
         ]
       }

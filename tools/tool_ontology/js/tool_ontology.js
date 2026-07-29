@@ -203,10 +203,11 @@ tool_ontology.prototype.build = async function(autoload=false) {
 * `tool_ontology::set_records_in_dd_ontology`, which parses the ontology section
 * node(s) and writes or updates their definitions in the `dd_ontology` table.
 *
-* The server handler determines processing scope from the caller mode:
+* The server handler determines processing scope from the request:
 *   - 'edit' mode  — processes a single record identified by section_id + section_tipo
-*   - other modes  — reads the active sqo from the PHP session and processes the full
-*       result set (batch mode for list/search views)
+*   - other modes  — processes exactly the set matched by the `sqo` sent below.
+*       The sqo is REQUIRED: the server refuses a list-mode call without one and
+*       has no whole-section default (WC-043).
 *
 * After a successful server response the active_elements session cache is cleared
 * server-side so `dd_ts_api::get_children_data` picks up the updated ontology.
@@ -234,6 +235,16 @@ tool_ontology.prototype.set_records_in_dd_ontology = async function() {
 		const section_tipo	= self.caller.section_tipo
 		const section_id	= self.caller.section_id || null
 
+	// sqo. The caller list's LIVE scope. In list mode the server REQUIRES it and
+	// processes exactly the matched set (pagination is stripped server-side).
+	// Deep-cloned — the caller's sqo is never handed out live. Without this the
+	// request rewrote EVERY record of the section while the button showed the
+	// filtered count; PHP took this scope from the session SQO and wrote nothing
+	// when it was absent (WC-043, same shape as the tool_update_cache runaway).
+		const caller_sqo = self.caller.rqo?.sqo
+			? structuredClone(self.caller.rqo.sqo)
+			: { section_tipo: [section_tipo] }
+
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
 	// create_source produces a descriptor that dd_tools_api uses to locate and invoke
@@ -248,7 +259,8 @@ tool_ontology.prototype.set_records_in_dd_ontology = async function() {
 			options	: {
 				section_id		: section_id,
 				section_tipo	: section_tipo,
-				mode			: mode
+				mode			: mode,
+				sqo				: caller_sqo
 			}
 		}
 

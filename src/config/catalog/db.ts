@@ -113,9 +113,16 @@ PostgreSQL cancels it. The default \`0\` means no limit.
 
 **A production installation should set it** — \`60000\` (one minute) is the recommended
 value: one runaway query must not be able to occupy a connection forever and starve
-every other user. Choose a value comfortably above your slowest legitimate operation;
-if searches on very large sections are part of daily work, measure them first (see
-\`DEDALO_SLOW_QUERY_MS\`).
+every other user. It is also the only bound on a search that cannot stop early: some
+columns are deliberately left unindexed, and a term that matches nothing there reads
+the whole table — on a large activity log that is minutes, and a user closing the
+browser does NOT cancel it.
+
+Long-running MAINTENANCE is exempt automatically, so this ceiling does not have to be
+sized around it: the reindex, vacuum and index-prune actions clear the limit for their
+own statements. Choose a value comfortably above your slowest legitimate *request* —
+if searches or exports on very large sections are part of daily work, measure them
+first (see \`DEDALO_SLOW_QUERY_MS\`).
 
 \`\`\`bash
 DB_STATEMENT_TIMEOUT_MS=60000

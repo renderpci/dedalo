@@ -20,7 +20,10 @@
 	min-width: 25rem;
 	opacity: 0;
 	transition: opacity 0.08s ease-in-out;
-	z-index: 1;
+	// (!) creates a stacking context: the inner .autocomplete_data z-index is
+	// trapped here, so this value alone decides whether the open list paints
+	// over the sibling component buttons (.button.close/up/down, z-index 3)
+	z-index: 6;
 
 	&.search {
 		background-color: transparent;

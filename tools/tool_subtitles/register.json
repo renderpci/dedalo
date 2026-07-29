@@ -287,6 +287,11 @@
             "value": "Auto-rebobinar"
           },
           {
+            "lang": "lg-nep",
+            "name": "auto_rewind",
+            "value": "स्वचालित रिवाइन्ड"
+          },
+          {
             "lang": "lg-eng",
             "name": "build_subtitles",
             "value": "Build subtitles"
@@ -330,6 +335,11 @@
             "lang": "lg-por",
             "name": "build_subtitles",
             "value": "Criar legendas"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "build_subtitles",
+            "value": "उपशीर्षकहरू बनाउनुहोस्"
           },
           {
             "lang": "lg-eng",
@@ -377,6 +387,11 @@
             "value": "Botão play/pause"
           },
           {
+            "lang": "lg-nep",
+            "name": "play_pause_key",
+            "value": "प्ले/पज कुञ्जी"
+          },
+          {
             "lang": "lg-eng",
             "name": "play_speed",
             "value": "Play speed"
@@ -422,6 +437,11 @@
             "value": "Velocidade de reprodução"
           },
           {
+            "lang": "lg-nep",
+            "name": "play_speed",
+            "value": "गति खेल्नुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "seconds_abbr",
             "value": "Sec."
@@ -460,6 +480,16 @@
             "lang": "lg-por",
             "name": "seconds_abbr",
             "value": "Seg"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "seconds_abbr",
+            "value": "Δεύτερος"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "seconds_abbr",
+            "value": "सेकेन्ड"
           }
         ]
       }

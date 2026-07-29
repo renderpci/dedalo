@@ -7,7 +7,7 @@
  * install SQL asset files through db_assets.ts.
  */
 
-import { sql } from '../../db/postgres.ts';
+import { runWithoutStatementTimeout, sql } from '../../db/postgres.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /**
@@ -70,7 +70,9 @@ async function databaseInfoAnalyzeDb(): Promise<WidgetResponse> {
 	const start = performance.now();
 	const errors: string[] = [];
 	try {
-		await sql.unsafe('VACUUM ANALYZE', []);
+		// Whole-database VACUUM: minutes on a production install, so it opts out
+		// of the pool-wide statement_timeout ceiling explicitly (WC-055).
+		await runWithoutStatementTimeout('VACUUM ANALYZE');
 	} catch (error) {
 		errors.push(` Error Processing sql query Request: ${(error as Error).message}`);
 	}

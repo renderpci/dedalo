@@ -161,7 +161,7 @@
   --shadow-2: 0 2px 6px var(--shadow_default);
   --shadow-3: 0 4px 12px var(--shadow_default);
   --shadow-4: 0 4px 8px var(--shadow_default), 0 6px 20px var(--shadow_default);
-  --shadow-focus: 0 0 0 3px var(--focus_ring_weak);
+  --shadow-focus: 0 0 0 2px var(--focus_ring_weak);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --transition-fast: 120ms var(--ease-standard);

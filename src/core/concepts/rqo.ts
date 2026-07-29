@@ -70,9 +70,42 @@ export const rqoSourceSchema = z
 		 */
 		matrix_id: z.union([z.number(), z.string()]).nullish(),
 		data_source: z.string().nullish(),
+		/**
+		 * TEMPORAL instance (WC-059): a tool's throwaway editable clone — the
+		 * propagate tool's value widget, service_tmp_section's staging form, the
+		 * component_text_area draw/reference pickers. It ADDRESSES NO RECORD: the
+		 * `section_id` it carries is a client-side sentinel (1), never an address.
+		 * The save door routes it to `resolveTemporalSave` (resolve + echo, no
+		 * write) and the read door resolves context with an empty value; the
+		 * record-lifecycle doors refuse it. See core/section/record/temporal.ts.
+		 *
+		 * Declared — not left to `.passthrough()` — because that is exactly how it
+		 * went unread for a whole engine generation while the client kept sending
+		 * it, and `section_id: 1` landed on real records.
+		 */
+		is_temporal: z.boolean().nullish(),
 	})
 	.passthrough();
 export type RqoSource = z.infer<typeof rqoSourceSchema>;
+
+/**
+ * THE single reader of `source.is_temporal` (the invariant
+ * test/unit/temporal_instance_tripwire.test.ts asserts). Every door calls this
+ * predicate rather than touching the wire field, so the concept cannot acquire a
+ * second, subtly different definition.
+ *
+ * It lives HERE, beside the field declaration, rather than in
+ * core/section/record/temporal.ts (which owns the BEHAVIOUR) because this module
+ * is a leaf: `section/read.ts` needs the predicate, and temporal.ts reaches back
+ * into read.ts, so a predicate defined there would close a static import cycle
+ * (import_scc_tripwire).
+ *
+ * STRICT `=== true`: a string 'false' or a stray 0 must not open the
+ * non-persisting path, and an absent flag is an ordinary record request.
+ */
+export function isTemporalSource(source: RqoSource | undefined | null): boolean {
+	return (source as { is_temporal?: unknown } | undefined | null)?.is_temporal === true;
+}
 
 /**
  * A show/search/choose block: a ddo_map plus optional per-block SQO tweaks.

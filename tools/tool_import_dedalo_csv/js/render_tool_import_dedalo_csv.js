@@ -536,7 +536,7 @@ const render_file_info = function(self, item) {
 			parent			: fragment
 		})
 		// const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns} - Header:<br><span class="columns">` + item.file_info.join(', ') + '</span>'
-		const info_text = `${self.get_tool_label('records') || 'Records'}: ${item.n_records} - ${self.get_tool_label('Columns') || 'Columns'}: ${item.n_columns}`
+		const info_text = `${self.get_tool_label('records') || 'Records'}: ${item.n_records} - ${self.get_tool_label('columns') || 'Columns'}: ${item.n_columns}`
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info_text',

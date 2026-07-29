@@ -7,19 +7,24 @@
  * TEST_TOOL_TOOL_PROPAGATE_COMPONENT_DATA
  * Client-side coverage for the propagate-component-data tool.
  *
- * The tool's deeper init/build/render path needs a live caller chain
- * (tool_button → component → section in edit mode) with an active SQO plus
- * the temporal clone component built via get_instance, none of which is
- * guaranteed in the headless harness. This suite therefore asserts the
- * reliable, fixture-free contract that every tool shares:
+ * The tool's deeper init/build/render path needs the temporal clone component
+ * built via get_instance, which is not guaranteed in the headless harness. This
+ * suite therefore asserts the reliable, fixture-free contract that every tool
+ * shares:
  *   - the module exports a constructor named exactly as its model,
  *   - construction seeds the documented instance properties,
  *   - the prototype is wired with the common + tool-specific lifecycle methods.
  *
  * This is the locked client template (layer 1: module-load + construct + wiring).
+ *
+ * LAYER 2 (below): resolve_propagate_section — the section resolution — is a PURE
+ * function over the caller chain, so it IS drivable here with synthetic
+ * instances. That matters: the fixed-depth walk it replaced is the exact reason
+ * this tool was unusable from a section list, and the old suite could not see it.
  */
 
 import {tool_propagate_component_data} from '../../../tools/tool_propagate_component_data/js/tool_propagate_component_data.js'
+import {resolve_propagate_section, ALLOWED_SECTION_MODES} from '../../../tools/tool_propagate_component_data/js/render_tool_propagate_component_data.js'
 
 
 
@@ -63,6 +68,76 @@ describe('TOOL_PROPAGATE_COMPONENT_DATA CLIENT TEST', function() {
 		assert.equal(typeof tool_propagate_component_data.prototype.on_close_actions, 'function', 'expected on_close_actions defined')
 	})
 
+})
+
+
+
+describe('TOOL_PROPAGATE_COMPONENT_DATA — section resolution (layer 2)', function() {
+
+	this.timeout(5000)
+
+	// section ← (link) ← component ← tool
+	const make = (section_overrides={}, link_model='section_group', component_overrides={}) => {
+		const section = Object.assign({
+			model	: 'section',
+			tipo	: 'test3',
+			mode	: 'edit',
+			label	: 'Test section'
+		}, section_overrides)
+		const link = { model:link_model, caller:section }
+		const component = Object.assign({
+			model			: 'component_input_text',
+			tipo			: 'test52',
+			section_tipo	: 'test3',
+			caller			: link
+		}, component_overrides)
+		return { section, tool:{ model:'tool_propagate_component_data', caller:component } }
+	}
+
+	it('resolves the section through a section_group (edit mode — no regression)', function() {
+		const {section, tool} = make()
+		assert.strictEqual(resolve_propagate_section(tool).section, section)
+	})
+
+	it('resolves the section through a section_record (list mode — the new capability)', function() {
+		// The per-cell edit modal's chain. The old fixed-depth walk landed on the
+		// section_record here and the tool refused to open.
+		const {section, tool} = make({mode:'list'}, 'section_record')
+		assert.strictEqual(resolve_propagate_section(tool).section, section)
+	})
+
+	it('REFUSES a section that does not own the component (the portal case)', function() {
+		// A portal-embedded component reaches the OUTER section, whose sqo
+		// describes a different record set — propagating against it would write
+		// the wrong records.
+		const {tool} = make({tipo:'test38'}, 'component_portal')
+		const resolution = resolve_propagate_section(tool)
+		assert.strictEqual(resolution.section, null)
+		assert.ok(resolution.reason.length > 0, 'a refusal must carry a user-facing reason')
+	})
+
+	it('REFUSES a mode outside the allowlist (tm)', function() {
+		const {tool} = make({mode:'tm'})
+		assert.strictEqual(resolve_propagate_section(tool).section, null)
+	})
+
+	it('accepts exactly edit and list', function() {
+		assert.deepEqual(ALLOWED_SECTION_MODES.slice().sort(), ['edit','list'])
+	})
+
+	it('REFUSES (and RETURNS) on a circular caller chain', function() {
+		// tool_common's new-window path sets caller.caller = self, so the chain is
+		// genuinely circular. A hand-rolled walk would hang the tab; this must
+		// return null AND return at all — the timeout above is the real assertion.
+		const tool = { model:'tool_propagate_component_data' }
+		const component = { model:'component_input_text', section_tipo:'test3', caller:tool }
+		tool.caller = component
+		assert.strictEqual(resolve_propagate_section(tool).section, null)
+	})
+
+	it('REFUSES when there is no caller at all', function() {
+		assert.strictEqual(resolve_propagate_section({model:'tool_propagate_component_data'}).section, null)
+	})
 })
 
 // @license-end

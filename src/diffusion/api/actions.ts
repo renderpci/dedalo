@@ -276,6 +276,7 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 	// (a) skip_publication_state_check is a GLOBAL-ADMIN operation — strip it for
 	// everyone else (a non-admin can never publish embargoed/draft records).
 	if (!principal.isGlobalAdmin) {
+		// biome-ignore lint/performance/noDelete: the key must VANISH — a present-but-undefined option still reads as "explicitly set" downstream
 		delete runnerOptions.skip_publication_state_check;
 	}
 	// (b) clamp the recursion budget to the configured server ceiling; a non-
@@ -284,6 +285,7 @@ export async function diffuseAction(rqo: Rqo, principal: Principal): Promise<Api
 	if (Number.isFinite(requestedLevels) && requestedLevels > 0) {
 		runnerOptions.levels = Math.min(requestedLevels, diffusionResolveLevels());
 	} else {
+		// biome-ignore lint/performance/noDelete: same — absence is the signal the runner's default detection reads
 		delete runnerOptions.levels;
 	}
 

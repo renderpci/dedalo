@@ -41,6 +41,7 @@ import {
 	getModelByTipo,
 } from '../../../src/core/ontology/resolver.ts';
 import { persistRecordColumns, persistRecordKeys } from '../../../src/core/section_record/index.ts';
+import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
 
@@ -133,6 +134,24 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 			result: false,
 			msg: `Error. apply_value for model '${model}' is not restorable`,
 			errors: ['invalid model'],
+		};
+	}
+	// SEC-024 §9.4 — PER-RECORD scope. The declarative module gate ('tipo',
+	// level 2) authorizes the (section_tipo, tipo) SCHEMA pair; it says nothing
+	// about the caller-supplied section_id, and the TM row lookup applies no
+	// projects filter of its own. Without this a level-2 user restores a
+	// historical snapshot into a record outside their filter_by_projects scope
+	// (PHP asserts security::assert_record_in_user_scope here — it was the ONLY
+	// gate of the two that this port dropped). PHP skips it for an empty
+	// section_id; so do we — the TM target match below refuses those anyway.
+	if (
+		sectionId > 0 &&
+		!(await principalCanAccessRecord(sectionTipo, sectionId, context.principal))
+	) {
+		return {
+			result: false,
+			msg: 'Error. Record is out of the user scope',
+			errors: ['unauthorized'],
 		};
 	}
 	if (options.caller_dataframe !== null && options.caller_dataframe !== undefined) {

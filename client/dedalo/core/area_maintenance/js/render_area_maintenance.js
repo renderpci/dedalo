@@ -610,10 +610,20 @@ const build_list_view = async function(self, widgets) {
 * added id is never hidden — it simply also shows in the palette.
 */
 	const MAP_NODES = [
-		{ id:'clients',	title:'Clients',		x:9,  y:14, tools:['lock_components'] },
-		{ id:'web',		title:'Web server',		x:31, y:14, tools:['system_info','runtime_info','environment'] },
-		{ id:'core',	title:'Dédalo core',	x:53, y:14, kind:'core',
-			tools:['check_config','register_tools','config_areas','menu_skip_tipos','update_code','update_data_version','unit_test','dedalo_api_test_environment','sqo_test_environment','error_reports'] },
+		{ id:'clients',	title:'Clients',		x:10, y:14, tools:['lock_components'] },
+		{ id:'web',		title:'Web server',		x:29, y:14, tools:['system_info','runtime_info','environment'] },
+		{ id:'core',	title:'Dédalo core',	x:50, y:14, kind:'core',
+			tools:['check_config','config_areas','menu_skip_tipos','update_code','update_data_version','error_reports'] },
+		// the tools/ package tree + its dd1324 registry records (matrix_tools) — a
+		// subsystem of its own, not part of the engine core: register_tools reconciles
+		// the two and touches nothing else.
+		{ id:'tools',	title:'Tools',			x:71, y:14, tools:['register_tools'] },
+		// developer surfaces: sandboxes that exercise the engine (API, SQO) or
+		// provision a known-state fixture row. They act ON the engine, they are not
+		// part of it — and unlike every other node, opening one is the whole point,
+		// so this node is never probed (unit_test WRITES a matrix_test row).
+		{ id:'dev',		title:'Dev & testing',	x:90, y:14,
+			tools:['unit_test','dedalo_api_test_environment','sqo_test_environment'] },
 		{ id:'pg',		title:'PostgreSQL',		x:12, y:66,
 			tools:['database_info','counters_status','sequences_status','dataframe_control','move_to_table','build_database_version','make_backup'] },
 		{ id:'bak',		title:'Backups',		x:31, y:66, tools:['make_backup','build_database_version'] },
@@ -624,8 +634,9 @@ const build_list_view = async function(self, widgets) {
 	]
 	const MAP_EDGES = [
 		['clients','web'], ['web','core'], ['core','pg'], ['core','bak'],
-		['core','pub'], ['core','media'], ['core','onto'],
-		['pg','bak','dim'], ['pub','media','dim']
+		['core','pub'], ['core','media'], ['core','onto'], ['core','tools'],
+		['core','dev','dim'],
+		['pg','bak','dim'], ['pub','media','dim'], ['tools','onto','dim']
 	]
 	// irreversible / destructive tools — flagged red in the map (chips + palette)
 	const MAP_DANGER_IDS = new Set([
@@ -740,6 +751,10 @@ const build_map_view = function(self, widgets, opts={}) {
 			core:	{ status:(maint||recov) ? 'warn' : 'ok',
 					  state: maint ? 'Maintenance mode' : recov ? 'Recovery mode' : (code_ver ? ('v'+code_ver) : 'Dédalo core'),
 					  sub: entity || 'engine' },
+			tools:	{ status:'idle', state:'Tools',                       sub:'registry' },
+			// no probe ever refines this one (see MAP_NODES), so the base line stays on
+			// screen — it describes the surfaces instead of echoing the node title
+			dev:	{ status:'idle', state:'Sandboxes',                    sub:'API · SQO · fixture' },
 			pg:		{ status:'ok',   state:'Online',                       sub: pg_ver ? ('PostgreSQL '+pg_ver) : 'database' },
 			bak:	{ status:'idle', state:'Backups',                     sub:'snapshots' },
 			pub:	{ status:'idle', state:'Publication',                 sub:'diffusion engine' },
@@ -1135,6 +1150,20 @@ const build_map_view = function(self, widgets, opts={}) {
 				if (ver) {
 					set_node_status('onto', 'ok', 'v' + ver, 'installed model')
 				}
+			})
+
+			// Tools — registered tool packages (one read-only SELECT on matrix_tools).
+			// `errors` is the widget's own pre-flight verdict (an outdated ontology
+			// missing the dd1644 Developer term), so a warn here is the tool's, not ours.
+			dd_request_idle_callback(async () => {
+				if (!by_id['register_tools']) { return }
+				const r = await probe_value('register_tools')
+				if (!r || !Array.isArray(r.datalist)) { return }
+				const errors	= Array.isArray(r.errors) ? r.errors.length : 0
+				const n			= r.datalist.length
+				set_node_status('tools', errors ? 'warn' : 'ok',
+					n + (n===1 ? ' tool' : ' tools'),
+					errors ? 'registry outdated' : 'registered')
 			})
 
 			// Backups — age of the most recent dump (warn when stale)
@@ -1574,6 +1603,11 @@ export const print_response = (container, api_response) => {
 *   on_done       {Function}    — Optional: called with `(api_response)` after the
 *                                 default API dispatch completes (not called when
 *                                 `on_submit` overrides the dispatch).
+*   render_response {Function}  — Optional: called with `(body_response, api_response)`
+*                                 INSTEAD of the default `print_response`, for actions
+*                                 whose raw JSON is too large to read (e.g. a per-tool
+*                                 import report). It owns the container completely —
+*                                 clearing it and providing its own dismiss affordance.
 *   on_render     {Function}    — Optional: called with `({ form_container, input_nodes })`
 *                                 immediately after the form is fully constructed,
 *                                 allowing callers to inject extra nodes or wire events.
@@ -1626,6 +1660,7 @@ export const build_form = function(widget_object) {
 		const on_submit		= widget_object.on_submit // optional replacement function to exec on submit
 		const on_done		= widget_object.on_done // optional function to exec on API response
 		const on_render		= widget_object.on_render // optional function to exec on render is complete
+		const render_response = widget_object.render_response // optional replacement for print_response
 
 	// create the form
 		const form_container = ui.create_dom_element({
@@ -1691,7 +1726,13 @@ export const build_form = function(widget_object) {
 								retries : 1, // one try only
 								timeout : 3600 * 1000 // 1 hour waiting response
 							})
+							// A widget with a purpose-built summary owns the container;
+						// everything else gets the generic message + JSON tree.
+						if (render_response) {
+							render_response(body_response, api_response)
+						}else{
 							print_response(body_response, api_response)
+						}
 
 						// on_done. Execute function after request
 							if (on_done) {

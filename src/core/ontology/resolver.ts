@@ -477,7 +477,7 @@ export interface NodeWithProperties {
  * a hot read, and it must see the live property set.
  */
 export async function getNodesWithProperty(propertyKey: string): Promise<NodeWithProperties[]> {
-	return (await sql.unsafe(`SELECT tipo, properties FROM dd_ontology WHERE properties ? $1`, [
+	return (await sql.unsafe('SELECT tipo, properties FROM dd_ontology WHERE properties ? $1', [
 		propertyKey,
 	])) as NodeWithProperties[];
 }

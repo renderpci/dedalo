@@ -23,6 +23,12 @@ export interface SectionStampParams {
 	properties: unknown;
 	/** When present, buttons use the real per-button ACL (Phase B). */
 	principal?: Principal;
+	/**
+	 * PHP's `$simple` (get_structure_context_simple): the start action and the
+	 * search-filter panel build a section WITHOUT its toolbar. The caller derives
+	 * it from addRequestConfig===false.
+	 */
+	simple?: boolean;
 }
 
 /**
@@ -64,9 +70,16 @@ export async function stampSectionContext(
 	const { currentRequestContext } = await import('../security/request_context.ts');
 	entry.sqo_session = currentRequestContext()?.session?.sqoSession?.[params.tipo] ?? null;
 
-	// Tools: the section's toolbar (PHP common::get_tools). Admin path only in
-	// the current wiring (non-admin security-tools-profile filter ledgered).
-	if (params.permissions >= 3) {
+	// Tools: the section's toolbar (PHP common::get_tools). The ONLY gate is
+	// PHP's `$simple` (build_structure_context:1865) — a section satisfies the
+	// mode half of that condition in EVERY mode, and get_tools() itself carries
+	// no permission check (authorization is the per-user user_tools list it
+	// iterates). A `permissions >= 3` gate here meant SUPERUSER-ONLY, since only
+	// userId -1 reaches 3 (the profile matrix tops out at 2, global admins
+	// included), so every real user got a toolbar-less section. The frozen
+	// oracle shows PHP's own list-mode section contexts carrying tools, and the
+	// perm-1 empties are all `start` — i.e. the SIMPLE build, not a level effect.
+	if (params.simple !== true) {
 		const { getSectionTools } = await import('../tools/registry.ts');
 		const toolConfigKeys = Object.keys(
 			(params.properties as { tool_config?: Record<string, unknown> } | null)?.tool_config ?? {},

@@ -39,15 +39,20 @@ import {
 import { mustGet } from '../helpers/assert.ts';
 
 // ── scratch twins (collection-time probe → visible SKIP when DB absent) ──
-// ich135/ich137: translatable input_text (the target_filename drive).
-// ich1/ich22: NON-translatable input_text (the input_component drive).
-// ich1/ich41: component_date (the target_date capture-date drive).
-const FILENAME_SECTION = 'ich135';
-const FILENAME_COMPONENT = 'ich137'; // translatable
-const INPUT_SECTION = 'ich1';
-const INPUT_COMPONENT = 'ich22'; // non-translatable
-const DATE_SECTION = 'ich1';
-const DATE_COMPONENT = 'ich41'; // component_date (non-translatable → lg-nolan)
+// The twins live in the test3 PLAYGROUND, which every suite DB carries. They
+// used to target the `ich` TLD, which exists ONLY in the live application DB —
+// so the whole file aborted at collection time ("no matrix table for section
+// 'ich135'") in BOTH test databases and asserted nothing. Same models, same
+// assertions; only the ontology addresses moved:
+//   test3/test52  — TRANSLATABLE input_text (the target_filename drive).
+//   test3/test162 — NON-translatable input_text (the input_component drive).
+//   test3/test145 — component_date (the target_date capture-date drive).
+const FILENAME_SECTION = 'test3';
+const FILENAME_COMPONENT = 'test52'; // translatable
+const INPUT_SECTION = 'test3';
+const INPUT_COMPONENT = 'test162'; // non-translatable
+const DATE_SECTION = 'test3';
+const DATE_COMPONENT = 'test145'; // component_date (non-translatable → lg-nolan)
 const USER = -1;
 const DATA_LANG = 'lg-eng'; // the request data lang threaded into the role writes
 
@@ -214,6 +219,44 @@ describe('tool_import_files module', () => {
 			'import_files',
 		]);
 		expect(loaded!.module.backgroundRunnable).toEqual(['import_files']);
+		// `..._from_souce` keeps PHP's typo: it is the literal API_ACTIONS entry of
+		// the oracle (class.tool_import_files.php :74), so it is a WIRE fact and
+		// must never be "corrected" without a WIRE_CONTRACT entry.
+	});
+
+	test('the matcher gates read the TARGET section out of the payload', async () => {
+		const loaded = await getLoadedTool('tool_import_files');
+		const actions = loaded!.module.apiActions;
+
+		// get_media_section_match: the handler only ever receives the target inside
+		// `target_filename`. A gate on options.section_tipo saw nothing and denied
+		// every call ("invalid section target") — the action was dead over the wire.
+		const free = mustGet(actions.get_media_section_match, 'get_media_section_match');
+		expect(free.permission).toBe('section_list');
+		expect(free.minLevel).toBe(1);
+		expect(
+			free.sectionTipos?.({
+				full_name: 'x.jpg',
+				target_filename: { tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
+			}),
+		).toEqual([FILENAME_SECTION]);
+		expect(free.sectionTipos?.({ full_name: 'x.jpg' })).toEqual([]); // fail-closed
+
+		// ..._from_souce reads filename values out of the TARGET section too, so
+		// gating only the SOURCE left the section whose data it reads unchecked.
+		const fromSource = mustGet(
+			actions.get_media_section_match_from_souce,
+			'get_media_section_match_from_souce',
+		);
+		expect(fromSource.permission).toBe('section_list');
+		expect(
+			fromSource.sectionTipos?.({
+				section_tipo: 'oh1',
+				section_id: 1,
+				target_section_tipo: FILENAME_SECTION,
+				full_name: 'x.jpg',
+			}),
+		).toEqual(['oh1', FILENAME_SECTION]);
 	});
 
 	test('file_processor fails closed for an unregistered name', async () => {
@@ -282,7 +325,11 @@ describe('tool_import_files module', () => {
 						import_mode: 'section_resource',
 						ddo_map: [
 							{ role: 'target_component', tipo: 'rsc29', section_tipo: 'rsc170' },
-							{ role: 'input_component', tipo: FILENAME_COMPONENT, section_tipo: 'ich135' },
+							{
+								role: 'input_component',
+								tipo: FILENAME_COMPONENT,
+								section_tipo: FILENAME_SECTION,
+							},
 						],
 					},
 					section_tipo: 'rsc170',

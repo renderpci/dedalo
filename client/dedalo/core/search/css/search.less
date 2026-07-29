@@ -16,9 +16,10 @@
 		flex: 0 1 32.8%;
 		flex-wrap: wrap;
 
-		// allow to view tooltip over other components
+		// allow to view tooltip / open autocomplete over other components.
+		// Must beat the sibling components' buttons (z-index 3) below.
 		&:hover {
-			z-index: 2;
+			z-index: 4;
 		}
 
 		>.wrapper_component {

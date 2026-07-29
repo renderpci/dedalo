@@ -173,9 +173,13 @@ export const render_reference = async function(options) {
 
 	// reference_component
 		// Build a temporal (non-persisted) component instance to serve as the
-		// autocomplete search widget. `is_temporal: true` prevents the component from
-		// writing to the real database row; data changes are held in Session only.
-		// `section_id: 1` is a dummy placeholder — the real record is irrelevant here.
+		// autocomplete search widget. `is_temporal: true` makes the server's save
+		// door RESOLVE + ECHO the picked value without persisting it, and its read
+		// door serve an empty value (WC-059, src/core/section/record/temporal.ts) —
+		// there is no server-side temporal store in the TS engine.
+		// `section_id: 1` is a SENTINEL, not an address: until 2026-07-28 it was
+		// taken as one, and this widget's `set_data` (which sends null to CLEAR)
+		// wrote to the real record 1 of references_section_tipo.
 		const instance_options = {
 			model			: references_component_model,
 			tipo			: references_component_tipo,

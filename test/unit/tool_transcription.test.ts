@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
+import { sql } from '../../src/core/db/postgres.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import {
@@ -23,6 +24,7 @@ import {
 } from '../../src/core/media/tools/transcription.ts';
 import { secondsToTc } from '../../src/core/resolve/tr_marks.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { getToolConfig, resetConfigCache } from '../../src/core/tools/config.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import {
 	type TranscriberStatusRequest,
@@ -182,6 +184,44 @@ describe('tool_transcription module', () => {
 
 const stubPrincipal: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 
+/**
+ * The REAL envelope a failing poll puts on the wire, harvested once.
+ *
+ * The honesty branch needs the poll to actually REACH the provider, which needs
+ * DEDALO_MEDIA_EXPORT_BASE (unset on a dev box, where the URL builder refuses
+ * first). `config` freezes at import, so overlay it in a child — same pattern as
+ * media_export_base.test.ts. The uri stays loopback, so the SSRF guard answers
+ * `{result:false,…}` with no network call. Memoized: the client-coupling test
+ * feeds this exact object to the browser poller.
+ */
+let failureEnvelope: { result: unknown; msg: string; errors: string[] } | null = null;
+function liveFailureEnvelope(): { result: unknown; msg: string; errors: string[] } {
+	if (failureEnvelope !== null) return failureEnvelope;
+	const script = [
+		"const {getLoadedTool}=await import('./src/core/tools/loader.ts');",
+		"const t=await getLoadedTool('tool_transcription');",
+		'const r=await t.module.apiActions.check_server_transcriber_status.handler({',
+		'principal:{userId:-1,isGlobalAdmin:true,isDeveloper:true},userId:-1,background:false,',
+		"options:{media_ddo:{component_tipo:'rsc35',section_tipo:'rsc167',section_id:1},",
+		"transcriber_engine:'babel_transcriber',pid:4321}});",
+		'console.log(JSON.stringify(r));',
+	].join('');
+	const probe = Bun.spawnSync(
+		['bun', '--preload', './test/preload/component_registry.ts', '-e', script],
+		{
+			cwd: `${import.meta.dir}/../..`,
+			env: {
+				...process.env,
+				DEDALO_DATABASE_CONN: 'dedalo7ts_test',
+				DEDALO_MEDIA_EXPORT_BASE: 'http://media.example.org/dedalo/media',
+			},
+		},
+	);
+	const line = probe.stdout.toString().trim().split('\n').pop() ?? '{}';
+	failureEnvelope = JSON.parse(line) as { result: unknown; msg: string; errors: string[] };
+	return failureEnvelope;
+}
+
 describe('check_server_transcriber_status handler', () => {
 	test('denies fail-closed on an invalid media_ddo record target (READ gate)', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
@@ -211,6 +251,339 @@ describe('check_server_transcriber_status handler', () => {
 		});
 		expect(response.result).toBe(false);
 		expect(response.msg).toBe('Missing required parameters: media_ddo, transcriber_engine, pid');
+	});
+});
+
+/**
+ * The READ-gated poll, driven end to end against a SEEDED dd996 transcriber
+ * config. Three regressions in one drive (audit 2026-07-28):
+ *  1. the entry list was read at `config.transcriber_config.value`, a shape
+ *     getToolConfig never emits — so BOTH remote-ASR actions were dead, always
+ *     answering "Transcriber config (uri/key) is not defined";
+ *  2. the poll called ensureAudioQuality, i.e. a level-1 READ action could fire
+ *     an ffmpeg transcode and write a media file (PHP only builds the URL);
+ *  3. an unreachable/blocked transcriber came back as `msg:'OK. Request done'`
+ *     with `errors:[]` — a dead ASR server read as success (and the client maps
+ *     a status-less response to its `default:` "Process done" branch).
+ * The seeded uri is loopback, so the SSRF guard trips: no network is touched.
+ */
+describe('check_server_transcriber_status against a configured transcriber', () => {
+	const SCRATCH_SECTION_ID = 990041;
+	// SUPERUSER_ID: the gate is not the subject here — the poll's behaviour is.
+	const adminPrincipal: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+
+	beforeAll(async () => {
+		await sql`DELETE FROM matrix_tools WHERE section_tipo = 'dd996' AND section_id = ${SCRATCH_SECTION_ID}`;
+		await sql`
+			INSERT INTO matrix_tools (section_id, section_tipo, string, misc)
+			VALUES (
+				${SCRATCH_SECTION_ID},
+				'dd996',
+				${'{"dd1326":[{"id":1,"value":"tool_transcription"}]}'}::text::jsonb,
+				${'{"dd999":[{"id":1,"value":{"transcriber_config":[{"name":"babel_transcriber","uri":"http://127.0.0.1:9/api/","key":"scratch-key"}]}}]}'}::text::jsonb
+			)`;
+		resetConfigCache();
+	});
+	afterAll(async () => {
+		await sql`DELETE FROM matrix_tools WHERE section_tipo = 'dd996' AND section_id = ${SCRATCH_SECTION_ID}`;
+		resetConfigCache();
+	});
+
+	test('the seeded config resolves through the real getToolConfig shape', async () => {
+		expect(
+			resolveTranscriberConfig(await getToolConfig('tool_transcription'), 'babel_transcriber'),
+		).toEqual({ uri: 'http://127.0.0.1:9/api/', key: 'scratch-key' });
+	});
+
+	test('never transcodes, and never reports a failed poll as OK', async () => {
+		const loaded = await getLoadedTool('tool_transcription');
+		const handler = loaded!.module.apiActions.check_server_transcriber_status!.handler;
+		const response = await handler({
+			principal: adminPrincipal,
+			userId: -1,
+			options: {
+				media_ddo: { component_tipo: 'rsc35', section_tipo: 'rsc167', section_id: 1 },
+				transcriber_engine: 'babel_transcriber',
+				pid: 4321,
+			},
+			background: false,
+		});
+		// It got PAST the config lookup (regression 1).
+		expect(response.msg).not.toContain('Transcriber config');
+		// It never asked for the audio quality to be BUILT (regression 2):
+		// 'AV original file not found' is ensureAudioQuality's error and can only
+		// surface here if the read path tries to transcode.
+		expect(response.msg).not.toContain('AV original file not found');
+		// And it did not dress a failure up as a success (regression 3): the
+		// loopback uri is refused by the SSRF guard (or, when
+		// DEDALO_MEDIA_EXPORT_BASE is unset, the URL builder refuses first) —
+		// either way this call cannot succeed, so it must not say 'OK.'.
+		expect(response.result).toBe(false);
+		expect(response.msg.startsWith('OK.')).toBe(false);
+		expect((response.errors ?? []).length).toBeGreaterThan(0);
+	});
+
+	/**
+	 * The honesty branch needs the poll to actually REACH the provider, which
+	 * needs DEDALO_MEDIA_EXPORT_BASE (unset on a dev box, where the URL builder
+	 * refuses first). `config` freezes at import, so overlay it in a child —
+	 * same pattern as media_export_base.test.ts. The uri stays loopback, so the
+	 * SSRF guard answers `{result:false,…}` with no network call.
+	 */
+	test('a provider failure is reported as a failure, never as OK', () => {
+		const response = liveFailureEnvelope();
+		expect(response.result).toBe(false);
+		expect(response.msg).toBe('invalid transcriber URL');
+		expect(response.errors).toEqual(['invalid transcriber URL']);
+	});
+});
+
+/**
+ * CLIENT half of the outage-honesty contract (audit 2026-07-28).
+ *
+ * The server now answers a dead/blocked ASR server with `{result:false,…}`, but
+ * the browser is what the user reads: `get_server_status()` in
+ * tools/tool_transcription/js/render_tool_transcription.js switches on
+ * `response.result.status`, and a status-less envelope used to fall through to
+ * `case 3: default:` — rendering "Process done" AND deleting the stored pid.
+ * A dead transcriber therefore looked like a finished transcription and threw
+ * away the only handle to the running job.
+ *
+ * The client module is served over HTTP (its imports resolve to /dedalo/core/…,
+ * which does not exist on disk), so it cannot be imported directly. This
+ * harness loads the REAL source text, strips the import block, and re-exports
+ * the module-scoped poller — every assertion below runs the shipped code.
+ */
+const CLIENT_SOURCE = `${import.meta.dir}/../../tools/tool_transcription/js/render_tool_transcription.js`;
+
+interface StubNode {
+	textContent: string;
+	classList: {
+		add: (c: string) => void;
+		remove: (c: string) => void;
+		contains: (c: string) => boolean;
+	};
+}
+function stubNode(...initial: string[]): StubNode {
+	const classes = new Set<string>(initial);
+	return {
+		textContent: '',
+		classList: {
+			add: (c: string) => {
+				classes.add(c);
+			},
+			remove: (c: string) => {
+				classes.delete(c);
+			},
+			contains: (c: string) => classes.has(c),
+		},
+	};
+}
+
+let getServerStatus: (options: unknown) => void;
+
+async function loadClientPoller(): Promise<(options: unknown) => void> {
+	const raw = await Bun.file(CLIENT_SOURCE).text();
+	const stripped = raw.replace(/^[ \t]*import\s+\{[^}]*\}\s+from\s+'[^']*'[ \t]*;?[ \t]*$/gm, '');
+	// Fail LOUDLY if the import shape changed: a silent strip failure would make
+	// the whole describe unloadable-but-green in the worst case.
+	if (stripped.includes("from '../../../core/")) {
+		throw new Error('client harness: the import block was not stripped — update the regex');
+	}
+	if (!stripped.includes('const get_server_status')) {
+		throw new Error('client harness: get_server_status not found in the client source');
+	}
+	const probe = `${ROOT}/client_probe/render_tool_transcription.probe.mjs`;
+	await Bun.write(probe, `${stripped}\nexport { get_server_status }\n`);
+	const module = (await import(probe)) as { get_server_status: (options: unknown) => void };
+	return module.get_server_status;
+}
+
+/** Drive one poll cycle against a stubbed browser world. */
+async function drivePoll(response: unknown, storedPid: number | null = 4321) {
+	const deleted: string[] = [];
+	const scheduled: number[] = [];
+	const refreshes: number[] = [];
+	const requests: unknown[] = [];
+	// the real node is created as 'status_container hide' (.hide = display:none)
+	const status_container = stubNode('hide');
+	const button = stubNode('disable');
+
+	// biome-ignore lint/suspicious/noExplicitAny: browser globals the client module reads free.
+	const g = globalThis as any;
+	const prior = { data_manager: g.data_manager, setTimeout: g.setTimeout };
+	g.data_manager = {
+		get_local_db_data: async (id: string) => (storedPid === null ? null : { id, pid: storedPid }),
+		delete_local_db_data: (id: string) => {
+			deleted.push(id);
+		},
+	};
+	// Record the re-poll / refresh scheduling WITHOUT firing it (4s in real time).
+	g.setTimeout = (_fn: unknown, ms: number) => {
+		scheduled.push(ms);
+		return 0;
+	};
+	const self = {
+		media_component: { section_tipo: 'rsc167', section_id: 1 },
+		transcription_component: {
+			refresh: () => {
+				refreshes.push(1);
+			},
+		},
+		get_tool_label: () => null, // unlabelled instance → the literal fallbacks
+		check_server_transcriber_status: async (options: unknown) => {
+			requests.push(options);
+			return response;
+		},
+	};
+	const nodes = {
+		status_container,
+		button_automatic_transcription: button,
+		transcriber_engine_select: { value: 'babel_transcriber' },
+	};
+
+	try {
+		getServerStatus({ self, nodes });
+		// every stubbed await resolves immediately: draining the microtask queue
+		// runs the whole poll deterministically, with no wall-clock dependency.
+		for (let i = 0; i < 100; i++) await Promise.resolve();
+	} finally {
+		g.data_manager = prior.data_manager;
+		g.setTimeout = prior.setTimeout;
+	}
+
+	return { deleted, scheduled, refreshes, requests, status_container, button };
+}
+
+describe('client poll honesty (render_tool_transcription.get_server_status)', () => {
+	beforeAll(async () => {
+		getServerStatus = await loadClientPoller();
+	});
+
+	test('a {result:false} envelope is NOT rendered as a finished transcription', async () => {
+		const run = await drivePoll({
+			result: false,
+			msg: 'invalid transcriber URL',
+			errors: ['invalid transcriber URL'],
+		});
+		// the whole point: the user must not read "Process done"
+		expect(run.status_container.textContent).not.toBe('Process done');
+		expect(run.status_container.textContent).toContain('invalid transcriber URL');
+		expect(run.status_container.classList.contains('error')).toBe(true);
+		expect(run.status_container.classList.contains('processing')).toBe(false);
+		// the node ships hidden (.hide = display:none !important): an error written
+		// into it is only honest if it is actually shown.
+		expect(run.status_container.classList.contains('hide')).toBe(false);
+		// the pid is the only handle on the running job — it must survive
+		expect(run.deleted).toEqual([]);
+		// polling STOPS: no re-poll, and no component refresh was scheduled
+		expect(run.scheduled).toEqual([]);
+		expect(run.refreshes).toEqual([]);
+	});
+
+	test('a status-less / malformed envelope is treated as a failure, not as done', async () => {
+		for (const response of [undefined, null, {}, { result: null }, { result: 'unexpected' }]) {
+			const run = await drivePoll(response);
+			expect(run.status_container.textContent).not.toBe('Process done');
+			expect(run.status_container.classList.contains('error')).toBe(true);
+			expect(run.deleted).toEqual([]);
+			expect(run.scheduled).toEqual([]);
+		}
+	});
+
+	test('the failure branch does not re-enable the button (a job may still be running)', async () => {
+		const run = await drivePoll({ result: false, msg: 'transcriber HTTP 502' });
+		expect(run.button.classList.contains('disable')).toBe(true);
+	});
+
+	test('status 2 still re-polls and keeps the pid', async () => {
+		const run = await drivePoll({ result: { status: 2 }, msg: 'OK. Request done' });
+		expect(run.status_container.textContent).toBe('Processing');
+		expect(run.status_container.classList.contains('processing')).toBe(true);
+		expect(run.status_container.classList.contains('error')).toBe(false);
+		expect(run.deleted).toEqual([]);
+		expect(run.scheduled).toEqual([4000]);
+	});
+
+	test('status 3 still clears the pid and refreshes the component', async () => {
+		const run = await drivePoll({ result: { status: 3 }, msg: 'OK. Request done' });
+		expect(run.status_container.textContent).toBe('Process done');
+		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
+		expect(run.scheduled).toEqual([4000]);
+	});
+
+	test('status 1 still clears the stale pid and reads Inactive', async () => {
+		const run = await drivePoll({ result: { status: 1 }, msg: 'OK. Request done' });
+		expect(run.status_container.textContent).toBe('Inactive');
+		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
+		expect(run.scheduled).toEqual([]);
+	});
+
+	/**
+	 * The two halves, joined: the envelope the SERVER really emits for a dead
+	 * transcriber, fed to the REAL browser poller. This is the gate that would
+	 * catch either half drifting — a server that starts dressing failures as OK,
+	 * or a client that starts trusting a status-less result again.
+	 */
+	test('the real server failure envelope renders as a failure in the browser', async () => {
+		const envelope = liveFailureEnvelope();
+		expect(envelope.result).toBe(false); // the harvest actually ran
+		const run = await drivePoll(envelope);
+		expect(run.status_container.textContent).toContain(envelope.msg);
+		expect(run.status_container.classList.contains('error')).toBe(true);
+		expect(run.deleted).toEqual([]);
+		expect(run.scheduled).toEqual([]);
+	});
+
+	test('no stored pid → the poll never calls the server at all', async () => {
+		const run = await drivePoll({ result: { status: 3 } }, null);
+		expect(run.requests).toEqual([]);
+		expect(run.status_container.textContent).toBe('');
+	});
+});
+
+describe('saveTranscriptionResult — the id-1 slot contract', () => {
+	// THE transcription is the lang's single main text: item id 1, stated
+	// explicitly. The id-less update this used to send relied on slice/sibling
+	// resolution and APPENDED with a minted id when nothing resolved — a
+	// finished 87-minute transcription landed invisible in item 2 while the
+	// editor showed the empty item 1 (rsc167/528, 2026-07-28).
+	test('an empty component receives the transcript as item id 1', async () => {
+		const { saveTranscriptionResult } = await import('../../src/core/tools/transcription_asr.ts');
+		const { insertMatrixRecordWithCounter, deleteMatrixRecord } = await import(
+			'../../src/core/db/matrix_write.ts'
+		);
+		const { readMatrixRecord } = await import('../../src/core/db/matrix.ts');
+		const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+
+		const table = (await getMatrixTableFromTipo('rsc167'))!;
+		const sectionId = await insertMatrixRecordWithCounter(table, 'rsc167', {});
+		try {
+			const outcome = await saveTranscriptionResult({
+				lang: 'lg-eng',
+				transcriptionDdo: {
+					component_tipo: 'rsc36',
+					section_tipo: 'rsc167',
+					section_id: sectionId,
+				},
+				segments: [{ start: 0, end: 4, text: ' Hello world.' }],
+				userId: -1,
+			});
+			expect(outcome.saved).toBe(true);
+
+			const record = await readMatrixRecord(table, 'rsc167', sectionId);
+			const items = (record?.columns.string as Record<string, unknown[]>)?.rsc36 as {
+				id?: unknown;
+				lang?: string;
+				value?: string;
+			}[];
+			expect(items).toHaveLength(1);
+			expect(Number(items[0]?.id)).toBe(1); // the slot is STATED, never minted
+			expect(items[0]?.lang).toBe('lg-eng');
+			expect(items[0]?.value).toContain('Hello world.');
+		} finally {
+			await deleteMatrixRecord(table, 'rsc167', sectionId);
+		}
 	});
 });
 

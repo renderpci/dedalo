@@ -12,7 +12,7 @@
 import { config } from '../../../config/config.ts';
 import { dispatchAreaRead, refuseAreaWrite } from '../../area/read.ts';
 import { isAreaModel } from '../../concepts/area.ts';
-import type { Rqo } from '../../concepts/rqo.ts';
+import { type Rqo, isTemporalSource } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { getSectionTipos } from '../../concepts/sqo.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
@@ -22,6 +22,7 @@ import {
 	type Principal,
 	getPermissions,
 	getSectionPermissions,
+	resolveOwnUserRecordPermission,
 } from '../../security/permissions.ts';
 import type { Session } from '../../security/session_store.ts';
 import { getTermByLocator, getTermTipos } from '../../ts_object/term_resolver.ts';
@@ -109,6 +110,37 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		) {
 			return denied(400, 'save: source.tipo/section_tipo/section_id are required');
 		}
+		// TEMPORAL instance (WC-059): a tool's throwaway editable clone addresses
+		// NO record — its section_id is a client sentinel, not an address. Resolve
+		// and echo, never persist. FIRST, so it also short-circuits the record
+		// scope gate, the activity log and the Time Machine below: none of them
+		// have a record to speak about. The gate is a READ level, not a write one
+		// — nothing is written (same reasoning as the search_<n> branch).
+		if (isTemporalSource(source)) {
+			if (!Array.isArray(dataPayload.changed_data)) {
+				return denied(400, 'save: data.changed_data must be an array');
+			}
+			// A read grant is enough BECAUSE nothing is persisted — with one
+			// exception: `add_new_element` really creates a record in the target
+			// section. Admitting that at level 1 would be a read→create escalation,
+			// since this branch deliberately short-circuits the level-2 gate, the
+			// record-scope gate and refuseAreaWrite below. So the required level is
+			// a function of what the batch actually does.
+			const temporalCreates = dataPayload.changed_data.some(
+				(change) => change.action === 'add_new_element',
+			);
+			const temporalLevel = await getPermissions(principal, source.section_tipo, source.tipo);
+			if (temporalLevel < (temporalCreates ? 2 : 1)) {
+				return denied(
+					403,
+					temporalCreates
+						? "You don't have enough permissions to edit this component"
+						: "You don't have enough permissions to read this component",
+				);
+			}
+			const { resolveTemporalSave } = await import('../../section/record/temporal.ts');
+			return await resolveTemporalSave(rqo, principal);
+		}
 		const saveAreaRefusal = await refuseAreaWrite(source.section_tipo, source.model);
 		if (saveAreaRefusal !== null) return saveAreaRefusal;
 		// Consultation-only sections (Activity dd542, Time Machine dd15, …) are
@@ -131,6 +163,8 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// and THROWS a 500 on read-only sections (Activity dd542 / Time Machine dd15).
 		// Mirrors the resolve_data action; a read grant (>= 1) is enough — nothing is
 		// written, and resolveSearchData applies its own per-target projects ACL.
+		// The merge + resolve + echo is the shared non-persisting core
+		// (section/record/resolve_echo.ts), which the temporal door reuses.
 		if (String(source.section_id).startsWith('search_')) {
 			if (!Array.isArray(dataPayload.changed_data)) {
 				return denied(400, 'save: data.changed_data must be an array');
@@ -144,92 +178,32 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				if (searchLevel < 1) {
 					return denied(403, "You don't have enough permissions to search this component");
 				}
-				// The resulting picked set: the client sends clone(self.data) — its
-				// CURRENT chips (entries) — plus the DELTA changed_data (link_record
-				// one 'insert'; unlink_record one 'remove' by entry id). Reconcile
-				// here: the echo is the client's next self.data verbatim (refresh
-				// tmp_api_response), so inserts-only would drop every prior chip on
-				// a second pick and clear ALL chips on an unlink. Insert duplicates
-				// are dropped (the client's own duplicate check is page-local).
-				const searchPayload = (rqo.data ?? {}) as { entries?: unknown; value?: unknown };
-				const currentChips = (
-					Array.isArray(searchPayload.entries)
-						? (searchPayload.entries as Record<string, unknown>[])
-						: Array.isArray(searchPayload.value)
-							? (searchPayload.value as Record<string, unknown>[])
-							: []
-				).filter((chip) => chip !== null && typeof chip === 'object');
-				const removedIds = new Set(
-					dataPayload.changed_data
-						.filter((change) => change.action === 'remove' && change.id != null)
-						.map((change) => String(change.id)),
+				const { currentChipsFromPayload, mergeRelationChips, resolveRelationEcho } = await import(
+					'../../section/record/resolve_echo.ts'
 				);
-				const merged = currentChips.filter((chip) => !removedIds.has(String(chip.id)));
-				for (const change of dataPayload.changed_data) {
-					if (change.action !== 'insert' || change.value == null) continue;
-					const locator = change.value as Record<string, unknown>;
-					const exists = merged.some(
-						(chip) =>
-							chip.section_tipo === locator.section_tipo &&
-							String(chip.section_id) === String(locator.section_id),
-					);
-					if (!exists) merged.push(locator);
-				}
-				// Strip the echo-only stamps — resolveSearchData re-stamps id 1..n.
-				const picked = merged.map(
-					({ id: _id, paginated_key: _paginatedKey, ...locator }) => locator,
+				const picked = mergeRelationChips(
+					currentChipsFromPayload((rqo.data ?? {}) as { entries?: unknown; value?: unknown }),
+					dataPayload.changed_data,
 				);
-				const resolveRqo = {
-					...rqo,
-					source: { ...source, action: 'resolve_data', value: picked },
-				} as typeof rqo;
-				const { resolveSearchData, buildGetDataContext } = await import('../../section/read.ts');
-				const { buildDataItem } = await import('../../resolve/component_data.ts');
-				const resolved = await resolveSearchData(resolveRqo, principal);
-				// resolveSearchData emits the main item with a NULL record identity
-				// (synthetic record — read.ts expandPortal stamp), so match by tipo
-				// only and RE-STAMP the client's synthetic id: the client picks its
-				// item by String(el.section_id)===String(self.section_id)
-				// ('search_1', component_common.js:400). The resolved entries are the
-				// string-cast locators the JSONB @> containment needs — rebuilding
-				// from the raw numeric `picked` here would echo a numeric section_id
-				// that misses every string-stored relation locator (0 rows).
-				let mainItem = resolved.find(
-					(item) =>
-						(item as { tipo?: string }).tipo === source.tipo &&
-						(item as { section_tipo?: string }).section_tipo === source.section_tipo,
-				);
-				if (mainItem !== undefined) {
-					(mainItem as { section_id?: unknown }).section_id = source.section_id;
-				} else {
-					mainItem = buildDataItem(
-						source.tipo,
-						source.section_tipo,
-						source.section_id,
-						'search',
-						source.lang ?? 'lg-nolan',
-						// Same string cast as resolveSearchData's echo (PHP locator
-						// parity, class.locator.php set_section_id).
-						picked.map((locator) =>
-							locator.section_id !== undefined && locator.section_id !== null
-								? { ...locator, section_id: String(locator.section_id) }
-								: locator,
-						),
-					);
-					resolved.unshift(mainItem);
-				}
-				// The client's link_record duplicate-check reads pagination.total and
-				// requires it to exceed the pre-insert count (component_portal.js:1063).
-				(mainItem as { pagination?: unknown }).pagination = {
-					total: picked.length,
-					limit: picked.length,
-					offset: 0,
-				};
-				const context = await buildGetDataContext(resolveRqo, resolved as never, principal);
-				return { status: 200, body: { result: { context, data: resolved }, msg: 'OK' } };
+				return await resolveRelationEcho({ rqo, principal, picked, mode: 'search' });
 			}
 		}
-		const level = await getPermissions(principal, source.section_tipo, source.tipo);
+		// dd128 OWN-record rules run BEFORE the matrix level and both raise and
+		// lower it (PHP component_common::save reaches the same resolver through
+		// get_component_permissions()). The DOWNGRADE half is the security half:
+		// without it a user holding a dd128 write grant can set their own profile
+		// assignment or developer flag through this very endpoint, and any global
+		// admin can raise their own global-admin flag. The UPGRADE half is what
+		// makes tool_user_admin work at all — dd128 is not project-assigned, so
+		// most profiles grant 0 on it and a user could not edit their own password.
+		const ownRecordLevel = resolveOwnUserRecordPermission(
+			principal,
+			source.section_tipo,
+			source.tipo,
+			source.section_id,
+		);
+		const level =
+			ownRecordLevel ?? (await getPermissions(principal, source.section_tipo, source.tipo));
 		if (level < 2) {
 			return denied(403, "You don't have enough permissions to edit this component");
 		}
@@ -439,6 +413,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (sectionTipo === undefined) {
 			return denied(400, 'create: source.section_tipo is required');
 		}
+		// WC-059: a temporal instance addresses no record, so a record-lifecycle
+		// action on one is nonsense. Refusing is cheaper than reasoning about it,
+		// and it keeps "every record-addressing door consults isTemporalSource"
+		// literally true (temporal_instance_tripwire).
+		if (isTemporalSource(source)) {
+			return denied(400, 'temporal instances cannot create records');
+		}
 		const createAreaRefusal = await refuseAreaWrite(sectionTipo, source.model);
 		if (createAreaRefusal !== null) return createAreaRefusal;
 		// getSectionPermissions caps consultation-only sections at read (1), so a
@@ -493,6 +474,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (source.section_id === undefined || source.section_id === null) {
 			return denied(400, 'duplicate: source.section_id is required');
 		}
+		// WC-059 — see the create door.
+		if (isTemporalSource(source)) {
+			return denied(400, 'temporal instances cannot duplicate records');
+		}
 		const dupAreaRefusal = await refuseAreaWrite(sectionTipo, source.model);
 		if (dupAreaRefusal !== null) return dupAreaRefusal;
 		// Consultation-only sections cap at read (1) → duplicate refused here; the
@@ -542,6 +527,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			true;
 		if (sectionTipo === undefined) {
 			return denied(400, 'delete: source.section_tipo is required');
+		}
+		// WC-059 — see the create door.
+		if (isTemporalSource(rqo.source)) {
+			return denied(400, 'temporal instances cannot delete records');
 		}
 		const deleteAreaRefusal = await refuseAreaWrite(
 			sectionTipo,

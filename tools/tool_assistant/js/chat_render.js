@@ -1,35 +1,11 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label*/
 /*eslint no-undef: "error"*/
 
 
 
 // import
 	import { markdown } from './markdown.js'
-
-
-
-/**
- * T
- * Localised label helper. Looks up `key` in the global `get_label` map
- * (populated by Dédalo's server-side label system) and returns the translated
- * string, or `fallback` when the map is unavailable or the key is absent.
- *
- * `get_label` is declared via /*global*\/ so ESLint does not flag it as
- * undefined; it is injected into the page at render time by PHP and is not
- * imported as an ES module. Access is guarded by a typeof check so this
- * module is safe to import in environments where the global is absent.
- *
- * @param {string} key      - Label identifier in the Dédalo label registry.
- * @param {string} fallback - English default used when the key is not found.
- * @returns {string} Translated label or fallback.
- */
-const t = function(key, fallback) {
-	if (typeof get_label !== 'undefined' && get_label && get_label[key]) {
-		return get_label[key]
-	}
-	return fallback
-}//end t
+	import { t } from './tool_labels.js'
 
 
 
@@ -62,8 +38,9 @@ const t = function(key, fallback) {
  * unless the user scrolls up more than 80 px from the bottom (`_auto_scroll`
  * flag). The flag is reset to true whenever the user sends a new message.
  *
- * Localization: all user-visible strings go through the module-local `t(key,
- * fallback)` helper, which reads from the global `get_label` map when available.
+ * Localization: all user-visible strings go through the shared `t(key,
+ * fallback)` helper (tool_labels.js), which reads this tool's own register.json
+ * labels first and the global `get_label` map second.
  */
 export const chat_render = class chat_render {
 

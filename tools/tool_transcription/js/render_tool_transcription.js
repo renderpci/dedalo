@@ -802,6 +802,14 @@ const render_activity_info = async function(self) {
 *   3 (or default) — Finished: clear local DB entry, mark UI as done, schedule a
 *       4-second delayed refresh of the transcription component so the new text appears.
 *
+* A FAILING envelope is not a status code and never reaches that switch: when the
+* response is missing, or carries `result:false` (the server's truthful shape for an
+* unreachable/blocked/misconfigured transcriber, or a denied gate), the poll shows the
+* server's message as an error, STOPS, and KEEPS the stored pid — the run stays
+* resumable/inspectable instead of being reported as finished and forgotten.
+* Gate: test/unit/tool_transcription.test.ts ('client poll honesty'), which loads THIS
+* source and drives the poll against a stubbed browser world.
+*
 * The poll is initiated once at call time via `check_current_server_status()`. If the
 * local DB holds no entry for this process (no job was ever started or it was already
 * cleaned up), the function returns immediately without touching the UI.
@@ -843,8 +851,36 @@ const get_server_status = function (options) {
 			pid : pid
 		})
 
-		const status = response.result.status
-			? response.result.status
+		// outage honesty (audit 2026-07-28)
+		// The transcriber is an EXTERNAL server: an unreachable host, an HTTP error,
+		// a blocked (SSRF) uri, a missing config or a denied gate all come back as
+		// {result:false, msg} — never as a status code. Falling through to the
+		// switch below landed on 'default:', which reads 'Process done' AND deletes
+		// the stored pid: the transcriptionist was told that a transcription that
+		// never ran had finished, and the only handle on the job was destroyed.
+		// So: report the real message, STOP polling, and KEEP the pid (a reload
+		// re-polls it, so a job that IS running can still be recovered).
+		const status_result = (response && typeof response.result === 'object')
+			? response.result
+			: null
+		if (!status_result) {
+			const error_msg = (response && response.msg)
+				? response.msg
+				: 'Transcriber server did not answer'
+			// SEC-XSS-006: status labels are plain text
+			nodes.status_container.textContent = (self.get_tool_label('transcription_error') || 'Transcription error') + ': ' + error_msg
+			nodes.status_container.classList.remove('processing');
+			nodes.status_container.classList.add('error');
+			nodes.status_container.classList.remove('hide');
+			// The button is deliberately left as it is: the job's real state is
+			// UNKNOWN, so re-enabling it here would invite a duplicate submit over
+			// a transcription that may still be running on the transcriber server.
+			console.error('[tool_transcription] transcriber status poll failed:', response)
+			return
+		}
+
+		const status = status_result.status
+			? status_result.status
 			: null
 
 		switch (status) {
@@ -1117,11 +1153,9 @@ const render_automatic_transcription = function (options) {
 						success_span.textContent = msg
 						status_container.appendChild(success_span)
 
-						// set value and implicit save action in component_text_area
-						self.transcription_component.set_value(
-							0, // key
-							response[0] || '' // value
-						)
+						// Persist as THE transcription: item id 1 of the current lang,
+						// replaced — never appended (see save_transcription).
+						self.save_transcription( response[0] || '' )
 					})
 					break;
 			}

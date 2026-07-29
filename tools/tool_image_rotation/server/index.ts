@@ -68,6 +68,6 @@ async function applyRotation(ctx: ToolActionContext): Promise<ToolResponse> {
 export const tool: ToolServerModule = {
 	name: 'tool_image_rotation',
 	apiActions: {
-		apply_rotation: { permission: 'record', minLevel: 2, handler: applyRotation },
+		apply_rotation: { permission: 'record_tipo', minLevel: 2, handler: applyRotation },
 	},
 };

@@ -383,7 +383,13 @@ export async function updateOntology(
 		// dd_ontology flat-index rebuild per imported TLD (skip matrix_dd)
 		for (const file of staged) {
 			if (file.tld === 'matrix_dd') continue;
-			const rebuilt = await setRecordsInDdOntology({ sectionTipo: file.sectionTipo, userId });
+			// wholeSection: this IS the deliberate full-TLD re-derive after an
+			// ontology-file import — not a request-driven batch (WC-043).
+			const rebuilt = await setRecordsInDdOntology({
+				sectionTipo: file.sectionTipo,
+				wholeSection: true,
+				userId,
+			});
 			messages.push(rebuilt.msg);
 			if (rebuilt.result !== true) response.errors.push(...rebuilt.errors);
 		}

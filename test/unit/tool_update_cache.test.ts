@@ -21,24 +21,42 @@ import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
 
 const SECTION = 'numisdata4';
-const SCRATCH_SECTION = 'ich135';
-const SCRATCH_INPUT_TEXT = 'ich137';
+/**
+ * The scratch surface is the canonical test3 playground (matrix_test), the ONE
+ * write surface the suite owns — the preload re-seeds it before every run and
+ * sweeps strays a crashed run left behind. It used to be `ich135`/`ich137`, a
+ * section that exists in NO test database: `getMatrixTableFromTipo` returned
+ * null, so buildSearchSql threw "no resolvable matrix table for the SQO
+ * section_tipo" in the abort test, and the scratch-twin regenerate test
+ * returned early from its `catch { return }` — silently green, asserting
+ * nothing, for as long as the file has existed.
+ */
+const SCRATCH_SECTION = 'test3';
+/** test52 — component_input_text, translatable (the lang-slice assertion needs both). */
+const SCRATCH_INPUT_TEXT = 'test52';
 const scratchIds: number[] = [];
 /** dd800 bulk-process records the runs mint — scratch hygiene. */
 const bulkIds: number[] = [];
 afterAll(async () => {
-	for (const id of scratchIds) {
-		try {
-			await deleteSectionRecord(SCRATCH_SECTION, id, -1);
-		} catch {
-			/* best-effort */
-		}
-	}
-	for (const id of bulkIds) {
-		try {
-			await deleteSectionRecord('dd800', id, -1);
-		} catch {
-			/* best-effort */
+	// Best-effort, but NEVER silent: a swallowed cleanup failure is how scratch
+	// rows accumulate in a shared playground. Report what did not go away.
+	for (const [sectionTipo, ids] of [
+		[SCRATCH_SECTION, scratchIds],
+		['dd800', bulkIds],
+	] as [string, number[]][]) {
+		for (const id of ids) {
+			try {
+				const outcome = await deleteSectionRecord(sectionTipo, id, -1);
+				if (outcome.removed !== true) {
+					console.warn(
+						`[tool_update_cache.test] scratch cleanup did NOT remove ${sectionTipo}/${id}: ${JSON.stringify(outcome)}`,
+					);
+				}
+			} catch (error) {
+				console.warn(
+					`[tool_update_cache.test] scratch cleanup threw for ${sectionTipo}/${id}: ${(error as Error).message}`,
+				);
+			}
 		}
 	}
 });
@@ -74,10 +92,29 @@ describe('tool_update_cache module', () => {
 		const list = res.result as Record<string, unknown>[];
 		expect(Array.isArray(list)).toBe(true);
 		expect(list.length).toBeGreaterThan(0);
-		// Every entry is a component and carries the regenerate_options key.
-		for (const el of list) {
-			expect(el.type).toBe('component');
+		// The list is the PHP shape: the section row + its groupers + the components,
+		// in ontology order (3dde1477e3 — the client's render_components_list switches
+		// on model to build the .ul_regular group headers, so a component-only list
+		// rendered every row ungrouped). regenerate_options is a COMPONENT concern and
+		// is stamped ONLY on components; PHP omits the key on the section/groupers.
+		const components = list.filter((el) => el.type === 'component');
+		expect(components.length).toBeGreaterThan(0);
+		for (const el of components) {
 			expect('regenerate_options' in el).toBe(true);
+		}
+		for (const el of list.filter((entry) => entry.type !== 'component')) {
+			expect('regenerate_options' in el).toBe(false);
+		}
+		// The section row itself leads the list (ontology order preserved).
+		expect(list.some((el) => el.type === 'section')).toBe(true);
+		expect(list.some((el) => el.model === 'section_group')).toBe(true);
+		// Media components carry the v6 delete_normalized_files descriptor; non-media
+		// components carry an explicit null (the client iterates or skips on it).
+		const media = components.find((el) => String(el.model).startsWith('component_image'));
+		if (media !== undefined) {
+			expect(media.regenerate_options).toEqual([
+				{ name: 'delete_normalized_files', type: 'boolean', default: false },
+			]);
 		}
 	});
 
@@ -153,8 +190,11 @@ describe('tool_update_cache module', () => {
 				sqo: { section_tipo: [SCRATCH_SECTION] },
 			},
 		});
-		if (res.result === false) return; // DB unavailable
+		// No silent skip: the handler must reach the loop and stop there. (This used
+		// to be `if (res.result === false) return`, which would have hidden the stale
+		// section_tipo that made the run throw instead of abort.)
 		if (typeof res.bulk_process_id === 'number') bulkIds.push(res.bulk_process_id);
+		expect(res.result).toBe(true);
 		expect(res.stopped).toBe(true);
 		expect(res.processed).toBe(0);
 		expect(res.regenerated).toBe(0);
@@ -163,12 +203,10 @@ describe('tool_update_cache module', () => {
 	test('update_cache regenerates a component (scratch-twin, real DB)', async () => {
 		const loaded = await getLoadedTool('tool_update_cache');
 		const principal = await resolvePrincipal(-1);
-		let scratchId: number;
-		try {
-			scratchId = await createSectionRecord(SCRATCH_SECTION, -1);
-		} catch {
-			return; // DB unavailable
-		}
+		// No try/catch escape: a failure to create the scratch twin must FAIL the
+		// test. The old `catch { return }` swallowed "section ich135 does not
+		// exist" and made this whole gate a no-op green.
+		const scratchId = await createSectionRecord(SCRATCH_SECTION, -1);
 		scratchIds.push(scratchId);
 		// Seed TWO languages, then regenerate the whole section for that component.
 		// The regenerate must preserve BOTH translations, un-duplicated (set_data is

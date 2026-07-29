@@ -283,6 +283,16 @@
             "value": "Preencher as lacunas"
           },
           {
+            "lang": "lg-eus",
+            "name": "fill_the_gaps",
+            "value": "Bete hutsuneak"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "fill_the_gaps",
+            "value": "खाली ठाउँहरू भर्नुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "show_tipo_in_label",
             "value": "Show ontology tipo"
@@ -321,6 +331,16 @@
             "lang": "lg-deu",
             "name": "show_tipo_in_label",
             "value": "Ontologie anzeigen tipo"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "show_tipo_in_label",
+            "value": "Erakutsi ontologiaren tipo-a"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "show_tipo_in_label",
+            "value": "ओन्टोलोजी tipo देखाउनुहोस्"
           },
           {
             "lang": "lg-eng",
@@ -468,6 +488,11 @@
             "value": "Elementos ativos"
           },
           {
+            "lang": "lg-nep",
+            "name": "active_elements",
+            "value": "सक्रिय तत्वहरू"
+          },
+          {
             "lang": "lg-eng",
             "name": "breakdown",
             "value": "Break down"
@@ -561,6 +586,11 @@
             "lang": "lg-por",
             "name": "tool_export",
             "value": "Exportar"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "tool_export",
+            "value": "निर्यात गर्नुहोस्"
           },
           {
             "lang": "lg-eng",

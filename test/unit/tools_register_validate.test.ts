@@ -16,6 +16,7 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+	applyActiveOverride,
 	convertAuthoringToV7,
 	detectFormat,
 	validateRegister,
@@ -82,6 +83,38 @@ describe('authoring → v7 conversion', () => {
 		await expect(
 			convertAuthoringToV7({ name: 'BadName', version: '1.0.0', label: { 'lg-eng': 'x' } }),
 		).rejects.toThrow();
+	});
+
+	test('applyActiveOverride outranks the file declaration and stays valid (WC-057)', async () => {
+		const authoring = {
+			name: 'tool_export',
+			version: '1.0.0',
+			label: { 'lg-eng': 'Export' },
+			active: true,
+		};
+		const record = await convertAuthoringToV7(authoring);
+		expect(record.relation?.dd1354?.[0]?.section_id).toBe('1');
+
+		// The admin unchecked it: dd64/2 (no), and the record must still validate —
+		// the override runs BEFORE validateRegister in importTools.
+		applyActiveOverride(record, false);
+		expect(record.relation?.dd1354?.[0]?.section_id).toBe('2');
+		expect(record.relation?.dd1354).toHaveLength(1);
+		expect(validateRegister(record, 'tool_export')).toEqual([]);
+
+		// …and back on, idempotently (no locator accumulation).
+		applyActiveOverride(record, true);
+		expect(record.relation?.dd1354?.[0]?.section_id).toBe('1');
+		expect(record.relation?.dd1354).toHaveLength(1);
+	});
+
+	test('applyActiveOverride creates the relation column when the record lacks one', () => {
+		const record = {};
+		applyActiveOverride(record, false);
+		expect(
+			(record as { relation?: Record<string, { section_id?: string }[]> }).relation?.dd1354?.[0]
+				?.section_id,
+		).toBe('2');
 	});
 
 	test('validateRegister rejects a name that mismatches the directory', () => {

@@ -14,9 +14,13 @@
  * WHAT THIS RESOLVES
  * - The SUPERUSER user_tools list: every active tool as a "simple context" DDO.
  * - The AUTHORIZED user_tools of a specific (non-admin) user, via their profile.
- * - The section/component tool FILTER (common::get_tools): affected_models /
+ * - The section/component tool FILTER (common::get_tools): the actor's
+ *   user_tools membership (PHP iterates get_user_tools($user_id), so a tool the
+ *   profile denies can never reach a toolbar), then affected_models /
  *   affected_tipos / all_components / in_properties matching plus per-tool
- *   is_available().
+ *   is_available(). The actor comes from the request scope
+ *   (security/request_context.ts), PHP's logged_user_id() — see
+ *   currentActorToolNames.
  *
  * The per-tool `is_available()` for tools that HAVE a server module is answered
  * by that module's hook (see loader/dispatch, Phase 3+). Until each of the two
@@ -29,6 +33,7 @@
  */
 
 import { sql } from '../db/postgres.ts';
+import { createDataCache } from '../ontology/cache_factory.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import {
 	AFFECTED_MODELS_SECTION_TIPO,
@@ -44,6 +49,14 @@ import type { ElementToolsResult, ElementToolsTarget, ToolSimpleContext } from '
 export type { ElementToolsResult, ElementToolsTarget, ToolSimpleContext } from './types.ts';
 /** Re-exported for callers that still reference the register section by name. */
 export const TOOLS_SECTION_TIPO = TOOLS_REGISTER_SECTION_TIPO;
+
+/**
+ * The users section — NOT a tool-registry tipo (ontology_map.ts's hard rule
+ * covers those), so it is file-local here as everywhere else that names it
+ * (security/auth.ts, resolve/read_tm.ts, …). A dd128 write changes a user's
+ * PROFILE ASSIGNMENT, which is one of the two inputs to the grants cache below.
+ */
+const USERS_SECTION_TIPO = 'dd128';
 
 /**
  * Tools whose availability the section-tools filter cannot yet decide because
@@ -115,7 +128,42 @@ export async function getUserTools(
 ): Promise<ToolSimpleContext[]> {
 	if (isGlobalAdmin) return getSuperuserUserTools();
 
-	// The profile's authorized tool record ids (dd1067 locators → dd1324 rows).
+	const allowedIds = await getProfileGrantedToolIds(userId);
+	const rows = await fetchActiveToolRows();
+	const tools: ToolSimpleContext[] = [];
+	for (const row of rows) {
+		const alwaysActive = radioIsYes(row.relation, TIPO.ALWAYS_ACTIVE);
+		if (!alwaysActive && !allowedIds.has(row.section_id)) continue;
+		const tool = buildToolSimpleContext(row);
+		if (tool !== null) tools.push(tool);
+	}
+	return tools;
+}
+
+/**
+ * Per-user cache of the tool-registry section_ids the user's PROFILE grants
+ * (dd234's dd1067 locators). Cached because the toolbar stamp needs it once per
+ * ELEMENT — a 40-component edit read would otherwise pay ~40 profile queries.
+ *
+ * Lifecycle (mirrors permissions.ts permissionsTableCache, the same derivation):
+ * the value derives from BOTH the user record (dd1725 profile assignment) and
+ * the profile record (dd1067 grants), so a write/delete of either section drops
+ * it via the save-event channel — coarse clear, since the reverse
+ * profile→users mapping is not known here. Registered BY CONSTRUCTION through
+ * createDataCache (WS-B/DEC-13 rule 1), so it can never be forgotten.
+ */
+const profileToolGrantsCache = createDataCache<number, Set<number>>((cache, sectionTipo) => {
+	if (sectionTipo === USERS_SECTION_TIPO || sectionTipo === PROFILE_SECTION_TIPO) cache.clear();
+});
+
+/**
+ * The tool-registry section_ids one user's profile authorizes (PHP
+ * tool_common::get_user_tools' dd1067 read). A user with no profile gets an
+ * empty set — fail-closed; only always_active tools then survive the filter.
+ */
+export async function getProfileGrantedToolIds(userId: number): Promise<Set<number>> {
+	const cached = profileToolGrantsCache.get(userId);
+	if (cached !== undefined) return cached;
 	const allowedIds = new Set<number>();
 	const profileRows = (await sql.unsafe(
 		`SELECT p.relation->'${PROFILE_TOOLS_COMPONENT}' AS grants
@@ -131,16 +179,35 @@ export async function getUserTools(
 			allowedIds.add(Number(locator.section_id));
 		}
 	}
+	profileToolGrantsCache.set(userId, allowedIds);
+	return allowedIds;
+}
 
-	const rows = await fetchActiveToolRows();
-	const tools: ToolSimpleContext[] = [];
-	for (const row of rows) {
-		const alwaysActive = radioIsYes(row.relation, TIPO.ALWAYS_ACTIVE);
-		if (!alwaysActive && !allowedIds.has(row.section_id)) continue;
-		const tool = buildToolSimpleContext(row);
-		if (tool !== null) tools.push(tool);
+/**
+ * The tool NAMES the CURRENT request's actor may see, or null for "no filter"
+ * (a global admin — every active tool — or no request scope at all: internal
+ * resolutions, background warmups and test harnesses, the same posture
+ * ddoIsAuthorized takes for an undefined principal).
+ *
+ * WHY THE ALS BACKSTOP: PHP's common::get_tools reads `logged_user_id()`
+ * directly, and getElementTools is a leaf with no principal parameter to reach
+ * for — precisely the case core/security/request_context.ts blesses the scope
+ * accessor for. dispatchRqo opens the scope once per RQO, so every real request
+ * is filtered.
+ */
+async function currentActorToolNames(): Promise<ReadonlySet<string> | null> {
+	const { currentPrincipal } = await import('../security/request_context.ts');
+	const principal = currentPrincipal();
+	if (principal === undefined || principal.isGlobalAdmin) return null;
+	const [granted, registered] = await Promise.all([
+		getProfileGrantedToolIds(principal.userId),
+		getRegisteredTools(),
+	]);
+	const names = new Set<string>();
+	for (const tool of registered) {
+		if (tool.alwaysActive || granted.has(tool.sectionId)) names.add(tool.name);
 	}
-	return tools;
+	return names;
 }
 
 /** Active registry rows (dd1354 dd64/1), in stable section_id order. */
@@ -218,6 +285,10 @@ function buildToolSimpleContext(row: ToolRow): ToolSimpleContext | null {
  */
 interface RegisteredTool {
 	name: string;
+	/** dd1324 record id — what a profile's dd1067 grant locators point at. */
+	sectionId: number;
+	/** dd1601: the tool cannot be withheld from a profile (PHP always_active). */
+	alwaysActive: boolean;
 	/** Raw dd799 lang-wrapped label items; resolved per call via resolveToolLabel. */
 	labelItems: { lang?: string; value?: string }[] | undefined;
 	/** Parsed dd1348 properties value, or null (dd_object drops a null key). */
@@ -324,9 +395,19 @@ async function getAffectedModelNameMap(): Promise<Map<string, string>> {
  */
 let registeredToolsCache: RegisteredTool[] | null = null;
 
-/** Reset the registry reader cache. Prefer invalidateAllToolCaches() (./cache.ts). */
+/**
+ * Reset the registry reader caches. Prefer invalidateAllToolCaches() (./cache.ts).
+ *
+ * The per-user profile-grants cache is dropped here TOO, even though
+ * createDataCache already evicts it on every dd128/dd234 write: the module
+ * header of ./cache.ts claims invalidateAllToolCaches() is THE single entry
+ * point for the subsystem's caches, and a cache reachable only through a second
+ * channel makes that claim false. Both routes are cheap; the redundancy keeps
+ * the documented invariant honest.
+ */
 export function resetRegistryCache(): void {
 	registeredToolsCache = null;
+	profileToolGrantsCache.clear();
 }
 
 /** Read every active tool with the extra fields the section filter needs. */
@@ -336,12 +417,13 @@ async function getRegisteredTools(): Promise<RegisteredTool[]> {
 	}
 	const modelNames = await getAffectedModelNameMap();
 	const rows = (await sql`
-		SELECT string, misc, relation
+		SELECT section_id, string, misc, relation
 		FROM matrix_tools
 		WHERE section_tipo = ${TOOLS_REGISTER_SECTION_TIPO}
 		  AND relation->${TIPO.ACTIVE} @> '[{"section_id":"1","section_tipo":"dd64"}]'
 		ORDER BY section_id
 	`) as (ToolRow & {
+		section_id: number;
 		relation: Record<string, { section_id?: string | number }[] | undefined> | null;
 	})[];
 
@@ -362,6 +444,8 @@ async function getRegisteredTools(): Promise<RegisteredTool[]> {
 
 		registered.push({
 			name,
+			sectionId: row.section_id,
+			alwaysActive: radioIsYes(row.relation, TIPO.ALWAYS_ACTIVE),
 			labelItems: row.string?.[TIPO.LABEL],
 			properties: row.misc?.[TIPO.PROPERTIES]?.[0]?.value ?? null,
 			showInInspector: radioIsYes(row.relation, TIPO.SHOW_IN_INSPECTOR),
@@ -389,6 +473,10 @@ export async function getElementTools(target: ElementToolsTarget): Promise<Eleme
 	if (NO_TOOLS_MODELS.has(target.model)) return { tools: [], ledgered: [] };
 
 	const registered = await getRegisteredTools();
+	// PHP get_tools iterates get_user_tools($user_id) — the actor's AUTHORIZED
+	// list, not the whole registry — so a tool their profile does not grant can
+	// never reach a toolbar. null = no filter (global admin / no request scope).
+	const actorTools = await currentActorToolNames();
 	const inPropertyTools = new Set(target.toolConfigKeys);
 	const context = {
 		calledClass: target.model,
@@ -403,6 +491,8 @@ export async function getElementTools(target: ElementToolsTarget): Promise<Eleme
 	const tools: ToolSimpleContext[] = [];
 	const ledgered: string[] = [];
 	for (const tool of registered) {
+		// The user_tools membership gate, BEFORE the applies/availability work.
+		if (actorTools !== null && !actorTools.has(tool.name)) continue;
 		const applies =
 			tool.affectedModels.includes(target.model) ||
 			tipoInArray(target.tipo, tool.affectedTipos) ||
@@ -472,7 +562,13 @@ export async function buildToolElementContext(
 	const baseUrl = getToolUrl(name);
 	const properties = row.misc?.[TIPO.PROPERTIES]?.[0]?.value ?? null;
 	// Labels (dd1372) are stored for every lang but PHP exposes only the
-	// application-lang entries in the tool context.
+	// application-lang entries in the tool context. SINGLE-LANG CONTRACT: the
+	// client's get_tool_label (tools/client/js/tool_common.js) treats a name match
+	// as already-correct-language BECAUSE of this filter, and relies on its own
+	// `|| 'literal'` fallback when the lang has no entry (the array is then empty).
+	// Widening this to several langs is a wire change: it needs a WIRE_CONTRACT
+	// entry, a re-cut of the frozen tool_element_context fixture, and the client
+	// resolver taught to choose. Gated by test/unit/tool_context_labels_lang.test.ts.
 	const allLabels = (row.misc?.[TIPO.LABELS]?.[0] as { value?: unknown })?.value;
 	const labels = Array.isArray(allLabels)
 		? allLabels.filter((item) => (item as { lang?: string }).lang === appLang)

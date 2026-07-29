@@ -2272,7 +2272,522 @@ indexes the policy calls `drop-dead` removed (BRIN `date(timestamp)`, standalone
 policy-`keep` indexes added that installs lacked (`(timestamp, id DESC)`,
 `(section_id)`), and the invalid `idx_matrix_data_trgm` dropped.
 
-## WC-054 — `tool_identify` client package is TS-only (2026-07-28)
+## WC-054 — Activity (dd542): the list's structural order is served by the `("timestamp", id)` index (2026-07-27)
+
+Born of a production-scale slow-request report on the 32.9M-row / 85 GB
+`matrix_activity` (dedalo7_mdcat): searching the **When** column (dd547) hung.
+Same shape as WC-053's range-filter barrier — *the column that filters and the
+column that sorts are not the same column* — but on the other log, and with a
+stronger remedy available.
+
+**Root cause: an abort-early plan flip, not the SQL shape.** Every dd542 list
+sort is a unique monotonic key — `id DESC` (the dd549 default: insertion order)
+or `section_id <dir>` (the When header; WC-044 maps When → section_id) — and
+ordered alone each is index-perfect. The When SEARCH filters `timestamp`, which
+neither the `id` PK nor `(section_tipo, section_id DESC)` carries. Above roughly
+100k estimated matches the planner therefore drops the `("timestamp", id)`
+index and walks the ORDER BY index BACKWARDS with the dates as a Filter, betting
+that 30 matches turn up within ~30/selectivity rows:
+
+```
+Limit  (cost=0.56..173.48 rows=30)
+  ->  Index Scan Backward using matrix_activity_pkey  (cost=0.56..18410763.51 rows=3194075)
+        Filter: "timestamp" >= … AND "timestamp" < … AND section_tipo = …
+```
+
+That bet assumes the qualifying rows are spread along the key. On an APPEND-ONLY
+log they are one contiguous block, so any range that does not touch "now" makes
+the scan walk every newer row first — for `When = 2023-06`, ~11.4M rows, each a
+heap fetch (the PK index does not carry `timestamp`). The estimates are accurate
+(3,194,075 estimated vs 3,207,022 actual); it is the DISTRIBUTION assumption
+that is wrong, which is why no amount of ANALYZE helps.
+
+Reachable from the ordinary UI, not an edge case: `builder_date.periodBounds`
+expands a partial date to its whole period, so a year-only value is a 12-month
+range and year+month a whole month. Only a full `YYYY-MM-DD` stayed under the
+flip threshold (~3 weeks of data on this install). `<` / `<=` on an old date is
+the worst case; `>=` on a recent one is fast by luck (its matches sit at the
+newest end). The implicit default order (`section_id ASC`, for an sqo that omits
+`order`) has the same trap seen from the other end — cost 13.6 M, walking from
+the OLDEST row.
+
+**The change (SQL only, same rows).** On `matrix_activity` a single
+structural-key order is emitted as `"timestamp" <dir>, id <dir>`
+(`sql_assembler.timeOrderedLogOrder`), covering the `id` default, the
+`section_id` When-header sort, and the implicit no-order default. The existing
+`("timestamp", id) INCLUDE (section_tipo, section_id)` index then delivers the
+requested order OUTRIGHT — a backward index scan with **no sort node** — so the
+cost is O(LIMIT), independent of the range width. Measured on mdcat with the
+emitted query (full wide-column select, `LIMIT 30`):
+
+| When search | before | after |
+|---|---|---|
+| `2023-06-15` (a day) | 1.9 ms | ~1 ms |
+| `2023-06` (a month, 3.2M rows) | **>300 s** (statement timeout) | **6.1 ms** |
+| `2023` (a year, 6.0M rows) | **>300 s** | **1.4 ms** |
+| bare browse, offset 0 | ~11 ms (WC-046) | 0.17 ms |
+
+Why dd542 gets the reorder where dd15 got WC-053's `OFFSET 0` barrier (which
+here measures 1.88 s for the month — 300x better than the trap, 300x worse than
+this): on dd15, `id` and `timestamp` are two DIFFERENT user-facing columns
+(dd1573 Id, dd559 When) and an `id` sort must stay an `id` sort. On dd542 there
+is no Id column at all — WC-044 already established that the only sortable
+column, When, IS insertion order, so re-expressing it on the timestamp index
+changes nothing the user asked for.
+
+**Divergence: equivalent order, not identical.** `timestamp` order ≡ insertion
+order ≡ `id` order is WC-044's own invariant (it is what made When → section_id
+legal), but it is not exact to the microsecond: measured on the real log, ~7
+rows per million are stamped microseconds out of id order (busiest bulk day
+2023-06-28: **10 inversions in 1,412,451 rows**, worst 224 µs — concurrent
+inserts whose ids were assigned in a slightly different order than their
+timestamps). Two sub-millisecond neighbours can therefore swap. The `id`
+tiebreaker keeps the pair a UNIQUE total order, so pagination stays stable.
+
+**The deep-page rewrites carry over unchanged.** `singleUniqueKeyOrder` rejects
+a two-column clause by design, so the WC-046 late-row-lookup and order-flip had
+to be handed the rewrite's key explicitly or every deep page would have silently
+dropped back to a plain OFFSET (8.1 s at offset 16 M on the composite order,
+measured). `("timestamp", id)` is still a unique total order (`id` alone is), so
+both rewrites stay exact: the page is ACQUIRED by `id` — the join back is 1:1 —
+while both the inner page and the outer restore ORDER BY the composite, mirrored
+together by the flip. Scoped to `matrix_activity`
+(`TIME_ORDERED_LOG_TABLES`): `matrix_time_machine` has its own emitter
+(`read_tm.ts`) and cannot flatten; every other section is untouched.
+
+### Gate
+
+`test/unit/activity_time_order.test.ts` (the rewrite: dd549 default, When-header
+sort both directions, same-direction pair, the date-filtered request that was
+reported, the no-order default, plus two negative controls — a jsonb component
+sort keeps its sort alias, an ordinary section keeps `section_id`) ·
+`activity_deep_offset_flip.test.ts` (extended: the flip/late-lookup page still
+equals the ground-truth `ORDER BY <key> DESC LIMIT L OFFSET O` byte-for-byte for
+BOTH keys, and now asserts the composite order on both sides of the join, so a
+regression to a bare key order fails loudly) · `search_order_id.test.ts`
+(retargeted off dd542 onto an ordinary section — it tests the generic `column` /
+`component_tipo` convention, which dd542 no longer exhibits; one boundary case
+pins the rewrite).
+
+FIXTURE STORE: `activity_read_differential.json` DOES pin a dd542 listing (the
+flattened SQL shape itself does not — WC-044). It is NOT edited and needs no
+re-harvest: the divergence only exists where `timestamp` and `id` disagree, and
+they do not disagree on any non-scale corpus. Verified by ranking every dd542
+row both ways on each install DB — `dedalo7ts` (1332 rows), `dedalo7ts_test`
+(260), `dedalo7_mdcat_test` (579): **0 inversions, 0 rank differences** in all
+three. Only the 32.9M-row `dedalo7_mdcat` log, whose concurrency produced the
+microsecond inversions above, orders differently at all.
+
+## WC-055 — Unindexed searches: the redundant `@?` pre-guard removed, and the statement-timeout ceiling made usable (2026-07-27)
+
+Two changes on the same theme — a search we deliberately do NOT index must still
+be cheap per row and bounded in total. Neither changes any result.
+
+**The `@?` pre-guard on the POSITIVE exists-envelope (SQL only, same rows).**
+`builder_json` and `builder_iri` emitted
+`(col @? '$.<tipo>[*]') AND EXISTS (SELECT 1 FROM jsonb_path_query(col, …) …)`.
+The guard cannot change the result: `jsonb_path_query` is STRICT, so a NULL
+column or a path yielding no element produces no rows and the EXISTS is already
+false. It was a second full jsonpath evaluation of the same path on the same
+document, per row. Measured on the dd551 Data search over the 32.9M-row mdcat
+`matrix_activity` — the shape that CANNOT abort early, a term matching nothing,
+so it reads everything — 200k rows: **2854 ms → 1059 ms (2.7x)**; extrapolated
+to the full table ~470 s → ~175 s. Removed from `existsEnvelope` in both
+builders only. It is LOAD-BEARING elsewhere and stays: `!=`/`-` is
+`(col @? path) AND NOT EXISTS (…)` = "has entries but none match" (without it
+every record lacking the component would match), and `*` not-empty IS the guard.
+
+**Why dd551 is not indexed at all** (the decision this entry records, so it is
+not silently revisited): the only index that could serve
+`f_unaccent(elem->>'value') ~* f_unaccent($1)` is a trigram GIN over an
+expression on `misc`, maintained on EVERY activity insert — the hottest write
+path in the system, the write amplification WC-046 set out to remove — to serve
+a column that is searched rarely, and whose COMMON-term search already answers
+in 0.3 ms (the matches are recent, so the ordered walk aborts early). Only the
+no-match term is slow. The residual cost is accepted and bounded, not indexed.
+
+**`DB_STATEMENT_TIMEOUT_MS` made usable (`runWithoutStatementTimeout`).** The
+ceiling is the only bound on that residual: an unindexed `~*` over 33M rows
+cannot abort early, and a client disconnecting does NOT cancel it (verified the
+hard way — probe queries orphaned by a killed `psql` were still burning CPU 24
+minutes later). The setting nevertheless shipped disabled and unused, because it
+is a per-connection GUC on the SHARED pool and the same ceiling would abort
+REINDEX / VACUUM / DROP INDEX CONCURRENTLY — maintenance that is SUPPOSED to run
+for minutes. Those statements now opt out explicitly through a RESERVED
+connection (`core/db/postgres.ts`), so the ceiling can finally be set for the
+request traffic it exists to protect: `db_assets.optimizeTables` (REINDEX +
+VACUUM per table), `pruneMatrixIndexes` (DROP INDEX CONCURRENTLY),
+`execMaintenance` (the `ar_maintenance` sentences, incl. VACUUM FULL), and the
+Database-info widget's whole-database VACUUM ANALYZE. The GUC is cleared on a
+reserved connection, never a pooled one: a plain `SET` persists for the life of
+the connection, so issuing it on the pool would silently un-bound every later
+request handed that same connection.
+
+### Gate
+
+`test/unit/search_exists_envelope_guard.test.ts` — the asymmetry (positive
+envelope carries no `@?`; `!=`/`-` and `*` keep theirs) PLUS a row-level
+equivalence proof against the live planner over NULL / empty-array /
+missing-component / object-valued rows · `test/unit/statement_timeout_exemption.test.ts`
+— a ceilinged statement IS cancelled, the helper's is not, and the cleared GUC
+does not leak back into pooled traffic.
+
+## WC-056 — Activity (dd542) "Who" (dd543): actor searched through an indexed expression (2026-07-27)
+
+The third scale defect on the same 32.9M-row log, and the one that had never
+worked: searching Who for a user who left the organization did not return.
+
+**Root cause — no index on `relation`, and none that could carry the sort key.**
+The list orders by `("timestamp", id)` (WC-054) while the filter is
+`relation @> '{"dd543":[{…}]}'`, so no index carries both; the planner walks the
+ordered index with containment as a Filter and stops at the LIMIT. On an
+append-only log every row of one actor is a contiguous block, so that walk is
+fast only when the actor is ALSO recent. Measured, 25-row page:
+
+| actor | matching rows | no index | GIN(relation) | GIN + `OFFSET 0` barrier | this |
+|---|---|---|---|---|---|
+| user 3 (last seen 2016) | 1 021 | **>300 s** | 12.5 ms | — | **1.6 ms** |
+| user 40 | 52 000 | **>300 s** | **>300 s** | — | **1.1 ms** |
+| user 95 | 206 000 | **>300 s** | **>300 s** | 4.4 s | **2.6 ms** |
+| user 115 | 2 600 000 | 258 ms | 68 ms | — | — |
+| user 2 | 8 100 000 | 90 ms | 90 ms | **69.5 s** | **4.3 ms** |
+
+(Final column measured on the shipped two-column index, `EXPLAIN ANALYZE` of the
+emitted query against `dedalo7_mdcat`. Every plan is a plain `Index Scan using
+matrix_activity_who_ts_idx` with no sort node — the cost is the page, not the
+actor.)
+
+Two candidate fixes were measured and rejected as complete answers. A **GIN on
+`relation`** rescues only the RARE actor — the one case the estimate is small
+enough for a bitmap scan — and leaves a departed actor with 206k rows timing
+out. The **WC-053 `OFFSET 0` barrier** helps that actor (>300 s → 4.4 s) but is
+catastrophic for a heavy one (90 ms → **69.5 s**), because it forces a full
+8.1M-row bitmap heap scan where abort-early was finding 25 rows immediately.
+This filter's selectivity spans four orders of magnitude BETWEEN ACTORS, so no
+static plan choice is right for all of them — unlike WC-053's date range, where
+one barrier fits.
+
+**The change.** `matrix_activity_who_ts_idx
+((relation->'dd543'->0->>'section_id'), (relation->'dd543'->0->>'section_tipo'),
+"timestamp" DESC, id DESC)` — leading actor equality leaves the trailing sort
+key free, so ONE index answers the filter AND the order, index-served with no
+sort node, O(LIMIT) for every actor class. It needs the predicate written as an
+equality on the same expression, so `builder_relation` gained an activity twin
+(`buildActivityWhoFragment`), exactly as it already had one for
+`matrix_time_machine`'s flat `user_id` column. `'*'`/`'!*'` existence stay on the
+cheap `?` key test; `!=`/`!==` negate the same expression.
+
+**Scoped, and resting on a gated invariant.** dd542/dd543 only — dd545 What on
+the same column, every ordinary section, and the TM twin are untouched and keep
+containment. The predicate reads element 0, so it is exact only while a row
+carries exactly ONE actor locator: that is how `activity_log.ts` writes, and how
+the data reads (2.5M rows sampled on mdcat — 2M newest + 500k oldest — all
+`length 1`, all `dd128`). `activity_log_single_actor.test.ts` gates the WRITER,
+because a second locator would be invisible to Who search rather than an error.
+`section_tipo` is bound explicitly rather than assumed, so a locator addressing
+another section can never be a false positive.
+
+**The GIN is restored anyway** (`matrix_index_policy`: `drop-dead` → `keep`,
+434 MB, 96 s to build). It is what makes a rare-value search fast for every
+OTHER relation component and every other section, and its drop-dead
+classification was unsound: the stated reason ("the planner picks the ordered
+btree + Filter, never this GIN") described the symptom of the ordering trap, and
+the `idxScan > 0` safety gate could not object because this cluster came up with
+`stats_reset` NULL — the STATS CAVEAT recorded in that same file, realized. It
+is also asset-provisioned for every matrix table
+(`all_matrix_relation_gin_idx`), so the prune was dropping an index
+`recreateDbAssets` immediately put back.
+
+### Gate
+
+`test/unit/activity_who_expression_search.test.ts` (the emitted predicate for
+default/`==`/`!=`/`!==`, bound params not interpolation, malformed locators drop
+the clause instead of matching everything, plus three negative controls: dd545
+on the same table, dd543 in an ordinary section, and the TM twin all still emit
+containment) · `test/unit/activity_log_single_actor.test.ts` (the writer-side
+invariant) · `matrix_index_policy.test.ts` + `matrix_index_prune.test.ts` (both
+indexes classified `keep`, so "Optimize tables" can no longer drop them).
+
+---
+
+## WC-057 — register_tools: the panel joins the tools tree, and its ACTIVE checkboxes outrank register.json (2026-07-28)
+
+- **Date adopted:** 2026-07-28.
+- **Decision:** admin sovereignty over tool activation (this entry; no earlier DEC).
+- **Shape before (TS):** `register_tools::get_value` served the dd1324 registry
+  ALONE — `{name, warning:null, version, developer, installed_version}`, with
+  `version` mirroring `installed_version` by construction, so PHP's two
+  file-state warnings could never arise. `register_tools.register_tools`
+  ignored its `options` entirely.
+- **Shape after (TS):** each datalist row gains **`active`** (dd1354, the
+  registry state) and **`on_disk`**, and the datalist is the JOIN of the
+  registry with the directories the importer scans — so a registered tool whose
+  directory is gone is listed with `warning:'Not found on disk'`, and a tool on
+  disk with no registry row is listed with `warning:'Not registered tool'`
+  (PHP's wording), `installed_version:null`, `active:true`. The action reads
+  **`options.tools_active`** (`{[tool_name]: boolean}`) and each report item
+  gains **`active`** — as does the frozen dry-run branch's `result.report`
+  (`ImportReportItem`), whose items now carry the same field.
+  **`version` is populated at last.** Both report mappers read
+  `(item as {record?:{version?:string}}).record?.version ?? null`, but
+  `ImportReportItem` never carried a `record` — so every row of every report
+  served `version: null`: the widget response AND the install wizard's per-tool
+  rows (`core/install/register_tools.ts`, rendered by `render_installer.js`).
+  `ImportReportItem.version` now holds the declared version and both mappers
+  read it. A consumer that keyed off the always-null value would see real
+  strings for the first time.
+- **Reason:** dd1354 gates whether a tool is served to ANY user
+  (`tools/registry.ts fetchActiveToolRows`), and 34 of 36 register.json files
+  declare `active:1`, so every import re-stamped active and silently re-enabled
+  tools an admin had turned off. The panel is the only place an admin
+  reconciles tools, so the control belongs there — and a control that writes
+  must show the state it writes, hence `active` on the wire. `on_disk` exists
+  because the action can only reach tools it can scan: without it the panel
+  would offer a checkbox whose write can never happen.
+  The override applies BEFORE `validateRegister`/`projectIdentity`
+  (`applyActiveOverride`), so the dry-run diff reports `active` too.
+  **Admin state wins over the file** for a tool the install already registered;
+  a tool author shipping `active:false` no longer deactivates it remotely. A
+  tool absent from `tools_active` (any other caller, including the installer's
+  `registerInstallTools`) keeps its file declaration — the pre-WC-057 path is
+  byte-unchanged.
+- **PHP fossil:** PHP scanned the directories for `register.json` and paired
+  each with its registry record — the join this entry restores. PHP had no
+  per-tool activation control on this panel.
+- **Client rendering (no wire effect):** the 36×7-object report is unreadable
+  as the generic `print_response` JSON tree, so `build_form` gained an optional
+  **`render_response`** hook (absent ⇒ `print_response`, unchanged for every
+  other widget) and register_tools supplies a summary: outcome headline,
+  active/disabled counts, per-tool errors, the deactivated set, warnings
+  GROUPED by message, and the original tree behind a collapsed
+  `<details>`.
+- **Gate reconciliation:** no oracle re-harvest — no harvested fixture covers
+  `register_tools` `get_value` or its action (the widget appears in
+  `widgets_differential` only as a CATALOG entry, which is untouched).
+  `test/parity/tools_register_differential.test.ts` is unaffected: it calls
+  `importTools({dryRun:true})` with no overrides, which is the unchanged path.
+
+### Gate
+
+`test/unit/register_tools_panel.test.ts` (the join: every on-disk tool is
+offered a row, rows unique + name-sorted, `active`/`on_disk` present and
+boolean, `on_disk` agrees with the scanner and a false one carries the
+warning, an unregistered row defaults to active) ·
+`test/unit/register_tools_widget.test.ts` (`tools_active` reaches importTools
+as `activeOverrides`; malformed keys/values DROPPED not defaulted; a non-object
+ignored; the report item's `active`) ·
+`test/unit/tools_register_validate.test.ts` (`applyActiveOverride` overrides the
+file declaration, keeps the record valid, is idempotent, creates a missing
+relation column).
+
+## WC-058 — tool_ontology::set_records_in_dd_ontology takes its scope from the request
+
+The list-mode counterpart of WC-043, found by the 2026-07-28 tools audit and closed
+the same way.
+
+PHP list mode rebuilt the SQO from the session
+(`$_SESSION['dedalo']['config']['sqo'][$sqo_id]`) and **failed CLOSED** when it was
+absent — `'Not sqo_session found from id: …'`, writing nothing
+(`class.tool_ontology.php:186-200`). The TS port has no session-SQO twin and filled
+the gap with an unbounded `SELECT section_id FROM "<table>" WHERE section_tipo = $1`,
+i.e. it rewrote **every record of the section**. That is fail-OPEN where PHP was
+fail-CLOSED. Measured reach on the audited install: 4,654 records from one button
+(`mdcat0`), 12,172 across `mdcat0`/`dmm0`/`dd0`/`rsc0` — foreground, not
+background-runnable, no progress frames, no abort signal, behind a client that gives
+up at 60 s while the server keeps writing.
+
+- **List mode REQUIRES `options.sqo`.** Absent, `null`, non-object or array fails
+  closed with `invalid_request` and the WC-043 wording. The v7 client now sends a
+  deep clone of the caller list's LIVE sqo
+  (`tools/tool_ontology/js/tool_ontology.js` — it previously sent none, which is
+  what armed the fallback), so the run's scope is by construction the scope the list
+  displays; an unfiltered list matches the whole section EXPLICITLY. Pagination is
+  stripped server-side (PHP `set_order([])` / `set_limit(0)` / `set_offset(0)`), so
+  the whole MATCHED set is processed, not the visible page.
+- **Edit mode is unchanged** — an explicit `section_id` is its own scope.
+- **`setRecordsInDdOntology` no longer has a whole-section default.** `SetRecordsTarget`
+  gains `sectionIds` (an explicit id list) and `wholeSection` (opt-in, greppable,
+  for internal rebuild callers only — `ontology_update.ts`'s full-TLD re-derive
+  after an ontology-file import declares it). With none of the three stated the
+  call refuses loudly rather than guessing "all".
+
+**The generalisation, now stated in TOOLS_SPEC:** a batch tool action takes its
+scope from the REQUEST or refuses. An absent scope parameter must never widen into
+"everything".
+
+Gated by `test/unit/tool_ontology_scope.test.ts` (9 tests, nothing written — every
+case is a refusal or a zero-match resolve, and the dd_ontology row count is asserted
+unchanged in `afterAll`). Mutation-proved: reintroducing the fallback turns it red.
+
+## WC-059 — `source.is_temporal`: a temporal instance resolves, it never persists (2026-07-28)
+
+The same shape as WC-058, one layer lower: a scope the TS port dropped, widening
+silently into "a real record". Found while investigating why
+`tool_propagate_component_data` is unreachable from section list mode.
+
+A **temporal instance** is a tool's throwaway editable clone — the propagate tool's
+value widget, `service_tmp_section`'s staging form (behind tool_import_marc21 /
+zotero / files), the `component_text_area` draw and reference pickers. It has no
+record: the client stamps a **sentinel** `section_id: 1` on it and sets
+`source.is_temporal` (PHP commit `5c45c71ebb`, 2026-01-31), which PHP routed to a
+scratch store — `matrix_temp_manager`, a `(section_tipo, logged_user_id)`-keyed row
+in the unlogged `temp` table.
+
+The TS rewrite (`d31bad80c1`) carried the five client producers over and **did not
+port the store**. `rqoSourceSchema` was `.passthrough()`, so the flag rode along
+unread, and the save door handed `sectionId: Number(source.section_id)` — the
+sentinel — straight to `saveComponentData`. Consequences on the **real** record 1 of
+the target section, every time such a tool was opened: the component's value
+replaced (`set_data` is a bulk replace; a phantom record is CREATED if record 1 was
+absent — `save_component.ts` `createSectionRecord({conflictTolerant:true})`), a Time
+Machine row appended, the dd197/dd201 modified stamp falsified, an activity `SAVE`
+row written, and for relation components an orphan record created in the target
+section plus a rewritten `relation_search`. Audited as a legitimate edit and
+therefore invisible in the TM UI — and, for the same reason, recoverable.
+
+Blast radius by producer: `tool_propagate_component_data` writes **once per tool
+open**, unconditionally, from `build()`; `service_tmp_section` writes **once per
+field edit** (`change_value` → `save`); the text_area pickers write on use, and
+`render_reference`'s `null` `set_data` **clears** the target. Global admins are
+fully exposed (`isRecordInScope` is skipped for them); a scoped level-2 user is
+exposed only where record 1 is inside their projects filter.
+
+- **The save door normalizes and echoes.** `resolveTemporalSave`
+  (`src/core/section/record/temporal.ts`) returns the canonical DataItem the client
+  resolves by, with no read of the addressed record, no write to it, no Time Machine
+  row, no modified stamp and no activity row.
+  - It does **not re-apply** `changed_data` on the literal branch, and that is the
+    subtle part. The persisted engine seeds from the LOCKED MATRIX ROW, so it
+    cannot double-apply; a temporal instance has no row, so its only base is
+    `data.entries` — which the client has ALREADY applied the delta to
+    (`change_value` runs `update_data_value` over every item, mutating
+    `self.data.entries`, and only then calls `save(changed_data)` with
+    `clone(self.data)`). Re-applying failed every `remove` (the id is already gone,
+    and the engine's unknown-id rule would 400 the user's deletion), duplicated
+    every `insert`, and appended on every `update`. Only `set_data` is idempotent
+    under re-application — which is exactly why the first cut of this door looked
+    correct against a set_data-only gate.
+  - What it DOES perform is the normalization the persisted path does on the way to
+    storage, because the echo becomes the client's next `self.data`: the lang stamp
+    (through the SAME predicate the engine uses — `isLangSlicedModel`, now exported
+    from `save_component.ts`) and the item-id mint. Without the mint an id-less item
+    stays id-less, the next `update` arrives with `id: null` and APPENDS, and the
+    array grows on every committed edit — the array `tool_propagate_component_data`
+    then writes across every matched record.
+  - The relation branch needs no equivalent: `mergeRelationChips` is idempotent
+    under both orderings (insert dedups by locator, remove is a filter).
+  The relation branch reuses
+  the pre-existing non-persisting `search_<n>` machinery, extracted to
+  `src/core/section/record/resolve_echo.ts` and now shared by both doors — the
+  client needs a labelled chip and a `pagination.total`, and only a real resolution
+  produces them.
+- **The gate is a READ level (>= 1) — except for the one action that writes.**
+  Nothing is persisted, so the write grant is generally not the question being asked
+  (the same reasoning the `search_<n>` branch already used). But `add_new_element`
+  really does create a target record, and this branch deliberately short-circuits
+  the level-2 gate, the record-scope gate and `refuseAreaWrite` — so admitting it at
+  level 1 would be a read→create escalation. The required level is therefore a
+  function of the batch: **2 when any change is `add_new_element`, 1 otherwise.**
+- **The read door serves no record.** `readComponentData`'s `hasRecordId` is false
+  for a temporal source, so it resolves context and datalist with an EMPTY value
+  (the existing record-independent path, shared with synthetic search ids) instead
+  of serving a stranger's record as the clone's starting value; `read_facade` skips
+  the per-record scope gate there for the same reason.
+- **The record-lifecycle doors refuse it.** `create` / `duplicate` / `delete` answer
+  400 — a lifecycle action on something that addresses no record is nonsense, and
+  refusing keeps the totality assertion literally true.
+- **`add_new_element` still creates its TARGET record**, and only that: the
+  host-filter read is skipped (`applyAddNewElement({skipHostFilterRead:true})`), so
+  the new record inherits the default project locator. PHP's temp store behaved the
+  same way — the target is real, only the host anchor was scratch. A consultation-only
+  target is refused with 400 (without it the `createSectionRecord` engine THROWS on
+  dd542/dd15 — a 500 where a 400 is the honest answer).
+- **The select family keeps its datalist.** Every `SELECT_FAMILY_MODELS` member is a
+  RELATION-column component, so the datalist attach lives on the relation branch;
+  placed on the literal branch it could never execute, and the client's post-save
+  render (`component_radio_button get_checked_value_label`) dereferences it.
+- **`is_temporal` is now DECLARED** on `rqoSourceSchema` rather than swallowed by
+  `.passthrough()`, and `isTemporalSource` — beside the declaration, because
+  `section/read.ts` needs it and a predicate in `temporal.ts` would close a static
+  import cycle — is the single reader.
+- **The sentinel is left alone.** `section_id: 1` stays on the wire and is now
+  inert; the doors branch on the flag, never on the value.
+
+**The generalisation, extending WC-058's:** a client-supplied record id on an
+instance that declares itself record-less is a **wire field, never an address**. A
+scope the port dropped must fail closed, not widen into whatever the raw value
+happens to name.
+
+Gated by `test/unit/temporal_instance_tripwire.test.ts` (8 tests). The behavioural
+half asserts the canonical test3 record 1 is byte-identical with no new TM and no
+new activity row after a temporal save, and carries a CANARY — a real save on a
+scratch twin — proving those same three probes can see a write, so "nothing
+changed" cannot pass vacuously. Mutation-proved: deleting the temporal branch from
+`dd_core_api.ts` turns it red.
+
+## WC-060 — `inspect_ontologies`: a misfiled source record is drift kind `foreign`, not a phantom `missing`
+
+`dd_ontology(tld)` is the projection of `matrix_ontology` section `<tld>0`, but a node's
+tipo AND tld come from the RECORD's `ontology7`, not from the section it sits in.
+`parseMatrixNodes(tld)` did not filter by tld while `storedNodes(tld)` read
+`WHERE tld = $1`, so a record with a typo'd `ontology7` (live: `actv0/127` declares
+`"act"`) parsed into another tld's namespace and could never appear in `stored`. It was
+reported `missing` FOREVER, re-upserted by every reconcile — breaking the module's own
+idempotency claim — and **written into the other tld's namespace** by a per-tld
+operation, where `deleteTldNodes(tld)` could never take it back. `reconcile_ontologies`
+therefore reported a permanent FALSE failure for a TLD it could never fix.
+
+Both sides of the diff are now scoped to the inspected tld. Wire additions, all
+backward-compatible:
+
+- `states[].drift[].kind` gains **`'foreign'`** (`diffColumns:['tld']`), plus optional
+  `source` (`'<section_tipo>/<section_id>'`) and `declaredTld`;
+- `states[].foreignNodes` (count) is new;
+- `states[].matrixNodes` now counts the tld's OWN nodes only — unchanged for every tld
+  with no misfiled record.
+
+Existing kinds are byte-unchanged. `ensureOntology`/`rebuildOntology` now REFUSE the
+cross-namespace write and name the culprit.
+
+**Client (closed same day):** `render_tool_ontology_parser.js` counted drift kinds by
+name (`{missing, stale, orphaned}`) and its detail join had no `foreign` term, so a
+foreign-only tld rendered a red "check failed" with an EMPTY reason — on the one panel
+built to diagnose exactly this. It now renders `N misfiled`, counts any kind it does not
+recognise as `N other`, and falls back to `out of sync` rather than an empty reason, so a
+future kind can never blank the panel again.
+
+Gate: `test/unit/ontology_state_foreign_tld.test.ts`.
+
+## WC-061 — `tool_tc::change_all_timecodes`: atomic slice write, slice-indexed audit map, `lang` required
+
+Three divergences from `class.tool_tc.php`, closed together.
+
+1. **The write is ATOMIC per component.** PHP built the whole rewritten element set and
+   issued ONE `set_data_lang($new_data, $lang)` + `save()`. The port called
+   `saveComponentData` once PER ITEM — each its own transaction, each its own Time
+   Machine row — so a failure part-way through a multi-paragraph transcription COMMITTED
+   a half-offset document and returned a success-shaped envelope for the prefix that
+   landed. Nothing on the wire distinguished it from a complete run, and every committed
+   prefix is indistinguishable from a legitimate edit in the TM UI. The handler now
+   issues a single `set_data` carrying the rebuilt lang slice.
+2. **`options.key` and the returned map are keyed by the LANG-SLICE index**, not the
+   full stored-array index (PHP `get_data_lang` → `array_values`). On a multi-lang
+   component the old indexing selected and reported the WRONG element. Latent in
+   practice — the client always sends `key: null` — but the returned `changesByKey`
+   keys change shape for any caller that does send one.
+3. **`lang` is now REQUIRED** (PHP `empty($lang)`) instead of silently defaulting to
+   `lg-nolan`, and `result` is the audit map on every successful path instead of
+   `false`. (The map-instead-of-`false` half is parity RESTORATION, not a divergence —
+   PHP assigns and returns it unconditionally.)
+
+One deliberate new divergence: a request that changes nothing skips the write entirely,
+so it mints no Time Machine row and no falsified `modified` stamp — the same
+formulation as WC-059.
+
+Gate: `test/unit/media_timecode.test.ts` (atomicity pinned as a TM row count on a
+scratch `test2` record seeded so slice index 0 ≠ array index 0).
+
+## WC-062 — `tool_identify` client package is TS-only (2026-07-28)
 
 ADDITIVE, no PHP counterpart: `tool_identify` is the object-identification
 curator panel (`engineering/IDENTIFY_SPEC.md`), a TS-native tool that never
@@ -2290,3 +2805,29 @@ the sanctioned seam for "exists only in TS"; the fixture stays the record of
 what PHP actually served.
 
 Files: `/dedalo/tools/tool_identify/{js/*.js,css/tool_identify.css}`.
+
+## WC-063 — TS-native core client files absent from the frozen oracle census (2026-07-29)
+
+ADDITIVE, no PHP counterpart. Five `client/dedalo/core/` files exist only in the
+TS `get_dedalo_files` census:
+
+- `core/page/js/design.js` + `core/page/js/design-init.js` — the design-line
+  toggle (classic / redesign), a TS-era client feature;
+- `core/common/js/session_expiry.js` — the idle-session countdown client
+  (behaviour ledgered under WC-051; the FILE is censused here);
+- `core/search/js/preset_scope.js` — the search-preset scope panel (dd623
+  presets, a TS-era feature);
+- `core/search/js/render_semantic.js` — the semantic-search (RAG) results
+  rendering, TS-native by definition.
+
+Handled like WC-013/WC-019: `isTsNativeCoreFileEntry` in
+`test/parity/dedalo_files_differential.test.ts` filters them from BOTH sides of
+the set compare; the every-TS-url-resolves gate still proves they serve.
+
+## WC-064 — `php_user` maintenance widget removed (2026-07-29)
+
+The `php_user` area_maintenance widget administered the PHP engine's system
+user — meaningless since the cutover retired that engine. Its two client files
+(`widgets/php_user/js/{php_user,render_php_user}.js`) are gone from the TS
+tree; the frozen oracle still censuses them. Filtered from BOTH sides
+(`isPhpUserRemovalEntry`), the same pattern as the WC-030 runtime_info merge.

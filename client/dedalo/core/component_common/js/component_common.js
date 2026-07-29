@@ -1507,11 +1507,23 @@ component_common.prototype.change_mode = async function(options) {
 			context			: current_context,
 			data			: current_data,
 			datum			: current_datum,
-			id_variant 		: id_variant
+			id_variant 		: id_variant,
+			// caller. The replacement takes over self's slot in the tree, so it
+			// inherits self's caller — NOT self (which is destroyed at the end of
+			// this function). Tools opened from the new instance's toolbar walk
+			// this chain to find their owning section; without it the chain dead-ends
+			// and e.g. tool_propagate_component_data cannot resolve the section's SQO.
+			caller			: self.caller
 		})
 
 	// build
 		await new_instance.build(autoload)
+
+	// caller. Re-assert AFTER get_instance: `caller` is not part of the instance
+	// key (instances.js key_order) and a cache HIT returns the stored instance
+	// without re-running init, so a reused instance would keep whatever caller the
+	// FIRST build gave it — stale the moment a re-search rebuilds the row.
+		new_instance.caller = self.caller
 
 	// render
 		const new_node = await new_instance.render({

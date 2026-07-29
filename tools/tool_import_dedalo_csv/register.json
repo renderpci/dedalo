@@ -654,6 +654,21 @@
             "value": "पूर्वावलोकन"
           },
           {
+            "lang": "lg-eus",
+            "name": "preview",
+            "value": "Aurrebista"
+          },
+          {
+            "lang": "lg-por",
+            "name": "preview",
+            "value": "Pré-visualização"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "preview",
+            "value": "Προεπισκόπηση"
+          },
+          {
             "lang": "lg-eng",
             "name": "records",
             "value": "Records"
@@ -671,12 +686,12 @@
           {
             "lang": "lg-eus",
             "name": "records",
-            "value": ""
+            "value": "Erregistroak"
           },
           {
             "lang": "lg-por",
             "name": "records",
-            "value": ""
+            "value": "Registos"
           },
           {
             "lang": "lg-fra",
@@ -691,7 +706,7 @@
           {
             "lang": "lg-ell",
             "name": "records",
-            "value": ""
+            "value": "Εγγραφές"
           },
           {
             "lang": "lg-deu",
@@ -704,9 +719,39 @@
             "value": "रेकर्डहरू"
           },
           {
+            "lang": "lg-eus",
+            "name": "records",
+            "value": "Erregistroak"
+          },
+          {
+            "lang": "lg-por",
+            "name": "records",
+            "value": "Registos"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "records",
+            "value": "Εγγραφές"
+          },
+          {
             "lang": "lg-ita",
             "name": "sure",
             "value": "Sicuro?"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "sure",
+            "value": "Ziur?"
+          },
+          {
+            "lang": "lg-por",
+            "name": "sure",
+            "value": "Tem a certeza?"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "sure",
+            "value": "Σίγουρα;"
           },
           {
             "lang": "lg-ita",
@@ -716,7 +761,22 @@
           {
             "lang": "lg-ell",
             "name": "error_coping_text",
-            "value": ""
+            "value": "Σφάλμα κατά την αντιγραφή του κειμένου:"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_coping_text",
+            "value": "Errorea testua kopiatzean:"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_coping_text",
+            "value": "Erro ao copiar o texto:"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_coping_text",
+            "value": "Σφάλμα κατά την αντιγραφή του κειμένου:"
           },
           {
             "lang": "lg-ita",
@@ -724,9 +784,39 @@
             "value": "Testo copiato negli appunti"
           },
           {
+            "lang": "lg-eus",
+            "name": "text_copied",
+            "value": "Testua arbelera kopiatu da"
+          },
+          {
+            "lang": "lg-por",
+            "name": "text_copied",
+            "value": "Texto copiado para a área de transferência"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "text_copied",
+            "value": "Το κείμενο αντιγράφηκε στο πρόχειρο"
+          },
+          {
             "lang": "lg-ita",
             "name": "insecure_context",
             "value": "Contesto non sicuro, usato solo in https"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "insecure_context",
+            "value": "Testuinguru ez segurua, https-n bakarrik erabiltzen da"
+          },
+          {
+            "lang": "lg-por",
+            "name": "insecure_context",
+            "value": "Contexto não seguro, utilizado apenas em https"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "insecure_context",
+            "value": "Μη ασφαλές περιβάλλον, χρησιμοποιείται μόνο σε https"
           },
           {
             "lang": "lg-ita",
@@ -734,9 +824,39 @@
             "value": "Aggiornato"
           },
           {
+            "lang": "lg-eus",
+            "name": "updated",
+            "value": "Eguneratua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "updated",
+            "value": "Atualizado"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "updated",
+            "value": "Ενημερωμένο"
+          },
+          {
             "lang": "lg-ita",
             "name": "copy_as_column",
             "value": "Copia come colonna"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "copy_as_column",
+            "value": "Kopiatu zutabe gisa"
+          },
+          {
+            "lang": "lg-por",
+            "name": "copy_as_column",
+            "value": "Copiar como coluna"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "copy_as_column",
+            "value": "Αντιγραφή ως στήλη"
           },
           {
             "lang": "lg-ita",
@@ -744,9 +864,39 @@
             "value": "Copia come separato da virgola"
           },
           {
+            "lang": "lg-eus",
+            "name": "copy_to_find",
+            "value": "Kopiatu komaz bereizita"
+          },
+          {
+            "lang": "lg-por",
+            "name": "copy_to_find",
+            "value": "Copiar separado por vírgulas"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "copy_to_find",
+            "value": "Αντιγραφή διαχωρισμένο με κόμματα"
+          },
+          {
             "lang": "lg-ita",
             "name": "created",
             "value": "Creato"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "created",
+            "value": "Sortua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "created",
+            "value": "Criado"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "created",
+            "value": "Δημιουργήθηκε"
           },
           {
             "lang": "lg-ita",
@@ -754,9 +904,39 @@
             "value": "Fallito"
           },
           {
+            "lang": "lg-eus",
+            "name": "failed",
+            "value": "Huts egin du"
+          },
+          {
+            "lang": "lg-por",
+            "name": "failed",
+            "value": "Falhou"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "failed",
+            "value": "Απέτυχε"
+          },
+          {
             "lang": "lg-ita",
             "name": "error",
             "value": "Errore"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error",
+            "value": "Errorea"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error",
+            "value": "Erro"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error",
+            "value": "Λάθος"
           },
           {
             "lang": "lg-ita",
@@ -764,9 +944,39 @@
             "value": "Ok"
           },
           {
+            "lang": "lg-eus",
+            "name": "ok",
+            "value": "Ados"
+          },
+          {
+            "lang": "lg-por",
+            "name": "ok",
+            "value": "OK"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "ok",
+            "value": "OK"
+          },
+          {
             "lang": "lg-ita",
             "name": "select_a_file",
             "value": "Selezionare un file"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "select_a_file",
+            "value": "Hautatu fitxategi bat"
+          },
+          {
+            "lang": "lg-por",
+            "name": "select_a_file",
+            "value": "Selecione um ficheiro"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "select_a_file",
+            "value": "Επιλέξτε ένα αρχείο"
           },
           {
             "lang": "lg-ita",
@@ -777,6 +987,21 @@
             "lang": "lg-cat",
             "name": "import",
             "value": "Importar"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "import",
+            "value": "Inportatu"
+          },
+          {
+            "lang": "lg-por",
+            "name": "import",
+            "value": "Importar"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "import",
+            "value": "ύλη"
           },
           {
             "lang": "lg-eng",
@@ -801,12 +1026,12 @@
           {
             "lang": "lg-eus",
             "name": "columns",
-            "value": ""
+            "value": "Zutabeak"
           },
           {
             "lang": "lg-por",
             "name": "columns",
-            "value": ""
+            "value": "Colunas"
           },
           {
             "lang": "lg-fra",
@@ -822,6 +1047,21 @@
             "lang": "lg-nep",
             "name": "columns",
             "value": "स्तम्भहरू"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "columns",
+            "value": "Zutabeak"
+          },
+          {
+            "lang": "lg-por",
+            "name": "columns",
+            "value": "Colunas"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "columns",
+            "value": "Στήλες"
           },
           {
             "lang": "lg-eng",
@@ -851,12 +1091,12 @@
           {
             "lang": "lg-eus",
             "name": "bulk_process_title",
-            "value": ""
+            "value": "Prozesuaren izenburua: "
           },
           {
             "lang": "lg-por",
             "name": "bulk_process_title",
-            "value": ""
+            "value": "Título do processo: "
           },
           {
             "lang": "lg-fra",
@@ -867,6 +1107,21 @@
             "lang": "lg-ita",
             "name": "bulk_process_title",
             "value": "Titolo del processo:"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "bulk_process_title",
+            "value": "Prozesuaren izenburua: "
+          },
+          {
+            "lang": "lg-por",
+            "name": "bulk_process_title",
+            "value": "Título do processo: "
+          },
+          {
+            "lang": "lg-ell",
+            "name": "bulk_process_title",
+            "value": "Τίτλος διαδικασίας: "
           },
           {
             "lang": "lg-eng",
@@ -917,6 +1172,356 @@
             "lang": "lg-por",
             "name": "process_completed",
             "value": "Processo concluído"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "decimal",
+            "value": "Decimal"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "decimal",
+            "value": "Decimal"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "decimal",
+            "value": "Decimal"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "decimal",
+            "value": "Hamartarra"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "decimal",
+            "value": "Décimal"
+          },
+          {
+            "lang": "lg-por",
+            "name": "decimal",
+            "value": "Decimal"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "decimal",
+            "value": "Dezimal"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "decimal",
+            "value": "Decimale"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "decimal",
+            "value": "Δεκαδικό"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "decimal",
+            "value": "दशमलव"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "point_name",
+            "value": "Point"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "point_name",
+            "value": "Punto"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "point_name",
+            "value": "Punt"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "point_name",
+            "value": "Puntua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "point_name",
+            "value": "Point"
+          },
+          {
+            "lang": "lg-por",
+            "name": "point_name",
+            "value": "Ponto"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "point_name",
+            "value": "Punkt"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "point_name",
+            "value": "Punto"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "point_name",
+            "value": "Τελεία"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "point_name",
+            "value": "बिन्दु"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "comma_name",
+            "value": "Comma"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "comma_name",
+            "value": "Coma"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "comma_name",
+            "value": "Coma"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "comma_name",
+            "value": "Koma"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "comma_name",
+            "value": "Virgule"
+          },
+          {
+            "lang": "lg-por",
+            "name": "comma_name",
+            "value": "Vírgula"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "comma_name",
+            "value": "Komma"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "comma_name",
+            "value": "Virgola"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "comma_name",
+            "value": "Κόμμα"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "comma_name",
+            "value": "अल्पविराम"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "preparing",
+            "value": "Preparing…"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "preparing",
+            "value": "Preparando…"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "preparing",
+            "value": "Preparant…"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "preparing",
+            "value": "Prestatzen…"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "preparing",
+            "value": "Préparation…"
+          },
+          {
+            "lang": "lg-por",
+            "name": "preparing",
+            "value": "A preparar…"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "preparing",
+            "value": "Wird vorbereitet…"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "preparing",
+            "value": "Preparazione…"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "preparing",
+            "value": "Προετοιμασία…"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "preparing",
+            "value": "तयारी गर्दै…"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "reading",
+            "value": "Reading"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "reading",
+            "value": "Leyendo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "reading",
+            "value": "Llegint"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "reading",
+            "value": "Irakurtzen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "reading",
+            "value": "Lecture"
+          },
+          {
+            "lang": "lg-por",
+            "name": "reading",
+            "value": "A ler"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "reading",
+            "value": "Lese"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "reading",
+            "value": "Lettura"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "reading",
+            "value": "Ανάγνωση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "reading",
+            "value": "पढ्दै"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "importing",
+            "value": "Importing"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "importing",
+            "value": "Importando"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "importing",
+            "value": "Important"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "importing",
+            "value": "Inportatzen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "importing",
+            "value": "Importation"
+          },
+          {
+            "lang": "lg-por",
+            "name": "importing",
+            "value": "A importar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "importing",
+            "value": "Importiere"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "importing",
+            "value": "Importazione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "importing",
+            "value": "Εισαγωγή"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "importing",
+            "value": "आयात गर्दै"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "warnings",
+            "value": "Warnings"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "warnings",
+            "value": "Avisos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "warnings",
+            "value": "Avisos"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "warnings",
+            "value": "Abisuak"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "warnings",
+            "value": "Avertissements"
+          },
+          {
+            "lang": "lg-por",
+            "name": "warnings",
+            "value": "Avisos"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "warnings",
+            "value": "Warnungen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "warnings",
+            "value": "Avvisi"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "warnings",
+            "value": "Προειδοποιήσεις"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "warnings",
+            "value": "चेतावनीहरू"
           }
         ]
       }

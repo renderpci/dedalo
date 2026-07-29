@@ -349,6 +349,21 @@
             "value": "Durchmesser"
           },
           {
+            "lang": "lg-eus",
+            "name": "diameter",
+            "value": "Diametroa"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "diameter",
+            "value": "Διάμετρος"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "diameter",
+            "value": "व्यास"
+          },
+          {
             "lang": "lg-fra",
             "name": "original_copy",
             "value": "Définir l'original/la copie"
@@ -377,6 +392,21 @@
             "lang": "lg-deu",
             "name": "copy",
             "value": "Kopieren"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "copy",
+            "value": "Kopiatu"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "copy",
+            "value": "αντίγραφο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "copy",
+            "value": "कापी"
           },
           {
             "lang": "lg-fra",
@@ -449,6 +479,21 @@
             "value": "Originale"
           },
           {
+            "lang": "lg-eus",
+            "name": "original",
+            "value": "Jatorrizkoa"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "original",
+            "value": "πρωτότυπο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "original",
+            "value": "मूल"
+          },
+          {
             "lang": "lg-cat",
             "name": "weight",
             "value": "Pes"
@@ -484,6 +529,21 @@
             "value": "Set Original / Copy"
           },
           {
+            "lang": "lg-eus",
+            "name": "original_copy",
+            "value": "Ezarri Jatorrizkoa / Kopia"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "original_copy",
+            "value": "Ορισμός Πρωτότυπο / Αντίγραφο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "original_copy",
+            "value": "मौलिक / प्रतिलिपि सेट गर्नुहोस्"
+          },
+          {
             "lang": "lg-eng",
             "name": "snap",
             "value": "Snap"
@@ -492,6 +552,21 @@
             "lang": "lg-deu",
             "name": "order_by",
             "value": "Sortieren nach:"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "order_by",
+            "value": "Ordenatu honen arabera:"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "order_by",
+            "value": "Ταξινόμηση κατά:"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "order_by",
+            "value": "यसद्वारा क्रमबद्ध गर्नुहोस्:"
           },
           {
             "lang": "lg-ita",
@@ -529,9 +604,39 @@
             "value": "Types"
           },
           {
+            "lang": "lg-eus",
+            "name": "types",
+            "value": "Motak"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "types",
+            "value": "Τύποι"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "types",
+            "value": "प्रकारहरू"
+          },
+          {
             "lang": "lg-eng",
             "name": "weight",
             "value": "Weight"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "weight",
+            "value": "Pisua"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "weight",
+            "value": "Βάρος"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "weight",
+            "value": "तौल"
           },
           {
             "lang": "lg-ell",
@@ -542,6 +647,11 @@
             "lang": "lg-nep",
             "name": "snap",
             "value": "स्न्याप"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "snap",
+            "value": "Doitu"
           }
         ]
       }

@@ -23,6 +23,7 @@ import {
 	moveUploadedToMediaDir,
 	posterframeAbsolutePath,
 } from '../../src/core/media/tools/posterframe.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
 
@@ -310,6 +311,52 @@ describe('component_av get_media_streams (player render path)', () => {
 	});
 });
 
+/**
+ * SEC gate (audit 2026-07-28): create_identifying_image WRITES a new record
+ * through a portal on a CALLER-SUPPLIED host locator (item_value.section_tipo /
+ * .section_id). The declarative record/1 gate covers the AV SOURCE only, so the
+ * host record needs its own per-record scope assertion — PHP does exactly that
+ * (class.tool_posterframe.php:152-160, SEC-024 §9.4). Without it a user could
+ * create a portal element on a record outside their projects filter.
+ *
+ * Driven with a SUPERUSER id but isGlobalAdmin:false: getPermissions
+ * short-circuits on the id (so the portal WRITE gate passes) while
+ * isRecordInScope is still evaluated literally. The host section_id does not
+ * exist, so no scope can contain it. `tipo` is deliberately a non-media
+ * component: BEFORE the fix the handler fell through to the media resolve and
+ * failed there, which is what this asserts against — and neither branch writes.
+ */
+describe('create_identifying_image per-record scope gate', () => {
+	const scopedPrincipal: Principal = { userId: -1, isGlobalAdmin: false, isDeveloper: false };
+
+	test('denies a portal host record outside the caller scope', async () => {
+		const loaded = await getLoadedTool('tool_posterframe');
+		const handler = mustGet(
+			loaded!.module.apiActions.create_identifying_image,
+			'create_identifying_image',
+		).handler;
+		const response = await handler({
+			principal: scopedPrincipal,
+			userId: -1,
+			background: false,
+			options: {
+				tipo: 'rsc36', // component_text_area — never reached once the gate fires
+				section_tipo: 'rsc167',
+				section_id: 1,
+				current_time: '00:00:01',
+				item_value: {
+					component_portal: 'rsc254',
+					component_image: 'rsc29',
+					section_tipo: 'rsc167',
+					section_id: 99999999, // no such record — cannot be in any scope
+				},
+			},
+		});
+		expect(response.result).toBe(false);
+		expect(response.msg).toContain('record is out of the user scope');
+	});
+});
+
 describe('tool_posterframe module', () => {
 	test('loads with both actions gated at record level', async () => {
 		const loaded = await getLoadedTool('tool_posterframe');
@@ -319,9 +366,15 @@ describe('tool_posterframe module', () => {
 			'create_identifying_image',
 			'get_ar_identifying_image',
 		]);
+		// create_identifying_image names an AV component: PHP asserts the tipo PAIR
+		// (class.tool_posterframe.php:136-138) plus the record scope -> 'record_tipo'.
 		expect(mustGet(actions.create_identifying_image, 'create_identifying_image').permission).toBe(
-			'record',
+			'record_tipo',
 		);
+		// get_ar_identifying_image names NO component — its handler and client send
+		// only section_tipo + section_id, and PHP asserts assert_section_permission(1)
+		// + assert_record_in_user_scope (:382-384) -> 'record'. Gating a pair here made
+		// the action unsatisfiable for every caller, global admins included.
 		expect(mustGet(actions.get_ar_identifying_image, 'get_ar_identifying_image').permission).toBe(
 			'record',
 		);

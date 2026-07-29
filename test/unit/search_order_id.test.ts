@@ -12,18 +12,26 @@
  *     authored, e.g. dd542 Activity's dd549) must produce the SAME SQL as the
  *     one-element array form — PHP tolerates both.
  *
- * dd542 (Activity → matrix_activity) is the live carrier of this config.
+ * dd542 (Activity → matrix_activity) is the live carrier of this config, but it
+ * is NOT the carrier here: WC-054 re-expresses a dd542 structural-key sort as
+ * `"timestamp" <dir>, id <dir>` (the only shape a When date filter can be
+ * served with — activity_time_order.test.ts owns that contract). Asserting the
+ * generic convention on dd542 would measure the rewrite instead of the
+ * convention, so an ordinary section carries these cases and one dd542 case
+ * below pins the boundary between the two.
  */
 
 import { describe, expect, test } from 'bun:test';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
 
 const ID_ORDER = { direction: 'DESC', path: [{ component_tipo: 'id' }] };
+/** An ordinary section (no timestamp-order rewrite) — the convention carrier. */
+const CARRIER = 'oh1';
 
 describe('search ORDER BY id (matrix PK) assembly', () => {
 	test("order by 'id' surfaces the PK into the SELECT exactly once and orders by it", async () => {
 		const { sql } = await buildSearchSql(
-			{ section_tipo: ['dd542'], limit: 25, offset: 0, order: [ID_ORDER] } as never,
+			{ section_tipo: [CARRIER], limit: 25, offset: 0, order: [ID_ORDER] } as never,
 			{},
 		);
 		// The SELECT surfaces the PK — exactly one `AS id` sentence.
@@ -46,7 +54,7 @@ describe('search ORDER BY id (matrix PK) assembly', () => {
 		// are emitted.
 		const { sql } = await buildSearchSql(
 			{
-				section_tipo: ['dd542'],
+				section_tipo: [CARRIER],
 				limit: 25,
 				offset: 0,
 				order: [ID_ORDER, { direction: 'ASC', path: [{ component_tipo: 'id' }] }],
@@ -57,7 +65,7 @@ describe('search ORDER BY id (matrix PK) assembly', () => {
 	});
 
 	test('a single order OBJECT normalizes to the same SQL as the one-element array', async () => {
-		const base = { section_tipo: ['dd542'], limit: 25, offset: 0 };
+		const base = { section_tipo: [CARRIER], limit: 25, offset: 0 };
 		const asArray = await buildSearchSql({ ...base, order: [ID_ORDER] } as never, {});
 		const asObject = await buildSearchSql({ ...base, order: ID_ORDER } as never, {});
 		expect(asObject.sql).toBe(asArray.sql);
@@ -66,13 +74,24 @@ describe('search ORDER BY id (matrix PK) assembly', () => {
 
 	test('no order → the global section_id ASC default (unchanged baseline)', async () => {
 		const { sql } = await buildSearchSql(
-			{ section_tipo: ['dd542'], limit: 25, offset: 0 } as never,
+			{ section_tipo: [CARRIER], limit: 25, offset: 0 } as never,
 			{},
 		);
 		// No custom order → no window, no `AS id`, inner default ASC only.
 		expect(sql).not.toContain('AS id');
 		expect(sql).not.toContain('main_select');
-		expect(sql).toMatch(/ORDER BY\s+dd542\.section_id ASC/);
+		expect(sql).toMatch(new RegExp(`ORDER BY\\s+${CARRIER}\\.section_id ASC`));
+	});
+
+	test('the same id order on dd542 is re-expressed by WC-054 (boundary case)', async () => {
+		// Same sqo, append-only log: the PK is still surfaced (the projection is
+		// unchanged) but the ORDER BY moves onto the ("timestamp", id) index.
+		const { sql } = await buildSearchSql(
+			{ section_tipo: ['dd542'], limit: 25, offset: 0, order: [ID_ORDER] } as never,
+			{},
+		);
+		expect((sql.match(/\bAS id\b/g) ?? []).length).toBe(1);
+		expect(sql).toMatch(/ORDER BY\s+"timestamp" DESC, id DESC/);
 	});
 });
 
@@ -84,7 +103,7 @@ describe('search ORDER BY id (matrix PK) assembly', () => {
 describe('search ORDER BY exact `column` convention', () => {
 	async function outerOrder(order: unknown): Promise<string> {
 		const { sql } = await buildSearchSql(
-			{ section_tipo: ['dd542'], limit: 25, offset: 0, order } as never,
+			{ section_tipo: [CARRIER], limit: 25, offset: 0, order } as never,
 			{},
 		);
 		const m = sql.match(/main_select\s+ORDER BY\s+([^;]+)/) ?? sql.match(/ORDER BY\s+([^;]+)/);
@@ -100,7 +119,7 @@ describe('search ORDER BY exact `column` convention', () => {
 	test('`column: "id"` surfaces the PK into the SELECT once', async () => {
 		const { sql } = await buildSearchSql(
 			{
-				section_tipo: ['dd542'],
+				section_tipo: [CARRIER],
 				limit: 25,
 				offset: 0,
 				order: [{ direction: 'DESC', path: [{ column: 'id' }] }],
@@ -121,7 +140,7 @@ describe('search ORDER BY exact `column` convention', () => {
 	});
 
 	test('a single {path,direction} OBJECT with `column` normalizes like the array form', async () => {
-		const base = { section_tipo: ['dd542'], limit: 25, offset: 0 };
+		const base = { section_tipo: [CARRIER], limit: 25, offset: 0 };
 		const arr = await buildSearchSql(
 			{ ...base, order: [{ direction: 'DESC', path: [{ column: 'section_id' }] }] } as never,
 			{},
@@ -137,7 +156,7 @@ describe('search ORDER BY exact `column` convention', () => {
 		await expect(
 			buildSearchSql(
 				{
-					section_tipo: ['dd542'],
+					section_tipo: [CARRIER],
 					limit: 25,
 					offset: 0,
 					order: [{ direction: 'DESC', path: [{ column: 'DROP TABLE' }] }],

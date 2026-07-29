@@ -29,6 +29,7 @@ import { getMainRelatedSectionTipo } from '../../../src/core/relations/request_c
 import { findInverseReferences } from '../../../src/core/search/search_related.ts';
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
+import { isRecordInScope } from '../../../src/core/security/record_scope.ts';
 import type {
 	ToolActionContext,
 	ToolResponse,
@@ -77,6 +78,19 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 		// Portal WRITE gate (PHP assert_tipo_permission(portal, level 2)).
 		const portalLevel = await getPermissions(ctx.principal, hostSectionTipo, portalComponentTipo);
 		if (portalLevel < 2) return fail('insufficient permissions on the portal target');
+		// Per-record gate on the portal HOST record (PHP SEC-024 §9.4:
+		// assert_record_in_user_scope(item_value->section_tipo, item_value->section_id)).
+		// The declarative record/1 gate covered the AV SOURCE record only, and the
+		// host locator is caller-supplied — without this a user could create a portal
+		// element on a record outside their projects scope.
+		if (
+			!ctx.principal.isGlobalAdmin &&
+			Number.isInteger(hostSectionId) &&
+			hostSectionId > 0 &&
+			!(await isRecordInScope(hostSectionTipo, hostSectionId, ctx.principal))
+		) {
+			return fail('record is out of the user scope');
+		}
 
 		// AV source context (declarative record/1 gate already ran on options.section_tipo/section_id).
 		const avContext = await resolveMediaToolContext(ctx.options);
@@ -200,10 +214,14 @@ export const tool: ToolServerModule = {
 	name: 'tool_posterframe',
 	apiActions: {
 		create_identifying_image: {
-			permission: 'record',
+			permission: 'record_tipo',
 			minLevel: 1,
 			handler: createIdentifyingImage,
 		},
+		// 'record', NOT 'record_tipo': this action's handler and client send only
+		// section_tipo + section_id, and PHP gates it assert_section_permission(1) +
+		// assert_record_in_user_scope (class.tool_posterframe.php:382-384). Gating a
+		// component pair here makes it unsatisfiable for every caller.
 		get_ar_identifying_image: { permission: 'record', minLevel: 1, handler: getArIdentifyingImage },
 	},
 };

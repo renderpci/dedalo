@@ -39,6 +39,7 @@ const DANGEROUS_ELEMENTS = [
 /** True when a URL value (whitespace/controls collapsed) uses a dangerous scheme. */
 function isDangerousUrl(raw: string): boolean {
 	// A browser ignores whitespace + C0 controls inside a scheme ("java\tscript:").
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: a sanitizer STRIPS control characters — matching them is the purpose
 	const s = raw.replace(/[\s\x00-\x1f]+/g, '').toLowerCase();
 	return (
 		s.startsWith('javascript:') ||

@@ -153,7 +153,18 @@ export function resolveTranscriberProvider(engine: string): {
 	}
 }
 
-/** Resolve the {uri, key} for a transcriber engine from tool config (dd996). */
+/**
+ * Resolve the {uri, key} for a transcriber engine from tool config (dd996).
+ *
+ * `getToolConfig` returns the tool's config already RESOLVED per key — the
+ * effective value under the option name, with any `{value, client, …}` wrapper
+ * unwrapped. So the entry list is `toolConfig.transcriber_config` (an array).
+ * The nested `config.transcriber_config.value` form is PHP's raw config-item
+ * shape (`tool_common::get_config` returns the whole item, and the PHP tool then
+ * read `->config->…` off an ARRAY — which yielded null, so the PHP remote path
+ * never resolved a uri/key either). Both are accepted; the flat one is the shape
+ * this engine actually produces.
+ */
 export function resolveTranscriberConfig(
 	toolConfig: Record<string, unknown>,
 	engine: string,
@@ -371,7 +382,13 @@ export async function saveTranscriptionResult(input: {
 		sectionTipo: transcriptionDdo.section_tipo,
 		sectionId: transcriptionDdo.section_id,
 		lang,
-		changedData: [{ action: 'update', id: null, value: { value: data, lang } }],
+		// THE transcription is the lang's single main text: always item id 1,
+		// stated explicitly. An id-less update relies on slice/sibling resolution
+		// and APPENDS with a minted id when nothing resolves — which is how a
+		// finished transcription ended up invisible in item 2 while the editor
+		// showed the empty item 1 (rsc167/528, 2026-07-28). Same contract as the
+		// browser tool's save_transcription.
+		changedData: [{ action: 'update', id: 1, key: 0, value: { id: 1, value: data, lang } }],
 		userId,
 	});
 	return {
