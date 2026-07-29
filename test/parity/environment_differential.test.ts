@@ -135,6 +135,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 			// DELETE, not `= undefined`: toEqual distinguishes a key present with
 			// value undefined from an absent key, so assigning undefined here left
 			// the very divergence this branch exists to neutralise in the diff.
+			// biome-ignore lint/performance/noDelete: see above — key ABSENCE is the assertion
 			delete phpVars.DEDALO_DIFFUSION_API_URL;
 		}
 		expect(tsVars).toEqual(phpVars);
@@ -172,7 +173,6 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		]) {
 			expect(key in tsGlobals).toBe(true);
 			expect(key in phpGlobals).toBe(false);
-			// biome-ignore lint/performance/noDelete: an undefined assignment would fail the key-set compare
 			delete tsGlobals[key];
 		}
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());

@@ -353,6 +353,58 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				const { buildGetDataContext } = await import('../../section/read.ts');
 				savedContext = await buildGetDataContext(rqo, savedData as never, principal);
 			}
+			// SCALAR saves: dispatch the model's emit-hook decorateItem on the
+			// echoed item (registry facet, no model conditional — S2-24), the
+			// same decoration the edit read applies. Without it the echo
+			// REPLACES the client's data with an undecorated item and every
+			// per-model extra silently vanishes on save — found live 2026-07-29:
+			// component_text_area's tags_persons/related_sections feed
+			// disappeared after the first save, killing the person button (and
+			// tag insertion with it) until a full reload. Relation saves above
+			// already reuse the full get_data pipeline, hooks included. Best
+			// effort: a decoration hiccup never fails a durable save.
+			if (!isRelationSave) {
+				try {
+					const { getEmitHook } = await import('../../components/emit_hooks.ts');
+					const hook = savedModel !== null ? getEmitHook(savedModel) : undefined;
+					if (hook?.decorateItem !== undefined) {
+						const { getMatrixTableFromTipo: tableFromTipo } = await import(
+							'../../ontology/resolver.ts'
+						);
+						const { readMatrixRecord } = await import('../../db/matrix.ts');
+						const { EmissionContext } = await import('../../resolve/component_data.ts');
+						const table = await tableFromTipo(source.section_tipo);
+						const record =
+							table === null
+								? null
+								: await readMatrixRecord(table, source.section_tipo, Number(source.section_id));
+						if (record !== null) {
+							const lang = source.lang ?? 'lg-nolan';
+							await hook.decorateItem(savedDataItem as never, {
+								ddo: {
+									tipo: source.tipo,
+									section_tipo: source.section_tipo,
+									mode: 'edit',
+								} as never,
+								record,
+								row: { section_tipo: source.section_tipo, section_id: Number(source.section_id) },
+								model: savedModel as string,
+								ddoMode: 'edit',
+								ddoLang: lang,
+								defaultMode: 'edit',
+								defaultLang: lang,
+								callerTipo: source.section_tipo,
+								emission: new EmissionContext([savedDataItem as never]),
+							});
+						}
+					}
+				} catch (error) {
+					console.error(
+						'[save] emit-hook decoration of the save echo failed (echo kept bare):',
+						error,
+					);
+				}
+			}
 		}
 		// PHP observers_data merge (:1503): the same-record recomputed observer
 		// items append AFTER the saved component's own data.
