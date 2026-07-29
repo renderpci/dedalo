@@ -184,6 +184,18 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 				self.get_diffusion_info(),
 				self.get_active_processes(),
 			])
+			// (!) data_manager.request NEVER rejects: on a network/HTTP failure it
+			// returns {result:false, msg} and records the failure in
+			// page_globals.api_errors. Without this guard diffusion_info would be
+			// `false`, the `?? 1` reads below would silently succeed (property access
+			// on a boolean), self.error would stay unset — and render() would fall
+			// through to common.prototype.render, whose api_errors short-circuit
+			// returns a generic error node with no .tool_header. The caller then
+			// throws the useless 'Invalid tool wrapper: missing tool_header',
+			// masking the real cause. Fail loudly here instead.
+			if (!self.diffusion_info) {
+				throw new Error('Unable to load the diffusion configuration from the server. See the browser console / server log for the failing request.')
+			}
 			self.resolve_levels               = self.diffusion_info.resolve_levels ?? 1
 			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 1
 		} else {

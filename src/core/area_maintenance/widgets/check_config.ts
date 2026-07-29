@@ -45,6 +45,7 @@ async function computeCheckConfig(): Promise<{
 	const { existsSync } = await import('node:fs');
 	const { basename, dirname, join } = await import('node:path');
 	const { readEnv } = await import('../../../config/env.ts');
+	const { readBool } = await import('../../../config/readers.ts');
 	const privateDir = join(dirname(String(process.cwd())), 'private');
 	const errors: string[] = [];
 
@@ -224,7 +225,9 @@ async function computeCheckConfig(): Promise<{
 		recovery: state.recovery_mode === true,
 		notification:
 			state.notification !== false && state.notification !== '' && state.notification != null,
-		diffusion_native: readEnv('DEDALO_DIFFUSION_NATIVE') === 'true',
+		// readBool, not readEnv==='true': see diffusion_server_control — the
+		// catalog default (true) must apply when the key was never written.
+		diffusion_native: readBool('DEDALO_DIFFUSION_NATIVE'),
 		dev_mode: readEnv('DEDALO_DEV_MODE') === 'true',
 	};
 

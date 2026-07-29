@@ -187,19 +187,23 @@ DEDALO_DIFFUSION_MAX_RUNNERS=2
 	DEDALO_DIFFUSION_NATIVE: {
 		type: 'boolean',
 		scope: 'operator',
-		default: false,
+		default: true,
 		heading: 'Native diffusion engine',
 		typeLabel: 'bool',
 		doc: `Routes the publication tool to the diffusion engine built into this server instead
-of the separate, external diffusion service of earlier releases. Set to \`true\` once the
-installation's publications have been validated against the native engine: the tool in
-the browser is unchanged, only the server that answers it is.
+of the separate, external diffusion service of earlier releases. The tool in the browser
+is unchanged, only the server that answers it is.
 
-While it is \`false\` (the default), Dédalo keeps advertising the external diffusion
-service to the client and publications continue to go through it.
+Defaults to \`true\`: this server IS the diffusion engine. It was \`false\` while
+installations still ran the separate service of earlier releases alongside Dédalo, but that
+service is decommissioned and this server serves no \`/dedalo/diffusion/api/v1/\` route — so
+with the flag off every publication call from the tool fails with a 404.
+
+Set it to \`false\` ONLY on a deployment that still runs the external service and reaches
+it through a reverse-proxy route of its own.
 
 \`\`\`bash
-DEDALO_DIFFUSION_NATIVE=true
+DEDALO_DIFFUSION_NATIVE=false
 \`\`\``,
 	},
 	DEDALO_DIFFUSION_NATIVE_ELEMENTS: {

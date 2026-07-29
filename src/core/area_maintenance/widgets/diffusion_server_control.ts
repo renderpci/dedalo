@@ -80,6 +80,7 @@ async function diffusionModules() {
 export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 	const { info, queue, scheduler, writers } = await diffusionModules();
 	const { readEnv } = await import('../../../config/env.ts');
+	const { readBool } = await import('../../../config/readers.ts');
 	const [running, queued, jobs, pending] = await Promise.all([
 		queue.countRunningJobs(),
 		queue.countQueuedJobs(),
@@ -88,7 +89,10 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 	]);
 	const langsRaw = readEnv('DEDALO_DIFFUSION_LANGS') ?? '';
 	const config = {
-		native: readEnv('DEDALO_DIFFUSION_NATIVE') === 'true',
+		// readBool, not readEnv==='true': the catalog default (true) must apply on
+		// an install that never wrote the key, or this panel reports "external
+		// engine" while buildPlainVars routes the tool at the native one.
+		native: readBool('DEDALO_DIFFUSION_NATIVE'),
 		native_elements: readEnv('DEDALO_DIFFUSION_NATIVE_ELEMENTS') ?? null,
 		resolve_levels: envIntOrNull(readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS')),
 		langs: langsRaw

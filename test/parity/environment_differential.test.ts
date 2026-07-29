@@ -132,7 +132,10 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		if (readEnv('DEDALO_DIFFUSION_NATIVE') === 'true') {
 			expect('DEDALO_DIFFUSION_API_URL' in tsVars).toBe(false);
 			expect('DEDALO_DIFFUSION_API_URL' in phpVars).toBe(true);
-			phpVars.DEDALO_DIFFUSION_API_URL = undefined;
+			// DELETE, not `= undefined`: toEqual distinguishes a key present with
+			// value undefined from an absent key, so assigning undefined here left
+			// the very divergence this branch exists to neutralise in the diff.
+			delete phpVars.DEDALO_DIFFUSION_API_URL;
 		}
 		expect(tsVars).toEqual(phpVars);
 	});
