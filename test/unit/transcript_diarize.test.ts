@@ -17,8 +17,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { parseTagId } from '../../src/core/components/component_text_area/tag_grammar.ts';
 import {
 	assign_speakers_to_segments,
+	cluster_speaker_turns,
 	speaker_stats,
 	stitch_diarization_chunks,
 } from '../../tools/tool_transcription/transcribers/lib/diarize.js';
@@ -93,6 +95,57 @@ describe('stitch_diarization_chunks', () => {
 	test('empty input is empty output', () => {
 		expect(stitch_diarization_chunks([], {})).toEqual([]);
 		expect(stitch_diarization_chunks([{ offset: 0, turns: [] }], {})).toEqual([]);
+	});
+});
+
+describe('cluster_speaker_turns (voice-fingerprint identity — coherence on long audio)', () => {
+	// Synthetic fingerprints: voice A ~ [1,0,ε], voice B ~ [0,1,ε]. Local ids
+	// PERMUTE across chunks and speakers vanish from overlaps — exactly the
+	// case that fragments co-activity stitching on long interviews.
+	const A = (jitter: number) => [1, jitter, 0.05];
+	const B = (jitter: number) => [jitter, 1, -0.05];
+
+	test('the same voice keeps ONE speaker id across distant, non-overlapping chunks', () => {
+		const turns = cluster_speaker_turns(
+			[
+				// chunk 1: A speaks (local 0), B interjects (local 1)
+				{ turns: [{ start: 0, end: 120 }], embedding: A(0.02) },
+				{ turns: [{ start: 120, end: 130 }], embedding: B(0.01) },
+				// chunk 2 (minutes later): B is local 0 there, A is local 1
+				{ turns: [{ start: 900, end: 960 }], embedding: B(0.06) },
+				{ turns: [{ start: 960, end: 1100 }], embedding: A(0.04) },
+				// chunk 3: only A speaks — absent from every overlap
+				{ turns: [{ start: 2400, end: 2600 }], embedding: A(0.03) },
+			],
+			{ cluster_similarity: 0.5 },
+		);
+		// TWO people, appearance-ordered: A (first voice heard) = 0, B = 1.
+		expect(turns.map((turn) => turn.speaker)).toEqual([0, 1, 1, 0, 0]);
+		expect(new Set(turns.map((turn) => turn.speaker)).size).toBe(2);
+	});
+
+	test('a fingerprint-less group keeps its own identity — never merged by guessing', () => {
+		const turns = cluster_speaker_turns(
+			[
+				{ turns: [{ start: 0, end: 10 }], embedding: A(0) },
+				{ turns: [{ start: 20, end: 30 }], embedding: null },
+				{ turns: [{ start: 40, end: 50 }], embedding: A(0.01) },
+			],
+			{ cluster_similarity: 0.5 },
+		);
+		expect(turns.map((turn) => turn.speaker)).toEqual([0, 1, 0]);
+	});
+
+	test('dissimilar voices never merge; empty input is empty output', () => {
+		const turns = cluster_speaker_turns(
+			[
+				{ turns: [{ start: 0, end: 5 }], embedding: [1, 0, 0] },
+				{ turns: [{ start: 5, end: 9 }], embedding: [0, 0, 1] },
+			],
+			{ cluster_similarity: 0.5 },
+		);
+		expect(new Set(turns.map((turn) => turn.speaker)).size).toBe(2);
+		expect(cluster_speaker_turns([], {})).toEqual([]);
 	});
 });
 
@@ -175,6 +228,34 @@ describe('speaker tags in the stored text (segments_to_html speaker_tags)', () =
 		const occurrences = html.split(TAG_1).length - 1;
 		expect(occurrences).toBe(1);
 		expect(html.startsWith(`<p>[TC_00:00:00.000_TC]${TAG_1}First part.</p>`)).toBe(true);
+	});
+
+	test('PLACEHOLDER tags (empty data payload) compose and parse — the unresolved form', () => {
+		// The immediate-save flow opens every turn with '[person-a-N-PN-data::data]';
+		// the empty payload is what marks the tag assignable later (the identity
+		// binding swaps the whole tag string, all occurrences, via the save path).
+		const P1 = '[person-a-1-P1-data::data]';
+		const P2 = '[person-a-2-P2-data::data]';
+		const html = segments_to_html(
+			[
+				{ text: 'Question.', start: 0, end: 2, speaker: 0 },
+				{ text: 'Answer.', start: 2, end: 5, speaker: 1 },
+			],
+			{ tc_mode: 'paragraph', speaker_tags: { 0: P1, 1: P2 } },
+		);
+		expect(html).toBe(
+			`<p>[TC_00:00:00.000_TC]${P1}Question.</p><p>[TC_00:00:02.000_TC]${P2}Answer.</p>`,
+		);
+		// The short form renders as a badge through the v7 tag grammar.
+		expect(parseTagId('[person-a-1-P1]')).toMatchObject({
+			kind: 'sprite',
+			type: 'person',
+			display: 'P1',
+		});
+		// And the binding is a plain whole-tag swap: byte-exact, all occurrences.
+		const bound = html.split(P2).join(TAG_1);
+		expect(bound).toContain(`[TC_00:00:02.000_TC]${TAG_1}Answer.`);
+		expect(bound).not.toContain('data::data]Answer');
 	});
 
 	test('segments without speakers render exactly as before (no map, no change)', () => {

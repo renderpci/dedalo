@@ -67,29 +67,31 @@ function readCatalog(): CatalogModel[] {
 			'no transcriber_quality catalog found in tools/tool_transcription/register.json',
 		);
 	}
-	// The speaker-detection model rides the same catalog listing: same store,
-	// same downloader, its own file profile (kind: 'diarization').
-	const diarization = configValue?.diarization_model?.value as
-		| {
-				name?: string;
-				label?: string;
-				notes?: string;
-				size_mb?: number;
-				dtype?: Record<string, string>;
-		  }
-		| undefined;
-	const diarizationModels: CatalogModel[] =
-		diarization !== undefined && typeof diarization.name === 'string'
-			? [
-					{
-						id: diarization.name,
-						label: diarization.label ?? diarization.name,
-						note: `${diarization.notes ?? ''}${diarization.size_mb !== undefined ? ` (~${diarization.size_mb} MB)` : ''}`.trim(),
-						dtype: diarization.dtype,
-						kind: 'diarization',
-					},
-				]
-			: [];
+	// The speaker-detection models ride the same catalog listing: same store,
+	// same downloader, their own file profile (kind: 'diarization'). Two
+	// slots: segmentation (who speaks when) + the voice-fingerprint embedding
+	// (same voice = same id across the whole recording).
+	const diarizationModels: CatalogModel[] = [];
+	for (const slot of ['diarization_model', 'diarization_embedding_model']) {
+		const entry = configValue?.[slot]?.value as
+			| {
+					name?: string;
+					label?: string;
+					notes?: string;
+					size_mb?: number;
+					dtype?: Record<string, string>;
+			  }
+			| undefined;
+		if (entry !== undefined && typeof entry.name === 'string') {
+			diarizationModels.push({
+				id: entry.name,
+				label: entry.label ?? entry.name,
+				note: `${entry.notes ?? ''}${entry.size_mb !== undefined ? ` (~${entry.size_mb} MB)` : ''}`.trim(),
+				dtype: entry.dtype,
+				kind: 'diarization',
+			});
+		}
+	}
 	return diarizationModels.concat(
 		entries
 			.filter(
