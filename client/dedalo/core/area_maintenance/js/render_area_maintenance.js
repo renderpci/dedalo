@@ -336,6 +336,13 @@ const get_content_data = async function(self) {
 					console.warn('[area_maintenance] could not persist view selection', err)
 				}
 			}
+			// (!) Announce the switch. Hiding the list view is a pure CSS class
+			// flip — the widget nodes stay CONNECTED and no lifecycle callback
+			// fires anywhere — so a widget holding a live resource cannot
+			// otherwise tell that it just became invisible. An `isConnected`
+			// check does not help here; visibility is the only signal, and this
+			// event is it.
+			document.dispatchEvent(new CustomEvent('dd_maintenance_view', { detail: { view } }))
 		}
 		btn_map.addEventListener('click', (e) => { e.preventDefault(); set_view('map', true) })
 		btn_list.addEventListener('click', (e) => { e.preventDefault(); set_view('list', true) })
@@ -995,6 +1002,25 @@ const build_map_view = function(self, widgets, opts={}) {
 			if (!body) { return }
 			context.querySelectorAll('.tool_chip').forEach(c => c.classList.toggle('sel', c.dataset.id===tid))
 			persist_sel(node_id, tid)
+
+			// (!) Destroy the outgoing tool BEFORE wiping its DOM. `innerHTML=''`
+			// detaches nodes without running any teardown, so every instance
+			// mounted here was orphaned — its dependencies never released, its
+			// events never unbound. That has been true for every widget the map
+			// view can mount, not just live ones; a widget holding an open
+			// stream is simply the first case where the leak is observable.
+			// destroy() carries its own double-destroy guard, so this is safe
+			// even if the widget was already torn down.
+			for (const widget_body of body.querySelectorAll('.widget_body')) {
+				const instance = widget_body.widget_instance
+				if (instance && typeof instance.destroy==='function') {
+					try {
+						instance.destroy(true, true, false)
+					} catch (error) {
+						console.error('[area_maintenance] widget destroy failed', error)
+					}
+				}
+			}
 			body.innerHTML = ''
 
 			const descriptor = by_id[tid]
@@ -1363,16 +1389,30 @@ const render_widget = async (item, self) => {
 	const is_background = item.background===true || background_widget_ids.includes(item.id)
 
 	// unified load trigger (uses the widget's own load() override if present,
-	// else the shared widget_common default)
+	// else the shared widget_common default).
+	// (!) RETURNS the loader promise. A widget that starts a live feed on open
+	// must not begin before its value exists, or its first frame lands against
+	// the spinner DOM instead of a rendered widget; trigger_open below chains
+	// on this. Discarding the promise here made that ordering unobservable.
 	const trigger_load = () => {
 		if (!widget_instance) {
-			return
+			return Promise.resolve()
 		}
 		const loader = (typeof widget_instance.load==='function')
 			? widget_instance.load.bind(widget_instance)
 			: widget_common.prototype.load.bind(widget_instance)
-		loader()
+		return Promise.resolve(loader())
 	}
+
+	// open = load, THEN tell the widget it is visible.
+	// load() is one-shot guarded (widget_common), so a re-expose never re-enters
+	// it — which is exactly why a widget cannot use load() as its "I am visible
+	// now" signal and needs on_expose.
+	const trigger_open = () => trigger_load().then(() => {
+		if (widget_instance && typeof widget_instance.on_expose==='function') {
+			widget_instance.on_expose()
+		}
+	}).catch((error) => console.error('[area_maintenance] widget open failed', error))
 
 	// label
 		const label = ui.create_dom_element({
@@ -1399,11 +1439,20 @@ const render_widget = async (item, self) => {
 	// collapse_toggle_track
 		const collapse = () => {
 			label.classList.remove('up')
+			// (!) Forward the collapse to the widget. Until this line, collapsing
+			// an accordion did NOTHING but flip a class — no destroy(), no
+			// notification of any kind — so a widget holding a live resource (an
+			// SSE reader, a timer) had no way to learn it was no longer visible
+			// and would keep it open behind a display:none panel.
+			if (widget_instance && typeof widget_instance.on_collapse==='function') {
+				widget_instance.on_collapse()
+			}
 		}
 		const expose = () => {
 			label.classList.add('up')
-			// unified lazy load: fetch widget data only when opened
-			trigger_load()
+			// unified lazy load: fetch widget data only when opened, then signal
+			// visibility once the value is actually there
+			trigger_open()
 		}
 		ui.collapse_toggle_track({
 			toggler				: label,
@@ -1460,16 +1509,25 @@ const render_widget = async (item, self) => {
 			}
 
 			widget_instance = widget
+			// Reachable handle for hosts that tear this DOM down directly (the
+			// map view's select_tool). The closure above is not reachable from
+			// the node, so without this there is no way to destroy the instance
+			// before its nodes are discarded.
+			body.widget_instance = widget
 
-			// background widgets: low-priority load while still collapsed
+			// background widgets: low-priority load while still collapsed.
+			// (!) trigger_LOAD, never trigger_open — a background widget fetches
+			// its value while shut, and must not be told it is exposed. Collapsed
+			// means no live feed, always.
 			if (is_background) {
 				dd_request_idle_callback(() => {
 					trigger_load()
 				})
 			} else if (!body.classList.contains('hide')) {
 				// restored-open state: expose_callback may have fired before the
-				// instance was ready, so ensure the load runs now.
-				trigger_load()
+				// instance was ready, so ensure the load runs now. This widget IS
+				// visible, so it gets the full open (load + on_expose).
+				trigger_open()
 			}
 
 		} catch (error) {

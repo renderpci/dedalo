@@ -202,6 +202,16 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   **global-admin only** (404 otherwise). Aggregates request totals/latency,
   slow-request and pool-wait counters, diffusion queue depths + scheduler
   state, media job headroom, background tool job stats, RSS, uptime.
+- **`diffusion_queue_streams_opened` / `_closed` (WC-067)** — the leak alarm for
+  the maintenance widget's live queue feed. Each open `follow_queue` SSE stream
+  runs a 1 s poll loop for as long as an admin has the panel open, so the two
+  must CONVERGE shortly after the last panel is closed. A persistent and growing
+  gap means poll loops are outliving their clients, and is the signal to look
+  (a browser tab that never sent a FIN, a proxy holding the connection). It is
+  a real gauge rather than a test because nothing in-process can assert that a
+  dropped socket fires `cancel()`; the stream's unconditional 15 s heartbeat and
+  its 15-minute hard lifetime exist to bound the damage either way, so a gap
+  should also self-heal within ~15 min.
 - **Error correlation**: every handler exception logs server-side with its
   `request_id`; the client receives the id, never the exception text.
 

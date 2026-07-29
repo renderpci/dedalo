@@ -647,6 +647,14 @@ const update_process_status = (options) => {
 		// (1 second default) until stream is done (PID is no longer running)
 		data_manager.read_stream(stream, on_read, on_done)
 	})
+	.catch((error) => {
+		// request_stream REJECTS on a network failure or a non-2xx response (it
+		// used to leave the promise pending forever, which is why this handler did
+		// not exist). Behaviour is unchanged — the stream simply does not start —
+		// but the failure is reported rather than surfacing as an unhandled
+		// rejection.
+		console.error('[tool_propagate_component_data] could not open the status stream:', error)
+	})
 }//end update_process_status
 
 

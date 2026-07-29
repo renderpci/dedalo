@@ -15,7 +15,42 @@
 		flex-direction: column;
 	}
 
+	// rollup band — the headline "what is publishing right now". First block, so
+	// it carries no divider and no top margin; the sections below own the rhythm.
+	.diffusion_server_control_rollup {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+
+		.dsc_rollup_head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.6rem;
+		}
+		// aggregate progress: bar over caption, both full width
+		.dsc_rollup_progress {
+			display: flex;
+			flex-direction: column;
+			gap: 0.3rem;
+
+			&.hide {
+				display: none;
+			}
+		}
+		// a bar with no usable denominator is hidden rather than drawn at 0%: an
+		// empty track here would read as "nothing has happened", when the truth
+		// is "no estimate to measure against"
+		.dsc_rollup_bar.hide {
+			display: none;
+		}
+	}
+
 	// ---- sections ------------------------------------------------------
+	// (!) The status block joined these lists when the rollup band took the top
+	// slot: it is no longer the first block, so without a divider and a top
+	// margin it would be the one section butting straight into its neighbour.
+	.diffusion_server_control_status,
 	.diffusion_server_control_scheduler,
 	.diffusion_server_control_jobs,
 	.diffusion_server_control_pending,
@@ -23,9 +58,12 @@
 	.diffusion_server_control_footer {
 		margin-top: 0.9rem;
 	}
-	// hairline dividers before the titled sub-sections + footer
+	// hairline dividers before the titled sub-sections + footer. Every titled
+	// section carries one — none is exempt, or the rhythm reads as a mistake.
+	.diffusion_server_control_status,
 	.diffusion_server_control_scheduler,
 	.diffusion_server_control_jobs,
+	.diffusion_server_control_pending,
 	.diffusion_server_control_config,
 	.diffusion_server_control_footer {
 		padding-top: 0.9rem;
@@ -33,17 +71,26 @@
 	}
 
 	// section headings (eyebrows) get a little breathing room below them
+	.diffusion_server_control_status > .dd_eyebrow,
 	.diffusion_server_control_scheduler > .dd_eyebrow,
 	.diffusion_server_control_jobs > .dd_eyebrow,
+	.diffusion_server_control_pending > .dd_eyebrow,
 	.diffusion_server_control_config > .dd_eyebrow {
 		margin-bottom: 0.5rem;
 	}
+	.diffusion_server_control_status {
+		display: flex;
+		flex-direction: column;
+	}
 
-	// scheduler: readout + pause/resume toggle
+	// scheduler: readout + pause/resume toggle.
+	// (!) align-items stays STRETCH so the readout panel spans the widget like the
+	// status and configuration ones — flex-start here shrank it to its content and
+	// left one panel visibly narrower than its identical neighbours. Only the
+	// button opts out, via align-self.
 	.diffusion_server_control_scheduler {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
 		gap: 0.6rem;
 
 		.button_scheduler {
@@ -51,40 +98,99 @@
 		}
 	}
 
-	// durable job queue table
+	// durable job queue — the shared kit .dd_table (widget_kit.less), same grid /
+	// surface / eyebrow language as every other panel in this widget.
+	//
+	// (!) The explicit column template is load-bearing, not cosmetic: under AUTO
+	// sizing (a real <table>, or a grid without a template) a cell carrying
+	// `word-break: break-word` reports a min-content width of ONE CHARACTER —
+	// the legacy keyword resolves to `overflow-wrap: anywhere`, which counts as a
+	// soft-wrap opportunity for intrinsic sizing. The layout then squeezes exactly
+	// the columns that hold the long machine strings, and every row wraps
+	// mid-token ("process_diffusion_…mdcat353_ / rsc170", "complet / ed").
 	.diffusion_server_control_jobs {
 		display: flex;
 		flex-direction: column;
 	}
 	.diffusion_server_control_job_table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.82rem;
+		grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem;
+		// the template has hard minimums: scroll rather than clip on a narrow panel
+		overflow-x: auto;
 
-		th,
-		td {
-			text-align: left;
-			padding: 0.4rem 0.6rem;
-			border-bottom: 1px solid var(--border_default);
-			vertical-align: middle;
+		&.with_actions {
+			grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem auto;
 		}
-		th {
-			font-weight: 600;
-			color: var(--text_muted, inherit);
-			white-space: nowrap;
-		}
-		// process / target columns carry machine strings
-		td:first-child,
-		td:nth-child(2) {
+
+		// machine strings (process id, element → section). They may still break
+		// anywhere — but only after the column template has given them their room.
+		.job_id,
+		.job_target {
 			font-family: @dsc_mono;
-			word-break: break-word;
+			font-size: 0.78rem;
 		}
-		.job_actions {
+
+		// state is ONE token, never hyphenated across lines. A pending cancel is a
+		// second line so it can never push the state word into wrapping.
+		.job_state {
+			flex-direction: column;
+			align-items: flex-start;
+			justify-content: center;
+			gap: 0.1rem;
+
+			.dd_badge {
+				white-space: nowrap;
+				word-break: normal;
+			}
+		}
+		.job_cancelling {
+			font-size: 0.7rem;
+			font-style: italic;
+		}
+
+		// progress = counter + message on one line, then the bar and its caption.
+		//
+		// (!) align-items must be set explicitly — widget_kit.less puts `center` on
+		// every .dd_td, which would centre the stack instead of letting the bar span
+		// the cell.
+		//
+		// (!) The bar deliberately carries NO min-width (see the .dd_bar primitive).
+		// Its flex minimum is 0 because it holds no text; anything wider than the
+		// cell would overflow, and since .dd_td has no overflow of its own and grid
+		// items do not push their siblings, it would paint over the Attempt column.
+		.job_progress {
+			flex-direction: column;
+			align-items: stretch;
+			justify-content: center;
+			gap: 0.25rem;
+		}
+		.job_progress_head {
 			display: flex;
-			gap: 0.4rem;
-			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 0.5rem;
+			min-width: 0;
+		}
+		// The counter's fixed 6.6rem gutter is gone on purpose: a formatted counter
+		// at this install's scale ("1,284,300 / 4,000,000") never fitted it, and the
+		// bars below now carry the column's vertical alignment.
+		.job_counter {
+			flex: 0 0 auto;
+			font-family: @dsc_mono;
+			font-size: 0.78rem;
+			font-variant-numeric: tabular-nums;
 			white-space: nowrap;
 		}
+		.job_msg {
+			min-width: 0;
+			color: var(--fg_muted);
+		}
+
+		.job_actions {
+			gap: 0.4rem;
+		}
+	}
+	// what the percentages mean — a definition, so it stays a plain muted note
+	.diffusion_server_control_estimate_note {
+		margin-top: 0.5rem;
 	}
 
 	// block-level purge control
@@ -100,12 +206,16 @@
 		}
 	}
 
-	// pending unpublish deletions (inline metric)
+	// pending unpublish deletions — same shape as the scheduler section:
+	// eyebrow, readout panel, then its action button
 	.diffusion_server_control_pending {
 		display: flex;
-		align-items: center;
-		gap: 0.66rem;
-		flex-wrap: wrap;
+		flex-direction: column;
+		gap: 0.6rem;
+
+		.button_retry {
+			align-self: flex-start;
+		}
 	}
 
 	.diffusion_server_control_config {

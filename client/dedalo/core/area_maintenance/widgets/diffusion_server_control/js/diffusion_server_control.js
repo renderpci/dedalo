@@ -86,8 +86,34 @@ export const diffusion_server_control = function() {
 	// lifecycle
 	diffusion_server_control.prototype.init		= widget_common.prototype.init
 	diffusion_server_control.prototype.render	= widget_common.prototype.render
-	diffusion_server_control.prototype.refresh	= widget_common.prototype.refresh
-	diffusion_server_control.prototype.destroy	= widget_common.prototype.destroy
+
+	// (!) refresh/destroy are WRAPPED, not assigned straight through. The live
+	// controller is registered in ar_instances, so do_delete_dependencies does
+	// tear it down — but only once the framework gets that far. Cancelling the
+	// reader FIRST means a frame can never land against a DOM that is midway
+	// through being replaced.
+	diffusion_server_control.prototype.refresh = function(...args) {
+		this.live?.destroy()
+		this.live = null
+		return widget_common.prototype.refresh.apply(this, args)
+	}
+	diffusion_server_control.prototype.destroy = function(...args) {
+		this.live?.destroy()
+		this.live = null
+		return widget_common.prototype.destroy.apply(this, args)
+	}
+
+	// Visibility signals from the area_maintenance host (WC-067 host edits).
+	// Collapsing an accordion and switching Map/List both leave this widget's
+	// nodes CONNECTED — only hidden — so `isConnected` cannot detect either.
+	// These callbacks are the only signal, and both funnel into the controller's
+	// single idempotent evaluate().
+	diffusion_server_control.prototype.on_collapse = function() {
+		this.live?.evaluate()
+	}
+	diffusion_server_control.prototype.on_expose = function() {
+		this.live?.evaluate()
+	}
 	// get_value issues a dd_area_maintenance_api::get_widget_value request; the
 	// server delegates to diffusion_server_control::get_value() and the resolved
 	// object is stored in this.value before the render cycle.
@@ -180,6 +206,38 @@ diffusion_server_control.prototype.widget_request = async function(action, optio
 
 	return api_response
 }//end widget_request
+
+
+
+/**
+* FOLLOW_QUEUE
+* Open the admin queue SSE stream (dd_diffusion_api::follow_queue, WC-067).
+*
+* (!) This is the ONE action on this widget that does NOT go through
+* widget_request, and the exception is structural rather than stylistic: the
+* widget API cannot carry a stream at all. dd_area_maintenance_api builds its
+* result as {status, body} from a WidgetResponse, which has no stream slot, so
+* the server's streaming branch can never fire for a widget action — and
+* widget_request's transport (data_manager.request with use_worker:true) never
+* touches response.body in any case. So the live feed goes direct, which is the
+* documented "shared/infra logic" exception to the widget-API policy. Every
+* MUTATING action stays on widget_request.
+*
+* Auth is unchanged: request_stream carries the session cookie and injects the
+* CSRF token, and the action is global-admin gated server-side.
+*
+* @returns {Promise<ReadableStream>} rejects on a network failure or a non-2xx
+*/
+diffusion_server_control.prototype.follow_queue = function() {
+
+	return data_manager.request_stream({
+		body : {
+			dd_api			: 'dd_diffusion_api',
+			action			: 'follow_queue',
+			prevent_lock	: true
+		}
+	})
+}//end follow_queue
 
 
 

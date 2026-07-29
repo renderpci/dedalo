@@ -1078,6 +1078,14 @@ const update_process_status = (options) => {
 		// read stream
 		data_manager.read_stream(stream, on_read, on_done)
 	})
+	.catch((error) => {
+		// request_stream REJECTS on a network failure or a non-2xx response
+		// (it used to leave the promise pending forever, which is why this
+		// handler did not exist). Behaviour here is unchanged — the reconnect
+		// simply does not happen — but the failure is now reported instead of
+		// surfacing as an unhandled rejection.
+		console.error('[tool_diffusion] could not follow process status:', error)
+	})
 }//end update_process_status
 
 

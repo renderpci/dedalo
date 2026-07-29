@@ -76,6 +76,52 @@ describe('diffusion_server_control widget (native engine)', () => {
 		expect(result.is_admin).toBe(true);
 	});
 
+	test('get_value: each job row carries the exact shape the client renders', async () => {
+		// The widget's job rows ARE a wire contract — the progress bar, the state
+		// badge, the attempt cell and the per-row action buttons each read a named
+		// field, and a rename here renders as a blank cell rather than an error.
+		// Asserting only Array.isArray (as this suite did) would let any of them
+		// disappear silently. Pinned against a real enqueued job, not a fixture.
+		const job = await enqueueDiffusionJob({
+			ownerUserId: OWNER,
+			clientProcessId: `process_diffusion_${OWNER}_dscshape_dscsec1`,
+			spec: spec('dscshape', 'dscsec1'),
+		});
+		createdJobIds.push(job.job.job_id);
+
+		const body = await call('get_value');
+		const jobs = (body.result as { jobs: Record<string, unknown>[] }).jobs;
+		const row = jobs.find((candidate) => candidate.job_id === job.job.job_id);
+		expect(row, 'the freshly enqueued job is missing from get_value').toBeDefined();
+
+		expect(Object.keys(row as Record<string, unknown>).sort()).toEqual([
+			'attempt',
+			'cancel_requested',
+			'counter',
+			'created_at',
+			'element_tipo',
+			'errors',
+			'finished_at',
+			'job_id',
+			'max_attempts',
+			'msg',
+			'process_id',
+			'section_tipo',
+			'started_at',
+			'state',
+			'total',
+			'type',
+		]);
+		// the fields the progress cell reads, with the types it assumes
+		expect(typeof (row as { counter: unknown }).counter).toBe('number');
+		expect(typeof (row as { total: unknown }).total).toBe('number');
+		expect((row as { state: unknown }).state).toBe('queued');
+		// process_id is the CLIENT label, never the job uuid (the row keys off
+		// job_id, but every human-facing string is the label)
+		expect((row as { process_id: unknown }).process_id).toBe(job.job.client_process_id);
+		expect((row as { process_id: unknown }).process_id).not.toBe(job.job.job_id);
+	});
+
 	test('removed lifecycle methods deny loudly (no daemon to control)', async () => {
 		for (const action of ['start_server', 'stop_server', 'restart_server']) {
 			const body = await call(action);

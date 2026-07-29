@@ -24,6 +24,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { incrementCounter } from '../../core/api/counters.ts';
 import type { ApiResult } from '../../core/api/response.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
 import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
@@ -33,18 +34,27 @@ import {
 	enqueueDiffusionJob,
 	getJobByClientProcessId,
 	getJobById,
+	listActiveJobs,
 	listJobsForCaller,
 	requestCancel,
 } from '../jobs/queue.ts';
 import type { DiffusionJobRow } from '../jobs/queue.ts';
-import { schedulerTick } from '../jobs/scheduler.ts';
 import {
+	STALE_AFTER_SECONDS,
+	getMaxRunners,
+	isSchedulerPaused,
+	schedulerTick,
+} from '../jobs/scheduler.ts';
+import {
+	encodeQueueSseChunk,
 	encodeSseChunk,
 	encodeSseCommentHeartbeat,
 	notFoundProgressData,
 	progressDataFromJob,
+	queueJobView,
 	sseResponseHeaders,
 } from '../jobs/sse.ts';
+import type { QueueFrame } from '../jobs/sse.ts';
 import { diffusionResolveLevels } from '../plan/compile.ts';
 
 /** Old-engine cadences (pinned): 2s state re-send on diffuse; 15s ":\n" on status. */
@@ -191,6 +201,258 @@ function sseResult(stream: ReadableStream<Uint8Array>): ApiResult {
 		stream,
 		streamHeaders: sseResponseHeaders(),
 	};
+}
+
+/* ── follow_queue: the admin queue stream (WC-067) ────────────────────────── */
+
+/**
+ * 1000ms, deliberately NOT the 500ms diffuse cadence. The underlying value
+ * moves once per DEDALO_DIFFUSION_BATCH_RECORDS batch (default 500 records) in
+ * the runner loop, so polling faster only burns CPU to observe the same number.
+ */
+const QUEUE_POLL_MS = 1000;
+/** Same 15s comment cadence as get_process_status — but unconditional here. */
+const QUEUE_HEARTBEAT_MS = STATUS_COMMENT_HEARTBEAT_MS;
+/** Hard lifetime cap; see the deadline note in buildQueueFollowStream. */
+const QUEUE_STREAM_MAX_MS = 900000;
+
+/** What a queue tick reads: the active set plus the scheduler's own state. */
+export interface QueueSnapshot {
+	scheduler: QueueFrame['scheduler'];
+	jobs: QueueFrame['jobs'];
+}
+
+/**
+ * Build the admin queue SSE stream. Same skeleton as buildJobFollowStream, with
+ * four deliberate differences — each one load-bearing:
+ *
+ * 1. NO TERMINAL CONDITION. A queue is never "done"; the stream lives until the
+ *    client goes away or the deadline fires.
+ *
+ * 2. The heartbeat is an UNCONDITIONAL SSE comment. This is the single most
+ *    important line here: on an idle queue nothing changes, so nothing is
+ *    enqueued, so the enqueue-throws backstop in push() — the only in-process
+ *    signal that the peer is gone — would never fire, and a closed browser tab
+ *    would leave this poll loop running until the process restarted. The
+ *    comment guarantees a write attempt every 15s whatever the queue is doing.
+ *
+ * 3. A MAX LIFETIME. Bun's cancel() on a dropped socket is not something this
+ *    codebase has a test for, so the stream does not rely on it: the deadline
+ *    bounds any leak regardless. It also bounds the stale-authorization window
+ *    — admin is checked once, at open, so an open socket must not outlive a
+ *    revoked session indefinitely. The final frame says reconnect:true so the
+ *    client knows this is routine, not a failure.
+ *
+ * 4. The change signature strips `at` (the twin of the total_time strip in
+ *    buildJobFollowStream) so a quiet queue produces no frames at all.
+ *
+ * All state is closure-local — nothing module-scoped, so per-request isolation
+ * is structural rather than a rule someone has to remember.
+ */
+export function buildQueueFollowStream(
+	resolveSnapshot: () => Promise<QueueSnapshot>,
+	options: { pollMs: number; maxMs: number; heartbeatMs?: number },
+): ReadableStream<Uint8Array> {
+	const heartbeatMs = options.heartbeatMs ?? QUEUE_HEARTBEAT_MS;
+	let pollTimer: ReturnType<typeof setInterval> | undefined;
+	let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+	let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+	let lastSerialized = '';
+	let lastMembership = '';
+	let closed = false;
+
+	/**
+	 * Opened/closed are the RUNTIME leak alarm this design needs precisely
+	 * because no test in this codebase can assert that a dropped socket fires
+	 * cancel(). A persistent gap between these two on /api/v1/counters means
+	 * poll loops are outliving their clients; they should converge within
+	 * QUEUE_STREAM_MAX_MS of the last tab closing. cleanup() is idempotent
+	 * (deadline-then-cancel is a normal sequence), so the close counter is
+	 * gated on the transition, not the call.
+	 */
+	incrementCounter('diffusion_queue_streams_opened');
+	const cleanup = () => {
+		if (!closed) incrementCounter('diffusion_queue_streams_closed');
+		closed = true;
+		if (pollTimer !== undefined) clearInterval(pollTimer);
+		if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
+		if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
+	};
+
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			const push = (chunk: Uint8Array) => {
+				if (closed) return;
+				try {
+					controller.enqueue(chunk);
+				} catch {
+					// the peer is gone — this is the backstop the heartbeat exists to reach
+					cleanup();
+				}
+			};
+			const finish = () => {
+				cleanup();
+				try {
+					controller.close();
+				} catch {
+					/* already closed by the client */
+				}
+			};
+
+			const poll = async () => {
+				if (closed) return;
+				try {
+					const snapshot = await resolveSnapshot();
+					const membership = snapshot.jobs
+						.map((job) => job.job_id)
+						.sort()
+						.join(',');
+					const frame: QueueFrame = {
+						kind: 'diffusion_queue',
+						at: Date.now(),
+						scheduler: snapshot.scheduler,
+						jobs: snapshot.jobs,
+						membership,
+						refresh: lastMembership !== '' && membership !== lastMembership,
+						errors: [],
+					};
+					lastMembership = membership;
+					const { at: _volatile, ...changeSignature } = frame;
+					const serialized = JSON.stringify(changeSignature);
+					if (serialized !== lastSerialized) {
+						lastSerialized = serialized;
+						push(encodeQueueSseChunk(frame));
+					}
+				} catch (error) {
+					// Parity with the per-job stream: a read failure mid-stream is a
+					// terminal error frame plus close, never a silent dead poll loop
+					// and never a floating rejection (Bun kills the process on the
+					// first one).
+					console.error('[diffusion sse] queue poll failed:', error);
+					push(
+						encodeQueueSseChunk({
+							kind: 'diffusion_queue',
+							at: Date.now(),
+							scheduler: {
+								running: 0,
+								queued: 0,
+								max_runners: 0,
+								paused: false,
+								stale_after_seconds: 0,
+							},
+							jobs: [],
+							membership: '',
+							refresh: false,
+							errors: ['queue status read failed'],
+						}),
+					);
+					finish();
+				}
+			};
+
+			void poll();
+			pollTimer = setInterval(() => void poll(), options.pollMs);
+			heartbeatTimer = setInterval(() => push(encodeSseCommentHeartbeat()), heartbeatMs);
+			deadlineTimer = setTimeout(() => {
+				if (closed) return;
+				push(
+					encodeQueueSseChunk({
+						kind: 'diffusion_queue',
+						at: Date.now(),
+						scheduler: {
+							running: 0,
+							queued: 0,
+							max_runners: 0,
+							paused: false,
+							stale_after_seconds: 0,
+						},
+						jobs: [],
+						membership: lastMembership,
+						refresh: false,
+						reconnect: true,
+						errors: [],
+					}),
+				);
+				finish();
+			}, options.maxMs);
+		},
+		cancel() {
+			cleanup();
+		},
+	});
+}
+
+/**
+ * The refusal for a non-admin caller — an SSE frame, NOT the JSON envelope its
+ * sibling actions return.
+ *
+ * (!) This looks inconsistent and is not. The caller is
+ * data_manager.request_stream, which resolves response.body and DISCARDS the
+ * Response object: the client is structurally incapable of seeing a status
+ * code or a content-type. Hand it a JSON body and read_stream finds no
+ * "data:\n…\n\n" framing, never fires on_read, and the caller waits forever.
+ * A framed terminal frame is the only refusal a stream client can actually
+ * receive. Same precedent as getProcessStatusAction's missing-id refusal.
+ */
+export function queueRefusalStream(msg: string): ApiResult {
+	return sseResult(
+		new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(
+					encodeQueueSseChunk({
+						kind: 'diffusion_queue',
+						at: Date.now(),
+						scheduler: {
+							running: 0,
+							queued: 0,
+							max_runners: 0,
+							paused: false,
+							stale_after_seconds: 0,
+						},
+						jobs: [],
+						membership: '',
+						refresh: false,
+						errors: [msg],
+					}),
+				);
+				controller.close();
+			},
+		}),
+	);
+}
+
+/**
+ * `follow_queue` — the maintenance widget's live feed: the whole ACTIVE queue
+ * plus scheduler state, for a global admin.
+ *
+ * (!) The principal is captured BY VALUE into the poll closure and never read
+ * from the request ALS. dispatchRqo closes its ALS scopes the moment this
+ * handler returns, so currentPrincipal()/currentApplicationLang() inside a
+ * later tick would be undefined. Nothing in the frame is language-dependent —
+ * every field is an id, a number or a state token — so there is nothing to
+ * resolve per tick anyway; that is a property of the frame design, not luck.
+ */
+export async function followQueueAction(_rqo: Rqo, _principal: Principal): Promise<ApiResult> {
+	return sseResult(
+		buildQueueFollowStream(
+			async () => {
+				const rows = await listActiveJobs();
+				return {
+					scheduler: {
+						// exact over the whole active set: window aggregates survive
+						// the LIMIT (see listActiveJobs)
+						running: rows[0]?.n_running ?? 0,
+						queued: rows[0]?.n_queued ?? 0,
+						max_runners: getMaxRunners(),
+						paused: isSchedulerPaused(),
+						stale_after_seconds: STALE_AFTER_SECONDS,
+					},
+					jobs: rows.map(queueJobView),
+				};
+			},
+			{ pollMs: QUEUE_POLL_MS, maxMs: QUEUE_STREAM_MAX_MS },
+		),
+	);
 }
 
 /**

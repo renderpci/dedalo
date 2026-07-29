@@ -389,6 +389,70 @@ export async function countRunningJobs(): Promise<number> {
 	return rows[0]?.n ?? 0;
 }
 
+/**
+ * One ACTIVE job as read for the admin queue stream. Deliberately NOT
+ * DiffusionJobRow: the jsonb columns are projected to scalars in SQL and the
+ * unbounded ones are not selected at all (see listActiveJobs).
+ *
+ * counter/total/msg arrive as TEXT on purpose. A `::int` cast in the query
+ * would make ONE malformed legacy totals value abort the whole stream for
+ * every admin; coercing per field in the projection degrades that to a single
+ * job showing 0.
+ */
+export interface ActiveJobRow {
+	job_id: string;
+	client_process_id: string;
+	state: DiffusionJobState;
+	counter_text: string | null;
+	total_text: string | null;
+	msg: string | null;
+	cancel_requested: boolean;
+	attempt: number;
+	max_attempts: number;
+	/** Window aggregates — exact over the whole active set, see below. */
+	n_running: number;
+	n_queued: number;
+}
+
+/**
+ * The active job set for the admin queue stream (WC-067) — the ONLY statement
+ * that stream's tick is allowed to run.
+ *
+ * (!) NOT listJobsForCaller(null). That reader is the 24h HISTORY view behind
+ * list_processes and the maintenance widget's get_value: up to 200 rows of six
+ * whole jsonb columns, including `spec` (which carries the entire sanitized
+ * SQO) and `errors` (an unbounded string[] appended per failing field), every
+ * one of them re-parsed by normalizeJobRow on every read. Polling THAT once a
+ * second per connected admin re-reads a quarter of a megabyte of rows that
+ * cannot change — 24h of completed history — to observe a counter that moves
+ * once per batch. This reader returns only rows that can still change, and
+ * projects them narrow.
+ *
+ * The counts are WINDOW aggregates, not a separate query: Postgres evaluates
+ * window functions after WHERE but before ORDER BY/LIMIT, so they stay exact
+ * over the whole active set even when LIMIT truncates the rows returned. That
+ * makes the LIMIT an output cap, never a correctness cap.
+ *
+ * Served by the partial index <table>_state_idx (schema.ts) — which exists for
+ * exactly this predicate and had no observer until now.
+ */
+export async function listActiveJobs(): Promise<ActiveJobRow[]> {
+	await ensureDiffusionJobTables();
+	return (await sql.unsafe(
+		`SELECT job_id, client_process_id, state,
+		        totals->>'counter' AS counter_text,
+		        totals->>'total'   AS total_text,
+		        totals->>'msg'     AS msg,
+		        cancel_requested, attempt, max_attempts,
+		        (count(*) FILTER (WHERE state = 'running') OVER ())::int AS n_running,
+		        (count(*) FILTER (WHERE state = 'queued')  OVER ())::int AS n_queued
+		   FROM "${DIFFUSION_JOBS_TABLE}"
+		  WHERE state IN ('queued','running')
+		  ORDER BY created_at DESC
+		  LIMIT 100`,
+	)) as ActiveJobRow[];
+}
+
 /** Count of jobs waiting to be claimed (scheduler backlog — admin widget input). */
 export async function countQueuedJobs(): Promise<number> {
 	await ensureDiffusionJobTables();

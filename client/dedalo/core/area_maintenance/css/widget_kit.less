@@ -10,6 +10,8 @@
 *                                                      + severity chip system
 *   .dd_eyebrow   uppercase section micro-heading
 *   .dd_note      muted helper note (+ .state_warning / .state_danger alert box)
+*   .dd_bar / .dd_bar_fill / .dd_bar_note   progress bar (+ .indeterminate sweep)
+*   .dd_stats / .dd_stat / .dd_stat_n       headline "how many, right now" band
 *
 * Mixins (called from area_maintenance.less so the look reaches every widget):
 *   .dd_console()          monospace output/log block
@@ -263,6 +265,133 @@
 .dd_note.state_danger {
 	background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
 	border-left-color: var(--color_danger);
+}
+
+// ---- progress bar -------------------------------------------------------
+// The kit's ONE progress primitive. Promoted here rather than re-invented per
+// widget because two hand-rolled bars already speak most of this dialect —
+// tool_diffusion's .run_bar and tool_import_dedalo_csv's .import_progress_track;
+// the term-for-term naming keeps a later fold a rename, not a redesign.
+//
+// NOT `.dd_progress`: layout/progress_bar.less ships a bootstrap-derived
+// `.progress` / `.progress-bar` into the SAME main.css, built on raw @color_*
+// vars and not theme-aware. NOT `.dd_meter`: <meter> promises a KNOWN range, and
+// every total this bar draws is an estimate the server never corrects.
+.dd_bar {
+	display: flex;
+	// clips the fill to the track radius, AND makes an over-100% fill
+	// structurally unable to draw past the track
+	overflow: hidden;
+	width: 100%;
+	height: 6px;
+	border-radius: 3px;
+	background-color: var(--bg_surface_alt);
+	// (!) On dark, --bg_surface_alt sits a few hex points from --bg_surface.
+	// Without this hairline a 0% bar VANISHES, and an empty track reads as
+	// "no bar here" instead of "no progress yet" — the distinction a queued
+	// job depends on.
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border_default) 80%, transparent);
+}
+.dd_bar_fill {
+	flex: 0 0 auto;
+	width: 0;
+	height: 100%;
+	background-color: var(--color_success);
+	// The source moves in batches of hundreds of records, so the counter arrives
+	// in jumps; the ease turns a jump into a readable move. No radius — the
+	// track's overflow:hidden owns the shape, so the leading edge stays square.
+	transition: width 0.3s ease;
+}
+.dd_bar_fill.state_warning {
+	background-color: var(--color_warning);
+}
+.dd_bar_fill.state_danger {
+	background-color: var(--color_danger);
+}
+
+// caption under a bar — machine numbers, never hyphenated mid-token
+.dd_bar_note {
+	color: var(--fg_muted);
+	font-size: 0.78rem;
+	font-variant-numeric: tabular-nums;
+	// inside a .dd_td this would otherwise inherit word-break:break-word (see
+	// the data-table block above) and split "1,284,3 / 00"
+	word-break: normal;
+	overflow-wrap: normal;
+}
+
+// extent unknown (no usable total): a sweep, not a fill
+.dd_bar.indeterminate .dd_bar_fill {
+	width: 30%;
+	animation: dd_bar_sweep 1.1s ease-in-out infinite;
+}
+@keyframes dd_bar_sweep {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(333%);
+	}
+}
+// (!) Reduced motion is an explicit STATIC STATE, never `animation: none`.
+// general.less collapses every animation to 0.001ms with iteration-count 1,
+// which parks a SWEPT fill on translateX(333%) — entirely off the track — so the
+// bar would read EMPTY while the job is actively running. A dimmed full track
+// says "active, extent unknown", which is the truth.
+@media (prefers-reduced-motion: reduce) {
+	.dd_bar.indeterminate .dd_bar_fill {
+		width: 100%;
+		transform: none;
+		animation: none;
+		background-color: color-mix(in srgb, var(--color_success) 45%, transparent);
+	}
+}
+
+// ---- headline stats -----------------------------------------------------
+// A short row of big numbers with uppercase captions — the "how many, right
+// now" band that sits above a detail table. Same surface, radius and divider
+// language as .dd_readout, so a widget can put one on top of the other and it
+// reads as one panel rather than two components.
+.dd_stats {
+	display: flex;
+	.dd_surface();
+}
+.dd_stat {
+	display: flex;
+	flex: 1 1 0;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.1rem;
+	padding: 0.5rem 0.85rem;
+	border-left: 1px solid var(--border_default);
+
+	&:first-child {
+		border-left: 0;
+	}
+}
+.dd_stat_n {
+	font-size: 1.35rem;
+	font-weight: 600;
+	line-height: 1.1;
+	color: var(--fg_default);
+	font-variant-numeric: tabular-nums;
+}
+.dd_stat_n.state_ok {
+	color: var(--color_success);
+}
+.dd_stat_n.state_warning {
+	color: var(--color_warning);
+}
+.dd_stat_n.state_danger {
+	color: var(--color_danger);
+}
+// (!) MUST stay last: same specificity as the severity rules above, so a later
+// declaration wins. A zero count keeps the muted colour even when it carries a
+// severity class — "0 failed" is not news, and colouring it red teaches admins
+// to ignore the colour that matters.
+.dd_stat.zero .dd_stat_n {
+	color: var(--fg_muted);
+	font-weight: 500;
 }
 
 // ---- mixins -------------------------------------------------------------

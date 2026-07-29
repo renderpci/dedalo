@@ -229,11 +229,21 @@ resume equivalence depend on it).
 ### 4.2 Runtime (control plane / data plane)
 
 - **Control plane = main server.** All actions (`diffuse, get_process_status,
-  list_processes, cancel_process, validate, get_diffusion_info,
+  list_processes, cancel_process, follow_queue, validate, get_diffusion_info,
   get_diffusion_status, retry_pending_deletions, rebuild_media_index,
   check_database, backup_database`) register in `src/core/api/dispatch.ts`
   under `dd_diffusion_api` (precedent: rebuild_media_index already there) —
   normal session auth, CSRF-equiv, allowlists.
+- **`follow_queue` (WC-067, 2026-07-29)** is the odd one out and intentionally
+  so: every other action is owner-scoped, this one is GLOBAL-ADMIN only, because
+  each frame names every owner's active job. It streams the whole ACTIVE queue
+  plus scheduler state for the `diffusion_server_control` maintenance widget.
+  Its per-job key set is a narrow contract (nine display fields — never `spec`,
+  `checkpoint`, `result`, `runner` or `errors[]`), because the frame is
+  re-serialized once a second per connected admin; that makes the narrowness
+  both the cost bound and the data-minimisation bound. Full shape, the
+  SSE-framed refusal, and the cadence/lifetime rationale: `WIRE_CONTRACT.md`
+  WC-067.
 - **Data plane = spawned runner.** `diffuse` enqueues a durable job; a
   scheduler claims it (`FOR UPDATE SKIP LOCKED`, global limit default 2,
   uniqueness: one active run per element+section) and spawns
@@ -261,12 +271,29 @@ resume equivalence depend on it).
   chunks are deterministic ordered slices and every write is an idempotent
   upsert or temp+rename file. Keystone gate: kill -9 mid-run, resume →
   byte-identical final artifacts.
-- **Progress:** SSE handlers are views over the job row via Postgres
-  `LISTEN/NOTIFY` (throttled ~500ms) — any server instance can stream any
-  runner's progress. Keep the old status vocabulary and every field
-  `render_tool_diffusion.js` consumes; echo `client_process_id` so the client's
-  reconnect (`list_processes` → find by process_id → `get_process_status`)
-  works unchanged.
+- **Progress:** SSE handlers are views over the durable job row — any server
+  instance can stream any runner's progress. Keep the old status vocabulary and
+  every field `render_tool_diffusion.js` consumes; echo `client_process_id` so
+  the client's reconnect (`list_processes` → find by process_id →
+  `get_process_status`) works unchanged.
+- **Progress transport is a server-side POLL, not `LISTEN/NOTIFY` — a recorded
+  NEGATIVE RESULT, not an oversight.** This section originally specified
+  LISTEN/NOTIFY and the implementation has always polled; the decision is
+  written down here (2026-07-29) so it stops being re-litigated every time
+  someone reads `pg_notify` in `jobs/queue.ts` and assumes a subscriber was
+  forgotten. Why polling stands: each tick is ONE indexed sub-millisecond
+  statement (`getJobById` for a single run; `listActiveJobs` over the partial
+  state index for `follow_queue`), the value observed only moves once per
+  `DEDALO_DIFFUSION_BATCH_RECORDS` batch so a faster transport would observe
+  nothing new, and a `LISTEN` connection is a long-lived DEDICATED Postgres
+  connection — not something the pooled `sql` accessor in `src/core/db/` hands
+  out, and a subscriber registry would be exactly the module-level state
+  `module_state_tripwire` exists to keep out. The in-process fan-out pattern
+  proven in `src/core/media/jobs.ts` does not transfer either: the runner is a
+  SEPARATE PROCESS, so there is no local emitter to subscribe to. The
+  `pg_notify` emitted on every observable change stays as forward
+  compatibility. Revisit when either changes: Bun.sql grows a notification API,
+  or `src/core/db/` gains a sanctioned dedicated-connection seam.
 - **`src/core/tools/background.ts`** stays for cheap tool actions; generalizing
   it onto the job service is a ledgered follow-up, not a dependency.
 

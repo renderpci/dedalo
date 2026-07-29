@@ -875,7 +875,11 @@ data_manager._create_error_response = function(msg, error) {
 * @param {string} [options.url] - Override the default API URL
 * @param {string} [options.method='POST'] - HTTP method
 * @param {Object} [options.headers] - HTTP headers; `Accept: text/event-stream` set by default
+* @param {AbortSignal} [options.signal] - Aborts the fetch itself. `reader.cancel()`
+*   cannot: a fetch still awaiting response headers has no reader yet, so a caller
+*   that gives up during connect had no way to release the request without this.
 * @returns {Promise<ReadableStream>} Resolved with the raw `response.body` stream
+* @throws Rejects on network failure or a non-2xx response (see below)
 */
 data_manager.request_stream = async function(options) {
 
@@ -905,7 +909,7 @@ data_manager.request_stream = async function(options) {
 		}
 	}
 
-	return new Promise(function(resolve){
+	return new Promise(function(resolve, reject){
 
 		fetch(
 			url,
@@ -917,10 +921,21 @@ data_manager.request_stream = async function(options) {
 				headers		: headers,
 				redirect	: redirect,
 				referrer	: referrer,
-				body		: JSON.stringify(body)
+				body		: JSON.stringify(body),
+				signal		: options.signal
 			}
 		)
 		.then(response => {
+
+			// (!) A non-2xx here is NOT a stream. Before this check the JSON error
+			// body of a 401/500 was handed straight to read_stream, which found no
+			// "data:\n…\n\n" framing, never fired on_read, and then ended cleanly —
+			// so a hard failure was indistinguishable from a stream that had simply
+			// finished, and the caller silently showed nothing.
+			if (!response.ok) {
+				reject(new Error('request_stream: HTTP ' + response.status + ' ' + response.statusText))
+				return
+			}
 
 			// Get the readable stream from the response body
 			const stream = response.body;
@@ -928,8 +943,13 @@ data_manager.request_stream = async function(options) {
 			resolve(stream)
 		})
 		.catch(error => {
-			// Log the error
+			// (!) REJECT, do not just log. This used to `console.error` and return,
+			// leaving the promise permanently PENDING — so `await request_stream(…)`
+			// on a network failure never resumed and the caller hung forever with no
+			// error path to run. Logging preserved: the console line was the only
+			// diagnostic callers had.
 			console.error(error);
+			reject(error)
 		});
 	})
 }//end request_stream
