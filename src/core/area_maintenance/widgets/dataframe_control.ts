@@ -252,5 +252,14 @@ export const widget: WidgetModule = {
 		run_check: dataframeControlGetValue,
 		run_fix: dataframeControlRunFix,
 	},
-	getValue: dataframeControlGetValue,
+	// NO `getValue` (WC-068): the module deliberately does not answer the
+	// get_widget_value panel-load RQO. This scan walks EVERY matrix% table
+	// end to end — on a scale install (dedalo7_mdcat: 24 tables / ~36.6M rows
+	// / ~92 GB) a single invocation is ~80s of DB work that ends in a
+	// statement_timeout cancel, and it was previously fired on every
+	// area_maintenance page load, per admin, in both views. It is an OPERATOR
+	// action now: the panel renders a "not run" state and the scan happens
+	// only through apiActions.run_check / run_fix. The client peer must not
+	// call get_widget_value for this widget — see the matching removal of
+	// `dataframe_control.prototype.get_value` in the client module.
 };
