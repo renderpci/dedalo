@@ -223,41 +223,64 @@ stored text with the right person tag — same privacy posture as the
 recognition itself: the audio never leaves the machine, the model comes from
 the install's own store.
 
-- **Model**: `onnx-community/pyannote-segmentation-3.0` (~6 MB), a SEPARATE
-  catalog slot (`diarization_model` in the tool's default config dd1633 —
-  never an entry of the ASR quality picker). Same store, same two seeding
-  doors; its file profile differs (no tokenizer, the preprocessor config is
-  MANDATORY — `DIARIZATION_COMMON_FILES` in `src/core/ai/model_fetch.ts`).
-  `get_model_sources` reports it under `diarization: {name, label, size_mb,
-  installed}`.
+- **Models** (two, both required for coherent detection — the admin Download
+  button and the seeder fetch both; `get_model_sources` reports
+  `diarization: {name, embedding_name, size_mb, installed}` with `installed`
+  true only when BOTH are in the store):
+  - `onnx-community/pyannote-segmentation-3.0` (~6 MB, slot
+    `diarization_model`): WHO speaks WHEN, per chunk;
+  - `onnx-community/wespeaker-voxceleb-resnet34-LM` (~26 MB, slot
+    `diarization_embedding_model`): VOICE FINGERPRINTS — the same voice keeps
+    the same speaker id across the whole recording. Without it, identity
+    falls back to overlap co-activity stitching, which is coherent on short
+    clips but FRAGMENTS one voice into several detected speakers on long
+    interviews (observed live on an 87-minute recording).
+  Separate catalog slots (never entries of the ASR quality picker); same
+  store, same seeding doors; diarization file profile (no tokenizer, the
+  preprocessor config is MANDATORY — `DIARIZATION_COMMON_FILES` in
+  `src/core/ai/model_fetch.ts`).
 - **Worker** (`browser_whisper.js diarize_audio`): runs after the last decode
   window, on WASM always (small recurrent model; CPU is faster than the
   WebGPU backend's op support is reliable). Long chunks (5 min) with a
   conversational overlap (30 s); the pure post-processing — cross-chunk
   identity stitching by co-activity, segment attribution, per-speaker stats —
   lives in `transcribers/lib/diarize.js` (bun-tested,
-  `test/unit/transcript_diarize.test.ts`). STRICTLY BEST-EFFORT: a
-  diarization failure emits `diarize_error` and the transcript arrives
-  without speakers, never lost.
-- **Identity is a HUMAN decision.** No voice print says who a voice belongs
-  to, and enrolling biometric voice prints is exactly what this tool avoids.
-  After recognition, the mapping dialog (`tool_transcription.js
-  map_speakers`) lists each detected speaker (turns, speaking time, listen
-  jump points into the player) and the archivist assigns persons from the
-  SAME `tags_persons` feed the editor's person button uses. Two detected
-  speakers may map to one person (a split voice degrades gracefully); an
-  unmapped speaker stays untagged; skipping saves the plain transcript.
-- **Stored shape**: the person tag opens the first paragraph of each speaker
-  TURN, right after the paragraph's TC mark — the v6 byte layout; a
-  same-speaker run split by paragraph caps carries the tag once
-  (`paragraphs.js segments_to_html` `speaker_tags`). Numeric speaker ids
-  never leak into the stored text.
+  `test/unit/transcript_diarize.test.ts`). GLOBAL identity: each chunk-local
+  voice is fingerprinted once (its longest turn, centered, capped at 10 s)
+  and duration-weighted agglomerative clustering over cosine similarity
+  (threshold `cluster_similarity`, default 0.5) merges the same voice across
+  the whole recording; fingerprint-less groups are never merged by guessing.
+  STRICTLY BEST-EFFORT at every stage: embedding failure falls back to
+  overlap stitching, diarization failure emits `diarize_error` and the
+  transcript arrives without speakers, never lost.
+- **Turn marking and identity are SEPARATE steps** (the placeholder flow):
+  a run with detection saves IMMEDIATELY, opening every detected turn with a
+  PLACEHOLDER tag — `[person-a-1-P1-data::data]`, normal person-tag grammar,
+  the EMPTY data payload is what marks it unresolved. No dialog blocks the
+  save; the draft is reviewable at once, and a wrongly placed tag is
+  ordinary editable content (move it, delete it, change it) BEFORE any
+  identity is bound.
+- **Identity is a HUMAN decision, deferred.** No voice print says who a
+  voice belongs to, and enrolling biometric voice prints is exactly what
+  this tool avoids. "Assign speakers" (`tool_transcription.js
+  assign_speakers` — auto-offered after a run, reopenable any time) reads
+  every distinct person tag out of the STORED text (placeholders first,
+  bound ones preselected), offers the `tags_persons` people with listen jump
+  points (each tag sits beside a TC mark), and applies the binding as a
+  DETERMINISTIC whole-tag swap through the normal save path — TM keeps the
+  pre-binding version, re-binding later is the same swap again. Two
+  placeholders may bind to one person; an unbound placeholder stays.
+- **Stored shape**: the (placeholder or bound) person tag opens the first
+  paragraph of each speaker TURN, right after the paragraph's TC mark — the
+  v6 byte layout; a same-speaker run split by paragraph caps carries the tag
+  once (`paragraphs.js segments_to_html` `speaker_tags`). Numeric speaker
+  ids never leak into the stored text.
 - **Known limits**: up to 3 concurrent voices (the model's powerset);
   overlapping speech attributes to the dominant voice; a voice absent from a
   chunk overlap opens a NEW detected speaker rather than guessing (the
-  mapping dialog merges it back). Embedding-based identity (WeSpeaker) is the
-  planned upgrade for very long recordings, and the sidecar contract can gain
-  a `diarize` flag for WhisperX-style boxes.
+  mapping dialog merges it back — with the embedding model installed this is
+  rare). The sidecar contract can still gain a `diarize` flag for
+  WhisperX-style boxes.
 
 ## Why the transcripts used to repeat words
 
