@@ -17,9 +17,36 @@
 *
 * open_tool is imported LAZILY (on click) so this global boot module does not
 * pull the tool machinery into every page load.
+*
+* POSITION IS NOT SET HERE. The button is a tenant of #floating_dock and all its
+* geometry lives in core/page/css/layout/floating_dock.less, because the corner
+* it occupies is shared with the fixed right rail (inspector / standalone
+* assistant) and only CSS can see that rail open, close and resize.
 */
 
 const BUTTON_ID = 'error_report_floating_launcher'
+const DOCK_ID	= 'floating_dock'
+
+
+/**
+* GET_FLOATING_DOCK
+* Returns the global floating-button dock, creating it on first use. The dock is
+* a bare positioning frame — everything visual is in floating_dock.less.
+* @returns {HTMLElement}
+*/
+function get_floating_dock() {
+
+	const found = document.getElementById(DOCK_ID)
+	if (found) {
+		return found
+	}
+
+	const dock = document.createElement('div')
+	dock.id = DOCK_ID
+	document.body.appendChild(dock)
+
+	return dock
+}//end get_floating_dock
 
 export function install_error_report_launcher() {
 
@@ -35,41 +62,20 @@ export function install_error_report_launcher() {
 				return
 			}
 
-		// floating button (fixed, bottom-right). Purple disc + white tool icon.
+		// floating button. Purple disc + white tool icon; placed by the dock.
 			const button = document.createElement('div')
 			button.id = BUTTON_ID
+			button.className = 'floating_dock_button'
 			button.setAttribute('role', 'button')
 			button.tabIndex = 0
 			button.title = (typeof get_label!=='undefined' && get_label.error_report) || 'Report a problem'
-			Object.assign(button.style, {
-				position		: 'fixed',
-				right			: '1rem',
-				bottom			: '1rem',
-				width			: '2.4rem',
-				height			: '2.4rem',
-				zIndex			: '2000',
-				cursor			: 'pointer',
-				display			: 'flex',
-				alignItems		: 'center',
-				justifyContent	: 'center',
-				borderRadius	: '50%',
-				backgroundColor	: 'rgba(90, 65, 131, 0.92)',
-				boxShadow		: '0 2px 8px rgba(0, 0, 0, 0.35)',
-				opacity			: '0.85'
-			})
 
 		// inner icon element so the white filter applies to the ICON only,
-		// not the purple disc behind it.
+		// not the purple disc behind it. Only the image is set here (it is
+		// tool-specific); the box is styled by .floating_dock_button_icon.
 			const icon = document.createElement('div')
-			Object.assign(icon.style, {
-				width				: '1.3rem',
-				height				: '1.3rem',
-				backgroundImage		: "url('/dedalo/tools/tool_error_report/img/icon.svg')",
-				backgroundRepeat	: 'no-repeat',
-				backgroundSize		: 'contain',
-				backgroundPosition	: 'center',
-				filter				: 'brightness(0) invert(1)'
-			})
+			icon.className = 'floating_dock_button_icon'
+			icon.style.backgroundImage = "url('/dedalo/tools/tool_error_report/img/icon.svg')"
 			button.appendChild(icon)
 
 			const open_handler = async (e) => {
@@ -101,7 +107,7 @@ export function install_error_report_launcher() {
 			button.addEventListener('click', open_handler)
 			button.addEventListener('keydown', (e) => { if (e.key==='Enter' || e.key===' ') open_handler(e) })
 
-			document.body.appendChild(button)
+			get_floating_dock().appendChild(button)
 
 	} catch (error) {
 		// a launcher defect must never break the page it is meant to help report on

@@ -1,0 +1,109 @@
+/**
+* floating_dock
+*
+* The ONE bottom-right corner where global floating buttons live. Its only
+* tenant today is the error-report launcher, installed on every page —
+* menu-less ones included — from common/js/error_report_launcher.js.
+*
+* Why a dock instead of per-button inline coordinates: that corner is
+* CONTESTED. The right rail is fixed to the very same spot — `.inspector_container`
+* in edit mode (section.less) and `.assistant_container.standalone` in list mode —
+* and the assistant composer (input + send/stop) sits exactly under a
+* `bottom:1rem` button, so the launcher covered it.
+*
+* So the dock reads its offset from --floating_dock_right / --floating_dock_bottom,
+* and whoever OWNS the corner overrides them (the "corner claims" block at the
+* end of this file). Since the claim is a calc() over --inspector_width, the dock
+* follows the user's live panel resize AND the rail collapse for free: no JS, no
+* resize listeners, nothing to keep in sync.
+*
+* Adding a floating button: give it .floating_dock_button and append it to
+* #floating_dock — the column stacks upwards from the corner. Never position a
+* global button with its own fixed coordinates, or this bug comes back.
+*
+* Included from main.less file
+*/
+
+:root {
+	--floating_dock_right: 1rem;
+	--floating_dock_bottom: 1rem;
+}
+
+#floating_dock {
+	position: fixed;
+	right: var(--floating_dock_right);
+	bottom: var(--floating_dock_bottom);
+	z-index: 2000;
+	display: flex;
+	flex-direction: column-reverse; // first child sits closest to the corner
+	align-items: flex-end;
+	gap: 0.5rem;
+	transition: right var(--transition-base), bottom var(--transition-base);
+
+	// the dock is a positioning frame only: it must never eat clicks aimed at
+	// the page beneath it. Its buttons opt back in.
+	pointer-events: none;
+
+	> * {
+		pointer-events: auto;
+	}
+}
+
+// shared disc shape for any dock tenant
+.floating_dock_button {
+	width: 2.4rem;
+	height: 2.4rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	cursor: pointer;
+	opacity: 0.85;
+	box-shadow: var(--shadow-3);
+	transition: opacity var(--transition-fast), transform var(--transition-fast);
+
+	&:hover,
+	&:focus-visible {
+		opacity: 1;
+		transform: scale(1.06);
+	}
+
+	&:focus-visible {
+		outline: none;
+		box-shadow: var(--shadow-3), var(--shadow-focus);
+	}
+
+	// icon in its own element so the white filter hits the ICON only, never the
+	// disc behind it. The image itself is set by the installing module.
+	> .floating_dock_button_icon {
+		width: 1.3rem;
+		height: 1.3rem;
+		background-repeat: no-repeat;
+		background-size: contain;
+		background-position: center;
+		filter: brightness(0) invert(1);
+	}
+}
+
+#error_report_floating_launcher {
+	background-color: rgba(90, 65, 131, 0.92); // purple disc
+}
+
+// ---- corner claims ----------------------------------------------------------
+// A claim shifts the dock LEFT of the rail rather than on top of it. Both rails
+// are --inspector_width wide; +1.5rem keeps the same visual gap on either side.
+
+// list mode: the assistant floats fixed over the right edge, full height, and
+// its composer occupies the bottom of that column.
+body:has(.assistant_container.standalone.show) {
+	--floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
+}
+
+// edit mode: the inspector panel is fixed to the same corner. Desktop only —
+// at or below the breakpoint it renders inline in the flow (section.less
+// `position: initial`) and claims nothing. `.full_width` hides it entirely.
+@media screen and (min-width: (@width_break_point_0 + 1)) {
+	body:has(:not(.full_width) > .inspector_container) {
+		--floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
+	}
+}
