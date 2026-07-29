@@ -154,6 +154,78 @@ export async function probeTargetDatabase(database: string): Promise<SQL> {
 	}
 }
 
+/** How long an info-panel reachability verdict is reused (short by design). */
+const PROBE_STATUS_TTL_MS = 10_000;
+/**
+ * Ceiling for ONE info probe. Bun's default connectionTimeout is 30s, so a
+ * black-holed target host would otherwise hang the whole get_diffusion_info
+ * request; an observability read must never do that.
+ */
+const PROBE_STATUS_TIMEOUT_MS = 3_000;
+
+/** The two oracle strings (PHP class.diffusion_utils.php:984 / :988). */
+const MSG_DATABASE_READY = 'Database is ready.';
+const MSG_DATABASE_NOT_READY = 'Database is NOT ready (missing or engine unreachable).';
+
+/**
+ * Target-database reachability verdicts for the INFO panels, keyed by database
+ * name. NOT a content cache and not ontology/record-derived — it memoizes a
+ * REMOTE SERVER'S LIVENESS, which no write event invalidates, so neither
+ * ontology/cache_factory lifecycle fits (module_state_tripwire allowlist).
+ * Lifecycle: each entry self-expires PROBE_STATUS_TTL_MS after it was written
+ * (checked on read), and the whole map is cleared by closeAllTargetPools
+ * (tests / process shutdown). Holds no request identity: a target database
+ * name is install state, never per-user/lang/session.
+ */
+const probeStatusMemo = new Map<string, { at: number; status: { result: boolean; msg: string } }>();
+
+/**
+ * NON-EVICTING, NON-THROWING reachability verdict for one target database —
+ * the native answer to PHP diffusion_utils::get_connection_status (:971) /
+ * database_exits (:1013), whose verbatim strings this returns.
+ *
+ * Deliberately NOT probeTargetDatabase(): that one is the WRITER's open() gate
+ * and, on failure, evicts AND closes the shared pool — an admin opening an
+ * accordion panel must not tear down the pool a live publication run is using.
+ * A panel read observes; it never mutates write-path state.
+ *
+ * Best-effort BY ORACLE CONTRACT: PHP logged a WARNING and returned
+ * result:false so the panel still rendered (:991-996). Memoized per database
+ * for PROBE_STATUS_TTL_MS so N accordion panels cost ONE round-trip.
+ */
+export async function getTargetDatabaseStatus(
+	database: string,
+): Promise<{ result: boolean; msg: string }> {
+	const cached = probeStatusMemo.get(database);
+	if (cached !== undefined && Date.now() - cached.at < PROBE_STATUS_TTL_MS) {
+		return cached.status;
+	}
+	let status: { result: boolean; msg: string };
+	try {
+		const pool = getTargetPool(database);
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			await Promise.race([
+				pool.unsafe('SELECT 1', []),
+				new Promise((_resolve, reject) => {
+					timer = setTimeout(
+						() => reject(new Error(`probe timeout after ${PROBE_STATUS_TIMEOUT_MS}ms`)),
+						PROBE_STATUS_TIMEOUT_MS,
+					);
+				}),
+			]);
+		} finally {
+			if (timer !== undefined) clearTimeout(timer);
+		}
+		status = { result: true, msg: MSG_DATABASE_READY };
+	} catch (error) {
+		status = { result: false, msg: MSG_DATABASE_NOT_READY };
+		console.warn(`[diffusion] target database probe failed [${database}]`, error);
+	}
+	probeStatusMemo.set(database, { at: Date.now(), status });
+	return status;
+}
+
 /**
  * One-shot reachability probe for the INSTALL wizard (DEC-19
  * test_diffusion_connection): open a throwaway connection from POSTED MariaDB
@@ -195,10 +267,12 @@ export async function probeAdhocMariadbConnection(creds: {
 	}
 }
 
-/** Close and drop every cached pool (tests / process shutdown). */
+/** Close and drop every cached pool + verdict (tests / process shutdown). */
 export async function closeAllTargetPools(): Promise<void> {
 	const pools = [...poolCache.values()];
 	poolCache.clear();
+	// The verdicts describe those pools' targets — outliving them would be a lie.
+	probeStatusMemo.clear();
 	for (const pool of pools) {
 		await pool.close().catch(() => {});
 	}

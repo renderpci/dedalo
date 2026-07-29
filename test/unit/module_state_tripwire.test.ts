@@ -205,6 +205,15 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// Diffusion MariaDB pool cache: one pool per DSN for the process lifetime;
 	// closed on shutdown by the graceful-drain path.
 	'diffusion/targets/mariadb/db.ts:poolCache',
+	// Target-DB reachability verdicts for the INFO panels (WC-065
+	// connection_status): { result, msg } keyed by database name. NOT a content
+	// cache and not ontology/record-derived — it memoizes a remote server's
+	// LIVENESS, which no write event invalidates, so neither cache_factory
+	// lifecycle applies. Lifecycle: every entry self-expires 10s after it was
+	// written (checked on read), and the whole map is cleared by
+	// closeAllTargetPools (tests / shutdown). No request identity: a target
+	// database name is install state.
+	'diffusion/targets/mariadb/db.ts:probeStatusMemo',
 	// Media-index per-key mutation chains (S2-31 port, oracle with_key_lock):
 	// a serialization primitive, NOT a content cache — each entry is deleted
 	// in the finally of the very chain it serializes (self-draining); keys are

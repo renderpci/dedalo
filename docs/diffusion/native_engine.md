@@ -229,7 +229,7 @@ set it calls is served natively:
 | `get_process_status` | Reconnect stream by client process label (poll rate honored, `:\n` heartbeat, pinned not-found chunk) |
 | `list_processes` | `{result, processes: progress_data[]}`, 24 h window — the reconnect-by-label predicate **actually works** (the old engine only ever exposed its internal UUID, so the client's reconnect could never match) |
 | `cancel_process` | Pinned `{result, msg}` shapes |
-| `get_diffusion_info` | Panel descriptors from the virtual tree, with honest per-format `connection_status` |
+| `get_diffusion_info` | Panel descriptors from the virtual tree, with a real per-target-database `connection_status` (`{result,msg}`, or `null` for non-MariaDB formats — WC-065) |
 | `get_engine_advisory` | Native subsystem health (there is no separate engine process to be "down") |
 | `retry_pending_deletions` | Native dd1758 pending-unpublish retry |
 | `validate` | Admin plan validation |
