@@ -1086,6 +1086,15 @@ const render_automatic_transcription = function (options) {
 						? nodes.transcriber_tc_mode_select.value
 						: 'paragraph_anchors'
 				},
+				// Speaker detection: only when asked for AND the model is in the
+				// local store (the checkbox is disabled otherwise, but the run
+				// handler re-checks — the store answer may have changed).
+				detect_speakers		: (nodes.detect_speakers_checkbox
+					&& nodes.detect_speakers_checkbox.checked
+					&& nodes.diarization_info
+					&& nodes.diarization_info.installed===true)
+						? { model: nodes.diarization_info.name }
+						: false,
 				nodes 				: nodes
 			}
 
@@ -1609,6 +1618,123 @@ const render_automatic_transcription = function (options) {
 						}
 					})
 			}//end if(transcriber_quality)
+
+		// speaker detection (diarization)
+		// A separate model slot (never part of the ASR quality picker): the
+		// pyannote segmentation model detects WHO speaks WHEN, so the result
+		// can carry person tags at each speaker turn. The checkbox is enabled
+		// only when the model is in the local store; when it is missing, an
+		// admin gets the same Download affordance the ASR models have.
+		// DELIBERATELY OUTSIDE the collapsed ⚙ configuration panel: whether
+		// this run tags speakers is the archivist's per-run choice, and a
+		// control nobody can see is a feature nobody uses.
+			const speakers_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name 		: 'speakers_label hide',
+				inner_html		: self.get_tool_label('detect_speakers') || 'Detect speakers',
+				parent 			: automatic_transcription_container
+			})
+			const detect_speakers_checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				parent			: speakers_label
+			})
+			nodes.detect_speakers_checkbox = detect_speakers_checkbox
+
+			const button_download_speaker_model = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_download_speaker_model hide',
+				inner_html		: self.get_tool_label('download_speaker_model') || 'Download speaker model',
+				parent			: speakers_label
+			})
+
+			// The server's answer (get_model_sources → result.diarization) drives
+			// the whole block; kept on `nodes` so the run handler reads ONE truth.
+			nodes.diarization_info = null
+			const detect_speakers_id = 'transcriber_detect_speakers'
+
+			const apply_diarization = function( diarization ) {
+				if (diarization===undefined) {
+					return // an older server: leave the block hidden
+				}
+				nodes.diarization_info = diarization
+				if (!diarization || !diarization.name) {
+					speakers_label.classList.add('hide')
+					return
+				}
+				speakers_label.classList.remove('hide')
+				detect_speakers_checkbox.disabled = diarization.installed!==true
+				button_download_speaker_model.classList.toggle('hide', diarization.installed===true)
+				if (diarization.installed!==true) {
+					detect_speakers_checkbox.checked = false
+					speakers_label.title = `${diarization.label || diarization.name} — ${self.get_tool_label('not_installed') || 'not installed'}`
+				} else {
+					speakers_label.title = diarization.label || diarization.name
+					// Saved preference; DEFAULT ON — detection is the reason the
+					// model was installed, and the mapping dialog can always skip.
+					data_manager.get_local_db_data( detect_speakers_id, 'status' ).then(function(saved){
+						detect_speakers_checkbox.checked = saved && typeof saved.value==='boolean'
+							? saved.value
+							: true
+					})
+				}
+			}
+			detect_speakers_checkbox.addEventListener('change', function(){
+				data_manager.set_local_db_data({
+					id		: detect_speakers_id,
+					value	: detect_speakers_checkbox.checked
+				}, 'status')
+			})
+
+			button_download_speaker_model.addEventListener('click', function(e){
+				e.stopPropagation()
+				const diarization = nodes.diarization_info
+				if (!diarization || !diarization.name) {
+					return
+				}
+				button_download_speaker_model.classList.add('disable')
+				self.download_model( diarization.name ).then(function(response){
+					if (!response || response.result===false) {
+						button_download_speaker_model.classList.remove('disable')
+						ui.show_message(
+							automatic_transcription_container,
+							(response && response.msg) || 'Download failed',
+							'error'
+						)
+						return
+					}
+					nodes.status_container.classList.remove('hide')
+					nodes.status_container.textContent =
+						self.get_tool_label('downloading_model')
+						|| 'Downloading the model… this can take several minutes.'
+					let polls = 0
+					const poll = setInterval(function(){
+						if (++polls > 120) { // ~10 min at 5 s — the model is ~6 MB
+							clearInterval(poll)
+							button_download_speaker_model.classList.remove('disable')
+							return
+						}
+						self.get_model_sources().then(function(sources){
+							const info = sources && sources.result ? sources.result.diarization : null
+							if (info && info.installed===true) {
+								clearInterval(poll)
+								button_download_speaker_model.classList.remove('disable')
+								apply_diarization( info )
+								nodes.status_container.textContent =
+									self.get_tool_label('model_ready') || 'Model installed.'
+							}
+						})
+					}, 5000)
+				})
+			})
+
+			// Ask once for the block's own state (the quality block's calls also
+			// re-apply it when they land — see apply_installed_models' callers).
+			self.get_model_sources().then(function(response){
+				if (response && response.result) {
+					apply_diarization( response.result.diarization )
+				}
+			})
 
 		// lang info. Display target lang info as 'Greek | lg-ell | el'
 			const lang_info = ui.create_dom_element({

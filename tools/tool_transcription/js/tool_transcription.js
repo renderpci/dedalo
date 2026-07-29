@@ -74,6 +74,8 @@
 	import { tool_common } from '../../../core/tools_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
 	import { parse_transcript, segments_to_html } from '../transcribers/lib/paragraphs.js'
+	import { speaker_stats } from '../transcribers/lib/diarize.js'
+	import { ui } from '../../../core/common/js/ui.js'
 
 
 
@@ -264,7 +266,17 @@ tool_transcription.prototype.build = async function(autoload=false) {
 							self.transcription_component.lang = self.transcription_component.context.options.related_component_lang
 							// set source land
 							self.source_lang = self.transcription_component.lang
-							// build again to force download data
+							// build again to force download data.
+							// (!) build() MEMOIZES: on status 'built' it returns
+							// without fetching anything, so the lang change alone
+							// left the instance carrying the MENU lang's data — the
+							// editor opened blank whenever the original language
+							// differed (and stayed blank after a save). refresh()
+							// is the post-render tool; here, pre-render, the build
+							// state is reset so build(true) really reloads in the
+							// original language.
+							self.transcription_component.status = 'initialized'
+							self.transcription_component._build_waiter = null
 							await self.transcription_component.build(true)
 							if(SHOW_DEBUG===true) {
 								console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
@@ -758,6 +770,16 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				return
 			}
 
+			// Speaker detection ran? The archivist maps each detected voice to a
+			// person BEFORE anything is composed — the mapping dialog resolves the
+			// final HTML (with person tags, or plain if skipped). Identity is a
+			// human decision by design: no voice print ever says WHO someone is.
+			const has_speakers = segments.some( segment => segment.speaker!==undefined )
+			if (has_speakers) {
+				self.map_speakers( segments, format_options ).then( html => resolve([ html ]) )
+				return
+			}
+
 			resolve([ segments_to_html( segments, format_options ) ])
 		}
 
@@ -812,6 +834,31 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					}, 'status')
 					break;
 
+				// Speaker detection (after the last window): its own progress line.
+				case 'diarize_init': {
+					const label = self.get_tool_label('detecting_speakers') || 'Detecting speakers'
+					const loaded = data.progress ? ` : ${parseInt(data.progress).toString().padStart(2, 0)}%` : ''
+					set_status( `${label}${loaded}` )
+					break;
+				}
+
+				case 'diarize_progress': {
+					const percent = data.duration>0
+						? Math.min( 99, Math.round((data.done_seconds / data.duration) * 100) )
+						: 0
+					set_status( `${self.get_tool_label('detecting_speakers') || 'Detecting speakers'} : ${percent}%` )
+					break;
+				}
+
+				// Best-effort: the transcript arrives without speakers; say so.
+				case 'diarize_error':
+					console.warn('[tool_transcription] speaker detection failed:', data.message);
+					set_status(
+						self.get_tool_label('speaker_detection_failed')
+						|| 'Speaker detection failed — the transcription continues without speaker tags.'
+					)
+					break;
+
 				case 'end':
 					finish( data.segments )
 					break;
@@ -863,6 +910,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 						dtype			: options.dtype,
 						decode			: options.decode,
 						sources			: sources,
+						// Speaker detection: the pyannote segmentation model from the
+						// SAME local store — set only when the archivist asked for it
+						// and the model is installed (the render layer checked).
+						diarize			: options.detect_speakers || undefined,
 						resume_segments	: resume ? resume.segments : undefined,
 						resume_seconds	: resume ? resume_seconds_of( resume.segments ) : 0
 					}
@@ -1052,6 +1103,177 @@ tool_transcription.prototype.save_transcription = function( html ) {
 		refresh : true
 	})
 }//end save_transcription
+
+
+
+/**
+* MAP_SPEAKERS
+* The identity step of speaker detection: a modal that lists every DETECTED
+* voice (Speaker 1, Speaker 2, …) with its speaking time and "listen" jump
+* points, and lets the archivist assign each one a PERSON from the record's
+* own people — the same tags_persons feed the editor's person button uses
+* (informants of the related oral-history record + the recording crew).
+*
+* WHY A HUMAN STEP. Diarization knows when the voice changes, never whose
+* voice it is — and enrolling voice prints to guess identities is exactly the
+* kind of biometric processing this tool exists to avoid. Two clicks by
+* someone who knows the interview replace it. Two detected speakers MAY map
+* to the same person (a voice the detector split); a speaker may be left
+* unmapped (its paragraphs stay untagged).
+*
+* @param {Array<Object>} segments - recognised segments carrying `speaker`
+* @param {Object} format_options - paragraph/timecode options (lib/paragraphs.js)
+* @returns {Promise<string>} the final HTML — with person tags at each speaker
+*   turn, or plain when skipped/closed (never with raw speaker numbers)
+*/
+tool_transcription.prototype.map_speakers = function( segments, format_options ) {
+
+	const self = this
+
+	// Plain composition: the numeric speaker ids must NEVER leak into the
+	// stored text, so the textual "0: " prefix is off in every path here.
+	const plain_options	= Object.assign({}, format_options, { speaker_prefix: false })
+	const persons		= (self.transcription_component && self.transcription_component.data
+		&& Array.isArray(self.transcription_component.data.tags_persons))
+			? self.transcription_component.data.tags_persons
+			: []
+	const stats			= speaker_stats( segments )
+
+	// Nothing to map against (no persons declared) or nothing detected: the
+	// transcript is saved as always, no dialog.
+	if (persons.length===0 || stats.length===0) {
+		return Promise.resolve( segments_to_html( segments, plain_options ) )
+	}
+
+	return new Promise(function(resolve){
+
+		let resolved = false
+		const finish = function(html, modal) {
+			if (resolved) return
+			resolved = true
+			if (modal) modal.close()
+			resolve( html )
+		}
+
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content transcription_speakers_map'
+		})
+
+		// One row per detected speaker: stats + listen points + person select.
+		const selects = new Map() // speaker id -> <select>
+		for (let i = 0; i < stats.length; i++) {
+
+			const stat = stats[i]
+
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'speaker_row',
+				parent			: body
+			})
+
+			const minutes	= Math.floor( stat.seconds / 60 )
+			const seconds	= Math.round( stat.seconds % 60 )
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'speaker_label',
+				inner_html		: `${self.get_tool_label('speaker') || 'Speaker'} ${i + 1} — ${stat.turns} × · ${minutes}:${String(seconds).padStart(2, '0')}`,
+				parent			: row
+			})
+
+			// Listen buttons: jump the player to the speaker's first turns, so
+			// the archivist can HEAR who this is before mapping it.
+			for (const sample of stat.samples) {
+				const jump = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light speaker_listen',
+					inner_html		: `▶ ${Math.floor(sample / 60)}:${String(Math.floor(sample % 60)).padStart(2, '0')}`,
+					parent			: row
+				})
+				jump.addEventListener('click', function(e){
+					e.stopPropagation()
+					if (self.media_component && typeof self.media_component.go_to_time==='function') {
+						self.media_component.go_to_time({ seconds: sample })
+						if (self.media_component.video && typeof self.media_component.video.play==='function') {
+							self.media_component.video.play()
+						}
+					}
+				})
+			}
+
+			const person_select = ui.create_dom_element({
+				element_type	: 'select',
+				parent			: row
+			})
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: '',
+				inner_html		: self.get_tool_label('no_person_tag') || '— no tag —',
+				parent			: person_select
+			})
+			for (let j = 0; j < persons.length; j++) {
+				const person = persons[j]
+				ui.create_dom_element({
+					element_type	: 'option',
+					value			: String(j),
+					inner_html		: `${person.full_name}${person.role ? ` (${person.role})` : ''}`,
+					parent			: person_select
+				})
+			}
+			selects.set( stat.speaker, person_select )
+		}
+
+		// footer: insert with tags / save without
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content transcription_speakers_map_footer'
+		})
+		const button_apply = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_apply_speakers',
+			inner_html		: self.get_tool_label('insert_person_tags') || 'Insert person tags',
+			parent			: footer
+		})
+		const button_skip = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_skip_speakers',
+			inner_html		: self.get_tool_label('without_tags') || 'Without tags',
+			parent			: footer
+		})
+
+		const modal = ui.attach_to_modal({
+			header		: self.get_tool_label('speakers_detected') || 'Speakers detected',
+			body		: body,
+			footer		: footer,
+			size		: 'small',
+			// Closing the dialog must never lose the transcription: it resolves
+			// the plain composition, exactly like "Without tags".
+			on_close	: function() {
+				finish( segments_to_html( segments, plain_options ), null )
+			}
+		})
+
+		button_apply.addEventListener('click', function(e){
+			e.stopPropagation()
+			const speaker_tags = {}
+			for (const [speaker, person_select] of selects) {
+				if (person_select.value==='') continue
+				const person = persons[parseInt(person_select.value)]
+				if (person && typeof person.tag==='string') {
+					speaker_tags[speaker] = person.tag
+				}
+			}
+			finish(
+				segments_to_html( segments, Object.assign({}, plain_options, { speaker_tags: speaker_tags }) ),
+				modal
+			)
+		})
+		button_skip.addEventListener('click', function(e){
+			e.stopPropagation()
+			finish( segments_to_html( segments, plain_options ), modal )
+		})
+	})
+}//end map_speakers
 
 
 
