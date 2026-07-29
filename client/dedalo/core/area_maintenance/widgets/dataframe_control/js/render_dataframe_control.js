@@ -332,6 +332,20 @@ const render_report = function(container, report, msg=null) {
 		container.removeChild(container.firstChild)
 	}
 
+	// (!) INCOMPLETENESS IS RENDERED FIRST, before any count (WC-069). The server
+	// sets complete:false when a table was exempted, truncated by a budget, or
+	// lost to a failed batch. "Orphan frames: 0" under a partial scan means "none
+	// where we looked", not "none" — so the caveat must reach the eye before the
+	// number does, not sit below it as a footnote.
+	if (report.complete === false) {
+		const warn = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_warning',
+			parent			: container
+		})
+		warn.textContent = 'INCOMPLETE SCAN — these counts cover only the tables listed as examined below.'
+	}
+
 	// SEC-XSS: report values may contain DB text; textContent avoids HTML parsing
 	const lines = [
 		'Records scanned: '				+ (report.scanned ?? '-'),
@@ -349,6 +363,17 @@ const render_report = function(container, report, msg=null) {
 			parent			: container
 		})
 		node.textContent = line
+	}
+
+	// what was NOT examined, and why — each line already carries table + reason
+	const uncovered = report.uncovered || []
+	if (uncovered.length > 0) {
+		const detail = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'orphan_items',
+			parent			: container
+		})
+		detail.textContent = 'NOT EXAMINED:\n' + uncovered.join('\n')
 	}
 
 	// orphan detail list (capped server-side)
