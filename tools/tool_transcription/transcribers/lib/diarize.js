@@ -49,7 +49,15 @@ export const DEFAULT_DIARIZE = {
 	overlap_seconds		: 30,
 	min_turn_seconds	: 0.4,
 	merge_gap_seconds	: 0.8,
-	match_min_seconds	: 0.2
+	match_min_seconds	: 0.2,
+	// Voice-fingerprint clustering (cluster_speaker_turns): two turn groups
+	// whose embedding centroids reach this cosine SIMILARITY are the same
+	// person. WeSpeaker ResNet34-LM same-speaker pairs typically score
+	// 0.55-0.8, different speakers 0.1-0.35 — 0.5 splits them with margin.
+	cluster_similarity	: 0.5,
+	// The slice of a turn handed to the embedding model: long enough to
+	// fingerprint reliably, short enough to bound the compute (centered).
+	embed_max_seconds	: 10
 };
 
 
@@ -155,13 +163,28 @@ export function stitch_diarization_chunks( chunks, options ) {
 		}
 	}
 
-	// Merge + denoise: sort, fuse same-speaker turns that touch or nearly touch
-	// (this also collapses the duplicated detections inside overlap zones),
-	// then drop what is too short to mean a speaking turn.
-	global_turns.sort( (a, b) => a.start - b.start || a.speaker - b.speaker );
+	return finalize_turns( global_turns, opts );
+}//end stitch_diarization_chunks
+
+
+/**
+* FINALIZE_TURNS
+* Merge + denoise a raw turn list: sort, fuse same-speaker turns that touch or
+* nearly touch (this also collapses duplicated detections inside overlap
+* zones), renumber speakers by FIRST APPEARANCE (so "speaker 1" is always the
+* first voice heard, whatever internal ids clustering produced), then drop
+* what is too short to mean a speaking turn.
+*
+* @param {Array<Object>} raw_turns - [{speaker, start, end}] any order/ids
+* @param {Object} opts - resolved DEFAULT_DIARIZE options
+* @returns {Array<Object>} turns, sorted, merged, 0-based appearance-ordered
+*/
+function finalize_turns( raw_turns, opts ) {
+
+	const turns = [...raw_turns].sort( (a, b) => a.start - b.start || a.speaker - b.speaker );
 
 	const merged = [];
-	for (const turn of global_turns) {
+	for (const turn of turns) {
 		const last = merged.length>0 ? merged[merged.length - 1] : null;
 		const previous_same = merged.findLast
 			? merged.findLast( item => item.speaker===turn.speaker )
@@ -177,8 +200,114 @@ export function stitch_diarization_chunks( chunks, options ) {
 		merged.push({ speaker: turn.speaker, start: turn.start, end: turn.end });
 	}
 
-	return merged.filter( turn => (turn.end - turn.start)>=opts.min_turn_seconds );
-}//end stitch_diarization_chunks
+	const kept = merged.filter( turn => (turn.end - turn.start)>=opts.min_turn_seconds );
+
+	// Appearance-ordered renumbering: stable, human-friendly ids.
+	const id_map = new Map();
+	for (const turn of kept) {
+		if (!id_map.has(turn.speaker)) id_map.set( turn.speaker, id_map.size );
+	}
+	return kept.map( turn => ({ speaker: id_map.get(turn.speaker), start: turn.start, end: turn.end }) );
+}//end finalize_turns
+
+
+/**
+* CLUSTER_SPEAKER_TURNS
+* GLOBAL speaker identity from VOICE FINGERPRINTS — the coherent alternative
+* to overlap stitching for long recordings.
+*
+* Co-activity stitching can only re-identify a voice that happens to speak
+* inside a chunk overlap; over an hour of interview that fragments one person
+* into several detected speakers. Here every chunk-local speaker GROUP (the
+* segmentation model is consistent within a chunk) carries an embedding — a
+* voice fingerprint from the speaker-verification model — and groups whose
+* centroids are similar enough ARE the same person, no matter how far apart
+* they spoke. Duration-weighted average-linkage agglomerative clustering:
+* with tens of groups the O(n³) worst case is microseconds.
+*
+* @param {Array<Object>} groups - one per chunk-local speaker:
+*   { turns: [{start, end}], embedding: number[]|Float32Array|null }
+*   (a null embedding — the fingerprint failed — keeps its own identity
+*   rather than guessing; finalize_turns renumbers everything by appearance)
+* @param {Object} [options] - see DEFAULT_DIARIZE (cluster_similarity)
+* @returns {Array<Object>} turns [{speaker, start, end}] merged + appearance-ordered
+*/
+export function cluster_speaker_turns( groups, options ) {
+
+	const opts = Object.assign({}, DEFAULT_DIARIZE, options || {});
+
+	if (!Array.isArray(groups) || groups.length===0) {
+		return [];
+	}
+
+	const normalize = function( vector ) {
+		let norm = 0;
+		for (const value of vector) norm += value * value;
+		norm = Math.sqrt( norm ) || 1;
+		return Array.from( vector, value => value / norm );
+	};
+	const dot = function( a, b ) {
+		let sum = 0;
+		const length = Math.min( a.length, b.length );
+		for (let i = 0; i < length; i++) sum += a[i] * b[i];
+		return sum;
+	};
+
+	// One cluster per group to start; weight = spoken seconds (a 40-second
+	// answer anchors the centroid; a 1-second backchannel barely moves it).
+	const clusters = groups.map( (group, index) => {
+		const turns = (Array.isArray(group.turns) ? group.turns : [])
+			.filter( turn => typeof turn.start==='number' && typeof turn.end==='number' && turn.end>turn.start );
+		const weight = turns.reduce( (sum, turn) => sum + (turn.end - turn.start), 0 );
+		const has_embedding = group.embedding!==null && group.embedding!==undefined && group.embedding.length>0;
+		return {
+			id			: index,
+			turns		: turns,
+			weight		: weight || 0.001,
+			embedding	: has_embedding ? normalize( group.embedding ) : null
+		};
+	}).filter( cluster => cluster.turns.length>0 );
+
+	// Agglomerative: merge the most similar pair while any pair clears the
+	// threshold. Fingerprint-less clusters never merge (no guessing).
+	for (;;) {
+		let best_i = -1;
+		let best_j = -1;
+		let best_similarity = -1;
+		for (let i = 0; i < clusters.length; i++) {
+			if (clusters[i].embedding===null) continue;
+			for (let j = i + 1; j < clusters.length; j++) {
+				if (clusters[j].embedding===null) continue;
+				const similarity = dot( clusters[i].embedding, clusters[j].embedding );
+				if (similarity>best_similarity) {
+					best_similarity	= similarity;
+					best_i			= i;
+					best_j			= j;
+				}
+			}
+		}
+		if (best_i===-1 || best_similarity<opts.cluster_similarity) {
+			break;
+		}
+		const a = clusters[best_i];
+		const b = clusters[best_j];
+		const merged_embedding = normalize(
+			a.embedding.map( (value, index) => value * a.weight + (b.embedding[index] ?? 0) * b.weight )
+		);
+		a.turns		= a.turns.concat( b.turns );
+		a.weight	= a.weight + b.weight;
+		a.embedding	= merged_embedding;
+		clusters.splice( best_j, 1 );
+	}
+
+	const raw_turns = [];
+	for (const cluster of clusters) {
+		for (const turn of cluster.turns) {
+			raw_turns.push({ speaker: cluster.id, start: turn.start, end: turn.end });
+		}
+	}
+	return finalize_turns( raw_turns, opts );
+}//end cluster_speaker_turns
 
 
 /**

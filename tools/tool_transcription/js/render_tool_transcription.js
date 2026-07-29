@@ -638,6 +638,32 @@ const render_transcription_options = async function(self) {
 		})
 		lang_container.appendChild(lang_selector)
 
+	// Button assign speakers — ALWAYS visible in the tool header: it binds
+	// identities to the speaker tags of the STORED text (placeholders from a
+	// detection run, or re-binding an already assigned voice), so it must be
+	// reachable at any time, not only right after a run. See
+	// tool_transcription.assign_speakers.
+		const button_assign_speakers_header = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'tool_button button_assign_speakers light',
+			inner_html		: self.get_tool_label('assign_speakers') || 'Assign speakers',
+			title			: self.get_tool_label('assign_speakers_info')
+				|| 'Assign the detected speakers (P1, P2, …) to the record\'s people',
+			parent			: fragment
+		})
+		button_assign_speakers_header.addEventListener('click', function(event) {
+			event.stopPropagation()
+			self.assign_speakers({}).then(function(result){
+				// false = nothing to offer (null = user cancelled: say nothing)
+				if (result===false) {
+					alert(
+						self.get_tool_label('no_speaker_tags')
+						|| 'The transcription has no speaker tags to assign'
+					)
+				}
+			})
+		})
+
 	// external tools
 		const ar_register_tools	= await self.get_user_tools(['tool_time_machine', 'tool_tr_print'])
 		const tool_tr_print		= ar_register_tools.find(el => el.name === 'tool_tr_print')
@@ -1093,7 +1119,12 @@ const render_automatic_transcription = function (options) {
 					&& nodes.detect_speakers_checkbox.checked
 					&& nodes.diarization_info
 					&& nodes.diarization_info.installed===true)
-						? { model: nodes.diarization_info.name }
+						? {
+							model			: nodes.diarization_info.name,
+							// voice fingerprints: same voice = same tag across
+							// the whole recording (coherence on long interviews)
+							embedding_model	: nodes.diarization_info.embedding_name
+						  }
 						: false,
 				nodes 				: nodes
 			}
@@ -1164,7 +1195,29 @@ const render_automatic_transcription = function (options) {
 
 						// Persist as THE transcription: item id 1 of the current lang,
 						// replaced — never appended (see save_transcription).
-						self.save_transcription( response[0] || '' )
+						const html = response[0] || ''
+						// capture the persons feed BEFORE saving: the save's refresh
+						// rebuilds the component and its data is briefly empty
+						const persons_snapshot = (self.transcription_component
+							&& self.transcription_component.data
+							&& Array.isArray(self.transcription_component.data.tags_persons))
+								? self.transcription_component.data.tags_persons
+								: []
+						const save_promise = self.save_transcription( html )
+
+						// Speaker detection saved PLACEHOLDER tags (P1, P2 … empty
+						// data payloads)? Offer the identity binding right away —
+						// non-blocking: the text is already saved, and closing the
+						// dialog just leaves the placeholders for later
+						// ("Assign speakers" reopens it any time).
+						if (/\[person-[a-z]-[0-9]+-[^-]{0,22}?-data::data\]/.test(html)) {
+							Promise.resolve(save_promise).then(function(){
+								// pass the saved html AND the persons snapshot: the
+								// component refresh is still in flight, and reading
+								// either from the instance here would race it
+								self.assign_speakers({ value: html, persons: persons_snapshot })
+							})
+						}
 					})
 					break;
 			}
@@ -1693,7 +1746,14 @@ const render_automatic_transcription = function (options) {
 					return
 				}
 				button_download_speaker_model.classList.add('disable')
-				self.download_model( diarization.name ).then(function(response){
+				// both halves of speaker detection: segmentation + the voice-
+				// fingerprint model (the server skips whichever is installed)
+				const downloads = [ self.download_model( diarization.name ) ]
+				if (diarization.embedding_name) {
+					downloads.push( self.download_model( diarization.embedding_name ) )
+				}
+				Promise.all( downloads ).then(function(responses){
+					const response = responses.find(r => !r || r.result===false) || responses[0]
 					if (!response || response.result===false) {
 						button_download_speaker_model.classList.remove('disable')
 						ui.show_message(

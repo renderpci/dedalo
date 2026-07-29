@@ -703,19 +703,32 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 		console.error('[tool_transcription] could not read the model catalog:', error);
 	}
 
-	// The speaker-detection model (a separate catalog slot — it must never
-	// appear in the ASR quality picker). The client uses this to enable the
-	// "Detect speakers" toggle and, for admins, its Download button.
-	let diarization: { name: string; label?: string; size_mb?: number; installed: boolean } | null =
-		null;
+	// The speaker-detection models (separate catalog slots — never in the ASR
+	// quality picker): segmentation (WHO speaks WHEN) + the voice-fingerprint
+	// embedding model (the SAME voice keeps the SAME id across the whole
+	// recording — without it, long recordings fragment one voice into several
+	// detected speakers). The client enables the "Detect speakers" toggle only
+	// when BOTH are in the store; the admin Download button fetches both.
+	let diarization: {
+		name: string;
+		label?: string;
+		size_mb?: number;
+		installed: boolean;
+		embedding_name?: string;
+	} | null = null;
 	try {
 		const entry = await readDiarizationModel();
 		if (entry !== null) {
+			const embedding = await readDiarizationEmbeddingModel();
+			const segmentationInstalled = modelInstalled(entry.name, entry.dtype);
+			const embeddingInstalled =
+				embedding === null ? true : modelInstalled(embedding.name, embedding.dtype);
 			diarization = {
 				name: entry.name,
 				label: entry.label,
-				size_mb: entry.size_mb,
-				installed: modelInstalled(entry.name, entry.dtype),
+				size_mb: (entry.size_mb ?? 0) + (embedding?.size_mb ?? 0),
+				installed: segmentationInstalled && embeddingInstalled,
+				embedding_name: embedding?.name,
 			};
 		}
 	} catch (error) {
@@ -746,8 +759,27 @@ async function readDiarizationModel(): Promise<{
 	size_mb?: number;
 	dtype?: Record<string, string>;
 } | null> {
+	return readModelConfigSlot('diarization_model');
+}
+
+/** The voice-fingerprint model slot (`diarization_embedding_model`), or null. */
+async function readDiarizationEmbeddingModel(): Promise<{
+	name: string;
+	label?: string;
+	size_mb?: number;
+	dtype?: Record<string, string>;
+} | null> {
+	return readModelConfigSlot('diarization_embedding_model');
+}
+
+async function readModelConfigSlot(slot: string): Promise<{
+	name: string;
+	label?: string;
+	size_mb?: number;
+	dtype?: Record<string, string>;
+} | null> {
 	const toolConfig = await getToolConfig('tool_transcription');
-	const raw = toolConfig?.diarization_model;
+	const raw = (toolConfig as Record<string, unknown> | null)?.[slot];
 	const entry =
 		raw !== null && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)
 			? (raw as { value?: unknown }).value
@@ -822,10 +854,14 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	const asrEntry = (await readModelCatalog()).find(
 		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
 	);
-	const diarizationEntry = asrEntry === undefined ? await readDiarizationModel() : null;
-	const entry =
-		asrEntry ??
-		(diarizationEntry !== null && diarizationEntry.name === model ? diarizationEntry : undefined);
+	const diarizationCandidates =
+		asrEntry === undefined
+			? [await readDiarizationModel(), await readDiarizationEmbeddingModel()]
+			: [];
+	const diarizationEntry =
+		diarizationCandidates.find((candidate) => candidate !== null && candidate.name === model) ??
+		undefined;
+	const entry = asrEntry ?? diarizationEntry;
 	if (entry === undefined) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}

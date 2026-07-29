@@ -190,7 +190,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "3.2.0"
+        "value": "3.3.0"
       }
     ],
     "dd1328": [
@@ -1973,6 +1973,20 @@
                 "model": "fp32"
               },
               "notes": "Detects WHO speaks WHEN (up to 3 voices), so the transcription can carry person tags at each speaker turn. Runs entirely in the browser; the identity mapping (which detected voice is which person) is always confirmed by the archivist."
+            },
+            "client": true
+          },
+          "diarization_embedding_model": {
+            "type": "object",
+            "value": {
+              "name": "onnx-community/wespeaker-voxceleb-resnet34-LM",
+              "label": "Voice matching (WeSpeaker ResNet34-LM)",
+              "kind": "diarization",
+              "size_mb": 26,
+              "dtype": {
+                "model": "fp32"
+              },
+              "notes": "Voice fingerprints that keep the SAME speaker tag for the same voice across a whole recording. Without it, long recordings may split one voice into several detected speakers."
             },
             "client": true
           }

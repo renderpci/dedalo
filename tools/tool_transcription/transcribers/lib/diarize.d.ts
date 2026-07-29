@@ -6,6 +6,14 @@ export interface DiarizeOptions {
 	min_turn_seconds?: number;
 	merge_gap_seconds?: number;
 	match_min_seconds?: number;
+	cluster_similarity?: number;
+	embed_max_seconds?: number;
+}
+
+export interface SpeakerGroup {
+	turns: { start: number; end: number }[];
+	/** Voice fingerprint (unit-normalized internally); null = fingerprint failed. */
+	embedding: number[] | Float32Array | null;
 }
 
 export interface DiarizationChunk {
@@ -34,6 +42,11 @@ export const DEFAULT_DIARIZE: Required<DiarizeOptions>;
 
 export function stitch_diarization_chunks(
 	chunks: DiarizationChunk[],
+	options?: DiarizeOptions,
+): SpeakerTurn[];
+
+export function cluster_speaker_turns(
+	groups: SpeakerGroup[],
 	options?: DiarizeOptions,
 ): SpeakerTurn[];
 
