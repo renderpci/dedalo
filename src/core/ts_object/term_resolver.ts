@@ -315,3 +315,78 @@ export async function getTermByLocator(
 	termByLocatorCache.set(cacheUid, value);
 	return value;
 }
+
+/**
+ * The display value of a locator built from an EXPLICIT tipo list instead of the
+ * section_map `term` scope — the tree's 'M' model badge (PHP
+ * component_common::get_value → get_grid_value → dd_grid_cell_object::resolve_value).
+ * The tipos come from the CALLER component's own `properties.source.request_config[].show.ddo_map`,
+ * so a component that displays its target by something other than the section's
+ * thesaurus term resolves the same string PHP renders.
+ *
+ * Lang chain, WIDER than termComponentValue's: data-lang → hierarchy main lang →
+ * lg-nolan → any non-empty. The tail is PHP's grid `fallback_value`, which
+ * get_grid_value sets ONLY for translatable components — and it is load-bearing
+ * here: the dd0 model-name records ('area_tool', 'component_portal') hold their
+ * value in ONE lang (lg-spa on a standard install), so a strict data-lang read
+ * renders every badge empty in an English UI.
+ *
+ * Shares termByLocatorCache under a `ddo:<tipos>` scope key so it inherits the
+ * per-section-tipo eviction on save/delete and the ontology-hub clear; a private
+ * cache here would serve renamed models stale forever.
+ */
+export async function getDdoValueByLocator(
+	locator: TermLocator,
+	tipos: string[],
+	fieldsSeparator: string = DEFAULT_FIELDS_SEPARATOR,
+	lang: string = currentDataLang(),
+): Promise<string> {
+	const sectionTipo = locator.section_tipo;
+	const sectionId = locator.section_id;
+	if (typeof sectionTipo !== 'string' || sectionTipo === '') return '';
+	if (sectionId === undefined || sectionId === null || sectionId === '') return '';
+	if (tipos.length === 0) return '';
+
+	const cacheUid = `${sectionTipo}_${sectionId}_ddo:${tipos.join('+')}_${lang}`;
+	const cached = termByLocatorCache.get(cacheUid);
+	if (cached !== undefined) return cached ?? '';
+
+	const fragments: string[] = [];
+	for (const tipo of tipos) {
+		const current = await ddoComponentValue(sectionTipo, sectionId, tipo, lang);
+		if (current !== '') fragments.push(current);
+	}
+	const value = fragments.join(fieldsSeparator);
+
+	if (termByLocatorCache.size >= 1000) termByLocatorCache.clear();
+	termByLocatorCache.set(cacheUid, value);
+	return value;
+}
+
+/** One ddo_map component value with the full grid fallback chain (see above). */
+async function ddoComponentValue(
+	sectionTipo: string,
+	sectionId: number | string,
+	tipo: string,
+	lang: string,
+): Promise<string> {
+	const items = await readComponentItems(sectionTipo, sectionId, tipo);
+	if (items.length === 0) return '';
+	const translatable = await getTranslatableByTipo(tipo);
+	const pick = (target: string): string => {
+		const item = items.find((entry) => (entry.lang ?? 'lg-nolan') === target);
+		return typeof item?.value === 'string' ? item.value : '';
+	};
+	// Non-translatable components store under lg-nolan and get NO fallback —
+	// PHP sets fallback_value only when is_translatable() (component_common :1074).
+	if (!translatable) return pick('lg-nolan');
+
+	let value = pick(lang);
+	if (value === '') value = pick(await getMainLang(sectionTipo));
+	if (value === '') value = pick('lg-nolan');
+	if (value === '') {
+		const any = items.find((entry) => typeof entry.value === 'string' && entry.value !== '');
+		value = typeof any?.value === 'string' ? any.value : '';
+	}
+	return value;
+}

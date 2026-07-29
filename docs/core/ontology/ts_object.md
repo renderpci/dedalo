@@ -173,6 +173,7 @@ These are the rules in `resolveElementValue()` / `getComponentDataLang()`
 | `icon` `ND` | Consumed server-side: sets `data.is_descriptor = false`, then **skips** the element (never rendered as an icon). |
 | `icon` `CH` | Always skipped. |
 | `icon` `U` (model `component_relation_index`) | Value becomes `` `${icon}:${total}` `` from `getCountDataGroupBy()`; zero-use icons are dropped. The element also carries a `count_result` whose `totals_group` entries are enriched with their section labels (`termByTipo()`, a direct `dd_ontology.term` read, structure-lang-first). |
+| `icon` `M` | Rendered like any other icon, and additionally carries `model_value` — the **model name** of the term next to it (`"area_tool"`). See [The `M` icon's model badge](#the-m-icons-model-badge) below. |
 | `icon` (other) | Rendered only when the component has data; empty icons are skipped. |
 | `link_children` | Sets `children_tipo` and `has_descriptor_children`; value is `'button show children'` or `'button show children unactive'`. If the node also has ND children, an extra `link_children_nd` element is appended. |
 | `component_portal` / `component_autocomplete_hi` | Each locator value is replaced by its resolved term string (`getTermByLocator(locator, DATA_LANG, true)`). |
@@ -185,11 +186,53 @@ a related component), and a `component_svg` element does **not** resolve to a
 file URL. The indexation *grid* (tag indexation, as opposed to the "U" count) is
 likewise out of scope for the node builder — only the counts are produced here.
 
+### The `M` icon's model badge
+
+An element whose resolved value is `'M'` gets one extra field:
+
+```json
+{ "type": "icon", "tipo": "ontology6", "value": "M", "model_value": "area_tool", "model": "component_portal" }
+```
+
+`model_value` is the name of the **model** the term implements. The ontology
+tree renders it as a small orange badge to the right of the `M` button, hidden
+until the user presses `Ctrl+M` — that is what turns the tree into a readable
+schema (see [area_ontology](../areas/area_ontology.md#the-model-badge-ctrlm)).
+
+The gate is the **resolved** value, not the `ddo_map` `icon` key, so a
+`component_relation_index` element whose value became `"M:3"` never matches.
+
+Resolution (`resolveModelValue()` in `ts_object.ts`) does not go through the
+target section's `term` scope — an `M` component displays its target by its own
+rules:
+
+1. The **raw locators** are read off the record, not the value
+   `getComponentDataLang()` produced: for the portal family that has already been
+   flattened through the target's `thesaurus` term scope, which for an ontology
+   model record is `[term, tld, section_id]` and collapses to the bare tld.
+2. The tipos to read on the target come from the component's own
+   `properties.source.request_config[].show.ddo_map` (`section_tipo: 'self'`
+   entries) — `ontology6 → [ontology5, ontology9]`,
+   `hierarchy27 → [hierarchy25]`. Fields join with the config's
+   `fields_separator` (default `', '`), multiple locators with
+   `records_separator` (default `' | '`).
+3. Each value resolves through `getDdoValueByLocator()` (`term_resolver.ts`) with
+   a **wider** language fallback than a term read: data-lang → hierarchy main
+   lang → `lg-nolan` → any non-empty, for translatable components only. This is
+   load-bearing — model-name records store their term in a single language, so a
+   strict data-lang read would leave every badge empty in any other UI language.
+
+A component that declares no usable `ddo_map` yields an empty string (the client
+suppresses the badge) and logs a warning; a tree read never fails over a
+decoration.
+
 ### The term cache (in `term_resolver.ts`)
 
 `term_resolver.ts` holds the **only** term cache, `termByLocatorCache`, keyed
 `` `${section_tipo}_${section_id}_${scope}_${lang}` ``. It self-caps at 1000
-entries (full-drop on overflow, not an LRU), evicts per node on the
+entries (full-drop on overflow, not an LRU). The `M` badge shares it under a
+`` `ddo:${tipos}` `` scope key rather than keeping a private cache, so it
+inherits the same invalidation. It evicts per node on the
 `` `${tipo}_${id}_` `` prefix (`invalidateNode()` in `term_resolver.ts`), and
 registers with `clearOntologyDerivedCaches()` for a full flush. `ts_object.ts`
 does **not** duplicate this cache — it only keeps a separate `resolvedChildCache`
@@ -280,11 +323,12 @@ out through `clearOntologyDerivedCaches()`, which both `term_resolver.ts`'s
 | --- | --- |
 | `getTermByLocator(locator, lang = DATA_LANG, fromCache = false, scope = 'thesaurus')` | Resolve the term **string**: gather the scope's term tipos, read each component value (with main-lang fallback via a private `getMainLang()`), join with the scope separator. Falls back to a locator-string id when no term map exists. Caches per scope + lang. |
 | `getTermDataByLocator(locator, scope = 'thesaurus')` | Resolve the merged **raw** component data across the scope's term tipos. Not cached. |
+| `getDdoValueByLocator(locator, tipos, fieldsSeparator = ', ', lang = DATA_LANG)` | Resolve a locator's display string from an **explicit tipo list** instead of the section_map term scope — the `M` model badge. Wider lang fallback (data-lang → main → `lg-nolan` → any, translatable only). Shares the cache under a `` `ddo:${tipos}` `` scope key. |
 | `invalidateNode(sectionTipo, sectionId)` | Evict all cache keys for one node (all langs/scopes) on the `` `${tipo}_${id}_` `` prefix. |
 | `clearTermCache()` | Full cache reset — registered with `clearOntologyDerivedCaches()`, so it runs automatically on any ontology write. |
 
 !!! note "Scope defaults to `'thesaurus'`"
-    Both functions default `scope = 'thesaurus'`; passing `null` walks the
+    The two locator readers default `scope = 'thesaurus'`; passing `null` walks the
     section_map scope chain instead. The cache key is scope-aware, to avoid
     cross-scope pollution.
 
