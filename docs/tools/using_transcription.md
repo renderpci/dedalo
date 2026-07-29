@@ -65,6 +65,9 @@ The **Transcription** button attaches to media components — audiovisual, image
 !!! warning "Automatic text is a draft, and it overwrites"
     Automatic transcription writes its result into the text field. Review it — recognizers make mistakes with names, places and overlapping speech. Because the write goes through the normal save path, earlier states remain in the [time machine](using_time_machine.md) if you need to revert.
 
+!!! tip "Automatic speaker tags"
+    With **Detect speakers** on (in the transcription options), the tool also detects when the voice changes. When the transcription finishes, a small dialog lists each detected speaker with its speaking time and ▶ buttons that jump the player there — assign each voice to a person from the record's people (informants, interviewer…) and the text is saved with a person tag opening every speaker turn. You can skip the dialog and keep the plain text, map two detected voices to the same person, or leave a voice untagged. Detection runs entirely in your browser with a small model (~6 MB) from your own installation; if it is marked *not installed*, an administrator can add it with **Download speaker model**. Who each voice belongs to is always your decision — the tool never guesses identities.
+
 !!! tip "Speaker, language and note tags"
     The text editor's toolbar carries the interview helpers: the **person** button lists the people talking — the informants of the related oral-history record and the recording crew of the audiovisual record itself — and inserts a speaker tag at the cursor (`Ctrl+1…9` inserts them by number). The **language** button drops an in-text language mark, and the **note** button creates a linked note record and its tag. Which components supply the speakers is declared in the ontology (the transcription field's `tags_persons` property), so an installation can point them at its own people fields.
 

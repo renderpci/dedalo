@@ -216,6 +216,49 @@ Wire shapes and the deliberate divergences from PHP are ledgered in
 `WIRE_CONTRACT.md` WC-065 (all-string section_ids, sections item always
 present, `value: string[]` cells) and WC-066 (note-button gating).
 
+## Speaker detection (diarization)
+
+The browser tier can detect WHO speaks WHEN and open each speaker turn in the
+stored text with the right person tag — same privacy posture as the
+recognition itself: the audio never leaves the machine, the model comes from
+the install's own store.
+
+- **Model**: `onnx-community/pyannote-segmentation-3.0` (~6 MB), a SEPARATE
+  catalog slot (`diarization_model` in the tool's default config dd1633 —
+  never an entry of the ASR quality picker). Same store, same two seeding
+  doors; its file profile differs (no tokenizer, the preprocessor config is
+  MANDATORY — `DIARIZATION_COMMON_FILES` in `src/core/ai/model_fetch.ts`).
+  `get_model_sources` reports it under `diarization: {name, label, size_mb,
+  installed}`.
+- **Worker** (`browser_whisper.js diarize_audio`): runs after the last decode
+  window, on WASM always (small recurrent model; CPU is faster than the
+  WebGPU backend's op support is reliable). Long chunks (5 min) with a
+  conversational overlap (30 s); the pure post-processing — cross-chunk
+  identity stitching by co-activity, segment attribution, per-speaker stats —
+  lives in `transcribers/lib/diarize.js` (bun-tested,
+  `test/unit/transcript_diarize.test.ts`). STRICTLY BEST-EFFORT: a
+  diarization failure emits `diarize_error` and the transcript arrives
+  without speakers, never lost.
+- **Identity is a HUMAN decision.** No voice print says who a voice belongs
+  to, and enrolling biometric voice prints is exactly what this tool avoids.
+  After recognition, the mapping dialog (`tool_transcription.js
+  map_speakers`) lists each detected speaker (turns, speaking time, listen
+  jump points into the player) and the archivist assigns persons from the
+  SAME `tags_persons` feed the editor's person button uses. Two detected
+  speakers may map to one person (a split voice degrades gracefully); an
+  unmapped speaker stays untagged; skipping saves the plain transcript.
+- **Stored shape**: the person tag opens the first paragraph of each speaker
+  TURN, right after the paragraph's TC mark — the v6 byte layout; a
+  same-speaker run split by paragraph caps carries the tag once
+  (`paragraphs.js segments_to_html` `speaker_tags`). Numeric speaker ids
+  never leak into the stored text.
+- **Known limits**: up to 3 concurrent voices (the model's powerset);
+  overlapping speech attributes to the dominant voice; a voice absent from a
+  chunk overlap opens a NEW detected speaker rather than guessing (the
+  mapping dialog merges it back). Embedding-based identity (WeSpeaker) is the
+  planned upgrade for very long recordings, and the sidecar contract can gain
+  a `diarize` flag for WhisperX-style boxes.
+
 ## Why the transcripts used to repeat words
 
 Recorded for the next person who touches this. Five causes, all fixed 2026-07-28:
