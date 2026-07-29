@@ -448,88 +448,214 @@
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body:nth-of-type(10) > .publication_items_grid .container_bottom > .buttons_container > .publication_button {
   background-color: var(--color_5);
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report {
-  padding: 1rem;
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
   width: 100%;
+  padding: 0.85rem 1rem;
+  margin-top: 0.5rem;
+  border-left: 3px solid var(--border_default);
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .report_summary {
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report.state_ok {
+  border-left-color: var(--color_success);
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report.state_neutral {
+  border-left-color: var(--border_default);
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report.state_warning {
+  border-left-color: var(--color_warning);
+  background-color: color-mix(in srgb, var(--color_warning) 6%, transparent);
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report.state_danger {
+  border-left-color: var(--color_danger);
+  background-color: color-mix(in srgb, var(--color_danger) 6%, transparent);
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_verdict {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_metrics {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_headline {
+  margin-top: 0.25rem;
+  word-break: break-word;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_subject {
+  margin-top: 0.15rem;
+  color: var(--fg_muted);
+  font-size: 0.78rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_progress {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
-  border-radius: 3px;
-  font-weight: 500;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .report_summary.success {
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_bar {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--bg_surface_alt);
+  overflow: hidden;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_bar_fill {
+  height: 100%;
   background-color: var(--color_success);
-  color: var(--color_white);
+  transition: width 0.3s ease;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .report_summary.partial {
-  background-color: var(--color_warning);
-  color: var(--color_white);
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_bar_note {
+  color: var(--fg_muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .report_summary.fail {
-  background-color: var(--color_danger);
-  color: var(--color_white);
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_zone {
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border_default);
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 0.25rem 1rem;
-  background-color: var(--color_grey_15);
-  border: 1px solid var(--color_grey_13);
-  padding: 0.75rem 1rem;
-  border-radius: 3px;
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_zone:first-of-type {
+  border-top: 0;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .header {
-  font-weight: 600;
-  opacity: 0.7;
-  text-transform: uppercase;
-  box-shadow: none;
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .zone_count {
+  margin-left: 0.5rem;
+  color: var(--fg_muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .header.table_name {
-  text-align: left;
-  border-bottom-left-radius: 1em;
-  border-top-left-radius: 1em;
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_cause_list {
+  margin: 0.4rem 0 0 0;
+  padding-left: 1.2rem;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .header.rows_total {
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_cause {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  padding: 0.2rem 0 0.2rem 0.6rem;
+  border-left: 3px solid var(--color_danger);
+  margin-bottom: 0.3rem;
+  word-break: break-word;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table.tables_report {
+  grid-template-columns: 1fr 10rem 12rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table.files_table {
+  grid-template-columns: 8rem 1fr auto;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table {
+  margin-top: 0.45rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table .dd_td.num,
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table .dd_th.num {
   text-align: right;
-}
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .header.records_count {
-  text-align: right;
-  border-bottom-right-radius: 1em;
-  border-top-right-radius: 1em;
-}
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .cell {
-  padding: 0.2rem 0 0 2em;
-  line-height: 1.4;
-}
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .cell.rows_total,
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .cell.records_count {
-  text-align: right;
-  font-weight: 600;
-  padding-right: 1em;
   font-variant-numeric: tabular-nums;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .cell.rows_total.zero,
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .tables_report .cell.records_count.zero {
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table .dd_tr.zero {
   opacity: 0.4;
   font-weight: 400;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .error_list {
-  margin-top: 1rem;
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_table .dd_tr.total_row {
+  border-top: 1px solid var(--border_default);
+  color: var(--fg_muted);
+  font-weight: 600;
 }
-.wrapper_tool.tool_diffusion > .content_data .diffusion_report .error_list .error_item {
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
-  font-family: monospace;
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .flag_delta:after {
+  content: ' ·';
+  color: var(--color_warning);
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .delta_legend,
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_empty {
+  color: var(--fg_muted);
+  font-size: 0.78rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_empty {
+  padding: 0.4rem 0;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .error_group {
+  margin-bottom: 0.35rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .error_group_head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .error_text {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
   word-break: break-word;
-  border-radius: 2px;
-  background-color: var(--color_danger) !important;
-  color: var(--color_white) !important;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .error_ids {
+  color: var(--fg_muted);
+  font-size: 0.74rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  padding-left: 0.6rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_toggle {
+  display: inline-block;
+  margin-top: 0.45rem;
+  margin-right: 0.8rem;
+  color: var(--fg_muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_toggle:before {
+  content: '▸ ';
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_toggle.open:before {
+  content: '▾ ';
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_toggle:hover {
+  color: var(--fg_default);
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_zone > .run_toggle + .copy_tsv,
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_zone > .copy_tsv {
+  float: right;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .run_zone:after {
+  content: '';
+  display: block;
+  clear: both;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report pre.run_console {
+  padding: 0.7rem 0.85rem;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fg_default);
+  background-color: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  margin-top: 0.35rem;
+  max-height: 22rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .copy_tsv {
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .diagnostics_body {
+  margin-top: 0.4rem;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_readout .dd_row.uncurated .dd_k {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.74rem;
+  opacity: 0.8;
+}
+.wrapper_tool.tool_diffusion > .content_data .diffusion_report.run_report .dd_readout .dd_v {
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
 }
 .tool_header.tool_diffusion {
   background-color: var(--tool_diffusion);
