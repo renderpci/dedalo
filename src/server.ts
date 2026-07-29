@@ -31,6 +31,7 @@ import { runBootMigrations } from '../install/db/migrate.ts';
 import { initRagHooks } from './ai/rag/bootstrap.ts';
 import { config } from './config/config.ts';
 import { projectRoot, readEnv } from './config/env.ts';
+import { AI_MODEL_URL_PREFIX, serveModelRequest } from './core/ai/model_store.ts';
 import { handleCountersRequest } from './core/api/counters.ts';
 import { type ApiRequestContext, dispatchRqo } from './core/api/dispatch.ts';
 import { handleEnvironmentView } from './core/api/environment_view.ts';
@@ -687,6 +688,15 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	if (request.method === 'GET' && url.pathname.startsWith(CLIENT_LIB_URL_PREFIX)) {
 		const libResponse = await serveClientLibRequest(url.pathname, request);
 		if (libResponse !== null) return libResponse;
+	}
+
+	// Local AI model weights (in-browser speech recognition / translation), served
+	// read-only from the install's own model store instead of a public model hub —
+	// the whole point of running inference locally. Same ordering reason as the
+	// lib route: the client tree has no ai_models/ subtree.
+	if (request.method === 'GET' && url.pathname.startsWith(AI_MODEL_URL_PREFIX)) {
+		const modelResponse = await serveModelRequest(url.pathname, request);
+		if (modelResponse !== null) return modelResponse;
 	}
 
 	// Entry points → the app (PHP's index.php / core/index.php redirect shims).

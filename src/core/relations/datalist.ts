@@ -171,6 +171,128 @@ async function resolveDdoLabel(
 }
 
 /**
+ * The option SOURCES of a selection component — which target sections its
+ * request_config points at, which show-ddos label an option, and the fixed
+ * filter that narrows the enumeration. Shared by the full build
+ * ({@link getDatalist}) and the bounded count ({@link probeDatalistSize}) so
+ * the two can never disagree about what the component's options ARE.
+ */
+async function resolveDatalistSources(
+	componentTipo: string,
+	componentProperties: unknown,
+	ownerSectionTipo: string,
+	lang: string,
+): Promise<{
+	targetSections: string[];
+	labelDdos: { tipo: string }[];
+	filterGroup: Record<string, unknown> | undefined;
+}> {
+	const context: RequestConfigContext = {
+		ownerTipo: componentTipo,
+		ownerSectionTipo,
+		mode: 'edit', // options come from the component's EDIT config (full ddos)
+		ownerIsSection: false,
+		lang,
+	};
+	const config = await buildRequestConfigForElement(componentProperties, context);
+	const mainItem = config[0];
+	// Every COMPONENT-model show ddo contributes to the label (PHP skips
+	// non-component ddos with an error log).
+	const labelDdos = (mainItem?.show?.ddo_map ?? []).filter(
+		(ddo) => typeof ddo.model === 'string' && ddo.model.startsWith('component_'),
+	);
+
+	// PHP get_list_of_values (:2860): the FIRST fixed_filter group becomes the
+	// option search's filter; a non-object entry is ignored with an error log.
+	const fixedFilter = (mainItem?.sqo as { fixed_filter?: unknown[] } | undefined)?.fixed_filter;
+	let filterGroup: Record<string, unknown> | undefined;
+	if (Array.isArray(fixedFilter) && fixedFilter.length > 0) {
+		const first = fixedFilter[0];
+		if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
+			filterGroup = first as Record<string, unknown>;
+		} else {
+			console.error(`getDatalist '${componentTipo}': ignored fixed filter, bad format`);
+		}
+	}
+	return { targetSections: extractSqoSectionTipos(mainItem), labelDdos, filterGroup };
+}
+
+/**
+ * HOW MANY OPTIONS DOES THIS COMPONENT OFFER — counted up to `limit` and no
+ * further, without building (or caching) the list.
+ *
+ * For a caller whose only question is "is this list over a cap?", building the
+ * datalist to find out is the whole cost for none of the value: the full build
+ * reads EVERY record of every target section to label it, and a 60k-term
+ * thesaurus is 60k sequential reads whose result is then thrown away — and,
+ * worse, stored first, evicting the shared `datalistCache` that ordinary reads
+ * depend on. This is the O(limit) answer: a `LIMIT limit` row probe per target
+ * section, nothing read, nothing cached.
+ *
+ * Returns `min(total, limit)`, so `result >= limit` means "at least this many",
+ * never "exactly". It counts RECORDS, where the full build drops options whose
+ * label resolves empty — so the probe can only OVER-count, and over-counting a
+ * cap check refuses a list that was borderline. That is the conservative
+ * direction, and the one "refuse, never truncate" already chose.
+ */
+export async function probeDatalistSize(
+	componentTipo: string,
+	componentProperties: unknown,
+	ownerSectionTipo: string,
+	lang: string,
+	limit: number,
+): Promise<number> {
+	if (limit <= 0) return 0;
+	// A list already built is already paid for — count it rather than re-probe.
+	const cached = datalistCache.get(`${componentTipo}_${lang}`);
+	if (cached !== undefined) return Math.min(cached.length, limit);
+
+	const { targetSections, filterGroup } = await resolveDatalistSources(
+		componentTipo,
+		componentProperties,
+		ownerSectionTipo,
+		lang,
+	);
+	let found = 0;
+	for (const targetSection of targetSections) {
+		if (found >= limit) break;
+		const table = await getMatrixTableFromTipo(targetSection);
+		if (table === null) continue;
+		const remaining = limit - found;
+		if (filterGroup !== undefined) {
+			// The SAME option search the full build runs, capped: a fixed filter can
+			// narrow a huge section to a handful, so counting the raw table would
+			// refuse lists that are perfectly small.
+			const { sanitizeClientSqo } = await import('../concepts/sqo.ts');
+			const { buildSearchSql } = await import('../search/sql_assembler.ts');
+			const sqo = sanitizeClientSqo({
+				section_tipo: [targetSection],
+				filter: filterGroup,
+				limit: 1,
+			});
+			// AFTER sanitizing, exactly as the full build sets 'all': the bound is
+			// the CALLER's, not a client-supplied one, so it must not be squeezed
+			// through the client ceiling (a small DEDALO_SEARCH_CLIENT_MAX_LIMIT
+			// would silently under-count and turn every refusal into a pass).
+			sqo.limit = remaining;
+			const query = await buildSearchSql(sqo);
+			const rows = (await sql.unsafe(
+				query.sql,
+				query.params as (string | number | null)[],
+			)) as unknown[];
+			found += rows.length;
+			continue;
+		}
+		const rows = (await sql.unsafe(
+			`SELECT section_id FROM "${table}" WHERE section_tipo = $1 LIMIT $2`,
+			[targetSection, remaining],
+		)) as { section_id: number }[];
+		found += rows.length;
+	}
+	return Math.min(found, limit);
+}
+
+/**
  * Build the datalist for a selection component: all records of its
  * request_config target section(s), each labeled with EVERY show-ddo value
  * joined by ' | ' (PHP get_list_of_values `implode(' | ', $ar_label)`),
@@ -187,35 +309,13 @@ export async function getDatalist(
 	const cached = datalistCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 
-	const context: RequestConfigContext = {
-		ownerTipo: componentTipo,
+	const { targetSections, labelDdos, filterGroup } = await resolveDatalistSources(
+		componentTipo,
+		componentProperties,
 		ownerSectionTipo,
-		mode: 'edit', // options come from the component's EDIT config (full ddos)
-		ownerIsSection: false,
 		lang,
-	};
-	const config = await buildRequestConfigForElement(componentProperties, context);
-	const mainItem = config[0];
-	const targetSections = extractSqoSectionTipos(mainItem);
-	// Every COMPONENT-model show ddo contributes to the label (PHP skips
-	// non-component ddos with an error log).
-	const labelDdos = (mainItem?.show?.ddo_map ?? []).filter(
-		(ddo) => typeof ddo.model === 'string' && ddo.model.startsWith('component_'),
 	);
 	const items: DatalistItem[] = [];
-
-	// PHP get_list_of_values (:2860): the FIRST fixed_filter group becomes the
-	// option search's filter; a non-object entry is ignored with an error log.
-	const fixedFilter = (mainItem?.sqo as { fixed_filter?: unknown[] } | undefined)?.fixed_filter;
-	let filterGroup: Record<string, unknown> | undefined;
-	if (Array.isArray(fixedFilter) && fixedFilter.length > 0) {
-		const first = fixedFilter[0];
-		if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
-			filterGroup = first as Record<string, unknown>;
-		} else {
-			console.error(`getDatalist '${componentTipo}': ignored fixed filter, bad format`);
-		}
-	}
 
 	for (const targetSection of targetSections) {
 		const table = await getMatrixTableFromTipo(targetSection);

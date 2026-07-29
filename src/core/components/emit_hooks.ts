@@ -60,6 +60,35 @@ export interface EmitHookContext {
 /** One model's emit-time particularity (see the module doc for the surface). */
 export interface ComponentEmitHook {
 	emitItem?(context: EmitHookContext): Promise<void>;
+	/**
+	 * A per-RECORD language override for the value slice, resolved BEFORE the
+	 * value is read (unlike transformValue, which sees an already-sliced value).
+	 * Non-null forces both the slice lang and the emitted item's `lang` — PHP's
+	 * `$this->lang` switch, visible on the wire.
+	 *
+	 * One implementor: component_text_area list values follow the record's
+	 * ORIGINAL language (the related component_select_lang, e.g. rsc263) so a
+	 * list of interviews shows each transcript in its own language.
+	 */
+	resolveEmitLang?(context: EmitHookContext): Promise<string | null>;
+	/**
+	 * Per-RECORD `context.options` for this model's EDIT context (a CONTEXT-phase
+	 * facet — the one hook method not called from emitDdoData; it runs where the
+	 * structure context is stamped, section/read.ts). Non-null becomes the
+	 * entry's `options` object on the wire; null emits no key at all.
+	 *
+	 * One implementor: component_text_area stamps `related_component_lang` (the
+	 * record's original language) so the transcription/indexation/lang tools open
+	 * the component in the interview's own language. Dispatching through the
+	 * registry — instead of a `model === '…'` conditional in read.ts — is what
+	 * keeps the core model-blind (S2-24): a future model that needs per-record
+	 * context options declares this facet, and read.ts never changes.
+	 */
+	resolveContextOptions?(target: {
+		tipo: string;
+		sectionTipo: string;
+		sectionId: number;
+	}): Promise<Record<string, unknown> | null>;
 	transformValue?(
 		value: unknown[] | null,
 		context: EmitHookContext,

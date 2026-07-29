@@ -460,6 +460,28 @@ export async function getPropertiesByTipo(tipo: string): Promise<unknown> {
 	return (await getNode(tipo))?.properties ?? null;
 }
 
+/** One node returned by getNodesWithProperty: its tipo + raw properties object. */
+export interface NodeWithProperties {
+	tipo: string;
+	properties: Record<string, unknown>;
+}
+
+/**
+ * Every dd_ontology node whose `properties` JSONB carries a top-level
+ * `propertyKey` (PHP's `properties ? 'key'` scan). The one caller today is the
+ * observer-mirror reconciler (`section/record/observer_reconcile.ts`), which
+ * needs all nodes declaring an `observers` spec — a by-PROPERTY scan the
+ * per-tipo cache cannot serve, so it lives here in the exempt canonical home
+ * (the T3 ratchet only shrinks — a caller must never grow its own direct
+ * `FROM dd_ontology`). Not cached: reconciliation is an out-of-band sweep, not
+ * a hot read, and it must see the live property set.
+ */
+export async function getNodesWithProperty(propertyKey: string): Promise<NodeWithProperties[]> {
+	return (await sql.unsafe('SELECT tipo, properties FROM dd_ontology WHERE properties ? $1', [
+		propertyKey,
+	])) as NodeWithProperties[];
+}
+
 /**
  * FIRST DESCENDANT BY MODEL: the classic
  * `get_ar_children_tipo_by_model_name_in_section(...) → first hit` shape that

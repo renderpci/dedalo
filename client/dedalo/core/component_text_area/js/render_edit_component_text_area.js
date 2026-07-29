@@ -322,12 +322,16 @@ export const render_page_selector = function(self, data_tag, tag_id, text_editor
 			class_name		: 'body'
 		})
 
-		// (!) eval is used here to interpolate page_in/page_out into a localised
-		// label template string stored in get_label.choose_page_between.
-		// The template is controlled by the application's label system,
-		// not by user input, but eval should still be considered a risk
-		// if label content is ever user-editable.
-		const label = eval('`'+get_label.choose_page_between+'`')
+		// Interpolate page_in/page_out/total_pages into the localised label
+		// template (get_label.choose_page_between) by EXPLICIT placeholder
+		// replacement — never eval(). eval of a label breaks under the strict
+		// Content-Security-Policy (no 'unsafe-eval') and would execute arbitrary
+		// code if a label ever became user-editable; replaceAll also degrades
+		// gracefully on a mistranslated placeholder instead of throwing.
+		const label = String(get_label.choose_page_between ?? '')
+			.replaceAll('${page_in}', page_in)
+			.replaceAll('${page_out}', page_out)
+			.replaceAll('${total_pages}', total_pages)
 		const body_title = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'body_title',

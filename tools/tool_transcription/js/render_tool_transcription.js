@@ -455,12 +455,19 @@ const get_content_data_edit = function(self) {
 
 
 			// references component
+			// OPTIONAL, like the two status roles above: build() logs a warning and
+			// leaves the property null when the section's tool_config ddo_map does not
+			// declare it. Dereferencing it unconditionally threw
+			// "Cannot read properties of undefined (reading 'render')" from inside a
+			// promise — which aborted the rest of this callback, so the whole right
+			// column silently stopped building on any section without a references field.
 			const references_component = self.references_component
-
-			references_component.render()
-			.then(function(references_component_node){
-				right_container.appendChild(references_component_node)
-			})
+			if (references_component) {
+				references_component.render()
+				.then(function(references_component_node){
+					right_container.appendChild(references_component_node)
+				})
+			}
 
 		})
 
@@ -1006,6 +1013,26 @@ const render_automatic_transcription = function (options) {
 		//save the pointer
 			nodes.button_automatic_transcription = button_automatic_transcription
 
+	// cancel button
+	// A browser transcription of a long interview runs for a long time, and until
+	// now the only way out was closing the window — which threw away everything
+	// recognised so far. Cancelling ASKS the worker to stop: it finishes the window
+	// it is on and returns what it has, which is then saved like a normal result.
+		const button_cancel_transcription = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_cancel_transcription hide',
+			inner_html		: self.get_tool_label('cancel') || 'Cancel',
+			parent			: automatic_transcription_container
+		})
+		//save the pointer
+			nodes.button_cancel_transcription = button_cancel_transcription
+
+		button_cancel_transcription.addEventListener('click', function(e){
+			e.stopPropagation()
+			button_cancel_transcription.classList.add('disable')
+			self.abort_transcription()
+		})
+
 		const button_automatic_transcription_click_handler = async function(e){
 			e.stopPropagation()
 
@@ -1034,6 +1061,13 @@ const render_automatic_transcription = function (options) {
 			// SEC-XSS-006: lang_info is plain text like "Greek | lg-ell | el"
 			lang_info.textContent = get_current_lang_info(lang)
 
+			// The catalog entry behind the selected quality, when there is one: it
+			// carries the per-model quantisation the browser engine needs (the
+			// wrong quantisation is what used to make the model repeat words).
+			const quality_entry = (transcriber_quality && Array.isArray(transcriber_quality.value))
+				? transcriber_quality.value.find(el => el.name === (nodes.transcriber_engine_quality || {}).value)
+				: null
+
 			// options to be sent to engine
 			const automatic_transcription_options = {
 				transcriber_engine	: engine.name,
@@ -1041,6 +1075,17 @@ const render_automatic_transcription = function (options) {
 					? nodes.transcriber_engine_quality.value
 					: false,
 				source_lang			: lang,
+				device				: nodes.transcriber_device_select
+					? nodes.transcriber_device_select.value
+					: 'auto',
+				dtype				: quality_entry ? quality_entry.dtype : undefined,
+				// How the recognised segments are turned into TEXT: paragraphs and
+				// timecode density. The archivist's choice, not a constant.
+				format_options		: {
+					tc_mode	: nodes.transcriber_tc_mode_select
+						? nodes.transcriber_tc_mode_select.value
+						: 'paragraph_anchors'
+				},
 				nodes 				: nodes
 			}
 
@@ -1081,6 +1126,10 @@ const render_automatic_transcription = function (options) {
 
 				case 'browser':
 				default:
+					// the job is cancellable from here on
+					button_cancel_transcription.classList.remove('hide')
+					button_cancel_transcription.classList.remove('disable')
+
 					// return a Promise with the data to be saved into transcription component.
 					self.automatic_transcription(automatic_transcription_options)
 					.then((response)=>{
@@ -1088,7 +1137,14 @@ const render_automatic_transcription = function (options) {
 							console.log('----> automatic_transcription response', response);
 						}
 
+						button_cancel_transcription.classList.add('hide')
 						button_automatic_transcription.classList.remove('disable')
+
+						// A failed or cancelled-to-nothing run already reported itself
+						// in the status area; there is no value to write.
+						if (response===false) {
+							return
+						}
 						const msg = self.get_tool_label('transcription_completed') || 'Transcription completed.';
 						// SEC-031: build success label via DOM; defence-in-depth on i18n label.
 						status_container.replaceChildren()
@@ -1097,11 +1153,9 @@ const render_automatic_transcription = function (options) {
 						success_span.textContent = msg
 						status_container.appendChild(success_span)
 
-						// set value and implicit save action in component_text_area
-						self.transcription_component.set_value(
-							0, // key
-							response[0] || '' // value
-						)
+						// Persist as THE transcription: item id 1 of the current lang,
+						// replaced — never appended (see save_transcription).
+						self.save_transcription( response[0] || '' )
 					})
 					break;
 			}
@@ -1184,65 +1238,191 @@ const render_automatic_transcription = function (options) {
 						}
 					})
 
-		// configuration of device to use in processing
-		// two options 'gpu' or 'cpu' by default is 'gpu' but for compatibility 'cpu' can be set.
+		// device used for inference
+		// 'auto' (default) lets the worker detect WebGPU and fall back to WASM by
+		// itself. It used to be a checkbox the user had to understand: leaving it
+		// unchecked on a machine without WebGPU meant a failed run rather than a
+		// slower one, and the fallback is now automatic in both directions.
 				const device_container = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'device_container',
 					parent 			: configuration_container
 				})
 
-				const option_label = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: self.get_tool_label('cpu_device') || 'More compatible, slower.',
+				const device_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'device_label',
+					inner_html		: self.get_tool_label('device') || 'Device',
 					parent			: device_container
 				})
 
-				const transcriber_device_checkbox = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox'
+				const transcriber_device_select = ui.create_dom_element({
+					element_type	: 'select',
+					parent			: device_label
 				})
-
 				//save the pointer
-				nodes.transcriber_device_checkbox = transcriber_device_checkbox
+				nodes.transcriber_device_select = transcriber_device_select
 
-				option_label.prepend(transcriber_device_checkbox)
+				const device_options = [
+					{ value: 'auto',	label: self.get_tool_label('device_auto') || 'Automatic' },
+					{ value: 'webgpu',	label: self.get_tool_label('device_gpu') || 'GPU (faster)' },
+					{ value: 'wasm',	label: self.get_tool_label('cpu_device') || 'More compatible, slower.' }
+				]
+				for (let i = 0; i < device_options.length; i++) {
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: device_options[i].value,
+						inner_html		: device_options[i].label,
+						parent			: transcriber_device_select
+					})
+				}
+
+				/**
+				* APPLY_DEVICE_LIMITS
+				* CPU/WASM cannot hold the large models — their weights exceed what a
+				* WASM heap can address — so choosing it restricts the quality list to
+				* the models that actually run there. The catalog says which those are
+				* (`requires`); before the catalog existed this was hardcoded to the
+				* one model literally labelled 'small'.
+				*/
+				const apply_device_limits = function() {
+
+					const quality_select = nodes.transcriber_engine_quality
+					if (!quality_select || !transcriber_quality || !Array.isArray(transcriber_quality.value)) {
+						return
+					}
+
+					const wasm_only	= transcriber_device_select.value==='wasm'
+					const entries	= transcriber_quality.value
+
+					let selectable = null
+					for (let i = 0; i < quality_select.options.length; i++) {
+						const option	= quality_select.options[i]
+						const entry		= entries.find(el => el.name===option.value)
+						// A model is unavailable on CPU when the catalog says it needs a
+						// GPU. Entries with no `requires` are assumed to run anywhere.
+						const blocked	= wasm_only && entry!==undefined && entry.requires==='webgpu'
+						option.disabled	= blocked
+						if (!blocked && selectable===null) {
+							selectable = option.value
+						}
+					}
+
+					if (wasm_only) {
+						quality_select.classList.add('lock')
+						const current = entries.find(el => el.name===quality_select.value)
+						if (current!==undefined && current.requires==='webgpu' && selectable!==null) {
+							quality_select.value = selectable
+						}
+					} else {
+						quality_select.classList.remove('lock')
+					}
+				}
 
 				// local_db
-				// When CPU/WASM mode is selected, the quality is locked to 'small' because
-				// larger Whisper models require WebGPU memory bandwidth — they cannot run in WASM
-					const device_id = 'transcriber_device_checkbox'
-					transcriber_device_checkbox.addEventListener('change', function(){
+					const device_id = 'transcriber_device_select'
+					transcriber_device_select.addEventListener('change', function(){
 						data_manager.set_local_db_data({
 							id		: device_id,
-							value	: transcriber_device_checkbox.checked
+							value	: transcriber_device_select.value
 						}, 'status')
-
-						if(transcriber_device_checkbox.checked){
-							const quality_small	= transcriber_quality.value.find(el => el.label==='small').name
-							nodes.transcriber_engine_quality.value = quality_small
-							nodes.transcriber_engine_quality.classList.add('lock')
-						}else{
-							nodes.transcriber_engine_quality.classList.remove('lock')
-						}
+						apply_device_limits()
 					})
 
 					data_manager.get_local_db_data(
 						device_id,
 						'status'
-					).then(function( quality_saved ){
-						if(quality_saved){
-							transcriber_device_checkbox.checked = quality_saved.value
+					).then(function( device_saved ){
+						if(device_saved && device_saved.value){
+							transcriber_device_select.value = device_saved.value
+						}
+						apply_device_limits()
+					})
 
-						// initial change quality if the engine is checked.
-						// if the engine is checked only can set the small version,
-						// any large model use more ram that can be handled in wasm
-						// only webGPU can load large models
-							if(transcriber_device_checkbox.checked){
-								const quality_small	= transcriber_quality.value.find(el => el.label==='small').name
-								nodes.transcriber_engine_quality.value = quality_small
-								nodes.transcriber_engine_quality.classList.add('lock')
+		// paragraph structure of the resulting text
+		// A recogniser emits subtitle-sized segments; an interview transcript needs
+		// paragraphs. This is where the archivist says how much timecode detail to
+		// keep — and 'anchors' is the default because the subtitle builder derives
+		// its cue times by interpolating between marks, so paragraph-only marks
+		// would read well and drift the .vtt.
+				const tc_mode_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'tc_mode_label',
+					inner_html		: self.get_tool_label('paragraphs') || 'Paragraphs',
+					parent			: configuration_container
+				})
+
+				const transcriber_tc_mode_select = ui.create_dom_element({
+					element_type	: 'select',
+					parent			: tc_mode_label
+				})
+				//save the pointer
+				nodes.transcriber_tc_mode_select = transcriber_tc_mode_select
+
+				const tc_mode_options = [
+					{
+						value : 'paragraph_anchors',
+						label : self.get_tool_label('tc_mode_paragraph_anchors') || 'Paragraphs with time marks'
+					},
+					{
+						value : 'paragraph',
+						label : self.get_tool_label('tc_mode_paragraph') || 'Paragraphs, one mark each'
+					},
+					{
+						value : 'segment',
+						label : self.get_tool_label('tc_mode_segment') || 'One mark per phrase'
+					}
+				]
+				for (let i = 0; i < tc_mode_options.length; i++) {
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: tc_mode_options[i].value,
+						inner_html		: tc_mode_options[i].label,
+						parent			: transcriber_tc_mode_select
+					})
+				}
+
+				// Rebuild the paragraphs of the transcription that is ALREADY there.
+				// Transcripts made before the grouper existed are one paragraph per
+				// recogniser segment; this re-groups them under the current rules
+				// without re-recognising a single word.
+					const button_regroup_paragraphs = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'light button_regroup_paragraphs',
+						inner_html		: self.get_tool_label('regroup_paragraphs') || 'Rebuild paragraphs',
+						parent			: configuration_container
+					})
+					button_regroup_paragraphs.addEventListener('click', function(e){
+						e.stopPropagation()
+						const done = self.regroup_paragraphs({
+							format_options : {
+								tc_mode : transcriber_tc_mode_select.value
 							}
+						})
+						if (!done) {
+							ui.show_message(
+								automatic_transcription_container,
+								self.get_tool_label('empty_transcription') || 'There is no transcription to rebuild',
+								'error'
+							)
+						}
+					})
+
+				// local_db
+					const tc_mode_id = 'transcriber_tc_mode_select'
+					transcriber_tc_mode_select.addEventListener('change', function(){
+						data_manager.set_local_db_data({
+							id		: tc_mode_id,
+							value	: transcriber_tc_mode_select.value
+						}, 'status')
+					})
+
+					data_manager.get_local_db_data(
+						tc_mode_id,
+						'status'
+					).then(function( tc_mode_saved ){
+						if(tc_mode_saved && tc_mode_saved.value){
+							transcriber_tc_mode_select.value = tc_mode_saved.value
 						}
 					})
 
@@ -1262,6 +1442,67 @@ const render_automatic_transcription = function (options) {
 				})
 				//save the pointer
 					nodes.transcriber_engine_quality = transcriber_engine_quality
+
+				/**
+				* APPLY_INSTALLED_MODELS
+				* Mark the models that are NOT in the install's model store, and offer
+				* the download for them.
+				*
+				* A model the archivist can pick but nobody downloaded fails deep inside
+				* the ONNX runtime with "Could not locate file: …/config.json" — after
+				* the audio has been prepared, and with a message that helps no one. The
+				* store is the authority on what can actually run, so the picker asks it.
+				*
+				* Uninstalled models stay SELECTABLE on purpose: selecting one is how an
+				* administrator reaches the Download button below (and how anyone else
+				* discovers which models exist and asks for them). The transcription run
+				* itself still refuses an uninstalled model up front.
+				*/
+				const not_installed_suffix = ` — ${self.get_tool_label('not_installed') || 'not installed'}`
+				let installed_models = null
+
+				const apply_installed_models = function( installed ) {
+
+					if (!Array.isArray(installed)) {
+						return
+					}
+					installed_models = installed
+
+					for (let i = 0; i < transcriber_engine_quality.options.length; i++) {
+						const option	= transcriber_engine_quality.options[i]
+						const present	= installed.includes(option.value)
+						const marked	= option.text.endsWith(not_installed_suffix)
+						if (!present && !marked) {
+							option.text = `${option.text}${not_installed_suffix}`
+						}
+						if (present && marked) {
+							option.text = option.text.slice(0, -not_installed_suffix.length)
+						}
+					}
+
+					update_download_button()
+				}
+
+				/**
+				* UPDATE_DOWNLOAD_BUTTON
+				* Show the download control exactly when the SELECTED model is missing
+				* from the store. The server gates the action (global admin only), so
+				* showing the button to everyone leaks nothing — a non-admin who clicks
+				* it gets the refusal that tells them who to ask.
+				*/
+				const update_download_button = function() {
+					const selected	= transcriber_engine_quality.value
+					const missing	= Array.isArray(installed_models) && !installed_models.includes(selected)
+					button_download_model.classList.toggle('hide', !missing)
+				}
+
+				// Ask the server which models are usable, once, while the rest renders.
+				self.get_model_sources().then(function(response){
+					if (response && response.result) {
+						apply_installed_models( response.result.installed )
+					}
+				})
+
 				const quality_value = transcriber_quality.value
 				for (let i = 0; i < quality_value.length; i++) {
 
@@ -1287,18 +1528,84 @@ const render_automatic_transcription = function (options) {
 							id		: quality_id,
 							value	: transcriber_engine_quality.value
 						}, 'status')
+						update_download_button()
 					})
+
+			// Download the selected model into the install's store, from the UI.
+			// The server gates it (global admin + catalog names only) and runs the
+			// download as a background job; here we start it and poll until the
+			// store reports the model usable. Before this button, seeding required
+			// shell access to the server — out of reach for a hosted install's admin.
+				const button_download_model = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light button_download_model hide',
+					inner_html		: self.get_tool_label('download_model') || 'Download model',
+					parent			: quality_label
+				})
+				button_download_model.addEventListener('click', function(e){
+					e.stopPropagation()
+					const model = transcriber_engine_quality.value
+					button_download_model.classList.add('disable')
+
+					self.download_model( model ).then(function(response){
+						if (!response || response.result===false) {
+							button_download_model.classList.remove('disable')
+							ui.show_message(
+								automatic_transcription_container,
+								(response && response.msg) || 'Download failed',
+								'error'
+							)
+							return
+						}
+
+						nodes.status_container.classList.remove('hide')
+						// SEC-031: i18n label, plain text only.
+						nodes.status_container.textContent =
+							self.get_tool_label('downloading_model')
+							|| 'Downloading the model… this can take several minutes.'
+
+						// Poll until installed. Bounded: a download that outlives the
+						// cap is not declared failed — the job keeps running server-side
+						// and the next tool open will find the model in place.
+						let polls = 0
+						const poll = setInterval(function(){
+							if (++polls > 360) { // ~30 min at 5 s
+								clearInterval(poll)
+								button_download_model.classList.remove('disable')
+								nodes.status_container.textContent =
+									self.get_tool_label('download_still_running')
+									|| 'Still downloading — the model will appear when it finishes.'
+								return
+							}
+							self.get_model_sources().then(function(sources){
+								const installed = (sources && sources.result && Array.isArray(sources.result.installed))
+									? sources.result.installed
+									: []
+								if (installed.includes(model)) {
+									clearInterval(poll)
+									button_download_model.classList.remove('disable')
+									apply_installed_models( installed )
+									nodes.status_container.textContent =
+										self.get_tool_label('model_ready') || 'Model installed.'
+								}
+							})
+						}, 5000)
+					})
+				})
 
 					data_manager.get_local_db_data(
 						quality_id,
 						'status'
-					).then(function( quality_saved ){
-						// change the value if the user was change it and the engine check box is not selected
-						// if the engine is checked only can set the small version,
-						// any large model use more ram that can be handled in wasm
-						// only webGPU can load large models
-						if(quality_saved && !transcriber_device_checkbox.checked){
+					).then(async function( quality_saved ){
+						if(quality_saved && quality_saved.value){
 							transcriber_engine_quality.value = quality_saved.value
+						}
+						// Re-apply both restrictions: a SAVED choice may be a model the
+						// current device cannot run, or one that is no longer installed.
+						apply_device_limits()
+						const sources = await self.get_model_sources()
+						if (sources && sources.result) {
+							apply_installed_models( sources.result.installed )
 						}
 					})
 			}//end if(transcriber_quality)

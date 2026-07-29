@@ -56,7 +56,16 @@ export async function executeSqlDeleteTargets(
 			confirmed = true;
 		} catch (error) {
 			if (isMissingTableError(error) || isMissingDatabaseError(error)) {
-				// Never published there — idempotent success (oracle errno 1146/1049).
+				// Idempotent success (oracle errno 1146/1049): nothing published there.
+				// Since DIFF-A put the delete target names through the SAME identifier
+				// chokepoint as publish, a missing table can no longer be a
+				// case/sanitize MISMATCH masquerading as "unpublished" (the bug that
+				// left records live while dd1758 logged success and retry never fired).
+				// It is now genuinely never-created — but LOG it (was silent), so an
+				// unexpected drop still surfaces instead of reading as a clean unpublish.
+				console.warn(
+					`[diffusion delete] ${key}: target absent (errno 1146/1049) — treating unpublish as idempotent success`,
+				);
 				confirmed = true;
 			} else {
 				result.errors.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);

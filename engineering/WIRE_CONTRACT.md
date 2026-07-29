@@ -2812,3 +2812,48 @@ formulation as WC-059.
 
 Gate: `test/unit/media_timecode.test.ts` (atomicity pinned as a TM row count on a
 scratch `test2` record seeded so slice index 0 ≠ array index 0).
+
+## WC-062 — `tool_identify` client package is TS-only (2026-07-28)
+
+ADDITIVE, no PHP counterpart: `tool_identify` is the object-identification
+curator panel (`engineering/IDENTIFY_SPEC.md`), a TS-native tool that never
+existed in the frozen PHP tree. Its client files therefore appear in the TS
+`get_dedalo_files` census and in no oracle harvest, exactly like the tools
+already ledgered as TS-only — `tool_error_report` (WC-019), the `error_reports`
+widget (WC-018), and `tool_sitebuilder` + `site_builder_status` (WC-035).
+
+Handled the same way they are: `isTsOnlyEntry` in
+`test/parity/dedalo_files_differential.test.ts` filters the prefix from BOTH
+sides of the set compare. **The frozen fixture is NOT edited** — a re-harvest is
+impossible by definition, and rewriting a harvested oracle to accommodate new TS
+files would destroy the very baseline the gate exists to hold. The predicate is
+the sanctioned seam for "exists only in TS"; the fixture stays the record of
+what PHP actually served.
+
+Files: `/dedalo/tools/tool_identify/{js/*.js,css/tool_identify.css}`.
+
+## WC-063 — TS-native core client files absent from the frozen oracle census (2026-07-29)
+
+ADDITIVE, no PHP counterpart. Five `client/dedalo/core/` files exist only in the
+TS `get_dedalo_files` census:
+
+- `core/page/js/design.js` + `core/page/js/design-init.js` — the design-line
+  toggle (classic / redesign), a TS-era client feature;
+- `core/common/js/session_expiry.js` — the idle-session countdown client
+  (behaviour ledgered under WC-051; the FILE is censused here);
+- `core/search/js/preset_scope.js` — the search-preset scope panel (dd623
+  presets, a TS-era feature);
+- `core/search/js/render_semantic.js` — the semantic-search (RAG) results
+  rendering, TS-native by definition.
+
+Handled like WC-013/WC-019: `isTsNativeCoreFileEntry` in
+`test/parity/dedalo_files_differential.test.ts` filters them from BOTH sides of
+the set compare; the every-TS-url-resolves gate still proves they serve.
+
+## WC-064 — `php_user` maintenance widget removed (2026-07-29)
+
+The `php_user` area_maintenance widget administered the PHP engine's system
+user — meaningless since the cutover retired that engine. Its two client files
+(`widgets/php_user/js/{php_user,render_php_user}.js`) are gone from the TS
+tree; the frozen oracle still censuses them. Filtered from BOTH sides
+(`isPhpUserRemovalEntry`), the same pattern as the WC-030 runtime_info merge.

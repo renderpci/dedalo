@@ -38,8 +38,20 @@ import { pipeline, env } from './lib/transformers.js';
  */
 //const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
 
-// Self-hosted model: serve from same origin instead of HuggingFace CDN
-// In browser context, the library uses fetch() with remoteHost + remotePathTemplate
+// RC-01 (2026-07-28 audit): PIN the onnxruntime-web runtime to THIS install.
+// Without wasmPaths, transformers.js loads its WASM glue (.mjs + .wasm) from
+// cdn.jsdelivr.net at runtime — third-party CODE executing in the archivist's
+// session, and impossible in an air-gapped archive. Point it at the same local
+// onnxruntime the browser_whisper transcriber uses (served from
+// node_modules/onnxruntime-web via the client-libs registry). The enforcing CSP
+// (script-src/connect-src 'self') also blocks the CDN fetch, so an un-pinned
+// build now fails loudly instead of silently phoning home.
+if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
+	env.backends.onnx.wasm.wasmPaths = new URL('/dedalo/lib/onnxruntime/dist/', self.location.origin).href;
+}
+env.allowLocalModels	= false;
+env.allowRemoteModels	= true;	// "remote" here means our OWN origin (below)
+// Self-hosted model: serve from same origin instead of HuggingFace CDN.
 env.remoteHost			= new URL('./models/', self.location.href).href;
 env.remotePathTemplate	= '{model}/';
 const MODEL_ID			= 'translategemma-text-4b-it-ONNX';

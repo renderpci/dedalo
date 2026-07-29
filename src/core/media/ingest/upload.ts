@@ -17,9 +17,12 @@
 
 import {
 	appendFileSync,
+	closeSync,
 	existsSync,
 	mkdirSync,
+	openSync,
 	readFileSync,
+	readSync,
 	renameSync,
 	unlinkSync,
 	writeFileSync,
@@ -177,7 +180,20 @@ export function joinChunkedUpload(
 		appendFileSync(assembled, new Uint8Array(readFileSync(part)));
 		unlinkSync(part);
 	}
-	const bytes = new Uint8Array(readFileSync(assembled));
+	// DOS-03 (2026-07-28 audit): the re-sniff needs only the leading magic bytes,
+	// NOT the whole file. Reading the entire assembled upload into RAM (media
+	// files reach many GB) doubled RSS and could OOM the server. Read a bounded
+	// prefix instead.
+	const SNIFF_BYTES = 8192;
+	const head = new Uint8Array(SNIFF_BYTES);
+	const fd = openSync(assembled, 'r');
+	let readCount: number;
+	try {
+		readCount = readSync(fd, head, 0, SNIFF_BYTES, 0);
+	} finally {
+		closeSync(fd);
+	}
+	const bytes = head.subarray(0, readCount);
 	try {
 		sniffAndValidate(bytes, extension);
 	} catch (error) {

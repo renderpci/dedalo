@@ -105,8 +105,8 @@ describe('time machine (dd15) sort policy', () => {
 		// EVERY mapped column is qualified — no bare identifier may reach the SQL.
 		for (const column of new Set(Object.values(TM_ORDER_COLUMN))) {
 			const sql = buildTmOrderSql(column, 'DESC');
-			expect(sql.startsWith('tm."' + column + '"'), column + ' not qualified: ' + sql).toBe(true);
-			expect(/(^|[ ,])(?!tm\.)[a-z_]+ (ASC|DESC)/.test(sql), 'bare identifier in: ' + sql).toBe(
+			expect(sql.startsWith(`tm."${column}"`), `${column} not qualified: ${sql}`).toBe(true);
+			expect(/(^|[ ,])(?!tm\.)[a-z_]+ (ASC|DESC)/.test(sql), `bare identifier in: ${sql}`).toBe(
 				false,
 			);
 		}

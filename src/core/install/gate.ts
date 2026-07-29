@@ -14,6 +14,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
+import { INSTALL_MODE } from '../../config/install_mode.ts';
 import { getServerState } from '../resolve/server_state.ts';
 
 /** The (class:action) pairs that make up the pre-auth install surface. */
@@ -39,6 +40,30 @@ export function isSealed(): boolean {
 export function installInProgress(): boolean {
 	const status = getServerState().install_status;
 	return status === 'configured' || status === 'installing';
+}
+
+/**
+ * Is the pre-auth install surface reachable AT ALL? (OPS-01, 2026-07-28 audit.)
+ *
+ * It opens ONLY on a genuinely fresh box (`INSTALL_MODE` — every required
+ * config key unset) or one whose TS wizard is mid-flight (`installInProgress`),
+ * and NEVER once sealed. The prior gate keyed on `!isSealed()` ALONE, which
+ * FAILED OPEN on every PHP-migrated / coexistence instance: those have their DB
+ * keys set (so `INSTALL_MODE` is false) yet carry no `install_status` (the
+ * v6→v7 config migration drops `DEDALO_INSTALL_STATUS` and `DEFAULT_STATE`
+ * omits it), so `isSealed()` returned false and the UNAUTHENTICATED installer —
+ * `persist_config` (rewrites `.env` + forces a restart) and `test_db_connection`
+ * (spawns psql) — was exposed to anyone who could reach the port.
+ *
+ * This is the SAME wizard-vs-app predicate the get_install_context handler
+ * already applies (`dd_core_api`: `config.installMode || installInProgress()`);
+ * the dispatch gate had simply been weaker than the handler it fronts. Reading
+ * `INSTALL_MODE` (a load-time const over env only, not the frozen `config`
+ * object) keeps this callable on a half-configured box without throwing.
+ */
+export function installSurfaceReachable(): boolean {
+	if (isSealed()) return false;
+	return INSTALL_MODE || installInProgress();
 }
 
 /**

@@ -74,8 +74,21 @@ function assignedKeys(lines: readonly string[]): Set<string> {
 	return keys;
 }
 
-/** Quote a value for the .env file when it needs it (spaces/quotes/empty). */
-function envQuote(value: string): string {
+/**
+ * Quote a value for the .env file when it needs it (spaces/quotes/empty).
+ *
+ * A `.env` is LINE-BASED, so a CR/LF inside a value cannot be represented —
+ * quoting does not help, the parser still splits on the newline and reads the
+ * tail as a SEPARATE `KEY=value` line. That is arbitrary-key injection
+ * (OPS-02, 2026-07-28 audit): a posted wizard field carrying
+ * `foo\nDEDALO_BINARY_BASE=/tmp/evil` would inject a spawned-binary redirect.
+ * No legitimate wizard value contains a newline or NUL, so REFUSE it (fail
+ * loud) rather than emit a corrupt/injected file.
+ */
+export function envQuote(value: string): string {
+	if (/[\r\n\0]/.test(value)) {
+		throw new Error('install: configuration value contains an illegal control character');
+	}
 	if (value === '') return '""';
 	if (/[\s"'#=]/.test(value)) return `"${value.replace(/"/g, '\\"')}"`;
 	return value;
@@ -119,11 +132,11 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 	// Secrets: preserve an existing value, else generate (and surface once).
 	const salt = prior.DEDALO_SALT_STRING ?? generateSecret();
 	if (prior.DEDALO_SALT_STRING === undefined) generated.DEDALO_SALT_STRING = salt;
-	let diffusionToken = prior.DEDALO_DIFFUSION_INTERNAL_TOKEN;
-	if (diffusion && diffusionToken === undefined) {
-		diffusionToken = generateSecret();
-		generated.DEDALO_DIFFUSION_INTERNAL_TOKEN = diffusionToken;
-	}
+	// OPS-04 (2026-07-28 audit): DEDALO_DIFFUSION_INTERNAL_TOKEN is NO LONGER
+	// minted. The TS engine removed the diffusion socket + internal-token control
+	// plane (see diffusion_bridge/diffusion_delete.ts) — the whole diffusion API
+	// runs behind the normal dispatch gates now — so writing a fresh secret here
+	// only left a weak, never-verified token sitting in every install's .env.
 
 	// Build the .env body with PHP key names (the aliases env.ts already resolves).
 	const lines: string[] = [
@@ -187,7 +200,6 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 			`DEDALO_DIFFUSION_DB_USER=${envQuote(str('mysql_username'))}`,
 			`DEDALO_DIFFUSION_DB_PASSWORD=${envQuote(str('mysql_password'))}`,
 			`DEDALO_DIFFUSION_DB_NAME=${envQuote(str('mysql_database'))}`,
-			`DEDALO_DIFFUSION_INTERNAL_TOKEN=${envQuote(diffusionToken ?? '')}`,
 		);
 	}
 	if (mailer) {

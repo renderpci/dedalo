@@ -157,12 +157,21 @@ async function getArIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespon
 			return fail('section_tipo and a positive section_id are required');
 		}
 
-		const hits = await findInverseReferences(
+		const rawHits = await findInverseReferences(
 			[{ section_tipo: sectionTipo, section_id: sectionId }],
 			{
 				order: 'section_id',
 			},
 		);
+		// TOOLS-08 (2026-07-28 audit): scope the inverse-reference hits to the
+		// caller's projects filter — the THIRD door of the AUTHZ-05 class the prior
+		// audit's R4 fix wired into relation_list.ts / dd_core_api.ts but not here.
+		// Without it, a non-admin enumerates the existence of records (in other
+		// tenants' projects) that reference the target. Global admins are unscoped.
+		const { scopeInverseReferenceHits } = await import(
+			'../../../src/core/security/record_scope.ts'
+		);
+		const hits = await scopeInverseReferenceHits(rawHits, ctx.principal);
 		const descriptors: Record<string, unknown>[] = [];
 		for (const hit of hits) {
 			const descriptor = await identifyingImageFromSection(hit.section_tipo, hit.section_id);

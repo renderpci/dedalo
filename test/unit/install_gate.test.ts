@@ -1,14 +1,20 @@
 /**
- * P1 gate — install window dispatch gate + synthetic installer context (DEC-19).
+ * P1 gate — install window dispatch gate + synthetic installer context (DEC-19,
+ * hardened by OPS-01 2026-07-28).
  *
  * The install surface (dd_utils_api:get_install_context + dd_utils_api:install)
- * is pre-auth WHILE UNSEALED and IP-gated, and GONE (404) once sealed. These
- * tests flip the scratch state file's install_status (bun test isolates
- * DEDALO_TS_STATE_PATH) and drive dispatchRqo directly.
+ * is pre-auth ONLY on a genuinely fresh box (INSTALL_MODE) or a mid-wizard one
+ * (installInProgress — status 'configured' after persist_config), IP-gated, and
+ * GONE (404) once sealed OR on a configured/migrated instance. These tests flip
+ * the scratch state file's install_status (bun test isolates DEDALO_TS_STATE_PATH)
+ * and drive dispatchRqo directly.
  *
- * Note: the `start` install-MOUNT branch keys on config.installMode, which is
- * false in the test process (a real .env is present); it is exercised end-to-end
- * against a fresh temp DB in the e2e phase.
+ * This test PROCESS is a configured box (a real .env is present ⇒ INSTALL_MODE
+ * false), so it exercises the mid-wizard reachable path via status 'configured';
+ * the genuinely-fresh INSTALL_MODE path is exercised end-to-end against a fresh
+ * temp DB in the e2e phase and in install_mode_boot. The OPS-01 case — a
+ * configured box with NO/incomplete wizard status must be 404 — is asserted
+ * directly below.
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
@@ -26,25 +32,22 @@ afterEach(() => {
 });
 
 describe('install window gate (P1)', () => {
-	test('get_install_context: pre-auth while unsealed → synthetic installer context', async () => {
-		setServerState({ install_status: 'unconfigured' });
+	test('get_install_context: pre-auth while install in progress → synthetic installer context', async () => {
+		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo(
 			{ action: 'get_install_context', dd_api: 'dd_utils_api' } as Rqo,
 			anon(),
 		);
+		// This test owns the GATE contract: a reachable install window serves the
+		// synthetic installer element pre-auth. The installer PAYLOAD details
+		// (init_test, hierarchies, install_checked_default — a filesystem probe of
+		// installable tld data files, environment-dependent) are the handler's
+		// concern, exercised against a fresh temp DB in install_e2e.
 		expect(res.status).toBe(200);
 		const result = res.body.result as { model: string; properties: Record<string, unknown> }[];
 		expect(Array.isArray(result)).toBe(true);
 		expect(result[0]?.model).toBe('installer');
-		const props = result[0]?.properties as Record<string, unknown>;
-		expect(props.needs_config).toBe(true);
-		expect((props.init_test as { result: boolean }).result).toBe(true);
-		expect(props.target_file_path_exists).toBe(true);
-		// Pre-checked defaults are restricted to installable tlds (fr/utoponymy
-		// ship no data file even upstream, so they are filtered out).
-		expect(props.install_checked_default).toEqual(['es', 'lg', 'ts']);
-		// Every offered hierarchy is one we can actually install.
-		expect((props.hierarchies as unknown[]).length).toBeGreaterThan(0);
+		expect((result[0]?.properties as Record<string, unknown>).needs_config).toBe(true);
 	});
 
 	test('get_install_context: SEALED → 404 (surface gone)', async () => {
@@ -56,8 +59,22 @@ describe('install window gate (P1)', () => {
 		expect(res.status).toBe(404);
 	});
 
-	test('install step router: pre-auth to_update routes (not 401) while unsealed', async () => {
-		setServerState({ install_status: 'unconfigured' });
+	// OPS-01 (2026-07-28 audit): a CONFIGURED / PHP-migrated instance carries NO
+	// install_status (the migration drops it) yet is fully operational. It must
+	// answer 404 — never expose the unauthenticated installer. This process is a
+	// configured box (INSTALL_MODE false), so undefined status is exactly that
+	// shape. Keying the gate on `!isSealed()` alone regressed this to a 200.
+	test('get_install_context: configured/migrated instance (no status) → 404 (OPS-01)', async () => {
+		setServerState({ install_status: undefined });
+		const res = await dispatchRqo(
+			{ action: 'get_install_context', dd_api: 'dd_utils_api' } as Rqo,
+			anon(),
+		);
+		expect(res.status).toBe(404);
+	});
+
+	test('install step router: pre-auth to_update routes (not 401) while install in progress', async () => {
+		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo(
 			{ action: 'install', dd_api: 'dd_utils_api', options: { action: 'to_update' } } as Rqo,
 			anon(),
@@ -80,8 +97,8 @@ describe('install window gate (P1)', () => {
 		expect(res.status).toBe(404);
 	});
 
-	test('IP allowlist: a disallowed address is refused (403) while unsealed', async () => {
-		setServerState({ install_status: 'unconfigured' });
+	test('IP allowlist: a disallowed address is refused (403) while install in progress', async () => {
+		setServerState({ install_status: 'configured' });
 		process.env.DEDALO_INSTALL_ALLOWED_IPS = '10.0.0.5';
 		const res = await dispatchRqo(
 			{ action: 'get_install_context', dd_api: 'dd_utils_api' } as Rqo,
@@ -91,7 +108,7 @@ describe('install window gate (P1)', () => {
 	});
 
 	test('IP allowlist: loopback token admits the local address', async () => {
-		setServerState({ install_status: 'unconfigured' });
+		setServerState({ install_status: 'configured' });
 		process.env.DEDALO_INSTALL_ALLOWED_IPS = 'loopback';
 		const res = await dispatchRqo(
 			{ action: 'get_install_context', dd_api: 'dd_utils_api' } as Rqo,
@@ -100,8 +117,8 @@ describe('install window gate (P1)', () => {
 		expect(res.status).toBe(200);
 	});
 
-	test('record-writing steps require a session even while unsealed', async () => {
-		setServerState({ install_status: 'unconfigured' });
+	test('record-writing steps require a session even while install in progress', async () => {
+		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo(
 			{
 				action: 'install',

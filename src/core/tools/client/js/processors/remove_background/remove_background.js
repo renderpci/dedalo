@@ -42,8 +42,20 @@
 * browser's module cache.
 */
 
-// imports
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.6.3';
+// imports — RC-01 (2026-07-28 audit): load the transformers runtime + its
+// onnxruntime WASM from THIS install, never a CDN (an archive may be air-gapped,
+// and third-party code must never run in the archivist's session). Mirrors the
+// browser_whisper transcriber. The enforcing CSP (script-src 'self') also blocks
+// the old jsdelivr import, so an un-pinned build fails loudly.
+import { pipeline, env } from '/dedalo/lib/transformers/dist/transformers.js';
+
+if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
+	env.backends.onnx.wasm.wasmPaths = new URL('/dedalo/lib/onnxruntime/dist/', self.location.origin).href;
+}
+env.allowLocalModels	= false;
+env.allowRemoteModels	= true;	// "remote" here means our OWN origin
+env.remoteHost			= new URL('/dedalo/ai_models/', self.location.origin).href;
+env.remotePathTemplate	= '{model}/';
 
 
 

@@ -40,8 +40,44 @@ Permission gating: the write/read target for each action is a nested `media_ddo`
 
 Two transcription paths, chosen by the configured engine's `type`:
 
-- `type: "browser"` (default, e.g. the `local` engine) → `automatic_transcription()` (client) spins up `transcribers/browser_whisper/browser_whisper.js` as a Web Worker (Transformers.js Whisper), first calls the server `create_transcribable_audio_file` action to get the 16 kHz WAV URL, decodes it via `AudioContext`, posts the channel data + model + device (`webgpu`/`wasm`) to the worker, streams status/progress labels into the UI, and on `end` parses the worker output into Dédalo paragraph+timecode format and `set_value`s it into the text area (then fires `delete_transcribable_audio_file`). It checks `ua.check_transformers_webgpu()` and warns before running on a non-WebGPU browser.
-- `type: "server"` (e.g. Babel) → `automatic_transcription_server()` (client) sends the `automatic_transcription` action, stores the returned `pid` in the local status DB, and polls `check_server_transcriber_status` every ~4 s until the server reports done, then refreshes the text component. The remote provider seam behind both actions has been verified with a **stub** provider only; a real Babel HTTP round-trip is not yet live-verified.
+- `type: "browser"` (default, e.g. the `local` engine) → `automatic_transcription()` (client) spins up `transcribers/browser_whisper/browser_whisper.js` as a Web Worker (Transformers.js Whisper), first calls the server `create_transcribable_audio_file` action to get the 16 kHz WAV URL, fetches it **from the web server** (never through the engine — see `engineering/TRANSCRIPTION.md`; a media host on another origin must allow CORS), decodes it via `AudioContext`, **transfers** the channel data to the worker, streams progress into the UI and, on `end`, formats the returned segments into paragraphs and `set_value`s them into the text area. `delete_transcribable_audio_file` fires on EVERY exit path — success, error, cancel — because the temporary WAV is a copy of the interview. Partial results are persisted per record/component in the local `status` store, so a closed window resumes instead of restarting.
+- `type: "server"` → `automatic_transcription_server()` (client) sends the `automatic_transcription` action, stores the returned `pid` in the local status DB, and polls `check_server_transcriber_status` every ~4 s until the server reports done, then refreshes the text component. Two providers sit behind it: `babel_transcriber` (external service, fetches a public media URL — stub-verified only) and `local_whisper` (the institution's own recognition box, POSTed the audio bytes; see `engineering/TRANSCRIPTION.md`).
+
+#### The browser recognition pipeline
+
+The worker does not hand the model the whole recording. That was the previous
+design, and it is what produced the repeated words users reported: blind
+30-second windows with a 5-second overlap transcribe the overlap twice, and the
+silence inside those windows is the classic trigger of a Whisper repetition loop.
+
+1. `transcribers/lib/vad.js` finds the speech and plans decode windows that start
+   and end **at pauses** — no overlap needed, long silences never sent;
+2. each window is decoded independently: greedy with `repetition_penalty`,
+   `no_repeat_ngram_size`, and no conditioning on the previous window (beam
+   search is unsupported by the ONNX ASR pipeline and is clamped to 1);
+3. a window whose output still looks degenerate is retried up a temperature
+   ladder, and the least repetitive attempt wins;
+4. `transcribers/lib/transcript_postprocess.js` collapses in-segment loops,
+   strips cross-window duplication and repairs missing end timestamps;
+5. `transcribers/lib/paragraphs.js` groups the segments into paragraphs.
+
+Quantisation is per model, from the catalog (`dtype`), and the encoder and the
+decoder are chosen separately: a 4-bit **decoder** — which is what the old code
+forced for every large model — is the single best-known cause of repetition
+loops.
+
+The three `transcribers/lib/*.js` modules are plain ESM with `.d.ts` siblings and
+no build step, imported unchanged by the Bun test gates and (for `paragraphs.js`)
+by the server write-back, so browser-produced and server-produced transcripts are
+formatted identically.
+
+Client actions worth knowing about, beyond the API ones:
+
+| Client method | What it does |
+| --- | --- |
+| `automatic_transcription(options)` | the browser pipeline above; resolves `[html]` for the text component, or `false` when it failed |
+| `abort_transcription()` | asks the worker to stop; it finishes the current window and returns everything recognised so far through the normal `end` path |
+| `regroup_paragraphs(options)` | re-paragraphs the transcript ALREADY in the component (`parse_transcript` → `segments_to_html`). No recognition, no word changes, saved through the normal component save |
 
 Styling: `css/tool_transcription.less`.
 
@@ -61,7 +97,8 @@ Notes:
 
 - `get_text_from_pdf` is not implemented on this engine (SEC-024 record-scope concerns) — use [tool_pdf_extractor](index.md).
 - The internal completion poll (`check_background_transcriber_status`) is the only entry in `backgroundRunnable`; it is not itself callable from the client (absent from `apiActions`) and is scheduled only by `automatic_transcription` itself. None of the five client-facing actions run through the background executor: the remote-ASR submit returns immediately with a job PID and the completion poll runs detached, while the browser-Whisper path runs entirely in the user's browser.
-- Engine names and qualities come from the tool config (`getToolConfig('tool_transcription')` — same dd996/dd1633 resolution as every other tool): the shipped default ships `transcriber_engine` `[{name:"local", type:"browser", label:"Local transcriber"}]` (`client:true`) and a `transcriber_quality` list, default `large` (`client:true`). A server-type engine (e.g. Babel) needs its `uri`/`key` configured — `resolveTranscriberProvider`/`resolveTranscriberConfig` (`src/core/tools/transcription_asr.ts`) has been verified with a **stub** provider only; a real Babel HTTP round-trip is not yet live-verified.
+- Engine names and models come from the tool config (`getToolConfig('tool_transcription')` — same dd996/dd1633 resolution as every other tool). The shipped default declares two engines: `local` (browser) and `local_whisper` (the institution's own recognition box), plus a `transcriber_quality` **catalog** whose entries carry `tier`, `languages`, `size_mb`, `requires` (`webgpu` models are disabled when the user picks the compatible device) and `dtype`. Default: `large_turbo` — near large-v3 accuracy with far fewer repetition loops. A server-type engine needs its `uri`/`key` in `transcriber_config`; for `local_whisper` on a LAN address, also `DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true`.
+- Model WEIGHTS for the browser engine come from the install's own model store (`/dedalo/ai_models/`, `DEDALO_AI_MODEL_STORE`) and the runtime from the client-lib registry — never a CDN or a public hub. Seeding has two doors, one downloader (`src/core/ai/model_fetch.ts`): the operator CLI `scripts/fetch_ai_models.ts`, and the `download_model` action — global-admin-only, catalog names only (the id becomes a hub URL and a store directory), run as a background job while the client polls `get_model_sources` until the model reports installed. See `engineering/TRANSCRIPTION.md`.
 
 ## How it is registered & surfaced
 
@@ -73,7 +110,7 @@ Notes:
 - **show_in_inspector** (dd1331 → dd64 §1 = Yes) **and** **show_in_component** (dd1332 → dd64 §1 = Yes): both true — the button renders both in the inspector panel and inline in the component.
 - `properties` (dd1335): `{ "open_as": "window", "windowFeatures": null }`.
 - `default_config` (dd1633): the `transcriber_engine` / `transcriber_quality` blocks described above.
-- UI labels (dd1372): a large multilingual set (`automatic_transcription`, `build_subtitles`, `quality`, `engine`, `chars_per_line`, `processing_audio`, `initializing`, `setting_up`, `transcription_completed`, `cpu_device`, `large`/`small`/`medium`/`large_turbo`, …), fetched client-side via `get_tool_label(...)`.
+- UI labels (dd1372): a large multilingual set (`automatic_transcription`, `build_subtitles`, `quality`, `engine`, `chars_per_line`, `processing_audio`, `initializing`, `setting_up`, `transcription_completed`, `device`/`device_auto`/`device_gpu`/`cpu_device`, `paragraphs`, `tc_mode_*`, `cancel`, `regroup_paragraphs`, `large`/`small`/`medium`/`large_turbo`/`parakeet_v3`, …), fetched client-side via `get_tool_label(...)`.
 
 Surfacing is element-driven (`getElementTools`, `src/core/tools/registry.ts`): once the user's profile is authorized for the tool, its button appears on any `component_av`, `component_image` or `component_pdf` element (matched against `affected_models`). The transcription workbench is most useful on AV components that have an adjacent transcription `component_text_area` declared in the section's `tool_config.ddo_map`.
 

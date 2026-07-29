@@ -118,7 +118,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		if (sectionTipo === '' || filesData.length === 0)
 			return fail('Missing section_tipo or files_data');
 		const { entries, idSpec } = readMarcMap(o.tool_config);
-		if (entries.length === 0) // Names the AUTHORING location (sample_config.json / register.json), which is
+		if (entries.length === 0)
+			// Names the AUTHORING location (sample_config.json / register.json), which is
 			// where an admin actually fixes it — not the flat key getToolConfig resolves to.
 			return fail('Missing marc21_map (tool_config.config.map)');
 

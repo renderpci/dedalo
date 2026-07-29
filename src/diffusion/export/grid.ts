@@ -43,12 +43,13 @@
  * and the protocol's meta `total` needs the full selection up front.
  */
 
-import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
+import { getSectionTipos, sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import { sql } from '../../core/db/postgres.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
+import { getPermissions } from '../../core/security/permissions.ts';
 import type { ToolActionContext, ToolResponse } from '../../core/tools/module.ts';
 import { loadExportRecord, prefetchExportRecords } from '../resolve/resolver.ts';
 import type { ExportRun, ExportSegment, GridAtom } from './atoms.ts';
@@ -547,6 +548,38 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	const sqo = sanitizeClientSqo(structuredClone(sqoInput));
 	sqo.limit = null as unknown as number; // ALL
 	sqo.offset = 0;
+
+	// TOOLS-02 (2026-07-28 audit): the tool gate checked read (>=1) on the
+	// DECLARED options.section_tipo only, but the export READS whatever
+	// options.sqo targets and emits whatever ddo PATHS are requested — sections
+	// and components the caller may not read (dd128 users → dd133 password
+	// hashes; dd996 API keys; neither is projects-gated, so buildSearchSql does
+	// not narrow them). Re-apply the read path's authorization (dd_core_api Gate
+	// A + Gate B): every SQO target section AND every exported ddo-path component
+	// must be readable by the principal. Fail CLOSED. Global admins are exempt.
+	if (!context.principal.isGlobalAdmin) {
+		for (const targetSectionTipo of getSectionTipos(
+			sqo as unknown as Parameters<typeof getSectionTipos>[0],
+		)) {
+			if ((await getPermissions(context.principal, targetSectionTipo, targetSectionTipo)) < 1) {
+				return { result: false, msg: 'Insufficient permissions to read', errors: ['unauthorized'] };
+			}
+		}
+		for (const ddo of exportDdos) {
+			for (const seg of ddo.path ?? []) {
+				if (typeof seg.section_tipo === 'string' && typeof seg.component_tipo === 'string') {
+					if ((await getPermissions(context.principal, seg.section_tipo, seg.component_tipo)) < 1) {
+						return {
+							result: false,
+							msg: 'Insufficient permissions to read',
+							errors: ['unauthorized'],
+						};
+					}
+				}
+			}
+		}
+	}
+
 	const { sql: builtSql, params } = await buildSearchSql(sqo, {
 		principal: context.principal.isGlobalAdmin ? undefined : context.principal,
 		// The export reads only the selection identity here (per-record data

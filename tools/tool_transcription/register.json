@@ -190,7 +190,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "3.0.3"
+        "value": "3.1.1"
       }
     ],
     "dd1328": [
@@ -1410,6 +1410,306 @@
           },
           {
             "lang": "lg-eng",
+            "name": "device",
+            "value": "Device"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "device",
+            "value": "Dispositivo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "device",
+            "value": "Dispositiu"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "device_auto",
+            "value": "Automatic"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "device_auto",
+            "value": "Automático"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "device_auto",
+            "value": "Automàtic"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "device_gpu",
+            "value": "GPU (faster)"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "device_gpu",
+            "value": "GPU (más rápido)"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "device_gpu",
+            "value": "GPU (més ràpid)"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "paragraphs",
+            "value": "Paragraphs"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "paragraphs",
+            "value": "Párrafos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "paragraphs",
+            "value": "Paràgrafs"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "tc_mode_paragraph_anchors",
+            "value": "Paragraphs with time marks"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "tc_mode_paragraph_anchors",
+            "value": "Párrafos con marcas de tiempo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "tc_mode_paragraph_anchors",
+            "value": "Paràgrafs amb marques de temps"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "tc_mode_paragraph",
+            "value": "Paragraphs, one mark each"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "tc_mode_paragraph",
+            "value": "Párrafos, una marca por párrafo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "tc_mode_paragraph",
+            "value": "Paràgrafs, una marca per paràgraf"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "tc_mode_segment",
+            "value": "One mark per phrase"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "tc_mode_segment",
+            "value": "Una marca por frase"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "tc_mode_segment",
+            "value": "Una marca per frase"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cancel",
+            "value": "Cancel"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cancel",
+            "value": "Cancelar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cancel",
+            "value": "Cancel·lar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "regroup_paragraphs",
+            "value": "Rebuild paragraphs"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "regroup_paragraphs",
+            "value": "Rehacer párrafos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "regroup_paragraphs",
+            "value": "Refer paràgrafs"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "parakeet_v3",
+            "value": "Parakeet (no repetitions)"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "parakeet_v3",
+            "value": "Parakeet (sin repeticiones)"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "parakeet_v3",
+            "value": "Parakeet (sense repeticions)"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "resumed_transcription",
+            "value": "Resuming the previous transcription"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "resumed_transcription",
+            "value": "Reanudando la transcripción anterior"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "resumed_transcription",
+            "value": "Reprenent la transcripció anterior"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "model_store_empty",
+            "value": "No local speech models are installed. Ask your administrator to seed the model store."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "model_store_empty",
+            "value": "No hay modelos de voz instalados localmente. Pida al administrador que instale los modelos."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "model_store_empty",
+            "value": "No hi ha models de veu instal·lats localment. Demaneu a l'administrador que instal·li els models."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "empty_transcription",
+            "value": "There is no transcription to rebuild"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "empty_transcription",
+            "value": "No hay transcripción que rehacer"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "empty_transcription",
+            "value": "No hi ha transcripció per refer"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "model_not_installed",
+            "value": "This model is not installed on this server"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "model_not_installed",
+            "value": "Este modelo no está instalado en el servidor"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "model_not_installed",
+            "value": "Aquest model no està instal·lat al servidor"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "no_speech_recognized",
+            "value": "No speech was recognized — the existing text was left untouched."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "no_speech_recognized",
+            "value": "No se reconoció ninguna voz — el texto existente no se ha modificado."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "no_speech_recognized",
+            "value": "No s'ha reconegut cap veu — el text existent no s'ha modificat."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "not_installed",
+            "value": "not installed"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "not_installed",
+            "value": "no instalado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "not_installed",
+            "value": "no instal·lat"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "download_model",
+            "value": "Download model"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "download_model",
+            "value": "Descargar modelo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "download_model",
+            "value": "Baixar model"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "downloading_model",
+            "value": "Downloading the model… this can take several minutes."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "downloading_model",
+            "value": "Descargando el modelo… puede tardar varios minutos."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "downloading_model",
+            "value": "Baixant el model… pot trigar uns quants minuts."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "model_ready",
+            "value": "Model installed."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "model_ready",
+            "value": "Modelo instalado."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "model_ready",
+            "value": "Model instal·lat."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "download_still_running",
+            "value": "Still downloading — the model will appear when it finishes."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "download_still_running",
+            "value": "Descarga en curso — el modelo aparecerá cuando termine."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "download_still_running",
+            "value": "Baixada en curs — el model apareixerà quan acabi."
+          },
+          {
+            "lang": "lg-eng",
             "name": "inactive",
             "value": "Inactive"
           },
@@ -1571,6 +1871,12 @@
                 "name": "local",
                 "type": "browser",
                 "label": "Local transcriber"
+              },
+              {
+                "name": "local_whisper",
+                "type": "server",
+                "label": "On-premise transcriber",
+                "notes": "Speech recognition on a machine the institution owns (faster-whisper / WhisperX / whisper.cpp). The audio is sent to it as bytes over the LAN and never published."
               }
             ],
             "client": true
@@ -1579,20 +1885,82 @@
             "type": "array",
             "value": [
               {
-                "name": "Xenova/whisper-small",
-                "label": "small"
-              },
-              {
                 "name": "onnx-community/whisper-large-v3-ONNX",
-                "label": "large"
+                "label": "large",
+                "tier": "browser",
+                "languages": "99",
+                "size_mb": 1550,
+                "requires": "webgpu",
+                "dtype": {
+                  "encoder_model": "fp16",
+                  "decoder_model_merged": "q4f16"
+                },
+                "notes": "Highest accuracy across languages. Slow; needs a GPU."
               },
               {
                 "name": "onnx-community/whisper-large-v3-turbo",
-                "label": "large_turbo"
+                "label": "large_turbo",
+                "tier": "browser",
+                "languages": "99",
+                "size_mb": 900,
+                "requires": "webgpu",
+                "dtype": {
+                  "encoder_model": "fp16",
+                  "decoder_model_merged": "q4f16"
+                },
+                "notes": "Nearly large-v3 accuracy, markedly less prone to repetition loops."
+              },
+              {
+                "name": "onnx-community/whisper-medium-ONNX",
+                "label": "medium",
+                "tier": "browser",
+                "languages": "99",
+                "size_mb": 780,
+                "requires": "webgpu",
+                "dtype": {
+                  "encoder_model": "fp16",
+                  "decoder_model_merged": "q4f16"
+                },
+                "notes": "Middle ground when large will not fit."
+              },
+              {
+                "name": "Xenova/whisper-small",
+                "label": "small",
+                "tier": "browser",
+                "languages": "99",
+                "size_mb": 920,
+                "requires": "any",
+                "dtype": {
+                  "encoder_model": "fp32",
+                  "decoder_model_merged": "fp32"
+                },
+                "notes": "Runs on CPU (32-bit weights). The fallback for machines without a GPU — a large download for its accuracy."
+              },
+              {
+                "name": "onnx-community/whisper-base-ONNX",
+                "label": "base",
+                "tier": "browser",
+                "languages": "99",
+                "size_mb": 280,
+                "requires": "any",
+                "dtype": {
+                  "encoder_model": "fp32",
+                  "decoder_model_merged": "fp32"
+                },
+                "notes": "Runs on CPU. Fastest, least accurate. Draft use only."
+              },
+              {
+                "name": "onnx-community/parakeet-tdt-0.6b-v3-ONNX",
+                "label": "parakeet_v3",
+                "tier": "browser",
+                "languages": "25 European",
+                "size_mb": 650,
+                "requires": "webgpu",
+                "notes": "Transducer model: cannot enter a repetition loop by construction. 25 European languages including Spanish and Catalan."
               }
             ],
             "client": true,
-            "default": "large"
+            "default": "large_turbo"
           }
         }
       }

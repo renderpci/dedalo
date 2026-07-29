@@ -319,12 +319,21 @@ export async function upsertEmbeddingRows(rows: EmbeddingRow[]): Promise<void> {
 export async function diffHashes(
 	locator: RecordLocator,
 	model: string,
+	modality?: string,
 ): Promise<Map<string, string>> {
+	// MODALITY SCOPING IS LOAD-BEARING, not a convenience. The indexer's text and
+	// image passes each treat "stored keys I did not produce" as orphans to
+	// delete. Without this filter, the two halves see each other's rows and each
+	// deletes the other's — and since both then report success, the queue marks
+	// the record converged and never retries. That is invisible until the index
+	// is empty. Model names are NOT a reliable separator: a joint image+text
+	// model (CLIP, jina-clip) is a single name by design.
 	const rows = (await ragSql.unsafe(
 		`SELECT component_tipo, lang, chunk_index, source_hash
 		 FROM rag_embeddings
-		 WHERE section_tipo = $1 AND section_id = $2 AND model = $3`,
-		[locator.sectionTipo, locator.sectionId, model],
+		 WHERE section_tipo = $1 AND section_id = $2 AND model = $3
+		   AND ($4::text IS NULL OR modality = $4)`,
+		[locator.sectionTipo, locator.sectionId, model, modality ?? null],
 	)) as {
 		component_tipo: string;
 		lang: string;
@@ -353,13 +362,24 @@ export async function deleteStale(
 	lang: string,
 	model: string,
 	validCount: number,
+	modality?: string,
 ): Promise<number> {
+	// Same reasoning as diffHashes: a prune must never reach across modalities.
 	const rows = (await ragSql.unsafe(
 		`DELETE FROM rag_embeddings
 		 WHERE section_tipo = $1 AND section_id = $2 AND component_tipo = $3 AND lang = $4
 		   AND model = $5 AND chunk_index >= $6
+		   AND ($7::text IS NULL OR modality = $7)
 		 RETURNING section_id`,
-		[locator.sectionTipo, locator.sectionId, componentTipo, lang, model, Math.max(0, validCount)],
+		[
+			locator.sectionTipo,
+			locator.sectionId,
+			componentTipo,
+			lang,
+			model,
+			Math.max(0, validCount),
+			modality ?? null,
+		],
 	)) as unknown[];
 	return rows.length;
 }

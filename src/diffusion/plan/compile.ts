@@ -63,6 +63,18 @@ import {
 } from './virtual_tree.ts';
 import type { VirtualDiffusionTree, VirtualTreeNode } from './virtual_tree.ts';
 
+/**
+ * The breadth-first recursion budget (DEDALO_DIFFUSION_RESOLVE_LEVELS, PHP
+ * diffusion_utils::get_resolve_levels default 2). Exported so the enqueue path
+ * can CLAMP a client-supplied `levels` to this server ceiling (DIFF-B) — a
+ * caller must not be able to expand a one-record run into a transitive-closure
+ * publication.
+ */
+export function diffusionResolveLevels(): number {
+	const raw = readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS');
+	return raw !== undefined && raw !== '' && !Number.isNaN(Number(raw)) ? Number(raw) : 2;
+}
+
 /** The diffusion output formats PHP validate accepts (dd_diffusion_api :442). */
 const KNOWN_FORMATS: ReadonlySet<string> = new Set(['sql', 'rdf', 'xml', 'socrata', 'markdown']);
 
@@ -567,6 +579,15 @@ export async function compileElementPlan(
 			diagnostics.errors.push(
 				`missing properties->diffusion->service_name (required for ${format} file paths)`,
 			);
+		} else if (!/^[A-Za-z0-9_-]{1,64}$/.test(serviceName)) {
+			// DIFF-D (2026-07-28 audit): serviceName becomes a filesystem DIRECTORY
+			// segment (writers/files.ts formatTargetDir), so a `../../..`-style label
+			// would escape the diffusion files root on write/unlink. The 'sql' branch
+			// already ran requireSqlIdentifier; the file branch had only an
+			// empty-check. Reject at compile/validate time (loud, before any run).
+			diagnostics.errors.push(
+				`invalid properties->diffusion->service_name ${JSON.stringify(serviceName)} — must match ^[A-Za-z0-9_-]{1,64}$`,
+			);
 		} else {
 			target = { kind: 'files', serviceName };
 		}
@@ -604,13 +625,7 @@ export async function compileElementPlan(
 		throw new PlanCompileError(elementTipo, diagnostics.errors, diagnostics.warnings);
 	}
 
-	const resolveLevelsRaw = readEnv('DEDALO_DIFFUSION_RESOLVE_LEVELS');
-	const maxLevels =
-		resolveLevelsRaw !== undefined &&
-		resolveLevelsRaw !== '' &&
-		!Number.isNaN(Number(resolveLevelsRaw))
-			? Number(resolveLevelsRaw)
-			: 2; // PHP diffusion_utils::get_resolve_levels default (:563)
+	const maxLevels = diffusionResolveLevels();
 
 	return {
 		planId: `${elementTipo}:r${currentOntologyRevision()}`,

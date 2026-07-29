@@ -278,8 +278,13 @@ async function langData(
 // Atom values per model family (PHP get_export_value semantics).
 // ---------------------------------------------------------------------------
 
-/** PHP component_date::data_item_to_value (modes date/range; sep '/'). */
-function dateItemToValue(item: Record<string, unknown>, dateMode: string): string {
+/**
+ * PHP component_date::data_item_to_value (modes date/range; sep '/'). Exported
+ * because the RAG characterizer's role reader (src/ai/rag/role_reader.ts) needs
+ * the SAME human-facing date label it puts in an export cell — a second copy of
+ * this formatter would drift.
+ */
+export function dateItemToValue(item: Record<string, unknown>, dateMode: string): string {
 	const pad = (n: number) => String(n).padStart(2, '0');
 	const partToString = (part: unknown): string => {
 		if (part === null || typeof part !== 'object') return '';

@@ -311,13 +311,18 @@ export function getPublicQualities(): string[] {
 }
 
 /**
- * The hard filter itself, as a PURE function over an arbitrary list — this is the
- * security-critical half of getPublicQualities(), so it is directly callable (and
- * directly testable) rather than reachable only through the frozen config catalog.
+ * Every quality name that identifies a MASTER/work copy on this install — the
+ * archival originals and the retouched work copies. Installs rename these
+ * tiers, so nothing may hardcode 'original'/'modified'.
+ *
+ * ONE definition, deliberately: the web-serving filter below uses it to decide
+ * what may be exposed, and any other subsystem that reads bytes off the media
+ * tree (the RAG image source feeding an embedder) uses the same set to decide
+ * what it may open. Two copies would drift, and the drift would be silent until
+ * something shipped a master.
  */
-export function filterPublicQualities(configured: readonly string[]): string[] {
-	// Every quality name that identifies a MASTER/work copy on this install.
-	const forbidden = new Set<string>([
+export function masterQualities(): ReadonlySet<string> {
+	return new Set<string>([
 		'original',
 		'modified',
 		config.media.image.originalQuality,
@@ -327,6 +332,20 @@ export function filterPublicQualities(configured: readonly string[]): string[] {
 		config.media.threeD.originalQuality,
 		config.media.imageQualityRetouched,
 	]);
+}
+
+/** Whether a BARE quality tier name is an archival master. */
+export function isMasterQuality(quality: string): boolean {
+	return masterQualities().has(quality.replace(/^\/+|\/+$/g, ''));
+}
+
+/**
+ * The hard filter itself, as a PURE function over an arbitrary list — this is the
+ * security-critical half of getPublicQualities(), so it is directly callable (and
+ * directly testable) rather than reachable only through the frozen config catalog.
+ */
+export function filterPublicQualities(configured: readonly string[]): string[] {
+	const forbidden = masterQualities();
 
 	const qualities: string[] = [];
 	for (const raw of configured) {
@@ -699,12 +718,29 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 
 	const qualities = mode === 'publication' ? getPublicQualities() : [];
 	const addons = getAddonLines();
-	const hash = getConfigHash(mode, qualities, addons);
 
-	const artifacts: Array<{ path: string; text: string }> = [
-		{ path: paths.htaccess, text: buildHtaccess(mode, qualities, addons) },
-		{ path: paths.nginx, text: buildNginxConf(mode, qualities) },
-		{ path: paths.nginxMap, text: buildNginxMap() },
+	// EACH ARTIFACT CARRIES ITS OWN HASH, because they are not shaped by the same
+	// inputs: MEDIA_HTACCESS_ADDONS is Apache syntax and reaches the .htaccess
+	// only — buildNginxConf never sees it, and embeds `getConfigHash(mode,
+	// qualities, [])` accordingly.
+	//
+	// Comparing both files against the addons-inclusive hash (which this did until
+	// 2026-07-28) means that the moment an install configures ANY addon, the nginx
+	// file can never match: it is rewritten on every login, and the media_control
+	// widget reports it permanently "out of date" — a false alarm of exactly the
+	// kind that teaches operators to ignore the widget.
+	const artifacts: Array<{ path: string; text: string; hash: string }> = [
+		{
+			path: paths.htaccess,
+			text: buildHtaccess(mode, qualities, addons),
+			hash: getConfigHash(mode, qualities, addons),
+		},
+		{
+			path: paths.nginx,
+			text: buildNginxConf(mode, qualities),
+			hash: getConfigHash(mode, qualities, []),
+		},
+		{ path: paths.nginxMap, text: buildNginxMap(), hash: '' },
 	];
 
 	for (const artifact of artifacts) {
@@ -717,7 +753,7 @@ export function writeRuleFiles(modeOverride?: RuleMode): boolean {
 		}
 		if (existsSync(artifact.path)) {
 			const current = readFileSync(artifact.path, 'utf8');
-			if (current.includes(`# config-hash: ${hash}`)) continue;
+			if (current.includes(`# config-hash: ${artifact.hash}`)) continue;
 		}
 		writeFileSync(artifact.path, artifact.text);
 	}
@@ -731,13 +767,17 @@ export function getRulesStatus(): { htaccess: RuleFileStatus; nginx: RuleFileSta
 	const paths = ruleFilePaths();
 	const mode = resolveMediaAccessMode();
 
-	const statusOf = (path: string | null): RuleFileStatus => {
+	// Same per-artifact rule as writeRuleFiles: the .htaccess is shaped by
+	// MEDIA_HTACCESS_ADDONS, the nginx conf is not. Judging both by the
+	// addons-inclusive hash reported the nginx file as out of date forever on any
+	// install that configured an addon.
+	const statusOf = (path: string | null, withAddons: boolean): RuleFileStatus => {
 		const exists = path !== null && existsSync(path);
 		if (mode === false || path === null) {
 			return { path, exists, up_to_date: null };
 		}
 		const qualities = mode === 'publication' ? getPublicQualities() : [];
-		const hash = getConfigHash(mode, qualities, getAddonLines());
+		const hash = getConfigHash(mode, qualities, withAddons ? getAddonLines() : []);
 		return {
 			path,
 			exists,
@@ -746,8 +786,8 @@ export function getRulesStatus(): { htaccess: RuleFileStatus; nginx: RuleFileSta
 	};
 
 	return {
-		htaccess: statusOf(paths?.htaccess ?? null),
-		nginx: statusOf(paths?.nginx ?? null),
+		htaccess: statusOf(paths?.htaccess ?? null, true),
+		nginx: statusOf(paths?.nginx ?? null, false),
 	};
 }
 

@@ -245,12 +245,15 @@ export async function runAutomaticTranslation(
 		]);
 	}
 
-	// PHP asserts BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124):
-	// assert_tipo_permission(section_tipo, component_tipo, 2) — the SCHEMA pair,
-	// which a section-level check does not imply when the component carries its
-	// own dd774 grant — and assert_record_in_user_scope(section_tipo,
-	// section_id). The 'record' gate below is the second half only, so the pair
-	// is asserted explicitly first.
+	// PHP asserts BOTH halves (tool_lang :164/:167, tool_lang_multi :122/:124;
+	// TOOLS-10, 2026-07-28 audit): assert_tipo_permission(section_tipo,
+	// component_tipo, 2) — the SCHEMA pair, which a section-level check does not
+	// imply when the component carries its own dd774 grant, so a user with
+	// section write but NOT write on THIS component cannot translate-overwrite
+	// it — and assert_record_in_user_scope(section_tipo, section_id). The
+	// 'record' gate below is the second half only, so the pair is asserted
+	// explicitly first. (Both branches added this same check in parallel; merged
+	// 2026-07-29.)
 	const { getPermissions } = await import('../security/permissions.ts');
 	if ((await getPermissions(ctx.principal, sectionTipo, componentTipo)) < 2) {
 		return fail('insufficient permissions on the target component', ['unauthorized']);

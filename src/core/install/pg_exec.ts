@@ -37,13 +37,37 @@ export function connFromConfig(): DbConnDescriptor {
 	};
 }
 
+/**
+ * Reject a connection field that psql could parse as an OPTION or that would
+ * break the argv/env (CMD-01, 2026-07-28 audit). The posted `db_database`
+ * used to ride as a BARE POSITIONAL argv element, so a value like
+ * `--command=\! sh` was parsed by psql as an option → shell execution on the
+ * host. Every field is now passed via a flag AND screened here: no leading `-`
+ * (option shape) and no CR/LF/NUL (argv/line corruption). A real Postgres
+ * identifier never starts with `-`, so this rejects only hostile input.
+ */
+export function assertSafeConnField(name: string, value: string): void {
+	if (/^-/.test(value)) {
+		throw new Error(`install: refusing ${name} that looks like a command-line option ('${value}')`);
+	}
+	if (/[\r\n\0]/.test(value)) {
+		throw new Error(`install: refusing ${name} with a control character`);
+	}
+}
+
 /** host/port/user flags (password rides PGPASSWORD, never argv). */
 function connArgs(conn: DbConnDescriptor): string[] {
 	const args: string[] = [];
 	const host = conn.socket && conn.socket !== '' ? conn.socket : conn.host;
-	if (host) args.push('-h', String(host));
+	if (host) {
+		assertSafeConnField('host', String(host));
+		args.push('-h', String(host));
+	}
 	if (conn.port) args.push('-p', String(conn.port));
-	if (conn.user) args.push('-U', String(conn.user));
+	if (conn.user) {
+		assertSafeConnField('user', String(conn.user));
+		args.push('-U', String(conn.user));
+	}
 	return args;
 }
 
@@ -64,15 +88,22 @@ export async function runPsql(
 	options: { stdin?: Uint8Array | string; database?: string } = {},
 ): Promise<PsqlRunResult> {
 	const database = options.database ?? conn.database;
-	const child = Bun.spawn([resolvePgBinary('psql'), database, ...connArgs(conn), ...args], {
-		stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
-		stdout: 'pipe',
-		stderr: 'pipe',
-		env: {
-			...(envSnapshot() as Record<string, string>),
-			...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
+	assertSafeConnField('database', String(database));
+	// `--dbname=<db>` as ONE glued token: getopt takes everything after the
+	// first `=` as the value, so even a `--command=…`-shaped database can never
+	// be re-parsed as a psql option (CMD-01). Was a bare positional argv element.
+	const child = Bun.spawn(
+		[resolvePgBinary('psql'), `--dbname=${database}`, ...connArgs(conn), ...args],
+		{
+			stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
+			stdout: 'pipe',
+			stderr: 'pipe',
+			env: {
+				...(envSnapshot() as Record<string, string>),
+				...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
+			},
 		},
-	});
+	);
 	if (options.stdin !== undefined && child.stdin) {
 		child.stdin.write(options.stdin);
 		await child.stdin.end();

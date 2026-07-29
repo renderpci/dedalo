@@ -91,8 +91,12 @@ describe('persist_config (P2)', () => {
 			mysql_password: 'dpw',
 		});
 		expect(result.result).toBe(true);
-		expect(result.generated.DEDALO_DIFFUSION_INTERNAL_TOKEN).toMatch(/^[0-9a-f]{64}$/);
+		// OPS-04: the dead internal token is no longer minted (the control plane
+		// that used it was removed) — it must NOT appear in the generated secrets
+		// nor in the written .env.
+		expect(result.generated.DEDALO_DIFFUSION_INTERNAL_TOKEN).toBeUndefined();
 		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
+		expect(parsed.DEDALO_DIFFUSION_INTERNAL_TOKEN).toBeUndefined();
 		expect(parsed.DEDALO_DIFFUSION_NATIVE).toBe('true');
 		expect(parsed.DEDALO_DIFFUSION_DB_USER).toBe('diff');
 		expect(parsed.DEDALO_DIFFUSION_DB_NAME).toBe('web_dedalo');

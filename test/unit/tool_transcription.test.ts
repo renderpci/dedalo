@@ -117,6 +117,12 @@ describe('tool_transcription module', () => {
 			'check_server_transcriber_status',
 			'create_transcribable_audio_file',
 			'delete_transcribable_audio_file',
+			// Admin-gated in-UI model seeding (validated against the catalog).
+			'download_model',
+			// Where the BROWSER engine may load its model from. The browser cannot
+			// read the install's configuration, so the operator's model-store and
+			// hub-fallback settings would otherwise be inert.
+			'get_model_sources',
 		]);
 		// permission: null → each handler gates imperatively against its ddo.
 		expect(
@@ -133,11 +139,46 @@ describe('tool_transcription module', () => {
 		expect(mustGet(actions.build_subtitles_file, 'build_subtitles_file').permission).toBeNull();
 	});
 
-	test('the background poll is allowlisted but NOT client-routable', async () => {
+	test('the background actions are allowlisted but NOT client-routable', async () => {
 		const loaded = await getLoadedTool('tool_transcription');
-		expect(loaded!.module.backgroundRunnable).toEqual(['check_background_transcriber_status']);
+		expect(loaded!.module.backgroundRunnable).toEqual([
+			'check_background_transcriber_status',
+			'background_download_model',
+		]);
 		// absent from apiActions — an action not in the map is unroutable.
 		expect(loaded!.module.apiActions.check_background_transcriber_status).toBeUndefined();
+		expect(loaded!.module.apiActions.background_download_model).toBeUndefined();
+	});
+
+	test('download_model refuses everyone but a global administrator', async () => {
+		// The action makes the SERVER fetch ~1 GB from the public hub and write it
+		// to disk — an operator act. The refusal must run before any catalog read.
+		const loaded = await getLoadedTool('tool_transcription');
+		const handler = loaded!.module.apiActions.download_model!.handler;
+		const response = await handler({
+			principal: stubPrincipal, // not an admin
+			userId: 7,
+			options: { model: 'onnx-community/whisper-large-v3-turbo' },
+			background: false,
+		});
+		expect(response.result).toBe(false);
+		expect(response.msg).toContain('administrator');
+	});
+
+	test('download_model refuses a model that is not in the catalog', async () => {
+		// The id becomes a hub URL path and a store directory — free-form input
+		// would download arbitrary repos or write outside the intended folder.
+		const loaded = await getLoadedTool('tool_transcription');
+		const handler = loaded!.module.apiActions.download_model!.handler;
+		const admin: Principal = { userId: 1, isGlobalAdmin: true, isDeveloper: false };
+		const response = await handler({
+			principal: admin,
+			userId: 1,
+			options: { model: '../../evil/path' },
+			background: false,
+		});
+		expect(response.result).toBe(false);
+		expect(response.msg).toContain('not in the transcriber catalog');
 	});
 });
 
@@ -501,6 +542,51 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 });
 
+describe('saveTranscriptionResult — the id-1 slot contract', () => {
+	// THE transcription is the lang's single main text: item id 1, stated
+	// explicitly. The id-less update this used to send relied on slice/sibling
+	// resolution and APPENDED with a minted id when nothing resolved — a
+	// finished 87-minute transcription landed invisible in item 2 while the
+	// editor showed the empty item 1 (rsc167/528, 2026-07-28).
+	test('an empty component receives the transcript as item id 1', async () => {
+		const { saveTranscriptionResult } = await import('../../src/core/tools/transcription_asr.ts');
+		const { insertMatrixRecordWithCounter, deleteMatrixRecord } = await import(
+			'../../src/core/db/matrix_write.ts'
+		);
+		const { readMatrixRecord } = await import('../../src/core/db/matrix.ts');
+		const { getMatrixTableFromTipo } = await import('../../src/core/ontology/resolver.ts');
+
+		const table = (await getMatrixTableFromTipo('rsc167'))!;
+		const sectionId = await insertMatrixRecordWithCounter(table, 'rsc167', {});
+		try {
+			const outcome = await saveTranscriptionResult({
+				lang: 'lg-eng',
+				transcriptionDdo: {
+					component_tipo: 'rsc36',
+					section_tipo: 'rsc167',
+					section_id: sectionId,
+				},
+				segments: [{ start: 0, end: 4, text: ' Hello world.' }],
+				userId: -1,
+			});
+			expect(outcome.saved).toBe(true);
+
+			const record = await readMatrixRecord(table, 'rsc167', sectionId);
+			const items = (record?.columns.string as Record<string, unknown[]>)?.rsc36 as {
+				id?: unknown;
+				lang?: string;
+				value?: string;
+			}[];
+			expect(items).toHaveLength(1);
+			expect(Number(items[0]?.id)).toBe(1); // the slot is STATED, never minted
+			expect(items[0]?.lang).toBe('lg-eng');
+			expect(items[0]?.value).toContain('Hello world.');
+		} finally {
+			await deleteMatrixRecord(table, 'rsc167', sectionId);
+		}
+	});
+});
+
 describe('remote ASR status seam', () => {
 	const statusRequest: TranscriberStatusRequest = {
 		uri: 'https://babel.example.org:8011/api/',
@@ -585,15 +671,38 @@ describe('ASR write-back (process_file port)', () => {
 		expect(secondsToTc(59)).toBe('00:00:59.000');
 	});
 
-	test('segmentsToTcText builds the PHP TC-tagged paragraph text', () => {
+	test('segmentsToTcText groups segments into paragraphs', () => {
+		// Two consecutive segments of one answer: ONE paragraph, one time mark.
+		// (It used to be one paragraph per segment — a cue list, not a transcript.)
 		const segments = [
-			{ start: 1.85, text: ' Can you say me...' },
-			{ start: 3.45, text: ' blah blah...' },
+			{ start: 1.85, end: 3.45, text: ' Can you say me...' },
+			{ start: 3.45, end: 6, text: ' blah blah...' },
 		];
 		expect(segmentsToTcText(segments)).toBe(
-			'[TC_00:00:01.850_TC] Can you say me...<p>[TC_00:00:03.450_TC] blah blah...',
+			'<p>[TC_00:00:01.850_TC]Can you say me... blah blah...</p>',
 		);
 		expect(segmentsToTcText([])).toBe('');
+	});
+
+	test('segmentsToTcText breaks a paragraph at a silence', () => {
+		const segments = [
+			{ start: 0, end: 4, text: 'Primera respuesta' },
+			{ start: 20, end: 24, text: 'Segunda respuesta' },
+		];
+		expect(segmentsToTcText(segments)).toBe(
+			'<p>[TC_00:00:00.000_TC]Primera respuesta</p><p>[TC_00:00:20.000_TC]Segunda respuesta</p>',
+		);
+	});
+
+	test('segmentsToTcText honours the caller’s timecode density', () => {
+		const segments = [
+			{ start: 0, end: 4, text: 'uno' },
+			{ start: 4, end: 8, text: 'dos' },
+		];
+		// 'segment' reproduces the historical one-mark-per-segment output.
+		expect(segmentsToTcText(segments, { tc_mode: 'segment' })).toBe(
+			'<p>[TC_00:00:00.000_TC]uno</p><p>[TC_00:00:04.000_TC]dos</p>',
+		);
 	});
 
 	test('hasExistingTranscription: any item in the target lang blocks the save', () => {
@@ -716,16 +825,45 @@ describe('remote ASR seam', () => {
 		expect(resolveTranscriberProvider('whisper_x').provider).toBeNull();
 		expect(resolveTranscriberProvider('whisper_x').error).toContain('not implemented');
 	});
-	test('resolveTranscriberConfig finds engine uri/key', () => {
-		const toolConfig = {
-			config: {
-				transcriber_config: { value: [{ name: 'babel_transcriber', uri: 'u', key: 'k' }] },
-			},
+	test('resolveTranscriberConfig reads the shape getToolConfig ACTUALLY returns', () => {
+		// getToolConfig returns the EFFECTIVE config: a flat map of key → resolved
+		// value. The lookup used to read `config.transcriber_config.value`, a shape
+		// it never produces, so no server-side engine could ever find its uri/key —
+		// and the old fixture here was written to that same wrong shape, so the gate
+		// stayed green while the feature was dead. This asserts the real one first.
+		const effective = {
+			transcriber_config: [{ name: 'babel_transcriber', uri: 'u', key: 'k' }],
 		};
-		expect(resolveTranscriberConfig(toolConfig, 'babel_transcriber')).toEqual({
+		expect(resolveTranscriberConfig(effective, 'babel_transcriber')).toEqual({
 			uri: 'u',
 			key: 'k',
 		});
+
+		// The raw-property forms an install may store are still accepted.
+		expect(
+			resolveTranscriberConfig(
+				{ transcriber_config: { value: [{ name: 'local_whisper', uri: 'u2', key: 'k2' }] } },
+				'local_whisper',
+			),
+		).toEqual({ uri: 'u2', key: 'k2' });
+		expect(
+			resolveTranscriberConfig(
+				{
+					config: {
+						transcriber_config: { value: [{ name: 'babel_transcriber', uri: 'u', key: 'k' }] },
+					},
+				},
+				'babel_transcriber',
+			),
+		).toEqual({ uri: 'u', key: 'k' });
+
 		expect(resolveTranscriberConfig({}, 'babel_transcriber')).toBeNull();
+		// An entry missing either half is not usable config.
+		expect(
+			resolveTranscriberConfig(
+				{ transcriber_config: [{ name: 'babel_transcriber', uri: 'u' }] },
+				'babel_transcriber',
+			),
+		).toBeNull();
 	});
 });

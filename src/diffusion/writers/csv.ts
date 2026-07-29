@@ -40,12 +40,19 @@ import type {
 	WriterSession,
 } from './types.ts';
 
-/** RFC4180: quote when the field contains comma, quote, CR or LF. */
+/** RFC4180 quoting + spreadsheet formula-injection neutralization. */
 export function csvField(value: string): string {
-	if (/[",\r\n]/.test(value)) {
-		return `"${value.replace(/"/g, '""')}"`;
+	// DIFF-E / EXPORT-CSV-01 (2026-07-28 audit): a published CSV is opened in
+	// Excel/Sheets/LibreOffice, where a cell beginning =, +, -, @, TAB or CR is
+	// executed as a FORMULA (=HYPERLINK(...), the =cmd|... DDE form). A record
+	// value the archive published becomes code in the opener's session. Prefix
+	// such a value with a single quote so it stays literal text.
+	let out = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+	// RFC4180: quote when the field contains comma, quote, CR or LF.
+	if (/[",\r\n]/.test(out)) {
+		out = `"${out.replace(/"/g, '""')}"`;
 	}
-	return value;
+	return out;
 }
 
 /** One csv record line (LF-terminated; null → empty field). */

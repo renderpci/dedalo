@@ -19,8 +19,14 @@ import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
 import { parseVersionString } from './version.ts';
 
-/** A safe git ref: refs/heads/… or a plain branch/tag name. No shell metachars. */
-const GIT_REF_RE = /^[A-Za-z0-9._/-]{1,200}$/;
+/**
+ * A safe git ref: refs/heads/… or a plain branch/tag name. No shell metachars,
+ * and — CMD-05 (2026-07-28 audit) — NO leading `-`: the ref is the last argv
+ * element of `git archive … -o <file> <ref>`, so a `-`-leading value like
+ * `--output=/evil` would be parsed by git as an OPTION (output redirect), not a
+ * ref. Git itself forbids refs starting with `-`, so this only rejects attacks.
+ */
+const GIT_REF_RE = /^[A-Za-z0-9._/][A-Za-z0-9._/-]{0,199}$/;
 
 export interface CodeBuildResponse {
 	result: boolean;

@@ -40,6 +40,7 @@
 import { config } from '../../config/config.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
+import { translationLangOf } from '../resolve/lang_alias.ts';
 
 /**
  * The language master.json is AUTHORED in. Requesting it serves the master
@@ -48,13 +49,6 @@ import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts'
  * Change this only if the team rewrites the master strings in another language.
  */
 export const MASTER_SOURCE_LANG = 'lg-eng';
-
-/**
- * Langs served from another lang's catalog by linguistic proximity (fallback
- * criterion 3). lg-vlca (Valencian) reads the Catalan catalog — the
- * pre-migration lg-vlca.js was a byte-copy of lg-cat.js.
- */
-const LANG_ALIAS: Readonly<Record<string, string>> = { 'lg-vlca': 'lg-cat' };
 
 /**
  * Merged-dictionary cache per requested lang. Master/catalog files and the
@@ -113,7 +107,12 @@ export async function getLabels(lang: string): Promise<Record<string, string>> {
 	const stages =
 		lang === MASTER_SOURCE_LANG
 			? [lang]
-			: [config.lang.applicationLangsDefault, LANG_ALIAS[lang], lang];
+			: // Linguistic proximity (criterion 3) comes from the DECLARED language
+				// equivalences (DEDALO_LANG_EQUIVALENCES — lg-vlca reads the Catalan
+				// catalog; the pre-migration lg-vlca.js was a byte-copy of lg-cat.js),
+				// not a private table: one source of truth with the ontology-term and
+				// data-fallback consumers.
+				[config.lang.applicationLangsDefault, translationLangOf(lang) ?? undefined, lang];
 	const applied = new Set<string>();
 	for (const stage of stages) {
 		if (stage === undefined || applied.has(stage)) continue;

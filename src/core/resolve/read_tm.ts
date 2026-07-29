@@ -51,9 +51,9 @@ import type {
 import type { Principal } from '../security/permissions.ts';
 import {
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
-	TM_COLUMN_MATRIX_ID as TIPO_MATRIX_ID,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
 	TM_COLUMN_DATA as TIPO_DATA,
+	TM_COLUMN_MATRIX_ID as TIPO_MATRIX_ID,
 	TM_NOTES_TEXT as TIPO_NOTES,
 	TM_COLUMN_SECTION_ID as TIPO_SECTION_ID,
 	TM_COLUMN_SECTION_TIPO as TIPO_SECTION_TIPO,
@@ -221,7 +221,12 @@ function buildTmWhere(sqo: Record<string, unknown>): {
 			}
 			return `(${clauses.join(' AND ')})`;
 		});
-		return { whereSql: `(${groups.join(' OR ')})`, params, isRecordList: false, rangeFilter: false };
+		return {
+			whereSql: `(${groups.join(' OR ')})`,
+			params,
+			isRecordList: false,
+			rangeFilter: false,
+		};
 	}
 	const tipoFilter = tipoColumnFilter(sqo);
 	if (tipoFilter !== null) {

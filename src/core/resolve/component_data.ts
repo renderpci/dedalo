@@ -25,6 +25,7 @@ import { readEnv } from '../../config/env.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { getColumnNameByModel, getTranslatableByTipo } from '../ontology/resolver.ts';
+import { equivalentLangsOf } from './lang_alias.ts';
 
 /**
  * The install's MAIN data language — the fallback chain's first candidate.
@@ -133,8 +134,18 @@ export async function resolveComponentValue(
 	if (model === 'component_iri') {
 		return { value: [], fallbackValue: null };
 	}
+	// DECLARED language equivalences go first: a transcript that exists only in
+	// Valencian is what a Catalan menu should see (both directions — the class
+	// is symmetric for DATA), before the install default gets a say. Fancier
+	// than PHP, which only aliased translations (labels/terms), never data.
 	const tried = new Set([effectiveLang]);
-	for (const candidate of [DEFAULT_DATA_LANG, NOLAN, ...ALL_LANGS, NOLAN]) {
+	for (const candidate of [
+		...equivalentLangsOf(effectiveLang),
+		DEFAULT_DATA_LANG,
+		NOLAN,
+		...ALL_LANGS,
+		NOLAN,
+	]) {
 		if (tried.has(candidate)) continue;
 		tried.add(candidate);
 		const fallbackSlice = filterItemsByLang(items, candidate);

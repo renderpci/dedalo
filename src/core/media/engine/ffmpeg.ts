@@ -136,9 +136,36 @@ export function buildAudioArgv(source: string, target: string, audioCodec: strin
 	];
 }
 
-/** Speech-to-text audio (audio_tr) argv (PHP :695): -vn -ar 16000 -ac 1 (16 kHz mono WAV). */
+/**
+ * Speech-to-text audio (audio_tr) argv: 16 kHz mono WAV, high-passed and loudness
+ * normalised.
+ *
+ * The rate and channel count are what the recogniser requires. The filter chain is
+ * a QUALITY measure, added 2026-07-28: field recordings of interviews carry rumble,
+ * handling noise and wildly inconsistent levels, and a recogniser fed quiet or
+ * rumbling audio is far likelier to hallucinate repeated words — the failure this
+ * whole pass exists to remove.
+ *   highpass=f=80  drops rumble and mains hum below the human voice;
+ *   loudnorm       brings the speech to a consistent level (EBU R128 target), so a
+ *                  softly-spoken informant is not transcribed as silence.
+ *
+ * Safe to change: audio_tr is a throwaway derivative, rebuilt on demand and deleted
+ * after each transcription — no stored data depends on its bytes.
+ */
 export function buildAudioTrArgv(source: string, target: string): string[] {
-	return [ffmpeg(), '-i', source, '-vn', '-ar', '16000', '-ac', '1', target];
+	return [
+		ffmpeg(),
+		'-i',
+		source,
+		'-vn',
+		'-af',
+		'highpass=f=80,loudnorm=I=-16:TP=-1.5:LRA=11',
+		'-ar',
+		'16000',
+		'-ac',
+		'1',
+		target,
+	];
 }
 
 /** qt-faststart argv (moov-atom relocation): <qt-faststart> <src> <dst>. */

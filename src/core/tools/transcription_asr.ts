@@ -17,7 +17,17 @@
  * the job payload — nothing here reads the ALS stores (isolation Rule 6).
  */
 
-import { secondsToTc } from '../resolve/tr_marks.ts';
+// The ONE transcript formatter, shared verbatim with the browser engine (plain
+// ESM, no build step — see segmentsToTcText).
+import { segments_to_html as segmentsToHtml } from '../../../tools/tool_transcription/transcribers/lib/paragraphs.js';
+import { localAsrProvider, localAsrStatusProvider } from './transcription_local_asr.ts';
+
+/**
+ * The engine name of the institution's own on-premise recognition box. One
+ * constant, because it is matched in three places (submit, status, and the tool
+ * handler that has to hand it a file path instead of a URL).
+ */
+export const LOCAL_ASR_ENGINE = 'local_whisper';
 
 // ---------------------------------------------------------------------------
 // SSRF guard
@@ -64,6 +74,13 @@ export interface TranscribeRequest {
 	quality: string;
 	/** Full fetchable URL of the 'audio' quality file (PHP av_url). */
 	audioUrl: string;
+	/**
+	 * Absolute path of the audio ON THIS SERVER'S disk. Used only by the
+	 * on-premise engine, which is POSTed the bytes instead of a URL: a sidecar on
+	 * the LAN cannot fetch a public media URL, and publishing one would defeat the
+	 * point of keeping the recording inside the building.
+	 */
+	audioPath?: string;
 	/** ISO 639-1 code (PHP lang_tld2 — babel wants alpha-2, not lg-*). */
 	langTld2: string;
 	userId: number;
@@ -122,6 +139,10 @@ export function resolveTranscriberProvider(engine: string): {
 	error: string | null;
 } {
 	switch (engine) {
+		// The institution's OWN recognition box (src/core/tools/transcription_local_asr.ts):
+		// audio POSTed as bytes, private addresses allowed behind a named exemption.
+		case LOCAL_ASR_ENGINE:
+			return { provider: localAsrProvider, error: null };
 		case 'local': // PHP fall-through: local → babel_transcriber
 		case 'babel_transcriber':
 		case '':
@@ -148,14 +169,19 @@ export function resolveTranscriberConfig(
 	toolConfig: Record<string, unknown>,
 	engine: string,
 ): { uri: string; key: string } | null {
+	// `getToolConfig` returns the EFFECTIVE config: a flat map of key → resolved
+	// value, so `transcriber_config` is already the array of entries. This used to
+	// read `toolConfig.config.transcriber_config.value` — a shape getToolConfig
+	// never produces — so every lookup returned null and no server-side engine
+	// could ever find its uri/key ("Transcriber config is not defined for '…'").
+	// Its test passed because the fixture was written to the same wrong shape.
+	// The nested form is still accepted: an install that stores the raw property
+	// object (rather than the resolved value) reads the same either way.
 	const flat = toolConfig?.transcriber_config;
 	const nested = (toolConfig?.config as { transcriber_config?: { value?: unknown[] } } | undefined)
 		?.transcriber_config?.value;
-	// Tolerate an un-unwrapped `{value:[…]}` under the flat key too (a config
-	// layer that stored the prop object rather than its value).
-	const configs = Array.isArray(flat)
-		? flat
-		: ((flat as { value?: unknown } | undefined)?.value ?? nested);
+	const wrapped = (toolConfig?.transcriber_config as { value?: unknown[] } | undefined)?.value;
+	const configs = Array.isArray(flat) ? flat : Array.isArray(wrapped) ? wrapped : nested;
 	if (!Array.isArray(configs)) return null;
 	const entry = configs.find(
 		(item) =>
@@ -235,6 +261,8 @@ export function resolveTranscriberStatusProvider(engine: string): {
 	error: string | null;
 } {
 	switch (engine) {
+		case LOCAL_ASR_ENGINE:
+			return { provider: localAsrStatusProvider, error: null };
 		case 'google_translation':
 			return { provider: null, error: `Sorry. '${engine}' is not implemented yet` };
 		default:
@@ -246,21 +274,36 @@ export function resolveTranscriberStatusProvider(engine: string): {
 // Write-back (PHP babel_transcriber::process_file)
 // ---------------------------------------------------------------------------
 
-/** One babel transcription segment ({ start: seconds(float), text }). */
+/** One transcription segment. `end`/`speaker` are absent from older providers. */
 export interface TranscriptionSegment {
 	start: number;
 	text: string;
+	end?: number | null;
+	speaker?: string;
 }
 
 /**
- * PHP process_file segment formatting: each segment becomes
- * `[TC_HH:MM:SS.mmm_TC]<text>` (OptimizeTC::seg2tc — ported as
- * resolve/tr_marks.ts::secondsToTc), joined by '<p>'.
+ * Segment formatting — the SAME grouping the browser engine applies, because it
+ * is literally the same module: `transcribers/lib/paragraphs.js` is plain ESM and
+ * Bun imports it directly. A transcript produced on the server and one produced in
+ * the browser must land in the record with identical structure; two
+ * implementations would drift the first time either was tuned.
+ *
+ * A recogniser emits subtitle-sized segments. Writing each of them as its own
+ * paragraph (which is what this function used to do — one `[TC_…_TC]` per
+ * segment, joined by `<p>`) destroys the paragraph structure an interview
+ * transcript depends on. Segments are now grouped at pauses, speaker changes and
+ * sentence ends, with inline time marks kept inside each paragraph so the
+ * subtitle builder still has anchors to interpolate between.
+ *
+ * @param segments recogniser output, times in seconds
+ * @param options paragraph/timecode options (see the module's DEFAULT_OPTIONS)
  */
-export function segmentsToTcText(segments: readonly TranscriptionSegment[]): string {
-	return segments
-		.map((segment) => `[TC_${secondsToTc(segment.start)}_TC]${segment.text}`)
-		.join('<p>');
+export function segmentsToTcText(
+	segments: readonly TranscriptionSegment[],
+	options?: Record<string, unknown>,
+): string {
+	return segmentsToHtml(segments, options);
 }
 
 /** The target transcription component locator (PHP transcription_ddo). */
@@ -339,7 +382,13 @@ export async function saveTranscriptionResult(input: {
 		sectionTipo: transcriptionDdo.section_tipo,
 		sectionId: transcriptionDdo.section_id,
 		lang,
-		changedData: [{ action: 'update', id: null, value: { value: data, lang } }],
+		// THE transcription is the lang's single main text: always item id 1,
+		// stated explicitly. An id-less update relies on slice/sibling resolution
+		// and APPENDS with a minted id when nothing resolves — which is how a
+		// finished transcription ended up invisible in item 2 while the editor
+		// showed the empty item 1 (rsc167/528, 2026-07-28). Same contract as the
+		// browser tool's save_transcription.
+		changedData: [{ action: 'update', id: 1, key: 0, value: { id: 1, value: data, lang } }],
 		userId,
 	});
 	return {

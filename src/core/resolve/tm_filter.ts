@@ -28,13 +28,11 @@
  */
 
 import {
-	TM_COLUMN_MATRIX_ID,
-} from '../tm_record/tm_record.ts';
-import {
 	type NormalizedDate,
 	normalizeDateQ,
 	timeMachineDatePredicates,
 } from '../search/builders/builder_date.ts';
+import { TM_COLUMN_MATRIX_ID } from '../tm_record/tm_record.ts';
 
 /** How a dd15 column-component compares (its physical column + value kind). */
 interface TmColumn {

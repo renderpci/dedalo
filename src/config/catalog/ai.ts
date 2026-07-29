@@ -604,6 +604,219 @@ people who may see it — it only stops it from leaving.
 DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS=oh1,rsc45
 \`\`\``,
 	},
+	// --- the image layer (object photographs) -------------------------------------
+	// Read in src/ai/rag/multimodal_config.ts. They were read as property accesses of
+	// an env map, which the census scanner cannot see, so they lived in no operator
+	// document at all until 2026-07-28.
+	DEDALO_RAG_MEDIA_ENABLED: {
+		type: 'boolean',
+		scope: 'operator',
+		default: false,
+		heading: 'Enabling image search',
+		typeLabel: 'bool',
+		doc: `The master switch for the IMAGE half of semantic search: visual similarity between
+objects, a typed question answered with photographs, and the neighbour-based
+characterization of an uncatalogued piece. With the default \`false\` those three actions
+decline as unavailable and nothing else changes — the text side of semantic search is
+untouched.
+
+It sits *inside* semantic search rather than beside it, so \`DEDALO_RAG_ENABLED\` must be on
+as well. For meaningful results it also needs a joint image-and-text embedding service
+(\`DEDALO_RAG_MULTIMODAL_ENDPOINT\`): with the switch on and no service configured the
+pipeline still runs end to end on a built-in, network-free stand-in whose vectors are
+reproducible but not semantic — right for trying the feature out, wrong for a real
+collection.
+
+\`\`\`bash
+DEDALO_RAG_MEDIA_ENABLED=true
+\`\`\``,
+	},
+	DEDALO_RAG_MULTIMODAL_PROVIDER: {
+		type: 'string',
+		scope: 'operator',
+		default: 'local',
+		heading: 'Defining the image embedding provider',
+		typeLabel: 'string',
+		doc: `Which service turns an image into a vector — and, the load-bearing part, whether that
+service runs on your own machine. \`local\` (the default) declares an on-premise image
+embedder; **any other value declares an external one**, whose every call carries the image
+itself off your server.
+
+That declaration is what \`DEDALO_RAG_IMAGE_EGRESS_POLICY\` acts on: while the policy is at
+its default, naming an external provider here is refused as a configuration error rather
+than quietly honoured. So name the service you actually run — \`local\` for a container of
+your own, the vendor's name for a hosted one. Calling a hosted service \`local\` does not
+make it one; it only disables the check.
+
+\`\`\`bash
+DEDALO_RAG_MULTIMODAL_PROVIDER="local"
+\`\`\``,
+	},
+	DEDALO_RAG_MULTIMODAL_MODEL: {
+		type: 'string',
+		scope: 'operator',
+		default: 'clip-ViT-B-32',
+		heading: 'Defining the image embedding model',
+		typeLabel: 'string',
+		doc: `The model name Dédalo asks the image embedding service for. It must be a **joint**
+image-and-text model (CLIP, SigLIP, jina-clip and their kin): both of its towers share one
+vector space, and that shared space is what lets a typed question retrieve a photograph. A
+text-only embedder cannot stand in here — the text-side \`DEDALO_RAG_EMBEDDING_MODEL\` is a
+separate, independent choice.
+
+Like its text twin, it **partitions** the stored vectors. Changing it on a populated
+installation therefore does not convert the existing image index: the images must be
+embedded again under the new model before image searches see them. The default
+\`"clip-ViT-B-32"\` is small enough to serve from a modest machine.
+
+\`\`\`bash
+DEDALO_RAG_MULTIMODAL_MODEL="clip-ViT-B-32"
+\`\`\``,
+	},
+	DEDALO_RAG_MULTIMODAL_ENDPOINT: {
+		type: 'string',
+		scope: 'operator',
+		default: '',
+		heading: 'Defining the image embedding endpoint',
+		typeLabel: 'string',
+		doc: `The base URL of the image embedding service. Dédalo posts images to
+\`{endpoint}/image\` and query text to \`{endpoint}/text\`, and expects the vectors back; a
+failed or mis-shaped response is skipped whole rather than stored as a partial batch, so a
+sick service degrades the results but never corrupts the index.
+
+Empty by default, and empty is meaningful: with no endpoint the image layer falls back to
+a built-in, network-free stand-in, so the whole pipeline stays exercisable offline —
+reproducible vectors that are not semantic. Any installation that wants real image search
+sets one.
+
+\`\`\`bash
+DEDALO_RAG_MULTIMODAL_ENDPOINT="http://127.0.0.1:8089"
+\`\`\``,
+	},
+	DEDALO_RAG_MULTIMODAL_API_KEY: {
+		type: 'string',
+		scope: 'secret',
+		default: undefined,
+		heading: 'Defining the image embedding credential',
+		typeLabel: 'string',
+		doc: `The bearer token Dédalo sends to the image embedding service. A container you run
+yourself usually needs none; a hosted service always does.
+
+It is a secret — keep it in \`../private/.env\`, never in a repository. Unset by default,
+and unset simply means the request carries no authorization header. Setting it does not by
+itself permit images to leave the host: that decision is
+\`DEDALO_RAG_IMAGE_EGRESS_POLICY\`.
+
+\`\`\`bash
+DEDALO_RAG_MULTIMODAL_API_KEY="sk-..."
+\`\`\``,
+	},
+	DEDALO_RAG_IMAGE_EGRESS_POLICY: {
+		type: 'string',
+		scope: 'operator',
+		default: 'local_only',
+		heading: 'Deciding whether object images may leave the host',
+		typeLabel: 'string',
+		doc: `Whether the photographs of your objects may be sent to an embedding service outside your
+server. It is the institution's own decision, stated once:
+
+* \`local_only\` (the default) — images are embedded only by a provider declared \`local\`
+  (\`DEDALO_RAG_MULTIMODAL_PROVIDER\`). Configuring an external one while this policy holds
+  is refused loudly as a configuration error, so no image leaves the building through an
+  oversight in a settings file.
+* \`allow_external\` — an external provider is permitted, because the institution has
+  decided its material may be processed by a third party. Know what that means in
+  practice: the image bytes are transmitted to that service on every embedding call.
+
+The policy governs the **provider**, not the record — it is a switch you hold, not a
+hidden restriction on what may be published. Which record *text* may reach an external
+language model is a separate question, answered by
+\`DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT\` and
+\`DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS\`. An unrecognized value is treated as
+\`local_only\` and logged, so a typo can never open the gate.
+
+\`\`\`bash
+DEDALO_RAG_IMAGE_EGRESS_POLICY="local_only"
+\`\`\``,
+	},
+	DEDALO_RAG_IMAGE_MAX_PX: {
+		type: 'number',
+		scope: 'operator',
+		default: 512,
+		heading: 'Defining the embedded image size',
+		typeLabel: 'int',
+		doc: `The longest side, in pixels, of the copy of an image that is sent to the embedding
+service. A larger original is downscaled into that box first; one already inside it is sent
+untouched. The original file on disk is never modified.
+
+512 is what the usual joint models actually consume — pushing a 6000-pixel master through
+gains nothing and costs bandwidth, memory and time on every call. Raise it only for a model
+that genuinely accepts a larger input. A value below 1 disables the downscale and sends the
+original as it is.
+
+\`\`\`bash
+DEDALO_RAG_IMAGE_MAX_PX=512
+\`\`\``,
+	},
+	DEDALO_RAG_IMAGE_HYBRID: {
+		type: 'boolean',
+		scope: 'operator',
+		default: true,
+		heading: 'Defining the default image similarity mode',
+		typeLabel: 'bool',
+		doc: `Whether an object-similarity search combines the visual match with a lexical one over
+the object's own descriptive context, when the request does not say which mode it wants.
+
+Keep the default \`true\` for a heritage collection: pure visual similarity confuses a
+bronze coin with a bronze button, and the descriptive leg is what tells them apart. Set it
+to \`false\` where the image *is* the record (a photographic archive, a fabric-pattern
+collection) and the surrounding text would only blur the result. A request may still ask
+for either mode explicitly — this decides only what happens when it does not.
+
+\`\`\`bash
+DEDALO_RAG_IMAGE_HYBRID=true
+\`\`\``,
+	},
+	DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY: {
+		type: 'number',
+		scope: 'operator',
+		default: 0.93,
+		heading: 'Defining the near-duplicate threshold',
+		typeLabel: 'float',
+		doc: `How alike two images must be, on a 0-to-1 similarity scale, before a near-duplicate
+search reports them as the same thing. It applies only to a request that explicitly asks
+for near duplicates; ordinary similarity searches are unaffected.
+
+0.93 is deliberately severe, because the question it answers is "has this object been
+photographed and catalogued twice?" — a looser floor turns that into "these two coins look
+alike", a different and much longer list. Lower it if genuine re-photographs (different
+lighting, a different rig) are being missed; raise it if merely similar pieces still creep
+in.
+
+\`\`\`bash
+DEDALO_RAG_NEAR_DUPLICATE_SIMILARITY=0.93
+\`\`\``,
+	},
+	DEDALO_RAG_CHARACTERIZE_TOP_K: {
+		type: 'number',
+		scope: 'operator',
+		default: 20,
+		heading: 'Defining the characterization neighbourhood',
+		typeLabel: 'int',
+		doc: `How many visually nearest already-catalogued objects are consulted when Dédalo proposes
+a typology, a period or a material for an uncatalogued one. The proposal is an aggregate of
+what those neighbours are catalogued as — never a generated guess — and it is returned for
+a cataloguer to accept or reject: the engine writes nothing.
+
+20 balances the two failure modes. Too few neighbours and a single oddly-photographed piece
+dominates the proposal; too many and the neighbourhood drifts away from the object,
+diluting a real signal with distant matches. A missing or non-integer value falls back to
+it.
+
+\`\`\`bash
+DEDALO_RAG_CHARACTERIZE_TOP_K=20
+\`\`\``,
+	},
 	DEDALO_RAG_PROVIDER_TIMEOUT: {
 		type: 'number',
 		scope: 'operator',
@@ -638,6 +851,67 @@ falls back to \`60\`, the widely used value.
 
 \`\`\`bash
 DEDALO_RAG_RRF_K=60
+\`\`\``,
+	},
+	DEDALO_AI_MODEL_STORE: {
+		type: 'string',
+		scope: 'operator',
+		default: undefined,
+		heading: 'Locating the local AI model store',
+		typeLabel: 'path',
+		doc: `Where the models that run **inside the browser** are kept — speech recognition for the
+transcription tool, translation for the language tool. The directory is served read-only at
+\`/dedalo/ai_models/\`, one folder per model.
+
+This is what makes local inference genuinely local. Without a store, the runtime falls back
+to downloading weights from a public model hub, which an air-gapped institution cannot do at
+all and which tells a third party when a recording is being worked on. Seed the store with
+\`bun run scripts/fetch_ai_models.ts\`, or copy it in with rsync where there is no network.
+
+Relative values resolve against the private directory. Unset, the store is
+\`<private>/ai_models\`. Expect roughly 1.5 GB for a large speech model.
+
+\`\`\`bash
+DEDALO_AI_MODEL_STORE="/data/dedalo/ai_models"
+\`\`\``,
+	},
+	DEDALO_AI_MODEL_ALLOW_HUB: {
+		type: 'boolean',
+		scope: 'operator',
+		default: false,
+		heading: 'Allowing model downloads from a public hub',
+		typeLabel: 'bool',
+		doc: `Whether the browser may fetch model weights from a public model hub when they are not in
+the local store.
+
+The default \`false\` keeps the promise the local engines are chosen for: nothing about a
+recording — not even the fact that one is being transcribed — reaches a third party, and the
+installation works with no outbound internet. Set it to \`true\` only where the convenience of
+on-demand downloads outweighs that, and never for collections holding personal data.
+
+\`\`\`bash
+DEDALO_AI_MODEL_ALLOW_HUB=false
+\`\`\``,
+	},
+	DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS: {
+		type: 'boolean',
+		scope: 'operator',
+		default: false,
+		heading: 'Allowing a transcriber on the local network',
+		typeLabel: 'bool',
+		doc: `Whether a configured transcription server may live on a private or loopback address.
+
+Outbound requests to private ranges are refused by default, because an *external* service
+must never be able to make the engine reach inside the network. An *on-premise* recogniser
+(faster-whisper, WhisperX, whisper.cpp on a LAN machine) is the legitimate opposite case, and
+this parameter is how you say so — deliberately, per installation, rather than by weakening
+the guard for everyone. The cloud metadata address stays refused either way.
+
+It applies only to the \`local_whisper\` engine, which is POSTed the audio bytes; the external
+engine keeps the strict guard regardless.
+
+\`\`\`bash
+DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS=true
 \`\`\``,
 	},
 	RAG_DB_NAME: {

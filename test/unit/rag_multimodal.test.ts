@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, rmSync, unlinkSync } from 'node:fs';
 import { ragApiActions } from '../../src/ai/rag/api.ts';
 import {
 	RagCharacterizer,
@@ -7,12 +8,33 @@ import {
 } from '../../src/ai/rag/characterizer.ts';
 import { cosineDistance } from '../../src/ai/rag/chunker.ts';
 import {
+	type ExtractedImage,
+	buildImageContextSummary,
+	extractImageForEmbedding,
+} from '../../src/ai/rag/image_source.ts';
+import { RagIndexer, defaultRagStore } from '../../src/ai/rag/indexer.ts';
+import {
 	DeterministicMultimodalProvider,
+	type MultimodalEmbeddingProvider,
 	extractVectors,
 } from '../../src/ai/rag/multimodal_embedding_provider.ts';
 import { ObjectRetrieval } from '../../src/ai/rag/object_retrieval.ts';
-import type { Candidate, EmbeddingRow, RecordLocator } from '../../src/ai/rag/types.ts';
-import { deleteRecordChunks, ragSql, upsertEmbeddingRows } from '../../src/ai/rag/vector_store.ts';
+import type { Candidate, RecordLocator } from '../../src/ai/rag/types.ts';
+import { deleteRecordChunks, getRecordVectors, ragSql } from '../../src/ai/rag/vector_store.ts';
+import { config } from '../../src/config/config.ts';
+import { mediaTypeOf } from '../../src/core/concepts/media.ts';
+import { updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
+import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
+import { runBinary } from '../../src/core/media/engine/spawn.ts';
+import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
+import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
+import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
+import {
+	type MediaIdentity,
+	type MediaPathOptions,
+	buildMediaLocation,
+} from '../../src/core/media/path.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
@@ -20,61 +42,241 @@ import { cleanScratchRecord } from '../helpers/test_data.ts';
 /**
  * Multimodal RAG (Brick 5): the deterministic joint provider, the pure
  * characterizer aggregators, and the object-retrieval + dd_rag_api image actions
- * against the live pgvector DB with directly-seeded image vectors (image INGEST
- * via the media extractor is the ledgered, separately-wired boundary).
+ * against the live pgvector DB.
+ *
+ * THE IMAGE VECTORS ARE NOT HAND-SEEDED. Each scratch record is given a REAL
+ * image through the REAL pipeline:
+ *
+ *   ImageMagick-generated upload → staging dir → processUploadedFile
+ *   (add_file → regenerateImage derivatives → files_info)
+ *   → RagIndexer.indexRecordImages
+ *       → extractImageForEmbedding  (reads the real non-master derivative,
+ *                                    downscales it, hashes the encoder bytes)
+ *       → buildImageContextSummary  (reads the record's real metadata role)
+ *       → upsertEmbeddingRows       (the LIVE pgvector store)
+ *
+ * The ONE stand-in is the encoder itself: DeterministicMultimodalProvider, so
+ * the gate is network-free and needs no CLIP sidecar. It is not semantic, so
+ * nothing here asserts VISUAL meaning — what is asserted is that the vectors,
+ * their source hash, their source_text and their chunk_meta are the real
+ * pipeline's output, and that retrieval/ACL/the API read them back correctly.
+ *
+ * MEDIA ROOT. The extractor resolves its own location from the ontology
+ * (resolveMediaPathOptions) and the CONFIGURED media root — there is no seam to
+ * redirect it, so an ingest into a scratch root would leave it finding nothing
+ * and the gate asserting nothing. The files therefore land in the configured
+ * tree (precedent: media_fallback_listener.test.ts), named after the freshly
+ * created scratch records, and afterAll unlinks every quality tier it wrote.
+ *
+ * PRECONDITIONS — each SKIPS LOUDLY, never silently green: a live pgvector RAG
+ * database, ImageMagick on PATH, and a configured MEDIA_PATH.
  */
 
 process.env.DEDALO_RAG_ENABLED = 'true';
 process.env.DEDALO_RAG_MEDIA_ENABLED = 'true';
 
 const SECTION_TIPO = 'test2';
+/** A REAL component_image tipo in the ontology — the extractor needs a media model. */
+const IMAGE_TIPO = 'rsc29';
+/** A REAL non-translatable component_input_text — the context summary's metadata role. */
+const CAPTION_TIPO = 'test162';
 const MODEL = 'deterministic-multimodal'; // buildMultimodalProvider default (no endpoint)
+const MAX_PX = 512; // multimodalConfigFromEnv().imageMaxPx default
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 const provider = new DeterministicMultimodalProvider({ model: MODEL, dimension: 64 });
-const createdIds: number[] = [];
+const NOLAN = 'lg-nolan';
+const DATA_LANG = 'lg-eng';
+const USER_ID = 7;
+const KEY_DIR = 'ragimggate';
+const IMAGE_SPEC = mediaTypeOf('component_image') as NonNullable<ReturnType<typeof mediaTypeOf>>;
+
+/** Overlapping captions ("roman bronze coin") → the hybrid lexical leg has something real to fuse. */
+const OBJECTS = [
+	{ caption: 'roman bronze coin obverse laureate head emperor', source: 'gradient:navy-gold' },
+	{
+		caption: 'roman bronze coin reverse eagle standard legionary',
+		source: 'gradient:crimson-white',
+	},
+];
 
 type Ctx = { session: { userId: number } | null; principal?: Principal };
 const rqo = (options: Record<string, unknown>) => ({ options }) as never;
 
-async function seedImage(sectionId: number, caption: string, view: string): Promise<void> {
-	const base64 = Buffer.from(caption).toString('base64');
-	const [embedding] = await provider.embedImage([base64]);
-	const row: EmbeddingRow = {
-		sectionTipo: SECTION_TIPO,
-		sectionId,
-		componentTipo: 'rsc29',
-		lang: 'lg-nolan',
-		chunkIndex: 0,
-		provider: 'local',
-		model: MODEL,
-		dimension: 64,
-		embedding: embedding as number[],
-		sourceHash: `img_${sectionId}`,
-		sourceText: caption,
-		tokenCount: null,
-		modality: 'image',
-		sourceKind: 'image_visual',
-		egressClass: 'public',
-		parentKey: `${SECTION_TIPO}_${sectionId}`,
-		chunkMeta: { view, thumb_url: `/thumb/${sectionId}.jpg`, media_tipo: 'rsc29' },
+// ─────────────────────────── preconditions (loud skips) ───────────────────────────
+
+const HAVE_MAGICK = existsSync(resolveMagick());
+const MEDIA_ROOT = config.media.rootPath;
+let HAVE_RAG_DB = false;
+try {
+	await ragSql.unsafe('SELECT 1 FROM rag_embeddings LIMIT 1');
+	HAVE_RAG_DB = true;
+} catch {
+	console.warn('[rag_multimodal] pgvector RAG database unavailable — the image gates are SKIPPED');
+}
+if (!HAVE_MAGICK) {
+	console.warn('[rag_multimodal] ImageMagick not found — the image gates are SKIPPED');
+}
+if (MEDIA_ROOT === null) {
+	console.warn('[rag_multimodal] MEDIA_PATH is not configured — the image gates are SKIPPED');
+}
+/** Every precondition of the REAL ingest path. Nothing image-related runs without all three. */
+const REAL_INGEST = HAVE_RAG_DB && HAVE_MAGICK && MEDIA_ROOT !== null;
+
+// ─────────────────────────── the real ingest fixture ───────────────────────────
+
+const createdIds: number[] = [];
+const extractedByRecord = new Map<number, ExtractedImage>();
+let matrixTable = 'matrix_test';
+let pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: null };
+
+const identityFor = (sectionId: number): MediaIdentity => ({
+	componentTipo: IMAGE_TIPO,
+	sectionTipo: SECTION_TIPO,
+	sectionId,
+	lang: null,
+});
+
+/**
+ * The indexer under test: the REAL store, the REAL extractor, the REAL context
+ * summary. Only the section descriptor is a fake — test2's ontology declares no
+ * `rag.context`, and this gate is about the ingest path, not about parsing that
+ * descriptor (rag_config.test.ts owns it). The TEXT half is a no-op ([] groups).
+ */
+function buildImageIndexer(multimodal: MultimodalEmbeddingProvider = provider): RagIndexer {
+	const ragConfig = {
+		getEmbedGroups: async () => [],
+		getContextImages: async () => [{ tipo: IMAGE_TIPO, view: 'obverse' }],
+		getContextMetadata: async () => ({ caption: CAPTION_TIPO }),
 	};
-	await upsertEmbeddingRows([row]);
+	return new RagIndexer({
+		config: ragConfig as never,
+		provider: { name: 'unused', model: 'unused-text', embed: async () => [] } as never,
+		ontology: {} as never,
+		store: defaultRagStore(),
+		langs: [DATA_LANG],
+		nolan: NOLAN,
+		resolveDocs: async () => [],
+		recordTitle: async () => '',
+		image: {
+			provider: multimodal,
+			extract: extractImageForEmbedding,
+			contextSummary: buildImageContextSummary,
+			maxPx: MAX_PX,
+			// The deterministic provider is 'local', so this is never consulted —
+			// stated explicitly so the gate cannot ship bytes off the host if it changes.
+			allowExternal: false,
+		},
+	});
 }
 
+/** The context summary the REAL builder produces for a record (the row's source_text). */
+const summaryFor = (caption: string) => `caption: ${caption}`;
+
+/** Write the metadata role the context summary reads (scratch record, `string` column). */
+async function writeCaption(sectionId: number, caption: string): Promise<void> {
+	await updateMatrixRecord(
+		matrixTable,
+		SECTION_TIPO,
+		sectionId,
+		{ string: JSON.stringify({ [CAPTION_TIPO]: [{ id: '1', value: caption, lang: NOLAN }] }) },
+		{ rawTextPassthrough: true },
+	);
+}
+
+/** Stage a real jpg and run the REAL ingest for one record (derivatives + files_info). */
+async function ingestImage(sectionId: number, source: string): Promise<void> {
+	const dir = stagingDir(USER_ID, KEY_DIR, MEDIA_ROOT as string);
+	mkdirSync(dir, { recursive: true });
+	const tmpName = `rag_${sectionId}.jpg`;
+	await runBinary([resolveMagick(), '-size', '1400x1000', source, `${dir}/${tmpName}`], {
+		nice: false,
+	});
+	const result = await processUploadedFile({
+		spec: IMAGE_SPEC,
+		identity: identityFor(sectionId),
+		pathOpts,
+		userId: USER_ID,
+		keyDir: KEY_DIR,
+		tmpName,
+		extension: 'jpg',
+	});
+	const qualities = new Set(result.filesInfo.map((entry) => entry.quality));
+	if (!qualities.has(IMAGE_SPEC.defaultQuality) || !qualities.has(config.media.thumb.quality)) {
+		throw new Error(
+			`[rag_multimodal] ingest produced no ${IMAGE_SPEC.defaultQuality}/${config.media.thumb.quality} derivative for ${SECTION_TIPO}/${sectionId} — the extractor would have nothing real to read`,
+		);
+	}
+}
+
+/** Unlink every tier this gate wrote for one record (all qualities × all extensions). */
+function removeMediaFiles(sectionId: number): void {
+	if (MEDIA_ROOT === null) return;
+	const identity = identityFor(sectionId);
+	const qualities = new Set([...IMAGE_SPEC.qualities, config.media.thumb.quality]);
+	const extensions = new Set([
+		IMAGE_SPEC.defaultExtension,
+		...IMAGE_SPEC.alternateExtensions,
+		config.media.thumb.extension,
+	]);
+	for (const quality of qualities) {
+		for (const extension of extensions) {
+			try {
+				const location = buildMediaLocation(IMAGE_SPEC, identity, quality, extension, pathOpts);
+				if (existsSync(location.absolutePath)) unlinkSync(location.absolutePath);
+			} catch {
+				// an off-ladder quality/extension combination has no file to remove
+			}
+		}
+	}
+}
+
+const indexer = buildImageIndexer();
+
 beforeAll(async () => {
-	const a = await createSectionRecord(SECTION_TIPO, -1);
-	const b = await createSectionRecord(SECTION_TIPO, -1);
-	createdIds.push(a, b);
-	// Overlapping captions ("roman bronze coin") → the two objects are neighbours.
-	await seedImage(a, 'roman bronze coin obverse laureate head emperor', 'obverse');
-	await seedImage(b, 'roman bronze coin reverse eagle standard legionary', 'reverse');
+	if (!REAL_INGEST) return;
+	matrixTable = (await getMatrixTableFromTipo(SECTION_TIPO)) ?? 'matrix_test';
+	// The SAME options the extractor will resolve for itself — by construction,
+	// so the ingest cannot write where the real read path would not look.
+	pathOpts = await resolveMediaPathOptions(IMAGE_TIPO, SECTION_TIPO);
+
+	for (const object of OBJECTS) {
+		const sectionId = await createSectionRecord(SECTION_TIPO, -1);
+		createdIds.push(sectionId);
+		await writeCaption(sectionId, object.caption);
+		await ingestImage(sectionId, object.source);
+
+		const indexed = await indexer.indexRecordImages({ sectionTipo: SECTION_TIPO, sectionId });
+		if (!indexed) {
+			throw new Error(
+				`[rag_multimodal] the REAL image index pass failed for ${SECTION_TIPO}/${sectionId} — refusing to assert against a half-built index`,
+			);
+		}
+		// Re-extract for the assertions: the stored vector must be reproducible
+		// from the derivative on disk (the hash-diff skip depends on it).
+		const extracted = await extractImageForEmbedding({
+			componentTipo: IMAGE_TIPO,
+			sectionTipo: SECTION_TIPO,
+			sectionId,
+			maxPx: MAX_PX,
+		});
+		if (extracted === null) {
+			throw new Error(
+				`[rag_multimodal] extractImageForEmbedding found no derivative for ${SECTION_TIPO}/${sectionId} after a successful ingest`,
+			);
+		}
+		extractedByRecord.set(sectionId, extracted);
+	}
 });
 
 afterAll(async () => {
 	for (const id of createdIds) {
+		removeMediaFiles(id);
 		await deleteRecordChunks(SECTION_TIPO, id);
-		await cleanScratchRecord(SECTION_TIPO, id);
+		await cleanScratchRecord(SECTION_TIPO, id, matrixTable);
+	}
+	if (MEDIA_ROOT !== null) {
+		rmSync(stagingDir(USER_ID, KEY_DIR, MEDIA_ROOT), { recursive: true, force: true });
 	}
 	await ragSql
 		.unsafe(`DROP TABLE IF EXISTS "rag_embeddings_${MODEL.replace(/[^a-z0-9]+/g, '_')}"`)
@@ -156,8 +358,8 @@ describe('RagCharacterizer (injected fakes, no DB)', () => {
 			{
 				sectionTipo: SECTION_TIPO,
 				sectionId: 2,
-				componentTipo: 'rsc29',
-				lang: 'lg-nolan',
+				componentTipo: IMAGE_TIPO,
+				lang: NOLAN,
 				chunkIndex: 0,
 				sourceText: null,
 				sourceKind: 'image_visual',
@@ -191,8 +393,8 @@ describe('RagCharacterizer (injected fakes, no DB)', () => {
 			{
 				sectionTipo: SECTION_TIPO,
 				sectionId: 2,
-				componentTipo: 'rsc29',
-				lang: 'lg-nolan',
+				componentTipo: IMAGE_TIPO,
+				lang: NOLAN,
 				chunkIndex: 0,
 				sourceText: null,
 				sourceKind: 'image_visual',
@@ -224,7 +426,87 @@ describe('RagCharacterizer (injected fakes, no DB)', () => {
 	});
 });
 
-describe('ObjectRetrieval (live pgvector, seeded image vectors)', () => {
+describe.if(REAL_INGEST)('the stored image row IS the ingest pipeline output', () => {
+	test('one vector per image component, reproducible from the derivative on disk', async () => {
+		const sectionId = createdIds[0] as number;
+		const stored = await getRecordVectors(
+			{ sectionTipo: SECTION_TIPO, sectionId } as RecordLocator,
+			MODEL,
+			'image',
+		);
+		expect(stored).toHaveLength(1);
+		const row = stored[0]!;
+		expect(row.chunkIndex).toBe(0);
+		expect(row.view).toBe('obverse');
+		// source_text is the REAL context summary, read from the record's metadata role.
+		expect(row.sourceText).toBe(summaryFor(OBJECTS[0]!.caption));
+		// The vector is the encoder's output for the bytes the extractor produced —
+		// re-extracting the same derivative reproduces it (what the hash-diff assumes).
+		const extracted = extractedByRecord.get(sectionId) as ExtractedImage;
+		const [fresh] = await provider.embedImage([extracted.base64]);
+		expect(row.embedding).toHaveLength((fresh as number[]).length);
+		expect(cosineDistance(row.embedding, fresh as number[])).toBeLessThan(1e-5);
+	});
+
+	test('chunk_meta carries the REAL derivative facts retrieval renders', async () => {
+		const sectionId = createdIds[0] as number;
+		const extracted = extractedByRecord.get(sectionId) as ExtractedImage;
+		const rows = (await ragSql.unsafe(
+			`SELECT chunk_meta, source_hash, modality, source_kind, parent_key, dimension
+			 FROM rag_embeddings
+			 WHERE section_tipo = $1 AND section_id = $2 AND model = $3`,
+			[SECTION_TIPO, sectionId, MODEL],
+		)) as {
+			chunk_meta: Record<string, unknown>;
+			source_hash: string;
+			modality: string;
+			source_kind: string;
+			parent_key: string;
+			dimension: number;
+		}[];
+		expect(rows).toHaveLength(1);
+		const row = rows[0]!;
+		expect(row.modality).toBe('image');
+		expect(row.source_kind).toBe('image_visual');
+		expect(row.parent_key).toBe(`${SECTION_TIPO}_${sectionId}`);
+		// The tier actually read: a derivative, NEVER an archival master.
+		expect(row.chunk_meta.quality).toBe(IMAGE_SPEC.defaultQuality);
+		expect(row.chunk_meta.quality).toBe(extracted.quality);
+		expect(row.chunk_meta.media_tipo).toBe(IMAGE_TIPO);
+		// Dimensions of the STORED derivative, measured by ImageMagick during ingest.
+		expect(row.chunk_meta.width).toBe(extracted.width);
+		expect(row.chunk_meta.height).toBe(extracted.height);
+		expect(typeof row.chunk_meta.width).toBe('number');
+		// The thumb URL is only stored when the thumb derivative really exists.
+		expect(row.chunk_meta.thumb_url).toBe(extracted.thumbUrl);
+		expect(String(row.chunk_meta.thumb_url)).toContain(`/${config.media.thumb.quality}/`);
+	});
+
+	test('re-indexing an UNCHANGED image costs no encoder call', async () => {
+		let calls = 0;
+		const counting: MultimodalEmbeddingProvider = {
+			embedImage: async (images) => {
+				calls++;
+				return provider.embedImage(images);
+			},
+			embedTextForImageSearch: (texts) => provider.embedTextForImageSearch(texts),
+			dimension: () => provider.dimension(),
+			model: () => MODEL,
+			provider: () => 'local',
+			isExternal: () => false,
+		};
+		const sectionId = createdIds[0] as number;
+		const ok = await buildImageIndexer(counting).indexRecordImages({
+			sectionTipo: SECTION_TIPO,
+			sectionId,
+		});
+		expect(ok).toBe(true);
+		// Same bytes + same context summary ⇒ same source_hash ⇒ skip.
+		expect(calls).toBe(0);
+	});
+});
+
+describe.if(REAL_INGEST)('ObjectRetrieval (live pgvector, real-ingest vectors)', () => {
 	test('findSimilarObjects returns the other object, excluding the seed', async () => {
 		const objectRetrieval = new ObjectRetrieval(provider);
 		const hits = await objectRetrieval.findSimilarObjects(
@@ -234,6 +516,19 @@ describe('ObjectRetrieval (live pgvector, seeded image vectors)', () => {
 		);
 		expect(hits.every((h) => h.sectionId !== createdIds[0])).toBe(true);
 		expect(hits.some((h) => h.sectionId === createdIds[1])).toBe(true);
+	});
+
+	test('hybrid mode also fuses the lexical leg over the stored context summary', async () => {
+		// Both captions share "roman bronze coin", so the lexical leg over the REAL
+		// summaries retrieves the sibling even though the encoder is not semantic.
+		const objectRetrieval = new ObjectRetrieval(provider);
+		const hits = await objectRetrieval.findSimilarObjects(
+			SUPERUSER,
+			{ sectionTipo: SECTION_TIPO, sectionId: createdIds[0]! } as RecordLocator,
+			{ sectionTipos: [SECTION_TIPO], mode: 'hybrid', topK: 5 },
+		);
+		expect(hits.some((h) => h.sectionId === createdIds[1])).toBe(true);
+		expect(hits[0]!.sourceText).toBe(summaryFor(OBJECTS[1]!.caption));
 	});
 
 	test('a denied user gets NOTHING (DoD)', async () => {
@@ -247,7 +542,7 @@ describe('ObjectRetrieval (live pgvector, seeded image vectors)', () => {
 	});
 });
 
-describe('dd_rag_api image actions', () => {
+describe.if(REAL_INGEST)('dd_rag_api image actions', () => {
 	test('similar_objects returns shaped objects with similarity + thumb_url', async () => {
 		const res = await ragApiActions.similar_objects(
 			rqo({
@@ -261,10 +556,17 @@ describe('dd_rag_api image actions', () => {
 		expect(res.body.msg).toBe('ok');
 		const hits = res.body.result as { section_id: number; thumb_url: string | null }[];
 		expect(hits.some((h) => h.section_id === createdIds[1])).toBe(true);
-		expect(hits[0]!.thumb_url).toContain('/thumb/');
+		// Every thumb_url points at THAT record's real thumb derivative.
+		for (const hit of hits) {
+			expect(hit.thumb_url).toContain(`/${config.media.thumb.quality}/`);
+			expect(hit.thumb_url).toContain(`${IMAGE_TIPO}_${SECTION_TIPO}_${hit.section_id}.`);
+		}
 	});
 
-	test('search_by_text_image finds objects whose caption shares tokens', async () => {
+	test('search_by_text_image reaches the image partition through the joint tower', async () => {
+		// The deterministic encoder is not semantic, so this asserts the PLUMBING —
+		// query → joint text tower → ANN over the real image vectors → ACL → shape —
+		// not that the caption's meaning matches the pixels.
 		const res = await ragApiActions.search_by_text_image(
 			rqo({ query: 'roman bronze coin', section_tipo: [SECTION_TIPO], limit: 5 }),
 			{ principal: SUPERUSER } as Ctx,
@@ -272,6 +574,7 @@ describe('dd_rag_api image actions', () => {
 		expect(res.body.msg).toBe('ok');
 		const hits = res.body.result as { section_id: number }[];
 		expect(hits.length).toBeGreaterThan(0);
+		expect(hits.every((h) => createdIds.includes(h.section_id))).toBe(true);
 	});
 
 	test('characterize_object returns a proposals envelope', async () => {
@@ -282,7 +585,10 @@ describe('dd_rag_api image actions', () => {
 		expect(res.body.msg).toBe('ok');
 		expect(res.body.result).toHaveProperty('neighboursConsidered');
 	});
+});
 
+// The feature-flag gate needs neither media nor vectors, so it never skips.
+describe('dd_rag_api image actions (flag gate)', () => {
 	test('image actions decline when media is disabled', async () => {
 		process.env.DEDALO_RAG_MEDIA_ENABLED = '';
 		try {

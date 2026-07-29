@@ -29,7 +29,7 @@
  */
 
 import { Database } from 'bun:sqlite';
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
@@ -148,6 +148,15 @@ export const SESSION_DB_PATH = sessionDbPath;
 mkdirSync(dirname(sessionDbPath), { recursive: true, mode: 0o700 });
 
 const database = new Database(sessionDbPath, { create: true });
+// OPS-04 (2026-07-28 audit): the session store holds session tokens, CSRF
+// secrets and password-reset codes — make the file OWNER-ONLY. It was created
+// with the process umask (commonly world-readable 0644). Best-effort: an
+// in-memory (:memory:) test path or a file we do not own must never block boot.
+try {
+	if (sessionDbPath !== ':memory:') chmodSync(sessionDbPath, 0o600);
+} catch {
+	/* best-effort hardening */
+}
 // busy_timeout is PER-CONNECTION state: set it immediately after every open,
 // or a concurrent writer (dev server + test run) throws SQLITE_BUSY after ~1ms.
 database.exec('PRAGMA busy_timeout = 5000');

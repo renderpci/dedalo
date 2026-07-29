@@ -70,8 +70,11 @@ describe('tool_import_rdf module', () => {
 			options: { ar_values: ['http://169.254.169.254/latest/meta-data'] },
 		});
 		expect(res.result).toEqual([]);
+		// Message shape from the SHARED ssrf guard (2026-07-28 audit centralized
+		// it; the per-tool 'SEC-072: refused unsafe RDF URI' wording is gone —
+		// the refusal itself and the empty result are what this test protects).
 		expect(res.errors).toEqual([
-			'SEC-072: refused unsafe RDF URI: http://169.254.169.254/latest/meta-data.rdf',
+			'http://169.254.169.254/latest/meta-data.rdf: ssrf: refused private/reserved address 169.254.169.254',
 		]);
 	});
 });

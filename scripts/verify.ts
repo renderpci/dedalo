@@ -74,6 +74,11 @@ const TRIPWIRES = [
 	'test/unit/temporal_instance_tripwire.test.ts',
 	'test/unit/client_caller_chain_tripwire.test.ts',
 	'test/unit/tools_cache_invalidation.test.ts',
+	'test/unit/no_remote_code_tripwire.test.ts',
+	'test/unit/install_seal_tripwire.test.ts',
+	'test/unit/xss_csp_tripwire.test.ts',
+	'test/unit/human_write_scope_tripwire.test.ts',
+	'test/unit/diffusion_scope_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

@@ -205,3 +205,46 @@ export function subtitlesPath(identity: MediaIdentity, lang: string, mediaRoot?:
 export function subtitlesUrl(identity: MediaIdentity, lang: string): string {
 	return `${config.media.webBase}${subtitlesRelativePath(identity, lang)}`;
 }
+
+/**
+ * Public URL of a record's THUMB derivative, or null when the media type has no
+ * thumb tier. The media subsystem owns this grammar so callers outside it (the
+ * RAG image index, which stores the URL alongside a vector) never assemble a
+ * media URL by hand.
+ *
+ * PURE — it does not stat the file. A thumb that has not been generated yet
+ * still yields a URL, so a caller that needs "renderable now" must check
+ * existence itself (`buildMediaLocation(...).absolutePath`). Reading it back is
+ * subject to the normal media access rules: the thumb tier is public-listed, so
+ * an anonymous reader still needs the record's publication marker, and everyone
+ * else needs the media auth cookie.
+ */
+export function mediaThumbUrl(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	options: MediaPathOptions,
+): string | null {
+	const location = mediaThumbLocation(spec, identity, options);
+	return location === null ? null : `${config.media.webBase}${location.relativePath}`;
+}
+
+/**
+ * The thumb derivative's location (null when the media type has no thumb tier).
+ * Split out of {@link mediaThumbUrl} so a caller that needs BOTH the URL and
+ * "does it exist yet" resolves the path once, and neither of them names the
+ * thumb quality or extension itself.
+ */
+export function mediaThumbLocation(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	options: MediaPathOptions,
+): MediaLocation | null {
+	if (!spec.hasThumb) return null;
+	return buildMediaLocation(
+		spec,
+		identity,
+		config.media.thumb.quality,
+		config.media.thumb.extension,
+		options,
+	);
+}

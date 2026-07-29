@@ -30,6 +30,7 @@ import {
 	resolveOriginalSource,
 } from '../processing.ts';
 import { type AddFileInput, addFile } from './add_file.ts';
+import { fireMediaIngestEvent } from './ingest_event.ts';
 
 /** Ensure the parent dir of an output file exists (mirrors processing.ts ensureDir). */
 function ensureMediaDir(absolutePath: string): void {
@@ -89,6 +90,21 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	const filesInfo = scanFilesInfo(spec, identity, pathOpts, {
 		originalNormalizedName: `${identity.componentTipo}_${identity.sectionTipo}_${identity.sectionId}.${added.extension}`,
 	});
+
+	// The single chokepoint every upload route passes through (tool_upload, the
+	// batch importer, the MCP media tool), so one notification covers them all.
+	// Fired AFTER the derivatives exist, because a listener's whole job is to
+	// read them. Best-effort by construction — see ingest_event.ts.
+	//
+	// For av the derivatives are still transcoding at this point (only the
+	// original is on disk); a listener that needs them must poll `jobId`.
+	await fireMediaIngestEvent({
+		componentTipo: identity.componentTipo,
+		sectionTipo: identity.sectionTipo,
+		sectionId: identity.sectionId,
+		model: spec.model,
+	});
+
 	return { originalFileName: added.fileName, extension: added.extension, filesInfo, jobId };
 }
 

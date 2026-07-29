@@ -107,6 +107,27 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		source: 'npm',
 		probe: 'xlsx.mjs',
 	},
+	transformers: {
+		// The in-browser AI runtime (tool_transcription's speech recognition,
+		// tool_lang's translation). It USED to be imported straight from a CDN by
+		// each tool — which made "local, private inference" depend on a third party
+		// being reachable, and leaked to that third party WHEN a record was being
+		// transcribed. Served from here, an air-gapped archive works and nothing
+		// leaves the building.
+		base: 'node_modules/@huggingface/transformers',
+		source: 'npm',
+		probe: 'dist/transformers.js',
+	},
+	onnxruntime: {
+		// Transformers.js runs its models on onnxruntime-web, whose WASM binaries it
+		// otherwise fetches from a CDN at inference time. It is a transitive dep of
+		// @huggingface/transformers, but pinned EXPLICITLY in package.json because
+		// this registry only serves what the lockfile names — and because the WASM
+		// build must match the runtime that loads it.
+		base: 'node_modules/onnxruntime-web',
+		source: 'npm',
+		probe: 'dist/ort-wasm-simd-threaded.jsep.wasm',
+	},
 	svgedit: {
 		// Was a vendored ~7.2.x-era build (2.0 MB) with no upstream package. 7.4.2 is a
 		// verified drop-in: same default export, all 29 methods + 3 properties

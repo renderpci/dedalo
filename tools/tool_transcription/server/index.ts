@@ -32,9 +32,16 @@
  * state).
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { config } from '../../../src/config/config.ts';
+import { downloadModel } from '../../../src/core/ai/model_fetch.ts';
+import {
+	AI_MODEL_URL_PREFIX,
+	modelHubAllowed,
+	modelInstalled,
+	modelStoreAvailable,
+} from '../../../src/core/ai/model_store.ts';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { probeFormat } from '../../../src/core/media/engine/ffmpeg.ts';
@@ -70,6 +77,7 @@ import type {
 } from '../../../src/core/tools/module.ts';
 import { assertActionPermission } from '../../../src/core/tools/security.ts';
 import {
+	LOCAL_ASR_ENGINE,
 	mapTranscriberEngine,
 	pollTranscriptionCompletion,
 	resolveTranscriberConfig,
@@ -236,6 +244,14 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 		const denied = await gateRecordWrite(transcriptionDdo, ctx);
 		if (denied !== null) return denied;
 
+		// TOOLS-06 (2026-07-28 audit): ALSO gate READ on the media SOURCE.
+		// Transcription reads the audio CONTENT of media_ddo — without this a
+		// caller who can write their OWN transcription target could transcribe the
+		// restricted audio of ANY AV record (one they cannot read) into a record
+		// they control. Read level 1 + record-in-scope on the source media record.
+		const mediaDenied = await gateRecord(mediaDdo, ctx, 1);
+		if (mediaDenied !== null) return mediaDenied;
+
 		const { provider, error: providerError } = resolveTranscriberProvider(engine);
 		if (provider === null) return fail(providerError ?? 'unknown transcriber engine');
 		// Config entry is looked up by the ORIGINAL engine name; the POSTed
@@ -249,14 +265,31 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 			section_tipo: mediaDdo.section_tipo,
 			section_id: mediaDdo.section_id,
 		});
-		const audioRel = await ensureAudioQuality(spec, identity, pathOpts);
-		const audioUrl = externalMediaUrl(audioRel);
+
+		// Two ways to hand a recogniser the audio, and the choice is not cosmetic:
+		//  - an EXTERNAL service fetches a public URL (and so needs one to exist);
+		//  - the institution's OWN box is POSTed the bytes of the speech-optimised
+		//    WAV, so the recording is never published anywhere. That WAV is a
+		//    throwaway derivative, deleted by the completion poll.
+		const isLocalEngine = engine === LOCAL_ASR_ENGINE;
+		const audioRel = isLocalEngine
+			? await ensureTranscribableAudio(spec, identity, pathOpts)
+			: await ensureAudioQuality(spec, identity, pathOpts);
+		const audioPath = isLocalEngine
+			? absoluteFromRelative(audioRel, pathOpts.mediaRoot)
+			: undefined;
+		// An on-premise engine never receives a URL; asking for one would throw
+		// when DEDALO_MEDIA_EXPORT_BASE is unset, which is the normal state of an
+		// install that publishes nothing.
+		const audioUrl = isLocalEngine ? '' : externalMediaUrl(audioRel);
+
 		const result = await provider({
 			uri: cfg.uri,
 			key: cfg.key,
 			engine: mappedEngine,
 			quality,
 			audioUrl,
+			audioPath,
 			langTld2: getAlpha2FromCode(sourceLang) ?? '',
 			userId: ctx.userId,
 			entityName: config.entity,
@@ -278,6 +311,10 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 					url: cfg.uri,
 					lang: sourceLang,
 					av_url: audioUrl,
+					// The throwaway WAV the on-premise engine was fed. The poll
+					// deletes it when the job ends, whichever way it ends — this
+					// file is a copy of an interview and must not linger.
+					cleanup_path: audioPath,
 					engine: mappedEngine,
 					user_id: ctx.userId,
 					entity_name: config.entity,
@@ -313,6 +350,7 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 	const o = ctx.options;
 	const ddo = (o.transcription_ddo ?? {}) as MediaDdo;
 	const lang = String(o.lang ?? '');
+	const cleanupPath = String(o.cleanup_path ?? '');
 	const outcome = await pollTranscriptionCompletion({
 		status: {
 			uri: String(o.url ?? ''),
@@ -332,6 +370,21 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 		},
 		userId: ctx.userId,
 	});
+
+	// The job is over (saved, failed or given up on): drop the temporary audio.
+	// Unconditional on purpose — the one previous cleanup path ran on success
+	// only, which left a copy of the recording on disk after every failure.
+	if (cleanupPath !== '' && existsSync(cleanupPath)) {
+		try {
+			unlinkSync(cleanupPath);
+		} catch (error) {
+			console.error(
+				`[tool_transcription] could not delete the temporary audio ${cleanupPath}:`,
+				error,
+			);
+		}
+	}
+
 	return { result: outcome.result, msg: outcome.msg, errors: outcome.result ? [] : [outcome.msg] };
 }
 
@@ -604,16 +657,167 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
 	}
 }
 
+/**
+ * get_model_sources — where the BROWSER engine may load its model from.
+ *
+ * The browser cannot read the install's configuration, so without this the
+ * operator switches (`DEDALO_AI_MODEL_STORE`, `DEDALO_AI_MODEL_ALLOW_HUB`) would
+ * be inert and the worker would be guessing. It answers three facts:
+ *   model_host  — the store URL to load weights from (this install's own);
+ *   allow_hub   — whether falling back to a public model hub is permitted
+ *                 (default NO: the recordings are personal data, and an
+ *                 air-gapped archive must work);
+ *   store_ready — whether the store actually has anything in it, so the tool can
+ *                 say "ask your administrator to seed the model store" instead of
+ *                 failing with a 404 from inside the ONNX runtime.
+ *
+ * No record is addressed and nothing is written; the answer is install
+ * configuration the logged-in user's own browser is about to act on.
+ */
+async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
+	// Which catalog models are actually USABLE right now. Without this the picker
+	// happily offers a model nobody downloaded, and the run dies deep inside the
+	// ONNX runtime with "Could not locate file: …/config.json" — a message that
+	// tells an archivist nothing and an administrator almost nothing.
+	const installed: string[] = [];
+	try {
+		// getToolConfig returns the EFFECTIVE config — a flat map of key → resolved
+		// value — so `transcriber_quality` IS the catalog array.
+		const toolConfig = await getToolConfig('tool_transcription');
+		const raw = toolConfig?.transcriber_quality;
+		const entries = Array.isArray(raw)
+			? raw
+			: ((raw as { value?: unknown[] } | undefined)?.value ?? null);
+		if (Array.isArray(entries)) {
+			for (const raw of entries) {
+				if (raw === null || typeof raw !== 'object') continue;
+				const entry = raw as { name?: unknown; tier?: unknown; dtype?: Record<string, string> };
+				if (typeof entry.name !== 'string') continue;
+				if (entry.tier !== undefined && entry.tier !== 'browser') continue;
+				if (modelInstalled(entry.name, entry.dtype)) installed.push(entry.name);
+			}
+		}
+	} catch (error) {
+		// A missing/!unreadable catalog must not break the transcription flow: the
+		// client falls back to offering everything, exactly as it did before.
+		console.error('[tool_transcription] could not read the model catalog:', error);
+	}
+
+	return {
+		result: {
+			model_host: AI_MODEL_URL_PREFIX,
+			allow_hub: modelHubAllowed(),
+			store_ready: modelStoreAvailable(),
+			installed,
+		},
+		msg: 'OK',
+		errors: [],
+	};
+}
+
+/** The background download action name (allowlisted, never client-routable). */
+const BACKGROUND_DOWNLOAD_ACTION = 'background_download_model';
+
+/**
+ * Read the LIVE model catalog (transcriber_quality) as typed entries.
+ * getToolConfig returns the effective config — a flat map — but the raw
+ * property-object form is tolerated like everywhere else in this module.
+ */
+async function readModelCatalog(): Promise<
+	{ name: string; tier?: string; size_mb?: number; dtype?: Record<string, string> }[]
+> {
+	const toolConfig = await getToolConfig('tool_transcription');
+	const raw = toolConfig?.transcriber_quality;
+	const entries = Array.isArray(raw)
+		? raw
+		: ((raw as { value?: unknown[] } | undefined)?.value ?? []);
+	return entries.filter(
+		(entry): entry is { name: string } =>
+			entry !== null &&
+			typeof entry === 'object' &&
+			typeof (entry as { name?: unknown }).name === 'string',
+	) as { name: string; tier?: string; size_mb?: number; dtype?: Record<string, string> }[];
+}
+
+/**
+ * download_model — seed one catalog model into the local store, from the UI.
+ *
+ * Before this, seeding required shell access (`scripts/fetch_ai_models.ts`) —
+ * out of reach for the administrator of a hosted install, whose users saw every
+ * uninstalled model greyed out with "ask your administrator" and no way for that
+ * administrator to act.
+ *
+ * GATES, in order:
+ *  - GLOBAL ADMIN only. This makes the server fetch ~1 GB from the public hub
+ *    and write it to disk — an operator act, not a cataloguer's.
+ *  - The model must be IN THE CATALOG. The id becomes a URL path on the hub and
+ *    a directory under the store; free-form input would let a request download
+ *    arbitrary repos or write outside the intended folder. Catalog names only.
+ *
+ * The download runs as a DETACHED background job (it can take many minutes;
+ * identity captured at enqueue time), and the client polls `get_model_sources`
+ * until the model turns up in `installed`. Note the deliberate asymmetry with
+ * DEDALO_AI_MODEL_ALLOW_HUB: that flag governs the BROWSER streaming weights at
+ * inference time (a per-recording privacy leak); this is the server seeding its
+ * own store once, on an explicit admin request.
+ */
+async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
+	if (ctx.principal?.isGlobalAdmin !== true) {
+		return fail('Only a global administrator can download models');
+	}
+
+	const model = String(ctx.options.model ?? '');
+	const entry = (await readModelCatalog()).find(
+		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
+	);
+	if (entry === undefined) {
+		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+	}
+	if (modelInstalled(entry.name, entry.dtype)) {
+		return { result: true, msg: 'OK. Model already installed', errors: [] };
+	}
+
+	const loaded = await getLoadedTool('tool_transcription');
+	if (loaded === undefined) {
+		return fail('tool module not loaded — cannot schedule the download');
+	}
+	scheduleBackground(
+		loaded,
+		BACKGROUND_DOWNLOAD_ACTION,
+		{ permission: null, handler: backgroundDownloadModel },
+		{ model: entry.name, dtype: entry.dtype },
+		ctx.principal,
+		ctx.userId,
+	);
+	return { result: true, msg: 'OK. Download started', errors: [] };
+}
+
+/** The detached download job. Reads its whole world from the enqueue-time options. */
+async function backgroundDownloadModel(ctx: ToolActionContext): Promise<ToolResponse> {
+	const model = String(ctx.options.model ?? '');
+	const dtype = (ctx.options.dtype ?? undefined) as Record<string, string> | undefined;
+	console.log(`[tool_transcription] downloading model '${model}' into the local store…`);
+	const report = await downloadModel(model, dtype, { quiet: true });
+	if (report.ok) {
+		console.log(`[tool_transcription] model '${model}' installed (${report.files.length} files)`);
+		return { result: true, msg: `OK. Model installed: ${model}`, errors: [] };
+	}
+	console.error(`[tool_transcription] model download FAILED for '${model}':`, report.errors);
+	return { result: false, msg: report.errors.join('; '), errors: report.errors };
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_transcription',
 	apiActions: {
+		get_model_sources: { permission: null, handler: getModelSources },
+		download_model: { permission: null, handler: downloadModelAction },
 		create_transcribable_audio_file: { permission: null, handler: createTranscribableAudioFile },
 		delete_transcribable_audio_file: { permission: null, handler: deleteTranscribableAudioFile },
 		automatic_transcription: { permission: null, handler: automaticTranscription },
 		check_server_transcriber_status: { permission: null, handler: checkServerTranscriberStatus },
 		build_subtitles_file: { permission: null, handler: buildSubtitlesFile },
 	},
-	// The completion poll is background-only: allowlisted here, absent from
-	// apiActions (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.
-	backgroundRunnable: [BACKGROUND_POLL_ACTION],
+	// Background-only actions: allowlisted here, absent from apiActions
+	// (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.
+	backgroundRunnable: [BACKGROUND_POLL_ACTION, BACKGROUND_DOWNLOAD_ACTION],
 };
