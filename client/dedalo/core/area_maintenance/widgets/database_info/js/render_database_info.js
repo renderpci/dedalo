@@ -116,6 +116,30 @@ const get_content_data_edit = async function(self) {
 		class_name	 : 'content_data'
 	})
 
+	// statistics health (WC-070) — FIRST, above the catalog dump.
+	// A stats-collector reset silently disables autovacuum/autoanalyze: they
+	// trigger on the cumulative counters, which restart from zero, so a 44 GB
+	// table stops being maintained and nothing says so. This is the only place
+	// that surfaces it, so it must not be buried under the index listing.
+	// SEC-XSS: DB-sourced table names go in via textContent, never inner_html.
+	const statistics = value.statistics
+	if (statistics && statistics.status === 'degraded') {
+		const warn = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_warning',
+			parent			: content_data
+		})
+		warn.textContent = 'Table statistics degraded — ' + (statistics.detail || '')
+		if ((statistics.worst || []).length > 0) {
+			const detail = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'version_info',
+				parent			: content_data
+			})
+			detail.textContent = statistics.worst.join('\n')
+		}
+	}
+
 	// Database info
 	// (!) info.IntervalStyle is used as the database identifier — it reflects the PG session
 	// interval formatting style (e.g. "postgres"), which doubles as a connection check value.

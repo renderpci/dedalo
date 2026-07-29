@@ -11,6 +11,107 @@ import { runWithoutStatementTimeout, sql } from '../../db/postgres.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /**
+ * A table above this size is one whose plans an operator actually cares about,
+ * so a missing ANALYZE on it is worth shouting about. Below it, unanalyzed
+ * tables are noise (a 50-row lookup table plans fine on defaults).
+ */
+const STATS_SIGNIFICANT_BYTES = 64 * 1024 * 1024;
+/** Below this row count the live-tuple ratio is too noisy to read as a reset. */
+const STATS_RESET_MIN_ROWS = 1000;
+
+/** One row of the statistics-health catalog read. */
+export interface TableStatsRow {
+	table: string;
+	/** Planner's row estimate (pg_class). -1 when never analyzed. */
+	reltuples: number;
+	/** Cumulative-stats live tuples — what autovacuum's triggers are built on. */
+	n_live_tup: number;
+	never_analyzed: boolean;
+	bytes: number;
+}
+
+export interface StatisticsHealth {
+	status: 'ok' | 'degraded';
+	tables: number;
+	never_analyzed: number;
+	counters_reset: number;
+	/** The biggest offenders, largest first — what to ANALYZE. */
+	worst: string[];
+	detail: string;
+}
+
+/**
+ * The statistics-health verdict — PURE, so the thresholds are testable without
+ * a database.
+ *
+ * WHY THIS EXISTS (2026-07-29). On dedalo7_mdcat, 38 of 43 tables had
+ * `last_analyze` AND `last_autoanalyze` NULL while `autovacuum` was ON, and
+ * `n_live_tup` was fiction: matrix_time_machine reported 91 live rows against
+ * a real 50,993,786. `pg_stats` still held rows, so `pg_statistic` had survived
+ * while the CUMULATIVE counters were wiped (a crash restart or a restore).
+ *
+ * That combination is silently self-perpetuating: autovacuum and autoanalyze
+ * fire on `n_mod_since_analyze` / `n_dead_tup`, which restart from zero, so a
+ * 44 GB table would never be auto-analyzed again and nothing would say so. It
+ * was found by accident while chasing an unrelated slow query. This readout
+ * makes the next occurrence announce itself.
+ */
+export function summarizeStatisticsHealth(rows: TableStatsRow[]): StatisticsHealth {
+	const neverAnalyzed = rows.filter((row) => row.never_analyzed);
+	// The RESET signature: the planner believes in a big table while the
+	// cumulative counters believe it is empty. Autovacuum trusts the latter.
+	const countersReset = rows.filter(
+		(row) => row.reltuples >= STATS_RESET_MIN_ROWS && row.n_live_tup * 100 < row.reltuples,
+	);
+	const significant = neverAnalyzed.filter((row) => row.bytes >= STATS_SIGNIFICANT_BYTES);
+	const degraded = significant.length > 0 || countersReset.length > 0;
+
+	const worst = [...new Set([...countersReset, ...significant])]
+		.sort((a, b) => b.bytes - a.bytes)
+		.slice(0, 8)
+		.map(
+			(row) =>
+				`${row.table} (${Math.round(row.bytes / 1024 / 1024)} MB, n_live_tup=${row.n_live_tup}` +
+				`, reltuples=${row.reltuples}${row.never_analyzed ? ', never analyzed' : ''})`,
+		);
+
+	return {
+		status: degraded ? 'degraded' : 'ok',
+		tables: rows.length,
+		never_analyzed: neverAnalyzed.length,
+		counters_reset: countersReset.length,
+		worst,
+		detail: degraded
+			? `Table statistics are missing or reset on ${worst.length} significant table(s). Autovacuum and autoanalyze trigger on the cumulative counters, so while those read zero they will NOT fire, and the planner runs on stale or absent statistics. Run "Analyze database" below to restore a correct baseline.`
+			: 'Table statistics are present and the cumulative counters agree with the planner.',
+	};
+}
+
+/** Read the per-table statistics state the verdict above is computed from. */
+export async function readStatisticsHealth(): Promise<StatisticsHealth> {
+	const rows = (await sql.unsafe(
+		`SELECT c.relname AS table_name,
+		        c.reltuples::bigint AS reltuples,
+		        s.n_live_tup::bigint AS n_live_tup,
+		        (s.last_analyze IS NULL AND s.last_autoanalyze IS NULL) AS never_analyzed,
+		        pg_total_relation_size(c.oid)::bigint AS bytes
+		 FROM pg_stat_user_tables s
+		 JOIN pg_class c ON c.oid = s.relid`,
+		[],
+	)) as Record<string, unknown>[];
+
+	return summarizeStatisticsHealth(
+		rows.map((row) => ({
+			table: String(row.table_name),
+			reltuples: Number(row.reltuples),
+			n_live_tup: Number(row.n_live_tup),
+			never_analyzed: row.never_analyzed === true,
+			bytes: Number(row.bytes),
+		})),
+	);
+}
+
+/**
  * database_info.get_value — PostgreSQL catalog snapshot (PHP db_tasks):
  * public-schema table names + per-table indexes (name, pretty size, indexdef,
  * size-DESC order). Both engines read the SHARED database, so 'tables' and
@@ -54,8 +155,17 @@ export async function databaseInfoGetValue(): Promise<WidgetResponse> {
 		host: String((config.db as { host?: unknown } | undefined)?.host ?? 'localhost'),
 	};
 
+	// WC-070: engine-native, additive. Fail-soft — a statistics readout must
+	// never take the whole catalog panel down with it.
+	let statistics: StatisticsHealth | null = null;
+	try {
+		statistics = await readStatisticsHealth();
+	} catch {
+		statistics = null;
+	}
+
 	return {
-		result: { info, tables, indexes },
+		result: { info, tables, indexes, statistics },
 		msg: 'OK. Request done successfully',
 		errors: [],
 	};
