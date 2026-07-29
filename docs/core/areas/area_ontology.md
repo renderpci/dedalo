@@ -75,6 +75,23 @@ then reads the model-view root terms instead of the ordinary ones. In that mode
 the tree line displays each node's `model`, which is what makes the ontology
 readable as a schema rather than as a vocabulary.
 
+### The model badge (Ctrl+M)
+
+Independently of the model view, every ontology tree line whose term declares a
+model carries an `M` button, and the server attaches that model's name to it
+(`model_value` — see
+[ts_object](../ontology/ts_object.md#the-m-icons-model-badge)). The client
+renders it as a small orange badge to the right of the `M`:
+
+```
+Processes [dd35] + M area_tool ▸
+```
+
+The badge is **hidden by default** and toggles with `Ctrl+M`, anywhere in the
+tree area. The state persists per browser in the local DB `status` store
+(`show_models`), so it survives a reload. The same shortcut works in
+area_thesaurus, where hierarchy lines carry the typology instead.
+
 ## Reading the area
 
 There is nothing to instantiate. A read is dispatched off `(model, tipo)`, the

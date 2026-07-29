@@ -25,6 +25,16 @@ locked in:
 
 ---
 
+> **ADDENDUM 2026-07-29 — cutover lever 1 is now the default, not an opt-in.**
+> `DEDALO_DIFFUSION_NATIVE` defaulted to unset-meaning-`false`, so an install
+> that never wrote the key kept emitting `DEDALO_DIFFUSION_API_URL` and pointed
+> `tool_diffusion` at a route this server does not serve — every call 404'd.
+> The catalog default is now `true` (`src/config/catalog/diffusion.ts`) and the
+> three readers use `readBool`, not `readEnv(...)==='true'` (which ignores
+> catalog defaults). P5 step 3 below is therefore satisfied for the *client
+> wire*: the key is no longer advertised by default. Gate:
+> `test/unit/diffusion_native_default.test.ts`; ledger: WC-003 addendum.
+
 ## 1. Mission
 
 Build the Dédalo **diffusion engine** as a native subsystem of the TS server in

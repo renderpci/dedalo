@@ -568,10 +568,11 @@ export const init_events_subscription = function(self) {
 *  2. Validate changed_data — must be a non-empty array.
 *  3. Optimisation: for action='update' items, compare each value against the
 *     db_data snapshot with is_equal(). If nothing actually changed, abort.
-*  4. Clone self.data, inject changed_data, build an RQO and POST via data_manager.
+*  4. Clear 'modified' + set 'saving'/'loading', then clone self.data, inject
+*     changed_data, build an RQO and POST via data_manager.
 *  5. On success: update self.data + self.db_data from the server response, run
-*     the success animation, clear the 'modified' CSS class, and reset the
-*     before-unload warning.
+*     the success animation, and reset the before-unload warning.
+*     On error: restore 'modified' (data is still unsaved) and set 'error'.
 *  6. On auth failure ('not_logged'): subscribe to 'login_successful' and
 *     retry the save automatically when the user logs back in.
 *  7. Always publish 'save' (general) and 'save_' + self.id_base (component-specific)
@@ -652,8 +653,13 @@ component_common.prototype.save = async function(new_changed_data) {
 		}
 
 	// UI: remove previous status classes and add 'saving'
+	// (!) 'modified' (the orange top bar) is dropped HERE, not after the response.
+	// Once the request is in flight the component is 'saving', no longer 'unsaved';
+	// keeping it until the response painted the orange bar for the whole round-trip
+	// and the user saw orange-then-green instead of the green line alone.
+	// The error branch below re-adds it, so a failed save still flags unsaved data.
 		if (self.node) {
-			self.node.classList.remove('error', 'save_success')
+			self.node.classList.remove('error', 'save_success', 'modified')
 			self.node.classList.add('saving')
 		}
 
@@ -716,9 +722,11 @@ component_common.prototype.save = async function(new_changed_data) {
 		if (result === false) {
 
 			// ERROR CASE
+			// restore 'modified': the data is still unsaved, so the orange marker
+			// must come back (it was cleared when the request started)
 			if (self.node) {
 				self.node.classList.remove('saving', 'loading')
-				self.node.classList.add('error')
+				self.node.classList.add('error', 'modified')
 			}
 
 			// Determine exact error
@@ -775,10 +783,8 @@ component_common.prototype.save = async function(new_changed_data) {
 			// Reset page unload warning
 				set_before_unload(false)
 
-			// Remove 'modified' visual state
-				if (self.node?.classList.contains('modified')) {
-					self.node.classList.remove('modified')
-				}
+			// (!) no 'modified' removal here: it was already cleared when the
+			// request started, so the success animation runs on a clean wrapper
 
 		}//end else
 

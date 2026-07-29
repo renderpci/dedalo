@@ -17,6 +17,7 @@ import {
 	getChildrenTipo,
 } from '../../src/core/relations/children.ts';
 import { getChildrenOfType, getParentsRecursive } from '../../src/core/relations/parent.ts';
+import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getNodeData } from '../../src/core/ts_object/ts_api.ts';
 import {
@@ -136,6 +137,42 @@ describe('buildNodeData — an icon whose component is empty is not rendered', (
 
 	it('still renders the P icon when the properties component has content', async () => {
 		expect(iconTipos(await buildNodeData('dd0', 1, {}, 'root', SUPERUSER))).toContain('ontology18');
+	});
+});
+
+describe("buildNodeData — the 'M' icon carries the model name (model_value)", () => {
+	// PHP class.ts_object.php:518 sets model_value = $component->get_value() on the
+	// element whose resolved value is 'M'; area_ontology renders it as the orange
+	// badge toggled with Ctrl+M (render_ts_line.js). Fixture: install ontology
+	// records — dd35 IS the area_tool section, dd5 the area_ontology one.
+	const modelValueOf = async (sectionId: number, lang: string): Promise<string | undefined> =>
+		runWithRequestLangs({ applicationLang: lang, dataLang: lang }, async () => {
+			const node = await buildNodeData('dd0', sectionId, {}, 'root', SUPERUSER);
+			return node.ar_elements.find((element) => element.value === 'M')?.model_value;
+		});
+
+	it('resolves the model name of an ontology node', async () => {
+		expect(await modelValueOf(35, 'lg-eng')).toBe('area_tool');
+		expect(await modelValueOf(5, 'lg-eng')).toBe('area_ontology');
+		expect(await modelValueOf(100, 'lg-eng')).toBe('area_thesaurus');
+	});
+
+	it('resolves the SAME name in any data lang (grid fallback_value)', async () => {
+		// Load-bearing: the dd0 model-name records store their term in ONE lang
+		// (lg-spa on a standard install). Without PHP's translatable fallback chain
+		// the badge renders empty in every other UI language.
+		expect(await modelValueOf(35, 'lg-spa')).toBe('area_tool');
+		expect(await modelValueOf(35, 'lg-fra')).toBe('area_tool');
+	});
+
+	it('never stamps model_value on a non-M element', async () => {
+		const node = await runWithRequestLangs(
+			{ applicationLang: 'lg-eng', dataLang: 'lg-eng' },
+			async () => buildNodeData('dd0', 35, {}, 'root', SUPERUSER),
+		);
+		const stamped = node.ar_elements.filter((element) => element.model_value !== undefined);
+		expect(stamped).toHaveLength(1);
+		expect(stamped[0]?.value).toBe('M');
 	});
 });
 

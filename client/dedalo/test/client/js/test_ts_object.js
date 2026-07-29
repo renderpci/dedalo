@@ -55,10 +55,14 @@ describe('TS_OBJECT : ', function() {
 	// test_ts_object_extended.js). Restored in after().
 	const original_request = data_manager.request
 
+	// Fixture responses, keyed `${action}_${section_tipo}_${section_id}`. Declared
+	// at describe scope so later blocks (the model badge below) can register their
+	// own node without a second mock.
+	const responses = new Map()
+
 	before(function() {
 
 		// Build one get_node_data fixture per item
-		const responses = new Map()
 		items.forEach(el => {
 			const key = `get_node_data_${el.section_tipo}_${el.section_id}`
 			responses.set(key, {
@@ -330,6 +334,158 @@ describe('TS_OBJECT : ', function() {
 		});//end describe(`Instance ${section_tipo}${section_id}`
 
 	});//end forEach
+
+
+	// MODEL BADGE ('M' icon)
+	// The server stamps `model_value` on the element whose value is 'M'
+	// (src/core/ts_object/ts_object.ts). render_ts_line appends it as a
+	// `.model_value` div, hidden unless page_globals.show_models is true —
+	// area_thesaurus toggles that flag with Ctrl+M.
+	describe('Model badge (model_value)', function() {
+
+		const section_tipo	= 'ts1'
+		const section_id	= '900'
+		let show_models_backup
+
+		before(function() {
+			show_models_backup = window.page_globals.show_models
+			responses.set(`get_node_data_${section_tipo}_${section_id}`, {
+				result : {
+					ts_id						: `${section_tipo}_${section_id}`,
+					ts_parent					: null,
+					section_tipo				: section_tipo,
+					section_id					: section_id,
+					order						: 1,
+					is_descriptor				: true,
+					is_indexable				: true,
+					has_descriptor_children		: false,
+					permissions_button_new		: 3,
+					permissions_button_delete	: 3,
+					permissions_indexation		: 3,
+					ar_elements					: [
+						{
+							type	: 'term',
+							tipo	: `${section_tipo}_term`,
+							value	: 'Processes',
+							model	: 'component_input_text'
+						},
+						{
+							type		: 'icon',
+							tipo		: 'ontology6',
+							value		: 'M',
+							model_value	: 'area_tool',
+							model		: 'component_portal'
+						}
+					]
+				}
+			})
+		})
+
+		after(function() {
+			window.page_globals.show_models = show_models_backup
+		})
+
+		const build_instance = async function() {
+			const instance = await ts_object.get_instance({
+				area_model		: 'area_thesaurus',
+				caller			: {
+					filter			: {},
+					build_options	: {},
+					id				: 'area_thesaurus_dd100_dd100_list_lg-eng',
+					id_base			: 'dd100__dd100',
+					model			: 'area_thesaurus'
+				},
+				children_tipo	: 'hierarchy49',
+				is_ontology		: false,
+				is_root_node	: true,
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				thesaurus_mode	: 'default',
+				thesaurus_view_mode : null
+			})
+			await instance.build(false)
+			return instance
+		}
+
+		it('renders the model name next to the M icon, hidden by default', async function() {
+
+			window.page_globals.show_models = false
+
+			const instance	= await build_instance()
+			const wrapper	= await instance.render({ render_level : 'full' })
+			const badge		= wrapper.querySelector('.model_value')
+
+			assert.deepEqual(
+				badge instanceof HTMLElement,
+				true,
+				'Expected a .model_value node for the M element'
+			);
+
+			assert.deepEqual(
+				badge.textContent,
+				'area_tool',
+				'Expected the model name as badge text'
+			);
+
+			assert.deepEqual(
+				badge.classList.contains('hide'),
+				true,
+				'Expected the badge hidden while show_models is false'
+			);
+
+			await instance.destroy(true, true, true)
+		});
+
+		it('shows the badge when show_models is on (Ctrl+M state)', async function() {
+
+			window.page_globals.show_models = true
+
+			const instance	= await build_instance()
+			const wrapper	= await instance.render({ render_level : 'full' })
+			const badge		= wrapper.querySelector('.model_value')
+
+			assert.deepEqual(
+				badge.classList.contains('hide'),
+				false,
+				'Expected the badge visible while show_models is true'
+			);
+
+			await instance.destroy(true, true, true)
+		});
+
+		it('never renders a badge for an element without model_value', async function() {
+
+			// The first fixture item carries a term element only.
+			const instance	= await ts_object.get_instance({
+				area_model		: 'area_thesaurus',
+				caller			: {
+					filter			: {},
+					build_options	: {},
+					id				: 'area_thesaurus_dd100_dd100_list_lg-eng',
+					id_base			: 'dd100__dd100',
+					model			: 'area_thesaurus'
+				},
+				children_tipo	: 'hierarchy49',
+				is_ontology		: false,
+				is_root_node	: true,
+				section_id		: items[0].section_id,
+				section_tipo	: items[0].section_tipo,
+				thesaurus_mode	: 'default',
+				thesaurus_view_mode : null
+			})
+			await instance.build(false)
+			const wrapper = await instance.render({ render_level : 'full' })
+
+			assert.deepEqual(
+				wrapper.querySelector('.model_value'),
+				null,
+				'Expected no .model_value node'
+			);
+
+			await instance.destroy(true, true, true)
+		});
+
+	});//end describe Model badge
 
 });//describe build
 

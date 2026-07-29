@@ -429,6 +429,7 @@
   align-items: flex-end;
   gap: 0.5rem;
   padding: 0.5rem;
+  padding-bottom: 1rem;
   background-color: var(--bg_elevated);
   border-top: 1px solid var(--border_default);
   flex-shrink: 0;

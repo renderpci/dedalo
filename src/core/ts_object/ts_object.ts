@@ -14,7 +14,8 @@
  *   COVERED: term/string family (string/date/number/iri columns, lang-filtered),
  *   is_descriptor/icon relations, component_relation_index counts,
  *   link_children (children resolution + descriptor/ND classification),
- *   portal/autocomplete_hi (locators → term strings, cached).
+ *   portal/autocomplete_hi (locators → term strings, cached), the 'M' icon's
+ *   model_value badge (get_value via the component's request_config ddo_map).
  *   DEFERRED (ledgered): component_relation_related inverse-reference merge (tree
  *   term rarely a related component), component_svg URL/file-exists resolution
  *   (needs media machinery), get_indexation_grid (tag-indexation grid — counts
@@ -59,7 +60,12 @@ import { countInverseReferences } from '../search/search_related.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getPermissions } from '../security/permissions.ts';
 import { type NodeLocator, batchDescriptorFlags, fetchNodeInfo } from './node_repository.ts';
-import { getTermByLocator, invalidateNode as invalidateTermNode } from './term_resolver.ts';
+import {
+	type TermLocator,
+	getDdoValueByLocator,
+	getTermByLocator,
+	invalidateNode as invalidateTermNode,
+} from './term_resolver.ts';
 
 // DEDALO_DATA_LANG is read PER REQUEST via currentDataLang() at each use site
 // (S2-11): PHP passes the per-request data lang (class.ts_object.php:1441-1445);
@@ -93,7 +99,8 @@ export interface TsElement {
 	tipo: string | string[];
 	value?: unknown;
 	model?: string;
-	model_value?: unknown;
+	/** 'M'-icon only: the target's model name ('area_tool'), the Ctrl+M badge. */
+	model_value?: string;
 	show_data?: string;
 	count_result?: unknown;
 }
@@ -616,12 +623,151 @@ async function processElementDetails(
 		);
 		if (ok === false) return false;
 
-		// model_value capture ('M' model-icon) is ledgered (needs component get_value);
-		// the 'M' icon still renders its value below via resolveElementValue.
+		// ontology model case (PHP :518): the 'M' icon carries the MODEL NAME of the
+		// term next to it ('area_tool'), which area_ontology renders as the orange
+		// badge toggled with Ctrl+M. Gated on the RESOLVED value, exactly like PHP —
+		// not on the ddo `icon` key, so a component_relation_index 'M:3' never matches.
+		if (elementObj.value === 'M') {
+			elementObj.model_value = await resolveModelValue(
+				record,
+				elementTipo,
+				model,
+				currentDataLang(),
+			);
+		}
+
 		if (elementObj.model === undefined) elementObj.model = model;
 		if (current.show_data !== undefined) elementObj.show_data = current.show_data;
 	}
 	return true;
+}
+
+// ---------------------------------------------------------------------------
+// MODEL_VALUE — the 'M' icon badge (PHP :518 `$element_obj->model_value =
+// $component->get_value()`).
+// ---------------------------------------------------------------------------
+
+/** component_common::get_grid_value defaults (:1064 / :1071). */
+const DEFAULT_FIELDS_SEPARATOR = ', ';
+const DEFAULT_RECORDS_SEPARATOR = ' | ';
+
+/** One `show.ddo_map` entry of a relation component's request_config. */
+interface ShowDdoEntry {
+	tipo?: unknown;
+	parent?: unknown;
+	section_tipo?: unknown;
+}
+
+/** The tipos a relation component displays its TARGET with, plus its separators. */
+interface ComponentShowMap {
+	tipos: string[];
+	fieldsSeparator: string;
+	recordsSeparator: string;
+}
+
+/**
+ * The component's OWN display map — `properties.source.request_config[].show`.
+ * PHP get_grid_value builds a grid from exactly these ddo, then resolve_value
+ * flattens it to the string get_value() returns.
+ *
+ * Only `section_tipo:'self'` entries are taken: 'self' is the placeholder PHP
+ * substitutes for the resolved target section, i.e. "read this tipo ON the
+ * target record" — the flat one-hop shape both live 'M' components use
+ * (ontology6 → [ontology5, ontology9], hierarchy27 → [hierarchy25]). An entry
+ * naming a real foreign section would be a nested sub-portal hop, which this
+ * badge does not resolve.
+ */
+async function readComponentShowMap(tipo: string): Promise<ComponentShowMap | null> {
+	const node = await getNode(tipo);
+	const properties = (node?.properties ?? null) as {
+		fields_separator?: unknown;
+		records_separator?: unknown;
+		source?: {
+			request_config?: {
+				api_engine?: unknown;
+				show?: {
+					ddo_map?: unknown;
+					fields_separator?: unknown;
+					records_separator?: unknown;
+				};
+			}[];
+		};
+	} | null;
+
+	const requestConfig = properties?.source?.request_config;
+	if (!Array.isArray(requestConfig)) return null;
+	// PHP array_find api_engine==='dedalo' (:279). 'dedalo' is also the implicit
+	// engine of a config that declares none — every stored 'M' component does.
+	const config =
+		requestConfig.find((entry) => entry?.api_engine === 'dedalo') ??
+		requestConfig.find((entry) => entry?.api_engine === undefined);
+	const ddoMap = config?.show?.ddo_map;
+	if (!Array.isArray(ddoMap)) return null;
+
+	const tipos = (ddoMap as ShowDdoEntry[])
+		.filter((entry) => entry?.section_tipo === 'self' || entry?.section_tipo === undefined)
+		.map((entry) => entry.tipo)
+		.filter((entryTipo): entryTipo is string => typeof entryTipo === 'string');
+	if (tipos.length === 0) return null;
+
+	const pickSeparator = (fromShow: unknown, fromProperties: unknown, fallback: string): string =>
+		typeof fromShow === 'string'
+			? fromShow
+			: typeof fromProperties === 'string'
+				? fromProperties
+				: fallback;
+
+	return {
+		tipos,
+		fieldsSeparator: pickSeparator(
+			config?.show?.fields_separator,
+			properties?.fields_separator,
+			DEFAULT_FIELDS_SEPARATOR,
+		),
+		recordsSeparator: pickSeparator(
+			config?.show?.records_separator,
+			properties?.records_separator,
+			DEFAULT_RECORDS_SEPARATOR,
+		),
+	};
+}
+
+/**
+ * The 'M' element's model name (PHP $component->get_value()).
+ *
+ * Reads the RAW locators off the record — NOT the resolved componentData: for the
+ * portal family getComponentDataLang has already flattened those locators through
+ * the target's section_map `thesaurus` term scope, which for a dd0 model record is
+ * [term, tld, section_id] and, with the untranslated term dropping out, serves the
+ * bare tld ('dd') instead of the model name.
+ *
+ * Empty string when the component declares no usable display map: the badge is
+ * suppressed client-side (`if (current_element.model_value)`), and the degraded
+ * path is logged rather than thrown — a tree read must not die over a decoration.
+ */
+async function resolveModelValue(
+	record: MatrixRecord | null,
+	elementTipo: string,
+	model: string,
+	lang: string,
+): Promise<string> {
+	const locators = readItemsFromRecord(record, elementTipo, model) as TermLocator[];
+	if (locators.length === 0) return '';
+
+	const showMap = await readComponentShowMap(elementTipo);
+	if (showMap === null) {
+		console.warn(
+			`[ts_object] no request_config show.ddo_map for 'M' component ${elementTipo} (model ${model}) — model badge suppressed`,
+		);
+		return '';
+	}
+
+	const values: string[] = [];
+	for (const locator of locators) {
+		const value = await getDdoValueByLocator(locator, showMap.tipos, showMap.fieldsSeparator, lang);
+		if (value !== '') values.push(value);
+	}
+	return values.join(showMap.recordsSeparator);
 }
 
 /** PHP resolve_element_value (:1504): dispatch by element type; false = skip. */

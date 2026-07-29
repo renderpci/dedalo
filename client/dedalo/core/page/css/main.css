@@ -6741,6 +6741,90 @@ body.is_ontology_server .menu > .content_data {
   }
 }
 /**
+* floating_dock
+*
+* The ONE bottom-right corner where global floating buttons live. Its only
+* tenant today is the error-report launcher, installed on every page —
+* menu-less ones included — from common/js/error_report_launcher.js.
+*
+* Why a dock instead of per-button inline coordinates: that corner is
+* CONTESTED. The right rail is fixed to the very same spot — `.inspector_container`
+* in edit mode (section.less) and `.assistant_container.standalone` in list mode —
+* and the assistant composer (input + send/stop) sits exactly under a
+* `bottom:1rem` button, so the launcher covered it.
+*
+* So the dock reads its offset from --floating_dock_right / --floating_dock_bottom,
+* and whoever OWNS the corner overrides them (the "corner claims" block at the
+* end of this file). Since the claim is a calc() over --inspector_width, the dock
+* follows the user's live panel resize AND the rail collapse for free: no JS, no
+* resize listeners, nothing to keep in sync.
+*
+* Adding a floating button: give it .floating_dock_button and append it to
+* #floating_dock — the column stacks upwards from the corner. Never position a
+* global button with its own fixed coordinates, or this bug comes back.
+*
+* Included from main.less file
+*/
+:root {
+  --floating_dock_right: 1rem;
+  --floating_dock_bottom: 1rem;
+}
+#floating_dock {
+  position: fixed;
+  right: var(--floating_dock_right);
+  bottom: var(--floating_dock_bottom);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.5rem;
+  transition: right var(--transition-base), bottom var(--transition-base);
+  pointer-events: none;
+}
+#floating_dock > * {
+  pointer-events: auto;
+}
+.floating_dock_button {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0.85;
+  box-shadow: var(--shadow-3);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.floating_dock_button:hover,
+.floating_dock_button:focus-visible {
+  opacity: 1;
+  transform: scale(1.06);
+}
+.floating_dock_button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-3), var(--shadow-focus);
+}
+.floating_dock_button > .floating_dock_button_icon {
+  width: 1.3rem;
+  height: 1.3rem;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  filter: brightness(0) invert(1);
+}
+#error_report_floating_launcher {
+  background-color: rgba(90, 65, 131, 0.92);
+}
+body:has(.assistant_container.standalone.show) {
+  --floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
+}
+@media screen and (min-width: 1025px) {
+  body:has(:not(.full_width) > .inspector_container) {
+    --floating_dock_right: calc(var(--inspector_width, 19rem) + 1.5rem);
+  }
+}
+/**
 * installer
 *
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
@@ -9418,11 +9502,6 @@ body.is_ontology_server .menu > .content_data {
 .menu > .content_data > .menu_spacer {
   flex: 1;
   margin: 0px;
-}
-@media screen and (max-width: 1185px) {
-  .menu > .content_data > .menu_spacer {
-    display: none;
-  }
 }
 .menu > .content_data > .theme_toggle {
   width: 1.25em;
@@ -19936,6 +20015,9 @@ body.inspector_resizing {
 .component_json .button_save:hover {
   background-color: var(--color_grey_5);
   border-color: var(--color_grey_5);
+}
+.component_json.edit {
+  padding-bottom: 1.5rem;
 }
 .component_json.edit > .content_data {
   height: var(--media_min_height);

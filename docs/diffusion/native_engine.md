@@ -246,7 +246,7 @@ All keys live in `../private/.env` (see [config](../config/index.md)):
 | `DEDALO_DIFFUSION_LANGS` | — | Output languages (the ladder's row set) |
 | `DEDALO_DIFFUSION_DB_SOCKET` / `_DB_HOST` / `_DB_PORT` / `_DB_USER` / `_DB_PASSWORD` | socket `/tmp/mysql.sock` | MariaDB target access (never reuses the old engine's `DB_*` keys — both must coexist during transition). Target databases are **pre-created**; a missing one is a loud config error, never auto-created |
 | `DEDALO_DIFFUSION_MAX_RUNNERS` | `2` | Concurrent runner processes |
-| `DEDALO_DIFFUSION_NATIVE` | unset | **Cutover lever 1**: `true` stops emitting `DEDALO_DIFFUSION_API_URL` in the environment payload → the client flips to the main API |
+| `DEDALO_DIFFUSION_NATIVE` | `true` | Emits no `DEDALO_DIFFUSION_API_URL` in the environment payload, so the client calls the main API and this server answers. Set to `false` ONLY on a deployment that still runs the external service behind a route of its own — this server serves no `/dedalo/diffusion/api/v1/`, so with the flag off the tool 404s (WC-003). Defaulted to `true` on 2026-07-29; it was previously unset-meaning-`false` |
 | `DEDALO_DIFFUSION_NATIVE_ELEMENTS` | unset | **Cutover lever 2**: csv of element tipos (or `all`) allowed to publish natively; un-routed elements refuse loudly (never both engines on one element+section) |
 | `DEDALO_DIFFUSION_FILES_ROOT` | media path | File-writer root override (tests) |
 
@@ -259,9 +259,12 @@ and during the transition both publishers coexist safely on the same MariaDB
 **for different elements** (idempotent upserts, additive schema):
 
 1. Pilot: set `DEDALO_DIFFUSION_NATIVE_ELEMENTS` to a short list of element
-   tipos; spot-check published rows.
-2. Flip: `DEDALO_DIFFUSION_NATIVE=true` — the byte-identical client lands on
-   the native actions; browser-smoke the tool panel.
+   tipos; spot-check published rows. To keep the client on the external service
+   while you pilot, set `DEDALO_DIFFUSION_NATIVE=false` — it is `true` by
+   default, so this step is now an explicit opt-out.
+2. Flip: remove that `DEDALO_DIFFUSION_NATIVE=false` (or set it `true`) — the
+   byte-identical client lands on the native actions; browser-smoke the tool
+   panel.
 3. Remove the `/dedalo/diffusion/api/v1` proxy route,
    `DEDALO_DIFFUSION_SOCKET_PATH` and `DEDALO_DIFFUSION_INTERNAL_TOKEN` (RETIRED at the 2026-07-11 cutover — the keys are unread; the native seams are the only transport),
    then decommission the old service.

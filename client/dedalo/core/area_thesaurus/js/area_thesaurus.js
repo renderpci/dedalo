@@ -471,9 +471,11 @@ const parse_search_tipos_filter = function (search_tipos) {
 *   - source.search_action = 'search'  — so the server treats it as a filtered query.
 *
 * show_models initialization:
-*  area_ontology defaults to show_models=true; area_thesaurus defaults to false.
-*  The local DB 'status' row 'show_models' overrides the default. A legacy
-*  localStorage key is still checked as a one-release fallback (migration runs in init).
+*  Both areas default to show_models=false — the model badges are hidden until
+*  Ctrl+M (PHP area_thesaurus.js set model_value_is_hide=true for area_ontology,
+*  the same effective state). The local DB 'status' row 'show_models' overrides
+*  the default; a legacy localStorage key is still checked as a one-release
+*  fallback (migration runs in init).
 *
 * @param {boolean} [autoload=true] - When false, skips the API call (used for dry-run / unit-test scenarios).
 * @returns {Promise<boolean>} true on success; false if the API returned no response or an empty context.

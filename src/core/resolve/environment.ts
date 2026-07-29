@@ -15,7 +15,7 @@
  */
 
 import { config } from '../../config/config.ts';
-import { readEnv } from '../../config/env.ts';
+import { readBool } from '../../config/readers.ts';
 import { readString } from '../../config/readers.ts';
 import { sql } from '../db/postgres.ts';
 import { getLabels } from '../labels/catalog.ts';
@@ -59,13 +59,15 @@ const DD_TIPOS: Readonly<Record<string, string>> = {
 export function buildPlainVars(isLogged: boolean): Record<string, unknown> {
 	// DIFFUSION CUTOVER LEVER (DIFFUSION_PLAN P5, spec §2.3): the copied
 	// tool_diffusion client calls DEDALO_DIFFUSION_API_URL when defined and
-	// falls back to the MAIN API otherwise. While a deployment still routes
-	// publications through the OLD engine the key is emitted (PHP parity);
-	// setting DEDALO_DIFFUSION_NATIVE=true suppresses it, flipping the
-	// byte-identical client onto the native dd_diffusion_api actions with
-	// zero client edits. Removal of the old proxy route + internal token
-	// follows this flag per-deployment (cutover step 3).
-	const nativeDiffusion = readEnv('DEDALO_DIFFUSION_NATIVE') === 'true';
+	// falls back to the MAIN API otherwise. Emitting the key points the client
+	// at the OLD external engine; omitting it flips the byte-identical client
+	// onto the native dd_diffusion_api actions with zero client edits (WC-003).
+	// DEFAULTS TO NATIVE (catalog default true, 2026-07-29): the external
+	// service is decommissioned and this server serves no
+	// /dedalo/diffusion/api/v1/ route, so emitting the key can only 404.
+	// readBool (NOT readEnv === 'true') so the catalog default actually applies
+	// — readEnv returns undefined when unset and ignores the catalog.
+	const nativeDiffusion = readBool('DEDALO_DIFFUSION_NATIVE');
 	const serverState = getServerState();
 	return {
 		DEDALO_ENVIRONMENT: true,
