@@ -65,6 +65,9 @@ The **Transcription** button attaches to media components — audiovisual, image
 !!! warning "Automatic text is a draft, and it overwrites"
     Automatic transcription writes its result into the text field. Review it — recognizers make mistakes with names, places and overlapping speech. Because the write goes through the normal save path, earlier states remain in the [time machine](using_time_machine.md) if you need to revert.
 
+!!! tip "Speaker, language and note tags"
+    The text editor's toolbar carries the interview helpers: the **person** button lists the people talking — the informants of the related oral-history record and the recording crew of the audiovisual record itself — and inserts a speaker tag at the cursor (`Ctrl+1…9` inserts them by number). The **language** button drops an in-text language mark, and the **note** button creates a linked note record and its tag. Which components supply the speakers is declared in the ontology (the transcription field's `tags_persons` property), so an installation can point them at its own people fields.
+
 ## Related
 
 - **[Subtitles](using_subtitles.md)** — hand-edit subtitles from the transcription in a rich editor.

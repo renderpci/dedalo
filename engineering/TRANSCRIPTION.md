@@ -185,6 +185,37 @@ sentence ends, capped so a monologue still breaks up.
 - `parse_transcript` reads stored text back into segments, so an existing
   transcript can be re-paragraphed without re-recognising a word.
 
+## The transcription helpers (speakers / language / note tags)
+
+The editing helpers an oral-history transcription needs — insert a SPEAKER tag
+(`[person-a-1-DyaDa-data:{'…person locator…'}:data]`), an in-text LANGUAGE tag,
+a NOTE tag backed by a notes record — are owned by **`component_text_area`'s
+edit view**, not by the tool: the tool hosts the component and the component's
+CKEditor toolbar brings the buttons (v6 worked the same way; the v7 client kept
+the whole tag UI). The server feed, restored 2026-07-29 (WC-065/WC-066):
+
+- WHICH components hold the speakers is ontology data: the text_area's
+  `properties.tags_persons`, keyed by related-section tipo (`oh1` → informants
+  portal `oh24`, state `a`; the AV record's own crew autocompletes, state `b`).
+  The emit hook stamps `tags_persons` + `related_sections` on EDIT data items
+  (`component_text_area/tags_persons.ts`, `resolve/related_sections.ts`).
+  The person LABEL comes from the target people section's OWN definition: its
+  section_map term (scope `default`, standard fallback walk — rsc197 declares
+  it in rsc1023) resolved through `getTermByLocator`, i.e. the same label a
+  relation list shows for that record; initials apply the 3+2+2 rule to that
+  word order. The PHP-hardcoded `rsc85`/`rsc86` pair survives only as the
+  fallback for a people section with no section_map term.
+- `context.toolbar_buttons` (structure_context.ts) gates the buttons
+  server-side from the same properties; `button_lang` is client-always and
+  feeds off the project langs, `button_note` creates its backing record in the
+  notes section (`features` bag).
+- The tools' parent-record `<select>` and the persons-modal grouping ride the
+  `source.action:'related_search'` read (read_facade.ts), same producer.
+
+Wire shapes and the deliberate divergences from PHP are ledgered in
+`WIRE_CONTRACT.md` WC-065 (all-string section_ids, sections item always
+present, `value: string[]` cells) and WC-066 (note-button gating).
+
 ## Why the transcripts used to repeat words
 
 Recorded for the next person who touches this. Five causes, all fixed 2026-07-28:
