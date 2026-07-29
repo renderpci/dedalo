@@ -9496,11 +9496,6 @@ body:has(.assistant_container.standalone.show) {
   flex: 1;
   margin: 0px;
 }
-@media screen and (max-width: 1185px) {
-  .menu > .content_data > .menu_spacer {
-    display: none;
-  }
-}
 .menu > .content_data > .theme_toggle {
   width: 1.25em;
   height: 2rem;
@@ -20013,6 +20008,9 @@ body.inspector_resizing {
 .component_json .button_save:hover {
   background-color: var(--color_grey_5);
   border-color: var(--color_grey_5);
+}
+.component_json.edit {
+  padding-bottom: 1.5rem;
 }
 .component_json.edit > .content_data {
   height: var(--media_min_height);
