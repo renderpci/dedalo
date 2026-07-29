@@ -31,7 +31,7 @@ import {
 	getDatabaseNameForElement,
 	termLabelOf,
 } from '../plan/virtual_tree.ts';
-import type { VirtualTreeNode } from '../plan/virtual_tree.ts';
+import type { VirtualPathItem, VirtualTreeNode } from '../plan/virtual_tree.ts';
 import { getTargetDatabaseStatus } from '../targets/mariadb/db.ts';
 import { WRITER_REGISTRY } from '../writers/registry.ts';
 
@@ -59,7 +59,8 @@ export interface SectionDiffusionNode {
 	tipo: string;
 	model: string;
 	label: string | null;
-	parents: { tipo: string; model: string }[];
+	/** The oracle's path items — `label` IS the panel header (WC-066). */
+	parents: { tipo: string; model: string; label: string | null; type?: string }[];
 	children: DiffusionNodeChild[];
 	/** Element output format resolved from the parents path (native addition
 	 * the old Bun enrichment also injected — the client shows readiness). */
@@ -70,6 +71,34 @@ export interface SectionDiffusionNode {
 
 /** The oracle's verbatim verdict strings (class.diffusion_utils.php:984/:988). */
 const MSG_DATABASE_NOT_READY = 'Database is NOT ready (missing or engine unreachable).';
+
+/**
+ * One `parents[]` entry as it goes on the wire (WC-066). PHP put the whole
+ * path item there (`$item->parents = $vnode->parents`, :265), built as
+ * `{tipo, model, label}` plus `type` ONLY on a diffusion_element(_alias)
+ * (:345-352). The client depends on both extra fields: `label` IS the
+ * accordion panel header (render_tool_diffusion.js:493) and the group key
+ * (:462); `type` feeds the per-format switch (:842).
+ *
+ * `realTipo` is deliberately NOT emitted — a TS-only alias-resolution memo
+ * the oracle never had; the client has no use for it.
+ */
+export function toWirePathItem(item: VirtualPathItem): {
+	tipo: string;
+	model: string;
+	label: string | null;
+	type?: string;
+} {
+	const wire: { tipo: string; model: string; label: string | null; type?: string } = {
+		tipo: item.tipo,
+		model: item.model,
+		label: item.label,
+	};
+	// Present exactly when the builder stamped it (element models only) — it
+	// already applied PHP's `?? 'unknown'` fallback, so never re-default here.
+	if (item.type !== undefined) wire.type = item.type;
+	return wire;
+}
 
 /** The diffusion element that owns `node` (nearest in the parents path). */
 function elementOf(
@@ -188,7 +217,7 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 			tipo: node.tipo,
 			model: node.model,
 			label: node.label,
-			parents: node.parents.map((item) => ({ tipo: item.tipo, model: item.model })),
+			parents: node.parents.map(toWirePathItem),
 			children,
 			type,
 			connection_status: connectionStatus,
