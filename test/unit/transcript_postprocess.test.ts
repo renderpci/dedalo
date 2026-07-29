@@ -20,9 +20,13 @@ import { describe, expect, test } from 'bun:test';
 import {
 	clean_transcript,
 	collapse_repeated_ngrams,
+	has_time_regression,
 	is_degenerate,
+	is_noise_text,
+	letter_ratio,
 	normalize_spacing,
 	repetition_score,
+	strip_noise_runs,
 	strip_overlap,
 } from '../../tools/tool_transcription/transcribers/lib/transcript_postprocess.js';
 
@@ -178,5 +182,100 @@ describe('clean_transcript', () => {
 
 		expect(before).toBeGreaterThan(0.7);
 		expect(after).toBeLessThan(0.3);
+	});
+});
+
+describe('non-speech noise (the rsc167/528 degeneration, 2026-07-29)', () => {
+	// Captured VERBATIM from a live large-v3 run: over a non-speech stretch the
+	// model degenerated into a letter-spam chain, then punctuation cascades.
+	const SPAM =
+		'M-M-M-T-A-D-C-M-I-F-M-C-T-C-C-G-C-S-C-D-T-T-M-E-T-D-M-D-D-A-T-N-T-B-T-R-T-J-T-P-T-S-T-H-M-S-M- B-B-B-M-B-C- B-b-b-p-t-c-';
+
+	test('letter_ratio separates language from garbage', () => {
+		expect(letter_ratio('So it wasn\u2019t an A, but it was unbelievable.')).toBeGreaterThan(0.7);
+		expect(letter_ratio(', , ,, , . ,!')).toBe(0);
+	});
+
+	test('spam chains and punctuation cascades are noise; real speech is not', () => {
+		expect(is_noise_text(SPAM)).toBe(true);
+		expect(is_noise_text(', , ,, . ,!')).toBe(true); // pure cascade
+		expect(is_noise_text(',')).toBe(true); // pure punctuation at any length
+		// A fragment with real words is NOT condemned wholesale — its cascades
+		// are excised by strip_noise_runs instead, keeping the words.
+		expect(is_noise_text(', and, on, , , ,')).toBe(false);
+		expect(strip_noise_runs(', and, on, , , ,')).toBe(', and, on,');
+		expect(is_noise_text('7-8 era notable.')).toBe(false); // hyphenated NUMBERS are speech
+		expect(is_noise_text('in Spain is called un notable.')).toBe(false);
+	});
+
+	test('embedded spam is excised, the real sentence survives', () => {
+		const mixed = `So it wasn't an A, but it was unbelievable. Mm-H. ${SPAM} B-b b a n valed, with a non, , and, on,`;
+		const cleaned = strip_noise_runs(mixed);
+		expect(cleaned).toContain('but it was unbelievable.');
+		expect(cleaned).not.toContain('M-M-M');
+		expect(cleaned).not.toContain(', ,');
+	});
+
+	test('a degenerated window now trips the retry ladder', () => {
+		expect(is_degenerate(SPAM)).toBe(true);
+	});
+});
+
+describe('temporal monotonicity (backwards timecodes = degeneration)', () => {
+	// The SAME live event: after 29:29 the window regressed to 29:15 and
+	// re-transcribed twenty seconds of already-transcribed speech — disordered
+	// timecode tags and a duplicated paragraph in the stored transcript.
+	const LIVE = [
+		{
+			text: ' And Madre Margarita, the director of the school had also known my father.',
+			start: 1745.56,
+			end: 1761.72,
+		},
+		{ text: ' but I have proved Revalida con un 7.', start: 1761.72, end: 1765.56 },
+		{
+			text: " in Spain is called un notable. So it wasn't an A, but it was unbelievable.",
+			start: 1765.56,
+			end: 1769.42,
+		},
+		{ text: ' ,', start: 1769.42, end: 1769.9 },
+		{ text: ' ,,,', start: 1755.54, end: 1755.9 }, // REGRESSED ~14 s
+		{ text: ' ,', start: 1756.46, end: 1756.9 },
+		{
+			text: ' by the nuns. But somebody called my home and said that not only had I approved revalida,',
+			start: 1755.92,
+			end: 1760.0,
+		}, // regressed RE-TRANSCRIPTION
+	];
+
+	test('has_time_regression flags the window (the worker retry trigger)', () => {
+		expect(has_time_regression(LIVE)).toBe(true);
+		expect(has_time_regression(LIVE.slice(0, 4))).toBe(false); // the healthy prefix
+	});
+
+	test('clean_transcript drops the regressed tail — timecodes stay monotonic, the duplicate dies', () => {
+		const cleaned = clean_transcript(LIVE);
+		// Only the forward-moving, non-noise segments survive.
+		expect(cleaned.map((segment) => segment.start)).toEqual([
+			1745.56, 1761.72, 1765.56,
+		]);
+		const joined = cleaned.map((s: { text: string }) => s.text).join(' ');
+		expect(joined).toContain('unbelievable.');
+		// The re-transcribed duplicate is GONE, not merely deduped.
+		expect(joined.match(/revalida/gi)?.length ?? 0).toBe(1);
+		// And times never move backwards.
+		let front = -1;
+		for (const segment of cleaned as { start: number }[]) {
+			expect(segment.start).toBeGreaterThanOrEqual(front);
+			front = segment.start;
+		}
+	});
+
+	test('small timestamp jitter is NOT punished', () => {
+		const jitter = [
+			{ text: 'primera frase completa', start: 10, end: 14 },
+			{ text: 'segunda frase distinta', start: 13.2, end: 17 }, // 0.8 s overlap-jitter
+		];
+		expect(has_time_regression(jitter)).toBe(false);
+		expect(clean_transcript(jitter)).toHaveLength(2);
 	});
 });

@@ -57,7 +57,7 @@
 // and a request to a third party would leak WHEN a record is transcribed.
 import { pipeline, WhisperTextStreamer, env } from '/dedalo/lib/transformers/dist/transformers.js';
 
-import { clean_transcript, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
+import { clean_transcript, has_time_regression, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
 import { plan_windows, total_speech_seconds } from '../lib/vad.js';
 
 
@@ -402,14 +402,19 @@ async function transcribe_window( params ) {
 		}
 
 		const text	= segments.map( segment => segment.text ).join(' ');
-		const score	= repetition_score( text );
+		// A timestamp REGRESSION is degeneration too: the model looped and
+		// re-emitted earlier content with broken time tokens (backwards
+		// timecodes + duplicated sentences in the transcript). Rank such an
+		// attempt far below any monotonic one, and retry.
+		const regressed	= has_time_regression( segments );
+		const score		= repetition_score( text ) + (regressed ? 1 : 0);
 
 		if (score<best_score) {
 			best		= segments;
 			best_score	= score;
 		}
 
-		if (!is_degenerate( text )) {
+		if (!is_degenerate( text ) && !regressed) {
 			return segments;
 		}
 	}
