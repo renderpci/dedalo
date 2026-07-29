@@ -212,6 +212,21 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   dropped socket fires `cancel()`; the stream's unconditional 15 s heartbeat and
   its 15-minute hard lifetime exist to bound the damage either way, so a gap
   should also self-heal within ~15 min.
+- **Table-statistics health (WC-070)** — the Database-info panel computes a
+  `statistics` verdict and shows a warning when it reads `degraded`. Two
+  signals: tables ≥64 MB with `last_analyze` AND `last_autoanalyze` NULL, and
+  the RESET signature `reltuples >= 1000 AND n_live_tup*100 < reltuples` (the
+  planner believing in a big table while the cumulative counters believe it is
+  empty). **Why it is worth a gauge:** a stats-collector reset — a crash
+  restart, or a restore into a fresh cluster — wipes the cumulative counters
+  while `pg_statistic` survives, and `autovacuum`/`autoanalyze` trigger on
+  `n_mod_since_analyze` / `n_dead_tup`, which then restart from zero. So
+  autovacuum reads `on`, every query still answers, and a 44 GB table quietly
+  stops being maintained forever. Found by accident on 2026-07-29 (38 of 43
+  tables on the scale DB, `matrix_time_machine` reporting 91 live rows against
+  a real 50,993,786). **The fix is a plain `ANALYZE;` on the database** — about
+  a minute for ~90 GB — after which the verdict returns to `ok`. Check it after
+  any restore, crash recovery, or cluster move.
 - **Error correlation**: every handler exception logs server-side with its
   `request_id`; the client receives the id, never the exception text.
 

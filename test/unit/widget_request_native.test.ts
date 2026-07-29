@@ -226,6 +226,14 @@ describe('database_info compute (get_widget_value catalog read)', () => {
 			tables?: string[];
 			indexes?: Record<string, Record<string, unknown>[]>;
 			info?: { server?: unknown; host?: unknown };
+			statistics?: {
+				status?: string;
+				tables?: number;
+				never_analyzed?: number;
+				counters_reset?: number;
+				worst?: unknown;
+				detail?: unknown;
+			} | null;
 		};
 
 		// tables: the public-schema catalog — the shared-install anchors present
@@ -272,6 +280,24 @@ describe('database_info compute (get_widget_value catalog read)', () => {
 		// engine-native by design (differential-pinned assertion, verbatim)
 		expect(String(result.info?.server ?? '')).toContain('PostgreSQL');
 		expect(typeof result.info?.host).toBe('string');
+
+		// statistics: engine-native, ADDITIVE (WC-070). Asserted for presence and
+		// shape only — `status` depends on whether THIS database has been
+		// analyzed, so pinning a value here would make the gate a property of
+		// the test box rather than of the code. The verdict logic itself is
+		// pinned purely in database_statistics_health.test.ts.
+		const statistics = result.statistics;
+		expect(statistics).not.toBeUndefined();
+		if (statistics !== null && statistics !== undefined) {
+			expect(['ok', 'degraded']).toContain(String(statistics.status));
+			expect(typeof statistics.tables).toBe('number');
+			expect(typeof statistics.never_analyzed).toBe('number');
+			expect(typeof statistics.counters_reset).toBe('number');
+			expect(Array.isArray(statistics.worst)).toBe(true);
+			expect(String(statistics.detail).length).toBeGreaterThan(0);
+			// the catalog and the stats read must agree about how many tables exist
+			expect(statistics.tables).toBeLessThanOrEqual((result.tables ?? []).length);
+		}
 	}, 120000);
 });
 
