@@ -52,8 +52,9 @@ silence inside those windows is the classic trigger of a Whisper repetition loop
 
 1. `transcribers/lib/vad.js` finds the speech and plans decode windows that start
    and end **at pauses** — no overlap needed, long silences never sent;
-2. each window is decoded independently: beam search, `repetition_penalty`,
-   `no_repeat_ngram_size`, and no conditioning on the previous window;
+2. each window is decoded independently: greedy with `repetition_penalty`,
+   `no_repeat_ngram_size`, and no conditioning on the previous window (beam
+   search is unsupported by the ONNX ASR pipeline and is clamped to 1);
 3. a window whose output still looks degenerate is retried up a temperature
    ladder, and the least repetitive attempt wins;
 4. `transcribers/lib/transcript_postprocess.js` collapses in-segment loops,

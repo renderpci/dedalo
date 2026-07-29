@@ -202,8 +202,11 @@ Recorded for the next person who touches this. Five causes, all fixed 2026-07-28
 5. nothing checked the output.
 
 Now: VAD plans windows at real pauses (`transcribers/lib/vad.js`), each window is
-decoded independently with beam search + anti-loop parameters, a window that still
-looks degenerate is retried up a temperature ladder, and
+decoded independently with anti-loop parameters (repetition penalty, no-repeat
+n-grams, no conditioning on the previous window — beam search is NOT available:
+Transformers.js' Whisper pipeline dies on it with "token_ids must be a non-empty
+array", so quality comes from the penalties, the retry ladder and VAD), a window
+that still looks degenerate is retried up a temperature ladder, and
 `transcribers/lib/transcript_postprocess.js` collapses whatever survives. The
 audio itself is high-passed and loudness-normalised on extraction, because quiet
 and rumbling input is what makes a recogniser hallucinate in the first place.

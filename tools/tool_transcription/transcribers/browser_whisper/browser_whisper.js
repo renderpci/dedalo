@@ -66,10 +66,15 @@ import { plan_windows, total_speech_seconds } from '../lib/vad.js';
 * Decoding parameters, quality-first. Every one of them exists to stop the decoder
 * looping; they cost speed and buy correctness, which is the trade this tool wants.
 *
-*   num_beams            — beam search explores alternatives instead of committing
-*                          to the first token; a loop is rarely the best BEAM, so
-*                          this alone removes many of them. Greedy (1) is faster
-*                          and is what live token streaming requires.
+*   num_beams            — MUST STAY 1. Transformers.js' Whisper ASR pipeline does
+*                          not support beam search with timestamps: with beams the
+*                          `_decode_asr` chunk accumulator receives EMPTY token
+*                          lists and the run dies with "token_ids must be a
+*                          non-empty array of integers" on the first window
+*                          (observed live, 2026-07-28). Anti-loop quality comes
+*                          from the penalties below + the temperature retry
+*                          ladder + VAD windows — and greedy is what makes live
+*                          token streaming possible at all.
 *   repetition_penalty   — down-weights tokens already produced.
 *   no_repeat_ngram_size — forbids repeating any n-gram of this length verbatim.
 *                          Kept at 4: shorter would forbid ordinary speech
@@ -77,7 +82,7 @@ import { plan_windows, total_speech_seconds } from '../lib/vad.js';
 *   temperature ladder   — retry values for a window that came back degenerate.
 */
 export const DEFAULT_DECODE = {
-	num_beams				: 4,
+	num_beams				: 1,
 	repetition_penalty		: 1.15,
 	no_repeat_ngram_size	: 4,
 	temperature_ladder		: [0.2, 0.4, 0.6, 0.8],
@@ -318,7 +323,11 @@ async function decode_window({ transcriber, samples, offset, language, decode, t
 		repetition_penalty		: decode.repetition_penalty,
 		no_repeat_ngram_size	: decode.no_repeat_ngram_size,
 		// Each window is decoded independently: a loop in one cannot seed the next.
-		condition_on_prev_tokens: false
+		condition_on_prev_tokens: false,
+		// The pre-rewrite worker always passed this, against a long-known
+		// transformers.js failure in the strict timestamp-sequence decode
+		// ("token_ids must be a non-empty array of integers"). Keep it.
+		force_full_sequences	: false
 	};
 	if (streamer!==undefined) {
 		options.streamer = streamer;
@@ -368,13 +377,29 @@ async function transcribe_window( params ) {
 
 	for (let attempt = 0; attempt < ladder.length; attempt++) {
 
-		const temperature	= ladder[attempt];
-		const segments		= await decode_window( Object.assign({}, params, {
-			temperature	: temperature,
-			// Only the first, greedy-or-beam attempt streams: a retry would
-			// otherwise re-print the same window's text in the status line.
-			stream		: attempt===0 && params.stream===true && decode.num_beams<=1
-		}));
+		const temperature = ladder[attempt];
+
+		let segments;
+		try {
+			segments = await decode_window( Object.assign({}, params, {
+				temperature	: temperature,
+				// Only the first, greedy attempt streams: a retry would
+				// otherwise re-print the same window's text in the status line.
+				stream		: attempt===0 && params.stream===true && decode.num_beams<=1
+			}));
+		} catch (error) {
+			// A window the decoder cannot finish (the timestamp-sequence decode
+			// is known to throw "token_ids must be a non-empty array" on some
+			// audio/model combinations) is a FAILED ATTEMPT, never a dead run:
+			// an archivist 80 minutes into an interview keeps those 80 minutes.
+			// Retry up the ladder; if every attempt throws, the window is skipped
+			// loudly and the recording continues.
+			console.warn(
+				`[browser_whisper] decode attempt ${attempt + 1}/${ladder.length} failed for window at ${params.offset}s:`,
+				(error && error.message) ? error.message : error
+			);
+			continue;
+		}
 
 		const text	= segments.map( segment => segment.text ).join(' ');
 		const score	= repetition_score( text );
@@ -389,7 +414,11 @@ async function transcribe_window( params ) {
 		}
 	}
 
-	return best===null ? [] : best;
+	if (best===null) {
+		console.warn(`[browser_whisper] window at ${params.offset}s produced no decodable output — skipped`);
+		return [];
+	}
+	return best;
 }//end transcribe_window
 
 
@@ -418,6 +447,12 @@ self.transcribe = async function( options ) {
 	const language		= options.language || 'en';
 	const model			= options.model;
 	const decode		= Object.assign({}, DEFAULT_DECODE, options.decode || {});
+	// Beam search is unsupported by the runtime (see DEFAULT_DECODE): a stale
+	// catalog or caller override must degrade to greedy, never kill the run.
+	if (decode.num_beams > 1) {
+		console.warn('[browser_whisper] num_beams>1 is not supported by the ASR runtime; using greedy decoding');
+		decode.num_beams = 1;
+	}
 
 	if (!audio || audio.length===0) {
 		throw new Error('No audio was supplied to the transcriber');
