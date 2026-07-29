@@ -1225,10 +1225,11 @@ const render_header = function(self) {
 					el.section_tipo===current_locator.section_tipo &&
 					parseInt(el.section_id)===parseInt(current_locator.section_id)
 				)
-				// Flatten the component's value array (each element is {id, value, …})
-			// into a single display string; use ' | ' as separator for multi-value fields.
+				// Flatten the component's value array into a single display string;
+			// ' | ' separates multi-value fields. Entries are flat strings on the
+			// v7 wire (WC-065) or {id, value, …} objects on legacy payloads.
 			const current_component_value = current_component_data && current_component_data.value
-					? current_component_data.value.map(item => item.value).join(' | ')
+					? current_component_data.value.map(item => item?.value ?? item).join(' | ')
 					: null
 
 				// Skip empty values

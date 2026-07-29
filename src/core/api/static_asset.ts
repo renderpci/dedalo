@@ -74,20 +74,21 @@ export const MEDIA_CSP_ORIGIN: string = (() => {
 const withMedia = (sources: string): string =>
 	MEDIA_CSP_ORIGIN === '' ? sources : `${sources} ${MEDIA_CSP_ORIGIN}`;
 
-export const APP_CSP =
-	"default-src 'self'; " +
-	"script-src 'self' 'unsafe-eval' blob: 'sha256-YeRfUXP7gY4V7v/uefS4JIBm3BthshUSvAd69Hmer+U='; " +
-	"worker-src 'self' blob:; " +
-	"style-src 'self' 'unsafe-inline'; " +
-	`img-src ${withMedia("'self' data: blob:")} *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; ` +
-	`media-src ${withMedia("'self' blob:")}; ` +
-	"font-src 'self' data:; " +
-	`connect-src ${withMedia("'self' blob:")}; ` +
-	"frame-src 'self' blob:; " +
-	"frame-ancestors 'self'; " +
-	"object-src 'none'; " +
-	"base-uri 'self'; " +
-	"form-action 'self'";
+export const APP_CSP = [
+	"default-src 'self'",
+	"script-src 'self' 'unsafe-eval' blob: 'sha256-YeRfUXP7gY4V7v/uefS4JIBm3BthshUSvAd69Hmer+U='",
+	"worker-src 'self' blob:",
+	"style-src 'self' 'unsafe-inline'",
+	`img-src ${withMedia("'self' data: blob:")} *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se`,
+	`media-src ${withMedia("'self' blob:")}`,
+	"font-src 'self' data:",
+	`connect-src ${withMedia("'self' blob:")}`,
+	"frame-src 'self' blob:",
+	"frame-ancestors 'self'",
+	"object-src 'none'",
+	"base-uri 'self'",
+	"form-action 'self'",
+].join('; ');
 
 /**
  * Baseline security response headers (L6) applied to every app response.

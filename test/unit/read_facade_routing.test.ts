@@ -335,3 +335,61 @@ describe('read facade routing: component-source action:search (BUG-0)', () => {
 		expect((envelope?.entries ?? []).length).toBe(1);
 	});
 });
+
+describe('read facade routing: related_search (WC-065)', () => {
+	/** The exact RQO shape tool_transcription/tool_indexation send (component
+	 * source + action related_search + sqo.mode 'related'). Before the route
+	 * existed, the component-model get_data branch swallowed it into an empty
+	 * component shell — the tools' parent-record <select> rendered empty. */
+	function relatedSearchRqo(sectionId: number | string | undefined): Rqo {
+		return {
+			id: 'facade_routing_related_search',
+			action: 'read',
+			dd_api: 'dd_core_api',
+			prevent_lock: true,
+			options: {},
+			source: {
+				typo: 'source',
+				type: 'component',
+				action: 'related_search',
+				model: 'component_portal',
+				tipo: PORTAL,
+				section_tipo: HOST_SECTION,
+				mode: 'related_list',
+				lang: 'lg-spa',
+			},
+			sqo: {
+				id: 'tmp',
+				section_tipo: ['all'],
+				mode: 'related',
+				limit: 10,
+				offset: 0,
+				full_count: false,
+				filter_by_locators:
+					sectionId === undefined ? [] : [{ section_tipo: TARGET_SECTION, section_id: sectionId }],
+			},
+		} as unknown as Rqo;
+	}
+
+	test('routes to the related-sections read, never the get_data shell', async () => {
+		if (!dbReady) return;
+		const { status, result } = await dispatchAsRoot(relatedSearchRqo(1));
+		expect(status).toBe(200);
+		expect(result).not.toBe(false);
+		const read = result as ReadResult;
+		// The WC-065 shape: data[0] is ALWAYS the sections item with `value`
+		// (the v6-client key the tools read) — zero hits keep the empty array.
+		const sections = read.data[0] as
+			| { typo?: string; value?: unknown[]; entries?: unknown[] }
+			| undefined;
+		expect(sections?.typo).toBe('sections');
+		expect(Array.isArray(sections?.value)).toBe(true);
+		expect('entries' in (sections ?? {})).toBe(false);
+	});
+
+	test('missing filter_by_locators is a 400, not an empty success', async () => {
+		if (!dbReady) return;
+		const { status } = await dispatchAsRoot(relatedSearchRqo(undefined));
+		expect(status).toBe(400);
+	});
+});

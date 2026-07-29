@@ -255,9 +255,7 @@ describe('temporal monotonicity (backwards timecodes = degeneration)', () => {
 	test('clean_transcript drops the regressed tail — timecodes stay monotonic, the duplicate dies', () => {
 		const cleaned = clean_transcript(LIVE);
 		// Only the forward-moving, non-noise segments survive.
-		expect(cleaned.map((segment) => segment.start)).toEqual([
-			1745.56, 1761.72, 1765.56,
-		]);
+		expect(cleaned.map((segment) => segment.start)).toEqual([1745.56, 1761.72, 1765.56]);
 		const joined = cleaned.map((s: { text: string }) => s.text).join(' ');
 		expect(joined).toContain('unbelievable.');
 		// The re-transcribed duplicate is GONE, not merely deduped.

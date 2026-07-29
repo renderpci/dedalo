@@ -7,8 +7,9 @@
  * The caller (api/handlers/dd_core_api.ts) has already run the ACL gates that
  * are NOT routing: the menu/area model dispatch, permission gate A (source
  * section_tipo+tipo) and gate B (every SQO target section). Everything below —
- * relation-list, time-machine, resolve_data, component get_data, the stale-lock
- * release and the generic readSection — is behavior-identical to the pre-split
+ * relation-list, related-sections (related_search), time-machine, resolve_data,
+ * component get_data, the stale-lock release and the generic readSection — is
+ * behavior-identical to the pre-split
  * dispatch body, with ONE deliberate routing fix (2026-07-09, BUG-0): a
  * component-model source with `action:'search'` (the service_autocomplete
  * picker, input_text find_equal) routes to the generic readSection — PHP
@@ -85,6 +86,62 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			);
 		}
 		return { status: 200, body };
+	}
+
+	// Related-sections read (source.action 'related_search' + sqo.mode
+	// 'related'): the transcription/indexation/tr_print/epigraphy tools'
+	// "which records point at me" listing. PHP dispatches on source.action
+	// alone (dd_core_api.php:2326 `case 'related_search'` →
+	// sections::get_instance 'related_list'); TS serves the same contract
+	// through buildRelatedSections (wire shape: WC-065). Keyed on
+	// source.action ALONE and placed BEFORE the component-model get_data
+	// branch below, which would otherwise swallow the tools' component-source
+	// RQO into an empty component shell.
+	if (source.action === 'related_search') {
+		const sqoOptions = (rqo.sqo ?? {}) as {
+			limit?: number | false;
+			offset?: number;
+			section_tipo?: unknown;
+			filter_by_locators?: { section_tipo?: unknown; section_id?: unknown }[];
+		};
+		const locators = (
+			Array.isArray(sqoOptions.filter_by_locators) ? sqoOptions.filter_by_locators : []
+		).filter(
+			(locator): locator is { section_tipo: string; section_id: number | string } =>
+				typeof locator?.section_tipo === 'string' &&
+				(typeof locator.section_id === 'number' || typeof locator.section_id === 'string'),
+		);
+		if (locators.length === 0) {
+			return denied(400, 'related_search: sqo.filter_by_locators is required');
+		}
+		// Host-read gate: read access to every host record's section (mirrors
+		// the count-mode 'related' gate in the handler).
+		for (const locator of locators) {
+			if ((await getPermissions(principal, locator.section_tipo, locator.section_tipo)) < 1) {
+				return denied(403, 'Insufficient permissions to read');
+			}
+		}
+		const rawSectionTipos = Array.isArray(sqoOptions.section_tipo)
+			? sqoOptions.section_tipo.filter((tipo): tipo is string => typeof tipo === 'string')
+			: typeof sqoOptions.section_tipo === 'string'
+				? [sqoOptions.section_tipo]
+				: [];
+		const sectionTipos =
+			rawSectionTipos.length === 0 || rawSectionTipos.includes('all')
+				? ('all' as const)
+				: rawSectionTipos;
+		const { buildRelatedSections } = await import('../resolve/related_sections.ts');
+		const result = await buildRelatedSections(locators, {
+			callerTipo: String(source.tipo ?? locators[0]?.section_tipo ?? ''),
+			lang: source.lang,
+			sectionTipos,
+			limit: sqoOptions.limit === 0 ? false : (sqoOptions.limit ?? false),
+			offset: sqoOptions.offset,
+			// AUTHZ-05: scope referencing records to the caller, like
+			// get_relation_list above — the scan spans 'all' owning sections.
+			principal,
+		});
+		return { status: 200, body: { result, msg: 'OK. Request done successfully' } };
 	}
 
 	// Time Machine read (sqo.mode 'tm'): the record-history listing is now
