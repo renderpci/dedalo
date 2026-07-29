@@ -34,29 +34,45 @@
 *
 * MESSAGE PROTOCOL (caller → worker):
 *   { action:'transcribe', options:{ audio, sample_rate, language, model, device,
-*                                    dtype, decode, vad, postprocess } }
+*                                    dtype, decode, vad, postprocess,
+*                                    diarize:{ model, tuning } } }
 *   { action:'abort' }   — stop after the current window and return what is done
 *
 * MESSAGE PROTOCOL (worker → caller):
-*   { status:'init',         data:{ progress, status, device, file } }
-*   { status:'plan',         data:{ windows, speech_seconds, duration } }
-*   { status:'window_start', data:{ index, total, from, to, done_seconds, speech_seconds } }
-*   { status:'partial',      data:{ text } }          live tokens (greedy only)
-*   { status:'progress',     data:{ segments, done_seconds, speech_seconds } }
-*   { status:'end',          data:{ segments, aborted } }
-*   { status:'error',        data:{ message } }
+*   { status:'init',             data:{ progress, status, device, file } }
+*   { status:'plan',             data:{ windows, speech_seconds, duration } }
+*   { status:'window_start',     data:{ index, total, from, to, done_seconds, speech_seconds } }
+*   { status:'partial',          data:{ text } }      live tokens (greedy only)
+*   { status:'progress',         data:{ segments, done_seconds, speech_seconds } }
+*   { status:'diarize_init',     data:{ progress, status, file } }
+*   { status:'diarize_progress', data:{ done_seconds, duration } }
+*   { status:'diarize_error',    data:{ message } }   best-effort: run continues
+*   { status:'end',              data:{ segments, aborted } }
+*   { status:'error',            data:{ message } }
 *
 * SEGMENT SHAPE returned to the caller: { text, start, end } with times in SECONDS
-* from the start of the recording. Formatting (paragraphs, timecode marks) is NOT
-* done here — the caller applies lib/paragraphs.js, so the archivist can change
-* paragraph rules without re-running the recogniser.
+* from the start of the recording — plus `speaker` (integer) when speaker
+* detection ran (options.diarize, the pyannote segmentation model from the
+* install's own store). Formatting (paragraphs, timecode marks, person tags) is
+* NOT done here — the caller applies lib/paragraphs.js, so the archivist can
+* change paragraph rules or the speaker mapping without re-running the
+* recogniser.
 */
 
 // The ASR runtime. Served from the engine's own client-lib registry
 // (/dedalo/lib/transformers/), never from a CDN: an archive may be air-gapped,
 // and a request to a third party would leak WHEN a record is transcribed.
-import { pipeline, WhisperTextStreamer, env } from '/dedalo/lib/transformers/dist/transformers.js';
+// AutoProcessor/AutoModelForAudioFrameClassification are the DIARIZATION half:
+// the runtime ships the pyannote segmentation model classes natively.
+import {
+	pipeline,
+	WhisperTextStreamer,
+	env,
+	AutoProcessor,
+	AutoModelForAudioFrameClassification
+} from '/dedalo/lib/transformers/dist/transformers.js';
 
+import { DEFAULT_DIARIZE, assign_speakers_to_segments, stitch_diarization_chunks } from '../lib/diarize.js';
 import { clean_transcript, has_time_regression, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
 import { plan_windows, total_speech_seconds } from '../lib/vad.js';
 
@@ -428,6 +444,87 @@ async function transcribe_window( params ) {
 
 
 /**
+* DIARIZE_AUDIO
+* Run the speaker-segmentation model over the whole recording and return
+* global speaker turns [{speaker, start, end}].
+*
+* Runs on WASM deliberately: the model is small (a few MB — SincNet + BiLSTM),
+* CPU decodes it far faster than real time, and its recurrent graph is exactly
+* the kind WebGPU backends reject with late, confusing errors. The audio is
+* decoded in LONG chunks with a conversational overlap; the identity stitching
+* and its limits are documented in lib/diarize.js.
+*
+* @param {Float32Array} audio - mono PCM at 16 kHz (the transcriber's buffer)
+* @param {number} sample_rate
+* @param {Object} options
+* @param {string} options.model - diarization model id from the catalog
+* @param {Object} [options.sources] - as configure_sources
+* @param {Object} [options.tuning] - DEFAULT_DIARIZE overrides
+* @returns {Promise<Array<Object>>} turns
+*/
+async function diarize_audio( audio, sample_rate, options ) {
+
+	configure_sources( options.sources );
+
+	const tuning		= Object.assign({}, DEFAULT_DIARIZE, options.tuning || {});
+	const chunk_len		= Math.max( 1, Math.floor(tuning.chunk_seconds * sample_rate) );
+	const overlap_len	= Math.max( 0, Math.floor(tuning.overlap_seconds * sample_rate) );
+	const step			= Math.max( 1, chunk_len - overlap_len );
+
+	const progress_callback = ({ progress, status, file }) => {
+		self.postMessage({
+			status	: 'diarize_init',
+			data	: { progress: progress, status: status, file: file }
+		});
+	};
+
+	const processor	= await AutoProcessor.from_pretrained( options.model, { progress_callback: progress_callback } );
+	const model		= await AutoModelForAudioFrameClassification.from_pretrained( options.model, {
+		device				: 'wasm',
+		dtype				: 'fp32',
+		progress_callback	: progress_callback
+	});
+
+	const chunks = [];
+	for (let from = 0; from < audio.length; from += step) {
+
+		if (aborted===true) {
+			break;
+		}
+
+		const to		= Math.min( audio.length, from + chunk_len );
+		const samples	= audio.subarray( from, to );
+		const inputs	= await processor( samples );
+		const { logits }= await model( inputs );
+		// Per-frame powerset classes → local turns {id, start, end, confidence},
+		// times in seconds RELATIVE to this chunk.
+		const turns		= processor.post_process_speaker_diarization( logits, samples.length )[0] || [];
+
+		chunks.push({
+			offset	: from / sample_rate,
+			// The post-processing labels silence as id -1 on some builds; only
+			// real speaker ids enter the stitcher.
+			turns	: turns.filter( turn => typeof turn.id==='number' ? turn.id>=0 : true )
+		});
+
+		self.postMessage({
+			status	: 'diarize_progress',
+			data	: {
+				done_seconds	: Math.min( audio.length, to ) / sample_rate,
+				duration		: audio.length / sample_rate
+			}
+		});
+
+		if (to>=audio.length) {
+			break;
+		}
+	}
+
+	return stitch_diarization_chunks( chunks, tuning );
+}//end diarize_audio
+
+
+/**
 * TRANSCRIBE
 * The pipeline runner: plan windows, decode them one by one, clean up, return.
 *
@@ -558,7 +655,30 @@ self.transcribe = async function( options ) {
 	}
 
 	// 4. The deterministic clean-up (loops, boundary duplication, timing repair).
-	return clean_transcript( collected, options.postprocess );
+	const cleaned = clean_transcript( collected, options.postprocess );
+
+	// 5. Speaker detection (optional): attribute each segment to a speaker turn.
+	// STRICTLY BEST-EFFORT — a diarization failure must never cost the
+	// transcription: the segments are returned without speakers and the caller
+	// is told, loudly, through 'diarize_error'.
+	if (options.diarize && options.diarize.model && cleaned.length>0) {
+		try {
+			const turns = await diarize_audio( audio, sample_rate, {
+				model	: options.diarize.model,
+				sources	: options.sources,
+				tuning	: options.diarize.tuning
+			});
+			return assign_speakers_to_segments( cleaned, turns );
+		} catch (error) {
+			console.warn('[browser_whisper] speaker detection failed — transcript kept without speakers:', error);
+			self.postMessage({
+				status	: 'diarize_error',
+				data	: { message: (error && error.message) ? error.message : String(error) }
+			});
+		}
+	}
+
+	return cleaned;
 }//end transcribe
 
 

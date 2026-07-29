@@ -35,7 +35,7 @@
 import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { config } from '../../../src/config/config.ts';
-import { downloadModel } from '../../../src/core/ai/model_fetch.ts';
+import { DIARIZATION_COMMON_FILES, downloadModel } from '../../../src/core/ai/model_fetch.ts';
 import {
 	AI_MODEL_URL_PREFIX,
 	modelHubAllowed,
@@ -703,16 +703,65 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 		console.error('[tool_transcription] could not read the model catalog:', error);
 	}
 
+	// The speaker-detection model (a separate catalog slot — it must never
+	// appear in the ASR quality picker). The client uses this to enable the
+	// "Detect speakers" toggle and, for admins, its Download button.
+	let diarization: { name: string; label?: string; size_mb?: number; installed: boolean } | null =
+		null;
+	try {
+		const entry = await readDiarizationModel();
+		if (entry !== null) {
+			diarization = {
+				name: entry.name,
+				label: entry.label,
+				size_mb: entry.size_mb,
+				installed: modelInstalled(entry.name, entry.dtype),
+			};
+		}
+	} catch (error) {
+		console.error('[tool_transcription] could not read the diarization model config:', error);
+	}
+
 	return {
 		result: {
 			model_host: AI_MODEL_URL_PREFIX,
 			allow_hub: modelHubAllowed(),
 			store_ready: modelStoreAvailable(),
 			installed,
+			diarization,
 		},
 		msg: 'OK',
 		errors: [],
 	};
+}
+
+/**
+ * The diarization model declared by the tool config (`diarization_model`),
+ * or null when the install declares none. Tolerates the raw property-object
+ * form ({value: {…}}) like every other config read in this module.
+ */
+async function readDiarizationModel(): Promise<{
+	name: string;
+	label?: string;
+	size_mb?: number;
+	dtype?: Record<string, string>;
+} | null> {
+	const toolConfig = await getToolConfig('tool_transcription');
+	const raw = toolConfig?.diarization_model;
+	const entry =
+		raw !== null && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)
+			? (raw as { value?: unknown }).value
+			: raw;
+	if (entry === null || typeof entry !== 'object') return null;
+	const model = entry as {
+		name?: unknown;
+		label?: string;
+		size_mb?: number;
+		dtype?: Record<string, string>;
+	};
+	return typeof model.name === 'string'
+		? { name: model.name, label: model.label, size_mb: model.size_mb, dtype: model.dtype }
+		: null;
 }
 
 /** The background download action name (allowlisted, never client-routable). */
@@ -767,9 +816,16 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	}
 
 	const model = String(ctx.options.model ?? '');
-	const entry = (await readModelCatalog()).find(
+	// Catalog names only (see the gate list above). Two slots qualify: the ASR
+	// quality catalog, and the diarization model — which downloads a different
+	// file set (no tokenizer; the preprocessor config is mandatory).
+	const asrEntry = (await readModelCatalog()).find(
 		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
 	);
+	const diarizationEntry = asrEntry === undefined ? await readDiarizationModel() : null;
+	const entry =
+		asrEntry ??
+		(diarizationEntry !== null && diarizationEntry.name === model ? diarizationEntry : undefined);
 	if (entry === undefined) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}
@@ -785,7 +841,7 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 		loaded,
 		BACKGROUND_DOWNLOAD_ACTION,
 		{ permission: null, handler: backgroundDownloadModel },
-		{ model: entry.name, dtype: entry.dtype },
+		{ model: entry.name, dtype: entry.dtype, kind: asrEntry === undefined ? 'diarization' : 'asr' },
 		ctx.principal,
 		ctx.userId,
 	);
@@ -797,7 +853,11 @@ async function backgroundDownloadModel(ctx: ToolActionContext): Promise<ToolResp
 	const model = String(ctx.options.model ?? '');
 	const dtype = (ctx.options.dtype ?? undefined) as Record<string, string> | undefined;
 	console.log(`[tool_transcription] downloading model '${model}' into the local store…`);
-	const report = await downloadModel(model, dtype, { quiet: true });
+	const fileOptions =
+		ctx.options.kind === 'diarization'
+			? { commonFiles: DIARIZATION_COMMON_FILES, optionalFiles: [] as string[] }
+			: {};
+	const report = await downloadModel(model, dtype, { quiet: true, ...fileOptions });
 	if (report.ok) {
 		console.log(`[tool_transcription] model '${model}' installed (${report.files.length} files)`);
 		return { result: true, msg: `OK. Model installed: ${model}`, errors: [] };
