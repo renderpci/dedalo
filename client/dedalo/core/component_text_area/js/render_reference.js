@@ -137,9 +137,14 @@ export const render_reference = async function(options) {
 
 		// Find the locator entry that corresponds to the clicked reference span.
 		// `tag_type === 'reference'` distinguishes these from index/note/draw tags.
+		// ALWAYS an array: a record whose tags_reference holds no locators yet
+		// (the FIRST reference of a text) has data.value null, and the Delete
+		// handler — also reached by Apply-with-empty-selection — reads
+		// `locator.length`, which crashed on null instead of cleanly removing
+		// the half-created tag from the editor.
 		const locator = (ar_tags_values)
 			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'reference')
-			: null
+			: []
 
 		// Build the list of reusable locators: iterate datum.data entries to enrich
 		// each locator with a human-readable fallback_value resolved by the server.
@@ -223,7 +228,9 @@ export const render_reference = async function(options) {
 			// server round-trip; `value: null` clears if no prior locator exists.
 			const changed_data = [Object.freeze({
 				action	: 'set_data',
-				value	: locator || null
+				// locator is ALWAYS an array now (see its construction): an empty
+				// one must still clear the autocomplete, exactly as null did.
+				value	: locator.length > 0 ? locator : null
 			})]
 
 		// fix instance changed_data
