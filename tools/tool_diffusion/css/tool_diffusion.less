@@ -12,8 +12,14 @@
 @import (reference) '../../../client/dedalo/core/area_maintenance/css/widget_kit';
 
 // local vars
+// ONE colour for both themes — declared here and nowhere else. The central dark
+// registry (`layout/theme_dark.less` "TOOL COLORS") deliberately carries NO
+// tool_diffusion entry: `:root[data-theme="dark"]` outranks this `:root`, so any
+// dark variant there wins silently and this block stops meaning anything.
+// --tool_diffusion_text means "ink that sits ON the tool colour", not "ink on
+// the page background"; using it anywhere else is a misuse (see the hover rule).
 :root {
-	--tool_diffusion: #8aa364;
+	--tool_diffusion: #567528;
 	--tool_diffusion_text: #040503;
 	--tool_diffusion_border: #7d9558;
 }
@@ -63,9 +69,18 @@
 					margin-left: 0.5rem;
 				}
 
+				// DARK MODE: this input is created WITHOUT a `type` attribute
+				// (render_tool_diffusion.js resolve_levels_input), so it never
+				// matches the global `input[type='text']…` rules — including the
+				// `:root[data-theme="dark"]` override that sets `color`. Left to
+				// the UA default the value rendered near-black on the dark
+				// background below, i.e. invisible. Set the ink explicitly here
+				// so the rule is self-sufficient and does not depend on the
+				// element carrying a type attribute.
 				input {
 					text-align: center;
-					background-color: @color_grey_15;
+					background-color: var(--input_bg);
+					color: var(--input_fg);
 					width: 3rem;
 					border: 1px solid @color_grey_13;
 					border-radius: 3px;
@@ -124,12 +139,16 @@
 			padding: 0.5rem;
 
 			// publication_item_label. Change background color to easy differentiate labels
+			// Ink is --fg_inverse (#ffffff in BOTH themes), NOT @color_white: that
+			// token INVERTS to #1b1d20 in dark, which was fine while the bar was a
+			// light green but is 2:1 now that the bar is one fixed deep sage. A bar
+			// that does not follow the theme cannot have ink that does.
 			>.publication_item_label {
 				padding: 0.5rem;
 				font-weight: 600;
 				min-height: 2rem;
 				background-color: @tool_color;
-				color: @color_white;
+				color: var(--fg_inverse);
 				margin-top: 0.33rem;
 				cursor: pointer;
 				text-transform: uppercase;
@@ -150,9 +169,11 @@
 					background-color: var(--color_4);
 				}
 
+				// the collapse chevron is a MASK — same rule as the text above: on a
+				// theme-independent bar it cannot use an inverting grey token
 				&:after {
 					right: 0.25rem;
-					background-color: @color_grey_14;
+					background-color: var(--fg_inverse);
 				}
 			}
 
@@ -190,11 +211,14 @@
 							color: @color_success;
 						}
 
+						// de-emphasised value. NOT @color_grey_10: that lands at
+						// ~2:1 against the card in BOTH themes, which is not
+						// "quiet", it is unreadable — and this carries real data.
 						&.light {
 							font-weight: 100;
 							font-family: monospace;
 							font-size: 0.95rem;
-							color: @color_grey_10;
+							color: var(--fg_muted);
 						}
 					}
 
@@ -223,8 +247,12 @@
 					.fields_grid_value.link {
 						cursor: pointer;
 
+						// NOT --tool_diffusion_text: that token is the ink for the
+						// GREEN bars, and the dark registry sets it to #1a1d20 —
+						// near-black, so on this dark card the label vanished on
+						// hover. Hover here means "full-strength ink".
 						&:hover {
-							color: var(--tool_diffusion_text);
+							color: var(--fg_default);
 							font-weight: 400;
 						}
 
@@ -549,20 +577,31 @@
 }//end wrapper_tool
 
 // modal header tool modification
+// NOTE `ui.build_modal` ADDS the `header` class to this same node, so the bar is
+// `.tool_header.tool_diffusion.header` and all of its ink comes from the modal
+// tokens, which resolve LIGHT in dark (title/description --modal_header_color ->
+// #ffffff, close/minimize --modal_btn_color -> #e5e7ea, masked icon literal
+// #ffffff). @tool_color must therefore stay dark enough to carry white ink.
 .tool_header.tool_diffusion {
 	background-color: @tool_color;
 }
 
 // engine advisory banner
+// Same severity vocabulary as .run_report above (rail + faint tint from a
+// token, never a hardcoded palette): the previous fixed cream/pink blocks
+// stayed light-mode in dark mode — a glaring slab with its own private ink.
 .diffusion_engine_advisory {
 	margin: 1em;
 	padding: 1em 1.2em;
 	border-radius: 6px;
-	border-left: 4px solid #c98a00;
-	background: #fff8e6;
-	color: #4a3b00;
+	border-left: 4px solid var(--color_warning);
+	background-color: color-mix(in srgb, var(--color_warning) 10%, var(--bg_surface));
+	color: var(--fg_default);
 
-	&.unreachable { border-left-color: #b3261e; background: #fdeceb; color: #5f1512; }
+	&.unreachable {
+		border-left-color: var(--color_danger);
+		background-color: color-mix(in srgb, var(--color_danger) 10%, var(--bg_surface));
+	}
 	.advisory_title { margin: 0 0 .4em; font-size: 1.05em; }
 	.advisory_cause { margin: 0 0 .6em; }
 	.advisory_steps { margin: 0 0 .8em 1.1em; }

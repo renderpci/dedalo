@@ -886,9 +886,6 @@ template {
   --tool_dd_label: #b0b0b0;
   --tool_dd_label_border: #808080;
   --tool_dev_template: #ffa040;
-  --tool_diffusion: #a0c080;
-  --tool_diffusion_text: #1a1d20;
-  --tool_diffusion_border: #90b070;
   --tool_export: #9070c8;
   --tool_export_lighten_40: #2a2438;
   --tool_export_lighten_5: #a080d8;
@@ -11304,6 +11301,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header > .tool_name_container {
   margin-right: 1em;
   padding-right: 1rem;
+  display: flex;
+  align-items: center;
 }
 .tool_header > .tool_name_container > .label {
   font-size: 1.4rem;
@@ -11318,7 +11317,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .tool_header > .tool_name_container > .description {
   font-weight: 200;
-  margin-top: 0.3rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  line-height: 1.4rem;
 }
 .tool_header > .tool_buttons_container {
   display: flex;

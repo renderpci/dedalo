@@ -202,7 +202,7 @@
   --service_bg_dark: #c56607;
 }
 :root {
-  --tool_diffusion: #8aa364;
+  --tool_diffusion: #567528;
   --tool_diffusion_text: #040503;
   --tool_diffusion_border: #7d9558;
 }
@@ -238,7 +238,8 @@
 }
 .wrapper_tool.tool_diffusion > .content_data .diffusion_info_container .resolve_levels_container input {
   text-align: center;
-  background-color: var(--color_grey_15);
+  background-color: var(--input_bg);
+  color: var(--input_fg);
   width: 3rem;
   border: 1px solid var(--color_grey_13);
   border-radius: 3px;
@@ -290,7 +291,7 @@
   font-weight: 600;
   min-height: 2rem;
   background-color: var(--tool_diffusion);
-  color: var(--color_white);
+  color: var(--fg_inverse);
   margin-top: 0.33rem;
   cursor: pointer;
   text-transform: uppercase;
@@ -309,7 +310,7 @@
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_label:after {
   right: 0.25rem;
-  background-color: var(--color_grey_14);
+  background-color: var(--fg_inverse);
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid {
   width: 100%;
@@ -345,7 +346,7 @@
   font-weight: 100;
   font-family: monospace;
   font-size: 0.95rem;
-  color: var(--color_grey_10);
+  color: var(--fg_muted);
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .value_info {
   margin-left: 1rem;
@@ -369,7 +370,7 @@
   cursor: pointer;
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .fields_grid_value.link:hover {
-  color: var(--tool_diffusion_text);
+  color: var(--fg_default);
   font-weight: 400;
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .fields_grid_value.link:active {
@@ -664,14 +665,13 @@
   margin: 1em;
   padding: 1em 1.2em;
   border-radius: 6px;
-  border-left: 4px solid #c98a00;
-  background: #fff8e6;
-  color: #4a3b00;
+  border-left: 4px solid var(--color_warning);
+  background-color: color-mix(in srgb, var(--color_warning) 10%, var(--bg_surface));
+  color: var(--fg_default);
 }
 .diffusion_engine_advisory.unreachable {
-  border-left-color: #b3261e;
-  background: #fdeceb;
-  color: #5f1512;
+  border-left-color: var(--color_danger);
+  background-color: color-mix(in srgb, var(--color_danger) 10%, var(--bg_surface));
 }
 .diffusion_engine_advisory .advisory_title {
   margin: 0 0 0.4em;
