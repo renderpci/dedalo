@@ -116,29 +116,29 @@ export const render_reference = async function(options) {
 			console.error("Error! misconfigured text area with references, the tags reference component is not available, create new one in the ontology, see rsc36 and rsc1368");
 			return false
 		}
-
+	
 		// Locate this text-area's own datum entry inside the shared datum.data array.
 		// datum.data is the flat array shared across the section; entries are keyed by
-		// tipo + section_tipo + section_id. `found_tag_data.value` holds the array of
+		// tipo + section_tipo + section_id. `found_tag_data.entries` holds the array of
 		// locator objects for all reference tags recorded in this component.
 		const found_tag_data = component_tags_reference.datum.data.find(el =>
 			el.tipo===component_tags_reference.tipo &&
 			el.section_tipo===component_tags_reference.section_tipo &&
 			el.section_id==component_tags_reference.section_id)
 
-		const all_tag_data = found_tag_data && found_tag_data.value
-			? found_tag_data.value
+		const all_tag_data = found_tag_data && found_tag_data.entries
+			? found_tag_data.entries
 			: []
 
-		// component_tags_reference.data.value is the live (potentially unsaved) array
+		// component_tags_reference.data.entries is the live (potentially unsaved) array
 		// of locator entries. Each entry carries: tag_id, tag_type, from_component_tipo,
 		// section_tipo, section_id, and optionally fallback_value.
-		const ar_tags_values = component_tags_reference.data.value
+		const ar_tags_values = component_tags_reference.data.entries
 
 		// Find the locator entry that corresponds to the clicked reference span.
 		// `tag_type === 'reference'` distinguishes these from index/note/draw tags.
 		// ALWAYS an array: a record whose tags_reference holds no locators yet
-		// (the FIRST reference of a text) has data.value null, and the Delete
+		// (the FIRST reference of a text) has data.entries null, and the Delete
 		// handler — also reached by Apply-with-empty-selection — reads
 		// `locator.length`, which crashed on null instead of cleanly removing
 		// the half-created tag from the editor.
@@ -294,10 +294,11 @@ export const render_reference = async function(options) {
 			for (let i = 0; i < existing_values.length; i++) {
 
 				const current_value = existing_values[i]
+				const fallback_value = current_value.fallback_value.find(el => el.lang === self.lang) ? current_value.fallback_value.find(el => el.lang === self.lang).value : ''
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: current_value.fallback_value ? current_value.fallback_value.join(' | ') : '',
+					inner_html		: fallback_value,
 					parent			: existing_tags_container
 				})
 				existing_value_node.data = current_value
@@ -384,13 +385,13 @@ export const render_reference = async function(options) {
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
-			button_apply.addEventListener('mouseup',function(e) {
-
+			button_apply.addEventListener('mouseup', async function(e) {
+				e.stopPropagation()
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
 				if(selected_tag.reuse === false){
 
-					const locator = reference_component.data.value
+					const locator = reference_component.data.entries
 
 					// If the autocomplete is empty (user clicked Apply without selecting
 					// a record), treat this as a delete: remove the tag from the editor.
@@ -410,7 +411,14 @@ export const render_reference = async function(options) {
 					// see the ontology node properties
 					delete new_locator.type
 
-					component_tags_reference.add_value(new_locator);
+					// Persist the locator into the tags_reference portal. `link_record`
+					// is the v7 relation verb (it stamps from_component_tipo and saves
+					// through the normal portal change_value path); the v6 `add_value`
+					// this code shipped with never existed in the v7 client, so Apply
+					// crashed here and the reference never reached the text. A `false`
+					// return means the locator was already linked — the text span must
+					// still get its reference attribute below, so we continue either way.
+					await component_tags_reference.link_record(new_locator);
 
 					// get the data from the new locator
 					// Look up the datum.data entry for the newly added locator so we can
@@ -480,7 +488,7 @@ export const render_reference = async function(options) {
 		// so would leak the temporal component across navigation events.
 		modal.on_close = async () => {
 
-			if( reference_component.data.value){
+			if( reference_component.data.entries){
 				// change data to set empty value in the component (it saved in Session instead DDBB)
 					const changed_data = [Object.freeze({
 						action	: 'set_data',
