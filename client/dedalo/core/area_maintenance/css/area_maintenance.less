@@ -342,6 +342,16 @@
 					background-color: @color_danger;
 				}
 			}
+			// WC-074: an ACTIONABLE-but-not-broken state, set from a widget's own
+			// render via set_widget_label_style(self,'warning',…). Distinct from
+			// .danger on purpose: degraded table statistics mean "come and press a
+			// button", not "something failed" — painting it red would train
+			// operators to ignore red.
+			&.warning {
+				>.widget_label {
+					background-color: @color_warning;
+				}
+			}
 			&.blue {
 				>.widget_label {
 					background-color: @color_primary;

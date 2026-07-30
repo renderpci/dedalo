@@ -328,10 +328,11 @@ const build_status_block = function(value, parent) {
 * Renders the scheduler status and the flow-control pause/resume toggle.
 *
 * Source: `value.scheduler` — { running, max_runners, queued, stale_after_seconds,
-* paused }. The scheduler claims queued jobs up to `max_runners` and spawns one
-* runner process per claim; while `paused` no new jobs are dispatched (in-flight
-* runners finish, queued jobs wait). Pausing is in-memory and resets to running
-* on a server restart.
+* paused, draining }. The scheduler claims queued jobs up to `max_runners` and
+* spawns one runner process per claim; while `paused` no new jobs are dispatched
+* (in-flight runners finish, queued jobs wait). Pausing is in-memory and resets
+* to running on a server restart. `draining` is a quiesce in progress: paused,
+* and waiting for the running jobs to finish before resuming by itself.
 *
 * @param {Object}      self   - the diffusion_server_control widget instance
 * @param {Object}      value  - the full widget value snapshot (see module header)
@@ -343,6 +344,7 @@ const build_scheduler_block = function(self, value, parent) {
 	const is_admin	= value.is_admin===true
 	const scheduler	= value.scheduler || {}
 	const paused	= scheduler.paused===true
+	const draining	= scheduler.draining===true
 
 	const scheduler_block = ui.create_dom_element({
 		element_type	: 'div',
@@ -367,7 +369,15 @@ const build_scheduler_block = function(self, value, parent) {
 	const max		= scheduler.max_runners ?? 0
 	const queued	= scheduler.queued ?? 0
 
-	add_row(grid, 'Dispatch', paused ? 'Paused' : 'Running', paused ? 'pill_warning' : 'pill_ok')
+	// (!) The live layer rewrites this pill in place (dsc_sched_dispatch), so the
+	// three states must be produced by ONE expression here and there. A drain is
+	// always paused too — report the more specific state.
+	add_row(
+		grid,
+		'Dispatch',
+		draining ? 'Draining' : (paused ? 'Paused' : 'Running'),
+		draining ? 'pill_warning' : (paused ? 'pill_warning' : 'pill_ok')
+	).classList.add('dsc_sched_dispatch')
 	// (!) These two rows show the SAME running/queued quantities the live stream
 	// carries. Left un-patched they would disagree with the rollup within
 	// seconds — one number, two values, one screen. The stable classes are the
@@ -377,27 +387,66 @@ const build_scheduler_block = function(self, value, parent) {
 		.classList.add('dsc_sched_queued')
 	add_row(grid, 'Stale after', (scheduler.stale_after_seconds ?? '?') + ' s', 'mono')
 
-	// pause / resume toggle (admin only)
+	// Dispatch lifecycle (admin only).
+	//
+	// (!) These act on job DISPATCH, not on a process. Diffusion runs INSIDE this
+	// server (WC-005) — there is no daemon left to start or stop, which is why
+	// these are not the old PHP start/stop/restart_server actions (those are
+	// tripwired as denied). "Drain & resume" is the honest analogue of a restart:
+	// hold dispatch, let the running jobs finish, then dispatch again.
 	if (is_admin) {
-		const button_toggle = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light button_scheduler ' + (paused ? 'success' : 'warning'),
-			inner_html		: paused ? 'Resume dispatch' : 'Pause dispatch',
+		const actions = [
+			{
+				key			: 'resume',
+				label		: 'Resume dispatch',
+				css			: 'success',
+				disabled	: !paused || draining,
+				confirm		: 'Resume dispatching diffusion jobs?'
+			},
+			{
+				key			: 'pause',
+				label		: 'Pause dispatch',
+				css			: 'danger',
+				disabled	: paused || draining,
+				confirm		: 'Hold dispatch? Running jobs finish; queued jobs wait.'
+			},
+			{
+				key			: 'drain_resume',
+				label		: 'Drain & resume',
+				css			: 'warning',
+				disabled	: draining,
+				confirm		: 'Hold dispatch, wait for the running jobs to finish, then resume?'
+			}
+		]
+
+		const button_bar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dsc_sched_actions',
 			parent			: scheduler_block
 		})
-		button_toggle.addEventListener('click', async (e) => {
-			e.stopPropagation()
-			const next = paused ? 'resume' : 'pause'
-			if (!confirm((get_label.sure || 'Sure?') + '\n' + next + ' the diffusion scheduler?')) {
-				return
-			}
-			button_toggle.classList.add('button_spinner')
-			try {
-				await run_action(self, parent, scheduler_block, () => self.set_scheduler(next))
-			} finally {
-				button_toggle.classList.remove('button_spinner')
-			}
-		})
+
+		for (const action of actions) {
+			const button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_scheduler ' + action.css,
+				inner_html		: action.label,
+				parent			: button_bar
+			})
+			button.dataset.scheduler_action = action.key
+			button.disabled = action.disabled
+			button.addEventListener('click', async (e) => {
+				e.stopPropagation()
+				if (!confirm((get_label.sure || 'Sure?') + '\n' + action.confirm)) {
+					return
+				}
+				button.classList.add('button_spinner')
+				try {
+					await run_action(self, parent, scheduler_block, () => self.set_scheduler(action.key))
+				} finally {
+					button.classList.remove('button_spinner')
+				}
+			})
+		}
 	}
 
 

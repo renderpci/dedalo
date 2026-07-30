@@ -408,6 +408,10 @@
   margin: 1rem;
   background-color: var(--tool_diffusion);
   border-color: var(--tool_diffusion_border);
+  color: var(--fg_inverse);
+}
+.wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button:before {
+  background-color: var(--fg_inverse) !important;
 }
 .wrapper_tool.tool_diffusion > .content_data .publication_items > .publication_item_body > .publication_items_grid .container_bottom > .buttons_container .publication_button.not_ready {
   opacity: 0.4;

@@ -20,6 +20,16 @@ Description=Dedalo TS server (Bun)
 After=network.target postgresql.service
 Wants=postgresql.service
 
+# Crash-loop budget. systemd's DEFAULT is 5 starts per 10 s, after which the unit
+# is left in `failed` and NOTHING restarts it — with RestartSec=3 that ceiling sits
+# right on top of a normal restart cadence, so a burst of planned restarts (an
+# installer persisting config, a code update) or a transient dependency outage
+# (Postgres slow to accept) can wedge the service permanently. Widened to 5 starts
+# per 5 min: still a real backstop against a hot crash loop, but no longer trippable
+# by legitimate restarts.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
 [Service]
 Type=simple
 User=DEDALO_USER
@@ -68,6 +78,16 @@ RestartSec=3
 SuccessExitStatus=75
 TimeoutStopSec=30
 KillSignal=SIGTERM
+# Signal the SERVER only, never its children. Diffusion dispatches one runner
+# process per job (src/diffusion/jobs/scheduler.ts) and those runners are designed
+# to SURVIVE a server restart: they talk only to Postgres, finish their job, and
+# the sweeper heals whatever does not. Under systemd's default
+# (KillMode=control-group) every runner is signalled and then SIGKILLed with the
+# server, silently truncating long publications mid-flight and making
+# engineering/PRODUCTION.md's "runners survive by design" false. The cost of
+# `process` is the honest tradeoff: a wedged runner is no longer reaped by the
+# unit stop, and is left to the stale-heartbeat sweep + attempt budget.
+KillMode=process
 
 # Log capture (audit S2-37): stdout/stderr → journald. The structured access
 # log (DEDALO_ACCESS_LOG=true) emits one JSON line per request here.

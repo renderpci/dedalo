@@ -224,6 +224,12 @@ export const create_live_controller = function(self, content_data, options={}) {
 	* The scheduler readout renders the same running/queued numbers the stream
 	* now carries live. Left alone they would disagree with the live values
 	* within seconds — two different numbers for one quantity on one screen.
+	*
+	* The DISPATCH STATE is patched for a stronger reason than agreement: a drain
+	* ends on its own, minutes after the request that started it returned. Nothing
+	* reloads the widget at that moment, so without this the pill would read
+	* "Draining" and the buttons would stay disabled until the operator reloaded
+	* the page by hand. The stream is the only thing that knows the drain is over.
 	*/
 	const patch_scheduler = function(scheduler) {
 		if (!scheduler) return
@@ -234,6 +240,26 @@ export const create_live_controller = function(self, content_data, options={}) {
 			queued.textContent = String(scheduler.queued)
 			queued.classList.toggle('state_warning', scheduler.queued>0)
 		}
+
+		const paused	= scheduler.paused===true
+		const draining	= scheduler.draining===true
+
+		// (!) Same expression as the render module's Dispatch row. Two places, one
+		// meaning — change both or neither.
+		const dispatch = content_data.querySelector('.dsc_sched_dispatch .dd_badge')
+		if (dispatch) {
+			dispatch.textContent = draining ? 'Draining' : (paused ? 'Paused' : 'Running')
+			dispatch.classList.toggle('pill_warning', paused || draining)
+			dispatch.classList.toggle('pill_ok', !paused && !draining)
+		}
+
+		const set_disabled = function(action, disabled) {
+			const button = content_data.querySelector('button[data-scheduler_action="' + action + '"]')
+			if (button) button.disabled = disabled
+		}
+		set_disabled('resume', !paused || draining)
+		set_disabled('pause', paused || draining)
+		set_disabled('drain_resume', draining)
 	}
 
 

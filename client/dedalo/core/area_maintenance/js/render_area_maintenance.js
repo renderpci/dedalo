@@ -1130,12 +1130,24 @@ const build_map_view = function(self, widgets, opts={}) {
 			if (probed) { return }
 			probed = true
 
-			// PostgreSQL — read-only catalog snapshot
+			// PostgreSQL — read-only catalog snapshot + statistics health (WC-074).
+			// The probe already returned `statistics`; before WC-074 it was fetched
+			// and thrown away, so a degraded planner-statistics state was invisible
+			// on the map. 'warn' not 'bad': the database is serving fine, it just
+			// needs an ANALYZE.
 			dd_request_idle_callback(async () => {
 				if (!by_id['database_info']) { return }
 				const r = await probe_value('database_info')
 				if (r && Array.isArray(r.tables)) {
-					set_node_status('pg', 'ok', 'Online', r.tables.length + ' tables')
+					const degraded	= r.statistics?.status==='degraded'
+					const stale		= Number(r.statistics?.never_analyzed || 0) + Number(r.statistics?.counters_reset || 0)
+					const sub		= r.tables.length + ' tables' + (degraded ? ' · statistics degraded' : '')
+					set_node_status(
+						'pg',
+						degraded ? 'warn' : 'ok',
+						degraded ? 'Statistics degraded' : 'Online',
+						degraded && stale>0 ? sub + ' (' + stale + ')' : sub
+					)
 				}
 			})
 

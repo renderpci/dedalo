@@ -83,18 +83,32 @@
 		flex-direction: column;
 	}
 
-	// scheduler: readout + pause/resume toggle.
+	// scheduler: readout + the dispatch lifecycle buttons.
 	// (!) align-items stays STRETCH so the readout panel spans the widget like the
 	// status and configuration ones — flex-start here shrank it to its content and
 	// left one panel visibly narrower than its identical neighbours. Only the
-	// button opts out, via align-self.
+	// button bar opts out, via align-self.
 	.diffusion_server_control_scheduler {
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
 
-		.button_scheduler {
+		// The three buttons sit on one row and WRAP rather than overflow — this
+		// widget is laid out in a narrow dashboard column.
+		.dsc_sched_actions {
 			align-self: flex-start;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+		}
+
+		// Disabled = "not available in this state" (resume while running, any
+		// action mid-drain), not an error. Muted, and unmistakably not clickable:
+		// the live layer flips these as the drain progresses, so a stale-looking
+		// enabled button would invite a click the server would only refuse.
+		.button_scheduler[disabled] {
+			opacity: 0.45;
+			cursor: not-allowed;
 		}
 	}
 

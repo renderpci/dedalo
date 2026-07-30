@@ -285,11 +285,18 @@ diffusion_server_control.prototype.purge_jobs = async function(older_than_hours=
 
 /**
 * SET_SCHEDULER
-* Pauses or resumes the scheduler's job DISPATCH. While paused no new jobs are
-* claimed (in-flight runners finish, queued jobs wait); crash-recovery keeps
-* running. In-memory state — resets to running on a server restart.
+* Controls the scheduler's job DISPATCH. While paused no new jobs are claimed
+* (in-flight runners finish, queued jobs wait); crash-recovery keeps running.
+* In-memory state — resets to running on a server restart.
 * Global-admin gated server-side.
-* @param {string} action - 'pause' | 'resume'.
+*
+* (!) This is dispatch control, NOT process control: diffusion runs inside the
+* server process, so there is nothing to start or stop (WC-005). 'drain_resume'
+* is the quiesce — hold dispatch, wait for the running jobs, then resume — and
+* it RETURNS IMMEDIATELY: the wait outlives any request budget, so the server
+* answers "draining" and the queue stream reports when it ends.
+*
+* @param {string} action - 'pause' | 'resume' | 'drain_resume'.
 * @returns {Promise<Object>} api_response { result: boolean, msg: string, errors: Array }
 */
 diffusion_server_control.prototype.set_scheduler = async function(action) {

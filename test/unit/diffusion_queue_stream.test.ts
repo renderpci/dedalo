@@ -31,6 +31,7 @@ const SCHEDULER: QueueSnapshot['scheduler'] = {
 	queued: 0,
 	max_runners: 2,
 	paused: false,
+	draining: false,
 	stale_after_seconds: 20,
 };
 
