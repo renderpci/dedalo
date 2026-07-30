@@ -295,3 +295,68 @@ describe('staged files — listing, deletion, confinement (WC-078)', () => {
 		expect(other?.startsWith(stagingDir(USER, KEY, ROOT))).toBe(false);
 	});
 });
+
+/**
+ * INGEST→PERSIST PAIRING GATE.
+ *
+ * `processUploadedFile` only touches the DISK: add_file, derivatives, and a
+ * files_info SCAN which it RETURNS. Writing that scan onto the record is a
+ * separate call (`persistUploadedMedia`). Nothing enforced the pairing, and two
+ * tools shipped without it INDEPENDENTLY — tool_import_files and
+ * tool_posterframe both wrote media to disk and left the record's `media` key
+ * NULL, which surfaces as tool_media_versions' "Files info data is unsync"
+ * (`files_info_db: []` against a full `files_info_disk`). An image has no
+ * read-time rescan to repair itself, so the loss is permanent.
+ *
+ * This is a source scan rather than a behavioural test on purpose: the failure
+ * is a MISSING call, and the cheapest honest way to catch a missing call is to
+ * look for it. A behavioural test would have to exist once per ingest path;
+ * this covers every path that exists now and every one added later.
+ */
+describe('media ingest — every disk-writing path records files_info', () => {
+	const INGEST = 'processUploadedFile';
+	const PERSIST = 'persistUploadedMedia';
+
+	/** Files that IMPORT the shared ingest engine (not same-named local helpers). */
+	const ingestCallers = (): string[] => {
+		const {
+			readFileSync: read,
+			readdirSync,
+			statSync: stat,
+		} = require('node:fs') as typeof import('node:fs');
+		const { join: j } = require('node:path') as typeof import('node:path');
+		const root = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
+		const out: string[] = [];
+		const walk = (dir: string): void => {
+			for (const entry of readdirSync(dir)) {
+				if (entry === 'node_modules' || entry.startsWith('.')) continue;
+				const full = j(dir, entry);
+				if (stat(full).isDirectory()) walk(full);
+				else if (full.endsWith('.ts')) {
+					const text = read(full, 'utf8');
+					// Only files that pull the ENGINE in — tool_import_dedalo_csv has a
+					// local action of the same name that is unrelated.
+					if (text.includes('ingest/process_uploaded_file.ts') && text.includes(`${INGEST}(`)) {
+						out.push(full.slice(root.length + 1));
+					}
+				}
+			}
+		};
+		for (const base of ['src', 'tools']) walk(j(root, base));
+		return out.sort();
+	};
+
+	test('every caller of the ingest engine also persists files_info', () => {
+		const { readFileSync: read } = require('node:fs') as typeof import('node:fs');
+		const root = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
+		const callers = ingestCallers();
+		// The scan must find the known callers, or it is passing vacuously.
+		expect(callers.length, 'the scan found no ingest callers — it is broken').toBeGreaterThan(1);
+
+		const missing = callers.filter((file) => !read(`${root}/${file}`, 'utf8').includes(PERSIST));
+		expect(
+			missing,
+			`these write media to disk but never record files_info on the record — the "unsync" bug: ${missing.join(', ')}`,
+		).toEqual([]);
+	});
+});

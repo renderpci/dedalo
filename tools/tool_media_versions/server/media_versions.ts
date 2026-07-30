@@ -54,9 +54,9 @@ function scanContext(mediaContext: MediaToolContext): ScanContext {
 async function writeBack(
 	mediaContext: MediaToolContext,
 	freshFilesInfo: FileInfoEntry[],
-): Promise<void> {
+): Promise<boolean> {
 	const { identity, items } = mediaContext;
-	await persistScannedFilesInfo({
+	return await persistScannedFilesInfo({
 		sectionTipo: identity.sectionTipo,
 		sectionId: identity.sectionId,
 		componentTipo: identity.componentTipo,
@@ -155,7 +155,22 @@ export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const mediaContext = await resolveMediaToolContext(ctx.options);
 		const { spec, identity, pathOpts } = mediaContext;
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		await writeBack(mediaContext, freshFilesInfo);
+		const wrote = await writeBack(mediaContext, freshFilesInfo);
+		// REPORT HONESTLY. persistScannedFilesInfo refreshes existing stored items
+		// and deliberately never CREATES one (a scan must not resurrect media for a
+		// component the operator emptied — files_info_persist.test.ts pins that).
+		// So a record with files on disk but NO stored item — the state a media
+		// ingest that skipped its persist leaves behind — cannot be repaired here,
+		// and answering the operator "Success" while changing nothing is the worst
+		// of both: the warning stays and the button appears to work.
+		if (!wrote && freshFilesInfo.length > 0 && mediaContext.items.length === 0) {
+			return {
+				result: false,
+				msg: 'Files exist on disk but this component has no stored value to attach them to. Re-upload the file (or re-run the import) to record it.',
+				errors: ['no stored media item to sync into'],
+				files_info: freshFilesInfo,
+			};
+		}
 		return { result: true, msg: 'Success. Request done', errors: [], files_info: freshFilesInfo };
 	} catch (error) {
 		return fail((error as Error).message);

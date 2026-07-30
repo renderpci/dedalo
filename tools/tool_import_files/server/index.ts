@@ -702,20 +702,40 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		let imported = 0;
 		const errors: string[] = [];
 
-		/** Move one staged file into a target record's media component. */
+		/**
+		 * Move one staged file into a target record's media component, AND record it
+		 * on the record.
+		 *
+		 * (!) BOTH HALVES ARE REQUIRED. `processUploadedFile` only touches the DISK —
+		 * add_file + derivatives + a files_info SCAN which it returns. Writing that
+		 * scan onto the record is a separate call, and this importer used to skip it:
+		 * the files landed in image/original, image/1.5MB and image/thumb while the
+		 * matrix `media` key stayed NULL, so the record did not know its own files.
+		 * tool_media_versions reported exactly that — `files_info_db: []` against
+		 * three disk entries — and unlike component_av (re-scanned on every emit)
+		 * an image has no read-time rescue, so the loss was permanent.
+		 * PHP did persist here: process_uploaded_file → regenerate_component →
+		 * update_component_data_files_info + save.
+		 *
+		 * The persist lives INSIDE this closure so both call sites — the multi-match
+		 * copy loop and the default single-target path — are covered by construction.
+		 */
 		const ingest = async (
 			targetSectionTipo: string,
 			targetSectionId: number,
 			keyDir: string,
 			tmpName: string,
 			extension: string,
+			originalFileName: string,
 		): Promise<void> => {
-			const { identity, pathOpts } = await resolveMediaToolContext({
+			// `items` is read fresh per call, so importing several files into the SAME
+			// record accumulates instead of each one clobbering the last.
+			const { identity, pathOpts, items } = await resolveMediaToolContext({
 				component_tipo: targetComponentTipo,
 				section_tipo: targetSectionTipo,
 				section_id: targetSectionId,
 			});
-			await processUploadedFile({
+			const result = await processUploadedFile({
 				spec,
 				identity,
 				pathOpts,
@@ -723,6 +743,23 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				keyDir,
 				tmpName,
 				extension,
+			});
+			const { persistUploadedMedia } = await import(
+				'../../../src/core/media/tools/files_info_persist.ts'
+			);
+			const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
+			await persistUploadedMedia({
+				sectionTipo: identity.sectionTipo,
+				sectionId: identity.sectionId,
+				componentTipo: identity.componentTipo,
+				lang: identity.lang,
+				existingItems: items as { id?: number; lang?: string | null; files_info?: unknown }[],
+				filesInfo: result.filesInfo,
+				// The name the operator recognises. NOTE it is not always human-readable:
+				// a dropzone row restored from the server listing carries the SANITIZED
+				// staged name, because that is what the listing reports.
+				originalFileName: originalFileName || result.originalFileName,
+				originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
 			});
 		};
 
@@ -840,7 +877,14 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 								join(dir, sanitizeSegment(step.tmpName)),
 							);
 						}
-						await ingest(targetSectionTipo, step.targetSectionId, keyDir, step.tmpName, extension);
+						await ingest(
+							targetSectionTipo,
+							step.targetSectionId,
+							keyDir,
+							step.tmpName,
+							extension,
+							fileName,
+						);
 						await setComponentsData({
 							ddoMap,
 							sectionTipo,
@@ -982,7 +1026,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 						dataLang,
 					});
 				}
-				await ingest(targetSectionTipo, targetSectionId, keyDir, tmpName, extension);
+				await ingest(targetSectionTipo, targetSectionId, keyDir, tmpName, extension, fileName);
 				imported += 1;
 			} catch (error) {
 				errors.push(`${file.name}: ${(error as Error).message}`);
