@@ -43,6 +43,41 @@
 
 
 /**
+* GET_DISPLAY_VALUE
+* Resolve the display string of a datum child item (the referenced record's
+* label component as emitted by the tags_reference portal expansion).
+*
+* Wire contract (v7): `entries` holds the requested-lang slice of raw items
+* `{id, lang, value}`; `fallback_value` holds the raw items of the FIRST
+* non-empty other lang and exists ONLY when the requested-lang slice is empty
+* (server cadence: lang equivalences → main data lang → lg-nolan → project
+* langs — src/core/resolve/component_data.ts resolveComponentValue). It is
+* therefore NEVER in the current lang: filtering it by `self.lang` (the old
+* v6-era consumption) can never match, and the v6 flat-string shape that
+* `.join(' | ')` assumed is gone — each entry is an object now.
+*
+* @param {Object} item - datum.data child item ({entries, fallback_value, ...})
+* @returns {string} resolved display string ('' when nothing resolves)
+*/
+const get_display_value = (item) => {
+
+	if (!item) {
+		return ''
+	}
+	// entries (current lang) wins; else the server-resolved fallback slice
+	const source = (item.entries && item.entries.length > 0)
+		? item.entries
+		: (item.fallback_value || [])
+
+	return source
+		.map(el => (el && typeof el === 'object') ? el.value : el)
+		.filter(value => value !== null && value !== undefined && value !== '')
+		.join(' | ')
+}//end get_display_value
+
+
+
+/**
 * RENDER_REFERENCE
 * Opens a modal for assigning or editing a "reference" tag on the active text
 * selection in the CKEditor instance.
@@ -147,7 +182,8 @@ export const render_reference = async function(options) {
 			: []
 
 		// Build the list of reusable locators: iterate datum.data entries to enrich
-		// each locator with a human-readable fallback_value resolved by the server.
+		// each locator with a human-readable display_value resolved from the server
+		// data (entries / fallback_value — see get_display_value).
 		// Iterating in reverse so most-recently added entries appear first.
 		const existing_values = []
 		for (let i = all_tag_data.length - 1; i >= 0; i--) {
@@ -155,8 +191,7 @@ export const render_reference = async function(options) {
 
 			// Check whether a datum.data entry exists for this locator's pointed-at
 			// section (from_component_tipo + section_tipo + section_id). Only locators
-			// whose referenced record is present in datum get a fallback_value, which
-			// is an array of resolved display strings (one per language layer).
+			// whose referenced record is present in datum get a display_value.
 			const found = component_tags_reference.datum.data.find(el =>
 				el.from_component_tipo === current_locator.from_component_tipo &&
 				el.section_tipo === current_locator.section_tipo &&
@@ -165,7 +200,9 @@ export const render_reference = async function(options) {
 
 			if(found){
 				const used_locator = clone(current_locator)
-				used_locator.fallback_value = found.fallback_value
+				// resolved display string (entries in current lang, else the
+				// server fallback slice) — see get_display_value wire notes
+				used_locator.display_value = get_display_value(found)
 				existing_values.push(used_locator)
 			}
 		}
@@ -294,11 +331,10 @@ export const render_reference = async function(options) {
 			for (let i = 0; i < existing_values.length; i++) {
 
 				const current_value = existing_values[i]
-				const fallback_value = current_value.fallback_value.find(el => el.lang === self.lang) ? current_value.fallback_value.find(el => el.lang === self.lang).value : ''
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: fallback_value,
+					inner_html		: current_value.display_value,
 					parent			: existing_tags_container
 				})
 				existing_value_node.data = current_value
@@ -331,7 +367,7 @@ export const render_reference = async function(options) {
 						// set the selected tag_id with the selection
 						selected_tag.tag_id = existing_value_node.data.tag_id
 						selected_tag.reuse = true
-						selected_tag.fallback_value = existing_value_node.data.fallback_value.join(' | ')
+						selected_tag.fallback_value = existing_value_node.data.display_value
 					}
 				})
 			}
@@ -422,7 +458,7 @@ export const render_reference = async function(options) {
 
 					// get the data from the new locator
 					// Look up the datum.data entry for the newly added locator so we can
-					// read its server-resolved `fallback_value` (array of display strings).
+					// resolve its display string (entries / fallback_value).
 					// Matching on section_id + section_tipo is sufficient here because the
 					// portal has already disambiguated the entry by the time we reach this
 					// point (from_component_tipo is commented out — left for reference).
@@ -435,11 +471,10 @@ export const render_reference = async function(options) {
 					 	: null
 
 					 // is possible that user don't select any text (collapse selection), in those cases it will insert a text value of the locator or empty text.
-					 // get the resolution of the new locator with the value_fallback (ensure text value if it's not translated)
-					 // if the locator data is not set, empty space is used to create the text for the collapse selection
-					 selected_tag.fallback_value  = locator_data?.fallback_value
-					 	? locator_data.fallback_value.join(' | ')
-					 	: ' '
+					 // get the resolution of the new locator (entries in current lang, else
+					 // the server fallback slice — see get_display_value wire notes)
+					 // if nothing resolves, empty space is used to create the text for the collapse selection
+					 selected_tag.fallback_value = get_display_value(locator_data) || ' '
 				 }
 
 				// create the new tag for the reference, it's necessary to change the referenceIn tag only
