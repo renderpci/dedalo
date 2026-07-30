@@ -461,12 +461,17 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 /**
 * GET_ENGINE_ADVISORY
-* Server-side engine health + (admin) auto-recover + role-tailored advisory.
-* Dispatched by PHP dd_diffusion_api (NOT Bun) so it answers even when the engine
-* is down — returns clean JSON, never a 404. @param object options {auto_recover?}
+* Server-side engine health + role-tailored advisory. Returns clean JSON, never
+* a 404.
+*
+* (!) No `auto_recover` option any more (WC-076). It asked the server to restart
+* a separate diffusion DAEMON before answering. Post-cutover the engine runs
+* INSIDE the server process — there is nothing to recover, and the request that
+* would have asked for it is being served by the very thing it would restart.
+*
 * @return promise<object> advisory
 */
-tool_diffusion.prototype.get_engine_advisory = function(options={}) {
+tool_diffusion.prototype.get_engine_advisory = function() {
 
 	const self = this
 
@@ -476,10 +481,9 @@ tool_diffusion.prototype.get_engine_advisory = function(options={}) {
 		dd_api	: 'dd_diffusion_api',
 		action	: 'get_engine_advisory',
 		source	: source,
-		options : { auto_recover : options.auto_recover !== false }
+		options : {}
 	}
 
-	// PHP endpoint (data_manager.url) — dd_manager dispatches this action, not Bun
 	return new Promise(function(resolve){
 		data_manager.request({
 			url		: data_manager.url,
@@ -493,9 +497,9 @@ tool_diffusion.prototype.get_engine_advisory = function(options={}) {
 		})
 		.catch(function(err){
 			console.error('get_engine_advisory error:', err)
-			resolve({ result:false, state:'unreachable', is_admin:false, recovered:false,
+			resolve({ result:false, state:'unreachable', is_admin:false,
 				title:'Diffusion is temporarily unavailable', cause:'', steps:[], actions:['retry'],
-				checks:null, service_cmd_configured:false, log_tail:null })
+				checks:null })
 		})
 	})
 }//end get_engine_advisory
