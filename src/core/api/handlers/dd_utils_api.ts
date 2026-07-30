@@ -232,17 +232,68 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			body: { result: [await buildLoginContext()], msg: 'OK. Request done' },
 		};
 	},
-	list_uploaded_files: async (_rqo, _context) => {
-		// The dropzone service lists the user's pending chunked uploads (PHP
-		// dd_utils_api::list_uploaded_files → scandir(DEDALO_UPLOAD_TMP_DIR/user)).
-		// With nothing uploaded (the default test state) PHP returns an empty
-		// array. The empty-dir result is the common case and, importantly, keeps
-		// page_globals.api_errors EMPTY: an unhandled action here accumulates a
-		// global error that makes the NEXT element's render bail before setting
-		// status='rendered' (common.js:404) — which is what broke the sibling
-		// service_tmp_section render in test_others_lifecycle. Full temp-dir scan
-		// is uncovered scope; the shape ([{url,name,size}]) is honored.
-		return { status: 200, body: { result: [], msg: 'OK. Request done' } };
+	list_uploaded_files: async (rqo, context) => {
+		// The dropzone service lists the user's already-staged files (PHP
+		// dd_utils_api::list_uploaded_files → scandir(DEDALO_UPLOAD_TMP_DIR/user))
+		// on EVERY render and injects them as existing rows. That is the mechanism
+		// by which a pending upload queue survives a page reload.
+		//
+		// This used to return a hardcoded `[]` with "full temp-dir scan is uncovered
+		// scope" — a silent narrowing that read as "nothing staged" and was the
+		// direct cause of "temporal data is not preserved across reload":
+		// tool_import_files came back from a reload with an empty dropzone even
+		// though the files were still on disk.
+		//
+		// Keeping the response a 200 with an ARRAY result still matters for the
+		// reason the old stub noted: an error here accumulates into
+		// page_globals.api_errors, which makes the NEXT element's render bail
+		// before setting status='rendered' (common.js:404).
+		const principal = requirePrincipal(context);
+		const options = (rqo.options ?? {}) as { key_dir?: unknown };
+		const keyDir = typeof options.key_dir === 'string' ? options.key_dir : '';
+		if (keyDir === '') {
+			return { status: 200, body: { result: [], msg: 'OK. Request done' } };
+		}
+		const { listStagedFiles } = await import('../../media/ingest/staged_files.ts');
+		try {
+			return {
+				status: 200,
+				body: { result: listStagedFiles(principal.userId, keyDir), msg: 'OK. Request done' },
+			};
+		} catch (error) {
+			// A malformed key_dir (or an unreadable staging root) must not poison
+			// page_globals.api_errors and break the sibling renders — log it and
+			// answer with the empty-but-well-shaped array.
+			console.error('[list_uploaded_files] staging scan failed:', (error as Error).message);
+			return { status: 200, body: { result: [], msg: 'OK. Request done' } };
+		}
+	},
+	delete_uploaded_file: async (rqo, context) => {
+		// service_dropzone's `removedfile` handler fires this for any file that
+		// reached the server (render_edit_service_dropzone.js:874). It was never
+		// implemented, so every removal 400'd: the row vanished from the UI while
+		// the bytes stayed in the staging dir forever — and the accumulated
+		// api_errors broke sibling renders.
+		const principal = requirePrincipal(context);
+		const options = (rqo.options ?? {}) as { key_dir?: unknown; file_name?: unknown };
+		const keyDir = typeof options.key_dir === 'string' ? options.key_dir : '';
+		const fileName = typeof options.file_name === 'string' ? options.file_name : '';
+		if (keyDir === '' || fileName === '') {
+			return { status: 200, body: { result: false, msg: 'key_dir and file_name are required' } };
+		}
+		const { deleteStagedFile } = await import('../../media/ingest/staged_files.ts');
+		try {
+			// Deleting an already-absent file is a successful no-op: the client has
+			// already removed the row, and a retry/double-fire must not surface an
+			// error the user cannot act on.
+			deleteStagedFile(principal.userId, keyDir, fileName);
+			return { status: 200, body: { result: true, msg: 'OK. Request done' } };
+		} catch (error) {
+			// A rejected segment (traversal attempt / malformed name) is the only
+			// way here — report it without leaking the resolved path.
+			console.error('[delete_uploaded_file] refused:', (error as Error).message);
+			return { status: 200, body: { result: false, msg: 'Invalid file reference' } };
+		}
 	},
 	get_install_context: async (_rqo, _context) => {
 		// The installer's own context request (DEC-19 TS-native install). The

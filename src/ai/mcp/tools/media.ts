@@ -175,7 +175,17 @@ export async function uploadMedia(
 	// the per-user staging dir.
 	const keyDir = `mcp_${crypto.randomUUID()}`;
 	const staged = receiveUpload(
-		{ keyDir, fileName, chunked: false, chunkIndex: 0, totalChunks: 1, blob: bytes },
+		// csrfToken is the HTTP endpoint's form-field CSRF twin; this in-process
+		// caller never crosses a browser boundary, so there is nothing to echo.
+		{
+			keyDir,
+			fileName,
+			chunked: false,
+			chunkIndex: 0,
+			totalChunks: 1,
+			blob: bytes,
+			csrfToken: null,
+		},
 		principal.userId,
 	);
 	const tmpName = staged.tmpName;

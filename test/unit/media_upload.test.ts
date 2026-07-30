@@ -48,6 +48,7 @@ function parsed(fields: Partial<ParsedUpload>, blob: Uint8Array): ParsedUpload {
 		chunkIndex: 0,
 		totalChunks: 1,
 		blob,
+		csrfToken: null,
 		...fields,
 	};
 }
@@ -216,5 +217,81 @@ describe('full ingest: upload → add_file → regenerate', () => {
 		expect(p.keyDir).toBe('kdr');
 		expect(p.fileName).toBe('req.jpg');
 		expect(p.blob.length).toBe(bytes.length);
+	});
+});
+
+/**
+ * WC-078 — the staged-upload READ surface. `list_uploaded_files` was a hardcoded
+ * `[]` and `delete_uploaded_file` did not exist, which is what made a queued
+ * import vanish on reload and leak its bytes forever. These pin the listing's
+ * exclusions and the confinement chokepoint that lets a user reach ONLY their
+ * own staging dir.
+ */
+describe('staged files — listing, deletion, confinement (WC-078)', () => {
+	const KEY = 'staged_kd';
+
+	test.if(HAVE_MAGICK)('lists completed files and hides in-flight artifacts', async () => {
+		const bytes = await jpegBytes();
+		receiveUpload(parsed({ keyDir: KEY, fileName: 'listed.jpg' }, bytes), USER, ROOT);
+		// An in-flight chunk and a half-assembled join must NOT be listed: showing
+		// them would offer the user a "restorable" row for a partial upload.
+		const { writeFileSync } = await import('node:fs');
+		writeFileSync(join(stagingDir(USER, KEY, ROOT), '0-pending.jpg.blob'), 'x');
+		writeFileSync(join(stagingDir(USER, KEY, ROOT), 'pending.jpg.assembling'), 'x');
+
+		const { listStagedFiles } = await import('../../src/core/media/ingest/staged_files.ts');
+		const listed = listStagedFiles(USER, KEY, ROOT);
+		expect(listed.map((f) => f.name)).toEqual(['listed.jpg']);
+		expect(listed[0]?.url).toBe('/dedalo/upload_tmp/staged_kd/listed.jpg');
+		expect(listed[0]?.size).toBeGreaterThan(0);
+	});
+
+	test('a staging dir that does not exist lists as empty, not as an error', async () => {
+		const { listStagedFiles } = await import('../../src/core/media/ingest/staged_files.ts');
+		expect(listStagedFiles(USER, 'never_created', ROOT)).toEqual([]);
+	});
+
+	test.if(HAVE_MAGICK)('deleting removes the file; a second delete is a no-op', async () => {
+		const bytes = await jpegBytes();
+		receiveUpload(parsed({ keyDir: KEY, fileName: 'doomed.jpg' }, bytes), USER, ROOT);
+		const target = join(stagingDir(USER, KEY, ROOT), 'doomed.jpg');
+		expect(existsSync(target)).toBe(true);
+
+		const { deleteStagedFile } = await import('../../src/core/media/ingest/staged_files.ts');
+		expect(deleteStagedFile(USER, KEY, 'doomed.jpg', ROOT)).toBe(true);
+		expect(existsSync(target)).toBe(false);
+		// Idempotent: the client may fire removedfile twice, and an already-gone
+		// file must not surface an error the user cannot act on.
+		expect(deleteStagedFile(USER, KEY, 'doomed.jpg', ROOT)).toBe(false);
+	});
+
+	test('resolveStagedPath confines to the caller’s own staging dir', async () => {
+		const { resolveStagedPath } = await import('../../src/core/media/ingest/staged_files.ts');
+		// Valid shapes resolve inside this user's key_dir.
+		const ok = resolveStagedPath(USER, `${KEY}/listed.jpg`, ROOT);
+		expect(ok).not.toBeNull();
+		expect(ok?.startsWith(stagingDir(USER, KEY, ROOT))).toBe(true);
+		expect(resolveStagedPath(USER, `${KEY}/thumbnail/listed.jpg.jpg`, ROOT)).not.toBeNull();
+
+		// Everything else fails CLOSED — traversal, another user's tree, a bare
+		// key_dir with no file, an over-deep path, and partial artifacts.
+		for (const bad of [
+			'../../../../etc/passwd',
+			`${KEY}/../../4/${KEY}/listed.jpg`,
+			`${KEY}/..`,
+			KEY,
+			`${KEY}/deeper/than/allowed.jpg`,
+			`${KEY}/notthumbnail/listed.jpg`,
+			`${KEY}/0-pending.jpg.blob`,
+			`${KEY}/pending.jpg.assembling`,
+		]) {
+			expect(resolveStagedPath(USER, bad, ROOT)).toBeNull();
+		}
+
+		// A DIFFERENT user asking for the same relative path lands in their own
+		// (non-existent) tree, never in USER's.
+		const other = resolveStagedPath(USER + 1, `${KEY}/listed.jpg`, ROOT);
+		expect(other).not.toBeNull();
+		expect(other?.startsWith(stagingDir(USER, KEY, ROOT))).toBe(false);
 	});
 });

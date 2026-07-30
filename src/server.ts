@@ -40,6 +40,7 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
+import { STAGED_URL_PREFIX, resolveStagedPath } from './core/media/ingest/staged_files.ts';
 import {
 	MEDIA_AUTH_COOKIE,
 	currentMediaAuthCookie,
@@ -727,6 +728,54 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// index.html that the client tree does not have, and 404 on the user.
 	if (request.method === 'GET' && ENTRY_REDIRECT_PATHS.has(url.pathname)) {
 		return redirectResponse(APP_ENTRY_PATH);
+	}
+
+	// Staged uploads — a user's OWN in-flight files (dropzone previews +
+	// list_uploaded_files thumbnails). Must precede the static branch, which would
+	// otherwise look for a client asset at this path and 404.
+	//
+	// This is deliberately NOT the general media route: that one authenticates a
+	// session but not an owner, which is exactly why MEDIA-04 makes it refuse
+	// everything under `upload/`. Here the user id comes from the SESSION and the
+	// URL only ever supplies <key_dir>[/thumbnail]/<name>, so one user can never
+	// address another's staging dir. Fail-closed: no session → 404, no leak.
+	if (request.method === 'GET' && url.pathname.startsWith(STAGED_URL_PREFIX)) {
+		const stagedCookie = request.headers.get('cookie') ?? '';
+		const stagedToken = stagedCookie
+			.split(';')
+			.map((pair) => pair.trim())
+			.find((pair) => pair.startsWith(`${SESSION_COOKIE}=`))
+			?.slice(SESSION_COOKIE.length + 1);
+		const stagedSession = stagedToken !== undefined ? getSession(stagedToken) : null;
+		if (stagedSession === null) {
+			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+		}
+		let stagedRel: string;
+		try {
+			stagedRel = decodeURIComponent(url.pathname.slice(STAGED_URL_PREFIX.length));
+		} catch {
+			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+		}
+		const stagedPath = resolveStagedPath(stagedSession.userId, stagedRel);
+		if (stagedPath === null) {
+			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+		}
+		const stagedFile = Bun.file(stagedPath);
+		if (!(await stagedFile.exists())) {
+			return jsonResponse({ result: false, msg: 'Not found' }, 404);
+		}
+		return new Response(stagedFile, {
+			headers: {
+				'Content-Type': stagedFile.type || 'application/octet-stream',
+				// Staging is per-user and short-lived: never let a shared cache hold it.
+				'Cache-Control': 'private, no-store',
+				// The bytes are unverified user uploads; forbid content sniffing and
+				// any active content (an uploaded .svg/.html must not execute here).
+				'X-Content-Type-Options': 'nosniff',
+				'Content-Security-Policy': "default-src 'none'; sandbox",
+				'Content-Disposition': 'inline',
+			},
+		});
 	}
 
 	// Copied-client static assets (Phase 7 seam).

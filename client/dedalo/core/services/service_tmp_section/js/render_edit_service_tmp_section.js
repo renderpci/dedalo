@@ -15,7 +15,7 @@
 * Client-side edit renderer for service_tmp_section.  Iterates over the
 * pre-built component instances stored in `self.ar_instances` (each created by
 * service_tmp_section.build() with `is_temporal: true` so they write to
-* matrix_temp_manager instead of the main data matrix) and renders them inside
+* the WC-079 scratch store instead of the main data matrix) and renders them inside
 * a shared wrapper div.
 *
 * This module is intentionally minimal: all component lifecycle concerns
@@ -136,7 +136,7 @@ export const get_content_data = async function(self) {
 *
 * Each instance was initialised with `is_temporal: true` by
 * service_tmp_section.prototype.build, meaning its data is stored in
-* matrix_temp_manager (a per-session scratch table) rather than the main
+* the WC-079 per-user scratch table (dedalo_ts_temporal_scratch) rather than the main
 * section matrix.  All instances are expected to be in 'edit' mode; a warning
 * is emitted if any instance has a different mode.
 *

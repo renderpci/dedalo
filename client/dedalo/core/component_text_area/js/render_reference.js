@@ -218,7 +218,9 @@ export const render_reference = async function(options) {
 		// autocomplete search widget. `is_temporal: true` makes the server's save
 		// door RESOLVE + ECHO the picked value without persisting it, and its read
 		// door serve an empty value (WC-059, src/core/section/record/temporal.ts) —
-		// there is no server-side temporal store in the TS engine.
+		// this picker sends NO temporal_scope, so nothing is persisted for it
+		// (WC-079: only service_tmp_section opts into the scratch store — a
+		// restored value here would stamp a stale locator into a tag).
 		// `section_id: 1` is a SENTINEL, not an address: until 2026-07-28 it was
 		// taken as one, and this widget's `set_data` (which sends null to CLEAR)
 		// wrote to the real record 1 of references_section_tipo.

@@ -23,9 +23,12 @@
  *   target_date      — EXIF/container/PDF capture date of the staged file
  *                      (media/file_date.ts getMediaFileDate), ONLY when empty;
  *                      no readable date keeps PHP's skip-when-empty path;
- *   input_component  — import-form values from components_temp_data
- *                      (non-translatable only; the translatable temp-session
- *                      component has no TS twin → FAIL LOUD, ledgered);
+ *   input_component  — import-form values from components_temp_data. The wire
+ *                      key is `entries` (WC-001), NOT `value`. Translatable
+ *                      components are written per-lang from the entries the
+ *                      client ships (each carries its own `lang`), since a
+ *                      save call writes exactly ONE lang slice — PHP instead
+ *                      copied all langs out of a temp-session component;
  *   component_option — import routing (the portal), never a data write.
  *
  * All component writes go through saveComponentData (tx-wrapped, TM-audited);
@@ -44,6 +47,7 @@ import {
 	processUploadedFile,
 	requireMediaSpec,
 } from '../../../src/core/media/ingest/process_uploaded_file.ts';
+import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
 import {
 	getColumnNameByModel,
@@ -93,10 +97,20 @@ export interface DdoMapEntry {
 	label?: string;
 }
 
-/** One components_temp_data entry (the import-form component payload). */
+/**
+ * One components_temp_data entry (the import-form component payload).
+ *
+ * The client pushes each tmp-section instance's `data` verbatim
+ * (service_tmp_section.get_components_data). Under WC-001 the engine emits
+ * component values as `entries` (resolve/component_data.ts buildDataItem), so
+ * `entries` is the LIVE key; `value` is kept only as the PHP-era fallback for
+ * any caller still shipping the old shape. Reading `value` alone silently
+ * dropped every Values field the operator typed.
+ */
 export interface TempDataEntry {
 	tipo?: string;
 	section_tipo?: string;
+	entries?: unknown;
 	value?: unknown;
 }
 
@@ -526,20 +540,11 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 			}
 
 			case 'input_component': {
-				if (translatable) {
-					// PHP (:1707-1732) copies ALL languages out of a session-backed
-					// temp component (is_temp=true at fake section_id 1). TS has no
-					// temp-session component twin — FAIL LOUD rather than silently
-					// dropping the user's other-language input. LEDGERED:
-					// rewrite/LEDGER.md "translatable input_component".
-					throw new Error(
-						`tool_import_files: translatable input_component '${tipo}' is not supported (the PHP temp-session component has no TS twin — see rewrite/LEDGER.md)`,
-					);
-				}
-				// Non-translatable: the client ships the full component payload in
-				// components_temp_data; extract .value and save it (PHP :1698-1705).
+				// The client ships the full component payload in components_temp_data;
+				// extract the value and save it (PHP :1698-1705). WC-001: the engine's
+				// wire key is `entries` — `value` is the PHP-era fallback only.
 				const temp = indexedTempData.get(`${tipo}\0${ddoSectionTipo}`);
-				const rawValue = temp?.value;
+				const rawValue = temp?.entries ?? temp?.value;
 				// PHP !empty guard; null/'' holes are dropped (never persist [null]).
 				const rawItems = Array.isArray(rawValue)
 					? rawValue.filter((entry) => entry !== null && entry !== '')
@@ -554,16 +559,40 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 						? { ...(entry as Record<string, unknown>), lang }
 						: entry,
 				);
-				const save = await saveComponentData({
-					componentTipo: tipo,
-					sectionTipo: ddoSectionTipo,
-					sectionId: destinationSectionId,
-					lang,
-					changedData: [{ action: 'set_data', id: null, value: items }],
-					userId,
-				});
-				if (!save.ok) {
-					throw new Error(`input_component save failed on '${tipo}': ${save.message}`);
+				// TRANSLATABLE components are stored as per-language SLICES:
+				// applySaveComponentData writes exactly ONE lang per call (its
+				// effectiveLang). PHP reached all languages by copying a
+				// session-backed temp component; the TS client instead ships every
+				// entry it holds, each already carrying its own `lang`. So group by
+				// lang and issue one save per group — which reaches the same
+				// languages the operator actually filled in, without a temp-session
+				// twin. This used to THROW (and a pre-flight check refused the whole
+				// batch), making the tool unusable with any translatable field on the
+				// import form — the shipped configuration.
+				// Non-translatable components ignore lang entirely (they are stored
+				// under 'lg-nolan'), so the single group below is the previous path.
+				const groups = new Map<string, unknown[]>();
+				for (const entry of items) {
+					const entryLang =
+						translatable && entry !== null && typeof entry === 'object'
+							? ((entry as { lang?: string }).lang ?? lang)
+							: lang;
+					const bucket = groups.get(entryLang);
+					if (bucket === undefined) groups.set(entryLang, [entry]);
+					else bucket.push(entry);
+				}
+				for (const [groupLang, groupItems] of groups) {
+					const save = await saveComponentData({
+						componentTipo: tipo,
+						sectionTipo: ddoSectionTipo,
+						sectionId: destinationSectionId,
+						lang: groupLang,
+						changedData: [{ action: 'set_data', id: null, value: groupItems }],
+						userId,
+					});
+					if (!save.ok) {
+						throw new Error(`input_component save failed on '${tipo}': ${save.message}`);
+					}
 				}
 				break;
 			}
@@ -659,16 +688,10 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			return fail(`'${targetComponentTipo}' is not a media component`);
 		}
 
-		// FAIL LOUD before any ingest: a translatable input_component would need
-		// the PHP temp-session component, which has no TS twin (ledgered).
-		for (const ddo of ddoMap) {
-			if (ddo.role !== 'input_component' || !ddo.tipo) continue;
-			if (await getTranslatableByTipo(String(ddo.tipo))) {
-				return fail(
-					`translatable input_component '${ddo.tipo}' is not supported (the PHP temp-session component has no TS twin — see rewrite/LEDGER.md)`,
-				);
-			}
-		}
+		// (No pre-flight refusal of translatable input_components: the
+		// setComponentsData input_component branch now saves them per-lang from the
+		// client payload. The old check rejected the ENTIRE batch before touching a
+		// single file, which made the tool unusable with the shipped import form.)
 
 		// Capture the request data language NOW, while still in request scope, and
 		// thread it into every setComponentsData call (Rule 6) — the translatable
@@ -703,13 +726,68 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			});
 		};
 
+		// Live progress + cooperative cancellation. `import_files` runs under the
+		// background executor (backgroundRunnable below), which supplies both
+		// publishProgress and signal; a direct call has neither, so both are
+		// optional here. Frame keys are the ones the client's compound_msg reads
+		// verbatim (render_tool_import_files.js:597-620) — msg / counter / total /
+		// total_ms / current_time / errors. `current_time` is the PER-FILE ms: the
+		// panel averages it over a rolling window to estimate time remaining, so
+		// it must be one file's cost, NOT the elapsed total.
+		const publish = ctx.publishProgress;
+		const totalFiles = filesData.length;
+		const runStartedAt = Date.now();
+		let counter = 0;
+
 		for (const file of filesData) {
+			// Cancellation is checked at the loop boundary: a file is imported whole
+			// or not at all, so an abort never leaves a half-ingested record behind.
+			if (ctx.signal?.aborted) {
+				errors.push(`Import cancelled after ${counter} of ${totalFiles} files`);
+				break;
+			}
+			const fileStartedAt = Date.now();
+			counter++;
+			// The client's display name arrives URI-encoded (tool_import_files.js
+			// applies encodeURI; PHP applied rawurldecode here). Decode defensively:
+			// a name containing a bare '%' is not a valid escape sequence and must
+			// survive untouched. Declared OUTSIDE the try so the `finally` progress
+			// frame and the error message can both name the file.
+			const rawName = String(file.name ?? '');
+			let fileName: string;
 			try {
-				const fileName = String(file.name ?? '');
+				fileName = decodeURIComponent(rawName);
+			} catch {
+				fileName = rawName;
+			}
+			try {
 				const keyDir = String(file.key_dir ?? optionsKeyDir);
-				const tmpName = String(file.tmp_name ?? fileName);
+				// The STAGED name is not the client name: the upload receiver
+				// rewrites anything outside [A-Za-z0-9_.-] to '_' (stagedTmpName), so
+				// 'DSC 001.jpg' / 'María.jpg' / 'photo (1).jpg' are on disk under a
+				// different name. service_dropzone now echoes the server's tmp_name
+				// back into files_data; reproduce the same transform for any caller
+				// that does not (other import tools, a restored legacy queue) —
+				// otherwise addFile's sanitizeSegment throws 'Unsafe path segment'
+				// or the lookup misses with 'Staged upload not found'.
+				const tmpName =
+					typeof file.tmp_name === 'string' && file.tmp_name !== ''
+						? file.tmp_name
+						: stagedTmpName(fileName);
 				const parsed = parseFilename(fileName);
-				const extension = String(file.extension ?? parsed.extension ?? '');
+				// Extension resolution. parseFilename implements the PHP IMPORT-NAME
+				// grammar, whose extension group is `[a-zA-Z]{3,4}` — ALPHA ONLY. That
+				// grammar exists to split section_id / base_name / letter for the
+				// matching modes; it is NOT a media-extension parser, and using it as
+				// the only source made every digit-bearing extension resolve to '' —
+				// so .mp4, .mp3, .jp2, .3gp and .m4v (the dominant AV formats) each
+				// died with 'Invalid media extension (empty)'.
+				// Order: the server-staged extension (authoritative — the receiver
+				// sniffed the magic bytes against it), then the grammar, then a plain
+				// last-dot split as the honest fallback.
+				const lastDot = fileName.lastIndexOf('.');
+				const plainExtension = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : '';
+				const extension = String(file.extension ?? parsed.extension ?? plainExtension ?? '');
 
 				// Per-file named-processor selections are fail-closed (SEC-053): no
 				// processor is ported (crop_50 ledgered), so the selection is an
@@ -908,6 +986,44 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				imported += 1;
 			} catch (error) {
 				errors.push(`${file.name}: ${(error as Error).message}`);
+			} finally {
+				// Publish AFTER the file settles (in `finally`, so a failed file still
+				// advances the counter — otherwise the bar stalls on the first error).
+				// `errors` is sent every frame so the panel can list them as they
+				// happen instead of only at the terminal frame.
+				publish?.({
+					msg: `Importing ${fileName}`,
+					counter,
+					total: totalFiles,
+					total_ms: Date.now() - runStartedAt,
+					current_time: Date.now() - fileStartedAt,
+					file: fileName,
+					errors,
+				});
+			}
+		}
+		// CONSUME the staging form (WC-079). The "Values" the operator typed have
+		// now been written into real records, so the scratch rows must go or the
+		// NEXT batch silently inherits this run's metadata.
+		//
+		// Server-side, on the code path that actually consumed them — not a client
+		// hook. That is what makes it survive a closed tab, and what gives
+		// tool_import_marc21 / tool_import_zotero the same behaviour without either
+		// of them growing an on_done handler they never had.
+		//
+		// Best effort, and only when something was ACTUALLY imported. `result: true`
+		// is not success here — this handler returns it for a run where every single
+		// file failed (each per-file error is collected into `errors` and the loop
+		// carries on), so clearing on it would wipe the form after a run that wrote
+		// nothing and leave the operator retyping it.
+		if (imported > 0) {
+			try {
+				const { clearTemporalScratch } = await import(
+					'../../../src/core/section/record/temporal_store.ts'
+				);
+				await clearTemporalScratch(ctx.userId, 'tool_import_files');
+			} catch (error) {
+				console.warn('[tool_import_files] scratch clear failed:', (error as Error).message);
 			}
 		}
 		return {

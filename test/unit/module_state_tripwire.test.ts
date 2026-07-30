@@ -92,6 +92,10 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/tools/config.ts:defaultConfigCache',
 	'core/tools/config.ts:installConfigCache',
 	'core/section/locks.ts:tableReady',
+	// Bootstrap memo for the temporal scratch table (WC-079): a boolean, no
+	// request identity. Cleared only by a process restart, which is correct —
+	// CREATE TABLE IF NOT EXISTS is idempotent and the DDL cannot un-apply.
+	'core/section/record/temporal_store.ts:tableReady',
 	'core/resolve/environment.ts:pgVersionCache',
 	'core/resolve/environment.ts:projectsLangsCache',
 	'core/diffusion_bridge/diffusion_map.ts:mapCache',

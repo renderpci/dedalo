@@ -264,6 +264,11 @@ const SUBSYSTEM_OWNED_TABLES: readonly {
 		tablePattern: /dedalo_ts_error_reports/,
 		owners: ['src/core/error_report/store.ts'],
 	},
+	{
+		family: 'temporal scratch (WC-079)',
+		tablePattern: /dedalo_ts_temporal_scratch/,
+		owners: ['src/core/section/record/temporal_store.ts'],
+	},
 ];
 
 // ---------------------------------------------------------------------------

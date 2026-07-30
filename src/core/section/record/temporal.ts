@@ -16,15 +16,36 @@
  * value replaced, Time Machine row appended, modified-stamp falsified, and for
  * relations an orphan target record created. Un-ledgered until 2026-07-28.
  *
- * WHY NOT PORT THE STORE. Nothing ever reads the value back out of it: the
- * propagate tool sends `component_to_propagate.data.entries` straight from client
- * memory (tools/tool_propagate_component_data/js/…:333). The store was a PHP-era
- * accident of "a component must have a record", not a requirement — and making
- * `saveComponentData` polymorphic over a second store would refactor the engine's
- * most load-bearing write path (row lock, counter, relation index, TM) to serve a
- * write that must not happen at all. The PHP design was also broken on its own
- * terms: its key is per (section, user), so two tools open on the same section
- * collide.
+ * WHY `saveComponentData` IS NOT MADE POLYMORPHIC. Teaching the persisted engine
+ * a second store would refactor the most load-bearing write path in the codebase
+ * (row lock, counter, relation index, TM) to serve a write that must not happen
+ * at all. That still holds — the scratch store is a SEPARATE module over a
+ * SEPARATE table, and this door still reaches no matrix write engine.
+ *
+ * (!) THE STORAGE HALF OF WC-059 IS SUPERSEDED BY WC-079 (2026-07-30). The old
+ * text argued "nothing ever reads the value back out of it". True of the
+ * propagate tool, which sends `component_to_propagate.data.entries` straight from
+ * client memory — but FALSE of service_tmp_section, whose children autoload
+ * (`element_instance.build(true)`), so every render re-read through this door,
+ * got `entries: []`, and silently wiped the "Values" form the operator had filled
+ * in: tool_import_files lost the metadata for a whole import batch on any reload.
+ *
+ * So a TS-native scratch store now exists — `./temporal_store.ts`, which owns its
+ * own table and is the only module allowed to name it (sql_confinement T4). What
+ * did NOT change is the invariant: a temporal instance still addresses no record,
+ * and nothing here writes to matrix record 1, its Time Machine or its activity
+ * rows.
+ *
+ * The store is OPT-IN and keyed by (user_id, scope, section_tipo, tipo, lang).
+ * Opt-in because only service_tmp_section wants persistence: the propagate tool
+ * seeds its clone from the OPEN record and then bulk-writes across a whole search
+ * result set, and the two component_text_area pickers are transient — a restored
+ * value in either would be a stale locator stamped into a tag, or a stale payload
+ * propagated over real records. The opt-in rides `source.temporal_scope`, NOT
+ * `is_temporal`: that flag means "addresses no record" and has exactly ONE reader
+ * by tripwire, so giving it a second meaning is the very mistake WC-059 was.
+ * `scope` also repairs PHP's key, which was per (section_tipo, user) and so
+ * collided whenever two tools were open on the same section.
  *
  * The producers (all client-side, frozen by the tripwire's allowlist):
  *   tools/tool_propagate_component_data/js/tool_propagate_component_data.js
@@ -38,7 +59,7 @@
 
 import type { ApiResult } from '../../api/response.ts';
 import { denied } from '../../api/response.ts';
-import type { Rqo } from '../../concepts/rqo.ts';
+import type { Rqo, RqoSource } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import {
 	getColumnNameByModel,
@@ -180,6 +201,61 @@ export function applyTemporalLiteralChanges(
 }
 
 /**
+ * Persist a temporal value to the scratch store — the ONE store name this module
+ * knows (`temporal_instance_tripwire` pins that this door reaches no matrix write
+ * engine; the scratch table is owned entirely by ./temporal_store.ts).
+ *
+ * NO-OP unless the source names a scope: that is the opt-in, and it is what keeps
+ * the propagate tool and the component_text_area pickers persisting nothing.
+ *
+ * BEST EFFORT by contract. The user's edit is already applied and about to be
+ * echoed; losing cross-reload persistence is a far smaller failure than losing
+ * the edit, so a store error is logged and swallowed, never propagated.
+ */
+/**
+ * The DURABLE base for a relation save, or null when there is no scratch row.
+ *
+ * The client can only ever ship the page it is holding, so for a persisted
+ * temporal instance the store — not the payload — is the authoritative set the
+ * delta applies to. Returns null (meaning "use the client's value, as before")
+ * when the source did not opt in or nothing is stored yet.
+ *
+ * Read failures return null rather than throwing: falling back to the client's
+ * page loses a page-boundary edit, which is bad, but failing the save loses the
+ * edit outright, which is worse.
+ */
+async function readTemporalScratchBase(
+	source: RqoSource,
+	principal: Principal,
+): Promise<Record<string, unknown>[] | null> {
+	try {
+		const { temporalScratchAddress, readTemporalScratch } = await import('./temporal_store.ts');
+		const address = temporalScratchAddress(source);
+		if (address === null) return null;
+		const stored = await readTemporalScratch(principal.userId, address);
+		return stored === null ? null : (stored as Record<string, unknown>[]);
+	} catch (error) {
+		console.warn('[temporal] scratch base read failed:', (error as Error).message);
+		return null;
+	}
+}
+
+async function persistTemporalScratch(
+	source: RqoSource,
+	principal: Principal,
+	entries: readonly unknown[],
+): Promise<void> {
+	try {
+		const { temporalScratchAddress, writeTemporalScratch } = await import('./temporal_store.ts');
+		const address = temporalScratchAddress(source);
+		if (address === null) return;
+		await writeTemporalScratch(principal.userId, address, entries);
+	} catch (error) {
+		console.warn('[temporal] scratch persist failed:', (error as Error).message);
+	}
+}
+
+/**
  * The temporal SAVE door: normalize the client's value and echo it in the
  * canonical shape the client resolves by. No matrix read of the addressed
  * record, no write to it, no Time Machine row, no modified stamp, no activity row.
@@ -224,7 +300,25 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 	// the client needs a labelled chip and a pagination.total, and only a real
 	// resolution produces them.
 	if (column === 'relation') {
-		let picked = mergeRelationChips(currentChipsFromPayload(payload), changedData);
+		// THE BASE the delta is applied to. Ordinarily the client's own value —
+		// but `payload.entries` is only the CURRENT PAGE of a portal (the read
+		// paginates; the client's own link_record notes it can see just the loaded
+		// page). Once the value is DURABLE that is a data-loss bug: staging 15
+		// records then linking a 16th would ship a 10-item page, and the UPSERT
+		// would replace the stored 15 with 11 — five staged relations gone, no
+		// error, invisible until the import runs.
+		//
+		// So when a scratch row exists it is the authoritative base: seed from IT
+		// and apply the delta. Behaviour is unchanged wherever no row exists,
+		// which is every temporal instance that did not opt in (WC-079).
+		const scratchBase = await readTemporalScratchBase(source, principal);
+		let picked = mergeRelationChips(scratchBase ?? currentChipsFromPayload(payload), changedData);
+		// Stable item ids on the durable set. `remove` matches by id, and after a
+		// reload the client's ids come from what the graft emitted — so the stored
+		// locators must carry the same ids the echo hands out (resolveRelationEcho
+		// re-stamps 1..n positionally). Without this an unlink after a reload is a
+		// silent server-side no-op: the row keeps a locator the operator deleted.
+		picked = picked.map((locator, index) => ({ ...locator, id: index + 1 }));
 		for (const change of changedData) {
 			if (change.action !== 'add_new_element') continue;
 			// add_new_element genuinely creates a record — in the TARGET section,
@@ -257,6 +351,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			}
 			picked = outcome.items as Record<string, unknown>[];
 		}
+		// TEMPORAL SCRATCH (WC-079). Persist the RAW picked locators, and do it
+		// HERE — before resolveRelationEcho — precisely because what comes back
+		// from that call are resolved CHIPS. A stored chip freezes a label the next
+		// reader may want in another language, or may not be allowed to see at all;
+		// the read path re-resolves from locators every time.
+		await persistTemporalScratch(source, principal, picked);
 		const echo = await resolveRelationEcho({
 			rqo,
 			principal,
@@ -303,6 +403,10 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 	if (!outcome.ok) {
 		return denied(400, `save failed: ${outcome.message}`);
 	}
+	// TEMPORAL SCRATCH (WC-079). `outcome.items` is the normalized, lang-stamped,
+	// id-minted array — the same value the client will hold as its next
+	// `self.data.entries`, so a reload restores exactly what the widget had.
+	await persistTemporalScratch(source, principal, outcome.items);
 
 	const { buildDataItem } = await import('../../resolve/component_data.ts');
 	const dataItem = buildDataItem(

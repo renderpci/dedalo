@@ -150,6 +150,11 @@ component_common.prototype.init = async function(options) {
 		self.data			= options.data		|| null // current specific data of this component
 		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
 		self.is_temporal	= options.is_temporal ?? false // temporal data (used in tools, etc.)
+		// temporal_scope (WC-079): the OWNING TOOL of a temporal instance whose
+		// values must survive a reload. Set ONLY by service_tmp_section — a
+		// temporal instance without it persists nothing, which is the contract for
+		// the propagate tool and the text_area pickers.
+		self.temporal_scope	= options.temporal_scope ?? null
 
 	// data_source
 		self.data_source = options.data_source

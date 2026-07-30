@@ -349,11 +349,21 @@ real record 1 of whatever section the tool was opened on — overwritten, Time-M
 and activity-logged on every single tool open, for a whole engine generation.
 
 A record-less instance therefore RESOLVES and ECHOES (`resolveTemporalSave`) and the
-record-lifecycle doors refuse it outright. Do not add a second store; do not make a
-write engine polymorphic over "real vs scratch". If a tool needs a value the user can
-edit, the value lives in the client until the tool commits it deliberately — which is
-exactly what `tool_propagate_component_data` already does (it propagates
+record-lifecycle doors refuse it outright. **Do not make a write engine polymorphic
+over "real vs scratch"** — that part stands. By default the value lives in the client
+until the tool commits it deliberately, which is exactly what
+`tool_propagate_component_data` does (it propagates
 `component_to_propagate.data.entries`, straight from client memory).
+
+**Exception (WC-079, 2026-07-30): a SEPARATE, opt-in scratch store now exists** for
+the one case where client-only cannot work — `service_tmp_section`, whose children
+autoload and so re-read an empty value on every render, silently wiping the staging
+form on any reload. It is a distinct table with its own owning module
+(`section/record/temporal_store.ts`); `saveComponentData` was NOT made polymorphic,
+and the temporal door still reaches no matrix write engine. A tool opts in by sending
+`source.temporal_scope`; anything that does not send it keeps the client-only
+behaviour described above. Adding a second producer of that field is a deliberate
+change gated by `temporal_instance_tripwire`.
 
 ## Loading (`src/core/tools/loader.ts`)
 

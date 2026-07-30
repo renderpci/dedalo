@@ -40,6 +40,13 @@ export interface ParsedUpload {
 	chunkIndex: number;
 	totalChunks: number;
 	blob: Uint8Array;
+	/**
+	 * SEC-008 form-field CSRF twin. Both upload clients send the token in the
+	 * `X-Dedalo-Csrf-Token` header AND as a `csrf_token` field; the field is the
+	 * documented fallback for when an intermediary strips the custom header.
+	 * The caller (handleMediaUpload) decides — parsing never authorises.
+	 */
+	csrfToken: string | null;
 }
 
 /** The result of receiving one chunk / a single-shot upload. */
@@ -58,17 +65,38 @@ export interface UploadReceiveResult {
 /** Parse the multipart form into the upload fields. Throws on a malformed body. */
 export async function parseUploadRequest(request: Request): Promise<ParsedUpload> {
 	const form = await request.formData();
+	// The blob part. `file_to_upload` is the name both Dédalo upload clients send;
+	// `file` is Dropzone's stock default and is accepted as a fallback so a plain
+	// Dropzone/blueimp configuration is not silently rejected (PHP read $_FILES
+	// positionally and so accepted either).
+	const file = form.get('file_to_upload') ?? form.get('file');
+	if (!(file instanceof Blob)) throw new Error('upload: missing file_to_upload');
+
+	// File name resolution, most explicit source first:
+	//   1. X-File-Name header  (service_upload, service_dropzone — URI-encoded)
+	//   2. `file_name` field   (the same clients' header-stripped fallback)
+	//   3. the multipart part's OWN filename (PHP's $_FILES['name'])
+	// (3) matters because the extension is cross-checked against the sniffed
+	// magic bytes: with no name at all the extension resolved to '' and every
+	// upload died with "File signature (jpeg) does not match declared extension '.'".
 	const fileNameHeader = request.headers.get('X-File-Name');
 	const fileNameField = form.get('file_name');
-	const fileName = decodeURIComponent(
+	const partName = file instanceof File ? file.name : '';
+	const rawFileName =
 		typeof fileNameHeader === 'string' && fileNameHeader !== ''
 			? fileNameHeader
-			: typeof fileNameField === 'string'
+			: typeof fileNameField === 'string' && fileNameField !== ''
 				? fileNameField
-				: '',
-	);
-	const file = form.get('file_to_upload');
-	if (!(file instanceof Blob)) throw new Error('upload: missing file_to_upload');
+				: partName;
+	// Only the header is URI-encoded by contract, but the clients have historically
+	// encoded the field too; decode defensively and fall back to the raw value when
+	// the name contains a literal '%' that is not a valid escape.
+	let fileName: string;
+	try {
+		fileName = decodeURIComponent(rawFileName);
+	} catch {
+		fileName = rawFileName;
+	}
 	// Server-side size enforcement (M6): reject a received part larger than the
 	// configured cap (the value get_system_info advertises), rather than trusting
 	// the client. The transport-layer maxRequestBodySize is the outer bound; this
@@ -78,6 +106,7 @@ export async function parseUploadRequest(request: Request): Promise<ParsedUpload
 	}
 	const blob = new Uint8Array(await file.arrayBuffer());
 	const chunked = String(form.get('chunked') ?? 'false') === 'true';
+	const csrfField = form.get('csrf_token');
 	return {
 		keyDir: String(form.get('key_dir') ?? ''),
 		fileName,
@@ -85,6 +114,7 @@ export async function parseUploadRequest(request: Request): Promise<ParsedUpload
 		chunkIndex: Number(form.get('chunk_index') ?? 0),
 		totalChunks: Number(form.get('total_chunks') ?? 1),
 		blob,
+		csrfToken: typeof csrfField === 'string' && csrfField !== '' ? csrfField : null,
 	};
 }
 

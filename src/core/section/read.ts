@@ -32,7 +32,7 @@ import type { Ddo } from '../concepts/ddo.ts';
 import { type Rqo, isTemporalSource } from '../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
-import { readMatrixRecord } from '../db/matrix.ts';
+import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -245,6 +245,8 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 			childrenView: (ddo as { children_view?: string | null }).children_view ?? null,
 			rqoChildrenDdos: rqoChildren as unknown as Record<string, unknown>[],
 			orderPathFrom,
+			// WC-079: a temporal clone ships no component toolbar.
+			isTemporal: isTemporalSource(source),
 		});
 		if (entry !== null && !seen.has(contextKey(entry))) {
 			seen.add(contextKey(entry));
@@ -463,6 +465,63 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	// RQO that omits lang resolves the session's active data language.
 	const lang = source.lang ?? currentDataLang();
 
+	// TEMPORAL SCRATCH (WC-079). service_tmp_section's staging form persists its
+	// values server-side, per user; load them ONCE here and GRAFT below, so all
+	// three record-less branches share one lookup and one policy.
+	//
+	// The graft is the point: it feeds the value into the SAME virtual-record slot
+	// the Time Machine override and component_relation_children use, so the
+	// STANDARD pipeline resolves it — relation locators come back as real labelled
+	// chips with a real pagination, in the caller's language and under the caller's
+	// grants, instead of the bare locators that were stored.
+	//
+	// Identity comes from the request-scoped ALS rather than a threaded parameter:
+	// readComponentData is reached from several doors and this is a leaf-position
+	// read, which is the backstop role request_context.ts documents. FAIL-CLOSED —
+	// no principal (unit tests, background jobs) means no graft and today's
+	// behaviour, never another user's row.
+	let scratchEntries: unknown[] | null = null;
+	{
+		const { temporalScratchAddress, readTemporalScratch } = await import(
+			'./record/temporal_store.ts'
+		);
+		const scratchAddress = temporalScratchAddress(source);
+		if (scratchAddress !== null) {
+			const { currentPrincipal } = await import('../security/request_context.ts');
+			const scratchPrincipal = currentPrincipal();
+			if (scratchPrincipal !== undefined) {
+				scratchEntries = await readTemporalScratch(scratchPrincipal.userId, scratchAddress);
+				// AUTHZ-02 (the hole this store shipped with, fixed 2026-07-30). The
+				// stored locators are CLIENT-SUPPLIED: the save door persists `picked`
+				// before resolveRelationEcho applies its own scope filter, admits at a
+				// READ grant, and read_facade exempts temporal sources from the
+				// per-record gate. Grafting them unscoped let a level-1 user inject any
+				// locator and have the standard expansion hand back another tenant's
+				// field values. Scope them with the SAME filter the search-chip door
+				// uses — at read time, because a projects assignment can change after
+				// the row was written.
+				if (scratchEntries !== null && getColumnNameByModel(model) === 'relation') {
+					const { filterLocatorsInScope } = await import('../security/record_scope.ts');
+					scratchEntries = await filterLocatorsInScope(
+						scratchEntries as Record<string, unknown>[],
+						scratchPrincipal,
+						dedaloConfig.usersSectionTipo,
+					);
+				}
+			}
+		}
+	}
+	/** Graft the scratch value into a record's slot for the standard pipeline. */
+	const graftScratch = async (target: MatrixRecord): Promise<void> => {
+		if (scratchEntries === null || scratchEntries.length === 0) return;
+		// Under the DATA tipo, not the ddo tipo: expandPortal and the select-family
+		// resolver both look the slot up by resolveDataTipo, so an aliased component
+		// (WC-020) would otherwise graft into a slot nothing reads.
+		const { resolveDataTipo } = await import('../ontology/alias.ts');
+		const { injectComponentData } = await import('../section_record/index.ts');
+		injectComponentData(target, await resolveDataTipo(tipo), model, scratchEntries);
+	};
+
 	// A synthetic search-filter id ('search_<n>', search.js get_section_id)
 	// addresses NO matrix record — its Number() is NaN. Resolve it to a null
 	// record WITHOUT touching the DB, so the search branches below build a
@@ -518,6 +577,10 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			if (tmOverride === null && !isTemporalSource(source)) return [];
 			const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
 			literalRecord = makeVirtualRecord(sectionTipo, Number(sectionId));
+			// WC-079: the staged value, if the operator has one. Freshly built here,
+			// so no cloneRecord is needed. A TM preview still wins below — a history
+			// playback must never be overwritten by a scratch form.
+			await graftScratch(literalRecord);
 		}
 		if (tmOverride !== null) {
 			const { cloneRecord, injectComponentData } = await import('../section_record/index.ts');
@@ -660,6 +723,10 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		) {
 			const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
 			record = makeVirtualRecord(sectionTipo, 0);
+			// WC-079: the staged pick. The select-family resolver emits its item
+			// regardless of the slot, so there is no empty-set trap here — the
+			// datalist still renders when nothing is staged.
+			await graftScratch(record);
 		} else {
 			// SEARCH mode builds a blank search form independent of any stored record —
 			// PHP get_data returns the component's own item with empty entries so the
@@ -678,9 +745,25 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			// echoed verbatim — an item with entries:[] is what makes the widget
 			// render empty rather than not render at all.
 			if (isTemporalSource(source)) {
-				return [buildDataItem(tipo, sectionTipo, sectionId, source.mode ?? 'edit', lang, [])];
+				// WC-079: with a staged value, graft it and FALL THROUGH to the
+				// standard expansion, which resolves the locators into labelled chips
+				// with a real pagination (expandPortal).
+				//
+				// (!) THE EMPTY-SET TRAP. expandPortal returns early on an empty
+				// locator set and emits NO item at all (relation_core.ts, the PHP
+				// portal_json guard). Falling through with nothing staged would leave
+				// the client's `self.data = data || {}` without an entries array —
+				// a worse regression than the bug this store fixes. So an empty
+				// scratch keeps the bare item and only a NON-empty one falls through.
+				if (scratchEntries === null || scratchEntries.length === 0) {
+					return [buildDataItem(tipo, sectionTipo, sectionId, source.mode ?? 'edit', lang, [])];
+				}
+				const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
+				record = makeVirtualRecord(sectionTipo, Number(sectionId));
+				await graftScratch(record);
+			} else {
+				return [];
 			}
-			return [];
 		}
 	}
 
@@ -898,35 +981,13 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 	// a record outside their projects filter by injecting its locator as a search
 	// chip. Drop out-of-scope targets; locators with no (section_tipo, section_id)
 	// identity carry nothing to scope and pass through. Global admins are unscoped.
-	if (principal !== undefined && !principal.isGlobalAdmin && injected.length > 0) {
-		const { isRecordInScope } = await import('../security/record_scope.ts');
-		const scoped: Record<string, unknown>[] = [];
-		for (const locator of injected) {
-			const locSectionTipo = locator.section_tipo;
-			const locSectionId = locator.section_id;
-			if (
-				typeof locSectionTipo !== 'string' ||
-				locSectionId === undefined ||
-				locSectionId === null
-			) {
-				scoped.push(locator);
-				continue;
-			}
-			// The root user locator (dd128/-1) resolves to a LABEL only, and PHP
-			// resolves it for any caller with section-level permission (resolve_data
-			// reaches -1 by design — activity "who" chips must render). Record
-			// access stays blocked by the assembler's section_id > 0 filter and
-			// principalCanAccessRecord; without this allow, isRecordInScope would
-			// now silently drop the chip for non-admins.
-			if (locSectionTipo === dedaloConfig.usersSectionTipo && Number(locSectionId) === -1) {
-				scoped.push(locator);
-				continue;
-			}
-			if (await isRecordInScope(locSectionTipo, Number(locSectionId), principal)) {
-				scoped.push(locator);
-			}
-		}
-		injected = scoped;
+	// Shared with the WC-079 temporal scratch graft (security/record_scope.ts
+	// filterLocatorsInScope) — the two client-locator doors must not drift, and
+	// they did: the scratch store shipped without this filter and was a live
+	// cross-tenant read until 2026-07-30.
+	if (injected.length > 0) {
+		const { filterLocatorsInScope } = await import('../security/record_scope.ts');
+		injected = await filterLocatorsInScope(injected, principal, dedaloConfig.usersSectionTipo);
 	}
 
 	// PHP locator parity (class.locator.php set_section_id :338): the echoed
@@ -1724,6 +1785,11 @@ export async function buildGetDataContext(
 			parent: entry.parent,
 			view: entry.view,
 			propertiesOverride: entry.propertiesOverride,
+			// WC-079: a temporal clone ships no component toolbar. This is the
+			// get_data door — the one service_tmp_section's children actually use,
+			// so the suppression has to be stamped here and not only on the
+			// section ddo-map path.
+			isTemporal: isTemporalSource(source),
 		});
 		if (built === null) return null;
 		const key = contextKey(built);

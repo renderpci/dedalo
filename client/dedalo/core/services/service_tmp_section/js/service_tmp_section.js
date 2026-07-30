@@ -16,14 +16,23 @@
 * section_id exists yet, a sentinel value of 1 is used as a fake record identifier
 * and `is_temporal: true` is set on each child component.
 *
-* (!) The sentinel is NOT an address, and there is NO server-side temporal store in
-* the TS engine (PHP had matrix_temp_manager; it was not ported). The server's save
-* door recognises `is_temporal` and RESOLVES + ECHOES each change without persisting
-* it, and its read door serves an empty value rather than record 1's (WC-059,
-* src/core/section/record/temporal.ts). Values live in the client until the caller
-* harvests them with get_components_data and the import is actually triggered.
-* Until 2026-07-28 the missing store meant every keystroke here wrote to the REAL
-* record 1 of the component's section.
+* (!) The sentinel is NOT an address: the save door never writes it to a record,
+* and the read door never serves record 1's value (WC-059,
+* src/core/section/record/temporal.ts). Until 2026-07-28 the missing store meant
+* every keystroke here wrote to the REAL record 1 of the component's section.
+*
+* THIS SERVICE IS THE ONE TEMPORAL PRODUCER WHOSE VALUES PERSIST (WC-079). Its
+* children autoload, so before the store existed every render re-read an empty
+* value and silently wiped the form on any reload. It now sends
+* `temporal_scope` (the owning tool, from self.caller.model) in the element
+* options below; the server keys a per-user scratch row on it and grafts the
+* value back on read, resolving relation locators into real chips. The owning
+* tool clears the scope once it has consumed the values.
+*
+* The scope is what keeps this OPT-IN: the other temporal producers (the
+* propagate tool, the component_text_area pickers) send none and persist
+* nothing — restoring a stale value in those would be a bug, not a feature.
+* get_components_data is still how the caller harvests the values for the import.
 *
 * Lifecycle (mirrors the standard Dédalo instance lifecycle):
 *   init → build → (caller renders via service_tmp_section.edit) → get_components_data
@@ -131,9 +140,12 @@ service_tmp_section.prototype.init = async function(options) {
 *
 *   section_id : 1            — Sentinel fake record id. No database row with this
 *                               id needs to exist; the temporal handler ignores it.
-*   is_temporal: true         — Tells component_common to use matrix_temp_manager
-*                               instead of the persistent matrix, so saves go to a
-*                               temporary in-memory store rather than the database.
+*   is_temporal: true         — Marks the instance as addressing NO record, so the
+*                               save door resolves + echoes instead of writing to
+*                               the matrix (WC-059).
+*   temporal_scope            — The OWNING TOOL (WC-079). Paired with is_temporal it
+*                               opts this instance into the per-user scratch store,
+*                               which is what makes the form survive a reload.
 *   id_variant : self.model   — Namespaces the instance key in instances_map using
 *                               the service's own model name, preventing id clashes
 *                               when two tools each build the same component tipo.
@@ -177,7 +189,14 @@ service_tmp_section.prototype.build = async function(autoload=false) {
 				lang			: self.lang,
 				type			: el.type,
 				id_variant		: self.model,  // id_variant prevents id conflicts
-				is_temporal		: true, // This sets the component to use the temporal data handler (matrix_temp_manager)
+				is_temporal		: true, // addresses no record — section_id above is a sentinel
+				// temporal_scope (WC-079): the OWNING TOOL. This single line is the
+				// whole persistence opt-in — it is why the staging form survives a
+				// reload while the propagate tool and the text_area pickers, which
+				// send no scope, keep their transient behaviour. It is also the key
+				// component that stops two tools open on the SAME section from
+				// clobbering each other, which PHP's (section_tipo, user) key did.
+				temporal_scope	: (self.caller && self.caller.model) || self.model,
 				caller			: self // set tool as caller of the component :-)
 			}
 
@@ -211,7 +230,7 @@ service_tmp_section.prototype.build = async function(autoload=false) {
 * Collects the current in-memory data object from every instantiated child component.
 *
 * Iterates self.ar_instances in reverse order and pushes each component's
-* `.data` property (the temporal datum written by matrix_temp_manager) into
+* `.data` property (the temporal datum, also mirrored to the WC-079 scratch store) into
 * the result array. The array is then passed to the server import action as
 * `components_temp_data` so the PHP side knows which field values the user
 * entered before triggering the import.

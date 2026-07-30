@@ -330,8 +330,27 @@ const get_content_data_edit = async function(self) {
 			event_manager.subscribe('drop_zone_success', drop_zone_success_handler)
 		)
 
+		// drop_zone_addedfile. Files restored from the server (list_uploaded_files)
+		// are injected via displayExistingFile and carry file.url — they are ALREADY
+		// staged, so they must unlock IMPORT exactly like a fresh upload does.
+		// A locally-added file that has not been uploaded yet must NOT unlock it.
+		const drop_zone_addedfile_handler = (data) => {
+			if(data && data.file && data.file.url){
+				button_process_import.classList.remove('loading')
+			}
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('drop_zone_addedfile', drop_zone_addedfile_handler)
+		)
+
 		// on reload page, if files_data exists, activate button
 		// files_data is persisted in-memory across soft reloads (same JS context).
+		// NOTE: this synchronous check alone is not enough after a HARD reload —
+		// the dropzone (and with it the server-side file restore) is built inside a
+		// deferred idle callback, so files_data is still empty here and the restored
+		// rows arrive later. The drop_zone_addedfile subscription above is what
+		// actually unlocks the button in that case; this stays for the soft-reload
+		// path, where the in-memory registry survives.
 		if(self.files_data.length > 0){
 			button_process_import.classList.remove('loading')
 		}

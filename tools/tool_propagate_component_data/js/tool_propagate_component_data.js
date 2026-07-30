@@ -215,10 +215,12 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 * The clone is instantiated with `is_temporal:true` and a sentinel section_id of 1.
 * (!) The sentinel is NOT an address. The server's save door recognises
 * `is_temporal` and RESOLVES + ECHOES the value without persisting anything (WC-059,
-* src/core/section/record/temporal.ts) — there is no server-side temporal store, and
+* src/core/section/record/temporal.ts) — this tool sends NO temporal_scope so nothing
+* is persisted for it (WC-079), and
 * the value that ultimately gets propagated is read from this clone's client-side
 * `data.entries` (see propagate_component_data below), never read back from a server.
-* PHP did have such a store (matrix_temp_manager); the TS engine deliberately does
+* PHP had a store for every temporal instance (matrix_temp_manager); the TS engine
+* deliberately does
 * not, and until 2026-07-28 the missing store meant this save landed on the REAL
 * record 1 of the target section. A unique `id_variant` (`'propagate_' + Date.now()`) prevents
 * instance-registry collisions when the tool is opened multiple times in a session.
