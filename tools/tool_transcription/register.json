@@ -1857,6 +1857,156 @@
             "lang": "lg-nep",
             "name": "finished",
             "value": "प्रक्रिया सम्पन्न भयो"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "detect_speakers",
+            "value": "Detect speakers"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "detect_speakers",
+            "value": "Detectar hablantes"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "detect_speakers",
+            "value": "Detectar parlants"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "detect_speakers",
+            "value": "Sprecher erkennen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "detect_speakers",
+            "value": "Αναγνώριση ομιλητών"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "detect_speakers",
+            "value": "Détecter les locuteurs"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "detect_speakers",
+            "value": "Rileva i parlanti"
+          },
+          {
+            "lang": "lg-por",
+            "name": "detect_speakers",
+            "value": "Detetar falantes"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "detect_speakers",
+            "value": "वक्ता पहिचान गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "detect_speakers",
+            "value": "Hizlariak detektatu"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "detect_speakers",
+            "value": "اكتشاف المتحدثين"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "download_speaker_model",
+            "value": "Download speaker model"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "download_speaker_model",
+            "value": "Descargar modelo de hablantes"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "download_speaker_model",
+            "value": "Baixar model de parlants"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "download_speaker_model",
+            "value": "Sprechermodell herunterladen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "download_speaker_model",
+            "value": "Λήψη μοντέλου ομιλητών"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "download_speaker_model",
+            "value": "Télécharger le modèle de locuteurs"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "download_speaker_model",
+            "value": "Scarica il modello dei parlanti"
+          },
+          {
+            "lang": "lg-por",
+            "name": "download_speaker_model",
+            "value": "Descarregar modelo de falantes"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "download_speaker_model",
+            "value": "वक्ता मोडेल डाउनलोड गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "download_speaker_model",
+            "value": "Hizlarien modeloa deskargatu"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "download_speaker_model",
+            "value": "تنزيل نموذج المتحدثين"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "not_installed",
+            "value": "nicht installiert"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "not_installed",
+            "value": "δεν είναι εγκατεστημένο"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "not_installed",
+            "value": "non installé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "not_installed",
+            "value": "non installato"
+          },
+          {
+            "lang": "lg-por",
+            "name": "not_installed",
+            "value": "não instalado"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "not_installed",
+            "value": "स्थापना गरिएको छैन"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "not_installed",
+            "value": "ez dago instalatuta"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "not_installed",
+            "value": "غير مثبَّت"
           }
         ]
       }
