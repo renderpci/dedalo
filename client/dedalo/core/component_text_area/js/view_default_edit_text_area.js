@@ -1505,11 +1505,11 @@ export const build_node_tag = function(view_data) {
 *   'a' = not publishable (component_publication section_id === '2')
 *   'b' = publishable
 *
-* (!) The 'note_section' variable referenced inside fn_remove is declared in the
-*     outer scope of get_note_section's resolved Promise, but the Promise may not
-*     have resolved by the time fn_remove fires if the user clicks Delete very
-*     quickly. The code handles this with an explicit 'undefined' guard and an
-*     alert() call. The alert() is a known deficiency — document only, do not remove.
+* (!) The note section instance is published to the shared 'note_section' variable of
+*     this function's scope as soon as get_note_section() resolves, because fn_remove
+*     (the footer Delete button) needs it. The delete button is kept hidden until the
+*     load finished, so fn_remove cannot normally run before the assignment; it still
+*     bails out defensively if the instance is missing.
 *
 * (!) SEC-030: user-editable fields (created_by_user_name, section tipo) are written
 *     via textContent (not innerHTML) to prevent HTML injection.
@@ -1543,6 +1543,9 @@ const render_note = async function(options) {
 		const features			= self.context.features || {}
 
 	// note section
+		// shared instance, assigned when the async load below resolves (used by fn_remove and modal.on_close)
+		let note_section = null
+
 		const get_note_section = async function(){
 			// create the instance of the note section, it will render without inspector or filter and with edit mode
 			const instance_options = {
@@ -1557,10 +1560,10 @@ const render_note = async function(options) {
 				filter			: false
 			}
 			// get the instance, built and render
-			const note_section	= await get_instance(instance_options)
-								  await note_section.build(true)
+			const instance	= await get_instance(instance_options)
+							  await instance.build(true)
 
-			return note_section
+			return instance
 		}
 
 		// subscribe to the change publication of the component_publication of the section node
@@ -1656,9 +1659,13 @@ const render_note = async function(options) {
 					text_editor.delete_tag(view_tag)
 					.then(function(){
 
-						if (typeof note_section==='undefined') {
-							alert("Undefined note_section");
-						}
+						// note section instance not loaded yet (Delete clicked before the async
+						// load resolved): the tag is already removed, nothing to delete server side
+							if (!note_section) {
+								text_editor.set_dirty(true)
+								modal.remove()
+								return
+							}
 
 						// Delete the server note data in the DDBB
 							// create sqo the the filter_by_locators of the section to be deleted
@@ -1677,7 +1684,9 @@ const render_note = async function(options) {
 								delete_mode	: 'delete_record'
 							})
 							// destroy the instance of the note section
+							// (cleared so modal.on_close does not destroy it a second time)
 							note_section.destroy(true,true,true)
+							note_section = null
 
 						// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
 							text_editor.set_dirty(true)
@@ -1710,7 +1719,8 @@ const render_note = async function(options) {
 			container : body,
 			callback : async function() {
 
-				const note_section = await get_note_section()
+				// publish to the shared scope variable, fn_remove and modal.on_close need it
+				note_section = await get_note_section()
 
 				// permissions check
 				if (!note_section.permissions || parseInt(note_section.permissions)<1) {
@@ -1725,7 +1735,10 @@ const render_note = async function(options) {
 
 				// on_close modal. when the modal is closed the section instance of the note need to be destroyed with all events and components
 					modal.on_close = () => {
-						note_section.destroy(true,true,true)
+						if (note_section) {
+							note_section.destroy(true,true,true)
+							note_section = null
+						}
 					}
 
 				if (!note_section.data.entries || !note_section.data.entries[0]) {
