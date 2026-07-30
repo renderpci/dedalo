@@ -155,7 +155,7 @@ export async function databaseInfoGetValue(): Promise<WidgetResponse> {
 		host: String((config.db as { host?: unknown } | undefined)?.host ?? 'localhost'),
 	};
 
-	// WC-070: engine-native, additive. Fail-soft — a statistics readout must
+	// WC-073: engine-native, additive. Fail-soft — a statistics readout must
 	// never take the whole catalog panel down with it.
 	let statistics: StatisticsHealth | null = null;
 	try {

@@ -116,7 +116,7 @@ const get_content_data_edit = async function(self) {
 		class_name	 : 'content_data'
 	})
 
-	// statistics health (WC-070) — FIRST, above the catalog dump.
+	// statistics health (WC-073) — FIRST, above the catalog dump.
 	// A stats-collector reset silently disables autovacuum/autoanalyze: they
 	// trigger on the cumulative counters, which restart from zero, so a 44 GB
 	// table stops being maintained and nothing says so. This is the only place

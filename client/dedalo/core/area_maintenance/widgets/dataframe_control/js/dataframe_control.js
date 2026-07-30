@@ -29,7 +29,7 @@
 *   init() → build() → render() → [refresh cycles] → destroy()
 *
 * Data flow:
-*   build()          — shell only. No get_value exists on this widget (WC-068),
+*   build()          — shell only. No get_value exists on this widget (WC-071),
 *                      so widget_common.prototype.load() is a no-op and NOTHING
 *                      is fetched on page load or accordion open.
 *   run_action()     — the ONLY server round-trip. Called directly from the UI
@@ -75,7 +75,7 @@ export const dataframe_control = function() {
 *
 * Lifecycle methods (init, render, refresh, destroy) are provided entirely by
 * widget_common — no custom overrides are needed for this widget.
-* (!) This widget deliberately has NO `get_value` (WC-068). Every other
+* (!) This widget deliberately has NO `get_value` (WC-071). Every other
 * area_maintenance widget borrows area_maintenance.prototype.get_value so the
 * framework's lazy loader can fetch a panel value on open — but this widget's
 * value IS a full-database integrity scan (every matrix% table, end to end),
@@ -108,7 +108,7 @@ export const dataframe_control = function() {
 * Custom build that delegates to the shared widget_common build and then
 * performs any widget-specific post-build work.
 *
-* This widget has no get_value (WC-068), so `autoload` is inert here: there is
+* This widget has no get_value (WC-071), so `autoload` is inert here: there is
 * no value to fetch and the widget renders a "not run" state until the operator
 * presses Check. No additional async work is required; the try/catch block is
 * kept as a scaffold for future widget-specific initialization steps.

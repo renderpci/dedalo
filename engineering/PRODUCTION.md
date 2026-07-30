@@ -212,7 +212,7 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   dropped socket fires `cancel()`; the stream's unconditional 15 s heartbeat and
   its 15-minute hard lifetime exist to bound the damage either way, so a gap
   should also self-heal within ~15 min.
-- **Table-statistics health (WC-070)** — the Database-info panel computes a
+- **Table-statistics health (WC-073)** — the Database-info panel computes a
   `statistics` verdict and shows a warning when it reads `degraded`. Two
   signals: tables ≥64 MB with `last_analyze` AND `last_autoanalyze` NULL, and
   the RESET signature `reltuples >= 1000 AND n_live_tup*100 < reltuples` (the

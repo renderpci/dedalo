@@ -417,7 +417,7 @@ export const widget: WidgetModule = {
 		run_check: dataframeControlGetValue,
 		run_fix: dataframeControlRunFix,
 	},
-	// NO `getValue` (WC-068): the module deliberately does not answer the
+	// NO `getValue` (WC-071): the module deliberately does not answer the
 	// get_widget_value panel-load RQO. This scan walks EVERY matrix% table
 	// end to end — on a scale install (dedalo7_mdcat: 24 tables / ~36.6M rows
 	// / ~92 GB) a single invocation is ~80s of DB work that ends in a

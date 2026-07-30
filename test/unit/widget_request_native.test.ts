@@ -281,7 +281,7 @@ describe('database_info compute (get_widget_value catalog read)', () => {
 		expect(String(result.info?.server ?? '')).toContain('PostgreSQL');
 		expect(typeof result.info?.host).toBe('string');
 
-		// statistics: engine-native, ADDITIVE (WC-070). Asserted for presence and
+		// statistics: engine-native, ADDITIVE (WC-073). Asserted for presence and
 		// shape only — `status` depends on whether THIS database has been
 		// analyzed, so pinning a value here would make the gate a property of
 		// the test box rather than of the code. The verdict logic itself is

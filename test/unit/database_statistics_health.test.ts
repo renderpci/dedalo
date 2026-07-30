@@ -1,5 +1,5 @@
 /**
- * database_info statistics-health verdict (WC-070).
+ * database_info statistics-health verdict (WC-073).
  *
  * Guards the detection of a stats-collector reset — the failure that is
  * dangerous precisely because it is SILENT: `autovacuum` reads `on`, every

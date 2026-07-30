@@ -94,7 +94,7 @@ render_dataframe_control.prototype.list = async function(options) {
 *
 * Renders three elements inside a container div:
 *   1. A summary div in the NOT-RUN state. No report is fetched on load
-*      (WC-068) — this widget's value is a whole-database scan, so it exists
+*      (WC-071) — this widget's value is a whole-database scan, so it exists
 *      only once an operator asks for it.
 *   2. A "Check" button that triggers the read-only scan (`run_check`).
 *   3. A "Remove orphans" button that triggers the destructive fix (`run_fix`)
@@ -121,7 +121,7 @@ const get_content_data = function(self) {
 			class_name	 : 'content_data'
 		})
 
-	// (!) NOTHING is fetched here (WC-068). This panel used to run the integrity
+	// (!) NOTHING is fetched here (WC-071). This panel used to run the integrity
 	// scan on every area_maintenance page load: it claimed the lazy load
 	// synchronously (self._load_state='loading') and then awaited its own
 	// get_value() inside a spinner placeholder. That scan walks EVERY matrix%
@@ -332,7 +332,7 @@ const render_report = function(container, report, msg=null) {
 		container.removeChild(container.firstChild)
 	}
 
-	// (!) INCOMPLETENESS IS RENDERED FIRST, before any count (WC-069). The server
+	// (!) INCOMPLETENESS IS RENDERED FIRST, before any count (WC-072). The server
 	// sets complete:false when a table was exempted, truncated by a budget, or
 	// lost to a failed batch. "Orphan frames: 0" under a partial scan means "none
 	// where we looked", not "none" — so the caveat must reach the eye before the

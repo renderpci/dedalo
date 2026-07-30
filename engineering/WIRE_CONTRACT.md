@@ -3130,7 +3130,7 @@ declares both) the output is identical bytes. Gate:
   `test/unit/diffusion_queue_stream.test.ts` (quiet-when-unchanged, membership
   marker, heartbeat-on-idle, deadline, error frame, refusal frame).
 
-### WC-070 addendum — the client consumer (2026-07-29)
+### WC-069 addendum — the client consumer (2026-07-29)
 
 Recorded with the frame because the consumer's constraints are what the frame
 shape is FOR, and a future editor reading only the wire half would not see them.
@@ -3226,7 +3226,7 @@ shape is FOR, and a future editor reading only the wire half would not see them.
 
 ## WC-072 — `dataframe_control` reports COVERAGE, and cannot claim a completeness it did not earn (2026-07-29)
 
-- **Date:** 2026-07-29 (same-day follow-on to WC-068).
+- **Date:** 2026-07-29 (same-day follow-on to WC-071).
 - **What changed.** `run_check` / `run_fix` gain three result fields:
   `complete: boolean`, `coverage: TableCoverage[]` (one entry per discovered
   table: `status` ∈ complete | exempt | no_relation_column | budget_exhausted

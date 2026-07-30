@@ -71,7 +71,7 @@ export const widget: WidgetModule = {
   card and the opened panel paint from identical data. It is fail-soft: a widget
   whose value cannot be computed must never break the dashboard read.
 
-> **`getValue` is PAGE-LOAD cost — budget it as such (WC-068).** It is not
+> **`getValue` is PAGE-LOAD cost — budget it as such (WC-071).** It is not
 > "lazy" in any sense a caller can rely on: `render_area_maintenance.js` builds
 > and renders every widget card on every dashboard load, so whatever `getValue`
 > does happens once per load, per admin, in both Map and List views. Two
@@ -193,7 +193,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `sequences_status` | integrity | *(read-only panel)* |
 | `media_control` | integrity | `set_media_access_mode`, `rebuild_media_index` |
 | `counters_status` | integrity | `modify_counter` |
-| `dataframe_control` | integrity | `get_value`, `run_check`, `run_fix` — and NO module `getValue`, so the panel loads nothing (WC-068); `run_check` reports per-table `coverage` and can never claim a completeness it did not earn (WC-069) |
+| `dataframe_control` | integrity | `get_value`, `run_check`, `run_fix` — and NO module `getValue`, so the panel loads nothing (WC-071); `run_check` reports per-table `coverage` and can never claim a completeness it did not earn (WC-072) |
 | `database_info` | system | `analyze_db`, `optimize_tables`, `consolidate_tables`, `recreate_db_assets`, `backfill_search_stores`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `rebuild_user_stats`, `relation_integrity_report` |
 | `environment`, `system_info` | system | *(read-only panels)* |
 | `error_reports` | system | `get_reports` |

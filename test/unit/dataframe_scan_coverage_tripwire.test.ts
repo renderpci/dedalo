@@ -5,7 +5,7 @@
  *
  * The defect this guards against is not a crash, it is a LIE: a scan that
  * skipped 21 of 24 tables reporting `orphans: 0` reads to an operator as "the
- * database is clean". WC-068 made the panel honest about a scan that never
+ * database is clean". WC-071 made the panel honest about a scan that never
  * ran; this keeps it honest about a scan that ran PARTIALLY.
  *
  * These assertions are pure — `summarizeCoverage` takes a coverage array and
