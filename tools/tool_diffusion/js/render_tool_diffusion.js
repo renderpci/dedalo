@@ -6,10 +6,11 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
-	import {object_to_url_vars, time_unit_auto, open_window} from '../../../core/common/js/utils/index.js'
+	import {object_to_url_vars, time_unit_auto, open_window, printf} from '../../../core/common/js/utils/index.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
+	import {build_report_model, tsv_tables, tsv_errors} from './report_model.js'
 
 
 
@@ -47,14 +48,26 @@
 *    Each entry: { process_id, started_at, ... }.  Used to reconnect an
 *    in-progress SSE stream after a page reload.
 *
-*  SSE chunk shape (sse_response) consumed by on_read callbacks:
-*    { is_running, total_time, result?, errors?,
-*      data: { msg, counter, total, section_label, current: { section_id, time }, total_ms } }
+*  SSE chunk shape (sse_response) consumed by the stream handlers:
+*    { process_id, is_running, started_at, total_time, errors: string[],
+*      state?,                                  // server job state, when present
+*      data:   { msg, counter, total, section_label?,
+*                current?: { section_id, time }, total_ms?,
+*                diffusion_data?, consolidated_files?, last_update_record_response? },
+*      result?: { result: boolean, msg: string,
+*                 tables?:  [{ table_name, records_count, records_affected }],
+*                 errors?:  string[],
+*                 consolidated_files?: { merged_url, zip_url },
+*                 diffusion_data?:     [{ file_url }],
+*                 diffusion_class? } }
 *
-*  Final SSE payload extras (engine_result):
-*    .tables  {Array} — SQL engine summary: [{ table_name, records_affected, records_count }]
-*    .result  {boolean}
-*    .errors  {Array<string>}
+*  (!) `tables` / `errors` / `consolidated_files` live INSIDE `result`, not at the
+*  SSE top level — an earlier version of this docblock said otherwise, and the
+*  code written against that claim gated the whole report on `result.tables`
+*  being truthy. An rdf/xml run reports `tables: []`, which IS truthy, so its
+*  download buttons were unreachable; a failed run has no `tables` at all, so it
+*  rendered nothing whatsoever. Both defects are gone: the chunk is now
+*  classified by ./report_model.js and the report is gated on NOTHING.
 */
 export const render_tool_diffusion = function() {
 
@@ -809,6 +822,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 			if (my_process) {
 				update_process_status({
 					self,
+					item		: item, // real subject line instead of a parsed process_id
 					process_id	: process_id,
 					container	: response_message,
 					lock_items	: lock_items
@@ -848,12 +862,17 @@ export const render_container_bottom = function (self, item, lock_items, process
 *     API (action: 'diffuse', SSE protocol).
 *  3. Sets up a render_stream panel inside response_message with a Stop button
 *     that fires a cancel_process API call.
-*  4. Reads stream chunks via data_manager.read_stream.  Each chunk (sse_response)
-*     is formatted by compound_msg into a human-readable progress line using
-*     a rolling window of the last 50 per-record timing samples to compute the
-*     estimated time remaining.
-*  5. On completion (on_done): unlocks buttons, calls render_process_report to
-*     display the final SQL table summary or RDF/XML download buttons.
+*  4. Reads stream chunks via data_manager.read_stream. Every chunk goes through
+*     build_stream_handlers → render_run_report, which rebuilds the report panel
+*     in place; the one-line message node carries the server's status message
+*     and nothing else.
+*  5. On completion (on_done): unlocks buttons and re-renders the report once.
+*
+* (!) The old "time remaining" estimate is GONE, deliberately. It averaged
+*     data.current.time, which is CUMULATIVE elapsed for the attempt, not a
+*     per-record duration (src/diffusion/runner.ts) — so the number it produced
+*     was arithmetically meaningless. The underlying values are still shown, in
+*     Diagnostics, under their honest names.
 *
 * The `process_id` is user+element+section scoped so concurrent diffusion jobs
 * for different elements remain independent.
@@ -914,6 +933,10 @@ const publish_content = async (self, options) => {
 		const render_response = render_stream({
 			container	: response_message,
 			id			: process_id,
+			// the raw chunk moves into the tool's own collapsed Diagnostics →
+			// Raw response disclosure: always available (no SHOW_DEBUG gate),
+			// but no longer a wall of JSON above everything else
+			display_json: false,
 			on_stop		: () => {
 				data_manager.request({
 					url : typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
@@ -934,103 +957,16 @@ const publish_content = async (self, options) => {
 			}
 		})
 
-	// average process time for record
-		const ar_samples = []
-		const get_average = (arr) => {
-			let sum = 0;
-			const arr_length = arr.length;
-			for (let i = 0; i < arr_length; i++) {
-				sum += arr[i];
-			}
-			return Math.ceil( sum / arr_length );
-		}
-
-	// last_sse_response
-		let last_sse_response
-
-		const on_read = (sse_response) => {
-
-			// fire update_info_node on every reader read chunk
-			render_response.update_info_node(
-				sse_response,
-				(info_node) => { // callback
-
-					const is_running = sse_response?.is_running ?? true
-
-					const compound_msg = (sse_response) => {
-						const data = sse_response.data
-						const parts = []
-						parts.push(data.msg)
-						if (data.counter) {
-							parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
-						}
-						if (data.section_label) {
-							parts.push(data.section_label)
-						}
-						if (data.current) {
-							if (data.current.section_id) {
-								parts.push('id: ' + data.current.section_id)
-							}
-						}
-						if (data.total_ms) {
-							parts.push( time_unit_auto(data.total_ms) )
-						}else if(sse_response.total_time) {
-							parts.push(sse_response.total_time)
-						}
-						if (data.current && data.current.time) {
-							// save in samples array to make average
-							if (ar_samples.length>50) {
-								ar_samples.shift() // remove older element
-							}
-							ar_samples.push(data.current.time)
-
-							const average			= get_average(ar_samples)
-							const remaining_ms		= ((data.total - data.counter) * average)
-							const remaining_time	= time_unit_auto(remaining_ms)
-							parts.push('Time remaining: ' + remaining_time)
-						}
-
-						return parts.join(' | ')
-					}
-
-					const msg = sse_response
-								&& sse_response.data
-								&& sse_response.data.msg
-								&& sse_response.data.msg.length>5
-						? compound_msg(sse_response)
-						: is_running
-							? 'Process running... please wait'
-							: 'Process completed in ' + sse_response.total_time
-
-					if(!info_node.msg_node) {
-						info_node.msg_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
-							parent			: info_node
-						})
-					}
-					ui.update_node_content(info_node.msg_node, msg)
-				}
-			)
-
-			last_sse_response = sse_response
-		}
-
-	// on_done event (called once at finish or cancel the stream read)
-		const on_done = () => {
-			// is triggered at the reader's closing
-			render_response.done()
-			// unlock lock_items
-			lock_items.forEach(el =>{
-				el.classList.remove('loading')
-			})
-			// render_process_report
-			render_process_report({
-				self,
-				last_sse_response,
-				container: response_message
-			})
-		}
+	// stream handlers
+		// The publish path and the reconnect path share ONE implementation: the two
+		// blocks used to be byte-duplicates, which is how a formatter drifts.
+		const {on_read, on_done} = build_stream_handlers({
+			self,
+			item			: item,
+			container		: response_message,
+			render_response	: render_response,
+			lock_items		: lock_items
+		})
 
 	// read stream
 		data_manager.read_stream(stream, on_read, on_done)
@@ -1047,14 +983,17 @@ const publish_content = async (self, options) => {
 * It opens a NEW get_process_status stream from the Bun API so the user can
 * follow progress without having initiated the Publish click in this session.
 *
-* Behaviour is identical to publish_content's streaming loop: the same
-* compound_msg formatter, ar_samples rolling average, and render_process_report
-* call on completion are used.
+* Behaviour is identical to publish_content's streaming loop because it IS the
+* same code: both call build_stream_handlers. They previously held byte-identical
+* copies of the reader, the formatter and the completion hook.
 *
 * (!) alert() is used on cancel_process errors — same reasoning as publish_content.
 *
 * @param {Object} options
 * @param {Object}      options.self       - tool_diffusion instance.
+* @param {Object}      [options.item]     - diffusion node descriptor; when absent
+*                                           the subject line is derived from the
+*                                           process_id and flagged as derived.
 * @param {string}      options.process_id - SSE stream identifier to reconnect to.
 * @param {HTMLElement} options.container  - Node to render progress into (response_message).
 * @param {Array}       options.lock_items - Button elements to lock while stream is active.
@@ -1066,6 +1005,7 @@ const update_process_status = (options) => {
 	const process_id	= options.process_id
 	const container		= options.container
 	const lock_items	= options.lock_items
+	const item			= options.item // may be undefined on an unrecognised panel
 
 	// locks lock_items
 	lock_items.forEach(el =>{
@@ -1105,6 +1045,7 @@ const update_process_status = (options) => {
 		const render_response = render_stream({
 			container	: container,
 			id			: process_id,
+			display_json: false, // see the publish path — raw chunk lives in Diagnostics
 			on_stop		: () => {
 				data_manager.request({
 					url : typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
@@ -1125,340 +1066,1002 @@ const update_process_status = (options) => {
 			}
 		})
 
-		// average process time for record
-			const ar_samples = []
-			const get_average = (arr) => {
-				let sum = 0;
-				const arr_length = arr.length;
-				for (let i = 0; i < arr_length; i++) {
-					sum += arr[i];
-				}
-				return Math.ceil( sum / arr_length );
-			}
-
-		// last_sse_response
-		let last_sse_response
-
-		// on_read event (called on every chunk from stream reader)
-		const on_read = (sse_response) => {
-
-			// fire update_info_node on every reader read chunk
-			render_response.update_info_node(
-				sse_response,
-				(info_node) => { // callback
-
-					const is_running = sse_response?.is_running ?? true
-
-					const compound_msg = (sse_response) => {
-						const data = sse_response.data
-						const parts = []
-						parts.push(data.msg)
-						if (data.counter) {
-							parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
-						}
-						if (data.section_label) {
-							parts.push(data.section_label)
-						}
-						if (data.current) {
-							if (data.current.section_id) {
-								parts.push('id: ' + data.current.section_id)
-							}
-						}
-						if (data.total_ms) {
-							parts.push( time_unit_auto(data.total_ms) )
-						}else if(sse_response.total_time) {
-							parts.push(sse_response.total_time)
-						}
-						if (data.current && data.current.time) {
-							// save in samples array to make average
-							if (ar_samples.length>50) {
-								ar_samples.shift() // remove older element
-							}
-							ar_samples.push(data.current.time)
-
-							const average			= get_average(ar_samples)
-							const remaining_ms		= ((data.total - data.counter) * average)
-							const remaining_time	= time_unit_auto(remaining_ms)
-							parts.push('Time remaining: ' + remaining_time)
-						}
-
-						return parts.join(' | ')
-					}
-
-					const msg = sse_response
-								&& sse_response.data
-								&& sse_response.data.msg
-								&& sse_response.data.msg.length>5
-						? compound_msg(sse_response)
-						: is_running
-							? 'Process running... please wait'
-							: 'Process completed in ' + sse_response.total_time
-
-					if(!info_node.msg_node) {
-						info_node.msg_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
-							parent			: info_node
-						})
-					}
-					ui.update_node_content(info_node.msg_node, msg)
-				}
-			)
-
-			last_sse_response = sse_response
-		}
-
-		// on_done event (called once at finish or cancel the stream read)
-		const on_done = () => {
-			// is triggered at the reader's closing
-			render_response.done()
-			// unlock lock_items
-			lock_items.forEach(el =>{
-				el.classList.remove('loading')
-			})
-			// render_process_report
-			render_process_report({
-				self,
-				last_sse_response,
-				container
-			})
-		}
+		// stream handlers (the SAME implementation the publish path uses)
+		const {on_read, on_done} = build_stream_handlers({
+			self,
+			item			: item,
+			container		: container,
+			render_response	: render_response,
+			lock_items		: lock_items
+		})
 
 		// read stream
 		data_manager.read_stream(stream, on_read, on_done)
+	})
+	.catch((error) => {
+		// request_stream REJECTS on a network failure or a non-2xx response
+		// (it used to leave the promise pending forever, which is why this
+		// handler did not exist). Behaviour here is unchanged — the reconnect
+		// simply does not happen — but the failure is now reported instead of
+		// surfacing as an unhandled rejection.
+		console.error('[tool_diffusion] could not follow process status:', error)
 	})
 }//end update_process_status
 
 
 
 /**
-* RENDER_PROCESS_REPORT
-* Render the post-completion report once a diffusion SSE stream finishes.
-*
-* Called from on_done in both publish_content and update_process_status.
-* Handles two mutually exclusive result shapes:
-*
-*  A) SQL engine result (engine_result.tables present):
-*     The Bun SQL engine appends a .tables array to the top-level SSE envelope.
-*     Renders a summary status badge (success / partial / fail) plus a grid of
-*     table names, affected rows, and unique record counts.  Also renders any
-*     error strings from engine_result.errors or the SSE envelope's .errors.
-*
-*  B) RDF / XML result (last_update_record_response set; engine_result.tables absent):
-*     Dispatches on last_update_record_response.class:
-*     - 'diffusion_rdf' / 'diffusion_xml': Bulk mode — if consolidated_files is
-*       present (merged_url + zip_url), shows two download buttons for the
-*       merged file and the ZIP archive.  Single-record mode — iterates
-*       diffusion_data[] and shows one download button per file_url.
-*     - default: no extra UI.
-*     Also renders any errors from last_update_record_response.errors.
+* LABEL_EN
+* English fallbacks for every string this report renders. The keys are final;
+* the translated rows land in tools/tool_diffusion/register.json in a separate
+* data-only commit, after which get_tool_label wins and these become the
+* fallback path only. Shipping literals first keeps THIS diff reviewable.
+* `{0}`-style placeholders are filled by printf (utils/util.js:571).
+*/
+const label_en = {
+	// verdicts
+	outcome_queued			: 'Queued',
+	outcome_running			: 'Running',
+	outcome_completed		: 'Completed',
+	outcome_partial			: 'Partial',
+	outcome_failed			: 'Failed',
+	outcome_cancelled		: 'Cancelled',
+	outcome_interrupted		: 'Interrupted',
+	outcome_gone			: 'Process no longer tracked',
+	outcome_unknown			: 'Unrecognised outcome',
+	// metrics + subject
+	metric_records			: '{0} records',
+	metric_rows				: '{0} rows written',
+	metric_files			: '{0} files written',
+	subject_started			: 'started {0}',
+	subject_last_id			: 'last id {0}',
+	subject_derived			: 'subject derived from the process id',
+	estimated				: 'estimated',
+	estimate_exceeded		: 'estimate exceeded',
+	// causes
+	causes					: 'Causes',
+	causes_dropped_note		: 'Per-record errors collected before the failure were not kept by the server. Only the causes above survive this run — see the server log.',
+	// files
+	files_title				: 'Files',
+	file_kind_merged		: 'merged',
+	file_kind_zip			: 'zip',
+	file_kind_file			: 'file',
+	files_unreported_note	: 'This format writes files (and a ZIP) to the diffusion files root, but the engine does not report their URLs. Use RDF or XML for downloadable output, or ask an administrator for the server path.',
+	// errors
+	errors_title			: 'Errors ({0})',
+	errors_none				: 'none',
+	errors_kept				: '{0} kept by server',
+	errors_capped_note		: 'Showing the {0} errors the server kept. More may have occurred; the complete list exists only in the server log.',
+	errors_occurrences		: '× {0}',
+	errors_more_ids			: '+{0} more',
+	error_source_job		: 'job',
+	show_raw_errors			: 'Show raw error list ({0} lines, verbatim)',
+	// tables
+	tables_title			: 'Tables',
+	classes_title			: 'Classes',
+	tables_census			: '{0} of {1} plan tables wrote rows',
+	tables_none_reported	: 'no table counts were reported for this run',
+	tables_partial			: 'partial — the run did not finish',
+	no_rows_note			: 'No plan table received any row. The run reported success but wrote nothing.',
+	col_table				: 'Table',
+	col_class				: 'Class',
+	col_rows_written		: 'Rows written',
+	col_rows_projected		: 'Rows projected',
+	col_db_rows_changed		: 'DB rows changed',
+	col_files_written		: 'Files written',
+	col_affected			: 'Affected',
+	delta_legend			: 'DB rows changed ≠ rows written: MariaDB counts 1 per insert, 2 per update, 0 when the row was already identical.',
+	row_total				: 'TOTAL · {0} tables',
+	show_zero_tables		: 'Show {0} tables that wrote nothing',
+	hide_zero_tables		: 'Hide tables that wrote nothing',
+	cancel_not_rollback		: 'A cancel is not a rollback. Everything committed before the stop stays published; the counts below are what actually landed.',
+	// controls + diagnostics
+	copy_tsv				: 'Copy TSV',
+	copied					: 'Copied',
+	diagnostics				: 'Diagnostics',
+	raw_response			: 'Raw response',
+	failure_message_raw		: 'Failure message (unsplit)',
+	legacy_wrapper			: 'Legacy response wrapper',
+	diag_job_state			: 'Job state',
+	diag_status_line		: 'Status line',
+	// The readout is a KEY column: its labels must be bare nouns. Reusing the
+	// sentence labels here ('started {0}', '{0} records') leaked a literal
+	// "{0}" into the UI, because a key is rendered with no printf arguments.
+	diag_started_at			: 'Started at',
+	diag_records_counted	: 'Records counted',
+	diag_process_id			: 'Process id',
+	diag_job_errors			: 'Job errors',
+	diag_wall_clock			: 'Wall clock',
+	// two DIFFERENT fields, so two different labels: data.current.time is the
+	// engine's running clock for the attempt, data.total_ms is the total it
+	// reports at the end. Labelling both the same made the readout look duplicated.
+	diag_attempt_elapsed	: 'This attempt, cumulative elapsed',
+	diag_reported_total_ms	: 'Reported total (ms)',
+	diag_last_batch			: 'Last batch committed',
+	diag_estimated_total	: 'Estimated total (client estimate, never corrected)',
+	diag_counted_note		: 'primary-section records only; linked records resolved through relations are not counted'
+}
+
+/** Diagnostics readout: wire path → its translated key. */
+const diag_key_of = {
+	'state'						: 'diag_job_state',
+	'process_id'				: 'diag_process_id',
+	'started_at'				: 'diag_started_at',
+	'total_time'				: 'diag_wall_clock',
+	'data.msg'					: 'diag_status_line',
+	'data.counter'				: 'diag_records_counted',
+	'data.total'				: 'diag_estimated_total',
+	'data.current.time'			: 'diag_attempt_elapsed',
+	'data.current.section_id'	: 'diag_last_batch',
+	'data.total_ms'				: 'diag_reported_total_ms',
+	'errors'					: 'diag_job_errors'
+}
+
+
+
+/**
+* BUILD_STREAM_HANDLERS
+* The ONE stream-reader implementation, shared by publish_content (a fresh run)
+* and update_process_status (reconnecting after a page reload). These two used
+* to hold byte-identical copies of the reader, the message formatter and the
+* completion hook — which is how a formatter silently drifts from its twin.
 *
 * @param {Object} options
-* @param {Object}      options.self              - tool_diffusion instance (for get_tool_label).
-* @param {Object}      [options.last_sse_response={}] - Final SSE envelope from the stream.
-*   .data.last_update_record_response  {Object}  RDF/XML per-record response.
-*   .data.diffusion_data               {Array}   Per-file metadata for individual downloads.
-*   .data.consolidated_files           {Object}  { merged_url, zip_url } for bulk RDF/XML.
-*   .result                            {Object}  SQL engine result ({ tables, result, errors, msg }).
-*   .total_time                        {string}  Human-readable total elapsed time.
-* @param {HTMLElement} options.container - Node to append the report into (response_message).
-* @returns {boolean} true on success, false when there is no data to report.
+* @param {Object}      options.self
+* @param {Object}      [options.item] - diffusion node descriptor (subject line)
+* @param {HTMLElement} options.container
+* @param {Object}      options.render_response - the render_stream panel API
+* @param {Array}       options.lock_items
+* @return {Object} { on_read, on_done }
 */
-const render_process_report = function(options) {
+const build_stream_handlers = function(options) {
 
-	// options
-		const self							= options.self
-		const last_sse_response				= options.last_sse_response || {}
-		const last_update_record_response	= last_sse_response.data?.last_update_record_response
-		const diffusion_data				= last_sse_response.data?.diffusion_data || []
-		const container						= options.container
+	const self				= options.self
+	const item				= options.item
+	const container			= options.container
+	const render_response	= options.render_response
+	const lock_items		= options.lock_items || []
 
-	// Bun SQL diffusion engine result (set at SSE top-level, not in last_update_record_response)
-		const engine_result = last_sse_response.result
-		if (engine_result?.tables) {
+	let last_sse_response = null
 
-			// wrapper
-			const report_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'diffusion_report',
-				parent			: container
-			})
+	// on_read (every chunk)
+	const on_read = (sse_response) => {
 
-			// helper: get label or fallback to English
-			const label_en = {
-				success          : 'Success',
-				partial_success  : 'Partial success',
-				fail             : 'Fail',
-				table_name       : 'Table',
-				rows_total       : 'Rows',
-				records_affected : 'Records'
-			}
-			const tl = (name) => self?.get_tool_label(name) || label_en[name] || name
+		render_response.update_info_node(
+			sse_response,
+			(info_node) => {
 
-			// summary status
-			const ok				= engine_result.result === true
-			const has_errors		= !!(engine_result.errors?.length)
-			const summary_class		= ok
-				? 'success'
-				: has_errors
-					? 'partial'
-					: 'fail'
-			const summary_label		= ok
-				? tl('success')
-				: has_errors
-					? tl('partial_success')
-					: tl('fail')
-			const total_time		= last_sse_response.total_time || ''
-			const summary_msg		= [summary_label, engine_result.msg || ''].filter(Boolean).join(' - ')
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'report_summary ' + summary_class,
-				text_content	: summary_msg + (total_time ? ' (' + total_time + ')' : ''),
-				parent			: report_node
-			})
+				const is_running = sse_response?.is_running ?? true
 
-			// tables grid
-			const grid = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'tables_report',
-				parent			: report_node
-			})
-			// headers
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'header table_name',
-				text_content	: tl('table_name'),
-				parent			: grid
-			})
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'header rows_total',
-				text_content	: tl('rows_total'),
-				parent			: grid
-			})
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'header records_count',
-				text_content	: tl('records_affected'),
-				parent			: grid
-			})
-			// table rows
-			engine_result.tables.forEach((table) => {
-				const total_rows	= table.records_affected || 0
-				const unique_recs	= table.records_count ?? total_rows
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'cell table_name',
-					text_content	: table.table_name || '',
-					parent			: grid
-				})
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'cell rows_total' + (total_rows === 0 ? ' zero' : ''),
-					text_content	: String(total_rows),
-					parent			: grid
-				})
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'cell records_count' + (unique_recs === 0 ? ' zero' : ''),
-					text_content	: String(unique_recs),
-					parent			: grid
-				})
-			})
-
-			// errors
-			const ar_errors = engine_result.errors || last_sse_response.errors || []
-			if (ar_errors.length) {
-				const error_list = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'error_list',
-					parent			: report_node
-				})
-				ar_errors.forEach((err) => {
-					ui.create_dom_element({
+				if (!info_node.msg_node) {
+					info_node.msg_node = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'error_item',
-						text_content	: err,
-						parent			: error_list
-					})
-				})
-			}
-			return true;
-		}
-
-	// last_update_record_response (RDF/XML only)
-		if (!last_update_record_response) {
-			return false
-		}
-
-	// class_name based actions
-		const type = last_update_record_response.class
-		// cases
-		switch (type) {
-
-			case 'diffusion_rdf':
-			case 'diffusion_xml': {
-				// RDF/XML export case.
-				// Bulk: show merged file + ZIP download buttons (consolidated_files present).
-				// Single record: show individual file download button (legacy behaviour).
-				const consolidated_files = last_sse_response.data?.consolidated_files
-
-				if (consolidated_files) {
-					// Bulk — consolidated output
-					const add_button = (file_url, label_key, fallback_label) => {
-						const name = file_url.split('/').pop()
-						const button = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'download warning',
-							text_content	: (get_label[label_key] || fallback_label) + ' ' + name,
-							parent			: container
-						})
-						button.addEventListener('click', function(e) {
-							e.stopPropagation()
-							open_window({ url : window.location.origin + file_url })
-						})
-					}
-					add_button(consolidated_files.merged_url, 'download_merged', 'Download merged')
-					add_button(consolidated_files.zip_url,    'download_zip',    'Download ZIP')
-
-				} else if (diffusion_data.length) {
-					// Single record — individual file(s)
-					diffusion_data.forEach((el) => {
-						const name = el.file_url.split('\\').pop().split('/').pop()
-						const button_download = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'download warning',
-							text_content	: (get_label.download || 'Download') + ' ' + name,
-							parent			: container
-						})
-						button_download.addEventListener('click', function(e) {
-							e.stopPropagation()
-							open_window({ url : window.location.origin + el.file_url })
-						})
+						class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
+						parent			: info_node
 					})
 				}
-				break;
+
+				// One owner per fact: this line carries the server's status
+				// message and NOTHING else — the counts, timings and ids it used
+				// to concatenate now live in the report panel below, each in one
+				// place. Set with textContent, never ui.update_node_content:
+				// that helper is insertAdjacentHTML (ui.js:2035), and data.msg
+				// carries server exception text and file paths straight from the
+				// engine. This is the XSS fix for both former call sites.
+				const line = (sse_response?.data?.msg)
+					? String(sse_response.data.msg)
+					: (is_running
+						? 'Process running… please wait'
+						: 'Process completed in ' + (sse_response?.total_time ?? ''))
+				info_node.msg_node.textContent = line
 			}
+		)
 
-			default:
-				// Nothing specific to do
-				break;
+		render_run_report({self, item, sse_response, container})
+
+		last_sse_response = sse_response
+	}
+
+	// on_done (once, at close or cancel)
+	const on_done = () => {
+
+		render_response.done()
+
+		lock_items.forEach(el => {
+			el.classList.remove('loading')
+		})
+
+		// idempotent: same chunk, same signature — a no-op unless the last
+		// read and the close disagree
+		render_run_report({self, item, sse_response:last_sse_response, container})
+	}
+
+	return {on_read, on_done}
+}//end build_stream_handlers
+
+
+
+/**
+* RENDER_RUN_REPORT
+* Render (or update in place) the run report panel.
+*
+* GATED ON NOTHING. Its predecessor required `engine_result.tables` to exist,
+* which meant a failed run — the case where a report matters most — rendered
+* nothing at all, and an rdf/xml run (whose `tables` is a truthy `[]`) could
+* never reach its download buttons. Both defects were properties of the branch
+* structure, so the structure is gone: every chunk produces a panel, and what
+* differs is only which zones open, per the severity ladder in report_model.js.
+*
+* Every node is built with text_content. No inner_html, no update_node_content.
+*
+* @param {Object} options
+* @param {Object}      options.self
+* @param {Object}      [options.item]
+* @param {Object}      options.sse_response - may be null → the unknown skeleton
+* @param {HTMLElement} options.container
+* @return {HTMLElement} the panel
+*/
+const render_run_report = function(options) {
+
+	const self			= options.self
+	const item			= options.item
+	const sse_response	= options.sse_response
+	const container		= options.container
+
+	if (!container) {
+		return null
+	}
+
+	// label resolver: translated key first, English literal second, key last
+	const tl = (key, ...rest) => {
+		const translated = self?.get_tool_label ? self.get_tool_label(key, ...rest) : null
+		if (translated) {
+			return translated
 		}
+		const literal = label_en[key] ?? key
+		return rest.length > 0 ? printf(literal, ...rest) : literal
+	}
 
-	// errors manager
-		const errors = last_update_record_response.errors || []
-		if (errors.length>0) {
+	// grouped numbers, so 1224190 reads as a quantity and not a serial number
+	const fmt_n = (n) => Number(n ?? 0).toLocaleString()
+
+	const model = build_report_model(sse_response, {
+		item			: item,
+		section_tipo	: item?.section_tipo ?? null
+	})
+
+	// panel lookup — updated in place, never appended twice
+	let panel = container.querySelector(':scope > .diffusion_report.run_report')
+	if (!panel) {
+		panel = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'diffusion_report run_report',
+			parent			: container
+		})
+	}
+
+	// Flicker guard: while running we get ~2 chunks/second. Rebuilding the DOM
+	// on each would fight the user's scroll and slam any disclosure they opened.
+	// The signature ignores the values that legitimately tick every chunk, so a
+	// pure progress update touches only three text nodes.
+	const signature = JSON.stringify({
+		outcome	: model.outcome,
+		severity: model.severity,
+		tables	: model.tables.rows.length,
+		nonzero	: model.tables.nonzero_count,
+		errors	: model.errors.total,
+		files	: model.files.entries.length,
+		causes	: model.causes.list.length
+	})
+	const progress_only = panel.dataset.signature === signature
+	if (progress_only) {
+		const metrics_node	= panel.querySelector('.run_metrics')
+		const fill_node		= panel.querySelector('.run_bar_fill')
+		const note_node		= panel.querySelector('.run_bar_note')
+		if (metrics_node)	metrics_node.textContent	= build_metrics_text(model, tl, fmt_n)
+		if (fill_node)		fill_node.style.width		= model.progress.percent + '%'
+		if (note_node)		note_node.textContent		= build_bar_note(model, tl)
+		return panel
+	}
+	panel.dataset.signature	= signature
+	panel.dataset.outcome	= model.outcome
+	panel.className			= 'diffusion_report run_report state_' + model.severity
+	panel.replaceChildren()
+
+	// ── verdict ──────────────────────────────────────────────────────────────
+	const verdict = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'run_verdict',
+		parent			: panel
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_badge state_' + model.severity,
+		text_content	: tl('outcome_' + model.outcome),
+		parent			: verdict
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'run_metrics',
+		text_content	: build_metrics_text(model, tl, fmt_n),
+		parent			: verdict
+	})
+	// the server's own sentence, shown when it carries meaning beyond the badge
+	if (model.headline && model.severity !== 'ok') {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'run_headline',
+			text_content	: model.headline,
+			parent			: panel
+		})
+	}
+
+	// ── subject ──────────────────────────────────────────────────────────────
+	const subject_parts = []
+	if (model.subject.label)		subject_parts.push(model.subject.label)
+	else if (model.subject.element_tipo) subject_parts.push(model.subject.element_tipo)
+	if (model.subject.section_tipo)	subject_parts.push('→ ' + model.subject.section_tipo)
+	if (model.format)				subject_parts.push(model.format.toUpperCase())
+	if (model.subject.started_at_ms) {
+		subject_parts.push(tl('subject_started', new Date(model.subject.started_at_ms).toLocaleTimeString()))
+	}
+	if (model.is_running && model.subject.last_section_id !== null) {
+		subject_parts.push(tl('subject_last_id', model.subject.last_section_id))
+	}
+	if (model.subject.derived_from_process_id) {
+		subject_parts.push('(' + tl('subject_derived') + ')')
+	}
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'run_subject',
+		text_content	: subject_parts.join(' · '),
+		parent			: panel
+	})
+
+	// ── progress ─────────────────────────────────────────────────────────────
+	if (model.progress.show) {
+		const progress_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'run_progress',
+			parent			: panel
+		})
+		const bar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'run_bar',
+			parent			: progress_node
+		})
+		const fill = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'run_bar_fill',
+			parent			: bar
+		})
+		fill.style.width = model.progress.percent + '%'
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'run_bar_note',
+			text_content	: build_bar_note(model, tl),
+			parent			: progress_node
+		})
+	}
+
+	// ── causes (failure) ─────────────────────────────────────────────────────
+	if (model.causes.list.length > 0) {
+		const zone = build_zone(panel, 'zone_causes', tl('causes'), model.causes.list.length)
+		const list = ui.create_dom_element({
+			element_type	: 'ol',
+			class_name		: 'run_cause_list',
+			parent			: zone
+		})
+		model.causes.list.forEach((cause) => {
+			ui.create_dom_element({
+				element_type	: 'li',
+				class_name		: 'run_cause',
+				text_content	: cause,
+				parent			: list
+			})
+		})
+		if (model.causes.dropped) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'error',
-				text_content	: errors.join(' | '),
-				parent			: container
+				class_name		: 'dd_note state_warning causes_dropped_note',
+				text_content	: tl('causes_dropped_note'),
+				parent			: zone
+			})
+		}
+	}
+
+	// ── files ────────────────────────────────────────────────────────────────
+	if (model.files.entries.length > 0 || model.files.unreported_format) {
+		const zone = build_zone(panel, 'zone_files', tl('files_title'), model.files.entries.length)
+		if (model.files.entries.length > 0) {
+			const grid = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_table files_table',
+				parent			: zone
+			})
+			model.files.entries.forEach((entry) => {
+				const row = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_tr',
+					parent			: grid
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_td kind',
+					text_content	: tl('file_kind_' + entry.kind),
+					parent			: row
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_td name',
+					text_content	: entry.name,
+					parent			: row
+				})
+				const act = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_td act',
+					parent			: row
+				})
+				const button = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'download warning',
+					text_content	: (get_label.download || 'Download'),
+					parent			: act
+				})
+				button.addEventListener('click', function(e) {
+					e.stopPropagation()
+					open_window({url : window.location.origin + entry.url})
+				})
+			})
+		}
+		if (model.files.unreported_format) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note state_warning files_unreported_note',
+				text_content	: tl('files_unreported_note'),
+				parent			: zone
+			})
+		}
+	}
+
+	// ── errors ───────────────────────────────────────────────────────────────
+	{
+		const zone = build_zone(panel, 'zone_errors', tl('errors_title', model.errors.total), null)
+		if (model.errors.total === 0) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_empty',
+				text_content	: tl('errors_none'),
+				parent			: zone
+			})
+		} else {
+			if (model.errors.capped) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_note state_warning errors_capped',
+					text_content	: tl('errors_capped_note', model.errors.total),
+					parent			: zone
+				})
+			}
+			model.errors.groups.forEach((group) => {
+				const group_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error_group',
+					parent			: zone
+				})
+				const head = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error_group_head',
+					parent			: group_node
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'error_text',
+					text_content	: group.text,
+					parent			: head
+				})
+				if (group.count > 1) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'dd_badge error_count',
+						text_content	: tl('errors_occurrences', group.count),
+						parent			: head
+					})
+				}
+				if (group.source === 'job') {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'dd_badge job',
+						text_content	: tl('error_source_job'),
+						parent			: head
+					})
+				}
+				if (group.ids.length > 0) {
+					const shown = group.ids.slice(0, 3)
+					const rest	= group.ids.length - shown.length
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error_ids',
+						text_content	: shown.join(', ') + (rest > 0 ? ', ' + tl('errors_more_ids', rest) : ''),
+						parent			: group_node
+					})
+				}
+			})
+			// verbatim list + TSV — grouping is a view, never the only copy
+			const raw_toggle = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'run_toggle toggle_raw_errors',
+				text_content	: tl('show_raw_errors', model.errors.raw.length),
+				parent			: zone
+			})
+			const raw_errors = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'run_console raw_errors hide',
+				text_content	: model.errors.raw.join('\n'),
+				parent			: zone
+			})
+			add_toggle(raw_toggle, raw_errors, 'collapsed_tool_diffusion_report_errors_raw', false)
+			add_copy_button(zone, () => tsv_errors(model), tl)
+		}
+	}
+
+	// ── tables ───────────────────────────────────────────────────────────────
+	{
+		const is_class_list	= model.format === 'rdf' || model.format === 'xml'
+		const zone			= build_zone(
+			panel,
+			'zone_tables',
+			tl(is_class_list ? 'classes_title' : 'tables_title'),
+			null
+		)
+		// the census rides on the zone's own eyebrow, NOT a sibling lookup
+		const census_text = model.tables.none_reported
+			? ''
+			: (model.outcome === 'cancelled' || model.outcome === 'interrupted'
+				? tl('tables_partial')
+				: tl('tables_census', model.tables.nonzero_count, model.tables.total_count))
+		const tables_eyebrow = zone.querySelector(':scope > .dd_eyebrow')
+		if (census_text !== '' && tables_eyebrow) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'zone_count',
+				text_content	: census_text,
+				parent			: tables_eyebrow
 			})
 		}
 
+		if (model.outcome === 'cancelled') {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note state_warning',
+				text_content	: tl('cancel_not_rollback'),
+				parent			: zone
+			})
+		}
+		if (model.all_zero_anomaly) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note state_warning no_rows_note',
+				text_content	: tl('no_rows_note'),
+				parent			: zone
+			})
+		}
 
-	return true
-}//end render_process_report
+		if (model.tables.none_reported) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_empty',
+				text_content	: tl('tables_none_reported'),
+				parent			: zone
+			})
+		} else {
+			const grid = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_table tables_report',
+				parent			: zone
+			})
+			const col_left	= is_class_list ? 'col_class' : 'col_table'
+			const col_mid	= (model.is_file_format && !model.is_table_format) ? 'col_rows_projected' : 'col_rows_written'
+			const col_right	= model.is_table_format
+				? 'col_db_rows_changed'
+				: (model.is_file_format ? 'col_files_written' : 'col_affected')
+			;[[col_left,''], [col_mid,' num'], [col_right,' num']].forEach(([key, extra]) => {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_th' + extra,
+					text_content	: tl(key),
+					parent			: grid
+				})
+			})
+			// The grid is FLAT: the three heading cells are direct children of the
+			// .dd_table and are laid out by grid-template-columns, so there is no
+			// header ROW element to create. The heading TEXT is format-dependent —
+			// the same two numbers mean different things per target (sql: rows
+			// written vs rows MariaDB reports changed; rdf/xml: rows projected vs
+			// files written) — and falls back to a neutral word when the format is
+			// unknown rather than asserting either meaning.
+
+			// non-zero first (the signal), then every zero row in PLAN ORDER,
+			// hidden but present — "show all" is a class flip, never a re-fetch
+			const append_row = (row) => {
+				const tr = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_tr' + (row.zero ? ' zero hide' : ''),
+					parent			: grid
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_td target',
+					text_content	: row.table_name,
+					parent			: tr
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_td num',
+					text_content	: fmt_n(row.records_count),
+					parent			: tr
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_td num' + (row.delta ? ' flag_delta' : ''),
+					text_content	: fmt_n(row.records_affected),
+					parent			: tr
+				})
+				return tr
+			}
+			model.tables.rows.filter(r => !r.zero).forEach(append_row)
+			const zero_rows = model.tables.rows.filter(r => r.zero).map(append_row)
+
+			// totals
+			const total_row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_tr total_row',
+				parent			: grid
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_td target',
+				text_content	: tl('row_total', model.tables.total_count),
+				parent			: total_row
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_td num',
+				text_content	: fmt_n(model.tables.totals.records_count),
+				parent			: total_row
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_td num',
+				text_content	: fmt_n(model.tables.totals.records_affected),
+				parent			: total_row
+			})
+
+			if (model.tables.any_delta) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_note delta_legend',
+					text_content	: tl('delta_legend'),
+					parent			: zone
+				})
+			}
+			if (zero_rows.length > 0) {
+				const zero_toggle = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'run_toggle toggle_zero_tables',
+					text_content	: tl('show_zero_tables', zero_rows.length),
+					parent			: zone
+				})
+				let zeros_open = model.zone_open.tables_zeros
+				const paint_zeros = () => {
+					zero_rows.forEach(tr => tr.classList.toggle('hide', !zeros_open))
+					zero_toggle.textContent = zeros_open
+						? tl('hide_zero_tables')
+						: tl('show_zero_tables', zero_rows.length)
+					zero_toggle.classList.toggle('open', zeros_open)
+				}
+				paint_zeros()
+				zero_toggle.addEventListener('click', () => {
+					zeros_open = !zeros_open
+					paint_zeros()
+				})
+			}
+			add_copy_button(zone, () => tsv_tables(model), tl)
+		}
+	}
+
+	// ── diagnostics ──────────────────────────────────────────────────────────
+	{
+		const zone = build_zone(panel, 'zone_diagnostics', null, null)
+		const diag_toggle = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'run_toggle toggle_diagnostics',
+			text_content	: tl('diagnostics'),
+			parent			: zone
+		})
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'diagnostics_body hide',
+			parent			: zone
+		})
+		add_toggle(diag_toggle, body, 'collapsed_tool_diffusion_report_diagnostics', model.zone_open.diagnostics)
+
+		// ENUMERATED, never hand-listed: report_model emits every wire path a
+		// primary zone did not consume, so a field added to the wire tomorrow
+		// appears here by itself instead of vanishing from the UI.
+		const readout = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_readout',
+			parent			: body
+		})
+		model.diagnostics.forEach((entry) => {
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_row' + (entry.kind === 'unknown' ? ' uncurated' : ''),
+				parent			: readout
+			})
+			const key_text = entry.kind === 'known' && diag_key_of[entry.path]
+				? tl(diag_key_of[entry.path])
+				: entry.path
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'dd_k',
+				text_content	: key_text,
+				parent			: row
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'dd_v',
+				text_content	: (entry.value === null || entry.value === undefined)
+					? '—'
+					: (typeof entry.value === 'object' ? JSON.stringify(entry.value) : String(entry.value)),
+				parent			: row
+			})
+		})
+
+		// the unsplit failure text, in case the split ever mangles it
+		if (model.causes.raw) {
+			add_console_disclosure(body, tl('failure_message_raw'), model.causes.raw,
+				'failure_message_raw', 'collapsed_tool_diffusion_report_failure_raw', false)
+		}
+		if (model.legacy_wrapper) {
+			add_console_disclosure(body, tl('legacy_wrapper'), model.legacy_wrapper,
+				'legacy_wrapper', 'collapsed_tool_diffusion_report_legacy', false)
+		}
+		// the complete chunk, verbatim — this is what display_json_box used to
+		// dump unconditionally at the top of the panel
+		add_console_disclosure(body, tl('raw_response'), model.raw_json,
+			'raw_response', 'collapsed_tool_diffusion_report_raw', model.zone_open.raw)
+	}
+
+	return panel
+}//end render_run_report
+
+
+
+/**
+* BUILD_METRICS_TEXT
+* The verdict's one-line quantity summary. Rows for table targets, files for
+* file targets; the record count always leads because it is the thing the user
+* asked to publish.
+*
+* @param {Object} model
+* @param {Function} tl
+* @param {Function} fmt_n
+* @return {string}
+*/
+const build_metrics_text = function(model, tl, fmt_n) {
+
+	const parts = []
+
+	if (model.is_running) {
+		parts.push(fmt_n(model.metrics.counter) + (model.metrics.total > 0 ? ' / ' + fmt_n(model.metrics.total) : ''))
+	} else {
+		parts.push(tl('metric_records', fmt_n(model.metrics.counter)))
+	}
+	if (model.files.entries.length > 0) {
+		parts.push(tl('metric_files', fmt_n(model.files.entries.length)))
+	} else if (!model.tables.none_reported) {
+		parts.push(tl('metric_rows', fmt_n(model.metrics.sum_records_count)))
+	}
+	if (model.metrics.total_time) {
+		parts.push(model.metrics.total_time)
+	} else if (model.metrics.total_ms !== null) {
+		parts.push(time_unit_auto(model.metrics.total_ms))
+	}
+
+	return parts.join(' · ')
+}//end build_metrics_text
+
+
+
+/**
+* BUILD_BAR_NOTE
+* Progress-bar caption. `total` is a CLIENT estimate the server never corrects,
+* so it is always labelled as such — and when the counter overtakes it we say
+* so rather than rendering a bar past 100 %.
+*
+* @param {Object} model
+* @param {Function} tl
+* @return {string}
+*/
+const build_bar_note = function(model, tl) {
+	return model.progress.exceeded
+		? tl('estimate_exceeded')
+		: model.progress.percent + ' % (' + tl('estimated') + ')'
+}//end build_bar_note
+
+
+
+/**
+* BUILD_ZONE
+* One report section: an eyebrow heading plus its body. Returns the body.
+*
+* @param {HTMLElement} panel
+* @param {string} class_name
+* @param {string|null} title
+* @param {number|null} count
+* @return {HTMLElement}
+*/
+const build_zone = function(panel, class_name, title, count) {
+
+	const zone = ui.create_dom_element({
+		element_type	: 'section',
+		class_name		: 'run_zone ' + class_name,
+		parent			: panel
+	})
+	if (title) {
+		const head = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_eyebrow',
+			text_content	: title,
+			parent			: zone
+		})
+		if (count !== null && count !== undefined) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'zone_count',
+				text_content	: String(count),
+				parent			: head
+			})
+		}
+	}
+	return zone
+}//end build_zone
+
+
+
+/**
+* ADD_TOGGLE
+* Wire a show/hide control. When `force_open` the zone is rendered OPEN with a
+* plain toggle and its state is NOT persisted: a danger-severity panel must not
+* be able to hide its own evidence because the user collapsed it three runs ago.
+* collapse_toggle_track resolves asynchronously off the local DB, so it would
+* also race a post-hoc classList change.
+*
+* @param {HTMLElement} toggler
+* @param {HTMLElement} body
+* @param {string} collapsed_id
+* @param {boolean} force_open
+* @return {void}
+*/
+const add_toggle = function(toggler, body, collapsed_id, force_open) {
+
+	if (force_open===true) {
+		body.classList.remove('hide')
+		toggler.classList.add('open')
+		toggler.addEventListener('click', () => {
+			const hidden = body.classList.toggle('hide')
+			toggler.classList.toggle('open', !hidden)
+		})
+		return
+	}
+
+	ui.collapse_toggle_track({
+		toggler			: toggler,
+		container		: body,
+		collapsed_id	: collapsed_id,
+		default_state	: 'closed'
+	})
+}//end add_toggle
+
+
+
+/**
+* ADD_CONSOLE_DISCLOSURE
+* A labelled toggle over a monospace <pre>. Used for every verbatim payload.
+*
+* @param {HTMLElement} parent
+* @param {string} label
+* @param {string} text
+* @param {string} class_name
+* @param {string} collapsed_id
+* @param {boolean} force_open
+* @return {void}
+*/
+const add_console_disclosure = function(parent, label, text, class_name, collapsed_id, force_open) {
+
+	const toggler = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'run_toggle',
+		text_content	: label,
+		parent			: parent
+	})
+	const pre = ui.create_dom_element({
+		element_type	: 'pre',
+		class_name		: 'run_console ' + class_name + ' hide',
+		text_content	: text,
+		parent			: parent
+	})
+	add_toggle(toggler, pre, collapsed_id, force_open)
+}//end add_console_disclosure
+
+
+
+/**
+* ADD_COPY_BUTTON
+* Copy-to-clipboard for a TSV payload. On a non-secure origin the Clipboard API
+* rejects; rather than failing silently we reveal the text and select it so the
+* user can copy by hand.
+*
+* @param {HTMLElement} parent
+* @param {Function} get_text
+* @param {Function} tl
+* @return {void}
+*/
+const add_copy_button = function(parent, get_text, tl) {
+
+	const button = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'copy_tsv',
+		text_content	: tl('copy_tsv'),
+		parent			: parent
+	})
+	button.addEventListener('click', (e) => {
+		e.stopPropagation()
+		const text = get_text()
+		const done = () => {
+			button.textContent = tl('copied')
+			setTimeout(() => { button.textContent = tl('copy_tsv') }, 2000)
+		}
+		if (navigator.clipboard && window.isSecureContext) {
+			navigator.clipboard.writeText(text).then(done).catch(() => fallback_select(parent, text))
+			return
+		}
+		fallback_select(parent, text)
+	})
+}//end add_copy_button
+
+
+
+/**
+* FALLBACK_SELECT
+* Clipboard unavailable: show the payload and select it, never fail quietly.
+*
+* @param {HTMLElement} parent
+* @param {string} text
+* @return {void}
+*/
+const fallback_select = function(parent, text) {
+
+	let pre = parent.querySelector(':scope > pre.run_console.copy_fallback')
+	if (!pre) {
+		pre = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'run_console copy_fallback',
+			text_content	: text,
+			parent			: parent
+		})
+	}
+	pre.classList.remove('hide')
+	pre.textContent = text
+	const range = document.createRange()
+	range.selectNodeContents(pre)
+	const selection = window.getSelection()
+	selection.removeAllRanges()
+	selection.addRange(range)
+}//end fallback_select
+
 
 
 

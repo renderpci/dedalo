@@ -2924,7 +2924,556 @@ related geolocation); the TS list is deduped. On the shipped ontology (rsc36
 declares both) the output is identical bytes. Gate:
 `test/unit/tags_persons.test.ts` (toolbar_buttons block).
 
-## WC-067 — `dd_component_text_area_api::get_tags_info` ported; `delete_tag` deliberately absent (2026-07-30)
+# WC-067 — `get_diffusion_info` node `connection_status` is `{result,msg}|null` (2026-07-29)
+
+- **Date:** 2026-07-29 (tool_diffusion accordion showed an EMPTY "Connection
+  status" value; root-caused the same day).
+- **Decision:** restore the PHP OBJECT contract the client was always written
+  against, and make the verdict a REAL target-database probe instead of a
+  compile-time writer-registry lookup.
+- **Shape before (PHP):** `dd_diffusion_api::get_diffusion_info` →
+  `diffusion_utils::get_section_diffusion_nodes` (`class.diffusion_utils.php:245-289`)
+  emitted **exactly** `{tipo, model, label, parents[], children[]}` — no `type`
+  and no `connection_status`. The `connection_status` object itself existed on
+  the SIBLING surface `get_diffusion_map` (`:945` →
+  `get_connection_status :971`), where it was `{result:bool, msg:string}` for
+  `type === 'sql'` and `null` for every other type (`default: // ignore`,
+  `:1002`); PHP obtained the verdict by asking the (now retired) external Bun
+  engine `check_database` (`database_exits :1013`). The retired external engine
+  stamped readiness onto the info nodes, which is why the copied client reads
+  it there.
+- **Shape after (TS):** each `section_diffusion_nodes[]` entry carries the two
+  ADDITIVE fields `type: string|null` (element `properties->diffusion->type`,
+  resolved from the parents path) and
+  `connection_status: {result: boolean, msg: string} | null`:
+  - `null` whenever the element does not publish into a MariaDB database —
+    the client's truthiness gate then omits the whole row (PHP's null rule);
+  - otherwise a live `SELECT 1` against the resolved target database
+    (`getDatabaseNameForElement`), with PHP's **verbatim** strings
+    `"Database is ready."` / `"Database is NOT ready (missing or engine
+    unreachable)."`.
+  The probed name is the label put through `requireSqlIdentifier`, the SAME
+  chokepoint the publish plan (`compile.ts:576`) and the delete map
+  (`diffusion_map.ts:488`) use — `getDatabaseNameForElement` returns the raw
+  institution-editable ontology label, and that helper NORMALIZES (lowercase,
+  non-`[a-z0-9_]` → `_`). Probing the raw label would address a DIFFERENT
+  database than the one written to (`Web MDCAT` publishes to `web_mdcat`) and
+  report a healthy target as dead — the DIFF-A raw-vs-sanitized drift
+  (`src/core/db/sql_identifier.ts:5-16`) on the read side. Pinned by the
+  `probe addresses the SANITIZED database` test.
+- **Deviations from the PHP strings/semantics (the only three):**
+  1. **`socrata` also answers.** PHP answered for `'sql'` alone. Natively
+     `socrata` publishes through the same MariaDB table target
+     (`TABLE_FORMATS`, `src/diffusion/plan/formats.ts`), so the verdict is
+     meaningful for it and suppressing it would be a lie by omission. Both
+     formats come from ONE list, shared with the plan compiler's identifier
+     chokepoint — never a fork.
+  2. **An unresolvable target database name** — no `database`/`database_alias`
+     node on the element path, OR a label that cannot sanitize to a valid
+     identifier — yields the same `result:false` object plus a
+     `console.warn`, where PHP would have asked the engine with an empty name.
+     The compiler treats that state as a compile ERROR; an observability panel
+     must render "not ready", not throw and blank the accordion.
+  3. **The probe never evicts the writer's pool.** `probeTargetDatabase()`
+     (the writer `open()` gate) closes and evicts the shared pool on failure;
+     an admin opening a panel must not tear down a pool a live publication is
+     using, so `getTargetDatabaseStatus()` is a separate non-evicting,
+     non-throwing path with a 3s ceiling (Bun's default `connectionTimeout` is
+     30s — a black-holed host would otherwise hang the request) and a 10s
+     per-database memo so N panels cost ONE round-trip.
+- **Interim TS defect this closes (never shipped to a fixture):** between the
+  native-diffusion cutover and today, `src/diffusion/api/info.ts:47/:114`
+  emitted the BARE STRING `'ok' | 'unavailable'` stamped from
+  `WRITER_REGISTRY.has(type)` — a compile-time "do we have a writer" fact, not
+  reachability. The client rendered the label (a string is truthy), a BLANK
+  value (`'ok'.msg` is undefined) and css class `value fail`
+  (`'ok' === true` is false) for every node including healthy ones.
+- **Gate reconciliation:** **no re-harvest, and no parity gate moves.** The
+  frozen fixture's only `connection_status` occurrences
+  (`test/parity/fixtures/oracle_harvest/widgets_differential.json:11414/:11428/:11442`)
+  belong to the `publication_api` widget's `value.diffusion_map` — the
+  `get_diffusion_map` surface, NOT `get_diffusion_info` — and
+  `test/parity/widgets_differential.test.ts:98-120` omits the `value` key from
+  the byte compare for all widgets. No fixture is edited. The new contract is
+  held mechanically by `test/unit/diffusion_connection_status.test.ts`
+  (`{result,msg}|null`, never a bare string; null exactly for non-MariaDB
+  formats; probe failure degrades instead of throwing; the format list is the
+  compiler's; the client still reads `.result`/`.msg`) plus the compile-time
+  type pin, and the memo is allowlisted with its lifecycle in
+  `test/unit/module_state_tripwire.test.ts`.
+
+## WC-068 — `get_diffusion_info` node `parents[]` carries `label` (+ `type`) (2026-07-29)
+
+- **Date:** 2026-07-29 (same-day sibling of WC-065: the accordion panel HEADER
+  rendered empty).
+- **Decision:** emit the oracle's full path item instead of a two-key stub.
+- **Shape before (TS):** `src/diffusion/api/info.ts` mapped the path to
+  `{tipo, model}` only. The client's panel header text IS
+  `diffusion_element_parent.label` (`render_tool_diffusion.js:493`) and its
+  group key IS `diffusion_group_parent.label` (`:462`), so both were
+  `undefined`. `ui.create_dom_element` guards its text setter with
+  `else if(options.text_content)` (`ui.js:1863`), so the header silently
+  rendered EMPTY rather than the string "undefined" — the blank bar above the
+  panel grid. `diffusion_element_parent.type` (`:484`, feeding the `:842`
+  per-format switch) was likewise undefined.
+- **Shape after (TS):** `{tipo, model, label}` plus `type` **only** on
+  `diffusion_element` / `diffusion_element_alias` items — byte-for-byte the
+  oracle's path item (`class.diffusion_utils.php:345-352`, emitted verbatim by
+  `$item->parents = $vnode->parents` at `:265`). `virtual_tree.ts:482-491`
+  already built exactly this, including PHP's `?? 'unknown'` type fallback;
+  only the emit dropped it, so no builder change was needed.
+- **Deliberate omission:** `VirtualPathItem.realTipo` is NOT emitted. It is a
+  TS-only alias-resolution memo (it replaces PHP's on-demand
+  `resolve_node_with_alias` call); the oracle never had it on the wire and the
+  client has no use for it. Pinned negatively by the gate.
+- **Gate reconciliation:** no fixture moves — `get_diffusion_info` has no
+  frozen oracle fixture (see WC-065's reconciliation for why the only
+  `connection_status` occurrences belong to the `get_diffusion_map` widget
+  surface). Held mechanically by `test/unit/diffusion_info_parents.test.ts`:
+  the pure `toWirePathItem` mapper's exact key sets for element vs non-element
+  items, `realTipo` never present, a null label staying null, and the client
+  welding pins on `:493`/`:462`/`:484`.
+
+## WC-069 — `dd_diffusion_api::follow_queue`, the admin queue stream (2026-07-29)
+
+- **Date:** 2026-07-29.
+- **Decision:** add an eighth `dd_diffusion_api` action — a global-admin SSE
+  stream carrying the whole ACTIVE diffusion queue plus scheduler state, so the
+  `diffusion_server_control` maintenance widget can show live publication
+  progress instead of a snapshot behind a Refresh button.
+- **No PHP oracle.** TS-only wire, like WC-064/065/066. The retired engine had
+  no queue-wide observer at all: its `get_process_status` followed one process
+  id out of an in-memory store, and the durable job queue this streams did not
+  exist. There is nothing to be byte-compatible with, so nothing here is pinned
+  against a fixture — the contract is the gate named below.
+- **Why not the widget API.** The obvious home was a `widget_request` action on
+  `diffusion_server_control`, and it cannot work:
+  `dd_area_maintenance_api.ts` constructs its `ApiResult` as `{status:200, body}`
+  from a `WidgetResponse` (`support.ts`), which has no `stream` slot, so
+  `server.ts`'s `outcome.stream` branch can never fire for a widget action; and
+  the widget transport is `data_manager.request` with `use_worker:true`, which
+  never touches `response.body`. The widget therefore keeps `widget_request` for
+  its mutations and opens this stream directly with
+  `data_manager.request_stream` — the documented "shared/infra logic" exception
+  to the widget-API policy.
+- **Shape.** One frame per observable change, in the EXISTING padded SSE framing
+  (`data:\n{json}` padded to 16384 then `\n\n`) so `data_manager.read_stream`
+  parses it with zero client transport changes — `encodeSseChunk` and
+  `encodeQueueSseChunk` share one private encoder precisely so the two wires
+  cannot drift apart:
+
+      { kind: 'diffusion_queue',            // discriminator; the client rejects
+                                            // anything else, including
+                                            // read_stream's synthetic first frame
+        at: <epoch ms>,                     // VOLATILE — stripped from the change
+                                            // signature, or a quiet queue would
+                                            // emit a frame every poll
+        scheduler: { running, queued, max_runners, paused, stale_after_seconds },
+        jobs: [ { job_id, process_id, state, counter, total, msg,
+                  cancel_requested, attempt, max_attempts } ],
+        membership: '<sorted job_id join>', // the client's "set changed" test
+        refresh:   <bool>,                  // membership moved since the last
+                                            // frame → the client refetches the
+                                            // 24h history ONCE
+        reconnect?: true,                   // only on the max-lifetime frame
+        errors: [] }
+
+- **The job key set is the contract.** Nine keys, and deliberately NOT
+  `mapJobToClient`'s: `spec` (the whole sanitized SQO), `checkpoint`, `result`,
+  `runner`, `owner_user_id` and `errors[]` (unbounded, appended per failing
+  field) are excluded. This frame is re-serialized once a second for every
+  connected admin, so the narrow set is the cost bound; and because the frames
+  name EVERY owner's jobs to a global admin, it is also the data-minimisation
+  bound. Those fields remain available on the widget's `get_value`, which is
+  read on open and on membership change — not per second.
+- **Scope.** Global admin only, checked once at open, before any queue read.
+  Strictly more sensitive than its owner-scoped siblings
+  (`get_process_status` / `list_processes` / `cancel_process`), which is why it
+  does not reuse `ownerScope()`.
+- **The refusal is an SSE frame, not a JSON envelope** — a deliberate divergence
+  from every other action on this class. `data_manager.request_stream` resolves
+  `response.body` and discards the `Response`, so a stream client cannot observe
+  a status code or a content-type; a JSON refusal yields no `data:\n…\n\n`
+  framing, `read_stream` never fires `on_read`, and the caller hangs forever. A
+  non-admin therefore receives one framed frame carrying
+  `errors:['insufficient permissions']`, empty `jobs`, and a close. Same
+  precedent as `getProcessStatusAction`'s missing-id refusal.
+- **Cadence and lifetime.** 1000 ms poll (not the 500 ms diffuse cadence — the
+  underlying counter moves once per `DEDALO_DIFFUSION_BATCH_RECORDS` batch, so
+  polling faster only burns CPU), an UNCONDITIONAL 15 s comment heartbeat, and a
+  15-minute hard lifetime whose final frame sets `reconnect:true`. The heartbeat
+  is load-bearing rather than cosmetic: the only in-process signal that the peer
+  is gone is the enqueue throw in `push()`, and on an idle queue the change
+  signature suppresses every frame, so without it a closed browser tab would
+  leave a poll loop running. The deadline bounds any leak without relying on
+  Bun's `cancel()` firing on a dropped socket (untested in this codebase), and
+  bounds the stale-authorization window. There is no client-settable
+  `update_rate`: a queue-wide stream at the 250 ms floor `get_process_status`
+  allows would be a self-inflicted DoS.
+- **Reader.** The tick runs exactly one statement, `listActiveJobs`
+  (`state IN ('queued','running')`, served by the partial index
+  `<table>_state_idx`, jsonb projected to scalars in SQL, counts as window
+  aggregates so `LIMIT 100` is an output cap and never a correctness cap). It
+  must never call `listJobsForCaller` (24h/200 rows of whole jsonb columns) or
+  `countPendingDiffusion` (a GIN containment COUNT over a multi-hundred-MB
+  table).
+- **`pg_notify` stays forward-compatibility.** `LISTEN` was evaluated and
+  rejected for now: the poll is one indexed sub-millisecond statement per second
+  per admin, and the runner is a separate process so the in-process fan-out
+  pattern in `core/media/jobs.ts` has nothing local to observe. Recorded in
+  `engineering/DIFFUSION_SPEC.md` §4.2 so it stops being re-litigated.
+- **Gate reconciliation:** no fixture moves — the per-job framing bytes are
+  unchanged (shared encoder, asserted by `test/unit/diffusion_sse.test.ts`), and
+  `get_value`'s `mapJobToClient` shape is untouched. Held mechanically by
+  `test/unit/diffusion_queue_stream_tripwire.test.ts` (key allowlist, forbidden
+  fields, reader purity, query narrowness) and
+  `test/unit/diffusion_queue_stream.test.ts` (quiet-when-unchanged, membership
+  marker, heartbeat-on-idle, deadline, error frame, refusal frame).
+
+### WC-069 addendum — the client consumer (2026-07-29)
+
+Recorded with the frame because the consumer's constraints are what the frame
+shape is FOR, and a future editor reading only the wire half would not see them.
+
+- **Who reads it.** `diffusion_server_control`'s live layer
+  (`client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/live_diffusion_server_control.js`),
+  opened through `data_manager.request_stream` — never `widget_request`, which
+  structurally cannot carry a stream (see the main entry).
+- **A frame PATCHES, it never rebuilds.** The widget's own
+  `refresh({destroy:true})` replaces the entire DOM; doing that once a second
+  would destroy focus, the value being typed into the purge-hours input, and the
+  scroll position. So a frame writes a fixed set of text nodes and one bar width.
+  A ROW is rebuilt only when its structural signature changes (state /
+  cancel_requested / bar shape — deliberately NOT the counter, or every frame
+  would rebuild), and the 24h history is refetched only when the frame's
+  `membership` marker moves. That is the whole reason `refresh` exists on the
+  frame instead of the client diffing job lists itself.
+- **`reconnect: true` is routine, not an error.** The 15-minute lifetime cap
+  fires it; the client reopens and must not show a failure state.
+- **Degradation is strictly additive.** Open failure, mid-stream drop, an
+  `errors[]` frame or a non-admin refusal all leave exactly the widget that
+  existed before — a static snapshot with a working Refresh button and working
+  action buttons. The live layer never applies the `lock` class, never disables a
+  control, and never blanks a number it can no longer refresh. A broken feed
+  degrades to "not live", never to "not usable"; the state chip is the only
+  place that says which.
+- **The 24h `failed` count is NOT on this wire, on purpose.** The stream reads
+  only ACTIVE rows, so the rollup band's failed count comes from `get_value` and
+  refreshes on membership change. Its caption says "(24 h)" so a number that is
+  minutes stale can never be read as a live alarm.
+- **Percentages are estimates and say so.** Both the per-row bar and the band's
+  aggregate derive from `total`, which is the client's enqueue-time estimate that
+  the server never re-counts (`queue.ts` writes `totals.total` once). Hence the
+  `(estimated)` suffix, the `Estimate exceeded` state instead of a >100% bar, and
+  the aggregate being record-weighted `SUM(counter)/SUM(total)` over running jobs
+  that HAVE an estimate — with the excluded count disclosed on screen rather than
+  folded in silently. There is deliberately no time-remaining figure anywhere.
+- Held mechanically by `test/unit/diffusion_queue_stream_tripwire.test.ts`
+  (client + host + honesty + motion halves) and
+  `test/unit/diffusion_queue_stream.test.ts` (the aggregate's three honesty
+  rules, asserted on the pure model).
+
+## WC-071 — `dataframe_control` does not answer `get_widget_value` (2026-07-29)
+
+- **Date:** 2026-07-29 (found by root-causing a `[db] slow query 2309ms`
+  line naming `FROM "matrix"`; diagnosed and fixed the same day).
+- **What changed.** The `dataframe_control` maintenance widget's module no
+  longer exports `getValue`, so `dd_area_maintenance_api / get_widget_value`
+  for `model:'dataframe_control'` now takes the no-handler branch in
+  `registry.ts dispatchGetWidgetValue`. Its client peer dropped the matching
+  `dataframe_control.prototype.get_value` assignment, so it never sends that
+  RQO. `apiActions` is UNCHANGED — `get_value`, `run_check` and `run_fix` all
+  still exist on `widget_request`, and `run_check` is byte-identical to what
+  the panel load used to return.
+- **Why.** The widget's "value" is a whole-database integrity scan
+  (`dataframeControlScan`, every `matrix%` table with a jsonb `relation`
+  column, end to end). It was NOT click-gated: the client claimed the lazy
+  load synchronously and awaited its own `get_value()` inside the render
+  spinner, so the scan ran **once per area_maintenance page load, per admin,
+  in both Map and List views** — for the cosmetic gain of not flashing a `-`
+  report before a second spinner. Measured on `dedalo7_mdcat` (24 tables,
+  ~36.6M rows, ~92 GB) through the real config/pool: 75.2 s / 84.5 s / 79.2 s
+  per invocation, **each ending in `canceling statement due to statement
+  timeout`** (`DB_STATEMENT_TIMEOUT_MS=60000`). The scan aborts on table 3 of
+  24 (`matrix_activity`, 32.9M rows / 81 GB, zero matching rows) and never
+  reaches `matrix_hierarchy`. The only `try/catch` in the function is inside
+  the `fix` branch, so it surfaced as `{result:false}` with no partial report.
+  The panel could not produce a report on this install at all.
+- **Divergence from PHP.** PHP's `class.dataframe_control.php` DID implement
+  `get_value()`, and the frozen oracle harvest still censuses the widget's two
+  client files (`dedalo_files_differential.json`). This is a deliberate
+  removal of a PHP-parity entry point, not an unported one: the SAME work is
+  reachable through `widget_request` (`run_check`), which is the route the UI
+  now uses exclusively.
+- **Not-run is not zero.** Per *never silently narrow scope*, the panel opens
+  in an explicit not-run state (`render_not_run`, the kit's `.dd_note`) rather
+  than `render_report(summary, {})` — five dashes read like a completed scan
+  that found nothing, which would imply a clean database the widget has not
+  looked at. Scan failures now paint through `render_error`
+  (`.dd_note.state_danger`) instead of silently leaving the previous state on
+  screen.
+- **Gate reconciliation.** No fixture moves: no oracle fixture pins a
+  `get_widget_value` response for this widget, and the catalog entry in
+  `widgets_differential.json` is produced by `eagerValue`, which this widget
+  has never had (its `value` stays `null`). `update_ownership_tripwire`'s
+  ENGINE_NATIVE map is unchanged because it classifies `apiActions` entries,
+  and all three remain registered.
+- **Still open (not addressed here).** The scan itself remains uncompletable
+  at this scale — no per-table budget, no partial report on timeout, no
+  in-flight dedupe or abort propagation, and `matrix_activity` is still
+  walked in full for zero matches. Those are separate changes; this one only
+  stops the scan from running when nobody asked for it.
+
+## WC-072 — `dataframe_control` reports COVERAGE, and cannot claim a completeness it did not earn (2026-07-29)
+
+- **Date:** 2026-07-29 (same-day follow-on to WC-071).
+- **What changed.** `run_check` / `run_fix` gain three result fields:
+  `complete: boolean`, `coverage: TableCoverage[]` (one entry per discovered
+  table: `status` ∈ complete | exempt | no_relation_column | budget_exhausted
+  | error, plus `reason`, `rows_scanned`, `last_id`, `batches`), and
+  `uncovered: string[]` (the human-readable "table [status]: reason" lines).
+  `msg` now opens `OK.` or `PARTIAL.` and appends the uncovered count. Existing
+  fields are untouched, so a client that ignores the new ones behaves as before
+  — except that it will now GET a report where it used to get `{result:false}`.
+- **Why.** Before this, a batch that exceeded `DB_STATEMENT_TIMEOUT_MS` threw
+  out of the whole scan: the operator got no report at all, and the 21 tables
+  after the failing one were never examined with nothing saying so. The
+  failure was total and silent about its own extent.
+- **Budgets.** `DATAFRAME_TABLE_BUDGET_MS` 45 s, `DATAFRAME_TOTAL_BUDGET_MS`
+  180 s, checked BEFORE issuing each batch so the recorded `last_id` is exactly
+  the last row examined. Basis: a warm full walk of `matrix` (the largest table
+  that actually holds frames) measures 18–24 s over its ~100 batches on
+  dedalo7_mdcat. A per-batch `try/catch` converts a cancelled statement into a
+  truncated table plus a reason, never an aborted scan.
+- **The exemption is NAMED and it costs completeness.**
+  `DATAFRAME_SCAN_EXEMPT_TABLES` skips `matrix_activity` and
+  `matrix_activity_diffusion`, each carrying the reason the report prints
+  verbatim. An exemption sets `complete:false` — the scan does not claim those
+  tables are clean, only that it chose not to look. Their zero-frame property
+  is EMPIRICAL (measured three ways), not structural: same 15-column jsonb
+  layout, and dd560 proves the ontology cannot answer the question (hard-coded
+  in `component_iri/descriptor.ts`, unreachable by recursion). An explicit
+  `scopedTables` argument overrides the exemptions — naming a table is a
+  deliberate choice and wins.
+- **`matrix_time_machine` is NOT exempt — the old `NOT IN` was dead code.**
+  That table has no `relation` column at all (its jsonb payload is `data`), so
+  the relation-column discovery query never could return it. Listing it would
+  document a decision nobody is making. Do not re-add it.
+- **Fail closed.** `summarizeCoverage([])` returns `complete:false`: empty
+  coverage means the discovery query is broken, and `uncovered.length===0`
+  would otherwise make the emptiest possible scan the most confident one.
+- **Client.** The INCOMPLETE banner renders ABOVE the counts (`.dd_note
+  .state_warning`), not below — "Orphan frames: 0" under a partial scan means
+  "none where we looked", so the caveat must reach the eye before the number.
+  The `uncovered` lines render in the existing `.orphan_items` console block.
+- **Measured effect (dedalo7_mdcat, 24 discovered tables).** Before: threw at
+  ~80 s having examined 2 tables, no report. After: **19–47 s, 22 tables walked
+  to exhaustion, 2 exempt**, `complete:false`, and it surfaces what the tool
+  exists to surface — **36,219 legacy pre-migration frames, 0 orphans**,
+  including `matrix_hierarchy` (51 rows), a table the old scan never reached.
+- **Gate.** `test/unit/dataframe_scan_coverage_tripwire.test.ts` (registered in
+  `engineering/TRIPWIRES.md` + `scripts/verify.ts` in this change, as the index
+  contract requires): every exemption carries a real reason; exempt / budget /
+  error each force `complete:false`; `no_relation_column` does not (structural,
+  proven by the column check); empty coverage fails closed.
+
+## WC-073 — `database_info.get_value` carries a `statistics` health verdict (2026-07-29)
+
+- **Date:** 2026-07-29.
+- **What changed.** `database_info.get_value` result gains one additive,
+  engine-native key: `statistics: StatisticsHealth | null` — `{status:
+  'ok'|'degraded', tables, never_analyzed, counters_reset, worst[], detail}`.
+  `info` / `tables` / `indexes` are untouched, so the PHP-parity fields and the
+  `widget_request` denial of `get_value` are unaffected. Computation is
+  fail-soft (`null` on error): a statistics readout must never take the catalog
+  panel down with it.
+- **Why.** A stats-collector reset is dangerous precisely because it is SILENT.
+  Found by accident on 2026-07-29 while chasing an unrelated slow query:
+  dedalo7_mdcat had 38 of 43 tables with `last_analyze` AND `last_autoanalyze`
+  NULL while `autovacuum` read `on`, and `n_live_tup` was fiction
+  (`matrix_time_machine` 91 against a real 50,993,786). `pg_stats` still held
+  rows — `pg_statistic` survived while the CUMULATIVE counters were wiped
+  (crash restart or restore). Autovacuum and autoanalyze fire on
+  `n_mod_since_analyze` / `n_dead_tup`, which restart from zero, so a 44 GB
+  table would never be auto-maintained again and nothing anywhere said so.
+- **Detection.** Two signals, thresholds in
+  `summarizeStatisticsHealth` (PURE — the verdict is testable without a DB):
+  never-analyzed tables at or above `STATS_SIGNIFICANT_BYTES` (64 MB; smaller
+  tables are counted but not alarming — a 50-row lookup plans fine on
+  defaults), and the RESET signature `reltuples >= 1000 && n_live_tup*100 <
+  reltuples` — the planner believing in a big table while the counters believe
+  it is empty. `detail` states the CONSEQUENCE ("they will NOT fire"), not just
+  the fact, and points at the panel's own "Analyze database" button.
+- **Client.** Renders FIRST in the panel (`.dd_note.state_warning` + a
+  `.version_info` block listing the offenders), above the catalog dump — the
+  one place this is surfaced, so it must not sit under the index listing.
+  Table names go in via `textContent` (DB-sourced).
+- **Measured, both branches, live.** `dedalo7_mdcat` after the 2026-07-29
+  DB-wide ANALYZE: `ok`, 43 tables, 0 never-analyzed — the alarm clears when
+  the problem is fixed. `dedalo7ts` untouched: `degraded`, 39 tables, **37
+  never analyzed, 8 counters-reset**, worst = matrix_hierarchy (398 MB,
+  n_live_tup=0 vs reltuples=185,612), matrix_relation_index (191 MB, 0 vs
+  1,512,310), matrix_ontology, matrix_string_search, … So the condition is
+  present across the local dev databases, not an mdcat quirk.
+- **Not a tripwire.** This is a runtime health READOUT, not a mechanical
+  invariant — its truth depends on the database, so it cannot live in
+  `engineering/TRIPWIRES.md`. The pure verdict is pinned by
+  `test/unit/database_statistics_health.test.ts` (thresholds, the reset
+  signature, alarm-clears-after-ANALYZE, dedup/cap of `worst`).
+
+## WC-074 — `database_info` gains an eager `statistics` verdict + `analyze_statistics` (2026-07-30)
+
+- **Date:** 2026-07-30. Follow-on to WC-073, which added the verdict but left it
+  reachable only by opening the panel, and pointed its fix at the wrong verb.
+- **What changed.**
+  1. `database_info` gains `eagerValue` returning `{statistics}` — and ONLY that
+     key. The widget catalog's inline `value` for `database_info` therefore goes
+     from `null` to `{statistics: {...}}`, so the FOLDED dashboard card can warn
+     without anyone opening the panel. The heavy `tables`/`indexes` catalog stays
+     on the panel-open path: `eagerValue` runs for every widget on every area
+     read, so it must stay cheap (one catalog query, ~3–5 ms). Fail-soft `null`
+     per the registry contract (`registry.ts` `?? null`).
+  2. `apiActions` gains `analyze_statistics` — plain `ANALYZE`, scoped to the
+     tables the verdict named, through `runWithoutStatementTimeout` (WC-055,
+     since ANALYZE on a multi-million-row table can exceed the pool ceiling).
+     Result `{analyzed: string[]}`; an empty list means the verdict was already
+     `ok` and is a SUCCESS, not an error.
+- **Why not reuse `analyze_db`.** It runs whole-database `VACUUM ANALYZE`.
+  Reclaiming space is a different job from refreshing statistics and its cost is
+  page-proportional, whereas plain `ANALYZE` samples a bounded page count and is
+  near-flat in table size (~60 s for 141 GB, 4 s for 68 MB). WC-073 documented
+  the near-flat figure while pointing the operator at the page-proportional
+  button — that mismatch is fixed here, in the code AND in the two client/server
+  doc comments that mis-described `analyze_db` as the lighter statement.
+- **The scope is re-derived server-side, never taken from `options`.**
+  `degradedTableNames()` (PURE, tripwire-tested) recomputes the offender list
+  from the catalog, so the set analyzed is exactly the set the verdict showed the
+  operator. Names are validated against `^[A-Za-z_][A-Za-z0-9_]*$` before being
+  interpolated into the `ANALYZE` list even though they come from `pg_class` —
+  provenance is not a substitute for validation. A rejected name is reported, not
+  skipped silently.
+- **Gate reconciliation.** No fixture moves: `widgets_differential.test.ts`
+  EXCLUDES `value` from the catalog byte-compare (its `omit` array always
+  contains `'value'`, because 11 widgets already embed a live payload), so adding
+  an eager value cannot break the frozen catalog fixture, and no PHP-side eager
+  value exists for `database_info` to diverge from. `analyze_statistics` needed a
+  new ENGINE_NATIVE classification in `update_ownership_tripwire.test.ts` (an
+  unclassified apiAction fails that tripwire). `test/unit/database_statistics_health.test.ts`
+  gains the repair-scope cases: healthy → empty scope (the action must never
+  silently widen into a whole-DB ANALYZE), offenders only and largest-first,
+  degraded ⇒ non-empty scope (so a warning always has something to press), and
+  every emitted name is a bare identifier.
+- **Deliberately NOT built** (investigated 2026-07-30, rejected): no scheduler
+  and no unattended auto-repair. Once the counters are correct, autoanalyze
+  maintains statistics itself — its threshold `50 + 0.1*reltuples` is correctly
+  sized because `reltuples` survives a reset — so a periodic engine-side ANALYZE
+  would duplicate a correctly-configured mechanism with a worse (wall-clock)
+  trigger. It would also cost a `module_state_tripwire` allowlist entry, a new
+  config key across the catalog/`migration_map`/`sample.env`/docs chain, drain
+  wiring, and a single-flight story for the documented multi-instance topology
+  (`STAGING_VALIDATION.md`) where a rolling restart would fire N concurrent
+  ANALYZEs. `/health` was excluded outright: the watchdog restarts the process on
+  any non-2xx and a restart cannot repair `pg_statistic`.
+
+## WC-075 — `diffusion_server_control.set_scheduler` gains `drain_resume`; `scheduler.draining` on both readouts (2026-07-30)
+
+- **Date:** 2026-07-30. Widens the action list WC-005 pinned when the daemon
+  lifecycle was removed.
+- **Why now.** The PHP widget had three lifecycle buttons —
+  `start_server`/`stop_server`/`restart_server`, which shelled out to
+  `DEDALO_DIFFUSION_SERVICE_CMD` against a SEPARATE Bun daemon. WC-005 removed
+  them because the daemon does not exist post-cutover (diffusion is in-process;
+  `info.ts` reports `service_cmd_configured:false`, `actions:[]`), and
+  `diffusion_server_control.test.ts` denies the three method names. That
+  decision stands. What was missing is the operation those buttons stood in for:
+  an admin quiescing publication work before a backup, a schema change or a
+  config edit. There is exactly one controllable thing left — job DISPATCH — so
+  the lifecycle controls live on `set_scheduler`, not on revived daemon verbs.
+- **Shape before (TS):** `set_scheduler` accepts `'pause' | 'resume'`; the
+  scheduler readout carries `{running, queued, max_runners, paused,
+  stale_after_seconds}` in BOTH serializations — `get_value.result.scheduler`
+  and the 1 Hz `QueueFrame.scheduler` of `follow_queue` (WC-069).
+- **Shape after (TS):**
+  1. `set_scheduler` accepts `'pause' | 'resume' | 'drain_resume'`. Anything
+     else still refuses with `errors:['invalid_action']`; the message now
+     enumerates the three. `drain_resume` on an already-draining scheduler
+     refuses with `errors:['already_draining']`.
+  2. `drain_resume` RETURNS IMMEDIATELY (`result:true`, msg contains
+     'Draining'). It does not carry the wait: the drain is bounded by
+     `DRAIN_TIMEOUT_MS` (5 min), far beyond `SERVER_IDLE_TIMEOUT_S` (255 s max)
+     and the documented 300 s proxy read timeout. Progress is observed on the
+     queue stream, which is what that stream is for.
+  3. Both scheduler serializations gain `draining: boolean` — `get_value` and
+     `QueueFrame.scheduler` (including its degenerate error/deadline/refusal
+     frames, which report `false`). One meaning, two wires: the client renders a
+     single Dispatch pill from `paused` + `draining`, and a frame missing the
+     key would silently read as "not draining".
+- **Semantics.** `drain_resume` = pause dispatch → poll `countRunningJobs()`
+  until 0 → resume + kick. On timeout it stays PAUSED and reports `timed_out`:
+  cancellation is cooperative, so resuming on top of runners that would not
+  drain is exactly the state the operator asked to avoid. `resumeScheduler()`
+  aborts an in-flight drain (the waiter re-reads the latch each poll), so an
+  admin is never stuck behind a runner with minutes of work left. All of it is
+  in-memory and resets to running on restart, like `paused` already did.
+- **Client.** Three buttons in the scheduler panel — Resume dispatch
+  (`success`), Pause dispatch (`danger`), Drain & resume (`warning`) — matching
+  the PHP button colours, with the honest labels. They are DISPATCH controls;
+  the naming deliberately does not say "server". The live layer patches the
+  Dispatch pill and the three disabled states from the stream, because a drain
+  ends minutes after the request that started it returned and nothing else
+  would ever repaint it.
+- **Gate reconciliation:** `diffusion_server_control.test.ts` (DB tier) covers
+  `drain_resume` end to end and the `draining` key on `get_value`;
+  `diffusion_dispatch_gate.test.ts` (HERMETIC tier — new) covers verb
+  validation, pause/resume, and that the retired daemon verbs are not smuggled
+  back in as scheduler actions. `diffusion_queue_stream.test.ts` carries the new
+  frame key. No re-harvest: the frozen store predates `follow_queue` (WC-069)
+  and this widget's panel is TS-owned (WC-005).
+
+### WC-074 addendum — the folded card, the map chip, and the boot wipe probe (2026-07-30)
+
+Recorded with the entry because the eager verdict added in WC-074 was only
+*enabling* a collapsed-card warning; nothing rendered it. These are the
+consumers that make the verdict visible without opening a panel.
+
+- **The folded card warns.** `render_database_info.js` now calls
+  `set_widget_label_style(self, 'warning', add|remove, …)` from its render, which
+  runs on page load for every card (see the WC-071 note in
+  `docs/core/areas/area_maintenance.md`: cards are built and rendered
+  unconditionally). `self.value` carries the verdict there because of WC-074's
+  `eagerValue`, so the header tints before anyone expands anything.
+- **A new `.warning` header variant** in `area_maintenance.less`, beside the
+  existing `.danger`. Deliberately NOT `.danger`: degraded statistics mean "come
+  and press a button", not "something failed", and painting it red trains
+  operators to ignore red. `bun run css:build` re-run — the committed `.css` and
+  `.css.map` are the served artifacts and `css_build_tripwire` demands byte
+  identity with a fresh compile.
+- **The Map `pg` node reports it.** `render_area_maintenance.js`'s map probe
+  ALREADY fetched `database_info`'s value and used only `r.tables.length`; the
+  `statistics` verdict was fetched and discarded. It now sets the node to
+  `warn` + "Statistics degraded" with the offender count. `warn`, not `bad`: the
+  database is serving fine.
+- **Boot wipe probe (server.ts, inside the `!config.installMode` guard).**
+  Fire-and-forget, `.catch()`ed, never awaited, DETECTION ONLY. Predicate:
+  `pg_stat_bgwriter.stats_reset >= pg_postmaster_start_time()`.
+  `pg_stat_database.stats_reset` cannot serve this — variable-numbered stats
+  entries are DROPPED and recreated NULL (measured: 0 non-null rows). The
+  fixed-numbered views reset in place WITH a timestamp, so the predicate means
+  "the cumulative counters were discarded at or after this boot". Verified TRUE
+  on this cluster (`stats_reset` 2026-07-28 11:02:18 vs postmaster start
+  11:02:15, corroborated by `postgresql@18.log`: "database system was not
+  properly shut down").
+  Two deliberate limits: it stays TRUE for the whole postmaster lifetime, so it
+  is PROVENANCE and never "repair owed"; and it is blind to a restore into a
+  fresh cluster (counters zero, flag FALSE) — exactly the case the per-table
+  verdict catches. The two signals are complements.
+- **Still no repair without an operator, and still no scheduler** — see the
+  WC-074 "deliberately not built" list. Boot auto-ANALYZE stays rejected because
+  multiple Bun instances against one database is a documented topology
+  (`STAGING_VALIDATION.md`) and a rolling restart would fire N concurrent
+  ANALYZEs.
+
+## WC-075 — `dd_component_text_area_api::get_tags_info` ported; `delete_tag` deliberately absent (2026-07-30)
 
 The whole API class was missing from the TS engine, so `tool_tr_print` answered
 **HTTP 400 "Undefined or unauthorized method (action)"** the moment it opened

@@ -115,6 +115,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 				queued,
 				stale_after_seconds: scheduler.STALE_AFTER_SECONDS,
 				paused: scheduler.isSchedulerPaused(),
+				draining: scheduler.isSchedulerDraining(),
 			},
 			jobs: jobs.map(mapJobToClient),
 			pending,
@@ -185,17 +186,48 @@ async function diffusionPurgeJobs(options: Record<string, unknown>): Promise<Wid
 	};
 }
 
-/** set_scheduler — pause/resume job DISPATCH (in-memory; sweeper keeps running). */
+/**
+ * set_scheduler — control job DISPATCH (in-memory; the sweeper keeps running).
+ *
+ * These are the three lifecycle controls. They act on DISPATCH, not on a
+ * process: post-cutover diffusion runs inside this server (WC-005), so there is
+ * no daemon to start or stop. `drain_resume` is the honest analogue of the old
+ * "restart" — quiesce, then start dispatching again.
+ */
 async function diffusionSetScheduler(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const action = options.action;
-	if (action !== 'pause' && action !== 'resume') {
+	if (action !== 'pause' && action !== 'resume' && action !== 'drain_resume') {
 		return {
 			result: false,
-			msg: "Error. Invalid scheduler action. Allowed: 'pause' | 'resume'",
+			msg: "Error. Invalid scheduler action. Allowed: 'pause' | 'resume' | 'drain_resume'",
 			errors: ['invalid_action'],
 		};
 	}
 	const { scheduler } = await diffusionModules();
+
+	if (action === 'drain_resume') {
+		if (scheduler.isSchedulerDraining()) {
+			return {
+				result: false,
+				msg: 'A drain is already in progress',
+				errors: ['already_draining'],
+			};
+		}
+		// STARTED, not awaited. The wait is bounded by DRAIN_TIMEOUT_MS (minutes),
+		// which outlives any request budget — SERVER_IDLE_TIMEOUT_S caps at 255 s
+		// and the proxy's read timeout sits at 300 s. Progress is observable on the
+		// queue stream (`scheduler.draining`), which is how the widget follows it.
+		// Caught, never floating: an unhandled rejection kills the process (S1-15).
+		void scheduler.drainAndResume().catch((error) => {
+			console.error('[diffusion] drain failed:', error);
+		});
+		return {
+			result: true,
+			msg: 'OK. Draining — dispatch held until the running jobs finish, then resumed',
+			errors: [],
+		};
+	}
+
 	if (action === 'pause') scheduler.pauseScheduler();
 	else scheduler.resumeScheduler();
 	const paused = scheduler.isSchedulerPaused();

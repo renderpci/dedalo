@@ -15,7 +15,8 @@
  * without infrastructure.
  */
 
-import type { DiffusionJobRow } from './queue.ts';
+import type { ActiveJobRow, DiffusionJobRow } from './queue.ts';
+import type { DiffusionJobState } from './schema.ts';
 
 /**
  * SSE payload padding boundary — the old engine right-pads every chunk to this
@@ -146,15 +147,109 @@ export function notFoundProgressData(processId: string): ProgressData {
 	};
 }
 
-/** Verbatim SSE chunk framing (old index.ts encode_sse_chunk :56-75). */
-export function encodeSseChunk(data: ProgressData): Uint8Array {
-	const json = JSON.stringify(data);
+/**
+ * The one SSE framing. Both encoders below delegate here so the queue stream
+ * cannot drift from the pinned per-job framing — the client's
+ * data_manager.read_stream reassembles frames by this exact shape, and the
+ * golden fixtures pin these bytes.
+ */
+function encodeSsePayload(json: string): Uint8Array {
 	let payload = `data:\n${json}`;
 	if (payload.length < SSE_PAD_LENGTH) {
 		payload += ' '.repeat(SSE_PAD_LENGTH - payload.length);
 	}
 	payload += '\n\n';
 	return encoder.encode(payload);
+}
+
+/** Verbatim SSE chunk framing (old index.ts encode_sse_chunk :56-75). */
+export function encodeSseChunk(data: ProgressData): Uint8Array {
+	return encodeSsePayload(JSON.stringify(data));
+}
+
+/**
+ * ─── The admin queue stream (WC-067) ────────────────────────────────────────
+ *
+ * A SECOND, narrower wire alongside ProgressData. ProgressData follows ONE job
+ * for its owner; this follows the whole ACTIVE queue for a global admin.
+ *
+ * (!) The key set below is a CONTRACT, not a convenience, and is asserted by
+ * diffusion_queue_stream_tripwire. It carries what a progress display needs
+ * and nothing else. It must never grow to include `spec` (the sanitized SQO),
+ * `checkpoint`, `result`, `runner`, or `errors[]` — those are unbounded in
+ * size, and this frame is re-serialized once a second for every connected
+ * admin. Adding one "just for debugging" is how a 1 Hz stream becomes a
+ * bandwidth incident. They remain available on the widget's get_value.
+ */
+
+/** One active job as serialized on the admin queue stream. */
+export interface QueueJobView {
+	job_id: string;
+	/** The client-facing label, never the job UUID — same rule as ProgressData. */
+	process_id: string;
+	state: DiffusionJobState;
+	counter: number;
+	total: number;
+	msg: string | null;
+	cancel_requested: boolean;
+	attempt: number;
+	max_attempts: number;
+}
+
+/**
+ * Project one active row onto the wire. counter/total arrive as TEXT (see
+ * ActiveJobRow) and are coerced here: a malformed legacy value degrades that
+ * ONE job to 0 rather than aborting the stream for everybody.
+ */
+export function queueJobView(row: ActiveJobRow): QueueJobView {
+	return {
+		job_id: row.job_id,
+		process_id: row.client_process_id,
+		state: row.state,
+		counter: Number(row.counter_text) || 0,
+		total: Number(row.total_text) || 0,
+		msg: row.msg ?? null,
+		cancel_requested: row.cancel_requested === true,
+		attempt: row.attempt,
+		max_attempts: row.max_attempts,
+	};
+}
+
+/** One frame of the admin queue stream. */
+export interface QueueFrame {
+	/** Discriminator — the client rejects anything else, including the
+	 * synthetic first frame data_manager.read_stream injects before any
+	 * server bytes arrive. */
+	kind: 'diffusion_queue';
+	/** Emitted-at, epoch ms. VOLATILE: stripped from the change signature, or
+	 * every poll would look like a change and the stream would never be quiet. */
+	at: number;
+	scheduler: {
+		running: number;
+		queued: number;
+		max_runners: number;
+		paused: boolean;
+		/** A quiesce is waiting for the running jobs to finish (set_scheduler
+		 * drain_resume). Always accompanied by paused:true — the drain holds
+		 * dispatch for its whole duration. */
+		draining: boolean;
+		stale_after_seconds: number;
+	};
+	jobs: QueueJobView[];
+	/** Sorted job_id join — the client's cheap "the set changed" test. */
+	membership: string;
+	/** Membership changed since the previous frame: a job started or reached a
+	 * terminal state. The client answers this with ONE history refetch, which
+	 * is why the stream itself never reads the 24h window. */
+	refresh: boolean;
+	/** Set only on the max-lifetime final frame: reconnect, nothing is wrong. */
+	reconnect?: true;
+	errors: string[];
+}
+
+/** Queue-frame framing — same bytes-on-the-wire rules as encodeSseChunk. */
+export function encodeQueueSseChunk(frame: QueueFrame): Uint8Array {
+	return encodeSsePayload(JSON.stringify(frame));
 }
 
 /** The ":\n" comment heartbeat used by the get_process_status stream. */

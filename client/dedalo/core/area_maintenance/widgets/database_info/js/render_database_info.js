@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
 
@@ -116,6 +117,47 @@ const get_content_data_edit = async function(self) {
 		class_name	 : 'content_data'
 	})
 
+	// statistics health (WC-073) — FIRST, above the catalog dump.
+	// A stats-collector reset silently disables autovacuum/autoanalyze: they
+	// trigger on the cumulative counters, which restart from zero, so a 44 GB
+	// table stops being maintained and nothing says so. This is the only place
+	// that surfaces it, so it must not be buried under the index listing.
+	// SEC-XSS: DB-sourced table names go in via textContent, never inner_html.
+	const statistics = value.statistics
+
+	// WC-074: tint the CARD HEADER so a COLLAPSED card warns. This is what the
+	// server-side eagerValue is for — the catalog inlines the verdict, so
+	// self.value carries it on the page-load render, before anyone opens the
+	// panel. Without this the verdict was only visible to someone who already
+	// went looking, which is the opposite of what a health signal is for.
+	// 'warning', not 'danger': degraded statistics mean "press a button", not
+	// "something failed".
+		if (statistics) {
+			set_widget_label_style(
+				self,
+				'warning',
+				statistics.status === 'degraded' ? 'add' : 'remove',
+				content_data
+			)
+		}
+
+	if (statistics && statistics.status === 'degraded') {
+		const warn = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_warning',
+			parent			: content_data
+		})
+		warn.textContent = 'Table statistics degraded — ' + (statistics.detail || '')
+		if ((statistics.worst || []).length > 0) {
+			const detail = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'version_info',
+				parent			: content_data
+			})
+			detail.textContent = statistics.worst.join('\n')
+		}
+	}
+
 	// Database info
 	// (!) info.IntervalStyle is used as the database identifier — it reflects the PG session
 	// interval formatting style (e.g. "postgres"), which doubles as a connection check value.
@@ -141,6 +183,16 @@ const get_content_data_edit = async function(self) {
 
 	// form init
 	if (self.caller?.init_form) {
+
+		// analyze statistics (WC-074) — FIRST of the actions, and only offered
+		// when the verdict is degraded: it is the fix for the warning rendered at
+		// the top, so it belongs next to the problem, not buried among the
+		// unrelated rebuild panels. When statistics are healthy there is nothing
+		// to repair and the panel would be noise.
+		if (statistics && statistics.status === 'degraded') {
+			const analyze_statistics_container = render_analyze_statistics(self)
+			content_data.appendChild(analyze_statistics_container)
+		}
 
 		// analyze
 		const analyze_container = render_analyze(self)
@@ -394,6 +446,73 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 * @param {Object} self - The database_info widget instance (must expose analyze_db())
 * @returns {HTMLElement} analyze_container - Section div ready to append to content_data
 */
+/**
+* RENDER_ANALYZE_STATISTICS
+* Builds the "Repair table statistics" action panel (WC-074) — the fix the
+* degraded-statistics warning points at.
+*
+* Rendered ONLY when the verdict is degraded (see get_content_data_edit). Runs
+* plain ANALYZE scoped server-side to the tables the verdict named, which is a
+* different and much cheaper statement than the neighbouring "Analyze database"
+* panel's whole-database VACUUM ANALYZE.
+*
+* @param {Object} self - the database_info widget instance
+* @returns {HTMLElement} the action panel container
+*/
+const render_analyze_statistics = (self) => {
+
+	const container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container analyze_statistics_container'
+	})
+
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.analyze_statistics || 'Repair table statistics',
+		parent			: container
+	})
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: get_label.analyze_statistics_info
+			|| 'Runs ANALYZE on the tables reported above. Refreshes planner statistics and restores the autovacuum baseline. Cheaper than "Analyze database", which also vacuums.',
+		parent			: container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	body_response.addEventListener('dblclick', () => {
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild)
+		}
+	})
+
+	self.caller?.init_form({
+		submit_label	: get_label.analyze_statistics || 'Repair table statistics',
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: container,
+		body_response	: body_response,
+		on_submit		: async (e) => {
+			await handle_submit(
+				body_response,
+				e.target,
+				self.analyze_statistics
+			)
+		}
+	})
+
+	container.appendChild(body_response)
+
+
+	return container
+}//end render_analyze_statistics
+
+
+
 const render_analyze = (self) => {
 
 	const analyze_container = ui.create_dom_element({

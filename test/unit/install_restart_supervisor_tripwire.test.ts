@@ -98,6 +98,35 @@ describe('install restart supervisor contract', () => {
 		expect(unit).toContain('Restart=always');
 	});
 
+	// Restart=always is NOT self-sufficient: systemd's default start-limit (5 starts
+	// per 10 s) sits right on top of RestartSec=3, so a burst of PLANNED restarts or
+	// a slow Postgres can leave the unit `failed` with nothing to bring it back —
+	// the exact outage Restart=always is there to prevent.
+	test('dedalo-ts.service widens the crash-loop budget past its own restart cadence', async () => {
+		const unit = await Bun.file(new URL('../../deploy/dedalo-ts.service', import.meta.url)).text();
+		const interval = unit.match(/^StartLimitIntervalSec=(\d+)$/m);
+		const burst = unit.match(/^StartLimitBurst=(\d+)$/m);
+		const restartSec = unit.match(/^RestartSec=(\d+)$/m);
+		expect(interval).not.toBeNull();
+		expect(burst).not.toBeNull();
+		expect(restartSec).not.toBeNull();
+		// The budget must allow at least `burst` restarts at the configured cadence,
+		// i.e. the window has to be wider than burst × RestartSec.
+		const windowSeconds = Number(interval?.[1]);
+		const allowedStarts = Number(burst?.[1]);
+		const cadenceSeconds = Number(restartSec?.[1]);
+		expect(windowSeconds).toBeGreaterThan(allowedStarts * cadenceSeconds);
+	});
+
+	// engineering/PRODUCTION.md promises diffusion runners survive a restart. That
+	// promise lives ENTIRELY in this line: systemd's default KillMode=control-group
+	// SIGTERMs (then SIGKILLs) every runner alongside the server, truncating long
+	// publications mid-flight while the doc still claims they survive.
+	test('dedalo-ts.service signals only the server, so diffusion runners survive', async () => {
+		const unit = await Bun.file(new URL('../../deploy/dedalo-ts.service', import.meta.url)).text();
+		expect(unit).toMatch(/^KillMode=process$/m);
+	});
+
 	// The socket-directory contract (added after a fresh-install 502). The engine
 	// binds SERVER_UNIX_SOCKET but does NOT create its parent dir, and /run is a
 	// tmpfs wiped every reboot — so the shipped unit MUST create /run/dedalo via

@@ -48,16 +48,15 @@ A widget is **one module file** exporting one `WidgetModule`:
 ```ts
 export const widget: WidgetModule = {
     spec: {
-        id      : 'dataframe_control',   // the wire id the client sends
+        id      : 'counters_status',     // the wire id the client sends
         category: 'integrity',           // the dashboard group
-        label   : { kind: 'label', key: 'dataframe_control' },
+        label   : { kind: 'label', key: 'counters_status' },
     },
     apiActions: {                        // the EXPLICIT method registry
-        run_check: dataframeRunCheck,
-        run_fix  : dataframeRunFix,
+        modify_counter: countersModifyCounter,
     },
-    getValue  : dataframeGetValue,       // the panel-open value load
-    eagerValue: dataframeEagerValue,     // optional: a value pre-computed into the catalog
+    getValue  : countersGetValue,        // the panel-open value load
+    eagerValue: countersEagerValue,      // optional: a value pre-computed into the catalog
 };
 ```
 
@@ -71,6 +70,21 @@ export const widget: WidgetModule = {
 - **`eagerValue`** pre-computes a value into the catalog so the folded dashboard
   card and the opened panel paint from identical data. It is fail-soft: a widget
   whose value cannot be computed must never break the dashboard read.
+
+> **`getValue` is PAGE-LOAD cost — budget it as such (WC-071).** It is not
+> "lazy" in any sense a caller can rely on: `render_area_maintenance.js` builds
+> and renders every widget card on every dashboard load, so whatever `getValue`
+> does happens once per load, per admin, in both Map and List views. Two
+> switches must BOTH be off for a panel to be genuinely deferred — the server
+> `getValue` **and** the client's `<widget>.prototype.get_value` binding, since
+> `widget_common.prototype.load()` only no-ops when
+> `typeof self.get_value !== 'function'`. Dropping the server field alone turns
+> a page-load query into a page-load ERROR. `dataframe_control` is the worked
+> example of getting this wrong: its `getValue` ran a whole-database integrity
+> scan on every dashboard load and could not finish inside the statement
+> timeout. It now has NO `getValue` and scans only on an operator's click.
+> If the work is unbounded or scales with table size, it belongs in
+> `apiActions` behind a button, not in `getValue`.
 
 Every handler returns the same envelope: `{ result, msg, errors }`.
 
@@ -179,7 +193,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `sequences_status` | integrity | *(read-only panel)* |
 | `media_control` | integrity | `set_media_access_mode`, `rebuild_media_index` |
 | `counters_status` | integrity | `modify_counter` |
-| `dataframe_control` | integrity | `run_check`, `run_fix` |
+| `dataframe_control` | integrity | `get_value`, `run_check`, `run_fix` — and NO module `getValue`, so the panel loads nothing (WC-071); `run_check` reports per-table `coverage` and can never claim a completeness it did not earn (WC-072) |
 | `database_info` | system | `analyze_db`, `optimize_tables`, `consolidate_tables`, `recreate_db_assets`, `backfill_search_stores`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `rebuild_user_stats`, `relation_integrity_report` |
 | `environment`, `system_info` | system | *(read-only panels)* |
 | `error_reports` | system | `get_reports` |

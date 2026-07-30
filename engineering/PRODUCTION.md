@@ -35,8 +35,21 @@ diffusion scheduler cadences → stops accepting connections → drains in-fligh
 requests up to `SERVER_SHUTDOWN_GRACE_MS` (default 10000) → marks still-live
 media transcode jobs `interrupted` in their pfiles → journals dying background
 tool jobs → closes the Postgres pool → unlinks the socket → exits 0.
+
+A **planned restart** takes the same path and exits `RESTART_EXIT_CODE` (75)
+instead of 0. `scheduleServerRestart` (`src/core/install/restart.ts`) hands off
+to the graceful sequence through a handler `startServer` registers at boot, so
+`persist_config` and a code update drain exactly like a supervisor's SIGTERM;
+with no listening server registered (CLI, test runner) it falls back to an
+immediate exit. It returns a `RestartOutcome` — `suppressed` under
+`DEDALO_INSTALL_NO_RESTART`, otherwise `draining` / `immediate` — so a caller
+can never report a restart it did not perform.
+
 Diffusion RUNNERS are separate processes and survive restarts by design; the
-sweeper heals anything that does not.
+sweeper heals anything that does not. **That survival is the unit file's job**:
+`deploy/dedalo-ts.service` sets `KillMode=process` so systemd signals only the
+server. Under the default (`control-group`) every runner is killed alongside it
+and long publications are truncated mid-flight.
 
 **Double-start guard.** At boot, a pre-existing socket file is **probed with a
 connect()**: if something answers, the server refuses to start (exit 1)
@@ -202,6 +215,52 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   **global-admin only** (404 otherwise). Aggregates request totals/latency,
   slow-request and pool-wait counters, diffusion queue depths + scheduler
   state, media job headroom, background tool job stats, RSS, uptime.
+- **`diffusion_queue_streams_opened` / `_closed` (WC-067)** — the leak alarm for
+  the maintenance widget's live queue feed. Each open `follow_queue` SSE stream
+  runs a 1 s poll loop for as long as an admin has the panel open, so the two
+  must CONVERGE shortly after the last panel is closed. A persistent and growing
+  gap means poll loops are outliving their clients, and is the signal to look
+  (a browser tab that never sent a FIN, a proxy holding the connection). It is
+  a real gauge rather than a test because nothing in-process can assert that a
+  dropped socket fires `cancel()`; the stream's unconditional 15 s heartbeat and
+  its 15-minute hard lifetime exist to bound the damage either way, so a gap
+  should also self-heal within ~15 min.
+- **Table-statistics health (WC-073)** — the Database-info panel computes a
+  `statistics` verdict and shows a warning when it reads `degraded`. Two
+  signals: tables ≥64 MB with `last_analyze` AND `last_autoanalyze` NULL, and
+  the RESET signature `reltuples >= 1000 AND n_live_tup*100 < reltuples` (the
+  planner believing in a big table while the cumulative counters believe it is
+  empty). **Why it is worth a gauge:** a stats-collector reset — a crash
+  restart, or a restore into a fresh cluster — wipes the cumulative counters
+  while `pg_statistic` survives, and `autovacuum`/`autoanalyze` trigger on
+  `n_mod_since_analyze` / `n_dead_tup`, which then restart from zero. So
+  autovacuum reads `on` and every query still answers while a large table stops
+  being maintained. Note the mechanism precisely: autovacuum's arithmetic is
+  INTACT — autoanalyze fires at `n_mod_since_analyze >= 50 + 0.1 * reltuples`
+  and `reltuples` survived, so the threshold stays correctly sized while the
+  counter restarts at 0. Recovery is therefore churn-proportional: small hot
+  tables self-heal within hours, a 51 M-row table needs ~5.1 M modifications
+  first, which in practice means never. It is not "never" by mechanism.
+  Found by accident on 2026-07-29 (38 of 43 tables on the scale DB,
+  `matrix_time_machine` reporting 91 live rows against a real 50,993,786; on
+  2026-07-30 all 11 v7 databases on the local cluster proved affected, i.e. the
+  cause is cluster-wide, not per-database).
+- **Repairing it.** Press **"Repair table statistics"** in the Database-info
+  panel (`analyze_statistics`, WC-074) — plain `ANALYZE` scoped to the tables the
+  verdict named. **Not** "Analyze database" (`analyze_db`), which runs
+  whole-database `VACUUM ANALYZE`: reclaiming space is a different job and its
+  cost is page-proportional. Plain `ANALYZE` samples a bounded page count, so it
+  is near-flat in table size — measured 2026-07-30 on this cluster: ~60 s for a
+  141 GB database, 20 s for ~5 GB, 8 s for 912 MB, 4 s for 68 MB. Treat that as
+  an order of magnitude, not a budget (at least one local install carries manual
+  `SET STATISTICS` tuning that inflates it). Cluster-wide, `ANALYZE;` per
+  database from psql is the equivalent — the engine's pool is bound to ONE
+  database, so the widget can only ever repair the active one.
+- **Check it after any restore, crash recovery, PITR, clone or cluster move** —
+  those are the events that produce it, and a `pg_dump`/restore-test (§6) is
+  routine here. There is deliberately no scheduler: once the counters are
+  correct, autoanalyze maintains statistics by itself, so a periodic engine-side
+  ANALYZE would duplicate a correctly-configured mechanism with a worse trigger.
 - **Error correlation**: every handler exception logs server-side with its
   `request_id`; the client receives the id, never the exception text.
 

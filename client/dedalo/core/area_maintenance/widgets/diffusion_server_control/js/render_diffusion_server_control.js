@@ -7,6 +7,10 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+	// the ONE progress model, shared with the live layer (see progress_model.js)
+	import {format_int, progress_view, row_signature} from './progress_model.js'
+	import {build_rollup_block} from './rollup_panel.js'
+	import {create_live_controller} from './live_diffusion_server_control.js'
 
 
 
@@ -121,11 +125,22 @@ const get_content_data_edit = async function(self) {
 	// short vars
 		const value = self.value || {}
 
+	// (!) Destroy any controller from a previous render FIRST. Together with the
+	// single creation site at the end of this function, that is what makes "one
+	// stream per widget" structural: there is no path that can leave two.
+	if (self.live) {
+		self.live.destroy()
+		self.live = null
+	}
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_data diffusion_server_control_content'
 		})
+
+	// rollup band — "what is publishing right now", first block
+		build_rollup_block(value, content_data)
 
 	// status + advisory block
 		build_status_block(value, content_data)
@@ -172,6 +187,25 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response',
 			parent			: content_data
 		})
+
+	// live layer — THE single creation site (see the destroy at the top).
+	//
+	// Registered in self.ar_instances so the framework's own teardown reaches it:
+	// refresh({destroy:true}) — which every mutating action triggers — runs
+	// destroy(false, true, false), and do_delete_dependencies destroys every
+	// ar_instances entry. Without this registration the controller would be
+	// invisible to the framework and every action would strand a stream.
+	//
+	// evaluate() rather than an unconditional open: this render also runs for a
+	// widget that is still collapsed (the background/idle load path), and a
+	// collapsed widget must never hold a stream.
+		self.live = create_live_controller(self, content_data, {
+			on_reload : () => reload_widget(self, content_data)
+		})
+		if (Array.isArray(self.ar_instances)) {
+			self.ar_instances.push(self.live)
+		}
+		dd_request_idle_callback(() => self.live?.evaluate())
 
 
 	return content_data
@@ -249,25 +283,38 @@ const build_status_block = function(value, parent) {
 	const engine = value.engine || {}
 	const checks = engine.checks || {}
 
+	// Wrapped in a titled section since the rollup band took the top slot: an
+	// untitled readout sitting under a titled band read as a stray panel.
 	const status_block = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'dd_readout',
+		class_name		: 'diffusion_server_control_status',
 		parent			: parent
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_eyebrow',
+		inner_html		: 'Engine',
+		parent			: status_block
+	})
+	const grid = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_readout',
+		parent			: status_block
 	})
 
 	// advisory state → pill vocabulary
 		const state = typeof engine.state === 'string' ? engine.state : 'error'
 		const state_map = { ok: 'pill_ok', warning: 'pill_warning', error: 'pill_danger' }
 		const state_label_map = { ok: 'Ready', warning: 'Degraded', error: 'Down' }
-		add_row(status_block, 'Engine', state_label_map[state] || state, state_map[state] || 'pill_danger')
+		add_row(grid, 'Engine', state_label_map[state] || state, state_map[state] || 'pill_danger')
 		if (engine.title) {
-			add_row(status_block, 'Detail', engine.title)
+			add_row(grid, 'Detail', engine.title)
 		}
 
 	// engine kind + served formats
-		add_row(status_block, 'Kind', checks.engine ? String(checks.engine) : 'native', 'mono')
+		add_row(grid, 'Kind', checks.engine ? String(checks.engine) : 'native', 'mono')
 		const formats = Array.isArray(checks.formats) ? checks.formats : []
-		add_row(status_block, 'Writer formats', formats.length ? formats.join(', ') : 'none',
+		add_row(grid, 'Writer formats', formats.length ? formats.join(', ') : 'none',
 			formats.length ? 'mono' : 'state_warning')
 
 
@@ -281,10 +328,11 @@ const build_status_block = function(value, parent) {
 * Renders the scheduler status and the flow-control pause/resume toggle.
 *
 * Source: `value.scheduler` — { running, max_runners, queued, stale_after_seconds,
-* paused }. The scheduler claims queued jobs up to `max_runners` and spawns one
-* runner process per claim; while `paused` no new jobs are dispatched (in-flight
-* runners finish, queued jobs wait). Pausing is in-memory and resets to running
-* on a server restart.
+* paused, draining }. The scheduler claims queued jobs up to `max_runners` and
+* spawns one runner process per claim; while `paused` no new jobs are dispatched
+* (in-flight runners finish, queued jobs wait). Pausing is in-memory and resets
+* to running on a server restart. `draining` is a quiesce in progress: paused,
+* and waiting for the running jobs to finish before resuming by itself.
 *
 * @param {Object}      self   - the diffusion_server_control widget instance
 * @param {Object}      value  - the full widget value snapshot (see module header)
@@ -296,6 +344,7 @@ const build_scheduler_block = function(self, value, parent) {
 	const is_admin	= value.is_admin===true
 	const scheduler	= value.scheduler || {}
 	const paused	= scheduler.paused===true
+	const draining	= scheduler.draining===true
 
 	const scheduler_block = ui.create_dom_element({
 		element_type	: 'div',
@@ -320,32 +369,84 @@ const build_scheduler_block = function(self, value, parent) {
 	const max		= scheduler.max_runners ?? 0
 	const queued	= scheduler.queued ?? 0
 
-	add_row(grid, 'Dispatch', paused ? 'Paused' : 'Running', paused ? 'pill_warning' : 'pill_ok')
-	add_row(grid, 'Runners', running + ' / ' + max, 'mono')
+	// (!) The live layer rewrites this pill in place (dsc_sched_dispatch), so the
+	// three states must be produced by ONE expression here and there. A drain is
+	// always paused too — report the more specific state.
+	add_row(
+		grid,
+		'Dispatch',
+		draining ? 'Draining' : (paused ? 'Paused' : 'Running'),
+		draining ? 'pill_warning' : (paused ? 'pill_warning' : 'pill_ok')
+	).classList.add('dsc_sched_dispatch')
+	// (!) These two rows show the SAME running/queued quantities the live stream
+	// carries. Left un-patched they would disagree with the rollup within
+	// seconds — one number, two values, one screen. The stable classes are the
+	// live layer's handle for keeping them in step.
+	add_row(grid, 'Runners', running + ' / ' + max, 'mono').classList.add('dsc_sched_running')
 	add_row(grid, 'Queued backlog', String(queued), queued>0 ? 'state_warning' : '')
+		.classList.add('dsc_sched_queued')
 	add_row(grid, 'Stale after', (scheduler.stale_after_seconds ?? '?') + ' s', 'mono')
 
-	// pause / resume toggle (admin only)
+	// Dispatch lifecycle (admin only).
+	//
+	// (!) These act on job DISPATCH, not on a process. Diffusion runs INSIDE this
+	// server (WC-005) — there is no daemon left to start or stop, which is why
+	// these are not the old PHP start/stop/restart_server actions (those are
+	// tripwired as denied). "Drain & resume" is the honest analogue of a restart:
+	// hold dispatch, let the running jobs finish, then dispatch again.
 	if (is_admin) {
-		const button_toggle = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light button_scheduler ' + (paused ? 'success' : 'warning'),
-			inner_html		: paused ? 'Resume dispatch' : 'Pause dispatch',
+		const actions = [
+			{
+				key			: 'resume',
+				label		: 'Resume dispatch',
+				css			: 'success',
+				disabled	: !paused || draining,
+				confirm		: 'Resume dispatching diffusion jobs?'
+			},
+			{
+				key			: 'pause',
+				label		: 'Pause dispatch',
+				css			: 'danger',
+				disabled	: paused || draining,
+				confirm		: 'Hold dispatch? Running jobs finish; queued jobs wait.'
+			},
+			{
+				key			: 'drain_resume',
+				label		: 'Drain & resume',
+				css			: 'warning',
+				disabled	: draining,
+				confirm		: 'Hold dispatch, wait for the running jobs to finish, then resume?'
+			}
+		]
+
+		const button_bar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dsc_sched_actions',
 			parent			: scheduler_block
 		})
-		button_toggle.addEventListener('click', async (e) => {
-			e.stopPropagation()
-			const next = paused ? 'resume' : 'pause'
-			if (!confirm((get_label.sure || 'Sure?') + '\n' + next + ' the diffusion scheduler?')) {
-				return
-			}
-			button_toggle.classList.add('button_spinner')
-			try {
-				await run_action(self, parent, scheduler_block, () => self.set_scheduler(next))
-			} finally {
-				button_toggle.classList.remove('button_spinner')
-			}
-		})
+
+		for (const action of actions) {
+			const button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_scheduler ' + action.css,
+				inner_html		: action.label,
+				parent			: button_bar
+			})
+			button.dataset.scheduler_action = action.key
+			button.disabled = action.disabled
+			button.addEventListener('click', async (e) => {
+				e.stopPropagation()
+				if (!confirm((get_label.sure || 'Sure?') + '\n' + action.confirm)) {
+					return
+				}
+				button.classList.add('button_spinner')
+				try {
+					await run_action(self, parent, scheduler_block, () => self.set_scheduler(action.key))
+				} finally {
+					button.classList.remove('button_spinner')
+				}
+			})
+		}
 	}
 
 
@@ -355,9 +456,113 @@ const build_scheduler_block = function(self, value, parent) {
 
 
 /**
+* BUILD_PROGRESS_CELL
+* The PROGRESS cell: a counter/message line, then the bar and its caption.
+*
+* (!) The bar sits on its OWN LINE, not inline with the counter. At the narrow
+* end the cell's content box is ~112px and the counter already claims most of it;
+* a bar as a third flex item on one row is starved to a few pixels. Stacking also
+* preserves the intent of the counter gutter this replaces — the message still
+* starts on one vertical line down the column, and the bars now carry that
+* alignment themselves.
+*
+* (!) The track carries NO min-width. Its flex minimum is 0 because it holds no
+* text, and it must stay that way: .dd_td has no overflow of its own and grid
+* items do not push their siblings, so any minimum wider than the cell would
+* paint the bar straight over the Attempt column.
+*
+* @param {Object}      job - one job row from the widget value
+* @param {HTMLElement} tr  - the row to append the cell to
+* @returns {HTMLElement} the progress cell
+*/
+const build_progress_cell = function(job, tr) {
+
+	const td_progress = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_td job_progress',
+		parent			: tr
+	})
+
+	// counter + message line
+	const head = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'job_progress_head',
+		parent			: td_progress
+	})
+	const counter = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'job_counter',
+		parent			: head
+	})
+	// "1,284,300 / 0" is worse than useless — a zero total means NO estimate was
+	// supplied, not a job with nothing to do. Show the bare tally instead; the
+	// caption below says "No estimate" in words.
+	counter.textContent = Number(job.total) > 0
+		? format_int(job.counter) + ' / ' + format_int(job.total)
+		: format_int(job.counter)
+	if (job.msg) {
+		const msg = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'job_msg',
+			parent			: head
+		})
+		msg.textContent = job.msg
+	}
+
+	// bar + caption (active jobs only)
+	const view = progress_view(job)
+	if (view.show===true) {
+		const bar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_bar' + (view.indeterminate===true ? ' indeterminate' : ''),
+			parent			: td_progress
+		})
+		// the bar is a status readout, not a control: expose it as a progressbar
+		// so it is not silently invisible to assistive tech
+		bar.setAttribute('role', 'progressbar')
+		if (view.indeterminate===true) {
+			bar.setAttribute('aria-valuetext', view.caption)
+		} else {
+			bar.setAttribute('aria-valuemin', '0')
+			bar.setAttribute('aria-valuemax', '100')
+			bar.setAttribute('aria-valuenow', String(view.percent))
+		}
+		const fill = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: ('dd_bar_fill ' + view.severity).trim(),
+			parent			: bar
+		})
+		// (!) The inline width is set ONLY for a determinate bar. An indeterminate
+		// bar takes its width from the .indeterminate rule (and from the
+		// reduced-motion override, which widens it to a full dimmed track); an
+		// inline 0% would beat both on specificity and freeze the sweep at zero
+		// width — a bar that silently reports nothing while a job runs.
+		if (view.indeterminate!==true) {
+			fill.style.width = view.percent + '%'
+		}
+
+		if (view.caption!=='') {
+			const note = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'dd_bar_note',
+				parent			: td_progress
+			})
+			note.textContent = view.caption
+		}
+	}
+
+
+	return td_progress
+}//end build_progress_cell
+
+
+
+/**
 * BUILD_JOBS_BLOCK
-* Renders the durable job queue as a table (admin scope: all jobs, 24h window),
-* with per-row Cancel / Requeue buttons and a block-level Purge control.
+* Renders the durable job queue as a shared kit `.dd_table` grid (admin scope:
+* all jobs, 24h window), with per-row Cancel / Requeue buttons and a block-level
+* Purge control. The column template lives in diffusion_server_control.less — see
+* the comment there for why it must be explicit.
 *
 * Source: `value.jobs` — projected durable job rows. Each item shape:
 *   { job_id, process_id, state, element_tipo, section_tipo, type, counter,
@@ -415,57 +620,93 @@ const build_jobs_block = function(self, value, parent) {
 			parent			: jobs_block
 		})
 	} else {
+		// shared kit table: a CSS grid whose column template lives in the widget
+		// stylesheet. Rows are display:contents, so header and data cells share one
+		// grid — every cell in a column aligns, whatever its content height.
 		const table = ui.create_dom_element({
-			element_type	: 'table',
-			class_name		: 'diffusion_server_control_job_table',
+			element_type	: 'div',
+			class_name		: 'dd_table diffusion_server_control_job_table' + (is_admin ? ' with_actions' : ''),
 			parent			: jobs_block
 		})
-		const thead = ui.create_dom_element({ element_type:'thead', parent:table })
-		const head_row = ui.create_dom_element({ element_type:'tr', parent:thead })
-		for (const heading of ['Process','Target','State','Progress','Attempt','']) {
-			const th = ui.create_dom_element({ element_type:'th', parent:head_row })
-			th.textContent = heading
+
+		// header row. (!) must live INSIDE the .dd_table grid so its cells take the
+		// same column template as the data cells. The action column is rendered only
+		// for admins — nobody else gets buttons, so nobody else gets a dead column.
+		const head_row = ui.create_dom_element({ element_type:'div', class_name:'dd_tr', parent:table })
+		const headings = [
+			{ label:'Process',	class_name:'dd_th' },
+			{ label:'Target',	class_name:'dd_th' },
+			{ label:'State',	class_name:'dd_th' },
+			{ label:'Progress',	class_name:'dd_th' },
+			{ label:'Attempt',	class_name:'dd_th num' }
+		]
+		if (is_admin) {
+			headings.push({ label:'', class_name:'dd_th act' })
 		}
-		const tbody = ui.create_dom_element({ element_type:'tbody', parent:table })
+		for (const heading of headings) {
+			const th = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: heading.class_name,
+				parent			: head_row
+			})
+			th.textContent = heading.label
+		}
 
 		for (const job of jobs) {
 			const state	= String(job.state || 'unknown')
 			const tr = ui.create_dom_element({
-				element_type	: 'tr',
-				class_name		: 'diffusion_server_control_job state_' + state,
-				parent			: tbody
+				element_type	: 'div',
+				class_name		: 'dd_tr diffusion_server_control_job job_state_' + state,
+				parent			: table
 			})
+			// Row identity + structural signature for the live layer: the stream
+			// finds a row by job_id and patches it in place while the signature
+			// holds, and asks for a rebuild the moment it does not. Written here,
+			// at the only place that knows what was actually rendered.
+			tr.dataset.job_id = String(job.job_id ?? '')
+			tr.dataset.signature = row_signature(job, progress_view(job))
 
 			// process id
-			const td_proc = ui.create_dom_element({ element_type:'td', parent:tr })
+			const td_proc = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_id', parent:tr })
 			td_proc.textContent = job.process_id || job.job_id || 'unknown'
 
 			// element → section (+ type)
-			const td_target = ui.create_dom_element({ element_type:'td', parent:tr })
+			const td_target = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_target', parent:tr })
 			td_target.textContent = (job.element_tipo || '?') + ' → ' + (job.section_tipo || '?')
 				+ (job.type ? ' (' + job.type + ')' : '')
 
-			// state badge
-			const td_state = ui.create_dom_element({ element_type:'td', parent:tr })
+			// state badge. The state word is a single token and is never wrapped;
+			// a requested cancel is a separate sub-line rather than a suffix, so it
+			// cannot force the badge to break mid-word.
+			const td_state = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_state', parent:tr })
 			const badge = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: ('dd_badge ' + (state_class[state] || '')).trim(),
 				parent			: td_state
 			})
-			badge.textContent = state + (job.cancel_requested===true ? ' (cancelling)' : '')
+			badge.textContent = state
+			if (job.cancel_requested===true) {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'dd_note job_cancelling',
+					inner_html		: 'cancelling',
+					parent			: td_state
+				})
+			}
 
-			// progress counter/total (+ msg)
-			const td_progress = ui.create_dom_element({ element_type:'td', parent:tr })
-			td_progress.textContent = (job.counter ?? 0) + '/' + (job.total ?? 0)
-				+ (job.msg ? ' — ' + job.msg : '')
+			// progress: counter/message line + the bar and its honest caption
+			build_progress_cell(job, tr)
 
-			// attempt/max
-			const td_attempt = ui.create_dom_element({ element_type:'td', parent:tr })
+			// attempt/max (kit .num cell: right-aligned tabular monospace)
+			const td_attempt = ui.create_dom_element({ element_type:'div', class_name:'dd_td num job_attempt', parent:tr })
 			td_attempt.textContent = (job.attempt ?? 0) + '/' + (job.max_attempts ?? 0)
 
 			// actions
-			const td_actions = ui.create_dom_element({ element_type:'td', class_name:'job_actions', parent:tr })
-			if (is_admin && CANCELABLE.includes(state)) {
+			if (!is_admin) {
+				continue
+			}
+			const td_actions = ui.create_dom_element({ element_type:'div', class_name:'dd_td act job_actions', parent:tr })
+			if (CANCELABLE.includes(state)) {
 				const button_cancel = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light button_cancel danger',
@@ -485,7 +726,7 @@ const build_jobs_block = function(self, value, parent) {
 					}
 				})
 			}
-			if (is_admin && REQUEUEABLE.includes(state)) {
+			if (REQUEUEABLE.includes(state)) {
 				const button_requeue = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light button_requeue warning',
@@ -506,6 +747,17 @@ const build_jobs_block = function(self, value, parent) {
 				})
 			}
 		}
+
+		// What the percentages actually mean. A plain muted note on purpose — this
+		// is a DEFINITION, not an alert, and tinting it amber would spend the
+		// severity vocabulary on a permanent caption (the global warning-bar
+		// antipattern this widget family avoids).
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note diffusion_server_control_estimate_note',
+			inner_html		: 'Percentages use the record estimate supplied when each job was queued — the server never re-counts. "Estimate exceeded" means a job has already processed more records than it estimated; it is not an error.',
+			parent			: jobs_block
+		})
 	}
 
 	// block-level purge control (admin only)
@@ -585,13 +837,30 @@ const build_pending_block = function(self, value, parent) {
 		parent			: parent
 	})
 
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_eyebrow',
+		inner_html		: 'Unpublish queue',
+		parent			: pending_block
+	})
+
+	// (!) the row MUST hang off a .dd_readout: .dd_row is display:contents, and the
+	// kit only styles .dd_k / .dd_v as *descendants of .dd_readout*. Appended to a
+	// bare flex block the two spans lose all padding, background and borders — the
+	// one key/value pair in this widget not sitting on a panel.
+	const grid = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_readout',
+		parent			: pending_block
+	})
+
 	const count_known	= typeof pending === 'number'
 	const count_label	= !count_known
 		? 'unknown (no diffusion ontology / not applicable)'
 		: String(pending)
 	add_row(
-		pending_block,
-		'Pending unpublish deletions',
+		grid,
+		'Pending deletions',
 		count_label,
 		count_known && pending>0 ? 'state_warning' : ''
 	)

@@ -182,9 +182,10 @@
 	--tool_dd_label:                  #b0b0b0;
 	--tool_dd_label_border:           #808080;
 	--tool_dev_template:              #ffa040;
-	--tool_diffusion:                 #a0c080;
-	--tool_diffusion_text:            #1a1d20;
-	--tool_diffusion_border:          #90b070;
+	// tool_diffusion deliberately has NO dark variant: its colour is one deep
+	// sage for both themes, declared once in tools/tool_diffusion/css. A dark
+	// entry here would win on specificity (`:root[data-theme]` beats the tool's
+	// `:root`) and silently reinstate a light bar under white header ink.
 	--tool_export:                    #9070c8;
 	--tool_export_lighten_40:         #2a2438;
 	--tool_export_lighten_5:          #a080d8;

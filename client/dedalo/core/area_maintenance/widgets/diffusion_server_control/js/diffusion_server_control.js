@@ -86,8 +86,34 @@ export const diffusion_server_control = function() {
 	// lifecycle
 	diffusion_server_control.prototype.init		= widget_common.prototype.init
 	diffusion_server_control.prototype.render	= widget_common.prototype.render
-	diffusion_server_control.prototype.refresh	= widget_common.prototype.refresh
-	diffusion_server_control.prototype.destroy	= widget_common.prototype.destroy
+
+	// (!) refresh/destroy are WRAPPED, not assigned straight through. The live
+	// controller is registered in ar_instances, so do_delete_dependencies does
+	// tear it down — but only once the framework gets that far. Cancelling the
+	// reader FIRST means a frame can never land against a DOM that is midway
+	// through being replaced.
+	diffusion_server_control.prototype.refresh = function(...args) {
+		this.live?.destroy()
+		this.live = null
+		return widget_common.prototype.refresh.apply(this, args)
+	}
+	diffusion_server_control.prototype.destroy = function(...args) {
+		this.live?.destroy()
+		this.live = null
+		return widget_common.prototype.destroy.apply(this, args)
+	}
+
+	// Visibility signals from the area_maintenance host (WC-067 host edits).
+	// Collapsing an accordion and switching Map/List both leave this widget's
+	// nodes CONNECTED — only hidden — so `isConnected` cannot detect either.
+	// These callbacks are the only signal, and both funnel into the controller's
+	// single idempotent evaluate().
+	diffusion_server_control.prototype.on_collapse = function() {
+		this.live?.evaluate()
+	}
+	diffusion_server_control.prototype.on_expose = function() {
+		this.live?.evaluate()
+	}
 	// get_value issues a dd_area_maintenance_api::get_widget_value request; the
 	// server delegates to diffusion_server_control::get_value() and the resolved
 	// object is stored in this.value before the render cycle.
@@ -184,6 +210,38 @@ diffusion_server_control.prototype.widget_request = async function(action, optio
 
 
 /**
+* FOLLOW_QUEUE
+* Open the admin queue SSE stream (dd_diffusion_api::follow_queue, WC-067).
+*
+* (!) This is the ONE action on this widget that does NOT go through
+* widget_request, and the exception is structural rather than stylistic: the
+* widget API cannot carry a stream at all. dd_area_maintenance_api builds its
+* result as {status, body} from a WidgetResponse, which has no stream slot, so
+* the server's streaming branch can never fire for a widget action — and
+* widget_request's transport (data_manager.request with use_worker:true) never
+* touches response.body in any case. So the live feed goes direct, which is the
+* documented "shared/infra logic" exception to the widget-API policy. Every
+* MUTATING action stays on widget_request.
+*
+* Auth is unchanged: request_stream carries the session cookie and injects the
+* CSRF token, and the action is global-admin gated server-side.
+*
+* @returns {Promise<ReadableStream>} rejects on a network failure or a non-2xx
+*/
+diffusion_server_control.prototype.follow_queue = function() {
+
+	return data_manager.request_stream({
+		body : {
+			dd_api			: 'dd_diffusion_api',
+			action			: 'follow_queue',
+			prevent_lock	: true
+		}
+	})
+}//end follow_queue
+
+
+
+/**
 * CANCEL_PROCESS
 * Cancels a single active diffusion job (queued or running) by its client
 * process_id. The server marks the durable queue row cancelled (admin scope);
@@ -227,11 +285,18 @@ diffusion_server_control.prototype.purge_jobs = async function(older_than_hours=
 
 /**
 * SET_SCHEDULER
-* Pauses or resumes the scheduler's job DISPATCH. While paused no new jobs are
-* claimed (in-flight runners finish, queued jobs wait); crash-recovery keeps
-* running. In-memory state — resets to running on a server restart.
+* Controls the scheduler's job DISPATCH. While paused no new jobs are claimed
+* (in-flight runners finish, queued jobs wait); crash-recovery keeps running.
+* In-memory state — resets to running on a server restart.
 * Global-admin gated server-side.
-* @param {string} action - 'pause' | 'resume'.
+*
+* (!) This is dispatch control, NOT process control: diffusion runs inside the
+* server process, so there is nothing to start or stop (WC-005). 'drain_resume'
+* is the quiesce — hold dispatch, wait for the running jobs, then resume — and
+* it RETURNS IMMEDIATELY: the wait outlives any request budget, so the server
+* answers "draining" and the queue stream reports when it ends.
+*
+* @param {string} action - 'pause' | 'resume' | 'drain_resume'.
 * @returns {Promise<Object>} api_response { result: boolean, msg: string, errors: Array }
 */
 diffusion_server_control.prototype.set_scheduler = async function(action) {

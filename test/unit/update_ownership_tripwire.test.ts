@@ -67,6 +67,8 @@ const ENGINE_NATIVE: Record<string, string> = {
 	'runtime_info.clear_session_files': 'TS-owned session store pruning',
 	'database_info.analyze_db':
 		'shared-DB maintenance through the TS db_assets path (PHP-parity action, no PHP-tree surface)',
+	'database_info.analyze_statistics':
+		'TS-native statistics repair (plain ANALYZE, scoped to the tables the WC-073 verdict names) — no PHP-install surface exists to own it',
 	'database_info.consolidate_tables': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.rebuild_user_stats': 'shared-DB maintenance through the TS db_assets path',
 	'database_info.optimize_tables': 'shared-DB maintenance through the TS db_assets path',

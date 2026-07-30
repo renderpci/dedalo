@@ -886,9 +886,6 @@ template {
   --tool_dd_label: #b0b0b0;
   --tool_dd_label_border: #808080;
   --tool_dev_template: #ffa040;
-  --tool_diffusion: #a0c080;
-  --tool_diffusion_text: #1a1d20;
-  --tool_diffusion_border: #90b070;
   --tool_export: #9070c8;
   --tool_export_lighten_40: #2a2438;
   --tool_export_lighten_5: #a080d8;
@@ -11304,6 +11301,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header > .tool_name_container {
   margin-right: 1em;
   padding-right: 1rem;
+  display: flex;
+  align-items: center;
 }
 .tool_header > .tool_name_container > .label {
   font-size: 1.4rem;
@@ -11318,7 +11317,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .tool_header > .tool_name_container > .description {
   font-weight: 200;
-  margin-top: 0.3rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  line-height: 1.4rem;
 }
 .tool_header > .tool_buttons_container {
   display: flex;
@@ -12619,6 +12620,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 *                                                      + severity chip system
 *   .dd_eyebrow   uppercase section micro-heading
 *   .dd_note      muted helper note (+ .state_warning / .state_danger alert box)
+*   .dd_bar / .dd_bar_fill / .dd_bar_note   progress bar (+ .indeterminate sweep)
+*   .dd_stats / .dd_stat / .dd_stat_n       headline "how many, right now" band
 *
 * Mixins (called from area_maintenance.less so the look reaches every widget):
 *   .dd_console()          monospace output/log block
@@ -12851,6 +12854,94 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .dd_note.state_danger {
   background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
   border-left-color: var(--color_danger);
+}
+.dd_bar {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--bg_surface_alt);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border_default) 80%, transparent);
+}
+.dd_bar_fill {
+  flex: 0 0 auto;
+  width: 0;
+  height: 100%;
+  background-color: var(--color_success);
+  transition: width 0.3s ease;
+}
+.dd_bar_fill.state_warning {
+  background-color: var(--color_warning);
+}
+.dd_bar_fill.state_danger {
+  background-color: var(--color_danger);
+}
+.dd_bar_note {
+  color: var(--fg_muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.dd_bar.indeterminate .dd_bar_fill {
+  width: 30%;
+  animation: dd_bar_sweep 1.1s ease-in-out infinite;
+}
+@keyframes dd_bar_sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(333%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dd_bar.indeterminate .dd_bar_fill {
+    width: 100%;
+    transform: none;
+    animation: none;
+    background-color: color-mix(in srgb, var(--color_success) 45%, transparent);
+  }
+}
+.dd_stats {
+  display: flex;
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+}
+.dd_stat {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.5rem 0.85rem;
+  border-left: 1px solid var(--border_default);
+}
+.dd_stat:first-child {
+  border-left: 0;
+}
+.dd_stat_n {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--fg_default);
+  font-variant-numeric: tabular-nums;
+}
+.dd_stat_n.state_ok {
+  color: var(--color_success);
+}
+.dd_stat_n.state_warning {
+  color: var(--color_warning);
+}
+.dd_stat_n.state_danger {
+  color: var(--color_danger);
+}
+.dd_stat.zero .dd_stat_n {
+  color: var(--fg_muted);
+  font-weight: 500;
 }
 .area_maintenance > .content_data h1 {
   line-height: 1em;
@@ -13385,6 +13476,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .area_maintenance > .content_data .widget_container.danger > .widget_label {
   background-color: var(--color_danger);
+}
+.area_maintenance > .content_data .widget_container.warning > .widget_label {
+  background-color: var(--color_warning);
 }
 .area_maintenance > .content_data .widget_container.blue > .widget_label {
   background-color: var(--color_primary);
@@ -14708,6 +14802,29 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   display: flex;
   flex-direction: column;
 }
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_progress.hide {
+  display: none;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_bar.hide {
+  display: none;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_status,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_jobs,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_pending,
@@ -14715,58 +14832,99 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.diffusion_server_control .diffusion_server_control_footer {
   margin-top: 0.9rem;
 }
+.wrapper_widget.diffusion_server_control .diffusion_server_control_status,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_jobs,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_pending,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_config,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_footer {
   padding-top: 0.9rem;
   border-top: 1px solid var(--border_default);
 }
+.wrapper_widget.diffusion_server_control .diffusion_server_control_status > .dd_eyebrow,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler > .dd_eyebrow,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_jobs > .dd_eyebrow,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_pending > .dd_eyebrow,
 .wrapper_widget.diffusion_server_control .diffusion_server_control_config > .dd_eyebrow {
   margin-bottom: 0.5rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_status {
+  display: flex;
+  flex-direction: column;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 0.6rem;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .button_scheduler {
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .dsc_sched_actions {
   align-self: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .button_scheduler[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_jobs {
   display: flex;
   flex-direction: column;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_job_table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
+  grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem;
+  overflow-x: auto;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table th,
-.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table td {
-  text-align: left;
-  padding: 0.4rem 0.6rem;
-  border-bottom: 1px solid var(--border_default);
-  vertical-align: middle;
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table.with_actions {
+  grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem auto;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table th {
-  font-weight: 600;
-  color: var(--text_muted, inherit);
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_id,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_target {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_state {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.1rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_state .dd_badge {
+  white-space: nowrap;
+  word-break: normal;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_cancelling {
+  font-size: 0.7rem;
+  font-style: italic;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_progress {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.25rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_progress_head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_counter {
+  flex: 0 0 auto;
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table td:first-child,
-.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table td:nth-child(2) {
-  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
-  word-break: break-word;
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_msg {
+  min-width: 0;
+  color: var(--fg_muted);
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_actions {
-  display: flex;
   gap: 0.4rem;
-  flex-wrap: wrap;
-  white-space: nowrap;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_estimate_note {
+  margin-top: 0.5rem;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_purge {
   display: flex;
@@ -14780,9 +14938,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_pending {
   display: flex;
-  align-items: center;
-  gap: 0.66rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_pending .button_retry {
+  align-self: flex-start;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_config {
   display: flex;

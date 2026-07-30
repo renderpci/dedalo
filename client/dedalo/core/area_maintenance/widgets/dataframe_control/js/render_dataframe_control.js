@@ -93,20 +93,24 @@ render_dataframe_control.prototype.list = async function(options) {
 * Builds the inner content node for the dataframe_control widget.
 *
 * Renders three elements inside a container div:
-*   1. A summary div, initially populated with the cached report stored in
-*      `self.value` (the result of get_value on the server, which runs a
-*      read-only integrity check at widget-load time).
-*   2. A "Check" button that triggers a fresh read-only scan (`run_check`).
+*   1. A summary div in the NOT-RUN state. No report is fetched on load
+*      (WC-071) — this widget's value is a whole-database scan, so it exists
+*      only once an operator asks for it.
+*   2. A "Check" button that triggers the read-only scan (`run_check`).
 *   3. A "Remove orphans" button that triggers the destructive fix (`run_fix`)
 *      after a browser confirm() guard. This button removes orphan frame locators
 *      but never deletes the frame target records themselves (TM safety rule).
 *
-* Both action buttons toggle a CSS `loading` class on content_data while the
-* server request is in flight (integrity scans can take many seconds on large
-* databases — the server timeout is set to 1 hour in run_action).
+* Both action buttons toggle a CSS `loading` class while the server request is
+* in flight (integrity scans can take many minutes on large databases — the
+* client timeout is 1 hour in run_action, but the SERVER's per-statement
+* timeout may cancel a batch first, which surfaces through render_error).
+*
+* This builder is fully synchronous: with nothing to await, wrapping it in a
+* spinner placeholder would only add a frame.
 *
 * @param {Object} self - the dataframe_control widget instance (provides
-*   `self.value` with the pre-loaded integrity report and `self.run_action`)
+*   `self.run_action`; `self.value` is populated by a scan, not by a load)
 * @returns {HTMLElement} content_data div containing summary + action buttons
 */
 const get_content_data = function(self) {
@@ -117,99 +121,180 @@ const get_content_data = function(self) {
 			class_name	 : 'content_data'
 		})
 
-	// Claim the lazy load synchronously so the framework's widget_common.load()
-	// (fired on accordion open) becomes a no-op. This widget fetches its OWN report
-	// INSIDE the placeholder below, so the "Loading…" spinner covers the real
-	// network wait — instead of the framework rendering a "-" report first and then
-	// tacking a second spinner underneath it while it fetches.
-		const needs_fetch = typeof self.get_value === 'function' && self._load_state !== 'loaded'
-		if (needs_fetch) {
-			self._load_state = 'loading'
+	// (!) NOTHING is fetched here (WC-071). This panel used to run the integrity
+	// scan on every area_maintenance page load: it claimed the lazy load
+	// synchronously (self._load_state='loading') and then awaited its own
+	// get_value() inside a spinner placeholder. That scan walks EVERY matrix%
+	// table end to end — minutes of DB work on a scale install, for a cosmetic
+	// gain (it avoided a "-" report flashing before a second spinner). The
+	// widget now renders a NOT-RUN state and only scans on operator request.
+
+	// summary — the explicit not-run state, NEVER a zeroed report: showing
+	// 0 orphans for a scan that never ran would read as "clean".
+	// `self.value` is set ONLY by a scan the operator ran (below), so when it
+	// is present we repaint that report — a re-render (render_level 'content',
+	// or the Alt-click refresh, which rebuilds the shell) must not silently
+	// discard a result the operator is still reading.
+		const summary = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'summary',
+			parent			: content_data
+		})
+		if (self.value) {
+			render_report(summary, self.value)
+		} else {
+			render_not_run(summary)
 		}
 
-	// load gracefully: the placeholder shows while fetching, then the report with fresh data
-		ui.load_item_with_spinner({
-			container			: content_data,
-			preserve_content	: false,
-			label				: self.name,
-			callback			: async () => {
-
-				// fetch the integrity report first (the placeholder covers the wait)
-					if (needs_fetch) {
-						try {
-							self.value = await self.get_value()
-						} catch (error) {
-							self.error = error
-						}
-						self._load_state = 'loaded'
-					}
-					// self.value comes from dataframe_control::get_value (run_check report)
-					const report = self.value || {}
-
-				// container
-					const container = new DocumentFragment()
-
-				// summary
-					const summary = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'summary',
-						parent			: container
-					})
-					render_report(summary, report)
-
-				// button check
-					const button_check = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'primary',
-						text_content	: get_label.check || 'Check',
-						parent			: container
-					})
-					button_check.addEventListener('click', async function(e) {
-						e.stopPropagation()
-						summary.classList.add('loading')
-						// button_spinner: self-contained on-button spinner (never escapes the card)
-						button_check.classList.add('button_spinner')
-						try {
-							const api_response = await self.run_action({action: 'run_check'})
-							render_report(summary, api_response?.result || {}, api_response?.msg)
-						} finally {
-							summary.classList.remove('loading')
-							button_check.classList.remove('button_spinner')
-						}
-					})
-
-				// button fix (removes orphan frame locators; frame target records are never deleted)
-					const button_fix = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'warning',
-						text_content	: get_label.delete ? (get_label.delete + ' orphans') : 'Remove orphans',
-						parent			: container
-					})
-					button_fix.addEventListener('click', async function(e) {
-						e.stopPropagation()
-						// double user confirmation: this writes data
-						if (!confirm(get_label.sure || 'Sure?')) {
-							return
-						}
-						content_data.classList.add('loading')
-						// button_spinner: self-contained on-button spinner (never escapes the card)
-						button_fix.classList.add('button_spinner')
-						try {
-							const api_response = await self.run_action({action: 'run_fix'})
-							render_report(summary, api_response?.result || {}, api_response?.msg)
-						} finally {
-							content_data.classList.remove('loading')
-							button_fix.classList.remove('button_spinner')
-						}
-					})
-
-				return container
+	// button check
+		const button_check = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary',
+			text_content	: get_label.check || 'Check',
+			parent			: content_data
+		})
+		button_check.addEventListener('click', async function(e) {
+			e.stopPropagation()
+			summary.classList.add('loading')
+			// button_spinner: self-contained on-button spinner (never escapes the card)
+			button_check.classList.add('button_spinner')
+			try {
+				render_response(self, summary, await self.run_action({action: 'run_check'}))
+			} catch (error) {
+				self.error = error
+				render_error(summary, error?.message || error)
+			} finally {
+				summary.classList.remove('loading')
+				button_check.classList.remove('button_spinner')
 			}
-		})//end ui.load_item_with_spinner
+		})
+
+	// button fix (removes orphan frame locators; frame target records are never deleted)
+		const button_fix = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning',
+			text_content	: get_label.delete ? (get_label.delete + ' orphans') : 'Remove orphans',
+			parent			: content_data
+		})
+		button_fix.addEventListener('click', async function(e) {
+			e.stopPropagation()
+			// double user confirmation: this writes data
+			if (!confirm(get_label.sure || 'Sure?')) {
+				return
+			}
+			content_data.classList.add('loading')
+			// button_spinner: self-contained on-button spinner (never escapes the card)
+			button_fix.classList.add('button_spinner')
+			try {
+				render_response(self, summary, await self.run_action({action: 'run_fix'}))
+			} catch (error) {
+				self.error = error
+				render_error(summary, error?.message || error)
+			} finally {
+				content_data.classList.remove('loading')
+				button_fix.classList.remove('button_spinner')
+			}
+		})
 
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_RESPONSE
+* Paints one run_check / run_fix outcome and caches it on the instance.
+*
+* (!) A FAILED scan does not throw. The server answers `{result:false, msg, errors}`
+* — and on a large database that is the EXPECTED failure: the scan walks every
+* matrix% table, and a batch that exceeds the server's per-statement timeout is
+* cancelled, which surfaces here as result:false. Treating that as a report
+* (`api_response?.result || {}`) would print five dashes and read exactly like a
+* completed scan that found nothing — the "clean database we never looked at"
+* the not-run state exists to prevent. So a falsy `result` paints as an error and
+* `self.value` is left alone.
+*
+* @param {Object} self - widget instance (receives the cached report in self.value)
+* @param {HTMLElement} container - the summary div
+* @param {Object|null} api_response - raw envelope from run_action
+* @returns {void}
+*/
+const render_response = function(self, container, api_response) {
+
+	const result = api_response?.result
+
+	// failed / refused scan: never a report
+	if (!result || typeof result!=='object') {
+		self.error = api_response?.msg || 'the server returned no report'
+		render_error(container, self.error)
+		return
+	}
+
+	self.error = null
+	self.value = result
+	render_report(container, result, api_response?.msg)
+}//end render_response
+
+
+
+/**
+* RENDER_NOT_RUN
+* Paints the summary container's initial state: no scan has been run in this
+* page session.
+*
+* (!) This is deliberately NOT `render_report(container, {})`. That would print
+* "Orphan frames: -" alongside four other dashes, which reads like a completed
+* scan that found nothing. The panel must never imply a clean database it has
+* not looked at.
+*
+* @param {HTMLElement} container - the summary div to clear and repopulate
+* @returns {void}
+*/
+const render_not_run = function(container) {
+
+	// reset
+	while (container.firstChild) {
+		container.removeChild(container.firstChild)
+	}
+
+	// .dd_note: the kit's muted helper note (widget_kit.less) — not a state chip.
+	// A not-run panel is neutral information, not a warning.
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_note',
+		parent			: container
+	})
+	node.textContent = 'No scan has been run. Press Check to scan for orphan dataframe pairings.'
+}//end render_not_run
+
+
+
+/**
+* RENDER_ERROR
+* Paints a failed scan. The scan can legitimately fail on large databases (the
+* server statement timeout cancels a batch that runs too long), and a silent
+* failure here would leave the previous state on screen as if it were current.
+*
+* @param {HTMLElement} container - the summary div to clear and repopulate
+* @param {string} message - already-unwrapped failure text (server msg or error.message)
+* @returns {void}
+*/
+const render_error = function(container, message) {
+
+	// reset
+	while (container.firstChild) {
+		container.removeChild(container.firstChild)
+	}
+
+	// SEC-XSS: error text may echo DB-sourced strings; textContent avoids HTML parsing
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_note state_danger',
+		parent			: container
+	})
+	node.textContent = 'Scan failed: ' + message
+}//end render_error
 
 
 
@@ -247,6 +332,20 @@ const render_report = function(container, report, msg=null) {
 		container.removeChild(container.firstChild)
 	}
 
+	// (!) INCOMPLETENESS IS RENDERED FIRST, before any count (WC-072). The server
+	// sets complete:false when a table was exempted, truncated by a budget, or
+	// lost to a failed batch. "Orphan frames: 0" under a partial scan means "none
+	// where we looked", not "none" — so the caveat must reach the eye before the
+	// number does, not sit below it as a footnote.
+	if (report.complete === false) {
+		const warn = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dd_note state_warning',
+			parent			: container
+		})
+		warn.textContent = 'INCOMPLETE SCAN — these counts cover only the tables listed as examined below.'
+	}
+
 	// SEC-XSS: report values may contain DB text; textContent avoids HTML parsing
 	const lines = [
 		'Records scanned: '				+ (report.scanned ?? '-'),
@@ -264,6 +363,17 @@ const render_report = function(container, report, msg=null) {
 			parent			: container
 		})
 		node.textContent = line
+	}
+
+	// what was NOT examined, and why — each line already carries table + reason
+	const uncovered = report.uncovered || []
+	if (uncovered.length > 0) {
+		const detail = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'orphan_items',
+			parent			: container
+		})
+		detail.textContent = 'NOT EXAMINED:\n' + uncovered.join('\n')
 	}
 
 	// orphan detail list (capped server-side)

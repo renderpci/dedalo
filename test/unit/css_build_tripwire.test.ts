@@ -112,4 +112,62 @@ describe('css build tripwire', () => {
 		}
 		expect(missing, `${WHY_MISSING}\n${missing.join('\n')}`).toEqual([]);
 	});
+
+	/**
+	 * The diffusion job table's column template is LOAD-BEARING, and until now it
+	 * was defended by a comment alone (diffusion_server_control.less) — exactly the
+	 * "state a rule, add no gate" shape DEC-12 forbids.
+	 *
+	 * WHAT WENT WRONG WITHOUT IT: the table was a plain <table> under auto layout.
+	 * Its cells carry `word-break: break-word`, which resolves to
+	 * `overflow-wrap: anywhere` — and that COUNTS AS A SOFT-WRAP OPPORTUNITY when
+	 * the browser computes min-content width. So the layout believed the State
+	 * column could be one character wide and rendered "completed" as "complet/ed",
+	 * with the machine-string columns squeezed the same way.
+	 *
+	 * The fix was an explicit grid template whose first five tracks are all
+	 * non-intrinsic (`minmax(<length>, …fr)` or a bare length). That is also
+	 * precisely what makes the progress bar's percentage width safe: CSS Grid
+	 * §12.5 never consults a cell's min-content contribution for a track whose
+	 * sizing functions are non-intrinsic, so no cell content can move these
+	 * columns. Relax any of the five to auto / min-content / max-content /
+	 * fit-content and BOTH properties fail at once — the wrapping returns and the
+	 * bar (a percentage child) starts contributing 0 to its own track.
+	 *
+	 * The sixth `.with_actions` track is deliberately `auto` and deliberately
+	 * excluded: it holds only buttons, never a percentage-width child.
+	 */
+	test('the diffusion job table keeps a non-intrinsic column template', () => {
+		const INTRINSIC = /\b(?:auto|min-content|max-content|fit-content)\b/;
+		const main = built.find((b) => b.lessPath === 'client/dedalo/core/page/css/main.less');
+		expect(main, 'main.less is not among the compiled entrypoints').toBeDefined();
+
+		// every `.diffusion_server_control_job_table{…}` rule carrying the template
+		const rules = [
+			...(main as { css: string }).css.matchAll(
+				/\.diffusion_server_control_job_table[^{}]*\{([^}]*grid-template-columns[^}]*)\}/g,
+			),
+		];
+		// guards the guard: a selector rename must fail LOUDLY, not pass vacuously
+		expect(
+			rules.length,
+			'No compiled .diffusion_server_control_job_table rule declares grid-template-columns. Either the template was removed (the bug returns) or the selector was renamed — update this gate deliberately.',
+		).toBeGreaterThanOrEqual(2);
+
+		const offenders: string[] = [];
+		for (const rule of rules) {
+			const declared = /grid-template-columns\s*:\s*([^;}]+)/.exec(rule[1] as string);
+			if (declared === null) continue;
+			// tracks are space-separated, but minmax(a, b) contains a space inside
+			// its parens — split on top-level whitespace only
+			const tracks = (declared[1] as string).trim().match(/(?:[^\s(]+\([^)]*\)|[^\s]+)/g) ?? [];
+			for (const track of tracks.slice(0, 5)) {
+				if (INTRINSIC.test(track)) offenders.push(`${track}  (in: ${declared[1]?.trim()})`);
+			}
+		}
+		expect(
+			offenders,
+			`A .diffusion_server_control_job_table column track among the first five is INTRINSIC (auto / min-content / max-content / fit-content).\n\nThat single change reintroduces two bugs at once: cells wrap mid-word ("complet/ed", "…mdcat353_/rsc170") because word-break:break-word collapses their min-content width to one character, and the progress bar stops sizing because a percentage width contributes 0 to an intrinsic track.\n\nKeep every one of the first five as minmax(<length>, …fr) or a bare length. See the comment above this test.\n\nOffending tracks:\n${offenders.map((o) => `  ${o}`).join('\n')}`,
+		).toEqual([]);
+	});
 });

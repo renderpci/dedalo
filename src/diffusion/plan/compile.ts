@@ -43,6 +43,7 @@ import { readEnv } from '../../config/env.ts';
 import { getComponentModel } from '../../core/components/registry.ts';
 import { getModelByTipo } from '../../core/ontology/resolver.ts';
 import { currentOntologyRevision } from './cache.ts';
+import { KNOWN_FORMATS, TABLE_FORMATS } from './formats.ts';
 import { requireSqlIdentifier } from './identifier.ts';
 import type {
 	ColumnDef,
@@ -75,11 +76,9 @@ export function diffusionResolveLevels(): number {
 	return raw !== undefined && raw !== '' && !Number.isNaN(Number(raw)) ? Number(raw) : 2;
 }
 
-/** The diffusion output formats PHP validate accepts (dd_diffusion_api :442). */
-const KNOWN_FORMATS: ReadonlySet<string> = new Set(['sql', 'rdf', 'xml', 'socrata', 'markdown']);
-
-/** Formats whose target is a MariaDB database (identifier chokepoint applies). */
-const TABLE_FORMATS: ReadonlySet<string> = new Set(['sql', 'socrata']);
+// KNOWN_FORMATS / TABLE_FORMATS moved to ./formats.ts (2026-07-29, WC-065):
+// api/info.ts needs the SAME MariaDB-target answer for connection_status, and
+// one list is the whole point.
 
 /** How a parser fn participates in the new engine (parsers/registry.ts). */
 export type ParserClassifier = (fn: string) => 'runtime' | 'rewriter' | 'unknown';
@@ -459,8 +458,13 @@ async function compileSectionPlan(
 		diagnostics.warnings.push(`global_table_maps:${tableNode.tipo}`);
 	}
 
+	// Columns come from the table node's DIRECT children (oracle
+	// dd_diffusion_api::process_datum :996 — get_ar_children is first-level
+	// only). childrenTipos is the RECURSIVE UI list: using it makes a nested
+	// table node's fields columns of its PARENT table, which collides whenever
+	// both declare the same field label ('Duplicate column name').
 	const fields: FieldPlan[] = [];
-	for (const fieldTipo of tableNode.childrenTipos) {
+	for (const fieldTipo of tableNode.directChildrenTipos) {
 		const fieldPlan = await compileFieldPlan(
 			tree,
 			fieldTipo,

@@ -7,7 +7,6 @@
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
-	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_dataframe_control} from './render_dataframe_control.js'
 
 
@@ -30,12 +29,11 @@
 *   init() → build() → render() → [refresh cycles] → destroy()
 *
 * Data flow:
-*   build()          — calls widget_common.prototype.build (which calls
-*                      get_value() on first render to populate self.value).
-*   get_value()      — delegates to area_maintenance.prototype.get_value,
-*                      which calls dd_area_maintenance_api / get_widget_value
-*                      → server class.dataframe_control.php::get_value().
-*   run_action()     — called directly from the UI buttons in
+*   build()          — shell only. No get_value exists on this widget (WC-071),
+*                      so widget_common.prototype.load() is a no-op and NOTHING
+*                      is fetched on page load or accordion open.
+*   run_action()     — the ONLY server round-trip. Called directly from the UI
+*                      buttons in
 *                      render_dataframe_control when the operator triggers a
 *                      check or fix; calls dd_area_maintenance_api /
 *                      widget_request → run_check or run_fix on the server.
@@ -43,7 +41,7 @@
 *                      render_dataframe_control.prototype.list, which builds
 *                      the report DOM and wires the action buttons.
 *
-* Server peer: core/area_maintenance/widgets/dataframe_control/class.dataframe_control.php
+* Server peer: src/core/area_maintenance/widgets/dataframe_control.ts
 * Render peer: render_dataframe_control.js
 *
 * Exported:
@@ -77,9 +75,18 @@ export const dataframe_control = function() {
 *
 * Lifecycle methods (init, render, refresh, destroy) are provided entirely by
 * widget_common — no custom overrides are needed for this widget.
-* get_value is borrowed from area_maintenance so the standard
-* dd_area_maintenance_api / get_widget_value route is used for the initial
-* data load (the same API endpoint used by every other area_maintenance widget).
+* (!) This widget deliberately has NO `get_value` (WC-071). Every other
+* area_maintenance widget borrows area_maintenance.prototype.get_value so the
+* framework's lazy loader can fetch a panel value on open — but this widget's
+* value IS a full-database integrity scan (every matrix% table, end to end),
+* which on a scale install is minutes of DB work that cannot complete inside
+* the statement timeout. It ran on every page load, per admin, in both views.
+* The scan is an OPERATOR action now: `run_action({action:'run_check'})` from
+* the Check button, nothing on load. Because widget_common.prototype.load()
+* no-ops when `typeof self.get_value!=='function'`, dropping this one
+* assignment is what actually disarms the load path — the server module
+* dropped its matching `getValue` in the same change.
+*
 * Both edit and list mode resolve to render_dataframe_control.prototype.list
 * because this widget has a single, combined check+fix view with no separate
 * read-only list.
@@ -90,7 +97,6 @@ export const dataframe_control = function() {
 	dataframe_control.prototype.render		= widget_common.prototype.render
 	dataframe_control.prototype.refresh		= widget_common.prototype.refresh
 	dataframe_control.prototype.destroy		= widget_common.prototype.destroy
-	dataframe_control.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	dataframe_control.prototype.edit		= render_dataframe_control.prototype.list
 	dataframe_control.prototype.list		= render_dataframe_control.prototype.list
@@ -102,15 +108,13 @@ export const dataframe_control = function() {
 * Custom build that delegates to the shared widget_common build and then
 * performs any widget-specific post-build work.
 *
-* widget_common.prototype.build handles the initial get_value() call (which
-* populates self.value with the run_check report from the server) so that the
-* widget renders with fresh data on first open. No additional async work is
-* required here; the try/catch block is kept as a scaffold for future
-* widget-specific initialization steps.
+* This widget has no get_value (WC-071), so `autoload` is inert here: there is
+* no value to fetch and the widget renders a "not run" state until the operator
+* presses Check. No additional async work is required; the try/catch block is
+* kept as a scaffold for future widget-specific initialization steps.
 *
-* @param {boolean} autoload - when true the parent widget_common build will
-*   call get_value() automatically before render(); pass false to skip the
-*   initial server round-trip (e.g. when the caller supplies data directly).
+* @param {boolean} autoload - forwarded to widget_common.prototype.build for
+*   signature compatibility; has no effect on this widget (nothing to autoload).
 * @returns {Promise<boolean>} resolves with the boolean result of
 *   widget_common.prototype.build (true on success, false on failure)
 */

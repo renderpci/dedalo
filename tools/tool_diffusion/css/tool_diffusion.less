@@ -6,10 +6,20 @@
 
 // imports
 @import (once) '../../../client/dedalo/core/page/css/layout/vars';
+// (reference) is MANDATORY: the .dd_* classes are already emitted into main.css,
+// so a plain @import would duplicate ~67 rules into tool_diffusion.css. We want
+// the MIXINS (.dd_surface, .dd_console) and @dd_mono only.
+@import (reference) '../../../client/dedalo/core/area_maintenance/css/widget_kit';
 
 // local vars
+// ONE colour for both themes — declared here and nowhere else. The central dark
+// registry (`layout/theme_dark.less` "TOOL COLORS") deliberately carries NO
+// tool_diffusion entry: `:root[data-theme="dark"]` outranks this `:root`, so any
+// dark variant there wins silently and this block stops meaning anything.
+// --tool_diffusion_text means "ink that sits ON the tool colour", not "ink on
+// the page background"; using it anywhere else is a misuse (see the hover rule).
 :root {
-	--tool_diffusion: #8aa364;
+	--tool_diffusion: #567528;
 	--tool_diffusion_text: #040503;
 	--tool_diffusion_border: #7d9558;
 }
@@ -59,9 +69,18 @@
 					margin-left: 0.5rem;
 				}
 
+				// DARK MODE: this input is created WITHOUT a `type` attribute
+				// (render_tool_diffusion.js resolve_levels_input), so it never
+				// matches the global `input[type='text']…` rules — including the
+				// `:root[data-theme="dark"]` override that sets `color`. Left to
+				// the UA default the value rendered near-black on the dark
+				// background below, i.e. invisible. Set the ink explicitly here
+				// so the rule is self-sufficient and does not depend on the
+				// element carrying a type attribute.
 				input {
 					text-align: center;
-					background-color: @color_grey_15;
+					background-color: var(--input_bg);
+					color: var(--input_fg);
 					width: 3rem;
 					border: 1px solid @color_grey_13;
 					border-radius: 3px;
@@ -120,12 +139,16 @@
 			padding: 0.5rem;
 
 			// publication_item_label. Change background color to easy differentiate labels
+			// Ink is --fg_inverse (#ffffff in BOTH themes), NOT @color_white: that
+			// token INVERTS to #1b1d20 in dark, which was fine while the bar was a
+			// light green but is 2:1 now that the bar is one fixed deep sage. A bar
+			// that does not follow the theme cannot have ink that does.
 			>.publication_item_label {
 				padding: 0.5rem;
 				font-weight: 600;
 				min-height: 2rem;
 				background-color: @tool_color;
-				color: @color_white;
+				color: var(--fg_inverse);
 				margin-top: 0.33rem;
 				cursor: pointer;
 				text-transform: uppercase;
@@ -146,9 +169,11 @@
 					background-color: var(--color_4);
 				}
 
+				// the collapse chevron is a MASK — same rule as the text above: on a
+				// theme-independent bar it cannot use an inverting grey token
 				&:after {
 					right: 0.25rem;
-					background-color: @color_grey_14;
+					background-color: var(--fg_inverse);
 				}
 			}
 
@@ -186,11 +211,14 @@
 							color: @color_success;
 						}
 
+						// de-emphasised value. NOT @color_grey_10: that lands at
+						// ~2:1 against the card in BOTH themes, which is not
+						// "quiet", it is unreadable — and this carries real data.
 						&.light {
 							font-weight: 100;
 							font-family: monospace;
 							font-size: 0.95rem;
-							color: @color_grey_10;
+							color: var(--fg_muted);
 						}
 					}
 
@@ -219,8 +247,12 @@
 					.fields_grid_value.link {
 						cursor: pointer;
 
+						// NOT --tool_diffusion_text: that token is the ink for the
+						// GREEN bars, and the dark registry sets it to #1a1d20 —
+						// near-black, so on this dark card the label vanished on
+						// hover. Hover here means "full-strength ink".
 						&:hover {
-							color: var(--tool_diffusion_text);
+							color: var(--fg_default);
 							font-weight: 400;
 						}
 
@@ -261,10 +293,22 @@
 							align-items: center;
 
 							// publication_button: default style
+							// White label in BOTH themes. The button carries the
+							// core `.warning` class, whose `color: @color_white`
+							// INVERTS to #1b1d20 in dark — near-black on this fixed
+							// green. Same law as the item-label bars: the background
+							// does not follow the theme, so the ink must not either.
+							// The ::before glyph is a mask painted via
+							// --button-bg-color and inverts identically.
 							.publication_button {
 								margin: 1rem;
 								background-color: @tool_color;
 								border-color: var(--tool_diffusion_border);
+								color: var(--fg_inverse);
+
+								&:before {
+									background-color: var(--fg_inverse) !important;
+								}
 
 								&.not_ready {
 									opacity: 0.4;
@@ -333,115 +377,243 @@
 			}
 		}
 
-		// diffusion_report: Bun SQL diffusion result display
-		.diffusion_report {
-			padding: 1rem;
+		// ── run report ───────────────────────────────────────────────────────
+		// The final (and live) report of a diffusion run. Severity is carried by
+		// a 3px left rail plus a 6% tint, NOT by a full-bleed saturated bar: the
+		// old .report_summary.success/.partial/.fail blocks were the same
+		// antipattern as the global .warning_text orange bar, and they shouted
+		// the one fact the user already knew while burying the 119 zero rows.
+		// Colour comes only from --* tokens + color-mix, so both themes hold.
+		.diffusion_report.run_report {
+			.dd_surface();
 			width: 100%;
+			padding: .85rem 1rem;
+			margin-top: .5rem;
+			border-left: 3px solid var(--border_default);
 
-			.report_summary {
+			&.state_ok		{ border-left-color: var(--color_success); }
+			&.state_neutral	{ border-left-color: var(--border_default); }
+			&.state_warning {
+				border-left-color: var(--color_warning);
+				background-color: color-mix(in srgb, var(--color_warning) 6%, transparent);
+			}
+			&.state_danger {
+				border-left-color: var(--color_danger);
+				background-color: color-mix(in srgb, var(--color_danger) 6%, transparent);
+			}
+
+			// verdict
+			.run_verdict {
+				display: flex;
+				align-items: baseline;
+				flex-wrap: wrap;
+				gap: .5rem;
+			}
+			.run_metrics {
+				font-variant-numeric: tabular-nums;
+				font-weight: 600;
+			}
+			.run_headline {
+				margin-top: .25rem;
+				word-break: break-word;
+			}
+			.run_subject {
+				margin-top: .15rem;
+				color: var(--fg_muted);
+				font-size: .78rem;
+			}
+
+			// progress
+			.run_progress {
 				display: flex;
 				align-items: center;
-				gap: 0.5rem;
-				padding: 0.75rem 1rem;
-				margin-bottom: 0.75rem;
+				gap: .6rem;
+				margin-top: .5rem;
+			}
+			.run_bar {
+				flex: 1 1 auto;
+				height: 6px;
 				border-radius: 3px;
-				font-weight: 500;
-
-				&.success {
-					background-color: @color_success;
-					color: @color_white;
-				}
-				&.partial {
-					background-color: @color_warning;
-					color: @color_white;
-				}
-				&.fail {
-					background-color: @color_danger;
-					color: @color_white;
-				}
+				background-color: var(--bg_surface_alt);
+				overflow: hidden;
+			}
+			.run_bar_fill {
+				height: 100%;
+				background-color: var(--color_success);
+				transition: width .3s ease;
+			}
+			.run_bar_note {
+				color: var(--fg_muted);
+				font-size: .78rem;
+				font-variant-numeric: tabular-nums;
+				white-space: nowrap;
 			}
 
-			.tables_report {
-				width: 100%;
-				display: grid;
-				grid-template-columns: 1fr auto auto;
-				gap: 0.25rem 1rem;
-				background-color: @color_grey_15;
-				border: 1px solid @color_grey_13;
-				padding: 0.75rem 1rem;
-				border-radius: 3px;
+			// zones
+			.run_zone {
+				margin-top: .9rem;
+				padding-top: .7rem;
+				border-top: 1px solid var(--border_default);
 
-				.header {
-					font-weight: 600;
-					opacity: 0.7;
-					text-transform: uppercase;
-					box-shadow: none;
-				}
-				.header.table_name {
-					text-align: left;
-					border-bottom-left-radius: 1em;
-					border-top-left-radius: 1em;
-				}
-				.header.rows_total {
-					text-align: right;
-				}
-				.header.records_count {
-					text-align: right;
-					border-bottom-right-radius: 1em;
-					border-top-right-radius: 1em;
-				}
+				&:first-of-type { border-top: 0; }
+			}
+			.zone_count {
+				margin-left: .5rem;
+				color: var(--fg_muted);
+				font-weight: 400;
+				text-transform: none;
+				letter-spacing: 0;
+			}
 
-				.cell {
-					padding: .2rem 0 0 2em;
-					line-height: 1.4;
-				}
-				.cell.rows_total,
-				.cell.records_count {
+			// causes — the failure zone, first and loudest
+			.run_cause_list {
+				margin: .4rem 0 0 0;
+				padding-left: 1.2rem;
+			}
+			.run_cause {
+				font-family: @dd_mono;
+				font-size: .8rem;
+				padding: .2rem 0 .2rem .6rem;
+				border-left: 3px solid var(--color_danger);
+				margin-bottom: .3rem;
+				word-break: break-word;
+			}
+
+			// tables + files grids
+			.dd_table.tables_report	{ grid-template-columns: 1fr 10rem 12rem; }
+			.dd_table.files_table	{ grid-template-columns: 8rem 1fr auto; }
+			.dd_table {
+				margin-top: .45rem;
+
+				.dd_td.num, .dd_th.num {
 					text-align: right;
-					font-weight: 600;
-					padding-right: 1em;
 					font-variant-numeric: tabular-nums;
-
-					&.zero {
-						opacity: 0.4;
-						font-weight: 400;
-					}
+				}
+				// the de-emphasis vocabulary the old grid used, preserved
+				.dd_tr.zero { opacity: .4; font-weight: 400; }
+				.dd_tr.total_row {
+					border-top: 1px solid var(--border_default);
+					color: var(--fg_muted);
+					font-weight: 600;
 				}
 			}
+			// a per-row marker, not a colour-coded row: the delta is a nuance
+			.flag_delta:after {
+				content: ' ·';
+				color: var(--color_warning);
+			}
+			.delta_legend, .dd_empty {
+				color: var(--fg_muted);
+				font-size: .78rem;
+			}
+			// left-aligned: a centred "none" reads as a placeholder for missing
+			// content rather than the answer to "how many errors?"
+			.dd_empty { padding: .4rem 0; }
 
-			.error_list {
-				margin-top: 1rem;
+			// errors
+			.error_group		{ margin-bottom: .35rem; }
+			.error_group_head {
+				display: flex;
+				align-items: baseline;
+				gap: .4rem;
+				flex-wrap: wrap;
+			}
+			.error_text {
+				font-family: @dd_mono;
+				font-size: .8rem;
+				word-break: break-word;
+			}
+			.error_ids {
+				color: var(--fg_muted);
+				font-size: .74rem;
+				font-family: @dd_mono;
+				padding-left: .6rem;
+			}
 
-				.error_item {
-					padding: 0.5rem 0.75rem;
-					margin-bottom: 0.25rem;
-					font-size: 0.9rem;
-					font-family: monospace;
-					word-break: break-word;
-					border-radius: 2px;
-					background-color: @color_danger !important;
-					color: @color_white !important;
-				}
+			// disclosures
+			// NOTE deliberately NOT the global `.button` class — that is a fixed-size
+			// ICON chip, which squashed these text toggles into a small square with
+			// the label wrapping one word per line. These are plain text affordances.
+			.run_toggle {
+				display: inline-block;
+				margin-top: .45rem;
+				margin-right: .8rem;
+				color: var(--fg_muted);
+				font-size: .78rem;
+				line-height: 1.4;
+				white-space: nowrap;
+				cursor: pointer;
+				user-select: none;
+
+				&:before { content: '▸ '; }
+				&.open:before { content: '▾ '; }
+				&:hover { color: var(--fg_default); }
+			}
+			// the disclosure row: toggles left, Copy TSV right, never overlapping
+			.run_zone > .run_toggle + .copy_tsv,
+			.run_zone > .copy_tsv {
+				float: right;
+			}
+			.run_zone:after {
+				content: '';
+				display: block;
+				clear: both;
+			}
+			pre.run_console {
+				.dd_console();
+				margin-top: .35rem;
+				max-height: 22rem;
+				overflow: auto;
+				white-space: pre-wrap;
+				word-break: break-word;
+			}
+			.copy_tsv {
+				margin-top: .45rem;
+				font-size: .74rem;
+			}
+
+			// diagnostics readout — an enumerated key/value dump, so an
+			// un-curated key is visibly marked rather than passed off as known
+			.diagnostics_body { margin-top: .4rem; }
+			.dd_readout .dd_row.uncurated .dd_k {
+				font-family: @dd_mono;
+				font-size: .74rem;
+				opacity: .8;
+			}
+			.dd_readout .dd_v {
+				font-variant-numeric: tabular-nums;
+				word-break: break-word;
 			}
 		}
 	}//end content_data
 }//end wrapper_tool
 
 // modal header tool modification
+// NOTE `ui.build_modal` ADDS the `header` class to this same node, so the bar is
+// `.tool_header.tool_diffusion.header` and all of its ink comes from the modal
+// tokens, which resolve LIGHT in dark (title/description --modal_header_color ->
+// #ffffff, close/minimize --modal_btn_color -> #e5e7ea, masked icon literal
+// #ffffff). @tool_color must therefore stay dark enough to carry white ink.
 .tool_header.tool_diffusion {
 	background-color: @tool_color;
 }
 
 // engine advisory banner
+// Same severity vocabulary as .run_report above (rail + faint tint from a
+// token, never a hardcoded palette): the previous fixed cream/pink blocks
+// stayed light-mode in dark mode — a glaring slab with its own private ink.
 .diffusion_engine_advisory {
 	margin: 1em;
 	padding: 1em 1.2em;
 	border-radius: 6px;
-	border-left: 4px solid #c98a00;
-	background: #fff8e6;
-	color: #4a3b00;
+	border-left: 4px solid var(--color_warning);
+	background-color: color-mix(in srgb, var(--color_warning) 10%, var(--bg_surface));
+	color: var(--fg_default);
 
-	&.unreachable { border-left-color: #b3261e; background: #fdeceb; color: #5f1512; }
+	&.unreachable {
+		border-left-color: var(--color_danger);
+		background-color: color-mix(in srgb, var(--color_danger) 10%, var(--bg_surface));
+	}
 	.advisory_title { margin: 0 0 .4em; font-size: 1.05em; }
 	.advisory_cause { margin: 0 0 .6em; }
 	.advisory_steps { margin: 0 0 .8em 1.1em; }

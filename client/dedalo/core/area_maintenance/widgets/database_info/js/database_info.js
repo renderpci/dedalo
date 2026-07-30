@@ -167,9 +167,12 @@ database_info.prototype.build = async function(autoload=false) {
 * Sends a PostgreSQL ANALYZE command to the database server via the maintenance API.
 *
 * ANALYZE updates the planner statistics for all user tables, helping the query
-* planner choose optimal execution plans.  The operation is lightweight compared
-* to VACUUM ANALYZE but is still routed through a worker with a 1-hour timeout
-* because large databases may take several minutes.
+* planner choose optimal execution plans.
+*
+* (!) This action runs whole-database **VACUUM ANALYZE** server-side, not plain
+* ANALYZE — its cost is page-proportional, not the near-flat sampling cost of
+* ANALYZE. For refreshing statistics only, use `analyze_statistics` (WC-074).
+* Routed through a worker because large databases may take many minutes.
 *
 * The rqo_string is stripped from the debug payload after the request to avoid
 * logging large query objects to the browser console or network inspector.
@@ -206,6 +209,52 @@ database_info.prototype.analyze_db = async function() {
 
 	return api_response
 }//end analyze_db
+
+
+
+/**
+* ANALYZE_STATISTICS
+* Repairs degraded table statistics: plain ANALYZE, scoped server-side to the
+* tables the `statistics` verdict named (WC-074).
+*
+* (!) NOT the same as analyze_db, which runs whole-database VACUUM ANALYZE.
+* Reclaiming space and refreshing planner statistics are different jobs with
+* different costs — plain ANALYZE samples a bounded page count and so is
+* near-flat in table size, while VACUUM ANALYZE is page-proportional. This is the
+* action the degraded-statistics warning points at.
+*
+* The table list is NOT sent from here: the server re-derives it from the catalog
+* so the set analyzed is exactly the set the verdict computed.
+*
+* @returns {Promise<Object>} api_response — result.analyzed is the table list
+*   actually analyzed ([] when the verdict was already healthy, which is a
+*   success, not an error).
+*/
+database_info.prototype.analyze_statistics = async function() {
+
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'analyze_statistics'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 21600 * 1000 // 3 hour waiting response
+	})
+
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end analyze_statistics
 
 
 

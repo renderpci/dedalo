@@ -48,6 +48,23 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		const { getEngineAdvisoryAction } = await import('../../../diffusion/api/actions.ts');
 		return getEngineAdvisoryAction(rqo, principal);
 	},
+	follow_queue: async (rqo, context) => {
+		// Admin-only, and MORE sensitive than its owner-scoped siblings: every
+		// frame names every owner's running job — precisely what ownerScope()
+		// withholds from get_process_status / list_processes. The gate runs
+		// before any queue is opened or read.
+		//
+		// (!) The refusal is an SSE frame, not the JSON envelope the other
+		// actions return — see queueRefusalStream for why a stream client
+		// cannot receive a JSON refusal.
+		const principal = requirePrincipal(context);
+		if (!principal.isGlobalAdmin) {
+			const { queueRefusalStream } = await import('../../../diffusion/api/actions.ts');
+			return queueRefusalStream('insufficient permissions');
+		}
+		const { followQueueAction } = await import('../../../diffusion/api/actions.ts');
+		return followQueueAction(rqo, principal);
+	},
 	retry_pending_deletions: async (rqo, context) => {
 		// Admin-only (DIFF-02): re-drives the GLOBAL dd1758 pending-unpublish queue
 		// — background load a non-admin must not be able to trigger. Its siblings
