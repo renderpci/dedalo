@@ -42,7 +42,9 @@
 * first argument. The caller (tool_tr_print.js) assigns this module's .edit method
 * to tool_tr_print.prototype.edit, so `this` inside .edit is the live instance.
 * Key instance properties consumed here:
-*   self.ar_raw_data               — Array of {value: string} items from the active
+*   self.ar_raw_data               — Array of {id, lang, value} data items (the
+*                                    component's `data.entries`; kept in sync by
+*                                    tool_tr_print.sync_raw_data) from the active
 *                                    component_text_area data value array (may change
 *                                    on lang switch)
 *   self.lang                      — BCP-47 language tag ('lg-spa', 'lg-eng', …)
@@ -346,7 +348,7 @@ const render_text_process_options = function(self, content_data) {
 						})
 
 					// fix vars — sync self.ar_raw_data after the refresh populates new lang data
-						self.ar_raw_data = self.transcription_component.data.value
+						self.sync_raw_data()
 
 					// remove previous nodes
 						while (content_data.right_container_text.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
@@ -1143,6 +1145,13 @@ const render_header = function(self) {
 	const datum		= related_sections || {}
 	const context	= datum.context
 	const data		= datum.data
+	// The server emits related_sections only for a text_area whose ontology
+	// declares properties.tags_persons; without this guard a component that has
+	// none reached `undefined.find(…)` and took the whole tool down on open,
+	// despite this function documenting a null return for exactly that case.
+	if(!Array.isArray(data)){
+		return null
+	}
 	const sections	= data.find(el => el.typo==='sections')
 	if(!sections){
 		return null

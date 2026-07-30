@@ -38,6 +38,7 @@ import { component3dApiActions } from './handlers/dd_component_3d_api.ts';
 import { componentAvApiActions } from './handlers/dd_component_av_api.ts';
 import { componentInfoApiActions } from './handlers/dd_component_info.ts';
 import { componentPortalApiActions } from './handlers/dd_component_portal_api.ts';
+import { componentTextAreaApiActions } from './handlers/dd_component_text_area_api.ts';
 import { coreApiActions } from './handlers/dd_core_api.ts';
 import { diffusionApiActions } from './handlers/dd_diffusion_api.ts';
 import { errorReportApiActions } from './handlers/dd_error_report_api.ts';
@@ -127,6 +128,9 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
 	dd_area_maintenance_api: areaMaintenanceApiActions,
 	dd_diffusion_api: diffusionApiActions,
 	dd_component_portal_api: componentPortalApiActions,
+	// Transcription tags (WC-077): get_tags_info (read the resolved tag payload)
+	// + delete_tag (remove one tag's marks from every lang of the text).
+	dd_component_text_area_api: componentTextAreaApiActions,
 	dd_component_av_api: componentAvApiActions,
 	dd_component_info: componentInfoApiActions,
 	dd_component_3d_api: component3dApiActions,

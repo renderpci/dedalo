@@ -21,6 +21,40 @@ export const INDEX_IN_PATTERN =
 export const INDEX_OUT_PATTERN =
 	/(\[\/(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\])/g;
 
+/**
+ * Tag types deletable BY ID: the paired (open + close) mark families, which are
+ * the ones PHP's id-targeted `get_mark_pattern` branches cover with a real UI
+ * flow behind them (class.TR.php:52-89). Deliberately NOT the whole grammar —
+ * a `markPatternById('note', …)` would strip a note's mark and orphan the note
+ * RECORD, and no client asks for that (WC-077).
+ */
+export const ID_TARGETED_MARK_TYPES = ['index', 'reference'] as const;
+export type IdTargetedMarkType = (typeof ID_TARGETED_MARK_TYPES)[number];
+
+/** The id shape the grammar itself defines (RE_INDEX in tag_grammar.ts). */
+const TAG_ID_SHAPE = /^[0-9]{1,6}$/;
+
+/**
+ * ONE tag's marks, open AND close, any state — the pattern PHP builds for
+ * `delete_tag_from_text` (get_mark_pattern($type, standalone, $id, false),
+ * class.TR.php:53-54).
+ *
+ * SECURITY: PHP interpolated `$id` into the regex source RAW. `tagId` here must
+ * match the grammar's own numeric id shape and THROWS otherwise — one check
+ * that is simultaneously the pattern-injection guard, the ReDoS guard, and the
+ * grammar rule. Callers pass client input, so this must never be relaxed into
+ * an escape-and-continue.
+ */
+export function markPatternById(type: IdTargetedMarkType, tagId: string): RegExp {
+	if (!ID_TARGETED_MARK_TYPES.includes(type)) {
+		throw new Error(`markPatternById: tag type '${type}' is not deletable by id`);
+	}
+	if (!TAG_ID_SHAPE.test(tagId)) {
+		throw new Error(`markPatternById: tag_id '${tagId}' is not a valid tag id (1-6 digits)`);
+	}
+	return new RegExp(`\\[\\/{0,1}${type}-[a-z]-${tagId}(-[^-]{0,22}-data:.*?:data)?\\]`, 'g');
+}
+
 /** index by STATE, open or close (PHP get_mark_pattern('index', true, false, false, state)). */
 export function indexStatePattern(state: string): RegExp {
 	return new RegExp(
@@ -28,6 +62,14 @@ export function indexStatePattern(state: string): RegExp {
 		'g',
 	);
 }
+
+/**
+ * note of ANY state, WITH its data payload (PHP get_mark_pattern('note',
+ * standalone=true) — the pattern get_annotations scans with).
+ * Groups: 1 'note', 2 state, 3 id, 5 label (optional), 6 the JSON payload
+ * (PHP's `$matches[7]`, whose delimiting outer paren is a group there).
+ */
+export const NOTE_PATTERN = /\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\]/g;
 
 /** note by STATE (PHP get_mark_pattern('note', false, false, false, state)). */
 export function noteStatePattern(state: string): RegExp {

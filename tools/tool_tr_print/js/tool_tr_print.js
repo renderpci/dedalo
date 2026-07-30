@@ -138,6 +138,39 @@ tool_tr_print.prototype.init = async function(options) {
 
 
 /**
+* SYNC_RAW_DATA
+* Refresh `self.ar_raw_data` from the transcription component's current data.
+*
+* WIRE CONTRACT: a component's data items live in `data.entries` — an array of
+* `{id, lang, value}` where `value` is the raw text with its Dédalo bracket
+* tags. The API emits NO `value` key on a data item (verified against the
+* server: the rsc36 item carries entries / fallback_value / related_sections /
+* tags_persons and nothing named `value`), so the pre-v6 `data.value` this tool
+* was written against read `undefined` and every `ar_raw_data.length` in the
+* render layer threw. `data.value` is kept as a trailing fallback only, the same
+* accommodation tool_lang's browser_translation.js makes, and the `[]` default
+* keeps the render layer from crashing on a component with no data at all.
+*
+* Called from `build` and again after a language switch re-populates the
+* component (render_tool_tr_print's lang selector), so the two call sites cannot
+* drift apart.
+*
+* @returns {Array<Object>} self.ar_raw_data — the data items, never null
+*/
+tool_tr_print.prototype.sync_raw_data = function() {
+
+	const self = this
+
+	const data = (self.transcription_component && self.transcription_component.data) || {}
+
+	self.ar_raw_data = data.entries || data.value || []
+
+	return self.ar_raw_data
+}//end sync_raw_data
+
+
+
+/**
 * BUILD
 * Builds the tool instance by delegating to `tool_common.prototype.build` and
 * then resolving the transcription-specific state needed by the render layer.
@@ -146,9 +179,10 @@ tool_tr_print.prototype.init = async function(options) {
 *   1. Locates `self.transcription_component` — the component_text_area instance
 *      whose `tipo` matches `self.caller.tipo` inside `self.ar_instances`.  This
 *      is the component that was active when the user opened the print tool.
-*   2. Snapshots `self.ar_raw_data` from `transcription_component.data.value`.
-*      Each element is a plain object with at minimum a `value` string property
-*      containing the raw Dédalo tag markup for one language/variant block.
+*   2. Snapshots `self.ar_raw_data` via `sync_raw_data()` (the component's data
+*      ITEMS — see that method for the wire key). Each element is a plain object
+*      with at minimum a `value` string property containing the raw Dédalo tag
+*      markup for one language/variant block.
 *   3. Pre-fetches tag resolution data via `get_tags_info(['index','note','reference'])`,
 *      storing the result in `self.tags_info`.  This is an asynchronous API call
 *      that returns resolved index term labels, note bodies, and reference data so
@@ -176,7 +210,7 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_tipo	= self.caller.tipo
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_tipo)
-			self.ar_raw_data					= self.transcription_component.data.value
+			self.sync_raw_data()
 
 			self.tags_info	= await self.transcription_component.get_tags_info(['index','note','reference'])
 	} catch (error) {

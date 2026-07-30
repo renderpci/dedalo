@@ -373,44 +373,106 @@
 						}
 					}
 
+					// Settings panel behind the ⚙ toggle.
+					// A single flex ROW cannot hold these controls: there are four
+					// select fields (engine, device, paragraphs, quality), two
+					// contextual buttons and a lang line, and squeezing them onto one
+					// line either clipped the selects or overflowed the tool. It is a
+					// GRID of fixed-minimum fields instead: as many columns as the
+					// width allows, wrapping to the next row on its own. Each field
+					// stacks its caption over its control, so the caption text is not
+					// competing with the select for the same line.
 					.configuration_container {
 						width: 100%;
-						display: flex;
-						align-items: center;
-						justify-content: center;
+						display: grid;
+						grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+						gap: 0.75rem 1rem;
+						align-items: end;
+						justify-items: stretch;
+						text-align: left;
+						padding: 0.75rem 1rem;
+						margin-bottom: 0.75rem;
+						border: 1px solid var(--border_default);
+						border-radius: 8px;
+						background-color: var(--bg_surface_alt);
 
-						>.quality_label {
-							margin-left: 1rem;
-
-							select {
-								margin-left: 0.5rem;
-							}
+						// every field: caption (text node) above its control
+						>.engine_label,
+						>.quality_label,
+						>.tc_mode_label,
+						>.device_container,
+						>.device_container >.device_label {
+							display: flex;
+							flex-direction: column;
+							gap: 0.25rem;
+							min-width: 0;
+							font-size: 0.9rem;
+							color: var(--field_label_fg);
 						}
 
-						>.engine_label {
-
-							select {
-								margin-left: 0.5rem;
-							}
-						}
-
+						// the .device_container wrapper adds no row of its own
 						>.device_container {
-							margin-left: 1rem;
+							gap: 0;
 
-							label {
-								display: flex;
-								cursor: pointer;
-
-								input {
-									margin-right: 0.3rem;
-								}
+							>.device_label {
+								font-size: inherit;
+								color: inherit;
 							}
 						}
 
+						select {
+							width: 100%;
+							min-width: 0;
+							max-width: 100%;
+						}
+
+						// contextual buttons (rebuild paragraphs, download model,
+						// download speaker model) sit on the control line of the grid
+						button {
+							white-space: nowrap;
+						}
+
+						>.button_regroup_paragraphs {
+							justify-self: start;
+						}
+
+						// download buttons live INSIDE their field, under the select
+						>.quality_label >.button_download_model,
+						>.speakers_label >.button_download_speaker_model {
+							margin-top: 0.25rem;
+							align-self: start;
+						}
+
+						// checkbox field: caption and box on the same line
+						>.speakers_label {
+							display: flex;
+							flex-wrap: wrap;
+							align-items: center;
+							gap: 0.4rem;
+							min-width: 0;
+							font-size: 0.9rem;
+							color: var(--field_label_fg);
+							cursor: pointer;
+
+							>input[type="checkbox"] {
+								margin: 0;
+								order: -1; // box before its caption
+								cursor: pointer;
+							}
+
+							>.button_download_speaker_model {
+								flex-basis: 100%;
+							}
+						}
+
+						// full-width footer line: which lang is being written to
 						>.lang_info {
-							opacity: 0.5;
-							padding-left: 0.5rem;
-							font-size: 0.95rem;
+							grid-column: 1 / -1;
+							opacity: 0.7;
+							font-size: 0.85rem;
+							color: var(--fg_muted);
+							padding-top: 0.5rem;
+							border-top: 1px solid var(--border_default);
 						}
 					}
 

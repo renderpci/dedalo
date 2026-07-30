@@ -19,8 +19,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { Glob } from 'bun';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
