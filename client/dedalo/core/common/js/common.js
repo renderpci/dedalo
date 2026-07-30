@@ -1198,6 +1198,66 @@ export const create_source = function (self, action) {
 
 
 /**
+* REBUILD_COMPONENT_IN_LANG
+* Switch an ALREADY-BUILT component to another data language and really reload
+* its data in that language.
+*
+* Why this is needed: component build() MEMOIZES — on status 'built' it returns
+* true immediately without touching the API
+* (component_common.prototype.build). So the obvious sequence
+*
+*     component.lang = other_lang
+*     await component.build(true)   // ← no-op, data stays in the OLD lang
+*
+* silently leaves the instance carrying the previous language's data, and the
+* component renders EMPTY whenever the new language holds different (or no)
+* text. Every caller that changes `lang` after build must reset the build state
+* first, and the tools that open a transcription in its ORIGINAL language
+* (tool_transcription, tool_indexation, tool_lang — all reading
+* `context.options.related_component_lang`) were hand-rolling that with
+* different levels of correctness: only tool_transcription had the reset, so the
+* other two opened blank on any record whose original language differed from the
+* menu's.
+*
+* A standalone function, NOT a prototype method: the client's component models
+* CHERRY-PICK the methods they expose (`component_text_area.prototype.build =
+* component_common.prototype.build`, …) instead of inheriting a prototype chain,
+* so a method added to component_common.prototype is simply absent from the
+* model instances the tools actually hold.
+*
+* `context.lang` is synchronised too: do_build assigns `self.context` only when
+* it is ABSENT, so a rebuilt component would otherwise keep a context claiming
+* a language whose data is no longer the one loaded.
+*
+* @param {Object} component - A built component instance
+* @param {string|null} lang - Target data lang, e.g. 'lg-vlca'. Falsy = no-op,
+*   so callers can pass an optional `related_component_lang` straight in.
+* @returns {Promise<boolean>} true when a reload happened, false when there was
+*   nothing to do (no lang given, or the component is already in that lang)
+*/
+export const rebuild_component_in_lang = async function(component, lang) {
+
+	if (!component || !lang || component.lang===lang) {
+		return false
+	}
+
+	component.lang = lang
+	if (component.context) {
+		component.context.lang = lang
+	}
+
+	// reset the memoized build state so build(true) really re-fetches
+	component.status			= 'initialized'
+	component._build_waiter		= null
+
+	await component.build(true)
+
+	return true
+}//end rebuild_component_in_lang
+
+
+
+/**
 * GET_VIEW
 * Resolve the active view string for an instance with a context fallback.
 * Returns `self.view` when set; otherwise falls back to `self.context.view`;
