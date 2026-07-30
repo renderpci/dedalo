@@ -144,6 +144,16 @@
   --menu_dropdown_bg: var(--color_grey_16);
   --menu_dropdown_border: var(--color_grey_9);
   --menu_dropdown_li_border: var(--color_grey_7);
+  --menu_mobile_bg: var(--color_grey_4);
+  --menu_mobile_fg: var(--fg_inverse);
+  --menu_mobile_parent_fg: var(--color_grey_8);
+  --menu_mobile_arrow: var(--color_grey_8);
+  --menu_mobile_hover_bg: transparent;
+  --menu_link_fg: var(--color_grey_14);
+  --menu_selector_fg: var(--color_grey_11);
+  --menu_item_active_bg: var(--color_tag_indexation_normal);
+  --menu_item_active_fg: #ffffff;
+  --menu_item_active_accent: transparent;
   --debug_info_bar_bg: var(--color_grey_4);
   --debug_info_bar_text: var(--color_grey_8);
   --checkbox_bg: var(--color_grey_16);
