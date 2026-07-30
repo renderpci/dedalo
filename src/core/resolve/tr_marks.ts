@@ -29,6 +29,14 @@ export function indexStatePattern(state: string): RegExp {
 	);
 }
 
+/**
+ * note of ANY state, WITH its data payload (PHP get_mark_pattern('note',
+ * standalone=true) — the pattern get_annotations scans with).
+ * Groups: 1 'note', 2 state, 3 id, 5 label (optional), 6 the JSON payload
+ * (PHP's `$matches[7]`, whose delimiting outer paren is a group there).
+ */
+export const NOTE_PATTERN = /\[(note)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\]/g;
+
 /** note by STATE (PHP get_mark_pattern('note', false, false, false, state)). */
 export function noteStatePattern(state: string): RegExp {
 	return new RegExp(`(\\[(note)-(${state})-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\\])`, 'g');
