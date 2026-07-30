@@ -527,7 +527,7 @@ template {
   --color_red_light: #ff9e87;
   --color_danger: #dc3545;
   --color_green_light: #c0e4cd;
-  --color_green_success: #5cb85c;
+  --color_green_success: #4f8a5b;
   --color_success: #28a745;
   --color_green_ontology_hover: #4e7a75;
   --color_green_ontology: #276f67;
@@ -9458,7 +9458,7 @@ body:has(.assistant_container.standalone.show) {
   padding-left: 1rem;
 }
 .menu > .content_data > .ontology {
-  color: var(--color_grey_14);
+  color: var(--menu_link_fg);
   margin-left: 0.5rem;
   margin-right: 0.5rem;
   cursor: pointer;
@@ -9476,7 +9476,7 @@ body:has(.assistant_container.standalone.show) {
   cursor: pointer;
 }
 .menu > .content_data > .logged_user_name:hover {
-  color: var(--color_grey_14);
+  color: var(--menu_link_fg);
 }
 .menu > .content_data > .logged_user_name.is_root {
   color: var(--color_orange_dedalo);
@@ -9489,7 +9489,7 @@ body:has(.assistant_container.standalone.show) {
   max-width: 99.9%;
   padding-left: 0px;
   padding-right: 1em;
-  color: var(--color_grey_11);
+  color: var(--menu_selector_fg);
   border: none;
   cursor: pointer;
   font-size: 1.05rem;
@@ -9636,7 +9636,7 @@ body:has(.assistant_container.standalone.show) {
 }
 .menu > .debug_info_bar > div {
   padding-left: 1em;
-  color: var(--color_grey_8);
+  color: var(--debug_info_bar_text);
   font-size: 94%;
 }
 .menu > .debug_info_bar > .service_worker_active {
