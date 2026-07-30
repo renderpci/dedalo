@@ -13477,6 +13477,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_maintenance > .content_data .widget_container.danger > .widget_label {
   background-color: var(--color_danger);
 }
+.area_maintenance > .content_data .widget_container.warning > .widget_label {
+  background-color: var(--color_warning);
+}
 .area_maintenance > .content_data .widget_container.blue > .widget_label {
   background-color: var(--color_primary);
 }
@@ -14854,8 +14857,15 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   flex-direction: column;
   gap: 0.6rem;
 }
-.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .button_scheduler {
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .dsc_sched_actions {
   align-self: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_scheduler .button_scheduler[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .wrapper_widget.diffusion_server_control .diffusion_server_control_jobs {
   display: flex;

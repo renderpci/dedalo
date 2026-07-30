@@ -64,6 +64,10 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// lastPurgeAt throttles the daily residue purge on the sweeper cadence.
 	'server.ts:shuttingDown',
 	'diffusion/jobs/scheduler.ts:lastPurgeAt',
+	// The graceful-shutdown entry point injected ONCE by startServer so a planned
+	// restart drains like a SIGTERM (core/install must not import the process
+	// root). Boot-stable process wiring — carries no request identity.
+	'core/install/restart.ts:gracefulShutdown',
 	// "Is curl on PATH" memo for the AI-model downloader: a fact about the HOST
 	// (boot-stable, request-independent), probed once per process on first
 	// download. Never cleared — the binary set does not change under a running
@@ -147,6 +151,10 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// Scheduler pause switch (admin flow control via the diffusion_server_control
 	// widget) — process-wide operational state, no request identity.
 	'diffusion/jobs/scheduler.ts:paused',
+	// Drain latch (the same widget's quiesce action) — makes drainAndResume
+	// idempotent across two admins and lets resumeScheduler abort an in-flight
+	// wait. Process-wide operational state, no request identity.
+	'diffusion/jobs/scheduler.ts:draining',
 	// Login-timing decoy hash (foundation audit AUTHZ-03): a memoized Argon2id
 	// hash of a random string, verified against on the no-user / legacy-hash
 	// failure paths so login timing never reveals whether an account exists.

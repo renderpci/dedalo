@@ -16,9 +16,34 @@
 import { hostname } from 'node:os';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
-import { claimNextQueuedJob, purgeTerminalJobs, recordRunnerPid, sweepStaleJobs } from './queue.ts';
+import {
+	claimNextQueuedJob,
+	countRunningJobs,
+	finishJob,
+	purgeTerminalJobs,
+	recordRunnerPid,
+	sweepStaleJobs,
+} from './queue.ts';
 
 const MAX_RUNNERS = Math.max(1, Number(readString('DEDALO_DIFFUSION_MAX_RUNNERS')) || 2);
+
+/**
+ * Does THIS process claim from the queue at all (DEDALO_DIFFUSION_SCHEDULER_ENABLED)?
+ *
+ * Read HERE, not only at the boot cadence, because claiming has three entry
+ * points: the 2 s cadence (server.ts), the enqueue kick (api/actions.ts) and the
+ * widget's requeue kick (area_maintenance). Gating only the cadence left the two
+ * kicks claiming the LIVE queue on an instance configured never to touch it —
+ * exactly the "second instance sharing the database / smoke-test copy" case the
+ * catalog entry promises is safe. The sweeper is deliberately NOT gated here;
+ * server.ts skips that cadence separately, as the key's doc states.
+ */
+const DISPATCH_ENABLED = readString('DEDALO_DIFFUSION_SCHEDULER_ENABLED') !== 'false';
+
+/** Whether this process is configured to claim jobs — read-only admin surface. */
+export function isDispatchEnabled(): boolean {
+	return DISPATCH_ENABLED;
+}
 
 /** The configured runner concurrency limit — read-only surface for the admin widget. */
 export function getMaxRunners(): number {
@@ -42,9 +67,81 @@ export function pauseScheduler(): void {
 }
 export function resumeScheduler(): void {
 	paused = false;
+	// Resuming ABORTS an in-flight drain: the waiter below re-reads this flag on
+	// every poll, so an admin who changes their mind is never stuck behind a
+	// runner that has minutes of work left.
+	draining = false;
 }
 export function isSchedulerPaused(): boolean {
 	return paused;
+}
+
+/**
+ * QUIESCE: pause dispatch, wait for the runners already out there to finish,
+ * then resume and kick. The honest analogue of the old PHP "restart" button —
+ * there is no daemon to bounce, but "bring dispatch to a full stop, then start
+ * it again" is a real operation an admin wants before a backup, a schema change
+ * or a config edit.
+ *
+ * Bounded by construction: cancellation is COOPERATIVE (the runner checks
+ * between batches) and a wedged runner would otherwise hold the drain open
+ * forever, so the wait has a deadline. On timeout the scheduler stays PAUSED
+ * and says so — resuming on top of runners that would not drain is exactly the
+ * state the operator asked to avoid, so the decision goes back to them.
+ */
+export const DRAIN_TIMEOUT_MS = 5 * 60 * 1000;
+const DRAIN_POLL_MS = 1000;
+
+let draining = false;
+export function isSchedulerDraining(): boolean {
+	return draining;
+}
+
+export type DrainOutcome = {
+	/** Every runner finished inside the deadline. */
+	drained: boolean;
+	/** Runners still going when the wait ended. */
+	remaining: number;
+	/** The deadline expired — the scheduler is left PAUSED. */
+	timed_out: boolean;
+	/** A drain was already running; this call did nothing. */
+	already_draining: boolean;
+};
+
+export async function drainAndResume(timeoutMs = DRAIN_TIMEOUT_MS): Promise<DrainOutcome> {
+	if (draining) {
+		return {
+			drained: false,
+			remaining: await countRunningJobs(),
+			timed_out: false,
+			already_draining: true,
+		};
+	}
+	paused = true;
+	draining = true;
+	const deadline = Date.now() + timeoutMs;
+	try {
+		while (true) {
+			const remaining = await countRunningJobs();
+			if (remaining === 0) {
+				paused = false;
+				draining = false;
+				void schedulerTick(); // resume + immediate kick, no 2 s wait
+				return { drained: true, remaining: 0, timed_out: false, already_draining: false };
+			}
+			// resumeScheduler() clears this — an operator abort, not a timeout.
+			if (!draining) {
+				return { drained: false, remaining, timed_out: false, already_draining: false };
+			}
+			if (Date.now() >= deadline) {
+				draining = false; // stays PAUSED on purpose
+				return { drained: false, remaining, timed_out: true, already_draining: false };
+			}
+			await Bun.sleep(DRAIN_POLL_MS);
+		}
+	} finally {
+		draining = false;
+	}
 }
 
 const SCHEDULER_TICK_MS = 2000;
@@ -57,14 +154,40 @@ let sweeperTimer: ReturnType<typeof setInterval> | null = null;
 /** Re-entrancy latch: one tick at a time (spawn + count are async). */
 let ticking = false;
 
-/** Spawn the runner process for a claimed job and record its pid. */
+/**
+ * Spawn the runner process for a claimed job and record its pid.
+ *
+ * The interpreter is `process.execPath` — the SAME bun binary running this
+ * server — not a bare `bun` off PATH. A deployment pins an absolute interpreter
+ * in its unit file (deploy/dedalo-ts.service) while systemd's PATH may not
+ * contain it at all; the bare name then throws here, the job stays CLAIMED, and
+ * nothing frees it until the stale-heartbeat sweep. Same-binary is also the
+ * correct semantic: the runner is this codebase, not whatever bun is first on
+ * an operator's PATH.
+ */
 function spawnRunner(jobId: string): void {
-	const child = Bun.spawn(['bun', 'run', runnerModulePath, '--job', jobId], {
-		cwd: new URL('../../../', import.meta.url).pathname,
-		stdout: 'ignore',
-		stderr: 'inherit',
-		env: { ...process.env },
-	});
+	let child: Bun.Subprocess;
+	try {
+		child = Bun.spawn([process.execPath, 'run', runnerModulePath, '--job', jobId], {
+			cwd: new URL('../../../', import.meta.url).pathname,
+			stdout: 'ignore',
+			stderr: 'inherit',
+			env: { ...process.env },
+		});
+	} catch (error) {
+		// The claim already happened, so NOBODY owns this row: no runner exists to
+		// finish it and no heartbeat will ever go stale-then-heal for ~20 s of a
+		// spent runner budget. Fail it here — the one place that knows the runner
+		// never started. Failed (not requeued): a spawn error is a deployment
+		// fault, and requeueing would hot-loop the whole queue against it.
+		console.error(`[diffusion scheduler] runner spawn failed for job ${jobId}:`, error);
+		finishJob(jobId, 'failed', {
+			msg: `Runner process could not be started: ${error instanceof Error ? error.message : String(error)}`,
+		}).catch((failError) =>
+			console.error('[diffusion scheduler] releasing the unspawned job failed:', failError),
+		);
+		return;
+	}
 	// The pid is informational (sweeper cross-check / cancel SIGTERM on this
 	// host); liveness truth is the HEARTBEAT, which also covers remote runners.
 	// Caught, not void'd: this runs OUTSIDE the tick's try/catch, and a floating
@@ -83,6 +206,7 @@ function spawnRunner(jobId: string): void {
  * and for tests.
  */
 export async function schedulerTick(): Promise<void> {
+	if (!DISPATCH_ENABLED) return;
 	if (paused) return;
 	if (ticking) return;
 	ticking = true;

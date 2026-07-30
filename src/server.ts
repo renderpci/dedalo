@@ -965,6 +965,7 @@ async function shutdownGracefully(
 	signal: string,
 	servers: ReturnType<typeof Bun.serve>[],
 	socketPath: string,
+	exitCode = 0,
 ): Promise<void> {
 	if (shuttingDown) return;
 	shuttingDown = true;
@@ -1018,7 +1019,7 @@ async function shutdownGracefully(
 		console.error('[shutdown] socket unlink failed:', error);
 	}
 	console.log('[shutdown] complete');
-	process.exit(0);
+	process.exit(exitCode);
 }
 
 /** Start the server. Exported for tests; auto-runs when executed directly. */
@@ -1299,6 +1300,43 @@ export async function startServer() {
 				}));
 			})
 			.catch((error) => console.error('[diffusion] boot init failed:', error));
+
+		// Statistics-collector wipe detection (WC-074). DETECTION ONLY — it never
+		// repairs: repair is `analyze_statistics` in the Database-info panel, an
+		// operator action. Multiple Bun instances against one database is a
+		// documented topology, so a rolling restart here would otherwise fire N
+		// concurrent ANALYZEs.
+		//
+		// WHY AT BOOT: the condition is CREATED by a restart or a restore, so boot
+		// is exactly when it becomes true — a periodic timer would spend its life
+		// re-confirming a healthy state, and once the counters are correct
+		// autoanalyze maintains statistics by itself.
+		//
+		// WHY THIS PREDICATE: `pg_stat_database.stats_reset` is useless here —
+		// variable-numbered stats entries are DROPPED and recreated NULL. The
+		// FIXED-numbered views are reset in place WITH a timestamp, so
+		// `pg_stat_bgwriter.stats_reset >= pg_postmaster_start_time()` means the
+		// cumulative counters were discarded at or after this boot. That is exact,
+		// unlike the per-table inference in `summarizeStatisticsHealth`, which is a
+		// heuristic over current state. Two known limits, both deliberate: it stays
+		// TRUE for the whole postmaster lifetime (it is provenance, never "repair
+		// owed"), and it is blind to a restore into a fresh cluster (counters zero,
+		// flag FALSE) — which is precisely the case the per-table verdict catches.
+		// The two signals are complements; neither duplicates autovacuum, because
+		// autovacuum is the thing that cannot fire.
+		void (async () => {
+			const { sql } = await import('./core/db/postgres.ts');
+			const rows = (await sql.unsafe(
+				`SELECT (stats_reset >= pg_postmaster_start_time()) AS wiped, stats_reset
+				 FROM pg_stat_bgwriter`,
+				[],
+			)) as { wiped: boolean | null; stats_reset: unknown }[];
+			if (rows[0]?.wiped === true) {
+				console.warn(
+					`[db stats] cumulative statistics counters were DISCARDED at or after this boot (pg_stat_bgwriter.stats_reset=${String(rows[0].stats_reset)}). autovacuum and autoanalyze trigger on those counters, so until a table accumulates 50 + 0.1*reltuples modifications from zero they will not fire on it — for a large low-churn table that means never, in practice. Check the Database-info panel and run "Repair table statistics" (ANALYZE) if it reports degraded.`,
+				);
+			}
+		})().catch((error) => console.error('[db stats] boot wipe probe failed:', error));
 	} // end if (!config.installMode)
 
 	// Media job pfile reconcile + residue GC (audit S2-15/S3-46): flip stale
@@ -1386,6 +1424,16 @@ export async function startServer() {
 	// Graceful shutdown (audit S2-17): supervisors send SIGTERM; operators ^C.
 	process.on('SIGTERM', () => void shutdownGracefully('SIGTERM', servers, socketPath));
 	process.on('SIGINT', () => void shutdownGracefully('SIGINT', servers, socketPath));
+
+	// A PLANNED restart (persist_config, code update) is a shutdown too, and gets
+	// the same drain. Registered rather than imported: core/install must not close
+	// an import cycle back through the process root (same seam as registerOpsGauge).
+	{
+		const { registerGracefulShutdown } = await import('./core/install/restart.ts');
+		registerGracefulShutdown((exitCode, reason) => {
+			void shutdownGracefully(reason, servers, socketPath, exitCode);
+		});
+	}
 
 	return server;
 }

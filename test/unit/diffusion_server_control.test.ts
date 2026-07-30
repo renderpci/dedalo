@@ -4,7 +4,10 @@
  * in-process advisory, the durable job queue (admin scope), the scheduler
  * status and an engine-native config summary; the action surface is
  * cancel / requeue / purge / set_scheduler / retry_pending_deletions. The old
- * socket-daemon lifecycle (start/stop/restart) is GONE and now denies loudly.
+ * socket-daemon lifecycle (start/stop/restart) is GONE and now denies loudly —
+ * the lifecycle controls live on set_scheduler instead and act on DISPATCH
+ * (pause / resume / drain_resume), which is the only thing there is left to
+ * control now that diffusion runs in-process.
  *
  * Positive queue paths run against the REAL Postgres (this suite already needs
  * a DB for the pending-count query); every row it creates is deleted in
@@ -16,7 +19,11 @@ import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/r
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { deleteJobsForTests, enqueueDiffusionJob } from '../../src/diffusion/jobs/queue.ts';
 import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
-import { isSchedulerPaused, resumeScheduler } from '../../src/diffusion/jobs/scheduler.ts';
+import {
+	isSchedulerDraining,
+	isSchedulerPaused,
+	resumeScheduler,
+} from '../../src/diffusion/jobs/scheduler.ts';
 
 const ADMIN: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true } as Principal;
 const OWNER = 424301;
@@ -196,6 +203,31 @@ describe('diffusion_server_control widget (native engine)', () => {
 		const resumed = await call('set_scheduler', { action: 'resume' });
 		expect(resumed.result).toBe(true);
 		expect(isSchedulerPaused()).toBe(false);
+	});
+
+	// The quiesce ("restart", honestly named). With an EMPTY running set it
+	// completes on the first poll, so this asserts the whole round trip without
+	// leaving a paused scheduler or a background wait behind.
+	test('set_scheduler drain_resume: returns at once and drains an idle queue', async () => {
+		const body = await call('set_scheduler', { action: 'drain_resume' });
+		expect(body.result).toBe(true);
+		expect(body.errors).toEqual([]);
+		expect(String(body.msg)).toContain('Draining');
+
+		// Started, not awaited — the request must not carry the wait (it is bounded
+		// by DRAIN_TIMEOUT_MS, minutes beyond any request budget).
+		await Bun.sleep(50);
+		expect(isSchedulerDraining()).toBe(false);
+		expect(isSchedulerPaused()).toBe(false); // drained, then resumed itself
+	});
+
+	test('get_value reports the drain state alongside paused', async () => {
+		const body = await call('get_value');
+		const scheduler = (body.result as { scheduler: Record<string, unknown> }).scheduler;
+		// Both flags must be present: the client renders ONE dispatch pill from
+		// them, and a missing `draining` would silently read as "not draining".
+		expect(typeof scheduler.paused).toBe('boolean');
+		expect(typeof scheduler.draining).toBe('boolean');
 	});
 
 	test('retry_pending_deletions count_only reports the dd1758 pending rows', async () => {

@@ -229,6 +229,10 @@ export interface QueueFrame {
 		queued: number;
 		max_runners: number;
 		paused: boolean;
+		/** A quiesce is waiting for the running jobs to finish (set_scheduler
+		 * drain_resume). Always accompanied by paused:true — the drain holds
+		 * dispatch for its whole duration. */
+		draining: boolean;
 		stale_after_seconds: number;
 	};
 	jobs: QueueJobView[];

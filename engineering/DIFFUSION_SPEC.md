@@ -247,8 +247,25 @@ resume equivalence depend on it).
 - **Data plane = spawned runner.** `diffuse` enqueues a durable job; a
   scheduler claims it (`FOR UPDATE SKIP LOCKED`, global limit default 2,
   uniqueness: one active run per element+section) and spawns
-  `bun run src/diffusion/runner.ts --job <uuid>` — same codebase, own process,
-  own memory ceiling, killable. Deletes/admin ops stay in-process (fast).
+  `<this process' bun> run src/diffusion/runner.ts --job <uuid>` — same
+  codebase, own process, own memory ceiling, killable. The interpreter is
+  `process.execPath`, never a bare `bun` off `$PATH`: a deployment pins an
+  absolute binary its unit file's `$PATH` need not contain, and the spawn throws
+  AFTER the row is claimed. That path fails the job it could not start — nothing
+  else owns a claimed row with no runner behind it. Deletes/admin ops stay
+  in-process (fast).
+- **Dispatch control is the lifecycle surface.** There is no daemon to start or
+  stop (WC-005), so `set_scheduler` — `pause` / `resume` / `drain_resume` — is
+  what an admin actually operates. `drain_resume` quiesces: hold dispatch, wait
+  for the running jobs, then resume and kick; bounded, and on timeout it stays
+  paused rather than resuming over runners that would not drain. All in-memory,
+  reset to running on restart. Shape: `WIRE_CONTRACT.md` WC-075.
+- **Claiming has ONE gate.** `DEDALO_DIFFUSION_SCHEDULER_ENABLED=false` means
+  this process never claims — that is the key's whole promise (a second instance
+  sharing the database, the ops smoke tests). It is enforced inside
+  `schedulerTick`, not at the boot cadence, because claiming has three entry
+  points: the cadence, the enqueue kick and the widget's requeue kick. Gate:
+  `test/unit/diffusion_dispatch_gate.test.ts`.
 - **Separate-machine option (design requirement):** the runner communicates
   *only* through Postgres (job claim, checkpoint, progress NOTIFY), the MariaDB
   targets, and the media path. A runner daemon on another machine claiming from

@@ -293,10 +293,22 @@
 							align-items: center;
 
 							// publication_button: default style
+							// White label in BOTH themes. The button carries the
+							// core `.warning` class, whose `color: @color_white`
+							// INVERTS to #1b1d20 in dark — near-black on this fixed
+							// green. Same law as the item-label bars: the background
+							// does not follow the theme, so the ink must not either.
+							// The ::before glyph is a mask painted via
+							// --button-bg-color and inverts identically.
 							.publication_button {
 								margin: 1rem;
 								background-color: @tool_color;
 								border-color: var(--tool_diffusion_border);
+								color: var(--fg_inverse);
+
+								&:before {
+									background-color: var(--fg_inverse) !important;
+								}
 
 								&.not_ready {
 									opacity: 0.4;

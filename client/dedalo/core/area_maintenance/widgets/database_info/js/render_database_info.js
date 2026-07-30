@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
 
@@ -123,6 +124,23 @@ const get_content_data_edit = async function(self) {
 	// that surfaces it, so it must not be buried under the index listing.
 	// SEC-XSS: DB-sourced table names go in via textContent, never inner_html.
 	const statistics = value.statistics
+
+	// WC-074: tint the CARD HEADER so a COLLAPSED card warns. This is what the
+	// server-side eagerValue is for — the catalog inlines the verdict, so
+	// self.value carries it on the page-load render, before anyone opens the
+	// panel. Without this the verdict was only visible to someone who already
+	// went looking, which is the opposite of what a health signal is for.
+	// 'warning', not 'danger': degraded statistics mean "press a button", not
+	// "something failed".
+		if (statistics) {
+			set_widget_label_style(
+				self,
+				'warning',
+				statistics.status === 'degraded' ? 'add' : 'remove',
+				content_data
+			)
+		}
+
 	if (statistics && statistics.status === 'degraded') {
 		const warn = ui.create_dom_element({
 			element_type	: 'div',

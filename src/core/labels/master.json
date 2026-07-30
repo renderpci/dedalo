@@ -10,6 +10,8 @@
 	"altitude": "Altitude",
 	"analyze_database": "Analyze database",
 	"analyze_database_info": "Exec \"ANALYZE\" command on database for optimal performance.",
+	"analyze_statistics": "Repair table statistics",
+	"analyze_statistics_info": "Runs ANALYZE on the tables reported above. Refreshes planner statistics and restores the autovacuum baseline. Cheaper than \"Analyze database\", which also vacuums.",
 	"and": "and",
 	"apply": "Apply",
 	"are_you_sure_to_delete_note": "Are you sure you want to delete this note?",

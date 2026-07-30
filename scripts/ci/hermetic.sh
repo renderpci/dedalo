@@ -72,6 +72,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/config_env_tripwire.test.ts
 	test/unit/module_state_tripwire.test.ts
 	test/unit/diffusion_boundaries.test.ts
+	test/unit/diffusion_dispatch_gate.test.ts
 	test/unit/boundary_seam_tripwire.test.ts
 	test/unit/coex_tag_tripwire.test.ts
 	test/unit/descriptor_completeness_tripwire.test.ts

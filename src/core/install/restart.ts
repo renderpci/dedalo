@@ -31,17 +31,61 @@ import { readEnv } from '../../config/env.ts';
  */
 export const RESTART_EXIT_CODE = 75;
 
-/** Schedule the exit so the supervisor restarts us into the real config. */
-export function scheduleServerRestart(reason: string): void {
+/**
+ * What a restart request actually did — the caller must be able to tell, because
+ * "suppressed" is indistinguishable from "restarting" at the call site otherwise.
+ * A lifecycle BUTTON reporting success while `DEDALO_INSTALL_NO_RESTART=true`
+ * silently swallowed the request is the failure this type exists to prevent.
+ */
+export type RestartOutcome = 'suppressed' | 'draining' | 'immediate';
+
+/**
+ * The graceful-shutdown entry point, injected by server.ts at boot.
+ *
+ * Inverted (server.ts registers into core, core never imports server.ts) for the
+ * same reason as registerOpsGauge: a static edge would close an import cycle
+ * through the process root. Null in the CLI, the test runner, and any context
+ * with no listening server — hence the immediate-exit fallback below.
+ */
+type GracefulShutdown = (exitCode: number, reason: string) => void;
+let gracefulShutdown: GracefulShutdown | null = null;
+
+/** Called once from startServer, after the signal handlers are installed. */
+export function registerGracefulShutdown(handler: GracefulShutdown): void {
+	gracefulShutdown = handler;
+}
+
+/**
+ * Schedule the exit so the supervisor restarts us into the real config.
+ *
+ * Routes through the GRACEFUL path when a server is listening. A bare
+ * `process.exit` here skipped everything shutdownGracefully does — draining
+ * in-flight requests, marking undrained media jobs `interrupted` in their
+ * pfiles, journaling dying background jobs, closing the DB pool, unlinking the
+ * socket — because that logic is bound to SIGTERM/SIGINT only. A restart is a
+ * planned shutdown; it deserves the same drain a supervisor's SIGTERM gets.
+ */
+export function scheduleServerRestart(reason: string): RestartOutcome {
 	// Never kill the test runner or the short-lived CLI (which reloads config by
 	// simply exiting on its own): both set DEDALO_INSTALL_NO_RESTART=true.
 	if (readEnv('DEDALO_INSTALL_NO_RESTART') === 'true') {
 		console.warn(`[install] restart suppressed (DEDALO_INSTALL_NO_RESTART): ${reason}`);
-		return;
+		return 'suppressed';
+	}
+	const handler = gracefulShutdown;
+	if (handler === null) {
+		console.warn(
+			`[install] ${reason} — exiting ${RESTART_EXIT_CODE} for supervised restart into configured mode (no listening server to drain).`,
+		);
+		// Delay so the HTTP response flushes before the socket closes.
+		setTimeout(() => process.exit(RESTART_EXIT_CODE), 250);
+		return 'immediate';
 	}
 	console.warn(
-		`[install] ${reason} — exiting ${RESTART_EXIT_CODE} for supervised restart into configured mode (2xx flushed first).`,
+		`[install] ${reason} — draining, then exiting ${RESTART_EXIT_CODE} for supervised restart into configured mode.`,
 	);
-	// Delay so the HTTP response flushes before the socket closes.
-	setTimeout(() => process.exit(RESTART_EXIT_CODE), 250);
+	// Deferred so THIS request's handler returns before the drain begins —
+	// otherwise the drain waits on the very response that asked for the restart.
+	setTimeout(() => handler(RESTART_EXIT_CODE, `restart: ${reason}`), 250);
+	return 'draining';
 }
