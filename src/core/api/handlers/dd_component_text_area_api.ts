@@ -2,7 +2,7 @@
  * dd_component_text_area_api handlers (PHP
  * core/api/v1/common/class.dd_component_text_area_api.php).
  *
- * Both PHP actions are ported (WC-076):
+ * Both PHP actions are ported (WC-077):
  *  - `get_tags_info` — READ: resolve a transcription's marks into the records
  *    they point at (tool_tr_print's feed);
  *  - `delete_tag` — WRITE: remove one tag's marks from EVERY language of the
@@ -118,7 +118,7 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 			return refuse(' Bad request: options.tag_id is mandatory');
 		}
 
-		// Only the paired mark families are deletable by id (WC-076). An
+		// Only the paired mark families are deletable by id (WC-077). An
 		// unsupported type is NAMED, never treated as a no-op success.
 		const { ID_TARGETED_MARK_TYPES } = await import('../../resolve/tr_marks.ts');
 		if (!(ID_TARGETED_MARK_TYPES as readonly string[]).includes(tagType)) {

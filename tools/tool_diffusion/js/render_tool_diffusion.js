@@ -2068,8 +2068,13 @@ const fallback_select = function(parent, text) {
 /**
 * RENDER_ENGINE_ADVISORY
 * Calm, role-tailored banner shown when the diffusion engine is unreachable or
-* unhealthy. Admins get cause + steps + actions (Retry / Restart engine / Show log);
-* regular users get a reassuring notice. Data comes from PHP get_engine_advisory.
+* unhealthy. Admins get cause + steps + a Retry action; regular users get a
+* reassuring notice. Data comes from dd_diffusion_api::get_engine_advisory.
+*
+* (!) Natively this banner does not render: buildEngineAdvisory hardcodes
+* state:'ok' because the engine is in-process, and get_content_data only calls
+* this when state!=='ok'. It is kept as the shape a real unhealthy verdict would
+* use (a target DB going away is the plausible one), NOT as live UI.
 * @param instance self @param object advisory @param HTMLElement parent
 */
 const render_engine_advisory = function(self, advisory, parent) {
@@ -2108,8 +2113,8 @@ const render_engine_advisory = function(self, advisory, parent) {
 	const actions = Array.isArray(advisory.actions) ? advisory.actions : ['retry']
 	const bar = ui.create_dom_element({ element_type:'div', class_name:'advisory_actions', parent:banner })
 
-	const reload = async (opts) => {
-		const fresh = await self.get_engine_advisory(opts || {})
+	const reload = async () => {
+		const fresh = await self.get_engine_advisory()
 		self.engine_advisory = fresh
 		self.bun_status = {
 			result : fresh.state === 'ok',
@@ -2120,26 +2125,20 @@ const render_engine_advisory = function(self, advisory, parent) {
 			// engine recovered: rebuild the full tool body
 			self.refresh()
 		} else {
-			// still down: re-render just this banner in place — no full rebuild,
-			// so the clicked button's auto_recover intent is the authoritative call
+			// still down: re-render just this banner in place, no full rebuild
 			const frag = new DocumentFragment()
 			render_engine_advisory(self, fresh, frag)
 			banner.replaceWith(frag)
 		}
 	}
 
+	// Retry is the ONLY action (WC-076). 'restart_engine' and 'show_log' were
+	// removed with the daemon they addressed: the first restarted the external
+	// diffusion service, the second tailed its log file. Neither referent exists
+	// natively — the engine is this process, and its log is the server's journal.
 	if (actions.includes('retry')) {
 		const btn = ui.create_dom_element({ element_type:'button', class_name:'button retry', text_content:get_label.retry || 'Retry', parent:bar })
-		btn.addEventListener('click', () => reload({ auto_recover:false }))
-	}
-	if (actions.includes('restart_engine')) {
-		const btn = ui.create_dom_element({ element_type:'button', class_name:'button warning restart_engine', text_content:get_label.restart_engine || 'Restart engine', parent:bar })
-		btn.addEventListener('click', () => reload({ auto_recover:true }))
-	}
-	if (actions.includes('show_log') && advisory.log_tail) {
-		const btn = ui.create_dom_element({ element_type:'button', class_name:'button show_log', text_content:get_label.show_log || 'Show log', parent:bar })
-		const pre = ui.create_dom_element({ element_type:'pre', class_name:'advisory_log hide', text_content:advisory.log_tail, parent:banner })
-		btn.addEventListener('click', () => pre.classList.toggle('hide'))
+		btn.addEventListener('click', () => reload())
 	}
 
 	return banner

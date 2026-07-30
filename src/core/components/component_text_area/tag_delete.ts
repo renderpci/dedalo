@@ -12,7 +12,7 @@
  * deliberately moved out of this flow and the client already calls right after
  * this one (tool_indexation.js:853).
  *
- * WHY ONE SAVE PER LANGUAGE, not one transaction over all of them (WC-076):
+ * WHY ONE SAVE PER LANGUAGE, not one transaction over all of them (WC-077):
  * mark deletion is IDEMPOTENT — a retry re-runs a pattern that no longer
  * matches — so a failure part-way through is fully recoverable by re-issuing
  * the request, and the response names exactly which languages changed. This is

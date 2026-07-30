@@ -26,7 +26,7 @@ export const INDEX_OUT_PATTERN =
  * the ones PHP's id-targeted `get_mark_pattern` branches cover with a real UI
  * flow behind them (class.TR.php:52-89). Deliberately NOT the whole grammar —
  * a `markPatternById('note', …)` would strip a note's mark and orphan the note
- * RECORD, and no client asks for that (WC-076).
+ * RECORD, and no client asks for that (WC-077).
  */
 export const ID_TARGETED_MARK_TYPES = ['index', 'reference'] as const;
 export type IdTargetedMarkType = (typeof ID_TARGETED_MARK_TYPES)[number];

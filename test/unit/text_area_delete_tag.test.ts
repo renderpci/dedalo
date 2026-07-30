@@ -1,6 +1,6 @@
 /**
  * DELETE_TAG GATE (dd_component_text_area_api::delete_tag, ported 2026-07-30 —
- * WC-076; PHP component_text_area::delete_tag_from_all_langs).
+ * WC-077; PHP component_text_area::delete_tag_from_all_langs).
  *
  * tool_indexation's tag delete is two steps: remove the MARKS from the text in
  * every language (this), then remove the portal LOCATOR (already ported). Step

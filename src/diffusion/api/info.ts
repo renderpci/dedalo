@@ -226,16 +226,26 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 	return { section_diffusion_nodes: items, resolve_levels: resolveLevels };
 }
 
-/** Native subsystem advisory (client-top-level shape, PHP :1779 contract). */
+/**
+ * Native subsystem advisory (client-top-level shape).
+ *
+ * The data plane is in-process + spawned runners over the durable queue — there
+ * is no separate engine to be "down". Target-DB failures surface per-run (loud
+ * open() errors) and per-panel (connection_status).
+ *
+ * The DAEMON-ERA keys are gone (WC-076): `recovered`, `service_cmd_configured`
+ * and `log_tail` described a supervised external process — whether its service
+ * command was configured, whether an auto-recover attempt had restarted it, and
+ * the tail of its log file. None of those referents exist. They were emitted as
+ * a permanent `false`/`false`/`null`, which is not a neutral default: it is a
+ * live-looking field that invites a client to branch on it. Retired instead of
+ * frozen. Gate: diffusion_dispatch_gate.test.ts.
+ */
 export function buildEngineAdvisory(isAdmin: boolean): Record<string, unknown> {
-	// The data plane is in-process + spawned runners over the durable queue —
-	// there is no separate engine to be "down". Target-DB failures surface
-	// per-run (loud open() errors) and per-panel (connection_status).
 	return {
 		result: true,
 		state: 'ok',
 		is_admin: isAdmin,
-		recovered: false,
 		title: 'Diffusion ready (native engine)',
 		cause: '',
 		steps: [],
@@ -244,8 +254,6 @@ export function buildEngineAdvisory(isAdmin: boolean): Record<string, unknown> {
 			engine: 'native',
 			formats: [...WRITER_REGISTRY.keys()],
 		},
-		service_cmd_configured: false,
-		log_tail: null,
 	};
 }
 

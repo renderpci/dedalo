@@ -148,6 +148,45 @@ describe('diffusion dispatch verbs', () => {
 		}
 	});
 
+	// WC-076. buildEngineAdvisory is pure (no DB), so the retirement is checkable
+	// on this tier. These three keys described a supervised external daemon:
+	// whether its service command was configured, whether an auto-recover had
+	// restarted it, and the tail of its log. Emitting them as a permanent
+	// false/false/null is worse than omitting them — a constant that LOOKS like a
+	// signal is one a client eventually branches on.
+	test('the engine advisory carries no daemon-era keys', async () => {
+		const { buildEngineAdvisory } = await import('../../src/diffusion/api/info.ts');
+		const advisory = buildEngineAdvisory(true);
+		for (const key of ['service_cmd_configured', 'log_tail', 'recovered']) {
+			expect(Object.hasOwn(advisory, key)).toBe(false);
+		}
+		// Still the live shape the maintenance widget reads.
+		expect(advisory.state).toBe('ok');
+		expect(advisory.title).toBe('Diffusion ready (native engine)');
+		expect((advisory.checks as { engine: string }).engine).toBe('native');
+	});
+
+	test('the tool offers no restart_engine / show_log action', async () => {
+		// Both are unreachable by construction (actions is always []), but the
+		// CLIENT used to branch on them — leaving that branch in place is how a
+		// dead daemon control comes back the first time actions is non-empty.
+		// Matches CODE, not prose: the comments explaining the retirement name
+		// these actions on purpose, and a gate that forbids the words would force
+		// the next reader to delete the explanation to stay green.
+		const render = await Bun.file(
+			new URL('../../tools/tool_diffusion/js/render_tool_diffusion.js', import.meta.url),
+		).text();
+		expect(render).not.toMatch(/actions\.includes\(\s*['"]restart_engine['"]\s*\)/);
+		expect(render).not.toMatch(/actions\.includes\(\s*['"]show_log['"]\s*\)/);
+		expect(render).not.toMatch(/advisory\.log_tail/);
+		expect(render).not.toMatch(/auto_recover\s*[:,)]/);
+
+		const tool = await Bun.file(
+			new URL('../../tools/tool_diffusion/js/tool_diffusion.js', import.meta.url),
+		).text();
+		expect(tool).not.toMatch(/auto_recover\s*[:,)]/);
+	});
+
 	test('the allowed verb list is exactly pause | resume | drain_resume', async () => {
 		const widget = await Bun.file(
 			new URL(

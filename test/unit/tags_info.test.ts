@@ -1,6 +1,6 @@
 /**
  * TAGS_INFO GATE (dd_component_text_area_api::get_tags_info, ported 2026-07-30
- * — WC-076).
+ * — WC-077).
  *
  * `tool_tr_print` asks for this feed on open; the action was never registered
  * on the TS engine, so opening the print tool answered HTTP 400 ("Undefined or
@@ -8,7 +8,7 @@
  *
  *   - the resolution itself: index/reference locators → term label, note marks
  *     in the TEXT → the note record's ddo values;
- *   - the WC-076 wire law the client matches marks against: STRING section_id
+ *   - the WC-077 wire law the client matches marks against: STRING section_id
  *     and tag_id, literal note ddos as string[], a bool ddo as a real boolean;
  *   - the shapes the shipped client actually reads (`el.data.tag_id`,
  *     `note.title.join(' | ')`, `note.body`);
@@ -124,7 +124,7 @@ afterAll(async () => {
 const host = () => ({ tipo: TEXT_AREA, section_tipo: HOST_SECTION, section_id: hostId });
 
 describe('buildTagsInfo — index / reference tags', () => {
-	test('locators resolve to a term label, ids served as STRINGS (WC-076)', async () => {
+	test('locators resolve to a term label, ids served as STRINGS (WC-077)', async () => {
 		const { tags_info } = await buildTagsInfo(['index', 'reference'], host(), LANG);
 		const index = tags_info.tags_index ?? [];
 		expect(index).toHaveLength(1);
@@ -160,7 +160,7 @@ describe('buildTagsInfo — annotations', () => {
 		expect(note.data.section_tipo).toBe(NOTE_SECTION);
 		expect(note.data.section_id).toBe(String(noteId));
 		// Literal ddos are string[] — the client does title.join(' | ') and
-		// concatenates body into a template (WC-076).
+		// concatenates body into a template (WC-077).
 		expect(note.title).toEqual(['Primera nota']);
 		expect(note.body).toEqual(['El cuerpo de la nota.']);
 		// A bool ddo is a real boolean (publication section_id '1' = publishable).
