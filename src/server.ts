@@ -469,6 +469,54 @@ const COUNTERS_PATHS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * MEDIA-03 (refined — SECURITY_DECISIONS.md DECISION 2): the safety headers for
+ * one media file, keyed on WHICH of the two SVG populations under the media root
+ * it belongs to. SVG is active content, but the two need opposite treatment:
+ *
+ *  - Server-generated image ENVELOPES (image/&#42;&#42;/svg/&#42;.svg — written only by
+ *    svg_overlay's fixed template; 'svg' is not an image quality and
+ *    component_image rejects .svg uploads, so no uploader bytes reach this
+ *    path). The client renders them INLINE via <object type="image/svg+xml">
+ *    and needs same-origin contentDocument access (quality switch, vector
+ *    editor) plus the same-origin raster <image> fetch — attachment/sandbox
+ *    breaks all of that (blank image). Script is blocked by CSP instead.
+ *  - Every other SVG (raw svg/ uploads) stays download-only + sandboxed:
+ *    the client only uses them as <img src>, which ignores the disposition.
+ *
+ * Split out of the route body and exported so the SELECTION is gated without a
+ * media corpus: the route-level MEDIA-03 cases need a real .svg on disk and skip
+ * silently on a fresh install or the hermetic CI tier — and since XSS-02's
+ * `object-src` admits the envelope folder (core/api/static_asset.ts), a rotted
+ * selection here is no longer backstopped by the app CSP.
+ *
+ * HONEST SCOPE: this is the Bun dev/fallback media route only. In the documented
+ * production topology the web server serves media from the generated access
+ * rules (core/media/protection.ts), which emit access control and NO headers —
+ * so these guarantees do not hold there. Ledgered, not implied.
+ *
+ * @param relSegments media-root-relative path segments, e.g. ['image','svg','0','x.svg']
+ * @param contentType the file's resolved MIME type
+ */
+export function mediaSvgSafetyHeaders(
+	relSegments: readonly string[],
+	contentType: string,
+): Record<string, string> {
+	const isSvg = contentType.includes('svg');
+	if (!isSvg) return {};
+	const imageFolder = config.media.image.folder.replace(/^\//, '');
+	const isImageEnvelope = relSegments[0] === imageFolder && relSegments.includes('svg');
+	return isImageEnvelope
+		? {
+				'Content-Security-Policy':
+					"default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'; form-action 'none'; base-uri 'none'",
+			}
+		: {
+				'Content-Disposition': 'attachment',
+				'Content-Security-Policy': "default-src 'none'; sandbox",
+			};
+}
+
+/**
  * Route a request. Kept as a plain function (not inline in Bun.serve) so tests
  * can call it directly without a socket.
  */
@@ -569,32 +617,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		// Accept-Ranges on every response and honour a bytes= range with a 206.
 		const contentType = mediaFile.type || 'application/octet-stream';
 		const totalSize = mediaFile.size;
-		// MEDIA-03 (refined — SECURITY_DECISIONS.md DECISION 2): SVG is active
-		// content, but the two SVG populations under the media root need different
-		// treatment:
-		//  - Server-generated image ENVELOPES (image/**/svg/*.svg — written only by
-		//    svg_overlay's fixed template; 'svg' is not an image quality and
-		//    component_image rejects .svg uploads, so no uploader bytes reach this
-		//    path). The client renders them INLINE via <object type="image/svg+xml">
-		//    and needs same-origin contentDocument access (quality switch, vector
-		//    editor) plus the same-origin raster <image> fetch — attachment/sandbox
-		//    breaks all of that (blank image). Script is blocked by CSP instead.
-		//  - Every other SVG (raw svg/ uploads) stays download-only + sandboxed:
-		//    the client only uses them as <img src>, which ignores the disposition.
-		const isSvg = contentType.includes('svg');
-		const imageFolder = config.media.image.folder.replace(/^\//, '');
-		const isImageEnvelope = isSvg && relSegments[0] === imageFolder && relSegments.includes('svg');
-		const svgSafetyHeaders: Record<string, string> = isImageEnvelope
-			? {
-					'Content-Security-Policy':
-						"default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'; form-action 'none'; base-uri 'none'",
-				}
-			: isSvg
-				? {
-						'Content-Disposition': 'attachment',
-						'Content-Security-Policy': "default-src 'none'; sandbox",
-					}
-				: {};
+		const svgSafetyHeaders = mediaSvgSafetyHeaders(relSegments, contentType);
 		const rangeHeader = request.headers.get('range');
 		if (rangeHeader) {
 			// Only the single "bytes=start-end" form is used by media elements.

@@ -12,7 +12,7 @@ import { config } from '../../src/config/config.ts';
 import { readEnv } from '../../src/config/env.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import { createSession } from '../../src/core/security/session_store.ts';
-import { handleRequest } from '../../src/server.ts';
+import { handleRequest, mediaSvgSafetyHeaders } from '../../src/server.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
 registerSessionCleanup();
@@ -194,6 +194,34 @@ const rawSvgSample = findSvgFile((rel) => !rel.startsWith(`${imageFolder}/`));
 // component_image renders blank) or the hardening (raw upload served inline →
 // stored XSS). This gate locks both scopes.
 describe('media serving — SVG safety-header scopes (MEDIA-03)', () => {
+	// UNCONDITIONAL half. The two route cases below need a real .svg on disk and
+	// SKIP silently without one (fresh install, hermetic CI tier) — so the
+	// selection itself is asserted here on synthetic paths, with no corpus. This
+	// matters more since XSS-02 relaxed `object-src` to admit the envelope folder
+	// (core/api/static_asset.ts): the app CSP no longer backstops a rotted scope.
+	test('the selector splits the two populations (no media corpus needed)', () => {
+		const imageFolder = config.media.image.folder.replace(/^\//, '');
+		const envelope = mediaSvgSafetyHeaders([imageFolder, 'svg', '0', 'x.svg'], 'image/svg+xml');
+		expect(envelope['Content-Disposition']).toBeUndefined();
+		expect(envelope['Content-Security-Policy']).toContain("script-src 'none'");
+		expect(envelope['Content-Security-Policy']).not.toContain('sandbox');
+
+		// Raw upload — same extension, different population. Both a top-level
+		// svg/ upload and an svg sitting under the image folder WITHOUT the 'svg'
+		// segment must land in the locked-down branch.
+		for (const rel of [
+			['svg', 'original', '0', 'x.svg'],
+			[imageFolder, 'original', '0', 'x.svg'],
+		]) {
+			const raw = mediaSvgSafetyHeaders(rel, 'image/svg+xml');
+			expect(raw['Content-Disposition'], rel.join('/')).toBe('attachment');
+			expect(raw['Content-Security-Policy'], rel.join('/')).toContain('sandbox');
+		}
+
+		// Non-SVG carries neither (a blanket attachment would break <img>/<video>).
+		expect(mediaSvgSafetyHeaders([imageFolder, 'web', '0', 'x.jpg'], 'image/jpeg')).toEqual({});
+	});
+
 	test.if(envelopeSample !== null)(
 		'server-generated image envelope serves INLINE with the script-blocking CSP',
 		async () => {
