@@ -2,15 +2,19 @@
  * dd_component_text_area_api handlers (PHP
  * core/api/v1/common/class.dd_component_text_area_api.php).
  *
- * PHP exposed TWO actions on this class; only `get_tags_info` is ported
- * (WC-067). `delete_tag` — the tool_indexation "delete this index tag in every
- * lang" write — is NOT implemented and is therefore NOT registered: an
- * unregistered pair is the documented 400 (API-01), which is the loud failure
- * the house rule asks for, not a silent no-op that would report success while
- * leaving the tag in the text.
+ * Both PHP actions are ported (WC-076):
+ *  - `get_tags_info` — READ: resolve a transcription's marks into the records
+ *    they point at (tool_tr_print's feed);
+ *  - `delete_tag` — WRITE: remove one tag's marks from EVERY language of the
+ *    text (tool_indexation's step 1; its step 2, the portal locator, is
+ *    dd_component_portal_api::delete_locator, which PHP deliberately moved out
+ *    of this action and the client calls right after).
  *
  * Response envelope is the PHP one: HTTP 200 + {result, msg, errors}, with
- * `result:false` for a refusal.
+ * `result:false` for a refusal. That falsiness is LOAD-BEARING for delete_tag:
+ * the client only removes the editor's own tag markup when `result!==false`
+ * (component_text_area.js:1372), so "nothing matched" must stay falsy — as in
+ * PHP, where $response->result = ($n_deleted > 0).
  */
 
 import type { ActionHandler } from '../handler_context.ts';
@@ -91,4 +95,107 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 
 		return { status: 200, body: { result: tags_info, msg, errors: [] } };
 	},
+
+	delete_tag: async (rqo, context) => {
+		const principal = requirePrincipal(context);
+		const source = (rqo.source ?? {}) as {
+			tipo?: unknown;
+			section_tipo?: unknown;
+			section_id?: unknown;
+		};
+		const options = (rqo.options ?? {}) as { tag_id?: unknown; type?: unknown };
+		const tipo = String(source.tipo ?? '');
+		const sectionTipo = String(source.section_tipo ?? '');
+		const sectionId = Number(source.section_id);
+		const tagId = String(options.tag_id ?? '');
+		const tagType = String(options.type ?? '');
+		if (tipo === '' || sectionTipo === '' || !Number.isInteger(sectionId) || sectionId <= 0) {
+			return refuse(
+				' Bad request: source.tipo, source.section_tipo and a positive source.section_id are mandatory',
+			);
+		}
+		if (tagId === '') {
+			return refuse(' Bad request: options.tag_id is mandatory');
+		}
+
+		// Only the paired mark families are deletable by id (WC-076). An
+		// unsupported type is NAMED, never treated as a no-op success.
+		const { ID_TARGETED_MARK_TYPES } = await import('../../resolve/tr_marks.ts');
+		if (!(ID_TARGETED_MARK_TYPES as readonly string[]).includes(tagType)) {
+			return refuse(
+				` Tag type '${tagType}' is not deletable by id (supported: ${ID_TARGETED_MARK_TYPES.join(', ')})`,
+			);
+		}
+
+		// SEC — the canonical write gate (same as dd_core_api save): level >= 2 on
+		// the (section, component) pair, then the per-record projects scope for
+		// non-admins. A level-2 user must not rewrite a record they cannot see.
+		const { getPermissions } = await import('../../security/permissions.ts');
+		if ((await getPermissions(principal, sectionTipo, tipo)) < 2) {
+			return refuse(" You don't have enough permissions to edit this component", 'forbidden');
+		}
+		if (!principal.isGlobalAdmin) {
+			const { isRecordInScope } = await import('../../security/record_scope.ts');
+			if (!(await isRecordInScope(sectionTipo, sectionId, principal))) {
+				return refuse(' Record is out of the user scope', 'forbidden');
+			}
+		}
+
+		const { deleteTagFromAllLangs } = await import(
+			'../../components/component_text_area/tag_delete.ts'
+		);
+		const { getModelByTipo } = await import('../../ontology/resolver.ts');
+		let outcome: Awaited<ReturnType<typeof deleteTagFromAllLangs>>;
+		try {
+			outcome = await deleteTagFromAllLangs({
+				componentTipo: tipo,
+				sectionTipo,
+				sectionId,
+				tagId,
+				tagType: tagType as 'index' | 'reference',
+				userId: principal.userId,
+			});
+		} catch (error) {
+			// markPatternById throws on a malformed tag_id — a rejected request,
+			// not a server fault.
+			return refuse(` ${(error as Error).message}`, 'bad_options');
+		}
+
+		// PHP message bytes (class.dd_component_text_area_api.php:71-74).
+		const model = (await getModelByTipo(tipo)) ?? '';
+		const total = outcome.langsChanged.length;
+		const msg: string[] = [
+			total > 0
+				? `Deleted tag: ${tagId} (${tagType}) in ${total} langs: ${outcome.langsChanged.join(', ')} (${model} - ${tipo})`
+				: `No tags are deleted in ${model} tipo: '${tipo}' tag_id: '${tagId}' type: '${tagType}'`,
+		];
+		const errors: string[] = [];
+		if (outcome.error !== undefined) {
+			// A partial write is reported, never swallowed: the langs already
+			// cleaned are named above, and re-issuing the request is safe.
+			msg.push(outcome.error);
+			errors.push(outcome.error);
+		}
+
+		return {
+			status: 200,
+			body: {
+				// PHP: result = ($n_deleted > 0). The client's editor-tag removal
+				// depends on this exact falsiness (see the module doc).
+				result: outcome.removedCount > 0 && outcome.error === undefined,
+				msg,
+				errors,
+				langs_changed: outcome.langsChanged,
+				removed_count: outcome.removedCount,
+			},
+		};
+	},
 };
+
+/** PHP refusal envelope: HTTP 200 + result:false + the message. */
+function refuse(message: string, errorCode = 'bad_source') {
+	return {
+		status: 200 as const,
+		body: { result: false, msg: [message], errors: [errorCode] },
+	};
+}

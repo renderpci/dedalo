@@ -20,7 +20,7 @@
  *   tags_notes     {<section_tipo>:[{id,type,component_tipo}]} note ddo_map
  *   tags_persons   see tags_persons.ts (shared with the EDIT emit feed)
  *
- * Wire law (WC-067, the WC-065 rule applied here): every `section_id` and
+ * Wire law (WC-076, the WC-065 rule applied here): every `section_id` and
  * `tag_id` emitted is a STRING — the client matches marks against this feed
  * with strict `===` on the values it scraped out of the text.
  */
@@ -267,7 +267,7 @@ async function buildAnnotations(
 						);
 					continue;
 				}
-				// WC-067: literal ddos emit STRING values, not stored items — the
+				// WC-076: literal ddos emit STRING values, not stored items — the
 				// client renders them directly (`note.title.join(' | ')`).
 				note[ddo.id] = items.map((item) => {
 					if (item !== null && typeof item === 'object') {

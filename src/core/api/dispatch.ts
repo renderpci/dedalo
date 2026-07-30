@@ -128,8 +128,8 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
 	dd_area_maintenance_api: areaMaintenanceApiActions,
 	dd_diffusion_api: diffusionApiActions,
 	dd_component_portal_api: componentPortalApiActions,
-	// Resolved transcription tag payload (WC-067) — ONE action, get_tags_info;
-	// PHP's delete_tag is deliberately unported/unregistered (see the handler).
+	// Transcription tags (WC-076): get_tags_info (read the resolved tag payload)
+	// + delete_tag (remove one tag's marks from every lang of the text).
 	dd_component_text_area_api: componentTextAreaApiActions,
 	dd_component_av_api: componentAvApiActions,
 	dd_component_info: componentInfoApiActions,
