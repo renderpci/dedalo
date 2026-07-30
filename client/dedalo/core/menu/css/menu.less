@@ -7,7 +7,6 @@
 @import (once) '../../page/css/layout/vars';
 @import (once) '../../page/css/layout/buttons';
 
-@menu_bg_color_active: @color_tag_indexation_normal;
 @menu_box_shadow: var(--shadow-3);
 
 .menu {
@@ -241,10 +240,14 @@
 				display: none;
 			}
 
-			// active
+			// active (also HOVER — render_menu_tree.js puts menu_li_active on the
+			// hovered li). Light: the solid orange fill, accent transparent.
+			// Dark: a quiet neutral raise, with the orange carried by the accent
+			// line — a left edge on dropdown/flyout rows.
 			.menu_li_active>a {
-				background: @menu_bg_color_active;
-				color: @color_white !important;
+				background: var(--menu_item_active_bg);
+				color: var(--menu_item_active_fg) !important;
+				box-shadow: inset 3px 0 0 var(--menu_item_active_accent);
 			}
 
 			.menu_li_active ul {
@@ -277,14 +280,23 @@
 				pointer-events: none;
 			}
 
-			// arrow white on active
+			// arrow takes the active ink (light: white on orange; dark: white on
+			// the neutral raise — @color_white would be #1b1d20 here)
 			li.has-sub.menu_li_active::after {
-				border-left: 5px solid @color_white;
+				border-left: 5px solid var(--menu_item_active_fg);
 			}
 
 			// Hides arrow in first level of li (fisrt menu line)
 			>li.has-sub::after {
 				display: none;
+			}
+
+			// top-level (bar) active item: the accent reads as an underline, not a
+			// left edge. Anchored on ul#dd1, NOT `>li` — the top-level li are
+			// children of that ul, so a `.menu_hierarchy > li` selector matches
+			// nothing (as the two `>li…` rules just above it have never matched).
+			ul#dd1>li.menu_li_active>a {
+				box-shadow: inset 0 -2px 0 var(--menu_item_active_accent);
 			}
 
 			// shadow for fir level when active

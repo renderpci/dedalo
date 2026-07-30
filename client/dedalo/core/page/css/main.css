@@ -9356,8 +9356,9 @@ body:has(.assistant_container.standalone.show) {
   display: none;
 }
 .menu > .content_data > .menu_hierarchy .menu_li_active > a {
-  background: var(--color_tag_indexation_normal);
-  color: var(--color_white) !important;
+  background: var(--menu_item_active_bg);
+  color: var(--menu_item_active_fg) !important;
+  box-shadow: inset 3px 0 0 var(--menu_item_active_accent);
 }
 .menu > .content_data > .menu_hierarchy .menu_li_active ul {
   display: block !important;
@@ -9384,10 +9385,13 @@ body:has(.assistant_container.standalone.show) {
   pointer-events: none;
 }
 .menu > .content_data > .menu_hierarchy li.has-sub.menu_li_active::after {
-  border-left: 5px solid var(--color_white);
+  border-left: 5px solid var(--menu_item_active_fg);
 }
 .menu > .content_data > .menu_hierarchy > li.has-sub::after {
   display: none;
+}
+.menu > .content_data > .menu_hierarchy ul#dd1 > li.menu_li_active > a {
+  box-shadow: inset 0 -2px 0 var(--menu_item_active_accent);
 }
 .menu > .content_data > .menu_hierarchy > li.menu_li_active {
   box-shadow: var(--shadow-3);
