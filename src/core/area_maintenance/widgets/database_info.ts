@@ -50,11 +50,17 @@ export interface StatisticsHealth {
  * a real 50,993,786. `pg_stats` still held rows, so `pg_statistic` had survived
  * while the CUMULATIVE counters were wiped (a crash restart or a restore).
  *
- * That combination is silently self-perpetuating: autovacuum and autoanalyze
- * fire on `n_mod_since_analyze` / `n_dead_tup`, which restart from zero, so a
- * 44 GB table would never be auto-analyzed again and nothing would say so. It
- * was found by accident while chasing an unrelated slow query. This readout
- * makes the next occurrence announce itself.
+ * That combination is silently self-perpetuating. autovacuum's arithmetic is
+ * intact — only the numerator is zeroed: autoanalyze fires at
+ * `n_mod_since_analyze >= 50 + 0.1 * reltuples`, and `reltuples` SURVIVED (it is
+ * in pg_class, WAL-durable), so the threshold stays correctly sized while the
+ * counter restarts from 0. Recovery is therefore churn-proportional: small hot
+ * tables self-heal within hours, while a large low-churn table needs millions of
+ * modifications first — 5.1 M for a 51 M-row table — which in practice means
+ * never. It is not "never" by mechanism, and this comment must not claim it is.
+ *
+ * Found by accident while chasing an unrelated slow query. This readout makes
+ * the next occurrence announce itself; `analyze_statistics` repairs it.
  */
 export function summarizeStatisticsHealth(rows: TableStatsRow[]): StatisticsHealth {
 	const neverAnalyzed = rows.filter((row) => row.never_analyzed);
@@ -87,8 +93,12 @@ export function summarizeStatisticsHealth(rows: TableStatsRow[]): StatisticsHeal
 	};
 }
 
-/** Read the per-table statistics state the verdict above is computed from. */
-export async function readStatisticsHealth(): Promise<StatisticsHealth> {
+/**
+ * The RAW rows behind the verdict. Split out so the repair action can re-derive
+ * its own table list server-side instead of trusting a list that came back
+ * through the client.
+ */
+async function readTableStatsRows(): Promise<TableStatsRow[]> {
 	const rows = (await sql.unsafe(
 		`SELECT c.relname AS table_name,
 		        c.reltuples::bigint AS reltuples,
@@ -100,15 +110,36 @@ export async function readStatisticsHealth(): Promise<StatisticsHealth> {
 		[],
 	)) as Record<string, unknown>[];
 
-	return summarizeStatisticsHealth(
-		rows.map((row) => ({
-			table: String(row.table_name),
-			reltuples: Number(row.reltuples),
-			n_live_tup: Number(row.n_live_tup),
-			never_analyzed: row.never_analyzed === true,
-			bytes: Number(row.bytes),
-		})),
-	);
+	return rows.map((row) => ({
+		table: String(row.table_name),
+		reltuples: Number(row.reltuples),
+		n_live_tup: Number(row.n_live_tup),
+		never_analyzed: row.never_analyzed === true,
+		bytes: Number(row.bytes),
+	}));
+}
+
+/** Read the per-table statistics state and reduce it to the verdict. */
+export async function readStatisticsHealth(): Promise<StatisticsHealth> {
+	return summarizeStatisticsHealth(await readTableStatsRows());
+}
+
+/**
+ * The tables `analyze_statistics` will ANALYZE: exactly the ones the verdict
+ * counts as offenders. PURE, so the scoping rule is testable — and so it can
+ * never disagree with what the panel showed the operator.
+ */
+export function degradedTableNames(rows: TableStatsRow[]): string[] {
+	const health = summarizeStatisticsHealth(rows);
+	if (health.status === 'ok') return [];
+	return rows
+		.filter(
+			(row) =>
+				(row.never_analyzed && row.bytes >= STATS_SIGNIFICANT_BYTES) ||
+				(row.reltuples >= STATS_RESET_MIN_ROWS && row.n_live_tup * 100 < row.reltuples),
+		)
+		.sort((a, b) => b.bytes - a.bytes)
+		.map((row) => row.table);
 }
 
 /**
@@ -190,6 +221,60 @@ async function databaseInfoAnalyzeDb(): Promise<WidgetResponse> {
 		result: errors.length > 0 ? false : {},
 		errors,
 		msg: errors.length > 0 ? 'Warning. Request done with errors' : 'OK. Request done successfully',
+	};
+	response.execution_time = (performance.now() - start) / 1000;
+	return response as WidgetResponse;
+}
+
+/**
+ * database_info.analyze_statistics — the repair the `statistics` verdict points
+ * at (WC-074). Plain `ANALYZE`, scoped to the tables the verdict named.
+ *
+ * (!) NOT `analyze_db`. That runs whole-database `VACUUM ANALYZE`, whose cost is
+ * page-proportional — reclaiming space is a different job from refreshing
+ * statistics, and pointing a stats warning at it prices the fix wrong. Plain
+ * ANALYZE samples a bounded page count, so it is near-flat in table size
+ * (measured 2026-07-30: ~60 s for a 141 GB database, 8 s for 912 MB, 4 s for
+ * 68 MB — an order of magnitude, not a budget: at least one local install
+ * carries manual `SET STATISTICS` tuning that inflates it).
+ *
+ * The table list is re-derived HERE from the catalog, never taken from options:
+ * the operator authorises "repair what you told me is broken", and the set must
+ * be the same set the verdict computed. An empty list means the verdict is 'ok'
+ * and there is nothing to do — that is a success, not an error.
+ */
+async function databaseInfoAnalyzeStatistics(): Promise<WidgetResponse> {
+	const start = performance.now();
+	const errors: string[] = [];
+	let tables: string[] = [];
+	try {
+		tables = degradedTableNames(await readTableStatsRows());
+		if (tables.length > 0) {
+			// Identifiers come from pg_class, but they are still INTERPOLATED, so
+			// they are validated before quoting rather than trusted for provenance.
+			const safe = tables.filter((table) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(table));
+			if (safe.length !== tables.length) {
+				errors.push('Warning. Some table names were rejected as non-identifiers and skipped');
+			}
+			if (safe.length > 0) {
+				const list = safe.map((table) => `"${table}"`).join(', ');
+				// Opts out of the pool-wide statement_timeout ceiling (WC-055):
+				// ANALYZE on a multi-million-row table can exceed it.
+				await runWithoutStatementTimeout(`ANALYZE ${list}`);
+			}
+		}
+	} catch (error) {
+		errors.push(` Error Processing sql query Request: ${(error as Error).message}`);
+	}
+	const response: WidgetResponse & { execution_time?: number } = {
+		result: errors.length > 0 ? false : { analyzed: tables },
+		errors,
+		msg:
+			errors.length > 0
+				? 'Warning. Request done with errors'
+				: tables.length === 0
+					? 'OK. Table statistics were already healthy — nothing to analyze'
+					: `OK. ANALYZE done on ${tables.length} table(s)`,
 	};
 	response.execution_time = (performance.now() - start) / 1000;
 	return response as WidgetResponse;
@@ -421,6 +506,7 @@ export const widget: WidgetModule = {
 	},
 	apiActions: {
 		analyze_db: databaseInfoAnalyzeDb,
+		analyze_statistics: databaseInfoAnalyzeStatistics,
 		relation_integrity_report: databaseInfoRelationIntegrityReport,
 		consolidate_tables: databaseInfoConsolidateTables,
 		rebuild_user_stats: databaseInfoRebuildUserStats,
@@ -458,4 +544,19 @@ export const widget: WidgetModule = {
 		},
 	},
 	getValue: databaseInfoGetValue,
+	// WC-074: the catalog's inline value carries ONLY the statistics verdict, so
+	// the FOLDED dashboard card can warn without anyone opening the panel — the
+	// verdict is the one thing here that is actionable while collapsed. Kept to
+	// that single key deliberately: eagerValue runs for every widget on every
+	// area read, so it must stay cheap (this is one catalog query, ~3-5 ms), and
+	// the heavy tables+indexes catalog stays on the panel-open path.
+	// Fail-soft per the registry contract — a widget whose eager value cannot be
+	// computed must never break the dashboard read (registry.ts: `?? null`).
+	eagerValue: async () => {
+		try {
+			return { statistics: await readStatisticsHealth() };
+		} catch {
+			return null;
+		}
+	},
 };
