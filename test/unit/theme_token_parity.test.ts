@@ -51,7 +51,8 @@ const WHY_ORPHAN =
 const declaredTokens = (src: string): Set<string> => {
 	const names = new Set<string>();
 	for (const match of src.matchAll(/^\s*(--[a-z0-9_-]+)\s*:/gim)) {
-		names.add(match[1]);
+		const name = match[1];
+		if (name) names.add(name);
 	}
 	return names;
 };
@@ -70,7 +71,10 @@ describe('theme token parity tripwire', () => {
 	});
 
 	test('every gated LIGHT token has a dark counterpart', () => {
-		const unpaired = [...light].filter(gated).filter((name) => !dark.has(name)).sort();
+		const unpaired = [...light]
+			.filter(gated)
+			.filter((name) => !dark.has(name))
+			.sort();
 		expect(
 			unpaired,
 			`${WHY_UNPAIRED}\n\nUnpaired:\n${unpaired.map((n) => `  ${n}`).join('\n')}`,
@@ -78,7 +82,10 @@ describe('theme token parity tripwire', () => {
 	});
 
 	test('every gated DARK token has a light counterpart', () => {
-		const orphans = [...dark].filter(gated).filter((name) => !light.has(name)).sort();
+		const orphans = [...dark]
+			.filter(gated)
+			.filter((name) => !light.has(name))
+			.sort();
 		expect(
 			orphans,
 			`${WHY_ORPHAN}\n\nOrphans:\n${orphans.map((n) => `  ${n}`).join('\n')}`,
