@@ -316,7 +316,7 @@
 		>.menu_mobile_wrapper {
 			width: 100%;
 			position: relative;
-			background-color: @color_grey_4;
+			background-color: var(--menu_mobile_bg);
 			font-size: 1.25rem;
 			padding: 1rem;
 
@@ -324,6 +324,9 @@
 
 			.menu_mobile_item {
 				display: block;
+				// explicit: inheriting --fg_inverse from .content_data is what put
+				// white leaf items on the panel regardless of the panel's colour
+				color: var(--menu_mobile_fg);
 				padding: 0.25rem 1rem;
 				padding-right: 1.75rem;
 				position: relative;
@@ -331,8 +334,13 @@
 				line-height: 1.6rem;
 				cursor: pointer;
 
+				&:hover {
+					background-color: var(--menu_mobile_hover_bg);
+					border-radius: var(--radius-sm);
+				}
+
 				&.with_children {
-					color: @color_grey_8;
+					color: var(--menu_mobile_parent_fg);
 
 					&:after {
 						content: " ";
@@ -343,7 +351,7 @@
 						vertical-align: middle;
 						border-bottom: 5px solid transparent;
 						border-top: 5px solid transparent;
-						border-left: 5px solid @color_grey_8;
+						border-left: 5px solid var(--menu_mobile_arrow);
 						position: absolute;
 						top: 0.66em;
 						right: 0.66em;
