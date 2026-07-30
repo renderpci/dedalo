@@ -2532,7 +2532,37 @@ the clause instead of matching everything, plus three negative controls: dd545
 on the same table, dd543 in an ordinary section, and the TM twin all still emit
 containment) · `test/unit/activity_log_single_actor.test.ts` (the writer-side
 invariant) · `matrix_index_policy.test.ts` + `matrix_index_prune.test.ts` (both
-indexes classified `keep`, so "Optimize tables" can no longer drop them).
+indexes classified `keep`, so "Optimize tables" can no longer drop them) ·
+`test/unit/user_stats_paging.test.ts` (the second emitter's paging seam — see the
+addendum).
+
+### Addendum 2026-07-30 — a SECOND emitter, and the index now carries writes too
+
+`matrix_activity_who_ts_idx` has **two** dependent emitters, not one. The new one
+is `area_maintenance/user_stats.ts` `whoScope`, and it leans on the index HARDER
+than the dd542 list does: the list only needs O(LIMIT) paging, while the stats
+rebuild walks the actor's whole history in `("timestamp", id)` KEYSET pages —
+the trailing sort key is what makes each page an index range scan instead of a
+whole-actor bitmap.
+
+Why it exists: `rebuild_user_stats` was written as containment, so its window
+bound was a Filter and every run scanned the entire actor. On the 8.1M-row mdcat
+actor that died on `DB_STATEMENT_TIMEOUT_MS` (`count(*)` alone: 57 s of a 60 s
+ceiling), reported from the running client as a `widget_request` exception. The
+same window now aggregates server-side in 127 s over ~82 pages, worst page 5.3 s.
+
+Consequences for anyone touching either side:
+
+- Relaxing the index, the predicate, or the single-actor invariant now breaks the
+  maintenance action too — not only the dd542 list. `matrix_index_policy.ts` and
+  `db_pg_definitions.json` (`all_matrix_activity_who_ts_idx` `info`) name both.
+- The totals payload is UNCHANGED — this is a plan/shape fix, not a wire change.
+  Parity was verified against a verbatim replica of the replaced TS row loop over
+  6 real mdcat windows (2.6M rows, 135 days): identical per-day dimension maps,
+  ORDER included, at page sizes forcing up to 211 pages.
+- The first-encounter totals ORDER is carried by `min(id)` per group, because an
+  aggregate cannot re-derive it. `user_stats_paging.test.ts` pins that the page
+  size is a performance knob and nothing else.
 
 ---
 
