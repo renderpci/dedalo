@@ -1678,14 +1678,11 @@ const render_automatic_transcription = function (options) {
 		// can carry person tags at each speaker turn. The checkbox is enabled
 		// only when the model is in the local store; when it is missing, an
 		// admin gets the same Download affordance the ASR models have.
-		// DELIBERATELY OUTSIDE the collapsed ⚙ configuration panel: whether
-		// this run tags speakers is the archivist's per-run choice, and a
-		// control nobody can see is a feature nobody uses.
 			const speakers_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name 		: 'speakers_label hide',
 				inner_html		: self.get_tool_label('detect_speakers') || 'Detect speakers',
-				parent 			: automatic_transcription_container
+				parent 			: configuration_container
 			})
 			const detect_speakers_checkbox = ui.create_dom_element({
 				element_type	: 'input',
