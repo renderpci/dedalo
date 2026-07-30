@@ -169,6 +169,26 @@
 	--menu_dropdown_bg:         var(--color_grey_16);
 	--menu_dropdown_border:     var(--color_grey_9);
 	--menu_dropdown_li_border:  var(--color_grey_7);
+	// menu — mobile (hamburger) panel. These LIGHT values are exactly what the
+	// palette vars resolved to before tokenization, so light is unchanged. They
+	// exist because the panel was painted with PALETTE vars, which INVERT in dark:
+	// a dark slab became a light one while its ink stayed white. Dark values live
+	// in theme_dark.less and theme_token_parity.test.ts keeps the pair honest.
+	--menu_mobile_bg:          var(--color_grey_4);
+	--menu_mobile_fg:          var(--fg_inverse);
+	--menu_mobile_parent_fg:   var(--color_grey_8);
+	--menu_mobile_arrow:       var(--color_grey_8);
+	--menu_mobile_hover_bg:    transparent; // light has no hover affordance here; dark adds one
+	// menu — bar ink. --menu_link_fg: the ontology link + the logged-user hover.
+	// --menu_selector_fg: the two application-language <select>s.
+	--menu_link_fg:            var(--color_grey_14);
+	--menu_selector_fg:        var(--color_grey_11);
+	// menu — active/hover item. Light keeps the solid orange fill it always had,
+	// so its accent line is transparent; dark trades the slab for a quiet raise
+	// plus an orange edge. _fg is a LITERAL: --color_white is #1b1d20 in dark.
+	--menu_item_active_bg:     var(--color_tag_indexation_normal);
+	--menu_item_active_fg:     #ffffff;
+	--menu_item_active_accent: transparent;
 	--debug_info_bar_bg:        var(--color_grey_4);
 	--debug_info_bar_text:      var(--color_grey_8);
 	--checkbox_bg:              var(--color_grey_16);
