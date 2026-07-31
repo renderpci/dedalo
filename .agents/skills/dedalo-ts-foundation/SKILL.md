@@ -84,7 +84,11 @@ Reach for the specialist when you cross into its area:
 
 ## Subsystem skills (the deep dives)
 
-`dedalo-relations-ts` (relation family), `dedalo-section-family-ts` (section reads + client render contract), `dedalo-ontology-ts` (ontology definition/provisioning), `dedalo-tree-ts` (thesaurus tree + shared tx/lock primitives), `dedalo-parity-debugging` (the oracle-diff workflow used by all of the above).
+`dedalo-relations-ts` (relation family + the full `component_dataframe` contract), `dedalo-section-family-ts` (section reads + client render contract), `dedalo-ontology-ts` (ontology definition/provisioning), `dedalo-tree-ts` (thesaurus tree + shared tx/lock primitives), `dedalo-parity-debugging` (the oracle-diff workflow used by all of the above).
+
+## Writing the manual
+
+**`dedalo-docs-authoring`** — anything under `docs/`. The load-bearing rule: **every ontology `tipo` in an example must be a REAL, verified node** (readers copy examples straight into their ontology), which means checking not just that the tipo exists but that its MODEL matches what the prose claims. Also the `docs_current_engine_tripwire` gates (PHP-free prose, links resolving inside `docs/`, no `rewrite/` paths) and the storage shapes examples keep getting wrong (`relation` — singular, keyed by component tipo — not `relations: []`). Prose canon: `docs/development/documentation_style_guide.md`.
 
 ## Cross-cutting docs (point, don't duplicate)
 
