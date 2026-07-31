@@ -23,7 +23,12 @@
  * lock-and-per-key write half of the integrity fix-mode (S2-06).
  */
 
-import { dataframeEntryMatches, isDataframeEntry } from '../concepts/subdatum.ts';
+import { dataframePairingOf } from '../concepts/rqo.ts';
+import {
+	dataframeEntriesEqual,
+	dataframeEntryMatches,
+	normalizeDataframeEntry,
+} from '../concepts/subdatum.ts';
 import { type MatrixKeyWrite, updateMatrixKeysData } from '../db/matrix_write.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 
@@ -59,15 +64,26 @@ export function filterCallerEntries(
  * a single slot tipo stores frames for ALL items of the main component on
  * the same record — a naive overwrite would erase sibling items' frames.
  *
- * Algorithm (ported exactly):
+ * Algorithm:
  * 1. siblings = every stored entry NOT matching this caller context —
  *    unconditionally preserved;
- * 2. additions = incoming entries not already present as siblings
- *    (JSON-signature dedup, so passing the full slot array is harmless);
- * 3. every addition that IS a frame gets the caller's id_key stamped as INT
- *    and the legacy section_id_key/section_tipo_key keys REMOVED
- *    (:205-213 — legacy keys are read-only BC, never written anew);
+ * 2. every incoming entry is NORMALIZED to the persisted-frame contract
+ *    (normalizeDataframeEntry: forced dd490 + server-authoritative
+ *    from/main/id_key, string section_id, transients and legacy keys
+ *    stripped);
+ * 3. additions = normalized entries that are not already present — compared
+ *    by test_equal_properties IDENTITY against both the siblings and the
+ *    additions accepted so far, so passing the full slot array is harmless
+ *    and a double-submit collapses;
  * 4. merged = siblings + additions; empty merges normalise to null.
+ *
+ * Steps 2 and 3 are DEFENCE IN DEPTH: with the save path now routing through
+ * validateRelationInsert, entries arrive here already normalized and deduped.
+ * They are repeated because this function is the last gate before the column
+ * is written, and the previous version — which stamped only entries that
+ * ALREADY looked like frames, and deduped on a full JSON signature — is what
+ * let unreadable, duplicated frames reach a live record. A normalizer that
+ * only fixes already-correct input is not a normalizer.
  */
 export function mergeCallerEntries(
 	fullSlotData: Record<string, unknown>[],
@@ -75,27 +91,36 @@ export function mergeCallerEntries(
 	caller: DataframeCaller,
 	frameTipo: string,
 ): Record<string, unknown>[] | null {
-	const mainComponentTipo = caller.main_component_tipo;
-	const idKey = caller.id_key;
-	const siblings =
-		typeof mainComponentTipo === 'string' && idKey !== undefined && idKey !== null
-			? fullSlotData.filter(
-					(entry) => !dataframeEntryMatches(entry, mainComponentTipo, idKey, frameTipo),
-				)
-			: [...fullSlotData];
+	// ONE validity rule, shared with the read and save doors (rqo.ts). Three
+	// slightly different local rules is what let a frame slip through the gaps
+	// between them and land unreadable.
+	const pairing = dataframePairingOf(caller);
+	if (pairing === null) {
+		// No usable pairing: there is nothing to scope the merge TO, so the only
+		// safe answer is to leave the slot exactly as it is. Writing the incoming
+		// entries would either clobber every item's frames (no caller subset to
+		// replace) or store entries with no pairing key — both worse than a
+		// no-op. The save door refuses this case outright; this is the backstop
+		// for any other caller.
+		return fullSlotData.length === 0 ? null : [...fullSlotData];
+	}
+	const { main_component_tipo: mainComponentTipo, id_key: idKey } = pairing;
+	const siblings = fullSlotData.filter(
+		(entry) => !dataframeEntryMatches(entry, mainComponentTipo, idKey, frameTipo),
+	);
 
-	const siblingSignatures = new Set(siblings.map((entry) => JSON.stringify(entry)));
-	const additions = incoming
-		.filter((entry) => !siblingSignatures.has(JSON.stringify(entry)))
-		.map((entry) => {
-			if (!isDataframeEntry(entry) || idKey === undefined || idKey === null) return entry;
-			const stamped: Record<string, unknown> = { ...entry, id_key: Math.trunc(Number(idKey)) };
-			// biome-ignore lint/performance/noDelete: PHP unset — legacy pairing keys must be ABSENT in persisted frames
-			delete stamped.section_id_key;
-			// biome-ignore lint/performance/noDelete: PHP unset — see above
-			delete stamped.section_tipo_key;
-			return stamped;
-		});
+	const additions: Record<string, unknown>[] = [];
+	for (const entry of incoming) {
+		const candidate = normalizeDataframeEntry(entry, { frameTipo, mainComponentTipo, idKey });
+		// Compared against the siblings AND the additions accepted so far. The
+		// sibling half cannot fire today (anything equal to a normalized
+		// candidate was filtered out above) and is kept as a cheap guard against
+		// a future filter change silently re-admitting duplicates.
+		const duplicate =
+			siblings.some((sibling) => dataframeEntriesEqual(sibling, candidate)) ||
+			additions.some((accepted) => dataframeEntriesEqual(accepted, candidate));
+		if (!duplicate) additions.push(candidate);
+	}
 
 	const merged = [...siblings, ...additions];
 	return merged.length === 0 ? null : merged;

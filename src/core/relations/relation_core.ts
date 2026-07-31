@@ -419,6 +419,7 @@ export async function emitDataframeItem(
 ): Promise<void> {
 	const { resolveFrameConfig } = await import('../section/list_definitions/section_list.ts');
 	const frame = await resolveFrameConfig(frameDdo.tipo);
+	const frameLimit = frame.limit;
 	// The frame bag lives on the record of the ddo's DECLARED section_tipo
 	// (PHP builds the component_dataframe instance with the ddo's scalar
 	// section_tipo + the caller's section_id). Components shared across
@@ -459,7 +460,7 @@ export async function emitDataframeItem(
 			  }[]
 			| undefined) ?? [];
 	const matched = bag.filter((entry) => dataframeEntryMatches(entry, mainComponentTipo, pairId));
-	const page = matched.slice(0, frame.limit).map((entry, index) => ({
+	const page = matched.slice(0, frameLimit).map((entry, index) => ({
 		...entry,
 		paginated_key: index,
 	}));
@@ -475,7 +476,7 @@ export async function emitDataframeItem(
 		'lg-nolan',
 		page, // [] when empty — the frame item ALWAYS emits
 	);
-	item.pagination = { total: matched.length, limit: frame.limit, offset: 0 };
+	item.pagination = { total: matched.length, limit: frameLimit, offset: 0 };
 	item.from_component_tipo = mainComponentTipo;
 	// The pairing context rides ON the frame item (PHP: the caller-aware
 	// component_dataframe instance stamps its dataframe_caller onto the data

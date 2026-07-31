@@ -36,7 +36,12 @@
 
 import { getComponentModel } from '../components/registry.ts';
 import { compareLocators, isLocatorInArray } from '../concepts/locator.ts';
-import { dataframeEntryMatches } from '../concepts/subdatum.ts';
+import {
+	type DataframePairing,
+	dataframeEntriesEqual,
+	dataframeEntryMatches,
+	normalizeDataframeEntry,
+} from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
 import { encodeForJsonb } from '../db/json_codec.ts';
 import { sql } from '../db/postgres.ts';
@@ -322,6 +327,15 @@ export async function maintainRelationSearchIndex(
  * Properties the client sent beyond the locator law are PRESERVED (S2-03
  * posture — dataframe id_key pairing must survive). Returns the normalized
  * locator, or null when the insert must be dropped (PHP returns false).
+ *
+ * DATAFRAME saves run through here TOO, with `pairing` set. They used to be
+ * excluded (`!isDataframeSave` at all three save_component call sites), which
+ * made component_dataframe the ONE relation column that persisted the client's
+ * raw locator: no `type`, echoed `paginated_key`, numeric section_id, no dedup
+ * — i.e. write-only frames the read predicate could never see again. PHP has
+ * no such exclusion (component_dataframe::set_data delegates to
+ * parent::set_data → validate_data_element like every other relation); it only
+ * OVERRIDES the dedup key, which `pairing` reproduces here.
  */
 export async function validateRelationInsert(
 	rawValue: Record<string, unknown>,
@@ -333,6 +347,13 @@ export async function validateRelationInsert(
 		translatable: boolean;
 		lang: string;
 		existingItems: unknown[];
+		/**
+		 * Frame pairing context — present ONLY for a component_dataframe save.
+		 * Switches on the two dataframe particularities: the persisted-frame
+		 * normalizer (forced dd490 + server-authoritative pairing fields) and
+		 * the test_equal_properties dedup key.
+		 */
+		pairing?: DataframePairing | null;
 	},
 ): Promise<Record<string, unknown> | null> {
 	const value: Record<string, unknown> = { ...rawValue };
@@ -368,6 +389,20 @@ export async function validateRelationInsert(
 	// biome-ignore lint/performance/noDelete: PHP unset — paginated_key must be ABSENT in persisted data
 	delete value.paginated_key;
 	value.section_id = String(value.section_id);
+
+	// DATAFRAME normalization + dedup. The pairing fields are stamped from the
+	// SERVER's caller context (overriding whatever the client sent for `type`,
+	// `id_key` and `main_component_tipo`), and identity is compared over
+	// test_equal_properties — which includes id_key, so the same target record
+	// may legitimately be framed from two different main items, while the SAME
+	// frame twice is dropped.
+	if (context.pairing !== undefined && context.pairing !== null) {
+		const normalized = normalizeDataframeEntry(value, context.pairing);
+		for (const item of context.existingItems) {
+			if (dataframeEntriesEqual(item, normalized)) return null; // already framed — ignored
+		}
+		return normalized;
+	}
 
 	// Duplicate rejection (hash-key equality like PHP build_locator_lookup_key;
 	// String() casts give the loose section_id the locator law requires).

@@ -109,9 +109,78 @@ export const rqoSourceSchema = z
 		 * every save in the form.
 		 */
 		temporal_scope: z.string().max(64).nullish(),
+		/**
+		 * DATAFRAME PAIRING context (PHP source.caller_dataframe): which item of
+		 * which main component the frame instance extends. The client sends it on
+		 * EVERY component_dataframe request — read and save alike (common.js
+		 * create_source :1184-94) — sourcing `id_key` from the last read echo.
+		 *
+		 * Declared rather than left to `.passthrough()` for the reason the
+		 * `is_temporal` note above spells out: it rode through undeclared, only
+		 * the SAVE door ever cast it out of the bag, and the READ door silently
+		 * ignored it — so get_data served every frame in the slot regardless of
+		 * which main item was open, and handed the client back an item with no
+		 * `id_key` to echo. Nullish-tolerant: a caller without a pairing (search
+		 * mode, maintenance) is legitimate and degrades to the unpaired read.
+		 */
+		caller_dataframe: z
+			.object({
+				main_component_tipo: z.string().nullish(),
+				section_tipo: z.string().nullish(),
+				section_id: z.union([z.number(), z.string()]).nullish(),
+				id_key: z.union([z.number(), z.string()]).nullish(),
+			})
+			.passthrough()
+			.nullish(),
 	})
 	.passthrough();
 export type RqoSource = z.infer<typeof rqoSourceSchema>;
+
+/**
+ * THE single reader of `source.caller_dataframe` (mirrors
+ * `isTemporalSource` below): returns the pairing ONLY when it is complete
+ * enough to scope a read or a write — a main component AND an item id.
+ *
+ * Everything else is a caller WITHOUT a pairing, which is legitimate (search
+ * mode, the maintenance widgets) and must degrade to the unpaired path rather
+ * than throw or, worse, pair against a partial context.
+ */
+export function callerDataframePairing(
+	source: RqoSource | undefined,
+): { main_component_tipo: string; id_key: number } | null {
+	return dataframePairingOf(source?.caller_dataframe);
+}
+
+/**
+ * THE pairing validity rule, shared by every door (read, save, merge).
+ *
+ * It exists as one function because it started as three: the read accepted any
+ * finite id_key, the save demanded >= 1, and the merge accepted anything
+ * non-null. That disagreement was a hole, not a nuance — `id_key: 0` or a
+ * null `main_component_tipo` (which the client sends as
+ * `self.caller?.tipo || null` whenever the caller instance is not threaded)
+ * passed one gate and failed another, so a frame could be written through the
+ * UNPAIRED path and land in exactly the unreadable shape this whole change set
+ * exists to prevent.
+ *
+ * Item ids are 1-based and server-minted, so a valid pairing is an integer
+ * >= 1 plus a non-empty main component tipo. `id_key` is returned as a NUMBER:
+ * every consumer wants it numeric, and normalizing here means no caller has to
+ * remember to (a string "abc" used to reach Math.trunc(Number(...)) and write
+ * NaN, which the jsonb encoder then threw on, aborting the transaction).
+ */
+export function dataframePairingOf(
+	caller: { main_component_tipo?: unknown; id_key?: unknown } | null | undefined,
+): { main_component_tipo: string; id_key: number } | null {
+	if (caller === null || caller === undefined) return null;
+	const mainComponentTipo = caller.main_component_tipo;
+	if (typeof mainComponentTipo !== 'string' || mainComponentTipo === '') return null;
+	const idKey = caller.id_key;
+	if (idKey === null || idKey === undefined || idKey === '') return null;
+	const numericIdKey = Number(idKey);
+	if (!Number.isInteger(numericIdKey) || numericIdKey < 1) return null;
+	return { main_component_tipo: mainComponentTipo, id_key: numericIdKey };
+}
 
 /**
  * THE single reader of `source.is_temporal` (the invariant
