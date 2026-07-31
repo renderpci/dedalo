@@ -333,12 +333,74 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				// resolution hiccup keep the bare echo (never fail a durable save).
 				try {
 					const { readComponentData } = await import('../../section/read.ts');
-					const fullData = await readComponentData(rqo);
-					const mainItem = fullData.find(
-						(item) =>
-							(item as { tipo?: string }).tipo === source.tipo &&
-							String((item as { section_id?: unknown }).section_id) === String(source.section_id),
-					);
+					const findMain = (items: unknown[]) =>
+						items.find(
+							(item) =>
+								(item as { tipo?: string }).tipo === source.tipo &&
+								String((item as { section_id?: unknown }).section_id) === String(source.section_id),
+						);
+					// PHP pagination sync (dd_core_api::save :1453): the save rqo carries
+					// NO sqo, so the read would page at the component's config limit —
+					// but the client ships its CURRENT pagination in `data` (clone of
+					// self.data), and its limit is the page size the portal is actually
+					// showing (0/'show all' included). Honour it, as PHP did.
+					const clientLimit = (rqo.data as { pagination?: { limit?: unknown } } | undefined)
+						?.pagination?.limit;
+					const echoRqo =
+						typeof clientLimit === 'number'
+							? ({
+									...rqo,
+									sqo: {
+										...(rqo.sqo ?? {}),
+										section_tipo: source.section_tipo,
+										limit: clientLimit,
+									},
+								} as typeof rqo)
+							: rqo;
+					let fullData = await readComponentData(echoRqo);
+					let mainItem = findMain(fullData);
+					// PHP :1459-1479 — after an ADD or a LINK the echo must answer the
+					// LAST page, where the appended locator lives. The echo becomes the
+					// client's next self.data, and the add button reads the new record as
+					// `entries[entries.length-1]` (component_portal/js/buttons.js): on a
+					// paginated portal a page-one echo made that the FIRST linked record,
+					// so the modal opened the wrong one (oh1/oh17, `limit: 1`, reported
+					// 2026-07-31). It also puts the paginator on the page the user is now
+					// looking at instead of snapping back to page one.
+					const firstAction = dataPayload.changed_data[0]?.action ?? null;
+					if (
+						(firstAction === 'add_new_element' || firstAction === 'insert') &&
+						mainItem !== undefined
+					) {
+						const pagination = (
+							mainItem as {
+								pagination?: { total?: number; limit?: number; offset?: number };
+							}
+						).pagination;
+						const total = pagination?.total ?? 0;
+						const pageLimit = pagination?.limit ?? 0;
+						// 'Show all' (limit clamped above the total) is a single page → 0.
+						const lastPageOffset =
+							pageLimit > 0 && pageLimit < total
+								? pageLimit * (Math.ceil(total / pageLimit) - 1)
+								: 0;
+						if (lastPageOffset !== (pagination?.offset ?? 0)) {
+							const lastPageData = await readComponentData({
+								...echoRqo,
+								sqo: {
+									...(echoRqo.sqo ?? {}),
+									section_tipo: source.section_tipo,
+									limit: pageLimit,
+									offset: lastPageOffset,
+								},
+							} as typeof rqo);
+							const lastPageMain = findMain(lastPageData);
+							if (lastPageMain !== undefined) {
+								fullData = lastPageData;
+								mainItem = lastPageMain;
+							}
+						}
+					}
 					if (mainItem !== undefined) {
 						const carriedDatalist = (savedDataItem as { datalist?: unknown }).datalist;
 						if (carriedDatalist !== undefined) {
@@ -411,9 +473,22 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (observersData.length > 0) {
 			savedData = [...savedData, ...observersData];
 		}
+		// created_section_id (WC-081, TS-native — PHP echoed no such key): the
+		// ADDRESS of the record `add_new_element` just made in the target section.
+		// The client's add button opened "the last echoed entry", which is only the
+		// new record when the whole list fits on the echoed page — the address makes
+		// it exact regardless of paging. Present ONLY when something was created.
+		const createdSectionId = outcome.created_section_id;
 		return {
 			status: 200,
-			body: { result: { context: savedContext, data: savedData }, msg: 'OK' },
+			body: {
+				result: {
+					context: savedContext,
+					data: savedData,
+					...(createdSectionId !== undefined ? { created_section_id: createdSectionId } : {}),
+				},
+				msg: 'OK',
+			},
 		};
 	},
 	read_raw: async (rqo, context) => {

@@ -410,13 +410,19 @@ describe('WC-059 — add_new_element creates the TARGET, never the host', () => 
 		);
 		expect(response.status).toBe(200);
 
-		const body = response.body as { result: { data: Record<string, unknown>[] } };
+		const body = response.body as {
+			result: { data: Record<string, unknown>[]; created_section_id?: unknown };
+		};
 		const item = body.result.data.find((entry) => entry.tipo === PORTAL);
 		const entries = (item?.entries ?? []) as Record<string, unknown>[];
 		expect(entries.length).toBe(1);
 		const created = Number(entries[0]?.section_id);
 		expect(Number.isFinite(created)).toBe(true);
 		createdTargets.push({ sectionTipo: SECTION, sectionId: created });
+
+		// WC-081: this door stamps the created ADDRESS too — the add button is the
+		// same button on a temporal portal, and it opens the record by address.
+		expect(body.result.created_section_id).toBe(created);
 
 		// The TARGET record really exists (this action is a genuine write — the
 		// only one a temporal instance may cause).

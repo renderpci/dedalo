@@ -319,6 +319,8 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		// re-stamps 1..n positionally). Without this an unlink after a reload is a
 		// silent server-side no-op: the row keeps a locator the operator deleted.
 		picked = picked.map((locator, index) => ({ ...locator, id: index + 1 }));
+		/** WC-081: the address of the record created below, echoed to the client. */
+		let createdSectionId: number | null = null;
 		for (const change of changedData) {
 			if (change.action !== 'add_new_element') continue;
 			// add_new_element genuinely creates a record — in the TARGET section,
@@ -350,6 +352,7 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 				return denied(400, 'add_new_element failed');
 			}
 			picked = outcome.items as Record<string, unknown>[];
+			createdSectionId = outcome.sectionId;
 		}
 		// TEMPORAL SCRATCH (WC-079). Persist the RAW picked locators, and do it
 		// HERE — before resolveRelationEcho — precisely because what comes back
@@ -388,6 +391,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 					lang,
 				);
 			}
+		}
+		// WC-081: the persisted door stamps the same key — a temporal portal's add
+		// button is the same button, and it must be able to open the same record.
+		if (createdSectionId !== null) {
+			const echoResult = (echo.body as { result?: Record<string, unknown> }).result;
+			if (echoResult !== undefined) echoResult.created_section_id = createdSectionId;
 		}
 		return echo;
 	}

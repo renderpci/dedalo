@@ -211,7 +211,11 @@ The **top-level `action` selects the API method**. `source->action` is a **secon
 | `resolve_data` | Injects a `source->value` locator array into a component and resolves it (portals in search mode) | `resolveSearchData()` |
 | `get_relation_list` | Legacy relation_list path | `buildRelationList()` (edit mode only) |
 
-`save` ignores `source->action` and instead switches on **`source->type`**. Only `type:'component'` is implemented: the `save` handler + `saveComponentData()` check write permission (≥ 2) and apply `data->changed_data`. Any other type returns `result:false` — there is **no** `section` save case. Within a component save, the per-item operation comes from each `changed_data[].action`: `insert`, `update`, `remove`, `set_data`, `sort_data`, `sort_by_column`, `add_new_element` (the inserting actions also recompute the pagination offset so the new item is revealed). In `search` mode the whole value replaces the datum.
+`save` ignores `source->action` and instead switches on **`source->type`**. Only `type:'component'` is implemented: the `save` handler + `saveComponentData()` check write permission (≥ 2) and apply `data->changed_data`. Any other type returns `result:false` — there is **no** `section` save case. Within a component save, the per-item operation comes from each `changed_data[].action`: `insert`, `update`, `remove`, `set_data`, `sort_data`, `sort_by_column`, `add_new_element`. In `search` mode the whole value replaces the datum.
+
+The two **inserting** actions (`insert`, `add_new_element`) recompute the pagination of the echoed relation datum so the new item is revealed: the echo answers the **last page** — `offset = limit * (ceil(total/limit) - 1)`, or 0 when the list fits on one page — and the page size comes from the client's own `data->pagination->limit` when it sends one (that is how *show all* survives a save). Without this the echo is page one, and a client that reads "the last entry" as the new item picks the first record on a paginated portal (WC-081).
+
+`add_new_element` additionally reports **`result->created_section_id`** — the `section_id` of the record it created in the target section. The key is present only when a record was really created; every other save omits it. Prefer it over inferring the new record from the echoed entries.
 
 ### sqo : `object` *Optional*
 
