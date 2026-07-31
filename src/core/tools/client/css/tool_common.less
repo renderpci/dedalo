@@ -186,3 +186,98 @@
 		}
 	}
 }//end .tool_header
+
+
+// tool_header — DARK THEME
+// ------------------------------------------------------------------
+// Every tool paints this bar with its own identity hue
+// (`.wrapper_tool.tool_x > .tool_header { background-color: var(--tool_x) }`),
+// and theme_dark.less makes those hues BRIGHTER, not darker. In dark that made
+// the header the most luminous surface in the app: a light slab at the top of a
+// near-black UI, with dark-slab selects punched into it and component labels
+// (which fall back to `.wrapper_component { color: var(--color_grey_4) }` =
+// #e5e7ea in dark) sitting on it at ~1.8:1. Same failure the mosaic hover chips
+// and the menu bar already had.
+//
+// The identity colour becomes an EDGE instead of a slab. Two deliberate choices
+// let one block fix every tool, including tools added later:
+//
+//  1. The tool's own `background-color` is NOT overridden. A `background-image`
+//     gradient paints the app's header surface over everything BELOW the first
+//     3px, so what stays visible is a 3px strip of the tool's REAL hue. No
+//     per-tool list to keep in sync, no `!important`, no specificity war.
+//     (Safe because no tool uses the `background` shorthand on this element —
+//     that would reset the gradient.)
+//
+//  2. `--color_white` is RE-SCOPED to the dark ink. 16 tool css files hard-set
+//     header text to `@color_white` (44 declarations) — written when the bar was
+//     always light, but `--color_white` is #1b1d20 in dark, i.e. dark ink on
+//     what is now a dark bar. Out-specifying 44 declarations from here would be
+//     a losing game; re-pointing the token they all read is one line. Scoped to
+//     the header, so the page-level meaning of --color_white is untouched.
+:root[data-theme="dark"] .tool_header {
+
+	// see (2) above — "white" means the dark theme's near-white ink in here
+	--color_white: var(--fg_default);
+
+	// see (1) above — dark surface over all but the top 3px identity edge.
+	// --bg_surface_alt is the app's own menu-bar material, so a tool window
+	// reads as the same product; it is also RECESSED relative to the control
+	// fills below, which is what lets the buttons sit on top of it.
+	background-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		transparent 3px,
+		var(--bg_surface_alt) 3px,
+		var(--bg_surface_alt) 100%
+	);
+	color: var(--fg_default);
+	box-shadow: inset 0 -1px 0 var(--border_default); // hairline against the body
+
+	>.tool_name_container {
+
+		// the subtitle steps back from the title: on the old bar both were the
+		// same near-black, so the tool name had no weight of its own
+		>.description {
+			color: var(--fg_muted);
+		}
+	}
+
+	// Header controls were drawn to stand on a BRIGHT bar: `.light` buttons fill
+	// with --color_grey_15 (#24272d) and edge with --color_light_border
+	// (#30353a), both of which read as dark holes punched into the old slab and,
+	// on a dark bar, as almost nothing at all. On this surface they need to be
+	// RAISED and edged instead.
+	>.tool_buttons_container {
+
+		button, select, input {
+			border: 1px solid var(--border_strong);
+		}
+
+		button.light {
+			background-color: var(--bg_elevated);
+			border-color: var(--border_strong);
+
+			&:hover {
+				background-color: var(--color_grey_13);
+				border-color: var(--color_grey_10);
+			}
+		}
+
+		// tool icons (print, time machine…) are <img> of black-fill svg — they
+		// were legible on the bright bar and are mud on this one. This is what
+		// --toolbar_btn_icon_filter was declared for (`none` in light).
+		>.tool_button >img.icon,
+		>.tool_button >.icon {
+			filter: var(--toolbar_btn_icon_filter);
+		}
+	}
+
+	// the close ✕ is a white mask (`.button { background-color: @color_black }`
+	// → #ffffff in dark), which was barely visible on the bright bar and is
+	// correct on this one. Its pressed state resolved to --color_white, i.e. the
+	// dark surface itself — an invisible press. Dim instead.
+	>.button.close:active {
+		background-color: var(--color_grey_7) !important;
+	}
+}//end tool_header dark theme

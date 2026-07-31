@@ -63,6 +63,9 @@
   --color_hilite: #fce8d2;
   --color_hilite_2: #ffda86;
   --color_hilite_yellow: #ffef3d;
+  --selection_bg: var(--color_hilite);
+  --selection_fg: var(--color_black);
+  --selection_bg_blur: #d9d9d9;
   --color_orange: #f8b544;
   --color_orange_dedalo: #f78a1c;
   --color_warning: #ed6223;
@@ -215,6 +218,7 @@
 }
 :root {
   --tool_media_versions: #a24540;
+  --media_max_height: 30vh;
 }
 .wrapper_tool.tool_media_versions .spinner {
   background-color: var(--tool_media_versions);
@@ -230,6 +234,13 @@
 }
 .wrapper_tool.tool_media_versions > .content_data > .main_element_container .wrapper_component > .content_data > .content_value {
   height: var(--media_min_height);
+  max-height: var(--media_max_height);
+}
+.wrapper_tool.tool_media_versions > .content_data > .main_element_container .wrapper_component > .content_data > .content_value .image_container {
+  height: 100%;
+}
+.wrapper_tool.tool_media_versions > .content_data > .main_element_container .wrapper_component > .content_data > .content_value .image_container .image {
+  max-height: var(--media_max_height);
 }
 .wrapper_tool.tool_media_versions > .content_data > .sync_data_wrapper {
   width: 100%;

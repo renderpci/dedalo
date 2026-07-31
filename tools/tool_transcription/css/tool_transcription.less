@@ -116,9 +116,11 @@
 
 			>.wrapper_component {
 				background-color: transparent;
+				flex: 0 0 auto; // "Finished" was breaking mid-word ("Finishe / d")
 
 				>.label, label {
 					color: @color_white;
+					white-space: nowrap;
 				}
 			}
 		}
@@ -168,6 +170,21 @@
 					}
 				}
 			}
+
+			// The transcript is the one thing in this tool that gets READ, at
+			// length, for hours. On a wide screen the 50% column ran the text to
+			// ~110 characters a line at 1.3rem leading, with no space between
+			// speaker turns — three defects that compound: the eye loses the line
+			// it is returning to, and question and answer merge into one block.
+			.editor_container {
+				max-width: 72ch;   // the measure, not the column, sets the width
+				line-height: 1.65;
+
+				// each <p> here is a speaker turn; separate them
+				p + p {
+					margin-top: 0.55rem;
+				}
+			}
 		}
 
 		.right_container {
@@ -212,6 +229,7 @@
 					font-weight: lighter;
 					width: 100%;
 					padding: 10px 0px;
+					text-align: left; // the value sits at the other end of this line
 				}
 				.slider {
 					width: 100%;
@@ -246,49 +264,117 @@
 						background-color: @color_orange_dedalo;
 						box-shadow: 0px 0px 1px @color_orange_dedalo;
 					}
+					// The value used to float 48px above the slider, which put it
+					// ABOVE its own caption: a large stray "1" with "Play speed"
+					// underneath, reading as two unrelated things. It belongs at
+					// the far end of the caption's line, as its value.
 					.speed_range_value {
-						text-align: center;
-						font-size: 20px;
+						font-size: 1rem;
+						font-weight: 600;
+						font-variant-numeric: tabular-nums; // no width jitter while dragging
 						display: block;
-						margin: auto;
-						padding: 0px 10px;
-						width: 100%;
+						padding: 0px;
+						width: auto;
 						color: @color_grey_4;
 						position: absolute;
-						top: -48px;
+						top: -1.75rem;
+						right: 0px;
+
+						&::after {
+							content: '×';
+							padding-left: 0.15rem;
+							font-weight: 400;
+							color: @color_grey_7;
+						}
 					}
 				}
 			}//end slider_container
 
+			// The addon stack under the player (speed, keys, subtitles, automatic
+			// transcription) used to float free across the full half-screen
+			// column, separated only by hairlines, so it read as scattered
+			// controls in a lot of dead space. They are BLOCKS now — the same
+			// bordered surface .configuration_container already uses — held to a
+			// readable width and centred under the player.
+			.slider_container,
+			.transcription_keys,
+			.block_separator {
+				max-width: 34rem;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
 			.transcription_keys {
 				display: flex;
 				justify-content: space-around;
-				padding: 0.5rem;
+				gap: 0.75rem;
+				padding: 0.75rem 1rem;
+				margin-bottom: 1rem;
+				border: 1px solid var(--border_default);
+				border-radius: 8px;
+				background-color: var(--bg_surface);
 
     			span {
     				text-align: center;
+					flex: 1 1 0;
+					min-width: 0;
     			}
-    			span label {
+    			span .label, span label {
 					display: block;
 					padding: 4px;
 					padding-left: 0px;
+					font-size: 0.9rem;
+					color: var(--field_label_fg);
 				}
+				// the fields carry the same fill as the panel in both themes
+				// (--bg_input === --bg_surface_alt in dark, both white in light),
+				// so without an edge they read as plain text, not as something
+				// you can type into
 				span input {
-					margin: 1em;
-					width: 6em;
+					margin: 0.25rem 0.25rem 0rem;
+					width: 5em;
 					text-align: center;
 					padding: 4px;
+					outline: 1px solid var(--border_default);
+					border-radius: 3px;
 				}
 			}
 
 			.block_separator {
-				border-top: 1px solid @color_grey_14;
 				display: flex;
 				align-items: center;
 				justify-content: center;
 				padding: 0.5rem;
 				flex-wrap: wrap;
 				position: relative;
+
+				// the subtitles builder is a block of its own, not a hairline
+				// hanging in space
+				&.subtitles_block {
+					padding: 0.75rem 1rem;
+					margin-bottom: 1rem;
+					gap: 0.75rem;
+					border: 1px solid var(--border_default);
+					border-radius: 8px;
+					background-color: var(--bg_surface);
+
+					// the caption explains the field, so it stays on the field's
+					// line instead of dropping to a row of its own
+					>.btn_subtitles {
+						width: 10rem;
+						margin: 0rem;
+					}
+					>input {
+						width: 4rem;
+						margin: 0rem;
+						outline: 1px solid var(--border_default);
+						border-radius: 3px;
+					}
+					>.label {
+						font-size: 0.9rem;
+						color: var(--field_label_fg);
+					}
+				}
 
 				>.btn_subtitles {
 					width: 12rem;
@@ -394,7 +480,9 @@
 						margin-bottom: 0.75rem;
 						border: 1px solid var(--border_default);
 						border-radius: 8px;
-						background-color: var(--bg_surface_alt);
+						// same panel fill as the other addon blocks; --bg_surface_alt
+						// is the SELECT fill too, so the fields used to vanish into it
+						background-color: var(--bg_surface);
 
 						// every field: caption (text node) above its control
 						>.engine_label,

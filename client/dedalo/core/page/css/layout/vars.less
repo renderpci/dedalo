@@ -69,6 +69,16 @@
 	--color_hilite:                   #fce8d2; // used in search components and maintenance widgets
 	--color_hilite_2:                 #ffda86; // used in tool cataloging and tool_numismatic_order_coins drag
 	--color_hilite_yellow:            #ffef3d; // used in ts_object to hilite terms
+
+	// Text selection (::selection). Kept apart from --color_hilite so the range
+	// a user drags can be tuned for legibility without moving every hilited
+	// surface. _blur is the range left behind when the editable loses focus
+	// (CKEditor's --ck-color-editable-blur-selection), which is the normal state
+	// in tool_indexation: the user selects a fragment, then clicks a term.
+	--selection_bg:                   var(--color_hilite);
+	--selection_fg:                   var(--color_black);
+	--selection_bg_blur:              #d9d9d9; // CKEditor default, kept in light
+
 	--color_orange:                   #f8b544; // used in security read only option
 	--color_orange_dedalo:            #f78a1c; // Dédalo logo orange
 	--color_warning:                  #ed6223; // used to show alert warning text in inspector

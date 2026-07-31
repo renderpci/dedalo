@@ -95,6 +95,9 @@
   --color_hilite: #fce8d2;
   --color_hilite_2: #ffda86;
   --color_hilite_yellow: #ffef3d;
+  --selection_bg: var(--color_hilite);
+  --selection_fg: var(--color_black);
+  --selection_bg_blur: #d9d9d9;
   --color_orange: #f8b544;
   --color_orange_dedalo: #f78a1c;
   --color_warning: #ed6223;

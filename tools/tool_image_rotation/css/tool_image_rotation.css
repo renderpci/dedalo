@@ -63,6 +63,9 @@
   --color_hilite: #fce8d2;
   --color_hilite_2: #ffda86;
   --color_hilite_yellow: #ffef3d;
+  --selection_bg: var(--color_hilite);
+  --selection_fg: var(--color_black);
+  --selection_bg_blur: #d9d9d9;
   --color_orange: #f8b544;
   --color_orange_dedalo: #f78a1c;
   --color_warning: #ed6223;
@@ -216,6 +219,7 @@
 :root {
   --tool_image_rotation: #587d8f;
   --tool_image_rotation_border: #45616f;
+  --media_max_height: 30vh;
 }
 .wrapper_tool.tool_image_rotation {
   justify-content: space-around;
@@ -237,6 +241,7 @@
   position: relative;
   margin-top: 1.5rem;
   background-color: var(--color_grey_14);
+  max-height: var(--media_max_height);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .main_element_container > .image_container {
   display: flex;
@@ -246,11 +251,15 @@
   position: relative;
   overflow: hidden;
   background-color: var(--color_white);
+  max-height: var(--media_max_height);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .main_element_container > .image_container.checkborad {
   background-image: url('../img/check_board.svg');
   background-size: 2rem;
   background-color: var(--color_grey_9);
+}
+.wrapper_tool.tool_image_rotation > .content_data > .main_element_container > .image_container > img {
+  max-height: var(--media_max_height);
 }
 .wrapper_tool.tool_image_rotation > .content_data > .main_element_container > .image_container .crop_selection {
   position: absolute;

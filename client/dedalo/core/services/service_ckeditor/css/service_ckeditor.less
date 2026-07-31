@@ -292,6 +292,14 @@ dd-modal .find_and_replace {
 	// Engine
 	--ck-color-engine-placeholder-text:		var(--color_grey_8);
 
+	// Editable — selection left behind when the editable is blurred.
+	// CKEditor hardcodes #d9d9d9 (.ck-editor__editable_inline.ck-blurred
+	// ::selection), a near-white slab that erases light text in dark mode. This
+	// is the DEFAULT state in tool_indexation: the user selects a fragment and
+	// then clicks a thesaurus term, which blurs the editable. The global
+	// ::selection colour (general.less) still applies on top of this background.
+	--ck-color-editable-blur-selection:		var(--selection_bg_blur);
+
 	// Text / typography
 	--ck-color-text:						var(--color_black);
 	--ck-color-link-default:				var(--color_blue);

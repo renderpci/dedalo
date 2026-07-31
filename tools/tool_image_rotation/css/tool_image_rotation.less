@@ -11,6 +11,7 @@
 :root {
 	--tool_image_rotation: #587d8f;
 	--tool_image_rotation_border: #45616f;
+	--media_max_height: 30vh;
 }
 @tool_color: var(--tool_image_rotation);
 
@@ -39,20 +40,26 @@
 			margin-top: 1.5rem;
 			// margin-bottom: 0.5rem;
 			background-color: @color_grey_14;
-
-			>.image_container{
+			max-height: var(--media_max_height);
+			
+			>.image_container {
 				display: flex;
 				justify-content: center;
 				align-content: center;
 				align-items: center;
 				position: relative;
 				overflow: hidden;
-				background-color: @color_white ;
+				background-color: @color_white;
+				max-height: var(--media_max_height);
 
-				&.checkborad{
+				&.checkborad {
 					background-image: url('../img/check_board.svg');
 					background-size: 2rem;
 					background-color: @color_grey_9;
+				}
+
+				>img {
+					max-height: var(--media_max_height);
 				}
 
 				.crop_selection {
@@ -62,6 +69,7 @@
 					display: none;
 					cursor: move;
 				}
+
 				.resize_handle {
 					position: absolute;
 					width: 10px;
@@ -106,7 +114,7 @@
 				}
 			}
 
-			.circle_axis{
+			.circle_axis {
 				border: 0.01rem solid @color_grey_9;
 				border-radius: 50%;
 				height: 100%;

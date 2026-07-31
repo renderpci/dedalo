@@ -10,6 +10,7 @@
 // local vars
 :root {
 	--tool_media_versions: #a24540;
+	--media_max_height: 30vh;
 }
 @tool_color: var(--tool_media_versions);
 
@@ -32,9 +33,20 @@
 			width: 100%;
 
 			.wrapper_component {
+
 				>.content_data {
+
 					>.content_value {
 						height: var(--media_min_height);
+						max-height: var(--media_max_height);
+						
+						.image_container {
+							height: 100%;
+
+							.image {
+								max-height: var(--media_max_height);
+							}
+						}
 					}
 				}
 			}

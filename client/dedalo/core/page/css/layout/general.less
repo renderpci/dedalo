@@ -925,8 +925,12 @@
 
 /* selection + scrollbar polish (theme-token driven, both themes)
    ------------------------------------------------------- */
+	// Both the background AND the text colour are set: leaving the text at its
+	// own colour is what made a selection unreadable whenever the two happened
+	// to be close (any light text over a light selection slab).
 	::selection {
-		background-color: var(--color_hilite);
+		background-color: var(--selection_bg);
+		color: var(--selection_fg);
 	}
 	html {
 		scrollbar-color: var(--color_grey_11) transparent;
