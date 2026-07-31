@@ -322,7 +322,7 @@
   }
 }
 .wrapper_tool.tool_transcription > .content_data .left_container .editor_container {
-  max-width: 72ch;
+  max-width: 100%;
   line-height: 1.65;
   height: 100%;
   margin: 0rem 0.5rem;
