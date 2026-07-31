@@ -145,6 +145,45 @@ A frame locator matches a main item when these four properties agree (the *match
 
 `section_tipo` / `section_id` of the locator point at the frame **target record** (where the frame fields actually live).
 
+### The write contract (server-authoritative)
+
+Every frame write funnels through **`normalizeDataframeEntry()`**
+(`src/core/concepts/subdatum.ts`), reached from both write doors —
+`validateRelationInsert()` (`src/core/relations/save.ts`, via the `pairing`
+option) and `mergeCallerEntries()` (`src/core/relations/dataframe.ts`). It is
+the single definition of the persisted shape:
+
+| rule | why |
+|---|---|
+| `type` **forced** to `dd490` | never trusted from the client, which sends it absent (autocomplete pick) or as `dd151` (portal tree view). A frame without the marker is stored-but-unreadable |
+| `from_component_tipo`, `main_component_tipo`, `id_key` taken from the **server's** caller context | the client sources its `id_key` from the last read echo, so trusting the payload lets one bad read corrupt every later write |
+| `section_id` stringified | the locator law's canonical form; a numeric one breaks jsonb `@>` containment |
+| `paginated_key`, `section_id_key`, `section_tipo_key` **stripped** | a read-time transient the client echoes back, and the pre-v7 pairing keys (read-only BC) |
+
+Duplicate rejection compares **`DATAFRAME_TEST_EQUAL_PROPERTIES`**
+(`dataframeEntriesEqual()`), *not* the generic relation key: `id` is excluded
+(it is minted per insert, so including it makes every duplicate look unique),
+and `id_key` is included (framing the same target record from two different
+main items is legitimate and must not be collapsed).
+
+> **Regression note (2026-07-31).** `component_dataframe` was the one relation
+> column excluded from this normalizer, so raw client locators were persisted
+> verbatim: no `type`, numeric `section_id`, echoed `paginated_key`, no dedup.
+> Gates: `test/unit/dataframe_write_contract_native.test.ts` (raw payloads only
+> — never spell `type:'dd490'` in an input there) and
+> `test/unit/dataframe_contract_tripwire.test.ts`.
+
+### Reading one item's frames
+
+`get_data` on a `component_dataframe` is a **paired** read: it honours
+`source.caller_dataframe` (declared on `rqoSourceSchema`, read through the one
+accessor `callerDataframePairing()`), returns only that main item's frames, and
+stamps `id_key` + `main_component_tipo` on the item. That stamp is load-bearing
+— the client assigns the response onto `self.data` and sources the next write's
+`id_key` from it, so an unstamped echo destroys the following write's pairing.
+Without a usable pairing (search mode, maintenance) the read degrades to the
+unpaired expansion rather than inventing one.
+
 ### Storage shape
 
 Record with one IRI value `id:2` paired with label record `dd1706:3`, through slot `dd560`, extending main component `rsc217`:
