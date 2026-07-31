@@ -30,12 +30,17 @@
 // imports
 	import { event_manager } from '../../../core/common/js/event_manager.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { when_in_viewport } from '../../../core/common/js/events.js'
 	import { ui } from '../../../core/common/js/ui.js'
 	import { ua } from '../../../core/common/js/ua.js'
 	import { keyboard_codes } from '../../../core/common/js/utils/keyboard.js'
 	import { render_node_info } from '../../../core/common/js/utils/notifications.js'
 	import { open_tool } from '../../../core/tools_common/js/tool_common.js'
 	import { get_current_lang_info } from './tool_transcription.js'
+	import Split from '../../../lib/split/dist/split.es.js'
+
+// localStorage key holding the user's last pane ratio. @see activate_split
+	const SPLIT_SIZES_KEY = 'tool_transcription_split_sizes'
 
 
 
@@ -125,7 +130,12 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 * Layout:
 *   content_data
 *   ├── left_container   — the transcription text-area component
+*   ├── (gutter)         — drag separator inserted by Split.js, see activate_split
 *   └── right_container  — the media player + AV-specific controls + references component
+*
+* (!) content_data is a FLEX row, not a grid: Split.js inserts its gutter as a
+* third sibling between the two columns, which a fixed grid-template-columns
+* would place in a track of its own and break.
 *
 * For `component_av` media, the right column is extended with:
 *   - A playback-speed range slider (0–2 × normal speed, step 0.1).
@@ -472,6 +482,10 @@ const get_content_data_edit = function(self) {
 		})
 
 
+	// split. Vertical drag separator between the transcript and the player.
+	// @see activate_split
+		activate_split(left_container, right_container)
+
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
@@ -482,6 +496,111 @@ const get_content_data_edit = function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* ACTIVATE_SPLIT
+* Turn the two content columns into user-resizable panes with a drag separator
+* between them, using Split.js.
+* @see https://github.com/nathancahill/split/tree/master/packages/splitjs
+*
+* Why a resizer at all
+* ───────────────────
+* The two panes hold work of opposite shapes: the left one is a long transcript
+* that is READ and typed into for hours, the right one is a video whose useful
+* size depends on what is being transcribed (a talking head needs little, a
+* wide shot with several speakers needs a lot). A fixed 50/50 serves neither,
+* and the correct ratio is the transcriptionist's call, not ours — the same
+* reasoning that already gave tool_indexation its separator.
+*
+* Timing
+* ──────
+* Split.js reads computed sizes at construction, so it must not run while the
+* tool is still off-screen (it would read zeros and hand out broken widths).
+* when_in_viewport defers it until the columns are actually laid out.
+*
+* Below 800 px the columns stack (see the @width_break_point_0 media query in
+* the tool's less) and there is no horizontal axis left to divide, so the split
+* is skipped entirely rather than fought with.
+*
+* (!) Split.js is given the ELEMENTS, not '#id' selectors as tool_indexation
+* does: these containers carry no id, and an id would collide the moment two
+* tools are open at once.
+*
+* Persistence
+* ───────────
+* The dragged ratio is stored to localStorage under SPLIT_SIZES_KEY and
+* restored on the next render. A stored value is only honoured when it is a
+* sane pair of numbers that sums to ~100; anything else (hand-edited storage, a
+* format change) falls back to the 50/50 default instead of laying out a pane
+* with a negative or zero width.
+*
+* @param {HTMLElement} left_container - The transcript column.
+* @param {HTMLElement} right_container - The media player column.
+* @returns {void}
+*/
+const activate_split = function(left_container, right_container) {
+
+	when_in_viewport(
+		left_container, // node to observe
+		() => { // callback
+			// don't add on small windows. There the columns are stacked.
+			if (window.innerWidth<800) {
+				return
+			}
+
+			Split([left_container, right_container], {
+				sizes		: get_stored_split_sizes(),
+				minSize		: 320, // px. Below this neither pane is usable
+				gutterSize	: 10,
+				onDragEnd	: function(sizes){
+					try {
+						localStorage.setItem(SPLIT_SIZES_KEY, JSON.stringify(sizes))
+					} catch (error) {
+						// storage full or blocked (private mode). The split still
+						// works, it just will not be remembered.
+					}
+				}
+			})
+		}
+	)
+}//end activate_split
+
+
+
+/**
+* GET_STORED_SPLIT_SIZES
+* Read the last dragged pane ratio from localStorage, validating it before use.
+*
+* @returns {number[]} A [left, right] percentage pair; the 50/50 default when
+*   nothing valid is stored.
+*/
+const get_stored_split_sizes = function() {
+
+	const fallback = [50, 50]
+
+	try {
+		const stored = localStorage.getItem(SPLIT_SIZES_KEY)
+		if (!stored) {
+			return fallback
+		}
+
+		const sizes = JSON.parse(stored)
+		const valid = Array.isArray(sizes)
+			&& sizes.length===2
+			&& sizes.every(size => typeof size==='number' && isFinite(size) && size>0)
+			&& Math.abs((sizes[0] + sizes[1]) - 100) < 1
+
+		return valid
+			? sizes
+			: fallback
+
+	} catch (error) {
+		// unreadable or unparseable storage is not worth failing the render for
+		return fallback
+	}
+}//end get_stored_split_sizes
 
 
 
@@ -503,9 +622,15 @@ const get_content_data_edit = function(self) {
 * Side effect: `self.top_locator` is set to the first locator immediately on
 * construction (before any user interaction) and updated on each `<select>` change.
 *
+* The control carries a caption above it, like every other header control
+* (see the header block of the tool's less). Without one the select showed a
+* record title — "Història Oral | 1 | 2009/001/001" — with nothing saying what
+* that title WAS, or that changing it re-scopes the whole session.
+*
 * @param {Object} self - The tool_transcription instance.
-* @returns {DocumentFragment} Fragment containing the related-list wrapper div and
-*   the populated `<select>`, or an empty fragment when no 'sections' datum exists.
+* @returns {DocumentFragment} Fragment containing the captioned related-list
+*   wrapper and the populated `<select>`, or an EMPTY fragment when no 'sections'
+*   datum exists.
 */
 const render_related_list = function(self) {
 
@@ -515,23 +640,40 @@ const render_related_list = function(self) {
 
 	const fragment = new DocumentFragment();
 
+	// select -> options.
+	// (!) Resolved BEFORE any DOM is built: when the transcription section is not
+	// referenced by any other section there is nothing to choose, and the tool
+	// used to emit an empty <select> anyway — which now, captioned, would read as
+	// a "Record" field the user had somehow left blank.
+		const sections = data.find(el => el.typo==='sections')
+		// if the section is not called by other sections (related sections) return empty node
+		if(!sections){
+			return fragment
+		}
+
 	// related list
 		const related_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'related_list_container',
 			parent			: fragment
 		})
+		// caption
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'container_label',
+			inner_html		: self.get_tool_label('related_record') || 'Record',
+			title			: self.get_tool_label('related_record_description')
+				|| 'Record this transcription belongs to',
+			parent			: related_list_container
+		})
 		const select = ui.create_dom_element({
 			element_type	: 'select',
+			class_name		: 'selector',
+			title			: self.get_tool_label('related_record_description')
+				|| 'Record this transcription belongs to',
 			parent			: related_list_container
 		})
 
-	// select -> options
-		const sections = data.find(el => el.typo==='sections')
-		// if the section is not called by other sections (related sections) return empty node
-		if(!sections){
-			return fragment
-		}
 		const value			= sections.value
 		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
@@ -550,18 +692,29 @@ const render_related_list = function(self) {
 
 			// ar_component_value
 				// Collect text values from all components that belong to this section/id pair
-				// so the option label carries enough context to distinguish entries
+				// so the option label carries enough context to distinguish entries.
+				// (!) Empty values are DROPPED. A component the record left blank
+				// used to contribute an empty string, and the join below then
+				// emitted its separator anyway — the option read
+				// "Història Oral | 1 | 2009/001/001 | " with a dangling pipe, which
+				// in a width-capped select looks exactly like a truncated label.
 				const ar_component_value = []
 				for (let j = 0; j < ar_component_data.length; j++) {
 					const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
+					if (current_value===null || current_value===undefined || String(current_value).trim()==='') {
+						continue
+					}
 					ar_component_value.push(current_value)
 				}
 
 			// label
 			// Format: "Section Label | section_id | component_value_1 | component_value_2 …"
-				const label = 	section_label + ' | ' +
-								current_locator.section_top_id +' | ' +
-								ar_component_value.join(' | ')
+			// (built from the non-empty parts, so no separator is ever left hanging)
+				const label = [
+					section_label,
+					current_locator.section_top_id,
+					...ar_component_value
+				].join(' | ')
 
 			// option DOM element
 				const option = ui.create_dom_element({
@@ -618,9 +771,12 @@ const render_transcription_options = async function(self) {
 			class_name		: 'lang_selector',
 			parent			: fragment
 		})
+		// caption. Carries .container_label so it obeys the same header caption
+		// rule as every other control here; .lang_label is kept because the
+		// tool's own less still targets it.
 		const lang_label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'lang_label',
+			class_name 		: 'lang_label container_label',
 			inner_html 		: get_label.language || 'Language',
 			parent 			: lang_container
 		})

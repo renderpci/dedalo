@@ -53,8 +53,27 @@
 
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {when_in_viewport} from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {clone, get_json_langs} from '../../../core/common/js/utils/index.js'
+	import Split from '../../../lib/split/dist/split.es.js'
+
+
+
+/**
+* SPLIT_SIZES_ID
+* Local-db (IndexedDB, 'status' table) key holding the last gutter position as
+* the [left, right] percentage pair Split.js reports. Persisted because a
+* translator picks a comfortable split ONCE and then reopens the tool per record;
+* re-dragging it every time is the whole friction this replaces.
+*/
+const SPLIT_SIZES_ID = 'tool_lang_split_sizes'
+
+/** Below this viewport width the panes stack and the split is skipped. */
+const SPLIT_MIN_VIEWPORT = 800
+
+/** Fallback split when nothing is persisted yet: even halves. */
+const SPLIT_DEFAULT_SIZES = [50, 50]
 
 
 
@@ -127,6 +146,7 @@ render_tool_lang.prototype.edit = async function(options) {
 *     └─ fragment
 *          ├─ components_container
 *          │    ├─ left_block  (source panel: lang selector + read-only component)
+*          │    ├─ [Split.js gutter — injected by activate_split, drag to resize]
 *          │    └─ right_block (target panel: lang selector + editable component
 *          │                    + streaming overlay for browser translation)
 *          └─ buttons_container
@@ -172,6 +192,7 @@ const get_content_data_edit = async function(self) {
 	// source panel: the component being translated from, always read-only here
 		const left_block = ui.create_dom_element({
 			element_type	: 'div',
+			id				: 'tool_lang_left_block',
 			class_name		: 'left_block',
 			parent			: components_container
 		})
@@ -232,6 +253,7 @@ const get_content_data_edit = async function(self) {
 	// the user has chosen the same language as the source (see guard below)
 		const right_block = ui.create_dom_element({
 			element_type	: 'div',
+			id				: 'tool_lang_right_block',
 			class_name		: 'right_block',
 			parent			: components_container
 		})
@@ -402,6 +424,9 @@ const get_content_data_edit = async function(self) {
 			// const propagate_marks_block = render_propagate_marks_block(self)
 			// buttons_container.appendChild(propagate_marks_block)
 
+	// split. Drag handle between the source and target panes.
+		activate_split(left_block)
+
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
@@ -409,6 +434,78 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* ACTIVATE_SPLIT
+* Turn the source/target pane pair into a Split.js drag-resizable pair.
+*
+* Deferred through when_in_viewport for the same reason tool_indexation defers
+* it: Split.js reads the panes' COMPUTED widths when it initialises, and while
+* the fragment is still detached (or the tool window is not painted yet) those
+* are zero, which pins the gutter to one edge.
+*
+* Skipped under SPLIT_MIN_VIEWPORT px, where the panes stack vertically and a
+* horizontal gutter would be meaningless (the CSS forces width:100% there).
+*
+* The chosen position is written back to IndexedDB on drag end and restored on
+* the next open. A stored value that is not a sane two-number pair (an older
+* shape, a hand-edited row) is IGNORED rather than fed to Split.js, which would
+* throw and leave the tool with no split at all.
+*
+* @param {HTMLElement} left_block - the source pane; the node observed for
+*   viewport entry. Both panes are addressed by id, as Split.js expects.
+* @returns {void}
+*/
+const activate_split = function(left_block) {
+
+	when_in_viewport(
+		left_block, // node to observe
+		async () => { // callback
+
+			// don't split on small windows
+				if (window.innerWidth < SPLIT_MIN_VIEWPORT) {
+					return
+				}
+
+			// stored sizes
+				let sizes = SPLIT_DEFAULT_SIZES
+				try {
+					const stored = await data_manager.get_local_db_data(
+						SPLIT_SIZES_ID,
+						'status'
+					)
+					const stored_value = stored?.value
+					if (Array.isArray(stored_value)
+						&& stored_value.length===2
+						&& stored_value.every(el => typeof el==='number' && isFinite(el))
+					) {
+						sizes = stored_value
+					}
+				} catch (error) {
+					console.error('tool_lang activate_split: could not read stored sizes', error)
+				}
+
+			// split
+			// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
+				Split(['#tool_lang_left_block', '#tool_lang_right_block'], {
+					sizes		: sizes,
+					minSize		: 200,
+					gutterSize	: 8,
+					onDragEnd	: (new_sizes) => {
+						data_manager.set_local_db_data(
+							{
+								id		: SPLIT_SIZES_ID,
+								value	: new_sizes
+							},
+							'status'
+						)
+					}
+				})
+		}
+	)
+}//end activate_split
 
 
 

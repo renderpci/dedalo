@@ -33,68 +33,10 @@
 	}
 
 	>.tool_header {
-		position: relative;
 
-		@media screen and (max-width: @width_break_point_0) {
-			flex-wrap: wrap;
-		}
-
+		// band layout, control metrics, select skin, the lang caption and the
+		// narrow-viewport wrap: tool_common `.tool_header >.tool_buttons_container`
 		>.tool_buttons_container {
-			display: flex;
-			align-items: flex-start;
-
-			@media screen and (max-width: @width_break_point_0) {
-				flex-wrap: wrap;
-				margin-top: 1rem;
-			}
-
-			>div, button {
-
-				margin: 0rem;
-				margin-left: 0.5rem;
-				margin-right: 0rem;
-				min-height: 2rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-					margin-bottom: 1rem;
-					flex: 1 0 auto;
-				}
-			}
-
-			select {
-				opacity: 1;
-				padding: 0.33rem;
-				background-color: @color_grey_15;
-				border-radius: 3px;
-				margin-right: 0px;
-				max-width: 20rem;
-				min-width: 7rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-
-				}
-			}
-
-			// select top tipo / id
-			>.related_list_container {
-
-			}
-
-			// component lang selector
-			>.lang_selector {
-				display: flex;
-				align-items: center;
-				margin-left: 0.75rem;
-				margin-right: 0.12rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-					padding-right: 0.5rem;
-				}
-
-				>.lang_label {
-					padding-right: 0.33rem;
-				}
-			}
 
 			// buttons of tools (tool print, tool time machine..)
 			>.tool_button {

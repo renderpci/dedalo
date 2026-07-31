@@ -211,9 +211,16 @@ const render_header_options = async function(self, content_data) {
 
 	const fragment = new DocumentFragment()
 
+	// "Order by:" is the CAPTION of the two sort toggles, not a control. It was
+	// classed `tool_button … light`, which under the shared header contract gave
+	// it a button's height and fill beside the real buttons — a dead, unfillable
+	// button. `top_label` is the class the band's caption idiom names (the same
+	// one tool_indexation uses for SHOW / APPROACH), so it now renders as the
+	// caption it is. Nothing selects `.order_by` (the `order_by` hits elsewhere
+	// in this file are the sort FUNCTION), so dropping it is safe.
 	const order_by_label = ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: 'tool_button order_by light',
+		class_name		: 'top_label',
 		text_content	: self.get_tool_label('order_by') || 'Order by:',
 		parent			: fragment
 	})

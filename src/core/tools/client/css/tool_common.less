@@ -5,6 +5,19 @@
 * Included from main.less file
 */
 
+// THE TOOL HEADER CONTROLS BAND — shared geometry.
+// One height and one padding for every tool, so the band does not stand at a
+// different height (and the content below does not start at a different y) in
+// each tool. Declared here rather than in vars.less because nothing outside
+// `.tool_header > .tool_buttons_container` may consume them: a tool that needs
+// its own band metrics is a tool that has left the unified header.
+@tool_header_control_height:  1.75rem;
+@tool_header_band_padding_v:  0.5rem;
+@tool_header_band_padding_h:  1rem;
+// = control + the padding above and below it: the smallest box that holds a
+// control without growing.
+@tool_header_band_height:     2.75rem;
+
 // wrapper_tool
 .wrapper_tool {
 	contain: content;
@@ -59,30 +72,73 @@
 .tool_header {
 	contain: content;
 	background-color: @color_orange_dedalo;
+	// THE IDENTITY HUE IS AN EDGE, NOT A SLAB (both themes since 2026-07-31).
+	//
 	// Every string in this bar is white (see `color` below, and the 44 tool-css
 	// declarations that repeat it), but the identity hues it sits on are
 	// MID-TONE: white lands at 2.31:1 on tool_indexation's cyan, 2.55:1 on the
-	// transcription orange — the whole header, not just the small labels, is
-	// under AA. Flipping the ink cannot fix it either: the palette spans #000000
-	// to #f78a1c, so white clears 4.5:1 on 15 of the 32 tools and a near-black
-	// ink on 12 — five tools are in the dead zone where NEITHER works.
+	// transcription orange. Flipping the ink cannot fix it either: the palette
+	// spans #000000 to #f78a1c, so white clears 4.5:1 on 15 of the 32 tools and
+	// a near-black ink on 12 — five tools are in the dead zone where NEITHER
+	// works. The dark theme had the mirror problem (theme_dark BRIGHTENS those
+	// hues, so the bar became the most luminous surface in a near-black UI) and
+	// solved it by demoting the hue to a 3px top edge over the app's own header
+	// surface. That reads better than any tinted band, so it is now what BOTH
+	// themes do — one treatment, no per-theme divergence to keep in sync.
 	//
-	// So the BAND is corrected instead of the ink: a flat 32% black scrim over
-	// whatever hue the tool set. Measured across all 32 tool colours, 32% is the
-	// point where the worst case (tool_indexation) reaches 4.5:1 — every tool
-	// passes, the hue stays recognisable (orange reads burnt, cyan deep teal),
-	// and it is one rule that a tool added tomorrow inherits.
+	// Two deliberate choices let one block fix every tool, including tools added
+	// later:
 	//
-	// Applied as background-IMAGE so each tool's own `background-color` still
-	// drives the hue. The two contexts that replace the band entirely — the dark
-	// theme below, and the redesign line — set their own `background-image`.
-	background-image: linear-gradient(rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.32));
+	//  1. The tool's own `background-color` is NOT overridden. This
+	//     `background-image` paints the header surface over everything BELOW the
+	//     first 3px, so what stays visible is a 3px strip of the tool's REAL
+	//     hue. No per-tool list to keep in sync, no `!important`, no specificity
+	//     war. (Safe because no tool uses the `background` shorthand here — that
+	//     would reset the gradient.)
+	//
+	//  2. `--color_white` is RE-SCOPED to the theme's ink. Those 44 declarations
+	//     were written when the bar was always a saturated slab; on a neutral
+	//     surface #ffffff is invisible in light and wrong in dark. Out-specifying
+	//     44 declarations from here would be a losing game; re-pointing the token
+	//     they all read is one line. Scoped to the header, so the page-level
+	//     meaning of --color_white is untouched.
+	//
+	// --bg_surface_alt is the app's own menu-bar material, so a tool window reads
+	// as the same product; it is also RECESSED relative to the control fills
+	// below, which is what lets the buttons sit on top of it.
+	//
+	// @edge_height: 3px was too quiet to do the job the edge exists for. It is
+	// the ONLY thing identifying which tool you are in, and at 3px, against a
+	// dark surface, several of the identity hues (the transcription orange is
+	// the worst case: theme_dark brightens it to #ff9040, a hair off the brand
+	// #ffa54a) read as generic chrome rather than as this tool's colour. 4px is
+	// still an edge, not the slab this replaced — but it is legible at a glance.
+	@edge_height: 4px;
+	background-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		transparent @edge_height,
+		var(--bg_surface_alt) @edge_height,
+		var(--bg_surface_alt) 100%
+	);
+	--color_white: var(--fg_default); // see (2) above
 	position: relative;
-	color: @color_white;
+	color: var(--fg_default);
+	box-shadow: inset 0 -1px 0 var(--border_default); // hairline against the body
 	width: 100%;
 	display: flex;
 	align-items: center;
+	// the controls row below wraps onto its own line — see .tool_buttons_container
+	flex-wrap: wrap;
 	padding: 1rem;
+	// (!) the identity edge is drawn INSIDE the padding box, so a symmetric
+	// `padding: 1rem` is not symmetric on the surface the user actually sees:
+	// the top 4px is the tool's hue, leaving 9px of surface above the title
+	// against 13px below it, and the whole header reads as sitting high.
+	// Adding the edge back makes the SURFACE padding equal. Measured both ways —
+	// with a controls band (where the band's -1rem bleed defines the bottom) and
+	// without one (the modal case) — the offset was the same 4px.
+	padding-top: calc(1rem + @edge_height);
 
 	// select
 	.selector {
@@ -108,15 +164,20 @@
 			align-items: center;
 
 			>.button {
-				background-color: #ffffff !important; // Remains white in dark mode
+				// the mask fill IS the icon colour; the bar is a neutral surface
+				// in both themes now, so it follows the header ink
+				background-color: var(--fg_default) !important;
 				font-size: 1.25rem;
 				vertical-align: baseline;
 				margin-right: 0.75rem;
 			}
 		}
 
+		// the subtitle steps back from the title: on the old saturated bar both
+		// were the same white, so the tool name had no weight of its own
 		>.description {
 			font-weight: 200;
+			color: var(--fg_muted);
 			// margin-top: 0.3rem;
 			padding-left: 1rem;
     		padding-right: 1rem;
@@ -124,9 +185,251 @@
 		}
 	}
 
+	// THE CONTROLS LINE.
+	// The header used to run title + description + every control on ONE row, so a
+	// tool with a few selects (tool_indexation, tool_lang) pushed its own name
+	// against the close ✕ and read as a cramped strip of unrelated widgets. The
+	// controls take a FULL-WIDTH row of their own underneath instead: the title
+	// line stays a title line, and the controls get a band that can breathe.
+	//
+	// Done by wrapping (`flex-wrap` above) rather than by moving the node, so the
+	// 30-odd per-tool `>.tool_header >.tool_buttons_container …` selectors and the
+	// `wrapper.tool_buttons_container` pointer every tool appends to keep working
+	// untouched.
 	>.tool_buttons_container {
 		display: flex;
 		align-items: center;
+		// basis = the header's content width PLUS the padding the negative margins
+		// below eat back, so the band spans the header's full border box. Plain
+		// `100%` would leave a 1rem gutter of bar showing at each end.
+		flex: 0 0 calc(100% + 2rem);
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		// bleed over the header padding so the band spans the full width
+		margin: 1rem -1rem -1rem -1rem;
+		padding: @tool_header_band_padding_v @tool_header_band_padding_h;
+		// THE BAND IS ONE HEIGHT FOR EVERY TOOL.
+		// It used to size to its contents, and its contents were whatever each
+		// tool happened to put there — a bare button (~1.5rem), a 2rem captioned
+		// select, a status component with a stacked label — so the band stood at a
+		// different height in every tool and the content below started at a
+		// different y. That is the incoherence this row was supposed to remove.
+		// min-height, NOT height: the row still wraps to a second line on a narrow
+		// viewport rather than clipping its controls (see the media query below).
+		min-height: @tool_header_band_height;
+		box-sizing: border-box;
+		border-top: 1px solid var(--border_default);
+		background-color: var(--bg_surface);
+
+		// a tool with no controls must not draw an empty band (render_status and
+		// friends return a DocumentFragment, so "no controls" really is :empty).
+		// !important because ~30 tool stylesheets re-declare `display` on this
+		// node at a higher specificity (`.wrapper_tool.tool_x > .tool_header >
+		// .tool_buttons_container`); each of them would otherwise re-show the
+		// band, and out-specifying all of them from here is the losing game the
+		// --color_white re-scope above already avoided once.
+		&:empty {
+			display: none !important;
+		}
+
+		// CONTROL GROUPS. A direct child is a control or a caption+control group;
+		// either way it is a horizontal run on the band's centre line. The tools
+		// each used to declare this for themselves with a different answer
+		// (`align-items` was flex-start in tool_indexation, center in
+		// numisdata_order_coins, flex-end in tool_subtitles) — which is why the
+		// captions in one tool sat on a different line from the captions in the
+		// next.
+		// .wrapper_component is EXCLUDED: a component owns its own internal
+		// layout (label above input, portals, dataframes) and turning it into a
+		// flex row would flatten it.
+		// (!) flex-wrap: NOWRAP. A caption and the control it names are ONE field
+		// and may never break apart — if they do, the caption lands on its own
+		// line, the group is two rows tall and the whole band grows with it
+		// (measured: tool_transcription's LANGUAGE stacked while RECORD beside it
+		// stayed inline, and the band stood at 54.3px against 36.75px). The band
+		// itself still wraps, so when the row genuinely runs out of space it
+		// breaks BETWEEN groups, which is the break that keeps meaning.
+		//
+		// It wraps when the group shrinks below its content: tools give these
+		// groups `min-width: 0` so a long record title cannot push the bar
+		// off-screen, and that same `min-width: 0` lets a wrapping group collapse
+		// under its caption+control width. nowrap makes the CONTROL absorb the
+		// squeeze instead — which is what `min-width: 0` was asking for.
+		>div:not(.wrapper_component),
+		>span {
+			display: flex;
+			align-items: center;
+			flex-wrap: nowrap;
+			gap: 0.5rem;
+			margin: 0px;
+		}
+
+		// EVERY control on the band is the same height, so no single widget can
+		// inflate the row. The height is the band height minus its padding, i.e.
+		// exactly what fits without growing it.
+		//
+		// DESCENDANT, not child. This was written as an explicit child list
+		// (`>button`, `>div:not(.wrapper_component) >select`, …) and measuring it
+		// in the browser showed the list is unwinnable: a status component nests
+		// its control as `.wrapper_component > .content_data > select`, three
+		// levels down, and tool_transcription's icon buttons are
+		// `span.tool_button` — neither matched, both kept their intrinsic height,
+		// and the band stood at 40px in those tools against 36.8px in
+		// tool_numisdata_order_coins. Every control on a toolbar wants the
+		// toolbar's height whatever it is wrapped in, so the rule says that
+		// instead of trying to enumerate the wrappers.
+		// (!) checkboxes and radios are EXCLUDED. They are not band controls —
+		// they arrive inside a status component, and a native checkbox has an
+		// intrinsic 13px width that `height` does not touch, so forcing 1.75rem
+		// on it draws a tall narrow rounded rectangle where a square belongs.
+		// Their sizing belongs to the component stylesheets.
+		button,
+		select,
+		input:not([type="checkbox"]):not([type="radio"]),
+		.button,
+		.tool_button {
+			height: @tool_header_control_height;
+			min-height: @tool_header_control_height;
+			box-sizing: border-box;
+			margin: 0px;
+			vertical-align: middle;
+		}
+
+		select {
+			opacity: 1;
+			padding: 0px 1.33rem 0px 0.4rem;
+			background-color: var(--bg_elevated);
+			color: var(--fg_default);
+			// in LIGHT, --bg_elevated and the band's --bg_surface are both
+			// #ffffff — without this the control has no edge at all and reads as
+			// a floating caret. (Dark re-declares it at --border_strong below.)
+			border: 1px solid var(--border_default);
+			border-radius: 3px;
+			line-height: @tool_header_control_height;
+			max-width: 20rem;
+			min-width: 7rem;
+			text-overflow: ellipsis;
+			overflow: hidden;
+		}
+
+		// THE CAPTION IDIOM — caption INLINE with the control it names.
+		// Promoted here from tool_indexation, which is where the shape was worked
+		// out: a caption stacked on its own line above a select made a one-control
+		// toolbar two rows tall for no gain, and every tool that did stack it
+		// stacked it differently. Uppercase + muted + small is the same treatment
+		// the pane headers use (`.top > .lang_label`), so a caption reads the same
+		// wherever it appears in a tool.
+		// The class list is the union of what the tools already emit for a band
+		// caption — `.top_label` (tool_indexation), `.lang_label` (tool_lang,
+		// tool_subtitles, tool_transcription), `.container_label`
+		// (tool_transcription), a bare <label>, and a status component's own
+		// `.label`. They are all the same thing wearing different names, and the
+		// point of listing them together is that they stop rendering differently:
+		// tool_transcription had "LANGUAGE" and "Record" side by side in one band
+		// because only one of the two carried a class the idiom reached.
+		.top_label,
+		.lang_label,
+		.container_label,
+		>label,
+		>div:not(.wrapper_component) >label,
+		>.wrapper_component >.label {
+			text-transform: uppercase;
+			font-weight: 300;
+			font-size: 0.85rem;
+			letter-spacing: 0.04em;
+			color: var(--fg_muted);
+			white-space: nowrap;
+			margin: 0px;
+			padding: 0px;
+			// the caption is the fixed part of the field: when the group is
+			// squeezed the CONTROL gives way, never the label naming it
+			flex: 0 0 auto;
+		}
+
+		// STATUS COMPONENTS. Several tools put a real component on the band
+		// (tool_lang and tool_indexation append render_status() output;
+		// tool_transcription adds TR status + TR validation), and a component
+		// arrives wearing the section-edit form grid:
+		// `.wrapper_component.edit` is `display:grid` with a fixed
+		// --component_label_height row STACKING the label above the control
+		// (layout.less). On a 2.75rem toolbar that is a two-line field — the band
+		// grows past its height and its captions sit on a different line from the
+		// captions beside them, which is the incoherence this row exists to
+		// remove.
+		//
+		// So the band DOES restate a component's layout, as a flex row: caption
+		// then control, one line, contract height. The rule above excludes
+		// .wrapper_component from the generic group treatment because a component
+		// nested deeper in a tool owns its own internals — but a component that is
+		// a DIRECT child of the band is a toolbar control, and the band's geometry
+		// wins. (Written once here; tool_transcription carried this block locally
+		// and no longer needs to.)
+		>.wrapper_component {
+			background-color: transparent;
+			margin: 0px;
+			flex: 0 0 auto; // a wrapping label broke mid-word ("Finishe / d")
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: 0.4rem; // binds the caption to ITS control, tighter than the band gap
+
+			>.label, label {
+				color: var(--fg_muted);
+				white-space: nowrap;
+			}
+
+			// the component's own label IS this band's caption, so it takes the
+			// caption treatment rather than the form-grid label row
+			>.label {
+				margin-bottom: 0px;
+				line-height: 1.2;
+				height: auto; // not the fixed --component_label_height row
+			}
+
+			>.content_data {
+				min-height: @tool_header_control_height;
+				display: flex;
+				align-items: center;
+				// align-CONTENT too, not just align-items: the component sheet sets
+				// `flex-wrap: wrap` here and `align-content: flex-start`, and with a
+				// wrapping container it is align-content that places the single
+				// line — so align-items alone centred nothing and the checkbox sat
+				// ~5px above the centre line every other control on the band sits on
+				align-content: center;
+				// the component's own `padding: 1em; padding-top: .5em` is form-grid
+				// spacing and has no place on a toolbar: the surviving top padding
+				// alone stood the band 6.5px taller in every tool with a status
+				// component (43.25px against the 36.75px everywhere else) and the
+				// left padding opened an 18px hole between the caption and the
+				// control the 0.4rem gap above exists to bind
+				padding: 0px;
+			}
+
+			// the section-edit `.active` fill (a warm tint that marks the component
+			// you are editing) is meaningless on a toolbar and reads as a stray
+			// patch — loudly in dark. Restated at (0,5,0)+ because the base rule
+			// `.wrapper_component.edit.active:not(.hilite_element)` is (0,4,0) and
+			// beat the plain `background-color: transparent` above. tool_indexation
+			// carried a local escape hatch for exactly this; it no longer needs one.
+			&.active,
+			&.edit.active:not(.hilite_element) {
+				background-color: transparent;
+				box-shadow: none;
+			}
+		}
+
+		// Narrow: the band gives up its fixed height and becomes a wrapping stack.
+		// Controls grow to fill the row rather than leaving ragged gaps.
+		@media screen and (max-width: @width_break_point_0) {
+			min-height: 0px;
+			row-gap: 0.5rem;
+
+			>div:not(.wrapper_component),
+			>button,
+			>select {
+				flex: 1 0 auto;
+			}
+		}
 	}
 
 	>.activity_info_container {
@@ -192,13 +495,40 @@
 			background-color: @color_black !important;
 			transform: rotate(90deg);
 		}
+		// the pressed state used to be `@color_white`, which now resolves to the
+		// header ink itself (see the --color_white re-scope) — an invisible press
+		// in both themes. Dim instead.
 		&:active {
-			background-color: @color_white !important;
+			background-color: var(--color_grey_7) !important;
 		}
 	}
 
-	// inside modal case
+	// INSIDE A MODAL.
+	// tool_common.js promotes the tool's own header into the modal's
+	// <slot name="header"> and adds `.header` to it, so the node is both
+	// `.tool_header` and the modal's `.header` — and `dd-modal .header`
+	// (layout.less) sets `color: var(--modal_header_color)`.
+	//
+	// That token is NOT rescued by the `--color_white` re-point above. A custom
+	// property is substituted where it is DECLARED, not where it is used:
+	// `--modal_header_color: var(--color_white)` is declared at `:root`, so it
+	// computes to #ffffff there and inherits down as a literal white, whatever
+	// `--color_white` means further in. Measured on the header node:
+	// `--color_white` = #353535 (re-pointed, as intended) while
+	// `--modal_header_color` = #ffffff.
+	//
+	// So the modal header's title rendered WHITE on the neutral surface — the
+	// tool NAME, the one string that must always be readable. The description
+	// escaped it only because it carries its own `--fg_muted` rule at (0,3,0);
+	// the title has no colour of its own and simply inherited.
+	//
+	// Restated here at (0,2,0), which beats `dd-modal .header` (0,1,1) on
+	// specificity alone, so source order between the two files cannot matter.
+	// The modal's own bar keeps `--modal_header_color` — this narrows it to the
+	// case where a TOOL supplies the header.
 	&.header {
+		color: var(--fg_default);
+
 		>.button.close {
 			display: none;
 		}
@@ -206,62 +536,70 @@
 }//end .tool_header
 
 
+// THE MODAL'S OWN CHROME, WHEN A TOOL SUPPLIES THE HEADER
+// ------------------------------------------------------------------
+// The minimise `_` and close `✕` live in dd-modal's SHADOW ROOT
+// (client/dedalo/core/common/js/dd-modal.js — `.mini_modal` / `.close_modal`),
+// so no selector here can reach them. What DOES reach them is inheritance: they
+// read `--modal_btn_color` / `--modal_btn_hover_color`, and custom properties
+// cross the shadow boundary from the host.
+//
+// Those tokens are correct for the modal's OWN bar, which is
+// `--modal_header_bg` = the saturated Dédalo orange — white glyphs on it. But
+// when a TOOL supplies the header the bar becomes the neutral --bg_surface_alt
+// this file paints, and white glyphs disappear into it. Same failure as the
+// title (see `&.header` above), one element over and out of reach of the same
+// fix, because these are the MODAL's controls, not the tool's.
+//
+// So the condition is stated where it is true — a dd-modal whose header came
+// from a tool — and the tokens are re-pointed on the host for that case only. A
+// modal with its own orange bar is untouched.
+//
+// `--fg_muted` at rest, `--fg_default` on hover: the same quiet-then-committed
+// hierarchy the header's captions use, and it retunes with the theme for free.
+// Both glyphs are 1.75rem bold (≈17pt), i.e. WCAG large text at a 3:1 floor —
+// --fg_muted measures 3.71:1 on the light bar and 7.64:1 on the dark one.
+dd-modal:has(.tool_header) {
+	--modal_btn_color: var(--fg_muted);
+	--modal_btn_hover_color: var(--fg_default);
+}
+
+
+// tool_header — LIGHT THEME CONTRAST
+// ------------------------------------------------------------------
+// The muted ink is the header's caption and subtitle colour (the band captions
+// — SHOW, APPROACH, RECORD, LANGUAGE, STATUS — and the tool description). In
+// DARK it was already tuned for this: theme_dark.less lifted --fg_muted from
+// #a3a8b0 to #aeb4bd for WCAG AA on elevated surfaces, and it measures 8.09:1
+// on the header ink surface and 7.64:1 on --bg_surface_alt.
+//
+// LIGHT never got that pass, because until this redesign the header had no
+// muted ink at all — every string on it was white on a saturated slab. The
+// light token (--color_grey_7, #7f7f7f) measures 4.00:1 on the band's #ffffff
+// and 3.71:1 on the header's #f6f6f6. Both are small text (0.85rem at weight
+// 300, and the description at weight 200), so both need 4.5:1 and both miss.
+//
+// #6f6f6f is the nearest neutral that clears it on BOTH surfaces (5.02:1 and
+// 4.65:1). No existing grey token does: --color_grey_7 is too light and
+// --color_grey_6 (#6c757d) still fails the header surface at 4.34:1.
+//
+// Scoped by `:not([data-theme="dark"])` rather than re-pointed inside
+// .tool_header and restored in the dark block, so the dark value stays in the
+// one place that owns it and is not copied here to be kept in sync.
+:root:not([data-theme="dark"]) .tool_header {
+	--fg_muted: #6f6f6f;
+}
+
+
 // tool_header — DARK THEME
 // ------------------------------------------------------------------
-// Every tool paints this bar with its own identity hue
-// (`.wrapper_tool.tool_x > .tool_header { background-color: var(--tool_x) }`),
-// and theme_dark.less makes those hues BRIGHTER, not darker. In dark that made
-// the header the most luminous surface in the app: a light slab at the top of a
-// near-black UI, with dark-slab selects punched into it and component labels
-// (which fall back to `.wrapper_component { color: var(--color_grey_4) }` =
-// #e5e7ea in dark) sitting on it at ~1.8:1. Same failure the mosaic hover chips
-// and the menu bar already had.
-//
-// The identity colour becomes an EDGE instead of a slab. Two deliberate choices
-// let one block fix every tool, including tools added later:
-//
-//  1. The tool's own `background-color` is NOT overridden. A `background-image`
-//     gradient paints the app's header surface over everything BELOW the first
-//     3px, so what stays visible is a 3px strip of the tool's REAL hue. No
-//     per-tool list to keep in sync, no `!important`, no specificity war.
-//     (Safe because no tool uses the `background` shorthand on this element —
-//     that would reset the gradient.)
-//
-//  2. `--color_white` is RE-SCOPED to the dark ink. 16 tool css files hard-set
-//     header text to `@color_white` (44 declarations) — written when the bar was
-//     always light, but `--color_white` is #1b1d20 in dark, i.e. dark ink on
-//     what is now a dark bar. Out-specifying 44 declarations from here would be
-//     a losing game; re-pointing the token they all read is one line. Scoped to
-//     the header, so the page-level meaning of --color_white is untouched.
+// The surface + identity-edge treatment this block used to own is now shared by
+// both themes (see .tool_header above). What is left here is only what dark
+// genuinely needs on its own: the header controls, which were drawn to stand on
+// a BRIGHT bar.
 :root[data-theme="dark"] .tool_header {
 
-	// see (2) above — "white" means the dark theme's near-white ink in here
-	--color_white: var(--fg_default);
-
-	// see (1) above — dark surface over all but the top 3px identity edge.
-	// --bg_surface_alt is the app's own menu-bar material, so a tool window
-	// reads as the same product; it is also RECESSED relative to the control
-	// fills below, which is what lets the buttons sit on top of it.
-	background-image: linear-gradient(
-		to bottom,
-		transparent 0,
-		transparent 3px,
-		var(--bg_surface_alt) 3px,
-		var(--bg_surface_alt) 100%
-	);
-	color: var(--fg_default);
-	box-shadow: inset 0 -1px 0 var(--border_default); // hairline against the body
-
-	>.tool_name_container {
-
-		// the subtitle steps back from the title: on the old bar both were the
-		// same near-black, so the tool name had no weight of its own
-		>.description {
-			color: var(--fg_muted);
-		}
-	}
-
-	// Header controls were drawn to stand on a BRIGHT bar: `.light` buttons fill
+	// `.light` buttons fill
 	// with --color_grey_15 (#24272d) and edge with --color_light_border
 	// (#30353a), both of which read as dark holes punched into the old slab and,
 	// on a dark bar, as almost nothing at all. On this surface they need to be
@@ -289,13 +627,5 @@
 		>.tool_button >.icon {
 			filter: var(--toolbar_btn_icon_filter);
 		}
-	}
-
-	// the close ✕ is a white mask (`.button { background-color: @color_black }`
-	// → #ffffff in dark), which was barely visible on the bright bar and is
-	// correct on this one. Its pressed state resolved to --color_white, i.e. the
-	// dark surface itself — an invisible press. Dim instead.
-	>.button.close:active {
-		background-color: var(--color_grey_7) !important;
 	}
 }//end tool_header dark theme

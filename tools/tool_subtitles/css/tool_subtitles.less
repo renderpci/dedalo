@@ -36,36 +36,9 @@
 
 	>.tool_header {
 
+		// band layout, control height, select skin and the lang caption now come
+		// from tool_common `.tool_header >.tool_buttons_container`
 		>.tool_buttons_container {
-			display: flex;
-			align-items: flex-end;
-
-			>* {
-				margin-left: 0.5rem;
-				margin-right: 0rem;
-				height: 2rem;
-			}
-
-			select {
-				opacity: 1;
-				padding: 0.33rem;
-				background-color: @color_grey_15;
-				border-radius: 3px;
-				margin-right: 0;
-			}
-
-			>.lang_selector {
-				display: flex;
-				align-items: center;
-
-				>.lang_label {
-					padding-right: 0.33rem;
-				}
-
-				>select {
-
-				}
-			}
 
 			>.tool_button {
 

@@ -384,10 +384,17 @@ let getServerStatus: (options: unknown) => void;
 
 async function loadClientPoller(): Promise<(options: unknown) => void> {
 	const raw = await Bun.file(CLIENT_SOURCE).text();
-	const stripped = raw.replace(/^[ \t]*import\s+\{[^}]*\}\s+from\s+'[^']*'[ \t]*;?[ \t]*$/gm, '');
+	// named ({ a, b }) OR default (Split) imports — the module uses both.
+	const stripped = raw.replace(
+		/^[ \t]*import\s+(?:\{[^}]*\}|[A-Za-z_$][\w$]*)\s+from\s+'[^']*'[ \t]*;?[ \t]*$/gm,
+		'',
+	);
 	// Fail LOUDLY if the import shape changed: a silent strip failure would make
 	// the whole describe unloadable-but-green in the worst case.
-	if (stripped.includes("from '../../../core/")) {
+	// (!) Asserts NO import survives, rather than naming one path prefix: the
+	// previous check only knew about '../../../core/', so a default import of
+	// '../../../lib/split/…' sailed past it and blew up at module load instead.
+	if (/^[ \t]*import\s/m.test(stripped)) {
 		throw new Error('client harness: the import block was not stripped — update the regex');
 	}
 	if (!stripped.includes('const get_server_status')) {

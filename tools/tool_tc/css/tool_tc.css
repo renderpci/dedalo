@@ -256,9 +256,5 @@
 }
 .tool_header.tool_tc {
   background-color: var(--tool_tc);
-  color: #00e801;
-}
-.tool_header.tool_tc .button.white {
-  background-color: #00e801 !important;
 }
 /*# sourceMappingURL=tool_tc.css.map */

@@ -234,6 +234,9 @@
   --print_page_shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   --tp_desk_bg: #2a2d31;
 }
+.tool_header.tool_print {
+  background-color: var(--tool_print);
+}
 .wrapper_tool.tool_print .spinner {
   background-color: var(--tool_print);
 }

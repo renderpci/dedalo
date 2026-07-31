@@ -29,123 +29,133 @@
 // wrapper_tool
 .wrapper_tool.tool_transcription {
 
+	// The tool fills its window and hands the leftover height to the panes.
+	// The body used to be `calc(100vh - 8rem)` — a hard-coded header height,
+	// and the header is no longer a fixed height: it grew a controls row, and
+	// this tool has the most controls of any (record select, language, assign
+	// speakers, print, time machine, two status components), so the band wraps
+	// to a second line at intermediate widths and the header grows another
+	// 2.75rem. With `overflow: hidden` below, everything past the guess was
+	// simply cut off rather than scrollable.
+	// max-height:100% is the modal guard: with no sized ancestor it resolves to
+	// `none` and 100vh stands; inside a sized modal it clamps to the modal.
+	height: 100vh;
+	max-height: 100%;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-content: stretch;
+
+	// NARROW: give the height back. Below this width the panes stack and switch
+	// to `height:auto; overflow:visible` (see >.content_data), so nothing in the
+	// chain scrolls — and `.wrapper_tool { contain: content }` PAINT-clips the
+	// overflow, so the player, the key panel and the automatic-transcription
+	// block below the fold were simply unreachable. With no height here the
+	// document scrolls, which is what it did before the column model landed.
+	@media screen and (max-width: @width_break_point_0) {
+		height: auto;
+		max-height: none;
+	}
+
+	>.tool_header {
+		flex: 0 0 auto;
+	}
+
 	.spinner {
 		background-color: @tool_color;
 	}
 
+	// the identity hue; tool_common.less demotes it to the header's top edge and
+	// owns the rest — surface, ink, and the controls band: its geometry and gaps,
+	// the caption idiom, the select shape, one control height for every widget on
+	// the line, and the narrow-viewport behaviour. What stays here is what the
+	// shared block deliberately does not reach.
 	>.tool_header {
 		background-color: @tool_color;
-		position: relative;
-
-		@media screen and (max-width: @width_break_point_0) {
-			flex-wrap: wrap;
-		}
 
 		>.tool_buttons_container {
-			display: flex;
-			align-items: flex-start;
 
-			@media screen and (max-width: @width_break_point_0) {
-				flex-wrap: wrap;
-				margin-top: 1rem;
-			}
+			// (the `.container_label` treatment that used to sit here is gone:
+			// the shared caption idiom names the class now, which is what stops
+			// this tool rendering "LANGUAGE" beside "Record")
 
-			>div, button {
-				margin: 0rem;
-				margin-left: 0.5rem;
-				margin-right: 0rem;
-				min-height: 2rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-					margin-bottom: 1rem;
-					flex: 1 0 auto;
-				}
-			}
-
-			select {
-				opacity: 1;
-				padding: 0.33rem;
-				padding-right: 2rem;
-				background-color: @color_grey_15;
-				border-radius: 3px;
-				margin-right: 0px;
-				max-width: 20rem;
-				min-width: 7rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-
-				}
+			// the flex row itself is tool_common's; this is the one thing it does
+			// not say — a long record title must not push the bar off-screen
+			>.related_list_container,
+			>.lang_selector {
+				min-width: 0;
 			}
 
 			// select top tipo / id
 			>.related_list_container {
 
+				// wider than the band's 20rem cap: these are record titles, and
+				// the cap clipped them to a couple of words
 				>select {
-
+					max-width: 22rem;
 				}
 			}
 
-			// component lang selector
-			>.lang_selector {
-				display: flex;
+			// buttons: the height is the band's, but a <button> is not one of the
+			// shared block's flex rows, so the icon+text centring stays here
+			>button {
+				display: inline-flex;
 				align-items: center;
-				margin-left: 0.75rem;
-				margin-right: 0.12rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-					padding-right: 0.5rem;
-				}
-
-				>.lang_label {
-					padding-right: 0.33rem;
-				}
-
-				>select {
-
-				}
+				justify-content: center;
+				white-space: nowrap; // "Assign speakers" was breaking mid-word
 			}
 
 			// buttons of tools (tool print, tool time machine..)
+			// (!) gap, not margin-right on the icon: print and time machine are
+			// icon-ONLY, and a trailing margin pushed their glyph off centre.
+			// A gap only exists between two items, so it costs them nothing.
 			>.tool_button {
+				gap: 0.33rem;
 
 				>.icon {
 					height: 1rem;
-					margin-right: 0.33rem;
 				}
 			}
 
-			>.wrapper_component {
-				background-color: transparent;
-				flex: 0 0 auto; // "Finished" was breaking mid-word ("Finishe / d")
-
-				>.label, label {
-					color: @color_white;
-					white-space: nowrap;
-				}
-			}
+			// (the status-component row treatment that used to sit here — TR
+			// status, TR validation — is tool_common's now: every tool that puts
+			// a component on the band needed the same 20 lines)
 		}
 	}//end >.tool_header
 
+	// (!) FLEX, not grid. Split.js inserts its gutter as a third sibling between
+	// the two columns; a fixed grid-template-columns would put it in a track of
+	// its own (or off the grid entirely) and the resizer would not work.
+	// @see activate_split in render_tool_transcription.js
 	>.content_data {
-		display: grid;
-		grid-template-columns: 50% 50%;
-		column-gap: 1rem;
-		align-items: start;
-		width: calc(100% - 1rem);
+		display: flex;
+		align-items: stretch;
+		width: 100%;
+		// whatever the header leaves, rather than 100vh minus a guess at it
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: hidden;
+		padding: 0px;
 
 		@media screen and (max-width: @width_break_point_0) {
-			display: flex;
-			width: 100%;
 			flex-wrap: wrap;
+			height: auto;
+			overflow: visible;
 		}
 
 		// left and right commons
-		.left_container,
-		.right_container {
-			height: calc(100vh - 8rem);
+		>.left_container,
+		>.right_container {
+			width: 50%; // Split.js overwrites this inline once it activates
+			height: 100%;
+			min-width: 0; // a flex item that cannot shrink cannot be resized
+			overflow: auto;
+			padding: 0.75rem 1rem;
+			box-sizing: border-box;
 
-			.wrapper_component {
-
+			@media screen and (max-width: @width_break_point_0) {
+				width: 100%;
+				height: auto;
+				overflow: visible;
 			}
 		}
 
@@ -157,6 +167,16 @@
 		.left_container {
 			>.wrapper_component {
 				height: 100%;
+				// (!) The base .wrapper_component.edit grid is
+				// `var(--component_label_height) minmax(auto, 100%)` — a label row
+				// PLUS a row that is 100% of the container on its own, so the
+				// tracks summed to label+100% and the wrapper stood ~5px taller
+				// than the pane it is height:100% of. The editor was clipped by
+				// that overflow (its last text line was cut in half, and the
+				// clipped strip was not scrollable because the box is
+				// overflow:hidden). 1fr takes what is LEFT after the label; the
+				// minmax(0,…) floor is what lets it actually shrink.
+				grid-template-rows: auto minmax(0, 1fr);
 
 				>.buttons_container {
 					visibility: hidden;
@@ -164,6 +184,7 @@
 
 				>.content_data {
 					height: unset;
+					min-height: 0; // ditto: a grid item may not shrink without it
 
 					@media screen and (max-width: @width_break_point_0) {
 						min-height: 50vh;
@@ -179,6 +200,17 @@
 			.editor_container {
 				max-width: 72ch;   // the measure, not the column, sets the width
 				line-height: 1.65;
+
+				// (!) component_text_area sizes this as `calc(100% - 1.5rem)` but
+				// hangs 2rem of margin on it (0.5 top + 1.5 bottom), so it stands
+				// 0.5rem taller than the overflow:hidden slot it lives in: the
+				// last line of the transcript was sliced in half, and the sliver
+				// was not scrollable because the CLIPPING box is not the scrolling
+				// one. Here the editor is the only thing in that slot, so it just
+				// fills it — no margin arithmetic to get wrong.
+				height: 100%;
+				margin: 0rem 0.5rem;
+				box-sizing: border-box;
 
 				// each <p> here is a speaker turn; separate them
 				p + p {
@@ -214,6 +246,39 @@
 						height: 100%;
 					}
 				}
+
+				// The player is the reference the transcript is typed against, so
+				// every pixel of margin around it is picture the transcriptionist
+				// does not get — and the pane is user-resizable now, so the width
+				// they chose is the width the video should use.
+				&.component_av {
+					margin: 0px;
+
+					>.content_data {
+						padding: 0px;
+
+						>.content_value {
+							margin: 0px;
+							padding: 0px;
+						}
+
+						video {
+							width: 100%;
+							margin: 0px;
+							display: block;
+							// (!) The player is width-driven, so on a wide pane it
+							// grew to over half the column height and pushed the
+							// whole addon stack — speed, keys, subtitles,
+							// automatic transcription — below the fold, where
+							// nothing announced it. Capped against the VIEWPORT so
+							// it still grows on a tall screen: the controls the
+							// transcriptionist reaches for constantly stay in
+							// sight, and the video keeps its aspect ratio.
+							max-height: 45vh;
+							object-fit: contain;
+						}
+					}
+				}
 			}
 
 			.av_control_buttons {
@@ -221,14 +286,21 @@
 			}
 
 			.slider_container {
-				margin: 1em;
-				text-align: center;
+				// the speed control is a panel like the ones under it, not a
+				// floating strip: the 1em margin it carried put it out of line
+				// with every other addon block
+				padding: 0.75rem 1rem;
+				text-align: left;
+				border: 1px solid var(--border_default);
+				border-radius: 8px;
+				background-color: var(--bg_surface);
 
 				.slider_label {
-					font-size: 14px;
+					font-size: 0.9rem;
 					font-weight: lighter;
+					color: var(--field_label_fg);
 					width: 100%;
-					padding: 10px 0px;
+					padding: 0px 0px 0.5rem 0px;
 					text-align: left; // the value sits at the other end of this line
 				}
 				.slider {
@@ -294,14 +366,20 @@
 			// transcription) used to float free across the full half-screen
 			// column, separated only by hairlines, so it read as scattered
 			// controls in a lot of dead space. They are BLOCKS now — the same
-			// bordered surface .configuration_container already uses — held to a
-			// readable width and centred under the player.
+			// bordered surface .configuration_container already uses — sharing
+			// one width, one surface and one gap.
+			//
+			// (!) They track the PANE, not a fixed 34rem centred cap. The pane is
+			// user-resizable now: a fixed cap left a gutter of dead space either
+			// side in a wide pane and overflowed a narrow one. These are control
+			// panels, not prose — there is no measure to protect.
 			.slider_container,
 			.transcription_keys,
 			.block_separator {
-				max-width: 34rem;
-				margin-left: auto;
-				margin-right: auto;
+				width: 100%;
+				max-width: none;
+				margin: 0rem 0rem 0.5rem 0rem;
+				box-sizing: border-box;
 			}
 
 			.transcription_keys {
@@ -309,7 +387,6 @@
 				justify-content: space-around;
 				gap: 0.75rem;
 				padding: 0.75rem 1rem;
-				margin-bottom: 1rem;
 				border: 1px solid var(--border_default);
 				border-radius: 8px;
 				background-color: var(--bg_surface);
@@ -352,8 +429,10 @@
 				// hanging in space
 				&.subtitles_block {
 					padding: 0.75rem 1rem;
-					margin-bottom: 1rem;
 					gap: 0.75rem;
+					// the panel spans the pane now, so its contents start where
+					// every other panel's do instead of floating in the middle
+					justify-content: flex-start;
 					border: 1px solid var(--border_default);
 					border-radius: 8px;
 					background-color: var(--bg_surface);
@@ -399,12 +478,21 @@
 
 				}
 
+				// the last addon block gets the same panel treatment as the three
+				// above it, so the stack under the player reads as one column of
+				// panels rather than one loose group per feature
 				&.automatic_transcription_container {
+					padding: 0.75rem 1rem;
+					gap: 0.75rem;
+					justify-content: flex-start;
+					border: 1px solid var(--border_default);
+					border-radius: 8px;
+					background-color: var(--bg_surface);
 
 					>.button_automatic_transcription {
 						width: 14rem;
-						margin: 1rem;
-						height: 3em;
+						margin: 0rem;
+						height: 2.5em;
 						position: relative;
 						border-radius: 8px;
 	  					box-shadow: 0 0 0 1px @color_grey_16;
@@ -468,6 +556,10 @@
 					// width allows, wrapping to the next row on its own. Each field
 					// stacks its caption over its control, so the caption text is not
 					// competing with the select for the same line.
+					// (!) no border or fill of its own any more: its container IS a
+					// panel now, and a bordered box inside a bordered box read as
+					// two nested things. It is a drawer within one panel, so a
+					// single rule above it is all the separation it needs.
 					.configuration_container {
 						width: 100%;
 						display: grid;
@@ -476,13 +568,12 @@
 						align-items: end;
 						justify-items: stretch;
 						text-align: left;
-						padding: 0.75rem 1rem;
-						margin-bottom: 0.75rem;
-						border: 1px solid var(--border_default);
-						border-radius: 8px;
-						// same panel fill as the other addon blocks; --bg_surface_alt
-						// is the SELECT fill too, so the fields used to vanish into it
-						background-color: var(--bg_surface);
+						padding: 0.75rem 0rem 0rem 0rem;
+						margin-bottom: 0rem;
+						border: 0px;
+						border-top: 1px solid var(--border_default);
+						border-radius: 0px;
+						background-color: transparent;
 
 						// every field: caption (text node) above its control
 						>.engine_label,
@@ -612,6 +703,62 @@
 			}//end .subtitles
 		}
 	}//end .content_data
+
+	// split. The drag separator Split.js inserts between the two panes.
+	// @see activate_split in render_tool_transcription.js
+	//
+	// (!) The grip is DRAWN, not an image. tool_indexation uses a pair of grip
+	// PNGs (img/grips/vertical.png); those are a fixed light-grey bitmap that
+	// vanishes against the dark theme, and they are a binary asset to ship for
+	// what is three dots. A repeating gradient costs nothing and follows the
+	// theme tokens in both themes.
+	.gutter {
+		flex: 0 0 auto;
+		position: relative;
+		background-color: var(--bg_surface_alt);
+		border-left: 1px solid var(--border_default);
+		border-right: 1px solid var(--border_default);
+		box-sizing: border-box;
+
+		// the grip: a short dotted rule centred on the bar, so the separator
+		// reads as something you can take hold of rather than a border
+		&::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 2px;
+			height: 1.75rem;
+			background-image: repeating-linear-gradient(
+				to bottom,
+				var(--fg_muted) 0px,
+				var(--fg_muted) 2px,
+				transparent 2px,
+				transparent 5px
+			);
+		}
+
+		&:hover {
+			background-color: var(--bg_surface);
+
+			&::after {
+				background-image: repeating-linear-gradient(
+					to bottom,
+					@tool_color 0px,
+					@tool_color 2px,
+					transparent 2px,
+					transparent 5px
+				);
+			}
+		}
+
+		// (!) only the horizontal case exists: this tool splits left/right and
+		// never top/bottom, so there is no .gutter-vertical rule to write.
+		&.gutter-horizontal {
+			cursor: col-resize;
+		}
+	}
 
 }//end .wrapper_tool
 

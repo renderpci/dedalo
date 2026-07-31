@@ -25,8 +25,9 @@
 * The tool splits the viewport into two resizable panes using the Split.js
 * library (see https://github.com/nathancahill/split/tree/master/packages/splitjs):
 *
-*   left_container  — thesaurus / media / people viewer (swappable via the
-*                     viewer selector dropdown in the toolbar).
+*   left_container  — the selected viewer: thesaurus, media or people. Swapped
+*                     by the toolbar's "Show" select, which never touches
+*                     right_container.
 *   right_container — stacked panels:
 *     1. transcription_component  : component_text_area where the user edits
 *                                   the transcription and creates index tags.
@@ -43,7 +44,7 @@
 *   • render_related_list   — "Approach" <select> for choosing the top-section
 *                             locator (section_tipo + section_id) that scopes
 *                             the current indexation session.
-*   • render_viewer_selector — "Viewer" <select> to switch the left pane.
+*   • render_viewer_selector — "Show" <select> that swaps the LEFT pane viewer.
 *   • render_status         — status components for users and admins.
 *
 * All functions in this module are module-private except the constructor and
@@ -99,13 +100,22 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		// fix pointers
 		wrapper.content_data = content_data
 
+		// viewer_selector. Swaps the LEFT pane between thesaurus / people / media.
+		// It sits in the toolbar beside Approach: both are captioned controls of the
+		// same shape in the same row, and the caption ("Show") plus its tooltip carry
+		// the scope that the position used to have to explain.
+		const viewer_selector = render_viewer_selector(self, content_data.left_container)
+		wrapper.tool_buttons_container.appendChild(viewer_selector.node)
+
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
 		wrapper.tool_buttons_container.appendChild(related_list_node)
 
-	// viewer_selector. (thesaurus/audiovisual)
-		const viewer_selector_node = render_viewer_selector(self, wrapper)
-		wrapper.tool_buttons_container.appendChild(viewer_selector_node)
+		// (!) restore the stored viewer only once the eagerly rendered thesaurus
+		// node exists — the 'area_thesaurus' branch of the change handler needs
+		// it, and this toolbar is built while that render is still in flight.
+		content_data.left_container.area_thesaurus_ready
+			.then(() => viewer_selector.apply_stored_viewer())
 
 	// status, render the status components for users and admins to control the process of the tool
 		const status_container = await render_status(self)
@@ -132,7 +142,9 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 * Left pane:
 *   • area_thesaurus rendered asynchronously; its node reference is kept as
 *     left_container.area_thesaurus_node so the viewer selector can show/hide
-*     it without re-rendering.
+*     it without re-rendering.  The render promise is kept as
+*     left_container.area_thesaurus_ready so edit() can defer the stored-viewer
+*     restore until that node exists.
 *
 * Right pane (top to bottom):
 *   • transcription_component_container
@@ -162,8 +174,9 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 *   • self.info_container, self.indexation_note, self.tag_info_container are
 *     set as direct properties on self for later access by get_tag_info and
 *     the event handlers in tool_indexation.js.
-*   • content_data.left_container is set so render_viewer_selector can reach
-*     left pane nodes through wrapper.content_data.left_container.
+*   • content_data.left_container is set so edit() can hand the left pane to
+*     render_viewer_selector, and left_container.area_thesaurus_ready is the
+*     render promise it waits on.
 *
 * @param {Object} self - The tool_indexation instance.
 * @returns {Promise<HTMLElement>} The content_data wrapper element, ready to be
@@ -173,7 +186,7 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// left_container (area thesaurus)
+	// left_container (viewer selector + the selected viewer)
 		const left_container = ui.create_dom_element({
 			element_type	: 'div',
 			id				: 'left_container',
@@ -181,8 +194,11 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-		// thesaurus render
-			self.area_thesaurus.render()
+		// thesaurus render.
+		// The promise is kept ON the pane: the viewer selector is built later (in
+		// edit(), for the toolbar) and has to wait for area_thesaurus_node before
+		// it can restore the stored viewer.
+			left_container.area_thesaurus_ready = self.area_thesaurus.render()
 			.then(function(node){
 				left_container.appendChild(node)
 				// fix pointer
@@ -197,10 +213,14 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-		// transcription_component (component_text_area)
-			const transcription_component_container = ui.create_dom_element({
+		// top_right
+		// Pane header for the transcription: caption + lang select INLINE, the
+		// tool_lang `.top` pattern (tools/tool_lang/css/tool_lang.less). The
+		// select used to be absolutely positioned in the pane's top-right corner,
+		// a full pane away from the label naming it.
+			const top_right = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'transcription_component_container',
+				class_name		: 'top transcription_top',
 				parent			: right_container
 			})
 
@@ -228,14 +248,33 @@ const get_content_data_edit = async function(self) {
 						component.show_interface.tools = false
 						component.render()
 						.then(function(node){
-							// remove previous node
-							transcription_component_container.replaceChildren(lang_selector)
+							// remove previous node. (!) the lang select lives in the
+							// .top bar now, so nothing is preserved here.
+							transcription_component_container.replaceChildren()
 							// add the new component to the container
 							transcription_component_container.appendChild(node)
 							// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
 						})
 				})
-				transcription_component_container.appendChild(lang_selector)
+				top_right.appendChild(lang_selector)
+
+			// caption. Named by the component itself, so an install that renames
+			// the transcription field sees its own wording. `order:-1` in the css
+			// puts it before the select whatever the DOM order is — same as
+			// tool_lang's .lang_label.
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'top_label',
+					inner_html		: self.transcription_component.label || '',
+					parent			: top_right
+				})
+
+		// transcription_component (component_text_area)
+			const transcription_component_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'transcription_component_container',
+				parent			: right_container
+			})
 
 			// transcription_component. render another node of component caller and append to container
 				const transcription_component = self.transcription_component || await self.get_component(self.lang)
@@ -698,10 +737,11 @@ const render_related_list = function(self){
 			parent			: fragment
 		})
 
-	// label
+	// label. Inline with its select (see the .top pattern in the css) instead of
+	// stacked above it — the caption and the control it names read as one field.
 		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'container_label',
+			element_type	: 'span',
+			class_name		: 'top_label',
 			inner_html		: (self.get_tool_label('approach') || 'Approach'),
 			parent			: related_list_container
 		})
@@ -823,8 +863,16 @@ const render_related_list = function(self){
 
 /**
 * RENDER_VIEWER_SELECTOR
-* Builds the "Viewer" toolbar control — a <select> that switches the content
-* rendered in the left pane between thesaurus, people, and media viewers.
+* Builds the left pane's own "Show" control — a <select> that switches the
+* content rendered in that pane between thesaurus, people, and media viewers.
+*
+* Placement is the feature
+* ────────────────────────
+* This used to live in the tool header next to the "Approach" select, where the
+* two read as peers. They are not: Approach scopes the whole indexation session,
+* this one only swaps the left pane and never touches right_container. The
+* control is therefore mounted as the first child of left_container so the pane
+* it acts on is unmistakable.
 *
 * Available viewer options (in order):
 *   • area_thesaurus  — hierarchical thesaurus browser (default).
@@ -846,9 +894,11 @@ const render_related_list = function(self){
 * Persistence
 * ───────────
 * The selected viewer key is stored to localStorage under
-* 'tool_indexation_viewer'.  If a stored value is present, the select is set
-* to that value and a synthetic 'change' event is dispatched synchronously so
-* the correct viewer is shown immediately on load.
+* 'tool_indexation_viewer'.  Restoring it is NOT done here: the caller must
+* invoke the returned apply_stored_viewer() once left_container.area_thesaurus_node
+* exists, because the 'area_thesaurus' branch of the change handler needs that
+* node.  apply_stored_viewer is a no-op when nothing is stored or the stored
+* value is already the current one.
 *
 * Side effects:
 *   • self.viewer is initialised to 'area_thesaurus' and updated on every
@@ -858,12 +908,14 @@ const render_related_list = function(self){
 *
 * @param {Object} self    - The tool_indexation instance. Must have area_thesaurus,
 *   people_section, and media_component set (set in build_custom).
-* @param {HTMLElement} wrapper - The tool wrapper element; used to reach
-*   wrapper.content_data.left_container so the change handler can manipulate
-*   the left pane's children.
-* @returns {DocumentFragment} Fragment containing the viewer selector widget.
+* @param {HTMLElement} left_container - The left pane node the selector acts on;
+*   the change handler reads/writes its *_node pointers and appends lazily
+*   rendered viewers to it.
+* @returns {Object} { node, apply_stored_viewer } - node is the selector
+*   container element (ready to append); apply_stored_viewer is the deferred
+*   localStorage restore described above.
 */
-const render_viewer_selector = function(self, wrapper){
+const render_viewer_selector = function(self, left_container){
 
 	// short vars
 		const media_component	= self.media_component || {label:'Media component role is not defined'}
@@ -887,20 +939,23 @@ const render_viewer_selector = function(self, wrapper){
 	// fix initial viewer name (Thesaurus)
 		self.viewer = items[0].value
 
-	const fragment = new DocumentFragment();
+	// description. Used as tooltip on both the caption and the select, so the
+	// scope is spelled out for anyone who hovers rather than infers it.
+		const description = self.get_tool_label('viewer_description') || 'Choose what this left panel shows'
 
-	// viewer_selector_container
+	// viewer_selector_container. A toolbar field: caption + control inline, the
+	// same shape as .related_list_container beside it.
 		const viewer_selector_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'viewer_selector_container',
-			parent			: fragment
+			class_name		: 'viewer_selector_container'
 		})
 
 	// label
 		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'container_label',
-			inner_html		: (get_label.viewer || 'Viewer'),
+			element_type	: 'span',
+			class_name		: 'top_label',
+			inner_html		: (self.get_tool_label('viewer') || 'Show'),
+			title			: description,
 			parent			: viewer_selector_container
 		})
 
@@ -908,8 +963,10 @@ const render_viewer_selector = function(self, wrapper){
 		const select = ui.create_dom_element({
 			element_type	: 'select',
 			class_name		: 'selector viewer_selector',
+			title			: description,
 			parent			: viewer_selector_container
 		})
+		select.setAttribute('aria-label', description)
 		// change event
 		// (!) hide_all must be called before the switch so that
 		// no two viewers are visible simultaneously.
@@ -917,8 +974,7 @@ const render_viewer_selector = function(self, wrapper){
 			// fix the new viewer name
 			self.viewer = e.target.value
 
-			const left_container		= wrapper.content_data.left_container
-			const area_thesaurus_node	= left_container.area_thesaurus_node
+			const area_thesaurus_node	= left_container.area_thesaurus_node || null
 			const media_component_node	= left_container.media_component_node || null
 			const people_section_node	= left_container.people_section_node || null
 
@@ -977,8 +1033,13 @@ const render_viewer_selector = function(self, wrapper){
 				case 'area_thesaurus':
 				default:
 
-					// show area_thesaurus_node
-					area_thesaurus_node.classList.remove('hide')
+					// show area_thesaurus_node.
+					// Guarded like the other branches: the node is assigned from
+					// an async render callback, so it can legitimately be absent
+					// when this runs early.
+					if (area_thesaurus_node) {
+						area_thesaurus_node.classList.remove('hide')
+					}
 					break;
 			}
 
@@ -987,14 +1048,8 @@ const render_viewer_selector = function(self, wrapper){
 		}
 		select.addEventListener('change', change_handler)
 
-	// option label
-		const option_blank = ui.create_dom_element({
-			element_type	: 'option',
-			inner_html		: (get_label.viewer || 'Viewer') + ': &nbsp;',
-			value			: null,
-			parent			: select
-		})
-		option_blank.disabled = true
+	// (!) no disabled placeholder option here. The caption sits right beside the
+	// select now, so repeating it as a decoy first option only added noise.
 
 	// options
 		const items_length = items.length
@@ -1014,17 +1069,35 @@ const render_viewer_selector = function(self, wrapper){
 			}
 		}
 
-	// last_viewer. Set last selection if present.
-	// Dispatching the 'change' event synchronously applies the saved viewer
-	// before the DOM is returned, so the user sees the correct pane immediately.
-	const last_viewer = localStorage.getItem('tool_indexation_viewer')
-	if (last_viewer) {
+	// apply_stored_viewer
+	// Restores the last selection from localStorage by setting the select value
+	// and dispatching a synthetic 'change'.
+	// (!) The caller must run this only once left_container.area_thesaurus_node
+	// exists (i.e. from the area_thesaurus render callback). Running it earlier
+	// would leave the eagerly rendered thesaurus visible underneath the restored
+	// viewer, because hide_all() cannot hide a node it cannot see yet.
+	const apply_stored_viewer = function(){
+
+		const last_viewer = localStorage.getItem('tool_indexation_viewer')
+		if (!last_viewer || last_viewer===self.viewer) {
+			// nothing stored, or the default is already applied
+			return
+		}
+
+		// ignore a stale/unknown stored key (e.g. a role removed from the ontology)
+		if (!items.some(item => item.value===last_viewer)) {
+			return
+		}
+
 		select.value = last_viewer
 		select.dispatchEvent(new Event('change'))
 	}
 
 
-	return fragment
+	return {
+		node				: viewer_selector_container,
+		apply_stored_viewer	: apply_stored_viewer
+	}
 }//end render_viewer_selector
 
 

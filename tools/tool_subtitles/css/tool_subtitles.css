@@ -229,29 +229,6 @@
 .wrapper_tool.tool_subtitles .spinner {
   background-color: var(--tool_subtitles);
 }
-.wrapper_tool.tool_subtitles > .tool_header > .tool_buttons_container {
-  display: flex;
-  align-items: flex-end;
-}
-.wrapper_tool.tool_subtitles > .tool_header > .tool_buttons_container > * {
-  margin-left: 0.5rem;
-  margin-right: 0rem;
-  height: 2rem;
-}
-.wrapper_tool.tool_subtitles > .tool_header > .tool_buttons_container select {
-  opacity: 1;
-  padding: 0.33rem;
-  background-color: var(--color_grey_15);
-  border-radius: 3px;
-  margin-right: 0;
-}
-.wrapper_tool.tool_subtitles > .tool_header > .tool_buttons_container > .lang_selector {
-  display: flex;
-  align-items: center;
-}
-.wrapper_tool.tool_subtitles > .tool_header > .tool_buttons_container > .lang_selector > .lang_label {
-  padding-right: 0.33rem;
-}
 .wrapper_tool.tool_subtitles > .tool_header > .tool_buttons_container > .tool_button > .icon {
   height: 1rem;
   margin-right: 0.33rem;

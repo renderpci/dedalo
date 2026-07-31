@@ -30,6 +30,16 @@
 }
 @tool_color : var(--tool_print);
 
+// the identity hue. tool_common.less demotes it to the header's top 4px edge —
+// which makes it the ONLY thing naming the tool you are in, so a tool that
+// never paints it inherits the generic Dédalo orange and reads as any other
+// tool. This file already had its teal; it just never reached the header.
+// (!) `background-color`, never the `background` shorthand: the shorthand
+// resets the gradient tool_common paints the header surface with.
+.tool_header.tool_print {
+	background-color: @tool_color;
+}
+
 .wrapper_tool.tool_print {
 
 	.spinner { background-color: @tool_color; }

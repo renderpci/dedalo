@@ -1,5 +1,16 @@
 // Indigo accent (brand color, reads well on both themes)
 @assistant_color: #6366f1;
+
+// The tool's identity hue, exposed the way every other tool exposes it.
+// tool_common.less demotes it to the header's top 4px edge, which is the ONLY
+// thing naming the tool you are in — without this the assistant's header edge
+// is the generic Dédalo orange while its own UI below is indigo.
+:root {
+	--tool_assistant: @assistant_color;
+}
+.tool_header.tool_assistant {
+	background-color: var(--tool_assistant);
+}
 @assistant_color_light: #818cf8;
 @assistant_color_dark: #4f46e5;
 // Structural colors mapped to semantic tokens so they follow the active theme.

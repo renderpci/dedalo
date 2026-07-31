@@ -1,3 +1,9 @@
+:root {
+  --tool_assistant: #6366f1;
+}
+.tool_header.tool_assistant {
+  background-color: var(--tool_assistant);
+}
 .assistant_container {
   display: flex;
   flex-direction: column;

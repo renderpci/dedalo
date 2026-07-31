@@ -11335,13 +11335,17 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header {
   contain: content;
   background-color: var(--color_orange_dedalo);
-  background-image: linear-gradient(rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.32));
+  background-image: linear-gradient(to bottom, transparent 0, transparent 4px, var(--bg_surface_alt) 4px, var(--bg_surface_alt) 100%);
+  --color_white: var(--fg_default);
   position: relative;
-  color: var(--color_white);
+  color: var(--fg_default);
+  box-shadow: inset 0 -1px 0 var(--border_default);
   width: 100%;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   padding: 1rem;
+  padding-top: calc(1rem + 4px);
 }
 .tool_header .selector {
   max-width: 19rem;
@@ -11363,13 +11367,14 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   align-items: center;
 }
 .tool_header > .tool_name_container > .label > .button {
-  background-color: #ffffff !important;
+  background-color: var(--fg_default) !important;
   font-size: 1.25rem;
   vertical-align: baseline;
   margin-right: 0.75rem;
 }
 .tool_header > .tool_name_container > .description {
   font-weight: 200;
+  color: var(--fg_muted);
   padding-left: 1rem;
   padding-right: 1rem;
   line-height: 1.4rem;
@@ -11377,6 +11382,108 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header > .tool_buttons_container {
   display: flex;
   align-items: center;
+  flex: 0 0 calc(100% + 2rem);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem -1rem -1rem -1rem;
+  padding: 0.5rem 1rem;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  border-top: 1px solid var(--border_default);
+  background-color: var(--bg_surface);
+}
+.tool_header > .tool_buttons_container:empty {
+  display: none !important;
+}
+.tool_header > .tool_buttons_container > div:not(.wrapper_component),
+.tool_header > .tool_buttons_container > span {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  margin: 0px;
+}
+.tool_header > .tool_buttons_container button,
+.tool_header > .tool_buttons_container select,
+.tool_header > .tool_buttons_container input:not([type="checkbox"]):not([type="radio"]),
+.tool_header > .tool_buttons_container .button,
+.tool_header > .tool_buttons_container .tool_button {
+  height: 1.75rem;
+  min-height: 1.75rem;
+  box-sizing: border-box;
+  margin: 0px;
+  vertical-align: middle;
+}
+.tool_header > .tool_buttons_container select {
+  opacity: 1;
+  padding: 0px 1.33rem 0px 0.4rem;
+  background-color: var(--bg_elevated);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  line-height: 1.75rem;
+  max-width: 20rem;
+  min-width: 7rem;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.tool_header > .tool_buttons_container .top_label,
+.tool_header > .tool_buttons_container .lang_label,
+.tool_header > .tool_buttons_container .container_label,
+.tool_header > .tool_buttons_container > label,
+.tool_header > .tool_buttons_container > div:not(.wrapper_component) > label,
+.tool_header > .tool_buttons_container > .wrapper_component > .label {
+  text-transform: uppercase;
+  font-weight: 300;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: var(--fg_muted);
+  white-space: nowrap;
+  margin: 0px;
+  padding: 0px;
+  flex: 0 0 auto;
+}
+.tool_header > .tool_buttons_container > .wrapper_component {
+  background-color: transparent;
+  margin: 0px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+.tool_header > .tool_buttons_container > .wrapper_component > .label,
+.tool_header > .tool_buttons_container > .wrapper_component label {
+  color: var(--fg_muted);
+  white-space: nowrap;
+}
+.tool_header > .tool_buttons_container > .wrapper_component > .label {
+  margin-bottom: 0px;
+  line-height: 1.2;
+  height: auto;
+}
+.tool_header > .tool_buttons_container > .wrapper_component > .content_data {
+  min-height: 1.75rem;
+  display: flex;
+  align-items: center;
+  align-content: center;
+  padding: 0px;
+}
+.tool_header > .tool_buttons_container > .wrapper_component.active,
+.tool_header > .tool_buttons_container > .wrapper_component.edit.active:not(.hilite_element) {
+  background-color: transparent;
+  box-shadow: none;
+}
+@media screen and (max-width: 1024px) {
+  .tool_header > .tool_buttons_container {
+    min-height: 0px;
+    row-gap: 0.5rem;
+  }
+  .tool_header > .tool_buttons_container > div:not(.wrapper_component),
+  .tool_header > .tool_buttons_container > button,
+  .tool_header > .tool_buttons_container > select {
+    flex: 1 0 auto;
+  }
 }
 .tool_header > .activity_info_container {
   z-index: 2;
@@ -11436,19 +11543,20 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   transform: rotate(90deg);
 }
 .tool_header > .button.close:active {
-  background-color: var(--color_white) !important;
+  background-color: var(--color_grey_7) !important;
+}
+.tool_header.header {
+  color: var(--fg_default);
 }
 .tool_header.header > .button.close {
   display: none;
 }
-:root[data-theme="dark"] .tool_header {
-  --color_white: var(--fg_default);
-  background-image: linear-gradient(to bottom, transparent 0, transparent 3px, var(--bg_surface_alt) 3px, var(--bg_surface_alt) 100%);
-  color: var(--fg_default);
-  box-shadow: inset 0 -1px 0 var(--border_default);
+dd-modal:has(.tool_header) {
+  --modal_btn_color: var(--fg_muted);
+  --modal_btn_hover_color: var(--fg_default);
 }
-:root[data-theme="dark"] .tool_header > .tool_name_container > .description {
-  color: var(--fg_muted);
+:root:not([data-theme="dark"]) .tool_header {
+  --fg_muted: #6f6f6f;
 }
 :root[data-theme="dark"] .tool_header > .tool_buttons_container button,
 :root[data-theme="dark"] .tool_header > .tool_buttons_container select,
@@ -11466,9 +11574,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 :root[data-theme="dark"] .tool_header > .tool_buttons_container > .tool_button > img.icon,
 :root[data-theme="dark"] .tool_header > .tool_buttons_container > .tool_button > .icon {
   filter: var(--toolbar_btn_icon_filter);
-}
-:root[data-theme="dark"] .tool_header > .button.close:active {
-  background-color: var(--color_grey_7) !important;
 }
 /**
 * login

@@ -229,61 +229,6 @@
 .wrapper_tool.tool_numisdata_epigraphy .spinner {
   background-color: var(--tool_numisdata_epigraphy);
 }
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header {
-  position: relative;
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_numisdata_epigraphy > .tool_header {
-    flex-wrap: wrap;
-  }
-}
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container {
-  display: flex;
-  align-items: flex-start;
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container {
-    flex-wrap: wrap;
-    margin-top: 1rem;
-  }
-}
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container > div,
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container button {
-  margin: 0rem;
-  margin-left: 0.5rem;
-  margin-right: 0rem;
-  min-height: 2rem;
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container > div,
-  .wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container button {
-    margin-bottom: 1rem;
-    flex: 1 0 auto;
-  }
-}
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container select {
-  opacity: 1;
-  padding: 0.33rem;
-  background-color: var(--color_grey_15);
-  border-radius: 3px;
-  margin-right: 0px;
-  max-width: 20rem;
-  min-width: 7rem;
-}
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container > .lang_selector {
-  display: flex;
-  align-items: center;
-  margin-left: 0.75rem;
-  margin-right: 0.12rem;
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container > .lang_selector {
-    padding-right: 0.5rem;
-  }
-}
-.wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container > .lang_selector > .lang_label {
-  padding-right: 0.33rem;
-}
 .wrapper_tool.tool_numisdata_epigraphy > .tool_header > .tool_buttons_container > .tool_button > .icon {
   height: 1rem;
   margin-right: 0.33rem;

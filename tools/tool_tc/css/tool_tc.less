@@ -67,11 +67,11 @@
 }//end wrapper_tool
 
 // modal header tool modification
+// Only the identity hue is ours; tool_common.less demotes it to the header's top
+// edge and owns the ink. The terminal green in here was the black slab's partner
+// (green on #000000) — on the shared neutral surface it is unreadable in light
+// and off-key in dark, so the header ink and icon fill go back to the contract.
+// The green stays where it belongs: on the tc controls in the body.
 .tool_header.tool_tc {
 	background-color: @tool_color;
-	color: @text_color;
-
-	.button.white {
-		background-color: @text_color !important;
-	}
 }

@@ -190,7 +190,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "3.3.0"
+        "value": "3.4.0"
       }
     ],
     "dd1328": [
@@ -3047,6 +3047,116 @@
             "lang": "lg-spa",
             "name": "transcription_completed",
             "value": "Transcripción finalizada."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "related_record",
+            "value": "السجل"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "related_record",
+            "value": "Registre"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "related_record",
+            "value": "Datensatz"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "related_record",
+            "value": "Εγγραφή"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "related_record",
+            "value": "Record"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "related_record",
+            "value": "Erregistroa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "related_record",
+            "value": "Fiche"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "related_record",
+            "value": "Scheda"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "related_record",
+            "value": "अभिलेख"
+          },
+          {
+            "lang": "lg-por",
+            "name": "related_record",
+            "value": "Registo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "related_record",
+            "value": "Registro"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "related_record_description",
+            "value": "السجل الذي تنتمي إليه هذه النسخة"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "related_record_description",
+            "value": "Registre al qual pertany aquesta transcripció"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "related_record_description",
+            "value": "Datensatz, zu dem diese Transkription gehört"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "related_record_description",
+            "value": "Εγγραφή στην οποία ανήκει αυτή η μεταγραφή"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "related_record_description",
+            "value": "Record this transcription belongs to"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "related_record_description",
+            "value": "Transkripzio hau dagokion erregistroa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "related_record_description",
+            "value": "Fiche à laquelle appartient cette transcription"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "related_record_description",
+            "value": "Scheda a cui appartiene questa trascrizione"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "related_record_description",
+            "value": "यो प्रतिलेख सम्बन्धित अभिलेख"
+          },
+          {
+            "lang": "lg-por",
+            "name": "related_record_description",
+            "value": "Registo ao qual pertence esta transcrição"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "related_record_description",
+            "value": "Registro al que pertenece esta transcripción"
           }
         ]
       }

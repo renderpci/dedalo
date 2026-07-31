@@ -222,9 +222,6 @@
 .wrapper_tool.tool_user_admin .spinner {
   background-color: var(--tool_user_admin);
 }
-.wrapper_tool.tool_user_admin > .tool_header {
-  position: relative;
-}
 .wrapper_tool.tool_user_admin > .content_data {
   padding: 1.5rem;
 }

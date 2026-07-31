@@ -222,14 +222,6 @@
 .wrapper_tool.tool_cataloging .spinner {
   background-color: var(--tool_cataloging);
 }
-.wrapper_tool.tool_cataloging > .tool_header {
-  position: relative;
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_cataloging > .tool_header {
-    flex-wrap: wrap;
-  }
-}
 .wrapper_tool.tool_cataloging > .content_data {
   display: grid;
   grid-template-columns: 40% 60%;

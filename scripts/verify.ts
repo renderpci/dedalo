@@ -83,6 +83,7 @@ const TRIPWIRES = [
 	'test/unit/diffusion_scope_tripwire.test.ts',
 	'test/unit/diffusion_queue_stream_tripwire.test.ts',
 	'test/unit/dataframe_scan_coverage_tripwire.test.ts',
+	'test/unit/tool_header_contract_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

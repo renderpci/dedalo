@@ -161,7 +161,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "2.0.2"
+        "value": "2.1.0"
       }
     ],
     "dd1328": [
@@ -490,6 +490,106 @@
             "lang": "lg-nep",
             "name": "approach",
             "value": "दृष्टिकोण"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "viewer",
+            "value": "Show"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "viewer",
+            "value": "Mostrar"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "viewer",
+            "value": "Mostra"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "viewer",
+            "value": "Erakutsi"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "viewer",
+            "value": "Anzeigen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "viewer",
+            "value": "Afficher"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "viewer",
+            "value": "Mostra"
+          },
+          {
+            "lang": "lg-por",
+            "name": "viewer",
+            "value": "Mostrar"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "viewer",
+            "value": "Εμφάνιση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "viewer",
+            "value": "देखाउनुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "viewer_description",
+            "value": "Choose what this left panel shows"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "viewer_description",
+            "value": "Elige qué muestra este panel izquierdo"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "viewer_description",
+            "value": "Scegli cosa mostra questo pannello di sinistra"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "viewer_description",
+            "value": "Aukeratu ezkerreko panel honek zer erakusten duen"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "viewer_description",
+            "value": "Wählen Sie, was dieses linke Panel anzeigt"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "viewer_description",
+            "value": "Choisissez ce qu'affiche ce panneau de gauche"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "viewer_description",
+            "value": "Tria què mostra aquest plafó esquerre"
+          },
+          {
+            "lang": "lg-por",
+            "name": "viewer_description",
+            "value": "Escolha o que este painel esquerdo mostra"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "viewer_description",
+            "value": "Επιλέξτε τι εμφανίζει αυτό το αριστερό πλαίσιο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "viewer_description",
+            "value": "यो बायाँ प्यानलले के देखाउँछ छान्नुहोस्"
           },
           {
             "lang": "lg-eng",

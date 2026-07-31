@@ -28,65 +28,50 @@
 // wrapper_tool
 .wrapper_tool.tool_numisdata_order_coins {
 
+	// The tool fills its window and hands the leftover height to the two coin
+	// columns. They used to be `calc(100vh - 90px)` — a header height measured
+	// when the header was one row (~67px). This tool populates the controls
+	// band (the order_by toggles), so the shared contract now gives it a row of
+	// its own and the header is ~45px taller: the columns ran that far past the
+	// bottom of the viewport, adding an outer scrollbar and clipping the last
+	// mosaic row.
+	// max-height:100% is the modal guard — see tool_lang for the same pattern.
+	height: 100vh;
+	max-height: 100%;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-content: stretch;
+
+	// NARROW: give the height back. Below this width the two mosaics stack and
+	// go `height:auto; overflow:visible`, so nothing scrolls — and
+	// `.wrapper_tool { contain: content }` PAINT-clips the overflow, leaving
+	// every coin past the first screenful unreachable. With no height here the
+	// document scrolls, as it did when the panes carried their own.
+	@media screen and (max-width: @width_break_point_0) {
+		height: auto;
+		max-height: none;
+	}
+
+	>.tool_header {
+		flex: 0 0 auto;
+	}
+
 	.spinner {
 		background-color: @tool_color;
 	}
 
 	>.tool_header {
-		position: relative;
 
-		@media screen and (max-width: @width_break_point_0) {
-			flex-wrap: wrap;
-		}
-
+		// band layout, control metrics, the lang caption and the narrow-viewport
+		// wrap: tool_common `.tool_header >.tool_buttons_container`. Only the
+		// pressed state of the ordering toggles is this tool's own.
 		>.tool_buttons_container {
-			display: flex;
-			align-items: center;
-
-			@media screen and (max-width: @width_break_point_0) {
-				flex-wrap: wrap;
-				margin-top: 1rem;
-			}
 
 			>div, button {
-
-				margin: 0rem;
-				margin-left: 0.5rem;
-				margin-right: 0rem;
-				min-height: 2rem;
 
 				&.active{
 					background-color: @color_hilite_2;
 					border-color: @color_grey_7;
-				}
-
-				@media screen and (max-width: @width_break_point_0) {
-					margin-bottom: 1rem;
-					flex: 1 0 auto;
-				}
-
-			}
-
-			// select top tipo / id
-			>.related_list_container {
-
-			}
-
-			// component lang selector
-			>.lang_selector {
-				display: flex;
-				align-items: center;
-				margin-left: 0.75rem;
-				margin-right: 0.12rem;
-				@media screen and (max-width: @width_break_point_0) {
-					padding-right: 0.5rem;
-				}
-
-				>.lang_label {
-					padding-right: 0.33rem;
-				}
-				>select {
-
 				}
 			}
 
@@ -104,8 +89,13 @@
 	>.content_data {
 		display: grid;
 		grid-template-columns: 50% 50%;
-		align-items: start;
+		// stretch, not start: the columns take the row's full height so they can
+		// scroll inside it (see their `height: 100%` below)
+		align-items: stretch;
 		width: calc(100% - 1rem);
+		// whatever the header leaves, rather than 100vh minus a guess at it
+		flex: 1 1 auto;
+		min-height: 0;
 
 		@media screen and (max-width: @width_break_point_0) {
 			display: flex;
@@ -116,9 +106,15 @@
 		// left and right commons
 		.left_container,
 		.right_container {
-			overflow: scroll;
-				height: calc(100vh - 90px);
+			overflow: auto;
+			height: 100%;
+			min-height: 0;
 			padding-left: 1rem;
+
+			@media screen and (max-width: @width_break_point_0) {
+				height: auto;
+				overflow: visible;
+			}
 
 			.wrapper_component {
 				box-shadow: none;

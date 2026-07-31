@@ -294,10 +294,6 @@
 .tool_header.tool_import_marc21 {
   background-color: var(--tool_import_marc21);
 }
-.tool_header.tool_import_marc21 .tool_name_container .label {
-  display: flex;
-  align-items: center;
-}
 .tool_header.tool_import_marc21 .tool_name_container .label .button {
   font-size: 3rem;
 }

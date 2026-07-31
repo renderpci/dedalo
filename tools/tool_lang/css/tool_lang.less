@@ -29,6 +29,22 @@
 // tool wrapper
 .wrapper_tool.tool_lang {
 
+	// The tool fills its window and hands the leftover height to the panes.
+	// It used to be `calc(100vh - 14rem)` on the component itself — a magic
+	// number that silently broke whenever the header changed height (it grew a
+	// controls row on 2026-07-31 and pushed the action bar off screen).
+	// max-height:100% is the modal guard: with no sized ancestor it resolves to
+	// `none` and 100vh stands; inside a sized modal it clamps to the modal.
+	height: 100vh;
+	max-height: 100%;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-content: stretch;
+
+	>.tool_header {
+		flex: 0 0 auto;
+	}
+
 	.spinner {
 		background-color: @tool_color;
 	}
@@ -41,72 +57,40 @@
 		margin-bottom: 0.5rem;
 	}
 
+	// the identity hue; tool_common.less demotes it to the header's top edge and
+	// owns everything else here — surface, ink, the controls band and its captions,
+	// select shape, control heights, the narrow-viewport behaviour
 	>.tool_header {
 		background-color: @tool_color;
-		position: relative;
-
-		@media screen and (max-width: @width_break_point_0) {
-			flex-wrap: wrap;
-		}
-
-		>.tool_buttons_container {
-			display: flex;
-			align-items: flex-start;
-
-			@media screen and (max-width: @width_break_point_0) {
-				flex-wrap: wrap;
-				margin-top: 1rem;
-			}
-
-			>div, >button {
-				margin: 0rem;
-				margin-left: 0.5rem;
-				margin-right: 0rem;
-				min-height: 2rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-					margin-bottom: 1rem;
-					flex: 1 0 auto;
-				}
-			}
-
-			select {
-				opacity: 1;
-				padding: 0.33rem;
-				background-color: @color_grey_15;
-				border-radius: 3px;
-				margin-right: 0px;
-				max-width: 20rem;
-				min-width: 7rem;
-
-				@media screen and (max-width: @width_break_point_0) {
-
-				}
-			}
-
-			// status components wrapper
-			>.wrapper_component {
-				background-color: transparent;
-
-				>.label, label {
-					color: @color_white;
-				}
-			}
-		}
 	}//end >.tool_header
 
 
+	// The tool body is a column: the two panes take whatever height is left and the
+	// action row sits under them. It used to be `height: calc(100vh - 14rem)` on
+	// the component itself — a magic number that had to be re-guessed every time
+	// the header grew a row.
 	>.content_data {
+		flex: 1 1 auto;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
+		// the panes own their own padding (and the gutter must run edge to edge),
+		// so drop the wrapper's
+		padding: 0px;
 
 		// components_container
+		// FLEX, not grid: Split.js resizes by writing inline `width` + `calc()` on
+		// the two panes, which a grid track would simply ignore.
 		>.components_container {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			grid-gap: 1em;
+			display: flex;
+			flex: 1;
+			min-height: 0;
 			z-index: 0;
 
 			@media screen and (max-width: @width_break_point_0) {
-				grid-template-columns: 1fr;
+				flex-wrap: wrap;
+				overflow-y: auto;
 			}
 
 			select {
@@ -122,33 +106,83 @@
 					content: '';
 					position: absolute;
 					inset: 0;
-					background: rgba(255,255,255,0.7);
+					// a scrim, not a white sheet: the old rgba(255,255,255,.7) was
+					// a bright flash over the dark theme
+					background: var(--bg_surface);
+					opacity: 0.7;
 					z-index: 10;
 				}
 			}
 
+			// pane header ("Source language  [English]").
+			// Label FIRST, then the select, both left-aligned: `space-between` used
+			// to fling the caption to the far edge of the pane, a full pane-width
+			// away from the control it names. Pinned because the pane scrolls — a
+			// caption that scrolls out of its own pane loses the association it is
+			// there to make.
 			.top {
+				position: sticky;
+				top: 0;
+				z-index: 3;
 				display: flex;
-				align-items: center;
-				justify-content: space-between;
+				align-items: baseline;
+				gap: 0.5rem;
+				// bleed over the pane's side padding so the bar spans its full width.
+				// (!) no negative TOP margin: a sticky box cannot be pulled above
+				// its containing block's padding box, so the pane carries no top
+				// padding at all and this bar supplies it instead.
+				margin: 0px -1rem 0.75rem -1rem;
+				padding: 1rem;
+				padding-bottom: 2px;
+				padding-top: 2px;
+				padding-left: 2rem;
+				// (!) NOT optional, and not decoration: this bar is `position:
+				// sticky` inside a pane that scrolls, so with no fill of its own it
+				// composites over whatever passes beneath it and the pane's text
+				// runs visibly through the caption and the select.
+				background-color: var(--bg_surface);
+				border-bottom: 1px solid var(--border_default);
 
 				>.lang_label {
-					padding-right: 0.5rem;
+					order: -1; // before the select, whatever the DOM order is
+					padding-right: 0px;
 					text-transform: uppercase;
 					font-weight: 300;
+					font-size: 0.85rem;
+					letter-spacing: 0.04em;
+					color: var(--fg_muted);
+					white-space: nowrap;
+				}
+
+				>select {
+					margin-bottom: 0px;
 				}
 			}
 
-			// left/right columns inside components_container grid
-			.left_block,
-			.right_block {
+			// left/right panes. Split.js owns their WIDTH; everything else is here.
+			>.left_block,
+			>.right_block {
 				display: flex;
 				flex-direction: column;
 				min-height: 0;
+				// top padding belongs to the sticky .top bar; the SIDE padding is
+				// what the bar's `margin: 0 -1rem` bleed is written against. With
+				// `padding: 0` the bar was 2rem wider than its own scrollport: it
+				// overhung into the split gutter, its left 1rem was clipped, and
+				// `overflow-y: auto` computed overflow-x to `auto` too, so each
+				// pane grew a spurious horizontal scrollbar. Same value as
+				// tool_indexation, which ports the identical bar.
+				padding: 0px 1rem;
+				overflow-y: auto;
+
+				@media screen and (max-width: @width_break_point_0) {
+					// no split at this width (see render_tool_lang) — stack instead
+					width: 100% !important;
+					overflow: visible;
+				}
 			}
 
 			.content_data.component {
-				height: calc(100vh - 14rem);
 				align-content: flex-start;
 
 				// placeholder of dataframe inside component_iri
@@ -160,7 +194,6 @@
 			.source_component_container {
 				flex: 1;
 				min-height: 0;
-				overflow-y: auto;
 			}
 			.target_component_container {
 				flex: 1;
@@ -175,7 +208,8 @@
 					left: 0;
 					width: 100%;
 					height: 100%;
-					background: @color_white;
+					background: var(--bg_surface);
+					color: var(--fg_default);
 					overflow-y: auto;
 					padding: 1rem;
 					z-index: 5;
@@ -194,12 +228,19 @@
 			}
 		}//end .components_container
 
-		// buttons_container
+		// buttons_container — the action row under the two panes
 		>.buttons_container {
-			padding-top: 1em;
-			padding-bottom: 1em;
+			flex: 0 0 auto;
+			padding: 0.75rem 1rem;
+			// the global "report a problem" bubble is fixed to the bottom-right
+			// corner; without this the primary action sits underneath it
+			padding-right: 3.5rem;
 			display: flex;
+			align-items: flex-end;
 			justify-content: space-between;
+			gap: 1rem;
+			border-top: 1px solid var(--border_default);
+			background-color: var(--bg_surface);
 
 			// automatic_translation_container
 			>.automatic_translation_container {
@@ -254,15 +295,19 @@
 				}
 
 				// collapsible configuration panel
+				// (!) opens UPWARD: the action row is the last thing on screen, so
+				// a downward panel would open off the bottom edge
 				>.configuration_container {
 					position: absolute;
-					top: 100%;
+					bottom: 100%;
 					left: 0;
-					background: @color_white;
-					border: 1px solid @color_grey_12;
+					background: var(--bg_surface);
+					color: var(--fg_default);
+					border: 1px solid var(--border_default);
+					box-shadow: 0 -2px 6px rgb(0 0 0 / 20%);
 					border-radius: 3px;
 					padding: 0.5rem 0.75rem;
-					margin-top: 0.25em;
+					margin-bottom: 0.25em;
 					z-index: 100;
 					white-space: nowrap;
 
@@ -313,6 +358,65 @@
 			}
 		}//end >.buttons_container
 	}//end content_data
+
+	// split
+	// The drag handle between the source and target panes.
+	// The grip is DRAWN, not a bitmap. It used to be
+	// `url('../img/grips/vertical.png')` — a file that was never added to git, so
+	// on any checkout but the one it was written on the request 404s and the
+	// divider has no grip at all. It was also a fixed light-grey image, which
+	// vanishes against the dark theme. This is tool_transcription's idiom: two
+	// theme-aware tokens and a repeating gradient, nothing to ship.
+	// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
+	.gutter {
+		flex: 0 0 auto;
+		position: relative;
+		background-color: var(--bg_surface_alt);
+		border-left: 1px solid var(--border_default);
+		border-right: 1px solid var(--border_default);
+		box-sizing: border-box;
+		transition: background-color 0.15s;
+
+		// a short dotted rule centred on the bar, so the separator reads as
+		// something you can take hold of rather than a border
+		&::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 2px;
+			height: 1.75rem;
+			background-image: repeating-linear-gradient(
+				to bottom,
+				var(--fg_muted) 0px,
+				var(--fg_muted) 2px,
+				transparent 2px,
+				transparent 5px
+			);
+		}
+
+		// the tool hue on hover is what tells the user the divider is draggable
+		&:hover {
+			background-color: var(--bg_surface);
+
+			&::after {
+				background-image: repeating-linear-gradient(
+					to bottom,
+					@tool_color 0px,
+					@tool_color 2px,
+					transparent 2px,
+					transparent 5px
+				);
+			}
+		}
+
+		// (!) only the horizontal case exists: this tool splits left/right and
+		// never top/bottom, so there is no .gutter-vertical rule to write.
+		&.gutter-horizontal {
+			cursor: col-resize;
+		}
+	}
 }//end wrapper_tool
 
 // modal header tool modification
