@@ -170,16 +170,23 @@ export const set_element_css = async function(key, value) {
  * always pass false; recursive calls always pass true to prevent premature insertion
  * of partial rule fragments.
  *
+ * Author-supplied colour declarations additionally yield a `dark_rules` list —
+ * the same declarations remapped for the dark theme (see adapt_color_for_dark).
+ * They are queued as a separate `:root[data-theme="dark"] <selector>` rule so
+ * both themes are served by static CSS and a theme toggle needs no re-injection.
+ *
  * @param {string} selector - Full CSS selector for the rule (e.g. '.rsc170_rsc20.wrapper_component')
  * @param {Object} json_css_values - Flat or nested CSS-property object
  * @param {boolean} skip_insert - When true, collected declarations are returned to
  *   the caller without queuing; used during recursion to build nested rule bodies
- * @returns {Array<string>} Flat list of serialised CSS declarations for this level
- *   (e.g. ['width:12%', 'height:150px']). Empty when all entries are nested objects.
+ * @returns {{rules: Array<string>, dark_rules: Array<string>}} Serialised CSS
+ *   declarations for this level (e.g. ['width:12%', 'height:150px']) and their
+ *   dark-theme counterparts. Both empty when all entries are nested objects.
  */
 const process_rule = function(selector, json_css_values, skip_insert) {
 
-	const rules = []
+	const rules			= []
+	const dark_rules	= []
 
 	for(const key in json_css_values) {
 
@@ -192,6 +199,12 @@ const process_rule = function(selector, json_css_values, skip_insert) {
 				: `${key}:${value}`
 
 			rules.push(propText)
+
+			// dark theme counterpart for author-supplied literal colours
+			const dark_value = adapt_color_for_dark(key, value)
+			if (dark_value!==null) {
+				dark_rules.push(`${key}:${dark_value}`)
+			}
 		}
 		else if(
 			typeof value==='object'
@@ -200,13 +213,13 @@ const process_rule = function(selector, json_css_values, skip_insert) {
 			{
 
 			// recursion
-			const deep_rules = process_rule(
+			const deep = process_rule(
 				selector,
 				value,
 				true // skip_insert
 			)
 
-			const joined = deep_rules.join('; ');
+			const joined = deep.rules.join('; ');
 
 			// Create nested rule (assuming key is a media query or pseudo-selector)
 			// const rule = `
@@ -216,14 +229,20 @@ const process_rule = function(selector, json_css_values, skip_insert) {
 			// 	}
 			// }`;
 
-			const rule_body = `${selector} { ${joined} }`
+			// The dark counterpart rides inside the same at-rule body as a second
+			// nested rule, so one queue entry still holds everything for `key`.
+			const dark_body = deep.dark_rules.length > 0
+				? ` ${DARK_ROOT} ${selector} { ${deep.dark_rules.join('; ')} }`
+				: ''
+
+			const rule_body = `${selector} { ${joined} }${dark_body}`
 			queue_style_update(key, rule_body)
 		}
 	}
 
 	// resolving deep_rules cases
 		if (skip_insert) {
-			return rules
+			return { rules, dark_rules }
 		}
 
 	 // Combine all rules for the main selector
@@ -233,9 +252,87 @@ const process_rule = function(selector, json_css_values, skip_insert) {
 			queue_style_update(selector, rule_body)
 		}
 
+	// Dark counterpart as its own rule. `:root[data-theme="dark"]` adds
+	// (0,2,0) of specificity on top of the base selector, so it always wins
+	// without needing !important, and both rules coexist: toggling the theme
+	// needs no re-injection.
+		if (dark_rules.length > 0) {
 
-	return rules
+			queue_style_update(
+				`${DARK_ROOT} ${selector}`,
+				dark_rules.join('; ')
+			)
+		}
+
+
+	return { rules, dark_rules }
 }//end process_rule
+
+
+
+/**
+ * ADAPT_COLOR_FOR_DARK
+ * Map an author-supplied (ontology) colour to its dark-theme counterpart.
+ *
+ * Colours injected through set_element_css come from `dd_ontology` component
+ * properties — they are DATA, authored against the light palette, and therefore
+ * survive the `[data-theme="dark"]` token overrides untouched. Left alone, a
+ * light surface colour keeps painting a near-white slab under the dark theme
+ * and the (now near-white) ink on top becomes unreadable.
+ *
+ * The mapping is the same policy the hand-tuned dark palette follows in
+ * theme_dark.less: KEEP THE HUE (it is meaningful — it encodes the section /
+ * field grouping), damp the saturation, and move the lightness to the band the
+ * dark theme uses. Expressed with CSS relative colour syntax so the browser
+ * does the conversion and any colour notation is accepted:
+ *
+ *   #fce8d2 (surface) -> hsl(from #fce8d2 h calc(s * 0.42) 18%) ~= #3c2f26
+ *                        (theme_dark's hand-picked --color_hilite is #4a3424)
+ *
+ * Only single-token literal colours are adapted. `var(…)` values are already
+ * theme-aware, and keywords (`transparent`, `inherit`, `currentColor`) plus
+ * shorthand/gradient values have no single colour to map, so all are skipped.
+ *
+ * @param {string} property - CSS property name, e.g. 'background-color'
+ * @param {string} value    - Author-supplied value, e.g. '#ffe2ab'
+ * @returns {string|null} The dark-theme value, or null when the declaration is
+ *   not an adaptable colour and must be left exactly as authored
+ */
+const DARK_ROOT				= ':root[data-theme="dark"]'
+const surface_prop_re		= /^(background|background-color)$/
+const line_prop_re			= /^(border(-(top|right|bottom|left))?-color|outline-color)$/
+const ink_prop_re			= /^(color|fill|stroke)$/
+const literal_color_re		= /^(#[0-9a-f]{3,8}|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^()]*\)|[a-z]{3,20})$/i
+const color_keyword_re		= /^(transparent|inherit|initial|unset|revert|none|currentcolor|auto)$/i
+const adapt_color_for_dark = function(property, value) {
+
+	const prop = String(property).toLowerCase().trim()
+
+	const is_surface	= surface_prop_re.test(prop)
+	const is_line		= line_prop_re.test(prop)
+	const is_ink		= ink_prop_re.test(prop)
+	if (!is_surface && !is_line && !is_ink) {
+		return null
+	}
+
+	const raw = String(value).trim()
+	if (!literal_color_re.test(raw) || color_keyword_re.test(raw)) {
+		return null // var(), shorthand, gradient, keyword… : leave as authored
+	}
+
+	if (is_ink) {
+		// ink is lifted into the light band so it reads on a dark surface
+		return `hsl(from ${raw} h calc(s * 0.55) 78%)`
+	}
+	if (is_line) {
+		// borders sit between surface and ink: visible, never glaring
+		return `hsl(from ${raw} h calc(s * 0.42) 34%)`
+	}
+
+	// surface. 18% is the ceiling that keeps --field_label_fg (#9aa3ae, the
+	// smallest ink that lands on these surfaces) at ~5:1 — WCAG AA.
+	return `hsl(from ${raw} h calc(s * 0.42) 18%)`
+}//end adapt_color_for_dark
 
 
 
@@ -499,6 +596,7 @@ export const prune_rules = function(condition_fn) {
  *   determined); false when the rule is orphan (no element matches) and safe to prune
  */
 const pseudo_re = /:{1,2}[a-zA-Z-]+(\([^)]*\))?/g;
+const theme_scope_re = /^\s*:root\[data-theme=[^\]]*\]\s+/i;
 const is_selector_alive = function(rule) {
 
 	// Non-style rules (media, keyframes, font-face...) have no selectorText.
@@ -512,8 +610,14 @@ const is_selector_alive = function(rule) {
 	const ar_selector = selector_text.split(',');
 	for (let i = 0; i < ar_selector.length; i++) {
 
-		// strip pseudo-classes / pseudo-elements and any dangling combinators
+		// strip the theme scope FIRST. `:root[data-theme="dark"] .foo` (the dark
+		// counterpart emitted by process_rule) matches nothing while the light
+		// theme is active, so testing it as-is would prune every dark rule the
+		// moment the user is on light — and the components would then render
+		// unthemed after a toggle. The rule lives or dies with its base selector.
+		// stripping pseudo-classes / pseudo-elements and any dangling combinators
 		const clean = ar_selector[i]
+			.replace(theme_scope_re, '')
 			.replace(pseudo_re, '')
 			.replace(/[>+~\s]+$/, '')
 			.trim();

@@ -38,6 +38,20 @@
 			}
 		}
 
+		// dark theme: the badge background flips to the dark band — the static
+		// grey below, and the ontology section colour that css.js remaps in
+		// adapt_color_for_dark. The ink must flip with it: @color_white resolves
+		// to the dark surface (#1b1d20) under [data-theme="dark"] and would be
+		// invisible on it.
+		:root[data-theme="dark"] & {
+			background-color: var(--bg_header);
+
+			>.label,
+			>.content_data >.section_id {
+				color: var(--fg_default);
+			}
+		}
+
 	}//end .edit
 
 	&.search {

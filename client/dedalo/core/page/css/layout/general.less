@@ -903,7 +903,11 @@
 	// It is a state marker, not content, so it must read as a watermark.
 	// Matched by src because most views set only the src (no class); the
 	// edit view of component_svg also tags it .fallback_image.
+	// component_image renders it through <object data=…> (so the svg keeps its
+	// own viewBox scaling), which the img selectors never matched — that is why
+	// an empty image field used to flash a full-strength white logo in dark.
 	img[src$="/themes/default/default.svg"],
+	object[data$="/themes/default/default.svg"],
 	img.fallback_image {
 		opacity: var(--media_placeholder_opacity, 1);
 	}
