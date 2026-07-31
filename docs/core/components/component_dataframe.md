@@ -71,8 +71,14 @@ Both the dataframe pairing AND the relation sibling-ordering have moved to `id_k
     ],
     "render_views" :[
         {
-            "view" : "default | mini | line",
-            "mode" : "edit | list"
+            "_comment" : "edit: the component_portal views, verbatim",
+            "view"     : "default | line | tree | mosaic | indexation | content | text | print",
+            "mode"     : "edit"
+        },
+        {
+            "_comment" : "list: dataframe-specific renderers (dataframe_<view>); others fall back to the portal list view",
+            "view"     : "default | text | mini",
+            "mode"     : "list"
         }
     ],
     "data"        : "array of frame locators",
@@ -214,33 +220,52 @@ unpaired expansion rather than inventing one.
 
 ### Storage shape
 
-Record with one IRI value `id:2` paired with label record `dd1706:3`, through slot `dd560`, extending main component `rsc217`:
+Frames live in the record's **`relation`** column — a JSONB **object keyed by
+component tipo**, one key per component, each holding that component's locator
+array. (It is `relation`, singular, and not a flat array: a frame is just one
+more entry under its own slot's key, alongside every other relation component
+of the record.)
+
+Live `matrix` row `numisdata5/9`: the IRI value `id:1` of main component
+`numisdata215` paired with label record `dd1706:60`, through slot `dd560`:
 
 ```json
 {
-   "relations": [
-        {"type":"dd490","section_id":"3","section_tipo":"dd1706","id_key":2,"from_component_tipo":"dd560","main_component_tipo":"rsc217","id":1}
-    ]
+    "relation": {
+        "dd560": [
+            {"id":1,"type":"dd490","id_key":1,"section_id":"60","section_tipo":"dd1706","from_component_tipo":"dd560","main_component_tipo":"numisdata215"}
+        ]
+    }
 }
 ```
 
 Note that the frame locator carries its **own** `id` (it is itself a data item of the dataframe component) — do not confuse it with `id_key`, the pairing key.
 
-**Literal main: text with a source qualifier.** A [component_input_text](component_input_text.md) (tipo `oh22`) with two values, the second one qualified by a frame stored in target section `oh57`:
+**Literal main: text with a role qualifier.** The live literal wiring — a
+[component_input_text](component_input_text.md) `oh16` (section `oh1`) with two
+values, the second one qualified by a frame in slot `oh130` pointing at a
+`rolepos1` term. Note the literal's values live in the **`string`** column
+(keyed by tipo, like every literal) while its frames live in **`relation`**
+under the SLOT's tipo — never under the main's:
 
 ```json
 {
     "string": {
-        "oh22": [
-            {"id": 1, "lang": "lg-eng", "value": "First testimony"},
-            {"id": 2, "lang": "lg-eng", "value": "Second testimony"}
+        "oh16": [
+            {"id": 1, "lang": "lg-spa", "value": "Primer testimonio"},
+            {"id": 2, "lang": "lg-spa", "value": "Segundo testimonio"}
         ]
     },
-    "relations": [
-        {"type":"dd490","section_id":"12","section_tipo":"oh57","id_key":2,"from_component_tipo":"oh115","main_component_tipo":"oh22","id":1}
-    ]
+    "relation": {
+        "oh130": [
+            {"id":1,"type":"dd490","id_key":2,"section_id":"4","section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}
+        ]
+    }
 }
 ```
+
+`id_key: 2` pairs the frame to the value whose `id` is `2` ("Segundo
+testimonio") — never to its array position.
 
 The edit view renders the frame button next to the second value; reordering or editing the values never breaks the pairing because it follows `id:2`, not the position.
 
@@ -275,40 +300,57 @@ A `component_dataframe` is created as an ontology node whose `model` is `compone
 
 Node definition (shape):
 
+Node definition of the live slot `oh115` (the role frame of the `oh24` portal,
+in section `oh1`):
+
 ```json
 {
     "tipo"         : "oh115",
     "model"        : "component_dataframe",
-    "parent"       : "oh22",
+    "parent"       : "oh24",
     "section_tipo" : "oh1",
-    "lg-eng"       : "Source frame",
-    "lg-spa"       : "Marco de fuente",
+    "lg-eng"       : "Role",
+    "lg-spa"       : "Rol",
     "translatable" : false,
     "properties"   : { }
 }
 ```
 
-Realistic `properties` block for the dataframe slot node — a portal `source` whose `sqo.section_tipo` is the frame target section, plus the optional delete policy:
+Its live `properties` block — a portal `source` whose `sqo.section_tipo` is the
+frame target. Here the target is resolved dynamically from
+`hierarchy_types: 4` (which expands to the role/uncertainty hierarchy sections
+`ds1`, `roleusr1`, `rolejob1`, `rolepos1`, `uncertainty1`) rather than named
+literally; a fixed target uses `{"value": ["<section>"], "source": "section"}`
+instead, as `numisdata1447` does with `rsc1242` further below.
 
 ```json
 {
+    "mode": "edit",
+    "view": "tree",
     "source": {
-        "mode": "list",
+        "mode": "autocomplete",
         "request_config": [{
             "sqo": {
-                "section_tipo": [{"tipo": "oh57"}]
+                "section_tipo": [{"value": [4], "source": "hierarchy_types"}]
             },
             "show": {
                 "ddo_map": [
-                    {"tipo": "oh58", "model": "component_input_text", "parent": "self", "section_tipo": "self", "view": "text"}
+                    {"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": false}
                 ],
+                "sqo_config": {"limit": 30},
+                "show_interface": {"label": false},
                 "fields_separator": ", "
             }
         }]
-    },
-    "dataframe": {
-        "delete_policy": "delete_target"
     }
+}
+```
+
+The optional delete policy is a sibling block on the same node:
+
+```json
+{
+    "dataframe": { "delete_policy": "delete_target" }
 }
 ```
 
@@ -323,13 +365,41 @@ Realistic `properties` block for the dataframe slot node — a portal `source` w
         "request_config": [{
             "show": {
                 "ddo_map": [
-                    {"tipo": "oh115", "model": "component_dataframe", "parent": "self", "view": "line", "section_tipo": "oh1"}
+                    {"tipo": "oh115", "mode": "edit", "view": "line", "parent": "self", "section_tipo": "oh1"}
                 ]
             }
         }]
     }
 }
 ```
+
+!!! danger "Declare `mode` on the slot ddo"
+    **A slot ddo that omits `mode` does not inherit the caller's.** When the
+    owner is not a section it resolves to **`mode: "list"`** (the
+    resolve-ddo-mode rule, `src/core/relations/request_config/explicit.ts`) and
+    the server stamps `"mode":"list","fixed_mode":true` on it — so you get the
+    compact read-only cell instead of the editable picker.
+
+    In **edit** mode the views are simply
+    [component_portal](component_portal.md)'s, used verbatim — `line`, `tree`,
+    `default`, `mosaic`, `indexation`, `content`, `text`. `view: "line"` above
+    is one of them and renders through `view_line_edit_portal`.
+
+    **List** mode is the exception: there the client prefixes the view name to
+    `dataframe_<view>` to reach the dataframe-specific renderers, and only
+    three exist — `dataframe_default`, `dataframe_text`, `dataframe_mini`
+    (views `default`, `text`, `mini`). Any other name matches no case and falls
+    through to `view_default_list_portal`, the plain portal renderer, which
+    shows nothing for a slot that has no frames yet.
+
+    So `{"view": "line"}` with **no** `mode` is the trap: a good edit view
+    silently demoted to list, where it does not exist. Adding `"mode": "edit"`
+    is the fix — the view was never the problem.
+    (The two switches: `render_edit_component_portal.js` and
+    `render_list_component_portal.js`.)
+
+    Symptom: the server sends the frame item and its context correctly, the
+    browser console is clean, and nothing appears.
 
 At construction the dataframe instance is created with a **caller_dataframe** object (carrying `id_key` / `main_component_tipo` for the item it is paired with); this context is expected in non-search modes. `section_tipo` / `parent` of the *target* records are not the dataframe node's own section; persistence still flows through the main record's section (the single database writer), with the frame locators living in that record's `relations` container.
 
@@ -368,67 +438,98 @@ Dataframe configuration is split across two nodes: a flag on the **main componen
 - **Values:** set `"role": "rating"` on a ddo inside the slot's `request_config.hide.ddo_map`, pointing at a [component_radio_button](component_radio_button.md) in the target section.
 - **Effect:** the client resolves that component's value against its datalist and paints the frame button with the rating's colour (and contrast-aware text colour). Used to surface a confidence/quality rating directly on the frame button without opening the modal. The ddo lives in `hide` so the rating is fetched for display only.
 
-### Worked example — uncertainty rating on a literal
+### Worked example — the valuation rating
 
-Complete ontology config to add a coloured "uncertainty" rating to each value of a **literal** main.
-Tipos here are placeholders: literal main `lit5` in section `lit5_section`, dataframe slot `lit5_df`,
-frame target section `unc1` holding a `component_radio_button` `unc_rating` (with a colour datalist).
+This is the live `monedaiberica` configuration, verbatim. Main component
+`numisdata161` (a `component_autocomplete` — an alias of
+[component_portal](component_portal.md) — in
+section `numisdata4`), dataframe slot `numisdata1447`, frame target section
+`rsc1242`, rating [component_radio_button](component_radio_button.md)
+`rsc1246`.
 
-**1. Main literal instance** (`lit5`) — the activation flag plus the slot ddo:
+**1. Dataframe slot node** (`numisdata1447`, `parent: numisdata161`) — its
+portal points at the frame target section `rsc1242`, and it declares `rsc1246`
+**twice**: in `show` (mode `edit`) so the rating is editable inside the frame,
+and in `hide` (mode `solved`, `role: "rating"`) so the colour is resolved for
+the chip without rendering a second column.
 
 ```json
 {
-    "properties": {
-        "has_dataframe": true,
-        "source": {
-            "request_config": [{
-                "show": {
-                    "ddo_map": [
-                        {"tipo": "lit5_df", "model": "component_dataframe", "parent": "self", "view": "default", "section_tipo": "lit5_section"}
-                    ]
-                }
-            }]
-        }
+    "label": "?",
+    "source": {
+        "request_config": [{
+            "sqo": { "section_tipo": [{"value": ["rsc1242"], "source": "section"}] },
+            "show": {
+                "ddo_map": [
+                    {"tipo": "rsc1246", "mode": "edit", "view": "line", "parent": "self", "section_tipo": "self"}
+                ],
+                "sqo_config": {"limit": 1}
+            },
+            "hide": {
+                "ddo_map": [
+                    {"tipo": "rsc1246", "mode": "solved", "role": "rating", "parent": "self", "section_tipo": "self"}
+                ]
+            }
+        }]
+    },
+    "hard_delete": true
+}
+```
+
+!!! warning "`hard_delete` is INERT"
+    `numisdata1447` carries it, and so do 59 other ontology nodes, but nothing
+    reads it: there is no `hard_delete` reader anywhere in `src/`, and the
+    client branch that once consumed it is commented out
+    (`view_default_list_dataframe.js`). The implemented delete opt-in is
+    `properties.dataframe.delete_policy` (below) — a different key in a
+    different place. Do not copy `hard_delete` into new configs expecting an
+    effect.
+
+**2. The rating component** (`rsc1246`, a `component_radio_button` under the
+`rsc1243` grouper of section `rsc1242`) — its options are the records of
+section `rsc1256`, labelled by `rsc1259` in `show` and **coloured by `rsc1260`
+in `hide`**:
+
+```json
+{
+    "view": "rating",
+    "source": {
+        "request_config": [{
+            "sqo": { "section_tipo": [{"value": ["rsc1256"], "source": "section"}] },
+            "show": { "ddo_map": [{"tipo": "rsc1259", "parent": "self", "section_tipo": "self"}] },
+            "hide": { "ddo_map": [{"tipo": "rsc1260", "parent": "self", "section_tipo": "self"}] }
+        }]
     }
 }
 ```
 
-**2. Dataframe slot node** (`lit5_df`) — points its portal at the frame target section (`unc1`), and
-declares the rating ddo in `hide.ddo_map`:
+**3. The vocabulary** — each `rsc1256` record stores its label in `rsc1259`
+(per language) and its colour in `rsc1260` (`lg-nolan`). The four live options:
 
-```json
-{
-    "model": "component_dataframe",
-    "parent": "lit5",
-    "properties": {
-        "source": {
-            "mode": "list",
-            "request_config": [{
-                "sqo": { "section_tipo": [{"tipo": "unc1"}] },
-                "show": {
-                    "ddo_map": [
-                        {"tipo": "unc_label", "model": "component_input_text", "parent": "self", "section_tipo": "self", "view": "text"}
-                    ],
-                    "fields_separator": ", "
-                },
-                "hide": {
-                    "ddo_map": [
-                        {"tipo": "unc_rating", "model": "component_radio_button", "role": "rating", "parent": "self", "section_tipo": "self"}
-                    ]
-                }
-            }]
-        }
-    }
-}
-```
+| `rsc1256` id | `rsc1259` (label) | `rsc1260` (colour) |
+|---|---|---|
+| 1 | Valor incierto | `#b51a00` |
+| 2 | Valor aproximado | `#ffaa00` |
+| 3 | Menos cierto | `#f5ea14` |
+| 4 | Más cierto | `#27bb4c` |
 
-**3. Frame target section** (`unc1`) contains the `component_radio_button` `unc_rating` whose **datalist
-options carry the colours** (the option provides the hex the client paints onto the button).
+The colour reaches the client on the rating component's **datalist**: every
+option carries `hide: [{literal, tipo, section_id, section_tipo}]`, and
+`view_default_list_dataframe.js` matches the picked locator's `section_id`
+against it and paints the chip with `hide[0].literal`.
 
-**4. Result** — open a `lit5_section` record in edit: each text value shows a round rating button; click
-it to create/open the `unc1` frame record and pick a rating; the button takes that colour. The same
-button also renders in **read-only** contexts — Time Machine previews and read-only users (the literal
-edit views attach the dataframe in both the writable and read-only render branches).
+**4. Result** — open a `numisdata4` record in edit: each `numisdata161` value
+shows a round rating button; click it to create/open the `rsc1242` frame record
+and pick a valuation; the button takes that colour. The same button also renders
+in **read-only** contexts — Time Machine previews and read-only users (the edit
+views attach the dataframe in both the writable and read-only render branches).
+
+!!! note "Literal mains"
+    The example above is a **relation** main. The literal case differs only in
+    the activation flag: a literal needs `has_dataframe: true` on the main
+    (see below). The live literal wiring is `oh16` (a
+    [component_input_text](component_input_text.md) in section `oh1`) with the
+    slot `oh130`; the rating is optional and `oh130` does not use one.
 
 !!! note "Standard context properties"
     Like every component, `component_dataframe` honours the generic ontology context blocks carried into the datum `context`: `css`, `request_config` (RQO) and `view`. Any other custom key seen in production should be verified in the ontology.
@@ -459,7 +560,7 @@ DOM (list / default): `wrapper_component component_dataframe <tipo> <mode>` -> `
 **Export.** A component that hosts frames exports them alongside its data inside the [dedalo_data wrapper](../importing_data.md). `buildRawCell()` (`src/diffusion/export/grid.ts`) collects the slot's frame locators via `getDataframeChildTipos()` and emits them next to the value:
 
 ```json
-{"dedalo_data": {"data": [{"id":2,"value":"Second testimony","lang":"lg-eng"}], "dataframe": [{"type":"dd490","section_id":"12","section_tipo":"oh57","id_key":2,"from_component_tipo":"oh115","main_component_tipo":"oh22"}]}}
+{"dedalo_data": {"data": [{"id":2,"value":"Segundo testimonio","lang":"lg-spa"}], "dataframe": [{"type":"dd490","id_key":2,"section_id":"4","section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}]}}
 ```
 
 Explicit item ids round-trip, which is exactly what keeps `id_key` valid across an export/import cycle.
