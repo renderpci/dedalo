@@ -437,7 +437,11 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// filename base name
-		const filename = 'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
+		// Note that the file name is sanitized because toLocaleDateString adds characters
+		// like '/' (as in '31/7/2026') that are not valid inside a file name
+		const filename = sanitize_file_name(
+			'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
+		)
 
 		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
@@ -448,22 +452,23 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_csv.addEventListener('click', async function() {
 
-				// dd_grid
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'csv'
-					await dd_grid.build(false)
-					const csv_string	= await dd_grid.render()
+				try {
+					// dd_grid
+						const dd_grid		= self.dd_grid
+						dd_grid.view		= 'csv'
+						await dd_grid.build(false)
+						const csv_string	= await dd_grid.render()
 
-				// Download it
-					const file	= filename + '.csv';
-					const link	= document.createElement('a');
-					link.style.display = 'none';
-					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
-					link.setAttribute('download', file);
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
+					// Download it
+						download_file(
+							csv_string,
+							'text/csv;charset=utf-8',
+							filename + '.csv'
+						)
+				} catch (error) {
+					console.error('Error on export CSV:', error);
+					ui.show_message(export_buttons_options, 'Error on export CSV: ' + error.message)
+				}
 			})
 
 		// tsv. button_export_tsv
@@ -475,22 +480,23 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_tsv.addEventListener('click', async function() {
 
-				// dd_grid
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'tsv'
-					await dd_grid.build(false)
-					const tsv_string	= await dd_grid.render()
+				try {
+					// dd_grid
+						const dd_grid		= self.dd_grid
+						dd_grid.view		= 'tsv'
+						await dd_grid.build(false)
+						const tsv_string	= await dd_grid.render()
 
-				// Download it
-					const file	= filename + '.tsv';
-					const link	= document.createElement('a');
-					link.style.display = 'none';
-					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
-					link.setAttribute('download', file);
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
+					// Download it
+						download_file(
+							tsv_string,
+							'text/tab-separated-values;charset=utf-8',
+							filename + '.tsv'
+						)
+				} catch (error) {
+					console.error('Error on export TSV:', error);
+					ui.show_message(export_buttons_options, 'Error on export TSV: ' + error.message)
+				}
 			})
 
 		// ods. button_export ODS Libre office
@@ -501,18 +507,25 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_ods.addEventListener('click', async function() {
-				// Download it
-					const file	= filename+ '.ods';
 
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'table_export'
-					await dd_grid.build(false)
-					const table_export	= await dd_grid.render()
+				try {
+					// Download it
+						const file	= filename+ '.ods';
 
-					self.export_table_with_xlsx_lib({
-						table		: table_export,
-						filename	: file
-					})
+						const dd_grid		= self.dd_grid
+						dd_grid.view		= 'table_export'
+						await dd_grid.build(false)
+						const table_export	= await dd_grid.render()
+
+						// note that the call is awaited to be able to catch the library errors
+						await self.export_table_with_xlsx_lib({
+							table		: table_export,
+							filename	: file
+						})
+				} catch (error) {
+					console.error('Error on export ODS:', error);
+					ui.show_message(export_buttons_options, 'Error on export ODS: ' + error.message)
+				}
 			})
 
 		// xlsx. button_export Excel
@@ -523,18 +536,25 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_excel.addEventListener('click', async function() {
-				// Download it
-				const file	= filename+ '.xlsx';
 
-				const dd_grid		= self.dd_grid
-				dd_grid.view		= 'table_export'
-				await dd_grid.build(false)
-				const table_export	= await dd_grid.render()
+				try {
+					// Download it
+					const file	= filename+ '.xlsx';
 
-				self.export_table_with_xlsx_lib({
-					table		: table_export,
-					filename	: file
-				})
+					const dd_grid		= self.dd_grid
+					dd_grid.view		= 'table_export'
+					await dd_grid.build(false)
+					const table_export	= await dd_grid.render()
+
+					// note that the call is awaited to be able to catch the library errors
+					await self.export_table_with_xlsx_lib({
+						table		: table_export,
+						filename	: file
+					})
+				} catch (error) {
+					console.error('Error on export XLSX:', error);
+					ui.show_message(export_buttons_options, 'Error on export XLSX: ' + error.message)
+				}
 			})
 
 		// html. button export html
@@ -546,29 +566,31 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_html.addEventListener('click', function() {
 
-				// Download it
-					const file	= filename + '.html';
-
-					const html	= document.createElement('html');
-					const head	= document.createElement('head');
-					const meta	= document.createElement('meta');
-					meta.setAttribute('charset', 'utf-8');
-					const body	= document.createElement('body');
-
-					html.appendChild(head);
-					head.appendChild(meta);
-					head.appendChild(body);
-					body.appendChild(export_data_container);
-
+				try {
 					// Download it
-					const link	= document.createElement('a');
-					link.style.display = 'none';
-					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/text;charset=utf-8,' + html.outerHTML);
-					link.setAttribute('download', file);
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
+						const file	= filename + '.html';
+
+					// html_string. Note that the export data container is cloned. Else the node
+					// is moved out of the tool DOM and the grid disappears from the current view
+						const html_string = '<!DOCTYPE html>' + "\n"
+							+ '<html>' + "\n"
+							+ '<head>' + "\n"
+							+ '<meta charset="utf-8">' + "\n"
+							+ '</head>' + "\n"
+							+ '<body>' + "\n"
+							+ export_data_container.cloneNode(true).outerHTML + "\n"
+							+ '</body>' + "\n"
+							+ '</html>'
+
+						download_file(
+							html_string,
+							'text/html;charset=utf-8',
+							file
+						)
+				} catch (error) {
+					console.error('Error on export HTML:', error);
+					ui.show_message(export_buttons_options, 'Error on export HTML: ' + error.message)
+				}
 			})
 
 		// media. button download media (images, pdf, av, 3d, svg)
@@ -1255,6 +1277,64 @@ const download_media = async function (self, quality_parse) {
 
 	return true
 }//end download_media
+
+
+
+/**
+* SANITIZE_FILE_NAME
+* Removes from the given string the characters that are not allowed
+* inside a file name (as the '/' added by toLocaleDateString)
+* @param string file_name
+* @return string
+*/
+const sanitize_file_name = function(file_name) {
+
+	return String(file_name).replace(/[\\/:*?"<>|]/g, '-')
+}//end sanitize_file_name
+
+
+
+/**
+* DOWNLOAD_FILE
+* Creates a temporary link and clicks it to download the given content as a file.
+* Note that a Blob object URL is used instead of a 'data:' URI because Firefox
+* blocks top level 'data:' URI navigations and limits the size of 'data:' URIs
+* (as the ones generated by big grid exports).
+* @param string|Blob content
+* @param string mime
+* 	like 'text/csv;charset=utf-8'
+* @param string file_name
+* 	like 'export_my_section_31-7-2026-oh1.csv'
+* @return bool
+*/
+const download_file = function(content, mime, file_name) {
+
+	// blob
+		const blob = (content instanceof Blob)
+			? content
+			: new Blob([content], {type: mime})
+
+	// url. Temporary object URL, released once the download is already started
+		const url = URL.createObjectURL(blob)
+
+	// link. Note that 'target' is not set. A target forces the browser to open
+	// a new browsing context and the 'download' attribute is then ignored
+		const link = document.createElement('a')
+			  link.style.display	= 'none'
+			  link.href				= url
+			  link.download			= sanitize_file_name(file_name)
+
+	// download
+		document.body.appendChild(link)
+		link.click()
+		document.body.removeChild(link)
+
+	// release the object URL
+		setTimeout(() => URL.revokeObjectURL(url), 60000)
+
+
+	return true
+}//end download_file
 
 
 
