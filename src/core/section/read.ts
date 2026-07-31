@@ -1749,17 +1749,43 @@ export async function emitDdoData(
 				.map((valueItem) => (valueItem as { id?: number | string } | null)?.id)
 				.filter((id): id is number | string => id !== undefined && id !== null);
 			const pairIds = storedIds.length > 0 ? storedIds : [1];
+			// The main's OWN declared ddo for each slot. A dataframe must behave
+			// IDENTICALLY on a literal and on a relation main — one component,
+			// one ontology contract — so the frame's mode/target come from the
+			// same place in both: the ddo the main declares in its
+			// `show.ddo_map`. The relation path already does exactly this
+			// (relation_core: `childDdo.mode ?? portalMode`); this path used to
+			// pass a SYNTHETIC ddo `{tipo, section_tipo}` and read the mode off
+			// the slot NODE instead, so a ddo that declared `"mode":"edit"` was
+			// silently ignored on a literal and the frame resolved to 'list' —
+			// which, with any view other than default/text/mini, renders nothing.
+			// Discovery still walks fixedDataframeTipos / has_dataframe children
+			// (a slot need not be declared to exist); the ddo only supplies HOW
+			// it renders, and the node-property fallback keeps every config that
+			// declares no ddo byte-identical.
+			const { resolveOwnConfigMap } = await import('../section/list_definitions/section_list.ts');
+			const declaredDdos = (await resolveOwnConfigMap(ddo.tipo)).rawDdos ?? [];
 			for (const frameTipo of frameTipos) {
-				// Frame item mode: the frame NODE's own properties.mode (dd560 →
-				// 'edit') else LIST (the generic literal default, oracle-pinned).
-				const frameNodeMode = (await resolveFrameConfig(frameTipo)).nodeMode ?? 'list';
+				const declared = declaredDdos.find((entry) => entry.tipo === frameTipo);
+				// Frame item mode: the DECLARED ddo, else the frame NODE's own
+				// properties.mode (dd560 → 'edit'), else LIST (the generic
+				// literal default, oracle-pinned).
+				const frameMode =
+					declared?.mode ?? (await resolveFrameConfig(frameTipo)).nodeMode ?? 'list';
+				// Frames live on the caller's record unless the ddo names another
+				// section ('self'/undeclared = the caller's) — the sibling-record
+				// case emitDataframeItem resolves.
+				const declaredSection =
+					typeof declared?.section_tipo === 'string' && declared.section_tipo !== 'self'
+						? declared.section_tipo
+						: row.section_tipo;
 				for (const pairId of pairIds) {
 					await emitDataframeItem(
-						{ tipo: frameTipo, section_tipo: row.section_tipo } as Ddo,
+						{ tipo: frameTipo, section_tipo: declaredSection, view: declared?.view } as Ddo,
 						record,
 						ddo.tipo,
 						pairId,
-						frameNodeMode,
+						frameMode,
 						row,
 						defaultLang,
 						callerTipo,
