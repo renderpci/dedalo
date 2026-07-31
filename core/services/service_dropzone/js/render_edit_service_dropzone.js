@@ -749,8 +749,29 @@ const render_template = async function(self) {
 	// event success
 		current_dropzone.on('success', function(file, api_response) {
 
+			// server side errors. The API always answers with a HTTP 200 status, even when
+			// the upload failed (invalid mime, invalid extension, size limit, permissions, ...).
+			// In these cases the response has no 'file_data' and the reason is given in 'msg'
+			if (!api_response || api_response.result!==true || !api_response.file_data) {
+
+				const error_msg = (api_response && api_response.msg)
+					? api_response.msg
+					: 'Error. Unexpected server response on upload file'
+
+				console.error('Error on upload file:', error_msg, api_response);
+
+				// error event. Dropzone default handler marks the preview element as failed
+				// and displays the message in the '[data-dz-errormessage]' node
+				this.emit('error', file, error_msg)
+
+				return
+			}
+
 			//showing an image created by the server after upload
-			this.emit('thumbnail', file, api_response.file_data.thumbnail_url);
+			// note that thumbnail_url is null for files without preview (like text or audio files)
+			if (api_response.file_data.thumbnail_url) {
+				this.emit('thumbnail', file, api_response.file_data.thumbnail_url);
+			}
 
 			// Handle the api_responseText here. For example, add the text to the preview element:
 			file.previewTemplate.appendChild(
