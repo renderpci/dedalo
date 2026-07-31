@@ -201,6 +201,66 @@ describe('tool_image_rotation core', () => {
 		// original dims unchanged
 		expect(await getDimensions(`${ROOT}/image/original/rsc29_rsc170_8.jpg`)).toEqual(origBefore);
 	});
+
+	// The client (render_tool_image_crop.update_crop_area) sends crop_area in
+	// PIXELS of the default-quality file it previews. MEDIA_SPEC §tools: the crop
+	// is "proportional […] computed from the default-quality reference
+	// dimensions" — so the box must be divided by the reference dims and
+	// re-scaled per tier, never fed to ImageMagick as if it were a 0..1 fraction.
+	test.if(HAVE_MAGICK)('crops every non-original tier from default-quality pixels', async () => {
+		const id11: MediaIdentity = { ...identity, sectionId: 11 };
+		await makeImage('/image/original/rsc29_rsc170_11.jpg', '800x600');
+		await makeImage(`/image/${image.defaultQuality}/rsc29_rsc170_11.jpg`, '400x300');
+		await makeImage('/image/thumb/rsc29_rsc170_11.jpg', '200x150');
+		const result = await applyRotationCore(
+			image,
+			id11,
+			pathOpts,
+			[
+				{ quality: 'original', extension: 'jpg', file_exist: true },
+				{ quality: image.defaultQuality, extension: 'jpg', file_exist: true },
+				{ quality: 'thumb', extension: 'jpg', file_exist: true },
+			],
+			// left half / top half of the 400x300 reference tier
+			{ degrees: 0, cropArea: { x: 0, y: 0, width: 200, height: 150 } },
+		);
+		expect(result.errors).toEqual([]);
+		expect(result.cropped.some((p) => p.includes('original'))).toBe(false); // original untouched
+		expect(await getDimensions(`${ROOT}/image/original/rsc29_rsc170_11.jpg`)).toEqual({
+			width: 800,
+			height: 600,
+		});
+		// reference tier: exactly the requested pixel box
+		expect(
+			await getDimensions(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_11.jpg`),
+		).toEqual({ width: 200, height: 150 });
+		// thumb tier: the SAME proportion of its own (smaller) dimensions
+		expect(await getDimensions(`${ROOT}/image/thumb/rsc29_rsc170_11.jpg`)).toEqual({
+			width: 100,
+			height: 75,
+		});
+	});
+
+	// A box outside the reference frame is a caller bug, and ImageMagick would
+	// answer it by silently clamping to a full-frame no-op. Refuse loudly.
+	test.if(HAVE_MAGICK)('refuses a crop box outside the reference frame', async () => {
+		const id12: MediaIdentity = { ...identity, sectionId: 12 };
+		await makeImage(`/image/${image.defaultQuality}/rsc29_rsc170_12.jpg`, '400x300');
+		const result = await applyRotationCore(
+			image,
+			id12,
+			pathOpts,
+			[{ quality: image.defaultQuality, extension: 'jpg', file_exist: true }],
+			{ degrees: 0, cropArea: { x: 380, y: 10, width: 200, height: 150 } },
+		);
+		expect(result.cropped).toEqual([]);
+		expect(result.errors.length).toBe(1);
+		expect(result.errors[0]).toMatch(/falls outside/);
+		// the tier is left exactly as it was
+		expect(
+			await getDimensions(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_12.jpg`),
+		).toEqual({ width: 400, height: 300 });
+	});
 });
 
 describe('tool_pdf_extractor core', () => {

@@ -26,7 +26,14 @@ export interface ApplyRotationOptions {
 	mode?: 'expanded' | 'default';
 	/** Background color for exposed corners (jpg → '#ffffff'; null → transparent). */
 	background?: string | null;
-	/** Proportional crop box (fractions 0..1 of the default-quality reference), or null. */
+	/**
+	 * Crop box in PIXELS of the default-quality reference file — the tier the
+	 * client previews and measures the selection against
+	 * (render_tool_image_crop.update_crop_area scales display px → natural px of
+	 * that file). It is turned into a proportion here and re-scaled per tier
+	 * (MEDIA_SPEC: "proportional crop computed from the default-quality
+	 * reference dimensions"). Null skips the crop pass.
+	 */
 	cropArea?: { x: number; y: number; width: number; height: number } | null;
 }
 
@@ -76,7 +83,8 @@ export async function applyRotationCore(
 		}
 	}
 
-	// Crop pass: scale the fractional box per tier from the default-quality dims.
+	// Crop pass: the client box is measured in default-quality PIXELS, so it is
+	// normalized against that reference tier's dimensions and re-scaled per tier.
 	if (options.cropArea && options.cropArea.width > 0 && options.cropArea.height > 0) {
 		const refPath = buildMediaLocation(
 			spec,
@@ -86,6 +94,32 @@ export async function applyRotationCore(
 			pathOpts,
 		).absolutePath;
 		if (existsSync(refPath)) {
+			const refDims = await getDimensions(refPath);
+			if (!(refDims.width > 0 && refDims.height > 0)) {
+				result.errors.push(
+					`crop: unreadable ${spec.defaultQuality} reference dimensions (${refPath})`,
+				);
+				return result;
+			}
+			const fraction = {
+				x: options.cropArea.x / refDims.width,
+				y: options.cropArea.y / refDims.height,
+				width: options.cropArea.width / refDims.width,
+				height: options.cropArea.height / refDims.height,
+			};
+			// A box the client could not have drawn (outside the reference image)
+			// would be silently clamped by ImageMagick to a no-op full-frame crop.
+			if (
+				fraction.x < 0 ||
+				fraction.y < 0 ||
+				fraction.x + fraction.width > 1.001 ||
+				fraction.y + fraction.height > 1.001
+			) {
+				result.errors.push(
+					`crop: box ${options.cropArea.width}x${options.cropArea.height}+${options.cropArea.x}+${options.cropArea.y} falls outside the ${spec.defaultQuality} reference (${refDims.width}x${refDims.height})`,
+				);
+				return result;
+			}
 			for (const entry of entries) {
 				if (entry.quality === spec.originalQuality) continue;
 				if (entry.file_exist === false) continue;
@@ -100,11 +134,17 @@ export async function applyRotationCore(
 				try {
 					const dims = await getDimensions(path);
 					const box: CropBox = {
-						x: Math.round(options.cropArea.x * dims.width),
-						y: Math.round(options.cropArea.y * dims.height),
-						width: Math.round(options.cropArea.width * dims.width),
-						height: Math.round(options.cropArea.height * dims.height),
+						x: Math.round(fraction.x * dims.width),
+						y: Math.round(fraction.y * dims.height),
+						width: Math.round(fraction.width * dims.width),
+						height: Math.round(fraction.height * dims.height),
 					};
+					// Rounding can push the far edge 1px past the tier bounds —
+					// ImageMagick would warn ("geometry does not contain image") and
+					// the tier would be lost. Clamp instead.
+					box.width = Math.min(box.width, dims.width - box.x);
+					box.height = Math.min(box.height, dims.height - box.y);
+					if (box.width < 1 || box.height < 1) continue;
 					const temp = `${path}.crop.${process.pid}`;
 					await cropImage(path, temp, box);
 					renameSync(temp, path);

@@ -540,14 +540,29 @@ const get_buttons = function(self) {
 			button_apply_rotation.addEventListener('click', async function(){
 				self.node.content_data.classList.add('loading')
 				const rotation_degrees = output.value
-				const result = await self.apply_rotation({
+				const response = await self.apply_rotation({
 					rotation_degrees	: rotation_degrees,
 					background_color	: color_picker.value,
 					alpha				: alpha_checkbox.checked,
 					rotation_mode		: expanded_checkbox.checked ? 'expanded' : 'default',
 					crop_area			: render_tool_image_crop.crop_area || null,
 				})
-				if (result===true) {
+				// user cancelled the confirm dialog: nothing to report
+				if (response===false) {
+					self.node.content_data.classList.remove('loading')
+					return
+				}
+				if (response?.result!==true) {
+					// Do not fail silently: the server reports per-tier errors
+					// (e.g. an out-of-bounds crop box) that the user must see.
+					const msg = (response?.errors?.length)
+						? response.errors.join(' | ')
+						: (response?.msg || 'Error')
+					ui.show_message(options_container, msg, 'error')
+					self.node.content_data.classList.remove('loading')
+					return
+				}
+				if (response.result===true) {
 					// reload the image
 					await fetch(self.main_element_image.src, {cache: 'reload', mode: 'no-cors'});
 					self.main_element_image.src = self.main_element_image.src

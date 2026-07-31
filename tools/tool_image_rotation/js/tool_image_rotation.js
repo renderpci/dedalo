@@ -208,14 +208,18 @@ tool_image_rotation.prototype.build = async function(autoload=false) {
 * @param {string} options.rotation_mode - `'expanded'` grows the canvas to fit the
 *   full rotated image; `'default'` keeps the original canvas dimensions and clips
 *   corners.
-* @param {Object|null} options.crop_area - Pixel crop rectangle measured against the
-*   tool's preview image, or null to skip cropping.
-* @param {number} options.crop_area.x      - Left edge offset in display pixels.
-* @param {number} options.crop_area.y      - Top edge offset in display pixels.
-* @param {number} options.crop_area.width  - Crop width in display pixels.
-* @param {number} options.crop_area.height - Crop height in display pixels.
-* @returns {Promise<boolean>} Resolves with `true` on success, `false` on server
-*   error, or plain `false` (non-Promise) if the user cancels the confirm dialog.
+* @param {Object|null} options.crop_area - Pixel crop rectangle in the NATURAL
+*   pixel space of the previewed default-quality file (render_tool_image_crop
+*   already converts display px → natural px), or null to skip cropping. The
+*   server normalizes it against the default-quality dimensions and re-scales it
+*   per quality tier.
+* @param {number} options.crop_area.x      - Left edge offset in reference pixels.
+* @param {number} options.crop_area.y      - Top edge offset in reference pixels.
+* @param {number} options.crop_area.width  - Crop width in reference pixels.
+* @param {number} options.crop_area.height - Crop height in reference pixels.
+* @returns {Promise<Object>} Resolves with the full API response
+*   (`{result, msg, errors, …}`) so the caller can surface server-side failures;
+*   returns plain `false` (non-Promise) if the user cancels the confirm dialog.
 */
 tool_image_rotation.prototype.apply_rotation = function(options) {
 
@@ -264,9 +268,9 @@ tool_image_rotation.prototype.apply_rotation = function(options) {
 					dd_console("-> apply_rotation API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				// Resolve the whole response: `result` alone gave the caller no way
+				// to tell the user WHY a rotation/crop failed (silent no-op).
+				resolve(response)
 			})
 		})
 }//end apply_rotation
