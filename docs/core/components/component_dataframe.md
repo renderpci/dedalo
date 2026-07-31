@@ -173,6 +173,34 @@ main items is legitimate and must not be collapsed).
 > — never spell `type:'dd490'` in an input there) and
 > `test/unit/dataframe_contract_tripwire.test.ts`.
 
+### The frame chip colour (rating)
+
+A dataframe slot may declare a `role: "rating"` ddo in the **hide** block of its
+`request_config`; the client paints the frame chip with that option's colour
+(`view_default_list_dataframe.js`). The chain, using the live wiring:
+
+```
+numisdata1448 (dataframe on numisdata30)
+  └ hide.ddo_map → rsc1246  role:"rating"   component_radio_button
+                     ├ sqo.section_tipo → rsc1256   (the vocabulary)
+                     ├ show → rsc1259 "Valuation"   → the option LABEL
+                     └ hide → rsc1260 "Colour"      → the option COLOUR
+```
+
+The colour reaches the client on the **datalist**: each option carries
+`hide: [{literal, tipo, section_id, section_tipo}]` — one entry per hide ddo,
+resolved against that option's own record — and the client matches the picked
+locator's `section_id` against the datalist, then reads `hide[0].literal`.
+
+> **Regression note (2026-07-31).** `src/core/relations/datalist.ts` emitted
+> `hide: []` for every option (a ledgered gap), so `hide[0].literal` threw and
+> killed the whole record render. Both halves are now fixed: the datalist
+> resolves hide ddos, and the client access is optional-chained so a colour can
+> never again take a page down. Gate:
+> `test/unit/datalist_hide_ddos.test.ts` (seeds its own vocabulary — the corpus
+> records are not in the test DB, and an install-data assertion there passed
+> with zero `expect()` calls).
+
 ### Reading one item's frames
 
 `get_data` on a `component_dataframe` is a **paired** read: it honours
