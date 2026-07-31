@@ -165,6 +165,9 @@ export const ts_object = function() {
 	this.term_text
 	// HTMLElement data_container. Container for inline component editors (show_component_in_ts_object).
 	this.data_container
+	// int show_component_seq. Monotonic token for overlapping show_component_in_ts_object
+	// calls (rapid clicking): only the newest may mutate data_container.
+	this.show_component_seq = 0
 	// HTMLElement indexations_container. Container for the indexation dd_grid (show_indexations).
 	this.indexations_container
 	// HTMLElement nd_container. Container shown/hidden by toggle_nd for non-descriptor children.
@@ -1733,6 +1736,83 @@ ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 
 
 
+// Duration of the data_container height swap animation, in ms.
+const DATA_CONTAINER_ANIMATION_MS = 180
+
+/**
+* ANIMATE_DATA_CONTAINER_HEIGHT
+* Animates a data_container from a previously measured height to its current
+* (already laid out) one, so that swapping component editors moves the tree
+* below it smoothly instead of in a single jump.
+*
+* Called AFTER the DOM swap: from_height must be captured before the mutation
+* and the container must already hold its final content when this runs.
+*
+* No-ops when the height did not change, when the Web Animations API is
+* unavailable, or when the user asked for reduced motion. A container can only
+* have one height animation in flight; a new one cancels the previous so rapid
+* clicking does not stack conflicting animations.
+*
+* overflow is forced to hidden for the duration so shrinking does not spill the
+* outgoing content outside the container. This does not alter the measured
+* height (the container already contains its floated .wrapper_component child).
+*
+* @param {HTMLElement} container - The .data_container node.
+* @param {number} from_height - offsetHeight measured before the DOM mutation.
+* @returns {Animation|null} The running animation, or null when skipped.
+*/
+const animate_data_container_height = function(container, from_height) {
+
+	const to_height = container.offsetHeight
+
+	// nothing to animate
+		if (from_height===to_height) {
+			return null
+		}
+
+	// capability / preference guards
+		if (typeof container.animate!=='function') {
+			return null
+		}
+		if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			return null
+		}
+
+	// cancel any in-flight animation on this container (rapid clicks)
+		if (container.height_animation) {
+			container.height_animation.cancel()
+		}
+
+	container.style.overflow = 'hidden'
+
+	const animation = container.animate(
+		[
+			{ height: from_height + 'px' },
+			{ height: to_height + 'px' }
+		],
+		{
+			duration	: DATA_CONTAINER_ANIMATION_MS,
+			easing		: 'ease-out'
+		}
+	)
+	container.height_animation = animation
+
+	// restore natural layout when done. cancel() rejects the finished promise,
+	// and in that case the superseding animation owns the cleanup.
+		const restore = () => {
+			if (container.height_animation===animation) {
+				container.height_animation	= null
+				container.style.overflow	= ''
+			}
+		}
+		animation.finished.then(restore).catch(restore)
+
+
+	return animation
+}//end animate_data_container_height
+
+
+
 /**
 * SHOW_COMPONENT_IN_TS_OBJECT
 * Toggles the inline display of one or more component editors inside the
@@ -1743,6 +1823,15 @@ ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 * For term-type components a 'save_*' event subscription updates self.term_text
 * and self.data.ar_elements immediately so the tree label changes without a
 * round-trip, then destroys the component via dd_request_idle_callback.
+*
+* Layout stability: the incoming components are built and rendered OFF-DOM, and
+* only then swapped in against the outgoing ones in a single synchronous DOM
+* mutation. The container therefore never collapses to a loader height while the
+* new component is fetched — it goes straight from the outgoing layout to the
+* incoming one, animated by animate_data_container_height. While loading, the
+* outgoing component is dimmed in place ('swapping' class) rather than replaced
+* by an in-flow loader, so waiting costs no layout at all.
+*
 * @param {Object} options
 * @param {string|string[]} options.tipo - One or more component tipos to show.
 *   A comma-separated string is also accepted (split internally).
@@ -1772,16 +1861,92 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 		self.events_tokens.forEach(token => event_manager.unsubscribe(token))
 		self.events_tokens = []
 
+	// data_contanier
+		const element_data_contanier = self.data_container
+
+	// swap_seq. Clicking several buttons faster than a component loads starts
+	// overlapping calls. Each claims a token; only the holder of the newest one
+	// may touch the container, so the last click wins and the earlier ones
+	// discard whatever they built instead of stacking it into the DOM.
+		const swap_seq = (self.show_component_seq || 0) + 1
+		self.show_component_seq = swap_seq
+
+	// from_height. Measured before ANY mutation; animate_data_container_height
+	// animates from here to whatever the incoming content lays out to. While a
+	// previous swap is still animating this reads its current animated height,
+	// which is exactly the right visual starting point.
+		const from_height = element_data_contanier.offsetHeight
+
+	// swapping state. The outgoing component stays in place and is merely dimmed
+	// (see ts_object.less) while the incoming one is built off-DOM, so the
+	// container holds its height for the whole round-trip at zero layout cost.
+	// (!) No in-flow loader node here on purpose: there is no gap to fill any
+	// more, and the clicked button already carries its own 'loading_spinner'.
+	// Only the newest call may clear the state — see the superseded check below.
+		const set_swapping = function(on) {
+			element_data_contanier.classList.toggle('swapping', on)
+		}
+
+	// toggle-off scan. Reverse order over the container as the user sees it,
+	// stopping at the first wrapper that already renders the requested tipo —
+	// that click closes it instead of loading anything.
+	// (!) tipo here is the raw options.tipo value (string or array); the
+	// comparison works only when options.tipo is a string. When an array
+	// is passed, this never matches and the toggle-off path is skipped.
+		const current_wrappers	= [...element_data_contanier.children]
+		let toggle_off			= false
+		for (let i = current_wrappers.length - 1; i >= 0; i--) {
+			const component_wrapper = current_wrappers[i]
+			if (component_wrapper.instance && component_wrapper.instance.tipo===tipo) {
+				// this component already exists. Remove it and stop
+				toggle_off = true
+				break
+			}
+		}
+
+	// detach_outgoing. Empties the container synchronously so the swap is a
+	// single, paint-free DOM mutation, and returns the detached wrappers for
+	// teardown. Re-reads the live children on purpose: it must clear whatever is
+	// actually in the container at swap time, not a stale entry snapshot.
+		const detach_outgoing = function() {
+			const outgoing = [...element_data_contanier.children]
+			outgoing.forEach(component_wrapper => component_wrapper.remove())
+			return outgoing
+		}
+
+	// destroy_outgoing. Instance teardown, awaited.
+	// (!) common.prototype.destroy is async and only removes the DOM node after
+	// its internal awaits — a fire-and-forget call lets the outgoing node linger
+	// in the container while the incoming one is inserted. The nodes are already
+	// detached by detach_outgoing, hence remove_dom=false here.
+		const destroy_outgoing = async function(outgoing) {
+			const outgoing_length = outgoing.length
+			for (let i = 0; i < outgoing_length; i++) {
+				const instance = outgoing[i].instance
+				if (instance) {
+					await instance.destroy(true, true, false)
+				}
+			}
+			return true
+		}
+
+	// toggle-off case. Nothing to load: collapse straight away and animate it.
+		if (toggle_off===true) {
+			set_swapping(false)
+			const outgoing = detach_outgoing()
+			animate_data_container_height(element_data_contanier, from_height)
+			await destroy_outgoing(outgoing)
+			return true
+		}
+
+	// swapping state on for the whole build+render round-trip
+		set_swapping(true)
+
 	// render_component_node function
+	// (!) Builds and renders OFF-DOM. The returned node is inserted by the caller
+	// only once every requested component is ready.
 		const components = [] // array of created component instances
 		const render_component_node = async function(tipo, key) {
-
-			const loader = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'loader loading',
-				inner_html		: 'Loading component..',
-				parent			: element_data_contanier
-			})
 
 			// component instance
 				const current_component = await get_instance({
@@ -1873,58 +2038,54 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 					// set pointer instance to DOM node
 					component_node.instance = current_component
 
-				// loader
-					loader.remove()
-
-				// activate
-					if (key===0) {
-						dd_request_idle_callback(
-							() => {
-								ui.component.activate(current_component)
-							}
-						)
-					}
-
 			return component_node
 		}//end render_component_node
 
-	// data_contanier
-		const element_data_contanier	= self.data_container
-		const all_element_data_div		= element_data_contanier.children // childNodes;
-
-	// get the children nodes of data_contanier
-		const all_element_data_div_len = all_element_data_div.length
-		if (all_element_data_div_len > 0) { // if the data element is not empty
-
-			for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-				const component_wrapper = all_element_data_div[i]
-
-				// Error messages case
-				if (component_wrapper.failed) {
-					component_wrapper.remove()
-				}
-
-				// (!) tipo here is the raw options.tipo value (string or array); the
-				// comparison works only when options.tipo is a string. When an array
-				// is passed, this never matches and the toggle-off path is skipped.
-				if (component_wrapper.instance.tipo===tipo) {
-					// this component already exists. Remove it and stop
-					component_wrapper.instance.destroy(true, true, true)
-					return true
-				}
-
-				// destroy component instance
-				component_wrapper.instance.destroy(true, true, true)
-			}
-		}
-
-	// render components and add nodes
-		const tipos_length = tipos.length
+	// build every requested component off-DOM
+		const component_nodes	= []
+		const tipos_length		= tipos.length
 		for (let i = 0; i < tipos_length; i++) {
 			const current_tipo = tipos[i]
-			const component_node = await render_component_node(current_tipo, i)
-			element_data_contanier.appendChild(component_node)
+			component_nodes.push( await render_component_node(current_tipo, i) )
 		}
+
+	// superseded case. A newer click claimed the container while this one was
+	// building. Drop what was built (it was never inserted) and leave the DOM
+	// and the swapping state untouched — that newer call owns them now.
+		if (self.show_component_seq!==swap_seq) {
+			const components_length = components.length
+			for (let i = 0; i < components_length; i++) {
+				await components[i].destroy(true, true, true)
+			}
+			return true
+		}
+
+	// swap. ONE synchronous DOM mutation: outgoing nodes out, incoming nodes in
+	// — no frame is painted with an empty container.
+	// (!) Nothing may await between the check above and the appendChild below,
+	// or another call could interleave into a half-swapped container.
+		set_swapping(false)
+		const outgoing = detach_outgoing()
+		const incoming_fragment = new DocumentFragment()
+		component_nodes.forEach(component_node => incoming_fragment.appendChild(component_node))
+		element_data_contanier.appendChild(incoming_fragment)
+
+	// animate the honest height delta (outgoing layout → incoming layout)
+		animate_data_container_height(element_data_contanier, from_height)
+
+	// activate. Deferred until the node is in the DOM, otherwise the component
+	// would be activated (and focused) while still detached.
+		if (components.length > 0) {
+			dd_request_idle_callback(
+				() => {
+					ui.component.activate(components[0])
+				}
+			)
+		}
+
+	// outgoing instance teardown. Awaited so the caller's .then() (which clears
+	// the button spinner) does not fire while destroy is still in flight.
+		await destroy_outgoing(outgoing)
 
 
 	return true
