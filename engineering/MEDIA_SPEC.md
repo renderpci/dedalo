@@ -268,6 +268,66 @@ Sole API action (`:50`). `session_write_close()` first (`:117`). Validate requir
 - Flow mirrors §6.1–6.2 with the SAME shared staging layout (coexistence), chunk-level AND assembled re-sniff (SEC-066), `add_file` SEC-063 confinement, per-type processor → `regenerate.ts`. Image/pdf/svg run synchronously inline; av transcode goes through `jobs.ts` (§5.5).
 - Missing derivative → the Dédalo placeholder image (PHP `get_url(default_add=true) :2942`) — preserve the fallback so the client never 404s a thumbnail.
 
+### 6.4 Addendum — the ingest as BUILT (2026-07-31, `engineering/WIRE_CONTRACT.md` WC-080)
+
+The §6.3 design landed; this records where it ended up, because three parts are
+not obvious from the plan.
+
+**The target tier is honoured, and the impossible ones are refused.**
+`processUploadedFile` takes `quality` (the client's `custom_target_quality` /
+`quality`) and parks the file there, as PHP's `set_quality()` before `add_file`
+did — `addFile` builds the location for that tier instead of hardcoding
+`originalQuality`. Three targets throw instead, all guarded in
+`src/core/concepts/media.ts` beside `assertValidQuality` so their carve-out lists
+cannot drift from its:
+- the THUMB tier and `audio_tr` (`assertIngestableQuality`) — DERIVED tiers the
+  scanner cannot index, so the file would be invisible to the record forever;
+- a non-normalized extension in a derivative tier
+  (`assertNormalizedExtensionForTier`) — the tier's canonical
+  `<id>.<defaultExtension>` shadows it in `files_info` and the thumb rebuilds
+  from that stale file. The ORIGINAL tier is exempt (the Original law).
+
+Which regenerate runs follows the tier: the ORIGINAL tier gets the ingest
+builders (unconditional re-encode — a fresh original SHOULD rebuild everything);
+any other tier gets `regenerateMissingDerivatives` (`media/repair.ts`, the v6
+`regenerate_component` port), so the just-placed file is never overwritten.
+`component_av` has no branch there, so a non-original av upload submits a
+transcode only when an ORIGINAL is on this box AND the default tier is absent.
+
+**`files_info` has ONE writer: `media/tools/files_info_persist.ts`.** Every
+write-back — the tool mutations, the AV job completion, the `sync_files` repair,
+the upload persist — goes through it, and each is a read-modify-write of the
+whole `media -> <tipo>` key held under a `FOR UPDATE` row lock
+(`readMatrixKeyForUpdate`, `db/matrix_write.ts`) inside one transaction. Callers
+must NOT hand in a snapshot: theirs is stale by the time the write lands, and the
+write replaces the key whole, so a stale snapshot silently reverts whatever
+another session committed on it. Two entry points, deliberately named apart:
+- `reconcileStoredFilesInfo` — refreshes existing items, NEVER mints. The
+  passive-scan rule: a background or incidental scan must not resurrect media
+  someone removed.
+- `repairStoredFilesInfo` — mints `{files_info}` (no provenance keys) when the
+  component has no item and the scan found files. PHP
+  `update_component_data_files_info :3748` did this unconditionally on save; here
+  it is reachable ONLY from the operator's explicit `sync_files`.
+
+The result carries `action` (`refreshed` / `created` / `noop` / `missing`) and
+the affected row count. `missing` — no matrix table, or the record was deleted
+mid-flight — is distinct from `noop` on purpose: a guard on the row count alone
+can never see it, and "nothing needed doing" must not report the same as "the
+record is gone" (`assertRecordPresent` throws; `persistUploadedMedia` throws
+outright, because the file is already on disk).
+
+**The AV transcode records its own result, and the CALLER starts it.**
+`submitAvTranscode`'s worker re-scans and reconciles after the encode, so the
+derivatives reach the stored index instead of waiting for the next save (only
+`component_av` re-scans per read — everything reading the STORED index saw a
+record owning nothing but its source). `processUploadedFile` therefore returns
+`startTranscode` UNSTARTED: the job and the ingest caller write the same jsonb
+key, and whichever lands second wins it whole, so the caller starts the job after
+its own persist commits. Jobs also run detached from the submitter's transaction
+ALS (`runDetachedFromTransaction`, `engineering/REQUEST_ISOLATION.md`) — a job
+outlives the request whose handle expires at COMMIT.
+
 ---
 
 ## 7. Phased strangler-fig plan

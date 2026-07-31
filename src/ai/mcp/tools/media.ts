@@ -175,7 +175,17 @@ export async function uploadMedia(
 	// the per-user staging dir.
 	const keyDir = `mcp_${crypto.randomUUID()}`;
 	const staged = receiveUpload(
-		{ keyDir, fileName, chunked: false, chunkIndex: 0, totalChunks: 1, blob: bytes },
+		// csrfToken is the HTTP endpoint's form-field CSRF twin; this in-process
+		// caller never crosses a browser boundary, so there is nothing to echo.
+		{
+			keyDir,
+			fileName,
+			chunked: false,
+			chunkIndex: 0,
+			totalChunks: 1,
+			blob: bytes,
+			csrfToken: null,
+		},
 		principal.userId,
 	);
 	const tmpName = staged.tmpName;
@@ -205,17 +215,19 @@ export async function uploadMedia(
 		sectionId: identity.sectionId,
 		componentTipo: identity.componentTipo,
 		lang: identity.lang,
-		existingItems: items as { id?: number; lang?: string | null; files_info?: unknown }[],
 		filesInfo: result.filesInfo,
 		originalFileName: result.originalFileName,
 		originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
 	});
+	// AFTER the persist commits: the transcode writes its own files_info back, and
+	// must not race the write above (see IngestResult.startTranscode).
+	const jobId = result.startTranscode?.() ?? null;
 	return {
 		section_tipo: sectionTipo,
 		section_id: sectionId,
 		tipo: fieldTipo,
 		files_info: result.filesInfo,
-		job_id: result.jobId,
+		job_id: jobId,
 	};
 }
 

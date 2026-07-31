@@ -32,6 +32,7 @@
   --media_min_width: 102px;
   --media_fade_speed: 0.3s;
   --media_viewer_height: calc(100vh - 3rem);
+  --media_placeholder_opacity: 1;
   --text_area_min_height: 200px;
   --geolocation_min_height: 495px;
   --geolocation_player_height: 605px;
@@ -69,7 +70,7 @@
   --color_red_light: #ff9e87;
   --color_danger: #dc3545;
   --color_green_light: #c0e4cd;
-  --color_green_success: #5cb85c;
+  --color_green_success: #4f8a5b;
   --color_success: #28a745;
   --color_green_ontology_hover: #4e7a75;
   --color_green_ontology: #276f67;
@@ -139,6 +140,16 @@
   --menu_dropdown_bg: var(--color_grey_16);
   --menu_dropdown_border: var(--color_grey_9);
   --menu_dropdown_li_border: var(--color_grey_7);
+  --menu_mobile_bg: var(--color_grey_4);
+  --menu_mobile_fg: var(--fg_inverse);
+  --menu_mobile_parent_fg: var(--color_grey_8);
+  --menu_mobile_arrow: var(--color_grey_8);
+  --menu_mobile_hover_bg: transparent;
+  --menu_link_fg: var(--color_grey_14);
+  --menu_selector_fg: var(--color_grey_11);
+  --menu_item_active_bg: var(--color_tag_indexation_normal);
+  --menu_item_active_fg: #ffffff;
+  --menu_item_active_accent: transparent;
   --debug_info_bar_bg: var(--color_grey_4);
   --debug_info_bar_text: var(--color_grey_8);
   --checkbox_bg: var(--color_grey_16);

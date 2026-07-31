@@ -74,6 +74,26 @@ export const MEDIA_CSP_ORIGIN: string = (() => {
 const withMedia = (sources: string): string =>
 	MEDIA_CSP_ORIGIN === '' ? sources : `${sources} ${MEDIA_CSP_ORIGIN}`;
 
+/**
+ * The ONE media URL prefix the app may embed as `<object>`, on a split-origin
+ * install: the image folder, and nothing else on that host. `<object>` opens a
+ * nested browsing context, so an SVG loaded into one EXECUTES its script in the
+ * origin it was fetched from — and a split-origin media host is an external
+ * Apache/nginx serving the generated access rules, which emit no CSP, no
+ * `sandbox` and no `Content-Disposition` (`src/core/media/protection.ts` — the
+ * MEDIA-03 safety headers exist only on the Bun dev/fallback media route).
+ * Handing the WHOLE host to `object-src` would therefore make every
+ * uploader-supplied `svg/` file embeddable-and-executing in the media origin,
+ * with the viewer's media auth cookie — a capability `frame-src` (which never
+ * carries the media origin) does not already grant. Path-scoping to the image
+ * folder admits exactly the server-generated envelopes: `svg` is not an image
+ * quality and component_image rejects `.svg` uploads, so no uploader bytes land
+ * under it. A CSP source whose path ends in `/` is a prefix match (CSP3
+ * §6.6.2.6). Empty when media is same-origin — `'self'` already covers it.
+ */
+export const MEDIA_CSP_OBJECT_SOURCE: string =
+	MEDIA_CSP_ORIGIN === '' ? '' : `${config.media.webBase}${config.media.image.folder}/`;
+
 export const APP_CSP = [
 	"default-src 'self'",
 	"script-src 'self' 'unsafe-eval' blob: 'sha256-YeRfUXP7gY4V7v/uefS4JIBm3BthshUSvAd69Hmer+U='",
@@ -85,7 +105,18 @@ export const APP_CSP = [
 	`connect-src ${withMedia("'self' blob:")}`,
 	"frame-src 'self' blob:",
 	"frame-ancestors 'self'",
-	"object-src 'none'",
+	// MEDIA-03, other half: component_image's default edit view hosts the
+	// server-generated SVG envelope as <object type="image/svg+xml"> (it needs
+	// same-origin contentDocument for the quality switch + vector editor), so
+	// `object-src 'none'` did not harden anything — it just rendered every image
+	// in the edit view blank. 'self' adds NO new class same-origin: `frame-src
+	// 'self'` (above, pre-existing) already admits the identical nested
+	// same-origin document via <iframe>, and CSP is not inherited into a nested
+	// context fetched from a URL, so object-src was never the control there —
+	// the write-side sanitizer (html_sanitize.ts, XSS-01, strips object/embed/
+	// iframe/svg) is. The media origin is NOT handed over wholesale; see
+	// MEDIA_CSP_OBJECT_SOURCE for why it is path-scoped to the envelope folder.
+	`object-src ${MEDIA_CSP_OBJECT_SOURCE === '' ? "'self'" : `'self' ${MEDIA_CSP_OBJECT_SOURCE}`}`,
 	"base-uri 'self'",
 	"form-action 'self'",
 ].join('; ');

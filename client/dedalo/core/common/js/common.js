@@ -1173,6 +1173,14 @@ export const create_source = function (self, action) {
 			source.is_temporal = self.is_temporal
 		}
 
+	// temporal_scope optional (WC-079): names the owning tool so the server can
+	// key this instance's scratch row. Only sent alongside is_temporal, and only
+	// by service_tmp_section — its absence is what keeps every other temporal
+	// producer on the no-persistence path.
+		if (self.temporal_scope) {
+			source.temporal_scope = self.temporal_scope
+		}
+
 	// caller_dataframe
 		if(self.model==='component_dataframe'){
 			source.caller_dataframe = self.caller_dataframe

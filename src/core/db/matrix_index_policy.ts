@@ -170,7 +170,7 @@ const ACTIVITY: MatrixTablePolicy = {
 				"using btree (((((relation -> 'dd543'::text) -> 0) ->> 'section_id'::text)), ((((relation -> 'dd543'::text) -> 0) ->> 'section_tipo'::text)), \"timestamp\" desc, id desc)",
 			disposition: 'keep',
 			reason:
-				'The dd543 Who search (WC-056): leading actor equality + the trailing ("timestamp", id) sort key means one index answers the filter AND the order, so a page is O(LIMIT) for EVERY actor — 1.1-4.3 ms measured across 1k / 52k / 206k / 8.1M-row actors, where containment ranged from 90 ms to >300 s and no static plan choice was right for all of them. Requires the matching emitter (builder_relation buildActivityWhoFragment): a containment predicate cannot use it.',
+				'The dd543 Who search (WC-056): leading actor equality + the trailing ("timestamp", id) sort key means one index answers the filter AND the order, so a page is O(LIMIT) for EVERY actor — 1.1-4.3 ms measured across 1k / 52k / 206k / 8.1M-row actors, where containment ranged from 90 ms to >300 s and no static plan choice was right for all of them. TWO emitters depend on it now, and a containment predicate can use NEITHER: builder_relation buildActivityWhoFragment (the dd542 list), and area_maintenance/user_stats whoScope, whose keyset-paged aggregation ALSO rides the trailing ("timestamp", id) — rebuild_user_stats timed out at 60 s on the 8.1M-row actor while it was still written as containment (2026-07-30).',
 		},
 		// --- drop-dead (no emitted shape uses these; WC-044 rejected the jsonb
 		//     component-sort / expression-index route for this insert-hot log) ----

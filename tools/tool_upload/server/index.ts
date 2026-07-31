@@ -2,15 +2,20 @@
  * tool_upload server module — process_uploaded_file (PHP tool_upload).
  *
  * Consumes a staged upload (already received + validated by the upload endpoint)
- * and ingests it: add_file into the original tier + per-type regenerate. Gates
+ * and ingests it: add_file into the requested quality tier (the original tier
+ * unless the client's `quality` says otherwise) + per-type regenerate. Gates
  * level>=2 on the record (write). The staged tmp_name/key_dir come from the
- * upload receiver; the extension is re-validated in add_file.
+ * upload receiver; the extension is re-validated in add_file, the quality in
+ * assertValidQuality.
  */
 
 import { processUploadedFile } from '../../../src/core/media/ingest/process_uploaded_file.ts';
 import { buildMediaIdentifier } from '../../../src/core/media/path.ts';
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
-import { persistUploadedMedia } from '../../../src/core/media/tools/files_info_persist.ts';
+import {
+	nameKeysForQuality,
+	persistUploadedMedia,
+} from '../../../src/core/media/tools/files_info_persist.ts';
 import { MEDIA_JOB_STATUS_ACTION } from '../../../src/core/tools/job_status.ts';
 import type {
 	ToolActionContext,
@@ -20,9 +25,13 @@ import type {
 
 async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
-		const { spec, identity, pathOpts, items } = await resolveMediaToolContext(ctx.options);
+		const { spec, identity, pathOpts } = await resolveMediaToolContext(ctx.options);
 		const fileData = (ctx.options.file_data ?? {}) as Record<string, unknown>;
 		const userId = ctx.userId;
+		// The tier the client asked for (tool_upload.js :224 —
+		// caller.context.target_quality, else features.default_target_quality).
+		// null/absent means the original tier; processUploadedFile validates it.
+		const quality = typeof ctx.options.quality === 'string' ? ctx.options.quality : undefined;
 		const result = await processUploadedFile({
 			spec,
 			identity,
@@ -31,8 +40,9 @@ async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 			keyDir: String(fileData.key_dir ?? ctx.options.key_dir ?? ''),
 			tmpName: String(fileData.tmp_name ?? ''),
 			extension: String(fileData.extension ?? ''),
+			quality,
 		});
-		// Persist the fresh files_info + original_* keys to the record so the client
+		// Persist the fresh files_info + the name keys to the record so the client
 		// renders the NEW image (not the stale/placeholder). Without this the upload
 		// only touched the disk; the stored media data stayed on the old file.
 		await persistUploadedMedia({
@@ -40,11 +50,15 @@ async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 			sectionId: identity.sectionId,
 			componentTipo: identity.componentTipo,
 			lang: identity.lang,
-			existingItems: items as { id?: number; lang?: string | null; files_info?: unknown }[],
 			filesInfo: result.filesInfo,
 			originalFileName: String(fileData.tmp_name ?? result.originalFileName),
 			originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
+			// Provenance follows the tier the file landed in (PHP :778).
+			nameKeys: nameKeysForQuality(spec, quality),
 		});
+		// AFTER the persist commits: the transcode writes its own files_info back,
+		// and must not race the write above (see IngestResult.startTranscode).
+		const jobId = result.startTranscode?.() ?? null;
 
 		// Activity audit (PHP logger 'UPLOAD COMPLETE' code 11,
 		// tool_upload :49). PHP serializes the whole file_data blob into the
@@ -71,7 +85,7 @@ async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 			original_file_name: result.originalFileName,
 			extension: result.extension,
 			files_info: result.filesInfo,
-			job_id: result.jobId,
+			job_id: jobId,
 		};
 	} catch (error) {
 		return { result: false, msg: (error as Error).message, errors: [(error as Error).message] };

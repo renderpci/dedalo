@@ -639,6 +639,16 @@ export async function buildStructureContext(options: {
 	 * is never touched. Threaded by the get_data context build.
 	 */
 	propertiesOverride?: Record<string, unknown>;
+	/**
+	 * TEMPORAL instance (WC-059/WC-079): suppress the component TOOLBAR. Every
+	 * tool on that strip acts on a RECORD — time machine history, propagate this
+	 * value across a search result set, per-language editing of a stored datum —
+	 * and a temporal clone addresses no record, so each one is either inert or
+	 * actively wrong on it. PHP shipped the strip here too; this is a deliberate
+	 * TS divergence, and a small one: the client renders from `self.tools || []`
+	 * (ui.add_tools), so an empty array needs no client change.
+	 */
+	isTemporal?: boolean;
 }): Promise<StructureContextEntry | null> {
 	const core = await buildCore(options.tipo, options.sectionTipo, options.mode);
 	if (core === null) return null;
@@ -822,9 +832,15 @@ export async function buildStructureContext(options: {
 	const isAreaElement = isAreaModel(core.model);
 	const isMenuModel = core.model === 'menu';
 	const simple = options.addRequestConfig === false;
+	// A TEMPORAL clone gets NO toolbar (WC-079): every tool on the strip acts on a
+	// record and this element addresses none. Same shape as the list-mode
+	// exclusion above — a MODE-like gate, never a permissions one.
+	const isTemporalElement = options.isTemporal === true;
 	if (
 		isMenuModel ||
-		(!simple && (isAreaElement || (isComponentModel && options.mode !== 'list')))
+		(!simple &&
+			!isTemporalElement &&
+			(isAreaElement || (isComponentModel && options.mode !== 'list')))
 	) {
 		const { getElementTools } = await import('../tools/registry.ts');
 		// The tool APPLIES gate reads the EFFECTIVE properties (an rqo override

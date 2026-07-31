@@ -124,3 +124,54 @@ export async function scopeInverseReferenceHits<
  * doors — and the AUTHZ-05 tripwire keeps pinning the original export.
  */
 export const scopeRecordHits = scopeInverseReferenceHits;
+
+/**
+ * AUTHZ-02 — drop CLIENT-SUPPLIED target locators the principal may not resolve.
+ *
+ * A non-admin must not read the child values of a record outside their projects
+ * filter by injecting its locator and letting the standard expansion resolve it.
+ * Two doors hand the engine locators that never came from a stored record — the
+ * search-chip `resolve_data` path and the WC-079 temporal scratch graft — and
+ * both must scope them.
+ *
+ * Extracted so the two cannot drift: the scratch store shipped without this
+ * filter and was a live cross-tenant read (a level-1 grant plus an injected
+ * locator returned another tenant's field values).
+ *
+ * Locators with no (section_tipo, section_id) identity carry nothing to scope
+ * and pass through. Global admins are unscoped.
+ *
+ * (!) Applied at READ time, not only at write time: a principal's projects
+ * assignment can change after a locator was stored, so a write-time filter alone
+ * would let a stale row outlive the grant that justified it.
+ */
+export async function filterLocatorsInScope<T extends Record<string, unknown>>(
+	locators: readonly T[],
+	principal: Principal | undefined,
+	usersSectionTipo: string,
+): Promise<T[]> {
+	if (principal === undefined || principal.isGlobalAdmin || locators.length === 0) {
+		return [...locators];
+	}
+	const scoped: T[] = [];
+	for (const locator of locators) {
+		const locSectionTipo = locator.section_tipo;
+		const locSectionId = locator.section_id;
+		if (typeof locSectionTipo !== 'string' || locSectionId === undefined || locSectionId === null) {
+			scoped.push(locator);
+			continue;
+		}
+		// The root user locator (dd128/-1) resolves to a LABEL only, and PHP
+		// resolves it for any caller with section-level permission — activity "who"
+		// chips must render. Record access stays blocked by the assembler's
+		// section_id > 0 filter and principalCanAccessRecord.
+		if (locSectionTipo === usersSectionTipo && Number(locSectionId) === -1) {
+			scoped.push(locator);
+			continue;
+		}
+		if (await isRecordInScope(locSectionTipo, Number(locSectionId), principal)) {
+			scoped.push(locator);
+		}
+	}
+	return scoped;
+}

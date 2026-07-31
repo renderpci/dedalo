@@ -1133,6 +1133,11 @@ component_portal.prototype.link_record = async function(value) {
 * (!) Respects the `data_limit` property: if the portal is already at capacity the
 * action is blocked before the API call.
 *
+* (!) Side effect: `self.created_section_id` is set to the section_id the server
+* created (api_response.result.created_section_id), or null when the server did
+* not report one.  The add button opens THAT record — the return value stays a
+* boolean because the client test suite pins it.
+*
 * @verified 07-09-2023 Paco
 * @param {string} target_section_tipo - Ontology tipo of the section in which the new
 *                                       record should be created (e.g. 'rsc197').
@@ -1142,6 +1147,10 @@ component_portal.prototype.link_record = async function(value) {
 component_portal.prototype.add_new_element = async function(target_section_tipo) {
 
 	const self = this
+
+	// created_section_id. Reset before the call so a failed add never leaves the
+	// previous creation's address behind for the button to open.
+		self.created_section_id = null
 
 	// data_limit. Maximum records allowed by this portal
 		if (data_limit_reached(self)) {
@@ -1178,6 +1187,12 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 		})
 		// add value to current data
 		if (api_response.result) {
+
+			// created_section_id. The ADDRESS of the record the server just created.
+			// Read it before the refresh: the caller (buttons.render_button_add) opens
+			// this record instead of guessing it from the echoed page, which is only
+			// the new one when the whole list fits on that page.
+				self.created_section_id = api_response.result.created_section_id ?? null
 
 			// save return the datum of the component
 			// Inject the save response as tmp_api_response so the build phase uses it

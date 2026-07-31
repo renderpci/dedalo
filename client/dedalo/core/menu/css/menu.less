@@ -7,7 +7,6 @@
 @import (once) '../../page/css/layout/vars';
 @import (once) '../../page/css/layout/buttons';
 
-@menu_bg_color_active: @color_tag_indexation_normal;
 @menu_box_shadow: var(--shadow-3);
 
 .menu {
@@ -241,10 +240,14 @@
 				display: none;
 			}
 
-			// active
+			// active (also HOVER — render_menu_tree.js puts menu_li_active on the
+			// hovered li). Light: the solid orange fill, accent transparent.
+			// Dark: a quiet neutral raise, with the orange carried by the accent
+			// line — a left edge on dropdown/flyout rows.
 			.menu_li_active>a {
-				background: @menu_bg_color_active;
-				color: @color_white !important;
+				background: var(--menu_item_active_bg);
+				color: var(--menu_item_active_fg) !important;
+				box-shadow: inset 3px 0 0 var(--menu_item_active_accent);
 			}
 
 			.menu_li_active ul {
@@ -277,14 +280,23 @@
 				pointer-events: none;
 			}
 
-			// arrow white on active
+			// arrow takes the active ink (light: white on orange; dark: white on
+			// the neutral raise — @color_white would be #1b1d20 here)
 			li.has-sub.menu_li_active::after {
-				border-left: 5px solid @color_white;
+				border-left: 5px solid var(--menu_item_active_fg);
 			}
 
 			// Hides arrow in first level of li (fisrt menu line)
 			>li.has-sub::after {
 				display: none;
+			}
+
+			// top-level (bar) active item: the accent reads as an underline, not a
+			// left edge. Anchored on ul#dd1, NOT `>li` — the top-level li are
+			// children of that ul, so a `.menu_hierarchy > li` selector matches
+			// nothing (as the two `>li…` rules just above it have never matched).
+			ul#dd1>li.menu_li_active>a {
+				box-shadow: inset 0 -2px 0 var(--menu_item_active_accent);
 			}
 
 			// shadow for fir level when active
@@ -316,7 +328,7 @@
 		>.menu_mobile_wrapper {
 			width: 100%;
 			position: relative;
-			background-color: @color_grey_4;
+			background-color: var(--menu_mobile_bg);
 			font-size: 1.25rem;
 			padding: 1rem;
 
@@ -324,6 +336,9 @@
 
 			.menu_mobile_item {
 				display: block;
+				// explicit: inheriting --fg_inverse from .content_data is what put
+				// white leaf items on the panel regardless of the panel's colour
+				color: var(--menu_mobile_fg);
 				padding: 0.25rem 1rem;
 				padding-right: 1.75rem;
 				position: relative;
@@ -331,8 +346,13 @@
 				line-height: 1.6rem;
 				cursor: pointer;
 
+				&:hover {
+					background-color: var(--menu_mobile_hover_bg);
+					border-radius: var(--radius-sm);
+				}
+
 				&.with_children {
-					color: @color_grey_8;
+					color: var(--menu_mobile_parent_fg);
 
 					&:after {
 						content: " ";
@@ -343,7 +363,7 @@
 						vertical-align: middle;
 						border-bottom: 5px solid transparent;
 						border-top: 5px solid transparent;
-						border-left: 5px solid @color_grey_8;
+						border-left: 5px solid var(--menu_mobile_arrow);
 						position: absolute;
 						top: 0.66em;
 						right: 0.66em;
@@ -370,7 +390,7 @@
 
 		// Ontology link
 		>.ontology {
-			color: @color_grey_14;
+			color: var(--menu_link_fg);
 			margin-left: 0.5rem;
 			margin-right: 0.5rem;
 			cursor: pointer;
@@ -395,7 +415,7 @@
 			cursor: pointer;
 
 			&:hover {
-				color: @color_grey_14;
+				color: var(--menu_link_fg);
 			}
 
 			&.is_root {
@@ -412,7 +432,7 @@
 			max-width: 99.9%;
 			padding-left: 0px;
 			padding-right: 1em;
-			color: @color_grey_11;
+			color: var(--menu_selector_fg);
 			border: none;
 			cursor: pointer;
 			font-size: 1.05rem;
@@ -605,7 +625,7 @@
 
 		>div {
 			padding-left: 1em;
-			color: @color_grey_8;
+			color: var(--debug_info_bar_text);
 			font-size: 94%;
 		}
 

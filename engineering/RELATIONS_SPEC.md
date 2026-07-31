@@ -145,7 +145,22 @@ A ddo_map is a flat list made a tree by each ddo's `parent` (=`tipo` of the ddo 
 ## 6. The particular cases — same concept, specific twist
 
 ### 6.1 List-of-values (select, radio_button, check_box, select_lang) + portal/autocomplete
-Datalist (§5.1) + single/multi selection semantics. Portal adds pagination (total = full locator count), drag-reorder (`sort_data`), `sort_by_column`, `add_new_element` (creates a target record inheriting the caller's projects filter, then appends the link), and nested-portal recursion. Autocomplete is portal/select with a search-driven choose flow (`choose` ddo_map + `search` SQO); the `_hi` (hierarchical) flavor targets thesaurus hierarchies and needs the `relation_search` ancestor index (§2).
+Datalist (§5.1) + single/multi selection semantics. Portal adds pagination (total = full locator count), drag-reorder (`sort_data`), `sort_by_column`, `add_new_element` (creates a target record inheriting the caller's projects filter, then appends the link), and nested-portal recursion.
+
+> **ADDENDUM 2026-07-31 (WC-081 — the SAVE echo of an inserting action).** The
+> save response of a relation component is the client's next `self.data`, so
+> the two INSERTING actions (`insert`, `add_new_element`) page it to the **last
+> page** — `offset = limit * (ceil(total/limit) - 1)`, else 0 — because that is
+> where the appended locator lives; the page size is the client's own
+> `data->pagination->limit` when it sends one. `add_new_element` also reports
+> `result->created_section_id`, the address of the record it created (absent on
+> every other save). Both doors comply: `api/handlers/dd_core_api.ts` and the
+> temporal one (`section/record/temporal.ts`). Before this the echo was page
+> ONE at the component's config limit, and a client that treats "the last
+> echoed entry" as the new record opened the FIRST one on any portal where
+> `limit < total`. See `engineering/WIRE_CONTRACT.md` WC-081; gate:
+> `test/unit/save_add_new_element_page_native.test.ts`.
+ Autocomplete is portal/select with a search-driven choose flow (`choose` ddo_map + `search` SQO); the `_hi` (hierarchical) flavor targets thesaurus hierarchies and needs the `relation_search` ancestor index (§2).
 
 ### 6.2 Dataframe — relation data paired to main-data items
 A dataframe works like any relation — it points to target section(s) and stores locators — but each frame locator is **connected to one data item of the main component** via `id_key → id`, where the locator's `id_key` equals the `id` of the item in the main component's data. The main component can be **any** component — relation or literal (text, date, iri, …). Dataframes are an *extension of the main data*: they qualify a specific item (uncertainty, context, references, qualifiers) without polluting it.

@@ -76,14 +76,39 @@ export const rqoSourceSchema = z
 		 * component_text_area draw/reference pickers. It ADDRESSES NO RECORD: the
 		 * `section_id` it carries is a client-side sentinel (1), never an address.
 		 * The save door routes it to `resolveTemporalSave` (resolve + echo, no
-		 * write) and the read door resolves context with an empty value; the
-		 * record-lifecycle doors refuse it. See core/section/record/temporal.ts.
+		 * write) and the read door resolves context with an empty value — unless the
+		 * source ALSO carries `temporal_scope` (WC-079), which grafts the caller's
+		 * own scratch row instead. The record-lifecycle doors refuse it either way.
+		 * See core/section/record/temporal.ts.
 		 *
 		 * Declared — not left to `.passthrough()` — because that is exactly how it
 		 * went unread for a whole engine generation while the client kept sending
 		 * it, and `section_id: 1` landed on real records.
 		 */
 		is_temporal: z.boolean().nullish(),
+		/**
+		 * TEMPORAL SCRATCH scope (WC-079): names the OWNING TOOL of a temporal
+		 * instance whose values must survive a reload, and is therefore also the
+		 * lifetime holder — the tool that clears them once they are consumed.
+		 *
+		 * SEPARATE from `is_temporal` on purpose. That flag answers "does this
+		 * address a record?"; this one answers "should this persist?". They are
+		 * different questions with very different blast radii: of the five temporal
+		 * producers only service_tmp_section wants persistence, and the other four
+		 * would be CORRUPTED or pointlessly served by it —
+		 * tool_propagate_component_data seeds its clone from the open record and then
+		 * bulk-writes across a search result set; the component_text_area draw and
+		 * reference pickers are transient, so a restored value is a stale locator
+		 * stamped into a tag; and view_graph_solved_section builds its instance for
+		 * the CONTEXT only and never saves. Conflating the two flags is how one
+		 * producer's need becomes five producers' bug.
+		 *
+		 * A plain string, validated at the accessor (temporal_store.ts
+		 * temporalScratchAddress) rather than as a z.enum: a stale client sending an
+		 * unknown scope must degrade to today's no-persistence behaviour, not 400
+		 * every save in the form.
+		 */
+		temporal_scope: z.string().max(64).nullish(),
 	})
 	.passthrough();
 export type RqoSource = z.infer<typeof rqoSourceSchema>;

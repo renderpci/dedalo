@@ -13,13 +13,22 @@
  * stored cache is written back so a subsequent read is immediately consistent.
  */
 
-import type { FileInfoEntry, ScanContext } from '../../../src/core/media/files_info.ts';
+import {
+	type FileInfoEntry,
+	type ScanContext,
+	scanContextFromItem,
+} from '../../../src/core/media/files_info.ts';
 import { type MediaIdentity, buildMediaIdentifier } from '../../../src/core/media/path.ts';
 import {
 	type MediaToolContext,
 	resolveMediaToolContext,
 } from '../../../src/core/media/tool_support.ts';
-import { persistScannedFilesInfo } from '../../../src/core/media/tools/files_info_persist.ts';
+import {
+	type FilesInfoReconcileResult,
+	assertRecordPresent,
+	reconcileStoredFilesInfo,
+	repairStoredFilesInfo,
+} from '../../../src/core/media/tools/files_info_persist.ts';
 import {
 	buildVersionCore,
 	conformHeadersCore,
@@ -42,28 +51,36 @@ function fail(message: string): ToolResponse {
  */
 function scanContext(mediaContext: MediaToolContext): ScanContext {
 	const { items, identity } = mediaContext;
-	const item = items.find((entry) => (entry.lang ?? null) === identity.lang) ?? items[0] ?? {};
-	return {
-		externalSource: (item.external_source as string | null | undefined) ?? null,
-		originalNormalizedName: (item.original_normalized_name as string | null | undefined) ?? null,
-		modifiedNormalizedName: (item.modified_normalized_name as string | null | undefined) ?? null,
-	};
+	const item = items.find((entry) => (entry.lang ?? null) === identity.lang) ?? items[0];
+	return scanContextFromItem(item);
 }
 
-/** Refresh the stored files_info cache after a synchronous mutating op (R1 tail). */
+/**
+ * Refresh the stored files_info cache after a synchronous mutating op (R1 tail).
+ * reconcileStoredFilesInfo NEVER mints: a mutation of files the component does
+ * not claim must not create a stored value — only the operator's explicit
+ * sync_files repair may (see syncFiles).
+ *
+ * A vanished record throws (assertRecordPresent) rather than passing silently:
+ * every media action wraps its body in the try/catch that turns that into the
+ * tool's `fail(...)` response, so the operator learns the record is gone
+ * instead of being told an op landed on nothing.
+ */
 async function writeBack(
 	mediaContext: MediaToolContext,
 	freshFilesInfo: FileInfoEntry[],
-): Promise<void> {
-	const { identity, items } = mediaContext;
-	await persistScannedFilesInfo({
-		sectionTipo: identity.sectionTipo,
-		sectionId: identity.sectionId,
-		componentTipo: identity.componentTipo,
-		lang: identity.lang,
-		items: items as { lang?: string | null; files_info?: unknown }[],
-		freshFilesInfo,
-	});
+): Promise<FilesInfoReconcileResult> {
+	const { identity } = mediaContext;
+	return assertRecordPresent(
+		await reconcileStoredFilesInfo({
+			sectionTipo: identity.sectionTipo,
+			sectionId: identity.sectionId,
+			componentTipo: identity.componentTipo,
+			lang: identity.lang,
+			freshFilesInfo,
+		}),
+		identity,
+	);
 }
 
 /**
@@ -155,7 +172,47 @@ export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const mediaContext = await resolveMediaToolContext(ctx.options);
 		const { spec, identity, pathOpts } = mediaContext;
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		await writeBack(mediaContext, freshFilesInfo);
+
+		// repairStoredFilesInfo: this is the ONE path that may MINT a stored item —
+		// a separately-named entry point, not a flag, so no other caller can reach
+		// the mint by flipping a boolean. PHP
+		// parity, not a new policy. update_component_data_files_info (:3748) minted
+		// `{files_info}` from scratch on every save whenever the component's data
+		// was empty and the scan found files, with no original_* keys because it
+		// knew nothing about provenance. That is exactly the state a persist-less
+		// ingest leaves behind: the files sit in image/original + image/1.5MB +
+		// image/thumb while the matrix `media` key is NULL, so the widget reports
+		// `files_info_db: []` against N disk entries and the record renders
+		// nothing. Every OTHER caller uses reconcileStoredFilesInfo, which never
+		// mints — a passive scan must not resurrect media someone removed.
+		//
+		// The emptiness test lives INSIDE the reconcile, under the row lock: a
+		// decision taken from the request's snapshot could mint a second item over
+		// an upload that committed while the disk scan ran.
+		// S2-02 fail-loud: assertRecordPresent throws when the record is gone
+		// (deleted mid-flight, or a section with no matrix table) — answering
+		// "Success" there tells the operator a repair landed that never did. That
+		// state is 'missing', NOT 'noop': a guard on the affected count alone could
+		// never see it, because "nothing needed doing" also writes no row.
+		const outcome = assertRecordPresent(
+			await repairStoredFilesInfo({
+				sectionTipo: identity.sectionTipo,
+				sectionId: identity.sectionId,
+				componentTipo: identity.componentTipo,
+				lang: identity.lang,
+				freshFilesInfo,
+			}),
+			identity,
+		);
+		if (outcome.action === 'created') {
+			return {
+				result: true,
+				msg: `Success. Recorded ${freshFilesInfo.length} file(s) the component had no stored value for.`,
+				errors: [],
+				files_info: freshFilesInfo,
+			};
+		}
+		// 'refreshed' / 'noop': the record exists and now matches the disk.
 		return { result: true, msg: 'Success. Request done', errors: [], files_info: freshFilesInfo };
 	} catch (error) {
 		return fail((error as Error).message);

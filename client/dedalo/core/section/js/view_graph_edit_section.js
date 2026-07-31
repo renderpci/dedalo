@@ -19,7 +19,7 @@
 * - Uses D3 v7 (UMD bundle at `lib/d3`). The bundle populates
 *   `globalThis.d3` rather than named ESM exports, so it is loaded via a
 *   dynamic `import()` and read from `globalThis.d3` immediately after.
-* - Provides a toolbar with a "back to form" button and a hint label.
+* - Provides a toolbar with a hint label and a close button (back to the form).
 * - All label text is resolved through `get_label` i18n lookups with hard-coded
 *   English fallbacks so the UI is functional even when translation data is absent.
 *
@@ -28,10 +28,17 @@
 *   view_graph_edit_section.render — async entry-point called by the section renderer
 *
 * Internal helpers (module-private):
-*   get_toolbar       — builds the toolbar DOM, wires the back button
-*   switch_view       — programmatic view transition (graph ↔ default)
-*   get_content_data  — creates graph canvas + detail panel; defers D3 mount until in DOM
-*   build_graph       — creates the full D3 simulation and all interaction handlers
+*   get_toolbar               — builds the toolbar DOM, wires the close button
+*   switch_view               — programmatic view transition (graph ↔ default)
+*   get_content_data          — creates graph canvas + detail panel; defers D3 mount until in DOM
+*   render_detail_placeholder — the panel's empty state (invitation + graph legend)
+*   build_graph               — creates the full D3 simulation and all interaction handlers
+*
+* Detail panel states (see `.node_detail` in view_graph_section.less):
+*   placeholder — nothing selected: invitation + legend decoding the visual grammar
+*   detail      — a node is selected: sticky identity header + scrolling field list
+*   hidden      — the user closed the panel (`content_data.detail_hidden`); the canvas
+*                 takes the full width and clicking any node brings the panel back
 */
 
 
@@ -136,12 +143,13 @@ view_graph_edit_section.render = async function(self, options) {
 * GET_TOOLBAR
 * Build the graph toolbar DOM and create the inverse-relation UI controls.
 *
-* The toolbar contains:
-* - A "back to form" button that switches the section view to 'default'.
+* The toolbar contains, in DOM (= tab) order:
 * - A hint label explaining click / Ctrl+click behavior.
 * - Optionally, a checkbox and "load more" button for inverse relations; these are
 *   only rendered when `self.context.config.relation_list_tipo` is set (i.e. the
 *   section has a relation_list component configured to resolve callers).
+* - A close button, pushed to the far right, that leaves the graph and switches
+*   the section view back to 'default' (the form).
 *
 * The returned `inverse_controls` object is a shared mutable reference holder
 * whose `.checkbox` and `.more_button` properties are set during this call and
@@ -161,18 +169,6 @@ const get_toolbar = function(self) {
 		element_type	: 'div',
 		class_name		: 'graph_toolbar'
 	})
-
-	// back to form
-		const back_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'light graph_back_button',
-			inner_html		: get_label.form || get_label.back || 'Form',
-			parent			: toolbar
-		})
-		back_button.addEventListener('click', async (e) => {
-			e.stopPropagation()
-			await switch_view(self, 'default')
-		})
 
 	// hint
 		ui.create_dom_element({
@@ -218,8 +214,60 @@ const get_toolbar = function(self) {
 			})
 		}
 
+	// close the graph (back to the form). Last in the DOM so tab order matches
+	// the visual order; CSS pushes it to the far right of the toolbar
+		const close_button = get_close_button(get_label.close || 'Close')
+		toolbar.appendChild(close_button)
+		close_button.addEventListener('click', async (e) => {
+			e.stopPropagation()
+			await switch_view(self, 'default')
+		})
+
 	return { toolbar, inverse_controls }
 }//end get_toolbar
+
+
+
+/**
+* GET_CLOSE_BUTTON
+* Build a close control: a padded `<button>` hit target wrapping the icon glyph.
+*
+* Two reasons it is not the bare `<span class="button close">` used elsewhere:
+* - **Hit area.** `.button` masks the icon onto the element itself, so the element
+*   IS the glyph — padding would only scale the drawing. Wrapping it in a real
+*   button gives a comfortable target around a small icon (the inner span is
+*   `pointer-events: none` in CSS, so the padded button owns every click).
+* - **Keyboard.** A real `<button>` is focusable and fires on Enter/Space for free.
+*
+* The tooltip is registered here with `placement: 'left'` because both call sites
+* pin the button to a top-right corner, where the default top tooltip is drawn over
+* the app chrome above and clipped by the viewport on the right. Registering now
+* also claims the element: the section's blanket `activate_tooltips(wrapper)` pass
+* skips it later, since `active_tooltip` is already set.
+*
+* @param {string} title - Tooltip text, also used as the accessible name.
+* @returns {HTMLElement} The `<button>`; the caller wires the click handler.
+*/
+const get_close_button = function(title) {
+
+	const close_button = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'graph_close_button'
+	})
+	close_button.title = title
+	close_button.setAttribute('aria-label', title)
+
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'button close',
+		parent			: close_button
+	})
+
+	ui.activate_tooltips(close_button, null, false, 'left')
+
+
+	return close_button
+}//end get_close_button
 
 
 
@@ -302,6 +350,8 @@ const get_content_data = function(self) {
 			parent			: content_data
 		})
 		content_data.node_detail = node_detail
+		// empty state from the first paint: the panel is never a blank slab
+		render_detail_placeholder(node_detail)
 
 	// mount d3 when in DOM
 		when_in_dom(graph_canvas, () => {
@@ -317,6 +367,78 @@ const get_content_data = function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_DETAIL_PLACEHOLDER
+* Fill the detail panel with its empty state.
+*
+* Two jobs, in this order:
+* 1. An invitation — the panel says what to do to fill it instead of sitting blank.
+* 2. A legend that decodes the graph's visual grammar (ring colour = expand state,
+*    line style = relation direction). The graph encodes all of this and never
+*    explains it, so the legend lives exactly where the user has nothing else to
+*    read, and is replaced by the record data as soon as a node is selected.
+*
+* The legend marks are pure CSS (`.graph_legend_mark`), so they always match the
+* SVG rules defined next to them in `view_graph_section.less`.
+*
+* @param {HTMLElement} node_detail - The detail panel container (emptied first).
+*/
+const render_detail_placeholder = function(node_detail) {
+
+	node_detail.innerHTML = ''
+
+	const placeholder = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'node_detail_placeholder',
+		parent			: node_detail
+	})
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'node_detail_placeholder_title',
+		inner_html		: get_label.graph_no_selection || 'Click a node to see its record',
+		parent			: placeholder
+	})
+
+	// legend (node states first, then link styles)
+		const legend = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'graph_legend',
+			parent			: placeholder
+		})
+
+		const legend_items = [
+			{ mark : 'node is_root',	text : get_label.current_record || 'Current record' },
+			{ mark : 'node expandable',	text : get_label.graph_legend_expand || 'Click to expand' },
+			{ mark : 'node expanded',	text : get_label.graph_legend_expanded || 'Expanded · click to collapse' },
+			{ mark : 'link',			text : get_label.graph_legend_relation || 'Relation' },
+			{ mark : 'link inverse',	text : get_label.graph_legend_reverse || 'Reverse relation' }
+		]
+
+		const legend_items_len = legend_items.length
+		for (let i = 0; i < legend_items_len; i++) {
+			const item = legend_items[i]
+			const row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'graph_legend_item',
+				parent			: legend
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'graph_legend_mark ' + item.mark,
+				parent			: row
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'graph_legend_text',
+				inner_html		: item.text,
+				parent			: row
+			})
+		}
+}//end render_detail_placeholder
 
 
 
@@ -476,6 +598,72 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 
 	// selected node for detail panel
 		let selected_node = null
+
+	// detail panel visibility (the grid parent owns the column track)
+		const content_data_el = node_detail.parentElement
+
+		/**
+		* SET_DETAIL_VISIBLE
+		* Show or collapse the detail column. Collapsing gives the canvas the full
+		* width, so the simulation is re-centered on the new size once the browser
+		* has applied the layout change (the class swap fires no resize event).
+		*
+		* @param {boolean} visible - true = detail column shown, false = collapsed.
+		*/
+		const set_detail_visible = (visible) => {
+			if (!content_data_el || content_data_el.classList.contains('detail_hidden')===!visible) {
+				return
+			}
+			content_data_el.classList.toggle('detail_hidden', !visible)
+			requestAnimationFrame(() => on_resize())
+		}
+
+		/**
+		* CLOSE_NODE_DETAIL
+		* Panel close button: deselect the node and collapse the column.
+		* Clicking any node reopens it, so the action is fully reversible.
+		*/
+		const close_node_detail = () => {
+			selected_node = null
+			render_detail_placeholder(node_detail)
+			set_detail_visible(false)
+			update()
+		}
+
+		/**
+		* GET_NODE_RELATION_INFO
+		* Resolve how a node hangs off the graph: the relation it arrived through
+		* and the record on the other end. Answers "why is this node here?", which
+		* the edge labels alone cannot when they overlap.
+		*
+		* Prefers the incoming edge (parent → node); falls back to an outgoing one
+		* for inverse links, where the referencing record is the source.
+		*
+		* @param {Object} node - Graph node being displayed.
+		* @returns {Object|null} `{ relation_label, other_label, is_inverse }`, or
+		*   null for the root node or a node with no edge yet.
+		*/
+		const get_node_relation_info = (node) => {
+
+			if (node.is_root) {
+				return null
+			}
+
+			const link = graph.links.find(l => endpoint_id(l.target)===node.id)
+				|| graph.links.find(l => endpoint_id(l.source)===node.id)
+			if (!link) {
+				return null
+			}
+
+			const other_id	= endpoint_id(link.target)===node.id ? endpoint_id(link.source) : endpoint_id(link.target)
+			const other		= graph.nodes.find(n => n.id===other_id)
+
+			return {
+				relation_label	: link.relation_label || '',
+				other_label		: other ? other.label : '',
+				is_inverse		: link.is_inverse===true
+			}
+		}
 
 	// inverse relations state
 		const root_tipo		= self.section_tipo
@@ -712,7 +900,7 @@ add_children(root_node, result)
 				.classed('expanded', d => d.expanded && !d.is_root)
 				.classed('selected', d => selected_node && d.id===selected_node.id)
 			node_sel.select('circle')
-				.attr('fill', d => d.is_root ? 'var(--color_hilite, #7092e0)' : color(d.section_tipo))
+				.attr('fill', d => d.is_root ? 'var(--color_orange_dedalo, #f78a1c)' : color(d.section_tipo))
 			node_sel.selectAll('text')
 				.text(d => d.label)
 
@@ -1023,15 +1211,21 @@ add_children(root_node, result)
 	* SHOW_NODE_DETAIL
 	* Populate the right-hand detail panel with information about the clicked node.
 	*
+	* Layout: a sticky identity header (section name, colour dot + label, locator,
+	* how the node is related, "Open") over a scrolling field list. The colour dot
+	* repeats the node's circle colour, so the panel visibly IS the clicked node.
+	*
 	* Renders immediately in two phases:
-	* 1. **Synchronous / instant**: label, type·id metadata, and "Open record"
-	*    button are created before any fetch. A loading indicator is shown in
-	*    the fields area.
+	* 1. **Synchronous / instant**: header (label, locator, relation context) and
+	*    the "Open" button are created before any fetch. A loading indicator is
+	*    shown in the fields area.
 	* 2. **Async / lazy**: the record datum is fetched (or, for the root node,
 	*    taken directly from `self.datum`) and `extract_node_fields` converts it
 	*    into a list of `{ label, value, tipo }` rows rendered in `fields_container`.
-	*    Any new section_maps from the fetched datum are merged into the shared
-	*    accumulator so they are available for future label resolutions.
+	*    The datum's own section context also resolves the header eyebrow from the
+	*    raw tipo to the section name. Any new section_maps from the fetched datum
+	*    are merged into the shared accumulator so they are available for future
+	*    label resolutions.
 	*
 	* On error the fields area shows a generic error message instead of throwing.
 	*
@@ -1040,22 +1234,62 @@ add_children(root_node, result)
 	*/
 	async function show_node_detail(node) {
 
+		// a previous close collapsed the panel: selecting a node brings it back
+			set_detail_visible(true)
+
 		// clear panel
 			node_detail.innerHTML = ''
 
-		// header: label
+		// header (sticky over the scrolling field list)
+			const header = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_detail_header',
+				parent			: node_detail
+			})
+
+		// close (collapses the panel; clicking any node reopens it)
+			const close_button = get_close_button(get_label.close || 'Close')
+			close_button.classList.add('node_detail_close')
+			header.appendChild(close_button)
+			close_button.addEventListener('click', (e) => {
+				e.stopPropagation()
+				close_node_detail()
+			})
+
+		// section name (eyebrow). Resolved from the datum below; the reserved
+		// height keeps the header from jumping when it arrives
+			const section_name = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_section_name',
+				parent			: header
+			})
+
+		// title: colour dot (mirrors the node circle) + record label
+			const title_row = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_detail_title_row',
+				parent			: header
+			})
+			const color_dot = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'node_color_dot',
+				parent			: title_row
+			})
+			color_dot.style.backgroundColor = node.is_root
+				? 'var(--color_orange_dedalo, #f78a1c)'
+				: color(node.section_tipo)
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'node_label',
 				inner_html		: node.label,
-				parent			: node_detail
+				parent			: title_row
 			})
 
-		// meta: section_tipo + section_id (secondary info)
+		// meta: locator + root badge
 			const meta = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'node_meta',
-				parent			: node_detail
+				parent			: header
 			})
 			ui.create_dom_element({
 				element_type	: 'span',
@@ -1063,32 +1297,87 @@ add_children(root_node, result)
 				inner_html		: node.section_tipo + ' · ' + node.section_id,
 				parent			: meta
 			})
+			if (node.is_root) {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'node_meta_badge',
+					inner_html		: get_label.current_record || 'Current record',
+					parent			: meta
+				})
+			}
+
+		// relation context: the edge this node arrived through
+			const relation_info = get_node_relation_info(node)
+			if (relation_info && (relation_info.relation_label || relation_info.other_label)) {
+				const relation_row = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: relation_info.is_inverse ? 'node_relation inverse' : 'node_relation',
+					parent			: header
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'node_relation_label',
+					inner_html		: relation_info.relation_label,
+					parent			: relation_row
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'node_relation_parent',
+					inner_html		: relation_info.other_label,
+					parent			: relation_row
+				})
+			}
 
 		// open record link
 			const open_link = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'light node_open_link',
-				inner_html		: get_label.open || 'Open record',
-				parent			: node_detail
+				class_name		: 'light link node_open_link',
+				inner_html		: get_label.open || 'Open',
+				parent			: header
 			})
 			open_link.addEventListener('click', (e) => {
 				e.stopPropagation()
 				open_record_window(node)
 			})
 
+		// body (scrolls under the header)
+			const body = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_detail_body',
+				parent			: node_detail
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_fields_title',
+				inner_html		: get_label.fields || 'Fields',
+				parent			: body
+			})
+
 		// fields container (lazy)
 			const fields_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'node_fields',
-				parent			: node_detail
+				parent			: body
 			})
 
-		// loading indicator
-			ui.create_dom_element({
+		// loading indicator. The header above is already painted from the graph
+		// node, so this covers the only part that waits on the network — and on a
+		// slow link it is the difference between "loading" and "this node is empty"
+			const loading = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'node_fields_loading',
-				inner_html		: '…',
 				parent			: fields_container
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'spinner',
+				parent			: loading
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'node_fields_loading_text',
+				inner_html		: get_label.loading || 'Loading...',
+				parent			: loading
 			})
 
 		// resolve fields
@@ -1103,6 +1392,13 @@ add_children(root_node, result)
 				}
 				if (datum) {
 					const model_map = build_model_map(datum)
+					// header eyebrow: raw tipo → section name, when the context carries it
+					const section_ctx = (datum.context || []).find(ctx =>
+						ctx && ctx.model==='section' && (ctx.tipo===node.section_tipo || ctx.section_tipo===node.section_tipo)
+					)
+					if (section_ctx && section_ctx.label) {
+						section_name.innerHTML = section_ctx.label
+					}
 					// merge section_maps from fetched datum
 					const new_maps = build_section_maps(datum)
 					const new_map_keys = Object.keys(new_maps)
@@ -1124,22 +1420,28 @@ add_children(root_node, result)
 							class_name		: 'node_field',
 							parent			: fields_container
 						})
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'node_field_label',
-							inner_html		: field.label,
+						// label line carries the tipo (revealed on hover, no reflow)
+						const label_row = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'node_field_label_row',
 							parent			: row
 						})
 						ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'node_field_value',
-							inner_html		: field.value,
-							parent			: row
+							class_name		: 'node_field_label',
+							inner_html		: field.label,
+							parent			: label_row
 						})
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'node_field_tipo',
 							inner_html		: field.tipo,
+							parent			: label_row
+						})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'node_field_value',
+							inner_html		: field.value,
 							parent			: row
 						})
 					}
@@ -1220,11 +1522,12 @@ add_children(root_node, result)
 		update()
 		graph_canvas.appendChild(svg.node())
 
-	// click on canvas background deselects node
+	// click on canvas background deselects node (panel returns to its empty state,
+	// it is NOT collapsed — only the close button hides the column)
 		svg.on('click', (event) => {
 			if (event.target===svg.node()) {
 				selected_node = null
-				node_detail.innerHTML = ''
+				render_detail_placeholder(node_detail)
 				update()
 			}
 		})

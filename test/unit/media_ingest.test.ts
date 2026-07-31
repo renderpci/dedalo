@@ -8,8 +8,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
-import { mediaTypeOf } from '../../src/core/concepts/media.ts';
-import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
+import { AUDIO_TR_QUALITY, mediaTypeOf } from '../../src/core/concepts/media.ts';
+import { updateMatrixKeysData } from '../../src/core/db/matrix_write.ts';
+import { sql } from '../../src/core/db/postgres.ts';
+import { getDimensions, resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { addFile, sanitizeSegment, stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import {
@@ -24,6 +26,10 @@ import {
 	type MediaPathOptions,
 	buildMediaLocation,
 } from '../../src/core/media/path.ts';
+import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
+import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
+import { mustGet } from '../helpers/assert.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_ingest_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -37,7 +43,27 @@ const identity: MediaIdentity = {
 	lang: null,
 };
 const pathOpts: MediaPathOptions = { initialMediaPath: '', maxItemsFolder: 1000, mediaRoot: ROOT };
+/** The av playground identity (test3/test94), shared by the av ingest cases. */
+const avIdentity: MediaIdentity = {
+	componentTipo: 'test94',
+	sectionTipo: 'test3',
+	sectionId: 44,
+	lang: null,
+};
 const USER_ID = 7;
+/**
+ * The stored-cue case needs a REAL record (the ingest re-reads the stored item),
+ * so it uses the canonical test3 playground — the one write surface the suite
+ * owns — with the scratch media ROOT above. Everything else here is DB-free.
+ */
+const CUE_SECTION = 'test3';
+const CUE_COMPONENT = 'test99'; // component_image
+const scratchIds: number[] = [];
+async function scratchRecord(): Promise<number> {
+	const sectionId = await createSectionRecord(CUE_SECTION, -1);
+	scratchIds.push(sectionId);
+	return sectionId;
+}
 
 /** Stage a real jpg in the upload tmp dir and return its tmp name. */
 async function stageImage(tmpName: string, size = '2500x1800'): Promise<void> {
@@ -116,8 +142,29 @@ async function awaitJob(jobId: string): Promise<void> {
 beforeAll(() => {
 	rmSync(ROOT, { recursive: true, force: true });
 });
-afterAll(() => {
+afterAll(async () => {
 	rmSync(ROOT, { recursive: true, force: true });
+	const failures: string[] = [];
+	for (const id of scratchIds) {
+		try {
+			const outcome = await deleteSectionRecord(CUE_SECTION, id, -1);
+			if (outcome.removed !== true) {
+				failures.push(`${CUE_SECTION}/${id}: ${JSON.stringify(outcome)}`);
+			}
+			// deleteSectionRecord writes a 'deleted' snapshot into matrix_time_machine,
+			// a REAL shared table — one orphan row per suite run otherwise.
+			await sql.unsafe(
+				'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+				[CUE_SECTION, id],
+			);
+		} catch (error) {
+			failures.push(`${CUE_SECTION}/${id}: ${(error as Error).message}`);
+		}
+	}
+	// Throw, don't warn: silent cleanup failure is how a shared playground fills.
+	if (failures.length > 0) {
+		throw new Error(`scratch cleanup failed: ${failures.join('; ')}`);
+	}
 });
 
 describe('add_file (SEC-063 confinement)', () => {
@@ -159,6 +206,47 @@ describe('add_file (SEC-063 confinement)', () => {
 		expect(result.originalFilePath).toContain('/image/original/0/rsc29_rsc170_42.jpg');
 		expect(existsSync(result.originalFilePath)).toBe(true);
 	});
+
+	test.if(HAVE_MAGICK)('quality parks the file in another tier (PHP set_quality)', async () => {
+		// tool_import_files' custom_target_quality / tool_upload's quality. The
+		// selector used to be inert server-side: every file landed in original.
+		await stageImage('up3.jpg');
+		const result = addFile({
+			spec: image,
+			identity: { ...identity, sectionId: 60 },
+			pathOpts,
+			userId: USER_ID,
+			keyDir: 'kd1',
+			tmpName: 'up3.jpg',
+			extension: 'jpg',
+			quality: image.defaultQuality,
+		});
+		expect(result.originalFilePath).toContain(
+			`/image/${image.defaultQuality}/0/rsc29_rsc170_60.jpg`,
+		);
+		expect(existsSync(result.originalFilePath)).toBe(true);
+	});
+
+	test.if(HAVE_MAGICK)('a bogus quality is refused, never used as a path segment', async () => {
+		// The value is CLIENT-supplied and becomes a directory name.
+		await stageImage('up4.jpg');
+		const attempt = (quality: string): (() => void) => {
+			return () =>
+				addFile({
+					spec: image,
+					identity: { ...identity, sectionId: 61 },
+					pathOpts,
+					userId: USER_ID,
+					keyDir: 'kd1',
+					tmpName: 'up4.jpg',
+					extension: 'jpg',
+					quality,
+				});
+		};
+		expect(attempt('../../etc')).toThrow();
+		expect(attempt('..')).toThrow();
+		expect(attempt('not_a_tier')).toThrow();
+	});
 });
 
 describe('processUploadedFile (ingest → derivatives → files_info)', () => {
@@ -183,7 +271,7 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 				tmpName: 'up2.jpg',
 				extension: 'jpg',
 			});
-			expect(result.jobId).toBeNull(); // image is synchronous
+			expect(result.startTranscode).toBeNull(); // image is synchronous
 			const qualities = new Set(result.filesInfo.map((e) => e.quality));
 			expect(qualities.has('original')).toBe(true);
 			expect(qualities.has('1.5MB')).toBe(true);
@@ -205,6 +293,172 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 		} finally {
 			registerMediaIngestHook(null);
 		}
+	});
+
+	test.if(HAVE_MAGICK)(
+		'a non-original target quality regenerates AROUND the placed file',
+		async () => {
+			// PHP set_quality()'d the component and still ran regenerate_component.
+			// Skipping it would leave the thumb showing the PREVIOUS image while this
+			// tier serves the new one — so the non-original path runs the
+			// build-only-what-is-missing regenerate: the placed file is NOT re-encoded,
+			// the thumb IS rebuilt from it, and no original is invented.
+			await stageImage('up5.jpg', '2500x1800');
+			const id5: MediaIdentity = { ...identity, sectionId: 62 };
+			const placed = buildMediaLocation(
+				image,
+				id5,
+				image.defaultQuality,
+				'jpg',
+				pathOpts,
+			).absolutePath;
+			const result = await processUploadedFile({
+				spec: image,
+				identity: id5,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up5.jpg',
+				extension: 'jpg',
+				quality: image.defaultQuality,
+			});
+			expect(result.startTranscode).toBeNull();
+			const qualities = new Set(result.filesInfo.map((e) => e.quality));
+			expect(qualities.has(image.defaultQuality)).toBe(true);
+			expect(qualities.has(config.media.thumb.quality)).toBe(true);
+			// The placed file is the SOURCE size, untouched — regenerate builds the
+			// default tier only when it is ABSENT, so the upload is never re-encoded.
+			expect((await getDimensions(placed)).width).toBe(2500);
+			// No original is invented for a tier that never received one.
+			expect(qualities.has(image.originalQuality)).toBe(false);
+			expect(
+				existsSync(
+					buildMediaLocation(image, id5, image.originalQuality, 'jpg', pathOpts).absolutePath,
+				),
+			).toBe(false);
+		},
+	);
+
+	test.if(HAVE_MAGICK)('a non-original upload PRESERVES the stored scan cues', async () => {
+		// A re-scan must read the stored item's cues (external_source + the
+		// original/modified normalized-name twins) — scanContextFromItem is the one
+		// reader of that mapping. The ORIGINAL branch replaces its own cue with what
+		// it just stored; the non-original branch has nothing to replace, so it must
+		// carry them over, or the upload persists an index built from the wrong
+		// premises.
+		//
+		// external_source is the cue that DISCRIMINATES: every image extension is in
+		// the scanner's walk list, so a dropped original_normalized_name changes
+		// nothing, while a dropped external_source flips the whole scan from
+		// external entries to disk entries.
+		const sectionId = await scratchRecord();
+		const idCue: MediaIdentity = {
+			componentTipo: CUE_COMPONENT,
+			sectionTipo: CUE_SECTION,
+			sectionId,
+			lang: null,
+		};
+		const table = mustGet(await getMatrixTableFromTipo(CUE_SECTION), 'test3 matrix table');
+		await updateMatrixKeysData(table, CUE_SECTION, sectionId, [
+			{
+				column: 'media',
+				key: CUE_COMPONENT,
+				value: [{ id: 1, external_source: 'https://example.org/remote.jpg', files_info: [] }],
+			},
+		]);
+
+		await stageImage('up8.jpg');
+		const result = await processUploadedFile({
+			spec: image,
+			identity: idCue,
+			pathOpts,
+			userId: USER_ID,
+			keyDir: 'kd1',
+			tmpName: 'up8.jpg',
+			extension: 'jpg',
+			quality: image.defaultQuality,
+		});
+		// The scan still resolves EXTERNAL — it read the stored cue, not just the disk.
+		expect(result.filesInfo.length).toBeGreaterThan(0);
+		expect(result.filesInfo.every((entry) => entry.external === true)).toBe(true);
+		expect(result.filesInfo[0]?.file_path).toBe('https://example.org/remote.jpg');
+	});
+
+	test.if(HAVE_MAGICK)('a derived tier is refused as an upload target', async () => {
+		// thumb is probed with the thumb extension ALONE, so a file placed there
+		// under any other extension is invisible to the record forever — and
+		// regenerate rebuilds the thumb anyway. Refuse instead of writing a file
+		// nothing will ever see.
+		await stageImage('up6.jpg');
+		await expect(
+			processUploadedFile({
+				spec: image,
+				identity: { ...identity, sectionId: 63 },
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up6.jpg',
+				extension: 'jpg',
+				quality: config.media.thumb.quality,
+			}),
+		).rejects.toThrow(/generated thumbnail/);
+		// Refused BEFORE the move: the staged file is still staged, the media tree
+		// untouched.
+		expect(existsSync(`${stagingDir(USER_ID, 'kd1', ROOT)}/up6.jpg`)).toBe(true);
+	});
+
+	test.if(HAVE_MAGICK)('a non-normalized extension is refused for a derivative tier', async () => {
+		// Regression: the placed file would be SHADOWED. The tier's canonical
+		// `<id>.<defaultExtension>` still exists (or gets rebuilt from the OLD
+		// original), the scanner emits it FIRST for that quality, and the thumb is
+		// regenerated from it — so the record keeps serving the previous image
+		// while the upload sits beside it, reported as a success.
+		await stageImage('up7.png');
+		await expect(
+			processUploadedFile({
+				spec: image,
+				identity: { ...identity, sectionId: 65 },
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up7.png',
+				extension: 'png',
+				quality: image.defaultQuality,
+			}),
+		).rejects.toThrow(/would be shadowed/);
+		// The ORIGINAL tier is exempt — it keeps the raw upload (Original law).
+		await expect(
+			processUploadedFile({
+				spec: image,
+				identity: { ...identity, sectionId: 66 },
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up7.png',
+				extension: 'png',
+				quality: image.originalQuality,
+			}),
+		).resolves.toBeDefined();
+	});
+
+	test.if(HAVE_FFMPEG)('the av transcription tier is refused too', async () => {
+		// audio_tr is the OTHER off-ladder carve-out assertValidQuality admits:
+		// a real av directory scanFilesInfo never walks. Both arms of the guard
+		// need a gate, or half of it can be deleted silently.
+		await stageVideo('upaudiotr.mp4');
+		await expect(
+			processUploadedFile({
+				spec: av,
+				identity: { componentTipo: 'test94', sectionTipo: 'test3', sectionId: 64, lang: null },
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kdav',
+				tmpName: 'upaudiotr.mp4',
+				extension: 'mp4',
+				quality: AUDIO_TR_QUALITY,
+			}),
+		).rejects.toThrow(/transcription derivative/);
+		expect(existsSync(`${stagingDir(USER_ID, 'kdav', ROOT)}/upaudiotr.mp4`)).toBe(true);
 	});
 
 	test('a listener that throws can never fail an upload', async () => {
@@ -261,10 +515,13 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 				tmpName: 'upav.mp4',
 				extension: 'mp4',
 			});
-			expect(result.jobId).not.toBeNull(); // av transcode is async
+			// The transcode is handed back UNSTARTED — the caller starts it after its
+			// own persist commits (IngestResult.startTranscode).
+			expect(result.startTranscode).not.toBeNull();
+			const jobId = mustGet(result.startTranscode, 'startTranscode')();
 
-			await awaitJob(result.jobId as string);
-			const job = mediaJobs.status(result.jobId as string);
+			await awaitJob(jobId);
+			const job = mediaJobs.status(jobId);
 			expect(job?.errors ?? ['no job']).toEqual([]);
 			expect(job?.status).toBe('done');
 
@@ -281,6 +538,63 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 			expect(existsSync(`${q404}.passlog-0.log`)).toBe(false);
 			expect(existsSync(`${q404}.passlog-0.log.mbtree`)).toBe(false);
 		},
+	);
+
+	test.if(HAVE_FFMPEG)(
+		'a non-original av upload transcodes only what it CAN derive',
+		async () => {
+			// regenerateMissingDerivatives has no component_av branch, so the av case
+			// is handled here — but a transcode derives from the ORIGINAL. Both arms
+			// matter: no original ⇒ nothing to offer (submitting would only produce a
+			// job that fails 'AV original not found'); original present + default tier
+			// missing ⇒ rebuild it, as PHP's regenerate_component did.
+			const noOriginal: MediaIdentity = { ...avIdentity, sectionId: 70 };
+			await stageVideo('upaudio1.mp4');
+			const bare = await processUploadedFile({
+				spec: av,
+				identity: noOriginal,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kdav',
+				tmpName: 'upaudio1.mp4',
+				extension: 'mp4',
+				quality: 'audio',
+			});
+			expect(bare.startTranscode).toBeNull();
+
+			// Same again on a record that DOES have an original: the missing default
+			// tier is rebuildable, so the transcode is offered.
+			const withOriginal: MediaIdentity = { ...avIdentity, sectionId: 71 };
+			await stageVideo('upaudio2.mp4');
+			await processUploadedFile({
+				spec: av,
+				identity: withOriginal,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kdav',
+				tmpName: 'upaudio2.mp4',
+				extension: 'mp4',
+			}); // lands in `original`
+			rmSync(
+				buildMediaLocation(av, withOriginal, av.defaultQuality, av.defaultExtension, pathOpts)
+					.absolutePath,
+				{ force: true },
+			);
+			await stageVideo('upaudio3.mp4');
+			const derivable = await processUploadedFile({
+				spec: av,
+				identity: withOriginal,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kdav',
+				tmpName: 'upaudio3.mp4',
+				extension: 'mp4',
+				quality: 'audio',
+			});
+			expect(derivable.startTranscode).not.toBeNull();
+			await awaitJob(mustGet(derivable.startTranscode, 'startTranscode')());
+		},
+		120_000,
 	);
 
 	test.if(HAVE_FFMPEG)(
@@ -308,8 +622,9 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 				tmpName: 'upsilent.mp4',
 				extension: 'mp4',
 			});
-			await awaitJob(result.jobId as string);
-			const job = mediaJobs.status(result.jobId as string);
+			const jobId = mustGet(result.startTranscode, 'startTranscode')();
+			await awaitJob(jobId);
+			const job = mediaJobs.status(jobId);
 			expect(job?.errors ?? ['no job']).toEqual([]);
 			expect(job?.status).toBe('done');
 

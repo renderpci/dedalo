@@ -224,6 +224,47 @@ describe('tool_import_files module', () => {
 		// must never be "corrected" without a WIRE_CONTRACT entry.
 	});
 
+	/**
+	 * THE WIRE. `custom_target_quality` — the Quality selector
+	 * (render_tool_import_files.js :989) — reached the handler and was DROPPED, so
+	 * every imported file landed in `original` whatever the operator chose. The
+	 * engine honouring a `quality` it is HANDED proves nothing about that; only
+	 * reading it off the payload does.
+	 *
+	 * An out-of-ladder tier must surface as the quality error for that file; with
+	 * the option not read, the same request dies at the staging lookup instead.
+	 */
+	testIfDb('custom_target_quality reaches the ingest (the inert-selector bug)', async () => {
+		const loaded = await getLoadedTool('tool_import_files');
+		const action = mustGet(loaded!.module.apiActions.import_files, 'import_files');
+		const call = async (customTargetQuality?: string): Promise<string[]> => {
+			const response = await action.handler({
+				principal: await resolvePrincipal(USER),
+				userId: USER,
+				background: false,
+				options: {
+					tipo: 'test99', // component_image in the test3 playground
+					section_tipo: FILENAME_SECTION,
+					section_id: mustGet(filenameScratchId, 'filename scratch id'),
+					tool_config: {},
+					key_dir: 'kd_wire',
+					files_data: [{ name: 'wire.jpg', tmp_name: 'wire.jpg', extension: 'jpg' }],
+					...(customTargetQuality === undefined
+						? {}
+						: { custom_target_quality: customTargetQuality }),
+				},
+			});
+			return (response.errors as string[]) ?? [];
+		};
+
+		expect((await call('not_a_tier')).join(' ')).toContain("Unknown media quality 'not_a_tier'");
+		// Same request without it must fail elsewhere — asserted POSITIVELY, so the
+		// control arm cannot pass by returning no errors at all.
+		const control = (await call()).join(' ');
+		expect(control).toContain('Staged upload not found');
+		expect(control).not.toContain('media quality');
+	});
+
 	test('the matcher gates read the TARGET section out of the payload', async () => {
 		const loaded = await getLoadedTool('tool_import_files');
 		const actions = loaded!.module.apiActions;
@@ -309,38 +350,46 @@ describe('tool_import_files module', () => {
 		expect(res.msg).toContain('target_component');
 	});
 
-	testIfDb(
-		'import_files FAILS LOUD (before any ingest) on a translatable input_component',
-		async () => {
-			// The PHP temp-session component (is_temp at fake section_id 1) has no
-			// TS twin — the batch is refused, never silently dropped (ledgered).
-			const loaded = await getLoadedTool('tool_import_files');
-			const principal = await resolvePrincipal(-1);
-			const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
-				principal,
-				userId: -1,
-				background: true,
-				options: {
-					tool_config: {
-						import_mode: 'section_resource',
-						ddo_map: [
-							{ role: 'target_component', tipo: 'rsc29', section_tipo: 'rsc170' },
-							{
-								role: 'input_component',
-								tipo: FILENAME_COMPONENT,
-								section_tipo: FILENAME_SECTION,
-							},
-						],
-					},
-					section_tipo: 'rsc170',
-					tipo: 'rsc29',
-					files_data: [{ name: 'a.jpg' }],
+	testIfDb('a translatable input_component no longer refuses the batch (WC-078)', async () => {
+		// WAS: the batch was refused outright, before touching a single file,
+		// because the PHP temp-session component (is_temp at fake section_id 1)
+		// has no TS twin. That made the tool unusable with the SHIPPED import
+		// form, which carries translatable text fields — the user-visible
+		// "images upload fails". Translatable values are now written per-lang
+		// from the entries the client ships (each carries its own `lang`).
+		//
+		// This asserts only that the pre-flight REFUSAL is gone: the run still
+		// fails here for the unrelated reason that 'a.jpg' was never staged, so
+		// pin the absence of the old message rather than a success.
+		const loaded = await getLoadedTool('tool_import_files');
+		const principal = await resolvePrincipal(-1);
+		const res = await mustGet(loaded!.module.apiActions.import_files, 'import_files').handler({
+			principal,
+			userId: -1,
+			background: true,
+			options: {
+				tool_config: {
+					import_mode: 'section_resource',
+					ddo_map: [
+						{ role: 'target_component', tipo: 'rsc29', section_tipo: 'rsc170' },
+						{
+							role: 'input_component',
+							tipo: FILENAME_COMPONENT,
+							section_tipo: FILENAME_SECTION,
+						},
+					],
 				},
-			});
-			expect(res.result).toBe(false);
-			expect(res.msg).toContain('translatable input_component');
-		},
-	);
+				section_tipo: 'rsc170',
+				tipo: 'rsc29',
+				files_data: [{ name: 'a.jpg' }],
+			},
+		});
+		expect(res.msg).not.toContain('translatable input_component');
+		// It got PAST the pre-flight and into the per-file loop, where the
+		// unstaged file is reported per-file instead of aborting the batch.
+		expect(res.result).toBe(true);
+		expect((res as { errors?: string[] }).errors?.join(' ')).toContain('a.jpg');
+	});
 });
 
 describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
@@ -488,23 +537,71 @@ describe.if(hasDb)('setComponentsData drive (scratch-twin, real DB)', () => {
 		expect(after).toEqual(before);
 	});
 
-	test('translatable input_component THROWS (no TS temp-session twin — ledgered)', async () => {
-		await expect(
-			setComponentsData({
-				ddoMap: [
-					{ role: 'input_component', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
-				],
-				sectionTipo: 'oh1',
-				sectionId: 0,
-				targetSectionId: filenameScratchId as number,
-				currentFileName: 'a.jpg',
-				mediaFilePath: null,
-				targetComponentModel: '',
-				componentsTempData: [],
-				userId: USER,
-				dataLang: DATA_LANG,
-			}),
-		).rejects.toThrow(/translatable input_component/);
+	// WC-078: a translatable input_component used to THROW here (PHP reached all
+	// languages through a temp-session component that has no TS twin). It now
+	// writes per-lang from the entries the client ships — a save call stores
+	// exactly ONE lang slice, so the entries are grouped by their own `lang`.
+	test('translatable input_component with NO temp payload writes nothing (no throw)', async () => {
+		const before = await readItems(
+			FILENAME_SECTION,
+			filenameScratchId as number,
+			FILENAME_COMPONENT,
+			'component_input_text',
+		);
+		await setComponentsData({
+			ddoMap: [
+				{ role: 'input_component', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
+			],
+			sectionTipo: 'oh1',
+			sectionId: 0,
+			targetSectionId: filenameScratchId as number,
+			currentFileName: 'a.jpg',
+			mediaFilePath: null,
+			targetComponentModel: '',
+			componentsTempData: [],
+			userId: USER,
+			dataLang: DATA_LANG,
+		});
+		const after = await readItems(
+			FILENAME_SECTION,
+			filenameScratchId as number,
+			FILENAME_COMPONENT,
+			'component_input_text',
+		);
+		expect(after).toEqual(before);
+	});
+
+	test('translatable input_component writes the entry under its OWN lang', async () => {
+		await setComponentsData({
+			ddoMap: [
+				{ role: 'input_component', tipo: FILENAME_COMPONENT, section_tipo: FILENAME_SECTION },
+			],
+			sectionTipo: 'oh1',
+			sectionId: 0,
+			targetSectionId: filenameScratchId as number,
+			currentFileName: 'a.jpg',
+			mediaFilePath: null,
+			targetComponentModel: '',
+			// `entries` is the live wire key (WC-001); the entry carries its lang.
+			componentsTempData: [
+				{
+					tipo: FILENAME_COMPONENT,
+					section_tipo: FILENAME_SECTION,
+					entries: [{ value: 'caption from the import form', lang: DATA_LANG }],
+				},
+			],
+			userId: USER,
+			dataLang: DATA_LANG,
+		});
+		const stored = await readItems(
+			FILENAME_SECTION,
+			filenameScratchId as number,
+			FILENAME_COMPONENT,
+			'component_input_text',
+		);
+		expect(stored).toContainEqual(
+			expect.objectContaining({ value: 'caption from the import form', lang: DATA_LANG }),
+		);
 	});
 
 	// Gated separately (visible SKIP): the reader shells out to pdfinfo.

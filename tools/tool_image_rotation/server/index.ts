@@ -4,7 +4,7 @@
  */
 
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
-import { persistScannedFilesInfo } from '../../../src/core/media/tools/files_info_persist.ts';
+import { reconcileStoredFilesInfo } from '../../../src/core/media/tools/files_info_persist.ts';
 import {
 	type RotationTargetEntry,
 	applyRotationCore,
@@ -44,12 +44,11 @@ async function applyRotation(ctx: ToolActionContext): Promise<ToolResponse> {
 		);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts);
 		// Refresh the stored files_info cache (rotation changes tier dimensions).
-		await persistScannedFilesInfo({
+		await reconcileStoredFilesInfo({
 			sectionTipo: identity.sectionTipo,
 			sectionId: identity.sectionId,
 			componentTipo: identity.componentTipo,
 			lang: identity.lang,
-			items: items as { lang?: string | null; files_info?: unknown }[],
 			freshFilesInfo,
 		});
 		return {

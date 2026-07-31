@@ -739,6 +739,11 @@ const render_template = async function(self) {
 			clickable			: button_add_files, // Define the element that should be used as click trigger to select files.
 			addRemoveLinks		: false,
 			acceptedFiles		: self.allowed_extensions.join(','),
+			// The TS engine's multipart receiver (src/core/media/ingest/upload.ts
+			// parseUploadRequest) reads the blob from the `file_to_upload` part.
+			// Dropzone's default paramName is 'file' — leaving it unset made every
+			// upload fail with 400 "upload: missing file_to_upload".
+			paramName			: 'file_to_upload',
 			params				: {
 				// key_dir is appended to every multipart upload POST so the server
 				// can route the file to the correct temporary sub-directory.
@@ -901,7 +906,48 @@ const render_template = async function(self) {
 		});
 
 	// event sending
-		current_dropzone.on('sending', function(file) {
+		// Signature is (file, xhr, formData): the LAST chance to add headers/fields
+		// before the multipart POST goes out. service_dropzone speaks the same wire
+		// as service_upload (core/services/service_upload/js/service_upload.js:600) —
+		// it was previously missing both the CSRF token and the file name, so every
+		// upload was rejected (403 CSRF, then 400 extension mismatch).
+		current_dropzone.on('sending', function(file, xhr, formData) {
+
+			// SEC-008: the upload action is NOT in the server-side CSRF-exempt
+			// allowlist, so the per-session token must ride on every POST.
+			// data_manager.request refreshes window.page_globals.csrf_token from
+			// each API response — read it at SEND time, not at Dropzone-init time,
+			// so a rotated token is picked up.
+			const csrf_token = (typeof window !== 'undefined' && window.page_globals)
+				? window.page_globals.csrf_token
+				: null;
+			if (csrf_token) {
+				if (xhr) {
+					xhr.setRequestHeader('X-Dedalo-Csrf-Token', csrf_token);
+				}
+				// Form-field twin: read by the server when an intermediary
+				// (proxy / CORS preflight) strips the custom header.
+				if (formData) {
+					formData.append('csrf_token', csrf_token);
+				}
+			}
+
+			// The receiver derives the stored extension from X-File-Name (or the
+			// `file_name` field), NEVER from the multipart part's own filename.
+			// Without it the extension resolved to '' and the magic-byte
+			// cross-check rejected the file:
+			//   "File signature (jpeg) does not match declared extension '.'".
+			// Use upload.filename so the renameFile() collision suffix is honoured.
+			const sent_name = (file.upload && file.upload.filename) || file.name;
+			if (sent_name) {
+				if (xhr) {
+					xhr.setRequestHeader('X-File-Name', encodeURIComponent(sent_name));
+				}
+				if (formData) {
+					formData.append('file_name', sent_name);
+				}
+			}
+
 			// Show the total progress bar when upload starts
 			// document.querySelector('#total-progress').style.opacity = '1';
 			global_progress.style.opacity = '1';
@@ -976,16 +1022,83 @@ const render_template = async function(self) {
 			}
 		}
 
+	// event error
+		// Dropzone's DEFAULT error handler assigns the second argument straight into
+		// [data-dz-errormessage].textContent, unwrapping only a `.error` key. The TS
+		// engine answers a rejected upload with { result:false, msg, errors:[...] },
+		// which has no `.error` — so the default stringified the whole object and the
+		// red badge read literally "[object Object]". Normalise to a string here.
+		current_dropzone.on('error', function(file, message, xhr) {
+
+			// message may be: a plain string (client-side validation, e.g. a file
+			// type Dropzone itself refused), or the parsed JSON error body, or —
+			// when the body was not JSON — the raw response text.
+			let text = '';
+			if (typeof message === 'string') {
+				text = message;
+			} else if (message && typeof message === 'object') {
+				// Prefer the server's own fields, most specific first.
+				if (Array.isArray(message.errors) && message.errors.length > 0) {
+					text = message.errors.join(' — ');
+				} else if (typeof message.error === 'string') {
+					text = message.error;
+				} else if (typeof message.msg === 'string') {
+					text = message.msg;
+				} else {
+					// Last resort: never let an object reach textContent.
+					try {
+						text = JSON.stringify(message);
+					} catch (e) {
+						text = 'Upload failed';
+					}
+				}
+			}
+			if (!text) {
+				text = xhr && xhr.status
+					? 'Upload failed (HTTP ' + xhr.status + ')'
+					: 'Upload failed';
+			}
+
+			if (file.previewElement) {
+				file.previewElement.classList.add('dz-error');
+				const nodes = file.previewElement.querySelectorAll('[data-dz-errormessage]');
+				for (let i = 0; i < nodes.length; i++) {
+					nodes[i].textContent = text;
+				}
+				// Stop the indeterminate striped bar: the upload is over, it failed.
+				const row_progress_bar = file.previewElement.querySelector('.progress');
+				if (row_progress_bar) {
+					row_progress_bar.style.opacity = '0';
+				}
+				// Let the user retry without re-adding the file.
+				const button_start = file.previewElement.querySelector('.start');
+				if (button_start) {
+					button_start.disabled = false;
+					button_start.removeAttribute('disabled');
+				}
+			}
+
+			console.error('[service_dropzone] upload error:', text, {file: file.name, status: xhr && xhr.status});
+		});
+
 	// event success
 		// Fires after the server returns a 2xx response.
-		// api_response is the parsed JSON body returned by dd_utils_api.
-		// Expected shape: { msg: string, file_data: { thumbnail_url: string } }.
+		// api_response is the parsed JSON body returned by the upload endpoint.
+		// Shape: { result:true, msg:string, file_data:{ key_dir, tmp_name, extension,
+		// chunked, chunk_index, total_chunks, complete, thumbnail_url? } }.
 		current_dropzone.on('success', function(file, api_response) {
 
 			// Replace the client-side thumbnail with the server-generated one so the
 			// preview reflects the actual stored representation (e.g. a TIFF→JPEG proxy).
-			//showing an image created by the server after upload
-			this.emit('thumbnail', file, api_response.file_data.thumbnail_url);
+			// thumbnail_url is OPTIONAL — the server omits it for formats it cannot
+			// rasterise. Emitting undefined blanked the preview img, so keep the
+			// locally-generated thumbnail in that case.
+			const thumbnail_url = api_response && api_response.file_data
+				? api_response.file_data.thumbnail_url
+				: null;
+			if (thumbnail_url) {
+				this.emit('thumbnail', file, thumbnail_url);
+			}
 
 			// Handle the api_responseText here. For example, add the text to the preview element:
 			file.previewTemplate.appendChild(
@@ -1010,6 +1123,28 @@ const render_template = async function(self) {
 			// Hide the per-file progress bar now that the upload is complete.
 			const row_progress_bar = file.previewElement.querySelector('.progress')
 			row_progress_bar.style.opacity = '0';
+
+			// Merge the server's file_data back into the caller's registry entry.
+			// `addedfile` could only record what the BROWSER knows (name/size); the
+			// staged identity is decided server-side, because the receiver sanitises
+			// the name (stagedTmpName: anything outside [A-Za-z0-9_.-] becomes '_').
+			// Without this merge, importers looked the file up under the original
+			// client name — so every file with a space, accent or parenthesis
+			// ('DSC 001.jpg', 'María.jpg', an auto-renamed 'photo (1).jpg') was
+			// staged as one name and requested as another, and the import failed.
+			const file_data = api_response ? api_response.file_data : null;
+			if (file_data) {
+				const registry	= self.caller.files_data;
+				const row_name	= (file.upload && file.upload.filename) || file.name;
+				for (let i = registry.length - 1; i >= 0; i--) {
+					if (registry[i].name === row_name) {
+						registry[i].tmp_name	= file_data.tmp_name;
+						registry[i].key_dir		= file_data.key_dir;
+						registry[i].extension	= file_data.extension;
+						break;
+					}
+				}
+			}
 
 			// Notify subscribers (e.g. tool_import_files) that a file was successfully
 			// uploaded.  Subscribers receive both the Dropzone file object and the raw
@@ -1049,8 +1184,14 @@ const render_template = async function(self) {
 				body : rqo
 			})
 			// response.result is an Array of file descriptor objects with at minimum
-			// { name, url, size } — the same shape as a Dropzone mock file object.
-			const files = response.result
+			// { name, url, size, thumbnail_url } — the same shape as a Dropzone mock
+			// file object. Guard the deref: on an expired session (or any error
+			// response) result is absent, and reading .length off it threw here —
+			// which aborted render_template and left the ENTIRE tool panel blank
+			// instead of degrading to an empty file list.
+			const files = Array.isArray(response && response.result)
+				? response.result
+				: []
 
 		// Access to the original image sizes on your server,
 		// to resize them in the browser:
@@ -1064,7 +1205,29 @@ const render_template = async function(self) {
 
 		for (let i = 0; i < files_length; i++) {
 			const current_file = files[i]
-			current_dropzone.displayExistingFile(current_file, current_file.url, callback, crossOrigin, resizeThumbnail);
+			// Prefer the server-rendered thumbnail; fall back to the file itself
+			// (an <img> can preview a jpeg/png directly, but not a TIFF or a video).
+			const preview_url = current_file.thumbnail_url || current_file.url
+			current_dropzone.displayExistingFile(current_file, preview_url, callback, crossOrigin, resizeThumbnail);
+			// Restored rows are already staged, so their staged identity IS their
+			// listed name (the listing reports what is on disk). Stamp it onto the
+			// registry entry `addedfile` just created, so an import launched straight
+			// after a reload resolves the same file the upload wrote.
+			const registry = self.caller.files_data
+			for (let j = registry.length - 1; j >= 0; j--) {
+				if (registry[j].name === current_file.name) {
+					registry[j].tmp_name	= current_file.name;
+					registry[j].key_dir		= self.key_dir;
+					// Carry the extension too: the import step's own fallback parses
+					// it from the name with the PHP grammar, which is alpha-only and
+					// silently loses .mp4 / .mp3 / .jp2.
+					const last_dot = current_file.name.lastIndexOf('.');
+					if (last_dot > 0) {
+						registry[j].extension = current_file.name.slice(last_dot + 1).toLowerCase();
+					}
+					break;
+				}
+			}
 		}
 
 

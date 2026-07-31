@@ -2532,7 +2532,37 @@ the clause instead of matching everything, plus three negative controls: dd545
 on the same table, dd543 in an ordinary section, and the TM twin all still emit
 containment) · `test/unit/activity_log_single_actor.test.ts` (the writer-side
 invariant) · `matrix_index_policy.test.ts` + `matrix_index_prune.test.ts` (both
-indexes classified `keep`, so "Optimize tables" can no longer drop them).
+indexes classified `keep`, so "Optimize tables" can no longer drop them) ·
+`test/unit/user_stats_paging.test.ts` (the second emitter's paging seam — see the
+addendum).
+
+### Addendum 2026-07-30 — a SECOND emitter, and the index now carries writes too
+
+`matrix_activity_who_ts_idx` has **two** dependent emitters, not one. The new one
+is `area_maintenance/user_stats.ts` `whoScope`, and it leans on the index HARDER
+than the dd542 list does: the list only needs O(LIMIT) paging, while the stats
+rebuild walks the actor's whole history in `("timestamp", id)` KEYSET pages —
+the trailing sort key is what makes each page an index range scan instead of a
+whole-actor bitmap.
+
+Why it exists: `rebuild_user_stats` was written as containment, so its window
+bound was a Filter and every run scanned the entire actor. On the 8.1M-row mdcat
+actor that died on `DB_STATEMENT_TIMEOUT_MS` (`count(*)` alone: 57 s of a 60 s
+ceiling), reported from the running client as a `widget_request` exception. The
+same window now aggregates server-side in 127 s over ~82 pages, worst page 5.3 s.
+
+Consequences for anyone touching either side:
+
+- Relaxing the index, the predicate, or the single-actor invariant now breaks the
+  maintenance action too — not only the dd542 list. `matrix_index_policy.ts` and
+  `db_pg_definitions.json` (`all_matrix_activity_who_ts_idx` `info`) name both.
+- The totals payload is UNCHANGED — this is a plan/shape fix, not a wire change.
+  Parity was verified against a verbatim replica of the replaced TS row loop over
+  6 real mdcat windows (2.6M rows, 135 days): identical per-day dimension maps,
+  ORDER included, at page sizes forcing up to 211 pages.
+- The first-encounter totals ORDER is carried by `min(id)` per group, because an
+  aggregate cannot re-derive it. `user_stats_paging.test.ts` pins that the page
+  size is a performance knob and nothing else.
 
 ---
 
@@ -2646,6 +2676,15 @@ case is a refusal or a zero-match resolve, and the dd_ontology row count is asse
 unchanged in `afterAll`). Mutation-proved: reintroducing the fallback turns it red.
 
 ## WC-059 — `source.is_temporal`: a temporal instance resolves, it never persists (2026-07-28)
+
+> **(!) THE STORAGE HALF IS SUPERSEDED BY WC-079 (2026-07-30).** "It never persists"
+> and "the read door serves an empty value" are no longer true for ONE opt-in case:
+> a source that also carries `temporal_scope` (only `service_tmp_section` sends it)
+> reads and writes a per-user row in `dedalo_ts_temporal_scratch`. Everything else
+> in this entry still holds, including the load-bearing half — a temporal instance
+> ADDRESSES NO RECORD, and neither door touches matrix record 1, its Time Machine
+> rows or its activity rows. Read this entry for the invariant; read WC-079 for the
+> storage.
 
 The same shape as WC-058, one layer lower: a scope the TS port dropped, widening
 silently into "a real record". Found while investigating why
@@ -3615,3 +3654,439 @@ index tag removed the locator and left orphan `[index-n-58-…]` /
 
 Gates: `test/unit/tags_info.test.ts`, `test/unit/text_area_delete_tag.test.ts`.
 
+
+---
+
+## WC-078 — the staged-upload read surface: `list_uploaded_files` + `delete_uploaded_file` + `file_data.thumbnail_url` + `/dedalo/upload_tmp/` (2026-07-30)
+
+`tool_import_files` was unusable end-to-end: uploads failed and the queue did
+not survive a reload. The staging area had a WRITE path (`media/ingest/upload.ts`)
+but effectively no READ path, and the Dropzone client spoke a different wire than
+the receiver. Fixed on both sides; the shape changes are recorded here.
+
+### `dd_utils_api::list_uploaded_files` — was a hardcoded `[]`
+
+The handler returned an empty array unconditionally ("full temp-dir scan is
+uncovered scope"). This is a **silent narrowing** of exactly the kind the project
+law forbids: it read as "nothing is staged" and was the direct cause of the
+reported *"temporal data is not preserved across reload"*. service_dropzone calls
+this action on every render and injects the result via `displayExistingFile`, so
+it IS the cross-reload restore mechanism.
+
+It now scans `stagingDir(userId, key_dir)` and emits PHP's
+`[{name, url, size}]` **plus `thumbnail_url`** (nullable — the added key; a
+client that ignores it is unaffected). In-flight artifacts (`<i>-<name>.blob`,
+`<name>.assembling`) and dotfiles are excluded, so a partially-uploaded file
+never shows as a restorable row. Order is `localeCompare` on the name, so a
+reload reproduces the previous row order. A missing staging dir is `[]` (the
+ordinary first-visit state); a malformed `key_dir` is logged and also answers
+`[]` — a 200-with-array is required because an error here accumulates into
+`page_globals.api_errors` and makes the NEXT element's render bail before
+setting `status='rendered'` (`common.js:404`).
+
+### `dd_utils_api::delete_uploaded_file` — was not implemented at all
+
+The client has always called it (`render_edit_service_dropzone.js:874`); nothing
+answered. Every removal 400'd, the row vanished from the UI, and the bytes stayed
+in the staging dir forever. Now registered, taking `{key_dir, file_name}` and
+answering `{result:boolean, msg}`. It also sweeps the generated thumbnail and any
+orphaned chunk parts of the same name. **Deleting an absent file is a successful
+no-op**, not an error: the client has already dropped the row, and a retry must
+not surface something the user cannot act on.
+
+### `file_data.thumbnail_url` on the upload response
+
+PHP set it (`dd_utils_api.php:1269`) and the client reads it
+(`on('success')` → `emit('thumbnail', …)`); the TS response omitted it entirely,
+so a successful upload fed `undefined` into the preview `<img>`. Restored: the
+receiver renders a preview with `buildThumb` once the whole file is staged.
+**Best effort by contract** — a still-image allowlist only, and `null` on any
+failure, at which point the client keeps its local preview. A thumbnail is never
+a reason to fail an upload that already passed magic-byte validation.
+
+### Error bodies gain an `error` string key
+
+Rejections now emit `{result:false, msg, error:<string>, errors:[<string>]}`.
+Dropzone's default error renderer unwraps ONLY a `.error` key and otherwise
+assigns the object straight into `[data-dz-errormessage].textContent` — which is
+why a failed upload showed the literal **`[object Object]`** in a red badge.
+`errors[]` is retained for service_upload. (The client also grew its own
+`on('error')` normaliser, so neither side alone can reintroduce the symptom.)
+
+### CSRF: the form-field twin is now actually read
+
+`upload_endpoint.ts` verified the `X-Dedalo-Csrf-Token` header only, while both
+clients' comments documented a `csrf_token` form-field fallback for a header
+stripped by an intermediary. The endpoint now parses first and accepts either.
+Ordering is still fail-closed: anonymous → 404 before anything is parsed, and a
+parse failure returns 400 without ever reaching the CSRF verdict.
+
+### NEW ROUTE — `GET /dedalo/upload_tmp/<key_dir>[/thumbnail]/<name>`
+
+Serving a user's own staged bytes needs a route, and the general media route
+must not be it: **MEDIA-04** makes that route refuse everything under `upload/`
+precisely because it authenticates a *session* but not an *owner*. The new route
+takes the user id from the SESSION and only ever accepts
+`<key_dir>[/thumbnail]/<name>` from the URL, so one user cannot address another's
+staging dir. No session → 404 (no existence leak); partial artifacts are never
+served; responses carry `Cache-Control: private, no-store`, `nosniff` and
+`Content-Security-Policy: default-src 'none'; sandbox` (the bytes are unverified
+user uploads). Confinement chokepoint: `resolveStagedPath`
+(`src/core/media/ingest/staged_files.ts`).
+
+### Client wire alignment (`service_dropzone`)
+
+Its sibling `service_upload` was hardened for the TS receiver; service_dropzone
+never was, and it is the widget `tool_import_files` mounts. It now sends
+`paramName: 'file_to_upload'` (Dropzone's default `file` produced
+*"upload: missing file_to_upload"*), the CSRF token, and the file name via
+`X-File-Name` + `file_name` (without it the extension resolved to `''` and the
+magic-byte cross-check rejected valid JPEGs). The receiver was ALSO made
+tolerant — it accepts `file` as a fallback part name and falls back to the
+multipart part's own filename (PHP's `$_FILES['name']`) — so neither side alone
+is load-bearing.
+
+Verified against the running engine: header-only, field-only and
+part-filename-only uploads all succeed; anonymous and cross-user reads of
+`/dedalo/upload_tmp/` 404; traversal via `key_dir`, `file_name` and the URL path
+all 404 / are refused.
+
+---
+
+## WC-079 — the temporal staging form persists SERVER-side, per user (2026-07-30)
+
+`service_tmp_section` (the "Values" form behind `tool_import_files` /
+`tool_import_marc21` / `tool_import_zotero`) builds its children with
+`element_instance.build(true)` — autoload ON — so every render re-read through
+the TEMPORAL door and got the `entries: []` WC-059 guarantees. **Everything the
+operator typed was silently wiped on any reload**, losing the metadata for a
+whole import batch.
+
+This adds a TS-native scratch store. **WC-059's storage half is superseded; its
+load-bearing half is not** — a temporal instance still ADDRESSES NO RECORD, and
+nothing here writes to matrix record 1, its Time Machine rows or its activity
+rows. `temporal_instance_tripwire` passes unmodified, including the assertion
+that `temporal.ts` reaches zero matrix write engines.
+
+(An earlier attempt the same day persisted these values in the browser via
+IndexedDB. That was reverted in favour of this store — persistence now follows the
+OPERATOR, not the browser, and no client-side scratch remains.)
+
+### The opt-in is a SEPARATE field, not `is_temporal`
+
+`source.temporal_scope` — a string naming the OWNING TOOL, emitted **only** by
+`service_tmp_section` (from `self.caller.model`), forwarded by
+`component_common` → `create_source`.
+
+`is_temporal` answers *"does this address a record?"*; `temporal_scope` answers
+*"should this persist?"*. Conflating them is how one producer's need becomes five
+producers' bug: of the five temporal producers only `service_tmp_section` wants
+persistence, and the other four would be **corrupted** by it —
+`tool_propagate_component_data` seeds its clone from the OPEN record and then
+bulk-writes across a whole search result set; the two `component_text_area` pickers
+(draw + reference) are transient, so a restored value there is a stale locator
+stamped into a tag; and `view_graph_solved_section`'s fallback instance is built
+for its CONTEXT only and never saved, so it has no value to persist. All four send
+no scope, so their behaviour is byte-identical to before.
+`is_temporal` also keeps its single-reader tripwire: the store calls the exported
+`isTemporalSource()` predicate rather than reading the wire literal.
+
+### The key: `(user_id, scope, section_tipo, component_tipo, lang)`
+
+Five discrete columns, the table's PRIMARY KEY, never a concatenated string.
+PHP's `matrix_temp_manager::get_uid` built `section_tipo . user_id` with no
+separator, so `'oh1'+42` and `'oh14'+2` addressed the SAME row — two different
+users on two different sections — and it omitted the owning tool entirely, so two
+tools open on one section clobbered each other. `scope` is that missing
+discriminator; `user_id` is the tenancy boundary and appears in **every**
+statement except the age-scoped TTL sweep.
+
+`user_id` comes from the session — `principal.userId` on the write door,
+`currentPrincipal()` on the read door — and **never from the request body**. The
+address type carries no user field by construction, so a key built from a wire
+source is structurally incapable of naming a user.
+
+### What is stored is RAW
+
+Literal items, or relation **LOCATORS** — never resolved chips. Labels are
+language- and permission-dependent, so a stored chip would freeze a label the
+next reader may want in another language or may not be allowed to see. The
+relation write therefore persists `picked` BEFORE `resolveRelationEcho`, not the
+chips that call returns.
+
+### Reads resolve through the STANDARD pipeline (record grafting)
+
+The read does not re-implement resolution. It materialises a virtual record,
+grafts the stored value with `injectComponentData`, and lets the ordinary
+pipeline run — the same pattern the Time Machine override and
+`component_relation_children` already use for values not stored on the addressed
+record. `expandPortal` then produces real labelled chips and a real pagination.
+
+This mirrors the PHP oracle, which built a **fake matrix row** in
+`matrix_temp_manager::read()` and let `component_portal_json.php` →
+`common::get_subdatum()` resolve against the real matrix; the temp manager itself
+resolved nothing.
+
+The graft goes in under `resolveDataTipo(tipo)`, not the ddo tipo — both
+`expandPortal` and the select-family resolver look the slot up by the DATA tipo,
+so an aliased component (WC-020) would otherwise graft into a slot nothing reads.
+
+**(!) The empty-set trap.** `expandPortal` returns early on an empty locator set
+and emits NO item at all. Falling through with nothing staged would leave the
+client's `self.data = data || {}` without an `entries` array — a worse regression
+than the bug being fixed. So an empty scratch keeps the bare
+`buildDataItem(..., [])` and only a NON-empty one falls through.
+
+### Lifecycle
+
+- **Consume** — each tool clears its own scope at the end of its `import_files`
+  server handler, on SUCCESS only (a failed import keeps the form for a retry).
+  Server-side on the code path that consumed the values, not a client hook: that
+  is what survives a closed tab, and what gives `tool_import_marc21` /
+  `tool_import_zotero` the same behaviour without either growing an `on_done`
+  handler they never had.
+- **TTL** — an opportunistic prune on write (the `error_report/store.ts`
+  retention precedent), 72h, index-supported. PHP never deleted a temp row at
+  all; its only reclamation was Postgres truncating the UNLOGGED table on crash.
+  This table is LOGGED: an unclean restart must not eat a half-filled form.
+- Steady-state size is "form fields a user has touched", not "edits performed" —
+  every write is an UPSERT on the natural key. A 256 KB per-row cap stops a
+  client using it as a blob store.
+
+### Component TOOLBARS are suppressed on a temporal element
+
+Every tool on the strip acts on a RECORD — time-machine history, propagate this
+value across a search result set — and a temporal clone addresses none, so each
+is inert or actively wrong. `buildStructureContext` now takes `isTemporal` and
+ships `tools: []`; the client renders from `self.tools || []`, so no client
+change was needed. A deliberate divergence from PHP, which shipped the strip.
+
+Gates: `test/unit/temporal_scratch_store.test.ts` (round trip, per-user
+isolation, cross-tool/section/lang non-collision, `jsonb_typeof = array` against
+the `::text::jsonb` bind trap, TTL prune, and the scope gate that pins the other
+four producers persisting nothing), plus the unmodified `temporal_door_native`
+and `temporal_instance_tripwire` suites.
+
+Verified against the running engine: a literal and a portal locator both survive
+a full page reload, the portal rendering as a resolved labelled chip
+("Ajuntament de Bon-Encontre") with `pagination {total:1, limit:10}`; a read
+without a scope still answers `entries: []`; the component toolbar is absent from
+every element of the form; and a completed import clears the rows.
+
+### Hardening after adversarial review (same day)
+
+The first cut of this store shipped two defects that a multi-agent review caught
+and reproduced. Both are fixed; both are worth recording, because both are the
+kind of bug that only appears once a value becomes DURABLE.
+
+**1. Cross-tenant read (AUTHZ-02).** The grafted locators are CLIENT-SUPPLIED —
+the save door persists `picked` *before* `resolveRelationEcho` applies its scope
+filter, admits at a READ grant, and `read_facade` exempts temporal sources from
+the per-record gate ("the sentinel addresses no record", true before this store,
+false after). Grafting them unscoped let a level-1 user POST a locator for any
+record, then read back that record's field values through the standard expansion.
+Reproduced live: 129 items including another tenant's field values.
+Fixed by scoping the stored locators through the SAME filter the search-chip door
+uses — now extracted as `filterLocatorsInScope` (`security/record_scope.ts`) and
+called from **both** doors, so they cannot drift again. Applied at READ time, not
+only write time: a projects assignment can change after a row is written.
+
+**2. Paginated truncation (silent data loss).** `payload.entries` is only the
+current PAGE of a portal, and the write is a wholesale UPSERT. Staging 15 records
+then linking a 16th shipped a 10-item page, and the store's 15 became 11 — five
+staged relations gone, no error, invisible until the import ran. Fixed by seeding
+the delta from the STORE when a row exists (`readTemporalScratchBase`), so the
+durable set is authoritative and the client's page is only a fallback. Stable
+`id`s are minted on the stored set at the same time, because `remove` matches by
+id and a post-reload unlink was otherwise a silent no-op.
+
+Also hardened: the consume-clear now fires only when something was actually
+imported (`result: true` is returned even when every file failed); a refused
+oversize write DELETES any previous row rather than leaving a stale value to be
+restored as though current; and a per-user row cap bounds the wire-controlled
+`scope`/`lang` key columns, which the TTL bounds in time but not in count.
+
+Gates added with the fixes: `test/unit/temporal_scratch_door.test.ts` exercises
+the wiring through `dispatchRqo` against the REAL table (the store's own suite
+uses an injectable scratch table and would pass even if the door were never
+wired), covering the scoped round trip, the unscoped no-persistence contract, the
+empty-set trap on both the portal and literal seams, cross-user invisibility, and
+`tools: []` **with a non-temporal control** so the suppression cannot pass
+vacuously. `filterLocatorsInScope` is pinned in `temporal_scratch_store.test.ts`,
+including the case that actually proves the tenant boundary: a REAL record
+locator is DROPPED for an out-of-scope non-admin and KEPT for an admin — the
+admin half being the control, without which the drop could equally mean the query
+errored or the record does not exist. `temporal_instance_tripwire` now also freezes the single reader and the
+client producers of `temporal_scope`, mirroring what it already does for
+`is_temporal` — without that, the safety argument for the opt-in was unenforced
+prose and a fifth producer could have opted itself in silently.
+
+---
+
+## WC-080 — the ingest honours the target quality tier, and refuses the DERIVED ones (2026-07-31)
+
+The media ingest now reads the client's target tier — `custom_target_quality`
+(`tool_import_files`, the Quality selector) and `quality` (`tool_upload`, set
+from `caller.context.target_quality` by the `tool_media_versions` per-quality
+upload rows) — and parks the file in that tier, as PHP's
+`$component->set_quality($custom_target_quality)` before `add_file` did
+(`tools/tool_import_files/class.tool_import_files.php:321-327`,
+`tools/tool_upload/class.tool_upload.php:240`).
+
+Both options were previously DROPPED server-side: every upload landed in
+`original` however the operator set the selector. The wire is unchanged — this
+is a parity FIX, not a new shape — but the behaviour visible to a client that
+was already sending these values changes, so it is ledgered.
+
+Two deliberate divergences ride along.
+
+### 1. A non-original tier runs the build-only-what-is-MISSING regenerate
+
+PHP ran `regenerate_component()` for every tier. TS's INGEST builders re-encode
+unconditionally (correct for a fresh original: every derivative should be rebuilt
+from it), which for a non-original target would immediately overwrite the file the
+operator just placed. The non-original path therefore runs
+`regenerateMissingDerivatives` (`src/core/media/repair.ts`, the v6
+`regenerate_component` port) instead: the default quality only when ABSENT, the
+image thumb ALWAYS from the default-quality file, the SVG envelope
+created-or-path-fixed. `component_av` has no branch there, so a non-original av
+upload submits the transcode when — and only when — the default tier is missing.
+
+Net effect vs PHP: identical outcomes, minus the alternate-extension builds the
+TS processing layer still lacks (a pre-existing, separately-ledgered gap).
+
+### 2. The refusals — three targets PHP accepted and lost
+
+#### 2a. The THUMB and `audio_tr` tiers
+
+`assertValidQuality` admits both as real directories even though neither is in
+`spec.qualities`. Neither is scannable: `scanFilesInfo` probes the thumb tier with
+the thumb extension ALONE and never walks `audio_tr`. A file uploaded there is
+invisible to the record forever, and `sync_files` cannot repair it either (its
+scan finds nothing to record). PHP accepted the upload and lost the file
+silently; TS throws (`assertIngestableQuality`, `src/core/concepts/media.ts`,
+deliberately adjacent to `assertValidQuality` so the two carve-out lists cannot
+drift). Error strings:
+
+- `Cannot upload into the '<thumb>' tier: it is a generated thumbnail, rebuilt from the <default> file`
+- `Cannot upload into the 'audio_tr' tier: it is a generated transcription derivative`
+
+STRICTER than PHP by design — the loud-uncovered-path rule beats writing a dead
+file. The thumb tier IS offered by `features.ar_quality` (it is in
+`DEDALO_IMAGE_AR_QUALITY`), so this is reachable from the shipped client and an
+operator who picks it now gets an error instead of silent loss.
+
+#### 2b. A non-normalized extension in a DERIVATIVE tier
+
+`assertNormalizedExtensionForTier` (same file, same reason it lives there):
+uploading `photo.png` into the `1.5MB` tier is refused, because that tier's
+canonical file is `<id>.jpg`. Left to run, the upload is SHADOWED — the jpg
+still exists (or `buildImageVersion` recreates it from the OLD original),
+`scanFilesInfo` emits it FIRST for that quality (`uniqueLower([defaultExtension,
+…])`), the thumb is regenerated from it, and the record keeps serving the
+previous image while the new file sits beside it, reported as a success. The
+ORIGINAL tier is exempt: keeping the raw upload in whatever the allowlist admits
+is exactly what it is for (the Original law).
+
+Error string: `Cannot upload a '.<ext>' file into the '<tier>' tier: it holds
+normalized .<ext> / … files, so the upload would be shadowed by them. Upload
+into '<original>' instead.`
+
+#### 2c. `component_av` into a non-original tier derives only what it CAN
+
+An av transcode reads the ORIGINAL. A non-original av upload therefore submits
+one only when an original is on this box AND the default tier is absent —
+otherwise the job could only fail with `AV original not found for transcode`, or
+re-encode a derivative that already exists. A file parked in a quality tier IS
+that tier; nothing derives from it.
+
+### The av transcode is started by the CALLER, after its persist
+
+`processUploadedFile` returns `startTranscode` UNSTARTED instead of a `job_id`.
+The transcode's completion write-back and the ingest caller's own
+`persistUploadedMedia` write the SAME `media -> <tipo>` jsonb key, and whichever
+lands second wins it whole; the caller therefore starts the job after its persist
+commits, which makes the ordering an invariant rather than a bet on an encode
+being slower than a DB round-trip. The `job_id` on the wire is unchanged.
+
+### Provenance follows the tier
+
+`nameKeysForQuality` (`src/core/media/tools/files_info_persist.ts`) reproduces
+PHP `component_image::process_uploaded_file:778-791` — an if/else-if over
+`get_original_quality()` / `get_modified_quality()` with NO else: `original_*`
+for the original tier, `modified_*` for the image retouched tier, and NEITHER
+for any other. The same "no provenance" shape is what the `sync_files` repair
+mints (PHP `update_component_data_files_info:3748`).
+
+**Gates:** `test/unit/media_ingest.test.ts` (tier targeting, both refusals, the
+non-original regenerate), `test/unit/files_info_persist.test.ts`
+(`nameKeysForQuality`, the name-key trios), `test/unit/tool_upload.test.ts` +
+`test/unit/tool_import_files.test.ts` (the WIRE — that each handler reads the
+option off the payload; mutation-verified). No re-harvest: no fixture records an
+upload.
+
+---
+
+## WC-081 — the save answers with the LAST page after an add/link, and reports `created_section_id` (2026-07-31)
+
+Two changes to the SAVE echo of a relation component, one a parity repair and
+one a TS-native addition. Both exist to answer the same client question: *which
+record did I just create?*
+
+### 1. The echo pages to the LAST page (parity REPAIR, not a divergence)
+
+PHP recomputed the component pagination after the `add_new_element` and
+`insert` actions and answered with the last page — the page the appended
+locator lives on (`v7_php_frozen/…/class.dd_core_api.php:1459-1479`), after
+first honouring a client-supplied `data.pagination.limit` (:1453, the
+"show all" case).
+
+TS did neither: the echo re-reads through `readComponentData` with the SAVE
+rqo, which carries no `sqo`, so the read paged at the component's config limit
+with `offset: 0` — page ONE.
+
+Reported live 2026-07-31: adding an image to the oh1 "Identifying image"
+portal (oh17, `sqo.limit: 1`) opened the FIRST linked record. The client's add
+button takes the new record from `self.data.entries[self.data.entries.length-1]`
+(`component_portal/js/buttons.js`) and the echo IS its next `self.data`, so on a
+paginated portal "the last entry" named the first record. It also snapped the
+paginator back to page one after every add. Any portal where `limit < total`
+was affected; it only looked right when the whole list fit on one page.
+
+`src/core/api/handlers/dd_core_api.ts` now reproduces both PHP steps:
+`offset = limit * (ceil(total/limit) - 1)` when the list spans more than one
+page, else 0. A second read happens only when that offset differs from the one
+already read.
+
+### 2. `result.created_section_id` (TS-NATIVE — PHP echoed no such key)
+
+Shape before (PHP): the save response is `{result: {context, data}, msg}`;
+the created record's address is nowhere on the wire — the client infers it
+from the echoed page.
+
+Shape after (TS): a save whose `changed_data` created a record in a TARGET
+section (`add_new_element`, the only action that does) adds
+`result.created_section_id: <number>`. **Absent** on every other save — a save
+that creates nothing says nothing. Both save doors stamp it: the persisted one
+(`dd_core_api.ts`, from `SaveResult.created_section_id`, which
+`save_component.ts` already computed and dropped on the floor) and the temporal
+one (`section/record/temporal.ts`, WC-059 — the same button lives there).
+
+Reason: position in a paginated echo is a proxy for identity, and a wrong proxy
+is exactly the bug above. The address is exact regardless of paging, ordering or
+page size. The client (`component_portal.js add_new_element` → `buttons.js`)
+opens `created_section_id` when present and keeps the last-entry heuristic as
+the fallback, so an older server still works.
+
+**Gates:** `test/unit/save_add_new_element_page_native.test.ts` — the last-page
+echo (limit 1 → offset 2 of 3; limit ≥ total → offset 0), the created record
+being the one the client would open, and the negative case (a plain `insert`
+carries no `created_section_id`). Temporal door: the WC-081 stamp is pinned in
+`test/unit/temporal_door_native.test.ts` (the WC-059 add_new_element case).
+
+**No re-harvest.** The frozen store does record saves — two, in
+`info_observer_differential.json` (`component_radio_button` numisdata57,
+`component_check_box` rsc156) — but neither is an `add_new_element`, so neither
+response can gain the key, and neither is paginated (the select family returns
+through the datalist branch with no pagination object, so the last-page
+recompute is a no-op there). No fixture shape moves.

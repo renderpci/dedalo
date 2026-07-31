@@ -19,7 +19,13 @@ import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { APP_CSP, MEDIA_CSP_ORIGIN, SECURITY_HEADERS } from '../../src/core/api/static_asset.ts';
+import { config } from '../../src/config/config.ts';
+import {
+	APP_CSP,
+	MEDIA_CSP_OBJECT_SOURCE,
+	MEDIA_CSP_ORIGIN,
+	SECURITY_HEADERS,
+} from '../../src/core/api/static_asset.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 
@@ -49,6 +55,35 @@ describe('XSS-02 — enforcing app CSP', () => {
 		for (const src of directive(APP_CSP, 'connect-src')) {
 			if (src === MEDIA_CSP_ORIGIN && MEDIA_CSP_ORIGIN !== '') continue;
 			expect(src.includes('://'), `connect-src must not allow a remote origin: ${src}`).toBe(false);
+		}
+	});
+
+	test('object-src is EXACTLY self + the path-scoped envelope prefix (MEDIA-03)', () => {
+		// component_image's default edit view hosts the server-generated SVG
+		// envelope as <object type="image/svg+xml"> (client
+		// component_image/js/view_default_edit_image.js render_image_node), so
+		// `object-src 'none'` rendered every edit-view image blank. What replaces
+		// it must stay EXACT, not merely "not obviously bad": <object> opens a
+		// nested browsing context, so any source added here is a place an SVG's
+		// script can execute. An allowlist, deliberately — a denylist here passed
+		// `data:`, `blob:`, `https:` and `*.host.example` unmoved (each is one
+		// whitespace-split token containing neither '*' alone nor '://'), i.e. it
+		// would have been green for exactly the widenings it advertised guarding.
+		// The header selection this leans on is gated corpus-independently by
+		// media_serving.test.ts::svgSafetyHeaders (the MEDIA-03 route cases there
+		// need an .svg on disk and SKIP without one).
+		const objectSrc = directive(APP_CSP, 'object-src');
+		expect(objectSrc).toEqual(
+			MEDIA_CSP_OBJECT_SOURCE === '' ? ["'self'"] : ["'self'", MEDIA_CSP_OBJECT_SOURCE],
+		);
+		if (MEDIA_CSP_OBJECT_SOURCE !== '') {
+			// Path-scoped to the envelope folder — never the bare media host, which
+			// also serves uploader-supplied svg/ files with no sandbox/CSP (the
+			// generated rules emit no headers). A trailing '/' is what makes CSP
+			// treat it as a prefix rather than one exact file.
+			expect(MEDIA_CSP_OBJECT_SOURCE.startsWith(`${MEDIA_CSP_ORIGIN}/`)).toBe(true);
+			expect(MEDIA_CSP_OBJECT_SOURCE.endsWith(`${config.media.image.folder}/`)).toBe(true);
+			expect(objectSrc).not.toContain(MEDIA_CSP_ORIGIN);
 		}
 	});
 

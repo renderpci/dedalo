@@ -388,6 +388,27 @@ export async function withTransaction<T>(work: () => Promise<T>): Promise<T> {
 }
 
 /**
+ * Run `work` OUTSIDE any ambient transaction context — the inverse of the
+ * S2-14 expiry guard, for the one case where a leaked continuation is not a bug
+ * but the design: a DETACHED BACKGROUND JOB.
+ *
+ * `mediaJobs.submit` is called synchronously from a request handler, so the
+ * worker it schedules inherits that request's AsyncLocalStorage stores. If the
+ * handler ran inside `withTransaction`, the job would still hold the tx handle
+ * minutes later, when the request has long since committed and the handle is
+ * `expired` — its first query would then throw the S2-14 error instead of
+ * running on the pool. A job outlives its submitter by construction; it must
+ * therefore own no part of the submitter's connection state.
+ *
+ * Exits BOTH stores: the tx handle (queries route to the pool) and the deferred
+ * queue (a job's cache clears must fire on their own, not be appended to a
+ * queue that has already been replayed).
+ */
+export function runDetachedFromTransaction<T>(work: () => T): T {
+	return transactionStore.exit(() => deferredActionStore.exit(work));
+}
+
+/**
  * True when the current async context is inside a `withTransaction` block.
  * NOTE an EXPIRED handle (a leaked continuation, S2-14) still reports true:
  * guards keyed on this stay on the transactional path and the next query

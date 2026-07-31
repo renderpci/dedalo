@@ -63,6 +63,240 @@ function userLocatorFilter(componentTipo: string, userId: number): string {
 	});
 }
 
+/**
+ * The actor predicate for matrix_activity — the WC-056 indexed EXPRESSION pair,
+ * NOT `relation @> …` containment.
+ *
+ * WHY (2026-07-30, the reported `rebuild_user_stats` statement timeout).
+ * Containment can only be answered by the relation GIN, which returns the
+ * actor's WHOLE history as one bitmap; a `timestamp` bound is then a Filter, so
+ * every window — even a single day — pays for the full actor. Measured on the
+ * 32.9M-row mdcat log, actor dd128/2 has 8.1M rows: `count(*)` alone took 57 s
+ * against a 60 s `DB_STATEMENT_TIMEOUT_MS`, and the rebuild's row fetch (994 B
+ * average width, plus a sort) never came close to finishing. `matrix_activity_
+ * who_ts_idx` carries the actor AND `("timestamp", id)`, so the same predicate
+ * written as an equality on its expressions turns any window into an index
+ * RANGE scan: the identical single-day aggregate is 14 ms.
+ *
+ * THE INVARIANT is builder_relation's (element 0 is the only actor locator —
+ * how activity_log.ts writes it, gated by activity_log_single_actor.test.ts).
+ * section_tipo is bound explicitly, so a locator into another section can never
+ * be a false positive.
+ *
+ * (!) DELIBERATE DEVIATION from the containment predicate it replaced: `->>` is
+ * type-lossy where `@>` was type-strict, so a NUMERIC section_id would match here
+ * and would not have before. Inert, not an oversight — both writers stringify
+ * (activity_log.ts `String(...)`; PHP locator::set_section_id casts), and all
+ * 32.94M mdcat rows are string-typed with jsonb_array_length(dd543) = 1.
+ */
+function whoScope(userId: number, params: unknown[]): string {
+	params.push(String(userId), USERS_SECTION);
+	const id = params.length - 1;
+	return (
+		`a.relation->'${ACT_WHO}'->0->>'section_id' = $${id} ` +
+		`AND a.relation->'${ACT_WHO}'->0->>'section_tipo' = $${id + 1}`
+	);
+}
+
+/**
+ * Rows per aggregation statement — the knob that keeps every statement under
+ * `DB_STATEMENT_TIMEOUT_MS` (60 s as configured).
+ *
+ * CALIBRATED, not guessed. The full rebuild window of the 8.1M-row mdcat actor
+ * was run at 400k/page: 21 pages, 154 s total, pages ranging 2.8 s → 30.2 s. An
+ * isolated EXPLAIN ANALYZE of the same 400k page was 3.4 s, so that spread is
+ * cache state and TOAST width, not the plan — the headroom has to absorb an
+ * order of magnitude, and 2× is not enough. The same window re-run at 100k has a
+ * worst page of 5.3 s (~11× under the ceiling) and finished FASTER end to end —
+ * 127 s over ~81 pages — because a narrower page spills less; the extra round
+ * trips are noise against heap-read-bound work. Both runs returned identical
+ * tallies (1124 keys, 21,643,162 counted dimensions), which is the paging
+ * invariant holding at production scale.
+ *
+ * Pages bound BOTH the statement duration and the CTE tuplestore (19 MB at 400k),
+ * so lowering this is always safe; raising it trades away the only margin.
+ */
+const AGGREGATE_PAGE_ROWS = 100000;
+
+/** The marker `kind` of the paged aggregate's trailing cursor row. */
+const CURSOR_KIND = '__cursor__';
+
+/** One (day, dimension, key) count from the paged aggregate. */
+interface ActivityTally {
+	day: string;
+	kind: 'what' | 'where' | 'when' | 'publish';
+	/** Dimension-raw: the what CODE (not yet WHAT_MAP'd), the where/publish tipo, the hour. */
+	key: string;
+	n: number;
+	/** Lowest contributing matrix_activity id — the first-encounter order carrier. */
+	minId: number;
+}
+
+/**
+ * Aggregate one actor's matrix_activity window IN THE DATABASE, paged.
+ *
+ * WHY IT IS NOT A ROW LOOP ANY MORE (2026-07-30). The dimensions this reduces to
+ * are ~40 keys per day, but the rows behind them are the whole activity log: the
+ * previous shape selected every matching row (7 columns, 4 of them jsonb) into
+ * the process and folded it in TS. On the 8.1M-row actor that is ~8 GB across
+ * the wire for an answer measured in kilobytes — the statement timeout was the
+ * first wall it hit, not the last. Counting server-side makes the result size
+ * independent of the log size, and the (timestamp, id) keyset page makes every
+ * statement bounded by `AGGREGATE_PAGE_ROWS` instead of by the actor's history.
+ *
+ * Only the two extraction rules that DECIDE which dimension a row lands in live
+ * in the SQL — the `where` value's array unwrap, and the dd1223 → publish
+ * routing with its top_tipo/section_tipo preference. WHAT_MAP and WHERE_SKIP
+ * stay in TS (below), so the mapping tables have exactly one home.
+ *
+ * `minId` per group is what preserves the totals array ORDER: the payload is
+ * ordered by first encounter in id-ascending order, which is a pinned wire shape
+ * (widget_request_native + the frozen get_widget_data fixture), so the order can
+ * not be re-derived from the aggregate — it has to be carried.
+ */
+export async function aggregateActivity(
+	userId: number,
+	from: string | null,
+	until: string,
+	/**
+	 * Page size. A parameter ONLY so the gate can drive the paging path with a
+	 * handful of scratch rows (user_stats_paging.test.ts asserts that any page
+	 * size yields byte-identical tallies) — production always takes the default.
+	 */
+	pageRows: number = AGGREGATE_PAGE_ROWS,
+): Promise<{ tallies: ActivityTally[]; rows: number }> {
+	const limit = Math.max(1, Math.trunc(pageRows));
+	const tallies: ActivityTally[] = [];
+	let rows = 0;
+	let cursor: { ts: string; id: number } | null = null;
+
+	for (;;) {
+		const params: unknown[] = [];
+		const scope = [whoScope(userId, params)];
+		params.push(until);
+		scope.push(`a."timestamp" < date($${params.length})`);
+		if (from !== null) {
+			params.push(from);
+			scope.push(`a."timestamp" >= date($${params.length})`);
+		}
+		if (cursor !== null) {
+			params.push(cursor.ts, cursor.id);
+			scope.push(
+				`(a."timestamp", a.id) > ($${params.length - 1}::timestamp, $${params.length}::int)`,
+			);
+		}
+
+		const page = (await sql.unsafe(
+			`WITH page AS (
+				SELECT a.id, a."timestamp",
+				       a.relation->'${ACT_WHAT}'->0->>'section_id' AS what_key,
+				       a.date->'${ACT_WHEN}'->0->'start'->>'hour' AS hour_key,
+				       CASE jsonb_typeof(a.string->'${ACT_WHERE}'->0->'value')
+				            WHEN 'array' THEN
+				                 CASE WHEN jsonb_typeof(a.string->'${ACT_WHERE}'->0->'value'->0) = 'string'
+				                      THEN a.string->'${ACT_WHERE}'->0->'value'->>0 END
+				            WHEN 'string' THEN a.string->'${ACT_WHERE}'->0->'value'#>>'{}'
+				       END AS where_key,
+				       CASE WHEN a.misc->'${ACT_DATA}'->0->'value'->'top_tipo' IS NULL
+				              OR jsonb_typeof(a.misc->'${ACT_DATA}'->0->'value'->'top_tipo') = 'null'
+				            THEN a.misc->'${ACT_DATA}'->0->'value'->'section_tipo'
+				            ELSE a.misc->'${ACT_DATA}'->0->'value'->'top_tipo'
+				       END AS publish_raw
+				FROM matrix_activity a
+				WHERE ${scope.join(' AND ')}
+				ORDER BY a."timestamp", a.id
+				LIMIT ${limit}
+			)
+			SELECT to_char(p."timestamp", 'YYYY-MM-DD') AS day, v.kind, v.key,
+			       count(*)::bigint AS n, min(p.id)::bigint AS min_id
+			FROM page p
+			CROSS JOIN LATERAL (VALUES
+				('what', p.what_key),
+				('when', p.hour_key),
+				(CASE WHEN p.where_key = '${WHERE_PUBLISH}' THEN 'publish' ELSE 'where' END,
+				 CASE WHEN p.where_key = '${WHERE_PUBLISH}'
+				      THEN CASE WHEN p.publish_raw IS NULL
+				                  OR p.publish_raw IN ('null'::jsonb, 'false'::jsonb)
+				                THEN NULL ELSE p.publish_raw#>>'{}' END
+				      ELSE p.where_key END)
+			) AS v(kind, key)
+			-- (!) The empty-string guard below is DELIBERATELY blanket over all four
+			-- dimensions; the row loop applied it to the where value only. Do not
+			-- "restore parity" here: an empty key is unreachable (no writer emits
+			-- one, 0 hits in 36.5M rows), and where it would have differed the old
+			-- output was garbage anyway (Number of '' is 0, so an empty hour became
+			-- a duplicate hour-0 entry).
+			WHERE v.key IS NOT NULL AND v.key <> ''
+			GROUP BY 1, 2, 3
+			UNION ALL
+			-- The keyset cursor + the page's row count, as one trailing row: the
+			-- page CTE cannot be reached from a second statement, and re-deriving
+			-- either would mean scanning the window twice.
+			(SELECT to_char(p."timestamp", 'YYYY-MM-DD HH24:MI:SS.US'), '${CURSOR_KIND}', NULL,
+			        (SELECT count(*)::bigint FROM page), p.id::bigint
+			 FROM page p ORDER BY p."timestamp" DESC, p.id DESC LIMIT 1)`,
+			params as (string | number)[],
+		)) as { day: string; kind: string; key: string | null; n: string; min_id: string }[];
+
+		let next: { ts: string; id: number } | null = null;
+		let pageCount = 0;
+		for (const row of page) {
+			if (row.kind === CURSOR_KIND) {
+				pageCount = Number(row.n);
+				next = { ts: row.day, id: Number(row.min_id) };
+				continue;
+			}
+			tallies.push({
+				day: row.day,
+				kind: row.kind as ActivityTally['kind'],
+				key: String(row.key),
+				n: Number(row.n),
+				minId: Number(row.min_id),
+			});
+		}
+		rows += pageCount;
+		// A short page (or an empty one — no cursor row at all) is the last.
+		if (next === null || pageCount < limit) break;
+		cursor = next;
+	}
+
+	return { tallies, rows };
+}
+
+/**
+ * Fold tallies into ONE dimension set, applying the two TS-side mapping tables:
+ * WHAT_MAP (an unmapped action code is dropped, as PHP build_what drops it) and
+ * WHERE_SKIP (tool areas leave the `where` histogram but still count in `what`
+ * and `when` — the same asymmetry the row loop had).
+ *
+ * Insertion order is `minId` ascending, so a key's position is where it was
+ * FIRST seen; a key split across pages accumulates at its earliest position.
+ */
+function foldTallies(tallies: ActivityTally[]): DayGroup {
+	const group: DayGroup = {
+		what: new Map(),
+		where: new Map(),
+		when: new Map(),
+		publish: new Map(),
+	};
+	const add = (target: Map<string, number>, key: string, n: number): void => {
+		target.set(key, (target.get(key) ?? 0) + n);
+	};
+	for (const tally of [...tallies].sort((a, b) => a.minId - b.minId)) {
+		if (tally.kind === 'what') {
+			const tipo = WHAT_MAP[tally.key];
+			if (tipo !== undefined) add(group.what, tipo, tally.n);
+		} else if (tally.kind === 'where') {
+			if (!WHERE_SKIP.has(tally.key)) add(group.where, tally.key, tally.n);
+		} else if (tally.kind === 'when') {
+			add(group.when, tally.key, tally.n);
+		} else {
+			add(group.publish, tally.key, tally.n);
+		}
+	}
+	return group;
+}
+
 /** PHP delete_user_activity_stats: drop every dd1521 row of one user. */
 export async function deleteUserActivityStats(userId: number): Promise<boolean> {
 	await sql.unsafe(
@@ -94,6 +328,13 @@ export interface UpdateStatsResponse {
 export async function updateUserActivityStats(
 	userId: number,
 	maxDays = 0,
+	/**
+	 * Aggregation page size — a TEST SEAM only (production always takes the
+	 * default). It exists so a gate can drive the SAVED dd1521 totals array, the
+	 * artifact the wire contract actually pins, across a page boundary: without it
+	 * that array is only ever produced from a single page.
+	 */
+	pageRows: number = AGGREGATE_PAGE_ROWS,
 ): Promise<UpdateStatsResponse> {
 	const response: UpdateStatsResponse = {
 		result: false,
@@ -129,80 +370,23 @@ export async function updateUserActivityStats(
 		).padStart(2, '0')}`;
 
 	// activity scan: [day after last, today)
-	const params: unknown[] = [userLocatorFilter(ACT_WHO, userId)];
-	const filters: string[] = [];
-	if (lastAggregated !== null) {
-		const nextDay = new Date(lastAggregated.getTime() + 24 * 3600 * 1000);
-		params.push(isoDate(nextDay));
-		filters.push(`"timestamp" >= date($${params.length})`);
-	}
-	params.push(isoDate(today));
-	filters.push(`"timestamp" < date($${params.length})`);
-
-	const activityRows = (await sql.unsafe(
-		`SELECT section_tipo, section_id, timestamp::text AS timestamp,
-		        relation, string, date, misc
-		 FROM matrix_activity
-		 WHERE relation @> $1::text::jsonb AND ${filters.join(' AND ')}
-		 ORDER BY id ASC`,
-		params as (string | number)[],
-	)) as {
-		timestamp: string | null;
-		relation: Record<string, unknown[]> | null;
-		string: Record<string, unknown[]> | null;
-		date: Record<string, unknown[]> | null;
-		misc: Record<string, unknown[]> | null;
-	}[];
+	const from =
+		lastAggregated !== null ? isoDate(new Date(lastAggregated.getTime() + 24 * 3600 * 1000)) : null;
+	const { tallies, rows: rowCount } = await aggregateActivity(
+		userId,
+		from,
+		isoDate(today),
+		pageRows,
+	);
 
 	const dayGroups = new Map<string, DayGroup>();
-	let rowCount = 0;
-	for (const row of activityRows) {
-		if (!row.timestamp) continue;
-		const day = row.timestamp.slice(0, 10);
-		let group = dayGroups.get(day);
-		if (group === undefined) {
-			group = { what: new Map(), where: new Map(), when: new Map(), publish: new Map() };
-			dayGroups.set(day, group);
-		}
-		rowCount++;
-
-		// what: the action code (dd545 locator section_id → term tipo)
-		const whatFirst = (row.relation?.[ACT_WHAT] as { section_id?: unknown }[] | undefined)?.[0];
-		if (whatFirst !== undefined && whatFirst !== null && typeof whatFirst === 'object') {
-			const mapped = WHAT_MAP[String(whatFirst.section_id)];
-			if (mapped !== undefined) {
-				group.what.set(mapped, (group.what.get(mapped) ?? 0) + 1);
-			}
-		}
-
-		// where: the touched area tipo (dd546 string); dd1223 routes to publish
-		const whereFirst = (row.string?.[ACT_WHERE] as { value?: unknown }[] | undefined)?.[0];
-		let whereKey = whereFirst?.value;
-		if (Array.isArray(whereKey)) whereKey = whereKey[0];
-		if (typeof whereKey === 'string' && whereKey !== '') {
-			if (whereKey === WHERE_PUBLISH) {
-				const dataFirst = (row.misc?.[ACT_DATA] as { value?: unknown }[] | undefined)?.[0];
-				const message = dataFirst?.value as
-					| { top_tipo?: unknown; section_tipo?: unknown }
-					| undefined;
-				const publishTipo = message?.top_tipo ?? message?.section_tipo;
-				if (publishTipo !== undefined && publishTipo !== null && publishTipo !== false) {
-					const key = String(publishTipo);
-					group.publish.set(key, (group.publish.get(key) ?? 0) + 1);
-				}
-			} else if (!WHERE_SKIP.has(whereKey)) {
-				group.where.set(whereKey, (group.where.get(whereKey) ?? 0) + 1);
-			}
-		}
-
-		// when: the hour histogram (dd547 date start.hour)
-		const whenFirst = (row.date?.[ACT_WHEN] as { start?: { hour?: unknown } }[] | undefined)?.[0];
-		const hour = whenFirst?.start?.hour;
-		if (hour !== undefined && hour !== null) {
-			const key = String(hour);
-			group.when.set(key, (group.when.get(key) ?? 0) + 1);
-		}
+	const byDay = new Map<string, ActivityTally[]>();
+	for (const tally of tallies) {
+		const list = byDay.get(tally.day);
+		if (list === undefined) byDay.set(tally.day, [tally]);
+		else list.push(tally);
 	}
+	for (const [day, list] of byDay) dayGroups.set(day, foldTallies(list));
 
 	if (rowCount === 0) {
 		response.msg = 'No activity records found';
@@ -298,58 +482,12 @@ export async function getIntervalRawActivityData(
 	dateIn: string,
 	dateOut: string,
 ): Promise<RawActivityItem[] | null> {
-	const rows = (await sql.unsafe(
-		`SELECT section_tipo, section_id, relation, string, date, misc
-		 FROM matrix_activity
-		 WHERE relation @> $1::text::jsonb
-		   AND "timestamp" >= date($2) AND "timestamp" < date($3)
-		 ORDER BY id ASC`,
-		[userLocatorFilter(ACT_WHO, userId), dateIn, dateOut],
-	)) as {
-		relation: Record<string, unknown[]> | null;
-		string: Record<string, unknown[]> | null;
-		date: Record<string, unknown[]> | null;
-		misc: Record<string, unknown[]> | null;
-	}[];
-
-	const what = new Map<string, number>();
-	const where = new Map<string, number>();
-	const when = new Map<string, number>();
-	const publish = new Map<string, number>();
-	for (const row of rows) {
-		// what (dd545 locator section_id → term tipo, PHP build_what)
-		const whatFirst = (row.relation?.[ACT_WHAT] as { section_id?: unknown }[] | undefined)?.[0];
-		if (whatFirst !== undefined && whatFirst !== null && typeof whatFirst === 'object') {
-			const mapped = WHAT_MAP[String(whatFirst.section_id)];
-			if (mapped !== undefined) what.set(mapped, (what.get(mapped) ?? 0) + 1);
-		}
-		// where (dd546 string); dd1223 → publish; tool areas skipped
-		const whereFirst = (row.string?.[ACT_WHERE] as { value?: unknown }[] | undefined)?.[0];
-		let whereKey = whereFirst?.value;
-		if (Array.isArray(whereKey)) whereKey = whereKey[0];
-		if (typeof whereKey === 'string' && whereKey !== '') {
-			if (whereKey === WHERE_PUBLISH) {
-				const dataFirst = (row.misc?.[ACT_DATA] as { value?: unknown }[] | undefined)?.[0];
-				const message = dataFirst?.value as
-					| { top_tipo?: unknown; section_tipo?: unknown }
-					| undefined;
-				const publishTipo = message?.top_tipo ?? message?.section_tipo;
-				if (publishTipo !== undefined && publishTipo !== null && publishTipo !== false) {
-					const key = String(publishTipo);
-					publish.set(key, (publish.get(key) ?? 0) + 1);
-				}
-			} else if (!WHERE_SKIP.has(whereKey)) {
-				where.set(whereKey, (where.get(whereKey) ?? 0) + 1);
-			}
-		}
-		// when (dd547 date start.hour)
-		const whenFirst = (row.date?.[ACT_WHEN] as { start?: { hour?: unknown } }[] | undefined)?.[0];
-		const hour = whenFirst?.start?.hour;
-		if (hour !== undefined && hour !== null) {
-			const key = String(hour);
-			when.set(key, (when.get(key) ?? 0) + 1);
-		}
-	}
+	// Day-keyed tallies folded into ONE set: the same paged, index-served
+	// aggregation as the rebuild (its doc carries the why), flattened over the
+	// whole interval. First-encounter order survives the flattening because
+	// foldTallies orders by the global minimum id, not by day.
+	const { tallies } = await aggregateActivity(userId, dateIn, dateOut);
+	const { what, where, when, publish } = foldTallies(tallies);
 
 	const { termByTipo } = await import('../ontology/labels.ts');
 	const { currentApplicationLang } = await import('../resolve/request_lang.ts');

@@ -74,6 +74,21 @@ export interface ScanContext {
 }
 
 /**
+ * The ScanContext a STORED media item implies — PHP always feeds get_files_info
+ * from the component's data[0]. The ONE copy of that mapping: every re-scan of a
+ * record's media (tool handlers, the save hook, the AV job write-back) must read
+ * the same three cues, or external media silently stops resolving and the
+ * raw-original twin goes missing from the index.
+ */
+export function scanContextFromItem(item: Record<string, unknown> | null | undefined): ScanContext {
+	return {
+		externalSource: (item?.external_source as string | null | undefined) ?? null,
+		originalNormalizedName: (item?.original_normalized_name as string | null | undefined) ?? null,
+		modifiedNormalizedName: (item?.modified_normalized_name as string | null | undefined) ?? null,
+	};
+}
+
+/**
  * One quality/extension file info (PHP get_quality_file_info :2496). Returns an
  * empty (file_exist:false) entry when the file is absent. External sources
  * short-circuit to an external entry.
@@ -238,11 +253,6 @@ export function refreshStoredFilesInfo(
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 ): Record<string, unknown> {
-	const context: ScanContext = {
-		externalSource: (storedItem.external_source as string) ?? null,
-		originalNormalizedName: (storedItem.original_normalized_name as string) ?? null,
-		modifiedNormalizedName: (storedItem.modified_normalized_name as string) ?? null,
-	};
-	const filesInfo = scanFilesInfo(spec, identity, pathOpts, context);
+	const filesInfo = scanFilesInfo(spec, identity, pathOpts, scanContextFromItem(storedItem));
 	return { ...storedItem, files_info: filesInfo };
 }

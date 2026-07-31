@@ -6,15 +6,20 @@
  * user id + a sanitized key_dir/tmp_name — never taken from a client-supplied
  * path. It is realpath-confined to the staging root, its extension is
  * re-validated against the type allowlist, any existing target is backed up
- * (rename_old_files), and it is renamed into the original quality dir. The
- * original tier keeps the raw upload; the normalized default-ext copy is built
- * by regenerate (Original law).
+ * (rename_old_files), and it is renamed into the target quality dir — the
+ * ORIGINAL tier unless the caller asked for another one (PHP set_quality()).
+ * The original tier keeps the raw upload; the normalized default-ext copy is
+ * built by regenerate (Original law).
  */
 
 import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../config/config.ts';
-import { type MediaTypeSpec, assertAllowedExtension } from '../../concepts/media.ts';
+import {
+	type MediaTypeSpec,
+	assertAllowedExtension,
+	assertValidQuality,
+} from '../../concepts/media.ts';
 import { renameOldFiles } from '../file_ops.ts';
 import {
 	type MediaIdentity,
@@ -70,6 +75,13 @@ export interface AddFileInput {
 	tmpName: string;
 	/** The declared/ sniffed extension (re-validated against the allowlist). */
 	extension: string;
+	/**
+	 * Target quality tier (PHP set_quality() before add_file — tool_import_files'
+	 * custom_target_quality, tool_upload's quality). Defaults to the ORIGINAL
+	 * tier. CLIENT-SUPPLIED and it becomes a path segment, so it is validated
+	 * against this type's ladder + charset (assertValidQuality) before use.
+	 */
+	quality?: string;
 	now?: Date;
 }
 
@@ -83,11 +95,16 @@ export interface AddFileResult {
 }
 
 /**
- * Move a staged file into `<original quality dir>/<id>.<ext>` after confinement
- * and extension validation, backing up any existing file first.
+ * Move a staged file into `<target quality dir>/<id>.<ext>` (the ORIGINAL tier
+ * unless `quality` says otherwise) after confinement and extension validation,
+ * backing up any existing file first.
  */
 export function addFile(input: AddFileInput): AddFileResult {
 	const extension = assertAllowedExtension(input.spec, input.extension);
+	const quality =
+		input.quality === undefined
+			? input.spec.originalQuality
+			: assertValidQuality(input.spec, input.quality);
 	// Rebuild the source path from the allowlisted staging root (SEC-063).
 	const dir = stagingDir(input.userId, input.keyDir, input.pathOpts.mediaRoot);
 	const tmpName = sanitizeSegment(input.tmpName);
@@ -98,11 +115,11 @@ export function addFile(input: AddFileInput): AddFileResult {
 	if (!existsSync(source) || !statSync(source).isFile()) {
 		throw new Error('Staged upload not found');
 	}
-	// Target = original quality, raw extension.
+	// Target = the requested quality tier (original by default), raw extension.
 	const target = buildMediaLocation(
 		input.spec,
 		input.identity,
-		input.spec.originalQuality,
+		quality,
 		extension,
 		input.pathOpts,
 	).absolutePath;

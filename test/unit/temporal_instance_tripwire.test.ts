@@ -359,6 +359,46 @@ describe('WC-059 — the flag has one reader and a frozen producer set', () => {
 		}
 	});
 
+	// WC-079 applies the SAME discipline to the persistence opt-in. Without it the
+	// safety argument for the store is unenforced prose: the whole reason the other
+	// four temporal producers are safe is that they never send a scope, and nothing
+	// would have stopped a fifth from starting to.
+	test('src/ reads source.temporal_scope in exactly ONE place (the address builder)', () => {
+		const readers = walk(join(ROOT, 'src'))
+			.filter((file) => file.endsWith('.ts'))
+			.filter((file) => stripComments(readFileSync(file, 'utf8')).includes('temporal_scope'))
+			.map((file) => file.slice(ROOT.length + 1))
+			.sort();
+		// Declared in rqo.ts, read only by temporal_store.temporalScratchAddress.
+		expect(readers).toEqual([
+			'src/core/concepts/rqo.ts',
+			'src/core/section/record/temporal_store.ts',
+		]);
+	});
+
+	test('the CLIENT producers of temporal_scope are a frozen, reason-stamped allowlist', () => {
+		// A fifth producer opting itself in is the WC-079 nightmare: the propagate
+		// tool would start restoring a stale value into a bulk write across every
+		// SQO match. That must fail in CI, not in a user's records.
+		const SCOPE_PRODUCERS: Record<string, string> = {
+			'client/dedalo/core/services/service_tmp_section/js/service_tmp_section.js':
+				'the ONLY producer that opts in — the staging form, whose children autoload and so need the value back',
+			'client/dedalo/core/common/js/common.js':
+				'create_source — the SENDER: forwards self.temporal_scope onto the RQO source',
+			'client/dedalo/core/component_common/js/component_common.js':
+				'the instance option itself (self.temporal_scope = options.temporal_scope ?? null)',
+		};
+		const found = [...walk(join(ROOT, 'client')), ...walk(join(ROOT, 'tools'))]
+			.filter((file) => file.endsWith('.js'))
+			.filter((file) => stripComments(readFileSync(file, 'utf8')).includes('temporal_scope'))
+			.map((file) => file.slice(ROOT.length + 1))
+			.sort();
+		expect(found).toEqual(Object.keys(SCOPE_PRODUCERS).sort());
+		for (const [file, reason] of Object.entries(SCOPE_PRODUCERS)) {
+			expect(reason.length, `${file} needs a substantive reason`).toBeGreaterThan(20);
+		}
+	});
+
 	test('every RECORD-WRITING dd_core_api door consults isTemporalSource', () => {
 		const handlerPath = join(ROOT, 'src/core/api/handlers/dd_core_api.ts');
 		const source = stripComments(readFileSync(handlerPath, 'utf8'));

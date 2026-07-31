@@ -150,6 +150,22 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		}
 
 		const report = await importMappedRecords(mapped, sectionTipo, ctx.userId);
+		// CONSUME the staging form (WC-079). This tool's client builds a
+		// service_tmp_section, so it accumulates scratch rows under its own scope —
+		// clearing here is what stops the next batch inheriting this run's values.
+		// Best effort. Only when something was ACTUALLY created or updated: a run where every
+		// record failed still returns result:true, and clearing on that would wipe
+		// the form after writing nothing.
+		if (report.created + report.updated > 0) {
+			try {
+				const { clearTemporalScratch } = await import(
+					'../../../src/core/section/record/temporal_store.ts'
+				);
+				await clearTemporalScratch(ctx.userId, 'tool_import_marc21');
+			} catch (error) {
+				console.warn('[tool_import_marc21] scratch clear failed:', (error as Error).message);
+			}
+		}
 		return {
 			result: true,
 			msg: `OK. MARC21 import done. Created ${report.created}, updated ${report.updated}${report.failed.length > 0 ? `, ${report.failed.length} failed` : ''}.`,

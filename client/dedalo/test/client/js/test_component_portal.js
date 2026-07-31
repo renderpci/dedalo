@@ -442,6 +442,52 @@ describe(`COMPONENT_PORTAL DATA OPERATIONS`, async function() {
 				`entries must increase by 1 after add_new_element`
 			)
 
+			// created_section_id (WC-081). The server reports the ADDRESS of the
+			// record it created; the add button opens that record instead of
+			// guessing it from the echoed page (which only ends on the new record
+			// when the whole list fits on one page).
+			assert.isOk(
+				instance.created_section_id,
+				'add_new_element must expose the created section_id'
+			)
+			const created_entry = instance.data.entries.find(el =>
+				el.section_tipo===portal_section &&
+				String(el.section_id)===String(instance.created_section_id)
+			)
+			assert.isOk(
+				created_entry,
+				'the created record must be present in the echoed entries'
+			)
+			assert.equal(
+				String(instance.data.entries[instance.data.entries.length-1].section_id),
+				String(instance.created_section_id),
+				'the echoed page must END on the created record (last-page echo)'
+			)
+
+			await instance.destroy(true, true, true)
+		})
+
+		it(`${portal_model} add_new_element resets created_section_id per call`, async function() {
+
+			const instance = await get_portal_instance('edit', 'default', portal_section_id)
+			await instance.render()
+
+			// first add
+			await instance.add_new_element(portal_section)
+			const first_created = instance.created_section_id
+			assert.isOk(first_created, 'first add_new_element must expose a created section_id')
+
+			// second add. A stale address from the previous call would make the add
+			// button re-open the record created before this one.
+			await instance.add_new_element(portal_section)
+			const second_created = instance.created_section_id
+			assert.isOk(second_created, 'second add_new_element must expose a created section_id')
+			assert.notEqual(
+				String(second_created),
+				String(first_created),
+				'created_section_id must name the record of THIS call'
+			)
+
 			await instance.destroy(true, true, true)
 		})
 	})//end describe ADD NEW ELEMENT

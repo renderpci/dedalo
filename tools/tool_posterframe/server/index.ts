@@ -136,6 +136,37 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 		);
 		if (!outcome.created) return fail('posterframe could not be created (no video stream?)');
 
+		// RECORD what was written. createIdentifyingImageCore only touches the DISK
+		// (frame extraction + derivative regeneration) and RETURNS the files_info
+		// scan; persisting it is a separate call. Returning it to the client is not
+		// the same thing — without this the freshly created portal record has an
+		// empty `media` key, tool_media_versions reports "Files info data is unsync",
+		// and an image has no read-time rescan to repair it (component_av does).
+		// Same defect the importer had; the two shipped it independently, which is
+		// why the ingest→persist pairing now has a gate.
+		//
+		// The record was created moments ago through the portal, so there are no
+		// existing items — persistUploadedMedia mints the first one.
+		{
+			const { persistUploadedMedia } = await import(
+				'../../../src/core/media/tools/files_info_persist.ts'
+			);
+			const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
+			// Derived from the path actually written, not guessed: the extension is
+			// whatever the frame extractor produced.
+			const writtenName = outcome.posterframePath?.split('/').pop() ?? '';
+			const posterName = writtenName !== '' ? writtenName : buildMediaIdentifier(imageIdentity);
+			await persistUploadedMedia({
+				sectionTipo: imageIdentity.sectionTipo,
+				sectionId: imageIdentity.sectionId,
+				componentTipo: imageIdentity.componentTipo,
+				lang: imageIdentity.lang,
+				filesInfo: outcome.filesInfo,
+				originalFileName: posterName,
+				originalNormalizedName: posterName,
+			});
+		}
+
 		return {
 			result: true,
 			msg: 'OK. Posterframe created successfully',

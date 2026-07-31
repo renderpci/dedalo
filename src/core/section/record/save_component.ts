@@ -125,6 +125,13 @@ export interface SaveResult {
 	 * refreshes info widgets in place.
 	 */
 	observersData?: unknown[];
+	/**
+	 * The section_id `add_new_element` created in the TARGET section (WC-081).
+	 * Absent on every other action — a save that creates nothing says nothing.
+	 * The API door forwards it so the client can open the record it just made
+	 * by ADDRESS instead of guessing it from the echoed page.
+	 */
+	created_section_id?: number;
 }
 
 /**
@@ -942,7 +949,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 
 	const result: SaveResult = { ok: true, message: 'ok', data: items };
 	if (createdSectionId !== null) {
-		(result as SaveResult & { created_section_id?: number }).created_section_id = createdSectionId;
+		result.created_section_id = createdSectionId;
 	}
 	return result;
 }

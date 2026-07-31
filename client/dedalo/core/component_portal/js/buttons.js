@@ -115,8 +115,11 @@ buttons.render_button_update_data_external = (self) => {
 *     to false and an alert is shown (multi-target add is not supported here;
 *     the button itself is hidden by build() in that case).
 *  3. self.add_new_element() POSTs to the API to create the record and returns
-*     true on success.  On success the last entry in self.data.entries contains
-*     the new record's section_tipo and section_id locator.
+*     true on success, leaving the created record's address in
+*     self.created_section_id (the server's created_section_id, WC-081).  That
+*     address names the record to open; the pre-WC-081 heuristic — the LAST
+*     entry of self.data.entries — remains as the fallback, and is only correct
+*     when the echoed page ends on the new record.
 *  4. A section instance is built and rendered in a modal.  On modal close,
 *     self.refresh() is called and 'add_row_<id>' is published so row views
 *     can animate/scroll to the new entry.
@@ -173,10 +176,25 @@ buttons.render_button_add = (self) => {
 					return;
 				}
 
-				// last_value. Get the last value of the portal to open the new section
+				// new_value. The record to open, by ADDRESS: the server reports the
+				// section_id it created (created_section_id). The fallback is the old
+				// heuristic — the last echoed entry — which only names the new record
+				// when the echoed page ends on it.
+				const created_section_id = self.created_section_id ?? null
 				const last_value	= self.data.entries[self.data.entries.length-1]
-				const section_tipo	= last_value.section_tipo
-				const section_id	= last_value.section_id
+				const new_value		= created_section_id!==null
+					? (self.data.entries.find(el =>
+						el.section_tipo===target_section_tipo &&
+						String(el.section_id)===String(created_section_id)
+					) ?? {
+						// Not on the echoed page (an older server, or a page that does
+						// not end on it): the address alone is enough to open it.
+						section_tipo	: target_section_tipo,
+						section_id		: created_section_id
+					})
+					: last_value
+				const section_tipo	= new_value.section_tipo
+				const section_id	= new_value.section_id
 
 				// header
 				const header = (get_label.new || 'New section') + ' ' + (target_section[0]?.label || '')

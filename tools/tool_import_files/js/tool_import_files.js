@@ -361,7 +361,19 @@ tool_import_files.prototype.import_files = function(options) {
 			return {
 				name				: name,
 				file_processor		: el.file_processor || null,
-				component_option	: el.component_option || null
+				component_option	: el.component_option || null,
+				// The STAGED identity, stamped onto the registry entry by
+				// service_dropzone (from the upload response, and from the restored
+				// listing after a reload). It must be forwarded: the display name is
+				// NOT the name on disk — the receiver rewrites anything outside
+				// [A-Za-z0-9_.-] to '_', so 'DSC 001.jpg' / 'María.jpg' /
+				// 'photo (1).jpg' are staged under a different name. Stripping these
+				// forced the server to re-derive them and mis-locate the file.
+				// `extension` also matters on its own: the server's name-grammar
+				// fallback is alpha-only and loses .mp4 / .mp3 / .jp2.
+				tmp_name			: el.tmp_name || null,
+				key_dir				: el.key_dir || null,
+				extension			: el.extension || null
 			}
 		})
 		if(SHOW_DEBUG===true) {
