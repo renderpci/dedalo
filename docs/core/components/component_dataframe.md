@@ -373,12 +373,17 @@ The optional delete policy is a sibling block on the same node:
 }
 ```
 
-!!! danger "Declare `mode` on the slot ddo"
+!!! danger "Declare `mode` — on the ddo AND on the slot node"
     **A slot ddo that omits `mode` does not inherit the caller's.** When the
     owner is not a section it resolves to **`mode: "list"`** (the
     resolve-ddo-mode rule, `src/core/relations/request_config/explicit.ts`) and
     the server stamps `"mode":"list","fixed_mode":true` on it — so you get the
     compact read-only cell instead of the editable picker.
+
+    The resolution order is the same on **every** kind of main: the **ddo's**
+    `mode`/`view` win, then the slot **node's** `properties.mode`/`view`, then
+    `list`. Declaring it in either place works; declaring it in neither gives
+    you `list`.
 
     In **edit** mode the views are simply
     [component_portal](component_portal.md)'s, used verbatim — `line`, `tree`,
@@ -524,12 +529,23 @@ and pick a valuation; the button takes that colour. The same button also renders
 in **read-only** contexts — Time Machine previews and read-only users (the edit
 views attach the dataframe in both the writable and read-only render branches).
 
-!!! note "Literal mains"
-    The example above is a **relation** main. The literal case differs only in
-    the activation flag: a literal needs `has_dataframe: true` on the main
-    (see below). The live literal wiring is `oh16` (a
+!!! note "Copying this onto a LITERAL main"
+    A dataframe behaves **identically** on a literal and on a relation main —
+    one component, one ontology contract — so this config is portable as-is.
+    The only difference is the activation flag: a literal main also needs
+    `has_dataframe: true` (see below); a relation main activates from the slot
+    ddo alone.
+
+    In both cases the frame's `mode`/`view` come from the **ddo** in the main's
+    `show.ddo_map`, falling back to the slot node's own `properties.mode` /
+    `properties.view`, then to `list`. That is why `numisdata1447` carries no
+    node-level `mode` (its ddo supplies it) while `dd560` and `oh115` declare
+    `"mode": "edit"`, `"view": "tree"` on the node — both spellings work, on
+    either kind of main.
+
+    The live literal wiring is `oh16` (a
     [component_input_text](component_input_text.md) in section `oh1`) with the
-    slot `oh130`; the rating is optional and `oh130` does not use one.
+    slot `oh130`.
 
 !!! note "Standard context properties"
     Like every component, `component_dataframe` honours the generic ontology context blocks carried into the datum `context`: `css`, `request_config` (RQO) and `view`. Any other custom key seen in production should be verified in the ontology.
