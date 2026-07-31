@@ -140,7 +140,7 @@ Adapt the following tasks to your own virtual host directory structure.
 3. Download the latest stable version:
 
     ```shell
-    sudo wget https://github.com/renderpci/dedalo/archive/master.zip
+    sudo wget https://github.com/renderpci/dedalo/archive/refs/heads/v6.zip
     ```
 
     Or you can choose another release from [GitHub releases list](https://github.com/renderpci/dedalo/releases)
