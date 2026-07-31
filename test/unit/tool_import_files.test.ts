@@ -224,6 +224,47 @@ describe('tool_import_files module', () => {
 		// must never be "corrected" without a WIRE_CONTRACT entry.
 	});
 
+	/**
+	 * THE WIRE. `custom_target_quality` — the Quality selector
+	 * (render_tool_import_files.js :989) — reached the handler and was DROPPED, so
+	 * every imported file landed in `original` whatever the operator chose. The
+	 * engine honouring a `quality` it is HANDED proves nothing about that; only
+	 * reading it off the payload does.
+	 *
+	 * An out-of-ladder tier must surface as the quality error for that file; with
+	 * the option not read, the same request dies at the staging lookup instead.
+	 */
+	testIfDb('custom_target_quality reaches the ingest (the inert-selector bug)', async () => {
+		const loaded = await getLoadedTool('tool_import_files');
+		const action = mustGet(loaded!.module.apiActions.import_files, 'import_files');
+		const call = async (customTargetQuality?: string): Promise<string[]> => {
+			const response = await action.handler({
+				principal: await resolvePrincipal(USER),
+				userId: USER,
+				background: false,
+				options: {
+					tipo: 'test99', // component_image in the test3 playground
+					section_tipo: FILENAME_SECTION,
+					section_id: mustGet(filenameScratchId, 'filename scratch id'),
+					tool_config: {},
+					key_dir: 'kd_wire',
+					files_data: [{ name: 'wire.jpg', tmp_name: 'wire.jpg', extension: 'jpg' }],
+					...(customTargetQuality === undefined
+						? {}
+						: { custom_target_quality: customTargetQuality }),
+				},
+			});
+			return (response.errors as string[]) ?? [];
+		};
+
+		expect((await call('not_a_tier')).join(' ')).toContain("Unknown media quality 'not_a_tier'");
+		// Same request without it must fail elsewhere — asserted POSITIVELY, so the
+		// control arm cannot pass by returning no errors at all.
+		const control = (await call()).join(' ');
+		expect(control).toContain('Staged upload not found');
+		expect(control).not.toContain('media quality');
+	});
+
 	test('the matcher gates read the TARGET section out of the payload', async () => {
 		const loaded = await getLoadedTool('tool_import_files');
 		const actions = loaded!.module.apiActions;

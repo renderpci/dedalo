@@ -89,6 +89,52 @@ describe('tool_upload module', () => {
 		expect(Array.isArray(res.errors)).toBe(true);
 		expect((res.errors as string[]).length).toBeGreaterThan(0);
 	});
+
+	/**
+	 * THE WIRE. The client has always sent the target tier (tool_upload.js :224 —
+	 * `caller.context.target_quality`, else `features.default_target_quality`) and
+	 * the handler dropped it, so every upload landed in `original` however the
+	 * operator set the selector. The engine honouring a `quality` it is HANDED
+	 * proves nothing about that; only reading it off the payload does.
+	 *
+	 * Drive an out-of-ladder tier: the failure has to be the quality gate. Rename
+	 * the option key and the request gets as far as the staging lookup instead —
+	 * the two messages are the discriminator, and the second half pins it.
+	 */
+	test('the client-supplied quality reaches the engine (the inert-selector bug)', async () => {
+		const loaded = await getLoadedTool('tool_upload');
+		const upload = mustGet(
+			loaded!.module.apiActions.process_uploaded_file,
+			'process_uploaded_file',
+		);
+		const options = {
+			tipo: 'test99', // component_image in the test3 playground
+			section_tipo: 'test3',
+			section_id: 1,
+			file_data: { key_dir: 'kd_wire', tmp_name: 'wire.jpg', extension: 'jpg' },
+		};
+		const principal = await resolvePrincipal(-1);
+
+		const refused = await upload.handler({
+			principal,
+			userId: -1,
+			background: false,
+			options: { ...options, quality: 'not_a_tier' },
+		});
+		expect(refused.result).toBe(false);
+		expect(String(refused.msg)).toContain("Unknown media quality 'not_a_tier'");
+
+		// Same payload WITHOUT the quality: it must fail somewhere else entirely,
+		// so the assertion above cannot pass for an unrelated reason.
+		const noQuality = await upload.handler({
+			principal,
+			userId: -1,
+			background: false,
+			options,
+		});
+		expect(noQuality.result).toBe(false);
+		expect(String(noQuality.msg)).not.toContain('media quality');
+	});
 });
 
 describe('get_job_status ownership (guessable ids are not the boundary)', () => {

@@ -666,6 +666,13 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const callerSectionId = Number(o.section_id ?? 0);
 		const componentsTempData = (o.components_temp_data ?? []) as TempDataEntry[];
 		const optionsKeyDir = String(o.key_dir ?? '');
+		// The Quality selector's choice (render_tool_import_files.js :989). PHP
+		// set_quality()'d the component with it before add_file; undefined ⇒ the
+		// component's original tier. add_file validates it against the ladder.
+		const customTargetQuality =
+			typeof o.custom_target_quality === 'string' && o.custom_target_quality !== ''
+				? o.custom_target_quality
+				: undefined;
 		const filesData = (o.files_data ?? []) as ImportFileData[];
 		if (sectionTipo === '' || componentTipo === '' || filesData.length === 0) {
 			return fail('Missing section_tipo, tipo or files_data');
@@ -743,8 +750,9 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				keyDir,
 				tmpName,
 				extension,
+				quality: customTargetQuality,
 			});
-			const { persistUploadedMedia } = await import(
+			const { persistUploadedMedia, nameKeysForQuality } = await import(
 				'../../../src/core/media/tools/files_info_persist.ts'
 			);
 			const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
@@ -753,14 +761,19 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				sectionId: identity.sectionId,
 				componentTipo: identity.componentTipo,
 				lang: identity.lang,
-				existingItems: items as { id?: number; lang?: string | null; files_info?: unknown }[],
 				filesInfo: result.filesInfo,
 				// The name the operator recognises. NOTE it is not always human-readable:
 				// a dropzone row restored from the server listing carries the SANITIZED
 				// staged name, because that is what the listing reports.
 				originalFileName: originalFileName || result.originalFileName,
 				originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
+				// Provenance follows the tier the file landed in (PHP :778) — an import
+				// into a non-original tier records no original_*/modified_* names.
+				nameKeys: nameKeysForQuality(spec, customTargetQuality),
 			});
+			// AFTER the persist commits: an av transcode writes its own files_info
+			// back, and must not race the write above (IngestResult.startTranscode).
+			result.startTranscode?.();
 		};
 
 		// Live progress + cooperative cancellation. `import_files` runs under the

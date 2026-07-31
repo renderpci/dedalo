@@ -25,6 +25,7 @@ process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
 const { MediaJobManager, jobFilePath, reconcileProcessFiles } = await import(
 	'../../src/core/media/jobs.ts'
 );
+const { isInTransaction, withTransaction } = await import('../../src/core/db/postgres.ts');
 
 /** A pid that is certainly dead (init-adjacent huge pid never allocated on macOS/Linux dev boxes). */
 const DEAD_PID = 999999901;
@@ -174,5 +175,30 @@ describe('shutdown hook (S2-17)', () => {
 		expect(persisted.status).toBe('interrupted');
 		expect(persisted.errors.join(' ')).toContain('server shutdown');
 		release();
+	});
+});
+
+/**
+ * A job OUTLIVES the request that submitted it, so it must not inherit that
+ * request's transaction handle: `withTransaction` expires the handle when the
+ * request commits (S2-14), minutes before a transcode ends, and the job's first
+ * query would then throw instead of running on the pool — swallowed into a
+ * `persist_error`, reinstating exactly the bug the write-back fixes.
+ */
+describe("jobs are detached from the submitter's transaction scope", () => {
+	test('a job submitted INSIDE withTransaction runs outside it', async () => {
+		const manager = new MediaJobManager(1, () => 0);
+		let jobId = '';
+		let submittedInTx = false;
+		await withTransaction(async () => {
+			submittedInTx = isInTransaction();
+			jobId = manager.submit('detach_probe', async () => ({ inTx: isInTransaction() })).id;
+		});
+		expect(submittedInTx).toBe(true); // the submit really was inside a tx
+		for (let i = 0; i < 100 && manager.status(jobId)?.status !== 'done'; i++) {
+			await Bun.sleep(5);
+		}
+		expect(manager.status(jobId)?.status).toBe('done');
+		expect(manager.status(jobId)?.data).toEqual({ inTx: false });
 	});
 });

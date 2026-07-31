@@ -161,7 +161,6 @@ async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolRespo
 				sectionId: imageIdentity.sectionId,
 				componentTipo: imageIdentity.componentTipo,
 				lang: imageIdentity.lang,
-				existingItems: [],
 				filesInfo: outcome.filesInfo,
 				originalFileName: posterName,
 				originalNormalizedName: posterName,

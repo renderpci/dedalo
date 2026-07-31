@@ -215,17 +215,19 @@ export async function uploadMedia(
 		sectionId: identity.sectionId,
 		componentTipo: identity.componentTipo,
 		lang: identity.lang,
-		existingItems: items as { id?: number; lang?: string | null; files_info?: unknown }[],
 		filesInfo: result.filesInfo,
 		originalFileName: result.originalFileName,
 		originalNormalizedName: `${buildMediaIdentifier(identity)}.${result.extension}`,
 	});
+	// AFTER the persist commits: the transcode writes its own files_info back, and
+	// must not race the write above (see IngestResult.startTranscode).
+	const jobId = result.startTranscode?.() ?? null;
 	return {
 		section_tipo: sectionTipo,
 		section_id: sectionId,
 		tipo: fieldTipo,
 		files_info: result.filesInfo,
-		job_id: result.jobId,
+		job_id: jobId,
 	};
 }
 

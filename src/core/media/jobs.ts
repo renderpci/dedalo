@@ -30,6 +30,7 @@ import {
 import { join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { runDetachedFromTransaction } from '../db/postgres.ts';
 
 /** A job's lifecycle status. */
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'interrupted' | 'stopped';
@@ -312,7 +313,12 @@ export class MediaJobManager {
 		this.controllers.set(id, controller);
 		this.commit(record);
 
-		void this.run(record, worker, controller);
+		// DETACHED: submit() is called synchronously from a request handler, so the
+		// worker would otherwise inherit that request's AsyncLocalStorage stores —
+		// including a `withTransaction` handle the request expires (S2-14) long
+		// before a transcode ends. A job outlives its submitter, so it must own no
+		// part of the submitter's connection state; its queries go to the pool.
+		void runDetachedFromTransaction(() => this.run(record, worker, controller));
 		return record;
 	}
 

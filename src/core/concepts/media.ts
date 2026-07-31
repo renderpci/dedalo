@@ -185,6 +185,59 @@ export function assertValidQuality(spec: MediaTypeSpec, quality: unknown): strin
 	return quality;
 }
 
+/**
+ * Validate a quality as an INGEST TARGET — stricter than assertValidQuality,
+ * and deliberately its neighbour so the two carve-out lists cannot drift.
+ *
+ * assertValidQuality admits two tiers that are NOT in `spec.qualities`: the
+ * thumb tier and `audio_tr`. Both are DERIVED — `scanFilesInfo` walks the thumb
+ * tier with the thumb extension ALONE (files_info.ts) and never walks audio_tr
+ * at all — so a file uploaded into either is invisible to the record forever,
+ * and sync_files cannot repair it (its scan finds nothing to record). PHP placed
+ * such a file and lost it silently; we refuse.
+ *
+ * Any future off-ladder carve-out added above must be considered here too.
+ */
+export function assertIngestableQuality(spec: MediaTypeSpec, quality: unknown): string {
+	const validated = assertValidQuality(spec, quality);
+	if (spec.hasThumb && validated === config.media.thumb.quality) {
+		throw new Error(
+			`Cannot upload into the '${validated}' tier: it is a generated thumbnail, rebuilt from the ${spec.defaultQuality} file`,
+		);
+	}
+	if (validated === AUDIO_TR_QUALITY) {
+		throw new Error(
+			`Cannot upload into the '${validated}' tier: it is a generated transcription derivative`,
+		);
+	}
+	return validated;
+}
+
+/**
+ * A DERIVATIVE tier holds NORMALIZED files — one per extension the type builds.
+ * An upload into such a tier must therefore carry one of those extensions, or it
+ * is SHADOWED: the tier's canonical `<id>.<defaultExtension>` still exists (or
+ * gets rebuilt from the old original), the scanner emits it FIRST for that
+ * quality, the thumb is regenerated from it, and the record keeps serving the
+ * previous image while the upload sits beside it, reported as a success.
+ *
+ * The ORIGINAL tier is exempt — it keeps the raw upload in whatever the
+ * allowlist admits (the Original law); that is what it is for.
+ */
+export function assertNormalizedExtensionForTier(
+	spec: MediaTypeSpec,
+	quality: string,
+	extension: string,
+): void {
+	if (quality === spec.originalQuality) return;
+	const normalized = [spec.defaultExtension, ...spec.alternateExtensions];
+	if (!normalized.includes(extension)) {
+		throw new Error(
+			`Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into '${spec.originalQuality}' instead.`,
+		);
+	}
+}
+
 /** Validate an extension against the type's upload allowlist. Throws. */
 export function assertAllowedExtension(spec: MediaTypeSpec, extension: unknown): string {
 	if (typeof extension !== 'string' || extension === '') {

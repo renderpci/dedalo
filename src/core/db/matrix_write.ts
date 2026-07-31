@@ -28,7 +28,7 @@
 
 import { type RawJsonText, asRawJsonText, encodeForJsonb } from './json_codec.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn, assertMatrixTable } from './matrix.ts';
-import { sql } from './postgres.ts';
+import { isInTransaction, sql } from './postgres.ts';
 
 /**
  * The EXPLICIT ordered column list of a standard matrix table, exactly as PHP
@@ -269,6 +269,56 @@ export async function updateMatrixKeysData(
 		parameters,
 	)) as unknown[];
 	return updated.length;
+}
+
+/**
+ * Read ONE jsonb key of a matrix row under a `FOR UPDATE` row lock (T2 — matrix
+ * SQL lives in this module).
+ *
+ * A read-modify-write of a component key is only safe if the read holds the row
+ * lock to COMMIT: `updateMatrixKeysData` replaces the WHOLE key value, so an
+ * unlocked read + later write silently reverts anything another session
+ * committed on that key in between. `save_component.ts` already locks this way
+ * before every component write; this is the same lock for the write-backs that
+ * live outside the save pipeline (files_info reconciles).
+ *
+ * MUST be called inside `withTransaction` — outside one the lock is released by
+ * the statement's own implicit transaction and buys nothing, so that is a
+ * programming error and throws.
+ *
+ * Returns the key's array value, `[]` when the key is absent or not an array,
+ * and `null` when the ROW does not exist (the caller must not then write).
+ */
+export async function readMatrixKeyForUpdate(
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+	columnName: MatrixJsonbColumn,
+	key: string,
+): Promise<unknown[] | null> {
+	assertMatrixTable(tableName);
+	if (!MATRIX_JSONB_COLUMNS.includes(columnName)) {
+		throw new Error(
+			`readMatrixKeyForUpdate: column '${columnName}' is not allowlisted (spec §7.6)`,
+		);
+	}
+	if (!/^[a-z]+[0-9]+$/.test(key)) {
+		throw new Error(`readMatrixKeyForUpdate: key '${key}' fails the tipo grammar (spec §7.6)`);
+	}
+	if (!isInTransaction()) {
+		throw new Error(
+			'readMatrixKeyForUpdate: FOR UPDATE outside a transaction holds no lock past the ' +
+				'statement — wrap the read-modify-write in withTransaction',
+		);
+	}
+	const rows = (await sql.unsafe(
+		`SELECT "${columnName}"->'${key}' AS items FROM "${tableName}"
+		 WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
+		[sectionTipo, sectionId],
+	)) as { items: unknown }[];
+	if (rows.length === 0) return null;
+	const items = rows[0]?.items;
+	return Array.isArray(items) ? items : [];
 }
 
 /**

@@ -403,3 +403,47 @@ describe('module-state tripwire (§4 request isolation)', () => {
 		expect(stale).toEqual([]);
 	});
 });
+
+/**
+ * The transaction ALS's ONE escape hatch. `runDetachedFromTransaction` exits the
+ * transaction + deferred-action stores, which is exactly right for a background
+ * job (it outlives its submitter, whose handle expires at COMMIT — S2-14) and
+ * exactly wrong for anything else: work wrapped in it loses read-your-writes and
+ * cannot be rolled back with the request. Freeze the caller set so a future
+ * "avoid holding the transaction" refactor has to argue its case here.
+ * Contract + rationale: engineering/REQUEST_ISOLATION.md.
+ */
+describe('runDetachedFromTransaction — frozen caller set', () => {
+	const ALLOWED_IMPORTERS = new Set([
+		// The job manager: submit() runs inside a request, the worker must not.
+		'src/core/media/jobs.ts',
+	]);
+
+	test('only the job manager imports the transaction-ALS escape hatch', () => {
+		const glob = new Glob('**/*.ts');
+		const importers: string[] = [];
+		// src/ AND tools/: a tool handler imports postgres.ts directly (e.g.
+		// tool_import_files pulls `sql` from it), so a src-only census would leave
+		// the whole tool layer free to detach its writes.
+		for (const [root, prefix] of [
+			[SRC_DIR, 'src/'],
+			[join(SRC_DIR, '..', 'tools'), 'tools/'],
+		] as [string, string][]) {
+			for (const rel of glob.scanSync(root)) {
+				if (`${prefix}${rel}` === 'src/core/db/postgres.ts') continue; // its home
+				if (readFileSync(join(root, rel), 'utf8').includes('runDetachedFromTransaction')) {
+					importers.push(`${prefix}${rel}`);
+				}
+			}
+		}
+		const unexpected = importers.filter((rel) => !ALLOWED_IMPORTERS.has(rel));
+		if (unexpected.length > 0) {
+			throw new Error(
+				`runDetachedFromTransaction used outside the job-manager submit path:\n  ${unexpected.join('\n  ')}\nDetaching hides a write from the ambient transaction: it cannot be rolled back and cannot read the transaction's own uncommitted rows. Only work that OUTLIVES the request (a supervised background job) may detach. See engineering/REQUEST_ISOLATION.md.`,
+			);
+		}
+		expect(unexpected).toEqual([]);
+		// Allowlist stays honest — a stale entry means the rule guards nothing.
+		expect([...ALLOWED_IMPORTERS].filter((rel) => !importers.includes(rel))).toEqual([]);
+	});
+});

@@ -13,6 +13,7 @@ REWRITE_SPEC §4 and per-file comments).
 | Identity (principal + session) | **request-context ALS**, opened once per RQO at the dispatch chokepoint, seeded from the session | `core/security/request_context.ts`; opened in `core/api/dispatch.ts` `dispatchRqo` |
 | Effective languages | **request-lang ALS** (`currentApplicationLang()`/`currentDataLang()`), opened beside the identity scope | `core/resolve/request_lang.ts` |
 | DB transaction handle | ALS (`withTransaction`) | `core/db/postgres.ts` |
+| **Detached background work** | `runDetachedFromTransaction` EXITS the transaction + deferred-action stores; the ONE legal caller is `MediaJobManager.submit` | `core/db/postgres.ts`; `core/media/jobs.ts` |
 | Per-user data at module scope | caches **keyed by `userId`** with explicit invalidation | `core/security/permissions.ts` |
 | Localized caches | key **bakes the lang** in | e.g. `core/ontology/labels.ts`, `core/resolve/structure_context.ts` |
 
@@ -30,7 +31,18 @@ reach for.
 2. **Caches key by every identity the value depends on** — `tipo` + `lang` +
    `user`, as applicable. A lang-only key on a value that could become
    user-dependent is a latent bleed (see the two guarded holes below).
-3. **Auth bypasses are explicit capabilities, never mutable globals.**
+3. **A background job owns no part of its submitter's connection state.**
+   `submit()` is called synchronously inside a request, so an ALS store would
+   propagate into the worker — and a `withTransaction` handle is EXPIRED (S2-14)
+   the moment that request commits, minutes before a transcode ends. The job
+   manager therefore starts every worker through `runDetachedFromTransaction`.
+   That helper is the transaction ALS's only escape hatch and exists FOR this one
+   caller: it must not be used to "avoid holding the transaction" around ordinary
+   work, because the work it wraps loses read-your-writes and cannot be rolled
+   back with the request. Enforced by `test/unit/media_jobs_reconcile.test.ts`
+   (a job submitted inside `withTransaction` observes `isInTransaction() === false`)
+   plus the importer allowlist in `test/unit/module_state_tripwire.test.ts`.
+4. **Auth bypasses are explicit capabilities, never mutable globals.**
    `skip_projects_filter` is a server-only SQO key stripped from client input by
    `sanitizeClientSqo`; the read/admin bypass is the presence / `isGlobalAdmin`
    of a `Principal`, threaded as a parameter — not a `read_only_scope`-style flag.
