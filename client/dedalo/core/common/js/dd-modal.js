@@ -20,7 +20,11 @@
  *   - Minimize to a bottom strip: clicking the '_' button toggles the .mini class
  *     and stacks minimized modals at the bottom-right with computed offsets.
  *   - Close via the '×' button, overlay click, or Escape key (topmost stack entry).
+ *   - Self-detaching: a closed modal removes itself from the DOM, so listener
+ *     de-registration and modal_stack removal always happen (never delegated to
+ *     a caller-supplied on_close, which callers routinely overwrite).
  *   - Unsaved-data guard: _closeModal() awaits check_unsaved_data() before hiding.
+ *     Concurrent closes are serialised — the guard returns the in-flight promise.
  *   - Modal stack: window.modal_stack[] tracks all mounted dd-modal elements;
  *     Escape always targets the topmost (last) entry.
  *   - window.modal getter: always returns the topmost dd-modal or null.
@@ -37,6 +41,12 @@
  *                                   also triggers service_autocomplete.destroy if present
  *   publish_close {Function|null} — called with (this) to fire the 'modal_close' event
  *                                   via event_manager before on_close runs
+ *
+ * DOM events dispatched:
+ *   'dd-modal-close' — on the element itself (bubbles:false), after on_close and
+ *                      before self-removal. on_close is a single slot that callers
+ *                      overwrite wholesale; this event is the seam the framework
+ *                      (ui.attach_to_modal) uses for teardown that must always run.
  *
  * Shadow DOM slots:
  *   slot[name="header"] — header bar content (projected inside .modal-header)
@@ -98,6 +108,7 @@ class DDModal extends HTMLElement {
 		this.mini = false;
 		this.on_close = null;
 		this.publish_close = null;
+		this._closing = null; // in-flight close promise; see _closeModal()
 		this.attachShadow({ mode: 'open' });
 		this.shadowRoot.innerHTML = this._template();
 
@@ -429,6 +440,10 @@ class DDModal extends HTMLElement {
 			const idx = window.modal_stack.indexOf(this);
 			if (idx > -1) window.modal_stack.splice(idx, 1);
 		}
+
+		// A disconnected modal frees its slot in the minimized strip: restack the
+		// survivors so no gap is left behind.
+		this._restack_minis();
 	}
 
 	/**
@@ -555,14 +570,9 @@ class DDModal extends HTMLElement {
 	 * element (so slot-projected header styles can also react), and the mini
 	 * flag is set to true. When restoring, the class and flag are removed.
 	 *
-	 * Stack positioning: after minimizing, ALL currently mounted dd-modal elements
-	 * are queried from the document and their `style.bottom` is recomputed so that
-	 * minimized strips stack vertically at the bottom-right without overlapping.
-	 * Each strip is 60 px tall with a 5 px gap; position formula:
-	 *   bottom = (60 * i) + (5 * i + 5)
-	 * This is applied unconditionally to all modals (not just minimized ones),
-	 * which is intentional — fully visible modals are unaffected because .mini
-	 * is the only class that makes `position:fixed; bottom:…` take effect.
+	 * Stack positioning is delegated to _restack_minis(), called on BOTH branches:
+	 * minimizing appends a strip, restoring frees one, and either way the surviving
+	 * strips must be re-indexed so no gap or overlap is left at the bottom-right.
 	 *
 	 * (!) A minimized modal returns true from _closeModal without checking unsaved
 	 * data, so the user must first restore it before closing.
@@ -577,26 +587,38 @@ class DDModal extends HTMLElement {
 				const header = this.querySelector("[slot='header']");
 				if (header) header.classList.remove('mini');
 				this.mini = false;
+				// This modal just left the strip: close the gap it leaves behind.
+				this._restack_minis();
 
 			}else{
 				this.shadowRoot.querySelector('.modal').classList.add('mini');
 				const header = this.querySelector("[slot='header']");
 				if (header) header.classList.add('mini');
 				this.mini = true;
-
-				// Restack all open modals at the bottom-right so their minimized
-				// strips do not overlap. 60 px height + 5 px gap per slot.
-				const items = document.querySelectorAll('dd-modal');
-				if (items.length > 0) {
-					let offset = 60;
-					for (let i = 0; i < items.length; i++) {
-						const el = items[i];
-						const bottom = parseInt((offset * i)) + (5 * i + 5);
-						const modal = el.shadowRoot.querySelector('.modal');
-						modal.style.bottom = bottom + "px";
-					}
-				}
+				this._restack_minis();
 			}
+		}
+	}
+
+	/**
+	 * _RESTACK_MINIS
+	 * Re-indexes every CURRENTLY minimized dd-modal so their strips stack
+	 * vertically at the bottom-right without overlapping and without reserving a
+	 * slot for a modal that is not minimized. Each strip is 60 px tall with a 5 px
+	 * gap; position formula: bottom = (60 * i) + (5 * i + 5).
+	 *
+	 * (!) Filtering on `el.mini` is load-bearing: indexing over ALL dd-modal
+	 * elements makes an open modal that precedes a minimized one in DOM order
+	 * reserve a slot, leaving a visible hole under the strip.
+	 * Called from both branches of _miniModal() and from disconnectedCallback(),
+	 * so restoring or closing a modal also closes its gap.
+	 */
+	_restack_minis() {
+		const minis = Array.from(document.querySelectorAll('dd-modal')).filter(el => el.mini === true);
+		for (let i = 0; i < minis.length; i++) {
+			const modal = minis[i].shadowRoot?.querySelector('.modal');
+			if (!modal) continue;
+			modal.style.bottom = ((60 * i) + (5 * i + 5)) + "px";
 		}
 	}
 
@@ -616,11 +638,42 @@ class DDModal extends HTMLElement {
 	 *   5. on_close callback: if set, called with (this); also destroys the
 	 *      autocomplete service (service_autocomplete.destroy) when present to
 	 *      prevent stale dropdown overlays after the modal is gone.
+	 *   6. 'dd-modal-close' event: dispatched on the element itself so framework
+	 *      teardown can run even when a caller has overwritten on_close (several
+	 *      components replace it wholesale). See ui.attach_to_modal.
+	 *   7. Self-removal: the element detaches itself from the DOM, which fires
+	 *      disconnectedCallback (listener de-registration + modal_stack splice).
+	 *
+	 * (!) Re-entrancy: the await in step 2 suspends this method, so a second
+	 * trigger (Escape twice, Escape + ×) would otherwise run the whole tail a
+	 * second time and double-fire publish_close/on_close. _closeModal is a guard
+	 * that returns the in-flight promise; the sequence lives in _doCloseModal.
 	 *
 	 * @returns {Promise<boolean>} true when the modal was successfully closed,
 	 *   false when the user cancelled the unsaved-data prompt
 	 */
-	async _closeModal() {
+	_closeModal() {
+
+		// In-flight guard. A close already awaiting check_unsaved_data owns the
+		// sequence; every concurrent caller shares its result instead of re-running it.
+		if (this._closing) {
+			return this._closing;
+		}
+
+		this._closing = this._doCloseModal().finally(() => {
+			this._closing = null;
+		});
+
+		return this._closing;
+	}
+
+	/**
+	 * _DOCLOSEMODAL
+	 * The actual close sequence. Never call directly — go through _closeModal(),
+	 * which serialises concurrent closes.
+	 * @returns {Promise<boolean>} true when closed, false when the user cancelled
+	 */
+	async _doCloseModal() {
 
 		// A minimized modal is not closed — the user must restore it first.
 		if (this.mini) {
@@ -654,6 +707,27 @@ class DDModal extends HTMLElement {
 			}
 		}
 
+		// (!) on_close is a single caller-owned slot that several components
+		// overwrite wholesale, so the framework cannot rely on it. This event is
+		// the unclobberable seam: ui.attach_to_modal listens on it for the teardown
+		// that must run on every close (options.on_close, selection restore).
+		this.dispatchEvent(new CustomEvent('dd-modal-close', {
+			detail		: { modal : this },
+			bubbles		: false,
+			composed	: false
+		}));
+
+		// (!) The element owns its own detachment. It used to depend on the
+		// caller-supplied on_close calling remove() — every caller that replaced
+		// on_close left the modal mounted forever: three leaked document listeners,
+		// a permanent window.modal_stack entry, and a truthy window.modal that
+		// dead-ends the page-level Escape handler. Removing here fires
+		// disconnectedCallback, which de-registers and unstacks.
+		// No caller re-opens a closed modal — attach_to_modal builds a fresh one.
+		if (this.isConnected) {
+			this.remove();
+		}
+
 		return true;
 	}
 
@@ -678,12 +752,17 @@ class DDModal extends HTMLElement {
 	 */
 	detect_key(e) {
 		if (e.keyCode === 27 && window.modal_stack?.length > 0) {
-			e.preventDefault();
 			const top_modal = window.modal_stack[window.modal_stack.length - 1];
-			// Each modal instance registers its own document keyup listener, so on a
-			// single Escape every listener runs. Act only from the top modal's own
-			// listener to avoid N concurrent _closeModal() calls on the same modal.
-			top_modal._closeModal();
+			// (!) Each modal instance registers its own document keyup listener, so a
+			// single Escape runs N listeners. Act ONLY from the top modal's own
+			// listener: without this guard every listener called top_modal._closeModal(),
+			// and since that method awaits check_unsaved_data before touching state,
+			// all N continuations ran the full tail (publish_close + on_close × N).
+			if (top_modal !== this) {
+				return;
+			}
+			e.preventDefault();
+			this._closeModal();
 			return;
 		}
 	}
@@ -737,6 +816,17 @@ class DDModal extends HTMLElement {
 	 * @param {MouseEvent} e - the mousedown event from the .modal-header
 	 */
 	_onHeaderMousedown(e) {
+		// (!) A minimized modal is not draggable and must NOT be pinned: .mini >
+		// .modal-content is display:contents, so getBoundingClientRect() returns an
+		// all-zero rect while parentElement is the 15rem × 60px bottom-right strip.
+		// Pinning against that pair writes large negative left/top plus
+		// position:absolute, and the dialog surfaces off-screen when restored.
+		// The strip's whole clickable surface is the slotted header, whose mousedown
+		// reaches this listener, so the case is trivially reachable.
+		if (this.mini) {
+			return;
+		}
+
 		// Pin current rendered position to inline styles before drag starts.
 		// Without this, the modal jumps because CSS positions it (margin: auto, top: 3.5vh)
 		// but the drag offset calc reads empty inline style.left/top as 0.

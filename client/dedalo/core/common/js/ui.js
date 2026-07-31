@@ -2480,8 +2480,10 @@ export const ui = {
 	* 1. Creates a <dd-modal> element and appends it to modal_parent
 	* 2. Slots header/body/footer into the shadow DOM (blank hidden divs fill empty slots)
 	* 3. Sets data-size attribute which triggers attributeChangedCallback → _showModal*()
-	* 4. On close: publish_close fires 'modal_close' event, then on_close removes the element
-	*    and restores the previously active component selection.
+	* 4. On close: publish_close fires the 'modal_close' event, then on_close runs, then the
+	*    element dispatches 'dd-modal-close' and removes ITSELF from the DOM. The framework
+	*    teardown (options.on_close callback + previous-selection restore) is bound to that
+	*    event, not to the on_close property, because callers overwrite on_close wholesale.
 	*
 	* Drag: the modal header is draggable. On first mousedown the CSS-centered position
 	* is pinned to inline styles (position:absolute, margin:0) so the modal stays under
@@ -2496,7 +2498,8 @@ export const ui = {
 	*   (default: .wrapper.page or document.body).
 	* @param {boolean} [options.remove_overlay=false] - When true, weakens the overlay background.
 	* @param {boolean} [options.minimizable=true] - Shows or hides the minimize button.
-	* @param {Function|null} [options.on_close] - Called after the modal is removed from the DOM.
+	* @param {Function|null} [options.on_close] - Called once on close, from the framework
+	*   teardown. Safe against callers that replace the modal's on_close property.
 	* @param {Function|null} [options.callback] - Called with the <dd-modal> element when it is ready
 	*   for custom styling. To set a custom width:
 	*   callback: (dd_modal) => { dd_modal.modal_content.style.width = '34rem' }
@@ -2664,10 +2667,22 @@ export const ui = {
 					break;
 			}
 
-		// remove on close
-			modal_container.on_close = () => {
+		// teardown. Everything the framework must run on close, exactly once.
+			// (!) on_close is a SINGLE caller-owned slot and several components
+			// (component_portal/buttons, component_select, component_dataframe,
+			// component_text_area, service_ckeditor) overwrite it wholesale, which
+			// silently dropped this teardown. It is therefore fired from two places:
+			// the default on_close below (kept for callers that invoke on_close()
+			// directly to force-close, e.g. tool_lang_multi, page.js lock poll) and
+			// the 'dd-modal-close' event the element dispatches on every close.
+			// The flag makes the two paths idempotent.
+			let did_teardown = false
+			const teardown = () => {
 
-				modal_container.remove()
+				if (did_teardown===true) {
+					return
+				}
+				did_teardown = true
 
 				if (typeof on_close==='function') {
 					// exec callback
@@ -2678,6 +2693,17 @@ export const ui = {
 				if (previous_component_selection) {
 					ui.component.activate(previous_component_selection)
 				}
+			}
+			modal_container.addEventListener('dd-modal-close', teardown)
+
+		// remove on close
+			// dd-modal removes itself on close; this default is what a direct
+			// on_close() call (force-close, no unsaved-data check) still relies on.
+			modal_container.on_close = () => {
+
+				modal_container.remove()
+
+				teardown()
 			}
 
 		// callback. Here the modal_container is ready and you can set styles safely
