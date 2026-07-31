@@ -10,7 +10,8 @@
  * Sizes (set via the `data-size` attribute or the open() method):
  *   'normal' — centered, 80% width (default)
  *   'big'    — 97vw × 97vh; suitable for full-screen editing views
- *   'small'  — fit-content, max 32vw; suitable for confirmation dialogs
+ *   'small'  — fit-content, max 32vw, viewport-centered, max 90vh; suitable for
+ *              confirmation dialogs and option pickers
  *
  * Features:
  *   - Drag by header: on first mousedown over .dragger, the modal-content is
@@ -272,11 +273,21 @@ class DDModal extends HTMLElement {
 				padding: 0;
 				z-index: 9999;
 			}
+			/* Centered in the viewport instead of pushed down by a fixed margin-top:
+			   a tall small modal (e.g. a long list of options) used to start at 20vh
+			   and overflow below the fold, hiding its own action buttons. */
+			.modal_small.modal_show:not(.mini) {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
 			.modal_small > .modal-content {
 				width: fit-content;
 				max-width: 32vw;
 				height: auto;
-				margin-top: 20vh;
+				margin: 0;
+				top: 0;
+				max-height: 90vh;
 				overflow: auto;
 			}
 			@media screen and (max-width: 1024px) {
@@ -483,7 +494,7 @@ class DDModal extends HTMLElement {
 	/**
 	 * _SHOWMODALSMALL
 	 * Shows the modal at compact size (fit-content width, max 32vw, auto height,
-	 * positioned 20vh from the top) by applying .modal_small.
+	 * centered in the viewport, never taller than 90vh) by applying .modal_small.
 	 * Also removes any .modal_big class so the two size modifiers don't coexist.
 	 * On narrow viewports (≤ 1024 px) the max-width constraint is lifted via media
 	 * query in the template style so the small modal still fits the screen.

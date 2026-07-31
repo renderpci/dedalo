@@ -123,53 +123,9 @@ export const render_open_list_with_direct_relations = ( options ) => {
 			parent			: body
 		})
 
-		// target sections
-
-			// if the caller is a component
-			// or the main section is not connected with any target section
-			// don't show the target sections.
-			const target_sections_len = target_sections.length
-			if(target_sections_len > 0){
-
-				// target section selected
-				// Mutates rqo_options in place so that when Open is clicked the
-				// correct section_tipo and tipo are already set for the API call.
-				const change_target_section_handler = (e)=> {
-					if (rqo_options) {
-						rqo_options.section_tipo	= e.target.value
-						rqo_options.tipo			= e.target.value
-					}
-				}
-
-				const target_sections_content = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'target_sections_content',
-					parent			: body
-				})
-				for (let i = 0; i < target_sections_len; i++) {
-					const target_section = target_sections[i]
-
-					const target_section_label = ui.create_dom_element({
-						element_type	: 'label',
-						class_name		: 'target_section_label unselectable',
-						text_node		: target_section.label || '',
-						parent			: target_sections_content
-					})
-
-					const current_target_section_radio = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'radio',
-						name			: 'target_section',
-						value 			: target_section.tipo
-					})
-					current_target_section_radio.addEventListener('change', change_target_section_handler)
-					// Prepend the radio inside the label so clicking the label text
-					// also toggles the radio (standard accessible pattern).
-					target_section_label.prepend(current_target_section_radio)
-				}
-			}
-
 		// current or found records
+			// Scope selector is rendered BEFORE the (potentially very long) target
+			// section list so it is always visible without scrolling.
 			// Stores 'current' or 'found' into data_selection.selected_value
 			// whenever the user flips the radio.
 			const change_mode_handler = (e)=> {
@@ -185,7 +141,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 			// option current_record
 				const current_record_label = ui.create_dom_element({
 					element_type	: 'label',
-					class_name		: 'current_record_label unselectable',
+					class_name		: 'current_record_label option_row unselectable',
 					text_node		: get_label.current_record || 'Current record',
 					parent			: radio_button_content
 				})
@@ -205,7 +161,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 			// option found_records
 				const found_records_label = ui.create_dom_element({
 					element_type	: 'label',
-					class_name		: 'found_records_label unselectable',
+					class_name		: 'found_records_label option_row unselectable',
 					text_node		: get_label.found_records || 'All found records',
 					parent			: radio_button_content
 				})
@@ -219,12 +175,20 @@ export const render_open_list_with_direct_relations = ( options ) => {
 				found_records_radio.addEventListener('change', change_mode_handler)
 				found_records_label.prepend(found_records_radio)
 
-		// button_open
+		// button_open (built here, slotted into the modal footer below, so that it
+		// stays visible while the target section list scrolls)
 			const button_open_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'button_open_container',
-				parent			: body
+				class_name		: 'button_open_container footer content'
 			})
+
+			const button_cancel = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'secondary',
+				inner_html		: get_label.cancel || 'Cancel',
+				parent			: button_open_container
+			})
+			button_cancel.addEventListener('mouseup', () => modal.close())
 
 			const button_open = ui.create_dom_element({
 				element_type	: 'button',
@@ -233,6 +197,138 @@ export const render_open_list_with_direct_relations = ( options ) => {
 				parent			: button_open_container
 			})
 
+		// target sections
+
+			// if the caller is a component
+			// or the main section is not connected with any target section
+			// don't show the target sections.
+			const target_sections_len = target_sections.length
+			if(target_sections_len > 0){
+
+				// No target is pre-selected (picking one for the user would open an
+				// arbitrary section), so Open stays disabled until the user chooses.
+				// Without this the button silently did nothing — open_related_data()
+				// returns early when rqo_options.section_tipo is missing.
+				button_open.disabled = true
+
+				// target section selected
+				// Mutates rqo_options in place so that when Open is clicked the
+				// correct section_tipo and tipo are already set for the API call.
+				const change_target_section_handler = (e)=> {
+					if (rqo_options) {
+						rqo_options.section_tipo	= e.target.value
+						rqo_options.tipo			= e.target.value
+					}
+					button_open.disabled = false
+				}
+
+				const target_sections_block = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_sections_block',
+					parent			: body
+				})
+
+				const target_sections_header = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_sections_header',
+					parent			: target_sections_block
+				})
+
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'target_sections_title',
+					text_node		: `${get_label.sections || 'sections'} (${target_sections_len})`,
+					parent			: target_sections_header
+				})
+
+				const target_sections_content = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_sections_content',
+					parent			: target_sections_block
+				})
+
+				// ar_target_section_nodes. Used by the filter to show/hide rows
+				const ar_target_section_nodes = []
+
+				for (let i = 0; i < target_sections_len; i++) {
+					const target_section = target_sections[i]
+
+					const target_section_label = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'target_section_label option_row unselectable',
+						text_node		: target_section.label || '',
+						parent			: target_sections_content
+					})
+
+					const current_target_section_radio = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'radio',
+						name			: 'target_section',
+						value 			: target_section.tipo
+					})
+					current_target_section_radio.addEventListener('change', change_target_section_handler)
+					// Prepend the radio inside the label so clicking the label text
+					// also toggles the radio (standard accessible pattern).
+					target_section_label.prepend(current_target_section_radio)
+
+					ar_target_section_nodes.push({
+						node		: target_section_label,
+						search_text	: (target_section.label || '').toLowerCase()
+					})
+				}
+
+				// filter. Long target lists (a section can point at dozens of others)
+				// are unusable without a way to narrow them down.
+				if (target_sections_len > 8) {
+
+					const filter_input = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'search',
+						class_name		: 'target_sections_filter',
+						placeholder		: get_label.search || 'Search',
+						parent			: target_sections_header
+					})
+
+					// empty state. The dialog keeps its height while filtering, so
+					// without this a non-matching search reads as a blank panel.
+					const no_matches_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'target_sections_empty hide',
+						text_node		: get_label.no_sections_match || 'No sections match your search',
+						parent			: target_sections_block
+					})
+
+					const filter_handler = () => {
+						const search_value = filter_input.value.trim().toLowerCase()
+						const nodes_len = ar_target_section_nodes.length
+						let matches_len = 0
+						for (let i = 0; i < nodes_len; i++) {
+							const item = ar_target_section_nodes[i]
+							// the already selected row is never hidden: Open would
+							// otherwise fire on a choice the user cannot see
+							const matches = search_value.length===0
+								|| item.search_text.includes(search_value)
+								|| item.node.querySelector('input').checked
+							item.node.classList.toggle('hide', !matches)
+							if (matches===true) {
+								matches_len++
+							}
+						}
+						no_matches_node.classList.toggle('hide', matches_len>0)
+					}
+					filter_input.addEventListener('input', filter_handler)
+
+					// Enter confirms the dialog when a target is already selected
+					filter_input.addEventListener('keydown', (e) => {
+						if (e.key==='Enter' && button_open.disabled===false) {
+							e.preventDefault()
+							perform_open_related_data()
+						}
+					})
+				}
+			}
+
+		// button_open action
 			// Thin wrapper so that the modal reference (created below) is already
 			// in scope when the mouseup fires, even though modal is defined after.
 			const perform_open_related_data = function(){
@@ -251,10 +347,26 @@ export const render_open_list_with_direct_relations = ( options ) => {
 		const modal = ui.attach_to_modal({
 			header		: header,
 			body		: body,
+			footer		: button_open_container,
 			size		: 'small', // string size big|normal|small
 			minimizable	: false,
 			callback	: (dd_modal) => {
 				dd_modal.classList.add('open_relations_modal')
+
+				// Freeze the dialog at its natural height once rendered.
+				// The modal is centered in the viewport, so without this the whole
+				// box moves vertically on every keystroke while the user filters the
+				// section list (the content shrinks, the centering re-balances).
+				// The CSS max-height still caps it, so a smaller viewport wins.
+				if (target_sections_len > 0) {
+					requestAnimationFrame(() => {
+						const modal_content = dd_modal.get_modal_content()
+						if (!modal_content) {
+							return
+						}
+						modal_content.style.height = modal_content.getBoundingClientRect().height + 'px'
+					})
+				}
 			}
 		})
 

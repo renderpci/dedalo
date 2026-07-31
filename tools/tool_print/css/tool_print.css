@@ -34,6 +34,7 @@
   --media_min_width: 102px;
   --media_fade_speed: 0.3s;
   --media_viewer_height: calc(100vh - 3rem);
+  --media_placeholder_opacity: 1;
   --text_area_min_height: 200px;
   --geolocation_min_height: 495px;
   --geolocation_player_height: 605px;

@@ -326,13 +326,14 @@ body.inspector_resizing {
 					padding-right: 1.1rem;
 				}
 
+				&:focus {
+					outline: none;
+				}
+
 				&.up {
 					&:before {
 						display: none;
 					}
-				}
-				&:focus {
-					outline: none;
 				}
 			}
 		}
@@ -365,37 +366,160 @@ body.inspector_resizing {
 				}
 			}
 		}
-
 	}//end &.list
 
 }//end .section
 
-.open_relations_modal{
-	font-size: 1.1em;
+// open relationships dialog (render_open_list_with_direct_relations.js)
+// Layout contract: the dd-modal shadow parts are styled through ::part() so the
+// dialog never grows past the viewport — header and action buttons stay put and
+// only the target section list scrolls.
+.open_relations_modal {
 
-	.label{
-		line-height: 1.2em;
+	&::part(content) {
+		width: 36rem;
+		max-width: 92vw;
+		max-height: 86vh;
+		// the body owns the scroll, not the whole dialog
+		overflow: hidden;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+	}
+	&::part(body) {
+		overflow-y: auto;
+		min-height: 0;
 	}
 
-	.target_sections_content{
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		padding-top: 2rem;
-		grid-row-gap: 0.5rem;
+	.body.content {
+		padding: 1.25rem;
+		padding-bottom: 0.5rem;
 	}
 
-	.radio_button_content{
-		text-align: center;
-		padding: 2rem;
+	.label {
+		line-height: 1.35em;
+	}
 
-		.found_records_label{
-			padding-left: 2rem;
+	// shared row for every radio option (scope + target section)
+	.option_row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.3rem 0.5rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-md);
+		line-height: 1.25rem;
+		cursor: pointer;
+
+		input[type="radio"] {
+			flex: 0 0 auto;
+			margin: 0;
+			accent-color: var(--color_input_focus);
+			cursor: pointer;
+		}
+
+		&:hover {
+			background-color: var(--field_hover_bg);
+		}
+		// selected state. Literal rgba (LESS fade() cannot operate on a CSS var):
+		// translucent Dédalo orange reads correctly on both light and dark surfaces
+		&:has(input:checked) {
+			background-color: rgba(247, 138, 28, 0.16);
+			border-color: var(--color_input_focus);
+		}
+		&:focus-within {
+			box-shadow: var(--shadow-focus);
 		}
 	}
-	.button_open_container{
-		text-align: center;
-		.success{
-			font-size: 1.2em;
+
+	// scope: current record | all found records
+	.radio_button_content {
+		display: flex;
+		gap: 0.5rem;
+		padding: 1rem 0 0.25rem 0;
+
+		> .option_row {
+			flex: 1 1 0;
+		}
+	}
+
+	// target sections picker
+	.target_sections_block {
+		border-top: 1px solid var(--border_default);
+		margin-top: 0.75rem;
+	}
+
+	.target_sections_header {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		// keep the title + filter reachable while the list scrolls
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background-color: var(--modal_content_bg);
+		padding: 0.5rem 0;
+
+		.target_sections_title {
+			font-size: 0.85em;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: var(--fg_muted);
+			white-space: nowrap;
+		}
+
+		.target_sections_filter {
+			flex: 1 1 auto;
+			min-width: 0;
+			font-size: 0.9em;
+			padding: 0.25rem 0.5rem;
+			border: 1px solid var(--border_default);
+			border-radius: var(--radius-md);
+			background-color: var(--bg_input);
+			color: var(--fg_default);
+
+			&:focus {
+				outline: none;
+				border-color: var(--color_input_focus);
+				box-shadow: var(--shadow-focus);
+			}
+		}
+	}
+
+	// two balanced columns, filled top-down so an alphabetical list reads
+	// naturally down the first column and then down the second one
+	.target_sections_content {
+		columns: 2;
+		column-gap: 1rem;
+		padding-bottom: 0.5rem;
+
+		.target_section_label {
+			break-inside: avoid;
+		}
+	}
+
+	// empty state, shown when the filter matches nothing
+	// (no italics: in Dédalo italic text marks an untranslated string)
+	.target_sections_empty {
+		padding: 1rem 0.5rem;
+		color: var(--fg_muted);
+	}
+
+	// &.footer keeps this above `dd-modal .footer.content` (layout.less), which
+	// would otherwise win on specificity and zero out the vertical padding
+	.button_open_container.footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding: 0.75rem 1.25rem;
+		border-top: 1px solid var(--border_default);
+
+		button {
+			margin: 0;
+
+			&:disabled {
+				opacity: 0.45;
+				cursor: not-allowed;
+				pointer-events: none;
+			}
 		}
 	}
 }

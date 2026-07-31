@@ -278,6 +278,7 @@
 	"no_empty": "It contains information",
 	"no_records": "No records found",
 	"no_results": "No hierarchies match the filter.",
+	"no_sections_match": "No sections match your search",
 	"no_tag_selected": "No tag selected. If you continue, the entire record will be indexed.",
 	"no_tools_match": "No tools match your search",
 	"not_allow_to_create_note": "Cannot create notes of a change that is not yours",

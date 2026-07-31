@@ -490,6 +490,7 @@ template {
   --media_min_width: 102px;
   --media_fade_speed: 0.3s;
   --media_viewer_height: calc(100vh - 3rem);
+  --media_placeholder_opacity: 1;
   --text_area_min_height: 200px;
   --geolocation_min_height: 495px;
   --geolocation_player_height: 605px;
@@ -828,6 +829,7 @@ template {
   --field_value_fg: #e6edf3;
   --field_rule: rgba(148, 163, 184, 0.14);
   --field_hover_bg: rgba(148, 163, 184, 0.06);
+  --media_placeholder_opacity: 0.2;
   --color_primary_border: #3a8aee;
   --color_primary_hover_bg: #3a8aee;
   --color_primary_hover_border: #2a7ade;
@@ -1832,6 +1834,12 @@ li .reset_input select {
   background-color: var(--input_bg);
   color: var(--input_fg);
   outline: var(--input_outline);
+}
+/* media placeholder (empty data)
+------------------------------------------------------- */
+img[src$="/themes/default/default.svg"],
+img.fallback_image {
+  opacity: var(--media_placeholder_opacity, 1);
 }
 /* UIUX-08: keyboard focus visibility on form fields.
    --input_outline:none removes the input outline at rest AND on focus (both
@@ -17046,11 +17054,11 @@ body.inspector_resizing {
   white-space: nowrap;
   padding-right: 1.1rem;
 }
-.section.list > .buttons_container > .show_other_buttons_button.up:before {
-  display: none;
-}
 .section.list > .buttons_container > .show_other_buttons_button:focus {
   outline: none;
+}
+.section.list > .buttons_container > .show_other_buttons_button.up:before {
+  display: none;
 }
 .section.list > .paginator_container {
   height: 39px;
@@ -17078,30 +17086,120 @@ body.inspector_resizing {
   height: 1.5rem;
   width: 1.5rem;
 }
-.open_relations_modal {
-  font-size: 1.1em;
+.open_relations_modal::part(content) {
+  width: 36rem;
+  max-width: 92vw;
+  max-height: 86vh;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.open_relations_modal::part(body) {
+  overflow-y: auto;
+  min-height: 0;
+}
+.open_relations_modal .body.content {
+  padding: 1.25rem;
+  padding-bottom: 0.5rem;
 }
 .open_relations_modal .label {
-  line-height: 1.2em;
+  line-height: 1.35em;
 }
-.open_relations_modal .target_sections_content {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  padding-top: 2rem;
-  grid-row-gap: 0.5rem;
+.open_relations_modal .option_row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+.open_relations_modal .option_row input[type="radio"] {
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--color_input_focus);
+  cursor: pointer;
+}
+.open_relations_modal .option_row:hover {
+  background-color: var(--field_hover_bg);
+}
+.open_relations_modal .option_row:has(input:checked) {
+  background-color: rgba(247, 138, 28, 0.16);
+  border-color: var(--color_input_focus);
+}
+.open_relations_modal .option_row:focus-within {
+  box-shadow: var(--shadow-focus);
 }
 .open_relations_modal .radio_button_content {
-  text-align: center;
-  padding: 2rem;
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 0 0.25rem 0;
 }
-.open_relations_modal .radio_button_content .found_records_label {
-  padding-left: 2rem;
+.open_relations_modal .radio_button_content > .option_row {
+  flex: 1 1 0;
 }
-.open_relations_modal .button_open_container {
-  text-align: center;
+.open_relations_modal .target_sections_block {
+  border-top: 1px solid var(--border_default);
+  margin-top: 0.75rem;
 }
-.open_relations_modal .button_open_container .success {
-  font-size: 1.2em;
+.open_relations_modal .target_sections_header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--modal_content_bg);
+  padding: 0.5rem 0;
+}
+.open_relations_modal .target_sections_header .target_sections_title {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg_muted);
+  white-space: nowrap;
+}
+.open_relations_modal .target_sections_header .target_sections_filter {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9em;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-md);
+  background-color: var(--bg_input);
+  color: var(--fg_default);
+}
+.open_relations_modal .target_sections_header .target_sections_filter:focus {
+  outline: none;
+  border-color: var(--color_input_focus);
+  box-shadow: var(--shadow-focus);
+}
+.open_relations_modal .target_sections_content {
+  columns: 2;
+  column-gap: 1rem;
+  padding-bottom: 0.5rem;
+}
+.open_relations_modal .target_sections_content .target_section_label {
+  break-inside: avoid;
+}
+.open_relations_modal .target_sections_empty {
+  padding: 1rem 0.5rem;
+  color: var(--fg_muted);
+}
+.open_relations_modal .button_open_container.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border_default);
+}
+.open_relations_modal .button_open_container.footer button {
+  margin: 0;
+}
+.open_relations_modal .button_open_container.footer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 /**
 * view_graph_section
