@@ -68,7 +68,7 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, rebuild_component_in_lang} from '../../../core/common/js/common.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
@@ -422,14 +422,17 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			// force change lang if related_component_lang is defined (original lang)
 			// Some recordings are transcribed in a different language than the project default;
 			// the ontology encodes the correct lang in context.options.related_component_lang.
-			if (self.transcription_component.context.options && self.transcription_component.context.options.related_component_lang) {
-				if (self.transcription_component.lang !== self.transcription_component.context.options.related_component_lang) {
-					self.transcription_component.lang = self.transcription_component.context.options.related_component_lang
-					// build again to force download data
-					await self.transcription_component.build(true)
-					if(SHOW_DEBUG===true) {
-						console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
-					}
+			// rebuild_component_in_lang (common.js) owns the reload: a bare build(true)
+			// after a lang change is MEMOIZED away, which left the editor blank on
+			// every record whose original language differed from the menu's.
+			const original_lang = self.transcription_component.context.options
+				? self.transcription_component.context.options.related_component_lang
+				: null
+			if (await rebuild_component_in_lang(self.transcription_component, original_lang)) {
+				// keep the tool's own lang aligned with the component it drives
+				self.source_lang = self.transcription_component.lang
+				if(SHOW_DEBUG===true) {
+					console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
 				}
 			}
 

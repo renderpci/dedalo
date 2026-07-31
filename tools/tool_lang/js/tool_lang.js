@@ -7,7 +7,7 @@
 // import
 	import {clone, dd_console, get_json_langs} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
+	import {common, create_source, rebuild_component_in_lang} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_lang} from './render_tool_lang.js'
@@ -215,11 +215,15 @@ tool_lang.prototype.build = async function(autoload=false) {
 				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 			}
 			// overwrite default lang from options.related_component_lang if exists (original lang)
-			if (self.main_element.context.options && self.main_element.context.options.related_component_lang) {
-				self.source_lang = self.main_element.context.lang = self.main_element.lang = self.main_element.context.options.related_component_lang
+			// rebuild_component_in_lang (common.js) sets lang + context.lang and forces
+			// the reload: build() MEMOIZES, so the previous bare build(true) never
+			// re-fetched and the main element kept the MENU lang's value.
+			const original_lang = self.main_element.context.options
+				? self.main_element.context.options.related_component_lang
+				: null
+			if (await rebuild_component_in_lang(self.main_element, original_lang)) {
+				self.source_lang = self.main_element.lang
 				self.target_lang = null
-				// rebuilt to force load the new lang
-				await self.main_element.build(true)
 			}
 
 		// status_user_component. control the tool status process for users

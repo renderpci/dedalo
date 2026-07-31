@@ -70,7 +70,7 @@
 // import
 	import { dd_console, get_json_langs } from '../../../core/common/js/utils/index.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
-	import { common, create_source } from '../../../core/common/js/common.js'
+	import { common, create_source, rebuild_component_in_lang } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../../core/tools_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
 	import { parse_transcript, segments_to_html, tc_to_seconds } from '../transcribers/lib/paragraphs.js'
@@ -260,26 +260,18 @@ tool_transcription.prototype.build = async function(autoload=false) {
 
 				if(role === 'transcription_component'){
 					// force change lang if related_component_lang is defined (original lang)
-					if (self.transcription_component.context.options && self.transcription_component.context.options.related_component_lang) {
-						if (self.transcription_component.lang !== self.transcription_component.context.options.related_component_lang) {
-							self.transcription_component.lang = self.transcription_component.context.options.related_component_lang
-							// set source land
-							self.source_lang = self.transcription_component.lang
-							// build again to force download data.
-							// (!) build() MEMOIZES: on status 'built' it returns
-							// without fetching anything, so the lang change alone
-							// left the instance carrying the MENU lang's data — the
-							// editor opened blank whenever the original language
-							// differed (and stayed blank after a save). refresh()
-							// is the post-render tool; here, pre-render, the build
-							// state is reset so build(true) really reloads in the
-							// original language.
-							self.transcription_component.status = 'initialized'
-							self.transcription_component._build_waiter = null
-							await self.transcription_component.build(true)
-							if(SHOW_DEBUG===true) {
-								console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
-							}
+					// The reset-and-reload lives in common.js rebuild_component_in_lang:
+					// build() MEMOIZES, so a bare build(true) after a lang change is a
+					// no-op and the editor opens blank. Shared with tool_indexation and
+					// tool_lang so the three tools behave identically.
+					const original_lang = self.transcription_component.context.options
+						? self.transcription_component.context.options.related_component_lang
+						: null
+					if (await rebuild_component_in_lang(self.transcription_component, original_lang)) {
+						// set source lang
+						self.source_lang = self.transcription_component.lang
+						if(SHOW_DEBUG===true) {
+							console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
 						}
 					}
 				}
