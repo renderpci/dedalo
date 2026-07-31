@@ -304,32 +304,56 @@ section.prototype.init = async function(options) {
 		// new_section_ event
 			const new_section_handler = async () => {
 
-				if (!confirm(get_label.sure || 'Sure?')) {
-					return false
-				}
-
 				// lock new section creation while a creation process is working
-				if (page_globals.creating_section) {
-					console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
-					alert("Wait for the creation of the active section to finish.");
-					return
-				}
-				page_globals.creating_section = true
+				// (!) The lock is taken BEFORE the dialog opens, not after it.
+				// ui.confirm() suspends this handler while the modal is on screen, so a
+				// check-then-set placed after the await is NOT atomic: two rapid clicks
+				// would open two dialogs, both would read creating_section===false on
+				// resolve, and two records would be created. Read and write with no
+				// await between them and the check-and-set is a single synchronous step.
+					if (page_globals.creating_section===true) {
+						console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
+						return
+					}
+					page_globals.creating_section = true
+
+				// created. Decides how the lock is released in the finally block below
+					let created = false
 
 				try {
+					const label = self.label || self.section_tipo
+
+					const confirmed = await ui.confirm({
+						header			: (get_label.new || 'New') + ' ' + (get_label.record || 'record'),
+						note			: label,
+						body			: get_label.sure || 'Are you sure?',
+						accept_class	: 'primary new'
+					})
+					if (confirmed!==true) {
+						return false
+					}
+
 					const new_section_id = await self.create_section()
 
 					// navigate to the new record
 					if (new_section_id) {
+						created = true
 						await self.navigate_to_new_section(new_section_id)
 					}
 				} catch (error) {
 					console.error('Error in new_section_handler:', error);
 				} finally {
-					// unlock new section creation. Set a timeout to prevent accidental double clicks
-					setTimeout(function(){
+					if (created===true) {
+						// unlock new section creation. Set a timeout to prevent accidental double clicks
+						setTimeout(function(){
+							page_globals.creating_section = false
+						}, 1500)
+					}else{
+						// (!) Cancelled or failed: release NOW, not in 1500 ms. A deferred
+						// release on the cancel path would fire while a later, legitimate
+						// creation already owns the lock and would clear it under it.
 						page_globals.creating_section = false
-					}, 1500)
+					}
 				}
 			}
 			self.events_tokens.push(
@@ -346,32 +370,49 @@ section.prototype.init = async function(options) {
 				// options
 				const section_id = options.section_id
 
-				if (!confirm(get_label.sure || 'Sure?')) {
-					return false
-				}
-
 				// lock new section creation while a creation process is working
-				if (page_globals.creating_section) {
-					console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
-					alert("Wait for the creation of the active section to finish.");
-					return
-				}
-				page_globals.creating_section = true
+				// (!) Taken BEFORE the dialog. See new_section_handler above.
+					if (page_globals.creating_section===true) {
+						console.error('Error. Ignored duplicate section event. Wait for the creation of the active section to finish.');
+						return
+					}
+					page_globals.creating_section = true
+
+				// created. Decides how the lock is released in the finally block below
+					let created = false
 
 				try {
+					const label = self.label || self.section_tipo
+
+					const confirmed = await ui.confirm({
+						header			: (get_label.duplicate || 'Duplicate') + ` ID: ${section_id}`,
+						note			: label,
+						body			: get_label.sure || 'Are you sure?',
+						accept_class	: 'primary duplicate'
+					})
+					if (confirmed!==true) {
+						return false
+					}
+
 					const new_section_id = await self.duplicate_section(section_id)
 
 					// navigate to the new record
 					if (new_section_id) {
+						created = true
 						await self.navigate_to_new_section(new_section_id)
 					}
 				} catch (error) {
 					console.error('Error in duplicate_section_handler:', error);
 				} finally {
-					// unlock new section creation. Set a timeout to prevent accidental double clicks
-					setTimeout(function(){
+					if (created===true) {
+						// unlock new section creation. Set a timeout to prevent accidental double clicks
+						setTimeout(function(){
+							page_globals.creating_section = false
+						}, 1500)
+					}else{
+						// Cancelled or failed: release immediately (see new_section_handler).
 						page_globals.creating_section = false
-					}, 1500)
+					}
 				}
 			}
 			self.events_tokens.push(

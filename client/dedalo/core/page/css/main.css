@@ -5498,6 +5498,15 @@ dd-modal .footer.distribute {
   justify-content: space-between;
   padding-top: 0rem;
 }
+dd-modal.dd_confirm::part(content) {
+  width: 32rem;
+  max-width: 92vw;
+}
+dd-modal.dd_confirm .body.content {
+  padding: 1.5rem;
+  padding-top: 1.75rem;
+  min-height: 2.5rem;
+}
 .disabled_component .content_data.component,
 .disabled_component .buttons_container,
 .disabled_component input,

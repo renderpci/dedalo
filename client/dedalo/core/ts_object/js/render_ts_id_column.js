@@ -171,7 +171,15 @@ export const render_id_column = function(self) {
 
 						// Require explicit user confirmation before creating a new child node,
 						// since the add_child API call cannot be trivially undone in the tree.
-						if (!confirm(get_label.sure || 'Sure?')) {
+						// (!) The term text is record data and travels through the `note`
+						// slot, which renders as text — never through `header`, which is HTML.
+						const confirmed = await ui.confirm({
+							header			: (get_label.new || 'New') + ' ' + (get_label.record || 'record'),
+							note			: self.term_text?.textContent || null,
+							body			: get_label.sure || 'Are you sure?',
+							accept_class	: 'primary new'
+						})
+						if (confirmed!==true) {
 							return
 						}
 

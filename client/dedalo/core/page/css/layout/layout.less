@@ -822,6 +822,30 @@
 		}
 	}//end dd-modal
 
+// dd-modal.dd_confirm
+// Transient yes/no dialog built by ui.confirm(). Same visual language as the
+// delete-record dialog (small modal, themed header bar, right-aligned footer),
+// but sized declaratively and without the 3rem body top padding, which exists
+// for the scrolling dialogs and leaves a one-line question floating.
+	dd-modal.dd_confirm {
+
+		// (!) ::part is the only reach into the shadow box. An outer-tree ::part
+		// rule beats the shadow's own `.modal_small .modal-content` sizing
+		// regardless of specificity, so no !important is needed here.
+		// This replaces the imperative `modal_content.style.width` the older
+		// dialogs set from their attach_to_modal callback.
+		&::part(content) {
+			width: 32rem;
+			max-width: 92vw;
+		}
+
+		.body.content {
+			padding: 1.5rem;
+			padding-top: 1.75rem;
+			min-height: 2.5rem;
+		}
+	}//end dd-modal.dd_confirm
+
 // disabled_component
 	.disabled_component {
 		// pointer-events: none !important;

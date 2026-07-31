@@ -41,6 +41,8 @@
  *                                   also triggers service_autocomplete.destroy if present
  *   publish_close {Function|null} — called with (this) to fire the 'modal_close' event
  *                                   via event_manager before on_close runs
+ *   transient     {boolean}       — when true, close() skips the page-wide unsaved-data
+ *                                   guard. Set by ui.confirm() for transient yes/no dialogs.
  *
  * DOM events dispatched:
  *   'dd-modal-close' — on the element itself (bubbles:false), after on_close and
@@ -628,9 +630,10 @@ class DDModal extends HTMLElement {
 	 *
 	 *   1. Guard: if the modal is minimized (this.mini === true), return true
 	 *      immediately — minimized modals cannot be closed without restoring first.
-	 *   2. Unsaved-data check: awaits check_unsaved_data(), which shows a
-	 *      browser confirm dialog if any component in the page has pending changes.
-	 *      Returns false without closing if the user cancels.
+	 *   2. Unsaved-data check: unless this.transient===true, awaits check_unsaved_data(),
+	 *      which shows a browser confirm dialog if any component in the page has pending
+	 *      changes. Returns false without closing if the user cancels. A transient modal
+	 *      (ui.confirm) owns no editable data and skips the guard entirely.
 	 *   3. Hide: removes .modal_show from the shadow .modal and sets _modalVisible
 	 *      to false.
 	 *   4. publish_close callback: if set, called with (this) to fire the
@@ -682,11 +685,19 @@ class DDModal extends HTMLElement {
 
 		// Prompt the user if there are unsaved changes anywhere on the page.
 		// check_unsaved_data resolves to false if the user clicks "cancel".
-		const result = await check_unsaved_data({
-			confirm_msg : 'dd-modal: ' + (get_label.discard_changes || 'Discard unsaved changes?')
-		});
-		if (!result) {
-			return false;
+		// (!) Skipped for transient dialogs (ui.confirm). A yes/no dialog owns no
+		// editable data, and this guard is PAGE-wide: running it here would flush
+		// every dirty component through save_unsaved_components as a side effect of
+		// dismissing the dialog, and could raise a native confirm on top of it.
+		// It can also return false, which leaves the modal open — a transient dialog
+		// whose caller is awaiting a close must always be dismissable.
+		if (this.transient!==true) {
+			const result = await check_unsaved_data({
+				confirm_msg : 'dd-modal: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+			});
+			if (!result) {
+				return false;
+			}
 		}
 
 		this._modalVisible = false;

@@ -224,12 +224,20 @@ export const render_ts_line = function(self) {
 					const click_handler_duplicate = async (e) => {
 						e.stopPropagation()
 
-						if (!confirm(get_label.sure || 'Sure?')) {
-							return false
-						}
-
 						const section_tipo	= self.section_tipo
 						const section_id	= self.section_id
+
+						// (!) The term text is record data and travels through the `note`
+						// slot, which renders as text — never through `header`, which is HTML.
+						const confirmed = await ui.confirm({
+							header			: (get_label.duplicate || 'Duplicate') + ` ID: ${section_id}`,
+							note			: self.term_text?.textContent || null,
+							body			: get_label.sure || 'Are you sure?',
+							accept_class	: 'primary duplicate'
+						})
+						if (confirmed!==true) {
+							return false
+						}
 
 						// Retrieve (or create) the section instance to call duplicate_section().
 						const section = await get_instance({

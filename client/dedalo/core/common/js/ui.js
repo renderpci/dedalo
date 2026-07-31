@@ -44,6 +44,7 @@
 *       collapse_toggle_track — persistent open/closed state via local DB
 *       build_select_lang — language <select> builder
 *       attach_to_modal — full-featured <dd-modal> Web Component wrapper
+*       confirm — promise-based confirmation dialog; the application default over window.confirm()
 *       activate_first_component — auto-focus the first editable component on record create
 *       render_list_header — unified portal/section list column headers with sort arrows
 *       allow_column_order / add_column_order_set — column-sort logic
@@ -802,6 +803,31 @@ export const ui = {
 					}
 				}
 
+			// scroll_into_view
+			// (!) focus() scrolls implicitly, instantly, and with no way to opt out
+			// of the jump — activating a component that landed off screen lurched the
+			// page (measured ~390px in the ontology tree, on top of the container
+			// resize happening in the same frame). Focus is therefore taken with
+			// preventScroll and the reveal is done here instead:
+			//   - 'nearest' so a component already on screen never moves at all,
+			//     matching what focus() did on a normal in-view click;
+			//   - 'smooth' so the movement that IS needed can be followed by eye.
+			// Reduced-motion falls back to an instant scroll (still 'nearest').
+				const scroll_into_view = (node) => {
+					if (!node) {
+						return false
+					}
+					const reduced_motion = window.matchMedia
+						? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+						: false
+					node.scrollIntoView({
+						block		: 'nearest',
+						inline		: 'nearest',
+						behavior	: reduced_motion ? 'auto' : 'smooth'
+					})
+					return true
+				}
+
 			// try to focus first input
 				if (focus===true) {
 					if (typeof component.focus_first_input==='function') {
@@ -842,7 +868,8 @@ export const ui = {
 													return
 												}
 
-												first_input.focus()
+												first_input.focus({ preventScroll: true })
+												scroll_into_view(first_input)
 											}
 										}
 									)
@@ -850,12 +877,11 @@ export const ui = {
 									// components without a focusable input/select (e.g. component_svg) never
 									// received the implicit scroll that first_input.focus() performs, so
 									// restore_section_selection selected them without bringing them on screen.
-									// Scroll the wrapper into view instead. block:'nearest' is a no-op when the
-									// element is already visible, matching the focus() behavior on a normal click.
+									// Scroll the wrapper into view instead.
 									dd_request_idle_callback(
 										() => {
 											if (component.active) {
-												wrapper.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+												scroll_into_view(wrapper)
 											}
 										}
 									)
@@ -2498,6 +2524,9 @@ export const ui = {
 	*   (default: .wrapper.page or document.body).
 	* @param {boolean} [options.remove_overlay=false] - When true, weakens the overlay background.
 	* @param {boolean} [options.minimizable=true] - Shows or hides the minimize button.
+	* @param {boolean} [options.transient=false] - When true the modal skips the page-wide
+	*   unsaved-data guard on close. For transient dialogs that own no editable data
+	*   (see ui.confirm); never set it on a modal that hosts components.
 	* @param {Function|null} [options.on_close] - Called once on close, from the framework
 	*   teardown. Safe against callers that replace the modal's on_close property.
 	* @param {Function|null} [options.callback] - Called with the <dd-modal> element when it is ready
@@ -2540,6 +2569,7 @@ export const ui = {
 			const remove_overlay	= options.remove_overlay ?? false
 			const minimizable		= options.minimizable ?? true
 			const on_close			= options.on_close ?? null
+			const transient			= options.transient ?? false
 			const callback			= options.callback ?? null
 
 		// previous_component_selection. Current active component before open the modal
@@ -2550,6 +2580,9 @@ export const ui = {
 
 		// modal container build new DOM on each call and remove on close
 			const modal_container = document.createElement('dd-modal')
+			// (!) set BEFORE the element is connected: connectedCallback and the
+			// first close path must already see the flag.
+			modal_container.transient = transient
 			modal_parent.appendChild(modal_container)
 
 		// modal_node
@@ -2717,6 +2750,229 @@ export const ui = {
 
 		return modal_container
 	},//end attach_to_modal
+
+
+
+	/**
+	* CONFIRM
+	* Application-default confirmation dialog. Promise-based replacement for the
+	* native window.confirm(): renders a small <dd-modal> in the same visual
+	* language as the delete-record dialog (themed header + [context] note,
+	* body question, right-aligned Cancel / accept footer) and resolves to a
+	* boolean the caller can await.
+	*
+	*   const confirmed = await ui.confirm({ header:'New record', body:get_label.sure })
+	*   if (confirmed!==true) { return false }
+	*
+	* Resolution contract (exactly once, never hangs, never rejects):
+	*   true  — the accept button was clicked, or Enter was pressed while the
+	*           accept button had focus (it is focused on open).
+	*   false — the cancel button, the '×', an overlay click, or Escape.
+	*
+	* (!) Dismissal is observed through the 'dd-modal-close' event, NOT through the
+	* on_close property: on_close is a single caller-owned slot that several
+	* components overwrite wholesale (see attach_to_modal). The event is dispatched
+	* by dd-modal itself on every close, so it cannot be clobbered.
+	*
+	* (!) No Escape listener is installed here. dd-modal already closes the TOPMOST
+	* stack entry on Escape (detect_key) and closes exactly one modal per keypress.
+	* A second handler here would close this dialog on keydown, unstack it, and let
+	* dd-modal's keyup pass close the modal underneath it as well.
+	*
+	* (!) minimizable is forced to false and is not an option: a minimized modal
+	* returns early from _doCloseModal without dispatching 'dd-modal-close', so the
+	* promise would never settle.
+	*
+	* (!) Overlay dismissals fired within 400 ms of opening are swallowed: the
+	* overlay covers the button that opened the dialog, and dd-modal closes on
+	* mousedown, so a double click would otherwise dismiss the dialog unanswered.
+	*
+	* @param {Object} options - Configuration.
+	* @param {HTMLElement|string} options.header - Dialog title. A string is wrapped in
+	*   div.header > span.label, matching render_delete_record_dialog. HTML is allowed,
+	*   so it must never carry record data — use options.note for that.
+	* @param {string|null} [options.note] - Optional '[context]' suffix appended to the
+	*   header label (the '[Oral History]' of the delete-record dialog). Rendered as
+	*   TEXT, so it is the safe slot for record data: section labels, thesaurus terms.
+	* @param {HTMLElement|string} options.body - The question. A string is wrapped in
+	*   div.body.content by attach_to_modal.
+	* @param {string} [options.accept_label] - Accept button caption. Default: get_label.continue.
+	* @param {string} [options.cancel_label] - Cancel button caption. Default: get_label.cancel.
+	* @param {string|null} [options.accept_class='primary'] - Class list for the accept button.
+	*   Any button colour class plus any icon class, e.g. 'primary new', 'primary duplicate',
+	*   'danger remove', 'warning'. Cancel is always 'secondary'.
+	* @param {string} [options.size='small'] - Modal size variant passed through to attach_to_modal.
+	* @returns {Promise<boolean>} true on accept, false on every dismissal.
+	*/
+	confirm : (options={}) => {
+
+		// options
+			const accept_label	= options.accept_label || get_label.continue || 'Continue'
+			const cancel_label	= options.cancel_label || get_label.cancel || 'Cancel'
+			const accept_class	= options.accept_class ?? 'primary'
+			const note			= options.note ?? null
+			const size			= options.size || 'small'
+
+		// header. A string is built as div.header > span.label so the node shape is
+		// identical to render_delete_record_dialog (attach_to_modal's own string path
+		// produces div.header.content, which is a different box).
+			const header = (typeof options.header==='string')
+				? (() => {
+					const header_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'header'
+					})
+					const label_node = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'label',
+						inner_html		: options.header,
+						parent			: header_node
+					})
+
+					// note. The '[context]' suffix of the delete-record dialog.
+					// (!) Built with text_content, never interpolated into the header
+					// string: a note is typically RECORD DATA (a section label, a
+					// thesaurus term) and would otherwise be an HTML injection point.
+						if (note) {
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'note',
+								// (!) Leading space is load-bearing: the note is a sibling
+								// inline span with no margin of its own, so without it the
+								// title reads 'New record[Term]'.
+								text_content	: ' [' + note + ']',
+								parent			: label_node
+							})
+						}
+
+					return header_node
+				  })()
+				: options.header
+
+		// footer
+			const footer = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'footer content'
+			})
+
+			const button_cancel = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'secondary',
+				text_content	: cancel_label,
+				parent			: footer
+			})
+
+			const button_accept = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: accept_class ? accept_class : null,
+				text_content	: accept_label,
+				parent			: footer
+			})
+
+		return new Promise((resolve) => {
+
+			// settle. Single resolution gate. Every close path funnels through here,
+			// so a button click followed by the modal's own 'dd-modal-close' (or two
+			// concurrent dismissals) resolves the promise exactly once.
+				let settled = false
+				const settle = (value) => {
+					if (settled===true) {
+						return
+					}
+					settled = true
+					resolve(value)
+				}
+
+			// close_with. Commits the value BEFORE closing so the value is already
+			// final when the 'dd-modal-close' listener below runs.
+			// (!) modal.close() and not modal.on_close(): close() is the symmetric
+			// sequence (publish_close fires, autocomplete is destroyed, the element
+			// removes itself), and with transient:true it contains no await, so it
+			// runs to completion synchronously.
+				const close_with = (value) => {
+					settle(value)
+					modal.close()
+				}
+
+				button_accept.addEventListener('click', (e) => {
+					e.stopPropagation()
+					close_with(true)
+				})
+				button_cancel.addEventListener('click', (e) => {
+					e.stopPropagation()
+					close_with(false)
+				})
+
+			// modal
+			// (!) `modal` is captured here and referenced by the handlers defined
+			// above; they run after this line executes, so the forward reference is safe.
+				const modal = ui.attach_to_modal({
+					header		: header,
+					body		: options.body,
+					footer		: footer,
+					size		: size,
+					minimizable	: false,
+					transient	: true,
+					callback	: (dd_modal) => {
+						dd_modal.classList.add('dd_confirm')
+						// Focus after layout so Enter activates accept natively.
+						requestAnimationFrame(() => button_accept.focus())
+					}
+				})
+
+			// gesture guard. The dialog is opened synchronously from a click handler
+			// and the overlay (position:fixed, full viewport) lands under the cursor in
+			// the SAME gesture. dd-modal dismisses on MOUSEDOWN, so the second mousedown
+			// of a double click on the button that opened the dialog hits the overlay and
+			// silently dismisses a dialog the user never read. Overlay dismissals fired
+			// inside the opening gesture are swallowed.
+			// (!) document-level and CAPTURE phase on purpose: the overlay handler lives
+			// on the shadow .modal node and was registered first (connectedCallback), and
+			// listeners on the event TARGET run in registration order regardless of the
+			// capture flag — a listener on the overlay itself would run too late.
+			// composedPath()[0] is the real shadow target that document-level event
+			// retargeting hides.
+				const opened_at				= performance.now()
+				const gesture_guard_ms		= 400
+				const gesture_guard_handler	= (e) => {
+					if ((performance.now() - opened_at) >= gesture_guard_ms) {
+						document.removeEventListener('mousedown', gesture_guard_handler, true)
+						return
+					}
+					if (e.composedPath()[0]===modal.get_modal_node()) {
+						e.stopPropagation()
+					}
+				}
+				document.addEventListener('mousedown', gesture_guard_handler, true)
+
+			// dismissal. '×', overlay click and Escape all route through
+			// _doCloseModal, which dispatches this event on the element itself.
+			// Already-settled accept/cancel closes land here too and are absorbed
+			// by the settle gate. Every close path (accept and cancel included) passes
+			// here, so it is also where the gesture guard is un-installed.
+				modal.addEventListener('dd-modal-close', () => {
+					document.removeEventListener('mousedown', gesture_guard_handler, true)
+					settle(false)
+				})
+
+			// Enter. The accept button is focused on open, so a <button> activates
+			// natively on Enter — this listener only covers the case where focus has
+			// moved into the dialog body (e.g. the user selected text). Form controls
+			// and buttons are excluded so it can never double-fire with the native
+			// activation. Bound to the element (slotted content is light DOM and
+			// bubbles to the host), so it dies with the element — no document listener.
+				modal.addEventListener('keydown', (e) => {
+					if (e.key!=='Enter' || settled===true) {
+						return
+					}
+					if (e.target.closest('button, input, textarea, select, [contenteditable]')) {
+						return
+					}
+					e.preventDefault()
+					close_with(true)
+				})
+		})
+	},//end confirm
 
 
 
