@@ -7,7 +7,20 @@
 
 // list_body. Used in sections and portals in list mode
 	.list_body {
-		contain: layout;
+		// 'style' (NOT 'layout') — the same rule already applied to
+		// `.wrapper_component` in layout.less: "Set as 'style' to prevent
+		// service autocomplete issues". `contain: layout` creates a STACKING
+		// CONTEXT, and this element is `position: relative; z-index: auto`, so
+		// everything inside it painted at level 0 of its parent and any LATER
+		// sibling covered it — no z-index inside could escape.
+		//
+		// Measured on oh1/370, the oh115 dataframe autocomplete open: its panel
+		// (z-index 6, inside a wrapper at z-index 3) hit-tested as `label` and
+		// `content_data` from the components BELOW the list, i.e. the whole
+		// dropdown was unreachable. Switching this one word to 'style' — which
+		// contains counters/quotes but creates NO stacking context — puts the
+		// panel back on top with no z-index anywhere.
+		contain: style;
 		display: grid;
 		height: 100%;
 		position: relative;

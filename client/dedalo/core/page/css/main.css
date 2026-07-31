@@ -6188,7 +6188,7 @@ dd-modal.dd_confirm .body.content {
 * Shared by section and portal.
 */
 .list_body {
-  contain: layout;
+  contain: style;
   display: grid;
   height: 100%;
   position: relative;
