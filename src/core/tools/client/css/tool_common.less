@@ -59,6 +59,24 @@
 .tool_header {
 	contain: content;
 	background-color: @color_orange_dedalo;
+	// Every string in this bar is white (see `color` below, and the 44 tool-css
+	// declarations that repeat it), but the identity hues it sits on are
+	// MID-TONE: white lands at 2.31:1 on tool_indexation's cyan, 2.55:1 on the
+	// transcription orange — the whole header, not just the small labels, is
+	// under AA. Flipping the ink cannot fix it either: the palette spans #000000
+	// to #f78a1c, so white clears 4.5:1 on 15 of the 32 tools and a near-black
+	// ink on 12 — five tools are in the dead zone where NEITHER works.
+	//
+	// So the BAND is corrected instead of the ink: a flat 32% black scrim over
+	// whatever hue the tool set. Measured across all 32 tool colours, 32% is the
+	// point where the worst case (tool_indexation) reaches 4.5:1 — every tool
+	// passes, the hue stays recognisable (orange reads burnt, cyan deep teal),
+	// and it is one rule that a tool added tomorrow inherits.
+	//
+	// Applied as background-IMAGE so each tool's own `background-color` still
+	// drives the hue. The two contexts that replace the band entirely — the dark
+	// theme below, and the redesign line — set their own `background-image`.
+	background-image: linear-gradient(rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.32));
 	position: relative;
 	color: @color_white;
 	width: 100%;

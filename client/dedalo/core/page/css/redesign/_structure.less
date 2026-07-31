@@ -302,6 +302,10 @@
 	// ---------------------------------------------------------------
 	.tool_header {
 		background-color: var(--bg_surface) !important;
+		// the classic bar darkens its identity hue with a 32% scrim so white ink
+		// clears AA on it; this header has no hue to darken, so drop the scrim or
+		// it just dims the neutral surface
+		background-image: none;
 		color: var(--fg_default);
 		border-top: 2px solid var(--color_orange_dedalo);
 		box-shadow: inset 0 -1px 0 var(--border_default); // hairline under header
