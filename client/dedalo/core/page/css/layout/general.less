@@ -895,6 +895,19 @@
 		}
 	}
 
+/* media placeholder (empty data)
+------------------------------------------------------- */
+	// page_globals.fallback_image (themes/default/default.svg, served from
+	// environment.ts) is the app-wide "no media here" mark, used by every
+	// media view (av, image, svg, pdf...) when no thumb/posterframe exists.
+	// It is a state marker, not content, so it must read as a watermark.
+	// Matched by src because most views set only the src (no class); the
+	// edit view of component_svg also tags it .fallback_image.
+	img[src$="/themes/default/default.svg"],
+	img.fallback_image {
+		opacity: var(--media_placeholder_opacity, 1);
+	}
+
 /* UIUX-08: keyboard focus visibility on form fields.
    --input_outline:none removes the input outline at rest AND on focus (both
    themes), which traps keyboard users. The global :where() rule below does NOT
