@@ -40,7 +40,11 @@ const CSS_LAYOUT_DIR = join(
 );
 
 /** Token families that MUST be declared in both themes. */
-const GATED_PREFIXES = ['--menu_', '--debug_info_bar_'];
+// --mosaic_: the portal mosaic hover chips. Same bug, second sighting — the
+// corner scrims over a record image were a hardcoded `rgb(255 255 255 / 80%)`,
+// so in dark they stayed light slabs while their ink (id number, edit / drag /
+// remove / info icons) inverted to near-white: every affordance invisible.
+const GATED_PREFIXES = ['--menu_', '--debug_info_bar_', '--mosaic_'];
 
 const WHY_UNPAIRED =
 	'A gated theme token is declared in vars.less (light) but NOT in theme_dark.less. In dark it then resolves through the INVERTED palette, so the surface flips material while its ink does not — the .menu_mobile_wrapper bug (a light slab carrying white text). Declare the dark value in theme_dark.less.';

@@ -170,6 +170,7 @@
   --select_icon_url: url('../../themes/default/icons/select_arrows.svg');
   --toolbar_btn_hover_bg: var(--color_grey_11);
   --toolbar_btn_icon_filter: none;
+  --mosaic_chip_bg: rgba(255, 255, 255, 0.8);
   --modal_overlay_bg: rgba(0, 0, 0, 0.4);
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.075);
   --modal_content_bg: var(--color_white);

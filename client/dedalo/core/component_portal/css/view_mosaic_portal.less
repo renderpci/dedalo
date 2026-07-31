@@ -51,7 +51,10 @@
 				grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
 				overflow: hidden;
 
-				@bg_color_buttons: rgb(255 255 255 / 80%);
+				// Theme-aware scrim (light: white 80%, dark: #181a1e 82%).
+				// Never hardcode a colour here: the chip sits over the record
+				// image and its ink inverts with the theme — see --mosaic_chip_bg.
+				@bg_color_buttons: var(--mosaic_chip_bg);
 
 				>.column {
 					display: flex;

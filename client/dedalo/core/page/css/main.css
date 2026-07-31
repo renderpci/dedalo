@@ -623,6 +623,7 @@ template {
   --select_icon_url: url('../../themes/default/icons/select_arrows.svg');
   --toolbar_btn_hover_bg: var(--color_grey_11);
   --toolbar_btn_icon_filter: none;
+  --mosaic_chip_bg: rgba(255, 255, 255, 0.8);
   --modal_overlay_bg: rgba(0, 0, 0, 0.4);
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.075);
   --modal_content_bg: var(--color_white);
@@ -894,6 +895,7 @@ template {
   --select_icon_url: url('../../themes/default/icons/select_arrows_light.svg');
   --toolbar_btn_hover_bg: #9c9c9c;
   --toolbar_btn_icon_filter: invert(0.85);
+  --mosaic_chip_bg: rgba(24, 26, 30, 0.82);
   --modal_overlay_bg: rgba(0, 0, 0, 0.6);
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.2);
   --modal_content_bg: var(--color_grey_15);
@@ -21094,7 +21096,7 @@ body.inspector_resizing {
   width: 100%;
   padding: 0px;
   margin: 0px;
-  background-color: rgba(255, 255, 255, 0.8) !important;
+  background-color: var(--mosaic_chip_bg) !important;
   z-index: 2;
   grid-column-start: 3;
   grid-row-start: 1;
@@ -21152,7 +21154,7 @@ body.inspector_resizing {
   grid-column-end: 4;
   grid-row-start: 3;
   grid-row-end: 4;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--mosaic_chip_bg);
   height: 100%;
   width: 100%;
   display: flex;

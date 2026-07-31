@@ -208,6 +208,14 @@
 	--select_icon_url:          url('../../themes/default/icons/select_arrows.svg');
 	--toolbar_btn_hover_bg:     var(--color_grey_11);
 	--toolbar_btn_icon_filter:  none;
+	// mosaic (portal card grid) hover chips — the corner scrims that carry the
+	// id / edit / drag / remove / info affordances ON TOP of the record image.
+	// They are a SCRIM over unknown pixels, so they must match the page material,
+	// not a fixed colour: hardcoded `rgb(255 255 255 / 80%)` stayed a light slab
+	// in dark while its ink inverted to near-white (id + every icon invisible).
+	// Ink is deliberately NOT tokenized: it already resolves through --color_black
+	// / --color_grey_*, which invert correctly once the chip matches the theme.
+	--mosaic_chip_bg:           rgb(255 255 255 / 80%);
 
 	// ---- MODAL TOKENS ----
 	--modal_overlay_bg:            rgba(0, 0, 0, 0.4);
