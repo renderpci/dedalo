@@ -53,7 +53,6 @@ const SRC_ROOT = resolve(import.meta.dir, '../../src');
  * intended string per key, add it to master.json, delete the entry here.
  */
 const UNCATALOGED_CLIENT_KEYS: ReadonlySet<string> = new Set([
-	'back', // only referenced as the middle of a `form || back || 'Form'` chain
 	'check_directories',
 	'db_name',
 	'enable_diffusion',

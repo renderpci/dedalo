@@ -150,15 +150,60 @@
 
 	&.edit {
 
-		// graph toolbar (back to form + hint)
+		// close control (toolbar + detail panel): a padded hit target around the
+		// icon. `.button` masks the glyph onto the element itself, so the element
+		// IS the drawing — padding would scale it instead of growing the target.
+		// Wrapping it in a real <button> buys both a comfortable click area and
+		// free keyboard activation.
+		.fn_graph_close_target() {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 2.4rem;
+			height: 2.4rem;
+			min-width: 2.4rem;
+			padding: 0;
+			margin: 0;
+			border: none;
+			border-radius: 50%;
+			background-color: transparent;
+			cursor: pointer;
+
+			>.button.close {
+				width: 1.05em;
+				height: 1.05em;
+				min-width: 1.05em;
+				margin: 0;
+				opacity: 0.55;
+				pointer-events: none; // the padded button owns every click
+			}
+
+			&:hover {
+				background-color: @color_grey_14;
+
+				>.button.close {
+					opacity: 1;
+				}
+			}
+
+			&:focus-visible {
+				outline: 2px solid var(--focus_ring);
+				outline-offset: 1px;
+			}
+		}
+
+		// graph toolbar (hint + reverse relations + close)
 		.graph_toolbar {
 			display: flex;
 			align-items: center;
 			gap: 1rem;
 			padding-bottom: 0.75rem;
 
-			.graph_back_button {
-				white-space: nowrap;
+			// leaves the graph, back to the form. Pushed to the far right:
+			// the only destructive-looking control sits away from the reading flow
+			.graph_close_button {
+				.fn_graph_close_target();
+				margin-left: auto;
 			}
 
 			.graph_hint {
@@ -190,9 +235,23 @@
 
 		>.content_data {
 			display: grid;
-			grid-template-columns: 1fr 320px;
+			grid-template-columns: minmax(0, 1fr) 340px;
 			gap: 0;
 			height: calc(100vh - 9rem);
+
+			// detail panel closed: the canvas takes the whole width.
+			// Reversible — clicking any node brings the panel back.
+			&.detail_hidden {
+				grid-template-columns: minmax(0, 1fr);
+
+				.graph_canvas {
+					border-radius: 6px;
+				}
+
+				.node_detail {
+					display: none;
+				}
+			}
 
 			// graph canvas (left)
 			.graph_canvas {
@@ -259,8 +318,10 @@
 							pointer-events: none;
 						}
 
+						// ring colour encodes expand state; @color_hilite (a near-white
+						// #fce8d2 in the light theme) was invisible on both surfaces
 						&.expandable circle {
-							stroke: @color_hilite;
+							stroke: @color_primary;
 							stroke-width: 2.5px;
 						}
 
@@ -269,8 +330,9 @@
 							stroke-width: 2.5px;
 						}
 
+						// the root is told apart by size + the Dédalo accent fill, so it
+						// keeps the canvas-coloured halo of the base rule
 						&.is_root circle {
-							stroke: @color_hilite;
 							stroke-width: 3px;
 						}
 
@@ -278,10 +340,11 @@
 							stroke-dasharray: 3 3;
 						}
 
+						// selection is a glow, NOT a stroke colour: the expand-state
+						// ring must stay readable while the node is selected
 						&.selected circle {
-							stroke: @color_hilite;
 							stroke-width: 3px;
-							filter: drop-shadow(0 0 4px var(--color_hilite, #7092e0));
+							filter: drop-shadow(0 0 5px var(--color_orange_dedalo, #f78a1c));
 						}
 
 						&:hover circle {
@@ -292,85 +355,276 @@
 			}
 
 			// node detail panel (right)
+			// Three states, all rendered here: placeholder (nothing selected),
+			// detail (sticky identity header + scrolling fields), hidden (see
+			// `.detail_hidden` on the parent grid).
 			.node_detail {
 				display: flex;
 				flex-direction: column;
+				min-width: 0;
 				height: 100%;
 				border: 1px solid @color_grey_12;
 				border-left: none;
 				border-radius: 0 6px 6px 0;
 				background-color: var(--color_white, #fff);
 				overflow-y: auto;
-				padding: 1rem;
+				overflow-x: hidden;
 
-				.node_label {
-					font-size: 1.1rem;
-					font-weight: 600;
-					margin-bottom: 0.5rem;
-					word-break: break-word;
-				}
+				// identity header: stays put while the field list scrolls
+				.node_detail_header {
+					position: sticky;
+					top: 0;
+					z-index: 1;
+					padding: 0.9rem 3rem 0.8rem 1rem; // right pad = room for the close button
+					background-color: var(--color_white, #fff);
+					border-bottom: 1px solid @color_grey_12;
 
-				.node_meta {
-					margin-bottom: 0.75rem;
+					.node_detail_close {
+						.fn_graph_close_target();
+						position: absolute;
+						top: 0.5rem;
+						right: 0.5rem;
+					}
 
-					.node_meta_item {
-						font-size: 0.75rem;
+					// section name; reserved height so the async fill never jumps
+					.node_section_name {
+						min-height: 0.95rem;
+						font-size: 0.68rem;
+						font-weight: 600;
+						letter-spacing: 0.06em;
+						text-transform: uppercase;
 						color: @color_grey_8;
+					}
+
+					.node_detail_title_row {
+						display: flex;
+						align-items: baseline;
+						gap: 0.45rem;
+
+						// repeats the node circle colour: the panel IS that node
+						.node_color_dot {
+							flex: 0 0 auto;
+							width: 0.6rem;
+							height: 0.6rem;
+							border-radius: 50%;
+							box-shadow: 0 0 0 1px @color_grey_12; // keeps pale colours visible
+						}
+
+						.node_label {
+							font-size: 1.05rem;
+							font-weight: 600;
+							line-height: 1.25;
+							word-break: break-word;
+						}
+					}
+
+					.node_meta {
+						display: flex;
+						flex-wrap: wrap;
+						align-items: center;
+						gap: 0.4rem;
+						margin-top: 0.35rem;
+
+						.node_meta_item {
+							font-family: @font_mono;
+							font-size: 0.68rem;
+							color: @color_grey_8;
+						}
+
+						.node_meta_badge {
+							padding: 0.05rem 0.4rem;
+							border-radius: 0.75rem;
+							font-size: 0.65rem;
+							background-color: @color_grey_14;
+							color: @color_grey_6;
+						}
+					}
+
+					// the edge this node arrived through (edge labels overlap in
+					// dense graphs; here it is always readable)
+					.node_relation {
+						display: flex;
+						flex-wrap: wrap;
+						align-items: baseline;
+						gap: 0.35rem;
+						margin-top: 0.5rem;
+						padding-left: 0.5rem;
+						border-left: 2px solid @color_primary;
+						font-size: 0.75rem;
+
+						&.inverse {
+							border-left-style: dashed; // same grammar as the inverse links
+						}
+
+						.node_relation_label {
+							font-weight: 600;
+							color: @color_grey_3;
+						}
+
+						.node_relation_parent {
+							color: @color_grey_8;
+							word-break: break-word;
+						}
+					}
+
+					.node_open_link {
+						margin: 0.7rem 0 0 0;
+						padding: 0.2rem 0.6rem;
+						font-size: 0.78rem;
+						cursor: pointer;
 					}
 				}
 
-				.node_open_link {
-					display: inline-block;
-					margin-bottom: 1rem;
-					padding: 0.25rem 0.75rem;
-					font-size: 0.8rem;
-					cursor: pointer;
+				.node_detail_body {
+					flex: 1;
+					padding: 0.85rem 1rem 1.5rem 1rem;
+
+					.node_fields_title {
+						font-size: 0.68rem;
+						font-weight: 600;
+						letter-spacing: 0.06em;
+						text-transform: uppercase;
+						color: @color_grey_8;
+						margin-bottom: 0.35rem;
+					}
 				}
 
 				.node_fields {
-					flex: 1;
 
+					// the global .spinner centres itself on this box; the caption
+					// clears it by starting below the spinner's lower edge
 					.node_fields_loading {
-						padding: 1rem;
-						opacity: 0.4;
-						font-style: italic;
+						position: relative;
+						min-height: 6rem;
+						padding-top: 4.2rem;
+						text-align: center;
+
+						.node_fields_loading_text {
+							font-size: 0.75rem;
+							color: @color_grey_8;
+						}
 					}
 
 					.node_fields_empty {
-						padding: 1rem;
+						padding: 0.75rem 0;
 						opacity: 0.5;
 						font-style: italic;
 					}
 
 					.node_field {
-						margin-bottom: 0.6rem;
+						padding: 0.45rem 0;
+						border-top: 1px solid @color_grey_14;
 						word-break: break-word;
 
+						&:first-child {
+							border-top: none;
+						}
+
+						.node_field_label_row {
+							display: flex;
+							align-items: baseline;
+							gap: 0.35rem;
+						}
+
 						.node_field_label {
-							display: block;
-							font-size: 0.75rem;
+							font-size: 0.7rem;
 							font-weight: 600;
 							color: @color_grey_8;
-							margin-bottom: 0.1rem;
+						}
+
+						.node_field_tipo {
+							font-family: @font_mono;
+							font-size: 0.62rem;
+							color: @color_grey_10;
+							opacity: 0; // revealed on hover, kept in flow: no reflow
+							transition: opacity 0.12s ease;
 						}
 
 						.node_field_value {
 							display: block;
-							font-size: 0.85rem;
+							margin-top: 0.1rem;
+							font-size: 0.88rem;
+							line-height: 1.35;
 							color: @color_grey_3;
 						}
 
-						.node_field_tipo {
-							display: none; // hidden by default
-							font-size: 0.65rem;
-							color: @color_grey_10;
-							margin-left: 0.4rem;
+						&:hover .node_field_tipo {
+							opacity: 1;
 						}
 					}
+				}
 
-					// show tipo on hover
-					.node_field:hover .node_field_tipo {
-						display: inline;
+				// empty state: what to do, plus the legend for what the graph draws
+				.node_detail_placeholder {
+					padding: 1.25rem 1rem;
+
+					.node_detail_placeholder_title {
+						font-size: 0.9rem;
+						line-height: 1.4;
+						color: @color_grey_6;
+					}
+
+					.graph_legend {
+						display: grid;
+						gap: 0.55rem;
+						margin-top: 1.1rem;
+						padding-top: 0.9rem;
+						border-top: 1px solid @color_grey_14;
+
+						.graph_legend_item {
+							display: flex;
+							align-items: center;
+							gap: 0.6rem;
+						}
+
+						// marks are drawn in CSS from the same rules as the SVG above
+						.graph_legend_mark {
+							position: relative;
+							flex: 0 0 1.1rem;
+							height: 1rem;
+
+							&.node:after {
+								content: '';
+								position: absolute;
+								top: 50%;
+								left: 50%;
+								width: 0.6rem;
+								height: 0.6rem;
+								transform: translate(-50%, -50%);
+								border-radius: 50%;
+								background-color: @color_grey_10;
+							}
+
+							&.is_root:after {
+								background-color: @color_orange_dedalo;
+							}
+
+							&.expandable:after {
+								box-shadow: 0 0 0 2px @color_primary;
+							}
+
+							&.expanded:after {
+								box-shadow: 0 0 0 2px @color_success;
+							}
+
+							&.link:after {
+								content: '';
+								position: absolute;
+								top: 50%;
+								left: 0;
+								width: 100%;
+								border-top: 1.5px solid @color_grey_10;
+							}
+
+							&.link.inverse:after {
+								border-top-style: dashed;
+							}
+						}
+
+						.graph_legend_text {
+							font-size: 0.75rem;
+							color: @color_grey_8;
+						}
 					}
 				}
 			}

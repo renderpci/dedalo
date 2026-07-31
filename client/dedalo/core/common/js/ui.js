@@ -4038,9 +4038,15 @@ export const ui = {
 	* @param {string|null} [selector='.button'] - CSS selector to find tooltip targets.
 	*   Pass null to treat wrapper itself as the sole tooltip target.
 	* @param {boolean} [reset=false] - When true, forces re-registration even for already-active buttons.
+	* @param {string} [placement='top'] - Where the tooltip is drawn relative to the target
+	*   ('top' | 'bottom' | 'left' | 'right'). The default suits buttons inside a panel;
+	*   pass another side for a button pinned to an edge, where a top tooltip would be
+	*   drawn over the chrome above it or clipped by the viewport (e.g. a corner close
+	*   button registers itself with 'left' BEFORE the blanket call, which then skips it
+	*   because `active_tooltip` is already set).
 	* @returns {void}
 	*/
-	activate_tooltips : function(wrapper, selector='.button', reset=false) {
+	activate_tooltips : function(wrapper, selector='.button', reset=false, placement='top') {
 
 		if (!ui.tooltip) {
 
@@ -4102,7 +4108,7 @@ export const ui = {
 			}
 
 			tooltip.onHover(button, button.title, {
-				placement: 'top',
+				placement: placement,
 				delay: 150
 			})
 			button.addEventListener('mouseover', mouseover_handler)

@@ -11174,10 +11174,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .service_dropzone > .content_data > .row {
   font-size: 1.3rem;
 }
-.service_dropzone > .content_data > .row .buttons_container button {
-  font-size: 1.3rem;
-  padding: 0.3rem 2rem;
-}
 @media screen and (max-width: 1024px) {
   .service_dropzone > .content_data > .row .buttons_container {
     display: flex;
@@ -17224,8 +17220,38 @@ body.inspector_resizing {
   gap: 1rem;
   padding-bottom: 0.75rem;
 }
-.section.view_graph.edit .graph_toolbar .graph_back_button {
-  white-space: nowrap;
+.section.view_graph.edit .graph_toolbar .graph_close_button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  min-width: 2.4rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  cursor: pointer;
+  margin-left: auto;
+}
+.section.view_graph.edit .graph_toolbar .graph_close_button > .button.close {
+  width: 1.05em;
+  height: 1.05em;
+  min-width: 1.05em;
+  margin: 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.section.view_graph.edit .graph_toolbar .graph_close_button:hover {
+  background-color: var(--color_grey_14);
+}
+.section.view_graph.edit .graph_toolbar .graph_close_button:hover > .button.close {
+  opacity: 1;
+}
+.section.view_graph.edit .graph_toolbar .graph_close_button:focus-visible {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 1px;
 }
 .section.view_graph.edit .graph_toolbar .graph_hint {
   font-size: 0.85rem;
@@ -17250,9 +17276,18 @@ body.inspector_resizing {
 }
 .section.view_graph.edit > .content_data {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 0;
   height: calc(100vh - 9rem);
+}
+.section.view_graph.edit > .content_data.detail_hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+.section.view_graph.edit > .content_data.detail_hidden .graph_canvas {
+  border-radius: 6px;
+}
+.section.view_graph.edit > .content_data.detail_hidden .node_detail {
+  display: none;
 }
 .section.view_graph.edit > .content_data .graph_canvas {
   contain: contain;
@@ -17310,7 +17345,7 @@ body.inspector_resizing {
   pointer-events: none;
 }
 .section.view_graph.edit > .content_data .graph_canvas .svg_content .graph_node.expandable circle {
-  stroke: var(--color_hilite);
+  stroke: var(--color_primary);
   stroke-width: 2.5px;
 }
 .section.view_graph.edit > .content_data .graph_canvas .svg_content .graph_node.expanded circle {
@@ -17318,16 +17353,14 @@ body.inspector_resizing {
   stroke-width: 2.5px;
 }
 .section.view_graph.edit > .content_data .graph_canvas .svg_content .graph_node.is_root circle {
-  stroke: var(--color_hilite);
   stroke-width: 3px;
 }
 .section.view_graph.edit > .content_data .graph_canvas .svg_content .graph_node.loading_node circle {
   stroke-dasharray: 3 3;
 }
 .section.view_graph.edit > .content_data .graph_canvas .svg_content .graph_node.selected circle {
-  stroke: var(--color_hilite);
   stroke-width: 3px;
-  filter: drop-shadow(0 0 4px var(--color_hilite, #7092e0));
+  filter: drop-shadow(0 0 5px var(--color_orange_dedalo, #f78a1c));
 }
 .section.view_graph.edit > .content_data .graph_canvas .svg_content .graph_node:hover circle {
   filter: brightness(1.1);
@@ -17335,71 +17368,251 @@ body.inspector_resizing {
 .section.view_graph.edit > .content_data .node_detail {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   height: 100%;
   border: 1px solid var(--color_grey_12);
   border-left: none;
   border-radius: 0 6px 6px 0;
   background-color: var(--color_white, #fff);
   overflow-y: auto;
-  padding: 1rem;
+  overflow-x: hidden;
 }
-.section.view_graph.edit > .content_data .node_detail .node_label {
-  font-size: 1.1rem;
+.section.view_graph.edit > .content_data .node_detail .node_detail_header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.9rem 3rem 0.8rem 1rem;
+  background-color: var(--color_white, #fff);
+  border-bottom: 1px solid var(--color_grey_12);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  min-width: 2.4rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  cursor: pointer;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_close > .button.close {
+  width: 1.05em;
+  height: 1.05em;
+  min-width: 1.05em;
+  margin: 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_close:hover {
+  background-color: var(--color_grey_14);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_close:hover > .button.close {
+  opacity: 1;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_close:focus-visible {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 1px;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_section_name {
+  min-height: 0.95rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color_grey_8);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_title_row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_title_row .node_color_dot {
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--color_grey_12);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_detail_title_row .node_label {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
   word-break: break-word;
 }
-.section.view_graph.edit > .content_data .node_detail .node_meta {
-  margin-bottom: 0.75rem;
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
 }
-.section.view_graph.edit > .content_data .node_detail .node_meta .node_meta_item {
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_meta .node_meta_item {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.68rem;
+  color: var(--color_grey_8);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_meta .node_meta_badge {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.75rem;
+  font-size: 0.65rem;
+  background-color: var(--color_grey_14);
+  color: var(--color_grey_6);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_relation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--color_primary);
+  font-size: 0.75rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_relation.inverse {
+  border-left-style: dashed;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_relation .node_relation_label {
+  font-weight: 600;
+  color: var(--color_grey_3);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_relation .node_relation_parent {
+  color: var(--color_grey_8);
+  word-break: break-word;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_header .node_open_link {
+  margin: 0.7rem 0 0 0;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_body {
+  flex: 1;
+  padding: 0.85rem 1rem 1.5rem 1rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_body .node_fields_title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color_grey_8);
+  margin-bottom: 0.35rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_fields .node_fields_loading {
+  position: relative;
+  min-height: 6rem;
+  padding-top: 4.2rem;
+  text-align: center;
+}
+.section.view_graph.edit > .content_data .node_detail .node_fields .node_fields_loading .node_fields_loading_text {
   font-size: 0.75rem;
   color: var(--color_grey_8);
 }
-.section.view_graph.edit > .content_data .node_detail .node_open_link {
-  display: inline-block;
-  margin-bottom: 1rem;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.section.view_graph.edit > .content_data .node_detail .node_fields {
-  flex: 1;
-}
-.section.view_graph.edit > .content_data .node_detail .node_fields .node_fields_loading {
-  padding: 1rem;
-  opacity: 0.4;
-  font-style: italic;
-}
 .section.view_graph.edit > .content_data .node_detail .node_fields .node_fields_empty {
-  padding: 1rem;
+  padding: 0.75rem 0;
   opacity: 0.5;
   font-style: italic;
 }
 .section.view_graph.edit > .content_data .node_detail .node_fields .node_field {
-  margin-bottom: 0.6rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--color_grey_14);
   word-break: break-word;
 }
+.section.view_graph.edit > .content_data .node_detail .node_fields .node_field:first-child {
+  border-top: none;
+}
+.section.view_graph.edit > .content_data .node_detail .node_fields .node_field .node_field_label_row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
 .section.view_graph.edit > .content_data .node_detail .node_fields .node_field .node_field_label {
-  display: block;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--color_grey_8);
-  margin-bottom: 0.1rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_fields .node_field .node_field_tipo {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.62rem;
+  color: var(--color_grey_10);
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 .section.view_graph.edit > .content_data .node_detail .node_fields .node_field .node_field_value {
   display: block;
-  font-size: 0.85rem;
+  margin-top: 0.1rem;
+  font-size: 0.88rem;
+  line-height: 1.35;
   color: var(--color_grey_3);
 }
-.section.view_graph.edit > .content_data .node_detail .node_fields .node_field .node_field_tipo {
-  display: none;
-  font-size: 0.65rem;
-  color: var(--color_grey_10);
-  margin-left: 0.4rem;
-}
 .section.view_graph.edit > .content_data .node_detail .node_fields .node_field:hover .node_field_tipo {
-  display: inline;
+  opacity: 1;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder {
+  padding: 1.25rem 1rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .node_detail_placeholder_title {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--color_grey_6);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color_grey_14);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark {
+  position: relative;
+  flex: 0 0 1.1rem;
+  height: 1rem;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark.node:after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.6rem;
+  height: 0.6rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: var(--color_grey_10);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark.is_root:after {
+  background-color: var(--color_orange_dedalo);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark.expandable:after {
+  box-shadow: 0 0 0 2px var(--color_primary);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark.expanded:after {
+  box-shadow: 0 0 0 2px var(--color_success);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark.link:after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  border-top: 1.5px solid var(--color_grey_10);
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_mark.link.inverse:after {
+  border-top-style: dashed;
+}
+.section.view_graph.edit > .content_data .node_detail .node_detail_placeholder .graph_legend .graph_legend_text {
+  font-size: 0.75rem;
+  color: var(--color_grey_8);
 }
 /**
 * view_base_section
