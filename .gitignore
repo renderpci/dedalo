@@ -61,6 +61,20 @@ server_config_api.php
 # v2: TypeScript incremental-build artifact (its tsconfig sets `incremental: true`).
 *.tsbuildinfo
 
+# CSS SOURCE MAPS — build output, never committed (2026-08-01).
+# The compiled `.css` IS committed (deploy is a checkout, production has no LESS
+# compiler — see .gitattributes), but the `.css.map` is a DEBUG aid only: nothing
+# serves worse without it and `bun run css:build` regenerates it. Committed, it was
+# pure friction: every token change rewrote 45 machine-generated JSON blobs, so two
+# developers touching any .less conflicted on files nobody reads or merges.
+# On a fresh checkout devtools 404s on the map until someone runs `bun run css:build`.
+# `css_build_tripwire` therefore checks maps FRESHLY BUILT (relative + resolvable
+# sources), not on disk; `css:check` compares only the .css bytes.
+*.css.map
+# ...except the vendored swagger-ui bundle under publication/, which we ship verbatim
+# and never build.
+!publication/server_api/v1/docu/ui/*.map
+
 # Logs and changelog
 *.log
 CHANGELOG.md

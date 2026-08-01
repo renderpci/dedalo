@@ -79,7 +79,8 @@ const BAND_GEOMETRY_PROPS = [
 ];
 
 /** A literal colour, or the token the header re-scopes for legacy declarations. */
-const LITERAL_INK = /^\s*color\s*:\s*(#[0-9a-fA-F]{3,8}|@color_white|var\(\s*--color_white\s*\)|rgba?\()/;
+const LITERAL_INK =
+	/^\s*color\s*:\s*(#[0-9a-fA-F]{3,8}|@color_white|var\(\s*--color_white\s*\)|rgba?\()/;
 
 /**
  * Named exemptions. Key = `<tool>:<what>`, value = why it is legitimate.
@@ -142,7 +143,10 @@ function flattenRules(text: string): Rule[] {
 			const frame = stack.pop();
 			if (frame) {
 				rules.push({
-					selector: stack.map((f) => f.selector).concat(frame.selector).join(' '),
+					selector: stack
+						.map((f) => f.selector)
+						.concat(frame.selector)
+						.join(' '),
 					body: frame.decls + buf,
 					line: frame.line,
 				});
@@ -190,13 +194,13 @@ describe('tool header contract (DEC-12)', () => {
 		for (const { tool, file, text } of sheets) {
 			if (EXEMPTIONS[`${tool}:identity_hue`]) continue;
 			const painted = flattenRules(text).some(
-				(r) => /\.tool_header/.test(r.selector) && /(^|\n)\s*background-color\s*:/.test(r.body)
+				(r) => /\.tool_header/.test(r.selector) && /(^|\n)\s*background-color\s*:/.test(r.body),
 			);
 			if (!painted) missing.push(file);
 		}
 		expect(
 			missing,
-			`These tools never paint their header, so the 4px identity edge — the only thing naming the tool — falls back to the generic Dédalo orange. Add \`.tool_header.<tool> { background-color: @tool_color; }\` (background-COLOR, never the \`background\` shorthand: the shorthand resets the gradient tool_common paints the header surface with).`
+			'These tools never paint their header, so the 4px identity edge — the only thing naming the tool — falls back to the generic Dédalo orange. Add `.tool_header.<tool> { background-color: @tool_color; }` (background-COLOR, never the `background` shorthand: the shorthand resets the gradient tool_common paints the header surface with).',
 		).toEqual([]);
 	});
 
@@ -215,7 +219,7 @@ describe('tool header contract (DEC-12)', () => {
 		}
 		expect(
 			offenders,
-			`The band's height, padding, gaps and alignment are tool_common.less's — that is what makes it the same row in every tool. Style the band's CHILDREN instead, or add a named EXEMPTIONS entry saying what the shared contract cannot express.`
+			`The band's height, padding, gaps and alignment are tool_common.less's — that is what makes it the same row in every tool. Style the band's CHILDREN instead, or add a named EXEMPTIONS entry saying what the shared contract cannot express.`,
 		).toEqual([]);
 	});
 
@@ -236,14 +240,11 @@ describe('tool header contract (DEC-12)', () => {
 	 * still exists: deleting it as "redundant" silently restores the bug.
 	 */
 	test('the modal tool header restates its ink over dd-modal', () => {
-		const compiled = readFileSync(
-			join(REPO_ROOT, 'client/dedalo/core/page/css/main.css'),
-			'utf8'
-		);
+		const compiled = readFileSync(join(REPO_ROOT, 'client/dedalo/core/page/css/main.css'), 'utf8');
 		const rule = /\.tool_header\.header\s*\{[^}]*\bcolor\s*:\s*var\(--fg_default\)/;
 		expect(
 			rule.test(compiled),
-			`main.css has no \`.tool_header.header { color: var(--fg_default) }\`. Without it, \`dd-modal .header { color: var(--modal_header_color) }\` wins and a tool opened in a modal renders its NAME in white on the neutral header surface — the token resolves to #ffffff at :root and the header's --color_white re-point cannot reach it.`
+			`main.css has no \`.tool_header.header { color: var(--fg_default) }\`. Without it, \`dd-modal .header { color: var(--modal_header_color) }\` wins and a tool opened in a modal renders its NAME in white on the neutral header surface — the token resolves to #ffffff at :root and the header's --color_white re-point cannot reach it.`,
 		).toBe(true);
 	});
 
@@ -259,14 +260,12 @@ describe('tool header contract (DEC-12)', () => {
 	 * white glyphs its own bar needs.
 	 */
 	test('a tool-headed modal re-points the shadow-DOM chrome buttons', () => {
-		const compiled = readFileSync(
-			join(REPO_ROOT, 'client/dedalo/core/page/css/main.css'),
-			'utf8'
-		);
-		const rule = /dd-modal:has\(\.tool_header\)\s*\{[^}]*--modal_btn_color\s*:[^}]*--modal_btn_hover_color\s*:/;
+		const compiled = readFileSync(join(REPO_ROOT, 'client/dedalo/core/page/css/main.css'), 'utf8');
+		const rule =
+			/dd-modal:has\(\.tool_header\)\s*\{[^}]*--modal_btn_color\s*:[^}]*--modal_btn_hover_color\s*:/;
 		expect(
 			rule.test(compiled),
-			`main.css has no \`dd-modal:has(.tool_header) { --modal_btn_color: …; --modal_btn_hover_color: … }\`. Without it the modal's own minimise and close glyphs inherit the default white — correct on the modal's orange bar, invisible on the neutral surface a tool header paints. They are in a shadow root, so a custom property on the host is the ONLY way to reach them.`
+			`main.css has no \`dd-modal:has(.tool_header) { --modal_btn_color: …; --modal_btn_hover_color: … }\`. Without it the modal's own minimise and close glyphs inherit the default white — correct on the modal's orange bar, invisible on the neutral surface a tool header paints. They are in a shadow root, so a custom property on the host is the ONLY way to reach them.`,
 		).toBe(true);
 	});
 
@@ -284,7 +283,7 @@ describe('tool header contract (DEC-12)', () => {
 		}
 		expect(
 			offenders,
-			`Header ink is token-driven (var(--fg_default) / var(--fg_muted)), which is what lets one change retune both themes. A literal colour opts that tool out of the theme — this is the failure that put 44 white declarations on a bar that is no longer saturated.`
+			'Header ink is token-driven (var(--fg_default) / var(--fg_muted)), which is what lets one change retune both themes. A literal colour opts that tool out of the theme — this is the failure that put 44 white declarations on a bar that is no longer saturated.',
 		).toEqual([]);
 	});
 });

@@ -227,17 +227,17 @@ if (!import.meta.main) {
 
 	for (const lessPath of targets) {
 		const cssPath = lessPath.replace(/\.less$/, '.css');
-		const mapPath = `${cssPath}.map`;
 
 		if (checkOnly) {
-			const { css, map } = await buildOne(lessPath);
+			// Only the .css is compared: the .css.map is gitignored build output (a devtools
+			// aid, not a shipped artifact), so it is absent on a fresh checkout and comparing
+			// it would call every entrypoint stale. Map correctness is gated on the FRESH
+			// bytes — below, and in css_build_tripwire.test.ts.
+			const { css } = await buildOne(lessPath);
 			const cssOld = existsSync(join(REPO_ROOT, cssPath))
 				? readFileSync(join(REPO_ROOT, cssPath), 'utf8')
 				: null;
-			const mapOld = existsSync(join(REPO_ROOT, mapPath))
-				? readFileSync(join(REPO_ROOT, mapPath), 'utf8')
-				: null;
-			if (cssOld !== css || mapOld !== map) stale.push(cssPath);
+			if (cssOld !== css) stale.push(cssPath);
 			continue;
 		}
 

@@ -13,13 +13,15 @@
 # ON A MERGE CONFLICT in one of these files: do not hand-resolve it. Take either side, then
 #   bun run css:build
 # and commit the result. The .less files are the merge that matters; the CSS is derived.
+#
+# The `.css.map` is NOT here because it is no longer committed at all (2026-08-01, see
+# .gitignore): a source map ships nothing, so the deploy argument above does not apply to
+# it, and 45 machine-generated JSON blobs conflicting on every shared token change was pure
+# friction. It is still built locally by `bun run css:build`.
 # ---------------------------------------------------------------------------
 client/dedalo/**/*.css      linguist-generated=true
-client/dedalo/**/*.css.map  linguist-generated=true
 tools/**/*.css              linguist-generated=true
-tools/**/*.css.map          linguist-generated=true
 src/core/tools/client/**/*.css      linguist-generated=true
-src/core/tools/client/**/*.css.map  linguist-generated=true
 
 # Third-party bundles we vendor verbatim — not our source, never reviewed as ours.
 vendor/**  linguist-vendored=true
