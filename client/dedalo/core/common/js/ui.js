@@ -72,6 +72,20 @@
 * Exported as a plain object literal so callers can import individual sub-namespaces
 * or the whole object without instantiation.
 */
+
+/**
+* CREATE_DOM_ELEMENT_OPTIONS
+* Every option key ui.create_dom_element honours. Anything else is silently dropped
+* by the factory, so this set is what the dev-mode guard checks against — keep it in
+* sync with the option list documented on create_dom_element itself.
+*/
+const CREATE_DOM_ELEMENT_OPTIONS = new Set([
+	'element_type', 'id', 'type', 'href', 'src', 'class_name', 'style',
+	'title_label', 'title', 'dataset', 'data_set', 'value',
+	'inner_html', 'text_node', 'text_content',
+	'draggable', 'contenteditable', 'name', 'placeholder', 'pattern', 'parent'
+])
+
 export const ui = {
 
 
@@ -1806,10 +1820,31 @@ export const ui = {
 	* Text-content priority (mutually exclusive; first match wins):
 	*   inner_html > text_node > text_content
 	*
+	* (!) An option key that is NOT in the list above is IGNORED. That silence cost a
+	* full debugging session once (`inner_text`, 2026-08-01 — the state widget's
+	* situation column rendered as empty spans while the state column, still on
+	* inner_html, rendered fine), so unknown keys are now reported when SHOW_DEBUG is
+	* on. Keep CREATE_DOM_ELEMENT_OPTIONS in sync when adding an option, or the new
+	* key reports itself as a typo.
+	*
 	* @param {Object} options - Configuration map (see above).
 	* @returns {HTMLElement} element - The newly created and configured DOM element.
 	*/
 	create_dom_element : function(options) {
+
+		// unknown-option guard (dev only; this is the most-called helper in the
+		// front-end, so the cost in production is one typeof check)
+			if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
+				const unknown = Object.keys(options).filter(key => !CREATE_DOM_ELEMENT_OPTIONS.has(key))
+				if (unknown.length > 0) {
+					console.error(
+						`(!) [ui.create_dom_element] unknown option(s) IGNORED: ${unknown.join(', ')}`
+						+ ` — the element will render without them. Supported text setters are`
+						+ ` inner_html (parsed) / text_node / text_content.`,
+						options
+					)
+				}
+			}
 
 		// DOM node element
 			const element_type	= options.element_type || 'div'
@@ -1871,9 +1906,14 @@ export const ui = {
 			}
 
 		// Text content: + span,
-			if(options.inner_html) {
+		// `has_text` instead of a bare truthy check so the NUMBER 0 renders as "0"
+		// instead of vanishing. '' still counts as absent — deliberately: it keeps
+		// the DOM byte-identical for the empty-label callers (a text_node of '' would
+		// otherwise append an empty <span> and break `:empty` CSS).
+			const has_text = (candidate) => candidate!==undefined && candidate!==null && candidate!==''
+			if(has_text(options.inner_html)) {
 				element.insertAdjacentHTML('afterbegin', options.inner_html)
-			}else if (options.text_node) {
+			}else if (has_text(options.text_node)) {
 				// SEC-XSS-001: text_node is meant to be plain text, not HTML.
 				// The old path used insertAdjacentHTML which would parse and execute
 				// any HTML markup (including <script>) in what the caller intended
@@ -1886,7 +1926,7 @@ export const ui = {
 						  el.textContent = " " + options.text_node
 					element.appendChild(el)
 				}
-			}else if(options.text_content) {
+			}else if(has_text(options.text_content)) {
 				element.textContent = options.text_content
 			}
 
