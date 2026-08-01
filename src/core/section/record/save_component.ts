@@ -41,7 +41,9 @@
  */
 
 import { getComponentModel } from '../../components/registry.ts';
+import { dataframePairingOf } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
+import type { DataframePairing } from '../../concepts/subdatum.ts';
 import { dbTimestamp } from '../../db/db_timestamp.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts';
 import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
@@ -485,6 +487,38 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		const { filterCallerEntries } = await import('../../relations/dataframe.ts');
 		items = filterCallerEntries(items as Record<string, unknown>[], callerDataframe, componentTipo);
 	}
+	// The pairing handed to validateRelationInsert on every value-carrying
+	// branch below (insert / update / set_data). Built ONCE from the caller
+	// context so the three branches cannot drift apart — which is precisely how
+	// the dataframe write path lost its normalization: each branch grew its own
+	// `!isDataframeSave` opt-out.
+	// The pairing handed to validateRelationInsert on every value-carrying
+	// branch below, derived through the ONE shared validity rule.
+	const validPairing = dataframePairingOf(callerDataframe);
+	const dataframePairing: DataframePairing | null =
+		isDataframeSave && validPairing !== null
+			? {
+					frameTipo: componentTipo,
+					mainComponentTipo: validPairing.main_component_tipo,
+					idKey: validPairing.id_key,
+				}
+			: null;
+	// REFUSE LOUDLY rather than write an unreadable frame. A dataframe write
+	// whose caller context is incomplete (no main component, id_key 0/absent —
+	// the client sends `self.caller?.tipo || null` when the caller instance is
+	// not threaded) CANNOT produce an entry the read predicate will ever match:
+	// it would be stored, invisible, and undeletable through the UI. That is
+	// the exact failure this change set exists to end, so it fails the save
+	// instead of silently persisting garbage (the project's "uncovered paths
+	// throw loudly" rule). Frames written with NO caller context at all —
+	// maintenance, import — keep their own doors and never reach here.
+	if (model === 'component_dataframe' && callerDataframe !== null && validPairing === null) {
+		return {
+			ok: false,
+			message:
+				'dataframe save refused: source.caller_dataframe needs main_component_tipo + an integer id_key >= 1',
+		};
+	}
 
 	// Absorb explicit item ids into the meta counter BEFORE any allocation
 	// (PHP set_data :1009-1019 runs the raise on every write, so a counter can
@@ -584,7 +618,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// Dedup scope is the NEW array only: PHP resets its locator lookup map on the
 			// first element of the call (:1150-53), so an element is compared against the
 			// ones already accepted in THIS set_data, never against the stored data.
-			if (column === 'relation' && !isDataframeSave) {
+			if (column === 'relation') {
 				const { validateRelationInsert } = await import('../../relations/save.ts');
 				const validatedItems: unknown[] = [];
 				for (const element of rawItems) {
@@ -599,6 +633,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 						translatable,
 						lang: effectiveLang,
 						existingItems: validatedItems,
+						pairing: dataframePairing,
 					});
 					if (safeElement !== null) validatedItems.push(safeElement);
 				}
@@ -692,8 +727,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// autoreference guard, paginated_key strip, string section_id, and
 			// duplicate rejection (a dup is DROPPED so pagination.total stays
 			// unchanged — the client's server-authoritative duplicate check).
-			// Dataframe saves keep their own merge/id_key pipeline.
-			if (column === 'relation' && !isDataframeSave) {
+			// Dataframe saves run through it too, with the pairing: the caller's
+			// frame subset is the dedup scope, and the normalizer stamps dd490 +
+			// the server-side pairing fields over whatever the picker sent.
+			if (column === 'relation') {
 				const { validateRelationInsert } = await import('../../relations/save.ts');
 				const validated = await validateRelationInsert(value as Record<string, unknown>, {
 					componentTipo,
@@ -703,6 +740,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 					translatable,
 					lang: effectiveLang,
 					existingItems: items,
+					pairing: dataframePairing,
 				});
 				if (validated === null) continue; // ignored insert (PHP returns false)
 				value = validated;
@@ -766,12 +804,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		// item must not be rejected as a duplicate of ITSELF (PHP rebuilds its lookup
 		// map per set_data call, so the element under validation is never in it yet).
 		let effectiveChange = change;
-		if (
-			column === 'relation' &&
-			!isDataframeSave &&
-			change.value !== null &&
-			typeof change.value === 'object'
-		) {
+		if (column === 'relation' && change.value !== null && typeof change.value === 'object') {
 			const { validateRelationInsert } = await import('../../relations/save.ts');
 			const targetId = (change.value as { id?: unknown }).id ?? change.id ?? null;
 			const otherItems = (items as unknown[]).filter((item) => {
@@ -786,6 +819,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 				translatable,
 				lang: effectiveLang,
 				existingItems: otherItems,
+				pairing: dataframePairing,
 			});
 			// PHP drops the element when validate_data_element returns false; we leave
 			// the stored item untouched rather than persist a bad-formed locator.
@@ -823,9 +857,12 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	// before the write. This is the general safety net behind the doubling fix:
 	// a genuinely new append (id:null 'update', or the first toggle on an empty
 	// record) gets a stable id here, so subsequent updates target it in place.
-	// The dataframe path is exempt (it stamps id_key via its own merge); the
-	// atomic-insert path already allocated its ids.
-	if (!isDataframeSave && (hasUpdates || atomicInserts.length > 0)) {
+	// The atomic-insert path already allocated its ids.
+	// Dataframes are NOT exempt: `id` (the entry's own counter id) and `id_key`
+	// (the main item it pairs with) are different fields, and the merge stamps
+	// only the latter — so an id-less frame arriving through set_data used to
+	// persist without one, which the remove-by-id cascade then cannot target.
+	if (hasUpdates || atomicInserts.length > 0) {
 		for (const item of items) {
 			if (
 				item !== null &&

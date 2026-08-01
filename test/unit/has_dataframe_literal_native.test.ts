@@ -377,3 +377,97 @@ describe('generic has_dataframe literal read (TS-native, oracle-captured golden)
 		expect(tsItems.map(comparable)).toEqual(items as never);
 	});
 });
+
+describe('a LITERAL main honours its declared ddo mode, exactly like a RELATION main', () => {
+	/**
+	 * ONE component, ONE ontology contract. `component_dataframe` must behave
+	 * identically whichever kind of main it hangs off — an author should not
+	 * have to know that a relation main reads the frame's `mode` from the ddo
+	 * while a literal main reads it from the slot NODE.
+	 *
+	 * It used to: this path passed a SYNTHETIC ddo `{tipo, section_tipo}` and
+	 * took the mode from `resolveFrameConfig(...).nodeMode ?? 'list'`, so a ddo
+	 * declaring `"mode":"edit"` was silently dropped on a literal. Found live
+	 * on `oh16`/`oh130` (2026-07-31): the author copied a slot config from a
+	 * RELATION main (`numisdata1447`, which legitimately carries no node mode),
+	 * the frame resolved to `list`, and `list` + `view:"line"` resolves to
+	 * `dataframe_line` — a view that does not exist — so nothing rendered at
+	 * all while the server looked correct.
+	 *
+	 * The golden above pins the FALLBACK (its ddo declares no mode → node mode
+	 * → 'list'), which is what keeps this change purely additive. This pins the
+	 * other half: a DECLARED ddo mode wins.
+	 */
+	const readFrameMode = async (): Promise<unknown> => {
+		const { readSection } = await import('../../src/core/section/read.ts');
+		const result = await readSection({
+			dd_api: 'dd_core_api',
+			action: 'read',
+			source: {
+				tipo: 'test3',
+				section_tipo: 'test3',
+				model: 'section',
+				mode: 'list',
+				lang: 'lg-spa',
+			},
+			sqo: {
+				section_tipo: ['test3'],
+				limit: 1,
+				offset: 0,
+				filter_by_locators: [{ section_tipo: 'test3', section_id: String(RECORD_ID) }],
+			},
+			show: {
+				ddo_map: [{ tipo: MAIN_TIPO, section_tipo: 'test3', parent: 'test3', mode: 'list' }],
+			},
+		} as never);
+		const frame = ((result.data ?? []) as Record<string, unknown>[]).find(
+			(item) => item.tipo === FRAME_TIPO,
+		);
+		return frame?.mode;
+	};
+
+	/** Rewrite MAIN_TIPO's slot ddo, keeping everything else the fixture set. */
+	const setDeclaredMode = async (mode: string | undefined): Promise<void> => {
+		await sql.unsafe('UPDATE dd_ontology SET properties = $2::text::jsonb WHERE tipo = $1', [
+			MAIN_TIPO,
+			JSON.stringify({
+				has_dataframe: true,
+				source: {
+					request_config: [
+						{
+							sqo: { section_tipo: [{ value: ['dd1706'], source: 'section' }] },
+							show: {
+								ddo_map: [
+									mode === undefined
+										? { tipo: FRAME_TIPO, parent: 'self', section_tipo: 'test3' }
+										: { tipo: FRAME_TIPO, parent: 'self', section_tipo: 'test3', mode },
+								],
+							},
+						},
+					],
+				},
+			}),
+		]);
+		await clearOntologyLayerCaches();
+	};
+
+	afterAll(async () => {
+		// Restore the fixture's own ddo (no declared mode) so the golden test
+		// above keeps describing what the file provisions, whatever order the
+		// runner picks. revertFixture() in the file-level afterAll then puts the
+		// node's ORIGINAL properties back.
+		await setDeclaredMode(undefined);
+	});
+
+	test('a declared "edit" on the ddo reaches the frame item (was silently dropped)', async () => {
+		await setDeclaredMode('edit');
+		expect(await readFrameMode()).toBe('edit');
+	});
+
+	test('an undeclared mode still falls back to the node/list default', async () => {
+		await setDeclaredMode(undefined);
+		// test900 carries no node-level `mode`, so this is the 'list' default —
+		// the exact behaviour the frozen golden above pins.
+		expect(await readFrameMode()).toBe('list');
+	});
+});

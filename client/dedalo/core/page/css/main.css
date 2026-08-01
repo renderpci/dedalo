@@ -6188,7 +6188,7 @@ dd-modal.dd_confirm .body.content {
 * Shared by section and portal.
 */
 .list_body {
-  contain: layout;
+  contain: style;
   display: grid;
   height: 100%;
   position: relative;
@@ -19160,6 +19160,63 @@ body.inspector_resizing {
   padding-left: 0.25rem;
   position: relative;
   top: -0.1rem;
+}
+/**
+* LITERAL MAIN + ITS FRAME = ONE DATA UNIT
+*
+* A literal value and the frame that qualifies it are one statement, so they
+* read as one row: column 1 the main value, column 2 the frame.
+*
+* SCOPE. `has_dataframe` is added to `content_value` by attach_item_dataframe
+* (component_common/js/dataframe.js), which is the shared glue of the REGULAR
+* literals — input_text, text_area, date, number, email. `component_iri`
+* never calls it (it builds its frame through get_dataframe directly), so its
+* content_value never carries this class and its frame-BEFORE-main layout is
+* untouched by everything below. The ordering difference between the two is
+* handled by scope, not by a conditional.
+*
+* NO DOM WRAPPER, deliberately. The obvious implementation — wrap the main in
+* a div and flex the row — silently breaks the DIRECT-CHILD selectors that
+* three components rely on (`component_input_text` `>.input_value` and
+* `>.input_value:focus`, `component_number` the same, `component_text_area`
+* `>.content_value >.editor_container`). Grid placement gets the identical
+* layout with the DOM exactly as it is.
+*/
+/*
+* WHY THE SELECTOR IS THIS LONG (and why `has_dataframe` is repeated).
+*
+* The literals already own this node at 0,5,0 — measured in the browser, not
+* guessed: `.component_input_text.view_default.edit > .content_data >
+* .content_value { display: flex; flex-wrap: wrap }`. `component_dataframe.less`
+* is imported at main.less:74, BEFORE component_input_text (84),
+* component_number (88) and component_text_area (104), so ANY selector that
+* merely TIES loses on source order. The repeated class buys the extra point
+* (0,6,0) and wins deterministically — no `!important`, and no reordering the
+* imports, which would move every other rule in this file with it.
+*
+* Measured before this rule, on oh1/368: `display:flex; flex-wrap:wrap`, the
+* input taking the full 635px, and the 22px frame WRAPPED onto a second line
+* (container 39px tall vs input 26px) — the value and its frame reading as two
+* stacked things instead of one unit.
+*
+* Grid, not flex, on purpose: as a grid item the input's existing `width:100%`
+* (set by TWO rules, incl. a bare `input[type=text]`) resolves to 100% OF ITS
+* COLUMN, which is exactly what we want. Under flex that same declaration is
+* what pushed the frame onto the next line, and beating it would mean an
+* override per literal.
+*/
+.wrapper_component > .content_data > .content_value.has_dataframe.has_dataframe.has_dataframe {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  column-gap: 0.25rem;
+}
+.wrapper_component > .content_data > .content_value.has_dataframe.has_dataframe.has_dataframe > * {
+  grid-column: 1;
+}
+.wrapper_component > .content_data > .content_value.has_dataframe.has_dataframe.has_dataframe > .wrapper_component.component_dataframe {
+  grid-column: 2;
+  grid-row: 1;
 }
 /**
 * component_date

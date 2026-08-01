@@ -15,10 +15,17 @@
  * request_config sqo carries fixed_filter, its FIRST group becomes the
  * option search's filter (bad format → ignored with an error log, PHP
  * parity) — the state widget's vocabulary leaves (rsc80 family) are the
- * live users. Ledgered: datalist `hide` ddo values (TS emits []);
- * properties filtered_by_search / filtered_by_search_dynamic narrowing (the
- * PHP elseif branch — no live datalist component on this install carries
- * them).
+ * live users.
+ *
+ * HIDE ddo values are resolved per option (PHP :2931-2955) — see
+ * DatalistHideItem. They were emitted as `[]` until 2026-07-31, which broke
+ * the dataframe rating colour: the client reads `hide[0].literal` to paint the
+ * frame chip and threw "Cannot read properties of undefined (reading
+ * 'literal')", killing the whole record render.
+ *
+ * Ledgered: properties filtered_by_search / filtered_by_search_dynamic
+ * narrowing (the PHP elseif branch — no live datalist component on this
+ * install carries them).
  */
 
 import { type Locator, compareLocators } from '../concepts/locator.ts';
@@ -32,6 +39,21 @@ import { registerSectionDataListener } from '../section_record/save_event.ts';
 import { buildRequestConfigForElement } from './request_config/build.ts';
 import { type RequestConfigContext, extractSqoSectionTipos } from './request_config/explicit.ts';
 
+/**
+ * One resolved HIDE-ddo value of an option (PHP `$hide_item`, :2949-2953).
+ * Field names and order are the PHP object's — the client indexes into this
+ * by position (`hide[0]`) and reads `.literal`.
+ */
+export interface DatalistHideItem {
+	/** The component's solved value on the OPTION record (PHP get_value()). */
+	literal: string;
+	/** Which hide ddo produced it. */
+	tipo: string;
+	/** The option record this was read from — STRING, like the option's own. */
+	section_id: string;
+	section_tipo: string;
+}
+
 /** One datalist option (PHP get_list_of_values result item). */
 export interface DatalistItem {
 	/** The option locator — PHP stores section_id as a STRING here. */
@@ -39,8 +61,18 @@ export interface DatalistItem {
 	label: string;
 	/** STRING too — PHP passes the pg driver's raw row value through. */
 	section_id: string;
-	/** ddo_map hide config per option (empty in v0 — no hide rules on these lists). */
-	hide: string[];
+	/**
+	 * The option's HIDE-ddo values (PHP get_list_of_values :2931-2955,
+	 * `$ar_hide`): data the widget CONSUMES without rendering it as a column.
+	 *
+	 * The live user is the dataframe rating colour: `rsc1246` (a
+	 * component_radio_button whose options are `rsc1256` records) declares
+	 * `rsc1259` "Valuation" in SHOW — the option's label — and `rsc1260`
+	 * "Colour" in HIDE. The client looks the picked option up in this datalist
+	 * and paints the frame chip with `hide[0].literal`
+	 * (client/…/view_default_list_dataframe.js).
+	 */
+	hide: DatalistHideItem[];
 	/**
 	 * security-tools (dd1067) `view_tools` enrichment ONLY (PHP
 	 * tool_common::hydrate_tools_info): internal tool name (icon URL + label
@@ -185,6 +217,7 @@ async function resolveDatalistSources(
 ): Promise<{
 	targetSections: string[];
 	labelDdos: { tipo: string }[];
+	hideDdos: { tipo: string }[];
 	filterGroup: Record<string, unknown> | undefined;
 }> {
 	const context: RequestConfigContext = {
@@ -201,6 +234,11 @@ async function resolveDatalistSources(
 	const labelDdos = (mainItem?.show?.ddo_map ?? []).filter(
 		(ddo) => typeof ddo.model === 'string' && ddo.model.startsWith('component_'),
 	);
+	// HIDE ddos (PHP :2934-2936) — same component-model filter as the labels;
+	// their values ride on each option as internal data for the widget.
+	const hideDdos = (mainItem?.hide?.ddo_map ?? []).filter(
+		(ddo) => typeof ddo.model === 'string' && ddo.model.startsWith('component_'),
+	);
 
 	// PHP get_list_of_values (:2860): the FIRST fixed_filter group becomes the
 	// option search's filter; a non-object entry is ignored with an error log.
@@ -214,7 +252,7 @@ async function resolveDatalistSources(
 			console.error(`getDatalist '${componentTipo}': ignored fixed filter, bad format`);
 		}
 	}
-	return { targetSections: extractSqoSectionTipos(mainItem), labelDdos, filterGroup };
+	return { targetSections: extractSqoSectionTipos(mainItem), labelDdos, hideDdos, filterGroup };
 }
 
 /**
@@ -309,7 +347,7 @@ export async function getDatalist(
 	const cached = datalistCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 
-	const { targetSections, labelDdos, filterGroup } = await resolveDatalistSources(
+	const { targetSections, labelDdos, hideDdos, filterGroup } = await resolveDatalistSources(
 		componentTipo,
 		componentProperties,
 		ownerSectionTipo,
@@ -348,11 +386,23 @@ export async function getDatalist(
 		}
 		for (const row of rows) {
 			const labelParts: string[] = [];
-			if (labelDdos.length > 0) {
+			const hideItems: DatalistHideItem[] = [];
+			// ONE record read feeding both projections (PHP instantiates a
+			// component per ddo against the same row) — the read is the expensive
+			// part, and a 60k-option thesaurus cannot afford two.
+			if (labelDdos.length > 0 || hideDdos.length > 0) {
 				const record = await readMatrixRecord(table, targetSection, row.section_id);
 				if (record !== null) {
 					for (const ddo of labelDdos) {
 						labelParts.push(await resolveDdoLabel(record, ddo.tipo, lang));
+					}
+					for (const ddo of hideDdos) {
+						hideItems.push({
+							literal: await resolveDdoLabel(record, ddo.tipo, lang),
+							tipo: ddo.tipo,
+							section_id: String(row.section_id),
+							section_tipo: targetSection,
+						});
 					}
 				}
 			}
@@ -360,7 +410,7 @@ export async function getDatalist(
 				value: { section_tipo: targetSection, section_id: String(row.section_id) },
 				label: labelParts.join(' | '),
 				section_id: String(row.section_id),
-				hide: [],
+				hide: hideItems,
 			});
 		}
 	}

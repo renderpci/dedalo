@@ -56,6 +56,7 @@
 		create_source
 	} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
+	import {DATAFRAME_TYPE} from '../../component_common/js/dataframe.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
@@ -1015,8 +1016,15 @@ component_portal.prototype.link_record = async function(value) {
 	// id_key (the MAIN DATA ITEM id) plus the type marker and main_component_tipo.
 	// id_key is sourced exclusively from self.data.id_key (the item id threaded by
 	// section_record.js); it is NEVER derived from a section_id / section_id_key.
+	// The type marker is the CONSTANT, not whatever the view left on the locator.
+	// `self.data.type` is never sent by the server (the frame item carries no
+	// `type`), so the previous `self.data.type ?? value.type` fell through to
+	// either nothing — a picker-sourced locator has no type — or to 'dd151',
+	// stamped a few lines up by the tree-view branch. Both produce a frame the
+	// server-side reader cannot see. The server now forces dd490 regardless;
+	// this keeps the payload honest at the source.
 		if(self.model === 'component_dataframe'){
-			value.type					= self.data.type ?? value.type
+			value.type					= DATAFRAME_TYPE
 			value.id_key				= self.data.id_key
 			value.main_component_tipo	= self.data.main_component_tipo
 		}

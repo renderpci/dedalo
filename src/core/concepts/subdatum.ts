@@ -66,10 +66,17 @@ export interface CallerDataframe {
 }
 
 /**
- * The full locator property set that defines dataframe-entry identity
+ * The full locator property set that defines dataframe-entry IDENTITY
  * (PHP component_dataframe::$test_equal_properties,
- * class.component_dataframe.php:82). Used by the save/dedup path (Phase C);
- * the READ pairing predicate below intentionally checks a subset.
+ * class.component_dataframe.php:82) — the dedup key of the write path
+ * (dataframeEntriesEqual below); the READ pairing predicate
+ * (dataframeEntryMatches) intentionally checks a subset.
+ *
+ * `id` is DELIBERATELY absent: it is the entry's own per-record counter id,
+ * minted fresh on every insert, so including it would make every duplicate
+ * unique and defeat the check. That is exactly how three byte-identical
+ * frames reached one live record (oh1/368) — the merge deduped on a full
+ * JSON signature, which `id` always differentiated.
  */
 export const DATAFRAME_TEST_EQUAL_PROPERTIES: readonly string[] = [
 	'type',
@@ -131,4 +138,88 @@ export function dataframeEntryMatches(
 	const entryKey = entry.id_key;
 	if (entryKey === undefined || entryKey === null) return false;
 	return Number(entryKey) === Number(pairId);
+}
+
+/**
+ * The pairing context a frame write is scoped to — the wire
+ * `source.caller_dataframe`, narrowed to the two fields that define the
+ * pairing. Declared here (with the predicate and the normalizer) so every
+ * door speaks the same shape.
+ */
+export interface DataframePairing {
+	/** The dataframe SLOT tipo the entry is stored under. */
+	readonly frameTipo: string;
+	/** The main component whose item the frame extends. */
+	readonly mainComponentTipo: string;
+	/** The stable id of the main data item (locator `id` / literal item `id`). */
+	readonly idKey: number | string;
+}
+
+/**
+ * THE persisted-frame normalizer — the single definition of what a stored
+ * dataframe pairing locator looks like. Every write door funnels through it,
+ * so a frame cannot reach the DB in a shape the read predicate rejects.
+ *
+ * The four things it guarantees, each one a defect found live on oh1/368:
+ *   1. `type` is FORCED to dd490. Never trusted from the client, which sends
+ *      it absent (the service_autocomplete pick) or wrong ('dd151', stamped
+ *      by the portal tree-view branch). A frame without dd490 is invisible to
+ *      isDataframeEntry — stored, unreadable, and undeletable through the UI.
+ *   2. `from_component_tipo` / `main_component_tipo` / `id_key` come from the
+ *      SERVER's caller context, not the payload: the client sources its
+ *      `id_key` from the last read echo, so trusting it lets one broken read
+ *      corrupt every subsequent write.
+ *   3. `section_id` is stringified — the locator law's canonical form (all
+ *      9698 PHP-written frames store it as a string; a numeric one breaks
+ *      jsonb `@>` containment against a string-shaped probe).
+ *   4. transients and legacy pairing keys are STRIPPED: `paginated_key` is a
+ *      read-time index the client echoes back, and section_id_key /
+ *      section_tipo_key are the pre-v7 pairing (read-only BC, never written).
+ */
+export function normalizeDataframeEntry(
+	entry: Record<string, unknown>,
+	pairing: DataframePairing,
+): Record<string, unknown> {
+	const normalized: Record<string, unknown> = {
+		...entry,
+		type: DATAFRAME_RELATION_TYPE,
+		from_component_tipo: pairing.frameTipo,
+		main_component_tipo: pairing.mainComponentTipo,
+		id_key: Math.trunc(Number(pairing.idKey)),
+	};
+	if (normalized.section_id !== undefined && normalized.section_id !== null) {
+		normalized.section_id = String(normalized.section_id);
+	}
+	// biome-ignore lint/performance/noDelete: transient read-time index — must be ABSENT in stored data
+	delete normalized.paginated_key;
+	// biome-ignore lint/performance/noDelete: pre-v7 pairing keys are read-only BC, never written anew
+	delete normalized.section_id_key;
+	// biome-ignore lint/performance/noDelete: see above
+	delete normalized.section_tipo_key;
+	return normalized;
+}
+
+/**
+ * Frame IDENTITY equality over DATAFRAME_TEST_EQUAL_PROPERTIES — the write
+ * path's duplicate gate (PHP validate_data_element keyed by
+ * component_dataframe::get_locator_properties_to_check).
+ *
+ * String()-compared per the locator law's loose section_id rule, so a stored
+ * "4" and an incoming 4 are the same frame. The generic relation dedup key
+ * ([section_id, section_tipo, type, tag_id]) must NOT be used here: it omits
+ * id_key, so it would reject a legitimate second frame pointing at the same
+ * target record from a DIFFERENT main item.
+ */
+export function dataframeEntriesEqual(a: unknown, b: unknown): boolean {
+	if (a === null || typeof a !== 'object' || b === null || typeof b !== 'object') return false;
+	const left = a as Record<string, unknown>;
+	const right = b as Record<string, unknown>;
+	return DATAFRAME_TEST_EQUAL_PROPERTIES.every((property) => {
+		const leftValue = left[property];
+		const rightValue = right[property];
+		if (leftValue === undefined || leftValue === null) {
+			return rightValue === undefined || rightValue === null;
+		}
+		return String(leftValue) === String(rightValue);
+	});
 }

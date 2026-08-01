@@ -29,7 +29,7 @@ import { config as dedaloConfig } from '../../config/config.ts';
 import { type EmitHookContext, getEmitHook } from '../components/emit_hooks.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
-import { type Rqo, isTemporalSource } from '../concepts/rqo.ts';
+import { type Rqo, callerDataframePairing, isTemporalSource } from '../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
@@ -826,6 +826,79 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		return familyData as DataItem[];
 	}
 
+	// DATAFRAME get_data — the PAIRED read (PHP component_dataframe::get_data
+	// :103-129 filters the slot by the caller predicate; component_dataframe_json
+	// :196-206 stamps id_key + main_component_tipo on the item).
+	//
+	// This branch is the read half of the pairing contract, and it was MISSING:
+	// the generic portal expansion below reads the whole slot, so a frame widget
+	// refresh — and, worse, the SAVE ECHO, which is the same call — served every
+	// frame belonging to every main item, with no id_key on the item. The client
+	// assigns that response straight onto `self.data` (component_common.js :409
+	// on build, :776 on save success) and sources its next write's `id_key` from
+	// it (common.js create_source :1192), so the missing stamp did not just show
+	// the wrong rows: it destroyed the pairing key of the following write.
+	//
+	// HOW: by GRAFTING the caller's frame subset over the record and letting the
+	// STANDARD portal expansion below run on it — the same substitution trick
+	// component_relation_children uses a few lines up. A bespoke emitter here
+	// (the first attempt) silently dropped everything that path provides: the
+	// sqo limit/offset paging, the source.properties override, the ddinfo
+	// breadcrumb, and the mode handling — it re-derived the render mode from
+	// source.mode where the portal path pins 'edit', which routes the client
+	// into a different view. Grafting keeps ONE expansion for every door and
+	// confines this branch to the one thing it owns: the pairing.
+	//
+	// Only a COMPLETE pairing takes this path (callerDataframePairing is the
+	// single gate). Search mode is excluded outright: the client sends
+	// caller_dataframe on every dataframe request, including search, where the
+	// widget wants the blank search shape and not a paired frame.
+	let dataframeStamp: { main_component_tipo: string; id_key: number | string } | null = null;
+	if (model === 'component_dataframe' && (source.mode ?? 'edit') !== 'search') {
+		const pairing = callerDataframePairing(source);
+		if (pairing !== null) {
+			const { filterCallerEntries } = await import('../relations/dataframe.ts');
+			const { resolveDataTipo } = await import('../ontology/alias.ts');
+			const { cloneRecord, injectComponentData } = await import('../section_record/index.ts');
+			const frameDataTipo = await resolveDataTipo(tipo);
+			const slotBag =
+				((record.columns.relation as Record<string, unknown[]> | null)?.[frameDataTipo] as
+					| Record<string, unknown>[]
+					| undefined) ?? [];
+			const paired = filterCallerEntries(
+				slotBag,
+				{ main_component_tipo: pairing.main_component_tipo, id_key: pairing.id_key },
+				tipo,
+			);
+			// A CLONE — never the shared record: the graft must not leak this
+			// caller's narrowed slot into another request's view of the row.
+			record = cloneRecord(record);
+			injectComponentData(record, tipo, model, paired);
+			dataframeStamp = pairing;
+			if (paired.length === 0) {
+				// THE EMPTY-SET TRAP. expandPortal emits NO item for an empty
+				// relation, and the client's `self.data = data || {}` would then
+				// leave the widget with no entries array at all — worse than the
+				// wrong rows this branch is fixing. A main item with no frames yet
+				// is the NORMAL state of a fresh dataframe, so answer the empty
+				// item explicitly, carrying the pairing the client echoes back.
+				const emptyItem = buildDataItem(
+					tipo,
+					sectionTipo,
+					sectionId,
+					source.mode ?? 'edit',
+					'lg-nolan',
+					[],
+				);
+				emptyItem.pagination = { total: 0, limit, offset: sqoOffset };
+				emptyItem.parent_tipo = tipo;
+				emptyItem.id_key = Number(pairing.id_key);
+				emptyItem.main_component_tipo = pairing.main_component_tipo;
+				return [emptyItem];
+			}
+		}
+	}
+
 	// The component's OWN request_config (edit mode → the full child tree).
 	// An rqo source.properties OVERRIDE replaces the ontology properties (PHP
 	// dd_core_api read :2305-2308, $element->set_properties): TOOL component
@@ -924,6 +997,16 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	if (portalItem !== undefined && portalItem.tipo === tipo) {
 		// biome-ignore lint/performance/noDelete: PHP parity — row_section_id must be ABSENT here
 		delete portalItem.row_section_id;
+		// DATAFRAME pairing stamp (PHP component_dataframe_json :196-206), the
+		// same two fields emitDataframeItem puts on the section-read frame item.
+		// Load-bearing, not cosmetic: the client assigns this response onto
+		// self.data and sources the NEXT write's id_key from it (common.js
+		// create_source), so an unstamped echo destroys the following write's
+		// pairing.
+		if (dataframeStamp !== null) {
+			portalItem.id_key = Number(dataframeStamp.id_key);
+			portalItem.main_component_tipo = dataframeStamp.main_component_tipo;
+		}
 	}
 	// CHILDREN particularities (PHP component_relation_children get_data):
 	// computed locators carry NO paginated_key, the own item echoes the
@@ -1666,17 +1749,43 @@ export async function emitDdoData(
 				.map((valueItem) => (valueItem as { id?: number | string } | null)?.id)
 				.filter((id): id is number | string => id !== undefined && id !== null);
 			const pairIds = storedIds.length > 0 ? storedIds : [1];
+			// The main's OWN declared ddo for each slot. A dataframe must behave
+			// IDENTICALLY on a literal and on a relation main — one component,
+			// one ontology contract — so the frame's mode/target come from the
+			// same place in both: the ddo the main declares in its
+			// `show.ddo_map`. The relation path already does exactly this
+			// (relation_core: `childDdo.mode ?? portalMode`); this path used to
+			// pass a SYNTHETIC ddo `{tipo, section_tipo}` and read the mode off
+			// the slot NODE instead, so a ddo that declared `"mode":"edit"` was
+			// silently ignored on a literal and the frame resolved to 'list' —
+			// which, with any view other than default/text/mini, renders nothing.
+			// Discovery still walks fixedDataframeTipos / has_dataframe children
+			// (a slot need not be declared to exist); the ddo only supplies HOW
+			// it renders, and the node-property fallback keeps every config that
+			// declares no ddo byte-identical.
+			const { resolveOwnConfigMap } = await import('../section/list_definitions/section_list.ts');
+			const declaredDdos = (await resolveOwnConfigMap(ddo.tipo)).rawDdos ?? [];
 			for (const frameTipo of frameTipos) {
-				// Frame item mode: the frame NODE's own properties.mode (dd560 →
-				// 'edit') else LIST (the generic literal default, oracle-pinned).
-				const frameNodeMode = (await resolveFrameConfig(frameTipo)).nodeMode ?? 'list';
+				const declared = declaredDdos.find((entry) => entry.tipo === frameTipo);
+				// Frame item mode: the DECLARED ddo, else the frame NODE's own
+				// properties.mode (dd560 → 'edit'), else LIST (the generic
+				// literal default, oracle-pinned).
+				const frameMode =
+					declared?.mode ?? (await resolveFrameConfig(frameTipo)).nodeMode ?? 'list';
+				// Frames live on the caller's record unless the ddo names another
+				// section ('self'/undeclared = the caller's) — the sibling-record
+				// case emitDataframeItem resolves.
+				const declaredSection =
+					typeof declared?.section_tipo === 'string' && declared.section_tipo !== 'self'
+						? declared.section_tipo
+						: row.section_tipo;
 				for (const pairId of pairIds) {
 					await emitDataframeItem(
-						{ tipo: frameTipo, section_tipo: row.section_tipo } as Ddo,
+						{ tipo: frameTipo, section_tipo: declaredSection, view: declared?.view } as Ddo,
 						record,
 						ddo.tipo,
 						pairId,
-						frameNodeMode,
+						frameMode,
 						row,
 						defaultLang,
 						callerTipo,

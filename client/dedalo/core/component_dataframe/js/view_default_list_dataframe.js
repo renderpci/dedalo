@@ -243,7 +243,15 @@ const render_content_value = function(options) {
 					}
 
 				// update background color
-					const bg_color = rating.hide[0].literal || default_bk_color
+				// Defensive on BOTH steps: find() returns undefined when the stored
+				// rating locator is not in the datalist (a deleted/out-of-scope option),
+				// and a datalist option's `hide` is not guaranteed to be populated —
+				// the TS engine currently emits `hide: []` for every datalist option
+				// (src/core/relations/datalist.ts, ledgered uncovered scope), so
+				// `rating.hide[0].literal` threw "Cannot read properties of undefined
+				// (reading 'literal')" and killed the whole record render. The colour
+				// is decoration; it must never be able to take the page down.
+					const bg_color = rating?.hide?.[0]?.literal || default_bk_color
 					button_activate.style.backgroundColor = bg_color
 
 				// update text color based on background
