@@ -549,16 +549,31 @@
   display: table;
 }
 .wrapper_tool.tool_indexation .gutter {
-  background-color: var(--color_grey_15);
-  background-repeat: no-repeat;
-  background-position: 50%;
+  flex: 0 0 auto;
+  position: relative;
+  background-color: var(--bg_surface_alt);
+  border-left: 1px solid var(--border_default);
+  border-right: 1px solid var(--border_default);
+  box-sizing: border-box;
+  transition: background-color 0.15s;
+}
+.wrapper_tool.tool_indexation .gutter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 1.75rem;
+  background-image: repeating-linear-gradient(to bottom, var(--fg_muted) 0px, var(--fg_muted) 2px, transparent 2px, transparent 5px);
+}
+.wrapper_tool.tool_indexation .gutter:hover {
+  background-color: var(--bg_surface);
+}
+.wrapper_tool.tool_indexation .gutter:hover::after {
+  background-image: repeating-linear-gradient(to bottom, var(--tool_indexation) 0px, var(--tool_indexation) 2px, transparent 2px, transparent 5px);
 }
 .wrapper_tool.tool_indexation .gutter.gutter-horizontal {
-  background-image: url('../img/grips/vertical.png');
   cursor: col-resize;
-}
-.wrapper_tool.tool_indexation .gutter.gutter-vertical {
-  background-image: url('../img/grips/horizontal.png');
-  cursor: row-resize;
 }
 /*# sourceMappingURL=tool_indexation.css.map */

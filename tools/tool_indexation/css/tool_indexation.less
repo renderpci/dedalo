@@ -519,17 +519,65 @@
 	}//end content_data
 
 	// split
+	// The drag handle between the two panes. Same idiom as tool_lang and
+	// tool_transcription, so the divider is one thing across the tools.
+	// The grip is DRAWN, not a bitmap. It used to be
+	// `url('../img/grips/vertical.png')` — a fixed light-grey image that
+	// disappears against the dark theme, on a flat @color_grey_15 bar with the
+	// same reading problem. Two theme-aware tokens and a repeating gradient
+	// carry both themes with nothing to ship, so img/grips/ (vertical.png +
+	// horizontal.png, the latter for a vertical split this tool never had) is
+	// deleted rather than left as an unreferenced asset.
+	// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
 	.gutter {
-		background-color: @color_grey_15;
-		background-repeat: no-repeat;
-		background-position: 50%;
-	}
-	.gutter.gutter-horizontal {
-		background-image: url('../img/grips/vertical.png');
-		cursor: col-resize;
-	}
-	.gutter.gutter-vertical {
-		background-image: url('../img/grips/horizontal.png');
-		cursor: row-resize;
+		flex: 0 0 auto;
+		position: relative;
+		background-color: var(--bg_surface_alt);
+		border-left: 1px solid var(--border_default);
+		border-right: 1px solid var(--border_default);
+		box-sizing: border-box;
+		transition: background-color 0.15s;
+
+		// a short dotted rule centred on the bar, so the separator reads as
+		// something you can take hold of rather than a border
+		&::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 2px;
+			height: 1.75rem;
+			background-image: repeating-linear-gradient(
+				to bottom,
+				var(--fg_muted) 0px,
+				var(--fg_muted) 2px,
+				transparent 2px,
+				transparent 5px
+			);
+		}
+
+		// the tool hue on hover is what tells the user the divider is draggable
+		&:hover {
+			background-color: var(--bg_surface);
+
+			&::after {
+				background-image: repeating-linear-gradient(
+					to bottom,
+					@tool_color 0px,
+					@tool_color 2px,
+					transparent 2px,
+					transparent 5px
+				);
+			}
+		}
+
+		// (!) only the horizontal case exists: this tool splits left/right and
+		// never top/bottom (render_tool_indexation calls Split on
+		// ['#left_container','#right_container']), so there is no
+		// .gutter-vertical rule to write.
+		&.gutter-horizontal {
+			cursor: col-resize;
+		}
 	}
 }//end wrapper_tool
