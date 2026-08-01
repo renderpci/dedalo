@@ -28,7 +28,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
   gates (DEC-14b — each retired differential's twin is mapped in
   `engineering/ORACLE_HARVEST.md`).
 - A re-harvest is IMPOSSIBLE by definition. Any fixture change is a
-  deliberate contract edit and needs its `engineering/WIRE_CONTRACT.md`
+  deliberate contract edit and needs its `engineering/wire_contract/`
   entry the same day — the WC ledger remains the wire law.
 - Never assert against a mutable production record — use scratch twins
   (see the `dedalo-parity-debugging` skill; its live-oracle workflow is
@@ -83,7 +83,7 @@ When in doubt: if a gate reads it or a consumer needs it, it is `engineering/`.
 |---|---|
 | `engineering/REWRITE_SPEC.md` | Master spec: constraints, security chokepoints, architecture. |
 | `engineering/TRIPWIRES.md` | **The tripwire index** — machine-read: `verify.ts` TRIPWIRES must equal it exactly. |
-| `engineering/WIRE_CONTRACT.md` | Ledgered wire-shape divergences from PHP (WC-nn). |
+| `engineering/WIRE_CONTRACT.md` | The wire-divergence ledger's RULES + id grammar; the entries are one file each in `engineering/wire_contract/`. |
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. |
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). |
 | `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. |

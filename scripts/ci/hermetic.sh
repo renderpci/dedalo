@@ -86,6 +86,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/ci_workflow_tripwire.test.ts
 	test/unit/docs_current_engine_tripwire.test.ts
 	test/unit/css_build_tripwire.test.ts
+	test/unit/wire_contract_tripwire.test.ts
 	test/unit/theme_token_parity.test.ts
 )
 

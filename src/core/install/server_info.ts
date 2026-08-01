@@ -4,7 +4,8 @@
  * TS-MEANINGFUL facts are emitted: the PHP/Apache-specific checkers
  * (php_version, apache_version, memory_limit, php_memory, max_execution_time,
  * php_user, gd, mbstring) were REMOVED from both this payload and the installer
- * client's grid (WC-006) — the Bun server has no PHP, so they were always '—'.
+ * client's grid (WC-2026-07-09-installer-diagnostics-grid) — the Bun server has no
+ * PHP, so they were always '—'.
  */
 
 import { statfsSync } from 'node:fs';

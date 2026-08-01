@@ -10,7 +10,7 @@
  * carrier for tool components (single source of truth instead of inline
  * ddo_map property copies; user decision 2026-07-10).
  *
- * CONTRACT (engineering/WIRE_CONTRACT.md WC-020):
+ * CONTRACT (engineering/wire_contract/ WC-020):
  * - `alias_of` required; SINGLE hop (alias→alias throws); missing target
  *   throws; retired v5 keys (`max_records`/`look_inside`/`edit_view`) present
  *   on an alias node throw — a half-migrated node must be loud.

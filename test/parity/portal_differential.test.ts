@@ -64,7 +64,7 @@ describe.if(hasPhpCredentials())('portal subdatum differential (Phase 4c gate)',
 			config.phpReference.password as string,
 		);
 		const { body } = await client.call(structuredClone(READ_RQO));
-		// DEC-02 / WIRE_CONTRACT.md WC-001: assert the adopted `entries: []`
+		// DEC-02 / engineering/wire_contract/ WC-001: assert the adopted `entries: []`
 		// empty contract (PHP's `entries: null` is the fossil shape at this seam).
 		phpData = adoptEntriesArrayContract((body.result as { data: Record<string, unknown>[] }).data);
 		tsData = (await readSectionRows(READ_RQO as unknown as Rqo)) as unknown as Record<

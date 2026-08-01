@@ -47,7 +47,7 @@ Standing spec for the section family, companion to `engineering/REWRITE_SPEC.md`
 > direct column (append-only log ⇒ When-order ≡ insertion order); every
 > other dd542 column emits `sortable:false`. Rationale, the flattened
 > ordered-search SQL shape that accompanies it, and its unique-key guard
-> (`tableHasUniqueSectionKey`) are in `engineering/WIRE_CONTRACT.md`
+> (`tableHasUniqueSectionKey`) are in `engineering/wire_contract/`
 > WC-044; gate: `test/unit/activity_sort_policy.test.ts`.
 
 **The section is THE main structure of Dédalo.** A section is the definition of a data schema — the analogue of a table in SQL: a named set of fields (components), defined in the ontology, organized by hierarchy relations. It is instantiated as a **section_record** in the matrix DB under a `section_id` that, combined with the `section_tipo`, is the base of the **locator** — every relation in the system points at that pair. A rewrite that gets sections wrong gets Dédalo wrong.
@@ -178,7 +178,7 @@ Not every component appears in list view. The `section_list` child node's `relat
 > Site-A swapped object's — 16 live mosaic portals depend on that fallback),
 > then the model default.
 > TS-only WC-016 extension: reserved `css.list`/`css.search` mode keys
-> (`engineering/WIRE_CONTRACT.md`). Gates: `component_list_css_strip_differential`,
+> (`engineering/wire_contract/`). Gates: `component_list_css_strip_differential`,
 > `section_list_css_differential`, the `css` field in `context_differential`,
 > `test/unit/structure_context_css.test.ts`.
 

@@ -226,7 +226,7 @@ export class EmissionContext {
 /**
  * Build the canonical data item envelope.
  *
- * WC-001 (engineering/WIRE_CONTRACT.md, DEC-02): an empty value emits `entries: []`
+ * WC-001 (engineering/wire_contract/, DEC-02): an empty value emits `entries: []`
  * — NEVER null — for EVERY model. PHP emits null; the byte-identical client's
  * lifecycle code requires an array (`entries.map(...)` call sites crash on
  * null), so the TS engine unified on `[]` at this single chokepoint. Parity

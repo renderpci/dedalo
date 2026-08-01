@@ -107,7 +107,7 @@ production mileage the engine it replaces had. Treat it accordingly.
 
 A handful of wire shapes diverge from the original **on purpose** — usually to *fix* a bug rather
 than faithfully reproduce it. Each of those is recorded, with its reason, in the wire-contract
-ledger (`engineering/WIRE_CONTRACT.md`). Correctness is held by the tripwires and by a parity
+ledger (`engineering/wire_contract/`). Correctness is held by the tripwires and by a parity
 suite that replays a fixture store harvested from the old engine before it was retired — see
 [Testing](development/testing.md).
 

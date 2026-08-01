@@ -990,7 +990,8 @@ const render_init_test_block = function(self) {
 		// Apache / PHP User / GD / mbstring) were removed — the Bun server has no
 		// PHP, so those were always '—'. This installer client is a TS-OWNED
 		// divergence from the PHP copy (excluded from scripts/sync_client.sh,
-		// ledgered WC-006). The real progression gate is init_test.result.
+		// ledgered WC-2026-07-09-installer-diagnostics-grid in
+		// engineering/wire_contract/). The real progression gate is init_test.result.
 
 		// RAM
 		add_card(

@@ -79,7 +79,7 @@ interface HarvestFile {
  * baseline-of-record); 'live'/'record' remain selectable explicitly but there
  * is nothing left to answer them — a re-harvest is impossible by definition,
  * and any fixture change from here on is a deliberate contract edit
- * (engineering/WIRE_CONTRACT.md). */
+ * (engineering/wire_contract/). */
 export function oracleMode(): OracleMode {
 	const raw = process.env.ORACLE_MODE ?? 'fixtures';
 	if (raw === 'live' || raw === 'record' || raw === 'fixtures') return raw;

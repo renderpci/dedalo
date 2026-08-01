@@ -68,7 +68,7 @@ beforeAll(async () => {
 
 	for (const testCase of CASES) {
 		const rqo = rqoOf(testCase.limit, testCase.offset);
-		// WC-001 (unified []): rewrite the PHP side only (see engineering/WIRE_CONTRACT.md).
+		// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
 		const phpData = adoptEntriesArrayContract(
 			((await php.call(structuredClone(rqo))).body as { result?: { data?: unknown[] } }).result
 				?.data ?? [],

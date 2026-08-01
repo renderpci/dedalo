@@ -1,6 +1,6 @@
 ---
 name: dedalo-ts-testing
-description: How to test the Dédalo v7 TypeScript/Bun rewrite oracle-honestly — the two tiers (test/unit/ pure+DB, test/parity/ differential vs the LIVE PHP oracle), the green-suite trap (differentials pass TRIVIALLY when PHP creds are absent), the eleven tripwire tests that are the invariant-enforcement backbone, and scratch-write hygiene. Use when writing or debugging any *.test.ts or *_differential.test.ts, when a test fails only in full-suite/parallel order, when oracle-gating with describe.if(hasPhpCredentials()) / test.if(...), running ORACLE_MODE=fixtures/record harvest (scripts/oracle_harvest.ts), asking "is this test actually asserting anything or silently green", adding or trusting a tripwire, chasing a mock.module leak across files ("mock.restore doesn't revert"), a wiped session store, or a deliberate TS↔PHP wire divergence (WC-001, entries:[]). Symbols: hasPhpCredentials (test/parity/php_client.ts:178), oracleMode/ORACLE_MODE (test/parity/oracle_fixtures.ts), oracle_canary.test.ts, DEDALO_SESSION_DB_PATH. Sibling: dedalo-parity-debugging for the differential probe/browser workflow. Authoritative: rewrite/LEDGER.md (tripwire index + measured state), engineering/ORACLE_HARVEST.md, engineering/WIRE_CONTRACT.md.
+description: How to test the Dédalo v7 TypeScript/Bun rewrite oracle-honestly — the two tiers (test/unit/ pure+DB, test/parity/ differential vs the LIVE PHP oracle), the green-suite trap (differentials pass TRIVIALLY when PHP creds are absent), the eleven tripwire tests that are the invariant-enforcement backbone, and scratch-write hygiene. Use when writing or debugging any *.test.ts or *_differential.test.ts, when a test fails only in full-suite/parallel order, when oracle-gating with describe.if(hasPhpCredentials()) / test.if(...), running ORACLE_MODE=fixtures/record harvest (scripts/oracle_harvest.ts), asking "is this test actually asserting anything or silently green", adding or trusting a tripwire, chasing a mock.module leak across files ("mock.restore doesn't revert"), a wiped session store, or a deliberate TS↔PHP wire divergence (WC-001, entries:[]). Symbols: hasPhpCredentials (test/parity/php_client.ts:178), oracleMode/ORACLE_MODE (test/parity/oracle_fixtures.ts), oracle_canary.test.ts, DEDALO_SESSION_DB_PATH. Sibling: dedalo-parity-debugging for the differential probe/browser workflow. Authoritative: rewrite/LEDGER.md (tripwire index + measured state), engineering/ORACLE_HARVEST.md, engineering/wire_contract/.
 ---
 
 # Dédalo v7 testing (TypeScript rewrite)
@@ -46,7 +46,7 @@ The oracle shares the corpus Postgres — a careless write corrupts real records
 
 ## Deliberate TS↔PHP divergences — ledger, don't normalize
 
-When TS intentionally differs from PHP (a PHP live defect, or a chosen wire improvement), the gate normalizes the oracle side to match — but that normalization must be **justified and recorded**, never a silent smoothing-over that hides a real regression. Record it in **engineering/WIRE_CONTRACT.md** (e.g. **WC-001**: empty component value is `entries: []`, unified across all models — PHP emitted `null`) and update the gate to transform the fixture. A normalization key with no WIRE_CONTRACT row is a bug in disguise; the reviewer's question is always "is this divergence deliberate and ledgered, or are you papering over a diff?".
+When TS intentionally differs from PHP (a PHP live defect, or a chosen wire improvement), the gate normalizes the oracle side to match — but that normalization must be **justified and recorded**, never a silent smoothing-over that hides a real regression. Record it in **engineering/wire_contract/**, one file per entry (e.g. **WC-001**: empty component value is `entries: []`, unified across all models — PHP emitted `null`) and update the gate to transform the fixture. A normalization key with no ledger entry is a bug in disguise; the reviewer's question is always "is this divergence deliberate and ledgered, or are you papering over a diff?".
 
 ## THE TRIPWIRE-TEST PATTERN — the enforcement backbone
 
@@ -90,7 +90,7 @@ A test that fails **only in full-suite / parallel order** but passes standalone 
 
 1. Oracle-touching? → gate it `describe.if(hasPhpCredentials())`. Assert on real structure, not `[]`.
 2. Writes the DB? → `matrix_test` / `dedalo_ts_test_*` only; scratch twin; clean up both ends; never the live session store.
-3. Diverges from PHP on purpose? → WIRE_CONTRACT.md row + normalization key, not a silent smoothing.
+3. Diverges from PHP on purpose? → an `engineering/wire_contract/` entry + normalization key, not a silent smoothing.
 4. New invariant? → new tripwire, and prove it red-on-violation before trusting it.
 5. Uses `mock.module`? → snapshot + `afterEach` re-install, or it leaks.
 

@@ -1,7 +1,7 @@
 /**
  * TIME MACHINE (dd15) list-sort policy — the TS-native contract for the
  * append-only history log, twin of the dd542 policy in activity_sort_policy.test.ts
- * (WC-044's family; this one is ledgered in engineering/WIRE_CONTRACT.md).
+ * (WC-044's family; this one is ledgered in engineering/wire_contract/).
  *
  * dd15's list columns ARE matrix_time_machine's own flat columns, so a header
  * click maps 1:1 to a real column (read_tm.ts TM_ORDER_COLUMN) — there is no

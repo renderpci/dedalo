@@ -213,7 +213,7 @@ the whole tag UI). The server feed, restored 2026-07-29 (WC-065/WC-066):
   `source.action:'related_search'` read (read_facade.ts), same producer.
 
 Wire shapes and the deliberate divergences from PHP are ledgered in
-`WIRE_CONTRACT.md` WC-065 (all-string section_ids, sections item always
+`engineering/wire_contract/` WC-065 (all-string section_ids, sections item always
 present, `value: string[]` cells) and WC-066 (note-button gating).
 
 ## Speaker detection (diarization)

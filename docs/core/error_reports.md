@@ -86,6 +86,6 @@ short:
 ## Notes
 
 - The report tool and the browse widget are a TypeScript-native feature. See
-  `engineering/WIRE_CONTRACT.md` WC-017/018/019.
+  `engineering/wire_contract/` WC-017/018/019.
 - Client assets (the error buffer, the global launcher, the widget) are TS-owned
   and served by the TS server.

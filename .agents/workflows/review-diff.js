@@ -79,7 +79,7 @@ const DIMENSIONS = [
 	{
 		key: 'wire-contract-parity',
 		skill: 'dedalo-ts-testing',
-		lens: `the PHP-oracle wire contract. Flag: a client-facing shape that diverges from PHP WITHOUT a engineering/WIRE_CONTRACT.md ledger line (silent divergence the client may crash on); emitting entries:null where the unified contract is entries:[] (WC-001); a scope/behaviour SILENTLY NARROWED instead of throwing loudly + ledgering the gap in rewrite/LEDGER.md; a normalization in a parity test that could hide a real divergence.`,
+		lens: `the PHP-oracle wire contract. Flag: a client-facing shape that diverges from PHP WITHOUT an engineering/wire_contract/ ledger entry (silent divergence the client may crash on); emitting entries:null where the unified contract is entries:[] (WC-001); a scope/behaviour SILENTLY NARROWED instead of throwing loudly + ledgering the gap in rewrite/LEDGER.md; a normalization in a parity test that could hide a real divergence.`,
 	},
 	{
 		key: 'tripwire-integrity',

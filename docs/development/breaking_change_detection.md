@@ -19,8 +19,8 @@ the fixture — which is, by construction, an explicit act.
 
 !!! danger "A fixture edit is a contract edit"
     Changing a fixture changes the contract every integrator depends on. It requires
-    an entry in the wire-contract ledger (`engineering/WIRE_CONTRACT.md`, the `WC-nn`
-    entries) **the same day**. That ledger is the wire law: if a divergence is not in
+    an entry in the wire-contract ledger (`engineering/wire_contract/`, one file per
+    `WC-` entry) **the same day**. That ledger is the wire law: if a divergence is not in
     it, the divergence is a bug. Never edit a fixture to make a failing test pass.
 
 **Breaking** (a parity diff will flag it): a removed response field, a changed field
@@ -109,8 +109,10 @@ explicitly, in this order:
 2. **Check the client.** The client and the server share an exact wire contract; a
    field the server stops emitting is a field the client stops rendering. Move both
    together, and run `bun run test:client`.
-3. **Ledger it.** Add the `WC-nn` entry to `engineering/WIRE_CONTRACT.md` describing
-   the old shape, the new shape, and why. Same day, same commit.
+3. **Ledger it.** Add an entry file to `engineering/wire_contract/` describing the old
+   shape, the new shape, and why. Same day, same commit. Its id is
+   `WC-<yyyy>-<mm>-<dd>-<slug>` — the grammar and the entry format are in
+   `engineering/WIRE_CONTRACT.md`.
 4. **Then update the fixture** to the new shape, so the gate pins the new contract.
 5. **Never silence a diff via `normalize.ts`** unless the field is genuinely volatile —
    and then only with a written justification in that file. Stripping a real contract
@@ -135,5 +137,5 @@ explicitly, in this order:
   surface the contract gates drive.
 - [Development overview](index.md) — the Conventional Commits convention for flagging
   a breaking change.
-- Definitions of record: `engineering/WIRE_CONTRACT.md` (the ledger),
+- Definitions of record: `engineering/wire_contract/` (the ledger),
   `engineering/TRIPWIRES.md` (the gate index), `engineering/CI.md` (the pipeline).

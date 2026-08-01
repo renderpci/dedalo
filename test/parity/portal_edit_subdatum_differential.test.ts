@@ -49,7 +49,7 @@ async function phpData(rqo: Record<string, unknown>): Promise<Record<string, unk
 	const body = (await php.call(structuredClone(rqo))).body as {
 		result?: { data?: Record<string, unknown>[] };
 	};
-	// DEC-02 / WIRE_CONTRACT.md WC-001: assert the adopted `entries: []` empty
+	// DEC-02 / engineering/wire_contract/ WC-001: assert the adopted `entries: []` empty
 	// contract (PHP's `entries: null` is the fossil shape at this seam).
 	return adoptEntriesArrayContract(normalize(body.result?.data ?? []));
 }

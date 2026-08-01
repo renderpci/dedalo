@@ -52,7 +52,7 @@ export function normalizeApiResponse<T>(responseBody: T): T {
 
 /**
  * DELIBERATE WIRE DIVERGENCE — the `entries` empty contract (DEC-02, adopted
- * option (a); ledgered in engineering/WIRE_CONTRACT.md entry WC-001).
+ * option (a); ledgered in engineering/wire_contract/ entry WC-001).
  *
  * For an EMPTY component value PHP emits `entries: null`; the TS engine emits
  * `entries: []` (commit 589deae — the byte-identical client's lifecycle code

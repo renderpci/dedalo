@@ -66,7 +66,8 @@ ASSET_INCLUDES=(
 # the native behavior. Port PHP changes by hand (same pattern as tools/).
 #  - diffusion_server_control (WC-005): reworked against the NATIVE diffusion
 #    engine (job-queue actions replace the PHP daemon start/stop/restart).
-#  - installer (WC-006): the TS-native install wizard; its diagnostics grid drops
+#  - installer (WC-2026-07-09-installer-diagnostics-grid): the TS-native install
+#    wizard; its diagnostics grid drops
 #    the PHP/Apache-only checkers (php_version/gd/mbstring/…) the Bun server has
 #    no PHP for. The PHP tree keeps its own PHP-era installer.
 #  - error_reports (WC-018): TS-only maintenance widget browsing the error-report

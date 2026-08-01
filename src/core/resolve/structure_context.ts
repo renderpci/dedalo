@@ -478,7 +478,7 @@ async function resolveSourceProperties(
  *   properties.css[tipo] REPLACES the css when present — any mode, even over a
  *   list-stripped null (isset semantics: a null value does not override).
  *
- * TS-only extension (engineering/WIRE_CONTRACT.md WC-016): the winning css object may
+ * TS-only extension (engineering/wire_contract/ WC-016): the winning css object may
  * scope rules per mode via the RESERVED top-level keys `list` / `search`
  * (selector-fragment maps, resolved by resolveCssModeKeys). Bare keys keep PHP
  * semantics exactly — measured: no existing ontology css uses the reserved

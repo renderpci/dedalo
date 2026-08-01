@@ -8,7 +8,7 @@
 > defaults to `fixtures`; the 23 fixture-exempt gates are RETIRED — the
 > DEC-14b punch list below maps each to its surviving TS-native twin. A
 > re-harvest is impossible by definition: any fixture change from here on is
-> a deliberate contract edit (`engineering/WIRE_CONTRACT.md`).
+> a deliberate contract edit (`engineering/wire_contract/`).
 
 The differential parity suite verified the TS engine against the **live PHP
 oracle** (`PHP_API_BASE_URL`, creds in `../private/.env`). That oracle was
@@ -97,7 +97,7 @@ S2-43's fixture-rot channel). The TS side keeps reading that DB live, so:
   Never "fix" the engine to match rotten data, and never re-harvest to bury
   an engine regression — the two-sided rule of the per-fixture
   `drift_policy` string.
-- A **deliberate wire divergence** (a `engineering/WIRE_CONTRACT.md` entry) makes
+- A **deliberate wire divergence** (a `engineering/wire_contract/` entry) makes
   the frozen PHP shape the *fossil* side, exactly like the live oracle: the
   gates already encode adopted divergences (e.g. WC-001 `entries:[]`) by
   transforming the PHP response before diffing, so fixtures stay verbatim
@@ -167,7 +167,7 @@ so it is never harvested; in fixture mode it asserts the store is present.
    `audits/2026-07_foundation/general/REMEDIATION.md`.
 6. After decommissioning, a "re-harvest" is impossible by definition: any
    adjudicated fixture change from then on is a deliberate contract edit and
-   belongs in `engineering/WIRE_CONTRACT.md`.
+   belongs in `engineering/wire_contract/`.
 
 ## DEC-14b re-expression punch list (audited 2026-07-10)
 

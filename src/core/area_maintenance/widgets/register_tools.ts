@@ -168,7 +168,7 @@ function readActiveOverrides(options: Record<string, unknown>): Record<string, b
  * errors', errors = flat per-tool error strings. Report items keep the TS
  * installer shape {name,dir,version,imported,errors,warnings} plus `active`
  * (richer than PHP's file_info rows — ledgered divergence WC-057,
- * engineering/WIRE_CONTRACT.md).
+ * engineering/wire_contract/).
  *
  * The panel's checkboxes ride in as `options.tools_active` and outrank each
  * register.json's own `active` declaration — see applyActiveOverride. With no

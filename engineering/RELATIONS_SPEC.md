@@ -158,7 +158,7 @@ Datalist (§5.1) + single/multi selection semantics. Portal adds pagination (tot
 > temporal one (`section/record/temporal.ts`). Before this the echo was page
 > ONE at the component's config limit, and a client that treats "the last
 > echoed entry" as the new record opened the FIRST one on any portal where
-> `limit < total`. See `engineering/WIRE_CONTRACT.md` WC-081; gate:
+> `limit < total`. See `engineering/wire_contract/` WC-081; gate:
 > `test/unit/save_add_new_element_page_native.test.ts`.
  Autocomplete is portal/select with a search-driven choose flow (`choose` ddo_map + `search` SQO); the `_hi` (hierarchical) flavor targets thesaurus hierarchies and needs the `relation_search` ancestor index (§2).
 

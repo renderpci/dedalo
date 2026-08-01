@@ -242,7 +242,7 @@ resume equivalence depend on it).
   `checkpoint`, `result`, `runner` or `errors[]`), because the frame is
   re-serialized once a second per connected admin; that makes the narrowness
   both the cost bound and the data-minimisation bound. Full shape, the
-  SSE-framed refusal, and the cadence/lifetime rationale: `WIRE_CONTRACT.md`
+  SSE-framed refusal, and the cadence/lifetime rationale: `engineering/wire_contract/`
   WC-067.
 - **Data plane = spawned runner.** `diffuse` enqueues a durable job; a
   scheduler claims it (`FOR UPDATE SKIP LOCKED`, global limit default 2,
@@ -259,7 +259,7 @@ resume equivalence depend on it).
   what an admin actually operates. `drain_resume` quiesces: hold dispatch, wait
   for the running jobs, then resume and kick; bounded, and on timeout it stays
   paused rather than resuming over runners that would not drain. All in-memory,
-  reset to running on restart. Shape: `WIRE_CONTRACT.md` WC-075.
+  reset to running on restart. Shape: `engineering/wire_contract/` WC-075.
 - **Claiming has ONE gate.** `DEDALO_DIFFUSION_SCHEDULER_ENABLED=false` means
   this process never claims — that is the key's whole promise (a second instance
   sharing the database, the ops smoke tests). It is enforced inside

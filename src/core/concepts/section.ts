@@ -130,7 +130,7 @@ export const TIME_MACHINE_SECTION_TIPO = 'dd15';
 
 /**
  * The ONLY dd15 list columns that may carry a sort icon — the TM twin of the
- * dd542 policy above (WC-044's family; see engineering/WIRE_CONTRACT.md).
+ * dd542 policy above (WC-044's family; see engineering/wire_contract/).
  *
  * (!) dd1573 "Id" and dd1212 "Section id" are DIFFERENT columns and both look
  * id-ish — dd1212's lg-spa term is literally "section_id". dd1573 is the TM
@@ -235,7 +235,7 @@ export const BULK_PROCESS_TIPOS = {
  * refusal :1330 + the section::create_record refusal :452). The
  * consultation_only_sections_tripwire test pins this invariant.
  *
- * NOTE (deliberate hardening, documented in engineering/WIRE_CONTRACT.md): PHP gates
+ * NOTE (deliberate hardening, documented in engineering/wire_contract/): PHP gates
  * duplicate/delete on the UNcapped common::get_permissions, so a misconfigured
  * profile that granted level >= 2 on one of these sections could delete/copy a
  * record in the oracle. The TS engine backstops close that hole — strictly

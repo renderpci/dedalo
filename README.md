@@ -202,7 +202,7 @@ master_dedalo/
 │   ├── unit/                  # TS-native unit gates (*_native.test.ts)
 │   └── parity/                # Frozen-fixture parity tests (no oracle, no creds)
 ├── tools/                     # Dédalo tools (tool_export, tool_print, etc.)
-├── engineering/               # Specs + contracts: REWRITE_SPEC, WIRE_CONTRACT, TRIPWIRES, CI, etc.
+├── engineering/               # Specs + contracts: REWRITE_SPEC, wire_contract/, TRIPWIRES, CI, etc.
 ├── docs/                      # Documentation (incl. rewrite.md)
 ├── scripts/                   # Install, migration, verification scripts
 └── install/                   # Install subsystem
@@ -218,7 +218,7 @@ master_dedalo/
 | [`docs/rewrite.md`](docs/rewrite.md) | The full story of the PHP → TypeScript rewrite |
 | [`engineering/REWRITE_SPEC.md`](engineering/REWRITE_SPEC.md) | Master spec: constraints, security, architecture |
 | [`engineering/TRIPWIRES.md`](engineering/TRIPWIRES.md) | The tripwire index — every enforced invariant and the gate that proves it |
-| [`engineering/WIRE_CONTRACT.md`](engineering/WIRE_CONTRACT.md) | Ledgered wire-shape divergences from PHP |
+| [`engineering/wire_contract/`](engineering/wire_contract/) | Ledgered wire-shape divergences from PHP — one file per entry; [`WIRE_CONTRACT.md`](engineering/WIRE_CONTRACT.md) is its rules + id grammar |
 | [`engineering/CONVENTIONS.md`](engineering/CONVENTIONS.md) | Error-handling/logging convention + dynamic-import rules |
 | [`engineering/DIFFUSION_SPEC.md`](engineering/DIFFUSION_SPEC.md) | Native diffusion subsystem spec |
 | [`engineering/RELATIONS_SPEC.md`](engineering/RELATIONS_SPEC.md) | Relations family spec |

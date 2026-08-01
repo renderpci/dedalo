@@ -1,5 +1,5 @@
 {
-	"_doc": "WC-034 label cleanup map (engineering/WIRE_CONTRACT.md WC-034). Consumed by test/parity/environment_differential.test.ts: an oracle get_label key must be present with the oracle value, OR renamed here (new key asserted present), OR listed as removed/migrated.",
+	"_doc": "WC-034 label cleanup map (engineering/wire_contract/ WC-034). Consumed by test/parity/environment_differential.test.ts: an oracle get_label key must be present with the oracle value, OR renamed here (new key asserted present), OR listed as removed/migrated.",
 	"renames": {
 		"information": "install_information",
 		"informacion": "information",

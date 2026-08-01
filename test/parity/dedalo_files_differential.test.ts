@@ -49,7 +49,7 @@ const RQO = { action: 'get_dedalo_files', dd_api: 'dd_utils_api' };
 const CLIENT_ROOT = resolve(import.meta.dir, '../../client/dedalo');
 
 /** Normalize one entry to a comparable line, mapping the tool_common seam —
- * a LEDGERED wire divergence (engineering/WIRE_CONTRACT.md WC-006). */
+ * a LEDGERED wire divergence (engineering/wire_contract/ WC-006). */
 function comparableLine(entry: ManifestEntry): string {
 	const url = entry.url.replace('/dedalo/tools/tool_common/', '/dedalo/core/tools_common/');
 	return `${entry.type} ${url}`;
@@ -57,7 +57,7 @@ function comparableLine(entry: ManifestEntry): string {
 
 /** tool_assistant is TS-NATIVE since the server-driven rewrite — its file
  * census deliberately diverges from the PHP tree's copy (11 js → 9 js; the
- * in-browser engine died). LEDGERED: engineering/WIRE_CONTRACT.md WC-013. Filtered
+ * in-browser engine died). LEDGERED: engineering/wire_contract/ WC-013. Filtered
  * from BOTH sides of the set compare; the every-TS-url-resolves test below
  * still validates the new files serve. */
 function isToolAssistantEntry(entry: ManifestEntry): boolean {

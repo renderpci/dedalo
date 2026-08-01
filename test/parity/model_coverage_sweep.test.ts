@@ -124,7 +124,7 @@ describe.if(hasPhpCredentials())('model coverage sweep (pre-Phase-6 measurement)
 				},
 			};
 			const { body } = await client.call(structuredClone(rqo));
-			// DEC-02 / WIRE_CONTRACT.md WC-001 (unified [] as of the WS-C
+			// DEC-02 / engineering/wire_contract/ WC-001 (unified [] as of the WS-C
 			// engine-wide unification): PHP still emits entries:null for empty
 			// values, so the normalizer rewrites the PHP side ONLY. The TS side
 			// is compared RAW — if the engine ever regresses to null, this sweep

@@ -7,7 +7,7 @@ description: The Dédalo v7 TypeScript/Bun UI-label subsystem — repo-owned lab
 
 Since the **2026-07-16 label-model migration (WC-033/WC-034)**, `src/core/labels/` is the **SINGLE source of truth for program strings**. Program strings are coupled to CODE, not to the data model: a key exists because a line of client/widget code references it, so **a label ships in the same commit as the code that uses it** (labels ride `git`/`update_code`, NEVER `update_ontology`).
 
-This skill POINTS — the authoritative content lives in `engineering/WIRE_CONTRACT.md` (WC-033, WC-034), the serving code header (`src/core/labels/catalog.ts`), and the gate (`test/unit/labels_tripwire.test.ts`). Read those; this teaches the model and the workflows.
+This skill POINTS — the authoritative content lives in `engineering/wire_contract/` (WC-033, WC-034), the serving code header (`src/core/labels/catalog.ts`), and the gate (`test/unit/labels_tripwire.test.ts`). Read those; this teaches the model and the workflows.
 
 ## The model: two files, two roles
 
@@ -111,7 +111,7 @@ Add translated keys to `catalog/lg-<code>.json` (sorted, tab-indented), review t
 | `src/core/tools/client/js/tool_common.js` | `get_tool_label` — the client resolver. |
 | `test/unit/tool_context_labels_lang.test.ts` | Gate for the single-lang serving contract. |
 | `engineering/TOOLS_SPEC.md` (§ Tool labels) | Authoritative tool-label spec. |
-| `engineering/WIRE_CONTRACT.md` (WC-033, WC-034) | Authoritative contract + gate reconciliation. |
+| `engineering/wire_contract/` (WC-033, WC-034) | Authoritative contract + gate reconciliation. |
 | `rewrite/LABELS_RECONCILE.md` (local-only) | The one-time DB↔file merge record. |
 
 Foundation: **`dedalo-ts-foundation`** (tripwire law). Serving lands in `get_environment` — section/environment read path.

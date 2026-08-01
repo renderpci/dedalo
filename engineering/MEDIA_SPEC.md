@@ -268,7 +268,7 @@ Sole API action (`:50`). `session_write_close()` first (`:117`). Validate requir
 - Flow mirrors §6.1–6.2 with the SAME shared staging layout (coexistence), chunk-level AND assembled re-sniff (SEC-066), `add_file` SEC-063 confinement, per-type processor → `regenerate.ts`. Image/pdf/svg run synchronously inline; av transcode goes through `jobs.ts` (§5.5).
 - Missing derivative → the Dédalo placeholder image (PHP `get_url(default_add=true) :2942`) — preserve the fallback so the client never 404s a thumbnail.
 
-### 6.4 Addendum — the ingest as BUILT (2026-07-31, `engineering/WIRE_CONTRACT.md` WC-080)
+### 6.4 Addendum — the ingest as BUILT (2026-07-31, `engineering/wire_contract/` WC-080)
 
 The §6.3 design landed; this records where it ended up, because three parts are
 not obvious from the plan.

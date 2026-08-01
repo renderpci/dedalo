@@ -76,7 +76,7 @@ async function compareGetData(rqo: Record<string, unknown>): Promise<{
 	ts: unknown[];
 }> {
 	const { body } = await php.call(structuredClone(rqo));
-	// WC-001 (unified []): rewrite the PHP side only (see engineering/WIRE_CONTRACT.md).
+	// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
 	const phpItems = adoptEntriesArrayContract(
 		(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
 	).map(itemProjection);
@@ -145,7 +145,7 @@ describe.if(hasPhpCredentials())('inverse/indexation family differential (spec g
 			},
 		};
 		const { body } = await php.call(structuredClone(rqo));
-		// WC-001 (unified []): rewrite the PHP side only (see engineering/WIRE_CONTRACT.md).
+		// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
 		const phpItems = adoptEntriesArrayContract(
 			(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
 		)

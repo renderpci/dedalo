@@ -92,4 +92,4 @@ Reach for the specialist when you cross into its area:
 
 ## Cross-cutting docs (point, don't duplicate)
 
-`engineering/CONVENTIONS.md` (error handling §1, dynamic imports §2) · `engineering/WIRE_CONTRACT.md` (deliberate wire divergences, e.g. WC-001 unified `entries:[]`) · `rewrite/COEXISTENCE.md` (PHP↔TS shared-DB rules, DEC-19) · the per-subsystem specs `RELATIONS_SPEC.md` / `SECTION_SPEC.md` / `DIFFUSION_SPEC.md` / `MEDIA_SPEC.md` / `TOOLS_SPEC.md` / `AREA_SPEC.md`.
+`engineering/CONVENTIONS.md` (error handling §1, dynamic imports §2) · `engineering/wire_contract/` (deliberate wire divergences, one file per entry, e.g. WC-001 unified `entries:[]`) · `rewrite/COEXISTENCE.md` (PHP↔TS shared-DB rules, DEC-19) · the per-subsystem specs `RELATIONS_SPEC.md` / `SECTION_SPEC.md` / `DIFFUSION_SPEC.md` / `MEDIA_SPEC.md` / `TOOLS_SPEC.md` / `AREA_SPEC.md`.

@@ -85,7 +85,7 @@ An unknown value throws — a typo can never silently mean the default.
 
 `record` and `live` remain selectable, but nothing answers them: the reference engine is
 decommissioned, so **a re-harvest is impossible by definition**. Any change to a fixture
-from here on is a deliberate contract edit and needs its `engineering/WIRE_CONTRACT.md`
+from here on is a deliberate contract edit and needs its `engineering/wire_contract/`
 entry in the same change.
 
 Consequence for you: `bun test test/parity/` **runs green on a fresh clone with no
@@ -158,7 +158,8 @@ recursive `debug` block.
 
 When the engine **deliberately** differs from the frozen reference shape, the gate
 transforms the reference side before diffing — and that transformation must be recorded as
-a numbered entry in `engineering/WIRE_CONTRACT.md` (for example the unified empty-component
+an entry in the wire-contract ledger, `engineering/wire_contract/` (for example the
+unified empty-component
 value `entries: []`). A normalization key with no ledger row is a regression in disguise.
 The reviewer's question is always: *is this divergence deliberate and ledgered, or are you
 papering over a diff?*
@@ -330,7 +331,7 @@ path, and it inherits the guards.
 **A parity gate.** New read-path coverage cannot be harvested — there is nothing left to
 harvest from. A new parity gate can only replay interactions already in the frozen store;
 new coverage belongs in `test/unit/`, and any change to a fixture is a deliberate contract
-edit with a `engineering/WIRE_CONTRACT.md` entry.
+edit with a `engineering/wire_contract/` entry.
 
 Finally, run your file while iterating and the gate before pushing:
 

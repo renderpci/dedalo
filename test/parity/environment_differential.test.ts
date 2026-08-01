@@ -123,7 +123,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		if (!hasPhpCredentials()) return;
 		const phpVars = { ...(phpEnv.plain_vars as Record<string, unknown>) };
 		const tsVars = { ...(tsEnv.plain_vars as Record<string, unknown>) };
-		// WIRE_CONTRACT.md WC-003 (self-contained cutover posture): under
+		// engineering/wire_contract/ WC-003 (self-contained cutover posture): under
 		// DEDALO_DIFFUSION_NATIVE=true the TS engine deliberately OMITS
 		// DEDALO_DIFFUSION_API_URL (the client must not call the legacy Bun
 		// diffusion route — the TS server does not serve it). The PHP oracle
@@ -145,7 +145,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		if (!hasPhpCredentials()) return;
 		const phpGlobals = { ...(phpEnv.page_globals ?? {}) };
 		const tsGlobals = { ...(tsEnv.page_globals ?? {}) };
-		// WIRE_CONTRACT.md WC-031: `is_ontology_server` is a TS-ONLY page_globals key
+		// engineering/wire_contract/ WC-031: `is_ontology_server` is a TS-ONLY page_globals key
 		// (PHP get_page_globals has no twin) driving the ontology-master client skin.
 		// Assert the divergence explicitly, then compare the rest of the key set exactly.
 		expect('is_ontology_server' in tsGlobals).toBe(true);
@@ -154,7 +154,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		// which still lists a key assigned undefined. Local literal, so perf is moot.
 		// biome-ignore lint/performance/noDelete: an undefined assignment would fail the key-set compare
 		delete tsGlobals.is_ontology_server;
-		// WIRE_CONTRACT.md WC-038: `ip_api` REMOVED from page_globals — IP→country
+		// engineering/wire_contract/ WC-038: `ip_api` REMOVED from page_globals — IP→country
 		// resolution moved server-side/offline (src/core/geoip). The frozen PHP
 		// oracle still carries it; strip it PHP-side (the mirror of the WC-031
 		// TS-only handling above) before the exact key-set compare.
@@ -162,7 +162,7 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		expect('ip_api' in tsGlobals).toBe(false);
 		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep 'ip_api' in Object.keys()
 		delete phpGlobals.ip_api;
-		// WIRE_CONTRACT.md WC-051: three TS-ONLY page_globals keys carrying the
+		// engineering/wire_contract/ WC-051: three TS-ONLY page_globals keys carrying the
 		// session-expiry warning contract. PHP has no twin because it had nothing to
 		// warn about — its client learned the session was gone only by being refused.
 		// Same explicit-then-strip handling as WC-031.

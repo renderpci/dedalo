@@ -59,7 +59,7 @@ oracle (transitional — see the "TS self-contained, not shared" memory). Verifi
   `../private/.env` and restart (memory: "diffusion native flag client 404").
 - **`DEDALO_DEV_MODE`** (`src/core/resolve/environment.ts:35`) — drives the
   `DEVELOPMENT_SERVER`/`SHOW_DEBUG`/`SHOW_DEVELOPER` posture the pre-auth login SW path
-  reads. This posture must be available **pre-auth**; the S1-19 fix (engineering/WIRE_CONTRACT.md,
+  reads. This posture must be available **pre-auth**; the S1-19 fix (engineering/wire_contract/,
   rewrite/STATUS.md) was a login stall that made the client-test gate unrunnable — do NOT
   gate dev/login-path env behind `isLogged`.
 - **`DEDALO_SESSION_DB_PATH`** (`src/core/security/session_store.ts:76,304`) — session

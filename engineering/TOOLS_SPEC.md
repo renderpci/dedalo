@@ -561,7 +561,7 @@ tiers a single-lang payload made unreachable; it only implied a fallback the wir
 could never deliver.)
 
 Widening the filter to several langs is a WIRE CHANGE: it needs a
-`WIRE_CONTRACT.md` entry, a re-cut of the frozen fixture, and the client resolver
+`engineering/wire_contract/` entry, a re-cut of the frozen fixture, and the client resolver
 taught to choose. Gated by `test/unit/tool_context_labels_lang.test.ts` (seeds its
 own scratch tool row, so it does not depend on what the install has registered).
 

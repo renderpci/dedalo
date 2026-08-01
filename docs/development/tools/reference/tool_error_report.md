@@ -93,4 +93,4 @@ The outbound relay the server sends to the master (`dd_error_report_api:receive_
 - [Error reports](../../../core/error_reports.md) — the operator/administrator guide: enabling the feature, the receiver side, and the master dashboard widget that browses received reports.
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, the `permission: null` + imperative-gate pattern, and config resolution this page builds on.
 - [Security](../security.md) — the framework gates and the defense-in-depth an admin-only relay tool adds.
-- Source: `tools/tool_error_report/server/index.ts`, `tools/tool_error_report/js/{tool_error_report,render_tool_error_report}.js`, the shared `src/core/error_report/{schema,store}.ts`, `tools/tool_error_report/register.json`. Wire contract: `engineering/WIRE_CONTRACT.md` WC-017/018/019.
+- Source: `tools/tool_error_report/server/index.ts`, `tools/tool_error_report/js/{tool_error_report,render_tool_error_report}.js`, the shared `src/core/error_report/{schema,store}.ts`, `tools/tool_error_report/register.json`. Wire contract: `engineering/wire_contract/` WC-017/018/019.

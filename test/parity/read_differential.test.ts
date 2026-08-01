@@ -70,7 +70,7 @@ describe.if(hasPhpCredentials())(
 			if (!loggedIn) throw new Error('PHP login failed');
 			const { body } = await client.call(structuredClone(READ_RQO));
 			const result = body.result as { data: Record<string, unknown>[] };
-			// DEC-02 / WIRE_CONTRACT.md WC-001: assert the adopted `entries: []`
+			// DEC-02 / engineering/wire_contract/ WC-001: assert the adopted `entries: []`
 			// empty contract (PHP's `entries: null` is the fossil shape at this seam).
 			phpData = adoptEntriesArrayContract(result.data);
 			tsData = (await readSectionRows(READ_RQO as unknown as Rqo)) as unknown as Record<
@@ -125,7 +125,7 @@ describe.if(hasPhpCredentials())(
 				config.phpReference.password as string,
 			);
 			const { body } = await client.call(structuredClone(editRqo));
-			// DEC-02 / WIRE_CONTRACT.md WC-001 (see above).
+			// DEC-02 / engineering/wire_contract/ WC-001 (see above).
 			const phpEdit = adoptEntriesArrayContract(
 				(body.result as { data: Record<string, unknown>[] }).data,
 			);
