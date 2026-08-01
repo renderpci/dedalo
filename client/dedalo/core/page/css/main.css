@@ -4843,7 +4843,7 @@ button.button_spinner.success::before {
   padding: 0.33em;
   padding-left: 0.5em;
   cursor: pointer;
-  text-transform: uppercase;
+  font-variant: small-caps;
   color: var(--color_grey_4);
 }
 @media screen and (max-width: 960px) {
@@ -5310,9 +5310,8 @@ dd-modal .wrapper_component > .content_data.vertical,
 }
 .section_record.edit .wrapper_component.edit > .label {
   color: var(--field_label_fg);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.015em;
+  font-size: 1rem;
+  font-weight: 100;
 }
 .section_record.edit .wrapper_component.edit > .content_data {
   color: var(--field_value_fg);
@@ -8249,14 +8248,13 @@ body:has(.assistant_container.standalone.show) {
   padding: 0.33em;
   padding-left: 0.5em;
   cursor: pointer;
-  text-transform: uppercase;
+  font-variant: small-caps;
   color: var(--color_grey_4);
   background-color: var(--bg_surface_alt);
   color: var(--fg_default);
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-weight: 700;
   letter-spacing: 0.04em;
   padding-right: 1.6rem;
 }
@@ -18507,7 +18505,7 @@ body.inspector_resizing {
   padding: 0.33em;
   padding-left: 0.5em;
   cursor: pointer;
-  text-transform: uppercase;
+  font-variant: small-caps;
   color: var(--color_grey_4);
   background: none;
   padding: 0.66em;
@@ -18515,10 +18513,7 @@ body.inspector_resizing {
   align-items: center;
   gap: 0.5rem;
   color: var(--fg_muted);
-  font-size: 0.75rem;
-  font-weight: 600;
   letter-spacing: 0.06em;
-  line-height: 1.2rem;
   transition: color var(--transition-fast);
 }
 @media screen and (max-width: 960px) {
