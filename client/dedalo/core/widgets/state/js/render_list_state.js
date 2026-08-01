@@ -141,10 +141,11 @@ const get_content_data_list = async function(self) {
 * The fn_update_widget_value handler therefore always iterates zero nodes. This looks
 * like an incomplete port of the edit-mode update logic to list mode — see flag below.
 *
-* Data items matched by their `value.id` field against output_item.id.
-* (!) Note: in list mode the data items use `item.id` for the output identifier,
-* whereas render_edit_state.js uses `item.widget_id`. They differ and are NOT
-* interchangeable across the two renderers.
+* Data items are matched by their `widget_id` against output_item.id — the same
+* key render_edit_state.js uses. The server also emits an `id` twin (WC-026, a
+* PHP-client compat shim); `widget_id` is the canonical selector because `id` is
+* overloaded (the ontology's output[].id, and a media_icons row's `id` is a CELL
+* object, not a string).
 *
 * @param {number} i - Zero-based index into self.ipo
 * @param {Array} data - Subset of self.value items where item.key === i
@@ -181,7 +182,7 @@ const get_value_element = (i, data, self) => {
 
 			// Situation
 				// get the total item for situation
-				const situation_total = data.find(item => item.id === output_item.id
+				const situation_total = data.find(item => item.widget_id === output_item.id
 					&& item.column === 'situation'
 					&& item.type ==='total'
 				)
@@ -189,7 +190,7 @@ const get_value_element = (i, data, self) => {
 
 			// State
 				// get the total item for state
-				const state_total = data.find(item =>  item.id === output_item.id
+				const state_total = data.find(item =>  item.widget_id === output_item.id
 													&& item.column === 'state'
 													&& item.type ==='total')
 				// console.log('state_total:', state_total.value, state_total);
@@ -260,7 +261,7 @@ const get_value_element = (i, data, self) => {
 			for (let o = node_length - 1; o >= 0; o--) {
 				const node = detail_nodes[o]
 				// find if the node has new data
-				const new_data = changed_data.find(item => item.id === node.id
+				const new_data = changed_data.find(item => item.widget_id === node.widget_id
 					&& item.column === node.column
 					&& item.lang === node.lang
 					&& item.key === i
@@ -317,9 +318,9 @@ const get_value_element = (i, data, self) => {
 *   iteration uses all entries of `page_globals.dedalo_projects_default_langs`; otherwise
 *   a single iteration is performed using the nolan lang key.
 *
-* Every data lookup here reads the item FLAT (item.id / item.column / item.lang /
-* item.type), matching what the server emits. Only self.datalist entries are
-* `.value`-wrapped ({value:{section_tipo,section_id}, label}).
+* Every data lookup here reads the item FLAT (item.widget_id / item.column /
+* item.lang / item.type), matching what the server emits. Only self.datalist
+* entries are `.value`-wrapped ({value:{section_tipo,section_id}, label}).
 *
 * @param {Object} output_item - One entry from ipo[i].output, shape: { id, label }
 * @param {Array} data - Subset of self.value items where item.key === i
@@ -351,13 +352,13 @@ const get_value_tooltip = (output_item, data, self) => {
 
 	// Situation
 		// check if the component is translatable, with the first item in the data of the current column
-		const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
+		const situation_item = data.find(item => item.widget_id === output_item.id && item.column === 'situation')
 		// check if the item is translatable
 		const situation_translatable = (situation_item.lang !== nolan)
 		// if the item is translatable select the all projects langs, else the item will be lg-nolan and only will has 1 item
 		const situation_length = situation_translatable ? project_langs.length : 1;
 		// get the total item for situation
-		const situation_total = data.find(item =>  item.id === output_item.id
+		const situation_total = data.find(item =>  item.widget_id === output_item.id
 			&& item.column === 'situation'
 			&& item.type ==='total'
 		)
@@ -392,7 +393,7 @@ const get_value_tooltip = (output_item, data, self) => {
 		for (let j = 0; j < situation_length; j++) {
 			// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 			const lang = situation_translatable ? project_langs[j].value : nolan
-			const situation_items_data = data.find(item => item.id === output_item.id
+			const situation_items_data = data.find(item => item.widget_id === output_item.id
 														&& item.column === 'situation'
 														&& item.lang === lang
 														&& item.type ==='detail')
@@ -424,13 +425,13 @@ const get_value_tooltip = (output_item, data, self) => {
 		} // end for (let j = 0; j < situation_length; j++)
 	// State
 		// check if the component is translatable, with the first item in the data of the current column
-		const state_item = data.find(item => item.id === output_item.id && item.column === 'state')
+		const state_item = data.find(item => item.widget_id === output_item.id && item.column === 'state')
 		// second, check if the item is translatable
 		const state_translatable = (state_item.lang !== nolan)
 		// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
 		const item_length = state_translatable ? project_langs.length : 1;
 
-		const state_total = data.find(item =>  item.id === output_item.id
+		const state_total = data.find(item =>  item.widget_id === output_item.id
 											&& item.column === 'state'
 											&& item.type ==='total')
 
@@ -465,7 +466,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 			const lang = state_translatable ? project_langs[k].value : nolan
 			// find the data of the item with the lang
-			const state_item_data = data.find(item =>  item.id === output_item.id
+			const state_item_data = data.find(item =>  item.widget_id === output_item.id
 														&& item.column === 'state'
 														&& item.lang === lang
 														&& item.type ==='detail')

@@ -421,7 +421,7 @@ const get_value_element = (i, data, self) => {
 					// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
 					const item_length = state_translatable ? project_langs.length : 1;
 
-					const state_total = data.find(item => item.id === output_item.id
+					const state_total = data.find(item => item.widget_id === output_item.id
 														&& item.column === 'state'
 														&& item.type ==='total')
 
