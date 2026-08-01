@@ -22,8 +22,10 @@
 * Data shape expected on `self`:
 *   self.ipo      – Array of IPO objects from the ontology.  Each entry has:
 *                     { input: {...}, output: [{id, label}, ...] }
-*   self.value    – Flat array of widget data items produced by class.state.php::get_data().
-*                   Each item: { value: { key, id, column, type, value, lang, locator? } }
+*   self.value    – Flat array of widget data items as the server emits them.
+*                   Each item: { widget, key, id, widget_id, column, type, value, lang, locator? }
+*                   (FLAT — there is no `.value` envelope around the item; the
+*                   only `.value`-wrapped array here is self.datalist, below)
 *                   where:
 *                     key     – index into self.ipo (0-based)
 *                     id      – output column identifier (e.g. 'state', 'situation')
@@ -84,7 +86,7 @@ render_list_state.prototype.list = async function(options) {
 * Build the full `<ul>` icon-strip for all IPO entries in list mode.
 *
 * Iterates self.ipo and for each entry filters self.value to only the items
-* belonging to that ipo key (item.value.key === i), then delegates to
+* belonging to that ipo key (item.key === i), then delegates to
 * get_value_element() for the per-entry `<li>`.
 *
 * The function returns a DocumentFragment (not a `<div>`) so that it can be
@@ -109,7 +111,7 @@ const get_content_data_list = async function(self) {
 		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data			= self.value.filter(el => el.value.key===i)
+			const data			= self.value.filter(el => el.key===i)
 			const value_element	= get_value_element(i, data, self)
 			values_container.appendChild(value_element)
 		}
@@ -140,12 +142,12 @@ const get_content_data_list = async function(self) {
 * like an incomplete port of the edit-mode update logic to list mode — see flag below.
 *
 * Data items matched by their `value.id` field against output_item.id.
-* (!) Note: in list mode the data items use `item.value.id` for the output identifier,
-* whereas render_edit_state.js uses `item.value.widget_id`. They differ and are NOT
+* (!) Note: in list mode the data items use `item.id` for the output identifier,
+* whereas render_edit_state.js uses `item.widget_id`. They differ and are NOT
 * interchangeable across the two renderers.
 *
 * @param {number} i - Zero-based index into self.ipo
-* @param {Array} data - Subset of self.value items where item.value.key === i
+* @param {Array} data - Subset of self.value items where item.key === i
 * @param {Object} self - The state widget instance
 * @returns {HTMLElement} `<li>` element with icon spans and event subscriptions attached
 */
@@ -179,22 +181,22 @@ const get_value_element = (i, data, self) => {
 
 			// Situation
 				// get the total item for situation
-				const situation_total = data.find(item => item.value.id === output_item.id
-					&& item.value.column === 'situation'
-					&& item.value.type ==='total'
+				const situation_total = data.find(item => item.id === output_item.id
+					&& item.column === 'situation'
+					&& item.type ==='total'
 				)
 				// console.log('situation_total:', situation_total);
 
 			// State
 				// get the total item for state
-				const state_total = data.find(item =>  item.value.id === output_item.id
-													&& item.value.column === 'state'
-													&& item.value.type ==='total')
+				const state_total = data.find(item =>  item.id === output_item.id
+													&& item.column === 'state'
+													&& item.type ==='total')
 				// console.log('state_total:', state_total.value, state_total);
 
 				// Only render the icon when at least one of situation or state has a non-zero total.
 				// This suppresses icons for rows where the record has no meaningful state data.
-				if(situation_total && (situation_total.value.value > 0 || state_total.value.value > 0)) {
+				if(situation_total && (situation_total.value > 0 || state_total.value > 0)) {
 					// node for the column situation
 					const situation = ui.create_dom_element({
 						element_type	: 'span',
@@ -258,11 +260,11 @@ const get_value_element = (i, data, self) => {
 			for (let o = node_length - 1; o >= 0; o--) {
 				const node = detail_nodes[o]
 				// find if the node has new data
-				const new_data = changed_data.find(item => item.value.id === node.id
-					&& item.value.column === node.column
-					&& item.value.lang === node.lang
-					&& item.value.key === i
-					&& item.value.type === node.type
+				const new_data = changed_data.find(item => item.id === node.id
+					&& item.column === node.column
+					&& item.lang === node.lang
+					&& item.key === i
+					&& item.type === node.type
 				)
 
 				// set the new value
@@ -315,15 +317,12 @@ const get_value_element = (i, data, self) => {
 *   iteration uses all entries of `page_globals.dedalo_projects_default_langs`; otherwise
 *   a single iteration is performed using the nolan lang key.
 *
-* (!) The detail-row lookup in the situation block (line ~294) searches on item.id /
-*   item.column / item.lang (root-level keys) rather than item.value.id / item.value.column /
-*   item.value.lang. This is inconsistent with every other data access in this file and
-*   will silently yield `undefined` for situation_items_data in all cases. The value
-*   expression then falls back to '0%' and the datalist label falls back to ''. This is
-*   a pre-existing bug — do NOT fix here; document only.
+* Every data lookup here reads the item FLAT (item.id / item.column / item.lang /
+* item.type), matching what the server emits. Only self.datalist entries are
+* `.value`-wrapped ({value:{section_tipo,section_id}, label}).
 *
 * @param {Object} output_item - One entry from ipo[i].output, shape: { id, label }
-* @param {Array} data - Subset of self.value items where item.value.key === i
+* @param {Array} data - Subset of self.value items where item.key === i
 * @param {Object} self - The state widget instance
 * @returns {DocumentFragment} fragment containing the fully built tooltip DOM
 */
@@ -346,21 +345,21 @@ const get_value_tooltip = (output_item, data, self) => {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'output_label',
-			inner_text		: get_label[output_item.label] || output_item.id,
+			text_content		: get_label[output_item.label] || output_item.id,
 			parent			: container
 		})
 
 	// Situation
 		// check if the component is translatable, with the first item in the data of the current column
-		const situation_item = data.find(item => item.value.id === output_item.id && item.value.column === 'situation')
+		const situation_item = data.find(item => item.id === output_item.id && item.column === 'situation')
 		// check if the item is translatable
-		const situation_translatable = (situation_item.value.lang !== nolan)
+		const situation_translatable = (situation_item.lang !== nolan)
 		// if the item is translatable select the all projects langs, else the item will be lg-nolan and only will has 1 item
 		const situation_length = situation_translatable ? project_langs.length : 1;
 		// get the total item for situation
-		const situation_total = data.find(item =>  item.value.id === output_item.id
-			&& item.value.column === 'situation'
-			&& item.value.type ==='total'
+		const situation_total = data.find(item =>  item.id === output_item.id
+			&& item.column === 'situation'
+			&& item.type ==='total'
 		)
 
 		// node for the column situation
@@ -379,7 +378,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			const situation_total_value = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_text		: situation_total.value.value+'%',
+				text_content		: situation_total.value+'%',
 				parent			: situation_total_node
 			})
 
@@ -393,8 +392,6 @@ const get_value_tooltip = (output_item, data, self) => {
 		for (let j = 0; j < situation_length; j++) {
 			// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 			const lang = situation_translatable ? project_langs[j].value : nolan
-			// (!) Bug: lookup uses root-level item.id / item.column / item.lang instead of
-			// item.value.id / item.value.column / item.value.lang — will always return undefined.
 			const situation_items_data = data.find(item => item.id === output_item.id
 														&& item.column === 'situation'
 														&& item.lang === lang
@@ -409,7 +406,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			const item_situation = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: (situation_items_data) ? situation_items_data.value.value+'%' : '0%',
+				inner_html		: (situation_items_data) ? situation_items_data.value+'%' : '0%',
 				parent			: situation_detail
 			})
 			// build the label with the list name
@@ -427,15 +424,15 @@ const get_value_tooltip = (output_item, data, self) => {
 		} // end for (let j = 0; j < situation_length; j++)
 	// State
 		// check if the component is translatable, with the first item in the data of the current column
-		const state_item = data.find(item => item.value.id === output_item.id && item.value.column === 'state')
+		const state_item = data.find(item => item.id === output_item.id && item.column === 'state')
 		// second, check if the item is translatable
-		const state_translatable = (state_item.value.lang !== nolan)
+		const state_translatable = (state_item.lang !== nolan)
 		// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
 		const item_length = state_translatable ? project_langs.length : 1;
 
-		const state_total = data.find(item =>  item.value.id === output_item.id
-											&& item.value.column === 'state'
-											&& item.value.type ==='total')
+		const state_total = data.find(item =>  item.id === output_item.id
+											&& item.column === 'state'
+											&& item.type ==='total')
 
 		// node for state column
 			const state = ui.create_dom_element({
@@ -453,7 +450,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			const total_value = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: state_total.value.value+'%',
+				inner_html		: state_total.value+'%',
 				parent			: total_node
 			})
 
@@ -468,10 +465,10 @@ const get_value_tooltip = (output_item, data, self) => {
 			// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 			const lang = state_translatable ? project_langs[k].value : nolan
 			// find the data of the item with the lang
-			const state_item_data = data.find(item =>  item.value.id === output_item.id
-														&& item.value.column === 'state'
-														&& item.value.lang === lang
-														&& item.value.type ==='detail')
+			const state_item_data = data.find(item =>  item.id === output_item.id
+														&& item.column === 'state'
+														&& item.lang === lang
+														&& item.type ==='detail')
 
 			// label_state. build the label with the lang
 			ui.create_dom_element({
@@ -484,7 +481,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: (state_item_data) ? state_item_data.value.value+'%' : '0%',
+				inner_html		: (state_item_data) ? state_item_data.value+'%' : '0%',
 				parent			: detail
 			})
 

@@ -120,7 +120,7 @@ render_edit_descriptors.prototype.edit = async function(options) {
 *
 * IPO iteration: `self.ipo` is an array of IPO configuration objects (one per
 * descriptor group defined in the ontology). For each index `i`, `self.value`
-* is filtered to find the data items belonging to that group (`item.value.key === i`),
+* is filtered to find the data items belonging to that group (`item.key === i`),
 * then forwarded to `get_value_element`.
 *
 * @param {Object} self - The `descriptors` widget instance (`this` from prototype method).
@@ -166,8 +166,8 @@ const get_content_data_edit = async function(self) {
 		const ipo_length	= ipo.length
 		for (let i = 0; i < ipo_length; i++) {
 			// Filter the flat value array to items belonging to IPO group i.
-			// Each item carries its group index in `item.value.key`.
-			const data	= self.value.filter(item => item.value.key===i)
+			// Each item carries its group index in `item.key`.
+			const data	= self.value.filter(item => item.key===i)
 			const node	= await get_value_element(i, data, self)
 			values_container.appendChild(node)
 		}
@@ -192,11 +192,10 @@ const get_content_data_edit = async function(self) {
 * Callers appending the fragment to the live DOM will see the grid appear once
 * the promise settles.
 *
-* Note: `data` is the subset of `self.value` where `item.value.key === i`.
-* The 'indexation' item's value is nested as `el.value.value` (double `.value`)
-* because each element wraps the server datum in an additional `.value` envelope.
-* The list-mode counterpart (`render_list_descriptors.js`) accesses the same
-* field one level shallower because its data shape differs slightly.
+* Note: `data` is the subset of `self.value` where `item.key === i`.
+* Items are FLAT — `{widget, key, widget_id, value, ...}` — exactly as the
+* server emits them; there is no `.value` envelope. The list-mode counterpart
+* (`render_list_descriptors.js`) reads them identically.
 *
 * @param {number} i    - IPO group index (0-based).
 * @param {Array}  data - Data items for this IPO group (subset of `self.value`).
@@ -205,9 +204,9 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = async (i, data, self) => {
 
-	const indexation	= data.find(el => el.value.widget_id==='indexation')
+	const indexation	= data.find(el => el.widget_id==='indexation')
 	// Safely extract the indexation count; default to 0 when the item is absent.
-	const value			= indexation?.value.value || 0
+	const value			= indexation?.value || 0
 
 	const fragment = new DocumentFragment()
 
@@ -247,18 +246,18 @@ const get_value_element = async (i, data, self) => {
 * Instantiate and render a `dd_grid` for the given IPO group's terms data.
 *
 * Extracts the 'terms' data item from `data` (the item with `widget_id === 'terms'`),
-* wraps its `.value.value` in a single-element array as required by `dd_grid`'s data
+* wraps its `.value` in a single-element array as required by `dd_grid`'s data
 * contract, then calls `get_instance` to build and render the grid with view
 * `'descriptors'`.
 *
 * The `dd_grid` is configured with:
 * - `view: 'descriptors'` — selects the descriptor-specific column layout.
 * - `mode: 'list'` — read-only display (no inline editing).
-* - `data: [terms.value.value]` — the merged component_grid_value array produced
+* - `data: [terms.value]` — the merged component_grid_value array produced
 *   by class.descriptors.php.
 *
 * (!) If the 'terms' item is absent from `data` (e.g. an empty group), `terms`
-* defaults to `{}` and `terms.value.value` will be `undefined`, which is passed
+* defaults to `{}` and `terms.value` will be `undefined`, which is passed
 * to `dd_grid` as `[undefined]`. This is a known edge case; the grid tolerates it
 * but callers should ensure the server always emits both 'indexation' and 'terms'
 * items for each group when the count > 0.
@@ -272,10 +271,10 @@ const render_values = function(self, data) {
 	return new Promise(async function(resolve){
 
 		// Terms find
-		const terms = data.find(el => el.value.widget_id==='terms') || {}
+		const terms = data.find(el => el.widget_id==='terms') || {}
 
 		// dd_grid_data
-		const dd_grid_data	= [terms.value.value]
+		const dd_grid_data	= [terms.value]
 
 		// dd_grid build and append
 		const dd_grid		= await get_instance({

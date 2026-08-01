@@ -167,16 +167,13 @@ const get_content_data_list = async function(self) {
 * completed — this function is reachable from the list DOM even though
 * it is defined in the list renderer module).
 *
-* Data shape expected in `data` (flat items, NOT nested under .value
-* unlike render_edit_descriptors.js):
+* Data shape expected in `data` (flat items, as the server emits them):
 *   { widget_id: 'indexation', value: <number> }
 *   { widget_id: 'terms',      value: <component_grid_value Object> }
 *
-* (!) Structural difference from render_edit_descriptors.js: that file
-* accesses el.value.widget_id (nested), while this file accesses
-* el.widget_id directly.  They consume the same PHP data shape but
-* through different wrapping layers — verify alignment if the server
-* data format changes.
+* render_edit_descriptors.js consumes the SAME flat shape (it used to
+* dereference an extra `.value` envelope that the server never emits, which
+* rendered the widget blank — fixed 2026-08-01).
 *
 * (!) If no item with widget_id === 'indexation' is found in `data`,
 * data.find() returns undefined and the next line (`indexation.value`)

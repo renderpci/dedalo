@@ -25,6 +25,16 @@
  *  5. ONTOLOGY CENSUS (DB) — every properties.widgets[].widget_name declared
  *     in the shared dd_ontology is registered, so no section read can hit
  *     WidgetNotRegisteredError on this install's data.
+ *  6. FLAT-ITEM WIRE CONTRACT (client) — no client widget renderer may read a
+ *     widget DATA item through a `.value` envelope. computeInfoWidgets emits
+ *     FLAT items ({widget, key, id, widget_id, column, type, value, lang,
+ *     locator}); component_info.js reads them flat too. The state + oh
+ *     descriptors renderers shipped in the initial TS commit dereferencing an
+ *     extra level (`item.value.key`, `item.value.column`, …), so every filter
+ *     matched nothing and the widget rendered BLANK with no console error —
+ *     the oh28-on-oh1 report, fixed 2026-08-01. `self.datalist` entries ARE
+ *     `.value`-wrapped ({value:{section_tipo,section_id}, label}); those keys
+ *     are therefore excluded here.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -148,6 +158,75 @@ describe('info widget registry tripwire', () => {
 		expect(
 			unknown,
 			`Ontology-declared widget_names with NO registry entry — a section read hitting these throws WidgetNotRegisteredError; register a widget module (or an unported stub + ledger row): ${unknown.join(', ')}`,
+		).toEqual([]);
+	});
+
+	test('client passes only SUPPORTED text options to ui.create_dom_element', () => {
+		// ui.create_dom_element (client/dedalo/core/common/js/ui.js) sets text from
+		// exactly three keys, in this precedence: inner_html > text_node >
+		// text_content. Any other `inner_*` key is SILENTLY IGNORED and the element
+		// renders EMPTY — no error, no warning. The v7 state renderer invented
+		// `inner_text` (v6 has zero occurrences of it), which is why the situation
+		// column rendered as blank spans while the state column, still on
+		// inner_html, rendered fine. Fixed 2026-08-01.
+		const CLIENT_ROOT = 'client/dedalo';
+		const badKey = /\binner_(?!html\b)[a-z_]+\s*:/;
+		const offenders: string[] = [];
+		const walkJs = (dir: string): void => {
+			for (const entry of readdirSync(join(REPO_ROOT, dir))) {
+				const rel = `${dir}/${entry}`;
+				if (statSync(join(REPO_ROOT, rel)).isDirectory()) {
+					walkJs(rel);
+					continue;
+				}
+				if (!entry.endsWith('.js')) continue;
+				for (const [index, line] of readFileSync(join(REPO_ROOT, rel), 'utf8')
+					.split('\n')
+					.entries()) {
+					const code = line.trim();
+					if (code.startsWith('*') || code.startsWith('//') || code.startsWith('/*')) continue;
+					if (badKey.test(line)) offenders.push(`${rel}:${index + 1}: ${code}`);
+				}
+			}
+		};
+		walkJs(CLIENT_ROOT);
+
+		expect(
+			offenders,
+			`Unsupported inner_* option passed to ui.create_dom_element — it is silently dropped and the element renders EMPTY. Use inner_html (parsed), text_node or text_content (plain text):\n${offenders.join('\n')}`,
+		).toEqual([]);
+	});
+
+	test('client renderers read widget data items FLAT (no .value envelope)', () => {
+		// Keys of an emitted widget item. section_tipo/section_id are OMITTED on
+		// purpose: those are datalist keys, which ARE legitimately .value-wrapped.
+		const ITEM_KEYS = ['key', 'id', 'widget_id', 'column', 'type', 'lang'];
+		const envelope = new RegExp(`\\.value\\.(?:${ITEM_KEYS.join('|')})\\b`);
+		const widgetsRoot = 'client/dedalo/core/widgets';
+
+		const offenders: string[] = [];
+		const walkJs = (dir: string): void => {
+			for (const entry of readdirSync(join(REPO_ROOT, dir))) {
+				const rel = `${dir}/${entry}`;
+				if (statSync(join(REPO_ROOT, rel)).isDirectory()) {
+					walkJs(rel);
+					continue;
+				}
+				if (!entry.endsWith('.js')) continue;
+				const lines = readFileSync(join(REPO_ROOT, rel), 'utf8').split('\n');
+				for (const [index, line] of lines.entries()) {
+					// Skip comments — prose may legitimately quote the broken shape.
+					const code = line.trim();
+					if (code.startsWith('*') || code.startsWith('//') || code.startsWith('/*')) continue;
+					if (envelope.test(line)) offenders.push(`${rel}:${index + 1}: ${code}`);
+				}
+			}
+		};
+		walkJs(widgetsRoot);
+
+		expect(
+			offenders,
+			`Client widget renderer reads a DATA item through a .value envelope. The server emits FLAT items — such a lookup silently matches nothing and the widget renders BLANK. Use item.<key>, not item.value.<key> (only self.datalist is .value-wrapped):\n${offenders.join('\n')}`,
 		).toEqual([]);
 	});
 });

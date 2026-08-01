@@ -82,8 +82,14 @@ async function computeState(ipo: unknown[], context: WidgetContext): Promise<Wid
 					sourceId,
 					source.component_tipo,
 				)) as { section_tipo?: unknown; section_id?: unknown }[];
-				// PHP keeps only the FIRST locator of each source component
-				if (sourceData[0] !== undefined && sourceData[0] !== null) arLocator.push(sourceData[0]);
+				// EVERY locator of the source, not just the first (PHP
+				// class.state.php:75 `array_merge($ar_locator, $source_dato)`; the
+				// `reset()` on the line above it only feeds the `!empty($locator)`
+				// guard). Keeping just [0] silently dropped every resource after the
+				// first on a multi-resource record — the leaf values behind them
+				// vanished from the widget AND the totals divided by the wrong
+				// count ($items = count($ar_locator), line 207).
+				arLocator.push(...sourceData.filter((entry) => entry !== null && entry !== undefined));
 			}
 		}
 		if (arLocator.length === 0) continue;

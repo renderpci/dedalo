@@ -30,19 +30,19 @@
 *     widget's `destroy()` lifecycle hook can unsubscribe them.
 *
 * Data contract — `self.value` (produced by class.state.php::get_data()):
-*   An array of flat objects each carrying a nested `.value` property:
+*   An array of FLAT objects — no `.value` envelope around the item:
 *   {
-*     value: {
-*       widget:    string,   // always 'state'
-*       key:       number,   // zero-based IPO index this item belongs to
-*       widget_id: string,   // var_name from IPO output — e.g. 'state'|'situation'
-*       lang:      string,   // language tag (e.g. 'lg-spa') or 'lg-nolan' for non-translatable
-*       value:     number,   // completion percentage 0–1 (total rows) or 0/1 (detail rows)
-*       locator:   {section_tipo:string, section_id:string, ...} | null,
-*       column:    string,   // 'situation' | 'state'
-*       type:      string    // 'total' | 'detail'
-*     }
+*     widget:    string,   // always 'state'
+*     key:       number,   // zero-based IPO index this item belongs to
+*     id:        string,   // same as widget_id (WC-026 emits both keys)
+*     widget_id: string,   // var_name from IPO output — e.g. 'state'|'situation'
+*     lang:      string,   // language tag (e.g. 'lg-spa') or 'lg-nolan' for non-translatable
+*     value:     number,   // completion percentage 0–1 (total rows) or 0/1 (detail rows)
+*     locator:   {section_tipo:string, section_id:string, ...} | null,
+*     column:    string,   // 'situation' | 'state'
+*     type:      string    // 'total' | 'detail'
 *   }
+*   (self.datalist IS `.value`-wrapped — do not confuse the two.)
 *
 * `self.datalist` (produced by class.state.php::get_data_list()):
 *   An array of list-of-values items. Each entry has a `.value` with
@@ -133,7 +133,7 @@ render_edit_state.prototype.edit = async function(options) {
 *
 * Iterates over every IPO entry (self.ipo) and builds one <li> per entry by
 * delegating to `get_value_element`. Items from `self.value` are pre-filtered
-* by IPO index (item.value.key === i) before being passed down.
+* by IPO index (item.key === i) before being passed down.
 *
 * The returned element is a plain <div> wrapping a DocumentFragment that holds
 * the <ul class="values_container">. The DocumentFragment is consumed by
@@ -159,7 +159,7 @@ const get_content_data_edit = async function(self) {
 		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data = self.value.filter(item => item.value.key === i)
+			const data = self.value.filter(item => item.key === i)
 			const value_element	= get_value_element(i, data, self)
 			values_container.appendChild(value_element)
 		}
@@ -309,7 +309,7 @@ const get_value_element = (i, data, self) => {
 
 			// Situation
 				// check if the component is translatable, with the first item in the data of the current column
-				const situation_item = data.find(item => item.value.widget_id === output_item.id && item.value.column === 'situation')
+				const situation_item = data.find(item => item.widget_id === output_item.id && item.column === 'situation')
 				if (situation_item) {
 
 					// check if the item is translatable
@@ -317,9 +317,9 @@ const get_value_element = (i, data, self) => {
 					// if the item is translatable select the all projects langs, else the item will be lg-nolan and only will has 1 item
 					const situation_length = situation_translatable ? project_langs.length : 1;
 					// get the total item for situation
-					const situation_total = data.find(item => item.value.widget_id === output_item.id
-																&& item.value.column === 'situation'
-																&& item.value.type ==='total')
+					const situation_total = data.find(item => item.widget_id === output_item.id
+																&& item.column === 'situation'
+																&& item.type ==='total')
 
 					// node for the column situation
 						const situation = ui.create_dom_element({
@@ -346,7 +346,7 @@ const get_value_element = (i, data, self) => {
 						const situation_total_value = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'value',
-							inner_text		: situation_total.value.value + '%',
+							text_content		: situation_total.value + '%',
 							parent			: situation_total_node
 						})
 						// save the node for reuse later in 'update_widget_value' event
@@ -370,21 +370,21 @@ const get_value_element = (i, data, self) => {
 						for (let j = 0; j < situation_length; j++) {
 							// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 							const lang = situation_translatable ? project_langs[j].value : nolan
-							const situation_items_data = data.find(item => item.value.widget_id === output_item.id
-																		&& item.value.column === 'situation'
-																		&& item.value.lang === lang
-																		&& item.value.type ==='detail')
+							const situation_items_data = data.find(item => item.widget_id === output_item.id
+																		&& item.column === 'situation'
+																		&& item.lang === lang
+																		&& item.type ==='detail')
 							// build the label with the lang name
 							const label_situation = ui.create_dom_element({
 								element_type	: 'label',
-								inner_text		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
+								text_content		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
 								parent			: situation_detail_container
 							})
 							// create the node with the value
 							const item_situation = ui.create_dom_element({
 								element_type	: 'span',
 								class_name		: 'value',
-								inner_text		: (situation_items_data) ? situation_items_data.value.value + '%' : '0%',
+								text_content		: (situation_items_data) ? situation_items_data.value + '%' : '0%',
 								parent			: situation_detail_container
 							})
 							// build the label with the list name
@@ -395,7 +395,7 @@ const get_value_element = (i, data, self) => {
 
 							const label_list_situation = ui.create_dom_element({
 								element_type	: 'label',
-								inner_text		: datalist_item.label,
+								text_content		: datalist_item.label,
 								parent			: situation_detail_container
 							})
 							// save the node for reuse later in 'update_widget_value' event
@@ -414,16 +414,16 @@ const get_value_element = (i, data, self) => {
 
 			// State
 				// check if the component is translatable, with the first item in the data of the current column
-				const state_item = data.find(item => item.value.widget_id === output_item.id && item.value.column === 'state')
+				const state_item = data.find(item => item.widget_id === output_item.id && item.column === 'state')
 				if (state_item) {
 					// second, check if the item is translatable
-					const state_translatable = (state_item.value.lang !== nolan)
+					const state_translatable = (state_item.lang !== nolan)
 					// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
 					const item_length = state_translatable ? project_langs.length : 1;
 
-					const state_total = data.find(item => item.value.id === output_item.id
-														&& item.value.column === 'state'
-														&& item.value.type ==='total')
+					const state_total = data.find(item => item.id === output_item.id
+														&& item.column === 'state'
+														&& item.type ==='total')
 
 					// node for state column
 					const state = ui.create_dom_element({
@@ -448,14 +448,14 @@ const get_value_element = (i, data, self) => {
 						const total_value = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'value',
-							inner_html 		: state_total.value.value +'%',
+							inner_html 		: state_total.value +'%',
 							parent 			: state_total_node
 						})
 						// save the node for reuse later in 'update_widget_value' event
 						ar_nodes.push({
 							node_value 	: total_value,
 							type 		: 'total',
-							value 		: state_total.value.value,
+							value 		: state_total.value,
 							lang 		: nolan,
 							widget_id	: output_item.id,
 							key 		: i,
@@ -472,10 +472,10 @@ const get_value_element = (i, data, self) => {
 						// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 						const lang = state_translatable ? project_langs[k].value : nolan
 						// find the data of the item with the lang
-						const state_item_data = data.find(item => item.value.widget_id === output_item.id
-																&& item.value.column === 'state'
-																&& item.value.lang === lang
-																&& item.value.type ==='detail')
+						const state_item_data = data.find(item => item.widget_id === output_item.id
+																&& item.column === 'state'
+																&& item.lang === lang
+																&& item.type ==='detail')
 
 						// build the label with the lang
 						const label_state = ui.create_dom_element({
@@ -489,7 +489,7 @@ const get_value_element = (i, data, self) => {
 						const item_state = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'value',
-							inner_html 		: (state_item_data) ? state_item_data.value.value +'%' : '0%',
+							inner_html 		: (state_item_data) ? state_item_data.value +'%' : '0%',
 							parent 			: state_detail_container
 						})
 						// build the label with the list name
@@ -553,11 +553,11 @@ const get_value_element = (i, data, self) => {
 				const node = detail_nodes[o]
 				// find if the node has new data
 				const new_data = changed_data.find(
-					item => item.value.widget_id === node.widget_id
-					&& item.value.column === node.column
-					&& item.value.lang === node.lang
-					&& item.value.key === i
-					&& item.value.type === node.type
+					item => item.widget_id === node.widget_id
+					&& item.column === node.column
+					&& item.lang === node.lang
+					&& item.key === i
+					&& item.type === node.type
 				)
 				// set the new value
 				if(new_data){

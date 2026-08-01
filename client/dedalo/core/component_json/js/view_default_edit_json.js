@@ -442,7 +442,7 @@ const get_content_value_read = (key, current_value, self) => {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'value',
-			inner_text		: parsed_value,
+			text_content		: parsed_value,
 			parent			: content_value
 		})
 
