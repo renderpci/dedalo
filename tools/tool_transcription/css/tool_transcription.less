@@ -129,6 +129,14 @@
 	>.content_data {
 		display: flex;
 		align-items: stretch;
+		// (!) Holds the gutter's 10px OPEN before Split.js exists. The panes are
+		// pre-sized to `calc(n% - 5px)` at build time (apply_split_width), so
+		// until the gutter is inserted the row is 10px short — and without this
+		// that slack collected at the far right, putting the right pane 10px left
+		// of where Split.js was about to place it. space-between parks the slack
+		// exactly where the gutter lands; once it is there the three items total
+		// 100% and this has no free space left to distribute.
+		justify-content: space-between;
 		width: 100%;
 		// whatever the header leaves, rather than 100vh minus a guess at it
 		flex: 1 1 auto;

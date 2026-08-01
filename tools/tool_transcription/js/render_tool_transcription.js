@@ -42,6 +42,16 @@
 // localStorage key holding the user's last pane ratio. @see activate_split
 	const SPLIT_SIZES_KEY = 'tool_transcription_split_sizes'
 
+// Width of the drag separator, in px. Split.js is told this AND the panes are
+// pre-sized against it, so the two must stay one number.
+// (!) The .gutter rule in the tool's less has no width of its own — Split.js
+// sets it inline from this value.
+	const SPLIT_GUTTER_SIZE = 10
+
+// Viewport width below which the panes stack and there is no horizontal axis
+// left to split. Must match the @width_break_point_0 media query in the less.
+	const SPLIT_MIN_VIEWPORT = 800
+
 
 
 /**
@@ -105,12 +115,20 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 		promises.push(
 			render_process_status(self)
 		)
-		// rendered in parallel but in the proper order
-		Promise.all(promises)
-		.then((nodes) => {
-			nodes.forEach(function (node, index) {
-				wrapper.tool_buttons_container.appendChild(node)
-			})
+		// rendered in parallel but in the proper order.
+		// (!) AWAITED. This used to be a fire-and-forget `.then()`, so edit()
+		// returned and the tool was mounted and PAINTED with an empty
+		// tool_buttons_container — which tool_common hides entirely
+		// (`&:empty { display: none !important }`). The band then landed a few
+		// frames later and the header grew from 48px to 85px, shoving the whole
+		// body down 37px in front of the reader. Measured: a 0.0217 layout-shift
+		// entry sourced to `.content_data.tool.edit`, ~12ms after first paint.
+		// Awaiting costs that same ~12ms (both promises are all but resolved by
+		// the time we get here) and buys a header that is its final height on the
+		// first frame.
+		const header_nodes = await Promise.all(promises)
+		header_nodes.forEach(function (node) {
+			wrapper.tool_buttons_container.appendChild(node)
 		})
 
 	// render_activity_info are the information of the activity as "Save"
@@ -161,12 +179,24 @@ const get_content_data_edit = function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// split_sizes. Read ONCE, here, and applied to the panes below before they
+	// are ever painted — activate_split is then handed the same pair so the two
+	// can never disagree.
+	// (!) This is what stops the panes moving on load. Split.js cannot run until
+	// the columns are in the viewport with real computed sizes, so leaving the
+	// CSS 50/50 to paint first meant every load shifted the transcript sideways
+	// once Split took over: by 5px for a user who had never dragged (each pane
+	// gives up half the gutter), and by the whole difference for one who had
+	// (a stored 33/67 painted as 50/50 first).
+		const split_sizes = get_stored_split_sizes()
+
 	// left_container
 		const left_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'left_container',
 			parent			: fragment
 		})
+		apply_split_width(left_container, split_sizes[0])
 
 	// component_text_area. render another node of component caller and append to container
 		const component_text_area = self.transcription_component
@@ -185,6 +215,7 @@ const get_content_data_edit = function(self) {
 			class_name		: 'right_container',
 			parent			: fragment
 		})
+		apply_split_width(right_container, split_sizes[1])
 
 	// media_component
 		self.media_component.mode			= 'edit'
@@ -484,7 +515,7 @@ const get_content_data_edit = function(self) {
 
 	// split. Vertical drag separator between the transcript and the player.
 	// @see activate_split
-		activate_split(left_container, right_container)
+		activate_split(left_container, right_container, split_sizes)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -530,33 +561,34 @@ const get_content_data_edit = function(self) {
 *
 * Persistence
 * ───────────
-* The dragged ratio is stored to localStorage under SPLIT_SIZES_KEY and
-* restored on the next render. A stored value is only honoured when it is a
-* sane pair of numbers that sums to ~100; anything else (hand-edited storage, a
-* format change) falls back to the 50/50 default instead of laying out a pane
-* with a negative or zero width.
+* The dragged ratio is stored to localStorage under SPLIT_SIZES_KEY. It is NOT
+* read here: the caller reads it once and has already applied it to the panes
+* (see apply_split_width) before they were painted, so Split.js is handed the
+* same pair and its activation moves nothing.
 *
 * @param {HTMLElement} left_container - The transcript column.
 * @param {HTMLElement} right_container - The media player column.
+* @param {number[]} sizes - The [left, right] percentage pair the panes are
+*   already laid out with.
 * @returns {void}
 */
-const activate_split = function(left_container, right_container) {
+const activate_split = function(left_container, right_container, sizes) {
 
 	when_in_viewport(
 		left_container, // node to observe
 		() => { // callback
 			// don't add on small windows. There the columns are stacked.
-			if (window.innerWidth<800) {
+			if (window.innerWidth<SPLIT_MIN_VIEWPORT) {
 				return
 			}
 
 			Split([left_container, right_container], {
-				sizes		: get_stored_split_sizes(),
+				sizes		: sizes,
 				minSize		: 320, // px. Below this neither pane is usable
-				gutterSize	: 10,
-				onDragEnd	: function(sizes){
+				gutterSize	: SPLIT_GUTTER_SIZE,
+				onDragEnd	: function(dragged_sizes){
 					try {
-						localStorage.setItem(SPLIT_SIZES_KEY, JSON.stringify(sizes))
+						localStorage.setItem(SPLIT_SIZES_KEY, JSON.stringify(dragged_sizes))
 					} catch (error) {
 						// storage full or blocked (private mode). The split still
 						// works, it just will not be remembered.
@@ -566,6 +598,34 @@ const activate_split = function(left_container, right_container) {
 		}
 	)
 }//end activate_split
+
+
+
+/**
+* APPLY_SPLIT_WIDTH
+* Lay a pane out at the width Split.js is going to give it, BEFORE it is
+* painted, so that Split.js taking over is invisible.
+*
+* The formula is Split.js's own: each pane gets its share of the width minus
+* half the gutter, which is what makes the two panes plus the gutter add up to
+* exactly 100%.
+*
+* (!) Skipped below SPLIT_MIN_VIEWPORT. There the panes stack at `width: 100%`
+* from the media query, and an inline width — which beats any stylesheet rule —
+* would pin them to half a column each on a phone.
+*
+* @param {HTMLElement} container - The pane to size.
+* @param {number} size - Its share of the width, in percent.
+* @returns {void}
+*/
+const apply_split_width = function(container, size) {
+
+	if (window.innerWidth<SPLIT_MIN_VIEWPORT) {
+		return
+	}
+
+	container.style.width = `calc(${size}% - ${SPLIT_GUTTER_SIZE / 2}px)`
+}//end apply_split_width
 
 
 

@@ -271,6 +271,7 @@
 .wrapper_tool.tool_transcription > .content_data {
   display: flex;
   align-items: stretch;
+  justify-content: space-between;
   width: 100%;
   flex: 1 1 auto;
   min-height: 0;
