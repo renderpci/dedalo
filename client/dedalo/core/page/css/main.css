@@ -11378,6 +11378,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   line-height: 1.4rem;
 }
 .tool_header > .tool_buttons_container {
+  contain: content;
   display: flex;
   align-items: center;
   flex: 0 0 calc(100% + 2rem);

@@ -86,9 +86,24 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 	// render level
 		const render_level = options.render_level || 'full'
 
+	// mount_lang_field
+	// The transcription lang field is BUILT with the pane (it closes over the
+	// component it swaps) but LIVES in the tool's controls band. A 'content'
+	// render rebuilds the pane and not the band, so the fresh field replaces the
+	// stale one in place — left alone, the band would keep a select still
+	// addressing a detached component container.
+		const mount_lang_field = function(node) {
+			if (!node) return
+			if (self.lang_selector_container && self.lang_selector_container.isConnected) {
+				self.lang_selector_container.replaceWith(node)
+			}
+			self.lang_selector_container = node
+		}
+
 	// content_data
 		const content_data = await get_content_data_edit(self)
 		if (render_level==='content') {
+			mount_lang_field(content_data.lang_selector_container)
 			return content_data
 		}
 
@@ -106,6 +121,13 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 		// the scope that the position used to have to explain.
 		const viewer_selector = render_viewer_selector(self, content_data.left_container)
 		wrapper.tool_buttons_container.appendChild(viewer_selector.node)
+
+		// transcription lang. Built in get_content_data_edit (it closes over the
+		// transcription component it swaps) but mounted HERE: in the pane it used
+		// to sit in, the editor toolbar covers its row while editing — which is
+		// precisely when the user wants to change the transcription language.
+		wrapper.tool_buttons_container.appendChild(content_data.lang_selector_container)
+		self.lang_selector_container = content_data.lang_selector_container
 
 	// related_list. This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
 		const related_list_node = render_related_list(self)
@@ -214,15 +236,27 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// top_right
-		// Pane header for the transcription: caption + lang select INLINE, the
-		// tool_lang `.top` pattern (tools/tool_lang/css/tool_lang.less). The
-		// select used to be absolutely positioned in the pane's top-right corner,
-		// a full pane away from the label naming it.
+		// Pane header for the transcription: it names the pane, and while the
+		// editor is focused the ck toolbar takes this row over (see
+		// @transcription_chrome_height in the tool css) so the text keeps every
+		// line. That takeover is WHY the lang select is not here any more: a
+		// control the toolbar hides is a control the user cannot reach exactly
+		// when they are working. It lives in the tool's controls band instead,
+		// beside Show / Approach, reachable in both states.
 			const top_right = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'top transcription_top',
 				parent			: right_container
 			})
+
+			// lang_selector_container. A band field: caption + control inline, the
+			// same shape as .viewer_selector_container. It is appended to
+			// wrapper.tool_buttons_container by edit() — the pointer below is how
+			// it gets there, since this function builds the content, not the header.
+				const lang_selector_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'lang_selector_container'
+				})
 
 			// lang_selector
 				const lang_selector = ui.build_select_lang({
@@ -249,19 +283,28 @@ const get_content_data_edit = async function(self) {
 						component.render()
 						.then(function(node){
 							// remove previous node. (!) the lang select lives in the
-							// .top bar now, so nothing is preserved here.
+							// tool controls band now, so nothing is preserved here.
 							transcription_component_container.replaceChildren()
 							// add the new component to the container
 							transcription_component_container.appendChild(node)
 							// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
 						})
 				})
-				top_right.appendChild(lang_selector)
+				// caption of the band field. The band's other fields are captioned
+				// (Show, Approach…) — an uncaptioned select among them would be the
+				// only control there without a name.
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'top_label',
+						inner_html		: (get_label.language || 'Language'),
+						parent			: lang_selector_container
+					})
+					lang_selector_container.appendChild(lang_selector)
 
 			// caption. Named by the component itself, so an install that renames
-			// the transcription field sees its own wording. `order:-1` in the css
-			// puts it before the select whatever the DOM order is — same as
-			// tool_lang's .lang_label.
+			// the transcription field sees its own wording. It is the whole content
+			// of the pane header now — the row the ck toolbar borrows while the
+			// editor is focused.
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'top_label',
@@ -475,6 +518,9 @@ const get_content_data_edit = async function(self) {
 
 		// fix pointers
 		content_data.left_container = left_container
+		// the transcription lang field, built with the pane it belongs to but
+		// mounted in the tool's controls band by edit()
+		content_data.lang_selector_container = lang_selector_container
 
 
 	return content_data
@@ -921,18 +967,30 @@ const render_viewer_selector = function(self, left_container){
 		const media_component	= self.media_component || {label:'Media component role is not defined'}
 		const area_thesaurus	= self.area_thesaurus || {label:'Area thesaurus role is not defined'}
 		const people_section	= self.people_section || {label:'People role is not defined'}
+		// items. Each carries a glyph prefix so the three viewers are told apart at
+		// a glance — the labels are ontology data ("Tesauro", "Audiovisual", a
+		// people section named whatever the install calls it) and read as three
+		// interchangeable words otherwise.
+		// (!) a <select> renders its options as TEXT: no <img>, no css mask, no
+		// icon element survives in there. A unicode glyph in the option label is
+		// the only mark that shows both in the open list AND in the closed
+		// control, which is where identification actually matters.
+		// Keyed by VALUE, never by label: the label is install-defined.
 		const items = [
 			{
 				label : area_thesaurus.label,
-				value : 'area_thesaurus'
+				value : 'area_thesaurus',
+				icon  : '🌳' // the tree the thesaurus panel actually renders
 			},
 			{
 				label : people_section.label,
-				value : 'people_section'
+				value : 'people_section',
+				icon  : '👤'
 			},
 			{
 				label : media_component.label,
-				value : 'media_component'
+				value : 'media_component',
+				icon  : '🎬'
 			}
 		]
 
@@ -1060,7 +1118,9 @@ const render_viewer_selector = function(self, left_container){
 			// option
 			const option = ui.create_dom_element({
 				element_type	: 'option',
-				inner_html		: item.label,
+				inner_html		: item.icon
+					? (item.icon + ' ' + item.label)
+					: item.label,
 				value			: item.value,
 				parent			: select
 			})
