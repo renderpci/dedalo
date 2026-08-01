@@ -68,6 +68,54 @@ $global_start_time = hrtime(true);
 
 
 
+// request size check. When the request body is bigger than the PHP 'post_max_size' limit, PHP
+// discards the whole body and the request arrives with empty php://input, $_POST and $_FILES.
+// Without this check the client receives an empty response body and the real cause is invisible
+// (!) Note that the size parsing is inline on purpose. The functions 'parse_size' and
+// 'file_upload_max_size' are already declared in the global namespace by dd_utils_api::get_system_info
+// and re-declaring them here would trigger a fatal 'Cannot redeclare' error
+	if (isset($_SERVER['CONTENT_LENGTH'])) {
+
+		// post_max_size. String value like '32M' converted to bytes
+		$post_max_size_ini	= trim( (string)ini_get('post_max_size') );
+		$size_unit			= preg_replace('/[^bkmgtpezy]/i', '', $post_max_size_ini);
+		$size_value			= (float)preg_replace('/[^0-9\.]/', '', $post_max_size_ini);
+		$post_max_size		= !empty($size_unit)
+			? (int)round( $size_value * pow(1024, stripos('bkmgtpezy', $size_unit[0])) )
+			: (int)round( $size_value );
+
+		$content_length = (int)$_SERVER['CONTENT_LENGTH'];
+
+		// Note that a 'post_max_size' of 0 means unlimited. This check can only be true
+		// when the server already discarded the request body
+		if ($post_max_size>0 && $content_length>$post_max_size) {
+
+			$msg = 'Error. The request size ('.$content_length.' bytes) exceeds the server limit'
+				.' post_max_size ('.$post_max_size_ini.'). The file is too big to be uploaded.';
+
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= $msg;
+				$response->error	= (object)[
+					'message' => $msg
+				];
+				$response->errors	= ['post_max_size_exceeded'];
+
+			// clean previous output. PHP emits a 'POST Content-Length exceeds the limit' startup
+			// warning before this script runs. When 'display_errors' is on, that warning is
+			// prepended to the body and the response is not valid JSON anymore
+			while (ob_get_level() > 0) {
+				ob_end_clean();
+			}
+
+			error_log('Error: '.$msg);
+			echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			exit( 0 );
+		}
+	}
+
+
+
 // php://input get post vars. file_get_contents returns a JSON encoded string
 	$str_json = file_get_contents('php://input');
 	if (!empty($str_json)) {
@@ -261,6 +309,33 @@ $global_start_time = hrtime(true);
 	// header X-Processing-Time
 	if (DEVELOPMENT_SERVER) {
 		header('X-Processing-Time: ' . (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']));
+	}
+
+
+
+// upload errors. The API always answers with a HTTP 200 status. The upload clients read the raw
+// XHR response (they do not use data_manager), so failed uploads expose the reason also as
+// 'error.message', the shape that the CKEditor upload adapter reads.
+// (!) Scope is limited to the 'upload' action on purpose: the property 'error' is consumed by
+// data_manager to record API errors and render the generic error page
+// @see data_manager._record_api_error and common.prototype.render (core/common/js/common.js)
+	if (isset($rqo->action) && $rqo->action==='upload') {
+
+		// string error case. Normalize to object. Used by the key_dir 'web' failure response
+		// @see dd_utils_api::upload (object)['error' => 'Error moving file']
+		if (isset($response->error) && is_string($response->error)) {
+			$response->error = (object)[
+				'message' => $response->error
+			];
+		}
+
+		// failed upload case. Only when 'result' is explicitly false. Note that the success
+		// response of the key_dir 'web' (text editor images) has no 'result' property at all
+		if (isset($response->result) && $response->result===false && !isset($response->error)) {
+			$response->error = (object)[
+				'message' => $response->msg ?? 'Error on upload file'
+			];
+		}
 	}
 
 

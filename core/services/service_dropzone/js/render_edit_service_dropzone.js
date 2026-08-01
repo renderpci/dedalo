@@ -554,6 +554,12 @@ const render_template = async function(self) {
 			clickable			: button_add_files, // Define the element that should be used as click trigger to select files.
 			addRemoveLinks		: false,
 			acceptedFiles		: self.allowed_extensions.join(','),
+			// maxFilesize. In MB (Dropzone default is 256). The server limit is the lower of the PHP
+			// 'post_max_size' and 'upload_max_filesize' values. Files bigger than the limit are
+			// rejected in the browser, instead of being uploaded to be rejected by the server
+			maxFilesize			: self.max_size_bytes
+				? (self.max_size_bytes / (1024*1024))
+				: 256,
 			params				: {
 				key_dir : self.key_dir
 			},
