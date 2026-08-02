@@ -565,6 +565,31 @@ Widening the filter to several langs is a WIRE CHANGE: it needs a
 taught to choose. Gated by `test/unit/tool_context_labels_lang.test.ts` (seeds its
 own scratch tool row, so it does not depend on what the install has registered).
 
+## Registry strings: label (dd799) + description (dd612)
+
+A tool's own REGISTRY strings are not `dd1372` labels and do NOT follow the
+single-lang rule above: they are one string each, and the context must carry one
+value, so a missing translation has to fall back to something. Since
+**2026-08-02** it falls back down a DECLARED chain
+(`src/core/resolve/lang_fallback.ts`), first hit wins:
+
+    requested lang → its linguistic alias → install default app lang
+      → MASTER_SOURCE_LANG → any non-empty entry
+
+PHP took `items[0]` — whatever lang the column's stored order happened to put
+first. Stored order is alphabetical by lang code, so an lg-spa install was served
+the GERMAN `tool_indexation` description: lg-deu merely sorted first among the
+langs that DID exist, and the same missing translation resolved to a different
+language depending on which OTHER translations were present. Divergence entry:
+`engineering/wire_contract/WC-2026-08-02-tool-string-lang-fallback.md`; gated by
+`test/unit/tool_string_lang_fallback.test.ts`.
+
+The chain mirrors the global UI-label catalog's
+(`src/core/labels/catalog.ts`) so the two label stores degrade the same way. It
+makes a missing translation less VISIBLE, so it does not remove the obligation to
+translate: a tool's `dd612` should carry every application lang the install
+serves, in the `register.json` seed.
+
 ## Scaffolding
 
 `bun run scripts/create_tool.ts --name=tool_x --label="X" [--models=a,b]` copies

@@ -83,19 +83,24 @@
         "value": "<p>Erstellen Sie Verknüpfungen zwischen Textfragmenten und Thesaurusbegriffen</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Δημιουργήστε συνδέσμους μεταξύ τμημάτων κειμένου και όρων θησαυρού</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Create links between text fragments and thesaurus terms</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>पाठ टुक्रा र थिसौरस सर्तहरू बीच लिङ्कहरू सिर्जना गर्नुहोस्</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-spa",
+        "value": "<p>Crea enlaces entre fragmentos de texto y términos del tesauro.</p>"
       }
     ],
     "dd799": [
@@ -105,47 +110,47 @@
         "value": "Eina d'indexació"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Indexierungswerkzeug"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εργαλείο ευρετηρίασης"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Indexing tool"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Indexatzeko tresna"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Outil d'indexation"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Strumento di indicizzazione"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "अनुक्रमणिका उपकरण"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Ferramenta de indexação"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Herramienta de indexación"
       }
@@ -161,14 +166,14 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "2.1.0"
+        "value": "2.1.1"
       }
     ],
     "dd1328": [
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -769,7 +774,7 @@
     ],
     "dd612": [
       {
-        "count": 4
+        "count": 1
       }
     ],
     "dd799": [

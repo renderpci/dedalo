@@ -90,6 +90,11 @@
         "id": 1,
         "lang": "lg-eng",
         "value": "<p>Manages logged user basic data directly from the menu link</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Gestiona los datos básicos del usuario conectado directamente desde el enlace del menú</p>"
       }
     ],
     "dd799": [

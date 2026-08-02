@@ -105,6 +105,11 @@
         "id": 4,
         "lang": "lg-nep",
         "value": "<p>कुनै पनि अन्य कन्फिगर गरिएको भाषामा सामग्री अनुवाद गर्न उपकरण।</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-spa",
+        "value": "<p>Herramienta para traducir el contenido a cualquier otra lengua configurada.</p>"
       }
     ],
     "dd799": [

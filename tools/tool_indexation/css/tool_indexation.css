@@ -288,23 +288,12 @@
   top: 0;
   z-index: 3;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   margin: 0px -1rem 0.75rem -1rem;
+  margin-bottom: 0;
   padding: 2px 1rem 2px 2rem;
-  background-color: var(--bg_surface);
   border-bottom: 1px solid var(--border_default);
-}
-.wrapper_tool.tool_indexation > .content_data .top > .top_label {
-  order: -1;
-  padding-right: 0px;
-  margin-bottom: 0px;
-  text-transform: uppercase;
-  font-weight: 300;
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
-  color: var(--fg_muted);
-  white-space: nowrap;
 }
 .wrapper_tool.tool_indexation > .content_data .top > select {
   width: fit-content;
@@ -319,6 +308,7 @@
 }
 .wrapper_tool.tool_indexation > .content_data > .left_container,
 .wrapper_tool.tool_indexation > .content_data > .right_container {
+  contain: content;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -363,6 +353,14 @@
 .wrapper_tool.tool_indexation > .content_data > .right_container {
   width: 55%;
 }
+.wrapper_tool.tool_indexation > .content_data > .right_container > .top {
+  flex: 0 0 2.2rem;
+  height: 2.2rem;
+  box-sizing: border-box;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  overflow: hidden;
+}
 @media screen and (max-width: 1024px) {
   .wrapper_tool.tool_indexation > .content_data > .right_container {
     width: 100% !important;
@@ -378,8 +376,8 @@
 .wrapper_tool.tool_indexation > .content_data > .right_container > .transcription_component_container {
   flex: 0 0 55%;
   min-height: 0;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+  overflow: visible;
+  margin-bottom: 0.25rem;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -395,21 +393,51 @@
   display: none;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .transcription_component_container > .wrapper_component > .buttons_container {
-  top: 0;
-  z-index: 4;
+  top: -1.7rem;
+  right: 0;
+  z-index: 6;
   border-radius: 0;
+  height: 2.2rem;
+  max-height: 2.2rem;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .transcription_component_container > .wrapper_component > .buttons_container > .buttons_fold {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .transcription_component_container > .wrapper_component > .buttons_container span {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .transcription_component_container > .wrapper_component > .content_data {
   flex: 1 1 auto;
   min-height: 0;
   height: auto!important;
   max-height: none!important;
+  overflow: visible;
+  position: relative;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .transcription_component_container > .wrapper_component .toolbar_container {
+  top: -1.7rem;
+  left: 0;
+  width: 100%;
+  height: 2.2rem;
+  box-sizing: border-box;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: 0px 7rem 0px 0.5rem;
+  background-color: var(--bg_surface);
+  box-shadow: none;
+  border-bottom: 1px solid var(--border_default);
   overflow: hidden;
+  z-index: 5;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container {
   flex: 0 0 auto;
-  min-height: 3rem;
+  min-height: 2rem;
   display: flex;
+  align-items: stretch;
+  box-shadow: inset 0 -1px 0 0 var(--border_default);
 }
 @media screen and (max-width: 1024px) {
   .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container {
@@ -428,22 +456,31 @@
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container {
   display: flex;
-  padding: 0.25em;
-  padding-left: 1rem;
+  padding: 0.1em 0.25em 0.1em 1rem;
   background-color: transparent;
   align-items: center;
   margin: 0px;
+  align-self: center;
+  min-height: 0;
   border-top-left-radius: 20px;
   border-bottom-left-radius: 20px;
   transition: all 0.5s ease;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > * {
   display: flex;
+  align-items: center;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container select,
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container button,
+.wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container .button {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  height: 1.7em;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > .fragment_id_info {
   font-family: "Courier New", Courier, monospace;
   color: var(--color_black);
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tag_info > .tag_info_container > .fragment_id_info > span {
   margin-right: 0.5rem;
@@ -462,7 +499,7 @@
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .info_container > .tab_label {
   flex: 1;
-  height: 3rem;
+  height: 2rem;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -485,19 +522,94 @@
   overflow: hidden;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .component_indexing_container {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   grid-area: unset;
+  flex-direction: column;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .component_indexing_container.tab.active {
+  display: flex;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .component_indexing_container > .wrapper_component.component_portal {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .component_indexing_container > .wrapper_component.component_portal > .label {
+  display: none;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .component_indexing_container > .wrapper_component.component_portal > .content_data {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
   overflow-y: auto;
+  padding-top: 0.25rem;
+  padding-right: 2.75rem;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component > .buttons_container {
+  top: 0px;
+  right: 0px;
+  border-radius: 0px;
+  z-index: 6;
+  height: 1.7rem;
+  max-height: 1.7rem;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component > .buttons_container > .buttons_fold {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component > .buttons_container span {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note.tab.active {
+  display: flex;
+  flex-direction: column;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component.component_input_text {
+  flex: 0 0 auto;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component.component_text_area {
+  flex: 1 1 auto;
+  min-height: 6rem;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component.component_text_area > .label {
+  flex: 0 0 1.7rem;
+  height: 1.7rem;
+  box-sizing: border-box;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  overflow: hidden;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component.component_text_area > .content_data {
-  min-height: 15rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  position: relative;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .wrapper_component.component_text_area .toolbar_container {
+  top: -1.7rem;
+  left: 0;
+  width: 100%;
+  height: 1.7rem;
+  box-sizing: border-box;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: 0px 5rem 0px 0.5rem;
+  background-color: var(--bg_surface);
+  box-shadow: none;
+  border-bottom: 1px solid var(--border_default);
+  overflow: hidden;
+  z-index: 5;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container > .indexation_container > .indexation_note > .empty_note {
   height: 100%;
@@ -507,38 +619,37 @@
 .wrapper_tool.tool_indexation > .content_data > .right_container .tab_label {
   display: inline-block;
   margin: 0px;
-  margin-left: -1px;
   font-weight: 600;
   text-align: center;
-  color: var(--color_grey_10);
-  border: 1px solid transparent;
+  color: var(--fg_muted);
   -webkit-user-select: none;
   -khtml-user-select: none;
   -moz-user-select: none;
   -o-user-select: none;
   user-select: none;
-  top: 1px;
   position: relative;
-  padding: 0.5rem;
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
+  padding: 0.25rem 1.25rem;
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 0 transparent;
+  transition: color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container .tab_label:before {
   margin-right: 10px;
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container .tab_label:hover {
-  color: var(--color_grey_7);
+  color: var(--fg_default);
   cursor: pointer;
+  box-shadow: inset 0 -2px 0 0 var(--border_strong);
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container .tab_label.active {
-  background-color: var(--color_grey_14);
-  background-color: var(--color_white);
-  color: var(--color_grey_5);
-  border: 1px solid var(--color_grey_13);
-  border-top: 2px solid var(--color_tag_indexation_normal);
-  border-bottom: 1px solid var(--color_white);
-  margin-bottom: 0px;
+  color: var(--fg_default);
+  background-color: var(--bg_elevated);
+  box-shadow: inset 0 -3px 0 0 var(--color_tag_indexation_normal);
   z-index: 2;
+}
+.wrapper_tool.tool_indexation > .content_data > .right_container .tab_label.active:hover {
+  box-shadow: inset 0 -3px 0 0 var(--color_tag_indexation_normal);
 }
 .wrapper_tool.tool_indexation > .content_data > .right_container .tab {
   display: none;

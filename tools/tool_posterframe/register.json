@@ -97,6 +97,11 @@
         "id": 1,
         "lang": "lg-eng",
         "value": "<p>Manages video posterframe images</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Gestiona las imágenes de posterframe de los vídeos</p>"
       }
     ],
     "dd799": [

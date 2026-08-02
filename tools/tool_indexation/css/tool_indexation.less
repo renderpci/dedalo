@@ -13,6 +13,36 @@
 }
 @tool_color: var(--tool_indexation);
 
+// EDITOR CHROME BAND (transcription pane).
+// The ck toolbar is `position:absolute` (service_ckeditor.less) and this tool
+// also docks the component's orange button pill at the same corner, so both
+// used to composite straight over the FIRST LINE of the transcription the
+// moment the user clicked into it.
+// The fix costs NO vertical space: while editing, the toolbar rises OUT of the
+// reading surface and takes over the pane header row — the caption and the
+// lang select are the pixels it borrows, not a line of text. Idle the header
+// is a header again. The reading surface is the same height in both states,
+// so nothing reflows and no line is ever hidden.
+// (!) this only works because the boxes between the toolbar and the header —
+// `.transcription_component_container` and the component's `.content_data` —
+// stop clipping (`overflow: visible`); the editor scrolls in its own box.
+// The two heights below MUST stay equal or the toolbar under/overshoots the
+// header row it replaces.
+@transcription_chrome_height: 2.2rem;
+
+// Room a scrolling list must leave on its right so the fixed #floating_dock
+// disc (2.4rem wide, 1rem from the edge — page/css/layout/floating_dock.less)
+// never lands on a row control. The dock owns that corner by design; content
+// that puts BUTTONS there has to step aside, not fight it.
+@floating_dock_safe_gutter: 2.75rem;
+
+// same trade as @transcription_chrome_height, one field down: the tag note's
+// description editor hands its LABEL ROW to the ck toolbar while focused. It is
+// the label's own height (--component_label_height rounded up to the toolbar's
+// button row), so the swap is invisible except for what it puts there.
+@note_chrome_height: 1.7rem;
+@transcription_chrome_top: 1.7rem;
+
 // column_id (section_tool list)
 .column_section_id > .button_edit.list_tool_indexation {
 
@@ -143,22 +173,23 @@
 			top: 0;
 			z-index: 3;
 			display: flex;
-			align-items: baseline;
+			align-items: center;
 			gap: 0.5rem;
 			// bleed over the pane's side padding so the bar spans its full width.
 			// (!) no negative TOP margin: a sticky box cannot be pulled above its
 			// containing block's padding box, so the panes carry no top padding at
 			// all and this bar supplies it instead.
 			margin: 0px -1rem 0.75rem -1rem;
+			margin-bottom: 0;
 			padding: 2px 1rem 2px 2rem;
 			// (!) NOT optional: this bar is `position: sticky` inside a pane that
 			// scrolls, so with no fill of its own the pane's content composites
 			// straight through the caption and the select.
-			background-color: var(--bg_surface);
+			// background-color: var(--bg_surface);
 			border-bottom: 1px solid var(--border_default);
 
 			>.top_label {
-				.tool_indexation_top_label;
+				// .tool_indexation_top_label;
 			}
 
 			>select {
@@ -186,6 +217,7 @@
 		// — which used to drop the viewer selector to the bottom of the pane.
 		// Flex ignores both problems.
 		>.left_container, >.right_container {
+			contain: content;
 			display: flex;
 			flex-direction: column;
 			min-height: 0;
@@ -257,6 +289,22 @@
 		>.right_container {
 			width: 55%;
 
+			// the row the editor toolbar borrows while editing: pinned to the
+			// toolbar's own height so the swap covers it exactly, with no band of
+			// caption peeking out above or below it.
+			>.top {
+				// (!) `flex: 0 0 <h>` and NOT a bare `height`: this is a flex item in
+				// a column pane whose content overflows, and `overflow: hidden` below
+				// switches its automatic minimum size off — a bare height is then a
+				// shrinkable hint and the row collapsed to 4px, slicing the caption.
+				flex: 0 0 @transcription_chrome_height;
+				height: @transcription_chrome_height;
+				box-sizing: border-box;
+				padding-top: 0px;
+				padding-bottom: 0px;
+				overflow: hidden;
+			}
+
 			@media screen and (max-width: @width_break_point_0) {
 				// see the left pane — Split.js's inline width needs beating
 				width: 100% !important;
@@ -277,12 +325,16 @@
 			>.transcription_component_container {
 				flex: 0 0 55%;
 				min-height: 0;
-				overflow: hidden;
-				margin-bottom: 0.5rem;
+				// (!) NOT `hidden`: the ck toolbar is an absolutely positioned
+				// descendant that must escape UPWARD over the pane header while
+				// editing (see @transcription_chrome_height). Nothing spills —
+				// the editor box scrolls its own overflow.
+				overflow: visible;
+				margin-bottom: 0.25rem;
 				position: relative;
 
-				// (!) the lang selector is NOT here any more — it moved into the
-				// pane's `.top` bar next to the caption that names it. It used to
+				// (!) the lang selector is NOT here any more — it moved to the
+				// tool's controls band, which the editor toolbar never covers. It used to
 				// be absolutely positioned in this corner, floating over the text.
 
 				// the component must FILL the reading surface, not sit at whatever
@@ -307,10 +359,34 @@
 						display: none;
 					}
 
+					// the orange tool pill — right end of the header row the toolbar
+					// takes over, height-matched to it. Its default `top: -2.4rem`
+					// floats it that bit too high (it was drawn for a field with air
+					// above it, not for a pane header).
 					>.buttons_container {
-						top: 0;
-						z-index: 4;
+						top: -@transcription_chrome_top;
+						right: 0;
+						z-index: 6; // above the toolbar strip it sits on
 						border-radius: 0;
+						height: @transcription_chrome_height;
+						max-height: @transcription_chrome_height;
+
+						// (!) centring goes on the FOLD, not here: the active state
+						// serves this box `display: block` (layout.less), so
+						// `align-items` on it is inert — the icons sat at the top of
+						// the pill with all the slack below them.
+						>.buttons_fold {
+							display: flex;
+							align-items: center;
+							height: 100%;
+						}
+
+						// the default margins center the icons in a 2rem pill; the fold
+						// centers them itself now, and doubling both shifted them low.
+						span {
+							margin-top: 0;
+							margin-bottom: 0;
+						}
 					}
 
 					// (!) both `height` and `max-height` need beating here:
@@ -323,16 +399,57 @@
 						min-height: 0;
 						height: auto!important;
 						max-height: none!important;
+						// see the container: the toolbar leaves this box upward
+						overflow: visible;
+
+						// the ck toolbar's containing block — `.content_value`
+						// between them is `display: contents`. Its padding-box top
+						// is the first text line, so the toolbar's negative offset
+						// is measured from exactly the edge it must clear.
+						position: relative;
+					}
+
+					// the ck toolbar, RAISED onto the pane header row. Full width and
+					// opaque: it replaces the caption + lang select for as long as the
+					// editor is focused (the service adds `.hide` on blur), and gives
+					// every pixel of the reading surface back to the text.
+					.toolbar_container {
+						top: -@transcription_chrome_top;
+						left: 0;
+						width: 100%;
+						height: @transcription_chrome_height;
+						box-sizing: border-box;
+						align-items: center;
+						flex-wrap: nowrap;
+						// right pad = room for the pill sharing the row
+						padding: 0px 7rem 0px 0.5rem;
+						background-color: var(--bg_surface);
+						box-shadow: none;
+						border-bottom: 1px solid var(--border_default);
 						overflow: hidden;
+						// over the sticky `.top` it covers (that one is z-index 3)
+						z-index: 5;
 					}
 				}
 			}
 
 			// selected tag info line
+			// (!) the band between the transcription and the list is pure chrome —
+			// a tab strip and a tag chip — and it used to eat 75px of a pane whose
+			// whole job is showing rows. It is the strip's own height now and
+			// nothing more: 2rem row, no repeated caption under it (see the portal
+			// label below), minimal air on either side.
 			>.info_container {
 				flex: 0 0 auto;
-				min-height: 3rem;
+				min-height: 2rem;
 				display: flex;
+				// THE STRIP BASELINE. Without it the three labels floated in the
+				// gap between the transcription and the list, and the active one
+				// was a white rectangle on nothing — the selection had no row to
+				// be a selection WITHIN. One hairline the whole row stands on,
+				// which the active tab's underline then sits on top of.
+				align-items: stretch;
+				box-shadow: inset 0 -1px 0 0 var(--border_default);
 
 				@media screen and (max-width: @width_break_point_0) {
 					flex-wrap: wrap;
@@ -348,23 +465,37 @@
 
 					>.tag_info_container {
 						display: flex;
-						padding: 0.25em;
-						padding-left: 1rem;
+						padding: 0.1em 0.25em 0.1em 1rem;
 						background-color: transparent;
 						align-items: center;
 						margin: 0px;
+						// (!) the chip must live INSIDE the strip's row rather than
+						// push it: its id ran at 1.2rem and its select carried a
+						// stacked-field's form margin, which made it the tallest thing
+						// in the band — it grew the row past the tab labels and
+						// spilled over the first line of the panel below.
+						align-self: center;
+						min-height: 0;
 						border-top-left-radius: 20px;
 						border-bottom-left-radius: 20px;
 						transition: all 0.5s ease;
 
 						>* {
 							display: flex;
+							align-items: center;
+						}
+
+						// state select + delete button: no stacked-field margins
+						select, button, .button {
+							margin-top: 0px;
+							margin-bottom: 0px;
+							height: 1.7em;
 						}
 
 						>.fragment_id_info {
 							font-family: "Courier New",Courier,monospace;
 							color: @color_black;
-							font-size: 1.2rem;
+							font-size: 1rem;
 
 							>span {
 								margin-right: 0.5rem;
@@ -397,7 +528,7 @@
 
 				>.tab_label {
 					flex: 1;
-					height: 3rem;
+					height: 2rem;
 					display: flex;
 					justify-content: center;
 					align-items: center;
@@ -431,28 +562,172 @@
 
 				// portal
 				>.component_indexing_container {
-					flex: 1;
+					// FLEX THE WHOLE WAY DOWN, like the transcription pane above.
+					// The portal wrapper is a GRID by default
+					// (`.wrapper_component.edit`: `grid-template-rows:
+					// var(--component_label_height) minmax(auto,100%)`), and inside
+					// that grid nothing percentage-based resolves here — the list box
+					// fell back to its 35px minimum while its row measured 267.
+					// Flex gives it a definite share, so the LIST scrolls in its own
+					// box instead of pushing the pane's scrollbar: the tab strip and
+					// the transcription stay put while you read down the rows.
+					flex: 1 1 auto;
 					min-height: 0;
 					grid-area: unset;
+					flex-direction: column;
+					// (!) NO bare `display` here. This node is also the `.tab`, and
+					// `.tab {display:none}` — the rule that HIDES the panel when
+					// another tab is selected — carries less specificity than this
+					// block, so declaring display here pinned the inactive list
+					// visible (2213px of it, under the References tab).
+
+					// the ACTIVE panel, and only it, is the flex column. `.tab.active`
+					// serves `display: table` later in this same sheet at equal
+					// specificity (the tie goes to the last rule), so winning it back
+					// takes one more class — without that the list rendered 2213px
+					// tall inside a 250px box and everything past row ~8 was clipped
+					// with no scrollbar to reach it.
+					&.tab.active {
+						display: flex;
+					}
 
 					>.wrapper_component.component_portal {
-						height: 100%;
+						flex: 1 1 auto;
+						min-height: 0;
+						height: auto;
+						display: flex;
+						flex-direction: column;
 
-						// was `calc(37vh - 5rem)` — another viewport-relative height
-						// inside an already-sized pane. It fills its tab instead.
+						// the portal's own caption is the word the ACTIVE TAB one
+						// pixel above it already says ("Indexación" under
+						// "Indexation"). Two names for one list, and a row of the
+						// pane spent saying the second one.
+						>.label {
+							display: none;
+						}
+
+						// was `calc(37vh - 5rem)` — a viewport-relative height inside an
+						// already-sized pane. It fills its tab instead.
 						>.content_data {
-							height: 100%;
+							flex: 1 1 auto;
+							min-height: 0;
+							height: auto;
+							max-height: none;
 							overflow-y: auto;
+							padding-top: 0.25rem;
+							// DOCK SAFE GUTTER. #floating_dock is `position: fixed` in
+							// this same bottom-right corner (page/css/layout/
+							// floating_dock.less) and the error launcher disc sat on
+							// top of the row-delete buttons — the one control in this
+							// list that is destructive AND was unreachable. The rows
+							// end left of the disc's column instead: the dock keeps
+							// its corner, the buttons keep their clicks.
+							// = disc (2.4rem) + its offset (1rem) - the pane's own
+							// padding (1rem), rounded up for the scrollbar.
+							padding-right: @floating_dock_safe_gutter;
 						}
 					}
 				}
 
 				// note
 				>.indexation_note {
+					// the tag's note components carry the standard floating tool
+					// pill, drawn for a field with air above it (`top: -2.4rem`,
+					// layout.less). Here there is no air — the tab strip is one pixel
+					// up — so the pill landed ON it, over the tag chip and the note's
+					// own first label. Docked inside this panel's top-right corner
+					// instead, the same answer the transcription band gives.
+					>.wrapper_component {
+						>.buttons_container {
+							top: 0px;
+							right: 0px;
+							border-radius: 0px;
+							z-index: 6; // above the toolbar strip it shares the row with
+							// height-matched to the row it docks into, or it hangs
+							// below the strip and back over the first line of text
+							height: @note_chrome_height;
+							max-height: @note_chrome_height;
+
+							// see the transcription pill: the active state serves this
+							// box `display: block`, so centring belongs on the fold
+							>.buttons_fold {
+								display: flex;
+								align-items: center;
+								height: 100%;
+							}
+
+							span {
+								margin-top: 0;
+								margin-bottom: 0;
+							}
+						}
+					}
+
+					// NOTHING MOVES WHEN THE DESCRIPTION IS FOCUSED.
+					// The note is Title + Description, and the description's editor
+					// used to claim `min-height: 15rem` — taller than the panel that
+					// holds both. Activating it therefore overflowed the panel and the
+					// browser scrolled the caret into view, which pushed the title row
+					// half out of sight at the top (and the label with it).
+					// The panel is a flex column instead: the title keeps its natural
+					// height, the description takes exactly what is left, and the
+					// EDITOR scrolls inside its own box. Focus changes nothing.
+					&.tab.active {
+						display: flex;
+						flex-direction: column;
+					}
+
+					>.wrapper_component.component_input_text {
+						flex: 0 0 auto;
+					}
 
 					>.wrapper_component.component_text_area {
+						flex: 1 1 auto;
+						min-height: 6rem;
+						height: auto;
+						display: flex;
+						flex-direction: column;
+
+						// the note's editor has the transcription's problem in
+						// miniature — an absolutely positioned ck toolbar over its
+						// first line — and it gets the same answer: the toolbar takes
+						// over the row that names the field while the editor is
+						// focused. Same trade, one row instead of one line of text.
+						>.label {
+							flex: 0 0 @note_chrome_height;
+							height: @note_chrome_height;
+							box-sizing: border-box;
+							padding-top: 0px;
+							padding-bottom: 0px;
+							overflow: hidden;
+						}
+
 						>.content_data {
-							min-height: 15rem;
+							flex: 1 1 auto;
+							// (!) was `min-height: 15rem` — the whole cause: a floor
+							// taller than the box it lives in.
+							min-height: 0;
+							height: auto;
+							max-height: none;
+							// the toolbar leaves this box upward, onto the label row
+							overflow: visible;
+							position: relative;
+						}
+
+						.toolbar_container {
+							top: -@note_chrome_height;
+							left: 0;
+							width: 100%;
+							height: @note_chrome_height;
+							box-sizing: border-box;
+							align-items: center;
+							flex-wrap: nowrap;
+							padding: 0px 5rem 0px 0.5rem;
+							background-color: var(--bg_surface);
+							box-shadow: none;
+							border-bottom: 1px solid var(--border_default);
+							overflow: hidden;
+							z-index: 5;
 						}
 					}
 
@@ -464,44 +739,59 @@
 				}
 			}//end >.indexation_container
 
-			// tab headers
+			// TAB HEADERS.
+			// The folder-tab idiom this used to draw (white box, grey border on
+			// three sides, orange line on top) needs a panel of the same colour
+			// under it to read as a tab at all — and the panel below is the grey
+			// pane surface, so the active tab read as a stray white rectangle.
+			// The mark is a SELECTION ZONE instead: the label's whole third of
+			// the strip lights up — tinted surface, full-width accent underline
+			// on the strip's baseline, ink promoted from muted to default.
+			// Nothing here relies on the panel's colour.
 			.tab_label {
 				display: inline-block;
 				margin: 0px;
-				margin-left: -1px;
 				font-weight: 600;
 				text-align: center;
-				color: @color_grey_10;
-				border: 1px solid transparent;
+				color: var(--fg_muted);
 				-webkit-user-select: none;
 				-khtml-user-select: none;
 				-moz-user-select: none;
 				-o-user-select: none;
 				user-select: none;
-				top: 1px;
 				position: relative;
-				padding: 0.5rem;
-				padding-left: 1.25rem;
-				padding-right: 1.25rem;
+				padding: 0.25rem 1.25rem;
+				border-top-left-radius: var(--radius-md);
+				border-top-right-radius: var(--radius-md);
+				// the underline is drawn as an inset shadow, not a border: a border
+				// would change the box height between states and shift the labels.
+				box-shadow: inset 0 0 0 0 transparent;
+				transition:
+					color var(--transition-fast),
+					background-color var(--transition-fast),
+					box-shadow var(--transition-fast);
 
 				&:before {
 					margin-right: 10px;
 				}
 
 				&:hover {
-					color: @color_grey_7;
+					color: var(--fg_default);
 					cursor: pointer;
+					// half-weight underline: the zone previews itself under the
+					// pointer, so which band a click will select is never a guess
+					box-shadow: inset 0 -2px 0 0 var(--border_strong);
 				}
 
 				&.active {
-					background-color: @color_grey_14;
-					background-color: @color_white;
-					color: @color_grey_5;
-					border: 1px solid @color_grey_13;
-					border-top: 2px solid @color_tag_indexation_normal;
-					border-bottom: 1px solid @color_white;
-					margin-bottom: 0px;
+					color: var(--fg_default);
+					background-color: var(--bg_elevated);
+					box-shadow: inset 0 -3px 0 0 @color_tag_indexation_normal;
 					z-index: 2;
+
+					&:hover {
+						box-shadow: inset 0 -3px 0 0 @color_tag_indexation_normal;
+					}
 				}
 			}
 

@@ -218,12 +218,29 @@ describe('renderSpriteTag / renderDrawTag — SVG output', () => {
 		expect(svg).toContain('>00:00:25.684<');
 	});
 
-	test('index label colour: white on the normal state, black otherwise (PHP parity)', () => {
-		expect(renderSpriteTag(asTag({ state: 'n' }))).toContain('fill="#ffffff"');
+	// WC-2026-08-02-index-tag-legibility: PHP painted the NORMAL state white on
+	// #ffab01; every index fill is light, so the ink is black on all three states.
+	test('index label colour: black on every state (WC-2026-08-02-index-tag-legibility)', () => {
+		expect(renderSpriteTag(asTag({ state: 'n' }))).toContain('fill="#000000"');
 		expect(renderSpriteTag(asTag({ state: 'r' }))).toContain('fill="#000000"');
 		expect(renderSpriteTag(asTag({ state: 'd' }))).toContain('fill="#000000"');
 		// index out uses the mirrored sprite but still embeds a base image.
 		expect(renderSpriteTag(asTag({ out: true }))).toContain('xlink:href="data:image/png;base64,');
+	});
+
+	/**
+	 * The number sits on the VISIBLE pill body, not the sprite box: both index
+	 * sprites are 68x30 with a circular notch, opaque at mid-height over 0..54
+	 * (`in`, centre 27) and 13..67 (`out`, centre 40). PHP's single `+2` nudge
+	 * put the label at x=36 for BOTH — 9px right of centre on `in`, 4px left on
+	 * `out`. A wrong anchor here is invisible in an eyeball test at 1-digit and
+	 * glaring at 3 digits, so it is pinned.
+	 */
+	test('index label is centred on the visible pill body, per direction', () => {
+		expect(renderSpriteTag(asTag({ out: false }))).toContain('x="27"');
+		expect(renderSpriteTag(asTag({ out: true }))).toContain('x="40"');
+		// vertically centred in the full-height pill, not PHP's `21 + offsetY` baseline.
+		expect(renderSpriteTag(asTag({ out: false }))).toContain('y="15" dominant-baseline="central"');
 	});
 
 	/**

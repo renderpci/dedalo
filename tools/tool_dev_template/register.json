@@ -90,6 +90,11 @@
         "id": 1,
         "lang": "lg-eng",
         "value": "<p>This a sample of Dédalo tool.</p><p>You can use it as start point to create new tools and maybe, to contribute to the community with your work.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Este es un ejemplo de herramienta de Dédalo.</p><p>Puedes usarlo como punto de partida para crear nuevas herramientas y, quizá, contribuir con tu trabajo a la comunidad.</p>"
       }
     ],
     "dd799": [

@@ -2465,6 +2465,9 @@ export const ui = {
 	* @param {Array|Object} [options.langs] - Language list; see format notes above.
 	* @param {string} [options.selected] - The lang code to pre-select (e.g. 'lg-eng').
 	* @param {Function|null} [options.action] - onChange handler.
+	* @param {boolean} [options.sort=false] - Sort options alphabetically by label. Off by
+	*        default: the project lang order is meaningful (main lang first) where it is used
+	*        to pick a working lang; opt in where the list is long and picked by name.
 	* @param {string} [options.class_name='select_lang'] - CSS class for the <select>.
 	* @returns {HTMLElement} select_lang - The constructed <select> element with <option> children.
 	*/
@@ -2481,6 +2484,7 @@ export const ui = {
 								  }]
 			const selected		= options.selected || page_globals.dedalo_application_lang || 'lg-eng'
 			const action		= options.action || null
+			const sort			= options.sort===true
 			const class_name	= options.class_name || 'select_lang'
 
 		const fragment = new DocumentFragment()
@@ -2501,18 +2505,23 @@ export const ui = {
 				// default array of objects case
 				: langs
 
+		// sort. Copy: langs may be the shared page_globals array, never sort it in place
+			const final_ar_langs = sort===true
+				? ar_langs.slice().sort((a,b) => String(a.label).localeCompare(String(b.label)))
+				: ar_langs
+
 		// iterate array of langs and create option for each one
-			const ar_langs_length = ar_langs.length
+			const ar_langs_length = final_ar_langs.length
 			for (let i = 0; i < ar_langs_length; i++) {
 
 				const current_option = ui.create_dom_element({
 					element_type	: 'option',
-					value			: ar_langs[i].value,
-					inner_html		: ar_langs[i].label,
+					value			: final_ar_langs[i].value,
+					inner_html		: final_ar_langs[i].label,
 					parent			: fragment
 				})
 				// selected options set on match
-				if (ar_langs[i].value===selected) {
+				if (final_ar_langs[i].value===selected) {
 					current_option.selected = true
 				}
 			}

@@ -105,6 +105,11 @@
         "id": 4,
         "lang": "lg-nep",
         "value": "<p>सम्बन्धित क्षेत्रहरूमा प्रयोग गर्न PDF को सामग्री निकाल्नुहोस्, जस्तै text_areas।</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-spa",
+        "value": "<p>Extrae el contenido del PDF para usarlo en los campos relacionados, como las áreas de texto.</p>"
       }
     ],
     "dd799": [
