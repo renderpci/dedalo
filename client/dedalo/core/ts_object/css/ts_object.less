@@ -15,6 +15,12 @@
 	@ts_object_line_height: 20px;
 	@grey_color: @color_grey_11;
 	@grey_dark_color: @color_grey_1;
+	// id-column icons: one hit box for every button, and one INK size all four
+	// icons are normalized to. `mask-size` must be absolute px, never a %: a %
+	// resolves against the (flex-shrinkable) box, so any width pressure in the
+	// id column silently rescaled the glyphs — that is what made them a mess.
+	@ts_icon_box: 20px;
+	@ts_icon_ink: 14px;
 
 	// mixins
 		// inline_common
@@ -24,13 +30,20 @@
 			font-size: 1rem;
 		}
 		// ts_icons_all. icons common
+		// Mask defaults live here; each icon only overrides `mask-size` to
+		// compensate for its own ink/viewBox ratio (see the per-icon comments).
 		.ts_icons_all {
-			background-position: center;
-			background-repeat: no-repeat;
-			background-size: 76%;
+			background-image: none;
+			background-color: var(--fg_muted);
+			border-radius: 3px;
 			cursor: pointer;
-			height: @ts_object_line_height;
-			width: @ts_object_line_height;
+			flex: 0 0 auto;
+			height: @ts_icon_box;
+			width: @ts_icon_box;
+			-webkit-mask-repeat: no-repeat;
+					mask-repeat: no-repeat;
+			-webkit-mask-position: center;
+					mask-position: center;
 		}
 
 	>.content_data {
@@ -63,7 +76,12 @@
 				line-height: 1.5rem;
 				z-index: 1; // overlap term hilite
 
-				width: 1.5rem;
+				// ONE hit box + ONE gap for every button. `flex: 0 0 auto` is
+				// load-bearing: the id column is `flex-wrap: nowrap`, so a
+				// shrinkable box got squeezed on deep/narrow rows and dragged the
+				// icon down with it.
+				flex: 0 0 auto;
+				width: @ts_icon_box;
 				margin-right: 0.25rem;
 
 				&:active {
@@ -71,50 +89,30 @@
 				}
 			}
 
-			a.id_column_link div {
-				height: @ts_object_line_height;
-				margin-right: 6px;
-			}
-
 			.ts_object_add_icon {
-			.ts_icons_all();
-				background-image: none;
+				.ts_icons_all();
+				// ink fills 98.3% of the 1024 viewBox
 				-webkit-mask-image: url('../../themes/default/icons/add_light.svg');
 						mask-image: url('../../themes/default/icons/add_light.svg');
-				-webkit-mask-size: 76%;
-						mask-size: 76%;
-				-webkit-mask-repeat: no-repeat;
-						mask-repeat: no-repeat;
-				-webkit-mask-position: center;
-						mask-position: center;
-			background-color: var(--fg_muted);
+				-webkit-mask-size: 14.25px;
+						mask-size: 14.25px;
 
-			&:hover {
-				background-color: var(--color_orange_dedalo); 
-				border-radius: 3px;
+				&:hover {
+					background-color: var(--color_orange_dedalo);
+				}
 			}
-		}
 
 			 // drag_button
-			.ts_object_drag {
-				margin-right: 4px;
-			}
 			.ts_object_drag_icon {
 				.ts_icons_all();
-				background-image: none;
+				// ink fills 99.8% of the 1024 viewBox
 				-webkit-mask-image: url('../../themes/default/icons/move.svg');
 						mask-image: url('../../themes/default/icons/move.svg');
-				-webkit-mask-size: 76%;
-						mask-size: 76%;
-				-webkit-mask-repeat: no-repeat;
-						mask-repeat: no-repeat;
-				-webkit-mask-position: center;
-						mask-position: center;
-				background-color: var(--fg_muted);
+				-webkit-mask-size: 14px;
+						mask-size: 14px;
 
 				&:hover {
 					background-color: var(--color_blue);
-					border-radius: 3px;
 				}
 			}
 
@@ -123,21 +121,15 @@
 
 				.ts_object_delete_icon {
 					.ts_icons_all();
-					background-image: none;
+					// ink fills only 91.7% of the 1024 viewBox — needs a bigger
+					// mask box to land on the same 14px of drawn glyph
 					-webkit-mask-image: url('../../themes/default/icons/trash.svg');
 							mask-image: url('../../themes/default/icons/trash.svg');
-					-webkit-mask-size: 76%;
-							mask-size: 76%;
-					-webkit-mask-repeat: no-repeat;
-							mask-repeat: no-repeat;
-					-webkit-mask-position: center;
-							mask-position: center;
-					background-color: var(--fg_muted);
-					margin-right: 2px;
+					-webkit-mask-size: 15.25px;
+							mask-size: 15.25px;
 
 					&:hover {
 						background-color: @color_danger;
-						border-radius: 3px;
 					}
 				}
 			}
@@ -189,21 +181,13 @@
 
 				// edit_icon
 				.ts_object_edit_icon {
-					background-image: none;
-					background-repeat: no-repeat;
+					.ts_icons_all();
+					// ink fills 95.5% of the 1024 viewBox
 					-webkit-mask-image: url('../../themes/default/icons/edit.svg');
 							mask-image: url('../../themes/default/icons/edit.svg');
-					-webkit-mask-size: 65%;
-							mask-size: 65%;
-					-webkit-mask-repeat: no-repeat;
-							mask-repeat: no-repeat;
-					-webkit-mask-position: center;
-							mask-position: center;
-					background-color: var(--fg_muted);
+					-webkit-mask-size: 14.75px;
+							mask-size: 14.75px;
 					float: left;
-					width: 24px;
-					height: @ts_object_line_height;
-					cursor: pointer;
 
 					&:hover {
 						background-color: var(--color_success);

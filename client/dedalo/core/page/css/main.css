@@ -18054,12 +18054,17 @@ body.inspector_resizing {
   font-size: 1rem;
 }
 .wrap_ts_object .ts_icons_all {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 .wrap_ts_object > .content_data {
   position: relative;
@@ -18083,85 +18088,72 @@ body.inspector_resizing {
   height: 1.4em;
   line-height: 1.5rem;
   z-index: 1;
-  width: 1.5rem;
+  flex: 0 0 auto;
+  width: 20px;
   margin-right: 0.25rem;
 }
 .wrap_ts_object > .content_data > .id_column_content .id_column_link:active {
   opacity: 0.5;
 }
-.wrap_ts_object > .content_data > .id_column_content a.id_column_link div {
-  height: 20px;
-  margin-right: 6px;
-}
 .wrap_ts_object > .content_data > .id_column_content .ts_object_add_icon {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
-  background-image: none;
-  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
-  mask-image: url('../../themes/default/icons/add_light.svg');
-  -webkit-mask-size: 76%;
-  mask-size: 76%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
+  mask-image: url('../../themes/default/icons/add_light.svg');
+  -webkit-mask-size: 14.25px;
+  mask-size: 14.25px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_add_icon:hover {
   background-color: var(--color_orange_dedalo);
-  border-radius: 3px;
-}
-.wrap_ts_object > .content_data > .id_column_content .ts_object_drag {
-  margin-right: 4px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_drag_icon {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
-  background-image: none;
-  -webkit-mask-image: url('../../themes/default/icons/move.svg');
-  mask-image: url('../../themes/default/icons/move.svg');
-  -webkit-mask-size: 76%;
-  mask-size: 76%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/move.svg');
+  mask-image: url('../../themes/default/icons/move.svg');
+  -webkit-mask-size: 14px;
+  mask-size: 14px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_drag_icon:hover {
   background-color: var(--color_blue);
-  border-radius: 3px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_delete .ts_object_delete_icon {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
-  background-image: none;
-  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
-  mask-image: url('../../themes/default/icons/trash.svg');
-  -webkit-mask-size: 76%;
-  mask-size: 76%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
-  margin-right: 2px;
+  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
+  mask-image: url('../../themes/default/icons/trash.svg');
+  -webkit-mask-size: 15.25px;
+  mask-size: 15.25px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_delete .ts_object_delete_icon:hover {
   background-color: var(--color_danger);
-  border-radius: 3px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_order_number {
   width: 1rem;
@@ -18199,20 +18191,21 @@ body.inspector_resizing {
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_edit .ts_object_edit_icon {
   background-image: none;
-  background-repeat: no-repeat;
-  -webkit-mask-image: url('../../themes/default/icons/edit.svg');
-  mask-image: url('../../themes/default/icons/edit.svg');
-  -webkit-mask-size: 65%;
-  mask-size: 65%;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  height: 20px;
+  width: 20px;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/edit.svg');
+  mask-image: url('../../themes/default/icons/edit.svg');
+  -webkit-mask-size: 14.75px;
+  mask-size: 14.75px;
   float: left;
-  width: 24px;
-  height: 20px;
-  cursor: pointer;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_edit .ts_object_edit_icon:hover {
   background-color: var(--color_success);
@@ -24969,8 +24962,10 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   background-color: transparent !important;
   color: var(--fg_muted) !important;
 }
+:root[data-design="redesign"] .column.caption.section > label {
+  background-color: var(--bg_surface_alt) !important;
+}
 :root[data-design="redesign"] .indexations_container .top_container {
-  background-color: transparent !important;
   box-shadow: none !important;
 }
 :root[data-design="redesign"] .area_ontology .typology_name {
