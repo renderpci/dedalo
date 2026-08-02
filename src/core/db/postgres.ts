@@ -265,6 +265,43 @@ interface DeferredActionQueue {
 
 const deferredActionStore = new AsyncLocalStorage<DeferredActionQueue>();
 
+/**
+ * COMMIT-ONLY actions for the current async context (W12, 2026-08-02 — the
+ * observer-cascade prerequisite). The deferred queue above is the WRONG lane
+ * for side effects that must track the transaction's OUTCOME: it replays on
+ * ROLLBACK too (correct for cache clears, catastrophic for mirror writes),
+ * its actions are `() => void` (an async action's rejection would be an
+ * unhandled promise), and callers cannot tell the two intents apart. This
+ * SEPARATE lane runs its actions ONLY after a successful COMMIT, awaits each
+ * one (async supported; a rejection is logged and the remainder still
+ * drains), and drains in withTransaction's finally OUTSIDE the
+ * transactionStore context — so the actions run with NO ambient transaction
+ * (they may open their own via withTransaction) and after the pool slot is
+ * released. On ROLLBACK the queue is discarded wholesale.
+ */
+interface CommitActionQueue {
+	actions: Array<() => void | Promise<void>>;
+	/** True once the queue's fate is decided — late registrations must be run
+	 * by the caller itself (registerCommitAction returns false). */
+	closed: boolean;
+}
+
+const commitActionStore = new AsyncLocalStorage<CommitActionQueue>();
+
+/**
+ * Queue `action` to run ONLY IF the ambient transaction COMMITS. Returns
+ * false when no transaction is active (or the ambient queue already drained —
+ * a leaked continuation): the caller then owns the action and must run it
+ * itself. Contrast deferPostTransaction, which replays on rollback too and is
+ * for idempotent cache invalidation only — never for writes.
+ */
+export function registerCommitAction(action: () => void | Promise<void>): boolean {
+	const queue = commitActionStore.getStore();
+	if (queue === undefined || queue.closed) return false;
+	queue.actions.push(action);
+	return true;
+}
+
 /** The executor for the current context: the ambient tx connection, else the pool. */
 function activeExecutor(): SQL {
 	const handle = transactionStore.getStore();
@@ -356,16 +393,25 @@ export async function withTransaction<T>(work: () => Promise<T>): Promise<T> {
 		return work();
 	}
 	const queue: DeferredActionQueue = { actions: [], closed: false };
+	const commitQueue: CommitActionQueue = { actions: [], closed: false };
 	let handle: TransactionHandle | null = null;
+	// COMMIT means pool.begin RESOLVED (Bun issues the COMMIT before resolving;
+	// a thrown work callback or a failed COMMIT both reject) — the flag decides
+	// whether the commit-only lane drains or is discarded.
+	let committed = false;
 	// The transaction owns ONE pool slot for its whole span (see the acquire
 	// gate above); its inner queries route onto the reserved connection and
 	// bypass the gate.
 	await acquirePoolSlot();
 	try {
-		return (await pool.begin(async (transaction: SQL) => {
+		const result = (await pool.begin(async (transaction: SQL) => {
 			handle = { executor: transaction, expired: false };
-			return transactionStore.run(handle, () => deferredActionStore.run(queue, work));
+			return transactionStore.run(handle, () =>
+				deferredActionStore.run(queue, () => commitActionStore.run(commitQueue, work)),
+			);
 		})) as T;
+		committed = true;
+		return result;
 	} finally {
 		releasePoolSlot();
 		// S2-14: expire the ambient handle FIRST — from here on, any leaked
@@ -384,6 +430,27 @@ export async function withTransaction<T>(work: () => Promise<T>): Promise<T> {
 				console.error('withTransaction: deferred post-transaction action failed:', error);
 			}
 		}
+		// COMMIT-ONLY lane (W12): drains here — outside transactionStore.run,
+		// so actions see NO ambient transaction and their queries hit the pool
+		// (or their own withTransaction) — and ONLY when the COMMIT succeeded.
+		// On rollback the queue is discarded: a commit action is by contract a
+		// side effect OF the committed state (observer cascade hops, mirror
+		// writes) and must never fire for state that does not exist.
+		// Each action is awaited: async actions are first-class, a rejection is
+		// logged and the remainder still drains (never an unhandled rejection).
+		commitQueue.closed = true;
+		if (committed) {
+			for (const action of commitQueue.actions) {
+				try {
+					await action();
+				} catch (error) {
+					console.error(
+						'withTransaction: commit-only action failed (remainder still drains):',
+						error,
+					);
+				}
+			}
+		}
 	}
 }
 
@@ -400,12 +467,14 @@ export async function withTransaction<T>(work: () => Promise<T>): Promise<T> {
  * running on the pool. A job outlives its submitter by construction; it must
  * therefore own no part of the submitter's connection state.
  *
- * Exits BOTH stores: the tx handle (queries route to the pool) and the deferred
- * queue (a job's cache clears must fire on their own, not be appended to a
- * queue that has already been replayed).
+ * Exits ALL THREE stores: the tx handle (queries route to the pool), the
+ * deferred queue (a job's cache clears must fire on their own, not be appended
+ * to a queue that has already been replayed) and the commit-only lane (a
+ * detached job's registerCommitAction must return false — run inline — never
+ * append to a queue whose fate was decided long ago).
  */
 export function runDetachedFromTransaction<T>(work: () => T): T {
-	return transactionStore.exit(() => deferredActionStore.exit(work));
+	return transactionStore.exit(() => deferredActionStore.exit(() => commitActionStore.exit(work)));
 }
 
 /**
