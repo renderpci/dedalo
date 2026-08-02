@@ -84,6 +84,37 @@ export async function seedTermChainIfAbsent(): Promise<TermSeedHandle> {
 	return handle;
 }
 
+/**
+ * Residue sweep (review 2026-08-02): a crashed observer-gate run can leave
+ * scratch rsc205 referencers of the seed term behind (matrix rows whose
+ * rsc387 slot targets on1/58); on the next run they inflate every recompute
+ * of the term's mirror — the observed first-run flake signature. Callers may
+ * ONLY invoke this after seedTermChainIfAbsent returned seededChain=true:
+ * planted ⇒ suite DB ⇒ any rsc205 row referencing on1/58 is scratch by
+ * construction (on a live snapshot such rows are REAL records).
+ */
+export async function sweepSeedTermReferencerResidue(): Promise<void> {
+	const residue = (await sql.unsafe(
+		`SELECT section_id FROM matrix WHERE section_tipo = 'rsc205' AND relation @> $1::text::jsonb`,
+		[
+			JSON.stringify({
+				rsc387: [
+					{ section_tipo: SEED_TERM.section_tipo, section_id: String(SEED_TERM.section_id) },
+				],
+			}),
+		],
+	)) as { section_id: number }[];
+	for (const row of residue) {
+		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
+			row.section_id,
+		]);
+		await sql.unsafe(
+			`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = $1`,
+			[row.section_id],
+		);
+	}
+}
+
 export async function sweepTermChain(handle: TermSeedHandle): Promise<void> {
 	if (handle.seededChain) {
 		// int[] binds go through a text CSV (a raw JS array mis-encodes at the

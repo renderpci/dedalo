@@ -66,7 +66,12 @@ export interface UpdateEngineSeams {
 		apply: boolean;
 		allowShrink: boolean;
 		log: (line: string) => void;
-	}) => Promise<{ repaired: number; shrinksSkipped: number }>;
+	}) => Promise<{
+		repaired: number;
+		shrinksSkipped: number;
+		sublawRefused?: number;
+		bigResultRefused?: number;
+	}>;
 }
 
 /** PHP update_dedalo_data_version: INSERT the new version row. */
@@ -239,8 +244,19 @@ export async function updateVersion(
 			allowShrink: false,
 			log: (line) => logLine(logPath, line),
 		});
+		// A refused record is never reported clean: sub-law refusals AND the
+		// >2000-reference freeze (computed, not written) must be visible in the
+		// update message, not only in the log file (review 2026-08-02).
 		msg.push(
-			`Observer mirrors reconciled: ${summary.repaired} repaired, ${summary.shrinksSkipped} shrink(s) held (see update log)`,
+			`Observer mirrors reconciled: ${summary.repaired} repaired, ${summary.shrinksSkipped} shrink(s) held${
+				(summary.sublawRefused ?? 0) > 0
+					? `, ${summary.sublawRefused} observer(s) REFUSED (unported sub-law)`
+					: ''
+			}${
+				(summary.bigResultRefused ?? 0) > 0
+					? `, ${summary.bigResultRefused} record(s) at the >2000-reference freeze (not written)`
+					: ''
+			} (see update log)`,
 		);
 	} catch (error) {
 		const reason = (error as Error).message;
