@@ -1813,8 +1813,17 @@ component_portal.prototype.get_total = async function() {
 * If the portal is in indexation mode with an active tag filter, the filter is
 * re-applied after the refresh so the display remains consistent.
 *
-* @param {Object} locator           - The locator to remove.  Must have `id` set (the
-*                                     portal item's per-record counter id, not the section_id).
+* An ARRAY of locators may be passed instead of a single one: every id travels in
+* the same `changed_data` payload, i.e. ONE save. This is what the indexation view
+* needs — a row there collapses every tag anchor pointing at the same term, so
+* removing them one request at a time would leave the term alive with a partial
+* set of links between requests. The server removes by `id` without renumbering
+* the survivors and fails the whole save on an unknown id, so a multi-id payload
+* is exact and all-or-nothing.
+*
+* @param {Object|Object[]} locator  - The locator to remove, or an array of them.
+*                                     Each must have `id` set (the portal item's
+*                                     per-record counter id, not the section_id).
 * @param {number|string} locator.id - Per-item counter id used to identify the entry to remove.
 * @param {string} [locator.section_id] - Used only as the label in the delete dialog
 *                                        (passed as `label` to `change_value`).
@@ -1825,12 +1834,21 @@ component_portal.prototype.unlink_record = async function(locator) {
 
 	const self = this
 
+	// ar_locators. Normalise to an array so single and multi removal share one path
+		const ar_locators = Array.isArray(locator)
+			? locator
+			: [locator]
+		if (ar_locators.length===0) {
+			console.warn('// unlink_record ignored empty locators');
+			return false
+		}
+
 	// changed_data
-		const changed_data = [Object.freeze({
+		const changed_data = ar_locators.map(el => Object.freeze({
 			action	: 'remove',
-			id		: locator.id,
+			id		: el.id,
 			value	: null
-		})]
+		}))
 
 	// change_value (implies saves too)
 	// The remove confirmation dialog is controlled by the button that called this function
@@ -1839,7 +1857,7 @@ component_portal.prototype.unlink_record = async function(locator) {
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false,
-			label			: locator.section_id,
+			label			: ar_locators[0].section_id,
 			remove_dialog	: ()=>{
 				return true
 			}
@@ -1871,7 +1889,11 @@ component_portal.prototype.unlink_record = async function(locator) {
 	// event to update the DOM elements of the instance
 	// Allows external listeners (e.g. picker modals, sibling portals) to react
 	// to the removal without polling or re-building.
-		event_manager.publish('remove_element_'+self.id, locator.id)
+	// (!) One event per removed id: listeners match a single id, so a multi-locator
+	// unlink that published only the first would leave the rest stale on screen.
+		for (let i = 0; i < ar_locators.length; i++) {
+			event_manager.publish('remove_element_'+self.id, ar_locators[i].id)
+		}
 
 
 	return true

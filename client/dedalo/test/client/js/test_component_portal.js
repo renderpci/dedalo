@@ -83,6 +83,95 @@ function make_locator(section_id, section_tipo) {
 
 
 
+/**
+* MAKE_INDEX_LOCATOR
+* Creates an INDEXATION locator: the shape tool_indexation stores, one per tag
+* anchor. Several of these share section_tipo + section_id and differ only in
+* tag_id — that is precisely what the indexation view has to collapse.
+* @param {number} id - Per-item counter id (what a 'remove' change targets)
+* @param {number|string} section_id - Target record id
+* @param {number|string} tag_id - Tag anchor id
+* @return {object} Locator object
+*/
+function make_index_locator(id, section_id, tag_id) {
+
+	return {
+		id						: id,
+		section_tipo			: portal_section,
+		section_id				: String(section_id),
+		from_component_tipo		: portal_tipo,
+		type					: DD_TIPOS?.DEDALO_RELATION_TYPE_INDEX_TIPO ?? 'dd96',
+		tag_id					: String(tag_id),
+		tag_type				: 'index'
+	}
+}//end make_index_locator
+
+
+
+/**
+* CAPTURE_ROW_UNLINK
+* Drives the indexation row's unlink to the point of the save and captures the
+* payload WITHOUT letting it reach the server: `change_value` is stubbed to record
+* `changed_data` and return false, so unlink_record aborts before any write.
+*
+* Returns the tag chips the confirmation dialog listed and the locator ids it was
+* about to remove — the two sides of the contract "what the row shows is what the
+* row deletes".
+*
+* @param {object} instance - The rendered component_portal instance
+* @param {HTMLElement} content - Its content_data node
+* @param {string} chip_text - A tag chip identifying which row to act on
+* @return {Promise<object>} {chips:Array<string>, ids:Array<number>}
+*/
+async function capture_row_unlink(instance, content, chip_text) {
+
+	// locate the row by one of its chips
+	const row = [...content.querySelectorAll('.section_record')].find(el =>
+		[...el.querySelectorAll('.tags.index')].some(chip => chip.textContent===chip_text)
+	)
+	assert.notEqual(row, undefined, `a row carrying tag ${chip_text} must be rendered`)
+
+	const button_remove = row.querySelector('.button_remove')
+	assert.notEqual(button_remove, null, 'the row must carry an unlink control')
+
+	// stub the save and the native confirm; both are restored in the finally block
+	let changed_data = null
+	const original_change_value	= instance.change_value
+	const original_confirm		= window.confirm
+	instance.change_value = async function(options) {
+		changed_data = options.changed_data
+		return false // abort: no request, no refresh, nothing written
+	}
+	window.confirm = () => true
+
+	try {
+		button_remove.click()
+		await pause(300)
+
+		const modal	= [...document.querySelectorAll('dd-modal')].pop()
+		assert.notEqual(modal, undefined, 'the confirmation dialog must open')
+
+		const chips = [...modal.querySelectorAll('.indexation_delete_tags >.tags')]
+			.map(el => el.textContent)
+
+		const button_unlink = modal.querySelector('.footer.content button.remove')
+		assert.notEqual(button_unlink, null, 'the dialog must offer the unlink action')
+		button_unlink.click()
+		await pause(400)
+
+		return {
+			chips	: chips,
+			ids		: (changed_data || []).map(el => el.id)
+		}
+	} finally {
+		instance.change_value	= original_change_value
+		window.confirm			= original_confirm
+		document.querySelectorAll('dd-modal').forEach(el => el.remove())
+	}
+}//end capture_row_unlink
+
+
+
 // ─────────────────────────────────────────────
 // 1. LIFECYCLE: INIT → BUILD → RENDER → DESTROY
 // ─────────────────────────────────────────────
@@ -548,6 +637,72 @@ describe(`COMPONENT_PORTAL DATA OPERATIONS`, async function() {
 
 			await instance.destroy(true, true, true)
 		})
+
+
+		it(`${portal_model} unlink_record removes every locator of an array in one save`, async function() {
+
+			const instance = await get_portal_instance('edit', 'default', portal_section_id)
+			await instance.render()
+
+			// clear data first
+			const clear_resp = await instance.change_value({
+				changed_data	: [Object.freeze({action:'set_data', id:null, value:null})],
+				refresh			: false
+			})
+			await instance.refresh({
+				build_autoload		: true,
+				tmp_api_response	: clear_resp
+			})
+
+			// add four locators: three to remove together, one that must survive
+			for (const id of [9020, 9021, 9022, 9023]) {
+				const added = await instance.link_record(make_locator(id))
+				assert.equal(added, true, `link_record must succeed for ${id}`)
+			}
+
+			const entries_before = instance.data?.entries?.length ?? 0
+			assert.equal(entries_before, 4, 'must have the 4 seeded entries before unlink')
+
+			// count the saves: the whole point is ONE request for N removals, so a
+			// per-locator loop regresses this test even when the end state matches
+			let change_value_calls = 0
+			const original_change_value = instance.change_value
+			instance.change_value = function(options) {
+				change_value_calls++
+				return original_change_value.call(this, options)
+			}
+
+			const targets = instance.data.entries.filter(el =>
+				['9020','9021','9022'].includes(String(el.section_id))
+			)
+			assert.equal(targets.length, 3, 'the 3 target locators must be resolvable')
+
+			const result = await instance.unlink_record(targets)
+			instance.change_value = original_change_value
+
+			// asserts
+			assert.equal(result, true, 'unlink_record must return true for an array')
+			assert.equal(change_value_calls, 1, 'the N removals must travel in ONE save')
+
+			const entries_after = instance.data?.entries ?? []
+			assert.equal(
+				entries_after.length,
+				entries_before - 3,
+				'entries must decrease by exactly the number of locators passed'
+			)
+			assert.equal(
+				entries_after.filter(el => ['9020','9021','9022'].includes(String(el.section_id))).length,
+				0,
+				'every passed locator must be gone'
+			)
+			assert.equal(
+				entries_after.filter(el => String(el.section_id)==='9023').length,
+				1,
+				'the locator NOT passed must survive untouched'
+			)
+
+			await instance.destroy(true, true, true)
+		})
 	})//end describe REMOVE DATA
 
 
@@ -923,6 +1078,148 @@ describe(`COMPONENT_PORTAL SPECIFIC METHODS`, async function() {
 	})//end describe RENDER_VIEWS
 
 })//end describe COMPONENT_PORTAL SPECIFIC METHODS
+
+
+
+// ─────────────────────────────────────────────
+// 3b. INDEXATION VIEW: a row is a TERM, not a tag
+// ─────────────────────────────────────────────
+
+/**
+* The indexation view is the only one where a row is not one locator: the stored
+* data holds one locator per tag anchor, so N tags on the same target record are N
+* locators that collapse into ONE row carrying N chips.
+*
+* REGRESSION GUARDED (2026-08-02): the de-duplicated list was handed to
+* get_section_records under the key `value`, which nothing reads, so it silently
+* fell back to the full entries array and painted one row PER TAG — each row then
+* showing every chip of the record, i.e. the term repeated N times identically.
+*
+* CONTRACT GUARDED: what the row displays is what the row's unlink deletes.
+*
+* These render against synthetic entries assigned to `data` / `datum` — a pure
+* client render contract, so no locator is ever written to the DB.
+*/
+describe(`COMPONENT_PORTAL INDEXATION VIEW`, async function() {
+
+	this.timeout(30000)
+
+	// tags 11,12,13 point at record 1; tag 21 points at record 3
+	const index_entries = [
+		make_index_locator(1, 1, 11),
+		make_index_locator(2, 1, 12),
+		make_index_locator(3, 1, 13),
+		make_index_locator(4, 3, 21)
+	]
+
+	/**
+	* Build an indexation portal carrying `entries` and render it.
+	* `datum` is populated too because filter_data_by_tag_id restores the FULL data
+	* from there before narrowing it to the selected tag.
+	* (!) The render must be FULL: a content-level render needs the wrapper's
+	* content_data pointer, which only a full render creates.
+	*/
+	async function get_indexation_instance(entries) {
+
+		const instance = await get_portal_instance('edit', 'indexation', portal_section_id)
+
+		const data = {
+			tipo			: portal_tipo,
+			section_tipo	: portal_section,
+			section_id		: portal_section_id,
+			entries			: clone(entries)
+		}
+		instance.data	= clone(data)
+		instance.datum	= { data: [clone(data)], context: [] }
+
+		// the unlink control is gated on the target section's ontology-declared
+		// button_delete; seed it so the control renders regardless of how test80's
+		// target section is configured (the gate itself is not what these test)
+		instance.permissions = 2
+		const target_section_ddo = (instance.target_section || [])[0]
+		if (target_section_ddo) {
+			target_section_ddo.buttons = target_section_ddo.buttons || []
+			if (!target_section_ddo.buttons.find(el => el.model==='button_delete')) {
+				target_section_ddo.buttons.push({model:'button_delete', permissions:2})
+			}
+		}
+
+		const wrapper	= await instance.render()
+		const content	= wrapper.content_data || wrapper.querySelector('.content_data')
+		assert.notEqual(content, null, 'the indexation view must render a content_data node')
+
+		return {instance, content}
+	}//end get_indexation_instance
+
+	/** [['11','12','13'], ['21']] — the chip texts of every rendered row, row-sorted. */
+	function rows_chips(content) {
+		return [...content.querySelectorAll('.section_record')]
+			.map(row => [...row.querySelectorAll('.tags.index')].map(chip => chip.textContent).sort())
+			.sort((a,b) => a.length - b.length)
+	}
+
+
+	it(`${portal_model} indexation view renders one row per record, one chip per tag`, async function() {
+
+		const {instance, content} = await get_indexation_instance(index_entries)
+
+		const rows = content.querySelectorAll('.section_record')
+
+		// 4 locators, 2 distinct target records
+		assert.equal(rows.length, 2, 'one row per TARGET RECORD, not one per tag locator')
+		assert.deepEqual(
+			rows_chips(content),
+			[['21'], ['11','12','13']],
+			'each row must carry a chip for every tag pointing at its record'
+		)
+
+		await instance.destroy(true, true, true)
+	})
+
+
+	it(`${portal_model} indexation view row unlink removes every locator the row shows`, async function() {
+
+		const {instance, content} = await get_indexation_instance(index_entries)
+
+		const captured = await capture_row_unlink(instance, content, '11')
+
+		assert.deepEqual(
+			captured.chips,
+			['11','12','13'],
+			'the confirmation dialog must list the row\'s whole tag set'
+		)
+		assert.deepEqual(
+			captured.ids,
+			[1,2,3],
+			'the unlink must send every locator of the term — and only those'
+		)
+
+		await instance.destroy(true, true, true)
+	})
+
+
+	it(`${portal_model} indexation view row unlink removes ONLY the selected tag when filtered`, async function() {
+
+		const {instance} = await get_indexation_instance(index_entries)
+
+		// select tag 12: filter_data_by_tag_id narrows data.entries and re-renders
+		const content = await instance.filter_data_by_tag_id({tag:{tag_id:'12'}})
+
+		assert.equal(
+			content.querySelectorAll('.section_record').length,
+			1,
+			'the filtered list must show only the record carrying the selected tag'
+		)
+
+		const captured = await capture_row_unlink(instance, content, '12')
+
+		assert.deepEqual(captured.chips, ['12'], 'the filtered row shows only the selected tag')
+		assert.deepEqual(captured.ids, [2], 'only the selected locator may be removed')
+
+		await instance.destroy(true, true, true)
+	})
+
+})//end describe COMPONENT_PORTAL INDEXATION VIEW
 
 
 

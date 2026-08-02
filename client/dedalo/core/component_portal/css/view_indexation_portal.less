@@ -254,3 +254,55 @@
 	}
 
 }//end .component_portal.view_indexation, .portal.view_indexation
+
+
+
+/**
+* indexation_delete_info
+*
+* The row-unlink confirmation modal (view_indexation_edit_portal
+* render_column_remove_indexation) is attached to the PAGE modal container, outside the
+* portal node, so it inherits none of the chip rules nested above. It repaints the row's
+* own tag chips with the same mixins so the dialog shows exactly the set the row shows —
+* which is exactly the set the deletion removes.
+*/
+.indexation_delete_info {
+
+	>.indexation_delete_tags {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem;
+		margin-bottom: 0.75rem;
+
+		>.tags {
+			margin: 0px;
+			&.index {
+				.fn_build_tag_indexation(@color_tag_indexation_normal, @color_white);
+			}
+			&.reference {
+				.fn_build_tag_reference(@color_tag_indexation_normal, @color_white);
+			}
+			&.draw {
+				.fn_build_tag_draw(@color_tag_indexation_normal, @color_white);
+			}
+		}
+
+		>.no_tag {
+			background-color: @color_blue_2;
+			color: @color_white;
+			border-radius: 3px;
+			padding: 0.1rem 0.25rem;
+			font-size: 0.8rem;
+			line-height: 0.96rem;
+		}
+	}
+
+	>.indexation_delete_scope {
+		margin: 0px 0px 0.25rem 0px;
+	}
+
+	>.indexation_delete_note {
+		margin: 0px;
+	}
+}//end .indexation_delete_info

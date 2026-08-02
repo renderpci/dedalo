@@ -30,6 +30,7 @@ The **Indexing tool** button attaches to the transcription text component (restr
 5. Click a tag in the text to select it. Set its review **state** (for example Normal / Deleted / To review) and, if useful, attach an **info note** (a title and description) explaining the passage.
 6. Use the **Approach** selector to choose which top section/record the current indexation hangs from.
 7. Switch the text language with the language selector; the original language is labelled "Original".
+8. Read what you have indexed in the **Indexation** panel: one row per linked term, with a numbered chip for every tag pointing at it. Click a chip to jump to that tag in the text; click the bin to remove links (see below).
 
 ## Options
 
@@ -47,6 +48,11 @@ The **Indexing tool** button attaches to the transcription text component (restr
 
 !!! warning "Deleting a tag removes it everywhere"
     Deleting a tag asks you to confirm twice, then removes the inline tag from every language copy of the transcript **and** the matching locator in the indexing portal. There is no partial delete.
+
+!!! warning "The bin in the Indexation panel removes links, not tags"
+    A row in the **Indexation** panel is one *term*, and it carries a chip for every tag that points at it — so the bin does not act on one tag, it acts on the row. With no tag selected the row shows all of the term's chips and the bin removes **all** of its links at once; with a tag selected the list is filtered to that tag, the row shows that single chip, and the bin removes **only** that link. The confirmation dialog names the term and lists exactly the tags it is about to unlink, so read it before accepting.
+
+    Either way the highlighted fragments stay in the text: this removes links only. To remove a tag from the transcript as well, delete the tag in the text instead.
 
 !!! info "How the work is saved"
     This tool is a front-end over the record's own components — the transcription text and the indexing portal — and the thesaurus. It writes through those components rather than through a tool action of its own. See the [developer reference](../development/tools/reference/tool_indexation.md) for the exact endpoints.
