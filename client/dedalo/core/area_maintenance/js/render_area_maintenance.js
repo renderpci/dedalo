@@ -57,7 +57,7 @@
 // imports
 	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {render_tree_data} from '../../common/js/common.js'
+	import {render_tree_data, format_label} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {widget_common} from '../../widgets/widget_common/js/widget_common.js'
 
@@ -1191,17 +1191,42 @@ const build_map_view = function(self, widgets, opts={}) {
 			})
 
 			// Tools — registered tool packages (one read-only SELECT on matrix_tools).
+			//
+			// The node reports the REGISTRY STATE, not just the row count: it reads
+			// `registry_state`, the verdict the widget itself computes (outdated /
+			// unregistered / missing names). It is deliberately NOT re-derived from
+			// the rows here — this node once counted rows only and stayed green over
+			// a red panel, and a second copy of the predicates in this file would be
+			// free to drift from the panel's again.
+			//
 			// `errors` is the widget's own pre-flight verdict (an outdated ontology
-			// missing the dd1644 Developer term), so a warn here is the tool's, not ours.
+			// missing the dd1644 Developer term) and outranks the drifts: it says the
+			// registry cannot be trusted at all.
 			dd_request_idle_callback(async () => {
 				if (!by_id['register_tools']) { return }
 				const r = await probe_value('register_tools')
 				if (!r || !Array.isArray(r.datalist)) { return }
 				const errors	= Array.isArray(r.errors) ? r.errors.length : 0
 				const n			= r.datalist.length
-				set_node_status('tools', errors ? 'warn' : 'ok',
-					n + (n===1 ? ' tool' : ' tools'),
-					errors ? 'registry outdated' : 'registered')
+				const state		= n + (n===1 ? ' tool' : ' tools')
+
+				if (errors) {
+					set_node_status('tools', 'warn', state, 'registry outdated')
+					return
+				}
+
+				const registry	= r.registry_state || {}
+				const counts	= [
+					{ n: (registry.outdated || []).length,		label: get_label.tools_outdated_count || '${count} outdated' },
+					{ n: (registry.unregistered || []).length,	label: get_label.tools_not_registered_count || '${count} not registered' },
+					{ n: (registry.missing || []).length,		label: get_label.tools_missing_count || '${count} missing on disk' }
+				]
+				const parts = counts
+					.filter(item => item.n > 0)
+					.map(item => format_label(item.label, {count: item.n}))
+
+				set_node_status('tools', parts.length ? 'warn' : 'ok', state,
+					parts.length ? parts.join(' · ') : 'registered')
 			})
 
 			// Backups — age of the most recent dump (warn when stale)

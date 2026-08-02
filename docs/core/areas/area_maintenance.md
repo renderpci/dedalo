@@ -204,7 +204,35 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 
 The `system` category also carries a **runtime panel** reporting the running
 engine's version, pid, memory and uptime, and offering real cache and session
-clears.
+clears. The cache clear runs the engine's invalidation hub, so it drops every
+registered in-memory cache — including the UI-label dictionaries, which is what
+makes a label deploy visible without a restart.
+
+### The Register tools panel
+
+`register_tools` is the one config widget that reports a DISCREPANCY rather than
+a setting, so it is worth knowing how to read it. Each row joins the two sides
+the importer reconciles: the registry record (dd1324) and the tool's directory.
+Two version columns follow from that — **Installed** (the registry) and
+**Version** (what the directory's `register.json` declares) — and the panel
+classifies every row as one of:
+
+| state | what it means | what fixes it |
+| --- | --- | --- |
+| *(none)* | registered, on disk, versions agree | — |
+| outdated | the files ship a version the registry does not have | *Register tools* |
+| not registered | a tool directory with no registry record | *Register tools* |
+| missing on disk | a registry record whose directory is gone | delete the record, or restore the files |
+
+A sentence above the table names the affected tools and the remedy, and the
+subsystem card in the maintenance map carries the same verdict — both read one
+classification served with the panel data, so the map can never report health
+over a panel showing drift.
+
+!!! note "The registry is what runs"
+    Tool metadata is served from the registry, not by re-reading `register.json`
+    — see [register.json](../../development/tools/register_json.md) for what that
+    means when you edit a tool.
 
 !!! note "Some operations are closed by design"
     A handful of registered methods refuse deliberately, with an explicit

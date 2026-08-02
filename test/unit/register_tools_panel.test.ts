@@ -75,11 +75,27 @@ interface ToolListItem {
 	installed_version: string | null;
 	active: boolean;
 	on_disk: boolean;
+	state: 'ok' | 'outdated' | 'unregistered' | 'missing';
 }
 
-async function panel(): Promise<{ datalist: ToolListItem[]; errors: string[] | null }> {
+interface RegistryStateSummary {
+	total: number;
+	outdated: string[];
+	unregistered: string[];
+	missing: string[];
+}
+
+async function panel(): Promise<{
+	datalist: ToolListItem[];
+	errors: string[] | null;
+	registry_state: RegistryStateSummary;
+}> {
 	const response = await (widget.getValue as NonNullable<typeof widget.getValue>)({}, ADMIN);
-	return response.result as { datalist: ToolListItem[]; errors: string[] | null };
+	return response.result as {
+		datalist: ToolListItem[];
+		errors: string[] | null;
+		registry_state: RegistryStateSummary;
+	};
 }
 
 describe('register_tools get_value', () => {
@@ -128,14 +144,69 @@ describe('register_tools get_value', () => {
 		expect(row).toEqual({
 			name: GHOST,
 			warning: 'Not found on disk',
-			version: GHOST_VERSION,
+			// No directory ⇒ nothing DECLARES a version; only the registry side exists.
+			version: null,
 			developer: GHOST_DEVELOPER,
 			installed_version: GHOST_VERSION,
 			// dd1354 absent → radioYes says not active; the field is still served
 			// so the panel's checkbox has a value it can disable.
 			active: false,
 			on_disk: false,
+			// No directory ⇒ the importer cannot reach it; the button is not the fix.
+			state: 'missing',
 		});
+	});
+
+	/**
+	 * The panel exists to show a STALE registry, so its two version columns must
+	 * come from the two sides of the join: `version` from the directory's
+	 * register.json, `installed_version` from dd1324. Serving the registry into
+	 * both (the bug fixed 2026-08-02) makes them equal by construction and the
+	 * client's mismatch alert can never fire.
+	 */
+	test('version is read from disk, installed_version from the registry', async () => {
+		const { datalist } = await panel();
+		const { readDeclaredVersion } = await import('../../src/core/tools/register.ts');
+		const byName = new Map(datalist.map((item) => [item.name, item]));
+		let checked = 0;
+		for (const entry of listToolDirectories()) {
+			const row = byName.get(entry.name);
+			expect(row).toBeDefined();
+			expect(row?.version).toBe(await readDeclaredVersion(entry.dir));
+			checked++;
+		}
+		expect(checked).toBeGreaterThan(0);
+	});
+
+	/**
+	 * `state` is the widget's ONE classification of a row, and `registry_state` is
+	 * that same verdict summarised for a consumer that does not walk the rows (the
+	 * maintenance map's Tools node). They must agree by construction: the map went
+	 * green over a red panel precisely because each view classified the raw fields
+	 * itself, and the map's copy forgot the version comparison.
+	 */
+	test('registry_state is exactly the per-row states, summarised', async () => {
+		const { datalist, registry_state } = await panel();
+
+		expect(registry_state.total).toBe(datalist.length);
+		const namesIn = (state: string) =>
+			datalist.filter((item) => item.state === state).map((item) => item.name);
+		expect(registry_state.outdated).toEqual(namesIn('outdated'));
+		expect(registry_state.unregistered).toEqual(namesIn('unregistered'));
+		expect(registry_state.missing).toEqual(namesIn('missing'));
+
+		// …and the classification itself follows from the two sides of the join.
+		for (const item of datalist) {
+			const expected =
+				item.on_disk === false
+					? 'missing'
+					: item.installed_version === null
+						? 'unregistered'
+						: item.version !== null && item.version !== item.installed_version
+							? 'outdated'
+							: 'ok';
+			expect(item.state).toBe(expected);
+		}
 	});
 
 	test('an unregistered on-disk tool is warned about and defaults to active', async () => {

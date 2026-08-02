@@ -265,7 +265,9 @@ const get_content_data_edit = async function(self) {
 				// value no longer matches the highest section_id in the data matrix.
 					const lsid_class = is_header
 					? 'dd_th num'
-					: ('dd_td num' + (out_of_sync===true ? ' alert' : ''))
+					// state_alert, NOT alert: the bare name collides with the global
+					// .alert component in layout/general.less (see widget_kit.less).
+					: ('dd_td num' + (out_of_sync===true ? ' state_alert' : ''))
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: lsid_class,
