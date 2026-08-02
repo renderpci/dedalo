@@ -427,13 +427,29 @@
 			background-color: transparent !important;
 			color: var(--fg_muted) !important;
 		}
+
+		// (!) …EXCEPT the section-name label itself: it is `position: sticky`
+		// inside the grid scroller (view_indexation.less) and is the only box
+		// hiding the rows that scroll under it. A transparent sticky box does
+		// not occlude — the rows paint straight through it. Quiet band, yes;
+		// see-through, no. It also must not match the ground it sits on
+		// (--bg_surface_alt) or the band disappears: it reads one step up, on
+		// the raised surface tone, with the section's own colour kept as a
+		// left-edge marker (same device as the ontology typology bar below).
+		> label {
+			background-color: var(--bg_surface) !important;
+			box-shadow: inset 3px 0 0 var(--base_color, var(--border_strong)) !important;
+			border-bottom: 1px solid var(--border_default) !important;
+		}
 	}
 
 	// The indexation-type filter bar (`.top_container`) was a jarring pure-white
-	// band on the warm ground. Blend it into the canvas so the filter checkboxes
-	// float, not sit in a bright slab.
+	// band on the warm ground. It is also `position: sticky` at the top of that
+	// scroller and the only thing covering the rows passing beneath it, so it
+	// must keep an OPAQUE background — the redesign palette already remaps its
+	// base colour (--color_grey_14) to the warm canvas tone, which is the blend
+	// we wanted. Only the slab's shadow is dropped.
 	.indexations_container .top_container {
-		background-color: transparent !important;
 		box-shadow: none !important;
 	}
 
