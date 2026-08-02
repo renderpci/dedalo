@@ -45,9 +45,20 @@
 			.inline_common();
 			opacity: 0.5;
 			flex-wrap: nowrap;
+			// (!) same min-height as `.elements_container`: `content_data` is
+			// `align-items: flex-start` on purpose (a term that wraps must keep its
+			// icons on the FIRST line), so the id column does NOT stretch — it was
+			// 18.2px against a 22px term line and every icon rendered ~2px high.
+			// A fixed first-line box keeps the two columns on the same baseline
+			// without re-centring on wrapped rows.
+			min-height: 22px;
 
 			.id_column_link {
-				display: inline-block;
+				// flex, not inline-block: the icon child is a bare box with no text,
+				// so baseline alignment parked it another ~1.4px above centre.
+				display: flex;
+				align-items: center;
+				justify-content: center;
 				height: 1.4em;
 				line-height: 1.5rem;
 				z-index: 1; // overlap term hilite
