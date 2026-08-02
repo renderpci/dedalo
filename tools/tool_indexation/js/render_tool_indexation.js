@@ -261,6 +261,9 @@ const get_content_data_edit = async function(self) {
 			// lang_selector
 				const lang_selector = ui.build_select_lang({
 					selected	: self.transcription_component.lang,
+					// alphabetical: the transcription lang is picked by NAME here, and
+					// the project order buries a lang in a long list
+					sort		: true,
 					class_name	: 'dd_input selector'
 				})
 				lang_selector.addEventListener('change', async function(e){
