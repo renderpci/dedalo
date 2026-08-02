@@ -43,10 +43,16 @@
 				// Where component value is placed and parsed by the editor inline
 				&.editor_container, >.editor_container {
 					display: block;
-					margin: 0.5rem;
+					// FIELD GRID (--field_* in vars.less): the editor surface is a
+					// field box like an input's — it bleeds --field_box_bleed outside
+					// its text so the TEXT lands on --field_inset_x, and its first
+					// line sits on the same row as the text centred in an input.
+					// Set here, not in layout.less: this selector is the deepest one
+					// that owns the box, so the shared grid must speak through it.
+					margin: var(--field_box_bleed);
 					margin-bottom: 1.5rem;
-					padding: 0.5rem;
-					padding-top: 0.33rem;
+					padding: var(--field_box_bleed);
+					padding-top: var(--field_value_pad_t);
 					padding-bottom: 0px;
 					height: calc(100% - 1.5rem);
 					overflow: auto;

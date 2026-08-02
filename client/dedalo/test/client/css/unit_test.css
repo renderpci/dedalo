@@ -69,6 +69,11 @@
   --geolocation_min_height: 495px;
   --geolocation_player_height: 605px;
   --geolocation_map_min_height: 320px;
+  --field_inset_x: 1rem;
+  --field_box_bleed: 0.5rem;
+  --field_row_h: 2rem;
+  --field_line_h: 1.3rem;
+  --field_value_pad_t: calc((var(--field_row_h) - var(--field_line_h)) / 2);
   --view_text_height: 1.2rem;
   --view_line_height: 5rem;
   --column_id_width: 6rem;

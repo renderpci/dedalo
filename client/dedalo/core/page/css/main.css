@@ -495,6 +495,11 @@ template {
   --geolocation_min_height: 495px;
   --geolocation_player_height: 605px;
   --geolocation_map_min_height: 320px;
+  --field_inset_x: 1rem;
+  --field_box_bleed: 0.5rem;
+  --field_row_h: 2rem;
+  --field_line_h: 1.3rem;
+  --field_value_pad_t: calc((var(--field_row_h) - var(--field_line_h)) / 2);
   --view_text_height: 1.2rem;
   --view_line_height: 5rem;
   --column_id_width: 6rem;
@@ -4971,6 +4976,7 @@ input::placeholder {
 }
 .wrapper_component > .label {
   padding: 1rem;
+  padding-left: var(--field_inset_x);
   padding-bottom: 0px;
   padding-top: 0.4rem;
   flex: 1 1 100%;
@@ -5053,6 +5059,7 @@ input::placeholder {
   align-items: flex-start;
   align-content: flex-start;
   padding: 1em;
+  padding-left: var(--field_inset_x);
   padding-top: 0.5em;
   overflow-wrap: anywhere;
 }
@@ -5301,6 +5308,25 @@ dd-modal .wrapper_component > .content_data.vertical,
   background-color: var(--color_grey_5);
   justify-content: center;
   flex-flow: unset;
+}
+.wrapper_component.edit.component_input_text > .content_data,
+.wrapper_component.edit.component_number > .content_data,
+.wrapper_component.edit.component_date > .content_data,
+.wrapper_component.edit.component_email > .content_data,
+.wrapper_component.edit.component_url > .content_data,
+.wrapper_component.edit.component_password > .content_data,
+.wrapper_component.edit.component_iri > .content_data {
+  padding-left: calc(var(--field_inset_x) - var(--field_box_bleed));
+}
+.wrapper_component.edit.component_input_text > .content_data input.input_value,
+.wrapper_component.edit.component_number > .content_data input.input_value,
+.wrapper_component.edit.component_date > .content_data input.input_value,
+.wrapper_component.edit.component_email > .content_data input.input_value,
+.wrapper_component.edit.component_url > .content_data input.input_value,
+.wrapper_component.edit.component_password > .content_data input.input_value,
+.wrapper_component.edit.component_iri > .content_data input.input_value {
+  padding-left: var(--field_box_bleed);
+  line-height: var(--field_line_h);
 }
 .section_record.edit .wrapper_component.edit {
   transition: background-color var(--transition-fast);
@@ -9957,6 +9983,18 @@ body:has(.assistant_container.standalone.show) {
   position: sticky;
   top: 0;
   z-index: 2;
+  width: var(--grid_scroll_w, 100%);
+}
+.wrapper_dd_grid.view_indexation .top_container .filter_section_container {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  justify-self: start;
+}
+.wrapper_dd_grid.view_indexation .top_container .paginator_container {
+  position: sticky;
+  right: 0;
+  justify-self: end;
 }
 .wrapper_dd_grid.view_indexation .top_container .filter_section_container {
   margin-left: 4rem;
@@ -10065,6 +10103,8 @@ body:has(.assistant_container.standalone.show) {
   position: sticky;
   top: 4.2rem;
   z-index: 1;
+  width: calc(var(--grid_scroll_w, 100%) - 4rem);
+  flex-shrink: 0;
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption .column span {
   padding-bottom: 0px;
@@ -18008,9 +18048,12 @@ body.inspector_resizing {
   font-size: 1rem;
   opacity: 0.5;
   flex-wrap: nowrap;
+  min-height: 22px;
 }
 .wrap_ts_object > .content_data > .id_column_content .id_column_link {
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 1.4em;
   line-height: 1.5rem;
   z-index: 1;
@@ -23218,10 +23261,10 @@ body.inspector_resizing {
 .component_text_area.edit > .content_data > .content_value.editor_container,
 .component_text_area.edit > .content_data > .content_value > .editor_container {
   display: block;
-  margin: 0.5rem;
+  margin: var(--field_box_bleed);
   margin-bottom: 1.5rem;
-  padding: 0.5rem;
-  padding-top: 0.33rem;
+  padding: var(--field_box_bleed);
+  padding-top: var(--field_value_pad_t);
   padding-bottom: 0px;
   height: calc(100% - 1.5rem);
   overflow: auto;
