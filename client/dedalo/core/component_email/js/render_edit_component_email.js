@@ -52,6 +52,7 @@
 	import { add_instance } from '../../common/js/instances.js'
 import {ui} from '../../common/js/ui.js'
 import {attach_item_dataframe} from '../../component_common/js/component_common.js'
+import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 	import {view_default_edit_email} from './view_default_edit_email.js'
 	import {view_line_edit_email} from './view_line_edit_email.js'
 	import {view_mini_email} from './view_mini_email.js'
@@ -248,8 +249,9 @@ const get_content_value = (i, current_value, self) => {
 		input.addEventListener('focus', focus_handler)
 
 		// keydown event
+		// (!) Escape is let through: the page-level handler deactivates the component.
 		const keydown_handler = (e) => {
-			e.stopPropagation()
+			stop_page_shortcuts(e)
 			if(e.key==='Tab'){
 				ui.component.deactivate(self)
 				return

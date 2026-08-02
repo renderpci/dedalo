@@ -8,6 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {change_handler} from './render_edit_component_input_text.js'
+	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 
 
 
@@ -200,8 +201,9 @@ const get_content_value = (i, current_value, self) => {
 				}
 			})
 		// keydown event. Prevent to fire page events like open search panel
+		// (!) Escape is let through: the page-level handler deactivates the component.
 			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
+				stop_page_shortcuts(e)
 			})
 
 		// click event

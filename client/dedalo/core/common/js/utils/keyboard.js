@@ -153,6 +153,39 @@ export const keyboard_codes = {
 
 
 /**
+* STOP_PAGE_SHORTCUTS
+* Stops a keydown event from bubbling up to the page-level shortcut handler
+* (page.js add_events → document 'keydown'), EXCEPT for Escape.
+*
+* Rationale: component inputs (input_text, number, date, email…) blanket-stopped
+* every keydown to keep the page 'Enter' shortcut (exec search / open search panel)
+* from firing while the user types. That also swallowed Escape, which is the ONE
+* key the page must always receive: Escape deactivates the active component
+* (ui.component.deactivate → saves changed_data, publishes 'deactivate_component').
+*
+* Escape therefore keeps bubbling. Any handler that legitimately OWNS Escape in a
+* narrower scope (an open suggestion list, an inline edit, a command palette) must
+* call e.stopPropagation() itself for that key — that is what makes one press close
+* the overlay and the next press deactivate the component.
+*
+* @param {KeyboardEvent} e
+* @returns {boolean} true when propagation was stopped, false when the event was
+*   let through (Escape).
+*/
+export const stop_page_shortcuts = function(e) {
+
+	if (e.key==='Escape') {
+		return false
+	}
+
+	e.stopPropagation()
+
+	return true
+}//end stop_page_shortcuts
+
+
+
+/**
 * ACTIVATE_WINDOW_KEYDOWN_DES
 * (!) Dead code — commented out. Superseded by per-component keyboard handling.
 *

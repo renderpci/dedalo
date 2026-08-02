@@ -10,6 +10,7 @@
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {change_handler, remove_handler, check_duplicates} from './render_edit_component_input_text.js'
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
+	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 
 
 /**
@@ -267,8 +268,10 @@ const get_content_value = (i, current_value, self) => {
 				}
 			})
 		// keydown event
+		// (!) stop_page_shortcuts lets Escape through on purpose: the page-level
+		// handler deactivates the active component on Escape.
 			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
+				stop_page_shortcuts(e)
 				if(e.key==='Tab'){
 					ui.component.deactivate(self)
 					return
