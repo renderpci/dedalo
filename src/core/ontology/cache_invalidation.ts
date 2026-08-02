@@ -39,6 +39,7 @@
  *   relations/filter_projects.ts     authorized-projects cache (also data-derived)
  *   relations/request_config/explicit.ts   hierarchy-sections cache (also data-derived)
  *   section/list_definitions/section_list.ts  cell-map / dataframe-children / own-map
+ *   section/record/observer_subscriptions.ts  subscription registry index + seed-race build tokens
  *   area/tree.ts                children-tipo cache
  *   search/search_related.ts    relation-capable table list
  *   diffusion/plan/cache.ts     plan revision bump

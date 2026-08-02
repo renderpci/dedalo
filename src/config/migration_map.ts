@@ -523,6 +523,11 @@ export const NEW_IN_V7: readonly string[] = [
 	// core/resolve/component_data.ts). They now read config.menu.projectsDefaultLangs.
 	'DEDALO_SECTION_USERS_TIPO',
 	'DEDALO_SEARCH_CLIENT_MAX_LIMIT',
+	// DEDALO_OBSERVER_CASCADE was DELETED here (2026-08-02, same day it landed):
+	// the D1/D2 rollout flag gated whether declared observer edges fire, i.e.
+	// what STORED relation data two identical installs end up with — data
+	// divergence by deploy setting. The benchmark cleared the cascade and it is
+	// now unconditional (WC-2026-08-02-observer-cascade-bounded-flag).
 	// media (v7-native knobs)
 	'DEDALO_MEDIA_DIR',
 	'DEDALO_MEDIA_EXPORT_BASE',

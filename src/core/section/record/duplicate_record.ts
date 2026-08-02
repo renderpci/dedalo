@@ -8,7 +8,9 @@
  * - `data` column: fresh metadata, NOT copied (build_metadata);
  * - copied columns: every jsonb column except data/meta/relation_search, with
  *   the audit component tipos (dd197/dd199/dd200/dd201) dropped — they get
- *   fresh stamps instead;
+ *   fresh stamps instead — and covered-observer mirror slots dropped too
+ *   (derived "who references me" state; empty by construction on a fresh
+ *   record — see isCoveredObserverTipo, Phase-0 disarm 2026-08-02);
  * - audit stamps: created dd200/dd199 AND modified dd197/dd201 all point at the
  *   duplicating user "now" (the per-component re-save loop stamps modification
  *   data on top of the creation stamps);
@@ -108,7 +110,8 @@ export async function duplicateSectionRecord(
 		);
 	}
 
-	// 1. Copy component columns (audit tipos dropped — fresh stamps below).
+	// 1. Copy component columns (audit tipos dropped — fresh stamps below;
+	//    covered-observer mirror slots dropped too — see below).
 	const values: Partial<Record<MatrixJsonbColumn, unknown>> = {};
 	const copied: CopiedComponent[] = [];
 	for (const column of MATRIX_JSONB_COLUMNS) {
@@ -118,6 +121,16 @@ export async function duplicateSectionRecord(
 		const copy: Record<string, unknown> = {};
 		for (const [tipo, items] of Object.entries(columnData)) {
 			if (AUDIT_TIPOS.has(tipo)) continue;
+			// Observer mirror slots are NEVER copied (Phase-0 disarm 2026-08-02):
+			// the source's bag mirrors the SOURCE's referencers, and nothing can
+			// reference a record that does not exist yet — the copy's correct bag
+			// is EMPTY BY CONSTRUCTION (absent slot), no recompute law needed.
+			// The old copy-then-shrink shape relied on recomputeExternalRelation,
+			// which now REFUSES unported-sub-law nodes (numisdata679/965): a
+			// copied bag there would persist ~1,000 phantom, index-fed locators
+			// per duplicate with no repair path until D3. Stripping also keeps
+			// the matrix_relation_index sync trigger from indexing the phantoms.
+			if (column === 'relation' && (await isCoveredObserverTipo(tipo))) continue;
 			copy[tipo] = items;
 			if (Array.isArray(items)) {
 				copied.push({ column, tipo, items: items as CopiedComponent['items'] });
@@ -205,14 +218,14 @@ export async function duplicateSectionRecord(
 	//    every target its copied relation locators point at — the targets'
 	//    observer mirrors (hierarchy93 family) must recompute or they miss the
 	//    duplicate until a reconcile. Cheap gate inside propagateToObservers
-	//    (no `observers` in the component's ontology properties → no-op).
-	//    And the copy's OWN observer-mirror slots were byte-copied from the
-	//    source (they mirror the SOURCE's referencers, not the new record's —
-	//    review 2026-07-24) — recompute each covered observer component at the
-	//    new record so its mirror reflects its own (initially empty) truth.
+	//    (Act 2: no subscription in the registry for the component's tipo, or
+	//    every subscription client-only — no server block — → no-op; the
+	//    ontology alone decides which edges fire).
+	//    The copy's OWN observer-mirror slots were never copied (step 1 strips
+	//    them — empty by construction for a fresh record), so there is nothing
+	//    to recompute or shrink at the new record itself.
 	{
-		const { propagateToObservers, recomputeExternalRelation } = await import('./observers.ts');
-		const { getNode } = await import('../../ontology/resolver.ts');
+		const { propagateToObservers } = await import('./observers.ts');
 		for (const component of copied) {
 			if (component.column !== 'relation') continue;
 			await propagateToObservers(
@@ -222,24 +235,6 @@ export async function duplicateSectionRecord(
 				component.items,
 				userId,
 			);
-			const observe = (
-				(await getNode(component.tipo))?.properties as {
-					observe?: {
-						server?: {
-							config?: { use_observable_dato?: boolean };
-							perform?: { function?: string };
-						};
-					}[];
-				} | null
-			)?.observe;
-			const isCoveredObserver = (observe ?? []).some(
-				(entry) =>
-					entry?.server?.config?.use_observable_dato === true &&
-					entry.server.perform?.function === 'set_dato_external',
-			);
-			if (isCoveredObserver) {
-				await recomputeExternalRelation(component.tipo, sectionTipo, newSectionId, userId, now);
-			}
 		}
 	}
 
@@ -257,6 +252,39 @@ export async function duplicateSectionRecord(
 	await fireSaveEvent(sectionTipo);
 
 	return newSectionId;
+}
+
+/**
+ * Covered-observer detection (the set_dato_external mirror family): such a
+ * component's stored bag is DERIVED state ("who references me"), never source
+ * data — step 1 must not copy it (gated by observer_reconcile_native's
+ * duplicate-strip test).
+ *
+ * DELIBERATELY reads the node's raw `observe` SHAPE, not the Act-2 registry:
+ * the strip decision is "is this bag derived state by declaration?", which
+ * needs only the declaration itself. Consistent with the dispatch rule (the
+ * ontology decides — a declared server edge fires, reverse-only included):
+ * every covered observer's edges now dispatch, so a stripped bag is
+ * recomputed by the cascade/reconciler the moment its observed component
+ * saves again.
+ */
+async function isCoveredObserverTipo(tipo: string): Promise<boolean> {
+	const { getNode } = await import('../../ontology/resolver.ts');
+	const observe = (
+		(await getNode(tipo))?.properties as {
+			observe?: {
+				server?: {
+					config?: { use_observable_dato?: boolean };
+					perform?: { function?: string };
+				};
+			}[];
+		} | null
+	)?.observe;
+	return (observe ?? []).some(
+		(entry) =>
+			entry?.server?.config?.use_observable_dato === true &&
+			entry.server.perform?.function === 'set_dato_external',
+	);
 }
 
 /**

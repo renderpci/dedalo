@@ -17,6 +17,7 @@
  * the show-ddo label build), get_type_rel :231.
  */
 
+import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../ontology/resolver.ts';
 import { resolveComponentValue } from '../resolve/component_data.ts';
@@ -63,25 +64,62 @@ export async function getReferences(
 	}));
 }
 
-/** The stored locators of the component at a graph node (its own data). */
+/** A stored relation-column entry as the graph walk sees it (loose by design). */
+export interface StoredRelationLink {
+	section_tipo?: string;
+	section_id?: number | string;
+	from_component_tipo?: string;
+	type?: string;
+}
+
+/**
+ * The stored locators of the component at a graph node (its own data).
+ *
+ * Deliberately the shared full-row reader, not a narrow `relation->$key`
+ * projection: with the expansion memo the walk visits each node ONCE, and the
+ * measured equivalence components are ≤10 nodes (~0.4ms/visit, single-digit
+ * ms per walk — review 2026-08-02), so a bespoke SQL shape in this file is
+ * not worth a second confinement home. Revisit only if closure sizes grow.
+ */
 async function readStoredLinks(
 	tipo: string,
 	sectionTipo: string,
 	sectionId: number | string,
-): Promise<
-	{ section_tipo?: string; section_id?: number | string; from_component_tipo?: string }[]
-> {
+): Promise<StoredRelationLink[]> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
 	const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
 	return (
-		((record?.columns.relation as Record<string, unknown[]> | null)?.[tipo] as {
-			section_tipo?: string;
-			section_id?: number | string;
-			from_component_tipo?: string;
-		}[]) ?? []
+		((record?.columns.relation as Record<string, unknown[]> | null)?.[
+			tipo
+		] as StoredRelationLink[]) ?? []
 	);
 }
+
+/**
+ * Graph-access seam for the related traversal. The DEFAULT is the live DB
+ * (inverse hops via matrix_relation_index, stored links via the matrix row);
+ * tests inject an in-memory graph so the TRAVERSAL LAW itself (typeRel gates,
+ * cycle cache, root-stored exclusion) is gated hermetically — the D3
+ * observer-seed gates depend on the dd621 recursive half being irremovable
+ * without a RED test, which only an injectable graph can assert without DB
+ * fixtures (observer_seed_native.test.ts).
+ */
+export interface RelatedGraphIO {
+	getInverse(
+		tipo: string,
+		sectionTipo: string,
+		sectionId: number | string,
+	): Promise<RelatedReference[]>;
+	readStored(
+		tipo: string,
+		sectionTipo: string,
+		sectionId: number | string,
+	): Promise<StoredRelationLink[]>;
+}
+
+// Immutable function-pair default (never mutated — module_state rule satisfied).
+const DB_GRAPH_IO: RelatedGraphIO = { getInverse: getReferences, readStored: readStoredLinks };
 
 /**
  * The relation-graph traversal (PHP get_references_recursive :274, ported
@@ -93,6 +131,19 @@ async function readStoredLinks(
  *   caller's stored data) — and recurses into both sets;
  * - stored-link elements are reduced to {section_tipo, section_id,
  *   from_component_tipo} (PHP builds a fresh 3-field element).
+ *
+ * EXPANSION MEMO (divergence from PHP, RESULT-IDENTICAL — review 2026-08-02):
+ * PHP re-recurses into every accumulated reference (its own c=a loop AND every
+ * ancestor frame's), firing 2 queries per re-entry that the cycle cache then
+ * filters to NOTHING — after a node's FIRST expansion all of its inverse and
+ * stored neighbours are in `cache`, so a re-entry deterministically returns
+ * []. That makes chain-shaped graphs QUADRATIC in queries (hermetic io-seam
+ * measurement: chain n=100 → 10,098 queries ≈ 3-5s inside the caller's FOR
+ * UPDATE lock; n=200 → 40,198). The `expanded` set short-circuits re-entries
+ * BEFORE any query: each node is expanded exactly once, at the same walk
+ * position as PHP's first expansion, so the RESULT (content and order) is
+ * byte-identical while chains become linear (~2 queries/node —
+ * observer_seed_native.test.ts pins the linear bound).
  */
 export async function getReferencesRecursive(
 	tipo: string,
@@ -101,13 +152,22 @@ export async function getReferencesRecursive(
 	recursion = false,
 	lang = 'lg-spa',
 	visited: string[] = [],
+	io: RelatedGraphIO = DB_GRAPH_IO,
+	expanded: Set<string> = new Set(),
 ): Promise<RelatedReference[]> {
 	const cache = recursion ? visited : [];
-	cache.push(`${locator.section_tipo}_${locator.section_id}_${lang}`);
+	const selfKey = `${locator.section_tipo}_${locator.section_id}_${lang}`;
+	// Re-entry of an already-expanded node contributes nothing (see the memo
+	// note above) — return before firing its inverse/stored queries. Safe to
+	// skip the cache push too: a node is only re-entered through a path that
+	// already put its key in `cache`.
+	if (expanded.has(selfKey)) return [];
+	expanded.add(selfKey);
+	cache.push(selfKey);
 	const references: RelatedReference[] = [];
 
 	// References to me (inverse hop).
-	const inverse = await getReferences(
+	const inverse = await io.getInverse(
 		locator.from_component_tipo,
 		locator.section_tipo,
 		locator.section_id,
@@ -121,7 +181,7 @@ export async function getReferencesRecursive(
 
 	if (typeRel === RELATED_MULTIDIRECTIONAL) {
 		// The node's stored links (a=b: what I point TO joins the graph).
-		const stored = await readStoredLinks(
+		const stored = await io.readStored(
 			locator.from_component_tipo,
 			locator.section_tipo,
 			locator.section_id,
@@ -130,6 +190,12 @@ export async function getReferencesRecursive(
 			if (typeof dataLocator?.section_tipo !== 'string' || dataLocator.section_id === undefined) {
 				continue;
 			}
+			// dd490 DATAFRAME entries share the main component's bag in v7 storage
+			// but are PAIRING records, not relation data — PHP get_dato never
+			// returned them (frames are stripped from a main's data everywhere:
+			// cf. the TM-restore literal split). Walking one would treat a frame
+			// TARGET (e.g. a vocabulary term) as a graph node — review 2026-08-02.
+			if (dataLocator.type === DATAFRAME_RELATION_TYPE) continue;
 			const key = `${dataLocator.section_tipo}_${dataLocator.section_id}_${lang}`;
 			if (cache.includes(key)) continue;
 			const element: RelatedReference = {
@@ -150,16 +216,94 @@ export async function getReferencesRecursive(
 					true,
 					lang,
 					cache,
+					io,
+					expanded,
 				)),
 			);
 		}
 		// References to references (c=a closure).
 		for (const current of [...references]) {
-			references.push(...(await getReferencesRecursive(tipo, current, typeRel, true, lang, cache)));
+			references.push(
+				...(await getReferencesRecursive(tipo, current, typeRel, true, lang, cache, io, expanded)),
+			);
 		}
 	}
 
 	return references;
+}
+
+/**
+ * PHP get_dato_with_references (v6 class.component_relation_related.php:149):
+ * the component's STORED bag merged with its calculated references — stored
+ * first, references appended (array_merge order). The references half follows
+ * the get_calculated_references switch exactly: dd620 UNIDIRECTIONAL
+ * contributes NOTHING, dd467 BIDIRECTIONAL one inverse hop, dd621
+ * MULTIDIRECTIONAL the full recursive closure. This is the peer-expansion
+ * primitive of the observer external-value law (D3): set_dato_external seeds
+ * its related-mode search with every locator reachable through
+ * properties.source.data_from_field, and MEASURED on 19,908 numisdata3
+ * records the closure is the difference between correct (19,885 exact / 13
+ * locators lost) and a one-hop stored-bag read (247,933 locators lost) —
+ * do NOT weaken this to the stored bag.
+ *
+ * MODEL DISPATCH (review 2026-08-02): PHP's get_dato_with_references is
+ * POLYMORPHIC — only component_relation_related OVERRIDES it with the
+ * typeRel-switched closure; every other relation model inherits the base,
+ * which returns get_dato() alone regardless of any config_relation
+ * .relation_type_rel it may carry (v6 class.component_relation_common.php
+ * :696-702). `peerModel` reproduces that dispatch: a non-related peer gets
+ * the stored bag ONLY, even with dd467/dd621 in its config. All shipped
+ * data_from_field peers ARE component_relation_related (app-DB census
+ * 2026-08-02: numisdata36/tch40/test200) — the reverse-enumeration census in
+ * observer_seed_native.test.ts fails loudly if a new peer ships otherwise.
+ *
+ * `peerProperties` is the peer NODE's ontology properties (typeRel source —
+ * passed in, not re-read, so the law is hermetically testable); `io` injects
+ * the graph for tests, defaulting to the live DB.
+ */
+export async function getStoredWithReferences(
+	tipo: string,
+	sectionTipo: string,
+	sectionId: number | string,
+	peerProperties: unknown,
+	peerModel: string | null,
+	lang = 'lg-nolan',
+	io: RelatedGraphIO = DB_GRAPH_IO,
+): Promise<{ section_tipo: string; section_id: string }[]> {
+	const typeRel = getRelationTypeRel(peerProperties);
+	const merged: { section_tipo: string; section_id: string }[] = [];
+	// Stored half (PHP get_dato()) — malformed entries carry nothing a locator
+	// seed could search on; they are dropped exactly like the traversal drops
+	// them (getReferencesRecursive's stored-link guard). dd490 frames are
+	// PAIRING records, never relation data (PHP get_dato excludes them — same
+	// rule as the traversal's stored walk above).
+	const stored = await io.readStored(tipo, sectionTipo, sectionId);
+	for (const entry of stored) {
+		if (typeof entry?.section_tipo !== 'string' || entry.section_id === undefined) continue;
+		if (entry.type === DATAFRAME_RELATION_TYPE) continue;
+		merged.push({ section_tipo: entry.section_tipo, section_id: String(entry.section_id) });
+	}
+	// References half (PHP get_calculated_references(true) — the typeRel
+	// switch), reached ONLY through the component_relation_related override
+	// (see MODEL DISPATCH above).
+	if (
+		peerModel === 'component_relation_related' &&
+		(typeRel === RELATED_BIDIRECTIONAL || typeRel === RELATED_MULTIDIRECTIONAL)
+	) {
+		const references = await getReferencesRecursive(
+			tipo,
+			{ section_tipo: sectionTipo, section_id: sectionId, from_component_tipo: tipo },
+			typeRel,
+			false,
+			lang,
+			[],
+			io,
+		);
+		for (const reference of references) {
+			merged.push({ section_tipo: reference.section_tipo, section_id: reference.section_id });
+		}
+	}
+	return merged;
 }
 
 /**

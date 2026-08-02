@@ -215,6 +215,86 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   **global-admin only** (404 otherwise). Aggregates request totals/latency,
   slow-request and pool-wait counters, diffusion queue depths + scheduler
   state, media job headroom, background tool job stats, RSS, uptime.
+- **`observers_big_result_refused`** — the PHP-parity >2000-reference freeze
+  (set_dato_external computes but refuses the persist above 2000 referencers).
+  EXPECTED to tick steadily, not an incident signal: targets permanently above
+  the threshold (this install: `cult1/5` 4,547 refs; `numisdata224/13787`
+  3,078; `numisdata224/13108` 2,874) re-compute and re-refuse on EVERY save
+  touching them once drifted — PHP behaved identically, and neither the
+  cascade nor `observer_reconcile --apply` can converge them by design. A
+  climbing counter on OTHER targets is worth a look;
+  `scripts/observer_reconcile.ts` (dry run) names the frozen records. Note
+  the COST shape: the freeze withholds only the persist — a frozen target
+  still pays the full uncapped closure walk + inverse search under its row
+  lock on EVERY save touching it, forever (it can never converge). Beyond
+  this counter, the only signal for that cost is
+  `observers_recompute_lock_slow`; if it ticks steadily alongside a frozen
+  hot term, that term is your contention source.
+- **Observer cascade — ALWAYS ON** (D1 relay + D2 bounded dispatch,
+  `WC-2026-08-02-observer-cascade-bounded-flag`). A saved component's
+  declared observer edges fire transitively (relay hops AND
+  recompute-triggered re-propagation), bounded by a shared visited set and a
+  depth budget of 8 hops. There is no config switch: the mirrors are STORED
+  relation data declared by the ontology, so gating them would make two
+  identical installs store different values (the `DEDALO_OBSERVER_CASCADE`
+  rollout flag was retired 2026-08-02 once the benchmark cleared the cascade
+  — typical external hop p50 1.3 ms / p90 3.1 ms, worst real case 22 ms,
+  measured graph depth ≤ 2 with zero cycles). Watch the cascade counters:
+  `observers_cascade_cycle_refused` / `observers_cascade_depth_exceeded` /
+  `observers_cascade_hop_failed` / `observers_cascade_hop_dropped` should
+  STAY at zero — any tick names its chain in the log and means a TRUE cyclic
+  observe graph (the node repeats on its own chain), an over-deep graph, a
+  failing hop, or (hop_dropped) a leaked continuation that lost its commit
+  lane — not normal operation. `observers_cascade_converged_skipped` is the
+  BENIGN sibling: the same observer reached through two branches of one
+  cascade (a converged diamond) is dispatched once and the second arrival
+  skipped — expected on diamond-shaped ontologies, NOT a cycle; only the
+  cycle counter indicates one. `observers_recompute_lock_slow` ticks when a
+  recompute held its target row lock >2s (the D3 closure + uncapped search
+  run under the lock) — steady ticks mean editor-visible contention on hot
+  terms. `observers_propagation_failed_in_tx` counts level-0 propagation
+  failures that happened INSIDE an ambient transaction (e.g. a CSV-import
+  row) — those rethrow to the transaction owner instead of being swallowed,
+  so the import row's error names the real cause. Cascade hops always run
+  post-COMMIT (a rolled-back import fires nothing) and the relay writes
+  nothing (`WC-2026-08-02-observer-relay-writes-nothing`).
+  **Discovery is observer-declared** (subscription registry,
+  `WC-2026-08-02-observer-subscription-registry-activation`): an edge
+  dispatches iff the OBSERVER's `properties.observe` entry carries a
+  `server` block — a reverse-only declaration alone is enough (the
+  subscriber registers itself). The forward `properties.observers` array is
+  legacy, consulted only to scope `'all'` wildcards and to target
+  reused-component hosts. The registry is built once per ontology state
+  (warmed at boot, hub-invalidated on any dd_ontology write); the boot
+  probe loud-logs contract violations (dead forward specs, dead wildcards,
+  unresolved SQO hosts, cycles) and the `observers_registry` gauge +
+  `observers_registry_contract_violations` counter expose them on
+  /api/v1/counters. `observers_host_section_unresolved` counts SQO
+  recomputes refused because no host section resolved (observe-entry scope
+  → forward spec → the observer's own section, virtual↔real-aware) —
+  should stay 0; a tick names the edge whose observe entry needs a
+  `section_tipo`.
+  **Incident playbook — a runaway or buggy EDGE**: there is no global
+  switch, and that is deliberate; the kill switch is PER-EDGE and lives in
+  the source of truth. Disable the offending edge in `dd_ontology` — blank
+  the observer node's `properties.observe` entry's `server` key — and the
+  edge stops firing engine-wide once the ontology cache invalidates.
+  (Removing the observed node's `properties.observers` declaration is NOT a
+  kill switch any more: the reverse declaration alone dispatches; it only
+  stops wildcard-matched edges.) That is an ontology EDIT, not a config
+  override: the engine keeps doing exactly what the ontology declares. Heal any drift afterwards with
+  `scripts/observer_reconcile.ts --apply` (grow-only unless
+  `--allow-shrink`); every live observer write is preceded by a
+  `matrix_time_machine` row, so per-record restore exists for a hop that
+  wrote wrong values. Blast radius is structurally capped meanwhile: hops
+  cannot hang (visited set + depth budget), cannot shrink stored bags,
+  cannot fire on ROLLBACK, and the relay writes nothing.
+  **Bulk-import throughput**: the commit lane drains synchronously in the
+  importing request after COMMIT, so imports pay the cascade per row —
+  ~2.7 s of observer work per 1,000 saved rows at the measured p50 (data-
+  dependent). Bulk doors that skip propagation entirely (tool_propagate,
+  delete_data wipe, portalize) rely on the reconciler afterwards; a
+  mid-import kill loses no stored data (grow-only).
 - **`diffusion_queue_streams_opened` / `_closed` (WC-067)** — the leak alarm for
   the maintenance widget's live queue feed. Each open `follow_queue` SSE stream
   runs a 1 s poll loop for as long as an admin has the panel open, so the two

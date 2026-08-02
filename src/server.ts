@@ -1347,6 +1347,36 @@ export async function startServer() {
 			);
 		}
 
+		// Observer subscription registry boot probe (Act 2 remediation,
+		// 2026-08-02): the DEC-12 gates validate the subscription contract
+		// against the SUITE database only — a strict subset of a production
+		// ontology — so an observer edge authored only in the production
+		// ontology can never turn CI red. THIS is the production locus: warm
+		// the registry against the REAL ontology at every boot/deploy ("read
+		// once at bun start") — the build-of-record logs every contract
+		// violation (dead config, unresolved hosts, cycles) loudly and feeds
+		// the observers_registry_contract_violations counter — and register
+		// the gauge that keeps the current state visible on GET
+		// /api/v1/counters between rebuilds.
+		void (async () => {
+			const { getSubscriptionRegistry, validateSubscriptionContract } = await import(
+				'./core/section/record/observer_subscriptions.ts'
+			);
+			const { registerOpsGauge } = await import('./core/api/counters.ts');
+			registerOpsGauge('observers_registry', async () => {
+				const index = await getSubscriptionRegistry();
+				return {
+					contract_violations: validateSubscriptionContract(index),
+					dead_wildcards: index.diagnostics.deadWildcards,
+					host_unresolved: index.diagnostics.hostUnresolved,
+					cycles: index.diagnostics.cycles.length,
+				};
+			});
+			await getSubscriptionRegistry(); // warm + loud-validate the real ontology
+		})().catch((error) =>
+			console.error('[observers] subscription registry boot probe failed:', error),
+		);
+
 		void import('./diffusion/jobs/schema.ts')
 			.then(({ ensureDiffusionJobTables }) => ensureDiffusionJobTables())
 			.then(async () => {

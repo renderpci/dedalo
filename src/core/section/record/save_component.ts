@@ -376,7 +376,10 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 		// mirrors). Post-commit like the cache invalidation above: observer
 		// mirror writes run their own row updates against committed state.
 		// No-op for the vast majority of components (no `observers` in
-		// ontology properties — the first check inside). Never throws.
+		// ontology properties — the first check inside). Never throws HERE
+		// (no ambient tx at this point on the interactive path); under an
+		// OUTER transaction (import_csv row wrap) a propagation failure
+		// rethrows so the row owner sees the real error (B6, observers.ts).
 		const { propagateToObservers } = await import('./observers.ts');
 		result.observersData = await propagateToObservers(
 			effectiveRequest.componentTipo,

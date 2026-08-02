@@ -1,0 +1,833 @@
+/**
+ * D1 (TRIGGER RELAY) + D2 (BOUNDED CASCADE) gates — DEC-12 twins of the
+ * relay branch and the guarded transitive dispatch in
+ * src/core/section/record/observers.ts, plus the W11 lock pin on
+ * src/core/relations/save.ts deletePortalLocator.
+ *
+ * THE LAW (PHP v6 class.component_common.php:1651-1660 → Save() :1306 →
+ * propagate_to_observers :1372): the DEFAULT observer branch (no `perform`,
+ * observer not an info model) reads the observer's value, sets
+ * observable_dato = the value WITH REFERENCES and re-SAVES the observer
+ * purely to re-enter propagation — a dependency EDGE (numisdata161 →
+ * numisdata36 → numisdata77; tch241 → tch40 → tch33). PHP's recursion is
+ * UNGUARDED (no visited set, no depth budget — a cyclic observe graph
+ * infinite-loops it). TS: write:'none' relay + an UNCONDITIONAL visited-set/
+ * depth-budget dispatch — the DEDALO_OBSERVER_CASCADE rollout flag was
+ * RETIRED 2026-08-02 the day the benchmark cleared the cascade (typical
+ * external hop p50 1.3ms, worst real case 22ms, measured graph depth ≤ 2,
+ * zero cycles): declared observer edges are ontology-declared STORED data
+ * and always fire. Hops go post-commit through the W12 commit-only lane,
+ * never inside an ambient transaction (B6). Divergence ledger:
+ * WC-2026-08-02-observer-relay-writes-nothing,
+ * WC-2026-08-02-observer-cascade-bounded-flag.
+ *
+ * Gates:
+ *   1. THE CASCADE FIRES FOR A DECLARED EDGE, unconditionally: the planted
+ *      2-hop chain (A saves → relay B → B's observer C recomputes)
+ *      CONVERGES — C's mirror lands at the target AND at the relay payload's
+ *      equivalent, while the RELAY ITSELF writes NOTHING (B's bag
+ *      byte-unchanged, zero TM rows for B);
+ *   2. planted CYCLE (X ↔ Y relay ring) terminates LOUDLY —
+ *      observers_cascade_cycle_refused counted, no hang;
+ *   3. the depth budget (MAX_CASCADE_DEPTH, pinned at 8 — a backstop over
+ *      the measured depth-≤2 graph) refuses the over-budget hop LOUDLY —
+ *      observers_cascade_depth_exceeded counted, cycle counter untouched;
+ *   4. inside an ambient transaction the hop is DEFERRED to the commit lane:
+ *      ROLLBACK discards it (no mirror), COMMIT fires it (mirror lands);
+ *   5. runObserverCascadeHop REFUSES an ambient transaction (throw naming
+ *      the chain — B6);
+ *   6. W11 pins: deletePortalLocator runs its read-modify-write under
+ *      withTransaction + FOR UPDATE with the zero-row guard (a lock that
+ *      matched no row never proceeds to the read), and two CONCURRENT
+ *      removals on one record both survive (no lost update);
+ *   7. a CONVERGED DIAMOND (same node via two branches) is deduped as
+ *      benign (observers_cascade_converged_skipped), NOT counted a cycle;
+ *   8. recompute hops fire ONLY after a REAL persist (wrote:true) — a
+ *      converged (no-drift) recompute never re-propagates;
+ *   9. the relay payload is the value WITH REFERENCES: a dd621 relay's
+ *      transitive closure target receives the mirror too (the payload never
+ *      degrades to the stored bag);
+ *  10. a leaked continuation (S2-14 class) whose commit lane already closed
+ *      DROPS the hop loudly (observers_cascade_hop_dropped) — never silently;
+ *  11. a level-0 propagation failure RETHROWS inside an ambient transaction
+ *      (B6 — the owner must see the abort) and stays swallowed outside one.
+ *
+ * Scratch hygiene: ontology nodes in the test9992x band (tld 'test' — swept
+ * BEFORE seeding, residue-tolerant); matrix rows in the 99999993x/99999994x
+ * id bands on rsc205 (matrix) and on1 (matrix_hierarchy); TM rows swept by
+ * tipo band + record band. Suite DB only — never the app DB.
+ */
+
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { getCounters } from '../../src/core/api/counters.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import {
+	type CascadeGuard,
+	MAX_CASCADE_DEPTH,
+	emitCascadeHop,
+	propagateToObservers,
+	runObserverCascadeHop,
+} from '../../src/core/section/record/observers.ts';
+import {
+	type TermSeedHandle,
+	seedTermChainIfAbsent,
+	sweepTermChain,
+} from '../helpers/observer_term_seed.ts';
+
+const REPO_ROOT = join(import.meta.dir, '..', '..');
+
+// ---------------------------------------------------------------------------
+// Scratch bands (distinct from observer_failsafe test9990x and
+// observer_seed test9991x / 9108x / 84000xx).
+// ---------------------------------------------------------------------------
+const OBSERVED = 'test99920'; // the saved component (rsc205)
+const RELAY = 'test99921'; // relay observer (component_relation_related dd621, on1)
+const MIRROR = 'test99922'; // set_dato_external observer (on1)
+const FOURTH = 'test99923'; // observes MIRROR — no component_to_search (counted skip = hop detector)
+const DIAMOND_OBS = 'test99924'; // the diamond's saved component
+const CYCLE_X = 'test99925';
+const CYCLE_Y = 'test99926';
+const RELAY_P = 'test99927'; // diamond branch 1
+const RELAY_Q = 'test99928'; // diamond branch 2
+const RELAY_R = 'test99929'; // the converged node (reached via P AND Q)
+const BROKEN_TABLE_NODE = 'test999298'; // matrix_table term → a nonexistent table
+const BROKEN_SECTION = 'test999299'; // section whose matrix table does not exist (deterministic SQL error)
+
+const TERM_A = 999999931; // on1 — relay target
+const TERM_EQUIV = 999999932; // on1 — carried in the relay payload (B's bag)
+const CYCLE_TERM = 999999933; // on1 — the X ↔ Y ring record
+const TERM_TX = 999999934; // on1 — the ambient-tx (commit-lane) target
+const REF_A = 999999935; // rsc205 — references TERM_A through OBSERVED
+const REF_EQUIV = 999999936; // rsc205 — references TERM_EQUIV through OBSERVED
+const REF_TX = 999999937; // rsc205 — references TERM_TX through OBSERVED
+const TERM_ON = 999999938; // on1 — the wrote-gate target
+const REF_ON = 999999939; // rsc205 — references TERM_ON through OBSERVED
+const W11_RECORD = 999999940; // rsc205 — the concurrent-delete record
+const DIAMOND_TERM = 999999943; // on1 — the diamond record (P and Q bags both point here)
+const TERM_TRANSITIVE = 999999944; // on1 — reachable ONLY through the dd621 closure (TERM_EQUIV's bag)
+const REF_TRANSITIVE = 999999945; // rsc205 — references TERM_TRANSITIVE through OBSERVED
+
+function observedReferencer(targetId: number): string {
+	return JSON.stringify({
+		[OBSERVED]: [
+			{
+				id: 1,
+				type: 'dd151',
+				section_id: String(targetId),
+				section_tipo: 'on1',
+				from_component_tipo: OBSERVED,
+			},
+		],
+	});
+}
+
+/** The exact mirror entry the set_dato_external law appends. */
+function mirrorEntry(itemId: number, referencerId: number): Record<string, unknown> {
+	return {
+		id: itemId,
+		type: 'dd151',
+		section_id: String(referencerId),
+		section_tipo: 'rsc205',
+		from_component_tipo: MIRROR,
+	};
+}
+
+async function bagOf(tipo: string, sectionId: number): Promise<unknown[] | null> {
+	const rows = (await sql.unsafe(
+		'SELECT relation->$1 AS bag FROM matrix_hierarchy WHERE section_tipo = $2 AND section_id = $3',
+		[tipo, 'on1', sectionId],
+	)) as { bag: unknown[] | null }[];
+	return rows[0]?.bag ?? null;
+}
+
+async function tmCount(tipo: string): Promise<number> {
+	const rows = (await sql.unsafe(
+		'SELECT count(*)::int AS c FROM matrix_time_machine WHERE tipo = $1',
+		[tipo],
+	)) as { c: number }[];
+	return rows[0]?.c ?? 0;
+}
+
+const SCRATCH_NODES: { tipo: string; model: string; properties: Record<string, unknown> }[] = [
+	{
+		tipo: OBSERVED,
+		model: 'component_autocomplete',
+		properties: {
+			observers: [{ section_tipo: 'on1', component_tipo: RELAY }],
+		},
+	},
+	{
+		// The RELAY edge — the numisdata36/tch40 shape: config only, NO perform,
+		// filter ABSENT (distinct from the filter:false terminal no-op). dd621
+		// (multidirectional) like the live flagship: the relay payload must be
+		// the value WITH REFERENCES — stored bag ∪ the transitive closure —
+		// which is what carries TERM_TRANSITIVE into the cascade (gate 9; a
+		// stored-bag-only payload fails it).
+		tipo: RELAY,
+		model: 'component_relation_related',
+		properties: {
+			config_relation: { relation_type_rel: 'dd621' },
+			observe: [
+				{
+					component_tipo: OBSERVED,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+			],
+			observers: [{ section_tipo: 'on1', component_tipo: MIRROR }],
+		},
+	},
+	{
+		// The terminal recompute — the numisdata77 shape. Its own `observers`
+		// entry (FOURTH) makes it a NON-leaf so the 'on'-mode wrote:true gate
+		// (gate 8) can observe whether a recompute re-propagated.
+		tipo: MIRROR,
+		model: 'component_portal',
+		properties: {
+			observe: [
+				{
+					component_tipo: RELAY,
+					server: {
+						config: { use_self_section: true, use_observable_dato: true },
+						perform: {
+							function: 'set_dato_external',
+							params: { save: true, changed: false, current_dato: false, references_limit: 0 },
+						},
+					},
+				},
+			],
+			source: { section_to_search: ['rsc205'], component_to_search: [OBSERVED] },
+			observers: [{ section_tipo: 'on1', component_tipo: FOURTH }],
+		},
+	},
+	{
+		// The wrote-gate DETECTOR: observes MIRROR with the covered recompute
+		// shape but NO source.component_to_search — its recompute is the counted
+		// skip observers_component_to_search_missing, so a tick of that counter
+		// proves the external hop fired without writing anything anywhere.
+		tipo: FOURTH,
+		model: 'component_portal',
+		properties: {
+			observe: [
+				{
+					component_tipo: MIRROR,
+					server: {
+						config: { use_self_section: false, use_observable_dato: true },
+						perform: {
+							function: 'set_dato_external',
+							params: { save: true, changed: false, current_dato: false, references_limit: 0 },
+						},
+					},
+				},
+			],
+			source: {},
+		},
+	},
+	{
+		// Converged diamond (gate 7): DIAMOND_OBS fires P and Q; both relay into
+		// R — the SECOND arrival at R is a converged path, NOT a cycle.
+		tipo: DIAMOND_OBS,
+		model: 'component_autocomplete',
+		properties: {
+			observers: [
+				{ section_tipo: 'on1', component_tipo: RELAY_P },
+				{ section_tipo: 'on1', component_tipo: RELAY_Q },
+			],
+		},
+	},
+	{
+		tipo: RELAY_P,
+		model: 'component_relation_related',
+		properties: {
+			observe: [
+				{
+					component_tipo: DIAMOND_OBS,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+			],
+			observers: [{ section_tipo: 'on1', component_tipo: RELAY_R }],
+		},
+	},
+	{
+		tipo: RELAY_Q,
+		model: 'component_relation_related',
+		properties: {
+			observe: [
+				{
+					component_tipo: DIAMOND_OBS,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+			],
+			observers: [{ section_tipo: 'on1', component_tipo: RELAY_R }],
+		},
+	},
+	{
+		// R observes BOTH branches; its own observers list points at a
+		// component with no `observe` (OBSERVED) so its hop terminates.
+		tipo: RELAY_R,
+		model: 'component_relation_related',
+		properties: {
+			observe: [
+				{
+					component_tipo: RELAY_P,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+				{
+					component_tipo: RELAY_Q,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+			],
+			observers: [{ section_tipo: 'on1', component_tipo: OBSERVED }],
+		},
+	},
+	{
+		// X ↔ Y relay ring (a shape PHP would infinite-loop on).
+		tipo: CYCLE_X,
+		model: 'component_relation_related',
+		properties: {
+			observers: [{ section_tipo: 'on1', component_tipo: CYCLE_Y }],
+			observe: [
+				{
+					component_tipo: CYCLE_Y,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+			],
+		},
+	},
+	{
+		tipo: CYCLE_Y,
+		model: 'component_relation_related',
+		properties: {
+			observers: [{ section_tipo: 'on1', component_tipo: CYCLE_X }],
+			observe: [
+				{
+					component_tipo: CYCLE_X,
+					server: { config: { use_self_section: false, use_observable_dato: true } },
+				},
+			],
+		},
+	},
+];
+
+async function clearResolverCaches(): Promise<void> {
+	const { clearOntologyDerivedCaches } = await import(
+		'../../src/core/ontology/cache_invalidation.ts'
+	);
+	await clearOntologyDerivedCaches();
+}
+
+async function sweepScratch(): Promise<void> {
+	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo LIKE 'test9992%' AND tld = 'test'`);
+	await sql.unsafe(
+		`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = ANY(string_to_array($1, ',')::int[])`,
+		[[REF_A, REF_EQUIV, REF_TX, REF_ON, W11_RECORD, REF_TRANSITIVE].join(',')],
+	);
+	await sql.unsafe(
+		`DELETE FROM matrix_hierarchy WHERE section_tipo = 'on1' AND section_id = ANY(string_to_array($1, ',')::int[])`,
+		[[TERM_A, TERM_EQUIV, CYCLE_TERM, TERM_TX, TERM_ON, DIAMOND_TERM, TERM_TRANSITIVE].join(',')],
+	);
+	await sql.unsafe(`DELETE FROM matrix_time_machine WHERE tipo LIKE 'test9992%'`, []);
+	await sql.unsafe(
+		`DELETE FROM matrix_time_machine WHERE section_tipo = 'rsc205' AND section_id = $1`,
+		[W11_RECORD],
+	);
+}
+
+let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
+
+beforeAll(async () => {
+	// on1 must resolve to matrix_hierarchy (a bare suite DB lacks the section
+	// node) — same environmental seed the observer_seed gates use.
+	termSeed = await seedTermChainIfAbsent();
+	// Residue-tolerant: sweep FIRST, then seed unconditionally (a crashed run
+	// must never turn these gates vacuous-green).
+	await sweepScratch();
+	for (const node of SCRATCH_NODES) {
+		await sql.unsafe(
+			`INSERT INTO dd_ontology (id, tipo, parent, model, tld, properties)
+			 VALUES ((SELECT COALESCE(MAX(id), 0) + 1300 FROM dd_ontology), $1, 'test3', $2, 'test', $3::text::jsonb)`,
+			[node.tipo, node.model, JSON.stringify(node.properties)],
+		);
+	}
+	// The DETERMINISTIC-SQL-ERROR section (gate 11): a section node whose
+	// matrix_table term names a table that does not exist — any recompute
+	// targeting it fails with 42P01 inside whatever transaction it runs in.
+	await sql.unsafe(
+		`INSERT INTO dd_ontology (id, tipo, parent, model, tld, term)
+		 VALUES ((SELECT COALESCE(MAX(id), 0) + 1300 FROM dd_ontology), $1, 'test3', 'matrix_table', 'test', $2::text::jsonb)`,
+		[BROKEN_TABLE_NODE, JSON.stringify({ 'lg-spa': 'matrix_zz_missing_zz' })],
+	);
+	await sql.unsafe(
+		`INSERT INTO dd_ontology (id, tipo, parent, model, tld, relations)
+		 VALUES ((SELECT COALESCE(MAX(id), 0) + 1300 FROM dd_ontology), $1, 'test3', 'section', 'test', $2::text::jsonb)`,
+		[BROKEN_SECTION, JSON.stringify([{ tipo: BROKEN_TABLE_NODE }])],
+	);
+	// Records: the relay target (B's bag names the equivalent term), the
+	// equivalent, the ring record (self-pointing bags), the commit-lane target
+	// (empty bag) and the referencers.
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		[
+			TERM_A,
+			JSON.stringify({
+				[RELAY]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_id: String(TERM_EQUIV),
+						section_tipo: 'on1',
+						from_component_tipo: RELAY,
+					},
+				],
+			}),
+		],
+	);
+	// TERM_EQUIV's own RELAY bag points at TERM_TRANSITIVE: reachable from
+	// TERM_A ONLY through the dd621 transitive closure (gate 9 — the relay
+	// payload must carry it; the stored bag alone never would).
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		[
+			TERM_EQUIV,
+			JSON.stringify({
+				[RELAY]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_id: String(TERM_TRANSITIVE),
+						section_tipo: 'on1',
+						from_component_tipo: RELAY,
+					},
+				],
+			}),
+		],
+	);
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+		[TERM_TRANSITIVE],
+	);
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+		[TERM_ON],
+	);
+	// The diamond record: P's and Q's bags both point at THIS record, so each
+	// branch's relay payload carries it and both branches hop R here.
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		[
+			DIAMOND_TERM,
+			JSON.stringify({
+				[RELAY_P]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_id: String(DIAMOND_TERM),
+						section_tipo: 'on1',
+						from_component_tipo: RELAY_P,
+					},
+				],
+				[RELAY_Q]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_id: String(DIAMOND_TERM),
+						section_tipo: 'on1',
+						from_component_tipo: RELAY_Q,
+					},
+				],
+			}),
+		],
+	);
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', $2::text::jsonb)`,
+		[
+			CYCLE_TERM,
+			JSON.stringify({
+				[CYCLE_X]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_id: String(CYCLE_TERM),
+						section_tipo: 'on1',
+						from_component_tipo: CYCLE_X,
+					},
+				],
+				[CYCLE_Y]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_id: String(CYCLE_TERM),
+						section_tipo: 'on1',
+						from_component_tipo: CYCLE_Y,
+					},
+				],
+			}),
+		],
+	);
+	await sql.unsafe(
+		`INSERT INTO matrix_hierarchy (section_id, section_tipo, relation) VALUES ($1, 'on1', '{}'::jsonb)`,
+		[TERM_TX],
+	);
+	for (const [refId, targetId] of [
+		[REF_A, TERM_A],
+		[REF_EQUIV, TERM_EQUIV],
+		[REF_TX, TERM_TX],
+		[REF_ON, TERM_ON],
+		[REF_TRANSITIVE, TERM_TRANSITIVE],
+	] as const) {
+		await sql.unsafe(
+			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
+			[refId, observedReferencer(targetId)],
+		);
+	}
+	await clearResolverCaches();
+});
+
+afterAll(async () => {
+	await sweepScratch();
+	await sweepTermChain(termSeed);
+	await clearResolverCaches();
+});
+
+// The saved data of OBSERVED at a rsc205 record: one locator to TERM_A.
+const SAVED_ITEMS = [{ section_tipo: 'on1', section_id: TERM_A }];
+
+// ---------------------------------------------------------------------------
+// 1. THE CASCADE IS UNCONDITIONAL — a declared edge always fires (this
+//    replaced the retired flag's "off = no cascade" byte-identity gate: the
+//    same propagation that once had to write NOTHING must now converge the
+//    whole declared chain).
+// ---------------------------------------------------------------------------
+
+describe('unconditional cascade — the flagship chain shape', () => {
+	test('A saves → relay B (write:none) → C recomputes at the target AND at the payload equivalent', async () => {
+		const relayBagBefore = JSON.stringify(await bagOf(RELAY, TERM_A));
+		await propagateToObservers(OBSERVED, 'rsc205', REF_A, SAVED_ITEMS, -1);
+
+		// C's mirror landed at the relay TARGET (self, use_self_section:true)…
+		expect(await bagOf(MIRROR, TERM_A)).toEqual([mirrorEntry(1, REF_A)]);
+		// …AND at the equivalent the relay payload (B's bag WITH REFERENCES)
+		// carried — the proof the child event consumed the relay's payload.
+		expect(await bagOf(MIRROR, TERM_EQUIV)).toEqual([mirrorEntry(1, REF_EQUIV)]);
+		// …AND at the dd621 TRANSITIVE closure target (gate 9): TERM_TRANSITIVE
+		// is only in TERM_EQUIV's bag, never TERM_A's — it reaches the cascade
+		// exclusively through getStoredWithReferences' recursive closure. If the
+		// relay payload ever degrades to the stored bag, THIS line goes red.
+		expect(await bagOf(MIRROR, TERM_TRANSITIVE)).toEqual([mirrorEntry(1, REF_TRANSITIVE)]);
+
+		// THE RELAY WROTE NOTHING (WC-2026-08-02-observer-relay-writes-nothing):
+		// B's stored bag is byte-identical and B has ZERO TM rows — while the
+		// recompute (a real write) audited C normally.
+		expect(JSON.stringify(await bagOf(RELAY, TERM_A))).toBe(relayBagBefore);
+		expect(await tmCount(RELAY)).toBe(0);
+		expect(await tmCount(MIRROR)).toBeGreaterThan(0);
+	}, 30000);
+});
+
+// ---------------------------------------------------------------------------
+// 2 + 3. The X ↔ Y ring terminates via the visited set; the depth budget is
+//        the independent backstop (the real ring never reaches it — depth 8
+//        sits far above the measured depth-2 graph — so the budget gate
+//        plants a guard already AT the ceiling and asserts the refusal).
+// ---------------------------------------------------------------------------
+
+describe('bounded dispatch on a planted CYCLE', () => {
+	test('the ring terminates LOUDLY via the visited set (no hang)', async () => {
+		const cycleBefore = getCounters().observers_cascade_cycle_refused ?? 0;
+		await propagateToObservers(
+			CYCLE_X,
+			'on1',
+			CYCLE_TERM,
+			[{ section_tipo: 'on1', section_id: CYCLE_TERM }],
+			-1,
+		);
+		// X → hop Y → hop X → hop Y REFUSED (already dispatched) — exactly one
+		// refusal, and the call RETURNED (a hang would trip the test timeout).
+		expect((getCounters().observers_cascade_cycle_refused ?? 0) - cycleBefore).toBe(1);
+	}, 20000);
+});
+
+describe('depth budget — the backstop refusal', () => {
+	test('the production ceiling is pinned at 8 and hop 9 is refused loudly (not a cycle)', async () => {
+		expect(MAX_CASCADE_DEPTH).toBe(8); // the 'on' value the flag era shipped
+		const depthBefore = getCounters().observers_cascade_depth_exceeded ?? 0;
+		const cycleBefore = getCounters().observers_cascade_cycle_refused ?? 0;
+		// A guard that already spent the whole budget: the NEXT hop is 9 > 8.
+		// RELAY declares `observers`, so the hop passes the leaf pre-gate and
+		// reaches the budget check with a fresh visited set (no revisit signal).
+		const guard: CascadeGuard = {
+			depth: MAX_CASCADE_DEPTH,
+			maxDepth: MAX_CASCADE_DEPTH,
+			visited: new Set(),
+			chain: [`synthetic-deep-chain@rsc205/${REF_A}`],
+		};
+		await emitCascadeHop(guard, RELAY, 'relay', 'on1', TERM_A, -1, new Date());
+		// refused BEFORE dispatch: counted, cycle counter untouched, and the
+		// node was never marked visited (the refusal is not an execution).
+		expect((getCounters().observers_cascade_depth_exceeded ?? 0) - depthBefore).toBe(1);
+		expect((getCounters().observers_cascade_cycle_refused ?? 0) - cycleBefore).toBe(0);
+		expect(guard.visited.size).toBe(0);
+	}, 20000);
+});
+
+// ---------------------------------------------------------------------------
+// 7. Converged DIAMOND: benign dedup, NOT a cycle (review 2026-08-02 — the
+//    two signals must never share a counter, or operators chase phantom
+//    cycles on legitimate diamond-shaped ontologies).
+// ---------------------------------------------------------------------------
+
+describe('converged diamond — execute-once dedup', () => {
+	test('the second arrival at R is counted converged; the cycle counter stays 0', async () => {
+		const convergedBefore = getCounters().observers_cascade_converged_skipped ?? 0;
+		const cycleBefore = getCounters().observers_cascade_cycle_refused ?? 0;
+		// DIAMOND_OBS fires P and Q; each branch's payload carries DIAMOND_TERM,
+		// so both branches hop R@DIAMOND_TERM — the second is a converged path
+		// (R is NOT on its own chain).
+		await propagateToObservers(
+			DIAMOND_OBS,
+			'on1',
+			DIAMOND_TERM,
+			[{ section_tipo: 'on1', section_id: DIAMOND_TERM }],
+			-1,
+		);
+		expect((getCounters().observers_cascade_converged_skipped ?? 0) - convergedBefore).toBe(1);
+		expect((getCounters().observers_cascade_cycle_refused ?? 0) - cycleBefore).toBe(0);
+	}, 20000);
+});
+
+// ---------------------------------------------------------------------------
+// 8. The wrote:true law: a recompute hop fires ONLY after a REAL persist
+//    (PHP: `$changed === false` skips Save() and the propagation).
+//    Detector: FOURTH observes MIRROR but has no component_to_search, so its
+//    recompute is EXACTLY one tick of observers_component_to_search_missing
+//    and writes nothing — the counter is the hop's footprint.
+// ---------------------------------------------------------------------------
+
+describe('recompute hops are gated on wrote:true', () => {
+	test('a PERSISTING recompute re-propagates (FOURTH is reached)', async () => {
+		const missingBefore = getCounters().observers_component_to_search_missing ?? 0;
+		await propagateToObservers(
+			RELAY,
+			'on1',
+			TERM_ON,
+			[{ section_tipo: 'on1', section_id: TERM_ON }],
+			-1,
+		);
+		// the recompute persisted (fresh mirror) …
+		expect(await bagOf(MIRROR, TERM_ON)).toEqual([mirrorEntry(1, REF_ON)]);
+		// … so the external hop fired and FOURTH's counted skip proves it ran
+		// (exactly once: one payload target, use_self_section:false on FOURTH).
+		expect((getCounters().observers_component_to_search_missing ?? 0) - missingBefore).toBe(1);
+	}, 30000);
+
+	test('a CONVERGED (no-drift) recompute does NOT re-propagate', async () => {
+		const missingBefore = getCounters().observers_component_to_search_missing ?? 0;
+		// same propagation again: the mirror already holds REF_ON → no drift →
+		// no write → `wrote` absent → no hop → FOURTH never runs.
+		await propagateToObservers(
+			RELAY,
+			'on1',
+			TERM_ON,
+			[{ section_tipo: 'on1', section_id: TERM_ON }],
+			-1,
+		);
+		expect(await bagOf(MIRROR, TERM_ON)).toEqual([mirrorEntry(1, REF_ON)]);
+		expect((getCounters().observers_component_to_search_missing ?? 0) - missingBefore).toBe(0);
+	}, 30000);
+});
+
+// ---------------------------------------------------------------------------
+// 4. Ambient transaction: the hop rides the COMMIT-ONLY lane (B6/W12).
+// ---------------------------------------------------------------------------
+
+describe('ambient transaction — hops are commit-gated', () => {
+	test('ROLLBACK discards the relay hop: no mirror, no TM', async () => {
+		await expect(
+			withTransaction(async () => {
+				await propagateToObservers(
+					OBSERVED,
+					'rsc205',
+					REF_TX,
+					[{ section_tipo: 'on1', section_id: TERM_TX }],
+					-1,
+				);
+				throw new Error('forced rollback');
+			}),
+		).rejects.toThrow('forced rollback');
+		expect(await bagOf(MIRROR, TERM_TX)).toBeNull();
+	});
+
+	test('COMMIT fires the deferred hop: the mirror lands post-commit', async () => {
+		await withTransaction(async () => {
+			await propagateToObservers(
+				OBSERVED,
+				'rsc205',
+				REF_TX,
+				[{ section_tipo: 'on1', section_id: TERM_TX }],
+				-1,
+			);
+			// still inside the outer tx: the hop has NOT run yet
+			expect(await bagOf(MIRROR, TERM_TX)).toBeNull();
+		});
+		// the commit lane drained before withTransaction resolved
+		expect(await bagOf(MIRROR, TERM_TX)).toEqual([mirrorEntry(1, REF_TX)]);
+	}, 30000);
+});
+
+// ---------------------------------------------------------------------------
+// 5. B6 assert: a hop refuses to run inside an ambient transaction.
+// ---------------------------------------------------------------------------
+
+describe('runObserverCascadeHop ambient-transaction refusal (B6)', () => {
+	test('throws naming the chain when called inside withTransaction', async () => {
+		const guard: CascadeGuard = {
+			depth: 1,
+			maxDepth: MAX_CASCADE_DEPTH,
+			visited: new Set(),
+			chain: [`${OBSERVED}@rsc205/${REF_A}`, `${RELAY}@on1/${TERM_A}`],
+		};
+		await expect(
+			withTransaction(() => runObserverCascadeHop(RELAY, 'on1', TERM_A, -1, new Date(), guard)),
+		).rejects.toThrow(/ambient transaction.*test99921@on1\/999999931/s);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 10. Leaked continuation (S2-14 class): the commit lane is CLOSED but the
+//     transaction context still reports active — the hop must be DROPPED
+//     loudly (counted), never silently (review 2026-08-02: this was the
+//     dispatch's one silent-truncation path).
+// ---------------------------------------------------------------------------
+
+describe('leaked continuation — the hop drop is loud', () => {
+	test('a hop emitted from a settled transaction context is counted, not silently lost', async () => {
+		const { getNode } = await import('../../src/core/ontology/resolver.ts');
+		await getNode(RELAY); // prime the ontology cache — the leaked context must not need a query
+		const droppedBefore = getCounters().observers_cascade_hop_dropped ?? 0;
+		let txSettled = false;
+		let leak: Promise<void> = Promise.resolve();
+		await withTransaction(async () => {
+			// the S2-14 leak class: an UNAWAITED promise started inside the
+			// callback that outlives the transaction while keeping its ALS context
+			leak = (async () => {
+				while (!txSettled) {
+					await Bun.sleep(5);
+				}
+				const guard: CascadeGuard = {
+					depth: 0,
+					maxDepth: MAX_CASCADE_DEPTH,
+					visited: new Set(),
+					chain: [`leak@rsc205/${REF_A}`],
+				};
+				await emitCascadeHop(guard, RELAY, 'relay', 'on1', TERM_A, -1, new Date());
+			})();
+			await sql.unsafe('SELECT 1', []);
+		});
+		txSettled = true;
+		await leak; // must resolve (no throw) — the drop is counted, not fatal
+		expect((getCounters().observers_cascade_hop_dropped ?? 0) - droppedBefore).toBe(1);
+	}, 20000);
+});
+
+// ---------------------------------------------------------------------------
+// 11. B6 completion: a LEVEL-0 propagation failure inside an ambient
+//     transaction RETHROWS (the outer tx is already aborted — swallowing
+//     would hide the cause and poison every later statement); outside a
+//     transaction the historical swallow stands. BROKEN_SECTION's matrix
+//     table does not exist, so its recompute fails deterministically.
+// ---------------------------------------------------------------------------
+
+describe('level-0 propagation failure — swallow only outside a transaction', () => {
+	const brokenItems = [{ section_tipo: BROKEN_SECTION, section_id: 1 }];
+
+	test('inside an ambient transaction the real failure surfaces to the tx owner', async () => {
+		await expect(
+			withTransaction(async () => {
+				await propagateToObservers(RELAY, 'on1', TERM_A, brokenItems, -1);
+			}),
+		).rejects.toThrow(/ambient transaction \(B6\)/);
+	});
+
+	test('outside a transaction the same failure is swallowed (never throws)', async () => {
+		const result = await propagateToObservers(RELAY, 'on1', TERM_A, brokenItems, -1);
+		expect(result).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 6. W11 — deletePortalLocator is locked + transactional.
+// ---------------------------------------------------------------------------
+
+describe('W11: deletePortalLocator lock', () => {
+	test('static pin: the RMW runs under withTransaction with a FOR UPDATE read, observers post-commit', () => {
+		const source = readFileSync(join(REPO_ROOT, 'src/core/relations/save.ts'), 'utf-8');
+		const body = source.slice(source.indexOf('export async function deletePortalLocator'));
+		expect(body).toContain('await withTransaction(');
+		expect(body).toContain('FOR UPDATE');
+		// the lock precedes the read; the observer fan-out follows the commit
+		expect(body.indexOf('FOR UPDATE')).toBeLessThan(body.indexOf('readMatrixRecord('));
+		expect(body.indexOf('propagateToObservers(')).toBeGreaterThan(body.indexOf('FOR UPDATE'));
+		// ZERO-ROW GUARD (review 2026-08-02): a FOR UPDATE matching no row locks
+		// NOTHING; under READ COMMITTED the later read could then see a freshly
+		// committed row and run the whole RMW unlocked. The lock result MUST be
+		// inspected and the empty case returned before the read.
+		expect(body).toContain('lockedRows.length === 0');
+		expect(body.indexOf('lockedRows.length === 0')).toBeLessThan(body.indexOf('readMatrixRecord('));
+	});
+
+	test('a record ABSENT under the lock returns the empty-data shape without reading', async () => {
+		const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
+		const response = await deletePortalLocator(
+			{ isGlobalAdmin: true, userId: -1 },
+			{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: 999999949 }, // no such row
+			{ locator: { type: 'dd96', section_id: '1', section_tipo: 'on1' } },
+		);
+		// byte-identical to the historical missing-record response
+		expect(response.result).toBe(0);
+		expect(response.errors).toEqual([]);
+		expect(response.msg.join(' ')).toContain('The component data is empty');
+	});
+
+	test('two CONCURRENT removals on one record both survive (no lost update)', async () => {
+		// rsc387 (dd96) on rsc205 — the same door observer_native drives. The
+		// two locators point at NONEXISTENT on1 targets so the observer
+		// recompute the door fires is a no-op (rows.length === 0), keeping this
+		// test independent of the mirror machinery above.
+		const locator = (id: number, targetId: number) => ({
+			id,
+			type: 'dd96',
+			section_id: String(targetId),
+			section_tipo: 'on1',
+			from_component_tipo: 'rsc387',
+		});
+		await sql.unsafe(
+			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, 'rsc205', $2::text::jsonb)`,
+			[W11_RECORD, JSON.stringify({ rsc387: [locator(1, 999999941), locator(2, 999999942)] })],
+		);
+		const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
+		const remove = (targetId: number) =>
+			deletePortalLocator(
+				{ isGlobalAdmin: true, userId: -1 },
+				{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: W11_RECORD },
+				{
+					locator: {
+						type: 'dd96',
+						section_id: String(targetId),
+						section_tipo: 'on1',
+						from_component_tipo: 'rsc387',
+					},
+					ar_properties: ['section_tipo', 'section_id', 'type', 'from_component_tipo'],
+				},
+			);
+		const [first, second] = await Promise.all([remove(999999941), remove(999999942)]);
+		expect(first.result).toBe(1);
+		expect(second.result).toBe(1);
+		const rows = (await sql.unsafe(
+			`SELECT relation->'rsc387' AS bag FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`,
+			[W11_RECORD],
+		)) as { bag: unknown[] | null }[];
+		// BOTH removals persisted — the unlocked RMW lost one of them.
+		expect(rows[0]?.bag).toEqual([]);
+	}, 30000);
+});

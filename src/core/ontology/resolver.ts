@@ -124,6 +124,7 @@ export function clearOntologyCaches(): void {
 	componentFilterTipoCache.clear();
 	descendantByModelCache.clear();
 	relatedTipoByModelCache.clear();
+	ancestorSectionCache.clear();
 }
 registerOntologyCacheClearer(clearOntologyCaches);
 
@@ -468,13 +469,22 @@ export interface NodeWithProperties {
 
 /**
  * Every dd_ontology node whose `properties` JSONB carries a top-level
- * `propertyKey` (PHP's `properties ? 'key'` scan). The one caller today is the
- * observer-mirror reconciler (`section/record/observer_reconcile.ts`), which
- * needs all nodes declaring an `observers` spec — a by-PROPERTY scan the
+ * `propertyKey` (PHP's `properties ? 'key'` scan) — a by-PROPERTY scan the
  * per-tipo cache cannot serve, so it lives here in the exempt canonical home
  * (the T3 ratchet only shrinks — a caller must never grow its own direct
- * `FROM dd_ontology`). Not cached: reconciliation is an out-of-band sweep, not
- * a hot read, and it must see the live property set.
+ * `FROM dd_ontology`).
+ *
+ * TWO callers, split caching (Act 2, 2026-08-02):
+ *   - the observer SUBSCRIPTION REGISTRY
+ *     (`section/record/observer_subscriptions.ts`) scans 'observers' ∪
+ *     'observe' and caches the BUILT index through createOntologyCache (hub-
+ *     cleared after every dd_ontology write) — the caching lives THERE, on the
+ *     derived structure, never here on the raw rows;
+ *   - the observer-mirror reconciler's sweep
+ *     (`section/record/observer_reconcile.ts`) reaches the registry too, but
+ *     out-of-band scripts remain free to call this scan directly.
+ * The scan itself stays UNCACHED: it must always see the live property set,
+ * and each caller decides what derived shape (if any) is worth memoizing.
  */
 export async function getNodesWithProperty(propertyKey: string): Promise<NodeWithProperties[]> {
 	return (await sql.unsafe('SELECT tipo, properties FROM dd_ontology WHERE properties ? $1', [
@@ -703,6 +713,37 @@ async function relatedMatrixTable(sectionTipo: string): Promise<string | null> {
 	// PHP reads the table name in DEDALO_STRUCTURE_LANG (lg-spa) — some
 	// matrix_table nodes carry stray terms in other langs (e.g. dd1200).
 	return term['lg-spa'] ?? Object.values(term).find((value) => value) ?? null;
+}
+
+/**
+ * A component's OWN SECTION: the first ancestor of model 'section' on the
+ * dd_ontology parent chain (the node's ontology position — e.g. oh28 → oh1,
+ * numisdata1478 → numisdata276). Null when the chain never reaches a section
+ * (orphan/partial ontology). NOTE this is the REAL ontology position; a
+ * VIRTUAL section is never on a parent chain (virtual sections point at their
+ * real section through relations[0].tipo — see getSectionRealTipo in
+ * resolve/security_access_datalist.ts for that half). Cached; hub-cleared on
+ * any dd_ontology write. Consumer: observer host-section resolution
+ * (section/record/observer_subscriptions.ts step 3).
+ */
+const ancestorSectionCache = createOntologyCache<string, string | null>();
+
+export async function getAncestorSectionTipo(tipo: string): Promise<string | null> {
+	const cached = ancestorSectionCache.get(tipo);
+	if (cached !== undefined) return cached;
+	const rows = (await sql`
+		WITH RECURSIVE up AS (
+			SELECT tipo, parent, model, 0 AS depth FROM dd_ontology WHERE tipo = ${tipo}
+			UNION ALL
+			SELECT d.tipo, d.parent, d.model, up.depth + 1
+			FROM dd_ontology d JOIN up ON d.tipo = up.parent
+			WHERE up.model IS DISTINCT FROM 'section' AND up.depth < 24
+		)
+		SELECT tipo FROM up WHERE model = 'section' LIMIT 1
+	`) as { tipo: string }[];
+	const section = rows[0]?.tipo ?? null;
+	cacheWrite(ancestorSectionCache, tipo, section);
+	return section;
 }
 
 /** One entry of the section census (listSectionNodes). */
