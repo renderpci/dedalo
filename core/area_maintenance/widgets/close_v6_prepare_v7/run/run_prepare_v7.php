@@ -33,7 +33,7 @@ if (PHP_SAPI !== 'cli') {
 	exit(2);
 }
 
-$opts = getopt('', ['dry-run', 'yes', 'skip-backup', 'deep-preflight', 'backup-dir:', 'log:', 'engine-root:', 'help']);
+$opts = getopt('', ['dry-run', 'yes', 'skip-backup', 'deep-preflight', 'no-auto-fix', 'backup-dir:', 'log:', 'engine-root:', 'help']);
 
 if (isset($opts['help'])) {
 	fwrite(STDOUT, <<<TXT
@@ -47,6 +47,10 @@ Close v6 / Prepare installation for v7
                          Includes the credential upgrade: v6 stores REVERSIBLE passwords,
                          and they are converted to Argon2id (needs Argon2 in this PHP).
   --skip-backup          Skip the mandatory pre-migration backup (only if you already have one).
+  --no-auto-fix          PREFLIGHT ONLY. Report the raw data without the structural repairs
+                         (missing 'dato' envelope, empty values), so you can see what the
+                         auto-fix is covering. The real migration ALWAYS repairs: turning it
+                         off there would drop the very values the preflight promised to fix.
   --backup-dir=PATH      Where to write the pg_dump (default: <package>/var/backup).
   --log=PATH             Log file (default: <package>/var/prepare_v7.log).
   --engine-root=PATH     Bundled engine root (default: <package>/engine, else the repo).
@@ -63,6 +67,11 @@ $is_dry      = isset($opts['dry-run']);
 $has_yes     = isset($opts['yes']);
 $is_deep     = isset($opts['deep-preflight']);
 $skip_backup = isset($opts['skip-backup']);
+$no_auto_fix = isset($opts['no-auto-fix']);
+
+// Passed to the REVIEW passes only. phase2 (the matrix rewrite) is never given this flag:
+// the repairs are what carry the affected values into the v7 columns.
+$auto_fix_arg = $no_auto_fix ? ['--no-auto-fix'] : [];
 
 // paths (this file: <package>/run/run_prepare_v7.php)
 $run_dir      = __DIR__;
@@ -186,7 +195,7 @@ $backup_arg = '--backup-dir=' . escapeshellarg($backup_dir);
 // ---------------------------------------------------------------- DRY RUN
 if ($is_dry) {
 	$emit('=== PREPARE V7: PREFLIGHT (dry-run) ===');
-	$code = $spawn('phase1_backup_pre_update.php', ['--dry-run', $log_arg]);
+	$code = $spawn('phase1_backup_pre_update.php', array_merge(['--dry-run', $log_arg], $auto_fix_arg));
 
 	// Diffusion preview. It needs dd_ontology (built by the REAL phase 1), so on an
 	// unmigrated database it reports "unavailable yet" and exits 0 — it never turns a
@@ -228,7 +237,7 @@ if ($is_deep) {
 
 	$emit('pre_update done: dd_ontology is in place and matrix data is untouched. '
 		. 'Reviewing the data again, now that component models resolve …');
-	$code_review = $spawn('phase1_backup_pre_update.php', ['--dry-run', $log_arg]);
+	$code_review = $spawn('phase1_backup_pre_update.php', array_merge(['--dry-run', $log_arg], $auto_fix_arg));
 
 	$emit('Previewing the diffusion ontology mapping (now possible: dd_ontology exists) …');
 	$spawn('phase3_diffusion.php', ['--dry-run', $log_arg]);
@@ -237,11 +246,14 @@ if ($is_deep) {
 	$spawn('phase4_passwords.php', ['--dry-run', $log_arg]);
 
 	if ($code_review === 6) {
-		$emit('DEEP PREFLIGHT: data issues found — see the reports above. '
-			. 'Fix or accept them, then run --yes to apply the full migration.');
+		$emit('DEEP PREFLIGHT: the review found issues under NEEDS ATTENTION — see the summary '
+			. 'above. Anything listed under AUTO-FIXED is already handled and needs no action; '
+			. 'NOTICES are values that cannot be migrated and will be dropped. Decide on the '
+			. 'NEEDS ATTENTION items, then run --yes to apply the full migration.');
 	}else if ($code_review === 0) {
-		$emit('DEEP PREFLIGHT PASSED: no data issues with the ontology in place. '
-			. 'Run --yes to apply the full migration.');
+		$emit('DEEP PREFLIGHT PASSED: nothing needs a decision. Check the AUTO-FIXED and NOTICES '
+			. 'sections of the summary to see what the migration will repair and what it will '
+			. 'drop, then run --yes to apply the full migration.');
 	}else{
 		$emit('DEEP PREFLIGHT: the review ended with code ' . $code_review . ' — see above.');
 	}

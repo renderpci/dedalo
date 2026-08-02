@@ -28,10 +28,11 @@
 require_once __DIR__ . '/lib/engine_boot.php';
 $paths = prepare_v7_boot_engine();
 
-$opts        = getopt('', ['dry-run', 'skip-backup', 'yes', 'backup-dir:', 'log:']);
+$opts        = getopt('', ['dry-run', 'skip-backup', 'yes', 'no-auto-fix', 'backup-dir:', 'log:']);
 $is_dry      = isset($opts['dry-run']);
 $skip_backup = isset($opts['skip-backup']);
 $has_yes     = isset($opts['yes']);
+$no_auto_fix = isset($opts['no-auto-fix']);
 $backup_dir  = $opts['backup-dir'] ?? ($paths['var_dir'] . '/backup');
 $log_file    = $opts['log']        ?? ($paths['var_dir'] . '/prepare_v7.log');
 
@@ -165,6 +166,16 @@ if ($is_dry) {
 		$log('engine-level detail for this review → ' . $engine_log);
 	}
 
+	// Structural auto-fix. ON by default: the repairs are applied IN MEMORY by
+	// v6_to_v7_normalize and flow into the v7 columns during phase 2, so what this review
+	// reports is exactly what the migration will do. --no-auto-fix disables them for
+	// diagnosis only; it reproduces the pre-auto-fix report.
+	v6_to_v7_normalize::$auto_fix = !$no_auto_fix;
+	if ($no_auto_fix) {
+		$log('NOTE: --no-auto-fix — structural repairs are DISABLED for this review. This is a '
+			. 'diagnostic view of the raw data; the migration always runs with them enabled.');
+	}
+
 	$review = v6_to_v7::reformat_matrix_data($ar_tables, false); // false = no save
 
 	if (!$ontology_ready) {
@@ -173,48 +184,67 @@ if ($is_dry) {
 		@ini_set('error_log', (string)$error_log_prev);
 	}
 
-	$errors = is_array($review->errors ?? null) ? $review->errors : [];
-	$log('data-review: ' . ($review->msg ?? 'n/a') . ' | reports: ' . count($errors));
+	// The aggregated verdict. v6_to_v7_normalize groups findings as they are produced, so
+	// this is bounded no matter how large the database is; $review->errors is only the flat
+	// legacy list (capped) and is no longer what the report is built from.
+	$report = v6_to_v7_normalize::get_report();
+	$log('data-review: ' . ($review->msg ?? 'n/a')
+		. ' | auto-fixed: ' . $report->fixed
+		. ' | notices: '    . $report->notices
+		. ' | errors: '     . $report->errors);
 
-	// Without `dd_ontology` no component model resolves, so EVERY value reports
-	// "Ignored empty model". That is the ontology's absence (expected in a preflight),
-	// not a data defect: count it once and judge the run on the remaining reports.
-	if (!$ontology_ready && !empty($errors)) {
+	// Without `dd_ontology` no component model resolves, so EVERY value reports as an orphan
+	// tipo. That is the ontology's absence (expected in a plain preflight), not a data
+	// defect: count those groups once, drop them from the report, and judge the run on what
+	// is left. A DEEP preflight runs after the real phase 1, so the ontology IS there and
+	// these groups are then genuine.
+	if (!$ontology_ready) {
 		$no_model	= 0;
-		$rest		= [];
-		foreach ($errors as $e) {
-			if (is_string($e) && strpos($e, 'Ignored empty model') !== false) {
-				$no_model++;
+		$kept		= [];
+		foreach ($report->groups as $group) {
+			if ($group->code === 'ORPHAN_TIPO' || $group->code === 'INVALID_TIPO') {
+				$no_model += $group->count;
 				continue;
 			}
-			$rest[] = $e;
+			$kept[] = $group;
 		}
 		if ($no_model > 0) {
-			$log('NOTE: ' . $no_model . ' "Ignored empty model" report(s) discounted — caused by '
+			$log('NOTE: ' . $no_model . ' unresolved-model report(s) discounted — caused by '
 				. '`dd_ontology` not existing yet, not by the data. Component models can only be '
-				. 'validated by a preflight run AFTER a real phase 1.');
+				. 'validated by a preflight run AFTER a real phase 1 (the "deep preflight").');
+			$report->notices = max(0, $report->notices - $no_model);
+			$report->groups  = $kept;
 		}
-		$errors = $rest;
 	}
 
-	$n_err = count($errors);
-
-	// One grouped summary, not a wall of near-identical lines: 34 rows failing on the same
-	// tipo is ONE thing to decide about, not 34. This block is what the widget shows.
+	// One grouped summary split by severity, not a wall of near-identical lines: 326 rows
+	// carrying the same mechanical defect are ONE thing to know about, not 326. This block
+	// is what the widget shows.
 	prepare_v7_log_summary(
 		$log,
-		$errors,
+		$report,
 		$ontology_ready
 			? 'engine-level detail (offending values) in ' . $engine_log
 			: 'component models could not be checked: dd_ontology does not exist yet'
 	);
 
-	if ($n_err > 0) {
-		$log('PREFLIGHT found ' . $n_err . ' data issue(s). Review before running for real.');
+	// Machine-readable sidecar for the widget, so it renders counts instead of re-parsing
+	// the log text. Written on every review; absent means "no review has run".
+	prepare_v7_write_review_json($paths['var_dir'] . '/data_review.json', $report, $ontology_ready);
+
+	// Only findings that need a human decision fail the preflight. Repaired values and
+	// dropped-and-reported ones are informational.
+	if ($report->errors > 0) {
+		$log('PREFLIGHT found ' . $report->errors . ' data issue(s) needing attention'
+			. ($report->fixed > 0 ? ' (' . $report->fixed . ' auto-fixed)' : '')
+			. '. Review before running for real.');
 		exit(6);
 	}
 
-	$log('PREFLIGHT OK. Re-run with --yes to apply the migration.');
+	$log('PREFLIGHT OK'
+		. ($report->fixed > 0 ? ' — ' . $report->fixed . ' issue(s) auto-fixed' : '')
+		. ($report->notices > 0 ? ', ' . $report->notices . ' notice(s) to be aware of' : '')
+		. '. Re-run with --yes to apply the migration.');
 	exit(0);
 }
 
@@ -262,60 +292,144 @@ exit(0);
 /**
 * prepare_v7_log_summary
 * Writes the run's FINAL, human-readable verdict: the findings grouped by what they
-* actually are, most frequent first, with one real example each.
+* actually are, split into the three things an operator does about them.
 *
-* The raw list is unusable as a report — 34 rows failing on the same tipo is one
-* decision, not 34 lines to read. Row ids / section ids are normalised out of the
-* grouping key so identical issues collapse, and the block is delimited by markers so
-* the widget can lift it out of the log and show it on its own.
+*   NEEDS ATTENTION  a human has to decide before migrating. These, and only these,
+*                    fail the preflight.
+*   NOTICES          cannot be migrated and will be dropped. Nothing to repair; the
+*                    operator only has to know it is happening.
+*   AUTO-FIXED       repaired automatically, in memory, by v6_to_v7_normalize. Listed
+*                    so the repair is never silent, but no action is required.
+*
+* The flat list was unusable as a report — 326 rows carrying the same mechanical defect
+* is one thing to know, not 326 lines. Grouping is done upstream on the finding's own
+* identity (code + tipo + model) rather than by regex over formatted text, which also
+* fixes the old summary's habit of splitting one defect across several entries because
+* the section_id happened to differ.
+*
+* The block is delimited by markers so the widget can lift it out of the log.
 *
 * @param callable $log
-* @param array $errors - the review's returned findings
-* @param string $note  - one line of context (where the detail is, or why it is limited)
+* @param object $report - v6_to_v7_normalize::get_report()
+* @param string $note   - one line of context (where the detail is, or why it is limited)
 * @return void
 */
-function prepare_v7_log_summary(callable $log, array $errors, string $note) : void {
+function prepare_v7_log_summary(callable $log, object $report, string $note) : void {
 
 	$log('=== DATA REVIEW SUMMARY ===');
 
-	if (empty($errors)) {
+	if (empty($report->groups)) {
 		$log('No data issues found.');
 		$log($note);
 		$log('=== END SUMMARY ===');
 		return;
 	}
 
-	// group: strip the row-specific parts so the same problem collapses into one entry
-	$groups = [];
-	foreach ($errors as $error) {
-		$text = is_string($error) ? $error : json_encode($error);
-		$key  = preg_replace(
-			['/\bID \d+/', "/section_id: '[^']*'/", '/\bid: \d+/'],
-			['ID *', "section_id: '*'", 'id: *'],
-			$text
-		);
-		if (!isset($groups[$key])) {
-			$groups[$key] = ['count' => 0, 'example' => $text];
-		}
-		$groups[$key]['count']++;
+	if ($report->auto_fix !== true) {
+		$log('Structural auto-fix is DISABLED (--no-auto-fix): this is the raw picture, not '
+			. 'what the migration would do.');
 	}
-	uasort($groups, static fn(array $a, array $b) : int => $b['count'] <=> $a['count']);
 
-	$log(count($errors) . ' issue(s) in ' . count($groups) . ' distinct kind(s):');
+	$sections = [
+		['severity' => 'error',  'total' => $report->errors,  'title' => 'NEEDS ATTENTION', 'hint' => 'review before migrating'],
+		['severity' => 'notice', 'total' => $report->notices, 'title' => 'NOTICES',         'hint' => 'cannot be migrated; these values will be dropped'],
+		['severity' => 'fixed',  'total' => $report->fixed,   'title' => 'AUTO-FIXED',      'hint' => 'applied automatically during migration, no action needed']
+	];
 
-	$shown = 0;
-	foreach ($groups as $group) {
-		if ($shown >= 20) {
-			$log('  … and ' . (count($groups) - $shown) . ' more kind(s); see the full log.');
-			break;
+	foreach ($sections as $section) {
+
+		$groups = array_values(array_filter(
+			$report->groups,
+			static fn(object $group) : bool => $group->severity === $section['severity']
+		));
+		if (empty($groups)) {
+			continue;
 		}
-		$log('  ' . str_pad((string)$group['count'], 6, ' ', STR_PAD_LEFT) . ' × ' . $group['example']);
-		$shown++;
+
+		$log($section['title'] . ' (' . $section['total'] . ') — ' . $section['hint']);
+
+		$shown = 0;
+		foreach ($groups as $group) {
+			if ($shown >= 20) {
+				$log('    … and ' . (count($groups) - $shown) . ' more kind(s); see the full log.');
+				break;
+			}
+			$shown++;
+
+			$log('  ' . str_pad((string)$group->count, 8, ' ', STR_PAD_LEFT) . ' × ' . $group->msg);
+
+			$tables = array_keys((array)$group->tables);
+			if (!empty($tables)) {
+				$log('            tables: ' . implode(', ', $tables));
+			}
+			if ($group->stored_model !== null && $group->stored_model !== $group->model) {
+				$log('            written as: ' . $group->stored_model
+					. ' · ontology now says: ' . ($group->model !== '' ? $group->model : '(none)'));
+			}
+			if ($group->sample !== '') {
+				$log('            sample (' . $group->sample_ref . '): ' . $group->sample);
+			}
+		}
+	}
+
+	if ($report->errors_overflow > 0) {
+		$log('NOTE: the flat error list was capped; ' . $report->errors_overflow
+			. ' entr(ies) are counted above but not listed individually.');
 	}
 
 	$log($note);
 	$log('=== END SUMMARY ===');
 }//end prepare_v7_log_summary
+
+
+
+/**
+* prepare_v7_write_review_json
+* Machine-readable twin of the summary block, for the widget.
+*
+* The widget used to re-parse the log text to find the verdict, which meant every
+* wording change was a client-side breakage waiting to happen. Writing the counts once,
+* here, lets the widget render chips from data and keep the log purely as prose.
+*
+* Best-effort: a failed write is not worth failing a preflight over, so it is logged
+* nowhere and simply leaves the widget on its text-only path.
+*
+* @param string $file
+* @param object $report
+* @param bool $ontology_ready
+* @return bool
+*/
+function prepare_v7_write_review_json(string $file, object $report, bool $ontology_ready) : bool {
+
+	$payload = [
+		'generated'			=> date('c'),
+		'auto_fix'			=> $report->auto_fix,
+		'ontology_ready'	=> $ontology_ready,
+		'fixed'				=> $report->fixed,
+		'notices'			=> $report->notices,
+		'errors'			=> $report->errors,
+		'errors_overflow'	=> $report->errors_overflow,
+		'groups'			=> array_map(
+			static fn(object $group) : array => [
+				'code'			=> $group->code,
+				'severity'		=> $group->severity,
+				'tipo'			=> $group->tipo,
+				'model'			=> $group->model,
+				'stored_model'	=> $group->stored_model,
+				'count'			=> $group->count,
+				'tables'		=> $group->tables,
+				'msg'			=> $group->msg,
+				'sample'		=> $group->sample,
+				'sample_ref'	=> $group->sample_ref
+			],
+			$report->groups
+		)
+	];
+
+	$json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+	return $json !== false && @file_put_contents($file, $json) !== false;
+}//end prepare_v7_write_review_json
 
 
 /**

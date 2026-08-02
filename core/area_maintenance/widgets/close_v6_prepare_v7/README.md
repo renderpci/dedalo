@@ -167,10 +167,35 @@ so the ontology can be rebuilt and phase 2 continues from this state whenever yo
 
 What it gives you that `--dry-run` cannot: real data issues (models resolve), and the full
 diffusion mapping preview. It writes, so it needs superuser + maintenance mode, and it takes the
-same mandatory backup as the real run. Exit code mirrors the review: 0 clean, 6 issues found.
+same mandatory backup as the real run.
 
 Each launch rotates `var/prepare_v7.log` to `var/prepare_v7.log.previous`, so the panel always
 streams the current run; it polls every 5 s until the runner writes a terminal line.
+
+### The three kinds of finding
+
+Most of what a review turns up is not a decision. `core/base/upgrade/class.v6_to_v7_normalize.php`
+repairs the mechanical defects **in memory** and sorts every finding into one of three buckets,
+which the summary block and the widget's chips report separately:
+
+| Bucket | Meaning | Blocks? |
+|---|---|---|
+| **AUTO-FIXED** | Repaired automatically. The commonest by far is a component value stored as the bare language map (`{"lg-nolan":[…]}`) instead of `{"dato":{…}}`; it is wrapped. Empty values (`{}`) are skipped. | no |
+| **NOTICES** | Cannot be migrated and will be dropped — typically an *orphan tipo*: referenced by matrix data but absent from `jer_dd`, so no model resolves. Nothing to repair. | no |
+| **NEEDS ATTENTION** | The ontology model and the stored shape disagree (the report names both: "the ontology says `button_new` but the value was written as `component_input_text`"). A person has to decide. | **yes** |
+
+The repairs are applied by the *same* function the migration runs (`reformat_matrix_data`, with
+`save=false` for the review), so the report is not a prediction: it is what phase 2 will do. The
+legacy `datos` column is never rewritten.
+
+Exit code: **0** clean or only auto-fixed/notices · **6** something needs attention.
+
+`--no-auto-fix` re-runs a preflight with the repairs off, to see the raw picture. It is a
+diagnostic switch only — phase 2 always repairs, because the repairs are what carry the affected
+values into the v7 columns.
+
+Every review also writes `var/data_review.json` (counts + groups) next to the log; that is what the
+widget reads for its chips, so the log stays prose.
 
 ### Headless (equivalent)
 ```bash
@@ -178,6 +203,7 @@ php close_v6_prepare_v7/run/run_prepare_v7.php --dry-run          # preflight, n
 php close_v6_prepare_v7/run/phase3_diffusion.php --dry-run        # diffusion mapping preview (needs dd_ontology)
 php close_v6_prepare_v7/run/phase4_passwords.php --dry-run        # credential conversion preview (writes nothing)
 php close_v6_prepare_v7/run/run_prepare_v7.php --deep-preflight  # backup + pre_update + REAL data review, stops before the rewrite
+php close_v6_prepare_v7/run/run_prepare_v7.php --dry-run --no-auto-fix  # same review, structural repairs OFF (diagnostic)
 php close_v6_prepare_v7/run/run_prepare_v7.php --yes              # backup + migrate
 php close_v6_prepare_v7/run/run_prepare_v7.php --yes --skip-backup   # only if you already backed up
 php close_v6_prepare_v7/run/run_prepare_v7.php --help
@@ -259,9 +285,11 @@ and `process_matrix_row_data()` takes it as a non-nullable `string`). Tables tha
 legacy `datos` column but are *not* on that list are reported as left-untouched.
 
 It runs **before** `dd_ontology` exists (the real phase 1 creates it), so no component model
-resolves and every value produces an `Ignored empty model` report. Those are discounted and
-reported as one count: the verdict rests on the remaining reports (bad locators, malformed
-`datos`, …). **Component models can only be validated by a preflight run after a real phase 1.**
+resolves and every value produces an orphan-tipo report. Those are discounted and reported as one
+count, and the widget marks the verdict *models not checked*: what remains is a purely structural
+review (bad locators, malformed `datos`, …).
+**Component models can only be validated by a preflight run after a real phase 1** — that is what
+the deep preflight is for.
 For the same reason PHP's `error_log` would receive one entry per row, so error logging is
 suspended for the review pass only (it was writing tens of GB).
 

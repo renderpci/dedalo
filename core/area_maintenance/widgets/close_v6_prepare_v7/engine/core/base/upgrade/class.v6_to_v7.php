@@ -30,6 +30,11 @@
 * @package Dédalo
 * @subpackage Core
 */
+// Structural repair + finding classification used by reformat_matrix_data().
+// Required explicitly (not autoloaded): the SPL autoloader maps a class name to a
+// directory of the same name, and this class lives beside its only consumer.
+require_once __DIR__ . '/class.v6_to_v7_normalize.php';
+
 class v6_to_v7 {
 
 	/**
@@ -460,6 +465,10 @@ class v6_to_v7 {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
+		// Fresh aggregation for this pass. A single process can run the review (save=false)
+		// and then the migration (save=true); the second must not inherit the first's counts.
+		v6_to_v7_normalize::reset();
+
 		debug_log(__METHOD__ . PHP_EOL
 			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
 			. ' CONVERTING ... ' . PHP_EOL
@@ -665,10 +674,26 @@ class v6_to_v7 {
 					// them into two distinct JSONB columns: 'relation' and 'relation_search'.
 					$target_key = ($datos_key === 'relations_search') ? 'relation_search' : 'relation';
 					foreach ($datos_value as $locator) {
+						// A locator with no from_component_tipo cannot be routed to a component
+						// column, and there is no safe way to infer the source: leave it as an
+						// error the operator has to look at.
 						if (!isset($locator->from_component_tipo)) {
 							$locator_string = json_handler::encode($locator);
 							debug_log(__METHOD__ . " ERROR: locator without from_component_tipo in $table/$section_id. locator: $locator_string", logger::ERROR);
-							$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id'";
+							v6_to_v7_normalize::add(
+								$response,
+								'LOCATOR_NO_SOURCE',
+								v6_to_v7_normalize::SEVERITY_ERROR,
+								[
+									'table'			=> $table,
+									'section_tipo'	=> $section_tipo,
+									'section_id'	=> $section_id,
+									'tipo'			=> $datos_key,
+									'model'			=> ''
+								],
+								"Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id'",
+								$locator
+							);
 							continue;
 						}
 
@@ -715,10 +740,27 @@ class v6_to_v7 {
 						$typology   = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
 						$target_col = $column_map[$typology] ?? 'misc';
 
+						// Missing 'dato' envelope.
+						// Most of these are mechanical: v6 stored the lang map itself
+						// ({"lg-nolan":[…]}) where v7 expects it wrapped ({"dato":{…}}), or the
+						// value is simply empty. v6_to_v7_normalize repairs what is provably
+						// safe to repair, records the finding with its severity, and returns
+						// false only when there is genuinely nothing to migrate.
 						if (!isset($literal_value->dato)) {
-							debug_log(__METHOD__ . " ERROR: Literal without v6 'dato' property ($literal_tipo) in $table/$section_id", logger::ERROR);
-							$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
-							continue;
+							debug_log(__METHOD__ . " Literal without v6 'dato' property ($literal_tipo) in $table/$section_id", logger::WARNING);
+							$normalized = v6_to_v7_normalize::component_value(
+								$literal_tipo,
+								$literal_value,
+								$table,
+								$section_tipo,
+								$section_id,
+								$model,
+								$response
+							);
+							if ($normalized === false) {
+								continue;
+							}
+							$literal_value = $normalized;
 						}
 
 						$value_key = 0;
@@ -735,15 +777,16 @@ class v6_to_v7 {
 								$section_tipo,
 								$section_id,
 								$value_key,
-								$model
+								$model,
+								v6_to_v7_normalize::stored_model($literal_value)
 							);
 
 							if ($migrate_component_data_response->result === false) {
-								// If the data isn't useful for saving (legacy garbage), no errors are added to the response. This is not an error, it's just a skip.
-								if(!empty($migrate_component_data_response->errors)){
-									$response->errors[] = "Error on SQL execution for ID $section_id. Table: $table : "
-										. implode("\n", $migrate_component_data_response->errors);
-								}
+								// If the data isn't useful for saving (legacy garbage), no findings are added
+								// to the response. This is not an error, it's just a skip.
+								// migrate_component_data has no idea which table it was called for, so the
+								// table is stamped on here as the findings are folded in.
+								v6_to_v7_normalize::merge($response, $migrate_component_data_response, $table);
 								continue;
 							}
 
@@ -960,7 +1003,22 @@ class v6_to_v7 {
 				// Every TM component row must carry a language code. A row without one cannot
 				// be routed to the correct columnar slot and is treated as corrupt.
 				if( empty($lang) ) {
-					$response->errors[] = "Ignored empty column lang for matrix_time_machine ID $id";
+					// Grouped rather than appended row by row: the TM table is the largest in
+					// the database, and one corrupt-lang row repeated a million times must not
+					// become a million strings in memory.
+					v6_to_v7_normalize::add(
+						$response,
+						'TM_NO_LANG',
+						v6_to_v7_normalize::SEVERITY_ERROR,
+						[
+							'table'			=> $table,
+							'section_tipo'	=> $section_tipo,
+							'section_id'	=> $row['section_id'] ?? '',
+							'tipo'			=> $tipo,
+							'model'			=> ''
+						],
+						"Ignored empty column lang for matrix_time_machine ID $id"
+					);
 					return;
 				}
 
@@ -987,7 +1045,19 @@ class v6_to_v7 {
 				// safe tipo
 				$safe_tipo = safe_tipo($tipo);
 				if( empty($safe_tipo) ) {
-					$response->errors[] = "Ignored empty safe_tipo for matrix_time_machine ID $id. Tipo: $tipo";
+					v6_to_v7_normalize::add(
+						$response,
+						'INVALID_TIPO',
+						v6_to_v7_normalize::SEVERITY_NOTICE,
+						[
+							'table'			=> $table,
+							'section_tipo'	=> $section_tipo,
+							'section_id'	=> $row['section_id'] ?? '',
+							'tipo'			=> $tipo,
+							'model'			=> ''
+						],
+						"Ignored empty safe_tipo for matrix_time_machine ID $id. Tipo: $tipo"
+					);
 					return;
 				}
 
@@ -1026,12 +1096,26 @@ class v6_to_v7 {
 					);
 				}
 
+				// Fold findings in REGARDLESS of the outcome. A section snapshot can produce
+				// findings and still migrate, and the group report is the operator-facing
+				// verdict: it must not disagree with the run's own error list.
+				//
+				// Two channels, deliberately handled differently:
+				//  · ->findings  come from defer() and have NOT been aggregated yet; merge()
+				//                is what counts them and re-applies the severity rule (so a
+				//                notice here no longer fails the run).
+				//  · ->errors    are what migrate_section_data collected when it passed its
+				//                OWN response down into process_matrix_row_data, where add()
+				//                already counted them into the groups. Those strings are
+				//                carried up verbatim — re-adding them would double-count.
+				v6_to_v7_normalize::merge($response, $migrated_data_response, $table);
+				if (!empty($migrated_data_response->errors)) {
+					$response->errors[] = "matrix_time_machine ID $id";
+					$response->errors = array_merge($response->errors, $migrated_data_response->errors);
+				}
+
 				// data migrate to v7
 				if( $migrated_data_response->result === false ) {
-					if(!empty($migrated_data_response->errors)) {
-						$response->errors[] = "matrix_time_machine ID $id";
-						$response->errors = array_merge($response->errors, $migrated_data_response->errors);
-					}
 					return;
 				}
 
@@ -1114,8 +1198,13 @@ class v6_to_v7 {
 	 * @param mixed $section_id The section id (e.g., 123).
 	 * @param int $value_key The key of the value to migrate. Defaults to 0.
 	 * @param string|null $model Pre-resolved model name to skip redundant ontology lookups.
-	 * @return stdClass Response object with 'errors' (array) and 'result' (array|false).
-	 *                  'result' contains the migrated data array or false if no changes were needed.
+	 * @param string|null $stored_model Model name recorded in the row itself when the value was
+	 *                    written (info.modelo / inf). Purely diagnostic: when it disagrees with
+	 *                    $model, the ontology changed under the data, and that is the fact the
+	 *                    operator needs in the report.
+	 * @return stdClass Response object with 'errors' (array), 'findings' (array) and
+	 *                  'result' (array|false). 'result' contains the migrated data array,
+	 *                  or false if no changes were needed.
 	 */
 	public static function migrate_component_data(
 			string $tipo,
@@ -1124,16 +1213,36 @@ class v6_to_v7 {
 			?string $section_tipo = null,
 			mixed $section_id = null,
 			int $value_key = 0,
-			?string $model = null
+			?string $model = null,
+			?string $stored_model = null
 		) : stdClass {
 
 		$response = new stdClass();
-		$response->errors = [];
+		$response->errors	= [];
+		$response->findings	= [];
+
+		// context carried by every finding this call may produce. The table is unknown here
+		// (this runs one level below the row iterator); v6_to_v7_normalize::merge() stamps it.
+		$ctx = [
+			'section_tipo'	=> $section_tipo,
+			'section_id'	=> $section_id,
+			'tipo'			=> $tipo,
+			'model'			=> $model,
+			'stored_model'	=> $stored_model
+		];
 
 		// safe tipo. Check if the tipo is valid
 		$safe_tipo = safe_tipo($tipo);
 		if( empty($safe_tipo) ) {
-			$response->errors[] = "Ignored empty safe_tipo. Tipo: $tipo";
+			// Not a well-formed tipo at all: nothing can be resolved from it and the value
+			// is dropped. Nothing to repair, so this is a notice, not a failure.
+			v6_to_v7_normalize::defer(
+				$response,
+				'INVALID_TIPO',
+				v6_to_v7_normalize::SEVERITY_NOTICE,
+				$ctx,
+				"Ignored empty safe_tipo. Tipo: $tipo"
+			);
 			$response->result = false;
 			return $response;
 		}
@@ -1141,9 +1250,23 @@ class v6_to_v7 {
 		// Use provided model or resolve from ontology
 		if( empty($model) ) {
 			$model = ontology_node::get_model_by_tipo($tipo);
+			$ctx['model'] = $model;
 		}
 		if( empty($model) ) {
-			$response->errors[] = "Ignored empty model. Tipo: $tipo";
+			// Orphan tipo: referenced by matrix data but absent from the ontology (jer_dd),
+			// so no model resolves and the value cannot be typed into a v7 column. There is
+			// no transformation that would fix this — the value is dropped, and the operator
+			// is told which tipo, where it lives, and what it used to be.
+			v6_to_v7_normalize::defer(
+				$response,
+				'ORPHAN_TIPO',
+				v6_to_v7_normalize::SEVERITY_NOTICE,
+				$ctx,
+				"Orphan tipo '$tipo' is not in the ontology: no model resolves, so the value is dropped"
+					. ($stored_model !== null ? " (written as $stored_model)" : '')
+					. ($section_tipo !== null ? " — section_tipo: '$section_tipo'" : ''),
+				$raw_value
+			);
 			$response->result = false;
 			return $response;
 		}
@@ -1212,7 +1335,17 @@ class v6_to_v7 {
 
 					$val_str = json_handler::encode($value);
 					debug_log(__METHOD__ . " ERROR: component value ($tipo) out of format: $val_str (section_tipo: '$section_tipo' - section_id: '$section_id')", logger::ERROR);
-					$response->errors[] = "Bad component data [1] (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'";
+					v6_to_v7_normalize::defer(
+						$response,
+						'MODEL_DATA_MISMATCH',
+						v6_to_v7_normalize::SEVERITY_ERROR,
+						$ctx,
+						"Bad component data [1] (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'"
+							. ($stored_model !== null && $stored_model !== $model
+								? " — the ontology says '$model' but the value was written as '$stored_model'"
+								: ''),
+						$value
+					);
 					$response->result = false;
 					return $response;
 				}
@@ -1255,7 +1388,17 @@ class v6_to_v7 {
 
 						$val_str = json_handler::encode($value);
 						debug_log(__METHOD__ . " ERROR: component value ($tipo) out of format: $val_str (section_tipo: '$section_tipo' - section_id: '$section_id')", logger::ERROR);
-						$response->errors[] = "Bad component data [2]. Expected object. (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'";
+						v6_to_v7_normalize::defer(
+							$response,
+							'MODEL_DATA_MISMATCH',
+							v6_to_v7_normalize::SEVERITY_ERROR,
+							$ctx,
+							"Bad component data [2]. Expected object. (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'"
+								. ($stored_model !== null && $stored_model !== $model
+									? " — the ontology says '$model' but the value was written as '$stored_model'"
+									: ''),
+							$value
+						);
 						$response->result = false;
 						return $response;
 					}
@@ -1326,26 +1469,56 @@ class v6_to_v7 {
 	) : object {
 
 		$response = new stdClass();
-			$response->errors = [];
-			$response->result = false;
+			$response->errors	= [];
+			$response->findings	= [];
+			$response->result	= false;
+
+		// context carried by every finding this call may produce (see migrate_component_data)
+		$ctx = [
+			'section_tipo'	=> $section_tipo,
+			'section_id'	=> $section_id,
+			'tipo'			=> $section_tipo,
+			'model'			=> null
+		];
 
 		// safe tipo. Check if the tipo is valid
 		$safe_tipo = safe_tipo($section_tipo);
 		if( empty($safe_tipo) ) {
-			$response->errors[] = "Ignored empty safe_tipo. Tipo: $section_tipo";
+			v6_to_v7_normalize::defer(
+				$response,
+				'INVALID_TIPO',
+				v6_to_v7_normalize::SEVERITY_NOTICE,
+				$ctx,
+				"Ignored empty safe_tipo. Tipo: $section_tipo"
+			);
 			$response->result = false;
 			return $response;
 		}
 
 		// model check
 		$model = ontology_node::get_model_by_tipo($section_tipo);
+		$ctx['model'] = $model;
 		if( empty($model) ) {
-			$response->errors[] = "Ignored empty model. Tipo: $section_tipo";
+			v6_to_v7_normalize::defer(
+				$response,
+				'ORPHAN_TIPO',
+				v6_to_v7_normalize::SEVERITY_NOTICE,
+				$ctx,
+				"Orphan section tipo '$section_tipo' is not in the ontology: no model resolves, so the snapshot is dropped"
+			);
 			$response->result = false;
 			return $response;
 		}
 		if($model!=='section'){
-			$response->errors[] = "Ignored non section model ($model). Tipo: $section_tipo";
+			// The TM row claims to be a whole-section snapshot but its tipo resolves to a
+			// component model. Nothing to repair; the snapshot cannot be migrated.
+			v6_to_v7_normalize::defer(
+				$response,
+				'NOT_A_SECTION_TIPO',
+				v6_to_v7_normalize::SEVERITY_NOTICE,
+				$ctx,
+				"Ignored non section model ($model). Tipo: $section_tipo"
+			);
 			$response->result = false;
 			return $response;
 		}

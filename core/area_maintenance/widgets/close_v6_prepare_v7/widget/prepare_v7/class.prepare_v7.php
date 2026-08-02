@@ -240,6 +240,47 @@ class prepare_v7 {
 
 
 	/**
+	* REVIEW_COUNTS
+	* The last data review's verdict as DATA, read from var/data_review.json (written by
+	* run/phase1_backup_pre_update.php).
+	*
+	* The summary block in the log is prose meant for a human; deriving the counts from it
+	* would make every wording change a client-side breakage. The sidecar carries the same
+	* numbers in a stable shape, so the widget renders chips without parsing text.
+	*
+	* @param string $file
+	* @return object|null - null when no review has run, or the file is unreadable/corrupt
+	*/
+	private static function review_counts(string $file) : ?object {
+
+		if (!is_file($file)) {
+			return null;
+		}
+
+		$raw = @file_get_contents($file);
+		if ($raw === false || $raw === '') {
+			return null;
+		}
+
+		$data = json_decode($raw);
+		if (!is_object($data) || !isset($data->fixed, $data->notices, $data->errors)) {
+			return null;
+		}
+
+		// only the summary numbers reach the client; the groups stay in the log, which is
+		// where the operator reads them with their full context.
+		return (object)[
+			'generated'			=> $data->generated ?? null,
+			'auto_fix'			=> ($data->auto_fix ?? true) === true,
+			'ontology_ready'	=> ($data->ontology_ready ?? false) === true,
+			'fixed'				=> (int)$data->fixed,
+			'notices'			=> (int)$data->notices,
+			'errors'			=> (int)$data->errors
+		];
+	}//end review_counts
+
+
+	/**
 	* TAIL
 	* Last LOG_TAIL_LINES lines of a text file
 	* @param string $file
@@ -370,6 +411,7 @@ class prepare_v7 {
 			'log_file'         => $log_file,
 			'log_tail'         => $log_tail,
 			'run_summary'      => self::run_summary($log_file),
+			'review_counts'    => self::review_counts($pkg . '/var/data_review.json'),
 			'engine_log'       => is_file($pkg . '/var/data_review.engine.log')
 				? $pkg . '/var/data_review.engine.log'
 				: null,
@@ -459,6 +501,9 @@ class prepare_v7 {
 		if (is_file($log_file)) {
 			@rename($log_file, $log_file . '.previous');
 		}
+		// and drop the previous run's review verdict, so the panel never shows counts from
+		// an earlier run next to the current run's log.
+		@unlink($var_dir . '/data_review.json');
 
 		// 3. build the runner command.
 		//    NOTE: not PHP_BINARY — under php-fpm that is the FPM binary, which prints its

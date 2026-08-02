@@ -98,6 +98,37 @@ const inject_style = function() {
 		.wrapper_widget.prepare_v7 .prepare_v7_checks {
 			margin: 0.6em 0;
 		}
+		/* Verdict chips. The three counts are the first thing to read after a review, so
+		   they sit above the summary block rather than inside it, where they would scroll
+		   away with the rest of the text. */
+		.wrapper_widget.prepare_v7 .prepare_v7_verdict {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5em;
+			align-items: center;
+			margin: 0.8em 0 0 0;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_chip {
+			padding: 0.15em 0.6em;
+			border-radius: 1em;
+			border: 1px solid rgba(128,128,128,0.45);
+			font-size: 0.85em;
+			white-space: nowrap;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_chip.attention {
+			border-color: rgba(200,60,60,0.9);
+			font-weight: 600;
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_chip.notices {
+			border-color: rgba(210,150,40,0.9);
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_chip.fixed {
+			border-color: rgba(70,160,90,0.9);
+		}
+		.wrapper_widget.prepare_v7 .prepare_v7_chip.stale {
+			opacity: 0.6;
+			font-style: italic;
+		}
 		.wrapper_widget.prepare_v7 .prepare_v7_buttons {
 			display: flex;
 			flex-wrap: wrap;
@@ -222,6 +253,14 @@ const get_content_data = async function(self) {
 		add_check_row(checks, 'Runner present', runner_present)
 		add_check_row(checks, 'PHP CLI binary usable', php_cli_ok)
 
+	// verdict node. The three counts of the last data review, read from the server as
+	// DATA (var/data_review.json) rather than scraped out of the summary prose.
+		const verdict_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'prepare_v7_verdict'
+		})
+		render_verdict(verdict_node, value.review_counts)
+
 	// summary node. The verdict of the last run, lifted out of the log so it does not
 	// scroll away behind progress lines. Hidden until a run has produced one.
 		const summary_node = ui.create_dom_element({
@@ -241,6 +280,7 @@ const get_content_data = async function(self) {
 			inner_html		: value.log_tail || '(no log yet)'
 		})
 		log_node.summary_node = summary_node
+		log_node.verdict_node = verdict_node
 
 	// actions. Rendered ONLY in maintenance mode: with users online neither the migration
 	// (which rewrites the database) nor the preflight (which reads every row of it) may be
@@ -372,7 +412,8 @@ const get_content_data = async function(self) {
 			})
 		}
 
-	// summary + log at the end
+	// verdict + summary + log at the end
+		content_data.appendChild(verdict_node)
 		content_data.appendChild(summary_node)
 		content_data.appendChild(log_node)
 
@@ -443,6 +484,70 @@ const add_check_row = function(parent, label, ok) {
 
 	return row
 }//end add_check_row
+
+
+
+/**
+* RENDER_VERDICT
+* Draws the three severity chips of the last data review.
+*
+* The split is the point of the panel: 'needs attention' is the only bucket that blocks,
+* 'notices' is data that will be dropped, and 'auto-fixed' is what the migration repairs
+* by itself. Showing one total instead of three made every finding look equally alarming.
+*
+* @param HTMLElement node
+* @param object|null counts
+* 	{ fixed:int, notices:int, errors:int, auto_fix:bool, ontology_ready:bool }
+* @return bool
+*/
+const render_verdict = function(node, counts) {
+
+	// wipe: this is re-rendered on every poll
+	while (node.firstChild) {
+		node.removeChild(node.firstChild)
+	}
+
+	if (!counts) {
+		node.style.display = 'none'
+		return false
+	}
+	node.style.display = ''
+
+	const add_chip = function(class_name, text, title) {
+		const chip = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'prepare_v7_chip ' + class_name,
+			inner_html		: text,
+			parent			: node
+		})
+		if (title) {
+			chip.title = title
+		}
+		return chip
+	}
+
+	add_chip('attention', counts.errors + ' need attention',
+		'Findings a person has to decide about. These are what make the preflight fail.')
+	add_chip('notices', counts.notices + ' notices',
+		'Values that cannot be migrated and will be dropped. Nothing to repair.')
+	add_chip('fixed', counts.fixed + ' auto-fixed',
+		'Structural defects repaired automatically during the migration. No action needed.')
+
+	// A review run WITHOUT the ontology cannot resolve component models, so its verdict is
+	// only about structure. Saying so prevents a clean plain-preflight from being read as a
+	// clean bill of health.
+	if (counts.ontology_ready!==true) {
+		add_chip('stale', 'models not checked',
+			'This review ran before dd_ontology existed, so component models could not be '
+				+ 'validated. Run the deep preflight for a meaningful verdict.')
+	}
+	if (counts.auto_fix!==true) {
+		add_chip('stale', 'auto-fix off',
+			'Ran with --no-auto-fix: this is the raw picture, not what the migration would do.')
+	}
+
+	return true
+}//end render_verdict
 
 
 
@@ -522,6 +627,10 @@ const refresh_log = async function(self, log_node) {
 * @return bool
 */
 const update_summary = function(log_node, value) {
+
+	if (log_node.verdict_node) {
+		render_verdict(log_node.verdict_node, value?.review_counts)
+	}
 
 	const summary_node = log_node.summary_node
 	if (!summary_node) {
