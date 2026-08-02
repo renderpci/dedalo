@@ -7,6 +7,9 @@
 // layout general
 	@import './layout/reset';
 	@import './layout/vars';
+	// main.css IS the SPA document's stylesheet, so it is the one sheet that may
+	// emit the `:root` palette — everything else is injected alongside it.
+	@import './layout/vars_tokens';
 	@import './layout/theme_tokens';
 	@import './layout/theme_dark';
 	@import './layout/functions';

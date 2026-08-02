@@ -462,20 +462,52 @@ template {
   display: none;
 }
 /**
- * vars
+ * vars_tokens
  *
- * Common vars definitions
+ * The `:root` CSS custom-property palette — the light values every theme
+ * override is written against. Split out of `vars.less` (2026-08-02), which
+ * keeps only the compile-time `@alias` mappings over these properties.
  *
- * Included from main.less file
+ * WHY THE SPLIT: 39 stylesheets `@import (once) './vars'` for the ALIASES, and
+ * 36 of them are their own build entrypoint (every tool is one). `(once)`
+ * dedupes per COMPILE, not per document, so each entrypoint re-emitted this
+ * whole block: 237 KB of the 572 KB of tool CSS — 41% — was byte-identical
+ * copies of it, and every token edit churned 35 committed artifacts. The
+ * duplicates were not even inert: `--select_icon_url` is a RELATIVE url(), so a
+ * tool's copy resolved against `/dedalo/tools/<tool>/` and 404'd the select
+ * arrow document-wide in the light theme. Dark escaped only by specificity —
+ * `:root[data-theme="dark"]` (0,2,0) out-ranks a tool's plain `:root` (0,1,0).
  *
- * DARK MODE NOTE:
- * All `@color_*` LESS variables are mapped to CSS custom properties
- * (`var(--color_*)`) defined on `:root`. The light palette lives in this file
- * and the dark palette overrides those same custom properties under
- * `:root[data-theme="dark"]` (see `theme_dark.less`). LESS color functions
+ * THE ONE RULE FOR IMPORTING THIS FILE: only a stylesheet that is loaded into a
+ * document WITHOUT main.css may import it. Everything the app injects at
+ * runtime — the 34 tool sheets, every partial of main.less — lands in the SPA
+ * document, which already carries these properties; importing here would just
+ * restore the duplication. Today `main.less` is the only importer.
+ * `test/unit/css_token_duplication_tripwire.test.ts` holds that line — it also
+ * asserts `vars.less` still compiles to zero bytes, which is the OTHER way the
+ * duplication comes back (a token added to the file everyone imports).
+ *
+ * DARK MODE NOTE: the dark palette overrides these same properties under
+ * `:root[data-theme="dark"]` (see `theme_dark.less`). LESS colour functions
  * like `darken()` / `lighten()` / `fade()` cannot operate on CSS variables, so
  * former uses have been replaced by explicit derived tokens (e.g.
  * `--color_primary_hover_bg`) defined statically in both palettes.
+ *
+ * ONE LIGHT PALETTE, NOT TWO: the `--ut_*` UI-theme tokens live here too, at the
+ * end of the block (2026-08-02). They used to sit in `theme_tokens.less` next to
+ * that file's LESS `@font_*`/`@size_*` vars — i.e. in exactly the shape this file
+ * was split out of — and shipped twice, because `main.less` and
+ * `test/client/css/unit_test.less` both import it and both land in the runner
+ * document. Folding them in DELETED the special case instead of splitting a
+ * second pair: there is one place to look per axis.
+ *
+ * The axes are NAMED, not merely two: this file (light), `theme_dark.less`
+ * (theme axis) and `redesign/_tokens.less` (design axis — the same names under
+ * `[data-design="redesign"]`). A file outside that set declaring a palette token
+ * on a bare root retunes the whole document and is invisible once LESS flattens
+ * it into main.css, so the set is gated by name — PALETTE_FILES in
+ * `test/unit/css_token_duplication_tripwire.test.ts`. Scoping an override to a
+ * component's own selector needs no permission; that is the sanctioned idiom.
  */
 :root {
   --component_height: auto;
@@ -678,28 +710,6 @@ template {
   --color_grey_4_light: #3a3a3a;
   --menu_bg_active_border: #fa8500;
   --service_bg_dark: #c56607;
-}
-/**
-* theme_tokens
-*
-* Shared UI theme tokens for Dédalo v7: CSP-safe font stacks, a small size scale,
-* and the light (default) + dark (`[data-theme="dark"]`) custom-property palette
-* (`--ut_*`).
-*
-* Single source of truth, imported by:
-*   - core/page/css/main.less        — so the installer / page shell can theme itself
-*   - test/client/css/unit_test.less — the unit-test runner chrome
-*
-* Dark is opt-in via `data-theme="dark"` on <html>, the same convention as
-* core/page/js/theme.js (localStorage key 'dedalo_theme'). The `--ut_*` prefix is
-* historical — these tokens originated in the unit-test client — and is kept to
-* avoid a large rename across the working runner.
-*
-* Accent = Dédalo logo orange (@color_orange_dedalo, from vars). System fonts only:
-* the app CSP (`font-src 'self' data:`, `style-src 'self'`) blocks web-font CDNs, so
-* the mono stack lands on SF Mono / Menlo for the technical, data-grid feel.
-*/
-:root {
   --ut_bg_app: #f6f8fa;
   --ut_bg_panel: #ffffff;
   --ut_bg_elevated: #ffffff;
@@ -729,41 +739,25 @@ template {
   --ut_shadow: 0 1px 2px rgba(27, 31, 36, 0.06), 0 8px 24px -16px rgba(27, 31, 36, 0.25);
   --ut_grain: 0.018;
 }
-:root[data-theme="dark"] {
-  --ut_bg_app: #0b0e14;
-  --ut_bg_panel: #111621;
-  --ut_bg_elevated: #161c28;
-  --ut_bg_hover: #1c2433;
-  --ut_bg_input: #0a0d13;
-  --ut_bg_active: rgba(247, 138, 28, 0.14);
-  --ut_border: rgba(148, 163, 184, 0.14);
-  --ut_border_strong: rgba(148, 163, 184, 0.26);
-  --ut_grid_dot: rgba(148, 163, 184, 0.05);
-  --ut_text_primary: #e6edf3;
-  --ut_text_secondary: #aeb9c7;
-  --ut_text_muted: #8b97a7;
-  --ut_text_dim: #7c8696;
-  --ut_accent: var(--color_orange_dedalo);
-  --ut_accent_hi: #fca340;
-  --ut_accent_soft: rgba(247, 138, 28, 0.16);
-  --ut_on_accent: #2a1c05;
-  --ut_green: #3fb950;
-  --ut_green_soft: rgba(63, 185, 80, 0.15);
-  --ut_green_glow: rgba(63, 185, 80, 0.4);
-  --ut_red: #f85149;
-  --ut_red_soft: rgba(248, 81, 73, 0.15);
-  --ut_red_glow: rgba(248, 81, 73, 0.45);
-  --ut_run: #d29922;
-  --ut_run_soft: rgba(210, 153, 34, 0.15);
-  --ut_pending: #586273;
-  --ut_shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
-  --ut_grain: 0.03;
-}
 /**
  * theme_dark
  *
  * Dark palette overrides. Activated by `data-theme="dark"` on `<html>`.
  * Imported from main.less after vars.less.
+ *
+ * THE DARK PALETTE FILE: every dark override of a PALETTE token lives here,
+ * `--ut_*` included since 2026-08-02 — they were in `theme_tokens.less`, which
+ * two entrypoints import into the same document, so they shipped twice. See
+ * `vars_tokens.less` for the light half and why the special case was deleted
+ * rather than split into a second pair.
+ *
+ * "Palette token", not "anything dark": a SCOPED dark rule belongs to whatever
+ * it is scoped to and stays there (`tool_common.less` retunes `--fg_muted`
+ * under `[data-theme="dark"] .tool_header`; components carry their own
+ * `[data-theme="dark"] &` blocks). What may not happen is a fourth file
+ * declaring a palette token on a bare root — that reaches the whole document
+ * and is invisible in the compiled bundle, so it is gated by name in
+ * `test/unit/css_token_duplication_tripwire.test.ts` (PALETTE_FILES).
  */
 :root[data-theme="dark"] {
   --color_white: #1b1d20;
@@ -917,6 +911,34 @@ template {
   --modal_btn_hover_color: var(--color_white);
   --modal_mini_header_bg: var(--color_grey_4);
   --modal_radius: var(--radius-lg);
+  --ut_bg_app: #0b0e14;
+  --ut_bg_panel: #111621;
+  --ut_bg_elevated: #161c28;
+  --ut_bg_hover: #1c2433;
+  --ut_bg_input: #0a0d13;
+  --ut_bg_active: rgba(247, 138, 28, 0.14);
+  --ut_border: rgba(148, 163, 184, 0.14);
+  --ut_border_strong: rgba(148, 163, 184, 0.26);
+  --ut_grid_dot: rgba(148, 163, 184, 0.05);
+  --ut_text_primary: #e6edf3;
+  --ut_text_secondary: #aeb9c7;
+  --ut_text_muted: #8b97a7;
+  --ut_text_dim: #7c8696;
+  --ut_accent: var(--color_orange_dedalo);
+  --ut_accent_hi: #fca340;
+  --ut_accent_soft: rgba(247, 138, 28, 0.16);
+  --ut_on_accent: #2a1c05;
+  --ut_green: #3fb950;
+  --ut_green_soft: rgba(63, 185, 80, 0.15);
+  --ut_green_glow: rgba(63, 185, 80, 0.4);
+  --ut_red: #f85149;
+  --ut_red_soft: rgba(248, 81, 73, 0.15);
+  --ut_red_glow: rgba(248, 81, 73, 0.45);
+  --ut_run: #d29922;
+  --ut_run_soft: rgba(210, 153, 34, 0.15);
+  --ut_pending: #586273;
+  --ut_shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --ut_grain: 0.03;
   --tool_dd_label: #b0b0b0;
   --tool_dd_label_border: #808080;
   --tool_dev_template: #ffa040;
@@ -6898,11 +6920,12 @@ body:has(.assistant_container.standalone.show) {
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
 * look. Theme-aware: light is the default, dark is opt-in via `data-theme="dark"`
 * on <html> (core/page/js/theme.js convention, key 'dedalo_theme'). All colours come
-* from the shared --ut_* token palette (core/page/css/layout/theme_tokens.less), so
-* the installer follows the same theme as the rest of v7 automatically.
+* from the shared --ut_* token palette (core/page/css/layout/vars_tokens.less for
+* light, layout/theme_dark.less for dark), so the installer follows the same theme
+* as the rest of v7 automatically.
 *
-* Included from main.less (which imports theme_tokens + vars before this file, so the
-* @font_* LESS vars and --ut_* custom properties are in scope here).
+* Included from main.less, which imports those two plus layout/theme_tokens (the
+* @font_ / @size_ LESS vars) before this file, so both are in scope here.
 */
 .installer.wrapper {
   position: fixed;
