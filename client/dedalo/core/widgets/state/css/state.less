@@ -2,54 +2,296 @@
 * widget state
 *
 * Included from main.less file
+*
+* Design language: the area_maintenance widget kit (.dd_table / .dd_bar /
+* .dd_badge in core/area_maintenance/css/widget_kit.less) — card surface,
+* uppercase micro-header, hairline row rules, tabular numerals, meter track.
+* The kit is NOT imported: it emits its own .dd_* class rules and belongs to an
+* area, and a core widget must not depend on one. Same tokens, same rems, same
+* color-mix() tint formula, scoped names — no leak in either direction.
+*
+* (!) Every colour goes through a semantic custom property (--bg_*, --fg_*,
+* --border_*, --color_*). The LESS @color_* vars this file used before are
+* LIGHT-PALETTE LITERALS: they painted a white popover over the dark theme.
 */
 .wrapper_widget.state {
 	width: auto;
 
 	&.edit {
-		// li
+		// li — the card. One per IPO entry.
 		.widget_item {
 			display: grid;
-			grid-template-columns: 1fr 1fr 1fr;
-			grid-gap: 0.3rem;
-			font-size: 1rem;
+			// row label | situation | state
+			grid-template-columns: minmax(7rem, max-content) 1fr 1fr;
+			// no grid-gap: rows are separated by hairlines, like .dd_table
+			grid-gap: 0;
+			// (!) NO `overflow: hidden` (which .dd_table uses to clip its corners):
+			// the detail popover is absolutely positioned inside this card and would
+			// be cut off. The corner cells round themselves instead — see the
+			// border-radius rules on the first/last row below.
+			border: 1px solid var(--border_default);
+			border-radius: 8px;
+			background-color: var(--bg_surface);
 
+			// the header/container wrappers are display:contents, so every cell
+			// below is a direct participant of the grid above
 			>.li_item {
 				display: contents;
 
+				>label,
+				>.situation,
+				>.state {
+					display: flex;
+					align-items: center;
+					min-width: 0;
+					padding: 0.4rem 0.7rem;
+					border-top: 1px solid var(--border_default);
+					line-height: 1.35;
+				}
+
+				// row label column
+				>label {
+					// (!) beats component_info.less `.values_container > .widget_item
+					// label { padding-right: 0.5em }`, which would knock the cell text
+					// off its column
+					padding-right: 0.7rem;
+					color: var(--fg_default);
+					word-break: normal;
+					overflow-wrap: normal;
+				}
+
 				&.header {
 					font-weight: 600;
+
+					>label {
+						font-size: 0.68rem;
+						font-weight: 600;
+						letter-spacing: 0.04em;
+						text-transform: uppercase;
+						color: var(--fg_muted);
+						background-color: var(--bg_surface_alt);
+						// header labels wrap on spaces only — never mid-word, and never
+						// clipped: "Estado de registro" must stay readable
+						white-space: normal;
+						overflow: visible;
+						text-overflow: clip;
+					}
+				}
+
+				// first row (the header) carries the card's top edge, not a rule.
+				// Its corner cells round themselves so the tinted header band follows
+				// the card radius (no overflow:hidden here — see the card comment).
+				&.header >label {
+					border-top: 0;
+
+					&:first-child {
+						border-top-left-radius: 8px;
+					}
+					&:last-child {
+						border-top-right-radius: 8px;
+					}
+				}
+
+				// same for the bottom corners of the last row
+				&.container:last-child {
+					>label {
+						border-bottom-left-radius: 8px;
+					}
+					>.state, >.situation:last-child {
+						border-bottom-right-radius: 8px;
+					}
+				}
+
+				&.container:hover {
+					>label,
+					>.situation,
+					>.state {
+						background-color: var(--field_hover_bg);
+					}
 				}
 
 				.situation, .state {
 					position: relative;
+
+					// no data at all for this row/column. The cell is rendered anyway
+					// (a missing cell would let the next row's label take its grid
+					// slot), so it says "nothing here" where the number would be
+					// instead of drawing an empty meter that means 0%.
+					&.empty {
+						justify-content: flex-end;
+
+						&:after {
+							content: '—';
+							min-width: 2.75rem;
+							font-size: 0.8rem;
+							text-align: right;
+							color: var(--fg_muted);
+						}
+					}
 				}
 
+				// the percentage + its meter
 				.total {
-					cursor: pointer;
+					display: flex;
+					flex: 1 1 auto;
+					align-items: center;
+					gap: 0.5rem;
+					min-width: 0;
+					cursor: help;
+					border-radius: 3px;
+
+					// meter track. The fill is a hard-stop gradient driven by --pct
+					// (set by render_edit_state.js set_meter), so the bar needs no
+					// extra DOM node and can never draw past the track.
+					&:before {
+						content: '';
+						flex: 1 1 auto;
+						min-width: 1.5rem;
+						height: 4px;
+						border-radius: 3px;
+						background-color: var(--bg_surface_alt);
+						background-image: linear-gradient(
+							to right,
+							var(--meter_fill, transparent) calc(var(--pct, 0) * 1%),
+							transparent 0
+						);
+						// (!) On dark, --bg_surface_alt sits a few hex points from
+						// --bg_surface: without this hairline an empty track VANISHES and
+						// 0% reads as "no metric here" instead of "nothing done yet".
+						box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border_default) 80%, transparent);
+					}
+
+					// severity, published by set_meter as data-state
+					&[data-state='ok'] {
+						--meter_fill: var(--color_success);
+					}
+					&[data-state='partial'] {
+						--meter_fill: var(--color_orange_dedalo);
+					}
+					// 'empty' keeps --meter_fill transparent: bare track, muted number
+
+					&:focus-visible {
+						outline: 2px solid var(--focus_ring);
+						outline-offset: 2px;
+					}
+
+					>.value {
+						flex: 0 0 auto;
+						min-width: 2.75rem;
+						padding: 0;
+						font-size: 0.8rem;
+						font-variant-numeric: tabular-nums;
+						text-align: right;
+						color: var(--fg_default);
+					}
+
+					// a zero is not news — it stays muted (kit `.dd_stat.zero`)
+					&[data-state='empty'] >.value {
+						color: var(--fg_muted);
+					}
 				}
 
+				// per-language breakdown popover
 				.detail {
 					position: absolute;
-					background-color: @color_white;
-					padding: 0.5rem;
-					border: 1px solid @color_grey_13;
-					left: 2rem;
-					top: -50%;
+					// anchored BELOW its own cell. It used to sit at `left:2rem;
+					// top:-50%` — across the neighbouring column, covering the value it
+					// was explaining and the header above it.
+					top: calc(100% + 4px);
+					left: 0.4rem;
+					right: auto;
+					z-index: 5;
 					display: grid;
-					grid-template-columns: 4fr 2fr 1fr;
-					grid-gap: 0.3rem;
-					z-index: 3;
+					// lang | % | option name. The old `4fr 2fr 1fr` starved the last
+					// column and broke option names ("Acabado") one letter per line.
+					grid-template-columns: max-content max-content 1fr;
+					align-items: center;
+					grid-gap: 0.25rem 0.5rem;
+					min-width: max-content;
+					max-width: 22rem;
+					// place_detail() clamps max-height when a per-language panel is
+					// taller than the widget; without the scroll those rows would be
+					// unreachable rather than merely out of sight
+					overflow-y: auto;
+					padding: 0.5rem 0.6rem;
+					border: 1px solid var(--border_default);
+					border-radius: 6px;
+					background-color: var(--bg_elevated);
 					box-shadow: var(--shadow-3);
 
-					&.active {
-						
+					// (!) component_info.less puts `contain: content` on .content_value,
+					// which is PAINT containment: anything drawn past that box is
+					// clipped. So the popover always opens towards the inside —
+					// upwards on the last row, and left-anchored from the last column.
+
+
+					// lang label
+					label {
+						padding: 0;
+						font-size: 0.68rem;
+						font-weight: 600;
+						letter-spacing: 0.04em;
+						text-transform: uppercase;
+						color: var(--fg_muted);
+						white-space: nowrap;
 					}
 
 					.value {
+						padding: 0;
 						padding-right: 0.33rem;
+						font-size: 0.8rem;
+						font-variant-numeric: tabular-nums;
+						text-align: right;
+						white-space: nowrap;
+						color: var(--fg_default);
+					}
+
+					// the aggregate row: the number the cell shows. Ruled off from the
+					// per-lang / per-source rows above it so the panel cannot be read
+					// as "one of these IS the total" — the old panel labelled a single
+					// per-source value `total :` and disagreed with its own cell.
+					.total_label, .total_value {
+						margin-top: 0.15rem;
+						padding-top: 0.35rem;
+						border-top: 1px solid var(--border_default);
+					}
+					.total_value {
+						color: var(--fg_default);
+						font-weight: 600;
+					}
+					// the chip column of the total row has nothing to say
+					.total_value ~ label:last-child {
+						margin-top: 0.15rem;
+						padding-top: 0.35rem;
+						border-top: 1px solid var(--border_default);
+					}
+
+					// selected option name — chip, so it reads as a value and not as
+					// another label. :empty collapses, otherwise every blank slot would
+					// draw a stray pill.
+					label:nth-child(3n) {
+						justify-self: start;
+						padding: 0.1rem 0.6rem;
+						border-radius: 999px;
+						font-size: 0.78rem;
+						font-weight: 400;
+						letter-spacing: 0;
+						text-transform: none;
+						color: var(--fg_muted);
+						background-color: color-mix(in srgb, var(--fg_muted) 12%, transparent);
+
+						&:empty {
+							padding: 0;
+							background-color: transparent;
+						}
 					}
 				}
+
+				// (!) The panel opens below its cell and place_detail() slides it back
+				// inside the content_value paint box with an inline transform when it
+				// would overflow. Do NOT add a static flip rule here: the panel's size
+				// depends on the row's language / source-record count, so which way it
+				// must go is only knowable at open time.
 
 				&.container {
 					span.value {
@@ -71,7 +313,7 @@
 			mask-size: contain;
 			-webkit-mask-position: center;
 			mask-position: center;
-			background-color: @color_grey_10_light;
+			background-color: var(--color_grey_10_light);
 			width: 1.5rem;
 			height: 1.5rem;
 			margin: 0.25rem;
@@ -95,7 +337,7 @@
 			}
 
 			&.active {
-				background-color: @color_orange_dedalo;
+				background-color: var(--color_orange_dedalo);
 				cursor: pointer;
 			}
 		}//end .state_icon

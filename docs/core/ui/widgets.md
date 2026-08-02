@@ -185,7 +185,7 @@ on the host page. In brief:
 | widget | TLD | facet |
 |---|---|---|
 | `calculation` | — | static process fns; emits `id` |
-| `state` | — | `computeDataList` (edit datalist) |
+| `state` | — | `computeDataList` (edit datalist); `total` items carry `items`, [the divisor](../components/component_info.md#state--detail-total-and-the-items-divisor) |
 | `user_activity` | `dd` | `isAsync` |
 | `get_archive_states` | `dmm` | shape-gated |
 | `sum_dates` | `mdcat` | `computeDataParsed` |

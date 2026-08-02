@@ -24141,44 +24141,206 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 * widget state
 *
 * Included from main.less file
+*
+* Design language: the area_maintenance widget kit (.dd_table / .dd_bar /
+* .dd_badge in core/area_maintenance/css/widget_kit.less) — card surface,
+* uppercase micro-header, hairline row rules, tabular numerals, meter track.
+* The kit is NOT imported: it emits its own .dd_* class rules and belongs to an
+* area, and a core widget must not depend on one. Same tokens, same rems, same
+* color-mix() tint formula, scoped names — no leak in either direction.
+*
+* (!) Every colour goes through a semantic custom property (--bg_*, --fg_*,
+* --border_*, --color_*). The LESS @color_* vars this file used before are
+* LIGHT-PALETTE LITERALS: they painted a white popover over the dark theme.
 */
 .wrapper_widget.state {
   width: auto;
 }
 .wrapper_widget.state.edit .widget_item {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-gap: 0.3rem;
-  font-size: 1rem;
+  grid-template-columns: minmax(7rem, max-content) 1fr 1fr;
+  grid-gap: 0;
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  background-color: var(--bg_surface);
 }
 .wrapper_widget.state.edit .widget_item > .li_item {
   display: contents;
 }
+.wrapper_widget.state.edit .widget_item > .li_item > label,
+.wrapper_widget.state.edit .widget_item > .li_item > .situation,
+.wrapper_widget.state.edit .widget_item > .li_item > .state {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0.4rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+  line-height: 1.35;
+}
+.wrapper_widget.state.edit .widget_item > .li_item > label {
+  padding-right: 0.7rem;
+  color: var(--fg_default);
+  word-break: normal;
+  overflow-wrap: normal;
+}
 .wrapper_widget.state.edit .widget_item > .li_item.header {
   font-weight: 600;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+  background-color: var(--bg_surface_alt);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label {
+  border-top: 0;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label:first-child {
+  border-top-left-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label:last-child {
+  border-top-right-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.container:last-child > label {
+  border-bottom-left-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.container:last-child > .state,
+.wrapper_widget.state.edit .widget_item > .li_item.container:last-child > .situation:last-child {
+  border-bottom-right-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.container:hover > label,
+.wrapper_widget.state.edit .widget_item > .li_item.container:hover > .situation,
+.wrapper_widget.state.edit .widget_item > .li_item.container:hover > .state {
+  background-color: var(--field_hover_bg);
 }
 .wrapper_widget.state.edit .widget_item > .li_item .situation,
 .wrapper_widget.state.edit .widget_item > .li_item .state {
   position: relative;
 }
+.wrapper_widget.state.edit .widget_item > .li_item .situation.empty,
+.wrapper_widget.state.edit .widget_item > .li_item .state.empty {
+  justify-content: flex-end;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .situation.empty:after,
+.wrapper_widget.state.edit .widget_item > .li_item .state.empty:after {
+  content: '—';
+  min-width: 2.75rem;
+  font-size: 0.8rem;
+  text-align: right;
+  color: var(--fg_muted);
+}
 .wrapper_widget.state.edit .widget_item > .li_item .total {
-  cursor: pointer;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: help;
+  border-radius: 3px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total:before {
+  content: '';
+  flex: 1 1 auto;
+  min-width: 1.5rem;
+  height: 4px;
+  border-radius: 3px;
+  background-color: var(--bg_surface_alt);
+  background-image: linear-gradient(to right, var(--meter_fill, transparent) calc(var(--pct, 0) * 1%), transparent 0);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border_default) 80%, transparent);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total[data-state='ok'] {
+  --meter_fill: var(--color_success);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total[data-state='partial'] {
+  --meter_fill: var(--color_orange_dedalo);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total:focus-visible {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 2px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total > .value {
+  flex: 0 0 auto;
+  min-width: 2.75rem;
+  padding: 0;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--fg_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total[data-state='empty'] > .value {
+  color: var(--fg_muted);
 }
 .wrapper_widget.state.edit .widget_item > .li_item .detail {
   position: absolute;
-  background-color: var(--color_white);
-  padding: 0.5rem;
-  border: 1px solid var(--color_grey_13);
-  left: 2rem;
-  top: -50%;
+  top: calc(100% + 4px);
+  left: 0.4rem;
+  right: auto;
+  z-index: 5;
   display: grid;
-  grid-template-columns: 4fr 2fr 1fr;
-  grid-gap: 0.3rem;
-  z-index: 3;
+  grid-template-columns: max-content max-content 1fr;
+  align-items: center;
+  grid-gap: 0.25rem 0.5rem;
+  min-width: max-content;
+  max-width: 22rem;
+  overflow-y: auto;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  background-color: var(--bg_elevated);
   box-shadow: var(--shadow-3);
 }
+.wrapper_widget.state.edit .widget_item > .li_item .detail label {
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+  white-space: nowrap;
+}
 .wrapper_widget.state.edit .widget_item > .li_item .detail .value {
+  padding: 0;
   padding-right: 0.33rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--fg_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_label,
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_value {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_value {
+  color: var(--fg_default);
+  font-weight: 600;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_value ~ label:last-child {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail label:nth-child(3n) {
+  justify-self: start;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg_muted);
+  background-color: color-mix(in srgb, var(--fg_muted) 12%, transparent);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail label:nth-child(3n):empty {
+  padding: 0;
+  background-color: transparent;
 }
 .wrapper_widget.state.edit .widget_item > .li_item.container span.value {
   display: inline-block;

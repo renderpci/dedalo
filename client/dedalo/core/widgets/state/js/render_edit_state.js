@@ -40,7 +40,12 @@
 *     value:     number,   // completion percentage 0–1 (total rows) or 0/1 (detail rows)
 *     locator:   {section_tipo:string, section_id:string, ...} | null,
 *     column:    string,   // 'situation' | 'state'
-*     type:      string    // 'total' | 'detail'
+*     type:      string,   // 'total' | 'detail'
+*     items:     number    // TOTAL ITEMS ONLY — the source-record count this
+*                          // total is averaged over, i.e. its own divisor
+*                          // (WC-2026-08-03-state-widget-total-source-count).
+*                          // A source with nothing saved emits no detail item,
+*                          // so this is the only way to know a row is missing.
 *   }
 *   (self.datalist IS `.value`-wrapped — do not confuse the two.)
 *
@@ -79,6 +84,278 @@ export const render_edit_state = function() {
 
 	return true
 }//end render_edit_state
+
+
+
+/**
+* SET_METER
+* Paint the progress meter of a `.total` node from its percentage.
+* The bar itself is a CSS pseudo-element (see widgets/state/css/state.less): this
+* only publishes the two inputs it reads — `--pct` (fill width) and `data-state`
+* (fill colour: ok / partial / empty). Called on build AND on every live
+* `update_widget_value`, so the bar can never drift from the number beside it.
+*
+* @param {HTMLElement} total_node - the `.total` div holding the percentage.
+* @param {number|string} value - percentage 0–100 as delivered by the server.
+* @returns {number} the clamped percentage actually painted.
+*/
+const set_meter = function(total_node, value) {
+
+	const pct = Math.max(0, Math.min(100, Number(value) || 0))
+
+	total_node.style.setProperty('--pct', pct)
+	total_node.dataset.state = pct >= 100
+		? 'ok'
+		: (pct > 0 ? 'partial' : 'empty')
+
+	return pct
+}//end set_meter
+
+
+
+/**
+* PLACE_DETAIL
+* Decide which way the breakdown panel opens, measured at open time.
+*
+* The widget renders inside `.content_value`, which carries `contain: content`
+* (component_info.less) — PAINT containment, so anything drawn outside that box
+* is clipped, not scrolled into view. A static rule cannot know: the panel's
+* height depends on how many languages or source records the row has, so the
+* same row overflows on one record and not on the next.
+*
+* @param {HTMLElement} detail_node - the `.detail` panel, already visible.
+* @returns {void}
+*/
+const place_detail = function(detail_node) {
+
+	// measure in the default position (below the cell, left-aligned, unclamped)
+	detail_node.style.transform = ''
+	detail_node.style.maxHeight = ''
+
+	const bounds_node = detail_node.closest('.content_value') || detail_node.closest('.wrapper_widget')
+	if (!bounds_node) {
+		return
+	}
+	const bounds	= bounds_node.getBoundingClientRect()
+	let panel		= detail_node.getBoundingClientRect()
+
+	// Last resort only: a panel taller than the whole widget (a translatable leaf
+	// draws one row per project language) scrolls. Scrolled rows are reachable;
+	// clipped ones are not.
+	if (panel.height > bounds.height - 4) {
+		detail_node.style.maxHeight = Math.max(0, bounds.height - 8) + 'px'
+		panel = detail_node.getBoundingClientRect()
+	}
+
+	// SLIDE the panel back inside the paint box rather than flipping it above the
+	// cell. Flipping trades one clipped edge for another: the widget card is only
+	// as tall as its rows, so on a short card neither side has room and the panel
+	// ends up either cut off or scrolled — and what falls off the bottom is the
+	// total row, the one number that explains all the others. A translation keeps
+	// the panel whole and adjacent; overlapping its own cell is the cheap part.
+	let dx = 0
+	let dy = 0
+	if (panel.bottom > bounds.bottom)	dy = bounds.bottom - panel.bottom - 2
+	if (panel.top + dy < bounds.top)	dy = bounds.top - panel.top + 2
+	if (panel.right > bounds.right)		dx = bounds.right - panel.right - 2
+	if (panel.left + dx < bounds.left)	dx = bounds.left - panel.left + 2
+	if (dx !== 0 || dy !== 0) {
+		detail_node.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)'
+	}
+}//end place_detail
+
+
+
+/**
+* BUILD_SOURCE_ROWS
+* Breakdown rows for a NON-translatable leaf: one per SOURCE RECORD.
+*
+* The total is `sum / langs / source-record-count` (server:
+* src/core/components/component_info/widgets/state/state.ts), and a source
+* record with nothing saved contributes 0 to that average while emitting NO
+* detail item. Listing only the details therefore showed `50%` under a cell
+* reading `25%` with nothing to explain the gap. The server publishes the
+* divisor as `items` on the total item
+* (WC-2026-08-03-state-widget-total-source-count), so the missing sources get
+* their own explicit 0% rows and the average becomes self-evident.
+*
+* Falls back to the details themselves when `items` is absent or smaller than
+* the number of details — the panel must never DROP a row it was given, and an
+* older server (or a shape this code has not met) is not a reason to lie.
+*
+* @param {Array} details - the detail items of this cell, in server order.
+* @param {Object|null} total_item - the cell's total item (carries `items`).
+* @param {string} nolan - page_globals.dedalo_data_nolan.
+* @returns {Array} row descriptors {label, lang, item}.
+*/
+const build_source_rows = function(details, total_item, nolan) {
+
+	const declared	= Number(total_item && total_item.items)
+	const count		= Math.max(details.length, Number.isFinite(declared) ? declared : 0, 1)
+
+	const rows = []
+	for (let r = 0; r < count; r++) {
+		rows.push({
+			label	: '',
+			lang	: nolan,
+			item	: details[r] || null
+		})
+	}
+
+	return rows
+}//end build_source_rows
+
+
+
+/**
+* BUILD_DETAIL_CONTAINER
+* Build the hover/focus breakdown panel of ONE metric cell (one column of one
+* output row), and register its nodes for live updates.
+*
+* Why it exists at all: the panel used to render one row per PROJECT LANGUAGE,
+* found by `data.find(… lang === lang …)`. That is only true for a translatable
+* leaf. For a NON-translatable one every detail item carries 'lg-nolan', so:
+*   - `find` returned the FIRST item and the rest were invisible — a record with
+*     two audiovisuals showed only the transcribed one, and
+*   - that single per-source value was labelled `total :`, which is not what it
+*     is. The server total is `sum / langs / source-record-count`
+*     (src/core/components/component_info/widgets/state/state.ts), so on a
+*     2-resource record the panel said `total : 50%` while the cell said `25%`.
+*     Two different numbers, both labelled total, neither explaining the other.
+*
+* So: one row per detail item that actually exists (by lang when translatable,
+* one per source record otherwise), plus an explicit total row carrying the same
+* number the cell shows. Nothing in the panel is labelled total but isn't.
+*
+* @param {Object} params
+* @param {HTMLElement} params.column_node - the `.situation` / `.state` cell.
+* @param {Array}  params.data - self.value items of this IPO entry.
+* @param {Object} params.output_item - the IPO output row ({id, label}).
+* @param {string} params.column - 'situation' | 'state'.
+* @param {boolean} params.translatable - is the leaf component translatable.
+* @param {Array}  params.project_langs - page_globals.dedalo_projects_default_langs.
+* @param {string} params.nolan - page_globals.dedalo_data_nolan.
+* @param {Object} params.total_item - the cell's total item (value + `items`).
+* @param {Object} params.self - the `state` widget instance (for self.datalist).
+* @param {Array}  params.ar_nodes - live-update registry to push into.
+* @param {number} params.key - IPO index.
+* @returns {HTMLElement} the `.detail` container (starts hidden).
+*/
+const build_detail_container = function(params) {
+
+	const column_node	= params.column_node
+	const data			= params.data
+	const output_item	= params.output_item
+	const column		= params.column
+	const translatable	= params.translatable
+	const project_langs	= params.project_langs
+	const nolan			= params.nolan
+	const self			= params.self
+	const ar_nodes		= params.ar_nodes
+	const key			= params.key
+
+	const detail_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'detail hide',
+		parent			: column_node
+	})
+
+	// every detail item of this cell, in server order
+	const details = data.filter(item => item.widget_id === output_item.id
+									&& item.column === column
+									&& item.type === 'detail')
+
+	// rows to draw.
+	// translatable: one per project lang, empty ones included (a language with
+	// nothing saved is a real, meaningful gap — it is what the total divides by).
+	// non-translatable: one per detail item — that is one per SOURCE RECORD, and
+	// they are not interchangeable, so none may be dropped.
+	const rows = translatable
+		? project_langs.map(lang_item => ({
+			label	: lang_item.label + ': ',
+			lang	: lang_item.value,
+			item	: details.find(item => item.lang === lang_item.value) || null
+		}))
+		: build_source_rows(details, params.total_item, nolan)
+
+	for (let r = 0; r < rows.length; r++) {
+		const row = rows[r]
+
+		// lang name, or nothing at all when the rows are per source record —
+		// there the option chip IS the identity of the row
+		ui.create_dom_element({
+			element_type	: 'label',
+			text_content	: row.label,
+			parent			: detail_container
+		})
+		const node_value = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			text_content	: (row.item ? row.item.value : 0) + '%',
+			parent			: detail_container
+		})
+		// selected option name
+		const datalist_item = (row.item && row.item.locator)
+			? self.datalist.find(item => item.value.section_tipo === row.item.locator.section_tipo
+									&& item.value.section_id === row.item.locator.section_id) || {label: ''}
+			: {label: ''}
+		const node_label_list = ui.create_dom_element({
+			element_type	: 'label',
+			text_content	: datalist_item.label,
+			parent			: detail_container
+		})
+
+		// save the nodes for reuse later in the 'update_widget_value' event.
+		// detail_index disambiguates rows that share the same lang (the
+		// per-source-record case) — without it every one of them would take the
+		// value of the first match.
+		ar_nodes.push({
+			node_value		: node_value,
+			node_label_list	: node_label_list,
+			type			: 'detail',
+			value			: row.item ? row.item.value : 0,
+			lang			: row.lang,
+			detail_index	: r,
+			per_source		: !translatable,
+			widget_id		: output_item.id,
+			key				: key,
+			column			: column
+		})
+	}
+
+	// the aggregate, spelled out: this is the number the cell shows, and the only
+	// row in the panel entitled to be called a total
+	ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'total_label',
+		text_content	: (get_label['total'] || 'total') + ' :',
+		parent			: detail_container
+	})
+	const node_total_value = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'value total_value',
+		text_content	: params.total_item.value + '%',
+		parent			: detail_container
+	})
+	ui.create_dom_element({
+		element_type	: 'label',
+		parent			: detail_container
+	})
+	ar_nodes.push({
+		node_value	: node_total_value,
+		type		: 'total',
+		value		: params.total_item.value,
+		lang		: nolan,
+		widget_id	: output_item.id,
+		key			: key,
+		column		: column
+	})
+
+	detail_container.classList.add('rows_' + rows.length)
+
+
+	return detail_container
+}//end build_detail_container
 
 
 
@@ -301,46 +578,66 @@ const get_value_element = (i, data, self) => {
 				})
 
 				// label for the row
-				const label = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: get_label[output_item.label] || output_item.id,
+					const row_label = get_label[output_item.label] || output_item.id
+					const label = ui.create_dom_element({
+						element_type	: 'label',
+						inner_html		: row_label,
+						parent			: container
+					})
+
+			// Situation
+				// node for the column situation.
+				// (!) ALWAYS created, even when this output row has no situation data.
+				// The row is a slice of a 3-column grid (label | situation | state)
+				// whose cells are auto-placed: skip one and the NEXT row's label slides
+				// into the hole, so the labels march across the columns and the table
+				// collapses. An empty cell is what keeps the grid a grid.
+				const situation = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'situation',
 					parent			: container
 				})
 
-			// Situation
 				// check if the component is translatable, with the first item in the data of the current column
 				const situation_item = data.find(item => item.widget_id === output_item.id && item.column === 'situation')
-				if (situation_item) {
+				// get the total item for situation
+				const situation_total = data.find(item => item.widget_id === output_item.id
+															&& item.column === 'situation'
+															&& item.type ==='total')
+				if (situation_item && situation_total) {
 
 					// check if the item is translatable
 					const situation_translatable = (situation_item.lang !== nolan)
-					// if the item is translatable select the all projects langs, else the item will be lg-nolan and only will has 1 item
-					const situation_length = situation_translatable ? project_langs.length : 1;
-					// get the total item for situation
-					const situation_total = data.find(item => item.widget_id === output_item.id
-																&& item.column === 'situation'
-																&& item.type ==='total')
 
-					// node for the column situation
-						const situation = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'situation',
-							parent			: container
+						// Reveal/hide the per-language detail panel on hover.
+						// The detail panel is initially hidden (.hide class) and is shown
+						// while the pointer is over the COLUMN — not over the total node
+						// alone: the panel is rendered below the total, so a listener on
+						// the total closed it the instant the pointer travelled towards it,
+						// making the breakdown unreadable. The column is the hover area the
+						// CSS `:hover` rule uses too, so both agree.
+						// focusin/focusout mirror it for keyboard users: `.hide` is
+						// `display:none !important` (layout/general.less), so a CSS
+						// :focus-within rule could not win — the class has to be toggled here.
+						situation.addEventListener('mouseenter', function(e) {
+							situation_detail_container.classList.remove('hide')
+							place_detail(situation_detail_container)
+						})
+						situation.addEventListener('mouseleave', function(e) {
+							situation_detail_container.classList.add('hide')
+						})
+						situation.addEventListener('focusin', function(e) {
+							situation_detail_container.classList.remove('hide')
+							place_detail(situation_detail_container)
+						})
+						situation.addEventListener('focusout', function(e) {
+							situation_detail_container.classList.add('hide')
 						})
 						// total
 						const situation_total_node = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'total',
 							parent			: situation
-						})
-						// Reveal/hide the per-language detail panel on hover.
-						// The detail panel is initially hidden (.hide class) and is only shown
-						// while the pointer is over the total node.
-						situation_total_node.addEventListener('mouseenter', function(e) {
-							situation_detail_container.classList.remove('hide')
-						})
-						situation_total_node.addEventListener('mouseleave', function(e) {
-							situation_detail_container.classList.add('hide')
 						})
 						// create the node with the total value
 						const situation_total_value = ui.create_dom_element({
@@ -349,9 +646,18 @@ const get_value_element = (i, data, self) => {
 							text_content		: situation_total.value + '%',
 							parent			: situation_total_node
 						})
+						// meter + keyboard access. focus opens the same detail panel as
+						// hover (CSS :focus-within), so the breakdown is reachable without
+						// a mouse.
+						const situation_pct = set_meter(situation_total_node, situation_total.value)
+						situation_total_node.setAttribute('tabindex', '0')
+						situation_total_node.setAttribute('aria-label',
+							row_label + ' · ' + (get_label['situation'] || 'situation') + ' ' + situation_pct + '%'
+						)
 						// save the node for reuse later in 'update_widget_value' event
 						ar_nodes.push({
 							node_value	: situation_total_value,
+							node_total	: situation_total_node,
 							type		: 'total',
 							value		: situation_total.value,
 							lang		: nolan,
@@ -360,89 +666,64 @@ const get_value_element = (i, data, self) => {
 							column		: 'situation'
 						})
 
-					// detail node with all languages
-						const situation_detail_container = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'detail hide',
-							parent			: situation
+					// detail node: the breakdown behind the total
+						const situation_detail_container = build_detail_container({
+							column_node		: situation,
+							data			: data,
+							output_item		: output_item,
+							column			: 'situation',
+							translatable	: situation_translatable,
+							project_langs	: project_langs,
+							nolan			: nolan,
+							total_item		: situation_total,
+							self			: self,
+							ar_nodes		: ar_nodes,
+							key				: i
 						})
-						// situation detail (by lang)
-						for (let j = 0; j < situation_length; j++) {
-							// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
-							const lang = situation_translatable ? project_langs[j].value : nolan
-							const situation_items_data = data.find(item => item.widget_id === output_item.id
-																		&& item.column === 'situation'
-																		&& item.lang === lang
-																		&& item.type ==='detail')
-							// build the label with the lang name
-							const label_situation = ui.create_dom_element({
-								element_type	: 'label',
-								text_content		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
-								parent			: situation_detail_container
-							})
-							// create the node with the value
-							const item_situation = ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'value',
-								text_content		: (situation_items_data) ? situation_items_data.value + '%' : '0%',
-								parent			: situation_detail_container
-							})
-							// build the label with the list name
-							const datalist_item = (situation_items_data && situation_items_data.locator)
-								? self.datalist.find(item => item.value.section_tipo === situation_items_data.locator.section_tipo
-														&& item.value.section_id === situation_items_data.locator.section_id) || {label: ''}
-								: {label: ''}
-
-							const label_list_situation = ui.create_dom_element({
-								element_type	: 'label',
-								text_content		: datalist_item.label,
-								parent			: situation_detail_container
-							})
-							// save the node for reuse later in 'update_widget_value' event
-							ar_nodes.push({
-								node_value		: item_situation,
-								node_label_list	: label_list_situation,
-								type			: 'detail',
-								value			: (situation_items_data) ? situation_items_data.value : 0,
-								lang			: lang,
-								widget_id		: output_item.id,
-								key				: i,
-								column			: 'situation'
-							})
-						}//end for (let j = 0; j < situation_length; j++)
-				}//end if (situation_item)
+				}else{
+					// no data for this row/column: the cell stays, empty (see above)
+					situation.classList.add('empty')
+				}//end if (situation_item && situation_total)
 
 			// State
+				// node for state column. Always created too — same grid reason as
+				// the situation cell above.
+				const state = ui.create_dom_element({
+					element_type 	: 'div',
+					class_name		: 'state',
+					parent 			: container
+				})
+
 				// check if the component is translatable, with the first item in the data of the current column
 				const state_item = data.find(item => item.widget_id === output_item.id && item.column === 'state')
-				if (state_item) {
+				const state_total = data.find(item => item.widget_id === output_item.id
+													&& item.column === 'state'
+													&& item.type ==='total')
+				if (state_item && state_total) {
 					// second, check if the item is translatable
 					const state_translatable = (state_item.lang !== nolan)
-					// if the item is translatable select the projects lang else the item is lg-nolan and only has 1 item
-					const item_length = state_translatable ? project_langs.length : 1;
 
-					const state_total = data.find(item => item.widget_id === output_item.id
-														&& item.column === 'state'
-														&& item.type ==='total')
-
-					// node for state column
-					const state = ui.create_dom_element({
-						element_type 	: 'div',
-						class_name		: 'state',
-						parent 			: container
-					})
+						// Reveal/hide the per-language detail panel on hover (same pattern as
+						// situation above: the COLUMN is the hover area, not the total node).
+						state.addEventListener('mouseenter', function(e) {
+							state_detail_container.classList.remove('hide')
+							place_detail(state_detail_container)
+						})
+						state.addEventListener('mouseleave', function(e) {
+							state_detail_container.classList.add('hide')
+						})
+						state.addEventListener('focusin', function(e) {
+							state_detail_container.classList.remove('hide')
+							place_detail(state_detail_container)
+						})
+						state.addEventListener('focusout', function(e) {
+							state_detail_container.classList.add('hide')
+						})
 						// total
 						const state_total_node = ui.create_dom_element({
 							element_type 	: 'div',
 							class_name		: 'total',
 							parent 			: state
-						})
-						// Reveal/hide the per-language detail panel on hover (same pattern as situation above).
-						state_total_node.addEventListener('mouseenter', function(e) {
-							state_detail_container.classList.remove('hide')
-						})
-						state_total_node.addEventListener('mouseleave', function(e) {
-							state_detail_container.classList.add('hide')
 						})
 						// create the node with the value
 						const total_value = ui.create_dom_element({
@@ -451,9 +732,16 @@ const get_value_element = (i, data, self) => {
 							inner_html 		: state_total.value +'%',
 							parent 			: state_total_node
 						})
+						// meter + keyboard access (see situation above)
+						const state_pct = set_meter(state_total_node, state_total.value)
+						state_total_node.setAttribute('tabindex', '0')
+						state_total_node.setAttribute('aria-label',
+							row_label + ' · ' + (get_label['state'] || 'state') + ' ' + state_pct + '%'
+						)
 						// save the node for reuse later in 'update_widget_value' event
 						ar_nodes.push({
 							node_value 	: total_value,
+							node_total	: state_total_node,
 							type 		: 'total',
 							value 		: state_total.value,
 							lang 		: nolan,
@@ -462,60 +750,24 @@ const get_value_element = (i, data, self) => {
 							column		: 'state'
 						})
 
-					// detail with all languages
-					const state_detail_container = ui.create_dom_element({
-						element_type 	: 'div',
-						class_name		: 'detail hide',
-						parent 			: state
+					// detail node: the breakdown behind the total
+					const state_detail_container = build_detail_container({
+						column_node		: state,
+						data			: data,
+						output_item		: output_item,
+						column			: 'state',
+						translatable	: state_translatable,
+						project_langs	: project_langs,
+						nolan			: nolan,
+						total_item		: state_total,
+						self			: self,
+						ar_nodes		: ar_nodes,
+						key				: i
 					})
-					for (let k = 0; k < item_length; k++) {
-						// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
-						const lang = state_translatable ? project_langs[k].value : nolan
-						// find the data of the item with the lang
-						const state_item_data = data.find(item => item.widget_id === output_item.id
-																&& item.column === 'state'
-																&& item.lang === lang
-																&& item.type ==='detail')
-
-						// build the label with the lang
-						const label_state = ui.create_dom_element({
-							element_type	: 'label',
-							inner_html 		: (state_translatable) ? (project_langs[k].label+': ') : 'total :',
-							// inner_html 		: 'total :',
-							parent 			: state_detail_container
-						})
-
-						// create the node with the value
-						const item_state = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'value',
-							inner_html 		: (state_item_data) ? state_item_data.value +'%' : '0%',
-							parent 			: state_detail_container
-						})
-						// build the label with the list name
-						const datalist_item_status = (state_item_data && state_item_data.locator)
-							? self.datalist.find(item => item.value.section_tipo === state_item_data.locator.section_tipo
-													&& item.value.section_id === state_item_data.locator.section_id) || {label: ''}
-							: {label: ''}
-
-						const label_list_state = ui.create_dom_element({
-							element_type	: 'label',
-							inner_html		: datalist_item_status.label,
-							parent			: state_detail_container
-						})
-						// save the node for reuse later in the event 'update_widget_value'
-						ar_nodes.push({
-							node_value		: item_state,
-							node_label_list	: label_list_state,
-							type			: 'detail',
-							value			: (state_item_data) ? state_item_data.value : 0,
-							lang			: lang,
-							widget_id		: output_item.id,
-							key				: i,
-							column			: 'state'
-						})
-					}// end for (let k = 0; k < item_length; k++)
-				}//end if (state_item)
+				}else{
+					// no data for this row/column: the cell stays, empty (see above)
+					state.classList.add('empty')
+				}//end if (state_item && state_total)
 		}//end for (let o = 0; o < output.length; o++)
 
 		// Subscribe to live-update events for this IPO slot.
@@ -552,16 +804,28 @@ const get_value_element = (i, data, self) => {
 			for (let o = node_length - 1; o >= 0; o--) {
 				const node = detail_nodes[o]
 				// find if the node has new data
-				const new_data = changed_data.find(
+				const matches = changed_data.filter(
 					item => item.widget_id === node.widget_id
 					&& item.column === node.column
 					&& item.lang === node.lang
 					&& item.key === i
 					&& item.type === node.type
 				)
+				// per-source detail rows all carry lg-nolan, so the identity check
+				// above cannot tell them apart — they are distinguished by their
+				// position, exactly as they were built. Everything else takes the
+				// single match.
+				const new_data = node.per_source
+					? matches[node.detail_index]
+					: matches[0]
 				// set the new value
 				if(new_data){
 					node.node_value.innerHTML = new_data.value +'%'
+					// repaint the bar from the same number, or it would freeze at the
+					// value the widget was built with
+					if(node.node_total){
+						set_meter(node.node_total, new_data.value)
+					}
 					if(node.type==='detail'){
 						const datalist_item = (new_data.locator)
 							? self.datalist.find(item => item.value.section_tipo===new_data.locator.section_tipo
@@ -573,6 +837,9 @@ const get_value_element = (i, data, self) => {
 
 				}else{
 					node.node_value.innerHTML = '0%'
+					if(node.node_total){
+						set_meter(node.node_total, 0)
+					}
 					if(node.type==='detail'){
 						node.node_label_list.innerHTML = ''
 					}
