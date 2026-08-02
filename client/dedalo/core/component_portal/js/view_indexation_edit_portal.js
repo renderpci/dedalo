@@ -62,10 +62,11 @@
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_all_instances} from '../../common/js/instances.js'
+	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {
 		render_column_component_info,
-		render_column_remove,
 		render_references,
 		get_buttons
 	} from './render_edit_component_portal.js'
@@ -149,11 +150,15 @@ view_indexation_edit_portal.render = async function(self, options) {
 			? self.id_variant + '_' + self.active_tag.tag.tag_id
 			: self.id_variant + '_' + (new Date()).getTime()
 
+		// (!) The key MUST be `entries`. get_section_records reads options.entries and
+		// falls back to self.data.entries — passing the de-duplicated list under any
+		// other name silently renders one row PER TAG (each showing every chip of the
+		// record) instead of one row per record.
 		const ar_section_record	= await get_section_records({
 			caller		: self,
 			mode		: 'list',
 			columns_map	: self.columns_map,
-			value		: entries_combined,
+			entries		: entries_combined,
 			id_variant	: id_variant,
 			view		: 'text'
 		})
@@ -443,6 +448,40 @@ const render_column_id = function(options) {
 
 
 /**
+* GET_ROW_LOCATORS
+* Every entry of `self.data.entries` that the given row is displaying: the locators
+* that share the row's `section_tipo` + `section_id`.
+*
+* This is THE definition of what a row *is* in this view. A row is one target record
+* (one thesaurus term), and the same record is tagged once per anchor in the companion
+* text editor, so a row stands for N locators — the N chips `render_tag_column` paints.
+*
+* (!) `render_tag_column` (what the user sees) and `render_column_remove_indexation`
+* (what a delete removes) MUST resolve the same set, or the delete silently acts on
+* something other than what the row shows. That is why both go through this helper.
+*
+* When a tag filter is active, `self.data.entries` has already been narrowed to the
+* selected tag by `component_portal.filter_data_by_tag_id`, so this returns exactly
+* that one locator — no special case needed here or in either caller.
+*
+* @param {Object} self    - The `component_portal` instance.
+* @param {Object} locator - The row's canonical locator (section_tipo + section_id).
+* @returns {Array<Object>} The locators this row represents; possibly empty.
+*/
+const get_row_locators = function(self, locator) {
+
+	const data		= self.data || {}
+	const entries	= data.entries || []
+
+	return entries.filter(el =>
+		el.section_tipo===locator.section_tipo &&
+		String(el.section_id)===String(locator.section_id)
+	)
+}//end get_row_locators
+
+
+
+/**
 * RENDER_TAG_COLUMN
 * Renders the tag-chip column for a single portal row.
 *
@@ -481,10 +520,8 @@ const render_tag_column = function(options) {
 	// options
 		const locator		= options.locator
 		const caller		= options.caller
-		const data			= caller.data || {}
-		const entries		= data.entries || []
 		// Filter all locators that belong to this row's record (there may be several tags).
-		const entries_tags	= entries.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
+		const entries_tags	= get_row_locators(caller, locator)
 
 	const self = caller
 
@@ -608,12 +645,14 @@ const render_tag_column = function(options) {
 * (e.g. the target section was removed from the ontology), the label falls back to an
 * empty string and an empty fragment is returned early.
 *
-* The `render_column_remove` helper (imported from `render_edit_component_portal.js`)
-* is appended directly inside `info_node` rather than as a sibling column — this is a
-* deliberate layout choice (see inline comment in `rebuild_columns_map`) for readability.
+* The remove control is appended directly inside `info_node` rather than as a sibling
+* column — this is a deliberate layout choice (see inline comment in
+* `rebuild_columns_map`) for readability. It is the indexation-specific
+* `render_column_remove_indexation`, NOT the shared `render_column_remove`: see that
+* function's header for why the two cannot be the same here.
 *
 * @param {Object} options              - Options object supplied by `section_record` per row.
-* @param {Object} options.locator      - Locator for this row; used by `render_column_remove`.
+* @param {Object} options.locator      - Locator for this row; used by the remove control.
 * @param {Object} options.caller       - The `component_portal` instance.
 * @returns {DocumentFragment} Fragment containing the label div (and optionally the remove button).
 */
@@ -653,13 +692,283 @@ const render_info_column = function(options) {
 	// The remove button is nested inside info_node (not a separate column) for layout compactness.
 		if (self.permissions>1) {
 			info_node.appendChild(
-				render_column_remove(options)
+				render_column_remove_indexation(options, section_label)
 			)
 		}
 
 
 	return fragment
 }//end render_info_column
+
+
+
+/**
+* RENDER_COLUMN_REMOVE_INDEXATION
+* The row's unlink control — the indexation view's own, deliberately NOT the shared
+* `render_column_remove` from `render_edit_component_portal.js`.
+*
+* WHY IT CANNOT BE THE SHARED ONE. Everywhere else a portal row is one locator, so the
+* shared control's `unlink_record(options.locator)` removes exactly what the row shows.
+* Here a row is one TERM and stands for every tag anchor pointing at it, so the shared
+* control would delete the row's FIRST locator and leave the term on screen with N-1
+* chips — the record half-unlinked, and which link died decided by array order. (This
+* was invisible while the view rendered one row per tag; it is the v6 behaviour the
+* de-duplication fix exposed.) So the rule here is: **delete exactly the locators the
+* row is displaying** — `get_row_locators`, the same set `render_tag_column` paints:
+*
+*   - no tag selected  → the row shows all N chips  → all N locators go, in ONE save.
+*   - a tag selected   → `filter_data_by_tag_id` has already narrowed `data.entries`,
+*                        the row shows that one chip → only that locator goes.
+*
+* Both cases fall out of the same expression; there is no branch on `active_tag`.
+*
+* MARKS ARE NOT TOUCHED. This removes links only; the `[index-n-…]` marks stay in the
+* transcription exactly as they are, orphaned or not. Deleting a tag for real (marks in
+* every lang + its locator) is the text editor's job — `tag_delete` server-side, driven
+* from the editor, not from this list. The modal says so, because a user who removes
+* five links from a term needs to know the highlighted text will still be highlighted.
+*
+* The button is gated exactly like the shared control: it renders only when the target
+* section's ontology-declared `button_delete` descriptor is present, so visibility stays
+* server-authoritative. `show_interface.button_delete_link_and_record` is forced false by
+* this view (indexation entries are managed through the tagging workflow), so the
+* "delete resource and all links" branch of the shared control has no counterpart here.
+*
+* @param {Object} options              - Options object supplied by `section_record` per row.
+* @param {Object} options.caller       - The `component_portal` instance.
+* @param {Object} options.locator      - The row's canonical locator.
+* @param {string} options.section_id   - Target record's section_id.
+* @param {string} options.section_tipo - Target record's section_tipo.
+* @param {number|string} options.row_key - Zero-based position in the full data array.
+* @param {string} section_label        - Resolved target-section label, for the dialog.
+* @returns {DocumentFragment} Fragment containing an optional `.button_remove` button.
+*/
+const render_column_remove_indexation = function(options, section_label) {
+
+	// options
+		const self			= options.caller
+		const locator		= options.locator
+		const row_key		= options.row_key
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+
+	const fragment = new DocumentFragment()
+
+	// button_delete. Server-authoritative gate (ontology-declared), as in the shared control
+		const target_section_ddo	= (self.target_section || []).find(el => el.tipo===section_tipo) || {}
+		const section_buttons		= target_section_ddo.buttons || []
+		const button_delete			= section_buttons.find(el => el.model==='button_delete')
+		if (!button_delete) {
+			return fragment
+		}
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_remove',
+			title			: (get_label.delete || 'Delete'),
+			parent			: fragment
+		})
+		button_remove.tabIndex = -1
+
+		// event click
+		button_remove.addEventListener('click', function(e){
+			e.stopPropagation()
+
+			// invalid permissions
+				if (self.permissions<2) {
+					return
+				}
+
+			// row_locators. Resolved at CLICK time, not at render time: the user may have
+			// selected or cleared a tag since the row was painted, and the set to delete
+			// must match what is on screen right now.
+				const row_locators = get_row_locators(self, locator)
+				if (row_locators.length===0) {
+					console.warn('// remove ignored: the row resolves no locator', locator);
+					return
+				}
+
+			// term_label. What the user reads in this very row, so the dialog names the
+			// term the way the list does. Falls back to the raw locator when the row node
+			// cannot be resolved (defensive: the button always lives inside its row).
+				const row_node		= button_remove.closest('.section_record')
+				const label_node	= row_node
+					? row_node.querySelector(':scope >.wrapper_component')
+					: null
+				const term_label	= (label_node && label_node.innerText.trim())
+					? label_node.innerText.trim()
+					: (section_tipo + '_' + section_id)
+
+			// header
+				const header = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'header'
+				})
+				const header_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					text_content	: (get_label.delete || 'Delete') + ' ' + term_label,
+					parent			: header
+				})
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'note',
+					text_content	: ' [' + section_label + ']',
+					parent			: header_label
+				})
+
+			// body
+				const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'body content'
+				})
+
+			// indexation_delete_info. WHAT this deletion does, stated before it happens:
+			// the affected tags, one chip per link, then the two consequences.
+				const delete_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'indexation_delete_info block',
+					parent			: body
+				})
+				const tags_line = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'indexation_delete_tags',
+					text_content	: (get_label.indexations || 'Indexations') + ': ' + row_locators.length,
+					parent			: delete_info
+				})
+				// the same chips the row paints, so the dialog is visually the row's own set
+				for (let i = 0; i < row_locators.length; i++) {
+					const current_locator	= row_locators[i]
+					const tag_type			= current_locator.tag_type || 'index'
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: (!current_locator.tag_id ? 'no_tag ' : 'tags ') + tag_type,
+						text_content	: !current_locator.tag_id
+							? (get_label.provisional || 'Provisional')
+							: String(current_locator.tag_id),
+						parent			: tags_line
+					})
+				}
+				// scope of the deletion: every link of the term, or only the selected one
+				ui.create_dom_element({
+					element_type	: 'p',
+					class_name		: 'indexation_delete_scope',
+					text_content	: self.active_tag
+						? (get_label.delete_selected_indexation_link || 'Only the selected link will be deleted.')
+						: (get_label.delete_all_indexation_links || 'All the links of this term will be deleted.'),
+					parent			: delete_info
+				})
+				// what survives: the marks in the transcription
+				ui.create_dom_element({
+					element_type	: 'p',
+					class_name		: 'indexation_delete_note note',
+					text_content	: get_label.text_tags_preserved || 'The tags in the text will be preserved.',
+					parent			: delete_info
+				})
+
+			// relation_list. Where else this record is used (lazy: loads on expand)
+				const relation_list_placeholder = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'relation_list_placeholder',
+					parent			: body
+				})
+				const relation_list = render_relation_list({
+					self			: self,
+					section_id		: section_id,
+					section_tipo	: section_tipo
+				})
+				relation_list_placeholder.replaceWith(relation_list)
+
+			// footer
+				const footer = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'footer content'
+				})
+
+			// button_unlink_record (Only deletes the locators, never the target record)
+				const button_unlink_record = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning remove',
+					text_content	: (get_label.delete_only_the_link || 'Delete only link')
+						+ (row_locators.length>1 ? ' (' + row_locators.length + ')' : ''),
+					parent			: footer
+				})
+				const fn_click_unlink_record = async function(e){
+					e.stopPropagation()
+
+					// stop if the user don't confirm
+					if (!confirm(get_label.sure)) {
+						return
+					}
+
+					footer.classList.add('loading')
+
+					// deletes every locator of the row in ONE save and refreshes the component
+					// (!) unlink_record re-applies the active tag filter after the refresh.
+					// dataframe cleanup is server-authoritative (single-writer rule).
+					await self.unlink_record(row_locators)
+
+					// close modal
+					modal.close()
+
+					footer.classList.remove('loading')
+				}
+				button_unlink_record.addEventListener('click', fn_click_unlink_record)
+
+			// modal
+				const modal = ui.attach_to_modal({
+					header		: header,
+					body		: body,
+					footer		: footer,
+					size		: 'normal', // string size small|big|normal
+					callback	: (dd_modal) => {
+						dd_modal.modal_content.style.width = '54rem'
+						dd_modal.modal_content.style.maxWidth = '100%'
+					}
+				})
+				// set the default button to be fired when the modal is active
+				// when the user press the Enter key in the keyboard
+				const focus_the_button = function() {
+					dd_request_idle_callback(
+						() => {
+							button_unlink_record.focus()
+							button_unlink_record.classList.add('focus')
+						}
+					)
+					button_unlink_record.addEventListener('keyup', (e)=>{
+						e.preventDefault()
+						if(e.key==='Enter'){
+							button_unlink_record.click()
+						}
+					})
+				}
+				when_in_dom(button_unlink_record, focus_the_button)
+
+			// data pagination offset. Check and update self data to allow save API request
+			// return the proper paginated data (same guard as the shared control)
+				const key = parseInt(row_key)
+				if (key===0 && self.data.pagination?.offset>0) {
+					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+					self.data.pagination.offset = next_offset>0
+						? next_offset
+						: 0
+				}
+		})//end event click
+
+		// icon delete
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button delete_light icon',
+			parent			: button_remove
+		})
+
+		// activate_tooltips
+		ui.activate_tooltips(button_remove.parentNode, '.button_remove')
+
+
+	return fragment
+}//end render_column_remove_indexation
 
 
 

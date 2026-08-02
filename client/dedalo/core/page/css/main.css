@@ -22293,6 +22293,110 @@ body.inspector_resizing {
   flex: none;
 }
 /**
+* indexation_delete_info
+*
+* The row-unlink confirmation modal (view_indexation_edit_portal
+* render_column_remove_indexation) is attached to the PAGE modal container, outside the
+* portal node, so it inherits none of the chip rules nested above. It repaints the row's
+* own tag chips with the same mixins so the dialog shows exactly the set the row shows —
+* which is exactly the set the deletion removes.
+*/
+.indexation_delete_info > .indexation_delete_tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags {
+  margin: 0px;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  font-size: 0.85rem;
+  margin-right: 1px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 5px;
+  padding-right: 0.65rem;
+  background-color: var(--color_tag_indexation_normal);
+  mask-image: radial-gradient(42% 56% ellipse at 129% 50%, transparent 0%, transparent 11px, #ffffff 0.5px);
+  border-bottom-left-radius: 6px;
+  border-top-left-radius: 6px;
+  color: var(--color_white);
+  cursor: pointer;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.index:active {
+  opacity: 0.5;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.reference {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 2.7rem;
+  font-size: 1rem;
+  margin-right: 1px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 5px;
+  padding-right: 0.65rem;
+  background-color: var(--color_tag_indexation_normal);
+  border-radius: 9px;
+  color: var(--color_white);
+  cursor: pointer;
+  background-image: url(../../themes/default/icons/link_white.svg);
+  background-size: 1rem;
+  background-repeat: no-repeat;
+  background-position: right 5px top 2px;
+  padding-right: 1.3rem;
+  flex-wrap: nowrap;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.reference:active {
+  opacity: 0.5;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.draw {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 2.7rem;
+  font-size: 1rem;
+  margin-right: 1px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 5px;
+  padding-right: 0.65rem;
+  background-color: var(--color_tag_indexation_normal);
+  border-radius: 9px;
+  color: var(--color_white);
+  cursor: pointer;
+  background-image: url(../../themes/default/icons/eye.svg);
+  background-size: 1rem;
+  background-repeat: no-repeat;
+  background-position: right 5px top 2px;
+  padding-right: 1.3rem;
+  flex-wrap: nowrap;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.draw:active {
+  opacity: 0.5;
+}
+.indexation_delete_info > .indexation_delete_tags > .no_tag {
+  background-color: var(--color_blue_2);
+  color: var(--color_white);
+  border-radius: 3px;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.8rem;
+  line-height: 0.96rem;
+}
+.indexation_delete_info > .indexation_delete_scope {
+  margin: 0px 0px 0.25rem 0px;
+}
+.indexation_delete_info > .indexation_delete_note {
+  margin: 0px;
+}
+/**
 * view_mini_portal
 *
 * (!) suffix '_mini' as 'component_portal_mini'
