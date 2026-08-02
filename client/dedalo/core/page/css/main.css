@@ -532,6 +532,7 @@ template {
   --field_row_h: 2rem;
   --field_line_h: 1.3rem;
   --field_value_pad_t: calc((var(--field_row_h) - var(--field_line_h)) / 2);
+  --field_rest_bg: transparent;
   --view_text_height: 1.2rem;
   --view_line_height: 5rem;
   --column_id_width: 6rem;
@@ -5349,6 +5350,7 @@ dd-modal .wrapper_component > .content_data.vertical,
 .wrapper_component.edit.component_iri > .content_data input.input_value {
   padding-left: var(--field_box_bleed);
   line-height: var(--field_line_h);
+  background-color: var(--field_rest_bg);
 }
 .section_record.edit .wrapper_component.edit {
   transition: background-color var(--transition-fast);
@@ -24513,6 +24515,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --checkbox_checked_bg: var(--color_orange_dedalo);
   --input_bg: #f1efea;
   --input_fg: #23211e;
+  --field_rest_bg: var(--input_bg);
   --select_bg: #f1efea;
   --select_fg: #23211e;
   --toolbar_btn_hover_bg: #ddd9d1;
@@ -24731,7 +24734,6 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   margin-bottom: var(--space-5, 1rem);
 }
 :root[data-design="redesign"] .wrapper_component .input_value {
-  background-color: var(--bg_input);
   border-radius: var(--radius-sm);
   transition: background-color var(--transition-fast, 120ms ease), box-shadow var(--transition-fast, 120ms ease);
 }

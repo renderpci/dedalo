@@ -605,6 +605,10 @@
 			>.content_data input.input_value {
 				padding-left: var(--field_box_bleed);
 				line-height: var(--field_line_h);
+				// one resting appearance in BOTH themes — see --field_rest_bg. Scoped
+				// to the field grid, so the inputs that are NOT fields (search panel,
+				// login, tool forms, modals) keep the surface they sit on.
+				background-color: var(--field_rest_bg);
 			}
 		}
 

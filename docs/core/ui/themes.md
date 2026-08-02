@@ -110,7 +110,7 @@ The token families in `vars_tokens.less`:
 | Motion | `--ease-standard`, `--transition-fast/base/slow` | |
 | Component tokens | `--menu_dropdown_bg`, `--checkbox_checked_bg`, `--input_bg`, `--select_icon_url`, `--toolbar_btn_hover_bg` | |
 | Modal tokens | `--modal_overlay_bg`, `--modal_content_bg`, `--modal_header_bg`, `--modal_radius` | Used by `dd-modal`; pierce the Shadow DOM boundary via `var()`. |
-| Field grid | `--field_inset_x`, `--field_box_bleed`, `--field_row_h`, `--field_line_h`, `--field_value_pad_t` | The one geometry every edit field shares — see [Field grid](#the-field-grid) below. Unitless geometry, no dark override. |
+| Field grid | `--field_inset_x`, `--field_box_bleed`, `--field_row_h`, `--field_line_h`, `--field_value_pad_t`, `--field_rest_bg` | The one geometry every edit field shares, plus its resting fill — see [Field grid](#the-field-grid) below. No dark override, deliberately. |
 | UI chrome (`--ut_*`) | `--ut_bg_app`, `--ut_bg_panel`, `--ut_text_primary`, `--ut_accent`, `--ut_border` | The shell/installer/test-runner chrome palette. A second token FAMILY, not a second file — see the note under [Only `main.less` may import `vars_tokens.less`](#tokens-css-custom-properties-vs-less-aliases). |
 
 ### The field grid
@@ -142,6 +142,27 @@ the shared grid has to speak through it).
 value's first line onto the row where an input centres its single line. Because
 both line boxes are the same height, the two land on the same row *exactly*
 rather than within a fraction of a pixel.
+
+A field's **resting** appearance is `--field_rest_bg`, and it is `transparent`:
+the value sits directly on the card, and the box appears only on hover (the
+outline reveal in `general.less`, the tint in `layout.less`) or on focus (the
+accent ring). That is the "quiet grid" the section edit view is built on.
+
+!!! warning "The resting fill has no dark override — on purpose"
+    It used to have one by accident. `general.less` painted `--input_bg` on
+    inputs under `:root[data-theme="dark"]` **only**, with no light counterpart,
+    so dark rendered a lifted box (`#1f2227` on a `#1b1d20` card) while light
+    rendered nothing (`#ffffff` on `#ffffff`) — and inside dark the input then
+    disagreed with the `<select>` and editor surfaces beside it, which are
+    transparent in both themes. One token, no per-theme answer, fixes both
+    disagreements at once.
+
+    A design line that *wants* sunken fields re-points the token rather than
+    writing a rule: `redesign/_tokens.less` sets
+    `--field_rest_bg: var(--input_bg)`. It has to, because the shared `FIELD
+    GRID` rule is five classes deep and out-specifies
+    `.wrapper_component .input_value` in `redesign/_structure.less` — a
+    background declared there would lose silently.
 
 !!! warning "Do not hard-code a field inset"
     Before this grid, each family carried its own: a literal input's text sat
