@@ -16,6 +16,7 @@
 		"lg-spa": "Encuentra los registros con más probabilidad de ser del mismo tipo que este, con el motivo por criterio de cada candidato."
 	},
 	"developer": "Dédalo team",
+	"dedalo_version_min": "7.0.0",
 	"affected_models": ["section"],
 	"show_in_inspector": true,
 	"show_in_component": false,

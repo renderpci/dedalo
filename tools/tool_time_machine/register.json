@@ -99,32 +99,32 @@
         "value": "<p>Accedir i recuperar versions de les dades de l'historial de canvis</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Auf Versionen von Änderungsverlaufsdaten zugreifen und diese abrufen</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Πρόσβαση και ανάκτηση εκδόσεων των δεδομένων ιστορικού αλλαγών</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Access and retrieve versions of change history data</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Accéder et récupérer des versions des données de l'historique des modifications</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>परिवर्तन इतिहास डेटाको संस्करणहरू पहुँच र पुन: प्राप्त गर्नुहोस्</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Accede y recupera versiones de los datos del historial de cambios</p>"
       }
@@ -136,47 +136,47 @@
         "value": "Màquina del temps"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Zeitmaschine"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Μηχανή του χρόνου"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Time machine"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Denboraren makina"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Machine à remonter le temps"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Macchina del tempo"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "समय यन्त्र"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Máquina do tempo"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Máquina del tiempo"
       }
@@ -199,7 +199,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.2.5"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -597,12 +597,12 @@
     ],
     "dd612": [
       {
-        "count": 7
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

@@ -99,7 +99,7 @@
         "value": "<p>Manages video posterframe images</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona las imágenes de posterframe de los vídeos</p>"
       }
@@ -111,22 +111,22 @@
         "value": "Eina posterframe"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Posterframe"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Kartel-markoa"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-nep",
         "value": "उपकरण पोस्टर फ्रेम"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Posterframe"
       }
@@ -149,7 +149,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -289,7 +289,7 @@
     ],
     "dd799": [
       {
-        "count": 5
+        "count": 1
       }
     ],
     "dd999": [

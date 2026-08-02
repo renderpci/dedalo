@@ -74,37 +74,37 @@
         "value": "<p>Carregueu fitxers al servidor i els processeu</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Dateien auf den Server hochladen und verarbeiten</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Μεταφόρτωση αρχείων στον διακομιστή και επεξεργασία του.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Upload files to the server and processed it.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Télécharger des fichiers sur le serveur et les traiter</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Carica i file sul server ed elaborali</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>सर्भरमा फाइलहरू अपलोड गर्नुहोस् र तिनीहरूलाई प्रक्रिया गर्नुहोस्</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Subir ficheros al servidor y procesarlos</p>"
       }
@@ -116,47 +116,47 @@
         "value": "Importació de fitxers"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Dateien importieren"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εισαγωγή αρχείων"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Import files"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Fitxategiak inportatzea"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Importer des fichiers"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Importazione di file"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "उपकरण आयात फाइलहरू"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Importar ficheiros"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Importación de archivos"
       }
@@ -179,7 +179,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -924,12 +924,12 @@
     ],
     "dd612": [
       {
-        "count": 8
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

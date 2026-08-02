@@ -92,47 +92,47 @@
         "value": "<p>Gestiona amb precisió la rotació de la imatge</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Präzise Verwaltung der Bilddrehung</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Διαχειρίζεται με ακρίβεια την περιστροφή της εικόνας</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Accurately manages image rotation</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "<p>Irudien biraketa zehaztasunez kudeatzen du</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Gestion précise de la rotation des images</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Gestione accurata della rotazione delle immagini</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>सही रूपमा छवि रोटेशन व्यवस्थापन गर्दछ</p>"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Gere com precisão a rotação da imagem</p>"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona la rotación de imágenes con precisión</p>"
       }
@@ -144,47 +144,47 @@
         "value": "Rotació d'imatge"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Bilddrehung"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Περιστροφή εικόνας"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Image rotation"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Irudiaren biraketa"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Rotation d'image"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Rotazione delle immagini"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "छवि रोटेशन"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Rotação de imagem"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Rotación de imagen"
       }
@@ -207,7 +207,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.7.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -972,12 +972,12 @@
     ],
     "dd612": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd999": [

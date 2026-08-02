@@ -92,27 +92,27 @@
         "value": "<p>El reemplaçament dels botons anteriors v5 activa \"Crea estructura\"</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Ersatz für frühere v5-Tasten löst „Struktur erstellen“ aus</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Αντικατάσταση για τα πρώην κουμπιά v5 ενεργοποιεί «Δημιουργία δομής»</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Replacement for former v5 buttons trigger 'Create structure'</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>भूतपूर्व v5 बटनहरूको प्रतिस्थापन 'संरचना सिर्जना गर्नुहोस्' ट्रिगर गर्नुहोस्</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Reemplazo para los botones anteriores de la v5 que activan 'Crear estructura'</p>"
       }
@@ -124,47 +124,47 @@
         "value": "Eina de Jerarquia"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Hierarchiewerkzeug"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εργαλείο ιεραρχίας"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Hierarchy tool"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Hierarkia tresna"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Outil de hiérarchisation"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Strumento di gerarchizzazione"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "पदानुक्रम उपकरण"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Ferramenta de hierarquia"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Herramienta de Jerarquía"
       }
@@ -187,7 +187,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -847,12 +847,12 @@
     ],
     "dd612": [
       {
-        "count": 6
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

@@ -92,7 +92,7 @@
         "value": "<p>Tool to import previously exported Dédalo CSV files as Dédalo raw format.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Herramienta para importar archivos CSV de Dédalo previamente exportados como formato RAW de Dédalo.</p>"
       }
@@ -104,47 +104,47 @@
         "value": "Importació"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Importieren"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εισαγωγή"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Import"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Inportatu"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Importation"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Importazione"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "आयात गर्नुहोस्"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Importação"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Importación"
       }
@@ -167,7 +167,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.2.5"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -1551,12 +1551,12 @@
     ],
     "dd612": [
       {
-        "count": 2
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

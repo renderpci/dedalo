@@ -118,47 +118,47 @@
         "value": "<p>Carregueu el fitxer seleccionat al servidor</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Laden Sie die ausgewählte Datei auf den Server hoch</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Μεταφορτώστε το επιλεγμένο αρχείο στον διακομιστή</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Upload selected file to the server</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "<p>Kargatu hautatutako fitxategia zerbitzarira</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Télécharger le fichier sélectionné sur le serveur</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Carica il file selezionato sul server</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>चयन गरिएको फाइल सर्भरमा अपलोड गर्नुहोस्</p>"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Carregar o ficheiro selecionado para o servidor</p>"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Sube el archivo seleccionado al servidor</p>"
       }
@@ -170,47 +170,47 @@
         "value": "Càrrega de fitxers"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Hochladen"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Μεταφόρτωση"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Upload"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Fitxategien igoera"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Télécharger"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Caricamento"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "अपलोड गर्नुहोस्"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Carregamento de arquivo"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Carga de ficheros"
       }
@@ -233,7 +233,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -325,12 +325,12 @@
     ],
     "dd612": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

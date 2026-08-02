@@ -101,47 +101,47 @@
         "value": "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Verwaltet die Umwandlung der Ontologie in hier_dd-Datensätze.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Διαχειρίζεται τον μετασχηματισμό της οντολογίας σε εγγραφές hier_dd.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Handles Ontology transformation to 'jer_dd' records</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "<p>Ontologiaren eraldaketa kudeatzen du 'jer_dd' erregistroetara</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Gestisce la trasformazione dell'ontologia nei record 'jer_dd'</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>'jer_dd' रेकर्डहरूमा ओन्टोलोजी रूपान्तरण ह्यान्डल गर्दछ</p>"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Lida com a transformação da ontologia para registos 'jer_dd'</p>"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
       }
@@ -153,47 +153,47 @@
         "value": "Ontologia"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Ontologie"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Οντολογία"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Ontology"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Ontologia"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Ontologie"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Ontologici"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "ओन्टोलजी"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Ontologia"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Ontología"
       }
@@ -216,7 +216,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.4.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -432,12 +432,12 @@
     ],
     "dd612": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

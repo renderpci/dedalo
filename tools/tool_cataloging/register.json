@@ -83,27 +83,27 @@
         "value": "<p>Agrupació i jerarquització de béns culturals.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Gruppierung und Hierarchie von Kulturgütern.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Ομαδοποίηση και ιεράρχηση πολιτιστικών αγαθών.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Grouping and hierarchization of cultural assets.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Groupement et hiérarchisation de biens culturels.</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Agrupación y jerarquización de bienes culturales.</p>"
       }
@@ -115,37 +115,37 @@
         "value": "Catalogació de bens culturals"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Katalogisierung von Kulturgütern"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Καταλογογράφηση πολιτιστικών αγαθών"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Cataloging of cultural properties"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Ondasunen katalogazioa"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Catalogage des biens culturels"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Catalogazione dei beni culturali"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Catalogación de bienes"
       }
@@ -168,7 +168,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -257,12 +257,12 @@
     ],
     "dd612": [
       {
-        "count": 6
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 8
+        "count": 1
       }
     ],
     "dd1326": [

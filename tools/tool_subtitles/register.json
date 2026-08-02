@@ -83,32 +83,32 @@
         "value": "<p>Crea i edita els subtítols d'una transcripció per utilitzar-los en format VTT</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Erstellen und bearbeiten Sie die Untertitel einer Abschrift zur Verwendung im VTT-Format.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Δημιουργήστε και επεξεργαστείτε τους υπότιτλους μιας μεταγραφής για να τους χρησιμοποιήσετε σε μορφή VTT</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Creates and edits the subtitles of a transcript for use in VTT format.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Créer et éditer les sous-titres d'une transcription pour les utiliser au format VTT</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Crea e modifica i sottotitoli di una trascrizione per usarli in formato VTT</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Crea y edita los subtítulos de una transcripción para utilizarlos en formato VTT</p>"
       }
@@ -120,37 +120,37 @@
         "value": "Subtítols"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Untertitel"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Υπότιτλος"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Subtitles"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Azpitituluak"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Sous-titres"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Sottotitolo"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Subtítulos"
       }
@@ -173,7 +173,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -519,12 +519,12 @@
     ],
     "dd612": [
       {
-        "count": 7
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 8
+        "count": 1
       }
     ],
     "dd1326": [

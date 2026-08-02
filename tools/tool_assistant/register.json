@@ -56,7 +56,7 @@
         "value": "<p>AI assistant powered by the Dédalo server agent. Ask questions about your data in natural language; with write mode enabled it proposes changes that you review and confirm before anything is saved. The model is selectable per conversation (local/private or external, as configured on the server).</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Asistente de IA impulsado por el agente del servidor Dédalo. Haga preguntas sobre sus datos en lenguaje natural; con el modo de escritura activado propone cambios que usted revisa y confirma antes de guardar nada. El modelo se selecciona por conversación (local/privado o externo, según la configuración del servidor).</p>"
       }
@@ -68,7 +68,7 @@
         "value": "AI assistant"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Asistente de IA"
       }
@@ -1935,12 +1935,12 @@
     ],
     "dd612": [
       {
-        "count": 2
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 2
+        "count": 1
       }
     ],
     "dd1326": [

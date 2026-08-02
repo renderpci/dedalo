@@ -92,22 +92,22 @@
         "value": "<p>Tool zum Übersetzen des Inhalts in jede andere konfigurierte Sprache.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Εργαλείο για τη μετάφραση του περιεχομένου σε οποιαδήποτε άλλη διαμορφωμένη γλώσσα.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Tool to translate the content to any other configured language.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>कुनै पनि अन्य कन्फिगर गरिएको भाषामा सामग्री अनुवाद गर्न उपकरण।</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Herramienta para traducir el contenido a cualquier otra lengua configurada.</p>"
       }
@@ -119,17 +119,17 @@
         "value": "Multi-language"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Hainbat hizkuntza"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-nep",
         "value": "बहु-भाषा"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Multi-lenguage"
       }
@@ -152,7 +152,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -688,12 +688,12 @@
     ],
     "dd612": [
       {
-        "count": 4
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 4
+        "count": 1
       }
     ],
     "dd1326": [

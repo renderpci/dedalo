@@ -101,47 +101,47 @@
         "value": "<p>Exportació de l'ontologia per la seva difusió entre instal·lacions</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Export der Ontologie zur Weitergabe an andere Einrichtungen.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Εξαγωγή της οντολογίας για τη διάδοση μεταξύ των εγκαταστάσεων.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Export of the ontology for dissemination between installations.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "<p>Instalazioen artean zabaltzeko ontologia esportatzea.</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Exportation de l'ontologie pour diffusion entre les installations.</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Esportazione dell'ontologia per la diffusione tra installazioni.</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>स्थापनाहरू बीच प्रसारको लागि ओन्टोलोजीको निर्यात।</p>"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Exportação da ontologia para disseminação entre instalações.</p>"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Exportación de la ontología para su difusión entre instalaciones.</p>"
       }
@@ -153,47 +153,47 @@
         "value": "Processador d'ontologia"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Ontologieprozessor"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Επεξεργαστής οντολογίας"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Ontology parser"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Analizatzaile ontologikoa"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Processeur d'ontologie"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Processore di ontologia"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "ओन्टोलजी पार्सर"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Analisador de ontologia"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Procesador de ontología"
       }
@@ -216,7 +216,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.4.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -1203,12 +1203,12 @@
     ],
     "dd612": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

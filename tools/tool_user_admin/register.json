@@ -92,7 +92,7 @@
         "value": "<p>Manages logged user basic data directly from the menu link</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona los datos básicos del usuario conectado directamente desde el enlace del menú</p>"
       }
@@ -104,47 +104,47 @@
         "value": "Administrador d'usuari"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Benutzerverwaltung"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Διαχείριση χρηστών"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "User admin"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Erabiltzaileen Administrazioa"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Administration des utilisateurs"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Amministrazione degli utenti"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "प्रयोगकर्ता व्यवस्थापक"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Administração do utilizador"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Administración de usuario"
       }
@@ -167,7 +167,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -260,7 +260,7 @@
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd999": [

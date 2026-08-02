@@ -92,7 +92,7 @@
         "value": "<p>Creates QR codes for records. Used to print labels with item information for easy location in the warehouse</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Crea códigos QR para los registros. Se usa para imprimir etiquetas con la información del ítem y localizarlo fácilmente en el almacén</p>"
       }
@@ -122,7 +122,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.2.8"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [

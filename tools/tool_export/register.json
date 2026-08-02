@@ -92,27 +92,27 @@
         "value": "<p>Exportació de dades a diferents formats, csv, excel, html, etc</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Datenexport in verschiedene Formate, CSV, Excel, HTML usw</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Εξαγωγή δεδομένων σε διαφορετικές μορφές, csv, excel, html κ.λπ</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Data export to different formats, csv, excel, html, etc</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>विभिन्न ढाँचाहरूमा डाटा निर्यात, csv, एक्सेल, html, आदि</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Exportación de datos a diferentes formatos, csv, excel, html, etc.</p>"
       }
@@ -124,42 +124,42 @@
         "value": "Exportar"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Exportieren"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Export"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Esportatu"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Exportation"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Esportazione"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-nep",
         "value": "निर्यात गर्नुहोस्"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-por",
         "value": "Exportação"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Exportar"
       }
@@ -182,7 +182,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -670,12 +670,12 @@
     ],
     "dd612": [
       {
-        "count": 6
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 9
+        "count": 1
       }
     ],
     "dd1326": [
