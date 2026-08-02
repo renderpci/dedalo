@@ -236,7 +236,7 @@
 			--jse-item-is-active-bg:                         var(--color_primary);
 
 			// ---- Menu (toolbar) ----
-			--jse-menu-color:                                var(--fg_inverse);
+			--jse-menu-color:                                var(--menu_link_fg);
 
 			// ---- Context menu ----
 			--jse-context-menu-background:                   var(--color_grey_12);
@@ -317,6 +317,46 @@
 			--jse-info-color:                                var(--color_info);
 
 		}//end .content_value
+
+		// editor toolbar (menu bar)
+		// The lib paints it with --jse-theme-color, which layout.less pins to
+		// @color_grey_8 (#8b9098 in dark) — a light slab that shouts on a dark
+		// page. --jse-theme-color is NOT retuned here because it also drives
+		// modal headers and input focus rings; the bar is restyled directly so
+		// it reads as a header surface like the rest of the dark chrome.
+		.jse-main {
+
+			// (descendant, not child: the menu sits inside .jse-text-mode /
+			// .jse-tree-mode / .jse-table-mode, never directly under .jse-main)
+			.jse-menu {
+				background: var(--bg_header);
+				color: var(--menu_link_fg);
+				border-bottom: 1px solid var(--border_default);
+
+				.jse-button {
+
+					&:hover,
+					&:focus {
+						background: var(--color_grey_12);
+					}
+
+					// mode group (text / tree / table)
+					&.jse-group-button {
+						border-color: var(--border_strong);
+
+						&.jse-selected {
+							background: var(--color_grey_11);
+							color: var(--fg_default);
+						}
+					}
+				}
+
+				.jse-separator {
+					background: var(--border_strong);
+					opacity: 1;
+				}
+			}
+		}//end .jse-main
 
 	}//end .component_json
 
