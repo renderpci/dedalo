@@ -10,13 +10,17 @@
 // local vars
 :root {
 	--tool_media_versions: #a24540;
-	--media_max_height: 30vh;
 }
 @tool_color: var(--tool_media_versions);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 .wrapper_tool.tool_media_versions {
+	// scoped, NOT on :root — --media_max_height belongs to the global palette
+	// (vars_tokens.less: `inherit`), and this sheet is injected into the SPA document
+	// for good (load_style never unloads). A :root override here would retune every
+	// media wrapper in the app the first time the tool was opened.
+	--media_max_height: 30vh;
 
 	.spinner {
 		background-color: @tool_color;

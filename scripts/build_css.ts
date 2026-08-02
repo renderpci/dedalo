@@ -37,7 +37,9 @@ const checkOnly = Bun.argv.includes('--check');
 const watch = Bun.argv.includes('--watch');
 
 /** Every .less in the repo (excluding vendored/third-party trees). */
-function allLessFiles(): string[] {
+/** Every .less the build can see. Exported so the token tripwire scans exactly the set the
+ *  build compiles — a gate with its own glob would drift from the tool. */
+export function allLessFiles(): string[] {
 	const out: string[] = [];
 	for (const dir of SEARCH_DIRS) {
 		const glob = new Glob(`${dir}/**/*.less`);
@@ -136,8 +138,9 @@ async function writeOne(lessPath: string): Promise<boolean> {
  * file, or if the changed file appears anywhere in its transitive `@import` graph.
  *
  * Editing `layout/vars.less` (imported by nearly everything) correctly rebuilds nearly
- * everything; editing one tool's stylesheet rebuilds only that tool. That is the whole point
- * of walking the graph instead of rebuilding all 41 on every keystroke.
+ * everything — even though it now emits nothing, an alias rename reaches every rule site;
+ * editing one tool's stylesheet rebuilds only that tool. That is the whole point of walking
+ * the graph instead of rebuilding all 41 on every keystroke.
  */
 function affectedBy(changed: string, targets: string[]): string[] {
 	const out: string[] = [];

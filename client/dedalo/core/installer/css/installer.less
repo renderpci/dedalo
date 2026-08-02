@@ -4,11 +4,12 @@
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
 * look. Theme-aware: light is the default, dark is opt-in via `data-theme="dark"`
 * on <html> (core/page/js/theme.js convention, key 'dedalo_theme'). All colours come
-* from the shared --ut_* token palette (core/page/css/layout/theme_tokens.less), so
-* the installer follows the same theme as the rest of v7 automatically.
+* from the shared --ut_* token palette (core/page/css/layout/vars_tokens.less for
+* light, layout/theme_dark.less for dark), so the installer follows the same theme
+* as the rest of v7 automatically.
 *
-* Included from main.less (which imports theme_tokens + vars before this file, so the
-* @font_* LESS vars and --ut_* custom properties are in scope here).
+* Included from main.less, which imports those two plus layout/theme_tokens (the
+* @font_ / @size_ LESS vars) before this file, so both are in scope here.
 */
 .installer.wrapper {
 	position: fixed;

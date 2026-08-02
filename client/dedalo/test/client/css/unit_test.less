@@ -8,15 +8,19 @@
 * Dédalo components (styled by main.css via data-theme) share one theme that
 * reflects the user's app selection.
 *
-* Accent = Dédalo logo orange (@color_orange_dedalo, imported from vars).
+* Accent = Dédalo logo orange, through --ut_accent.
 * System fonts only — the app CSP (`font-src 'self' data:`, `style-src 'self'`)
 * blocks web-font CDNs, so no IBM Plex / JetBrains download; the mono stack still
 * lands on SF Mono / Menlo for the technical, data-grid feel.
 *
-* Theming is driven by a single set of CSS custom properties (--ut_*).
+* Theming is driven by a single set of CSS custom properties (--ut_*), which this
+* sheet only USES: it declares none. They come from main.css, which every document
+* linking this file also links (index.html, frame.html) — see the import note below.
 */
-// Shared fonts/sizes + the --ut_* light/dark token palette now live in one partial
-// so the installer and page shell reuse the exact same tokens (single source of truth).
+// The LESS @font_*/@size_* vars only. This partial emits nothing: its --ut_* palette
+// moved into layout/vars_tokens.less (light) + layout/theme_dark.less (dark) on
+// 2026-08-02, because this sheet and main.less are BOTH entrypoints landing in the
+// SAME document, so every token shipped twice. Do not re-import the palette here.
 @import (once) '../../../core/page/css/layout/theme_tokens';
 
 // ── mocha colour remap ──────────────────────────────────

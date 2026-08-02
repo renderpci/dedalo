@@ -3,7 +3,25 @@
  *
  * Dark palette overrides. Activated by `data-theme="dark"` on `<html>`.
  * Imported from main.less after vars.less.
+ *
+ * THE DARK PALETTE FILE: every dark override of a PALETTE token lives here,
+ * `--ut_*` included since 2026-08-02 — they were in `theme_tokens.less`, which
+ * two entrypoints import into the same document, so they shipped twice. See
+ * `vars_tokens.less` for the light half and why the special case was deleted
+ * rather than split into a second pair.
+ *
+ * "Palette token", not "anything dark": a SCOPED dark rule belongs to whatever
+ * it is scoped to and stays there (`tool_common.less` retunes `--fg_muted`
+ * under `[data-theme="dark"] .tool_header`; components carry their own
+ * `[data-theme="dark"] &` blocks). What may not happen is a fourth file
+ * declaring a palette token on a bare root — that reaches the whole document
+ * and is invisible in the compiled bundle, so it is gated by name in
+ * `test/unit/css_token_duplication_tripwire.test.ts` (PALETTE_FILES).
  */
+
+// For the `@alias` used below (`--ut_accent: @color_orange_dedalo`). vars.less emits
+// nothing and imports nothing, so this is free and cannot cycle.
+@import (once) './vars';
 
 :root[data-theme="dark"] {
 
@@ -212,6 +230,37 @@
 	--modal_btn_hover_color:      var(--color_white);
 	--modal_mini_header_bg:       var(--color_grey_4);
 	--modal_radius:               var(--radius-lg);
+
+	// ---- UI THEME TOKENS (--ut_*, dark) ----
+	// Light counterparts in vars_tokens.less, same ordinal position (after MODAL).
+	--ut_bg_app: #0b0e14;
+	--ut_bg_panel: #111621;
+	--ut_bg_elevated: #161c28;
+	--ut_bg_hover: #1c2433;
+	--ut_bg_input: #0a0d13;
+	--ut_bg_active: rgba(247,138,28,.14);
+	--ut_border: rgba(148,163,184,.14);
+	--ut_border_strong: rgba(148,163,184,.26);
+	--ut_grid_dot: rgba(148,163,184,.05);
+	--ut_text_primary: #e6edf3;
+	--ut_text_secondary: #aeb9c7;
+	--ut_text_muted: #8b97a7;
+	--ut_text_dim: #7c8696;
+	--ut_accent: @color_orange_dedalo;
+	--ut_accent_hi: #fca340;
+	--ut_accent_soft: rgba(247,138,28,.16);
+	--ut_on_accent: #2a1c05;
+	--ut_green: #3fb950;
+	--ut_green_soft: rgba(63,185,80,.15);
+	--ut_green_glow: rgba(63,185,80,.4);
+	--ut_red: #f85149;
+	--ut_red_soft: rgba(248,81,73,.15);
+	--ut_red_glow: rgba(248,81,73,.45);
+	--ut_run: #d29922;
+	--ut_run_soft: rgba(210,153,34,.15);
+	--ut_pending: #586273;
+	--ut_shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+	--ut_grain: .03;
 
 	// ---- TOOL COLORS (dark variants) ----
 	// Tools that alias existing vars inherit their dark values automatically.

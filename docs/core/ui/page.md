@@ -119,7 +119,8 @@ client/dedalo/core/page/
     ├── main.less           # single LESS entrypoint — @imports every stylesheet in the app
     ├── main.css            # compiled bundle the page loads (generated; ~445 KB)
     └── layout/             # the page's own layout layer (imported first by main.less)
-        ├── reset.less  vars.less  theme_dark.less  functions.less  fonts.less
+        ├── reset.less  vars.less  vars_tokens.less  theme_dark.less  theme_tokens.less
+        ├── functions.less  fonts.less
         ├── general.less   # html/body/#main, .loading/.hide, maintenance/recovery/notification containers
         ├── progress_bar.less  buttons.less  layout.less  list.less
         └── page.less      # the `.page` wrapper rules (content_data, bubbles_notification_container)
@@ -135,8 +136,9 @@ widget uses them:
 ```less
 // 1. layout core (tokens, mixins, page chrome)
 @import './layout/reset';
-@import './layout/vars';         // @color_* + :root CSS custom properties
-@import './layout/theme_tokens'; // semantic theme token layer
+@import './layout/vars';         // @color_* LESS aliases (compile-time only)
+@import './layout/vars_tokens';  // the :root CSS custom properties — main.less ONLY
+@import './layout/theme_tokens'; // @font_*/@size_* LESS vars (emits nothing)
 @import './layout/theme_dark';   // :root[data-theme="dark"] overrides
 @import './layout/functions';
 @import './layout/fonts';
@@ -165,9 +167,10 @@ The full layering rules, tokens and the per-component LESS contract live in
 
 Theming is CSS-custom-property driven, not a separate stylesheet:
 
-- `layout/vars.less` defines the light palette as `--color_*` properties on
-  `:root` and maps the legacy `@color_*` LESS variables onto `var(--color_*)`, so
-  every existing rule is theme-aware without edits.
+- `layout/vars_tokens.less` defines the light palette as `--color_*` properties
+  on `:root`; `layout/vars.less` maps the legacy `@color_*` LESS variables onto
+  `var(--color_*)`, so every existing rule is theme-aware without edits. Only
+  `main.less` imports `vars_tokens.less` — see `docs/core/ui/themes.md`.
 - `layout/theme_dark.less` overrides those same properties under
   `:root[data-theme="dark"]`.
 - `js/theme-init.js` runs synchronously in `<head>` and sets
