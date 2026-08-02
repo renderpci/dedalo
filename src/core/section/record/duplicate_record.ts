@@ -218,7 +218,9 @@ export async function duplicateSectionRecord(
 	//    every target its copied relation locators point at — the targets'
 	//    observer mirrors (hierarchy93 family) must recompute or they miss the
 	//    duplicate until a reconcile. Cheap gate inside propagateToObservers
-	//    (no `observers` in the component's ontology properties → no-op).
+	//    (Act 2: no subscription in the registry for the component's tipo, or
+	//    every subscription client-only — no server block — → no-op; the
+	//    ontology alone decides which edges fire).
 	//    The copy's OWN observer-mirror slots were never copied (step 1 strips
 	//    them — empty by construction for a fresh record), so there is nothing
 	//    to recompute or shrink at the new record itself.
@@ -256,8 +258,15 @@ export async function duplicateSectionRecord(
  * Covered-observer detection (the set_dato_external mirror family): such a
  * component's stored bag is DERIVED state ("who references me"), never source
  * data — step 1 must not copy it (gated by observer_reconcile_native's
- * duplicate-strip test). Same shape check as propagateToObservers' covered
- * branch and the reconciler's discovery — one law, three readers.
+ * duplicate-strip test).
+ *
+ * DELIBERATELY reads the node's raw `observe` SHAPE, not the Act-2 registry:
+ * the strip decision is "is this bag derived state by declaration?", which
+ * needs only the declaration itself. Consistent with the dispatch rule (the
+ * ontology decides — a declared server edge fires, reverse-only included):
+ * every covered observer's edges now dispatch, so a stripped bag is
+ * recomputed by the cascade/reconciler the moment its observed component
+ * saves again.
  */
 async function isCoveredObserverTipo(tipo: string): Promise<boolean> {
 	const { getNode } = await import('../../ontology/resolver.ts');

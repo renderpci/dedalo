@@ -40,6 +40,22 @@
  *     save response's data array (mode 'list', the client refresh);
  *   - other `server.filter` + perform shapes remain LEDGERED (logged skip,
  *     never guessed).
+ *
+ * DISCOVERY (Act 2, 2026-08-02): edges come from the ontology-wide
+ * SUBSCRIPTION REGISTRY (./observer_subscriptions.ts) — no longer from the
+ * saved node's `properties.observers` alone. THE DISPATCH RULE (owner ruling
+ * 2026-08-02): an edge dispatches iff the OBSERVER declares it in
+ * `properties.observe` with a `server` block (plus wildcard edges compiled
+ * from forward specs) — the ontology decides; no code table gates it. A
+ * reverse-only declaration (observe half alone) dispatches like any other —
+ * the single-declaration model that closes the rsc19 -> oh28 defect. The
+ * SQO-filter recompute's host section comes from the registry's 4-step
+ * resolution (observe-entry scope → forward spec → observer's own section
+ * with virtual↔real equivalence → loud refusal); dead config (forward-only
+ * specs, dead wildcards, unresolved hosts) is a LOUD contract violation
+ * (gate-RED where the suite ontology carries it; boot-probe/gauge/counter on
+ * a production ontology — see observer_subscriptions.ts header).
+ * Classification, the resolvers and every perform below are untouched.
  */
 
 import { incrementCounter } from '../../api/counters.ts';
@@ -50,20 +66,12 @@ import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/
 // (the VALUE import of relations/related.ts stays dynamic on the compute path).
 import type { RelatedGraphIO } from '../../relations/related.ts';
 import { auditDateItem, auditUserLocator, dbTimestamp } from './create_record.ts';
-
-interface ObserverSpec {
-	section_tipo?: string;
-	component_tipo?: string;
-}
-
-interface ObserveEntry {
-	component_tipo?: string;
-	server?: {
-		filter?: unknown;
-		config?: { use_observable_dato?: boolean; use_self_section?: boolean };
-		perform?: { function?: string; params?: Record<string, unknown> };
-	};
-}
+import {
+	type ObserveEntry,
+	entryServerBlock,
+	getObserverSubscriptions,
+	isSqoFilter,
+} from './observer_subscriptions.ts';
 
 interface StoredLocator {
 	id?: number;
@@ -132,9 +140,14 @@ export async function emitCascadeHop(
 	userId: number,
 	now: Date,
 ): Promise<void> {
-	const node = await getNode(observerTipo);
-	const specs = (node?.properties as { observers?: unknown[] } | null)?.observers;
-	if (!Array.isArray(specs) || specs.length === 0) return; // leaf — nothing to relay into
+	// Leaf pre-gate (Act 2: registry, not the node's own `observers` array):
+	// a hop is worth scheduling only when the observer's OWN saves would
+	// dispatch something — any subscription registered for it (forward-
+	// declared, or a reverse-only observe+server declaration: those dispatch
+	// by the ontology rule). A node with no subscriptions at all is a leaf —
+	// no commit-lane task / guard entry / read appears for it.
+	const hopSubscriptions = await getObserverSubscriptions(observerTipo);
+	if (hopSubscriptions.length === 0) return; // leaf — nothing to relay into
 	const chainLabel = `${observerTipo}@${sectionTipo}/${sectionId}`;
 	const key = `${observerTipo}|${kind}|${sectionTipo}|${sectionId}`;
 	if (guard.visited.has(key)) {
@@ -280,9 +293,12 @@ export async function propagateToObservers(
 ): Promise<unknown[]> {
 	const observersData: unknown[] = [];
 	try {
-		const observedNode = await getNode(observedTipo);
-		const specs = (observedNode?.properties as { observers?: ObserverSpec[] } | null)?.observers;
-		if (!Array.isArray(specs) || specs.length === 0) return observersData;
+		// Act 2 discovery: the ontology-wide subscription registry (forward
+		// specs in their declared order first — the historical iteration order
+		// — then reverse-only declarations). Dispatchability is the ontology's
+		// decision alone: an entry with a server block fires, full stop.
+		const subscriptions = await getObserverSubscriptions(observedTipo);
+		if (subscriptions.length === 0) return observersData;
 
 		// D2 root guard: created ONCE per user-initiated propagation and threaded
 		// through every re-entry (relay/external/info hops share the visited set).
@@ -303,18 +319,15 @@ export async function propagateToObservers(
 		);
 
 		const done = new Set<string>(); // observerTipo|targetKey dedup across specs
-		for (const spec of specs) {
-			const observerTipo = spec.component_tipo;
-			if (typeof observerTipo !== 'string') continue;
-			const observerNode = await getNode(observerTipo);
-			const observeEntries = (observerNode?.properties as { observe?: ObserveEntry[] } | null)
-				?.observe;
-			const entry = (observeEntries ?? []).find(
-				(candidate) =>
-					candidate?.component_tipo === observedTipo || candidate?.component_tipo === 'all',
-			);
-			const server = entry?.server;
-			if (server === undefined) continue; // client-only observer (most of them)
+		for (const sub of subscriptions) {
+			const observerTipo = sub.observerTipo;
+			// entryServerBlock is THE dispatchability predicate: undefined for a
+			// client-only observer (most of them) AND for a malformed non-object
+			// server value (build-time RED — never dispatched, never thrown on).
+			const server = entryServerBlock(sub.entry);
+			if (server === undefined) continue;
+			// No further gate: a declared server edge dispatches — the ontology
+			// decides (see the header's DISPATCH RULE).
 
 			const performFunction = server.perform?.function;
 			const useObservable = server.config?.use_observable_dato === true;
@@ -330,10 +343,24 @@ export async function propagateToObservers(
 				(observerModel === 'component_info' ||
 					getComponentModel(observerModel)?.alias === 'component_info');
 			if (isInfoObserver && performFunction === undefined) {
+				// R5 host-section law: an SQO-filter recompute searches the section
+				// the registry's 4-step resolution produced (observe-entry scope →
+				// forward spec → the observer's own section, virtual↔real-aware —
+				// see observer_subscriptions.ts). Unresolved = step 4: REFUSE
+				// LOUDLY, never guess a section (a wrong fallback would search the
+				// saved record's section, wrong for a cross-section observer). The
+				// validator flags the same edges RED at build/boot.
+				if (isSqoFilter(server.filter) && sub.hostSection === undefined) {
+					console.error(
+						`observer '${observerTipo}' ← '${observedTipo}': SQO-filter edge with UNRESOLVED host section — recompute REFUSED; add a section scope (section_tipo) to the observe entry`,
+					);
+					incrementCounter('observers_host_section_unresolved');
+					continue;
+				}
 				observersData.push(
 					...(await recomputeInfoObserver(
 						observerTipo,
-						spec.section_tipo,
+						sub.hostSection,
 						server,
 						sectionTipo,
 						sectionId,
@@ -468,7 +495,7 @@ export async function propagateToObservers(
  */
 async function recomputeInfoObserver(
 	observerTipo: string,
-	specSectionTipo: string | undefined,
+	hostSectionTipo: string | undefined,
 	server: NonNullable<ObserveEntry['server']>,
 	savedSectionTipo: string,
 	savedSectionId: number,
@@ -479,7 +506,7 @@ async function recomputeInfoObserver(
 	// targets
 	const targets: { sectionTipo: string; sectionId: number }[] = [];
 	const filter = server.filter;
-	if (filter !== undefined && filter !== false && typeof filter === 'object' && filter !== null) {
+	if (isSqoFilter(filter)) {
 		// PHP: every clause's q := the saved record's locator, with
 		// from_component_tipo taken from the FIRST clause's last path step (the
 		// portal/relation the observer's section references the record through).
@@ -505,7 +532,17 @@ async function recomputeInfoObserver(
 		for (const clause of clauses) {
 			clause.q = qLocator;
 		}
-		const searchSection = specSectionTipo ?? savedSectionTipo;
+		// The registry's 4-step host resolution supplies the search section; the
+		// caller refused the recompute if it was unresolved (step 4 — never a
+		// guessed fallback).
+		if (hostSectionTipo === undefined) {
+			console.error(
+				`observer '${observerTipo}': SQO recompute reached with an unresolved host section — refused (defense in depth; the dispatch guard should have caught this)`,
+			);
+			incrementCounter('observers_host_section_unresolved');
+			return [];
+		}
+		const searchSection = hostSectionTipo;
 		const { sanitizeClientSqo } = await import('../../concepts/sqo.ts');
 		const { buildSearchSql } = await import('../../search/sql_assembler.ts');
 		const sqo = sanitizeClientSqo({

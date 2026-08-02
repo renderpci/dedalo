@@ -228,7 +228,8 @@ export async function runWithoutStatementTimeout(
  * with AsyncLocalStorage: `withTransaction` stashes the reserved tx handle here,
  * and the exported `sql` proxy (below) transparently routes every query to it.
  * Nothing outside this module reads the store — request identity never leaks
- * into it (spec §4); it holds only a connection handle for the current tx.
+ * into it (spec §4); it holds a connection handle for the current tx plus the
+ * tx-scoped memo (getTransactionMemo), never identity.
  */
 interface TransactionHandle {
 	executor: SQL;
@@ -242,6 +243,13 @@ interface TransactionHandle {
 	 * deterministically and the query is never sent.
 	 */
 	expired: boolean;
+	/**
+	 * Transaction-scoped memo (see getTransactionMemo): derived-data snapshots
+	 * whose lifetime is exactly this transaction's span. Lazily created; dies
+	 * with the handle. Keyed by module-owned symbols so entries can never
+	 * collide across subsystems.
+	 */
+	memo?: Map<symbol, unknown>;
 }
 
 const transactionStore = new AsyncLocalStorage<TransactionHandle>();
@@ -475,6 +483,25 @@ export async function withTransaction<T>(work: () => Promise<T>): Promise<T> {
  */
 export function runDetachedFromTransaction<T>(work: () => T): T {
 	return transactionStore.exit(() => deferredActionStore.exit(() => commitActionStore.exit(work)));
+}
+
+/**
+ * The TRANSACTION-SCOPED memo for the current async context, or undefined when
+ * no transaction is ambient. For caches that must NOT seed a process-wide
+ * store from inside a transaction (S1-14: an in-tx build may observe
+ * uncommitted rows) but should not rebuild on every in-tx call either: the
+ * memo lives exactly as long as the transaction, so nothing uncommitted ever
+ * crosses the tx boundary. Introduced 2026-08-02 for the observer subscription
+ * registry (a cold-cache import ran one full registry build per component save
+ * inside the per-row import transaction). Keys are module-owned symbols.
+ * Nested withTransaction joins the ambient handle, so inner scopes share the
+ * outer memo — correct, since they share the same uncommitted read view.
+ */
+export function getTransactionMemo(): Map<symbol, unknown> | undefined {
+	const handle = transactionStore.getStore();
+	if (handle === undefined) return undefined;
+	handle.memo ??= new Map();
+	return handle.memo;
 }
 
 /**

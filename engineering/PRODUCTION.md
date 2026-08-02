@@ -258,14 +258,31 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   so the import row's error names the real cause. Cascade hops always run
   post-COMMIT (a rolled-back import fires nothing) and the relay writes
   nothing (`WC-2026-08-02-observer-relay-writes-nothing`).
+  **Discovery is observer-declared** (subscription registry,
+  `WC-2026-08-02-observer-subscription-registry-activation`): an edge
+  dispatches iff the OBSERVER's `properties.observe` entry carries a
+  `server` block — a reverse-only declaration alone is enough (the
+  subscriber registers itself). The forward `properties.observers` array is
+  legacy, consulted only to scope `'all'` wildcards and to target
+  reused-component hosts. The registry is built once per ontology state
+  (warmed at boot, hub-invalidated on any dd_ontology write); the boot
+  probe loud-logs contract violations (dead forward specs, dead wildcards,
+  unresolved SQO hosts, cycles) and the `observers_registry` gauge +
+  `observers_registry_contract_violations` counter expose them on
+  /api/v1/counters. `observers_host_section_unresolved` counts SQO
+  recomputes refused because no host section resolved (observe-entry scope
+  → forward spec → the observer's own section, virtual↔real-aware) —
+  should stay 0; a tick names the edge whose observe entry needs a
+  `section_tipo`.
   **Incident playbook — a runaway or buggy EDGE**: there is no global
   switch, and that is deliberate; the kill switch is PER-EDGE and lives in
   the source of truth. Disable the offending edge in `dd_ontology` — blank
-  the observer node's `properties.observe` entry's `server` key (or remove
-  the observed node's `properties.observers` declaration) — and the edge
-  stops firing engine-wide once the ontology cache invalidates. That is an
-  ontology EDIT, not a config override: the engine keeps doing exactly what
-  the ontology declares. Heal any drift afterwards with
+  the observer node's `properties.observe` entry's `server` key — and the
+  edge stops firing engine-wide once the ontology cache invalidates.
+  (Removing the observed node's `properties.observers` declaration is NOT a
+  kill switch any more: the reverse declaration alone dispatches; it only
+  stops wildcard-matched edges.) That is an ontology EDIT, not a config
+  override: the engine keeps doing exactly what the ontology declares. Heal any drift afterwards with
   `scripts/observer_reconcile.ts --apply` (grow-only unless
   `--allow-shrink`); every live observer write is preceded by a
   `matrix_time_machine` row, so per-record restore exists for a hop that

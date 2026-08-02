@@ -64,6 +64,8 @@ import {
 	resolveListCellMap,
 	resolveOwnConfigMap,
 } from '../../src/core/section/list_definitions/section_list.ts';
+import { clearObserverSubscriptionRegistry } from '../../src/core/section/record/observer_subscriptions.ts';
+import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 
 // --- 1. registration census -------------------------------------------------
 
@@ -93,6 +95,14 @@ const REGISTERED_CLEARERS: [string, () => void][] = [
 	// is valid pre-migration — the v5 keys throw by contract).
 	['ontology/alias clearAliasCaches', clearAliasCaches],
 	['section/buttons clearSectionButtonsCache', clearSectionButtonsCache],
+	// Observer subscription registry (Act 2, 2026-08-02): index + seed-race
+	// build tokens; the identity probe lives in observer_subscriptions_native
+	// (lifecycle test) rather than IDENTITY_CASES — the registry is global, not
+	// per-tipo keyed.
+	[
+		'record/observer_subscriptions clearObserverSubscriptionRegistry',
+		clearObserverSubscriptionRegistry,
+	],
 ];
 
 describe('hub registration census (S1-09)', () => {
@@ -114,7 +124,25 @@ const IDENTITY_CASES: [string, () => Promise<object | null>][] = [
 	['labels/catalog getLabels', () => getLabels('lg-eng')],
 	['search_related getRelationTables', () => getRelationTables()],
 	['section_map getSectionMap', () => getSectionMap('oh1')],
-	['filter_projects getUserAuthorizedProjects', () => getUserAuthorizedProjects()],
+	// AUTHZ-06 made getUserAuthorizedProjects fail CLOSED without an ambient
+	// principal (a fresh [] each call — no identity to test), which left this
+	// case permanently red. Anchor a global-admin principal so the case tests
+	// what it was written to test: cache identity across a hub fire. (The
+	// fail-closed no-principal behaviour has its own assertion surface in the
+	// AUTHZ gates; repaired 2026-08-02 during the Act 2 remediation.)
+	[
+		'filter_projects getUserAuthorizedProjects',
+		() =>
+			runWithRequestContext(
+				{
+					principal: { userId: 1, isGlobalAdmin: true, isDeveloper: false },
+					session: null,
+					requestId: 'hub_completion_test',
+					clientIp: '127.0.0.1',
+				},
+				() => getUserAuthorizedProjects(),
+			),
+	],
 	[
 		'request_config/explicit resolveHierarchySectionsFromTypes',
 		() => resolveHierarchySectionsFromTypes([1]),
