@@ -40,6 +40,24 @@
 	--geolocation_min_height: 495px; // Min height for the geolocation (leaflet) edit wrapper
 	--geolocation_player_height: 605px; // Min height for the geolocation player/transcription map
 	--geolocation_map_min_height: 320px; // Min height for the leaflet map surface itself
+	// ---- FIELD GRID (every edit field, wherever it is drawn) ----
+	// ONE grid for every field, so a literal input and a rich-text area read as
+	// the same object. Two rules only:
+	//   1. the LABEL and the VALUE TEXT start at the same left inset;
+	//   2. every value's first text line sits on the same row.
+	// An editable box (input outline, editor surface) BLEEDS --field_box_bleed
+	// outside its text, so the box is inset from the wrapper edge while the text
+	// itself still lands on --field_inset_x. Components carry the inset where
+	// their value lives: inside the <input> for literals, on .content_data for
+	// block values. See layout.less "FIELD GRID".
+	--field_inset_x: 1rem;      // label + value text left inset
+	--field_box_bleed: 0.5rem;  // editable-box overhang, outside the value text
+	--field_row_h: 2rem;        // input box height (its single line is centred)
+	--field_line_h: 1.3rem;     // one line-height for every value
+	// top pad that drops a BLOCK value's first line onto the same row as the
+	// text centred inside a --field_row_h input
+	--field_value_pad_t: calc((var(--field_row_h) - var(--field_line_h)) / 2);
+
 	--view_text_height: 1.2rem;
 	--view_line_height: 5rem;
 	--column_id_width: 6rem; // Default id column width for list
