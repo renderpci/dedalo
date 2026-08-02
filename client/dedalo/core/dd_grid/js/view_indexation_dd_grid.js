@@ -173,6 +173,10 @@ view_indexation_dd_grid.render = async function(self, options) {
 	// wrapper append nodes
 		wrapper.appendChild(top_container)
 		wrapper.appendChild(content_data)
+		// sticky bars. Keep --grid_scroll_w in sync with the real scroll width
+		// (see the note in view_indexation.less: the sticky filter bar and the
+		// section labels are sized from it so they cover what scrolls under them)
+		observe_sticky_width(wrapper)
 		// set pointers
 		// (!) Expose content_data on the wrapper so dd_grid.refresh() can
 		// replace only the data area without rebuilding the entire subtree.
@@ -181,6 +185,84 @@ view_indexation_dd_grid.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
+
+
+/**
+* SYNC_STICKY_WIDTH
+* Set `--grid_scroll_w` on the wrapper to its current horizontal scroll width.
+*
+* The indexation wrapper scrolls on BOTH axes (the per-section grids declare
+* fixed column tracks wider than the pane). A `position:sticky` bar inside it is
+* laid out at the scrollport width, so on horizontal scroll it slides left with
+* the content and stops covering the rows that pass under it. The widest box is
+* a deep sibling of the bars, so CSS alone cannot size them from it — hence this
+* measurement.
+*
+* (!) The var is reset to 100% before measuring: the bars are themselves sized
+* from it, so measuring while they are already wide would pin the value open and
+* never let it shrink back.
+*
+* (!) `scrollWidth` is NOT used: it drops the margin-left of the overflowing
+* rows and came out 52px short here. Clamping scrollLeft to its maximum and
+* adding clientWidth gives the true scrollable width. The scroll position is
+* restored in the same task, so nothing is painted in between.
+*
+* @param {HTMLElement} wrapper - The `.wrapper_dd_grid.view_indexation` node.
+* @returns {void}
+*/
+const sync_sticky_width = function(wrapper) {
+
+	// detached nodes measure 0 — nothing useful to set yet
+	if (!wrapper.isConnected) {
+		return
+	}
+
+	const previous_scroll_left = wrapper.scrollLeft
+
+	wrapper.style.setProperty('--grid_scroll_w', '100%')
+
+	wrapper.scrollLeft = wrapper.scrollWidth // clamps to the real maximum
+	const scroll_width = wrapper.scrollLeft + wrapper.clientWidth
+	wrapper.scrollLeft = previous_scroll_left
+
+	wrapper.style.setProperty('--grid_scroll_w', scroll_width + 'px')
+}//end sync_sticky_width
+
+
+
+/**
+* OBSERVE_STICKY_WIDTH
+* Keep sync_sticky_width() up to date across the wrapper's lifetime.
+*
+* Two triggers are needed:
+*   ResizeObserver  — fires once as soon as the wrapper is connected and laid
+*                     out (the initial measurement) and again whenever the pane
+*                     is resized.
+*   MutationObserver— refresh cycles replace the whole content_data node
+*                     (common.render render_level 'content'), which is a
+*                     childList mutation on the wrapper and can change the
+*                     scroll width.
+*
+* Both observers are reachable only through the wrapper node, so they are
+* collected with it when the grid is destroyed.
+*
+* @param {HTMLElement} wrapper - The `.wrapper_dd_grid.view_indexation` node.
+* @returns {void}
+*/
+const observe_sticky_width = function(wrapper) {
+
+	const handler = () => sync_sticky_width(wrapper)
+
+	const resize_observer = new ResizeObserver(handler)
+	resize_observer.observe(wrapper)
+
+	const mutation_observer = new MutationObserver(handler)
+	mutation_observer.observe(wrapper, {childList: true})
+
+	// keep the references alive with the node they belong to
+	wrapper.sticky_width_observers = [resize_observer, mutation_observer]
+}//end observe_sticky_width
 
 
 
