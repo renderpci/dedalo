@@ -94,6 +94,19 @@
 	// top pad that drops a BLOCK value's first line onto the same row as the
 	// text centred inside a --field_row_h input
 	--field_value_pad_t: calc((var(--field_row_h) - var(--field_line_h)) / 2);
+	// What an editable field's box looks like AT REST. Transparent: the value sits
+	// on the card, and the box appears on hover/focus (general.less reveals the
+	// outline, layout.less the hover tint) — the "quiet grid" the section edit view
+	// is built on. A token, not a literal, because it is a DESIGN DECISION: the
+	// redesign line deliberately reads its fields as gently sunken and re-points
+	// this to --bg_input.
+	// It has no dark override on purpose. The bug this closes was exactly a
+	// per-theme answer: general.less painted --input_bg on inputs under
+	// :root[data-theme="dark"] ONLY, so dark showed a lifted box (#1f2227 on a
+	// #1b1d20 card) while light showed nothing (#ffffff on #ffffff) — and in dark
+	// the input then disagreed with the select and editor surfaces beside it,
+	// which are transparent in both themes.
+	--field_rest_bg: transparent;
 
 	--view_text_height: 1.2rem;
 	--view_line_height: 5rem;

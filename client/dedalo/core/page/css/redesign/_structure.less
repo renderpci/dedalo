@@ -92,8 +92,11 @@
 	// editable value is visibly distinct from a static one (surfaces, not
 	// borders, signal affordance).
 	// ---------------------------------------------------------------
+	// (!) the resting fill is NOT set here — it comes from --field_rest_bg in
+	// _tokens.less. The shared FIELD GRID rule (layout.less) is 5 classes deep and
+	// would out-specify this selector, so a background-color declared here loses
+	// silently. Radius/transition/focus are unaffected: nothing else sets them.
 	.wrapper_component .input_value {
-		background-color: var(--bg_input);
 		border-radius: var(--radius-sm);
 		transition: background-color var(--transition-fast, 120ms ease), box-shadow var(--transition-fast, 120ms ease);
 
