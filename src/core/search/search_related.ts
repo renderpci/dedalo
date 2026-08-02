@@ -170,7 +170,16 @@ async function findInverseReferencesViaIndex(
 	// LIMIT/OFFSET stay exact.
 	let orderSql = 'r.section_id ASC';
 	const tableByTipo = new Map<string, string>();
-	if (options.order !== 'section_id') {
+	if (options.order === 'section_tipo_section_id') {
+		// PHP related-search DEFAULT order (v6 core/search/class.search_related.php
+		// :189 — `ORDER BY section_tipo, section_id ASC` when the SQO sets none):
+		// pure SQL over the index columns. Deliberately NOT routed through the
+		// 'table' branch below — that one fires an extra SELECT DISTINCT probe
+		// over matrix_relation_index (9.7M rows) to materialize the tipo→table
+		// mapping, a cost the observer WRITE path (which runs this per save)
+		// must not pay for an ordering the index already expresses.
+		orderSql = 'r.section_tipo ASC, r.section_id ASC';
+	} else if (options.order !== 'section_id') {
 		const tipoRows = (await sql.unsafe(
 			`SELECT DISTINCT r.section_tipo FROM matrix_relation_index r WHERE ${where.join(' AND ')}`,
 			params,
@@ -244,8 +253,13 @@ export async function findInverseReferences(
 		sectionTipos?: string[] | 'all';
 		limit?: number | false;
 		offset?: number;
-		/** 'section_id' = PHP related-search default order. */
-		order?: 'table' | 'section_id';
+		/**
+		 * 'section_id' = plain id order; 'section_tipo_section_id' = the PHP
+		 * related-search DEFAULT (v6 class.search_related.php:189, pure SQL —
+		 * multi-section scopes need the tipo tiebreak); 'table' materializes the
+		 * tipo→table mapping (extra probe — see findInverseReferencesViaIndex).
+		 */
+		order?: 'table' | 'section_id' | 'section_tipo_section_id';
 		/**
 		 * Restrict the scan to specific matrix tables (PHP sqo set_tables — the
 		 * children engine searches only the parent section's table). Each name
