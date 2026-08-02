@@ -34,6 +34,7 @@
 
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
+import { resolveLangItems } from '../resolve/lang_fallback.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import {
 	AFFECTED_MODELS_SECTION_TIPO,
@@ -89,16 +90,18 @@ function radioIsYes(relation: ToolRow['relation'], componentTipo: string): boole
 	return first !== undefined && String(first.section_id) === '1';
 }
 
-/** Resolve the tool label in the application language (PHP fallback: first, then name). */
+/**
+ * Resolve the tool label in the application language, falling back down the
+ * deterministic chain (resolve/lang_fallback.ts — alias, install default,
+ * source lang, then any) and finally to the tool NAME. PHP took items[0], i.e.
+ * whichever lang sorted first in storage: WC-2026-08-02-tool-string-lang-fallback.
+ */
 function resolveToolLabel(
 	labelItems: { lang?: string; value?: string }[] | undefined,
 	name: string,
 ): string {
-	if (labelItems === undefined || labelItems.length === 0) return name;
-	const appLang = currentApplicationLang();
-	const match = labelItems.find((item) => item.lang === appLang);
-	const label = match?.value ?? labelItems[0]?.value;
-	return label !== undefined && label !== '' ? label : name;
+	const label = resolveLangItems(labelItems, currentApplicationLang());
+	return label ?? name;
 }
 
 /**
@@ -574,7 +577,7 @@ export async function buildToolElementContext(
 		? allLabels.filter((item) => (item as { lang?: string }).lang === appLang)
 		: null;
 	const developer = row.string?.[TIPO.DEVELOPER]?.[0]?.value ?? null;
-	const description = resolveLangValue(row.string?.[TIPO.DESCRIPTION], appLang);
+	const description = resolveLangItems(row.string?.[TIPO.DESCRIPTION], appLang);
 
 	// Field order mirrors PHP create_tool_simple_context (dd_object drops null
 	// keys); consumers compare structurally so order is not load-bearing.
@@ -603,17 +606,6 @@ export async function buildToolElementContext(
 	const clientConfig = await getToolClientConfigRaw(name);
 	if (Object.keys(clientConfig).length > 0) context.config = clientConfig;
 	return context;
-}
-
-/** Resolve a lang-array component to the app-lang value (fallback: first non-empty). */
-function resolveLangValue(
-	items: { lang?: string; value?: string }[] | undefined,
-	appLang: string,
-): string | null {
-	if (items === undefined || items.length === 0) return null;
-	const match = items.find((item) => item.lang === appLang);
-	const value = match?.value ?? items.find((item) => item.value !== '')?.value;
-	return value !== undefined && value !== '' ? value : null;
 }
 
 /** Backwards-compatible section-tools helper (model 'section', non-component). */

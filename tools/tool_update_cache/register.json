@@ -90,6 +90,11 @@
         "id": 1,
         "lang": "lg-eng",
         "value": "<p>Manages Dédalo components cache clean actions</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Gestiona las acciones de limpieza de la caché de componentes de Dédalo</p>"
       }
     ],
     "dd799": [

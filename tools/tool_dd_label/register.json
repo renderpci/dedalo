@@ -72,6 +72,11 @@
         "id": 1,
         "lang": "lg-eng",
         "value": "<p>Creates tool labels in all available langs. This tool will generate JSON data and only will be applied to component_json (dd1372)</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Crea las etiquetas de las herramientas en todas las lenguas disponibles. Esta herramienta genera datos JSON y solo se aplica a component_json (dd1372)</p>"
       }
     ],
     "dd799": [

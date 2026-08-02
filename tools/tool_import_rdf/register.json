@@ -96,6 +96,11 @@
         "id": 4,
         "lang": "lg-nep",
         "value": "<p>नोमिस्मा, डब्लिन कोर, इत्यादि जस्ता बाह्य ओन्टोलजीहरू द्वारा परिभाषित RDF योजनाहरू आयात गर्नुहोस्</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-spa",
+        "value": "<p>Importa esquemas RDF definidos por ontologías externas, como Nomisma, Dublin Core, etc.&nbsp;</p>"
       }
     ],
     "dd799": [

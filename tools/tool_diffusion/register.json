@@ -90,6 +90,11 @@
         "id": 1,
         "lang": "lg-eng",
         "value": "<p>Manages diffusion features, publishing selected records to diffusion domain (MySQL, RDF, etc.)</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-spa",
+        "value": "<p>Gestiona las funciones de difusión, publicando los registros seleccionados en el dominio de difusión (MySQL, RDF, etc.)</p>"
       }
     ],
     "dd799": [
