@@ -68,6 +68,14 @@ interface TypeStyle {
 	readonly colorFor: (state: string) => string;
 	/** Horizontal nudge from centre (PHP $offsetX). */
 	readonly offsetX: number;
+	/**
+	 * Per-direction horizontal nudge, overriding `offsetX` when present. Needed by
+	 * `index`, whose in/out sprites are MIRRORED: the notch (and therefore the
+	 * visible pill body) sits on the opposite side for each.
+	 */
+	readonly offsetXFor?: (out: boolean) => number;
+	/** Label font weight (default 'normal'). */
+	readonly fontWeight?: number;
 	/** Vertical nudge added to the baseline (PHP $offsetY). */
 	readonly offsetY: number;
 	/** Label font size in native px (default 18). */
@@ -101,10 +109,27 @@ const TYPE_STYLES: Record<SpriteTag['type'], TypeStyle> = {
 	index: {
 		spriteFor: (state, out) =>
 			`${out ? 'indexOut' : 'indexIn'}-${pickState(state, ['n', 'r', 'd'], 'n')}-x2.png`,
-		// PHP: black label, white only for the normal state.
-		colorFor: (state) => (state === 'n' ? WHITE : BLACK),
-		offsetX: 2,
+		// DIVERGENCE from PHP (which used white for the normal state): black on
+		// every state. All three index fills are LIGHT (#ffab01 / #fc461a /
+		// #2f8fff), so black is the readable ink on each — white on the orange
+		// was the worst pair of the set.
+		colorFor: () => BLACK,
+		// The number is centred on the VISIBLE pill body, not on the 68px sprite
+		// box. Measured opaque span at mid-height (both are 68x30 with a circular
+		// notch): indexIn 0..54 → centre 27, indexOut 13..67 → centre 40. Sprite
+		// centre is 34, hence -7 / +6. PHP's single +2 sat 9px right of centre on
+		// `in` and 4px left of centre on `out`.
+		offsetX: -7,
+		offsetXFor: (out) => (out ? 6 : -7),
 		offsetY: 2,
+		// 20 native px (10 at the client's 1x box) instead of the ported 18: the
+		// badge is small and the digits are the whole payload. Fits — 4 digits at
+		// 20px measure ~36 native px against a 54px visible body.
+		fontSize: 20,
+		fontWeight: 600,
+		// The pill is full-height, so centre the digits instead of PHP's fixed
+		// `21 + offsetY` baseline (which sat ~2px low).
+		vCenter: true,
 	},
 	geo: {
 		spriteFor: (state) => `geo-${pickState(state, ['n', 'r'], 'n')}-x2.png`,
@@ -155,6 +180,7 @@ interface LabelSpec {
 	readonly offsetY: number;
 	readonly fontSize?: number;
 	readonly vCenter?: boolean;
+	readonly fontWeight?: number;
 }
 
 /**
@@ -172,7 +198,8 @@ function composite(sprite: Sprite, label: string, spec: LabelSpec): string {
 	const y = spec.vCenter ? height / 2 : 21 + spec.offsetY;
 	const baseline = spec.vCenter ? ' dominant-baseline="central"' : '';
 	const image = `<image width="${width}" height="${height}" xlink:href="${dataUri}"/>`;
-	const glyph = `<text x="${x}" y="${y}"${baseline} text-anchor="middle" fill="${spec.color}" font-family="${FONT_FAMILY}" font-size="${fontSize}">${text}</text>`;
+	const weight = spec.fontWeight === undefined ? '' : ` font-weight="${spec.fontWeight}"`;
+	const glyph = `<text x="${x}" y="${y}"${baseline} text-anchor="middle" fill="${spec.color}" font-family="${FONT_FAMILY}" font-size="${fontSize}"${weight}>${text}</text>`;
 	const open = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
 	return `${open}${image}${glyph}</svg>`;
 }
@@ -203,10 +230,11 @@ export function renderSpriteTag(tag: SpriteTag): string {
 	if (sprite === undefined) return fallbackPill(tag.width, tag.state, tag.display);
 	return composite(sprite, tag.display, {
 		color: style.colorFor(tag.state),
-		offsetX: style.offsetX,
+		offsetX: style.offsetXFor?.(tag.out) ?? style.offsetX,
 		offsetY: style.offsetY,
 		fontSize: style.fontSize,
 		vCenter: style.vCenter,
+		fontWeight: style.fontWeight,
 	});
 }
 
