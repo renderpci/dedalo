@@ -33,6 +33,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { getCounters } from '../../src/core/api/counters.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
@@ -43,6 +44,7 @@ import { createSession, getSession } from '../../src/core/security/session_store
 import {
 	type TermSeedHandle,
 	seedTermChainIfAbsent,
+	sweepSeedTermReferencerResidue,
 	sweepTermChain,
 } from '../helpers/observer_term_seed.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
@@ -150,6 +152,12 @@ async function relationSearchOf(id: number, key: string): Promise<unknown> {
 
 beforeAll(async () => {
 	termSeed = await seedTermChainIfAbsent();
+	// Residue tolerance (review 2026-08-02): a crashed prior run can leave
+	// scratch rsc205 referencers of on1/58 behind; the recompute then finds
+	// them as extra references and the append assertions flake. Sweep ONLY when
+	// the chain was just planted (planted ⇒ suite DB ⇒ residue is scratch by
+	// construction; on a live snapshot those rows are real records).
+	if (termSeed.seededChain) await sweepSeedTermReferencerResidue();
 	original = await termBag();
 	originalCaptured = true;
 	twinA = await createSectionRecord('rsc205', -1);
@@ -248,7 +256,7 @@ describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
 // relation slots WITHOUT the saveComponentData chokepoint, so each fires the
 // cascade itself — a refactor that drops/reorders either call must fail HERE.
 describe('bypass doors fire the observer cascade', () => {
-	test('duplicate ADDS the copy to the mirror; delete_locator REMOVES its twin', async () => {
+	test('duplicate ADDS the copy to the mirror; delete_locator shrink is REFUSED (Phase-0 fail-safe)', async () => {
 		const base = await termBag();
 		let twin = 0;
 		let copy = 0;
@@ -264,10 +272,19 @@ describe('bypass doors fire the observer cascade', () => {
 			copy = await duplicateSectionRecord('rsc205', twin, -1);
 			expect((await termBag()).length).toBe(base.length + 2);
 
-			// delete_locator door: removing the twin's locator recomputes the
-			// REMOVED target's mirror (post relation-index update — the copy
-			// must survive, the twin must not).
+			// delete_locator door: removing the twin's locator still FIRES the
+			// cascade at the removed target, but the recompute is a SHRINK and
+			// the Phase-0 fail-safe (2026-08-02, recomputeExternalRelation's
+			// shrink guard) WITHHOLDS the drop: the mirror keeps the stale twin
+			// entry until the value law (D3) restores legitimate-removal
+			// mirroring. PINNED here so a silent flip back to shrink-on-save
+			// fails this gate — REVISIT (restore the removal assertions) when D3
+			// ships. The counter DELTA is the proof the door actually fired
+			// (review 2026-08-02: without it, an unchanged bag could also mean
+			// the cascade call was dropped — the exact regression this describe
+			// block exists to catch).
 			const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
+			const refusedBefore = getCounters().observers_shrink_refused ?? 0;
 			await deletePortalLocator(
 				{ isGlobalAdmin: true, userId: -1 },
 				{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: twin },
@@ -281,13 +298,14 @@ describe('bypass doors fire the observer cascade', () => {
 					ar_properties: ['section_tipo', 'section_id', 'type', 'from_component_tipo'],
 				},
 			);
+			expect((getCounters().observers_shrink_refused ?? 0) - refusedBefore).toBe(1);
 			const afterRemoval = await termBag();
-			expect(afterRemoval.length).toBe(base.length + 1);
+			expect(afterRemoval.length).toBe(base.length + 2);
 			expect(
 				afterRemoval.some(
 					(entry) => (entry as { section_id?: string }).section_id === String(twin),
 				),
-			).toBe(false);
+			).toBe(true);
 		} finally {
 			// Delete pipeline restores the mirror; raw sweep is the crash belt.
 			for (const id of [copy, twin]) {

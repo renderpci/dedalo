@@ -44,7 +44,7 @@ import {
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
 import { encodeForJsonb } from '../db/json_codec.ts';
-import { sql } from '../db/postgres.ts';
+import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
 
 export interface SortDataChange {
@@ -609,30 +609,7 @@ export async function deletePortalLocator(
 	const model = (await getModelByTipo(tipo)) ?? '';
 	const column = getColumnNameByModel(model) ?? 'relation';
 	const table = (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix';
-	const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
-	const items =
-		((record?.columns[column as keyof typeof record.columns] as Record<string, unknown[]> | null)?.[
-			tipo
-		] as Record<string, unknown>[]) ?? [];
-	if (items.length === 0) {
-		response.msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
-		response.result = 0;
-		return response;
-	}
 
-	// type guard (PHP remove_locator_from_data): default a missing type to the
-	// component's OWN relation type (config_relation.relation_type of the tipo,
-	// then the class default — rsc860 is dd96, not dd151); abort on mismatch.
-	// PHP isset() treats null like absent, so null auto-sets too.
-	const compare = { ...locator };
-	const relationType = await getRelationTypeByTipo(tipo);
-	if (compare.type === undefined || compare.type === null) {
-		compare.type = relationType;
-	} else if (compare.type !== relationType) {
-		response.msg.push(`No locators are removed (${model} - ${tipo})`);
-		response.result = 0;
-		return response;
-	}
 	// Empty/omitted ar_properties passes through as [] — PHP's API layer never
 	// substitutes the method's 4-field default here, so compare_locators runs
 	// its full property-UNION strict compare (substituting the default
@@ -640,61 +617,149 @@ export async function deletePortalLocator(
 	// tag_id would be destroyed).
 	const properties = Array.isArray(options.ar_properties) ? options.ar_properties : [];
 
-	const kept: Record<string, unknown>[] = [];
-	const removedLocators: Record<string, unknown>[] = [];
-	for (const item of items) {
-		// PHP locator::compare_locators semantics: property present on exactly
-		// one side → not equal; absent on both → skip; section_id loose, every
-		// other property strict (stored tag_id '7' vs sent 7 does NOT match);
-		// paginated_key always excluded (accidental saved-paginated_key guard).
-		const equal = compareLocators(item as never, compare as never, properties, ['paginated_key']);
-		if (equal) {
-			removedLocators.push(item);
-		} else {
-			// PHP re-persists survivors through the locator class, which CASTS
-			// tag_id to string — mirror the normalization.
-			kept.push(
-				item?.tag_id !== undefined && item.tag_id !== null
-					? { ...item, tag_id: String(item.tag_id) }
-					: item,
+	// W11 (2026-08-02, observer-cascade prerequisite): the read → JS filter →
+	// whole-key replace below was an UNLOCKED read-modify-write on the pooled
+	// connection — two concurrent removals on the same record each read the
+	// full bag, each wrote its own filtered copy, and the second COMMIT undid
+	// the first removal (lost update); any cascade wired through this door
+	// would then propagate from a bag state that never existed. The whole RMW
+	// (+ the dataframe cascade + the TM audit row) now runs in ONE transaction
+	// with the row locked FOR UPDATE before the read, so concurrent removals
+	// serialize and the write+audit commit atomically. The post-commit fan-out
+	// (save event, permission caches, observers) stays OUTSIDE the transaction
+	// — observers must see committed state and may never run in an ambient tx
+	// (B6, see observers.ts runObserverCascadeHop).
+	const outcome = await withTransaction(async () => {
+		// Row lock first — the identifier is the allowlist-validated matrix
+		// table; both values are bound. ZERO-ROW GUARD (review 2026-08-02): a
+		// FOR UPDATE that matches no row LOCKS NOTHING, and under READ COMMITTED
+		// the readMatrixRecord below takes a FRESH snapshot — a record committed
+		// between the two statements would then be read-modify-written with NO
+		// lock, re-opening the W11 lost-update window. Never proceed past the
+		// lock unless it actually returned (and therefore locked) the row; a
+		// record that does not exist under the lock has no locators to remove —
+		// byte-identical empty-data response.
+		const lockedRows = (await sql.unsafe(
+			`SELECT id FROM "${table}" WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
+			[sectionTipo, Number(sectionId)],
+		)) as { id: number }[];
+		if (lockedRows.length === 0) {
+			return {
+				emptyData: true,
+				typeMismatch: false,
+				removed: 0,
+				removedLocators: [] as Record<string, unknown>[],
+			};
+		}
+		const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+		const items =
+			((
+				record?.columns[column as keyof typeof record.columns] as Record<string, unknown[]> | null
+			)?.[tipo] as Record<string, unknown>[]) ?? [];
+		if (items.length === 0) {
+			return {
+				emptyData: true,
+				typeMismatch: false,
+				removed: 0,
+				removedLocators: [] as Record<string, unknown>[],
+			};
+		}
+
+		// type guard (PHP remove_locator_from_data): default a missing type to the
+		// component's OWN relation type (config_relation.relation_type of the tipo,
+		// then the class default — rsc860 is dd96, not dd151); abort on mismatch.
+		// PHP isset() treats null like absent, so null auto-sets too. Runs AFTER
+		// the empty-data check (PHP order — the empty-data message wins).
+		const compare = { ...locator };
+		const relationType = await getRelationTypeByTipo(tipo);
+		if (compare.type === undefined || compare.type === null) {
+			compare.type = relationType;
+		} else if (compare.type !== relationType) {
+			return {
+				emptyData: false,
+				typeMismatch: true,
+				removed: 0,
+				removedLocators: [] as Record<string, unknown>[],
+			};
+		}
+
+		const kept: Record<string, unknown>[] = [];
+		const removedLocators: Record<string, unknown>[] = [];
+		for (const item of items) {
+			// PHP locator::compare_locators semantics: property present on exactly
+			// one side → not equal; absent on both → skip; section_id loose, every
+			// other property strict (stored tag_id '7' vs sent 7 does NOT match);
+			// paginated_key always excluded (accidental saved-paginated_key guard).
+			const equal = compareLocators(item as never, compare as never, properties, ['paginated_key']);
+			if (equal) {
+				removedLocators.push(item);
+			} else {
+				// PHP re-persists survivors through the locator class, which CASTS
+				// tag_id to string — mirror the normalization.
+				kept.push(
+					item?.tag_id !== undefined && item.tag_id !== null
+						? { ...item, tag_id: String(item.tag_id) }
+						: item,
+				);
+			}
+		}
+		if (removedLocators.length > 0) {
+			// Dataframe cascade (PHP remove_locator_from_data :1362): each removed
+			// locator strips the frame entries paired with its item id (unified
+			// id_key pairing). Pre-migration locators without an id have no id_key
+			// to pair on — PHP skips them too.
+			for (const removedLocator of removedLocators) {
+				const itemId = removedLocator.id;
+				if (itemId === undefined || itemId === null) continue;
+				await removeDataframeDataById(
+					table,
+					sectionTipo,
+					Number(sectionId),
+					tipo,
+					Math.trunc(Number(itemId)),
+					principal.userId,
+				);
+			}
+			await updateMatrixKeyData(table, sectionTipo, Number(sectionId), column, tipo, kept);
+			await recordTimeMachine(
+				{
+					sectionTipo,
+					sectionId: Number(sectionId),
+					componentTipo: tipo,
+					lang: 'lg-nolan',
+					userId: principal.userId,
+					data: kept,
+				},
+				dbTimestamp(),
 			);
 		}
+		return {
+			emptyData: false,
+			typeMismatch: false,
+			removed: removedLocators.length,
+			removedLocators,
+		};
+	});
+
+	if (outcome.emptyData) {
+		response.msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
+		response.result = 0;
+		return response;
 	}
-	const removed = removedLocators.length;
+	if (outcome.typeMismatch) {
+		response.msg.push(`No locators are removed (${model} - ${tipo})`);
+		response.result = 0;
+		return response;
+	}
+	const removed = outcome.removed;
 	if (removed > 0) {
-		// Dataframe cascade (PHP remove_locator_from_data :1362): each removed
-		// locator strips the frame entries paired with its item id (unified
-		// id_key pairing). Pre-migration locators without an id have no id_key
-		// to pair on — PHP skips them too.
-		for (const removedLocator of removedLocators) {
-			const itemId = removedLocator.id;
-			if (itemId === undefined || itemId === null) continue;
-			await removeDataframeDataById(
-				table,
-				sectionTipo,
-				Number(sectionId),
-				tipo,
-				Math.trunc(Number(itemId)),
-				principal.userId,
-			);
-		}
-		await updateMatrixKeyData(table, sectionTipo, Number(sectionId), column, tipo, kept);
-		await recordTimeMachine(
-			{
-				sectionTipo,
-				sectionId: Number(sectionId),
-				componentTipo: tipo,
-				lang: 'lg-nolan',
-				userId: principal.userId,
-				data: kept,
-			},
-			dbTimestamp(),
-		);
 		// Cache invalidation (Opus review 2026-07-10, C2): this door bypassed the
 		// save chokepoint's event fan-out, so removing a SECURITY locator (dd244
 		// admin flag, dd1725 profile, dd170 projects) left every security cache
 		// stale until the TTL — a demoted admin kept admin for up to 300s. The
 		// event channel + the targeted clear close all three caches at once.
+		// Post-COMMIT (W11): fired after the transaction above settles, so a
+		// concurrent request repopulating the cache reads the committed bag.
 		{
 			const { fireSaveEvent } = await import('../section_record/save_event.ts');
 			const { invalidatePermissionsForWrite } = await import('../security/permissions.ts');
@@ -706,14 +771,15 @@ export async function deletePortalLocator(
 		// observable targets (those are the records whose mirrors must
 		// recompute; the recompute reads truth from matrix_relation_index, so
 		// the removal is already reflected). Dynamic import: runtime-only
-		// relations→section edge, no static SCC.
+		// relations→section edge, no static SCC. Post-COMMIT (W11/B6): the
+		// recompute must read the committed removal.
 		{
 			const { propagateToObservers } = await import('../section/record/observers.ts');
 			await propagateToObservers(
 				tipo,
 				sectionTipo,
 				Number(sectionId),
-				removedLocators,
+				outcome.removedLocators,
 				principal.userId,
 			);
 		}

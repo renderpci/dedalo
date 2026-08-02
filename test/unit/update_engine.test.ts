@@ -131,6 +131,32 @@ describe('engine step semantics (fixture catalog, injected writer)', () => {
 		expect(log).toContain('query: SELECT 1');
 	});
 
+	test('reconcile refusals are VISIBLE in the update message (sub-law + >2000 freeze)', async () => {
+		// A refused record must never read as handled: the seam carries
+		// sublawRefused AND bigResultRefused, and the summary line names both
+		// (review 2026-08-02 — the freeze was log-file-only before).
+		const out = await updateVersion(
+			{ SQL_update_0: true },
+			{
+				catalog: CATALOG,
+				scripts,
+				currentVersion: [7, 0, 0],
+				logPath: LOG_PATH,
+				writeVersionRow: async () => {},
+				reconcileMirrors: async () => ({
+					repaired: 4,
+					shrinksSkipped: 2,
+					sublawRefused: 1,
+					bigResultRefused: 3,
+				}),
+			},
+		);
+		expect(out.result).toBe(true);
+		expect(out.msg).toContain(
+			'Observer mirrors reconciled: 4 repaired, 2 shrink(s) held, 1 observer(s) REFUSED (unported sub-law), 3 record(s) at the >2000-reference freeze (not written) (see update log)',
+		);
+	});
+
 	test('a failing SQL step HARD-ABORTS: no version row, PHP abort log bytes', async () => {
 		const out = await run({ SQL_update_0: true, SQL_update_1: true });
 		expect(out.result).toBe(false);
