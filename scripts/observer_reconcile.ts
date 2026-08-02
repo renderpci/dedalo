@@ -25,12 +25,18 @@
  *     bun scripts/observer_reconcile.ts --id 2 --section dc1
  *     bun scripts/observer_reconcile.ts --apply [--allow-shrink]
  *
- * SHRINK PROTECTION: a recompute that would DROP entries (after < before)
- * is reported and SKIPPED unless --allow-shrink — a mirror whose stored
- * entries exceed the index truth may be legacy data the match law does not
- * cover (locators without from_component_tipo), and an unattended sweep must
- * never mass-delete on that ambiguity. The adjudication happens INSIDE the
- * row lock (no TOCTOU). Grows (the migration-backfill case) apply normally.
+ * SHRINK PROTECTION (grow-only, membership-based — Phase-0 disarm
+ * 2026-08-02): a recompute NEVER drops a stored entry without --allow-shrink
+ * — a mirror whose stored entries exceed the index truth may be legacy data
+ * the match law does not cover, and until the value law (D3) lands the
+ * computed set is known too small, so every drop is suspect. Additions still
+ * apply (the sweep stays convergent-upward); the drop half is held and
+ * reported. The adjudication happens INSIDE the row lock (no TOCTOU).
+ *
+ * UNPORTED SUB-LAWS: observers whose source carries `set_observed_data` /
+ * `source_overwrite` (PHP sub-laws a/b, not ported) are REFUSED wholesale
+ * and reported as such — law (c) is provably the wrong law for them
+ * (numisdata679/965 would wipe ~131,800 mirror locators).
  */
 
 import { reconcileObserverMirrors } from '../src/core/section/record/observer_reconcile.ts';
@@ -58,6 +64,14 @@ console.log(
 		apply
 			? ` — ${summary.repaired} repaired, ${summary.shrinksSkipped} shrink(s) held`
 			: ' — dry-run, pass --apply to repair'
+	}${
+		summary.sublawRefused > 0
+			? `; ${summary.sublawRefused} tuple(s) REFUSED (unported sub-law — not swept)`
+			: ''
+	}${
+		summary.bigResultRefused > 0
+			? `; ${summary.bigResultRefused} record(s) at the >2000-reference FREEZE (computed, not written)`
+			: ''
 	}`,
 );
 process.exit(0);
