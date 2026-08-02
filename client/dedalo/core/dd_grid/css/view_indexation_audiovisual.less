@@ -15,7 +15,11 @@
 		background-color: @color_grey_15;
 		display: grid;
 		// ------------- posterframe|code|project|name|municipality
-		grid-template-columns: 102px 8rem 10.5rem 20rem 1fr;
+		// (!) minmax(0, 1fr), never a bare 1fr: every row is its own grid, so a
+		// track whose automatic minimum is its own content resolves to a
+		// different width in each row and the columns stop lining up as soon as
+		// the pane is too narrow to satisfy the fixed tracks.
+		grid-template-columns: 102px 8rem 10.5rem 20rem minmax(0, 1fr);
 
 		.column {
 			box-shadow: none;
@@ -94,13 +98,23 @@
 		.column.indexation {
 			display: grid;
 			// -- btn edit|tag id|indexation|transcription|av player|text fragment|tc_in|tc_out|duration|download|download watermark
-			grid-template-columns: 5rem 3rem 3rem 3rem 3rem 1fr 7rem 7rem 7rem 3rem 3rem;
+			// (!) The text fragment track is minmax(8rem, 1fr), NOT 1fr: a bare
+			// fr takes its own content as automatic minimum, so in a pane too
+			// narrow for the fixed tracks each row sized that track from its own
+			// longest word (measured: 89 / 94 / 104 / 116px across rows) and the
+			// timecode columns landed at a different x in every row. The 8rem
+			// floor is what keeps the fragment readable once the flexible space
+			// is gone; the row overflows into the existing horizontal scroll.
+			grid-template-columns: 5rem 3rem 3rem 3rem 3rem minmax(8rem, 1fr) 7rem 7rem 7rem 3rem 3rem;
 			line-height: 2rem;
 
 			>.column {
 				overflow: visible;
 				box-shadow: none;
 				outline: none;
+				// let a cell shrink inside its track instead of pushing it wider
+				// (this is what makes the text fragment's ellipsis work)
+				min-width: 0;
 
 				display: flex;
 				align-content: center;

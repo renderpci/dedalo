@@ -10135,7 +10135,7 @@ body:has(.assistant_container.standalone.show) {
   background-color: var(--color_orange_light);
   width: 100%;
   display: grid;
-  grid-template-columns: 102px 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 102px repeat(5, minmax(0, 1fr));
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc205 > .row.head .column {
   box-shadow: none;
@@ -10156,7 +10156,7 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row:not(.head) > .column {
   margin-left: 8rem;
   display: grid;
-  grid-template-columns: 1fr 1fr 6fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 6fr);
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row:not(.head) > .column > .column {
   box-shadow: none;
@@ -10164,7 +10164,7 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row.head {
   width: 100%;
   display: grid;
-  grid-template-columns: 102px 1fr 1fr 1fr 1fr;
+  grid-template-columns: 102px repeat(4, minmax(0, 1fr));
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row.head .column {
   box-shadow: none;
@@ -10185,12 +10185,12 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc197 > .row {
   width: 100%;
   display: grid;
-  grid-template-columns: 4rem 4fr 4fr 2fr;
+  grid-template-columns: 4rem minmax(0, 4fr) minmax(0, 4fr) minmax(0, 2fr);
   align-items: center;
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.tch > .row.line {
   display: grid;
-  grid-template-columns: auto 13.4rem 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: auto 13.4rem repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--color_grey_13);
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.tch > .row.line img {
@@ -10202,7 +10202,7 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc170 > .row.line {
   width: 100%;
   display: grid;
-  grid-template-columns: 5rem 8rem 2fr 1fr 1fr 1fr 7rem 2fr;
+  grid-template-columns: 5rem 8rem minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 7rem minmax(0, 2fr);
   align-items: start;
   border-bottom: 1px solid var(--color_grey_13);
 }
@@ -10218,7 +10218,7 @@ body:has(.assistant_container.standalone.show) {
   margin-left: 0px;
   background-color: var(--color_grey_15);
   display: grid;
-  grid-template-columns: 102px 8rem 10.5rem 20rem 1fr;
+  grid-template-columns: 102px 8rem 10.5rem 20rem minmax(0, 1fr);
 }
 .wrapper_dd_grid.view_indexation > .content_data > .row > .caption.audiovisual > .row.head .column {
   box-shadow: none;
@@ -10273,13 +10273,14 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_dd_grid.view_indexation > .content_data > .row > .caption.audiovisual > .row.line .column.indexation {
   display: grid;
-  grid-template-columns: 5rem 3rem 3rem 3rem 3rem 1fr 7rem 7rem 7rem 3rem 3rem;
+  grid-template-columns: 5rem 3rem 3rem 3rem 3rem minmax(8rem, 1fr) 7rem 7rem 7rem 3rem 3rem;
   line-height: 2rem;
 }
 .wrapper_dd_grid.view_indexation > .content_data > .row > .caption.audiovisual > .row.line .column.indexation > .column {
   overflow: visible;
   box-shadow: none;
   outline: none;
+  min-width: 0;
   display: flex;
   align-content: center;
   line-height: 2rem;
