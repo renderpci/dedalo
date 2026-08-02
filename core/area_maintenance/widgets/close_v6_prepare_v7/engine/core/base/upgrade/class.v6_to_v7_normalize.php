@@ -92,6 +92,19 @@ class v6_to_v7_normalize {
 	private const SAMPLE_WIDTH = 220;
 
 	/**
+	* Max DISTINCT section ids remembered per (table, section_tipo) inside one group.
+	*
+	* Locations are collected for SEVERITY_ERROR groups only — the bucket the operator has
+	* to open and look at — precisely because an unbounded id list is the one thing that
+	* could reintroduce per-row memory growth. 'fixed' and 'notice' groups routinely span
+	* hundreds of thousands of rows and are not meant to be visited one by one.
+	*
+	* Overflow is recorded per location (see 'truncated') so a capped list is never
+	* mistaken for the whole set.
+	*/
+	public const LOCATIONS_CAP = 200;
+
+	/**
 	* Language keys as v6 wrote them inside a component's `dato` map: 'lg-spa',
 	* 'lg-nolan', … Used by the MISSING_DATO_ENVELOPE rule as its safety guard.
 	*
@@ -310,6 +323,7 @@ class v6_to_v7_normalize {
 				'msg'			=> $msg,
 				'count'			=> 0,
 				'tables'		=> [],			// table => count
+				'locations'		=> [],			// "table|section_tipo" => {table, section_tipo, ids[], truncated}
 				// sampled ONLY here, on first sight of the group: encoding the offending
 				// value on every occurrence would cost a json_encode per row, which is
 				// exactly what the aggregation exists to avoid.
@@ -327,6 +341,34 @@ class v6_to_v7_normalize {
 		$table = (string)($ctx['table'] ?? '');
 		if ($table !== '') {
 			$group->tables[$table] = ($group->tables[$table] ?? 0) + 1;
+		}
+
+		// Exact locations, for the bucket that has to be reviewed by hand. A sample row is
+		// enough to RECOGNISE a finding, but not to go and fix it: that needs every record
+		// it touches. Errors are the small bucket by construction, so this stays bounded —
+		// and LOCATIONS_CAP catches the pathological case anyway.
+		if ($severity === self::SEVERITY_ERROR && $table !== '') {
+			$section_id = (string)($ctx['section_id'] ?? '');
+			if ($section_id !== '') {
+				$loc_key = $table . '|' . (string)($ctx['section_tipo'] ?? '');
+				if (!isset($group->locations[$loc_key])) {
+					$group->locations[$loc_key] = (object)[
+						'table'			=> $table,
+						'section_tipo'	=> (string)($ctx['section_tipo'] ?? ''),
+						'ids'			=> [],	// used as a SET (id => true) so repeats collapse
+						'truncated'		=> false
+					];
+				}
+				$location = $group->locations[$loc_key];
+				if (!isset($location->ids[$section_id])) {
+					// several components of the SAME record are one place to look, not many
+					if (count($location->ids) >= self::LOCATIONS_CAP) {
+						$location->truncated = true;
+					}else{
+						$location->ids[$section_id] = true;
+					}
+				}
+			}
 		}
 
 		// backward compatibility: only errors reach ->errors, so notices and repaired
@@ -467,6 +509,96 @@ class v6_to_v7_normalize {
 			'groups'			=> $groups
 		];
 	}//end get_report
+
+
+
+	/**
+	* GROUP_LOCATIONS
+	* The records a group touches, as a flat list, ids sorted and de-duplicated.
+	*
+	* @param object $group
+	* @return array<int,object> - [{ table, section_tipo, ids: (int|string)[], truncated: bool }]
+	*/
+	public static function group_locations(object $group) : array {
+
+		$out = [];
+		foreach (($group->locations ?? []) as $location) {
+
+			// NOTE the ids were stored as SET KEYS, and PHP silently casts a numeric string
+			// key to int — so this is an int|string list, not a string list. Typed
+			// accordingly: under strict_types a `string` hint here would only survive
+			// because internal functions invoke callbacks in weak mode, which is not
+			// something to build on.
+			$ids = array_keys($location->ids);
+
+			// numeric sort where possible: section_id is an integer column, and 10 sorting
+			// before 9 in a list an operator has to read is just noise.
+			usort($ids, static fn(int|string $a, int|string $b) : int => (is_numeric($a) && is_numeric($b))
+				? ((int)$a <=> (int)$b)
+				: strcmp((string)$a, (string)$b)
+			);
+
+			$out[] = (object)[
+				'table'			=> $location->table,
+				'section_tipo'	=> $location->section_tipo,
+				'ids'			=> $ids,
+				'truncated'		=> $location->truncated
+			];
+		}
+
+		return $out;
+	}//end group_locations
+
+
+
+	/**
+	* GROUP_SQL
+	* Ready-to-paste SELECTs for the records a group touches — one per
+	* (table, section_tipo), because a group can span both.
+	*
+	* This is the difference between "34 rows are wrong somewhere" and being able to look
+	* at them. The operator gets a statement they can run as-is against the v6 database.
+	*
+	* section_id is an INTEGER column in every matrix table, so ids are emitted unquoted;
+	* a non-numeric id (which should not exist) is quoted defensively rather than silently
+	* producing invalid SQL. section_tipo is a varchar and is always quoted, with any
+	* embedded quote doubled.
+	*
+	* @param object $group
+	* @return array<int,string>
+	*/
+	public static function group_sql(object $group) : array {
+
+		$out = [];
+		foreach (self::group_locations($group) as $location) {
+
+			if (empty($location->ids)) {
+				continue;
+			}
+
+			$ids = array_map(
+				static fn(int|string $id) : string => is_numeric($id)
+					? (string)$id
+					: "'" . str_replace("'", "''", (string)$id) . "'",
+				$location->ids
+			);
+
+			$where = "section_tipo = '" . str_replace("'", "''", $location->section_tipo) . "'";
+			// one id reads better as '=' than as a one-element IN list
+			$where .= (count($ids) === 1)
+				? ' AND section_id = ' . $ids[0]
+				: ' AND section_id IN (' . implode(', ', $ids) . ')';
+
+			$sql = 'SELECT * FROM ' . $location->table . ' WHERE ' . $where . ';';
+			if ($location->truncated === true) {
+				$sql .= ' -- first ' . self::LOCATIONS_CAP . ' ids only';
+			}
+
+			$out[] = $sql;
+		}
+
+		return $out;
+	}//end group_sql
 
 
 

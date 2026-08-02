@@ -184,6 +184,22 @@ which the summary block and the widget's chips report separately:
 | **NOTICES** | Cannot be migrated and will be dropped — typically an *orphan tipo*: referenced by matrix data but absent from `jer_dd`, so no model resolves. Nothing to repair. | no |
 | **NEEDS ATTENTION** | The ontology model and the stored shape disagree (the report names both: "the ontology says `button_new` but the value was written as `component_input_text`"). A person has to decide. | **yes** |
 
+Because NEEDS ATTENTION is the bucket somebody has to open, each of its groups also lists **every
+record it touches** and a ready-to-paste statement per table:
+
+```
+   14 × Bad component data [2]. Expected object. … tipo: 'ich147' … model: button_new
+        written as: component_input_text · ontology now says: button_new
+        records in matrix_dd · section_tipo ich145 · section_id: 1, 2, 3, 4, 5, 6, 7
+        SELECT * FROM matrix_dd WHERE section_tipo = 'ich145' AND section_id IN (1, 2, 3, 4, 5, 6, 7);
+```
+
+Ids are de-duplicated (14 findings across 7 records, two languages each) and sorted numerically;
+the list is capped at 200 per table + section_tipo, and says so when it truncates. The other two
+buckets deliberately collect no ids — they routinely span hundreds of thousands of rows and are
+meant to be counted, not visited. `var/data_review.json` carries the same `locations` and `sql`
+fields per group.
+
 The repairs are applied by the *same* function the migration runs (`reformat_matrix_data`, with
 `save=false` for the review), so the report is not a prediction: it is what phase 2 will do. The
 legacy `datos` column is never rewritten.

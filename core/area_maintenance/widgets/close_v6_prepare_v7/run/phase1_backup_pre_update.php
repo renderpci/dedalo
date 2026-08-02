@@ -369,6 +369,18 @@ function prepare_v7_log_summary(callable $log, object $report, string $note) : v
 			if ($group->sample !== '') {
 				$log('            sample (' . $group->sample_ref . '): ' . $group->sample);
 			}
+
+			// The records to open. Collected for NEEDS ATTENTION only — those are the ones
+			// somebody has to go and look at; the other two buckets are counted, not visited.
+			foreach (v6_to_v7_normalize::group_locations($group) as $location) {
+				$log('            records in ' . $location->table
+					. ' · section_tipo ' . $location->section_tipo
+					. ' · section_id: ' . implode(', ', $location->ids)
+					. ($location->truncated ? ' … (list capped)' : ''));
+			}
+			foreach (v6_to_v7_normalize::group_sql($group) as $sql) {
+				$log('            ' . $sql);
+			}
 		}
 	}
 
@@ -420,7 +432,11 @@ function prepare_v7_write_review_json(string $file, object $report, bool $ontolo
 				'tables'		=> $group->tables,
 				'msg'			=> $group->msg,
 				'sample'		=> $group->sample,
-				'sample_ref'	=> $group->sample_ref
+				'sample_ref'	=> $group->sample_ref,
+				// the records to review, and the statements that fetch them (populated for
+				// severity 'error' only — see v6_to_v7_normalize::LOCATIONS_CAP)
+				'locations'		=> v6_to_v7_normalize::group_locations($group),
+				'sql'			=> v6_to_v7_normalize::group_sql($group)
 			],
 			$report->groups
 		)
