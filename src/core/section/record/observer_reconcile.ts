@@ -22,6 +22,15 @@ interface ReconcileTuple {
 	hostSection: string;
 	componentToSearch: string;
 	sectionToSearch: string[] | 'all';
+	/**
+	 * Unported PHP sub-law key (`set_observed_data` / `source_overwrite`) when
+	 * the observer's source carries one — the tuple is surfaced and REFUSED,
+	 * never swept (Phase-0 disarm 2026-08-02): the kernel would refuse each
+	 * candidate anyway (defense-in-depth), but sweeping would print one error
+	 * per candidate (~9,200 for numisdata679/965) and then report the tuple as
+	 * CLEAN — the false-clean that would hide the armed wipe from the operator.
+	 */
+	sublaw: string | null;
 }
 
 export interface ReconcileOptions {
@@ -42,6 +51,10 @@ export interface ReconcileSummary {
 	drifted: number;
 	repaired: number;
 	shrinksSkipped: number;
+	/** Tuples refused wholesale: unported PHP sub-law (see ReconcileTuple.sublaw). */
+	sublawRefused: number;
+	/** Records whose persist hit the PHP >2000-reference freeze (computed, not written). */
+	bigResultRefused: number;
 }
 
 /** Every (observed → observer @ host-section) tuple with the covered server shape. */
@@ -85,18 +98,32 @@ async function discoverTuples(
 			) {
 				continue;
 			}
+			// Unported-sub-law detection FIRST (Phase-0 disarm 2026-08-02) so even
+			// a sub-law node without component_to_search surfaces as a refused
+			// tuple instead of vanishing from the report.
+			const sourceValue: unknown = properties?.source;
+			let sublaw: string | null = null;
+			if (sourceValue !== null && typeof sourceValue === 'object') {
+				for (const unportedKey of ['set_observed_data', 'source_overwrite']) {
+					if (unportedKey in (sourceValue as Record<string, unknown>)) {
+						sublaw = unportedKey;
+						break;
+					}
+				}
+			}
 			const componentToSearchRaw = properties?.source?.component_to_search;
 			const componentToSearch = Array.isArray(componentToSearchRaw)
 				? componentToSearchRaw[0]
 				: componentToSearchRaw;
-			if (typeof componentToSearch !== 'string') continue;
+			if (sublaw === null && typeof componentToSearch !== 'string') continue;
 			seen.add(key);
 			tuples.push({
 				observedTipo: observed.tipo,
 				observerTipo,
 				hostSection,
-				componentToSearch,
+				componentToSearch: typeof componentToSearch === 'string' ? componentToSearch : '',
 				sectionToSearch: properties?.source?.section_to_search ?? 'all',
+				sublaw,
 			});
 		}
 	}
@@ -107,6 +134,9 @@ async function discoverTuples(
 	// left the rest permanently stale). Union in every target section the
 	// index knows for each tuple's component_to_search.
 	for (const tuple of [...tuples]) {
+		// Refused sub-law tuples are reported once per spec host — no index
+		// fan-out (their candidates are never swept anyway).
+		if (tuple.sublaw !== null) continue;
 		const indexSections = (await sql.unsafe(
 			'SELECT DISTINCT target_section_tipo AS s FROM matrix_relation_index WHERE from_component_tipo = $1',
 			[tuple.componentToSearch],
@@ -165,10 +195,22 @@ export async function reconcileObserverMirrors(
 		drifted: 0,
 		repaired: 0,
 		shrinksSkipped: 0,
+		sublawRefused: 0,
+		bigResultRefused: 0,
 	};
 	const tuples = await discoverTuples(options.onlyObserver ?? null, options.onlySection ?? null);
 	summary.tuples = tuples.length;
 	for (const tuple of tuples) {
+		if (tuple.sublaw !== null) {
+			// Honest reporting of the wipe-armed nodes (Phase-0 disarm
+			// 2026-08-02): one REFUSED line + a summary count — never "0 drifted"
+			// for a tuple whose law is not even runnable.
+			summary.sublawRefused++;
+			log(
+				`- ${tuple.observerTipo} @ ${tuple.hostSection} (← ${tuple.observedTipo}): REFUSED — properties.source.${tuple.sublaw} is an UNPORTED PHP sub-law; candidates not swept, stored mirrors left as-is (see observers.ts Phase-0 disarm)`,
+			);
+			continue;
+		}
 		const hostTable = await getMatrixTableFromTipo(tuple.hostSection);
 		if (hostTable === null) {
 			log(
@@ -195,10 +237,22 @@ export async function reconcileObserverMirrors(
 			if (!outcome.changed) continue;
 			drifted++;
 			const isShrink = outcome.after < outcome.before;
+			if (outcome.refusedBigResult === true) {
+				// PHP >2000-reference freeze: the kernel computed the diff but
+				// persisted nothing — never count it as repaired (a refused record
+				// reported clean is the sub-law lesson all over again).
+				summary.bigResultRefused++;
+				log(
+					`  ${tuple.hostSection} §${id} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}]`,
+				);
+				continue;
+			}
 			if (outcome.skippedShrink === true) {
+				// Grow-only kernel semantics: any additions HAVE been applied (in
+				// apply mode); only the drop half is held for --allow-shrink.
 				shrinksSkipped++;
 				log(
-					`  ${tuple.hostSection} §${id} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK — skipped, pass --allow-shrink]`,
+					`  ${tuple.hostSection} §${id} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK held — grows applied, drops need --allow-shrink]`,
 				);
 				continue;
 			}
