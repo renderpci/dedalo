@@ -94,6 +94,16 @@ Two tiers, by dependency footprint:
   actions an SSH deploy key. Dependabot (`.github/dependabot.yml`,
   `github-actions` ecosystem) proposes the bumps, so pinning does not decay into
   running two-year-old actions.
+- **CodeQL init and analyze move TOGETHER** (rule 9): both are pinned to one SHA.
+  They are two paths in one repo but a single dependency — `init` builds the database
+  `analyze` reads, and a major-version split fails the run. **Dependabot cannot see
+  this** (it models each action path separately) and proposed exactly that split on
+  2026-08-03, PR #77. It will do so again on every codeql-action release: take the
+  version, bump both lines, one change. The gate is what makes the mistake loud.
+
+  Dependabot also only scans `.github/workflows/` — the `workflows-selfhosted/` tier
+  gets NO update PRs and must be bumped by hand in the same change, or the two tiers
+  drift onto different versions of the same action (they did, until 2026-08-03).
 - **The secret scanner keeps its default ruleset**: `.gitleaks.toml` must set
   `[extend] useDefault = true`. GitLab loads that same file WHOLESALE through
   `.gitlab/secret-detection-ruleset.toml`, so dropping the line would replace ~170

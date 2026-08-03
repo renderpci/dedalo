@@ -36,6 +36,9 @@
  *      owner can repoint at any commit: the pin is the difference between "we chose
  *      this code" and "we run whatever that repo publishes today", and the deploy
  *      workflow hands one of these actions an SSH key.
+ *   9. CODEQL PAIRING (2026-08-03) — every `github/codeql-action/*` step is pinned
+ *      to the SAME SHA. init and analyze are one dependency (init writes the database
+ *      analyze reads); Dependabot models them as two and WILL propose splitting them.
  *
  * SCANNERS THAT ARE NOT GATED HERE, deliberately: CodeQL (.github/workflows/codeql.yml)
  * and the secret scan (.github/workflows/security.yml) are third-party analyses whose
@@ -230,6 +233,42 @@ describe('CI workflow tripwire', () => {
 			offenders,
 			'A GitHub action referenced by tag (`@v5`) runs whatever commit that tag points at TODAY — the action owner, or anyone who compromises that account, can repoint it. Pin the 40-hex SHA and keep the version in a trailing comment (`uses: actions/checkout@fbc6f39… # v5`); Dependabot updates both. .github/workflows-selfhosted/deploy.yml hands one of these an SSH deploy key:',
 		).toEqual([]);
+	});
+
+	/**
+	 * Rule 9 — every `github/codeql-action/*` step is pinned to ONE SHA.
+	 *
+	 * `init` and `analyze` are two paths inside one repo and MUST come from the same
+	 * release: init writes the database that analyze reads, and a major-version split
+	 * fails the run. Dependabot cannot see that — it models each action PATH as its own
+	 * dependency, so on 2026-08-03 it opened a PR (#77) bumping `analyze` to v4.37.4
+	 * while leaving `init` on the v3 SHA. The PR's own CodeQL job went red, which is the
+	 * lucky case; the unlucky one is a green-looking half-upgrade nobody reads.
+	 *
+	 * Dependabot will propose the same split every time codeql-action releases, so this
+	 * has to be mechanical: whoever takes that PR gets a red gate here until both lines
+	 * move together.
+	 */
+	test('every codeql-action step is pinned to the same SHA (init and analyze cannot split)', () => {
+		const CODEQL_USES = /uses:\s*github\/codeql-action\/[a-z-]+@([0-9a-f]{40})/g;
+		const bySha = new Map<string, string[]>();
+		for (const { rel, src } of allWorkflows) {
+			for (const [line, sha] of [...src.matchAll(CODEQL_USES)].map(
+				(m) => [m[0] as string, m[1] as string] as const,
+			)) {
+				bySha.set(sha, [...(bySha.get(sha) ?? []), `${rel}: ${line}`]);
+			}
+		}
+		// Guards the guard: rename the workflow or the action and this would pass over an
+		// empty map, proving nothing — the same zero-length trap the ledger gates carry.
+		expect(
+			bySha.size,
+			'No SHA-pinned github/codeql-action step found in any workflow. Either CodeQL was removed (then delete this rule deliberately) or the pin grammar changed and this gate is now blind.',
+		).toBeGreaterThan(0);
+		expect(
+			[...bySha.entries()].map(([sha, where]) => `${sha}: ${where.join(' | ')}`),
+			'The codeql-action steps are pinned to DIFFERENT commits. `init` builds the database `analyze` consumes; across majors that run fails. Bump every codeql-action line to one SHA in one change — Dependabot proposes them separately and cannot know they are one dependency:',
+		).toHaveLength(1);
 	});
 
 	// The secret scanner's config is the one place where "make the alert go away" and
