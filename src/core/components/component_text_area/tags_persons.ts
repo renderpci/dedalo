@@ -22,8 +22,8 @@
  * with strict `===` against string ids (WC-065).
  */
 
-import { readMatrixRecord } from '../../db/matrix.ts';
 import type { MatrixRecord } from '../../db/matrix.ts';
+import { readMatrixRecord } from '../../db/matrix.ts';
 import { termByTipo } from '../../ontology/labels.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../ontology/resolver.ts';
 import { readComponentItems } from '../../resolve/component_data.ts';

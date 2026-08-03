@@ -114,7 +114,7 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		const validation = await validateElementPlan(elementTipo);
 		return { status: 200, body: validation as unknown as Record<string, unknown> };
 	},
-	rebuild_media_index: async (rqo, context) => {
+	rebuild_media_index: async (_rqo, context) => {
 		// Full media-marker resync (PHP dd_diffusion_api::rebuild_media_index):
 		// every sql/socrata publication target of the diffusion map is sent to
 		// the Bun engine, which regenerates the .publication/pub store.

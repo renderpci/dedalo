@@ -15,7 +15,7 @@
  * sanitize_quality() (:2830, SEC-065), component_image pixel law (:1850-1899).
  */
 
-import { type MediaTypeConfig, config } from '../../config/config.ts';
+import { config, type MediaTypeConfig } from '../../config/config.ts';
 
 /** The five media component model names (PHP get_media_components, sorted). */
 export type MediaModel =

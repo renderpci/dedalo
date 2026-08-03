@@ -180,7 +180,7 @@ async function main(): Promise<void> {
 		});
 
 		const response = await page.goto(testUrl, { waitUntil: 'networkidle0', timeout: 30000 });
-		if (!response || !response.ok()) {
+		if (!response?.ok()) {
 			error(`Failed to load test page: ${response?.status()} ${response?.statusText()}`);
 			error('Make sure the TS server is running (bun run src/server.ts) with a SERVER_TCP_PORT.');
 			process.exit(1);
@@ -192,7 +192,7 @@ async function main(): Promise<void> {
 		const needsLogin = await page.evaluate(() => {
 			const globals = (window as unknown as { page_globals?: { is_logged?: boolean } })
 				.page_globals;
-			return !globals || globals.is_logged !== true;
+			return globals?.is_logged !== true;
 		});
 
 		if (needsLogin) {

@@ -25,7 +25,7 @@
 import { config } from '../../config/config.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
-import { createDataCache, createOntologyCache } from '../ontology/cache_factory.ts';
+import { createDataCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import {
 	getColumnNameByModel,

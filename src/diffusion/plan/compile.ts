@@ -55,6 +55,7 @@ import type {
 	SectionPlan,
 	TargetAddress,
 } from './types.ts';
+import type { VirtualDiffusionTree, VirtualTreeNode } from './virtual_tree.ts';
 import {
 	buildVirtualDiffusionTree,
 	getDatabaseNameForElement,
@@ -62,7 +63,6 @@ import {
 	getSectionsForElement,
 	termLabelOf,
 } from './virtual_tree.ts';
-import type { VirtualDiffusionTree, VirtualTreeNode } from './virtual_tree.ts';
 
 /**
  * The breadth-first recursion budget (DEDALO_DIFFUSION_RESOLVE_LEVELS, PHP

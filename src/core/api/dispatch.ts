@@ -29,7 +29,7 @@ import {
 	reporterIpAllowed,
 } from '../error_report/gate.ts';
 import { INSTALL_ACTION_KEYS, installIpAllowed, installSurfaceReachable } from '../install/gate.ts';
-import { SUPERUSER_ID, resolvePrincipal } from '../security/permissions.ts';
+import { resolvePrincipal, SUPERUSER_ID } from '../security/permissions.ts';
 import { verifyCsrf } from '../security/session_store.ts';
 import { logApiAccess } from './access_log.ts';
 import type { ActionHandler, ApiRequestContext } from './handler_context.ts';

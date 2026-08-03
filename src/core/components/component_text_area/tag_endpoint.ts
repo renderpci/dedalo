@@ -26,7 +26,7 @@ import { isValidTipo } from '../../concepts/ontology.ts';
 import { resolveMediaPathOptions } from '../../media/ontology_path.ts';
 import { buildMediaLocation } from '../../media/path.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
-import { SESSION_COOKIE, getSession } from '../../security/session_store.ts';
+import { getSession, SESSION_COOKIE } from '../../security/session_store.ts';
 import { type LocatorTag, parseTagId, safeDecodeTagId } from './tag_grammar.ts';
 import { renderDrawTag, renderSpriteTag } from './tag_render.ts';
 

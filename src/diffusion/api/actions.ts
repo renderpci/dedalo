@@ -30,6 +30,7 @@ import type { Rqo } from '../../core/concepts/rqo.ts';
 import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { getPermissions } from '../../core/security/permissions.ts';
+import type { DiffusionJobRow } from '../jobs/queue.ts';
 import {
 	enqueueDiffusionJob,
 	getJobByClientProcessId,
@@ -38,14 +39,14 @@ import {
 	listJobsForCaller,
 	requestCancel,
 } from '../jobs/queue.ts';
-import type { DiffusionJobRow } from '../jobs/queue.ts';
 import {
-	STALE_AFTER_SECONDS,
 	getMaxRunners,
 	isSchedulerDraining,
 	isSchedulerPaused,
+	STALE_AFTER_SECONDS,
 	schedulerTick,
 } from '../jobs/scheduler.ts';
+import type { QueueFrame } from '../jobs/sse.ts';
 import {
 	encodeQueueSseChunk,
 	encodeSseChunk,
@@ -55,7 +56,6 @@ import {
 	queueJobView,
 	sseResponseHeaders,
 } from '../jobs/sse.ts';
-import type { QueueFrame } from '../jobs/sse.ts';
 import { diffusionResolveLevels } from '../plan/compile.ts';
 
 /** Old-engine cadences (pinned): 2s state re-send on diffuse; 15s ":\n" on status. */

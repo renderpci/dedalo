@@ -28,8 +28,8 @@
 import type { Principal } from '../security/permissions.ts';
 import { scheduleBackground } from './background.ts';
 import {
-	BACKGROUND_JOBS_ACTION,
 	BACKGROUND_JOB_STATUS_ACTION,
+	BACKGROUND_JOBS_ACTION,
 	backgroundJobStatusResponse,
 	backgroundJobsResponse,
 } from './job_status.ts';

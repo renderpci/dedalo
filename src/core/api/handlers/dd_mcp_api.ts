@@ -88,8 +88,8 @@ import {
 import { type AgentUiContext, buildSystemPrompt } from '../../../ai/agent/system_prompt.ts';
 import { asToolResult } from '../../../ai/mcp/envelope.ts';
 import {
-	type RegistryGates,
 	getToolSpec,
+	type RegistryGates,
 	registeredTools,
 	runTool,
 	toAgentToolDefinition,

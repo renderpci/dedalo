@@ -21,7 +21,6 @@
  */
 
 import { config } from '../../config/config.ts';
-import { readEnv } from '../../config/env.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { getColumnNameByModel, getTranslatableByTipo } from '../ontology/resolver.ts';

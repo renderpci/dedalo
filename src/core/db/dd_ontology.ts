@@ -30,8 +30,10 @@
  *    layer's readDdOntologyRow is an uncached raw-row probe for the parser.
  */
 
-import { clearOntologyDerivedCaches } from '../ontology/cache_invalidation.ts';
-import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
+import {
+	clearOntologyDerivedCaches,
+	registerOntologyCacheClearer,
+} from '../ontology/cache_invalidation.ts';
 import { safeTld } from '../ontology/tld.ts';
 import { encodeForJsonb } from './json_codec.ts';
 import { sql } from './postgres.ts';

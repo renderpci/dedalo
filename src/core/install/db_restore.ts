@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { SEED_DUMP_PATH } from './paths.ts';
-import { type DbConnDescriptor, connFromConfig, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 
 export interface DbRestoreResult {
 	result: boolean;

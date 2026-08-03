@@ -11,7 +11,7 @@
  * DEDALO_IMAGE_EXTENSIONS_SUPPORTED / _ALTERNATIVE_EXTENSIONS overrides.
  */
 
-import { type MediaTypeConfig, config } from '../../config/config.ts';
+import { config, type MediaTypeConfig } from '../../config/config.ts';
 
 /** model → its config.media entry (PHP component_<model> ↔ media type). */
 const MEDIA_MODEL_CONFIG: Readonly<Record<string, MediaTypeConfig>> = {

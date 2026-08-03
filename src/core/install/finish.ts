@@ -8,7 +8,7 @@
  */
 
 import { setServerState } from '../resolve/server_state.ts';
-import { type DbConnDescriptor, connFromConfig, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 
 export interface InstallFinishResult {
 	result: boolean;

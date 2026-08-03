@@ -144,7 +144,6 @@ function firstCsvField(record: string): string {
 }
 
 class CsvWriterSession implements WriterSession {
-	private readonly plan: PublicationPlan;
 	private readonly targetDir: string;
 	/** Insertion-ordered so close() reports tables in plan order. */
 	private readonly states = new Map<string, CsvSectionState>();
@@ -152,7 +151,6 @@ class CsvWriterSession implements WriterSession {
 	private schemaEnsured = false;
 
 	constructor(plan: PublicationPlan) {
-		this.plan = plan;
 		this.targetDir = formatTargetDir('csv', fileTargetDirLabel(plan));
 		for (const section of plan.sections) this.stateFor(section);
 	}

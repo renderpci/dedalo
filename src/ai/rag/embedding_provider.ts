@@ -8,7 +8,6 @@
  * no network, no flaky scores.
  */
 
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 
 /** The provider contract: embed a batch of texts into fixed-dimension vectors. */
@@ -45,7 +44,7 @@ export class DeterministicHashProvider implements EmbeddingProvider {
 		const tokens = text
 			.toLowerCase()
 			.normalize('NFD')
-			// biome-ignore lint/suspicious/noMisleadingCharacterClass: NFD above decomposes \u2014 combining marks ARE standalone here (standard unaccent idiom)
+			// NFD above decomposes \u2014 combining marks ARE standalone here (standard unaccent idiom)
 			.replace(/[\u0300-\u036f]/g, '') // strip combining diacritics (mirrors unaccent)
 			.split(/[^a-z0-9]+/)
 			.filter((token) => token.length > 1);

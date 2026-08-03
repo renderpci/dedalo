@@ -41,13 +41,13 @@ import { unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
-import { type MediaTypeSpec, assertValidQuality, mediaTypeOf } from '../../core/concepts/media.ts';
+import { assertValidQuality, type MediaTypeSpec, mediaTypeOf } from '../../core/concepts/media.ts';
 import { convertImage, getDimensions } from '../../core/media/engine/imagemagick.ts';
 import { resolveMediaPathOptions } from '../../core/media/ontology_path.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
-	buildMediaLocation,
 	mediaThumbLocation,
 	mediaThumbUrl,
 } from '../../core/media/path.ts';

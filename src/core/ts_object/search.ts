@@ -22,14 +22,14 @@ import { sql } from '../db/postgres.ts';
 import { getTldFromTipo, safeTld } from '../ontology/tld.ts';
 import { getChildren } from '../relations/children.ts';
 import {
+	getParentsRecursive,
 	type ParentLocator,
 	type RecursionError,
-	getParentsRecursive,
 } from '../relations/parent.ts';
 import { buildSearchSql } from '../search/sql_assembler.ts';
 import type { Principal } from '../security/permissions.ts';
-import { type NodeLocator, fetchNodeInfo } from './node_repository.ts';
-import { type TsNodeData, buildNodeData } from './ts_object.ts';
+import { fetchNodeInfo, type NodeLocator } from './node_repository.ts';
+import { buildNodeData, type TsNodeData } from './ts_object.ts';
 
 /**
  * The main display order of a TLD (PHP hierarchy::get_main_order → ontology::

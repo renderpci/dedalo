@@ -19,7 +19,7 @@
  * covers every form the language offers, and has its own test.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**

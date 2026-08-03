@@ -9,12 +9,12 @@
  */
 
 import {
-	type InfoWidgetDescriptor,
-	type WidgetContext,
-	type WidgetItem,
 	findTyped,
+	type InfoWidgetDescriptor,
 	phpRound,
 	readWidgetComponentData,
+	type WidgetContext,
+	type WidgetItem,
 } from '../widget_common.ts';
 
 async function computeGetArchiveWeights(

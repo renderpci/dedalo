@@ -29,11 +29,11 @@ import { join, resolve } from 'node:path';
 import { config } from '../src/config/config.ts';
 import {
 	FIXTURE_EXEMPT_GATES,
-	NO_ORACLE_GATES,
 	finalizeHarvestGate,
+	NO_ORACLE_GATES,
 	oracleHarvestDir,
 } from '../test/parity/oracle_fixtures.ts';
-import { PhpApiClient, hasPhpCredentials } from '../test/parity/php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from '../test/parity/php_client.ts';
 
 const projectRoot = resolve(import.meta.dir, '..');
 const parityDir = join(projectRoot, 'test', 'parity');

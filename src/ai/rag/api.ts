@@ -31,8 +31,8 @@ import type { ApiResult } from '../../core/api/response.ts';
 import { isValidTipo } from '../../core/concepts/ontology.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
 import {
-	type Principal,
 	getPermissions,
+	type Principal,
 	resolvePrincipal,
 } from '../../core/security/permissions.ts';
 import { RESTRICTED_MSG, runAsk } from './ask.ts';
@@ -45,11 +45,11 @@ import {
 	defaultRagEnv,
 } from './ask_config.ts';
 import { RagCharacterizer } from './characterizer.ts';
-import { RagConfig, defaultOntologyPort } from './config.ts';
+import { defaultOntologyPort, RagConfig } from './config.ts';
 import {
-	type MultimodalRuntimeConfig,
 	buildMultimodalProvider,
 	isMediaEnabled,
+	type MultimodalRuntimeConfig,
 	multimodalConfigFromEnv,
 } from './multimodal_config.ts';
 import { ObjectRetrieval, type SimilarityMode } from './object_retrieval.ts';

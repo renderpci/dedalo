@@ -24,7 +24,7 @@
 import type { Ddo } from '../../concepts/ddo.ts';
 import { readMatrixRecord } from '../../db/matrix.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
-import { type DataItem, EmissionContext, buildDataItem } from '../../resolve/component_data.ts';
+import { buildDataItem, type DataItem, EmissionContext } from '../../resolve/component_data.ts';
 import type { EmitDdoFn, RelationEmitContext, RelationModelResolver } from '../registry.ts';
 import { PORTAL_LIST_LIMIT } from '../relation_core.ts';
 import { portalResolver } from './portal.ts';
@@ -197,7 +197,7 @@ async function emitRelationIndexData(
 	context: RelationEmitContext,
 	config: RelationIndexConfig,
 ): Promise<void> {
-	const { ddo, row, ddoMode, defaultLang, callerTipo, emission, depth, emitDdo } = context;
+	const { ddo, row, ddoMode, callerTipo, emission, depth, emitDdo } = context;
 	const { findInverseReferenceLocators, countInverseReferences } = await import(
 		'../../search/search_related.ts'
 	);

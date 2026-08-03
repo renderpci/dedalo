@@ -50,7 +50,7 @@ import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
 import { widget as site_builder_status } from './site_builder_status.ts';
 import { widget as sqo_test_environment } from './sqo_test_environment.ts';
-import { type LabelRule, type WidgetModule, type WidgetResponse, failed } from './support.ts';
+import { failed, type LabelRule, type WidgetModule, type WidgetResponse } from './support.ts';
 import { widget as system_info } from './system_info.ts';
 import { widget as unit_test } from './unit_test.ts';
 import { widget as update_code } from './update_code.ts';

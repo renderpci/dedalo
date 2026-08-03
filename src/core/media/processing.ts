@@ -18,7 +18,7 @@ import { dirname } from 'node:path';
 import { config } from '../../config/config.ts';
 import { type MediaTypeSpec, pixelAreaBudget } from '../concepts/media.ts';
 import { buildThumb, convertImage, getColorspace, getDimensions } from './engine/imagemagick.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from './path.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
 
 /**
  * PDF thumbnail rasterization tunables (PHP component_pdf::create_thumb :273-275):
@@ -29,7 +29,7 @@ const PDF_THUMB_DENSITY = 72;
 const PDF_THUMB_QUALITY = 75;
 
 /** Resolve the media root for these path options (scratch override or config). */
-function rootOf(pathOpts: MediaPathOptions): string {
+function _rootOf(pathOpts: MediaPathOptions): string {
 	const root = pathOpts.mediaRoot ?? config.media.rootPath;
 	if (root === null || root === undefined) throw new Error('MEDIA_PATH not configured');
 	return root;

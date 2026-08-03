@@ -16,15 +16,15 @@ import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../config/config.ts';
 import {
-	type MediaTypeSpec,
 	assertAllowedExtension,
 	assertValidQuality,
+	type MediaTypeSpec,
 } from '../../concepts/media.ts';
 import { renameOldFiles } from '../file_ops.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
-	buildMediaLocation,
 	requireMediaRoot,
 } from '../path.ts';
 
@@ -41,7 +41,7 @@ export function sanitizeSegment(value: string): string {
 		value === '..' ||
 		value.includes('\0') ||
 		value.includes('/') ||
-		!/^[A-Za-z0-9_.\-]+$/.test(value)
+		!/^[A-Za-z0-9_.-]+$/.test(value)
 	) {
 		throw new Error(`Unsafe path segment '${value}'`);
 	}

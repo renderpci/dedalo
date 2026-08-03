@@ -31,13 +31,11 @@ import { config } from '../../config/config.ts';
 import { privateDir } from '../../config/env.ts';
 import { readDdOntologyRow, searchDdOntology } from '../db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
-import { type DbConnDescriptor, connFromConfig, runPsql } from '../install/pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { engineOwnsInstall } from '../update/ownership.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
 import { isSafeSectionTipo, setOntologyIoPath } from './data_io.ts';
 import {
-	MAX_MANIFEST_FILES,
-	type OntologyIoResponse,
 	assertTlsVerificationOn,
 	confinedPath,
 	consolidateSectionCounter,
@@ -45,6 +43,8 @@ import {
 	downloadRemoteOntologyFile,
 	gunzipWithCaps,
 	importFromCopyFile,
+	MAX_MANIFEST_FILES,
+	type OntologyIoResponse,
 } from './data_io_import.ts';
 import { termByTipo } from './labels.ts';
 import {

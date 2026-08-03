@@ -50,6 +50,8 @@ import type {
 } from '../section/read_source.ts';
 import type { Principal } from '../security/permissions.ts';
 import {
+	buildTmSectionRecord,
+	ddDateFromTimestamp,
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
 	TM_COLUMN_DATA as TIPO_DATA,
@@ -60,13 +62,11 @@ import {
 	TM_COLUMN_TIMESTAMP as TIPO_TIMESTAMP,
 	TM_COLUMN_USER_ID as TIPO_USER,
 	TM_NOTES_SECTION_TIPO,
-	buildTmSectionRecord,
-	ddDateFromTimestamp,
 } from '../tm_record/tm_record.ts';
 import { EmissionContext, filterItemsByLang, readComponentItems } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 import type { StructureContextEntry } from './structure_context.ts';
-import { type ParamSink, conformTmFilter } from './tm_filter.ts';
+import { conformTmFilter, type ParamSink } from './tm_filter.ts';
 
 /**
  * The section-record TM list filters by a `tipo` COLUMN filter whose value is the

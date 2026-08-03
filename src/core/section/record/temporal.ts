@@ -72,13 +72,7 @@ import {
 	mergeRelationChips,
 	resolveRelationEcho,
 } from './resolve_echo.ts';
-import {
-	type ChangedDataItem,
-	applyUpdate,
-	getIdFromKey,
-	isLangSlicedModel,
-	normalizeItemId,
-} from './save_component.ts';
+import { type ChangedDataItem, getIdFromKey, isLangSlicedModel } from './save_component.ts';
 
 /**
  * The record id the client stamps on a temporal instance (component_common.js

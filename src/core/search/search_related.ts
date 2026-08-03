@@ -41,7 +41,7 @@ import { assertMatrixTable } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
-import { VALID_DATA_COLUMNS, assertValidTipo } from './identifier_gate.ts';
+import { assertValidTipo, VALID_DATA_COLUMNS } from './identifier_gate.ts';
 import { requireRelationIndex } from './search_store.ts';
 
 /** One inverse-reference hit: the record that HOLDS the pointing locator. */

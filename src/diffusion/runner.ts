@@ -23,7 +23,6 @@
  * the flag, and a stub run publishes nothing (no dd1758 'published' rows).
  */
 
-import { readEnv } from '../config/env.ts';
 // S2-20 boot registration: the runner is its own process — load the component
 // registry so the ontology↔components model lookup is registered before plan
 // resolution touches component models (see core/ontology/resolver.ts seam note).
@@ -31,6 +30,7 @@ import '../core/components/registry.ts';
 import { readString } from '../config/readers.ts';
 import { closeDatabasePool } from '../core/db/postgres.ts';
 import { logDiffusionActivity } from '../core/diffusion_bridge/diffusion_delete.ts';
+import type { DiffusionJobRow } from './jobs/queue.ts';
 import {
 	checkpointJob,
 	finishJob,
@@ -39,7 +39,6 @@ import {
 	isCancelRequested,
 	updateJobProgress,
 } from './jobs/queue.ts';
-import type { DiffusionJobRow } from './jobs/queue.ts';
 import { RUNNER_HEARTBEAT_MS } from './jobs/scheduler.ts';
 
 /** Parse --job <uuid> (also tolerates --job=<uuid>). */

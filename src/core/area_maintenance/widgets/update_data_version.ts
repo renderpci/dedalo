@@ -14,7 +14,7 @@
 
 import type { Principal } from '../../security/permissions.ts';
 import { DEDALO_VERSION_TRIPLE } from '../../update/version.ts';
-import { type WidgetModule, type WidgetResponse, gated } from './support.ts';
+import { gated, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * update_data_version panel (PHP widgets/update_data_version::get_value):

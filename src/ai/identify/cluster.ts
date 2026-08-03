@@ -88,22 +88,22 @@
  * the clusters it had found with `stopped: true` rather than nothing at all.
  */
 
-import { type Locator, buildLocatorLookupKey } from '../../core/concepts/locator.ts';
+import { buildLocatorLookupKey, type Locator } from '../../core/concepts/locator.ts';
 import { type ComponentGrant, criterionReadableOn } from '../../core/identify/component_access.ts';
 import {
 	type AccessFilter,
 	type CandidateRecord,
-	type MatchReport,
 	compareValues,
 	findMatches,
+	type MatchReport,
 	normalizeText,
 } from '../../core/identify/match.ts';
 import { IDENTITY_LOCATOR_PROPERTIES, readPathValues } from '../../core/identify/path_read.ts';
 import { ProfileError } from '../../core/identify/profile.ts';
 import { loadProfileForSection } from '../../core/identify/profile_source.ts';
 import {
-	DEFAULT_CLUSTER_POOL_CAP,
 	capExplicitPool,
+	DEFAULT_CLUSTER_POOL_CAP,
 	listRecordPool,
 } from '../../core/identify/record_pool.ts';
 import type {
@@ -116,7 +116,7 @@ import type {
 } from '../../core/identify/types.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { scopeRecordHits } from '../../core/security/record_scope.ts';
-import { RagConfig, defaultOntologyPort } from '../rag/config.ts';
+import { defaultOntologyPort, RagConfig } from '../rag/config.ts';
 import {
 	buildMultimodalProvider,
 	isMediaEnabled,
@@ -906,4 +906,4 @@ function round(value: number): number {
 }
 
 /** Re-exported so a consumer types a criterion without reaching into core. */
-export type { Criterion, CandidateRecord };
+export type { CandidateRecord, Criterion };

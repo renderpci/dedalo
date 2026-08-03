@@ -11,10 +11,10 @@
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
-	type MediaTypeSpec,
 	assertAllowedExtension,
 	assertIngestableQuality,
 	assertNormalizedExtensionForTier,
+	type MediaTypeSpec,
 	mediaTypeOf,
 } from '../../concepts/media.ts';
 import {
@@ -27,7 +27,7 @@ import {
 import { getFfmpegProfile, settingName } from '../engine/ffmpeg_profiles.ts';
 import { type FileInfoEntry, scanContextFromItem, scanFilesInfo } from '../files_info.ts';
 import { mediaJobs } from '../jobs.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from '../path.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 import {
 	regenerate3d,
 	regenerateImage,

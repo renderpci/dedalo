@@ -20,12 +20,12 @@
  */
 
 import {
+	findTyped,
 	type InfoWidgetDescriptor,
+	readWidgetComponentData,
 	type TypedInput,
 	type WidgetContext,
 	type WidgetItem,
-	findTyped,
-	readWidgetComponentData,
 } from '../widget_common.ts';
 
 /** PHP DateInterval JSON shape (json_encode of a diff() result). */

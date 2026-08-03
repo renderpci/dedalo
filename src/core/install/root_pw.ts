@@ -13,7 +13,7 @@
  * password is still empty (fresh seed) — never silently overwrite a real one.
  */
 
-import { type DbConnDescriptor, connFromConfig, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 
 export interface SetRootPwResult {
 	result: boolean;

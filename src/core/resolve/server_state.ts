@@ -7,7 +7,7 @@
  * maintenance mode refuses non-superuser logins.
  */
 
-import { constants, accessSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { privateDir, readEnv } from '../../config/env.ts';
 

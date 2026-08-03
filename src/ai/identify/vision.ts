@@ -102,14 +102,14 @@
 
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
-import { type Locator, buildLocatorLookupKey } from '../../core/concepts/locator.ts';
+import { buildLocatorLookupKey, type Locator } from '../../core/concepts/locator.ts';
 import { type ComponentGrant, criterionReadableOn } from '../../core/identify/component_access.ts';
 import {
 	type AccessFilter,
 	type CandidateRecord,
 	IdentifyAccessError,
-	type ValueReader,
 	normalizeText,
+	type ValueReader,
 } from '../../core/identify/match.ts';
 import { IDENTITY_LOCATOR_PROPERTIES, readPathValues } from '../../core/identify/path_read.ts';
 import type {
@@ -125,15 +125,15 @@ import {
 	getPropertiesByTipo,
 } from '../../core/ontology/resolver.ts';
 import { getDatalist, probeDatalistSize } from '../../core/relations/datalist.ts';
-import { type Principal, getPermissions } from '../../core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../core/security/permissions.ts';
 import { scopeRecordHits } from '../../core/security/record_scope.ts';
 import type { AgentImage, AgentLlmProvider } from '../agent/llm_provider.ts';
 import { type CatalogModel, ModelCatalogError, resolveProvider } from '../agent/model_catalog.ts';
 import type { Evidence } from '../rag/characterizer.ts';
 import { type ExtractedImage, extractImageForEmbedding } from '../rag/image_source.ts';
 import {
-	type ImageEgressPolicy,
 	endpointIsLocal,
+	type ImageEgressPolicy,
 	multimodalConfigFromEnv,
 } from '../rag/multimodal_config.ts';
 

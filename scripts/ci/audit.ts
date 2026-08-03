@@ -85,7 +85,7 @@ async function auditPackage(dir: string): Promise<AuditReport | 'unreachable'> {
 	}
 }
 
-function flatten(dir: string, report: AuditReport): BaselineEntry[] {
+function flatten(_dir: string, report: AuditReport): BaselineEntry[] {
 	return Object.entries(report).flatMap(([pkg, advisories]) =>
 		(advisories ?? []).map((a) => ({
 			id: a.id,

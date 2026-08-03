@@ -20,7 +20,7 @@ export class ParamsCollector {
 	/** Register a value (strict-dedup) and return its '$N' placeholder. */
 	getPlaceholder(value: unknown): string {
 		// Strict search: types must match exactly (mirrors PHP array_search strict).
-		let index = this.values.findIndex((existing) => existing === value);
+		let index = this.values.indexOf(value);
 		if (index === -1) {
 			this.values.push(value);
 			index = this.values.length - 1;

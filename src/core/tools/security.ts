@@ -13,7 +13,7 @@
  */
 
 import { assertValidTipo } from '../search/identifier_gate.ts';
-import { type Principal, getPermissions } from '../security/permissions.ts';
+import { getPermissions, type Principal } from '../security/permissions.ts';
 import { isRecordInScope } from '../security/record_scope.ts';
 import type { ToolActionSpec, ToolServerModule } from './module.ts';
 

@@ -18,8 +18,7 @@
  * the month logic entirely.
  */
 
-import { createWriteStream, mkdirSync, rmSync, statSync } from 'node:fs';
-import { readFileSync } from 'node:fs';
+import { createWriteStream, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { createGunzip } from 'node:zlib';
 import { readEnv } from '../../config/env.ts';

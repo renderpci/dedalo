@@ -40,8 +40,8 @@
 import type { Principal } from '../../core/security/permissions.ts';
 import { wrapError } from '../mcp/envelope.ts';
 import {
-	type RegistryGates,
 	getToolSpec,
+	type RegistryGates,
 	registeredTools,
 	runTool,
 	toAgentToolDefinition,

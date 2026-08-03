@@ -29,7 +29,7 @@ import { config as dedaloConfig } from '../../config/config.ts';
 import { type EmitHookContext, getEmitHook } from '../components/emit_hooks.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
-import { type Rqo, callerDataframePairing, isTemporalSource } from '../concepts/rqo.ts';
+import { callerDataframePairing, isTemporalSource, type Rqo } from '../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
@@ -40,24 +40,24 @@ import {
 } from '../ontology/resolver.ts';
 import { emitDataframeItem, expandPortal } from '../relations/relation_core.ts';
 import {
+	buildDataItem,
 	type DataItem,
 	EmissionContext,
-	type SectionsEnvelope,
-	buildDataItem,
 	resolveComponentValue,
+	type SectionsEnvelope,
 } from '../resolve/component_data.ts';
 import { currentDataLang } from '../resolve/request_lang.ts';
 import {
-	type StructureContextEntry,
 	buildStructureContext,
 	contextKey,
+	type StructureContextEntry,
 } from '../resolve/structure_context.ts';
 import {
-	type Principal,
 	ddoIsAuthorized,
 	getPermissions,
 	getSectionPermissions,
 	inheritSubdatumPermission,
+	type Principal,
 	resolveComponentContextPermission,
 	resolveOwnUserRecordPermission,
 } from '../security/permissions.ts';

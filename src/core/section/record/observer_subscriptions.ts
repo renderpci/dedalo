@@ -102,9 +102,9 @@ import { getTransactionMemo, isInTransaction } from '../../db/postgres.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import {
-	type NodeWithProperties,
 	getAncestorSectionTipo,
 	getNodesWithProperty,
+	type NodeWithProperties,
 } from '../../ontology/resolver.ts';
 
 /** One `observe` entry as declared on an observer node (shared with observers.ts). */

@@ -6,7 +6,6 @@
  * DEDALO_RAG_ENABLED in ../private/.env.
  */
 
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 
 /** True only when DEDALO_RAG_ENABLED is 'true' or '1'. */

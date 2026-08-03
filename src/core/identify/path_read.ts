@@ -58,7 +58,7 @@
 
 import { config } from '../../config/config.ts';
 import { getComponentModel, getSearchBuilderFamily } from '../components/registry.ts';
-import { type Locator, buildLocatorLookupKey } from '../concepts/locator.ts';
+import { buildLocatorLookupKey, type Locator } from '../concepts/locator.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { type DdDate, ddDateToSeconds } from '../media/file_date.ts';
 import {

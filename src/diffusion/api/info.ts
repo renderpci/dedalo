@@ -22,16 +22,15 @@
  *   (dd1758 unpublish_pending rows, DIFFU-08 flip-in-place).
  */
 
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { isMariadbTargetFormat } from '../plan/formats.ts';
 import { requireSqlIdentifier } from '../plan/identifier.ts';
+import type { VirtualPathItem, VirtualTreeNode } from '../plan/virtual_tree.ts';
 import {
 	buildVirtualDiffusionTree,
 	getDatabaseNameForElement,
 	termLabelOf,
 } from '../plan/virtual_tree.ts';
-import type { VirtualPathItem, VirtualTreeNode } from '../plan/virtual_tree.ts';
 import { getTargetDatabaseStatus } from '../targets/mariadb/db.ts';
 import { WRITER_REGISTRY } from '../writers/registry.ts';
 

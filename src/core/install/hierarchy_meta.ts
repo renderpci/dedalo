@@ -7,7 +7,7 @@
  * lookup would let the wizard offer a hierarchy the activator cannot describe.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HIERARCHY_IMPORT_DIR } from './paths.ts';
 

@@ -17,7 +17,7 @@
  * to audit, one place to tighten.
  */
 
-import { type Principal, getPermissions } from '../security/permissions.ts';
+import { getPermissions, type Principal } from '../security/permissions.ts';
 import type { Criterion } from './types.ts';
 
 /**

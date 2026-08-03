@@ -17,8 +17,8 @@
  * chosen by byte-comparing each file against the previously-vendored copy: 18 of
  * the 20 files the client loads are byte-identical to what shipped before. The two
  * that are not: `highlightjs` (differs only by the build hash in its banner — same
- * 11.9.0 release) and `chai` (the old copy was a CDN build; npm's is an equivalent
- * UMD bundle, and it is test-harness-only anyway).
+ * release) and `chai` (the old copy was a CDN UMD build; since chai 6 the package is
+ * ESM-only and the harness imports it through its import map — test-harness-only either way).
  *
  * Adding a lib: add an entry here, add the dep to package.json (or drop it in
  * `vendor/` with a `reason`), and point `probe` at a file that must exist. The
@@ -27,7 +27,7 @@
  */
 
 import { resolve } from 'node:path';
-import { projectRoot, readEnv } from '../../config/env.ts';
+import { projectRoot } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 
 /**
@@ -141,7 +141,9 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 
 	// --- dev-only (client test harness; devDependencies) -------------------------
 	mocha: { base: 'node_modules/mocha', source: 'npm', probe: 'mocha.js', devOnly: true },
-	chai: { base: 'node_modules/chai', source: 'npm', probe: 'chai.js', devOnly: true },
+	// chai 5 dropped the UMD bundle: `index.js` is a self-contained ESM bundle (no bare
+	// specifiers), loaded through the harness import map. See client/dedalo/test/client/.
+	chai: { base: 'node_modules/chai', source: 'npm', probe: 'index.js', devOnly: true },
 
 	// --- COMMITTED under vendor/ (2.2 MB gzipped) --------------------------------
 	ckeditor: {

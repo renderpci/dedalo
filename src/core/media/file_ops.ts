@@ -17,10 +17,10 @@ import { dirname } from 'node:path';
 import { config } from '../../config/config.ts';
 import type { MediaTypeSpec } from '../concepts/media.ts';
 import {
-	type MediaIdentity,
-	type MediaPathOptions,
 	assertInsideMediaRoot,
 	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
 } from './path.ts';
 
 /** PHP date('Y-m-d_Hi') — the move_deleted_file / rename_old_files stamp. */

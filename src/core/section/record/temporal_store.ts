@@ -32,7 +32,7 @@
  * fallback below — keep them in lockstep when evolving the table.
  */
 
-import { type RqoSource, isTemporalSource } from '../../concepts/rqo.ts';
+import { isTemporalSource, type RqoSource } from '../../concepts/rqo.ts';
 import { encodeForJsonb } from '../../db/json_codec.ts';
 import { sql } from '../../db/postgres.ts';
 

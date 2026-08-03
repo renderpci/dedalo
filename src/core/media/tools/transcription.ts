@@ -14,10 +14,10 @@ import { dirname } from 'node:path';
 import { AUDIO_TR_QUALITY, type MediaTypeSpec } from '../../concepts/media.ts';
 import { extractAudio } from '../engine/ffmpeg.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaLocation,
 	type MediaPathOptions,
-	buildMediaLocation,
 } from '../path.ts';
 import { resolveOriginalSource } from '../processing.ts';
 

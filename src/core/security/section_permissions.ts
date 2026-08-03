@@ -39,7 +39,7 @@ import { readMatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import { getGrantChildrenTipos, getSectionRealTipo } from '../resolve/security_access_datalist.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
-import { PROFILES_SECTION, SECURITY_ACCESS_COMPONENT, resolveProfileId } from './permissions.ts';
+import { PROFILES_SECTION, resolveProfileId, SECURITY_ACCESS_COMPONENT } from './permissions.ts';
 
 /** The data lang of a non-translatable component (DEDALO_DATA_NOLAN). */
 const DATA_NOLAN = 'lg-nolan';

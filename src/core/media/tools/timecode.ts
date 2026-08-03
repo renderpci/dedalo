@@ -8,7 +8,7 @@
  * I/O. Reuses the shared TR mark helpers (tr_marks.ts).
  */
 
-import { TC_PATTERN, secondsToTc, tcToSeconds } from '../../resolve/tr_marks.ts';
+import { secondsToTc, TC_PATTERN, tcToSeconds } from '../../resolve/tr_marks.ts';
 
 /**
  * Replace every TC mark's timecode by `offsetSeconds`. Returns the rewritten

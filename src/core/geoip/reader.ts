@@ -16,8 +16,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { Reader } from 'mmdb-lib';
 import type { CountryResponse } from 'mmdb-lib';
+import { Reader } from 'mmdb-lib';
 import { isPrivateOrReserved } from './ip_ranges.ts';
 
 /**

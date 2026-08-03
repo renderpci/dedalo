@@ -65,12 +65,12 @@ import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/
 // type-only: erased at build, so no static relations↔section cycle is created
 // (the VALUE import of relations/related.ts stays dynamic on the compute path).
 import type { RelatedGraphIO } from '../../relations/related.ts';
-import { auditDateItem, auditUserLocator, dbTimestamp } from './create_record.ts';
+import { dbTimestamp } from './create_record.ts';
 import {
-	type ObserveEntry,
 	entryServerBlock,
 	getObserverSubscriptions,
 	isSqoFilter,
+	type ObserveEntry,
 } from './observer_subscriptions.ts';
 
 interface StoredLocator {

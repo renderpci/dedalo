@@ -22,7 +22,7 @@
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { buildSearchSql } from '../search/sql_assembler.ts';
-import { type Principal, getPermissions } from './permissions.ts';
+import { getPermissions, type Principal } from './permissions.ts';
 
 /**
  * True when a principal-scoped existence search for `sectionTipo/sectionId`

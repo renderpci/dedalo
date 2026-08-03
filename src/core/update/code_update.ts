@@ -31,9 +31,9 @@ import {
 	lstatSync,
 	mkdirSync,
 	openSync,
+	readdirSync,
 	readFileSync,
 	readSync,
-	readdirSync,
 	renameSync,
 	rmSync,
 	statSync,
@@ -43,7 +43,7 @@ import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
 import { downloadReleaseArchive } from './code_download.ts';
 import { engineOwnsInstall } from './ownership.ts';
-import { DEDALO_VERSION_TRIPLE, compareVersionArrays, parseVersionString } from './version.ts';
+import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
 
 const ARCHIVE_ROOT_PREFIX = 'dedalo_code/';
 const MAX_ARCHIVE_ENTRIES = 50_000;

@@ -13,7 +13,7 @@
  * 404 like every other admin surface (no existence leak).
  */
 
-import { SESSION_COOKIE, getSession } from '../security/session_store.ts';
+import { getSession, SESSION_COOKIE } from '../security/session_store.ts';
 import { getProcessPoison } from './process_health.ts';
 
 const counters = new Map<string, number>();

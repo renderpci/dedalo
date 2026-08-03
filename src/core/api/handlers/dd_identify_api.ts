@@ -75,16 +75,16 @@ import {
 	proposeElements,
 } from '../../../ai/identify/propose.ts';
 import {
+	proposeFromVision,
 	type VisionElementProposal,
 	type VisionProposeInput,
 	type VisionProposeReport,
-	proposeFromVision,
 } from '../../../ai/identify/vision.ts';
 import { collapseToRecords, tagScore } from '../../../ai/rag/fusion.ts';
 import {
-	type MultimodalRuntimeConfig,
 	buildMultimodalProvider,
 	isMediaEnabled,
+	type MultimodalRuntimeConfig,
 	multimodalConfigFromEnv,
 } from '../../../ai/rag/multimodal_config.ts';
 import type { MultimodalEmbeddingProvider } from '../../../ai/rag/multimodal_embedding_provider.ts';
@@ -98,10 +98,10 @@ import type { Rqo } from '../../concepts/rqo.ts';
 import { readExistingSectionIds } from '../../db/matrix.ts';
 import {
 	DEFAULT_POOL_CAP,
+	findMatches,
 	IdentifyAccessError,
 	type MatchInput,
 	type MatchReport,
-	findMatches,
 } from '../../identify/match.ts';
 import { readPathValues } from '../../identify/path_read.ts';
 import { type PreviewRecord, previewKey, resolvePreviewThumbs } from '../../identify/preview.ts';
@@ -122,7 +122,7 @@ import {
 } from '../../ontology/resolver.ts';
 import { getSectionMapValue } from '../../ontology/section_map.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
-import { type Principal, getPermissions } from '../../security/permissions.ts';
+import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { scopeRecordHits } from '../../security/record_scope.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';

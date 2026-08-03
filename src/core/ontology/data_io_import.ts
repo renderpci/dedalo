@@ -32,9 +32,9 @@ import {
 	existsSync,
 	mkdirSync,
 	openSync,
+	readdirSync,
 	readFileSync,
 	readSync,
-	readdirSync,
 	rmSync,
 	statSync,
 } from 'node:fs';
@@ -43,7 +43,7 @@ import { createGunzip } from 'node:zlib';
 import { z } from 'zod';
 import { readEnv } from '../../config/env.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
-import { type DbConnDescriptor, connFromConfig, runPsql } from '../install/pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { isSafeSectionTipo, safeTld } from './data_io.ts';
 
 // ---------------------------------------------------------------------------

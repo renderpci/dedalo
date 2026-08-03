@@ -58,7 +58,7 @@
  * "no file found (already removed)").
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import { atomicWriteFile, createZip, formatTargetDir, planColumnNames } from './files.ts';
@@ -351,7 +351,6 @@ interface RdfTableCounters {
 }
 
 class RdfWriterSession implements WriterSession {
-	private readonly plan: PublicationPlan;
 	private readonly serviceName: string;
 	private readonly targetDir: string;
 	/** Insertion-ordered so close() reports tables in plan order. */
@@ -364,7 +363,6 @@ class RdfWriterSession implements WriterSession {
 	private schemaEnsured = false;
 
 	constructor(plan: PublicationPlan) {
-		this.plan = plan;
 		this.serviceName = requireFilesTarget('rdf', plan);
 		this.targetDir = formatTargetDir('rdf', this.serviceName);
 		for (const section of plan.sections) {

@@ -1,7 +1,7 @@
 // Biome config (JSONC so rule decisions can carry their justification inline).
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-	"organizeImports": { "enabled": true },
+	"$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
@@ -16,16 +16,42 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
+			// Both DECLARED EXPLICITLY for the same reason as performance/noDelete below:
+			// biome 2 dropped them from `recommended`, and a rule this repo suppresses at a
+			// named site with a named reason is a rule it relies on — inheriting it from a
+			// preset means it can switch off in a minor upgrade with nothing to notice.
 			"style": {
-				"noVar": "error"
+				"noParameterAssign": "error"
 			},
 			"suspicious": {
-				"noExplicitAny": "warn"
-			}
+				"noExplicitAny": "warn",
+				"noVar": "error",
+				// OFF (biome 2 added it to `recommended`, 2026-08-03). The rule assumes a
+				// `${...}` inside a quoted string is a template literal someone forgot to
+				// backtick. In this codebase `${...}` is LITERAL SYNTAX in three domains, and
+				// every one of the 22 sites is one of them:
+				//   - diffusion placeholder tokens ('${section_tipo}' — a wildcard the
+				//     resolver matches on, not an interpolation);
+				//   - the GENERATED Apache/nginx rules ('pub/${dd_s}_${dd_i}' — those are the
+				//     WEB SERVER's variables, and interpolating them here would break the rule);
+				//   - operator-facing prose that documents .env grammar ("No ${VAR} interpolation").
+				// Backticking any of them would corrupt the value. A rule that is wrong on
+				// 100% of its hits is noise, and noise is what makes a real hit invisible.
+				"noTemplateCurlyInString": "off"
+			},
 			// performance/noDelete stays ON: accidental `delete` is worth catching. The
 			// intentional sites (PHP unset() wire-shape parity, process.env unsetting)
 			// carry inline biome-ignore comments with reasons — the established repo convention.
+			//
+			// DECLARED EXPLICITLY since the biome 2 upgrade (2026-08-03): v2 dropped this
+			// rule from `recommended`, which turned all 53 of those documented suppressions
+			// into dead comments overnight — the rule stopped running and nothing said so.
+			// A rule this repo relies on is named here, not inherited from a preset that
+			// can quietly change under it.
+			"performance": {
+				"noDelete": "error"
+			}
 		}
 	},
 	"overrides": [
@@ -33,69 +59,49 @@
 			// Tests assert presence with expect(...).not.toBeNull()/toBeDefined() before
 			// using `!`; duplicating runtime guards at ~200 gate sites adds noise without
 			// safety. Production code (src/, tools/*/server) must still narrow properly.
-			"include": ["test/**"],
-			"linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+			"includes": ["**/test/**"],
+			"linter": {
+				"rules": {
+					"style": { "noNonNullAssertion": "off" },
+					// Same argument, for the rule biome 2 added to `recommended` (2026-08-03):
+					// `(record?.columns.relation as X).test218` throws a TypeError if the read
+					// returned undefined — which in a GATE is the test failing, loudly, at the
+					// exact line that made the wrong assumption. All 55 sites are assertions on
+					// a value the test has already proven present; rewriting them into guards
+					// would turn one honest failure into two lines of ceremony each. In src/
+					// the rule stays ON, where an unexpected undefined is a 500, not a red test.
+					"correctness": { "noUnsafeOptionalChaining": "off" }
+				}
+			}
 		}
 	],
 	"files": {
-		"ignore": [
-			"node_modules",
-			// Agent / editor tooling config (not project source). `.agents/` is the real
-			// home; `.claude` is a symlink alias to it, so ignore both spellings.
-			".agents/**",
-			".claude/**",
-			".vscode/**",
-			// Local Python virtualenv for the mkdocs toolchain (never committed, absent on
-			// CI): its vendored site-packages JS produced ~15k phantom diagnostics locally,
-			// so `bun run lint` disagreed with the CI gate that runs the same command.
-			".venv/**",
-			// client/ is the TS-OWNED primary client source (since the 2026-07-11 cutover):
-			// vanilla JS on an exact wire contract, formatted to its own conventions — never linted.
-			"client/**",
-			// Third-party client libraries committed to the repo (ckeditor, json-view,
-			// pdfjs): prebuilt bundles, not our source — never linted or formatted.
-			// Index of record: src/core/client_libs/registry.ts.
-			"vendor/**",
-			// Generated documentation site (mkdocs.yml `site_dir`) — build OUTPUT, gitignored.
-			// The source is docs/; linting the rendered HTML/JS bundle is meaningless noise.
-			"docs_site/**",
-			"test/parity/fixtures/*.response.json",
-			// Captured API sample payloads (fixture data, 2.7 MiB — over Biome's maxSize).
-			"src/core/components/*/samples/*.json",
-			// Ontology seed dumps (data, not source; ontology_llm_map.json is 5.9 MiB).
-			"install/import/**",
-			// Browser-served tool assets follow the PHP-master client conventions.
-			"tools/*/js/**",
-			"tools/*/css/**",
-			"tools/*/img/**",
-			"tools/*/register.json",
-			"src/core/tools/client/**",
-			// Byte-identical copies of PHP-master browser assets (vendored qrcode lib,
-			// transformers.js bundle + worker shims) — verified identical to ../../v7_php_frozen/master_dedalo.
-			"tools/tool_qr/lib/**",
-			"tools/tool_lang/translators/browser_transformer/**",
-			"tools/tool_transcription/transcribers/browser_whisper/**",
-			// The transcription tool's shared recognition modules (VAD, repetition
-			// clean-up, paragraph grouping). Browser-served Worker assets on the same
-			// client conventions as the rest of the tool's JS — and imported UNCHANGED
-			// by the server and the test gates, which is the point: one implementation,
-			// no build step. Their .d.ts siblings ARE linted.
-			"tools/*/transcribers/lib/*.js",
-			// Documentation bundle (prebuilt site assets, not server source; renamed
-			// docs_v7 → docs in the 2026-07-10 docs-tree split).
-			"docs/**",
-			// Harvested oracle fixture store (frozen PHP responses — data, not source).
-			"test/parity/fixtures/oracle_harvest/**",
-			// The Publication API — a TOTALLY ISOLATED, read-only subsystem over the
-			// diffusion-published MariaDB (it never imports engine code and may be deployed on
-			// a different host entirely). v1 is vendored legacy PHP + a committed Swagger bundle
-			// whose JSON must never be reformatted; v2 is a standalone Bun app with its OWN
-			// package.json, tsconfig, biome-free conventions and its own test/coverage gates
-			// (`bun run test:publication`). Neither belongs to the engine's lint universe.
-			"publication/**",
-			// WC-020 migration pre-image (the restore point the --execute run wrote;
-			// gitignored data artifact, owner deletes it once satisfied).
-			".claude_migration_component_alias_preimage.json"
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/.agents",
+			"!**/.claude",
+			"!**/.vscode",
+			"!**/.venv",
+			"!**/client",
+			"!**/vendor",
+			"!**/docs_site",
+			"!**/test/parity/fixtures/**/*.response.json",
+			"!**/src/core/components/**/*/samples/**/*.json",
+			"!**/install/import",
+			"!**/tools/**/*/js",
+			"!**/tools/**/*/css",
+			"!**/tools/**/*/img",
+			"!**/tools/**/*/register.json",
+			"!**/src/core/tools/client",
+			"!**/tools/tool_qr/lib",
+			"!**/tools/tool_lang/translators/browser_transformer",
+			"!**/tools/tool_transcription/transcribers/browser_whisper",
+			"!**/tools/**/*/transcribers/lib/**/*.js",
+			"!**/docs",
+			"!**/test/parity/fixtures/oracle_harvest",
+			"!**/publication",
+			"!**/.claude_migration_component_alias_preimage.json"
 		]
 	}
 }

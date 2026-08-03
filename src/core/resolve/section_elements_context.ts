@@ -23,9 +23,9 @@ import { ACTIVITY_SECTION_TIPO, TIME_MACHINE_SECTION_TIPO } from '../concepts/se
 import { sql } from '../db/postgres.ts';
 import { getModelByTipo, getTranslatableByTipo } from '../ontology/resolver.ts';
 import { resolveVirtualEditScope } from '../relations/request_config/implicit.ts';
-import { type Principal, getPermissions, getSectionPermissions } from '../security/permissions.ts';
+import { getPermissions, getSectionPermissions, type Principal } from '../security/permissions.ts';
 import { currentDataLang } from './request_lang.ts';
-import { type StructureContextEntry, buildStructureContext } from './structure_context.ts';
+import { buildStructureContext, type StructureContextEntry } from './structure_context.ts';
 
 /** PHP default ar_components_exclude (class.common.php:3729) + section_tab. */
 const DEFAULT_EXCLUDE: ReadonlySet<string> = new Set([

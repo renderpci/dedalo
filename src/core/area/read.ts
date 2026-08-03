@@ -13,7 +13,7 @@ import { type ApiResult, denied } from '../api/response.ts';
 import { AREA_ONTOLOGY_TIPO, areaBehaviorOf, isAreaModel } from '../concepts/area.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
-import { type Principal, SUPERUSER_ID, getPermissions } from '../security/permissions.ts';
+import { getPermissions, type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import { readAreaHierarchyData } from './tree.ts';
 
 /** Shape of the tree-area boot item (subset consumed by the permission filter). */

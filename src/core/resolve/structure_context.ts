@@ -31,10 +31,10 @@ import { isAreaModel } from '../concepts/area.ts';
 import {
 	ACTIVITY_SECTION_TIPO,
 	ACTIVITY_WHEN_TIPO,
-	TIME_MACHINE_SECTION_TIPO,
-	TIME_MACHINE_SORTABLE_TIPOS,
 	isConsultationOnlySection,
 	isGrouperModel,
+	TIME_MACHINE_SECTION_TIPO,
+	TIME_MACHINE_SORTABLE_TIPOS,
 } from '../concepts/section.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';

@@ -29,7 +29,6 @@
  */
 
 import { config } from '../../config/config.ts';
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { getSectionTipos } from '../concepts/sqo.ts';
@@ -44,7 +43,7 @@ import {
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
-import { type Principal, getUserProjects } from '../security/permissions.ts';
+import { getUserProjects, type Principal } from '../security/permissions.ts';
 import { bareBrowseCount } from './bare_count.ts';
 import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';

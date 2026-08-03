@@ -27,8 +27,8 @@ import { join, resolve } from 'node:path';
 import {
 	COMMON_FILES,
 	DIARIZATION_COMMON_FILES,
-	OPTIONAL_FILES,
 	downloadModel,
+	OPTIONAL_FILES,
 } from '../src/core/ai/model_fetch.ts';
 import { modelFiles, modelStoreRoot } from '../src/core/ai/model_store.ts';
 

@@ -16,16 +16,15 @@
  */
 
 import { config } from '../../../../../config/config.ts';
-import { readString } from '../../../../../config/readers.ts';
 import { getModelByTipo, getNode } from '../../../../ontology/resolver.ts';
 import {
 	type InfoWidgetDescriptor,
-	type TypedInput,
-	type WidgetContext,
-	type WidgetItem,
 	phpRound,
 	readWidgetComponentData,
 	resolveCurrent,
+	type TypedInput,
+	type WidgetContext,
+	type WidgetItem,
 } from '../widget_common.ts';
 
 /** The two controlled vocabularies the state widget reads. */

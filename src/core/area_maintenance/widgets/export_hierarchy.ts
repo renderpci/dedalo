@@ -5,7 +5,7 @@
  */
 
 import { sql } from '../../db/postgres.ts';
-import { type WidgetModule, type WidgetResponse, engineDenied } from './support.ts';
+import { engineDenied, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * Deactivate every ACTIVE hierarchy (hierarchy1 hierarchy4 = dd64/1) whose

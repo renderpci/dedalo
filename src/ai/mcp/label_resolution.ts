@@ -33,7 +33,7 @@ export function normalizeLabel(value: string): string {
 	return (
 		value
 			.normalize('NFD')
-			// biome-ignore lint/suspicious/noMisleadingCharacterClass: stripping combining marks after NFD is the point
+			// stripping combining marks after NFD is the point
 			.replace(/[̀-ͯ]/g, '')
 			.toLowerCase()
 			.trim()

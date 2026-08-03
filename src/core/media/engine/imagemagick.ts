@@ -13,7 +13,7 @@
 import { existsSync } from 'node:fs';
 import { config } from '../../../config/config.ts';
 import { pixelAreaBudget } from '../../concepts/media.ts';
-import { type SpawnResult, runBinary } from './spawn.ts';
+import { runBinary, type SpawnResult } from './spawn.ts';
 
 /** Resolve the ImageMagick binary: `magick` (v7) if present, else `convert` (v6). */
 export function resolveMagick(): string {

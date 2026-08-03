@@ -19,10 +19,8 @@
 
 import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
-import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../ontology/resolver.ts';
-import { resolveComponentValue } from '../resolve/component_data.ts';
+import { getMatrixTableFromTipo, getNode } from '../ontology/resolver.ts';
 import { findInverseReferences } from '../search/search_related.ts';
-import { getRelationListValue } from './datalist.ts';
 
 export const RELATED_UNIDIRECTIONAL = 'dd620';
 export const RELATED_BIDIRECTIONAL = 'dd467';

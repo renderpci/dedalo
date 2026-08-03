@@ -14,7 +14,6 @@
  */
 
 import { hostname } from 'node:os';
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import {
 	claimNextQueuedJob,

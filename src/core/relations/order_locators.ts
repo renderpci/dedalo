@@ -177,7 +177,9 @@ export async function rankLocatorsByColumns(
 		section_id: number;
 	}[];
 	const rank = new Map<string, number>();
-	rows.forEach((row, index) => rank.set(`${row.section_tipo}_${row.section_id}`, index));
+	rows.forEach((row, index) => {
+		rank.set(`${row.section_tipo}_${row.section_id}`, index);
+	});
 
 	const rankOf = (item: { section_id?: unknown; section_tipo?: unknown }): number =>
 		rank.get(`${item?.section_tipo ?? ''}_${Number(item?.section_id ?? 0)}`) ??

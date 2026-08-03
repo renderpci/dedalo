@@ -28,17 +28,16 @@
  *   already rolled back by the failed writeRows call.
  */
 
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
+import type { MariadbExecResult } from '../targets/mariadb/db.ts';
 import {
 	getTargetPool,
 	isMissingDatabaseError,
 	isMissingTableError,
 	probeTargetDatabase,
 } from '../targets/mariadb/db.ts';
-import type { MariadbExecResult } from '../targets/mariadb/db.ts';
 import {
 	DEFAULT_UPSERT_BATCH_BYTES,
 	DEFAULT_UPSERT_BATCH_ROWS,

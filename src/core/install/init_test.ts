@@ -8,7 +8,7 @@
  * also fails the panel; `msg` carries the human-readable pass/fail lines.
  */
 
-import { constants, accessSync, existsSync } from 'node:fs';
+import { accessSync, constants, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { SEED_DUMP_PATH } from './paths.ts';

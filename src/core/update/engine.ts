@@ -28,10 +28,10 @@ import { privateDir, readEnv } from '../../config/env.ts';
 import { encodeForJsonb } from '../db/json_codec.ts';
 import { sql } from '../db/postgres.ts';
 import {
-	UPDATE_CATALOG,
-	type UpdateDescriptor,
 	getMatchedDescriptor,
 	getUpdateVersion,
+	UPDATE_CATALOG,
+	type UpdateDescriptor,
 } from './catalog.ts';
 
 /** A registered TS migration script (the script_class::script_method twin). */

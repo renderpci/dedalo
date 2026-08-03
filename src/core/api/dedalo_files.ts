@@ -23,7 +23,7 @@
 
 import { readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { TOOLS_URL_BASE, TOOL_COMMON_CLIENT_DIR, getRoots } from '../tools/paths.ts';
+import { getRoots, TOOL_COMMON_CLIENT_DIR, TOOLS_URL_BASE } from '../tools/paths.ts';
 import { DEDALO_ENGINE_VERSION } from '../update/version.ts';
 
 /** One manifest entry ({type,url}, PHP shape). */

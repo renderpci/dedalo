@@ -18,10 +18,10 @@
 
 import {
 	type InfoWidgetDescriptor,
-	type WidgetContext,
-	type WidgetItem,
 	readWidgetComponentData,
 	resolveCurrent,
+	type WidgetContext,
+	type WidgetItem,
 } from '../widget_common.ts';
 import { CALCULATION_FUNCTIONS } from './functions.ts';
 

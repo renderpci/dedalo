@@ -12,11 +12,11 @@
 import { buildPortalGridValue } from '../grid.ts';
 import {
 	type InfoWidgetDescriptor,
+	readWidgetComponentData,
+	resolveCurrent,
 	type TypedInput,
 	type WidgetContext,
 	type WidgetItem,
-	readWidgetComponentData,
-	resolveCurrent,
 } from '../widget_common.ts';
 
 async function computeDescriptors(ipo: unknown[], context: WidgetContext): Promise<WidgetItem[]> {

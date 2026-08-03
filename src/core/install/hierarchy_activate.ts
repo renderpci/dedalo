@@ -20,7 +20,7 @@
 
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
-import { HIERARCHY_SECTION, ensureHierarchy } from '../ontology/hierarchy_state.ts';
+import { ensureHierarchy, HIERARCHY_SECTION } from '../ontology/hierarchy_state.ts';
 import {
 	HIERARCHY_TERM,
 	HIERARCHY_TLD,

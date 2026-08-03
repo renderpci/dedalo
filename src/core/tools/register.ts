@@ -622,7 +622,7 @@ const DEFAULT_REGISTRY_TARGET: RegistryWriteTarget = {
  * must stay green BEFORE TOOLS_ENABLE_REGISTRY_IMPORT is ever enabled.
  */
 export async function writeRegistryRecord(
-	name: string,
+	_name: string,
 	record: ToolRecord,
 	existing: RegistryRow | null,
 	target: RegistryWriteTarget = DEFAULT_REGISTRY_TARGET,

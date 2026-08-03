@@ -23,13 +23,13 @@
 import { config } from '../../config/config.ts';
 import { sql } from '../db/postgres.ts';
 import {
-	LOGIN_ACCOUNT_MAX_ATTEMPTS,
 	buildAccountThrottleKey,
 	buildThrottleKey,
 	clearAttempts,
 	createSession,
 	destroyUserSessions,
 	isThrottled,
+	LOGIN_ACCOUNT_MAX_ATTEMPTS,
 	recordFailedAttempt,
 } from './session_store.ts';
 

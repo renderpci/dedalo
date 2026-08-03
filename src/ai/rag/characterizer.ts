@@ -17,7 +17,7 @@
  * is injected (unit-tested directly; the aggregators are pure). No module globals.
  */
 
-import { type Principal, getPermissions } from '../../core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../core/security/permissions.ts';
 import type { ObjectRetrieval, SimilarityMode } from './object_retrieval.ts';
 import type { Candidate, RecordLocator } from './types.ts';
 

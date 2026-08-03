@@ -15,8 +15,7 @@
  */
 
 import { config } from '../../config/config.ts';
-import { readBool } from '../../config/readers.ts';
-import { readString } from '../../config/readers.ts';
+import { readBool, readString } from '../../config/readers.ts';
 import { sql } from '../db/postgres.ts';
 import { getLabels } from '../labels/catalog.ts';
 import { resolveMediaAccessMode } from '../media/protection.ts';

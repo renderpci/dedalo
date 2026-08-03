@@ -18,7 +18,7 @@
  * the TS port is self-contained — it does not read the PHP tree at runtime).
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DrawTag, SpriteTag } from './tag_grammar.ts';
 

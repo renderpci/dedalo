@@ -20,19 +20,19 @@ import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import { sql } from '../../core/db/postgres.ts';
 import { assertValidTipo } from '../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
-import { type Principal, getPermissions } from '../../core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../core/security/permissions.ts';
 import { type ChunkOpts, chunk } from './chunker.ts';
 import { RAG_GROUP_PREFIX } from './config.ts';
 import { getEmbeddingProvider } from './embedding_provider.ts';
 import { collapseToRecords, fuse } from './fusion.ts';
 import type { Candidate } from './types.ts';
 import {
-	type RagChunk,
-	type RagHit,
 	denseSearch,
 	getRecordVectors,
 	lexicalSearch,
 	parseChunkMeta,
+	type RagChunk,
+	type RagHit,
 	replaceRecordChunks,
 } from './vector_store.ts';
 

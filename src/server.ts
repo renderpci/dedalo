@@ -40,10 +40,10 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
-import { STAGED_URL_PREFIX, resolveStagedPath } from './core/media/ingest/staged_files.ts';
+import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
 import {
-	MEDIA_AUTH_COOKIE,
 	currentMediaAuthCookie,
+	MEDIA_AUTH_COOKIE,
 	resolveMediaAccessMode,
 	writeRuleFiles,
 } from './core/media/protection.ts';
@@ -55,9 +55,9 @@ import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
 import {
+	getSession,
 	SESSION_COOKIE,
 	SESSION_IDLE_TTL_SECONDS,
-	getSession,
 } from './core/security/session_store.ts';
 import { serveToolCommonRequest, serveToolsRequest } from './core/tools/serving.ts';
 

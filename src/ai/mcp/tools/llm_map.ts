@@ -24,12 +24,12 @@
  */
 
 import { config } from '../../../config/config.ts';
-import { listSectionNodes } from '../../../core/ontology/resolver.ts';
 import type { OntologySubtreeNode } from '../../../core/ontology/resolver.ts';
+import { listSectionNodes } from '../../../core/ontology/resolver.ts';
 import {
 	LINK_TARGET_MODELS,
-	SIMPLIFIED_TYPE_MAP,
 	linkTargetSections,
+	SIMPLIFIED_TYPE_MAP,
 	sectionFieldNodes,
 } from './discovery.ts';
 

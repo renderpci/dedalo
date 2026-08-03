@@ -21,7 +21,7 @@
 
 import { buildEnvironment } from '../resolve/environment.ts';
 import { resolvePrincipal } from '../security/permissions.ts';
-import { SESSION_COOKIE, type Session, getSession } from '../security/session_store.ts';
+import { getSession, SESSION_COOKIE, type Session } from '../security/session_store.ts';
 
 /** Resolve the caller's session from the TS-native cookie (null when absent/expired). */
 function readSessionFromCookie(request: Request): Session | null {

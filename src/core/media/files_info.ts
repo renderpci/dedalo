@@ -15,8 +15,8 @@
 
 import { existsSync, statSync } from 'node:fs';
 import { config } from '../../config/config.ts';
-import { type MediaTypeSpec, assertValidQuality } from '../concepts/media.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from './path.ts';
+import { assertValidQuality, type MediaTypeSpec } from '../concepts/media.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
 
 /** One files_info entry (PHP get_quality_file_info shape). */
 export interface FileInfoEntry {

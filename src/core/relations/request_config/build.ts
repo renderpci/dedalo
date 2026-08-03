@@ -22,10 +22,10 @@ import { sql } from '../../db/postgres.ts';
 import { getNode } from '../../ontology/resolver.ts';
 import { getSectionRealTipo } from '../../resolve/security_access_datalist.ts';
 import {
-	type ParsedRequestConfigItem,
-	type RequestConfigContext,
 	buildExplicitRequestConfig,
 	extractSqoSectionTipos,
+	type ParsedRequestConfigItem,
+	type RequestConfigContext,
 } from './explicit.ts';
 import { buildImplicitComponentListConfig, buildImplicitSectionEditConfig } from './implicit.ts';
 

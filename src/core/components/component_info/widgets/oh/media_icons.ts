@@ -20,11 +20,11 @@ import { getModelByTipo, getNode } from '../../../../ontology/resolver.ts';
 import { currentApplicationLang } from '../../../../resolve/request_lang.ts';
 import {
 	type InfoWidgetDescriptor,
+	readWidgetComponentData,
+	resolveCurrent,
 	type TypedInput,
 	type WidgetContext,
 	type WidgetItem,
-	readWidgetComponentData,
-	resolveCurrent,
 } from '../widget_common.ts';
 
 /** The cached-duration component on media records (PHP hardcoded 'rsc54'). */

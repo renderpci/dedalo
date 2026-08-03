@@ -22,7 +22,7 @@ import { readEnv } from '../../config/env.ts';
 import { sql } from '../db/postgres.ts';
 import { requireSqlIdentifier } from '../db/sql_identifier.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
-import { type OntologySubtreeNode, getOrderedSubtree } from '../ontology/resolver.ts';
+import { getOrderedSubtree, type OntologySubtreeNode } from '../ontology/resolver.ts';
 
 const DIFFUSION_ROOT = 'dd1190'; // DEDALO_DIFFUSION_TIPO
 

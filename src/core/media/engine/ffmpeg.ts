@@ -15,7 +15,7 @@ import { renameSync, rmSync } from 'node:fs';
 import { dirname, extname } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { type FfmpegProfile, getFfmpegProfile } from './ffmpeg_profiles.ts';
-import { type SpawnOptions, runBinary } from './spawn.ts';
+import { runBinary, type SpawnOptions } from './spawn.ts';
 
 function ffmpeg(): string {
 	return config.media.binaries.ffmpeg;

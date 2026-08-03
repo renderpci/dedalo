@@ -23,8 +23,7 @@
  */
 
 import { readMatrixRecord } from '../db/matrix.ts';
-import { updateMatrixKeyData } from '../db/matrix_write.ts';
-import { allocateComponentItemId } from '../db/matrix_write.ts';
+import { allocateComponentItemId, updateMatrixKeyData } from '../db/matrix_write.ts';
 import { RELATION_TYPE_PARENT } from '../ontology/ontology_tipos.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import {

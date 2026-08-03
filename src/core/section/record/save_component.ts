@@ -56,13 +56,13 @@ import {
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import {
-	type SortByColumnChange,
-	type SortDataChange,
 	applyAddNewElement,
 	applySortByColumn,
 	applySortData,
 	maintainRelationSearchIndex,
 	removeDataframeDataById,
+	type SortByColumnChange,
+	type SortDataChange,
 } from '../../relations/save.ts';
 import { persistModifiedStamp, persistRecordKeys } from '../../section_record/index.ts';
 

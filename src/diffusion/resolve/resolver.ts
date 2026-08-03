@@ -64,11 +64,14 @@ import type {
 	ResolveStep,
 	SectionPlan,
 } from '../plan/types.ts';
-import { buildVirtualDiffusionTree } from '../plan/virtual_tree.ts';
 import type { VirtualDiffusionTree } from '../plan/virtual_tree.ts';
-import type { FieldProjectionPolicy, ProjectedRow } from '../project/lang_ladder.ts';
+import { buildVirtualDiffusionTree } from '../plan/virtual_tree.ts';
+import type {
+	ColumnLangValues,
+	FieldProjectionPolicy,
+	ProjectedRow,
+} from '../project/lang_ladder.ts';
 import { NOLAN_KEY, projectRecordRows } from '../project/lang_ladder.ts';
-import type { ColumnLangValues } from '../project/lang_ladder.ts';
 import type { IconographyOptions } from './ddo_fns.ts';
 import {
 	buildGeojsonLayers,
@@ -78,11 +81,11 @@ import {
 } from './ddo_fns.ts';
 import { defaultPublicationValue } from './default_value.ts';
 import type { FieldIR, RecordIR, ResolvedLink } from './record_ir.ts';
-import { buildRewriterFns } from './rewriters.ts';
 import type { RewriterEnv } from './rewriters.ts';
+import { buildRewriterFns } from './rewriters.ts';
 import { readMatrixRecords, selectRecordBatches } from './selection.ts';
-import { fieldValuesToColumn } from './transform.ts';
 import type { ExtraStepFn, FieldTransformSpec, MergeColumnRef } from './transform.ts';
+import { fieldValuesToColumn } from './transform.ts';
 
 // ---------------------------------------------------------------------------
 // Public contract
@@ -269,7 +272,7 @@ async function publicationTipoOf(ctx: RunContext, sectionTipo: string): Promise<
 	return tipo;
 }
 
-async function parentTipoOf(ctx: RunContext, sectionTipo: string): Promise<string | null> {
+async function _parentTipoOf(ctx: RunContext, sectionTipo: string): Promise<string | null> {
 	const cached = ctx.parentTipoCache.get(sectionTipo);
 	if (cached !== undefined) return cached;
 	const tipo = await findSectionComponentByModel(sectionTipo, 'component_relation_parent');

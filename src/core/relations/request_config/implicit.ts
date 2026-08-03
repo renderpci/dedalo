@@ -38,10 +38,10 @@ import { sql } from '../../db/postgres.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
 import {
+	buildSqoSectionTipoDdos,
 	type ParsedRequestConfigItem,
 	type ProcessedDdo,
 	type RequestConfigContext,
-	buildSqoSectionTipoDdos,
 } from './explicit.ts';
 
 /** PHP DEDALO_SECTION_PROJECTS_TIPO — the projects section every component_filter targets. */

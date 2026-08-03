@@ -18,7 +18,7 @@
  */
 
 import { z } from 'zod';
-import { type Locator, compareLocators } from '../../../core/concepts/locator.ts';
+import { compareLocators, type Locator } from '../../../core/concepts/locator.ts';
 import { readMatrixRecord } from '../../../core/db/matrix.ts';
 import {
 	getColumnNameByModel,
@@ -30,7 +30,7 @@ import { deletePortalLocator } from '../../../core/relations/save.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
 import { ToolError } from '../envelope.ts';
-import { type ToolSpec, defineTool } from '../tool_spec.ts';
+import { defineTool, type ToolSpec } from '../tool_spec.ts';
 import { resolveFieldReference } from './discovery.ts';
 import { searchRecords } from './search.ts';
 

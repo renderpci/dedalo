@@ -63,9 +63,9 @@ import {
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import {
-	type FileItem,
 	addMainSection,
 	createDdOntologyRootNode,
+	type FileItem,
 	getMainNameData,
 	getMainTypologyId,
 } from './ontology_write.ts';

@@ -20,12 +20,12 @@ import { config } from '../../config/config.ts';
 import type { MediaTypeSpec } from '../concepts/media.ts';
 import { getDimensions } from './engine/imagemagick.ts';
 import {
-	type MediaIdentity,
-	type MediaPathOptions,
 	additionalPath,
 	assertInsideMediaRoot,
 	buildMediaIdentifier,
 	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
 	requireMediaRoot,
 } from './path.ts';
 

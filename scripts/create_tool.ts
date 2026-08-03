@@ -13,7 +13,7 @@
  * "Register tools" widget (dry-run by default) to reconcile it with dd1324.
  */
 
-import { cpSync, existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 const TOOLS_ROOT = resolve(import.meta.dir, '../tools');

@@ -28,7 +28,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parseEnvFile, privateDir } from '../src/config/env.ts';
-import { type MigrationRule, V6_MIGRATION, encodeEnvValue } from '../src/config/migration_map.ts';
+import { encodeEnvValue, type MigrationRule, V6_MIGRATION } from '../src/config/migration_map.ts';
 import { type DefineRecord, extractDefines } from '../src/config/php_defines.ts';
 
 const SOURCE_FILES = ['config.php', 'config_db.php', 'config_areas.php', 'config_core.php'];

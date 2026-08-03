@@ -17,7 +17,7 @@
  * migration: rewrite/LABELS_RECONCILE.md.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { MASTER_SOURCE_LANG } from '../src/core/labels/catalog.ts';
 

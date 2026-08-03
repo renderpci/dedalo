@@ -21,7 +21,7 @@ import type { MatrixJsonbColumn } from '../../db/matrix.ts';
 import { readMatrixKeyForUpdate, updateMatrixKeysData } from '../../db/matrix_write.ts';
 import { withTransaction } from '../../db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
-import { type DdDate, type FileInfoEntry, ddDateFromMtime } from '../files_info.ts';
+import { type DdDate, ddDateFromMtime, type FileInfoEntry } from '../files_info.ts';
 
 const MEDIA_COLUMN: MatrixJsonbColumn = 'media';
 

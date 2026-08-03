@@ -34,9 +34,9 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
-import { envSnapshot, readEnv } from '../../config/env.ts';
+import { envSnapshot } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
-import { type Locator, compareLocators } from '../concepts/locator.ts';
+import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';

@@ -28,6 +28,7 @@ const SAFE_MODEL_SEGMENT = /^[A-Za-z0-9._/-]+$/;
 function isSafeModelSegment(value: string): boolean {
 	return value !== '' && SAFE_MODEL_SEGMENT.test(value) && !value.split('/').includes('..');
 }
+
 import { modelFiles, modelStoreRoot } from './model_store.ts';
 
 /** Where model files are fetched from when a download is requested. */

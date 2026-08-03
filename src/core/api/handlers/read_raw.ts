@@ -16,8 +16,7 @@
 
 import type { Sqo } from '../../concepts/sqo.ts';
 import { sanitizeClientSqo } from '../../concepts/sqo.ts';
-import { MATRIX_JSONB_COLUMNS } from '../../db/matrix.ts';
-import { readMatrixRecord } from '../../db/matrix.ts';
+import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../../db/matrix.ts';
 import { sql } from '../../db/postgres.ts';
 import {
 	getColumnNameByModel,

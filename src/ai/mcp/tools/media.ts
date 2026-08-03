@@ -36,7 +36,7 @@ import {
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
 import { ToolError } from '../envelope.ts';
-import { type ToolSpec, defineTool } from '../tool_spec.ts';
+import { defineTool, type ToolSpec } from '../tool_spec.ts';
 import { resolveFieldReference } from './discovery.ts';
 
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
@@ -195,7 +195,7 @@ export async function uploadMedia(
 	}
 
 	// Ingest + persist — the same path tool_upload's process_uploaded_file runs.
-	const { spec, identity, pathOpts, items } = await resolveMediaToolContext({
+	const { spec, identity, pathOpts } = await resolveMediaToolContext({
 		tipo: fieldTipo,
 		section_tipo: sectionTipo,
 		section_id: sectionId,

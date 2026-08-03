@@ -21,7 +21,7 @@ import { config } from '../../config/config.ts';
 import { parseEnvFile } from '../../config/env.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
-import { SAMPLE_ENV_PATH, installPrivateDir } from './paths.ts';
+import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
 import { connFromConfig, psqlSelect1 } from './pg_exec.ts';
 import { generateSecret } from './secret.ts';
 

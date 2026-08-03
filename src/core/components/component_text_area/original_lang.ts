@@ -30,8 +30,8 @@
  * (module_state_tripwire): list callers hand in the already-loaded row.
  */
 
-import { readMatrixRecord } from '../../db/matrix.ts';
 import type { MatrixRecord } from '../../db/matrix.ts';
+import { readMatrixRecord } from '../../db/matrix.ts';
 import { getMatrixTableFromTipo, relatedTipoByModel } from '../../ontology/resolver.ts';
 import { getLangCodeBySectionId } from '../../relations/select_lang.ts';
 import { readComponentItems } from '../../resolve/component_data.ts';

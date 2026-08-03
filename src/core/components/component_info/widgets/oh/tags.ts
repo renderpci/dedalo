@@ -10,10 +10,10 @@
 
 import {
 	type InfoWidgetDescriptor,
+	readWidgetComponentData,
 	type TypedInput,
 	type WidgetContext,
 	type WidgetItem,
-	readWidgetComponentData,
 } from '../widget_common.ts';
 
 async function computeTags(ipo: unknown[], context: WidgetContext): Promise<WidgetItem[]> {

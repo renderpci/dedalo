@@ -20,8 +20,8 @@
  */
 
 import { sql, withTransaction } from '../../core/db/postgres.ts';
-import { DIFFUSION_JOBS_TABLE, ensureDiffusionJobTables } from './schema.ts';
 import type { DiffusionJobState } from './schema.ts';
+import { DIFFUSION_JOBS_TABLE, ensureDiffusionJobTables } from './schema.ts';
 
 /** Postgres NOTIFY channel bumped on every observable job change. */
 export const JOB_PROGRESS_CHANNEL = 'diffusion_job_progress';

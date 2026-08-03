@@ -38,7 +38,7 @@
  */
 
 import { readNumber } from '../../config/readers.ts';
-import { type Locator, compareLocators } from '../concepts/locator.ts';
+import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { sql } from '../db/postgres.ts';
 import { cleanEmail, isValidEmail, sendMail } from '../mailer/mailer.ts';
 import { normalizeTiming } from './auth.ts';

@@ -14,7 +14,7 @@
 import { join, resolve } from 'node:path';
 import { config } from '../src/config/config.ts';
 import { normalizeApiResponse } from '../test/parity/normalize.ts';
-import { PhpApiClient, hasPhpCredentials } from '../test/parity/php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from '../test/parity/php_client.ts';
 
 const fixturesDir = resolve(import.meta.dir, '../test/parity/fixtures');
 

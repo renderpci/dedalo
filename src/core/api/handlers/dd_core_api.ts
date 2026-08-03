@@ -12,16 +12,16 @@
 import { config } from '../../../config/config.ts';
 import { dispatchAreaRead, refuseAreaWrite } from '../../area/read.ts';
 import { isAreaModel } from '../../concepts/area.ts';
-import { type Rqo, isTemporalSource } from '../../concepts/rqo.ts';
+import { isTemporalSource, type Rqo } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { getSectionTipos } from '../../concepts/sqo.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
 import { routeSectionRead } from '../../section/read_facade.ts';
 import { type ChangedDataItem, saveComponentData } from '../../section/record/save_component.ts';
 import {
-	type Principal,
 	getPermissions,
 	getSectionPermissions,
+	type Principal,
 	resolveOwnUserRecordPermission,
 } from '../../security/permissions.ts';
 import type { Session } from '../../security/session_store.ts';

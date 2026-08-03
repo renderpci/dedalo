@@ -2,12 +2,22 @@
 
 /**
 * TEST_BOOTSTRAP
-* Classic (non-module) script loaded after mocha.js and chai.js.
-* Runs during parsing, before the deferred module runners, so the bdd
-* interface (describe/it) and the global `assert` exist before any test
-* file is imported. Externalized from inline <script> blocks to comply
-* with the Content-Security-Policy (see root .htaccess script-src).
+* ES module, loaded after the classic mocha.js and BEFORE the module runners
+* (js/index.js, js/frame_runner.js). Module scripts execute in document order,
+* so the bdd interface (describe/it) and the global `assert` still exist before
+* any test file is imported — the guarantee has not changed, only the mechanism.
+* Externalized from inline <script> blocks to comply with the
+* Content-Security-Policy (see root .htaccess script-src).
+*
+* WHY A MODULE (2026-08-03, chai 4 -> 6): chai 5 dropped the UMD browser bundle
+* (`chai.js`) and ships ESM only. Its `index.js` is a SELF-CONTAINED bundle — no
+* bare specifiers — so the browser loads it straight from the client-lib registry
+* through the import map, with no bundler and no extra libs to register. The
+* global `assert` is kept: ~88 test files use it, and they are not the reason
+* for this change.
 */
+
+import { assert } from '../../../lib/chai/index.js'
 
 // early theme init — runs in <head> before the body paints to avoid a
 // theme flash. Mirrors Dédalo's core/page/js/theme-init.js convention:
@@ -36,4 +46,4 @@ mocha.setup({
 	asyncOnly	: false
 })
 
-window.assert = chai.assert
+window.assert = assert

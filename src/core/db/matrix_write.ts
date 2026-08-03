@@ -26,8 +26,8 @@
  * against real rows.
  */
 
-import { type RawJsonText, asRawJsonText, encodeForJsonb } from './json_codec.ts';
-import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn, assertMatrixTable } from './matrix.ts';
+import { asRawJsonText, encodeForJsonb, type RawJsonText } from './json_codec.ts';
+import { assertMatrixTable, MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from './matrix.ts';
 import { isInTransaction, sql } from './postgres.ts';
 
 /**

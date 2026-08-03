@@ -16,7 +16,7 @@
  * time_machine_list and relation_list are INCLUDED (PHP :502).
  */
 
-import { type Principal, getPermissions } from '../../security/permissions.ts';
+import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { findSectionChildByModel } from './node_find.ts';
 
 /** A section's time_machine_list child tipo (virtual-aware), or null. */

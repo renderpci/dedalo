@@ -24,11 +24,11 @@
  */
 
 import { z } from 'zod';
-import { type Structured, ToolError, err, ok, wrapError } from '../mcp/envelope.ts';
+import { err, ok, type Structured, ToolError, wrapError } from '../mcp/envelope.ts';
 import {
+	getToolSpec,
 	type RegistryGates,
 	type RegistryPrincipal,
-	getToolSpec,
 	runTool,
 } from '../mcp/registry.ts';
 import { resolveFieldReference } from '../mcp/tools/discovery.ts';

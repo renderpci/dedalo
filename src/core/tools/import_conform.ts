@@ -865,7 +865,7 @@ function hasProtocol(value: string): boolean {
 function conformIriRecord(
 	record: string,
 	fieldsSeparator: string,
-	ctx: ImportConformContext,
+	_ctx: ImportConformContext,
 ): { item: Record<string, unknown> | null; error: string | null } {
 	const fields = record.split(fieldsSeparator).map((field) => field.trim());
 	const first = fields[0] ?? '';

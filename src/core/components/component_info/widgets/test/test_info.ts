@@ -8,11 +8,11 @@
 
 import {
 	type InfoWidgetDescriptor,
+	readWidgetComponentData,
+	resolveCurrent,
 	type TypedInput,
 	type WidgetContext,
 	type WidgetItem,
-	readWidgetComponentData,
-	resolveCurrent,
 } from '../widget_common.ts';
 
 async function computeTestInfo(ipo: unknown[], context: WidgetContext): Promise<WidgetItem[]> {

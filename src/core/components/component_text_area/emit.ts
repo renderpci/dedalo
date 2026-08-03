@@ -12,8 +12,8 @@
  *   component_select_lang, e.g. rsc263), equivalence-aware.
  */
 
-import { filterItemsByLang, readComponentItems } from '../../resolve/component_data.ts';
 import type { DataItem } from '../../resolve/component_data.ts';
+import { filterItemsByLang, readComponentItems } from '../../resolve/component_data.ts';
 import { equivalentLangsOf } from '../../resolve/lang_alias.ts';
 import { truncateHtml } from '../../resolve/truncate_html.ts';
 import type { ComponentEmitHook, EmitHookContext } from '../emit_hooks.ts';

@@ -20,7 +20,7 @@ import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../../core/search/sql_assembler.ts';
 import { readSection } from '../../../core/section/read.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
-import { type ToolSpec, defineTool } from '../tool_spec.ts';
+import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
 /** The default page size an MCP search returns when the caller omits `limit`. */
 const DEFAULT_SEARCH_LIMIT = 20;

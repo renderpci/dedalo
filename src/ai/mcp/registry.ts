@@ -17,7 +17,7 @@
 
 import { z } from 'zod';
 import type { AgentToolDefinition } from '../agent/llm_provider.ts';
-import { Page, type Structured, err, ok, wrapError } from './envelope.ts';
+import { err, ok, Page, type Structured, wrapError } from './envelope.ts';
 import type { ToolSpec } from './tool_spec.ts';
 import { DISCOVERY_SPECS } from './tools/discovery.ts';
 import { FIELDS_WRITE_SPECS } from './tools/fields_write.ts';

@@ -6,7 +6,7 @@
 import { sql } from '../../db/postgres.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
 import { TIPO, TOOLS_REGISTER_SECTION_TIPO } from '../../tools/ontology_map.ts';
-import { type WidgetModule, type WidgetResponse, gated } from './support.ts';
+import { gated, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * How the registry and the tools tree DISAGREE about one tool — the widget's

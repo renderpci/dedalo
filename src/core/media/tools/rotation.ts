@@ -10,7 +10,7 @@
 import { existsSync, renameSync } from 'node:fs';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
 import { type CropBox, cropImage, getDimensions, rotateImage } from '../engine/imagemagick.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from '../path.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 
 /** A stored files_info entry (quality + extension) the rotation walks. */
 export interface RotationTargetEntry {

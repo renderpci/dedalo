@@ -32,7 +32,7 @@ import type {
 } from './llm_provider.ts';
 
 /** Default model for the Dédalo agent (override via AGENT_MODEL env). */
-const DEFAULT_MODEL = 'claude-opus-4-8';
+const _DEFAULT_MODEL = 'claude-opus-4-8';
 /** Default per-turn output cap (override via DEDALO_AGENT_MAX_TOKENS / catalog). */
 const DEFAULT_MAX_TOKENS = 16000;
 

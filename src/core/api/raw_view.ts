@@ -30,7 +30,7 @@ import { config } from '../../config/config.ts';
 import { readRaw } from '../api/handlers/read_raw.ts';
 import { isValidTipo } from '../concepts/ontology.ts';
 import { resolvePrincipal } from '../security/permissions.ts';
-import { SESSION_COOKIE, type Session, getSession } from '../security/session_store.ts';
+import { getSession, SESSION_COOKIE, type Session } from '../security/session_store.ts';
 
 /**
  * Sections whose raw data is never dumpable through this endpoint, even by an

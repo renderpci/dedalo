@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
 import { extractText } from '../engine/pdf.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from '../path.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 
 export interface PdfExtractCoreOptions {
 	method: 'text' | 'html';

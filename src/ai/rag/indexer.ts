@@ -25,16 +25,15 @@
  */
 
 import { config } from '../../config/config.ts';
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { getTermByTipo } from '../../core/ontology/resolver.ts';
 import { type Chunk, type ChunkOpts, chunk } from './chunker.ts';
-import { type OntologyPort, RAG_GROUP_PREFIX, RagConfig, defaultOntologyPort } from './config.ts';
+import { defaultOntologyPort, type OntologyPort, RAG_GROUP_PREFIX, RagConfig } from './config.ts';
 import { type EmbedDoc, type ResolveEmbedDocsInput, resolveEmbedDocs } from './embed_source.ts';
 import { type EmbeddingProvider, getEmbeddingProvider } from './embedding_provider.ts';
 import {
-	type ExtractedImage,
 	buildImageContextSummary,
+	type ExtractedImage,
 	extractImageForEmbedding,
 	imageSourceHash,
 } from './image_source.ts';

@@ -81,16 +81,16 @@
  * background job. No module-level state of any kind lives here.
  */
 
-import { type Locator, buildLocatorLookupKey } from '../../core/concepts/locator.ts';
+import { buildLocatorLookupKey, type Locator } from '../../core/concepts/locator.ts';
 import { type ComponentGrant, criterionReadableOn } from '../../core/identify/component_access.ts';
 import { SECONDS_PER_VIRTUAL_YEAR } from '../../core/identify/criteria.ts';
 import {
 	type AccessFilter,
 	type CandidateRecord,
-	IdentifyAccessError,
-	type ValueReader,
 	findMatches,
+	IdentifyAccessError,
 	normalizeText,
+	type ValueReader,
 } from '../../core/identify/match.ts';
 import { IDENTITY_LOCATOR_PROPERTIES, readPathValues } from '../../core/identify/path_read.ts';
 import type {
@@ -99,15 +99,15 @@ import type {
 	IdentificationProfile,
 	ValueLocator,
 } from '../../core/identify/types.ts';
-import { type Principal, getPermissions } from '../../core/security/permissions.ts';
+import { getPermissions, type Principal } from '../../core/security/permissions.ts';
 import { scopeRecordHits } from '../../core/security/record_scope.ts';
 import {
+	aggregateCategorical,
 	DEFAULT_CHARACTERIZE_TOP_K,
 	type Evidence,
-	aggregateCategorical,
 	summarizeDates,
 } from '../rag/characterizer.ts';
-import { RagConfig, defaultOntologyPort } from '../rag/config.ts';
+import { defaultOntologyPort, RagConfig } from '../rag/config.ts';
 import {
 	buildMultimodalProvider,
 	isMediaEnabled,

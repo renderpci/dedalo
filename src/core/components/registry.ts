@@ -35,8 +35,6 @@
  */
 
 import { registerComponentModelFieldsLookup } from '../ontology/resolver.ts';
-import type { ComponentModel } from './types.ts';
-
 // --- data-entry / scalar / special (non-relation) models -------------------
 import { component_3d } from './component_3d/descriptor.ts';
 import { component_autocomplete } from './component_autocomplete/descriptor.ts';
@@ -80,6 +78,7 @@ import { component_select_lang } from './component_select_lang/descriptor.ts';
 import { component_state } from './component_state/descriptor.ts';
 import { component_svg } from './component_svg/descriptor.ts';
 import { component_text_area } from './component_text_area/descriptor.ts';
+import type { ComponentModel } from './types.ts';
 
 /** Every registered descriptor. One entry per `component_<model>/descriptor.ts`. */
 const ALL_DESCRIPTORS: readonly ComponentModel[] = [

@@ -19,8 +19,8 @@
  * legacy `phpAlias` spellings.
  */
 
-import { CONFIG_CATALOG, DOMAINS, KEY_DOMAIN, isOperatorFacing } from './catalog/index.ts';
-import type { CatalogEntry, ComputedDefault } from './catalog_types.ts';
+import { CONFIG_CATALOG, DOMAINS, isOperatorFacing, KEY_DOMAIN } from './catalog/index.ts';
+import type { CatalogEntry } from './catalog_types.ts';
 import { V6_MIGRATION } from './migration_map.ts';
 
 const BAR = '═'.repeat(78);

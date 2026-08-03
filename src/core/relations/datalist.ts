@@ -28,7 +28,7 @@
  * install carries them).
  */
 
-import { type Locator, compareLocators } from '../concepts/locator.ts';
+import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
@@ -37,7 +37,7 @@ import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts'
 import { resolveComponentValue } from '../resolve/component_data.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
 import { buildRequestConfigForElement } from './request_config/build.ts';
-import { type RequestConfigContext, extractSqoSectionTipos } from './request_config/explicit.ts';
+import { extractSqoSectionTipos, type RequestConfigContext } from './request_config/explicit.ts';
 
 /**
  * One resolved HIDE-ddo value of an option (PHP `$hide_item`, :2949-2953).

@@ -39,7 +39,7 @@
  */
 
 import { readEnv } from '../../config/env.ts';
-import { type StructuredErr, err } from '../mcp/envelope.ts';
+import { err, type StructuredErr } from '../mcp/envelope.ts';
 import type { RecordEgressClass } from '../rag/ask.ts';
 import { askRuntimeConfigFromEnv, buildEgressPolicy } from '../rag/ask_config.ts';
 

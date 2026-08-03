@@ -25,7 +25,7 @@
  *   (never a silent wrong value; ledgered in the run report).
  */
 
-import type { MetaValueIR, ParserContext } from '../parsers/types.ts';
+import type { MetaValueIR } from '../parsers/types.ts';
 import type { ResolvedLink, ValueIR } from './record_ir.ts';
 import type { ExtraStepFn } from './transform.ts';
 

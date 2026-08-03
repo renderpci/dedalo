@@ -20,7 +20,6 @@
  * dd774 data or a user's profile assignment changes (clearPermissionsCache).
  */
 
-import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { AUDIT_TIPOS, isConsultationOnlySection } from '../concepts/section.ts';
 import { sql } from '../db/postgres.ts';

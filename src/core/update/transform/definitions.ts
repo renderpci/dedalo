@@ -10,7 +10,7 @@
  * `*.json` directly under `<dir>/<widget>/`, never a traversal.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { config } from '../../../config/config.ts';
 

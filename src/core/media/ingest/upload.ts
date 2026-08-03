@@ -136,7 +136,7 @@ function extensionOf(fileName: string): string {
  */
 export function stagedTmpName(fileName: string): string {
 	const base = fileName.split('/').pop() ?? fileName;
-	const cleaned = base.replace(/[^A-Za-z0-9_.\-]/g, '_');
+	const cleaned = base.replace(/[^A-Za-z0-9_.-]/g, '_');
 	return cleaned === '' ? 'upload.bin' : cleaned;
 }
 

@@ -5,7 +5,7 @@
  * tool_pdf_extractor / tool_posterframe).
  */
 
-import { type MediaTypeSpec, isMediaModel, mediaTypeOf } from '../concepts/media.ts';
+import { isMediaModel, type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import {
 	getMatrixTableFromTipo,

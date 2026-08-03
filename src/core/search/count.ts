@@ -9,7 +9,7 @@
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
-import { type Principal, getPermissions } from '../security/permissions.ts';
+import { getPermissions, type Principal } from '../security/permissions.ts';
 import { buildSearchSql } from './sql_assembler.ts';
 
 export async function countSectionRecords(

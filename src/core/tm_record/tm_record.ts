@@ -37,7 +37,7 @@
  */
 
 import type { MatrixJsonbColumn, MatrixRecord } from '../db/matrix.ts';
-import { MATRIX_JSONB_COLUMNS, assertMatrixTable, readMatrixRecord } from '../db/matrix.ts';
+import { assertMatrixTable, MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
 import { TIME_MACHINE_SECTION_TIPO } from '../db/time_machine.ts';

@@ -18,7 +18,7 @@ import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
 import { getModelByTipo, getNode } from '../ontology/resolver.ts';
-import { type Principal, getPermissions } from '../security/permissions.ts';
+import { getPermissions, type Principal } from '../security/permissions.ts';
 
 /** One emitted button DDO (PHP dd_object type='button' — null keys dropped). */
 export interface ButtonContext {

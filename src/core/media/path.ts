@@ -19,7 +19,7 @@
 
 import { resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
-import { type MediaTypeSpec, assertValidQuality, mediaTypeOf } from '../concepts/media.ts';
+import { assertValidQuality, type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
 import { assertValidTipo } from '../search/identifier_gate.ts';
 
 /** A media component instance's identity (the identifier inputs). */

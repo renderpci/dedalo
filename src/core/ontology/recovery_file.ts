@@ -19,7 +19,7 @@ import { createGzip } from 'node:zlib';
 import { envSnapshot, projectRoot } from '../../config/env.ts';
 import { createRecoverySlice, dropRecoverySlice } from '../db/dd_ontology.ts';
 import { resolvePgBinary } from '../install/pg_bin.ts';
-import { type DbConnDescriptor, connFromConfig, runPsql } from '../install/pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { gunzipWithCaps } from './data_io_import.ts';
 
 /** PHP installer whitelist (narrower than config to_preserve_tld). */

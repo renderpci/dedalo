@@ -31,10 +31,9 @@
  * the DB layer without changing call sites.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RETIRED_ENV_KEYS, privateDir, projectRoot, readEnv } from './env.ts';
-import { INSTALL_MODE, REQUIRED_CONFIG_KEYS } from './install_mode.ts';
+import { projectRoot, RETIRED_ENV_KEYS, readEnv } from './env.ts';
+import { INSTALL_MODE } from './install_mode.ts';
 import {
 	readBool,
 	readJsonArray,

@@ -8,12 +8,12 @@
 
 import { existsSync } from 'node:fs';
 import { config } from '../../../config/config.ts';
-import { type MediaTypeSpec, assertValidQuality } from '../../concepts/media.ts';
+import { assertValidQuality, type MediaTypeSpec } from '../../concepts/media.ts';
 import { conformHeader } from '../engine/ffmpeg.ts';
 import { moveToDeleted } from '../file_ops.ts';
 import { type FileInfoEntry, type ScanContext, scanFilesInfo } from '../files_info.ts';
 import { submitAvTranscode } from '../ingest/process_uploaded_file.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from '../path.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 import {
 	buildImageVersion,
 	buildPdfCover,

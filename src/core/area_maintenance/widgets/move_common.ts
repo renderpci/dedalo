@@ -11,12 +11,12 @@
  */
 
 import {
+	engineDenied,
+	gated,
 	type WidgetHandler,
 	type WidgetModule,
 	type WidgetResponse,
 	type WidgetSpec,
-	engineDenied,
-	gated,
 } from './support.ts';
 
 const MOVE_WIDGET_BODIES: Record<string, string> = {

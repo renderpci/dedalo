@@ -36,9 +36,9 @@ import {
 } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
 import {
-	type RelatedLocatorFilter,
 	countInverseReferences,
 	findInverseReferences,
+	type RelatedLocatorFilter,
 } from '../search/search_related.ts';
 import { getInlineValueByIdKey } from './dataframe.ts';
 

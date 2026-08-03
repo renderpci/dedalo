@@ -24,8 +24,8 @@
 // must never import src/diffusion/**); re-exported here so diffusion consumers
 // keep their historical import site.
 import {
-	type TagRenderOptions,
 	addTagImgOnTheFly,
+	type TagRenderOptions,
 } from '../../core/components/component_text_area/tag_html.ts';
 import { decodeHtmlEntities } from './default_value.ts';
 
@@ -35,10 +35,10 @@ import { decodeHtmlEntities } from './default_value.ts';
 // ---------------------------------------------------------------------------
 
 export {
-	type SvgTagLocator,
-	type TagRenderOptions,
 	addTagImgOnTheFly,
+	type SvgTagLocator,
 	svgUrlFromTagLocator,
+	type TagRenderOptions,
 } from '../../core/components/component_text_area/tag_html.ts';
 
 /**

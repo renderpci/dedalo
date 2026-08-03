@@ -35,17 +35,13 @@
 
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData, updateMatrixRecord } from '../db/matrix_write.ts';
-import { sql } from '../db/postgres.ts';
-import { withTransaction } from '../db/postgres.ts';
-import { applyAddNewElement } from '../relations/save.ts';
+import { sql, withTransaction } from '../db/postgres.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import { setSectionPermissions } from '../security/section_permissions.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
 import {
 	DATA_NOLAN,
 	HIERARCHY_ACTIVE,
-	HIERARCHY_LANG,
-	HIERARCHY_MAIN_SECTION,
 	HIERARCHY_MODEL_TYPE_GROUP,
 	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_SOURCE_REAL_SECTION,

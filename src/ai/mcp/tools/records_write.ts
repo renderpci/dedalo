@@ -17,7 +17,7 @@
 import { z } from 'zod';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
-import { type ToolSpec, defineTool } from '../tool_spec.ts';
+import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
 /** Server-authoritative write gate: level >= 2 on (section_tipo, tipo) or throw. */
 async function assertWritePermission(

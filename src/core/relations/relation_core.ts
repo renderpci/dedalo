@@ -21,8 +21,8 @@
 import type { Ddo } from '../concepts/ddo.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
-import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../ontology/resolver.ts';
-import { type DataItem, type EmissionContext, buildDataItem } from '../resolve/component_data.ts';
+import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
+import { buildDataItem, type DataItem, type EmissionContext } from '../resolve/component_data.ts';
 import { loadRecordCached } from '../section/record_loader.ts';
 import type { EmitDdoFn } from './registry.ts';
 

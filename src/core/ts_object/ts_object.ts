@@ -31,7 +31,7 @@ import { config } from '../../config/config.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
-import { ONTOLOGY_STRUCTURE_LANG, labelByTipo } from '../ontology/labels.ts';
+import { labelByTipo, ONTOLOGY_STRUCTURE_LANG } from '../ontology/labels.ts';
 import {
 	HIERARCHY_BUTTON_NEW,
 	HIERARCHY_MAIN_SECTION,
@@ -59,12 +59,12 @@ import { currentDataLang } from '../resolve/request_lang.ts';
 import { countInverseReferences } from '../search/search_related.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getPermissions } from '../security/permissions.ts';
-import { type NodeLocator, batchDescriptorFlags, fetchNodeInfo } from './node_repository.ts';
+import { batchDescriptorFlags, fetchNodeInfo, type NodeLocator } from './node_repository.ts';
 import {
-	type TermLocator,
 	getDdoValueByLocator,
 	getTermByLocator,
 	invalidateNode as invalidateTermNode,
+	type TermLocator,
 } from './term_resolver.ts';
 
 // DEDALO_DATA_LANG is read PER REQUEST via currentDataLang() at each use site

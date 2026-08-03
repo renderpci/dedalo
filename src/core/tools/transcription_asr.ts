@@ -187,7 +187,7 @@ export function resolveTranscriberConfig(
 		(item) =>
 			item !== null && typeof item === 'object' && (item as { name?: string }).name === engine,
 	) as { uri?: string; key?: string } | undefined;
-	if (!entry || !entry.uri || !entry.key) return null;
+	if (!entry?.uri || !entry.key) return null;
 	return { uri: entry.uri, key: entry.key };
 }
 

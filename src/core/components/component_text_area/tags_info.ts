@@ -154,7 +154,7 @@ function normalizeLocator(stored: Record<string, unknown>): TagLocator | null {
  */
 async function readTagLocators(
 	config: TagsPointerConfig | undefined,
-	host: TagsInfoHost,
+	_host: TagsInfoHost,
 	hostRecord: MatrixRecord | null,
 ): Promise<TagLocator[]> {
 	const componentTipo = config?.tipo;

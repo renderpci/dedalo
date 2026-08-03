@@ -21,7 +21,7 @@
  * 'dd156', order component 'dd1631'.
  */
 
-import { type Locator, compareLocators } from '../concepts/locator.ts';
+import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';

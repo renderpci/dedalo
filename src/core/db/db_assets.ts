@@ -17,7 +17,7 @@
  */
 
 import definitions from './db_pg_definitions.json';
-import { type LiveIndex, classifyIndex, policyForTable } from './matrix_index_policy.ts';
+import { classifyIndex, type LiveIndex, policyForTable } from './matrix_index_policy.ts';
 import { runWithoutStatementTimeout, sql, withTransaction } from './postgres.ts';
 
 interface AssetEntry {

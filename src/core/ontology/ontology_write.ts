@@ -30,12 +30,9 @@
 
 import {
 	type DdOntologyNode,
-	createBackupTable,
 	deleteTldNodes,
-	dropBackupTable,
 	getActiveTlds,
 	readDdOntologyRow,
-	restoreFromBackupTable,
 	updateDdOntologyColumns,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';

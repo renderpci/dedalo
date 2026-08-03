@@ -16,18 +16,18 @@ import { z } from 'zod';
 import { isValidTipo } from '../../../core/concepts/ontology.ts';
 import { labelByTipo, resolveLabel } from '../../../core/ontology/labels.ts';
 import {
-	type OntologySubtreeNode,
 	getMatrixTableFromTipo,
 	getModelByTipo,
 	getNode,
 	getOrderedSubtree,
 	getPropertiesByTipo,
 	listSectionNodes,
+	type OntologySubtreeNode,
 } from '../../../core/ontology/resolver.ts';
 import { buildRequestConfigForElement } from '../../../core/relations/request_config/build.ts';
 import {
-	type RequestConfigContext,
 	extractSqoSectionTipos,
+	type RequestConfigContext,
 } from '../../../core/relations/request_config/explicit.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
@@ -38,7 +38,7 @@ import {
 	resolveFieldCandidates,
 	resolveSectionCandidates,
 } from '../label_resolution.ts';
-import { type ToolSpec, defineTool } from '../tool_spec.ts';
+import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
 /**
  * Simplified field types for the agent view (adopted from the PHP

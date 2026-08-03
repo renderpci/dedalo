@@ -29,7 +29,7 @@ import { type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
 import { moveToDeleted } from './file_ops.ts';
 import { refreshStoredFilesInfo } from './files_info.ts';
 import { resolveMediaPathOptions } from './ontology_path.ts';
-import { type MediaIdentity, type MediaPathOptions, buildMediaLocation } from './path.ts';
+import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
 import {
 	buildImageVersion,
 	buildThumbVersion,

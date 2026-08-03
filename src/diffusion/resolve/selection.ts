@@ -15,8 +15,8 @@
  */
 
 import type { Sqo } from '../../core/concepts/sqo.ts';
-import { MATRIX_JSONB_COLUMNS, assertMatrixTable } from '../../core/db/matrix.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
+import { assertMatrixTable, MATRIX_JSONB_COLUMNS } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import type { Principal } from '../../core/security/permissions.ts';

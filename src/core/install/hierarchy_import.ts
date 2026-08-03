@@ -33,7 +33,7 @@ import { safeTld } from '../ontology/data_io.ts';
 import { activateHierarchy } from './hierarchy_activate.ts';
 import { hierarchyMetaByTld } from './hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from './paths.ts';
-import { type DbConnDescriptor, connFromConfig, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 
 const HIERARCHY_TABLE = 'matrix_hierarchy';
 

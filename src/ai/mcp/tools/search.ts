@@ -17,7 +17,7 @@ import { z } from 'zod';
 import type { Sqo, SqoFilterLeaf, SqoFilterNode } from '../../../core/concepts/sqo.ts';
 import { sanitizeClientSqo } from '../../../core/concepts/sqo.ts';
 import { sql } from '../../../core/db/postgres.ts';
-import { type OntologySubtreeNode, getOrderedSubtree } from '../../../core/ontology/resolver.ts';
+import { getOrderedSubtree, type OntologySubtreeNode } from '../../../core/ontology/resolver.ts';
 import {
 	assertValidLang,
 	assertValidTipo,
@@ -25,9 +25,9 @@ import {
 } from '../../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../../core/search/sql_assembler.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
-import { Page, ToolError, buildPagination } from '../envelope.ts';
+import { buildPagination, Page, ToolError } from '../envelope.ts';
 import { pickUnambiguous, resolveFieldCandidates } from '../label_resolution.ts';
-import { type ToolSpec, defineTool } from '../tool_spec.ts';
+import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;

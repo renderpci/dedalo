@@ -18,7 +18,7 @@
 
 import { registerMediaIngestHook } from '../../core/media/ingest/ingest_event.ts';
 import { registerRagRecordHook } from '../../core/section_record/save_event.ts';
-import { RagQueue, defaultMatrixQueryer, ensureRagQueueTable } from './queue.ts';
+import { defaultMatrixQueryer, ensureRagQueueTable, RagQueue } from './queue.ts';
 import { isRagEnabled } from './rag_enabled.ts';
 
 /** Register (or clear) the RAG save/delete hook based on the kill-switch. */

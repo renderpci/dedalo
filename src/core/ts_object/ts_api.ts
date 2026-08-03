@@ -38,10 +38,10 @@ import { createSectionRecord } from '../section/record/create_record.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getPermissions } from '../security/permissions.ts';
 import {
-	type ParseLocator,
-	type TsOptions,
 	invalidateNode,
+	type ParseLocator,
 	parseChildData,
+	type TsOptions,
 	getChildrenData as tsGetChildrenData,
 } from './ts_object.ts';
 

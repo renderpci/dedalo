@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { readEnv } from '../../config/env.ts';
 import { readNumber, readString } from '../../config/readers.ts';
 
 /**

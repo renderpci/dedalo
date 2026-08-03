@@ -13,7 +13,7 @@
 
 import { config } from '../../../config/config.ts';
 import { readEnv } from '../../../config/env.ts';
-import { type WidgetModule, type WidgetResponse, engineDenied, gated } from './support.ts';
+import { engineDenied, gated, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /** update_code panel (PHP get_value bytes). */
 async function updateCodeGetValue(): Promise<WidgetResponse> {

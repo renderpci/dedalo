@@ -19,15 +19,14 @@ import { buildThumb } from '../engine/imagemagick.ts';
 import { type FileInfoEntry, scanFilesInfo } from '../files_info.ts';
 import { sanitizeSegment, stagingDir } from '../ingest/add_file.ts';
 import {
-	type MediaIdentity,
-	type MediaPathOptions,
 	absoluteFromRelative,
 	additionalPath,
 	buildMediaIdentifier,
 	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
 } from '../path.ts';
-import { resolveOriginalSource } from '../processing.ts';
-import { regenerateImage } from '../processing.ts';
+import { regenerateImage, resolveOriginalSource } from '../processing.ts';
 
 /** A resolved media component context (spec + identity + path options). */
 export interface MediaContext {

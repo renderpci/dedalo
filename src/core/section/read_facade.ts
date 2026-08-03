@@ -17,10 +17,10 @@
  * get_data branches used to swallow it into the no-id empty shell.
  */
 
-import { denied } from '../api/response.ts';
 import type { ApiResult } from '../api/response.ts';
-import { type Rqo, isTemporalSource } from '../concepts/rqo.ts';
-import { type Principal, getPermissions } from '../security/permissions.ts';
+import { denied } from '../api/response.ts';
+import { isTemporalSource, type Rqo } from '../concepts/rqo.ts';
+import { getPermissions, type Principal } from '../security/permissions.ts';
 import { readSection } from './read.ts';
 
 /** Route a permission-gated dd_core_api read RQO to its read strategy. */

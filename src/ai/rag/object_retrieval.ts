@@ -16,7 +16,7 @@
  */
 
 import type { Principal } from '../../core/security/permissions.ts';
-import { DEFAULT_ID_KEYS, collapseToRecords, fuse, tagScore } from './fusion.ts';
+import { collapseToRecords, DEFAULT_ID_KEYS, fuse, tagScore } from './fusion.ts';
 import type { MultimodalEmbeddingProvider } from './multimodal_embedding_provider.ts';
 import { aclFilterCandidates } from './retrieval.ts';
 import type { Candidate, RecordLocator } from './types.ts';

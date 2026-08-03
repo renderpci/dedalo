@@ -14,7 +14,7 @@
  */
 
 import type { Principal } from '../../security/permissions.ts';
-import { type WidgetModule, type WidgetResponse, failed } from './support.ts';
+import { failed, type WidgetModule, type WidgetResponse } from './support.ts';
 
 async function mediaControlGetValue(
 	_options: Record<string, unknown>,
