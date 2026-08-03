@@ -303,31 +303,37 @@ alias), **test212** (test_info over test52), and the copied client samples under
 
 ## Observers
 
-Two distinct ontology keys wire the observer graph, and they must not be
-confused:
+One ontology key wires the edge: **`observe`**, declared on the info component
+itself — `{component_tipo, server:{filter|config|perform}, client:{event,perform}}`.
+An entry carrying a `server` object is the whole registration. The watched
+component is not asked and declares nothing.
 
-- **`observe`** — *what I watch.* Declared on the info component:
-  `{component_tipo, server:{filter|config|perform}, client:{event,perform}}`.
-- **`observers`** — *who watches me.* Declared on the **observed** component: a
-  list of `[{section_tipo, component_tipo}]` naming the info components to
-  recompute.
+!!! warning "`observers` on the watched component is legacy"
+    A second, mirror declaration on the **observed** node
+    (`[{section_tipo, component_tipo}]`) used to be required, and a
+    half-declared edge was silently dead. It no longer is. The forward array
+    survives only for scoping an `"all"` wildcard and for targeting a component
+    reused across sections — neither of which applies to an ordinary info
+    widget. Full rules: [Server-side observers](../system/observers.md).
 
-When an observed component saves, `propagateToObservers`
-(`src/core/api/handlers/observers.ts`) walks its `observers`, and for each
-info-model observer recomputes the widgets. Two server `filter` shapes are
+When the watched component saves, the engine looks up its watchers in an
+ontology-wide subscription registry and, for each info-model observer,
+recomputes the widgets after the save commits. Two server `filter` shapes are
 covered (oracle-verified on scratch twins 2026-07-10):
 
 | shape | example | targets | what lands |
 |---|---|---|---|
-| **`filter:{SQO}`** | numisdata595 ← numisdata57 (observed lives on **another** section) | fill every clause's `q` with the saved record's locator (+ `from_component_tipo` from the clause's last path step) and search the observer's section for the referencing records | ONE `matrix_time_machine` row per target (lg-nolan, raw computed shape); live misc **untouched**; no response item (cross-section) |
+| **`filter:{SQO}`** | numisdata595 ← numisdata57 (observed lives on **another** section) | fill every clause's `q` with the saved record's locator (+ `from_component_tipo` from the clause's last path step) and search the **host section** for the referencing records | ONE `matrix_time_machine` row per target (lg-nolan, raw computed shape); live misc **untouched**; no response item (cross-section) |
 | **`filter:false`** | rsc19 ← rsc156 (same-record observer) | the saved record itself | TM row **plus** the recomputed item merged into the **save response** (`observers_data`), so the actively-edited record's panel refreshes |
 
-Real shapes: numisdata57 (a `component_radio_button`) carries
-`observers: [{"info": "Coins. Property used for server side only",
-"section_tipo": "numisdata3", "component_tipo": "numisdata595"}]`; the info
-component numisdata595 carries the matching `observe` block with a
-`server.filter` `$and` clause whose path is the numisdata77 portal. rsc19
-(`component_state`) carries eight `observe` entries with `server:{filter:false}`.
+Real shapes: the info component numisdata595 (in section numisdata3) carries an
+`observe` entry for numisdata57 (a `component_radio_button` in section
+numisdata4) whose `server.filter` `$and` clause has a path through the
+numisdata77 portal — that entry alone is the wiring, and numisdata3 is the host
+section it searches. rsc19 (`component_state`) carries eight `observe` entries
+with `server:{filter:false}`. How the host section is chosen when the observer's
+own section and the filter path disagree is in
+[Server-side observers](../system/observers.md#host-section-resolution).
 
 !!! note "One TM row, never the live misc column"
     Per target the engine writes exactly one `matrix_time_machine` row per save

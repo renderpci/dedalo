@@ -375,16 +375,23 @@ non-empty.
 
 ## R6 — Wire observers so the widget recomputes on saves
 
-When another component changes, an info widget can recompute so its stored value
-/ TM history stays fresh. Two ontology keys — don't confuse them:
+When another component changes, an info widget can recompute so its TM history
+stays fresh. **One key does it: `observe` on the info component** — *what I
+watch* — `{component_tipo, server:{filter|…}, client:{event,perform}}`. The
+watched component declares nothing; the subscriber registers itself.
 
-- **`observe`** on the **info** component — *what I watch*:
-  `{component_tipo, server:{filter|…}, client:{event,perform}}`.
-- **`observers`** on the **observed** component — *who watches me*:
-  `[{section_tipo, component_tipo}]`.
+!!! warning "`observers` on the observed component is legacy — and never was 'required'"
+    Earlier releases needed a mirror declaration, `[{section_tipo,
+    component_tipo}]` on the **observed** node, and a half-declared edge was
+    silently dead. That is no longer true: an `observe` entry with a `server`
+    block dispatches on its own. The forward array survives for two jobs only —
+    scoping an `observe` entry whose `component_tipo` is the `"all"` wildcard,
+    and telling the recompute which section's records to target when one
+    component is reused across several sections. Neither applies to an ordinary
+    info widget. Full rules: [Server-side observers](../system/observers.md).
 
-`propagateToObservers` (`src/core/api/handlers/observers.ts`) runs on save and
-handles two server `filter` shapes.
+The recompute runs on save, from `src/core/section/record/observers.ts`, and
+reads two server `filter` shapes.
 
 ### Cross-section — `filter:{SQO}`
 
@@ -400,18 +407,31 @@ The observed component lives on **another** section. Verified from
       "q_operator": null } ] } } } ]
 ```
 
+That entry is the whole wiring. `numisdata57` (`component_radio_button`) does
+also carry the legacy mirror below, but it is inert for dispatch — the edge
+would fire identically without it:
+
 ```json
-// numisdata57 (the observed radio_button) properties.observers
+// numisdata57 (the observed radio_button) properties.observers — LEGACY, not required
 [ { "info": "Coins. Property used for server side only", "section_tipo": "numisdata3", "component_tipo": "numisdata595" } ]
 ```
 
 On a `numisdata57` save the recompute fills every clause's `q` with the saved
 record's locator (+ `from_component_tipo` from the clause's last path step),
-searches the observer's section (`numisdata3`) for the archives referencing the
-coin through the `numisdata77` portal, and recomputes `get_archive_weights` **at
-each archive** — writing **one** `matrix_time_machine` row per target (lg-nolan,
-raw computed shape) and leaving the live misc column untouched. No item rides the
-save response (the target ≠ the saved record).
+searches the observer's own section (`numisdata3`) for the type records that
+reference the saved coin through the `numisdata77` portal, and recomputes
+`get_archive_weights` **at each of them** — writing **one**
+`matrix_time_machine` row per target (lg-nolan, raw computed shape) and leaving
+the live misc column untouched. No item rides the save response (the target ≠
+the saved record).
+
+!!! tip "Which section gets searched"
+    Three independent sources name `numisdata3` here and they all agree: the
+    legacy spec's `section_tipo`, the observer's own ontology section, and the
+    filter path's first step. So this edge resolves the same with or without the
+    legacy spec. The order that decides when they *disagree* — and what happens
+    when the section is virtual — is in
+    [Server-side observers](../system/observers.md#host-section-resolution).
 
 ### Same-record — `filter:false`
 
@@ -429,6 +449,14 @@ On an `rsc156` save the recompute targets the saved record itself, writes the TM
 row, **and** merges the recomputed `rsc19` item into the **save response**
 (`observers_data`) so the actively-edited panel refreshes client-side. The
 response item carries WC-026 dual keys.
+
+!!! danger "Declare the watch on the widget, never only on the watched component"
+    `rsc19` is also the cautionary tale. Four components on this install —
+    `rsc1139`, `rsc1140`, `rsc1401`, `rsc1403` — carry a legacy `observers`
+    spec naming `rsc19` and **no** matching `observe` entry on `rsc19`. Nothing
+    ever fired for them, and nothing ever will until the `observe` half is
+    added: a forward spec alone is dead configuration. The engine now names
+    every such edge in the boot log.
 
 !!! note "What lands where"
     Per target: exactly **one** TM row (never the live misc column — stored misc

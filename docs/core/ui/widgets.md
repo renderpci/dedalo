@@ -313,8 +313,8 @@ ontology-supplied string would be a code-injection vector.
 - `src/core/components/component_info/emit.ts` — the emit hook (stored-wins /
   live-fallback, WC-026 normalize, edit datalist attach, principal threading).
 - `src/core/api/handlers/dd_component_info.ts` — the `get_widget_data` action.
-- `src/core/api/handlers/observers.ts` `recomputeInfoObserver` — observer
-  recompute on saves.
+- `src/core/section/record/observers.ts` `recomputeInfoObserver` — observer
+  recompute on saves (see [Server-side observers](../system/observers.md)).
 
 ## How it fits with the rest of Dédalo
 

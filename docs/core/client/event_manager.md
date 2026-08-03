@@ -109,10 +109,13 @@ side. They are different mechanisms that happen to share configuration:
 | Entry point | the observer's subscribed callback | `set_dato_external` |
 
 On the **server**, the observable's change drives `propagateToObservers()`
-(`src/core/api/handlers/observers.ts`, wired into the save path from
-`src/core/api/handlers/dd_core_api.ts`), which loads the observer component and runs the
-configured `perform` function (dominantly `set_dato_external`) against the
-observable's data — persisting the recomputed external value. On the
+(`src/core/section/record/observers.ts`, wired into the save path from
+`src/core/section/record/save_component.ts`), which looks the observers up in an
+ontology-wide subscription registry — the **observer** declares the edge, not
+the observable — and runs the configured `perform` function (dominantly
+`set_dato_external`) against the observable's data, persisting the recomputed
+external value. The full reference is
+[Server-side observers](../system/observers.md). On the
 **client**, the same configuration's `client.event` / `client.perform` is
 wired into an `event_manager.subscribe()` so the observer reacts to user
 interaction in the browser. The contract reference for the `observe` JSON

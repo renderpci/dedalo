@@ -225,8 +225,9 @@ hierarchy/ancestor-walk/sibling-order behaviour lives in `relations/parent.ts` a
   (emitted as `tools: []`).
 - Saving flows through the section record
   (`src/core/section/record/save_component.ts`) — a component never touches the
-  database directly; the section persists its column + counter. Server-side
-  observers recompute from `api/handlers/observers.ts` (partial, ledgered coverage).
+  database directly; the section persists its column + counter.
+  [Server-side observers](../system/observers.md) then recompute from
+  `src/core/section/record/observers.ts` (partial, ledgered coverage).
 
 ---
 
