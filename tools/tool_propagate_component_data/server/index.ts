@@ -27,8 +27,8 @@
 import { config } from '../../../src/config/config.ts';
 import { sanitizeClientSqo } from '../../../src/core/concepts/sqo.ts';
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
-import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
+import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
@@ -49,7 +49,7 @@ import type {
 	ToolResponse,
 	ToolServerModule,
 } from '../../../src/core/tools/module.ts';
-import { COMPONENTS_WITH_RELATIONS, type PropagateAction, applyPropagation } from './propagate.ts';
+import { applyPropagation, COMPONENTS_WITH_RELATIONS, type PropagateAction } from './propagate.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';

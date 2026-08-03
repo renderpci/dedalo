@@ -6,8 +6,8 @@
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
 import { reconcileStoredFilesInfo } from '../../../src/core/media/tools/files_info_persist.ts';
 import {
-	type RotationTargetEntry,
 	applyRotationCore,
+	type RotationTargetEntry,
 } from '../../../src/core/media/tools/rotation.ts';
 import { getFilesInfoCore } from '../../../src/core/media/tools/versions.ts';
 import type {

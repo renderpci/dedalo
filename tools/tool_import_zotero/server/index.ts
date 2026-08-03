@@ -26,13 +26,13 @@ import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
-import { type MappedRecord, importMappedRecords } from '../../../src/core/tools/import_execute.ts';
+import { importMappedRecords, type MappedRecord } from '../../../src/core/tools/import_execute.ts';
 import type {
 	ToolActionContext,
 	ToolResponse,
 	ToolServerModule,
 } from '../../../src/core/tools/module.ts';
-import { type RdfMapEntry, applyRdfMap, parseRdfXml } from '../../../src/core/tools/rdf_xml.ts';
+import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../../src/core/tools/rdf_xml.ts';
 
 function fail(message: string): ToolResponse {
 	return { result: false, msg: `Error. ${message}`, errors: [message] };

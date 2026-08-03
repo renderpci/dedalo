@@ -20,7 +20,7 @@ import type {
 	ToolResponse,
 	ToolServerModule,
 } from '../../../src/core/tools/module.ts';
-import { type RdfMapEntry, applyRdfMap, parseRdfXml } from '../../../src/core/tools/rdf_xml.ts';
+import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../../src/core/tools/rdf_xml.ts';
 
 function fail(message: string): ToolResponse {
 	return { result: false, msg: `Error. ${message}`, errors: [message] };

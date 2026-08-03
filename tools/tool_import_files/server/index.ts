@@ -735,9 +735,10 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			extension: string,
 			originalFileName: string,
 		): Promise<void> => {
-			// `items` is read fresh per call, so importing several files into the SAME
-			// record accumulates instead of each one clobbering the last.
-			const { identity, pathOpts, items } = await resolveMediaToolContext({
+			// The context is RE-RESOLVED per call (stored items read fresh), so importing
+			// several files into the SAME record accumulates instead of each one clobbering
+			// the last.
+			const { identity, pathOpts } = await resolveMediaToolContext({
 				component_tipo: targetComponentTipo,
 				section_tipo: targetSectionTipo,
 				section_id: targetSectionId,

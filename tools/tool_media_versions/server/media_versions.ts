@@ -18,14 +18,14 @@ import {
 	type ScanContext,
 	scanContextFromItem,
 } from '../../../src/core/media/files_info.ts';
-import { type MediaIdentity, buildMediaIdentifier } from '../../../src/core/media/path.ts';
+import { buildMediaIdentifier, type MediaIdentity } from '../../../src/core/media/path.ts';
 import {
 	type MediaToolContext,
 	resolveMediaToolContext,
 } from '../../../src/core/media/tool_support.ts';
 import {
-	type FilesInfoReconcileResult,
 	assertRecordPresent,
+	type FilesInfoReconcileResult,
 	reconcileStoredFilesInfo,
 	repairStoredFilesInfo,
 } from '../../../src/core/media/tools/files_info_persist.ts';

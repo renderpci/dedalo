@@ -14,7 +14,7 @@
  */
 
 import { config } from '../../../src/config/config.ts';
-import { type DaemonProblem, SiteBuilderError, capDetail } from './wire.ts';
+import { capDetail, type DaemonProblem, SiteBuilderError } from './wire.ts';
 
 export interface Actor {
 	user_id: number;

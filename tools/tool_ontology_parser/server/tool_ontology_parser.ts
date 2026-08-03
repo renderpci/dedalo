@@ -23,6 +23,7 @@
  *    parallelizes; the four surrounding steps stay strictly sequential.
  */
 
+import type { OntologyIoResponse } from '../../../src/core/ontology/data_io.ts';
 import {
 	exportLlmMap,
 	exportOntologyInfo,
@@ -31,7 +32,6 @@ import {
 	getActiveOntologies,
 	updateOntologyInfo,
 } from '../../../src/core/ontology/data_io.ts';
-import type { OntologyIoResponse } from '../../../src/core/ontology/data_io.ts';
 import {
 	type EnsureOntologyResult,
 	ensureOntologies,

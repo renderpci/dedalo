@@ -46,10 +46,10 @@ import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { probeFormat } from '../../../src/core/media/engine/ffmpeg.ts';
 import {
-	type MediaIdentity,
-	type MediaPathOptions,
 	absoluteFromRelative,
 	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
 	subtitlesPath,
 	subtitlesUrl,
 } from '../../../src/core/media/path.ts';

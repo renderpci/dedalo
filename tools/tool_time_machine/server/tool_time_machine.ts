@@ -31,9 +31,9 @@ import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { MATRIX_JSONB_COLUMNS } from '../../../src/core/db/matrix.ts';
 import {
-	type TimeMachineRow,
 	readTimeMachineRow,
 	recordTimeMachine,
+	type TimeMachineRow,
 } from '../../../src/core/db/time_machine.ts';
 import {
 	getColumnNameByModel,

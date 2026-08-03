@@ -27,11 +27,11 @@ import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
 import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
-import { type MappedRecord, importMappedRecords } from '../../../src/core/tools/import_execute.ts';
+import { importMappedRecords, type MappedRecord } from '../../../src/core/tools/import_execute.ts';
 import {
+	applyMarcMap,
 	type MarcMapEntry,
 	type MarcValueSpec,
-	applyMarcMap,
 	parseMarc,
 } from '../../../src/core/tools/marc21.ts';
 import type {

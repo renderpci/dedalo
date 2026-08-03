@@ -38,17 +38,13 @@ async function status(): Promise<ToolResponse> {
 }
 
 /** 'tipo' gate demo: level >= 1 on (section_tipo, tipo) was already asserted. */
-async function readDemo(context: {
-	options: Record<string, unknown>;
-}): Promise<ToolResponse> {
+async function readDemo(context: { options: Record<string, unknown> }): Promise<ToolResponse> {
 	const { section_tipo, tipo } = context.options;
 	return { result: { section_tipo, tipo, read: true }, msg: 'OK', errors: [] };
 }
 
 /** 'record' gate demo: section write perm + record-in-scope already asserted. */
-async function writeDemo(context: {
-	options: Record<string, unknown>;
-}): Promise<ToolResponse> {
+async function writeDemo(context: { options: Record<string, unknown> }): Promise<ToolResponse> {
 	const { section_tipo, section_id } = context.options;
 	return { result: { section_tipo, section_id, written: true }, msg: 'OK', errors: [] };
 }
