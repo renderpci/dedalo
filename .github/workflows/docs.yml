@@ -36,6 +36,14 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
 
+# Least privilege for GITHUB_TOKEN: without this block a workflow inherits the
+# REPOSITORY default, which on an older repo is read/WRITE on contents, packages,
+# issues and pull-requests — ambient push rights handed to every step, including a
+# third-party action. None of these jobs writes anything back to the repo.
+# Enforced by rule 7 of test/unit/ci_workflow_tripwire.test.ts.
+permissions:
+  contents: read
+
 concurrency:
   group: docs-${{ github.ref }}
   cancel-in-progress: true
@@ -45,9 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
           cache: pip
