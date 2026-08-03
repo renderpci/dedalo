@@ -8,8 +8,7 @@
  * mutated; derivatives are atomic.
  */
 
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync } from 'node:fs';
 import {
 	assertAllowedExtension,
 	assertIngestableQuality,
@@ -17,17 +16,11 @@ import {
 	type MediaTypeSpec,
 	mediaTypeOf,
 } from '../../concepts/media.ts';
-import {
-	extractAudio,
-	getAudioCodec,
-	probeStreams,
-	standardFromFps,
-	transcodeTwoPass,
-} from '../engine/ffmpeg.ts';
-import { getFfmpegProfile, settingName } from '../engine/ffmpeg_profiles.ts';
+// The av encoder lives in ../av_versions.ts — ONE encoder for ingest and for the
+// media-versions tool's per-quality build (see that module's header).
+import { submitAvTranscode } from '../av_versions.ts';
 import { type FileInfoEntry, scanContextFromItem, scanFilesInfo } from '../files_info.ts';
-import { mediaJobs } from '../jobs.ts';
-import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
+import { buildMediaLocation } from '../path.ts';
 import {
 	regenerate3d,
 	regenerateImage,
@@ -37,22 +30,8 @@ import {
 } from '../processing.ts';
 import { regenerateMissingDerivatives } from '../repair.ts';
 import { readStoredMediaItems } from '../tool_support.ts';
-import { reconcileStoredFilesInfo } from '../tools/files_info_persist.ts';
 import { type AddFileInput, addFile } from './add_file.ts';
 import { fireMediaIngestEvent } from './ingest_event.ts';
-
-/** Ensure the parent dir of an output file exists (mirrors processing.ts ensureDir). */
-function ensureMediaDir(absolutePath: string): void {
-	const dir = dirname(absolutePath);
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o775 });
-}
-
-/** Best-effort removal of ffmpeg's two-pass stats scratch (`${passLog}-0.log` + .mbtree). */
-function removePassLog(passLog: string): void {
-	for (const suffix of ['-0.log', '-0.log.mbtree']) {
-		rmSync(`${passLog}${suffix}`, { force: true });
-	}
-}
 
 export interface IngestInput extends Omit<AddFileInput, 'spec'> {
 	spec: MediaTypeSpec;
@@ -225,149 +204,6 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 		filesInfo,
 		startTranscode,
 	};
-}
-
-/**
- * Write the finished transcode's files_info back onto the record.
- *
- * A transcode ends long after the request that started it returned, so the
- * caller's own persist could only record the ORIGINAL — the derivatives it
- * produced (the default quality, the extracted audio) never reached the matrix,
- * and unlike a read-time-rescanned emit, everything that consumes the STORED
- * index (diffusion, publication, export, tool_media_versions) kept seeing an
- * av record that owned nothing but its source file.
- *
- * The stored items are RE-READ under the row lock inside
- * `reconcileStoredFilesInfo`, never closed over: the request's snapshot is long
- * stale, and both the caller's own persist and a concurrent save can commit on
- * this key while ffmpeg runs. Only the ONE cue the scan needs — the stored
- * normalized names / external source — is read (unlocked) beforehand; a stale
- * cue at worst costs an index entry, it cannot revert someone's write.
- *
- * No stored item ⇒ the reconcile no-ops (it never mints — the passive-scan rule:
- * a transcode must not create a stored value for a component that has none; the
- * operator's explicit sync_files repair is the one path that may). That decision
- * is left to the reconcile, INSIDE the lock — an unlocked pre-check here could
- * read "no item" a moment before the caller's own persist created one, and skip
- * the write-back this whole path exists for.
- */
-async function persistTranscodedFilesInfo(
-	spec: MediaTypeSpec,
-	identity: MediaIdentity,
-	pathOpts: MediaPathOptions,
-): Promise<void> {
-	const items = await readStoredMediaItems(
-		identity.sectionTipo,
-		identity.sectionId,
-		identity.componentTipo,
-	);
-	const item = items.find((entry) => (entry.lang ?? null) === identity.lang) ?? items[0];
-	const filesInfo = scanFilesInfo(spec, identity, pathOpts, scanContextFromItem(item));
-	await reconcileStoredFilesInfo({
-		sectionTipo: identity.sectionTipo,
-		sectionId: identity.sectionId,
-		componentTipo: identity.componentTipo,
-		lang: identity.lang,
-		freshFilesInfo: filesInfo,
-	});
-}
-
-/**
- * Submit the AV transcode to the job manager (PHP async build_version). Builds
- * the default quality (two-pass) and the audio quality, then records the result
- * on the record (persistTranscodedFilesInfo); returns the job id.
- */
-export function submitAvTranscode(
-	spec: MediaTypeSpec,
-	identity: MediaIdentity,
-	pathOpts: MediaPathOptions,
-	rawExtension: string,
-): string {
-	const record = mediaJobs.submit('av_transcode', async ({ onProgress }) => {
-		const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
-		if (source === null) throw new Error('AV original not found for transcode');
-		const created: string[] = [];
-
-		// Determine standard/aspect from the source streams.
-		const probe = await probeStreams(source);
-		const video = probe?.streams?.find((s) => s.codec_type === 'video');
-		const hasAudioStream = probe?.streams?.some((s) => s.codec_type === 'audio') ?? false;
-		const standard = standardFromFps(video?.avg_frame_rate);
-		const aspect = pickAspect(video?.width, video?.height);
-
-		// Default quality (e.g. '404') via the matching two-pass profile.
-		const profileName = settingName(spec.defaultQuality, standard, aspect);
-		if (getFfmpegProfile(profileName) !== null) {
-			const target = buildMediaLocation(
-				spec,
-				identity,
-				spec.defaultQuality,
-				spec.defaultExtension,
-				pathOpts,
-			).absolutePath;
-			// The quality tier's directory (e.g. av/404/<bucket>/) does not exist yet
-			// — only the original tier was created by addFile. ffmpeg pass 1 writes
-			// its two-pass stats file (passLog) into this dir, so without the mkdir
-			// it dies with "ratecontrol_init: can't open stats file" and NO derivative
-			// is ever produced (client then finds no default-quality file → no video).
-			ensureMediaDir(target);
-			const temp = `${target}.tmp.${process.pid}`;
-			const passLog = `${target}.passlog`;
-			await transcodeTwoPass(profileName, source, temp, passLog);
-			await import('node:fs').then((fs) => fs.renameSync(temp, target));
-			// ffmpeg writes two-pass stats as `${passLog}-0.log` (+ .mbtree). Remove
-			// them so they don't litter the quality dir (and get mistaken for media).
-			removePassLog(passLog);
-			created.push(target);
-			onProgress(70);
-		}
-
-		// Audio quality (single-pass extraction) — ONLY when the source actually
-		// carries an audio stream. A silent/video-only source (common for screen
-		// captures and muxed clips) makes ffmpeg emit "Output file does not contain
-		// any stream" and exit non-zero; letting that throw would fail the WHOLE
-		// transcode job even though the video derivative was already built, so the
-		// client sees a failed job and never plays the (existing) video.
-		if (spec.qualities.includes('audio') && hasAudioStream) {
-			const audioTarget = buildMediaLocation(
-				spec,
-				identity,
-				'audio',
-				spec.defaultExtension,
-				pathOpts,
-			).absolutePath;
-			// Same as above: the audio tier's directory must exist before extraction.
-			ensureMediaDir(audioTarget);
-			await getAudioCodec();
-			await extractAudio(source, audioTarget, 'audio');
-			created.push(audioTarget);
-		}
-
-		// Record what was built. A failure here does NOT fail the job: the
-		// derivatives really are on disk, and reporting the transcode as errored
-		// would send the client back to a re-transcode it does not need. It is
-		// still loud (console.error + a `persist_error` in the payload) because a
-		// record that does not know its own files is exactly the bug this fixes.
-		let persistError: string | null = null;
-		try {
-			await persistTranscodedFilesInfo(spec, identity, pathOpts);
-		} catch (error) {
-			persistError = (error as Error).message;
-			console.error(
-				`[media jobs] av_transcode ${identity.sectionTipo}/${identity.sectionId}/${identity.componentTipo}: files_info write-back failed: ${persistError}`,
-			);
-		}
-		onProgress(100);
-		return { created, persist_error: persistError };
-	});
-	return record.id;
-}
-
-/** 16x9 vs 4x3 from dimensions (PHP get_aspect_ratio). */
-function pickAspect(width?: number, height?: number): '16x9' | '4x3' | null {
-	if (!width || !height) return null;
-	const ratio = width / height;
-	return ratio > 1.5 ? '16x9' : '4x3';
 }
 
 /** Resolve a media spec from a model name (convenience for callers). */

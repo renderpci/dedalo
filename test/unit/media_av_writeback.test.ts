@@ -30,9 +30,9 @@ import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { submitAvTranscode } from '../../src/core/media/av_versions.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { scanFilesInfo } from '../../src/core/media/files_info.ts';
-import { submitAvTranscode } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import { mediaJobs } from '../../src/core/media/jobs.ts';
 import {
 	buildMediaLocation,

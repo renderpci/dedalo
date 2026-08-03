@@ -24,33 +24,35 @@ Use it when: derived media qualities are missing, broken, rotated, un-seekable, 
 | --- | --- |
 | `get_files_info` | the `files_info` scanner (probes each quality on disk) |
 | `delete_quality` | file-ops soft-delete for the quality |
-| `build_version` | the processing engine (`buildImageVersion`/`buildPdfCover`/…, pixel-budget resize, never-upscale, CMYK→sRGB) |
+| `build_version` | the processing engine (`buildImageVersion`/`buildPdfCover`/…, pixel-budget resize, never-upscale, CMYK→sRGB). For `component_av` it is the av encoder (`src/core/media/av_versions.ts`): the REQUESTED quality tier is transcoded in a background job (returns `job_id`), and the thumb tier is derived from the posterframe, never from ffmpeg |
+| `get_job_status` | the media job manager — the poll wire for the `job_id` an av `build_version` returns |
 | `conform_headers` | AV header/moov-atom rewrite (`component_av`-only, per `register.json`'s `specific_actions`) |
 | `rotate` | the rotation engine (`component_image`-only) for the matching quality entry |
 | `sync_files` | re-reads data then re-derives the component's stored `files_info` |
 | `delete_version` | the thumb-specific delete path for the thumb quality, else the general file-ops delete |
 
-All seven actions return the standard `{ result, msg, errors }` envelope; the write actions merge the engine response into that envelope. `sync_files` re-reads current data **before** regenerating, so the regeneration runs against current data. `rotate` reads the component's `files_info`, matches the requested `quality`, and runs the rotation for each matching entry — gated against real ImageMagick/ffmpeg output on scratch media.
+All eight actions return the standard `{ result, msg, errors }` envelope; the write actions merge the engine response into that envelope. `sync_files` re-reads current data **before** regenerating, so the regeneration runs against current data. `rotate` reads the component's `files_info`, matches the requested `quality`, and runs the rotation for each matching entry — gated against real ImageMagick/ffmpeg output on scratch media.
 
-**Client** (`tools/tool_media_versions/js/`). `tool_media_versions.js` is the instance; it extends the standard tool lifecycle (`init` / `build` / `render` / `edit` from `tool_common`). In `build()` it resolves its `main_element` from `tool_config.ddo_map` (the ddo flagged with `role: 'main_element'`), finds that component instance in `ar_instances`, and pre-computes the file sets it needs: `files_info_db` (from the record's `entries[0].files_info`), `files_info_disk` (fetched live via `get_files_info`), and filtered views (`files_info_safe`, `files_info_alternative`, `files_info_original`). `render_tool_media_versions.js` builds the DOM: the read-only main-element preview, the sync/regenerate row, and the versions grid. Each client method (`delete_quality`, `build_version`, `conform_headers`, `rotate`, `sync_files`, `delete_version`) builds an RQO with `dd_api: 'dd_tools_api'`, `action: 'tool_request'`, `source: create_source(self, '<action>')`, and the options above, then calls `data_manager.request()`. The destructive/long actions confirm first (`confirm(get_label.sure)`) and use a long client timeout (`3600 * 1000` ms) with a single retry, because rebuilds can take minutes.
+**Client** (`tools/tool_media_versions/js/`). `tool_media_versions.js` is the instance; it extends the standard tool lifecycle (`init` / `build` / `render` / `edit` from `tool_common`). In `build()` it resolves its `main_element` from `tool_config.ddo_map` (the ddo flagged with `role: 'main_element'`), finds that component instance in `ar_instances`, and pre-computes the file sets it needs: `files_info_db` (from the record's `entries[0].files_info`), `files_info_disk` (fetched live via `get_files_info`), and filtered views (`files_info_safe`, `files_info_alternative`, `files_info_original`). `render_tool_media_versions.js` builds the DOM: the read-only main-element preview, the sync/regenerate row, and the versions grid. Each client method (`delete_quality`, `build_version`, `conform_headers`, `rotate`, `sync_files`, `delete_version`, `get_job_status`) builds an RQO with `dd_api: 'dd_tools_api'`, `action: 'tool_request'`, `source: create_source(self, '<action>')`, and the options above, then calls `data_manager.request()`. The destructive/long actions confirm first (`confirm(get_label.sure)`) and use a long client timeout (`3600 * 1000` ms) with a single retry, because rebuilds can take minutes.
 
 **Specific actions.** The rotate and conform-headers buttons are not shown on every media model. The tool's `properties.specific_actions` (from `register.json`) maps each action to the component models it applies to — `rotate` → `component_image`, `conform_headers` → `component_av` — and `render_tool_media_versions.js` only renders a specific action when `self.main_element.model` is in that action's model list.
 
 ## Actions & options
 
-`apiActions` declares every action with `permission: 'record'` — `minLevel: 1` for the one read action, `minLevel: 2` for the six write actions — so the framework asserts both the section/component permission level **and** the per-record project-scope check before any handler runs. There is no `backgroundRunnable`: `build_version` runs its own async work inside the processing engine (the `async` option), not via a background fork.
+`apiActions` declares each media action with `permission: 'record_tipo'` — `minLevel: 1` for the one read action, `minLevel: 2` for the six write actions — so the framework asserts the level on the (section_tipo, component) PAIR **and** the per-record project-scope check before any handler runs. `get_job_status` is the exception: it mounts the shared `MEDIA_JOB_STATUS_ACTION` spec with `permission: null`, because dispatch gates 1–4 already require a caller authorized for this tool and the handler applies the job-record ownership rule itself. `build_version` is the one `backgroundRunnable` action.
 
 All actions read the same three required options — `tipo` (the component tipo), `section_tipo`, `section_id` — and refuse with an error envelope if any are missing.
 
 | Action | Gate | Extra required / read options | Purpose |
 | --- | --- | --- | --- |
-| `get_files_info` | `record`, level 1 | — | Probe disk for every quality; returns the `files_info` array (existence, name, path, url, size, time per quality). |
-| `delete_quality` | `record`, level 2 | `quality` (req.) | Delete the file of one quality. |
-| `build_version` | `record`, level 2 | `quality` (req.), `async` (default `true`) | (Re)build one quality from the original. |
-| `conform_headers` | `record`, level 2 | `quality` (req.) | Rebuild a quality rewriting file headers (AV seek/compatibility fix). |
-| `rotate` | `record`, level 2 | `quality` (req.), `degrees` (req., e.g. `-90` / `90`) | Rotate the matching quality entries. |
-| `sync_files` | `record`, level 2 | `regenerate_options` (object, e.g. `{ delete_normalized_files: bool }`) | Re-read data and regenerate the component so `files_info` matches disk. |
-| `delete_version` | `record`, level 2 | `quality` (req.), `extension` (optional) | Delete one specific version: the thumb-specific path for the thumb quality, else the general file-ops delete. |
+| `get_files_info` | `record_tipo`, level 1 | — | Probe disk for every quality; returns the `files_info` array (existence, name, path, url, size, time per quality). |
+| `delete_quality` | `record_tipo`, level 2 | `quality` (req.) | Delete the file of one quality. |
+| `build_version` | `record_tipo`, level 2 | `quality` (req.), `extension` (optional), `async` (default `true`) | (Re)build the requested quality from the original (falling back to the default-quality file when the box has no original). For av it returns `job_id` and encodes in the background; refusals that are knowable up front — no source, no encode profile for the tier, no audio stream for an audio tier, the original as target — come back as `result:false` **before** a job exists. |
+| `get_job_status` | dispatch gates 1–4 (+ job ownership) | `job_id` (req.) | Poll one media job: top-level `JobStatusFrame` fields (`pid`, `pfile`, `is_running`, `data`, `errors`, `total_time`); `{result:false, errors:['job_not_found']}` on an unknown id. |
+| `conform_headers` | `record_tipo`, level 2 | `quality` (req.) | Rebuild a quality rewriting file headers (AV seek/compatibility fix). |
+| `rotate` | `record_tipo`, level 2 | `quality` (req.), `degrees` (req., e.g. `-90` / `90`) | Rotate the matching quality entries. |
+| `sync_files` | `record_tipo`, level 2 | `regenerate_options` (object, e.g. `{ delete_normalized_files: bool }`) | Re-read data and regenerate the component so `files_info` matches disk. |
+| `delete_version` | `record_tipo`, level 2 | `quality` (req.), `extension` (optional) | Delete one specific version: the thumb-specific path for the thumb quality, else the general file-ops delete. |
 
 Response shape for every action: `{ result, msg, errors }`. For `get_files_info`, `result` is the files-info array (or `false` on failure); for the write actions `result` is the boolean / merged result of the delegated engine call.
 

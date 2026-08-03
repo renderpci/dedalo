@@ -9,10 +9,10 @@
 import { existsSync } from 'node:fs';
 import { config } from '../../../config/config.ts';
 import { assertValidQuality, type MediaTypeSpec } from '../../concepts/media.ts';
+import { submitAvVersionBuild } from '../av_versions.ts';
 import { conformHeader } from '../engine/ffmpeg.ts';
 import { moveToDeleted } from '../file_ops.ts';
 import { type FileInfoEntry, type ScanContext, scanFilesInfo } from '../files_info.ts';
-import { submitAvTranscode } from '../ingest/process_uploaded_file.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 import {
 	buildImageVersion,
@@ -21,6 +21,7 @@ import {
 	copyToQuality,
 	resolveOriginalSource,
 } from '../processing.ts';
+import { buildAvThumbFromPosterframe } from './posterframe.ts';
 import { applyRotationCore } from './rotation.ts';
 
 /**
@@ -60,9 +61,21 @@ export async function buildVersionCore(
 	const thumbQuality = config.media.thumb.quality;
 
 	if (spec.model === 'component_av') {
+		// The av thumb is NOT a transcode: PHP component_av::create_thumb resizes
+		// the POSTERFRAME (ImageMagick), so routing it through ffmpeg would build a
+		// video into the thumb tier. No posterframe ⇒ refuse loudly; the operator's
+		// next step is tool_posterframe, not a longer wait.
+		if (quality === thumbQuality) {
+			return {
+				built: [await buildAvThumbFromPosterframe({ spec, identity, pathOpts })],
+				jobId: null,
+			};
+		}
+		// ONE quality — the tier the operator clicked. Pre-flight refusals surface
+		// as a failed request, not as an accepted job that dies later.
 		return {
 			built: [],
-			jobId: submitAvTranscode(spec, identity, pathOpts, rawExtension ?? spec.defaultExtension),
+			jobId: await submitAvVersionBuild(spec, identity, pathOpts, quality, rawExtension),
 		};
 	}
 

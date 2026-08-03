@@ -505,9 +505,10 @@ tool_media_versions.prototype.delete_quality = async function(quality) {
 * using the component's configured encoding parameters for that quality.
 *
 * Passes async:true so the server kicks off the transcoding job and returns
-* immediately (result===true) rather than waiting for completion.  The render
-* layer is responsible for polling get_files_info() until the file appears on
-* disk (see render_build_version() in render_tool_media_versions.js).
+* immediately (result===true) rather than waiting for completion.  For AV the
+* response also carries `job_id`: the render layer follows THAT (get_job_status)
+* and only then confirms the file on disk — see render_build_version() in
+* render_tool_media_versions.js.
 *
 * A browser confirm() dialog is shown before the request is sent.  If the user
 * cancels, the method returns false without making any API call.
@@ -522,8 +523,10 @@ tool_media_versions.prototype.delete_quality = async function(quality) {
 * returns result===false with a descriptive msg.
 *
 * @param {string} quality - Target quality key (e.g. 'normal', '404', 'audio').
-* @returns {Promise<Array>|false} Resolves with the server result array,
-*   or false when the user cancelled the confirm dialog.
+* @returns {Promise<Object>|false} Resolves with the whole server response
+*   ({result, msg, job_id, files_info}), or false when the user cancelled the
+*   confirm dialog. The FULL response (not just `result`) because the caller
+*   needs `job_id` to follow the transcode and `msg` to show why it was refused.
 */
 tool_media_versions.prototype.build_version = async function(quality) {
 
@@ -569,12 +572,62 @@ tool_media_versions.prototype.build_version = async function(quality) {
 					alert('Error: ' + response.msg);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				resolve(response)
 			})
 		})
 }//end build_version
+
+
+
+/**
+* GET_JOB_STATUS
+* Reads the state of one media job (the `job_id` build_version returns for AV
+* transcodes) from the job manager.
+*
+* This is what makes the progress indicator honest. Before it existed the panel
+* could only watch the filesystem, where "still encoding" and "the job died ten
+* minutes ago" look exactly the same — so a failed transcode blinked
+* "Processing" until the user gave up and reloaded.
+*
+* Dispatches to: src/core/tools/job_status.ts (MEDIA_JOB_STATUS_ACTION),
+* mounted on this tool as 'get_job_status'.
+*
+* @param {string} job_id
+* @returns {Promise<Object>} {result, is_running, errors, data, total_time}.
+*   result===false (job_not_found) when the id is unknown — a server restart
+*   drops in-process jobs, so an unknown id means "not running any more",
+*   never "still working".
+*/
+tool_media_versions.prototype.get_job_status = async function(job_id) {
+
+	const self = this
+
+	const source = create_source(self, 'get_job_status')
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: source,
+		options	: {
+			tipo			: self.main_element.tipo,
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id,
+			job_id			: job_id
+		}
+	}
+
+	return new Promise(function(resolve){
+		data_manager.request({
+			body : rqo
+		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> get_job_status API response:",'DEBUG',response);
+			}
+			resolve(response)
+		})
+	})
+}//end get_job_status
 
 
 

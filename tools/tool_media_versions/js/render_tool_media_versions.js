@@ -852,7 +852,12 @@ const render_file_upload = function(quality, self) {
 				const render_handler = () => {
 					event_manager.unsubscribe(token)
 					self.main_element_quality = quality
-					self.refresh()
+					// destroy:false — a destroying refresh nulls main_element.context and
+					// the grid re-render throws on its first line (see render_build_version).
+					self.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
 				}
 				token = event_manager.subscribe('render_'+self.main_element.id, render_handler)
 				// store token so tool destroy can clean up if the user closes before uploading
@@ -1006,8 +1011,12 @@ const render_file_versions = function(quality, self) {
 					self.delete_version(quality, extension)
 					.then(function(response){
 						if (response.result===true) {
+							// destroy:false — see the note in render_build_version: a
+							// destroying refresh nulls main_element.context and the
+							// re-render throws before it can repaint.
 							self.refresh({
-								build_autoload : false
+								build_autoload	: false,
+								destroy			: false
 							})
 						}else{
 							self.node.content_data.classList.remove('loading')
@@ -1076,7 +1085,8 @@ const render_file_delete = function(quality, self) {
 				if (response===true) {
 					// self.main_element_quality = quality
 					self.refresh({
-						build_autoload : false
+						build_autoload	: false,
+						destroy			: false
 					})
 				}
 				self.node.classList.remove('loading')
@@ -1097,14 +1107,19 @@ const render_file_delete = function(quality, self) {
 * new quality-encoded file from the 'original'. The button is removed on success
 * and replaced with a blinking "Processing" label while the background job runs.
 *
-* Two post-build polling strategies, based on component model:
+* Two post-build strategies, based on component model:
 *
 *  component_av (except thumb):
-*    AV transcoding is asynchronous and may take minutes. After the API call,
-*    check_file polls self.get_files_info() every 2 seconds (via self.timer) until
-*    the output file appears on disk. When found, it triggers a force_save on the
-*    component (to persist the updated files_info in the DB) and refreshes the tool.
-*    self.timer is stored on the instance so destroy() can clearTimeout it.
+*    AV transcoding is asynchronous and may take minutes, so the panel FOLLOWS
+*    THE JOB the server minted (response.job_id) via self.get_job_status(), and
+*    only when that job is terminal does it confirm the file on disk with
+*    self.get_files_info(). Watching the filesystem alone cannot tell "still
+*    encoding" from "the job failed" — which is why a dead transcode used to
+*    blink "Processing" forever. Terminal-with-errors, a job that vanished
+*    (server restart), a job that finished without writing the requested tier,
+*    and the overall wait cap all end the wait with a READABLE reason and put
+*    the gear back so the operator can retry. self.timer holds the pending
+*    setTimeout so destroy() can clear it.
 *
 *  All other models (images, etc.):
 *    Processing is fast enough that a single dd_request_idle_callback refresh
@@ -1116,6 +1131,11 @@ const render_file_delete = function(quality, self) {
 * @param {Object} self - the tool_media_versions instance
 * @returns {HTMLElement} file_info_node containing the build button (empty for 'original')
 */
+
+/** Poll cadence of the AV build watcher, ms. */
+const BUILD_POLL_INTERVAL = 2000
+/** Hard cap on the whole wait (1 h): a watcher must not outlive its own tab. */
+const BUILD_POLL_MAX_MS = 3600 * 1000
 const render_build_version = function(quality, self) {
 
 	// file_info_node
@@ -1141,59 +1161,149 @@ const render_build_version = function(quality, self) {
 
 			self.node.classList.add('loading')
 
-			// exec build_version: API call returns true when server accepted the job
-			const result = await self.build_version(quality)
-			if (result===true) {
+			// exec build_version: the server accepted the job when result===true,
+			// and for AV it hands back the job_id of the transcode it started.
+			const response	= await self.build_version(quality)
+			const accepted	= response && response.result===true
+			if (accepted) {
 
 				// replace button with a blinking "Processing" indicator
 				button_build_version.remove()
 
-				ui.create_dom_element({
+				const processing_label = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'blink',
 					inner_html		: get_label.processing || 'Processing',
 					parent			: file_info_node
 				})
 
+				// give_up: end the wait honestly — say WHY, and put the gear back so
+				// the operator can act. Never leave the label blinking on a build
+				// that is not happening.
+				const give_up = function(reason) {
+					if (self.timer) {
+						clearTimeout(self.timer)
+						self.timer = null
+					}
+					processing_label.remove()
+					file_info_node.appendChild(button_build_version)
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'build_error',
+						inner_html		: (get_label.error || 'Error') + ': ' + reason,
+						parent			: file_info_node
+					})
+				}
+
+				// done: the file is really there — re-render against it.
+				const done = async function() {
+					if (self.timer) {
+						clearTimeout(self.timer)
+						self.timer = null
+					}
+					self.main_element_quality = quality
+
+					// NO force_save here. PHP needed one: its build ran outside the
+					// component, so someone had to trigger the save pipeline to get the
+					// new files_info into the record. The TS engine persists it on the
+					// build path itself — the av transcode job writes files_info back
+					// when it finishes, and the synchronous types write it back in the
+					// build_version handler. The call was also a guaranteed 500:
+					// 'force_save' is not an implemented save action (save_component.ts
+					// refuses unknown actions loudly), so this line failed the whole
+					// completion step and left the cell blinking on a build that HAD
+					// succeeded. A component with no stored files_info at all is the
+					// one case still needing a write — that is what Regenerate
+					// (sync_files) is for, and the unsync bar says so.
+					//
+					// destroy:false is load-bearing (the pattern sync_files already
+					// uses): the default refresh destroys DEPENDENCIES, which nulls
+					// main_element.context — and the first thing this grid re-reads is
+					// main_element.context.features.default_quality, so the re-render
+					// died on a TypeError and the cell kept blinking on a build that
+					// had finished. build(false) re-scans get_files_info regardless of
+					// autoload, so the grid is still fresh.
+					self.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
+				}
+
 				if (self.main_element.model === 'component_av' && quality !== 'thumb') {
-					// AV transcoding is asynchronous: poll disk every 2s until the file appears
-					const check_file = async function() {
+
+					const job_id	= response.job_id || null
+					const started	= Date.now()
+
+					// THE FILE CHECK. A quality counts as built only when the scan
+					// reports the entry present AND non-empty: a zero-byte file is a
+					// failed encode, not a version (the encoder writes to a temp name
+					// and renames, so a partial file should never be visible — this is
+					// the belt to that braces).
+					const file_is_ready = async function() {
+						const files_info	= await self.get_files_info()
+						const found			= files_info.find(el => el.quality===quality)
+						return !!(found && found.file_exist===true && (found.file_size===null || found.file_size>0))
+					}
+
+					const check_job = async function() {
 
 						if (self.timer) {
 							clearTimeout(self.timer);
 						}
 
-						const files_info	= await self.get_files_info()
-						const found			= files_info.find(el => el.quality===quality)
-						if (found && found.file_exist===true) {
-							// processing_label.remove()
-							// button_build_version.classList.remove('hide')
-							self.main_element_quality = quality
-
-							// force_save does not persist data changes; it only triggers the component
-							// save pipeline so that the server updates files_info in the DB record
-							// (the component would otherwise only save on user-initiated edits)
-								await self.main_element.save([{
-									action : 'force_save'
-								}])
-
-							self.refresh({
-								build_autoload : false
-							})
-						}else{
-							// file not yet ready — check again after 2 seconds
-							self.timer = setTimeout(async function(){
-								check_file()
-							}, 2000)
+						if ((Date.now() - started) > BUILD_POLL_MAX_MS) {
+							return give_up((get_label.processing || 'Processing') + ' > 1h')
 						}
+
+						// No job id (a server that answered without one): fall back to
+						// watching the filesystem, still bounded by the cap above.
+						if (job_id===null) {
+							if (await file_is_ready()) {
+								return done()
+							}
+							self.timer = setTimeout(check_job, BUILD_POLL_INTERVAL)
+							return
+						}
+
+						const status = await self.get_job_status(job_id)
+
+						// Still encoding.
+						if (status && status.result===true && status.is_running===true) {
+							self.timer = setTimeout(check_job, BUILD_POLL_INTERVAL)
+							return
+						}
+
+						// The job manager no longer knows this id: in-process jobs die
+						// with the server, so this is "not running any more", never
+						// "still working". The file may still have landed before the
+						// restart, so check the disk before calling it a failure.
+						if (!status || status.result!==true) {
+							if (await file_is_ready()) {
+								return done()
+							}
+							return give_up((status && status.msg) ? status.msg : 'job lost')
+						}
+
+						// Terminal. Errors win over everything else.
+						const errors = Array.isArray(status.errors) ? status.errors : []
+						if (errors.length>0) {
+							return give_up(errors.join('; '))
+						}
+						// Terminal and clean, but the tier is not on disk: the job did
+						// something other than what was asked. Say so instead of waiting.
+						if (!(await file_is_ready())) {
+							return give_up(quality + ' not built')
+						}
+						return done()
 					}
-					check_file()
+					check_job()
 				}else{
 					// non-AV builds complete synchronously; refresh on the next idle frame
 					dd_request_idle_callback(
 						() => {
 							self.refresh({
-								build_autoload : false
+								build_autoload	: false,
+								destroy			: false
 							})
 						}
 					)
@@ -1272,7 +1382,11 @@ const render_specific_actions = {
 				const result = await self.conform_headers(quality)
 				if (result===true) {
 					self.main_element_quality = quality
-					self.refresh()
+					// destroy:false — see render_build_version.
+					self.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
 				}
 				self.node.classList.remove('loading')
 			})

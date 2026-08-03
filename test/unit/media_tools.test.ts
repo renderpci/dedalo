@@ -372,6 +372,7 @@ describe('media tool server modules load with the right surface', () => {
 				'delete_quality',
 				'delete_version',
 				'get_files_info',
+				'get_job_status',
 				'rotate',
 				'sync_files',
 			].sort(),
@@ -379,6 +380,12 @@ describe('media tool server modules load with the right surface', () => {
 		expect(actions.build_version!.permission).toBe('record_tipo');
 		expect(actions.build_version!.minLevel).toBe(2);
 		expect(actions.get_files_info!.minLevel).toBe(1);
+		// get_job_status polls the transcode build_version minted. permission null
+		// is the shared MEDIA_JOB_STATUS_ACTION posture (tool_upload mounts the same
+		// spec): dispatch gates 1-4 already require a caller authorized for this
+		// tool, and the handler applies the job-record ownership rule itself. Pinned
+		// here so mounting it can never be mistaken for an ungated door.
+		expect(actions.get_job_status!.permission).toBeNull();
 		// component-specific mutations are WRITE-gated like the rest.
 		expect(actions.conform_headers!.minLevel).toBe(2);
 		expect(actions.rotate!.minLevel).toBe(2);

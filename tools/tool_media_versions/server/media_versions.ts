@@ -138,7 +138,8 @@ export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse
 		const mediaContext = await resolveMediaToolContext(ctx.options);
 		const { spec, identity, pathOpts } = mediaContext;
 		const quality = String(ctx.options.quality ?? spec.defaultQuality);
-		const built = await buildVersionCore(spec, identity, pathOpts, quality);
+		const extension = typeof ctx.options.extension === 'string' ? ctx.options.extension : null;
+		const built = await buildVersionCore(spec, identity, pathOpts, quality, extension);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		// Persist only for synchronous builds; av transcodes finish in a background
 		// job and refresh files_info when the next read/save re-scans.

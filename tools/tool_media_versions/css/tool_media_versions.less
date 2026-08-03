@@ -26,6 +26,18 @@
 		background-color: @tool_color;
 	}
 
+	// The reason a build stopped, shown in the cell next to the restored gear
+	// (render_build_version give_up). Local + inline: a failed 576 must read as
+	// that cell's state, not as a page-wide alarm bar.
+	.build_error {
+		display: block;
+		color: @color_danger;
+		font-size: 0.8rem;
+		line-height: 1.2;
+		margin-top: 0.25rem;
+		word-break: break-word;
+	}
+
 	// content_data
 	>.content_data {
 		display: flex;

@@ -12,6 +12,14 @@
 .wrapper_tool.tool_media_versions .spinner {
   background-color: var(--tool_media_versions);
 }
+.wrapper_tool.tool_media_versions .build_error {
+  display: block;
+  color: var(--color_danger);
+  font-size: 0.8rem;
+  line-height: 1.2;
+  margin-top: 0.25rem;
+  word-break: break-word;
+}
 .wrapper_tool.tool_media_versions > .content_data {
   display: flex;
   flex-wrap: wrap;

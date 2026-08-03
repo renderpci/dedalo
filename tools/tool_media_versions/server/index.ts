@@ -10,6 +10,7 @@
  * transcodes in the background.
  */
 
+import { MEDIA_JOB_STATUS_ACTION } from '../../../src/core/tools/job_status.ts';
 import type { ToolServerModule } from '../../../src/core/tools/module.ts';
 import {
 	buildVersion,
@@ -33,6 +34,11 @@ export const tool: ToolServerModule = {
 		conform_headers: { permission: 'record_tipo', minLevel: 2, handler: conformHeaders },
 		// component_image-specific (register.json specific_actions): rotate a quality tier.
 		rotate: { permission: 'record_tipo', minLevel: 2, handler: rotate },
+		// The poll wire for the av transcode build_version mints (job_id). Without
+		// it the panel could only guess from the filesystem — it blinked
+		// "Processing" forever when a job failed, because a file that is never
+		// written is indistinguishable from one that is still encoding.
+		get_job_status: MEDIA_JOB_STATUS_ACTION,
 	},
 	backgroundRunnable: ['build_version'],
 };

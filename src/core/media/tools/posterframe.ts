@@ -155,6 +155,34 @@ export function posterframeAbsolutePath(
 }
 
 /**
+ * Build the AV thumb FROM the component's posterframe (PHP component_av::
+ * create_thumb → ImageMagick::dd_thumb(posterframe → av/thumb/id.jpg)).
+ *
+ * The av thumb is an IMAGE derived from the posterframe, never an ffmpeg output
+ * — which is why the media-versions panel's thumb gear routes here instead of
+ * through the transcoder. Throws when there is no posterframe: the operator's
+ * next step is tool_posterframe, and a silent no-op would leave the panel
+ * waiting for a file nothing is writing.
+ */
+export async function buildAvThumbFromPosterframe(ctx: MediaContext): Promise<string> {
+	if (ctx.spec.model !== 'component_av') throw new Error('av thumb source must be component_av');
+	const posterframe = posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
+	if (!existsSync(posterframe)) {
+		throw new Error('build_version: no posterframe to build the thumb from');
+	}
+	const thumbTarget = avDerivedPath(
+		ctx.spec,
+		ctx.identity,
+		ctx.pathOpts,
+		config.media.thumb.quality,
+		config.media.thumb.extension,
+	);
+	mkdirSync(dirname(thumbTarget), { recursive: true, mode: 0o775 });
+	await buildThumb(posterframe, thumbTarget);
+	return thumbTarget;
+}
+
+/**
  * Create the AV component's own posterframe (PHP component_av::create_posterframe).
  * Resolves the AV source (original quality, else default quality — PHP fallback),
  * extracts a frame at `timecode` sized to the source video, writes it to the
@@ -206,15 +234,7 @@ export async function createAvPosterframe(av: MediaContext, timecode: string): P
 	// ImageMagick::dd_thumb(posterframe → av/thumb/id.jpg)). Best-effort, mirroring
 	// PHP where create_thumb's result does not gate create_posterframe's return.
 	try {
-		const thumbTarget = avDerivedPath(
-			av.spec,
-			av.identity,
-			av.pathOpts,
-			config.media.thumb.quality,
-			config.media.thumb.extension,
-		);
-		mkdirSync(dirname(thumbTarget), { recursive: true, mode: 0o775 });
-		await buildThumb(target, thumbTarget);
+		await buildAvThumbFromPosterframe(av);
 	} catch {
 		// posterframe already written; a thumb failure must not fail the operation.
 	}
