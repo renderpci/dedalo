@@ -37,7 +37,7 @@ export const requestConfigBlockSchema = z
 	.object({
 		ddo_map: ddoMapSchema.optional(),
 		/** Per-block SQO adjustments (operator, etc.). */
-		sqo_config: z.record(z.unknown()).optional(),
+		sqo_config: z.record(z.string(), z.unknown()).optional(),
 		/** Presentation hints (interface, separators…). Kept open for now. */
 	})
 	.passthrough();

@@ -16,7 +16,6 @@
  */
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { AgentToolDefinition } from '../agent/llm_provider.ts';
 import { Page, type Structured, err, ok, wrapError } from './envelope.ts';
 import type { ToolSpec } from './tool_spec.ts';
@@ -115,8 +114,14 @@ export function toAgentToolDefinition(spec: ToolSpec): AgentToolDefinition {
 	return {
 		name: spec.name,
 		description: spec.description,
-		input_schema: zodToJsonSchema(z.object(spec.inputShape), {
-			$refStrategy: 'none',
+		// zod 4 emits JSON Schema natively — `zod-to-json-schema` was a zod-3-only
+		// package and was dropped in the 2026-08-03 dependency sweep. `io: 'input'`
+		// keeps the PRE-transform shape (the model is told what to SEND, not what the
+		// parse produces); `cycles: 'ref'` never fires on a flat tool shape, but a
+		// $ref the Messages API would reject beats a silent throw if one ever does.
+		input_schema: z.toJSONSchema(z.object(spec.inputShape), {
+			io: 'input',
+			cycles: 'ref',
 		}) as Record<string, unknown>,
 	};
 }

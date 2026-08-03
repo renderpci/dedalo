@@ -23,10 +23,18 @@ import { z } from 'zod';
  * below name tables/columns that cannot be bound as parameters, so they are
  * validated here, at boot — a bad value fails the process, never a query.
  * Same grammar the query builder enforces for client-supplied identifiers.
+ *
+ * EXPORTED FOR THE TESTS (2026-08-03, zod 3 → 4). zod 4 no longer re-validates a
+ * `.default()` value, so a boot that takes every AV_* default — which is what the
+ * test process does — stops exercising these checks entirely. Under zod 3 they ran
+ * on every boot and the coverage came for free; the guard is unchanged and still
+ * rejects (verified), but nothing was TESTING it any more. Asserting on the schema
+ * directly is the honest replacement: this grammar is what stands between an
+ * operator's env var and an interpolated SQL identifier.
  */
 const SQL_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const sqlIdentifier = z.string().regex(SQL_IDENTIFIER, 'must be a plain SQL identifier');
-const sqlIdentifierList = z
+export const sqlIdentifier = z.string().regex(SQL_IDENTIFIER, 'must be a plain SQL identifier');
+export const sqlIdentifierList = z
   .string()
   .refine(
     value =>

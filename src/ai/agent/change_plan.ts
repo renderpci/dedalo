@@ -68,7 +68,7 @@ export interface ApplyReport {
 const changeOpSchema = z.object({
 	op_id: z.string().min(1),
 	tool: z.string().min(1),
-	args: z.record(z.unknown()),
+	args: z.record(z.string(), z.unknown()),
 	summary: z.string().min(1),
 });
 

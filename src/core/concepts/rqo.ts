@@ -60,7 +60,7 @@ export const rqoSourceSchema = z
 		 * sqo_config.limit 1 beats the ontology's 9). Nullish-tolerant like PHP
 		 * (`?? null`) — an explicit null is NOT an override.
 		 */
-		properties: z.record(z.unknown()).nullish(),
+		properties: z.record(z.string(), z.unknown()).nullish(),
 		/**
 		 * Time Machine read overrides (PHP dd_core_api :2372-2383,
 		 * `$element->matrix_id` / `$element->data_source`): when `data_source` is
@@ -208,7 +208,7 @@ export function isTemporalSource(source: RqoSource | undefined | null): boolean 
 export const rqoDdoBlockSchema = z
 	.object({
 		ddo_map: ddoMapSchema.optional(),
-		sqo_config: z.record(z.unknown()).optional(),
+		sqo_config: z.record(z.string(), z.unknown()).optional(),
 	})
 	.passthrough();
 
@@ -244,7 +244,7 @@ export const rqoSchema = z
 		 */
 		prevent_lock: z.boolean().optional(),
 		/** Action-specific options bag (file uploads, etc.). May carry a nested sqo. */
-		options: z.record(z.unknown()).optional(),
+		options: z.record(z.string(), z.unknown()).optional(),
 		/** Pretty-print the JSON response (dev aid). */
 		pretty_print: z.boolean().optional(),
 	})

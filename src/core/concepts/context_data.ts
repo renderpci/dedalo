@@ -44,7 +44,7 @@ export const contextEntrySchema = z
 		parent_grouper: z.string().nullable().optional(),
 		mode: z.string().optional(),
 		translatable: z.boolean().optional(),
-		properties: z.record(z.unknown()).nullable().optional(),
+		properties: z.record(z.string(), z.unknown()).nullable().optional(),
 		css: z.unknown().optional(),
 		tools: z.array(z.unknown()).optional(),
 		buttons: z.array(z.unknown()).optional(),

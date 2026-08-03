@@ -138,7 +138,7 @@ export type AvIndexationParams = z.infer<typeof avIndexationParamsSchema>;
 const batchQuerySchema = z.object({
   id: z.string().min(1),
   path: z.string().min(1).startsWith('/', 'path must start with "/"'),
-  params: z.record(z.union([
+  params: z.record(z.string(), z.union([
     z.string(),
     z.number(),
     z.boolean(),

@@ -35,7 +35,7 @@ export const authoringRegisterSchema = z
 		require_translatable: z.boolean().optional(),
 		always_active: z.boolean().optional(),
 		active: z.boolean().optional(),
-		properties: z.union([z.record(z.unknown()), z.null()]).optional(),
+		properties: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
 		labels: z
 			.array(
 				z.object({
@@ -46,8 +46,8 @@ export const authoringRegisterSchema = z
 			)
 			.optional(),
 		ontology: z.union([z.array(z.unknown()), z.null()]).optional(),
-		config: z.union([z.record(z.unknown()), z.null()]).optional(),
-		default_config: z.union([z.record(z.unknown()), z.null()]).optional(),
+		config: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
+		default_config: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
 	})
 	.strict();
 

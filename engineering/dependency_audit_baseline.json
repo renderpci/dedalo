@@ -22,6 +22,12 @@
 				"title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
 			},
 			{
+				"id": 1112706,
+				"severity": "low",
+				"package": "diff",
+				"title": "jsdiff has a Denial of Service vulnerability in parsePatch and applyPatch"
+			},
+			{
 				"id": 1124064,
 				"severity": "high",
 				"package": "fast-uri",

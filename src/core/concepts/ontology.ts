@@ -64,9 +64,9 @@ export const ontologyNodeSchema = z
 		/** Parent tipo in the ontology tree. */
 		parent: z.string().nullable().optional(),
 		/** Per-node configuration JSON (request_config lives under properties.source). */
-		properties: z.record(z.unknown()).nullable().optional(),
+		properties: z.record(z.string(), z.unknown()).nullable().optional(),
 		/** Human labels by language. */
-		label: z.union([z.string(), z.record(z.string())]).optional(),
+		label: z.union([z.string(), z.record(z.string(), z.string())]).optional(),
 		/** Whether component data is language-translatable. */
 		translatable: z.boolean().optional(),
 	})

@@ -1,5 +1,13 @@
 import { describe, test, expect } from 'bun:test';
-import { config, parseList, dbNames, dbNameSet, avSchema } from '../src/config';
+import {
+  config,
+  parseList,
+  dbNames,
+  dbNameSet,
+  avSchema,
+  sqlIdentifier,
+  sqlIdentifierList,
+} from '../src/config';
 
 describe('config', () => {
   test('parseList splits, trims and drops empty entries', () => {
@@ -55,5 +63,30 @@ describe('AV schema config', () => {
   test('the loaded config exposes the AV keys it validated', () => {
     expect(config.AV_TABLE).toMatch(SQL_IDENTIFIER);
     expect(config.AV_THESAURUS_TABLES.length).toBeGreaterThan(0);
+  });
+});
+
+describe('the SQL-identifier grammar itself (AV_* env values)', () => {
+  // These assert the SCHEMA, not the loaded config, because since zod 4 a
+  // `.default()` value is not re-validated: a boot that takes every AV_* default
+  // never runs these checks, so the config assertions above can no longer prove
+  // the guard works. What is interpolated into SQL deserves a direct test.
+  test('sqlIdentifier accepts a plain identifier and nothing else', () => {
+    for (const good of ['interview', '_private', 'rsc36', 'A1']) {
+      expect(sqlIdentifier.safeParse(good).success).toBe(true);
+    }
+    for (const bad of ['1abc', 'a b', 'a;drop table x', 'a-b', 'a.b', '', 'a"b', "a'b"]) {
+      expect(sqlIdentifier.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  test('sqlIdentifierList accepts a comma-separated list, rejects any bad member', () => {
+    for (const good of ['ts_themes', 'a,b,c', ' a , b ', 'a,,b']) {
+      expect(sqlIdentifierList.safeParse(good).success).toBe(true);
+    }
+    // One bad member poisons the whole list — the list is interpolated as a unit.
+    for (const bad of ['ts_themes,a;drop', 'a,b c', 'a,1b', 'a,b-c']) {
+      expect(sqlIdentifierList.safeParse(bad).success).toBe(false);
+    }
   });
 });
