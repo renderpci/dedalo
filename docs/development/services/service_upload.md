@@ -54,6 +54,7 @@ sample event response (as returned by the multipart upload endpoint, `src/core/m
     "file_data": {
         "key_dir": "component_geolocation",
         "tmp_name": "my_file.zip",
+        "upload_id": "9f0c4a1de5b4471aa0d2",
         "extension": "zip",
         "chunked": true,
         "chunk_index": 0,
@@ -63,7 +64,11 @@ sample event response (as returned by the multipart upload endpoint, `src/core/m
 }
 ```
 
-`chunk_index`/`total_chunks` are echoed back on every chunk so the client's own counter (`files_chunked[chunk_index] = tmp_name`) knows when to fire `join_chunked_files_uploaded`; the join re-assembles the parts and re-sniffs the whole file's magic bytes (SEC-066) before it is usable server-side.
+`chunk_index`/`total_chunks` are echoed back on every chunk so the client's own counter (`files_chunked[chunk_index] = tmp_name`) knows when to fire `join_chunked_files_uploaded`; the join re-assembles the parts and verifies the whole assembled file — its signature and, in bounded windows, its body — before it is usable server-side.
+
+`upload_id` identifies ONE transfer. A client may send it as a form field on every part of a file (any 8 to 64 characters of `A-Z a-z 0-9 _ -`, the same value for every part, a new value per file); the server refuses a value outside that shape. A client that does not send one gets a value derived from the file name and the chunk count, which is enough to keep two different files apart but not two simultaneous transfers of the same file name. It is echoed here so it travels back on the join request, and it may also be sent to `delete_uploaded_file` to drop a cancelled transfer's parts immediately.
+
+`tmp_name` on a response with `"complete": true` is the name the file really has in the staging directory, and it is not always the name that was uploaded: names are sanitised, and two files whose sanitised names would collide are kept apart with a `-1`, `-2` … suffix. Always read the staged name from the response — never re-derive it from the display name.
 
 ### Client side handle
 

@@ -29,7 +29,7 @@ PDF import with first-page identifying-image extraction (an `archive` field nami
 
 ### Client
 
-`tools/tool_import_zotero/js/` wires the standard tool lifecycle through `tool_common`. `init()` derives `key_dir = caller.tipo + '_' + caller.section_tipo`. `build()` deliberately skips the generic ddo_map autoload (`load_ddo_map: () => []`) and instead builds two services: `service_dropzone` (the file upload / drop zone for the JSON + PDFs) and `service_tmp_section` (the manual "Values" inputs, filtered to ddo_map role `input_component`). `render_tool_import_zotero.js` draws the drop zone, the Values block and an **IMPORT** button; clicking it gathers `service_tmp_section.get_components_data()`, builds the request via `create_source(self, 'import_files')` and calls `data_manager.request()` with a 3600 s timeout and a single retry, then shows the success/error message and reloads. The tool opens as a separate **window** (`properties.open_as: "window"`). Styling lives in `css/tool_import_zotero.less`.
+`tools/tool_import_zotero/js/` wires the standard tool lifecycle through `tool_common`. `init()` derives `key_dir = caller.tipo + '_' + caller.section_tipo`. `build()` deliberately skips the generic ddo_map autoload (`load_ddo_map: () => []`) and instead builds two services: `service_upload` in multi-file mode (`multiple: true` — the file upload / drop zone for the JSON + PDFs) and `service_tmp_section` (the manual "Values" inputs, filtered to ddo_map role `input_component`). `render_tool_import_zotero.js` draws the drop zone, the Values block and an **IMPORT** button; clicking it gathers `service_tmp_section.get_components_data()`, builds the request via `create_source(self, 'import_files')` and calls `data_manager.request()` with a 3600 s timeout and a single retry, then shows the success/error message and reloads. The tool opens as a separate **window** (`properties.open_as: "window"`). Styling lives in `css/tool_import_zotero.less`.
 
 ## Actions & options
 
@@ -95,7 +95,7 @@ PDF import with first-page identifying-image extraction (an `archive` field nami
 - [tool_import_marc21](tool_import_marc21.md) — MARC21 library-catalogue import (shares the shared-executor write path).
 - [tool_import_dedalo_csv](tool_import_dedalo_csv.md) — CSV import / Dédalo export round-trips.
 - [tool_import_rdf](tool_import_rdf.md) — the sibling RDF/XML import tool this one's parser and mapper are shared with (`src/core/tools/rdf_xml.ts`) — but unlike `tool_import_rdf`'s `get_rdf_data`, this tool's `import_files` actually writes.
-- [tool_import_files](tool_import_files.md) — media file ingest (shares the dropzone upload pattern).
+- [tool_import_files](tool_import_files.md) — media file ingest (shares the multi-file upload-queue pattern).
 - [tool_export](tool_export.md) and [Exporting data](../../../core/exporting_data.md) — the export side.
 - [Importing data](../../../core/importing_data.md) — the per-component import-data contract.
 - Source: `tools/tool_import_zotero/server/index.ts`; RDF parser + mapper: `src/core/tools/rdf_xml.ts`; shared executor: `src/core/tools/import_execute.ts`.

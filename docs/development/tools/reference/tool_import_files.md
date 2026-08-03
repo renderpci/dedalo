@@ -49,7 +49,7 @@ Internal-only helpers (filename parsing, media-file writing, per-role data appli
 
 `tools/tool_import_files/js/tool_import_files.js` wires the standard tool lifecycle and opens in a **window** (per the `dd1335` property `open_as: "window"`). On `init` it builds `key_dir` as `<caller.tipo>_<caller.section_tipo>`. On `build` it loads the `target_component` element context and spins up two services:
 
-- `service_dropzone` — the upload drop zone, seeded with the allowed extensions, the `key_dir`, the `component_option` map entries and the `file_processor` list (so each file can be assigned a processor in its preview row).
+- `service_upload` in multi-file mode (`multiple: true`) — the upload drop zone, seeded with the allowed extensions, the `key_dir`, the `component_option` map entries and the `file_processor` list (so each file can be assigned a processor in its preview row).
 - `service_tmp_section` — a temporary in-memory section that renders the `input_component` fields once; the values typed there are read on submit (`get_components_data()`) and propagated to every imported record.
 
 `render_tool_import_files.js` builds the options panel: a quality selector (`custom_target_quality`, defaulting to `original`), a per-file processor selector, the component-option (target slot) selector, and — only when `import_mode` is `section`/`section_resource` — the checkboxes that flip `import_file_name_mode` between `enumerate` (name indicates id), `named` (same name → same section), `match` (matching id) and `match_freename` (matching name).

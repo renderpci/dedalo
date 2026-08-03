@@ -27,7 +27,7 @@ Only `import_files` is dispatchable; the parser, mapper and executor are plain f
 
 ### Client
 
-`tools/tool_import_marc21/js/` wires the standard tool lifecycle (`init`/`build`/`edit`/`render` via `tool_common`). `init()` derives `key_dir = caller.tipo + '_' + caller.section_tipo`. `build()` skips the generic ddo_map autoload and instead builds two services: `service_dropzone` (file upload) and `service_tmp_section` (the manual "Values" inputs for ddo_map role `input_component`). `render_tool_import_marc21.js` draws the drop zone, the values block and an **IMPORT** button; clicking it gathers `service_tmp_section.get_components_data()`, builds the request via `create_source(self, 'import_files')` and calls `data_manager.request()` with a long timeout (3600 s, 1 retry). The tool opens as a separate window (`properties.open_as: "window"`). Styling lives in `css/tool_import_marc21.less`.
+`tools/tool_import_marc21/js/` wires the standard tool lifecycle (`init`/`build`/`edit`/`render` via `tool_common`). `init()` derives `key_dir = caller.tipo + '_' + caller.section_tipo`. `build()` skips the generic ddo_map autoload and instead builds two services: `service_upload` in multi-file mode (`multiple: true` — the file upload drop zone) and `service_tmp_section` (the manual "Values" inputs for ddo_map role `input_component`). `render_tool_import_marc21.js` draws the drop zone, the values block and an **IMPORT** button; clicking it gathers `service_tmp_section.get_components_data()`, builds the request via `create_source(self, 'import_files')` and calls `data_manager.request()` with a long timeout (3600 s, 1 retry). The tool opens as a separate window (`properties.open_as: "window"`). Styling lives in `css/tool_import_marc21.less`.
 
 ## Actions & options
 
@@ -121,7 +121,7 @@ A conditional holdings rule (945 $a, only when sibling $j equals 193 — ✅ sup
 - [tool_import_dedalo_csv](tool_import_dedalo_csv.md) — CSV import / Dédalo export round-trips
 - [tool_import_rdf](tool_import_rdf.md) — RDF/OWL graph import
 - [tool_import_zotero](tool_import_zotero.md) — Zotero JSON bibliographic import
-- [tool_import_files](tool_import_files.md) — media file ingest (shares the dropzone upload pattern)
+- [tool_import_files](tool_import_files.md) — media file ingest (shares the multi-file upload-queue pattern)
 - [tool_export](tool_export.md) and [Exporting data](../../../core/exporting_data.md) — the export side
 - [Importing data](../../../core/importing_data.md) — the per-component import-data contract
 - [Creating new tools](../creating_tools.md), [Server contract](../server_contract.md), [register.json reference](../register_json.md), [Security](../security.md)

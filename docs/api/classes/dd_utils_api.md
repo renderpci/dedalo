@@ -114,12 +114,12 @@ Reassemble a completed chunked upload (the JSON follow-up to the multipart chunk
 ### Accepts
 
 - `options`: object (required)
-  - `file_data`: object — `{ key_dir, tmp_name, total_chunks }`
+  - `file_data`: object — `{ key_dir, tmp_name, total_chunks, upload_id }`, the descriptor the last chunk response returned. `upload_id` identifies the transfer whose parts are to be joined; a malformed one is refused, and an absent one falls back to matching the recorded file name and part count (ambiguous matches are refused rather than guessed).
   - `files_chunked`: array (optional) — the dense chunk list (its length is used as `total_chunks` when present)
 
 ### Returns
 
-`{ result: true|false, msg: string, file_data: { key_dir, tmp_name, extension, chunked: false, complete: true } }`. Fail-closed: an anonymous caller gets a 404.
+`{ result: true|false, msg: string, file_data: { key_dir, tmp_name, extension, chunked: false, complete: true } }`. `tmp_name` is the name the assembled file really has in the staging directory, which may carry a `-1`, `-2` … suffix when another staged file already held the sanitised name. Fail-closed: an anonymous caller gets a 404.
 
 ## list_uploaded_files
 

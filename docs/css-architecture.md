@@ -90,7 +90,7 @@ Do not hand-resolve them. Take either side, run `bun run css:build`, and commit.
    See [themes](core/ui/themes.md) for the full light/dark token story; this
    page only tracks the import layering.
 2. Services & commons:
-   - `install`, `inspector`, `paginator`, `search`, `menu`, `dd_grid`, generic services (autocomplete, upload, ckeditor, time_machine, dropzone, tmp_section), `tool_common`.
+   - `install`, `inspector`, `paginator`, `search`, `menu`, `dd_grid`, generic services (autocomplete, upload, ckeditor, time_machine, tmp_section), `tool_common`.
 3. Global areas:
    - `login`, `relation_list`, and all `area_*` bundles.
 4. Sections & TS objects:

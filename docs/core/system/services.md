@@ -61,7 +61,7 @@ model, **not** declared in the ontology:
   there is no standalone service; `service_upload` even logs an error if no
   caller is set.
 - **Talk to a generic server action**, never to a service-specific endpoint:
-  `service_upload` / `service_dropzone` call the `get_system_info`, `upload` and
+  `service_upload` calls the `get_system_info`, `upload` and
   `join_chunked_files_uploaded` actions on `dd_utils_api` (backed by
   `src/core/api/handlers/system_info.ts` and `src/core/media/ingest/upload.ts`);
   `service_autocomplete` / `service_time_machine` build an RQO or SQO and call the
@@ -103,7 +103,7 @@ modules by a single caller:
 
 | how it is obtained | services |
 | --- | --- |
-| `get_instance({model:'service_*'})` (factory, by model prefix) | `service_autocomplete`, `service_dropzone`, `service_time_machine`, `service_tmp_section`, `service_subtitles` |
+| `get_instance({model:'service_*'})` (factory, by model prefix) | `service_autocomplete`, `service_time_machine`, `service_tmp_section`, `service_subtitles` |
 | direct ES6 `import` by one component | `service_upload` (the `upload()` fn, used by `component_3d`), `service_ckeditor` (used by `component_text_area`) |
 
 !!! note "`service_upload` is consumed two ways"
@@ -128,12 +128,6 @@ core/services/
 │   │   ├── service_ckeditor.js
 │   │   └── render_text_editor.js
 │   └── plug-ins/reference/    # custom CKEditor "reference" plug-in (src + theme)
-├── service_dropzone/          # drag-and-drop multi-file upload (import tools)
-│   ├── css/service_dropzone.less
-│   ├── img/icon.svg
-│   └── js/
-│       ├── service_dropzone.js
-│       └── render_edit_service_dropzone.js
 ├── service_subtitles/         # subtitle text generation (transcription tools)
 │   └── js/service_subtitles.js      # client shell only (server path not yet ported)
 ├── service_time_machine/      # dd15 history list (time machine)
@@ -148,12 +142,16 @@ core/services/
 │   └── js/
 │       ├── service_tmp_section.js
 │       └── render_edit_service_tmp_section.js
-└── service_upload/            # chunked single-file upload (media, import)
+└── service_upload/            # chunked upload, single-file AND multi-file
     ├── css/service_upload.less
     ├── img/icon.svg
     └── js/
         ├── service_upload.js
-        └── render_edit_service_upload.js
+        ├── render_edit_service_upload.js       # single-file form
+        ├── upload_transport.js                 # DOM-free wire core (the only XHR)
+        ├── upload_queue.js                     # DOM-free multi-file state model
+        ├── dropped_files.js                    # recursive directory-drop traversal
+        └── render_edit_service_upload_queue.js # multi-file queue renderer
 ```
 
 The file nomenclature mirrors [components](../components/index.md): the main
@@ -165,9 +163,11 @@ class is `<service>/js/<service>.js`, render helpers are
 
 ### service_upload
 
-Chunked single-file upload to the server, with progress, retry and
-concurrency control. The main entry points are the standalone `upload()`
-function and the `service_upload.prototype.upload_file()` method.
+Chunked upload to the server, with progress, retry and concurrency control, in
+**two modes on one model**: the default single-file form, and the multi-file
+drag-and-drop queue selected by the `multiple:true` init option. The main entry
+points are the standalone `upload()` function and the
+`service_upload.prototype.upload_file()` method.
 
 - Validates extension (`allowed_extensions`) and size (`max_size_bytes`,
   fetched from `dd_utils_api::get_system_info`).
@@ -189,13 +189,18 @@ function and the `service_upload.prototype.upload_file()` method.
 are the canonical upload-service consumers — see
 [Components → media components](../components/index.md#media-components).
 
-### service_dropzone
+#### Multi-file mode (`multiple: true`)
 
-Drag-and-drop, multi-file variant built on the bundled `lib/dropzone`. `init()`
-lazy-loads `dropzone-min.js` + `dropzone.css`; `build()` pulls the same
-`get_system_info` limits as `service_upload` and resets the active dropzone.
-**Consumed by** the import tools: `tool_import_marc21`, `tool_import_zotero`,
-`tool_import_files`.
+`init({multiple:true})` swaps the single-file renderer for
+`render_edit_service_upload_queue`, a drag-and-drop queue that accepts whole
+**directories** (recursive traversal in `dropped_files.js`) and uploads through
+the same transport, chunking and CSRF path as the single-file mode — one wire,
+two renderers. It also restores a queue across a page reload from
+`dd_utils_api::list_uploaded_files`, and removes a staged row through
+`dd_utils_api::delete_uploaded_file`.
+
+**Consumed by** the import tools: `tool_import_files`, `tool_import_marc21`,
+`tool_import_zotero`.
 
 ### service_autocomplete
 
@@ -260,20 +265,11 @@ service. *(All are instance methods on the JS prototype unless noted.)*
 
 | method | exported fn? | purpose |
 | --- | --- | --- |
-| `init(options)` | | Set `caller`, `allowed_extensions`, `key_dir`, `max_concurrent`; subscribe the `upload_file_status_<id>` progress handler. |
+| `init(options)` | | Set `caller`, `allowed_extensions`, `key_dir`, `max_concurrent`, `multiple` (strict `true` selects the queue renderer); subscribe the `upload_file_status_<id>` progress handler. |
 | `build(autoload=false)` | | Fetch server limits via `dd_utils_api::get_system_info` (max size, tmp dir, chunk size, OCR engine). |
 | `upload_file(options)` | | Resolve `key_dir` from the caller, run `upload()`, then publish `upload_file_done_<caller.id>`. |
 | `join_chunked_files(options)` | | Call `dd_utils_api::join_chunked_files_uploaded` to reassemble chunks server-side. |
 | `upload(options)` | ✓ (module export) | The standalone uploader: validate, chunk/queue/concurrency, XHR with CSRF + retry; resolves the API response. Imported directly by `component_3d`. |
-
-### service_dropzone (`core/services/service_dropzone/js/service_dropzone.js`)
-
-| method | purpose |
-| --- | --- |
-| `init(options)` | Common init; lazy-load the `lib/dropzone` JS + CSS. |
-| `build(autoload=false)` | Fetch `get_system_info` limits and `reset_dropzone()`. |
-| `reset_dropzone()` | Remove all files from the active dropzone. |
-| `edit()` | (from `render_edit_service_dropzone`) build the dropzone DOM. |
 
 ### service_autocomplete (`core/services/service_autocomplete/js/service_autocomplete.js`)
 
@@ -346,8 +342,8 @@ file from a transcription — is the `build_subtitles_file` action of
   [component_text_area](../components/component_text_area.md),
   [component_portal](../components/component_portal.md),
   [component_3d](../components/component_3d.md).
-- **Tools** — upload/import tools consume **upload**, **dropzone** and
-  **tmp_section**; `tool_time_machine` consumes **time_machine**;
+- **Tools** — upload/import tools consume **upload** (single-file or the
+  multi-file queue) and **tmp_section**; `tool_time_machine` consumes **time_machine**;
   `tool_subtitles` / `tool_transcription` consume **subtitles**. See
   [Creating tools](../../development/tools/creating_tools.md).
 - **The shared client prototype** — every client service borrows `render` /
@@ -430,7 +426,7 @@ const service_node = await self.autocomplete.render()
   [component_portal](../components/component_portal.md) (autocomplete),
   [media components](../components/index.md#media-components) (upload).
 - [Creating tools](../../development/tools/creating_tools.md) — the task
-  abstraction that consumes upload/dropzone/tmp_section/time_machine/subtitles.
+  abstraction that consumes upload/tmp_section/time_machine/subtitles.
 - [common](common.md) — the shared object machinery services borrow on the
   client.
 - [RQO](../rqo.md) · [SQO](../sqo.md) — the request/query objects

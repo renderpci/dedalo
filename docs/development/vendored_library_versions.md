@@ -2,13 +2,13 @@
 
 ## Purpose
 
-The Dédalo client loads ~19 third-party browser libraries. **Since 2026-07-12 most
+The Dédalo client loads 20 third-party browser libraries. **Since 2026-07-12 most
 of them are package-manager tracked**, which is what this document used to exist to
 compensate for.
 
 The old model was a 118 MB gitignored `client/dedalo/lib/` directory of hand-dropped
 bundles that no package manager watched — so **SEC-103** made a human re-check every
-one against the CVE feeds each release. That gap is now mostly closed: 15 of the 19
+one against the CVE feeds each release. That gap is now mostly closed: 17 of the 20
 libs are pinned dependencies in `package.json`, so Dependabot and `bun audit` see
 them like any other dep.
 
@@ -23,7 +23,7 @@ the repo any more. **Two** sources back that URL, and that is the whole story:
 
 | Source | Count | Root | In git? |
 |---|---|---|---|
-| **npm** | 16 | `node_modules/` | no — `bun install` |
+| **npm** | 17 | `node_modules/` | no — `bun install` |
 | **vendor** | 3 | `vendor/` | **yes** — committed (ckeditor, json-view, pdfjs) |
 
 !!! note "No install-time fetch step, deliberately"
@@ -64,7 +64,6 @@ byte-identical** to what shipped before this migration.
 | d3 | `d3` | 7.9.0 | The version no longer appears in the URL. |
 | xlsx | `xlsx` (SheetJS tarball URL) | 0.20.3 | See below. |
 | flatpickr | `flatpickr` | 4.6.3 | |
-| dropzone | `dropzone` | 5.9.3 | |
 | split | `split.js` | 1.6.5 | Used by `tool_indexation`. |
 | iro | `@jaames/iro` | 5.5.2 | |
 | codex-tooltip | `codex-tooltip` | 1.0.5 | |
@@ -167,6 +166,13 @@ CKEditor build (`build_html_text/`), and a stale `d3-7.8.5` sitting beside 7.9.0
 The `sublime-text/` and `visual-studio/` directories were never libraries at all —
 they are Dédalo's own editor snippets. Everything removed remains recoverable from
 the repository history if it is ever wanted back.
+
+**`dropzone` went on 2026-08-03**, for a different reason: it had a call site, but
+it was the terminal release (5.9.3) of an unmaintained package — v6 was abandoned at
+beta — and it made the engine carry two upload transports for one job. Its
+multi-file drag-and-drop UI was rebuilt in-house as the `multiple: true` mode of
+`service_upload`, so `/dedalo/lib/dropzone/` no longer serves and the dep is gone
+from `package.json`. See [Services](../core/system/services.md).
 
 ## References
 
