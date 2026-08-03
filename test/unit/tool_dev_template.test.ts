@@ -23,7 +23,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { LIFECYCLE_KEYS } from '../../src/core/tools/module.ts';
 import { tool } from '../../tools/tool_dev_template/server/index.ts';

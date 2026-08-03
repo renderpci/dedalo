@@ -15,13 +15,13 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	DEFAULT_LOCATOR_KEY_PROPERTIES,
-	LOCATOR_KEY_DELIMITER,
-	type Locator,
 	buildLocatorLookupKey,
 	compareLocators,
+	DEFAULT_LOCATOR_KEY_PROPERTIES,
 	getTermIdFromLocator,
 	isLocatorInArray,
+	LOCATOR_KEY_DELIMITER,
+	type Locator,
 	locatorSchema,
 } from '../../src/core/concepts/locator.ts';
 

@@ -35,9 +35,9 @@ import { scanFilesInfo } from '../../src/core/media/files_info.ts';
 import { submitAvTranscode } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import { mediaJobs } from '../../src/core/media/jobs.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
-	buildMediaLocation,
 } from '../../src/core/media/path.ts';
 import { readStoredMediaItems } from '../../src/core/media/tool_support.ts';
 import { persistUploadedMedia } from '../../src/core/media/tools/files_info_persist.ts';

@@ -161,19 +161,22 @@ const cellOf = (rows: ProtocolLine[], ordinal: number): string | undefined => {
 };
 
 describe('WC-049 parents chain — grid_value emission', () => {
-	test('compact portal cell (WC-008) grows a sibling #parents column with the ' +
-		"nearest-first ' > ' chain", async () => {
-		const { columns, rows } = await runExport(
-			exportOptions('grid_value', [ddo(PORTAL, { value_with_parents: true })]),
-		);
-		const parents = parentsColumns(columns);
-		expect(parents).toHaveLength(1);
-		const column = parents[0] as ProtocolLine;
-		expect(column.key).toBe(`${SECTION}_${PORTAL}.${SECTION}_${PORTAL}#parents`);
-		// the sub_id labels the column leaf verbatim
-		expect((column.ar_labels ?? []).at(-1)).toBe('parents');
-		expect(cellOf(rows, column.i as number)).toBe(EXPECTED_CHAIN);
-	});
+	test(
+		'compact portal cell (WC-008) grows a sibling #parents column with the ' +
+			"nearest-first ' > ' chain",
+		async () => {
+			const { columns, rows } = await runExport(
+				exportOptions('grid_value', [ddo(PORTAL, { value_with_parents: true })]),
+			);
+			const parents = parentsColumns(columns);
+			expect(parents).toHaveLength(1);
+			const column = parents[0] as ProtocolLine;
+			expect(column.key).toBe(`${SECTION}_${PORTAL}.${SECTION}_${PORTAL}#parents`);
+			// the sub_id labels the column leaf verbatim
+			expect((column.ar_labels ?? []).at(-1)).toBe('parents');
+			expect(cellOf(rows, column.i as number)).toBe(EXPECTED_CHAIN);
+		},
+	);
 
 	test('request-config fan-out (autocomplete family) emits the SAME chain shape', async () => {
 		const { columns, rows } = await runExport(

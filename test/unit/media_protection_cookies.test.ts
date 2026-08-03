@@ -24,17 +24,17 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-	MEDIA_AUTH_COOKIE,
 	currentMediaAuthCookie,
 	initMediaAuthCookie,
+	MEDIA_AUTH_COOKIE,
 	overrideMediaProtectionPathsForTests,
 } from '../../src/core/media/protection.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import {
-	SESSION_COOKIE,
-	SESSION_IDLE_TTL_SECONDS,
 	createSession,
 	getSession,
+	SESSION_COOKIE,
+	SESSION_IDLE_TTL_SECONDS,
 } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';

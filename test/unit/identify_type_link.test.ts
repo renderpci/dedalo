@@ -33,12 +33,12 @@
 import { describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
 import {
-	type IdentifyByImageDeps,
-	type IdentifyTypeLinkDeps,
-	MAX_SURVEY_RECORDS,
 	buildIdentifyByImage,
 	buildResolveTypeLink,
+	type IdentifyByImageDeps,
+	type IdentifyTypeLinkDeps,
 	identifyApiActions,
+	MAX_SURVEY_RECORDS,
 	typeLinkCandidates,
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { ApiResult } from '../../src/core/api/response.ts';

@@ -16,7 +16,7 @@ import {
 	buildStructureContext,
 	clearStructureContextCache,
 } from '../../src/core/resolve/structure_context.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const SECTIONS = ['numisdata3', 'numisdata6', 'oh7'];
 

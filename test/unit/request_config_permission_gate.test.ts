@@ -31,10 +31,10 @@ import {
 	readSection,
 } from '../../src/core/section/read.ts';
 import {
-	type Principal,
 	ddoIsAuthorized,
 	getPermissions,
 	getSectionPermissions,
+	type Principal,
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
 import { runWithRequestContext } from '../../src/core/security/request_context.ts';

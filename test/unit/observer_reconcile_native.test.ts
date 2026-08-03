@@ -32,10 +32,10 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { recomputeExternalRelation } from '../../src/core/section/record/observers.ts';
 import {
 	SEED_TERM,
-	type TermSeedHandle,
 	seedTermChainIfAbsent,
 	sweepSeedTermReferencerResidue,
 	sweepTermChain,
+	type TermSeedHandle,
 } from '../helpers/observer_term_seed.ts';
 
 const REFERENCER_ID = 91070; // scratch rsc205 rows, clear of every other band

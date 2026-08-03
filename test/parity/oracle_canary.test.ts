@@ -16,7 +16,7 @@
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { FIXTURE_EXEMPT_GATES, fixtureStoreStats, oracleMode } from './oracle_fixtures.ts';
-import { PhpApiClient, hasPhpCredentials, oracleOptional } from './php_client.ts';
+import { hasPhpCredentials, oracleOptional, PhpApiClient } from './php_client.ts';
 
 // NOT gated on hasPhpCredentials() — the whole point is to run (and fail)
 // when the oracle is absent. Do not add describe.if here.

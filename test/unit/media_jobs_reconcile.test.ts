@@ -40,7 +40,7 @@ beforeAll(() => {
 	expect(jobFilePath('probe').startsWith(scratchDir)).toBe(true);
 });
 afterAll(() => {
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.DEDALO_MEDIA_PROCESSES_DIR;
 	rmSync(scratchDir, { recursive: true, force: true });
 });

@@ -23,7 +23,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { PhpApiClient, hasLivePhpOracle } from './php_client.ts';
+import { hasLivePhpOracle, PhpApiClient } from './php_client.ts';
 
 const created: { table: string; sectionTipo: string; sectionId: number }[] = [];
 

@@ -19,6 +19,10 @@
 
 import { describe, expect, test } from 'bun:test';
 import { buildSubtitlesText } from '../../src/core/media/tools/subtitles.ts';
+import type {
+	Paragraph,
+	TranscriptSegment as Segment,
+} from '../../tools/tool_transcription/transcribers/lib/paragraphs.js';
 import {
 	build_paragraph_text,
 	group_paragraphs,
@@ -26,10 +30,6 @@ import {
 	seconds_to_tc,
 	segments_to_html,
 	tc_to_seconds,
-} from '../../tools/tool_transcription/transcribers/lib/paragraphs.js';
-import type {
-	Paragraph,
-	TranscriptSegment as Segment,
 } from '../../tools/tool_transcription/transcribers/lib/paragraphs.js';
 
 /** A run of consecutive segments, each `seconds` long, starting at `from`. */

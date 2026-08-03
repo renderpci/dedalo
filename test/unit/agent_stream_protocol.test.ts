@@ -23,10 +23,10 @@ import type {
 import * as realCatalog from '../../src/ai/agent/model_catalog.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import {
-	type Session,
 	createSession,
 	destroySession,
 	getSession,
+	type Session,
 } from '../../src/core/security/session_store.ts';
 
 const REAL_CATALOG = { ...realCatalog };
@@ -301,7 +301,7 @@ describe('agent_models — gated, secret-free', () => {
 			expect(serialized).not.toContain('SECRET_LOCAL_API_KEY');
 			expect(serialized).not.toContain('native-secret-model');
 		} finally {
-			// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.DEDALO_AGENT_MODELS;
 		}
 	});

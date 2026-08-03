@@ -7,11 +7,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
+	compareVersionArrays,
 	DEDALO_ENGINE_VERSION,
 	DEDALO_VERSION,
 	DEDALO_VERSION_MAJOR_MINOR,
 	DEDALO_VERSION_TRIPLE,
-	compareVersionArrays,
 	parseVersionString,
 } from '../../src/core/update/version.ts';
 

@@ -29,8 +29,8 @@ import { join } from 'node:path';
 import { Glob } from 'bun';
 import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
 import {
-	type WidgetHandler,
 	ownershipMark,
+	type WidgetHandler,
 } from '../../src/core/area_maintenance/widgets/support.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 

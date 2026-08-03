@@ -29,13 +29,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+	buildClusterGroups,
 	type CandidateRecord,
 	type ClusterLink,
 	type ClusterPorts,
 	type ClusterSignal,
-	type NeighbourHit,
-	buildClusterGroups,
 	clusterRecords,
+	type NeighbourHit,
 } from '../../src/ai/identify/cluster.ts';
 import type { AccessFilter } from '../../src/core/identify/match.ts';
 import { parseProfile } from '../../src/core/identify/profile.ts';

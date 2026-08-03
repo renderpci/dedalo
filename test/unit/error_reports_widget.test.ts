@@ -14,9 +14,9 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { widget } from '../../src/core/area_maintenance/widgets/error_reports.ts';
 import {
-	MAINTENANCE_WIDGET_IDS,
 	dispatchGetWidgetValue,
 	dispatchWidgetRequest,
+	MAINTENANCE_WIDGET_IDS,
 } from '../../src/core/area_maintenance/widgets/registry.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import {

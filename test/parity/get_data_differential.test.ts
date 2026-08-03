@@ -9,7 +9,7 @@ import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData } from '../../src/core/section/read.ts';
 import { adoptEntriesArrayContract } from './normalize.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const GET_DATA_RQO = {
 	action: 'read',

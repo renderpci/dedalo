@@ -9,6 +9,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
+	buildContextBlock,
+	buildSystemPrompt,
 	CORE_IDENTITY,
 	DOMAIN_PRIMER,
 	EGRESS_NOTE,
@@ -16,8 +18,6 @@ import {
 	LANGUAGE_POLICY,
 	TOOL_STRATEGY,
 	WRITE_DISCIPLINE,
-	buildContextBlock,
-	buildSystemPrompt,
 } from '../../src/ai/agent/system_prompt.ts';
 
 describe('buildSystemPrompt', () => {

@@ -34,20 +34,20 @@ import {
 	currentOntologyRevision,
 	getCompiledPlan,
 } from '../../src/diffusion/plan/cache.ts';
+import type { ParserClassifier } from '../../src/diffusion/plan/compile.ts';
 import {
-	PlanCompileError,
 	compileElementPlan,
+	PlanCompileError,
 	validateElementPlan,
 } from '../../src/diffusion/plan/compile.ts';
-import type { ParserClassifier } from '../../src/diffusion/plan/compile.ts';
 import type { PublicationPlan } from '../../src/diffusion/plan/types.ts';
-import {
-	buildVirtualDiffusionTree,
-	findElementNodes,
-} from '../../src/diffusion/plan/virtual_tree.ts';
 import type {
 	VirtualDiffusionTree,
 	VirtualTreeNode,
+} from '../../src/diffusion/plan/virtual_tree.ts';
+import {
+	buildVirtualDiffusionTree,
+	findElementNodes,
 } from '../../src/diffusion/plan/virtual_tree.ts';
 
 /** Strict identifier grammar (identifier.ts SQL_IDENTIFIER_PATTERN). */

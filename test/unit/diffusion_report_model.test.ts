@@ -30,11 +30,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
+	build_report_model,
+	classify_outcome,
 	MSG,
 	OUTCOMES,
 	SEVERITY,
-	build_report_model,
-	classify_outcome,
 	tsv_errors,
 	tsv_tables,
 } from '../../tools/tool_diffusion/js/report_model.js';

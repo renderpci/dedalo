@@ -14,8 +14,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	type Principal,
 	inheritSubdatumPermission,
+	type Principal,
 	resolveComponentContextPermission,
 } from '../../src/core/security/permissions.ts';
 

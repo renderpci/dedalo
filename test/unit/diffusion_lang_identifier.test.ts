@@ -15,13 +15,13 @@ import {
 	requireSqlIdentifier,
 	sanitizeSqlName,
 } from '../../src/diffusion/plan/identifier.ts';
+import type { ColumnLangValues } from '../../src/diffusion/project/lang_ladder.ts';
 import {
-	NOLAN_KEY,
 	applyFieldPolicy,
+	NOLAN_KEY,
 	projectRecordRows,
 	resolveColumnForLang,
 } from '../../src/diffusion/project/lang_ladder.ts';
-import type { ColumnLangValues } from '../../src/diffusion/project/lang_ladder.ts';
 
 describe('identifier chokepoint (spec §8.3)', () => {
 	test('sanitizeSqlName reproduces the oracle byte-for-byte', () => {

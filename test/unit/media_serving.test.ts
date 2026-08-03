@@ -38,7 +38,7 @@ beforeAll(() => {
 	setServerState({ media_access_mode: false });
 });
 afterAll(() => {
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.MEDIA_DEV_ROUTE_ENABLED;
 	setServerState({ media_access_mode: null });
 });
@@ -140,7 +140,7 @@ describe('media serving (dev listener, fail-closed)', () => {
 			// the true default-off 404 (what CI and fresh installs assert).
 			const path = `/dedalo/${config.mediaDir}/${sample}`;
 			const token = createSession(-1, 'root', true);
-			// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.MEDIA_DEV_ROUTE_ENABLED;
 			try {
 				const fileOrDefault = readEnv('MEDIA_DEV_ROUTE_ENABLED') ?? 'false';

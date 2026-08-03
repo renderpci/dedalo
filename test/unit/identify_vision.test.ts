@@ -31,11 +31,11 @@ import type {
 } from '../../src/ai/agent/llm_provider.ts';
 import type { CatalogModel } from '../../src/ai/agent/model_catalog.ts';
 import {
+	parseSuggestions,
+	proposeFromVision,
 	type VisionModelChoice,
 	type VisionProposeInput,
 	type VocabularyEntry,
-	parseSuggestions,
-	proposeFromVision,
 	visionEgressRefusal,
 } from '../../src/ai/identify/vision.ts';
 import type { ExtractedImage } from '../../src/ai/rag/image_source.ts';

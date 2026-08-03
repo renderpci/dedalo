@@ -16,7 +16,7 @@ import {
 	buildStructureContext,
 	clearStructureContextCache,
 } from '../../src/core/resolve/structure_context.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 type Ddoish = { tipo: string; parent: string };
 

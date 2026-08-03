@@ -20,8 +20,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { conformTmFilter } from '../../src/core/resolve/tm_filter.ts';
 import type { ParamSink } from '../../src/core/resolve/tm_filter.ts';
+import { conformTmFilter } from '../../src/core/resolve/tm_filter.ts';
 
 function conform(filter: unknown): { sql: string | null; sink: ParamSink } {
 	const sink: ParamSink = { params: [] };

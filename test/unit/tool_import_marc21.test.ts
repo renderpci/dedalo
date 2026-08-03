@@ -27,8 +27,7 @@ import { createSectionRecord } from '../../src/core/section/record/create_record
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolResponse } from '../../src/core/tools/module.ts';
-import { readMarcMap } from '../../tools/tool_import_marc21/server/index.ts';
-import { resolveStagedFile } from '../../tools/tool_import_marc21/server/index.ts';
+import { readMarcMap, resolveStagedFile } from '../../tools/tool_import_marc21/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
 
 const FT = '\x1e'; // field terminator

@@ -14,9 +14,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	type TableStatsRow,
 	degradedTableNames,
 	summarizeStatisticsHealth,
+	type TableStatsRow,
 } from '../../src/core/area_maintenance/widgets/database_info.ts';
 
 const MB = 1024 * 1024;

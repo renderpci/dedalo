@@ -22,7 +22,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readTimeMachineData } from '../../src/core/resolve/read_tm.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 function tmFilterRqo(userId: string): Record<string, unknown> {
 	return {

@@ -24,7 +24,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
-import { SESSION_COOKIE, createSession } from '../../src/core/security/session_store.ts';
+import { createSession, SESSION_COOKIE } from '../../src/core/security/session_store.ts';
 import { createRequestContext, handleRequest } from '../../src/server.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 
@@ -46,7 +46,7 @@ beforeAll(() => {
 });
 
 afterEach(() => {
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined'
+	// assigning undefined coerces to the STRING 'undefined'
 	delete process.env.MEDIA_DEV_ROUTE_ENABLED;
 	// ALWAYS restore: a leaked 'private' here would leave the developer's own install
 	// expecting web-server-enforced rules that nothing is generating.

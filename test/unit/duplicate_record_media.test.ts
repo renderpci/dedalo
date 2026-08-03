@@ -18,7 +18,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, rmdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -26,9 +26,9 @@ import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { scanFilesInfo } from '../../src/core/media/files_info.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
-	buildMediaLocation,
 } from '../../src/core/media/path.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { duplicateSectionRecord } from '../../src/core/section/record/duplicate_record.ts';

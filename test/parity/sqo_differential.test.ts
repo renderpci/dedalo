@@ -21,7 +21,7 @@ import { config } from '../../src/config/config.ts';
 import { sanitizeClientSqo } from '../../src/core/concepts/sqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildSearchSql } from '../../src/core/search/sql_assembler.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface RecordIdentity {
 	section_tipo: string;

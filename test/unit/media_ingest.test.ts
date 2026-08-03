@@ -5,7 +5,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { AUDIO_TR_QUALITY, mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -15,16 +15,16 @@ import { getDimensions, resolveMagick } from '../../src/core/media/engine/imagem
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { addFile, sanitizeSegment, stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import {
-	type MediaIngestEvent,
 	fireMediaIngestEvent,
+	type MediaIngestEvent,
 	registerMediaIngestHook,
 } from '../../src/core/media/ingest/ingest_event.ts';
 import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import { MediaJobManager, mediaJobs } from '../../src/core/media/jobs.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
-	buildMediaLocation,
 } from '../../src/core/media/path.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';

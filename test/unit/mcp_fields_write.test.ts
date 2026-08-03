@@ -248,7 +248,7 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 		else process.env.DEDALO_MCP_MEDIA_IMPORT_DIR = dir;
 		return run().finally(() => {
 			if (saved === undefined) {
-				// biome-ignore lint/performance/noDelete: undefined assignment leaves the STRING 'undefined'
+				// undefined assignment leaves the STRING 'undefined'
 				delete process.env.DEDALO_MCP_MEDIA_IMPORT_DIR;
 			} else {
 				process.env.DEDALO_MCP_MEDIA_IMPORT_DIR = saved;
@@ -311,7 +311,7 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 			).rejects.toMatchObject({ code: 'media_too_large' });
 		} finally {
 			if (saved === undefined) {
-				// biome-ignore lint/performance/noDelete: undefined assignment leaves the STRING 'undefined'
+				// undefined assignment leaves the STRING 'undefined'
 				delete process.env.DEDALO_MCP_MEDIA_MAX_BYTES;
 			} else {
 				process.env.DEDALO_MCP_MEDIA_MAX_BYTES = saved;
@@ -341,7 +341,7 @@ describe('media source gating (pure — no DB, no ingest)', () => {
 			).rejects.toMatchObject({ code: 'invalid_request' });
 		} finally {
 			if (saved === undefined) {
-				// biome-ignore lint/performance/noDelete: undefined assignment leaves the STRING 'undefined'
+				// undefined assignment leaves the STRING 'undefined'
 				delete process.env.DEDALO_MCP_MEDIA_MAX_BYTES;
 			} else {
 				process.env.DEDALO_MCP_MEDIA_MAX_BYTES = saved;

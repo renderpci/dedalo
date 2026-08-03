@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	IMAGE_HASH_VERSION,
 	embeddingMediaIdentity,
+	IMAGE_HASH_VERSION,
 	imageSourceHash,
 	qualityIsEmbeddable,
 } from '../../src/ai/rag/image_source.ts';

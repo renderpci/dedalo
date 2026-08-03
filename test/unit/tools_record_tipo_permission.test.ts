@@ -19,8 +19,8 @@
  */
 
 import { afterAll, afterEach, describe, expect, mock, test } from 'bun:test';
-import * as realPermissions from '../../src/core/security/permissions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import * as realPermissions from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import type { ToolActionSpec } from '../../src/core/tools/module.ts';
 import { assertActionPermission } from '../../src/core/tools/security.ts';

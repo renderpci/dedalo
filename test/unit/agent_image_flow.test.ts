@@ -15,8 +15,8 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import {
-	type ChangePlan,
 	applyChangePlan,
+	type ChangePlan,
 	validateChangePlan,
 } from '../../src/ai/agent/change_plan.ts';
 import type {

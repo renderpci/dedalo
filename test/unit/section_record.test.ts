@@ -19,6 +19,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { deleteMatrixRecord, updateMatrixRecord } from '../../src/core/db/matrix_write.ts';
+import type { RagRecordEvent } from '../../src/core/section_record/index.ts';
 import {
 	buildModifiedAuditWrites,
 	cloneRecord,
@@ -30,7 +31,6 @@ import {
 	persistRecordKeys,
 	registerRagRecordHook,
 } from '../../src/core/section_record/index.ts';
-import type { RagRecordEvent } from '../../src/core/section_record/index.ts';
 
 /** Reserved coordinates in matrix_test — collide with nothing real. */
 const TEST_TABLE = 'matrix_test';

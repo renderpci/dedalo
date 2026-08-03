@@ -19,8 +19,8 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
-	readFileSync,
 	readdirSync,
+	readFileSync,
 	rmSync,
 	statSync,
 	writeFileSync,
@@ -28,7 +28,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-	MEDIA_AUTH_COOKIE,
 	buildHtaccess,
 	buildNginxConf,
 	filterPublicQualities,
@@ -38,6 +37,7 @@ import {
 	getPublicQualities,
 	getRulesStatus,
 	initMediaAuthCookie,
+	MEDIA_AUTH_COOKIE,
 	mintAuthCookieValue,
 	overrideMediaProtectionPathsForTests,
 	readAuthStore,
@@ -325,7 +325,7 @@ describe('the config-hash idempotency guard', () => {
 			writeRuleFiles();
 			expect(statSync(paths.nginx).mtimeMs).toBe(nginxWrite);
 		} finally {
-			// biome-ignore lint/performance/noDelete: unsetting an env var is the point
+			// unsetting an env var is the point
 			delete process.env.MEDIA_HTACCESS_ADDONS;
 		}
 	});

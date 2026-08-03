@@ -33,8 +33,8 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Glob } from 'bun';
-import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import type { DdOntologyNode } from '../../src/core/db/dd_ontology.ts';
+import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import {
 	clearOntologyCaches,
 	compareSiblingOrder,

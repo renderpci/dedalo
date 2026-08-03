@@ -18,12 +18,11 @@
 import { describe, expect, test } from 'bun:test';
 import { cleanupFormatting, replace } from '../../src/diffusion/parsers/parser_helper.ts';
 import {
+	classifyParserFn,
 	PARSER_CLASSIFICATION,
 	RUNTIME_PARSERS,
-	classifyParserFn,
 } from '../../src/diffusion/parsers/registry.ts';
-import type { ParserContext } from '../../src/diffusion/parsers/types.ts';
-import type { MetaValueIR, ValueMeta } from '../../src/diffusion/parsers/types.ts';
+import type { MetaValueIR, ParserContext, ValueMeta } from '../../src/diffusion/parsers/types.ts';
 import type { ResolvedLink, ValueIR } from '../../src/diffusion/resolve/record_ir.ts';
 
 // ---------------------------------------------------------------------------

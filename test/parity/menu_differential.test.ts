@@ -17,7 +17,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { getMenuTreeDatalist } from '../../src/core/api/handlers/menu.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface PhpMenuItem {
 	tipo: string;

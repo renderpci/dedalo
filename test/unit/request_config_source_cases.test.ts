@@ -15,8 +15,8 @@
 import { describe, expect, test } from 'bun:test';
 import { getModelByTipo } from '../../src/core/ontology/resolver.ts';
 import {
-	type RequestConfigContext,
 	clearOntologySectionsCache,
+	type RequestConfigContext,
 	resolveOntologySections,
 	resolveSqoSectionTipos,
 } from '../../src/core/relations/request_config/explicit.ts';

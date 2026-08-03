@@ -28,7 +28,7 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData } from '../../src/core/section/read.ts';
 import { routeSectionRead } from '../../src/core/section/read_facade.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface DataItem {
 	tipo: string;

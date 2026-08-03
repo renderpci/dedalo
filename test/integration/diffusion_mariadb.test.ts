@@ -30,9 +30,9 @@ import { readEnv } from '../../src/config/env.ts';
 import type { FieldPlan, PublicationPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';
 import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
 import {
-	MissingTargetDatabaseError,
 	closeAllTargetPools,
 	getTargetPool,
+	MissingTargetDatabaseError,
 } from '../../src/diffusion/targets/mariadb/db.ts';
 import {
 	generateBatchUpsert,
@@ -42,8 +42,8 @@ import {
 } from '../../src/diffusion/targets/mariadb/sql_generator.ts';
 import { mariadbSqlWriter } from '../../src/diffusion/writers/mariadb_sql.ts';
 import {
-	UnknownDiffusionFormatError,
 	getDiffusionWriter,
+	UnknownDiffusionFormatError,
 } from '../../src/diffusion/writers/registry.ts';
 
 // ---------------------------------------------------------------------------

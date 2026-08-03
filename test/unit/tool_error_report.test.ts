@@ -18,9 +18,9 @@ import { describe, expect, test } from 'bun:test';
 import type { ReportWire } from '../../src/core/error_report/schema.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
 import {
-	type RelaySettings,
 	buildSendReportHandler,
 	masterUrlAllowed,
+	type RelaySettings,
 	tool,
 } from '../../tools/tool_error_report/server/index.ts';
 

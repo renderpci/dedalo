@@ -9,7 +9,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { buildToolElementContext } from '../../src/core/tools/registry.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const TOOLS = ['tool_export', 'tool_time_machine', 'tool_lang'];
 

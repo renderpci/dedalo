@@ -38,7 +38,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { listInfoWidgets } from '../../src/core/components/component_info/widgets/registry.ts';
 

@@ -22,7 +22,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** A record with real TM history on this install (same corpus as tm_read). */
 const CALLER = { section_tipo: 'rsc1242', section_id: '578' };

@@ -12,8 +12,8 @@
 import { describe, expect, test } from 'bun:test';
 import { DIFFUSION_ACTIVITY_TABLE } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import {
-	DIFFUSION_JOBS_TABLE,
 	DIFFUSION_JOB_EVENTS_TABLE,
+	DIFFUSION_JOBS_TABLE,
 } from '../../src/diffusion/jobs/schema.ts';
 
 describe('diffusion jobs table seam (S1-17/DEC-18a)', () => {

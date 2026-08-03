@@ -8,12 +8,12 @@
  * carries parent_grouper = its ontology grouper, so the client can nest.
  */
 
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { GROUPER_MODELS } from '../../src/core/concepts/section.ts';
 import { readSection } from '../../src/core/section/read.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const SECTIONS = ['numisdata3', 'numisdata4']; // 6+1 and 10 groupers respectively
 

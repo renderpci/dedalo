@@ -15,7 +15,7 @@ import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSectionRows } from '../../src/core/section/read.ts';
 import { adoptEntriesArrayContract } from './normalize.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** One data-bearing component per model family (verified via SQL). */
 const SWEEP: { model: string; tipo: string; section: string }[] = [

@@ -10,11 +10,11 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import type { DiffusionSqlTarget } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import {
 	getSectionDiffusionMap,
 	getSectionDiffusionTargets,
 } from '../../src/core/diffusion_bridge/diffusion_map.ts';
-import type { DiffusionSqlTarget } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 
 describe('diffusion_map caches invalidate through the ontology hub (S1-10)', () => {

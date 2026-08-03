@@ -80,7 +80,7 @@ describe('MariaDB 64-key cap', () => {
 		// fields: if either kind escaped the shared budget, the total would
 		// exceed 50.
 		const section = wideSection(60);
-		section.fields = section.fields.map((f, i) =>
+		section.fields = section.fields.map((_f, i) =>
 			i % 2 === 0 ? field(i + 1, 'field_text') : field(i + 1, 'field_varchar'),
 		);
 		const create = generateCreateTable(section);

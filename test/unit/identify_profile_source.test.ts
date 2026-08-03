@@ -20,11 +20,11 @@
 import { describe, expect, test } from 'bun:test';
 import { ProfileError } from '../../src/core/identify/profile.ts';
 import {
-	type ProfileSourceNode,
-	type ProfileSourcePort,
 	buildOntologyProfileSourcePort,
 	clearIdentifyProfileCache,
 	loadProfileForSection,
+	type ProfileSourceNode,
+	type ProfileSourcePort,
 } from '../../src/core/identify/profile_source.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 

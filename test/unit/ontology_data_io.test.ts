@@ -20,9 +20,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildLlmMap } from '../../src/ai/mcp/tools/llm_map.ts';
 import {
-	type OntologyIoResponse,
 	exportToFile,
 	isSafeSectionTipo,
+	type OntologyIoResponse,
 	safeTld,
 	setOntologyIoPath,
 } from '../../src/core/ontology/data_io.ts';

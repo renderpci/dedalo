@@ -17,8 +17,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { deleteJobsForTests, enqueueDiffusionJob } from '../../src/diffusion/jobs/queue.ts';
 import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
+import { deleteJobsForTests, enqueueDiffusionJob } from '../../src/diffusion/jobs/queue.ts';
 import {
 	isSchedulerDraining,
 	isSchedulerPaused,

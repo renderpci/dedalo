@@ -16,12 +16,12 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { login } from '../../src/core/security/auth.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import {
-	LOGIN_MAX_ATTEMPTS,
 	buildThrottleKey,
 	createSession,
 	destroyUserSessions,
 	getSession,
 	isThrottled,
+	LOGIN_MAX_ATTEMPTS,
 	recordFailedAttempt,
 	resetSessionStoreForTests,
 	verifyCsrf,

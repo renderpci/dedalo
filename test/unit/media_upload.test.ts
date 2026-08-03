@@ -13,11 +13,11 @@ import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
-import { addFile, stagingDir } from '../../src/core/media/ingest/add_file.ts';
+import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import {
-	type ParsedUpload,
 	joinChunkedUpload,
+	type ParsedUpload,
 	parseUploadRequest,
 	receiveUpload,
 } from '../../src/core/media/ingest/upload.ts';

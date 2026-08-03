@@ -22,7 +22,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dir, '../..');

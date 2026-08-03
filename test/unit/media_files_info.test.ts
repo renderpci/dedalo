@@ -6,15 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import {
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	rmSync,
-	statSync,
-	utimesSync,
-	writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import {

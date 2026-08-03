@@ -14,11 +14,11 @@ import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/r
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import {
-	type UpdateDescriptor,
 	catalogKeyOf,
 	getMatchedDescriptor,
 	getUpdateVersion,
 	toWireDescriptor,
+	type UpdateDescriptor,
 } from '../../src/core/update/catalog.ts';
 import { updateVersion } from '../../src/core/update/engine.ts';
 import * as realOwnership from '../../src/core/update/ownership.ts';

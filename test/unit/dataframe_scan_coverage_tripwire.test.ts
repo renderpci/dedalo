@@ -16,8 +16,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
 	DATAFRAME_SCAN_EXEMPT_TABLES,
-	type TableCoverage,
 	summarizeCoverage,
+	type TableCoverage,
 } from '../../src/core/area_maintenance/widgets/dataframe_control.ts';
 
 const entry = (over: Partial<TableCoverage> & Pick<TableCoverage, 'status'>): TableCoverage => ({

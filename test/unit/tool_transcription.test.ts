@@ -27,7 +27,6 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { getToolConfig, resetConfigCache } from '../../src/core/tools/config.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import {
-	type TranscriberStatusRequest,
 	babelTranscriberStatusProvider,
 	buildTranscriberStatusBody,
 	hasExistingTranscription,
@@ -37,6 +36,7 @@ import {
 	resolveTranscriberProvider,
 	resolveTranscriberStatusProvider,
 	segmentsToTcText,
+	type TranscriberStatusRequest,
 } from '../../src/core/tools/transcription_asr.ts';
 import { mustGet } from '../helpers/assert.ts';
 

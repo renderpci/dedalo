@@ -20,11 +20,11 @@
 import { describe, expect, test } from 'bun:test';
 // the client progress model is pure and DOM-free, so it tests directly here
 import { aggregate_view } from '../../client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js';
-import { buildQueueFollowStream, queueRefusalStream } from '../../src/diffusion/api/actions.ts';
 import type { QueueSnapshot } from '../../src/diffusion/api/actions.ts';
+import { buildQueueFollowStream, queueRefusalStream } from '../../src/diffusion/api/actions.ts';
 import type { ActiveJobRow } from '../../src/diffusion/jobs/queue.ts';
-import { encodeQueueSseChunk, queueJobView } from '../../src/diffusion/jobs/sse.ts';
 import type { QueueFrame } from '../../src/diffusion/jobs/sse.ts';
+import { encodeQueueSseChunk, queueJobView } from '../../src/diffusion/jobs/sse.ts';
 
 const SCHEDULER: QueueSnapshot['scheduler'] = {
 	running: 1,

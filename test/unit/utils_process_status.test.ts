@@ -30,6 +30,7 @@ process.env.DEDALO_MEDIA_PROCESSES_DIR = scratchDir;
 // Import AFTER the env override so every processesDir() call lands in scratch.
 const { getUtilsProcessStatus } = await import('../../src/core/api/process_status.ts');
 const { mediaJobs } = await import('../../src/core/media/jobs.ts');
+
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 
 afterAll(() => {

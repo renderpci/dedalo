@@ -21,7 +21,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import type { FieldPlan, PublicationPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';
 import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
@@ -30,8 +30,8 @@ import { atomicWriteFile, createZip, recordFileName } from '../../src/diffusion/
 import { jsonWriter } from '../../src/diffusion/writers/json.ts';
 import { markdownWriter, renderMarkdownRecord } from '../../src/diffusion/writers/markdown.ts';
 import {
-	UnknownDiffusionFormatError,
 	getDiffusionWriter,
+	UnknownDiffusionFormatError,
 } from '../../src/diffusion/writers/registry.ts';
 
 const ROOT = `${tmpdir()}/dedalo_ts_diffusion_file_writers_${process.pid}`;
@@ -45,7 +45,7 @@ beforeAll(() => {
 
 afterAll(() => {
 	if (savedRoot !== undefined) process.env.DEDALO_DIFFUSION_FILES_ROOT = savedRoot;
-	// biome-ignore lint/performance/noDelete: assigning undefined would leave the string 'undefined' in process.env
+	// assigning undefined would leave the string 'undefined' in process.env
 	else delete process.env.DEDALO_DIFFUSION_FILES_ROOT;
 	rmSync(ROOT, { recursive: true, force: true });
 });

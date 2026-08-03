@@ -13,6 +13,7 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
+import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
 import {
 	claimNextQueuedJob,
 	deleteJobsForTests,
@@ -20,7 +21,6 @@ import {
 	getJobById,
 	sweepStaleJobs,
 } from '../../src/diffusion/jobs/queue.ts';
-import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
 import { DIFFUSION_JOBS_TABLE } from '../../src/diffusion/jobs/schema.ts';
 
 const OWNER = 424401;

@@ -42,10 +42,10 @@ import { deleteSectionRecord } from '../../src/core/section/record/delete_record
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import {
-	type TermSeedHandle,
 	seedTermChainIfAbsent,
 	sweepSeedTermReferencerResidue,
 	sweepTermChain,
+	type TermSeedHandle,
 } from '../helpers/observer_term_seed.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 

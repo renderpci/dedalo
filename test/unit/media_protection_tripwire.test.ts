@@ -29,11 +29,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	MEDIA_AUTH_COOKIE,
 	buildHtaccess,
 	buildNginxConf,
 	filterPublicQualities,
 	getPublicQualities,
+	MEDIA_AUTH_COOKIE,
 } from '../../src/core/media/protection.ts';
 import { makeMarkerKey } from '../../src/diffusion/targets/mediastore/media_index.ts';
 

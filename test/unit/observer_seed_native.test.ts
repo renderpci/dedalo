@@ -50,10 +50,10 @@ import {
 } from '../../src/core/section/record/observers.ts';
 import {
 	SEED_TERM,
-	type TermSeedHandle,
 	seedTermChainIfAbsent,
 	sweepSeedTermReferencerResidue,
 	sweepTermChain,
+	type TermSeedHandle,
 } from '../helpers/observer_term_seed.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');

@@ -44,12 +44,12 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-	type DiffusionConnectionStatus,
-	type SectionDiffusionNode,
 	buildDiffusionInfo,
 	connectionStatusForElement,
+	type DiffusionConnectionStatus,
+	type SectionDiffusionNode,
 } from '../../src/diffusion/api/info.ts';
-import { TABLE_FORMATS, isMariadbTargetFormat } from '../../src/diffusion/plan/formats.ts';
+import { isMariadbTargetFormat, TABLE_FORMATS } from '../../src/diffusion/plan/formats.ts';
 import {
 	closeAllTargetPools,
 	getTargetDatabaseStatus,

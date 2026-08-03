@@ -6,8 +6,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	type CsvColumn,
 	analyzeCsv,
+	type CsvColumn,
 	parseCsv,
 	planCsvImport,
 	unescapeCell,

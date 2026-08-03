@@ -23,8 +23,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
-	type NoteElement,
 	buildTagsInfo,
+	type NoteElement,
 } from '../../src/core/components/component_text_area/tags_info.ts';
 import {
 	deleteMatrixRecord,

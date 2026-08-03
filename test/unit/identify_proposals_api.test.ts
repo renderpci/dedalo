@@ -40,8 +40,8 @@ import type {
 } from '../../src/ai/identify/vision.ts';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
 import {
-	type IdentifyProposalsDeps,
 	buildGetProposals,
+	type IdentifyProposalsDeps,
 	identifyApiActions,
 	readProposalSources,
 } from '../../src/core/api/handlers/dd_identify_api.ts';

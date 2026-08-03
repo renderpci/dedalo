@@ -53,8 +53,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
 import {
-	type IdentifyTypeLinkDeps,
 	buildResolveTypeLink,
+	type IdentifyTypeLinkDeps,
 	typeLinkCandidates,
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { ApiResult } from '../../src/core/api/response.ts';

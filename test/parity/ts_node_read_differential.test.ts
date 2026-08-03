@@ -13,7 +13,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const NODE = { section_tipo: 'tchi1', section_id: 602 };
 const PARENT = { section_tipo: 'tchi1', section_id: 620, children_tipo: 'tchi40' };

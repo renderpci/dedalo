@@ -12,9 +12,9 @@ import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
 import {
-	type MarcMapEntry,
 	applyMarcMap,
 	extractMarcValues,
+	type MarcMapEntry,
 	parseMarcRecord,
 } from '../../src/core/tools/marc21.ts';
 

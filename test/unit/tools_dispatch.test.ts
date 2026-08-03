@@ -116,7 +116,7 @@ afterAll(async () => {
 	await cleanScratch();
 	resetBackgroundJobs();
 	if (previousProcessesDir === undefined) {
-		// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING "undefined"
+		// assigning undefined coerces to the STRING "undefined"
 		delete process.env.DEDALO_MEDIA_PROCESSES_DIR;
 	} else {
 		process.env.DEDALO_MEDIA_PROCESSES_DIR = previousProcessesDir;

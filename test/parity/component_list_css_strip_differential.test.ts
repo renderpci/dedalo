@@ -18,7 +18,7 @@ import {
 	buildStructureContext,
 	clearStructureContextCache,
 } from '../../src/core/resolve/structure_context.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** Plain components carrying authored edit css (probe-verified 2026-07-10). */
 const COMPONENTS = [

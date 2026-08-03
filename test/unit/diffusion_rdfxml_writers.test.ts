@@ -25,7 +25,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { sanitizePublishedFileName } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import type { FieldPlan, PublicationPlan, SectionPlan } from '../../src/diffusion/plan/types.ts';
@@ -33,8 +33,8 @@ import type { ProjectedRow } from '../../src/diffusion/project/lang_ladder.ts';
 import {
 	CONSOLIDATED_MERGED_PREFIX,
 	CONSOLIDATED_ZIP_PREFIX,
-	InvalidFileTargetError,
 	collectRdfNamespaces,
+	InvalidFileTargetError,
 	langToAlpha2,
 	mergeRdfParts,
 	rdfRecordFileName,
@@ -60,7 +60,7 @@ beforeAll(() => {
 
 afterAll(() => {
 	if (savedRoot !== undefined) process.env.DEDALO_DIFFUSION_FILES_ROOT = savedRoot;
-	// biome-ignore lint/performance/noDelete: assigning undefined would leave the string 'undefined' in process.env
+	// assigning undefined would leave the string 'undefined' in process.env
 	else delete process.env.DEDALO_DIFFUSION_FILES_ROOT;
 	rmSync(ROOT, { recursive: true, force: true });
 });

@@ -23,8 +23,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
+import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';

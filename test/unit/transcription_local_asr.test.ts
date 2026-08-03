@@ -24,7 +24,7 @@ import {
 /** The exemption is read through the config chain; set it the same way tests do elsewhere. */
 function setExemption(value: string | undefined): void {
 	if (value === undefined) {
-		// biome-ignore lint/performance/noDelete: unsetting an env var is the point
+		// unsetting an env var is the point
 		delete process.env.DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS;
 		return;
 	}

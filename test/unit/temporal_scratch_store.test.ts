@@ -13,11 +13,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
-	type TemporalScratchAddress,
 	clearTemporalScratch,
 	ensureTemporalScratchTable,
 	readTemporalScratch,
 	sweepTemporalScratch,
+	type TemporalScratchAddress,
 	temporalScratchAddress,
 	writeTemporalScratch,
 } from '../../src/core/section/record/temporal_store.ts';

@@ -2,21 +2,21 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, unlinkSync } from 'node:fs';
 import { ragApiActions } from '../../src/ai/rag/api.ts';
 import {
-	RagCharacterizer,
 	aggregateCategorical,
+	RagCharacterizer,
 	summarizeDates,
 } from '../../src/ai/rag/characterizer.ts';
 import { cosineDistance } from '../../src/ai/rag/chunker.ts';
 import {
-	type ExtractedImage,
 	buildImageContextSummary,
+	type ExtractedImage,
 	extractImageForEmbedding,
 } from '../../src/ai/rag/image_source.ts';
-import { RagIndexer, defaultRagStore } from '../../src/ai/rag/indexer.ts';
+import { defaultRagStore, RagIndexer } from '../../src/ai/rag/indexer.ts';
 import {
 	DeterministicMultimodalProvider,
-	type MultimodalEmbeddingProvider,
 	extractVectors,
+	type MultimodalEmbeddingProvider,
 } from '../../src/ai/rag/multimodal_embedding_provider.ts';
 import { ObjectRetrieval } from '../../src/ai/rag/object_retrieval.ts';
 import type { Candidate, RecordLocator } from '../../src/ai/rag/types.ts';
@@ -30,9 +30,9 @@ import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
 import {
+	buildMediaLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
-	buildMediaLocation,
 } from '../../src/core/media/path.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -281,9 +281,9 @@ afterAll(async () => {
 	await ragSql
 		.unsafe(`DROP TABLE IF EXISTS "rag_embeddings_${MODEL.replace(/[^a-z0-9]+/g, '_')}"`)
 		.catch(() => {});
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.DEDALO_RAG_ENABLED;
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.DEDALO_RAG_MEDIA_ENABLED;
 });
 

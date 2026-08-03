@@ -18,8 +18,8 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { registerSessionCleanup } from '../helpers/session_cleanup.ts';
 

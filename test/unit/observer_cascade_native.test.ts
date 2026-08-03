@@ -65,15 +65,15 @@ import { getCounters } from '../../src/core/api/counters.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import {
 	type CascadeGuard,
-	MAX_CASCADE_DEPTH,
 	emitCascadeHop,
+	MAX_CASCADE_DEPTH,
 	propagateToObservers,
 	runObserverCascadeHop,
 } from '../../src/core/section/record/observers.ts';
 import {
-	type TermSeedHandle,
 	seedTermChainIfAbsent,
 	sweepTermChain,
+	type TermSeedHandle,
 } from '../helpers/observer_term_seed.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');

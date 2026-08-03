@@ -41,9 +41,9 @@ import {
 import { duplicateSectionRecord } from '../../src/core/section/record/duplicate_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import {
-	type Principal,
 	getPermissions,
 	getSectionPermissions,
+	type Principal,
 } from '../../src/core/security/permissions.ts';
 
 // The superuser (user_id -1) resolves to level 3 WITHOUT any DB read — the ideal

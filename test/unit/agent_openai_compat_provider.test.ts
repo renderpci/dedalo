@@ -13,8 +13,8 @@ import type {
 	AgentTurnDelta,
 } from '../../src/ai/agent/llm_provider.ts';
 import {
-	OpenAiCompatProvider,
 	buildChatCompletionsRequest,
+	OpenAiCompatProvider,
 	parseChatCompletion,
 } from '../../src/ai/agent/openai_compat_provider.ts';
 

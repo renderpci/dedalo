@@ -23,8 +23,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	type StructureContextEntry,
 	resolveDefaultView,
+	type StructureContextEntry,
 } from '../../src/core/resolve/structure_context.ts';
 import { attachSectionTabChildren } from '../../src/core/section/read.ts';
 

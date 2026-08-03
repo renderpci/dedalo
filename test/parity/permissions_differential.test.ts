@@ -18,9 +18,9 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../src/core/ontology/resolver.ts';
 import {
-	PUBLIC_LIST_TABLES,
 	getPermissions,
 	getSectionPermissions,
+	PUBLIC_LIST_TABLES,
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
 

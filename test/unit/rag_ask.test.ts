@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { ragApiActions } from '../../src/ai/rag/api.ts';
-import { type AskDeps, RESTRICTED_MSG, fitTokenBudget, runAsk } from '../../src/ai/rag/ask.ts';
+import { type AskDeps, fitTokenBudget, RESTRICTED_MSG, runAsk } from '../../src/ai/rag/ask.ts';
 import { StubLlmProvider } from '../../src/ai/rag/llm_provider.ts';
 import { PassThroughReranker } from '../../src/ai/rag/reranker.ts';
-import { type RagPassageHit, indexComponentText } from '../../src/ai/rag/retrieval.ts';
+import { indexComponentText, type RagPassageHit } from '../../src/ai/rag/retrieval.ts';
 import { deleteRecordChunks } from '../../src/ai/rag/vector_store.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -61,7 +61,7 @@ afterAll(async () => {
 		await deleteRecordChunks(SECTION_TIPO, id);
 		await cleanScratchRecord(SECTION_TIPO, id);
 	}
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.DEDALO_RAG_ENABLED;
 });
 
@@ -183,9 +183,9 @@ describe('dd_rag_api ask', () => {
 			expect(res.body.result).toBe(false);
 			expect(res.body.errors).toContain('generation_failed');
 		} finally {
-			// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.DEDALO_RAG_LLM_ENDPOINT;
-			// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.DEDALO_RAG_ALLOW_EXTERNAL_PROVIDER_DEFAULT;
 		}
 	});
@@ -203,7 +203,7 @@ describe('dd_rag_api ask', () => {
 			expect(res.body.errors ?? []).not.toContain('generation_failed');
 			expect((res.body.result as { restricted?: boolean }).restricted).toBe(true);
 		} finally {
-			// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+			// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 			delete process.env.DEDALO_RAG_LLM_ENDPOINT;
 		}
 	});

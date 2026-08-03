@@ -11,7 +11,7 @@
  */
 
 import { beforeAll, expect, test } from 'bun:test';
-import { getDashboardChildSections, getDashboardData } from '../../src/core/area/dashboard.ts';
+import { getDashboardData } from '../../src/core/area/dashboard.ts';
 import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
 
 const NON_ADMIN_USER = 16;

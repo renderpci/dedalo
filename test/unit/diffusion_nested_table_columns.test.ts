@@ -22,8 +22,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { compileElementPlan } from '../../src/diffusion/plan/compile.ts';
 import type { ParserClassifier } from '../../src/diffusion/plan/compile.ts';
+import { compileElementPlan } from '../../src/diffusion/plan/compile.ts';
 import type {
 	VirtualDiffusionTree,
 	VirtualTreeNode,

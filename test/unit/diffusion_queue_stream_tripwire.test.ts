@@ -39,8 +39,8 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildQueueFollowStream, followQueueAction } from '../../src/diffusion/api/actions.ts';
-import { listActiveJobs } from '../../src/diffusion/jobs/queue.ts';
 import type { ActiveJobRow } from '../../src/diffusion/jobs/queue.ts';
+import { listActiveJobs } from '../../src/diffusion/jobs/queue.ts';
 import { queueJobView } from '../../src/diffusion/jobs/sse.ts';
 
 /** Exactly what a progress display needs, and nothing else. */

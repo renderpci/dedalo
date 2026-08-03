@@ -21,8 +21,8 @@ import { selectRequestConfigStrategy } from '../../src/core/concepts/request_con
 import { getNode } from '../../src/core/ontology/resolver.ts';
 import { buildRequestConfigForElement } from '../../src/core/relations/request_config/build.ts';
 import {
-	type RequestConfigContext,
 	extractSqoSectionTipos,
+	type RequestConfigContext,
 } from '../../src/core/relations/request_config/explicit.ts';
 import { buildImplicitComponentListConfig } from '../../src/core/relations/request_config/implicit.ts';
 

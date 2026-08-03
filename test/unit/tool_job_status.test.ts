@@ -45,7 +45,7 @@ beforeAll(() => {
 });
 afterAll(() => {
 	resetBackgroundJobs();
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING "undefined"
+	// assigning undefined coerces to the STRING "undefined"
 	delete process.env.DEDALO_MEDIA_PROCESSES_DIR;
 	rmSync(scratchDir, { recursive: true, force: true });
 });

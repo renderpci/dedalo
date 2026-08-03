@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
+	buildEmbedText,
 	CHUNKER_VERSION,
 	type ChunkEmbedder,
-	buildEmbedText,
 	chunk,
 	cosineDistance,
 	detectMode,

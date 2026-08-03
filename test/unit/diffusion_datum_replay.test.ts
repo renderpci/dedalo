@@ -28,13 +28,13 @@
 import { describe, expect, test } from 'bun:test';
 import type { MetaValueIR, ParserContext } from '../../src/diffusion/parsers/types.ts';
 import type { ParserStepConfig } from '../../src/diffusion/plan/types.ts';
-import { NOLAN_KEY, projectRecordRows } from '../../src/diffusion/project/lang_ladder.ts';
 import type {
 	ColumnLangValues,
 	FieldProjectionPolicy,
 } from '../../src/diffusion/project/lang_ladder.ts';
-import { fieldValuesToColumn } from '../../src/diffusion/resolve/transform.ts';
+import { NOLAN_KEY, projectRecordRows } from '../../src/diffusion/project/lang_ladder.ts';
 import type { FieldTransformSpec } from '../../src/diffusion/resolve/transform.ts';
+import { fieldValuesToColumn } from '../../src/diffusion/resolve/transform.ts';
 import legacyGolden from '../parity/fixtures/diffusion/legacy_datum/php_response.golden.json';
 import legacyColumnOrder from '../parity/fixtures/diffusion/legacy_datum/php_response_column_order.json';
 import legacyMinimal from '../parity/fixtures/diffusion/legacy_datum/php_response_minimal.json';

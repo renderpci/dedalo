@@ -15,9 +15,9 @@ import type { ComponentGrant } from '../../src/core/identify/component_access.ts
 import {
 	type AccessFilter,
 	type CandidateRecord,
-	IdentifyAccessError,
 	compareValues,
 	findMatches,
+	IdentifyAccessError,
 } from '../../src/core/identify/match.ts';
 import { parseProfile } from '../../src/core/identify/profile.ts';
 import type {

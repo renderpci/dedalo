@@ -138,12 +138,12 @@ describe('defaultMaxTokens (DEDALO_AGENT_MAX_TOKENS)', () => {
 	const saved = process.env.DEDALO_AGENT_MAX_TOKENS;
 
 	beforeAll(() => {
-		// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+		// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 		delete process.env.DEDALO_AGENT_MAX_TOKENS;
 	});
 
 	afterAll(() => {
-		// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+		// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 		if (saved === undefined) delete process.env.DEDALO_AGENT_MAX_TOKENS;
 		else process.env.DEDALO_AGENT_MAX_TOKENS = saved;
 	});
@@ -154,7 +154,7 @@ describe('defaultMaxTokens (DEDALO_AGENT_MAX_TOKENS)', () => {
 		expect(defaultMaxTokens()).toBe(32000);
 		process.env.DEDALO_AGENT_MAX_TOKENS = 'not-a-number';
 		expect(defaultMaxTokens()).toBe(16000);
-		// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+		// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 		delete process.env.DEDALO_AGENT_MAX_TOKENS;
 	});
 });

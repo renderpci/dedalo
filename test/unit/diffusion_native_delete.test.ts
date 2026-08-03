@@ -12,12 +12,12 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
+import type { NativeSqlDeleteTarget } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import {
 	deleteDiffusionRecord,
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
-import type { NativeSqlDeleteTarget } from '../../src/core/diffusion_bridge/diffusion_delete.ts';
 import { getSectionDiffusionTargets } from '../../src/core/diffusion_bridge/diffusion_map.ts';
 import { executeSqlDeleteTargets } from '../../src/diffusion/targets/mariadb/delete_record.ts';
 

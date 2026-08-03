@@ -6,9 +6,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
+	deriveLangConfig,
 	INSTALL_LANG_CATALOG,
 	INSTALL_LANG_CODES,
-	deriveLangConfig,
 } from '../../src/core/install/lang_catalog.ts';
 
 describe('install lang catalog', () => {

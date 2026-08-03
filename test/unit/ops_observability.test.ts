@@ -22,9 +22,9 @@ import {
 } from '../../src/core/api/counters.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import {
-	SESSION_COOKIE,
 	createSession,
 	destroySession,
+	SESSION_COOKIE,
 } from '../../src/core/security/session_store.ts';
 
 /** Capture console.log lines for the duration of `work`. */

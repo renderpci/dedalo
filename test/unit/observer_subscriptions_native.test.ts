@@ -53,11 +53,11 @@ import { fileURLToPath } from 'node:url';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import type { NodeWithProperties } from '../../src/core/ontology/resolver.ts';
 import {
-	type HostSectionContext,
 	buildSubscriptionIndex,
 	clearObserverSubscriptionRegistry,
 	entryServerBlock,
 	getSubscriptionRegistry,
+	type HostSectionContext,
 	validateSubscriptionContract,
 } from '../../src/core/section/record/observer_subscriptions.ts';
 import { propagateToObservers } from '../../src/core/section/record/observers.ts';

@@ -17,8 +17,10 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext, ToolResponse } from '../../src/core/tools/module.ts';
-import { preBulkState } from '../../tools/tool_time_machine/server/bulk_revert.ts';
-import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/bulk_revert.ts';
+import {
+	preBulkState,
+	toolTimeMachineBulkRevert,
+} from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import { mustGet } from '../helpers/assert.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 

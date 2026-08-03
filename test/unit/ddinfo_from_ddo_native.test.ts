@@ -19,8 +19,8 @@ import { describe, expect, test } from 'bun:test';
 import type { Ddo } from '../../src/core/concepts/ddo.ts';
 import { portalCellEmitsDdinfo } from '../../src/core/relations/relation_core.ts';
 import { EmissionContext } from '../../src/core/resolve/component_data.ts';
-import { matrixReadSource } from '../../src/core/section/read_source.ts';
 import type { EmitRowContext, SectionRow } from '../../src/core/section/read_source.ts';
+import { matrixReadSource } from '../../src/core/section/read_source.ts';
 
 // A section tipo no ontology resolves — buildDdInfoChain returns [] without
 // touching thesaurus data, keeping the gate independent of DB content.

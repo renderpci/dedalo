@@ -45,7 +45,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
 
@@ -332,7 +332,7 @@ describe('wire contract ledger tripwire', () => {
 		// sailed straight through it — and five committed `.agents/` skills used exactly
 		// that form. Dated ids count too: an entry re-issued under the new grammar can be
 		// mis-cited just as easily as a legacy one.
-		const STALE = /WIRE_CONTRACT\.md[`'")\]]*[\s,:;(\[]*[`'"]*(?:entry\s+)?`?WC-(?:\d{3}|20\d{2}-)/;
+		const STALE = /WIRE_CONTRACT\.md[`'")\]]*[\s,:;([]*[`'"]*(?:entry\s+)?`?WC-(?:\d{3}|20\d{2}-)/;
 		const offenders: string[] = [];
 		for (const { path, text } of tree) {
 			for (const [i, line] of text.split('\n').entries()) {

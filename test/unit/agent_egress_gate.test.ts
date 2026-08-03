@@ -231,9 +231,7 @@ class ScriptedProvider implements AgentLlmProvider {
 	readonly seenTranscripts: AgentTranscriptEntry[][] = [];
 	private turnIndex = 0;
 	constructor(private readonly script: AgentAssistantTurn[]) {}
-	async createTurn(request: {
-		transcript: AgentTranscriptEntry[];
-	}): Promise<AgentAssistantTurn> {
+	async createTurn(request: { transcript: AgentTranscriptEntry[] }): Promise<AgentAssistantTurn> {
 		this.seenTranscripts.push([...request.transcript]);
 		const turn = this.script[Math.min(this.turnIndex, this.script.length - 1)];
 		this.turnIndex++;

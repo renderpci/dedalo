@@ -10,10 +10,10 @@
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
-	LOGIN_ACCOUNT_MAX_ATTEMPTS,
 	buildAccountThrottleKey,
 	buildThrottleKey,
 	isThrottled,
+	LOGIN_ACCOUNT_MAX_ATTEMPTS,
 	recordFailedAttempt,
 	resetSessionStoreForTests,
 } from '../../src/core/security/session_store.ts';

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { RagQueue, defaultMatrixQueryer, ensureRagQueueTable } from '../../src/ai/rag/queue.ts';
 import type { RagIndexerLike } from '../../src/ai/rag/queue.ts';
+import { defaultMatrixQueryer, ensureRagQueueTable, RagQueue } from '../../src/ai/rag/queue.ts';
 import type { RecordLocator } from '../../src/ai/rag/types.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import {

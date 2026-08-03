@@ -16,9 +16,9 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
-	type RequestConfigPreset,
 	clearRequestConfigPresetsCache,
 	getActiveRequestConfigPresets,
+	type RequestConfigPreset,
 	resolvePresetRequestConfig,
 	selectMatchingPreset,
 } from '../../src/core/relations/request_config/presets.ts';

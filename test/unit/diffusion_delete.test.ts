@@ -14,8 +14,8 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import {
 	DIFFUSION_ACTIVITY_TABLE,
-	type NativeSqlDeleteTarget,
 	deleteDiffusionRecord,
+	type NativeSqlDeleteTarget,
 	registerNativeDiffusionSqlDelete,
 	resetNativeDiffusionSqlDeleteForTests,
 } from '../../src/core/diffusion_bridge/diffusion_delete.ts';

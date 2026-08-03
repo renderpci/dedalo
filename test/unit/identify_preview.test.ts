@@ -55,10 +55,7 @@ afterAll(() => {
 
 /** A port over an in-memory ontology, counting what it was asked. */
 function fakePort(
-	overrides: {
-		model?: string | null;
-		translatable?: boolean;
-	} = {},
+	overrides: { model?: string | null; translatable?: boolean } = {},
 ): PreviewSourcePort & { calls: { model: number; pathOptions: string[] } } {
 	const calls = { model: 0, pathOptions: [] as string[] };
 	return {

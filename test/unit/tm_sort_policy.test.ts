@@ -29,7 +29,7 @@ import {
 	TIME_MACHINE_SECTION_TIPO,
 	TIME_MACHINE_SORTABLE_TIPOS,
 } from '../../src/core/concepts/section.ts';
-import { TM_ORDER_COLUMN, buildTmOrderSql } from '../../src/core/resolve/read_tm.ts';
+import { buildTmOrderSql, TM_ORDER_COLUMN } from '../../src/core/resolve/read_tm.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { buildOrderPath } from '../../src/core/search/order_path.ts';

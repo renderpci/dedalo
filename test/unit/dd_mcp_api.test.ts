@@ -21,10 +21,10 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
-	type Session,
 	createSession,
 	destroySession,
 	getSession,
+	type Session,
 } from '../../src/core/security/session_store.ts';
 
 const GATED_SECTION = 'numisdata267';

@@ -50,7 +50,7 @@ afterAll(async () => {
 		await deleteRecordChunks(SECTION_TIPO, id);
 		await cleanScratchRecord(SECTION_TIPO, id);
 	}
-	// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+	// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 	delete process.env.DEDALO_RAG_ENABLED;
 });
 

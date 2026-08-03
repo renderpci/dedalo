@@ -21,7 +21,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { buildSectionElementsContext } from '../../src/core/resolve/section_elements_context.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 // ontology1 exercises the ontology_sections source (222 targets), hierarchy1
 // the field_value source (active-hierarchy targets) — both differential-cover

@@ -10,9 +10,9 @@
 import { describe, expect, test } from 'bun:test';
 import { allComponentModels } from '../../src/core/components/registry.ts';
 import {
+	buildSearchOptionsTitle,
 	CLASSIFIED_SEARCH_OPERATOR_MODELS,
 	MODELS_WITHOUT_SEARCH_OPERATORS,
-	buildSearchOptionsTitle,
 	searchOperatorsInfo,
 	searchOperatorsInfoWire,
 } from '../../src/core/search/search_operators.ts';

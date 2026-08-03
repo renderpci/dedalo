@@ -19,7 +19,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseEnvFile } from '../../src/config/env.ts';
-import { V6_MIGRATION, encodeEnvValue } from '../../src/config/migration_map.ts';
+import { encodeEnvValue, V6_MIGRATION } from '../../src/config/migration_map.ts';
 import { extractDefines } from '../../src/config/php_defines.ts';
 
 const FIXTURE_DIR = join(import.meta.dir, '..', 'fixtures', 'v6_config');

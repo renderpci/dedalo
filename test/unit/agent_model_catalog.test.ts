@@ -10,8 +10,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { AnthropicProvider } from '../../src/ai/agent/anthropic_provider.ts';
 import {
-	ModelCatalogError,
 	agentModelCatalog,
+	ModelCatalogError,
 	publicModelList,
 	resolveProvider,
 } from '../../src/ai/agent/model_catalog.ts';
@@ -186,7 +186,7 @@ describe('agent model catalog — resolveProvider', () => {
 			savedEnv[key] = process.env[key];
 		}
 		process.env.ANTHROPIC_API_KEY = 'test-key-never-used';
-		// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
+		// assigning undefined coerces to the STRING 'undefined' — only delete truly unsets the key
 		delete process.env.UNSET_TEST_API_KEY;
 	});
 

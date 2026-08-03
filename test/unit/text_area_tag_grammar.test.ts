@@ -10,10 +10,10 @@
 import { describe, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
 import {
-	type SpriteTag,
-	TAG_WIDTHS,
 	parseTagId,
+	type SpriteTag,
 	safeDecodeTagId,
+	TAG_WIDTHS,
 } from '../../src/core/components/component_text_area/tag_grammar.ts';
 import {
 	renderDrawTag,

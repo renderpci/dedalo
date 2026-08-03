@@ -46,7 +46,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-	// biome-ignore lint/performance/noDelete: unsetting an env var is the point (repo convention)
+	// unsetting an env var is the point (repo convention)
 	delete process.env.DEDALO_AI_MODEL_STORE;
 	rmSync(STORE, { recursive: true, force: true });
 });
@@ -99,7 +99,7 @@ describe('the public hub is opt-in', () => {
 		try {
 			expect(modelHubAllowed()).toBe(true);
 		} finally {
-			// biome-ignore lint/performance/noDelete: unsetting an env var is the point
+			// unsetting an env var is the point
 			delete process.env.DEDALO_AI_MODEL_ALLOW_HUB;
 		}
 	});

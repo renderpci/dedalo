@@ -167,7 +167,7 @@ describe('agent loop (Phase 8 gate — offline scripted provider)', () => {
 		try {
 			expect(() => new AnthropicProvider()).toThrow(/ANTHROPIC_API_KEY/);
 		} finally {
-			// biome-ignore lint/performance/noDelete: assigning undefined leaves the STRING 'undefined' in process.env
+			// assigning undefined leaves the STRING 'undefined' in process.env
 			if (saved === undefined) delete process.env.ANTHROPIC_API_KEY;
 			else process.env.ANTHROPIC_API_KEY = saved;
 		}

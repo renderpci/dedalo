@@ -11,7 +11,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { getSuperuserUserTools } from '../../src/core/tools/registry.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const USER_TOOLS_RQO = {
 	dd_api: 'dd_tools_api',

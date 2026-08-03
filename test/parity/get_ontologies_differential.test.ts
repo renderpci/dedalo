@@ -14,7 +14,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { dispatchToolRequest } from '../../src/core/tools/dispatch.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface OntologyDescriptor {
 	target_section_tipo: string;

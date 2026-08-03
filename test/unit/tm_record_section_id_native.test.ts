@@ -26,7 +26,7 @@ import '../../src/core/components/registry.ts';
 import { MATRIX_JSONB_COLUMNS } from '../../src/core/db/matrix.ts';
 import type { TimeMachineRow } from '../../src/core/db/time_machine.ts';
 import { TIME_MACHINE_SECTION_TIPO } from '../../src/core/db/time_machine.ts';
-import { TM_COLUMN_SECTION_ID, buildTmSectionRecord } from '../../src/core/tm_record/tm_record.ts';
+import { buildTmSectionRecord, TM_COLUMN_SECTION_ID } from '../../src/core/tm_record/tm_record.ts';
 
 const SECTION_ID_TIPO = 'dd1001'; // base-ontology component_section_id
 const SOURCE_SECTION_ID = 42;

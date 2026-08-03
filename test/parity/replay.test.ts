@@ -20,7 +20,7 @@ import { join, resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { apiResponseSchema, rqoSchema } from '../../src/core/concepts/rqo.ts';
 import { normalizeApiResponse } from './normalize.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const fixturesDir = resolve(import.meta.dir, 'fixtures');
 

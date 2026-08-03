@@ -17,9 +17,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import {
-	type LegacyKeyMaterial,
 	decryptLegacyPassword,
 	encryptLegacyPasswordForTest,
+	type LegacyKeyMaterial,
 	rehashLegacyPassword,
 } from '../../src/core/security/legacy_password.ts';
 import { isArgon2Hash } from '../../src/core/security/password_hash.ts';

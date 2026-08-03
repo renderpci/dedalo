@@ -10,11 +10,11 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realPermissions from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import {
-	type TranslationProvider,
 	babelDirection,
 	resolveTranslationProvider,
 	resolveTranslatorConfig,
 	runAutomaticTranslation,
+	type TranslationProvider,
 	translateItems,
 } from '../../src/core/tools/translation.ts';
 import { mustGet } from '../helpers/assert.ts';

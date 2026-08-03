@@ -27,12 +27,12 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import {
+	buildNeighbourFinder,
 	type CategoricalElementProposal,
 	type ElementProposal,
 	type NeighbourFinder,
 	type NeighbourPorts,
 	type ProposalNeighbour,
-	buildNeighbourFinder,
 	proposeElements,
 } from '../../src/ai/identify/propose.ts';
 import { type AccessFilter, IdentifyAccessError } from '../../src/core/identify/match.ts';
@@ -45,9 +45,9 @@ import type {
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
 import {
+	extractImportSpecifiers,
 	FORBIDDEN_WRITE_IMPORTS,
 	FORBIDDEN_WRITE_SOURCE,
-	extractImportSpecifiers,
 	listSourceFiles,
 	scanFileForWriteSeam,
 } from '../helpers/no_write_scan.ts';

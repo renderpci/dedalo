@@ -56,7 +56,7 @@ beforeAll(async () => {
 		port: 0,
 		async fetch(req) {
 			const url = new URL(req.url);
-			let body: unknown = undefined;
+			let body: unknown;
 			if (req.method !== 'GET') {
 				const text = await req.text();
 				body = text ? JSON.parse(text) : undefined;

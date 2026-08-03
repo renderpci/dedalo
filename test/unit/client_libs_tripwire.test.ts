@@ -17,8 +17,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, extname, join, posix, resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { extname, join, posix, resolve } from 'node:path';
 import { CLIENT_LIBS } from '../../src/core/client_libs/registry.ts';
 import { handleRequest } from '../../src/server.ts';
 

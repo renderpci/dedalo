@@ -25,7 +25,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { readSection } from '../../src/core/section/read.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 // dd542 removed 2026-07-21 (WC-044): the whole Activity column set now
 // DELIBERATELY diverges from the frozen oracle — see LEDGERED_DIVERGENT below.

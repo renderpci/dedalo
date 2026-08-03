@@ -20,7 +20,7 @@ const preloadOverride = process.env.DEDALO_SESSION_DB_PATH;
 
 afterEach(() => {
 	// Restore the preload's override — other files in the run rely on it.
-	// biome-ignore lint/performance/noDelete: assigning undefined leaves the STRING 'undefined' in process.env
+	// assigning undefined leaves the STRING 'undefined' in process.env
 	if (preloadOverride === undefined) delete process.env.DEDALO_SESSION_DB_PATH;
 	else process.env.DEDALO_SESSION_DB_PATH = preloadOverride;
 });
@@ -41,7 +41,7 @@ describe('session store test isolation (S1-18)', () => {
 	});
 
 	test('reset throws when the override is unset (store would be the live file)', () => {
-		// biome-ignore lint/performance/noDelete: the test NEEDS the key truly unset, not the string 'undefined'
+		// the test NEEDS the key truly unset, not the string 'undefined'
 		delete process.env.DEDALO_SESSION_DB_PATH;
 		expect(() => resetSessionStoreForTests()).toThrow(/refused/);
 	});

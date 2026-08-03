@@ -13,7 +13,7 @@ import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSectionRows } from '../../src/core/section/read.ts';
 import { adoptEntriesArrayContract } from './normalize.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const READ_RQO = {
 	action: 'read',

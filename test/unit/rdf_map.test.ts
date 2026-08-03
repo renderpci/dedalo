@@ -11,7 +11,7 @@ import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { importMappedRecords } from '../../src/core/tools/import_execute.ts';
-import { type RdfMapEntry, applyRdfMap, parseRdfXml } from '../../src/core/tools/rdf_xml.ts';
+import { applyRdfMap, parseRdfXml, type RdfMapEntry } from '../../src/core/tools/rdf_xml.ts';
 
 const SECTION = 'ich135';
 const INPUT_TEXT = 'ich137';

@@ -25,10 +25,10 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { compileElementPlan } from '../../src/diffusion/plan/compile.ts';
 import type { PublicationPlan } from '../../src/diffusion/plan/types.ts';
-import { buildVirtualDiffusionTree } from '../../src/diffusion/plan/virtual_tree.ts';
 import type { VirtualDiffusionTree } from '../../src/diffusion/plan/virtual_tree.ts';
+import { buildVirtualDiffusionTree } from '../../src/diffusion/plan/virtual_tree.ts';
+import type { ResolvedBatch, ResolveOptions } from '../../src/diffusion/resolve/resolver.ts';
 import { resolvePublication } from '../../src/diffusion/resolve/resolver.ts';
-import type { ResolveOptions, ResolvedBatch } from '../../src/diffusion/resolve/resolver.ts';
 
 /** The known-good sql element of the dev domain (diffusion_plan_compile gate). */
 const ELEMENT_TIPO = 'numisdata29';

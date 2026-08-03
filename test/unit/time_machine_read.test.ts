@@ -10,9 +10,9 @@
 import { describe, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import {
-	TIME_MACHINE_SECTION_TIPO,
 	readTimeMachineHistory,
 	readTimeMachineRow,
+	TIME_MACHINE_SECTION_TIPO,
 } from '../../src/core/db/time_machine.ts';
 
 describe('time machine read (real DB)', () => {

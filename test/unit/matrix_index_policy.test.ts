@@ -14,9 +14,9 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
+	classifyIndex,
 	type LiveIndex,
 	MATRIX_INDEX_POLICIES,
-	classifyIndex,
 	normalizeIndexDef,
 	policyForTable,
 } from '../../src/core/db/matrix_index_policy.ts';

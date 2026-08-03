@@ -14,10 +14,10 @@
 import { describe, expect, test } from 'bun:test';
 import { HINTS } from '../../src/ai/mcp/envelope.ts';
 import {
-	TOOL_REGISTRY,
 	getToolSpec,
 	registeredTools,
 	runTool,
+	TOOL_REGISTRY,
 	toAgentToolDefinition,
 } from '../../src/ai/mcp/registry.ts';
 

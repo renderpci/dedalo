@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { type OntologyPort, RagConfig } from '../../src/ai/rag/config.ts';
 import { resolveEmbedDocs } from '../../src/ai/rag/embed_source.ts';
 import { getEmbeddingProvider } from '../../src/ai/rag/embedding_provider.ts';
-import { RagIndexer, defaultRagStore } from '../../src/ai/rag/indexer.ts';
+import { defaultRagStore, RagIndexer } from '../../src/ai/rag/indexer.ts';
 import { indexComponentText, semanticSearch } from '../../src/ai/rag/retrieval.ts';
 import { deleteRecordChunks, ragSql } from '../../src/ai/rag/vector_store.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';

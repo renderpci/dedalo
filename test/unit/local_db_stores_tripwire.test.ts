@@ -21,7 +21,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DATA_MANAGER = 'client/dedalo/core/common/js/data_manager.js';

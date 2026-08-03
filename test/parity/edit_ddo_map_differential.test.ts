@@ -13,7 +13,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
-import { PhpApiClient, hasPhpCredentials } from './php_client.ts';
+import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 type Ddoish = { tipo: string; model: string; parent: string; mode: string; view?: string | null };
 

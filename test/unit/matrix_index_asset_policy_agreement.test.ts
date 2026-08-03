@@ -33,8 +33,8 @@
 import { describe, expect, test } from 'bun:test';
 import definitions from '../../src/core/db/db_pg_definitions.json';
 import {
-	MATRIX_INDEX_POLICIES,
 	classifyIndex,
+	MATRIX_INDEX_POLICIES,
 	normalizeIndexDef,
 } from '../../src/core/db/matrix_index_policy.ts';
 import { sql } from '../../src/core/db/postgres.ts';

@@ -45,10 +45,10 @@ import { config } from '../../src/config/config.ts';
 import { envSnapshot } from '../../src/config/env.ts';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
 import {
-	type IdentifyByImageDeps,
-	MAX_IMAGE_BYTES,
 	buildIdentifyByImage,
 	defaultIdentifyByImageDeps,
+	type IdentifyByImageDeps,
+	MAX_IMAGE_BYTES,
 	readImageInput,
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
