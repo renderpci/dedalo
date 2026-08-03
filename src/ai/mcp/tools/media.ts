@@ -184,6 +184,10 @@ export async function uploadMedia(
 			chunkIndex: 0,
 			totalChunks: 1,
 			blob: bytes,
+			// One transfer, one identity: this caller stages the whole file in a
+			// single shot, so it supplies its own id rather than letting the receiver
+			// derive one from the file name.
+			uploadId: crypto.randomUUID().replace(/-/g, ''),
 			csrfToken: null,
 		},
 		principal.userId,

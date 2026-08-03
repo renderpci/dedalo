@@ -25,7 +25,7 @@
 import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
-import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
+import { resolveStagedName } from '../../../src/core/media/ingest/staged_files.ts';
 import { importMappedRecords, type MappedRecord } from '../../../src/core/tools/import_execute.ts';
 import type {
 	ToolActionContext,
@@ -54,7 +54,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
 		const o = ctx.options;
 		const sectionTipo = String(o.section_tipo ?? '');
-		const filesData = (o.files_data ?? []) as { name?: string }[];
+		const filesData = (o.files_data ?? []) as { name?: string; tmp_name?: string | null }[];
 		if (sectionTipo === '' || filesData.length === 0)
 			return fail('Missing section_tipo or files_data');
 		const map = readFieldMap(o.tool_config);
@@ -67,13 +67,30 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const errors: string[] = [];
 		const mapped: MappedRecord[] = [];
 		for (const file of filesData) {
-			const name = String(file.name ?? '');
+			// The client URI-encodes the display name (JSON/HTTP safety); decode
+			// defensively, since a bare '%' is not a valid escape sequence.
+			const rawName = String(file.name ?? '');
+			let name: string;
+			try {
+				name = decodeURIComponent(rawName);
+			} catch {
+				name = rawName;
+			}
 			// PHP: the batch is filtered to .json (the Zotero export) — the other
 			// dropzone entries are attachments, not records.
 			if (!name.toLowerCase().endsWith('.json')) continue;
-			// The name goes through the SAME transform the upload receiver applied,
-			// then the resolved path is re-confined ('..' survives that transform).
-			const staged = resolve(dir, stagedTmpName(name));
+			// The staged name is SERVER-ASSIGNED (upload.ts claimStagedName), so the
+			// authoritative source is the `tmp_name` this tool's client forwards per
+			// entry; the legacy transform is the fallback, and it REFUSES rather than
+			// guess when collision-suffixed candidates exist. The resolved path is
+			// then re-confined ('..' survives the legacy transform untouched).
+			let staged: string;
+			try {
+				staged = resolve(dir, resolveStagedName(dir, name, file.tmp_name ?? null));
+			} catch (error) {
+				errors.push(`${name}: ${(error as Error).message}`);
+				continue;
+			}
 			if (!staged.startsWith(dir + sep)) {
 				errors.push(`${name}: invalid file name`);
 				continue;

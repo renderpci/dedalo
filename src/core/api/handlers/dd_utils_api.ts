@@ -140,7 +140,14 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			return { status: 404, body: { result: false, msg: 'Not found' } };
 		}
 		const options = (rqo.options ?? {}) as {
-			file_data?: { key_dir?: unknown; tmp_name?: unknown; total_chunks?: unknown };
+			file_data?: {
+				key_dir?: unknown;
+				tmp_name?: unknown;
+				total_chunks?: unknown;
+				// The transfer identity the chunk responses echoed; the client
+				// forwards file_data verbatim, so it arrives here untouched.
+				upload_id?: unknown;
+			};
 			files_chunked?: unknown[];
 		};
 		const fileData = options.file_data ?? {};
@@ -150,12 +157,19 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			filesChunked.length > 0 ? filesChunked.length : Number(fileData.total_chunks ?? 0);
 		try {
 			const { joinChunkedUpload } = await import('../../media/ingest/upload.ts');
-			const joined = joinChunkedUpload(
-				String(fileData.key_dir ?? ''),
-				String(fileData.tmp_name ?? ''),
+			// Awaited: the assembly is O(file size) and yields between windows so a
+			// multi-GB join does not freeze every other request (S-7).
+			const joined = await joinChunkedUpload({
+				keyDir: String(fileData.key_dir ?? ''),
+				tmpName: String(fileData.tmp_name ?? ''),
 				totalChunks,
-				context.session.userId,
-			);
+				userId: context.session.userId,
+				// Untrusted: the receiver validates it against UPLOAD_ID_PATTERN and
+				// REFUSES a malformed one rather than sanitizing it. Absent (a client
+				// that does not echo it back yet) the join falls back to matching the
+				// server-recorded proposal + part count, and refuses when several match.
+				uploadId: typeof fileData.upload_id === 'string' ? fileData.upload_id : null,
+			});
 			return {
 				status: 200,
 				body: {
@@ -233,7 +247,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		};
 	},
 	list_uploaded_files: async (rqo, context) => {
-		// The dropzone service lists the user's already-staged files (PHP
+		// The upload service's multi-file queue lists the user's already-staged files (PHP
 		// dd_utils_api::list_uploaded_files → scandir(DEDALO_UPLOAD_TMP_DIR/user))
 		// on EVERY render and injects them as existing rows. That is the mechanism
 		// by which a pending upload queue survives a page reload.
@@ -241,7 +255,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// This used to return a hardcoded `[]` with "full temp-dir scan is uncovered
 		// scope" — a silent narrowing that read as "nothing staged" and was the
 		// direct cause of "temporal data is not preserved across reload":
-		// tool_import_files came back from a reload with an empty dropzone even
+		// tool_import_files came back from a reload with an empty queue even
 		// though the files were still on disk.
 		//
 		// Keeping the response a 200 with an ARRAY result still matters for the
@@ -269,15 +283,30 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		}
 	},
 	delete_uploaded_file: async (rqo, context) => {
-		// service_dropzone's `removedfile` handler fires this for any file that
-		// reached the server (render_edit_service_dropzone.js:874). It was never
+		// The queue renderer's row-removal path fires this for any file that
+		// reached the server (found in the since-deleted
+		// render_edit_service_dropzone.js:874 — provenance, not a live path).
+		// It was never
 		// implemented, so every removal 400'd: the row vanished from the UI while
 		// the bytes stayed in the staging dir forever — and the accumulated
 		// api_errors broke sibling renders.
 		const principal = requirePrincipal(context);
-		const options = (rqo.options ?? {}) as { key_dir?: unknown; file_name?: unknown };
+		const options = (rqo.options ?? {}) as {
+			key_dir?: unknown;
+			file_name?: unknown;
+			// OPTIONAL explicit cancel (WC-2026-08-03-chunked-upload-identity): a row
+			// removed before its transfer completed has no staged file to delete, only
+			// parts under `.up_<upload_id>/`. With it they go now; without it the age
+			// sweep collects them (src/core/media/ingest/staging_gc.ts).
+			//
+			// It is ALSO the release for a QUARANTINED transfer — one whose assembled
+			// bytes failed content verification and were kept rather than destroyed
+			// (ingest/upload.ts quarantineAssembled). Same directory, same cancel.
+			upload_id?: unknown;
+		};
 		const keyDir = typeof options.key_dir === 'string' ? options.key_dir : '';
 		const fileName = typeof options.file_name === 'string' ? options.file_name : '';
+		const uploadId = typeof options.upload_id === 'string' ? options.upload_id : null;
 		if (keyDir === '' || fileName === '') {
 			return { status: 200, body: { result: false, msg: 'key_dir and file_name are required' } };
 		}
@@ -286,7 +315,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			// Deleting an already-absent file is a successful no-op: the client has
 			// already removed the row, and a retry/double-fire must not surface an
 			// error the user cannot act on.
-			deleteStagedFile(principal.userId, keyDir, fileName);
+			deleteStagedFile(principal.userId, keyDir, fileName, undefined, uploadId);
 			return { status: 200, body: { result: true, msg: 'OK. Request done' } };
 		} catch (error) {
 			// A rejected segment (traversal attempt / malformed name) is the only

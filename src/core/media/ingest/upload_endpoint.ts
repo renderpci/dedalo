@@ -48,7 +48,6 @@ export async function handleMediaUpload(
 			{
 				result: false,
 				msg: 'Upload rejected',
-				error: (error as Error).message,
 				errors: [(error as Error).message],
 			},
 			400,
@@ -56,7 +55,7 @@ export async function handleMediaUpload(
 	}
 	if (!verifyCsrf(session, csrfCandidate) && !verifyCsrf(session, parsed.csrfToken)) {
 		return json(
-			{ result: false, msg: 'CSRF validation failed', error: 'CSRF validation failed' },
+			{ result: false, msg: 'CSRF validation failed', errors: ['CSRF validation failed'] },
 			403,
 		);
 	}
@@ -89,20 +88,29 @@ export async function handleMediaUpload(
 				chunk_index: received.chunkIndex ?? 0,
 				total_chunks: received.totalChunks ?? 1,
 				complete: received.complete,
+				// The TRANSFER IDENTITY (WC-2026-08-03-chunked-upload-identity).
+				// Echoed so it round-trips: the client forwards the LAST chunk's
+				// file_data verbatim into join_chunked_files_uploaded, which is how the
+				// join finds exactly THIS transfer's parts instead of guessing from a
+				// file name two different uploads can share.
+				upload_id: received.uploadId ?? null,
 				// PHP dd_utils_api :1269 — null when the format is not previewable.
 				thumbnail_url: thumbnailUrl,
 			},
 		});
 	} catch (error) {
 		// Validation failures (bad MIME, traversal, polyglot) → 400, no detail leak.
-		// `error` (string) is the key Dropzone's default handler unwraps; `errors`
-		// (array) is the shape service_upload reads. Emit BOTH so neither client
-		// renders a stringified object into its error slot.
+		// ONE machine-readable error key: `errors` (array), the shape
+		// `upload_transport.js` reads (`errors[]` then `msg`). The former sibling
+		// `error` (string) existed ONLY because Dropzone 5's default renderer
+		// unwraps `.error`; with service_dropzone deleted it has no consumer
+		// (WC-2026-08-03-service-dropzone-folded-into-service-upload, which
+		// REVERSES the WC-078 "error bodies gain an `error` string key" section).
+		// The rejection body key set is pinned by test/unit/media_upload_endpoint.
 		return json(
 			{
 				result: false,
 				msg: 'Upload rejected',
-				error: (error as Error).message,
 				errors: [(error as Error).message],
 			},
 			400,

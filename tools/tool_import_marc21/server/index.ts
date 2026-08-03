@@ -26,7 +26,7 @@
 import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { stagingDir } from '../../../src/core/media/ingest/add_file.ts';
-import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
+import { resolveStagedName } from '../../../src/core/media/ingest/staged_files.ts';
 import { importMappedRecords, type MappedRecord } from '../../../src/core/tools/import_execute.ts';
 import {
 	applyMarcMap,
@@ -99,13 +99,33 @@ export function readMarcMap(toolConfig: unknown): {
 }
 
 /**
- * Resolve ONE client-named staged file inside the user's staging dir, or null
- * when the name is not stageable there. The name goes through the SAME
- * transform the upload receiver applied when it wrote the file, then the
- * resolved path is confined (a `..` name survives stagedTmpName untouched).
+ * Resolve ONE staged file inside the user's staging dir, or null when the name
+ * is not stageable there.
+ *
+ * The staged name is SERVER-ASSIGNED since 2026-08-03 (two client names that
+ * sanitize alike now yield `x.mrc` and `x-1.mrc`), so the authoritative source
+ * is the `tmp_name` this tool's client forwards per entry. `resolveStagedName`
+ * takes it when present and falls back to the legacy transform otherwise —
+ * THROWING rather than guessing when collision-suffixed candidates exist.
+ *
+ * THE `null` RETURN IS CURRENTLY UNREACHABLE, and is kept deliberately. Both
+ * branches of `resolveStagedName` now produce a name that cannot escape: a
+ * forwarded value goes through `sanitizeSegment` (which THROWS on '', '.', '..',
+ * NUL, '/' and anything outside [A-Za-z0-9_.-]), and the legacy transform
+ * rewrites every other character to '_' and prefixes a leading dot, so '..'
+ * becomes '_..'. No input reaches `resolve(dir, name)` with a traversal left in
+ * it. Stating that here rather than deleting the check, because it is the last
+ * line of a confinement guarantee and the transforms in front of it are two
+ * modules away; the gate that replaces the lost branch coverage asserts the
+ * INVARIANT instead (test/unit/tool_import_marc21.test.ts: no hostile client
+ * name resolves outside `dir`).
  */
-export function resolveStagedFile(dir: string, clientName: string): string | null {
-	const target = resolve(dir, stagedTmpName(clientName));
+export function resolveStagedFile(
+	dir: string,
+	clientName: string,
+	tmpName?: string | null,
+): string | null {
+	const target = resolve(dir, resolveStagedName(dir, clientName, tmpName));
 	if (!target.startsWith(dir + sep)) return null;
 	return target;
 }
@@ -114,7 +134,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
 		const o = ctx.options;
 		const sectionTipo = String(o.section_tipo ?? '');
-		const filesData = (o.files_data ?? []) as { name?: string }[];
+		const filesData = (o.files_data ?? []) as { name?: string; tmp_name?: string | null }[];
 		if (sectionTipo === '' || filesData.length === 0)
 			return fail('Missing section_tipo or files_data');
 		const { entries, idSpec } = readMarcMap(o.tool_config);
@@ -130,11 +150,28 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const errors: string[] = [];
 		const mapped: MappedRecord[] = [];
 		for (const file of filesData) {
-			const name = String(file.name ?? '');
+			// The client URI-encodes the display name (JSON/HTTP safety); decode
+			// defensively, since a bare '%' is not a valid escape sequence.
+			const rawName = String(file.name ?? '');
+			let name: string;
+			try {
+				name = decodeURIComponent(rawName);
+			} catch {
+				name = rawName;
+			}
 			// PHP filter_marc21_files: .mrc (binary ISO 2709) only; other uploads in
 			// the same dropzone batch are not MARC21 and are silently passed over.
 			if (!name.toLowerCase().endsWith('.mrc')) continue;
-			const staged = resolveStagedFile(dir, name);
+			let staged: string | null;
+			try {
+				// tmp_name is the SERVER-assigned staged name, forwarded per entry by
+				// this tool's client. An entry without one falls back to the legacy
+				// derivation, which refuses (throws) rather than guess.
+				staged = resolveStagedFile(dir, name, file.tmp_name ?? null);
+			} catch (error) {
+				errors.push(`${name}: ${(error as Error).message}`);
+				continue;
+			}
 			if (staged === null) {
 				errors.push(`${name}: invalid file name`);
 				continue;
@@ -145,7 +182,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			}
 			const bytes = new Uint8Array(await Bun.file(staged).arrayBuffer());
 			const { records, errors: parseErrors } = parseMarc(bytes);
-			errors.push(...parseErrors.map((e) => `${file.name}: ${e}`));
+			errors.push(...parseErrors.map((e) => `${name}: ${e}`));
 			for (const record of records) mapped.push(applyMarcMap(record, entries, idSpec));
 		}
 

@@ -47,7 +47,7 @@ import {
 	processUploadedFile,
 	requireMediaSpec,
 } from '../../../src/core/media/ingest/process_uploaded_file.ts';
-import { stagedTmpName } from '../../../src/core/media/ingest/upload.ts';
+import { resolveStagedName } from '../../../src/core/media/ingest/staged_files.ts';
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
 import {
 	getColumnNameByModel,
@@ -813,18 +813,20 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			}
 			try {
 				const keyDir = String(file.key_dir ?? optionsKeyDir);
-				// The STAGED name is not the client name: the upload receiver
-				// rewrites anything outside [A-Za-z0-9_.-] to '_' (stagedTmpName), so
-				// 'DSC 001.jpg' / 'María.jpg' / 'photo (1).jpg' are on disk under a
-				// different name. service_dropzone now echoes the server's tmp_name
-				// back into files_data; reproduce the same transform for any caller
-				// that does not (other import tools, a restored legacy queue) —
-				// otherwise addFile's sanitizeSegment throws 'Unsafe path segment'
-				// or the lookup misses with 'Staged upload not found'.
-				const tmpName =
-					typeof file.tmp_name === 'string' && file.tmp_name !== ''
-						? file.tmp_name
-						: stagedTmpName(fileName);
+				// The STAGED name is not the client name: it is SERVER-ASSIGNED
+				// (upload.ts claimStagedName). Anything outside [A-Za-z0-9_.-] became
+				// '_', so 'DSC 001.jpg' / 'María.jpg' / 'photo (1).jpg' are on disk
+				// under a different name — and two names that sanitize alike are kept
+				// apart with a '-1', '-2' … suffix, which no transform can reproduce.
+				// service_dropzone echoes the server's tmp_name back into files_data;
+				// resolveStagedName takes it when present and falls back to the legacy
+				// transform otherwise, REFUSING (throwing, reported as this file's
+				// error) rather than guessing when suffixed candidates exist.
+				const tmpName = resolveStagedName(
+					stagingDir(ctx.userId, keyDir),
+					fileName,
+					typeof file.tmp_name === 'string' ? file.tmp_name : null,
+				);
 				const parsed = parseFilename(fileName);
 				// Extension resolution. parseFilename implements the PHP IMPORT-NAME
 				// grammar, whose extension group is `[a-zA-Z]{3,4}` — ALPHA ONLY. That

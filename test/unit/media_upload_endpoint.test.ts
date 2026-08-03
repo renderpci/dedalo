@@ -2,12 +2,22 @@
  * Phase F gate: the media upload HTTP route on the real server handler.
  * Fail-closed: anonymous → 404 (no leak), bad CSRF → 403; a valid session +
  * CSRF stages a real jpg and returns the file_data descriptor.
+ *
+ * 2026-08-03 (WC-2026-08-03-chunked-upload-identity) adds the three defects the
+ * chunked receive path carried into the day `tool_import_files` starts chunking
+ * every upload: colliding staged identities, a head-only re-sniff, and orphaned
+ * parts. Every test below stages into the REAL configured media root (that is
+ * what makes it an end-to-end gate), so each key_dir is torn down before and
+ * after — a leftover `shot.jpg` from a previous run would otherwise be claimed
+ * around as `shot-1.jpg` and the assertions would drift.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
+import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import { handleRequest } from '../../src/server.ts';
 
@@ -19,6 +29,16 @@ function newSession(userId: number): { token: string; csrf: string } {
 }
 
 const context = { requestId: 'upload-test', startedAt: 0 };
+const UPLOAD_USER = 3;
+/** Every key_dir this file writes into — torn down before and after the run. */
+const KEY_DIRS = ['kd_ep', 'kd_chunk', 'kd_collide', 'kd_corrupt', 'kd_badid'];
+const clearStaging = (): void => {
+	for (const keyDir of KEY_DIRS) {
+		rmSync(stagingDir(UPLOAD_USER, keyDir), { recursive: true, force: true });
+	}
+};
+beforeAll(clearStaging);
+afterAll(clearStaging);
 const API_URL = 'http://localhost/dedalo/core/api/v1/json/';
 const HAVE_MAGICK = existsSync(resolveMagick());
 
@@ -54,6 +74,17 @@ describe('media upload endpoint (fail-closed auth/CSRF)', () => {
 			context,
 		);
 		expect(res.status).toBe(403);
+		// The rejection body KEY SET is contractual and had no coverage. It is
+		// exactly {result,msg,errors}: `errors[]` is the one machine-readable
+		// carrier `upload_transport.js` reads (then falls back to `msg`). The
+		// Dropzone-only `error` string key is GONE with service_dropzone
+		// (WC-2026-08-03-service-dropzone-folded-into-service-upload) — and this
+		// CSRF branch, which previously carried `error` and NO `errors`, gains the
+		// array so it is not left without a machine-readable error at all.
+		const body = (await res.json()) as Record<string, unknown>;
+		expect(Object.keys(body).sort()).toEqual(['errors', 'msg', 'result']);
+		expect(body.result).toBe(false);
+		expect(body.errors).toEqual(['CSRF validation failed']);
 	});
 
 	test.if(HAVE_MAGICK)('valid session + CSRF stages the file and returns file_data', async () => {
@@ -135,4 +166,260 @@ describe('chunked upload contract through the real server (the browser flow)', (
 			expect(joinBody.file_data.complete).toBe(true);
 		},
 	);
+});
+
+/**
+ * DEFECT 1 — STAGED IDENTITY. `stagedTmpName` is not injective: 'María.jpg' and
+ * 'Mar#a.jpg' both sanitize to 'Mar_a.jpg'. Single-shot, that silently
+ * overwrote one file with the other (LOSS). Chunked — which is what every
+ * upload becomes once tool_import_files moves to the chunking client — the two
+ * transfers' parts interleaved under one name and the join concatenated
+ * whichever parts won, which the head-only re-sniff then happily accepted
+ * (CORRUPTION).
+ */
+describe('staged identity: colliding client names stay two distinct files', () => {
+	/** Post one part and return its file_data. */
+	async function post(
+		s: { token: string; csrf: string },
+		fields: Record<string, string>,
+		body: Uint8Array,
+	): Promise<{ status: number; body: Record<string, unknown> }> {
+		const form = new FormData();
+		for (const [key, value] of Object.entries(fields)) form.set(key, value);
+		form.set('file_to_upload', new Blob([body as BlobPart]), fields.file_name ?? 'f.bin');
+		const res = await handleRequest(
+			new Request(API_URL, {
+				method: 'POST',
+				body: form,
+				headers: {
+					Cookie: `dedalo_ts_session=${s.token}`,
+					'x-dedalo-csrf-token': s.csrf,
+					'X-File-Name': encodeURIComponent(fields.file_name ?? 'f.bin'),
+				},
+			}),
+			context,
+		);
+		return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+	}
+
+	/** A minimal but WHOLE jpeg: SOI + a distinguishable body + EOI. */
+	const jpegOf = (marker: number, length: number): Uint8Array =>
+		new Uint8Array([0xff, 0xd8, 0xff, ...Array.from({ length }, () => marker), 0xff, 0xd9]);
+
+	test('two names that sanitize alike produce two intact staged files (chunked)', async () => {
+		const s = newSession(UPLOAD_USER);
+		const a = jpegOf(0x41, 600);
+		const b = jpegOf(0x42, 400);
+		const half = (bytes: Uint8Array, i: number): Uint8Array =>
+			i === 0
+				? bytes.slice(0, Math.floor(bytes.length / 2))
+				: bytes.slice(Math.floor(bytes.length / 2));
+		const base = (name: string, index: number): Record<string, string> => ({
+			key_dir: 'kd_collide',
+			file_name: name,
+			chunked: 'true',
+			chunk_index: String(index),
+			total_chunks: '2',
+		});
+
+		// INTERLEAVED, as two concurrent transfers really arrive.
+		const a0 = await post(s, base('María.jpg', 0), half(a, 0));
+		const b0 = await post(s, base('Mar#a.jpg', 0), half(b, 0));
+		const a1 = await post(s, base('María.jpg', 1), half(a, 1));
+		const b1 = await post(s, base('Mar#a.jpg', 1), half(b, 1));
+		for (const part of [a0, b0, a1, b1]) expect(part.status).toBe(200);
+		const aData = a1.body.file_data as Record<string, unknown>;
+		const bData = b1.body.file_data as Record<string, unknown>;
+		// The two transfers carry DIFFERENT identities even though their staged-name
+		// proposals are identical — that is what keeps their parts apart.
+		expect(aData.tmp_name).toBe(bData.tmp_name);
+		expect(typeof aData.upload_id).toBe('string');
+		expect(aData.upload_id).not.toBe(bData.upload_id);
+
+		const joinOne = async (fileData: Record<string, unknown>): Promise<Record<string, unknown>> => {
+			const res = await handleRequest(
+				new Request(API_URL, {
+					method: 'POST',
+					body: JSON.stringify({
+						dd_api: 'dd_utils_api',
+						action: 'join_chunked_files_uploaded',
+						options: { file_data: fileData, files_chunked: ['x', 'y'] },
+					}),
+					headers: {
+						'Content-Type': 'application/json',
+						Cookie: `dedalo_ts_session=${s.token}`,
+						'x-dedalo-csrf-token': s.csrf,
+					},
+				}),
+				context,
+			);
+			return (await res.json()) as Record<string, unknown>;
+		};
+		const joinedA = (await joinOne(aData)).file_data as Record<string, unknown>;
+		const joinedB = (await joinOne(bData)).file_data as Record<string, unknown>;
+
+		// TWO staged files, not one.
+		expect(joinedA.tmp_name).not.toBe(joinedB.tmp_name);
+		const dir = stagingDir(UPLOAD_USER, 'kd_collide');
+		const readStaged = (name: unknown): Uint8Array =>
+			new Uint8Array(readFileSync(resolve(dir, String(name))));
+		// BOTH intact: byte-for-byte what was uploaded, no interleaving.
+		expect(readStaged(joinedA.tmp_name)).toEqual(a);
+		expect(readStaged(joinedB.tmp_name)).toEqual(b);
+	});
+});
+
+/**
+ * DEFECT 2 — the join re-sniff was HEAD-ONLY (8192 bytes), so a valid signature
+ * over a corrupt or hostile body passed. The verification now reaches past that
+ * prefix in bounded windows (src/core/media/engine/verify_content.ts).
+ *
+ * HOW FAR it reaches is per content class, and the 2026-08-03 revision narrowed
+ * that deliberately: a rule is kept only where no legal file can trip it, because
+ * the first version refused real encoder output. The two cases below are the two
+ * halves of that — the mechanism still catches a container that is not what it
+ * claims (JPEG), and it no longer applies a predicate no consumer enforces (text).
+ */
+describe('join verification reaches past the first 8192 bytes', () => {
+	async function upload(
+		s: { token: string; csrf: string },
+		name: string,
+		body: Uint8Array,
+	): Promise<{ status: number; body: Record<string, unknown> }> {
+		const form = new FormData();
+		form.set('key_dir', 'kd_corrupt');
+		form.set('file_name', name);
+		form.set('chunked', 'false');
+		form.set('file_to_upload', new Blob([body as BlobPart]), name);
+		const res = await handleRequest(
+			new Request(API_URL, {
+				method: 'POST',
+				body: form,
+				headers: {
+					Cookie: `dedalo_ts_session=${s.token}`,
+					'x-dedalo-csrf-token': s.csrf,
+					'X-File-Name': encodeURIComponent(name),
+				},
+			}),
+			context,
+		);
+		return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+	}
+
+	test('a JPEG header over 16 KB of non-JPEG body is REJECTED (and the body shape is pinned)', async () => {
+		const s = newSession(UPLOAD_USER);
+		// Valid SOI, then 16 KB with no EOI anywhere: the old 8192-byte re-sniff
+		// declared this a jpeg.
+		const hostile = new Uint8Array([0xff, 0xd8, 0xff, ...new Array(16384).fill(0x00)]);
+		const { status, body } = await upload(s, 'hostile.jpg', hostile);
+		expect(status).toBe(400);
+		// The rejection body KEY SET is pinned: exactly {result,msg,errors}. The
+		// Dropzone-only `error` string key was removed with service_dropzone
+		// (WC-2026-08-03-service-dropzone-folded-into-service-upload); asserting
+		// the key set — not just the presence of `errors` — is what stops it, or
+		// any other undeclared key, being reintroduced.
+		expect(Object.keys(body).sort()).toEqual(['errors', 'msg', 'result']);
+		expect(body.result).toBe(false);
+		expect(body.msg).toBe('Upload rejected');
+		expect(Array.isArray(body.errors)).toBe(true);
+		expect((body.errors as string[]).length).toBe(1);
+		expect((body.errors as string[])[0]).toContain('verification failed');
+		expect(existsSync(resolve(stagingDir(UPLOAD_USER, 'kd_corrupt'), 'hostile.jpg'))).toBe(false);
+	});
+
+	/**
+	 * A DELIBERATE ACCEPTANCE, pinned so nobody "fixes" it back.
+	 *
+	 * This case asserted a REJECTION until 2026-08-03: the text class was verified
+	 * `full` (no control byte anywhere in the file). That rule was wrong on the
+	 * merits, not merely expensive. Control bytes are pervasive in real curator
+	 * material:
+	 *
+	 *   • Excel's "Unicode Text (*.txt)" and many database exports are UTF-16LE,
+	 *     so every second byte of an ASCII column IS a NUL — the sniffed prefix
+	 *     of a latin-1 CSV can be clean while the rest is full of them;
+	 *   • a DOS/CP-M era export ends with 0x1A (the historical EOF character),
+	 *     which is exactly the shape of a legacy catalogue dump;
+	 *   • OCR transcriptions carry stray 0x7F/0x01 from the scanner software.
+	 *
+	 * No CSV/XML/JSON consumer enforces the predicate we were enforcing, so the
+	 * verifier was more aggressive than the decoder ecosystem it guards — and at
+	 * the time a rejected join DELETED the transfer. The 8192-byte head sniff
+	 * still classifies the file (that is what cross-checks the extension); what
+	 * is gone is the whole-file byte predicate on top of it.
+	 * See VERIFICATION_POLICY.text in src/core/media/engine/verify_content.ts.
+	 */
+	test('a CSV carrying a NUL / 0x1A / 0x7F past the sniffed prefix is ACCEPTED', async () => {
+		const s = newSession(UPLOAD_USER);
+		const head = new TextEncoder().encode(`id,name\n${'1,ok\n'.repeat(2000)}`);
+		expect(head.length).toBeGreaterThan(8192); // the sniffed bound really is passed
+		const legacy = new Uint8Array(head.length + 4);
+		legacy.set(head, 0);
+		// UTF-16 residue, an OCR artefact, and the DOS end-of-file marker.
+		legacy.set([0x00, 0x7f, 0x01, 0x1a], head.length);
+		const { status, body } = await upload(s, 'legacy.csv', legacy);
+		expect(status).toBe(200);
+		expect((body.file_data as Record<string, unknown>).complete).toBe(true);
+	});
+
+	test('the same content without any control byte is accepted too', async () => {
+		const s = newSession(UPLOAD_USER);
+		const clean = new TextEncoder().encode(`id,name\n${'1,ok\n'.repeat(2000)}`);
+		const { status, body } = await upload(s, 'clean.csv', clean);
+		expect(status).toBe(200);
+		expect((body.file_data as Record<string, unknown>).complete).toBe(true);
+	});
+});
+
+/**
+ * The client-supplied transfer id is UNTRUSTED input that becomes a path
+ * segment. It is REFUSED when malformed — never sanitized into something else,
+ * because silently rewriting an identity is how two transfers end up sharing one.
+ */
+describe('upload_id is validated, not sanitized', () => {
+	const hostile: [string, string][] = [
+		['traversal', '../../../etc'],
+		['slash', 'a/b/c/deadbeef'],
+		['nul', 'abcdefgh\u0000'],
+		['too short', 'abc'],
+		['oversized', 'a'.repeat(4096)],
+		['dot', '..'],
+	];
+	for (const [label, uploadId] of hostile) {
+		test(`refuses a ${label} upload_id`, async () => {
+			const s = newSession(UPLOAD_USER);
+			const form = new FormData();
+			form.set('key_dir', 'kd_badid');
+			form.set('file_name', 'x.jpg');
+			form.set('chunked', 'true');
+			form.set('chunk_index', '0');
+			form.set('total_chunks', '1');
+			form.set('upload_id', uploadId);
+			form.set(
+				'file_to_upload',
+				new Blob([new Uint8Array([0xff, 0xd8, 0xff]) as BlobPart]),
+				'x.jpg',
+			);
+			const res = await handleRequest(
+				new Request(API_URL, {
+					method: 'POST',
+					body: form,
+					headers: {
+						Cookie: `dedalo_ts_session=${s.token}`,
+						'x-dedalo-csrf-token': s.csrf,
+						'X-File-Name': encodeURIComponent('x.jpg'),
+					},
+				}),
+				context,
+			);
+			expect(res.status).toBe(400);
+			const body = (await res.json()) as Record<string, unknown>;
+			expect(body.result).toBe(false);
+			// `errors[]`, not the removed Dropzone-only `error` string
+			// (WC-2026-08-03-service-dropzone-folded-into-service-upload).
+			expect(String((body.errors as string[])[0])).toContain('invalid upload_id');
+			// Nothing was staged under a rewritten id.
+			expect(existsSync(stagingDir(UPLOAD_USER, 'kd_badid'))).toBe(false);
+		});
+	}
 });

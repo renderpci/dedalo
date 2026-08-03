@@ -3,34 +3,70 @@
  * :925 + join_chunked_files_uploaded :1379).
  *
  * Parses the vendored client's multipart form (Content-Range / X-File-Name /
- * fields key_dir,file_name,chunked,start,end,chunk_index,total_chunks,
+ * fields key_dir,file_name,chunked,start,end,chunk_index,total_chunks,upload_id,
  * file_to_upload), sniffs the MAGIC BYTES (never the client Content-Type),
  * cross-validates the extension, stages under the per-user upload tmp dir, and
- * on the final chunk joins + RE-SNIFFS the assembled file (SEC-066). Returns the
- * staged tmp name once the upload is complete; the caller then runs
- * processUploadedFile to add_file + regenerate.
+ * on the final chunk joins + RE-VERIFIES the assembled file (SEC-066 +
+ * verify_content.ts). Returns the staged tmp name once the upload is complete;
+ * the caller then runs processUploadedFile to add_file + regenerate.
  *
  * Bun's native request.formData() parses the body — no third-party library.
  * Chunks are client-capped (~MB) so buffering one in memory is acceptable;
  * streaming multipart is ledgered as a later optimization.
+ *
+ * ── STAGED IDENTITY (WC-2026-08-03-chunked-upload-identity) ──────────────────
+ * One logical upload has ONE identity, decided ONCE, and the FINAL staged name
+ * is allocated ONCE at completion:
+ *
+ *   • every part of a transfer is written under `.up_<uploadId>/` inside the
+ *     user's key_dir, so two transfers can never interleave their parts;
+ *   • `uploadId` is the client's `upload_id` field when present (validated, NOT
+ *     sanitized — a malformed one is refused), else a value DERIVED from the raw
+ *     client file name + chunk count, which is stable across the chunks of one
+ *     transfer without any client coordination;
+ *   • the final name is claimed at completion with an atomic `link` and a
+ *     `-1`, `-2`, … ladder, so two files whose names sanitize to the same thing
+ *     (`María.jpg` and `Mar#a.jpg` → `Mar_a.jpg`) get two distinct staged files
+ *     instead of one overwriting the other.
+ *
+ * Why not allocate per chunk: chunks arrive concurrently with no defined first
+ * arrival, so an allocator that ran per chunk would scatter one transfer's parts
+ * across several identities. Uniqueness has to be decided once, up front (the
+ * id) or once, at the end (the name) — never in between.
+ *
+ * ── A REFUSED TRANSFER IS QUARANTINED, NEVER DELETED ─────────────────────────
+ * Nothing on this path may destroy a completed transfer. A failed content
+ * verification parks the assembled bytes in the transfer's own artifact dir with
+ * a `rejected.json` marker (quarantineAssembled / listQuarantinedUploads); an
+ * interrupted assembly keeps every part until the join reaches a durable outcome
+ * (ASSEMBLY_STALE_MS recovery). Both release through the mechanisms that already
+ * existed — the 24 h age sweep and the explicit cancel — so nothing new leaks,
+ * and a curator's forty-hour upload is never destroyed by a heuristic verdict.
  */
 
 import {
-	appendFileSync,
 	closeSync,
 	existsSync,
+	linkSync,
 	mkdirSync,
 	openSync,
+	readdirSync,
 	readFileSync,
 	readSync,
 	renameSync,
+	rmdirSync,
+	rmSync,
+	statSync,
 	unlinkSync,
 	writeFileSync,
+	writeSync,
 } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { sniffAndValidate } from '../engine/mime.ts';
+import { verifyFileContent } from '../engine/verify_content.ts';
 import { sanitizeSegment, stagingDir } from './add_file.ts';
+import { sweepStagedOrphans, UPLOAD_DIR_PREFIX, uploadArtifactDir } from './staging_gc.ts';
 
 /** The parsed upload request fields. */
 export interface ParsedUpload {
@@ -40,6 +76,14 @@ export interface ParsedUpload {
 	chunkIndex: number;
 	totalChunks: number;
 	blob: Uint8Array;
+	/**
+	 * Client-supplied per-transfer identity (`upload_id` form field). UNTRUSTED:
+	 * validated against UPLOAD_ID_PATTERN and refused when it does not match —
+	 * never sanitized into something else, because silently rewriting an identity
+	 * is exactly how two transfers end up sharing one. null = not sent (the
+	 * receiver then derives one; see resolveUploadId).
+	 */
+	uploadId: string | null;
 	/**
 	 * SEC-008 form-field CSRF twin. Both upload clients send the token in the
 	 * `X-Dedalo-Csrf-Token` header AND as a `csrf_token` field; the field is the
@@ -53,14 +97,34 @@ export interface ParsedUpload {
 export interface UploadReceiveResult {
 	/** True when the whole file is staged and ready for add_file. */
 	complete: boolean;
-	/** The staged temp file name (present for every chunk, not just the last). */
+	/**
+	 * The staged temp file name. On a COMPLETED upload this is the final,
+	 * collision-free name on disk; on an in-flight chunk it is the PROPOSAL the
+	 * final name is derived from (the client only counts these).
+	 */
 	tmpName?: string;
 	/** The validated/declared extension. */
 	extension?: string;
 	/** Echoed back so the client can count chunk completion (chunked flow). */
 	chunkIndex?: number;
 	totalChunks?: number;
+	/**
+	 * The transfer identity. Echoed in `file_data` so it round-trips back on the
+	 * join RQO (the client forwards the last chunk's `file_data` verbatim).
+	 */
+	uploadId?: string;
 }
+
+/**
+ * The accepted shape of a client-supplied `upload_id`. Deliberately narrow: it
+ * becomes a path segment, so it is an allowlist of URL-safe base64 characters
+ * with a hard length bound (a `crypto.randomUUID()` is 36 chars and fits). A
+ * traversal payload, a NUL, or a 4 KB id fails it and the upload is REFUSED.
+ */
+export const UPLOAD_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** Ceiling on the chunk count/index a client may declare (a sanity bound, not a policy). */
+const MAX_CHUNKS = 100_000;
 
 /** Parse the multipart form into the upload fields. Throws on a malformed body. */
 export async function parseUploadRequest(request: Request): Promise<ParsedUpload> {
@@ -107,15 +171,31 @@ export async function parseUploadRequest(request: Request): Promise<ParsedUpload
 	const blob = new Uint8Array(await file.arrayBuffer());
 	const chunked = String(form.get('chunked') ?? 'false') === 'true';
 	const csrfField = form.get('csrf_token');
+	const uploadIdField = form.get('upload_id');
 	return {
 		keyDir: String(form.get('key_dir') ?? ''),
 		fileName,
 		chunked,
-		chunkIndex: Number(form.get('chunk_index') ?? 0),
-		totalChunks: Number(form.get('total_chunks') ?? 1),
+		chunkIndex: readCount(form.get('chunk_index'), 0, 'chunk_index'),
+		totalChunks: readCount(form.get('total_chunks'), 1, 'total_chunks'),
 		blob,
+		uploadId: typeof uploadIdField === 'string' && uploadIdField !== '' ? uploadIdField : null,
 		csrfToken: typeof csrfField === 'string' && csrfField !== '' ? csrfField : null,
 	};
+}
+
+/**
+ * A chunk counter from the form. `Number(…)` alone let a missing/garbage field
+ * become NaN, which then became part of a file NAME (`NaN.part`) — a malformed
+ * count must be refused, not coerced.
+ */
+function readCount(raw: FormDataEntryValue | null, fallback: number, label: string): number {
+	if (raw === null || raw === '') return fallback;
+	const value = Number(raw);
+	if (!Number.isInteger(value) || value < 0 || value > MAX_CHUNKS) {
+		throw new Error(`upload: invalid ${label}`);
+	}
+	return value;
 }
 
 /** Extension from a file name (lowercased, no dot); '' when none. */
@@ -125,19 +205,172 @@ function extensionOf(fileName: string): string {
 }
 
 /**
- * A stable, sanitized staged base name derived from the client file name.
+ * The sanitized staged base name PROPOSED for a client file name.
  *
- * EXPORTED because it is the only way a later request can find what this
- * receiver wrote: the batch importers (tool_import_marc21 / tool_import_zotero)
- * are handed the client's `files_data[].name` and must reproduce the exact same
- * transform to locate the staged file. It is NOT a confinement primitive — a
- * `..` name survives it unchanged, so every caller still resolves against the
- * staging dir and rejects anything that escapes it.
+ * NOT AN IDENTITY. This transform is not injective — `María.jpg` and `Mar#a.jpg`
+ * both land on `Mar_a.jpg` — which is why the final staged name is ALLOCATED
+ * from this proposal (claimStagedName) instead of being it. Callers that need
+ * the name on disk must use the server's `tmp_name`, never re-derive it.
+ *
+ * Still EXPORTED because the batch importers keep a legacy fallback for entries
+ * with no forwarded `tmp_name` (see staged_files.ts resolveStagedName, which
+ * refuses to guess when collision-suffixed candidates exist).
  */
 export function stagedTmpName(fileName: string): string {
 	const base = fileName.split('/').pop() ?? fileName;
 	const cleaned = base.replace(/[^A-Za-z0-9_.-]/g, '_');
-	return cleaned === '' ? 'upload.bin' : cleaned;
+	if (cleaned === '') return 'upload.bin';
+	// A leading dot would make the staged file invisible to listStagedFiles (it
+	// skips dotfiles) and could collide with the `.up_<id>` artifact dirs.
+	return cleaned.startsWith('.') ? `_${cleaned}` : cleaned;
+}
+
+/** Validate a client-supplied upload id. Refuses — never rewrites — a bad one. */
+function assertUploadId(raw: string): string {
+	if (!UPLOAD_ID_PATTERN.test(raw)) {
+		throw new Error('upload: invalid upload_id');
+	}
+	return raw;
+}
+
+/**
+ * The identity of this transfer.
+ *
+ * With `upload_id` (the contract the clients are moving to) it is that value:
+ * one transfer, one id, decided by the only party that knows which parts belong
+ * together.
+ *
+ * WITHOUT it — every currently deployed client — it is DERIVED from the RAW
+ * client file name plus the declared chunk count. That derivation is stable
+ * across the chunks of one transfer (every chunk carries the same name and
+ * count) and, unlike the staged-name transform, it distinguishes `María.jpg`
+ * from `Mar#a.jpg`, because it hashes the raw name before any sanitizing. The
+ * residue it cannot resolve is two transfers of the SAME raw name into the SAME
+ * key_dir at the same time (two tabs, the same file): those still share an
+ * identity, and the client-supplied `upload_id` is what closes it.
+ */
+function resolveUploadId(parsed: ParsedUpload): string {
+	if (parsed.uploadId !== null) return assertUploadId(parsed.uploadId);
+	const digest = new Bun.CryptoHasher('sha256')
+		.update(`${parsed.keyDir} ${parsed.fileName} ${parsed.totalChunks}`)
+		.digest('hex');
+	return `d${digest.slice(0, 32)}`;
+}
+
+/** Split a staged base name into stem + extension suffix (`.jpg`, or ''). */
+function splitStagedName(name: string): { stem: string; suffix: string } {
+	const dot = name.lastIndexOf('.');
+	return dot > 0
+		? { stem: name.slice(0, dot), suffix: name.slice(dot) }
+		: { stem: name, suffix: '' };
+}
+
+/**
+ * errno values a filesystem WITHOUT hardlink support reports for `link(2)`.
+ *
+ * SMB/CIFS-backed media stores (common where the repository's images live on a
+ * NAS), several FUSE mounts and some object-storage gateways answer `EPERM` or
+ * `EOPNOTSUPP` for every link attempt. Since `claimStagedName` is the SINGLE
+ * allocation chokepoint for every upload, an unhandled errno here means the
+ * install cannot receive a file at all.
+ *
+ * `EXDEV` is deliberately NOT in this list: source and destination are in the
+ * same staging dir by construction (`.up_<id>/assembled` → `<staging>/<name>`
+ * under one `key_dir`), so a cross-device link is unreachable and pretending to
+ * handle it would be an untested branch.
+ */
+const NO_HARDLINK_ERRNOS: ReadonlySet<string> = new Set([
+	'EPERM',
+	'EOPNOTSUPP',
+	'ENOTSUP',
+	'ENOSYS',
+]);
+
+/**
+ * Move a completed upload to its FINAL staged name, allocating a collision-free
+ * one from `proposal`.
+ *
+ * `linkSync` is the allocator: it fails with EEXIST rather than overwriting, so
+ * the claim is atomic against a concurrent upload racing for the same name, and
+ * the name never exists as an empty placeholder that `list_uploaded_files` could
+ * show as a restorable row. The source is unlinked once the claim holds.
+ *
+ * FALLBACK (2026-08-03): on a staging area with no hardlink support the claim is
+ * made with an EXCLUSIVE CREATE instead — `open(…, 'wx')` reserves the name with
+ * the same atomicity, and the assembled file is then `rename`d over our own
+ * reservation. The only property lost is that the name exists as a zero-byte
+ * placeholder for the microseconds between the two calls; a concurrent
+ * `list_uploaded_files` in that window can see a 0-size row, which is strictly
+ * better than the install being unable to accept uploads.
+ *
+ * The old receiver simply wrote over whatever was there — silent data loss for a
+ * single-shot upload, and (once chunking is on for every file) silent CORRUPTION
+ * for a chunked one, since the parts of two transfers interleaved under one name.
+ */
+function claimStagedName(dir: string, proposal: string, sourcePath: string): string {
+	const { stem, suffix } = splitStagedName(proposal);
+	const candidates: string[] = [proposal];
+	for (let n = 1; n <= 999; n++) candidates.push(`${stem}-${n}${suffix}`);
+	// Last resort when a user really has a thousand same-named staged files: a
+	// random discriminator, still inside the safe segment charset.
+	for (let n = 0; n < 8; n++) {
+		candidates.push(`${stem}-${Math.random().toString(16).slice(2, 10)}${suffix}`);
+	}
+	// Sticky: once link(2) is known unsupported here, every later candidate takes
+	// the reservation path directly instead of paying a failing syscall each time.
+	let hardlinks = true;
+	for (const candidate of candidates) {
+		const target = confine(dir, candidate);
+		if (hardlinks) {
+			try {
+				linkSync(sourcePath, target);
+				unlinkSync(sourcePath);
+				return candidate;
+			} catch (error) {
+				const code = (error as NodeJS.ErrnoException).code ?? '';
+				if (code === 'EEXIST') continue;
+				if (!NO_HARDLINK_ERRNOS.has(code)) throw error;
+				hardlinks = false;
+			}
+		}
+		try {
+			closeSync(openSync(target, 'wx', 0o640));
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === 'EEXIST') continue;
+			throw error;
+		}
+		renameSync(sourcePath, target);
+		return candidate;
+	}
+	throw new Error('upload: could not allocate a free staged file name');
+}
+
+/** Per-upload metadata written beside the parts, so the join needs no client state. */
+interface UploadMeta {
+	/** The staged base name PROPOSED by the chunk that created the upload dir. */
+	proposal: string;
+	/** The extension the parts were declared under. */
+	extension: string;
+}
+
+function writeUploadMeta(upDir: string, meta: UploadMeta): void {
+	// Write-then-rename: two concurrent chunks of the same transfer write the
+	// same bytes, and the reader (the join) can never see a half-written file.
+	const temporary = resolve(upDir, `meta.${Math.random().toString(16).slice(2, 10)}.tmp`);
+	writeFileSync(temporary, JSON.stringify(meta), { mode: 0o640 });
+	renameSync(temporary, resolve(upDir, 'meta.json'));
+}
+
+function readUploadMeta(upDir: string): UploadMeta | null {
+	const path = resolve(upDir, 'meta.json');
+	if (!existsSync(path)) return null;
+	try {
+		const parsed = JSON.parse(readFileSync(path, 'utf8')) as UploadMeta;
+		if (typeof parsed?.proposal !== 'string' || typeof parsed?.extension !== 'string') return null;
+		return { proposal: sanitizeSegment(parsed.proposal), extension: parsed.extension };
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -149,89 +382,431 @@ export function stagedTmpName(fileName: string): string {
  * counts responses by `file_data.chunk_index` / `file_data.total_chunks`, and
  * only AFTER all chunks arrive fires a separate `join_chunked_files_uploaded`
  * RQO. So a chunk POST here just STORES the part and echoes its index/total —
- * the join (assemble + SEC-066 re-sniff) happens in joinChunkedUpload, not here.
+ * the join (assemble + SEC-066 re-verify) happens in joinChunkedUpload, not here.
  */
 export function receiveUpload(
 	parsed: ParsedUpload,
 	userId: number,
 	mediaRoot?: string,
 ): UploadReceiveResult {
+	// Identity BEFORE any filesystem effect: a refused upload_id must leave no
+	// trace at all, not even an empty staging dir.
+	const uploadId = resolveUploadId(parsed);
 	const dir = stagingDir(userId, parsed.keyDir, mediaRoot);
+	const upDir = uploadArtifactDir(userId, parsed.keyDir, uploadId, mediaRoot);
 	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o750 });
-	const tmpName = stagedTmpName(parsed.fileName);
+	const proposal = stagedTmpName(parsed.fileName);
 	const extension = extensionOf(parsed.fileName);
 
 	if (!parsed.chunked) {
-		// Single-shot: sniff the bytes, validate against the extension, stage.
+		// Single-shot: sniff the bytes first (the cheapest rejection), then stage
+		// through the SAME completion path a chunked upload takes, so both flows
+		// verify identically and both allocate a collision-free name.
 		sniffAndValidate(parsed.blob, extension);
-		writeFileSync(confine(dir, tmpName), parsed.blob);
-		return { complete: true, tmpName, extension, chunkIndex: 0, totalChunks: 1 };
+		mkdirSync(upDir, { recursive: true, mode: 0o700 });
+		// PER-REQUEST scratch name, not a fixed 'whole': without a client-supplied
+		// upload_id two concurrent single-shot POSTs of the SAME file name DERIVE the
+		// same id, so they share this directory — and a fixed name would have let one
+		// request's bytes be claimed under the other's staged name. A single-shot has
+		// no cross-request rendezvous to preserve, so its payload is simply unique.
+		const whole = resolve(upDir, `w${Math.random().toString(16).slice(2, 12)}`);
+		try {
+			writeFileSync(whole, parsed.blob);
+			verifyFileContent(whole, extension);
+			const tmpName = claimStagedName(dir, proposal, whole);
+			return { complete: true, tmpName, extension, chunkIndex: 0, totalChunks: 1, uploadId };
+		} finally {
+			// Drop OUR scratch file (a rejection leaves nothing staged), then the
+			// directory itself only if it is empty.
+			//
+			// WHY NOT QUARANTINE HERE, unlike the chunked join: a single-shot upload
+			// is ONE request, and the browser still holds the file it just posted, so
+			// a 400 is fully recoverable by repeating it. The chunked case is not —
+			// there the server holds the only assembled copy of a transfer that may
+			// have taken hours — which is exactly why quarantine lives there and not
+			// here. Retaining every rejected single-shot body would instead turn a
+			// stream of refused uploads into a disk-exhaustion vector.
+			//
+			// The rmdir below is conditional: a concurrent single-shot sharing
+			// the derived id may still be writing into it, and a recursive remove here
+			// would delete its payload mid-flight.
+			rmSync(whole, { force: true });
+			try {
+				rmdirSync(upDir);
+			} catch {
+				// ENOTEMPTY: another request is still using it; the age sweep is the
+				// backstop if that request dies (staging_gc.ts).
+			}
+		}
 	}
 
-	// Chunked: store the part as <chunkIndex>-<tmp>.blob. The client drives the
-	// join once it has counted all chunks. Echo index/total so its counter works.
-	writeFileSync(confine(dir, `${parsed.chunkIndex}-${tmpName}.blob`), parsed.blob);
+	// Chunked: store the part inside THIS transfer's artifact dir. The client
+	// drives the join once it has counted all chunks. Echo index/total so its
+	// counter works, and the upload id so the join can find these parts.
+	if (parsed.chunkIndex >= parsed.totalChunks && parsed.totalChunks > 0) {
+		throw new Error('upload: chunk_index is outside the declared total_chunks');
+	}
+	mkdirSync(upDir, { recursive: true, mode: 0o700 });
+	writeUploadMeta(upDir, { proposal, extension });
+	writeFileSync(resolve(upDir, `${parsed.chunkIndex}.part`), parsed.blob);
 	return {
 		complete: false,
-		tmpName,
+		// The PROPOSAL, not the final name: the client uses it only to fill
+		// files_chunked[] and to carry file_data into the join.
+		tmpName: proposal,
 		extension,
 		chunkIndex: parsed.chunkIndex,
 		totalChunks: parsed.totalChunks,
+		uploadId,
 	};
 }
 
+/** Arguments for a chunked join. An object because five of the six are load-bearing. */
+export interface JoinChunkedUploadInput {
+	keyDir: string;
+	/** The client's staged-name proposal (`file_data.tmp_name`) — a LOCATOR HINT only. */
+	tmpName: string;
+	totalChunks: number;
+	userId: number;
+	/** `file_data.upload_id`, round-tripped from the chunk responses. */
+	uploadId?: string | null;
+	mediaRoot?: string;
+}
+
 /**
- * Assemble a chunked upload's parts into the final staged file and RE-SNIFF the
- * whole (SEC-066), then return the staged descriptor. Called by the
- * dd_utils_api.join_chunked_files_uploaded action after the client has posted
- * every chunk. `totalChunks` is derived from the client's files_chunked array.
+ * Locate the artifact dir of the transfer being joined.
+ *
+ * With an `upload_id` this is exact. Without one (a client that does not yet
+ * echo `file_data.upload_id` back), fall back to matching artifact dirs on the
+ * recorded proposal AND the delivered part count — and REFUSE when more than one
+ * matches. Picking one of several would be precisely the silent mis-join this
+ * whole change exists to make impossible.
  */
-export function joinChunkedUpload(
-	keyDir: string,
-	tmpName: string,
-	totalChunks: number,
+function locateUploadDir(
 	userId: number,
+	keyDir: string,
+	proposal: string,
+	totalChunks: number,
+	uploadId: string | null | undefined,
 	mediaRoot?: string,
-): UploadReceiveResult {
+): string {
+	if (typeof uploadId === 'string' && uploadId !== '') {
+		const dir = uploadArtifactDir(userId, keyDir, assertUploadId(uploadId), mediaRoot);
+		if (!existsSync(dir)) throw new Error('join: no staged parts for this upload');
+		return dir;
+	}
+	const stagingRoot = stagingDir(userId, keyDir, mediaRoot);
+	if (!existsSync(stagingRoot)) throw new Error('join: no staged parts for this upload');
+	const matches: string[] = [];
+	for (const entry of readdirSync(stagingRoot)) {
+		if (!entry.startsWith(UPLOAD_DIR_PREFIX)) continue;
+		const candidate = resolve(stagingRoot, entry);
+		const meta = readUploadMeta(candidate);
+		if (meta === null || meta.proposal !== proposal) continue;
+		let complete = true;
+		for (let i = 0; i < totalChunks; i++) {
+			if (!existsSync(resolve(candidate, `${i}.part`))) {
+				complete = false;
+				break;
+			}
+		}
+		if (complete) matches.push(candidate);
+	}
+	if (matches.length === 0) throw new Error('join: no staged parts for this upload');
+	if (matches.length > 1) {
+		throw new Error(
+			'join: several staged uploads match this file name — the client must send upload_id',
+		);
+	}
+	return matches[0] as string;
+}
+
+/**
+ * How long an `assembled` output may sit untouched before a later join treats it
+ * as the wreckage of an interrupted one and starts over.
+ *
+ * A LIVE assembly writes continuously — a 1 MiB window per iteration — so its
+ * mtime advances constantly however large the file is; an output whose mtime has
+ * not moved for ten minutes has no writer. The client's transport retries the
+ * join after 10 s, so without this recovery ONE interrupted join (a restart, a
+ * killed worker, a full disk) blocked every subsequent attempt on that transfer
+ * until the 24 h sweep — permanently, from the user's point of view.
+ */
+export const ASSEMBLY_STALE_MS = 10 * 60 * 1000;
+
+/** Marker file naming a QUARANTINED transfer inside its artifact dir. */
+export const REJECTION_MARKER = 'rejected.json';
+
+/** What the rejection marker records. Read by listQuarantinedUploads. */
+export interface RejectionRecord {
+	reason: string;
+	rejected_at: string;
+	proposal: string;
+	extension: string;
+	size: number;
+}
+
+/**
+ * QUARANTINE a transfer whose assembled bytes failed verification.
+ *
+ * The previous behaviour was `rmSync(upDir, {recursive:true})` — a heuristic
+ * verdict DESTROYING a completed transfer. For a heritage ingest path the
+ * ranking is: silently accepting corrupt bytes < refusing loudly and KEEPING the
+ * data <<< destroying a curator's upload. A curator who spent forty hours
+ * pushing a 30 GB master over a rural link must not lose it to a rule that this
+ * very pass proved capable of false positives.
+ *
+ * So the artifact dir STAYS, holding the complete assembled bytes under a
+ * `rejected.` name plus a marker naming the reason. It is released by the
+ * ordinary 24 h age sweep (staging_gc.ts) or immediately by the explicit cancel
+ * (`delete_uploaded_file` with `upload_id`) — the same two mechanisms that
+ * already governed every other in-flight artifact, so nothing new leaks.
+ */
+function quarantineAssembled(
+	upDir: string,
+	assembled: string,
+	proposal: string,
+	extension: string,
+	reason: string,
+): string {
+	const quarantined = resolve(upDir, `rejected.${sanitizeSegment(proposal)}`);
+	let size = 0;
+	try {
+		size = statSync(assembled).size;
+		renameSync(assembled, quarantined);
+	} catch (error) {
+		// Even a failed rename must not escalate into a delete: whatever is on disk
+		// stays there and the age sweep is the backstop.
+		console.warn('[upload] could not park a rejected assembly:', (error as Error).message);
+	}
+	const record: RejectionRecord = {
+		reason,
+		rejected_at: new Date().toISOString(),
+		proposal,
+		extension,
+		size,
+	};
+	try {
+		writeFileSync(resolve(upDir, REJECTION_MARKER), JSON.stringify(record), { mode: 0o640 });
+	} catch (error) {
+		console.warn('[upload] could not write the rejection marker:', (error as Error).message);
+	}
+	return quarantined;
+}
+
+/**
+ * The quarantined transfers under one user's `key_dir` — the read side of the
+ * behaviour above, so a refused upload is RECOVERABLE rather than merely
+ * retained. Returns the artifact dir, the parked file and the recorded reason.
+ *
+ * Not yet projected onto the wire: `list_uploaded_files` keeps its WC-078 shape
+ * this pass (the upload clients are owned elsewhere and a row whose URL does not
+ * resolve would render as a broken restorable file). The operator path is this
+ * function plus the reason echoed in the rejection response.
+ */
+export function listQuarantinedUploads(
+	userId: number,
+	keyDir: string,
+	mediaRoot?: string,
+): { uploadId: string; dir: string; file: string | null; record: RejectionRecord | null }[] {
 	const dir = stagingDir(userId, keyDir, mediaRoot);
-	const safeTmp = sanitizeSegment(tmpName);
-	const extension = extensionOf(safeTmp);
+	if (!existsSync(dir)) return [];
+	const out: {
+		uploadId: string;
+		dir: string;
+		file: string | null;
+		record: RejectionRecord | null;
+	}[] = [];
+	for (const entry of readdirSync(dir)) {
+		if (!entry.startsWith(UPLOAD_DIR_PREFIX)) continue;
+		const upDir = resolve(dir, entry);
+		const markerPath = resolve(upDir, REJECTION_MARKER);
+		if (!existsSync(markerPath)) continue;
+		let record: RejectionRecord | null = null;
+		try {
+			record = JSON.parse(readFileSync(markerPath, 'utf8')) as RejectionRecord;
+		} catch {
+			// A corrupt marker still means "quarantined" — report it without a reason
+			// rather than hiding the directory.
+		}
+		const parked = record === null ? null : resolve(upDir, `rejected.${record.proposal}`);
+		out.push({
+			uploadId: entry.slice(UPLOAD_DIR_PREFIX.length),
+			dir: upDir,
+			file: parked !== null && existsSync(parked) ? parked : null,
+			record,
+		});
+	}
+	return out;
+}
+
+/** Yield to the event loop so a long assembly does not freeze the single-threaded engine. */
+const yieldToLoop = (): Promise<void> =>
+	new Promise<void>((done) => {
+		setImmediate(done);
+	});
+
+/**
+ * Assemble a chunked upload's parts into the final staged file and RE-VERIFY the
+ * whole (SEC-066 + verify_content.ts), then return the staged descriptor. Called
+ * by the dd_utils_api.join_chunked_files_uploaded action after the client has
+ * posted every chunk. `totalChunks` is derived from the client's files_chunked
+ * array.
+ *
+ * Memory: the assembly copies part→output through ONE fixed buffer, and the
+ * verification reads the result in bounded windows. Neither the parts nor the
+ * assembled file are ever held whole in RAM (the old code read each part with
+ * readFileSync — a client-chosen part size, not a bounded one).
+ *
+ * ASYNC since 2026-08-03: the copy is O(file size) and was fully synchronous, so
+ * joining a 30 GB master stalled every other request on this single-threaded
+ * engine for the whole copy. It now yields to the event loop between windows.
+ * (The verification pass is bounded and stays synchronous — see
+ * engine/verify_content.ts, which no longer has any whole-file rule.)
+ */
+export async function joinChunkedUpload(
+	input: JoinChunkedUploadInput,
+): Promise<UploadReceiveResult> {
+	const { keyDir, tmpName, totalChunks, userId, uploadId, mediaRoot } = input;
+	const dir = stagingDir(userId, keyDir, mediaRoot);
+	if (!Number.isInteger(totalChunks) || totalChunks < 1 || totalChunks > MAX_CHUNKS) {
+		throw new Error('join: invalid total_chunks');
+	}
+	const hint = sanitizeSegment(tmpName);
+	const upDir = locateUploadDir(userId, keyDir, hint, totalChunks, uploadId, mediaRoot);
+	const meta = readUploadMeta(upDir);
+	// The SERVER's own record of the name wins over the client-relayed hint: the
+	// hint is only a locator, and the name on disk must not be re-decidable by a
+	// later request.
+	const proposal = meta?.proposal ?? hint;
+	const extension = meta?.extension ?? extensionOf(hint);
+
+	// A transfer already quarantined must not read as "missing chunks": say what
+	// actually happened, and that the bytes are still there.
+	if (existsSync(resolve(upDir, REJECTION_MARKER))) {
+		throw new Error(
+			'join: this upload was already rejected by content verification; its bytes are quarantined and released by cancelling it (delete_uploaded_file with upload_id) or by the 24 h sweep',
+		);
+	}
+
 	// Confirm every part is present before joining (fail-closed).
 	for (let i = 0; i < totalChunks; i++) {
-		if (!existsSync(confine(dir, `${i}-${safeTmp}.blob`))) {
+		if (!existsSync(resolve(upDir, `${i}.part`))) {
 			throw new Error(`join: missing chunk ${i} of ${totalChunks}`);
 		}
 	}
-	const assembled = confine(dir, `${safeTmp}.assembling`);
-	if (existsSync(assembled)) unlinkSync(assembled);
-	writeFileSync(assembled, new Uint8Array(0));
-	for (let i = 0; i < totalChunks; i++) {
-		const part = confine(dir, `${i}-${safeTmp}.blob`);
-		appendFileSync(assembled, new Uint8Array(readFileSync(part)));
-		unlinkSync(part);
-	}
-	// DOS-03 (2026-07-28 audit): the re-sniff needs only the leading magic bytes,
-	// NOT the whole file. Reading the entire assembled upload into RAM (media
-	// files reach many GB) doubled RSS and could OOM the server. Read a bounded
-	// prefix instead.
-	const SNIFF_BYTES = 8192;
-	const head = new Uint8Array(SNIFF_BYTES);
-	const fd = openSync(assembled, 'r');
-	let readCount: number;
+	const assembled = resolve(upDir, 'assembled');
+	// EXCLUSIVE create: the client's transport retries the join after 10 s and up
+	// to 5 times, so on a slow (multi-GB) assembly a second join can arrive while
+	// the first is still writing. Two writers on one output produce a silently
+	// corrupt file; refusing the second produces a loud, retryable error, and
+	// between those two the loud one is the only acceptable answer.
+	//
+	// RECOVERY (2026-08-03): an INTERRUPTED join used to leave this file behind
+	// forever, and every retry then failed on it — a permanently stuck transfer,
+	// reachable in ordinary operation because the transport retries at 10 s. An
+	// output nobody has written to for ASSEMBLY_STALE_MS has no writer, and the
+	// parts are all still on disk (they are removed only once the join is
+	// finished), so the honest recovery is to discard the partial output and
+	// assemble again.
+	const openAssembly = (): number => openSync(assembled, 'wx', 0o640);
+	let out: number;
 	try {
-		readCount = readSync(fd, head, 0, SNIFF_BYTES, 0);
-	} finally {
-		closeSync(fd);
-	}
-	const bytes = head.subarray(0, readCount);
-	try {
-		sniffAndValidate(bytes, extension);
+		out = openAssembly();
 	} catch (error) {
-		unlinkSync(assembled);
-		throw error;
+		if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+		let idleFor = 0;
+		try {
+			idleFor = Date.now() - statSync(assembled).mtimeMs;
+		} catch {
+			idleFor = 0; // it vanished under us: let the retry below decide
+		}
+		if (idleFor < ASSEMBLY_STALE_MS) {
+			throw new Error('join: this upload is already being assembled');
+		}
+		rmSync(assembled, { force: true });
+		try {
+			out = openAssembly();
+		} catch {
+			// Another join won the race to recover it — that one is live, so this is
+			// the ordinary concurrent case again.
+			throw new Error('join: this upload is already being assembled');
+		}
 	}
-	renameSync(assembled, confine(dir, safeTmp));
-	return { complete: true, tmpName: safeTmp, extension, chunkIndex: 0, totalChunks };
+	try {
+		const buffer = new Uint8Array(1 << 20);
+		for (let i = 0; i < totalChunks; i++) {
+			const partPath = resolve(upDir, `${i}.part`);
+			const part = openSync(partPath, 'r');
+			try {
+				let position = 0;
+				for (;;) {
+					const read = readSync(part, buffer, 0, buffer.length, position);
+					if (read <= 0) break;
+					writeSync(out, buffer, 0, read);
+					position += read;
+					// Hand the loop back between windows: a 30 GB join is ~30 000 of these,
+					// and holding the thread for all of them froze every other user.
+					await yieldToLoop();
+				}
+			} finally {
+				closeSync(part);
+			}
+			// NOTE: the part is deliberately NOT unlinked here. It used to be consumed
+			// as it was read, so an interruption mid-assembly had already destroyed
+			// the front of the transfer and no retry could ever succeed. Parts are the
+			// only complete copy of the bytes until the join finishes, so they are
+			// removed at the very end — after assembly AND verification have both
+			// reached a durable outcome.
+		}
+	} finally {
+		closeSync(out);
+	}
+	try {
+		// SEC-066, now over the whole CONTAINER within a bounded budget: the head
+		// signature must still match the declared extension, and the container must
+		// satisfy whatever bounded invariant its content class has (see
+		// engine/verify_content.ts for exactly what that is per format, and for the
+		// named exemptions where it is still header-only).
+		verifyFileContent(assembled, extension);
+	} catch (error) {
+		const reason = (error as Error).message;
+		const parked = quarantineAssembled(upDir, assembled, proposal, extension, reason);
+		// The parts are now redundant: assembly completed, and the parked file holds
+		// the same bytes contiguously. Keeping both would double the disk cost of
+		// every rejected multi-GB transfer.
+		for (let i = 0; i < totalChunks; i++) {
+			rmSync(resolve(upDir, `${i}.part`), { force: true });
+		}
+		console.warn(
+			`[upload] transfer quarantined (not deleted): ${parked} — ${reason}. Release it with delete_uploaded_file + upload_id, or let the 24 h sweep collect it.`,
+		);
+		throw new Error(
+			`${reason} — the uploaded bytes are NOT deleted: this transfer is quarantined${
+				uploadId ? ` as upload_id '${uploadId}'` : ''
+			} and can be released by cancelling it, or is collected by the 24 h sweep`,
+		);
+	}
+	const staged = claimStagedName(dir, proposal, assembled);
+	// Everything left in the artifact dir is garbage by definition: the client
+	// declared how many parts the file had, and it has been assembled and
+	// verified. Leaving a surplus part behind is the leak this change exists to
+	// end — and this is also where the consumed parts finally go.
+	rmSync(upDir, { recursive: true, force: true });
+	// Opportunistic GC of OTHER abandoned transfers in the same key_dir.
+	try {
+		sweepStagedOrphans(userId, keyDir, mediaRoot);
+	} catch (error) {
+		console.warn('[upload] staging sweep failed:', (error as Error).message);
+	}
+	return {
+		complete: true,
+		tmpName: staged,
+		extension,
+		chunkIndex: 0,
+		totalChunks,
+		uploadId: uploadId ?? undefined,
+	};
 }
 
 /** Confine a name inside the staging dir (defense in depth over sanitizeSegment). */

@@ -5,7 +5,10 @@
  * the actual binary output is gated in Phase C against ffprobe/identify.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
 	buildConformHeaderArgv,
 	buildPosterframeArgv,
@@ -25,6 +28,7 @@ import {
 } from '../../src/core/media/engine/imagemagick.ts';
 import { sniffAndValidate, sniffBytes } from '../../src/core/media/engine/mime.ts';
 import { buildExtractArgv, buildOcrArgv } from '../../src/core/media/engine/pdf.ts';
+import { verifyFileContent } from '../../src/core/media/engine/verify_content.ts';
 
 describe('ffmpeg profiles (37 settings files → typed data)', () => {
 	test('all 37 profiles present', () => {
@@ -221,5 +225,229 @@ describe('mime sniffer (magic bytes, no library)', () => {
 		expect(() => sniffAndValidate(bytesOf(0x00, 0x01, 0x02, 0x03), 'jpg')).toThrow();
 		// text-based 3D (.obj) with no magic → accepted when not a known binary
 		expect(sniffAndValidate(new TextEncoder().encode('v 0.0 0.0 0.0\n'), 'obj')).toBe('obj');
+	});
+});
+
+/**
+ * CONTENT-VERIFICATION POLICY (2026-08-03, WC-2026-08-03-chunked-upload-identity).
+ *
+ * `verify_content.ts` states, per content class, how deeply an upload's BODY is
+ * verified — and the point of stating it is that nothing may be missing from
+ * the statement. A signature added to mime.ts with no policy row would silently
+ * fall back to a header-only check, which is precisely the narrowing this
+ * change exists to end, so the source is scanned for `kind:` literals and every
+ * one of them must be listed.
+ */
+describe('content verification: every sniffable kind has a stated depth', () => {
+	test('mime.ts kinds and VERIFICATION_POLICY agree exactly', async () => {
+		const { VERIFICATION_POLICY } = await import('../../src/core/media/engine/verify_content.ts');
+		const source = readFileSync(
+			new URL('../../src/core/media/engine/mime.ts', import.meta.url).pathname,
+			'utf8',
+		);
+		const kinds = new Set<string>();
+		for (const match of source.matchAll(/kind:\s*'([a-z0-9]+)'/g)) kinds.add(match[1] as string);
+		// The scan must find the known families, or it is passing vacuously.
+		expect(kinds.size).toBeGreaterThan(15);
+		const unstated = [...kinds].filter((kind) => VERIFICATION_POLICY[kind] === undefined);
+		expect(unstated.sort()).toEqual([]);
+		// The extension-only 3D formats have no signature and so no `kind:` line;
+		// they are keyed by extension and must be stated too.
+		for (const extension of ['obj', 'fbx', 'dae']) {
+			expect(VERIFICATION_POLICY[extension]).toBeDefined();
+		}
+		// Every exemption carries a REASON — a named exemption, never a silent one.
+		for (const [kind, policy] of Object.entries(VERIFICATION_POLICY)) {
+			expect(policy.reason.length, `${kind} has no stated reason`).toBeGreaterThan(20);
+		}
+	});
+
+	test('structural verifiers catch a truncated/smuggled container without reading the file', async () => {
+		const { verifyFileContent } = await import('../../src/core/media/engine/verify_content.ts');
+		const { mkdtempSync, writeFileSync: write } = await import('node:fs');
+		const { tmpdir } = await import('node:os');
+		const { join } = await import('node:path');
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_verify_'));
+
+		// A WHOLE mp4: one 'ftyp' box that tiles the file exactly.
+		const ftyp = new Uint8Array([
+			0, 0, 0, 16, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0, 0, 0, 0,
+		]);
+		const good = join(dir, 'good.mp4');
+		write(good, ftyp);
+		expect(verifyFileContent(good, 'mp4')).toBe('mp4');
+
+		// The same header with a NON-ZERO payload bolted on: the appended block reads
+		// as a box declaring 0x41414141 bytes, far past EOF. (The zero-filled variant
+		// this test used until 2026-08-03 is now ACCEPTED on purpose — see the
+		// false-positive suite below: it is indistinguishable from the block padding
+		// a capture card writes.)
+		const smuggled = new Uint8Array(ftyp.length + 4096).fill(0x41);
+		smuggled.set(ftyp, 0);
+		const bad = join(dir, 'bad.mp4');
+		write(bad, smuggled);
+		expect(() => verifyFileContent(bad, 'mp4')).toThrow(/verification failed/);
+
+		const { rmSync } = await import('node:fs');
+		rmSync(dir, { recursive: true, force: true });
+	});
+});
+
+/**
+ * THE FALSE-POSITIVE SURFACE — the surface that DESTROYS DATA.
+ *
+ * The first version of this verifier was gated by one synthetic accept and one
+ * synthetic reject: it tested the mechanism's happy path, not the question that
+ * actually matters for an archival ingest path, which is "what LEGAL file does
+ * this refuse?". An adversarial review then reproduced five classes of real,
+ * standards-legal encoder output that it rejected — and, at the time, a rejected
+ * join DELETED the transfer.
+ *
+ * Every row below is one of those classes, asserted as an ACCEPTANCE. They are
+ * constructed byte by byte rather than committed as binaries, so the gate stays
+ * readable and the repository stays free of fixture blobs.
+ *
+ * Adding a rule to VERIFICATION_POLICY means adding the real-world file it could
+ * refuse to this list first. If you cannot write that case, the rule does not
+ * belong at a depth deeper than `header`.
+ */
+describe('content verification: real encoder output is never refused', () => {
+	const be32 = (n: number): number[] => [
+		(n >>> 24) & 255,
+		(n >>> 16) & 255,
+		(n >>> 8) & 255,
+		n & 255,
+	];
+	const le32 = (n: number): number[] => [
+		n & 255,
+		(n >>> 8) & 255,
+		(n >>> 16) & 255,
+		(n >>> 24) & 255,
+	];
+	const chars = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
+
+	/** `RIFF<size>WAVE` + a `fmt ` and a `data` chunk of `payload` bytes. */
+	function wav(riffSize: number | 'sentinel', payload: number, trailer: number[] = []): Uint8Array {
+		const data = [...chars('data'), ...le32(payload), ...new Array(payload).fill(0x7f)];
+		const fmt = [...chars('fmt '), ...le32(16), ...new Array(16).fill(0)];
+		const body = [...chars('WAVE'), ...fmt, ...data];
+		const size = riffSize === 'sentinel' ? [255, 255, 255, 255] : le32(riffSize);
+		return new Uint8Array([...chars('RIFF'), ...size, ...body, ...trailer]);
+	}
+
+	/** One `ftyp` box + one `mdat` box of `payload` bytes, plus optional trailing bytes. */
+	function mp4(payload: number, trailer: number[] = []): Uint8Array {
+		const ftyp = [...be32(16), ...chars('ftypisom'), 0, 0, 0, 0];
+		const mdat = [...be32(8 + payload), ...chars('mdat'), ...new Array(payload).fill(0x21)];
+		return new Uint8Array([...ftyp, ...mdat, ...trailer]);
+	}
+
+	const dir = mkdtempSync(join(tmpdir(), 'dedalo_verify_ok_'));
+	afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+	/** Write the constructed fixture and return its path. */
+	const stage = (name: string, bytes: Uint8Array): string => {
+		const path = join(dir, name);
+		writeFileSync(path, bytes);
+		return path;
+	};
+
+	test('an ffmpeg WAV written to a PIPE (RIFF size 0xFFFFFFFF) is accepted', () => {
+		// A non-seekable sink cannot patch the size back in, so ffmpeg leaves the
+		// streaming sentinel. Every decoder reads it as extends-to-EOF; the first
+		// version of this verifier recognised it explicitly and refused it anyway.
+		expect(verifyFileContent(stage('pipe.wav', wav('sentinel', 4096)), 'wav')).toBe('wav');
+	});
+
+	test('a WAV with a trailing tag OUTSIDE the RIFF size is accepted', () => {
+		// An ID3v1/APE tag (or any writer that did not update the header) leaves
+		// bytes the chunk chain cannot account for. Refusing them refused real files.
+		const tag = [...chars('TAG'), ...new Array(125).fill(0x20)];
+		const inner = 4 + (8 + 16) + (8 + 4096); // 'WAVE' + fmt chunk + data chunk
+		expect(verifyFileContent(stage('tagged.wav', wav(inner, 4096, tag)), 'wav')).toBe('wav');
+	});
+
+	test('an MP4 with 512 B of trailing ZERO block padding is accepted', () => {
+		// Capture cards and block-aligned tape-out pad to a boundary. The box chain
+		// cannot tile that, and calling it "an appended payload" refused masters.
+		expect(verifyFileContent(stage('padded.mp4', mp4(2048, new Array(512).fill(0))), 'mp4')).toBe(
+			'mp4',
+		);
+	});
+
+	test('an MP4 whose last box is the streaming size-0 form is accepted', () => {
+		const ftyp = [...be32(16), ...chars('ftypisom'), 0, 0, 0, 0];
+		const mdat = [...be32(0), ...chars('mdat'), ...new Array(1024).fill(0x21)];
+		const bytes = new Uint8Array([...ftyp, ...mdat]);
+		expect(verifyFileContent(stage('frag.mp4', bytes), 'mp4')).toBe('mp4');
+	});
+
+	test('a JPEG with a >1 MiB appended block after EOI (Motion Photo / JUMBF) is accepted', () => {
+		// The tail window was 1 MiB, so a Motion Photo's embedded MP4 — or a large
+		// XMP/JUMBF/C2PA packet — pushed the EOI out of range and the master was
+		// refused (and, before the quarantine fix, DELETED).
+		const bytes = new Uint8Array([
+			0xff,
+			0xd8,
+			0xff,
+			0xe0,
+			...new Array(64).fill(0x30),
+			0xff,
+			0xd9,
+			...new Array((1 << 20) + 4096).fill(0x5a),
+		]);
+		expect(verifyFileContent(stage('motion.jpg', bytes), 'jpg')).toBe('jpg');
+	});
+
+	test('a CSV carrying a NUL and a DOS 0x1A EOF is accepted', () => {
+		// A NUL in a CSV is not evidence of corruption: it is what a UTF-16→UTF-8
+		// conversion leaves behind, and 0x1A is the CP/M end-of-file every DOS-era
+		// export ends with. Refusing them destroys exactly the legacy material a
+		// heritage repository exists to keep.
+		const head = new TextEncoder().encode(`id,name\n${'1,ok\n'.repeat(2000)}`);
+		expect(head.length).toBeGreaterThan(8192); // past the sniffed prefix, as before
+		const bytes = new Uint8Array(head.length + 2);
+		bytes.set(head, 0);
+		bytes.set([0x00, 0x1a], head.length);
+		expect(verifyFileContent(stage('legacy.csv', bytes), 'csv')).toBe('csv');
+	});
+
+	test('a BMP/GLB whose declared size is SHORTER than the file is accepted', () => {
+		// bfSize left at the pixel-array size (or 0), and exporters that pad to an
+		// alignment boundary — both legal, both previously refused for "declares N
+		// but the file holds M".
+		const bmp = new Uint8Array([...chars('BM'), ...le32(40), ...new Array(120).fill(0)]);
+		expect(verifyFileContent(stage('short.bmp', bmp), 'bmp')).toBe('bmp');
+		const glb = new Uint8Array([
+			...chars('glTF'),
+			...le32(2),
+			...le32(64),
+			...new Array(120).fill(0),
+		]);
+		expect(verifyFileContent(stage('short.glb', glb), 'glb')).toBe('glb');
+	});
+
+	test('but a TRUNCATED container is still refused (the invariant that survives)', () => {
+		// A RIFF chunk declaring more payload than the file holds = missing bytes.
+		expect(() => verifyFileContent(stage('short.wav', wav(1 << 20, 64)), 'wav')).toThrow(
+			/truncated transfer/,
+		);
+		// An ISO-BMFF box declaring past EOF, likewise.
+		expect(() => verifyFileContent(stage('cut.mp4', mp4(4096).slice(0, 512)), 'mp4')).toThrow(
+			/truncated transfer/,
+		);
+		// And a JPEG with no EOI anywhere in range is still a header over garbage.
+		const headless = new Uint8Array([0xff, 0xd8, 0xff, ...new Array(16384).fill(0x00)]);
+		expect(() => verifyFileContent(stage('headless.jpg', headless), 'jpg')).toThrow(/JPEG EOI/);
+	});
+
+	test('no policy row claims a depth that reads the whole file (S-7)', async () => {
+		// The `full` depth ran a synchronous per-byte loop over every byte — ~43 s of
+		// total server freeze for a 30 GB CSV. It is gone, and this keeps it gone:
+		// a row that needs O(file size) work belongs off the request path, not here.
+		const { VERIFICATION_POLICY } = await import('../../src/core/media/engine/verify_content.ts');
+		for (const [kind, policy] of Object.entries(VERIFICATION_POLICY)) {
+			expect(['structural', 'header'], `${kind} has an unbounded depth`).toContain(policy.depth);
+		}
 	});
 });

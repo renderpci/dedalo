@@ -6,7 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
@@ -48,6 +48,7 @@ function parsed(fields: Partial<ParsedUpload>, blob: Uint8Array): ParsedUpload {
 		chunkIndex: 0,
 		totalChunks: 1,
 		blob,
+		uploadId: null,
 		csrfToken: null,
 		...fields,
 	};
@@ -128,7 +129,14 @@ describe('upload receiver — chunked store + join (client contract)', () => {
 		const r1 = receiveUpload(parsed({ ...base, chunkIndex: 1 }, bytes.slice(mid)), USER, ROOT);
 		expect(r1.complete).toBe(false);
 		// The client, having counted all chunks, fires the join.
-		const joined = joinChunkedUpload('kdc', 'big.jpg', 2, USER, ROOT);
+		const joined = await joinChunkedUpload({
+			keyDir: 'kdc',
+			tmpName: 'big.jpg',
+			totalChunks: 2,
+			userId: USER,
+			uploadId: r0.uploadId,
+			mediaRoot: ROOT,
+		});
 		expect(joined.complete).toBe(true);
 		expect(joined.extension).toBe('jpg');
 	});
@@ -142,38 +150,70 @@ describe('upload receiver — chunked store + join (client contract)', () => {
 			const base = { keyDir: 'kdp', fileName: 'sneaky.jpg', chunked: true, totalChunks: 2 };
 			receiveUpload(parsed({ ...base, chunkIndex: 0 }, pdfBytes.slice(0, 5)), USER, ROOT);
 			receiveUpload(parsed({ ...base, chunkIndex: 1 }, pdfBytes.slice(5)), USER, ROOT);
-			expect(() => joinChunkedUpload('kdp', 'sneaky.jpg', 2, USER, ROOT)).toThrow();
+			expect(
+				joinChunkedUpload({
+					keyDir: 'kdp',
+					tmpName: 'sneaky.jpg',
+					totalChunks: 2,
+					userId: USER,
+					mediaRoot: ROOT,
+				}),
+			).rejects.toThrow();
 		},
 	);
 
 	test('join with a missing chunk fails closed', () => {
-		expect(() => joinChunkedUpload('kd_missing', 'x.jpg', 3, USER, ROOT)).toThrow();
+		expect(
+			joinChunkedUpload({
+				keyDir: 'kd_missing',
+				tmpName: 'x.jpg',
+				totalChunks: 3,
+				userId: USER,
+				mediaRoot: ROOT,
+			}),
+		).rejects.toThrow();
 	});
 
-	test('join with EXTRA delivered chunks consumes exactly the declared total', () => {
+	test('join with EXTRA delivered chunks consumes exactly the declared total', async () => {
 		// Pinned contract (surplus side of the count mismatch): the join assembles
 		// exactly parts 0..declaredTotal-1 — a surplus part is NEVER concatenated
-		// into the staged file; it stays behind as an unconsumed orphan in the
-		// staging dir. (A valid jpeg signature spans the first part, so the
-		// re-sniff passes and only the byte accounting is under test.)
-		const bytes = new Uint8Array([
-			0xff,
-			0xd8,
-			0xff,
-			...Array.from({ length: 297 }, (_, i) => i % 251),
-		]);
+		// into the staged file.
+		//
+		// AMENDED 2026-08-03 (WC-2026-08-03-chunked-upload-identity): the surplus
+		// part used to be LEFT BEHIND in the staging dir, where nothing ever
+		// collected it. It is now dropped with the rest of the transfer's artifact
+		// dir once the join succeeds — the client declared the part count, so
+		// anything past it is garbage by definition, and 'leaks forever' was never
+		// a contract worth keeping.
+		//
+		// The body carries a real EOI (FFD9) because the join now verifies the
+		// whole assembled file, not only its first 8192 bytes; only the byte
+		// accounting is under test here.
+		const body = Array.from({ length: 195 }, (_, i) => i % 251);
+		const bytes = new Uint8Array([0xff, 0xd8, 0xff, ...body, 0xff, 0xd9]);
 		const base = { keyDir: 'kde', fileName: 'extra.jpg', chunked: true, totalChunks: 3 };
-		receiveUpload(parsed({ ...base, chunkIndex: 0 }, bytes.slice(0, 100)), USER, ROOT);
+		const first = receiveUpload(
+			parsed({ ...base, chunkIndex: 0 }, bytes.slice(0, 100)),
+			USER,
+			ROOT,
+		);
 		receiveUpload(parsed({ ...base, chunkIndex: 1 }, bytes.slice(100, 200)), USER, ROOT);
 		receiveUpload(parsed({ ...base, chunkIndex: 2 }, bytes.slice(200)), USER, ROOT);
 		// The client declares 2 chunks at join time, but 3 parts were delivered.
-		const joined = joinChunkedUpload('kde', 'extra.jpg', 2, USER, ROOT);
+		const joined = await joinChunkedUpload({
+			keyDir: 'kde',
+			tmpName: 'extra.jpg',
+			totalChunks: 2,
+			userId: USER,
+			uploadId: first.uploadId,
+			mediaRoot: ROOT,
+		});
 		expect(joined.complete).toBe(true);
 		const dir = stagingDir(USER, 'kde', ROOT);
 		// The staged file holds parts 0+1 only — the surplus part contributed nothing.
 		expect(readFileSync(join(dir, 'extra.jpg'))).toEqual(Buffer.from(bytes.slice(0, 200)));
-		// The surplus part is left unconsumed (not silently appended, not deleted).
-		expect(existsSync(join(dir, '2-extra.jpg.blob'))).toBe(true);
+		// And nothing of the transfer is left behind (defect 3: orphan parts).
+		expect(readdirSync(dir).filter((e) => e.startsWith('.up_'))).toEqual([]);
 	});
 });
 
@@ -358,5 +398,284 @@ describe('media ingest — every disk-writing path records files_info', () => {
 			missing,
 			`these write media to disk but never record files_info on the record — the "unsync" bug: ${missing.join(', ')}`,
 		).toEqual([]);
+	});
+});
+
+/**
+ * DEFECT 3 (2026-08-03) — ORPHANED CHUNK PARTS. Parts were unlinked only inside
+ * a SUCCESSFUL join, so a cancelled or failed transfer parked everything it had
+ * already delivered in the staging dir forever: a failed 4 GB upload leaked
+ * ~4 GB, repeatably, with no sweeper anywhere in media/ingest/.
+ *
+ * The retention rule under test (src/core/media/ingest/staging_gc.ts): an
+ * upload is collectable when NOTHING has touched it for STAGING_ORPHAN_TTL_MS,
+ * measured as the NEWEST mtime in its artifact dir — never per part, because
+ * part 0 of a live multi-hour transfer is legitimately old.
+ */
+describe('staging GC — abandoned transfers are collected, live ones are not', () => {
+	const KEY = 'kd_gc';
+
+	test('an abandoned transfer is removed; a fresh one and completed files are not', async () => {
+		const { sweepStagedOrphans, STAGING_ORPHAN_TTL_MS } = await import(
+			'../../src/core/media/ingest/staging_gc.ts'
+		);
+		const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0x41, 0x42, 0xff, 0xd9]);
+		// One transfer that will be abandoned after its first part…
+		const abandoned = receiveUpload(
+			parsed({ keyDir: KEY, fileName: 'gone.jpg', chunked: true, totalChunks: 4 }, bytes),
+			USER,
+			ROOT,
+		);
+		// …one that is still arriving…
+		const live = receiveUpload(
+			parsed({ keyDir: KEY, fileName: 'live.jpg', chunked: true, totalChunks: 4 }, bytes),
+			USER,
+			ROOT,
+		);
+		// …and one COMPLETED staged file, which the sweeper must never touch.
+		const done = receiveUpload(parsed({ keyDir: KEY, fileName: 'kept.jpg' }, bytes), USER, ROOT);
+		const dir = stagingDir(USER, KEY, ROOT);
+		const upDir = (id: string | undefined): string => join(dir, `.up_${id}`);
+		expect(existsSync(upDir(abandoned.uploadId))).toBe(true);
+
+		// Nothing is old enough yet: a sweep NOW must remove nothing at all.
+		expect(sweepStagedOrphans(USER, KEY, ROOT)).toBe(0);
+
+		// Wind the clock past the retention window. Both in-flight transfers are
+		// then abandoned by the rule — which is the honest answer: a transfer
+		// untouched for 24 h cannot be live (the client fails a stalled part in
+		// under a minute).
+		const later = Date.now() + STAGING_ORPHAN_TTL_MS + 1000;
+		expect(sweepStagedOrphans(USER, KEY, ROOT, later)).toBe(2);
+		expect(existsSync(upDir(abandoned.uploadId))).toBe(false);
+		expect(existsSync(upDir(live.uploadId))).toBe(false);
+		// The completed file survives every sweep — it is the user's data.
+		expect(existsSync(join(dir, done.tmpName as string))).toBe(true);
+	});
+
+	test('legacy flat artifacts (<i>-<name>.blob / <name>.assembling) are collected too', async () => {
+		const { sweepStagedOrphans, STAGING_ORPHAN_TTL_MS } = await import(
+			'../../src/core/media/ingest/staging_gc.ts'
+		);
+		const { writeFileSync, mkdirSync } = await import('node:fs');
+		const dir = stagingDir(USER, 'kd_gc_legacy', ROOT);
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, '0-old.jpg.blob'), 'x');
+		writeFileSync(join(dir, 'old.jpg.assembling'), 'x');
+		writeFileSync(join(dir, 'real.jpg'), 'x');
+		const later = Date.now() + STAGING_ORPHAN_TTL_MS + 1000;
+		expect(sweepStagedOrphans(USER, 'kd_gc_legacy', ROOT, later)).toBe(2);
+		expect(existsSync(join(dir, 'real.jpg'))).toBe(true);
+	});
+
+	test('an explicit cancel drops one transfer immediately, and only that one', async () => {
+		const { cancelStagedUpload } = await import('../../src/core/media/ingest/staging_gc.ts');
+		const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0x41, 0xff, 0xd9]);
+		const KEY_C = 'kd_cancel';
+		const a = receiveUpload(
+			parsed({ keyDir: KEY_C, fileName: 'a.jpg', chunked: true, totalChunks: 2 }, bytes),
+			USER,
+			ROOT,
+		);
+		const b = receiveUpload(
+			parsed({ keyDir: KEY_C, fileName: 'b.jpg', chunked: true, totalChunks: 2 }, bytes),
+			USER,
+			ROOT,
+		);
+		const dir = stagingDir(USER, KEY_C, ROOT);
+		expect(cancelStagedUpload(USER, KEY_C, a.uploadId as string, ROOT)).toBe(true);
+		expect(existsSync(join(dir, `.up_${a.uploadId}`))).toBe(false);
+		expect(existsSync(join(dir, `.up_${b.uploadId}`))).toBe(true);
+		// Idempotent: cancelling twice is a no-op, not an error.
+		expect(cancelStagedUpload(USER, KEY_C, a.uploadId as string, ROOT)).toBe(false);
+	});
+});
+
+/**
+ * The BATCH-IMPORTER consequence of a server-assigned staged name: the importers
+ * can no longer re-derive it from the display name, so they must forward
+ * `tmp_name` — and the fallback for an entry without one must refuse to guess
+ * rather than import the wrong file.
+ */
+describe('resolveStagedName — forwarded tmp_name wins, the fallback refuses to guess', () => {
+	const KEY = 'kd_resolve';
+
+	test('forwarded tmp_name is authoritative; the legacy transform is the fallback', async () => {
+		const { resolveStagedName } = await import('../../src/core/media/ingest/staged_files.ts');
+		const { writeFileSync, mkdirSync } = await import('node:fs');
+		const dir = stagingDir(USER, KEY, ROOT);
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'records__1_.mrc'), 'x');
+		// No forwarded name → the legacy derivation, which is what is on disk.
+		expect(resolveStagedName(dir, 'records (1).mrc')).toBe('records__1_.mrc');
+		// Forwarded → taken verbatim (after segment validation), even when the
+		// legacy derivation would have said something else.
+		expect(resolveStagedName(dir, 'records (1).mrc', 'records__1_-1.mrc')).toBe(
+			'records__1_-1.mrc',
+		);
+		// A forwarded value is still client input: an unsafe segment is refused.
+		expect(() => resolveStagedName(dir, 'x.mrc', '../../etc/passwd')).toThrow();
+	});
+
+	test('a collision-suffixed staging dir with no forwarded tmp_name REFUSES rather than guess', async () => {
+		const { resolveStagedName } = await import('../../src/core/media/ingest/staged_files.ts');
+		const { writeFileSync, mkdirSync } = await import('node:fs');
+		const dir = stagingDir(USER, 'kd_resolve_amb', ROOT);
+		mkdirSync(dir, { recursive: true });
+		// Only the SUFFIXED forms exist (the un-suffixed one was deleted): which
+		// of them the entry meant is unknowable, so this must not pick one.
+		writeFileSync(join(dir, 'notes-1.mrc'), 'x');
+		writeFileSync(join(dir, 'notes-2.mrc'), 'x');
+		expect(() => resolveStagedName(dir, 'notes.mrc')).toThrow(/ambiguous/);
+		// With the forwarded name there is nothing to guess.
+		expect(resolveStagedName(dir, 'notes.mrc', 'notes-2.mrc')).toBe('notes-2.mrc');
+	});
+
+	test('the LEGACY name existing does not suppress the refusal (the stale-file bug)', async () => {
+		// THE BUG (2026-08-03): the collision scan ran only after `existsSync(legacy)`
+		// said no, so the "refuse to guess" contract fired exactly when it did not
+		// matter. With BOTH names present — the shape a curator produces by
+		// re-uploading a corrected scan, since a re-upload no longer overwrites —
+		// this returned the SUPERSEDED file: wrong bytes under the right catalogue
+		// record, silently.
+		const { resolveStagedName } = await import('../../src/core/media/ingest/staged_files.ts');
+		const { writeFileSync, mkdirSync } = await import('node:fs');
+		const dir = stagingDir(USER, 'kd_resolve_stale', ROOT);
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'DSC001.jpg'), 'the superseded scan');
+		writeFileSync(join(dir, 'DSC001-1.jpg'), 'the corrected scan');
+		expect(() => resolveStagedName(dir, 'DSC001.jpg')).toThrow(/ambiguous/);
+		// The same shape the reviewer reproduced with .mrc entries.
+		writeFileSync(join(dir, 'records.mrc'), 'old');
+		writeFileSync(join(dir, 'records-1.mrc'), 'new');
+		expect(() => resolveStagedName(dir, 'records.mrc')).toThrow(/ambiguous/);
+		// Forwarding the server's tmp_name is, as ever, the answer.
+		expect(resolveStagedName(dir, 'records.mrc', 'records-1.mrc')).toBe('records-1.mrc');
+		// And with no suffixed candidate at all the legacy derivation still stands.
+		writeFileSync(join(dir, 'lonely.mrc'), 'x');
+		expect(resolveStagedName(dir, 'lonely.mrc')).toBe('lonely.mrc');
+	});
+});
+
+/**
+ * A REFUSED TRANSFER IS QUARANTINED, NEVER DELETED (2026-08-03).
+ *
+ * The join used to `rmSync(upDir, {recursive:true})` when verification threw —
+ * a heuristic verdict DESTROYING a completed transfer, with no recovery. For a
+ * heritage ingest path the ranking is: silently accepting corrupt bytes <
+ * refusing loudly and KEEPING the data <<< destroying a curator's upload, and
+ * this pass proved the verifier itself capable of false positives.
+ */
+describe('join rejection quarantines the transfer instead of deleting it', () => {
+	const KEY = 'kd_quarantine';
+
+	test('rejected bytes stay on disk, marked, and are released by the ordinary cancel', async () => {
+		const { listQuarantinedUploads, REJECTION_MARKER } = await import(
+			'../../src/core/media/ingest/upload.ts'
+		);
+		const { cancelStagedUpload } = await import('../../src/core/media/ingest/staging_gc.ts');
+		// Chunks that assemble to a PDF while declared .jpg: refused by the head
+		// sniff, i.e. the cheapest possible rejection — and previously fatal.
+		const pdf = new TextEncoder().encode('%PDF-1.4\n a curator’s forty-hour master \n');
+		const base = { keyDir: KEY, fileName: 'master.jpg', chunked: true, totalChunks: 2 };
+		const first = receiveUpload(parsed({ ...base, chunkIndex: 0 }, pdf.slice(0, 9)), USER, ROOT);
+		receiveUpload(parsed({ ...base, chunkIndex: 1 }, pdf.slice(9)), USER, ROOT);
+
+		await expect(
+			joinChunkedUpload({
+				keyDir: KEY,
+				tmpName: 'master.jpg',
+				totalChunks: 2,
+				userId: USER,
+				uploadId: first.uploadId,
+				mediaRoot: ROOT,
+			}),
+			// The error must SAY the bytes survived — a curator acts on this message.
+		).rejects.toThrow(/NOT deleted/);
+
+		const dir = stagingDir(USER, KEY, ROOT);
+		const upDir = join(dir, `.up_${first.uploadId}`);
+		// The artifact dir is still there, with the marker and the complete bytes.
+		expect(existsSync(upDir)).toBe(true);
+		expect(existsSync(join(upDir, REJECTION_MARKER))).toBe(true);
+		expect(readFileSync(join(upDir, 'rejected.master.jpg'))).toEqual(Buffer.from(pdf));
+		// Nothing was staged as an importable file, though: a refused upload must not
+		// become a row anything can ingest.
+		const { listStagedFiles } = await import('../../src/core/media/ingest/staged_files.ts');
+		expect(listStagedFiles(USER, KEY, ROOT)).toEqual([]);
+
+		// The read side: a quarantined transfer is discoverable with its reason.
+		const quarantined = listQuarantinedUploads(USER, KEY, ROOT);
+		expect(quarantined.length).toBe(1);
+		expect(quarantined[0]?.uploadId).toBe(first.uploadId as string);
+		expect(quarantined[0]?.file).not.toBeNull();
+		expect(String(quarantined[0]?.record?.reason)).toContain('does not match declared extension');
+
+		// Re-joining says what happened rather than "missing chunk 0".
+		await expect(
+			joinChunkedUpload({
+				keyDir: KEY,
+				tmpName: 'master.jpg',
+				totalChunks: 2,
+				userId: USER,
+				uploadId: first.uploadId,
+				mediaRoot: ROOT,
+			}),
+		).rejects.toThrow(/already rejected/);
+
+		// Release is the mechanism that already existed — no new leak, no new surface.
+		expect(cancelStagedUpload(USER, KEY, first.uploadId as string, ROOT)).toBe(true);
+		expect(existsSync(upDir)).toBe(false);
+		expect(listQuarantinedUploads(USER, KEY, ROOT)).toEqual([]);
+	});
+});
+
+/**
+ * AN INTERRUPTED JOIN MUST BE RETRYABLE (2026-08-03).
+ *
+ * The output was opened `wx` and each part was unlinked AS IT WAS CONSUMED, so a
+ * join killed halfway had already destroyed the front of the transfer AND left
+ * an `assembled` file that made every later attempt throw "already being
+ * assembled" — until the 24 h sweep. The client's transport retries the join
+ * after 10 s, so this was reachable in ordinary operation, not only on a crash.
+ */
+describe('interrupted join — parts survive, and a stale assembly is recovered', () => {
+	const KEY = 'kd_stale';
+
+	test('a leftover assembled file blocks a CONCURRENT join but not a later one', async () => {
+		const { ASSEMBLY_STALE_MS } = await import('../../src/core/media/ingest/upload.ts');
+		const { writeFileSync, utimesSync } = await import('node:fs');
+		const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0x41, 0x42, 0x43, 0xff, 0xd9]);
+		const base = { keyDir: KEY, fileName: 'retry.jpg', chunked: true, totalChunks: 2 };
+		const first = receiveUpload(parsed({ ...base, chunkIndex: 0 }, bytes.slice(0, 4)), USER, ROOT);
+		receiveUpload(parsed({ ...base, chunkIndex: 1 }, bytes.slice(4)), USER, ROOT);
+		const upDir = join(stagingDir(USER, KEY, ROOT), `.up_${first.uploadId}`);
+		const call = (): Promise<unknown> =>
+			joinChunkedUpload({
+				keyDir: KEY,
+				tmpName: 'retry.jpg',
+				totalChunks: 2,
+				userId: USER,
+				uploadId: first.uploadId,
+				mediaRoot: ROOT,
+			});
+
+		// A FRESH output means a join really is in flight: refuse, loudly.
+		writeFileSync(join(upDir, 'assembled'), 'partial');
+		await expect(call()).rejects.toThrow(/already being assembled/);
+		// Both parts are still there — the interrupted attempt destroyed nothing.
+		expect(existsSync(join(upDir, '0.part'))).toBe(true);
+		expect(existsSync(join(upDir, '1.part'))).toBe(true);
+
+		// Age the output past the staleness window: nobody is writing to it, so the
+		// transfer is recoverable from the parts that were deliberately kept.
+		const stale = (Date.now() - ASSEMBLY_STALE_MS - 60_000) / 1000;
+		utimesSync(join(upDir, 'assembled'), stale, stale);
+		const joined = (await call()) as { complete: boolean; tmpName?: string };
+		expect(joined.complete).toBe(true);
+		// And the recovered file is the WHOLE transfer, not the partial wreckage.
+		expect(readFileSync(join(stagingDir(USER, KEY, ROOT), joined.tmpName as string))).toEqual(
+			Buffer.from(bytes),
+		);
 	});
 });
