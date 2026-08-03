@@ -58,13 +58,13 @@
 		"zod-to-json-schema": "^3.25.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.5.6",
 		"@types/bun": "latest",
 		"@types/less": "3.0.8",
 		"@types/nodemailer": "^8.0.1",
-		"chai": "4.3.8",
-		"less": "4.6.7",
-		"mocha": "11.1.0",
+		"chai": "6.2.2",
+		"less": "4.8.1",
+		"mocha": "11.7.6",
 		"puppeteer": "^25.3.0"
 	},
 	"peerDependencies": {
