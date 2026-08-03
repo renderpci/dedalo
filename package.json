@@ -41,7 +41,7 @@
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@svgedit/svgcanvas": "7.4.2",
-		"@turf/turf": "7.0.0",
+		"@turf/turf": "7.3.5",
 		"codex-tooltip": "1.0.5",
 		"d3": "7.9.0",
 		"dropzone": "5.9.3",
