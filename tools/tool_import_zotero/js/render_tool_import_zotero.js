@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB Dropzone */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, console, alert, window */
 /*eslint no-undef: "error"*/
 
 
@@ -26,28 +26,25 @@
 * Internal helpers (module-private, not exported):
 *   get_content_data_edit — assembles the file drop-zone, temporary-section
 *     component inputs, and the "Import" button; wires the server request.
-*   set_import_mode — updates per-file <select> elements in the Dropzone preview
-*     to auto-assign target portals based on a filename suffix convention.
-*
 * Data flow:
-*   1. tool_import_zotero.build() constructs service_dropzone (handles file
-*      uploads to the server's tmp dir) and service_tmp_section (renders a live
+*   1. tool_import_zotero.build() constructs service_upload in multi-file mode
+*      (handles file uploads to the server's tmp dir) and service_tmp_section (renders a live
 *      edit interface for optional metadata to be applied to every imported
 *      record — e.g. project assignment).
 *   2. render_tool_import_zotero.prototype.edit (→ get_content_data_edit) renders
 *      both services and adds the "Import" button.
 *   3. On button click the tool collects self.files_data (populated by
-*      service_dropzone) and service_tmp_section.get_components_data(), then
+*      service_upload) and service_tmp_section.get_components_data(), then
 *      issues a dd_tools_api / tool_request RQO to the PHP
 *      tool_import_zotero::import_files() action.
 *   4. On success the page is reloaded so the user can see the newly imported
 *      records.
 *
 * Key instance properties consumed here (set by tool_import_zotero):
-*   self.files_data          {Array}  — File metadata objects accumulated by
-*     service_dropzone; each entry has at least { name, previewElement }.
-*   self.service_dropzone    {Object} — service_dropzone instance; render() returns
-*     an HTMLElement with the Dropzone UI.
+*   self.files_data          {Array}  — the upload queue's ENTRY ARRAY, adopted
+*     verbatim; each entry has at least { name, status, tmp_name, previewElement }.
+*   self.service_upload      {Object} — service_upload instance (multiple:true);
+*     render() returns an HTMLElement with the upload queue UI.
 *   self.service_tmp_section {Object} — service_tmp_section instance; render()
 *     returns component nodes; get_components_data() extracts current values.
 *   self.tool_config         {Object} — Registered tool configuration from dd1633;
@@ -115,11 +112,12 @@ render_tool_import_zotero.prototype.edit = async function(options) {
 *      depending on whether the tool was opened in 'section' import_mode.
 *      (!) class_name_configuration is built but never applied to any node —
 *      see flags.
-*   2. drop_zone — placeholder div that the service_dropzone template is NOT
+*   2. drop_zone — placeholder div that the service_upload template is NOT
 *      appended to; both appear side-by-side inside the fragment. (!) The
-*      drop_zone element is created but left empty; see flags.
-*   3. template_container — receives the rendered service_dropzone node, which
-*      carries the actual Dropzone upload UI.
+*      drop_zone element is created but left empty; see flags. The queue brings
+*      its own drop target, so nothing is lost by it staying empty.
+*   3. template_container — receives the rendered service_upload node, which
+*      carries the actual multi-file upload queue UI.
 *   4. inputs_container — renders service_tmp_section components (metadata
 *      fields the user fills before import) with a localised caption label.
 *   5. buttons_bottom_container — holds the "Import" button.
@@ -167,8 +165,8 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'template_container',
 			parent			: fragment
 		})
-		// service_dropzone render
-		const template = await self.service_dropzone.render()
+		// service_upload render (multi-file queue)
+		const template = await self.service_upload.render()
 		template_container.appendChild(template)
 
 	// inputs components container label
@@ -212,6 +210,22 @@ const get_content_data_edit = async function(self) {
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
 			}
+			// files_data: JSON-SAFE projection of the upload queue's entries.
+			// A queue entry carries a DOM node (`previewElement`, non-enumerable) and
+			// a pile of transfer bookkeeping; posting it verbatim sends junk over the
+			// wire. Only these four keys are read server-side, and
+			// `tmp_name` is now LOAD-BEARING: the staged name is server-assigned
+			// (two client names that sanitize alike become 'x.EXT' and 'x-1.EXT'),
+			// so the server can no longer re-derive it from the display name.
+				const safe_files_data = (self.files_data || []).map(el => {
+					return {
+						name		: encodeURI(el.name),
+						tmp_name	: el.tmp_name || null,
+						key_dir		: el.key_dir || null,
+						extension	: el.extension || null
+					}
+				})
+
 			// get the data from every component used to propagate to every file uploaded
 			const components_temp_data = self.service_tmp_section.get_components_data()
 
@@ -230,7 +244,7 @@ const get_content_data_edit = async function(self) {
 						section_tipo			: self.caller.section_tipo,
 						section_id				: self.caller.section_id,
 						tool_config				: self.tool_config,
-						files_data				: self.files_data,
+						files_data				: safe_files_data,
 						components_temp_data	: components_temp_data,
 						key_dir					: self.key_dir
 					}
@@ -279,75 +293,6 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
-
-
-
-
-/**
-* SET_IMPORT_MODE
-*
-* Updates the target-portal <select> elements in each Dropzone file-preview
-* card based on either a filename-suffix auto-detection pattern or an explicit
-* reset to the default portal.
-*
-* Auto-detect pattern (apply===true):
-*   Filenames must match /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/ — e.g.
-*   "record-A.jpg" → suffix letter "A" (uppercased) → matched against
-*   tool_config.ddo_map entries where role==='component_option' and
-*   map_name===suffix. When a matching portal descriptor is found, its
-*   tipo value is written into the file card's .option_component_select element.
-*
-* Reset (apply!==true):
-*   Selects either the ddo_map entry flagged with default:true or falls back
-*   to the first <option> in the select widget.
-*
-* This function is module-private; it is not exported and is not currently
-* called from within this module. It appears to be a utility intended for
-* external callers (e.g. service_dropzone event handlers) that have access
-* to the tool instance.
-*
-* (!) The function is declared but not invoked anywhere in this file. If no
-* external caller uses it either, it is dead code — flag for review.
-*
-* @param {Object} self  - The tool_import_zotero instance; provides
-*   self.files_data (array of Dropzone file objects with previewElement) and
-*   self.tool_config.ddo_map (array of component descriptor objects).
-* @param {boolean} apply - When true, attempt auto-detection from the filename
-*   suffix; when false (or any falsy value), reset to the default portal.
-* @returns {boolean} Always returns true.
-*/
-const set_import_mode = function (self, apply) {
-
-	const files_data		= self.files_data || []
-	const files_data_length	= files_data.length
-	for (let i = 0; i < files_data_length; i++) {
-
-		const current_value = files_data[i]
-
-		if(apply===true){
-			const regex = /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/;
-			// const name = current_value.name; //`123 85-456 fd-a.jpg`;
-			const map_name = regex.exec(current_value.name)
-			if ( map_name!==null && map_name[2]!==null ) {
-
-				const map_name_upper	= map_name[2].toUpperCase();
-				const target_portal		= self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
-				if (target_portal) {
-					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
-				}
-			}
-		}else{
-			const default_target_portal = self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
-			if(default_target_portal){
-				current_value.previewElement.querySelector(".option_component_select").value = default_target_portal.tipo;
-			}else{
-				current_value.previewElement.querySelector(".option_component_select").options[0].selected = true ;
-			}
-		}
-	}
-
-	return true
-}//end set_import_mode
 
 
 

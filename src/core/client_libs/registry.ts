@@ -84,7 +84,6 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 	},
 	turf: { base: 'node_modules/@turf/turf', source: 'npm', probe: 'turf.min.js' },
 	flatpickr: { base: 'node_modules/flatpickr', source: 'npm', probe: 'dist/flatpickr.min.js' },
-	dropzone: { base: 'node_modules/dropzone', source: 'npm', probe: 'dist/min/dropzone.min.js' },
 	split: { base: 'node_modules/split.js', source: 'npm', probe: 'dist/split.es.js' },
 	iro: { base: 'node_modules/@jaames/iro', source: 'npm', probe: 'dist/iro.min.js' },
 	'codex-tooltip': {

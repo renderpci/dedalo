@@ -120,7 +120,6 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 		[
 			// 'service_autocomplete',
 			// 'service_ckeditor',
-			'service_dropzone',
 			// 'service_subtitles', // not finished
 			// 'service_time_machine',
 			// 'service_tinymce',

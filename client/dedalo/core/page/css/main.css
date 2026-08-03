@@ -10754,6 +10754,79 @@ body:has(.assistant_container.standalone.show) {
 .service_upload > .content_data .info_container > label {
   padding-right: 2em;
 }
+.service_upload.multiple > .content_data > .button.info {
+  right: 0;
+  top: 0;
+}
+.service_upload.multiple > .content_data > .info_container {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+.service_upload.multiple > .content_data.hover {
+  outline: 2px dashed var(--color_orange_dedalo);
+  outline-offset: -2px;
+}
+.service_upload.multiple > .content_data > .row {
+  font-size: 1.3rem;
+}
+@media screen and (max-width: 1024px) {
+  .service_upload.multiple > .content_data > .row .buttons_container {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+  }
+  .service_upload.multiple > .content_data > .row .buttons_container button {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  .service_upload.multiple > .content_data > .row .buttons_container .all_delete_checkbox {
+    margin-top: 0.5rem;
+  }
+}
+.service_upload.multiple > .content_data > .row .progress {
+  margin-top: 1rem;
+  margin-bottom: 0px;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row {
+  margin: 0px;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem;
+  align-items: center;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row > * {
+  margin-right: 1em;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row .details_wrapp {
+  padding: 0.5rem;
+  padding-right: 1rem;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row .details_wrapp > .name {
+  margin-right: 0.33rem;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row .details_wrapp > .error {
+  margin-right: 0.33rem;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row .details_wrapp > .size {
+  margin-right: 0.33rem;
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row .preview_wrapp {
+  overflow: hidden;
+  height: 100%;
+  min-width: 115px;
+  min-height: 70px;
+  background-color: var(--color_grey_16);
+}
+.service_upload.multiple > .content_data .table.table-striped > .file-row .preview_wrapp img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-image: url(../../themes/default/dedalo_logo_grey.svg);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  display: block;
+}
 /**
 * service_ckeditor
 *
@@ -11232,96 +11305,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   grid-column-start: 4;
   grid-row-start: 1;
   background-color: var(--color_grey_13);
-}
-/**
-* service_dropzone
-*
-* Included from main.less file
-*/
-.service_dropzone > .content_data {
-  padding: 1rem;
-  position: relative;
-}
-.service_dropzone > .content_data > .button.info {
-  background-color: var(--color_black);
-  position: absolute;
-  right: 0;
-  top: 0;
-}
-.service_dropzone > .content_data > .info_container {
-  background-color: var(--color_grey_15);
-  color: var(--color_grey_8);
-  margin-bottom: 1rem;
-  display: grid;
-  grid-template-columns: 1fr 3fr;
-}
-.service_dropzone > .content_data > .info_container > label,
-.service_dropzone > .content_data > .info_container > div {
-  padding: 0.75em;
-}
-.service_dropzone > .content_data > .info_container > label {
-  padding-right: 2em;
-}
-.service_dropzone > .content_data > .row {
-  font-size: 1.3rem;
-}
-@media screen and (max-width: 1024px) {
-  .service_dropzone > .content_data > .row .buttons_container {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-  }
-  .service_dropzone > .content_data > .row .buttons_container button {
-    width: 100%;
-    margin-top: 0.5rem;
-  }
-  .service_dropzone > .content_data > .row .buttons_container .all_delete_checkbox {
-    margin-top: 0.5rem;
-  }
-}
-.service_dropzone > .content_data > .row .progress {
-  margin-top: 1rem;
-  margin-bottom: 0px;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row {
-  margin: 0px;
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem;
-  align-items: center;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row > * {
-  margin-right: 1em;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row .details_wrapp {
-  padding: 0.5rem;
-  padding-right: 1rem;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row .details_wrapp > .name {
-  margin-right: 0.33rem;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row .details_wrapp > .error {
-  margin-right: 0.33rem;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row .details_wrapp > .size {
-  margin-right: 0.33rem;
-}
-.service_dropzone > .content_data .table.table-striped > .file-row .preview_wrapp {
-  overflow: hidden;
-  height: 100%;
-  min-width: 115px;
-  min-height: 70px;
-  background-color: var(--color_grey_16);
-}
-.service_dropzone > .content_data .table.table-striped > .file-row .preview_wrapp img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background-image: url(../../themes/default/dedalo_logo_grey.svg);
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center;
-  display: block;
 }
 /**
 * service_tmp_section

@@ -18,8 +18,12 @@
 *   - `tool_import_files` — the main tool constructor; extends `tool_common` lifecycle
 *       (init → build → render → destroy).
 *   - Two service sub-instances are created during build:
-*       • `service_dropzone`    — handles file drag-and-drop, chunked upload to a
-*                                 temporary server directory, and the per-file UI rows.
+*       • `service_upload` (multi-file mode, `multiple:true`) — handles file
+*                                 drag-and-drop, chunked upload to a temporary
+*                                 server directory, and the per-file UI rows.
+*                                 The queue model (`upload_queue.js`) owns the
+*                                 staged entries; this tool's `files_data` array
+*                                 IS that queue's entry array, adopted verbatim.
 *       • `service_tmp_section` — renders a temporary "phantom" section whose input
 *                                 components let the user fill in metadata fields that
 *                                 will be propagated to each imported section record.
@@ -86,7 +90,7 @@ export const tool_import_files = function () {
 	/** @var {HTMLElement|null} node - Root DOM node after render(). */
 	this.node					= null
 
-	/** @var {Array|null} ar_instances - Child component instances (service_dropzone, service_tmp_section). */
+	/** @var {Array|null} ar_instances - Child component instances (service_upload, service_tmp_section). */
 	this.ar_instances			= null
 
 	/** @var {string|null} status - Lifecycle status: 'initializing' | 'initialized' | 'building' | 'built'. */
@@ -134,24 +138,31 @@ export const tool_import_files = function () {
 	this.tool_contanier			= null
 
 	/**
-	* @var {Array} files_data - Array of Dropzone file objects currently staged for import.
-	*   Each entry is a Dropzone file descriptor extended with tool-specific properties:
-	*     - name           {string}      — URL-encoded filename sent to the server.
-	*     - file_processor {string|null} — selected processor function name, or null.
-	*     - component_option {string}    — tipo of the target portal/component option.
-	*     - previewElement {HTMLElement} — Dropzone-managed DOM node for the file row.
-	*   Populated by service_dropzone; read by `import_files()` and the import button handler.
+	* @var {Array} files_data - The upload queue's ENTRY ARRAY, adopted verbatim.
+	*   (!) `upload_queue` does not copy: it takes this exact array reference and
+	*   mutates it in place, so it must be created ONCE here and never reassigned
+	*   (see `reset_queue` → `queue.clear()`, which empties it rather than
+	*   replacing it). Each entry carries, among others:
+	*     - name             {string}      — display name; URL-encoded before sending.
+	*     - status           {string}      — pending|invalid|uploading|done|staged|error|canceled.
+	*     - tmp_name/key_dir/extension     — the STAGED identity on the server.
+	*     - file_processor   {string|null} — selected processor function name, or null.
+	*     - component_option {string}      — tipo of the target portal/component option.
+	*     - previewElement   {HTMLElement} — the row node (non-enumerable, so the
+	*                                        array stays JSON-serialisable).
+	*   Populated by service_upload; read by `import_files()` and the import button handler.
 	*/
 	this.files_data				= []
 
 	// --- service sub-instances ---
 
 	/**
-	* @var {Object|null} service_dropzone - Instance of `service_dropzone` (mode: 'edit').
-	*   Manages the drag-and-drop zone, chunked file upload to the server's tmp directory,
-	*   and the per-file preview rows in the UI.  Created in build().
+	* @var {Object|null} service_upload - Instance of `service_upload` in MULTI-FILE
+	*   mode (`multiple:true`, mode 'edit'). Manages the drag-and-drop zone, chunked
+	*   file upload to the server's tmp directory, and the per-file preview rows in
+	*   the UI. Created in build().
 	*/
-	this.service_dropzone		= null
+	this.service_upload			= null
 
 	/**
 	* @var {Object|null} service_tmp_section - Instance of `service_tmp_section` (mode: 'edit').
@@ -183,7 +194,7 @@ export const tool_import_files = function () {
 * Delegates to `tool_common.prototype.init` for the shared lifecycle bootstrap
 * (caller resolution, tool_config parsing, events_tokens setup), then derives
 * `key_dir` — the server-side upload subdirectory token — from the caller's
-* tipo and section_tipo.  `key_dir` is also passed to `service_dropzone` in
+* tipo and section_tipo.  `key_dir` is also passed to `service_upload` in
 * `build()` so that uploaded files are isolated per caller component+section.
 *
 * @param {Object} options - Initialisation options forwarded verbatim to tool_common.init.
@@ -227,12 +238,13 @@ tool_import_files.prototype.init = async function(options) {
 *   3. Enriches `tool_config.file_processor` entries with localised labels via
 *      `self.get_tool_label(el.function_name)` so the processor selector can display
 *      human-readable names.
-*   4. Instantiates `service_dropzone` (handles file drag-and-drop and chunked upload).
+*   4. Instantiates `service_upload` in multi-file mode (handles file drag-and-drop
+*      and chunked upload).
 *   5. Instantiates `service_tmp_section` (renders phantom input components for
 *      per-import metadata, using ddo_map entries whose role is 'input_component').
 *
 * (!) The `load_ddo_map` override returns an empty array intentionally.  ddo_map
-* elements are managed through service_dropzone and service_tmp_section instead,
+* elements are managed through service_upload and service_tmp_section instead,
 * which avoids duplicate builds and ensures the correct section_id context.
 *
 * @param {boolean} [autoload=false] - When true, fetches the tool's registered context
@@ -268,7 +280,7 @@ tool_import_files.prototype.build = async function(autoload=false) {
 		}//end load_target_component_context
 		self.target_component_context = await load_target_component_context()
 
-		// Service DropZone
+		// Service upload (multi-file)
 			if(self.tool_config.file_processor){
 				// Enrich each file processor definition with its localised label so the
 				// processor selector can display human-readable option text.
@@ -276,10 +288,15 @@ tool_import_files.prototype.build = async function(autoload=false) {
 					el.function_name_label = self.get_tool_label(el.function_name)
 				});
 			}
-			// init service dropzone
-			self.service_dropzone = await get_instance({
-				model				: 'service_dropzone',
+			// init service upload.
+			// (!) `multiple:true` is what selects the QUEUE renderer
+			// (render_edit_service_upload_queue.js) instead of the single-file form.
+			// The model stays 'service_upload' in both modes — instances.js derives
+			// the module path from the model string, so there is no second model.
+			self.service_upload = await get_instance({
+				model				: 'service_upload',
 				mode				: 'edit',
+				multiple			: true,
 				caller				: self,
 				allowed_extensions	: self.allowed_extensions || [],
 				key_dir				: self.key_dir,
@@ -324,7 +341,7 @@ tool_import_files.prototype.build = async function(autoload=false) {
 * transmission to prevent multi-byte or special-character filenames from breaking the
 * JSON payload or HTTP request boundaries.  Only three scalar properties travel with
 * each file descriptor (`name`, `file_processor`, `component_option`); the binary file
-* data itself was already uploaded to the server tmp directory by `service_dropzone`.
+* data itself was already uploaded to the server tmp directory by `service_upload`.
 *
 * `self.key_dir` tells the server which tmp subdirectory holds the staged files.
 *
@@ -362,8 +379,8 @@ tool_import_files.prototype.import_files = function(options) {
 				name				: name,
 				file_processor		: el.file_processor || null,
 				component_option	: el.component_option || null,
-				// The STAGED identity, stamped onto the registry entry by
-				// service_dropzone (from the upload response, and from the restored
+				// The STAGED identity, stamped onto the queue entry by
+				// upload_queue (from the upload response, and from the restored
 				// listing after a reload). It must be forwarded: the display name is
 				// NOT the name on disk — the receiver rewrites anything outside
 				// [A-Za-z0-9_.-] to '_', so 'DSC 001.jpg' / 'María.jpg' /

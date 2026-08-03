@@ -43,7 +43,6 @@ describe('TOOL_IMPORT_RDF CLIENT TEST', function() {
 		assert.equal(instance.ar_instances, null, 'expected ar_instances null')
 		assert.equal(instance.events_tokens, null, 'expected events_tokens null')
 		assert.equal(instance.caller, null, 'expected caller null')
-		assert.equal(instance.active_dropzone, null, 'expected active_dropzone null')
 		assert.equal(instance.tool_contanier, null, 'expected tool_contanier null')
 		// files_data is seeded as an empty array (not null)
 		assert.equal(Array.isArray(instance.files_data), true, 'expected files_data array')

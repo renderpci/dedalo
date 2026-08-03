@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB Dropzone */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, event_manager, console, document, window, alert, setTimeout, Option */
 /*eslint no-undef: "error"*/
 
 
@@ -18,8 +18,9 @@
 * Client-side render module for the tool_import_files batch importer.
 *
 * This module provides the 'edit' render layer (no read/list modes exist for this
-* tool) and a set of exported helpers consumed by the Dropzone service preview
-* template to build per-file per-queue option rows.
+* tool) and a set of exported helpers that build the GLOBAL option controls shown
+* above the upload queue (the per-file selects themselves are emitted by
+* `render_edit_service_upload_queue.js`, one pair per `.file-row`).
 *
 * Architectural overview:
 *  - `render_tool_import_files` is a constructor/namespace whose prototype.edit is
@@ -27,9 +28,10 @@
 *  - The edit UI is composed of:
 *      1. An options_container (processor selector, target-field selector, quality
 *         selector, matching options, configuration options).
-*      2. A Dropzone drop_zone area managed by `self.service_dropzone`.
-*      3. A template_container that renders per-file preview rows via the
-*         same service_dropzone, using dd_request_idle_callback for deferred load.
+*      2. A drop_zone area managed by `self.service_upload` (multi-file mode).
+*      3. A template_container that renders the upload QUEUE widget — its own
+*         drop target plus one `.file-row` per file — via the same
+*         service_upload, using dd_request_idle_callback for deferred load.
 *      4. An inputs_container that renders `input_component` ddo_map entries via
 *         `self.service_tmp_section` (a temporary section with live edit widgets).
 *      5. A response_message area that streams SSE progress from the PHP background
@@ -50,7 +52,7 @@
 *  - 'match'       — numeric prefix matches an existing section; replaces media.
 *  - 'match_freename' — full filename matched against stored filenames.
 *
-* Exported symbols (for Dropzone preview template):
+* Exported symbols (the global option selectors above the queue):
 *  - render_file_processor_selector
 *  - render_target_field_selector
 *  - render_quality_selector
@@ -59,9 +61,8 @@
 *
 * NOTE: `event_manager` is accessed as a browser global (window.event_manager).
 * It is not imported in this module.  This is intentional — tools run in iframes
-* and reach the singleton via the parent window.  The eslint global directive at
-* the top of this file does NOT list event_manager, which will cause a lint
-* warning on those two call-sites.  Do not add an import here.
+* and reach the singleton via the parent window.  Do not add an import here; it
+* is declared in the `/*global …*\/` directive at the top instead.
 */
 export const render_tool_import_files = function() {
 
@@ -79,7 +80,7 @@ export const render_tool_import_files = function() {
 * refreshes).  Otherwise returns a fully built ui.tool wrapper with content_data
 * attached as a property.
 *
-* Side effects: builds service_dropzone and service_tmp_section inside idle
+* Side effects: builds service_upload and service_tmp_section inside idle
 * callbacks; subscribes event_manager listeners stored in self.events_tokens.
 *
 * @param {Object} options
@@ -120,8 +121,9 @@ render_tool_import_files.prototype.edit = async function(options) {
 * DOM structure produced:
 *   .content_data
 *     .options_container      — global options (processor, target, quality, modes)
-*     .drop_zone              — Dropzone mount point (populated by service_dropzone)
-*     .template_container     — per-file preview rows (populated by service_dropzone)
+*     .drop_zone              — legacy empty mount point (the queue brings its own
+*                               drop target; kept because the tool CSS styles it)
+*     .template_container     — the upload queue widget (populated by service_upload)
 *     .inputs_container       — "Values" section with service_tmp_section widgets
 *     .response_message       — SSE progress output area
 *     .buttons_bottom_container
@@ -170,8 +172,6 @@ const get_content_data_edit = async function(self) {
 		content_data.template_container = template_container
 		lock_items.push(template_container)
 
-		// const template = await self.service_dropzone.render()
-		// template_container.appendChild(template)
 		// Deferred via idle callback so the browser can paint the skeleton UI first.
 		dd_request_idle_callback(
 			() => {
@@ -180,8 +180,8 @@ const get_content_data_edit = async function(self) {
 					preserve_content	: true,
 					label				: 'Drop zone',
 					callback			: async () => {
-						await self.service_dropzone.build()
-						return await self.service_dropzone.render()
+						await self.service_upload.build()
+						return await self.service_upload.render()
 					}
 				})
 			}
@@ -259,7 +259,7 @@ const get_content_data_edit = async function(self) {
 			// Iterates in reverse so splices (if any) don't shift unprocessed indices.
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
-				// Read the per-file processor choice from the Dropzone preview row.
+				// Read the per-file processor choice from the queue's `.file-row`.
 				if(ar_file_processor){
 					self.files_data[i].file_processor = current_value.previewElement.querySelector(".file_processor_select").value === 'null'
 					? null
@@ -320,22 +320,44 @@ const get_content_data_edit = async function(self) {
 		}
 		button_process_import.addEventListener('click', button_process_import_click_handler)
 
-		// drop_zone_success. On upload file success, re-activate button
-		// The button starts in 'loading' (disabled-looking) state; the first
-		// successful Dropzone upload unlocks it.
-		const drop_zone_success_handler = () => {
-			button_process_import.classList.remove('loading')
+		// THE IMPORT UNLOCK, IN TWO HALVES.
+		// The button starts in 'loading' (disabled-looking) state and must unlock as
+		// soon as there is at least one IMPORTABLE file — that is, one whose bytes
+		// are already on the server. A file arrives in that state by exactly two
+		// routes, and each has its own event.
+		//
+		// (!) STATUS, NOT `url`. The previous test was `data.file.url` truthiness.
+		// That silently depended on Dropzone's `displayExistingFile` path and does
+		// NOT hold for the queue: the upload response's `file_data` carries
+		// `key_dir / tmp_name / extension / thumbnail_url` but NO `url`
+		// (upload_queue.js only copies one `if (file_data.url)`), so a freshly
+		// uploaded `done` entry has `url === null` and would never unlock IMPORT.
+		// Only restored `staged` rows are guaranteed a url. The queue's status
+		// machine is the honest signal, so both handlers read it.
+
+		// drop_zone_success. Published by render_edit_service_upload_queue's
+		// `on_change` callback, and ONLY when `entry.status === 'done'`:
+		//    event_manager.publish('drop_zone_success', {file: entry, api_response: {…}})
+		// i.e. a fresh upload just finished.
+		const drop_zone_success_handler = (data) => {
+			if (data && data.file && data.file.status==='done') {
+				button_process_import.classList.remove('loading')
+			}
 		}
 		self.events_tokens.push(
 			event_manager.subscribe('drop_zone_success', drop_zone_success_handler)
 		)
 
-		// drop_zone_addedfile. Files restored from the server (list_uploaded_files)
-		// are injected via displayExistingFile and carry file.url — they are ALREADY
-		// staged, so they must unlock IMPORT exactly like a fresh upload does.
-		// A locally-added file that has not been uploaded yet must NOT unlock it.
+		// drop_zone_addedfile. Published by the queue's `on_add` callback for EVERY
+		// row, local or restored:
+		//    event_manager.publish('drop_zone_addedfile', {file: entry})
+		// Files restored from the server (list_uploaded_files → `add_staged`) enter
+		// with status 'staged' — they are ALREADY on disk and must unlock IMPORT
+		// exactly like a fresh upload does. A locally-added file ('pending') must
+		// NOT unlock it, and a staged descriptor that arrived without a url is
+		// admitted as 'error', which correctly unlocks nothing either.
 		const drop_zone_addedfile_handler = (data) => {
-			if(data && data.file && data.file.url){
+			if (data && data.file && data.file.status==='staged') {
 				button_process_import.classList.remove('loading')
 			}
 		}
@@ -346,8 +368,8 @@ const get_content_data_edit = async function(self) {
 		// on reload page, if files_data exists, activate button
 		// files_data is persisted in-memory across soft reloads (same JS context).
 		// NOTE: this synchronous check alone is not enough after a HARD reload —
-		// the dropzone (and with it the server-side file restore) is built inside a
-		// deferred idle callback, so files_data is still empty here and the restored
+		// the upload queue (and with it the server-side file restore) is built inside
+		// a deferred idle callback, so files_data is still empty here and the restored
 		// rows arrive later. The drop_zone_addedfile subscription above is what
 		// actually unlocks the button in that case; this stays for the soft-reload
 		// path, where the in-memory registry survives.
@@ -440,14 +462,14 @@ const render_options_container = function (self, content_data) {
 	// file processor options of the files, it could be defined in the preferences or could be the caller
 	const file_processor_options = self.tool_config?.file_processor;
 	if(file_processor_options){
-		const processor_selector_container = render_file_processor_selector(self, options_container, file_processor_options);
+		const processor_selector_container = render_file_processor_selector(self, options_container, file_processor_options, content_data);
 		options_container.appendChild(processor_selector_container)
 		// set pointer
 		options_container.processor = processor_selector_container
 	}
 
 	// target field
-	const target_field_selector_container = render_target_field_selector(self, options_container, option_components);
+	const target_field_selector_container = render_target_field_selector(self, options_container, option_components, content_data);
 	options_container.appendChild(target_field_selector_container)
 	// set pointer
 	options_container.target_component = target_field_selector_container
@@ -499,7 +521,7 @@ const render_options_container = function (self, content_data) {
 *       msg | counter of total | elapsed time | estimated remaining time
 *     The remaining-time estimate is based on a rolling average of the last
 *     100 per-record processing times (data.current_time samples).
-*  6. When the stream closes (on_done), unlocks the UI, resets the Dropzone
+*  6. When the stream closes (on_done), unlocks the UI, resets the upload queue's
 *     file list, and re-adds 'loading' to the import button.
 *
 * @param {Object} options
@@ -652,13 +674,20 @@ const update_process_status = (options) => {
 				el.classList.remove('loading')
 			})
 
-			// service_dropzone. Clean files list
-			self.service_dropzone.reset_dropzone();
+			// service_upload. Clean files list.
+			// (!) `reset_queue`, not a reassignment of files_data: the queue owns
+			// that exact array reference, so it must be EMPTIED, never replaced.
+			self.service_upload.reset_queue();
 
 			// de-activate button_process_import
 			// Puts the button back into 'loading' (disabled) state until the user
-			// drops new files.  Selects by class because the node is not closed over.
-			const button_process_import = document.querySelector('.button_process_import')
+			// drops new files. Selects by class because the node is not closed over
+			// here — but SCOPED TO THIS TOOL'S OWN SUBTREE: `document.querySelector`
+			// returns the FIRST match on the page, which is another tool's button
+			// whenever two importers are open at once.
+			const button_process_import = self.node
+				? self.node.querySelector('.button_process_import')
+				: null
 			if (button_process_import) {
 				button_process_import.classList.add('loading')
 			}
@@ -691,7 +720,7 @@ const update_process_status = (options) => {
 /**
 * SET_IMPORT_MODE
 * Applies or resets the "suffix indicates field" naming convention on all
-* currently queued Dropzone files.
+* currently queued files.
 *
 * When apply === true, the function parses each file's name against the pattern:
 *   `<prefix>-<base>-<map_key>.<ext>`
@@ -699,7 +728,7 @@ const update_process_status = (options) => {
 *
 * The map_key is matched (case-insensitively) against ddo_map entries whose
 * role === 'component_option' and map_name === map_key.  If found, the
-* corresponding <select.option_component_select> in the Dropzone preview row is
+* corresponding <select.option_component_select> in the queue's `.file-row` is
 * updated to that entry's tipo.
 *
 * When apply === false, each file's selector is reset to the configured default
@@ -767,7 +796,7 @@ const set_import_mode = function (self, apply) {
 * function to apply to every queued file.
 *
 * The global selector's change handler propagates its value to all per-file
-* <select.file_processor_select> nodes in the Dropzone preview template rows,
+* <select.file_processor_select> nodes in the upload queue's `.file-row`s,
 * keeping them in sync.
 *
 * The first option is always an empty/null sentinel; subsequent options are built
@@ -782,9 +811,13 @@ const set_import_mode = function (self, apply) {
 *   options_container.processor after this call; not used inside this function)
 * @param {Array<{function_name: string}>} file_processor_options - list of
 *   processor descriptors from tool_config.file_processor
+* @param {HTMLElement} [content_data] - THIS tool's content_data node; the search
+*   root for the per-row selects. Omitted = the propagation is a no-op (it can
+*   reach no row), which is the only safe degradation: a document-wide search
+*   writes into every other importer open on the page.
 * @returns {HTMLElement} processor_selector_container
 */
-export const render_file_processor_selector = function (self, options_container, file_processor_options) {
+export const render_file_processor_selector = function (self, options_container, file_processor_options, content_data) {
 
 	const processor_selector_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -808,8 +841,14 @@ export const render_file_processor_selector = function (self, options_container,
 	})
 	// change event handler
 	// Propagates the global processor choice to every per-file selector in the queue.
+	// (!) SCOPED TO THIS TOOL'S content_data, never `document`. The per-row selects
+	// carry a bare class name that the upload queue emits for EVERY caller, so a
+	// document-wide query rewrote the rows of every other import widget on the page
+	// — silently, and with this tool's processor choice.
 	const select_process_change_handler = () => {
-		const file_processor_nodes = document.querySelectorAll('select.file_processor_select')
+		const file_processor_nodes = content_data
+			? content_data.querySelectorAll('select.file_processor_select')
+			: []
 		const len = file_processor_nodes.length
 		for (let i = len - 1; i >= 0; i--) {
 			file_processor_nodes[i].value = select_process.value
@@ -860,7 +899,7 @@ export const render_file_processor_selector = function (self, options_container,
 *   - default {boolean} — when true the option is pre-selected.
 *
 * The global selector's change handler mirrors the chosen value to every
-* per-file <select.option_component_select> in the Dropzone preview rows.
+* per-file <select.option_component_select> in the upload queue's `.file-row`s.
 *
 * The chosen tipo is read back at import-click time via:
 *   previewElement.querySelector('.option_component_select').value
@@ -871,9 +910,13 @@ export const render_file_processor_selector = function (self, options_container,
 * @param {Object} self - tool_import_files instance
 * @param {HTMLElement} options_container - receives .select_options pointer
 * @param {Array<{tipo: string, label: string, default?: boolean}>} option_components
+* @param {HTMLElement} [content_data] - THIS tool's content_data node; the search
+*   root for the per-row selects. Omitted = the propagation is a no-op (it can
+*   reach no row), which is the only safe degradation: a document-wide search
+*   writes into every other importer open on the page.
 * @returns {HTMLElement} target_field_selector_container
 */
-export const render_target_field_selector = function (self, options_container, option_components) {
+export const render_target_field_selector = function (self, options_container, option_components, content_data) {
 
 	// target_component
 	const target_field_selector_container = ui.create_dom_element({
@@ -900,8 +943,13 @@ export const render_target_field_selector = function (self, options_container, o
 	options_container.select_options = select_options
 	// change event handler
 	// Propagates the global target-field choice to every per-file selector in the queue.
+	// (!) SCOPED TO THIS TOOL'S content_data, never `document` — same reason as the
+	// processor selector above: `.option_component_select` is a shared class name
+	// emitted by the upload queue for every caller on the page.
 	const change_handler = () => {
-		const option_component_nodes = document.querySelectorAll('select.option_component_select')
+		const option_component_nodes = content_data
+			? content_data.querySelectorAll('select.option_component_select')
+			: []
 		const len = option_component_nodes.length
 		for (let i = len - 1; i >= 0; i--) {
 			option_component_nodes[i].value = select_options.value

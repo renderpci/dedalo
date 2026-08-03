@@ -8,7 +8,7 @@
  * Client-side coverage for the Zotero bibliographic-import tool.
  *
  * The tool's deeper build/render path needs a live caller section plus the
- * service_dropzone and service_tmp_section instances, none of which are
+ * service_upload (multi-file queue mode) and service_tmp_section instances, none of which are
  * guaranteed in the headless harness. This suite therefore asserts the
  * reliable, fixture-free contract that every tool shares:
  *   - the module exports a constructor named exactly as its model,
@@ -41,7 +41,7 @@ describe('TOOL_IMPORT_ZOTERO CLIENT TEST', function() {
 		assert.equal(instance.node, null, 'expected node null')
 		assert.equal(instance.caller, null, 'expected caller null')
 		assert.equal(instance.key_dir, null, 'expected key_dir null')
-		assert.equal(instance.service_dropzone, null, 'expected service_dropzone null')
+		assert.equal(instance.service_upload, null, 'expected service_upload null')
 		assert.equal(instance.service_tmp_section, null, 'expected service_tmp_section null')
 		// files_data is seeded as an empty array
 		assert.ok(Array.isArray(instance.files_data), 'expected files_data to be an array')

@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB Dropzone */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, console, alert, window */
 /*eslint no-undef: "error"*/
 
 
@@ -21,10 +21,10 @@
 * construction lifecycle for the tool's interactive view:
 *
 *   1. Builds a DOM fragment containing:
-*      - A drop-zone area (rendered by `service_dropzone`) where the user
-*        drags or selects one or more `.mrc` (MARC 21 binary) files. Each
-*        file uploaded populates `self.files_data` via the service's
-*        `addedfile` event handler.
+*      - A drop-zone area (rendered by `service_upload` in multi-file mode)
+*        where the user drags or selects one or more `.mrc` (MARC 21 binary)
+*        files. `self.files_data` IS the upload queue's entry array, so each
+*        queued file appears there the moment it is added.
 *      - A temporary section panel (rendered by `service_tmp_section`) that
 *        exposes `input_component` entries from `tool_config.ddo_map`. These
 *        components carry per-import metadata values (e.g. project, language)
@@ -109,13 +109,14 @@ render_tool_import_marc21.prototype.edit = async function(options) {
 *                          is invoked from a component context (`import_mode !== 'section'`);
 *                          visible when opened in standalone section mode.
 *
-*   drop_zone            — placeholder div; the actual Dropzone widget is injected by
-*                          `self.service_dropzone.render()` into `template_container`.
-*                          As the user uploads files, `service_dropzone` appends entries
-*                          to `self.files_data` (each entry: {name, previewElement, size}).
+*   drop_zone            — placeholder div; the actual upload widget is injected by
+*                          `self.service_upload.render()` into `template_container`.
+*                          As the user queues files, the queue appends entries to
+*                          `self.files_data` (each entry: {name, status, tmp_name,
+*                          previewElement, size, …}).
 *
-*   template_container   — hosts the rendered `service_dropzone` template (Dropzone preview
-*                          rows, progress bars, per-file controls).
+*   template_container   — hosts the rendered `service_upload` queue widget (one
+*                          `.file-row` per file: preview, progress bar, per-file controls).
 *
 *   inputs_container     — hosts the `service_tmp_section` component panel. A "Values"
 *                          caption labels the group. The section's `input_component`
@@ -128,7 +129,7 @@ render_tool_import_marc21.prototype.edit = async function(options) {
 * All regions are assembled into a `content_data` div via `ui.tool.build_content_data`.
 *
 * @param {Object} self - The `tool_import_marc21` instance (provides `tool_config`,
-*   `service_dropzone`, `service_tmp_section`, `files_data`, `key_dir`, `caller`, `node`).
+*   `service_upload`, `service_tmp_section`, `files_data`, `key_dir`, `caller`, `node`).
 * @returns {Promise<HTMLElement>} Resolves to the populated content_data HTMLElement.
 */
 const get_content_data_edit = async function(self) {
@@ -161,8 +162,8 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'template_container',
 			parent			: fragment
 		})
-		// service_dropzone
-		const template = await self.service_dropzone.render()
+		// service_upload (multi-file queue)
+		const template = await self.service_upload.render()
 		template_container.appendChild(template)
 
 		// inputs components container label
@@ -210,6 +211,22 @@ const get_content_data_edit = async function(self) {
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
 			}
+			// files_data: JSON-SAFE projection of the upload queue's entries.
+			// A queue entry carries a DOM node (`previewElement`, non-enumerable) and
+			// a pile of transfer bookkeeping; posting it verbatim sends junk over the
+			// wire. Only these four keys are read server-side, and
+			// `tmp_name` is now LOAD-BEARING: the staged name is server-assigned
+			// (two client names that sanitize alike become 'x.EXT' and 'x-1.EXT'),
+			// so the server can no longer re-derive it from the display name.
+				const safe_files_data = (self.files_data || []).map(el => {
+					return {
+						name		: encodeURI(el.name),
+						tmp_name	: el.tmp_name || null,
+						key_dir		: el.key_dir || null,
+						extension	: el.extension || null
+					}
+				})
+
 			// get the data from every component used to propagate to every file uploaded
 			// Returns an array of component `.data` objects from the tmp_section child instances.
 			const components_temp_data = self.service_tmp_section.get_components_data()
@@ -233,7 +250,7 @@ const get_content_data_edit = async function(self) {
 						section_tipo			: self.caller.section_tipo,
 						section_id				: self.caller.section_id,
 						tool_config				: self.tool_config,
-						files_data				: self.files_data,
+						files_data				: safe_files_data,
 						components_temp_data	: components_temp_data,
 						key_dir					: self.key_dir,
 					}
@@ -287,87 +304,6 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
-
-
-
-/**
-* SET_IMPORT_MODE
-* Updates the per-file target-portal selector in the Dropzone preview UI
-* based on an auto-detection heuristic or resets it to the configured default.
-*
-* This function is designed to run after files have been added to the drop-zone
-* (i.e. `self.files_data` is populated). It iterates every queued file and
-* either:
-*
-*   apply === true  — Attempts to detect the intended target portal from the
-*     file name. The expected naming convention is:
-*       `<base>-<letter>.<ext>`  (e.g. "record-A.jpg", "scan-B.tif")
-*     The trailing letter (captured as group [2] by the regex) is upper-cased
-*     and matched against `tool_config.ddo_map` entries that have
-*     `role === 'component_option'` and a matching `map_name`. When found the
-*     per-file `<select class="option_component_select">` is set to that entry's
-*     `tipo` value.
-*
-*   apply === false — Resets every file's selector to the default portal,
-*     determined by the first `ddo_map` entry that has
-*     `role === 'component_option' && default === true`. If no default entry
-*     exists, the first `<option>` in the selector is selected.
-*
-* The function mutates DOM elements inside `previewElement` of each Dropzone
-* file object. The selector `.option_component_select` is rendered by the
-* Dropzone per-file preview template in `service_dropzone`.
-*
-* Note: this function is defined in this module but is NOT referenced from
-* `get_content_data_edit`. It appears to be a utility intended for callers
-* that wire up an "auto-detect" toggle control. Its presence here is
-* intentional — do not remove.
-*
-* @param {Object} self  - The `tool_import_marc21` instance. Requires:
-*   `self.files_data`   — {Array<{name: string, previewElement: HTMLElement}>}
-*                         Populated by `service_dropzone` as files are added.
-*   `self.tool_config.ddo_map` — Array of ddo configuration objects, each with
-*                         `role`, optional `map_name`, optional `default`, and
-*                         `tipo` properties.
-* @param {boolean} apply - `true` to auto-detect target from file name;
-*   `false` to reset to the configured default.
-* @returns {boolean} Always `true`.
-*/
-const set_import_mode = function (self, apply) {
-
-	const files_data		= self.files_data || []
-	const files_data_length	= files_data.length
-	for (let i = 0; i < files_data_length; i++) {
-
-		const current_value = files_data[i]
-
-		if(apply===true){
-			// Regex captures the letter suffix from filenames like "record-A.jpg" or "scan-b.tif".
-			// Group [1]: base name, group [2]: letter code, group [3]: extension.
-			const regex = /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/;
-			// const name = current_value.name; //`123 85-456 fd-a.jpg`;
-			const map_name = regex.exec(current_value.name)
-			if ( map_name!==null && map_name[2]!==null ) {
-
-				// Upper-case for case-insensitive comparison against ddo_map.map_name.
-				const map_name_upper = map_name[2].toUpperCase();
-				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
-				if (target_portal) {
-					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
-				}
-			}
-		}else{
-			// Reset path: find the default portal, or fall back to the first <option>.
-			const default_target_portal = self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
-			if(default_target_portal){
-				current_value.previewElement.querySelector(".option_component_select").value = default_target_portal.tipo;
-			}else{
-				current_value.previewElement.querySelector(".option_component_select").options[0].selected = true ;
-			}
-		}
-	}
-
-	return true
-}//end set_import_mode
 
 
 

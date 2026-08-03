@@ -13,7 +13,7 @@
 *
 * The tool provides a drag-and-drop bulk file importer that lets operators
 * upload one or more files and associate them with records in a Dédalo section.
-* Files are staged via service_dropzone, optional per-file metadata is collected
+* Files are staged via service_upload (multi-file queue mode), optional per-file metadata is collected
 * through a service_tmp_section (input_component DDO entries), and the final
 * import is dispatched as a long-running background process through dd_tools_api
 * (action 'tool_request' → server method 'import_files').  Progress is streamed

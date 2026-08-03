@@ -2,7 +2,7 @@
  * STAGED-UPLOAD PREVIEW THUMBNAIL (PHP dd_utils_api::create_thumbnail :3354,
  * assigned to `file_data->thumbnail_url` at :1269 / :1539).
  *
- * service_dropzone's `success` handler swaps the browser-generated preview for
+ * The upload queue's success handler swaps the browser-generated preview for
  * the server's own rendering of the staged bytes, so the row reflects what was
  * actually stored (a TIFF or a CMYK JPEG previews very differently once
  * rasterised). The TS engine never emitted `thumbnail_url`, so that swap fed

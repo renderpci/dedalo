@@ -8,8 +8,9 @@
  * Client-side coverage for the batch media-file import tool.
  *
  * The tool's deeper build/render path needs a live caller component with a
- * configured ddo_map (target_component, input_component) plus the service_dropzone
- * and service_tmp_section sub-instances and a host section, none of which is
+ * configured ddo_map (target_component, input_component) plus the service_upload
+ * (multi-file queue mode) and service_tmp_section sub-instances and a host
+ * section, none of which is
  * guaranteed in the headless harness. This suite therefore asserts the reliable,
  * fixture-free contract that every tool shares:
  *   - the module exports a constructor named exactly as its model,
@@ -46,7 +47,7 @@ describe('TOOL_IMPORT_FILES CLIENT TEST', function() {
 		// tool-specific null-seeded properties
 		assert.equal(instance.key_dir, null, 'expected key_dir null')
 		assert.equal(instance.tool_contanier, null, 'expected tool_contanier null')
-		assert.equal(instance.service_dropzone, null, 'expected service_dropzone null')
+		assert.equal(instance.service_upload, null, 'expected service_upload null')
 		assert.equal(instance.service_tmp_section, null, 'expected service_tmp_section null')
 		// files_data is seeded to an empty array
 		assert.ok(Array.isArray(instance.files_data), 'expected files_data to be an array')

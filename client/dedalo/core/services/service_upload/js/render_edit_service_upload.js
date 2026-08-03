@@ -63,6 +63,7 @@
 
 // imports
 	import {ui} from '../../../common/js/ui.js'
+	import {get_content_data_queue} from './render_edit_service_upload_queue.js'
 
 
 
@@ -88,6 +89,13 @@ export const render_edit_service_upload = function() {
 * content_data element is returned (useful for partial refreshes without
 * rebuilding the wrapper).
 *
+* TWO RENDERS, ONE MODEL. `self.multiple===true` selects the multi-file upload
+* QUEUE (render_edit_service_upload_queue.js) instead of the single-file form,
+* and the wrapper gains the `multiple` modifier class the LESS keys off
+* (`.service_upload.multiple > .content_data`). The model string is NOT branched:
+* see the note in the service_upload constructor for why a second model would
+* cost a duplicate service directory.
+*
 * @param {Object} options
 * @param {string} [options.render_level='full'] - 'full' returns the wrapper div;
 *   'content' returns only the content_data element.
@@ -101,8 +109,11 @@ render_edit_service_upload.prototype.edit = async function (options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// content_data
-		const content_data = get_content_data(self)
+	// content_data. The queue builder is async (it awaits the staged-file
+	// listing); the single-file builder is sync and stays untouched.
+		const content_data = self.multiple===true
+			? await get_content_data_queue(self)
+			: get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -111,7 +122,9 @@ render_edit_service_upload.prototype.edit = async function (options) {
 		// Root element; callers can query wrapper.content_data for partial re-renders.
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'service_upload'
+			class_name		: self.multiple===true
+				? 'service_upload multiple'
+				: 'service_upload'
 		})
 		wrapper.appendChild(content_data)
 		// set pointers

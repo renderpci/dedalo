@@ -26,8 +26,9 @@
 *   2. `init` seeds instance properties and derives `key_dir` (the server-side
 *      temporary upload directory key) from caller.tipo + caller.section_tipo.
 *   3. `build` creates two service sub-instances:
-*        - `service_dropzone`  — handles drag-and-drop .mrc file upload and
-*          populates `self.files_data` with the uploaded file descriptors.
+*        - `service_upload` (multi-file mode) — handles drag-and-drop .mrc file
+*          upload and populates `self.files_data` with the staged queue entries.
+*          `files_data` IS the queue's own entry array, adopted verbatim.
 *        - `service_tmp_section` — renders the input components declared in
 *          `tool_config.ddo_map` (role: "input_component") so the user can
 *          supply context values (e.g. a target project locator) that are
@@ -87,13 +88,16 @@ export const tool_import_marc21 = function () {
 	// tool_contanier: (sic) reserved for an optional outer wrapper node (currently unused)
 	this.tool_contanier			= null
 
-	// files_data: array of file-descriptor objects populated by service_dropzone
-	// after each successful upload; consumed by the import button handler
+	// files_data: the upload queue's ENTRY ARRAY, adopted verbatim by
+	// upload_queue and mutated in place — create it once, never reassign it
+	// (reset goes through service_upload.reset_queue()). Consumed by the import
+	// button handler.
 	this.files_data				= []
 
 	// services
-	// service_dropzone: service_dropzone instance; manages drag-and-drop upload UI
-	this.service_dropzone		= null
+	// service_upload: service_upload instance in MULTI-FILE mode (multiple:true);
+	// manages the drag-and-drop upload queue UI
+	this.service_upload			= null
 	// service_tmp_section: service_tmp_section instance; renders input_component
 	// entries from ddo_map so the user can supply per-import context values
 	this.service_tmp_section	= null
@@ -160,9 +164,10 @@ tool_import_marc21.prototype.init = async function(options) {
 * returns an empty array, preventing the generic build from auto-loading all ddo_map
 * entries as live component instances.  This tool manages its own sub-instances:
 *
-*   service_dropzone   — Instantiated with `allowed_extensions` from tool options
-*     (defaults to []) and `key_dir`.  Handles drag-and-drop .mrc file selection,
-*     uploads files to the server temp dir, and populates `self.files_data`.
+*   service_upload     — Instantiated in multi-file mode (`multiple:true`) with
+*     `allowed_extensions` from tool options (defaults to []) and `key_dir`.
+*     Handles drag-and-drop .mrc file selection, uploads files to the server temp
+*     dir, and populates `self.files_data`.
 *
 *   service_tmp_section — Instantiated with only the ddo_map entries whose `role`
 *     equals "input_component".  Renders those components in a temporary section
@@ -187,19 +192,23 @@ tool_import_marc21.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// service_dropzone
+		// service_upload (multi-file)
 		// 'file_processor' and 'component_option' are intentionally null for MARC 21:
-		// files are processed entirely server-side and there is no per-file component selection.
-			self.service_dropzone = await get_instance({
-				model 				: 'service_dropzone',
+		// files are processed entirely server-side and there is no per-file component
+		// selection — with both null the queue emits no `.component.options` block at all.
+		// (!) `multiple:true` is what selects the QUEUE renderer
+		// (render_edit_service_upload_queue.js) instead of the single-file form.
+			self.service_upload = await get_instance({
+				model 				: 'service_upload',
 				mode 				: 'edit',
+				multiple			: true,
 				caller 				: self,
 				allowed_extensions	: self.allowed_extensions || [],
 				key_dir				: self.key_dir,
 				component_option	: null,
 				file_processor		: null
 			})
-			await self.service_dropzone.build()
+			await self.service_upload.build()
 
 		// Service tmp_section
 		// Only pass ddo_map entries with role 'input_component'; these become the

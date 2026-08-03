@@ -130,6 +130,45 @@ function isPhpUserRemovalEntry(entry: ManifestEntry): boolean {
 	return entry.url.startsWith('/dedalo/core/area_maintenance/widgets/php_user/');
 }
 
+/** The modules the service_dropzone fold ADDED to service_upload
+ * (WC-2026-08-03-service-dropzone-folded-into-service-upload): the abandoned
+ * dropzone@5.9.3 dependency is being deleted and its multi-file upload-queue UI
+ * rebuilt in-house, split into a DOM-free wire core, a DOM-free queue model, the
+ * directory-drop traversal and the queue renderer. TS-only: the frozen oracle's
+ * service_upload package (captured 2026-07-11) predates all four.
+ *
+ * EXACT URLs, not a `startsWith` prefix — deliberately unlike the removal
+ * predicates. A prefix over service_upload/ would stop comparing the whole
+ * package, including the two files that DO have a PHP twin
+ * (service_upload.js, render_edit_service_upload.js). Every future addition
+ * here must be listed by name, which is the point: each one costs a line of
+ * reviewable paperwork rather than silently widening the hole. */
+function isServiceUploadFoldAdditionEntry(entry: ManifestEntry): boolean {
+	return (
+		entry.url === '/dedalo/core/services/service_upload/js/upload_transport.js' ||
+		entry.url === '/dedalo/core/services/service_upload/js/upload_queue.js' ||
+		entry.url === '/dedalo/core/services/service_upload/js/dropped_files.js' ||
+		entry.url === '/dedalo/core/services/service_upload/js/render_edit_service_upload_queue.js'
+	);
+}
+
+/** `service_dropzone` is DELETED
+ * (WC-2026-08-03-service-dropzone-folded-into-service-upload, deletion half):
+ * the package's two modules — `js/service_dropzone.js` and
+ * `js/render_edit_service_dropzone.js` — plus its css/img are gone from the TS
+ * tree, their multi-file UI having been rebuilt inside `service_upload`. The
+ * frozen oracle (2026-07-11) still censuses them.
+ *
+ * A `startsWith` PREFIX, unlike the additive predicate above, and the asymmetry
+ * is deliberate: this is a REMOVAL of a whole package, so there is nothing left
+ * on the TS side for a prefix to stop comparing — the package is empty by
+ * construction, which the positive assertion below proves. The additive
+ * predicate must stay exact for the opposite reason: `service_upload/` still
+ * holds files with a PHP twin that MUST keep being compared. */
+function isDropzoneServiceRemovalEntry(entry: ManifestEntry): boolean {
+	return entry.url.startsWith('/dedalo/core/services/service_dropzone/');
+}
+
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
 	let phpBody: ManifestBody;
 	let tsBody: ManifestBody;
@@ -202,10 +241,27 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isRuntimeInfoRenameEntry(entry) &&
 			!isLangFileEntry(entry) &&
 			!isTsNativeCoreFileEntry(entry) &&
-			!isPhpUserRemovalEntry(entry);
+			!isPhpUserRemovalEntry(entry) &&
+			!isServiceUploadFoldAdditionEntry(entry) &&
+			!isDropzoneServiceRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
+
+		// Two-sided filtering is what keeps the frozen store honest (it records what
+		// PHP really served on 2026-07-11 and can never be re-harvested), but it
+		// costs the assertion that the TS side is what we think it is. Recover that
+		// explicitly: the four fold modules must ACTUALLY be present, not merely
+		// normalized away. Without this, deleting one of them — or never shipping
+		// it — would slip through as silently as adding it.
+		expect(tsBody.result.filter(isServiceUploadFoldAdditionEntry).length).toBe(4);
+		expect(phpBody.result.filter(isServiceUploadFoldAdditionEntry)).toEqual([]);
+
+		// Mirror image for the removal half: the TS census must contain NO
+		// service_dropzone file at all. Without this, a prefix filter would
+		// happily normalize away a resurrected (or never-deleted) package.
+		expect(tsBody.result.filter(isDropzoneServiceRemovalEntry)).toEqual([]);
+		expect(phpBody.result.filter(isDropzoneServiceRemovalEntry).length).toBeGreaterThan(0);
 	});
 
 	test('WC-013: the TS tool_assistant census is the server-driven file set', () => {

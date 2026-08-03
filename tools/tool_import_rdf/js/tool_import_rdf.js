@@ -54,7 +54,7 @@
 *                                      cleanup in destroy().
 *   - `files_data`      {Array}        Staging array for file-upload payloads;
 *                                      populated by the render layer before import.
-*   - `source_lang`,`target_lang`,`langs`,`key_dir`,`active_dropzone`,`tool_contanier`
+*   - `source_lang`,`target_lang`,`langs`,`key_dir`,`tool_contanier`
 *                                      Reserved instance slots carried over from the
 *                                      shared tool scaffold. Not actively used by this
 *                                      tool's current implementation; retained for
@@ -78,7 +78,6 @@ export const tool_import_rdf = function () {
 	this.langs				= null
 	this.caller				= null
 	this.key_dir			= null
-	this.active_dropzone	= null
 	this.tool_contanier		= null
 	this.files_data			= []
 

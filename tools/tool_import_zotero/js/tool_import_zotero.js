@@ -15,17 +15,17 @@
 * Purpose:
 *   Lets operators batch-import bibliographic records from Zotero (exported as
 *   CSL-JSON) into the Dédalo Publications section (default: rsc205).  Files are
-*   staged via service_dropzone; batch-level defaults are collected through
+*   staged via service_upload (multi-file queue mode); batch-level defaults are collected through
 *   service_tmp_section (ddo_map entries with role 'input_component').  On
 *   import the server PHP class maps each Zotero field to the configured Dédalo
 *   component tipos (see tool_config.map / register.json dd1633).
 *
 * Workflow (client side):
 *   1. init()  — delegates to tool_common init; computes key_dir from the caller.
-*   2. build() — instantiates service_dropzone (file staging) and
+*   2. build() — instantiates service_upload in multi-file mode (file staging) and
 *                service_tmp_section (batch-default input components).
 *   3. render/edit — delegated to render_tool_import_zotero.prototype.edit,
-*                which renders the dropzone, input fields, and the import button.
+*                which renders the upload queue, input fields, and the import button.
 *
 * Exported symbols:
 *   tool_import_zotero — the constructor (pick up from index.js barrel)
@@ -65,8 +65,9 @@
 *   @var {Object|null}        caller            The component or section instance that launched the tool
 *   @var {string|null}        key_dir           Temp-upload directory key: '<caller.tipo>_<caller.section_tipo>'
 *   @var {string|null}        tool_contanier    (!) Typo for 'tool_container' — do not rename (kept for compat)
-*   @var {Array}              files_data        Dropzone file objects accumulated during the session
-*   @var {Object|null}        service_dropzone  service_dropzone instance managing file staging
+*   @var {Array}              files_data        The upload queue's ENTRY ARRAY, adopted verbatim
+*                                               by upload_queue and mutated in place — never reassign it
+*   @var {Object|null}        service_upload    service_upload instance (multiple:true) managing file staging
 *   @var {Object|null}        service_tmp_section service_tmp_section instance for batch-default fields
 */
 export const tool_import_zotero = function () {
@@ -88,7 +89,7 @@ export const tool_import_zotero = function () {
 	this.files_data				= []
 
 	// services
-	this.service_dropzone		= null
+	this.service_upload			= null
 	this.service_tmp_section	= null
 }//end tool_import_zotero
 
@@ -115,7 +116,7 @@ export const tool_import_zotero = function () {
 * uniquely identifies the caller's staging area on the server.
 *
 * key_dir format: '<caller.tipo>_<caller.section_tipo>'
-* (e.g. 'rsc349_rsc205')  — used by service_dropzone and later passed inside
+* (e.g. 'rsc349_rsc205')  — used by service_upload and later passed inside
 * the rqo.options.key_dir field so the server can locate staged files.
 *
 * @param {Object} options - Tool initialisation options forwarded from instances.js
@@ -149,7 +150,7 @@ tool_import_zotero.prototype.init = async function(options) {
 *
 * Two services are built in sequence:
 *
-*   service_dropzone
+*   service_upload (multi-file, `multiple:true`)
 *     Handles file staging (Zotero JSON + optional companion PDFs).
 *     Receives allowed_extensions from self.allowed_extensions (usually set in
 *     tool_config); component_option and file_processor are null for this tool
@@ -183,17 +184,22 @@ tool_import_zotero.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// service_dropzone
-			self.service_dropzone = await get_instance({
-				model 				: 'service_dropzone',
+		// service_upload (multi-file)
+		// (!) `multiple:true` is what selects the QUEUE renderer
+		// (render_edit_service_upload_queue.js) instead of the single-file form.
+		// component_option/file_processor stay null: routing is decided server-side,
+		// so the queue emits no per-row `.component.options` block at all.
+			self.service_upload = await get_instance({
+				model 				: 'service_upload',
 				mode 				: 'edit',
+				multiple			: true,
 				caller 				: self,
 				allowed_extensions	: self.allowed_extensions || [],
 				key_dir				: self.key_dir,
 				component_option	: null,
 				file_processor		: null
 			})
-			await self.service_dropzone.build()
+			await self.service_upload.build()
 
 		// Service tmp_section
 			self.service_tmp_section = await get_instance({

@@ -730,7 +730,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		return redirectResponse(APP_ENTRY_PATH);
 	}
 
-	// Staged uploads — a user's OWN in-flight files (dropzone previews +
+	// Staged uploads — a user's OWN in-flight files (upload-queue previews +
 	// list_uploaded_files thumbnails). Must precede the static branch, which would
 	// otherwise look for a client asset at this path and 404.
 	//

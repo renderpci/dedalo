@@ -143,7 +143,6 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 			const services = [
 				'service_autocomplete',
 				'service_ckeditor', // @todo: Unify service model using prototypes
-				'service_dropzone',
 				// 'service_subtitles', // not finished
 				'service_time_machine',
 				'service_tmp_section',

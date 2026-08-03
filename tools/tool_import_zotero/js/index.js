@@ -16,7 +16,8 @@
 * as follows:
 *
 *   1. The operator exports records from Zotero as JSON (CSL-JSON format).
-*   2. Files (JSON + optional companion PDFs) are staged via service_dropzone.
+*   2. Files (JSON + optional companion PDFs) are staged via service_upload
+*      (multi-file queue mode).
 *   3. Default metadata values for the batch are collected through
 *      service_tmp_section (DDO entries with role 'input_component').
 *   4. On import the server PHP class maps each Zotero field to the configured
@@ -44,7 +45,7 @@
 *
 * Related modules in this directory:
 *   - tool_import_zotero.js         — tool constructor, prototype assignments (init, build)
-*   - render_tool_import_zotero.js  — DOM/view rendering (dropzone, input components,
+*   - render_tool_import_zotero.js  — DOM/view rendering (upload queue, input components,
 *                                     import button, post-import message)
 */
 
