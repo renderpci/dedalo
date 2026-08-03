@@ -12,7 +12,7 @@
  * tripwire).
  */
 
-import { readMatrixRecord } from '../../../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../../../db/record_memo.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../../ontology/resolver.ts';
 
 /** One emitted widget data item (shape is widget-specific; keys ordered as PHP inserts them). */
@@ -129,6 +129,11 @@ export function phpRound(value: number, precision: number): number {
  * FULL stored item array, NO lang filtering (that is get_data_lang, which the
  * widget classes never call; test_info reads the first item of a translatable
  * source verbatim — verified against live PHP on test3/1's lg-eng-only data).
+ *
+ * The ROW read goes through the read-scoped memo (db/record_memo.ts): widgets
+ * ask this helper for one component at a time, so a widget with N declared
+ * paths over the same record would otherwise fetch that whole row N times. The
+ * memo makes it once per read; with no read scope active it is a direct read.
  */
 export async function readWidgetComponentData(
 	sectionTipo: string,
@@ -137,7 +142,7 @@ export async function readWidgetComponentData(
 ): Promise<unknown[]> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return [];
-	const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+	const record = await memoizedReadMatrixRecord(table, sectionTipo, Number(sectionId));
 	if (record === null) return [];
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) return [];

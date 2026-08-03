@@ -328,6 +328,11 @@ The TS handler reads these from `source` (`src/core/api/dispatch.ts` → `saveCo
 
 Saves component changes. Requires level ≥ 2 on `(section_tipo, tipo)`. On success the server echoes the saved component in the canonical DataItem envelope (relation and select-family saves also carry `datalist` / `pagination` / `context`), triggers server-side observers, and writes an activity-log entry.
 
+The echo is the **twin of the edit read**: for a translatable literal (the `component_input_text` / `component_text_area` family, `component_iri`) the record stores every language in one flat array, and the echoed `entries` carry only the **`source.lang` slice** — exactly what a `get_data` read of the same component returns. Non-translatable and relation components echo their full item array, since they are not language-sliced.
+
+!!! warning
+    A client that assigns the echoed item to its in-memory component data (the standard post-save refresh) therefore keeps one language. Echoing every language instead is what made an ontology-tree inline term edit repaint the node with all its translations concatenated. Gate: `test/unit/save_echo_lang_slice_native.test.ts`.
+
 ### Example Request
 
 ```json
@@ -342,11 +347,13 @@ Saves component changes. Requires level ≥ 2 on `(section_tipo, tipo)`. On succ
   },
   "data": {
     "changed_data": [
-      { "action": "update", "key": 0, "value": "Updated Title" }
+      { "action": "update", "id": 1, "value": { "id": 1, "lang": "lg-eng", "value": "Updated Title" } }
     ]
   }
 }
 ```
+
+`oh16` is a translatable `component_input_text`, so its items carry `id` + `lang`; the `id` pairs the language versions of the same value.
 
 ### Example Response
 
@@ -355,12 +362,22 @@ Saves component changes. Requires level ≥ 2 on `(section_tipo, tipo)`. On succ
   "result": {
     "context": [],
     "data": [
-      { "tipo": "oh16", "section_tipo": "oh1", "section_id": 124, "mode": "edit", "lang": "lg-eng", "value": ["Updated Title"] }
+      {
+        "tipo": "oh16",
+        "section_tipo": "oh1",
+        "section_id": 124,
+        "mode": "edit",
+        "lang": "lg-eng",
+        "from_component_tipo": "oh16",
+        "entries": [ { "id": 1, "lang": "lg-eng", "value": "Updated Title" } ]
+      }
     ]
   },
   "msg": "OK"
 }
 ```
+
+The record's other languages are untouched on disk and simply absent from this `lg-eng` echo.
 
 ## count
 

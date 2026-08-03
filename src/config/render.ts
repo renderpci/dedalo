@@ -68,15 +68,66 @@ function templateValue(entry: CatalogEntry): string {
 // install/sample.env
 // ---------------------------------------------------------------------------
 
+/** Markdown → plain text, on ONE line (links to their text, no emphasis marks). */
+function plain(text: string): string {
+	return (
+		text
+			.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → their text
+			// Backticks and asterisks are markup here; `_` is NOT — stripping it turned every
+			// key named in prose into DEDALOSMTPUSER. No catalog doc uses _emphasis_.
+			.replace(/[`*]/g, '')
+			.replace(/\s+/g, ' ')
+			.trim()
+	);
+}
+
+/** A doc paragraph is skipped when it is machinery rather than prose. */
+function isProse(para: string): boolean {
+	const t = para.trim();
+	if (t === '') return false;
+	if (t.startsWith('```')) return false; // fenced example — rendered separately
+	if (t.startsWith('!!!')) return false; // mkdocs admonition
+	if (t.startsWith('|')) return false; // table
+	return true;
+}
+
 /** Strip markdown to a one-paragraph plain-text blurb for an .env comment. */
 function summarize(doc: string): string {
-	const firstPara = (doc.split('\n\n').find((p) => !p.trim().startsWith('```')) ?? '').trim();
-	return firstPara
-		.replace(/```[\s\S]*?```/g, '')
-		.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → their text
-		.replace(/[`*_]/g, '')
-		.replace(/\s+/g, ' ')
-		.trim();
+	return plain(doc.split('\n\n').find(isProse) ?? '');
+}
+
+/**
+ * The bullet list that CONTINUES the blurb. A doc that ends its opening paragraph with a
+ * colon ("The servers could be:") is answered by the list right below it — dropping that
+ * list is how `ONTOLOGY_SERVERS` shipped a comment that promised an enumeration and then
+ * stopped. Only that case is pulled in: a list further down is reference material and
+ * belongs in the manual.
+ */
+function blurbBullets(doc: string): string[] {
+	const paras = doc.split('\n\n');
+	const first = paras.findIndex(isProse);
+	if (first === -1 || !(paras[first] as string).trim().endsWith(':')) return [];
+	const next = (paras[first + 1] ?? '').trim();
+	if (!/^[-*] /.test(next)) return [];
+	return next
+		.split('\n')
+		.filter((line) => /^\s*[-*] /.test(line))
+		.map((line) => plain(line.replace(/^\s*[-*] /, '')));
+}
+
+/**
+ * The copy-pasteable example. Every operator-facing entry documents one in a fenced block
+ * (a gate in `config_docs_tripwire` keeps it that way) — the census used to strip fences
+ * wholesale, which left an operator reading `[array of objects] default: (unset)` with no
+ * way to guess the shape. The block containing `KEY=` is the one that shows THIS key.
+ */
+function exampleLines(key: string, doc: string): string[] {
+	for (const match of doc.matchAll(/```[a-z]*\n([\s\S]*?)```/g)) {
+		const body = (match[1] as string).trimEnd();
+		if (!body.includes(`${key}=`)) continue;
+		return body.split('\n').filter((line) => line.trim() !== '');
+	}
+	return [];
 }
 
 /** Hard-wrap at `width`, prefixing every line with `# `. */
@@ -126,6 +177,12 @@ export function renderSampleEnv(): string {
 		),
 	);
 	out.push('#');
+	out.push(
+		...comment(
+			'EACH ENTRY. A short description, then [scope · type] default: …, then an "example:" showing a real value for that exact key — copy the example line, uncomment it and edit the value. The full prose, tables and rationale for every setting live in docs/config/config.md and docs/config/config_db.md.',
+		),
+	);
+	out.push('#');
 	out.push('#  GENERATED from src/config/catalog/ — do not edit by hand.');
 	out.push('#  Regenerate: bun run config:gen   (config_docs_tripwire fails if you forget)');
 	out.push(`# ${BAR}`);
@@ -147,10 +204,20 @@ export function renderSampleEnv(): string {
 			const entry = CONFIG_CATALOG[key] as CatalogEntry;
 			out.push('');
 			out.push(...comment(summarize(entry.doc)));
+			for (const bullet of blurbBullets(entry.doc)) {
+				const [head, ...rest] = comment(bullet, 72);
+				out.push(`#   - ${(head as string).slice(2)}`);
+				for (const line of rest) out.push(`#     ${line.slice(2)}`);
+			}
 			const tags = [entry.scope, entry.typeLabel].join(' · ');
 			out.push(`# [${tags}]  default: ${renderDefault(entry)}`);
 			if (entry.phpAlias !== undefined) {
 				out.push(`# legacy spelling still honoured: ${entry.phpAlias}`);
+			}
+			const example = exampleLines(key, entry.doc);
+			if (example.length > 0) {
+				out.push('# example:');
+				for (const line of example) out.push(`#   ${line}`);
 			}
 			// A placeholder key ships UNCOMMENTED — the template must literally carry the
 			// value check_config rejects, or "still on the sample value" is unfalsifiable.

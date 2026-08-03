@@ -213,15 +213,24 @@ async function currentActorToolNames(): Promise<ReadonlySet<string> | null> {
 	return names;
 }
 
-/** Active registry rows (dd1354 dd64/1), in stable section_id order. */
+/**
+ * Active registry rows (dd1354 dd64/1), in stable section_id order — cached in
+ * activeToolRowsCache (see its header: this is a constant query that used to be
+ * re-issued once per rendered list row).
+ */
 async function fetchActiveToolRows(): Promise<(ToolRow & { section_id: number })[]> {
-	return (await sql`
+	if (activeToolRowsCache !== null) {
+		return activeToolRowsCache;
+	}
+	const rows = (await sql`
 		SELECT section_id, string, misc, relation
 		FROM matrix_tools
 		WHERE section_tipo = ${TOOLS_REGISTER_SECTION_TIPO}
 		  AND relation->${TIPO.ACTIVE} @> '[{"section_id":"1","section_tipo":"dd64"}]'
 		ORDER BY section_id
 	`) as (ToolRow & { section_id: number })[];
+	activeToolRowsCache = rows;
+	return rows;
 }
 
 /** Per-tool metadata the `view_tools` datalist hydration needs. */
@@ -399,6 +408,25 @@ async function getAffectedModelNameMap(): Promise<Map<string, string>> {
 let registeredToolsCache: RegisteredTool[] | null = null;
 
 /**
+ * The RAW active-registry rows behind every reader in this file — same
+ * lifecycle, same invalidation, same lang-independence rule as
+ * registeredToolsCache above.
+ *
+ * WHY IT EXISTS. fetchActiveToolRows() takes no arguments: it is the same
+ * constant query every time. It was re-issued on EVERY call, and the
+ * component_info media_icons widget calls it once per rendered row — so the oh1
+ * list page ran this one JSONB-containment query 10 times per read for 43ms of
+ * the 110ms it spent in SQL (measured 2026-08-03). Caching the rows makes it
+ * once per invalidation.
+ *
+ * ONLY RAW ROWS ARE CACHED, never a built ToolSimpleContext: the label is
+ * resolved from the per-request application lang (resolveToolLabel →
+ * currentApplicationLang), so caching a built context would serve one request's
+ * language to the next. Callers still build per request from these rows.
+ */
+let activeToolRowsCache: (ToolRow & { section_id: number })[] | null = null;
+
+/**
  * Reset the registry reader caches. Prefer invalidateAllToolCaches() (./cache.ts).
  *
  * The per-user profile-grants cache is dropped here TOO, even though
@@ -410,6 +438,7 @@ let registeredToolsCache: RegisteredTool[] | null = null;
  */
 export function resetRegistryCache(): void {
 	registeredToolsCache = null;
+	activeToolRowsCache = null;
 	profileToolGrantsCache.clear();
 }
 
@@ -419,16 +448,9 @@ async function getRegisteredTools(): Promise<RegisteredTool[]> {
 		return registeredToolsCache;
 	}
 	const modelNames = await getAffectedModelNameMap();
-	const rows = (await sql`
-		SELECT section_id, string, misc, relation
-		FROM matrix_tools
-		WHERE section_tipo = ${TOOLS_REGISTER_SECTION_TIPO}
-		  AND relation->${TIPO.ACTIVE} @> '[{"section_id":"1","section_tipo":"dd64"}]'
-		ORDER BY section_id
-	`) as (ToolRow & {
-		section_id: number;
-		relation: Record<string, { section_id?: string | number }[] | undefined> | null;
-	})[];
+	// Same active-registry rows every other reader uses — this used to be a
+	// second, byte-identical copy of that query behind its own cache.
+	const rows = await fetchActiveToolRows();
 
 	const registered: RegisteredTool[] = [];
 	for (const row of rows) {

@@ -13,6 +13,7 @@ REWRITE_SPEC §4 and per-file comments).
 | Identity (principal + session) | **request-context ALS**, opened once per RQO at the dispatch chokepoint, seeded from the session | `core/security/request_context.ts`; opened in `core/api/dispatch.ts` `dispatchRqo` |
 | Effective languages | **request-lang ALS** (`currentApplicationLang()`/`currentDataLang()`), opened beside the identity scope | `core/resolve/request_lang.ts` |
 | DB transaction handle | ALS (`withTransaction`) | `core/db/postgres.ts` |
+| Matrix rows within ONE read | **read-scoped memo ALS**, opened by `readSection` only; a nested read JOINS it. Bounded (8000 rows) and dies with the read, so it needs no invalidation — it can only serve a row the same read already saw. NEVER opened around a write: save/delete legitimately re-read a row they just modified | `core/db/record_memo.ts`; opened in `core/section/read.ts` |
 | **Detached background work** | `runDetachedFromTransaction` EXITS the transaction + deferred-action stores; the ONE legal caller is `MediaJobManager.submit` | `core/db/postgres.ts`; `core/media/jobs.ts` |
 | Per-user data at module scope | caches **keyed by `userId`** with explicit invalidation | `core/security/permissions.ts` |
 | Localized caches | key **bakes the lang** in | e.g. `core/ontology/labels.ts`, `core/resolve/structure_context.ts` |

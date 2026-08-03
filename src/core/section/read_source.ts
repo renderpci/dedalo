@@ -25,6 +25,7 @@ import type { Sqo } from '../concepts/sqo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { seedRecordMemo } from '../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import type { EmissionContext } from '../resolve/component_data.ts';
 import type { StructureContextEntry } from '../resolve/structure_context.ts';
@@ -146,6 +147,12 @@ export const matrixReadSource: SectionReadSource = {
 			const records = await readMatrixRecordBatch(table, sectionTipo, ids);
 			for (const row of rows) {
 				if (row.section_tipo === sectionTipo) row.raw = records.get(row.section_id) ?? null;
+			}
+			// The page's OWN rows, handed to the read-scoped memo: a widget
+			// asking for a component of the row it is rendering (the usual
+			// 'current' source) would otherwise re-fetch a row already in hand.
+			for (const id of ids) {
+				seedRecordMemo(table, sectionTipo, id, records.get(id) ?? null);
 			}
 		}
 		return rows;
