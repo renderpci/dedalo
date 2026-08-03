@@ -35,6 +35,10 @@ Why: a save reads-then-writes under `SELECT … FOR UPDATE`. If the lock and the
 
 Never issue a raw `BEGIN`: **Bun pooled connections reject it** with `ERR_POSTGRES_UNSAFE_TRANSACTION`. Nested `withTransaction` is a no-op join (no inner BEGIN/savepoint); the outer commit is authoritative. In-tx cache seeding is blocked — deferred cache clears replay on commit (see §6).
 
+**Two post-tx lanes, NOT interchangeable:** `registerCommitAction` (`postgres.ts:306`) fires ONLY on COMMIT and is discarded on ROLLBACK — the lane for deferred WRITES (the observer cascade schedules its hops here); `deferPostTransaction` (`:336`) replays on ROLLBACK too — idempotent cache invalidation only, **never writes**. Both return `false` when the ambient queue already drained (a leaked continuation past `withTransaction`, S2-14); the caller then owns the action.
+
+Every component save also fires post-commit **observer propagation** (`propagateToObservers`, called from `save_component.ts:384`, `relations/save.ts:778` and `duplicate_record.ts:231`) — it can write to OTHER records (mirror recomputes) and re-enter itself. Two things bind you when you wrap a save in your own transaction: propagation RETHROWS inside an ambient tx (a swallow there would hide the cause of an already-aborted tx), and a cascade hop refuses to run inside one at all. That whole subsystem — discovery, the mirror value law, the grow-only fail-safe — is the **`dedalo-observers-ts`** skill.
+
 ## 4. The locator law — `compareLocators`
 
 A locator (`section_tipo` + `section_id` + component coords) is how two records point at each other. Equality has **exact PHP `property_exists` semantics** and lives in ONE place: `compareLocators` (`src/core/concepts/locator.ts:133`) / `isLocatorInArray`.

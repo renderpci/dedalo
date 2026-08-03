@@ -1,0 +1,135 @@
+---
+name: dedalo-observers-ts
+description: The Dédalo v7 TypeScript/Bun server-side observer / set_dato_external propagation subsystem (REBUILT 2026-08-02 — reverse, observer-declared discovery through an ontology-wide subscription registry). Use when editing src/core/section/record/{observers,observer_subscriptions,observer_reconcile}.ts, scripts/observer_reconcile.ts, the propagateToObservers call sites (save_component.ts, relations/save.ts deletePortalLocator, duplicate_record.ts), or when debugging "my observer didn't fire on save", "the mirror is stale / wiped / lost locators", a component_info/state/calculation widget that does not recompute, set_dato_external or properties.observe / properties.observers config questions, an observers_* counter moving on GET /api/v1/counters, "observer subscription contract violation" lines in the boot log, observers_shrink_refused, a cascade cycle/depth refusal, or the ERR that refuses to run a cascade hop inside a transaction. Gates: test/unit/observer_{subscriptions,cascade,failsafe,seed,reconcile}_native.test.ts + observer_native.test.ts. Wire contract: WC-050 plus the four dated 2026-08-02 observer entries in engineering/wire_contract/ (subscription-registry activation, bounded cascade, relay writes nothing, references_limit not honoured).
+---
+
+# Dédalo v7 observers / `set_dato_external` (rebuilt 2026-08-02)
+
+When an observed component saves, its declared observers recompute. Propagation fires from the `saveComponentData` chokepoint POST-COMMIT, so every save door propagates (dispatch, imports, MCP tools, transcription). Callers of `propagateToObservers` (`src/core/section/record/observers.ts:285`): `save_component.ts:384`, `relations/save.ts:778` (`deletePortalLocator` — passes the REMOVED locators, the records whose mirrors must recompute), `duplicate_record.ts:231` (per copied relation column). Record deletes ride the generic inverse cleanup; the bulk doors that bypass every cascade (tool_propagate, the delete_data wipe, portalize, v6→v7 migration) are healed by `scripts/observer_reconcile.ts`.
+
+Three files, one law each: **`observer_subscriptions.ts` = WHICH edges exist**, **`observers.ts` = WHAT each edge computes and the safety laws**, **`observer_reconcile.ts` = replaying the same recompute offline**. There is no fourth copy of discovery — the reconciler used to have one.
+
+## THE HEADLINE: discovery is REVERSE, observer-declared
+
+An edge dispatches **iff the OBSERVER declares it in `properties.observe` with a `server` block**. The observed component declares NOTHING. Standard observer semantics: the subscriber registers itself. No code activation table, no config switch — the ontology decides, and the per-edge kill switch is an ontology edit (blank that entry's `server` key).
+
+Discovery used to be FORWARD-ONLY (read the saved node's `properties.observers`), so an edge had to be declared TWICE and any half-declared edge was silent dead config. That is why `rsc19 -> oh28` never fired: oh28 declared `observe` correctly, rsc19 never declared the forward mirror.
+
+Registry: `src/core/section/record/observer_subscriptions.ts` — built over the WHOLE ontology (`getNodesWithProperty('observers') ∪ getNodesWithProperty('observe')`). `buildSubscriptionIndex` :362 (pure, gate-driven), `validateSubscriptionContract` :600, `getSubscriptionRegistry` :729, dispatch lookup `getObserverSubscriptions` :776. Cached through `createOntologyCache` — the invalidation hub clears it after EVERY dd_ontology write (deferred to COMMIT), so registration is by construction and the module-level cache is legal; `clearObserverSubscriptionRegistry` :661 for out-of-band ontology surgery. Warmed + loud-validated at boot in `src/server.ts:1361` (the probe also registers the `observers_registry` ops gauge). Two races closed on top: a build TOKEN planted before the reads (a concurrent dd_ontology COMMIT ⇒ serve the index, do not cache it) and an in-tx memo (`getTransactionMemo` — S1-14 forbids seeding a shared cache from an ambient tx; one build per tx span). The index is deep-frozen and its Maps runtime-hardened (mutators shadowed to throw) — **rebuild on invalidation, never patch**.
+
+**The ONE dispatchability predicate is `entryServerBlock(entry)` (:285)**: undefined for an absent `server` (client-only observer) AND for a present-but-non-object value (`server:null` — flagged RED, never dispatched, never thrown on). Match law: the FIRST `observe` entry, in array order, whose `component_tipo` equals the observed tipo or is `'all'`. Client-only is NOT the majority: measured 2026-08-02 on the app ontology, 76 of 136 `observe` entries carry a `server` half (39 of the 67 nodes with `observe`); the suite DB is 73 of 126. **The `58 of 66 configs` line in the observers.ts header is STALE** — it was measured through the old forward-only view; re-measure, don't quote it.
+
+Measured on the live app ontology (2026-08-02, rebuild the numbers with the recipe below): 80 registry rows, 75 dispatchable, **73 distinct edge keys = 64 mirrored + 9 reverse-only that had NEVER dispatched**; 0 dead wildcards, 0 unresolved hosts, 0 cycles; 4 forward-only specs (`rsc1139`/`rsc1140`/`rsc1401`/`rsc1403` -> `rsc19`) that have been dead config for this install's whole life and are now reported LOUDLY at every boot. The 9: `oh93->oh28`, `rsc19->oh28`, `rsc860->oh87`, `numisdata282->numisdata321`, `numisdata1373->numisdata1478`, `numisdata1373->numisdata1479` do real work; `rsc30->rsc1369`, `rsc36->rsc860`, `rsc36->rsc1368` land on the TERMINAL NO-OP branch (don't sell those three as recovered behaviour).
+
+## The forward `observers` array is LEGACY — exactly two residual jobs
+
+1. **Compiling the `'all'` wildcard.** An `observe` entry with `component_tipo:'all'` is a MATCHING RULE with no intrinsic scope; without the forward specs bounding it, it would mean "every save in the system". The builder compiles it to exactly the forward-declared edge set in pass 1 only (live: `numisdata282->numisdata250`, `numisdata1451->numisdata257`, `tch555->tch557`); pass 2 `continue`s on `'all'`, so a wildcard can NEVER mint an edge without a forward spec. A wildcard nobody forward-declares admits ZERO edges ⇒ `deadWildcards`, RED.
+2. **Host targeting for a REUSED component.** A component declared once and reused across sections needs the forward spec's `section_tipo` (live: `rsc387` declares observer `hierarchy93` three times, `section_tipo` on1/ts1/dc1, while hierarchy93's own ontology position is section hierarchy20 — 9 of the 64 mirrored edges are this shape). Never silently retarget these to the observer's own section.
+
+A forward spec with no matching `observe` entry = `forwardOnly` diagnostic = dead config, RED. Fix the ONTOLOGY (add the observe half, or delete the spec) — never pin it in code.
+
+## Host-section resolution — "which records do I recompute?"
+
+`resolveHostSection` (`observer_subscriptions.ts:325`), in order:
+
+1. the `observe` entry's own `section_tipo` — the authoring home for new edges (nothing ships it yet);
+2. a forward spec's `section_tipo` (reused-component targeting; the literal `'self'` falls through);
+3. the observer's OWN section (`getAncestorSectionTipo`), refined by the SQO filter path with **virtual↔real equivalence** — a virtual section's `relations[0].tipo` names its real section (numisdata5 ≡ numisdata276; on1/ts1/dc1/cont1/cult1/es1 are all virtual sections of hierarchy20; helper `getSectionRealTipo`). The PATH's face wins, because stored records carry the virtual tipo. A NON-equivalent path section resolves to nothing — never a silent retarget;
+4. unresolved ⇒ LOUD refusal naming the edge (`observers_host_section_unresolved`; validator `hostUnresolved` RED). Nothing hits this today.
+
+Only the **SQO-filter** shape needs a host at dispatch. Observable-driven resolvers (`use_observable_dato`) take their targets from the SAVED LOCATORS and never search by section at all.
+
+## Dispatch: branch order in `propagateToObservers` (read it as a decision list)
+
+`server === undefined` ⇒ skip (:327). Then, in this order:
+
+1. **info observer** (:345) — observer model is `component_info` or an alias of it (`component_state`, `component_calculation`) AND no `perform`. Targets: `server.filter` is an SQO object ⇒ search the HOST section, every clause's `q` := the saved record's locator, `from_component_tipo` from the FIRST clause's last path step, `sqo.limit = 'all'` (:553); `filter:false` ⇒ the saved record itself. Per target: recompute the widgets, write ONE `matrix_time_machine` row (lg-nolan) and **deliberately never touch the live misc column** (stored misc is legacy, live reads compute). Same-record targets ride the save response as `observersData`. `recomputeInfoObserver` :496.
+2. **`filter:false`, no perform, non-info** (:381) — the written-out TERMINAL NO-OP (oracle-verified for the hi family). Distinct from `filter` ABSENT; the two shapes used to be indistinguishable here.
+3. **relay** (:400) — no `perform`, `filter` ABSENT, `use_observable_dato`, observer not info. A pure TRIGGER: read the observer's value "with references" and re-enter propagation as if it had just saved. **WRITES NOTHING** — no value change, no TM row, no dd197/dd201 stamps (`runObserverCascadeHop` :229; divergence WC-2026-08-02-observer-relay-writes-nothing).
+4. **`set_dato_external`** (:423 gate, :438 call) — requires `use_observable_dato`; targets = the saved data's locators, plus the saved record itself when `use_self_section:true`. Everything else falls through to the ledgered loud skip `"server shape not covered"` (:424) — **`refresh_data` is NOT ported and lands here.**
+
+So the WIRED resolver kinds are **self** (info + `filter:false` — the saved record), **observable** (`use_self_section:false` + `use_observable_dato` — the saved data's target locators), **self+observable** (both true — the union), and **sqo_filter** (info + object filter — a search over the host section). `'all'` is a matching rule compiled at registry build, NOT a resolver. **`use_inverse_relations` is INERT**: nothing in `src/` reads that key (grep it), so the one live entry declaring it (numisdata965 ← numisdata11, `set_dato_external` without `use_observable_dato`) fails the `useObservable` gate and lands in the ledgered skip. Wiring it means implementing a new resolver, not flipping a flag.
+
+## THE VALUE LAW of `set_dato_external` (`recomputeExternalRelation`, observers.ts:862)
+
+The observer's data := every record referencing the target through `properties.source.component_to_search` — **or any EQUIVALENT of the target** reachable through `properties.source.data_from_field` — restricted to `source.section_to_search`. Existing entries keep their stored order; new references append with `nextObserverItemId` (:806 — a non-finite legacy id must never NaN-poison the max, or every appended entry serializes id `null` and breaks id-based pairing downstream). New entry shape: `{id, type:'dd151', section_id:String, section_tipo, from_component_tipo:observerTipo}`. Search is uncapped, ordered `section_tipo, section_id`.
+
+**The seed** — `collectExternalSeed` :725 (async half) over `buildExternalSeed` :658 (pure half): the target record PLUS each `data_from_field` peer's bag "with references" AT THE TARGET = the peer's stored bag ∪ its typeRel-gated closure (`relations/related.ts getStoredWithReferences` :264 — dd620 nothing, dd467 one inverse hop, dd621 the FULL symmetric transitive closure, both recursion directions, memoized; typeRel is read from `properties.config_relation.relation_type_rel`, defaulting to dd620). Every seed entry is re-stamped `from_component_tipo = component_to_search` — the search must match the REFERENCING component's locators, never the peer's own stamp. Semantics: **the mirror lists records referencing this record OR ANY OF ITS EQUIVALENTS.** The dispatch is polymorphic: only a `component_relation_related` peer computes the closure; any other model gets the stored bag even with dd621 in its config.
+
+**Why one hop is wrong — measured** (19,908 numisdata3 records holding numisdata77, against the values migrated from the previous engine):
+
+| seed | exact | locators lost |
+|---|---|---|
+| self only | 7,430 | 318,122 |
+| self + peer stored bag (ONE hop) | 11,953 | 247,933 |
+| self + dd621 transitive closure | 19,885 | 13 |
+
+The closure IS the law. Do not weaken `getStoredWithReferences` to the stored bag "for performance".
+
+- **`perform.params.references_limit` is deliberately NOT honoured** (WC-2026-08-02-observer-references-limit-not-honoured). On the write path a capped result set is indistinguishable from "these records stopped referencing you", and the order-preserving merge removes by OMISSION — measured: tchi1/162 stores 1,023 locators against a declared limit of 200, so honouring it would destroy 823. A finite NONZERO `referencesLimit` is REFUSED outright (:899, `observers_references_limit_refused`) rather than truncating; `0` is the uncapped sentinel most shipped configs declare (numisdata77 included) and falls through.
+- **>2000-reference freeze** (`EXTERNAL_REFERENCES_FREEZE` :823) ported as a WRITE REFUSAL: compute and report the diff, persist NOTHING (`observers_big_result_refused`, `refusedBigResult`). Reachable — rsc387 → cult1/5 holds 4,547 referencers.
+- **Concurrency**: the write phase is ONE `withTransaction` with the target row `FOR UPDATE` and the bag re-read under the lock, so two concurrent saves serialize instead of last-writer-wins; TM pair + live write commit atomically (a first-ever write also backfills a baseline TM row 60s earlier). A locked compute over 2s is logged + counted (`observers_recompute_lock_slow`). Dry run (`write:false`) is lock-free.
+- **Return contract**: `before`/`after` ALWAYS describe the full-law diff (what `--allow-shrink` would write), so a dry run, a refused shrink and an apply report the same numbers; when `skippedShrink` is set in apply mode the record actually holds `before + additions`.
+
+## Safety laws (all unconditional)
+
+- **GROW-ONLY SHRINK FAIL-SAFE.** The recompute splits into `kept` + `additions`; additions ALWAYS persist; NO stored entry is dropped unless the caller passes `allowShrink:true`, and no production caller does (the live cascade passes `{allowShrink:false}` :448; `options` is a REQUIRED parameter because an omitted argument armed the 2026-08-02 wipe — `undefined !== false` let shrinks commit). Membership-based, adjudicated INSIDE the row lock (no TOCTOU), so a 1-drop+1-add swap commits the add and withholds the drop — the old length-only guard did not. Withheld drops log loudly + count `observers_shrink_refused`. **DELIBERATE TEMPORARY trade**: a legitimate removal is not mirrored until the value law fully settles; the operator path is `bun scripts/observer_reconcile.ts --apply --allow-shrink`.
+- **UNPORTED SUB-LAW REFUSAL** (:935). A node whose `properties.source` carries `source_overwrite` or `set_observed_data` is REFUSED before any compute (`observers_unported_sublaw_refused`, `refusedSublaw`) — those sub-laws are not ported and the default law is provably wrong for them. This disarmed a live full wipe: numisdata679/numisdata965 recompute to ZERO against stored bags of 1,077 / 959 / 766 (re-measured 2026-08-02: **131,806 locators — 118,449 + 13,357 — across 4,688 records**, mostly section numisdata665). The test is `typeof source === 'object'` before `in`, NOT a bare null check — a malformed SCALAR source is real data here (oh55 stores a string, oh90 a number) and must fall through to the counted `component_to_search` skip, because `duplicate_record` reaches this kernel with no try/catch.
+- **BOUNDED CASCADE.** An observer that PERSISTS a recompute is a save, so it re-enters propagation (`emitCascadeHop` :134). **Emission is NOT uniform** — only the `set_dato_external` branch gates on `outcome.wrote === true` (:455; a refused, withheld or no-drift recompute emits NO hop); the **relay** branch emits per target UNCONDITIONALLY (:410 — emitting the hop IS the relay, it writes nothing else) and the **info** recompute emits per target unconditionally (:604). `emitCascadeHop`'s own leaf pre-gate drops a hop into an observer with zero subscriptions before it is scheduled. The guard is a shared visited set keyed `observerTipo|kind|section_tipo|section_id` plus `MAX_CASCADE_DEPTH = 8` (:119), threaded as a PARAMETER (never module state — module_state_tripwire). A node on its OWN chain = TRUE CYCLE (`observers_cascade_cycle_refused` — an incident, must stay 0); reached via another branch = converged diamond, benign dedup (`observers_cascade_converged_skipped`; execute-once vs re-execute-to-fixpoint is ledgered in WC-2026-08-02-observer-cascade-bounded-flag). A depth overrun is a loud counted stop naming the full chain — never a silent truncation, never a hang. The real graph is depth ≤ 2 with zero cycles.
+- **Cascade hops run OUTSIDE any transaction, or on the COMMIT-ONLY lane.** `runObserverCascadeHop` (:229) ASSERTS not-in-tx and throws naming the chain (`observers_cascade_in_transaction_refused`) — `withTransaction` JOINS an ambient tx, so a hop's writes would ride a transaction it does not own, and escaping to a second connection would deadlock on the outer row locks undetectably. In-tx emission therefore defers via **`registerCommitAction` (`src/core/db/postgres.ts:306`) — fires ONLY on COMMIT, discarded on ROLLBACK**. **`deferPostTransaction` (:336) is a DIFFERENT, older lane that replays on ROLLBACK too — idempotent cache invalidation only, NEVER writes.** A closed commit lane (leaked continuation past `withTransaction`, S2-14) DROPS the hop loudly (`observers_cascade_hop_dropped`). `propagateToObservers` swallows errors loudly OUTSIDE a tx but RETHROWS inside one (`observers_propagation_failed_in_tx`): a swallow there would leave the caller's tx aborted-and-poisoned while hiding the cause.
+- **There is NO configuration switch.** Mirrors are STORED data, so a deploy flag would make two installs with the same ontology store different values. `DEDALO_OBSERVER_CASCADE` existed briefly and was removed the day the benchmark cleared it: one external hop p50 1.3ms / p90 3.1ms; widest records (bags to 1,189) p50 10.6ms; worst real case 4,547 referencers = 22ms; cost per entry FALLS as fan-out grows (61.8 → 5.2 ms per 100) — sub-linear.
+
+## Counters (GET /api/v1/counters)
+
+Gauge `observers_registry` → `contract_violations` / `dead_wildcards` / `host_unresolved` / `cycles`. Counters: `observers_registry_contract_violations` · `observers_host_section_unresolved` · `observers_cascade_{cycle_refused,converged_skipped,depth_exceeded,hop_dropped,hop_failed,in_transaction_refused}` · `observers_propagation_failed_in_tx` · `observers_seed_{malformed_peer_locator,invalid_data_from_field,peer_node_missing}` · `observers_references_limit_refused` · `observers_unported_sublaw_refused` · `observers_component_to_search_missing` · `observers_big_result_refused` · `observers_shrink_refused` · `observers_recompute_lock_slow`.
+
+## Gates, contract entries, docs
+
+- `test/unit/observer_subscriptions_native.test.ts` (registry laws + contract validator RED), `observer_cascade_native.test.ts` (guard, depth budget, commit lane, dropped hop), `observer_failsafe_native.test.ts` (shrink + sub-law refusals), `observer_seed_native.test.ts` (the pure seed law via `ExternalSeedIO` injection + the peer-model census), `observer_reconcile_native.test.ts`, `observer_native.test.ts`.
+- Behavioural gates seed scratch dd_ontology nodes under the `test999…` namespace. They dispatch by the ordinary ontology rule; they are excluded from contract DIAGNOSTICS **only when the connected DB is the `_test` suite database** (`touchesScratchObserverNamespace` :235) — `test` is a real tld in production ontologies.
+- The DEC-12 gates run against the SUITE ontology, a strict subset of a production install's, so a production-only edge can never turn CI red. That is why the boot probe + gauge + counter exist: violations surface OPERATIONALLY on every deploy/restart.
+- `engineering/wire_contract/`: WC-050 (cascade fires at the write chokepoint), WC-2026-08-02-observer-subscription-registry-activation, WC-2026-08-02-observer-cascade-bounded-flag, WC-2026-08-02-observer-relay-writes-nothing, WC-2026-08-02-observer-references-limit-not-honoured. No tripwire in `engineering/TRIPWIRES.md` — this subsystem's gates are the native tests.
+- User-facing manual: `docs/core/system/observers.md` (docs-law prose — no internal paths there; keep the two in sync when the behaviour changes).
+
+## Known gaps (loud, dated — do not paper over)
+
+- **`refresh_data` perform NOT ported** — falls into the ledgered "server shape not covered" skip.
+- **Sub-laws `source_overwrite` / `set_observed_data` NOT ported** — refused wholesale; remove the per-key refusal only when actually ported.
+- **Info-observer recompute never touches the live misc column** (deliberate — live reads compute; stored misc is legacy).
+- **Legitimate removals are not mirrored** while grow-only is the default; operator path is the reconciler with `--allow-shrink`.
+
+## Diagnostic recipes
+
+**Registry state, no repro needed** — build it against the live ontology and read the diagnostics:
+
+```
+bun -e "const m=await import('./src/core/section/record/observer_subscriptions.ts');
+const i=await m.getSubscriptionRegistry(); const d=i.diagnostics;
+console.log(i.edges.length,'rows |',d.mirroredServer.length,'mirrored |',d.reverseOnly.length,'reverse-only');
+console.log('forwardOnly',d.forwardOnly,'deadWildcards',d.deadWildcards,'hostUnresolved',d.hostUnresolved,'cycles',d.cycles.length);
+console.log('violations',m.validateSubscriptionContract(i).length); process.exit(0)"
+```
+
+Same information without a shell: GET `/api/v1/counters` → the `observers_registry` gauge, and the `observer subscription contract violation: …` boot log lines.
+
+**"Why doesn't my edge fire?"** — (1) does the OBSERVER's `properties.observe` carry an entry whose `component_tipo` is the observed tipo (or `'all'` WITH a forward spec) and an OBJECT `server` block? `entryServerBlock` is the only predicate — `server:null` or a scalar never dispatches. (2) FIRST-match law: an earlier client-only entry for the same tipo shadows a later server one. (3) SQO-filter edges need a resolvable host section — check `observers_host_section_unresolved` and the boot log. (4) After dd_ontology surgery done OUTSIDE the engine, restart or call `clearObserverSubscriptionRegistry`.
+
+**"Mirror stale / short"** — dry run first (the default; prints every drifted record):
+`bun scripts/observer_reconcile.ts [--observer <tipo>] [--section <tipo>] [--id <n>]`, then `--apply` (grow-only) or `--apply --allow-shrink` (drops). Kernel: `observer_reconcile.ts reconcileObserverMirrors` :209 — candidates from `matrix_relation_index` truth ∪ stored-mirror holders, replaying the SAME `recomputeExternalRelation`. One law, one implementation. The v6→v7 update pipeline runs it automatically (`src/core/update/engine.ts:239`, success tail).
+
+**"Mirror short by thousands"** — inspect the peer's `properties.config_relation.relation_type_rel`: only dd621 gets the full closure, and only for a `component_relation_related` peer. A peer whose ontology node is MISSING degrades the seed to stored-bag-only — exactly the 247,933-locator-loss shape — and counts `observers_seed_peer_node_missing`.
+
+**Cascade suspected** — `observers_cascade_cycle_refused` must be 0 in production; `converged_skipped` is benign. Every refusal log names the full chain (`tipo@section/id -> …`).
+
+**Standalone scripts** — the seed's model/alias resolution needs the component registry's lookup registered, so these modules dynamic-import `components/registry.ts` themselves. Keep that pattern: a static import here creates a relations↔section cycle (`RelatedGraphIO` is imported type-only for the same reason).
+
+## Verified live examples (monedaiberica / dedalo_mib_v7, re-checked 2026-08-02)
+
+- **oh28** (`component_state`, section oh1) observes **rsc19** through the oh25 portal — an SQO-filter info observer, host oh1. THE canonical single-declaration case: only oh28 declares anything.
+- **rsc19** (`component_state`; ontology section **rsc2** via `getAncestorSectionTipo` — rsc167 is a VIRTUAL face of rsc2, do not cite it as the section) observes rsc156, rsc80, rsc431, rsc285, rsc437, rsc439, rsc438, rsc493 — every entry `{"filter": false}`, same-record, so no host is resolved at all.
+- **numisdata77** (`component_portal`, `mode:external`, section numisdata3) observes **numisdata36** — `set_dato_external`, `use_self_section:true` + `use_observable_dato:true` (self+observable union), `references_limit:0` (the uncapped sentinel). Its `properties.source`: `data_from_field:["numisdata36"]`, `section_to_search:["numisdata4"]`, `component_to_search:["numisdata161"]`. numisdata36 is `component_relation_related` with `config_relation.relation_type_rel = dd621`.
+- **numisdata36 observes numisdata161** with `config` only, no `perform` ⇒ a RELAY edge; numisdata36 -> numisdata77 is the `set_dato_external` hop. The chain's intent is written into numisdata161's own `observers` info text ("numisdata161 fire numisdata36 then fire numisdata77") — the canonical depth-2 cascade.
+- **hierarchy93** (`component_autocomplete`) observes **rsc387** — `use_self_section:false` + `use_observable_dato` + `set_dato_external`: observable-driven, targets come from the saved locators, host supplied by rsc387's three forward specs (on1/ts1/dc1, virtual sections of hierarchy20).
+- Dead config, live: `rsc1139`/`rsc1140`/`rsc1401`/`rsc1403` declare forward `observers` specs naming rsc19, which declares no matching `observe` entry — 4 boot-time contract violations.
+
+**Verify every tipo's MODEL before citing it** (`select tipo, model from dd_ontology where tipo in (…)`). Never retype a config from memory — read it out of `properties`.

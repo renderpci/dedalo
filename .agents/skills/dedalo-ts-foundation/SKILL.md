@@ -84,7 +84,7 @@ Reach for the specialist when you cross into its area:
 
 ## Subsystem skills (the deep dives)
 
-`dedalo-relations-ts` (relation family + the full `component_dataframe` contract), `dedalo-section-family-ts` (section reads + client render contract), `dedalo-ontology-ts` (ontology definition/provisioning), `dedalo-tree-ts` (thesaurus tree + shared tx/lock primitives), `dedalo-parity-debugging` (the oracle-diff workflow used by all of the above).
+`dedalo-relations-ts` (relation family + the full `component_dataframe` contract), `dedalo-observers-ts` (server-side observers / `set_dato_external`: since 2026-08-02 an edge fires because the OBSERVER declares it — reverse discovery through the ontology-wide subscription registry in `src/core/section/record/observer_subscriptions.ts`; the mirror value law + grow-only shrink fail-safe in `observers.ts`; the bounded, commit-only cascade; `scripts/observer_reconcile.ts`), `dedalo-section-family-ts` (section reads + client render contract), `dedalo-ontology-ts` (ontology definition/provisioning), `dedalo-tree-ts` (thesaurus tree + shared tx/lock primitives), `dedalo-parity-debugging` (the oracle-diff workflow used by all of the above).
 
 ## Writing the manual
 

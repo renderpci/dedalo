@@ -11,7 +11,7 @@ The relation family is being rewritten from the PHP monolith (`v7_php_frozen/mas
 
 ## Architecture — strangler-fig into `src/core/relations/`
 
-The old `src/core/resolve/read_rows.ts` monolith is **DELETED** (strangler-fig complete): its exports live in `src/core/section/read.ts` (`readSection`, `readComponentData`, `resolveSearchData`, `readSectionRows` — the shared `emitDdoData` lives here) and the save path in `src/core/section/record/save_component.ts` + `src/core/relations/save.ts`. Layering (no cycles): `relations/` imports `concepts/`, `ontology/`, `db/`, `search/search_related.ts`, `search/builders/*`; `section/read.ts` / `section/record/save_component.ts` / `search/conform.ts` import `relations/registry.ts`. Child recursion goes through the `emitDdo` CALLBACK handed into resolvers — so `relations/` never imports `section/read.ts`.
+The old `src/core/resolve/read_rows.ts` monolith is **DELETED** (strangler-fig complete): its exports live in `src/core/section/read.ts` (`readSection`, `readComponentData`, `resolveSearchData`, `readSectionRows` — the shared `emitDdoData` lives here) and the save path in `src/core/section/record/save_component.ts` + `src/core/relations/save.ts`. Layering (no cycles): `relations/` imports `concepts/`, `ontology/`, `db/`, `search/search_related.ts`, `search/builders/*`; `section/read.ts` / `section/record/save_component.ts` / `search/conform.ts` import `relations/registry.ts`. Child recursion goes through the `emitDdo` CALLBACK handed into resolvers — so `relations/` never imports `section/read.ts`. The one relations→section edge is RUNTIME-ONLY and deliberate: `deletePortalLocator` (`relations/save.ts:778`) dynamic-imports `section/record/observers.ts` and fires `propagateToObservers` post-COMMIT with the **REMOVED** locators, so the targets whose observer mirrors referenced them recompute. Keep it dynamic (a static import would create an SCC) and keep it post-commit (see **`dedalo-observers-ts`**).
 
 ```
 src/core/relations/
@@ -58,7 +58,7 @@ src/core/relations/
 ## Inverse-question engines (data-driven components own NO stored rows)
 
 - `children.ts`: `getChildren/countChildren/getChildrenRecursive` — inverse dd47 ("who declares me as parent?"), STRING section_ids, sibling-ordered via `resolveParentLinkIdKey` + `getInlineValueByIdKey`.
-- `related.ts`: transitive closure (dd620/dd467/dd621) with cycle cache.
+- `related.ts`: transitive closure (dd620 none / dd467 one inverse hop / dd621 full symmetric closure, typeRel read from `properties.config_relation.relation_type_rel`) with cycle cache. **`getStoredWithReferences` (:264) is load-bearing OUTSIDE relations**: it is the peer-expansion primitive of the observer `set_dato_external` value law — measured, weakening the dd621 closure to the stored bag loses 247,933 locators over 19,908 numisdata3 records. The dispatch is polymorphic on purpose (only a `component_relation_related` peer computes the closure). Touch it only with **`dedalo-observers-ts`** in hand.
 - `relation_index.ts` (`models/`): computed inverse dd96 ("who calls me", tag_id anchors); `mode:external` inverse (hierarchy40). Preserves pinned PHP quirks.
 - `datalist.ts`: select-family option lists — a FAITHFUL C `natsort` port (whitespace-skipping strnatcmp; "Petit-Aledón" before "Petit 1981"), multi-ddo `' | '` labels.
 
