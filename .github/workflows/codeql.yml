@@ -50,6 +50,6 @@ jobs:
           config-file: .github/codeql/codeql-config.yml
 
       - name: Analyze
-        uses: github/codeql-action/analyze@a2983b8bed1923f44751c5c43237f479442827b3 # v3
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           category: "/language:javascript-typescript"
