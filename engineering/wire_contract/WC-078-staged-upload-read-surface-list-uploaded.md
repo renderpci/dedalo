@@ -93,3 +93,30 @@ part-filename-only uploads all succeed; anonymous and cross-user reads of
 all 404 / are refused.
 
 ---
+
+## Addendum 2026-08-03
+
+`service_dropzone` — the client this entry aligned — has been **deleted**
+(`WC-2026-08-03-service-dropzone-folded-into-service-upload`). Three
+clarifications, appended rather than rewritten in place because the entry
+records what actually landed on 2026-07-30:
+
+1. **The read surface itself is UNCHANGED.** `list_uploaded_files`,
+   `delete_uploaded_file`, `file_data.thumbnail_url`, the CSRF form-field twin
+   and the `GET /dedalo/upload_tmp/…` route all stand exactly as described,
+   including the confinement chokepoint. Only the CALLER changed: it is now
+   `service_upload` in its `multiple:true` mode.
+2. **The `render_edit_service_dropzone.js:874` citations** (and the
+   "Client wire alignment (`service_dropzone`)" section's `paramName` /
+   `X-File-Name` / CSRF findings) are **provenance, not live pointers** — they
+   record where the mismatch was found in the code of the day. That file no
+   longer exists. The receiver-side tolerance they describe (accepting `file` as
+   a fallback part name, falling back to the multipart part's own filename) is
+   unchanged and still load-bearing.
+3. **"Error bodies gain an `error` string key" is REVERSED.** That key existed
+   solely because Dropzone 5's default renderer unwraps `.error`; with the
+   library gone it has no consumer. Rejections are now
+   `{result:false, msg, errors:[<string>]}` — and the 403 CSRF branch, which
+   this entry left carrying `error` with **no** `errors`, gained the array so it
+   is not left without a machine-readable error. Pinned by the key-set
+   assertions in `test/unit/media_upload_endpoint.test.ts`.
