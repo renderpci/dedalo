@@ -29,40 +29,15 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { NEW_IN_V7, V6_MIGRATION } from '../../src/config/migration_map.ts';
 import { extractDefines } from '../../src/config/php_defines.ts';
+import { envKeysReadInSrc } from '../helpers/env_key_scan.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'test', 'fixtures', 'v6_config');
 
-/**
- * Uppercase-snake string literals passed as the first argument of ANY call in
- * src/. That deliberately over-collects (it catches keys read through wrappers
- * like `bin('DEDALO_AV_FFMPEG_PATH', …)`, which a `readEnv\(`-only regex misses)
- * and the few non-env literals it sweeps up are named below.
- */
-const KEY_CALL = /[a-zA-Z_]\w*\s*\(\s*'([A-Z][A-Z0-9_]{2,})'/g;
-
-/** Uppercase-snake literals in src/ that are NOT env keys. */
-const NOT_ENV_KEYS = new Set([
-	'GMT', // date formatting
-	'NFD', // unicode normalization form
-	'SIGINT', // signal names
-	'SIGTERM',
-]);
-
-function envKeysReadInSrc(): Set<string> {
-	const keys = new Set<string>();
-	for (const file of new Glob('src/**/*.ts').scanSync(REPO_ROOT)) {
-		const source = readFileSync(join(REPO_ROOT, file), 'utf8');
-		for (const match of source.matchAll(KEY_CALL)) {
-			const key = match[1] as string;
-			if (!NOT_ENV_KEYS.has(key)) keys.add(key);
-		}
-	}
-	return keys;
-}
+// The scanner (regex + the named non-env literals) lives in test/helpers/env_key_scan.ts
+// so this gate and config_docs_tripwire cannot disagree about what "the engine reads".
 
 /** Every key the migration map believes the engine reads. */
 function keysTheMapKnows(): Set<string> {

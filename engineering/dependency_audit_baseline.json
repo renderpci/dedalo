@@ -16,12 +16,6 @@
 				"title": "adm-zip: Crafted ZIP file triggers 4GB memory allocation"
 			},
 			{
-				"id": 1130589,
-				"severity": "high",
-				"package": "brace-expansion",
-				"title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
-			},
-			{
 				"id": 1112706,
 				"severity": "low",
 				"package": "diff",

@@ -67,5 +67,8 @@
 	},
 	"peerDependencies": {
 		"typescript": "^7.0.2"
+	},
+	"overrides": {
+		"brace-expansion": "^2.1.4"
 	}
 }

@@ -25,35 +25,16 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Glob } from 'bun';
 import { CONFIG_CATALOG, DOMAINS, isOperatorFacing } from '../../src/config/catalog/index.ts';
 import type { CatalogEntry } from '../../src/config/catalog_types.ts';
 import { REQUIRED_CONFIG_KEYS } from '../../src/config/install_mode.ts';
 import { renderReferencePage, renderSampleEnv, spliceGenerated } from '../../src/config/render.ts';
+import { envKeysReadInSrc } from '../helpers/env_key_scan.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
-/**
- * The same scanner config_census_tripwire uses: ANY call whose first argument is an
- * uppercase-snake literal. It deliberately over-collects (it catches keys read through
- * local wrappers like `envNumber('DEDALO_RAG_CHUNK_TOKENS', 450)`, which a `readEnv(`-only
- * regex misses — and three such wrappers really did hide keys from an earlier draft of
- * this catalog).
- */
-const KEY_CALL = /[a-zA-Z_]\w*\s*\(\s*'([A-Z][A-Z0-9_]{2,})'/g;
-const NOT_ENV_KEYS = new Set(['GMT', 'NFD', 'SIGINT', 'SIGTERM']);
-
-function envKeysReadInSrc(): Set<string> {
-	const keys = new Set<string>();
-	for (const file of new Glob('src/**/*.ts').scanSync(REPO_ROOT)) {
-		const source = readFileSync(join(REPO_ROOT, file), 'utf8');
-		for (const match of source.matchAll(KEY_CALL)) {
-			const key = match[1] as string;
-			if (!NOT_ENV_KEYS.has(key)) keys.add(key);
-		}
-	}
-	return keys;
-}
+// The scanner (regex + the named non-env literals) lives in test/helpers/env_key_scan.ts
+// so this gate and config_census_tripwire cannot disagree about what "the engine reads".
 
 const entries = (): [string, CatalogEntry][] => Object.entries(CONFIG_CATALOG);
 
