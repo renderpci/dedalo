@@ -1,0 +1,65 @@
+{
+	"generated": "2026-08-03",
+	"note": "Accepted (known, triaged) dependency advisories. Regenerate with `bun run scripts/ci/audit.ts --update` and explain the delta in the commit message. A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts).",
+	"accepted": {
+		".": [
+			{
+				"id": 1124006,
+				"severity": "moderate",
+				"package": "@hono/node-server",
+				"title": "Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`)"
+			},
+			{
+				"id": 1123686,
+				"severity": "high",
+				"package": "adm-zip",
+				"title": "adm-zip: Crafted ZIP file triggers 4GB memory allocation"
+			},
+			{
+				"id": 1130589,
+				"severity": "high",
+				"package": "brace-expansion",
+				"title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
+			},
+			{
+				"id": 1124064,
+				"severity": "high",
+				"package": "fast-uri",
+				"title": "fast-uri vulnerable to host confusion via literal backslash authority delimiter"
+			},
+			{
+				"id": 1113686,
+				"severity": "high",
+				"package": "serialize-javascript",
+				"title": "Serialize JavaScript is Vulnerable to RCE via RegExp.flags and Date.prototype.toISOString()"
+			},
+			{
+				"id": 1119440,
+				"severity": "moderate",
+				"package": "serialize-javascript",
+				"title": "Serialize JavaScript has CPU Exhaustion Denial of Service via crafted array-like objects"
+			},
+			{
+				"id": 1124066,
+				"severity": "high",
+				"package": "sharp",
+				"title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591"
+			}
+		],
+		"publication/server_api/v2": [
+			{
+				"id": 1124006,
+				"severity": "moderate",
+				"package": "@hono/node-server",
+				"title": "Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`)"
+			},
+			{
+				"id": 1124064,
+				"severity": "high",
+				"package": "fast-uri",
+				"title": "fast-uri vulnerable to host confusion via literal backslash authority delimiter"
+			}
+		],
+		"publication/site_builder": []
+	}
+}
