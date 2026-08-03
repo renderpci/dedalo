@@ -33,6 +33,7 @@ import { type Rqo, callerDataframePairing, isTemporalSource } from '../concepts/
 import { isConsultationOnlySection } from '../concepts/section.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
+import { runWithRecordMemo } from '../db/record_memo.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -83,7 +84,16 @@ export interface ReadResult {
  * per resolved component ddo, deduplicated by context_key (tipo+section+mode,
  * first occurrence wins — PHP merge_unique_context).
  */
-export async function readSection(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
+export function readSection(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
+	// One read = one point-in-time view, so a matrix row fetched for one
+	// component is reused by every other component that wants it (see
+	// db/record_memo.ts — the component_info widgets otherwise re-read the same
+	// whole row once per declared path). The scope dies with the read; nothing
+	// on the write path opens it.
+	return runWithRecordMemo(() => readSectionScoped(rqo, principal));
+}
+
+async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
 	const data = await readSectionRows(rqo, principal);
 	const source = rqo.source ?? {};
 	const callerTipo = source.tipo as string;

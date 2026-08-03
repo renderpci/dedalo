@@ -22,6 +22,7 @@
  */
 
 import { type MatrixRecord, readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
+import { seedRecordMemo } from '../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import type { EmissionContext } from '../resolve/component_data.ts';
 
@@ -98,7 +99,12 @@ export async function prefetchRecords(
 		const records = await readMatrixRecordBatch(table, sectionTipo, [...ids]);
 		if (cache.size > RECORD_CACHE_LIMIT) cache.clear();
 		for (const id of ids) {
-			cache.set(`${sectionTipo}/${id}`, records.get(id) ?? null);
+			const record = records.get(id) ?? null;
+			cache.set(`${sectionTipo}/${id}`, record);
+			// Hand the same row to the read-scoped memo, so the component_info
+			// widgets (which read rows through it, not through this cache) reuse
+			// the batch instead of re-fetching each row one at a time.
+			seedRecordMemo(table, sectionTipo, id, record);
 		}
 	}
 }

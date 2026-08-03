@@ -48,6 +48,7 @@ const { listBackgroundJobs, resetBackgroundJobs, getBackgroundJob } = await impo
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { invalidateAllToolCaches } from '../../src/core/tools/cache.ts';
 import {
 	DD64_SECTION_TIPO,
 	TIPO,
@@ -109,11 +110,20 @@ beforeAll(async () => {
 	await cleanScratch();
 	await seedScratchTool(SCRATCH_ACTIVE, true);
 	await seedScratchTool(SCRATCH_INACTIVE, false);
+	// These rows are seeded with RAW SQL, so they bypass the write chokepoint
+	// that would normally fire the save event — exactly like the registry's own
+	// writeRegistryRecord path, which is why importTools invalidates for itself.
+	// The active-registry rows are cached (registry.ts activeToolRowsCache), and
+	// a suite that ran earlier in this process may already have warmed it, so
+	// without this the scratch tools are invisible to every gate below.
+	invalidateAllToolCaches();
 	resetBackgroundJobs();
 });
 
 afterAll(async () => {
 	await cleanScratch();
+	// …and drop them again, so a later suite never sees these ghost tools.
+	invalidateAllToolCaches();
 	resetBackgroundJobs();
 	if (previousProcessesDir === undefined) {
 		// biome-ignore lint/performance/noDelete: assigning undefined coerces to the STRING "undefined"

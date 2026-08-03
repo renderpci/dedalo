@@ -88,6 +88,11 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// resolved per call in getElementTools, which also builds a fresh
 	// simpleContext per call — nothing cache-owned reaches a caller.
 	'core/tools/registry.ts:registeredToolsCache',
+	// The RAW rows the line above (and every other registry reader) is built
+	// from — same lifecycle, cleared by the same resetRegistryCache(). Raw rows
+	// only: the lang-dependent label is resolved per request by the callers, so
+	// nothing lang-bearing is cache-owned.
+	'core/tools/registry.ts:activeToolRowsCache',
 	'core/tools/paths.ts:rootsCache',
 	'core/tools/config.ts:defaultConfigCache',
 	'core/tools/config.ts:installConfigCache',

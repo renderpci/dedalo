@@ -57,7 +57,16 @@ PostgreSQL                      matrix tables (typed JSONB columns)
   single-connection semantics via `AsyncLocalStorage` and flatten-nesting (an
   inner `withTransaction` joins the ambient transaction).
 - **Matrix record read** — `readMatrixRecord` returns one row's typed JSONB
-  columns both parsed and as raw `::text` twins for parity diffing (`matrix.ts`).
+  columns both parsed and as raw `::text` twins for parity diffing;
+  `readMatrixRecordBatch` answers a whole set of ids with one `ANY()` query
+  (`matrix.ts`).
+- **Read-scoped row memo** — within ONE section read, a row is fetched from the
+  database once however many components ask for it (`record_memo.ts`). The memo
+  lives in a scope opened by the section read and dies with it, so it needs no
+  invalidation: it can only serve a row that same read already saw. The page-level
+  batch loaders seed it, so a component asking for a row the page already fetched
+  costs no round trip. It is never active on the write path — a save legitimately
+  re-reads a row it just modified.
 - **Matrix record write** — the typed write verbs over the `matrix*` tables:
   `updateMatrixRecord` (whole-column upsert), `updateMatrixKeysData` /
   `updateMatrixKeyData` (surgical per-key `jsonb_set_lax`), the item-id

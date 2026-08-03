@@ -54,7 +54,9 @@ import {
 import { invalidateAllToolCaches } from '../../src/core/tools/cache.ts';
 import { loadToolModules } from '../../src/core/tools/loader.ts';
 import {
+	DD64_SECTION_TIPO,
 	PROFILE_SECTION_TIPO,
+	TIPO,
 	TOOLS_CONFIG_SECTION_TIPO,
 	TOOLS_REGISTER_SECTION_TIPO,
 } from '../../src/core/tools/ontology_map.ts';
@@ -173,6 +175,80 @@ describe('save_event routes the three tool-owning sections into invalidateAllToo
 			await fireSaveEvent(sectionTipo);
 			expect({ sectionTipo, cached: await stillCached() }).toEqual({ sectionTipo, cached: true });
 		}
+	});
+});
+
+/**
+ * The registry ROW cache (registry.ts activeToolRowsCache) is the one tool cache
+ * with an observable identity, so it is the one that can be proved end-to-end
+ * rather than at the source level.
+ *
+ * It exists because fetchActiveToolRows() is a constant query that every reader
+ * calls — media_icons once per rendered list row, which cost 43ms per oh1 list
+ * read. Caching it moved gate 3 ("the tool must be ACTIVE in dd1324") from a
+ * live read to a cached one, so the invalidation is now load-bearing for a
+ * SECURITY gate: a deactivated tool that stays cached stays dispatchable. That
+ * is asserted here against the real save-event channel, not a manual reset.
+ */
+describe('the active-registry row cache is invalidated by a real dd1324 write', () => {
+	const SCRATCH_TOOL_ID = 999_733;
+
+	async function deleteScratchTool(): Promise<void> {
+		await sql`
+			DELETE FROM matrix_tools
+			WHERE section_tipo = ${TOOLS_REGISTER_SECTION_TIPO} AND section_id = ${SCRATCH_TOOL_ID}
+		`;
+	}
+
+	afterAll(async () => {
+		await deleteScratchTool();
+		invalidateAllToolCaches();
+	});
+
+	test('a tool added and then removed becomes visible, and invisible, on the save event', async () => {
+		await deleteScratchTool();
+		invalidateAllToolCaches();
+
+		const { getActiveToolMetaBySectionId } = await import('../../src/core/tools/registry.ts');
+		expect((await getActiveToolMetaBySectionId()).has(SCRATCH_TOOL_ID)).toBe(false);
+
+		// Raw insert: the registry's own writer bypasses the section chokepoint
+		// too (writeRegistryRecord → matrix_write), which is why importTools
+		// invalidates for itself.
+		await sql.unsafe(
+			`INSERT INTO matrix_tools (section_tipo, section_id, string, relation)
+			 VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)`,
+			[
+				TOOLS_REGISTER_SECTION_TIPO,
+				SCRATCH_TOOL_ID,
+				JSON.stringify({ [TIPO.NAME]: [{ id: 1, value: 'tool_zz_cache_probe' }] }),
+				JSON.stringify({
+					[TIPO.ACTIVE]: [
+						{
+							id: 1,
+							type: 'dd151',
+							section_id: '1',
+							section_tipo: DD64_SECTION_TIPO,
+							from_component_tipo: TIPO.ACTIVE,
+						},
+					],
+				}),
+			],
+		);
+
+		// The cache is REAL: without invalidation the fresh row stays invisible.
+		// (This is the staleness the cache buys — stated, not hidden.)
+		expect((await getActiveToolMetaBySectionId()).has(SCRATCH_TOOL_ID)).toBe(false);
+
+		// …and the production channel clears it.
+		await fireSaveEvent(TOOLS_REGISTER_SECTION_TIPO);
+		expect((await getActiveToolMetaBySectionId()).has(SCRATCH_TOOL_ID)).toBe(true);
+
+		// The same must hold for DEACTIVATION, which is the direction that matters
+		// for the gate: a removed tool must stop being served.
+		await deleteScratchTool();
+		await fireSaveEvent(TOOLS_REGISTER_SECTION_TIPO);
+		expect((await getActiveToolMetaBySectionId()).has(SCRATCH_TOOL_ID)).toBe(false);
 	});
 });
 
