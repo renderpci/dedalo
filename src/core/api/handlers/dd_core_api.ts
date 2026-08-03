@@ -17,7 +17,11 @@ import { isConsultationOnlySection } from '../../concepts/section.ts';
 import { getSectionTipos } from '../../concepts/sqo.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
 import { routeSectionRead } from '../../section/read_facade.ts';
-import { type ChangedDataItem, saveComponentData } from '../../section/record/save_component.ts';
+import {
+	type ChangedDataItem,
+	isLangSlicedModel,
+	saveComponentData,
+} from '../../section/record/save_component.ts';
 import {
 	type Principal,
 	getPermissions,
@@ -275,8 +279,28 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// envelope; returning the bare items array left the client's .find()
 		// empty, so the echoed value never round-tripped (client test suite:
 		// "<component>. Data save using API").
-		const { buildDataItem } = await import('../../resolve/component_data.ts');
-		const savedItems = Array.isArray(outcome.data) ? outcome.data : [];
+		const { buildDataItem, filterItemsByLang } = await import('../../resolve/component_data.ts');
+		// LANG SLICE — the echo must be the READ's twin. saveComponentData returns
+		// the component's FULL item array (every language in one flat array, its
+		// documented contract); the edit read emits only the request-lang slice
+		// (resolveComponentValue). Echoing the full array made the client's
+		// post-save `self.data = result.data.find(…)` swap a one-language entries
+		// array for all of them — visible in the ontology tree, whose inline term
+		// editor relabels the node by joining data.entries (ts_object.js), so a
+		// term edit repainted "فهرس Inventari Katalog …" (2026-08-03). Same
+		// predicate + effective lang as the write engine itself (isLangSlicedModel
+		// / translatable-or-iri, PHP get_element_lang).
+		const savedLang = source.lang ?? 'lg-nolan';
+		let savedItems = Array.isArray(outcome.data) ? outcome.data : [];
+		{
+			const { getModelByTipo, getTranslatableByTipo } = await import('../../ontology/resolver.ts');
+			const echoModel = await getModelByTipo(source.tipo);
+			if (echoModel !== null && isLangSlicedModel(echoModel)) {
+				const translatable = await getTranslatableByTipo(source.tipo);
+				const echoLang = translatable || echoModel === 'component_iri' ? savedLang : 'lg-nolan';
+				savedItems = filterItemsByLang(savedItems, echoLang);
+			}
+		}
 		// Relation saves echo context too (populated in the block below); [] for scalars.
 		let savedContext: unknown[] = [];
 		let savedDataItem = buildDataItem(
