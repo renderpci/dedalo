@@ -1,0 +1,49 @@
+# Dependabot — the supply side of the dependency ratchet (scripts/ci/audit.ts).
+#
+# The ratchet tells us when a NEW advisory lands on what we already ship; Dependabot is
+# what makes the fix arrive as a reviewable PR instead of a chore nobody schedules. The
+# two are complementary: without the ratchet an update PR is optional forever; without
+# the updates the ratchet's baseline only ever grows.
+#
+# THREE npm ECOSYSTEMS, because this repo holds three packages with three lockfiles —
+# the root engine and the two isolated publication daemons. Dependabot does not discover
+# them; a directory left out of this file is a lockfile nobody updates (the same shape of
+# hole that left publication/server_api/v2 out of CI until 2026-08-03).
+#
+# `github-actions` is here because every `uses:` in .github/ is SHA-pinned (rule 8 of
+# test/unit/ci_workflow_tripwire.test.ts). A pinned action never updates itself — the pin
+# is a security property that would decay into "we run a two-year-old action" without
+# something proposing the bumps. Dependabot rewrites the SHA and the trailing `# vN`.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the routine noise; anything with a CVE still comes on its own.
+      dev-dependencies:
+        dependency-type: development
+
+  - package-ecosystem: npm
+    directory: "/publication/server_api/v2"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: npm
+    directory: "/publication/site_builder"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3

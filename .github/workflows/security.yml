@@ -1,0 +1,72 @@
+# SECRET SCANNING — hosted tier (engineering/CI.md).
+#
+# The engine's credentials live in `../private/.env`, outside the repo by design, and
+# `config_env_tripwire` keeps `process.env.` out of everything but src/config/. Neither
+# of those stops the accident this job is for: a key pasted into a doc, a token left in
+# a debug script, a fixture harvested with a live cookie in it. Nothing in the repo
+# looked for that until 2026-08-03.
+#
+# TWO DEPTHS, DELIBERATELY:
+#   working tree (every PR, ~7s) — is a secret in the code we are about to merge?
+#   full history (weekly)        — is a secret in the 766 commits behind us? A secret
+#                                  committed and then "removed" in a later commit is
+#                                  still published; only the history scan sees it.
+#
+# PUBLIC-REPO POSTURE: ubuntu-latest, no secrets, no self-hosted runner (rule 5 of
+# test/unit/ci_workflow_tripwire.test.ts). The scanner runs from a DIGEST-pinned image:
+# a tag is mutable, and this container reads the whole repository.
+#
+# Findings are printed REDACTED. A hit means: rotate the credential first (it is public
+# the moment it is pushed), then remove it from the tree and, if it was ever committed,
+# from history. Do NOT silence it by widening .gitleaks.toml.
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    # Mondays 02:00 UTC. GitHub pauses schedules after ~60 days of repo inactivity.
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+# Least privilege for GITHUB_TOKEN: this job reads the tree and reports; it writes
+# nothing back. Enforced by rule 7 of test/unit/ci_workflow_tripwire.test.ts.
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # gitleaks v8.30.1, pinned by digest (the tag itself is mutable).
+  GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # 0 = full history: the weekly scan below needs the commits, and a shallow
+          # clone would make it pass over the thing it exists to find.
+          fetch-depth: 0
+
+      - name: Working-tree scan (every run)
+        run: |
+          docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" \
+            dir /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1
+
+      # Full history is minutes, not seconds — worth it weekly, wasteful per PR.
+      - name: Full-history scan (scheduled / manual)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          # git refuses to read a repo owned by another uid ("dubious ownership"): the
+          # runner checkout is uid 1001, the container is root. Marking it safe INSIDE
+          # the container is the narrow fix; the alternative (chown -R) rewrites the
+          # working tree the next step would scan.
+          docker run --rm -v "$PWD:/repo" --entrypoint sh "$GITLEAKS_IMAGE" -c \
+            'git config --global --add safe.directory /repo && \
+             gitleaks git /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1'

@@ -1,0 +1,22 @@
+# CodeQL scope (.github/workflows/codeql.yml).
+name: "Dédalo v7 — engine, client and tools"
+
+# security-extended adds the lower-precision security queries on top of the default set.
+# Worth it here: this is an advisory analysis (it gates nothing), so the cost of a weak
+# alert is a dismissal, while the cost of a missed one is the whole point of running it.
+queries:
+  - uses: security-extended
+
+# What is NOT ours to analyse. Every exclusion is third-party bytes we ship verbatim,
+# generated output, or recorded data — never engine, client or tool SOURCE. Alerts in
+# vendored code are unactionable (we do not edit those files) and would bury the ones
+# that are, which is the failure mode that makes teams stop reading the Security tab.
+paths-ignore:
+  - client/dedalo/lib          # third-party client libs (registry-served, not tracked)
+  - tools/tool_lang/translators/browser_transformer/lib   # vendored transformers.js bundle
+  - publication/**/docu/ui     # vendored API-docs UI (swagger/scalar bundles)
+  - test/parity/fixtures       # recorded oracle payloads — data, not code
+  - docs_site                  # generated mkdocs output (gitignored, belt-and-braces)
+  - "**/*.min.js"
+  - "**/*.min.css"
+  - node_modules

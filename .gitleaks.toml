@@ -1,0 +1,66 @@
+# Secret-scanning config (gitleaks) — see .github/workflows/security.yml.
+#
+# The engine's real secrets live in `../private/.env`, OUTSIDE the repo by design, and
+# nothing in the tree may read `process.env` outside src/config/ (config_env_tripwire).
+# This scan is the belt to that braces: it catches the credential that arrives by
+# accident — pasted into a doc, committed in a fixture, left in a debug script.
+#
+# EXTEND THE DEFAULT RULES, NEVER REPLACE THEM: `[extend] useDefault = true` keeps the
+# ~170 upstream provider rules. Only the two verified false positives below are allowed
+# through, each scoped as tightly as the finding (a path OR a literal), because a broad
+# allowlist is how a secret scanner ends up scanning nothing.
+
+title = "Dédalo v7"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Vendored third-party bundles we ship verbatim — minified base64 blobs read as high-entropy keys, and we do not edit these bytes."
+paths = [
+  '''tools/tool_lang/translators/browser_transformer/lib/''',
+  '''client/dedalo/lib/''',
+  '''publication/.*/docu/ui/''',
+]
+
+[[allowlists]]
+description = "Documentation placeholders. Scoped to the literal example values, not to docs/ — a REAL key pasted into the manual must still fail."
+regexes = [
+  '''key_live_abc123''',
+]
+
+# ---------------------------------------------------------------------------
+# HISTORY ONLY (the weekly full-history scan; none of this exists in the tree).
+#
+# The 2026-08-03 first full run reported 178 hits over 38,980 commits and 3.8 GB.
+# Every one was triaged; NONE was a live Dédalo credential. What they were:
+#   - composer/npm VENDOR trees from the PHP era (`vendor/`, `lib/`) — library test
+#     fixtures: onelogin/php-saml example private keys, react's localhost.pem,
+#     leaflet's docs full of Mapbox demo tokens. Third-party bytes, third-party
+#     example keys, deleted from the tree at the cutover.
+#   - `core/component_geolocation/js/component_geolocation.js` — Mapbox `pk.` tokens
+#     and a CloudMade key inside COMMENTED-OUT example URLs (2020, 2023). Mapbox `pk.`
+#     tokens are public by design (they ship in client JS and are restricted by
+#     referrer), and CloudMade has not existed for a decade. Retired PHP client.
+# Recorded here rather than in a report, because the alternative is a weekly job that
+# is permanently red and therefore permanently unread.
+# ---------------------------------------------------------------------------
+[[allowlists]]
+description = "Vendored PHP/JS dependency trees that existed only before the TS cutover — third-party example keys, deleted from the current tree."
+paths = [
+  '''^vendor/''',
+  '''^lib/''',
+  '''^core/component_geolocation/js/component_geolocation\.js$''',
+]
+
+[[allowlists]]
+description = "Entropy false positives on values that are not secrets: AI MODEL NAMES in tool_assistant's register.json (`qwen3.6-35b-a3b-mlx` reads as a key to any entropy rule), and a migration flag quoted in a skill doc."
+# regexTarget = "match" — WITHOUT this, a regex here is tested against the SECRET
+# alone (gitleaks' default), so an anchor like `api_model":` can never match and the
+# allowlist silently does nothing. That is precisely how the first draft of this block
+# left 5 findings standing while looking correct.
+regexTarget = "match"
+regexes = [
+  '''api_model"\s*:\s*"[A-Za-z0-9._-]+"''',
+  '''legacy_unmigrated=\d+''',
+]
