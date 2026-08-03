@@ -1,11 +1,11 @@
 # Events
 
-> See also: [Browser client](client/index.md) · [Glossary](glossary.md)
+> See also: [Browser client](client/index.md) · [Server-side observers](system/observers.md) · [Glossary](glossary.md)
 
 Dédalo implements an event manager used across all ontology definitions (areas, sections, components, tools, services, etc). The event manager is an observer/observable pattern, but the connection between instances is made with tokens. The event manager centralizes all events fired by observables and runs some functions or methods of the observers.
 
 !!! note "Client vs server"
-    Everything below through **Active events** documents the **client-side** `event_manager` — pure browser JavaScript (`core/common/js/event_manager.js`) served as-is by the TS server. The TS server additionally has its own, unrelated **server-side observer** mechanism — see [Server-side observers](#server-side-observers-ts) below.
+    Everything below through **Active events** documents the **client-side** `event_manager` — pure browser JavaScript (`core/common/js/event_manager.js`) served as-is by the server. The server additionally has its own **server-side observer** mechanism, driven by the same `properties.observe` configuration but running on save instead of in the tab — see [Server-side observers](#server-side-observers) below.
 
 ## Event definition
 
@@ -95,38 +95,34 @@ or the short format with the id_base of the observable component:
 event_manager.publish(event +'_'+ self.id_base, perform)
 ```
 
-## Server-side observers (TS)
+## Server-side observers
 
-The `properties.observe` ontology configuration above drives two different
-mechanisms, one per side:
+One ontology key, `properties.observe`, drives two mechanisms that share nothing
+but their configuration:
 
-- **Client-side** (documented above): the browser `event_manager` fires the
-  observer component's callback live, in the open tab — pure UI reactivity.
-- **Server-side**: the server recomputes an observer component's stored
-  value on save, for observer configs that declare a `server` block (most of
-  the 66 `observe` configs on this ontology are client-only and have no
-  `server` key, so there is nothing for the server to do). This runs through
-  `propagateToObservers()` in `src/core/api/handlers/observers.ts`, called
-  after a component save completes.
+- **Client-side** — everything documented above. An entry's `client` half makes
+  the browser `event_manager` fire the observer component's callback live, in
+  the open tab. Pure UI reactivity; nothing is stored.
+- **Server-side** — an entry's `server` half makes the server **recompute** the
+  observer after the observed component's save commits: an external mirror is
+  rebuilt, an info/state widget is recomputed into a Time Machine row, or a
+  relay re-enters propagation so a dependency chain continues. This runs on
+  every save door (editor, import, API tool, duplicate), not only on an
+  interactive edit.
 
-  Coverage (measured against the live ontology): the dominant server shape —
-  `{config: {use_observable_dato: true}, perform: {function: 'set_dato_external'}}`
-  (the `hierarchy93` ← `rsc387` family) — recomputes, for every target the
-  just-saved data points at, that target's observer component as *every
-  record that references the target* through
-  `properties.source.component_to_search` (scoped to
-  `properties.source.section_to_search`), preserving existing entries in
-  stored order and appending new ones with the next item id. `component_info`
-  observers (including the state/calculation aliases) also recompute: for a
-  `server.filter` config the server resolves the filter against the
-  just-saved record's locator and recomputes the observer's widgets on every
-  matching record; for `server.filter === false` it recomputes the widgets on
-  the saved record itself. `server.filter === false` with no `perform`
-  function is a no-op and is skipped outright. Any other server shape (e.g. a
-  `server.filter` search paired with a non-default `perform` function) is
-  **ledgered, not guessed** — it logs a `console.error` and skips rather than
-  writing an unverified value. See the module's header comment for the exact
-  coverage ledger.
+The two halves are independent: an entry may carry either, both or neither, and
+both are common: on the ontology this manual is written against, 60 of the 136
+`observe` entries are client-only and the other 76 carry a `server` half.
+
+The one thing worth knowing here, because it is the opposite of the client side:
+**the server edge is declared by the observer alone.** The observed component
+does not have to name its watchers, and the `properties.observers` array that
+used to be required for that is now legacy.
+
+Everything else — which records each observer recomputes on, the value law of
+`set_dato_external`, the grow-only fail-safe, the bounded cascade, and how to
+diagnose an observer that did not fire — is on its own page:
+**[Server-side observers](system/observers.md)**.
 
 ## Active events
 

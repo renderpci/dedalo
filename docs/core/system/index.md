@@ -30,6 +30,7 @@ system and the publication system, read the
 | [media_engine](media_engine.md) | Media | Media processing layer — stateless `Ffmpeg`/`ImageMagick` wrappers that shell out to transcode, resize, rasterize, probe and derive files for the media components. |
 | [search](search.md) | Search &amp; API | Query engine — compiles a Search Query Object ([SQO](../sqo.md)) into a single prepared PostgreSQL statement over the JSONB `matrix_*` tables and returns an iterable result. |
 | [api](api.md) | Search &amp; API | Single HTTP entry point of the work system — decodes a Request Query Object ([RQO](../rqo.md)), runs the security gates, dispatches to a `dd_*_api` handler and returns the standard JSON envelope. |
+| [Server-side observers](observers.md) | Write cascade | Save-time propagation — components that declared an interest in a saved component recompute after the save commits: external mirrors (`set_dato_external`), info/state widget recomputes and relay chains, discovered from `properties.observe` alone. |
 | [tm_record](tm_record.md) | Versioning | Time Machine (`dd15`) runtime object — one historical version of a component/section change in the flat `matrix_time_machine` table, with read-only `tm` mode and restore. |
 | [backup](backup.md) | Ops | Dumps and lists the PostgreSQL work database via a version-matched `pg_dump`, driven by the `make_backup` maintenance widget. |
 | [Activity log](logger.md) | Ops | The user-activity audit trail: one structured row per state-changing action, appended to `matrix_activity`. |

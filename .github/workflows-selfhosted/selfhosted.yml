@@ -30,6 +30,14 @@ on:
   #   pull_request:            # for `verify`
   #   push: { branches: [master] }   # for `full`
 
+# Least privilege for GITHUB_TOKEN: without this block a workflow inherits the
+# REPOSITORY default, which on an older repo is read/WRITE on contents, packages,
+# issues and pull-requests — ambient push rights handed to every step, including a
+# third-party action. None of these jobs writes anything back to the repo.
+# Enforced by rule 7 of test/unit/ci_workflow_tripwire.test.ts.
+permissions:
+  contents: read
+
 concurrency:
   group: selfhosted
   cancel-in-progress: false
@@ -43,7 +51,7 @@ jobs:
       DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
       DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0 # verify.ts needs the merge-base vs origin/master
       - name: Link sibling paths (../private, PHP tree, client lib)
@@ -55,7 +63,7 @@ jobs:
       - name: Verify branch vs origin/master
         shell: bash # explicit: enables pipefail so tee cannot mask a red exit
         run: bun run scripts/verify.ts --base origin/master 2>&1 | tee verify.log
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: verify-log
@@ -69,7 +77,7 @@ jobs:
       DIFFUSION_JOBS_TABLE: dedalo_ts_test_ci_diffusion_jobs
       DIFFUSION_ACTIVITY_TABLE: dedalo_ts_test_ci_activity_diffusion
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Link sibling paths (../private, PHP tree, client lib)
         run: bash scripts/ci/link_siblings.sh
       - name: Runner preconditions (bun pin, env, service probes)
@@ -79,7 +87,7 @@ jobs:
       - name: Full suite (unit + parity, frozen-fixture oracle)
         shell: bash
         run: bun test test/unit test/parity 2>&1 | tee full-suite.log
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: full-suite-log

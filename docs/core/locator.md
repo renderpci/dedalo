@@ -251,7 +251,7 @@ graph LR
     C --> D["descriptors: from_component_tipo, from_section_tipo, from_section_id, id_key"]
 ```
 
-`src/core/search/search_related.ts` (`findInverseReferences()`) does this scan — used e.g. by the delete path and by the server-side observer engine (`src/core/api/handlers/observers.ts`) to recompute an "external relation" component's value from its live inverse references.
+`src/core/search/search_related.ts` (`findInverseReferences()`) does this scan — used e.g. by the delete path and by the [server-side observer engine](system/observers.md) (`src/core/section/record/observers.ts`) to recompute an "external relation" component's value from its live inverse references.
 
 This drives referential-integrity cleanup on delete (`src/core/section/record/delete_record.ts`) and the inverse view of `relation_list`.
 

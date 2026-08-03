@@ -324,8 +324,9 @@ options: `array` of observer configuration objects
 
 Standard component observer wiring (see [index.md](index.md#observers-and-observables)).
 On the transcription node `observe` subscribes to the related "original language"
-selector (`set_lang_value` → `change_lang`), and `observers` (server-side only)
-lists the components that watch this one.
+selector (`set_lang_value` → `change_lang`). The `observers` array is the legacy
+mirror list of components watching this one; it no longer registers an edge —
+see [Server-side observers](../system/observers.md).
 
 ### Output formatting
 

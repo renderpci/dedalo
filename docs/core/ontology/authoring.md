@@ -314,32 +314,43 @@ CSS-property objects**. The client (`client/dedalo/core/page/js/css.js`,
     {"width": "25%"}}}`). Author css in `properties.css`; leave `propiedades`
     alone.
 
-### `observers`
+### `observe` and `observers`
 
-`properties.observers` declares **server-side reactive fan-out**: after the
-observed component saves, Dédalo recomputes the listed observer components.
-`propagateToObservers()` (`src/core/api/handlers/observers.ts`) runs the
-post-save cascade, driven from `src/core/section/record/save_component.ts`:
+`properties.observe` declares **server-side reactive fan-out**, and it is
+declared on the **observer** — the component that wants to be recomputed. Each
+entry names one watched component and may carry a `client` half (browser
+reactivity) and a `server` half (the post-save recompute):
 
 ```jsonc
 {
-    "observers": [
-        { "section_tipo": "numisdata3", "component_tipo": "numisdata595" }
+    "observe": [
+        {
+            "component_tipo": "numisdata57",
+            "server": { "filter": { "$and": [ /* an SQO clause */ ] } }
+        }
     ]
 }
 ```
 
-Each entry names a `section_tipo` + `component_tipo` to refresh; the observer's
-own `observe` config (also in its `properties`) decides which records to update
-and how. Only the actively-edited section's result is sent back to the client;
+An entry with a `server` **object** is the whole registration: after the watched
+component saves, the engine finds its watchers in an ontology-wide subscription
+registry and recomputes each of them, driven from
+`src/core/section/record/save_component.ts`. The watched component declares
+nothing. Only the actively-edited section's result is sent back to the client;
 the rest are saved silently.
 
-Most observer configs on a typical ontology are **client-only** (no `server`
-key), so nothing runs on the server for them. The server-side shapes that are
-implemented are the `{config: {use_observable_dato}, perform: set_dato_external}`
-family and the `component_info` observers (both `filter: {SQO}` and
-`filter: false` forms). Any other `server.filter` + `perform` shape is a logged
-skip — never guessed.
+`properties.observers` — the mirror array on the **watched** component,
+`[{section_tipo, component_tipo}]` — is **legacy**. It is no longer what makes
+an edge fire; it survives only to scope an `observe` entry whose
+`component_tipo` is the `"all"` wildcard, and to say which section's records an
+edge covers when one component is reused across several sections.
+
+The server-side shapes that are implemented are the
+`{config: {use_observable_dato}, perform: set_dato_external}` family, the
+`component_info` observers (both `filter: {SQO}` and `filter: false` forms), and
+the no-perform relay. Any other `server.filter` + `perform` shape is a logged
+skip — never guessed. Full rules, counters and diagnostics:
+[Server-side observers](../system/observers.md).
 
 ### Other common keys
 

@@ -26,6 +26,21 @@
  *      inert, in .github/workflows-selfhosted/ (GitHub executes only
  *      .github/workflows/) for a PRIVATE mirror. This was prose in CI.md and
  *      prose does not stop a paste; now it is a gate.
+ *   7. LEAST PRIVILEGE (2026-08-03) — every workflow declares a top-level
+ *      `permissions:` block. With none, the job inherits the REPOSITORY default,
+ *      which on a repo created before GitHub changed the default is read/WRITE on
+ *      contents — ambient push rights granted to every step, including third-party
+ *      actions, in jobs that write nothing back.
+ *   8. PINNED ACTIONS (2026-08-03) — every `uses:` names a 40-hex commit SHA, with
+ *      the human version in a trailing comment. `@v5` is a MOVING TAG the action's
+ *      owner can repoint at any commit: the pin is the difference between "we chose
+ *      this code" and "we run whatever that repo publishes today", and the deploy
+ *      workflow hands one of these actions an SSH key.
+ *
+ * SCANNERS THAT ARE NOT GATED HERE, deliberately: CodeQL (.github/workflows/codeql.yml)
+ * and the secret scan (.github/workflows/security.yml) are third-party analyses whose
+ * rulesets we do not control. Their WIRING is checked by the two rules above like any
+ * other workflow; their FINDINGS are not this file's business.
  *
  * EVERY path this gate reads is version-controlled, so it runs on a bare clone.
  * The index moved out of rewrite/LEDGER.md on 2026-07-11 for exactly that
@@ -181,6 +196,50 @@ describe('CI workflow tripwire', () => {
 			stray,
 			'Workflow in .github/workflows-selfhosted/ that targets no self-hosted runner — if it can run hosted, it belongs in .github/workflows/ where it will actually execute:',
 		).toEqual([]);
+	});
+
+	// Rule 7 — least privilege. Binds to BOTH tiers: the self-hosted jobs are the ones
+	// with real reach (they run on the data host), so an inherited write token there is
+	// worse, not better.
+	test('every workflow declares a top-level permissions block', () => {
+		const offenders = allWorkflows
+			.filter(({ src }) => !/^permissions:/m.test(src))
+			.map(({ rel }) => rel);
+		expect(
+			offenders,
+			'A workflow with no top-level `permissions:` inherits the REPOSITORY default GITHUB_TOKEN scope — historically read/write on contents, i.e. push rights handed to every step of a job that only reads. Declare what the job actually needs (`permissions: {contents: read}` for all of ours except codeql.yml, which writes code-scanning alerts):',
+		).toEqual([]);
+	});
+
+	// Rule 8 — supply chain. A tag is mutable; a SHA is the thing we reviewed.
+	test('every action is pinned to a commit SHA, never a moving tag', () => {
+		const USES = /^\s*(?:-\s*)?uses:\s*(\S+)/gm;
+		const offenders: string[] = [];
+		for (const { rel, src } of allWorkflows) {
+			for (const [, ref] of src.matchAll(USES)) {
+				const value = ref as string;
+				// Local (`./…`) and container (`docker://…`) references are not fetched from
+				// a third-party repo at run time; everything else is `owner/repo@ref`.
+				if (value.startsWith('./') || value.startsWith('docker://')) continue;
+				const at = value.lastIndexOf('@');
+				const pin = at === -1 ? '' : value.slice(at + 1);
+				if (!/^[0-9a-f]{40}$/.test(pin)) offenders.push(`${rel}: uses: ${value}`);
+			}
+		}
+		expect(
+			offenders,
+			'A GitHub action referenced by tag (`@v5`) runs whatever commit that tag points at TODAY — the action owner, or anyone who compromises that account, can repoint it. Pin the 40-hex SHA and keep the version in a trailing comment (`uses: actions/checkout@fbc6f39… # v5`); Dependabot updates both. .github/workflows-selfhosted/deploy.yml hands one of these an SSH deploy key:',
+		).toEqual([]);
+	});
+
+	// The secret scanner's config is the one place where "make the alert go away" and
+	// "fix the leak" look identical in a diff. Keep the default ruleset load-bearing.
+	test('the gitleaks config extends the default ruleset instead of replacing it', () => {
+		const src = read('.gitleaks.toml');
+		expect(
+			/^\s*useDefault\s*=\s*true\s*$/m.test(src),
+			'.gitleaks.toml must set `[extend] useDefault = true`. Without it, our two allowlists REPLACE ~170 upstream provider rules and the scan reports a clean repo because it stopped looking — and GitLab loads this same file wholesale through .gitlab/secret-detection-ruleset.toml, so the blindness would be on both platforms at once.',
+		).toBe(true);
 	});
 
 	test('.gitlab-ci.yml oven/bun image tag equals the .bun-version pin', () => {

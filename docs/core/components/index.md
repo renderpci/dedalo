@@ -584,7 +584,7 @@ Dédalo uses two separate configurations to set up the observer/observable space
 
 ### Server context
 
-When a component is set as observable in server context, any change to its data is sent to the observer. The observer component can be configured to take actions such as updating values or changing its own data depending on the value of the observable component. This runs in `src/core/api/handlers/observers.ts`, invoked from the save path (`src/core/section/record/save_component.ts`). Coverage is partial and honestly ledgered: the dominant server config (`use_observable_dato` → `set_dato_external`, the hierarchy `external` recompute) is ported; other `perform` functions are logged and skipped rather than guessed.
+When a component is set as observable in server context, any change to its data is sent to the observer. The observer component can be configured to take actions such as updating values or changing its own data depending on the value of the observable component. The edge is declared by the **observer**, in its own `properties.observe`; the observable declares nothing. This runs in `src/core/section/record/observers.ts`, invoked from the save path (`src/core/section/record/save_component.ts`). Coverage is partial and honestly ledgered: `set_dato_external`, the `component_info` recompute and the no-perform relay are ported; other `perform` functions are logged and skipped rather than guessed. Full reference: [Server-side observers](../system/observers.md).
 
 ### Client context
 

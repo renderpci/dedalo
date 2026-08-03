@@ -1,0 +1,55 @@
+# CODEQL — dataflow SAST, hosted tier (engineering/CI.md).
+#
+# WHAT IT ADDS THAT THE TRIPWIRES DO NOT. The repo's own gates are surgical: they assert
+# a named invariant at a named place (no `innerHTML` in these three files, every MCP write
+# tool scope-checks, jsonb goes through json_codec). They are excellent at "the security
+# line was deleted" and blind to "a value reached a sink by a path nobody thought about".
+# CodeQL is the opposite: whole-program taint tracking, no list of places to keep current.
+# Neither replaces the other, and the tripwires stay the load-bearing half — CodeQL is a
+# third-party analysis whose ruleset we do not control, so it advises where it fires and
+# gates nothing else.
+#
+# Free on public repositories. Results land in the Security tab (code scanning alerts),
+# which is why this workflow — alone among the hosted tier — needs `security-events: write`.
+#
+# PUBLIC-REPO POSTURE: ubuntu-latest, no secrets, no self-hosted runner (rule 5 of
+# test/unit/ci_workflow_tripwire.test.ts). `build-mode: none` — TypeScript needs no build
+# for analysis, so nothing in this repo is EXECUTED here; the analysis reads source.
+name: codeql
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    # Fresh queries land upstream continuously — a weekly run re-analyses unchanged code
+    # against them. Mondays 03:00 UTC (an hour after the secret scan, same reasoning).
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+  # The one exception to `contents: read` only — writing alerts IS this job's output.
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@a2983b8bed1923f44751c5c43237f479442827b3 # v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@a2983b8bed1923f44751c5c43237f479442827b3 # v3
+        with:
+          category: "/language:javascript-typescript"

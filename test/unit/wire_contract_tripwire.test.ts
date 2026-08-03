@@ -36,7 +36,12 @@
  *      the whole hand-written tree, but it is a NAMED scope, not a hand-wave).
  *
  * COST: reads the ~80 entry files + every hand-written source/prose file in SCANNED_DIRS
- * (~4s). DB-less, network-less → hermetic tier.
+ * (~0.3s). The tree is read ONCE and shared by the two scanning tests, and a file with no
+ * `WC-` substring is dropped before any regex runs — both citation regexes require that
+ * substring, so the scope is unchanged (see `scanTree`). Without the pre-filter the two
+ * regex passes cost ~4s, nearly all of it spent backtracking over generated/vendored
+ * blobs (a 19MB model tokenizer, the harvest fixtures, minified css/js), which is how this
+ * gate came to time out on a loaded CI runner. DB-less, network-less → hermetic tier.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -207,20 +212,31 @@ const entries = files.map((file) => ({
  * rules file (the duplicate it records, the number never used, the example grammar), this
  * gate's own header (same history), and the entries themselves (their own id is the h1,
  * and they cross-reference each other freely).
+ *
+ * A file that does not contain the literal `WC-` is dropped here. That is a SPEED filter,
+ * not a scope filter: both citation regexes below start with that exact literal, so a file
+ * without it cannot match either — the substring scan is linear where the regexes backtrack.
+ * Result is materialised once and shared by both scanning tests, so the tree is read once.
  */
-async function* scanTree(): AsyncGenerator<{ path: string; text: string }> {
+function scanTree(): { path: string; text: string }[] {
+	const found: { path: string; text: string }[] = [];
+	const take = (path: string) => {
+		const text = readFileSync(join(REPO_ROOT, path), 'utf8');
+		if (text.includes('WC-')) found.push({ path, text });
+	};
 	for (const dir of SCANNED_DIRS) {
 		const glob = new Glob(`**/*.{${SCANNED_EXTENSIONS.join(',')}}`);
-		for await (const rel of glob.scan({ cwd: join(REPO_ROOT, dir) })) {
+		for (const rel of glob.scanSync({ cwd: join(REPO_ROOT, dir) })) {
 			const path = join(dir, rel);
 			if (path === RULES_FILE || path === SELF || path.startsWith(`${LEDGER_DIR}/`)) continue;
-			yield { path, text: readFileSync(join(REPO_ROOT, path), 'utf8') };
+			take(path);
 		}
 	}
-	for (const path of SCANNED_ROOT_FILES) {
-		yield { path, text: readFileSync(join(REPO_ROOT, path), 'utf8') };
-	}
+	for (const path of SCANNED_ROOT_FILES) take(path);
+	return found;
 }
+
+const tree = scanTree();
 
 describe('wire contract ledger tripwire', () => {
 	test('there are entries to check (a zero-length pass is not a pass)', () => {
@@ -297,7 +313,14 @@ describe('wire contract ledger tripwire', () => {
 		).toEqual([]);
 	});
 
-	test('no citation sends a reader to the rules file for an ENTRY', async () => {
+	test('the tree scan sees files (a zero-length pass is not a pass)', () => {
+		// Guards the guard, second half: rename a scanned directory or over-tighten the
+		// `WC-` pre-filter and both scanning tests would iterate nothing and report GREEN.
+		expect(tree.length).toBeGreaterThan(100);
+		expect(tree.map((f) => f.path)).toContain('engineering/TRIPWIRES.md');
+	});
+
+	test('no citation sends a reader to the rules file for an ENTRY', () => {
 		// The split moved the entries out of WIRE_CONTRACT.md, so `WIRE_CONTRACT.md WC-016`
 		// now names a file that does not contain WC-016 — the id still resolves, but the
 		// path misdirects. 42 such citations were repointed in the split commit; this keeps
@@ -311,7 +334,7 @@ describe('wire contract ledger tripwire', () => {
 		// mis-cited just as easily as a legacy one.
 		const STALE = /WIRE_CONTRACT\.md[`'")\]]*[\s,:;(\[]*[`'"]*(?:entry\s+)?`?WC-(?:\d{3}|20\d{2}-)/;
 		const offenders: string[] = [];
-		for await (const { path, text } of scanTree()) {
+		for (const { path, text } of tree) {
 			for (const [i, line] of text.split('\n').entries()) {
 				if (STALE.test(line)) offenders.push(`${path}:${i + 1}`);
 			}
@@ -322,7 +345,7 @@ describe('wire contract ledger tripwire', () => {
 		).toEqual([]);
 	});
 
-	test('every WC- id cited in the tree resolves to an entry', async () => {
+	test('every WC- id cited in the tree resolves to an entry', () => {
 		const known = new Set(entries.map((e) => e.id));
 		// `WC-017/018/019` is a real citation form in docs/: the bare `018` and `019` are
 		// ids too, and a first draft that matched only the prefixed one would let an entry
@@ -331,7 +354,7 @@ describe('wire contract ledger tripwire', () => {
 		const CITATION_TAIL = /(?<=WC-\d{3}(?:\/\d{3})*)\/(\d{3})/g;
 		const dangling = new Map<string, string[]>();
 
-		for await (const { path, text } of scanTree()) {
+		for (const { path, text } of tree) {
 			const cited = [
 				...[...text.matchAll(CITATION)].map((m) => m[0]),
 				...[...text.matchAll(CITATION_TAIL)].map((m) => `WC-${m[1]}`),

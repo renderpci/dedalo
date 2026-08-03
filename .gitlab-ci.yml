@@ -1,4 +1,4 @@
-# GitLab CI — hermetic tier only (docs/CI.md).
+# GitLab CI — hermetic tier + the platform's own security scanners (engineering/CI.md).
 #
 # GitLab is the mirror host: shared runners run the SAME scripts/ci/hermetic.sh
 # as the GitHub `hermetic` job (typecheck + lint + DB-less tripwires), so the
@@ -8,6 +8,27 @@
 #
 # The image tag must equal .bun-version (the load-bearing Bun.sql jsonb pin);
 # test/unit/ci_workflow_tripwire.test.ts enforces it.
+#
+# SECURITY SCANNERS (added 2026-08-03). The two platforms are NOT symmetric here, and
+# that is deliberate rather than drift: GitHub runs CodeQL + gitleaks from
+# .github/workflows/, GitLab runs its own bundled equivalents below. Each host's
+# scanner is free, maintained, and integrated with that host's UI; reimplementing
+# GitHub's choices on GitLab would buy nothing and cost a second thing to keep current.
+# What must NOT differ is the repo's OWN gate — hence one shared hermetic.sh.
+#
+# The templates are GitLab-maintained (Semgrep-based SAST, gitleaks-based Secret
+# Detection). They add jobs to the `test` stage on merge requests and the default
+# branch; on a plan without Ultimate they still RUN and still fail the job on a
+# finding — only the MR security widget is gated behind the licence.
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+
+# Secret Detection is gitleaks under the hood, so it is pointed at the SAME
+# `.gitleaks.toml` the GitHub job uses — via the documented ruleset passthrough in
+# `.gitlab/secret-detection-ruleset.toml`. One allowlist, triaged once; an exception
+# cannot exist on one platform only. (That file, not this one, is where the wiring
+# lives — see its header for the shape and the verify-on-first-run note.)
 
 hermetic:
   image: oven/bun:1.3.9
