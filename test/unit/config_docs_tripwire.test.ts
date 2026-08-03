@@ -97,6 +97,23 @@ describe('config docs: the catalog is the single source of truth', () => {
 		expect(undescribed.sort()).toEqual([]);
 	});
 
+	test('every operator-facing entry shows a copy-pasteable example of ITS OWN key', () => {
+		// The census renders the fenced block that contains `KEY=` under an `example:` line —
+		// which is the ONLY thing that tells an administrator what a value looks like
+		// ("[array of objects] default: (unset)" told them nothing, and ONTOLOGY_SERVERS
+		// shipped exactly that). A block that never names the key renders NO example, so the
+		// gate demands the key, not merely a fence.
+		const exampleless = entries()
+			.filter(([, e]) => isOperatorFacing(e))
+			.filter(([key, e]) =>
+				[...e.doc.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].every(
+					(m) => !(m[1] as string).includes(`${key}=`),
+				),
+			)
+			.map(([key]) => key);
+		expect(exampleless.sort()).toEqual([]);
+	});
+
 	test('catalog prose is PHP-FREE (docs_current_engine_tripwire would fail on it)', () => {
 		// The `doc` of an operator-facing key is rendered STRAIGHT into docs/config/config.md,
 		// where docs_current_engine_tripwire bans /php/i outside a set-equality allowlist that
