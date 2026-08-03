@@ -164,8 +164,37 @@ if ! command -v git >/dev/null 2>&1; then
   echo "== hermetic: installing git (absent on this runner)"
   apt-get update -qq && apt-get install -y -qq git >/dev/null
 fi
+# Run one isolated daemon package's gate, and NAME the failure.
+#
+# Both daemons set `coverageThreshold` in their bunfig.toml, and a threshold miss makes
+# `bun test` exit 1 while printing NOTHING about coverage — the log reads
+# "290 pass / 0 fail" followed by a bare "exit code 1", which is indistinguishable from
+# a crash and sent one CI failure (2026-08-03) round several wrong hypotheses. Bun does
+# not say it, so this script does: every test passing plus a non-zero exit IS the
+# coverage gate, and the table it printed is right above the message.
+daemon_gate() {
+	local dir="$1"
+	local log
+	log="$(mktemp -t dedalo_daemon_gate)"
+	if (cd "$dir" && bun install --frozen-lockfile && bunx tsc --noEmit && bun test) 2>&1 | tee "$log"; then
+		rm -f "$log"
+		return 0
+	fi
+	# `tee` is last in the pipe, so consult bun's own status, not tee's.
+	if grep -qE '^ +0 fail' "$log"; then
+		echo ""
+		echo "== hermetic: RED in $dir — every test PASSED but the run exited non-zero."
+		echo "   That is the bunfig.toml coverageThreshold: bun exits 1 and prints no reason."
+		echo "   The per-file table above shows which file fell below it (thresholds:"
+		grep -E 'coverageThreshold' "$dir/bunfig.toml" | sed 's/^/     /'
+		echo "   Fix by TESTING the uncovered code, not by lowering the threshold."
+	fi
+	rm -f "$log"
+	return 1
+}
+
 echo "== hermetic: site builder daemon (publication/site_builder)"
-(cd publication/site_builder && bun install --frozen-lockfile && bunx tsc --noEmit && bun test)
+daemon_gate publication/site_builder
 
 # The publication API v2 (publication/server_api/v2) is the same case as the site builder
 # above and was missed by the same reasoning gap: it is an ISOLATED package with its own
@@ -175,6 +204,6 @@ echo "== hermetic: site builder daemon (publication/site_builder)"
 # and it is the READ-ONLY PUBLIC door of the whole install: auth, rate limiting and the
 # query builder are exactly the invariants that must not rot unwatched.
 echo "== hermetic: publication API v2 (publication/server_api/v2)"
-(cd publication/server_api/v2 && bun install --frozen-lockfile && bunx tsc --noEmit && bun test)
+daemon_gate publication/server_api/v2
 
 echo "== hermetic: GREEN"

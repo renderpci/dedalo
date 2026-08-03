@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { normalizeValues, assertKnownDb } from '../src/db/pool';
+import { normalizeValues, assertKnownDb, getPool, closePools, dbExecute } from '../src/db/pool';
 import { NotFoundError } from '../src/errors';
 import { dbNames } from '../src/config';
 import type { DbRow } from '../src/db/types';
@@ -68,5 +68,80 @@ describe('normalizeValues', () => {
 
   test('handles an empty result set', () => {
     expect(normalizeValues([])).toEqual([]);
+  });
+});
+
+/**
+ * The pool LIFECYCLE — deliberately DB-less.
+ *
+ * WHY THESE EXIST (2026-08-03). `pool.ts` used to be covered only as a side effect of
+ * the live-DB tests in schema.test.ts, so its coverage read 90% on a developer machine
+ * with MariaDB running and 33% on a CI runner without one — and the per-file
+ * coverageThreshold turned that into a red gate whose cause was the RUNNER, not the code.
+ * A gate that depends on whether a database happens to be listening is not a gate.
+ *
+ * None of this opens a connection: `new SQL(...)` is lazy (it builds options and defers
+ * the socket until the first query), so pool creation, memoization and teardown are all
+ * exercisable with no server anywhere. `dbExecute` is the one function left to the
+ * live-DB tests, since it is the one that must actually talk to a server.
+ */
+describe('pool lifecycle (no database required)', () => {
+  test('getPool builds a pool for a configured database and MEMOIZES it', () => {
+    // One pool per database, reused: a fresh pool per call would leak connections and
+    // silently defeat DB_POOL_MAX.
+    const first = getPool(dbNames[0]);
+    const second = getPool(dbNames[0]);
+
+    expect(first).toBeDefined();
+    expect(second).toBe(first);
+  });
+
+  test('getPool refuses a database outside the allowlist BEFORE building anything', () => {
+    // The allowlist check is the security boundary and must run first — a pool must
+    // never be constructed against a database the operator did not publish.
+    expect(() => getPool('mysql')).toThrow(NotFoundError);
+    expect(() => getPool('information_schema')).toThrow(NotFoundError);
+  });
+
+  test('closePools drops every pool and is safe to call twice', async () => {
+    const before = getPool(dbNames[0]);
+
+    await closePools();
+    // Idempotent: the second call has nothing to close and must not throw. The daemon
+    // calls it on SIGTERM, where a throw would break the graceful drain.
+    await closePools();
+
+    // The map was cleared, so the next request builds a NEW pool rather than handing
+    // out the closed one.
+    expect(getPool(dbNames[0])).not.toBe(before);
+
+    await closePools();
+  });
+
+  test('dbExecute routes through the allowlist and normalizes whatever comes back', async () => {
+    // Refused before any socket: the allowlist guards this door too, not just getPool.
+    await expect(dbExecute('mysql', 'SELECT 1')).rejects.toThrow(NotFoundError);
+
+    // For a CONFIGURED database the outcome depends on whether a server is listening,
+    // and this suite must assert the same thing either way — that is the whole point of
+    // the block above. So assert the contract that holds in BOTH branches: the call
+    // settles (no hang), and on success every value is already JSON-shaped, never a Date.
+    // Locally this rejects with "Access denied", on a bare CI runner with ECONNREFUSED,
+    // and on a fully provisioned box it resolves — all three are a pass, none is a skip.
+    const outcome = await dbExecute(dbNames[0], 'SELECT 1 AS x').then(
+      rows => ({ ok: true as const, rows }),
+      error => ({ ok: false as const, error }),
+    );
+
+    if (outcome.ok) {
+      expect(Array.isArray(outcome.rows)).toBe(true);
+      for (const row of outcome.rows) {
+        for (const key in row) expect(row[key]).not.toBeInstanceOf(Date);
+      }
+    } else {
+      // A driver/transport failure must surface as an Error, not a swallowed undefined —
+      // the routes turn it into a 500, and a non-Error would print as "[object Object]".
+      expect(outcome.error).toBeInstanceOf(Error);
+    }
   });
 });
