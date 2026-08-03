@@ -175,7 +175,11 @@ fi
 daemon_gate() {
 	local dir="$1"
 	local log
-	log="$(mktemp -t dedalo_daemon_gate)"
+	# PORTABLE TEMPLATE, not `mktemp -t NAME`. BSD/macOS accepts a bare suffix there;
+	# GNU coreutils demands the XXXXXX placeholder and dies with "too few X's in
+	# template" — so the developer-machine form passed locally and broke the Linux
+	# runner on the first run (2026-08-03). An explicit template satisfies both.
+	log="$(mktemp "${TMPDIR:-/tmp}/dedalo_daemon_gate.XXXXXX")"
 	if (cd "$dir" && bun install --frozen-lockfile && bunx tsc --noEmit && bun test) 2>&1 | tee "$log"; then
 		rm -f "$log"
 		return 0
