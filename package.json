@@ -49,7 +49,7 @@
 		"leaflet": "1.9.4",
 		"mmdb-lib": "3.0.2",
 		"nodemailer": "^9.0.3",
-		"onnxruntime-web": "1.26.0-dev.20260416-b7804b056c",
+		"onnxruntime-web": "1.27.0",
 		"split.js": "1.6.5",
 		"three": "0.149.0",
 		"vanilla-jsoneditor": "3.12.0",
