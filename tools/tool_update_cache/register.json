@@ -92,7 +92,7 @@
         "value": "<p>Manages Dédalo components cache clean actions</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona las acciones de limpieza de la caché de componentes de Dédalo</p>"
       }
@@ -104,47 +104,47 @@
         "value": "Actualitza la memòria cau"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Cache aktualisieren"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Ενημέρωση cache"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Update cache"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Eguneratu cachea"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Mise à jour du cache"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Aggiornamento della cache"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "क्यास अपडेट गर्नुहोस्"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Atualizar cache"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Actualizar caché"
       }
@@ -167,7 +167,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -587,7 +587,7 @@
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd999": [

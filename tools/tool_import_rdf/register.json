@@ -83,22 +83,22 @@
         "value": "<p>Importieren Sie RDF-Schemata, die von externen Ontologien wie Nomisma, Dublin Core usw. definiert wurden</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Εισαγωγή σχημάτων RDF που ορίζονται από εξωτερικές οντολογίες, όπως Nomisma, Dublin Core, κ.λπ.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Import RDF schemas defined by external ontologies, like Nomisma, Dublin Core, etc&nbsp;</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>नोमिस्मा, डब्लिन कोर, इत्यादि जस्ता बाह्य ओन्टोलजीहरू द्वारा परिभाषित RDF योजनाहरू आयात गर्नुहोस्</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Importa esquemas RDF definidos por ontologías externas, como Nomisma, Dublin Core, etc.&nbsp;</p>"
       }
@@ -110,57 +110,57 @@
         "value": "استيراد RDF"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-cat",
         "value": "Importar RDF"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-deu",
         "value": "RDF importieren"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εισαγωγή RDF"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Import RDF"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Inportatu RDF"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Importer RDF"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Importa RDF"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-nep",
         "value": "RDF आयात गर्नुहोस्"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-por",
         "value": "Importar RDF"
       },
       {
-        "id": 11,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Importar RDF"
       },
       {
-        "id": 12,
+        "id": 1,
         "lang": "lg-vlca",
         "value": "Importar RDF"
       }
@@ -183,7 +183,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -340,12 +340,12 @@
     ],
     "dd612": [
       {
-        "count": 4
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 12
+        "count": 1
       }
     ],
     "dd1326": [

@@ -120,22 +120,22 @@
         "value": "<p>Gestiona fitxers multimèdia amb diferents versions de qualitat</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Manages media files with different quality versions</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Gestisce file multimediali con diverse versioni di qualità</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Gere ficheiros multimédia com diferentes versões de qualidade</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona archivos multimedia con diferentes versiones de calidad.</p>"
       }
@@ -147,47 +147,47 @@
         "value": "Versions de mitjans"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Medienversionen"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εκδόσεις πολυμέσων"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Media versions"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Baliabideen bertsioak"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Versions pour les médias"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Versioni multimediali"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "मिडिया संस्करणहरू"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Versões multimédia"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Versiones media"
       }
@@ -210,7 +210,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.2.6"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -614,12 +614,12 @@
     ],
     "dd612": [
       {
-        "count": 5
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

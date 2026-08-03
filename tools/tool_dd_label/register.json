@@ -74,7 +74,7 @@
         "value": "<p>Creates tool labels in all available langs. This tool will generate JSON data and only will be applied to component_json (dd1372)</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Crea las etiquetas de las herramientas en todas las lenguas disponibles. Esta herramienta genera datos JSON y solo se aplica a component_json (dd1372)</p>"
       }
@@ -86,27 +86,27 @@
         "value": "Etikettenzusammensetzung"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Σύνθεση ετικέτας"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Label composition"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Etiketen konposizioa"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-nep",
         "value": "लेबल संरचना"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Composición de etiquetas"
       }
@@ -129,7 +129,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.1"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -220,7 +220,7 @@
     ],
     "dd799": [
       {
-        "count": 6
+        "count": 1
       }
     ],
     "dd1326": [

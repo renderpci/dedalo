@@ -462,20 +462,52 @@ template {
   display: none;
 }
 /**
- * vars
+ * vars_tokens
  *
- * Common vars definitions
+ * The `:root` CSS custom-property palette — the light values every theme
+ * override is written against. Split out of `vars.less` (2026-08-02), which
+ * keeps only the compile-time `@alias` mappings over these properties.
  *
- * Included from main.less file
+ * WHY THE SPLIT: 39 stylesheets `@import (once) './vars'` for the ALIASES, and
+ * 36 of them are their own build entrypoint (every tool is one). `(once)`
+ * dedupes per COMPILE, not per document, so each entrypoint re-emitted this
+ * whole block: 237 KB of the 572 KB of tool CSS — 41% — was byte-identical
+ * copies of it, and every token edit churned 35 committed artifacts. The
+ * duplicates were not even inert: `--select_icon_url` is a RELATIVE url(), so a
+ * tool's copy resolved against `/dedalo/tools/<tool>/` and 404'd the select
+ * arrow document-wide in the light theme. Dark escaped only by specificity —
+ * `:root[data-theme="dark"]` (0,2,0) out-ranks a tool's plain `:root` (0,1,0).
  *
- * DARK MODE NOTE:
- * All `@color_*` LESS variables are mapped to CSS custom properties
- * (`var(--color_*)`) defined on `:root`. The light palette lives in this file
- * and the dark palette overrides those same custom properties under
- * `:root[data-theme="dark"]` (see `theme_dark.less`). LESS color functions
+ * THE ONE RULE FOR IMPORTING THIS FILE: only a stylesheet that is loaded into a
+ * document WITHOUT main.css may import it. Everything the app injects at
+ * runtime — the 34 tool sheets, every partial of main.less — lands in the SPA
+ * document, which already carries these properties; importing here would just
+ * restore the duplication. Today `main.less` is the only importer.
+ * `test/unit/css_token_duplication_tripwire.test.ts` holds that line — it also
+ * asserts `vars.less` still compiles to zero bytes, which is the OTHER way the
+ * duplication comes back (a token added to the file everyone imports).
+ *
+ * DARK MODE NOTE: the dark palette overrides these same properties under
+ * `:root[data-theme="dark"]` (see `theme_dark.less`). LESS colour functions
  * like `darken()` / `lighten()` / `fade()` cannot operate on CSS variables, so
  * former uses have been replaced by explicit derived tokens (e.g.
  * `--color_primary_hover_bg`) defined statically in both palettes.
+ *
+ * ONE LIGHT PALETTE, NOT TWO: the `--ut_*` UI-theme tokens live here too, at the
+ * end of the block (2026-08-02). They used to sit in `theme_tokens.less` next to
+ * that file's LESS `@font_*`/`@size_*` vars — i.e. in exactly the shape this file
+ * was split out of — and shipped twice, because `main.less` and
+ * `test/client/css/unit_test.less` both import it and both land in the runner
+ * document. Folding them in DELETED the special case instead of splitting a
+ * second pair: there is one place to look per axis.
+ *
+ * The axes are NAMED, not merely two: this file (light), `theme_dark.less`
+ * (theme axis) and `redesign/_tokens.less` (design axis — the same names under
+ * `[data-design="redesign"]`). A file outside that set declaring a palette token
+ * on a bare root retunes the whole document and is invisible once LESS flattens
+ * it into main.css, so the set is gated by name — PALETTE_FILES in
+ * `test/unit/css_token_duplication_tripwire.test.ts`. Scoping an override to a
+ * component's own selector needs no permission; that is the sanctioned idiom.
  */
 :root {
   --component_height: auto;
@@ -495,6 +527,12 @@ template {
   --geolocation_min_height: 495px;
   --geolocation_player_height: 605px;
   --geolocation_map_min_height: 320px;
+  --field_inset_x: 1rem;
+  --field_box_bleed: 0.5rem;
+  --field_row_h: 2rem;
+  --field_line_h: 1.3rem;
+  --field_value_pad_t: calc((var(--field_row_h) - var(--field_line_h)) / 2);
+  --field_rest_bg: transparent;
   --view_text_height: 1.2rem;
   --view_line_height: 5rem;
   --column_id_width: 6rem;
@@ -673,28 +711,6 @@ template {
   --color_grey_4_light: #3a3a3a;
   --menu_bg_active_border: #fa8500;
   --service_bg_dark: #c56607;
-}
-/**
-* theme_tokens
-*
-* Shared UI theme tokens for Dédalo v7: CSP-safe font stacks, a small size scale,
-* and the light (default) + dark (`[data-theme="dark"]`) custom-property palette
-* (`--ut_*`).
-*
-* Single source of truth, imported by:
-*   - core/page/css/main.less        — so the installer / page shell can theme itself
-*   - test/client/css/unit_test.less — the unit-test runner chrome
-*
-* Dark is opt-in via `data-theme="dark"` on <html>, the same convention as
-* core/page/js/theme.js (localStorage key 'dedalo_theme'). The `--ut_*` prefix is
-* historical — these tokens originated in the unit-test client — and is kept to
-* avoid a large rename across the working runner.
-*
-* Accent = Dédalo logo orange (@color_orange_dedalo, from vars). System fonts only:
-* the app CSP (`font-src 'self' data:`, `style-src 'self'`) blocks web-font CDNs, so
-* the mono stack lands on SF Mono / Menlo for the technical, data-grid feel.
-*/
-:root {
   --ut_bg_app: #f6f8fa;
   --ut_bg_panel: #ffffff;
   --ut_bg_elevated: #ffffff;
@@ -724,41 +740,25 @@ template {
   --ut_shadow: 0 1px 2px rgba(27, 31, 36, 0.06), 0 8px 24px -16px rgba(27, 31, 36, 0.25);
   --ut_grain: 0.018;
 }
-:root[data-theme="dark"] {
-  --ut_bg_app: #0b0e14;
-  --ut_bg_panel: #111621;
-  --ut_bg_elevated: #161c28;
-  --ut_bg_hover: #1c2433;
-  --ut_bg_input: #0a0d13;
-  --ut_bg_active: rgba(247, 138, 28, 0.14);
-  --ut_border: rgba(148, 163, 184, 0.14);
-  --ut_border_strong: rgba(148, 163, 184, 0.26);
-  --ut_grid_dot: rgba(148, 163, 184, 0.05);
-  --ut_text_primary: #e6edf3;
-  --ut_text_secondary: #aeb9c7;
-  --ut_text_muted: #8b97a7;
-  --ut_text_dim: #7c8696;
-  --ut_accent: var(--color_orange_dedalo);
-  --ut_accent_hi: #fca340;
-  --ut_accent_soft: rgba(247, 138, 28, 0.16);
-  --ut_on_accent: #2a1c05;
-  --ut_green: #3fb950;
-  --ut_green_soft: rgba(63, 185, 80, 0.15);
-  --ut_green_glow: rgba(63, 185, 80, 0.4);
-  --ut_red: #f85149;
-  --ut_red_soft: rgba(248, 81, 73, 0.15);
-  --ut_red_glow: rgba(248, 81, 73, 0.45);
-  --ut_run: #d29922;
-  --ut_run_soft: rgba(210, 153, 34, 0.15);
-  --ut_pending: #586273;
-  --ut_shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
-  --ut_grain: 0.03;
-}
 /**
  * theme_dark
  *
  * Dark palette overrides. Activated by `data-theme="dark"` on `<html>`.
  * Imported from main.less after vars.less.
+ *
+ * THE DARK PALETTE FILE: every dark override of a PALETTE token lives here,
+ * `--ut_*` included since 2026-08-02 — they were in `theme_tokens.less`, which
+ * two entrypoints import into the same document, so they shipped twice. See
+ * `vars_tokens.less` for the light half and why the special case was deleted
+ * rather than split into a second pair.
+ *
+ * "Palette token", not "anything dark": a SCOPED dark rule belongs to whatever
+ * it is scoped to and stays there (`tool_common.less` retunes `--fg_muted`
+ * under `[data-theme="dark"] .tool_header`; components carry their own
+ * `[data-theme="dark"] &` blocks). What may not happen is a fourth file
+ * declaring a palette token on a bare root — that reaches the whole document
+ * and is invisible in the compiled bundle, so it is gated by name in
+ * `test/unit/css_token_duplication_tripwire.test.ts` (PALETTE_FILES).
  */
 :root[data-theme="dark"] {
   --color_white: #1b1d20;
@@ -912,6 +912,34 @@ template {
   --modal_btn_hover_color: var(--color_white);
   --modal_mini_header_bg: var(--color_grey_4);
   --modal_radius: var(--radius-lg);
+  --ut_bg_app: #0b0e14;
+  --ut_bg_panel: #111621;
+  --ut_bg_elevated: #161c28;
+  --ut_bg_hover: #1c2433;
+  --ut_bg_input: #0a0d13;
+  --ut_bg_active: rgba(247, 138, 28, 0.14);
+  --ut_border: rgba(148, 163, 184, 0.14);
+  --ut_border_strong: rgba(148, 163, 184, 0.26);
+  --ut_grid_dot: rgba(148, 163, 184, 0.05);
+  --ut_text_primary: #e6edf3;
+  --ut_text_secondary: #aeb9c7;
+  --ut_text_muted: #8b97a7;
+  --ut_text_dim: #7c8696;
+  --ut_accent: var(--color_orange_dedalo);
+  --ut_accent_hi: #fca340;
+  --ut_accent_soft: rgba(247, 138, 28, 0.16);
+  --ut_on_accent: #2a1c05;
+  --ut_green: #3fb950;
+  --ut_green_soft: rgba(63, 185, 80, 0.15);
+  --ut_green_glow: rgba(63, 185, 80, 0.4);
+  --ut_red: #f85149;
+  --ut_red_soft: rgba(248, 81, 73, 0.15);
+  --ut_red_glow: rgba(248, 81, 73, 0.45);
+  --ut_run: #d29922;
+  --ut_run_soft: rgba(210, 153, 34, 0.15);
+  --ut_pending: #586273;
+  --ut_shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --ut_grain: 0.03;
   --tool_dd_label: #b0b0b0;
   --tool_dd_label_border: #808080;
   --tool_dev_template: #ffa040;
@@ -4971,6 +4999,7 @@ input::placeholder {
 }
 .wrapper_component > .label {
   padding: 1rem;
+  padding-left: var(--field_inset_x);
   padding-bottom: 0px;
   padding-top: 0.4rem;
   flex: 1 1 100%;
@@ -5053,6 +5082,7 @@ input::placeholder {
   align-items: flex-start;
   align-content: flex-start;
   padding: 1em;
+  padding-left: var(--field_inset_x);
   padding-top: 0.5em;
   overflow-wrap: anywhere;
 }
@@ -5301,6 +5331,26 @@ dd-modal .wrapper_component > .content_data.vertical,
   background-color: var(--color_grey_5);
   justify-content: center;
   flex-flow: unset;
+}
+.wrapper_component.edit.component_input_text > .content_data,
+.wrapper_component.edit.component_number > .content_data,
+.wrapper_component.edit.component_date > .content_data,
+.wrapper_component.edit.component_email > .content_data,
+.wrapper_component.edit.component_url > .content_data,
+.wrapper_component.edit.component_password > .content_data,
+.wrapper_component.edit.component_iri > .content_data {
+  padding-left: calc(var(--field_inset_x) - var(--field_box_bleed));
+}
+.wrapper_component.edit.component_input_text > .content_data input.input_value,
+.wrapper_component.edit.component_number > .content_data input.input_value,
+.wrapper_component.edit.component_date > .content_data input.input_value,
+.wrapper_component.edit.component_email > .content_data input.input_value,
+.wrapper_component.edit.component_url > .content_data input.input_value,
+.wrapper_component.edit.component_password > .content_data input.input_value,
+.wrapper_component.edit.component_iri > .content_data input.input_value {
+  padding-left: var(--field_box_bleed);
+  line-height: var(--field_line_h);
+  background-color: var(--field_rest_bg);
 }
 .section_record.edit .wrapper_component.edit {
   transition: background-color var(--transition-fast);
@@ -6872,11 +6922,12 @@ body:has(.assistant_container.standalone.show) {
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"
 * look. Theme-aware: light is the default, dark is opt-in via `data-theme="dark"`
 * on <html> (core/page/js/theme.js convention, key 'dedalo_theme'). All colours come
-* from the shared --ut_* token palette (core/page/css/layout/theme_tokens.less), so
-* the installer follows the same theme as the rest of v7 automatically.
+* from the shared --ut_* token palette (core/page/css/layout/vars_tokens.less for
+* light, layout/theme_dark.less for dark), so the installer follows the same theme
+* as the rest of v7 automatically.
 *
-* Included from main.less (which imports theme_tokens + vars before this file, so the
-* @font_* LESS vars and --ut_* custom properties are in scope here).
+* Included from main.less, which imports those two plus layout/theme_tokens (the
+* @font_ / @size_ LESS vars) before this file, so both are in scope here.
 */
 .installer.wrapper {
   position: fixed;
@@ -9957,6 +10008,18 @@ body:has(.assistant_container.standalone.show) {
   position: sticky;
   top: 0;
   z-index: 2;
+  width: var(--grid_scroll_w, 100%);
+}
+.wrapper_dd_grid.view_indexation .top_container .filter_section_container {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  justify-self: start;
+}
+.wrapper_dd_grid.view_indexation .top_container .paginator_container {
+  position: sticky;
+  right: 0;
+  justify-self: end;
 }
 .wrapper_dd_grid.view_indexation .top_container .filter_section_container {
   margin-left: 4rem;
@@ -10065,6 +10128,8 @@ body:has(.assistant_container.standalone.show) {
   position: sticky;
   top: 4.2rem;
   z-index: 1;
+  width: calc(var(--grid_scroll_w, 100%) - 4rem);
+  flex-shrink: 0;
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption .column span {
   padding-bottom: 0px;
@@ -10095,7 +10160,7 @@ body:has(.assistant_container.standalone.show) {
   background-color: var(--color_orange_light);
   width: 100%;
   display: grid;
-  grid-template-columns: 102px 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 102px repeat(5, minmax(0, 1fr));
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc205 > .row.head .column {
   box-shadow: none;
@@ -10116,7 +10181,7 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row:not(.head) > .column {
   margin-left: 8rem;
   display: grid;
-  grid-template-columns: 1fr 1fr 6fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 6fr);
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row:not(.head) > .column > .column {
   box-shadow: none;
@@ -10124,7 +10189,7 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row.head {
   width: 100%;
   display: grid;
-  grid-template-columns: 102px 1fr 1fr 1fr 1fr;
+  grid-template-columns: 102px repeat(4, minmax(0, 1fr));
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.isad1 > .row.head .column {
   box-shadow: none;
@@ -10145,12 +10210,12 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc197 > .row {
   width: 100%;
   display: grid;
-  grid-template-columns: 4rem 4fr 4fr 2fr;
+  grid-template-columns: 4rem minmax(0, 4fr) minmax(0, 4fr) minmax(0, 2fr);
   align-items: center;
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.tch > .row.line {
   display: grid;
-  grid-template-columns: auto 13.4rem 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: auto 13.4rem repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--color_grey_13);
 }
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.tch > .row.line img {
@@ -10162,7 +10227,7 @@ body:has(.assistant_container.standalone.show) {
 .wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc170 > .row.line {
   width: 100%;
   display: grid;
-  grid-template-columns: 5rem 8rem 2fr 1fr 1fr 1fr 7rem 2fr;
+  grid-template-columns: 5rem 8rem minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 7rem minmax(0, 2fr);
   align-items: start;
   border-bottom: 1px solid var(--color_grey_13);
 }
@@ -10178,7 +10243,7 @@ body:has(.assistant_container.standalone.show) {
   margin-left: 0px;
   background-color: var(--color_grey_15);
   display: grid;
-  grid-template-columns: 102px 8rem 10.5rem 20rem 1fr;
+  grid-template-columns: 102px 8rem 10.5rem 20rem minmax(0, 1fr);
 }
 .wrapper_dd_grid.view_indexation > .content_data > .row > .caption.audiovisual > .row.head .column {
   box-shadow: none;
@@ -10233,13 +10298,14 @@ body:has(.assistant_container.standalone.show) {
 }
 .wrapper_dd_grid.view_indexation > .content_data > .row > .caption.audiovisual > .row.line .column.indexation {
   display: grid;
-  grid-template-columns: 5rem 3rem 3rem 3rem 3rem 1fr 7rem 7rem 7rem 3rem 3rem;
+  grid-template-columns: 5rem 3rem 3rem 3rem 3rem minmax(8rem, 1fr) 7rem 7rem 7rem 3rem 3rem;
   line-height: 2rem;
 }
 .wrapper_dd_grid.view_indexation > .content_data > .row > .caption.audiovisual > .row.line .column.indexation > .column {
   overflow: visible;
   box-shadow: none;
   outline: none;
+  min-width: 0;
   display: flex;
   align-content: center;
   line-height: 2rem;
@@ -12919,7 +12985,7 @@ dd-modal:has(.tool_header) {
   font-size: 0.68rem;
   font-family: inherit;
 }
-.dd_table .dd_td.alert {
+.dd_table .dd_td.state_alert {
   color: var(--color_danger);
   font-weight: 700;
 }
@@ -15667,7 +15733,36 @@ dd-modal:has(.tool_header) {
 * banner and the response block are widget-specific.
 */
 .wrapper_widget.register_tools .dd_table {
-  grid-template-columns: 5.5rem minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+  grid-template-columns: 5.5rem minmax(9rem, 20rem) minmax(6rem, 12rem) 6rem 5.5rem minmax(12rem, 1fr);
+}
+.wrapper_widget.register_tools .dd_table .dd_tr:hover .dd_td {
+  background-color: color-mix(in srgb, var(--fg_default) 5%, transparent);
+}
+.wrapper_widget.register_tools .name_td {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+.wrapper_widget.register_tools .dev_td {
+  color: var(--fg_muted);
+}
+.wrapper_widget.register_tools .version_notice {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--fg_default);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+  border-left: 3px solid var(--color_warning);
+  border-radius: 0 6px 6px 0;
+}
+.wrapper_widget.register_tools .version_notice p {
+  margin: 0;
+}
+.wrapper_widget.register_tools .version_notice p + p {
+  margin-top: 0.3rem;
+}
+.wrapper_widget.register_tools .version_notice:empty {
+  display: none;
 }
 .wrapper_widget.register_tools .active_th {
   display: flex;
@@ -17959,12 +18054,17 @@ body.inspector_resizing {
   font-size: 1rem;
 }
 .wrap_ts_object .ts_icons_all {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 .wrap_ts_object > .content_data {
   position: relative;
@@ -17979,91 +18079,81 @@ body.inspector_resizing {
   font-size: 1rem;
   opacity: 0.5;
   flex-wrap: nowrap;
+  min-height: 22px;
 }
 .wrap_ts_object > .content_data > .id_column_content .id_column_link {
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 1.4em;
   line-height: 1.5rem;
   z-index: 1;
-  width: 1.5rem;
+  flex: 0 0 auto;
+  width: 20px;
   margin-right: 0.25rem;
 }
 .wrap_ts_object > .content_data > .id_column_content .id_column_link:active {
   opacity: 0.5;
 }
-.wrap_ts_object > .content_data > .id_column_content a.id_column_link div {
-  height: 20px;
-  margin-right: 6px;
-}
 .wrap_ts_object > .content_data > .id_column_content .ts_object_add_icon {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
-  background-image: none;
-  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
-  mask-image: url('../../themes/default/icons/add_light.svg');
-  -webkit-mask-size: 76%;
-  mask-size: 76%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/add_light.svg');
+  mask-image: url('../../themes/default/icons/add_light.svg');
+  -webkit-mask-size: 14.25px;
+  mask-size: 14.25px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_add_icon:hover {
   background-color: var(--color_orange_dedalo);
-  border-radius: 3px;
-}
-.wrap_ts_object > .content_data > .id_column_content .ts_object_drag {
-  margin-right: 4px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_drag_icon {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
-  background-image: none;
-  -webkit-mask-image: url('../../themes/default/icons/move.svg');
-  mask-image: url('../../themes/default/icons/move.svg');
-  -webkit-mask-size: 76%;
-  mask-size: 76%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/move.svg');
+  mask-image: url('../../themes/default/icons/move.svg');
+  -webkit-mask-size: 14px;
+  mask-size: 14px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_drag_icon:hover {
   background-color: var(--color_blue);
-  border-radius: 3px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_delete .ts_object_delete_icon {
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 76%;
+  background-image: none;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 20px;
   width: 20px;
-  background-image: none;
-  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
-  mask-image: url('../../themes/default/icons/trash.svg');
-  -webkit-mask-size: 76%;
-  mask-size: 76%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
-  margin-right: 2px;
+  -webkit-mask-image: url('../../themes/default/icons/trash.svg');
+  mask-image: url('../../themes/default/icons/trash.svg');
+  -webkit-mask-size: 15.25px;
+  mask-size: 15.25px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_delete .ts_object_delete_icon:hover {
   background-color: var(--color_danger);
-  border-radius: 3px;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_order_number {
   width: 1rem;
@@ -18101,20 +18191,21 @@ body.inspector_resizing {
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_edit .ts_object_edit_icon {
   background-image: none;
-  background-repeat: no-repeat;
-  -webkit-mask-image: url('../../themes/default/icons/edit.svg');
-  mask-image: url('../../themes/default/icons/edit.svg');
-  -webkit-mask-size: 65%;
-  mask-size: 65%;
+  background-color: var(--fg_muted);
+  border-radius: 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  height: 20px;
+  width: 20px;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/edit.svg');
+  mask-image: url('../../themes/default/icons/edit.svg');
+  -webkit-mask-size: 14.75px;
+  mask-size: 14.75px;
   float: left;
-  width: 24px;
-  height: 20px;
-  cursor: pointer;
 }
 .wrap_ts_object > .content_data > .id_column_content .ts_object_edit .ts_object_edit_icon:hover {
   background-color: var(--color_success);
@@ -20859,7 +20950,7 @@ body.inspector_resizing {
   --jse-theme-color: var(--color_primary);
   --jse-theme-color-highlight: var(--color_blue_2);
   --jse-item-is-active-bg: var(--color_primary);
-  --jse-menu-color: var(--fg_inverse);
+  --jse-menu-color: var(--menu_link_fg);
   --jse-context-menu-background: var(--color_grey_12);
   --jse-context-menu-background-highlight: var(--color_grey_11);
   --jse-context-menu-color: var(--fg_default);
@@ -20914,6 +21005,26 @@ body.inspector_resizing {
   --jse-error-color: var(--color_danger);
   --jse-warning-color: var(--color_warning);
   --jse-info-color: var(--color_info);
+}
+:root[data-theme="dark"] .component_json .jse-main .jse-menu {
+  background: var(--bg_header);
+  color: var(--menu_link_fg);
+  border-bottom: 1px solid var(--border_default);
+}
+:root[data-theme="dark"] .component_json .jse-main .jse-menu .jse-button:hover,
+:root[data-theme="dark"] .component_json .jse-main .jse-menu .jse-button:focus {
+  background: var(--color_grey_12);
+}
+:root[data-theme="dark"] .component_json .jse-main .jse-menu .jse-button.jse-group-button {
+  border-color: var(--border_strong);
+}
+:root[data-theme="dark"] .component_json .jse-main .jse-menu .jse-button.jse-group-button.jse-selected {
+  background: var(--color_grey_11);
+  color: var(--fg_default);
+}
+:root[data-theme="dark"] .component_json .jse-main .jse-menu .jse-separator {
+  background: var(--border_strong);
+  opacity: 1;
 }
 /**
 * component_number
@@ -22264,6 +22375,110 @@ body.inspector_resizing {
   flex: none;
 }
 /**
+* indexation_delete_info
+*
+* The row-unlink confirmation modal (view_indexation_edit_portal
+* render_column_remove_indexation) is attached to the PAGE modal container, outside the
+* portal node, so it inherits none of the chip rules nested above. It repaints the row's
+* own tag chips with the same mixins so the dialog shows exactly the set the row shows —
+* which is exactly the set the deletion removes.
+*/
+.indexation_delete_info > .indexation_delete_tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags {
+  margin: 0px;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  font-size: 0.85rem;
+  margin-right: 1px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 5px;
+  padding-right: 0.65rem;
+  background-color: var(--color_tag_indexation_normal);
+  mask-image: radial-gradient(42% 56% ellipse at 129% 50%, transparent 0%, transparent 11px, #ffffff 0.5px);
+  border-bottom-left-radius: 6px;
+  border-top-left-radius: 6px;
+  color: var(--color_white);
+  cursor: pointer;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.index:active {
+  opacity: 0.5;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.reference {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 2.7rem;
+  font-size: 1rem;
+  margin-right: 1px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 5px;
+  padding-right: 0.65rem;
+  background-color: var(--color_tag_indexation_normal);
+  border-radius: 9px;
+  color: var(--color_white);
+  cursor: pointer;
+  background-image: url(../../themes/default/icons/link_white.svg);
+  background-size: 1rem;
+  background-repeat: no-repeat;
+  background-position: right 5px top 2px;
+  padding-right: 1.3rem;
+  flex-wrap: nowrap;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.reference:active {
+  opacity: 0.5;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.draw {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 2.7rem;
+  font-size: 1rem;
+  margin-right: 1px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 5px;
+  padding-right: 0.65rem;
+  background-color: var(--color_tag_indexation_normal);
+  border-radius: 9px;
+  color: var(--color_white);
+  cursor: pointer;
+  background-image: url(../../themes/default/icons/eye.svg);
+  background-size: 1rem;
+  background-repeat: no-repeat;
+  background-position: right 5px top 2px;
+  padding-right: 1.3rem;
+  flex-wrap: nowrap;
+}
+.indexation_delete_info > .indexation_delete_tags > .tags.draw:active {
+  opacity: 0.5;
+}
+.indexation_delete_info > .indexation_delete_tags > .no_tag {
+  background-color: var(--color_blue_2);
+  color: var(--color_white);
+  border-radius: 3px;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.8rem;
+  line-height: 0.96rem;
+}
+.indexation_delete_info > .indexation_delete_scope {
+  margin: 0px 0px 0.25rem 0px;
+}
+.indexation_delete_info > .indexation_delete_note {
+  margin: 0px;
+}
+/**
 * view_mini_portal
 *
 * (!) suffix '_mini' as 'component_portal_mini'
@@ -23085,10 +23300,10 @@ body.inspector_resizing {
 .component_text_area.edit > .content_data > .content_value.editor_container,
 .component_text_area.edit > .content_data > .content_value > .editor_container {
   display: block;
-  margin: 0.5rem;
+  margin: var(--field_box_bleed);
   margin-bottom: 1.5rem;
-  padding: 0.5rem;
-  padding-top: 0.33rem;
+  padding: var(--field_box_bleed);
+  padding-top: var(--field_value_pad_t);
   padding-bottom: 0px;
   height: calc(100% - 1.5rem);
   overflow: auto;
@@ -23926,44 +24141,206 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 * widget state
 *
 * Included from main.less file
+*
+* Design language: the area_maintenance widget kit (.dd_table / .dd_bar /
+* .dd_badge in core/area_maintenance/css/widget_kit.less) — card surface,
+* uppercase micro-header, hairline row rules, tabular numerals, meter track.
+* The kit is NOT imported: it emits its own .dd_* class rules and belongs to an
+* area, and a core widget must not depend on one. Same tokens, same rems, same
+* color-mix() tint formula, scoped names — no leak in either direction.
+*
+* (!) Every colour goes through a semantic custom property (--bg_*, --fg_*,
+* --border_*, --color_*). The LESS @color_* vars this file used before are
+* LIGHT-PALETTE LITERALS: they painted a white popover over the dark theme.
 */
 .wrapper_widget.state {
   width: auto;
 }
 .wrapper_widget.state.edit .widget_item {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-gap: 0.3rem;
-  font-size: 1rem;
+  grid-template-columns: minmax(7rem, max-content) 1fr 1fr;
+  grid-gap: 0;
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  background-color: var(--bg_surface);
 }
 .wrapper_widget.state.edit .widget_item > .li_item {
   display: contents;
 }
+.wrapper_widget.state.edit .widget_item > .li_item > label,
+.wrapper_widget.state.edit .widget_item > .li_item > .situation,
+.wrapper_widget.state.edit .widget_item > .li_item > .state {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0.4rem 0.7rem;
+  border-top: 1px solid var(--border_default);
+  line-height: 1.35;
+}
+.wrapper_widget.state.edit .widget_item > .li_item > label {
+  padding-right: 0.7rem;
+  color: var(--fg_default);
+  word-break: normal;
+  overflow-wrap: normal;
+}
 .wrapper_widget.state.edit .widget_item > .li_item.header {
   font-weight: 600;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+  background-color: var(--bg_surface_alt);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label {
+  border-top: 0;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label:first-child {
+  border-top-left-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.header > label:last-child {
+  border-top-right-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.container:last-child > label {
+  border-bottom-left-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.container:last-child > .state,
+.wrapper_widget.state.edit .widget_item > .li_item.container:last-child > .situation:last-child {
+  border-bottom-right-radius: 8px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item.container:hover > label,
+.wrapper_widget.state.edit .widget_item > .li_item.container:hover > .situation,
+.wrapper_widget.state.edit .widget_item > .li_item.container:hover > .state {
+  background-color: var(--field_hover_bg);
 }
 .wrapper_widget.state.edit .widget_item > .li_item .situation,
 .wrapper_widget.state.edit .widget_item > .li_item .state {
   position: relative;
 }
+.wrapper_widget.state.edit .widget_item > .li_item .situation.empty,
+.wrapper_widget.state.edit .widget_item > .li_item .state.empty {
+  justify-content: flex-end;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .situation.empty:after,
+.wrapper_widget.state.edit .widget_item > .li_item .state.empty:after {
+  content: '—';
+  min-width: 2.75rem;
+  font-size: 0.8rem;
+  text-align: right;
+  color: var(--fg_muted);
+}
 .wrapper_widget.state.edit .widget_item > .li_item .total {
-  cursor: pointer;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: help;
+  border-radius: 3px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total:before {
+  content: '';
+  flex: 1 1 auto;
+  min-width: 1.5rem;
+  height: 4px;
+  border-radius: 3px;
+  background-color: var(--bg_surface_alt);
+  background-image: linear-gradient(to right, var(--meter_fill, transparent) calc(var(--pct, 0) * 1%), transparent 0);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border_default) 80%, transparent);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total[data-state='ok'] {
+  --meter_fill: var(--color_success);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total[data-state='partial'] {
+  --meter_fill: var(--color_orange_dedalo);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total:focus-visible {
+  outline: 2px solid var(--focus_ring);
+  outline-offset: 2px;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total > .value {
+  flex: 0 0 auto;
+  min-width: 2.75rem;
+  padding: 0;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--fg_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .total[data-state='empty'] > .value {
+  color: var(--fg_muted);
 }
 .wrapper_widget.state.edit .widget_item > .li_item .detail {
   position: absolute;
-  background-color: var(--color_white);
-  padding: 0.5rem;
-  border: 1px solid var(--color_grey_13);
-  left: 2rem;
-  top: -50%;
+  top: calc(100% + 4px);
+  left: 0.4rem;
+  right: auto;
+  z-index: 5;
   display: grid;
-  grid-template-columns: 4fr 2fr 1fr;
-  grid-gap: 0.3rem;
-  z-index: 3;
+  grid-template-columns: max-content max-content 1fr;
+  align-items: center;
+  grid-gap: 0.25rem 0.5rem;
+  min-width: max-content;
+  max-width: 22rem;
+  overflow-y: auto;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border_default);
+  border-radius: 6px;
+  background-color: var(--bg_elevated);
   box-shadow: var(--shadow-3);
 }
+.wrapper_widget.state.edit .widget_item > .li_item .detail label {
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg_muted);
+  white-space: nowrap;
+}
 .wrapper_widget.state.edit .widget_item > .li_item .detail .value {
+  padding: 0;
   padding-right: 0.33rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--fg_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_label,
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_value {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_value {
+  color: var(--fg_default);
+  font-weight: 600;
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail .total_value ~ label:last-child {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border_default);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail label:nth-child(3n) {
+  justify-self: start;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg_muted);
+  background-color: color-mix(in srgb, var(--fg_muted) 12%, transparent);
+}
+.wrapper_widget.state.edit .widget_item > .li_item .detail label:nth-child(3n):empty {
+  padding: 0;
+  background-color: transparent;
 }
 .wrapper_widget.state.edit .widget_item > .li_item.container span.value {
   display: inline-block;
@@ -24313,6 +24690,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --checkbox_checked_bg: var(--color_orange_dedalo);
   --input_bg: #f1efea;
   --input_fg: #23211e;
+  --field_rest_bg: var(--input_bg);
   --select_bg: #f1efea;
   --select_fg: #23211e;
   --toolbar_btn_hover_bg: #ddd9d1;
@@ -24531,7 +24909,6 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   margin-bottom: var(--space-5, 1rem);
 }
 :root[data-design="redesign"] .wrapper_component .input_value {
-  background-color: var(--bg_input);
   border-radius: var(--radius-sm);
   transition: background-color var(--transition-fast, 120ms ease), box-shadow var(--transition-fast, 120ms ease);
 }
@@ -24767,8 +25144,12 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   background-color: transparent !important;
   color: var(--fg_muted) !important;
 }
+:root[data-design="redesign"] .column.caption.section > label {
+  background-color: var(--bg_surface) !important;
+  box-shadow: inset 3px 0 0 var(--base_color, var(--border_strong)) !important;
+  border-bottom: 1px solid var(--border_default) !important;
+}
 :root[data-design="redesign"] .indexations_container .top_container {
-  background-color: transparent !important;
   box-shadow: none !important;
 }
 :root[data-design="redesign"] .area_ontology .typology_name {

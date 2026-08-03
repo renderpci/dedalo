@@ -83,22 +83,22 @@
         "value": "<p>Transcripción de leyendas, contramarcas de objetos numismáticos.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Transcription of legends, countermarks of numismatic objects.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Transcription des légendes, contremarques des objets numismatiques.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Trascrizione di legende e contromarche di oggetti numismatici.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>&nbsp;</p><p>Transcripción de leyendas, contramarcas de objetos numismáticos.</p>"
       }
@@ -110,37 +110,37 @@
         "value": "Descripcions epigràfiques"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Epigraphische Beschreibungen"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Epigraphic descriptions"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Deskribapen epigrafikoak"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Descriptions épigraphiques"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Descrizioni epigrafiche"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-por",
         "value": "Descrições epigráficas"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Descripciones epigráficas"
       }
@@ -163,7 +163,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -308,12 +308,12 @@
     ],
     "dd612": [
       {
-        "count": 5
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 8
+        "count": 1
       }
     ],
     "dd1326": [

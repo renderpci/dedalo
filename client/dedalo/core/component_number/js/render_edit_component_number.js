@@ -10,6 +10,7 @@
 	import {view_default_edit_number} from './view_default_edit_number.js'
 	import {view_line_edit_number} from './view_line_edit_number.js'
 	import {view_mini_number} from './view_mini_number.js'
+	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 
 
 
@@ -283,8 +284,9 @@ export const get_content_value = (i, current_value, self, options={}) => {
 		})
 
 		// keydown event
+		// (!) Escape is let through: the page-level handler deactivates the component.
 		input.addEventListener('keydown', function(e) {
-			e.stopPropagation()
+			stop_page_shortcuts(e)
 			if(e.key==='Tab'){
 				ui.component.deactivate(self)
 				return

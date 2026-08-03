@@ -29,7 +29,8 @@ front-end infrastructure consumed by the work-system client.
 | layer | role |
 | --- | --- |
 | **`client/dedalo/core/page/css/main.less`** | The single LESS entrypoint. `@import`s the layout core (reset, vars, theme_dark, functions, fonts, general, …) and then every service / area / section / component / widget LESS bundle, in that order. Compiles to `main.css`. |
-| **`client/dedalo/core/page/css/layout/vars.less`** | The design tokens: the light `:root` palette, semantic surface/spacing/radius/elevation/motion tokens, component & modal tokens, and the `@color_*` LESS aliases that map onto the CSS custom properties. |
+| **`client/dedalo/core/page/css/layout/vars_tokens.less`** | The design tokens themselves: the light `:root` palette, semantic surface/spacing/radius/elevation/motion tokens, component & modal tokens. |
+| **`client/dedalo/core/page/css/layout/vars.less`** | The `@color_*` LESS aliases that map onto those custom properties, plus the breakpoints. Emits nothing — see below. |
 | **`client/dedalo/core/page/css/layout/theme_dark.less`** | The dark palette: the *same* custom properties re-declared under `:root[data-theme="dark"]`. |
 | **`client/dedalo/core/page/js/theme.js` + `theme-init.js`** | The runtime theme switch: set/toggle `data-theme="dark"` on `<html>`, persisted in `localStorage.dedalo_theme`. |
 | **`client/dedalo/core/themes/default/`** | Static assets: `icons/*.svg`, `fonts/`, logos, tag bases. Referenced from LESS by relative URL (`../../themes/default/icons/<name>.svg`). |
@@ -42,7 +43,7 @@ front-end infrastructure consumed by the work-system client.
 
 ## Responsibilities
 
-- **Own the design tokens** — one canonical place (`vars.less`) for colours,
+- **Own the design tokens** — one canonical place (`vars_tokens.less`) for colours,
   spacing, radius, elevation, motion and component-level semantic tokens, exposed
   both as CSS custom properties (`var(--color_primary)`) and as LESS aliases
   (`@color_primary`).
@@ -68,13 +69,13 @@ front-end infrastructure consumed by the work-system client.
 
 ### Tokens: CSS custom properties vs. LESS aliases
 
-`vars.less` declares everything twice, deliberately:
+Every token is declared twice, deliberately, in two files:
 
-- A `:root { --color_*: … }` block holds the **light** palette plus the semantic
-  scales (surfaces, spacing, radius, elevation, motion) and component/modal
-  tokens.
-- A trailing block of `@color_* : var(--color_*)` LESS aliases maps each LESS
-  variable onto its custom property. This is what makes the whole codebase
+- `vars_tokens.less` — a `:root { --color_*: … }` block holding the **light**
+  palette plus the semantic scales (surfaces, spacing, radius, elevation,
+  motion) and component/modal tokens.
+- `vars.less` — a block of `@color_* : var(--color_*)` LESS aliases mapping each
+  LESS variable onto its custom property. This is what makes the whole codebase
   theme-aware: thousands of existing rules use `@color_primary`, and because that
   alias resolves to `var(--color_primary)`, swapping the custom property under a
   dark `:root` retints every rule with no rule-site change.
@@ -84,10 +85,19 @@ front-end infrastructure consumed by the work-system client.
     former derived colours are pre-computed into explicit *derived tokens*
     (e.g. `--color_primary_hover_bg`, `--color_orange_dark`) in **both**
     palettes, so a hover/border shade still retunes per theme. When you add a
-    button-like state, add the derived token in `vars.less` *and*
+    button-like state, add the derived token in `vars_tokens.less` *and*
     `theme_dark.less` — do not call `darken()`.
 
-The token families in `vars.less`:
+!!! warning "Only `main.less` may import `vars_tokens.less`"
+    The two files are separate because 39 stylesheets import `vars.less` for the
+    aliases and 36 of them are their own build entrypoint: `@import (once)`
+    dedupes per *compile*, not per *document*, so keeping the `:root` block in
+    `vars.less` shipped 36 copies of it (41% of all tool CSS). Import
+    `vars_tokens.less` only from a stylesheet loaded into a document that does
+    **not** already carry `main.css`.
+    `test/unit/css_token_duplication_tripwire.test.ts` enforces it.
+
+The token families in `vars_tokens.less`:
 
 | family | examples | notes |
 | --- | --- | --- |
@@ -100,10 +110,70 @@ The token families in `vars.less`:
 | Motion | `--ease-standard`, `--transition-fast/base/slow` | |
 | Component tokens | `--menu_dropdown_bg`, `--checkbox_checked_bg`, `--input_bg`, `--select_icon_url`, `--toolbar_btn_hover_bg` | |
 | Modal tokens | `--modal_overlay_bg`, `--modal_content_bg`, `--modal_header_bg`, `--modal_radius` | Used by `dd-modal`; pierce the Shadow DOM boundary via `var()`. |
+| Field grid | `--field_inset_x`, `--field_box_bleed`, `--field_row_h`, `--field_line_h`, `--field_value_pad_t`, `--field_rest_bg` | The one geometry every edit field shares, plus its resting fill — see [Field grid](#the-field-grid) below. No dark override, deliberately. |
+| UI chrome (`--ut_*`) | `--ut_bg_app`, `--ut_bg_panel`, `--ut_text_primary`, `--ut_accent`, `--ut_border` | The shell/installer/test-runner chrome palette. A second token FAMILY, not a second file — see the note under [Only `main.less` may import `vars_tokens.less`](#tokens-css-custom-properties-vs-less-aliases). |
+
+### The field grid
+
+Every editable field — a literal `<input>`, a rich-text editor surface — sits on
+one grid, so a `component_input_text` and a `component_text_area` read as the
+same object however deeply they are nested. Two rules, five tokens:
+
+1. the **label** and the **value TEXT** start at the same left inset;
+2. every value's **first text line** sits on the same row.
+
+```
+|<-- --field_box_bleed -->|
+|         label text starts here (--field_inset_x)
+[ input box ................ ]   the box bleeds left, the TEXT lands on the inset
+[ editor box ............... ]   same box, same text position
+```
+
+An editable *box* (the input outline, the editor surface) bleeds
+`--field_box_bleed` **outside** its text, so the box is inset from the wrapper
+edge while the text itself still lands on `--field_inset_x`. Each component
+carries the inset where its value actually lives: inside the `<input>` for
+literals (`layout.less`, the `FIELD GRID` block), on the editor surface for
+`component_text_area` (that component's own sheet owns the deepest selector, so
+the shared grid has to speak through it).
+
+`--field_value_pad_t` is derived, not tuned:
+`calc((--field_row_h - --field_line_h) / 2)` — the top pad that drops a block
+value's first line onto the row where an input centres its single line. Because
+both line boxes are the same height, the two land on the same row *exactly*
+rather than within a fraction of a pixel.
+
+A field's **resting** appearance is `--field_rest_bg`, and it is `transparent`:
+the value sits directly on the card, and the box appears only on hover (the
+outline reveal in `general.less`, the tint in `layout.less`) or on focus (the
+accent ring). That is the "quiet grid" the section edit view is built on.
+
+!!! warning "The resting fill has no dark override — on purpose"
+    It used to have one by accident. `general.less` painted `--input_bg` on
+    inputs under `:root[data-theme="dark"]` **only**, with no light counterpart,
+    so dark rendered a lifted box (`#1f2227` on a `#1b1d20` card) while light
+    rendered nothing (`#ffffff` on `#ffffff`) — and inside dark the input then
+    disagreed with the `<select>` and editor surfaces beside it, which are
+    transparent in both themes. One token, no per-theme answer, fixes both
+    disagreements at once.
+
+    A design line that *wants* sunken fields re-points the token rather than
+    writing a rule: `redesign/_tokens.less` sets
+    `--field_rest_bg: var(--input_bg)`. It has to, because the shared `FIELD
+    GRID` rule is five classes deep and out-specifies
+    `.wrapper_component .input_value` in `redesign/_structure.less` — a
+    background declared there would lose silently.
+
+!!! warning "Do not hard-code a field inset"
+    Before this grid, each family carried its own: a literal input's text sat
+    `0.5rem` right of its own label (the input's inner padding stacked on
+    `.content_data`'s) while a text_area's sat flush, and three different left
+    edges shipped side by side. If a component needs different metrics, derive
+    them from these tokens.
 
 ### The two palettes (light default, dark override)
 
-Light is the *default* — it lives directly in `:root` in `vars.less`. Dark is an
+Light is the *default* — it lives directly in `:root` in `vars_tokens.less`. Dark is an
 *override*: `theme_dark.less` re-declares the same custom property names under
 `:root[data-theme="dark"]`. In the dark palette the greys are inverted
 (`--color_white: #1b1d20`, `--color_black: #ffffff`, `--color_grey_1: #f8f9fb`),
@@ -140,7 +210,7 @@ flowchart LR
     TOGGLE[".theme_toggle button<br/>(menu top bar)"] -->|click| TJS["theme.js toggle_theme()"]
     TJS -->|set/remove data-theme<br/>+ persist localStorage| HTML
     HTML -->|":root[data-theme=dark]"| DARK["theme_dark.less overrides"]
-    VARS["vars.less :root (light)"] --> TOKENS["--color_* / @color_* tokens"]
+    VARS["vars_tokens.less :root (light)"] --> TOKENS["--color_* / @color_* tokens"]
     DARK --> TOKENS
     TOKENS --> CSS["every component / area / tool rule"]
 ```
@@ -153,8 +223,9 @@ client/dedalo/core/page/css/
 ├── main.css                      # compiled, minified output loaded by the page
 └── layout/
     ├── reset.less                # CSS reset / normalize, box-sizing
-    ├── vars.less                 # tokens: light :root palette + @color_* aliases + scales
-    ├── theme_tokens.less         # --ut_* tokens shared with the test-client CSS (new in this checkout)
+    ├── vars.less                 # @color_* LESS aliases + breakpoints (emits nothing)
+    ├── vars_tokens.less          # the ONE light palette: :root, semantic scales, --ut_*
+    ├── theme_tokens.less         # @font_*/@size_* LESS vars only — emits nothing
     ├── theme_dark.less           # dark palette: same tokens under :root[data-theme="dark"]
     ├── functions.less            # mixins: .truncate_text, .fn_build_tag_* (indexation/tc/note/…)
     ├── fonts.less                # .global_font() (system-ui stack)
@@ -186,8 +257,9 @@ guarantees tokens and mixins exist before any consumer uses them:
 ```less
 // layout general
 @import './layout/reset';
-@import './layout/vars';
-@import './layout/theme_tokens';  // shared --ut_* tokens (also imported by the test-client CSS)
+@import './layout/vars';          // @color_* LESS aliases (compile-time only)
+@import './layout/vars_tokens';   // the light :root palette — main.less ONLY
+@import './layout/theme_tokens';  // @font_*/@size_* LESS vars (emits nothing)
 @import './layout/theme_dark';    // dark overrides, right after vars
 @import './layout/functions';
 @import './layout/fonts';
@@ -203,14 +275,23 @@ guarantees tokens and mixins exist before any consumer uses them:
 //       all component_* → widgets/*
 ```
 
-!!! note "`theme_tokens.less` is a separate, newer token system"
-    `layout/theme_tokens.less` (`--ut_*` custom properties: CSP-safe font
-    stacks, a small size scale, its own light/dark palette) is a single source
-    of truth shared by `main.less` **and** `test/client/css/unit_test.less` (the
-    Bun test-runner's own UI chrome) — added so the installer/page shell and
-    the test client can theme themselves off one file. It is unrelated to the
-    `@color_*` / `--color_*` tokens `vars.less` defines; the two token
-    systems currently coexist rather than being unified.
+!!! note "`--ut_*` is a second token FAMILY, not a second token FILE"
+    The `--ut_*` custom properties (the chrome palette shared by the page shell,
+    the installer and `test/client/css/unit_test.less`, the Bun test-runner's own
+    UI) live in the **same two palette files as everything else**: light in
+    `layout/vars_tokens.less`, dark in `layout/theme_dark.less`. They used to
+    have their own file, `layout/theme_tokens.less`, together with its LESS
+    `@font_*`/`@size_*` vars — and because `main.less` and `unit_test.less` are
+    both build entrypoints whose sheets land in the **same** document
+    (`test/client/index.html` links `main.css` and `unit_test.css`), all 28
+    tokens shipped twice. Folding them in (2026-08-02) deleted the special case:
+    `theme_tokens.less` kept only the LESS vars and now emits nothing, exactly
+    like `vars.less`, so none of its importers changed a line.
+    `test/unit/css_token_duplication_tripwire.test.ts` holds both halves of that
+    (`EMIT_FREE_PARTIALS`, and `--ut_*` being ordinary owned palette names).
+    The `--ut_` prefix is historical — these tokens originated in the test
+    client — and is kept to avoid a rename across the working runner; they still
+    name their own family, distinct from `@color_*` / `--color_*`.
 
 !!! warning "Keep `main.less` the only entrypoint, and keep the order"
     Every component/area/widget LESS assumes `vars`, `functions`, `buttons` and
@@ -357,9 +438,11 @@ toggle_theme()         // flips light <-> dark
 ### Adding a new colour with a hover shade
 
 ```less
-// vars.less  (light :root)
+// vars_tokens.less  (light :root)
 --color_brand:           #663399;
 --color_brand_hover_bg:  #58308a;   // pre-computed darken(), NOT darken(@color_brand)
+
+// vars.less  (the LESS alias)
 @color_brand:            var(--color_brand);
 
 // theme_dark.less  (:root[data-theme="dark"])

@@ -76,7 +76,7 @@ Do not hand-resolve them. Take either side, run `bun run css:build`, and commit.
 1. Layout core:
    - `./layout/reset`
    - `./layout/vars`
-   - `./layout/theme_tokens` (shared `--ut_*` tokens, also consumed by the test-client CSS — new in this checkout)
+   - `./layout/theme_tokens` (LESS `@font_*`/`@size_*` vars only — emits nothing)
    - `./layout/theme_dark` (dark-palette overrides under `:root[data-theme="dark"]`, right after `vars`)
    - `./layout/functions`
    - `./layout/fonts`
@@ -112,14 +112,16 @@ Do not hand-resolve them. Take either side, run `bun run css:build`, and commit.
 
 **2.1 Tokens**
 
-- **CSS custom properties** (`:root` in `layout/vars.less`):
+- **CSS custom properties** (`:root` in `layout/vars_tokens.less`, imported by `main.less` alone):
   - Used for high-level, runtime-tunable values:
     - `--component_height`, `--component_width`
     - `--media_min_height`, `--media_max_height`, `--media_min_width`
     - `--view_text_height`, `--view_line_height`
   - **Use these** for dimensions that must be shared across multiple components and potentially overridden by ontology CSS.
+  - Consume them with `var(--x)` freely; **never re-declare one on a global root** (`:root`, `html`, `body`, `*`) from another stylesheet. Tool sheets are injected into the same document and never unloaded, so a `:root` copy retunes the whole app (and re-declaring the palette wholesale costs ~237 KB of duplicated tool CSS). To retune a token for your own subtree, declare it on that subtree's selector — a scoped custom property is the sanctioned idiom and is bounded by its selector.
+  - Only three files may declare a palette token on a global root, one per **axis**: `layout/vars_tokens.less` (light, the base), `layout/theme_dark.less` (the theme axis, `[data-theme="dark"]`) and `redesign/_tokens.less` (the design axis, `[data-design="redesign"]`). A new axis is a deliberate act: add it to `PALETTE_FILES` with the axis it varies. All of this is gated by `test/unit/css_token_duplication_tripwire.test.ts` — including in *source* space, because once LESS flattens a partial into `main.css` there is no record of which file wrote the rule.
 
-- **LESS variables** (also `layout/vars.less`):
+- **LESS variables** (`layout/vars.less`, which aliases the properties above and emits nothing):
   - Color palette (`@color_*`), breakpoints (`@width_break_point_*`), and semantic tokens for ontology and tags.
   - **Use these** inside LESS only; do not re-declare colors or breakpoints in component files.
 
@@ -131,6 +133,7 @@ Do not hand-resolve them. Take either side, run `bun run css:build`, and commit.
     - `.media_wrapper.*.wrapper_component` including `.media_content_data`, `.media_content_value`.
     - `.media.view_text` for compact media text-view.
   - `.wrapper_component` defines the base structural contract for all components (`>.label`, `>.content_data`, `.buttons_container`, state modifiers `.edit`, `.list`, `.search`, `.active`, `.fullscreen`, etc.).
+  - The `FIELD GRID` block: one left inset and one value row for every edit field, driven by the `--field_*` tokens. Do not hard-code a field inset — see [themes → The field grid](core/ui/themes.md#the-field-grid).
 
 - `layout/buttons.less`:
   - Icon & button helpers:

@@ -2516,6 +2516,36 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 
 /**
+* FORMAT_LABEL
+* Fills the `${placeholder}` slots of a UI label with the given values.
+*
+* Dédalo labels carry their placeholders INLINE (see `choose_page_between` in
+* src/core/labels/master.json), so a translator moves them freely inside the
+* sentence — which is why a message with values in it must be one label plus
+* this call, never string concatenation around a translated fragment.
+*
+* An unknown placeholder is left untouched: a visible `${foo}` in one language
+* is a bug report, a silently truncated sentence is not.
+*
+* @param {string} template - the label text (a get_label entry, or its literal fallback).
+* @param {Object} values - placeholder name → value.
+* @returns {string}
+*
+* @example
+* // 'Registry has 2.1.0'
+* format_label('Registry has ${v}', {v: '2.1.0'})
+*/
+export const format_label = function(template, values) {
+
+	return String(template).replace(
+		/\$\{(\w+)\}/g,
+		(match, key) => (key in values ? String(values[key]) : match)
+	)
+}//end format_label
+
+
+
+/**
 * VALIDATE_TIPO
 * Validate that a string matches the Dédalo ontology tipo format.
 * Valid tipos consist of two or more lowercase letters followed by one or more digits,

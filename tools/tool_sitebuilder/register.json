@@ -8,6 +8,7 @@
 		"lg-spa": "Construye sitios web públicos sobre los datos publicados conversando con un agente de código, previsualízalos y publícalos en producción."
 	},
 	"developer": "Dédalo team",
+	"dedalo_version_min": "7.0.0",
 	"affected_models": [],
 	"show_in_component": false,
 	"active": true,

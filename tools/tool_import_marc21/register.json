@@ -65,37 +65,37 @@
         "value": "<p>So importieren Sie Dateien im Marc21-Format.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Για να εισαγάγετε αρχεία σε μορφή Marc21.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>To import files in Marc21 format.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Pour importer des fichiers au format Marc21.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Per importare file in formato Marc21.</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>Για εισαγωγή αρχείων σε μορφή Marc21.</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Para importar ficheiros no formato Marc21.</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Para importar ficheros en formato en Marc21.</p>"
       }
@@ -107,42 +107,42 @@
         "value": "Importar Marc21"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Marc21 einführen"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εισαγωγή Marc21"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Import Marc21"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Inportatu Marc21"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Importation Marc21"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-nep",
         "value": "मार्च २१ आयात गर्नुहोस्"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-por",
         "value": "Importação Marc21"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Importar Marc21"
       }
@@ -165,7 +165,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -984,12 +984,12 @@
     ],
     "dd612": [
       {
-        "count": 8
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 9
+        "count": 1
       }
     ],
     "dd1326": [

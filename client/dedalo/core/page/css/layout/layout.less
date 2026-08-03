@@ -196,6 +196,7 @@
 		// label
 		>.label {
 			padding: 1rem;
+			padding-left: var(--field_inset_x); // FIELD GRID: shared with the value text
 			padding-bottom: 0px;
 			padding-top: 0.4rem;
 			flex: 1 1 100%;
@@ -301,6 +302,7 @@
 			align-items: flex-start;
 			align-content: flex-start;
 			padding: 1em;
+			padding-left: var(--field_inset_x); // FIELD GRID: shared with the label
 			padding-top: 0.5em;
 			overflow-wrap: anywhere; // force break long text like URL
 		}//end >.content_data
@@ -557,6 +559,64 @@
 			}
 		}//end .section_record &, .wrapper_tool &
 	}//end .wrapper_component
+
+// ---- FIELD GRID (every edit field, wherever it is drawn) ----
+// Before this block every family carried its own inset, so three different
+// left edges and three different value rows shipped side by side: a literal
+// input's text sat 0.5rem right of its own label (the input's inner padding
+// stacked on .content_data's), while a text_area's text sat flush with it.
+// Now BOTH rules come from one place — see the --field_* tokens in vars.less.
+//
+//   |<-- --field_box_bleed -->|
+//   |         label text starts here (--field_inset_x)
+//   [ input box ................ ]   box bleeds left, TEXT lands on the inset
+//   [ editor box ............... ]   same box, same text position
+//
+// Strictly geometry: no colour, no font. Deliberately NOT scoped to
+// .section_record.edit — the grid is a property of an EDIT FIELD, not of the
+// record that happens to hold it, and the same pair renders inside tools (the
+// tool_indexation note is Título + Descripción), modals and ts_object panels.
+// One class deep on purpose, so any container that has a reason to set its own
+// metrics still out-specifies it (see tool_indexation's transcription band).
+	.wrapper_component.edit {
+
+		// Literals: the value lives inside an <input> that already carries
+		// --field_box_bleed, so .content_data gives back exactly that much —
+		// the text lands on --field_inset_x and the field box bleeds left of it,
+		// matching the text_area editor surface exactly.
+		&.component_input_text,
+		&.component_number,
+		&.component_date,
+		&.component_email,
+		&.component_url,
+		&.component_password,
+		&.component_iri {
+
+			>.content_data {
+				padding-left: calc(var(--field_inset_x) - var(--field_box_bleed));
+			}
+
+			// The bleed is set HERE, not on the global input rule, so the calc()
+			// above can never disagree with the input's real inset — and so an
+			// input in some other font size elsewhere keeps its em-relative
+			// padding. Same line-height as a block value too: with both line
+			// boxes the same height, --field_value_pad_t lands them on the same
+			// row exactly, instead of within a fraction of it.
+			>.content_data input.input_value {
+				padding-left: var(--field_box_bleed);
+				line-height: var(--field_line_h);
+				// one resting appearance in BOTH themes — see --field_rest_bg. Scoped
+				// to the field grid, so the inputs that are NOT fields (search panel,
+				// login, tool forms, modals) keep the surface they sit on.
+				background-color: var(--field_rest_bg);
+			}
+		}
+
+		// The text_area's half of the grid is NOT here: its editor surface is
+		// owned by a deeper selector in component_text_area.less (which is
+		// imported after this file, so it wins any tie). It reads the same
+		// --field_* tokens there — one source, applied where the box lives.
+	}//end FIELD GRID
 
 // ---- QUIET GRID (section edit view only) ----
 // Readability retune: darker label/value ink, resting hairline per field,

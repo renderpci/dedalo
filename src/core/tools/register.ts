@@ -464,6 +464,30 @@ export function listToolDirectories(): { name: string; dir: string }[] {
 }
 
 /**
+ * The version a tool's register.json DECLARES on disk — the number the panel
+ * compares against the registry row (never the registry's own copy: serving the
+ * registry twice makes the mismatch the panel exists to show unrepresentable).
+ * Both live formats are read; anything unreadable/unsupported (v6, bad JSON)
+ * returns null, which the client renders as 'Tool version not defined'.
+ */
+export async function readDeclaredVersion(dir: string): Promise<string | null> {
+	let raw: unknown;
+	try {
+		raw = await Bun.file(resolve(dir, 'register.json')).json();
+	} catch {
+		return null;
+	}
+	const format = detectFormat(raw);
+	const declared =
+		format === 'authoring'
+			? (raw as { version?: unknown }).version
+			: format === 'column'
+				? getItems(raw as ToolRecord, TIPO.VERSION)?.[0]?.value
+				: null;
+	return typeof declared === 'string' && declared !== '' ? declared : null;
+}
+
+/**
  * Reconcile the tools registry. Dry-run (default) validates every tool and
  * reports whether the shared dd1324 registry already matches — writing nothing.
  * A real write runs only when config.tools.enableRegistryImport is true.

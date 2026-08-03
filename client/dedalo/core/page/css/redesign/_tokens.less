@@ -95,6 +95,12 @@
 	--checkbox_checked_bg: var(--color_orange_dedalo); // selection = accent
 	--input_bg:            #f1efea;
 	--input_fg:            #23211e;
+	// this design line reads an editable field as gently SUNKEN — surfaces, not
+	// borders, signal affordance. The classic line leaves it transparent (quiet at
+	// rest, box on hover). Said through the token because the shared FIELD GRID rule
+	// in layout.less out-specifies the `.wrapper_component .input_value` rule in
+	// _structure.less: a background set there would simply lose.
+	--field_rest_bg:       var(--input_bg);
 	--select_bg:           #f1efea;
 	--select_fg:           #23211e;
 	--toolbar_btn_hover_bg: #ddd9d1;

@@ -116,6 +116,11 @@ describe('css build tripwire', () => {
 		expect(missing, `${WHY_MISSING}\n${missing.join('\n')}`).toEqual([]);
 	});
 
+	// WHO MAY EMIT the `:root` palette (the 2026-08-02 vars.less → vars_tokens.less split)
+	// is a different question from "do the bytes match their source", and lives in its own
+	// tripwire: test/unit/css_token_duplication_tripwire.test.ts. It compiles the same
+	// entrypoints through the same buildOne().
+
 	/**
 	 * The diffusion job table's column template is LOAD-BEARING, and until now it
 	 * was defended by a comment alone (diffusion_server_control.less) — exactly the

@@ -210,15 +210,20 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		expect(String(info.version)).toBe(Bun.version);
 		expect(Number(info.memory_rss)).toBeGreaterThan(0);
 
+		// The clear goes through the invalidation HUB, so the report names the two
+		// families rather than a hand-maintained cache list — a second list beside
+		// the hub's is exactly how the UI-label dictionary went unflushed.
 		const caches = await call('runtime_info', 'clear_cache_files');
-		expect((caches.result as { cleared: string[] }).cleared).toEqual([
-			'ontology',
-			'tools',
-			'datalist',
-			'area_tree',
-			'labels',
-			'structure_context',
-		]);
+		expect((caches.result as { cleared: string[] }).cleared).toEqual(['ontology_derived', 'tools']);
+
+		// …and the hub only covers a cache that REGISTERED with it. The UI-label
+		// dictionary is the one that proved this: it was cached, the panel said
+		// 'labels', and a label deploy still needed a server restart.
+		const { clearLabelsCache } = await import('../../src/core/labels/catalog.ts');
+		const { isOntologyCacheClearerRegistered } = await import(
+			'../../src/core/ontology/cache_invalidation.ts'
+		);
+		expect(isOntologyCacheClearerRegistered(clearLabelsCache)).toBe(true);
 
 		const sessions = await call('runtime_info', 'clear_session_files');
 		expect(typeof (sessions.result as { pruned: number }).pruned).toBe('number');

@@ -54,6 +54,7 @@
 	import {view_line_edit_date} from './view_line_edit_date.js'
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
 
 
 
@@ -380,8 +381,9 @@ const attach_input_handlers = function(input, self, change_callback, options={})
 			}
 		})
 	// keydown event. Prevent to fire page events like open search panel
+	// (!) Escape is let through: the page-level handler deactivates the component.
 		input.addEventListener('keydown', function(e) {
-			e.stopPropagation()
+			stop_page_shortcuts(e)
 			if(e.key==='Tab'){
 				ui.component.deactivate(self)
 				return

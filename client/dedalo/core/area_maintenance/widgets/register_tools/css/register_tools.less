@@ -10,8 +10,65 @@
 	// active · name · developer · installed · version · info
 	// installed/version columns are sized to fit their uppercase headers
 	// ("INSTALLED"/"VERSION") on one line (the kit already prevents mid-word breaks).
+	//
+	// A row is read left-to-right as one line, so the identity columns are CAPPED
+	// (ceilings, not bare fr): with every text column elastic, a wide screen
+	// stranded the developer alone in the middle and threw the two version numbers
+	// against the far edge, so nothing tied a row together. Capped, they stay a
+	// tight block — name · developer · the two versions side by side.
+	//
+	// The LEFTOVER width goes to Info (1fr), the only column holding sentences
+	// (the version-mismatch note, 'Not registered tool'). The table therefore still
+	// spans the full card: capping the TABLE instead left its right edge floating
+	// short of the button and description above it — the columns were aligned, the
+	// block was not.
 	.dd_table {
-		grid-template-columns: 5.5rem minmax(6rem, 1.3fr) minmax(5rem, 1fr) 6rem 5.5rem minmax(7rem, 1.4fr);
+		grid-template-columns:
+			5.5rem minmax(9rem, 20rem) minmax(6rem, 12rem) 6rem 5.5rem minmax(12rem, 1fr);
+	}
+
+	// scan aid on a wide row: hovering lights the whole line, so the eye keeps the
+	// name and the version columns on the same record.
+	.dd_table .dd_tr:hover .dd_td {
+		background-color: color-mix(in srgb, var(--fg_default) 5%, transparent);
+	}
+
+	// tool identifiers: monospace so the shared `tool_` prefix aligns column-wise
+	.name_td {
+		font-family: @dd_mono;
+		font-size: 0.8rem;
+	}
+
+	// provenance is secondary to name/versions
+	.dev_td {
+		color: var(--fg_muted);
+	}
+
+	// the plain-language state line above the table (render_version_notice). It is
+	// a call to action, not a failure: the warning accent, never .info_text.error
+	// (that one is reserved for the ontology-outdated blocker below the table).
+	// Empty = registry and tools tree agree = nothing is drawn.
+	.version_notice {
+		margin-bottom: 0.75rem;
+		padding: 0.5rem 0.7rem;
+		color: var(--fg_default);
+		font-size: 0.85rem;
+		line-height: 1.4;
+		background-color: color-mix(in srgb, var(--color_warning) 12%, transparent);
+		border-left: 3px solid var(--color_warning);
+		border-radius: 0 6px 6px 0;
+
+		p {
+			margin: 0;
+
+			& + p {
+				margin-top: 0.3rem;
+			}
+		}
+
+		&:empty {
+			display: none;
+		}
 	}
 
 	// active column: the header cell pairs the all/none box with the column title,

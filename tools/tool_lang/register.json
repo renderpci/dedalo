@@ -93,52 +93,52 @@
         "value": "<p>أداة لترجمة المحتوى إلى لغات أخرى</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-cat",
         "value": "<p>Eina per traduir contingut a altres idiomes</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Tool zum Übersetzen des Inhalts in andere Sprachen</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Εργαλείο για τη μετάφραση του περιεχομένου σε άλλες γλώσσες</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Tool for translate the content to other languages</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-eus",
         "value": "<p>Edukia beste hizkuntzetara itzultzeko tresna</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Outil pour traduire le contenu dans d'autres langues</p>"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Strumento per tradurre i contenuti in altre lingue</p>"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>अन्य भाषाहरूमा सामग्री अनुवाद गर्न उपकरण</p>"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-por",
         "value": "<p>Ferramenta para traduzir conteúdos para outros idiomas.</p>"
       },
       {
-        "id": 11,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Herramienta de traducción de contenido a otras lenguas</p>"
       }
@@ -150,47 +150,47 @@
         "value": "Traducció"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Übersetzung"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Μετάφραση"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Translation"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Itzulpena"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Traduction"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Traduzione"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "अनुवाद"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Tradução"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Traducción"
       }
@@ -213,7 +213,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.9.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -1260,12 +1260,12 @@
     ],
     "dd612": [
       {
-        "count": 11
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd999": [

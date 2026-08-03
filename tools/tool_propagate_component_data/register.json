@@ -302,32 +302,32 @@
         "value": "<p>Propaga les dades dels components al mateix component entre els registres</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Übertragen Sie Komponentendaten über Datensätze hinweg an dieselbe Komponente</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Διαδώστε δεδομένα συστατικού στο ίδιο στοιχείο σε εγγραφές</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Propagates the component data to same component across records of the current section</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Propaga i dati dei componenti allo stesso componente tra i record</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>हालको खण्डको अभिलेखहरूमा कम्पोनेन्ट डाटालाई एउटै कम्पोनेन्टमा प्रचार गर्छ</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Propaga datos de componentes al mismo componente a través de registros de la misma sección</p>"
       }
@@ -339,47 +339,47 @@
         "value": "Propaga les dades dels components"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Komponentendaten propagieren"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Διάδοση δεδομένων στοιχείων"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Propagate component data"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Datuak zabaldu"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Propager les données des composants"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Propaga i dati dei componenti"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "कम्पोनेन्ट डाटा प्रचार गर्नुहोस्"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Propagar dados de componentes"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Propaga datos de componentes"
       }
@@ -402,7 +402,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.2.5"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -1168,12 +1168,12 @@
     ],
     "dd612": [
       {
-        "count": 7
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

@@ -165,6 +165,42 @@ declaration order. Each item is widget-specific but uniform in its head:
     text items (no `widget` tag) pass through verbatim. This is wire contract
     WC-026.
 
+### `state` — `detail`, `total`, and the `items` divisor
+
+The `state` widget emits two item types per column (`situation` = the `dd174`
+vocabulary, `state` = `dd501`), for each `output` id of the IPO block:
+
+```jsonc
+[
+  // one detail item per SOURCE RECORD (or per language, on a translatable leaf)
+  { "widget": "state", "key": 0, "widget_id": "indexation", "lang": "lg-nolan",
+    "value": 50, "locator": { "section_tipo": "dd501", "section_id": "2" },
+    "column": "state", "type": "detail" },
+  // one total item per column: the average over every source record
+  { "widget": "state", "key": 0, "widget_id": "indexation", "lang": "lg-nolan",
+    "value": 25, "column": "state", "type": "total", "items": 2 }
+]
+```
+
+The total is `sum / n / items` — `n` is the project-language count for a
+translatable leaf (else 1), and **`items` is the number of source records the
+IPO input resolved to**. On a record with two linked resources where only one
+carries a value, a single `detail` of 50% therefore yields a `total` of 25%.
+
+!!! warning "`items` is the only way to see a source record that saved nothing"
+    A source record with no value emits **no `detail` item at all** — it
+    contributes 0 to the average and then vanishes from the payload. Without the
+    divisor a consumer cannot tell 50%-of-one from 25%-of-two, and any breakdown
+    it renders will contradict the total sitting next to it (which is exactly
+    what the edit render did until 2026-08-03). The client pads its breakdown
+    panel to `items` rows, so the missing record appears as its own explicit
+    `0%` row.
+
+    `items` is **TS-only** — wire contract
+    `WC-2026-08-03-state-widget-total-source-count`. It is additive: every other
+    key keeps its value and its position, so a consumer that ignores it is
+    unaffected. Live instances: **rsc19**, **oh28** (both `component_state`).
+
 ### The stored-misc-wins / live-fallback rule
 
 The emit hook serves the **stored** misc value when the client save cycle has

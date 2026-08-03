@@ -156,7 +156,8 @@ tag_note.prototype.render_indexation_note = async function(tag) {
 * RENDER_EMPTY_NOTE
 * Renders a placeholder container shown when a tag has no associated note yet.
 * The container holds a single "Create tag info note" button. Clicking it:
-*  1. Asks the user for confirmation.
+*  1. Asks the user for confirmation with the application modal dialog
+*     (`ui.confirm`, same visual language as the inspector's "New record").
 *  2. Calls `new_tag_note` to POST a new `rsc377` record.
 *  3. Writes the returned `section_id` back into the tag's `data` field via
 *     `transcription_component.update_tag`, then immediately saves the editor so
@@ -194,11 +195,17 @@ tag_note.prototype.render_empty_note = function(tag) {
 		inner_html		: label,
 		parent			: empty_note_container
 	})
-	button_new_note.addEventListener('click', function(e){
+	button_new_note.addEventListener('click', async function(e){
 		e.stopPropagation()
 
-		// user confirm
-			if ( !confirm(get_label.sure || 'Sure?') ) {
+		// user confirm. Dédalo modal dialog (ui.confirm), never window.confirm
+			const confirmed = await ui.confirm({
+				header			: (get_label.new || 'New') + ' ' + (get_label.note || 'note'),
+				note			: tag.label || null,
+				body			: get_label.sure || 'Are you sure?',
+				accept_class	: 'primary new'
+			})
+			if (confirmed!==true) {
 				return false
 			}
 

@@ -91,12 +91,45 @@ function triple(body: unknown): { result: unknown; msg: unknown; errors: unknown
 	return { result: envelope.result, msg: envelope.msg, errors: envelope.errors };
 }
 
+/**
+ * WC-2026-08-03-state-widget-total-source-count — the TS state widget adds
+ * `items` (the source-locator count, the total's own divisor) to every `total`
+ * item; PHP never emitted it. Strip it TS-side before diffing (the WC-001
+ * pattern: transform the response, never re-harvest the frozen store).
+ *
+ * The strip RETURNS whether it found the key, and the state test asserts it did
+ * — a normalizer that silently no-ops is how a divergence quietly becomes a
+ * regression the day the field stops being emitted.
+ */
+function stripStateTotalItems(body: unknown): boolean {
+	const result = (body as { result?: unknown }).result;
+	if (!Array.isArray(result)) return false;
+	let found = false;
+	for (const entry of result) {
+		const item = entry as { widget?: unknown; type?: unknown; items?: unknown };
+		if (item?.widget !== 'state' || item?.type !== 'total') continue;
+		if (item.items === undefined) continue;
+		found = true;
+		// The key must be GONE, not undefined: a present-but-undefined key is a
+		// different object shape, and the diff would then depend on how the matcher
+		// treats it rather than on what the engines actually emit.
+		// biome-ignore lint/performance/noDelete: removing the key IS the assertion
+		delete (item as { items?: unknown }).items;
+	}
+	return found;
+}
+
 async function expectEnvelopeParity(
 	rqo: Record<string, unknown>,
-	options: { nonEmpty?: boolean } = {},
+	options: { nonEmpty?: boolean; expectStateItems?: boolean } = {},
 ): Promise<void> {
 	const phpBody = (await php.call(structuredClone(rqo))).body;
 	const tsBody = (await dispatchRqo(structuredClone(rqo) as never, tsContext as never)).body;
+	// WC-2026-08-03-state-widget-total-source-count
+	const strippedItems = stripStateTotalItems(tsBody);
+	if (options.expectStateItems === true) {
+		expect(strippedItems).toBe(true);
+	}
 	if (options.nonEmpty === true) {
 		// non-vacuity floor: a both-engines result:false would "match" too —
 		// the success cases must return actual widget items.
@@ -273,6 +306,7 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 	test('state widget: single-widget compute envelope (scratch rsc2, real vocab)', async () => {
 		await expectEnvelopeParity(widgetRqo('rsc19', 'rsc2', fixtures.stateRecord, 'state'), {
 			nonEmpty: true,
+			expectStateItems: true,
 		});
 	});
 

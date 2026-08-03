@@ -339,19 +339,49 @@ export const render_relation_list = function(options) {
 			parent			: relation_list_container
 		})
 
+	// panel_instance. The relation_list instance THIS panel loaded. The paginator
+	// channel is keyed by section_tipo, not by instance, so every panel ever built
+	// for this section_tipo hears every page turn — see the handler below.
+		let panel_instance = null
+
+	// load_chain. Serializes page turns: two quick clicks on the arrows would
+	// otherwise re-enter load_relation_list on the same instance and race on
+	// self.node (the later render replaces a node the earlier one is appending).
+		let load_chain = Promise.resolve()
+
 	// relation_list events
 	// Subscribe to paginator events so that when the embedded paginator fires a page
 	// change the panel re-renders with the new page of results without re-init.
+		let paginator_token = null
 		const relation_list_paginator_handler = (relation_list) => {
+
+			// (!) A dialog that has been closed takes its DOM with it (dd-modal removes
+			// itself on close) but NOT its subscription: events_tokens is only drained
+			// when the whole caller component is destroyed, so each delete-dialog opening
+			// leaves one more listener on this channel. A stale listener re-renders the
+			// LIVE instance into its own detached body, stealing the node from the panel
+			// the user is looking at and blanking it. Drop it, and unsubscribe on the way.
+				if (!relation_list_container.isConnected) {
+					if (paginator_token) {
+						event_manager.unsubscribe(paginator_token)
+					}
+					return
+				}
+
+			// not this panel's instance (another open panel on the same section_tipo)
+				if (relation_list!==panel_instance) {
+					return
+				}
+
 			relation_list_body.classList.add('loading')
-			load_relation_list(relation_list)
-			.then(function(){
-				relation_list_body.classList.remove('loading')
-			})
+			load_chain = load_chain
+				.then(() => load_relation_list(relation_list))
+				.then(function(){
+					relation_list_body.classList.remove('loading')
+				})
 		}
-		self.events_tokens.push(
-			event_manager.subscribe('relation_list_paginator_'+section_tipo, relation_list_paginator_handler)
-		)
+		paginator_token = event_manager.subscribe('relation_list_paginator_'+section_tipo, relation_list_paginator_handler)
+		self.events_tokens.push(paginator_token)
 
 	// track collapse toggle state of content
 	// load_relation_list: async function that (re-)renders the relation_list instance
@@ -361,7 +391,7 @@ export const render_relation_list = function(options) {
 			relation_list_head.classList.add('up')
 
 			// spinner
-				ui.create_dom_element({
+				const spinner = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'spinner',
 					parent			: relation_list_body
@@ -380,6 +410,10 @@ export const render_relation_list = function(options) {
 					id_variant		:id_variant
 				})
 
+			// panel_instance. Binds the instance to this panel, so paginator events
+			// published by any other panel of the same section_tipo are ignored.
+				panel_instance = relation_list
+
 			// height preserve
 			// Snapshot current height before clearing children so the container
 			// does not collapse to zero during the async render, causing a layout flash.
@@ -387,11 +421,22 @@ export const render_relation_list = function(options) {
 				relation_list_body.style.minHeight = height + 'px'
 
 			await relation_list.build()
-			const relation_list_container = await relation_list.render()
+			const rendered_node = await relation_list.render()
+
+			// render can bail out (illegal status) returning false. Appending it would
+			// throw AFTER the body was emptied, leaving the panel permanently blank:
+			// keep what is on screen instead.
+				if (!(rendered_node instanceof Node)) {
+					console.warn('[render_relation_list] invalid render node. Keeping current content:', rendered_node);
+					spinner.remove()
+					relation_list_body.style.minHeight = null
+					return
+				}
+
 			while (relation_list_body.firstChild) {
 				relation_list_body.removeChild(relation_list_body.firstChild)
 			}
-			relation_list_body.appendChild(relation_list_container)
+			relation_list_body.appendChild(rendered_node)
 
 			// height preserve
 			// Release the reserved minimum height after one tick so the browser

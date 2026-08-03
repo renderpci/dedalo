@@ -74,32 +74,32 @@
         "value": "<p>Genera una versió imprimible de la transcripció d'una entrevista. Utilitzat per personalitzar la sortida d'impressió, afegint o eliminant les etiquetes de codi de temps, indexació, persones, etc.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Erzeugt eine druckbare Version des Interviewprotokolls. Sie können den Ausdruck durch Hinzufügen oder Entfernen von Tags für Zeitcode, Indexierung, Personen usw. anpassen.</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Δημιουργεί μια εκτυπώσιμη έκδοση του πρακτικού της συνέντευξης. Σας επιτρέπει να προσαρμόσετε την εκτύπωση προσθέτοντας ή αφαιρώντας ετικέτες για τον κώδικα ώρας, την ευρετηρίαση, τα άτομα κ.λπ.</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Generates a printable version of the interview transcript. Allows you to customize the printout by adding or removing tags for time code, indexing, people, etc.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-fra",
         "value": "<p>Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc.</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>अन्तर्वार्ता ट्रान्सक्रिप्टको मुद्रण योग्य संस्करण उत्पन्न गर्दछ। समय कोड, अनुक्रमणिका, व्यक्ति, इत्यादिका लागि ट्यागहरू थपेर वा हटाएर प्रिन्टआउटलाई अनुकूलन गर्न अनुमति दिन्छ।</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Genera una versión imprimible de la transcripción de una entrevista. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc.</p>"
       }
@@ -111,32 +111,32 @@
         "value": "Impresió de transcripció"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Transkription drucken"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Εκτύπωση μεταγραφής"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Print transcription"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Transkripzioa inprimatzea"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-nep",
         "value": "प्रिन्ट ट्रान्सक्रिप्शन"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Impresión de transcripción"
       }
@@ -159,7 +159,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -248,12 +248,12 @@
     ],
     "dd612": [
       {
-        "count": 7
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 7
+        "count": 1
       }
     ],
     "dd1326": [

@@ -135,8 +135,16 @@
 	font-size: 0.68rem;
 	font-family: inherit;
 }
-// a cell whose value needs attention (e.g. a drifted counter)
-.dd_table .dd_td.alert {
+// a cell whose value needs attention (e.g. a drifted counter, a stale version)
+//
+// (!) NOT `.alert` — that name is taken by a full BOOTSTRAP-STYLE COMPONENT in
+// core/page/css/layout/general.less (inline-flex, width:100%, 1rem padding,
+// 1px border + radius, centered text, user-select:none, transitions). The kit
+// rule below only sets colour/weight, so every OTHER declaration of that
+// component leaked into the cell: a rounded box drawn around the value, a
+// 0.25em right margin that knocked it off the column's right edge, centred
+// text, and a number the admin could not even select. Scoped name, no leak.
+.dd_table .dd_td.state_alert {
 	color: var(--color_danger);
 	font-weight: 700;
 }

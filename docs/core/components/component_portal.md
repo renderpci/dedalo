@@ -259,8 +259,20 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 | `mini` | — | yes | Minimal inline view, used by the service autocomplete / tight layouts. |
 | `mosaic` | yes | — | Grid layout of linked records (visual / media-heavy targets). |
 | `tree` | yes | — | Picks target records from a thesaurus / hierarchy tree; links with `type` forced to `dd151`. |
-| `indexation` | yes | — | Specialised thesaurus indexation view (uses `config_relation` `tag_id`, `top_locator` from `tool_indexation`). |
+| `indexation` | yes | — | Specialised thesaurus indexation view (uses `config_relation` `tag_id`, `top_locator` from `tool_indexation`). One row per target record, not per locator — see [below](#indexation-view-rows-are-terms-not-tags). |
 | `content` | yes | — | Renders the linked records' content inline. |
+
+### `indexation` view: rows are terms, not tags
+
+The indexation view is the only one where a row is **not** one locator. The stored data holds one locator per tag anchor, so a term tagged five times inside the companion `component_text_area` is five locators sharing the same `section_tipo` + `section_id` and differing only in `tag_id`. The view de-duplicates them into **one row per target record**, and the row's tag column paints one chip per locator — clicking a chip scrolls to that tag in the text.
+
+Two consequences follow, and they are the whole contract of the view:
+
+- **What the row shows is what the row deletes.** The row's unlink removes *every* locator the row is displaying — all of the term's links, in a single save — instead of an arbitrary one of them. The confirmation dialog names the term and lists the chips it is about to remove.
+- **A selected tag narrows both.** While a tag filter is active the portal's entries are filtered to that `tag_id`, so the row shows one chip and the unlink removes one link. There is no separate code path for this case: the displayed set and the deleted set are the same expression.
+
+!!! warning "Unlinking here never edits the text"
+    This removes locators only. The `[index-…]` marks stay in the transcription exactly as they were, orphaned or not. Deleting a tag for real — the marks in every language *plus* its locator — is the text component's job, driven from the editor, not from this list. Say so in any UI you build on top of it.
 
 !!! note "search mode"
     `search` mode reuses the edit/list render pipeline via `render_search_component_portal.js`: the portal becomes an SQO filter input (autocomplete over the target section, `action: 'resolve_data'`), and the picked locators are carried as the filter source value. Saves are blocked in search mode.

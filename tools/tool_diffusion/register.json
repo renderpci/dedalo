@@ -92,7 +92,7 @@
         "value": "<p>Manages diffusion features, publishing selected records to diffusion domain (MySQL, RDF, etc.)</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Gestiona las funciones de difusión, publicando los registros seleccionados en el dominio de difusión (MySQL, RDF, etc.)</p>"
       }
@@ -104,47 +104,47 @@
         "value": "Difusió"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Diffusion"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Διάχυση"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Diffusion"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Difusioa"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "La diffusion"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Diffusione"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "प्रसार"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Difusão"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Difusión"
       }
@@ -167,7 +167,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -901,7 +901,7 @@
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

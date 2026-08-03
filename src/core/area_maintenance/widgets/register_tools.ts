@@ -8,17 +8,62 @@ import { getModelByTipo } from '../../ontology/resolver.ts';
 import { TIPO, TOOLS_REGISTER_SECTION_TIPO } from '../../tools/ontology_map.ts';
 import { type WidgetModule, type WidgetResponse, gated } from './support.ts';
 
+/**
+ * How the registry and the tools tree DISAGREE about one tool — the widget's
+ * single classification, computed here so no consumer re-derives it:
+ *
+ *  - `ok`           registered, on disk, same version;
+ *  - `outdated`     both sides known, the directory ships a different version
+ *                   (the registry is the stale side) → an import fixes it;
+ *  - `unregistered` on disk, no registry row → an import fixes it;
+ *  - `missing`      registered, no directory → an import CANNOT reach it.
+ *
+ * Two clients read this (the panel table + the maintenance map's Tools node) and
+ * both used to re-implement the predicates from the raw fields; the map's copy
+ * simply forgot the version comparison, so it reported a healthy green node over
+ * a red panel. One field, one truth.
+ */
+type ToolRegistryState = 'ok' | 'outdated' | 'unregistered' | 'missing';
+
 /** One datalist row: a tool as the registry and the tools tree jointly see it. */
 interface ToolListItem {
 	name: string;
 	warning: string | null;
+	/** The version the tool's register.json DECLARES on disk (null = unparsable). */
 	version: string | null;
 	developer: string | null;
+	/** The version the dd1324 registry carries (null = not registered). */
 	installed_version: string | null;
 	/** dd1354 — served so the panel's Active checkbox reflects the registry. */
 	active: boolean;
 	/** False = registered but its directory is gone; an import cannot touch it. */
 	on_disk: boolean;
+	/** The row's drift verdict — see ToolRegistryState. */
+	state: ToolRegistryState;
+}
+
+/**
+ * The datalist's drift, summarised: the names behind each non-ok state. Served
+ * so a consumer that only needs the verdict (the map node) never has to walk the
+ * rows, and so the two consumers cannot drift apart in their reading of them.
+ */
+interface RegistryStateSummary {
+	total: number;
+	outdated: string[];
+	unregistered: string[];
+	missing: string[];
+}
+
+/** Summarise the classified rows (names, in the datalist's own sorted order). */
+function summarizeRegistryState(datalist: ToolListItem[]): RegistryStateSummary {
+	const namesOf = (state: ToolRegistryState) =>
+		datalist.filter((item) => item.state === state).map((item) => item.name);
+	return {
+		total: datalist.length,
+		outdated: namesOf('outdated'),
+		unregistered: namesOf('unregistered'),
+		missing: namesOf('missing'),
+	};
 }
 
 /**
@@ -32,10 +77,13 @@ interface ToolListItem {
  * unregistered ('Not registered tool', PHP's wording; it registers ACTIVE
  * unless the admin unchecks it first).
  *
- * `version` still mirrors `installed_version` for registered rows: the registry
- * is this engine's only parsed copy of a tool's declared version, so the
- * 'Missing register.json' warning cannot arise. Component tipos come from
- * tool_ontology_map — never inline a registry tipo here.
+ * The two version columns come from the two SIDES of that join and never from
+ * one: `installed_version` is the dd1324 row, `version` is what the directory's
+ * register.json declares (readDeclaredVersion). Serving the registry into both —
+ * as this engine did until 2026-08-02 — made a stale registry indistinguishable
+ * from a synced one, silently disabling the client's mismatch alert and the
+ * widget's danger badge, which are the panel's whole reason to exist.
+ * Component tipos come from tool_ontology_map — never inline a registry tipo here.
  */
 async function registerToolsGetValue(): Promise<WidgetResponse> {
 	const rows = (await sql.unsafe(
@@ -55,8 +103,15 @@ async function registerToolsGetValue(): Promise<WidgetResponse> {
 
 	// Cold path (a panel load), so the importer's scanner is loaded lazily —
 	// dynamic-import rationale 3, engineering/CONVENTIONS.md §2.
-	const { listToolDirectories } = await import('../../tools/register.ts');
-	const onDisk = new Set(listToolDirectories().map((entry) => entry.name));
+	const { listToolDirectories, readDeclaredVersion } = await import('../../tools/register.ts');
+	const directories = listToolDirectories();
+	const onDisk = new Set(directories.map((entry) => entry.name));
+	// name → declared version, read from each directory's register.json.
+	const declared = new Map(
+		await Promise.all(
+			directories.map(async (entry) => [entry.name, await readDeclaredVersion(entry.dir)] as const),
+		),
+	);
 
 	const datalist: ToolListItem[] = [];
 	const registered = new Set<string>();
@@ -64,15 +119,24 @@ async function registerToolsGetValue(): Promise<WidgetResponse> {
 		if (row.name === null || row.name === '') continue;
 		registered.add(row.name);
 		const present = onDisk.has(row.name);
+		// No directory ⇒ nothing declares a version; the row is registry-only.
+		const declaredVersion = present ? (declared.get(row.name) ?? null) : null;
 		datalist.push({
 			name: row.name,
 			warning: present ? null : 'Not found on disk',
-			version: row.version,
+			version: declaredVersion,
 			developer: row.developer,
 			installed_version: row.version,
 			// radioYes semantics: the FIRST dd64 locator, '1' = yes.
 			active: row.active_id === '1',
 			on_disk: present,
+			state: !present
+				? 'missing'
+				: // Both sides must be KNOWN to call it drift: an unparsable
+					// register.json is a broken package, not a stale registry.
+					declaredVersion !== null && row.version !== null && declaredVersion !== row.version
+					? 'outdated'
+					: 'ok',
 		});
 	}
 	for (const name of onDisk) {
@@ -80,13 +144,14 @@ async function registerToolsGetValue(): Promise<WidgetResponse> {
 		datalist.push({
 			name,
 			warning: 'Not registered tool',
-			// Nothing is parsed for an unregistered tool — the import reads its
-			// register.json. It registers active unless the admin unchecks it.
-			version: null,
+			// Nothing is REGISTERED yet, but the directory still declares a version;
+			// it registers active unless the admin unchecks it.
+			version: declared.get(name) ?? null,
 			developer: null,
 			installed_version: null,
 			active: true,
 			on_disk: true,
+			state: 'unregistered',
 		});
 	}
 	datalist.sort((a, b) => a.name.localeCompare(b.name));
@@ -99,7 +164,7 @@ async function registerToolsGetValue(): Promise<WidgetResponse> {
 			: null;
 
 	return {
-		result: { datalist, errors },
+		result: { datalist, errors, registry_state: summarizeRegistryState(datalist) },
 		msg: 'OK. Request done successfully',
 		errors: [],
 	};

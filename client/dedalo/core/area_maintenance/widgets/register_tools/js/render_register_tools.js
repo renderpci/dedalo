@@ -25,9 +25,20 @@
 *       warning           : {string|null}   — pre-composed server-side warning (e.g. missing register.json)
 *       active            : {boolean}       — dd1354 registry state; seeds the Active checkbox
 *       on_disk           : {boolean}       — false = registered but its directory is gone
+*       state             : {string}        — 'ok' | 'outdated' | 'unregistered' | 'missing'
 *     }>,
+*     registry_state : {                    — the same verdict, summarised
+*       total        : {number},
+*       outdated     : {Array<string>},     — names shipping a version the registry lacks
+*       unregistered : {Array<string>},     — names on disk with no registry row
+*       missing      : {Array<string>}      — names registered with no directory
+*     },
 *     errors : {Array<string>|null}         — fatal errors (e.g. outdated ontology)
 *   }
+*
+* `state` / `registry_state` are the SERVER's classification and the only source
+* this file (and the maintenance map's Tools node) reads for drift — see the
+* Version columns note below.
 *
 * Active checkboxes (WC-057)
 * --------------------------
@@ -54,6 +65,20 @@
 * 4. After a successful form submit the `on_done` callback refreshes `self.value`
 *    and calls `render_datalist` again in place so only the list repaints.
 *
+* Version columns
+* ---------------
+* `installed_version` and `version` are the TWO SIDES of a join and never the
+* same source: the registry row vs the tool directory's register.json. When they
+* disagree the registry is the stale one (it reddens), and `render_version_notice`
+* prints the sentence above the table that says which number is new and that the
+* Register button is the cure — a red cell in a 37-row list explains neither.
+*
+* WHICH rows disagree is decided ONCE, on the server (`state` / `registry_state`,
+* WC-2026-08-02-register-tools-registry-state). This file and
+* render_area_maintenance.js both consume that verdict; when each re-derived it
+* from the raw fields, the map's copy omitted the version comparison and reported
+* a green Tools node above this panel showing a red one.
+*
 * Visual state
 * ------------
 * The outer widget card label is coloured `danger` (via `set_widget_label_style`)
@@ -73,7 +98,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {render_tree_data} from '../../../../common/js/common.js'
+	import {render_tree_data, format_label} from '../../../../common/js/common.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
@@ -182,6 +207,17 @@ const render_content_data = async function(self) {
 		// every repaint (including the post-submit refresh) from the server value.
 			const tools_active = {}
 
+	// version_notice
+		// The one sentence that says WHAT is wrong and WHAT fixes it. A red cell in
+		// a 37-row table is a pointer, not an explanation: it never said which of
+		// the two numbers was the new one, nor that pressing the button is the cure.
+		// Filled (or emptied) by render_datalist on every repaint; `:empty` hides it.
+			const version_notice = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'version_notice',
+				parent			: content_data
+			})
+
 	// datalist
 		// datalist_container holds the header row + the live tool rows; render_datalist
 		// populates the rows and can replace them on subsequent calls (e.g. after
@@ -280,7 +316,8 @@ const render_content_data = async function(self) {
 			const active_state = {
 				tools_active	: tools_active,
 				check_all		: check_all,
-				summary_node	: summary_node
+				summary_node	: summary_node,
+				version_notice	: version_notice
 			}
 
 		// datalist rows
@@ -436,21 +473,25 @@ const render_datalist = (self, datalist_container, active_state) => {
 			delete tools_active[key]
 		}
 
-	// check versions
-		// collect tools whose on-disk version differs from the installed (registered) version
-		// A server warning ('Not registered tool' / 'Not found on disk') counts too:
-		// both are states the Register action exists to resolve. A tool the admin
-		// deliberately deactivated is NOT a warning and never reddens the card.
-		const outdated = datalist.reduce((carry, value) => {
-			if (value.version !== value.installed_version || value.warning) {
-				carry.push(value)
-			}
-			return carry
-		}, [])
+	// drift
+		// The card reddens on any state the Register action exists to resolve —
+		// read from the server's classification, never re-derived here (the map
+		// node reads the same field, so the two views cannot disagree). A tool the
+		// admin deliberately deactivated is NOT a drift and never reddens the card.
+		const registry	= value.registry_state || {}
+		const drift		= (registry.outdated || []).length
+			+ (registry.unregistered || []).length
+			+ (registry.missing || []).length
+
+	// version_notice
+		// Three DISTINCT states hide behind one red cell, and each needs a different
+		// action from the admin, so each gets its own sentence (only the ones that
+		// actually occur are printed) — see render_version_notice.
+		render_version_notice(active_state.version_notice, value)
 
 	// set widget container label color style
-		// mark the card red if there are fatal errors OR any outdated tools
-		if (errors.length || outdated.length) {
+		// mark the card red if there are fatal errors OR any drift
+		if (errors.length || drift) {
 			set_widget_label_style(self, 'danger', 'add', datalist_container)
 		}else{
 			set_widget_label_style(self, 'danger', 'remove', datalist_container)
@@ -469,6 +510,9 @@ const render_datalist = (self, datalist_container, active_state) => {
 		const installed_version	= item.installed_version
 		const on_disk			= item.on_disk !== false
 		const active			= item.active !== false
+		// The server's own verdict for this row: ok | outdated | unregistered |
+		// missing (see the widget's ToolRegistryState). Never re-derived here.
+		const state				= item.state || 'ok'
 		// seed ar_warning with the server-side warning (if any); client-side checks append below
 		const ar_warning		= item.warning
 			? [item.warning]
@@ -514,17 +558,21 @@ const render_datalist = (self, datalist_container, active_state) => {
 		}
 
 		// name
+		// name_td: the tool identifier is machine text — monospaced so the shared
+		// `tool_` prefix lines up and the rows are scannable by their suffix.
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'dd_td',
+			class_name		: 'dd_td name_td',
 			inner_html		: name,
 			parent			: tool_item
 		})
 
 		// developer
+		// dev_td: secondary provenance (nearly always the same value), so it is
+		// muted — it must not compete with the name and the versions.
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'dd_td',
+			class_name		: 'dd_td dev_td',
 			inner_html		: developer,
 			parent			: tool_item
 		})
@@ -536,9 +584,15 @@ const render_datalist = (self, datalist_container, active_state) => {
 			inner_html		: installed_version,
 			parent			: tool_item
 		})
-		// highlight the installed version cell when it does not match the current on-disk version
-		if (installed_version!==version) {
-			installed_version_node.classList.add('alert')
+		// The registry copy is the WRONG one when the two differ, so it is the cell
+		// that reddens. Only an 'outdated' row qualifies: an empty cell painted red
+		// (an unregistered tool, an orphan row) would say 'error' where the Info
+		// column already says exactly what happened.
+		const version_mismatch = state==='outdated'
+		if (version_mismatch) {
+			// state_alert, NOT alert: the bare name collides with the global .alert
+			// component in layout/general.less (see widget_kit.less).
+			installed_version_node.classList.add('state_alert')
 		}
 
 		// available version
@@ -551,10 +605,25 @@ const render_datalist = (self, datalist_container, active_state) => {
 
 		// warning
 		// append client-side diagnostic messages after any server-supplied warning.
-		// An UNREGISTERED tool (on disk, no registry row) has no parsed version by
+		// An UNREGISTERED tool (on disk, no registry row) has no INSTALLED version by
 		// definition — its 'Not registered tool' warning already says everything, so
-		// the two generic version notes are suppressed as noise.
-		const unregistered = on_disk && !installed_version && !version
+		// the two generic version notes are suppressed as noise. (It does carry a
+		// declared `version`: the server reads it from the directory's register.json.)
+		const unregistered = state==='unregistered'
+		// Says which number is which. 'Installed' vs 'Version' in the headers does
+		// not tell an admin that the SECOND one is what the files now ship.
+		if (version_mismatch) {
+			// escaped: the Info cell is rendered with inner_html (the entries are
+			// joined by <br>), and a version is author-supplied register.json data.
+			ar_warning.push(format_label(
+				get_label.tools_version_mismatch
+					|| 'The registry has ${registry_version}, this tool now ships ${disk_version}',
+				{
+					registry_version	: escape_html(installed_version),
+					disk_version		: escape_html(version)
+				}
+			))
+		}
 		if (!version && !unregistered) {
 			ar_warning.push('Tool version not defined')
 		}
@@ -621,6 +690,146 @@ const set_all_active = (datalist_container, checked) => {
 
 	return true
 }//end set_all_active
+
+
+
+/**
+* ESCAPE_HTML
+* Minimal escape for values that reach an `inner_html` sink. Used for the
+* register.json-supplied version strings in the Info column — everything else
+* rendered there is a fixed literal composed in this file.
+*
+* @param {string} value
+* @returns {string}
+*/
+const escape_html = (value) => String(value).replace(/[&<>"]/g, (char) => ({
+	'&' : '&amp;',
+	'<' : '&lt;',
+	'>' : '&gt;',
+	'"' : '&quot;'
+}[char]))
+
+
+
+/**
+* NAME_LIST
+* Joins tool names for a prose sentence, capping the enumeration so a
+* whole-install drift ('34 tools are not registered') stays one readable line.
+* The overflow is marked with an ellipsis, NOT with an English 'and N more':
+* this string is dropped into a translated sentence.
+*
+* @param {Array<string>} names - tool names (registry_state carries names, not rows).
+* @param {number} [max=4] - How many names to print before the ellipsis.
+* @returns {string} e.g. `tool_a, tool_b, tool_c, tool_d, …`
+*/
+const name_list = (names, max=4) => {
+
+	return names.length<=max
+		? names.join(', ')
+		: names.slice(0, max).join(', ') + ', …'
+}//end name_list
+
+
+
+/**
+* RENDER_VERSION_NOTICE
+* Writes the plain-language explanation above the table — the piece the red
+* `installed` cell cannot give: which side is ahead, and whether the Register
+* button is the fix.
+*
+* Reads `registry_state` (the server's own classification of the datalist), so
+* the panel and the maintenance map's Tools node say the same thing by
+* construction — neither re-derives 'outdated' from the raw version fields.
+*
+* Each state gets its own line because each has a different resolution:
+*   - outdated     (the directory ships a version the registry lacks) → the button;
+*   - unregistered (on disk, no registry row)                         → the button;
+*   - missing      (registered, no directory) → the importer cannot reach it at
+*     all, so saying 'press the button' there would be a lie.
+*
+* Emptied (and CSS-hidden) when the registry and the tools tree agree, so the
+* panel is silent in the normal case.
+*
+* @param {HTMLElement|null} node - the `.version_notice` container.
+* @param {Object} value - the widget value: {datalist, registry_state, errors}.
+* @returns {boolean} Always returns true.
+*/
+const render_version_notice = (node, value) => {
+
+	if (!node) {
+		return true
+	}
+
+	// the three drift states, as the SERVER classified them
+		const registry		= value.registry_state || {}
+		const outdated		= registry.outdated || []
+		const unregistered	= registry.unregistered || []
+		const missing		= registry.missing || []
+		const datalist		= value.datalist || []
+
+	const button	= get_label.register_tools || 'Register tools'
+	const lines		= []
+
+	if (outdated.length) {
+		// One row: name the two versions outright — no need to make the admin hunt
+		// for the red cell to learn which side is ahead. The row is looked up by
+		// name so the sentence quotes the same numbers the table shows.
+		const single = outdated.length===1
+			? datalist.find((item) => item.name===outdated[0])
+			: null
+		lines.push(single
+			? format_label(
+				get_label.tools_registry_outdated_one
+					|| "${name} ships version ${disk_version}, but the registry still has ${registry_version}. Press '${button}' to update it.",
+				{
+					name				: single.name,
+					disk_version		: single.version,
+					registry_version	: single.installed_version,
+					button				: button
+				}
+			)
+			: format_label(
+				get_label.tools_registry_outdated_many
+					|| "${count} tools ship a version the registry does not have: ${names}. Press '${button}' to update it.",
+				{
+					count	: outdated.length,
+					names	: name_list(outdated),
+					button	: button
+				}
+			)
+		)
+	}
+
+	if (unregistered.length) {
+		lines.push(format_label(
+			get_label.tools_not_registered_notice
+				|| "Tools found on disk but not registered yet: ${names}. They stay invisible to users until you press '${button}'.",
+			{
+				names	: name_list(unregistered),
+				button	: button
+			}
+		))
+	}
+
+	if (missing.length) {
+		lines.push(format_label(
+			get_label.tools_registry_missing_notice
+				|| 'Registered tools with no files on disk: ${names}.',
+			{ names : name_list(missing) }
+		))
+	}
+
+	// textContent, never innerHTML: a version string is author-supplied data read
+	// straight out of a register.json file, and this node is rendered for an admin.
+	node.innerHTML = ''
+	for (const line of lines) {
+		const p = document.createElement('p')
+		p.textContent = line
+		node.appendChild(p)
+	}
+
+	return true
+}//end render_version_notice
 
 
 

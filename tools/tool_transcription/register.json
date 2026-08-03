@@ -97,32 +97,32 @@
         "value": "<p>Transcribir qualsevol tipus de media a text.</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "<p>Transkribieren Sie jede Art von Medien in Text</p>"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "<p>Μεταγράψτε οποιοδήποτε είδος μέσων σε κείμενο</p>"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "<p>Transcribe any kind of media to text.</p>"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-ita",
         "value": "<p>Trascrivi qualsiasi tipo di media in testo</p>"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-nep",
         "value": "<p>पाठमा कुनै पनि प्रकारको मिडिया ट्रान्सक्राइब गर्नुहोस्।</p>"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Transcribir cualquier tipo de media a texto.</p>"
       }
@@ -134,47 +134,47 @@
         "value": "Transcripció"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Transkription"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Μεταγραφή"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Transcription"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Transkripzioa"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Transcription"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Trascrizione"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "ट्रान्सक्रिप्शन"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Transcrição"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Transcripción"
       }
@@ -197,7 +197,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.6.0"
+        "value": "7.0.0"
       }
     ],
     "dd1644": [
@@ -3313,12 +3313,12 @@
     ],
     "dd612": [
       {
-        "count": 7
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

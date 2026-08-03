@@ -1060,7 +1060,10 @@ page.prototype.destroy = async function(delete_self=true, delete_dependencies=fa
 *                            built-in "changes may not be saved" dialog (text cannot be
 *                            customised in modern browsers).
 *   document 'keydown'     — Application-wide keyboard shortcuts:
-*                              Escape      → close active modal / deactivate active component
+*                              Escape      → priority ladder: open modal (dd-modal owns it)
+*                                            → CSS fullscreen → component that binds ESC
+*                                            (text_area AV play/pause) → deactivate the
+*                                            active component (saves pending changed_data)
 *                              Shift+Left  → paginator previous page
 *                              Shift+Right → paginator next page
 *                              Ctrl+I      → toggle inspector panel
@@ -1186,19 +1189,48 @@ page.prototype.add_events = function() {
 		self.keydown_handler = function(evt) {
 			switch(evt.key) {
 
-				case 'Escape':
-					// modal is open case
+				case 'Escape': {
+					// Escape priority ladder. The page owns Escape ONLY as the last
+					// step; every narrower scope that legitimately consumes it wins
+					// first, so one press dismisses exactly one thing.
+					//  1. open modal          → dd-modal closes the topmost (own keyup)
+					//  2. CSS fullscreen      → ui.enter_fullscreen exits (own keyup)
+					//  3. component owning ESC→ e.g. component_text_area AV play/pause
+					//  4. otherwise           → deactivate the active component
+					// (Overlays with a narrower scope — suggestion lists, inline edits,
+					// the command palette — stopPropagation on their own keydown and
+					// never reach here.)
+
+					// 1. modal is open case
 					if (window.modal) {
 						// Note that dd-modal has is own ESC event to close the modal
 						return
 					}
-					// inactive user activated component
-					if (page_globals.component_active) {
-						ui.component.deactivate(page_globals.component_active)
+
+					// 2. CSS fullscreen is active (ui.enter_fullscreen exits on keyup)
+					if (document.querySelector('.fullscreen')) {
+						return
 					}
+
+					const component_active = page_globals.component_active
+
+					// 3. the active component binds Escape to its own action
+					// (component_text_area AV play/pause: features.av_player.av_play_pause_code)
+					const av_player = component_active?.context?.features?.av_player
+					if (av_player && av_player.av_play_pause_code==='Escape') {
+						return
+					}
+
+					// 4. deactivate the user activated component
+					// (this saves pending changed_data and publishes 'deactivate_component')
+					if (component_active) {
+						ui.component.deactivate(component_active)
+					}
+
 					// blur active input
-					document.activeElement.blur()
+					document.activeElement?.blur()
 					break;
+				}
 
 				case 'ArrowLeft': {
 					if (evt.shiftKey) {

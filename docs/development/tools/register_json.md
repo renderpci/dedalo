@@ -63,7 +63,27 @@ Every field maps to a fixed ontology tipo (`TOOL_NAME`, `TOOL_VERSION`, `CONFIG`
 
 ## Where the data lands
 
-At registration the file is reconciled into a record of the "Registered Tools" section (dd1324, `matrix_tools`). `importTools()` defaults to **dry-run** (`config.tools.enableRegistryImport = false`, see [Server contract](server_contract.md)): it reports, per tool, whether the registry already reflects the file's declared identity, without writing.
+At registration the file is reconciled into a record of the "Registered Tools" section (dd1324, `matrix_tools`). `importTools()` defaults to **dry-run** (`config.tools.enableRegistryImport = false`, see [Server contract](server_contract.md)): it reports, per tool, whether the registry already reflects the file's declared identity, without writing. The area_maintenance *Register tools* widget is the exception — its own action always performs a real import, so the button an administrator presses does write.
+
+!!! warning "The registry is what runs, not the file"
+
+    Dédalo serves a tool's metadata — label, description, configuration,
+    affected models, the version shown to users — from the **registry record**,
+    never by re-reading `register.json` at runtime. Editing the file therefore
+    changes nothing until the tool is registered again.
+
+    The *Register tools* panel in
+    [area_maintenance](../../core/areas/area_maintenance.md) is where this
+    becomes visible. It shows two version columns per tool — **Installed** (the
+    registry) and **Version** (what the file on disk declares) — and flags every
+    tool where the two disagree, where a directory exists with no registry
+    record, or where a record survives a directory that is gone. Press *Register
+    tools* to reconcile; the first two states are exactly what it fixes. The
+    third is not: no directory means the importer has nothing to read, so either
+    the record is deleted or the tool's files are restored.
+
+    So: **bump `version` when you change a tool's registered metadata**, and
+    re-register. A version left untouched makes a stale registry look correct.
 
 ## Legacy v6 format
 

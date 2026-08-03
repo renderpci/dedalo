@@ -478,10 +478,30 @@ The panel itself (`get_value`) JOINS the registry with the scanned directories,
 so it can never offer a checkbox over a tool the import cannot reach: a row
 whose directory is gone is flagged `on_disk:false` (the client disables its
 checkbox) and a directory with no registry row is flagged
-`'Not registered tool'`. Gated by `test/unit/register_tools_panel.test.ts` — it
+`'Not registered tool'`.
+
+**The two version columns are the two SIDES of that join**
+(WC-2026-08-02-register-tools-registry-state): `installed_version` is the dd1324
+value, `version` is what the directory's `register.json` declares
+(`readDeclaredVersion`, both formats; `null` for an unparsable file and for a
+registry row with no directory). Until 2026-08-02 both were served from the
+registry row, which made a stale registry indistinguishable from a synced one and
+left the client's mismatch alert unreachable.
+
+**One drift verdict, computed server-side.** Each row carries
+`state: 'ok' | 'outdated' | 'unregistered' | 'missing'`, and the response carries
+`registry_state = {total, outdated[], unregistered[], missing[]}` (names). Both
+consumers — the panel table and the maintenance map's Tools node — READ that
+verdict; neither re-derives it. They did before, and the map's copy omitted the
+version comparison, so it reported a healthy node above a panel rendering the
+drift. Any new consumer reads `registry_state` too.
+
+Gated by `test/unit/register_tools_panel.test.ts` — it
 asserts the JOIN itself (every scanned directory is offered a row, rows are unique
 and sorted, both checkbox fields are booleans, `on_disk` agrees with the scanner
-and a `false` one carries the 'Not found on disk' warning) rather than any
+and a `false` one carries the 'Not found on disk' warning), that `version` equals
+the declared version read from each directory, and that `registry_state` is
+exactly the per-row `state` values summarised — rather than any
 install's particular rows. NOTE the `on_disk:false` branch is DATA-DEPENDENT: it
 asserts nothing unless the DB under test has a registry row with no directory —
 the live install does (an extra row against 36 directories), the suite DB may not.

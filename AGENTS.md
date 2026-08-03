@@ -113,6 +113,29 @@ confinement is tiered (README "Hard rules"). Diffusion is native under
 `src/diffusion/` (facade: `diffusion/api/`). Request identity (lang,
 principal) is ALS-scoped — never captured at module level.
 
+## Virtual sections
+
+A section is **virtual** when `getSectionRealTipo(tipo)` returns another tipo:
+its ontology `relations` name a node whose **model is `section`** (e.g.
+`rsc170` → `rsc2`, `es1` → `hierarchy20`). Real sections have no such relation
+(`numisdata3`). A `matrix_table` relation (`dd623` → `dd22`) does **not** make
+the section virtual.
+
+Virtual sections borrow the real section's children. Never use a plain
+`WHERE parent = sectionTipo` for child-by-model lookup — use
+`findSectionChildByModel` / `getSectionRealTipo` (own children are often only
+`exclude_elements` / `section_list` / buttons).
+
+- **Edit**: real children **minus** the FIRST `exclude_elements` child (skipping
+  a grouper drops its subtree). Without this the edit form is empty.
+- **List columns**: inherit the real `section_list` **verbatim** (no
+  `exclude_elements` subtraction). Own `section_list` wins when present; a
+  zero-children hierarchy instance (`es1`) still needs the real fallback or
+  only the built-in `Id` column renders.
+
+Canon: `engineering/SECTION_SPEC.md` (§7.1 + virtual notes). Playbook:
+`dedalo-section-family-ts`.
+
 ## Tripwires
 
 The authoritative tripwire list is **`engineering/TRIPWIRES.md`** (in the repo,

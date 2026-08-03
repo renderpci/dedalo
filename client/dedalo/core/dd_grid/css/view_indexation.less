@@ -16,6 +16,17 @@
 	overflow: auto;
 	position: relative;
 
+	// (!) This is a TWO-AXIS scroll container: the per-section grids below (and
+	// view_indexation_audiovisual.less) declare fixed column tracks wider than
+	// the pane, so it scrolls horizontally as well as vertically.
+	// A sticky bar inside it is laid out at the SCROLLPORT width, not the scroll
+	// width, so on horizontal scroll it slides left with the content: its left
+	// end goes out of view and its right end leaves a transparent gap through
+	// which the scrolled rows show. The widest box is a deep sibling (a row's
+	// grid tracks), so no CSS relationship can size the bars from it —
+	// --grid_scroll_w is measured and set from JS instead
+	// (view_indexation_dd_grid.js sync_sticky_width). The fallback keeps the
+	// old behaviour if the var is ever missing.
 	.top_container {
 	    background-color: var(--color_grey_14);
 		display: grid;
@@ -24,6 +35,23 @@
 		position: sticky;
 		top: 0;
 		z-index: 2;
+		width: var(--grid_scroll_w, 100%);
+
+		// The bar now spans the whole scroll width, so its contents must be
+		// pinned or they scroll out of the viewport with it. Both need an
+		// intrinsic width (and matching justify-self) or they fill their grid
+		// track and have no slack left to stick with.
+		.filter_section_container {
+			position: sticky;
+			left: 0;
+			width: max-content;
+			justify-self: start;
+		}
+		.paginator_container {
+			position: sticky;
+			right: 0;
+			justify-self: end;
+		}
 
 		.filter_section_container {
 			// background-color: @color_white;
@@ -157,6 +185,15 @@
 					position: sticky;
 					top: 4.2rem;
 					z-index: 1;
+					// same scroll-width span as .top_container (see the note
+					// there), minus this label's own indent: .caption carries
+					// margin-left 4rem, so a full-width label would push the
+					// scroll width 4rem further out on every measurement.
+					// (!) This label is a FLEX item: without flex-shrink:0 it
+					// is shrunk straight back to the pane width and the gap
+					// returns.
+					width: calc(var(--grid_scroll_w, 100%) - 4rem);
+					flex-shrink: 0;
 				}
 
 				// column generic
@@ -183,6 +220,17 @@
 				>.row {
 					width: 100%;
 				}
+
+				// (!) COLUMN ALIGNMENT LAW for every per-section grid below:
+				// each ROW is its own independent grid, so columns line up only
+				// because their track lists resolve to the same widths. A bare
+				// `fr` takes the item's own content as its automatic minimum, so
+				// as soon as the pane is too narrow to satisfy the fixed tracks
+				// each row sizes that track from its own longest word and the
+				// columns drift apart (measured in the audiovisual grid: 89 /
+				// 94 / 104 / 116px for the same track in four rows).
+				// Always write minmax(0, Nfr) — or minmax(<floor>, Nfr) when the
+				// column must stay readable. `auto` tracks have the same defect.
 
 				// oh1 . Oral History (uses view_indexation_audiovisual.less too)
 				&.oh1 {
@@ -212,7 +260,7 @@
 						background-color: @color_orange_light;
 						width: 100%;
 						display: grid;
-						grid-template-columns: 102px 1fr 1fr 1fr 1fr 1fr;
+						grid-template-columns: 102px repeat(5, minmax(0, 1fr));
 
 						.column {
 							box-shadow: none;
@@ -243,7 +291,7 @@
 						&:not(.head)>.column {
 							margin-left: 8rem;
 							display: grid;
-							grid-template-columns: 1fr 1fr 6fr;
+							grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 6fr);
 							>.column {
 								box-shadow: none;
 							}
@@ -252,7 +300,7 @@
 					>.row.head {
 						width: 100%;
 						display: grid;
-						grid-template-columns: 102px 1fr 1fr 1fr 1fr;
+						grid-template-columns: 102px repeat(4, minmax(0, 1fr));
 
 						.column {
 							box-shadow: none;
@@ -287,7 +335,7 @@
 
 						width: 100%;
 						display: grid;
-						grid-template-columns: 4rem 4fr 4fr 2fr;
+						grid-template-columns: 4rem minmax(0, 4fr) minmax(0, 4fr) minmax(0, 2fr);
 						align-items: center;
 					}//end >.row
 				}//end .rsc197
@@ -296,7 +344,7 @@
 				&.tch {
 					>.row.line {
 						display: grid;
-						grid-template-columns: auto 13.4rem 1fr 1fr 1fr 1fr 1fr;
+						grid-template-columns: auto 13.4rem repeat(5, minmax(0, 1fr));
 						border-bottom: 1px solid @color_grey_13;
 
 						img {
@@ -316,7 +364,7 @@
 					>.row.line {
 						width: 100%;
 						display: grid;
-						grid-template-columns: 5rem 8rem 2fr 1fr 1fr 1fr 7rem 2fr;
+						grid-template-columns: 5rem 8rem minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 7rem minmax(0, 2fr);
 						align-items: start;
 						border-bottom: 1px solid @color_grey_13;
 					}//end >.row.line

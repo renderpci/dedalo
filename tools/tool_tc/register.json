@@ -92,7 +92,7 @@
         "value": "<p>Manages offset timecode of transcriptions tags by adding or subtracting seconds</p>"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-spa",
         "value": "<p>Herramienta para gestionar los códigos de tiempo de una transcripción.</p>"
       }
@@ -104,47 +104,47 @@
         "value": "Codis de temps"
       },
       {
-        "id": 2,
+        "id": 1,
         "lang": "lg-deu",
         "value": "Zeitcodes"
       },
       {
-        "id": 3,
+        "id": 1,
         "lang": "lg-ell",
         "value": "Κωδικοί ώρας"
       },
       {
-        "id": 4,
+        "id": 1,
         "lang": "lg-eng",
         "value": "Time codes"
       },
       {
-        "id": 5,
+        "id": 1,
         "lang": "lg-eus",
         "value": "Denbora-kodeak"
       },
       {
-        "id": 6,
+        "id": 1,
         "lang": "lg-fra",
         "value": "Codes de temps"
       },
       {
-        "id": 7,
+        "id": 1,
         "lang": "lg-ita",
         "value": "Codici di tempo"
       },
       {
-        "id": 8,
+        "id": 1,
         "lang": "lg-nep",
         "value": "समय कोडहरू"
       },
       {
-        "id": 9,
+        "id": 1,
         "lang": "lg-por",
         "value": "Códigos de tempo"
       },
       {
-        "id": 10,
+        "id": 1,
         "lang": "lg-spa",
         "value": "Códigos de tiempo"
       }
@@ -167,7 +167,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "6.0.0"
+        "value": "7.0.0"
       }
     ],
     "dd1362": [
@@ -411,12 +411,12 @@
     ],
     "dd612": [
       {
-        "count": 2
+        "count": 1
       }
     ],
     "dd799": [
       {
-        "count": 10
+        "count": 1
       }
     ],
     "dd1326": [

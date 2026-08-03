@@ -10,6 +10,36 @@ Dédalo version
 
 ---
 
+## [Unreleased] - The `state` widget reads like a table, and adds up
+
+### Fixed
+- **The state breakdown panel contradicted its own cell.** A source record that
+  saved nothing contributes 0 to the average but emits no `detail` item, so a
+  record with two linked resources and one value showed a hover panel reading
+  `total : 50%` beside a cell reading `25%` — two numbers, both labelled total.
+  The panel now lists **one row per source record** (the empty ones included,
+  as explicit `0%`) under a single ruled-off total that always equals the cell.
+  It also dropped every row after the first on a non-translatable leaf, and
+  clipped long option names to one letter per line.
+- **A row with no data collapsed the layout.** The cells of an empty
+  situation/state column were not rendered at all, so the next row's label was
+  auto-placed into the hole and the labels marched across the columns. Empty
+  cells are now drawn, and read `—`.
+
+### Added
+- **`items` on the `state` widget's `total` items** — the source-record count
+  the total is averaged over, i.e. its own divisor. TS-only and additive; wire
+  contract `WC-2026-08-03-state-widget-total-source-count`.
+  [Shape and rationale](./core/components/component_info.md#state--detail-total-and-the-items-divisor).
+
+### Changed
+- **The state widget's edit view was restyled** to the maintenance widget-kit
+  language: card surface, uppercase header, hairline row rules, tabular
+  numerals, and a meter per percentage (full at 100%, muted empty track at 0%).
+  Every colour goes through a theme token, so the breakdown panel is no longer
+  a white slab in dark mode. Percentages are keyboard reachable, and the panel
+  stays open while the pointer travels into it.
+
 ## [Unreleased] - Session lifetime, and the media cookie bound to it
 
 ### Changed

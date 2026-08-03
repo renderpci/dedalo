@@ -37,31 +37,27 @@ async function runtimeInfoGetValue(): Promise<WidgetResponse> {
 
 /**
  * clear_cache_files — flush the TS server's IN-MEMORY caches (the TS analog
- * of PHP's dd_cache file purge): ontology nodes/models, tools registry and
- * the datalist cache.
+ * of PHP's dd_cache file purge).
+ *
+ * Goes through the invalidation HUB (clearOntologyDerivedCaches), which fires
+ * every clearer registered by cache_factory — not a hand-picked list. The
+ * hand-picked version silently missed caches nobody remembered to add here: it
+ * cleared ontology/labels.ts (dd_ontology TERM labels) and reported 'labels',
+ * while the UI-label dictionaries of labels/catalog.ts survived, so an admin who
+ * pressed this button after a label deploy still got the old strings back and
+ * had nothing but a restart left to try. Keeping a second list of caches next to
+ * the hub's is the bug — there is now one list, and it is the hub's.
+ *
+ * The tools caches are NOT ontology-derived (registry rows, tool config, loaded
+ * modules), so they stay an explicit second call.
  */
 async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
-	const cleared: string[] = [];
-	const { clearOntologyCaches } = await import('../../ontology/resolver.ts');
-	clearOntologyCaches();
-	cleared.push('ontology');
+	const { clearOntologyDerivedCaches } = await import('../../ontology/cache_invalidation.ts');
+	await clearOntologyDerivedCaches();
 	const { invalidateAllToolCaches } = await import('../../tools/cache.ts');
 	invalidateAllToolCaches();
-	cleared.push('tools');
-	const { clearDatalistCache } = await import('../../relations/datalist.ts');
-	clearDatalistCache();
-	cleared.push('datalist');
-	// Area/structure caches: ontology-derived, request-invariant, but stale after
-	// an ontology import (engineering/AREA_SPEC.md §1 cache hygiene).
-	const { clearChildrenTipoCache } = await import('../../area/tree.ts');
-	clearChildrenTipoCache();
-	const { clearLabelCache } = await import('../../ontology/labels.ts');
-	clearLabelCache();
-	const { clearStructureContextCache } = await import('../../resolve/structure_context.ts');
-	clearStructureContextCache();
-	cleared.push('area_tree', 'labels', 'structure_context');
 	return {
-		result: { cleared },
+		result: { cleared: ['ontology_derived', 'tools'] },
 		msg: 'OK. Request done successfully',
 		errors: [],
 	};

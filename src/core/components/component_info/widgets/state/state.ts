@@ -7,6 +7,8 @@
  * the vocabulary record's percentage (dd92 / dd83) becomes a 'detail' item
  * and per-column running sums emit 'total' items (round((sum / n) / source
  * locator count, 2); n = project-lang count for translatable leaves, else 1).
+ * The total also carries that source locator count as `items` — TS-only, see
+ * WC-2026-08-03-state-widget-total-source-count.
  * Empty leaves emit a zero detail whose column comes from the leaf's related
  * SECTION relation (dd501 → 'state', else 'situation'); non-empty leaves take
  * the column from the STORED locator's section. Multi-hop paths are UNPORTED
@@ -210,6 +212,11 @@ async function computeState(ipo: unknown[], context: WidgetContext): Promise<Wid
 					value: phpRound(sum.total / sum.n / items, 2),
 					column,
 					type: 'total',
+					// WC-2026-08-03-state-widget-total-source-count: TS-only. The
+					// divisor, published. A source record with nothing saved emits no
+					// detail item at all, so the client could not tell 50%-of-one from
+					// 25%-of-two and its breakdown panel contradicted its own cell.
+					items,
 				});
 			}
 		}

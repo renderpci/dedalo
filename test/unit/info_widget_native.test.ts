@@ -41,7 +41,10 @@
  *    of the PHP array_sum defect pin (non-empty input → TS serves [[]]; the
  *    PHP crash itself stays pinned in the parity differential ONLY).
  *  - state               : detail + total items and the EDIT datalist over
- *    the dd501/dd174 install vocabularies.
+ *    the dd501/dd174 install vocabularies, plus the `items` divisor on the
+ *    total items (WC-2026-08-03-state-widget-total-source-count — TS-only, so
+ *    it is STRIPPED before the PHP-captured golden compare and pinned by its
+ *    own arithmetic test; the goldens are never regenerated from TS output).
  *  - tc SLOW PATH        : READ-NO-WRITE — TS emits 00:00:00.000 for a tape
  *    without the cached rsc54 and must NOT write it back (PHP persists it
  *    during the read — that write-back is pinned in the differential ONLY).
@@ -305,15 +308,47 @@ async function tsEntries(rqo: Record<string, unknown>): Promise<unknown[]> {
 	return (await tsData(rqo)).map((item) => item.entries);
 }
 
+/**
+ * WC-2026-08-03-state-widget-total-source-count — the TS state widget adds
+ * `items` (the total's own divisor: the source-record count) to every `total`
+ * item; the PHP-captured goldens predate it. Strip before the deep-equal, and
+ * COUNT what was stripped so the caller can assert the key is really there —
+ * the goldens must never be regenerated from TS output, so a divergence has to
+ * be absorbed here, and a normalizer that silently no-ops would turn the
+ * divergence back into an undetected regression.
+ */
+function stripStateTotalItems(entries: unknown[]): number {
+	let stripped = 0;
+	for (const entry of entries) {
+		if (!Array.isArray(entry)) continue;
+		for (const item of entry) {
+			const widgetItem = item as { widget?: unknown; type?: unknown; items?: unknown };
+			if (widgetItem?.widget !== 'state' || widgetItem?.type !== 'total') continue;
+			if (widgetItem.items === undefined) continue;
+			stripped++;
+			// The key must be GONE, not undefined — the golden compare below has to
+			// see exactly the PHP-captured shape.
+			// biome-ignore lint/performance/noDelete: removing the key IS the assertion
+			delete (widgetItem as { items?: unknown }).items;
+		}
+	}
+	return stripped;
+}
+
 /** Deep-equal BOTH modes of one component read against the case golden. */
 async function expectCaseGolden(
 	caseName: keyof typeof golden.cases,
 	sectionTipo: string,
 	sectionId: number | string,
 	componentTipo: string,
+	options: { expectStateItems?: boolean } = {},
 ): Promise<void> {
 	for (const mode of ['list', 'edit'] as const) {
 		const entries = await tsEntries(readRqo(sectionTipo, sectionId, componentTipo, mode));
+		const stripped = stripStateTotalItems(entries);
+		if (options.expectStateItems === true) {
+			expect(stripped).toBeGreaterThan(0);
+		}
 		expect(entries).toEqual(golden.cases[caseName][mode] as never);
 	}
 }
@@ -436,7 +471,50 @@ describe('component_info widget read-time compute (TS-native, oracle-captured go
 	}, 30000);
 
 	test('state: detail + total items over the dd501/dd174 vocabularies', async () => {
-		await expectCaseGolden('state', 'rsc2', IW.stateRecord, 'rsc19');
+		// expectStateItems: the WC-2026-08-03 divisor must be ON the total items
+		// (the strip is what keeps the PHP-captured golden usable — see it).
+		await expectCaseGolden('state', 'rsc2', IW.stateRecord, 'rsc19', {
+			expectStateItems: true,
+		});
+	}, 30000);
+
+	test("state: `items` is the total's divisor — one source record, one row", async () => {
+		// WC-2026-08-03-state-widget-total-source-count. rsc19's IPO reads `self`
+		// paths, so the source-locator count is 1 and every total is its own
+		// detail. The pin that matters is the RELATION between the three numbers:
+		// value === sum(details) / items. A record whose sources outnumber its
+		// saved values (two audiovisuals, one transcribed) is what produced the
+		// 50%-detail-under-a-25%-total report — with `items` the client can tell
+		// the difference; without it, it cannot.
+		const entries = (await tsEntries(readRqo('rsc2', IW.stateRecord, 'rsc19', 'edit'))) as Record<
+			string,
+			unknown
+		>[][];
+		const items = entries.flat().filter((item) => item.widget === 'state');
+		const totals = items.filter((item) => item.type === 'total');
+		expect(totals.length).toBeGreaterThan(0);
+		for (const total of totals) {
+			// present, integer, and never a division by zero
+			expect(typeof total.items).toBe('number');
+			expect(total.items as number).toBeGreaterThan(0);
+			expect(Number.isInteger(total.items)).toBe(true);
+			// the emitted value IS sum(details of this column+id) / n / items;
+			// n is 1 here (non-translatable leaves), so the divisor is `items`
+			const details = items.filter(
+				(item) =>
+					item.type === 'detail' &&
+					item.widget_id === total.widget_id &&
+					item.column === total.column &&
+					item.key === total.key,
+			);
+			const sum = details.reduce((acc, item) => acc + Math.trunc(Number(item.value) || 0), 0);
+			expect(total.value).toBe(Math.round((sum / (total.items as number)) * 100) / 100);
+		}
+		// detail items are NOT dualised with the divisor — it belongs to the
+		// aggregate alone (a per-source row has nothing to average)
+		for (const detail of items.filter((item) => item.type === 'detail')) {
+			expect(detail.items).toBeUndefined();
+		}
 	}, 30000);
 
 	test('state EDIT datalist: the merged vocabulary option lists (client hard-requires it)', async () => {
