@@ -164,6 +164,21 @@ describe('chunked upload contract through the real server (the browser flow)', (
 			expect(joinBody.file_data.tmp_name).toBe('c.jpg');
 			expect(joinBody.file_data.extension).toBe('jpg');
 			expect(joinBody.file_data.complete).toBe(true);
+			// THE TWO COMPLETION PATHS MUST EMIT THE SAME PREVIEW KEY.
+			// `receiveUpload` reports complete:false for every chunk, so a chunked
+			// transfer's only completion moment is the join — and the join used to
+			// omit `thumbnail_url` entirely. service_dropzone never chunked, so the
+			// ingest path only ever reached the single-shot branch and the gap was
+			// invisible until the import tools moved to the chunking transport:
+			// every file over DEDALO_UPLOAD_SERVICE_CHUNK_FILES MB then completed
+			// through here and silently lost its preview. Worst on the formats the
+			// thumbnail exists FOR — a browser cannot draw a TIFF, so the client's
+			// `thumbnail_url || url` fallback had nothing to show and the row
+			// rendered blank.
+			// Assert the KEY, not a URL: buildThumb spawns an external converter,
+			// so a null here is a legitimate environment answer (and the documented
+			// one for a non-rasterisable format). An ABSENT key never is.
+			expect(Object.hasOwn(joinBody.file_data, 'thumbnail_url')).toBe(true);
 		},
 	);
 });

@@ -170,6 +170,33 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 				// server-recorded proposal + part count, and refuses when several match.
 				uploadId: typeof fileData.upload_id === 'string' ? fileData.upload_id : null,
 			});
+			// The preview thumbnail, exactly as the single-shot path builds it
+			// (upload_endpoint.ts). BOTH completion paths must emit it or they are
+			// not the same wire: `receiveUpload` reports `complete:false` for every
+			// chunk, so a chunked transfer's ONLY completion moment is right here.
+			//
+			// (!) This was the regression that proved the plan's named risk real.
+			// service_dropzone never chunked — it posted every file whole — so the
+			// single-shot branch was the only one the ingest path ever reached and
+			// the join never needed a thumbnail. The moment the import tools moved
+			// onto the chunking transport, every file over
+			// DEDALO_UPLOAD_SERVICE_CHUNK_FILES MB completed through the join and
+			// silently lost its preview. It shows up worst on exactly the formats
+			// the thumbnail exists FOR: a browser cannot render a TIFF, so the
+			// client's `thumbnail_url || url` fallback has nothing to draw and the
+			// row renders blank.
+			//
+			// Best effort, like the single-shot path: a thumbnail failure must
+			// never fail an upload whose bytes are already staged and verified.
+			const { createStagedThumbnail } = await import('../../media/ingest/staged_thumbnail.ts');
+			const thumbnailUrl = joined.tmpName
+				? await createStagedThumbnail(
+						context.session.userId,
+						String(fileData.key_dir ?? ''),
+						joined.tmpName,
+						joined.extension ?? null,
+					)
+				: null;
 			return {
 				status: 200,
 				body: {
@@ -181,6 +208,9 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 						extension: joined.extension ?? null,
 						chunked: false,
 						complete: true,
+						// null when the format is not rasterisable — the client keeps
+						// its own local preview in that case and must not blank the img.
+						thumbnail_url: thumbnailUrl,
 					},
 				},
 			};
