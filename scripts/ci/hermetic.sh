@@ -25,10 +25,29 @@
 # test/unit/ci_workflow_tripwire.test.ts: add a required key to src/config/config.ts
 # without stubbing it here and the tripwire goes red BEFORE CI does.
 #
-# NOT in this list (self-hosted tier only, via scripts/verify.ts):
+# THE COVERAGE HOLE THIS LIST WALKED INTO (2026-08-03). The hermetic list had 20 of
+# the 48 tripwires in scripts/verify.ts, and the other 28 ran on NO tier that actually
+# executes: the DB/parity tier lives in .github/workflows-selfhosted/, which GitHub does
+# not run (public-repo posture), and the private mirror is not wired yet. So a PR could
+# land an `innerHTML` sink in the error-report client, a CDN `import` in a tool, an
+# unclassified agent read tool, or an unscoped human write handler, and every gate the
+# repo owns would report GREEN — the invariants existed, nothing ran them. Each entry
+# below was empirically re-verified DB-less (DB_PORT closed) before being added.
+#
+# NOT in this list, and WHY — the honest boundary, not a convenient subset:
 #   sql_confinement_tripwire            — needs the live matrix Postgres
 #   consultation_only_sections_tripwire — needs the live matrix Postgres
+#   root_user_hidden_tripwire           — needs the live matrix Postgres (9 red DB-less)
+#   info_widget_registry_tripwire       — needs the live matrix Postgres
+#   temporal_instance_tripwire          — needs the live matrix Postgres
+#   install_seed_drift_tripwire         — needs the live matrix Postgres
+#   test3_canonical_fixture             — IS the DB fixture
+#   matrix_index_asset_policy_agreement — needs the live matrix Postgres
+#   tools_cache_invalidation            — needs the live matrix Postgres
 #   client_serving                      — needs the sibling PHP tree (byte-identity)
+#   client_libs_tripwire                — probes client/dedalo/lib/, which is NOT tracked
+#                                         (118 MB, sibling-linked): green here would be
+#                                         green over an absent tree
 #   test/parity/oracle_canary           — needs the oracle contract
 #
 # Usage: bash scripts/ci/hermetic.sh   (from anywhere; cd's to repo root)
@@ -89,6 +108,27 @@ HERMETIC_TRIPWIRES=(
 	test/unit/css_token_duplication_tripwire.test.ts
 	test/unit/wire_contract_tripwire.test.ts
 	test/unit/theme_token_parity.test.ts
+	# --- security tier, added 2026-08-03 (see the coverage-hole note above) ---
+	test/unit/xss_csp_tripwire.test.ts
+	test/unit/error_report_xss_tripwire.test.ts
+	test/unit/security_audit_2026_07_23_tripwire.test.ts
+	test/unit/no_remote_code_tripwire.test.ts
+	test/unit/agent_egress_tripwire.test.ts
+	test/unit/human_write_scope_tripwire.test.ts
+	test/unit/rag_index_scope_tripwire.test.ts
+	test/unit/local_db_stores_tripwire.test.ts
+	test/unit/install_seal_tripwire.test.ts
+	# --- static-scan tier, same change: DB-less and previously ungated ---
+	test/unit/config_census_tripwire.test.ts
+	test/unit/config_docs_tripwire.test.ts
+	test/unit/labels_tripwire.test.ts
+	test/unit/tool_header_contract_tripwire.test.ts
+	test/unit/dataframe_scan_coverage_tripwire.test.ts
+	test/unit/diffusion_scope_tripwire.test.ts
+	test/unit/diffusion_queue_stream_tripwire.test.ts
+	test/unit/hierarchy_single_writer_tripwire.test.ts
+	test/unit/ontology_single_writer_tripwire.test.ts
+	test/unit/client_caller_chain_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
@@ -102,6 +142,12 @@ bun run lint
 
 echo "== hermetic: static tripwires (${#HERMETIC_TRIPWIRES[@]})"
 bun test "${HERMETIC_TRIPWIRES[@]}"
+
+# Dependency advisories, as a RATCHET against engineering/dependency_audit_baseline.json:
+# a NEW advisory is red, a known one is not (the tree already carried 7 on the day this
+# was wired). Offline → skips loudly. Rationale in scripts/ci/audit.ts.
+echo "== hermetic: dependency audit ratchet"
+bun run scripts/ci/audit.ts
 
 # The site-builder daemon (publication/site_builder) is its own package with a fully
 # hermetic suite: no DB, no oracle, no ../private — its tests run against a repo-local
@@ -120,5 +166,15 @@ if ! command -v git >/dev/null 2>&1; then
 fi
 echo "== hermetic: site builder daemon (publication/site_builder)"
 (cd publication/site_builder && bun install --frozen-lockfile && bunx tsc --noEmit && bun test)
+
+# The publication API v2 (publication/server_api/v2) is the same case as the site builder
+# above and was missed by the same reasoning gap: it is an ISOLATED package with its own
+# lockfile, so verify.ts's src/+test/ neighbour scan never reaches it and `bun test` at the
+# root never descends into it. `bun run test:publication` existed and ran on NO gate. Its
+# suite is hermetic (24 files, no DB — the pool/integration tests stub their transport),
+# and it is the READ-ONLY PUBLIC door of the whole install: auth, rate limiting and the
+# query builder are exactly the invariants that must not rot unwatched.
+echo "== hermetic: publication API v2 (publication/server_api/v2)"
+(cd publication/server_api/v2 && bun install --frozen-lockfile && bunx tsc --noEmit && bun test)
 
 echo "== hermetic: GREEN"

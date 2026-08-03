@@ -81,6 +81,8 @@ const TRIPWIRES = [
 	'test/unit/no_remote_code_tripwire.test.ts',
 	'test/unit/install_seal_tripwire.test.ts',
 	'test/unit/xss_csp_tripwire.test.ts',
+	'test/unit/error_report_xss_tripwire.test.ts',
+	'test/unit/security_audit_2026_07_23_tripwire.test.ts',
 	'test/unit/human_write_scope_tripwire.test.ts',
 	'test/unit/diffusion_scope_tripwire.test.ts',
 	'test/unit/diffusion_queue_stream_tripwire.test.ts',
