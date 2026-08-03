@@ -11,6 +11,28 @@ copy: `CLAUDE.md` is a symlink to it, so Claude Code and any tool following the
 `AGENTS.md` convention read the same bytes and cannot drift. Never fork the two
 (the "link, never duplicate" law applies to this file first).
 
+## 🎯 Project premise — the master criterion
+
+**Dédalo's goal is to create the best Cultural Heritage management system
+possible.** It is NOT a commercial product; no decision is judged by market,
+startup, or product criteria. Every architecture/design decision aligns with
+this premise. Concretely:
+
+- **Never rank options by time, cost, or effort.** Recommend the structurally
+  correct, durable design even when it means a full rebuild. State effort as
+  information, never as the deciding criterion. Reserve conservatism for real
+  safety (data integrity), not scope.
+- **Dependencies default to the latest STABLE version.** Staleness is the
+  risk (debt shipped to long-lived heritage installs), not the upgrade.
+  Holding an old major needs a stated reason next to the pin (e.g. latest is
+  only beta/RC). Mechanical side (per DEC-12): Dependabot proposes the bumps,
+  `scripts/ci/audit.ts` ratchets advisories — never override either toward
+  older versions. Security pins (SHA-pinned actions, `.bun-version`) are NOT
+  staleness: they are exactness with an updater, and stay.
+- If a proposal is shaped by commercial instincts (MVP thinking,
+  churn-minimizing, risk-averse scoping), it has the wrong perspective —
+  restate it from the premise.
+
 ## Interactions
 - In all interactions and commit messages, be extremely concise and precise and sacrifice grammar for the sake of concision.
 
