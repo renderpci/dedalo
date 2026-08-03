@@ -23,6 +23,8 @@ self-hosted tier is parked, inert but preserved, in `.github/workflows-selfhoste
 |---|---|---|---|
 | `.github/workflows/ci.yml` | pull_request | hosted ubuntu | `hermetic` (scripts/ci/hermetic.sh) |
 | `.github/workflows/main.yml` | push to **master** | hosted ubuntu | `hermetic` |
+| `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
+| `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
 | `.gitlab-ci.yml` | MR + default-branch push (GitLab mirror) | GitLab shared runners | hermetic tier only — the SAME scripts/ci/hermetic.sh |
 | *— PRIVATE MIRROR ONLY (inert on the public repo) —* | | | |
 | `.github/workflows-selfhosted/selfhosted.yml` | dispatch (restore PR/push triggers on the mirror) | self-hosted mac | `verify` (scripts/verify.ts --base origin/master) + `full` (bun test test/unit test/parity) |
@@ -44,11 +46,20 @@ oracle instead of silently skipping. Ignore any older text below telling you to
 Two tiers, by dependency footprint:
 
 - **Hermetic** (any bare runner, no secrets): `bun install` + `bunx tsc
-  --noEmit` + `bun run lint` + the 10 DB-less/sibling-less tripwires. One
-  source of truth: `scripts/ci/hermetic.sh` — GitHub and GitLab both call it,
-  so the platforms cannot drift. The 4 required config keys get harmless stubs
-  inside the script; `DB_PORT` points at a closed port so any accidental DB
+  --noEmit` + `bun run lint` + the **39** DB-less/sibling-less tripwires + the
+  dependency-audit ratchet + the two isolated publication packages
+  (`site_builder`, `server_api/v2` — each `bun install` + `tsc` + `bun test`).
+  One source of truth: `scripts/ci/hermetic.sh` — GitHub and GitLab both call
+  it, so the platforms cannot drift. Every required config key gets a harmless
+  stub inside the script; `DB_PORT` points at a closed port so any accidental DB
   touch fails loudly.
+
+  **The hole this closed (2026-08-03):** the list had 20 of the 48 tripwires, and
+  the other 28 ran on NO executing tier — the DB/parity tier is parked in
+  `workflows-selfhosted/` and the private mirror is not wired. XSS, remote-code,
+  agent-egress and write-scope invariants all existed and none of them ran on a
+  PR. Each entry added was re-verified DB-less first; the ones that genuinely need
+  Postgres are listed, with the reason, at the top of `hermetic.sh`.
 - **Self-hosted** (this Mac — the machine that has the live matrix Postgres
   with real Dédalo data, the PHP oracle at :8080, the sibling PHP tree, and
   Chrome): everything else. Unit tests are NOT hermetic by design (they read
@@ -70,6 +81,29 @@ Two tiers, by dependency footprint:
   shared scratch DB surfaces. Registering a second runner (or a gitlab-runner)
   on this machine breaks it; if that day comes, add cross-system locking first.
 - **GitLab runs no oracle/DB tier** — same invariant from the other side.
+
+- **Least privilege** (rule 7): every workflow declares a top-level
+  `permissions:` block. Absent one, the job inherits the REPOSITORY default
+  GITHUB_TOKEN scope — historically read/**write** on contents, i.e. ambient push
+  rights for every step, third-party actions included, in jobs that write nothing
+  back. All of ours are `contents: read`; `codeql.yml` alone adds
+  `security-events: write`, which IS its output.
+- **Pinned actions** (rule 8): every `uses:` names a 40-hex commit SHA with the
+  human version in a trailing comment. `@v5` is a moving tag its owner can
+  repoint at any commit, and `workflows-selfhosted/deploy.yml` hands one of these
+  actions an SSH deploy key. Dependabot (`.github/dependabot.yml`,
+  `github-actions` ecosystem) proposes the bumps, so pinning does not decay into
+  running two-year-old actions.
+- **The secret scanner keeps its default ruleset**: `.gitleaks.toml` must set
+  `[extend] useDefault = true`. GitLab loads that same file WHOLESALE through
+  `.gitlab/secret-detection-ruleset.toml`, so dropping the line would replace ~170
+  upstream provider rules with our two allowlists and report a clean repo on both
+  platforms because it stopped looking. Tripwired.
+- **Dependency advisories ratchet, never bare-audit**: `scripts/ci/audit.ts` vs
+  `engineering/dependency_audit_baseline.json`. A NEW advisory is red; an accepted
+  one is data. The tree carried 7 (5 high, all transitive) on the day it was wired
+  — a blocking bare `bun audit` would have been red on day one and ignored by
+  week two. Accept one deliberately with `--update` and say why in the commit.
 
 ## CI seam environment (why CI never collides with interactive dev)
 
@@ -153,7 +187,40 @@ a ledger line) rather than deleting it in passing.
 
 Also set, in GitHub repo settings: Actions → General → "Require approval for all
 outside collaborators", and restrict allowed actions to GitHub-authored +
-`oven-sh/setup-bun`.
+`oven-sh/setup-bun` (the full `uses:` census is: `actions/*`,
+`github/codeql-action/*`, `oven-sh/setup-bun`, `webfactory/ssh-agent` — all
+SHA-pinned; the secret scanner is not an action at all, it is a digest-pinned
+container). Two more settings worth turning on while you are there: **secret
+scanning + push protection** (free on public repos — it blocks the push, which the
+weekly scan cannot), and **private vulnerability reporting** (the intake
+`SECURITY.md` points people at).
+
+### Scanners (added 2026-08-03)
+
+The repo's own tripwires are surgical — a named invariant at a named place — and
+that is both their strength and their blind spot: excellent at "the security line
+was deleted", blind to "a value reached a sink by a path nobody listed". Two
+third-party analyses cover the second half, and neither gates what the tripwires
+gate:
+
+- **Secret scanning** (`security.yml`, gitleaks). Working tree on every PR (~7s);
+  full history weekly, because a secret committed and later "removed" is still
+  published. Config: `.gitleaks.toml`, shared with GitLab. **First full-history
+  run (2026-08-03): 178 hits over 38,980 commits, ALL triaged as third-party
+  example keys in the deleted PHP `vendor/`+`lib/` trees, public Mapbox `pk.`
+  tokens inside commented-out example URLs, and entropy false positives. No live
+  Dédalo credential has ever been committed.** The allowlist entries carry that
+  triage, so the weekly job starts green and a new hit means something new.
+- **CodeQL** (`codeql.yml`, free on public repos). Whole-program taint tracking,
+  `security-extended` queryset, vendored/generated paths excluded in
+  `.github/codeql/codeql-config.yml` so actionable alerts are not buried under
+  alerts in bytes we do not edit. Advisory: its output is the Security tab.
+
+**GitLab is deliberately asymmetric**: it runs its own bundled SAST (Semgrep) and
+Secret Detection templates rather than a copy of GitHub's choices. Each host's
+scanner is free, maintained and integrated with that host's UI. What must NOT
+differ across platforms is the repo's OWN gate — which is why both call one
+`scripts/ci/hermetic.sh`.
 
 ## Activation runbook — GitHub (public repo, hermetic tier)
 
