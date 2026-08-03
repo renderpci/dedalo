@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL */
+/*global get_label, console, SHOW_DEVELOPER, DEDALO_UPLOAD_SERVICE_CHUNK_FILES, DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT */
 /*eslint no-undef: "error"*/
 
 
@@ -8,19 +8,22 @@
 * SERVICE_UPLOAD
 * Generic multi-part file upload service for the Dédalo v7 platform.
 *
+* (!) THE WIRE LIVES IN `upload_transport.js`. Since the transport extraction
+* this module holds NO XMLHttpRequest, no multipart shape, no CSRF handling and
+* no chunk bookkeeping. What remains here is the DOM-aware, single-file UX layer:
+* the instance lifecycle, the `upload_file_status_<id>` / `upload_file_done_<id>`
+* event topics, and the blocking alert() on a validation refusal. Anything that
+* is about bytes belongs in the transport; anything that a human sees belongs here.
+*
 * Responsibilities:
-* - Negotiates PHP upload limits with the server via `dd_utils_api::get_system_info`.
-* - Validates file extension and size client-side before any network traffic.
-* - Splits large files into configurable-size chunks (DEDALO_UPLOAD_SERVICE_CHUNK_FILES MB)
-*   and pipelines up to DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT simultaneous XHR connections.
-* - Retries failed chunks up to 3 times with a 5-second back-off.
-* - Joins chunks server-side via `dd_utils_api::join_chunked_files_uploaded` when all
-*   parts have arrived.
-* - Publishes `upload_file_status_<id>` and `upload_file_done_<id>` events so callers
-*   (render_edit_service_upload, tool_import, component_av, …) can update their UI without
-*   tight coupling to this class.
-* - Attaches SEC-008 CSRF tokens to every XHR request both as a header
-*   (X-Dedalo-Csrf-Token) and as a form-field fallback for proxy environments.
+* - Negotiates server upload limits via `dd_utils_api::get_system_info`.
+* - Delegates validation, chunking, concurrency, retries, the SEC-008 CSRF twin
+*   and the server-side join to upload_transport.js (chunk size from
+*   DEDALO_UPLOAD_SERVICE_CHUNK_FILES, window from DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT).
+* - Renders the transport's callbacks as `upload_file_status_<id>` events and
+*   publishes `upload_file_done_<id>` after a successful upload, so callers
+*   (render_edit_service_upload, tool_import, component_av, …) can update their UI
+*   without tight coupling to this class.
 *
 * Consumers instantiate `service_upload`, call `init(options)` → `build()` → `render()`,
 * then let the rendered UI call `upload_file()` automatically on file-selection or drop.
@@ -35,9 +38,10 @@
 // import
 	import { event_manager } from '../../../common/js/event_manager.js'
 	import { data_manager } from '../../../common/js/data_manager.js'
-	import { dd_console,JSON_parse_safely } from '../../../common/js/utils/index.js'
+	import { dd_console } from '../../../common/js/utils/index.js'
 	import { common, create_source } from '../../../common/js/common.js'
 	import { render_edit_service_upload } from './render_edit_service_upload.js'
+	import { validate_file, create_connection_pool, create_transfer } from './upload_transport.js'
 
 
 
@@ -87,6 +91,27 @@ export const service_upload = function () {
 	this.allowed_extensions	= null
 
 	this.max_concurrent 	= null
+
+	// multi-file mode. `multiple===true` swaps the single-file form for the
+	// upload-queue renderer (render_edit_service_upload_queue.js).
+	// (!) ONE MODEL, NOT TWO. `self.model` stays 'service_upload' in both modes:
+	// instances.js:262-280 derives the module path FROM the model string and then
+	// requires the module's named export to equal the model exactly, so a second
+	// model would force a whole duplicate service directory (own file, prototype
+	// block, img/icon.svg — render_edit_service_upload.js builds the icon src from
+	// self.model — LESS partial, main.less import and test rows) to say "the same
+	// service, with more files".
+	this.multiple			= null
+	this.key_dir			= null
+	this.component_option	= null
+	this.file_processor		= null
+
+	// set by the queue renderer; consumed by destroy()
+	this.queue				= null
+	this.row_map			= null
+	this.object_urls		= null
+	this.dom_listeners		= null
+	this.queue_teardown		= null
 }//end page
 
 
@@ -97,7 +122,6 @@ export const service_upload = function () {
 */
 // prototypes assign
 	service_upload.prototype.render		= common.prototype.render
-	service_upload.prototype.destroy	= common.prototype.destroy
 	service_upload.prototype.refresh	= common.prototype.refresh
 	service_upload.prototype.edit		= render_edit_service_upload.prototype.edit
 
@@ -124,6 +148,12 @@ export const service_upload = function () {
 *   @param {string}  [options.model='service_upload'] - Model name used for URL/icon resolution.
 *   @param {Array}   [options.allowed_extensions=[]]  - Lowercase file extensions whitelist.
 *   @param {string|null} [options.key_dir=null]       - Server directory routing key.
+*   @param {boolean} [options.multiple=false]         - true renders the MULTI-FILE
+*     upload queue instead of the single-file form. Strict === true.
+*   @param {Array|null} [options.component_option=null] - Multi-file only: target
+*     component ddos offered per row ({tipo, label, default}).
+*   @param {Array|null} [options.file_processor=null]   - Multi-file only: processing
+*     pipelines offered per row ({function_name, function_name_label, default}).
 * @returns {Promise<boolean>} Result of common.prototype.init (true on success).
 */
 service_upload.prototype.init = async function(options) {
@@ -137,6 +167,13 @@ service_upload.prototype.init = async function(options) {
 		self.model				= options.model || 'service_upload'
 		self.allowed_extensions	= options.allowed_extensions || []
 		self.key_dir			= options.key_dir || null
+		// multiple: strict === true. A truthy-ish value (a string, a 1) coming from
+		// a tool config must not silently swap the whole renderer.
+		self.multiple			= options.multiple === true
+		// Multi-file only: the two per-row <select> lists. Absent = no
+		// `.component.options` block is emitted at all.
+		self.component_option	= options.component_option || null
+		self.file_processor		= options.file_processor || null
 		// Read the global constant injected by dd_core_api; fall back to 50
 		// if the constant was not yet defined when this module loaded.
 		self.max_concurrent 	= typeof DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT === 'undefined'
@@ -220,12 +257,116 @@ service_upload.prototype.build = async function(autoload=false) {
 			self.upload_service_chunk_files	= system_info.upload_service_chunk_files
 			self.pdf_ocr_engine				= system_info.pdf_ocr_engine
 
+	// queue limits. The queue is created by the renderer (it needs the DOM
+	// callbacks), so a build() that runs AFTER a render — the refresh cycle does
+	// exactly that — must push the refreshed server limits into the live queue.
+	// Without this a re-built service keeps validating against whatever the limits
+	// were on first render.
+		if (self.queue) {
+			self.queue.max_size_bytes	= self.max_size_bytes
+			self.queue.chunk_size_mb	= self.upload_service_chunk_files || 0
+		}
+
 	// status update
 		self.status = 'built'
 
 
 	return true
 }//end build_custom
+
+
+
+/**
+* RESET_QUEUE
+* Empties the multi-file queue without destroying it, so the same instance can
+* keep receiving files.
+*
+* The stable reset surface a consumer calls after an import completes
+* (tool_import_files does it from its SSE finish handler). Mirrors the semantics
+* of the retired `service_dropzone.reset_dropzone`: false means "nothing to
+* reset", not "failed".
+*
+* (!) `clear()`, never `self.queue.entries = []` — the entries array IS the
+* caller's `files_data`, adopted once and held forever; replacing it leaves every
+* importer reading a detached array and sending zero files.
+*
+* @returns {boolean} true when a queue existed and was cleared.
+*/
+service_upload.prototype.reset_queue = function() {
+
+	const self = this
+
+	if (self.queue) {
+		self.queue.clear()
+		return true
+	}
+
+	return false
+}//end reset_queue
+
+
+
+/**
+* DESTROY
+* Deterministic teardown of the multi-file render, then the generic destructor.
+*
+* Order matters: abort transfers first (a chunk that lands after the row is gone
+* writes a staging blob nothing will ever join), then release the object URLs and
+* row map, then unbind every DOM listener — including the two `document`-level
+* drag guards, which are the ONLY listeners this widget puts outside its own
+* subtree and therefore the only ones that could stack across renders. That
+* stacking is precisely what forced `service_dropzone` to grow a bespoke
+* `destroy()`: Dropzone attached to `document.body` and left everything behind.
+*
+* (!) ALL THREE ARGUMENTS ARE FORWARDED. The dropzone override swallowed them
+* (`common.prototype.destroy.call(self)`), silently forcing the defaults — so a
+* caller asking for `remove_dom` or `delete_dependencies` got neither.
+*
+* @param {boolean} [delete_self=true]
+* @param {boolean} [delete_dependencies=false]
+* @param {boolean} [remove_dom=false]
+* @returns {Promise<Object>} The generic destructor's result.
+*/
+service_upload.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// queue
+		if (self.queue && typeof self.queue.destroy==='function') {
+			try {
+				self.queue.destroy()
+			} catch (error) {
+				console.error('service_upload destroy: error destroying the upload queue', error)
+			}
+			self.queue = null
+		}
+
+	// render-owned resources (object URLs, row map, thumbnail scheduler)
+		if (typeof self.queue_teardown==='function') {
+			try {
+				self.queue_teardown()
+			} catch (error) {
+				console.error('service_upload destroy: error tearing down the queue render', error)
+			}
+			self.queue_teardown = null
+		}
+
+	// DOM listeners
+		if (Array.isArray(self.dom_listeners)) {
+			for (let i = self.dom_listeners.length - 1; i >= 0; i--) {
+				const listener = self.dom_listeners[i]
+				try {
+					listener.node.removeEventListener(listener.type, listener.handler, listener.options)
+				} catch (error) {
+					console.error('service_upload destroy: error removing a DOM listener', error)
+				}
+			}
+			self.dom_listeners = []
+		}
+
+
+	return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+}//end destroy
 
 
 
@@ -279,509 +420,139 @@ const get_system_info = async function() {
 
 /**
 * UPLOAD
-* Low-level file upload driver.  Validates the file, then either sends it as a
-* single XHR POST or splits it into chunks depending on DEDALO_UPLOAD_SERVICE_CHUNK_FILES.
+* Thin, DOM-AWARE adapter over the wire core in upload_transport.js.
 *
-* Chunked mode:
-*   Files are sliced into `chunk_size`-byte blobs.  Each blob is enqueued via
-*   `add_to_queue` / `process_queue`, which maintains a sliding window of
-*   `max_concurrent` concurrent XHR connections.  Failed chunks are retried up to
-*   `max_retry` (3) times with a 5-second delay.  Once ALL chunks are confirmed
-*   uploaded (`count_uploaded.length === total_chunks`), the chunks are joined
-*   server-side via `join_chunked_files`.
+* Everything that touches bytes now lives in `create_transfer`; what stays here
+* is exactly the legacy single-file UX contract, quarantined on purpose:
 *
-* Single-shot mode (DEDALO_UPLOAD_SERVICE_CHUNK_FILES falsy):
-*   A single XHR POST carries the entire file.  Progress events still fire so the
-*   UI behaves identically to chunked mode.
+*  - the `upload_file_status_<id>` event topic, with the same value/msg
+*    semantics as before (0 on start, N in progress, 100 on done, `false` on
+*    error or abort). service_upload.prototype.init subscribes to it and drives
+*    the one progress bar / response message the service renders.
+*  - the BLOCKING `alert()` on a validation failure. It stays HERE and not in
+*    the transport because the multi-file queue must never block: a queue that
+*    alerts once per rejected file is unusable. The transport returns a verdict;
+*    this caller is the one that chose to shout it.
 *
-* Events published on `upload_file_status_<id>`:
-*   - `{ value: 0,    msg: 'Loading file <name>' }`   — upload started
-*   - `{ value: N,    msg: 'Upload progress: N %' }`  — 0 < N < 100
-*   - `{ value: 100,  msg: 'Loaded file <name>' }`    — upload complete
-*   - `{ value: false, msg: '<error text>' }`          — error or abort
+* Chunked vs single-shot is still decided by DEDALO_UPLOAD_SERVICE_CHUNK_FILES
+* (MB per chunk; >0 = chunked), and the concurrency window still comes from the
+* caller's `max_concurrent` — the info panel edits it live between uploads.
 *
-* The per-request Content-Range header follows RFC 7233:
-*   `bytes <start>-<end-1>/<total>` (end is exclusive in the slice call, inclusive in the header).
+* (!) The pool is created PER CALL here, which reproduces the legacy per-file
+* window. It is a deliberate hold: sharing one pool across files is only
+* meaningful once something uploads more than one file at a time, and that
+* belongs to the queue phase, not to this extraction.
 *
-* SEC-008: Every XHR carries `window.page_globals.csrf_token` both as the
-*   `X-Dedalo-Csrf-Token` request header and as a `csrf_token` form field so that
-*   the server can validate the token even when a reverse proxy strips custom headers.
-*
-* (!) `alert()` is used for extension/size validation errors — this is existing
-*   behaviour; do not replace with console.warn without verifying the UX contract
-*   with callers.
+* SEC-008 (CSRF), the multipart field/header shape and the server-side join are
+* all owned by upload_transport.js and are byte-identical to the previous
+* implementation — see the wire notes there.
 *
 * @param {Object} options - Upload configuration.
-*   @param {Object}  options.self               - The service_upload instance (used for context only;
-*                                                 events are keyed on `id`, not `self`).
-*   @param {string}  options.id                 - Unique identifier appended to event names.
-*   @param {File}    options.file               - The browser File object to upload.
-*   @param {string}  options.key_dir            - Server-side directory routing key.
-*   @param {Array}   options.allowed_extensions  - Lowercase file-extension whitelist.
-*   @param {number}  options.max_size_bytes      - Maximum allowed file size in bytes.
-*   @param {string|null} options.tipo            - Ontology tipo of the owning component, if any.
-*   @param {number|false} options.max_concurrent - Max simultaneous XHR connections; falsy = unlimited.
-* @returns {Promise<Object>} API response object.  On success: `{ result: true, file_data: {...} }`.
-*   On extension/size failure resolves immediately with `{ result: false }`.
+*   @param {Object}  [options.self]            - Ignored; kept for signature
+*                                                compatibility with old callers.
+*   @param {string}  options.id                - Unique identifier appended to event names.
+*   @param {File}    options.file              - The browser File object to upload.
+*   @param {string}  options.key_dir           - Server-side directory routing key.
+*   @param {Array}   [options.allowed_extensions] - Lowercase extension whitelist.
+*                                                EMPTY OR ABSENT = ALLOW ALL (defect D3).
+*   @param {number}  [options.max_size_bytes]  - Maximum allowed size in bytes; falsy = no cap.
+*   @param {string|null} [options.tipo]        - Ontology tipo of the owning component.
+*   @param {number|false} [options.max_concurrent] - Max simultaneous XHR connections; falsy = unlimited.
+* @returns {Promise<Object>} API response object. On success `{result:true, file_data:{…}}`;
+*   on ANY failure (validation, transport, abort, server refusal) `{result:false, msg:string}`.
+*   (!) It ALWAYS returns — see defect D1 in upload_transport.js.
 */
 export const upload = async function(options) {
 
 	// options
-		const self 					= options.self
 		const id					= options.id // id done by the caller, used to send the events of progress
 		const file					= options.file // object {name:'xxx.jpg',size:5456456}
-		const key_dir				= options.key_dir // object {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH'}
+		const key_dir				= options.key_dir // string like 'image' used to target dir
 		const allowed_extensions	= options.allowed_extensions // array ['tiff', 'jpeg']
 		const max_size_bytes		= options.max_size_bytes // int 352142
 		const tipo					= options.tipo // self.caller.caller.tipo, like service_upload.tool_upload.component_image.tipo
-		const max_concurrent 		= options.max_concurrent
+		const max_concurrent		= options.max_concurrent
 
-	return new Promise( async function(resolve){
+	// publish_status
+		// The one place this module talks to the UI.
+		const publish_status = function(value, msg) {
+			event_manager.publish('upload_file_status_' + id, {
+				value	: value,
+				msg		: msg
+			})
+		}
 
-		// short vars
-			const api_url	= DEDALO_API_URL
-			const response	= {
-				result : false
+	// validation
+		// The transport decides IF the file is acceptable; this layer decides HOW
+		// the refusal is shown. `code` is a get_label key, `msg` the detail text
+		// appended to it, which keeps the alert text identical to the legacy one.
+		const validation = validate_file({
+			file				: file,
+			allowed_extensions	: allowed_extensions,
+			max_size_bytes		: max_size_bytes
+		})
+		if (validation.valid===false) {
+			const label = get_label[validation.code] || validation.code
+			const text	= label + validation.msg
+			alert( text )
+			publish_status(false, text)
+			return {
+				result	: false,
+				msg		: text
 			}
+		}
 
-			const queue				= [];
-			let active_count		= 0;
-			let total_chunks		= 0;
-			let file_size 			= 0;
+	// chunk_size_mb
+		// `typeof` guard: the constant is injected by the server environment
+		// payload, and a module that loads before it exists must fall back to
+		// single-shot rather than die on a ReferenceError.
+		const chunk_size_mb = (typeof DEDALO_UPLOAD_SERVICE_CHUNK_FILES !== 'undefined' && DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0)
+			? DEDALO_UPLOAD_SERVICE_CHUNK_FILES
+			: 0
 
-		// check file extension
-			const file_extension = file.name.split('.').pop().toLowerCase();
-			if (!allowed_extensions.includes(file_extension)) {
-				alert( get_label.invalid_extension + ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions) );
-				resolve(response)
-				return false
-			}
-
-		// check max file size
-			const file_size_bytes = file.size
-			if (file_size_bytes>max_size_bytes) {
-				alert( get_label.filesize_is_too_big + " Max file size is " + Math.floor(max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024)));
-				resolve(response)
-				return false
-			}
-
-		// upload_loadstart
-			const upload_loadstart = function() {
-				// progress_line.value		= 0;
-				// response_msg.innerHTML	= '<span class="blink">Loading file '+file.name+'</span>'
-				event_manager.publish('upload_file_status_'+id, {
-					value	: 0,
-					msg		: 'Loading file ' + file.name
-				})
-
-			}//end upload_loadstart
-
-		// upload_load.(finished)
-			const upload_load = function() {
-				// response_msg.innerHTML = '<span class="blink">Processing file '+file.name+'</span>'
-				event_manager.publish('upload_file_status_'+id, {
-					value	: 100,
-					msg		: 'Loaded file ' + file.name
-				})
-			}//end upload_load
-
-		// upload_error
-			const upload_error = function() {
-				event_manager.publish('upload_file_status_'+id, {
-					value	: false,
-					msg		: `${get_label.error_on_upload_file} ${file.name}`
-				})
-			}//end upload_error
-
-		// upload_abort
-			const upload_abort = function() {
-				event_manager.publish('upload_file_status_'+id, {
-					value	: false,
-					msg		: `User aborts upload`
-				})
-			}//end upload_abort
-
-		// upload_try
-			// when a network error happens, the upload try to resume, if the resume success, the error message will change to show the current state.
-			const upload_try = function() {
-				event_manager.publish('upload_file_status_'+id, {
-					value	: false,
-					msg		: 'Trying to upload file ' + file.name
-				})
-			}//end upload_try
-
-		// upload_progress
-			// Update the upload state and progress bar
-			const loaded = []
-			let last_percent = -1
-			const upload_progress = function(options) {
-
-				const event			= options.event
-				const chunk_index	= options.chunk_index
-				const total_chunks	= options.total_chunks
-
-				// guard event.total===0 (zero-byte chunk) so we never store NaN, which
-				// would poison the sum and render "NaN %".
-				const current_chunk_loaded = event.total ? parseInt(event.loaded/event.total*100) : 0;
-				loaded[chunk_index] = current_chunk_loaded;
-				// seed reduce with 0 so it never throws on an empty/single-hole array and
-				// sparse holes (chunks that have not reported yet) are treated as 0.
-				const sum = loaded.reduce((first, second) => first + (second || 0), 0);
-
-				const percent = Math.round(sum/total_chunks);
-				// skip publishing if the percentage has not changed to avoid redundant DOM updates
-				if(percent === last_percent){
-					return
-				}
-				last_percent = percent
-
-				// info line show numerical percentage of load
-			    event_manager.publish('upload_file_status_'+id, {
-					value	: percent,
-					msg		: `Upload progress: ${percent} %`
-				})
-				if(percent === 100){
-					upload_load()
-				}
-			}//end upload_progress
-
-		// on_xhr_load
-			// check if the upload was done, and process the result in the server
-			// if the process use a chunk files, join the chunks previously.
-			const files_chunked		= []
-			const count_uploaded	= []
-			const on_xhr_load = function(evt) {
-
-				// debug
-					if(SHOW_DEBUG===true) {
-						console.log('on_xhr_load evt:', evt);
-					}
-
-				// parse response string as JSON
-					const api_response = JSON_parse_safely(evt.target.response);
-					if (!api_response) {
-						console.error("Error in XMLHttpRequest load response. Invalid response is received");
-						if (evt.target.responseText) {
-							response.msg = evt.target.responseText
-						}
-						resolve(response)
-						return false
-					}
-
-				// check if the file uploaded is a chunk
-					const file_data = api_response.file_data
-					// if upload is chunked it is necessary join the files in the server before resolve the upload
-					if(file_data && file_data.chunked) {
-						// get the index
-						const chunk_index = file_data.chunk_index
-
-						files_chunked[chunk_index] = file_data.tmp_name
-						count_uploaded.push(file_data.chunk_index)
-						// get filename of every chunk
-						const total_chunks = parseInt( file_data.total_chunks)
-						// finished upload all chunks
-						if(count_uploaded.length === total_chunks){
-
-							service_upload.prototype.join_chunked_files({
-								file_data		: file_data,
-								files_chunked	: files_chunked
-							})
-							.then(function(api_response){
-								resolve(api_response)
-								return true
-							})
-						}
-					}else{
-						resolve(api_response)
-						return true
-					}
-			}//end on_xhr_load
-
-		// process_queue
-			// Fire a maximum of request define in the config.php
-			// If the max_concurrent is achieve stop to open new connections.
-			const process_queue = async function(){
-				// stop if the max_councurrent is achieve
-				if ( (max_concurrent && active_count >= max_concurrent) || queue.length === 0) {
-					return;
-				}
-				// get the next queue chunk to open the connection
-				active_count++;
-				const { chunk, chunk_index, start, end, resolve, reject } = queue.shift();
-
-				try {
-					// open de connection and send the current chunk
-					const result = await send_chunk({
-						chunk		: chunk,
-						chunk_index	: chunk_index,
-						start		: start,
-						end			: end
-					});
-					resolve(result);
-				} catch (error) {
-					reject(error);
-				} finally {
-					active_count--;
-					process_queue();
+	// transfer
+		const transfer = create_transfer({
+			file			: file,
+			name			: file.name,
+			key_dir			: key_dir,
+			tipo			: tipo,
+			chunk_size_mb	: chunk_size_mb,
+			pool			: create_connection_pool(max_concurrent),
+			max_retry		: 3,
+			callbacks		: {
+				on_start : function() {
+					publish_status(0, 'Loading file ' + file.name)
+				},
+				on_progress : function(progress) {
+					publish_status(progress.percent, `Upload progress: ${progress.percent} %`)
+				},
+				on_retry : function() {
+					// A network error is not necessarily fatal: the chunk is being
+					// resent, so the message is a warning, not a verdict.
+					publish_status(false, 'Trying to upload file ' + file.name)
 				}
 			}
+		})
 
-		// add_to_queue
-			const add_to_queue = async function( options ){
-				const { chunk, chunk_index, start, end } = options
-				return new Promise((resolve, reject) => {
-					queue.push({ chunk, chunk_index, start, end, resolve, reject });
-					process_queue();
-				});
+	// start. Resolves EXACTLY ONCE on every terminal path and never rejects, so
+	// this await can no longer hang the caller (defect D1).
+		const api_response = await transfer.start()
+
+	// status
+		if (!api_response || api_response.result!==true) {
+			const msg = (api_response && typeof api_response.msg==='string' && api_response.msg!=='')
+				? api_response.msg
+				: `${get_label.error_on_upload_file} ${file.name}`
+			publish_status(false, msg)
+			return {
+				result	: false,
+				msg		: msg
 			}
-
-		// chunk_file
-			const chunk_file = async function (file) {
-
-				file_size			= file.size;
-				// break into xMB chunks
-				const size			= DEDALO_UPLOAD_SERVICE_CHUNK_FILES || 80; // maximum size for chunks
-				const chunk_size	= size*1024*1024;
-				let start			= 0;
-				total_chunks		= Math.ceil(file_size / chunk_size);
-				// store all promises for every chunk
-				const upload_promises = [];
-				for (let i = 0; i < total_chunks; i++) {
-
-					const check_end = start + chunk_size
-					const end = (file_size - check_end < 0)
-						? file_size
-						: check_end;
-					const chunk = slice(file, start, end);
-
-					const current_promise = add_to_queue({
-						chunk		: chunk,
-						chunk_index	: i,
-						start		: start,
-						end			: end
-					});
-					upload_promises.push(current_promise)
-
-					start += chunk_size;
-				}
-				// fire all promises, (the max_concurrent will limit the connections)
-				await Promise.all(upload_promises);
-
-				console.log('All promises done !', upload_promises);
-			}
-
-		// slice the file
-			function slice(file, start, end) {
-				const slice = file.mozSlice
-					? file.mozSlice
-					: file.webkitSlice
-						? file.webkitSlice
-						: file.slice
-							? file.slice
-							: function(){};
-
-				return slice.bind(file)(start, end);
-			}
-
-		// send the chunk files to server
-			function send_chunk(options) {
-
-				// options
-				const chunk			= options.chunk
-				const chunk_index	= options.chunk_index
-				const start			= options.start
-				const end			= options.end
-				const retry_number	= options.retry_number || 0
-
-				const chunked 		= true
-				const max_retry		= 3
-
-				return new Promise(function(resolve){
-
-					const xhr = new XMLHttpRequest();
-
-					xhr.open('POST', api_url, true);
-
-					// Content-Range: bytes 0-999999/4582884
-					const chunk_end = end-1;
-					const contentRange = "bytes "+ start +"-"+ chunk_end +"/"+ file_size;
-					xhr.setRequestHeader("Content-Range",contentRange);
-
-					// request header
-					xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
-
-					// SEC-008: CSRF token. The upload action is not in the
-					// server-side CSRF_EXEMPT_ACTIONS allowlist, so every chunk
-					// must echo the per-session token. data_manager.request
-					// updates `window.page_globals.csrf_token` from each API
-					// response; reuse it here.
-					if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
-						xhr.setRequestHeader("X-Dedalo-Csrf-Token", window.page_globals.csrf_token);
-					}
-
-					// FormData
-					const formdata = new FormData();
-						formdata.append('key_dir', key_dir);
-						formdata.append('file_name', file.name);
-						formdata.append('chunked', chunked);
-						formdata.append('start', start);
-						formdata.append('end', end);
-						formdata.append('chunk_index', chunk_index);
-						formdata.append('total_chunks', total_chunks);
-						formdata.append('file_to_upload', chunk);
-						// SEC-008: also send the CSRF token as a form field. The
-						// server reads it from $rqo->options->csrf_token as a
-						// fallback when the X-Dedalo-Csrf-Token header is dropped
-						// by an intermediary (proxy / CORS).
-						if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
-							formdata.append('csrf_token', window.page_globals.csrf_token);
-						}
-
-					// upload_error (the upload ends in error)
-						xhr.upload.addEventListener("error", function(evt) {
-							upload_error(evt)
-							console.error('xhr.upload error evt:', evt);
-							console.log('xhr.upload error chunk:', chunk);
-
-							if (retry_number <= max_retry) {
-
-								const next_retry = retry_number + 1
-								console.log(`Retry attempt ${next_retry}/${max_retry}`);
-
-								const result_retry = new Promise(function(resolve, reject){
-									setTimeout( function(){
-										// Clean up current XHR to prevent memory leaks
-										xhr.onreadystatechange = null;
-										xhr.upload.onerror = null;
-										xhr.abort();
-										upload_try()
-
-										 // Retry with updated options
-										const updated_options = {
-											...options,
-											retry_number: next_retry
-										};
-
-										// fire the upload
-										send_chunk(updated_options)
-											.then(resolve)
-											.catch(reject);
-
-									}, 5000)
-								})
-								resolve( result_retry )
-							}else {
-								// Max retries exceeded - reject with meaningful error
-								const error = new Error(`Upload failed after ${max_retry} retries`);
-								error.chunk = chunk;
-								error.event = evt;
-								reject(error);
-							}
-						}, false);
-
-					// upload_abort (the upload has been aborted by the user)
-						const abort_handler = (e) => {
-							console.error('xhr.upload abort');
-							upload_abort(e)
-							reject(e)
-						}
-						xhr.upload.addEventListener("abort", abort_handler, false);
-
-					// progress
-						xhr.upload.addEventListener("progress", function(event) {
-							 upload_progress({
-								event			: event,
-								chunk_index		: chunk_index,
-								total_chunks	: total_chunks
-							 })
-						}, false);
-
-					// on_xhr_load (the XMLHttpRequest ends successfully)
-						const load_handler = (e) => {
-							console.log('xhr.upload loaded chunk: ', chunk_index);
-							// Treat a non-2xx HTTP status as a failure: otherwise a chunk
-							// the server rejected (e.g. 500 with a non-JSON body) resolves
-							// "successfully" while on_xhr_load never increments count_uploaded,
-							// so join_chunked_files never runs and the upload silently
-							// half-completes with no error surfaced.
-							if (e.target.status < 200 || e.target.status >= 300) {
-								console.error('Chunk upload failed with HTTP status', e.target.status, 'chunk', chunk_index);
-								reject(e)
-								return
-							}
-							on_xhr_load(e)
-							resolve(e)
-						}
-						xhr.addEventListener("load", load_handler, false);
-
-					xhr.send(formdata);
-				})
-			}//end send_chunk
+		}
+		publish_status(100, 'Loaded file ' + file.name)
 
 
-		// send the entire file to server
-			function send(options) {
-
-				const chunked = false
-
-				const xhr = new XMLHttpRequest();
-
-				xhr.open('POST', api_url, true);
-
-				// request header
-				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
-
-				// SEC-008: CSRF token (see send_chunk for rationale).
-				if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
-					xhr.setRequestHeader("X-Dedalo-Csrf-Token", window.page_globals.csrf_token);
-				}
-
-				const formdata = new FormData();
-					formdata.append('key_dir', key_dir);
-					formdata.append('file_name', file.name);
-					formdata.append('chunked', chunked);
-					formdata.append('file_to_upload', file);
-					formdata.append('tipo', tipo);
-					// SEC-008: CSRF token form-field fallback (see send_chunk).
-					if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
-						formdata.append('csrf_token', window.page_globals.csrf_token);
-					}
-
-				// upload_load file (the upload ends successfully)
-					// xhr.upload.addEventListener("load", upload_load, false);
-
-				// upload_loadstart (the upload begins)
-					xhr.upload.addEventListener("loadstart", upload_loadstart, false);
-
-				// upload_error (the upload ends in error)
-					xhr.upload.addEventListener("error", upload_error, false);
-
-				// upload_abort (the upload has been aborted by the user)
-					xhr.upload.addEventListener("abort", upload_abort, false);
-
-				// progress
-					xhr.upload.addEventListener("progress", function(event){
-						 upload_progress({
-							event			: event,
-							chunk_index		: 1,
-							total_chunks	: 1
-						 })
-					}, false);
-
-				// on_xhr_load (the XMLHttpRequest ends successfully)
-					xhr.addEventListener("load", on_xhr_load, false);
-
-				xhr.send(formdata);
-			}//end send
-
-
-		// chunk_file on end, else send next chunk
-			if (DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0) {
-				chunk_file(file, key_dir)
-			}else{
-				send()
-			}
-	})//end promise
+	return api_response
 }//end upload
 
 
@@ -858,62 +629,6 @@ service_upload.prototype.upload_file = async function(options) {
 
 	return api_response
 }//end upload_file
-
-
-
-/**
-* JOIN_CHUNKED_FILES
-* Instructs the server to concatenate all uploaded chunk temp-files into a
-* single final file after all parts have arrived.
-*
-* Delegates to `dd_utils_api::join_chunked_files_uploaded` via `data_manager.request`.
-* Called internally from `on_xhr_load` (inside `upload()`) once
-* `count_uploaded.length === total_chunks`.
-*
-* The request is configured with up to 5 retries and a 10-second timeout per
-* attempt to account for slow disk I/O on large files.
-*
-* @param {Object} options - Join options.
-*   @param {Object} options.file_data     - The `file_data` object from the last
-*                                           chunk's API response (carries metadata
-*                                           such as `original_name`, `total_chunks`,
-*                                           `tmp_dir`).
-*   @param {Array}  options.files_chunked - Ordered array of server-side temp-file
-*                                           paths, indexed by chunk_index.
-* @returns {Promise<Object>} Full API response: `{ result: boolean, file_data?: Object, msg: string }`.
-*/
-service_upload.prototype.join_chunked_files = async function(options) {
-
-	// options
-		const file_data		= options.file_data
-		const files_chunked	= options.files_chunked
-
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_utils_api',
-			action	: 'join_chunked_files_uploaded',
-			options	: {
-				file_data		: file_data,
-				files_chunked	: files_chunked
-			}
-		}
-
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
-
-			data_manager.request({
-				body : rqo,
-				retries : 5, // try
-				timeout : 10 * 1000 // 10 secs waiting response
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> get_system_info API response:",'DEBUG',response);
-				}
-				resolve(response)
-			})
-		})
-}//end get_system_info
 
 
 
