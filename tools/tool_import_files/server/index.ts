@@ -772,6 +772,20 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				// into a non-original tier records no original_*/modified_* names.
 				nameKeys: nameKeysForQuality(spec, customTargetQuality),
 			});
+			// A derivative failure is NOT an import failure: the original landed and
+			// is now indexed by the persist above, so the file counts as imported and
+			// the missing tiers can be rebuilt (tool_media_versions / repair). Report
+			// it per file so the operator knows a tier is missing.
+			//
+			// Reported through the EXISTING `errors[]` — the ONE channel the panel
+			// reads: render_tool_import_files.js:605-609 renders
+			// `sse_response.data.errors` and nothing else, so a `warnings` field
+			// would be dropped on the floor and the failure would be silent.
+			for (const message of result.derivativeErrors) {
+				errors.push(
+					`${originalFileName || result.originalFileName}: imported, but a derivative could not be built — ${message}`,
+				);
+			}
 			// AFTER the persist commits: an av transcode writes its own files_info
 			// back, and must not race the write above (IngestResult.startTranscode).
 			result.startTranscode?.();

@@ -78,10 +78,23 @@ async function processUploaded(ctx: ToolActionContext): Promise<ToolResponse> {
 				},
 			});
 		}
+		// A derivative failure does NOT fail the upload: add_file has already moved
+		// the staged file and the persist above indexed it, so `result:false` here
+		// would tell the operator nothing landed while the record says otherwise
+		// (see IngestResult.derivativeErrors). It is still a real failure, so it
+		// must reach the screen — and on the SUCCESS path this client shows only
+		// `msg`: render_tool_upload.js:273 writes response.msg into the status
+		// node, while its errors[] alert at :264-265 fires exclusively inside the
+		// `if (!response.result)` branch (:256). So the message carries it and
+		// errors[] carries the detail for any non-browser caller.
+		const derivativeErrors = result.derivativeErrors.map(
+			(message) =>
+				`${result.originalFileName}: imported, but a derivative could not be built — ${message}`,
+		);
 		return {
 			result: true,
-			msg: 'ok',
-			errors: [],
+			msg: derivativeErrors.length === 0 ? 'ok' : derivativeErrors.join(' | '),
+			errors: derivativeErrors,
 			original_file_name: result.originalFileName,
 			extension: result.extension,
 			files_info: result.filesInfo,
