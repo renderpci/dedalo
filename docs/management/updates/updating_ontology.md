@@ -26,6 +26,13 @@ Private tlds must be updated manually.
 
 Common and shared tlds are defined by `ACTIVE_ONTOLOGY_TLDS` (set in `../private/.env`). See the [Configuration Administrator Guide](../../config/administration.md).
 
+## Serving other installations (ontology master)
+
+If your installation is the one **serving** the ontology (`IS_AN_ONTOLOGY_SERVER=true`), each client's update panel asks it for the update manifest **from the browser**, not from the client's server. The master must therefore list every client origin in [`DEDALO_CORS_ALLOWED_ORIGINS`](../../config/config.md#cross-origin-api-callers-cors) (exact `scheme://host[:port]` strings, no wildcards, no trailing slash) or the client's browser blocks the call and the panel fails with a network error.
+
+!!! warning
+    The panel's reachability check is made server to server, so it can report the master as *ready* while the update itself still fails on the missing origin. If the panel shows the master ready and then errors on submit, the origin list is the first thing to check.
+
 ## Update process
 
 To update the shared ontology enter into the Maintenance panel in the System administration -> Maintenance and locate the update ontology control:

@@ -21,6 +21,38 @@ Some installations need to block the global access to specific components, use t
 DEDALO_AR_EXCLUDE_COMPONENTS=[]
 \`\`\``,
 	},
+	DEDALO_CORS_ALLOWED_ORIGINS: {
+		type: 'string_list',
+		scope: 'operator',
+		default: [],
+		heading: 'Cross-origin API callers (CORS)',
+		typeLabel: 'array',
+		doc: `Origins allowed to call this server's JSON API from a **browser** on another origin.
+
+Empty (the default) means **no CORS headers are sent at all** and the browser blocks every
+cross-origin call — the safe default, and the behaviour of every install that does not set this.
+
+The one workflow that needs it is a Dédalo acting as an **ontology master**
+(\`IS_AN_ONTOLOGY_SERVER=true\`): the update panel on the *client* Dédalo fetches
+\`get_ontology_update_info\` from the master **directly from the browser**
+(\`client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js\`),
+so the master must name the client origins here. The server-to-server probe
+(\`checkRemoteServer\`) is unaffected — it is a Bun \`fetch\`, and CORS is a browser rule.
+
+An entry is matched as an **exact, case-sensitive origin string** — scheme + host + port, no
+path, no trailing slash, no wildcards. \`https://a.example.org\` does not match
+\`https://a.example.org:443\` or \`http://a.example.org\`.
+
+Only a listed origin is echoed back in \`Access-Control-Allow-Origin\`; \`*\` is never sent, and
+neither is \`Access-Control-Allow-Credentials\` — the client calls cross-origin with
+\`credentials: 'same-origin'\` (\`data_manager.js\`), so no cookie ever rides one of these
+requests. A cross-origin caller is therefore ALWAYS unauthenticated and reaches only what the
+API opens to an anonymous request; listing an origin does not grant it a session.
+
+\`\`\`bash
+DEDALO_CORS_ALLOWED_ORIGINS=["https://archive.example.org","https://museum.example.org"]
+\`\`\``,
+	},
 	DEDALO_LOCK_COMPONENTS: {
 		type: 'boolean',
 		scope: 'operator',

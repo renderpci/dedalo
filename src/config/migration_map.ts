@@ -490,6 +490,11 @@ export const NEW_IN_V7: readonly string[] = [
 	// query performance
 	'SEARCH_LATE_ROW_LOOKUP_OFFSET',
 	'TM_COUNT_CACHE_TTL_MS',
+	// CORS. NEW_IN_V7 rather than a RESHAPED rule off the v7-PHP `DEDALO_CORS`
+	// array: that constant is not in the v6 census this map is keyed on, and the
+	// shape is narrower on purpose — only the origin list is an operator's to
+	// set (core/security/cors.ts explains why methods/headers are constants).
+	'DEDALO_CORS_ALLOWED_ORIGINS',
 	// sessions / login / permissions (the TS-native auth stack)
 	'SESSION_TTL_SECONDS',
 	'SESSION_ABSOLUTE_TTL_SECONDS',

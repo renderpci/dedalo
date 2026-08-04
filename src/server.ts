@@ -54,6 +54,7 @@ import {
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
+import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
 import {
 	getSession,
 	SESSION_COOKIE,
@@ -783,6 +784,17 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		return serveClientAsset(url.pathname, request);
 	}
 
+	// CORS preflight for the API path. MUST come before every other API branch:
+	// the browser sends OPTIONS (never POST) first, and each branch below tests
+	// for POST, so an unhandled preflight would fall through to the 404 and the
+	// real request would never be sent. Answers only for an allowlisted origin —
+	// null means "not ours", and routing continues as if this block did not exist.
+	// See core/security/cors.ts for why the origin list is the only knob.
+	if (API_PATHS.has(url.pathname) && request.method === 'OPTIONS') {
+		const preflight = corsPreflightResponse(request);
+		if (preflight !== null) return preflight;
+	}
+
 	// Media upload: the MULTIPART branch of the API path (PHP dd_utils_api::upload).
 	// Runs before JSON parsing — the body is form-data, not JSON.
 	if (
@@ -854,6 +866,10 @@ export async function handleRequest(request: Request, context: RequestContext): 
 		const headers = new Headers({
 			'Content-Type': 'application/json',
 			...SECURITY_HEADERS,
+			// A successful preflight only buys the right to SEND the request; the
+			// browser still discards the RESPONSE unless it too carries
+			// Access-Control-Allow-Origin. Both halves or neither.
+			...corsResponseHeaders(request),
 		});
 		// Authenticated API payloads may carry record data — never let a shared
 		// cache store them (L6).
