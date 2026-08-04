@@ -45,7 +45,7 @@ All actions read the same three required options — `tipo` (the component tipo)
 
 | Action | Gate | Extra required / read options | Purpose |
 | --- | --- | --- | --- |
-| `get_files_info` | `record_tipo`, level 1 | — | Probe disk for every quality; returns the `files_info` array (existence, name, path, url, size, time per quality). |
+| `get_files_info` | `record_tipo`, level 1 | — | Probe disk for every quality; returns the `files_info` array (existence, name, path, url, size, time per quality) as `result`, plus `files_info_db` — what the RECORD stores for the same lang, read in the same breath. The panel compares the two to raise the "files info data is unsync" warning, so both sides must come from one answer: taking the DB side from the component's cached data made every delete raise a false alarm that a page reload cleared. |
 | `delete_quality` | `record_tipo`, level 2 | `quality` (req.) | Delete the file of one quality. |
 | `build_version` | `record_tipo`, level 2 | `quality` (req.), `extension` (optional), `async` (default `true`) | (Re)build the requested quality from the original (falling back to the default-quality file when the box has no original). For av it returns `job_id` and encodes in the background; refusals that are knowable up front — no source, no encode profile for the tier, no audio stream for an audio tier, the original as target — come back as `result:false` **before** a job exists. |
 | `get_job_status` | dispatch gates 1–4 (+ job ownership) | `job_id` (req.) | Poll one media job: top-level `JobStatusFrame` fields (`pid`, `pfile`, `is_running`, `data`, `errors`, `total_time`); `{result:false, errors:['job_not_found']}` on an unknown id. |
@@ -54,7 +54,7 @@ All actions read the same three required options — `tipo` (the component tipo)
 | `sync_files` | `record_tipo`, level 2 | `regenerate_options` (object, e.g. `{ delete_normalized_files: bool }`) | Re-read data and regenerate the component so `files_info` matches disk. |
 | `delete_version` | `record_tipo`, level 2 | `quality` (req.), `extension` (optional) | Delete one specific version: the thumb-specific path for the thumb quality, else the general file-ops delete. |
 
-Response shape for every action: `{ result, msg, errors }`. For `get_files_info`, `result` is the files-info array (or `false` on failure); for the write actions `result` is the boolean / merged result of the delegated engine call.
+Response shape for every action: `{ result, msg, errors }`. For `get_files_info`, `result` is the files-info array (or `false` on failure) and `files_info_db` carries the stored array beside it; for the write actions `result` is the boolean / merged result of the delegated engine call.
 
 `delete_quality` vs `delete_version`: `delete_quality` removes a quality regardless of extension; `delete_version` targets one concrete file, handling the thumb specially and accepting an `extension` to disambiguate when a quality has more than one file (e.g. a `.pdf` main file alongside derivatives).
 

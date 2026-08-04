@@ -278,10 +278,14 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 			const data	= self.main_element.data || {}
 			const entries	= data.entries || []
 
-			// files info from DB data
+			// files info from DB data. FALLBACK ONLY — the component's cached data is
+			// a snapshot from when the tool opened and no refresh re-reads it.
+			// get_files_info below overwrites this with what the record stores NOW
+			// (its files_info_db), read together with the disk scan it is compared
+			// against. Order matters: the server's answer must land last.
 				self.files_info_db = entries[0]?.files_info || []
 
-			// files info real (read from disk)
+			// files info real (read from disk) — also refreshes self.files_info_db
 				self.files_info_disk = await self.get_files_info() || []
 
 			// original_file_name
@@ -420,6 +424,16 @@ tool_media_versions.prototype.get_files_info = async function() {
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
 					dd_console("-> get_files_info API response:",'DEBUG',response);
+				}
+
+				// files_info_db: what the RECORD stores, read by the server in the same
+				// breath as the disk scan below. Refreshed HERE, next to the disk side,
+				// because the two are only meaningful compared against each other (the
+				// unsync warning). Taking the DB side from self.main_element.data
+				// instead — a cache that only a full component reload updates — is what
+				// made every delete raise a warning that a page reload cleared.
+				if (Array.isArray(response?.files_info_db)) {
+					self.files_info_db = response.files_info_db
 				}
 
 				// always resolve an array so callers never receive undefined

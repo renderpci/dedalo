@@ -86,13 +86,32 @@ async function writeBack(
 /**
  * get_files_info: re-scan and return the current files_info AS `result` (the
  * client contract — result must be the array, not a boolean).
+ *
+ * `files_info_db` rides along: what the RECORD stores right now, for the same
+ * lang, read in the same breath as the disk scan. The panel compares the two to
+ * decide whether to raise "files info data is unsync", and it used to take the
+ * DB side from the component's CACHED data — a snapshot from when the tool was
+ * opened, which no refresh re-reads. So every delete/build raised a false alarm
+ * that a page reload made disappear: the two sides of one comparison came from
+ * two different moments. This costs nothing — resolveMediaToolContext already
+ * loaded the stored items.
  */
 export async function getFilesInfo(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
 		const mediaContext = await resolveMediaToolContext(ctx.options);
-		const { spec, identity, pathOpts } = mediaContext;
+		const { spec, identity, pathOpts, items } = mediaContext;
 		const filesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		return { result: filesInfo, msg: 'ok', errors: [], files_info: filesInfo };
+		const item = items.find((entry) => (entry.lang ?? null) === identity.lang) ?? items[0];
+		const stored = (item as { files_info?: unknown } | undefined)?.files_info;
+		return {
+			result: filesInfo,
+			msg: 'ok',
+			errors: [],
+			files_info: filesInfo,
+			// [] is the honest answer when the component stores nothing: the panel
+			// SHOULD warn then, and Regenerate is the documented repair.
+			files_info_db: Array.isArray(stored) ? stored : [],
+		};
 	} catch (error) {
 		return fail((error as Error).message);
 	}
