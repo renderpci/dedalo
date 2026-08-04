@@ -317,6 +317,20 @@ can never see it, and "nothing needed doing" must not report the same as "the
 record is gone" (`assertRecordPresent` throws; `persistUploadedMedia` throws
 outright, because the file is already on disk).
 
+**One AV encoder, two callers** (`src/core/media/av_versions.ts`). `encodeAvQuality`
+is the single place an av tier is produced: the two-pass x264 profile for
+`<quality>_<standard>[_<aspect>]`, or an audio extraction, written atomically
+(temp + rename) with the two-pass stats scratch removed. `submitAvTranscode` is
+the INGEST caller (default quality + audio, §6.2); `submitAvVersionBuild` is the
+TOOL caller and builds the ONE tier the operator asked for — PHP
+`component_av::build_version` parity, source = the original, falling back to the
+default-quality file, and never a tier from itself. Refusals knowable up front
+(no source, no encode profile for the tier, no audio stream for an audio tier,
+the original as target) are raised BEFORE a job id exists, because the panel
+shows *Processing* the moment it receives one. The av THUMB is not a transcode:
+it is the posterframe resized (PHP `create_thumb`), so it routes to
+`buildAvThumbFromPosterframe`, not to ffmpeg.
+
 **The AV transcode records its own result, and the CALLER starts it.**
 `submitAvTranscode`'s worker re-scans and reconciles after the encode, so the
 derivatives reach the stored index instead of waiting for the next save (only
@@ -348,7 +362,9 @@ Write-phases run against a **scratch media root** (the `MEDIA_PATH` override the
 All register in `TOOL_API_ACTIONS` (`tool_request.ts`) with declarative permission specs (`minLevel: 2` on the target for every mutation; PHP `assert_record_in_user_scope` → the standard `getPermissions` gate + record-scope check). PHP's 8-gate `tool_request` chain (sanitize model → registry whitelist → per-user grant → realpath confinement → API_ACTIONS allowlist → public+static reflection → 0-or-1-object-param signature → declarative permission spec) is already re-expressed as the explicit TS registry (no reflection) — strictly stronger. Each tool's `register.json` is an ontology record in section `dd1340`.
 
 - **tool_upload.process_uploaded_file** — the ingest entry (§6.2). `API_ACTIONS = ['process_uploaded_file']`.
-- **tool_media_versions** (`API_ACTIONS = ['get_files_info','delete_quality','build_version','conform_headers','rotate','sync_files','delete_version']`) — thin verbs over §4–§6: `build_version` (`options.async` default **true** → job manager), `conform_headers` (AV remux), `sync_files` (`edit` mode, `regenerate_component`, re-scan disk), `delete_version` (thumb → `delete_thumb`, else `delete_file(quality,ext)`).
+- **tool_media_versions** (`API_ACTIONS = ['get_files_info','delete_quality','build_version','conform_headers','rotate','sync_files','delete_version','get_job_status']`) — thin verbs over §4–§6: `build_version` (`options.async` default **true** → job manager), `conform_headers` (AV remux), `sync_files` (`edit` mode, `regenerate_component`, re-scan disk), `delete_version` (thumb → `delete_thumb`, else `delete_file(quality,ext)`). Two TS-only additions the panel depends on (`WC-2026-08-04-media-versions-panel-wire`):
+  - `build_version` on **component_av** builds the QUALITY THAT WAS ASKED FOR (`submitAvVersionBuild`, §6), and `get_job_status` (the shared `MEDIA_JOB_STATUS_ACTION`, also mounted on tool_upload) is how the panel follows that job. Watching the filesystem alone cannot distinguish "still encoding" from "the job died", which is why a failed transcode used to blink *Processing* forever.
+  - `get_files_info` returns **`files_info_db`** — what the record STORES for the operated lang — beside the disk scan in `result`. The panel's "files info data is unsync" warning is a comparison of those two, and both sides must come from one answer: taking the stored side from the client's cached component data (a snapshot no refresh re-reads) made every delete raise a false alarm that a page reload cleared. It costs no extra query — the tool context already loaded the stored items.
 - **tool_image_rotation.apply_rotation** (`API_ACTIONS = ['apply_rotation']`) — rotate all non-`original` tiers (`±distort SRT`) + proportional crop computed from the default-quality reference dimensions — the client sends `crop_area` in **pixels of the default-quality file it previews** (`render_tool_image_crop` already scales display px → natural px), the core divides by that file's dimensions and re-scales the resulting fraction per tier; feeding the pixel box straight to `-crop` yields a silent no-op (offset inside the frame → ImageMagick clamps) or a lost tier (offset outside → `geometry does not contain image`), so an out-of-reference box is REFUSED with an error instead (gate: `media_tools.test.ts` "crops every non-original tier from default-quality pixels"); **original never mutated** — asserted in code, not convention (rotate/crop targeting `quality === 'original'` refuses).
 - **tool_posterframe** (`API_ACTIONS = ['create_identifying_image','get_ar_identifying_image']`) — `create_identifying_image`: instantiate the portal, `add_new_element` → `Save` → new image record in the target section, `Ffmpeg::create_posterframe` at `current_time` into the image original path, then image `process_uploaded_file` for derivatives; `get_ar_identifying_image`: walk inverse references for portals whose ontology node has an `identifying_image` property.
 - **tool_pdf_extractor.get_pdf_data** (`API_ACTIONS = ['get_pdf_data']`) — method `text|html`, engine from the `dd1633` tool config (`pdftotext`/`pdftohtml`), `type -P` resolution → TS boot-probe, page range, `htmlentities`-equivalent output encoding.
