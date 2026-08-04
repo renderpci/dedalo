@@ -31,7 +31,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 CI_PORT="${DEDALO_CI_CLIENT_PORT:-3510}"
-SCRATCH="$(mktemp -d -t dedalo_ci_client_gate)"
+# Portable template (see the same note in hermetic.sh): `mktemp -d -t NAME` is BSD-only
+# and dies on GNU coreutils with "too few X's in template". This gate runs on the
+# self-hosted Mac today, so the bug is latent here — fixed with its twin rather than
+# left to surface the day the client gate is pointed at a Linux runner.
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/dedalo_ci_client_gate.XXXXXX")"
 
 export SERVER_TCP_PORT="$CI_PORT"
 export SERVER_UNIX_SOCKET="$SCRATCH/dedalo_ts_ci.sock"
