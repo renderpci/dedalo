@@ -6,7 +6,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -22,9 +22,14 @@ import {
 	settingName,
 } from '../../src/core/media/engine/ffmpeg_profiles.ts';
 import {
+	backgroundForTarget,
+	buildConvertArgv,
 	buildCropArgv,
 	buildRotateArgv,
 	buildThumbArgv,
+	CMYK_SOURCE_PROFILE,
+	resolveMagick,
+	SRGB_TARGET_PROFILE,
 } from '../../src/core/media/engine/imagemagick.ts';
 import { sniffAndValidate, sniffBytes } from '../../src/core/media/engine/mime.ts';
 import { buildExtractArgv, buildOcrArgv } from '../../src/core/media/engine/pdf.ts';
@@ -123,14 +128,151 @@ describe('ffmpeg argv recipes (PHP class.Ffmpeg.php)', () => {
 	});
 });
 
+/**
+ * SCENE SELECTION (2026-08-04). An image source can hold N images — Photoshop
+ * layers, TIFF/PDF pages, GIF frames — and an argv that leaves N images in the
+ * pipeline makes ImageMagick write `<stem>-0.jpg`, `<stem>-1.jpg`… and never the
+ * bare target. So the recipes below are pinned as EXACT argv arrays rather than
+ * `toContain` fragments: what matters is not that a token is present somewhere,
+ * it is which image the recipe names and where the collapse operator sits
+ * relative to the resize. A `toContain` set stays green while the scene selector
+ * is missing, which is why this block asserts equality.
+ */
 describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
-	test("dd_thumb: -define jpeg:size … -thumbnail 'WxH>' -auto-orient …", () => {
-		const argv = buildThumbArgv('/s.tif', '/t.jpg', 222, 148);
-		const s = argv.join(' ');
-		expect(s).toContain('-define jpeg:size=400x400');
-		expect(s).toContain('-thumbnail 222x148>');
-		expect(s).toContain('-auto-orient -gravity center -unsharp 0x.5 -quality 90');
+	const magick = resolveMagick();
+
+	test('dd_thumb, representative scene: exact argv (SOURCE[0], flatten BEFORE -thumbnail)', () => {
+		expect(
+			buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+				selection: 'representative',
+				background: '#ffffff',
+			}),
+		).toEqual([
+			magick,
+			'-define',
+			'jpeg:size=400x400',
+			'/s.tif[0]',
+			'-background',
+			'#ffffff',
+			'-flatten',
+			'-thumbnail',
+			'222x148>',
+			'-auto-orient',
+			'-gravity',
+			'center',
+			'-unsharp',
+			'0x.5',
+			'-quality',
+			'90',
+			'/t.jpg',
+		]);
+	});
+
+	test('dd_thumb, composite scene: byte-identical to representative minus the [0]', () => {
+		const representative = buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+			selection: 'representative',
+			background: '#ffffff',
+		});
+		const composite = buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+			selection: 'composite',
+			background: '#ffffff',
+		});
+		// The ONLY difference is the source token: the collapse operator is the same
+		// `-flatten` in both, so a source with no representative image still leaves
+		// exactly one image in the pipeline.
+		expect(composite).toEqual(
+			representative.map((token) => (token === '/s.tif[0]' ? '/s.tif' : token)),
+		);
+		expect(composite).toContain('/s.tif');
+		expect(composite).not.toContain('/s.tif[0]');
+	});
+
+	test('dd_thumb, cmyk: the ICC trio sits between the source token and -background', () => {
+		const argv = buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+			selection: 'representative',
+			background: '#ffffff',
+			cmyk: true,
+		});
+		const source = argv.indexOf('/s.tif[0]');
+		const background = argv.indexOf('-background');
+		// THE PROFILES MUST BE REAL FILES. This branch named `engine/icc/…` while
+		// that directory did not exist in the repo at all: measured, ImageMagick then
+		// exits 1 with `unable to open image '…/Generic_CMYK_Profile.icc'` and writes
+		// NOTHING, so every CMYK master lost its whole derivative ladder. An argv
+		// assertion alone cannot see that — hence the existence check here, next to
+		// the shape it certifies.
+		for (const profile of [CMYK_SOURCE_PROFILE, SRGB_TARGET_PROFILE]) {
+			expect([profile, existsSync(profile)]).toEqual([profile, true]);
+		}
+		// A CMYK JPEG renders INVERTED in every browser, so the conversion must
+		// happen; and it must happen before the flatten, or the background colour is
+		// composited in the wrong colorspace.
+		expect(argv.slice(source + 1, background)).toEqual([
+			'-profile',
+			expect.stringContaining('Generic_CMYK_Profile.icc'),
+			'-profile',
+			expect.stringContaining('sRGB_Profile.icc'),
+			'-strip',
+		]);
+		// Everything else is untouched by the CMYK branch.
+		expect(argv.slice(background)).toEqual(
+			buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+				selection: 'representative',
+				background: '#ffffff',
+			}).slice(4),
+		);
+	});
+
+	test('backgroundForTarget is decided by the TARGET, for a path or a bare extension', () => {
+		// Bare JPEG encoding does not composite alpha: it drops the plane and keeps
+		// the producing application's hidden RGB (measured red, black AND white on
+		// different sources). What matters is what the target can STORE.
+		expect(backgroundForTarget('/media/image/thumb/0/x.jpg')).toBe('#ffffff');
+		expect(backgroundForTarget('/media/image/1.5MB/0/x.JPEG')).toBe('#ffffff');
+		expect(backgroundForTarget('bmp')).toBe('#ffffff');
+		expect(backgroundForTarget('pnm')).toBe('#ffffff');
+		// Alpha-capable targets keep their transparency.
+		expect(backgroundForTarget('/media/image/thumb/0/x.png')).toBe('none');
+		expect(backgroundForTarget('avif')).toBe('none');
+		expect(backgroundForTarget('webp')).toBe('none');
+	});
+
+	test('buildConvertArgv threads the scene token + background, and ports no v6 layer operator', () => {
+		const argv = buildConvertArgv('/s.tif', '/t.jpg', {
+			quality: '1.5MB',
+			selection: 'representative',
+			background: '#ffffff',
+		});
+		expect(argv[1]).toBe('/s.tif[0]');
+		const flatten = argv.indexOf('-flatten');
+		expect(argv[flatten - 2]).toBe('-background');
+		expect(argv[flatten - 1]).toBe('#ffffff');
 		expect(argv[argv.length - 1]).toBe('/t.jpg');
+
+		// An alpha-capable target must NOT be whited out (the recipe carried a
+		// literal '#ffffff' before the background became a caller decision).
+		expect(
+			buildConvertArgv('/s.png', '/t.png', {
+				quality: '1.5MB',
+				selection: 'composite',
+				background: backgroundForTarget('/t.png'),
+			}),
+		).toContain('none');
+
+		// v6's `-layers merge` GROWS the canvas and emits negative page offsets
+		// (200x100 → 250x180, `240x120+-40+-20`), desynchronising the tier from
+		// getDimensions and the SVG envelope; `remove_layer_0` (`-delete 0`) was
+		// measured 59.7 % wrong on the reported files. Neither is ported, and this
+		// is the gate that keeps them out.
+		for (const options of [
+			{ quality: '1.5MB', selection: 'representative' as const, background: '#ffffff' },
+			{ quality: 'original', selection: 'composite' as const, background: 'none' },
+		]) {
+			const built = buildConvertArgv('/s.tif', '/t.jpg', options);
+			expect(built).not.toContain('-layers');
+			expect(built).not.toContain('+layers');
+			expect(built).not.toContain('-delete');
+		}
 	});
 
 	test('rotate expanded: +distort SRT <deg> +repage', () => {
