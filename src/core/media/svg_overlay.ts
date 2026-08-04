@@ -14,10 +14,10 @@
  *   MEDIA_PATH + /image + initial_media_path + /svg + additional_path + /<id>.svg
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, writeFileSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import type { MediaTypeSpec } from '../concepts/media.ts';
+import { writeAtomically } from './atomic.ts';
 import { getDimensions } from './engine/imagemagick.ts';
 import {
 	additionalPath,
@@ -104,15 +104,28 @@ export async function createDefaultSvgFile(
 	).absolutePath;
 	if (!existsSync(rasterPath)) return null;
 
-	const dims = await getDimensions(rasterPath).catch(() => ({ width: 0, height: 0 }));
+	// An unreadable raster is FATAL here. The previous `.catch(() => ({width:0,
+	// height:0}))` wrote a 0x0 envelope, and a 0x0 <svg> renders as a blank edit
+	// view — the record looks empty rather than broken, which is the worst of both.
+	// The caller (regenerateImage) reports the failure; the record keeps its index.
+	let dims: { width: number; height: number };
+	try {
+		dims = await getDimensions(rasterPath);
+	} catch (error) {
+		throw new Error(
+			`svg envelope: cannot read the dimensions of ${rasterPath}: ${(error as Error).message}`,
+		);
+	}
 	const rasterUrl = defaultRasterUrl(spec, identity, pathOpts);
 	const svg = buildDefaultSvgString(dims.width, dims.height, rasterUrl);
 
+	// Atomic like every other media write: the client fetches this envelope as an
+	// <object>, so a half-written file is a blank edit view for whoever loads it
+	// during the write.
 	const location = svgOverlayLocation(spec, identity, pathOpts);
-	const dir = dirname(location.absolutePath);
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o775 });
-	writeFileSync(location.absolutePath, svg);
-	return location.absolutePath;
+	return writeAtomically(location.absolutePath, async (temp) => {
+		writeFileSync(temp, svg);
+	});
 }
 
 /**

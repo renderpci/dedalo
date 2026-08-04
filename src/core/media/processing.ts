@@ -3,22 +3,41 @@
  *
  * Given an ORIGINAL file, build the default-quality derivative, the thumbnail,
  * and any alternate-extension versions, per type. Uses the binary adapters
- * (imagemagick/ffmpeg/pdf) over the spawn discipline. Outputs are written to a
- * temp name in the destination dir then atomically renamed, so a coexisting PHP
- * reader never sees a partial derivative (Original law: the original is the
- * source of truth and is never mutated).
+ * (imagemagick/ffmpeg/pdf) over the spawn discipline. Every output goes through
+ * `./atomic.ts` (temp sibling + rename + debris sweep), so a coexisting reader
+ * never sees a partial derivative and a failed run leaves nothing behind
+ * (Original law: the original is the source of truth and is never mutated).
+ *
+ * SCENE SELECTION (2026-08-04): a source can hold N images (Photoshop layers,
+ * TIFF/PDF pages, GIF frames). Each recipe here PROBES its source once
+ * (`./engine/probe.ts`) and hands the argv layer an explicit scene selection, a
+ * flatten background and the CMYK flag. Before that, a layered TIFF made
+ * ImageMagick write `<stem>-0.jpg`… instead of the temp, the rename threw ENOENT
+ * and the record was left with `matrix.media` NULL.
  *
  * PHP anchors: build_version (:3543), regenerate_component (:3153),
  * component_image build_version (:1461), component_pdf create_alternative_version
  * (:1375), component_av build_version (:1437, async transcode via jobs).
  */
 
-import { copyFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { copyFileSync, existsSync } from 'node:fs';
 import { config } from '../../config/config.ts';
-import { type MediaTypeSpec, pixelAreaBudget } from '../concepts/media.ts';
-import { buildThumb, convertImage, getColorspace, getDimensions } from './engine/imagemagick.ts';
-import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
+import type { MediaTypeSpec } from '../concepts/media.ts';
+import { writeAtomically, writeAtomicallySync } from './atomic.ts';
+import {
+	backgroundForTarget,
+	buildThumb,
+	convertImage,
+	type SceneSelection,
+	type ThumbOptions,
+} from './engine/imagemagick.ts';
+import { type ImageSourceProbe, probeImageSource } from './engine/probe.ts';
+import {
+	buildMediaIdentifier,
+	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
+} from './path.ts';
 
 /**
  * PDF thumbnail rasterization tunables (PHP component_pdf::create_thumb :273-275):
@@ -36,28 +55,59 @@ function _rootOf(pathOpts: MediaPathOptions): string {
 }
 
 /**
- * A unique temp path in the same dir as `target` (atomic-rename staging). The
- * temp name MUST keep the target's extension: ImageMagick/ffmpeg infer the
- * OUTPUT FORMAT from the filename extension, so a temp like `x.jpg.tmp.123`
- * would make ImageMagick fall back to the SOURCE format (e.g. write TIFF bytes
- * into a `.jpg` file — which browsers can't display). Insert the uniqueness
- * BEFORE the extension: `<stem>.tmp.<pid>.<rand>.<ext>`.
+ * Turn one probe into the three decisions every image recipe needs: which image
+ * of the source to take, what to composite it over, and whether to run the
+ * CMYK→sRGB profile pair.
+ *
+ * `label` names the thing being built (a media identifier, a staging path) and
+ * appears in the composite warning — a source with no representative image is
+ * the ONE class the measurements do not cover empirically (a PSD saved without
+ * a merged composite), so it must be visible in the log rather than inferred
+ * later from a wrong-looking derivative.
+ *
+ * The warning is a LOG line and not a `derivativeErrors` entry on purpose: since
+ * the probe rule was corrected (2026-08-04 review) this branch is only reached
+ * when scene 0 is a partial patch of a SHARED page — layers of one canvas —
+ * where compositing them is the right answer and `-flatten` yields exactly that
+ * page. It is a judgement the operator may want to know about, not a derivative
+ * that failed. Paged/multi-resolution containers, where compositing WAS
+ * destructive, no longer take this branch at all.
  */
-function tempSibling(target: string): string {
-	const slash = target.lastIndexOf('/');
-	const dir = target.slice(0, slash);
-	const name = target.slice(slash + 1);
-	const dot = name.lastIndexOf('.');
-	const stem = dot > 0 ? name.slice(0, dot) : name;
-	const ext = dot > 0 ? name.slice(dot) : ''; // includes the leading dot
-	const unique = `${process.pid}.${globalThis.performance.now().toString(36).replace('.', '')}`;
-	return `${dir}/${stem}.tmp.${unique}${ext}`;
+function recipeFromProbe(probe: ImageSourceProbe, target: string, label: string): ThumbOptions {
+	const selection: SceneSelection = probe.hasRepresentativeScene ? 'representative' : 'composite';
+	if (probe.sceneCount > 1 && selection === 'composite') {
+		console.warn(
+			`[media] ${label}: source declares no representative image (${probe.sceneCount} scenes, canvas ${probe.canvasWidth}x${probe.canvasHeight}) — compositing the whole stack`,
+		);
+	}
+	return {
+		selection,
+		// The background is decided by the TARGET extension, never by the source's
+		// alpha: what matters is what the target can store (see backgroundForTarget).
+		background: backgroundForTarget(target),
+		cmyk: /cmyk/i.test(probe.colorspace),
+	};
 }
 
-/** Ensure the parent dir of `absolutePath` exists. */
-function ensureDir(absolutePath: string): void {
-	const dir = dirname(absolutePath);
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o775 });
+/**
+ * Thumbnail an arbitrary image file into an arbitrary target path, atomically.
+ *
+ * The shared "probe then buildThumb" gear for the three call sites that own a
+ * raw path pair rather than a media identity: the staged-upload preview and the
+ * two posterframe thumbs. Each of those sources is arbitrary bytes (a layered
+ * TIFF upload, a client canvas snapshot), so none of them may assume a single
+ * image. Returns the target path.
+ */
+export async function buildThumbAtomically(
+	source: string,
+	target: string,
+	label: string,
+): Promise<string> {
+	const probe = await probeImageSource(source);
+	const options = recipeFromProbe(probe, target, label);
+	return writeAtomically(target, async (temp) => {
+		await buildThumb(source, temp, options);
+	});
 }
 
 /**
@@ -85,6 +135,13 @@ export function resolveOriginalSource(
  * Build one image quality derivative from the source (PHP component_image
  * convert_quality). Resizes to the quality's pixel-area budget (never upscaling),
  * converting CMYK→sRGB when detected. Writes atomically. Returns the target path.
+ *
+ * ONE probe supplies all three derived facts (scene selection, CMYK, source
+ * dimensions) — it replaces the previous `getColorspace`/`getDimensions` pair,
+ * each of which swallowed its own failure (`.catch(() => '')`). Those swallows
+ * are gone: an unreadable source silently disabled the CMYK branch and the
+ * resize budget, and per the ingest change it no longer costs the record its
+ * index to fail here.
  */
 export async function buildImageVersion(
 	spec: MediaTypeSpec,
@@ -100,21 +157,20 @@ export async function buildImageVersion(
 		spec.defaultExtension,
 		pathOpts,
 	).absolutePath;
-	ensureDir(target);
-	const temp = tempSibling(target);
-	const colorspace = await getColorspace(source).catch(() => '');
-	const dims =
-		pixelAreaBudget(quality) !== null
-			? await getDimensions(source).catch(() => undefined)
-			: undefined;
-	await convertImage(source, temp, {
-		quality,
-		sourceWidth: dims?.width,
-		sourceHeight: dims?.height,
-		cmyk: /cmyk/i.test(colorspace),
+	const probe = await probeImageSource(source);
+	const recipe = recipeFromProbe(probe, target, `${buildMediaIdentifier(identity)} ${quality}`);
+	return writeAtomically(target, async (temp) => {
+		await convertImage(source, temp, {
+			quality,
+			selection: recipe.selection,
+			background: recipe.background,
+			// The CANVAS, not scene 0's raster: a scene at a page offset makes the two
+			// differ, and this must describe the file that will actually be written.
+			sourceWidth: probe.canvasWidth,
+			sourceHeight: probe.canvasHeight,
+			cmyk: recipe.cmyk,
+		});
 	});
-	renameSync(temp, target);
-	return target;
 }
 
 /** Build the thumbnail (PHP create_thumb): dd_thumb recipe, atomic write. */
@@ -133,25 +189,25 @@ export async function buildThumbVersion(
 		thumbExtension,
 		pathOpts,
 	).absolutePath;
-	ensureDir(target);
-	const temp = tempSibling(target);
 	if (spec.model === 'component_pdf') {
-		// PHP component_pdf::create_thumb — rasterize ONLY the first page ([0]) via
-		// the PDF-aware convert recipe (density/antialias/cropbox), fit to the thumb
-		// box. The image dd_thumb recipe emits no scene selector, so a multi-page PDF
-		// makes ImageMagick write <stem>-0.jpg/<stem>-1.jpg… and never the bare
-		// <stem>.jpg the rename below expects → ENOENT (PHP guards with ar_layers=[0]).
-		await convertImage(`${source}[0]`, temp, {
-			quality: thumbQuality,
-			pdfDensity: PDF_THUMB_DENSITY,
-			thumbBox: { width: config.media.thumb.width, height: config.media.thumb.height },
-			compression: PDF_THUMB_QUALITY,
+		// PHP component_pdf::create_thumb — rasterize ONLY the first page via the
+		// PDF-aware convert recipe (density/antialias/cropbox), fit to the thumb box.
+		// Page 1 is declared by the MODEL here, not discovered by a probe: a pdf is a
+		// paged source by definition and page 1 is its cover. The selection is built
+		// in exactly one place (sceneToken), so the inline scene-index suffix that
+		// used to be concatenated onto the source path here is gone.
+		return writeAtomically(target, async (temp) => {
+			await convertImage(source, temp, {
+				quality: thumbQuality,
+				selection: 'representative',
+				background: backgroundForTarget(target),
+				pdfDensity: PDF_THUMB_DENSITY,
+				thumbBox: { width: config.media.thumb.width, height: config.media.thumb.height },
+				compression: PDF_THUMB_QUALITY,
+			});
 		});
-	} else {
-		await buildThumb(source, temp);
 	}
-	renameSync(temp, target);
-	return target;
+	return buildThumbAtomically(source, target, `${buildMediaIdentifier(identity)} ${thumbQuality}`);
 }
 
 /** Rasterize the PDF's first page to the jpg cover (PHP create_alternative_version). */
@@ -168,14 +224,15 @@ export async function buildPdfCover(
 		'jpg',
 		pathOpts,
 	).absolutePath;
-	ensureDir(target);
-	const temp = tempSibling(target);
-	await convertImage(`${source}[0]`, temp, {
-		quality: spec.defaultQuality,
-		pdfDensity: config.media.imagePrintDpi,
+	// Page 1 by model declaration (see buildThumbVersion's pdf branch).
+	return writeAtomically(target, async (temp) => {
+		await convertImage(source, temp, {
+			quality: spec.defaultQuality,
+			selection: 'representative',
+			background: backgroundForTarget(target),
+			pdfDensity: config.media.imagePrintDpi,
+		});
 	});
-	renameSync(temp, target);
-	return target;
 }
 
 /** Copy the original to a target quality with the same extension (PHP base build_version copy). */
@@ -188,11 +245,13 @@ export function copyToQuality(
 	pathOpts: MediaPathOptions,
 ): string {
 	const target = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
-	ensureDir(target);
-	const temp = tempSibling(target);
-	copyFileSync(source, temp);
-	renameSync(temp, target);
-	return target;
+	// SYNCHRONOUS on purpose (writeAtomicallySync, not writeAtomically): this is
+	// called by regenerate3d, which is itself sync and is called UNAWAITED from
+	// ingest/process_uploaded_file.ts. Returning a promise from here would turn a
+	// copy failure into an unhandled rejection three call sites away.
+	return writeAtomicallySync(target, (temp) => {
+		copyFileSync(source, temp);
+	});
 }
 
 /**
@@ -209,8 +268,20 @@ export async function regenerateImage(
 	const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) return [];
 	const created: string[] = [];
-	created.push(await buildImageVersion(spec, identity, spec.defaultQuality, source, pathOpts));
-	created.push(await buildThumbVersion(spec, identity, source, pathOpts));
+	const defaultPath = await buildImageVersion(
+		spec,
+		identity,
+		spec.defaultQuality,
+		source,
+		pathOpts,
+	);
+	created.push(defaultPath);
+	// THE THUMB'S SOURCE IS THE DEFAULT TIER, NEVER THE RAW ORIGINAL.
+	// v6 component_image::create_thumb (class.component_image.php:393-431) reads
+	// get_media_filepath(quality_default): single-scene, already composited, already
+	// CMYK-converted, so the thumb recipe cannot meet a sequence at all.
+	// repair.ts:232-233 already does this and versions.ts:87-100 already prefers it.
+	created.push(await buildThumbVersion(spec, identity, defaultPath, pathOpts));
 	// The edit view renders the raster through an SVG envelope (PHP
 	// component_image regenerate re-creates it); without it the client falls back
 	// to the placeholder and the image never shows. Built from the default tier.

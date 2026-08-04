@@ -42,7 +42,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { assertValidQuality, type MediaTypeSpec, mediaTypeOf } from '../../core/concepts/media.ts';
-import { convertImage, getDimensions } from '../../core/media/engine/imagemagick.ts';
+import {
+	backgroundForTarget,
+	convertImage,
+	getDimensions,
+} from '../../core/media/engine/imagemagick.ts';
 import { resolveMediaPathOptions } from '../../core/media/ontology_path.ts';
 import {
 	buildMediaLocation,
@@ -185,6 +189,14 @@ async function boundedEncoderInput(
 		// shrink-only — exactly the longest-side cap an image encoder wants.
 		await convertImage(source, target, {
 			quality,
+			// The source is a DERIVATIVE tier (qualityIsEmbeddable refuses a master
+			// tier), so it was itself produced by a collapsing recipe and holds one
+			// image — `representative` is `[0]` on a single-image source, i.e. a no-op
+			// that also stays correct if a stray sequence ever reaches this path.
+			selection: 'representative',
+			// scratchTarget() is always '.jpg', which cannot carry alpha; deriving the
+			// value keeps the two facts from drifting apart.
+			background: backgroundForTarget(target),
 			thumbBox: { width: maxPx, height: maxPx },
 			compression: 90,
 		});

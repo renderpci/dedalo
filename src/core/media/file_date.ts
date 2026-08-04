@@ -33,8 +33,8 @@
 
 import { existsSync } from 'node:fs';
 import { config } from '../../config/config.ts';
+import { identifyAvailable, runIdentify } from './engine/binaries.ts';
 import { probeFormat } from './engine/ffmpeg.ts';
-import { resolveIdentify } from './engine/imagemagick.ts';
 import { runBinary } from './engine/spawn.ts';
 
 /** Sparse dd_date fields (PHP core/common/class.dd_date.php — nulls omitted). */
@@ -231,18 +231,16 @@ export function parsePdfCreationDate(line: string): DdDate | null {
 
 /** component_image: identify EXIF DateTimeOriginal, falling back to date:modify. */
 async function imageDate(filePath: string): Promise<DdDate | null> {
-	const identify = resolveIdentify();
-	if (!existsSync(identify[0] as string)) return null; // no binary → skip-when-empty
+	if (!identifyAvailable()) return null; // no binary → skip-when-empty
+	// `runIdentify` (engine/binaries.ts), never a bare spawn: this reads a file the
+	// user just uploaded, and ImageMagick picks its coder from the CONTENT, so the
+	// hardened policy.xml has to be loaded here exactly as it is for a conversion.
 	const exif = (
-		await runBinary([...identify, '-quiet', '-format', '%[EXIF:DateTimeOriginal]', filePath], {
-			nice: false,
-		})
+		await runIdentify(['-quiet', '-format', '%[EXIF:DateTimeOriginal]', filePath])
 	).stdout.trim();
 	if (exif !== '') return parseIdentifyDateTimeOriginal(exif);
 	const modify = (
-		await runBinary([...identify, '-quiet', '-format', '%[date:modify]', filePath], {
-			nice: false,
-		})
+		await runIdentify(['-quiet', '-format', '%[date:modify]', filePath])
 	).stdout.trim();
 	if (modify !== '') return parseIdentifyDateModify(modify);
 	return null;

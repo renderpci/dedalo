@@ -160,6 +160,14 @@ export async function uploadMedia(
 	section_id: number;
 	tipo: string;
 	files_info: unknown;
+	/**
+	 * Non-empty when the file WAS stored and indexed but a derived tier (thumb,
+	 * web quality, SVG envelope) could not be built — see
+	 * IngestResult.derivativeErrors for why that is not an upload failure. The
+	 * agent's channel is the tool result itself: it has no errors[] and must not
+	 * be told the upload failed when the record now holds the original.
+	 */
+	derivative_errors: string[];
 	job_id?: unknown;
 }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.media.section_tipo');
@@ -231,6 +239,10 @@ export async function uploadMedia(
 		section_id: sectionId,
 		tipo: fieldTipo,
 		files_info: result.filesInfo,
+		derivative_errors: result.derivativeErrors.map(
+			(message) =>
+				`${result.originalFileName}: imported, but a derivative could not be built — ${message}`,
+		),
 		job_id: jobId,
 	};
 }
@@ -323,7 +335,9 @@ export const MEDIA_SPECS: ToolSpec[] = [
 		description:
 			'Upload a file (path inside the configured import dir, or base64) and ' +
 			'attach it to a media field (image/av/pdf/svg/3d) of a record. Images ' +
-			'regenerate their derived qualities synchronously; AV returns a job_id.',
+			'regenerate their derived qualities synchronously; AV returns a job_id. ' +
+			'A non-empty derivative_errors means the file IS stored and indexed but ' +
+			'a derived tier is missing (rebuildable) — it is not an upload failure.',
 		tier: 'agent',
 		write: true,
 		annotations: {

@@ -54,6 +54,7 @@ const TRIPWIRES = [
 	'test/unit/client_serving.test.ts',
 	'test/unit/client_libs_tripwire.test.ts',
 	'test/unit/media_protection_tripwire.test.ts',
+	'test/unit/media_writer_discipline_tripwire.test.ts',
 	'test/unit/mcp_write_scope_tripwire.test.ts',
 	'test/unit/agent_egress_tripwire.test.ts',
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
