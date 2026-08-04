@@ -6,6 +6,11 @@
  * derivatives per type (image/pdf/svg/3d synchronously; av transcode via the job
  * manager), and returns the freshly-scanned files_info. The original is never
  * mutated; derivatives are atomic.
+ *
+ * ORDERING LAW (2026-08-04): the derivative pass is NON-FATAL and reports
+ * through IngestResult.derivativeErrors, because it runs AFTER add_file has
+ * irreversibly moved the staged upload. Only the pre-move assertions and the
+ * move itself may abort an ingest — see IngestResult.derivativeErrors.
  */
 
 import { existsSync } from 'node:fs';
@@ -63,6 +68,29 @@ export interface IngestResult {
 	/** Fresh files_info after derivative generation. */
 	filesInfo: FileInfoEntry[];
 	/**
+	 * Derivative-build failures, one message per failing pass. EMPTY on success —
+	 * a non-empty array means the ORIGINAL landed and is indexed, but one or more
+	 * derived tiers (thumb / web quality / SVG envelope) are missing.
+	 *
+	 * Why these are NOT thrown (2026-08-04): by the time the derivative pass runs,
+	 * `addFile` has already moved the staged upload IRREVERSIBLY into the original
+	 * tier. A throw past that point unwinds the caller before it can persist
+	 * files_info, so the record ends up created, portal-linked, with the original
+	 * on disk and `matrix.media` NULL — the file exists but no record knows it,
+	 * the staged source is consumed, and the import cannot be retried. That was
+	 * the measured state of records 440866/440867.
+	 *
+	 * v6 behaved the same way on purpose: component_image::create_thumb returned
+	 * false and logged; it never aborted an ingest. The asymmetry is the point —
+	 * a missing tier is rebuildable at any time (tool_media_versions, repair.ts,
+	 * regenerateMissingDerivatives), a lost index is not.
+	 *
+	 * Callers MUST surface these (they are real failures, not noise); every
+	 * consumer routes them into the channel it already has. See
+	 * tools/tool_import_files, tools/tool_upload and src/ai/mcp/tools/media.ts.
+	 */
+	derivativeErrors: string[];
+	/**
 	 * For av: START the transcode. DEFERRED on purpose — the job writes its
 	 * finished files_info back onto the record, so it must not be racing the
 	 * caller's own persist of the ingest-time scan. Call it AFTER that persist
@@ -103,32 +131,52 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	const original = isOriginalTier(spec, quality);
 
 	let startTranscode: (() => string) | null = null;
-	if (original) {
-		switch (spec.model) {
-			case 'component_image':
-				await regenerateImage(spec, identity, pathOpts, added.extension);
-				break;
-			case 'component_pdf':
-				await regeneratePdf(spec, identity, pathOpts);
-				break;
-			case 'component_svg':
-				await regenerateSvg(spec, identity, pathOpts);
-				break;
-			case 'component_3d':
-				regenerate3d(spec, identity, pathOpts, added.extension);
-				break;
-			// component_av: submitted LAST, below — see the barrier note there.
+	// NON-FATAL FROM HERE ON. The catch covers EXACTLY the derivative pass, and
+	// nothing else: everything above it either runs BEFORE the move
+	// (assertIngestableQuality / assertNormalizedExtensionForTier) or IS the move
+	// (addFile), and those must stay fatal — a refused upload has to leave the
+	// staging dir and the media tree untouched. Everything below it (the
+	// files_info scan, the ingest event, the av submit) is what turns the moved
+	// file into an INDEXED file, and is precisely what a derivative throw used to
+	// skip. See IngestResult.derivativeErrors for the full rationale.
+	const derivativeErrors: string[] = [];
+	try {
+		if (original) {
+			switch (spec.model) {
+				case 'component_image':
+					await regenerateImage(spec, identity, pathOpts, added.extension);
+					break;
+				case 'component_pdf':
+					await regeneratePdf(spec, identity, pathOpts);
+					break;
+				case 'component_svg':
+					await regenerateSvg(spec, identity, pathOpts);
+					break;
+				case 'component_3d':
+					regenerate3d(spec, identity, pathOpts, added.extension);
+					break;
+				// component_av: submitted LAST, below — see the barrier note there.
+			}
+		} else {
+			// Non-original tier: build only what is MISSING around the file just
+			// placed (see isOriginalTier). regenerateMissingDerivatives has no
+			// component_av branch — av derivatives are an async transcode — so the av
+			// case is handled with the submit below.
+			await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
+				rawExtension: added.extension,
+				deleteNormalized: false,
+				bulkProcessId: null,
+			});
 		}
-	} else {
-		// Non-original tier: build only what is MISSING around the file just
-		// placed (see isOriginalTier). regenerateMissingDerivatives has no
-		// component_av branch — av derivatives are an async transcode — so the av
-		// case is handled with the submit below.
-		await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
-			rawExtension: added.extension,
-			deleteNormalized: false,
-			bulkProcessId: null,
-		});
+	} catch (error) {
+		// Never swallowed: logged here for the operator's server log AND returned
+		// so the calling tool can put it in front of the user (the scan below
+		// records which tiers actually exist, so the record stays honest about it).
+		const message = (error as Error).message;
+		derivativeErrors.push(message);
+		console.warn(
+			`[process_uploaded_file] derivative build failed for ${spec.model} ${identity.componentTipo}_${identity.sectionTipo}_${identity.sectionId}: ${message}`,
+		);
 	}
 
 	// The stored cues (external_source, the original/modified normalized-name
@@ -202,6 +250,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 		originalFileName: added.fileName,
 		extension: added.extension,
 		filesInfo,
+		derivativeErrors,
 		startTranscode,
 	};
 }

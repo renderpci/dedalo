@@ -84,6 +84,12 @@ export async function buildVersionCore(
 	// On a partial-media box the default file is usually present while the
 	// original is not; requiring the original here made the thumb gear fail with
 	// 'original not found' for exactly those records.
+	//
+	// The fallback to the ORIGINAL is deliberately kept (2026-08-04): the
+	// component_pdf / component_svg thumb gears reach it by design — their
+	// defaultExtension is not a raster tier — and deleting it would break exactly
+	// the partial-media boxes above. It is safe on a raw master because
+	// buildThumbVersion now probes its source, selects a scene and converts CMYK.
 	if (quality === thumbQuality) {
 		const defaultLocation = buildMediaLocation(
 			spec,

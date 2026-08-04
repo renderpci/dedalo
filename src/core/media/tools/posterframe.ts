@@ -15,7 +15,6 @@ import { dirname, resolve, sep } from 'node:path';
 import { config } from '../../../config/config.ts';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
 import { createPosterframe, probeStreams } from '../engine/ffmpeg.ts';
-import { buildThumb } from '../engine/imagemagick.ts';
 import { type FileInfoEntry, scanFilesInfo } from '../files_info.ts';
 import { sanitizeSegment, stagingDir } from '../ingest/add_file.ts';
 import {
@@ -26,7 +25,7 @@ import {
 	type MediaIdentity,
 	type MediaPathOptions,
 } from '../path.ts';
-import { regenerateImage, resolveOriginalSource } from '../processing.ts';
+import { buildThumbAtomically, regenerateImage, resolveOriginalSource } from '../processing.ts';
 
 /** A resolved media component context (spec + identity + path options). */
 export interface MediaContext {
@@ -178,7 +177,15 @@ export async function buildAvThumbFromPosterframe(ctx: MediaContext): Promise<st
 		config.media.thumb.extension,
 	);
 	mkdirSync(dirname(thumbTarget), { recursive: true, mode: 0o775 });
-	await buildThumb(posterframe, thumbTarget);
+	// Probing + atomic gear (buildThumbAtomically): the posterframe is normally a
+	// single ffmpeg-written frame, but it can also be a client-uploaded canvas
+	// snapshot (moveUploadedToMediaDir below) — arbitrary bytes, so no recipe here
+	// may assume one image, and a failed run must leave no debris in a live av dir.
+	await buildThumbAtomically(
+		posterframe,
+		thumbTarget,
+		`${buildMediaIdentifier(ctx.identity)} av thumb`,
+	);
 	return thumbTarget;
 }
 
@@ -235,8 +242,12 @@ export async function createAvPosterframe(av: MediaContext, timecode: string): P
 	// PHP where create_thumb's result does not gate create_posterframe's return.
 	try {
 		await buildAvThumbFromPosterframe(av);
-	} catch {
-		// posterframe already written; a thumb failure must not fail the operation.
+	} catch (error) {
+		// posterframe already written; a thumb failure must not fail the operation —
+		// but it is logged, not silent (same rule as moveUploadedToMediaDir below).
+		console.warn(
+			`[posterframe] thumb not built for ${buildMediaIdentifier(av.identity)}: ${(error as Error).message}`,
+		);
 	}
 	return true;
 }
@@ -323,9 +334,18 @@ export async function moveUploadedToMediaDir(input: {
 				config.media.thumb.extension,
 			);
 			mkdirSync(dirname(thumbTarget), { recursive: true, mode: 0o775 });
-			await buildThumb(target, thumbTarget);
-		} catch {
-			// posterframe already in place; a thumb failure must not fail the move.
+			await buildThumbAtomically(
+				target,
+				thumbTarget,
+				`${buildMediaIdentifier(ctx.identity)} ${segment} thumb`,
+			);
+		} catch (error) {
+			// The posterframe is already in place; a thumb failure must not fail the
+			// move. But it is SAID OUT LOUD: this swallow used to make a missing av
+			// thumb indistinguishable from a thumb nobody asked for.
+			console.warn(
+				`[posterframe] thumb not built for ${buildMediaIdentifier(ctx.identity)}: ${(error as Error).message}`,
+			);
 		}
 	}
 	return true;

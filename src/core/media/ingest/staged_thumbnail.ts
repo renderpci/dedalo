@@ -15,7 +15,7 @@
 
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildThumb } from '../engine/imagemagick.ts';
+import { buildThumbAtomically } from '../processing.ts';
 import { stagingDir } from './add_file.ts';
 import { STAGED_THUMB_DIR, stagedThumbnailUrl } from './staged_files.ts';
 
@@ -57,7 +57,18 @@ export async function createStagedThumbnail(
 		// Confinement: tmpName came from stagedTmpName/sanitizeSegment upstream,
 		// but re-assert that neither path escaped the key_dir before spawning.
 		if (!source.startsWith(dir) || !thumbDir.startsWith(dir)) return null;
-		await buildThumb(source, resolve(thumbDir, `${tmpName}.jpg`));
+		// The staged bytes are a RAW upload: `tif`/`tiff`/`gif` are on the allowlist
+		// above, so this source can be a layered/paged/animated sequence. It therefore
+		// goes through the probing, atomic gear like every other derivative — before
+		// that, a layered upload wrote `<tmp>.jpg-0.jpg`… , nothing landed on the
+		// returned path, and the client was handed a `thumbnail_url` for a file that
+		// never existed. The allowlist is deliberately NOT narrowed to dodge that:
+		// narrowing it would hide a fixed bug behind a smaller feature.
+		await buildThumbAtomically(
+			source,
+			resolve(thumbDir, `${tmpName}.jpg`),
+			`staged upload ${keyDir}/${tmpName}`,
+		);
 		return stagedThumbnailUrl(keyDir, tmpName);
 	} catch (error) {
 		console.error('[staged_thumbnail] preview generation failed:', (error as Error).message);

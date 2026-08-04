@@ -7,8 +7,9 @@
  * the spawn discipline; each derivative is rewritten via temp+rename.
  */
 
-import { existsSync, renameSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
+import { writeAtomically } from '../atomic.ts';
 import { type CropBox, cropImage, getDimensions, rotateImage } from '../engine/imagemagick.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 
@@ -72,10 +73,17 @@ export async function applyRotationCore(
 				pathOpts,
 			).absolutePath;
 			if (!existsSync(path)) continue;
-			const temp = `${path}.rot.${process.pid}`;
 			try {
-				await rotateImage(path, temp, options.degrees, mode, background);
-				renameSync(temp, path);
+				// writeAtomically, NOT an ad-hoc temp built from the tier path plus a
+				// rotation suffix and the pid. That name APPENDED to the full filename,
+				// so it dropped the extension and ImageMagick fell back to the SOURCE
+				// format and could write e.g. TIFF bytes into a `.jpg` tier (the exact trap
+				// tempSibling documents), and it was not unique per call, so two
+				// concurrent rotations of the same tier collided. The per-entry
+				// try/catch stays: PHP collects rotate errors rather than aborting.
+				await writeAtomically(path, (temp) =>
+					rotateImage(path, temp, options.degrees, mode, background),
+				);
 				result.rotated.push(path);
 			} catch (error) {
 				result.errors.push(`${entry.quality}: ${(error as Error).message}`);
@@ -145,9 +153,9 @@ export async function applyRotationCore(
 					box.width = Math.min(box.width, dims.width - box.x);
 					box.height = Math.min(box.height, dims.height - box.y);
 					if (box.width < 1 || box.height < 1) continue;
-					const temp = `${path}.crop.${process.pid}`;
-					await cropImage(path, temp, box);
-					renameSync(temp, path);
+					// Same writer as the rotate pass above, same reasons (extension-
+					// preserving temp, unique per call, debris swept on failure).
+					await writeAtomically(path, (temp) => cropImage(path, temp, box));
 					result.cropped.push(path);
 				} catch (error) {
 					result.errors.push(`crop ${entry.quality}: ${(error as Error).message}`);

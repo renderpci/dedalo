@@ -17,6 +17,25 @@
   removes the OTHER classic ImageMagick/Ghostscript RCE / SSRF / file-disclosure
   vectors that Dédalo never needs: the PostScript/EPS/XPS coders, the scripting
   coders (MSL/MVG), remote-fetch delegates (URL/HTTP/HTTPS/FTP), and @-indirection.
+
+  Every ImageMagick process in the engine loads this file — conversions through
+  runMagickTo AND reads through runIdentify (engine/binaries.ts), because
+  ImageMagick selects its coder from the file CONTENT: measured 2026-08-04,
+  `identify -ping` on a `.png` holding PostScript reports `PS` and exits 0
+  unpoliced, and is refused here.
+
+  KNOWN-OPEN (measured 2026-08-04, PRE-EXISTING — not introduced by the scene
+  selection change): on a build with no librsvg delegate, ImageMagick RASTERIZES
+  an SVG through its own MSVG renderer, which emits MVG — so `coder MVG rights
+  none` also blocks every SVG→raster conversion:
+    magick 'x.svg[0]' -background '#ffffff' -flatten -thumbnail 222x148 out.jpg
+    → "not allowed by the security policy `MVG'", exit 1, no file
+  PROBING an SVG is unaffected (identify -ping reads the header only), so this
+  costs the component_svg THUMB gear, not the record. Deciding between a
+  librsvg delegate requirement and a narrower policy is a security decision for
+  the MEDIA-02 owner, not a side effect of a media-writer change; until then the
+  failure is at least loud (runMagickTo names the policy in its diagnostic,
+  where the old text-only rule turned it into an ENOENT on rename).
 -->
 <policymap>
   <!-- Remote fetch / SSRF via delegates -->
