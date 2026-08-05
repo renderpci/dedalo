@@ -14,12 +14,17 @@ import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { probeStreams } from '../../src/core/media/engine/ffmpeg.ts';
 import {
 	buildThumb,
+	convertImage,
 	getDimensions,
 	resolveMagick,
 	rotateImage,
 } from '../../src/core/media/engine/imagemagick.ts';
 import { extractText, getPageCount } from '../../src/core/media/engine/pdf.ts';
-import { probeImageSource } from '../../src/core/media/engine/probe.ts';
+import {
+	probeContentSpread,
+	probeImageSource,
+	probeMetaChannels,
+} from '../../src/core/media/engine/probe.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import {
@@ -27,6 +32,7 @@ import {
 	regenerateImage,
 	regeneratePdf,
 	resolveOriginalSource,
+	shouldApplyMetaAlpha,
 } from '../../src/core/media/processing.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_proc_${process.pid}`;
@@ -362,6 +368,375 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 		expect(g).toBeLessThan(60);
 		expect(b).toBeLessThan(60);
 	});
+
+	/**
+	 * THE META-CHANNEL MASK (2026-08-04, the reported medal defect — this is the
+	 * gate that would have caught it).
+	 *
+	 * The masters are Photoshop-layered TIFFs of a medal whose scene 0 is the
+	 * flattened composite: the medal WITH retouch paint over it. The transparency
+	 * that cuts the image at the edge of the medal is NOT an alpha plane — it is a
+	 * TIFF extra sample (a "meta channel"), and ImageMagick renders that opaque.
+	 * The previous fix stopped the sequence split, so exactly one tier was written
+	 * — with all the paint still in it.
+	 *
+	 * The fixture reproduces that shape exactly: scene 0 is red on the left,
+	 * #2f86e8 (the medal masters' blue) on the right, and the meta channel keeps
+	 * ONLY the left half. Correct output: red survives, the blue is cut and the jpg
+	 * target composites the cut region onto white.
+	 *
+	 * FAILS PRE-FIX in the strongest way: without `applyMetaAlpha` both derivatives
+	 * come out solid blue on the right.
+	 */
+	test.if(HAVE_MAGICK)('a META-CHANNEL MASK cuts the image in every tier', async () => {
+		// sectionId 28: 20-27 are taken by the gates around this one, and two gates
+		// sharing a media identifier in this shared ROOT lets one be satisfied by the
+		// other's leftover derivatives.
+		const masked: MediaIdentity = { ...identity, sectionId: 28 };
+		await makeMagickFixture('/image/original/rsc29_rsc170_28.tif', [
+			'-size',
+			'300x200',
+			'xc:red',
+			'-fill',
+			'#2f86e8',
+			'-draw',
+			'rectangle 150,0 299,199',
+			// `-draw` turns the raster RGBA; drop it so the fixture matches the real
+			// masters (scene 0 = `srgb 4.1`, no alpha plane, mask in the extra sample)
+			// AND so it exercises the recipe rule, which deliberately declines the fx
+			// when a true alpha is present.
+			'-alpha',
+			'off',
+			// The mask, appended as meta0: white = keep, black = cut.
+			'(',
+			'-size',
+			'300x200',
+			'xc:black',
+			'-fill',
+			'white',
+			'-draw',
+			'rectangle 0,0 149,199',
+			')',
+			'-channel-fx',
+			'| gray=>meta0',
+		]);
+		// The fixture REALLY carries a meta channel. Without this guard a container
+		// writer that dropped the extra sample would make every assertion below pass
+		// for the wrong reason (no mask, no blue either way is not the claim).
+		const source = `${ROOT}/image/original/rsc29_rsc170_28.tif`;
+		const sourceProbe = await probeImageSource(source);
+		expect((await probeMetaChannels(source)).metaChannels).toBe(1);
+		expect(sourceProbe.scenes[0]?.hasAlpha).toBe(false);
+
+		await regenerateImage(image, masked, pathOpts, 'tif');
+		const defaultPath = `${ROOT}/image/1.5MB/rsc29_rsc170_28.jpg`;
+		const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_28.jpg`;
+
+		for (const [label, derivative] of [
+			['default tier', defaultPath],
+			['thumb', thumbPath],
+		] as const) {
+			expect([label, existsSync(derivative)]).toEqual([label, true]);
+			const dims = await getDimensions(derivative);
+			// A pixel INSIDE the mask keeps its colour — the mask cuts, it does not
+			// blank the image.
+			const inside = await pixelAt(derivative, Math.round(dims.width * 0.2), dims.height >> 1);
+			expect([label, inside[0] > 180, inside[1] < 90, inside[2] < 90]).toEqual([
+				label,
+				true,
+				true,
+				true,
+			]);
+			// A pixel OUTSIDE the mask is WHITE: the jpg target cannot store alpha, so
+			// the cut region composites onto the flatten background. The blue is GONE.
+			const outside = await pixelAt(derivative, Math.round(dims.width * 0.8), dims.height >> 1);
+			expect([label, outside]).toEqual([label, [255, 255, 255]]);
+		}
+	});
+
+	/**
+	 * A META CHANNEL IS NOT NECESSARILY A MASK — the class that must never ship.
+	 *
+	 * "The file has an extra sample" does NOT mean "the extra sample is a keep-mask".
+	 * The TIFF tag on the real medal masters literally reads
+	 * `Extra Samples: 1<unspecified>`. Photoshop routinely puts other things there,
+	 * and promoting one of those to alpha replaces the picture with a blank
+	 * rectangle — exit 0, file written, nothing said. In an archive, the next
+	 * tool_update_cache sweep would overwrite the record's default tier, its thumb
+	 * AND its SVG envelope with that blank.
+	 *
+	 * Each fixture below is a measured real-world authoring mistake, and each must
+	 * come out looking like the master, NOT like a white rectangle.
+	 */
+	test.if(HAVE_MAGICK)(
+		'a meta channel that is NOT a mask never blanks the derivative',
+		async () => {
+			const cases = [
+				{
+					id: 29,
+					name: 'EMPTY saved selection (a channel Photoshop created but never painted)',
+					// Mask entirely black => alpha 0 everywhere => the whole picture is cut.
+					// Measured unguarded: derivative mean 1.000, std 0 — pure white.
+					base: ['-size', '300x200', 'xc:white', '-fill', 'red', '-draw', 'rectangle 0,0 149,199'],
+					mask: ['-size', '300x200', 'xc:black'],
+				},
+				{
+					id: 30,
+					name: 'INVERTED saved selection (the "select the background" workflow)',
+					// The subject is a red block on white; the mask keeps the BACKGROUND and
+					// cuts the SUBJECT — the exact inverse of what the promotion assumes. The
+					// cut region composites onto white, so the whole tier goes white.
+					// Measured unguarded: mean 0.9995, std 0.0038.
+					base: ['-size', '300x200', 'xc:white', '-fill', 'red', '-draw', 'rectangle 0,0 149,199'],
+					mask: [
+						'-size',
+						'300x200',
+						'xc:white',
+						'-fill',
+						'black',
+						'-draw',
+						'rectangle 0,0 149,199',
+					],
+				},
+			];
+			for (const { id, name, base, mask } of cases) {
+				await makeMagickFixture(`/image/original/rsc29_rsc170_${String(id)}.tif`, [
+					...base,
+					'-alpha',
+					'off',
+					'(',
+					...mask,
+					')',
+					'-channel-fx',
+					'| gray=>meta0',
+				]);
+				const source = `${ROOT}/image/original/rsc29_rsc170_${String(id)}.tif`;
+				// The fixture really is the shape under test: one meta channel, no alpha —
+				// i.e. it PASSES every rule and is stopped only by the post-condition.
+				expect([name, (await probeMetaChannels(source)).metaChannels]).toEqual([name, 1]);
+
+				await regenerateImage(image, { ...identity, sectionId: id }, pathOpts, 'tif');
+				const derivative = `${ROOT}/image/1.5MB/rsc29_rsc170_${String(id)}.jpg`;
+				expect([name, existsSync(derivative)]).toEqual([name, true]);
+				// THE CLAIM: the tier still holds the picture. Unguarded, both of these
+				// derivatives are a uniform white rectangle.
+				const spread = await probeContentSpread(derivative);
+				expect([name, spread !== null && spread > 0.05]).toEqual([name, true]);
+				// And concretely: the master's red half is still red, not white.
+				const dims = await getDimensions(derivative);
+				const red = await pixelAt(derivative, Math.round(dims.width * 0.2), dims.height >> 1);
+				expect([name, red[0] > 180, red[1] < 90, red[2] < 90]).toEqual([name, true, true, true]);
+			}
+		},
+	);
+
+	/**
+	 * TWO META CHANNELS = UNKNOWABLE. `meta0` is then whichever plane the producing
+	 * application wrote first, and the engine has no way to inspect that order.
+	 *
+	 * Fixture: meta0 is a small spot-ink plate, meta1 is the real silhouette — a
+	 * print master. Measured unguarded (promoting meta0): a COMPLETELY BLANK white
+	 * derivative, std 0. Reversing the two channels renders correctly, which is
+	 * exactly why a guess is not acceptable. v6 said "multiple meta channels are not
+	 * supported" in a comment and then applied meta0 anyway; this refuses.
+	 */
+	test.if(HAVE_MAGICK)('a source with TWO meta channels is refused, not guessed at', async () => {
+		await makeMagickFixture('/image/original/rsc29_rsc170_31.tif', [
+			'-size',
+			'300x200',
+			'xc:red',
+			'-fill',
+			'#2f86e8',
+			'-draw',
+			'rectangle 150,0 299,199',
+			'-alpha',
+			'off',
+			// meta0: the spot plate (a small patch, black elsewhere).
+			'(',
+			'-size',
+			'300x200',
+			'xc:black',
+			'-fill',
+			'white',
+			'-draw',
+			'rectangle 10,10 60,40',
+			')',
+			// meta1: the real silhouette.
+			'(',
+			'-size',
+			'300x200',
+			'xc:black',
+			'-fill',
+			'white',
+			'-draw',
+			'rectangle 0,0 149,199',
+			')',
+			'-channel-fx',
+			'| gray=>meta0 | gray=>meta1',
+		]);
+		const source = `${ROOT}/image/original/rsc29_rsc170_31.tif`;
+		expect((await probeMetaChannels(source)).metaChannels).toBe(2);
+
+		await regenerateImage(image, { ...identity, sectionId: 31 }, pathOpts, 'tif');
+		const derivative = `${ROOT}/image/1.5MB/rsc29_rsc170_31.jpg`;
+		const dims = await getDimensions(derivative);
+		// NOTHING is masked: the derivative shows everything the master shows, blue
+		// half included. Promoting meta0 would have produced a white rectangle.
+		const red = await pixelAt(derivative, Math.round(dims.width * 0.2), dims.height >> 1);
+		expect([red[0] > 180, red[1] < 90, red[2] < 90]).toEqual([true, true, true]);
+		const blue = await pixelAt(derivative, Math.round(dims.width * 0.8), dims.height >> 1);
+		expect([blue[0] < 90, blue[2] > 180]).toEqual([true, true]);
+	});
+
+	/**
+	 * THE COMPOSITE SELECTION NEVER GETS THE FX — the rule, and the damage it stops.
+	 *
+	 * `-channel-fx` COLLAPSES the ImageMagick image list to image 0: every later
+	 * layer is DISCARDED, exit 0, one file written. The composite selection exists
+	 * precisely to keep that stack for `-flatten`, so the two are mutually exclusive.
+	 *
+	 * Gated HERE and not end-to-end because the combination is not constructible
+	 * with the containers ImageMagick can WRITE on this box (verified: a TIFF does
+	 * not round-trip page offsets, so its scene 0 is always full-frame and the probe
+	 * never selects composite; IM's PSD writer drops meta channels). A real
+	 * Photoshop-authored PSD is under no such limit — which is why the rule exists
+	 * rather than being left to chance.
+	 *
+	 * Part 1 pins the decision. Part 2 reproduces, through the SHIPPED convert
+	 * recipe, the destruction that would follow if the decision ever flipped.
+	 */
+	test.if(HAVE_MAGICK)('the COMPOSITE selection is refused the meta-alpha fx', async () => {
+		// A REAL source that qualifies on every other count: one meta channel, no
+		// alpha, a TIFF. Only the selection differs between the two calls.
+		await makeMagickFixture('/image/original/rsc29_rsc170_32.tif', [
+			'-size',
+			'300x200',
+			'xc:red',
+			'-alpha',
+			'off',
+			'(',
+			'-size',
+			'300x200',
+			'xc:black',
+			'-fill',
+			'white',
+			'-draw',
+			'rectangle 0,0 149,199',
+			')',
+			'-channel-fx',
+			'| gray=>meta0',
+		]);
+		const source = `${ROOT}/image/original/rsc29_rsc170_32.tif`;
+		const probe = await probeImageSource(source);
+		expect((await probeMetaChannels(source)).metaChannels).toBe(1);
+
+		// Representative: the mask IS applied — proving the fixture qualifies, so the
+		// composite refusal below is the selection's doing and nothing else's.
+		expect(await shouldApplyMetaAlpha(probe, source, 'representative', 'gate')).toBe(true);
+		expect(await shouldApplyMetaAlpha(probe, source, 'composite', 'gate')).toBe(false);
+	});
+
+	/**
+	 * TRUE ALPHA WINS — and the `-ping` trap that makes it easy to get wrong.
+	 *
+	 * The fx OVERWRITES the alpha plane, so applying it to a source that already has
+	 * real transparency destroys that transparency and replaces it with whatever
+	 * selection a retoucher happened to save. v6 applied it whenever a meta channel
+	 * existed; this engine does not.
+	 *
+	 * The fixture is the hard case: a TIFF with BOTH, whose IFD reads
+	 * `Extra Samples: 2<unassoc-alpha, unspecified>`. It reports `srgba 5.1` on a
+	 * full read but `srgb  3.0` under `-ping` — so a rule that read alpha from the
+	 * `-ping` probe would see NEITHER the alpha nor the meta channel and would apply
+	 * the fx to precisely the files it must not touch. Both facts must come from the
+	 * authoritative call.
+	 */
+	test.if(HAVE_MAGICK)('a source with REAL alpha keeps it — the fx is refused', async () => {
+		await makeMagickFixture('/image/original/rsc29_rsc170_33.tif', [
+			'-size',
+			'300x200',
+			'xc:red',
+			'-alpha',
+			'set',
+			'-channel',
+			'A',
+			'-evaluate',
+			'set',
+			'50%',
+			'+channel',
+			'(',
+			'-size',
+			'300x200',
+			'xc:black',
+			'-fill',
+			'white',
+			'-draw',
+			'rectangle 0,0 149,199',
+			')',
+			'-channel-fx',
+			'| gray=>meta0',
+		]);
+		const source = `${ROOT}/image/original/rsc29_rsc170_33.tif`;
+		const report = await probeMetaChannels(source);
+		// The fixture really is "alpha AND a meta channel" — the only shape that can
+		// exercise the rule.
+		expect([report.metaChannels, report.hasAlpha]).toEqual([1, true]);
+		// And the -ping probe really is blind to both, which is why the rule may not
+		// read from it. If ImageMagick ever fixes this, the assertion tells us.
+		const probe = await probeImageSource(source);
+		expect(probe.scenes[0]?.hasAlpha).toBe(false);
+
+		expect(await shouldApplyMetaAlpha(probe, source, 'representative', 'gate')).toBe(false);
+	});
+
+	test.if(HAVE_MAGICK)(
+		'the fx DESTROYS a composited stack — why the rule above exists',
+		async () => {
+			// Two scenes, each with a meta channel: scene 0 a small red patch, scene 1 a
+			// full lime frame. `-flatten` stamps scene 1 over scene 0.
+			for (const [name, size, fill] of [
+				['32a', '100x80', 'red'],
+				['32b', '300x200', 'lime'],
+			] as const) {
+				await makeMagickFixture(`/image/original/rsc29_rsc170_${name}.tif`, [
+					'-size',
+					size,
+					`xc:${fill}`,
+					'-alpha',
+					'off',
+					'(',
+					'-size',
+					size,
+					'xc:white',
+					')',
+					'-channel-fx',
+					'| gray=>meta0',
+				]);
+			}
+			await makeMagickFixture('/image/original/rsc29_rsc170_32c.tif', [
+				`${ROOT}/image/original/rsc29_rsc170_32a.tif`,
+				`${ROOT}/image/original/rsc29_rsc170_32b.tif`,
+				'-adjoin',
+			]);
+			const stack = `${ROOT}/image/original/rsc29_rsc170_32c.tif`;
+			expect((await probeImageSource(stack)).sceneCount).toBe(2);
+
+			// Both through the SHIPPED convert recipe; only applyMetaAlpha differs.
+			const shared = { quality: '1.5MB', selection: 'composite', background: '#ffffff' } as const;
+			const kept = `${ROOT}/stack_composited.jpg`;
+			const lost = `${ROOT}/stack_collapsed.jpg`;
+			await convertImage(stack, kept, shared);
+			await convertImage(stack, lost, { ...shared, applyMetaAlpha: true });
+
+			// WITHOUT the fx the stack composites: scene 1's lime wins.
+			const [, g1] = await pixelAt(kept, 50, 40);
+			expect(g1).toBeGreaterThan(180);
+			// WITH the fx scene 1 is GONE and only scene 0's red survives. This is the
+			// silent layer loss the rule prevents — note it exits 0 and writes a file.
+			const [r2, g2] = await pixelAt(lost, 50, 40);
+			expect([r2 > 180, g2 < 120]).toEqual([true, true]);
+		},
+	);
 
 	test.if(HAVE_MAGICK)('a DELTA-FRAME GIF thumbnails FRAME 1, not the stacked frames', async () => {
 		// A delta GIF's later frames are PARTIAL rasters at a page offset. Frame 1 is

@@ -42,12 +42,15 @@
  *     rename, nothing for invariants 1-2 to see — and it returned a
  *     `thumbnail_url` for a file that never existed, leaving `<stem>-N.jpg`
  *     orphans in a live media dir with nothing to sweep them.
- *  4. NO `[0]` SCENE-SELECTOR CONCATENATION outside `engine/imagemagick.ts`.
+ *  4. NO `[0]` SCENE-SELECTOR CONCATENATION outside `engine/scene.ts`.
  *     Callers declare `selection: 'representative' | 'composite'`; `sceneToken`
  *     is the ONE place that turns that into `SOURCE[0]`. `processing.ts` used to
  *     paste `[0]` onto two source paths inline, which is how the pdf/cover gears
  *     were safe while every image gear was not — the incoherence that hid the
- *     bug for as long as it hid.
+ *     bug for as long as it hid. It binds the PROBE as well: `probeMetaChannels`
+ *     asks ImageMagick about ONE image and the convert then masks ONE image, so a
+ *     divergence there would decide on one image's channels and apply the answer
+ *     to another's.
  *
  * TECHNIQUE: a source scan over `src/core/media/**` plus `src/ai/rag/image_source.ts`
  * (the one media writer outside that tree), comments STRIPPED first so the prose
@@ -88,6 +91,14 @@ const MAGICK_ENGINE = 'src/core/media/engine/imagemagick.ts';
 
 /** The binary-resolution leaf (the one `identify` spawn, and the policy env). */
 const MAGICK_BINARIES = 'src/core/media/engine/binaries.ts';
+
+/**
+ * The scene-selector leaf — the ONE home of `sceneToken`, i.e. of the decision
+ * "which image of this source do we mean". It is its own module because both the
+ * argv recipes and `probe.ts` need it and `imagemagick.ts` already imports
+ * `probe.ts`, so either of those as its home would close an import cycle.
+ */
+const MAGICK_SCENE = 'src/core/media/engine/scene.ts';
 
 // ---------------------------------------------------------------------------
 // Scan plumbing
@@ -372,17 +383,15 @@ const SCENE_SELECTOR_CONCAT = /\$\{[^{}]*\}\[0\]|\+\s*['"`]\[0\]['"`]/;
 
 describe('media writer discipline: the scene selector has one home', () => {
 	test('no caller pastes a [0] scene selector onto a source path', () => {
-		const violations = filesMatching(SCENE_SELECTOR_CONCAT).filter(
-			(file) => file !== MAGICK_ENGINE,
-		);
+		const violations = filesMatching(SCENE_SELECTOR_CONCAT).filter((file) => file !== MAGICK_SCENE);
 		expect(
 			violations,
-			`Inline [0] scene selector. Callers declare selection: 'representative' | 'composite' and sceneToken() (engine/imagemagick.ts) builds the token — one place decides what "the source's own image" means, so a new gear cannot be written without deciding it: ${violations.join(', ')}`,
+			`Inline [0] scene selector. Callers declare selection: 'representative' | 'composite' and sceneToken() (engine/scene.ts) builds the token — one place decides what "the source's own image" means, so a new gear cannot be written without deciding it. This binds the PROBE too: probeMetaChannels asks about one image and the convert then masks one image, and if those disagreed the engine would read one image's channels and apply the answer to another's. Violations: ${violations.join(', ')}`,
 		).toEqual([]);
 	});
 
 	test('sceneToken is where the selector is actually built (positive control)', () => {
-		expect(filesMatching(SCENE_SELECTOR_CONCAT)).toContain(MAGICK_ENGINE);
+		expect(filesMatching(SCENE_SELECTOR_CONCAT)).toContain(MAGICK_SCENE);
 	});
 });
 

@@ -17,10 +17,15 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
-import { probeImageSource } from '../../src/core/media/engine/probe.ts';
+import {
+	canCarryMetaChannel,
+	probeContentSpread,
+	probeImageSource,
+	probeMetaChannels,
+} from '../../src/core/media/engine/probe.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_probe_${process.pid}`;
@@ -207,6 +212,39 @@ beforeAll(async () => {
 		'0',
 		'+channel',
 		path('hidden.png'),
+	]);
+
+	// 6b. PLAIN JPEG — the ordinary single-image case, the one that must never take
+	//     the meta-channel branch (the fx would write no file at all).
+	await magick(['-size', '120x90', 'xc:#3366aa', path('flat.jpg')]);
+
+	// 7. META CHANNEL — a red raster carrying its mask as a TIFF EXTRA SAMPLE
+	//    (`| gray=>meta0` appends the second image's gray plane as meta0), which is
+	//    exactly how Photoshop stores a saved selection. Left half of the mask is
+	//    white (keep), right half black (cut).
+	//
+	//    VERIFIED before it was asserted on (a fixture that is secretly 3.0 makes
+	//    this gate green for the wrong reason):
+	//      magick identify -quiet -format '%[channels]' meta_channel.tif → 'srgb  4.1'
+	//      magick identify -ping -quiet …                                → 'srgb  3.0'
+	//    The second line is why the count has its own non-ping call: under -ping this
+	//    fixture is indistinguishable from a plain RGB TIFF.
+	await magick([
+		'-size',
+		'200x150',
+		'xc:red',
+		'(',
+		'-size',
+		'200x150',
+		'xc:black',
+		'-fill',
+		'white',
+		'-draw',
+		'rectangle 0,0 99,149',
+		')',
+		'-channel-fx',
+		'| gray=>meta0',
+		path('meta_channel.tif'),
 	]);
 });
 
@@ -404,6 +442,104 @@ describe('probeImageSource: source-shape classification per real source class', 
 		const probe = await probeImageSource(path('paged.tif'));
 		expect(probe.scenes[0]?.hasAlpha).toBe(false);
 		expect(probe.scenes[0]?.channels).not.toContain(' ');
+	});
+
+	/**
+	 * META CHANNELS — the 2026-08-04 medal defect. Photoshop writes the mask as a
+	 * TIFF extra sample; ImageMagick renders it opaque, so without promoting it the
+	 * retouch paint outside the medal silhouette survived into every tier.
+	 *
+	 * THE COUNT IS DELIBERATELY NOT A FIELD OF `SceneInfo`. `probeImageSource` runs
+	 * `-ping`, which reports this very fixture as `srgb 3.0` — a scene field would
+	 * therefore read 0 for a file that has a meta channel, i.e. it could only be a
+	 * confident lie. The count is its own opt-in call that pays a full pixel decode
+	 * (measured 7.23 s / 14.4 GB RSS on a 40000x30000 TIFF, which is why every other
+	 * caller in the engine keeps `-ping`).
+	 */
+	test.if(HAVE_MAGICK)('a TIFF extra sample is counted by probeMetaChannels', async () => {
+		expect((await probeMetaChannels(path('meta_channel.tif'))).metaChannels).toBe(1);
+		const probe = await probeImageSource(path('meta_channel.tif'));
+		// The `-ping` probe still parses the LAYOUT token correctly...
+		expect(probe.scenes[0]?.channels).toBe('srgb');
+		// ...and still reports alpha correctly (alpha survives -ping; meta does not).
+		expect(probe.scenes[0]?.hasAlpha).toBe(false);
+		// ...and the format is what gates the expensive count.
+		expect(probe.format).toBe('TIFF');
+		expect(canCarryMetaChannel(probe)).toBe(true);
+	});
+
+	test.if(HAVE_MAGICK)('ordinary sources count 0 meta channels — the fx stays off', async () => {
+		// `-channel-fx meta0=>alpha` HARD-FAILS and writes NO FILE when meta0 is
+		// absent, so a false positive here would break every ordinary image.
+		for (const fixture of ['flat.jpg', 'paged.tif', 'hidden.png', 'animated.gif']) {
+			expect([fixture, (await probeMetaChannels(path(fixture))).metaChannels]).toEqual([
+				fixture,
+				0,
+			]);
+		}
+	});
+
+	/**
+	 * THE FORMAT COMES FROM THE FILE'S CONTENT, NOT ITS NAME — which is what makes
+	 * it safe to gate the meta-channel decode on. An upload's extension is
+	 * accident- and attacker-controlled; its magic bytes are what ImageMagick acts
+	 * on. A TIFF renamed `.jpg` must still be recognised as a possible mask carrier.
+	 */
+	test.if(HAVE_MAGICK)(
+		'probe.format is content-detected, so a mislabelled TIFF is caught',
+		async () => {
+			copyFileSync(path('meta_channel.tif'), path('mislabelled.jpg'));
+			const probe = await probeImageSource(path('mislabelled.jpg'));
+			expect(probe.format).toBe('TIFF');
+			expect(canCarryMetaChannel(probe)).toBe(true);
+			// And a real JPEG is correctly excluded, so it never pays the decode.
+			const flat = await probeImageSource(path('flat.jpg'));
+			expect(flat.format).toBe('JPEG');
+			expect(canCarryMetaChannel(flat)).toBe(false);
+		},
+	);
+
+	/**
+	 * `-ping` IS A TRIPWIRE, NOT A PREFERENCE — a stated invariant needs a mechanical
+	 * gate, and this one cannot be caught behaviourally: dropping `-ping` changes NO
+	 * value this probe returns, it only makes ImageMagick decode every pixel.
+	 * Measured cost of losing it: 1.04 s / 2.3 GB RSS on a 192 MP TIFF and
+	 * 7.23 s / 14.4 GB RSS on a 40000x30000 one — per call, on a function that runs
+	 * on every derivative build, inside runMagickTo on every output written, and on
+	 * the authenticated upload request path.
+	 *
+	 * A previous change removed it (to reach the meta-channel count, which is real
+	 * but has its own opt-in call now). This gate is what makes that a deliberate act
+	 * rather than an invisible one.
+	 */
+	test('probeImageSource asks identify for a HEADER READ (-ping)', async () => {
+		const source = await Bun.file(
+			new URL('../../src/core/media/engine/probe.ts', import.meta.url).pathname,
+		).text();
+		const call = source.slice(source.indexOf('const result = await runIdentify('));
+		expect(call.slice(0, call.indexOf(')'))).toContain("'-ping'");
+	});
+
+	/**
+	 * The blank-derivative safety net's measuring instrument. It MUST be read off a
+	 * written derivative: `%[fx:standard_deviation]` counts the meta channel itself
+	 * when one is still present, and the meta channel is the mask, which has plenty
+	 * of variance — measured 0.106 inline vs 0.0038 on the written jpg for the same
+	 * inverted-mask source, i.e. the inline reading hides the very failure this
+	 * measurement exists to catch.
+	 */
+	test.if(HAVE_MAGICK)('probeContentSpread separates a real picture from a blank one', async () => {
+		const blank = path('uniform.png');
+		await magick(['-size', '80x60', 'xc:white', blank]);
+		expect(await probeContentSpread(blank)).toBe(0);
+		const real = await probeContentSpread(path('flat.jpg'));
+		// A flat colour jpg is also uniform; the gradient fixture is the picture.
+		const gradient = path('spread.png');
+		await magick(['-size', '80x60', 'gradient:black-white', gradient]);
+		const spread = await probeContentSpread(gradient);
+		expect(real).not.toBeNull();
+		expect(spread).not.toBeNull();
+		expect(spread as number).toBeGreaterThan(0.2);
 	});
 
 	test.if(HAVE_MAGICK)('colorspace and orientation are reported once, from scene 0', async () => {

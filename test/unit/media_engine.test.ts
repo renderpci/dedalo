@@ -223,6 +223,128 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 		);
 	});
 
+	/**
+	 * META-CHANNEL → ALPHA (2026-08-04, the reported medal defect).
+	 *
+	 * Photoshop stores the mask as a TIFF extra sample; ImageMagick does not read
+	 * it as transparency, so the retouch paint outside the medal silhouette
+	 * survived into every jpg tier. `-channel-fx meta0=>alpha` promotes it.
+	 *
+	 * These gates pin the two things an argv can get wrong:
+	 *  - POSITION: right after the source token, before the CMYK trio and before
+	 *    -background. The alpha must exist before anything composites against it —
+	 *    on an opaque target that composite is what the mask is FOR.
+	 *  - QUOTING: v6 built a shell string (`-channel-fx "meta0=>alpha"`); this argv
+	 *    goes to spawn directly, so a quoted token would reach ImageMagick
+	 *    literally and the fx would fail.
+	 */
+	test('dd_thumb, applyMetaAlpha: the fx sits right after the source, unquoted', () => {
+		const argv = buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+			selection: 'representative',
+			background: '#ffffff',
+			applyMetaAlpha: true,
+		});
+		expect(argv).toEqual([
+			magick,
+			'-define',
+			'jpeg:size=400x400',
+			'/s.tif[0]',
+			'-channel-fx',
+			'meta0=>alpha',
+			'-background',
+			'#ffffff',
+			'-flatten',
+			'-thumbnail',
+			'222x148>',
+			'-auto-orient',
+			'-gravity',
+			'center',
+			'-unsharp',
+			'0x.5',
+			'-quality',
+			'90',
+			'/t.jpg',
+		]);
+		// Absent by default: the fx HARD-FAILS (no output file at all) on a source
+		// without a meta channel, so it can only ever be probe-gated opt-in.
+		expect(
+			buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+				selection: 'representative',
+				background: '#ffffff',
+			}),
+		).not.toContain('-channel-fx');
+	});
+
+	test('dd_thumb, applyMetaAlpha + cmyk: the fx precedes the ICC trio', () => {
+		const argv = buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+			selection: 'representative',
+			background: '#ffffff',
+			cmyk: true,
+			applyMetaAlpha: true,
+		});
+		const source = argv.indexOf('/s.tif[0]');
+		expect(argv.slice(source + 1, argv.indexOf('-background'))).toEqual([
+			'-channel-fx',
+			'meta0=>alpha',
+			'-profile',
+			expect.stringContaining('Generic_CMYK_Profile.icc'),
+			'-profile',
+			expect.stringContaining('sRGB_Profile.icc'),
+			'-strip',
+		]);
+	});
+
+	test('buildConvertArgv, applyMetaAlpha: the fx sits right after the source, unquoted', () => {
+		const argv = buildConvertArgv('/s.tif', '/t.jpg', {
+			quality: '1.5MB',
+			selection: 'representative',
+			background: '#ffffff',
+			applyMetaAlpha: true,
+		});
+		expect(argv.slice(0, 4)).toEqual([magick, '/s.tif[0]', '-channel-fx', 'meta0=>alpha']);
+		expect(argv[4]).toBe('-background');
+		// The whole rest of the recipe is untouched by the branch.
+		expect(argv.slice(4)).toEqual(
+			buildConvertArgv('/s.tif', '/t.jpg', {
+				quality: '1.5MB',
+				selection: 'representative',
+				background: '#ffffff',
+			}).slice(2),
+		);
+		// And with the CMYK trio the fx still comes first.
+		//
+		// `selection: 'representative'` deliberately, NOT 'composite'. This builder is
+		// a dumb argv assembler and would happily emit both, but the pair is never
+		// built: `-channel-fx` COLLAPSES the image list to image 0, so it destroys the
+		// stack the composite selection exists to keep (measured — see
+		// `shouldApplyMetaAlpha` in processing.ts, and the recipe gate in
+		// media_processing.test.ts that holds the rule). A gate must not pin a
+		// combination the engine forbids as though it were contract.
+		const cmyk = buildConvertArgv('/s.tif', '/t.jpg', {
+			quality: '1.5MB',
+			selection: 'representative',
+			background: '#ffffff',
+			cmyk: true,
+			applyMetaAlpha: true,
+		});
+		expect(cmyk.slice(1, 8)).toEqual([
+			'/s.tif[0]',
+			'-channel-fx',
+			'meta0=>alpha',
+			'-profile',
+			expect.stringContaining('Generic_CMYK_Profile.icc'),
+			'-profile',
+			expect.stringContaining('sRGB_Profile.icc'),
+		]);
+		expect(
+			buildConvertArgv('/s.tif', '/t.jpg', {
+				quality: '1.5MB',
+				selection: 'representative',
+				background: '#ffffff',
+			}),
+		).not.toContain('-channel-fx');
+	});
+
 	test('backgroundForTarget is decided by the TARGET, for a path or a bare extension', () => {
 		// Bare JPEG encoding does not composite alpha: it drops the plane and keeps
 		// the producing application's hidden RGB (measured red, black AND white on

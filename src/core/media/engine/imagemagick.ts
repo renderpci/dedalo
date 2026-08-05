@@ -21,40 +21,14 @@ import { config } from '../../../config/config.ts';
 import { pixelAreaBudget } from '../../concepts/media.ts';
 import { magickPolicyEnv, resolveIdentify, resolveMagick } from './binaries.ts';
 import { probeImageSource } from './probe.ts';
+import { type SceneSelection, sceneToken } from './scene.ts';
 import { runBinary, type SpawnResult } from './spawn.ts';
 
-// The binary resolvers live in a leaf module so that `probe.ts` can use them
-// without closing an import cycle with this file (see binaries.ts). Re-exported
-// here because this is where every existing caller imports them from.
-export { resolveIdentify, resolveMagick };
-
-/**
- * Which image of a multi-image source a recipe operates on.
- *
- * - `representative` — take the source's OWN first image (`SOURCE[0]`). Correct
- *   whenever `probeImageSource().hasRepresentativeScene` is true: a merged
- *   PSD/TIFF composite, page 1 of a paged source, frame 1 of a GIF.
- * - `composite` — hand ImageMagick the whole sequence and let `-flatten` stack
- *   it. The fallback for a source that declares no representative image.
- *
- * Measured on the 2026-08-04 layered TIFFs: `[0]` vs `-flatten` differ by
- * RMSE 0.005 (an antialias halo from re-compositing already-composited content)
- * — scene 0 ALREADY contains the layers. Meanwhile a blanket `-flatten` is
- * measurably WRONG for paged/framed sources, which are allow-listed today:
- * multi-page TIFF → page 3, animated GIF → last frame, delta GIF → a stack
- * matching no frame. Hence: take the source's own image when it declares one.
- *
- * v6's `-layers merge` and `remove_layer_0` are deliberately NOT ported:
- * `-layers merge` can GROW the canvas and emit negative page offsets
- * (200x100 → 250x180, `240x120+-40+-20`), desynchronising the tier from
- * `getDimensions` and the SVG envelope; `remove_layer_0` was 59.7 % wrong here.
- */
-export type SceneSelection = 'representative' | 'composite';
-
-/** The source token a recipe feeds ImageMagick for this selection. */
-export function sceneToken(source: string, selection: SceneSelection): string {
-	return selection === 'representative' ? `${source}[0]` : source;
-}
+// The binary resolvers and the scene-selector token live in leaf modules so that
+// `probe.ts` can use them without closing an import cycle with this file (see
+// binaries.ts, scene.ts). Re-exported here because this is where every existing
+// caller imports them from.
+export { resolveIdentify, resolveMagick, type SceneSelection, sceneToken };
 
 /**
  * Target extensions that CANNOT carry alpha, so a derivative must be composited
@@ -108,6 +82,55 @@ function cmykProfileArgs(): string[] {
 	return ['-profile', CMYK_SOURCE_PROFILE, '-profile', SRGB_TARGET_PROFILE, '-strip'];
 }
 
+/**
+ * The `-channel-fx` fragment that promotes a source's FIRST meta channel to the
+ * alpha plane. v6 anchor: `class.ImageMagick.php:279-284` (`$middle_flags`).
+ *
+ * The value carries NO quotes. v6 built a SHELL string, so it wrote
+ * `-channel-fx "meta0=>alpha"`; here the argv array is handed to spawn directly,
+ * and a quoted token would reach ImageMagick as the literal `"meta0=>alpha"`.
+ */
+const META_ALPHA_ARGS: readonly string[] = ['-channel-fx', 'meta0=>alpha'];
+
+/**
+ * Shared documentation anchor for the `applyMetaAlpha` option on both recipes.
+ *
+ * WHAT A META CHANNEL IS: a TIFF/PSD "extra sample" — the plane Photoshop writes
+ * a saved selection or a layer mask into. ImageMagick does NOT treat it as alpha,
+ * so a master whose transparency lives there renders fully opaque, retouch paint
+ * and all. `meta0=>alpha` copies the first one into the alpha plane.
+ *
+ * THREE MEASURED PROPERTIES OF THE EXPRESSION (IM 7.1.2-18), all load-bearing:
+ *
+ *  1. IT READS IMAGE 0 ONLY. `magick meta.tif plain.jpg -channel-fx 'meta0=>alpha'`
+ *     exits 0; reverse the order and it fails. Whether the REST of the sequence has
+ *     a meta channel is irrelevant.
+ *  2. IT COLLAPSES THE SEQUENCE TO ONE IMAGE. A 2-scene source in, one image out
+ *     (`0|srgba 5.1`) — every image after the first is DISCARDED. This is why
+ *     `processing.ts` refuses to combine it with the `composite` selection, whose
+ *     whole purpose is to keep the stack for `-flatten`.
+ *  3. IT HARD-FAILS WITHOUT `meta0` on image 0: `magick: missing image channel
+ *     'meta0' @ error/channel.c/ChannelFxImage/318`, exit 1, NO OUTPUT FILE.
+ *     Applied unconditionally it would break every ordinary image, so it MUST be
+ *     probe-gated (`probeMetaChannels`). Under the runMagickTo output contract
+ *     that surfaces as a loud "produced no output file", but broken is broken.
+ *
+ * v6 anchor `class.ImageMagick.php:276-284` knew (2): it set `$composite = false;
+ * $flatten = false;` in the very same branch.
+ *
+ * WE APPLY IT FOR OPAQUE TARGETS TOO — deliberately unlike v6, which guarded the
+ * branch with `!in_array($extension, $ar_opaque_extensions)` and therefore left
+ * the jpg tiers unmasked. That guard is the reported defect: the meta channel IS
+ * the transparency, so for a jpg it decides WHAT GETS COMPOSITED ONTO WHITE. The
+ * masked-away region becomes background instead of surviving as paint — which is
+ * the whole point of the mask.
+ *
+ * WHETHER THE PLANE REALLY IS A MASK IS NOT KNOWABLE FROM ITS EXISTENCE, and
+ * getting that wrong blanks the picture. `processing.ts` owns the decision rules
+ * and the post-condition that catches it; this module only emits the tokens.
+ */
+type MetaAlphaOption = boolean;
+
 /** Scene/background/colorspace decisions a recipe needs from the caller's probe. */
 export interface ThumbOptions {
 	/** Which image of the source to thumbnail (see SceneSelection). */
@@ -116,6 +139,13 @@ export interface ThumbOptions {
 	background: string;
 	/** Inject the CMYK→sRGB ICC profiles + -strip (when the source is CMYK). */
 	cmyk?: boolean;
+	/**
+	 * Promote the source's first META CHANNEL to the alpha plane before anything
+	 * else touches the pipeline. See `MetaAlphaOption` above for what that is, why
+	 * it MUST be probe-gated (it hard-fails and writes nothing when meta0 is
+	 * absent) and why — unlike v6 — it is applied for opaque targets too.
+	 */
+	applyMetaAlpha?: MetaAlphaOption;
 }
 
 /**
@@ -145,6 +175,12 @@ export function buildThumbArgv(
 		'jpeg:size=400x400',
 		sceneToken(source, options.selection),
 	];
+	// IMMEDIATELY after the source and BEFORE the profiles and the background:
+	// v6's ordering (a `$middle_flags` that precedes the background/merge). The
+	// mask has to exist as alpha before anything composites against it.
+	if (options.applyMetaAlpha === true) {
+		argv.push(...META_ALPHA_ARGS);
+	}
 	if (options.cmyk === true) {
 		argv.push(...cmykProfileArgs());
 	}
@@ -189,6 +225,13 @@ export interface ConvertOptions {
 	compression?: number;
 	/** Inject the CMYK→sRGB ICC profiles + -strip (when the source is CMYK). */
 	cmyk?: boolean;
+	/**
+	 * Promote the source's first META CHANNEL to the alpha plane before anything
+	 * else touches the pipeline. See `MetaAlphaOption` above for what that is, why
+	 * it MUST be probe-gated (it hard-fails and writes nothing when meta0 is
+	 * absent) and why — unlike v6 — it is applied for opaque targets too.
+	 */
+	applyMetaAlpha?: MetaAlphaOption;
 	/** PDF source: rasterization density (dpi) + cropbox. */
 	pdfDensity?: number;
 	/**
@@ -224,6 +267,13 @@ export function buildConvertArgv(
 		);
 	}
 	argv.push(sceneToken(source, options.selection));
+	// IMMEDIATELY after the source and BEFORE the profiles and the background:
+	// v6's ordering (a `$middle_flags` that precedes the background/merge). The
+	// mask has to exist as alpha before -flatten composites onto the background,
+	// because on an opaque target that composite is what the mask is FOR.
+	if (options.applyMetaAlpha === true) {
+		argv.push(...META_ALPHA_ARGS);
+	}
 	// CMYK → sRGB via ICC profiles then strip (PHP :408-448).
 	if (options.cmyk === true) {
 		argv.push(...cmykProfileArgs());

@@ -79,9 +79,16 @@ export function magickPolicyEnv(): Record<string, string> {
  * binary (identify is read-only, so there is no output contract to prove here —
  * that is `runMagickTo`'s job in imagemagick.ts).
  *
- * `nice` is off: every caller is a header read on the request path (a probe, an
- * EXIF date), measured at ~12 ms, and de-prioritising it only lengthens the
- * request.
+ * `nice` is off because the callers that sit on the request path are HEADER READS
+ * — `probeImageSource` (`-ping`), an EXIF date — measured at ~12 ms, and
+ * de-prioritising those only lengthens the request.
+ *
+ * TWO CALLERS ARE NOT HEADER READS and must stay deliberate about it:
+ * `probeMetaChannels` (cannot use `-ping`, measured 7.23 s / 14.4 GB RSS on a
+ * 40000x30000 TIFF) and `probeContentSpread` (statistics over a written
+ * derivative). Both are gated to the rare paths that need them — see their own doc
+ * comments in probe.ts. If a THIRD non-ping caller ever appears here, `nice` stops
+ * being obviously right.
  */
 export async function runIdentify(args: readonly string[]): Promise<SpawnResult> {
 	return runBinary([...resolveIdentify(), ...args], {

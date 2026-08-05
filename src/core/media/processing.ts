@@ -31,7 +31,13 @@ import {
 	type SceneSelection,
 	type ThumbOptions,
 } from './engine/imagemagick.ts';
-import { type ImageSourceProbe, probeImageSource } from './engine/probe.ts';
+import {
+	canCarryMetaChannel,
+	type ImageSourceProbe,
+	probeContentSpread,
+	probeImageSource,
+	probeMetaChannels,
+} from './engine/probe.ts';
 import {
 	buildMediaIdentifier,
 	buildMediaLocation,
@@ -73,7 +79,12 @@ function _rootOf(pathOpts: MediaPathOptions): string {
  * that failed. Paged/multi-resolution containers, where compositing WAS
  * destructive, no longer take this branch at all.
  */
-function recipeFromProbe(probe: ImageSourceProbe, target: string, label: string): ThumbOptions {
+async function recipeFromProbe(
+	probe: ImageSourceProbe,
+	source: string,
+	target: string,
+	label: string,
+): Promise<ThumbOptions> {
 	const selection: SceneSelection = probe.hasRepresentativeScene ? 'representative' : 'composite';
 	if (probe.sceneCount > 1 && selection === 'composite') {
 		console.warn(
@@ -86,7 +97,153 @@ function recipeFromProbe(probe: ImageSourceProbe, target: string, label: string)
 		// alpha: what matters is what the target can store (see backgroundForTarget).
 		background: backgroundForTarget(target),
 		cmyk: /cmyk/i.test(probe.colorspace),
+		applyMetaAlpha: await shouldApplyMetaAlpha(probe, source, selection, label),
 	};
+}
+
+/**
+ * Below this standard deviation a derivative carries no picture at all — it is one
+ * flat colour. 0.01 is 1 % of the dynamic range.
+ *
+ * MEASURED separation on written jpgs (the numbers this threshold sits between):
+ *
+ *   medal master 440866, correct mask   0.190   ← must pass
+ *   medal master 440867, correct mask   0.189   ← must pass
+ *   ————————————————————————— 0.01 —————————————————————————
+ *   inverted saved selection            0.0038  ← must be refused
+ *   empty (all-black) extra sample      0       ← must be refused
+ *   spot-ink plate promoted as a mask   0       ← must be refused
+ *
+ * 19x of headroom below the real masters, 2.6x above the worst destructive case.
+ */
+const MASK_DEGENERATE_SPREAD = 0.01;
+
+/**
+ * Decide whether `-channel-fx meta0=>alpha` belongs in this recipe.
+ *
+ * WHY IT EXISTS: Photoshop stores a saved selection / layer mask as a TIFF extra
+ * sample (a "meta channel"), and ImageMagick does not read that as transparency —
+ * it renders the image opaque. On the 2026-08-04 medal masters scene 0's meta
+ * channel IS the medal silhouette; unapplied, the retouch paint that sits outside
+ * the silhouette survives into every tier (the reported blue blobs). Applied, the
+ * derivative is cut at the edge of the medal, which is what the master says.
+ *
+ * THIS IS AN INFERENCE, NOT A FACT THE FILE STATES. `tiffinfo` on those very
+ * masters prints `Extra Samples: 1<unspecified>`: the format declares the plane
+ * has NO declared meaning. (When a TIFF does declare an extra sample to be alpha —
+ * ExtraSamples 1 or 2 — ImageMagick promotes it to a real alpha plane itself and
+ * no meta channel is reported, so a meta channel is by construction always an
+ * `unspecified` one.) Photoshop puts other things there, and the rules below plus
+ * the post-condition in `writeGuardedAgainstABlankingMask` are what keep a wrong
+ * guess from destroying a record. Every refusal is LOUD.
+ *
+ * THE RULES, each with the measurement that forces it:
+ *
+ *  - NEVER ON 'composite'. `-channel-fx` COLLAPSES the image list to image 0.
+ *    Measured: a 2-scene source (layer 0 red, layer 1 green, both `srgb 4.1`)
+ *    flattened WITHOUT the fx gives p(50,50) = srgb(0,128,1), the composited
+ *    stack; WITH the fx it gives srgb(254,0,0) — layer 1 silently discarded,
+ *    exit 0, one file, and the `-flatten` that follows has nothing left to
+ *    composite. The composite selection exists precisely to keep the stack, so the
+ *    two are mutually exclusive. v6 agreed: `class.ImageMagick.php:276-281` sets
+ *    `$composite = false; $flatten = false;` in this branch.
+ *  - EXACTLY ONE META CHANNEL. With two (`srgb 5.2`) `meta0` is whichever plane
+ *    the producing application happened to write first. Measured on a master whose
+ *    meta0 is a spot-ink plate and whose meta1 is the real silhouette: promoting
+ *    meta0 yields a COMPLETELY BLANK white derivative (std 0, mean 1), and simply
+ *    reversing the channel order renders correctly. The engine cannot inspect that
+ *    order, so a multi-meta source is unknowable and must fall through unmasked.
+ *    v6 said the same in a comment ("multiple meta channels are not supported")
+ *    but never checked; this refuses, and says so.
+ *  - TRUE ALPHA WINS. When image 0 carries a real alpha plane AND a meta channel,
+ *    do not apply the fx: it OVERWRITES the alpha plane, so v6's rule would
+ *    destroy real transparency with whatever selection a retoucher had saved. The
+ *    alpha plane is the unambiguous carrier; the meta channel is only a stand-in
+ *    for a source that has none.
+ *  - ONLY FOR CONTAINERS THAT CAN CARRY ONE, so the expensive count is never asked
+ *    for a JPEG/PNG/GIF. See `probeMetaChannels` for what asking costs.
+ *
+ * EXPORTED FOR ITS GATE. The 'composite' rule cannot be reached end-to-end with the
+ * containers ImageMagick can WRITE on this box — a TIFF does not round-trip page
+ * offsets (so its scene 0 is always full-frame and the probe never selects
+ * composite) and IM's PSD writer drops meta channels — so the rule is gated here,
+ * on the function that owns it, plus a companion gate that reproduces the damage it
+ * prevents. A real Photoshop-authored PSD is not bound by IM's writer limits, which
+ * is exactly why the rule is not left to chance.
+ */
+export async function shouldApplyMetaAlpha(
+	probe: ImageSourceProbe,
+	source: string,
+	selection: SceneSelection,
+	label: string,
+): Promise<boolean> {
+	if (selection === 'composite') return false;
+	if (probe.scenes[0] === undefined) return false;
+	if (!canCarryMetaChannel(probe)) return false;
+	// ALPHA IS READ FROM THIS CALL, NOT FROM `probe.scenes[0].hasAlpha`. `-ping`
+	// under-reports alpha on a TIFF that stores it as an extra sample — measured
+	// `srgb 3.0` under -ping against `srgba 5.1` on a full read, i.e. the -ping
+	// probe sees neither the alpha nor the meta channel. Deciding "true alpha wins"
+	// from the -ping flag would apply the fx to exactly those files and overwrite a
+	// real alpha plane, which is the damage the rule exists to prevent.
+	const { metaChannels, hasAlpha } = await probeMetaChannels(source);
+	if (hasAlpha) return false;
+	if (metaChannels === 1) return true;
+	if (metaChannels > 1) {
+		// Loud, per the "never silently narrow scope" law: this source HAS a mask the
+		// engine is choosing not to apply, and the operator is the only one who can
+		// say which plane it is.
+		console.warn(
+			`[media] ${label}: source carries ${metaChannels} meta channels — cannot tell which is the transparency mask, so NONE is applied and the derivative keeps everything the master shows`,
+		);
+	}
+	return false;
+}
+
+/**
+ * Write a derivative that may have a promoted meta channel in it, and REFUSE to
+ * ship the result if that promotion blanked the picture.
+ *
+ * WHY THIS EXISTS: "the file has an extra sample" does not mean "the extra sample
+ * is a keep-mask". Measured, end-to-end, all exiting 0 with a file written:
+ *
+ *   - an EMPTY extra sample (a channel Photoshop initialised to black, never
+ *     painted) → derivative mean 1.000, std 0 — a pure white rectangle;
+ *   - an INVERTED saved selection (the ordinary "select the background, save
+ *     selection" workflow) → mean 0.9995, std 0.0038 — the object erased;
+ *   - a spot/ink plate in meta0 → mean 1.000, std 0.
+ *
+ * Without this guard each of those silently replaces a record's default tier, its
+ * thumb and its SVG envelope with a blank the moment tool_update_cache sweeps the
+ * archive, and nothing anywhere says so. That is the worst failure a heritage
+ * engine can have, so the promotion is verified rather than trusted.
+ *
+ * The fallback is not a failure path: rebuilding WITHOUT the mask yields exactly
+ * what this engine shipped before the promotion existed, and exactly what v6
+ * shipped for jpg tiers. A genuinely blank master stays blank either way, so the
+ * check cannot invent damage — it can only decline to cause it.
+ *
+ * RESIDUAL, KNOWN-OPEN: this catches a mask that destroys the WHOLE picture, not
+ * one that damages part of it. An inverted selection over a busy background leaves
+ * a non-uniform derivative and passes here. Detecting that needs a judgement about
+ * which region is the subject, which no measurement on this box supports today.
+ */
+async function writeGuardedAgainstABlankingMask(
+	temp: string,
+	label: string,
+	applyMetaAlpha: boolean,
+	build: (applyMetaAlpha: boolean) => Promise<void>,
+): Promise<void> {
+	await build(applyMetaAlpha);
+	if (!applyMetaAlpha) return;
+	const spread = await probeContentSpread(temp);
+	// A measurement we could not take is NOT evidence of damage: never condemn a
+	// derivative on a failed identify.
+	if (spread === null || spread >= MASK_DEGENERATE_SPREAD) return;
+	console.warn(
+		`[media] ${label}: the source's meta channel is not a transparency mask — promoting it left a blank derivative (pixel spread ${spread.toFixed(4)} < ${String(MASK_DEGENERATE_SPREAD)}); rebuilding WITHOUT it, so the tier shows everything the master shows`,
+	);
+	await build(false);
 }
 
 /**
@@ -104,9 +261,19 @@ export async function buildThumbAtomically(
 	label: string,
 ): Promise<string> {
 	const probe = await probeImageSource(source);
-	const options = recipeFromProbe(probe, target, label);
+	const options = await recipeFromProbe(probe, source, target, label);
 	return writeAtomically(target, async (temp) => {
-		await buildThumb(source, temp, options);
+		// The guard runs INSIDE the atomic write, against the temp: a blanked thumb is
+		// discarded and rebuilt before anything is renamed into place, so no reader
+		// ever sees it.
+		await writeGuardedAgainstABlankingMask(
+			temp,
+			label,
+			options.applyMetaAlpha === true,
+			async (applyMetaAlpha) => {
+				await buildThumb(source, temp, { ...options, applyMetaAlpha });
+			},
+		);
 	});
 }
 
@@ -158,18 +325,30 @@ export async function buildImageVersion(
 		pathOpts,
 	).absolutePath;
 	const probe = await probeImageSource(source);
-	const recipe = recipeFromProbe(probe, target, `${buildMediaIdentifier(identity)} ${quality}`);
+	const label = `${buildMediaIdentifier(identity)} ${quality}`;
+	const recipe = await recipeFromProbe(probe, source, target, label);
 	return writeAtomically(target, async (temp) => {
-		await convertImage(source, temp, {
-			quality,
-			selection: recipe.selection,
-			background: recipe.background,
-			// The CANVAS, not scene 0's raster: a scene at a page offset makes the two
-			// differ, and this must describe the file that will actually be written.
-			sourceWidth: probe.canvasWidth,
-			sourceHeight: probe.canvasHeight,
-			cmyk: recipe.cmyk,
-		});
+		// The guard runs INSIDE the atomic write, against the temp (see
+		// writeGuardedAgainstABlankingMask): a mask that blanked the tier is
+		// discarded and rebuilt before the rename, so the archive never holds it.
+		await writeGuardedAgainstABlankingMask(
+			temp,
+			label,
+			recipe.applyMetaAlpha === true,
+			async (applyMetaAlpha) => {
+				await convertImage(source, temp, {
+					quality,
+					selection: recipe.selection,
+					background: recipe.background,
+					// The CANVAS, not scene 0's raster: a scene at a page offset makes the two
+					// differ, and this must describe the file that will actually be written.
+					sourceWidth: probe.canvasWidth,
+					sourceHeight: probe.canvasHeight,
+					cmyk: recipe.cmyk,
+					applyMetaAlpha,
+				});
+			},
+		);
 	});
 }
 
