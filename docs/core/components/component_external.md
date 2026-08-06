@@ -36,8 +36,22 @@
     read. There is no edit
     input — the `edit` view renders the resolved remote text read-only.
 
-!!! warning "Gap: the remote fetch itself is not implemented"
-    Only half of this component's behaviour described below has a confirmed implementation. The **request_config plumbing** — attaching the target section's `api_config` to a non-`dedalo` (`api_engine`) config item so the client/engine know an external source is in play — is done: `resolveExternalConfig()` in `src/core/relations/request_config/external.ts`. The actual **read-time HTTP call to the remote API** (entity-specific request building, response mapping, an SSRF guard on the constructed URL) has no confirmed implementation in this checkout. Separately, `src/core/components/component_external/descriptor.ts` currently registers this model with `resolveData: 'portal'` and a `column: 'relation'` (dispatched through the relation-locator family), which does not match the model described on this page (a literal `misc`-column value with no stored locators) — treat that descriptor as a placeholder/coverage gap, not as the intended final shape, until the remote-proxy read path is implemented.
+!!! note "Status (2026-08-05)"
+    The remote-read subsystem is implemented: the outbound door, the per-service
+    adapters, the row cache and the circuit breaker live in `src/external/`
+    (a peer of `src/core`, reached only through `src/external/api/`), and the
+    component's own derivation lives in
+    `src/core/components/component_external/value.ts`, wired as
+    `emitHook: 'external'`. Two things are deliberately still open:
+
+    - **outbound is fail-closed by default.** With no
+      `DEDALO_EXTERNAL_ALLOWED_HOSTS` line in the install's environment, every
+      request is refused and each component reports `misconfigured`. Turning it
+      on is an operator action.
+    - **server-side external SEARCH is not implemented.** The component's
+      `search` face throws deliberately: there is no SQL surface to search, so
+      it must go through the service adapter's search request, which is not
+      built yet.
 
 ## Definition
 
@@ -72,9 +86,14 @@ from the ZENON API.
   [component_text_area](component_text_area.md).
 - You only need to *link* to another Dédalo section — use a relation component
   such as [component_portal](component_portal.md).
-- The remote source is unreliable and you need data to persist offline:
-  external values are recomputed on every load and the component goes dark when
-  the entity is unavailable (see Notes).
+- The value must persist offline: external values are recomputed on every load.
+  An unreachable source is survivable — the last good values keep being shown,
+  marked as such — but nothing is stored locally, so a source that goes away
+  for good takes the values with it.
+
+For connecting a service end to end (the section binding, the host allowlist,
+the operator knobs), see
+[External record services](../system/external_services.md).
 
 ## Data model
 
@@ -84,13 +103,27 @@ formatted by the server.
 
 **Value:** `array` of `strings`, or `null`.
 
-**Storage:** `component_external` belongs to the `misc` matrix data-type
-column (the configuration/miscellaneous column, shared with
-`component_filter_records`, `component_info`, etc.). The component does **not**
-persist the remote payload: the authored value of a real record (for example
-the ZENON identifier) lives elsewhere in the section, and the external value is
-derived live. As a literal-direct component it transmits its data through the
-standard `{context, data}` datum.
+**Storage: none.** The component stores nothing, in any column. Its descriptor
+declares `column: 'relation'` purely for column-map parity with the retired
+engine; nothing writes it and nothing reads it. The record it displays IS the
+remote record — the section's `section_id` is the remote identifier (a
+zero-padded string such as `"001338683"`, never a Dédalo numeric id) — and the
+value is derived on every read. As a literal-shaped component it transmits its
+data through the standard `{context, data}` datum.
+
+Because the value is derived, **an import can never write it**: every cell
+shape (flat, JSON, empty) is refused per cell, leaving the record untouched.
+
+!!! danger "The component is never written, and the remote service never is"
+    The traffic is one-directional by design. A save addressed to a
+    `component_external` tipo is refused outright (an `ExternalWriteRefused`
+    error naming the tipo), `delete_data` skips the model instead of emptying
+    it, and a Time Machine restore therefore cannot put a remote value back —
+    the retired engine did exactly that, and it fossilised a stale copy of
+    somebody else's record into a column nothing reads. Outbound, the transport
+    accepts only `GET` and `POST`; no adapter can express a remote mutation.
+    The **one** thing curation writes is the caller's own locator, in the
+    calling component: `{"section_tipo": "zenon1", "section_id": "001338683"}`.
 
 Data item emitted to the client (`mode: list`):
 
@@ -110,29 +143,44 @@ Data item emitted to the client (`mode: list`):
 
 The component is **non-translatable** (`translatable: false`); the lang is
 forced to `lg-nolan`. The requested remote language is derived from the
-current data language and mapped to a two-letter code by the entity-specific
-mapping (for ZENON, `lgn=en` etc. — see the gap warning above for the current
-implementation status).
+current data language and mapped to a two-letter code by the service adapter
+(for ZENON, `lgn=en`).
 
-Saving is meant to only sanitise: every entry coerced to a string before
-storing. Because the value is normally re-derived from the API on load,
-persisting is rarely meaningful for this component; this checkout's descriptor
-does not wire it as a literal `misc`-column save at all (see the gap warning
-above), so this save behaviour has no confirmed implementation either.
+When the values are anything but a plain fresh success, the item carries an
+extra `source_status` object naming what happened:
 
-### How the value is designed to resolve
+```json
+"source_status": {
+    "service"    : "zenon",
+    "state"      : "stale",
+    "label_key"  : "external_source_stale",
+    "retryable"  : true,
+    "stale_since": 1754380000000
+}
+```
 
-This is the intended design the ontology configuration below targets; only the request_config attach step (1) has a confirmed implementation today (see the gap warning above) — steps 2-5 describe the read-time proxy that still needs to be built.
+`state` is one of `stale`, `unavailable`, `timeout`, `not_found`,
+`circuit_open`, `disabled`, `misconfigured` (a clean success emits no field at
+all), and `label_key` is a key into the UI label catalog — the client
+localizes it. There is deliberately **no silent blank**: an empty external
+field always says why it is empty.
+
+**Saving:** there is nothing to save. The component has no edit input and no
+storage slot.
+
+### How the value resolves
 
 1. Read the **section** ontology node properties (`api_config`) for `entity`,
    `api_url` and `response_map`.
 2. Collect the `remote` field names declared by sibling components
    (`properties.fields_map` entries whose `local` is `dato`).
-3. An entity-specific request builder constructs the per-record URL for the
-   configured `entity` (e.g. `zenon`).
-4. The URL is validated by an SSRF guard, then fetched with a short-timeout
-   HTTP request.
-5. Each component extracts its own field from the row using its own
+3. The service adapter for the configured `entity` (e.g. `zenon`) builds the
+   per-record request, asking for exactly those fields.
+4. The host is checked against the operator's allowlist **before** anything is
+   resolved; the address is then vetted, pinned, and fetched with a short
+   timeout and a hard response-size ceiling.
+5. The row whose identifier matches the requested one is selected.
+6. Each component extracts its own field from that row using its own
    `fields_map` `dato` entry and applies the optional `format` transform.
 
 Sample remote row (ZENON `records[0]`) the component reads from:
@@ -232,26 +280,60 @@ objects:
   this component's value (it is the default `local` name; only `dato` entries
   are read when the value is resolved, and only they contribute to the
   section's requested remote field list).
-- `remote` — the key to read from the remote row object (e.g. `"title"`,
-  `"authors"`, `"physicalDescriptions"`).
+- `remote` — a **path** into the remote row. A top-level key is the common
+  case (`"title"`, `"authors"`, `"physicalDescriptions"`); a nested value is
+  written with dots and indexes (`"labels.en.value"`,
+  `"items[0].body.value"`), which is what lets a service with a nested payload
+  be mapped without any code. A step that does not resolve is a **missing
+  value**, not an error.
 - `format` *(optional)* — server-side transform applied to the remote value:
     - `array_values` — joins an array remote value with ` | ` (scalars are
-      stringified).
+      stringified). Empty elements are dropped, and an element that is an
+      OBJECT is refused and counted exactly as an unformatted one is — a
+      `format` never turns rubbish into a value.
     - `zenon_authors` — flattens the ZENON `authors` object into
       `role: name - name | role: …`.
-    - *(any other / absent value)* — the raw remote value is used (coerced to a
-      string when a `format` is present but unrecognised).
+    - *(a name the service adapter does not implement)* — REFUSED as a
+      configuration error, not silently passed through: the mapping is wrong
+      and the cataloguer must see it.
+    - *(absent)* — strings, numbers and booleans are used as-is; an array fans
+      out into several entries; an OBJECT is refused and counted, because it
+      has no canonical text form and guessing one writes `[object Object]`
+      into a heritage record.
+
+    Whatever the format, an entry always reaches the wire as a **string**, and
+    two ceilings apply: an over-long value is refused (never silently
+    shortened — a cut title is a wrong title that looks real) and entries past
+    the count ceiling are dropped. Both are counted in `source_status`.
 
 ### `api_config` (section node, not the component node)
 
 Read from the **section** ontology node properties; drives the remote call for
 all external components in that section:
 
-- `entity` — the entity key selecting which request-builder/response-mapping logic to use, and seeding the per-entity availability flag in the session (see *Notes*). Documented entity: `zenon`.
-- `api_url` — base record endpoint of the external API.
+- `entity` — the key selecting which service adapter handles this section
+  (request shape, identifier form, named formats). It must match a registered
+  adapter exactly; an unknown key is a loud error, never an empty component.
+  Documented entity: `zenon`.
+- `api_url` — per-record endpoint, called by the **server**. Its host must be
+  in the install's outbound allowlist or the whole binding is refused.
+- `api_url_search` *(optional)* — the service's search endpoint, when it has
+  one. Server-side external search is not implemented yet (see the status note
+  above), so nothing in the engine calls it today.
+- `ui_base_url` *(optional)* — the human-facing record page, opened by the
+  **browser**; it must be an `http`/`https` address.
 - `response_map` — maps remote response keys to local roles. The entry with
-  `local === "ar_records"` identifies the array of records in the response (the
-  first record is used).
+  `local === "ar_records"` identifies the array of records in the response.
+  The record used is the one whose identifier **matches the one asked for** —
+  never simply the first: an answer carrying a different record is treated as
+  *not found*, because a confidently wrong value is worse than a reported gap.
+
+!!! danger "A credential never belongs in `api_config`"
+    The ontology is editable data. Any credential-shaped key found here is
+    stripped and reported rather than used, and stripped again before anything
+    reaches a browser. Service credentials live in the install's private
+    environment file — see
+    [External record services](../system/external_services.md).
 
 !!! note "No standard literal properties"
     `component_external` does **not** use `with_lang_versions`, `unique`,
@@ -273,16 +355,55 @@ DOM follows the shared structure: `wrapper_component component_external <tipo>
 `content_value` nodes. The edit toolbar can show component tools and a
 `full_screen` button.
 
+### Entries render as text
+
+An entry is a string a third-party service put in this record, so every view
+renders it with `textContent` — it is never parsed as HTML. The one exception
+is an entry the server declares as markup in the optional `entries_kind` array
+(parallel to `entries`), which it emits only for values it put through its
+allowlist sanitizer: bare `b`, `i`, `em`, `strong`, `sub`, `sup`, `br`, `p`,
+`ul`, `ol`, `li`, with no attributes at all. No shipped adapter produces markup
+today, so the field is absent from every emission and everything renders as
+text.
+
+To render formatted values, declare a `fields_map` `format` whose adapter
+returns the markup kind; there is no way to opt in from the ontology alone, and
+none from the client.
+
+### The degradation marker
+
+When the source is degraded the component renders, after its values, a
+
+```html
+<span class="external_source_status state_<state>">…</span>
+```
+
+carrying the localized `source_status.label_key`, and a tooltip with the
+service, the fetch time when the row is stale, and how many values were
+withheld. Every state has its own look, and `stale` (data shown, possibly out
+of date) differs from `unavailable` (no data at all) in border style as well as
+colour.
+
+!!! warning "An empty external component is never just empty"
+    If a `component_external` shows nothing AND no marker, the record really
+    has no value there. If it shows a marker, the value could not be derived
+    and the marker says why — do not catalogue around it as if the remote
+    record were blank.
+
 ## Import / export model
 
-`component_external` has no per-model import/export override; it goes through
-the generic literal import/export path like any other component without one.
-In practice there is little to import: the
-value is owned by the remote system and resolved live, so the meaningful local
-datum is the **identifier** stored by the section (or by a neighbouring
-component such as a [component_portal](component_portal.md) /
-[component_input_text](component_input_text.md) that holds the record id). The
-external fields then render from that identifier on each load.
+**Import: refused, always.** The value is owned by the remote system and has no
+local slot, so every cell shape — flat, JSON round-trip, or empty — is refused
+per cell with a loud row error, and the record is left untouched. (The empty
+cell is refused too: "clearing" a value that does not exist locally would be a
+lie in the import report.) The meaningful local datum is the **identifier**,
+which is the section's own `section_id`; the external fields render from it on
+each load.
+
+**Export:** the flat cell is the component's derived entries, joined like a
+literal — a `section_list` column of an external section exports normally. When
+the source is unreachable the cell exports empty AND the model is reported in
+the export's unresolved list, rather than shipping a silent blank column.
 
 For the generic literal import/export contract and CSV formats, see
 [../importing_data.md](../importing_data.md) and
@@ -290,29 +411,30 @@ For the generic literal import/export contract and CSV formats, see
 
 ## Notes
 
-The following describe the intended design for the remote-fetch proxy; the fetch itself has no confirmed implementation yet (see the gap warning near the top of this page).
-
 - **No default tools.** The shipped ontology context exposes `tools: []` for
   this component (no `tool_time_machine`/`tool_lang`/add/replace data tools),
   consistent with its read-only, remote nature.
-- **Entity availability circuit-breaker (intended).** When the remote host is
-  unreachable or returns an empty/invalid response, the component is meant to
-  flip a session-scoped per-entity availability flag to false and return
-  `null` from then on, to avoid hammering the API request after request. The
-  flag would be session-scoped: a fresh login (new session) lets it try again.
-- **Remote cache (intended).** Resolved rows are meant to be memoised per
-  request, keyed by `section_tipo_section-id_lang`, so multiple external
-  fields of the same record trigger a single API call. As request-scoped
-  state, such a cache must be cleared between requests, not held as a
-  persistent-worker global.
-- **SSRF guard (intended).** Even though the `api_url` is admin-owned
-  ontology, the fully constructed URL should be re-checked before the fetch
-  to block cloud-metadata / internal-service reads; an unsafe URL should mark
-  the entity unavailable.
-- **Adding a new entity (intended).** A new entity is meant to be added by
-  registering a request builder for it (constructs the per-record URL from
-  `api_url`, the requested fields, `section_id` and `lang`) and referencing
-  its key via `api_config.entity`.
+- **Circuit breaker.** Repeated failures open a circuit per (service, remote
+  origin) so a dead host is not re-dialled on every page view. It is keyed by
+  origin and cleared only by TIME — never per session and never per user (the
+  retired engine kept the flag in the session, so one bad response blanked the
+  source for a whole login, for one user, across every entity at once).
+- **Row cache + coalescing.** Rows are cached with a soft TTL and keyed by
+  service, endpoint, section, remote id, data language and the requested field
+  set, so several external fields of the same record trigger ONE call. Past
+  the soft TTL the last good row is served immediately, marked `stale`, while
+  a refresh runs behind the request.
+- **Egress control.** The `api_url` host must be in the operator's allowlist
+  or the binding is refused; the fully constructed URL is re-checked against
+  an SSRF guard and pinned to the vetted address before the fetch. A
+  credential never comes from the ontology — any credential-shaped key found
+  in `api_config` is stripped and reported.
+- **Adding a new service.** Register an adapter under
+  `src/external/services/` (request builders, response mapping, formats, id
+  shape and an egress classification) and name its key in
+  `api_config.entity`. An unknown key THROWS — it never degrades to an empty
+  component, because an empty component is indistinguishable from a record
+  with no data.
 - **No observers/observables** are configured for this component.
 - Related component docs: [component_input_text](component_input_text.md)
   (editable literal alternative), [component_text_area](component_text_area.md),

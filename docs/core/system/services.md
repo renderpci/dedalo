@@ -4,6 +4,13 @@
 
 The `core/services/` subsystem holds small, mostly client-side runtime objects that package a piece of shared interface/logic (file upload, rich-text editing, autocomplete search, …) so that **many** components, sections and tools can reuse it without re-implementing it.
 
+!!! note "A service is not an *external service*"
+    "Service" on this page means a reusable **client-side** interface module.
+    It is unrelated to an [external record service](external_services.md) — the
+    server-side subsystem that resolves a record from a third-party catalogue —
+    which has its own ontology configuration, its own outbound controls and no
+    client module at all. The two words collide by history; the pages do not.
+
 This page is the **subsystem reference** for `core/services/`. A service is not a
 section or a component — it does not live in the ontology and it has no `tipo`.
 It is a reusable helper instanced *by* a component, section or tool and wired to

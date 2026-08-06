@@ -445,27 +445,28 @@ This document does **not** re-explain the architecture or the wire format — se
 }
 ```
 
-**Zenon section `api_config`** (lives in the target section's properties, *not* in the request_config — it is the `api_engine`-specific connection block whose null value the `request_config_object` constructor deliberately preserves):
+**Zenon section `api_config`** (lives in the TARGET section's properties — `zenon1` here — *not* in the request_config; it is the `api_engine`-specific connection block, and the parsed item carries `api_config: null` for every ordinary `dedalo` engine):
 
 ```json
 {
   "api_config": {
+    "entity": "zenon",
     "api_url": "https://zenon.dainst.org/api/v1/record",
-    "api_key": "",
-    "response_format": "json",
-    "field_mapping": {
-      "title": "title",
-      "author": "author",
-      "year": "year"
-    }
+    "api_url_search": "https://zenon.dainst.org/api/v1/search",
+    "ui_base_url": "https://zenon.dainst.org/Record/",
+    "response_map": [
+      { "local": "ar_records", "remote": "records" },
+      { "local": "msg", "remote": "status" }
+    ]
   }
 }
 ```
 
 **Explanation**:
 - `api_engine: "zenon"` — routes data retrieval through the external Zenon adapter instead of the matrix tables.
-- `fields_map: true` — use the component's field-mapping configuration to translate external API fields to Dédalo values.
-- `api_config` is resolved from the target section's properties; never put live `api_key` secrets in an RQO (it is logged in debug environments).
+- `fields_map: true` — a lazy flag: the engine REPLACES it with the named component's own `properties.fields_map` and stamps the ddo's `model`, `lang` and `permissions`. The hydrated array is what the client sends as `&field[]=`, so it stays on the wire.
+- `api_config` is resolved from the section the show ddo names. Those five keys are the only ones published: anything else is dropped, credential-shaped keys (`api_key`, `token`, …) are stripped, and every URL must be `http(s)` — a `javascript:` `ui_base_url` refuses the whole block, because the portal concatenates it with a record id to open a window. A service credential belongs in `../private/.env` on a secret catalog key, never in the ontology.
+- `api_url` / `api_url_search` hosts must also be listed in `DEDALO_EXTERNAL_ALLOWED_HOSTS` before the SERVER will fetch them.
 
 *See properties:* [`api_engine`](rqo.md#api_engine-string-optional-default-dedalo), [`api_config`](request_config.md#request_config_object-shape).
 

@@ -40,7 +40,7 @@ relations/request_config/build.ts       # buildRequestConfigForElement() — the
 | `relations/request_config/implicit.ts` | The ontology-relation-graph walk (component list targets + the full section edit-form tree) | `buildImplicitComponentListConfig()`, `buildImplicitSectionEditConfig()`, `resolveVirtualEditScope()` |
 | `relations/request_config/presets.ts` | Per-user saved layout overrides (section `dd1244`) | `resolvePresetRequestConfig()`, `getActiveRequestConfigPresets()`, `selectMatchingPreset()` |
 | `relations/request_config/filters.ts` | Live `filter_by_list` / `fixed_filter` expansion (record/DB data, never cached) | `expandFilterByList()`, `expandFixedFilter()` |
-| `relations/request_config/external.ts` | Attaches the target section's `api_config` for non-`dedalo` engines | `resolveExternalConfig()` |
+| `relations/request_config/external.ts` | Attaches the TARGET section's `api_config` for non-`dedalo` engines, shaped for publication (credential keys stripped, unknown keys dropped, `http(s)`-only URLs) | `resolveExternalConfig()` |
 
 Every build is a plain async function call — there is no config-level cache to invalidate (see [Caching](#caching-and-the-cache-key) below for what that means in practice). `build.ts`, the pure-contract boundary in `concepts/request_config.ts`, and the `explicit`/`implicit` builders are the things to understand first; `presets.ts`/`filters.ts`/`external.ts` are the live-expansion special cases.
 
@@ -165,7 +165,7 @@ interface request_config_object {
   search?: { ddo_map?: dd_object[]; get_ddo_map?: object; sqo_config?: object; };
   choose?: { ddo_map?: dd_object[]; fields_separator?: string; };
   hide?:   { ddo_map?: dd_object[]; };  // resolved server-side, never rendered
-  api_config?: object | null;      // external-engine connection params (null preserved)
+  api_config: object | null;       // external-engine connection block; ALWAYS present, null on dedalo items
 }
 ```
 
