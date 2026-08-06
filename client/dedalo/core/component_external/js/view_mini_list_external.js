@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {append_entries, append_source_status} from './external_render.js'
 
 
 
@@ -28,10 +29,10 @@
 * @see render_list_component_external  — dispatcher that selects this view
 * @see view_default_list_component_external — interactive 'default' list view
 * @see view_text_list_component_external   — bare-span 'text' / 'line' view
+* @see external_render                     — the shared entry / status rules
 * @see ui.component.build_wrapper_mini     — wrapper factory (adds CSS classes
-*      `mini` and `<model>_mini`; does not pre-fill `value_string` unless
-*      passed in options — this renderer injects the value itself via
-*      `insertAdjacentHTML` after the wrapper is created)
+*      `mini` and `<model>_mini`; its `value_string` option is deliberately NOT
+*      used here, because that option is injected with `insertAdjacentHTML`)
 */
 export const view_mini_list_external = function() {
 
@@ -45,21 +46,21 @@ export const view_mini_list_external = function() {
 * Builds the DOM node for component_external in 'mini' view mode.
 *
 * Reads `self.data.entries` (an array of strings resolved server-side from
-* the configured `api_config` + `fields_map`), joins them with ' | ', and
-* injects the resulting string as HTML into the mini wrapper element.
+* the configured `api_config` + `fields_map`) and appends one node per entry,
+* separated by ' | ' text nodes, followed by the degradation marker.
 *
 * Contract notes:
-* - `self.data` is expected to exist; `entries` defaults to `[]` when absent,
-*   yielding an empty wrapper (no error thrown).
-* - The wrapper is built via `ui.component.build_wrapper_mini(self)` WITHOUT
-*   passing `value_string` in the options object. The value is injected
-*   afterwards via `insertAdjacentHTML('afterbegin', …)`. This differs from
-*   `view_default_list_component_external`, which passes `value_string` to the
-*   builder directly; the two approaches produce the same visual result.
-* - Because external-API values may contain HTML entities emitted by the remote
-*   service, `insertAdjacentHTML` is used (rather than `textContent`) to
-*   preserve them. Callers should ensure the server sanitises the resolved
-*   entries before returning them in `data.entries`.
+* - `self.data` may be absent; `entries` defaults to `[]`, yielding an empty
+*   wrapper (no error thrown).
+* - (!) CHANGED 2026-08-06 — the value used to be joined and injected with
+*   `insertAdjacentHTML`, on the reasoning that "external-API values may contain
+*   HTML entities … callers should ensure the server sanitises". The server did
+*   not, so a remote service's markup ran in the curator's session. Entries now
+*   render as text unless the server marked them 'markup' (external_render.js
+*   rule 1). This view is the one that appears inside autocomplete overlays,
+*   i.e. it renders values from a remote SEARCH — the least trusted of all.
+* - The status marker is appended here too (rule 2): a mini chip that silently
+*   shows nothing is how a curator picks a record believing it has no title.
 *
 * @param {Object} self - component_external instance in list / tm mode;
 *   must have `self.data.entries` (array of resolved display strings) and
@@ -69,17 +70,14 @@ export const view_mini_list_external = function() {
 view_mini_list_external.render = async function(self) {
 
 	// short vars
-		const data		= self.data
-		const entries	= data.entries || []
+		const data = self.data || {}
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
-	// Value as string
-		const value_string = entries.join(' | ')
-
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// value + status
+		append_entries(wrapper, data)
+		append_source_status(wrapper, data)
 
 
 	return wrapper

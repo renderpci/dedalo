@@ -22,9 +22,11 @@
 * `api_config` / `fields_map` pipeline.
 *
 * Data contract (`self.data`):
-*   `{ entries: string[] }` — zero or more resolved string values from the
-*   remote external API, already formatted by the server-side `fields_map`.
-*   When `entries` is missing or empty, the resulting span renders empty.
+*   `{ entries: string[], entries_kind?: ('text'|'markup')[], source_status?: Object }`
+*   — zero or more resolved string values from the remote external API, already
+*   formatted by the server-side `fields_map`, plus the per-entry render kind
+*   and the degradation status when they say something. When `entries` is
+*   missing or empty the span renders empty except for the status marker.
 *
 * Contrast with `view_default_list_component_external`, which wraps the same
 * value string in a full interactive container (`ui.component.build_wrapper_list`)
@@ -39,6 +41,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {append_entries, append_source_status} from './external_render.js'
 
 
 /**
@@ -59,9 +62,14 @@ export const view_text_list_component_external = function() {
 * Builds and returns a bare `<span>` element containing the joined display
 * value for this component in 'text' or 'line' view.
 *
-* All entries from `self.data.entries` are concatenated with ' | ' as
-* a separator. This matches the convention used by the 'default' and 'mini'
-* views so that the string representation is consistent across all renderers.
+* All entries from `self.data.entries` are appended in order with ' | ' text
+* nodes between them. This matches the convention used by the 'default' and
+* 'mini' views so that the string representation is consistent across all
+* renderers. (!) They are NODES, not a joined string injected as HTML: an entry
+* is third-party text and is rendered with textContent unless the server marked
+* it 'markup' — see external_render.js rule 1. The degradation marker (rule 2)
+* is appended after them, because even an export-oriented view must not present
+* a failed lookup as an empty value.
 *
 * Unlike `view_default_list_component_external.render`, this method creates
 * the wrapper directly via `ui.create_dom_element` rather than delegating to
@@ -84,19 +92,19 @@ export const view_text_list_component_external = function() {
 view_text_list_component_external.render = async function(self, options) {
 
 	// short vars
-		const data			= self.data || {}
-		const entries		= data.entries || []
-		// Join multiple entries with a pipe separator, consistent with other views.
-		const value_string	= entries.join(' | ')
+		const data = self.data || {}
 
 	// wrapper. Set as span
 	// (!) A raw <span> is used intentionally — no build_wrapper_list scaffolding —
 	// so this view stays chrome-free for embedding in dense or export contexts.
 		const wrapper = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
-			inner_html		: value_string
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`
 		})
+
+	// value + status
+		append_entries(wrapper, data)
+		append_source_status(wrapper, data)
 
 
 	return wrapper

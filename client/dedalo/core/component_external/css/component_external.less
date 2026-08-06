@@ -22,3 +22,113 @@
 	}
 
 }//end .component_external
+
+
+/**
+* EXTERNAL_SOURCE_STATUS
+* The degradation marker (client/dedalo/core/component_external/js/external_render.js
+* rule 2). A component_external's value is fetched from a third-party service at
+* read time, so an empty component has two completely different meanings: "this
+* work has no author" and "the source did not answer". The server never emits a
+* silent blank — it emits the state — and this is what makes the state VISIBLE.
+*
+* (!) EACH STATE MUST LOOK DIFFERENT. Specifically stale vs unavailable: stale
+* shows real (possibly out-of-date) data, unavailable shows none at all, and a
+* cataloguer deciding whether to trust what is on screen needs to tell them
+* apart without hovering. They are given different colours AND different
+* borders, so the difference survives a monochrome print and colour-blindness.
+*/
+.external_source_status {
+	display: inline-block;
+	margin-left: 0.5em;
+	padding: 0 0.45em;
+	border-radius: 3px;
+	border-style: solid;
+	border-width: 1px;
+	font-size: 0.78em;
+	line-height: 1.5;
+	font-style: normal;
+	white-space: nowrap;
+	vertical-align: baseline;
+	cursor: help; // the title carries service / fetch time / drop counts
+
+	// STALE — data IS shown, and it may be out of date. Dashed border: the
+	// value is provisional. Warm, low-alarm colour.
+	&.state_stale {
+		color: #7a5200;
+		background-color: #fff4d6;
+		border-color: #d9a400;
+		border-style: dashed;
+	}
+
+	// UNAVAILABLE — no data at all; the source failed. Solid red-ish,
+	// deliberately unlike stale.
+	&.state_unavailable {
+		color: #8a1f11;
+		background-color: #fde7e4;
+		border-color: #d1493a;
+	}
+
+	// TIMEOUT — no data, but the source was REACHABLE and merely slow, which is
+	// a different thing to report to whoever runs the install. Same alarm
+	// colour, dashed like the other "provisional" states.
+	&.state_timeout {
+		color: #8a1f11;
+		background-color: #fde7e4;
+		border-color: #d1493a;
+		border-style: dashed;
+	}
+
+	// CIRCUIT_OPEN — no data, and the engine has STOPPED asking after repeated
+	// failures. Same family as unavailable, marked as a suspension by the
+	// double border rather than by colour alone.
+	&.state_circuit_open {
+		color: #8a1f11;
+		background-color: #fde7e4;
+		border-color: #d1493a;
+		border-style: double;
+		border-width: 3px;
+	}
+
+	// NOT_FOUND — the record is gone upstream. A cataloguing fact, not an
+	// outage: neutral, not alarming, but clearly not a value.
+	&.state_not_found {
+		color: #4a4a4a;
+		background-color: #ededed;
+		border-color: #9a9a9a;
+	}
+
+	// DISABLED — an operator turned the service off. Muted and dotted: nothing
+	// is wrong, nothing will arrive.
+	&.state_disabled {
+		color: #5a5a5a;
+		background-color: #f4f4f4;
+		border-color: #b0b0b0;
+		border-style: dotted;
+	}
+
+	// MISCONFIGURED — the ontology or the settings are wrong, and no amount of
+	// waiting fixes it. The one state that asks for a human: highest contrast.
+	&.state_misconfigured {
+		color: #ffffff;
+		background-color: #7c1fa2;
+		border-color: #58156f;
+	}
+
+	// TRUNCATED / ok-with-drops — values WERE shown, some were withheld.
+	&.state_ok {
+		color: #2c4a7c;
+		background-color: #e5eeff;
+		border-color: #7d9dd1;
+	}
+
+	// UNKNOWN — a state this client does not know yet (the server's set is
+	// closed, but a newer server may widen it). Rendered anyway, on purpose:
+	// dropping it would restore the silent blank.
+	&.state_unknown {
+		color: #4a4a4a;
+		background-color: #ededed;
+		border-color: #9a9a9a;
+		border-style: dashed;
+	}
+}//end .external_source_status

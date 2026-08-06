@@ -2051,7 +2051,34 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 			// external engines: zenon etc.
 
-			const url = engine_request_config.api_config.ui_base_url + section_id
+			// (!) THE VALIDATION OF THIS URL IS SERVER-SIDE, AND IT IS THE ONLY ONE.
+			// `api_config` is cataloguing data — anyone who can edit the ontology can
+			// set `ui_base_url`, and this line concatenates it into a window the
+			// curator opens with one click, so a `javascript:` value was stored XSS.
+			// Since 2026-08-05 the config is published through the ONE shaper,
+			// src/external/config.ts publishApiConfig (both publication paths:
+			// request_config[].api_config and the structure-context properties echo),
+			// which refuses the WHOLE binding unless every URL is http(s), carries no
+			// embedded credentials and its host is allowlisted, and which strips
+			// credential-shaped keys. Gate: test/unit/external_secret_confinement_tripwire.
+			// So: keep this a plain concatenation of an ALREADY-VETTED value. Do not
+			// re-add a raw one from another source, and do not "fix" a rejected URL
+			// here — a missing api_config means the server refused it, and the fix
+			// belongs in the ontology.
+			const ui_base_url = engine_request_config.api_config
+				? engine_request_config.api_config.ui_base_url
+				: null
+			if (!ui_base_url) {
+				// The server refused (or the ontology never declared) the binding.
+				// Silence would open a blank window at the app's own origin; say so.
+				console.warn(
+					')) edit_record_handler: no api_config.ui_base_url published for external section_tipo:',
+					section_tipo
+				)
+				return
+			}
+
+			const url = ui_base_url + section_id
 
 			// open a new window from external source to view record
 			new_window	= open_window({

@@ -35,7 +35,9 @@
 * per-entry addition/removal or format validation is needed.
 *
 * Data shape consumed (`self.data` in search mode):
-*   `{ q_operator: string|null, entries: [string|null] }`
+*   `{ q_operator: string|null, entries?: [string|null], source_status?: Object }`
+*   — `entries` is OPTIONAL: a freshly added filter and a degraded component
+*   both arrive without it.
 *
 * Exports: `render_search_component_external` (constructor / prototype carrier).
 *
@@ -50,6 +52,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {append_source_status} from './external_render.js'
 
 
 
@@ -144,6 +147,12 @@ render_search_component_external.prototype.search = async function(options) {
 * there is no functional difference, but this is a minor inconsistency worth
 * noting when tracing the data-flow.
 *
+* Degradation marker: a search filter is built against a source that can be
+* down, kill-switched or misconfigured, and typing a term into a box that will
+* be sent nowhere is worse than the box not being there. So when the component
+* arrives carrying a `source_status`, the marker is rendered here too
+* (external_render.js rule 2).
+*
 * @param {Object} self - The component instance (`component_external`).
 * @returns {HTMLElement} `content_data` div populated with the two inputs.
 */
@@ -175,7 +184,13 @@ const get_content_data = function(self) {
 		})
 
 	// value — first (and only) entry in the entries array
-		const value = data.entries[0] || ''
+		// (!) GUARDED: `entries` is absent on a freshly added filter and on any
+		// component whose derivation degraded (the server emits the status and no
+		// entries), and the unguarded read threw a TypeError that took the whole
+		// search inspector's render down with it — one dead remote service made
+		// the search bar unusable.
+		const entries	= Array.isArray(data.entries) ? data.entries : []
+		const value		= entries[0] || ''
 		const input_value = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
@@ -192,6 +207,9 @@ const get_content_data = function(self) {
 			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
+
+	// source_status. Marker when the source this filter targets is degraded
+		append_source_status(content_data, data)
 
 
 	return content_data

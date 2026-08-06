@@ -19473,6 +19473,85 @@ body.inspector_resizing {
   flex-wrap: nowrap;
 }
 /**
+* EXTERNAL_SOURCE_STATUS
+* The degradation marker (client/dedalo/core/component_external/js/external_render.js
+* rule 2). A component_external's value is fetched from a third-party service at
+* read time, so an empty component has two completely different meanings: "this
+* work has no author" and "the source did not answer". The server never emits a
+* silent blank — it emits the state — and this is what makes the state VISIBLE.
+*
+* (!) EACH STATE MUST LOOK DIFFERENT. Specifically stale vs unavailable: stale
+* shows real (possibly out-of-date) data, unavailable shows none at all, and a
+* cataloguer deciding whether to trust what is on screen needs to tell them
+* apart without hovering. They are given different colours AND different
+* borders, so the difference survives a monochrome print and colour-blindness.
+*/
+.external_source_status {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0 0.45em;
+  border-radius: 3px;
+  border-style: solid;
+  border-width: 1px;
+  font-size: 0.78em;
+  line-height: 1.5;
+  font-style: normal;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: help;
+}
+.external_source_status.state_stale {
+  color: #7a5200;
+  background-color: #fff4d6;
+  border-color: #d9a400;
+  border-style: dashed;
+}
+.external_source_status.state_unavailable {
+  color: #8a1f11;
+  background-color: #fde7e4;
+  border-color: #d1493a;
+}
+.external_source_status.state_timeout {
+  color: #8a1f11;
+  background-color: #fde7e4;
+  border-color: #d1493a;
+  border-style: dashed;
+}
+.external_source_status.state_circuit_open {
+  color: #8a1f11;
+  background-color: #fde7e4;
+  border-color: #d1493a;
+  border-style: double;
+  border-width: 3px;
+}
+.external_source_status.state_not_found {
+  color: #4a4a4a;
+  background-color: #ededed;
+  border-color: #9a9a9a;
+}
+.external_source_status.state_disabled {
+  color: #5a5a5a;
+  background-color: #f4f4f4;
+  border-color: #b0b0b0;
+  border-style: dotted;
+}
+.external_source_status.state_misconfigured {
+  color: #ffffff;
+  background-color: #7c1fa2;
+  border-color: #58156f;
+}
+.external_source_status.state_ok {
+  color: #2c4a7c;
+  background-color: #e5eeff;
+  border-color: #7d9dd1;
+}
+.external_source_status.state_unknown {
+  color: #4a4a4a;
+  background-color: #ededed;
+  border-color: #9a9a9a;
+  border-style: dashed;
+}
+/**
 * component_filter
 * 	&& component_filter_master
 *

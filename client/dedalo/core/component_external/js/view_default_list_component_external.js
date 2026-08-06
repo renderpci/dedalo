@@ -22,14 +22,17 @@
 *     edit mode ('line' view) so that the user can trigger a fresh API lookup.
 *
 * Data contract (read from `self.data`):
-*   `{ entries: string[] }` — zero or more resolved string values from the
-*   remote external API, already formatted server-side according to the
-*   `fields_map.format` configuration in the component's ontology properties.
-*   When `entries` is empty the wrapper is rendered with an empty string.
+*   `{ entries: string[], entries_kind?: ('text'|'markup')[], source_status?: Object }`
+*   — zero or more resolved string values from the remote external API, already
+*   formatted server-side according to the `fields_map.format` configuration in
+*   the component's ontology properties, plus (only when they say something) the
+*   per-entry render kind and the degradation status.
 *
-* The entries are joined with the separator ' | ' to match the rendering
-* convention used across all list views in component_external (see also
-* `view_text_list_component_external` and `view_mini_list_external`).
+* The entries are appended as separate nodes joined by ' | ' text nodes, to
+* match the rendering convention used across all list views in
+* component_external (see also `view_text_list_component_external` and
+* `view_mini_list_external`) WITHOUT concatenating third-party strings into one
+* parsed blob — see external_render.js.
 *
 * Exports:
 *   `view_default_list_component_external` — constructor (no-op; used only as a
@@ -40,6 +43,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {append_entries, append_source_status} from './external_render.js'
 
 
 
@@ -61,11 +65,14 @@ export const view_default_list_component_external = function() {
 * Builds and returns the read-only list-mode DOM node for component_external.
 *
 * Steps:
-*  1. Reads `self.data.entries` (string[]) and joins them with ' | '.
-*  2. Delegates wrapper construction to `ui.component.build_wrapper_list`,
-*     which creates a `<div>` with the standardised CSS classes, inserts the
-*     joined value as a `<span>` child, and optionally wires Alt+click debug
-*     logging when `SHOW_DEBUG` is active.
+*  1. Delegates wrapper construction to `ui.component.build_wrapper_list`,
+*     which creates a `<div>` with the standardised CSS classes and optionally
+*     wires Alt+click debug logging when `SHOW_DEBUG` is active. (!) No
+*     `value_string` is passed: that option is injected with `insertAdjacentHTML`,
+*     and an entry is third-party text — see external_render.js rule 1.
+*  2. Appends one node per entry (' | ' text nodes between them), then the
+*     degradation marker when the source is degraded (rule 2) — in list mode a
+*     blank cell is exactly as ambiguous as a blank field.
 *  3. Attaches a `click` listener that calls `self.change_mode({ mode: 'edit',
 *     view: 'line' })`, transitioning the component to edit mode so the user
 *     can reload data from the remote API. `stopPropagation` prevents the click
@@ -85,19 +92,25 @@ export const view_default_list_component_external = function() {
 view_default_list_component_external.render = async function(self, options) {
 
 	// short vars
-		const data			= self.data || {}
-		const entries		= data.entries || []
-		// Join multiple remote values with a visible separator.
-		// Empty entries array produces an empty string, leaving the wrapper blank.
-		const value_string	= entries.join(' | ')
+		const data = self.data || {}
 
 	// wrapper
 		// build_wrapper_list creates the outer <div> with standardised CSS classes
-		// ('wrapper_component', model, tipo, section_tipo_tipo, 'list', 'view_default'),
-		// injects a <span> containing value_string, and applies any ontology CSS rules.
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
+		// ('wrapper_component', model, tipo, section_tipo_tipo, 'list', 'view_default')
+		// and applies any ontology CSS rules.
+		const wrapper = ui.component.build_wrapper_list(self)
+
+	// value. One node per entry, separated by ' | ' text nodes
+		const value_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'external_entries',
+			parent			: wrapper
 		})
+		append_entries(value_node, data)
+
+	// source_status. Marker when the remote values are degraded (absent otherwise)
+		append_source_status(wrapper, data)
+
 		// Clicking the list view switches the component into edit mode ('line' view),
 		// which triggers a new request to the configured remote API endpoint.
 		// stopPropagation prevents the event from reaching parent row/section handlers.
