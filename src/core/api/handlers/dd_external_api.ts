@@ -44,14 +44,17 @@
  * identical queries, and the `MAX_SEARCH_LIMIT` page ceiling enforced below.
  * A per-principal limiter is a real gap and belongs in a design of its own.
  *
- * OUTPUT is the shape the client's `format_data` fabricates today
- * (service_autocomplete.js ~:1063-1110), produced server-side so the rendering
- * path downstream is untouched: a `typo:'sections'` entry carrying the
- * locators, then one `record_data` per record × ddo. Ledger:
- * `WC-2026-08-06-external-search-request`.
+ * OUTPUT is the shape the client's `format_data` used to fabricate, produced
+ * server-side so the rendering path downstream is untouched: a `typo:'sections'`
+ * entry carrying the locators, then one `record_data` per record × ddo.
+ *
+ * FAILURE OUTPUT is a 200 envelope carrying the record path's own
+ * `source_status` — see `searchFailure` below for why a 4xx would be an
+ * explanation nobody reads. Ledger: `WC-2026-08-06-external-search-request`.
  */
 
 import type {
+	ExternalErrorKind,
 	ExternalSearchHit,
 	ExternalSearchResult,
 	ExternalServiceModel,
@@ -150,7 +153,7 @@ export const externalApiActions: Record<string, ActionHandler> = {
 				`[dd_external_api] search target unresolved for ${callerTipo}@${callerSectionTipo} [req ${context.requestId}]`,
 				error,
 			);
-			return denied(400, 'Error. This component is not bound to an external service');
+			return await searchFailure('unknown', 'bad_config');
 		}
 
 		const { searchExternalService } = await import('../../../external/api/index.ts');
@@ -173,18 +176,11 @@ export const externalApiActions: Record<string, ActionHandler> = {
 			);
 			if (error instanceof ExternalSearchUnsupportedError) {
 				console.error(error.message, error);
-				return denied(400, `Error. External search unsupported (${error.reason})`);
+				return await searchFailure(error.service, error.kind, error.reason);
 			}
 			if (error instanceof ExternalServiceError) {
 				console.error(error.message, error);
-				return {
-					status: 200,
-					body: {
-						result: false,
-						msg: 'Error. The external service did not answer',
-						errors: [`external_${error.kind}`],
-					},
-				};
+				return await searchFailure(error.service, error.kind);
 			}
 			throw error;
 		}
@@ -216,6 +212,56 @@ function readTerms(options: { q?: unknown; terms?: unknown }): string[] {
 	return typeof options.q === 'string' ? [options.q] : [];
 }
 
+/**
+ * THE FAILURE ENVELOPE a search box can act on.
+ *
+ * HTTP 200 with `result: false`, deliberately. A 4xx body never reaches the
+ * caller: `data_manager.request`'s `handle_errors` reads a non-ok response as a
+ * thrown fetch error (only 401 is let through, WC-051), so everything the
+ * server said about WHY is discarded and the widget is back to the generic
+ * "network error" this whole change exists to remove. A 4xx is therefore
+ * reserved here for CALLER FAULTS (a missing source tipo, an unparseable page,
+ * no read permission) — a programming error nobody translates — while a
+ * SERVICE or CONFIGURATION state, which a curator must read, travels in a 200
+ * envelope.
+ *
+ * The envelope carries the SAME `source_status` object the record path emits
+ * (component_external/value.ts), built by the SAME two functions: `stateForKind`
+ * (total over ExternalErrorKind) and `externalSourceStatus`. One taxonomy, one
+ * state→label_key map, one place to change it — the browser gets a labels
+ * CATALOG KEY and never prose, exactly as `source_status_label` expects. The
+ * `errors` token keeps the finer grain the closed state set folds away
+ * ('blocked_host' and 'not_registered' are both `misconfigured` states): the
+ * client shows it as diagnostic detail next to the localized text.
+ */
+export async function searchFailure(
+	service: string,
+	kind: ExternalErrorKind,
+	reason?: string,
+): Promise<ApiResult> {
+	const { externalSourceStatus, stateForKind } = await import(
+		'../../components/component_external/value.ts'
+	);
+	const state = stateForKind(kind);
+	return {
+		status: 200,
+		body: {
+			result: false,
+			// Human fallback for a client that does not know this envelope. The
+			// TRANSLATABLE text is source_status.label_key; this is never rendered
+			// by the autocomplete.
+			msg: 'Error. The external search did not complete',
+			errors: [`external_${kind}`, ...(reason === undefined ? [] : [`search_${reason}`])],
+			source_status: externalSourceStatus(service, state) ?? {
+				service,
+				state,
+				label_key: 'external_source_unavailable',
+				retryable: false,
+			},
+		},
+	};
+}
+
 function readInteger(value: unknown): number | undefined {
 	if (typeof value === 'number' && Number.isInteger(value)) return value;
 	if (typeof value === 'string' && /^-?\d+$/.test(value)) return Number(value);
@@ -223,15 +269,122 @@ function readInteger(value: unknown): number | undefined {
 }
 
 /**
+ * The render modes a component's external config may be DECLARED under.
+ *
+ * A component does not carry one request_config: the builder answers a
+ * different set per mode (a `section_list` child substitutes the whole config
+ * in list-like modes, so `numisdata162` declares its zenon item in EDIT and not
+ * in LIST). The widget that searches is rendered in whichever mode its host
+ * view is, and the client is not allowed to name the mode — that would be
+ * config travelling from the browser, which is the whole thing this action
+ * exists to stop. So the engine asks EVERY mode and requires the answers to
+ * AGREE: one external target section, or a loud refusal naming the ambiguity.
+ * Hard-coding one mode silently resolved nothing for a third of this
+ * installation's external callers.
+ */
+const SEARCH_RESOLUTION_MODES = ['edit', 'search', 'list'] as const;
+
+/** True when a ddo's model is an external one, by the DESCRIPTOR FACET (§9). */
+async function isExternalDdo(tipo: string): Promise<boolean> {
+	const model = await getModelByTipo(tipo);
+	if (model === null) return false;
+	const { getComponentModel } = await import('../../components/registry.ts');
+	return getComponentModel(model)?.emitHook === 'external';
+}
+
+/** A ddo's declared section, normalised (`['zenon1']` and `'zenon1'` are one thing). */
+function declaredSectionOf(declared: unknown): string | null {
+	const value = Array.isArray(declared) ? declared[0] : declared;
+	return typeof value === 'string' && value !== '' ? value : null;
+}
+
+/** The shape this decision reads out of a built request_config item. */
+export interface ExternalSearchConfigItem {
+	readonly api_engine?: unknown;
+	readonly show?: {
+		readonly ddo_map?: readonly { readonly tipo: string; readonly section_tipo?: unknown }[];
+	} | null;
+}
+
+/** One external display field, as the decision found it. */
+export interface ExternalSearchDdoRef {
+	readonly tipo: string;
+	readonly section: string | null;
+	readonly ddo: unknown;
+}
+
+/**
+ * THE TARGET DECISION, isolated from the ontology so it can be gated credlessly
+ * (`external_search_target_tripwire`). Three rules, each of which was WRONG in
+ * the first cut of this action and measurably broke real callers:
+ *
+ *  1. THE TARGET IS THE SECTION OF THE EXTERNAL DDOS — never `ddo_map[0]`'s.
+ *     A portal's external item leads with its own portal ddo (`rsc1285` →
+ *     `rsc368`@`rsc332`) and lists the `zenon1` fields after it, so ddo_map[0]
+ *     names a section with no `api_config` at all. Three of this installation's
+ *     six external callers resolved to nothing under the first-ddo rule; the
+ *     browser engine had hidden it behind a hard-coded fallback URL.
+ *  2. EVERY MODE IS ASKED. The builder answers a different item set per mode (a
+ *     `section_list` child substitutes the config in list-like modes), so
+ *     `numisdata162` declares its external item in EDIT and not in LIST. The
+ *     client may not name the mode — that is config travelling from the browser.
+ *  3. AMBIGUITY IS REFUSED, never resolved by picking the first. Two external
+ *     target sections mean two services; the client cannot say which it
+ *     selected (by design), and searching the wrong catalogue is a wrong answer
+ *     that looks right.
+ */
+export async function selectExternalSearchTarget(
+	callerTipo: string,
+	itemsPerMode: readonly (readonly ExternalSearchConfigItem[])[],
+	isExternal: (tipo: string) => Promise<boolean>,
+): Promise<{ targetSectionTipo: string; externalDdos: ExternalSearchDdoRef[] }> {
+	const externalDdos: ExternalSearchDdoRef[] = [];
+	const seenDdo = new Set<string>();
+	let sawExternalItem = false;
+	for (const items of itemsPerMode) {
+		for (const item of items) {
+			if (engineOf(item as never) === 'dedalo') continue;
+			sawExternalItem = true;
+			for (const ddo of item.show?.ddo_map ?? []) {
+				if (seenDdo.has(ddo.tipo)) continue;
+				seenDdo.add(ddo.tipo);
+				if (!(await isExternal(ddo.tipo))) continue;
+				externalDdos.push({ tipo: ddo.tipo, section: declaredSectionOf(ddo.section_tipo), ddo });
+			}
+		}
+	}
+	if (!sawExternalItem) {
+		throw new Error(`component ${callerTipo} declares no external api_engine`);
+	}
+	const targets = [
+		...new Set(externalDdos.map((entry) => entry.section).filter((s) => s !== null)),
+	];
+	if (targets.length === 0) {
+		throw new Error(`component ${callerTipo} external config names no external target section`);
+	}
+	if (targets.length > 1) {
+		throw new Error(
+			`component ${callerTipo} external config names ${targets.length} target sections (${targets.join(', ')}) — the search cannot choose`,
+		);
+	}
+	return { targetSectionTipo: targets[0] as string, externalDdos };
+}
+
+/**
  * Resolve WHICH external section this component searches and WHICH fields it
  * displays — entirely from the ontology.
  *
- * The component's `request_config` is built by the same builder the read path
- * uses, then the FIRST non-`dedalo` item is taken (a component may declare both
- * engines — `rsc368` declares dedalo + zenon; only the external one has a
- * service behind it). Its `show.ddo_map` names the target section, exactly as
- * `relations/request_config/external.ts` binds `api_config` from the first
- * ddo's `section_tipo`.
+ * THE TARGET IS THE SECTION OF THE EXTERNAL DDOS, not the first ddo's section.
+ * `relations/request_config/external.ts` binds `api_config` from `ddo_map[0]`,
+ * and that rule is PHP parity on a PUBLICATION path — but it is wrong as a
+ * resolution rule and measurably so: a portal's external item leads with its
+ * OWN portal ddo (`rsc1285` → `rsc368`@`rsc332`) and only then lists the
+ * `zenon1` fields, so ddo_map[0] names a section with no `api_config` at all.
+ * The browser engine survived that by falling back to a hard-coded Zenon URL —
+ * the hard-coding this change deleted. The engine instead reads the target off
+ * the ddos that ARE external, and refuses loudly if they disagree (two services
+ * behind one component would need the client to say which, and the client is
+ * deliberately unable to).
  *
  * The fields_map is read from each ddo's OWN ONTOLOGY NODE, never from the ddo
  * echo: the echo exists for the client, and the request that leaves this
@@ -243,45 +396,38 @@ export async function resolveExternalSearchTarget(
 ): Promise<ResolvedSearchTarget> {
 	const { buildRequestConfigForElement } = await import('../../relations/request_config/build.ts');
 	const properties = await getPropertiesByTipo(callerTipo);
-	const items = await buildRequestConfigForElement(properties, {
-		ownerTipo: callerTipo,
-		ownerSectionTipo: callerSectionTipo,
-		mode: 'list',
-		ownerIsSection: false,
-	});
-	const external = items.find((item) => engineOf(item) !== 'dedalo');
-	if (external === undefined) {
-		throw new Error(`component ${callerTipo} declares no external api_engine`);
+
+	const itemsPerMode: ExternalSearchConfigItem[][] = [];
+	for (const mode of SEARCH_RESOLUTION_MODES) {
+		itemsPerMode.push(
+			(await buildRequestConfigForElement(properties, {
+				ownerTipo: callerTipo,
+				ownerSectionTipo: callerSectionTipo,
+				mode,
+				ownerIsSection: false,
+			})) as unknown as ExternalSearchConfigItem[],
+		);
 	}
-	const ddoMap = external.show?.ddo_map ?? [];
-	const firstSection = ddoMap[0]?.section_tipo;
-	const targetSectionTipo = Array.isArray(firstSection) ? firstSection[0] : firstSection;
-	if (typeof targetSectionTipo !== 'string' || targetSectionTipo === '') {
-		throw new Error(`component ${callerTipo} external config names no target section`);
-	}
+	const { targetSectionTipo, externalDdos } = await selectExternalSearchTarget(
+		callerTipo,
+		itemsPerMode,
+		isExternalDdo,
+	);
 
 	const { parseFieldsMap, remoteFieldsOf } = await import('../../../external/api/index.ts');
 	const ddos: SearchDdo[] = [];
 	const context: Record<string, unknown>[] = [];
 	const seen = new Set<string>();
 	const remoteFields: string[] = [];
-	for (const ddo of ddoMap) {
-		const declared = ddo.section_tipo;
-		const targets =
-			declared === undefined || declared === 'self'
-				? true
-				: Array.isArray(declared)
-					? declared.includes(targetSectionTipo)
-					: declared === targetSectionTipo;
-		if (!targets) continue;
-		if ((await getModelByTipo(ddo.tipo)) !== 'component_external') continue;
-		const nodeProperties = (await getPropertiesByTipo(ddo.tipo)) as {
+	for (const entry of externalDdos) {
+		if (entry.section !== targetSectionTipo) continue;
+		const nodeProperties = (await getPropertiesByTipo(entry.tipo)) as {
 			fields_map?: unknown;
 		} | null;
-		const fieldsMap = parseFieldsMap(nodeProperties?.fields_map, { tipo: ddo.tipo });
+		const fieldsMap = parseFieldsMap(nodeProperties?.fields_map, { tipo: entry.tipo });
 		if (fieldsMap.length === 0) continue;
-		ddos.push({ tipo: ddo.tipo, fieldsMap });
-		context.push(ddo as unknown as Record<string, unknown>);
+		ddos.push({ tipo: entry.tipo, fieldsMap });
+		context.push(entry.ddo as Record<string, unknown>);
 		// Declaration order is the `field[]=` order on the wire — the same order
 		// the browser engine sent, and part of the byte form gated by the tests.
 		for (const field of remoteFieldsOf(fieldsMap)) {
@@ -291,7 +437,9 @@ export async function resolveExternalSearchTarget(
 		}
 	}
 	if (ddos.length === 0) {
-		throw new Error(`component ${callerTipo} external config shows no component_external field`);
+		throw new Error(
+			`component ${callerTipo} external config shows no external field with a fields_map`,
+		);
 	}
 
 	const { getExternalServiceForSection } = await import('../../../external/api/index.ts');

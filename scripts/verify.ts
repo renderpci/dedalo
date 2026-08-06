@@ -98,6 +98,7 @@ const TRIPWIRES = [
 	'test/unit/external_config_narrowing_census.test.ts',
 	'test/unit/external_write_refusal_tripwire.test.ts',
 	'test/unit/external_client_render_tripwire.test.ts',
+	'test/unit/external_search_target_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 
