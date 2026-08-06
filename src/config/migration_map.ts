@@ -569,6 +569,23 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_SITE_BUILDER_URL',
 	'DEDALO_SITE_BUILDER_TOKEN',
 	'DEDALO_SITE_BUILDER_TIMEOUT_MS',
+	// external record services (the outbound side). NEW_IN_V7 rather than a rule off
+	// a v6 constant: v6 had no shared outbound layer at all — each component that
+	// talked to a third party carried its own hardcoded url and curl timeout, so
+	// there is no legacy constant to classify. The allowlist is the new part: v6
+	// could reach any host the ontology named.
+	'DEDALO_EXTERNAL_ENABLED',
+	'DEDALO_EXTERNAL_DISABLED_SERVICES',
+	'DEDALO_EXTERNAL_ALLOWED_HOSTS',
+	'DEDALO_EXTERNAL_TIMEOUT_MS',
+	'DEDALO_EXTERNAL_MAX_BYTES',
+	'DEDALO_EXTERNAL_MAX_CONCURRENCY',
+	'DEDALO_EXTERNAL_SOFT_TTL_MS',
+	'DEDALO_EXTERNAL_RETRY_ATTEMPTS',
+	'DEDALO_EXTERNAL_BREAKER_COOLDOWN_MS',
+	'DEDALO_EXTERNAL_MAX_ENTRY_CHARS',
+	'DEDALO_EXTERNAL_MAX_ENTRIES',
+	'DEDALO_EXTERNAL_ZENON_API_KEY',
 	// install
 	'DEDALO_INSTALL_ALLOWED_IPS',
 	'DEDALO_INSTALL_NO_RESTART',

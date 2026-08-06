@@ -39,6 +39,7 @@ import {
 	readJsonArray,
 	readList,
 	readMediaAccessMode,
+	readNameList,
 	readNumber,
 	readOptionalList,
 	readOptionalString,
@@ -149,6 +150,37 @@ export interface SiteBuilderConfig {
 	readonly url: string | undefined;
 	readonly token: string | undefined;
 	readonly timeoutMs: number;
+}
+
+/**
+ * The outbound side: components whose ontology names a record service other than Dédalo's
+ * own (a bibliographic catalogue, an authority file).
+ *
+ * Two of these fields are FAIL-CLOSED and must be read as such: `allowedHosts` empty means
+ * NO host may be contacted (the address is assembled from editable ontology data, so the
+ * operator — not the ontology — states where the server may go), and a service named in
+ * `disabledServices` is never contacted even while everything else works. The remaining
+ * fields are the bounds on one lookup: how long it may take, how much it may read, how many
+ * may run at once, how stale a cached row may get before a background refresh, how hard a
+ * failure is retried, how long a failing service is left alone, and how much one component
+ * may emit from a remote answer.
+ */
+export interface ExternalServicesConfig {
+	readonly enabled: boolean;
+	/** Service identifiers (ontology `api_engine` values), lowercased. */
+	readonly disabledServices: readonly string[];
+	/** Host names, lowercased. EMPTY = every outbound request is refused. */
+	readonly allowedHosts: readonly string[];
+	readonly timeoutMs: number;
+	readonly maxBytes: number;
+	readonly maxConcurrency: number;
+	readonly softTtlMs: number;
+	readonly retryAttempts: number;
+	readonly breakerCooldownMs: number;
+	readonly maxEntryChars: number;
+	readonly maxEntries: number;
+	/** Undefined = the Zenon request carries no authorization header (its public API needs none). */
+	readonly zenonApiKey: string | undefined;
 }
 
 /** One configured code master (PHP CODE_SERVERS entry). */
@@ -573,6 +605,7 @@ export interface DedaloConfig {
 	readonly geoip: GeoipConfig;
 	readonly tools: ToolsConfig;
 	readonly siteBuilder: SiteBuilderConfig;
+	readonly external: ExternalServicesConfig;
 	readonly update: UpdateConfig;
 	readonly ontologyIo: OntologyIoConfig;
 	readonly media: MediaConfig;
@@ -848,6 +881,22 @@ export const config: DedaloConfig = Object.freeze({
 		url: readOptionalString('DEDALO_SITE_BUILDER_URL'),
 		token: readOptionalString('DEDALO_SITE_BUILDER_TOKEN'),
 		timeoutMs: readNumber('DEDALO_SITE_BUILDER_TIMEOUT_MS'),
+	}),
+	// The numeric bounds are declared in the catalog (`clamp`), not restated here, so the
+	// generated census can print the same limits the reader enforces.
+	external: Object.freeze({
+		enabled: readBool('DEDALO_EXTERNAL_ENABLED'),
+		disabledServices: readNameList('DEDALO_EXTERNAL_DISABLED_SERVICES'),
+		allowedHosts: readNameList('DEDALO_EXTERNAL_ALLOWED_HOSTS'),
+		timeoutMs: readNumber('DEDALO_EXTERNAL_TIMEOUT_MS'),
+		maxBytes: readNumber('DEDALO_EXTERNAL_MAX_BYTES'),
+		maxConcurrency: readNumber('DEDALO_EXTERNAL_MAX_CONCURRENCY'),
+		softTtlMs: readNumber('DEDALO_EXTERNAL_SOFT_TTL_MS'),
+		retryAttempts: readNumber('DEDALO_EXTERNAL_RETRY_ATTEMPTS'),
+		breakerCooldownMs: readNumber('DEDALO_EXTERNAL_BREAKER_COOLDOWN_MS'),
+		maxEntryChars: readNumber('DEDALO_EXTERNAL_MAX_ENTRY_CHARS'),
+		maxEntries: readNumber('DEDALO_EXTERNAL_MAX_ENTRIES'),
+		zenonApiKey: readOptionalString('DEDALO_EXTERNAL_ZENON_API_KEY'),
 	}),
 	update: Object.freeze({
 		codeServers: readServerList('CODE_SERVERS'),

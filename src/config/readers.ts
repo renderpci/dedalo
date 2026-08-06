@@ -146,6 +146,25 @@ export function readList(key: string): readonly string[] {
 }
 
 /**
+ * A list of NAMES compared case-insensitively — host names and service identifiers.
+ *
+ * It exists so no caller ever splits one of these strings itself. The external-services
+ * host allowlist is the reason it is its own reader rather than `readList`: that list is a
+ * SECURITY decision (empty = every outbound request refused), and a decision enforced by
+ * comparing strings must not turn on whether the operator typed `Zenon.DAINST.org`. Lower,
+ * trim and de-duplicate once, here, so every comparison downstream is a plain equality on
+ * an already-normalized value.
+ */
+export function readNameList(key: string): readonly string[] {
+	const seen = new Set<string>();
+	for (const entry of readList(key)) {
+		const name = entry.trim().toLowerCase();
+		if (name !== '') seen.add(name);
+	}
+	return Object.freeze([...seen]);
+}
+
+/**
  * Like readList, but UNSET (null) is distinguishable from an explicitly EMPTY list ([]).
  * The media public-quality list needs it: unset derives the install's delivery qualities,
  * while [] means no folder is public at all.
