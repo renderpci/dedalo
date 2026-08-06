@@ -21,7 +21,8 @@
 *
 * Responsibilities:
 *   - Accepts a typed search string from the caller UI and dispatches it to an
-*     underlying search engine (Dédalo internal API or the external Zenon API).
+*     underlying search engine (the Dédalo internal API, or an external service
+*     reached THROUGH the engine — never from this browser).
 *   - Builds and manages the Search Query Object (SQO) used for each request,
 *     merging caller-supplied filters (filter_free), fixed ontology filters
 *     (fixed_filter), and optional list-restriction filters (filter_by_list).
@@ -430,11 +431,13 @@ service_autocomplete.prototype.render = async function(options={}) {
 /**
 * AUTOCOMPLETE_SEARCH
 * Orchestrates the autocomplete search process by calling the appropriate
-* engine method (dedalo_engine, zenon_engine, …) defined by `self.search_engine`.
+* engine method (dedalo_engine, external_engine) defined by `self.search_engine`.
 *
-* The engine name is resolved dynamically: self.search_engine + '_engine' must
-* be a function on this prototype. If the requested engine method does not exist
-* a console error is logged and an error result is returned without throwing.
+* The engine name is resolved dynamically: self.search_engine + '_engine' when
+* this client implements one, otherwise external_engine for every non-dedalo
+* api_engine (the ONE server action searches any bound service). If neither
+* resolves, a console error is logged and an error result is returned without
+* throwing.
 *
 * Guard: if no searchable section tipos are configured (ar_search_section_tipo is
 * empty) the user is alerted via get_label.select_search_section and search is
@@ -456,11 +459,19 @@ service_autocomplete.prototype.autocomplete_search = async function() {
 			// console.log('self.request_config_object', self.request_config_object);
 		}
 
-	// engine name
-		const engine = self.search_engine + '_engine'
+	// engine name. A named engine wins when this client implements one
+	// ('dedalo_engine', and the 'zenon_engine' alias kept for ontologies that
+	// carry api_engine:'zenon'); ANY OTHER non-dedalo api_engine is an external
+	// service, and the browser must not need to know which — the engine resolves
+	// the service from the section's api_config. Before 2026-08-06 a second
+	// service could not be added without editing this file.
+		const named_engine	= self.search_engine + '_engine'
+		const engine		= (typeof self[named_engine]==='function')
+			? named_engine
+			: (self.search_engine!=='dedalo' ? 'external_engine' : null)
 
 	// check valid function name (defined in component properties search_engine)
-		if (typeof self[engine]!=='function') {
+		if (engine===null || typeof self[engine]!=='function') {
 			console.error('ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :', self.search_engine);
 			return {
 				result: false
@@ -476,7 +487,7 @@ service_autocomplete.prototype.autocomplete_search = async function() {
 			}
 		}
 
-	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called
+	// exec search self.search_engine = dedalo_engine || external_engine, the method that will called
 		const js_promise = self[engine]()
 
 
@@ -814,300 +825,167 @@ service_autocomplete.prototype.split_q = function(q) {
 
 
 /**
-* ZENON_ENGINE
-* Executes a search against the external Zenon bibliographic API (DAI).
+* GET_FILTER_FREE_Q
+* The terms the cataloguer typed, read from the SAME `filter_free` the dedalo
+* engine reads: the search box is ONE box, whatever answers it.
 *
-* Zenon uses a different REST API (VuFind-based) that returns bibliographic records
-* with fields like 'authors', 'title', 'urls', 'publicationDates'.  This engine
-* translates Dédalo's internal request configuration into a Zenon URL query, fetches
-* the results via XMLHttpRequest, then normalises the response into Dédalo's standard
-* API response shape { result: { context, data } }.
+* Returns the LAST non-empty `q` across every operator group — the behaviour
+* the browser Zenon engine had, preserved byte-for-byte so pointing the widget
+* at the server stays a swap of the transport and not a change of what is
+* searched. (A multi-field autocomplete could send every group as separate
+* terms — the engine accepts a `terms` array and the Zenon adapter joins it
+* with a space — but that is a different query, and it belongs in its own
+* change with its own gate.)
 *
-* Flow:
-*   1. Clones self.rqo_search for read access to the ddo_map (field definitions).
-*   2. Extracts the `q` value from filter_free; returns empty-data if filter_free
-*      is absent or all q values are empty.
-*   3. Builds a Zenon query URL from api_config.api_url_search (or the hardcoded
-*      DAI default) plus parameters (lookfor, type, sort, limit, lng, field[]).
-*   4. Issues a POST request via XMLHttpRequest wrapped in a Promise.
-*   5. On success, passes the raw JSON response through format_data(), which maps
-*      Zenon record fields to component_data entries in Dédalo's data-layer format.
-*
-* format_data() internal structure:
-*   - Iterates records × fields from the ddo_map.
-*   - The 'authors' field gets special handling: primary/secondary/corporate author
-*     groups are each joined by ' - ' and then concatenated.
-*   - Array fields are joined with ', '; string fields are used directly.
-*   - Produces a `section` entry (locators) plus one `record_data` entry per
-*     record×field combination, mirroring the server-side component data shape.
-*
-* (!) When q is empty, the placeholder string 'ñññññññ---!!!!!' is used to prevent
-*     Zenon from returning its first 10 records as a default result set.
-*
-* (!) This engine ignores the Dédalo project filter (skip_projects_filter is
-*     not applicable to external APIs). Records returned are not restricted to
-*     any user-specific scope.
-*
-* @param {Object|null} options - Optional configuration overrides (currently unused;
-*   all config is read from self.request_config_object and self.rqo_search)
-* @returns {Promise<Object>} A promise resolving to the normalised API response:
-*   { result: { context: Array, data: Array }, msg: string }
-*   or { result: { data: [] }, msg: 'No filter_free defined' } on config error
+* @param {Object} self - The service_autocomplete instance
+* @returns {string} the query, or '' when there is nothing to search
 */
-service_autocomplete.prototype.zenon_engine = async function(options) {
+const get_filter_free_q = function(self) {
+
+	const filter_free = self.rqo_search && self.rqo_search.sqo_options
+		? self.rqo_search.sqo_options.filter_free
+		: null
+	if (!filter_free) {
+		return ''
+	}
+
+	let q = ''
+	for (let operator in filter_free) {
+
+		const current_filter		= filter_free[operator]
+		const current_filter_length	= current_filter.length
+		for (let i = 0; i < current_filter_length; i++) {
+
+			const q_check = current_filter[i].q
+			if (!q_check || q_check === '') {
+				continue
+			}
+			q = q_check
+		}
+	}
+
+	return q
+}//end get_filter_free_q
+
+
+
+/**
+* EXTERNAL_ENGINE
+* Search a third-party service THROUGH the Dédalo engine.
+*
+* Until 2026-08-06 this function WAS `zenon_engine`, and it issued a
+* cross-origin XMLHttpRequest straight at the DAI Zenon search endpoint from the
+* curator's browser (the origin is deliberately not repeated here — see the
+* server module, src/external/search.ts). Everything about that was wrong:
+*
+*   - It went round every control the external subsystem has
+*     (engineering/EXTERNAL_SPEC.md §5) — the kill switches, the operator's host
+*     allowlist, the SSRF guard + socket pin, the circuit breaker, the
+*     concurrency ceiling, the byte cap, the egress classification — because
+*     none of them can see a request the server never makes.
+*   - It could never work for an AUTHENTICATED service: a credential that
+*     reaches a browser is a published credential.
+*   - It stopped working outright when the app's CSP dropped third-party origins
+*     from `connect-src` (XSS-02/RC-01), which is the symptom that surfaced it.
+*     The fix is NOT to name the origin in `connect-src`: that value comes from
+*     an operator-editable ontology field, so a cataloguer could aim the
+*     directive at any host.
+*   - It hard-coded ONE service's knowledge in the browser: the fallback URL,
+*     a hard-coded German UI language, the remote field list, an authors-only
+*     formatter and the
+*     nonsense-string empty-query sentinel. All of it now lives in
+*     `src/external/services/zenon.ts`, the ONE place that knows what Zenon is.
+*
+* What the browser now says is only: WHO is asking (the caller component's
+* tipo + section_tipo) and WHAT was typed. The url, the host, the service name,
+* the field list and the target section are all resolved server-side from the
+* ontology (src/core/api/handlers/dd_external_api.ts). A client that could name
+* the URL would be the browser-direct call again, wearing the engine's socket.
+*
+* The answer is the shape this function used to fabricate (`format_data`), built
+* server-side now by `formatExternalSearchData`, so the rendering path below is
+* untouched. Ledger: engineering/wire_contract/WC-2026-08-06-external-search-request.md.
+*
+* On failure the engine answers HTTP 200 with `result:false` and a
+* `source_status` — the same typed provenance object the record path emits —
+* which `render_search_notice` turns into a localized notice. The old code
+* rejected with a generic network-error Error built at the XHR site, which the
+* caller logged and swallowed: the curator saw an empty list and could not tell
+* "the catalogue is down" from "this install has not allowlisted the host".
+*
+* @param {Object|null} options - Unused; kept so the engine signature is uniform
+*   across dedalo_engine / external_engine.
+* @returns {Promise<Object>} the API response:
+*   { result: { context: Array, data: Array }, msg: string } on success,
+*   { result: false, msg, errors: string[], source_status: Object } on failure,
+*   { result: { data: [] }, source_status: {state:'empty_query'} } when nothing
+*   was typed (no request is made).
+*/
+service_autocomplete.prototype.external_engine = async function(options) {
 
 	const self = this
 
-	// dd_request
-		const rqo_search = clone(self.rqo_search)
+	// q. Nothing else about the query leaves this browser.
+		const q = get_filter_free_q(self)
 
-	// rqo
-		// const generate_rqo = async function(){
-		// 	// request_config_object. get the request_config_object from context
-		// 	// rqo build
-		// 	// const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
-		// 	const add_show	= true
-		// 	const zenon_rqo	= await self.caller.build_rqo_show(dd_request, 'get_data', add_show)
-		// 	self.rqo_search	= self.caller.build_rqo_search(zenon_rqo, 'search')
-		// }
-		// generate_rqo()
+	// empty query case. Refused HERE, without a round trip: the engine answers
+	// an empty query with an empty result and no socket (src/external/search.ts),
+	// so asking is pure latency. This is the one search state the client can
+	// resolve by itself, and it is the one a curator most needs named — an empty
+	// datalist otherwise reads as "the catalogue has nothing".
+		if (q==='') {
+			return {
+				result	: {
+					data : []
+				},
+				msg		: 'Empty query',
+				source_status : {
+					state		: 'empty_query',
+					label_key	: 'external_search_empty_query',
+					retryable	: false
+				}
+			}
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			// console.log('[zenon_engine] rqo:',rqo);
-			console.log('[zenon_engine] dd_request:', rqo_search);
-			// console.log('self.caller-----------------:',self.caller);
+			console.log('[external_engine] source:', self.section_tipo, self.tipo, 'q:', q);
 		}
 
-	// const request_ddo			= dd_request.find(item => item.typo === 'request_ddo').value
-	// const ar_selected_fields		= self.caller.datum.context.filter(el => el.model === 'component_external')
-	// const ar_fields				= ar_selected_fields.map(field => field.properties.fields_map[0].remote)
-
-	// fields of Zenon 'title' for zenon4
-		const fields		= rqo_search.show.ddo_map
-		const fields_length	= fields.length
-
-	// section_tipo of Zenon zenon1
-		const section_tipo	= fields[0].section_tipo
-
-	// format data function
-		const format_data = function(data) {
-			if(SHOW_DEBUG===true) {
-				console.log('[zenon_engine] format_data data 1:',data);
-				//console.log('+++ dd_request 1:',dd_request);
-				//console.log('+++ source 1:',source);
-			}
-			const section_data		= []
-			const components_data	= []
-			const records			= data.records || []
-			const records_length	= records.length
-			const separator = ' - '
-			for (let i = 0; i < records_length; i++) {
-
-				const record = records[i]
-
-				for (let j = 0; j < fields_length; j++) {
-
-					const field = fields[j].fields_map[0].remote
-					const ar_value 	= []
-					const authors_ar_value	= []
-
-					switch(field) {
-
-						case 'authors':
-							if (!record[field]) {
-								break;
-							}
-							if (record[field].primary && Object.keys(record[field].primary).length > 0) {
-								authors_ar_value.push(Object.keys(record[field].primary).join(separator))
-							}
-							if (record[field].secondary && Object.keys(record[field].secondary).length > 0) {
-								authors_ar_value.push(Object.keys(record[field].secondary).join(separator))
-							}
-							if (record[field].corporate && Object.keys(record[field].corporate).length > 0) {
-								authors_ar_value.push(Object.keys(record[field].corporate).join(separator))
-							}
-							ar_value.push(authors_ar_value.join(separator))
-							break;
-
-						default:
-							if (record[field] == null) {
-								break;
-							}
-							if (Array.isArray(record[field])) {
-								if (record[field].length>0) {
-									ar_value.push(record[field].join(', '))
-								}
-							}else if (typeof record[field]==='string') {
-								if (record[field].length>0) {
-									ar_value.push(record[field])
-								}
-							}
-							break;
-					}
-
-					// value
-						// const fields_separator = self.caller.fields_separator || ' | '
-						const value = ar_value
-
-					// record_data
-						const record_data = {
-							section_tipo	: section_tipo,
-							section_id		: record['id'],
-							type			: 'dd687',
-							tipo			: fields[j].tipo,
-							mode			: 'list',
-							entries			: value
-						}
-
-					// insert formatted item
-						components_data.push(record_data)
-				}//end iterate fields
-
-				// locator
-					const locator = {
-						section_tipo	: section_tipo,
-						section_id		: record['id']
-					}
-
-				// insert formatted locator
-				section_data.push(locator)
-			}//end iterate records
-
-			// create the section and your data
-			const section = {
-				section_tipo	: section_tipo,
-				tipo			: self.caller.tipo,
-				entries			: section_data,
-				typo			: 'sections'
-			}
-
-			// mix the section and component_data
-			const data_formatted = [section, ...components_data]
-
-			const response = {
-				msg		: 'OK. Request done',
-				result 	: {
-					context	: fields,
-					data	: data_formatted
-				}
-			}
-
-			if(SHOW_DEBUG===true) {
-				console.log('+++ format_data response:', response);
-			}
-
-			return response
-		}//end format_data function
-
-	// trigger vars
-
-		// Iterate current filter
-		let q = ''
-		const filter_free = rqo_search.sqo_options?.filter_free
-		if (!filter_free) {
-			return {
-				result : {
-					data : []
+	// API search request. data_manager is the ONE request path of this client:
+	// it carries the session cookie, the CSRF token and its rotation, the
+	// re-login recovery on 401 and the error reporting. A hand-rolled
+	// XMLHttpRequest bypasses all four.
+		const api_response = await data_manager.request({
+			body : {
+				dd_api	: 'dd_external_api',
+				action	: 'search',
+				source	: {
+					tipo			: self.tipo,
+					section_tipo	: self.section_tipo
 				},
-				msg : 'No filter_free defined'
-			}
-		}
-		for (let operator in filter_free) {
-
-			// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
-			const new_operator = self.operator || operator
-
-			// get the array of the filters objects, they have the default operator
-			const current_filter = filter_free[operator]
-			const current_filter_length = current_filter.length
-			for (let i = 0; i < current_filter_length; i++) {
-
-				const filter_item = current_filter[i]
-
-				const q_check =  filter_item.q
-
-				if( !q_check || q_check === "" ){
-					continue
+				options	: {
+					q		: q,
+					limit	: self.limit
 				}
-				// wildcards
-					q = q_check
 			}
-		}
+		})
 
-		// trigger
-		const url_trigger	= self.request_config_object.api_config.api_url_search || 'https://zenon.dainst.org/api/v1/search'
-		const trigger_vars	= {
-			lookfor		: (q==='') ? 'ñññññññ---!!!!!' : q, // when the q is empty, Zenon get the first 10 records of your DDBB, in that case we change the empty with a nonsense q
-			type		: "AllFields", // search in all fields
-			sort		: "relevance",
-			limit		: 20,
-			prettyPrint	: false,
-			lng			: "de"
-		};
-
-		// percent-encode every value (the user query 'lookfor' in particular) so
-		// special characters (&, =, %, spaces, …) cannot corrupt the query string.
-		// Keys are fixed ASCII identifiers, and the 'field[]' literal must stay
-		// verbatim for the Zenon (VuFind) API, so only values are encoded.
-		const pairs = []
-		for (let key in trigger_vars) {
-			pairs.push( key + '=' + encodeURIComponent(trigger_vars[key]) )
-		}
-		let url_arguments =  pairs.join("&")
-		// const fields   = ["id","authors","title","urls","publicationDates"]
-		for (let i = 0; i < fields_length; i++) {
-			const field_map_remote = fields[i].fields_map[0].remote
-			url_arguments += "&field[]=" + encodeURIComponent(field_map_remote)
-		}
+	return api_response
+}//end external_engine
 
 
-	// XMLHttpRequest promise
-		return new Promise(function(resolve, reject) {
 
-			const request = new XMLHttpRequest();
-
-				// ready state change event
-					// request.onreadystatechange = function() {
-					// 	if (request.readyState == 4 && request.status == 200) {
-					// 		//console.dir(request.response)
-					// 		//console.dir(request.responseText);
-					// 	}
-					// }
-
-				// open xmlhttprequest
-					//request.open("POST", "https://zenon.dainst.org/api/v1/search?type=AllFields&sort=relevance&page=1&limit=20&prettyPrint=false&lng=de&lookfor=david", true);
-					request.responseType = 'json';
-					request.open('POST', url_trigger + '?' + url_arguments, true);
-
-				// onload event
-					request.onload = function() {
-						if (request.status === 200) {
-
-							// data format
-								const data = format_data(request.response)
-
-							// If successful, resolve the promise by passing back the request response
-								resolve(data);
-
-						}else{
-							// If it fails, reject the promise with a error message
-							reject(Error('Reject error don\'t load successfully; error code: ' + request.statusText));
-						}
-					};
-
-				// request error
-					request.onerror = function() {
-						// Also deal with the case when the entire request fails to begin with
-						// This is probably a network error, so reject the promise with an appropriate message
-						reject(Error('There was a network error. data_send: '+url_trigger+"?"+ url_arguments + "statusText:" + request.statusText));
-					};
-
-			// send the request
-				request.send();
-
-		})//end Promise
-}//end zenon_engine
+/**
+* ZENON_ENGINE
+* Stable alias of external_engine.
+*
+* `autocomplete_search` resolves the engine by NAME (`api_engine` + '_engine'),
+* and an ontology anywhere may carry `api_engine: 'zenon'`, so the name must
+* keep resolving. It resolves to the service-agnostic engine: there is nothing
+* Zenon-specific left in this client.
+*/
+service_autocomplete.prototype.zenon_engine = service_autocomplete.prototype.external_engine
 
 
 

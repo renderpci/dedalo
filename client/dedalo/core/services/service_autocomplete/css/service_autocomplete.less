@@ -279,6 +279,27 @@
 			border-bottom: 1px solid @color_orange_dedalo;
 		}
 
+		// search_notice. A search that answered with a STATE instead of rows:
+		// the external source is down, this install has not allowlisted its
+		// host, the service is off, or nothing was typed. An empty datalist on
+		// its own reads as "the catalogue has nothing" — the difference the
+		// curator acts on has to be visible, so the notice is never a silent
+		// blank. 'empty_query' is the one NEUTRAL state (the user simply has
+		// not typed yet) and must not look like a failure.
+		.search_notice {
+			padding: 0.5rem;
+			background-color: @color_white;
+			pointer-events: none;
+			border-bottom: 1px solid @color_orange_dedalo;
+			color: @color_danger;
+			font-weight: 600;
+
+			&.state_empty_query {
+				color: @color_grey_5;
+				font-weight: normal;
+			}
+		}
+
 		// li autocomplete_data_li
 		>.autocomplete_data_li {
 			border-top: 1px solid @color_grey_11;

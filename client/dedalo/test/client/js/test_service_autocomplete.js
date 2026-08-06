@@ -16,8 +16,10 @@ import {
 import {
 	render_datalist,
 	execute_search_render,
+	render_search_notice,
 	run_search
 } from '../../../core/services/service_autocomplete/js/view_default_autocomplete.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
 
@@ -83,61 +85,161 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 
 
 	// ───────────────────────────────────────────────────────────
-	// HIGH-SEVERITY #2 — Zenon query string not URL-encoded
-	// zenon_engine must percent-encode the user query (lookfor) so special
-	// characters (&, =, %, spaces) cannot corrupt the request.
+	// HIGH-SEVERITY #2 — the external search must go through the ENGINE
+	// (2026-08-06). external_engine used to be zenon_engine and issued a
+	// cross-origin XHR at the DAI search endpoint from this browser: outside
+	// every server-side control, impossible for an authenticated service, and
+	// dead since the app CSP dropped third-party origins from connect-src.
+	// It now calls dd_external_api::search through data_manager, and says
+	// only WHO is asking and WHAT was typed.
 	// ───────────────────────────────────────────────────────────
 
-	describe("zenon_engine percent-encodes the search query", function() {
+	describe("external_engine asks the Dédalo engine, never the service", function() {
 
-		it("encodes the lookfor value in the request URL", async function() {
+		it("posts dd_external_api::search with the caller source and the typed q, and nothing else", async function() {
 
 			const dirty_q = 'Smith & Co = 100%'
 
 			const self = new service_autocomplete()
-			self.operator				= '$and'
-			self.request_config_object	= {
-				api_config : { api_url_search : 'https://zenon.example/api/v1/search' }
-			}
-			self.rqo_search = {
-				show : {
-					ddo_map : [
-						{ section_tipo: 'zenon1', tipo: 'zt1', fields_map: [{ remote: 'title' }] }
-					]
-				},
+			self.tipo			= 'test61'
+			self.section_tipo	= 'test3'
+			self.limit			= 20
+			self.rqo_search		= {
 				sqo_options : {
 					filter_free : { $and: [ { q: dirty_q } ] }
 				}
 			}
 
-			// stub XMLHttpRequest to capture the URL without hitting the network
-			const real_xhr = window.XMLHttpRequest
-			let captured_url = null
-			window.XMLHttpRequest = function() {
-				this.open	= function(method, url) { captured_url = url }
-				this.send	= function() { /* never completes; we only inspect the URL */ }
+			// capture the request instead of sending it
+			const real_request = data_manager.request
+			let captured_body = null
+			data_manager.request = async function(options) {
+				captured_body = options.body
+				return { result : { data: [] }, msg : 'OK. Request done' }
 			}
 
 			try {
-				// do NOT await: the returned promise never resolves (send is stubbed).
-				// The URL is built synchronously inside the executor.
-				self.zenon_engine()
-				await Promise.resolve()
+				await self.external_engine()
 			} finally {
-				window.XMLHttpRequest = real_xhr
+				data_manager.request = real_request
 			}
 
-			assert.notEqual(captured_url, null, 'XHR url must be captured')
-			assert.ok(
-				captured_url.includes(encodeURIComponent(dirty_q)),
-				'lookfor must be percent-encoded; got: ' + captured_url
-			)
-			assert.ok(
-				captured_url.indexOf('lookfor=' + dirty_q) === -1,
-				'raw unencoded query must not appear in the URL; got: ' + captured_url
+			assert.notEqual(captured_body, null, 'the request body must be captured')
+			assert.equal(captured_body.dd_api, 'dd_external_api', 'the engine action must be the external API')
+			assert.equal(captured_body.action, 'search')
+			assert.equal(captured_body.source.tipo, 'test61', 'the CALLER component identifies the binding')
+			assert.equal(captured_body.source.section_tipo, 'test3')
+			// The query travels as data, so nothing has to be percent-encoded here:
+			// the engine builds the remote URL (and encodes it) server-side.
+			assert.equal(captured_body.options.q, dirty_q, 'the raw typed query is sent as data')
+
+			// Nothing about WHERE to go may come from this browser.
+			const serialized = JSON.stringify(captured_body)
+			assert.equal(serialized.indexOf('http'), -1, 'no url may leave the browser')
+			assert.equal(serialized.indexOf('lng'), -1, 'no remote language may leave the browser')
+			assert.equal(serialized.indexOf('field'), -1, 'no remote field list may leave the browser')
+		})
+
+		it("refuses an empty query without any request, and says so", async function() {
+
+			const self = new service_autocomplete()
+			self.tipo			= 'test61'
+			self.section_tipo	= 'test3'
+			self.rqo_search		= {
+				sqo_options : {
+					filter_free : { $and: [ { q: '' } ] }
+				}
+			}
+
+			const real_request = data_manager.request
+			let called = 0
+			data_manager.request = async function() {
+				called++
+				return { result : { data: [] } }
+			}
+
+			let response
+			try {
+				response = await self.external_engine()
+			} finally {
+				data_manager.request = real_request
+			}
+
+			assert.equal(called, 0, 'an empty query must cost no round trip')
+			assert.deepEqual(response.result.data, [], 'and it must answer with no rows')
+			assert.equal(response.source_status.state, 'empty_query')
+			assert.equal(response.source_status.label_key, 'external_search_empty_query',
+				'the message must be a labels-catalog key, never prose')
+		})
+
+		it("zenon_engine stays a resolvable name, and IS external_engine", function() {
+			// autocomplete_search resolves api_engine + '_engine'; an ontology may
+			// carry api_engine:'zenon'. The name resolves — to the service-agnostic
+			// engine, because nothing about Zenon is left in this client.
+			assert.equal(
+				service_autocomplete.prototype.zenon_engine,
+				service_autocomplete.prototype.external_engine,
+				'zenon_engine must be the external_engine alias'
 			)
 		})
-	})//end describe zenon_engine encoding
+	})//end describe external_engine
+
+
+
+	// ───────────────────────────────────────────────────────────
+	// HIGH-SEVERITY #2b — a failed search must be NAMED, not swallowed
+	// The engine answers a dead / blocked / disabled source with a typed
+	// source_status. Rendering only an empty datalist told the curator "no
+	// matches" for every one of them.
+	// ───────────────────────────────────────────────────────────
+
+	describe("render_search_notice names why the datalist is empty", function() {
+
+		it("renders the label key the server chose, with its state class", function() {
+
+			const self = { datalist : document.createElement('ul') }
+
+			const notice = render_search_notice(self, {
+				result			: false,
+				msg				: 'Error. The external search did not complete',
+				errors			: ['external_blocked_host'],
+				source_status	: {
+					service		: 'zenon',
+					state		: 'misconfigured',
+					label_key	: 'external_source_misconfigured',
+					retryable	: false
+				}
+			})
+
+			assert.notEqual(notice, null, 'a failed search must say something')
+			assert.ok(notice.classList.contains('state_misconfigured'),
+				'the state must be visible as a class, so states do not share a look')
+			assert.ok(notice.textContent.length > 0, 'the notice must never be an empty box')
+			assert.ok(notice.title.indexOf('external_blocked_host') !== -1,
+				'the finer-grained error token must survive as diagnostics')
+			assert.equal(self.datalist.querySelectorAll('.search_notice').length, 1)
+		})
+
+		it("names a failure with NO envelope too (a 4xx body never reaches us)", function() {
+
+			const self = { datalist : document.createElement('ul') }
+
+			const notice = render_search_notice(self, null)
+
+			assert.notEqual(notice, null, 'a thrown search must still be named')
+			assert.ok(notice.classList.contains('state_failed'))
+		})
+
+		it("says nothing on a plain successful search", function() {
+
+			const self = { datalist : document.createElement('ul') }
+
+			const notice = render_search_notice(self, { result : { data : [] } })
+
+			assert.equal(notice, null, 'a working search must not grow a permanent warning')
+			assert.equal(self.datalist.querySelectorAll('.search_notice').length, 0)
+		})
+	})//end describe render_search_notice
 
 
 

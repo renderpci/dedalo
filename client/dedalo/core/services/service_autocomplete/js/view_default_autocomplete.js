@@ -30,6 +30,9 @@
 	import {clone} from '../../../common/js/utils/index.js'
 	import {get_instance} from '../../../common/js/instances.js'
 	import {get_section_records} from '../../../section/js/section.js'
+	// the ONE label-key resolver for an external source_status. Shared with
+	// component_external so a state never gets two different words.
+	import {source_status_label} from '../../../component_external/js/external_render.js'
 
 
 
@@ -586,6 +589,85 @@ const render_search_input = function(self) {
 
 
 /**
+* RENDER_SEARCH_NOTICE
+* Say WHY the datalist is empty, when there is something to say.
+*
+* An autocomplete that answers every failure with an empty list tells the
+* curator one thing — "nothing matches" — for four completely different
+* situations: the catalogue really has no match, the external source is down,
+* this installation has not allowlisted its host (or has switched it off), or
+* nothing was typed. Those need different actions, so they need different
+* words.
+*
+* THE TEXT IS NEVER PROSE FROM THIS FILE. The server sends the same typed
+* `source_status` the record path sends ({service, state, label_key,
+* retryable} — src/core/components/component_external/value.ts), and
+* `source_status_label` resolves the label KEY through the labels catalog. The
+* only status this client builds itself is the local 'empty_query' one, which
+* never leaves the browser because nothing was asked; it too carries a key.
+*
+* A response that failed with NO status is the transport failing in front of
+* the envelope (a 4xx, whose body `data_manager.request` discards, or a thrown
+* fetch): 'external_search_failed', still a key, never the old
+* 'There was a network error' string built at the XHR site.
+*
+* The `state_<state>` class is what makes the neutral case (nothing typed) look
+* unlike the failures; the title carries the untranslated diagnostics — the
+* service name and the engine's error tokens ('external_blocked_host',
+* 'external_circuit_open', …) — which name the finer grain the closed state set
+* folds together and are what an operator quotes in a bug report.
+*
+* @param {Object} self - The service_autocomplete instance
+* @param {Object|null} api_response - the response, or null when it threw
+* @returns {HTMLElement|null} the appended notice, or null when there is
+*   nothing to say (a plain successful search)
+*/
+export const render_search_notice = function(self, api_response) {
+
+	// datalist. Nothing to render into (the widget is not built / was destroyed)
+		const datalist = self ? self.datalist : null
+		if (!datalist) {
+			return null
+		}
+
+	// status. Either the engine's typed state, or — when the response failed
+	// with no envelope at all — the generic failure, which is still a key.
+		const succeeded	= !!(api_response && api_response.result!==false)
+		const status	= (api_response && api_response.source_status)
+			? api_response.source_status
+			: (succeeded
+				? null
+				: { state: 'failed', label_key: 'external_search_failed', retryable: true })
+		if (!status) {
+			return null
+		}
+
+	// title. Diagnostics for the operator, plain text.
+		const title_parts = []
+		if (status.service) {
+			title_parts.push(status.service)
+		}
+		if (api_response && Array.isArray(api_response.errors)) {
+			title_parts.push(api_response.errors.join(' · '))
+		}
+
+	// node
+		const notice = ui.create_dom_element({
+			// a div, exactly like the sibling loading_label: the datalist ul holds
+			// selectable rows, and a notice must never be arrow-key selectable.
+			element_type	: 'div',
+			class_name		: 'search_notice state_' + (status.state || 'unknown'),
+			text_content	: source_status_label(status),
+			title			: title_parts.join(' · '),
+			parent			: datalist
+		})
+
+	return notice
+}//end render_search_notice
+
+
+
+/**
 * EXECUTE_SEARCH_RENDER
 * Runs one autocomplete search (cache-aware) and renders the result into the
 * datalist, then clears the per-request loading UI for the latest request.
@@ -617,8 +699,14 @@ export const execute_search_render = async function(self, options) {
 				return
 			}
 
-		// no result from API case
+		// no result from API case. NAMED, never swallowed: until 2026-08-06 this
+		// early return dropped the response on the floor, so a search against a
+		// dead (or CSP-blocked) external source was indistinguishable from a
+		// search that found nothing. The notice reads the typed state the engine
+		// sends and renders its LABEL KEY.
 			if (!api_response || api_response.result===false) {
+				await render_datalist(self, null)
+				render_search_notice(self, api_response)
 				return
 			}
 
@@ -631,10 +719,18 @@ export const execute_search_render = async function(self, options) {
 		// render datalist (call API and render the response result)
 			await render_datalist(self, api_response.result)
 
+		// notice. A successful response may still carry a state worth saying —
+		// today the local 'empty_query' one, which never leaves the browser.
+			render_search_notice(self, api_response)
+
 	} catch (error) {
 		// a failed search must not jam the widget or raise an unhandled promise
-		// rejection; log and fall through to the cleanup in finally.
+		// rejection; log, SAY SO in the datalist, and fall through to the cleanup.
 		console.error('[service_autocomplete] autocomplete search failed:', error)
+		if (my_seq === self._search_seq) {
+			await render_datalist(self, null)
+			render_search_notice(self, null)
+		}
 	} finally {
 		// always clear the loading UI for the latest request — even on error / no
 		// result / stale — so a thrown search can never leave a stuck "Searching..".
@@ -683,12 +779,15 @@ export const run_search = async function(self) {
 			: null
 
 		await render_datalist(self, result)
+		render_search_notice(self, api_response)
 
 	} catch (error) {
-		// a failed search must not raise an unhandled rejection; clear the list.
+		// a failed search must not raise an unhandled rejection; clear the list
+		// and say why it is empty.
 		console.error('[service_autocomplete] autocomplete search failed:', error)
 		if (my_seq === self._search_seq) {
 			await render_datalist(self, null)
+			render_search_notice(self, null)
 		}
 	}
 }//end run_search

@@ -10596,6 +10596,18 @@ body:has(.assistant_container.standalone.show) {
   pointer-events: none;
   border-bottom: 1px solid var(--color_orange_dedalo);
 }
+.wrapper_service_autocomplete > .autocomplete_data .search_notice {
+  padding: 0.5rem;
+  background-color: var(--color_white);
+  pointer-events: none;
+  border-bottom: 1px solid var(--color_orange_dedalo);
+  color: var(--color_danger);
+  font-weight: 600;
+}
+.wrapper_service_autocomplete > .autocomplete_data .search_notice.state_empty_query {
+  color: var(--color_grey_5);
+  font-weight: normal;
+}
 .wrapper_service_autocomplete > .autocomplete_data > .autocomplete_data_li {
   border-top: 1px solid var(--color_grey_11);
   cursor: pointer;
