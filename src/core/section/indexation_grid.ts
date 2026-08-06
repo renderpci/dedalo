@@ -1058,12 +1058,23 @@ async function defaultDdoMap(ctx: GridContext, ddo: GridDdo): Promise<GridDdo[]>
 			callerSectionTipo: ddo.section_tipo,
 			mode: 'indexation_list',
 		} as never);
-		const dedaloConfig = configs.find(
-			(item) => (item as { api_engine?: string }).api_engine === 'dedalo',
-		) as { show?: { ddo_map?: GridDdo[] } } | undefined;
+		const { selectConfigItemForConcern } = await import(
+			'../relations/request_config/engine_select.ts'
+		);
+		const dedaloConfig = (await selectConfigItemForConcern(
+			configs as unknown as { api_engine?: string }[],
+			'listColumns',
+			'section/indexation_grid.defaultDdoMap',
+		)) as { show?: { ddo_map?: GridDdo[] } } | null;
 		map = dedaloConfig?.show?.ddo_map ?? [];
-	} catch {
-		// PHP tolerates a request_config that cannot build (logs, renders empty)
+	} catch (error) {
+		// PHP tolerates a request_config that cannot build (logs, renders empty).
+		// A CAPABILITY refusal is not that: it is a configuration answer this
+		// tolerance must not swallow, so it propagates.
+		const { ExternalEngineConcernUnsupportedError } = await import(
+			'../relations/request_config/engine_select.ts'
+		);
+		if (error instanceof ExternalEngineConcernUnsupportedError) throw error;
 		map = [];
 	}
 	ctx.defaultDdoMaps.set(ddo.tipo, map);

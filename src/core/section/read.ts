@@ -393,8 +393,12 @@ async function appendDerivedItemContexts(
 					ownerIsSection: false,
 				},
 			);
-			for (const ddo of parentConfig[0]?.show?.ddo_map ?? []) {
-				views.set(ddo.tipo, (ddo as { view?: string }).view ?? null);
+			// EVERY config item's show map (PHP full_ddo_map): a second source's
+			// column may carry the `view` its child renders with.
+			const { flattenConfigDdoMaps } = await import('../relations/config_ddo_map.ts');
+			for (const ddo of flattenConfigDdoMaps(parentConfig, { ownerTipo: parentTipo })) {
+				if (typeof ddo.tipo !== 'string') continue;
+				views.set(ddo.tipo, (ddo.view as string | undefined) ?? null);
 			}
 			viewCache.set(parentTipo, views);
 		}
@@ -952,7 +956,12 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		}
 		if (configured !== undefined) effectiveLimit = configured;
 	}
-	const childDdos: Ddo[] = (config[0]?.show?.ddo_map ?? []).map(
+	// EVERY config item's children, not just the first one's (PHP full_ddo_map,
+	// class.common.php:2312) — the get_data twin of the section-read rule in
+	// relations/models/portal.ts. Without it, paging a two-source component
+	// (rsc368: dedalo + zenon) drops the second source's columns.
+	const { flattenConfigDdoMaps } = await import('../relations/config_ddo_map.ts');
+	const childDdos: Ddo[] = flattenConfigDdoMaps(config, { ownerTipo: tipo }).map(
 		(ddo) =>
 			({
 				tipo: ddo.tipo,
@@ -1860,8 +1869,12 @@ export async function buildGetDataContext(
 					ownerIsSection: false,
 				},
 			);
-			for (const ddo of parentConfig[0]?.show?.ddo_map ?? []) {
-				views.set(ddo.tipo, (ddo as { view?: string }).view ?? null);
+			// EVERY config item's show map (PHP full_ddo_map): a second source's
+			// column may carry the `view` its child renders with.
+			const { flattenConfigDdoMaps } = await import('../relations/config_ddo_map.ts');
+			for (const ddo of flattenConfigDdoMaps(parentConfig, { ownerTipo: parentTipo })) {
+				if (typeof ddo.tipo !== 'string') continue;
+				views.set(ddo.tipo, (ddo.view as string | undefined) ?? null);
 			}
 			viewCache.set(parentTipo, views);
 		}
@@ -1974,9 +1987,18 @@ export async function buildGetDataContext(
 				typeof (item as { pagination?: { limit?: unknown } }).pagination?.limit === 'number',
 		);
 		if (mainItem !== undefined) {
-			const dedaloItem = (
-				mainEntry.request_config as { api_engine?: string; sqo?: Record<string, unknown> }[]
-			).find((item) => item.api_engine === 'dedalo');
+			// LOCAL narrowing (relations/request_config/engine_select.ts): the
+			// dedalo item when there is one, else the first. NO capability gate —
+			// the number stamped here is the limit THIS engine already paged the
+			// emitted data with, so the remote service's own paging ability cannot
+			// change it; negotiating `capabilities.pagination` would throw an
+			// external-only component's whole get_data out of the read path.
+			const { selectLocalConfigItem } = await import(
+				'../relations/request_config/engine_select.ts'
+			);
+			const dedaloItem = selectLocalConfigItem(
+				mainEntry.request_config as { api_engine?: string; sqo?: Record<string, unknown> }[],
+			);
 			if (dedaloItem?.sqo !== undefined) {
 				dedaloItem.sqo.limit = (
 					mainItem as unknown as { pagination: { limit: number } }
