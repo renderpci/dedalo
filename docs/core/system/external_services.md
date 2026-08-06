@@ -263,6 +263,14 @@ What you configure: the target section's `api_config` needs an
 either, the engine refuses and says which of the two is missing — it never
 answers "no matches", because you would believe it.
 
+Which section gets searched is worked out from the widget's own configuration:
+the engine looks at the display fields the widget shows, and the section THOSE
+belong to — `zenon1` for the Zenon binding — is the one it searches. The
+browser never names it. If one widget somehow shows the fields of two different
+external sections, the search refuses and names both rather than guessing: two
+sections mean two services, and searching the wrong catalogue would look like a
+real answer.
+
 What the engine does with your words:
 
 - an **empty** search box returns nothing, immediately, without contacting the
@@ -275,6 +283,15 @@ What the engine does with your words:
 - the **values** you see obey the same `fields_map`, formats and length limits
   as a record you have already catalogued, so a search result and a saved
   record read identically.
+
+What you see when a search cannot run: the result list says which situation you
+are in, instead of looking empty. "External source unavailable" means the
+catalogue did not answer and trying again may work; "External source
+misconfigured" means this installation has not allowed the service's address
+(or the binding is wrong) and no amount of retrying will help — ask whoever
+administers the installation; "External source disabled" means it was switched
+off on purpose. Typing nothing simply says so, in neutral text: nothing was
+searched, so nothing was found.
 
 The `search` face of [component_external](../components/component_external.md)
 still refuses: that is Dédalo's *own* search index, which cannot hold values it

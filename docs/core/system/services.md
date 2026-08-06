@@ -214,8 +214,9 @@ two renderers. It also restores a queue across a page reload from
 Search-as-you-type for relational components. It does **not** use
 `common.prototype.init`; it builds a small `context`, resolves the *main*
 `request_config` object, and drives a pluggable search **engine**
-(`dedalo_engine` over the internal read API, or `zenon_engine` for the external
-Zenon catalogue), re-combining user input + fixed filters into an SQO via
+(`dedalo_engine` over the internal read API, or `external_engine`, which asks
+the Dédalo **server** to search the bound external service — the browser never
+contacts a third party, and never needs to know which service it is), re-combining user input + fixed filters into an SQO via
 `rebuild_search_query_object()`. **Consumed by** `component_portal` (and through
 it the other relational components — `component_relation_parent`,
 `component_relation_children`, `component_relation_related`); the consumer
@@ -287,7 +288,7 @@ service. *(All are instance methods on the JS prototype unless noted.)*
 | `render(options={})` | Delegate to `view_default_autocomplete.render`. |
 | `autocomplete_search()` | Dispatch to the configured `<engine>_engine`. |
 | `dedalo_engine()` | Internal read-API search (list mode, `skip_projects_filter`). |
-| `zenon_engine(options)` | External Zenon catalogue search + response formatting. |
+| `external_engine(options)` | External-service search THROUGH the engine (`dd_external_api::search`). `zenon_engine` is a stable alias of it. |
 | `rebuild_search_query_object(options)` | Merge user input + fixed/list filters into the SQO. |
 | `service_autocomplete_keys(e)` | Keyboard navigation (Up/Down/Enter) over the datalist. |
 | `split_q(q)` | Split a multi-field query on `|`. |
