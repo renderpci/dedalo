@@ -70,8 +70,11 @@ bottom; the descriptor-facet steps are enforced by
    correct default for the media models. Every relation-column model MUST
    declare it (`'relation'`); `descriptor_completeness_tripwire` enforces that,
    because a relation without a parser silently refuses every section-id list.
-7. Flat display string in grids? Declare `flatValue` (`'string'` |
-   `'datalist'`).
+7. Flat display string in grids? Declare `flatValue` — one of the
+   `FlatValueFamily` names (`'string'`, `'datalist'`, `'section_id'`,
+   `'date'`, `'iri'`, `'media'`, `'external'`). Omitting it is legal and
+   means "this model has no flat form"; the consumers then LEDGER the cell
+   unresolved rather than guessing a string.
 8. Emit-time particularity? Declare `emitHook` (an `EmitHookId`) and add its
    implementation to `components/emit_hooks.ts` EMIT_HOOKS — in the model's
    own folder (`component_<model>/emit.ts`) or its engine home (the media
@@ -79,6 +82,21 @@ bottom; the descriptor-facet steps are enforced by
    whole emission (`emitItem`) or adjusts the generic literal path
    (`transformValue` / `decorateItem`). Models that ALWAYS pair with fixed
    dataframe frames declare `fixedDataframeTipos` (component_iri's dd560).
+
+   **`emitHook: 'external'` is not just an emission detail — it DEFINES the
+   derived family.** A model declaring it has no stored value at all: the item
+   is derived at read time from a third-party service through the
+   `src/external/api/` facade (`component_external/value.ts`;
+   `engineering/EXTERNAL_SPEC.md`). Declaring it therefore carries four
+   consequences a new derived model inherits with no further edit, because
+   every one of them keys on the FACET and not on a model name:
+   `saveComponentData` refuses the write (`ExternalWriteRefused`),
+   `delete_record.ts EXCLUDED_EMPTY_MODELS` skips the model instead of
+   emptying it, an import cell is refused per cell (declare NO
+   `importConform`), and the model must NOT declare `resolveData` — there is
+   no matrix row to resolve. Both omissions are named exemptions in
+   `descriptor_completeness_tripwire` (NO_IMPORT_CONFORM / NO_RESOLVE_DATA);
+   the write half is gated by `external_write_refusal_tripwire`.
 9. (Optional) drop a `samples/` reference set alongside it.
 
 **Engine side (STILL SCATTERED — check each; this is the honest part):**

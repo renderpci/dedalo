@@ -25,6 +25,7 @@ import type { Ddo } from '../concepts/ddo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { mediaEmitHook } from '../media/component_emit.ts';
 import type { DataItem, EmissionContext } from '../resolve/component_data.ts';
+import { externalEmitHook } from './component_external/emit.ts';
 import { filterRecordsEmitHook } from './component_filter_records/emit.ts';
 import { infoEmitHook } from './component_info/emit.ts';
 import { sectionIdEmitHook } from './component_section_id/emit.ts';
@@ -104,6 +105,7 @@ const EMIT_HOOKS: Readonly<Record<EmitHookId, ComponentEmitHook>> = {
 	text_area: textAreaEmitHook,
 	filter_records: filterRecordsEmitHook,
 	security_access: securityAccessEmitHook,
+	external: externalEmitHook,
 };
 
 /** The emit hook a model's descriptor declares, or undefined (generic path). */

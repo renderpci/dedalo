@@ -57,7 +57,8 @@ export type EmitHookId =
 	| 'info'
 	| 'text_area'
 	| 'filter_records'
-	| 'security_access';
+	| 'security_access'
+	| 'external';
 
 /**
  * The import-parser IDs a descriptor may name in `importConform`. Adding one =
@@ -111,10 +112,22 @@ export type SearchBuilderFamily = 'string' | 'number' | 'date' | 'iri' | 'sectio
  * - 'iri': the iri value + its dd560 label-dataframe field joined ', ';
  * - 'media': the default-quality file's absolute media URL
  *   (mediaTypeOf(model).defaultQuality — install-tunable via DEDALO_* keys).
+ * - 'external': DERIVED from a third-party service (component_external) — the
+ *   cell is the component's remote entries joined like a literal. It is its own
+ *   family, not 'string', because 'string' means "lang-slice the stored jsonb
+ *   value", and this model stores none: declaring 'string' would resolve every
+ *   cell to a silent null while claiming a value exists.
  * Models with no family declared are LEDGERED unresolved by the consumers
  * (value null + a note, never a guessed string).
  */
-export type FlatValueFamily = 'string' | 'datalist' | 'section_id' | 'date' | 'iri' | 'media';
+export type FlatValueFamily =
+	| 'string'
+	| 'datalist'
+	| 'section_id'
+	| 'date'
+	| 'iri'
+	| 'media'
+	| 'external';
 
 /**
  * One component model's declarative descriptor. Only the fields the engines
