@@ -280,3 +280,113 @@ describe('external client render — ui_base_url has ONE consumer', () => {
 		expect(code).toMatch(/const\s+url\s*=\s*ui_base_url\s*\+\s*section_id/);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Rule 4 — the SEARCH path leaves this browser only towards this engine
+// ---------------------------------------------------------------------------
+
+/**
+ * THE REGRESSION THIS EXISTS FOR (2026-08-06, the client half of
+ * `WC-2026-08-06-external-search-request`).
+ *
+ * `service_autocomplete.js`'s `zenon_engine` POSTed straight at
+ * `https://zenon.dainst.org/api/v1/search` from the curator's browser. That
+ * request could not be gated by anything the server owns — not the kill
+ * switches, not the operator's host allowlist, not the SSRF guard, the breaker,
+ * the concurrency ceiling or the byte cap — because the server never made it;
+ * and it could never carry a credential, because a credential that reaches a
+ * browser is published. It also carried ONE service's knowledge in the client:
+ * a hard-coded fallback URL, `lng:"de"`, the `field[]` list, a `case 'authors'`
+ * formatter, and the `ñññññññ---!!!!!` empty-query sentinel.
+ *
+ * The engine now owns all of it (`dd_external_api::search`). This gate keeps
+ * the browser from growing a direct call back — including the tempting "just
+ * add the origin to connect-src" version, which reverses XSS-02/RC-01 and would
+ * point a CSP directive at an operator-editable ontology value.
+ */
+const AUTOCOMPLETE_DIR = join(REPO_ROOT, 'client/dedalo/core/services/service_autocomplete/js');
+
+const autocompleteFiles: readonly string[] = readdirSync(AUTOCOMPLETE_DIR)
+	.filter((name) => name.endsWith('.js'))
+	.sort();
+
+describe('external client search — no third party is contacted from the browser', () => {
+	test('the autocomplete has modules to police (non-vacuity)', () => {
+		expect(autocompleteFiles.length).toBeGreaterThan(0);
+		expect(autocompleteFiles).toContain('service_autocomplete.js');
+		expect(autocompleteFiles).toContain('view_default_autocomplete.js');
+	});
+
+	for (const file of autocompleteFiles) {
+		test(`${file} names no absolute off-origin URL`, () => {
+			const code = readStripped(join(AUTOCOMPLETE_DIR, file));
+			// Comment-stripped, so a `@see https://…` reference is not a finding;
+			// a URL surviving here is one the code could actually request.
+			const found = code.match(/https?:\/\/[^\s'"`)]+/g) ?? [];
+			expect(found, `${file} holds an absolute URL: ${found.join(', ')}`).toEqual([]);
+		});
+
+		test(`${file} opens no request of its own — data_manager is the ONE door`, () => {
+			const code = readStripped(join(AUTOCOMPLETE_DIR, file));
+			// data_manager carries the session cookie, the CSRF token and its
+			// rotation, the 401 re-login recovery and the error reporting. A
+			// hand-rolled request bypasses all four, whatever origin it targets.
+			for (const sink of ['XMLHttpRequest', 'new WebSocket', 'navigator.sendBeacon']) {
+				expect(code.includes(sink), `${file} reaches ${sink}`).toBe(false);
+			}
+			// `fetch(` only through the data layer: no direct call site here.
+			expect(/(^|[^.\w])fetch\s*\(/.test(code), `${file} calls fetch directly`).toBe(false);
+		});
+	}
+
+	test('the retired Zenon knowledge is gone from the client, literal by literal', () => {
+		const all = autocompleteFiles
+			.map((file) => readFileSync(join(AUTOCOMPLETE_DIR, file), 'utf-8'))
+			.join('\n');
+		// Comments included deliberately: these literals are what a copy-paste
+		// revival would bring back, and a commented-out one is a loaded gun.
+		for (const literal of ['zenon.dainst.org', 'ñññññññ', 'lookfor', 'field[]', 'prettyPrint']) {
+			expect(all.includes(literal), `the client still holds '${literal}'`).toBe(false);
+		}
+		// The service's own request grammar, and its one hard-coded language.
+		expect(/lng\s*[:=]/.test(stripComments(all)), 'the client still sets lng').toBe(false);
+	});
+
+	test('the engine asks the ENGINE, and says only who is asking and what was typed', () => {
+		const code = readStripped(join(AUTOCOMPLETE_DIR, 'service_autocomplete.js'));
+		expect(code).toContain("dd_api	: 'dd_external_api'");
+		expect(code).toContain("action	: 'search'");
+		// Nothing about WHERE to go may be client-supplied: the url, the host, the
+		// service and the field list are all resolved server-side from the ontology.
+		for (const forbidden of ['api_url_search', 'api_url', 'fields_map', 'service	:']) {
+			expect(
+				code.includes(forbidden),
+				`the search request carries '${forbidden}' — that is the browser-direct call again, wearing the engine's socket`,
+			).toBe(false);
+		}
+	});
+
+	test('a failed search is NAMED with a label key, never client prose', () => {
+		const view = readStripped(join(AUTOCOMPLETE_DIR, 'view_default_autocomplete.js'));
+		// The one resolver, shared with component_external, so a state never gets
+		// two different words.
+		expect(view).toContain('source_status_label');
+		expect(view).toContain('render_search_notice');
+		// The literal the curator used to get for EVERY failure — and only in the
+		// console, because the caller swallowed the rejection.
+		expect(
+			readFileSync(join(AUTOCOMPLETE_DIR, 'service_autocomplete.js'), 'utf-8').includes(
+				'There was a network error',
+			),
+		).toBe(false);
+		// Every key this file can name must be defined in the master catalog
+		// (labels_tripwire owns the general rule; these two are dynamic-access
+		// keys it cannot scan).
+		const master = JSON.parse(
+			readFileSync(join(REPO_ROOT, 'src/core/labels/master.json'), 'utf-8'),
+		) as Record<string, string>;
+		for (const key of ['external_search_empty_query', 'external_search_failed']) {
+			expect(master[key], `${key} is not defined in master.json`).toBeString();
+		}
+	});
+});

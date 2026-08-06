@@ -729,12 +729,105 @@ describe('the target section and the field list are resolved from the ontology',
 		const source = await Bun.file(
 			`${import.meta.dir}/../../src/core/api/handlers/dd_external_api.ts`,
 		).text();
-		expect(source).toContain('getPropertiesByTipo(ddo.tipo)');
+		// The fields_map is hydrated from the DDO'S OWN NODE. Asserted on the call
+		// SHAPE rather than one spelling of the loop variable, so a rename cannot
+		// silently vacate the check: whatever it is called, the argument must be a
+		// `.tipo` of the ddo being hydrated — never a value off the request.
+		expect(/getPropertiesByTipo\(\s*\w+\.tipo\s*\)/.test(source)).toBe(true);
+		expect(source).toContain('parseFieldsMap(nodeProperties?.fields_map');
 		// No branch may read a field list, a url or a host off the incoming rqo.
 		for (const forbidden of ['rqo.options.fields', 'api_url', 'apiUrlSearch', 'options.host']) {
 			expect(source.includes(forbidden), `the handler reads '${forbidden}' from the request`).toBe(
 				false,
 			);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The failure envelope — what a search box can act on
+// ---------------------------------------------------------------------------
+
+/**
+ * A search that fails must say WHICH failure, in words the curator's language
+ * has. Before 2026-08-06 the browser rejected every one of them with the same
+ * built-in string ("There was a network error"), which the caller logged and
+ * swallowed: an empty list meant "no matches", "the catalogue is down" and
+ * "this install has not allowlisted the host" indistinguishably.
+ *
+ * Two properties, both load-bearing:
+ *
+ *  1. HTTP 200, not 4xx. `data_manager.request` reads a non-ok response as a
+ *     thrown fetch error (only 401 survives, WC-051), so a 4xx body — every
+ *     word of the explanation — is discarded before any caller sees it.
+ *  2. The payload is the RECORD PATH'S OWN `source_status`, built by the same
+ *     `stateForKind` + `externalSourceStatus` pair. One taxonomy, one
+ *     state→label_key map; the client renders it with the same helper.
+ */
+describe('a failed search answers with a state the client can name', () => {
+	const KINDS = [
+		'disabled',
+		'not_registered',
+		'bad_config',
+		'circuit_open',
+		'blocked_host',
+		'timeout',
+		'transport',
+		'http_status',
+		'too_large',
+		'protocol',
+		'not_found',
+	] as const;
+
+	test('every error kind produces a 200 envelope with a defined label key', async () => {
+		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
+		const master = (await Bun.file(
+			`${import.meta.dir}/../../src/core/labels/master.json`,
+		).json()) as Record<string, string>;
+		for (const kind of KINDS) {
+			const result = await searchFailure('zenon', kind);
+			// A 4xx here would be an explanation nobody ever reads.
+			expect(result.status, `${kind} answered ${result.status}`).toBe(200);
+			expect(result.body.result).toBe(false);
+			expect(result.body.errors).toEqual([`external_${kind}`]);
+			const status = result.body.source_status as { label_key: string; state: string };
+			expect(status.state, `${kind} produced no state`).toBeString();
+			// The key must EXIST in the catalog: a marker whose text resolves to
+			// undefined is the empty box this whole mechanism exists to remove.
+			expect(
+				master[status.label_key],
+				`${kind} → '${status.label_key}' is not in master.json`,
+			).toBeString();
+		}
+	});
+
+	test('the three states a curator must tell apart do not collapse into one', async () => {
+		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
+		const stateOf = async (kind: (typeof KINDS)[number]): Promise<string> =>
+			((await searchFailure('zenon', kind)).body.source_status as { state: string }).state;
+		// "the catalogue is down" (retry may work) …
+		expect(await stateOf('transport')).toBe('unavailable');
+		// … "this install has not allowlisted the host" (retrying never helps) …
+		expect(await stateOf('blocked_host')).toBe('misconfigured');
+		// … "an operator switched it off".
+		expect(await stateOf('disabled')).toBe('disabled');
+	});
+
+	test('the finer grain the state set folds away survives as an error token', async () => {
+		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
+		// blocked_host and not_registered are BOTH 'misconfigured' states — the
+		// closed set is what the user reads, the token is what an operator quotes.
+		const blocked = await searchFailure('zenon', 'blocked_host');
+		const unknown = await searchFailure('zenon', 'not_registered');
+		expect((blocked.body.source_status as { state: string }).state).toBe(
+			(unknown.body.source_status as { state: string }).state,
+		);
+		expect(blocked.body.errors).not.toEqual(unknown.body.errors);
+	});
+
+	test('an unsupported search names WHICH of the three reasons it was', async () => {
+		const { searchFailure } = await import('../../src/core/api/handlers/dd_external_api.ts');
+		const result = await searchFailure('zenon', 'bad_config', 'engine');
+		expect(result.body.errors).toEqual(['external_bad_config', 'search_engine']);
 	});
 });
