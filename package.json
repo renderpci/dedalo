@@ -47,7 +47,7 @@
 		"flatpickr": "4.6.13",
 		"leaflet": "1.9.4",
 		"mmdb-lib": "3.0.3",
-		"nodemailer": "^9.0.3",
+		"nodemailer": "^9.0.4",
 		"onnxruntime-web": "1.27.0",
 		"split.js": "1.6.5",
 		"three": "0.185.1",
@@ -63,12 +63,15 @@
 		"chai": "6.2.2",
 		"less": "4.8.1",
 		"mocha": "11.8.0",
-		"puppeteer": "^25.4.0"
+		"puppeteer": "^25.5.0"
 	},
 	"peerDependencies": {
 		"typescript": "^7.0.2"
 	},
 	"overrides": {
-		"brace-expansion": "^2.1.4"
+		"brace-expansion": "^2.1.4",
+		"fast-uri": "^3.1.5",
+		"hono": "^4.13.0",
+		"ip-address": "^10.4.0"
 	}
 }

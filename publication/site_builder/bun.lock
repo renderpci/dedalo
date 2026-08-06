@@ -5,11 +5,11 @@
     "": {
       "name": "dedalo-site-builder",
       "dependencies": {
-        "zod": "latest",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "latest",
+        "@types/bun": "^1.3.14",
+        "typescript": "^7.0.2",
       },
     },
   },

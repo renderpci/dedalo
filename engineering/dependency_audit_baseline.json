@@ -1,5 +1,5 @@
 {
-	"generated": "2026-08-03",
+	"generated": "2026-08-06",
 	"note": "Accepted (known, triaged) dependency advisories. Regenerate with `bun run scripts/ci/audit.ts --update` and explain the delta in the commit message. A NEW advisory fails CI; a vanished one only prints a nudge (see scripts/ci/audit.ts).",
 	"accepted": {
 		".": [
@@ -20,12 +20,6 @@
 				"severity": "low",
 				"package": "diff",
 				"title": "jsdiff has a Denial of Service vulnerability in parsePatch and applyPatch"
-			},
-			{
-				"id": 1124064,
-				"severity": "high",
-				"package": "fast-uri",
-				"title": "fast-uri vulnerable to host confusion via literal backslash authority delimiter"
 			},
 			{
 				"id": 1113686,
@@ -52,12 +46,6 @@
 				"severity": "moderate",
 				"package": "@hono/node-server",
 				"title": "Node.js Adapter for Hono: Path traversal in `serve-static` on Windows via encoded backslash (`%5C`)"
-			},
-			{
-				"id": 1124064,
-				"severity": "high",
-				"package": "fast-uri",
-				"title": "fast-uri vulnerable to host confusion via literal backslash authority delimiter"
 			}
 		],
 		"publication/site_builder": []
