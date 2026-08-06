@@ -26,6 +26,7 @@
  */
 
 import { config } from '../../config/config.ts';
+import { publishApiConfig } from '../../external/api/index.ts';
 import { getComponentModel } from '../components/registry.ts';
 import { isAreaModel } from '../concepts/area.ts';
 import {
@@ -484,6 +485,44 @@ async function resolveSourceProperties(
  * semantics exactly — measured: no existing ontology css uses the reserved
  * keys, so all current data emits byte-identically to PHP.
  */
+/**
+ * THE SECOND PUBLICATION PATH of `api_config`.
+ *
+ * The emitted `properties` of a context entry are a near-verbatim ontology
+ * echo, and for the external SECTIONS (zenon1, test3 — and rsc205, whose copy
+ * is a stale 2024 duplicate) that echo carries `properties.api_config`. That
+ * object names an endpoint the browser is invited to call and a `ui_base_url`
+ * the portal concatenates into an `open_window` URL
+ * (client/dedalo/core/component_portal/js/component_portal.js:2054), so it is
+ * shaped by exactly the same publication rules as the request_config copy —
+ * one shaper, two paths, no way to fix one and forget the other.
+ *
+ * A refused api_config is DROPPED from the echo (not nulled): the echo's
+ * contract is "what the ontology says", and a key that could not be published
+ * is better absent than present-and-false. Nothing in the client reads
+ * `context.properties.api_config` (measured over client/**), so no render
+ * depends on it either way.
+ *
+ * Returns the SAME object when there is nothing to shape (the overwhelming
+ * case — one section in a hundred is external), a rebuilt one when the key has
+ * to go, so the caller never has to wonder which it got.
+ */
+export function sanitizeEmittedProperties(
+	properties: Record<string, unknown>,
+	tipo: string,
+): Record<string, unknown> {
+	if (!('api_config' in properties)) return properties;
+	const published = publishApiConfig(properties.api_config, { sectionTipo: tipo });
+	if (published === null) {
+		// Rebuilt without the key — an `undefined` value would still answer true
+		// to `'api_config' in properties`, which is the shape the gates read.
+		const { api_config: _refused, ...withoutBinding } = properties;
+		return withoutBinding;
+	}
+	properties.api_config = published;
+	return properties;
+}
+
 export function resolveEmittedPropertiesAndCss(input: {
 	model: string;
 	mode: string;
@@ -514,9 +553,10 @@ export function resolveEmittedPropertiesAndCss(input: {
 	// css lift (PHP :1829) + the unconditional properties strip (:1834). The
 	// :1830 list-mode null-out folds into resolveCssModeKeys — applied LAST so
 	// the strip cannot swallow a css.list opt-in or the :1840 override.
-	const { css: liftedCss, ...properties } = (
+	const { css: liftedCss, ...rawProperties } = (
 		source !== null && source !== undefined ? structuredClone(source) : {}
 	) as Record<string, unknown>;
+	const properties = sanitizeEmittedProperties(rawProperties, tipo);
 	let css: unknown = liftedCss ?? null;
 
 	// PHP :1840-1846 — the section-node css override for components. An override
@@ -954,8 +994,18 @@ export async function buildStructureContext(options: {
 		// children ⇒ untouched config (the element's ontology map stands).
 		if (options.rqoChildrenDdos !== undefined && options.rqoChildrenDdos.length > 0) {
 			const { extractSqoSectionTipos } = await import('../relations/request_config/explicit.ts');
-			const item = parsedConfig.find((candidate) => candidate.api_engine === 'dedalo');
-			if (item !== undefined && item.show !== null) {
+			// Capability-negotiated (relations/request_config/engine_select.ts):
+			// the caller's children describe COLUMNS to render at the target, so
+			// an external-only element must have an adapter that can back them.
+			const { selectConfigItemForConcern } = await import(
+				'../relations/request_config/engine_select.ts'
+			);
+			const item = await selectConfigItemForConcern(
+				parsedConfig,
+				'listColumns',
+				'resolve/structure_context.rqoChildrenNarrowing',
+			);
+			if (item !== null && item.show !== null) {
 				item.show.ddo_map = await processRqoChildren(
 					options.rqoChildrenDdos,
 					requestConfigContext,

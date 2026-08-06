@@ -313,6 +313,25 @@ export async function resolveCellValue(
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) return null;
 
+	// DERIVED families resolve BEFORE the record load, because their sections
+	// have no record to load: an external section (zenon1) owns no matrix table
+	// and no rows — its "record" is the remote one. Falling through to the table
+	// lookup would return null for every cell of a live section_list (zenon8
+	// lists zenon3..zenon6), which is a silent blank, not an absence.
+	if (getFlatValueFamily(model) === 'external') {
+		const { deriveExternalValue } = await import('../components/component_external/value.ts');
+		// section_id VERBATIM (String, not Number): the remote id is zero-padded.
+		const derived = await deriveExternalValue(componentTipo, sectionTipo, String(sectionId));
+		if (derived.entries.length === 0 && derived.source_status !== undefined) {
+			// An EMPTY degraded cell is reported unresolved: an export that silently
+			// ships blank bibliography columns is worse than one that says the
+			// source was unreachable. A degraded cell that still HAS values (stale,
+			// truncated) is a value, not a gap.
+			if (!unresolved.includes(model)) unresolved.push(model);
+		}
+		return derived.entries.length > 0 ? derived.entries.join(itemSeparator) : null;
+	}
+
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return null;
 	// The loader seam consults AFTER the null-table early-return (parity
@@ -472,7 +491,18 @@ export async function componentFieldsSeparator(componentTipo: string): Promise<s
 		[componentTipo],
 	)) as { rc: { api_engine?: string; show?: { fields_separator?: string } }[] | null }[];
 	const rcs = rows[0]?.rc ?? [];
-	const main = rcs.find((entry) => entry?.api_engine === 'dedalo') ?? rcs[0];
+	// The separator joins a component's values INSIDE a list/export cell, so the
+	// concern is listColumns: an external-only component whose adapter cannot
+	// back a column has no business rendering one, and the old `?? rcs[0]` read
+	// the separator off that very item as if it could.
+	const { selectConfigItemForConcern } = await import(
+		'../relations/request_config/engine_select.ts'
+	);
+	const main = await selectConfigItemForConcern(
+		rcs,
+		'listColumns',
+		'resolve/relation_list.componentFieldsSeparator',
+	);
 	const separator =
 		typeof main?.show?.fields_separator === 'string' ? main.show.fields_separator : ', ';
 	cellFieldsSeparatorCache.set(componentTipo, separator);
