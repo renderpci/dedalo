@@ -52,6 +52,18 @@
 	vertical-align: baseline;
 	cursor: help; // the title carries service / fetch time / drop counts
 
+	// COMPACT — the dense inline views (text / line / mini) concatenate several
+	// component_external fields of one record on a single line, where the full
+	// sentence lands mid-value and repeats per field. There the marker is a
+	// glyph and the sentence moves to the title. Still fully visible, and the
+	// state colours below still apply: compact ≠ hidden.
+	&.compact {
+		padding: 0 0.25em;
+		margin-left: 0.3em;
+		font-size: 0.85em;
+		line-height: 1;
+	}
+
 	// STALE — data IS shown, and it may be out of date. Dashed border: the
 	// value is provisional. Warm, low-alarm colour.
 	&.state_stale {

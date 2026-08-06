@@ -196,7 +196,7 @@ export const source_status_label = function(status) {
 * @param {Object} data - the component's data object (`self.data`).
 * @returns {HTMLElement|null} the marker node, or null when there is nothing to say.
 */
-export const build_source_status_node = function(data) {
+export const build_source_status_node = function(data, options) {
 
 	// status
 		const status = data ? data.source_status : null
@@ -204,12 +204,25 @@ export const build_source_status_node = function(data) {
 			return null
 		}
 
+	// compact. DENSE INLINE VIEWS (text/line/mini) concatenate SEVERAL
+	// component_external fields of the same record on one line, so each one
+	// would repeat the full sentence mid-value ("ANE<marker> | 1967"). There the
+	// marker is a glyph and the sentence moves to the title, which stays
+	// readable at four fields per row. It is never HIDDEN — a degradation the
+	// curator cannot see is the silent blank this whole subsystem exists to
+	// prevent — only made compact.
+		const compact = !!(options && options.compact)
+
 	// state. Closed set server-side; an unknown one still renders (with its own
 	// class), because refusing to render it would be the silent blank again.
 		const state = status.state || 'unknown'
 
-	// title. Detail for the curator, assembled as plain text.
+	// title. Detail for the curator, assembled as plain text. In compact form
+	// the label itself leads, so the glyph is never the only explanation.
 		const title_parts = []
+		if (compact) {
+			title_parts.push(source_status_label(status))
+		}
 		if (status.service) {
 			title_parts.push(status.service)
 		}
@@ -226,8 +239,11 @@ export const build_source_status_node = function(data) {
 	// node
 		return ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: `external_source_status state_${state}` + (status.retryable ? ' retryable' : ''),
-			text_content	: source_status_label(status),
+			class_name		: `external_source_status state_${state}`
+								+ (status.retryable ? ' retryable' : '')
+								+ (compact ? ' compact' : ''),
+			// textContent (never innerHTML): this is server-supplied text.
+			text_content	: compact ? '◍' : source_status_label(status),
 			title			: title_parts.join(' · ')
 		})
 }//end build_source_status_node
@@ -242,9 +258,9 @@ export const build_source_status_node = function(data) {
 * @param {Object} data - the component's data object (`self.data`).
 * @returns {HTMLElement|null} the appended marker, or null when there was none.
 */
-export const append_source_status = function(parent, data) {
+export const append_source_status = function(parent, data, options) {
 
-	const node = build_source_status_node(data)
+	const node = build_source_status_node(data, options)
 	if (node) {
 		parent.appendChild(node)
 	}

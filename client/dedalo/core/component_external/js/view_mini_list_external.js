@@ -77,7 +77,7 @@ view_mini_list_external.render = async function(self) {
 
 	// value + status
 		append_entries(wrapper, data)
-		append_source_status(wrapper, data)
+		append_source_status(wrapper, data, {compact:true})
 
 
 	return wrapper

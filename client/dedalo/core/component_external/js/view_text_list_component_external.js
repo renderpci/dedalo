@@ -104,7 +104,7 @@ view_text_list_component_external.render = async function(self, options) {
 
 	// value + status
 		append_entries(wrapper, data)
-		append_source_status(wrapper, data)
+		append_source_status(wrapper, data, {compact:true})
 
 
 	return wrapper

@@ -57,6 +57,17 @@ interface CachedRow {
 	/** 'ok' or the negative cache entry 'not_found'. */
 	readonly status: 'ok' | 'not_found';
 	readonly storedAt: number;
+	/**
+	 * When the LAST background refresh of this row failed, in ms.
+	 *
+	 * This — not cache age — is what makes a served row 'stale'. Passing the
+	 * soft TTL is a routine refresh trigger, NOT a degradation: the service is
+	 * healthy, the row is almost certainly still correct, and telling the
+	 * curator "showing the last known data" every 5 minutes is both false and
+	 * noise. The marker means what its label says only when a refresh has
+	 * actually FAILED and this row is the fallback.
+	 */
+	readonly refreshFailedAt?: number;
 }
 
 /** Ontology-derived row cache: an ontology write drops it, by construction. */
@@ -281,10 +292,29 @@ export async function fetchExternalRows(
 				return;
 			}
 			if (cached !== undefined) {
-				// SOFT staleness: serve the old row NOW and refresh behind the request.
-				// A refresh failure must not become an unhandled rejection.
-				refresh().catch((error) => reportRowError(error));
-				views.set(viewKey, toView(resolved, entry, cached, 'stale'));
+				// SOFT-TTL REFRESH: serve the row NOW and refresh behind the
+				// request. The served row is reported with its OWN status — a
+				// routine refresh is not a degradation, so a healthy service
+				// never shows a marker. Only a FAILED refresh downgrades the row
+				// to 'stale', on this and every later serve, until one succeeds.
+				refresh().catch((error) => {
+					reportRowError(error);
+					const current = rowCache.get(cacheKey);
+					// Re-read: the entry may have been dropped by an ontology
+					// write, or already replaced by a later successful refresh.
+					if (current !== undefined && current.storedAt === cached.storedAt) {
+						rowCache.set(cacheKey, { ...current, refreshFailedAt: Date.now() });
+					}
+				});
+				views.set(
+					viewKey,
+					toView(
+						resolved,
+						entry,
+						cached,
+						cached.refreshFailedAt === undefined ? cached.status : 'stale',
+					),
+				);
 				return;
 			}
 			try {

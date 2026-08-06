@@ -148,19 +148,60 @@ describe('fetching, caching and refreshing rows', () => {
 		expect(calls.length).toBe(1); // served from the row cache
 	});
 
-	test('past the soft TTL the STALE row is served immediately and refreshed behind it', async () => {
+	test('past the soft TTL the row is served as OK and refreshed behind it', async () => {
 		const { impl, calls } = countingFetch();
 		const target = { sectionTipo: SECTION, remoteId: '000100002', remoteFields: ['id'] };
 		await fetchExternalRows([target], { deps: deps(impl), dataLang: 'lg-eng' });
 		expect(calls.length).toBe(1);
 
 		overrideExternalSettingsForTests({ enabled: true, allowedHosts: [HOST], softTtlMs: 0 });
-		const stale = await fetchExternalRows([target], { deps: deps(impl), dataLang: 'lg-eng' });
-		const view = stale.get(externalRowViewKey(SECTION, '000100002'));
-		expect(view?.status).toBe('stale');
-		expect(view?.row).not.toBeNull(); // the last good row, not an empty record
+		const served = await fetchExternalRows([target], { deps: deps(impl), dataLang: 'lg-eng' });
+		const view = served.get(externalRowViewKey(SECTION, '000100002'));
+		// PASSING THE SOFT TTL IS NOT A DEGRADATION. The service is healthy and
+		// the row is current; marking it 'stale' put "showing the last known
+		// data from the external source" under every field every 5 minutes,
+		// which is both false and unreadable. 'stale' means a refresh FAILED.
+		expect(view?.status).toBe('ok');
+		expect(view?.row).not.toBeNull();
 		await drainInFlightExternalFetches();
 		expect(calls.length).toBe(2); // the refresh DID happen, behind the request
+	});
+
+	test('only a FAILED refresh downgrades the served row to stale', async () => {
+		const { impl } = countingFetch();
+		const target = { sectionTipo: SECTION, remoteId: '000100022', remoteFields: ['id'] };
+		await fetchExternalRows([target], { deps: deps(impl), dataLang: 'lg-eng' });
+
+		// Soft-expire, and make the background refresh fail.
+		overrideExternalSettingsForTests({ enabled: true, allowedHosts: [HOST], softTtlMs: 0 });
+		const failing: typeof impl = async () => {
+			throw new Error('remote down');
+		};
+		// The serve that TRIGGERS the failing refresh still reports the row as
+		// ok — the failure has not happened yet when the view is built.
+		const during = await fetchExternalRows([target], {
+			deps: deps(failing),
+			dataLang: 'lg-eng',
+		});
+		expect(during.get(externalRowViewKey(SECTION, '000100022'))?.status).toBe('ok');
+		await drainInFlightExternalFetches();
+
+		// The NEXT serve carries the downgrade, with the last good row intact.
+		const after = await fetchExternalRows([target], { deps: deps(failing), dataLang: 'lg-eng' });
+		const view = after.get(externalRowViewKey(SECTION, '000100022'));
+		expect(view?.status).toBe('stale');
+		expect(view?.row).not.toBeNull();
+		await drainInFlightExternalFetches();
+
+		// And a refresh that SUCCEEDS clears the downgrade again.
+		const recovered = await fetchExternalRows([target], {
+			deps: deps(impl),
+			dataLang: 'lg-eng',
+		});
+		expect(recovered.get(externalRowViewKey(SECTION, '000100022'))?.status).toBe('stale');
+		await drainInFlightExternalFetches();
+		const healthy = await fetchExternalRows([target], { deps: deps(impl), dataLang: 'lg-eng' });
+		expect(healthy.get(externalRowViewKey(SECTION, '000100022'))?.status).toBe('ok');
 	});
 
 	test('N sibling components asking for the same record collapse to ONE call', async () => {
