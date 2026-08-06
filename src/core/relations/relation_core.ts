@@ -2,8 +2,10 @@
  * RELATION CORE — the shared engine of the relation family
  * (RELATIONS_SPEC.md §2/§5): stored-locator paging, per-locator target
  * expansion through the child ddos, nested recursion, dataframe slot
- * emission, and the outer-subdatum re-stamp bookkeeping. Every model
- * resolver (relations/models/*) builds its particularity on these. The
+ * emission, the batched EXTERNAL-target prepass (a locator may point at a
+ * section whose records live in a third-party service — see
+ * prefetchExternalTargets), and the outer-subdatum re-stamp bookkeeping. Every
+ * model resolver (relations/models/*) builds its particularity on these. The
  * emission protocol (items array + nested-stamp ledger) is the EXPLICIT
  * per-read EmissionContext (resolve/component_data.ts, S2-29) — no module
  * state.
@@ -29,6 +31,229 @@ import type { EmitDdoFn } from './registry.ts';
 /** List-cell locator page size (PHP portal list mode paginates the cell to 1). */
 export const PORTAL_LIST_LIMIT = 1;
 
+// ---------------------------------------------------------------------------
+// EXTERNAL TARGETS — the batched prepass
+// ---------------------------------------------------------------------------
+
+/**
+ * A portal's locators may point at an EXTERNAL section (rsc368's second config
+ * item targets zenon1, whose records live in the DAI catalogue). Such a section
+ * has no matrix row anywhere — zenon1 has zero rows in any table and no
+ * `matrix_zenon` — so the per-locator `loadRecordCached` below returns null and
+ * the locator used to vanish silently, which is the whole rsc368 bug.
+ *
+ * The expansion still needs SOMETHING in the `record` slot: `emitDdo` is the
+ * generic path and takes a MatrixRecord. This is that placeholder — identity
+ * only, columns deliberately EMPTY. A component_external's value is DERIVED
+ * (components/component_external/value.ts) and never reads it; any other model
+ * at an external target is refused loudly in the child loop rather than served
+ * this empty record, because "no stored columns" would render as a blank field
+ * indistinguishable from a genuinely empty one.
+ */
+function externalTargetRecord(sectionTipo: string, sectionId: number | string): MatrixRecord {
+	return {
+		id: 0,
+		// The locator's RAW id type survives (a zero-padded '001338683' stays a
+		// string) — the cast keeps the shared MatrixRecord shape honest without
+		// rewriting the value, exactly as the dedalo path does for targetRow.
+		section_id: sectionId as number,
+		section_tipo: sectionTipo,
+		columns: {},
+		rawText: {},
+	};
+}
+
+/** How a target section's compatible child ddos are made up, per section tipo. */
+interface TargetChildShape {
+	/** At least one compatible child derives its value from a remote service. */
+	readonly hasDerived: boolean;
+	/** At least one compatible child reads the STORED record. */
+	readonly hasStored: boolean;
+}
+
+/**
+ * The child-model shape of each of a page's target sections, answered ONCE per
+ * expansion over the DISTINCT section tipos rather than per locator.
+ *
+ * THE DISCRIMINATOR IS THE CHILD DDO SET, NOT `properties.api_config`. An
+ * earlier cut asked the facade "is this section external?", which answers "does
+ * the node carry an api_config" — and that is NOT the same question. `test3` is
+ * an ordinary playground section with 7 stored rows and ~30 children of every
+ * model that merely also carries an api_config; `rsc205` (bibliography, ~21.7k
+ * rows) carries a stale duplicate left by a 2024 edit. Classifying either as
+ * external refuses all of its ordinary children and blanks every citation.
+ *
+ * `getMatrixTableFromTipo(...) === null` is equally wrong as a discriminator:
+ * `zenon1` IS `model:'section'` with no `matrix_table` relation, so it resolves
+ * to the DEFAULT 'matrix' table, not to null.
+ *
+ * What actually matters at this call site is per-target and already in hand: a
+ * target is external when every compatible child derives its value remotely.
+ * A MIXED target (test3: `test52` stored + `test215` derived) takes the dedalo
+ * path and still renders its derived children — the emit hook resolves those
+ * through the facade on its own. So nothing is refused and nothing is blanked.
+ */
+async function targetChildShapes(
+	page: readonly Record<string, unknown>[],
+	childDdos: readonly Ddo[],
+): Promise<ReadonlyMap<string, TargetChildShape>> {
+	const shapes = new Map<string, TargetChildShape>();
+	const distinct = new Set<string>();
+	for (const locator of page) {
+		const sectionTipo = locator.section_tipo;
+		if (typeof sectionTipo === 'string' && sectionTipo !== '') distinct.add(sectionTipo);
+	}
+	for (const sectionTipo of distinct) {
+		let hasDerived = false;
+		let hasStored = false;
+		for (const childDdo of childDdos) {
+			if (!ddoTargetsSection(childDdo, sectionTipo)) continue;
+			const childModel = await getModelByTipo(childDdo.tipo);
+			if (childModel === 'component_external') {
+				hasDerived = true;
+			} else if (childModel !== 'component_dataframe') {
+				// A dataframe pairs with the CALLER's record, never the locator
+				// target, so it says nothing about where the target is stored.
+				hasStored = true;
+			}
+		}
+		shapes.set(sectionTipo, { hasDerived, hasStored });
+	}
+	return shapes;
+}
+
+/**
+ * The remote FIELD NAMES one external target section needs: the union of
+ * `fields_map[].remote` over THE DDOS ACTUALLY IN THIS MAP that are compatible
+ * with that section and are component_external.
+ *
+ * Deliberately NOT "every component_external descendant of the section", which
+ * is what v6 did: it asked the service for fields nobody had asked to see, and
+ * coupled the request (and therefore the row cache key) to unrelated ontology
+ * edits elsewhere in the section.
+ */
+async function collectRemoteFields(
+	childDdos: readonly Ddo[],
+	targetSectionTipo: string,
+): Promise<string[]> {
+	const { parseFieldsMap, remoteFieldsOf } = await import('../../external/api/index.ts');
+	const { getPropertiesByTipo } = await import('../ontology/resolver.ts');
+	const seen = new Set<string>();
+	const fields: string[] = [];
+	for (const childDdo of childDdos) {
+		if (!ddoTargetsSection(childDdo, targetSectionTipo)) continue;
+		if ((await getModelByTipo(childDdo.tipo)) !== 'component_external') continue;
+		const properties = (await getPropertiesByTipo(childDdo.tipo)) as {
+			fields_map?: unknown;
+		} | null;
+		let entries: ReturnType<typeof parseFieldsMap>;
+		try {
+			entries = parseFieldsMap(properties?.fields_map, { tipo: childDdo.tipo });
+		} catch {
+			// A malformed mapping is reported per component by the value derivation
+			// (source_status: 'misconfigured'); here it simply contributes no fields.
+			continue;
+		}
+		for (const field of remoteFieldsOf(entries)) {
+			if (seen.has(field)) continue;
+			seen.add(field);
+			fields.push(field);
+		}
+	}
+	return fields;
+}
+
+/**
+ * The per-locator child compatibility rule, in one place: 'self' and an
+ * undeclared section_tipo match every target; an array matches by membership
+ * (numisdata20's hierarchy25 spans 26 sections — never flatten it to [0]).
+ */
+function ddoTargetsSection(ddo: Ddo, targetSectionTipo: string): boolean {
+	const declared = ddo.section_tipo;
+	if (declared === undefined || declared === 'self') return true;
+	return Array.isArray(declared)
+		? declared.includes(targetSectionTipo)
+		: declared === targetSectionTipo;
+}
+
+/**
+ * Resolve EVERY external target of this page in ONE bounded fan-out and park
+ * the rows on the emission context for the component_external emit hook.
+ *
+ * The batching is the point. v6 fetched inside the per-locator loop, so a
+ * 10-locator page cost 10 × the 4 s timeout in series when the service was
+ * unreachable; here the whole page is one `fetchExternalRows` call, whose
+ * targets are deduped by `${sectionTipo}|${remoteId}`, field sets unioned, and
+ * parallelism capped at `DEDALO_EXTERNAL_MAX_CONCURRENCY` at the transport door.
+ *
+ * NEVER THROWS. `fetchExternalRows` degrades per record, and anything it does
+ * raise is a wiring error that must not blank the DEDALO rows sharing this page
+ * — the prepass is an optimisation, and each component_external falls back to
+ * fetching its own row when its view is absent.
+ */
+async function prefetchExternalTargets(
+	page: readonly Record<string, unknown>[],
+	childDdos: readonly Ddo[],
+	childShapes: ReadonlyMap<string, TargetChildShape>,
+	emission: EmissionContext,
+): Promise<void> {
+	// Prefetch keyed on hasDerived, NOT on "fully external": a MIXED target
+	// (test3's test215 alongside its stored children) has remote values to batch
+	// too. Without this it would fall back to one fetch per component.
+	let anyDerived = false;
+	for (const shape of childShapes.values()) {
+		if (shape.hasDerived) {
+			anyDerived = true;
+			break;
+		}
+	}
+	if (!anyDerived) return;
+	const api = await import('../../external/api/index.ts');
+	const { externalTransportDepsForRead, mergePrefetchedExternalRows } = await import(
+		'../components/component_external/value.ts'
+	);
+
+	const fieldsBySection = new Map<string, string[]>();
+	const targets: { sectionTipo: string; remoteId: string; remoteFields: string[] }[] = [];
+	const seenTargets = new Set<string>();
+	for (const locator of page) {
+		const sectionTipo = locator.section_tipo;
+		if (typeof sectionTipo !== 'string' || childShapes.get(sectionTipo)?.hasDerived !== true) {
+			continue;
+		}
+		// STORAGE FORM, verbatim: the remote id IS the section_id and it is a
+		// zero-padded string ('001338683'). Number() would drop the padding and
+		// ask the service for a different record.
+		const rawId = locator.section_id;
+		const remoteId = rawId === null || rawId === undefined ? '' : String(rawId);
+		if (remoteId === '') continue;
+		const key = api.externalRowViewKey(sectionTipo, remoteId);
+		if (seenTargets.has(key)) continue;
+		seenTargets.add(key);
+		let remoteFields = fieldsBySection.get(sectionTipo);
+		if (remoteFields === undefined) {
+			remoteFields = await collectRemoteFields(childDdos, sectionTipo);
+			fieldsBySection.set(sectionTipo, remoteFields);
+		}
+		if (remoteFields.length === 0) continue; // nothing to ask for
+		targets.push({ sectionTipo, remoteId, remoteFields });
+	}
+	if (targets.length === 0) return;
+
+	const deps = externalTransportDepsForRead(emission);
+	try {
+		const views = await api.fetchExternalRows(targets, deps === undefined ? {} : { deps });
+		mergePrefetchedExternalRows(emission, views);
+	} catch (error) {
+		// Loud (CONVENTIONS §1) and non-fatal: the dedalo rows of this page must
+		// render regardless, and each external component re-derives on its own.
+		console.error(
+			'[relations/relation_core] external prepass failed; falling back per component',
+			error,
+		);
+	}
+}
+
 /**
  * Whether the own-config child ddos ask for the target's breadcrumb: a child
  * with `value_with_parents: true` compatible with the target section (same
@@ -38,17 +263,11 @@ export const PORTAL_LIST_LIMIT = 1;
  * thesauri living in the generic `matrix` table (`tch555`'s `tchi1`).
  */
 export function portalCellEmitsDdinfo(childDdos: Ddo[], targetSectionTipo: string): boolean {
-	return childDdos.some((childDdo) => {
-		if ((childDdo as { value_with_parents?: unknown }).value_with_parents !== true) return false;
-		const declaredSection = childDdo.section_tipo;
-		return (
-			declaredSection === undefined ||
-			declaredSection === 'self' ||
-			(Array.isArray(declaredSection)
-				? declaredSection.includes(targetSectionTipo)
-				: declaredSection === targetSectionTipo)
-		);
-	});
+	return childDdos.some(
+		(childDdo) =>
+			(childDdo as { value_with_parents?: unknown }).value_with_parents === true &&
+			ddoTargetsSection(childDdo, targetSectionTipo),
+	);
 }
 
 /** Options steering one portal expansion (see call sites for the flow rules). */
@@ -205,23 +424,58 @@ export async function expandPortal(
 	portalItem.row_section_id = row.section_id;
 	emission.items.push(portalItem);
 
+	// EXTERNAL targets of this page, resolved in ONE bounded fan-out before the
+	// emit loop (see prefetchExternalTargets). Nothing about the dedalo path
+	// changes: `externalSections` is empty for every portal in the installation
+	// that does not point at an external section, and the two calls below return
+	// immediately.
+	const childShapes = await targetChildShapes(page, childDdos);
+	await prefetchExternalTargets(page, childDdos, childShapes, emission);
+
 	// Expand each paginated locator through the child ddos (record-major).
 	for (const locator of page) {
 		const targetSectionTipo = locator.section_tipo as string;
 		// PHP keeps the locator's raw section_id type (often a string).
 		const targetSectionId = locator.section_id as number | string;
-		const targetTable = await getMatrixTableFromTipo(targetSectionTipo);
-		if (targetTable === null) continue;
-		// Per-read cached read (targets repeat across a page's rows and nested
-		// expansions) — consulted AFTER the null-table early-return, same
-		// contract as the bare read it replaces.
-		const targetRecord = await loadRecordCached(
-			emission,
-			targetTable,
-			targetSectionTipo,
-			Number(targetSectionId),
-		);
-		if (targetRecord === null) continue;
+		const shape = childShapes.get(targetSectionTipo);
+		// A target every one of whose compatible children DERIVES has no stored
+		// row to look for — skip the pointless matrix query. Purely an
+		// optimisation: the null-record fallback below is what carries
+		// correctness, so a mis-declared over-broad ddo costs a query, not a
+		// blank cell.
+		const skipStoredLookup = shape?.hasDerived === true && !shape.hasStored;
+		let targetRecord: MatrixRecord | null;
+		// True when the target has NO stored row and we are rendering it from a
+		// placeholder — the only situation in which a stored-value child cannot
+		// resolve. A target that HAS a record (test3, rsc205) never sets this,
+		// so no ordinary child is ever refused.
+		let targetIsDerivedOnly = false;
+		if (skipStoredLookup) {
+			targetIsDerivedOnly = true;
+			targetRecord = externalTargetRecord(targetSectionTipo, targetSectionId);
+		} else {
+			const targetTable = await getMatrixTableFromTipo(targetSectionTipo);
+			if (targetTable === null) continue;
+			// Per-read cached read (targets repeat across a page's rows and nested
+			// expansions) — consulted AFTER the null-table early-return, same
+			// contract as the bare read it replaces.
+			targetRecord = await loadRecordCached(
+				emission,
+				targetTable,
+				targetSectionTipo,
+				Number(targetSectionId),
+			);
+			if (targetRecord === null) {
+				// NO STORED ROW. v6 dispatches purely by component MODEL —
+				// component_external::get_dato() never reads the record — so a
+				// target whose compatible children derive their value still
+				// renders; the record was never their source. Every other target
+				// keeps the original skip, byte for byte.
+				if (shape?.hasDerived !== true) continue;
+				targetIsDerivedOnly = true;
+				targetRecord = externalTargetRecord(targetSectionTipo, targetSectionId);
+			}
+		}
 
 		// Resolve each child through the SHARED emission path (full model-family
 		// logic — relations/media/selects inside a portal render correctly). The
@@ -256,16 +510,37 @@ export async function expandPortal(
 			// the ones compatible with the current locator's target (numisdata97
 			// declares numisdata33 → skipped at an object1 target). 'self' and
 			// undeclared section_tipos pass (they resolve to the portal targets).
-			const declaredSection = childDdo.section_tipo;
 			if (
-				declaredSection !== undefined &&
-				declaredSection !== 'self' &&
-				(Array.isArray(declaredSection)
-					? !declaredSection.includes(targetSectionTipo)
-					: declaredSection !== targetSectionTipo) &&
+				!ddoTargetsSection(childDdo, targetSectionTipo) &&
 				(await getModelByTipo(childDdo.tipo)) !== 'component_dataframe'
 			) {
 				continue;
+			}
+			// THIS filter is what makes a multi-engine child map safe, and why no
+			// api_engine branch is needed anywhere in the read path: a zenon1
+			// locator only ever sees the ddos declared at zenon1, an rsc205
+			// locator only the dedalo ones. Dispatch stays model-polymorphic.
+			// THIS filter is what makes a multi-engine child map safe, and why no
+			// api_engine branch is needed anywhere in the read path: a zenon1
+			// locator only ever sees the ddos declared at zenon1, an rsc205
+			// locator only the dedalo ones. Dispatch stays model-polymorphic.
+			//
+			// The gate is RECORD ABSENCE, never `properties.api_config`: test3 and
+			// rsc205 both carry an api_config and are ordinary sections with rows,
+			// so they never reach it and never lose a child.
+			if (targetIsDerivedOnly) {
+				const childModel = await getModelByTipo(childDdo.tipo);
+				// With no stored row, only a DERIVED-value model can render.
+				// Anything else would be handed the empty placeholder and emit a
+				// blank that looks exactly like a genuinely empty field — refuse it
+				// loudly instead (a component_dataframe pairs with the MAIN record
+				// and is handled below).
+				if (childModel !== 'component_external' && childModel !== 'component_dataframe') {
+					console.warn(
+						`[relations/relation_core] ddo '${childDdo.tipo}' (model ${childModel}) cannot resolve at target '${targetSectionTipo}' id '${String(targetSectionId)}' — that target has no stored record; only a derived model renders there`,
+					);
+					continue;
+				}
 			}
 			// component_dataframe ddos pair with the MAIN record (never the
 			// locator target): route to the frame emitter (PHP get_subdatum's

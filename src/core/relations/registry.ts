@@ -152,9 +152,13 @@ export function getRelationResolver(model: string): RelationModelResolver {
 // - component_relation_index → builder_relation_index.ts (computed-inverse
 //   `section_id IN (…)` over the dd96 reference scan);
 // - component_external stays `search: { status: 'unported' }` and THROWS —
-//   that IS the faithful port: PHP has no trait and fatals on any external
-//   search (component_common::get_search_query → undefined
-//   resolve_query_object_sql).
+//   not because a builder is missing, but because there is NO SQL SURFACE to
+//   build over: its value is DERIVED from a third-party API at read time
+//   (components/component_external/value.ts), so an external search goes
+//   through the service adapter's buildSearchRequest (src/external/search.ts,
+//   implemented 2026-08-06 behind dd_external_api::search), never through
+//   SQO. It also declares no `resolveData` —
+//   the throw above fires first, so the order here is load-bearing.
 // The legacy component_autocomplete_hi ancestor wrap is deliberately NOT
 // wired (PHP live defect — see builder_relation.ts module doc).
 // ---------------------------------------------------------------------------
