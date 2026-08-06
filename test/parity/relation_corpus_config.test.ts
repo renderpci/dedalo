@@ -73,6 +73,13 @@ function ddoChain(
 		parent: ddo.parent,
 		mode: ddo.mode,
 		section_tipo: ddo.section_tipo ?? null,
+		// STEP 9 hydration (external-API components): the ontology stores the flag
+		// `fields_map: true` and the wire must carry the node's real mapping —
+		// service_autocomplete.js:911/:1060 read fields_map[0].remote to shape the
+		// answer and to build '&field[]='. `null` on every ordinary ddo, which is
+		// also what the oracle emits (the key is absent unless hydrated).
+		fields_map: ddo.fields_map ?? null,
+		lang: ddo.lang ?? null,
 	}));
 }
 
@@ -106,6 +113,13 @@ function configProjection(requestConfig: unknown): unknown {
 		return {
 			api_engine: item.api_engine,
 			type: item.type,
+			// The target section's external binding. PHP emits the key on EVERY
+			// item — null for the dedalo engine — and the client reads it as soon
+			// as api_engine !== 'dedalo' (component_portal.js:2054, ui_base_url +
+			// section_id). TS publishes a SHAPED copy (publishApiConfig): credential
+			// keys stripped, unknown keys dropped, http(s)-only URLs. On this
+			// corpus that is field-identical to the oracle's raw echo.
+			api_config: item.api_config ?? null,
 			targets: targetTipos(sqo.section_tipo),
 			filter_by_list:
 				sqo.filter_by_list === undefined ? null : filterByListSurface(sqo.filter_by_list),

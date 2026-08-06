@@ -74,6 +74,43 @@ const LEDGERED_UNSEARCHABLE: ReadonlySet<string> = new Set([
 const NO_DEFAULT_RELATION_TYPE: ReadonlySet<string> = new Set(['component_external']);
 
 /**
+ * Relation-COLUMN models whose emission is NOT a relation resolution, so
+ * `resolveData` would be a lie (2026-08-05).
+ *
+ * `component_external`'s value is DERIVED from a third-party API at read time —
+ * PHP's component_external extends component_common and its get_dato() never
+ * reads a column; there is no matrix row anywhere for an external section
+ * (zenon1: zero rows, no `matrix_zenon`). It carried `resolveData: 'portal'`
+ * until this entry landed, which routed it into expandPortal — a function that
+ * reads `record.columns.relation[<tipo>]` and returns early on an empty bag, so
+ * the model emitted ZERO items always. Emission now belongs to
+ * `emitHook: 'external'`, which section/read.ts consults BEFORE the relation
+ * branch. The `column: 'relation'` declaration stays as inert column-map parity
+ * (see the descriptor header); dropping it would also drop the model's search
+ * face, which the search dispatcher depends on.
+ *
+ * Cleared only if a model here ever gains a real relation resolution — never by
+ * re-adding a resolver that resolves nothing.
+ */
+const NO_RESOLVE_DATA: ReadonlySet<string> = new Set(['component_external']);
+
+/**
+ * Relation-COLUMN models that must NEVER be written from an import
+ * (2026-08-05). A DERIVED field has no importable form: the value lives in a
+ * remote service and the local record has no slot for it, so EVERY cell shape
+ * must be REFUSED — which is exactly what omitting the facet does. A flat cell
+ * hits conformImportData's no-facet tail ("IGNORED: '<model>' has no
+ * flat-value import form"); a JSON or empty cell hits the derived-field check
+ * ahead of it (a RELATION-column model with no facet — the shape this set and
+ * the test below make exact). Nothing is written, and the record's existing
+ * value is left untouched. Behaviour gated in external_degradation_tripwire.
+ *
+ * This list may only SHRINK if a model stops being derived, which is a change
+ * of model, not of import support.
+ */
+const NO_IMPORT_CONFORM: ReadonlySet<string> = new Set(['component_external']);
+
+/**
  * PHP get_sortable() → false, resolved per CANONICAL model (component_media_common
  * / component_relation_common / geolocation / info / security_access). The alias
  * models inherit their canonical target's value via getModelByTipo
@@ -149,10 +186,22 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 	test('canonical relation models declare the full relation face', () => {
 		for (const descriptor of descriptors) {
 			if (!isCanonical(descriptor) || descriptor.column !== 'relation') continue;
-			expect(
-				descriptor.resolveData,
-				`${descriptor.model}: relation model without resolveData`,
-			).toBeDefined();
+			if (NO_RESOLVE_DATA.has(descriptor.model)) {
+				// Derived-value models: a resolver here resolved nothing (see the set).
+				expect(
+					descriptor.resolveData,
+					`${descriptor.model}: NO_RESOLVE_DATA model declares a resolver again`,
+				).toBeUndefined();
+				expect(
+					descriptor.emitHook,
+					`${descriptor.model}: a model with no resolver MUST own its emission (emitHook)`,
+				).toBeDefined();
+			} else {
+				expect(
+					descriptor.resolveData,
+					`${descriptor.model}: relation model without resolveData`,
+				).toBeDefined();
+			}
 			expect(
 				descriptor.search,
 				`${descriptor.model}: relation model without search face`,
@@ -259,11 +308,28 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 		// (component_relation_common). A relation model without the facet would refuse
 		// every flat section_id list ('273,418') — a silent capability hole, which is
 		// exactly the class of bug this tripwire family exists to prevent.
+		// EXCEPT the derived-value models (NO_IMPORT_CONFORM), for which the
+		// refusal is the CORRECT behavior, not a hole.
 		const missing = descriptors
 			.filter((d) => d.alias === undefined && d.column === 'relation')
-			.filter((d) => d.importConform === undefined)
+			.filter((d) => d.importConform === undefined && !NO_IMPORT_CONFORM.has(d.model))
 			.map((d) => d.model);
 		expect(missing).toEqual([]);
+	});
+
+	test('the derived-value exemption sets carry no dead entries', () => {
+		for (const model of [...NO_RESOLVE_DATA, ...NO_IMPORT_CONFORM, ...NO_DEFAULT_RELATION_TYPE]) {
+			expect(
+				getComponentModel(model),
+				`exemption names an unregistered model: '${model}'`,
+			).toBeDefined();
+		}
+		for (const model of NO_IMPORT_CONFORM) {
+			expect(
+				getComponentModel(model)?.importConform,
+				`NO_IMPORT_CONFORM: '${model}' declares an import parser again — a derived field must never be written from an import`,
+			).toBeUndefined();
+		}
 	});
 
 	test('no parser in IMPORT_CONFORM is dead (every id is claimed by a descriptor)', () => {

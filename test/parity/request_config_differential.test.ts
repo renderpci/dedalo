@@ -13,8 +13,20 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { sql } from '../../src/core/db/postgres.ts';
 import { readSection } from '../../src/core/section/read.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
+
+/**
+ * The external-engine case needs the `zenon` ontology on the SUITE database.
+ * The default suite DB is the test3 playground, which does not carry it — so
+ * the case is reported as an explicit SKIP there (S2-40: never a silent green)
+ * and runs on an installation whose DB has it. The DB-independent twin of the
+ * same contract is test/unit/external_request_config_native.test.ts, which
+ * builds its own scratch external section and always runs.
+ */
+const ZENON_ONTOLOGY_PRESENT =
+	((await sql`SELECT tipo FROM dd_ontology WHERE tipo = 'zenon1' LIMIT 1`) as unknown[]).length > 0;
 
 const READ_RQO = {
 	action: 'read',
@@ -66,6 +78,33 @@ function ddoIdentity(ddo: RawDdo): Record<string, unknown> {
 		section_tipo: ddo.section_tipo,
 		mode: ddo.mode,
 	};
+}
+
+/** The first non-dedalo request_config item on ANY context entry (rsc368's zenon one). */
+function externalItemOf(context: Record<string, unknown>[]): Record<string, unknown> | undefined {
+	for (const entry of context ?? []) {
+		const items = (entry.request_config as Record<string, unknown>[] | undefined) ?? [];
+		const external = items.find((item) => (item.api_engine ?? 'dedalo') !== 'dedalo');
+		if (external !== undefined) return external;
+	}
+	return undefined;
+}
+
+/** The step-9 hydrated surface of an external item's show ddos. */
+function externalDdoSurface(
+	item: Record<string, unknown> | undefined,
+): { tipo: unknown; fields_map: unknown; lang: unknown; permissions: unknown; model: unknown }[] {
+	const map =
+		((item?.show as { ddo_map?: Record<string, unknown>[] } | null)?.ddo_map as
+			| Record<string, unknown>[]
+			| undefined) ?? [];
+	return map.map((ddo) => ({
+		tipo: ddo.tipo,
+		fields_map: ddo.fields_map,
+		lang: ddo.lang,
+		permissions: ddo.permissions,
+		model: ddo.model,
+	}));
 }
 
 /** Extract section tipos from a request_config sqo (PHP enriches to dd_objects). */
@@ -146,6 +185,65 @@ describe.if(hasPhpCredentials())('request_config explicit differential (Phase 4d
 		expect(tsMap?.length).toBe(1); // the section_list child's single column
 		expect(ddoIdentity(tsMap?.[0] as RawDdo)).toEqual(ddoIdentity(phpMap?.[0] as RawDdo));
 	}, 30000);
+
+	/**
+	 * THE EXTERNAL-ENGINE ITEM (rsc368's second request_config, api_engine
+	 * 'zenon'). Two wire facts this pins, both live CLIENT contracts:
+	 *
+	 *  - `api_config` — component_portal.js:2054 builds the record link as
+	 *    `api_config.ui_base_url + section_id`, and service_autocomplete.js:1039
+	 *    POSTs to `api_config.api_url_search`. TS publishes a SHAPED copy
+	 *    (publishApiConfig); on this installation's data that is field-identical
+	 *    to the oracle's raw echo, which is what this asserts.
+	 *  - the HYDRATED `fields_map` (step 9) — service_autocomplete.js:911/:1060
+	 *    read `show.ddo_map[j].fields_map[0].remote` to shape the answer and to
+	 *    build `&field[]=`. The ontology stores the flag `fields_map: true`; if
+	 *    the engine leaves it a boolean the autocomplete asks for no fields.
+	 *
+	 * Driven through case A's rqo (the one whose harvested answer carries the
+	 * rsc368 context).
+	 */
+	test.if(ZENON_ONTOLOGY_PRESENT)(
+		'external engine item: api_config + hydrated fields_map match PHP',
+		async () => {
+			if (!hasPhpCredentials()) return;
+			const caseARqo = structuredClone(READ_RQO) as typeof READ_RQO;
+			caseARqo.show.ddo_map = [
+				{ tipo: 'numisdata163', section_tipo: 'self', parent: 'self', mode: 'list' },
+			];
+
+			const client = new PhpApiClient();
+			await client.login(
+				config.phpReference.username as string,
+				config.phpReference.password as string,
+			);
+			const { body } = await client.call(structuredClone(caseARqo));
+			const phpItem = externalItemOf(
+				(body.result as { context: Record<string, unknown>[] }).context,
+			);
+			const tsResult = await readSection(caseARqo as unknown as Rqo);
+			const tsItem = externalItemOf(tsResult.context as unknown as Record<string, unknown>[]);
+
+			// The fixture MUST still carry the case (a silent absence would make every
+			// assertion below vacuous).
+			expect(phpItem, 'no api_engine!==dedalo item in the oracle answer').toBeDefined();
+			expect(tsItem).toBeDefined();
+
+			// api_config: same fields, same values (key order is not a wire fact).
+			expect(tsItem?.api_config).toEqual(phpItem?.api_config as never);
+			expect(
+				(tsItem?.api_config as { ui_base_url?: string })?.ui_base_url,
+				'a non-http(s) ui_base_url would be stored XSS on the portal edit click',
+			).toMatch(/^https?:\/\//);
+
+			// The hydrated per-ddo surface the autocomplete reads.
+			expect(externalDdoSurface(tsItem)).toEqual(externalDdoSurface(phpItem) as never);
+			for (const ddo of externalDdoSurface(tsItem)) {
+				expect(Array.isArray(ddo.fields_map), `${ddo.tipo} fields_map stayed a flag`).toBe(true);
+			}
+		},
+		30000,
+	);
 
 	test('show ddo_map resolves identically (tipo/parent/section_tipo/mode, in order)', () => {
 		if (!hasPhpCredentials()) return;

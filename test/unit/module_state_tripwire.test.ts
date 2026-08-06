@@ -186,6 +186,13 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// and cleared by overrideMediaProtectionPathsForTests. It exists to keep the
 	// per-request cookie re-issue a string compare instead of a JSON store read.
 	'core/media/protection.ts:cachedAuthCookie',
+	// The external subsystem's ONE settings door (src/external/settings.ts). Holds
+	// OPERATOR settings only — the frozen config is built at import, and `bun test`
+	// shares one module graph, so a test cannot state a scenario any other way
+	// (the core/media/protection.ts:pathOverridesForTests precedent, same shape and
+	// same lifecycle: null in production, set and cleared around one case).
+	// Request identity can never land in it: its type is the operator config.
+	'external/settings.ts:overridesForTests',
 ]);
 
 /**
@@ -255,6 +262,30 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// the hub via plan/cache.ts registration) — its own documented scheme, not
 	// a clear-on-fire Map.
 	'diffusion/plan/cache.ts:planCache',
+	// --- external record services (src/external) -----------------------------
+	// Circuit state per (service, ORIGIN). Deliberately NOT factory-built: the
+	// factory's clearer fires after EVERY dd_ontology write, so an unrelated
+	// cataloguing save would reset an open circuit and re-open the flood at a
+	// failing third party (v6 kept this in $_SESSION, which additionally bled
+	// between users). Lifecycle: TIME ONLY — a success deletes its entry, and
+	// every access prunes entries untouched for 10 cooldowns. Keys are a service
+	// name and a host; never session/user/lang.
+	'external/breaker.ts:breakerStates',
+	// Per-(service, origin) parallelism bound at the one outbound door. NOT a
+	// content cache — slot accounting. Lifecycle: SELF-DRAINING, deleted the
+	// moment the last holder releases with nobody waiting (the media_index
+	// keyLocks precedent).
+	'external/transport.ts:concurrencySlots',
+	// In-flight fetch coalescing, keyed by the row cache key. A serialization
+	// primitive, not a cache: each entry is deleted in the `finally` of the very
+	// fetch it coalesces. The ROW cache beside it IS factory-built.
+	'external/cache.ts:inFlight',
+	// In-flight SEARCH coalescing, keyed by (service, section, method, url). Same
+	// serialization-primitive lifecycle as cache.ts:inFlight — deleted in the
+	// `finally` of the very fetch it coalesces. There is no factory cache beside
+	// this one on purpose: a search is user-typed and high-cardinality, so its
+	// results are deliberately NOT cached (src/external/search.ts header).
+	'external/search.ts:inFlightSearches',
 ]);
 
 /** Mutation shapes for a named binding: assignment, ++/--, mutating methods. */

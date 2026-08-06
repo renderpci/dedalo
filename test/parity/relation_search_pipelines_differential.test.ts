@@ -11,8 +11,8 @@
  *
  * Both engines run the same search RQO; the SECTIONS envelope's entries
  * (locator sets) and totals must match. component_external has no
- * differential — PHP fatals on any external search (the TS throw is the
- * port; unit-pinned).
+ * differential — it has no SQL surface at all (its value is DERIVED from a
+ * third-party API), so both engines refuse; the TS throw is unit-pinned.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';

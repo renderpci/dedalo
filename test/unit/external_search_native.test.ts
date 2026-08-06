@@ -1,0 +1,740 @@
+/**
+ * BEHAVIOUR TWIN — server-side external search (2026-08-06,
+ * `WC-2026-08-06-external-search-request`).
+ *
+ * The path this covers replaces a call the BROWSER used to make directly
+ * (service_autocomplete.js `zenon_engine`), so the request form is a live wire
+ * contract against a third party: it is asserted BYTE FOR BYTE, not "shaped
+ * like". The three deliberate divergences from the browser form — the
+ * lang-derived `lng`, the removed empty-query sentinel, the caller-driven
+ * limit/offset — each have a test that fails if they are quietly reverted.
+ *
+ * NO TEST HERE OPENS A SOCKET. Every case injects `fetchImpl` +
+ * `assertPublicUrlImpl` through the transport's declared seams; a case that
+ * must prove "no request was made" counts the calls on that stub.
+ */
+
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
+import { getAlpha2FromCode } from '../../src/core/resolve/lang_names.ts';
+import type { ExternalSearchResult } from '../../src/external/api/types.ts';
+import { resetBreakerForOrigin } from '../../src/external/breaker.ts';
+import type { ExternalServiceModel } from '../../src/external/descriptor_types.ts';
+import { ExternalSearchUnsupportedError, ExternalServiceError } from '../../src/external/errors.ts';
+import {
+	assertExternalSearchable,
+	drainInFlightExternalSearches,
+	MAX_SEARCH_LIMIT,
+	searchExternalService,
+} from '../../src/external/search.ts';
+import { zenon } from '../../src/external/services/zenon.ts';
+import { overrideExternalSettingsForTests } from '../../src/external/settings.ts';
+import { type ExternalFetchImpl, fetchExternalJson } from '../../src/external/transport.ts';
+
+const HOST = 'zenon.dainst.org';
+const ORIGIN = `https://${HOST}`;
+const SEARCH_URL = `${ORIGIN}/api/v1/search`;
+/** The one external section the TEST database carries (zenon1's twin). */
+const SECTION = 'test3';
+
+/** A realistic Zenon /search answer — the record sample, in search clothing. */
+const SEARCH_PAYLOAD = {
+	resultCount: 137,
+	records: [
+		{
+			id: '000848571',
+			title: 'Las acuñaciones provinciales romanas de Hispania ',
+			authors: {
+				primary: { 'Ripollès Alegre, P. P. (Pere Pau)': [] },
+				secondary: [],
+				corporate: [],
+			},
+			publicationDates: ['2010'],
+		},
+		{
+			id: '001338683',
+			title: 'Coinage of the Roman provinces',
+			authors: { primary: { 'Burnett, Andrew': [] }, secondary: [], corporate: [] },
+			publicationDates: ['1992', '1999'],
+		},
+	],
+	status: 'OK',
+};
+
+const RESPONSE_MAP = [
+	{ local: 'ar_records', remote: 'records' },
+	{ local: 'msg', remote: 'status' },
+] as const;
+
+interface Recorder {
+	readonly impl: ExternalFetchImpl;
+	readonly urls: string[];
+	readonly inits: Record<string, unknown>[];
+}
+
+function recordingFetch(payload: unknown = SEARCH_PAYLOAD, status = 200): Recorder {
+	const urls: string[] = [];
+	const inits: Record<string, unknown>[] = [];
+	const impl: ExternalFetchImpl = async (url, init) => {
+		urls.push(url);
+		inits.push(init as unknown as Record<string, unknown>);
+		return new Response(JSON.stringify(payload), { status });
+	};
+	return { impl, urls, inits };
+}
+
+/**
+ * A fetch stub whose answer is held until the test releases it — the only way
+ * to observe IN-FLIGHT coalescing deterministically. With an immediately
+ * resolving stub the first call can run to completion (and delete its
+ * coalescing entry) before the second one is even scheduled, which would make
+ * the coalescing assertion measure microtask ordering rather than the code.
+ */
+function gatedFetch(payload: unknown = SEARCH_PAYLOAD): Recorder & { release: () => void } {
+	const urls: string[] = [];
+	const inits: Record<string, unknown>[] = [];
+	let release: () => void = () => {};
+	const gate = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const impl: ExternalFetchImpl = async (url, init) => {
+		urls.push(url);
+		inits.push(init as unknown as Record<string, unknown>);
+		await gate;
+		return new Response(JSON.stringify(payload), { status: 200 });
+	};
+	return { impl, urls, inits, release: () => release() };
+}
+
+/** Vetting stub — counted, so "refused BEFORE DNS" is an assertion, not a hope. */
+function vettingStub(): {
+	impl: (uri: string) => Promise<{ url: URL; addresses: string[] }>;
+	calls: string[];
+} {
+	const calls: string[] = [];
+	return {
+		calls,
+		impl: async (uri: string) => {
+			calls.push(uri);
+			return { url: new URL(uri), addresses: ['141.100.1.1'] };
+		},
+	};
+}
+
+beforeEach(async () => {
+	overrideExternalSettingsForTests({
+		enabled: true,
+		allowedHosts: [HOST],
+		retryAttempts: 0,
+	});
+	resetBreakerForOrigin('zenon', ORIGIN);
+	await clearOntologyDerivedCaches();
+});
+
+afterEach(async () => {
+	await drainInFlightExternalSearches();
+	overrideExternalSettingsForTests(null);
+	resetBreakerForOrigin('zenon', ORIGIN);
+});
+
+// ---------------------------------------------------------------------------
+// buildSearchRequest — the byte form
+// ---------------------------------------------------------------------------
+
+describe('buildSearchRequest reproduces the known-good browser request', () => {
+	test('byte for byte, including field[] order and percent-encoding', () => {
+		const request = zenon.buildSearchRequest?.({
+			apiUrlSearch: SEARCH_URL,
+			terms: ['casana'],
+			dataLang: 'lg-deu',
+			// rsc368's zenon ddo order — authors, publicationDates, id, title.
+			remoteFields: ['authors', 'publicationDates', 'id', 'title'],
+			limit: 20,
+			offset: 0,
+		});
+		expect(request).toBeDefined();
+		expect(request?.url).toBe(
+			`${SEARCH_URL}?lookfor=casana&type=AllFields&sort=relevance&limit=20&prettyPrint=false&lng=de` +
+				'&field[]=authors&field[]=publicationDates&field[]=id&field[]=title',
+		);
+		// POST with the query in the query string and NO body — what the browser
+		// engine sent, and what VuFind answers.
+		expect(request?.method).toBe('POST');
+		expect(request?.body).toBeUndefined();
+	});
+
+	test('every VALUE is percent-encoded while the literal field[] stays verbatim', () => {
+		const request = zenon.buildSearchRequest?.({
+			apiUrlSearch: SEARCH_URL,
+			// & = % and a space: each of these would corrupt the query string raw.
+			terms: ['Ripollès & Burnett 100% =', 'nuevo'],
+			dataLang: 'lg-spa',
+			remoteFields: ['title'],
+			limit: 5,
+			offset: 0,
+		});
+		expect(request?.url).toContain('lookfor=Ripoll%C3%A8s%20%26%20Burnett%20100%25%20%3D%20nuevo');
+		// The bracket literal must NOT be encoded — VuFind matches on the bytes.
+		expect(request?.url).toContain('&field[]=title');
+		expect(request?.url).not.toContain('field%5B%5D');
+	});
+
+	test('limit and offset are caller-driven; offset becomes VuFind 1-based page', () => {
+		const first = zenon.buildSearchRequest?.({
+			apiUrlSearch: SEARCH_URL,
+			terms: ['casana'],
+			dataLang: 'lg-deu',
+			remoteFields: [],
+			limit: 50,
+			offset: 0,
+		});
+		// Page one omits `page` entirely — the byte form with field evidence.
+		expect(first?.url).toBe(
+			`${SEARCH_URL}?lookfor=casana&type=AllFields&sort=relevance&limit=50&prettyPrint=false&lng=de`,
+		);
+		const third = zenon.buildSearchRequest?.({
+			apiUrlSearch: SEARCH_URL,
+			terms: ['casana'],
+			dataLang: 'lg-deu',
+			remoteFields: [],
+			limit: 50,
+			offset: 100,
+		});
+		expect(third?.url).toContain('&limit=50&page=3&');
+	});
+
+	test('an offset that is not a whole page is REFUSED, never rounded', () => {
+		expect(() =>
+			zenon.buildSearchRequest?.({
+				apiUrlSearch: SEARCH_URL,
+				terms: ['casana'],
+				dataLang: 'lg-deu',
+				remoteFields: [],
+				limit: 20,
+				offset: 25,
+			}),
+		).toThrow(ExternalServiceError);
+	});
+
+	test('a field name that is not a bare identifier is refused before the URL exists', () => {
+		expect(() =>
+			zenon.buildSearchRequest?.({
+				apiUrlSearch: SEARCH_URL,
+				terms: ['casana'],
+				dataLang: 'lg-deu',
+				remoteFields: ['title&lookfor=evil'],
+				limit: 20,
+				offset: 0,
+			}),
+		).toThrow(ExternalServiceError);
+	});
+});
+
+describe('lng is derived from the request data lang, not hard-coded', () => {
+	// The browser engine sent the literal `lng: "de"` for every user in every
+	// installation. This is the assertion that keeps that from coming back.
+	for (const [dataLang, expected] of [
+		['lg-spa', 'es'],
+		['lg-eng', 'en'],
+		['lg-deu', 'de'],
+	] as const) {
+		test(`${dataLang} → lng=${expected}`, () => {
+			expect(getAlpha2FromCode(dataLang)).toBe(expected);
+			const request = zenon.buildSearchRequest?.({
+				apiUrlSearch: SEARCH_URL,
+				terms: ['casana'],
+				dataLang,
+				remoteFields: [],
+				limit: 20,
+				offset: 0,
+			});
+			expect(request?.url).toContain(`&lng=${expected}`);
+		});
+	}
+
+	test('a lang with no ISO 639-1 mapping falls back exactly as the record path does', () => {
+		const lang = 'lg-zzz';
+		expect(getAlpha2FromCode(lang) ?? null).toBeNull();
+		const search = zenon.buildSearchRequest?.({
+			apiUrlSearch: SEARCH_URL,
+			terms: ['casana'],
+			dataLang: lang,
+			remoteFields: [],
+			limit: 20,
+			offset: 0,
+		});
+		const record = zenon.buildRecordRequest({
+			apiUrl: `${ORIGIN}/api/v1/record`,
+			remoteId: '000848571',
+			dataLang: lang,
+			remoteFields: [],
+		});
+		expect(search?.url).toContain('&lng=en');
+		expect(record.url).toContain('&lgn=en');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The empty query — the sentinel's replacement
+// ---------------------------------------------------------------------------
+
+describe('an empty query is refused in the engine, before any socket', () => {
+	test('no fetch happens at all and the result is empty', async () => {
+		const fetcher = recordingFetch();
+		const vetting = vettingStub();
+		for (const terms of [[], [''], ['   ', '\t']]) {
+			const result = await searchExternalService({
+				sectionTipo: SECTION,
+				terms,
+				remoteFields: ['id', 'title'],
+				deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+				dataLang: 'lg-deu',
+			});
+			expect(result.hits).toEqual([]);
+			expect(result.total).toBeNull();
+		}
+		expect(fetcher.urls, 'an empty query reached the network').toHaveLength(0);
+		expect(vetting.calls, 'an empty query reached the resolver').toHaveLength(0);
+	});
+
+	test('the sentinel string is gone from the engine entirely', async () => {
+		// 'ñññññññ---!!!!!' only ever "worked" while Zenon's tokeniser kept failing
+		// to match it. If it is ever reintroduced, this fails.
+		const sources = await Promise.all(
+			['src/external/search.ts', 'src/external/services/zenon.ts'].map((path) =>
+				Bun.file(`${import.meta.dir}/../../${path}`).text(),
+			),
+		);
+		for (const source of sources) {
+			expect(source.includes('ñññññññ---!!!!!')).toBe(false);
+		}
+	});
+
+	test('the ADAPTER refuses an empty query too — an adapter is data, not a private', () => {
+		expect(() =>
+			zenon.buildSearchRequest?.({
+				apiUrlSearch: SEARCH_URL,
+				terms: ['   '],
+				dataLang: 'lg-deu',
+				remoteFields: [],
+				limit: 20,
+				offset: 0,
+			}),
+		).toThrow(ExternalServiceError);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// unwrapSearch
+// ---------------------------------------------------------------------------
+
+describe('unwrapSearch reads the payload through the section response_map', () => {
+	test('a realistic Zenon answer becomes rows + total', () => {
+		const decoded = zenon.unwrapSearch?.(SEARCH_PAYLOAD, RESPONSE_MAP);
+		expect(decoded?.rows).toHaveLength(2);
+		expect(decoded?.rows[0]?.id).toBe('000848571');
+		expect(decoded?.total).toBe(137);
+	});
+
+	test('the response_map indirection is honoured, exactly as unwrapRows does', () => {
+		const renamed = { hits: SEARCH_PAYLOAD.records, resultCount: 4 };
+		const decoded = zenon.unwrapSearch?.(renamed, [{ local: 'ar_records', remote: 'hits' }]);
+		expect(decoded?.rows).toHaveLength(2);
+		// A map may rename the count too.
+		const withTotal = zenon.unwrapSearch?.({ records: [], count: 9 }, [
+			{ local: 'total', remote: 'count' },
+		]);
+		expect(withTotal?.total).toBe(9);
+	});
+
+	test('total is NULL when the remote gives none — never 0, never rows.length', () => {
+		const decoded = zenon.unwrapSearch?.({ records: SEARCH_PAYLOAD.records }, RESPONSE_MAP);
+		expect(decoded?.rows).toHaveLength(2);
+		expect(decoded?.total).toBeNull();
+		// A non-integer or negative count is no answer either.
+		expect(
+			zenon.unwrapSearch?.({ records: [], resultCount: 'many' }, RESPONSE_MAP)?.total,
+		).toBeNull();
+		expect(zenon.unwrapSearch?.({ records: [], resultCount: -1 }, RESPONSE_MAP)?.total).toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The refusals
+// ---------------------------------------------------------------------------
+
+describe('a service that cannot search is refused BY NAME, never silently empty', () => {
+	const binding = (model: ExternalServiceModel) => ({
+		sectionTipo: SECTION,
+		model,
+		apiConfig: {
+			entity: 'zenon',
+			apiUrl: `${ORIGIN}/api/v1/record`,
+			apiUrlSearch: SEARCH_URL,
+			uiBaseUrl: null,
+			responseMap: RESPONSE_MAP,
+		},
+	});
+
+	test('capabilities.search === false → ExternalSearchUnsupportedError(reason: service)', () => {
+		const forged: ExternalServiceModel = {
+			...zenon,
+			capabilities: { ...zenon.capabilities, search: false },
+		};
+		let caught: unknown;
+		try {
+			assertExternalSearchable(forged, binding(forged));
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(ExternalSearchUnsupportedError);
+		expect((caught as ExternalSearchUnsupportedError).reason).toBe('service');
+	});
+
+	test('capability declared but the pair unimplemented → reason: engine', () => {
+		// Spread everything EXCEPT the builder — an adapter that declares the
+		// capability and implements nothing.
+		const { buildSearchRequest: _omitted, ...rest } = zenon;
+		const forged = rest as ExternalServiceModel;
+		let caught: unknown;
+		try {
+			assertExternalSearchable(
+				forged as ExternalServiceModel,
+				binding(forged as ExternalServiceModel),
+			);
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(ExternalSearchUnsupportedError);
+		expect((caught as ExternalSearchUnsupportedError).reason).toBe('engine');
+	});
+
+	test('no api_url_search on the section → reason: config', () => {
+		const bound = binding(zenon);
+		let caught: unknown;
+		try {
+			assertExternalSearchable(zenon, {
+				...bound,
+				apiConfig: { ...bound.apiConfig, apiUrlSearch: null },
+			});
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(ExternalSearchUnsupportedError);
+		expect((caught as ExternalSearchUnsupportedError).reason).toBe('config');
+	});
+
+	test('a limit past the ceiling is refused, not clamped', async () => {
+		const fetcher = recordingFetch();
+		await expect(
+			searchExternalService({
+				sectionTipo: SECTION,
+				terms: ['casana'],
+				remoteFields: ['id'],
+				limit: MAX_SEARCH_LIMIT + 1,
+				deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vettingStub().impl },
+				dataLang: 'lg-deu',
+			}),
+		).rejects.toThrow(ExternalServiceError);
+		expect(fetcher.urls).toHaveLength(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The one outbound door
+// ---------------------------------------------------------------------------
+
+describe('search goes through the transport door, with every step in front of it', () => {
+	test('the request reaching the socket is the adapter-built search request', async () => {
+		const fetcher = recordingFetch();
+		const vetting = vettingStub();
+		const result = await searchExternalService({
+			sectionTipo: SECTION,
+			terms: ['casana'],
+			remoteFields: ['id', 'title'],
+			deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+			dataLang: 'lg-deu',
+		});
+		expect(fetcher.urls).toHaveLength(1);
+		// The SSRF guard saw the real URL (step 4) before the socket, and the socket
+		// was pinned to the vetted address with the real host kept for SNI.
+		expect(vetting.calls[0]).toContain('/api/v1/search?lookfor=casana');
+		expect(fetcher.urls[0]).toContain('141.100.1.1');
+		const init = fetcher.inits[0] as {
+			method?: string;
+			redirect?: string;
+			tls?: { serverName?: string };
+		};
+		expect(init.method).toBe('POST');
+		expect(init.redirect).toBe('error');
+		expect(init.tls?.serverName).toBe(HOST);
+		expect(result.hits.map((hit) => hit.remoteId)).toEqual(['000848571', '001338683']);
+		expect(result.total).toBe(137);
+		// Ids stay STRINGS with their padding — a Number() anywhere breaks this.
+		expect(result.hits[0]?.remoteId).toBe('000848571');
+	});
+
+	test('a non-allowlisted api_url_search is refused BEFORE any DNS traffic', async () => {
+		const fetcher = recordingFetch();
+		const vetting = vettingStub();
+		// Step 3 (the operator's allowlist) runs before step 4 (the first resolver
+		// traffic): with the host absent, the guard must never be consulted.
+		overrideExternalSettingsForTests({ enabled: true, allowedHosts: [], retryAttempts: 0 });
+		let caught: unknown;
+		try {
+			await fetchExternalJson({
+				model: zenon,
+				request: {
+					url: `${SEARCH_URL}?lookfor=casana`,
+					method: 'POST',
+					accept: 'application/json',
+				},
+				sectionTipo: SECTION,
+				deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+			});
+		} catch (error) {
+			caught = error;
+		}
+		expect(caught).toBeInstanceOf(ExternalServiceError);
+		expect((caught as ExternalServiceError).kind).toBe('blocked_host');
+		expect(vetting.calls, 'the SSRF guard ran before the allowlist').toHaveLength(0);
+		expect(fetcher.urls).toHaveLength(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Caching and coalescing — the stated decision
+// ---------------------------------------------------------------------------
+
+describe('search results are NOT cached, but identical in-flight queries coalesce', () => {
+	test('two concurrent identical searches cost ONE call', async () => {
+		const fetcher = gatedFetch();
+		const vetting = vettingStub();
+		const options = {
+			sectionTipo: SECTION,
+			terms: ['casana'],
+			remoteFields: ['id', 'title'],
+			deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+			dataLang: 'lg-deu',
+		};
+		const first = searchExternalService(options);
+		// Let the first call reach the (held) socket, so the second genuinely
+		// arrives while it is in flight.
+		await Promise.resolve();
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		const second = searchExternalService(options);
+		fetcher.release();
+		const [a, b] = await Promise.all([first, second]);
+		expect(fetcher.urls).toHaveLength(1);
+		expect(a.hits).toEqual(b.hits);
+	});
+
+	test('a SECOND search after the first settles is a second real request', async () => {
+		const fetcher = recordingFetch();
+		const vetting = vettingStub();
+		const options = {
+			sectionTipo: SECTION,
+			terms: ['casana'],
+			remoteFields: ['id', 'title'],
+			deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+			dataLang: 'lg-deu',
+		};
+		await searchExternalService(options);
+		await searchExternalService(options);
+		// If a result cache were ever added, this becomes 1 and the decision
+		// documented in src/external/search.ts has been reversed silently.
+		expect(fetcher.urls).toHaveLength(2);
+	});
+
+	test('a different query is a different call, and the coalescer drains', async () => {
+		const fetcher = recordingFetch();
+		const vetting = vettingStub();
+		const base = {
+			sectionTipo: SECTION,
+			remoteFields: ['id'],
+			deps: { fetchImpl: fetcher.impl, assertPublicUrlImpl: vetting.impl },
+			dataLang: 'lg-deu',
+		};
+		await Promise.all([
+			searchExternalService({ ...base, terms: ['casana'] }),
+			searchExternalService({ ...base, terms: ['burnett'] }),
+		]);
+		expect(fetcher.urls).toHaveLength(2);
+		await drainInFlightExternalSearches();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The client wire shape
+// ---------------------------------------------------------------------------
+
+describe('the emitted shape is the one the client already speaks', () => {
+	/**
+	 * The browser engine fabricated this itself (service_autocomplete.js
+	 * format_data ~:1063-1110). Produced server-side now, so the rendering path
+	 * downstream is untouched.
+	 */
+	test('a sections entry of locators, then one record_data per record × ddo', async () => {
+		const { formatExternalSearchData } = await import(
+			'../../src/core/api/handlers/dd_external_api.ts'
+		);
+		const { parseFieldsMap } = await import('../../src/external/api/index.ts');
+		const hits = SEARCH_PAYLOAD.records.map((row) => ({
+			sectionTipo: 'zenon1',
+			remoteId: row.id,
+			row: row as Record<string, unknown>,
+		}));
+		const result: ExternalSearchResult = {
+			service: 'zenon',
+			sectionTipo: 'zenon1',
+			hits,
+			total: 137,
+			limit: 20,
+			offset: 0,
+			dropped: 0,
+		};
+		const target = {
+			targetSectionTipo: 'zenon1',
+			callerTipo: 'test61',
+			model: zenon,
+			remoteFields: ['id', 'title'],
+			context: [],
+			ddos: [
+				{
+					tipo: 'zenon3',
+					fieldsMap: parseFieldsMap([{ local: 'dato', remote: 'id' }], { tipo: 'zenon3' }),
+				},
+				{
+					tipo: 'zenon4',
+					fieldsMap: parseFieldsMap([{ local: 'dato', remote: 'title' }], { tipo: 'zenon4' }),
+				},
+			],
+		};
+		const data = await formatExternalSearchData(result, target);
+
+		// 1 sections entry + 2 records × 2 ddos.
+		expect(data).toHaveLength(5);
+		expect(data[0]).toEqual({
+			section_tipo: 'zenon1',
+			// self.caller.tipo in the browser engine — the CALLER, not the service.
+			tipo: 'test61',
+			typo: 'sections',
+			entries: [
+				{ section_tipo: 'zenon1', section_id: '000848571' },
+				{ section_tipo: 'zenon1', section_id: '001338683' },
+			],
+		});
+		const first = data[1] as Record<string, unknown>;
+		expect(first.section_tipo).toBe('zenon1');
+		expect(first.section_id).toBe('000848571'); // a STRING, padding intact
+		expect(first.type).toBe('dd687');
+		expect(first.tipo).toBe('zenon3');
+		expect(first.mode).toBe('list');
+		expect(first.entries).toEqual(['000848571']);
+		const second = data[2] as Record<string, unknown>;
+		expect(second.tipo).toBe('zenon4');
+		expect(second.entries).toEqual(['Las acuñaciones provinciales romanas de Hispania ']);
+	});
+
+	test('values come from the ONE emission function — a declared format applies', async () => {
+		const { formatExternalSearchData } = await import(
+			'../../src/core/api/handlers/dd_external_api.ts'
+		);
+		const { parseFieldsMap } = await import('../../src/external/api/index.ts');
+		const row = SEARCH_PAYLOAD.records[0] as Record<string, unknown>;
+		const data = await formatExternalSearchData(
+			{
+				service: 'zenon',
+				sectionTipo: 'zenon1',
+				hits: [{ sectionTipo: 'zenon1', remoteId: '000848571', row }],
+				total: null,
+				limit: 20,
+				offset: 0,
+				dropped: 0,
+			},
+			{
+				targetSectionTipo: 'zenon1',
+				callerTipo: 'test61',
+				model: zenon,
+				remoteFields: ['authors'],
+				context: [],
+				ddos: [
+					{
+						tipo: 'zenon5',
+						fieldsMap: parseFieldsMap(
+							[{ local: 'dato', remote: 'authors', format: 'zenon_authors' }],
+							{ tipo: 'zenon5' },
+						),
+					},
+				],
+			},
+		);
+		// The engine's zenon_authors formatter, not the browser's ad-hoc one.
+		expect((data[1] as Record<string, unknown>).entries).toEqual([
+			'primary: Ripollès Alegre, P. P. (Pere Pau)',
+		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Ontology resolution — nothing about the target comes from the client
+// ---------------------------------------------------------------------------
+
+/**
+ * DB DRIFT, stated rather than hidden: the suite database
+ * (`dedalo_mib_v7_test`) carries `test3` and `test61` but NOT the `zenon1`
+ * display tree, so `buildRequestConfigForElement` drops every ddo and there is
+ * nothing to resolve. The behavioural assertion below runs where the tree
+ * exists (the application ontology) and is SKIPPED — loudly, with the reason
+ * printed — where it does not. The credless half of the same invariant is the
+ * source assertion after it, which is what actually guards "the field list is
+ * never taken from the caller".
+ */
+const hasZenonTree = await (async (): Promise<boolean> => {
+	try {
+		const { getNode } = await import('../../src/core/ontology/resolver.ts');
+		return (await getNode('zenon3')) !== null && (await getNode('test61')) !== null;
+	} catch {
+		return false;
+	}
+})();
+if (!hasZenonTree) {
+	console.warn(
+		'[external_search_native] SKIPPED the ontology-resolution case: this database carries no zenon display tree (test/fixtures/external/ontology_census.json documents the application one)',
+	);
+}
+
+describe('the target section and the field list are resolved from the ontology', () => {
+	test.if(hasZenonTree)(
+		'test61 (an external-ONLY component) resolves to zenon1 and its zenon fields',
+		async () => {
+			const { resolveExternalSearchTarget } = await import(
+				'../../src/core/api/handlers/dd_external_api.ts'
+			);
+			const target = await resolveExternalSearchTarget('test61', 'test3');
+			expect(target.targetSectionTipo).toBe('zenon1');
+			expect(target.model.service).toBe('zenon');
+			// The ddo declaration order IS the field[] order on the wire.
+			expect(target.remoteFields).toEqual(['id', 'title', 'authors', 'publicationDates']);
+			expect(target.ddos.map((ddo) => ddo.tipo)).toEqual(['zenon3', 'zenon4', 'zenon5', 'zenon6']);
+			// Every fields_map came from the NODE, never from a caller-supplied echo.
+			expect(target.ddos[0]?.fieldsMap).toEqual([{ local: 'dato', remote: 'id' }]);
+		},
+	);
+
+	test('the fields_map is read from the NODE, never from the request', async () => {
+		// Credless, and the half that matters for trust: a client that could put a
+		// field list on the wire would be the browser-direct call again, with the
+		// engine's socket. The resolver must consult the ontology node.
+		const source = await Bun.file(
+			`${import.meta.dir}/../../src/core/api/handlers/dd_external_api.ts`,
+		).text();
+		expect(source).toContain('getPropertiesByTipo(ddo.tipo)');
+		// No branch may read a field list, a url or a host off the incoming rqo.
+		for (const forbidden of ['rqo.options.fields', 'api_url', 'apiUrlSearch', 'options.host']) {
+			expect(source.includes(forbidden), `the handler reads '${forbidden}' from the request`).toBe(
+				false,
+			);
+		}
+	});
+});

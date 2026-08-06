@@ -122,7 +122,7 @@ describe('registry search face', () => {
 		);
 	});
 
-	test('external still THROWS — the faithful port of a PHP fatal', async () => {
+	test('external still THROWS — there is no SQL surface to search', async () => {
 		expect(getRelationSearchFragmentBuilder('component_external')).rejects.toThrow(
 			/not searchable/,
 		);

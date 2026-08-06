@@ -87,7 +87,10 @@ const GOLDEN_RESOLVER_MODELS: readonly string[] = [
 	'component_relation_children',
 	'component_filter',
 	'component_filter_master',
-	'component_external',
+	// component_external LEFT this list 2026-08-05: its value is DERIVED from a
+	// third-party API, so the portal resolver it used to name read an empty
+	// relation bag and emitted zero items, always. Emission moved to
+	// emitHook:'external'. Asserted below as a deliberate absence, not a gap.
 	'component_dataframe',
 	'component_select',
 	'component_select_lang',
@@ -100,8 +103,10 @@ const GOLDEN_RESOLVER_MODELS: readonly string[] = [
 ];
 
 /** The remaining deliberate search throw (children/index PORTED 2026-07-10 —
- * their dispatch is pinned in relation_search_builders.test.ts; external's
- * throw IS the faithful port of a PHP fatal). */
+ * their dispatch is pinned in relation_search_builders.test.ts; external throws
+ * because there is NO SQL SURFACE to search: the value lives in a third-party
+ * API, so an external search must go through the service adapter's
+ * buildSearchRequest, not SQO). */
 const GOLDEN_SEARCH_UNCOVERED: Readonly<Record<string, string>> = {
 	component_external: 'not searchable',
 };
@@ -159,6 +164,14 @@ describe('getRelationResolver matches the old RESOLVERS map', () => {
 	}
 	test('a non-relation model throws (uncovered scope)', () => {
 		expect(() => getRelationResolver('component_input_text')).toThrow('no registered resolver');
+	});
+	test('component_external declares NO resolver and owns its emission instead', () => {
+		// The deliberate absence, asserted so nobody "restores" the portal
+		// resolver that made this model emit nothing (descriptor_completeness's
+		// NO_RESOLVE_DATA carries the full reasoning).
+		expect(getComponentModel('component_external')?.resolveData).toBeUndefined();
+		expect(getComponentModel('component_external')?.emitHook).toBe('external');
+		expect(() => getRelationResolver('component_external')).toThrow('no registered resolver');
 	});
 });
 

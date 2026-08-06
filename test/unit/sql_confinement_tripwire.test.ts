@@ -43,6 +43,7 @@ import {
 	getOrderedSubtree,
 	getPropertiesByTipo,
 } from '../../src/core/ontology/resolver.ts';
+import { stripComments } from '../helpers/strip_comments.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -407,6 +408,56 @@ describe('T3 — canonical accessor semantics (one policy for all walks)', () =>
 				virtualFallback: false,
 			}),
 		).toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// T4 (companion) — src/external is SQL-FREE.
+//
+// The external subsystem reads the ontology through the resolver accessors and
+// holds its rows in memory; it owns NO table. Stated as a gate because the
+// tempting next step — "let's snapshot remote rows into a table so they survive
+// a restart" — is a write path, and a write path that appeared inside an
+// outbound subsystem would bypass matrix_write/json_codec and the TM audit
+// entirely. When a snapshot store is genuinely wanted it gets its own owning
+// module and its own T4 family row, in a change that has to edit THIS line.
+// ---------------------------------------------------------------------------
+
+describe('T4b — src/external owns no SQL', () => {
+	test('no SQL statement, pool or table name under src/external/**', () => {
+		const forbidden = [
+			{
+				name: 'SQL text',
+				pattern: /\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE)\b/,
+			},
+			{ name: 'the sql proxy', pattern: /\bsql\s*(?:\.\s*unsafe\s*\(|`)/ },
+			{ name: 'a pool', pattern: /\bnew\s+SQL\s*\(/ },
+			{
+				name: 'a matrix/dd table',
+				pattern: /\b(?:matrix_[a-z_]+|dd_ontology|dedalo_ts_[a-z_]+)\b/,
+			},
+		];
+		const violations: string[] = [];
+		for (const file of sourceFiles()) {
+			if (!file.startsWith('src/external/')) continue;
+			// Strip comments: the module headers legitimately discuss dd_ontology.
+			// The shared, string-literal-aware stripper — a regex one could be made
+			// to eat the rest of a line, and with it a real violation.
+			const code = stripComments(read(file));
+			for (const { name, pattern } of forbidden) {
+				if (pattern.test(code)) violations.push(`${file}: ${name}`);
+			}
+		}
+		expect(
+			violations,
+			`src/external must stay SQL-free — it reads the ontology through src/core/ontology accessors and owns no table: ${violations.join(', ')}`,
+		).toEqual([]);
+	});
+
+	test('the scan actually covers the subsystem', () => {
+		expect(
+			sourceFiles().filter((file) => file.startsWith('src/external/')).length,
+		).toBeGreaterThanOrEqual(9);
 	});
 });
 

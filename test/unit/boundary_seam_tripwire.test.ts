@@ -35,8 +35,16 @@ import { Glob } from 'bun';
 
 const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
 
-/** The facade subtree: the only legal target for NEW core→diffusion imports. */
-const FACADE_PREFIX = 'diffusion/api/';
+/**
+ * The facade subtrees: the only legal targets for NEW core→subsystem imports.
+ * One entry per PEER subsystem of src/core (diffusion, external — src/ai is
+ * still governed only by the direction gate). Adding a peer subsystem means
+ * adding its facade prefix here, or the seam grows through its internals.
+ */
+const FACADE_PREFIX = new Set(['diffusion/api/', 'external/api/']);
+
+/** The subsystem directories this gate governs, in specifier form. */
+const GOVERNED_SUBSYSTEMS = ['diffusion', 'external'];
 
 /**
  * Grandfathered NON-facade pairs (file → set of imported diffusion modules).
@@ -61,8 +69,11 @@ const GRANDFATHERED_INTERNAL: Record<string, readonly string[]> = {
 	],
 };
 
-/** Any import/export/import() specifier reaching into src/diffusion. */
-const DIFFUSION_SPECIFIER = /(?:from\s*|import\s*\(\s*)['"`]([^'"`]*\/diffusion\/[^'"`]+)['"`]/g;
+/** Any import/export/import() specifier reaching into a governed subsystem. */
+const SUBSYSTEM_SPECIFIER = new RegExp(
+	`(?:from\\s*|import\\s*\\(\\s*)['"\`]([^'"\`]*\\/(?:${GOVERNED_SUBSYSTEMS.join('|')})\\/[^'"\`]+)['"\`]`,
+	'g',
+);
 
 interface SeamEdge {
 	file: string;
@@ -73,17 +84,17 @@ interface SeamEdge {
 function scanSeamEdges(): SeamEdge[] {
 	const edges: SeamEdge[] = [];
 	const glob = new Glob('**/*.ts');
+	const insideSubsystem = new RegExp(`^(?:${GOVERNED_SUBSYSTEMS.join('|')})/`);
+	const specifierRoot = new RegExp(`^.*?((?:${GOVERNED_SUBSYSTEMS.join('|')})/)`);
 	for (const relativePath of glob.scanSync({ cwd: SRC_DIR })) {
-		if (relativePath.startsWith('diffusion/')) continue; // inside the subsystem
+		if (insideSubsystem.test(relativePath)) continue; // inside a governed subsystem
 		const text = readFileSync(join(SRC_DIR, relativePath), 'utf8');
 		const lines = text.split('\n');
 		for (let index = 0; index < lines.length; index++) {
 			const lineText = lines[index] as string;
-			for (const match of lineText.matchAll(DIFFUSION_SPECIFIER)) {
+			for (const match of lineText.matchAll(SUBSYSTEM_SPECIFIER)) {
 				const specifier = match[1] as string;
-				const normalized = specifier
-					.replace(/^(?:\.\.?\/)+/, '')
-					.replace(/^.*?diffusion\//, 'diffusion/');
+				const normalized = specifier.replace(/^(?:\.\.?\/)+/, '').replace(specifierRoot, '$1');
 				edges.push({ file: relativePath, line: index + 1, target: normalized });
 			}
 		}
@@ -91,12 +102,12 @@ function scanSeamEdges(): SeamEdge[] {
 	return edges;
 }
 
-describe('core→diffusion seam is facade-only (S3-02 tripwire)', () => {
+describe('core→subsystem seams are facade-only (S3-02 tripwire)', () => {
 	const edges = scanSeamEdges();
 
 	test('every non-facade seam edge is grandfathered (shrink-only list)', () => {
 		const violations = edges.filter((edge) => {
-			if (edge.target.startsWith(FACADE_PREFIX)) return false;
+			if ([...FACADE_PREFIX].some((prefix) => edge.target.startsWith(prefix))) return false;
 			const allowed = GRANDFATHERED_INTERNAL[edge.file];
 			return allowed === undefined || !allowed.includes(edge.target);
 		});
@@ -118,7 +129,8 @@ describe('core→diffusion seam is facade-only (S3-02 tripwire)', () => {
 		}
 	});
 
-	test('the facade itself exists (rule sanity)', () => {
+	test('every governed facade exists (rule sanity)', () => {
 		expect(() => readFileSync(join(SRC_DIR, 'diffusion/api/actions.ts'))).not.toThrow();
+		expect(() => readFileSync(join(SRC_DIR, 'external/api/index.ts'))).not.toThrow();
 	});
 });
