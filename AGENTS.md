@@ -53,6 +53,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 | `engineering/WIRE_CONTRACT.md` | The wire-divergence ledger's RULES + id grammar; the entries are one file each in `engineering/wire_contract/`. | 
 | `engineering/RELATIONS_SPEC.md`, `engineering/SECTION_SPEC.md` | Family specs — **read the dated §1 addenda first**: the rebuilds they instruct already landed. | 
 | `engineering/DIFFUSION_SPEC.md` | Native diffusion subsystem (`src/diffusion/`, Bun-owns-MariaDB tiering). | 
+| `engineering/EXTERNAL_SPEC.md` | External record services (`src/external/`, a PEER of core) — the four ontology pieces, the one outbound door and its order, egress classes, the write invariant. | 
 | `engineering/IDENTIFY_SPEC.md` | Object identification (`src/core/identify/` + the RAG image index) — a criterion IS an SQO path; read §4 for what each match mode actually does today. | 
 | `engineering/CONVENTIONS.md` | Error-handling/logging convention + the dynamic-import rules. | 
 | `engineering/ORACLE_HARVEST.md` | The frozen fixture store: how it replays, why a re-harvest is impossible, the retired-differential twin map. | 
