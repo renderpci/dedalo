@@ -15,12 +15,15 @@
  *   choose / hide ddo_maps with self-sentinel + mode resolution and
  *   model/label enrichment + the step-11 per-ddo permission drop
  *   (section-owned configs only — 2026-07-10, ddoIsAuthorized);
- * - DEFERRED (nulls/ledger): fields_map (step 9, external-API components),
- *   tm dataframe view (step 10), session/rqo overlay stages. User presets
+ * - step 9 (fields_map hydration for external-API components) LANDED 2026-08-05
+ *   — see hydrateDdoFieldsMap + WC-2026-08-05-external-api-config-publication;
+ * - DEFERRED (nulls/ledger): tm dataframe view (step 10),
+ *   session/rqo overlay stages. User presets
  *   (dd1244 layout maps) LANDED 2026-07-10 — the STAGE-2 override lives at the
  *   build.ts chokepoint (./presets.ts), feeding this parser the preset config.
  */
 
+import type { PublishedApiConfig } from '../../../external/api/index.ts';
 import { getActiveTlds } from '../../db/dd_ontology.ts';
 import { sql } from '../../db/postgres.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
@@ -427,7 +430,7 @@ async function processSingleDdo(
 		if (!authorized) return null;
 	}
 
-	return {
+	const processed: ProcessedDdo = {
 		...rawDdo,
 		tipo,
 		model,
@@ -440,6 +443,80 @@ async function processSingleDdo(
 		// ddo's mode for the cell instance instead of downgrading to list.
 		fixed_mode: true,
 	};
+
+	// step 9 (PHP resolve_ddo_fields_map, trait.request_config_ddo.php:350) —
+	// see hydrateDdoFieldsMap. Runs LAST because it stamps model/lang/permissions
+	// over the enrichment above (PHP assigns in the same order).
+	if (mapType === 'show' && rawDdo.fields_map === true) {
+		await hydrateDdoFieldsMap(processed, node.properties, context);
+	}
+
+	return processed;
+}
+
+/**
+ * STEP 9 — external-API fields_map hydration (PHP resolve_ddo_fields_map,
+ * trait.request_config_ddo.php:329-359; v6 class.common.php:3335-3348).
+ *
+ * A show ddo declaring the literal `fields_map: true` is saying "the real
+ * mapping lives on my own ontology node". The flag is REPLACED by that node's
+ * `properties.fields_map`, and the ddo is stamped with the node's properties,
+ * lang, model and the actor's permissions.
+ *
+ * THIS IS A LIVE CLIENT CONTRACT, not a parity nicety: the zenon autocomplete
+ * reads `fields[j].fields_map[0].remote` when shaping a remote answer
+ * (client/dedalo/core/services/service_autocomplete/js/service_autocomplete.js:911)
+ * and again when building `&field[]=` for the search request (:1060), where
+ * `fields` IS `rqo_search.show.ddo_map` (:887). Dropping the hydrated
+ * fields_map from the wire asks the service for no fields and renders nothing.
+ *
+ * The echoed `properties` go through the SAME publication shaper as everywhere
+ * else (publishApiConfig): today every component_external node carries only
+ * `fields_map`, so the strip is a measured no-op — but a node is editable data
+ * and this is a wire-facing echo.
+ */
+async function hydrateDdoFieldsMap(
+	ddo: ProcessedDdo,
+	nodeProperties: unknown,
+	context: RequestConfigContext,
+): Promise<void> {
+	const { sanitizeEmittedProperties } = await import('../../resolve/structure_context.ts');
+	// DEEP-CLONE FIRST. `nodeProperties` is the RESOLVER CACHE's object (getNode).
+	// sanitizeEmittedProperties returns it UNCHANGED when there is no api_config
+	// — so the cache object and its `fields_map` array would go on the wire and
+	// be mutable by any stamp-time caller — and when there IS one it assigns
+	// `properties.api_config = published` IN PLACE, which would poison the cache
+	// with the publication-stripped shape for every later reader (admin/tools
+	// read raw ontology properties). The other caller of the shaper,
+	// resolveEmittedPropertiesAndCss, clones for the same reason
+	// (structure_context.ts, PHP SEC-023).
+	const properties = sanitizeEmittedProperties(
+		structuredClone((nodeProperties ?? {}) as Record<string, unknown>),
+		ddo.tipo,
+	);
+	ddo.properties = properties;
+	ddo.fields_map = Array.isArray(properties.fields_map) ? properties.fields_map : [];
+	// PHP: DEDALO_DATA_LANG when the node is translatable, DEDALO_DATA_NOLAN
+	// otherwise — an external component must know which language axis its data
+	// lives on. Every component_external in this install is non-translatable.
+	const { getTranslatableByTipo } = await import('../../ontology/resolver.ts');
+	const { currentDataLang } = await import('../../resolve/request_lang.ts');
+	ddo.lang = (await getTranslatableByTipo(ddo.tipo)) ? currentDataLang() : 'lg-nolan';
+	// PHP re-reads the model here (guards against an earlier mismatched stamp).
+	ddo.model = (await getModelByTipo(ddo.tipo)) ?? ddo.model;
+	// PHP common::get_permissions($ddo->section_tipo, $ddo->tipo). Absent
+	// principal = internal resolution → the v0 admin posture (3) this parser
+	// stamps everywhere else (buildSqoSectionTipoDdos).
+	const { currentPrincipal } = await import('../../security/request_context.ts');
+	const { getPermissions } = await import('../../security/permissions.ts');
+	const principal = currentPrincipal();
+	const permissionSection = Array.isArray(ddo.section_tipo)
+		? ddo.section_tipo[0]
+		: (ddo.section_tipo ?? context.ownerSectionTipo);
+	ddo.permissions =
+		principal === undefined || permissionSection === undefined
+			? 3
+			: await getPermissions(principal, permissionSection, ddo.tipo);
 }
 
 /**
@@ -475,6 +552,14 @@ export interface ParsedRequestConfigItem {
 	search: { ddo_map: ProcessedDdo[]; sqo_config?: unknown } | null;
 	choose: { ddo_map: ProcessedDdo[]; sqo_config?: unknown } | null;
 	hide: { ddo_map: ProcessedDdo[] } | null;
+	/**
+	 * The TARGET SECTION's external binding, shaped for publication
+	 * (src/external/config.ts publishApiConfig). `null` on every dedalo item —
+	 * PHP emits the key unconditionally and the client's portal edit handler
+	 * reads it (component_portal.js:2054), so its ABSENCE would be a wire
+	 * divergence. Only ./external.ts may set it to a non-null value.
+	 */
+	api_config: PublishedApiConfig | null;
 }
 
 /**
@@ -739,6 +824,9 @@ export async function buildExplicitRequestConfig(
 			search: await parseBlock(item.search, context, 'search', targetTipos),
 			choose: await parseBlock(item.choose, context, 'choose', targetTipos),
 			hide: await parseBlock(item.hide, context, 'hide', targetTipos),
+			// PHP emits `api_config` on EVERY item, null for the dedalo engine
+			// (verified in the frozen harvest, request_config_differential.json).
+			api_config: null,
 		};
 		// PHP resolve_show_sqo_config → build_sqo_config_default: when a config
 		// declares a custom page size (sqo.limit) but ships no explicit

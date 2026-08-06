@@ -142,6 +142,9 @@ export async function buildImplicitComponentListConfig(
 				search: null,
 				choose: null,
 				hide: null,
+				// Implicit configs are always the dedalo engine; PHP emits the key
+				// as null on every item (the client reads it unconditionally).
+				api_config: null,
 			},
 		];
 	}
@@ -232,6 +235,7 @@ export async function buildImplicitComponentListConfig(
 			search: null,
 			choose: null,
 			hide: null,
+			api_config: null, // dedalo engine (PHP emits the key on every item)
 		},
 	];
 }
@@ -362,6 +366,7 @@ export async function buildImplicitSectionEditConfig(
 			search: null,
 			choose: null,
 			hide: null,
+			api_config: null, // dedalo engine (PHP emits the key on every item)
 		} as unknown as ParsedRequestConfigItem,
 	];
 }
