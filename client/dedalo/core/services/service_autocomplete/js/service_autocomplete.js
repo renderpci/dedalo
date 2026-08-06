@@ -168,18 +168,20 @@ service_autocomplete.prototype.init = async function(options) {
 * Key decisions made here:
 *   - Locates the 'main' dedalo request_config entry that drives all searches.
 *   - Resolves the boolean operator ($and/$or) from the config: search.sqo_config
-*     takes priority over show.sqo_config; falls back to '$and'.
+*     takes priority over show.sqo_config; falls back to '$or' (a typed term must
+*     match ANY searched component — with '$and' a multi-component SQO asks the
+*     term to be in every component at once and returns nothing).
 *   - Calls caller.build_rqo_search() to get the base SQO, ensuring project/language
 *     scope matches the host component.
 *   - Builds columns_map from the 'choose'→'search'→'show' ddo_map cascade.
 *   - Registers a render callback for the optional 'ddinfo' info-panel column.
 *   - Reads the persisted result limit from localStorage ('service_autocomplete_limit').
 *
-* (!) To change the operator default value, edit the request_config adding "sqo_config"
+* (!) To force the operator, edit the request_config adding "sqo_config"
 *     to "show" or "search":
 *     {
 *       "show": {
-*         "sqo_config": { "operator": "$or" },
+*         "sqo_config": { "operator": "$and" },
 *         "ddo_map": [...]
 *       }
 *     }
@@ -224,11 +226,14 @@ service_autocomplete.prototype.build = async function(options={}) {
 		self.search_fired		= false
 
 		// operator.
-		// (!) To change the operator default value, edit the request_config adding "sqo_config" to "show":
+		// Default is '$or': the typed term is matched across ALL searched components.
+		// With '$and' the same term would have to be present in every component at
+		// once (e.g. numisdata60 AND the rest), which returns nothing in practice.
+		// (!) To force the operator, edit the request_config adding "sqo_config" to "search" or "show":
 		// {
 		// 	"show": {
 		// 		"sqo_config": {
-		// 			"operator": "$or"
+		// 			"operator": "$and"
 		// 		},
 		// 		"ddo_map": [...]
 		// 	}
@@ -237,7 +242,7 @@ service_autocomplete.prototype.build = async function(options={}) {
 			? self.request_config_object.search.sqo_config.operator
 			: self.request_config_object.show && self.request_config_object.show.sqo_config && self.request_config_object.show.sqo_config.operator
 				? self.request_config_object.show.sqo_config.operator
-				: '$and'
+				: '$or'
 
 		// engine. get the search_engine sent or set the default value
 		self.search_engine = self.request_config_object.api_engine || 'dedalo'
