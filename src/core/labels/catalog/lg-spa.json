@@ -360,6 +360,7 @@
 	"save_root_pw": " Salvar la contraseña de root ",
 	"saved": "guardado",
 	"search": "Búsqueda",
+	"search_failed": "No se ha podido completar la búsqueda",
 	"search_in_all_langs": "Buscar en todos los idiomas",
 	"search_in_current_lang": "Buscar en el idioma actual",
 	"search_operators": "Operadores de búsqueda",

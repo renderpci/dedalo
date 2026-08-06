@@ -31,6 +31,14 @@ export function buildSectionIdFragment(
 		return false;
 	}
 	const columnExpr = `${context.alias}.section_id::integer`;
+	// EVERY bind of a digit string against that integer column must carry its
+	// own cast. Bun.sql sends a JS string as `text`, and Postgres has no
+	// `integer = text` operator, so an uncast placeholder fails the whole query
+	// with "operator does not exist: integer = text" — the search does not
+	// return zero rows, it 500s. (The ANY branch below already casts, which is
+	// why the ',' sequence was the one form that worked.) Digits-only is
+	// enforced above, so the cast can never fail at runtime.
+	const INT = '::integer';
 
 	// '...' between → $and of two comparisons (mirrors the PHP clone approach).
 	if (effective.includes('...')) {
@@ -39,8 +47,8 @@ export function buildSectionIdFragment(
 		const high = digitsOnly(highRaw ?? '');
 		if (low === '' || high === '') return false;
 		return compound('$and', [
-			fragment(`${columnExpr} >= _Q1_`, { _Q1_: low }),
-			fragment(`${columnExpr} <= _Q1_`, { _Q1_: high }),
+			fragment(`${columnExpr} >= _Q1_${INT}`, { _Q1_: low }),
+			fragment(`${columnExpr} <= _Q1_${INT}`, { _Q1_: high }),
 		]);
 	}
 	// ',' sequence → = ANY('{a,b,c}'::integer[])
@@ -57,11 +65,11 @@ export function buildSectionIdFragment(
 		if (effective.startsWith(comparisonOperator)) {
 			const value = digitsOnly(effective.slice(comparisonOperator.length));
 			if (value === '') return false;
-			return fragment(`${columnExpr} ${comparisonOperator} _Q1_`, { _Q1_: value });
+			return fragment(`${columnExpr} ${comparisonOperator} _Q1_${INT}`, { _Q1_: value });
 		}
 	}
 	// Default '='
 	const value = digitsOnly(effective);
 	if (value === '') return false;
-	return fragment(`${columnExpr} = _Q1_`, { _Q1_: value });
+	return fragment(`${columnExpr} = _Q1_${INT}`, { _Q1_: value });
 }

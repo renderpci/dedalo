@@ -632,14 +632,40 @@ export const render_search_notice = function(self, api_response) {
 
 	// status. Either the engine's typed state, or — when the response failed
 	// with no envelope at all — the generic failure, which is still a key.
-		const succeeded	= !!(api_response && api_response.result!==false)
-		const status	= (api_response && api_response.source_status)
+	//
+	// THE FALLBACK IS ENGINE-SCOPED. `render_search_notice` runs for EVERY
+	// autocomplete, dedalo ones included (numisdata161 declares no api_engine at
+	// all), so labelling any failed response 'external_search_failed' told a
+	// cataloguer that an external source had failed when no external source was
+	// involved — it sent them looking at Zenon for a plain SQO error. A dedalo
+	// engine keeps the pre-2026-08-06 behaviour: no notice, the failure surfaces
+	// through the normal error path. Only the ENGINE's own typed source_status
+	// is ever rendered for it, and a dedalo engine never sends one.
+		const is_external	= !!(self && self.search_engine && self.search_engine!=='dedalo')
+		const succeeded		= !!(api_response && api_response.result!==false)
+		const status		= (api_response && api_response.source_status)
 			? api_response.source_status
 			: (succeeded
 				? null
-				: { state: 'failed', label_key: 'external_search_failed', retryable: true })
+				: {
+					state		: 'failed',
+					// Only an EXTERNAL engine may blame an external source. A
+					// dedalo search that fails is a dedalo failure, and saying
+					// otherwise sends the cataloguer to inspect a service that
+					// was never contacted. Both are still label KEYS.
+					label_key	: is_external ? 'external_search_failed' : 'search_failed',
+					retryable	: true
+				})
 		if (!status) {
 			return null
+		}
+
+	// diagnostics. The notice title carries the server's error tokens, but a
+	// failure is worth a console line too: the tokens are what an operator
+	// quotes in a bug report, and a dropdown title is easy to miss.
+		if (!succeeded && typeof console!=='undefined') {
+			console.error('[autocomplete] search failed. engine:', self ? self.search_engine : null,
+				'component:', self ? self.tipo : null, 'response:', api_response)
 		}
 
 	// title. Diagnostics for the operator, plain text.

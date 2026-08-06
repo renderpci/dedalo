@@ -378,6 +378,7 @@
 	"saved": "saved",
 	"search": "Search",
 	"search_by_meaning": "Search by meaning",
+	"search_failed": "The search could not be completed",
 	"search_in_all_langs": "Search in all langs",
 	"search_in_current_lang": "Search in current lang",
 	"search_operators": "Search operators",
