@@ -1,0 +1,180 @@
+{
+	"api_engine_nodes": [
+		{
+			"tipo": "numisdata162",
+			"model": "component_autocomplete_hi",
+			"engines": ["dedalo", "zenon"]
+		},
+		{
+			"tipo": "rsc1285",
+			"model": "component_portal",
+			"engines": ["dedalo", "zenon"]
+		},
+		{
+			"tipo": "rsc368",
+			"model": "component_autocomplete",
+			"engines": ["dedalo", "zenon"]
+		},
+		{
+			"tipo": "tchi29",
+			"model": "component_portal",
+			"engines": ["dedalo", "zenon"]
+		},
+		{
+			"tipo": "test204",
+			"model": "component_portal",
+			"engines": ["zenon"]
+		},
+		{
+			"tipo": "test61",
+			"model": "box elements",
+			"engines": ["zenon"]
+		}
+	],
+	"api_config_sections": [
+		{
+			"tipo": "rsc205",
+			"model": "section",
+			"api_config": {
+				"info": "Added 24-06-2024 from reference in component_external->load_data_from_remote",
+				"entity": "zenon",
+				"api_url": "https://zenon.dainst.org/api/v1/record",
+				"response_map": [
+					{
+						"local": "ar_records",
+						"remote": "records"
+					},
+					{
+						"local": "msg",
+						"remote": "status"
+					}
+				]
+			}
+		},
+		{
+			"tipo": "test3",
+			"model": "section",
+			"api_config": {
+				"entity": "zenon",
+				"api_url": "https://zenon.dainst.org/api/v1/record",
+				"ui_base_url": "https://zenon.dainst.org/Record/",
+				"response_map": [
+					{
+						"local": "ar_records",
+						"remote": "records"
+					},
+					{
+						"local": "msg",
+						"remote": "status"
+					}
+				],
+				"api_url_search": "https://zenon.dainst.org/api/v1/search"
+			}
+		},
+		{
+			"tipo": "zenon1",
+			"model": "section",
+			"api_config": {
+				"entity": "zenon",
+				"api_url": "https://zenon.dainst.org/api/v1/record",
+				"ui_base_url": "https://zenon.dainst.org/Record/",
+				"response_map": [
+					{
+						"local": "ar_records",
+						"remote": "records"
+					},
+					{
+						"local": "msg",
+						"remote": "status"
+					}
+				],
+				"api_url_search": "https://zenon.dainst.org/api/v1/search"
+			}
+		}
+	],
+	"component_external_nodes": [
+		{
+			"tipo": "test215",
+			"parent": "test45",
+			"fields_map": [
+				{
+					"local": "dato",
+					"format": "zenon_authors",
+					"remote": "authors"
+				}
+			]
+		},
+		{
+			"tipo": "zenon10",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"remote": "containerTitle"
+				}
+			]
+		},
+		{
+			"tipo": "zenon11",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"remote": "physicalDescriptions"
+				}
+			]
+		},
+		{
+			"tipo": "zenon3",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"remote": "id"
+				}
+			]
+		},
+		{
+			"tipo": "zenon4",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"remote": "title"
+				}
+			]
+		},
+		{
+			"tipo": "zenon5",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"format": "zenon_authors",
+					"remote": "authors"
+				}
+			]
+		},
+		{
+			"tipo": "zenon6",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"format": "array_values",
+					"remote": "publicationDates"
+				}
+			]
+		},
+		{
+			"tipo": "zenon9",
+			"parent": "zenon2",
+			"fields_map": [
+				{
+					"local": "dato",
+					"remote": "recordPage"
+				}
+			]
+		}
+	]
+}

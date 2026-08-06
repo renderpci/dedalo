@@ -137,6 +137,62 @@ export interface SaveResult {
 }
 
 /**
+ * A write was addressed to a component whose value is DERIVED from a
+ * third-party service (WC-2026-08-06-external-write-refusal).
+ *
+ * SEPARATE CLASS, and a THROW rather than an `ok:false`: the consultation-only
+ * guard above answers "this record is read-only for everyone", which the client
+ * shows as a message; this answers "there is no place on disk where these bytes
+ * could go", which is a contract violation by the caller and must reach the
+ * operator's log with the tipo that caused it.
+ */
+export class ExternalWriteRefused extends Error {
+	readonly componentTipo: string;
+	readonly sectionTipo: string;
+	readonly model: string;
+
+	constructor(fields: { componentTipo: string; sectionTipo: string; model: string; door: string }) {
+		super(
+			`${fields.door}: write refused to '${fields.componentTipo}' (${fields.model}) in section '${fields.sectionTipo}' — its value is DERIVED from a third-party service at read time, so the local record has no slot for it and the remote service is never written to`,
+		);
+		this.name = 'ExternalWriteRefused';
+		this.componentTipo = fields.componentTipo;
+		this.sectionTipo = fields.sectionTipo;
+		this.model = fields.model;
+	}
+}
+
+/**
+ * THE WRITE REFUSAL for derived-from-remote components (2026-08-06).
+ *
+ * The predicate is the descriptor facet `emitHook: 'external'`, not a model
+ * name list: a model whose emission is fully owned by the external hook derives
+ * its value from a service at read time, and that IS the property that makes it
+ * unwritable. A future second derived model is covered the day it declares the
+ * hook, with no edit here.
+ *
+ * DELIBERATE DIVERGENCE FROM v6, ledgered in the WC entry: PHP's
+ * `component_external` carried an explicit `# Tool Time machine case` branch
+ * that called `parent::set_dato()`, so a TM restore DID write a snapshot of the
+ * remote answer into the matrix column. The census that licenses removing it:
+ * `matrix_time_machine` holds ZERO rows for any `component_external` tipo, and
+ * the one external section (`zenon1`) has zero matrix rows in any table — there
+ * is nothing to restore, and restoring would fossilize a stale remote answer
+ * into a column the read path never consults.
+ */
+async function assertNotExternalWrite(componentTipo: string, sectionTipo: string): Promise<void> {
+	const model = await getModelByTipo(componentTipo);
+	if (model === null) return; // the unknown-tipo answer belongs to the save body
+	if (getComponentModel(model)?.emitHook !== 'external') return;
+	throw new ExternalWriteRefused({
+		componentTipo,
+		sectionTipo,
+		model,
+		door: 'saveComponentData',
+	});
+}
+
+/**
  * PHP lang-slice gate — supports_translation && !is_relation (PHP
  * update_data_value :4110-4126/:4169-4180 conditions): only the literal
  * translation-supporting CLASSES (registry classSupportsTranslation, PHP
@@ -351,6 +407,12 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	const dataTipo = await resolveDataTipo(request.componentTipo);
 	const effectiveRequest =
 		dataTipo === request.componentTipo ? request : { ...request, componentTipo: dataTipo };
+	// Derived-from-remote components are refused BEFORE the transaction opens:
+	// the answer is a property of the ontology, identical for every request, so
+	// there is nothing to roll back and no row to lock (see assertNotExternalWrite).
+	// After the alias hop, so an alias door onto an external tipo is refused too.
+	await assertNotExternalWrite(effectiveRequest.componentTipo, effectiveRequest.sectionTipo);
+
 	const result = await withTransaction(() => applySaveComponentData(effectiveRequest));
 
 	// Post-commit side effect — deliberately OUTSIDE the transaction (S1-14

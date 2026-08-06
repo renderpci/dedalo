@@ -185,11 +185,15 @@ async function buildPortalOrderPath(
 			},
 		);
 	}
-	// PHP array_find api_engine==='dedalo' (:405-418); the bare-first-item
-	// fallback only stands when that item declares no other engine.
-	const item =
-		config.find((el) => (el.api_engine ?? 'dedalo') === 'dedalo') ??
-		(config[0]?.api_engine === undefined ? config[0] : undefined);
+	// PHP array_find api_engine==='dedalo' (:405-418). The narrowing now goes
+	// through the shared selector: an ORDER path over an external-only component
+	// requires an adapter that can order at all — silently returning a one-step
+	// path (what the old bare-first-item fallback did) sorts by the wrong column
+	// and looks like it worked.
+	const { selectConfigItemForConcern } = await import(
+		'../relations/request_config/engine_select.ts'
+	);
+	const item = await selectConfigItemForConcern(config, 'ordering', 'search/order_path.pathFor');
 	const firstDdo = (item?.show?.ddo_map ?? [])[0] as
 		| { tipo?: string; section_tipo?: unknown }
 		| undefined;

@@ -698,10 +698,22 @@ async function readComponentShowMap(tipo: string): Promise<ComponentShowMap | nu
 	if (!Array.isArray(requestConfig)) return null;
 	// PHP array_find api_engine==='dedalo' (:279). 'dedalo' is also the implicit
 	// engine of a config that declares none — every stored 'M' component does.
-	const config =
-		requestConfig.find((entry) => entry?.api_engine === 'dedalo') ??
-		requestConfig.find((entry) => entry?.api_engine === undefined);
-	const ddoMap = config?.show?.ddo_map;
+	// An EXTERNAL-only component reaches the adapter first: the badge renders a
+	// value per target record, which is what capabilities.listColumns answers.
+	const { selectConfigItemForConcern } = await import(
+		'../relations/request_config/engine_select.ts'
+	);
+	const config = await selectConfigItemForConcern(
+		requestConfig as { api_engine?: string }[],
+		'listColumns',
+		'ts_object.readComponentShowMap',
+	);
+	const show = (
+		config as {
+			show?: { ddo_map?: unknown; fields_separator?: unknown; records_separator?: unknown };
+		} | null
+	)?.show;
+	const ddoMap = show?.ddo_map;
 	if (!Array.isArray(ddoMap)) return null;
 
 	const tipos = (ddoMap as ShowDdoEntry[])
@@ -720,12 +732,12 @@ async function readComponentShowMap(tipo: string): Promise<ComponentShowMap | nu
 	return {
 		tipos,
 		fieldsSeparator: pickSeparator(
-			config?.show?.fields_separator,
+			show?.fields_separator,
 			properties?.fields_separator,
 			DEFAULT_FIELDS_SEPARATOR,
 		),
 		recordsSeparator: pickSeparator(
-			config?.show?.records_separator,
+			show?.records_separator,
 			properties?.records_separator,
 			DEFAULT_RECORDS_SEPARATOR,
 		),

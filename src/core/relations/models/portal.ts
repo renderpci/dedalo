@@ -12,12 +12,20 @@
  * relations map); for edit cells the component's own config through the explicit
  * builder.
  *
+ * A component may declare SEVERAL config items (a main + a secondary scope, or a
+ * dedalo item + a non-dedalo one — rsc368, numisdata162, rsc1285, tchi29,
+ * test204). ALL of them contribute children, flattened and deduped by
+ * ../config_ddo_map.ts; which of those children a given locator sees is decided
+ * by the LOCATOR's own section_tipo in relation_core, never by an api_engine
+ * branch.
+ *
  * PHP references: component_portal_json.php, class.common.php:2603-2681
  * (injected request_config precedence), trait.request_config_v5.php:618
  * (build_legacy_ddo_map).
  */
 
 import type { Ddo } from '../../concepts/ddo.ts';
+import { type ConfigDdoMapSource, flattenConfigDdoMaps } from '../config_ddo_map.ts';
 import type { RelationEmitContext, RelationModelResolver } from '../registry.ts';
 import { expandPortal } from '../relation_core.ts';
 
@@ -216,30 +224,37 @@ export const portalResolver: RelationModelResolver = {
 					ownerSectionId: row.section_id,
 					lang: defaultLang,
 				});
-				// PHP get_subdatum flattens SHOW + HIDE ddo_map entries — hide ddos
-				// are server-resolved data the client widgets consume without
-				// rendering as columns (numisdata585's hierarchy31 geolocation
-				// feeds the map observer).
-				const configChildren = [
-					...(ownConfig[0]?.show?.ddo_map ?? []),
-					...(ownConfig[0]?.hide?.ddo_map ?? []),
-				];
+				// PHP get_subdatum builds ONE full_ddo_map out of EVERY config
+				// item's show + hide maps (class.common.php:2312-2341) — not just
+				// the first item's. Taking `ownConfig[0]` dropped a second engine's
+				// children entirely, which is where rsc368's zenon source died; it
+				// also dropped a `secondary` dedalo item's children (numisdata573's
+				// hierarchy95). The shared flattener owns the rule, including the
+				// dedup and the empty-show-map skip.
+				const configChildren = flattenConfigDdoMaps(ownConfig as unknown as ConfigDdoMapSource[], {
+					ownerTipo: ddo.tipo,
+					logEmptyShowMap: true,
+				});
 				for (const child of configChildren) {
+					const childTipo = child.tipo;
+					if (typeof childTipo !== 'string' || childTipo === '') continue;
 					fullMap.push({
-						tipo: child.tipo,
+						tipo: childTipo,
 						// Keep the DECLARED section list intact — a multi-target hi
 						// component's 'self' children resolve to EVERY target
 						// (numisdata20's hierarchy25 spans 26 hierarchy sections);
 						// flattening to [0] made the per-locator grouping skip all
-						// but the first target (the numisdata6 §2 client bug).
-						section_tipo: child.section_tipo,
-						parent: child.parent === 'self' ? ddo.tipo : child.parent,
-						mode: (child as { mode?: string }).mode,
-						lang: await stampLang(child.tipo, (child as { lang?: string }).lang),
-						limit: (child as { limit?: number }).limit,
+						// but the first target (the numisdata6 §2 client bug). It is
+						// ALSO what keeps a multi-engine map safe: the zenon ddos
+						// declare zenon1, so only a zenon1 locator ever sees them.
+						section_tipo: child.section_tipo as string | string[] | undefined,
+						parent: child.parent === 'self' ? ddo.tipo : (child.parent as string),
+						mode: child.mode as string | undefined,
+						lang: await stampLang(childTipo, child.lang as string | undefined),
+						limit: child.limit as number | undefined,
 						// carried through for the breadcrumb trigger
 						// (relation_core portalCellEmitsDdinfo)
-						value_with_parents: (child as { value_with_parents?: boolean }).value_with_parents,
+						value_with_parents: child.value_with_parents as boolean | undefined,
 					} as Ddo);
 				}
 			}

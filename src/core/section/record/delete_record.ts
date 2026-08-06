@@ -365,8 +365,16 @@ async function removeAllInverseReferences(
 	}
 }
 
-/** Component models delete_data never empties (PHP $excluded_model_to_empty). */
-const EXCLUDED_EMPTY_MODELS: ReadonlySet<string> = new Set([
+/**
+ * Component models delete_data never empties (PHP $excluded_model_to_empty).
+ *
+ * `component_external` is here for the same reason it is refused at the save
+ * door: its value is DERIVED from a third-party service, so "emptying" it would
+ * write a TM backfill row and a column key for data this record never held.
+ * EXPORTED so `external_write_refusal_tripwire` asserts the membership rather
+ * than trusting this comment (WC-2026-08-06-external-write-refusal).
+ */
+export const EXCLUDED_EMPTY_MODELS: ReadonlySet<string> = new Set([
 	'component_section_id',
 	'component_external',
 	'component_inverse',

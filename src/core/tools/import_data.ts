@@ -18,9 +18,16 @@
  * intact, whereas "conform to null and save" would CLEAR it — a silent
  * destruction of data the CSV never meant to touch. PHP is laxer here (it stores
  * the raw string and corrupts the column); we do not copy that.
+ *
+ * THE ONE EXCEPTION to "json always round-trips" (2026-08-05): a DERIVED field
+ * refuses BOTH cell shapes. See the relation-column check in conformImportData.
  */
 
-import { allComponentModels, getImportConformId } from '../components/registry.ts';
+import {
+	allComponentModels,
+	getComponentModel,
+	getImportConformId,
+} from '../components/registry.ts';
 import { IMPORT_CONFORM, type ImportConformContext, type JsonCell } from './import_conform.ts';
 
 /**
@@ -241,6 +248,26 @@ export async function conformImportData(input: ConformInput): Promise<ConformRes
 		component_tipo: input.componentTipo,
 		msg,
 	});
+
+	// A RELATION-column model with no facet is a DERIVED field (2026-08-05:
+	// component_external, whose value lives in a third-party API — every other
+	// relation model is required to declare a parser, and
+	// descriptor_completeness_tripwire enforces that). It has no importable
+	// form at all, so even the model-agnostic json round-trip is refused: the
+	// local record has no slot the imported bytes belong in, and writing them
+	// would put a fossil into a column the read path never consults again.
+	if (getComponentModel(input.model)?.column === 'relation') {
+		return {
+			result: null,
+			errors: [
+				failure(
+					`IGNORED: '${input.model}' is a DERIVED field — its value comes from an external service, so it can never be written from an import`,
+				),
+			],
+			warnings: [],
+			msg: 'Error. Request failed',
+		};
+	}
 
 	if (json.isJson) {
 		const normalizeItems = (items: unknown[]): unknown[] =>
