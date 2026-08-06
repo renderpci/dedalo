@@ -68,16 +68,29 @@ export async function resolveGridColumns(
 	if (cached !== undefined) return cached;
 
 	const node = await getNode(componentTipo);
-	const requestConfig = (
+	const rawConfig = (
 		node?.properties as {
 			source?: {
 				request_config?: {
+					api_engine?: string;
 					sqo?: { section_tipo?: unknown };
 					show?: { get_ddo_map?: { columns?: unknown[] } };
 				}[];
 			};
 		} | null
-	)?.source?.request_config?.[0];
+	)?.source?.request_config;
+	// Capability-negotiated narrowing (relations/request_config/engine_select.ts):
+	// the grid renders one COLUMN per resolved ddo, so an external-only component
+	// must have an adapter that can back a column. `[0]` used to pick whatever
+	// came first, external or not.
+	const { selectConfigItemForConcern } = await import(
+		'../../../relations/request_config/engine_select.ts'
+	);
+	const requestConfig = await selectConfigItemForConcern(
+		rawConfig,
+		'listColumns',
+		'component_info/grid.resolveGridColumns',
+	);
 	const columnsDecl = requestConfig?.show?.get_ddo_map?.columns;
 	const columns: GridColumn[] = [];
 	if (Array.isArray(columnsDecl)) {

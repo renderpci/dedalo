@@ -89,6 +89,15 @@ const TRIPWIRES = [
 	'test/unit/diffusion_queue_stream_tripwire.test.ts',
 	'test/unit/dataframe_scan_coverage_tripwire.test.ts',
 	'test/unit/tool_header_contract_tripwire.test.ts',
+	'test/unit/external_registry_totality_tripwire.test.ts',
+	'test/unit/external_outbound_tripwire.test.ts',
+	'test/unit/external_secret_confinement_tripwire.test.ts',
+	'test/unit/external_isolation_tripwire.test.ts',
+	'test/unit/external_egress_tripwire.test.ts',
+	'test/unit/external_degradation_tripwire.test.ts',
+	'test/unit/external_config_narrowing_census.test.ts',
+	'test/unit/external_write_refusal_tripwire.test.ts',
+	'test/unit/external_client_render_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 

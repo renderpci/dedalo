@@ -42,6 +42,7 @@ import { componentTextAreaApiActions } from './handlers/dd_component_text_area_a
 import { coreApiActions } from './handlers/dd_core_api.ts';
 import { diffusionApiActions } from './handlers/dd_diffusion_api.ts';
 import { errorReportApiActions } from './handlers/dd_error_report_api.ts';
+import { externalApiActions } from './handlers/dd_external_api.ts';
 import { identifyApiActions } from './handlers/dd_identify_api.ts';
 import { mcpApiActions } from './handlers/dd_mcp_api.ts';
 import { toolsApiActions } from './handlers/dd_tools_api.ts';
@@ -142,6 +143,12 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
 	// class here; the RESULTS are ACL-gated inside the engine (the principal runs
 	// through both the pool query and the per-candidate record read).
 	dd_identify_api: identifyApiActions,
+	// External record services (src/external): search a third-party catalogue
+	// THROUGH the engine, so the request goes through the one outbound door and
+	// all of its controls. Deliberately absent from NO_LOGIN_ACTIONS and from
+	// CSRF_EXEMPT_ACTIONS: the action makes the SERVER open an outbound socket on
+	// the caller's behalf, so an anonymous visitor must never be able to drive it.
+	dd_external_api: externalApiActions,
 	// Error-report intake (WC-017, TS-only): ONE pre-auth action, reachable
 	// only where DEDALO_ERROR_REPORT_RECEIVER is on (Gate 1c below).
 	dd_error_report_api: errorReportApiActions,
