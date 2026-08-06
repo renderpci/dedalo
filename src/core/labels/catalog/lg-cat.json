@@ -128,6 +128,8 @@
 	"export_hierarchy": "Exportar jerarquia",
 	"export_presets": "Configuracions d'exportació",
 	"extension": "extensió",
+	"external_search_empty_query": "Escriviu alguna cosa per cercar a la font externa",
+	"external_search_failed": "No s'ha pogut completar la cerca externa",
 	"external_source_circuit_open": "Font externa suspesa temporalment després de fallades repetides",
 	"external_source_disabled": "Font externa desactivada",
 	"external_source_misconfigured": "Font externa mal configurada",

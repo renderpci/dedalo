@@ -137,6 +137,8 @@
 	"export_hierarchy": "Export hierarchy",
 	"export_presets": "Export presets",
 	"extension": "extension",
+	"external_search_empty_query": "Type something to search the external source",
+	"external_search_failed": "The external search could not be completed",
 	"external_source_circuit_open": "External source temporarily suspended after repeated failures",
 	"external_source_disabled": "External source disabled",
 	"external_source_misconfigured": "External source misconfigured",

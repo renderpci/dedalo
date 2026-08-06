@@ -128,6 +128,8 @@
 	"export_hierarchy": "Hierarchie exportieren",
 	"export_presets": "Exportkonfiguration",
 	"extension": "Erweiterung",
+	"external_search_empty_query": "Geben Sie etwas ein, um die externe Quelle zu durchsuchen",
+	"external_search_failed": "Die externe Suche konnte nicht abgeschlossen werden",
 	"external_source_circuit_open": "Externe Quelle nach wiederholten Fehlern vorübergehend ausgesetzt",
 	"external_source_disabled": "Externe Quelle deaktiviert",
 	"external_source_misconfigured": "Externe Quelle falsch konfiguriert",
