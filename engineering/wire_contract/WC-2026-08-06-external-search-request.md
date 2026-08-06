@@ -3,8 +3,9 @@
 - **Date:** 2026-08-06 (the last gap of the external-record subsystem;
   engineering/EXTERNAL_SPEC.md §10 was "DECLARED, UNIMPLEMENTED" until today).
 - **Decision:** — (DEC-12 gates shipped with it:
-  `test/unit/external_search_native.test.ts` plus the `query_terms` half of
-  `test/unit/external_egress_tripwire.test.ts`, which is already registered in
+  `test/unit/external_search_native.test.ts`, the `query_terms` half of
+  `test/unit/external_egress_tripwire.test.ts` and the new
+  `test/unit/external_search_target_tripwire.test.ts` — all registered in
   `engineering/TRIPWIRES.md` + `scripts/verify.ts`).
 - **Re-harvest: NO — impossible by definition.** The oracle is frozen; this
   entry records a deliberate contract edit.
@@ -125,17 +126,96 @@ number. `total`/`limit`/`offset` are ADDED keys (the browser engine could not
 report a total at all); the client ignores unknown keys, so the envelope widens
 without changing.
 
-**What the client may NOT send:** a URL, a host, a service name or a field list.
-The request carries only the caller component's `tipo` + `section_tipo`, the
-terms and a page; the target section comes from the component's
-`request_config`, the service from that section's `api_config`, and the field
-list from each `component_external` node's own `properties.fields_map`. A client
-that could name any of those would be the browser-direct call again, wearing the
-engine's socket.
+**What the client may NOT send:** a URL, a host, a service name, a field list —
+or a render mode. The request carries only the caller component's `tipo` +
+`section_tipo`, the terms and a page; the target section is DERIVED (below), the
+service comes from that section's `api_config`, and the field list from each
+external node's own `properties.fields_map`. A client that could name any of
+those would be the browser-direct call again, wearing the engine's socket.
 
-### Known open
+### How the target section is DERIVED (corrected 2026-08-06, same day)
 
-`service_autocomplete.js` still holds the browser-direct `zenon_engine`; pointing
-it at this action is the CLIENT half of the same change and is tracked
-separately. Until it lands, the search box remains broken in exactly the way it
-has been since 2026-07-28 — no regression, and no new one.
+Because the client names nothing, the derivation is load-bearing, and the first
+cut got it wrong two ways — both found by resolving this installation's six real
+`api_engine` callers rather than by reading the code:
+
+1. **The target is the section of the ddos that ARE external** (predicate: the
+   descriptor facet `emitHook: 'external'`), never `ddo_map[0]`'s section.
+   `relations/request_config/external.ts` does use the first ddo — correctly,
+   as PHP parity on a PUBLICATION path — but a PORTAL's external item leads with
+   its own portal ddo (`rsc1285` → `rsc368`@`rsc332`) and lists the `zenon1`
+   fields after it. Under the first-ddo rule `rsc1285`, `tchi29` and
+   `numisdata162` resolved to a section with no `api_config` and answered every
+   search `misconfigured`. The browser engine had hidden exactly this behind its
+   hard-coded fallback URL — which is why nobody had seen it.
+2. **Every render mode is asked.** The builder answers a different item set per
+   mode (a `section_list` child substitutes the whole config in list-like
+   modes), so `numisdata162` declares its external item in EDIT only and a
+   `list`-only lookup resolved nothing at all. The client may not name the mode:
+   that is config travelling from the browser.
+3. **Ambiguity is REFUSED, both sections named** — never resolved by taking the
+   first. Two external targets mean two services, the client cannot say which
+   source selector it is on (by design), and searching the wrong catalogue is a
+   wrong answer that looks right.
+
+Gate: `test/unit/external_search_target_tripwire.test.ts` (credless, against
+frozen copies of what the builder really answers for those nodes, plus an
+ontology half that runs the real resolver wherever the DB carries the tree).
+
+### The client half (landed the same day)
+
+`service_autocomplete.js`'s `zenon_engine` is now `external_engine`: it calls
+`dd_external_api::search` through `data_manager.request` — the client's ONE
+request path, which carries the session cookie, the CSRF token and its rotation,
+the 401 re-login recovery and the error reporting — and `zenon_engine` remains
+as a stable alias, because `autocomplete_search` resolves an engine by NAME
+(`api_engine + '_engine'`) and an ontology may carry `api_engine: 'zenon'`.
+Any OTHER non-`dedalo` `api_engine` now resolves to `external_engine` too: the
+browser no longer needs to know which service it is talking to, so a second
+service is an ontology edit, not a client edit.
+
+Deleted from the browser, because the engine owns them: the hard-coded
+`https://zenon.dainst.org/api/v1/search` fallback, `lng:"de"`, the
+`ñññññññ---!!!!!` sentinel, the `field[]` list, the `case 'authors'` formatter
+and the whole `format_data` fabrication. What the browser still decides is
+presentational only. Gate: the fourth section of
+`test/unit/external_client_render_tripwire.test.ts` — no absolute URL, no
+`XMLHttpRequest`/`fetch`/`WebSocket`/`sendBeacon`, none of the retired literals
+(comments included), and the request may not name a url, a host, a service or a
+field list. Behaviour half: `client/dedalo/test/client/js/test_service_autocomplete.js`.
+
+**The empty query never leaves the browser.** The engine answers it with an
+empty result and no socket, so asking is pure latency; `external_engine`
+short-circuits and returns a local `source_status` of state `empty_query`.
+
+### Failure states on the wire (client-visible)
+
+A search that fails does NOT return 4xx: `data_manager.request` reads a non-ok
+response as a thrown fetch error (only 401 is let through, WC-051), so a 4xx
+body — everything the server said about WHY — is discarded before any caller
+sees it. So a SERVICE or CONFIGURATION failure answers HTTP 200 with:
+
+```json
+{ "result": false,
+  "msg": "Error. The external search did not complete",
+  "errors": ["external_blocked_host"],
+  "source_status": { "service": "zenon", "state": "misconfigured",
+                     "label_key": "external_source_misconfigured",
+                     "retryable": false } }
+```
+
+`source_status` is the SAME object the record path emits (component_external),
+built by the same `stateForKind` + `externalSourceStatus` pair — one taxonomy,
+one state→label_key map. The client renders it through the same
+`source_status_label` helper, so a state never gets two different words, and the
+text is always a labels-catalog KEY (`src/core/labels/master.json`), never
+prose. `errors` keeps the finer grain the closed state set folds away
+(`blocked_host` and `not_registered` are both `misconfigured`) as operator
+diagnostics in the notice's `title`.
+
+A 4xx is now reserved for CALLER FAULTS (missing `source.tipo`, an unparseable
+page, no read permission) — a programming error nobody translates.
+
+Two new label keys: `external_search_empty_query` (nothing was typed — the one
+NEUTRAL state, and it must not look like a failure) and `external_search_failed`
+(the response failed with no envelope at all: a 4xx, or a thrown fetch).

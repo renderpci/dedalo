@@ -498,11 +498,22 @@ OPERATOR-EDITABLE ontology field.
 
 Six things that are contract, not detail:
 
-1. **The client sends no URL, host, service name or field list.** Only the
-   CALLER's `tipo` + `section_tipo`, the terms and a page. The target section
-   comes from the component's `request_config`, the service from that section's
-   `api_config`, the fields from each `component_external` node's own
-   `properties.fields_map`.
+1. **The client sends no URL, host, service name, field list or render mode.**
+   Only the CALLER's `tipo` + `section_tipo`, the terms and a page. The service
+   comes from the target section's `api_config`, the fields from each external
+   node's own `properties.fields_map`, and the TARGET SECTION is derived by
+   three rules that are contract, not detail (gate:
+   `external_search_target_tripwire`):
+   **(a)** the target is the section of the ddos whose model carries
+   `emitHook: 'external'` — never `ddo_map[0]`'s, which on a PORTAL is the
+   portal's own ddo in its own section (`rsc1285` → `rsc368`@`rsc332`) and
+   resolved three of this installation's six callers to a section with no
+   `api_config`;
+   **(b)** every render mode is asked, because the builder answers a different
+   item set per mode and `numisdata162` declares its external item in EDIT only;
+   **(c)** two distinct external targets are REFUSED by name — the client cannot
+   say which source selector it is on, and searching the wrong catalogue is a
+   wrong answer that looks right.
 2. **An empty query is refused before any socket** and answers an empty result.
    The browser's `ñ`-sentinel (which existed because Zenon answers an empty
    `lookfor` with its first ten records) is NOT ported: a magic string whose
@@ -521,13 +532,32 @@ Six things that are contract, not detail:
    coalesced. `searchExternalService` also THROWS rather than degrading — a
    search has no other content to protect, and `[]` is a lie a user acts on.
 
-Ledger: `WC-2026-08-06-external-search-request`. Gate:
-`test/unit/external_search_native.test.ts` + the `query_terms` half of
-`external_egress_tripwire`.
+### 10.1 The client half (same day)
 
-**KNOWN OPEN:** the CLIENT half. `service_autocomplete.js` still holds the
-browser-direct `zenon_engine`; pointing it at `dd_external_api::search` is
-tracked separately.
+`service_autocomplete.js`'s `zenon_engine` is now `external_engine` and calls
+`dd_external_api::search` through `data_manager.request` — the client's ONE
+request path (session cookie, CSRF token + rotation, 401 re-login recovery,
+error reporting). `zenon_engine` stays as an ALIAS because `autocomplete_search`
+resolves an engine by name; any other non-`dedalo` `api_engine` resolves to
+`external_engine` too, so adding a second service is an ontology edit and not a
+client edit. The fallback URL, `lng:"de"`, the sentinel, the `field[]` list, the
+per-service formatter and the whole client-side answer fabrication are DELETED —
+the browser now says only who is asking and what was typed.
+
+**A failed search is NAMED.** The action answers a service/configuration failure
+with HTTP 200 + `result:false` + the record path's own `source_status`
+(`stateForKind` + `externalSourceStatus`: one taxonomy, one state→label_key
+map), which the widget renders through the shared `source_status_label`. A 4xx
+would be worse than useless here — `data_manager` discards a non-ok body (only
+401 survives, WC-051) — so 4xx is reserved for CALLER FAULTS. Two new keys:
+`external_search_empty_query` (the one neutral state) and
+`external_search_failed` (a failure with no envelope at all).
+
+Ledger: `WC-2026-08-06-external-search-request`. Gates:
+`test/unit/external_search_native.test.ts`, the `query_terms` half of
+`external_egress_tripwire`, the fourth section of
+`external_client_render_tripwire` (no third-party origin reachable from the
+autocomplete path), and `client/dedalo/test/client/js/test_service_autocomplete.js`.
 
 ---
 
@@ -542,7 +572,8 @@ tracked separately.
 | `external_egress_tripwire` | §6, sentinel-driven; per-PATH classes (`egress` / `searchEgress`) |
 | `external_degradation_tripwire` | §8.2 — no silent blank on any reachable (status, kind) pair; the maps are total; every label key is defined |
 | `external_write_refusal_tripwire` | §9, five axes + a positive control |
-| `external_client_render_tripwire` | the client half: text rendering, the visible marker, one `ui_base_url` consumer |
+| `external_client_render_tripwire` | the client half: text rendering, the visible marker, one `ui_base_url` consumer, and NO third-party origin reachable from the autocomplete search path (§10.1) |
+| `external_search_target_tripwire` | §10.1 — the target section is derived from the EXTERNAL ddos (not `ddo_map[0]`), across EVERY render mode, and two targets are refused by name |
 | `external_config_narrowing_census` | §3.5 — TRANSITIONAL RATCHET; delete when `deferred` is empty |
 
 Behaviour twins (`test/unit/external_*_native.test.ts`): `cache`, `degradation`,
