@@ -15,6 +15,7 @@ import { DEFAULTS_KEYS } from './defaults.ts';
 import { DIFFUSION_KEYS } from './diffusion.ts';
 import { ENTITY_KEYS } from './entity.ts';
 import { ERROR_REPORT_KEYS } from './error_report.ts';
+import { EXTERNAL_KEYS } from './external.ts';
 import { INSTALL_KEYS } from './install.ts';
 import { LANGS_KEYS } from './langs.ts';
 import { LOCALE_KEYS } from './locale.ts';
@@ -66,6 +67,13 @@ export const DOMAINS: readonly ConfigDomain[] = [
 	{ id: 'ops', page: 'config', title: 'Logs, backups and diagnostics', intro: '' },
 	{ id: 'error_report', page: 'config', title: 'Error reporting', intro: '' },
 	{ id: 'ai', page: 'config', title: 'AI assistant, agent and semantic search', intro: '' },
+	{
+		id: 'external',
+		page: 'config',
+		title: 'External record services',
+		intro:
+			'Some ontology nodes resolve their values from a service outside Dédalo (a bibliographic catalogue, an authority file) rather than from the records stored here. These settings govern that outbound side: whether it runs at all, which hosts it may reach — nowhere, until you say so — and the ceilings that keep a slow or hostile service from becoming a slow or broken Dédalo.',
+	},
 	{ id: 'tools', page: 'config', title: 'Tools', intro: '' },
 	{ id: 'sitebuilder', page: 'config', title: 'Site builder', intro: '' },
 	{ id: 'install', page: 'config', title: 'Install', intro: '' },
@@ -129,6 +137,7 @@ const DOMAIN_KEYS: Record<string, Record<string, CatalogEntry>> = {
 	ops: OPS_KEYS,
 	error_report: ERROR_REPORT_KEYS,
 	ai: AI_KEYS,
+	external: EXTERNAL_KEYS,
 	tools: TOOLS_KEYS,
 	sitebuilder: SITEBUILDER_KEYS,
 	install: INSTALL_KEYS,
