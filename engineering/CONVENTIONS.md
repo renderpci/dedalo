@@ -36,6 +36,26 @@ identifying coordinates (tipo/section_id/job id). Request-scale telemetry
 belongs in the structured access log (S2-37, `src/server.ts`), not scattered
 console lines. Never log secrets or full record payloads.
 
+**Outbound subsystems name the counterparty, and only the ORIGIN of it.** The
+external-services subsystem (`src/external/`, engineering/EXTERNAL_SPEC.md)
+fixes its grammar in code — `formatExternalError` builds every line as:
+
+```
+[external:<service>] <kind> origin=<scheme://host> [status=<n>] [section=<tipo>] [id=<remote id>] [detail]
+```
+
+The subsystem tag carries the SERVICE (`[external:zenon]`, `[external:unknown]`
+before resolution) because "an outbound call failed" is unactionable when four
+catalogues are bound; `<kind>` is the closed taxonomy ordered by how far the
+attempt got, which answers the second operator question an outbound path
+raises — not only "no data or swallowed failure?" but "how far did it get?".
+**A full URL is never stored on the error and never logged**: a record
+request's query string holds the remote id and the field set, a search
+request's holds what a cataloguer typed, and neither belongs in a log —
+`originOf()` is the only permitted rendering of a target. `console.warn` for
+degraded-but-expected (`not_found`, `circuit_open`, `disabled`, `timeout`),
+`console.error` for a contract/configuration failure an operator must fix.
+
 **Write paths never absorb integrity errors.** Anything between "the client
 asked to persist X" and COMMIT propagates its failure to the caller — the
 `ok:true`-with-lost-write class (S1-02/S1-04) is the reason this document
@@ -59,8 +79,15 @@ comment, or it does not merge:
    reaches `src/diffusion/**` only through lazy imports of the
    `diffusion/api/` facade (enforced: `test/unit/diffusion_boundaries.test.ts`
    + `test/unit/boundary_seam_tripwire.test.ts`); same posture for core→ai
-   (RAG off ⇒ pgvector never loads). The laziness IS the boundary: an
-   unconfigured subsystem must cost nothing at boot.
+   (RAG off ⇒ pgvector never loads) and for **core→external**
+   (`src/external/api/`, 2026-08-05): `src/external` is a PEER of core, so a
+   STATIC value edge from core into it would fuse the two into one import
+   component — the S2-20 defect class the SCC tripwire exists to prevent — and
+   an installation with no external section (which is nearly all of them)
+   would still load the transport, the breaker and every adapter at boot. The
+   TYPE import stays static: it is erased, and the SCC gate excludes
+   `import type`. The laziness IS the boundary: an unconfigured subsystem must
+   cost nothing at boot.
 3. **RARELY-HIT / TOOL-SCALE lazy loading.** Per-action tool handlers and
    cold paths (delete-record media moves loading `node:fs`) defer module
    cost to first use so boot and the hot read path stay lean.

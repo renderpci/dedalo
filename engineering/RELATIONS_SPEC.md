@@ -35,6 +35,28 @@ Standing spec for the relation family, companion to `engineering/REWRITE_SPEC.md
 > `use_function` flat names survive as wire vocabulary only (WC-012,
 > amendment 2). See `docs/core/system/search.md` → "The relation index".
 
+> **ADDENDUM 2026-08-05 (multi-source components).** A relation component may
+> declare SEVERAL `request_config` items, and **every one of them contributes
+> children**: `src/core/relations/config_ddo_map.ts` flattens each item's
+> `show` + `hide` ddo maps into one deduped list, reproducing PHP's
+> `full_ddo_map` (`class.common.php:2312-2341`). Which of those children a
+> given locator sees is decided by the **locator's own `section_tipo`** against
+> the child ddo's declared `section_tipo` — the filter that already lived in
+> `relation_core.expandPortal`. **No `api_engine` branch exists anywhere in the
+> read path, and none may be added**: dispatch stays model-polymorphic, exactly
+> as the oracle does it. A locator whose target section is EXTERNAL (its
+> ontology carries `properties.api_config`) has no matrix row at all; those
+> locators are partitioned out of the page and resolved in ONE bounded
+> fan-out through the `src/external/` facade before the emit loop, and only
+> `component_external` (plus `component_dataframe`, which pairs with the MAIN
+> record) may resolve there. Sites that must narrow a multi-item config to ONE
+> item negotiate with the adapter's `capabilities`
+> (`relations/request_config/engine_select.ts`) and refuse loudly where
+> unsupported; the full census is
+> `test/unit/external_config_narrowing_census.test.ts`. Wire law:
+> `engineering/wire_contract/WC-2026-08-05-multi-engine-ddo-expansion.md` +
+> `-external-request-field-union.md`.
+
 **Relation components are the first-class, critical part of Dédalo.** Sections connect to sections *only* through locators stored by relation components; the thesaurus tree, portals, indexation, access control (projects filter), and the dataframe system are all expressions of the same relation machinery. A rewrite that gets relations wrong gets Dédalo wrong.
 
 The current TS implementation of relations is judged **not done correctly** and is hereby superseded as a foundation. It is concentrated in `src/core/resolve/read_rows.ts` (~1,600 lines, the portal/subdatum/dataframe renderer), `src/core/resolve/request_config_v6.ts`, `src/core/search/search_related.ts`, and `src/core/resolve/save_component.ts`, with good value objects in `src/core/concepts/locator.ts` and `src/core/concepts/ddo.ts`. **Audit it, salvage what is proven (the differential parity tests and the locator/ddo value objects are assets), then rebuild the relation family on the coherent model below — do not patch around the existing shape.** Known defects and ledgered gaps in the current code, which the rebuild must resolve rather than inherit:

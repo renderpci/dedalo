@@ -232,3 +232,32 @@ stay as live cross-checks until cutover, then retire per step 5 above.
 Cross-cutting: P0/P1 replacements need goldens derived from the
 differentials' pinned shapes or the PHP source — never from whatever the TS
 engine happens to emit (the two-sided drift rule).
+
+## Post-cutover subsystems: external record services (2026-08-05/06)
+
+A subsystem built AFTER the freeze has no differential to retire and no
+fixture to reconcile — but it still owes the same thing every retired
+differential owed: a TS-native gate holding the contract. `src/external/`
+(`engineering/EXTERNAL_SPEC.md`) is the first such subsystem, and its twin map
+is listed here so the punch list stays the one place to ask "what holds this
+contract now that the oracle is gone".
+
+**Why NO fixture is affected, verified rather than assumed:** the frozen store
+holds no data item for ANY `component_external` tipo, `zenon1` has zero rows in
+every matrix table, and `matrix_time_machine` holds zero rows for every
+`component_external` tipo. There is no PHP shape in the store for these gates to
+diff against, so every entry below is a native contract, not a re-expression.
+
+| Contract | TS-native twin |
+|---|---|
+| payload → entries: unwrap, id-matching row pick, path extraction, named formats, the two ceilings | `test/unit/external_fields_map_native.test.ts` |
+| the nine-step outbound door: order, classification, retry policy, breaker transitions, pin + cap | `test/unit/external_transport_native.test.ts` |
+| row cache key, coalescing, soft-TTL stale serving, per-page field union | `test/unit/external_cache_native.test.ts` |
+| every degradation state end to end, identical empty shape in `edit`/`list`/`tm` | `test/unit/external_degradation_native.test.ts` |
+| the derived emission item (literal shape, `lg-nolan`, verbatim zero-padded `section_id`) | `test/unit/external_emit_native.test.ts` |
+| multi-item `request_config`: ddo flattening, per-locator filtering, capability negotiation | `test/unit/external_multi_source_native.test.ts`, `test/unit/external_request_config_native.test.ts` |
+| the `zenon` adapter's request bytes, `lgn` fallback, id codec, both formats | `test/unit/external_zenon_native.test.ts` |
+
+The nine `external_*_tripwire` invariant gates are indexed in
+`engineering/TRIPWIRES.md`, not here — this table is contract coverage, that one
+is invariant enforcement.
