@@ -25,7 +25,12 @@ import {
 	type MediaIdentity,
 	type MediaPathOptions,
 } from '../path.ts';
-import { buildThumbAtomically, regenerateImage, resolveMasterSource } from '../processing.ts';
+import {
+	buildThumbAtomically,
+	noteOutrankingMaster,
+	regenerateImage,
+	resolveMasterSource,
+} from '../processing.ts';
 
 /** A resolved media component context (spec + identity + path options). */
 export interface MediaContext {
@@ -100,6 +105,21 @@ export async function createIdentifyingImageCore(
 	if (!created) return { created: false, posterframePath: null, filesInfo: [] };
 
 	// Regenerate the image derivatives from the freshly written original.
+	//
+	// "From the original" is not guaranteed: if the poster's image component
+	// carries a RETOUCHED master (an operator colour-corrected an earlier
+	// posterframe — exactly what that tier is for), it outranks the frame just
+	// written and every derived tier is rebuilt from it, so picking a new
+	// timecode changes nothing visible. That is the same settled precedence the
+	// ingest path follows, applied to the other entry point that writes a
+	// master — so it gets the same notice rather than happening in silence.
+	noteOutrankingMaster(
+		image.spec,
+		image.identity,
+		image.pathOpts,
+		image.spec.originalQuality,
+		'wrote a new posterframe',
+	);
 	await regenerateImage(image.spec, image.identity, image.pathOpts, image.spec.defaultExtension);
 	const filesInfo = scanFilesInfo(image.spec, image.identity, image.pathOpts, {
 		originalNormalizedName: `${image.identity.componentTipo}_${image.identity.sectionTipo}_${image.identity.sectionId}.${image.spec.defaultExtension}`,

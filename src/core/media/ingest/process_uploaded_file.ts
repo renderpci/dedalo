@@ -4,8 +4,11 @@
  *
  * Moves the staged upload into its target tier (add_file), builds the
  * derivatives per type (image/pdf/svg/3d synchronously; av transcode via the job
- * manager), and returns the freshly-scanned files_info. No master is ever
- * mutated; derivatives are atomic.
+ * manager), and returns the freshly-scanned files_info. No master is mutated on
+ * THIS path — an upload only ever adds one; derivatives are atomic. (The one
+ * deliberate master mutation in the engine is tool_image_rotation, which rotates
+ * the RETOUCHED master in place on purpose — see tools/rotation.ts. The archival
+ * original is never mutated anywhere.)
  *
  * TWO MASTERS (2026-08-07): the target tier is either a MASTER — the archival
  * original, or, for an image, the human-retouched one — or a real derivative
@@ -33,10 +36,10 @@ import { type FileInfoEntry, scanContextFromItem, scanFilesInfo } from '../files
 import { buildMediaLocation } from '../path.ts';
 import {
 	regenerate3d,
+	noteOutrankingMaster,
 	regenerateImage,
 	regeneratePdf,
 	regenerateSvg,
-	resolveMasterQuality,
 	resolveMasterSource,
 } from '../processing.ts';
 import { regenerateMissingDerivatives } from '../repair.ts';
@@ -171,13 +174,20 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 			// tiers FROM THE RETOUCH — the new scan lands in the archive and is indexed,
 			// but the visible image does not change. That is the intended domain rule
 			// (v6 get_image_source), and it is exactly the kind of thing an operator
-			// cannot deduce from a successful upload, so it names the record here.
-			const sourceQuality = resolveMasterQuality(spec, identity, pathOpts, added.extension);
-			if (sourceQuality !== null && sourceQuality !== quality && isOriginal) {
-				console.info(
-					`[process_uploaded_file] ${spec.model} ${identity.componentTipo}_${identity.sectionTipo}_${identity.sectionId}: uploaded into '${spec.originalQuality}', but the '${sourceQuality}' master outranks it — the derived tiers are rebuilt from '${sourceQuality}' and the visible image does not change`,
-				);
-			}
+			// cannot deduce from a successful upload, so it names the record.
+			//
+			// The EFFECTIVE target is what the notice compares against, not the raw
+			// `quality`: an unset selector normalises to `undefined` here, and
+			// comparing a tier name to `undefined` fired the line on EVERY ordinary
+			// upload — claiming 'original' outranked 'original' — which is exactly
+			// the noise that would bury the one case it exists for.
+			noteOutrankingMaster(
+				spec,
+				identity,
+				pathOpts,
+				quality ?? spec.originalQuality,
+				'uploaded',
+			);
 			switch (spec.model) {
 				case 'component_image':
 					await regenerateImage(spec, identity, pathOpts, added.extension);

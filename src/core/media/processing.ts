@@ -38,6 +38,7 @@ import {
 	probeImageSource,
 	probeMetaChannels,
 } from './engine/probe.ts';
+import { moveToDeleted, renameOldFiles } from './file_ops.ts';
 import {
 	buildMediaIdentifier,
 	buildMediaLocation,
@@ -294,33 +295,34 @@ export async function buildThumbAtomically(
  * this happens — see ingest/process_uploaded_file.ts — because an operator whose
  * new scan did not change the visible image must be able to find out why.
  *
- * `targetQuality` reproduces v6's ONE exception (:1574): when the tier being
- * built IS the archival original, the retouched master is NOT a legal source.
- * The original is never derived from anything — it is what it is.
+ * A MASTER IS NEVER A BUILD TARGET, so this walk needs no "do not build the
+ * original out of the retouch" exception: v6 needed one (get_image_source
+ * :1575) because its build_version accepted a master tier as a target and would
+ * happily convert modified → original. tool_media_versions' buildVersionCore
+ * REFUSES a master target outright (see it), which is the same rule enforced one
+ * level up, where it also stops the retouch being rebuilt out of itself.
  */
 export function resolveMasterSource(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension?: string | null,
-	targetQuality?: string | null,
 ): string | null {
-	return resolveMaster(spec, identity, pathOpts, rawExtension, targetQuality)?.path ?? null;
+	return resolveMaster(spec, identity, pathOpts, rawExtension)?.path ?? null;
 }
 
 /**
- * WHICH master tier `resolveMasterSource` resolves to. Exists so the ingest path
- * can SAY SO to the operator (see that function's precedence note) without
- * re-deriving the resolution rule at the call site.
+ * WHICH master tier `resolveMasterSource` resolves to. Exists so the ingest and
+ * posterframe paths can SAY SO to the operator (see that function's precedence
+ * note) without re-deriving the resolution rule at the call site.
  */
 export function resolveMasterQuality(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension?: string | null,
-	targetQuality?: string | null,
 ): string | null {
-	return resolveMaster(spec, identity, pathOpts, rawExtension, targetQuality)?.quality ?? null;
+	return resolveMaster(spec, identity, pathOpts, rawExtension)?.quality ?? null;
 }
 
 /** The ONE master-resolution walk both accessors above read (tier, then extension). */
@@ -329,20 +331,45 @@ function resolveMaster(
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension: string | null | undefined,
-	targetQuality: string | null | undefined,
 ): { quality: string; path: string } | null {
-	const masters =
-		targetQuality === spec.originalQuality ? [spec.originalQuality] : spec.masterQualities;
 	const candidates = [rawExtension, spec.defaultExtension, ...spec.allowedExtensions].filter(
 		(e): e is string => typeof e === 'string' && e !== '',
 	);
-	for (const quality of masters) {
+	for (const quality of spec.masterQualities) {
 		for (const extension of candidates) {
 			const loc = buildMediaLocation(spec, identity, quality, extension, pathOpts);
 			if (existsSync(loc.absolutePath)) return { quality, path: loc.absolutePath };
 		}
 	}
 	return null;
+}
+
+/**
+ * SAY IT OUT LOUD when the file just written into `writtenQuality` is NOT the
+ * master the derived tiers will be built from.
+ *
+ * The retouched master outranks the original for as long as it exists, so
+ * putting a fresh scan in the archive — by upload, or by writing a new av
+ * posterframe — leaves the visible image unchanged. That is the intended domain
+ * rule, and it is precisely the kind of outcome an operator cannot deduce from a
+ * successful operation, so every path that writes a master names the record.
+ *
+ * Silent when the tier just written IS the resolved master (the ordinary case),
+ * because a line that fires on every upload is a line nobody reads — and then
+ * the one occurrence that matters is indistinguishable from the noise.
+ */
+export function noteOutrankingMaster(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	writtenQuality: string,
+	whatWasWritten: string,
+): void {
+	const resolved = resolveMasterQuality(spec, identity, pathOpts);
+	if (resolved === null || resolved === writtenQuality) return;
+	console.info(
+		`[media] ${spec.model} ${buildMediaIdentifier(identity)}: ${whatWasWritten} into '${writtenQuality}', but the '${resolved}' master outranks it — every derived tier is (re)built from '${resolved}', so the visible image does not change`,
+	);
 }
 
 /**
@@ -483,8 +510,10 @@ export function copyToQuality(
 /**
  * Regenerate the derivatives of an image record from its best master: default
  * quality + thumb + SVG envelope, PLUS a re-encode of every other ladder tier
- * that ALREADY EXISTS on disk. Returns the paths created. No master is ever
- * touched.
+ * that ALREADY EXISTS on disk. Returns the paths created. No master is touched
+ * by THIS path (the one deliberate master mutation in the engine is
+ * tool_image_rotation — see tools/rotation.ts, which rotates the retouched
+ * master in place on purpose).
  *
  * WHY THE EXISTING HIGHER TIERS ARE RE-ENCODED (2026-08-07): this function runs
  * whenever a MASTER CHANGES — a fresh original or a fresh retouch is ingested, a
@@ -495,6 +524,23 @@ export function copyToQuality(
  * created here: tiers are minted on demand by tool_media_versions, and building
  * a 100MB derivative nobody asked for on every upload is a different decision
  * than keeping an existing one honest.
+ *
+ * WHAT THAT COSTS, AND WHY IT IS RECOVERABLE. A derived tier is not necessarily
+ * machine-authored: tool_image_rotation rotates and crops the DERIVED tiers in
+ * place, and an operator can park a curated file in any tier by uploading into
+ * it. Re-encoding replaces that work. Measured before this pass: a hand-placed
+ * blue '6MB' came back green (the new master) with no trace. So every file this
+ * loop replaces goes to `deleted/` FIRST (renameOldFiles — the engine's
+ * No-hard-delete law, PHP rename_old_files :1193) and the replacement is named
+ * in a console.warn. The tiers stay honest AND the operator's bytes survive.
+ *
+ * The DEFAULT tier and the thumb above are deliberately NOT backed up: they have
+ * been rebuilt unconditionally on every master ingest since long before this
+ * change, and turning every upload on the install into deleted/ churn is a
+ * different decision from making a newly-destructive loop recoverable. That
+ * asymmetry is the honest state, not an oversight — see the report gap on
+ * per-tier provenance, which is what would let the engine tell "machine-built"
+ * from "operator-authored" and stop guessing.
  */
 export async function regenerateImage(
 	spec: MediaTypeSpec,
@@ -502,8 +548,9 @@ export async function regenerateImage(
 	pathOpts: MediaPathOptions,
 	rawExtension?: string | null,
 ): Promise<string[]> {
-	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
-	if (source === null) return [];
+	const master = resolveMaster(spec, identity, pathOpts, rawExtension);
+	if (master === null) return [];
+	const source = master.path;
 	const created: string[] = [];
 	const defaultPath = await buildImageVersion(
 		spec,
@@ -525,21 +572,67 @@ export async function regenerateImage(
 	const { createDefaultSvgFile } = await import('./svg_overlay.ts');
 	const svgPath = await createDefaultSvgFile(spec, identity, pathOpts);
 	if (svgPath !== null) created.push(svgPath);
-	// Re-encode the OTHER ladder tiers that already exist (see the header note).
-	// Masters are excluded — they are sources, never rebuilt — and so are the thumb
-	// (built above, from the default tier) and the default tier itself.
+	// Re-encode the OTHER ladder tiers that already exist, and retire the stale
+	// alternate-extension twins of every derived tier (see the header note).
+	// Masters are excluded — they are sources, never rebuilt — and so is the thumb
+	// (built above, from the default tier, and it has no alternate twin: its
+	// extension is fixed by config.media.thumb).
+	const replaced: string[] = [];
+	const retired: string[] = [];
 	for (const quality of spec.qualities) {
 		if (spec.masterQualities.includes(quality)) continue;
-		if (quality === spec.defaultQuality || quality === config.media.thumb.quality) continue;
-		const existing = buildMediaLocation(
-			spec,
-			identity,
-			quality,
-			spec.defaultExtension,
-			pathOpts,
-		).absolutePath;
-		if (!existsSync(existing)) continue;
-		created.push(await buildImageVersion(spec, identity, quality, source, pathOpts));
+		if (quality === config.media.thumb.quality) continue;
+		if (quality !== spec.defaultQuality) {
+			const existing = buildMediaLocation(
+				spec,
+				identity,
+				quality,
+				spec.defaultExtension,
+				pathOpts,
+			).absolutePath;
+			if (existsSync(existing)) {
+				// deleted/ FIRST, then rebuild: the operator's previous bytes must
+				// survive the replacement (header note). If the rebuild then fails the
+				// tier is ABSENT rather than stale — which is the honest of the two
+				// states, the re-scan reports it, and the backup is one move away.
+				renameOldFiles(existing, new Date(), pathOpts.mediaRoot);
+				created.push(await buildImageVersion(spec, identity, quality, source, pathOpts));
+				replaced.push(quality);
+			}
+		}
+		// THE ALTERNATE TWINS ARE RETIRED, NOT REBUILT, because this engine has no
+		// builder for them: nothing in src/ ever writes an .avif/.png twin (v6's
+		// create_alternative_version was not ported), so a twin on disk came from
+		// v6 or from an operator. It now depicts a master the record no longer
+		// has, and files_info reports it present and current — the panel offers a
+		// cell that opens the PREVIOUS picture. Measured: 6MB.jpg went blue while
+		// 6MB.avif stayed red. Serving a lie is the one thing an archive may not
+		// do, so the twin goes to deleted/ and is named below.
+		// GAP, stated rather than narrowed: files_info also scans the UPLOAD
+		// ALLOWLIST in derived tiers, so a legacy '6MB/<id>.tif' goes just as
+		// stale and is NOT retired here — only the configured alternate twins are.
+		// The durable fix for both is porting an alternate-version builder.
+		for (const extension of spec.alternateExtensions) {
+			const twin = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
+			if (!existsSync(twin)) continue;
+			if (moveToDeleted(twin, { mediaRoot: pathOpts.mediaRoot }) !== null) {
+				retired.push(`${quality}.${extension}`);
+			}
+		}
+	}
+	if (replaced.length > 0 || retired.length > 0) {
+		// LOUD ON PURPOSE. Everything this line names was replaced or removed by a
+		// master change the operator may not connect to it — a rotation or crop
+		// that lived only in these tiers is gone from them. Every file is in the
+		// sibling deleted/ directory under its `_deleted_<stamp>` name.
+		console.warn(
+			`[media] ${spec.model} ${buildMediaIdentifier(identity)}: master '${master.quality}' rebuilt the derived tiers.` +
+				(replaced.length > 0 ? ` Re-encoded (previous bytes in deleted/): ${replaced.join(', ')}.` : '') +
+				(retired.length > 0
+					? ` Retired to deleted/ — this engine cannot rebuild them: ${retired.join(', ')}.`
+					: '') +
+				' Any rotation or crop applied to those tiers no longer applies to them.',
+		);
 	}
 	return created;
 }

@@ -19,12 +19,13 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { assertNormalizedExtensionForTier, mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
+import { scanFilesInfo } from '../../src/core/media/files_info.ts';
 import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
 import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
 import {
@@ -33,12 +34,17 @@ import {
 	type MediaPathOptions,
 } from '../../src/core/media/path.ts';
 import {
+	noteOutrankingMaster,
 	regenerateImage,
 	resolveMasterQuality,
 	resolveMasterSource,
 } from '../../src/core/media/processing.ts';
 import { svgOverlayLocation } from '../../src/core/media/svg_overlay.ts';
-import { rebuildDerivedTiersAfterMasterDelete } from '../../src/core/media/tools/versions.ts';
+import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
+import {
+	buildVersionCore,
+	deleteAndResyncCore,
+} from '../../src/core/media/tools/versions.ts';
 
 const ROOT = `${tmpdir()}/dedalo_two_masters_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -85,6 +91,26 @@ async function centrePixel(path: string): Promise<[number, number, number]> {
 		throw new Error(`cannot read the centre pixel of ${path}: '${result.stdout}'`);
 	}
 	return [parts[0] as number, parts[1] as number, parts[2] as number];
+}
+
+/** `<w>x<h>` of a written file — the assertion for rotation/crop work. */
+async function dimensions(path: string): Promise<string> {
+	const result = await runBinary([resolveMagick(), path, '-format', '%wx%h', 'info:'], {
+		nice: false,
+	});
+	return result.stdout.trim();
+}
+
+/** A real derived tier ABOVE the default one (the '6MB'-class tiers). */
+function higherTier(): string {
+	const quality = image.qualities.find(
+		(value) =>
+			!image.masterQualities.includes(value) &&
+			value !== image.defaultQuality &&
+			value !== config.media.thumb.quality,
+	);
+	if (quality === undefined) throw new Error('this ladder has no higher derived tier');
+	return quality;
 }
 
 /** Which flat fixture colour a written derivative depicts — the content assertion. */
@@ -183,15 +209,6 @@ describe.if(HAVE_MAGICK)('resolveMasterSource — precedence', () => {
 		expect(resolveMasterSource(image, identity, pathOpts)).toContain(`/${image.originalQuality}/`);
 	});
 
-	test('building the ORIGINAL tier never sources from the retouch (v6 :1574)', async () => {
-		const identity = nextIdentity();
-		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
-		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
-		expect(resolveMasterSource(image, identity, pathOpts, null, image.originalQuality)).toContain(
-			`/${image.originalQuality}/`,
-		);
-	});
-
 	test('no master at all resolves to null', () => {
 		expect(resolveMasterSource(image, nextIdentity(), pathOpts)).toBeNull();
 		expect(resolveMasterQuality(image, nextIdentity(), pathOpts)).toBeNull();
@@ -267,17 +284,22 @@ describe.if(HAVE_MAGICK)('the derived tiers depict the best master', () => {
 	});
 });
 
+/**
+ * THE DELETE SEAM, driven through `deleteAndResyncCore` — the function BOTH tool
+ * actions call, so the ordering (delete → rebuild → re-scan) and the
+ * rebuild-only-when-the-master-changed guard are gated where they live. As a
+ * sequence spelled out inside the tool handler it had no gate at all: replacing
+ * both call sites with a stub left the entire media suite green.
+ */
 describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () => {
 	test('deleting the RETOUCH rebuilds the derived tiers from the ORIGINAL at once', async () => {
 		const identity = nextIdentity();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
-		const modifiedPath = pathOf(identity, MODIFIED, 'tif');
-		await makeImage(modifiedPath, 'blue');
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
 		await regenerateImage(image, identity, pathOpts, 'tif');
 		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('blue');
 
-		rmSync(modifiedPath);
-		const outcome = await rebuildDerivedTiersAfterMasterDelete(image, identity, pathOpts, MODIFIED);
+		const outcome = await deleteAndResyncCore(image, identity, pathOpts, MODIFIED, 'tif');
 
 		expect(outcome.errors).toEqual([]);
 		expect(outcome.rebuilt.length).toBeGreaterThan(0);
@@ -285,38 +307,96 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 		expect(
 			await depicts(pathOf(identity, config.media.thumb.quality, config.media.thumb.extension)),
 		).toBe('red');
+		// THE ORDER: the returned scan was taken AFTER the rebuild, so a files_info
+		// persisted from it never describes tiers that depict the deleted master.
+		const derived = outcome.filesInfo.find(
+			(info) => info.quality === DERIVED && info.extension === image.defaultExtension,
+		);
+		expect(derived?.file_exist).toBe(true);
+		expect(outcome.filesInfo.some((info) => info.quality === MODIFIED)).toBe(false);
 	});
 
-	test('deleting the ORIGINAL while a retouch survives changes nothing visible', async () => {
+	test('the whole retouched TIER can be deleted (delete_quality) and rebuilds too', async () => {
 		const identity = nextIdentity();
-		const originalPath = pathOf(identity, image.originalQuality, 'tif');
-		await makeImage(originalPath, 'red');
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
 		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
 		await regenerateImage(image, identity, pathOpts, 'tif');
 
-		rmSync(originalPath);
-		await rebuildDerivedTiersAfterMasterDelete(image, identity, pathOpts, image.originalQuality);
+		const outcome = await deleteAndResyncCore(image, identity, pathOpts, MODIFIED, null);
 
-		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('blue');
+		expect(outcome.moved.length).toBeGreaterThan(0);
+		expect(outcome.rebuilt.length).toBeGreaterThan(0);
+		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('red');
 	});
 
-	test('deleting the LAST master LEAVES the derived tiers standing (never wipes them)', async () => {
+	test('deleting the ORIGINAL while a retouch survives rebuilds NOTHING', async () => {
+		// The retouch was ALREADY the source, so the resolved master file is the
+		// same before and after. Measured before this guard: 3 files rebuilt and
+		// the derived tier lossily re-encoded on a delete that changed nothing.
 		const identity = nextIdentity();
-		const originalPath = pathOf(identity, image.originalQuality, 'tif');
-		await makeImage(originalPath, 'red');
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
 		await regenerateImage(image, identity, pathOpts, 'tif');
 		const derivedPath = pathOf(identity, DERIVED, image.defaultExtension);
-		expect(await depicts(derivedPath)).toBe('red');
+		const before = statSync(derivedPath).mtimeMs;
 
-		rmSync(originalPath);
-		const outcome = await rebuildDerivedTiersAfterMasterDelete(
+		const outcome = await deleteAndResyncCore(
 			image,
 			identity,
 			pathOpts,
 			image.originalQuality,
+			'tif',
 		);
 
-		expect(outcome).toEqual({ rebuilt: [], errors: [] });
+		expect(outcome.rebuilt).toEqual([]);
+		expect(statSync(derivedPath).mtimeMs).toBe(before);
+		expect(await depicts(derivedPath)).toBe('blue');
+	});
+
+	test('removing a LOWER-PRECEDENCE extension of a master rebuilds NOTHING', async () => {
+		// The same FILE resolves as master before and after — the master resolution
+		// prefers the default extension, so a '.tif' sitting beside the '.jpg' the
+		// engine actually reads is not what any tier was built from. Nothing to
+		// re-source. Measured before the guard: 3 files rebuilt, and a derived tier
+		// an operator had rotated to portrait came back landscape.
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, image.defaultExtension), 'red');
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red'); // lower precedence
+		await regenerateImage(image, identity, pathOpts);
+		const derivedPath = pathOf(identity, DERIVED, image.defaultExtension);
+		// Operator work that lives ONLY in the derived tier: a portrait rotation.
+		await makeImage(derivedPath, 'red', '600x900');
+		const before = await dimensions(derivedPath);
+
+		const outcome = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			image.originalQuality,
+			'tif',
+		);
+
+		expect(outcome.rebuilt).toEqual([]);
+		expect(await dimensions(derivedPath)).toBe(before);
+	});
+
+	test('deleting the LAST master LEAVES the derived tiers standing (never wipes them)', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		await regenerateImage(image, identity, pathOpts, 'tif');
+		const derivedPath = pathOf(identity, DERIVED, image.defaultExtension);
+		expect(await depicts(derivedPath)).toBe('red');
+
+		const outcome = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			image.originalQuality,
+			'tif',
+		);
+
+		expect(outcome.rebuilt).toEqual([]);
+		expect(outcome.errors).toEqual([]);
 		// They are all that is left of this record's image — still there, still honest.
 		expect(existsSync(derivedPath)).toBe(true);
 		expect(await depicts(derivedPath)).toBe('red');
@@ -327,26 +407,240 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
 		await regenerateImage(image, identity, pathOpts, 'tif');
 		const derivedPath = pathOf(identity, DERIVED, image.defaultExtension);
-		rmSync(derivedPath);
 
-		const outcome = await rebuildDerivedTiersAfterMasterDelete(image, identity, pathOpts, DERIVED);
+		const outcome = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			DERIVED,
+			image.defaultExtension,
+		);
 
-		expect(outcome).toEqual({ rebuilt: [], errors: [] });
+		expect(outcome.rebuilt).toEqual([]);
 		expect(existsSync(derivedPath)).toBe(false);
 	});
 
-	test('removing ONE extension of a master that still holds another re-sources from it', async () => {
+	test('a master tier that still holds another extension re-sources FROM IT', async () => {
+		// Deleting the file the tiers WERE built from, while the same tier still
+		// holds a lower-precedence twin: the tier is still a master, the resolved
+		// file changed, so the derived tiers follow the twin.
 		const identity = nextIdentity();
 		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
-		const modifiedTif = pathOf(identity, MODIFIED, 'tif');
-		await makeImage(modifiedTif, 'blue');
-		await makeImage(pathOf(identity, MODIFIED, 'png'), 'blue');
+		await makeImage(pathOf(identity, MODIFIED, image.defaultExtension), 'blue');
+		await makeImage(pathOf(identity, MODIFIED, 'png'), 'green');
+		await regenerateImage(image, identity, pathOpts);
+		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('blue');
+
+		const outcome = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			MODIFIED,
+			image.defaultExtension,
+		);
+
+		expect(outcome.rebuilt.length).toBeGreaterThan(0);
+		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('green');
+	});
+});
+
+/**
+ * A MASTER IS AUTHORED, NEVER GENERATED. Without the refusal the panel's build
+ * gear on the retouched row resolved the retouch as its OWN source and rewrote
+ * it: measured, jpeg quality 100 / 3 169 136 bytes → quality 82 / 1 798 308
+ * bytes. The client only hides the gear for the literal 'original', so the
+ * server is the chokepoint.
+ */
+describe.if(HAVE_MAGICK)('build_version refuses a master target', () => {
+	test('every master tier of every type is refused', async () => {
+		for (const spec of [image, av, pdf, mediaTypeOf('component_svg')!, mediaTypeOf('component_3d')!]) {
+			for (const master of spec.masterQualities) {
+				await expect(
+					buildVersionCore(spec, nextIdentity(), pathOpts, master, 'tif'),
+				).rejects.toThrow(/is a MASTER tier, not a derivative/);
+			}
+		}
+	});
+
+	test('the retouched master is BYTE-IDENTICAL after a refused build', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		const retouch = pathOf(identity, MODIFIED, image.defaultExtension);
+		await makeImage(retouch, 'blue');
+		const before = statSync(retouch).size;
+
+		await expect(buildVersionCore(image, identity, pathOpts, MODIFIED)).rejects.toThrow(
+			/MASTER tier/,
+		);
+
+		expect(statSync(retouch).size).toBe(before);
+		expect(await depicts(retouch)).toBe('blue');
+	});
+
+	test('a real DERIVATIVE tier still builds (the refusal is not a blanket)', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		const built = await buildVersionCore(image, identity, pathOpts, DERIVED, 'tif');
+		expect(built.built.length).toBe(1);
+		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('red');
+	});
+});
+
+/**
+ * THE RE-ENCODE PASS REPLACES BYTES THE ENGINE DID NOT NECESSARILY AUTHOR —
+ * tool_image_rotation rotates and crops the DERIVED tiers in place, and an
+ * operator can park a curated file in any tier. The tiers must end up honest AND
+ * the previous bytes must survive, so they go to the sibling deleted/ first.
+ */
+describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', () => {
+	test('the previous higher-tier bytes are in deleted/, not gone', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		const higher = higherTier();
+		const higherPath = pathOf(identity, higher, image.defaultExtension);
+		await makeImage(higherPath, 'green'); // curated by hand / rotated by the operator
+
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
 		await regenerateImage(image, identity, pathOpts, 'tif');
 
-		rmSync(modifiedTif); // the .png retouch survives — still the best master
-		await rebuildDerivedTiersAfterMasterDelete(image, identity, pathOpts, MODIFIED);
+		// The tier is honest…
+		expect(await depicts(higherPath)).toBe('blue');
+		// …and the operator's file is one move away, under the No-hard-delete name.
+		const deletedDir = `${higherPath.slice(0, higherPath.lastIndexOf('/'))}/deleted`;
+		// The tier dir is shared by every identity in this file, so filter by stem.
+		const stem = `rsc29_rsc170_${identity.sectionId}_deleted_`;
+		const backups = readdirSync(deletedDir).filter((name) => name.startsWith(stem));
+		expect(backups.length).toBe(1);
+		expect(await depicts(`${deletedDir}/${backups[0]}`)).toBe('green');
+	});
 
-		expect(await depicts(pathOf(identity, DERIVED, image.defaultExtension))).toBe('blue');
+	test('a stale ALTERNATE-extension twin is retired to deleted/, never left serving', async () => {
+		const alternate = image.alternateExtensions[0];
+		expect(alternate).toBeDefined();
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		await regenerateImage(image, identity, pathOpts, 'tif');
+		// A twin this engine cannot author (v6's create_alternative_version was not
+		// ported), depicting the master that is about to be superseded.
+		const twin = pathOf(identity, DERIVED, alternate as string);
+		await makeImage(twin, 'red');
+
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
+		await regenerateImage(image, identity, pathOpts, 'tif');
+
+		// It is NOT sitting there depicting the previous master…
+		expect(existsSync(twin)).toBe(false);
+		// …and it was not destroyed either.
+		const deletedDir = `${twin.slice(0, twin.lastIndexOf('/'))}/deleted`;
+		const retired = readdirSync(deletedDir).filter(
+			(name) => name.startsWith(`rsc29_rsc170_${identity.sectionId}_deleted_`) &&
+				name.endsWith(`.${alternate}`),
+		);
+		expect(retired.length).toBe(1);
+		// The scan no longer reports a file that depicts a master the record lost.
+		const scanned = scanFilesInfo(image, identity, pathOpts, {});
+		expect(
+			scanned.some(
+				(info) => info.quality === DERIVED && info.extension === alternate && info.file_exist,
+			),
+		).toBe(false);
+	});
+
+	test('a MASTER tier is never re-encoded or retired by the pass', async () => {
+		const alternate = image.alternateExtensions[0] as string;
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		const masterTwin = pathOf(identity, image.originalQuality, alternate);
+		await makeImage(masterTwin, 'green'); // a twin IN a master tier
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
+
+		await regenerateImage(image, identity, pathOpts, 'tif');
+
+		expect(await depicts(pathOf(identity, image.originalQuality, 'tif'))).toBe('red');
+		expect(existsSync(masterTwin)).toBe(true);
+		expect(await depicts(masterTwin)).toBe('green');
+		expect(await depicts(pathOf(identity, MODIFIED, 'tif'))).toBe('blue');
+	});
+});
+
+/**
+ * THE PRECEDENCE NOTICE. It exists for ONE case — a master was written but a
+ * different one outranks it — and a line that also fires on every ordinary
+ * upload is a line nobody reads.
+ */
+describe.if(HAVE_MAGICK)('noteOutrankingMaster only speaks when it must', () => {
+	function captureInfo(): { lines: string[]; restore: () => void } {
+		const lines: string[] = [];
+		const original = console.info;
+		console.info = (...args: unknown[]): void => {
+			lines.push(args.map(String).join(' '));
+		};
+		return { lines, restore: () => (console.info = original) };
+	}
+
+	test('SILENT when the tier just written IS the resolved master', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		const captured = captureInfo();
+		try {
+			noteOutrankingMaster(image, identity, pathOpts, image.originalQuality, 'uploaded');
+		} finally {
+			captured.restore();
+		}
+		expect(captured.lines).toEqual([]);
+	});
+
+	test('NAMES THE RECORD when a retouch outranks the original just written', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
+		const captured = captureInfo();
+		try {
+			noteOutrankingMaster(image, identity, pathOpts, image.originalQuality, 'uploaded');
+		} finally {
+			captured.restore();
+		}
+		expect(captured.lines.length).toBe(1);
+		expect(captured.lines[0]).toContain(`rsc29_rsc170_${identity.sectionId}`);
+		expect(captured.lines[0]).toContain(MODIFIED);
+	});
+});
+
+/**
+ * ROTATION. The archival original is the invariant this file must hold; the
+ * RETOUCHED master is rotated in place on purpose (v6 tool_image_rotation :190
+ * skips the literal 'original' and nothing else), because that is the only way a
+ * rotation survives the next master change — see tools/rotation.ts.
+ */
+describe.if(HAVE_MAGICK)('tool_image_rotation and the two masters', () => {
+	test('the ARCHIVAL ORIGINAL is never rotated; the RETOUCH is', async () => {
+		const identity = nextIdentity();
+		const originalPath = pathOf(identity, image.originalQuality, image.defaultExtension);
+		const retouchPath = pathOf(identity, MODIFIED, image.defaultExtension);
+		const derivedPath = pathOf(identity, DERIVED, image.defaultExtension);
+		await makeImage(originalPath, 'red');
+		await makeImage(retouchPath, 'blue');
+		await makeImage(derivedPath, 'blue');
+
+		await applyRotationCore(
+			image,
+			identity,
+			pathOpts,
+			[
+				{ quality: image.originalQuality, extension: image.defaultExtension },
+				{ quality: MODIFIED, extension: image.defaultExtension },
+				{ quality: DERIVED, extension: image.defaultExtension },
+			],
+			{ degrees: 90 },
+		);
+
+		// The archival master is byte-for-byte what it was…
+		expect(await dimensions(originalPath)).toBe('900x600');
+		// …while the RETOUCHED master turned with the derived tiers ('expanded'
+		// mode grows the canvas, so the exact numbers are ImageMagick's, not 600x900).
+		const rotated = await dimensions(derivedPath);
+		expect(rotated).not.toBe('900x600');
+		expect(await dimensions(retouchPath)).toBe(rotated);
 	});
 });
 

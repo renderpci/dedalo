@@ -3,7 +3,8 @@
  *
  * get_files_info (re-scan), build_version (one quality derivative; av async via
  * the job manager), delete_version / delete_quality (soft-delete), sync_files
- * (re-scan → the fresh files_info). The original is never mutated.
+ * (re-scan → the fresh files_info). No MASTER tier is ever a build target here
+ * (buildVersionCore refuses one), and the archival original is never mutated.
  */
 
 import { existsSync } from 'node:fs';
@@ -22,7 +23,6 @@ import {
 	regenerateImage,
 	regeneratePdf,
 	regenerateSvg,
-	resolveMasterQuality,
 	resolveMasterSource,
 } from '../processing.ts';
 import { buildAvThumbFromPosterframe } from './posterframe.ts';
@@ -49,10 +49,29 @@ export interface BuildVersionResult {
 }
 
 /**
- * Build one quality derivative from the original (PHP build_version). Image tiers
- * resize; the thumb tier thumbnails; pdf 'web' copies + covers; av transcodes via
- * the job manager (returns a job id). Throws on an unknown quality / missing
- * original.
+ * Build one quality DERIVATIVE from the best master (PHP build_version). Image
+ * tiers resize; the thumb tier thumbnails; pdf 'web' copies + covers; av
+ * transcodes via the job manager (returns a job id). Throws on an unknown
+ * quality, a master target, or a missing master.
+ *
+ * A MASTER IS NEVER A BUILD TARGET (2026-08-07). A master is authored — uploaded
+ * by a person — never generated, which is what makes it a master; the retouched
+ * tier means "a human retouched this object", and a machine-made file there is a
+ * lie about provenance that then OUTRANKS the archival original as the source of
+ * every other tier. Without this refusal the panel's build gear on the retouched
+ * row was live and self-destructive: MEASURED, one click on a delivered retouch
+ * (jpeg quality 100, 3,169,136 bytes) resolved that very file as its own source
+ * and rewrote it at quality 82, 1,798,308 bytes — the human's master destroyed,
+ * irreversibly, by a button that looked like every other build button.
+ *
+ * v6 allowed it (build_version had a master-target branch, frozen
+ * class.component_image.php:1391 — no resize, quality 100) and its
+ * get_image_source needed a special case at :1575 to stop 'original' being
+ * built out of 'modified'. Refusing the whole class here is the same rule with
+ * no exceptions to keep in step, and it also removes the self-source. The
+ * client already hides the gear for the literal 'original'
+ * (render_tool_media_versions.js:1147); this is the chokepoint that does not
+ * depend on a hardcoded tier name in a JS file.
  */
 export async function buildVersionCore(
 	spec: MediaTypeSpec,
@@ -62,6 +81,11 @@ export async function buildVersionCore(
 	rawExtension?: string | null,
 ): Promise<BuildVersionResult> {
 	assertValidQuality(spec, quality);
+	if (spec.masterQualities.includes(quality)) {
+		throw new Error(
+			`build_version: '${quality}' is a MASTER tier, not a derivative — a master is uploaded, never generated. Upload the file into '${quality}' instead.`,
+		);
+	}
 	const thumbQuality = config.media.thumb.quality;
 
 	if (spec.model === 'component_av') {
@@ -113,11 +137,7 @@ export async function buildVersionCore(
 		return { built: [await buildThumbVersion(spec, identity, thumbSource, pathOpts)], jobId: null };
 	}
 
-	// `quality` is passed as the TARGET so the master precedence cannot build the
-	// archival original out of the retouched master (resolveMasterSource's one
-	// exception — v6 get_image_source :1574). Every other tier takes the retouched
-	// master when it exists.
-	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension, quality);
+	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) throw new Error('build_version: master not found');
 
 	if (spec.model === 'component_image') {
@@ -190,6 +210,19 @@ export function deleteQualityCore(
 }
 
 /**
+ * The master file the derived tiers currently depict — captured BEFORE a delete
+ * so the rebuild below can tell whether the delete actually changed anything.
+ * `null` when the record has no master at all.
+ */
+export function resolveMasterFingerprint(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+): string | null {
+	return resolveMasterSource(spec, identity, pathOpts);
+}
+
+/**
  * After a delete, put the derived tiers back in step with the best REMAINING
  * master — the third half of the two-masters rule (2026-08-07).
  *
@@ -197,8 +230,19 @@ export function deleteQualityCore(
  * what is served must go back to depicting the original AT ONCE, not at some
  * later repair sweep. Anything else leaves every derived tier showing a retouch
  * the record no longer holds, with a files_info that reports them all present.
- * Symmetrically, deleting the original while a retouch survives is a no-op for
- * the derived tiers — they already depict the retouch, which still outranks.
+ *
+ * IT REBUILDS ONLY WHEN THE RESOLVED MASTER FILE ACTUALLY CHANGED, which is why
+ * `masterBefore` is a parameter and not something this function can work out on
+ * its own. The comparison is on the PATH, because the tier alone does not decide
+ * it: master resolution walks tiers AND extensions, so deleting a
+ * lower-precedence twin ('.tif' beside the '.jpg' the tiers were actually built
+ * from) leaves the very same file in charge, and deleting the ORIGINAL while a
+ * retouch survives leaves the retouch — already the source — in charge. Both
+ * must be no-ops. MEASURED before this guard, on the shipped code: each of them
+ * rebuilt 3 files, and the first reverted a derived tier an operator had rotated
+ * to portrait (600x900 back to 887x592) on a delete that touched nothing the
+ * tiers were built from. A rebuild is not free — see regenerateImage, which
+ * replaces bytes.
  *
  * DELETING THE LAST MASTER DOES NOT WIPE THE DERIVED TIERS. There is nothing to
  * rebuild them from, and on a partial-media box (masters on a bucket that is not
@@ -216,12 +260,14 @@ export async function rebuildDerivedTiersAfterMasterDelete(
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	deletedQuality: string,
+	masterBefore: string | null,
 ): Promise<{ rebuilt: string[]; errors: string[] }> {
 	if (!spec.masterQualities.includes(deletedQuality)) return { rebuilt: [], errors: [] };
 	// Re-resolved AFTER the delete: a tier that still holds another extension
 	// (a '.jpg' beside the removed '.tif') is still a master, and still wins.
-	const survivor = resolveMasterQuality(spec, identity, pathOpts);
+	const survivor = resolveMasterSource(spec, identity, pathOpts);
 	if (survivor === null) return { rebuilt: [], errors: [] }; // last master — see above
+	if (survivor === masterBefore) return { rebuilt: [], errors: [] }; // nothing changed
 	try {
 		switch (spec.model) {
 			case 'component_image':
@@ -241,6 +287,59 @@ export async function rebuildDerivedTiersAfterMasterDelete(
 	} catch (error) {
 		return { rebuilt: [], errors: [(error as Error).message] };
 	}
+}
+
+export interface DeleteAndResyncResult {
+	/** Paths moved into deleted/ by the delete itself. */
+	moved: string[];
+	/** Derived tiers rebuilt because the delete changed the best master. */
+	rebuilt: string[];
+	/** Non-fatal rebuild failures — the delete itself already landed. */
+	errors: string[];
+	/** The disk scan taken AFTER the rebuild (see the ordering note). */
+	filesInfo: FileInfoEntry[];
+}
+
+/**
+ * THE WHOLE DELETE SEAM, in one gateable place: delete → rebuild-if-the-master-
+ * changed → re-scan. `extension === null` deletes the whole quality tier
+ * (delete_quality), a string deletes one file (delete_version).
+ *
+ * IT LIVES HERE, NOT IN THE TOOL, because the ORDER is the invariant and the
+ * tool layer is documented as thin wrappers. The rebuild MUST run before the
+ * scan: a files_info taken between the delete and the rebuild records tiers that
+ * still depict the master just removed, and that value is what gets persisted.
+ * As a sequence spelled out inside a tool handler, the ordering had no gate at
+ * all — replacing both call sites with a stub left the entire media suite green.
+ */
+export async function deleteAndResyncCore(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	quality: string,
+	extension: string | null,
+	context: ScanContext = {},
+): Promise<DeleteAndResyncResult> {
+	const masterBefore = resolveMasterFingerprint(spec, identity, pathOpts);
+	const moved =
+		extension === null
+			? deleteQualityCore(spec, identity, pathOpts, quality, context)
+			: [deleteVersionCore(spec, identity, pathOpts, quality, extension)].filter(
+					(path): path is string => path !== null,
+				);
+	const rebuild = await rebuildDerivedTiersAfterMasterDelete(
+		spec,
+		identity,
+		pathOpts,
+		quality,
+		masterBefore,
+	);
+	return {
+		moved,
+		rebuilt: rebuild.rebuilt,
+		errors: rebuild.errors,
+		filesInfo: getFilesInfoCore(spec, identity, pathOpts, context),
+	};
 }
 
 /**

@@ -5,6 +5,29 @@
  * is never mutated) and optionally crops, with the crop box scaled per tier from
  * the default-quality reference dimensions. Uses the ImageMagick adapter over
  * the spawn discipline; each derivative is rewritten via temp+rename.
+ *
+ * THE RETOUCHED MASTER IS ROTATED TOO, DELIBERATELY (checked 2026-08-07 against
+ * the two-masters change). Only `spec.originalQuality` is skipped, and that is
+ * v6's rule verbatim — frozen tool_image_rotation :190 / :229 skip the literal
+ * 'original' and nothing else — but it is also the RIGHT rule under the two-
+ * masters model, which is why it was left alone rather than widened to
+ * `spec.masterQualities`:
+ *
+ *  - the retouched tier IS the human's working master ("a better look of the
+ *    image"), and rotating/cropping is a human retouching act; it belongs in it;
+ *  - it is the only way rotation SURVIVES. The derived tiers are re-encoded from
+ *    the best master on every master change (processing.ts regenerateImage), so
+ *    a rotation that lived only in them is reverted the next time anything
+ *    touches the masters. Rotating the retouch keeps the whole ladder rotated.
+ *
+ * The archival ORIGINAL is never touched here — that invariant is the one this
+ * file must hold, and it is gated (test/unit/media_two_masters.test.ts).
+ *
+ * KNOWN, NOT NARROWED: for a record with NO retouch, a rotation still lives only
+ * in the derived tiers and a later master change reverts it (pre-existing — the
+ * default tier and thumb have always been rebuilt unconditionally). The durable
+ * fix is storing the rotation/crop as record state and re-applying it after a
+ * rebuild; v6 did not do that either.
  */
 
 import { existsSync } from 'node:fs';

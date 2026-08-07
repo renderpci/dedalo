@@ -140,6 +140,12 @@ function typeHasThumb(folder: MediaTypeFolder): boolean {
 }
 
 /**
+ * The canonical name of the retouched tier — the BELT, never the primary read.
+ * See masterQualitiesFor for why a literal appears here at all.
+ */
+const CANONICAL_RETOUCHED_TIER = 'modified';
+
+/**
  * The master tiers of one type, HIGHEST PRECEDENCE FIRST — see
  * MediaTypeSpec.masterQualities for what a master IS.
  *
@@ -151,13 +157,33 @@ function typeHasThumb(folder: MediaTypeFolder): boolean {
  * scanned into files_info (files_info.ts appendNormalizedTwin bails on exactly
  * this test), so treating it as a source would resolve files nothing can ever
  * put there.
+ *
+ * THE CANONICAL LITERAL RIDES ALONG AS A BELT, exactly as
+ * protection.ts masterQualities() carries 'original'/'modified' beside the
+ * configured names, and for the same class of reason. The two keys are
+ * INDEPENDENT (`DEDALO_IMAGE_QUALITY_RETOUCHED` and `DEDALO_IMAGE_AR_QUALITY`),
+ * `../private/.env` is append-only and nothing ties them, so an install that
+ * empties or renames the first while the ladder still carries 'modified' would
+ * — with a config-only read — reclassify a tier full of HUMAN-AUTHORED masters
+ * as a plain derivative: regenerateImage would then overwrite it on the next
+ * upload. A tier named 'modified' is never a derivative on any install, so the
+ * belt costs nothing and closes that. MEASURED before the belt: the retouch's
+ * centre pixel went blue → red (the original) on one ingest.
+ *
+ * The CONFIGURED name still comes first: precedence is config's to decide, the
+ * literal only guarantees the tier is never treated as overwritable.
  */
 function masterQualitiesFor(folder: MediaTypeFolder, cfg: MediaTypeConfig): string[] {
 	if (folder !== 'image') return [cfg.originalQuality];
-	const retouched = config.media.imageQualityRetouched;
-	const hasRetouchedTier =
-		retouched !== '' && retouched !== cfg.originalQuality && cfg.qualities.includes(retouched);
-	return hasRetouchedTier ? [retouched, cfg.originalQuality] : [cfg.originalQuality];
+	const masters: string[] = [];
+	for (const candidate of [config.media.imageQualityRetouched, CANONICAL_RETOUCHED_TIER]) {
+		if (candidate === '' || candidate === cfg.originalQuality) continue;
+		if (!cfg.qualities.includes(candidate)) continue;
+		if (masters.includes(candidate)) continue;
+		masters.push(candidate);
+	}
+	masters.push(cfg.originalQuality);
+	return masters;
 }
 
 const specCache = new Map<MediaModel, MediaTypeSpec>();
@@ -291,9 +317,19 @@ export function assertNormalizedExtensionForTier(
 	if (spec.masterQualities.includes(quality)) return;
 	const normalized = [spec.defaultExtension, ...spec.alternateExtensions];
 	if (!normalized.includes(extension)) {
-		const targets = spec.masterQualities.map((value) => `'${value}'`).join(' or ');
+		// THE ADVICE NAMES THE ARCHIVE, NOT "the other place a .tif fits". Listing
+		// every master as an equal destination reads as an invitation to park raw
+		// scans in the retouched tier — and a raw scan sitting there OUTRANKS the
+		// original as the source of every derived tier, silently inverting the very
+		// precedence this tier exists to express. The retouched tier is offered
+		// only under its actual meaning: a human retouched this object.
+		const retouched = spec.masterQualities.filter((value) => value !== spec.originalQuality);
+		const alternative =
+			retouched.length === 0
+				? ''
+				: ` — or into ${retouched.map((value) => `'${value}'`).join(' / ')} if this file IS the human-retouched master`;
 		throw new Error(
-			`Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into ${targets} instead.`,
+			`Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into '${spec.originalQuality}' instead${alternative}.`,
 		);
 	}
 }

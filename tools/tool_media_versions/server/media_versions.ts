@@ -32,10 +32,8 @@ import {
 import {
 	buildVersionCore,
 	conformHeadersCore,
-	deleteQualityCore,
-	deleteVersionCore,
+	deleteAndResyncCore,
 	getFilesInfoCore,
-	rebuildDerivedTiersAfterMasterDelete,
 	rotateVersionCore,
 } from '../../../src/core/media/tools/versions.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
@@ -240,6 +238,21 @@ export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	}
 }
 
+/**
+ * A delete landed, but the follow-up rebuild did not. The delete is NOT undone
+ * and `result` stays true — it really happened — so the failure has to travel in
+ * the two fields the panel actually reads. `errors` alone was unreachable:
+ * render_tool_media_versions.js prints `msg` only when `result===false`, and
+ * tool_media_versions.js delete_quality resolves `response.result` and discards
+ * the rest of the envelope, so a stale ladder would have been reported to
+ * nobody. It is also logged, because the operator's next action depends on it.
+ */
+function withRebuildFailure(message: string, errors: string[]): string {
+	if (errors.length === 0) return message;
+	console.error(`[tool_media_versions] delete succeeded, tier rebuild failed: ${errors.join('; ')}`);
+	return `${message} — WARNING: the derived tiers could NOT be rebuilt from the remaining master and may still show the deleted one: ${errors.join('; ')}`;
+}
+
 /** delete_quality: soft-delete EVERY extension of one quality tier. */
 export async function deleteQuality(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
@@ -247,25 +260,28 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 		const { spec, identity, pathOpts } = mediaContext;
 		const quality = String(ctx.options.quality ?? '');
 		if (quality === '') return fail('delete_quality: missing quality');
-		const moved = deleteQualityCore(spec, identity, pathOpts, quality, scanContext(mediaContext));
-		// Deleting a MASTER changes what the record's best master IS, so the derived
-		// tiers are put back in step BEFORE the re-scan — otherwise files_info would
-		// record tiers that still depict the master just removed.
-		const rebuild = await rebuildDerivedTiersAfterMasterDelete(spec, identity, pathOpts, quality);
-		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		await writeBack(mediaContext, freshFilesInfo);
+		// delete → rebuild-if-the-master-changed → re-scan, as ONE core call: the
+		// order is the invariant (a scan taken before the rebuild persists tiers
+		// that still depict the deleted master) and it is gated there.
+		const outcome = await deleteAndResyncCore(
+			spec,
+			identity,
+			pathOpts,
+			quality,
+			null,
+			scanContext(mediaContext),
+		);
+		await writeBack(mediaContext, outcome.filesInfo);
 		await logMediaActivity(ctx, 'DELETE FILE', identity, {
 			msg: 'Deleted media file (file is renamed and moved to delete folder)',
 			quality,
 		});
 		return {
 			result: true,
-			msg: `File deleted successfully. ${quality}`,
-			// Surfaced, never swallowed: the delete landed, but a tier may still
-			// depict the removed master (see rebuildDerivedTiersAfterMasterDelete).
-			errors: rebuild.errors,
-			moved,
-			files_info: freshFilesInfo,
+			msg: withRebuildFailure(`File deleted successfully. ${quality}`, outcome.errors),
+			errors: outcome.errors,
+			moved: outcome.moved,
+			files_info: outcome.filesInfo,
 		};
 	} catch (error) {
 		return fail((error as Error).message);
@@ -280,13 +296,17 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		const quality = String(ctx.options.quality ?? '');
 		if (quality === '') return fail('delete_version: missing quality');
 		const extension = String(ctx.options.extension ?? spec.defaultExtension);
-		const moved = deleteVersionCore(spec, identity, pathOpts, quality, extension);
-		// See deleteQuality: a master deletion re-sources the derived tiers at once.
-		// Re-resolved after the move, so removing ONE extension of a master that
-		// still holds another correctly changes nothing.
-		const rebuild = await rebuildDerivedTiersAfterMasterDelete(spec, identity, pathOpts, quality);
-		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
-		await writeBack(mediaContext, freshFilesInfo);
+		// See deleteQuality. Removing ONE extension of a master that still holds
+		// another leaves the same file as master, so the rebuild is skipped.
+		const outcome = await deleteAndResyncCore(
+			spec,
+			identity,
+			pathOpts,
+			quality,
+			extension,
+			scanContext(mediaContext),
+		);
+		await writeBack(mediaContext, outcome.filesInfo);
 		await logMediaActivity(ctx, 'DELETE FILE', identity, {
 			msg: 'Deleted media file (file is renamed and moved to delete folder)',
 			quality,
@@ -294,10 +314,10 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		});
 		return {
 			result: true,
-			msg: 'OK file delete successfully',
-			errors: rebuild.errors,
-			moved,
-			files_info: freshFilesInfo,
+			msg: withRebuildFailure('OK file delete successfully', outcome.errors),
+			errors: outcome.errors,
+			moved: outcome.moved,
+			files_info: outcome.filesInfo,
 		};
 	} catch (error) {
 		return fail((error as Error).message);
