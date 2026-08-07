@@ -256,7 +256,7 @@ describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
 // relation slots WITHOUT the saveComponentData chokepoint, so each fires the
 // cascade itself — a refactor that drops/reorders either call must fail HERE.
 describe('bypass doors fire the observer cascade', () => {
-	test('duplicate ADDS the copy to the mirror; delete_locator shrink is REFUSED (Phase-0 fail-safe)', async () => {
+	test('duplicate ADDS the copy to the mirror; delete_locator REMOVES it', async () => {
 		const base = await termBag();
 		let twin = 0;
 		let copy = 0;
@@ -272,17 +272,13 @@ describe('bypass doors fire the observer cascade', () => {
 			copy = await duplicateSectionRecord('rsc205', twin, -1);
 			expect((await termBag()).length).toBe(base.length + 2);
 
-			// delete_locator door: removing the twin's locator still FIRES the
-			// cascade at the removed target, but the recompute is a SHRINK and
-			// the Phase-0 fail-safe (2026-08-02, recomputeExternalRelation's
-			// shrink guard) WITHHOLDS the drop: the mirror keeps the stale twin
-			// entry until the value law (D3) restores legitimate-removal
-			// mirroring. PINNED here so a silent flip back to shrink-on-save
-			// fails this gate — REVISIT (restore the removal assertions) when D3
-			// ships. The counter DELTA is the proof the door actually fired
-			// (review 2026-08-02: without it, an unchanged bag could also mean
-			// the cascade call was dropped — the exact regression this describe
-			// block exists to catch).
+			// delete_locator door: removing the twin's locator fires the cascade at
+			// the REMOVED target, and the recompute — a pure shrink — now APPLIES
+			// (2026-08-06). This assertion is inverted from what it pinned before:
+			// under the Phase-0 grow-only fail-safe the mirror KEPT the stale twin
+			// entry, which is precisely the reported bug (an unlinked reference
+			// mirrored forever). The copy stays, so the drop is adjudicated per
+			// entry — not by length.
 			const { deletePortalLocator } = await import('../../src/core/relations/save.ts');
 			const refusedBefore = getCounters().observers_shrink_refused ?? 0;
 			await deletePortalLocator(
@@ -298,12 +294,19 @@ describe('bypass doors fire the observer cascade', () => {
 					ar_properties: ['section_tipo', 'section_id', 'type', 'from_component_tipo'],
 				},
 			);
-			expect((getCounters().observers_shrink_refused ?? 0) - refusedBefore).toBe(1);
+			// No refusal fires on a clean seed — the drop is simply the law.
+			expect((getCounters().observers_shrink_refused ?? 0) - refusedBefore).toBe(0);
 			const afterRemoval = await termBag();
-			expect(afterRemoval.length).toBe(base.length + 2);
+			// The twin's entry is GONE; the duplicate's survives.
+			expect(afterRemoval.length).toBe(base.length + 1);
 			expect(
 				afterRemoval.some(
 					(entry) => (entry as { section_id?: string }).section_id === String(twin),
+				),
+			).toBe(false);
+			expect(
+				afterRemoval.some(
+					(entry) => (entry as { section_id?: string }).section_id === String(copy),
 				),
 			).toBe(true);
 		} finally {

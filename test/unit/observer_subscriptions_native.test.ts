@@ -618,7 +618,13 @@ describe('live-ontology gates (suite DB)', () => {
 		// invisible; under the ontology-decided rule the save response carries
 		// the recomputed widget item and ONE TM row is written (scratch id,
 		// swept in afterAll).
-		const result = await propagateToObservers('oh93', 'oh1', SCRATCH_OH1_ID, [], -1);
+		const result = await propagateToObservers(
+			'oh93',
+			'oh1',
+			SCRATCH_OH1_ID,
+			{ saved: [], removed: [] },
+			-1,
+		);
 		expect(result).toHaveLength(1);
 		const item = result[0] as { tipo?: string; section_tipo?: string; section_id?: string };
 		expect(item.tipo).toBe('oh28');
@@ -636,7 +642,13 @@ describe('live-ontology gates (suite DB)', () => {
 		// reaches the entries (no skip filter exists any more) and lands on the
 		// oracle-pinned terminal no-op — the response stays empty and no error
 		// is thrown.
-		const result = await propagateToObservers('rsc36', 'rsc1', 999_999_991, [], -1);
+		const result = await propagateToObservers(
+			'rsc36',
+			'rsc1',
+			999_999_991,
+			{ saved: [], removed: [] },
+			-1,
+		);
 		expect(result).toEqual([]);
 	});
 });

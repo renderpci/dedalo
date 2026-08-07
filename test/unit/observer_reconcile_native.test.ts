@@ -11,14 +11,18 @@
  *   dry-run detects the drift without writing → repair writes the exact
  *   mirror byte-shape + the TM audit pair → second run is a no-op
  *   (idempotent) → a masked swap (one referencer bypass-deleted, another
- *   bypass-inserted) proves the Phase-0 fail-safe is MEMBERSHIP-based and
- *   GROW-ONLY (2026-08-02): the addition persists, the stale entry is NOT
- *   dropped (the old length-only guard let an equal-length swap commit the
- *   drop) → a pure bypass DELETE makes the recompute a shrink, which the law
- *   withholds by default (an omitted option can never mean "allow") and
- *   applies ONLY on an explicit allowShrink:true opt-in → duplicating the
+ *   bypass-inserted) proves the adjudication is MEMBERSHIP-based, not
+ *   length-based, and that BOTH halves now persist → a pure bypass DELETE
+ *   makes the recompute a shrink, and THE SHRINK APPLIES → duplicating the
  *   term proves covered-observer mirror slots are STRIPPED at copy (empty by
  *   construction — never the source's byte-copied referencer bag).
+ *
+ * 2026-08-06: the blanket GROW-ONLY fail-safe and its `allowShrink` opt-in are
+ * RETIRED (see observer_failsafe_native.test.ts's header for why). The two
+ * shrink tests here used to assert that a legitimate removal was WITHHELD;
+ * they now assert it is applied, which is the regression guard for the
+ * reported numisdata36 equivalence bug. The only remaining withholder is a
+ * DEGRADED SEED, gated in the failsafe file.
  *
  * Environment: suite DB — the on1 anchor + section node come from the shared
  * seed helper (observer_term_seed.ts); referencers are scratch matrix rows
@@ -182,12 +186,13 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		expect(again.changed).toBe(false);
 	});
 
-	test('a MASKED SWAP (1 stale drop + 1 new add) keeps the stale entry AND applies the addition', async () => {
+	test('a MASKED SWAP (1 stale drop + 1 new add) applies BOTH halves — membership, not length', async () => {
 		if (!planted) return;
 		// Bypass-delete referencer 1 (its mirror entry goes stale) and
-		// bypass-insert referencer 2: the full law now wants to drop one entry
-		// and add one — EQUAL length before/after. The old length-only guard let
-		// the drop COMMIT; the membership guard must not (review 2026-08-02).
+		// bypass-insert referencer 2: the law wants to drop one entry and add
+		// one — EQUAL length before/after. The adjudication is MEMBERSHIP-based
+		// (the historic length-only guard could not even see this), and since
+		// 2026-08-06 the full law persists: BOTH halves land in one write.
 		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
 			REFERENCER_ID,
 		]);
@@ -202,31 +207,29 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			{},
 		);
 		expect(outcome.changed).toBe(true);
-		expect(outcome.skippedShrink).toBe(true); // the drop half was withheld
-		expect((getCounters().observers_shrink_refused ?? 0) - refusedBefore).toBe(1);
-		// GROW-ONLY merge persisted: stale entry kept IN PLACE, addition
-		// appended with the next item id.
-		expect(await mirrorBag()).toEqual([
-			mirrorEntry(1, REFERENCER_ID),
-			mirrorEntry(2, REFERENCER_ID2),
-		]);
-		// Explicit opt-in applies the FULL law: the stale entry drops, the
-		// surviving entry keeps its stored id and position.
-		const applied = await recomputeExternalRelation(
+		// No refusal: the seed was clean, so nothing withholds the drop.
+		expect(outcome.skippedShrink).toBeUndefined();
+		expect(outcome.seedDefects).toBeUndefined();
+		expect((getCounters().observers_shrink_refused ?? 0) - refusedBefore).toBe(0);
+		// The stale entry is GONE and the survivor keeps its stored id.
+		expect(await mirrorBag()).toEqual([mirrorEntry(2, REFERENCER_ID2)]);
+		// Idempotent: a second pass finds no drift.
+		const again = await recomputeExternalRelation(
 			'hierarchy93',
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
 			-1,
 			new Date(),
-			{ allowShrink: true },
+			{},
 		);
-		expect(applied.changed).toBe(true);
-		expect(applied.skippedShrink).toBeUndefined();
-		expect(await mirrorBag()).toEqual([mirrorEntry(2, REFERENCER_ID2)]);
+		expect(again.changed).toBe(false);
 	});
 
-	test('a bypass DELETE makes the recompute a pure shrink: WITHHELD by default, applied ONLY on explicit opt-in', async () => {
+	test('a bypass DELETE makes the recompute a pure shrink, and the shrink APPLIES', async () => {
 		if (!planted) return;
+		// THE REGRESSION GUARD for the reported bug. Until 2026-08-06 a pure
+		// shrink was withheld unconditionally, so an unlinked reference stayed
+		// mirrored forever and only an operator flag could clear it.
 		await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
 			REFERENCER_ID2,
 		]);
@@ -240,11 +243,11 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		);
 		expect(diff.changed).toBe(true);
 		expect(diff.before).toBe(1);
-		expect(diff.after).toBe(0); // the shrink signal allowShrink adjudicates
-		// Phase-0 fail-safe (2026-08-02): with NO explicit opt-in the drop is
-		// WITHHELD inside the lock — reported as skippedShrink, nothing persisted
-		// (no additions here, so the grow-only merge equals the stored bag).
-		const refused = await recomputeExternalRelation(
+		expect(diff.after).toBe(0);
+		// A clean seed means the dry run promises a real write, not a refusal.
+		expect(diff.skippedShrink).toBeUndefined();
+
+		const applied = await recomputeExternalRelation(
 			'hierarchy93',
 			SEED_TERM.section_tipo,
 			SEED_TERM.section_id,
@@ -252,20 +255,89 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 			new Date(),
 			{},
 		);
-		expect(refused.skippedShrink).toBe(true);
-		expect((await mirrorBag())?.length).toBe(1); // stored bag untouched
-		// Explicit opt-in is the ONLY door that applies a shrink.
-		const applied = await recomputeExternalRelation(
-			'hierarchy93',
-			SEED_TERM.section_tipo,
-			SEED_TERM.section_id,
-			-1,
-			new Date(),
-			{ allowShrink: true },
-		);
 		expect(applied.changed).toBe(true);
+		expect(applied.wrote).toBe(true);
 		expect(applied.skippedShrink).toBeUndefined();
 		expect(await mirrorBag()).toEqual([]);
+	});
+
+	test('the census reports drop volume and the budget predicate adjudicates it', async () => {
+		// PURE — no DB. The budget turns "we eyeballed a dry run once" into a
+		// re-runnable pre-deploy check: a future value-law change that would
+		// mass-delete must fail HERE, not at the next save.
+		const { exceedsShrinkBudget } = await import(
+			'../../src/core/section/record/observer_reconcile.ts'
+		);
+		const base = {
+			tuples: 1,
+			candidates: 10,
+			drifted: 3,
+			repaired: 0,
+			shrinksSkipped: 0,
+			sublawRefused: 0,
+			bigResultRefused: 0,
+			droppedRecords: 3,
+			droppedLocators: 1673,
+			degradedSeedRecords: 0,
+		};
+		expect(exceedsShrinkBudget(base, { maxDroppedLocators: 2000, maxDroppedRecords: 40 })).toEqual(
+			[],
+		);
+		expect(
+			exceedsShrinkBudget(base, { maxDroppedLocators: 100, maxDroppedRecords: 40 }).length,
+		).toBe(1);
+		expect(
+			exceedsShrinkBudget(base, { maxDroppedLocators: 2000, maxDroppedRecords: 2 }).length,
+		).toBe(1);
+		// A degraded seed is NEVER within budget — the ontology is broken in a way
+		// that makes the value law unanswerable for that record.
+		const degraded = { ...base, degradedSeedRecords: 1 };
+		expect(
+			exceedsShrinkBudget(degraded, { maxDroppedLocators: 2000, maxDroppedRecords: 40 }),
+		).toHaveLength(1);
+	});
+
+	test('the drop census counts MEMBERSHIP, never a length delta', async () => {
+		// A regression that drops N genuine locators and appends N wrong ones has
+		// an equal length. `before - after` reports 0 and sails through the
+		// budget — which is the exact shape the budget exists to catch. The
+		// kernel adjudicates membership (that is why a masked swap commits both
+		// halves), so the census must read the kernel's own numbers.
+		const { readFileSync } = await import('node:fs');
+		const { join } = await import('node:path');
+		const root = join(import.meta.dir, '..', '..');
+		const source = readFileSync(
+			join(root, 'src/core/section/record/observer_reconcile.ts'),
+			'utf-8',
+		);
+		expect(source).toContain('outcome.dropped ??');
+		expect(source).toContain('outcome.added ??');
+		// And the kernel must actually supply them.
+		const kernel = readFileSync(join(root, 'src/core/section/record/observers.ts'), 'utf-8');
+		expect(kernel).toContain('dropped: existing.length - kept.length');
+		expect(kernel).toContain('added: additions.length');
+	});
+
+	test('the shrink budget file is present, parseable and complete', async () => {
+		// The budget is a committed artefact the CLI reads at runtime; a typo or
+		// a missing key would surface as a crash during an ops sweep, which is
+		// the worst moment to find out.
+		const { readFileSync } = await import('node:fs');
+		const { join } = await import('node:path');
+		const root = join(import.meta.dir, '..', '..');
+		const budget = JSON.parse(
+			readFileSync(join(root, 'engineering/observer_shrink_budget.json'), 'utf-8'),
+		) as Record<string, unknown>;
+		expect(typeof budget.maxDroppedLocators).toBe('number');
+		expect(typeof budget.maxDroppedRecords).toBe('number');
+		// It must carry its own provenance — a bare number nobody can re-derive
+		// is a number nobody dares change.
+		expect(String(budget._ ?? '').length).toBeGreaterThan(120);
+		// And the CLI must actually consult it, or the file is decoration.
+		const cli = readFileSync(join(root, 'scripts/observer_reconcile.ts'), 'utf-8');
+		expect(cli).toContain('observer_shrink_budget.json');
+		expect(cli).toContain('exceedsShrinkBudget');
+		expect(cli).toContain('process.exit(1)');
 	});
 
 	test('duplicate STRIPS the covered-observer mirror slot from the copy (empty by construction)', async () => {

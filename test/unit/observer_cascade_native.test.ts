@@ -503,7 +503,7 @@ const SAVED_ITEMS = [{ section_tipo: 'on1', section_id: TERM_A }];
 describe('unconditional cascade — the flagship chain shape', () => {
 	test('A saves → relay B (write:none) → C recomputes at the target AND at the payload equivalent', async () => {
 		const relayBagBefore = JSON.stringify(await bagOf(RELAY, TERM_A));
-		await propagateToObservers(OBSERVED, 'rsc205', REF_A, SAVED_ITEMS, -1);
+		await propagateToObservers(OBSERVED, 'rsc205', REF_A, { saved: SAVED_ITEMS, removed: [] }, -1);
 
 		// C's mirror landed at the relay TARGET (self, use_self_section:true)…
 		expect(await bagOf(MIRROR, TERM_A)).toEqual([mirrorEntry(1, REF_A)]);
@@ -539,7 +539,7 @@ describe('bounded dispatch on a planted CYCLE', () => {
 			CYCLE_X,
 			'on1',
 			CYCLE_TERM,
-			[{ section_tipo: 'on1', section_id: CYCLE_TERM }],
+			{ saved: [{ section_tipo: 'on1', section_id: CYCLE_TERM }], removed: [] },
 			-1,
 		);
 		// X → hop Y → hop X → hop Y REFUSED (already dispatched) — exactly one
@@ -560,6 +560,7 @@ describe('depth budget — the backstop refusal', () => {
 			depth: MAX_CASCADE_DEPTH,
 			maxDepth: MAX_CASCADE_DEPTH,
 			visited: new Set(),
+			recomputed: new Set(),
 			chain: [`synthetic-deep-chain@rsc205/${REF_A}`],
 		};
 		await emitCascadeHop(guard, RELAY, 'relay', 'on1', TERM_A, -1, new Date());
@@ -588,7 +589,7 @@ describe('converged diamond — execute-once dedup', () => {
 			DIAMOND_OBS,
 			'on1',
 			DIAMOND_TERM,
-			[{ section_tipo: 'on1', section_id: DIAMOND_TERM }],
+			{ saved: [{ section_tipo: 'on1', section_id: DIAMOND_TERM }], removed: [] },
 			-1,
 		);
 		expect((getCounters().observers_cascade_converged_skipped ?? 0) - convergedBefore).toBe(1);
@@ -611,7 +612,7 @@ describe('recompute hops are gated on wrote:true', () => {
 			RELAY,
 			'on1',
 			TERM_ON,
-			[{ section_tipo: 'on1', section_id: TERM_ON }],
+			{ saved: [{ section_tipo: 'on1', section_id: TERM_ON }], removed: [] },
 			-1,
 		);
 		// the recompute persisted (fresh mirror) …
@@ -629,7 +630,7 @@ describe('recompute hops are gated on wrote:true', () => {
 			RELAY,
 			'on1',
 			TERM_ON,
-			[{ section_tipo: 'on1', section_id: TERM_ON }],
+			{ saved: [{ section_tipo: 'on1', section_id: TERM_ON }], removed: [] },
 			-1,
 		);
 		expect(await bagOf(MIRROR, TERM_ON)).toEqual([mirrorEntry(1, REF_ON)]);
@@ -649,7 +650,7 @@ describe('ambient transaction — hops are commit-gated', () => {
 					OBSERVED,
 					'rsc205',
 					REF_TX,
-					[{ section_tipo: 'on1', section_id: TERM_TX }],
+					{ saved: [{ section_tipo: 'on1', section_id: TERM_TX }], removed: [] },
 					-1,
 				);
 				throw new Error('forced rollback');
@@ -664,7 +665,7 @@ describe('ambient transaction — hops are commit-gated', () => {
 				OBSERVED,
 				'rsc205',
 				REF_TX,
-				[{ section_tipo: 'on1', section_id: TERM_TX }],
+				{ saved: [{ section_tipo: 'on1', section_id: TERM_TX }], removed: [] },
 				-1,
 			);
 			// still inside the outer tx: the hop has NOT run yet
@@ -685,6 +686,7 @@ describe('runObserverCascadeHop ambient-transaction refusal (B6)', () => {
 			depth: 1,
 			maxDepth: MAX_CASCADE_DEPTH,
 			visited: new Set(),
+			recomputed: new Set(),
 			chain: [`${OBSERVED}@rsc205/${REF_A}`, `${RELAY}@on1/${TERM_A}`],
 		};
 		await expect(
@@ -718,6 +720,7 @@ describe('leaked continuation — the hop drop is loud', () => {
 					depth: 0,
 					maxDepth: MAX_CASCADE_DEPTH,
 					visited: new Set(),
+					recomputed: new Set(),
 					chain: [`leak@rsc205/${REF_A}`],
 				};
 				await emitCascadeHop(guard, RELAY, 'relay', 'on1', TERM_A, -1, new Date());
@@ -744,13 +747,19 @@ describe('level-0 propagation failure — swallow only outside a transaction', (
 	test('inside an ambient transaction the real failure surfaces to the tx owner', async () => {
 		await expect(
 			withTransaction(async () => {
-				await propagateToObservers(RELAY, 'on1', TERM_A, brokenItems, -1);
+				await propagateToObservers(RELAY, 'on1', TERM_A, { saved: brokenItems, removed: [] }, -1);
 			}),
 		).rejects.toThrow(/ambient transaction \(B6\)/);
 	});
 
 	test('outside a transaction the same failure is swallowed (never throws)', async () => {
-		const result = await propagateToObservers(RELAY, 'on1', TERM_A, brokenItems, -1);
+		const result = await propagateToObservers(
+			RELAY,
+			'on1',
+			TERM_A,
+			{ saved: brokenItems, removed: [] },
+			-1,
+		);
 		expect(result).toEqual([]);
 	});
 });

@@ -387,9 +387,19 @@ describe('D3 seed law (hermetic, table-driven over the declared users)', () => {
 // ---------------------------------------------------------------------------
 describe('D3 kernel wiring (static pins)', () => {
 	test('the recompute searches the collectExternalSeed result, never a hand-built single locator', () => {
-		expect(kernelSource).toContain(
-			'collectExternalSeed(source, componentToSearch, targetSection, targetId)',
+		// The call is multiline since the defect sink landed (2026-08-06), so pin
+		// the arguments individually rather than one brittle source substring.
+		const call = kernelSource.slice(
+			kernelSource.indexOf('const seed = await collectExternalSeed('),
 		);
+		expect(call.startsWith('const seed = await collectExternalSeed(')).toBe(true);
+		for (const argument of ['source,', 'componentToSearch,', 'targetSection,', 'targetId,']) {
+			expect(call.slice(0, 260)).toContain(argument);
+		}
+		// The per-call defect sink MUST be threaded through: without it the
+		// degraded-seed shrink refusal can never fire and a partially-installed
+		// ontology turns every save into a mass delete.
+		expect(call.slice(0, 260)).toContain('defects,');
 		expect(kernelSource).toContain('findInverseReferences(seed');
 	});
 
