@@ -27,7 +27,11 @@ import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { scanFilesInfo } from '../../src/core/media/files_info.ts';
 import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
-import { processUploadedFile } from '../../src/core/media/ingest/process_uploaded_file.ts';
+import {
+	isMasterTier,
+	processUploadedFile,
+	replacesArchivalCue,
+} from '../../src/core/media/ingest/process_uploaded_file.ts';
 import {
 	buildMediaLocation,
 	type MediaIdentity,
@@ -41,10 +45,7 @@ import {
 } from '../../src/core/media/processing.ts';
 import { svgOverlayLocation } from '../../src/core/media/svg_overlay.ts';
 import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
-import {
-	buildVersionCore,
-	deleteAndResyncCore,
-} from '../../src/core/media/tools/versions.ts';
+import { buildVersionCore, deleteAndResyncCore } from '../../src/core/media/tools/versions.ts';
 
 const ROOT = `${tmpdir()}/dedalo_two_masters_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -146,6 +147,23 @@ describe('masterQualities — the concept', () => {
 		for (const master of image.masterQualities) {
 			expect(image.qualities).toContain(master);
 		}
+	});
+
+	test('"is a master" and "replaces the archival cue" are DIFFERENT questions', () => {
+		// The retouch re-encodes the derived tiers (isMaster) but must NOT claim the
+		// archival tier's stored name cue — collapsing the two into one boolean
+		// stamps original_normalized_name with the retouch and discards the record's
+		// stored cues. See replacesArchivalCue for what is and is not gated here.
+		expect(isMasterTier(image, MODIFIED)).toBe(true);
+		expect(replacesArchivalCue(image, MODIFIED)).toBe(false);
+		// They agree everywhere else — on the archival tier, on an unset target,
+		// and on a real derivative tier.
+		expect(isMasterTier(image, image.originalQuality)).toBe(true);
+		expect(replacesArchivalCue(image, image.originalQuality)).toBe(true);
+		expect(isMasterTier(image, undefined)).toBe(true);
+		expect(replacesArchivalCue(image, undefined)).toBe(true);
+		expect(isMasterTier(image, DERIVED)).toBe(false);
+		expect(replacesArchivalCue(image, DERIVED)).toBe(false);
 	});
 });
 
@@ -307,13 +325,35 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 		expect(
 			await depicts(pathOf(identity, config.media.thumb.quality, config.media.thumb.extension)),
 		).toBe('red');
-		// THE ORDER: the returned scan was taken AFTER the rebuild, so a files_info
-		// persisted from it never describes tiers that depict the deleted master.
-		const derived = outcome.filesInfo.find(
-			(info) => info.quality === DERIVED && info.extension === image.defaultExtension,
-		);
-		expect(derived?.file_exist).toBe(true);
 		expect(outcome.filesInfo.some((info) => info.quality === MODIFIED)).toBe(false);
+	});
+
+	test('THE ORDER: the returned scan is taken AFTER the rebuild, never before', async () => {
+		// The tool persists this files_info. Taken before the rebuild it would
+		// record the state the delete left behind — including files the rebuild is
+		// about to retire — and the record would then claim a file that is gone.
+		// The alternate twin is the observable: the re-encode pass retires it,
+		// so a scan from the wrong moment still lists it as present.
+		const alternate = image.alternateExtensions[0] as string;
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		await makeImage(pathOf(identity, MODIFIED, 'tif'), 'blue');
+		await regenerateImage(image, identity, pathOpts);
+		const twin = pathOf(identity, DERIVED, alternate);
+		await makeImage(twin, 'blue'); // a v6-era twin depicting the retouch
+		expect(
+			scanFilesInfo(image, identity, pathOpts, {}).some(
+				(info) => info.extension === alternate && info.file_exist,
+			),
+		).toBe(true);
+
+		const outcome = await deleteAndResyncCore(image, identity, pathOpts, MODIFIED, 'tif');
+
+		expect(outcome.rebuilt.length).toBeGreaterThan(0);
+		expect(existsSync(twin)).toBe(false);
+		expect(outcome.filesInfo.some((info) => info.extension === alternate && info.file_exist)).toBe(
+			false,
+		);
 	});
 
 	test('the whole retouched TIER can be deleted (delete_quality) and rebuilds too', async () => {
@@ -453,7 +493,13 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
  */
 describe.if(HAVE_MAGICK)('build_version refuses a master target', () => {
 	test('every master tier of every type is refused', async () => {
-		for (const spec of [image, av, pdf, mediaTypeOf('component_svg')!, mediaTypeOf('component_3d')!]) {
+		for (const spec of [
+			image,
+			av,
+			pdf,
+			mediaTypeOf('component_svg')!,
+			mediaTypeOf('component_3d')!,
+		]) {
 			for (const master of spec.masterQualities) {
 				await expect(
 					buildVersionCore(spec, nextIdentity(), pathOpts, master, 'tif'),
@@ -533,7 +579,8 @@ describe.if(HAVE_MAGICK)('what the re-encode pass replaces stays recoverable', (
 		// …and it was not destroyed either.
 		const deletedDir = `${twin.slice(0, twin.lastIndexOf('/'))}/deleted`;
 		const retired = readdirSync(deletedDir).filter(
-			(name) => name.startsWith(`rsc29_rsc170_${identity.sectionId}_deleted_`) &&
+			(name) =>
+				name.startsWith(`rsc29_rsc170_${identity.sectionId}_deleted_`) &&
 				name.endsWith(`.${alternate}`),
 		);
 		expect(retired.length).toBe(1);
@@ -738,8 +785,9 @@ describe.if(HAVE_MAGICK)('ingesting into the retouched tier', () => {
 		expect(existsSync(svgOverlayLocation(image, identity, pathOpts).absolutePath)).toBe(true);
 	});
 
-	test('a retouch does NOT overwrite the stored original_normalized_name cue', async () => {
+	test('a retouch leaves the ARCHIVAL tier alone — it adds a master, never moves one', async () => {
 		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
 		await stage('retouch4.tif', 'blue');
 
 		const result = await processUploadedFile({
@@ -753,9 +801,18 @@ describe.if(HAVE_MAGICK)('ingesting into the retouched tier', () => {
 			quality: MODIFIED,
 		});
 
-		// The retouch takes the isOriginal=false branch: it stamps no original cue,
-		// so a raw original recorded earlier survives in the index.
-		expect(result.filesInfo.some((info) => info.quality === image.originalQuality)).toBe(false);
+		// The original is still there, still the original picture, still indexed.
+		expect(await depicts(pathOf(identity, image.originalQuality, 'tif'))).toBe('red');
+		expect(
+			result.filesInfo.some(
+				(info) => info.quality === image.originalQuality && info.file_exist === true,
+			),
+		).toBe(true);
+		// The OTHER half of the isOriginal/isMaster split — that a retouch keeps the
+		// record's STORED cues (external_source, the normalized-name twins) — needs a
+		// component that actually STORES some. It is NOT gated end to end; see
+		// replacesArchivalCue for why the module-mock route is unreliable in this
+		// suite and what the durable gate would be.
 	});
 
 	test('a .tif into a REAL derivative tier is still refused BEFORE the move', async () => {

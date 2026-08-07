@@ -35,8 +35,8 @@ import { submitAvTranscode } from '../av_versions.ts';
 import { type FileInfoEntry, scanContextFromItem, scanFilesInfo } from '../files_info.ts';
 import { buildMediaLocation } from '../path.ts';
 import {
-	regenerate3d,
 	noteOutrankingMaster,
+	regenerate3d,
 	regenerateImage,
 	regeneratePdf,
 	regenerateSvg,
@@ -74,8 +74,32 @@ export interface IngestInput extends Omit<AddFileInput, 'spec'> {
  * tier would leave the thumb showing the PREVIOUS image while the web tier
  * serves the new one, and persist a files_info recording exactly that mismatch.
  */
-function isMasterTier(spec: MediaTypeSpec, quality: string | undefined): boolean {
+export function isMasterTier(spec: MediaTypeSpec, quality: string | undefined): boolean {
 	return quality === undefined || spec.masterQualities.includes(quality);
+}
+
+/**
+ * Whether this upload replaces the ARCHIVAL tier's stored name cue — a DIFFERENT
+ * question from isMasterTier, and the reason the two are not one boolean.
+ *
+ * Only the original tier's own cue is replaced, by what was just stored. A
+ * RETOUCH is a master (it re-encodes the derived tiers) but it must answer NO
+ * here: stamping `original_normalized_name` with the retouch's name loses the raw
+ * original from the index, and taking the original's branch also DISCARDS the
+ * record's stored cues (`external_source`, the two normalized-name twins), which
+ * describe files the retouch did not replace.
+ *
+ * EXPORTED so the disagreement is gateable as a fact rather than as a shape.
+ * NOT GATED end to end, and deliberately said out loud: the discarded-cues half
+ * is only observable on a component that actually STORES cues, which needs the
+ * stored-item read stubbed — and `mock.module` on `tool_support.ts` is not
+ * reliable here, because bun runs test files in one process in a
+ * non-deterministic order and another file's config mock clobbers it (measured:
+ * green alone, red in the suite, in BOTH file orders). A DB-backed gate on a
+ * scratch record is the durable fix.
+ */
+export function replacesArchivalCue(spec: MediaTypeSpec, quality: string | undefined): boolean {
+	return quality === undefined || quality === spec.originalQuality;
 }
 
 export interface IngestResult {
@@ -154,7 +178,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	//    original_normalized_name (it would lose the raw original from the index);
 	//    its own twin is stamped by the caller through nameKeysForQuality.
 	const isMaster = isMasterTier(spec, quality);
-	const isOriginal = quality === undefined || quality === spec.originalQuality;
+	const isOriginal = replacesArchivalCue(spec, quality);
 
 	let startTranscode: (() => string) | null = null;
 	// NON-FATAL FROM HERE ON. The catch covers EXACTLY the derivative pass, and
@@ -181,13 +205,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 			// comparing a tier name to `undefined` fired the line on EVERY ordinary
 			// upload — claiming 'original' outranked 'original' — which is exactly
 			// the noise that would bury the one case it exists for.
-			noteOutrankingMaster(
-				spec,
-				identity,
-				pathOpts,
-				quality ?? spec.originalQuality,
-				'uploaded',
-			);
+			noteOutrankingMaster(spec, identity, pathOpts, quality ?? spec.originalQuality, 'uploaded');
 			switch (spec.model) {
 				case 'component_image':
 					await regenerateImage(spec, identity, pathOpts, added.extension);

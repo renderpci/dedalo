@@ -627,7 +627,9 @@ export async function regenerateImage(
 		// sibling deleted/ directory under its `_deleted_<stamp>` name.
 		console.warn(
 			`[media] ${spec.model} ${buildMediaIdentifier(identity)}: master '${master.quality}' rebuilt the derived tiers.` +
-				(replaced.length > 0 ? ` Re-encoded (previous bytes in deleted/): ${replaced.join(', ')}.` : '') +
+				(replaced.length > 0
+					? ` Re-encoded (previous bytes in deleted/): ${replaced.join(', ')}.`
+					: '') +
 				(retired.length > 0
 					? ` Retired to deleted/ — this engine cannot rebuild them: ${retired.join(', ')}.`
 					: '') +

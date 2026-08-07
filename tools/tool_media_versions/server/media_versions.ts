@@ -249,7 +249,9 @@ export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
  */
 function withRebuildFailure(message: string, errors: string[]): string {
 	if (errors.length === 0) return message;
-	console.error(`[tool_media_versions] delete succeeded, tier rebuild failed: ${errors.join('; ')}`);
+	console.error(
+		`[tool_media_versions] delete succeeded, tier rebuild failed: ${errors.join('; ')}`,
+	);
 	return `${message} — WARNING: the derived tiers could NOT be rebuilt from the remaining master and may still show the deleted one: ${errors.join('; ')}`;
 }
 

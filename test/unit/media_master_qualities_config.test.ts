@@ -105,4 +105,39 @@ describe('masterQualities follows DEDALO_IMAGE_QUALITY_RETOUCHED', () => {
 		const media = await mediaConceptsWith('original', ['original', '1.5MB', 'thumb'], 'collapsed');
 		expect(media.mediaTypeOf('component_image')?.masterQualities).toEqual(['original']);
 	});
+
+	/**
+	 * THE BELT. The two keys are INDEPENDENT and nothing ties them: `../private/.env`
+	 * is append-only, so an install can empty or rename
+	 * DEDALO_IMAGE_QUALITY_RETOUCHED and leave `modified` in DEDALO_IMAGE_AR_QUALITY.
+	 * With a config-only read that tier — full of HUMAN-AUTHORED masters — becomes an
+	 * ordinary derivative, and regenerateImage overwrites it on the next upload.
+	 * MEASURED before the belt: the retouch's centre pixel went blue → red.
+	 * protection.ts masterQualities() carries the same literals for the same class of
+	 * reason.
+	 */
+	test("a tier literally named 'modified' is a master even when config forgets it", async () => {
+		const media = await mediaConceptsWith(
+			'',
+			['original', 'modified', '1.5MB', 'thumb'],
+			'driftempty',
+		);
+		const image = media.mediaTypeOf('component_image');
+		expect(image?.masterQualities).toEqual(['modified', 'original']);
+		// And it behaves as a master: raw uploads admitted, never shadowed-guarded.
+		expect(() => media.assertNormalizedExtensionForTier(image!, 'modified', 'tif')).not.toThrow();
+	});
+
+	test('the CONFIGURED name still comes first — the belt does not take precedence', async () => {
+		const media = await mediaConceptsWith(
+			'retocada',
+			['original', 'retocada', 'modified', '1.5MB', 'thumb'],
+			'driftboth',
+		);
+		expect(media.mediaTypeOf('component_image')?.masterQualities).toEqual([
+			'retocada',
+			'modified',
+			'original',
+		]);
+	});
 });

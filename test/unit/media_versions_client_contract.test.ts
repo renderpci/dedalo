@@ -96,6 +96,39 @@ describe('media-versions panel ↔ engine contract', () => {
 		expect(Array.isArray(response.files_info_db)).toBe(true);
 	});
 
+	/**
+	 * THE DELETE WIRING (2026-08-07). Deleting a master must re-source the derived
+	 * tiers before the re-scan — the operator's decision 3. The ordering and the
+	 * only-when-the-master-changed guard are gated on the core
+	 * (media_two_masters.test.ts, driving `deleteAndResyncCore`), but the WIRING
+	 * had no gate at all: stubbing both tool call sites left the whole media suite
+	 * green. Source assertions, because driving the handler needs a stored media
+	 * record; they pin exactly the regression — a handler that deletes without
+	 * re-sourcing, or that swallows the rebuild failure.
+	 */
+	test('both delete actions go through deleteAndResyncCore, never a bare delete', () => {
+		const source = readFileSync(
+			join(REPO_ROOT, 'tools/tool_media_versions/server/media_versions.ts'),
+			'utf8',
+		);
+		// Two handlers, two calls.
+		expect((source.match(/deleteAndResyncCore\(/g) ?? []).length).toBe(2);
+		// The bare cores bypass the rebuild — they must not be reachable from here.
+		expect(source).not.toContain('deleteQualityCore(');
+		expect(source).not.toContain('deleteVersionCore(');
+	});
+
+	test('a failed rebuild reaches the operator through msg, not only errors[]', () => {
+		const source = readFileSync(
+			join(REPO_ROOT, 'tools/tool_media_versions/server/media_versions.ts'),
+			'utf8',
+		);
+		// render_tool_media_versions.js prints `msg` only when result===false, and
+		// tool_media_versions.js delete_quality resolves `response.result` alone —
+		// so `errors` on a successful delete is unreachable by the operator.
+		expect((source.match(/msg: withRebuildFailure\(/g) ?? []).length).toBe(2);
+	});
+
 	test('the client reads the DB side of the comparison from the server only', () => {
 		const source = readFileSync(TOOL_JS, 'utf8');
 		// The assignment that made the warning lie: files_info_db taken from the
