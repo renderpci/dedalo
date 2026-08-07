@@ -422,8 +422,11 @@ For the generic literal import/export contract and CSV formats, see
 - **Row cache + coalescing.** Rows are cached with a soft TTL and keyed by
   service, endpoint, section, remote id, data language and the requested field
   set, so several external fields of the same record trigger ONE call. Past
-  the soft TTL the last good row is served immediately, marked `stale`, while
-  a refresh runs behind the request.
+  the soft TTL the last good row is served immediately and a refresh runs
+  behind the request — with **no marker**, because the age of a cache entry is
+  not a degradation and the service is healthy. Only when a refresh actually
+  FAILS is the row it falls back on marked `stale`, and the next successful
+  refresh clears that again.
 - **Egress control.** The `api_url` host must be in the operator's allowlist
   or the binding is refused; the fully constructed URL is re-checked against
   an SSRF guard and pinned to the vetted address before the fetch. A

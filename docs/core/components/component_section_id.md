@@ -216,17 +216,30 @@ Server-side the filter is turned into SQL by `src/core/search/builders/builder_s
 
 | Input | Operator | Meaning | SQL shape |
 | --- | --- | --- | --- |
-| `123` | equal (default) | id is 123 | `col::integer = _Q1_` |
-| `100...200` | `...` between | id in range | `col::integer >= a AND col::integer <= b` |
+| `123` | equal (default) | id is 123 | `col::integer = _Q1_::integer` |
+| `100...200` | `...` between | id in range | `col::integer >= a::integer AND col::integer <= b::integer` |
 | `1,2,3` | `,` sequence | id in list | `col::integer = ANY(_Q1_::integer[])` |
-| `!=123` | `!=` different | id is not 123 | `col::integer != _Q1_` |
-| `>=50` | `>=` | id ≥ 50 | `col::integer >= _Q1_` |
-| `<=50` | `<=` | id ≤ 50 | `col::integer <= _Q1_` |
-| `>50` | `>` | id > 50 | `col::integer > _Q1_` |
-| `<50` | `<` | id < 50 | `col::integer < _Q1_` |
+| `!=123` | `!=` different | id is not 123 | `col::integer != _Q1_::integer` |
+| `>=50` | `>=` | id ≥ 50 | `col::integer >= _Q1_::integer` |
+| `<=50` | `<=` | id ≤ 50 | `col::integer <= _Q1_::integer` |
+| `>50` | `>` | id > 50 | `col::integer > _Q1_::integer` |
+| `<50` | `<` | id < 50 | `col::integer < _Q1_::integer` |
 
 Non-numeric characters are stripped before binding. A locator passed as `q` is reduced
 to its `value` (or `section_id`) before resolution.
+
+!!! warning "Both sides of the comparison carry the cast"
+    The bound value is cast as well as the column, and that is load-bearing
+    rather than cosmetic. Search placeholders are **deduplicated by value**, so
+    searching a text field for `5555` and the record id for `5555` collapses
+    both onto one placeholder. Bound as text for the text field and left
+    uncast here, the same placeholder would be asked to be an integer too, and
+    the whole query would fail with `operator does not exist: integer = text` —
+    an error, not an empty result. Searching either field alone worked, so the
+    fault only appeared when both carried the same number (fixed 2026-08-06;
+    gated by `test/unit/search_section_id_bind_native.test.ts`, which executes
+    the SQL, because building it is not enough to catch a type error only the
+    database raises).
 
 ## Notes
 

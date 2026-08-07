@@ -208,11 +208,14 @@ Points worth knowing:
 
 An external field never goes silently blank. If it cannot show the remote
 values it shows a small marker saying why, and a tooltip with the service name,
-when the shown data was fetched, and how many values were withheld:
+when the shown data was fetched, and how many values were withheld.
+
+A field that is working shows **no marker at all** — the marker means something
+is wrong, so it must never appear on the healthy path:
 
 | Marker | What it means | Worth retrying |
 | --- | --- | --- |
-| stale | The values are real but were fetched a while ago; a refresh is running behind your request | — |
+| stale | A refresh of these values FAILED, so the last known good copy is shown | yes |
 | unavailable | The service answered badly or not at all, and there is no cached copy | yes |
 | timeout | The service took too long | yes |
 | not found | The service answered, and the record is not in it (deleted upstream, or a wrong identifier) | no |
@@ -224,6 +227,12 @@ when the shown data was fetched, and how many values were withheld:
     A field showing nothing **and** no marker really has no value in the remote
     record. A field showing a marker could not be derived. Do not catalogue
     around the second case as if the remote record were blank.
+
+!!! note "The marker is compact in dense views"
+    In the `text`, `line` and `mini` views several external fields of one
+    record are concatenated onto a single line, so there the marker is a small
+    glyph and the full sentence moves into its tooltip. It is shortened, never
+    hidden — the state colours are the same, and hovering says the same thing.
 
 The engine also keeps itself polite by construction: values are cached with a
 soft age and shared between the fields of one record, requests to one service
@@ -292,6 +301,25 @@ misconfigured" means this installation has not allowed the service's address
 administers the installation; "External source disabled" means it was switched
 off on purpose. Typing nothing simply says so, in neutral text: nothing was
 searched, so nothing was found.
+
+!!! note "Only an external-backed widget says 'external'"
+    Those messages appear when the widget really is bound to a service. An
+    ordinary autocomplete that searches Dédalo's own records reports its
+    failures in its own terms — it never blames an external source that was
+    never contacted, which would send you inspecting a catalogue that had
+    nothing to do with it.
+
+!!! info "Why the browser cannot do this itself"
+    Dédalo serves a Content-Security-Policy that allows the page to open
+    connections only back to Dédalo itself. A browser-side call to a third
+    party is blocked before it leaves, and the browser reports that as a bare
+    network error with no detail. This is deliberate: the address of a service
+    is cataloguing data, and letting the page dial whatever an editable field
+    names would hand that reach to anyone who can edit the ontology. Routing
+    search through the server is what keeps the address under the operator's
+    allowlist. If a service ever appears unreachable **only** from the
+    interface, it is this rule doing its job, and the answer is a server-side
+    call — never an exception to the policy.
 
 The `search` face of [component_external](../components/component_external.md)
 still refuses: that is Dédalo's *own* search index, which cannot hold values it
