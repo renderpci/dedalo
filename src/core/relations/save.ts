@@ -767,19 +767,22 @@ export async function deletePortalLocator(
 			invalidatePermissionsForWrite(sectionTipo, tipo, Number(sectionId));
 		}
 		// Observer cascade (2026-07-24): this door bypasses saveComponentData,
-		// so it fires propagation itself — with the REMOVED locators as the
-		// observable targets (those are the records whose mirrors must
-		// recompute; the recompute reads truth from matrix_relation_index, so
-		// the removal is already reflected). Dynamic import: runtime-only
-		// relations→section edge, no static SCC. Post-COMMIT (W11/B6): the
-		// recompute must read the committed removal.
+		// so it fires propagation itself. This is a PURE REMOVAL door — the
+		// removed locators name the records whose mirrors must recompute, and
+		// nothing was saved. Until 2026-08-06 they rode the `saved` slot, which
+		// happened to work only because the two sets were then handled
+		// identically; ObservedChange makes the semantics explicit. The
+		// recompute reads truth from matrix_relation_index, so the removal is
+		// already reflected. Dynamic import: runtime-only relations→section
+		// edge, no static SCC. Post-COMMIT (W11/B6): the recompute must read the
+		// committed removal.
 		{
 			const { propagateToObservers } = await import('../section/record/observers.ts');
 			await propagateToObservers(
 				tipo,
 				sectionTipo,
 				Number(sectionId),
-				outcome.removedLocators,
+				{ saved: [], removed: outcome.removedLocators },
 				principal.userId,
 			);
 		}

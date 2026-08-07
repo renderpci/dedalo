@@ -81,7 +81,11 @@ export async function deleteSectionRecord(
 	// ambient outer transaction the "post-commit" steps run while that outer tx
 	// is still open — composed callers own that trade-off.
 	const txOutcome = await withTransaction(
-		async (): Promise<{ snapshot: Record<string, unknown>; removedCount: number } | null> => {
+		async (): Promise<{
+			snapshot: Record<string, unknown>;
+			removedCount: number;
+			inverseRewrites: InverseRewrite[];
+		} | null> => {
 			// 1. Read the full record (every jsonb column) for the TM snapshot — this is
 			//    PHP section_record::get_data(), the object stored in matrix_time_machine.
 			const columnList = MATRIX_JSONB_COLUMNS.map((column) => `"${column}"`).join(', ');
@@ -114,7 +118,7 @@ export async function deleteSectionRecord(
 
 			// 3. Referential integrity: remove every locator in OTHER records that
 			//    points at this one (PHP remove_all_inverse_references, delete step 3).
-			await removeAllInverseReferences(sectionTipo, sectionId, userId, now);
+			const inverseRewrites = await removeAllInverseReferences(sectionTipo, sectionId, userId, now);
 
 			// 4. Remove the row. (Ontology-node cleanup ledgered.)
 			const removedCount = await deleteMatrixRecord(table, sectionTipo, sectionId);
@@ -125,7 +129,7 @@ export async function deleteSectionRecord(
 			//    the ambient sql handle, so a rolled-back delete leaves no marker.
 			await fireRagRecordEvent({ kind: 'delete', sectionTipo, sectionId });
 
-			return { snapshot, removedCount };
+			return { snapshot, removedCount, inverseRewrites };
 		},
 	);
 	if (txOutcome === null) {
@@ -148,6 +152,82 @@ export async function deleteSectionRecord(
 	//    does — the tipo-switch twins AND the section-data listeners (datalist
 	//    option lists etc.). PHP's delete runs its save_event fan-out too.
 	await fireSaveEvent(sectionTipo);
+
+	// 9. Observer cascade (POST-COMMIT, 2026-08-06). A delete is the widest
+	//    removal door there is, and it fired NOTHING before this: deleting a
+	//    record left it listed in every observer mirror that referenced it, and
+	//    left the mirrors of the records IT referenced unrecomputed. Under the
+	//    retired grow-only fail-safe that was invisible; with the full law it is
+	//    simply a correctness gap.
+	//
+	//    Two directions, both needed:
+	//    (a) every OTHER record whose bag this delete rewrote (step 3) — it
+	//        saved, so its observers must see {saved: remaining, removed};
+	//    (b) the deleted record's OWN relation bags — it was a referencer of
+	//        each target, so those targets' mirrors must drop it. The row is
+	//        gone, so the recompute reads the correct (smaller) truth.
+	//
+	//    Post-commit is mandatory: a cascade hop refuses to run inside a
+	//    transaction (B6), and the recompute must read the committed delete.
+	{
+		const { propagateToObservers, MAX_CASCADE_DEPTH } = await import('./observers.ts');
+		const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
+		// ONE guard for the WHOLE step, deliberately. This door propagates in a
+		// LOOP — one call per rewritten owner — and a fresh guard per call would
+		// give every call its own empty visited/recomputed sets, so overlapping
+		// targets get recomputed once per iteration. Measured on this install:
+		// deleting numisdata3/17463 rewrites 1,189 owners, each relaying into the
+		// same equivalence classes; unshared, that is up to 1,189 redundant
+		// closure walks + row locks + TM rows per shared class, synchronously
+		// inside the request. Sharing is also semantically right: the visited key
+		// IS the recompute identity, and this is one logical operation.
+		const guard = {
+			depth: 0,
+			maxDepth: MAX_CASCADE_DEPTH,
+			visited: new Set<string>(),
+			recomputed: new Set<string>(),
+			chain: [`delete:${sectionTipo}/${sectionId}`],
+		};
+		for (const rewrite of txOutcome.inverseRewrites) {
+			await propagateToObservers(
+				rewrite.component,
+				rewrite.ownerSection,
+				rewrite.ownerId,
+				{ saved: rewrite.remaining, removed: rewrite.removed },
+				userId,
+				now,
+				guard,
+			);
+		}
+		const ownRelations = txOutcome.snapshot.relation as Record<string, unknown[]> | null;
+		if (ownRelations !== null && typeof ownRelations === 'object') {
+			for (const [componentTipo, bag] of Object.entries(ownRelations)) {
+				if (!Array.isArray(bag)) continue;
+				// dd490 frames are PAIRING records, not edges — excluded here exactly
+				// as the save chokepoint's removed-diff and the external seed exclude
+				// them. Passing them through would feed frame targets into the target
+				// set as if they were graph nodes: extra row locks and class walks on
+				// records that are not part of the relation graph at all.
+				const edges = bag.filter(
+					(entry) =>
+						entry !== null &&
+						typeof entry === 'object' &&
+						(entry as { type?: unknown }).type !== DATAFRAME_RELATION_TYPE,
+				);
+				if (edges.length === 0) continue;
+				await propagateToObservers(
+					componentTipo,
+					sectionTipo,
+					sectionId,
+					// The record is GONE: everything it pointed at is a removal.
+					{ saved: [], removed: edges },
+					userId,
+					now,
+					guard,
+				);
+			}
+		}
+	}
 
 	return { deleted: [String(sectionId)], removed: txOutcome.removedCount > 0 };
 }
@@ -215,12 +295,25 @@ export async function removeSectionMediaFiles(
  * (PHP supports relation_common descendants + component_dataframe — both
  * store in the relation column). The owner's modified stamps refresh.
  */
+/**
+ * One owning component whose bag this delete rewrote — the observer cascade's
+ * input, collected inside the transaction and propagated AFTER the commit
+ * (see step 9 in deleteSectionRecord).
+ */
+interface InverseRewrite {
+	ownerSection: string;
+	ownerId: number;
+	component: string;
+	remaining: unknown[];
+	removed: unknown[];
+}
+
 async function removeAllInverseReferences(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
 	now: Date,
-): Promise<void> {
+): Promise<InverseRewrite[]> {
 	const { findInverseReferenceLocators } = await import('../../search/search_related.ts');
 	const { readMatrixRecord } = await import('../../db/matrix.ts');
 	const { persistRecordKeys, persistModifiedStamp } = await import('../../section_record/index.ts');
@@ -231,7 +324,7 @@ async function removeAllInverseReferences(
 		[{ section_tipo: sectionTipo, section_id: sectionId }],
 		{ order: 'section_id' },
 	);
-	if (hits.length === 0) return;
+	if (hits.length === 0) return [];
 
 	// Group by owning record + component so each component saves ONCE.
 	const byOwner = new Map<
@@ -260,6 +353,7 @@ async function removeAllInverseReferences(
 	const backfillStamp = stamp(new Date(now.getTime() - 60_000));
 	const nowStamp = stamp(now);
 	const touchedOwners = new Set<string>();
+	const rewrites: InverseRewrite[] = [];
 
 	for (const group of byOwner.values()) {
 		const model = await getModelByTipo(group.component);
@@ -352,6 +446,13 @@ async function removeAllInverseReferences(
 			false,
 		);
 		touchedOwners.add(`${group.table}|${group.ownerSection}|${group.ownerId}`);
+		rewrites.push({
+			ownerSection: group.ownerSection,
+			ownerId: group.ownerId,
+			component: group.component,
+			remaining,
+			removed: removedEntries,
+		});
 	}
 
 	// Owners' modified stamps (component Save refreshes dd197/dd201).
@@ -363,6 +464,7 @@ async function removeAllInverseReferences(
 			{ userId, now },
 		);
 	}
+	return rewrites;
 }
 
 /**
@@ -455,6 +557,10 @@ export async function deleteSectionData(
 	const backfillStamp = stamp(new Date(now.getTime() - 60_000));
 	const nowStamp = stamp(now);
 
+	/** Relation slots this wipe emptied — the observer cascade's input below. */
+	const emptied: { component: string; removed: unknown[]; remaining: unknown[] }[] = [];
+	const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
+
 	for (const component of components) {
 		if (EXCLUDED_EMPTY_MODELS.has(component.model)) continue;
 		// component_info data is observer-COMPUTED (PHP empties it and logs a TM
@@ -522,10 +628,57 @@ export async function deleteSectionData(
 			[{ column: column as MatrixJsonbColumn, key: component.tipo, value: newData }],
 			false,
 		);
+		// Emptying a RELATION slot is a removal like any other — collect it for
+		// the observer cascade below (2026-08-06). This door used to be listed
+		// among the "healed by the reconciler later" bulk doors, which was
+		// defensible while the recompute could not shrink at all; now that an
+		// ordinary edit corrects a mirror instantly, leaving the wipe door
+		// permanently stale would be an arbitrary asymmetry.
+		if (column === 'relation' && Array.isArray(stored)) {
+			const edges = stored.filter(
+				(entry) =>
+					entry !== null &&
+					typeof entry === 'object' &&
+					(entry as { type?: unknown }).type !== DATAFRAME_RELATION_TYPE,
+			);
+			if (edges.length > 0) {
+				emptied.push({
+					component: component.tipo,
+					removed: edges,
+					remaining: Array.isArray(newData) ? newData : [],
+				});
+			}
+		}
 	}
 
 	// Modified stamps (PHP update_modified_section_data 'update_record').
 	await persistModifiedStamp({ table, sectionTipo, sectionId }, { userId, now });
+
+	// Observer cascade for the wiped relation slots — ONE shared guard across
+	// the loop, for the same fan-out reason as the delete door (see step 9
+	// there). Not wrapped in a transaction here: this function has no ambient
+	// tx of its own, and a cascade hop refuses to run inside one.
+	if (emptied.length > 0) {
+		const { propagateToObservers, MAX_CASCADE_DEPTH } = await import('./observers.ts');
+		const guard = {
+			depth: 0,
+			maxDepth: MAX_CASCADE_DEPTH,
+			visited: new Set<string>(),
+			recomputed: new Set<string>(),
+			chain: [`delete_data:${sectionTipo}/${sectionId}`],
+		};
+		for (const slot of emptied) {
+			await propagateToObservers(
+				slot.component,
+				sectionTipo,
+				sectionId,
+				{ saved: slot.remaining, removed: slot.removed },
+				userId,
+				now,
+				guard,
+			);
+		}
+	}
 
 	return { deleted: [String(sectionId)], removed: false };
 }

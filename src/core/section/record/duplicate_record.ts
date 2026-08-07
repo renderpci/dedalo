@@ -235,7 +235,8 @@ export async function duplicateSectionRecord(
 				component.tipo,
 				sectionTipo,
 				newSectionId,
-				component.items,
+				// A duplicate only ADDS references — a fresh record removed nothing.
+				{ saved: component.items, removed: [] },
 				userId,
 			);
 		}

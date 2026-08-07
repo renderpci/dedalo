@@ -128,6 +128,14 @@ export interface SaveResult {
 	 */
 	observersData?: unknown[];
 	/**
+	 * INTERNAL, never on the wire: the relation locators present BEFORE this
+	 * save and absent after it. Feeds the observer cascade's removed-target set
+	 * (ObservedChange in ./observers.ts) — those records' mirrors still list the
+	 * saved record and only a visit can drop that dead entry. Absent when the
+	 * save removed nothing, and for every literal (non-relation) component.
+	 */
+	removedItems?: unknown[];
+	/**
 	 * The section_id `add_new_element` created in the TARGET section (WC-081).
 	 * Absent on every other action — a save that creates nothing says nothing.
 	 * The API door forwards it so the client can open the record it just made
@@ -447,7 +455,10 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 			effectiveRequest.componentTipo,
 			effectiveRequest.sectionTipo,
 			Number(effectiveRequest.sectionId),
-			Array.isArray(result.data) ? result.data : [],
+			{
+				saved: Array.isArray(result.data) ? result.data : [],
+				removed: Array.isArray(result.removedItems) ? result.removedItems : [],
+			},
 			effectiveRequest.userId,
 		);
 	}
@@ -542,6 +553,16 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		const rawItems = lockRows[0]?.items;
 		items = Array.isArray(rawItems) ? rawItems : rawItems == null ? [] : [rawItems];
 	}
+
+	// PRE-SAVE SNAPSHOT for the observer cascade (2026-08-06). Taken here, on
+	// the FULL slot under the lock and before any narrowing, so it matches what
+	// `result.data` reports on both the dataframe and non-dataframe paths. A
+	// shallow copy suffices: every mutation path REBINDS `items` (applyUpdate
+	// returns a new array, remove filters, set_data reassigns), and the in-place
+	// writes touch `id` and dates — never locator identity.
+	// Relation slots only: a literal save has no locators to remove, so it pays
+	// nothing.
+	const preSaveItems: unknown[] = column === 'relation' ? [...items] : [];
 
 	// DATAFRAME saves (PHP component_dataframe get_data/set_data): the change
 	// loop operates on the CALLER's frame subset; the full slot is kept for
@@ -1052,6 +1073,44 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 	const result: SaveResult = { ok: true, message: 'ok', data: items };
 	if (createdSectionId !== null) {
 		result.created_section_id = createdSectionId;
+	}
+	// The locators this save DROPPED — the observer cascade's removed-target
+	// set (see ObservedChange in ./observers.ts). Keyed on
+	// (section_tipo, section_id), NEVER on the item id: an `update` that
+	// retargets a locator replaces the object IN PLACE keeping its id, so an
+	// id-keyed diff would see neither the old target leaving nor the new one
+	// arriving.
+	//
+	// BOTH SIDES ARE THE FULL SLOT. `preSaveItems` is snapshotted before the
+	// dataframe narrowing, and on the dataframe path `items` is REBOUND to
+	// `merged` (the caller's subset merged back over its untouched siblings)
+	// before we get here — so this never compares a full slot against a
+	// caller subset and reports every sibling as removed. dd490 frames are
+	// excluded on top of that: they are pairing records, not edges, exactly as
+	// getStoredWithReferences excludes them from the seed.
+	if (preSaveItems.length > 0) {
+		const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
+		const locatorKey = (entry: unknown): string | null => {
+			if (entry === null || typeof entry !== 'object') return null;
+			const locator = entry as { section_tipo?: unknown; section_id?: unknown; type?: unknown };
+			if (typeof locator.section_tipo !== 'string' || locator.section_id === undefined) return null;
+			if (locator.type === DATAFRAME_RELATION_TYPE) return null;
+			return `${locator.section_tipo}|${String(locator.section_id)}`;
+		};
+		const postKeys = new Set<string>();
+		for (const entry of items) {
+			const key = locatorKey(entry);
+			if (key !== null) postKeys.add(key);
+		}
+		const removed: unknown[] = [];
+		const seenRemoved = new Set<string>();
+		for (const entry of preSaveItems) {
+			const key = locatorKey(entry);
+			if (key === null || postKeys.has(key) || seenRemoved.has(key)) continue;
+			seenRemoved.add(key);
+			removed.push(entry);
+		}
+		if (removed.length > 0) result.removedItems = removed;
 	}
 	return result;
 }
