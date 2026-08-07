@@ -1,15 +1,16 @@
 # What changed in v7
 
-> See also: [How configuration works](administration.md) · [Migrating your config from v6](migrating_from_v6.md) · [Settings reference](config.md)
+> See also: [How configuration works](administration.md) · [Migrating a v6 install to v7](../install/migrating_from_v6.md) · [Settings reference](config.md)
 
 v7 replaced the PHP engine with a TypeScript/Bun one, and configuration changed
 with it. This page is the reference for **what moved, what was renamed, and what
 is simply gone** — so that when a v6 setting seems to have vanished, you can find
 out what happened to it.
 
-If you are upgrading an existing install, read [Migrating your config from
-v6](migrating_from_v6.md) instead: it tells you how to run the migration. This
-page is the "why" behind it.
+If you are upgrading an existing install, read [Migrating a v6 install to
+v7](../install/migrating_from_v6.md) instead: it is the one manual for the whole
+migration, and its Phase C tells you how to run the config conversion. This page
+is the "why" behind it.
 
 ---
 

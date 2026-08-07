@@ -166,7 +166,7 @@ would write, what it drops and why, and what it cannot migrate — and it writes
 nothing until you pass `--execute`. It never rewrites your existing `.env`; it
 merges into it and backs the old one up.
 
-**Full walkthrough: [Migrating your config from v6](migrating_from_v6.md).**
+**Full walkthrough: [Migrating a v6 install to v7](../install/migrating_from_v6.md) — Phase C.**
 **What moved and what is gone: [What changed in v7](whats_changed_v7.md).**
 
 ---

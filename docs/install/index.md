@@ -88,6 +88,7 @@ And the supporting pages, whichever path you take:
 - **[Installer reference](installer_reference.md)** — every flag, every step, what the seed contains, and exactly which keys land in `.env`.
 - **[Troubleshooting](troubleshooting.md)** — symptom → cause → fix.
 - **[Upgrading](upgrading.md)** — the runtime pin, boot migrations, retired keys, rollback.
+- **[Migrating a v6 install to v7](migrating_from_v6.md)** — the whole operator path: transform the data on v6, move the database and the media, and what to do when the data is wrong.
 - **[H.264 streaming module](install_h264_module.md)** — serve audiovisual fragments by time range.
 
 ## After the install

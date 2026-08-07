@@ -1,6 +1,6 @@
 # Settings reference
 
-> See also: [How configuration works](administration.md) · [What changed in v7](whats_changed_v7.md) · [Migrating from v6](migrating_from_v6.md)
+> See also: [How configuration works](administration.md) · [What changed in v7](whats_changed_v7.md) · [Migrating from v6](../install/migrating_from_v6.md)
 
 Every setting Dédalo v7 reads, what it means, and its default.
 

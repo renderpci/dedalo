@@ -30,7 +30,7 @@ wizard](../install/index.md) writes the file for you.
 | [How configuration works](administration.md) | Where values live, how they resolve, secrets, required keys, troubleshooting. **Start here.** |
 | [Settings reference](config.md) | Every setting, what it means, and its default. |
 | [What changed in v7](whats_changed_v7.md) | The v6 → v7 map: renamed, reshaped and removed settings. |
-| [Migrating your config from v6](migrating_from_v6.md) | The tool that converts an old v6 config into a v7 `.env`. |
+| [Migrating a v6 install to v7](../install/migrating_from_v6.md) | The whole v6 → v7 migration, config included — `dedalo:migrate-config` is Phase C of it. |
 | [Database connection](config_db.md) | PostgreSQL (the work database) and MariaDB (diffusion). |
 | [Areas](config_areas.md) | Allowing and denying areas. |
 | [Media protection](media_protection.md) | Web-server-enforced access control for media files. |

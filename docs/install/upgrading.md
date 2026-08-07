@@ -1,6 +1,6 @@
 # Upgrading
 
-> See also: [Production install](production.md) · [Docker](docker.md) · [Troubleshooting](troubleshooting.md) · [Backup](../management/backup.md)
+> See also: [Production install](production.md) · [Docker](docker.md) · [Troubleshooting](troubleshooting.md) · [Backup](../management/backup.md) · [Migrating a v6 install to v7](migrating_from_v6.md)
 
 Upgrading Dédalo is a `git pull`, a dependency install and a restart. Everything
 that has to happen to the database happens **inside the server at boot**. This
@@ -110,6 +110,7 @@ Config key 'DEDALO_PREFIX_TIPOS' is RETIRED: rename that line to
 | Retired key | Replacement |
 | --- | --- |
 | `DEDALO_PREFIX_TIPOS` | `ACTIVE_ONTOLOGY_TLDS` |
+| `DEDALO_MEDIA_BASE_URL` | `DEDALO_MEDIA_EXPORT_BASE` |
 
 Rename the line. The error names the file and the key, and it is fatal on
 purpose: a boot that refuses is a five-minute fix, and a boot that quietly

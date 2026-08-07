@@ -158,5 +158,5 @@ do not need them: go to [Installation](install/index.md).
 
 | Page | What |
 | ---- | ---- |
+| [Migrating a v6 install to v7](install/migrating_from_v6.md) | **The one migration manual**: transform the data on v6, move the database and the media, convert the config, migrate the passwords, first v7 boot, and what to do when the data is wrong |
 | [What changed in v7](config/whats_changed_v7.md) | The v6 → v7 settings map: renamed, reshaped and removed |
-| [Migrating your config from v6](config/migrating_from_v6.md) | `bun run dedalo:migrate-config` — point it at your old config directory and it writes the v7 `.env` |

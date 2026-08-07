@@ -80,6 +80,9 @@ plugins:
         install/apache_configuration.md: install/reverse_proxy.md
         install/install_fedora.md: install/install_rhel.md
         install/install_help.md: install/troubleshooting.md
+        # The v6→v7 migration is ONE process, so it is ONE page (2026-08-07): the
+        # config half moved into the install manual as its Phase C.
+        config/migrating_from_v6.md: install/migrating_from_v6.md
         # Pages renamed away from a retired engine's class names.
         api/classes/dd_manager.md: api/classes/dispatch.md
         core/ontology/ontology_class.md: core/ontology/ontology_write.md
