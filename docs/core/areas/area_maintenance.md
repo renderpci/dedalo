@@ -194,7 +194,7 @@ read-only panel: it reports state through `getValue` or an eager catalog value.
 | `media_control` | integrity | `set_media_access_mode`, `rebuild_media_index` |
 | `counters_status` | integrity | `modify_counter` |
 | `dataframe_control` | integrity | `get_value`, `run_check`, `run_fix` — and NO module `getValue`, so the panel loads nothing (WC-071); `run_check` reports per-table `coverage` and can never claim a completeness it did not earn (WC-072) |
-| `database_info` | system | `analyze_db`, `optimize_tables`, `consolidate_tables`, `recreate_db_assets`, `backfill_search_stores`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `rebuild_user_stats`, `relation_integrity_report` |
+| `database_info` | system | `analyze_db`, `analyze_statistics`, `optimize_tables`, `consolidate_tables`, `recreate_db_assets`, `backfill_search_stores`, `rebuild_db_indexes`, `rebuild_db_functions`, `rebuild_db_constraints`, `rebuild_user_stats`, `relation_integrity_report` |
 | `environment`, `system_info` | system | *(read-only panels)* |
 | `error_reports` | system | `get_reports` |
 | `publication_api` | diffusion | *(read-only panel)* |
