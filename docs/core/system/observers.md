@@ -175,9 +175,39 @@ recomputes on, and **what** is computed on each.
 
 The observable-data targets are the locators **in the payload the save door just
 handed over**, not a re-read of the record — they are never found by searching a
-section. On the portal-deletion door that payload is deliberately the set of
-locators that were **removed**, because those are precisely the records whose
-mirrors have to be rebuilt. Only the SQO-filter shape needs a host section.
+section. Only the SQO-filter shape needs a host section.
+
+#### A save also visits what it stopped pointing at
+
+Every save door reports two things: the value the component now holds, and the
+locators the save **removed**. Both are targets. This matters because a record
+you just unlinked still lists you in its mirror, and visiting it is the only
+way that entry can go away at the moment you caused it — the recompute reads
+current truth, so a record that turns out to be unaffected simply computes the
+same value and writes nothing.
+
+Removed locators participate in the external-mirror and relay branches. They
+are deliberately **not** used by
+[component_info](../components/component_info.md) observers: those select
+their targets by searching for the *saved* record, so a removed locator is not
+an input to that search at all.
+
+#### An equivalence edge recomputes the whole class
+
+When the saved component is one of the observer's own **equivalents** peers
+(named in `source.data_from_field`), the save does not change one link — it
+re-partitions an equivalence group, and multidirectional equivalence is
+transitive. If A ≡ B and B ≡ C, then A ≡ C follows; break the B–C link and A's
+group changes too, even though the save never mentions A.
+
+So for these edges the targets are the whole equivalence group, computed
+before and after: the group the saved record is in now, plus the group of each
+record it was just unlinked from. This is needed in **both** directions —
+merging two groups reaches the far members exactly as splitting one does. A
+two-member group hides the distinction, which is why the gap went unnoticed:
+with only A and B there is no third member to miss.
+
+Edges without a `data_from_field` peer are unaffected and pay nothing extra.
 
 !!! note "On a `set_dato_external` edge, `server.filter` is ignored"
     An external-mirror edge takes its targets from the observable data whatever
@@ -414,21 +444,35 @@ saves. It is reachable here: the widest real case holds 4,547 referencers.
 
 All four are unconditional. None of them can be switched off.
 
-### Grow-only: no stored entry is dropped
+### Removals are mirrored — and the one case where they are not
 
-The recompute splits into *kept* entries and *additions*. **Additions always
-persist. No stored entry is ever dropped** unless the caller explicitly opts in
-— and no production caller does. A withheld drop is logged and counted as
-`observers_shrink_refused`. The decision is membership-based, not length-based:
-a recompute that wants to drop one entry and add another commits the addition
-and withholds the drop.
+The recompute writes the **full law**: entries that no longer match are
+dropped, new ones are appended. Removing a link updates every affected mirror
+on the spot, the same way adding one does. The decision is membership-based,
+not length-based, so a recompute that wants to drop one entry and add another
+commits both.
 
-This is a deliberate, temporary trade. Until the value law is fully settled,
-anything the recompute wants to remove is treated as suspect, so **a legitimate
-removal is not mirrored automatically**. Operators reconcile deliberately with
-the maintenance script `scripts/observer_reconcile.ts` — dry-run by default,
-`--apply --allow-shrink` to perform the drops. The same script heals mirrors
-after bulk operations that bypass the per-component save door.
+There is no setting for this. Nothing a caller passes can grant or deny a
+drop, which is deliberate: a switch that can mean "allow the deletion" is
+always one mistake away from meaning it by accident.
+
+Exactly one situation withholds the drop half — **a degraded seed**. If this
+record's own equivalents could not be resolved (a peer named in
+`data_from_field` has no ontology node, an entry there is not a tipo, or a
+peer locator is malformed), the computed reference set is known to be
+incomplete, so removing anything on the strength of it would be a guess. The
+additions still apply; the drops are held, logged, and counted as
+`observers_shrink_refused_degraded_seed`, and the outcome names the defect so
+you know which ontology node to fix. Fix it, then re-run the reconcile script.
+
+!!! note "This replaced a blanket rule"
+    Between 2026-08-02 and 2026-08-06 the engine dropped **nothing**, ever,
+    without an operator flag — a temporary guard from when the equivalents law
+    was still incomplete and every drop was suspect. Once that law landed the
+    guard became the problem: a mirror that can only grow is not a mirror, and
+    a legitimate removal stayed visible in the public portal indefinitely.
+    Retiring it corrected 1,673 stale references across 22 records on this
+    install.
 
 ### Unrecognized derivation rules are refused
 
@@ -546,8 +590,10 @@ Work the list top-down.
    `observers_registry_contract_violations`,
    `observers_host_section_unresolved`, `observers_component_to_search_missing`,
    `observers_unported_sublaw_refused`. Runtime refusals:
-   `observers_shrink_refused`, `observers_big_result_refused`,
+   `observers_shrink_refused_degraded_seed`, `observers_big_result_refused`,
    `observers_references_limit_refused`, and the `observers_cascade_*` family.
+   Volume signals: `observers_removed_targets_visited`,
+   `observers_equivalence_class_wide`.
 5. **Mirror short by thousands?** Look at the `data_from_field` peer: it must be
    a `component_relation_related` (no other model computes a closure at all),
    its `relation_type_rel` must be `dd621` for the full closure, and its
@@ -555,5 +601,16 @@ Work the list top-down.
    and counts `observers_seed_peer_node_missing`.
 6. **Edited the ontology out-of-band?** Restart the server; the registry only
    invalidates on writes made through the engine.
-7. **Expecting a removal to propagate?** It will not, by design. Run
-   `scripts/observer_reconcile.ts --apply --allow-shrink`.
+7. **A removal did not propagate?** It should have. Check whether the outcome
+   was a degraded-seed refusal (`observers_shrink_refused_degraded_seed` — the
+   log names the peer node to fix), and if the stale entry is on a record the
+   save never mentioned, confirm the observer really declares the observed
+   component in `source.data_from_field` — that is what makes a save an
+   equivalence-group event rather than a single-link one.
+8. **Auditing drift across the whole install?** `scripts/observer_reconcile.ts`
+   is a census as well as a repair. `--json` emits one record per drifted
+   mirror (`before`, `after`, `dropped`, `added`, plus any refusal and its
+   defects) so drop volume can be reviewed by cause; `--budget` compares the
+   run against `engineering/observer_shrink_budget.json` and exits non-zero if
+   the install wants to delete more than the declared ceiling. Always run the
+   census before `--apply`.
