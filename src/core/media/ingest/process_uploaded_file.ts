@@ -2,10 +2,15 @@
  * PROCESS_UPLOADED_FILE — the ingest orchestrator (PHP tool_upload::
  * process_uploaded_file → component process_uploaded_file → regenerate_component).
  *
- * Moves the staged upload into the original tier (add_file), builds the
+ * Moves the staged upload into its target tier (add_file), builds the
  * derivatives per type (image/pdf/svg/3d synchronously; av transcode via the job
- * manager), and returns the freshly-scanned files_info. The original is never
+ * manager), and returns the freshly-scanned files_info. No master is ever
  * mutated; derivatives are atomic.
+ *
+ * TWO MASTERS (2026-08-07): the target tier is either a MASTER — the archival
+ * original, or, for an image, the human-retouched one — or a real derivative
+ * tier, and the two take different branches. See isMasterTier below and
+ * MediaTypeSpec.masterQualities for the domain model.
  *
  * ORDERING LAW (2026-08-04): the derivative pass is NON-FATAL and reports
  * through IngestResult.derivativeErrors, because it runs AFTER add_file has
@@ -31,7 +36,8 @@ import {
 	regenerateImage,
 	regeneratePdf,
 	regenerateSvg,
-	resolveOriginalSource,
+	resolveMasterQuality,
+	resolveMasterSource,
 } from '../processing.ts';
 import { regenerateMissingDerivatives } from '../repair.ts';
 import { readStoredMediaItems } from '../tool_support.ts';
@@ -43,22 +49,30 @@ export interface IngestInput extends Omit<AddFileInput, 'spec'> {
 }
 
 /**
- * Whether the target tier is the ORIGINAL one. It selects WHICH regenerate runs,
- * never whether one runs at all:
+ * Whether the target tier is a MASTER (`spec.masterQualities` — see that field:
+ * an image has TWO, the archival original and the human-retouched one). It
+ * selects WHICH regenerate runs, never whether one runs at all:
  *
- * - original tier → the ingest builders, which re-encode UNCONDITIONALLY (a
- *   fresh original should re-encode every derivative from it);
+ * - a master tier → the ingest builders, which re-encode UNCONDITIONALLY, from
+ *   whichever master now outranks the others. A new master is a new statement
+ *   about what this record looks like, so every derived tier — the web quality,
+ *   the thumb, the SVG envelope, and any higher tier already on disk — is
+ *   rebuilt to depict it. That is the same treatment a fresh original has always
+ *   had; before 2026-08-07 the RETOUCHED tier did not get it, so uploading a
+ *   retouch onto a record that already had tiers changed nothing visible;
  * - any other tier → `regenerateMissingDerivatives` (v6 regenerate_component
  *   parity): the default quality only when ABSENT — so the file the operator
  *   just placed is never overwritten — the image thumb ALWAYS, rebuilt from the
- *   default-quality file, and the SVG envelope created-or-path-fixed.
+ *   default-quality file, and the SVG envelope created-or-path-fixed. Correct
+ *   for a real derivative tier: a file parked in '6MB' IS that tier, nothing
+ *   derives from it.
  *
- * PHP called regenerate_component either way; skipping it for a non-original
+ * PHP called regenerate_component either way; skipping it for a derivative
  * tier would leave the thumb showing the PREVIOUS image while the web tier
  * serves the new one, and persist a files_info recording exactly that mismatch.
  */
-function isOriginalTier(spec: MediaTypeSpec, quality: string | undefined): boolean {
-	return quality === undefined || quality === spec.originalQuality;
+function isMasterTier(spec: MediaTypeSpec, quality: string | undefined): boolean {
+	return quality === undefined || spec.masterQualities.includes(quality);
 }
 
 export interface IngestResult {
@@ -108,8 +122,9 @@ export interface IngestResult {
  * and IngestResult.startTranscode for why the caller starts it).
  *
  * `input.quality` (the client's custom_target_quality / tool_upload's quality)
- * parks the upload in a NON-original tier; the derivative pass then builds only
- * what is missing around it — see isOriginalTier.
+ * chooses the target tier. A MASTER tier re-encodes the derived tiers from the
+ * best master; any other tier parks the upload and builds only what is missing
+ * around it — see isMasterTier.
  */
 export async function processUploadedFile(input: IngestInput): Promise<IngestResult> {
 	const { spec, identity, pathOpts } = input;
@@ -128,7 +143,15 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 		assertNormalizedExtensionForTier(spec, quality, assertAllowedExtension(spec, input.extension));
 	}
 	const added = addFile({ ...input, quality });
-	const original = isOriginalTier(spec, quality);
+	// TWO DIFFERENT QUESTIONS, deliberately not one boolean:
+	//  - isMaster decides whether the derived tiers are re-encoded from this file
+	//    (any master does that — original OR retouched);
+	//  - isOriginal decides which stored name cue this upload replaces, and that
+	//    is the ARCHIVAL tier's cue alone. A retouch must not overwrite
+	//    original_normalized_name (it would lose the raw original from the index);
+	//    its own twin is stamped by the caller through nameKeysForQuality.
+	const isMaster = isMasterTier(spec, quality);
+	const isOriginal = quality === undefined || quality === spec.originalQuality;
 
 	let startTranscode: (() => string) | null = null;
 	// NON-FATAL FROM HERE ON. The catch covers EXACTLY the derivative pass, and
@@ -141,7 +164,20 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	// skip. See IngestResult.derivativeErrors for the full rationale.
 	const derivativeErrors: string[] = [];
 	try {
-		if (original) {
+		if (isMaster) {
+			// THE SURPRISE, SAID OUT LOUD: the retouched master outranks the original
+			// as the derivative source for as long as it exists, so ingesting a fresh
+			// ORIGINAL onto a record that already carries a retouch rebuilds the derived
+			// tiers FROM THE RETOUCH — the new scan lands in the archive and is indexed,
+			// but the visible image does not change. That is the intended domain rule
+			// (v6 get_image_source), and it is exactly the kind of thing an operator
+			// cannot deduce from a successful upload, so it names the record here.
+			const sourceQuality = resolveMasterQuality(spec, identity, pathOpts, added.extension);
+			if (sourceQuality !== null && sourceQuality !== quality && isOriginal) {
+				console.info(
+					`[process_uploaded_file] ${spec.model} ${identity.componentTipo}_${identity.sectionTipo}_${identity.sectionId}: uploaded into '${spec.originalQuality}', but the '${sourceQuality}' master outranks it — the derived tiers are rebuilt from '${sourceQuality}' and the visible image does not change`,
+				);
+			}
 			switch (spec.model) {
 				case 'component_image':
 					await regenerateImage(spec, identity, pathOpts, added.extension);
@@ -158,8 +194,8 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 				// component_av: submitted LAST, below — see the barrier note there.
 			}
 		} else {
-			// Non-original tier: build only what is MISSING around the file just
-			// placed (see isOriginalTier). regenerateMissingDerivatives has no
+			// A real DERIVATIVE tier: build only what is MISSING around the file just
+			// placed (see isMasterTier). regenerateMissingDerivatives has no
 			// component_av branch — av derivatives are an async transcode — so the av
 			// case is handled with the submit below.
 			await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
@@ -180,12 +216,14 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	}
 
 	// The stored cues (external_source, the original/modified normalized-name
-	// twins) still describe this component — a non-original upload does not
-	// invalidate them, and dropping them loses the raw-original twin from the
+	// twins) still describe this component — an upload into any other tier does
+	// not invalidate them, and dropping them loses the raw-original twin from the
 	// index. Only the ORIGINAL tier's own cue is replaced, by what was just
-	// stored; scanContextFromItem is the one reader of the other two.
+	// stored; scanContextFromItem is the one reader of the other two. A RETOUCH
+	// takes this branch too (isOriginal, not isMaster): it must keep the stored
+	// original_normalized_name intact.
 	const storedCues = scanContextFromItem(
-		original
+		isOriginal
 			? undefined
 			: ((await readStoredMediaItems(
 					identity.sectionTipo,
@@ -196,7 +234,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	);
 	const filesInfo = scanFilesInfo(spec, identity, pathOpts, {
 		...storedCues,
-		...(original
+		...(isOriginal
 			? {
 					originalNormalizedName: `${identity.componentTipo}_${identity.sectionTipo}_${identity.sectionId}.${added.extension}`,
 				}
@@ -223,7 +261,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 	// "the encode is slower than a DB round-trip" is not good enough. The caller
 	// starts it after its own persist commits.
 	//
-	// A NON-original av upload transcodes too — the build-only-what-is-missing
+	// A NON-master av upload transcodes too — the build-only-what-is-missing
 	// rule the other types get from regenerateMissingDerivatives, which has no av
 	// branch (PHP ran regenerate_component for an av upload into any tier). Two
 	// conditions, both load-bearing: the default tier must be ABSENT (never
@@ -239,9 +277,12 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 			spec.defaultExtension,
 			pathOpts,
 		).absolutePath;
+		// av has ONE master (its originalQuality) — no av ladder carries a retouched
+		// tier — so isMaster and isOriginal coincide here. isMaster is the honest
+		// question: "did this upload land in a tier things derive FROM?".
 		const canDerive =
-			original || resolveOriginalSource(spec, identity, pathOpts, added.extension) !== null;
-		if (canDerive && (original || !existsSync(defaultFile))) {
+			isMaster || resolveMasterSource(spec, identity, pathOpts, added.extension) !== null;
+		if (canDerive && (isMaster || !existsSync(defaultFile))) {
 			startTranscode = (): string => submitAvTranscode(spec, identity, pathOpts, added.extension);
 		}
 	}

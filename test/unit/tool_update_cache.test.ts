@@ -10,7 +10,7 @@ import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { updateMatrixKeyData } from '../../src/core/db/matrix_write.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
-import { resolveOriginalSource } from '../../src/core/media/processing.ts';
+import { resolveMasterSource } from '../../src/core/media/processing.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -364,7 +364,7 @@ describe('tool_update_cache module', () => {
 		const originalItems = readComponentItems(record, MEDIA_COMPONENT, 'component_image');
 		if (!Array.isArray(originalItems) || originalItems.length === 0) return;
 		const pathOpts = await resolveMediaPathOptions(MEDIA_COMPONENT, MEDIA_SECTION);
-		const source = resolveOriginalSource(
+		const source = resolveMasterSource(
 			spec!,
 			{
 				componentTipo: MEDIA_COMPONENT,

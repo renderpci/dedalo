@@ -25,7 +25,7 @@ import {
 	type MediaIdentity,
 	type MediaPathOptions,
 } from '../path.ts';
-import { buildThumbAtomically, regenerateImage, resolveOriginalSource } from '../processing.ts';
+import { buildThumbAtomically, regenerateImage, resolveMasterSource } from '../processing.ts';
 
 /** A resolved media component context (spec + identity + path options). */
 export interface MediaContext {
@@ -59,7 +59,7 @@ export async function createIdentifyingImageCore(
 
 	// AV source: original quality, else default quality (PHP fallback when the
 	// original file is absent).
-	let source = resolveOriginalSource(av.spec, av.identity, av.pathOpts);
+	let source = resolveMasterSource(av.spec, av.identity, av.pathOpts);
 	if (source === null) {
 		for (const ext of [av.spec.defaultExtension, ...av.spec.allowedExtensions]) {
 			const loc = buildMediaLocation(
@@ -205,7 +205,7 @@ export async function createAvPosterframe(av: MediaContext, timecode: string): P
 
 	// AV source: original quality, else default quality (PHP fallback when the
 	// original file is absent).
-	let source = resolveOriginalSource(av.spec, av.identity, av.pathOpts);
+	let source = resolveMasterSource(av.spec, av.identity, av.pathOpts);
 	if (source === null) {
 		for (const ext of [av.spec.defaultExtension, ...av.spec.allowedExtensions]) {
 			const loc = buildMediaLocation(

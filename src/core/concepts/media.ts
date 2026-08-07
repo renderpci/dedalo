@@ -44,6 +44,33 @@ export interface MediaTypeSpec {
 	readonly defaultQuality: string;
 	/** Original (source-of-truth) quality — never mutated in place (Original law). */
 	readonly originalQuality: string;
+	/**
+	 * The MASTER tiers: the ones that hold RAW uploads and act as derivative
+	 * SOURCES, in PRECEDENCE ORDER, highest first.
+	 *
+	 * Dédalo's domain has TWO masters for images, not one (v6
+	 * component_image::get_image_source / get_normalized_ar_quality, frozen PHP
+	 * class.component_image.php:1569 + :296):
+	 *  - the ORIGINAL is the camera/scanner shot, stored AS IS, never mutated;
+	 *  - the RETOUCHED tier (DEDALO_IMAGE_QUALITY_RETOUCHED, canonically
+	 *    'modified') is the HUMAN-RETOUCHED master — colour-corrected, cropped,
+	 *    background removed. It is a SECOND MASTER, not a derivative: it is
+	 *    stored full-size and losslessly, in whatever format the upload
+	 *    allowlist admits (.tif / .psd), and it OUTRANKS the original as the
+	 *    source every other tier is built from, for as long as it exists.
+	 *
+	 * Every other model has one master (its `originalQuality`); no ladder but
+	 * the image one has a retouched tier at all.
+	 *
+	 * Derived from config, never from the literal 'modified': installs rename
+	 * these tiers, which is why protection.ts:316 forbids hardcoding them.
+	 *
+	 * NOT the same idea as `protection.ts masterQualities()`: that is a
+	 * cross-model SECURITY set (it also carries the literal names as a belt, so
+	 * a renamed tier can never be configured web-public). This is the per-type
+	 * PRECEDENCE list the processing layer resolves sources through.
+	 */
+	readonly masterQualities: readonly string[];
 	/** Normalized default extension the type converts to. */
 	readonly defaultExtension: string;
 	/** Upload allowlist. */
@@ -112,6 +139,27 @@ function typeHasThumb(folder: MediaTypeFolder): boolean {
 	return folder === 'image' || folder === 'av' || folder === 'pdf' || folder === '3d';
 }
 
+/**
+ * The master tiers of one type, HIGHEST PRECEDENCE FIRST — see
+ * MediaTypeSpec.masterQualities for what a master IS.
+ *
+ * Only component_image has a second master (the retouched tier), and only when
+ * this install actually put it in the ladder: `DEDALO_IMAGE_QUALITY_RETOUCHED`
+ * always has a value ('modified' by default), but an install is free to drop
+ * that tier from `DEDALO_IMAGE_AR_QUALITY`. A master that is not in the ladder
+ * cannot be uploaded into (assertIngestableQuality refuses it) and is never
+ * scanned into files_info (files_info.ts appendNormalizedTwin bails on exactly
+ * this test), so treating it as a source would resolve files nothing can ever
+ * put there.
+ */
+function masterQualitiesFor(folder: MediaTypeFolder, cfg: MediaTypeConfig): string[] {
+	if (folder !== 'image') return [cfg.originalQuality];
+	const retouched = config.media.imageQualityRetouched;
+	const hasRetouchedTier =
+		retouched !== '' && retouched !== cfg.originalQuality && cfg.qualities.includes(retouched);
+	return hasRetouchedTier ? [retouched, cfg.originalQuality] : [cfg.originalQuality];
+}
+
 const specCache = new Map<MediaModel, MediaTypeSpec>();
 
 /**
@@ -131,6 +179,7 @@ export function mediaTypeOf(model: string): MediaTypeSpec | null {
 		qualities: cfg.qualities,
 		defaultQuality: cfg.defaultQuality,
 		originalQuality: cfg.originalQuality,
+		masterQualities: Object.freeze(masterQualitiesFor(entry.folder, cfg)),
 		defaultExtension: cfg.extension,
 		allowedExtensions: cfg.allowedExtensions,
 		alternateExtensions: cfg.alternateExtensions,
@@ -221,19 +270,30 @@ export function assertIngestableQuality(spec: MediaTypeSpec, quality: unknown): 
  * quality, the thumb is regenerated from it, and the record keeps serving the
  * previous image while the upload sits beside it, reported as a success.
  *
- * The ORIGINAL tier is exempt — it keeps the raw upload in whatever the
- * allowlist admits (the Original law); that is what it is for.
+ * EVERY MASTER TIER IS EXEMPT (spec.masterQualities), not just the original.
+ * A master is not a derivative: nothing regenerates it, so nothing can shadow
+ * it — it keeps the raw upload in whatever the allowlist admits, which is the
+ * whole point of it. For the ORIGINAL that is the Original law; for the
+ * RETOUCHED tier it is the same law for the same reason, because a retouch
+ * delivered by a photographer arrives as a .tif or .psd and IS the new master
+ * every derived tier is then built from (v6 get_image_source).
+ *
+ * Refusing a raw extension there was the reported defect: importing with the
+ * target quality set to 'modified' failed per file with "Cannot upload a '.tif'
+ * file into the 'modified' tier", because the retouched tier was classified as
+ * a derivative it never was.
  */
 export function assertNormalizedExtensionForTier(
 	spec: MediaTypeSpec,
 	quality: string,
 	extension: string,
 ): void {
-	if (quality === spec.originalQuality) return;
+	if (spec.masterQualities.includes(quality)) return;
 	const normalized = [spec.defaultExtension, ...spec.alternateExtensions];
 	if (!normalized.includes(extension)) {
+		const targets = spec.masterQualities.map((value) => `'${value}'`).join(' or ');
 		throw new Error(
-			`Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into '${spec.originalQuality}' instead.`,
+			`Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into ${targets} instead.`,
 		);
 	}
 }

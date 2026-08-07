@@ -426,19 +426,27 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 				quality: image.defaultQuality,
 			}),
 		).rejects.toThrow(/would be shadowed/);
-		// The ORIGINAL tier is exempt — it keeps the raw upload (Original law).
-		await expect(
-			processUploadedFile({
-				spec: image,
-				identity: { ...identity, sectionId: 66 },
-				pathOpts,
-				userId: USER_ID,
-				keyDir: 'kd1',
-				tmpName: 'up7.png',
-				extension: 'png',
-				quality: image.originalQuality,
-			}),
-		).resolves.toBeDefined();
+		// EVERY MASTER tier is exempt — each keeps the raw upload it is there to
+		// hold: the archival original (Original law) and the human-retouched second
+		// master (2026-08-07 — a retouch is delivered as a .tif/.psd and IS the new
+		// source of every derived tier; see MediaTypeSpec.masterQualities).
+		let nextId = 66;
+		for (const master of image.masterQualities) {
+			await stageImage('up7.png');
+			await expect(
+				processUploadedFile({
+					spec: image,
+					identity: { ...identity, sectionId: nextId },
+					pathOpts,
+					userId: USER_ID,
+					keyDir: 'kd1',
+					tmpName: 'up7.png',
+					extension: 'png',
+					quality: master,
+				}),
+			).resolves.toBeDefined();
+			nextId += 1;
+		}
 	});
 
 	test.if(HAVE_FFMPEG)('the av transcription tier is refused too', async () => {

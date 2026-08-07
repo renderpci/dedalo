@@ -36,7 +36,7 @@ import {
 	regenerate3d,
 	regeneratePdf,
 	regenerateSvg,
-	resolveOriginalSource,
+	resolveMasterSource,
 } from './processing.ts';
 import { createDefaultSvgFile, defaultRasterUrl, svgOverlayLocation } from './svg_overlay.ts';
 
@@ -129,7 +129,7 @@ export async function refreshMediaItems(input: {
 			lang: (item.lang as string | null) ?? null,
 		};
 		// The raw upload extension (e.g. the '.png' behind a normalized '.jpg')
-		// steers resolveOriginalSource to the right original file.
+		// steers resolveMasterSource to the right original file.
 		const rawName = item.original_normalized_name;
 		const rawExtension = typeof rawName === 'string' ? (rawName.split('.').pop() ?? null) : null;
 		if (regenerate) {
@@ -196,7 +196,7 @@ export async function regenerateMissingDerivatives(
 	// The original is needed only by the ORIGINAL-SOURCED steps (default-quality
 	// build, delete_normalized). Thumb + envelope derive from the DEFAULT file —
 	// they must run even when the original is not on this box (v6 create_thumb).
-	const source = resolveOriginalSource(spec, identity, pathOpts, options.rawExtension);
+	const source = resolveMasterSource(spec, identity, pathOpts, options.rawExtension);
 
 	const defaultLocation = buildMediaLocation(
 		spec,

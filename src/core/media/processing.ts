@@ -278,22 +278,69 @@ export async function buildThumbAtomically(
 }
 
 /**
- * Locate the best source file for regeneration: the original quality, preferring
- * the raw upload extension, then the normalized default extension. Returns the
- * absolute path or null when no original is present.
+ * Locate the best source file for regeneration — THE MASTER, in precedence
+ * order (`spec.masterQualities`, highest first), preferring within each tier the
+ * raw upload extension, then the normalized default extension, then the
+ * allowlist. Returns the absolute path or null when no master is present.
+ *
+ * PRECEDENCE IS THE POINT, and it is surprising: for component_image the
+ * RETOUCHED master ('modified') OUTRANKS the original, so while a retouch
+ * exists EVERY derived tier is built from it — including the tiers rebuilt when
+ * a NEW ORIGINAL is ingested. That is deliberate (v6
+ * component_image::get_image_source, frozen class.component_image.php:1569): the
+ * retouch is a human-authored better look of the image, and silently reverting
+ * the web tiers to the raw scan the moment someone re-scans the object would
+ * throw that work away. The ingest path names the record in a console.info when
+ * this happens — see ingest/process_uploaded_file.ts — because an operator whose
+ * new scan did not change the visible image must be able to find out why.
+ *
+ * `targetQuality` reproduces v6's ONE exception (:1574): when the tier being
+ * built IS the archival original, the retouched master is NOT a legal source.
+ * The original is never derived from anything — it is what it is.
  */
-export function resolveOriginalSource(
+export function resolveMasterSource(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension?: string | null,
+	targetQuality?: string | null,
 ): string | null {
+	return resolveMaster(spec, identity, pathOpts, rawExtension, targetQuality)?.path ?? null;
+}
+
+/**
+ * WHICH master tier `resolveMasterSource` resolves to. Exists so the ingest path
+ * can SAY SO to the operator (see that function's precedence note) without
+ * re-deriving the resolution rule at the call site.
+ */
+export function resolveMasterQuality(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	rawExtension?: string | null,
+	targetQuality?: string | null,
+): string | null {
+	return resolveMaster(spec, identity, pathOpts, rawExtension, targetQuality)?.quality ?? null;
+}
+
+/** The ONE master-resolution walk both accessors above read (tier, then extension). */
+function resolveMaster(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	rawExtension: string | null | undefined,
+	targetQuality: string | null | undefined,
+): { quality: string; path: string } | null {
+	const masters =
+		targetQuality === spec.originalQuality ? [spec.originalQuality] : spec.masterQualities;
 	const candidates = [rawExtension, spec.defaultExtension, ...spec.allowedExtensions].filter(
 		(e): e is string => typeof e === 'string' && e !== '',
 	);
-	for (const extension of candidates) {
-		const loc = buildMediaLocation(spec, identity, spec.originalQuality, extension, pathOpts);
-		if (existsSync(loc.absolutePath)) return loc.absolutePath;
+	for (const quality of masters) {
+		for (const extension of candidates) {
+			const loc = buildMediaLocation(spec, identity, quality, extension, pathOpts);
+			if (existsSync(loc.absolutePath)) return { quality, path: loc.absolutePath };
+		}
 	}
 	return null;
 }
@@ -434,9 +481,20 @@ export function copyToQuality(
 }
 
 /**
- * Regenerate all derivatives for an image record: default quality + thumb.
- * (Higher tiers are built on demand by tool_media_versions.) Returns the paths
- * created. The original is never touched.
+ * Regenerate the derivatives of an image record from its best master: default
+ * quality + thumb + SVG envelope, PLUS a re-encode of every other ladder tier
+ * that ALREADY EXISTS on disk. Returns the paths created. No master is ever
+ * touched.
+ *
+ * WHY THE EXISTING HIGHER TIERS ARE RE-ENCODED (2026-08-07): this function runs
+ * whenever a MASTER CHANGES — a fresh original or a fresh retouch is ingested, a
+ * master is deleted and the surviving one takes over. After such a change every
+ * derived tier must depict the new best master, and a '6MB' built from the
+ * previous one would keep serving the previous picture forever, with a
+ * files_info that reports it as present and current. An absent tier is still NOT
+ * created here: tiers are minted on demand by tool_media_versions, and building
+ * a 100MB derivative nobody asked for on every upload is a different decision
+ * than keeping an existing one honest.
  */
 export async function regenerateImage(
 	spec: MediaTypeSpec,
@@ -444,7 +502,7 @@ export async function regenerateImage(
 	pathOpts: MediaPathOptions,
 	rawExtension?: string | null,
 ): Promise<string[]> {
-	const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
+	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) return [];
 	const created: string[] = [];
 	const defaultPath = await buildImageVersion(
@@ -467,6 +525,22 @@ export async function regenerateImage(
 	const { createDefaultSvgFile } = await import('./svg_overlay.ts');
 	const svgPath = await createDefaultSvgFile(spec, identity, pathOpts);
 	if (svgPath !== null) created.push(svgPath);
+	// Re-encode the OTHER ladder tiers that already exist (see the header note).
+	// Masters are excluded — they are sources, never rebuilt — and so are the thumb
+	// (built above, from the default tier) and the default tier itself.
+	for (const quality of spec.qualities) {
+		if (spec.masterQualities.includes(quality)) continue;
+		if (quality === spec.defaultQuality || quality === config.media.thumb.quality) continue;
+		const existing = buildMediaLocation(
+			spec,
+			identity,
+			quality,
+			spec.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		if (!existsSync(existing)) continue;
+		created.push(await buildImageVersion(spec, identity, quality, source, pathOpts));
+	}
 	return created;
 }
 
@@ -476,7 +550,7 @@ export async function regeneratePdf(
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 ): Promise<string[]> {
-	const source = resolveOriginalSource(spec, identity, pathOpts, 'pdf');
+	const source = resolveMasterSource(spec, identity, pathOpts, 'pdf');
 	if (source === null) return [];
 	const created: string[] = [];
 	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
@@ -491,7 +565,7 @@ export async function regenerateSvg(
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 ): Promise<string[]> {
-	const source = resolveOriginalSource(spec, identity, pathOpts, 'svg');
+	const source = resolveMasterSource(spec, identity, pathOpts, 'svg');
 	if (source === null) return [];
 	const created: string[] = [];
 	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'svg', pathOpts));
@@ -505,7 +579,7 @@ export function regenerate3d(
 	pathOpts: MediaPathOptions,
 	rawExtension: string,
 ): string[] {
-	const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
+	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 	if (source === null) return [];
 	return [
 		copyToQuality(spec, identity, spec.defaultQuality, source, spec.defaultExtension, pathOpts),

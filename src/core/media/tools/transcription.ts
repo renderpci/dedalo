@@ -19,7 +19,7 @@ import {
 	type MediaLocation,
 	type MediaPathOptions,
 } from '../path.ts';
-import { resolveOriginalSource } from '../processing.ts';
+import { resolveMasterSource } from '../processing.ts';
 
 const AUDIO_TR_EXTENSION = 'wav';
 
@@ -49,7 +49,7 @@ export async function ensureTranscribableAudio(
 	const location = transcribableAudioLocation(spec, identity, pathOpts);
 	if (existsSync(location.absolutePath)) return location.relativePath;
 
-	const source = resolveOriginalSource(spec, identity, pathOpts);
+	const source = resolveMasterSource(spec, identity, pathOpts);
 	if (source === null) throw new Error('AV original file not found');
 
 	mkdirSync(dirname(location.absolutePath), { recursive: true, mode: 0o775 });
@@ -74,7 +74,7 @@ export async function ensureAudioQuality(
 		throw new Error('audio quality requires a component_av source');
 	const location = buildMediaLocation(spec, identity, 'audio', spec.defaultExtension, pathOpts);
 	if (existsSync(location.absolutePath)) return location.relativePath;
-	const source = resolveOriginalSource(spec, identity, pathOpts);
+	const source = resolveMasterSource(spec, identity, pathOpts);
 	if (source === null) throw new Error('AV original file not found');
 	mkdirSync(dirname(location.absolutePath), { recursive: true, mode: 0o775 });
 	await extractAudio(source, location.absolutePath, 'audio');

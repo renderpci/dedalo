@@ -26,7 +26,7 @@ import { getFfmpegProfile, settingName } from './engine/ffmpeg_profiles.ts';
 import { scanContextFromItem, scanFilesInfo } from './files_info.ts';
 import { mediaJobs } from './jobs.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
-import { resolveOriginalSource } from './processing.ts';
+import { resolveMasterSource } from './processing.ts';
 import { readStoredMediaItems } from './tool_support.ts';
 import { reconcileStoredFilesInfo } from './tools/files_info_persist.ts';
 
@@ -149,7 +149,7 @@ export function resolveAvBuildSource(
 	targetQuality: string,
 	rawExtension?: string | null,
 ): string | null {
-	const original = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
+	const original = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 	if (original !== null) return original;
 	if (targetQuality === spec.defaultQuality) return null;
 	for (const extension of [spec.defaultExtension, ...spec.allowedExtensions]) {
@@ -245,7 +245,7 @@ export function submitAvTranscode(
 	rawExtension: string,
 ): string {
 	const record = mediaJobs.submit('av_transcode', async ({ onProgress }) => {
-		const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
+		const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
 		if (source === null) throw new Error('AV original not found for transcode');
 		const profile = await probeAvSource(source);
 		const created: string[] = [];

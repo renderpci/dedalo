@@ -31,7 +31,7 @@ import {
 	buildThumbVersion,
 	regenerateImage,
 	regeneratePdf,
-	resolveOriginalSource,
+	resolveMasterSource,
 	shouldApplyMetaAlpha,
 } from '../../src/core/media/processing.ts';
 
@@ -241,12 +241,12 @@ describe('image processing (real ImageMagick)', () => {
 		expect(dims.height).toBeLessThanOrEqual(80);
 	});
 
-	test.if(HAVE_MAGICK)('resolveOriginalSource finds the original file', async () => {
-		expect(resolveOriginalSource(image, identity, pathOpts)).toContain(
+	test.if(HAVE_MAGICK)('resolveMasterSource finds the original file', async () => {
+		expect(resolveMasterSource(image, identity, pathOpts)).toContain(
 			'/image/original/rsc29_rsc170_5.jpg',
 		);
 		const absent: MediaIdentity = { ...identity, sectionId: 999 };
-		expect(resolveOriginalSource(image, absent, pathOpts)).toBeNull();
+		expect(resolveMasterSource(image, absent, pathOpts)).toBeNull();
 	});
 });
 
@@ -1034,7 +1034,7 @@ describe('pdf processing (real pdf tools + ImageMagick)', () => {
 		async () => {
 			const multiId: MediaIdentity = { ...identity, sectionId: 8 };
 			await makeMultiPagePdf('/pdf/original/rsc37_rsc176_8.pdf', 3);
-			const source = resolveOriginalSource(pdf, multiId, pathOpts, 'pdf');
+			const source = resolveMasterSource(pdf, multiId, pathOpts, 'pdf');
 			expect(source).not.toBeNull();
 			// Before the fix this threw ENOENT: the recipe wrote <stem>-0/-1/-2.jpg
 			// (one per page) and the bare temp the rename targets never existed.

@@ -2,7 +2,7 @@
  * v6 create_thumb parity (component_image::create_thumb :393): the thumb builds
  * FROM THE DEFAULT-QUALITY FILE and never needs the original. The first TS port
  * gated the whole tool regenerate — and the versions tool's thumb build — on
- * `resolveOriginalSource`, so on a partial-media box (default files present,
+ * `resolveMasterSource`, so on a partial-media box (default files present,
  * originals not) "nothing happened": no thumb, no envelope, or a hard
  * 'original not found'. These gates pin the corrected behavior with a scratch
  * media root holding ONLY the default-quality file.

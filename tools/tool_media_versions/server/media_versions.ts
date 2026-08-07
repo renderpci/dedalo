@@ -35,6 +35,7 @@ import {
 	deleteQualityCore,
 	deleteVersionCore,
 	getFilesInfoCore,
+	rebuildDerivedTiersAfterMasterDelete,
 	rotateVersionCore,
 } from '../../../src/core/media/tools/versions.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
@@ -247,6 +248,10 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 		const quality = String(ctx.options.quality ?? '');
 		if (quality === '') return fail('delete_quality: missing quality');
 		const moved = deleteQualityCore(spec, identity, pathOpts, quality, scanContext(mediaContext));
+		// Deleting a MASTER changes what the record's best master IS, so the derived
+		// tiers are put back in step BEFORE the re-scan — otherwise files_info would
+		// record tiers that still depict the master just removed.
+		const rebuild = await rebuildDerivedTiersAfterMasterDelete(spec, identity, pathOpts, quality);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		await writeBack(mediaContext, freshFilesInfo);
 		await logMediaActivity(ctx, 'DELETE FILE', identity, {
@@ -256,7 +261,9 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 		return {
 			result: true,
 			msg: `File deleted successfully. ${quality}`,
-			errors: [],
+			// Surfaced, never swallowed: the delete landed, but a tier may still
+			// depict the removed master (see rebuildDerivedTiersAfterMasterDelete).
+			errors: rebuild.errors,
 			moved,
 			files_info: freshFilesInfo,
 		};
@@ -274,6 +281,10 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		if (quality === '') return fail('delete_version: missing quality');
 		const extension = String(ctx.options.extension ?? spec.defaultExtension);
 		const moved = deleteVersionCore(spec, identity, pathOpts, quality, extension);
+		// See deleteQuality: a master deletion re-sources the derived tiers at once.
+		// Re-resolved after the move, so removing ONE extension of a master that
+		// still holds another correctly changes nothing.
+		const rebuild = await rebuildDerivedTiersAfterMasterDelete(spec, identity, pathOpts, quality);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		await writeBack(mediaContext, freshFilesInfo);
 		await logMediaActivity(ctx, 'DELETE FILE', identity, {
@@ -284,7 +295,7 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		return {
 			result: true,
 			msg: 'OK file delete successfully',
-			errors: [],
+			errors: rebuild.errors,
 			moved,
 			files_info: freshFilesInfo,
 		};

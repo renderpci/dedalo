@@ -19,7 +19,11 @@ import {
 	buildPdfCover,
 	buildThumbVersion,
 	copyToQuality,
-	resolveOriginalSource,
+	regenerateImage,
+	regeneratePdf,
+	regenerateSvg,
+	resolveMasterQuality,
+	resolveMasterSource,
 } from '../processing.ts';
 import { buildAvThumbFromPosterframe } from './posterframe.ts';
 import { applyRotationCore } from './rotation.ts';
@@ -100,7 +104,7 @@ export async function buildVersionCore(
 		);
 		const thumbSource = existsSync(defaultLocation.absolutePath)
 			? defaultLocation.absolutePath
-			: resolveOriginalSource(spec, identity, pathOpts, rawExtension);
+			: resolveMasterSource(spec, identity, pathOpts, rawExtension);
 		if (thumbSource === null) {
 			throw new Error(
 				`build_version: no ${spec.defaultQuality} file and no original to build the thumb from`,
@@ -109,8 +113,12 @@ export async function buildVersionCore(
 		return { built: [await buildThumbVersion(spec, identity, thumbSource, pathOpts)], jobId: null };
 	}
 
-	const source = resolveOriginalSource(spec, identity, pathOpts, rawExtension);
-	if (source === null) throw new Error('build_version: original not found');
+	// `quality` is passed as the TARGET so the master precedence cannot build the
+	// archival original out of the retouched master (resolveMasterSource's one
+	// exception — v6 get_image_source :1574). Every other tier takes the retouched
+	// master when it exists.
+	const source = resolveMasterSource(spec, identity, pathOpts, rawExtension, quality);
+	if (source === null) throw new Error('build_version: master not found');
 
 	if (spec.model === 'component_image') {
 		return {
@@ -179,6 +187,60 @@ export function deleteQualityCore(
 		if (target !== null) moved.push(target);
 	}
 	return moved;
+}
+
+/**
+ * After a delete, put the derived tiers back in step with the best REMAINING
+ * master — the third half of the two-masters rule (2026-08-07).
+ *
+ * Deleting the RETOUCHED master is the operator saying "that retouch was wrong";
+ * what is served must go back to depicting the original AT ONCE, not at some
+ * later repair sweep. Anything else leaves every derived tier showing a retouch
+ * the record no longer holds, with a files_info that reports them all present.
+ * Symmetrically, deleting the original while a retouch survives is a no-op for
+ * the derived tiers — they already depict the retouch, which still outranks.
+ *
+ * DELETING THE LAST MASTER DOES NOT WIPE THE DERIVED TIERS. There is nothing to
+ * rebuild them from, and on a partial-media box (masters on a bucket that is not
+ * mounted) they are the only surviving picture of the object. Destroying them
+ * would turn one deletion into total loss of the record's image, which is the
+ * exact opposite of what a Cultural Heritage archive may do. They are left
+ * standing and the caller's re-scan reports them honestly.
+ *
+ * Returns the rebuilt paths ([] when nothing needed doing). NON-FATAL by
+ * contract, like every other derivative pass: the delete already happened, so a
+ * rebuild failure is reported, never thrown over the top of it.
+ */
+export async function rebuildDerivedTiersAfterMasterDelete(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	deletedQuality: string,
+): Promise<{ rebuilt: string[]; errors: string[] }> {
+	if (!spec.masterQualities.includes(deletedQuality)) return { rebuilt: [], errors: [] };
+	// Re-resolved AFTER the delete: a tier that still holds another extension
+	// (a '.jpg' beside the removed '.tif') is still a master, and still wins.
+	const survivor = resolveMasterQuality(spec, identity, pathOpts);
+	if (survivor === null) return { rebuilt: [], errors: [] }; // last master — see above
+	try {
+		switch (spec.model) {
+			case 'component_image':
+				return { rebuilt: await regenerateImage(spec, identity, pathOpts), errors: [] };
+			case 'component_pdf':
+				return { rebuilt: await regeneratePdf(spec, identity, pathOpts), errors: [] };
+			case 'component_svg':
+				return { rebuilt: await regenerateSvg(spec, identity, pathOpts), errors: [] };
+			default:
+				// component_3d needs the raw extension it cannot know here; component_av
+				// derivatives are an async transcode owned by the job manager. Neither
+				// model has a second master (only the image ladder has a retouched tier),
+				// so this branch is reachable only by deleting the sole master — which
+				// the survivor check above has already returned on.
+				return { rebuilt: [], errors: [] };
+		}
+	} catch (error) {
+		return { rebuilt: [], errors: [(error as Error).message] };
+	}
 }
 
 /**
