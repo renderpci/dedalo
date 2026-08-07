@@ -1,0 +1,5 @@
+{
+	"_": "Corpus drop budget for scripts/observer_reconcile.ts --budget. A dry run over the whole install must not want to delete more than this. Baseline measured 2026-08-06 on monedaiberica/dedalo_mib_v7, BEFORE the grow-only fail-safe was retired: 22 records / 1673 locators, every drop verified genuine (each referencing record still exists but no longer points at the target). Headroom is deliberate but small: this gate exists so a future change to the value law that would mass-delete fails HERE, not at the next save. Raise it only with a --json census proving every additional drop is genuine, and say why in this file.",
+	"maxDroppedLocators": 2000,
+	"maxDroppedRecords": 40
+}

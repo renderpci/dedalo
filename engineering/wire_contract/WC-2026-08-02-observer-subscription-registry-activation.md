@@ -112,3 +112,14 @@ longer stops a non-wildcard edge — the reverse declaration alone dispatches.)
 The classification/resolvers/perform semantics of the dispatch itself are
 unchanged (see the Act 1 entries: relay-writes-nothing, cascade-bounded-flag,
 references-limit-not-honoured).
+
+## Addendum 2026-08-06 — the grow-only risk bound named here is retired
+
+The activation-risk paragraph above says "the grow-only shrink fail-safe means
+a hop can only ADD mirror entries". That bound is gone: the recompute writes
+the full law, drops included
+(`WC-2026-08-06-observer-grow-only-failsafe-retired`). The registry's own
+laws — reverse observer-declared discovery, the `entryServerBlock`
+dispatchability predicate, wildcard compilation, host resolution — are
+unchanged, and the second half of the bound still holds: nothing fires until
+the observed component saves.

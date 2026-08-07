@@ -282,19 +282,28 @@ export) exceeds it; measure first with `DEDALO_SLOW_QUERY_MS`.
   (Removing the observed node's `properties.observers` declaration is NOT a
   kill switch any more: the reverse declaration alone dispatches; it only
   stops wildcard-matched edges.) That is an ontology EDIT, not a config
-  override: the engine keeps doing exactly what the ontology declares. Heal any drift afterwards with
-  `scripts/observer_reconcile.ts --apply` (grow-only unless
-  `--allow-shrink`); every live observer write is preceded by a
+  override: the engine keeps doing exactly what the ontology declares. Heal any
+  drift afterwards with `scripts/observer_reconcile.ts` — run it as a CENSUS
+  first (`--json` for per-record causes, `--budget` to adjudicate the drop
+  volume against `engineering/observer_shrink_budget.json` with a non-zero
+  exit), then `--apply`. Since 2026-08-06 the recompute writes the FULL law
+  including drops (`WC-2026-08-06-observer-grow-only-failsafe-retired`), so
+  the budget gate is the standing protection against a value-law change that
+  would mass-delete. Every live observer write is preceded by a
   `matrix_time_machine` row, so per-record restore exists for a hop that
   wrote wrong values. Blast radius is structurally capped meanwhile: hops
-  cannot hang (visited set + depth budget), cannot shrink stored bags,
-  cannot fire on ROLLBACK, and the relay writes nothing.
+  cannot hang (visited set + depth budget), cannot fire on ROLLBACK, the
+  relay writes nothing, and a recompute whose own seed could not be built
+  withholds its drops (`observers_shrink_refused_degraded_seed` — the log
+  names the ontology node to fix).
   **Bulk-import throughput**: the commit lane drains synchronously in the
   importing request after COMMIT, so imports pay the cascade per row —
   ~2.7 s of observer work per 1,000 saved rows at the measured p50 (data-
   dependent). Bulk doors that skip propagation entirely (tool_propagate,
-  delete_data wipe, portalize) rely on the reconciler afterwards; a
-  mid-import kill loses no stored data (grow-only).
+  delete_data wipe, portalize) rely on the reconciler afterwards. A
+  mid-import kill leaves mirrors partially recomputed, not corrupt: each
+  recompute is a single locked, TM-audited write of a value derived from
+  committed truth, and the reconciler converges whatever the kill missed.
 - **`diffusion_queue_streams_opened` / `_closed` (WC-067)** — the leak alarm for
   the maintenance widget's live queue feed. Each open `follow_queue` SSE stream
   runs a 1 s poll loop for as long as an admin has the panel open, so the two

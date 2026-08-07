@@ -105,3 +105,26 @@ refusal. `test/unit/commit_lane_native.test.ts` — the commit-only lane's own
 contract (never fires on rollback, async-safe, drains outside the tx
 context). No parity fixture replays observer cascades; **no re-harvest**
 (impossible anyway).
+
+## Addendum 2026-08-06 — the grow-only risk bound named here is retired
+
+The "Behaviour change at retirement" note above bounds this entry's risk with
+"the Phase-0 grow-only fail-safe still applies (a hop can ADD referencers but
+cannot drop stored entries without an explicit `allowShrink:true`, which no
+production caller passes)". That is no longer true: the fail-safe and its
+`allowShrink` opt-in were retired, and a cascade hop now writes the full law
+including drops — see
+`WC-2026-08-06-observer-grow-only-failsafe-retired`.
+
+Nothing else in this entry changes. The cascade's own bounds — visited set,
+`MAX_CASCADE_DEPTH = 8`, the commit-only lane, the ambient-transaction refusal
+— are untouched and are what actually caps blast radius. The shrink direction
+is now bounded instead by the kernel's degraded-seed refusal
+(`WC-2026-08-06-observer-degraded-seed-refuses-shrink`) and, corpus-wide, by
+`engineering/observer_shrink_budget.json`.
+
+One second-order effect worth stating: a PERSISTING recompute emits a cascade
+hop (`outcome.wrote === true`), and pure-drop recomputes now persist where
+before they were withheld. Hop VOLUME therefore rises for removal-shaped
+saves. Still bounded by the same visited set and depth budget; the measured
+real graph remains depth ≤ 2 with zero cycles.
