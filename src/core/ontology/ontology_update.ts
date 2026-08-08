@@ -443,7 +443,7 @@ export async function updateOntology(
 }
 
 /** Restore every mutated table from the Phase-B snapshots (best-effort, loud). */
-async function restoreSnapshots(
+export async function restoreSnapshots(
 	files: readonly StagedFile[],
 	recoveryDir: string,
 	conn: DbConnDescriptor,

@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as realConfigModule from '../../src/config/config.ts';
+import { UPDATE_CATALOG } from '../../src/core/update/catalog.ts';
 import { buildCodeUpdateInfo, linearUpgradeTargets } from '../../src/core/update/code_manifest.ts';
 import {
 	assertLinearUpgrade,
@@ -79,7 +80,15 @@ describe('assertLinearUpgrade (strict path backstop)', () => {
 });
 
 describe('linearUpgradeTargets + buildCodeUpdateInfo (empty catalog)', () => {
-	test('the live catalog advertises no releases (7.0.0 is current)', () => {
+	// BRANCH COVERAGE FOR BOTH FUNCTIONS LIVES IN test/unit/code_manifest.test.ts,
+	// driven through the injectable `catalog` parameter. It CANNOT live here:
+	// the live UPDATE_CATALOG is Object.freeze({}), so every walk loop body is
+	// unreachable and `toEqual([])` would hold for any implementation, broken
+	// or not. What is asserted below is only the stock-master FACT — and it is
+	// pinned to the emptiness of the catalog so it stays honest: the day a 7.x
+	// release lands, this case must be rewritten rather than silently re-passing.
+	test('the stock master advertises no releases (the 7.x catalog is empty)', () => {
+		expect(Object.keys(UPDATE_CATALOG).length).toBe(0);
 		expect(linearUpgradeTargets([7, 0, 0])).toEqual([]);
 		const info = buildCodeUpdateInfo({
 			clientVersion: [7, 0, 0],

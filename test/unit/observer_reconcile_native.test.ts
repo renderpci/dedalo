@@ -31,6 +31,9 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { config } from '../../src/config/config.ts';
 import { getCounters } from '../../src/core/api/counters.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { recomputeExternalRelation } from '../../src/core/section/record/observers.ts';
@@ -53,6 +56,23 @@ let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
  * ambiguity) with no restore. Tests early-return loudly instead.
  */
 let planted = false;
+
+/**
+ * The early return of a behavioural case, made AUDIBLE (2026-08-08). A silently
+ * returning test reads as a passing test: this file measured 0% coverage of the
+ * reconcile kernel while showing green, and the wholesale skip was half the
+ * reason. Every skipped case now names ITSELF on stderr, so a CI log makes the
+ * difference between "8 gates ran" and "8 gates declined to run" visible.
+ * The skip itself is NOT weakened — on a restored live snapshot on1/58 is a
+ * real record and a repair write there is unrecoverable.
+ */
+function skipUnlessPlanted(caseName: string): boolean {
+	if (planted) return false;
+	console.warn(
+		`observer_reconcile_native: NOT RUN — "${caseName}" (on1/58 pre-exists: live-snapshot DB, a repair write would mutate a real mirror)`,
+	);
+	return true;
+}
 
 async function mirrorBag(): Promise<unknown[] | null> {
 	const rows = (await sql.unsafe(
@@ -133,7 +153,7 @@ afterAll(async () => {
 
 describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	test('dry-run detects the bypass drift WITHOUT writing', async () => {
-		if (!planted) return;
+		if (skipUnlessPlanted('dry-run detects the bypass drift WITHOUT writing')) return;
 		const diff = await recomputeExternalRelation(
 			'hierarchy93',
 			SEED_TERM.section_tipo,
@@ -149,7 +169,10 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('repair writes the exact mirror shape + the TM audit pair, then converges', async () => {
-		if (!planted) return;
+		if (
+			skipUnlessPlanted('repair writes the exact mirror shape + the TM audit pair, then converges')
+		)
+			return;
 		const tmCountBefore = async (): Promise<number> => {
 			const rows = (await sql.unsafe(
 				`SELECT count(*)::int AS n FROM matrix_time_machine
@@ -187,7 +210,7 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('a MASKED SWAP (1 stale drop + 1 new add) applies BOTH halves — membership, not length', async () => {
-		if (!planted) return;
+		if (skipUnlessPlanted('a MASKED SWAP (1 stale drop + 1 new add) applies BOTH halves')) return;
 		// Bypass-delete referencer 1 (its mirror entry goes stale) and
 		// bypass-insert referencer 2: the law wants to drop one entry and add
 		// one — EQUAL length before/after. The adjudication is MEMBERSHIP-based
@@ -226,7 +249,10 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('a bypass DELETE makes the recompute a pure shrink, and the shrink APPLIES', async () => {
-		if (!planted) return;
+		if (
+			skipUnlessPlanted('a bypass DELETE makes the recompute a pure shrink, and the shrink APPLIES')
+		)
+			return;
 		// THE REGRESSION GUARD for the reported bug. Until 2026-08-06 a pure
 		// shrink was withheld unconditionally, so an unlinked reference stayed
 		// mirrored forever and only an operator flag could clear it.
@@ -297,31 +323,98 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		).toHaveLength(1);
 	});
 
-	test('the drop census counts MEMBERSHIP, never a length delta', async () => {
+	test('the drop census counts MEMBERSHIP, never a length delta (executed sweep)', async () => {
+		if (skipUnlessPlanted('the drop census counts MEMBERSHIP, never a length delta')) return;
 		// A regression that drops N genuine locators and appends N wrong ones has
 		// an equal length. `before - after` reports 0 and sails through the
 		// budget — which is the exact shape the budget exists to catch. The
 		// kernel adjudicates membership (that is why a masked swap commits both
 		// halves), so the census must read the kernel's own numbers.
-		const { readFileSync } = await import('node:fs');
-		const { join } = await import('node:path');
-		const root = join(import.meta.dir, '..', '..');
-		const source = readFileSync(
-			join(root, 'src/core/section/record/observer_reconcile.ts'),
-			'utf-8',
+		//
+		// 2026-08-08: this used to be a SOURCE GREP for `outcome.dropped ??` —
+		// it executed none of the census fold and would have stayed green against
+		// a reconciler that returned an empty summary. It now DRIVES the sweep
+		// over a planted masked swap and asserts the reported numbers.
+		const { reconcileObserverMirrors } = await import(
+			'../../src/core/section/record/observer_reconcile.ts'
 		);
-		expect(source).toContain('outcome.dropped ??');
-		expect(source).toContain('outcome.added ??');
-		// And the kernel must actually supply them.
-		const kernel = readFileSync(join(root, 'src/core/section/record/observers.ts'), 'utf-8');
-		expect(kernel).toContain('dropped: existing.length - kept.length');
-		expect(kernel).toContain('added: additions.length');
-	});
+		const recompute = async (): Promise<void> => {
+			await recomputeExternalRelation(
+				'hierarchy93',
+				SEED_TERM.section_tipo,
+				SEED_TERM.section_id,
+				-1,
+				new Date(),
+				{},
+			);
+		};
+		try {
+			// Rebuild a known one-entry mirror from scratch (the preceding tests
+			// leave their own state; this case must not inherit it).
+			await sweepScratch();
+			await recompute();
+			await insertReferencer(REFERENCER_ID);
+			await recompute();
+			expect((await mirrorBag())?.length).toBe(1);
+			// THE MASKED SWAP: one referencer bypass-deleted, one bypass-inserted,
+			// so the law drops exactly one entry and appends exactly one — before
+			// === after, and a length-delta census would report ZERO drops.
+			await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`, [
+				REFERENCER_ID,
+			]);
+			await insertReferencer(REFERENCER_ID2);
 
-	test('the shrink budget file is present, parseable and complete', async () => {
+			const records: unknown[] = [];
+			const summary = await reconcileObserverMirrors({
+				// dry run (the default): the census must be readable WITHOUT writing.
+				onlyObserver: 'hierarchy93',
+				onlySection: SEED_TERM.section_tipo,
+				onlyId: SEED_TERM.section_id,
+				onRecord: (record) => records.push(record),
+			});
+			expect(summary.drifted).toBe(1);
+			expect(records).toEqual([
+				{
+					observerTipo: 'hierarchy93',
+					hostSection: SEED_TERM.section_tipo,
+					sectionId: SEED_TERM.section_id,
+					before: 1,
+					after: 1, // ← the length delta is 0; membership says 1 out, 1 in
+					dropped: 1,
+					added: 1,
+				},
+			]);
+			// The summary fold reads the same membership numbers, so the budget sees
+			// the swap it exists to catch.
+			expect(summary.droppedRecords).toBe(1);
+			expect(summary.droppedLocators).toBe(1);
+			// A dry run persisted nothing: the stale entry is still stored.
+			expect(await mirrorBag()).toEqual([mirrorEntry(1, REFERENCER_ID)]);
+			// …and the drop volume it reported busts a budget of zero — the
+			// predicate and the census are wired to the same numbers.
+			const { exceedsShrinkBudget } = await import(
+				'../../src/core/section/record/observer_reconcile.ts'
+			);
+			expect(
+				exceedsShrinkBudget(summary, { maxDroppedLocators: 0, maxDroppedRecords: 0 }),
+			).toHaveLength(2);
+		} finally {
+			// Hand the next test the state the pure-shrink test left: no
+			// referencers, empty mirror. In `finally` on purpose — this case plants
+			// its own fixture, and a FAILING assertion must not cascade into a
+			// duplicate-key crash in the duplicate-record gate below.
+			await sweepScratch();
+			await recompute();
+		}
+		expect(await mirrorBag()).toEqual([]);
+	}, 30000);
+
+	test('the committed shrink budget parses and the predicate ADJUDICATES with it', async () => {
 		// The budget is a committed artefact the CLI reads at runtime; a typo or
 		// a missing key would surface as a crash during an ops sweep, which is
-		// the worst moment to find out.
+		// the worst moment to find out. Executed, not grepped: the parsed values
+		// are fed to the real predicate at both sides of their own boundary, so a
+		// string-typed or absent ceiling fails here instead of at 3am.
 		const { readFileSync } = await import('node:fs');
 		const { join } = await import('node:path');
 		const root = join(import.meta.dir, '..', '..');
@@ -333,7 +426,49 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 		// It must carry its own provenance — a bare number nobody can re-derive
 		// is a number nobody dares change.
 		expect(String(budget._ ?? '').length).toBeGreaterThan(120);
-		// And the CLI must actually consult it, or the file is decoration.
+
+		const { exceedsShrinkBudget } = await import(
+			'../../src/core/section/record/observer_reconcile.ts'
+		);
+		const limits = budget as unknown as {
+			maxDroppedLocators: number;
+			maxDroppedRecords: number;
+		};
+		const base: Parameters<typeof exceedsShrinkBudget>[0] = {
+			tuples: 1,
+			candidates: 1,
+			drifted: 1,
+			repaired: 0,
+			shrinksSkipped: 0,
+			sublawRefused: 0,
+			bigResultRefused: 0,
+			droppedRecords: limits.maxDroppedRecords,
+			droppedLocators: limits.maxDroppedLocators,
+			degradedSeedRecords: 0,
+		};
+		// Exactly AT the committed ceiling is within budget…
+		expect(exceedsShrinkBudget(base, limits)).toEqual([]);
+		// …one locator / one record over it is not.
+		expect(
+			exceedsShrinkBudget({ ...base, droppedLocators: limits.maxDroppedLocators + 1 }, limits),
+		).toHaveLength(1);
+		expect(
+			exceedsShrinkBudget({ ...base, droppedRecords: limits.maxDroppedRecords + 1 }, limits),
+		).toHaveLength(1);
+	});
+
+	test('SOURCE-SHAPE GUARD (executes nothing): the CLI consults the budget file', () => {
+		// HONEST LABEL (2026-08-08). This is a TEXT SCAN of scripts/
+		// observer_reconcile.ts, not a behaviour gate. It proves only that the
+		// three tokens appear in the file; it proves NOTHING about whether the
+		// CLI actually reads the budget, adjudicates it, or exits non-zero.
+		// It cannot be executed here because the script is a top-level CLI (it
+		// runs the whole sweep and calls process.exit on import). Replacing it
+		// with a real gate needs a production seam — extracting the argv parse +
+		// budget adjudication into an importable `runReconcileCli(argv)` — which
+		// is a production change, out of scope for this repair. Scheduled as
+		// such; until then, this guard is a typo tripwire and nothing more.
+		const root = join(import.meta.dir, '..', '..');
 		const cli = readFileSync(join(root, 'scripts/observer_reconcile.ts'), 'utf-8');
 		expect(cli).toContain('observer_shrink_budget.json');
 		expect(cli).toContain('exceedsShrinkBudget');
@@ -341,7 +476,8 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 	});
 
 	test('duplicate STRIPS the covered-observer mirror slot from the copy (empty by construction)', async () => {
-		if (!planted) return;
+		if (skipUnlessPlanted('duplicate STRIPS the covered-observer mirror slot from the copy'))
+			return;
 		// Re-grow the term's mirror so there is a non-empty bag to (not) copy —
 		// the pre-fix byte-copy would have handed it to the duplicate wholesale
 		// (for unported-sub-law nodes: ~1,000 phantom locators with no repair
@@ -395,5 +531,295 @@ describe('observer mirror reconcile law (recomputeExternalRelation)', () => {
 				await sql.unsafe('DELETE FROM matrix_counter WHERE tipo = $1', [SEED_TERM.section_tipo]);
 			}
 		}
+	}, 30000);
+});
+
+/**
+ * THE SWEEP'S OWN NARROWING + CENSUS FOLD (2026-08-08 mutation-repair pass).
+ *
+ * The gates above drive the reconciler only through ONE fully-specified
+ * (--observer + --section + --id) call, so three of its own laws were never
+ * entered and survived mutation:
+ *   1. `--section` narrowing (discoverTuples' LAST line — the filter whose
+ *      comment records the tchi1 starvation bug from filtering too early);
+ *   2. `--id` MEMBERSHIP (candidateIds: an id that is neither a referenced
+ *      target nor a stored mirror holder must yield NO candidate — otherwise
+ *      `--id N --apply` recomputes and WRITES an arbitrary record outside the
+ *      tuple's candidate set);
+ *   3. the degraded-seed census FOLD (`summary.degradedSeedRecords`) — the
+ *      number the shrink budget adjudicates. It was only ever fed to
+ *      exceedsShrinkBudget as a hand-built literal; nothing proved the sweep
+ *      ever produces it.
+ *
+ * Fixture: a scratch REVERSE-ONLY observer edge (test999… namespace, the
+ * registry's suite-DB diagnostics carve-out) whose `data_from_field` names a
+ * peer with no ontology node — the measured degraded-seed shape — plus one
+ * scratch rsc205 record holding a stale mirror entry nothing references. That
+ * makes the sweep's answer deterministic (1 tuple, 1 candidate, 1 withheld
+ * drop) instead of hostage to whatever the suite ontology happens to carry.
+ * Every call here is a DRY RUN: the fold and the narrowing are readable
+ * without writing, and a mutant that writes is the thing we are guarding.
+ */
+const SCRATCH_OBSERVER = 'test99930'; // own band — the failsafe gate owns test9990x
+const SCRATCH_MISSING_PEER = 'test99939_no_such_node';
+const SCRATCH_HOST = 'rsc205';
+const SCRATCH_HOLDER_ID = 91098; // clear of REFERENCER_ID/2 above and of the failsafe band
+/** The id the stale entry POINTS AT: a real-looking neighbour that is neither a
+ * referenced target nor a mirror holder — exactly the record an `--id` filter
+ * that skipped the membership check would go and recompute. */
+const SCRATCH_NON_CANDIDATE_ID = 91099;
+
+/** Suite DB only: this fixture writes dd_ontology, and `test` is a REAL tld in
+ * production ontologies (the scratch-namespace carve-out is itself suite-DB
+ * gated — observer_subscriptions.ts touchesScratchObserverNamespace). */
+const onSuiteDb = config.db.database.endsWith('_test');
+
+function skipUnlessSuiteDb(caseName: string): boolean {
+	if (onSuiteDb) return false;
+	console.warn(
+		`observer_reconcile_native: NOT RUN — "${caseName}" (not the *_test suite DB: seeding a test999… ontology node would pollute a real ontology)`,
+	);
+	return true;
+}
+
+async function sweepScratchObserverFixture(): Promise<void> {
+	await sql.unsafe(`DELETE FROM dd_ontology WHERE tipo = $1 AND tld = 'test'`, [SCRATCH_OBSERVER]);
+	await sql.unsafe(`DELETE FROM matrix WHERE section_tipo = $1 AND section_id = $2`, [
+		SCRATCH_HOST,
+		SCRATCH_HOLDER_ID,
+	]);
+	await sql.unsafe(`DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2`, [
+		SCRATCH_HOST,
+		SCRATCH_HOLDER_ID,
+	]);
+	const { clearOntologyDerivedCaches } = await import(
+		'../../src/core/ontology/cache_invalidation.ts'
+	);
+	await clearOntologyDerivedCaches();
+}
+
+describe('reconcile sweep: --section / --id narrowing and the degraded-seed census', () => {
+	beforeAll(async () => {
+		if (!onSuiteDb) return;
+		// Residue-tolerant (the observer suites' convention): sweep first, then
+		// seed unconditionally — a crashed run's leftovers must never make these
+		// gates vacuously green.
+		await sweepScratchObserverFixture();
+		await sql.unsafe(
+			`INSERT INTO dd_ontology (id, tipo, parent, model, tld, properties)
+			 VALUES ((SELECT COALESCE(MAX(id), 0) + 1300 FROM dd_ontology), $1, 'test3', 'component_autocomplete_hi', 'test', $2::text::jsonb)`,
+			[
+				SCRATCH_OBSERVER,
+				JSON.stringify({
+					// The reconciler's covered shape: use_observable_dato +
+					// set_dato_external, host pinned by the observe entry's own scope
+					// (resolution step 1), so the tuple is deterministic.
+					observe: [
+						{
+							component_tipo: 'rsc387',
+							section_tipo: SCRATCH_HOST,
+							server: {
+								config: { use_observable_dato: true },
+								perform: { function: 'set_dato_external' },
+							},
+						},
+					],
+					source: {
+						data_from_field: [SCRATCH_MISSING_PEER], // ← degrades the seed
+						section_to_search: [SCRATCH_HOST],
+						component_to_search: ['rsc387'],
+					},
+				}),
+			],
+		);
+		const { clearOntologyDerivedCaches } = await import(
+			'../../src/core/ontology/cache_invalidation.ts'
+		);
+		await clearOntologyDerivedCaches();
+		// The holder: one stale mirror entry, nothing references it → the law
+		// wants to drop it, and the degraded seed withholds exactly that drop.
+		await sql.unsafe(
+			`INSERT INTO matrix (section_id, section_tipo, relation) VALUES ($1, $2, $3::text::jsonb)`,
+			[
+				SCRATCH_HOLDER_ID,
+				SCRATCH_HOST,
+				JSON.stringify({
+					[SCRATCH_OBSERVER]: [
+						{
+							id: 1,
+							type: 'dd151',
+							section_id: String(SCRATCH_NON_CANDIDATE_ID),
+							section_tipo: SCRATCH_HOST,
+							from_component_tipo: SCRATCH_OBSERVER,
+						},
+					],
+				}),
+			],
+		);
+	});
+
+	afterAll(async () => {
+		if (!onSuiteDb) return;
+		await sweepScratchObserverFixture();
+	});
+
+	test('the degraded-seed census FOLD reports the number the budget adjudicates', async () => {
+		if (
+			skipUnlessSuiteDb('the degraded-seed census FOLD reports the number the budget adjudicates')
+		)
+			return;
+		const { exceedsShrinkBudget, reconcileObserverMirrors } = await import(
+			'../../src/core/section/record/observer_reconcile.ts'
+		);
+		const records: unknown[] = [];
+		const lines: string[] = [];
+		const summary = await reconcileObserverMirrors({
+			onlyObserver: SCRATCH_OBSERVER,
+			onlySection: SCRATCH_HOST,
+			onlyId: SCRATCH_HOLDER_ID,
+			onRecord: (record) => records.push(record),
+			log: (line) => lines.push(line),
+		});
+		expect(summary.tuples).toBe(1);
+		expect(summary.candidates).toBe(1);
+		expect(summary.drifted).toBe(1);
+		// THE FOLD: the withheld record is counted as degraded AND as a wanted
+		// drop. Nothing was repaired (dry run) and no OTHER refusal fired.
+		expect(summary.degradedSeedRecords).toBe(1);
+		expect(summary.shrinksSkipped).toBe(1);
+		expect(summary.droppedRecords).toBe(1);
+		expect(summary.droppedLocators).toBe(1);
+		expect(summary.repaired).toBe(0);
+		expect(summary.bigResultRefused).toBe(0);
+		expect(summary.sublawRefused).toBe(0);
+		// The census channel names the cause, so a budget can be adjudicated by
+		// cause instead of by one total.
+		expect(records).toEqual([
+			{
+				observerTipo: SCRATCH_OBSERVER,
+				hostSection: SCRATCH_HOST,
+				sectionId: SCRATCH_HOLDER_ID,
+				before: 1,
+				after: 0,
+				dropped: 1,
+				added: 0,
+				seedDefects: [`peer_node_missing:${SCRATCH_MISSING_PEER}`],
+				refusal: 'degraded_seed',
+			},
+		]);
+		// The operator line names the defect too — a held shrink an operator
+		// cannot attribute is a held shrink nobody fixes.
+		expect(lines.some((line) => line.includes('DEGRADED SEED'))).toBe(true);
+		// …and the number the fold produced is the one the budget refuses: a
+		// degraded seed is never within budget, however generous the ceilings.
+		expect(
+			exceedsShrinkBudget(summary, {
+				maxDroppedLocators: 1_000_000,
+				maxDroppedRecords: 1_000_000,
+			}),
+		).toHaveLength(1);
+		// A dry run persisted nothing: the stale entry is still stored.
+		const rows = (await sql.unsafe(
+			`SELECT relation->$3 AS bag FROM matrix WHERE section_tipo = $1 AND section_id = $2`,
+			[SCRATCH_HOST, SCRATCH_HOLDER_ID, SCRATCH_OBSERVER],
+		)) as { bag: unknown[] | null }[];
+		expect(rows[0]?.bag).toHaveLength(1);
+
+		// HONEST GAP (do not delete): the kernel sets `seedDefects` and
+		// `skippedShrink` together and only together (observers.ts — both return
+		// sites spread the same `wouldWithhold`/`withheld` object), so a mutant
+		// that folds on `outcome.skippedShrink === true` instead of
+		// `outcome.seedDefects !== undefined` is EQUIVALENT against the real
+		// kernel and cannot be turned red from here. Distinguishing them needs a
+		// fake kernel outcome — an injection seam (or a mock.module of
+		// observers.ts, which leaks process-wide across the observer suites).
+		// What this case does prove: the fold RUNS, counts the right record, and
+		// feeds the budget.
+	}, 30000);
+
+	test('--id NARROWS BY MEMBERSHIP: a non-candidate id yields no candidate at all', async () => {
+		if (skipUnlessSuiteDb('--id NARROWS BY MEMBERSHIP: a non-candidate id yields no candidate'))
+			return;
+		const { reconcileObserverMirrors } = await import(
+			'../../src/core/section/record/observer_reconcile.ts'
+		);
+		// SCRATCH_NON_CANDIDATE_ID is the id the stale mirror entry points at: it
+		// holds no mirror and is referenced by nothing, so it is NOT in the
+		// tuple's candidate set. An `--id` that trusted its argument would
+		// recompute it — and under `--apply` WRITE it — from a candidate list it
+		// was never in.
+		const records: unknown[] = [];
+		const summary = await reconcileObserverMirrors({
+			onlyObserver: SCRATCH_OBSERVER,
+			onlySection: SCRATCH_HOST,
+			onlyId: SCRATCH_NON_CANDIDATE_ID,
+			onRecord: (record) => records.push(record),
+		});
+		expect(summary.tuples).toBe(1); // the tuple IS discovered — not a vacuous pass
+		expect(summary.candidates).toBe(0);
+		expect(summary.drifted).toBe(0);
+		expect(records).toEqual([]);
+		// Positive control on the same tuple: the holder IS a member (its id
+		// comes from the stored-mirror half of the union, not the index half).
+		const hit = await reconcileObserverMirrors({
+			onlyObserver: SCRATCH_OBSERVER,
+			onlySection: SCRATCH_HOST,
+			onlyId: SCRATCH_HOLDER_ID,
+		});
+		expect(hit.candidates).toBe(1);
+	}, 30000);
+
+	test('--section NARROWS the tuple set (filtered LAST, after the index fan-out)', async () => {
+		if (skipUnlessSuiteDb('--section NARROWS the tuple set')) return;
+		const { reconcileObserverMirrors } = await import(
+			'../../src/core/section/record/observer_reconcile.ts'
+		);
+		// Every call passes a non-candidate --id so no candidate is ever swept:
+		// this case is about DISCOVERY, and it must not cost a corpus recompute.
+		const noSweep = 999_999_901;
+		// The scratch edge is DECLARED at rsc205, and the index fan-out seeds it
+		// at every section rsc387 actually points into (the sections the tests
+		// above plant referencers for, on1 among them) — so unfiltered it is a
+		// multi-tuple observer, and --section rsc205 must cut it to the declared
+		// one. (Measured correction 2026-08-08: an earlier draft asserted
+		// `--section on1` finds 0 tuples for this edge; it finds 1, because the
+		// fan-out is the point — the filter narrows the UNION, it does not
+		// replace it.)
+		const unfiltered = await reconcileObserverMirrors({
+			onlyObserver: SCRATCH_OBSERVER,
+			onlyId: noSweep,
+		});
+		expect(unfiltered.tuples).toBeGreaterThan(1);
+		const home = await reconcileObserverMirrors({
+			onlyObserver: SCRATCH_OBSERVER,
+			onlySection: SCRATCH_HOST,
+			onlyId: noSweep,
+		});
+		expect(home.tuples).toBe(1);
+		// A section NO tuple hosts at yields none — an operator's scope is a
+		// scope, not a hint (a pass-through filter would return the whole union).
+		const elsewhere = await reconcileObserverMirrors({
+			onlyObserver: SCRATCH_OBSERVER,
+			onlySection: 'zzz-no-such-section',
+			onlyId: noSweep,
+		});
+		expect(elsewhere.tuples).toBe(0);
+
+		// …and on a REAL multi-host observer (hierarchy93 is declared at on1/ts1/
+		// dc1 — measured 3 tuples on the suite ontology), --section must cut the
+		// set down, not pass it through. This is the shape the tchi1 starvation
+		// bug lived in: the filter has to run AFTER the index fan-out, but it
+		// does have to run.
+		const allHosts = await reconcileObserverMirrors({
+			onlyObserver: 'hierarchy93',
+			onlyId: noSweep,
+		});
+		const oneHost = await reconcileObserverMirrors({
+			onlyObserver: 'hierarchy93',
+			onlySection: SEED_TERM.section_tipo,
+			onlyId: noSweep,
+		});
+		expect(allHosts.tuples).toBeGreaterThan(1);
+		expect(oneHost.tuples).toBe(1);
 	}, 30000);
 });

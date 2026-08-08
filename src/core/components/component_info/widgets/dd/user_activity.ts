@@ -26,7 +26,7 @@ import type { CanonicalTotals } from '../../../../area_maintenance/user_stats.ts
 import type { InfoWidgetDescriptor, WidgetContext, WidgetItem } from '../widget_common.ts';
 
 /** PHP user_activity::is_canonical_empty — no actionable data in any dimension. */
-function isCanonicalEmpty(totals: CanonicalTotals | null): boolean {
+export function isCanonicalEmpty(totals: CanonicalTotals | null): boolean {
 	if (totals === null || typeof totals !== 'object') return true;
 	if (Array.isArray(totals.what) && totals.what.length > 0) return false;
 	if (Array.isArray(totals.where) && totals.where.length > 0) return false;
