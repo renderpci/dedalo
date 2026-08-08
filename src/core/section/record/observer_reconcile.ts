@@ -13,12 +13,17 @@
 import { incrementCounter } from '../../api/counters.ts';
 import { sql } from '../../db/postgres.ts';
 import { getMatrixTableFromTipo, getNode } from '../../ontology/resolver.ts';
-import { entryServerBlock, getSubscriptionRegistry } from './observer_subscriptions.ts';
+import {
+	entryServerBlock,
+	getSubscriptionRegistry,
+	type ObserverSubscription,
+	type SubscriptionIndex,
+} from './observer_subscriptions.ts';
 import { recomputeExternalRelation } from './observers.ts';
 
 const SYSTEM_USER_ID = -1;
 
-interface ReconcileTuple {
+export interface ReconcileTuple {
 	observedTipo: string;
 	observerTipo: string;
 	hostSection: string;
@@ -126,60 +131,86 @@ export function exceedsShrinkBudget(summary: ReconcileSummary, budget: ShrinkBud
 	return reasons;
 }
 
+/** The kernel outcome the classifier adjudicates — recomputeExternalRelation's
+ * return contract, named so a gate stub can satisfy it structurally. */
+export type ExternalRecomputeOutcome = Awaited<ReturnType<typeof recomputeExternalRelation>>;
+
 /**
- * Every (observed → observer @ host-section) tuple with the covered server
- * shape. Since Act 2 the edges come from the SUBSCRIPTION REGISTRY (the same
- * discovery the live cascade dispatches from — this used to be a third
- * hand-rolled copy of forward-only discovery): the reconciler heals exactly
- * what the cascade fires — every declared server edge, the ontology's
- * decision (reverse-only declarations included).
+ * Every side effect the sweep needs, as ONE injectable seam. The default is
+ * `defaultReconcileIO` (the real implementations), so today's callers are
+ * unchanged; the gates pass stubs so the classifier and the discovery halves
+ * are exercisable without a DB or an ontology.
  */
-async function discoverTuples(
+export interface ReconcileIO {
+	getRegistry(): Promise<SubscriptionIndex>;
+	getNodeProperties(tipo: string): Promise<Record<string, unknown> | null>;
+	indexSectionsFor(componentToSearch: string): Promise<string[]>;
+	matrixTableFor(sectionTipo: string): Promise<string | null>;
+	candidateIds(tuple: ReconcileTuple, hostTable: string, onlyId: number | null): Promise<number[]>;
+	recompute(
+		observerTipo: string,
+		hostSection: string,
+		id: number,
+		userId: number,
+		at: Date,
+		opts: { write: boolean },
+	): Promise<ExternalRecomputeOutcome>;
+}
+
+/**
+ * Only the covered server shape reconciles — anything else is the cascade's
+ * ledgered-skip territory, not silently swept here. Shared by the tuple
+ * selector and the source pre-resolution below so the two can never diverge.
+ */
+export function isCoveredReconcileEdge(sub: ObserverSubscription): boolean {
+	const server = entryServerBlock(sub.entry);
+	if (server === undefined) return false;
+	if (
+		server.config?.use_observable_dato !== true ||
+		server.perform?.function !== 'set_dato_external'
+	) {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * PURE tuple selection: every (observed → observer @ host-section) edge with
+ * the covered server shape, deduped on `observerTipo|hostSection` (first edge
+ * wins). `observerSource` yields the observer node's `properties.source`.
+ *
+ * Unresolved hosts are RETURNED, never dropped silently (never-narrow law,
+ * review 2026-08-02): a covered edge with an unresolved host still DISPATCHES
+ * live (its targets come from the observable data), so a silent skip here
+ * would let its mirrors drift unhealed with no signal. The caller logs them
+ * loudly and counts them.
+ */
+export function selectReconcileTuples(
+	edges: readonly ObserverSubscription[],
+	observerSource: (observerTipo: string) => unknown,
 	onlyObserver: string | null,
-	onlySection: string | null,
-): Promise<ReconcileTuple[]> {
-	const registry = await getSubscriptionRegistry();
+): { tuples: ReconcileTuple[]; hostUnresolved: string[] } {
 	const tuples: ReconcileTuple[] = [];
+	const hostUnresolved: string[] = [];
 	const seen = new Set<string>();
-	for (const sub of registry.edges) {
-		const server = entryServerBlock(sub.entry);
-		if (server === undefined) continue;
-		// Only the covered server shape reconciles — anything else is the
-		// cascade's ledgered-skip territory, not silently swept here.
-		if (
-			server.config?.use_observable_dato !== true ||
-			server.perform?.function !== 'set_dato_external'
-		) {
-			continue;
-		}
+	for (const sub of edges) {
+		if (!isCoveredReconcileEdge(sub)) continue;
 		const observerTipo = sub.observerTipo;
 		// Host section from the registry's 4-step resolution (observe-entry
 		// scope → forward spec → the observer's own section) — same requirement
-		// as ever: no host, no tuple. But NEVER silently (never-narrow law,
-		// review 2026-08-02): a covered edge with an unresolved host still
-		// DISPATCHES live (its targets come from the observable data), so a
-		// silent skip here would let its mirrors drift unhealed with no signal.
-		// Loud + counted (the dispatch-side SQO refusal's counter); nothing
-		// hits this on either current ontology — every covered edge resolves.
+		// as ever: no host, no tuple.
 		const hostSection = sub.hostSection;
 		if (typeof hostSection !== 'string') {
-			console.error(
-				`observer reconcile: covered edge '${sub.observedTipo}->${observerTipo}' has an UNRESOLVED host section — tuple skipped, mirrors NOT swept; add a section scope (section_tipo) to the observe entry`,
-			);
-			incrementCounter('observers_host_section_unresolved');
+			hostUnresolved.push(`${sub.observedTipo}->${observerTipo}`);
 			continue;
 		}
 		if (onlyObserver !== null && observerTipo !== onlyObserver) continue;
 		const key = `${observerTipo}|${hostSection}`;
 		if (seen.has(key)) continue;
-		const observerNode = await getNode(observerTipo);
-		const properties = observerNode?.properties as {
-			source?: { section_to_search?: string[]; component_to_search?: string[] | string };
-		} | null;
+		const sourceValue: unknown = observerSource(observerTipo);
 		// Unported-sub-law detection FIRST (Phase-0 disarm 2026-08-02) so even
 		// a sub-law node without component_to_search surfaces as a refused
 		// tuple instead of vanishing from the report.
-		const sourceValue: unknown = properties?.source;
 		let sublaw: string | null = null;
 		if (sourceValue !== null && typeof sourceValue === 'object') {
 			for (const unportedKey of ['set_observed_data', 'source_overwrite']) {
@@ -189,7 +220,11 @@ async function discoverTuples(
 				}
 			}
 		}
-		const componentToSearchRaw = properties?.source?.component_to_search;
+		const source = sourceValue as
+			| { section_to_search?: string[]; component_to_search?: string[] | string }
+			| null
+			| undefined;
+		const componentToSearchRaw = source?.component_to_search;
 		const componentToSearch = Array.isArray(componentToSearchRaw)
 			? componentToSearchRaw[0]
 			: componentToSearchRaw;
@@ -200,48 +235,203 @@ async function discoverTuples(
 			observerTipo,
 			hostSection,
 			componentToSearch: typeof componentToSearch === 'string' ? componentToSearch : '',
-			sectionToSearch: properties?.source?.section_to_search ?? 'all',
+			sectionToSearch: source?.section_to_search ?? 'all',
 			sublaw,
 		});
 	}
-	// The live cascade recomputes at WHATEVER section a saved locator targets
-	// (spec.section_tipo is informational) — so host sections must come from
-	// the INDEX TRUTH too, not the spec list alone (review 2026-07-24: rsc387
-	// targets ~20 sections on this DB, the specs name 3; spec-only discovery
-	// left the rest permanently stale). Union in every target section the
-	// index knows for each tuple's component_to_search.
-	//
-	// This union is ALSO the intended backstop for virtual↔real section faces
-	// (review 2026-08-02): a host resolved via the observer's OWN section is
-	// the REAL face, while stored records may carry the VIRTUAL face
-	// (numisdata282->numisdata321: host numisdata276, yet every numisdata5
-	// record — all 441 — is stored under numisdata5, so the seeded tuple's
-	// queries find nothing). The index rows carry the faces the records
-	// actually use, so the fan-out seeds tuples at the STORED faces (measured:
-	// the numisdata321 sweep discovers its tuples and drift through it). No
-	// face normalization is done here on purpose — it would duplicate what the
-	// index truth already supplies.
+	return { tuples, hostUnresolved };
+}
+
+/**
+ * The live cascade recomputes at WHATEVER section a saved locator targets
+ * (spec.section_tipo is informational) — so host sections must come from the
+ * INDEX TRUTH too, not the spec list alone (review 2026-07-24: rsc387 targets
+ * ~20 sections on this DB, the specs name 3; spec-only discovery left the rest
+ * permanently stale). Union in every target section the index knows for each
+ * tuple's component_to_search.
+ *
+ * This union is ALSO the intended backstop for virtual↔real section faces
+ * (review 2026-08-02): a host resolved via the observer's OWN section is the
+ * REAL face, while stored records may carry the VIRTUAL face
+ * (numisdata282->numisdata321: host numisdata276, yet every numisdata5 record
+ * — all 441 — is stored under numisdata5, so the seeded tuple's queries find
+ * nothing). The index rows carry the faces the records actually use, so the
+ * fan-out seeds tuples at the STORED faces (measured: the numisdata321 sweep
+ * discovers its tuples and drift through it). No face normalization is done
+ * here on purpose — it would duplicate what the index truth already supplies.
+ *
+ * Returns the input tuples FOLLOWED BY the fan-out (only the input list is
+ * expanded — an index-seeded tuple is never re-expanded).
+ */
+export async function expandTuplesByIndexSections(
+	tuples: readonly ReconcileTuple[],
+	indexSectionsFor: (componentToSearch: string) => Promise<string[]>,
+): Promise<ReconcileTuple[]> {
+	const out = [...tuples];
+	const seen = new Set<string>(out.map((t) => `${t.observerTipo}|${t.hostSection}`));
 	for (const tuple of [...tuples]) {
 		// Refused sub-law tuples are reported once per spec host — no index
 		// fan-out (their candidates are never swept anyway).
 		if (tuple.sublaw !== null) continue;
-		const indexSections = (await sql.unsafe(
-			'SELECT DISTINCT target_section_tipo AS s FROM matrix_relation_index WHERE from_component_tipo = $1',
-			[tuple.componentToSearch],
-		)) as { s: string }[];
-		for (const row of indexSections) {
-			const key = `${tuple.observerTipo}|${row.s}`;
+		const indexSections = await indexSectionsFor(tuple.componentToSearch);
+		for (const section of indexSections) {
+			const key = `${tuple.observerTipo}|${section}`;
 			if (seen.has(key)) continue;
 			seen.add(key);
-			tuples.push({ ...tuple, hostSection: row.s });
+			out.push({ ...tuple, hostSection: section });
 		}
 	}
+	return out;
+}
+
+/** Per-record counter deltas the classifier hands back to the sweep. */
+export interface ReconcileCounts {
+	droppedRecords: number;
+	droppedLocators: number;
+	degradedSeedRecords: number;
+	bigResultRefused: number;
+	shrinksSkipped: number;
+	repaired: number;
+}
+
+/**
+ * PURE per-candidate adjudication: given ONE kernel outcome, what the census
+ * records, which counters move and which report line is printed.
+ *
+ * Census: drop volume comes from the kernel's MEMBERSHIP counts, never from
+ * `before - after`. A value-law regression that drops N genuine locators and
+ * appends N wrong ones has an equal length — a length delta reports 0 and
+ * sails through the budget, which is precisely the shape the budget exists to
+ * catch. The kernel adjudicates membership (that is why a 1-drop+1-add swap
+ * commits both halves), so the census must read the same numbers it did.
+ */
+export function classifyReconcileOutcome(
+	outcome: ExternalRecomputeOutcome,
+	tuple: ReconcileTuple,
+	sectionId: number,
+	apply: boolean,
+): {
+	drifted: boolean;
+	record: ReconcileRecord | null;
+	counted: ReconcileCounts;
+	log: string | null;
+} {
+	const counted: ReconcileCounts = {
+		droppedRecords: 0,
+		droppedLocators: 0,
+		degradedSeedRecords: 0,
+		bigResultRefused: 0,
+		shrinksSkipped: 0,
+		repaired: 0,
+	};
+	if (!outcome.changed) return { drifted: false, record: null, counted, log: null };
+	const isShrink = outcome.after < outcome.before;
+	const droppedHere = outcome.dropped ?? Math.max(0, outcome.before - outcome.after);
+	const addedHere = outcome.added ?? Math.max(0, outcome.after - outcome.before);
+	if (droppedHere > 0) {
+		counted.droppedRecords++;
+		counted.droppedLocators += droppedHere;
+	}
+	if (outcome.seedDefects !== undefined) counted.degradedSeedRecords++;
+	const record: ReconcileRecord = {
+		observerTipo: tuple.observerTipo,
+		hostSection: tuple.hostSection,
+		sectionId,
+		before: outcome.before,
+		after: outcome.after,
+		dropped: droppedHere,
+		added: addedHere,
+		...(outcome.seedDefects !== undefined ? { seedDefects: outcome.seedDefects } : {}),
+		...(outcome.refusedBigResult === true
+			? ({ refusal: 'big_result' } as const)
+			: outcome.skippedShrink === true
+				? ({ refusal: 'degraded_seed' } as const)
+				: {}),
+	};
+	if (outcome.refusedBigResult === true) {
+		// PHP >2000-reference freeze: the kernel computed the diff but
+		// persisted nothing — never count it as repaired (a refused record
+		// reported clean is the sub-law lesson all over again).
+		counted.bigResultRefused++;
+		return {
+			drifted: true,
+			record,
+			counted,
+			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}]`,
+		};
+	}
+	if (outcome.skippedShrink === true) {
+		// DEGRADED SEED — the only remaining shrink escape. Additions HAVE
+		// been applied (in apply mode); the drop half is withheld because
+		// this record's seed could not be built completely. Not fixable by
+		// a flag: fix the ontology the defects name, then re-run.
+		counted.shrinksSkipped++;
+		return {
+			drifted: true,
+			record,
+			counted,
+			log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK held — DEGRADED SEED: ${(outcome.seedDefects ?? []).join(', ')}; grows applied]`,
+		};
+	}
+	if (apply) counted.repaired++;
+	return {
+		drifted: true,
+		record,
+		counted,
+		log: `  ${tuple.hostSection} §${sectionId} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s)${isShrink ? ' [shrink]' : ''}${apply ? ' [repaired]' : ''}`,
+	};
+}
+
+/**
+ * Every (observed → observer @ host-section) tuple with the covered server
+ * shape. Since Act 2 the edges come from the SUBSCRIPTION REGISTRY (the same
+ * discovery the live cascade dispatches from — this used to be a third
+ * hand-rolled copy of forward-only discovery): the reconciler heals exactly
+ * what the cascade fires — every declared server edge, the ontology's
+ * decision (reverse-only declarations included).
+ *
+ * Orchestration only: selection, the index fan-out and the --section filter
+ * are the three pure functions above; the loud+counted unresolved-host signal
+ * and the IO live here.
+ */
+async function discoverTuples(
+	onlyObserver: string | null,
+	onlySection: string | null,
+	io: ReconcileIO,
+): Promise<ReconcileTuple[]> {
+	const registry = await io.getRegistry();
+	// The pure selector reads each covered observer's `properties.source`
+	// synchronously, so resolve them up front. getNode is a cached, side-effect
+	// free ontology read (the registry build already materialised these nodes).
+	const sourceByTipo = new Map<string, unknown>();
+	for (const sub of registry.edges) {
+		if (!isCoveredReconcileEdge(sub)) continue;
+		if (sourceByTipo.has(sub.observerTipo)) continue;
+		const properties = await io.getNodeProperties(sub.observerTipo);
+		sourceByTipo.set(sub.observerTipo, (properties as { source?: unknown } | null)?.source);
+	}
+	const { tuples, hostUnresolved } = selectReconcileTuples(
+		registry.edges,
+		(observerTipo) => sourceByTipo.get(observerTipo),
+		onlyObserver,
+	);
+	// Loud + counted (the dispatch-side SQO refusal's counter); nothing hits
+	// this on either current ontology — every covered edge resolves.
+	for (const edgeKey of hostUnresolved) {
+		console.error(
+			`observer reconcile: covered edge '${edgeKey}' has an UNRESOLVED host section — tuple skipped, mirrors NOT swept; add a section scope (section_tipo) to the observe entry`,
+		);
+		incrementCounter('observers_host_section_unresolved');
+	}
+	const expanded = await expandTuplesByIndexSections(tuples, (componentToSearch) =>
+		io.indexSectionsFor(componentToSearch),
+	);
 	// --section filters LAST: a spec-listed section must still seed the union
 	// (filtering inside the loops starved it — a --section tchi1 run found 0
 	// tuples although tchi1 drift exists through the index truth). The match
 	// is the tuple's host face VERBATIM (no virtual↔real normalization): pass
 	// the face the stored records carry (e.g. numisdata5, not numisdata276).
-	return onlySection === null ? tuples : tuples.filter((t) => t.hostSection === onlySection);
+	return onlySection === null ? expanded : expanded.filter((t) => t.hostSection === onlySection);
 }
 
 /** Referenced-target ids ∪ stored-mirror-holder ids for one tuple. */
@@ -273,8 +463,28 @@ async function candidateIds(
 	return [...ids].sort((a, b) => a - b);
 }
 
+/** The real side-effect set — what every production caller gets. */
+export const defaultReconcileIO: ReconcileIO = {
+	getRegistry: getSubscriptionRegistry,
+	async getNodeProperties(tipo: string): Promise<Record<string, unknown> | null> {
+		const node = await getNode(tipo);
+		return (node?.properties as Record<string, unknown> | undefined) ?? null;
+	},
+	async indexSectionsFor(componentToSearch: string): Promise<string[]> {
+		const rows = (await sql.unsafe(
+			'SELECT DISTINCT target_section_tipo AS s FROM matrix_relation_index WHERE from_component_tipo = $1',
+			[componentToSearch],
+		)) as { s: string }[];
+		return rows.map((row) => row.s);
+	},
+	matrixTableFor: (sectionTipo: string) => getMatrixTableFromTipo(sectionTipo),
+	candidateIds,
+	recompute: recomputeExternalRelation,
+};
+
 export async function reconcileObserverMirrors(
 	options: ReconcileOptions = {},
+	io: ReconcileIO = defaultReconcileIO,
 ): Promise<ReconcileSummary> {
 	const apply = options.apply === true;
 	const log = options.log ?? ((): void => {});
@@ -291,7 +501,11 @@ export async function reconcileObserverMirrors(
 		droppedLocators: 0,
 		degradedSeedRecords: 0,
 	};
-	const tuples = await discoverTuples(options.onlyObserver ?? null, options.onlySection ?? null);
+	const tuples = await discoverTuples(
+		options.onlyObserver ?? null,
+		options.onlySection ?? null,
+		io,
+	);
 	summary.tuples = tuples.length;
 	for (const tuple of tuples) {
 		if (tuple.sublaw !== null) {
@@ -304,14 +518,14 @@ export async function reconcileObserverMirrors(
 			);
 			continue;
 		}
-		const hostTable = await getMatrixTableFromTipo(tuple.hostSection);
+		const hostTable = await io.matrixTableFor(tuple.hostSection);
 		if (hostTable === null) {
 			log(
 				`- ${tuple.observerTipo} @ ${tuple.hostSection}: SKIP (no matrix table — section not provisioned)`,
 			);
 			continue;
 		}
-		const ids = await candidateIds(tuple, hostTable, options.onlyId ?? null);
+		const ids = await io.candidateIds(tuple, hostTable, options.onlyId ?? null);
 		summary.candidates += ids.length;
 		let drifted = 0;
 		let shrinksSkipped = 0;
@@ -320,7 +534,7 @@ export async function reconcileObserverMirrors(
 			// INSIDE the row lock — no diff-then-apply TOCTOU window. The kernel
 			// applies the FULL law (2026-08-06); the only drop it withholds is one
 			// whose seed it knows was degraded.
-			const outcome = await recomputeExternalRelation(
+			const outcome = await io.recompute(
 				tuple.observerTipo,
 				tuple.hostSection,
 				id,
@@ -328,63 +542,17 @@ export async function reconcileObserverMirrors(
 				new Date(),
 				{ write: apply },
 			);
-			if (!outcome.changed) continue;
+			const verdict = classifyReconcileOutcome(outcome, tuple, id, apply);
+			if (!verdict.drifted) continue;
 			drifted++;
-			const isShrink = outcome.after < outcome.before;
-			// Census: drop volume comes from the kernel's MEMBERSHIP counts, never
-			// from `before - after`. A value-law regression that drops N genuine
-			// locators and appends N wrong ones has an equal length — a length
-			// delta reports 0 and sails through the budget, which is precisely the
-			// shape the budget exists to catch. The kernel adjudicates membership
-			// (that is why a 1-drop+1-add swap commits both halves), so the census
-			// must read the same numbers it did.
-			const droppedHere = outcome.dropped ?? Math.max(0, outcome.before - outcome.after);
-			const addedHere = outcome.added ?? Math.max(0, outcome.after - outcome.before);
-			if (droppedHere > 0) {
-				summary.droppedRecords++;
-				summary.droppedLocators += droppedHere;
-			}
-			if (outcome.seedDefects !== undefined) summary.degradedSeedRecords++;
-			onRecord({
-				observerTipo: tuple.observerTipo,
-				hostSection: tuple.hostSection,
-				sectionId: id,
-				before: outcome.before,
-				after: outcome.after,
-				dropped: droppedHere,
-				added: addedHere,
-				...(outcome.seedDefects !== undefined ? { seedDefects: outcome.seedDefects } : {}),
-				...(outcome.refusedBigResult === true
-					? ({ refusal: 'big_result' } as const)
-					: outcome.skippedShrink === true
-						? ({ refusal: 'degraded_seed' } as const)
-						: {}),
-			});
-			if (outcome.refusedBigResult === true) {
-				// PHP >2000-reference freeze: the kernel computed the diff but
-				// persisted nothing — never count it as repaired (a refused record
-				// reported clean is the sub-law lesson all over again).
-				summary.bigResultRefused++;
-				log(
-					`  ${tuple.hostSection} §${id} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [>2000-reference FREEZE — ${apply ? 'not written' : 'an apply would refuse'}]`,
-				);
-				continue;
-			}
-			if (outcome.skippedShrink === true) {
-				// DEGRADED SEED — the only remaining shrink escape. Additions HAVE
-				// been applied (in apply mode); the drop half is withheld because
-				// this record's seed could not be built completely. Not fixable by
-				// a flag: fix the ontology the defects name, then re-run.
-				shrinksSkipped++;
-				log(
-					`  ${tuple.hostSection} §${id} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s) [SHRINK held — DEGRADED SEED: ${(outcome.seedDefects ?? []).join(', ')}; grows applied]`,
-				);
-				continue;
-			}
-			if (apply) summary.repaired++;
-			log(
-				`  ${tuple.hostSection} §${id} ${tuple.observerTipo}: ${outcome.before} → ${outcome.after} entrie(s)${isShrink ? ' [shrink]' : ''}${apply ? ' [repaired]' : ''}`,
-			);
+			summary.droppedRecords += verdict.counted.droppedRecords;
+			summary.droppedLocators += verdict.counted.droppedLocators;
+			summary.degradedSeedRecords += verdict.counted.degradedSeedRecords;
+			summary.bigResultRefused += verdict.counted.bigResultRefused;
+			summary.repaired += verdict.counted.repaired;
+			shrinksSkipped += verdict.counted.shrinksSkipped;
+			if (verdict.record !== null) onRecord(verdict.record);
+			if (verdict.log !== null) log(verdict.log);
 		}
 		summary.drifted += drifted;
 		summary.shrinksSkipped += shrinksSkipped;
