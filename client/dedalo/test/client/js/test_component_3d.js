@@ -437,4 +437,99 @@ describe(`COMPONENT_3D SEARCH DATA OPERATIONS`, function() {
 
 
 
+// VIEWER CONTRACT
+// The three.js viewer is the one third-party coupling in component_3d, and it is
+// loaded LAZILY (a dynamic import from view_default_edit_3d) — so a viewer that
+// cannot load does not fail any of the lifecycle tests above: the edit view still
+// renders, just without a canvas. That is exactly how a three r152 rename went
+// unnoticed until a 3D upload stopped producing a posterframe.
+//
+// These cases pin what the posterframe path depends on. They do NOT require a
+// WebGL context: the point is the module boundary and the refusal path, both of
+// which are reachable without rendering a frame.
+describe(`COMPONENT_3D VIEWER`, function() {
+
+	this.timeout(20000);
+
+	let viewer_module = null
+
+
+
+	it(`viewer module loads (every three import resolves)`, async function() {
+
+		// The failure this guards is a HARD module-load error, not a soft
+		// degradation: one removed named export takes the whole file down and with
+		// it the canvas, the controls and posterframe capture.
+		viewer_module = await import('../../../core/component_3d/js/viewer/viewer.js')
+
+		assert.isOk(viewer_module, 'viewer module expected to load')
+		assert.equal(typeof viewer_module.viewer, 'function', 'expected viewer export')
+		assert.equal(typeof viewer_module.viewer.build, 'function', 'expected viewer.build')
+		assert.equal(typeof viewer_module.viewer.load, 'function', 'expected viewer.load')
+		assert.equal(typeof viewer_module.viewer.get_image, 'function', 'expected viewer.get_image')
+	});
+
+
+
+	it(`lighting environments are all same-origin`, async function() {
+
+		// An air-gapped archive must not have presets that cannot work, and a
+		// connected one must not announce record activity to a third party.
+		const module = await import('../../../core/component_3d/js/viewer/environments.js')
+
+		assert.isOk(Array.isArray(module.environments), 'environments expected array')
+		assert.isAbove(module.environments.length, 1, 'expected at least None + Neutral')
+
+		const remote = module.environments.filter(el =>
+			typeof el.path==='string' && /^https?:\/\//.test(el.path)
+		)
+		assert.deepEqual(remote, [], 'no environment preset may point at a third-party host')
+	});
+
+
+
+	it(`get_image resolves null when no model is loaded`, async function() {
+
+		// build() mounts the GUI before any model exists, so this state is real and
+		// reachable — a capture requested here used to throw and never resolve.
+		const instance = Object.create(viewer_module.viewer)
+		instance.object = null
+
+		const image = await viewer_module.viewer.get_image.call(instance, {
+			width	: 720,
+			height	: 404
+		})
+
+		assert.isNull(image, 'expected null capture when no model is loaded')
+	});
+
+
+
+	it(`create_posterframe refuses without a viewer`, async function() {
+
+		const instance = await get_instance({
+			model			: 'component_3d',
+			mode			: 'edit',
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: lang,
+			permissions		: 2
+		})
+		await instance.build(true)
+
+		// No viewer mounted (the component was never rendered into the viewport):
+		// the capture must refuse rather than upload an empty frame over the
+		// record's existing posterframe.
+		instance.viewer = null
+		const result = await instance.create_posterframe()
+
+		assert.equal(result, false, 'expected create_posterframe to refuse with no viewer')
+
+		await instance.destroy(true)
+	});
+});
+
+
+
 // @license-end

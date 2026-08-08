@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, posix, resolve } from 'node:path';
 import { CLIENT_LIBS } from '../../src/core/client_libs/registry.ts';
 import { handleRequest } from '../../src/server.ts';
@@ -137,7 +137,21 @@ describe('client libs — the registry resolves every lib the client loads', () 
 				broken.push(`${fileUrl}: "${ref}" → unregistered lib id "${id}"`);
 				continue;
 			}
-			if (url.endsWith('/')) continue;
+			// A DIRECTORY reference (an import-map prefix, or a loader's decoder path
+			// like `<root>/lib/three/examples/jsm/libs/draco/`) is not fetchable on its
+			// own — but it still has to EXIST, or the assets under it 404 at runtime.
+			// Checking the id alone left `.../libs/draco/` covered by nothing: rename
+			// that folder upstream and every Draco-compressed glTF stops loading with a
+			// green suite. Resolve it on disk under the lib's own base instead.
+			if (url.endsWith('/')) {
+				const lib = CLIENT_LIBS[id];
+				const tail = url.slice(`/dedalo/lib/${id}/`.length);
+				const dir = join(REPO_ROOT, lib.base, tail);
+				if (tail !== '' && !(existsSync(dir) && statSync(dir).isDirectory())) {
+					broken.push(`${fileUrl}: "${ref}" → ${url} → no such directory (${lib.base}/${tail})`);
+				}
+				continue;
+			}
 			const response = await get(url);
 			if (response.status !== 200) {
 				broken.push(`${fileUrl}: "${ref}" → ${url} → HTTP ${response.status}`);
@@ -172,6 +186,327 @@ describe('client libs — the registry resolves every lib the client loads', () 
 			expect(lib.reason ?? '', `${id} (source=${lib.source}) must carry a reason`).not.toBe('');
 			expect((lib.reason ?? '').length, `${id}: reason is too thin`).toBeGreaterThan(40);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Import-map API surface: the SYMBOLS a client file takes out of a lib
+// ---------------------------------------------------------------------------
+
+/**
+ * Every in-repo page that declares an `<script type="importmap">`. DISCOVERED, not
+ * listed: hardcoding the page set made the "a new mapping cannot escape this gate"
+ * claim false the moment a second page declared one — and two already had
+ * (`client/dedalo/test/client/{index,frame}.html`), so the gate was checking one
+ * page's `three` while the client harness quietly ran on another's.
+ */
+function importmapPages(): string[] {
+	const found: string[] = [];
+	for (const root of SCAN_ROOTS) {
+		for (const file of walk(join(REPO_ROOT, root))) {
+			if (extname(file).toLowerCase() !== '.html') continue;
+			if (readFileSync(file, 'utf8').includes('type="importmap"')) found.push(file);
+		}
+	}
+	return found;
+}
+
+/** One import-map entry: the specifier, the page that declared it, its target. */
+interface MapEntry {
+	specifier: string;
+	/** true for a trailing-slash PREFIX mapping (`three/addons/` → a directory). */
+	prefix: boolean;
+	page: string;
+	target: string;
+	/** The /dedalo/lib/… URL the target resolves to, or null when it does not. */
+	url: string | null;
+}
+
+function importmapEntries(): MapEntry[] {
+	const out: MapEntry[] = [];
+	for (const page of importmapPages()) {
+		const html = readFileSync(page, 'utf8');
+		const pageUrl = fileToUrl(page);
+		for (const block of html.matchAll(/<script\s+type="importmap"\s*>([\s\S]*?)<\/script>/g)) {
+			const map = JSON.parse(block[1] ?? '{}') as { imports?: Record<string, string> };
+			for (const [specifier, target] of Object.entries(map.imports ?? {})) {
+				out.push({
+					specifier,
+					prefix: specifier.endsWith('/'),
+					page: pageUrl ?? page,
+					target,
+					// A page's import map resolves against the PAGE, which is what
+					// fileToUrl gives us. pageUrl is only null for a file outside both
+					// URL spaces — recorded as an unresolved entry below, never skipped.
+					url: pageUrl === null ? null : toLibUrl(pageUrl, target),
+				});
+			}
+		}
+	}
+	return out;
+}
+
+/**
+ * The names an ES module exports.
+ *
+ * BOTH forms, because three's own tree uses both: the bundle re-exports through
+ * `export { … }` blocks while the addons (`stats.module.js`, the loaders) use
+ * declaration form and `export default`. Reading only the blocks reported every
+ * legitimate import from an addon as missing.
+ */
+function exportedNames(source: string): Set<string> {
+	const names = new Set<string>();
+	for (const block of source.match(/export\s*\{([\s\S]*?)\}/g) ?? []) {
+		for (const part of block.replace(/export\s*\{|\}/g, '').split(',')) {
+			const halves = part.trim().split(/\s+as\s+/);
+			const name = (halves[1] ?? halves[0] ?? '').trim();
+			// `export { x as default }` names the default slot, not a named export.
+			if (name !== '' && name !== 'default') names.add(name);
+		}
+	}
+	// Declaration form: `export const X`, `export class X`, `export function X`,
+	// `export async function X`, `export let/var X`.
+	for (const match of source.matchAll(
+		/\bexport\s+(?:async\s+)?(?:const|let|var|class|function\*?)\s+([A-Za-z_$][\w$]*)/g,
+	)) {
+		if (match[1] !== undefined) names.add(match[1]);
+	}
+	return names;
+}
+
+/** Strip line and block comments so a commented-out import is not read as code. */
+function stripComments(source: string): string {
+	// Order matters: block first, then line. Strings containing `//` survive because
+	// the replacement keeps the line structure and a false positive here can only
+	// HIDE an import (the anti-vacuity guard below is what catches wholesale loss).
+	return source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
+}
+/**
+ * ONE import statement's use of an import-map specifier.
+ *
+ * `importPath` is the FULL specifier as written (`three`, or
+ * `three/addons/loaders/GLTFLoader.js`), which is what decides the module URL for
+ * a prefix mapping — so it is carried per statement, not per mapping.
+ */
+interface ImportUse {
+	importPath: string;
+	/** Named bindings — the ones whose existence can be checked against exports. */
+	named: string[];
+	/** true when the statement also takes the default export (needs no name check). */
+	usesDefault: boolean;
+	/**
+	 * Set when the import form makes symbol use UNCHECKABLE from the statement:
+	 * `import * as X` and `import(…)`, where symbols are reached as properties
+	 * later. A removed property is then `undefined` rather than a load error — a
+	 * silent wrong value instead of a loud crash — so these are reported, not
+	 * passed over. Holds the form as written, for the message.
+	 */
+	unverifiable: string | null;
+}
+
+/** Every import of `specifier` (or, for a prefix mapping, of anything under it). */
+function importUsesOf(source: string, specifier: string, prefix: boolean): ImportUse[] {
+	const quoted = specifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	// A PREFIX mapping matches any module path under it (`three/addons/loaders/X.js`);
+	// an exact mapping matches only itself, or the ES-resolution rules would let
+	// `three-foo` masquerade as `three`.
+	const spec = prefix ? `${quoted}[^'"]*` : quoted;
+	const uses: ImportUse[] = [];
+
+	// Static import: `import <clause> from '<spec>'`, where <clause> is any legal
+	// combination of a default binding, a namespace binding and a named clause.
+	// Matching the clause permissively and classifying it here is what catches the
+	// mixed forms (`import THREE, { X } from …`) a `{…}`-only pattern skipped.
+	for (const match of source.matchAll(
+		new RegExp(`\\bimport\\s+([^;'"]*?)\\s*from\\s*['"](${spec})['"]`, 'g'),
+	)) {
+		const clause = (match[1] ?? '').trim();
+		const importPath = match[2] ?? specifier;
+		const braces = clause.match(/\{([\s\S]*?)\}/);
+		const named: string[] = [];
+		if (braces?.[1] !== undefined) {
+			for (const raw of braces[1].split(',')) {
+				const name =
+					raw
+						.trim()
+						.split(/\s+as\s+/)[0]
+						?.trim() ?? '';
+				if (name !== '') named.push(name);
+			}
+		}
+		uses.push({
+			importPath,
+			named,
+			// A bare identifier at the head of the clause is the default binding.
+			usesDefault: /^[A-Za-z_$][\w$]*\s*(?:,|$)/.test(clause),
+			unverifiable: /(^|,)\s*\*\s+as\s/.test(clause) ? `import * as … from '${importPath}'` : null,
+		});
+	}
+
+	// Dynamic import: whatever it yields is destructured or property-accessed
+	// elsewhere, so the statement alone cannot say which symbols are used.
+	for (const match of source.matchAll(new RegExp(`\\bimport\\s*\\(\\s*['"](${spec})['"]`, 'g'))) {
+		const importPath = match[1] ?? specifier;
+		uses.push({
+			importPath,
+			named: [],
+			usesDefault: false,
+			unverifiable: `import('${importPath}')`,
+		});
+	}
+
+	// A bare side-effect import (`import 'three'`) binds nothing: nothing to check,
+	// and nothing uncheckable either.
+	return uses;
+}
+
+/** One file's use of one import-map entry, with the file kept for the message. */
+interface Usage {
+	fileUrl: string;
+	entry: MapEntry;
+	use: ImportUse;
+	/** The module URL this specific import resolves to; null = unresolved mapping. */
+	url: string | null;
+}
+
+/**
+ * For a PREFIX mapping the module URL depends on the import path, so it is
+ * computed per import statement rather than per mapping.
+ */
+function moduleUrlFor(entry: MapEntry, importPath: string): string | null {
+	if (entry.url === null) return null;
+	return entry.prefix ? entry.url + importPath.slice(entry.specifier.length) : entry.url;
+}
+
+/**
+ * Walk the source tree ONCE, testing every mapping against each file.
+ *
+ * DEDUPED on (file, import path, resolved URL): several pages declare the same
+ * `three` / `three/addons/` mapping, and a file is not owned by one page, so the
+ * same import would otherwise be reported once per page. The URL is part of the
+ * key ON PURPOSE — two pages mapping one specifier to DIFFERENT modules (a harness
+ * pointed at `three.webgpu.js`, say) is exactly the disagreement worth checking
+ * twice, and it survives this.
+ */
+function collectUsages(entries: MapEntry[]): Usage[] {
+	const usages: Usage[] = [];
+	const seen = new Set<string>();
+	for (const root of SCAN_ROOTS) {
+		for (const file of walk(join(REPO_ROOT, root))) {
+			if (!['.js', '.mjs'].includes(extname(file).toLowerCase())) continue;
+			const fileUrl = fileToUrl(file);
+			if (fileUrl === null) continue;
+			// Comments are stripped so a commented-out migration line
+			// (`// import { sRGBEncoding } from 'three'`) or a JSDoc example cannot fail
+			// CI on a client that is correct — the sibling libStringsIn scan skips
+			// comment lines for the same reason.
+			const source = stripComments(readFileSync(file, 'utf8'));
+			for (const entry of entries) {
+				if (!source.includes(entry.specifier)) continue;
+				for (const use of importUsesOf(source, entry.specifier, entry.prefix)) {
+					const url = moduleUrlFor(entry, use.importPath);
+					const key = `${fileUrl} ${use.importPath} ${url ?? ''}`;
+					if (seen.has(key)) continue;
+					seen.add(key);
+					usages.push({ fileUrl, entry, use, url });
+				}
+			}
+		}
+	}
+	return usages;
+}
+
+describe('client libs — the symbols the client imports still exist', () => {
+	/**
+	 * WHY THIS EXISTS (2026-08-08). The resolution gate above proves a lib URL
+	 * serves 200; it says NOTHING about the module's API surface. three r152
+	 * renamed the colour-space constants and `client/dedalo/core/component_3d/js/
+	 * viewer/viewer.js` kept importing `sRGBEncoding`, which r185 no longer
+	 * exports. `three.module.js` still served 200, every gate stayed green, and the
+	 * whole 3D viewer module failed to load in the browser — so component_3d
+	 * rendered only its static posterframe and `create_posterframe()` bailed with
+	 * "3D viewer is not set", meaning a 3D upload silently never got a posterframe.
+	 *
+	 * A named import of a symbol the served module does not export is a HARD
+	 * module-load failure, not a deprecation warning: it takes down every importer
+	 * at once and it is invisible until someone opens the right widget. Since
+	 * dependencies here track the latest stable by policy, an upstream rename is a
+	 * ROUTINE event — so it needs a gate, not vigilance.
+	 *
+	 * BOTH HALVES OF A MAPPING. The first cut checked only exact specifiers and
+	 * skipped the `three/addons/` PREFIX — which is where 10 of viewer.js's 11 three
+	 * imports go, so the gate written for this outage would not have caught the same
+	 * outage one import line over.
+	 */
+	const entries = importmapEntries();
+	const usages = collectUsages(entries);
+
+	test('every import-map entry resolves to a registered lib (no silent drops)', () => {
+		// An unresolvable entry is NOT skipped: it would be a mapping whose symbols go
+		// unverified forever while the gate reports green. Fail with the specifier
+		// named, so closing it stays a decision someone makes on purpose.
+		const unresolved = entries
+			.filter((entry) => entry.url === null)
+			.map(
+				(entry) =>
+					`${entry.page}: "${entry.specifier}" → "${entry.target}" does not resolve to a /dedalo/lib/ URL`,
+			);
+		expect(unresolved).toEqual([]);
+	});
+
+	test('the scan found the mappings and real imports (guards against a silently empty gate)', () => {
+		// Without this, an empty `broken` proves only that nothing was FOUND. Moving
+		// viewer.js out of the scan roots, or reformatting its imports into a shape the
+		// matcher misses, would otherwise leave the gate green having checked zero
+		// symbols — the exact failure mode it exists to prevent.
+		expect(entries.map((entry) => entry.specifier)).toContain('three');
+		expect(entries.some((entry) => entry.prefix)).toBe(true);
+		const named = usages.reduce((total, usage) => total + usage.use.named.length, 0);
+		expect(named).toBeGreaterThan(20);
+		// The addons half specifically — the hole the first cut left open.
+		expect(usages.some((usage) => usage.entry.prefix && usage.use.named.length > 0)).toBe(true);
+	});
+
+	test('no client file reaches an import-map lib through an uncheckable import form', () => {
+		// `import * as THREE` / `await import('three')` resolve a REMOVED symbol to
+		// `undefined` instead of failing the load, so the widget renders with a wrong
+		// value and no error anywhere — strictly worse than the crash this gate
+		// catches, and invisible to it. There are none today; a new one must be a
+		// deliberate decision, not a silent gap.
+		const uncheckable = usages
+			.filter((usage) => usage.use.unverifiable !== null)
+			.map((usage) => `${usage.fileUrl}: ${usage.use.unverifiable}`);
+		expect(uncheckable).toEqual([]);
+	});
+
+	test('every named import from an import-map lib is exported by the served module', async () => {
+		const broken: string[] = [];
+		// One fetch + parse per module URL, however many files import it.
+		const exportsByUrl = new Map<string, Set<string> | null>();
+		for (const usage of usages) {
+			if (usage.url === null) continue; // already failed loudly, above
+			if (usage.use.named.length === 0) continue; // default-only: nothing to name-check
+			let exported = exportsByUrl.get(usage.url);
+			if (exported === undefined) {
+				const response = await get(usage.url);
+				exported = response.status === 200 ? exportedNames(await response.text()) : null;
+				exportsByUrl.set(usage.url, exported);
+			}
+			if (exported === null) {
+				broken.push(
+					`${usage.fileUrl}: '${usage.use.importPath}' → ${usage.url} does not serve 200`,
+				);
+				continue;
+			}
+			for (const name of usage.use.named) {
+				if (!exported.has(name)) {
+					broken.push(
+						`${usage.fileUrl}: imports { ${name} } from '${usage.use.importPath}' — not exported by ${usage.url}`,
+					);
+				}
+			}
+		}
+		expect(broken).toEqual([]);
 	});
 });
 
