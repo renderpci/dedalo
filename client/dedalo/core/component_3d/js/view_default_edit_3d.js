@@ -318,6 +318,15 @@ export const get_content_value = (i, current_value, self) => {
 				console.error('Error loading 3D model:', e)
 			})
 			.then((gltf) => {
+				// A FAILED load must not announce a ready viewer. This `.then` is
+				// chained AFTER the `.catch` above, so it runs on the rejection path too
+				// — and `load()`'s own internal `.catch` already resolves it to
+				// undefined. Publishing regardless drove component_3d.upload_handler
+				// into create_posterframe with an empty scene, which is one of the two
+				// routes to "uploaded a 3D file and got no posterframe". `gltf` is the
+				// honest success signal: the loader resolves it only from its onLoad.
+				if (!gltf) return
+
 				// Use idle callback to avoid blocking the render thread while the scene
 				// is still being initialised by Three.js.
 				dd_request_idle_callback(

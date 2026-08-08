@@ -227,6 +227,13 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			width	: 720,
 			height	: 404
 		})
+		// get_image resolves null when the viewer holds no model (a load that failed
+		// or has not finished). Uploading nothing produced an unreadable posterframe
+		// on disk; refusing here keeps the previous one and names the reason.
+		if (!image_blob) {
+			console.error('Error creating 3D posterframe: the viewer has no model loaded');
+			return false
+		}
 		image_blob.name = self.tipo +'_'+ self.section_tipo +'_'+ self.section_id +'.jpg' // added name to the tmp file
 
 	// debug

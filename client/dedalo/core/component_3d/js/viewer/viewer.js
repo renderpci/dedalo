@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_LIB_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_ROOT_WEB*/
 /*eslint no-undef: "error"*/
 
 
@@ -56,7 +56,7 @@
 		SkeletonHelper,
 		Vector3,
 		WebGLRenderer,
-		sRGBEncoding,
+		SRGBColorSpace,
 		LinearToneMapping,
 		ACESFilmicToneMapping
 	} from 'three';
@@ -116,8 +116,16 @@ viewer.init = async function (options) {
 	// set main vars
 		self.DEFAULT_CAMERA	= default_camera;
 		self.MANAGER		= new LoadingManager();
-		self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( '../../lib/three/examples/jsm/libs/draco/' );
-		self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( '../../lib/three/examples/jsm/libs/basis/' );
+		// ABSOLUTE, via DEDALO_ROOT_WEB — the pattern the rest of the client uses for a
+		// lib asset. These were document-relative ('../../lib/…'), which happened to be
+		// right only because the shell is served from /dedalo/core/page/: they are
+		// resolved by the loader against the DOCUMENT, not against this module, so the
+		// '../../' reads as a depth relative to viewer.js and is wrong on inspection.
+		// Anyone "correcting" it to match this file's own depth would have silently
+		// 404'd every Draco- and KTX2-compressed glTF, and no gate models these strings
+		// with the document base.
+		self.DRACO_LOADER	= new DRACOLoader( self.MANAGER ).setDecoderPath( DEDALO_ROOT_WEB + '/lib/three/examples/jsm/libs/draco/' );
+		self.KTX2_LOADER	= new KTX2Loader( self.MANAGER ).setTranscoderPath( DEDALO_ROOT_WEB + '/lib/three/examples/jsm/libs/basis/' );
 
 		Cache.enabled = cache;
 
@@ -161,6 +169,10 @@ viewer.build = async function (content_value, options) {
 
 	self.lights			= [];
 	self.content		= null;
+	// The loaded glTF scene, and the ONLY thing get_image() can frame. Declared here
+	// with the rest of the per-build state so "no model yet" is a stated null rather
+	// than an absent property nobody thought to check.
+	self.object			= null;
 	self.mixer			= null;
 	self.clips			= [];
 	self.gui 			= null;
@@ -204,9 +216,14 @@ viewer.build = async function (content_value, options) {
 	self.active_camera	= self.default_camera;
 	self.scene.add( self.default_camera );
 
+	// three r152 renamed the output colour transform (outputEncoding/sRGBEncoding →
+	// outputColorSpace/SRGBColorSpace) and r155-r165 removed the legacy lighting
+	// switch (useLegacyLights) together with the whole legacy mode. The old names
+	// were a HARD FAILURE, not a deprecation: `sRGBEncoding` is no longer exported,
+	// so the import above threw and this whole module failed to load — which took
+	// the viewer, and with it component_3d's posterframe capture, down with it.
 	self.renderer					= new WebGLRenderer({antialias: true});
-	self.renderer.useLegacyLights	= false;
-	self.renderer.outputEncoding	= sRGBEncoding;
+	self.renderer.outputColorSpace	= SRGBColorSpace;
 	self.renderer.setClearColor( 0xcccccc );
 	self.renderer.setPixelRatio( window.devicePixelRatio );
 	self.renderer.setSize( self.content_value.clientWidth, self.content_value.clientHeight );
@@ -217,7 +234,11 @@ viewer.build = async function (content_value, options) {
 	self.neutral_environment			= self.pmrem_generator.fromScene( new RoomEnvironment() ).texture;
 
 	self.controls						= new OrbitControls( self.default_camera, self.renderer.domElement );
-	self.controls.screen_space_panning	= true;
+	// three's property is screenSpacePanning (OrbitControls.js). The snake_case
+	// spelling this file used is not read by anything, so both this line and the
+	// GUI checkbox bound to it in update_GUI were writing a dead property: the
+	// checkbox looked live and changed nothing.
+	self.controls.screenSpacePanning	= true;
 
 	self.content_value.appendChild(self.renderer.domElement);
 
@@ -497,11 +518,31 @@ viewer.get_image = function(options){
 
 	const self = this
 
-	const original_width	= self.renderer.domElement.width /2 ;
-	const original_height	= self.renderer.domElement.height /2;
+	// No model in the scene ⇒ no image. `self.object` is set ONLY by a successful
+	// load(), and the caller (component_3d.create_posterframe) is reached from
+	// upload_handler as soon as a viewer EXISTS — which is not the same thing as a
+	// model having landed. Dereferencing it here threw a TypeError that never
+	// surfaced, so a failed/slow load produced the same silent no-posterframe an
+	// unloadable viewer module did. Resolve null and let the caller say so.
+	if (!self.object) {
+		console.error('viewer.get_image: no model loaded, nothing to capture')
+		return Promise.resolve(null)
+	}
 
-	const width		= options.width /2
-	const height	= options.height /2
+	// The canvas is sized in DEVICE pixels (setPixelRatio(devicePixelRatio) below
+	// multiplies the CSS size), so converting between the two is a division by the
+	// ACTUAL ratio. It was a hardcoded 2: on any display that is not 2× the capture
+	// came out at the wrong resolution AND the restore below resized the live canvas
+	// to the wrong size, visibly shrinking the viewer after every upload.
+	const pixel_ratio		= self.renderer.getPixelRatio() || 1
+
+	const original_width	= self.renderer.domElement.width / pixel_ratio;
+	const original_height	= self.renderer.domElement.height / pixel_ratio;
+
+	// The requested size is in OUTPUT pixels; setSize takes CSS pixels and the
+	// renderer multiplies by the ratio again, so divide once here.
+	const width		= options.width / pixel_ratio
+	const height	= options.height / pixel_ratio
 
 	self.default_camera.aspect = width / height;
 	self.default_camera.updateProjectionMatrix();
@@ -817,9 +858,21 @@ viewer.update_environment = function() {
 
 	const environment = environments.filter((entry) => entry.name === self.state.environment)[0];
 
-	self.get_cube_map_texture( environment ).then(( { envMap } ) => {
+	self.get_cube_map_texture( environment )
+	.then(( { envMap } ) => {
 		self.scene.environment = envMap;
 		self.scene.background = self.state.background ? envMap : self.background_color;
+	})
+	// get_cube_map_texture hands EXRLoader's `reject` straight through, so a
+	// texture that will not load (a remote entry on an offline install, a 404, a
+	// malformed EXR) landed here as an UNHANDLED rejection: the dropdown moved,
+	// nothing changed, and the only trace was a console line nobody attributes to
+	// this control. Keep the previous environment and say which one failed.
+	.catch((error) => {
+		console.error(
+			'viewer.update_environment: could not load environment "' + (environment && environment.name) + '":',
+			error
+		)
 	});
 }//end update_environment
 
@@ -902,6 +955,14 @@ viewer.get_cube_map_texture = function( environment ) {
 viewer.update_display = function() {
 
 	const self = this
+
+	// The GUI is mounted by build(), BEFORE any model exists, and it stays live when
+	// a load fails or is still in flight (view_default_edit_3d does not await load()
+	// and load() swallows its own rejection). So every Display checkbox could be
+	// clicked with self.content still null — traverse_materials then threw on null.
+	// Nothing to apply yet is a no-op, not an error: set_content calls this again
+	// once a model lands, which re-applies whatever the operator ticked meanwhile.
+	if (!self.content) return
 
 	if (self.skeleton_helpers.length) {
 		self.skeleton_helpers.forEach((helper) => self.scene.remove(helper));
@@ -1055,7 +1116,7 @@ viewer.add_GUI = function() {
 
 		const grid_ctrl = display_folder.add(self.state, 'grid');
 		grid_ctrl.onChange(() => self.update_display());
-		display_folder.add(self.controls, 'screen_space_panning');
+		display_folder.add(self.controls, 'screenSpacePanning').name('screen space panning');
 
 		const bg_color_ctrl = display_folder.addColor(self.state, 'bg_color');
 		bg_color_ctrl.onChange(() => self.update_background());
@@ -1157,7 +1218,12 @@ viewer.update_GUI = function() {
 	if (camera_names.length) {
 		self.camera_folder.domElement.style.display = '';
 		if (self.camera_ctrl){
-			self.camera_ctrl.remove();
+			// lil-gui's Controller teardown is destroy(), not remove() — the same call
+			// the morph/anim controller loops above already make. remove() does not
+			// exist on Controller, so loading a second camera-bearing model threw
+			// inside the GLTFLoader callback and skipped update_environment/
+			// update_display, leaving the new model with the old model's state.
+			self.camera_ctrl.destroy();
 		}
 		const camera_options	= [self.DEFAULT_CAMERA].concat(camera_names);
 		self.camera_ctrl		= self.camera_folder.add(self.state, 'camera', camera_options);

@@ -43,25 +43,22 @@ export const environments = [
 		name: 'Neutral',
 		path: null,
 	},
-	{
-		id: 'venice-sunset',
-		name: 'Venice Sunset',
-		// 1k resolution EXR hosted on a public GCS bucket (donmccurdy-static).
-		// (!) External URL — availability depends on the remote host; no CDN fallback.
-		path: 'https://storage.googleapis.com/donmccurdy-static/venice_sunset_1k.exr',
-		// format is declared here for descriptive purposes.
-		// (!) viewer.get_cube_map_texture does not read the `format` field; it always
-		//     uses EXRLoader regardless of the extension stored here.
-		format: '.exr'
-	},
-	{
-		id: 'footprint-court',
-		name: 'Footprint Court (HDR Labs)',
-		// 2k resolution EXR; higher resolution than venice-sunset for richer reflections.
-		// (!) External URL — same caveat as venice-sunset above.
-		path: 'https://storage.googleapis.com/donmccurdy-static/footprint_court_2k.exr',
-		format: '.exr'
-	}
+	// REMOVED 2026-08-08 — the two remote EXR presets ('venice-sunset',
+	// 'footprint-court'), both `https://storage.googleapis.com/donmccurdy-static/…`.
+	// They are the upstream three.js glTF-viewer DEMO assets, not heritage content,
+	// and selecting one made the browser fetch from a third-party bucket: dead on an
+	// air-gapped archive, and on a connected one it told that bucket exactly when a
+	// 3D record was being worked on. That is the outbound-request class this engine
+	// gates elsewhere (engineering/TRIPWIRES.md), and it was reachable from an
+	// ordinary dropdown, so it goes rather than gets a caveat comment.
+	//
+	// The two entries above need no network at all: 'None' clears the environment and
+	// 'Neutral' is three's built-in RoomEnvironment, generated in-process.
+	//
+	// TO RE-ADD ONE: vendor the .exr under the media tree (or client/dedalo/lib/) and
+	// give the entry a SAME-ORIGIN `path`. get_cube_map_texture needs no change — it
+	// already loads any non-'neutral' path through EXRLoader — and
+	// update_environment now reports a load failure instead of swallowing it.
 ];
 
 

@@ -125,6 +125,30 @@ describe('no remote code: the client and tools load code only from this install'
 		expect(offenders).toEqual([]);
 	});
 
+	test('the 3D viewer resolves its lighting environments from this install (2026-08-08)', () => {
+		// A THIRD invisible-load shape, and the reason this test exists next to the
+		// transformers one rather than under the URL patterns above: an environment
+		// preset is a DATA fetch (`EXRLoader.load(entry.path)`), which the patterns
+		// deliberately do not cover — a remote address is legitimate for data in
+		// general (a map tile server).
+		//
+		// It is NOT legitimate here. component_3d's environment dropdown shipped two
+		// presets pointing at a public bucket: dead in an air-gapped archive, and on
+		// a connected one every selection announced to a third party that a 3D
+		// heritage record was being worked on. Same promise as the recogniser above,
+		// broken the same two ways — so the registry is held to the same rule.
+		const registry = join(REPO_ROOT, 'client/dedalo/core/component_3d/js/viewer/environments.js');
+		const source = stripComments(readFileSync(registry, 'utf8'));
+		const remote = [...source.matchAll(/path\s*:\s*['"`](https?:\/\/[^'"`]+)['"`]/g)].map(
+			(match) => match[1] ?? '',
+		);
+		expect(remote).toEqual([]);
+		// Anti-vacuity: the file must still BE a registry of presets, or a rename
+		// would leave this passing over nothing.
+		expect(/export\s+const\s+environments\s*=/.test(source)).toBe(true);
+		expect((source.match(/\bid\s*:/g) ?? []).length).toBeGreaterThan(1);
+	});
+
 	test('the patterns actually catch what they claim to (the gate is not vacuous)', () => {
 		const samples = [
 			"import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';",
