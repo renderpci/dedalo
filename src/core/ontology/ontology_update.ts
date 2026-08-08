@@ -24,7 +24,7 @@
  * ported (ledgered).
  */
 
-import { cpSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
@@ -39,14 +39,16 @@ import {
 	assertTlsVerificationOn,
 	confinedPath,
 	consolidateSectionCounter,
-	copySanityCheck,
-	downloadRemoteOntologyFile,
-	gunzipWithCaps,
 	importFromCopyFile,
 	MAX_MANIFEST_FILES,
 	type OntologyIoResponse,
 } from './data_io_import.ts';
 import { termByTipo } from './labels.ts';
+import {
+	resolveUpdateTarget,
+	type StagedFile,
+	stageOntologyFiles,
+} from './ontology_update_target.ts';
 import {
 	addMainSection,
 	createDdOntologyRootNode,
@@ -97,16 +99,6 @@ export type UpdateOntologyOptions = z.infer<typeof updateOntologyOptionsSchema>;
 
 /** Single-flight latch — two concurrent runs must never interleave DELETEs. */
 let updateInFlight = false;
-
-interface StagedFile {
-	tld: string;
-	/** RECOMPUTED from the tld — never the client's value. */
-	sectionTipo: string;
-	/** Decompressed, sanity-checked `.copy` payload ready for \copy. */
-	stagedPath: string;
-	typologyId?: number | string | null;
-	nameData?: unknown;
-}
 
 /**
  * PHP hierarchy::save_simple_schema_file — additions-only diff of the section
@@ -215,14 +207,12 @@ export async function updateOntology(
 	// The network target comes from the CONFIG catalog, never the client
 	// (WC-023 D5): match the selected server by code, or the localhost
 	// pseudo-server when this instance is an ontology master.
-	const isLocal = options.server.code === 'localhost' && config.ontologyIo.isOntologyServer;
-	const configured = config.ontologyIo.servers.find((entry) => entry.code === options.server.code);
-	if (!isLocal && configured === undefined) {
-		response.errors.push(`unknown ontology server code: ${options.server.code}`);
-		response.msg = 'Error. The selected server is not configured on this instance';
+	const target = resolveUpdateTarget(options.server, config.ontologyIo);
+	if ('error' in target) {
+		response.errors.push(target.error);
+		response.msg = target.msg;
 		return response;
 	}
-	const configuredOrigin = isLocal ? null : new URL((configured as { url: string }).url).origin;
 
 	if (updateInFlight) {
 		response.errors.push('an ontology update is already running');
@@ -248,60 +238,14 @@ export async function updateOntology(
 		// ------------------------------------------------------------------
 		rmSync(stagingDir, { recursive: true, force: true });
 		mkdirSync(stagingDir, { recursive: true });
-		const staged: StagedFile[] = [];
-		const seenTlds = new Set<string>();
-		for (const file of options.files) {
-			if (seenTlds.has(file.tld)) {
-				response.errors.push(`duplicate tld in file list: ${file.tld}`);
-				return response;
-			}
-			seenTlds.add(file.tld);
-			const expectedBasename = `${file.tld}.copy.gz`;
-			const gzPath = confinedPath(stagingDir, expectedBasename);
-			if (gzPath === null) {
-				response.errors.push(`unconfined staging name: ${expectedBasename}`);
-				return response;
-			}
-			if (isLocal) {
-				// Local-package source: the files already sit in the IO dir —
-				// no self-HTTP round trip (wire-invisible shortcut).
-				const source = confinedPath(ioPath, expectedBasename);
-				if (source === null || !statSafe(source)) {
-					response.errors.push(`local ontology file missing: ${expectedBasename}`);
-					response.msg = `Error. Local ontology file missing: ${expectedBasename}`;
-					return response;
-				}
-				cpSync(source, gzPath);
-			} else {
-				const downloaded = await downloadRemoteOntologyFile({
-					url: file.url,
-					configuredOrigin: configuredOrigin as string,
-					expectedBasename,
-					targetDir: stagingDir,
-				});
-				messages.push(downloaded.msg);
-				if (downloaded.result !== true) {
-					response.errors.push(...downloaded.errors);
-					response.msg = `Error. Download failed for ${expectedBasename}`;
-					return response;
-				}
-			}
-			const stagedPath = gzPath.slice(0, -'.gz'.length);
-			await gunzipWithCaps(gzPath, stagedPath);
-			const sanity = copySanityCheck(stagedPath, MATRIX_COPY_COLUMNS.length);
-			if (sanity !== null) {
-				response.errors.push(`${expectedBasename}: ${sanity}`);
-				response.msg = `Error. Staged file failed validation: ${expectedBasename}`;
-				return response;
-			}
-			staged.push({
-				tld: file.tld,
-				sectionTipo: file.tld === 'matrix_dd' ? 'matrix_dd' : `${file.tld}0`,
-				stagedPath,
-				typologyId: file.typology_id ?? null,
-				nameData: file.name_data ?? null,
-			});
+		const staging = await stageOntologyFiles(options.files, target, { ioPath, stagingDir });
+		if ('errors' in staging) {
+			response.errors.push(...staging.errors);
+			if (staging.msg !== undefined) response.msg = staging.msg;
+			return response;
 		}
+		const staged = staging.staged;
+		messages.push(...staging.messages);
 
 		// ------------------------------------------------------------------
 		// Phase B — recovery snapshot BEFORE the first destructive statement

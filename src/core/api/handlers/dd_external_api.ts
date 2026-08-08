@@ -371,6 +371,67 @@ export async function selectExternalSearchTarget(
 }
 
 /**
+ * THE HYDRATION DECISION, isolated from the ontology exactly as the target
+ * decision above is: given the ddos the target decision found, produce the
+ * three things the search needs — the ddos that will RENDER, the `context`
+ * echo that names their columns, and the remote field list that goes on the
+ * wire.
+ *
+ * Three properties, each load-bearing:
+ *
+ *  1. `remoteFields` keeps DECLARATION ORDER and dedupes across ddos. That
+ *     array IS the `field[]=` byte order this installation sends to a live
+ *     third party (the same order the browser engine sent), so a sort or a Set
+ *     round-trip is a wire change, not a tidy-up.
+ *  2. `ddos` and `context` stay INDEX-PAIRED. The client reads column i of the
+ *     data as column i of the context; filtering one list and not the other
+ *     renders every value under the wrong header.
+ *  3. A ddo with an EMPTY fields_map is skipped (it has nothing to ask the
+ *     service for), and all-empty is a loud refusal naming the caller — never
+ *     a silent empty search.
+ *
+ * The fields_map itself is NOT read here: `loadFieldsMap` is the injected
+ * reader, and its one production implementation reads the ddo's own ontology
+ * node (never the request).
+ */
+export async function hydrateExternalSearchDdos(
+	callerTipo: string,
+	targetSectionTipo: string,
+	externalDdos: readonly ExternalSearchDdoRef[],
+	loadFieldsMap: (tipo: string) => Promise<readonly FieldsMapEntry[]>,
+): Promise<{
+	ddos: SearchDdo[];
+	context: Record<string, unknown>[];
+	remoteFields: string[];
+}> {
+	const { remoteFieldsOf } = await import('../../../external/api/index.ts');
+	const ddos: SearchDdo[] = [];
+	const context: Record<string, unknown>[] = [];
+	const seen = new Set<string>();
+	const remoteFields: string[] = [];
+	for (const entry of externalDdos) {
+		if (entry.section !== targetSectionTipo) continue;
+		const fieldsMap = await loadFieldsMap(entry.tipo);
+		if (fieldsMap.length === 0) continue;
+		ddos.push({ tipo: entry.tipo, fieldsMap });
+		context.push(entry.ddo as Record<string, unknown>);
+		// Declaration order is the `field[]=` order on the wire — the same order
+		// the browser engine sent, and part of the byte form gated by the tests.
+		for (const field of remoteFieldsOf(fieldsMap)) {
+			if (seen.has(field)) continue;
+			seen.add(field);
+			remoteFields.push(field);
+		}
+	}
+	if (ddos.length === 0) {
+		throw new Error(
+			`component ${callerTipo} external config shows no external field with a fields_map`,
+		);
+	}
+	return { ddos, context, remoteFields };
+}
+
+/**
  * Resolve WHICH external section this component searches and WHICH fields it
  * displays — entirely from the ontology.
  *
@@ -414,33 +475,21 @@ export async function resolveExternalSearchTarget(
 		isExternalDdo,
 	);
 
-	const { parseFieldsMap, remoteFieldsOf } = await import('../../../external/api/index.ts');
-	const ddos: SearchDdo[] = [];
-	const context: Record<string, unknown>[] = [];
-	const seen = new Set<string>();
-	const remoteFields: string[] = [];
-	for (const entry of externalDdos) {
-		if (entry.section !== targetSectionTipo) continue;
-		const nodeProperties = (await getPropertiesByTipo(entry.tipo)) as {
-			fields_map?: unknown;
-		} | null;
-		const fieldsMap = parseFieldsMap(nodeProperties?.fields_map, { tipo: entry.tipo });
-		if (fieldsMap.length === 0) continue;
-		ddos.push({ tipo: entry.tipo, fieldsMap });
-		context.push(entry.ddo as Record<string, unknown>);
-		// Declaration order is the `field[]=` order on the wire — the same order
-		// the browser engine sent, and part of the byte form gated by the tests.
-		for (const field of remoteFieldsOf(fieldsMap)) {
-			if (seen.has(field)) continue;
-			seen.add(field);
-			remoteFields.push(field);
-		}
-	}
-	if (ddos.length === 0) {
-		throw new Error(
-			`component ${callerTipo} external config shows no external field with a fields_map`,
-		);
-	}
+	const { parseFieldsMap } = await import('../../../external/api/index.ts');
+	// The ONE reader of a ddo's fields_map: the ddo's OWN ONTOLOGY NODE. Passed
+	// as the hydration loader so the ordering/dedup/pairing decision above can be
+	// gated without a database, while the source of truth stays right here.
+	const { ddos, context, remoteFields } = await hydrateExternalSearchDdos(
+		callerTipo,
+		targetSectionTipo,
+		externalDdos,
+		async (tipo: string) => {
+			const nodeProperties = (await getPropertiesByTipo(tipo)) as {
+				fields_map?: unknown;
+			} | null;
+			return parseFieldsMap(nodeProperties?.fields_map, { tipo });
+		},
+	);
 
 	const { getExternalServiceForSection } = await import('../../../external/api/index.ts');
 	const resolved = await getExternalServiceForSection(targetSectionTipo);

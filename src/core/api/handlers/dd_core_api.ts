@@ -36,6 +36,7 @@ import {
 	requirePrincipal,
 } from '../handler_context.ts';
 import { type ApiResult, denied } from '../response.ts';
+import { normalizeTermLocators } from './section_terms.ts';
 
 /** PHP safe_tipo grammar (shared/core_functions.php:2296). */
 const SAFE_TIPO = /^[a-z]{2,}[0-9]+$/;
@@ -1286,15 +1287,8 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				},
 			};
 		}
-		// hard cap to prevent unbounded work from a hostile/huge batch (PHP :3491)
-		const maxLocators = 1000;
-		let locatorEntries = rawLocators as unknown[];
-		if (locatorEntries.length > maxLocators) {
-			console.warn(
-				`[dd_core_api] get_section_terms batch exceeds cap (${maxLocators}); truncating from ${locatorEntries.length}`,
-			);
-			locatorEntries = locatorEntries.slice(0, maxLocators);
-		}
+		// Validate + dedup + cap the batch (pure; handlers/section_terms.ts).
+		const locatorEntries = normalizeTermLocators(rawLocators);
 
 		// scope null => the section_map main → thesaurus → relation_list chain.
 		const scopeRaw = (rqo as { scope?: unknown }).scope;
@@ -1302,23 +1296,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const langRaw = (rqo as { lang?: unknown }).lang;
 		const lang = typeof langRaw === 'string' ? langRaw : currentDataLang();
 
-		// Resolve deduped by composite key; skip invalid or unreadable sections.
+		// Resolve the already-deduped batch; skip unreadable/untermed sections.
 		const terms: Record<string, string | null> = {};
-		for (const entry of locatorEntries) {
-			if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
-			const sectionTipo = (entry as { section_tipo?: unknown }).section_tipo;
-			const sectionId = (entry as { section_id?: unknown }).section_id;
-			if (typeof sectionTipo !== 'string' || !SAFE_TIPO.test(sectionTipo)) continue;
-			if (
-				sectionId === null ||
-				sectionId === undefined ||
-				sectionId === '' ||
-				(typeof sectionId !== 'string' && typeof sectionId !== 'number')
-			) {
-				continue;
-			}
-			const key = `${sectionTipo}_${sectionId}`;
-			if (key in terms) continue; // dedup — first occurrence wins
+		for (const { key, section_tipo: sectionTipo, section_id: sectionId } of locatorEntries) {
 			// SEC: read permission required on the section (omit forbidden, never leak).
 			if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 1) continue;
 			// Only sections with a section_map term — otherwise getTermByLocator

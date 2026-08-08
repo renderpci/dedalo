@@ -295,6 +295,29 @@ component_geolocation.prototype.init = async function(options) {
 
 
 /**
+* GET_ENTRIES
+* Normalized read of the component's stored entries, guaranteed non-empty.
+*
+* (!) WC-001: the engine ALWAYS emits an array for data.entries — `[]` where the
+* PHP oracle emitted `null`. The PHP-era truthiness idiom
+* (`self.data.entries || [self.default_value]`) is therefore wrong: an empty
+* array is truthy, so an unsaved record fell through to `entries[0].lat` and
+* threw, leaving self.map null (blank map + every map method broken).
+*
+* @returns {Array<Object>} entries, or [default_value] when nothing is stored
+*/
+component_geolocation.prototype.get_entries = function() {
+
+	const entries = this.data?.entries
+
+	return (Array.isArray(entries) && entries.length > 0)
+		? entries
+		: [this.default_value]
+}//end get_entries
+
+
+
+/**
 * LOAD_LIBS
 * Lazy-loads all third-party scripts and stylesheets required by the map editor,
 * in dependency order:
@@ -427,8 +450,9 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	// load libs
 		await self.load_libs()
 
-	// defaults — when data is absent use the component's geographic fallback position
-		const entries = self.data.entries || [self.default_value]
+	// defaults — when data is absent (or an empty WC-001 array) use the
+	// component's geographic fallback position
+		const entries = self.get_entries()
 
 	// get data
 		const field_lat		= entries[key].lat
@@ -462,7 +486,9 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		let base_maps	= {}
 
 	// Add layer to map — provider is configured per-section in context.features.geo_provider
-		switch(self.context.features.geo_provider) {
+	// (the server stamps it from properties.geo_provider ?? DEDALO_GEO_PROVIDER;
+	// an absent features object falls to the default branch, not a crash)
+		switch(self.context.features?.geo_provider) {
 
 			case 'OSM':
 				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom})
@@ -523,6 +549,11 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				break;
 
 			case 'VARIOUS':
+			default:
+				// (!) 'VARIOUS' is also the DEFAULT branch: an absent or unknown
+				// features.geo_provider must still build a map. Without it self.map
+				// stays undefined and the next line throws — the same blank-map
+				// symptom as an unhandled empty entries array.
 				// LAYER
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				osm = fn_osm_layer();
@@ -1630,7 +1661,9 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 
 	const original_value = caller.data.entries
 	// if the caller has not data, do not update the map
-	if(!original_value){
+	// (!) WC-001: an empty caller emits `[]` (truthy) — the length check is the
+	// real guard; without it last_value is undefined and .section_id throws.
+	if(!Array.isArray(original_value) || original_value.length===0){
 		return
 	}
 	// get the last value of the caller portal

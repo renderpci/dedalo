@@ -20,10 +20,10 @@ import { sql } from '../../db/postgres.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { createSectionRecord } from '../../section/record/create_record.ts';
 import type { PortalizeItem } from './definitions.ts';
+import { collectPortalizeMoves } from './portalize_plan.ts';
 import type { TransformRecorder } from './report.ts';
 
 const TIPO_RE = /^[a-z]+[0-9]+$/;
-const RELATION_LIKE: ReadonlySet<string> = new Set(['relation', 'relation_search']);
 
 export async function executePortalize(
 	rawItems: unknown,
@@ -43,7 +43,11 @@ export async function executePortalize(
 	}
 }
 
-async function portalizeOne(item: PortalizeItem, recorder: TransformRecorder): Promise<void> {
+/** Exported for test/unit/portalize_plan_native.test.ts (the dry-run gate). */
+export async function portalizeOne(
+	item: PortalizeItem,
+	recorder: TransformRecorder,
+): Promise<void> {
 	const sourceTable = await getMatrixTableFromTipo(item.source_section);
 	const targetTable = await getMatrixTableFromTipo(item.target_section);
 	if (sourceTable === null || targetTable === null) {
@@ -65,35 +69,14 @@ async function portalizeOne(item: PortalizeItem, recorder: TransformRecorder): P
 	for (const row of sourceRows) {
 		const sourceId = row.section_id;
 		// Gather the per-component values to move: {column, sourceKey, targetKey, value}.
-		const moves: {
-			column: MatrixJsonbColumn;
-			sourceTipo: string;
-			targetTipo: string;
-			value: unknown;
-		}[] = [];
-		for (const component of components) {
-			for (const column of MATRIX_JSONB_COLUMNS) {
-				const text = row[column];
-				if (text === null || text === undefined) continue;
-				const decoded = JSON.parse(text) as Record<string, unknown>;
-				if (decoded[component.source_tipo] === undefined) continue;
-				let value = decoded[component.source_tipo];
-				// relation locators carry from_component_tipo — repoint to the target.
-				if (RELATION_LIKE.has(column) && Array.isArray(value)) {
-					value = value.map((loc) =>
-						loc !== null && typeof loc === 'object'
-							? { ...(loc as Record<string, unknown>), from_component_tipo: component.target_tipo }
-							: loc,
-					);
-				}
-				moves.push({
-					column: column as MatrixJsonbColumn,
-					sourceTipo: component.source_tipo,
-					targetTipo: component.target_tipo,
-					value,
-				});
-			}
-		}
+		// The selection law (including the `=== undefined` presence test) lives in
+		// portalize_plan.ts — gated by test/unit/portalize_plan_native.test.ts.
+		// (the cast only drops `section_id: number` from the row's shape — the
+		// plan layer reads MATRIX_JSONB_COLUMNS keys only.)
+		const moves = collectPortalizeMoves(
+			row as Readonly<Partial<Record<MatrixJsonbColumn, string | null>>>,
+			components,
+		);
 		if (moves.length === 0) continue;
 
 		if (recorder.dryRun) {

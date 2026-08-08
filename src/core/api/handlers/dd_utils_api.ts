@@ -8,8 +8,83 @@ import { readString } from '../../../config/readers.ts';
 import { publicOrigin } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
+import { DEDALO_VERSION_TRIPLE, parseVersionString } from '../../update/version.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 import { denied } from '../response.ts';
+
+/**
+ * Human-readable SQL for the SQO dev console: substitute $N placeholders with
+ * their param values. Iterate high→low so $1 never matches inside $10 (SEC:
+ * display only — the executed query always uses the bound params, never this
+ * string).
+ */
+export function resolveSqlForDisplay(sql: string, params: readonly unknown[]): string {
+	let resolved = sql;
+	for (let i = params.length; i >= 1; i--) {
+		const param = params[i - 1];
+		const literal =
+			typeof param === 'number' ? String(param) : `'${String(param).replace(/'/g, "''")}'`;
+		resolved = resolved.replaceAll(`$${i}`, literal);
+	}
+	return resolved;
+}
+
+/**
+ * The shared authorization gate of the TWO update manifest doors
+ * (get_ontology_update_info + get_code_update_info). Both doors ask the same
+ * three questions in the same order, but NOT with the same answers — the
+ * asymmetry is the point of having one function:
+ *
+ * - `allowLocalhost`: the ontology door honors the 'localhost' pseudo-code
+ *   (the panel's 'Local files' source posts it to our own API); the code door
+ *   does not.
+ * - `requiredParts`: the ontology door reads TWO parts (the IO dir is
+ *   major.minor); the code door demands a full THREE-part triple.
+ * - `serverKind`: only the refusal bytes differ ('an code server' is a PHP
+ *   parity typo — correcting it is a wire change, not a cleanup).
+ *
+ * ORDER IS SECURITY: an install that is not a master answers 'not a … server'
+ * BEFORE any code is examined, so a wrong code can never confirm that this
+ * host is a master.
+ */
+export function authorizeUpdateManifest(input: {
+	isServer: boolean;
+	configuredCodes: readonly (string | undefined)[];
+	allowLocalhost: boolean;
+	presentedCode: unknown;
+	versionRaw: unknown;
+	requiredParts: 2 | 3;
+	/** Refusal wording of the first gate. Default 'ontology' (PHP parity bytes). */
+	serverKind?: 'ontology' | 'code';
+}): { ok: true; version: number[] } | { ok: false; msg: string } {
+	if (input.isServer !== true) {
+		return input.serverKind === 'code'
+			? // PHP parity: the 'an code' typo is the wire byte, do not correct it.
+				{ ok: false, msg: 'Error. Server is not an code server' }
+			: { ok: false, msg: 'Error. Server is not an ontology server' };
+	}
+	const versionRaw = typeof input.versionRaw === 'string' ? input.versionRaw : '';
+	// Two parts: split on dots and read major/minor positionally (Number('') is
+	// 0, so a bare '' fails only on the MISSING minor — keep both checks).
+	// Three parts: the shared parseVersionString (strips a '.dev' tail).
+	const version =
+		input.requiredParts === 2
+			? [Number(versionRaw.split('.')[0]), Number(versionRaw.split('.')[1])]
+			: parseVersionString(versionRaw);
+	if (version.length < input.requiredParts || version.some((n) => !Number.isInteger(n))) {
+		return { ok: false, msg: 'Error. Invalid version number' };
+	}
+	const codes = new Set(
+		input.configuredCodes.filter((code): code is string => typeof code === 'string' && code !== ''),
+	);
+	if (input.allowLocalhost) {
+		codes.add('localhost');
+	}
+	if (typeof input.presentedCode !== 'string' || !codes.has(input.presentedCode)) {
+		return { ok: false, msg: 'Error. Invalid code' };
+	}
+	return { ok: true, version };
+}
 
 /** dd_utils_api action handlers, keyed by action (registered in dispatch.ts). */
 export const utilsApiActions: Record<string, ActionHandler> = {
@@ -500,16 +575,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			const { sql } = await import('../../db/postgres.ts');
 			const sqo = sanitizeClientSqo(untrusted);
 			const built = await buildSearchSql(sqo, { principal });
-			// Human-readable SQL: substitute $N placeholders with their param values.
-			// Iterate high→low so $1 never matches inside $10 (SEC: display only —
-			// the executed query always uses the bound params below, not this string).
-			let resolved = built.sql;
-			for (let i = built.params.length; i >= 1; i--) {
-				const param = built.params[i - 1];
-				const literal =
-					typeof param === 'number' ? String(param) : `'${String(param).replace(/'/g, "''")}'`;
-				resolved = resolved.replaceAll(`$${i}`, literal);
-			}
+			const resolved = resolveSqlForDisplay(built.sql, built.params);
 			const rows = (await sql.unsafe(built.sql, built.params as (string | number)[])) as Record<
 				string,
 				unknown
@@ -569,28 +635,24 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// presenting a configured access code. PHP refusal bytes preserved.
 		const options = (rqo.options ?? {}) as { version?: unknown; code?: unknown };
 		const fail = (msg: string) => ({ status: 200, body: { result: false, msg, errors: [msg] } });
-		if (config.ontologyIo.isOntologyServer !== true) {
-			return fail('Error. Server is not an ontology server');
-		}
-		const versionRaw = typeof options.version === 'string' ? options.version : '';
-		const parts = versionRaw.split('.');
-		const major = Number(parts[0]);
-		const minor = Number(parts[1]);
-		if (!Number.isInteger(major) || !Number.isInteger(minor)) {
-			return fail('Error. Invalid version number');
-		}
-		const validCodes = new Set(
-			[
+		const auth = authorizeUpdateManifest({
+			isServer: config.ontologyIo.isOntologyServer === true,
+			configuredCodes: [
 				config.ontologyIo.serverCode,
 				...config.ontologyIo.servers.map((entry) => entry.code),
-			].filter((code): code is string => typeof code === 'string' && code !== ''),
-		);
-		// The localhost pseudo-code is always honored on a master (the panel's
-		// 'Local files' source posts it to our own API).
-		validCodes.add('localhost');
-		if (typeof options.code !== 'string' || !validCodes.has(options.code)) {
-			return fail('Error. Invalid code');
+			],
+			// The localhost pseudo-code is always honored on a master (the panel's
+			// 'Local files' source posts it to our own API).
+			allowLocalhost: true,
+			presentedCode: options.code,
+			versionRaw: options.version,
+			requiredParts: 2,
+			serverKind: 'ontology',
+		});
+		if (auth.ok !== true) {
+			return fail(auth.msg);
 		}
+		const [major, minor] = auth.version as [number, number];
 		const { getOntologyIoPath, buildOntologyUpdateInfo } = await import(
 			'../../ontology/data_io_import.ts'
 		);
@@ -608,23 +670,20 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// only built release archives on the caller's linear upgrade path.
 		const options = (rqo.options ?? {}) as { version?: unknown; code?: unknown };
 		const fail = (msg: string) => ({ status: 200, body: { result: false, msg, errors: [msg] } });
-		if (config.update.isCodeServer !== true) {
-			return fail('Error. Server is not an code server');
+		const auth = authorizeUpdateManifest({
+			isServer: config.update.isCodeServer === true,
+			configuredCodes: config.update.codeServers.map((entry) => entry.code),
+			// No localhost pseudo-code here: a code master only answers configured peers.
+			allowLocalhost: false,
+			presentedCode: options.code,
+			versionRaw: options.version,
+			requiredParts: 3,
+			serverKind: 'code',
+		});
+		if (auth.ok !== true) {
+			return fail(auth.msg);
 		}
-		const versionRaw = typeof options.version === 'string' ? options.version : '';
-		const { parseVersionString, DEDALO_VERSION_TRIPLE } = await import('../../update/version.ts');
-		const clientVersion = parseVersionString(versionRaw);
-		if (clientVersion.length < 3 || clientVersion.some((n) => !Number.isInteger(n))) {
-			return fail('Error. Invalid version number');
-		}
-		const validCodes = new Set(
-			config.update.codeServers
-				.map((entry) => entry.code)
-				.filter((code): code is string => typeof code === 'string' && code !== ''),
-		);
-		if (typeof options.code !== 'string' || !validCodes.has(options.code)) {
-			return fail('Error. Invalid code');
-		}
+		const clientVersion = auth.version;
 		const { buildCodeUpdateInfo } = await import('../../update/code_manifest.ts');
 		const info = buildCodeUpdateInfo({
 			clientVersion,

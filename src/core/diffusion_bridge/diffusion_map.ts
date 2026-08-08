@@ -14,25 +14,33 @@
  *      alias's REAL node's relations as fallback when the alias declares
  *      none); alias nodes also descend into their real node's children.
  *
+ * THIS module owns only the DB seam + the two process caches: the walk rules
+ * live in the pure ./diffusion_graph.ts (which imports neither postgres.ts
+ * nor env.ts), driven through the DiffusionGraph built by
+ * createDbDiffusionGraph() below.
+ *
  * No configured domain (env DEDALO_DIFFUSION_DOMAIN unset / no match) →
  * EMPTY map, matching PHP's fresh-install early return.
  */
 
 import { readEnv } from '../../config/env.ts';
 import { sql } from '../db/postgres.ts';
-import { requireSqlIdentifier } from '../db/sql_identifier.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { getOrderedSubtree, type OntologySubtreeNode } from '../ontology/resolver.ts';
+import {
+	type DiffusionGraph,
+	type DiffusionNode,
+	type DiffusionSqlTarget,
+	type MediaIndexTarget,
+	resolveDomainTipo,
+	selectMediaIndexTargets,
+	walkDiffusionSections,
+	walkDiffusionTargets,
+} from './diffusion_graph.ts';
+
+export type { DiffusionSqlTarget, MediaIndexTarget };
 
 const DIFFUSION_ROOT = 'dd1190'; // DEDALO_DIFFUSION_TIPO
-
-interface OntologyNodeRow {
-	tipo: string;
-	parent: string | null;
-	model: string;
-	term: Record<string, string> | null;
-	relations: { tipo?: string }[] | null;
-}
 
 let mapCache: Set<string> | null = null;
 
@@ -40,8 +48,8 @@ export function clearDiffusionMapCache(): void {
 	mapCache = null;
 }
 
-/** Accessor node → this module's row shape (same fields the raw walk selected). */
-function toNodeRow(node: OntologySubtreeNode): OntologyNodeRow {
+/** Accessor node → the graph's row shape (same fields the raw walk selected). */
+function toNodeRow(node: OntologySubtreeNode): DiffusionNode {
 	return {
 		tipo: node.tipo,
 		parent: node.parent,
@@ -51,27 +59,21 @@ function toNodeRow(node: OntologySubtreeNode): OntologyNodeRow {
 	};
 }
 
-function termOf(node: OntologyNodeRow | undefined): string | null {
-	const term = node?.term;
-	if (term === null || term === undefined) return null;
-	return term['lg-spa'] ?? Object.values(term).find((value) => value !== '') ?? null;
-}
-
-/** Sections with diffusion (the map keys). Cached per process. */
-export async function getSectionDiffusionMap(): Promise<Set<string>> {
-	if (mapCache !== null) return mapCache;
-	const map = new Set<string>();
-
-	const domainName = readEnv('DEDALO_DIFFUSION_DOMAIN');
-	if (domainName === undefined || domainName === '') {
-		mapCache = map;
-		return map;
-	}
-
-	// The whole diffusion subtree via the canonical accessor (S2-19/T3): full
-	// structural walk (crossSections — dd1190 nests freely), root included.
-	// The DFS pre-order groups siblings in canonical order, so the childrenOf
-	// lists built below inherit it.
+/**
+ * The DB-backed DiffusionGraph: the whole dd1190 subtree through the
+ * canonical accessor (S2-19/T3 — full structural walk, crossSections, root
+ * included), plus lazy dd_ontology reads for anything OUTSIDE it (alias
+ * targets and related sections can live anywhere).
+ *
+ * Sibling order matters: PHP walks children ORDER BY order_number ASC
+ * (dd_ontology_db_manager::search), and the walk order decides FIRST-hit
+ * selections downstream (which database label an element inherits, which
+ * table_alias indexes a section when no real table matches). The accessor's
+ * DFS pre-order applies exactly that policy (compareSiblingOrder: order ASC
+ * nulls-last, tipo tiebreak), so the grouped children lists are already
+ * canonically sorted.
+ */
+async function createDbDiffusionGraph(): Promise<DiffusionGraph> {
 	const rows = (
 		await getOrderedSubtree(DIFFUSION_ROOT, { includeRoot: true, crossSections: true })
 	).map(toNodeRow);
@@ -84,146 +86,70 @@ export async function getSectionDiffusionMap(): Promise<Set<string>> {
 		childrenOf.set(row.parent, list);
 	}
 
-	// Models of nodes OUTSIDE the subtree (alias targets, related sections).
-	const externalModel = new Map<string, string>();
-	const modelOf = async (tipo: string): Promise<string | null> => {
-		const inTree = byTipo.get(tipo);
-		if (inTree !== undefined) return inTree.model;
-		const cached = externalModel.get(tipo);
-		if (cached !== undefined) return cached;
-		const found = (await sql.unsafe('SELECT model FROM dd_ontology WHERE tipo = $1', [tipo])) as {
-			model: string;
-		}[];
-		const model = found[0]?.model ?? '';
-		externalModel.set(tipo, model);
-		return model === '' ? null : model;
-	};
-	const relationsOf = async (tipo: string): Promise<string[]> => {
-		const inTree = byTipo.get(tipo);
-		if (inTree !== undefined) {
-			return (inTree.relations ?? [])
-				.map((link) => link.tipo)
-				.filter((t): t is string => typeof t === 'string');
-		}
-		const found = (await sql.unsafe('SELECT relations FROM dd_ontology WHERE tipo = $1', [
-			tipo,
-		])) as { relations: { tipo?: string }[] | null }[];
-		return (found[0]?.relations ?? [])
-			.map((link) => link.tipo)
-			.filter((t): t is string => typeof t === 'string');
-	};
-	const relatedByModel = async (tipo: string, wanted: string): Promise<string[]> => {
-		const out: string[] = [];
-		for (const target of await relationsOf(tipo)) {
-			if ((await modelOf(target)) === wanted) out.push(target);
-		}
-		return out;
-	};
-
-	// Domain node: dd1190 child of model diffusion_domain, term === configured name.
-	let domainTipo: string | null = null;
-	for (const child of childrenOf.get(DIFFUSION_ROOT) ?? []) {
-		const node = byTipo.get(child);
-		if (node?.model === 'diffusion_domain' && termOf(node) === domainName) {
-			domainTipo = child;
-			break;
-		}
-	}
-	if (domainTipo === null) {
-		mapCache = map;
-		return map;
-	}
-
-	// Alias resolution: target = first RELATED node of model (alias's model
-	// minus '_alias'), chained up to 10 hops.
-	const resolveAlias = async (tipo: string, depth = 10): Promise<string | null> => {
-		if (depth <= 0) return null;
-		const model = (await modelOf(tipo)) ?? '';
-		if (!model.includes('_alias')) return null;
-		const targets = await relatedByModel(tipo, model.replace('_alias', ''));
-		const target = targets[0] ?? null;
-		if (target === null) return null;
-		const targetModel = (await modelOf(target)) ?? '';
-		return targetModel.includes('_alias') ? resolveAlias(target, depth - 1) : target;
-	};
-
-	// Real nodes consumed by an alias anywhere under the domain.
-	const consumed = new Set<string>();
-	const subtreeTipos: string[] = [];
-	const collect = (tipo: string): void => {
-		for (const child of childrenOf.get(tipo) ?? []) {
-			subtreeTipos.push(child);
-			collect(child);
-		}
-	};
-	collect(domainTipo);
-	for (const tipo of subtreeTipos) {
-		const model = byTipo.get(tipo)?.model ?? '';
-		if (model.includes('_alias')) {
-			const real = await resolveAlias(tipo);
-			if (real !== null) consumed.add(real);
-		}
-	}
-
-	// External children lookup (alias real nodes may live outside the subtree).
+	const external = new Map<string, DiffusionNode | null>();
 	const externalChildren = new Map<string, string[]>();
-	const childTipos = async (tipo: string): Promise<string[]> => {
-		const inTree = childrenOf.get(tipo);
-		if (inTree !== undefined || byTipo.has(tipo)) return inTree ?? [];
-		const cached = externalChildren.get(tipo);
-		if (cached !== undefined) return cached;
-		const found = (await sql.unsafe('SELECT tipo FROM dd_ontology WHERE parent = $1', [tipo])) as {
-			tipo: string;
-		}[];
-		const list = found.map((row) => row.tipo);
-		externalChildren.set(tipo, list);
-		return list;
+
+	return {
+		async node(tipo: string): Promise<DiffusionNode | null> {
+			const inTree = byTipo.get(tipo);
+			if (inTree !== undefined) return inTree;
+			const cached = external.get(tipo);
+			if (cached !== undefined) return cached;
+			const found = (await sql.unsafe(
+				'SELECT tipo, parent, model, term, relations FROM dd_ontology WHERE tipo = $1',
+				[tipo],
+			)) as DiffusionNode[];
+			const node = found[0] ?? null;
+			external.set(tipo, node);
+			return node;
+		},
+		async children(tipo: string): Promise<string[]> {
+			const inTree = childrenOf.get(tipo);
+			if (inTree !== undefined || byTipo.has(tipo)) return inTree ?? [];
+			const cached = externalChildren.get(tipo);
+			if (cached !== undefined) return cached;
+			const found = (await sql.unsafe('SELECT tipo FROM dd_ontology WHERE parent = $1', [
+				tipo,
+			])) as {
+				tipo: string;
+			}[];
+			const list = found.map((row) => row.tipo);
+			externalChildren.set(tipo, list);
+			return list;
+		},
+		async properties(tipo: string): Promise<Record<string, unknown> | null> {
+			const found = (await sql.unsafe('SELECT properties FROM dd_ontology WHERE tipo = $1', [
+				tipo,
+			])) as { properties: Record<string, unknown> | null }[];
+			return found[0]?.properties ?? null;
+		},
 	};
+}
 
-	const ELEMENT_MODELS = new Set(['diffusion_element', 'diffusion_element_alias']);
-	const walk = async (tipo: string, underElement: boolean, depth: number): Promise<void> => {
-		if (depth > 20) return;
-		const model = (await modelOf(tipo)) ?? '';
-		const isAlias = model.includes('_alias');
-		if (!isAlias && consumed.has(tipo)) return; // re-parented by an alias
-		const realTipo = isAlias ? await resolveAlias(tipo) : null;
+/** Sections with diffusion (the map keys). Cached per process. */
+export async function getSectionDiffusionMap(): Promise<Set<string>> {
+	if (mapCache !== null) return mapCache;
 
-		if (underElement) {
-			let sections = await relatedByModel(tipo, 'section');
-			if (sections.length === 0 && realTipo !== null) {
-				sections = await relatedByModel(realTipo, 'section');
-			}
-			for (const sectionTipo of sections) map.add(sectionTipo);
-		}
+	const domainName = readEnv('DEDALO_DIFFUSION_DOMAIN');
+	if (domainName === undefined || domainName === '') {
+		mapCache = new Set<string>();
+		return mapCache;
+	}
 
-		const nextUnder = underElement || ELEMENT_MODELS.has(model);
-		const children = new Set(await childTipos(tipo));
-		if (isAlias && realTipo !== null) {
-			for (const child of await childTipos(realTipo)) children.add(child);
-		}
-		for (const child of children) {
-			await walk(child, nextUnder, depth + 1);
-		}
-	};
-	await walk(domainTipo, false, 0);
+	const graph = await createDbDiffusionGraph();
+	const domainTipo = await resolveDomainTipo(graph, DIFFUSION_ROOT, domainName);
+	if (domainTipo === null) {
+		mapCache = new Set<string>();
+		return mapCache;
+	}
 
-	mapCache = map;
-	return map;
+	mapCache = await walkDiffusionSections(graph, domainTipo);
+	return mapCache;
 }
 
 /** tool_diffusion::is_available — sections only, O(1) map lookup. */
 export async function haveSectionDiffusion(sectionTipo: string): Promise<boolean> {
 	return (await getSectionDiffusionMap()).has(sectionTipo);
-}
-
-/** One publish target of a section (PHP diffusion_delete step 2). */
-export interface DiffusionSqlTarget {
-	element_tipo: string;
-	type: string;
-	database_name: string;
-	table_name: string;
-	/** true when the emitting node is a table_alias (real tables win selection). */
-	table_is_alias?: boolean;
 }
 
 let targetsCache: Map<string, DiffusionSqlTarget[]> | null = null;
@@ -250,265 +176,27 @@ export async function getSectionDiffusionTargets(
 	return targetsCache.get(sectionTipo) ?? [];
 }
 
-/** One media-index publication target (PHP resolve_media_index_targets). */
-export interface MediaIndexTarget {
-	database_name: string;
-	table_name: string;
-	section_tipo: string;
-}
-
 /**
  * EVERY sql/socrata publication target of the diffusion map, deduped by
- * (database, table, section) — PHP
- * dd_diffusion_api::resolve_media_index_targets. File-based elements
- * (rdf/xml/markdown) and targets without a database or table name are
- * skipped, as PHP does. PHP's per-section node selection is mirrored: a
- * section related by BOTH a real 'table' node and a 'table_alias' (e.g.
- * rsc197 → 'people' + alias 'other_people') publishes to the REAL table —
- * the engine only ever writes there, so only that table holds rows worth
- * indexing (diffusion_utils::get_section_node_for_element, real-preferred,
- * first-alias fallback). Order is section-major — the engine treats the
- * list as a set.
+ * (database, table, section) — PHP dd_diffusion_api::resolve_media_index_targets.
+ * The selection rule itself is pure: ./diffusion_graph.ts selectMediaIndexTargets.
  */
 export async function getAllMediaIndexTargets(): Promise<MediaIndexTarget[]> {
 	if (targetsCache === null) {
 		targetsCache = await buildDiffusionTargets();
 	}
-	const targets: MediaIndexTarget[] = [];
-	for (const [sectionTipo, list] of targetsCache) {
-		// per (database, section): real table wins, else the first alias
-		const chosen = new Map<string, DiffusionSqlTarget>();
-		for (const target of list) {
-			if (target.type !== 'sql' && target.type !== 'socrata') continue;
-			if (target.database_name === '' || target.table_name === '') continue;
-			const current = chosen.get(target.database_name);
-			if (
-				current === undefined ||
-				(current.table_is_alias === true && target.table_is_alias !== true)
-			) {
-				chosen.set(target.database_name, target);
-			}
-		}
-		for (const target of chosen.values()) {
-			targets.push({
-				database_name: target.database_name,
-				table_name: target.table_name,
-				section_tipo: sectionTipo,
-			});
-		}
-	}
-	return targets;
+	return selectMediaIndexTargets(targetsCache);
 }
 
 async function buildDiffusionTargets(): Promise<Map<string, DiffusionSqlTarget[]>> {
-	const map = new Map<string, DiffusionSqlTarget[]>();
 	const domainName = readEnv('DEDALO_DIFFUSION_DOMAIN');
-	if (domainName === undefined || domainName === '') return map;
+	if (domainName === undefined || domainName === '') return new Map();
 
-	// Canonical accessor walk (S2-19/T3). Sibling order matters: PHP walks
-	// children ORDER BY order_number ASC (dd_ontology_db_manager::search), and
-	// the walk order decides FIRST-hit selections downstream (e.g. which
-	// table_alias indexes a section when no real table matches). The accessor's
-	// DFS pre-order applies exactly that policy (compareSiblingOrder: order ASC
-	// nulls-last, tipo tiebreak), so the grouped childrenOf lists below are
-	// already canonically sorted.
-	const rows = (
-		await getOrderedSubtree(DIFFUSION_ROOT, { includeRoot: true, crossSections: true })
-	).map(toNodeRow);
-	const byTipo = new Map(rows.map((row) => [row.tipo, row]));
-	const childrenOf = new Map<string, string[]>();
-	for (const row of rows) {
-		if (row.parent === null) continue;
-		const list = childrenOf.get(row.parent) ?? [];
-		list.push(row.tipo);
-		childrenOf.set(row.parent, list);
-	}
+	const graph = await createDbDiffusionGraph();
+	const domainTipo = await resolveDomainTipo(graph, DIFFUSION_ROOT, domainName);
+	if (domainTipo === null) return new Map();
 
-	const external = new Map<string, OntologyNodeRow | null>();
-	const nodeOf = async (tipo: string): Promise<OntologyNodeRow | null> => {
-		const inTree = byTipo.get(tipo);
-		if (inTree !== undefined) return inTree;
-		const cached = external.get(tipo);
-		if (cached !== undefined) return cached;
-		const found = (await sql.unsafe(
-			'SELECT tipo, parent, model, term, relations FROM dd_ontology WHERE tipo = $1',
-			[tipo],
-		)) as OntologyNodeRow[];
-		const node = found[0] ?? null;
-		external.set(tipo, node);
-		return node;
-	};
-	const relationsOf = async (tipo: string): Promise<string[]> =>
-		((await nodeOf(tipo))?.relations ?? [])
-			.map((link) => link.tipo)
-			.filter((t): t is string => typeof t === 'string');
-	const relatedByModel = async (tipo: string, wanted: string): Promise<string[]> => {
-		const out: string[] = [];
-		for (const target of await relationsOf(tipo)) {
-			if ((await nodeOf(target))?.model === wanted) out.push(target);
-		}
-		return out;
-	};
-	const resolveAlias = async (tipo: string, depth = 10): Promise<string | null> => {
-		if (depth <= 0) return null;
-		const model = (await nodeOf(tipo))?.model ?? '';
-		if (!model.includes('_alias')) return null;
-		const target = (await relatedByModel(tipo, model.replace('_alias', '')))[0] ?? null;
-		if (target === null) return null;
-		const targetModel = (await nodeOf(target))?.model ?? '';
-		return targetModel.includes('_alias') ? resolveAlias(target, depth - 1) : target;
-	};
-	const propsOf = async (tipo: string): Promise<Record<string, unknown> | null> => {
-		const found = (await sql.unsafe('SELECT properties FROM dd_ontology WHERE tipo = $1', [
-			tipo,
-		])) as { properties: Record<string, unknown> | null }[];
-		return found[0]?.properties ?? null;
-	};
-
-	// domain node
-	let domainTipo: string | null = null;
-	for (const child of childrenOf.get(DIFFUSION_ROOT) ?? []) {
-		const node = byTipo.get(child);
-		if (node?.model === 'diffusion_domain' && termOf(node) === domainName) {
-			domainTipo = child;
-			break;
-		}
-	}
-	if (domainTipo === null) return map;
-
-	// consumed-by-alias reals
-	const consumed = new Set<string>();
-	const subtree: string[] = [];
-	const collect = (tipo: string): void => {
-		for (const child of childrenOf.get(tipo) ?? []) {
-			subtree.push(child);
-			collect(child);
-		}
-	};
-	collect(domainTipo);
-	for (const tipo of subtree) {
-		if ((byTipo.get(tipo)?.model ?? '').includes('_alias')) {
-			const real = await resolveAlias(tipo);
-			if (real !== null) consumed.add(real);
-		}
-	}
-
-	const externalChildren = new Map<string, string[]>();
-	const childTipos = async (tipo: string): Promise<string[]> => {
-		const inTree = childrenOf.get(tipo);
-		if (inTree !== undefined || byTipo.has(tipo)) return inTree ?? [];
-		const cached = externalChildren.get(tipo);
-		if (cached !== undefined) return cached;
-		const found = (await sql.unsafe('SELECT tipo FROM dd_ontology WHERE parent = $1', [tipo])) as {
-			tipo: string;
-		}[];
-		const list = found.map((row) => row.tipo);
-		externalChildren.set(tipo, list);
-		return list;
-	};
-
-	interface ElementContext {
-		realTipo: string;
-		type: string;
-		database: string | null;
-	}
-	const ELEMENT_MODELS = new Set(['diffusion_element', 'diffusion_element_alias']);
-	const pending: {
-		section: string;
-		element: ElementContext;
-		table: string | null;
-		tableIsAlias: boolean;
-	}[] = [];
-
-	const walk = async (
-		tipo: string,
-		element: ElementContext | null,
-		depth: number,
-	): Promise<void> => {
-		if (depth > 20) return;
-		const node = await nodeOf(tipo);
-		const model = node?.model ?? '';
-		const isAlias = model.includes('_alias');
-		if (!isAlias && consumed.has(tipo)) return;
-		const realTipo = isAlias ? await resolveAlias(tipo) : null;
-		const label = termOf(node ?? undefined);
-
-		let currentElement = element;
-		if (ELEMENT_MODELS.has(model)) {
-			// the element context: real tipo + diffusion type (alias inherits the
-			// real node's properties when it declares none — PHP resolve_node).
-			let properties = await propsOf(tipo);
-			if ((properties === null || Object.keys(properties).length === 0) && realTipo !== null) {
-				properties = await propsOf(realTipo);
-			}
-			const diffusionType =
-				((properties as { diffusion?: { type?: string } } | null)?.diffusion?.type ?? 'unknown') ||
-				'unknown';
-			currentElement = { realTipo: realTipo ?? tipo, type: diffusionType, database: null };
-		} else if (element !== null && (model === 'database' || model === 'database_alias')) {
-			if (element.database === null && label !== null) element.database = label;
-		}
-
-		if (element !== null) {
-			// related sections of the node (alias real fallback)
-			let sections = await relatedByModel(tipo, 'section');
-			if (sections.length === 0 && realTipo !== null) {
-				sections = await relatedByModel(realTipo, 'section');
-			}
-			for (const section of sections) {
-				pending.push({ section, element, table: label, tableIsAlias: model === 'table_alias' });
-			}
-		}
-
-		const children = new Set(await childTipos(tipo));
-		if (isAlias && realTipo !== null) {
-			for (const child of await childTipos(realTipo)) children.add(child);
-		}
-		for (const child of children) {
-			await walk(child, currentElement, depth + 1);
-		}
-	};
-	await walk(domainTipo, null, 0);
-
-	// materialize (database labels resolved after the full walk), dedup per
-	// section by db|table
-	for (const hit of pending) {
-		const list = map.get(hit.section) ?? [];
-		// DIFF-A (2026-07-28 audit): sanitize the ontology-label database/table
-		// names through the SAME chokepoint the publish plan uses
-		// (requireSqlIdentifier), so delete targets are byte-identical to what was
-		// published. Previously these were the RAW labels, so a node labelled `Web`
-		// was deleted from `` `Web` `` while publish had created `web` → errno 1146,
-		// counted as a successful unpublish, record left live. A label publish would
-		// REJECT was never created, so skip it here too (keeps the two in lockstep).
-		let databaseName: string;
-		let tableName: string;
-		try {
-			databaseName = hit.element.database
-				? requireSqlIdentifier(hit.element.database, 'database')
-				: '';
-			tableName = hit.table ? requireSqlIdentifier(hit.table, 'table') : '';
-		} catch {
-			continue;
-		}
-		const exists = list.some(
-			(t) =>
-				t.element_tipo === hit.element.realTipo &&
-				t.database_name === databaseName &&
-				t.table_name === tableName,
-		);
-		if (!exists) {
-			list.push({
-				element_tipo: hit.element.realTipo,
-				type: hit.element.type,
-				database_name: databaseName,
-				table_name: tableName,
-				table_is_alias: hit.tableIsAlias,
-			});
-			map.set(hit.section, list);
-		}
-	}
-	return map;
+	return walkDiffusionTargets(graph, domainTipo);
 }
 
 // Both caches are pure dd_ontology interpretation (dd1190 is runtime-mutable

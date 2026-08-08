@@ -31,10 +31,15 @@ describe('DIFF-A — publish/delete identifier lockstep', () => {
 	});
 
 	test('the delete map sanitizes db/table names through requireSqlIdentifier', () => {
+		// The walk moved to the pure graph module (Tier-3 3.9 extraction); the
+		// sanitizer chokepoint moved WITH it — assert it there, and assert the
+		// map still drives that walk (no second, unsanitized materializer).
+		const graph = read('src/core/diffusion_bridge/diffusion_graph.ts');
+		expect(graph.includes("from '../db/sql_identifier.ts'")).toBe(true);
+		expect(graph.includes("requireSqlIdentifier(hit.element.database, 'database')")).toBe(true);
+		expect(graph.includes("requireSqlIdentifier(hit.table, 'table')")).toBe(true);
 		const map = read('src/core/diffusion_bridge/diffusion_map.ts');
-		expect(map.includes("from '../db/sql_identifier.ts'")).toBe(true);
-		expect(map.includes("requireSqlIdentifier(hit.element.database, 'database')")).toBe(true);
-		expect(map.includes("requireSqlIdentifier(hit.table, 'table')")).toBe(true);
+		expect(map.includes('walkDiffusionTargets')).toBe(true);
 	});
 
 	test('the publish plan uses the SAME sanitizer (re-exported from core)', () => {
