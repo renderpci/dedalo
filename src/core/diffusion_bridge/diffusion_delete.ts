@@ -29,6 +29,7 @@ import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { readEnv } from '../../config/env.ts';
 import { sql } from '../db/postgres.ts';
 import { virtualDateNow } from '../section/record/create_record.ts';
+import type { DiffusionSqlTarget } from './diffusion_graph.ts';
 import { getSectionDiffusionTargets } from './diffusion_map.ts';
 
 export interface DiffusionDeleteOutcome {
@@ -211,8 +212,8 @@ export async function deleteDiffusionRecord(
 					sectionTipo,
 					sectionId,
 				);
-				if (unlinked) outcome.deleted.push(`${target.type}:${target.element_tipo}`);
-				else outcome.pending.push(`${target.type}:${target.element_tipo}`);
+				if (unlinked) outcome.deleted.push(targetKey(target));
+				else outcome.pending.push(targetKey(target));
 			}
 		}
 		if (sqlTargets.length === 0) return outcome;
@@ -232,7 +233,7 @@ export async function deleteDiffusionRecord(
 				`[diffusion] DEC-19: record ${sectionTipo}/${sectionId} has ${sqlTargets.length} sql publication target(s) but no native delete executor is registered — unpublish is deferred to pending rows. Fix the boot registration (src/server.ts).`,
 			);
 			for (const target of sqlTargets) {
-				outcome.pending.push(`${target.database_name}|${target.table_name}`);
+				outcome.pending.push(targetKey(target));
 			}
 			return outcome;
 		}
@@ -247,7 +248,7 @@ export async function deleteDiffusionRecord(
 		);
 		const confirmed = new Set(native.deleted);
 		for (const target of sqlTargets) {
-			const key = `${target.database_name}|${target.table_name}`;
+			const key = targetKey(target);
 			if (confirmed.has(key)) outcome.deleted.push(key);
 			else outcome.pending.push(key);
 		}
@@ -259,6 +260,36 @@ export async function deleteDiffusionRecord(
 	}
 	await logUnpublishOutcome(sectionTipo, sectionId, outcome, logActivity, userId);
 	return outcome;
+}
+
+/**
+ * The outcome-ledger key of a target — the SINGLE producer of the strings
+ * pushed into DiffusionDeleteOutcome.deleted/pending, so the fold below reads
+ * the same grammar the delete path wrote (DIFF-A class of drift):
+ * sql/socrata → `db|table`, file elements → `type:element_tipo`.
+ */
+export function targetKey(target: DiffusionSqlTarget): string {
+	return target.type === 'sql' || target.type === 'socrata'
+		? `${target.database_name}|${target.table_name}`
+		: `${target.type}:${target.element_tipo}`;
+}
+
+/**
+ * Fold per-target confirmations into per-element outcomes: an element is
+ * successful ONLY when EVERY one of its targets confirmed (AND, not OR — one
+ * unconfirmed target poisons its element). Elements fold independently; the
+ * `?? true` seed makes the first target of an element decide on its own.
+ */
+export function foldElementOutcomes(
+	targets: readonly DiffusionSqlTarget[],
+	deletedKeys: ReadonlySet<string>,
+): Map<string, boolean> {
+	const elements = new Map<string, boolean>();
+	for (const target of targets) {
+		const previous = elements.get(target.element_tipo) ?? true;
+		elements.set(target.element_tipo, previous && deletedKeys.has(targetKey(target)));
+	}
+	return elements;
 }
 
 /**
@@ -277,16 +308,7 @@ async function logUnpublishOutcome(
 	if (!logActivity) return;
 	try {
 		const targets = await getSectionDiffusionTargets(sectionTipo);
-		const confirmedKeys = new Set(outcome.deleted);
-		const elements = new Map<string, boolean>();
-		for (const target of targets) {
-			const key =
-				target.type === 'sql' || target.type === 'socrata'
-					? `${target.database_name}|${target.table_name}`
-					: `${target.type}:${target.element_tipo}`;
-			const previous = elements.get(target.element_tipo) ?? true;
-			elements.set(target.element_tipo, previous && confirmedKeys.has(key));
-		}
+		const elements = foldElementOutcomes(targets, new Set(outcome.deleted));
 		for (const [elementTipo, success] of elements) {
 			await logDiffusionActivity({
 				sectionTipo,
