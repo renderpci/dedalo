@@ -106,8 +106,8 @@ view_default_edit_geolocation.render = async function(self, options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data		= self.data || {}
-		const entries	= data.entries || [self.default_value]
+	// (!) get_entries normalizes the WC-001 empty array to [default_value]
+		const entries	= self.get_entries()
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -272,7 +272,7 @@ export const get_content_value = (i, current_value, self) =>{
 			function fn_refresh(e) {
 				e.stopPropagation()
 
-				const entry = self.data.entries[i] || self.default_value
+				const entry = self.get_entries()[i] ?? self.default_value
 
 				const lat	= entry.lat
 				const lon	= entry.lon

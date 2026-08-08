@@ -408,6 +408,127 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 
 
 
+// EMPTY RECORD (WC-001)
+// The engine ALWAYS emits an array for data.entries — `[]` where the PHP oracle
+// emitted null. This component used to read it with the PHP truthiness idiom
+// (`self.data.entries || [self.default_value]`), and an empty array is truthy:
+// on a record with no stored geolocation, get_map threw on entries[0].lat, self.map
+// stayed null and every map method (layers_loader, create_point, update_draw_data,
+// load_tag_into_geo_editor, map_update_coordinates) broke with it — the map rendered
+// as a zero-height empty container and editing was blocked.
+// Reported against numisdata6/564 (component numisdata264).
+describe(`COMPONENT_GEOLOCATION EMPTY RECORD (WC-001 entries: [])`, function() {
+
+	this.timeout(15000);
+
+	let instance	= null
+	let map_holder	= null
+
+
+
+	it(`get_entries normalizes the empty WC-001 array to the default value`, async function() {
+
+		const options = {
+			model			: 'component_geolocation',
+			tipo			: tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: lang,
+			mode			: 'edit',
+			view			: 'default',
+			id_variant		: 'empty_entries_' + Math.random()
+		}
+
+		instance = await get_instance(options)
+		await instance.build(true)
+
+		// simulate a record with no stored geolocation (the engine's empty shape)
+		instance.data.entries = []
+
+		assert.isOk(is_empty(instance), 'instance expected empty with entries: []')
+
+		const entries = instance.get_entries()
+		assert.isOk(Array.isArray(entries), 'get_entries expected array')
+		assert.equal(entries.length, 1, 'get_entries expected one fallback entry')
+		assert.deepEqual(entries[0], instance.default_value, 'fallback expected default_value')
+	});
+
+
+
+	it(`renders the edit view with the default coordinates`, async function() {
+
+		const node = await instance.render()
+		component_container.appendChild(node)
+
+		assert.equal(instance.status, 'rendered', 'status expected rendered')
+		assert.isOk(node.querySelector('.leaflet_map'), 'expected leaflet_map container')
+
+		const lat_node = node.querySelector('.geo_active_input.lat')
+		const lon_node = node.querySelector('.geo_active_input.lon')
+		assert.isOk(lat_node, 'expected lat input')
+		assert.isOk(lon_node, 'expected lon input')
+		assert.equal(parseFloat(lat_node.value), instance.default_value.lat, 'lat expected default_value.lat')
+		assert.equal(parseFloat(lon_node.value), instance.default_value.lon, 'lon expected default_value.lon')
+	});
+
+
+
+	it(`get_map builds the Leaflet map on an empty record`, async function() {
+
+		// explicit container: the view defers get_map until the node enters the
+		// viewport (lazy_in_viewport), which is not deterministic under the runner
+		map_holder = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'leaflet_map',
+			dataset			: { key : 0 },
+			parent			: component_container
+		})
+		map_holder.style.width	= '400px'
+		map_holder.style.height	= '300px'
+
+		// (!) the regression: this threw TypeError on entries[0].lat and left map null
+		await instance.get_map(map_holder, 0)
+
+		assert.isOk(instance.map, 'Leaflet map expected after get_map on an empty record')
+		assert.equal(instance.map.getCenter().lat, instance.default_value.lat, 'map centre lat expected default_value.lat')
+		assert.equal(instance.map.getCenter().lng, instance.default_value.lon, 'map centre lon expected default_value.lon')
+		assert.isOk(map_holder.children.length > 0, 'expected Leaflet DOM inside the map container')
+	});
+
+
+
+	it(`map_update_coordinates ignores a caller with empty entries`, async function() {
+
+		// the update_value observer (e.g. numisdata585 → numisdata264): an empty
+		// caller portal emits `[]`, which must be a no-op, not a TypeError
+		const caller = {
+			data					: { entries: [] },
+			datum					: { data: [] },
+			request_config_object	: {}
+		}
+
+		await instance.map_update_coordinates({ caller: caller })
+	});
+
+
+
+	it(`destroy empty-record instance`, async function() {
+
+		if (instance) {
+			await instance.destroy(true)
+		}
+
+		assert.equal(instance.status, 'destroyed', 'status expected destroyed')
+
+		// clean DOM
+			while (component_container.firstChild) {
+				component_container.removeChild(component_container.firstChild)
+			}
+	});
+});
+
+
+
 describe(`COMPONENT_GEOLOCATION SEARCH DATA OPERATIONS`, function() {
 
 	this.timeout(15000);
