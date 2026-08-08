@@ -28,6 +28,8 @@ import {
 	buildRotateArgv,
 	buildThumbArgv,
 	CMYK_SOURCE_PROFILE,
+	coderToken,
+	compressionForTarget,
 	resolveMagick,
 	SRGB_TARGET_PROFILE,
 } from '../../src/core/media/engine/imagemagick.ts';
@@ -164,7 +166,8 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 			'0x.5',
 			'-quality',
 			'90',
-			'/t.jpg',
+			// THE OUTPUT TOKEN CARRIES ITS CODER (2026-08-07), never the bare path.
+			'JPEG:/t.jpg',
 		]);
 	});
 
@@ -263,7 +266,8 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 			'0x.5',
 			'-quality',
 			'90',
-			'/t.jpg',
+			// THE OUTPUT TOKEN CARRIES ITS CODER (2026-08-07), never the bare path.
+			'JPEG:/t.jpg',
 		]);
 		// Absent by default: the fx HARD-FAILS (no output file at all) on a source
 		// without a meta channel, so it can only ever be probe-gated opt-in.
@@ -369,7 +373,7 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 		const flatten = argv.indexOf('-flatten');
 		expect(argv[flatten - 2]).toBe('-background');
 		expect(argv[flatten - 1]).toBe('#ffffff');
-		expect(argv[argv.length - 1]).toBe('/t.jpg');
+		expect(argv[argv.length - 1]).toBe('JPEG:/t.jpg');
 
 		// An alpha-capable target must NOT be whited out (the recipe carried a
 		// literal '#ffffff' before the background became a caller decision).
@@ -406,6 +410,121 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 	test('crop: -crop WxH+x+y +repage', () => {
 		const s = buildCropArgv('/s.jpg', '/t.jpg', { x: 10, y: 20, width: 100, height: 50 }).join(' ');
 		expect(s).toContain('-crop 100x50+10+20 +repage');
+	});
+
+	/**
+	 * THE OUTPUT TOKEN (2026-08-07, the alternate-extension twin builder).
+	 *
+	 * ImageMagick picks the output coder from the file EXTENSION, and when it does
+	 * not recognise one it does not refuse — it writes SOMETHING. MEASURED on
+	 * IM 7.1.2-18 under the repo policy dir: `magick src.png out.jxl` exits 0 with
+	 * an EMPTY stderr and leaves 316 bytes of PNG in a file named `out.jxl`. That
+	 * output passes `nonEmptyFile`, passes the one-scene post-condition, enters
+	 * files_info and is served with the wrong MIME — a failure class no exit code
+	 * and no stderr check can see. Stating the coder turns it into a loud one.
+	 *
+	 * These are ARGV gates, deliberately: the recipes are pure functions and this
+	 * is the one property that must hold for EVERY target the engine can be
+	 * configured to write, including the ones this box has no delegate for.
+	 */
+	describe('every recipe states its output CODER', () => {
+		test('all four recipes end in <CODER>:<abs path>, never a bare path', () => {
+			const recipes: [string, string[]][] = [
+				[
+					'thumb',
+					buildThumbArgv('/s.tif', '/t.jpg', 222, 148, {
+						selection: 'representative',
+						background: '#ffffff',
+					}),
+				],
+				[
+					'convert',
+					buildConvertArgv('/s.tif', '/t.jpg', {
+						quality: '1.5MB',
+						selection: 'representative',
+						background: '#ffffff',
+					}),
+				],
+				['rotate', buildRotateArgv('/s.jpg', '/t.jpg', 90, 'expanded', '#ffffff')],
+				['crop', buildCropArgv('/s.jpg', '/t.jpg', { x: 1, y: 2, width: 3, height: 4 })],
+			];
+			for (const [label, argv] of recipes) {
+				expect([label, argv[argv.length - 1]]).toEqual([label, 'JPEG:/t.jpg']);
+			}
+		});
+
+		test('the coder is the CANONICAL module name, and an unlisted one uppercases', () => {
+			// jpg/tif are ALIASES of the JPEG/TIFF modules (measured byte-identical
+			// output through `TIF:` and `TIFF:`), but the canonical name is what
+			// `-list format` prints, so that is what we send.
+			expect(coderToken('/x/y.jpg')).toBe('JPEG:/x/y.jpg');
+			expect(coderToken('/x/y.JPEG')).toBe('JPEG:/x/y.JPEG');
+			expect(coderToken('/x/y.tif')).toBe('TIFF:/x/y.tif');
+			// The formats a twin can be configured as.
+			expect(coderToken('/x/y.avif')).toBe('AVIF:/x/y.avif');
+			expect(coderToken('/x/y.png')).toBe('PNG:/x/y.png');
+			expect(coderToken('/x/y.webp')).toBe('WEBP:/x/y.webp');
+			// UNLISTED IS NOT REFUSED: an operator may configure any format their
+			// ImageMagick can encode, so the map declares only what the engine itself
+			// writes and everything else uppercases. The loudness comes from the
+			// absolute path (below) plus canWriteImageFormat's real 1x1 probe, not
+			// from a closed list this engine has no business owning.
+			expect(coderToken('/x/y.jxl')).toBe('JXL:/x/y.jxl');
+		});
+
+		test('a RELATIVE target is refused — the token would become the filename', () => {
+			// Measured: `magick src.png JXL:rel.jxl` exits 0, stderr empty, and creates
+			// a file literally named `JXL:rel.jxl` in the cwd. With an ABSOLUTE path the
+			// same unrecognised coder exits 1 and writes nothing, which is what makes
+			// this rule load-bearing rather than tidy.
+			expect(() => coderToken('rel.jxl')).toThrow(/ABSOLUTE/);
+			expect(() => coderToken('./rel.jpg')).toThrow(/ABSOLUTE/);
+			// …and a target with no extension has no coder to state.
+			expect(() => coderToken('/dir/name')).toThrow(/extension/);
+		});
+	});
+
+	/**
+	 * PER-TARGET COMPRESSION (2026-08-07). PNG's `-quality` IS NOT A QUALITY: it
+	 * encodes `zlib_level*10 + filter_type`, so the engine's 82 meant "zlib level 8,
+	 * filter 2" — a worse lossless compressor — on a format that cannot lose
+	 * anything either way. MEASURED through the real 1.5MB recipe: the layered medal
+	 * master gives 721 858 B at 82 vs 535 300 B at 90 (+34.9 % for nothing), and this
+	 * install's largest master at full size 12 347 424 B vs 9 957 081 B (+24.0 %).
+	 */
+	describe('compressionForTarget', () => {
+		test('82 for the lossy targets, 90 for png/webp, path or bare extension', () => {
+			for (const target of ['/m/image/1.5MB/0/x.jpg', 'jpg', 'jpeg', 'avif', 'tif', 'tiff']) {
+				expect([target, compressionForTarget(target)]).toEqual([target, 82]);
+			}
+			for (const target of ['/m/image/1.5MB/0/x.png', 'png', 'webp']) {
+				expect([target, compressionForTarget(target)]).toEqual([target, 90]);
+			}
+		});
+
+		test('an EXPLICIT compression always wins — this is a default, not a policy', () => {
+			// component_pdf's thumb passes 75 (PHP create_thumb literal); a per-target
+			// rule that overrode the caller would silently change that recipe.
+			expect(compressionForTarget('/x.png', 75)).toBe(75);
+			expect(compressionForTarget('/x.jpg', 100)).toBe(100);
+		});
+
+		test('buildConvertArgv takes its -quality from the TARGET, not from a literal', () => {
+			const qualityOf = (target: string, compression?: number): string => {
+				const argv = buildConvertArgv('/s.tif', target, {
+					quality: '1.5MB',
+					selection: 'representative',
+					background: backgroundForTarget(target),
+					compression,
+				});
+				return argv[argv.indexOf('-quality') + 1] as string;
+			};
+			expect(qualityOf('/t.jpg')).toBe('82');
+			// The alpha-capable twin an install configures — same recipe, other target.
+			expect(qualityOf('/t.avif')).toBe('82');
+			expect(qualityOf('/t.png')).toBe('90');
+			expect(qualityOf('/t.png', 75)).toBe('75');
+		});
 	});
 });
 

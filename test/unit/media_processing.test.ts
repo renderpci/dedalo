@@ -13,6 +13,7 @@ import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { probeStreams } from '../../src/core/media/engine/ffmpeg.ts';
 import {
+	backgroundForTarget,
 	buildThumb,
 	convertImage,
 	getDimensions,
@@ -201,10 +202,24 @@ describe('image processing (real ImageMagick)', () => {
 		async () => {
 			// A large original well over the 1.5MB pixel budget.
 			await makeImage('/image/original/rsc29_rsc170_5.jpg', '3000x2000', 'red');
-			const created = await regenerateImage(image, identity, pathOpts);
-			// default quality + thumb + the SVG envelope (the edit view's display wrapper).
-			expect(created.length).toBe(3);
-			expect(created.some((p) => p.endsWith('.svg'))).toBe(true);
+			const outcome = await regenerateImage(image, identity, pathOpts);
+			const created = outcome.created;
+			// default quality + thumb + the SVG envelope (the edit view's display
+			// wrapper) + one ALTERNATE TWIN per configured extension (2026-08-07): the
+			// default tier now has its own file AND its companions, built from the same
+			// master through the same recipe. Derived from the spec, never a literal —
+			// the count is a consequence of the install's configuration.
+			expect(created.length).toBe(3 + image.alternateExtensions.length);
+			expect(created.some((path) => path.endsWith('.svg'))).toBe(true);
+			for (const alternate of image.alternateExtensions) {
+				const twin = `${ROOT}/image/1.5MB/rsc29_rsc170_5.${alternate}`;
+				expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
+				expect([alternate, created.includes(twin)]).toEqual([alternate, true]);
+			}
+			// A twin failure is NON-FATAL and travels in `errors` — on a host that can
+			// encode what this install configured, there are none.
+			expect(outcome.errors).toEqual([]);
+			expect(outcome.retired).toEqual([]);
 
 			// Default quality exists, is a REAL jpeg (not the source format under a .jpg
 			// name — the temp-extension guard), and is resized within the pixel budget.
@@ -293,8 +308,10 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			// single-image file and prove nothing.
 			expect((await probeImageSource(source)).sceneCount).toBe(3);
 
-			const created = await regenerateImage(image, layered, pathOpts, 'tif');
-			expect(created.length).toBe(3); // default tier + thumb + svg envelope
+			const created = (await regenerateImage(image, layered, pathOpts, 'tif')).created;
+			// default tier + thumb + svg envelope + one twin per configured alternate
+			// (2026-08-07 — see the first regenerateImage gate in this file).
+			expect(created.length).toBe(3 + image.alternateExtensions.length);
 
 			const defaultPath = `${ROOT}/image/1.5MB/rsc29_rsc170_20.jpg`;
 			const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_20.jpg`;
@@ -787,6 +804,32 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			const [r, g, b] = await pixelAt(`${ROOT}/image/${tier}/rsc29_rsc170_24.jpg`, 100, 74);
 			expect([tier, r > 250, g > 250, b > 250]).toEqual([tier, true, true, true]);
 		}
+		// …AND THE ALPHA-CAPABLE TWIN KEEPS ITS TRANSPARENCY (2026-08-07). This is the
+		// user-visible point of the whole twin builder: tool_image_rotation's
+		// browser-side background removal lands an alpha PNG in the retouched master,
+		// every jpg tier flattens it onto white by contract (above), and until the
+		// twin existed A BACKGROUND REMOVAL PERFORMED TODAY SHOWED UP NOWHERE IN
+		// DÉDALO. The background is decided per TARGET inside the one recipe
+		// (backgroundForTarget), which is why the twin needs no recipe of its own —
+		// and this is the assertion that the decision really reaches the file.
+		for (const alternate of image.alternateExtensions) {
+			const twin = `${ROOT}/image/1.5MB/rsc29_rsc170_24.${alternate}`;
+			expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
+			const opaque = await runBinary([resolveMagick(), twin, '-format', '%[opaque]', 'info:'], {
+				nice: false,
+			});
+			// Only for the targets that CAN store alpha: a twin configured as .bmp or
+			// .pnm is flattened exactly like the jpg, and must be.
+			const expected = backgroundForTarget(twin) === 'none' ? 'False' : 'True';
+			expect([alternate, opaque.stdout.trim()]).toEqual([alternate, expected]);
+		}
+		// The complement, so the pair above cannot pass because EVERYTHING is
+		// transparent: the tier's own jpg is opaque.
+		const tierOpaque = await runBinary(
+			[resolveMagick(), `${ROOT}/image/1.5MB/rsc29_rsc170_24.jpg`, '-format', '%[opaque]', 'info:'],
+			{ nice: false },
+		);
+		expect(tierOpaque.stdout.trim()).toBe('True');
 	});
 
 	test.if(HAVE_MAGICK)(
@@ -827,9 +870,17 @@ describe('multi-image sources: layers, pages and frames (real ImageMagick)', () 
 			const composite = warnings.filter((line) =>
 				line.includes('declares no representative image'),
 			);
-			expect(composite.length).toBe(1);
-			expect(composite[0]).toContain(image.defaultQuality);
-			expect(composite[0]).not.toContain(config.media.thumb.quality);
+			// ONE PER BUILD FROM THE MASTER, and since 2026-08-07 the alternate twins
+			// are builds from the master too: the default tier plus one per configured
+			// extension, every one of them naming the DEFAULT quality. What this gate is
+			// actually about is the second clause and it is unchanged — no warning names
+			// the THUMB, because the thumb is built from the single-scene default tier
+			// and therefore never meets a sequence at all.
+			expect(composite.length).toBe(1 + image.alternateExtensions.length);
+			for (const line of composite) {
+				expect(line).toContain(image.defaultQuality);
+				expect(line).not.toContain(config.media.thumb.quality);
+			}
 			// And the thumb is still exactly one image.
 			const thumbPath = `${ROOT}/image/thumb/rsc29_rsc170_25.jpg`;
 			expect((await probeImageSource(thumbPath)).sceneCount).toBe(1);
@@ -1021,8 +1072,11 @@ describe('pdf processing (real pdf tools + ImageMagick)', () => {
 		'regeneratePdf builds web copy + jpg cover + thumb',
 		async () => {
 			await makePdf('/pdf/original/rsc37_rsc176_5.pdf');
-			const created = await regeneratePdf(pdf, identity, pathOpts);
-			expect(created.length).toBe(3);
+			const outcome = await regeneratePdf(pdf, identity, pathOpts);
+			// A result object, not a path list (D9 applied to pdf): a non-fatal cover
+			// failure had nowhere to go and every caller reported a clean success.
+			expect(outcome.errors).toEqual([]);
+			expect(outcome.created.length).toBe(3);
 			expect(existsSync(`${ROOT}/pdf/web/rsc37_rsc176_5.pdf`)).toBe(true);
 			expect(existsSync(`${ROOT}/pdf/web/rsc37_rsc176_5.jpg`)).toBe(true); // cover
 			expect(existsSync(`${ROOT}/pdf/thumb/rsc37_rsc176_5.jpg`)).toBe(true);

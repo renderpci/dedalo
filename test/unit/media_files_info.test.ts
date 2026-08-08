@@ -8,6 +8,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import {
 	duplicateMediaFiles,
@@ -19,7 +20,10 @@ import { ddDateFromMtime, scanFilesInfo } from '../../src/core/media/files_info.
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_fi_${process.pid}`;
+/** The repo root — a child bun process is booted from it (see the pdf-cover gate). */
+const REPO_ROOT = join(import.meta.dir, '../..');
 const image = mediaTypeOf('component_image')!;
+const pdf = mediaTypeOf('component_pdf')!;
 const identity: MediaIdentity = {
 	componentTipo: 'rsc29',
 	sectionTipo: 'rsc170',
@@ -43,6 +47,12 @@ beforeAll(() => {
 	place('/image/thumb/rsc29_rsc170_5.jpg', 'thumb', new Date('2024-06-25T19:25:41'));
 	place('/image/original/rsc29_rsc170_5.jpg', 'norm-original');
 	place('/image/original/rsc29_rsc170_5.tif', 'raw-original');
+	// Record 7 is the EXTENSION-ORDER fixture: one derived tier holding its own
+	// normalized file plus every other extension the scan walks (see the order gate).
+	place('/image/1.5MB/rsc29_rsc170_7.jpg', 'jpeg-web');
+	for (const extension of ORDER_FIXTURE_EXTENSIONS) {
+		place(`/image/1.5MB/rsc29_rsc170_7.${extension}`, `web-${extension}`);
+	}
 });
 
 afterAll(() => {
@@ -136,5 +146,192 @@ describe('file ops — no-hard-delete + duplication + deleted-scan', () => {
 		const versions = listDeletedVersions(image, identity, '25MB', 'jpg', pathOpts);
 		expect(versions.length).toBe(2);
 		expect(versions[versions.length - 1]).toContain('2024-02-01');
+	});
+});
+
+/**
+ * EXTENSION ORDER WITHIN A QUALITY — load-bearing, and invisible until it breaks.
+ *
+ * `scanFilesInfo` emits one entry per quality × extension IN LIST ORDER, and two
+ * classes of consumer pick a tier's file BY QUALITY ALONE, i.e. they take the
+ * FIRST entry of that quality: `resolve/relation_list.ts` (`find(info =>
+ * info.quality === defaultQuality)`) and four component_image views. Since
+ * 2026-08-07 a derived tier really can hold more than one file — the engine now
+ * BUILDS the alternate-extension twins it only ever scanned for before — so the
+ * "there is only one entry per quality anyway" accident that used to protect
+ * those consumers is gone.
+ *
+ * The rule: the type's own `defaultExtension` comes FIRST, and every list added
+ * to the scan (upload allowlist, alternates, pdf covers) is APPENDED. Get it
+ * wrong and a record silently starts serving its avif to a client that asked for
+ * "the 1.5MB file" — no error anywhere, just the wrong bytes.
+ */
+const ORDER_FIXTURE_EXTENSIONS: readonly string[] = [
+	// A NON-default extension that is on the scan list for every install (it is in
+	// image's upload allowlist), so this gate can never pass vacuously on a box
+	// that configures no alternates…
+	'png',
+	// …plus whatever this install really did configure, which is the case that
+	// only exists because there is now a writer for it.
+	...image.alternateExtensions.filter((extension) => extension !== image.defaultExtension),
+];
+
+describe('files_info scan order: the default extension is FIRST', () => {
+	const orderIdentity: MediaIdentity = { ...identity, sectionId: 7 };
+
+	test('the fixture really holds several extensions of one quality (positive control)', () => {
+		expect(ORDER_FIXTURE_EXTENSIONS.length).toBeGreaterThan(0);
+		const info = scanFilesInfo(image, orderIdentity, pathOpts, {});
+		const tier = info.filter((entry) => entry.quality === image.defaultQuality);
+		expect(tier.map((entry) => entry.extension).sort()).toEqual(
+			[image.defaultExtension, ...ORDER_FIXTURE_EXTENSIONS].sort(),
+		);
+	});
+
+	test("the FIRST entry of a quality is the type's own normalized file", () => {
+		const info = scanFilesInfo(image, orderIdentity, pathOpts, {});
+		const tier = info.filter((entry) => entry.quality === image.defaultQuality);
+		expect(tier[0]?.extension).toBe(image.defaultExtension);
+		// Written the way the consumers actually write it — this IS relation_list.ts:463.
+		const asAConsumerReadsIt = info.find((entry) => entry.quality === image.defaultQuality);
+		expect(asAConsumerReadsIt?.extension).toBe(image.defaultExtension);
+		expect(asAConsumerReadsIt?.file_path?.endsWith(`.${image.defaultExtension}`)).toBe(true);
+	});
+
+	test('…and it leads because the SCANNER puts it there, not because a list does', () => {
+		// image's upload allowlist happens to begin with 'jpg', so the gate above
+		// would also pass on a scanner that simply concatenated the lists in
+		// configuration order. scanFilesInfo takes the spec as a parameter, so the
+		// mutation runs here: with the allowlist REORDERED (and the alternates put in
+		// front of it), the type's own normalized file must still come out first.
+		const reordered = {
+			...image,
+			allowedExtensions: [...image.allowedExtensions].reverse(),
+		};
+		const info = scanFilesInfo(reordered, orderIdentity, pathOpts, {});
+		const tier = info.filter((entry) => entry.quality === image.defaultQuality);
+		expect(tier.length).toBeGreaterThan(1);
+		expect(tier[0]?.extension).toBe(image.defaultExtension);
+	});
+});
+
+/**
+ * THE PDF COVER IS SCANNED WHETHER OR NOT THE CONFIG LISTS IT.
+ *
+ * `DEDALO_PDF_ALTERNATIVE_EXTENSIONS` defaults to `['jpg']` and the jpg cover is
+ * built unconditionally (`buildPdfCovers` walks `spec.coverExtensions`, whose
+ * first entry is the literal cover extension). Deriving the SCAN list from the
+ * config alone would therefore let an operator who empties that key un-index
+ * every cover already on disk: the file keeps existing and the record stops
+ * seeing it — data loss by config edit, with nothing said.
+ *
+ * The discriminator only exists with the key EMPTIED, and config is frozen at
+ * boot, so this boots a child with the key set to `[]` (the established
+ * technique — see active_ontology_tlds.test.ts). Without the union in
+ * files_info.ts the child reports no `web.jpg` at all.
+ */
+describe('files_info scans the pdf cover independently of the config', () => {
+	const PROBE = [
+		"const { mediaTypeOf } = await import('./src/core/concepts/media.ts');",
+		"const { scanFilesInfo } = await import('./src/core/media/files_info.ts');",
+		"const pdf = mediaTypeOf('component_pdf');",
+		'const info = scanFilesInfo(',
+		'\tpdf,',
+		"\t{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },",
+		"\t{ initialMediaPath: '', maxItemsFolder: null, mediaRoot: process.env.PROBE_MEDIA_ROOT },",
+		'\t{},',
+		');',
+		'console.log(',
+		'\tJSON.stringify({',
+		'\t\talternates: pdf.alternateExtensions,',
+		'\t\tcovers: pdf.coverExtensions,',
+		'\t\tscanned: info.map((entry) => `${entry.quality}.${entry.extension}`),',
+		'\t}),',
+		');',
+	].join('');
+
+	/** Boot the scanner in a child with `DEDALO_PDF_ALTERNATIVE_EXTENSIONS` overridden. */
+	function scanWithPdfKey(value: string): {
+		alternates: string[];
+		covers: string[];
+		scanned: string[];
+	} {
+		const child = Bun.spawnSync(['bun', '-e', PROBE], {
+			cwd: REPO_ROOT,
+			env: {
+				...process.env,
+				DEDALO_PDF_ALTERNATIVE_EXTENSIONS: value,
+				PROBE_MEDIA_ROOT: ROOT,
+			} as Record<string, string>,
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		const stdout = child.stdout.toString().trim();
+		if (child.exitCode !== 0) {
+			throw new Error(`probe failed (${String(child.exitCode)}): ${child.stderr.toString()}`);
+		}
+		// The child may log boot noise; the payload is the LAST line it prints.
+		return JSON.parse((stdout.split('\n').pop() ?? '').trim());
+	}
+
+	beforeAll(() => {
+		place('/pdf/web/rsc37_rsc176_5.pdf', 'the document');
+		place('/pdf/web/rsc37_rsc176_5.jpg', 'the cover');
+	});
+
+	test('the cover survives an EMPTIED DEDALO_PDF_ALTERNATIVE_EXTENSIONS', () => {
+		const emptied = scanWithPdfKey('[]');
+		// The key really is empty in the child — otherwise this proves nothing.
+		expect(emptied.alternates).toEqual([]);
+		// …and the cover is still declared, and still scanned.
+		expect(emptied.covers).toEqual(['jpg']);
+		expect(emptied.scanned).toContain('web.jpg');
+		expect(emptied.scanned).toContain('web.pdf');
+	});
+
+	test('and it is the COVER UNION that carries it — the mutation, in place', () => {
+		// The gate above would also pass if some other list happened to hold 'jpg'.
+		// scanFilesInfo takes the spec as a parameter, so the mutation can be run here
+		// rather than asserted from prose. It is run against `managedExtensions` — the
+		// ONE list every enumeration of a record's files reads (concepts/media.ts) —
+		// because that is where the union now lives; dropping the cover from it is
+		// exactly what "scan only what the config lists" would ship.
+		//
+		// The real spec is asserted first, so the mutation is a mutation OF the
+		// shipped state and not of an invented one.
+		expect(pdf.coverExtensions).toContain('jpg');
+		for (const cover of pdf.coverExtensions) expect(pdf.managedExtensions).toContain(cover);
+		const withCover = scanFilesInfo(
+			{ ...pdf, alternateExtensions: [], managedExtensions: ['pdf', 'jpg'] },
+			{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },
+			pathOpts,
+			{},
+		);
+		const withoutCover = scanFilesInfo(
+			{ ...pdf, alternateExtensions: [], coverExtensions: [], managedExtensions: ['pdf'] },
+			{ componentTipo: 'rsc37', sectionTipo: 'rsc176', sectionId: 5, lang: null },
+			pathOpts,
+			{},
+		);
+		const covers = (entries: typeof withCover): string[] =>
+			entries.filter((entry) => entry.extension === 'jpg').map((entry) => entry.quality);
+		expect(covers(withCover)).toEqual([pdf.defaultQuality]);
+		expect(covers(withoutCover)).toEqual([]);
+		// The document itself is unaffected either way — only the cover moved.
+		expect(withoutCover.some((entry) => entry.extension === 'pdf')).toBe(true);
+	});
+
+	test('a configured alternate is APPENDED after the cover, never before it', () => {
+		const configured = scanWithPdfKey('["avif","jpg"]');
+		expect(configured.alternates).toEqual(['avif', 'jpg']);
+		// The cover extension leads the cover list even when the config names it last.
+		expect(configured.covers[0]).toBe('jpg');
+		// And the document itself still comes first in the scan of its own tier.
+		expect(configured.scanned.filter((entry) => entry.startsWith('web.'))[0]).toBe('web.pdf');
+	});
+
+	test('the shipped default is unchanged (Q1: no shipped default was touched)', () => {
+		expect(pdf.alternateExtensions).toEqual(['jpg']);
+		expect(pdf.coverExtensions).toEqual(['jpg']);
 	});
 });

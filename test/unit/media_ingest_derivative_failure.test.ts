@@ -28,6 +28,7 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { stagingDir } from '../../src/core/media/ingest/add_file.ts';
@@ -159,6 +160,101 @@ describe('processUploadedFile: the original is indexed even when the derivatives
 		});
 		expect(result.derivativeErrors).toEqual([]);
 		expect(result.filesInfo.some((entry) => entry.quality === 'thumb')).toBe(true);
+	});
+});
+
+/**
+ * THE SAME LAW FOR THE ALTERNATE TWINS (2026-08-07, decision D9).
+ *
+ * `regenerateImage` now builds the configured alternate-extension twins, and a
+ * twin failure is NON-FATAL by construction: a box with no AVIF delegate must
+ * still get its whole jpg ladder. With the old `string[]` return that failure had
+ * NOWHERE TO GO — `derivativeErrors` was populated at exactly one site, the
+ * ingest catch — so a host that cannot write the configured format would have
+ * reported every upload a complete success while the format was silently never
+ * produced. That is the defect this whole subsystem exists to end, which is why
+ * the error channel is part of the signature.
+ *
+ * The failure is produced with NO stubbing, exactly like the broken-bytes case
+ * above: a real image, ingested on a host whose ImageMagick genuinely cannot
+ * write the configured format. `.jxl` is that format here (measured on this box:
+ * `canWriteImageFormat('jxl')` is false, and a bare `magick src.png out.jxl`
+ * exits 0 leaving 316 bytes of PNG under the .jxl name — the silent-wrong-format
+ * hazard the coder token closes). Config is frozen at boot, so it runs in a child
+ * (the established technique — see active_ontology_tlds.test.ts).
+ */
+describe('an UNWRITABLE configured twin is reported, never silently skipped', () => {
+	const PROBE = [
+		"const { mediaTypeOf } = await import('./src/core/concepts/media.ts');",
+		"const { processUploadedFile } = await import('./src/core/media/ingest/process_uploaded_file.ts');",
+		"const spec = mediaTypeOf('component_image');",
+		'const result = await processUploadedFile({',
+		'\tspec,',
+		"\tidentity: { componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 92, lang: null },",
+		"\tpathOpts: { initialMediaPath: '', maxItemsFolder: null, mediaRoot: process.env.PROBE_MEDIA_ROOT },",
+		'\tuserId: -1,',
+		"\tkeyDir: 'kdjxl',",
+		"\ttmpName: 'twin.jpg',",
+		"\textension: 'jpg',",
+		'});',
+		'console.log(',
+		'\tJSON.stringify({',
+		'\t\tconfigured: spec.alternateExtensions,',
+		'\t\tderivativeErrors: result.derivativeErrors,',
+		'\t\tqualities: result.filesInfo.map((entry) => `${entry.quality}.${entry.extension}`),',
+		'\t}),',
+		');',
+	].join('');
+
+	test('the upload succeeds, the ladder is intact, and the refusal names the KEY', async () => {
+		// A REAL image (not the broken bytes above): the jpg ladder must build.
+		const dir = stagingDir(USER, 'kdjxl', ROOT);
+		mkdirSync(dir, { recursive: true });
+		const { runBinary } = await import('../../src/core/media/engine/spawn.ts');
+		const { resolveMagick } = await import('../../src/core/media/engine/imagemagick.ts');
+		await runBinary([resolveMagick(), '-size', '300x200', 'xc:green', `${dir}/twin.jpg`], {
+			nice: false,
+		});
+
+		const child = Bun.spawnSync(['bun', '-e', PROBE], {
+			cwd: join(import.meta.dir, '../..'),
+			env: {
+				...process.env,
+				DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: '["jxl"]',
+				PROBE_MEDIA_ROOT: ROOT,
+			} as Record<string, string>,
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect([child.exitCode, child.stderr.toString()]).toEqual([0, child.stderr.toString()]);
+		const out = JSON.parse((child.stdout.toString().trim().split('\n').pop() ?? '').trim()) as {
+			configured: string[];
+			derivativeErrors: string[];
+			qualities: string[];
+		};
+
+		// The child really was configured for a format this host cannot write —
+		// otherwise everything below passes for the wrong reason.
+		expect(out.configured).toEqual(['jxl']);
+		// THE INDEX IS INTACT: the original landed, the jpg ladder built, the record
+		// knows its files. A twin nobody can encode costs the record a FORMAT, never
+		// its index (and never the upload).
+		expect(out.qualities).toContain(`${image.originalQuality}.jpg`);
+		expect(out.qualities).toContain(`${image.defaultQuality}.jpg`);
+		expect(out.qualities.some((entry) => entry.startsWith('thumb.'))).toBe(true);
+		// …and the operator is TOLD, in the one channel every consumer already
+		// surfaces, with the config key that asked for it.
+		expect(out.derivativeErrors.length).toBeGreaterThan(0);
+		const named = out.derivativeErrors.filter(
+			(line) => line.includes('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS') && line.includes('jxl'),
+		);
+		expect(named.length).toBeGreaterThan(0);
+		// THE UNWRITABLE FORMAT NEVER LANDS. Without the coder token ImageMagick
+		// writes PNG bytes into a file named .jxl, exit 0 and empty stderr: it would
+		// pass every post-condition, enter files_info and be served with the wrong
+		// MIME. Nothing named .jxl may exist anywhere under the media root.
+		expect(out.qualities.some((entry) => entry.endsWith('.jxl'))).toBe(false);
+		expect(existsSync(`${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_92.jxl`)).toBe(false);
 	});
 });
 

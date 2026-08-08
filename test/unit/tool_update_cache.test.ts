@@ -6,11 +6,18 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, rmSync, statSync, utimesSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
 import { updateMatrixKeyData } from '../../src/core/db/matrix_write.ts';
+import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
+import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
-import { resolveMasterSource } from '../../src/core/media/processing.ts';
+import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
+import { derivedTwinQualities, resolveMasterSource } from '../../src/core/media/processing.ts';
+import { regenerateMissingDerivatives } from '../../src/core/media/repair.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -427,4 +434,131 @@ describe('tool_update_cache module', () => {
 			);
 		}
 	});
+});
+
+/**
+ * WHAT THE REPAIR DOES TO THE ALTERNATE TWINS (2026-08-07, plan step 6).
+ *
+ * `tool_update_cache` regenerates what is MISSING — that is its whole contract
+ * (v6 regenerate_component: an existing derivative is never re-encoded). The twin
+ * pass inherits it and adds nothing: it BUILDS an absent twin, never re-encodes a
+ * present one and NEVER RETIRES ANYTHING.
+ *
+ * The two halves that are easy to get wrong, and what each would cost:
+ *  - RE-ENCODING a present twin would re-encode the archive on every sweep, and
+ *    the engine cannot tell a stale twin from an operator-authored one without
+ *    per-tier provenance (the ledgered gap). A stale twin is therefore corrected
+ *    by the next MASTER CHANGE, not here — stated, not narrowed.
+ *  - RETIRING here would let a repair sweep on a PARTIAL-MEDIA box (buckets not
+ *    mounted, the 2026-07-19 incident class) delete the twins of every record
+ *    whose tier file lives elsewhere.
+ *
+ * Driven through `regenerateMissingDerivatives`, which is the exported seam the
+ * kernel calls per item — so the gate needs no DB and writes only under tmpdir.
+ */
+describe('tool_update_cache: the twin pass is MISSING-ONLY', () => {
+	const MEDIA_ROOT = `${tmpdir()}/dedalo_update_cache_twins_${process.pid}`;
+	const image = mediaTypeOf('component_image')!;
+	const HAVE_MAGICK = existsSync(resolveMagick());
+	const identity: MediaIdentity = {
+		componentTipo: 'rsc29',
+		sectionTipo: 'rsc170',
+		sectionId: 60,
+		lang: null,
+	};
+	const pathOpts: MediaPathOptions = {
+		initialMediaPath: '',
+		maxItemsFolder: null,
+		mediaRoot: MEDIA_ROOT,
+	};
+	const alternate = image.alternateExtensions[0];
+	/** The two derived tiers this fixture uses: the default one and one above it. */
+	const higher = derivedTwinQualities(image).find((quality) => quality !== image.defaultQuality);
+
+	function pathOf(quality: string, extension: string): string {
+		return `${MEDIA_ROOT}/image/${quality}/rsc29_rsc170_60.${extension}`;
+	}
+	async function place(quality: string, extension: string, color: string): Promise<string> {
+		const absolute = pathOf(quality, extension);
+		mkdirSync(absolute.slice(0, absolute.lastIndexOf('/')), { recursive: true });
+		const result = await runBinary([resolveMagick(), '-size', '400x300', `xc:${color}`, absolute], {
+			nice: false,
+		});
+		if (result.exitCode !== 0) throw new Error(`fixture failed: ${result.stderr}`);
+		return absolute;
+	}
+
+	afterAll(() => rmSync(MEDIA_ROOT, { recursive: true, force: true }));
+
+	test.if(HAVE_MAGICK)(
+		'builds the MISSING twin, touches neither the present nor the orphan',
+		async () => {
+			expect(
+				alternate,
+				'this gate needs a configured alternate extension (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)',
+			).toBeDefined();
+			expect(higher).toBeDefined();
+			await place(image.originalQuality, 'tif', 'red');
+			// The default tier: file present, twin present — nothing to do for either.
+			await place(image.defaultQuality, image.defaultExtension, 'red');
+			const present = await place(image.defaultQuality, alternate as string, 'green');
+			const stale = new Date('2020-01-02T03:04:05');
+			utimesSync(present, stale, stale);
+			const presentBefore = statSync(present);
+			// A higher tier holding its own file but NO twin — the one thing to build.
+			await place(higher as string, image.defaultExtension, 'red');
+			const missing = pathOf(higher as string, alternate as string);
+			expect(existsSync(missing)).toBe(false);
+			// An ORPHAN twin: a tier that holds no file for it to accompany. The
+			// reconciler would retire this on a master change; repair must not.
+			const orphanTier = derivedTwinQualities(image).find(
+				(quality) => quality !== image.defaultQuality && quality !== higher,
+			) as string;
+			const orphan = await place(orphanTier, alternate as string, 'green');
+			utimesSync(orphan, stale, stale);
+			const orphanBefore = statSync(orphan);
+
+			const errors = await regenerateMissingDerivatives(
+				'component_image',
+				image,
+				identity,
+				pathOpts,
+				{
+					rawExtension: 'tif',
+					deleteNormalized: false,
+					bulkProcessId: null,
+				},
+			);
+
+			expect(errors).toEqual([]);
+			// BUILT: the twin that was missing beside a tier file that exists.
+			expect(existsSync(missing)).toBe(true);
+			// UNTOUCHED: a twin that is already there is never re-encoded (mtime AND size
+			// — a re-encode of the same source would change both).
+			const presentAfter = statSync(present);
+			expect([presentAfter.size, presentAfter.mtimeMs]).toEqual([
+				presentBefore.size,
+				presentBefore.mtimeMs,
+			]);
+			// UNTOUCHED AND NOT RETIRED: repair never removes.
+			expect(existsSync(orphan)).toBe(true);
+			const orphanAfter = statSync(orphan);
+			expect([orphanAfter.size, orphanAfter.mtimeMs]).toEqual([
+				orphanBefore.size,
+				orphanBefore.mtimeMs,
+			]);
+			const deletedDir = `${MEDIA_ROOT}/image/${orphanTier}/deleted`;
+			expect(existsSync(deletedDir)).toBe(false);
+			// …and the two things this tool actually exists to fix ran: the thumb and the
+			// SVG envelope. They are FIRST in the sequence for exactly that reason — an
+			// AVIF delegate missing from a box must never abort the repair of a record
+			// whose edit view renders nothing.
+			expect(
+				existsSync(
+					`${MEDIA_ROOT}/image/${config.media.thumb.quality}/rsc29_rsc170_60.${config.media.thumb.extension}`,
+				),
+			).toBe(true);
+			expect(existsSync(`${MEDIA_ROOT}/image/svg/rsc29_rsc170_60.svg`)).toBe(true);
+		},
+	);
 });

@@ -8,15 +8,22 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { join } from 'node:path';
+import { MEDIA_KEYS } from '../../src/config/catalog/media.ts';
 import {
+	ALTERNATE_BUILDER_BY_MODEL,
 	assertAllowedExtension,
 	assertValidQuality,
 	isMediaModel,
 	mediaTypeOf,
+	NO_ALTERNATE_BUILDER_REASON,
 	pixelAreaBudget,
 	qualityToMegabytes,
 	thumbQuality,
 } from '../../src/core/concepts/media.ts';
+
+/** The repo root — the capability filter is proved in a child (see that block). */
+const REPO_ROOT = join(import.meta.dir, '../..');
 
 describe('media contract — type catalog (env-config)', () => {
 	test('the five media models resolve; non-media do not', () => {
@@ -126,5 +133,171 @@ describe('media contract — pixel-area law (component_image:1850-1899)', () => 
 		expect(pixelAreaBudget('6MB')).toBe(2100000);
 		expect(pixelAreaBudget('original')).toBeNull();
 		expect(pixelAreaBudget('thumb')).toBeNull();
+	});
+});
+
+/**
+ * THE ALTERNATE-EXTENSION CONTRACT (2026-08-07).
+ *
+ * `DEDALO_*_ALTERNATIVE_EXTENSIONS` used to be read by seven modules and written
+ * by none. The spec now states, per model, what is BUILT (`alternateExtensions`),
+ * what was asked for and REFUSED (`refusedAlternateExtensions`), which key both
+ * came from, and which files the type builds regardless of the key
+ * (`coverExtensions`). The narrowing happens at construction so every existing
+ * consumer became correct with no edit of its own — which also means the only
+ * place it can be gated is here.
+ */
+describe('media contract — alternate-extension twins', () => {
+	test('every model states its key, its list, its refusals and its covers', () => {
+		for (const model of Object.keys(ALTERNATE_BUILDER_BY_MODEL)) {
+			const spec = mediaTypeOf(model)!;
+			// The key is what an operator edits, so a refusal can name it.
+			expect([model, spec.alternateExtensionsConfigKey]).toEqual([
+				model,
+				`DEDALO_${model === 'component_3d' ? '3D' : model.replace('component_', '').toUpperCase()}_ALTERNATIVE_EXTENSIONS`,
+			]);
+			// A model with no writer advertises NOTHING — the scanners, the upload
+			// allowlist message and features.alternative_extensions all read this list
+			// and would otherwise describe files that cannot exist.
+			if (ALTERNATE_BUILDER_BY_MODEL[model as keyof typeof ALTERNATE_BUILDER_BY_MODEL] === null) {
+				expect([model, spec.alternateExtensions]).toEqual([model, []]);
+			}
+			// Covers are a pdf concern only: the first page rasterized into the default
+			// quality, because a pdf's own defaultExtension is the DOCUMENT.
+			expect([model, spec.coverExtensions]).toEqual([
+				model,
+				model === 'component_pdf' ? spec.coverExtensions : [],
+			]);
+		}
+		const pdf = mediaTypeOf('component_pdf')!;
+		// The jpg cover leads the list and is built whether or not the key names it —
+		// so emptying the key can never un-index a cover already on disk.
+		expect(pdf.coverExtensions[0]).toBe('jpg');
+		expect(pdf.allowedExtensions).not.toContain('jpg'); // it is not an upload slot
+	});
+
+	test('Q1: the SHIPPED catalog defaults are untouched', () => {
+		// The image key still ships EMPTY: a stock install builds no twins. Changing
+		// a shipped default is a separate decision with its own migration story, and
+		// this gate is what makes that decision visible rather than incidental.
+		expect(MEDIA_KEYS.DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS.default).toEqual([]);
+		expect(MEDIA_KEYS.DEDALO_AV_ALTERNATIVE_EXTENSIONS.default).toEqual([]);
+		expect(MEDIA_KEYS.DEDALO_SVG_ALTERNATIVE_EXTENSIONS.default).toEqual([]);
+		expect(MEDIA_KEYS.DEDALO_3D_ALTERNATIVE_EXTENSIONS.default).toEqual([]);
+		// …and pdf still ships ['jpg'], which is why its cover was honoured BY
+		// COINCIDENCE for as long as nothing else was configurable.
+		expect(MEDIA_KEYS.DEDALO_PDF_ALTERNATIVE_EXTENSIONS.default).toEqual(['jpg']);
+	});
+
+	/**
+	 * The refusal is only observable when a model WITHOUT a writer has the key set,
+	 * and this install (like the shipped defaults) leaves those empty — so asserting
+	 * it here would pass vacuously forever. Config is frozen at boot, so the honest
+	 * gate boots a child with the keys set (the established technique — see
+	 * active_ontology_tlds.test.ts) and reads what the spec then says.
+	 */
+	describe('the capability filter, proved with the keys actually set', () => {
+		const PROBE = [
+			"const { mediaTypeOf } = await import('./src/core/concepts/media.ts');",
+			'const out = {};',
+			"for (const model of ['component_image', 'component_av', 'component_svg', 'component_3d']) {",
+			'\tconst spec = mediaTypeOf(model);',
+			'\tout[model] = { built: spec.alternateExtensions, refused: spec.refusedAlternateExtensions };',
+			'}',
+			'console.log(JSON.stringify(out));',
+		].join('');
+
+		function specsWith(
+			env: Record<string, string>,
+		): Record<string, { built: string[]; refused: string[] }> {
+			const child = Bun.spawnSync(['bun', '-e', PROBE], {
+				cwd: REPO_ROOT,
+				env: { ...process.env, ...env } as Record<string, string>,
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			if (child.exitCode !== 0) {
+				throw new Error(`probe failed (${String(child.exitCode)}): ${child.stderr.toString()}`);
+			}
+			const stdout = child.stdout.toString().trim();
+			return JSON.parse((stdout.split('\n').pop() ?? '').trim());
+		}
+
+		test('a model with NO builder builds nothing and keeps the refusal visible', () => {
+			const specs = specsWith({
+				DEDALO_AV_ALTERNATIVE_EXTENSIONS: '["webm"]',
+				DEDALO_SVG_ALTERNATIVE_EXTENSIONS: '["png"]',
+				DEDALO_3D_ALTERNATIVE_EXTENSIONS: '["gltf"]',
+				DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: '["avif","png"]',
+			});
+			// av: every ffmpeg profile forces mp4/libx264 and settingName has no
+			// container axis; svg: a derivative is a byte copy; 3d: the converters are
+			// ledgered PHP-dead. None of them can produce a second format, so none of
+			// them may advertise one — but the operator's request is not thrown away.
+			expect(specs.component_av).toEqual({ built: [], refused: ['webm'] });
+			expect(specs.component_svg).toEqual({ built: [], refused: ['png'] });
+			expect(specs.component_3d).toEqual({ built: [], refused: ['gltf'] });
+			// …and the filter is NOT a blanket: the model that has a writer keeps its
+			// whole list. Without this the gate above would also pass on an engine that
+			// simply dropped the key everywhere — i.e. on the defect, differently spelled.
+			expect(specs.component_image).toEqual({ built: ['avif', 'png'], refused: [] });
+		});
+
+		test('THE BOOT PRE-FLIGHT really prints that refusal, with key, value and reason', () => {
+			// The catalog prose promises operators three times that a configured format
+			// with no builder is "refused at start-up, and the server log names this
+			// parameter, its value and this reason". That promise had NO gate: the
+			// pre-flight was an inline `void (async …)` in startServer with no awaited
+			// effect, and deleting it left every suite green — the same read-but-never-
+			// honoured shape one layer up. It is a module with a return value now, so
+			// the sentence an operator will read can be asserted.
+			const child = Bun.spawnSync(
+				[
+					'bun',
+					'-e',
+					[
+						"const { alternateExtensionWarnings } = await import('./src/core/media/alternate_preflight.ts');",
+						'console.log(JSON.stringify(await alternateExtensionWarnings()));',
+					].join(''),
+				],
+				{
+					cwd: REPO_ROOT,
+					env: {
+						...process.env,
+						DEDALO_AV_ALTERNATIVE_EXTENSIONS: '["webm"]',
+						DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: '[]',
+					} as Record<string, string>,
+					stdout: 'pipe',
+					stderr: 'pipe',
+				},
+			);
+			expect(child.exitCode).toBe(0);
+			const warnings = JSON.parse(
+				(child.stdout.toString().trim().split('\n').pop() ?? '').trim(),
+			) as string[];
+			const refusal = warnings.find((line) => line.includes('DEDALO_AV_ALTERNATIVE_EXTENSIONS'));
+			expect(
+				refusal,
+				'the pre-flight said nothing about a key it refuses — the ONLY place an operator ever learns that a format they configured is not being written',
+			).toBeDefined();
+			// key, value, and a reason that names the code that would have to change.
+			expect(refusal).toContain('webm');
+			expect(refusal).toContain('component_av');
+			expect(refusal).toContain('ffmpeg_profiles.ts');
+			// And it is SILENT about the healthy models: a line per configured format is
+			// a line nobody reads, and then the one that matters is buried in it.
+			expect(warnings.filter((line) => line.includes('component_image'))).toEqual([]);
+		});
+
+		test('every refused model carries the reason the operator reads at boot', () => {
+			for (const model of ['component_av', 'component_svg', 'component_3d'] as const) {
+				const reason = NO_ALTERNATE_BUILDER_REASON[model];
+				expect([model, reason === null]).toEqual([model, false]);
+				expect([model, (reason as string).length > 80]).toEqual([model, true]);
+			}
+			// The two models that DO build carry no reason — the census is a partition.
+			expect(NO_ALTERNATE_BUILDER_REASON.component_image).toBeNull();
+			expect(NO_ALTERNATE_BUILDER_REASON.component_pdf).toBeNull();
+		});
 	});
 });

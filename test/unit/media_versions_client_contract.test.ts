@@ -126,7 +126,93 @@ describe('media-versions panel ↔ engine contract', () => {
 		// render_tool_media_versions.js prints `msg` only when result===false, and
 		// tool_media_versions.js delete_quality resolves `response.result` alone —
 		// so `errors` on a successful delete is unreachable by the operator.
-		expect((source.match(/msg: withRebuildFailure\(/g) ?? []).length).toBe(2);
+		expect((source.match(/withRebuildFailure\(/g) ?? []).length).toBe(3); // 2 uses + the definition
+		// …and so is the fact that MORE FILES LEFT THE TIER than the operator named:
+		// deleting a tier's own file takes its alternate-extension twins with it
+		// (a twin is a companion, not an independent version — processing.ts
+		// retireOrphanTwins), and one click removing a file nobody mentioned must be
+		// said out loud in the SAME field, for the same reason.
+		expect((source.match(/withRetiredTwins\(/g) ?? []).length).toBe(3);
+		expect(source).toContain('retired: outcome.retired');
+	});
+
+	/**
+	 * BUILD_VERSION'S TWO EXTENSION ARGUMENTS (2026-08-07, decision D8/Q4).
+	 *
+	 * The handler used to read `extension` and thread it in as the SOURCE selector
+	 * (which master file to build FROM). It reads like a target, so an API caller
+	 * sending `extension:'avif'` got a jpg built from whichever master that
+	 * extension happened to resolve — a silent wrong answer, not an error. It is
+	 * HARD-REMOVED with no alias: the client never sent it
+	 * (tool_media_versions.js posts tipo/section/quality/async only), so nothing in
+	 * the repo loses a capability, and a caller that did send it now gets the
+	 * documented `target_extension` instead of a lie.
+	 *
+	 * Source assertions, scoped to the buildVersion FUNCTION BODY: `extension` is a
+	 * legitimate argument of delete_version and conform_headers, where it really
+	 * does name a file on disk, so a file-wide grep would be both a false positive
+	 * here and a false negative there.
+	 */
+	describe('build_version: target_extension in, extension out', () => {
+		/** The buildVersion handler's body — brace-matched, so the scan cannot drift. */
+		function buildVersionBody(): string {
+			const source = readFileSync(
+				join(REPO_ROOT, 'tools/tool_media_versions/server/media_versions.ts'),
+				'utf8',
+			)
+				// Comments first: the header above this handler EXPLAINS the removed
+				// argument by name, and prose must never satisfy or trip a source gate.
+				.replace(/\/\*[\s\S]*?\*\//g, '')
+				.replace(/(^|[^:])\/\/.*$/gm, '$1');
+			const start = source.indexOf('export async function buildVersion(');
+			expect(start).toBeGreaterThan(-1);
+			const open = source.indexOf('{', start);
+			let depth = 0;
+			for (let i = open; i < source.length; i++) {
+				if (source[i] === '{') depth++;
+				else if (source[i] === '}') {
+					depth--;
+					if (depth === 0) return source.slice(open, i + 1);
+				}
+			}
+			throw new Error('buildVersion: unbalanced body');
+		}
+
+		test('the handler reads target_extension and threads it to the core', () => {
+			const body = buildVersionBody();
+			expect(body).toContain('ctx.options.target_extension');
+			expect(body).toMatch(/buildVersionCore\(/);
+		});
+
+		test('the handler no longer reads `extension` — hard removal, no alias', () => {
+			const body = buildVersionBody();
+			// `options.extension` in THIS handler could only ever be the source
+			// selector again; the source selector is not the caller's to choose (it is
+			// resolved from the disk by resolveMaster).
+			expect(body).not.toMatch(/options\.extension\b/);
+			expect(body).not.toMatch(/options\[['"]extension['"]\]/);
+		});
+
+		test('the other handlers keep their own `extension` (positive control)', () => {
+			// Without this, the removal above would also pass on a file that lost the
+			// argument everywhere — delete_version's extension names the FILE to move
+			// and is not the same question at all.
+			const source = readFileSync(
+				join(REPO_ROOT, 'tools/tool_media_versions/server/media_versions.ts'),
+				'utf8',
+			);
+			expect(source).toMatch(/options\.extension\b/);
+		});
+
+		test('a twin the host cannot write reaches the operator: errors + msg', () => {
+			const body = buildVersionBody();
+			// The tier BUILT, so `result` stays true — a result:false would tell the
+			// operator nothing was produced when the tier and its jpg were. The refusal
+			// therefore has to travel in the two fields the panel actually renders.
+			expect(body).toMatch(/errors:\s*built\.errors/);
+			expect(body).toMatch(/built\.errors\.length/);
+			expect(body).toMatch(/result:\s*true/);
+		});
 	});
 
 	test('the client reads the DB side of the comparison from the server only', () => {

@@ -249,6 +249,14 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// constants, not from dd_ontology or record data — nothing invalidates it
 	// because nothing can change it at runtime.
 	'core/concepts/media.ts:specCache',
+	// "Can this ImageMagick, under OUR hardened policy, write a .<ext> file"
+	// (engine/imagemagick.ts:canWriteImageFormat). A fact about the HOST — the
+	// installed delegates plus the shipped policy.xml — probed once per process
+	// with a real 1x1 encode. Key is a file extension, value a boolean promise:
+	// request identity cannot land in it. Lifecycle: process restart, and that is
+	// correct — neither the binary's delegates nor the shipped policy can change
+	// under a running server (the engine/ffmpeg.ts:cachedAudioCodec precedent).
+	'core/media/engine/imagemagick.ts:writableFormatCache',
 	// Tool filesystem-root resolution: cleared by resetPathsCache via
 	// invalidateAllToolCaches on TS-side tool writes; COEX restart rule for
 	// PHP-side writes (tools/cache.ts header).

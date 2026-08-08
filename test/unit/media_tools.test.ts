@@ -6,7 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -102,6 +102,174 @@ describe('tool_media_versions core', () => {
 			expect(info.some((e) => e.quality === '1.5MB')).toBe(true);
 		},
 	);
+
+	/**
+	 * THE OPERATOR'S CONTROL OVER THE ALTERNATE TWINS (2026-08-07, decision D8).
+	 *
+	 * Omitting `target_extension` builds the tier COMPLETE — its normalized file
+	 * plus every configured twin — because a tier minted on demand must not arrive
+	 * half-built: the ⟺ invariant (processing.ts buildAlternateVersions) would be
+	 * false the moment it is created, and the next master change would retire a twin
+	 * nobody ever built.
+	 *
+	 * Naming one builds EXACTLY that file. Delete is already granular
+	 * (delete_version takes an extension), so without this, recovering a single twin
+	 * meant re-encoding the tier's own jpg as well — destroying any rotation or crop
+	 * an operator had applied to it, on a request that asked for nothing of the sort.
+	 */
+	test.if(HAVE_MAGICK)(
+		'build_version builds the tier COMPLETE: its file + every twin',
+		async () => {
+			const id13: MediaIdentity = { ...identity, sectionId: 13 };
+			await makeImage('/image/original/rsc29_rsc170_13.jpg', '2000x1500');
+			const built = await buildVersionCore(image, id13, pathOpts, image.defaultQuality);
+			expect(built.errors).toEqual([]);
+			expect(built.built.length).toBe(1 + image.alternateExtensions.length);
+			for (const alternate of image.alternateExtensions) {
+				const twin = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_13.${alternate}`;
+				expect([alternate, existsSync(twin)]).toEqual([alternate, true]);
+			}
+		},
+	);
+
+	test.if(HAVE_MAGICK)(
+		'build_version with target_extension rebuilds ONE twin, leaving the tier untouched',
+		async () => {
+			const alternate = image.alternateExtensions[0];
+			expect(
+				alternate,
+				'this gate needs a configured alternate extension (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)',
+			).toBeDefined();
+			const id14: MediaIdentity = { ...identity, sectionId: 14 };
+			await makeImage('/image/original/rsc29_rsc170_14.jpg', '2000x1500');
+			await buildVersionCore(image, id14, pathOpts, image.defaultQuality);
+			const tierFile = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_14.jpg`;
+			const twin = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_14.${alternate as string}`;
+			// The operator's work lives ONLY in the tier's own file, and recovering the
+			// twin must not cost it. (statSync, not bytes: an mtime+size pair changes on
+			// any re-encode.)
+			const tierBefore = statSync(tierFile);
+			rmSync(twin, { force: true }); // the twin the operator wants back
+
+			const built = await buildVersionCore(
+				image,
+				id14,
+				pathOpts,
+				image.defaultQuality,
+				null,
+				alternate,
+			);
+
+			expect(built.built.length).toBe(1);
+			expect(built.built[0]).toBe(twin);
+			expect(built.errors).toEqual([]);
+			expect(existsSync(twin)).toBe(true);
+			// The tier's own file was not re-encoded.
+			const tierAfter = statSync(tierFile);
+			expect([tierAfter.size, tierAfter.mtimeMs]).toEqual([tierBefore.size, tierBefore.mtimeMs]);
+		},
+	);
+
+	test.if(HAVE_MAGICK)(
+		'…and REFUSES when the tier carries a rotation the master does not',
+		async () => {
+			// THE TWIN IS A COMPANION, AND ITS SOURCE IS THE MASTER. Those two facts
+			// collide exactly here: a tier an operator rotated is no longer a plain
+			// resize of the master, so a twin built from the master would be a companion
+			// of a DIFFERENT PICTURE. MEASURED on the shipped code before this refusal:
+			// rotate 1.5MB by 90° (both extensions rotate together, correctly), lose the
+			// twin, recover it here — and the tier ends up holding an 852x620 jpg beside
+			// a 618x850 avif, reported by files_info as present and current, with no
+			// error anywhere. The same path is what tool_update_cache's repair sweep
+			// walks, so on an install that turns the key on it would manufacture one for
+			// every already-rotated tier, unattended.
+			const alternate = image.alternateExtensions[0];
+			const id15: MediaIdentity = { ...identity, sectionId: 15 };
+			await makeImage('/image/original/rsc29_rsc170_15.jpg', '2000x1500');
+			await buildVersionCore(image, id15, pathOpts, image.defaultQuality);
+			const tierFile = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_15.jpg`;
+			const twin = `${ROOT}/image/${image.defaultQuality}/rsc29_rsc170_15.${alternate as string}`;
+			// The rotation, simulated in the one way that matters to the check: the
+			// tier's own file is now portrait while its landscape master is untouched.
+			await makeImage(`/image/${image.defaultQuality}/rsc29_rsc170_15.jpg`, '600x900');
+			const tierBefore = statSync(tierFile);
+			rmSync(twin, { force: true });
+
+			const built = await buildVersionCore(
+				image,
+				id15,
+				pathOpts,
+				image.defaultQuality,
+				null,
+				alternate,
+			);
+
+			// Nothing written, and the refusal is READABLE: it names the two geometries,
+			// the config key that asked for the format, and what to do about it.
+			expect(built.built).toEqual([]);
+			expect(existsSync(twin)).toBe(false);
+			expect(built.errors.length).toBe(1);
+			expect(built.errors[0]).toContain('600x900');
+			expect(built.errors[0]).toContain('2000x1500');
+			expect(built.errors[0]).toContain('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS');
+			expect(built.errors[0]).toContain('Rebuild the tier itself');
+			// And the operator's rotated file is untouched by the refusal.
+			const tierAfter = statSync(tierFile);
+			expect([tierAfter.size, tierAfter.mtimeMs]).toEqual([tierBefore.size, tierBefore.mtimeMs]);
+			expect(await getDimensions(tierFile)).toEqual({ width: 600, height: 900 });
+		},
+	);
+
+	test.if(HAVE_MAGICK)(
+		'a twin with no tier file to accompany is REFUSED, not empty-success',
+		async () => {
+			// A twin is a COMPANION. With no tier file the reconciler builds nothing (and
+			// would retire the twin), so returning an empty success would have the panel
+			// render "done" over a request that produced no file at all.
+			const alternate = image.alternateExtensions[0] as string;
+			const id15: MediaIdentity = { ...identity, sectionId: 15 };
+			await makeImage('/image/original/rsc29_rsc170_15.jpg', '800x600');
+			const higher = image.qualities.find(
+				(quality) =>
+					!image.masterQualities.includes(quality) &&
+					quality !== image.defaultQuality &&
+					quality !== config.media.thumb.quality,
+			) as string;
+			await expect(
+				buildVersionCore(image, id15, pathOpts, higher, null, alternate),
+			).rejects.toThrow(/nothing to accompany/);
+			expect(existsSync(`${ROOT}/image/${higher}/rsc29_rsc170_15.${alternate}`)).toBe(false);
+		},
+	);
+
+	test('build_version refuses a target extension this engine does not write', async () => {
+		const id16: MediaIdentity = { ...identity, sectionId: 16 };
+		// An image format the install did not configure: writing it would produce a
+		// file no scanner ever walks (files_info reads the configured list), so the
+		// refusal names the key to add it to.
+		const unconfigured = ['webp', 'gif', 'bmp'].find(
+			(extension) => !image.alternateExtensions.includes(extension),
+		) as string;
+		await expect(
+			buildVersionCore(image, id16, pathOpts, image.defaultQuality, null, unconfigured),
+		).rejects.toThrow(new RegExp(`cannot build a '\\.${unconfigured}' version`));
+		await expect(
+			buildVersionCore(image, id16, pathOpts, image.defaultQuality, null, unconfigured),
+		).rejects.toThrow(new RegExp(image.alternateExtensionsConfigKey));
+		// …and on a model with NO builder at all, the refusal states WHY, naming the
+		// code that would have to change (NO_ALTERNATE_BUILDER_REASON).
+		await expect(buildVersionCore(av, id16, pathOpts, '404', null, 'webm')).rejects.toThrow(
+			/NO alternate-extension builder at all/,
+		);
+		await expect(buildVersionCore(av, id16, pathOpts, '404', null, 'webm')).rejects.toThrow(
+			/ffmpeg_profiles\.ts/,
+		);
+		// The THUMB tier is fixed by config: files_info scans it with that extension
+		// alone, so anything else would be written and never seen.
+		await expect(
+			buildVersionCore(image, id16, pathOpts, config.media.thumb.quality, null, 'png'),
+		).rejects.toThrow(/could never be indexed/);
+	});
 
 	test.if(HAVE_MAGICK)('delete_version soft-deletes into deleted/', async () => {
 		await makeImage('/image/6MB/rsc29_rsc170_5.jpg', '400x300');

@@ -18,10 +18,12 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import type { FileInfoEntry } from '../../src/core/media/files_info.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
 import {
@@ -388,4 +390,113 @@ describe('media tool identity follows the REQUEST data lang', () => {
 		});
 		expect(outside.identity.lang).toBe(config.menu.dataLang);
 	});
+});
+
+/**
+ * THE REPAIR'S NON-FATAL CHANNEL (2026-08-07, decision D9 applied to repair).
+ *
+ * `regenerateMissingDerivatives` gained a twin pass, and a twin is the one
+ * derivative whose ENCODER MAY SIMPLY BE ABSENT on the host. So it returns its
+ * non-fatal failures instead of throwing them, and the kernel merges them into
+ * the `errors` the sweep and the tool already report through. Without that
+ * channel the failure had nowhere to go: a box with no delegate would report
+ * every repaired record a success while the configured format was never written —
+ * the same silence, one layer down.
+ *
+ * The ORDER is the other half and it is load-bearing: the twin step runs LAST and
+ * every extension is wrapped individually, because the thumb and the SVG envelope
+ * are what tool_update_cache exists to fix (a record whose edit view renders
+ * nothing has a missing envelope, not a missing avif). A missing delegate must
+ * never abort the repair of every record in a sweep.
+ */
+describe('repair: a twin this host cannot write is REPORTED, and costs nothing else', () => {
+	const REPO_ROOT = join(import.meta.dir, '../..');
+	const MEDIA_ROOT = `${tmpdir()}/dedalo_repair_twin_errors_${process.pid}`;
+	// Skipped HONESTLY (S2-40 posture) rather than returning early from the body:
+	// a test that returns green on a box with no ImageMagick is indistinguishable
+	// from one that asserted something.
+	const HAVE_MAGICK = existsSync(resolveMagick());
+
+	afterAll(() => rmSync(MEDIA_ROOT, { recursive: true, force: true }));
+
+	test('the kernel MERGES the returned failures — it does not drop them', () => {
+		// The seam is one line and it is invisible from the outside: a caller that
+		// awaited the call for its side effects alone would compile, pass every test
+		// in this file, and silently lose every twin failure on the install.
+		const source = readFileSync(join(REPO_ROOT, 'src/core/media/repair.ts'), 'utf8');
+		expect(source).toMatch(/errors\.push\(\s*\.\.\.\(await regenerateMissingDerivatives\(/);
+		// …and the FATAL half still has its own channel (positive control: both
+		// paths reach `errors`, so this is a merge and not a replacement).
+		expect(source).toMatch(/catch \(error\) \{\s*errors\.push\(\(error as Error\)\.message\);/);
+	});
+
+	test.if(HAVE_MAGICK)(
+		'the twin failure is returned, and the thumb + envelope are built anyway',
+		async () => {
+			const { runBinary } = await import('../../src/core/media/engine/spawn.ts');
+
+			// Fixtures: a master and the default-tier file the thumb/envelope derive from.
+			for (const [quality, extension] of [
+				['original', 'tif'],
+				['1.5MB', 'jpg'],
+			] as [string, string][]) {
+				const absolute = `${MEDIA_ROOT}/image/${quality}/rsc29_rsc170_70.${extension}`;
+				mkdirSync(dirname(absolute), { recursive: true });
+				const built = await runBinary([resolveMagick(), '-size', '400x300', 'xc:red', absolute], {
+					nice: false,
+				});
+				expect(built.exitCode).toBe(0);
+			}
+
+			// `.jxl` is a format this host genuinely cannot write (measured:
+			// canWriteImageFormat('jxl') is false under the hardened policy). Config is
+			// frozen at boot, so the repair runs in a child with the key set — the
+			// established technique, see active_ontology_tlds.test.ts.
+			const PROBE = [
+				"const { mediaTypeOf } = await import('./src/core/concepts/media.ts');",
+				"const { regenerateMissingDerivatives } = await import('./src/core/media/repair.ts');",
+				"const spec = mediaTypeOf('component_image');",
+				'const errors = await regenerateMissingDerivatives(',
+				"\t'component_image',",
+				'\tspec,',
+				"\t{ componentTipo: 'rsc29', sectionTipo: 'rsc170', sectionId: 70, lang: null },",
+				"\t{ initialMediaPath: '', maxItemsFolder: null, mediaRoot: process.env.PROBE_MEDIA_ROOT },",
+				"\t{ rawExtension: 'tif', deleteNormalized: false, bulkProcessId: null },",
+				');',
+				'console.log(JSON.stringify({ configured: spec.alternateExtensions, errors }));',
+			].join('');
+			const child = Bun.spawnSync(['bun', '-e', PROBE], {
+				cwd: REPO_ROOT,
+				env: {
+					...process.env,
+					DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: '["jxl"]',
+					PROBE_MEDIA_ROOT: MEDIA_ROOT,
+				} as Record<string, string>,
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			expect([child.exitCode, child.stderr.toString()]).toEqual([0, child.stderr.toString()]);
+			const out = JSON.parse((child.stdout.toString().trim().split('\n').pop() ?? '').trim()) as {
+				configured: string[];
+				errors: string[];
+			};
+
+			// The child really asked for the unwritable format.
+			expect(out.configured).toEqual(['jxl']);
+			// REPORTED, with the key that asked for it — never a silent skip.
+			expect(out.errors.length).toBeGreaterThan(0);
+			expect(
+				out.errors.some(
+					(line) => line.includes('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS') || line.includes('jxl'),
+				),
+			).toBe(true);
+			// AND THE REPAIR STILL HAPPENED: the two derivatives the tool exists to fix
+			// are on disk. Placed earlier, or wrapped as one block, the twin step would
+			// have taken them down with it.
+			expect(existsSync(`${MEDIA_ROOT}/image/thumb/rsc29_rsc170_70.jpg`)).toBe(true);
+			expect(existsSync(`${MEDIA_ROOT}/image/svg/rsc29_rsc170_70.svg`)).toBe(true);
+			// …and the format that could not be written never landed under its name.
+			expect(existsSync(`${MEDIA_ROOT}/image/1.5MB/rsc29_rsc170_70.jxl`)).toBe(false);
+		},
+	);
 });
