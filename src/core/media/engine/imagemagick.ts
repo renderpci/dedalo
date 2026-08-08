@@ -12,11 +12,21 @@
  * target, so EVERY recipe here names a scene and collapses the stack. See
  * `./probe.ts` for the shape abstraction and `SceneSelection` below for the rule.
  *
+ * OUTPUT TOKENS (2026-08-07): every recipe's target goes through `coderToken`,
+ * which states the coder explicitly (`AVIF:/abs/x.avif`) and requires an
+ * absolute path. Without it ImageMagick silently writes PNG bytes under an
+ * unrecognised extension — see `coderToken` for the measurement. The bare path
+ * is still what `runMagickTo` receives: that is a FILESYSTEM path, not an argv
+ * token.
+ *
  * PHP anchors: dd_thumb (:184), convert (:275), rotate (:697), crop (:781),
  * get_dimensions (:1027).
  */
 
+import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { pixelAreaBudget } from '../../concepts/media.ts';
 import { magickPolicyEnv, resolveIdentify, resolveMagick } from './binaries.ts';
@@ -49,10 +59,114 @@ const OPAQUE_TARGET_EXTENSIONS: ReadonlySet<string> = new Set(['jpg', 'jpeg', 'b
  * `-alpha background`) does.
  */
 export function backgroundForTarget(target: string): string {
+	return OPAQUE_TARGET_EXTENSIONS.has(targetExtension(target)) ? '#ffffff' : 'none';
+}
+
+/**
+ * The lowercase extension of a target — accepts a full path OR a bare extension
+ * ('jpg'), because every caller of the three `*ForTarget` helpers has one or the
+ * other and a second spelling of this two-liner is how they would drift apart.
+ */
+function targetExtension(target: string): string {
 	const dot = target.lastIndexOf('.');
-	// Accept a full path or a bare extension ('jpg').
-	const extension = (dot >= 0 ? target.slice(dot + 1) : target).toLowerCase();
-	return OPAQUE_TARGET_EXTENSIONS.has(extension) ? '#ffffff' : 'none';
+	return (dot >= 0 ? target.slice(dot + 1) : target).toLowerCase();
+}
+
+/**
+ * Extension → the ImageMagick CODER NAME the engine states explicitly for it.
+ *
+ * Only the entries whose coder is not simply the uppercased extension, plus the
+ * formats this engine itself writes — those are declared rather than derived so
+ * a build that drops a convenience ALIAS cannot change what we encode. Measured
+ * on IM 7.1.2-18: `JPG` and `TIF` are aliases of the `JPEG`/`TIFF` modules on
+ * this box (`TIF:` and `TIFF:` wrote byte-identical files), but the canonical
+ * module name is the one `-list format` prints, so that is the one we send.
+ *
+ * Anything not listed falls back to the UPPERCASED extension. That is not a
+ * narrowing: an operator may configure any format their ImageMagick can encode,
+ * and an unrecognised coder fails LOUDLY on an absolute path (measured below),
+ * with `canWriteImageFormat` refusing it long before a record is touched.
+ */
+const CODER_BY_EXTENSION: ReadonlyMap<string, string> = new Map([
+	['jpg', 'JPEG'],
+	['jpeg', 'JPEG'],
+	['tif', 'TIFF'],
+	['tiff', 'TIFF'],
+	['png', 'PNG'],
+	['webp', 'WEBP'],
+	['avif', 'AVIF'],
+	['heic', 'HEIC'],
+	['heif', 'HEIF'],
+	['gif', 'GIF'],
+	['bmp', 'BMP'],
+	['pnm', 'PNM'],
+]);
+
+/**
+ * The OUTPUT ARGV TOKEN for a target path: `AVIF:/abs/path.avif`.
+ *
+ * WHY THE EXPLICIT CODER. ImageMagick picks the output format from the
+ * extension, and when it does not recognise it, it does not refuse — it writes
+ * SOMETHING. Measured (IM 7.1.2-18, repo policy dir, no JXL delegate):
+ * `magick src.png out.jxl` exits 0 with an EMPTY stderr and leaves 316 bytes of
+ * PNG in a file named `out.jxl`. That output passes `nonEmptyFile`, passes the
+ * one-scene post-condition, enters files_info and is served with the wrong MIME.
+ * With the coder stated, the same run fails loudly and writes nothing.
+ *
+ * WHY ABSOLUTE ONLY. The token is `<CODER>:<path>`, and when the coder is not
+ * recognised ImageMagick treats the whole token as a FILENAME. Measured:
+ * `magick src.png JXL:rel.jxl` exits 0, stderr empty, and creates a file
+ * literally named `JXL:rel.jxl` in the cwd — the silent-wrong-format hazard
+ * again, now with a bogus name and nothing to sweep it. The same token with an
+ * absolute path (`JXL:/tmp/…/abs.jxl`) exits 1 ("unable to open image", the
+ * literal name contains a directory that does not exist) and writes nothing. So
+ * the absolute-path rule is what converts this whole failure class into a loud
+ * one, and it is enforced here rather than trusted.
+ *
+ * It is FREE on the formats we already write: measured through the real 1.5MB
+ * recipe, `JPEG:`/`JPG:`/`PNG:`/`WEBP:`/`AVIF:`/`TIFF:` outputs are BYTE-IDENTICAL
+ * to the bare-path outputs.
+ */
+export function coderToken(target: string): string {
+	if (!target.startsWith('/')) {
+		throw new Error(
+			`ImageMagick output token needs an ABSOLUTE path, got '${target}': with a relative path an unrecognised coder prefix is taken as part of the FILENAME (measured: 'JXL:rel.jxl' exits 0 and creates a file literally named 'JXL:rel.jxl')`,
+		);
+	}
+	const slash = target.lastIndexOf('/');
+	const extension = target.slice(slash + 1).includes('.') ? targetExtension(target) : '';
+	if (extension === '') {
+		throw new Error(
+			`ImageMagick output token needs a target with an extension, got '${target}': the extension is what names the coder`,
+		);
+	}
+	return `${CODER_BY_EXTENSION.get(extension) ?? extension.toUpperCase()}:${target}`;
+}
+
+/**
+ * Target extensions whose `-quality` is NOT a lossy quality knob and must stay
+ * high. See `compressionForTarget`.
+ */
+const HIGH_COMPRESSION_TARGET_EXTENSIONS: ReadonlySet<string> = new Set(['png', 'webp']);
+
+/**
+ * The `-quality` value for a target file (or bare extension). An EXPLICIT
+ * `compression` from the caller always wins — this is the DEFAULT, not a policy
+ * override.
+ *
+ * 82 is the PHP default and the right lossy setting for jpg/avif/tif. PNG IS THE
+ * TRAP: its `-quality` is not a quality at all, it encodes `zlib_level*10 +
+ * filter_type`, so 82 means "zlib level 8, filter 2" — a WORSE lossless
+ * compressor than 90, on a format that cannot lose anything either way.
+ * MEASURED here through the real 1.5MB recipe: the layered medal master gives
+ * 721 858 B at 82 vs 535 300 B at 90 (+34.9% for nothing), and this install's
+ * largest master (1849x2047) at full size gives 12 347 424 B vs 9 957 081 B
+ * (+24.0%). webp's `-quality` is a genuine quality knob, but it is the alpha
+ * delivery format and 90 is its usual working point.
+ */
+export function compressionForTarget(target: string, explicit?: number): number {
+	if (explicit !== undefined) return explicit;
+	return HIGH_COMPRESSION_TARGET_EXTENSIONS.has(targetExtension(target)) ? 90 : 82;
 }
 
 /**
@@ -197,7 +311,9 @@ export function buildThumbArgv(
 		'0x.5',
 		'-quality',
 		'90',
-		target,
+		// The OUTPUT token, never the bare path — see coderToken for the measured
+		// silent-wrong-format hazard it closes.
+		coderToken(target),
 	);
 	return argv;
 }
@@ -221,7 +337,11 @@ export interface ConvertOptions {
 	/** Source pixel dimensions (never upscale past these). */
 	sourceWidth?: number;
 	sourceHeight?: number;
-	/** Force a specific -quality (jpeg compression); default 82 (PHP default). */
+	/**
+	 * Force a specific -quality. Default is `compressionForTarget(target)`: 82
+	 * (the PHP default) for the lossy targets, 90 for png/webp — png's -quality
+	 * is a zlib/filter code, not a quality, and 82 costs measured bytes.
+	 */
 	compression?: number;
 	/** Inject the CMYK→sRGB ICC profiles + -strip (when the source is CMYK). */
 	cmyk?: boolean;
@@ -289,7 +409,13 @@ export function buildConvertArgv(
 	if (geometry !== null) {
 		argv.push('-resize', geometry);
 	}
-	argv.push('-quality', String(options.compression ?? 82), target);
+	// The compression DEFAULT is per-target (png's -quality is not a quality —
+	// see compressionForTarget); an explicit options.compression still wins.
+	argv.push(
+		'-quality',
+		String(compressionForTarget(target, options.compression)),
+		coderToken(target),
+	);
 	return argv;
 }
 
@@ -337,7 +463,7 @@ export function buildRotateArgv(
 		'SRT',
 		String(degrees),
 		'+repage',
-		target,
+		coderToken(target),
 	);
 	return argv;
 }
@@ -356,7 +482,7 @@ export function buildCropArgv(source: string, target: string, box: CropBox): str
 		'-crop',
 		`${box.width}x${box.height}+${box.x}+${box.y}`,
 		'+repage',
-		target,
+		coderToken(target),
 	];
 }
 
@@ -508,6 +634,106 @@ export async function cropImage(source: string, target: string, box: CropBox): P
 	// The out-of-bounds geometry check keeps its own message and runs FIRST: an
 	// impossible crop box is a caller error, not a missing-output mystery.
 	await runMagickTo(buildCropArgv(source, target, box), target, /geometry does not contain image/i);
+}
+
+/**
+ * Per-PROCESS memo of "can this ImageMagick, under OUR policy, write a `.<ext>`
+ * file". Keyed by the lowercase extension, value is the in-flight probe promise
+ * so N concurrent uploads of the same configured format spawn ONE probe.
+ *
+ * ONLY A `true` IS KEPT. A positive answer really is a fact about the HOST (the
+ * delegate is built in) plus the shipped policy.xml, and neither can change under
+ * a running server — that is the ffmpeg.ts:cachedAudioCodec class, and caching it
+ * is what keeps a bulk ingest from spawning a probe per file. A NEGATIVE is not
+ * the same kind of fact: the probe is a process spawn writing into os.tmpdir(),
+ * so it also fails when the fd/PID table is saturated by the very bulk ingest
+ * that asked, when tmp is full, or when tmp is momentarily unwritable. Memoized,
+ * one such failure would take the format out for the lifetime of the server and
+ * every subsequent pass would RETIRE the twins it could no longer rebuild — a
+ * transient condition turned into archive damage. Re-probing costs ~16 ms and
+ * only on a box that genuinely lacks the format, where it is asked once per
+ * buildAlternateVersions pass, not once per tier.
+ *
+ * Request-INDEPENDENT by construction: the key is a file extension and the value
+ * a boolean. Allowlisted in module_state_tripwire.
+ */
+const writableFormatCache = new Map<string, Promise<boolean>>();
+
+/**
+ * Can this host actually WRITE `extension`? Probed by encoding a real 1x1 image
+ * through the very runner the derivative ladder uses, once per process.
+ *
+ * WHY NOT `magick -list format`. It answers a different question. Measured on
+ * IM 7.1.2-18 with the repo policy dir:
+ *
+ *  - it reports `PS  PS  rw+`, yet `magick src.png PS:/tmp/out.ps` exits 1 with
+ *    "attempt to perform an operation not allowed by the security policy `PS'".
+ *    The listing describes the BUILD; what decides is the build AND the hardened
+ *    policy.xml (without MAGICK_CONFIGURE_PATH the same command exits 0 and
+ *    writes 14 036 bytes — that gap is MEDIA-02's whole point).
+ *  - it reports `PNG* PNG rw-` and `JPG* JPEG rw-`. The `+` is multi-image
+ *    support, not writability, so a "require rw+" check would refuse PNG and
+ *    JPG — the engine's own DEFAULT extension.
+ *
+ * A real write through `runMagickTo` asks exactly the question the caller has:
+ * will the file I am about to produce exist, hold bytes, and be one image.
+ * Never throws — an unwritable format is an answer, not an error.
+ */
+export function canWriteImageFormat(extension: string): Promise<boolean> {
+	const normalized = extension.toLowerCase().replace(/^\./, '');
+	const cached = writableFormatCache.get(normalized);
+	if (cached !== undefined) return cached;
+	const probe = probeWritableFormat(normalized);
+	// The in-flight promise is cached immediately (no stampede: N concurrent first
+	// callers share ONE spawn) and a `false` is DROPPED once it resolves — see the
+	// cache's lifecycle note. Dropping it after resolution, not before, is what
+	// keeps both properties.
+	writableFormatCache.set(normalized, probe);
+	void probe.then((writable) => {
+		if (!writable && writableFormatCache.get(normalized) === probe) {
+			writableFormatCache.delete(normalized);
+		}
+	});
+	return probe;
+}
+
+/** The one 1x1 encode behind `canWriteImageFormat`. Temp removed in a finally. */
+async function probeWritableFormat(extension: string): Promise<boolean> {
+	// os.tmpdir(), never the media tree: a probe artefact inside a quality dir
+	// would be scanned into files_info before the finally could remove it. The
+	// uuid keeps two concurrent probes of the same format apart.
+	const target = join(tmpdir(), `dedalo_format_probe_${randomUUID()}.${extension}`);
+	try {
+		// `xc:white` is a 1x1 canvas generated in-process — no source file, so the
+		// probe measures the ENCODER alone. The output token carries the coder, so
+		// an unrecognised format fails here instead of writing PNG bytes under the
+		// configured name (see coderToken).
+		await runMagickTo([resolveMagick(), '-size', '1x1', 'xc:white', coderToken(target)], target);
+		return true;
+	} catch {
+		return false;
+	} finally {
+		rmSync(target, { force: true });
+	}
+}
+
+/**
+ * Refuse a target extension this host cannot encode, LOUDLY and before anything
+ * is written. `context` names who asked (the config key, the tier) so the
+ * operator reads why the engine was asked for a format it cannot produce —
+ * a format configured but silently not built is the defect class this whole
+ * subsystem exists to end.
+ */
+export async function assertWritableTargetExtension(
+	extension: string,
+	context?: string,
+): Promise<void> {
+	if (await canWriteImageFormat(extension)) return;
+	throw new Error(
+		`ImageMagick on this host cannot write '.${extension}' files (probed with a real 1x1 encode under the hardened policy)${
+			context === undefined || context === '' ? '' : ` — requested by ${context}`
+		}`,
+	);
 }
 
 /**

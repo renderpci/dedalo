@@ -33,10 +33,25 @@ async function applyRotation(ctx: ToolActionContext): Promise<ToolResponse> {
 			{
 				degrees: Number(ctx.options.rotation_degrees ?? 0),
 				mode: ctx.options.rotation_mode === 'default' ? 'default' : 'expanded',
+				// THE CLIENT'S 'Transparent' CHECKBOX IS WHAT DECIDES (2026-08-07).
+				// It has always been sent (`alpha`) and was READ NOWHERE — the same
+				// config-read-never-honoured shape this whole change exists to end, one
+				// layer up. The colour picker ALWAYS sends a value (it defaults to
+				// white), so taking it unconditionally made rotation.ts's per-file rule
+				// (D10) dead code from the only tool that reaches it.
+				//
+				//  - ticked  → `undefined`, i.e. PER FILE: an alpha-capable file keeps
+				//    transparent corners, and a jpg is still composited onto white —
+				//    never a transparent jpg, which is the nondeterministic-background
+				//    trap backgroundForTarget documents;
+				//  - unticked → the picker's colour for every file: the operator chose a
+				//    solid fill and can see it in the preview.
 				background:
-					typeof ctx.options.background_color === 'string'
-						? ctx.options.background_color
-						: '#ffffff',
+					ctx.options.alpha === true
+						? undefined
+						: typeof ctx.options.background_color === 'string'
+							? ctx.options.background_color
+							: undefined,
 				cropArea:
 					(ctx.options.crop_area as { x: number; y: number; width: number; height: number }) ??
 					null,

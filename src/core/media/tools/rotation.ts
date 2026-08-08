@@ -33,7 +33,13 @@
 import { existsSync } from 'node:fs';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
 import { writeAtomically } from '../atomic.ts';
-import { type CropBox, cropImage, getDimensions, rotateImage } from '../engine/imagemagick.ts';
+import {
+	backgroundForTarget,
+	type CropBox,
+	cropImage,
+	getDimensions,
+	rotateImage,
+} from '../engine/imagemagick.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from '../path.ts';
 
 /** A stored files_info entry (quality + extension) the rotation walks. */
@@ -48,7 +54,27 @@ export interface ApplyRotationOptions {
 	degrees: number;
 	/** 'expanded' grows the canvas; 'default' keeps it (PHP rotation_mode). */
 	mode?: 'expanded' | 'default';
-	/** Background color for exposed corners (jpg → '#ffffff'; null → transparent). */
+	/**
+	 * Background for the corners a rotation EXPOSES. UNSET (the normal case) means
+	 * PER FILE — `backgroundForTarget(path)`, exactly as every build recipe decides
+	 * it. An explicit value (including null = transparent) overrides for every file.
+	 *
+	 * WHY IT IS NOT A SINGLE '#ffffff' ANY MORE (2026-08-07, D10): rotateVersionCore
+	 * rotates EVERY on-disk extension of a tier, and since the engine authors alpha
+	 * TWINS (processing.ts buildAlternateVersions) that set now includes `.avif` /
+	 * `.png` files whose whole reason to exist is the transparency a background
+	 * removal produced. Their exposed corners belong transparent, not white.
+	 *
+	 * WHAT IT DOES *NOT* DO, MEASURED — the plan's claim was wrong and is corrected
+	 * here rather than repeated. Rotating the real medal twin (`opaque=False`,
+	 * `mean.a 0.531173`) with `-background '#ffffff'` gives `opaque=False`,
+	 * `mean.a 0.5339`, corner `srgba(255,254,255,1)`: the cut-out SURVIVES and only
+	 * the newly exposed corners turn white. `buildRotateArgv` carries no `-flatten`,
+	 * so `-background` only paints the virtual-pixel area. So this is a correctness
+	 * fix about the corners a rotation creates, NOT a rescue from data loss — and
+	 * the difference matters, because a comment that overstates its damage is the
+	 * kind nobody trusts the second time.
+	 */
 	background?: string | null;
 	/**
 	 * Crop box in PIXELS of the default-quality reference file — the tier the
@@ -80,8 +106,10 @@ export async function applyRotationCore(
 	options: ApplyRotationOptions,
 ): Promise<RotationResult> {
 	const result: RotationResult = { rotated: [], cropped: [], errors: [] };
-	const background = options.background === undefined ? '#ffffff' : options.background;
 	const mode = options.mode ?? 'expanded';
+	// PER FILE, never one value for the tier — see ApplyRotationOptions.background.
+	const backgroundFor = (path: string): string | null =>
+		options.background === undefined ? backgroundForTarget(path) : options.background;
 
 	// Rotate pass (skip original; skip zero rotation).
 	if (options.degrees !== 0 && !Number.isNaN(options.degrees)) {
@@ -105,7 +133,10 @@ export async function applyRotationCore(
 				// concurrent rotations of the same tier collided. The per-entry
 				// try/catch stays: PHP collects rotate errors rather than aborting.
 				await writeAtomically(path, (temp) =>
-					rotateImage(path, temp, options.degrees, mode, background),
+					// The TEMP decides the background, and it is a sibling of `path` with
+					// the same extension (tempSibling), so an alpha twin keeps its alpha
+					// and a jpg is still composited onto white.
+					rotateImage(path, temp, options.degrees, mode, backgroundFor(temp)),
 				);
 				result.rotated.push(path);
 			} catch (error) {

@@ -113,7 +113,11 @@ function resolveExistingSource(
 	quality: string,
 	options: MediaPathOptions,
 ): string | null {
-	const extensions = [spec.defaultExtension, ...spec.alternateExtensions];
+	// The MANAGED list, not the built one: this asks "which file is on disk", and
+	// an install may hold formats the current config does not build — a v6 legacy
+	// twin, a configured-but-refused extension, a pdf cover. Default extension
+	// first, so a tier holding both jpg and avif still answers with the jpg.
+	const extensions = spec.managedExtensions;
 	const seen = new Set<string>();
 	for (const extension of extensions) {
 		if (extension === '' || seen.has(extension)) continue;

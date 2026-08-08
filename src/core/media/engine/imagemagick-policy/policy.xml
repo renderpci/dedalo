@@ -11,7 +11,7 @@
   Hardened ImageMagick policy for the Dédalo TS media engine (foundation audit
   MEDIA-02). Loaded via MAGICK_CONFIGURE_PATH (set by engine/imagemagick.ts).
 
-  Dédalo rasterizes PDFs (buildPdfCover → Ghostscript delegate) and converts
+  Dédalo rasterizes PDFs (buildPdfCovers → Ghostscript delegate) and converts
   raster images, so the PDF coder stays enabled and safety there depends on
   Ghostscript >= 9.50 (SAFER by default — a hard deploy requirement). This policy
   removes the OTHER classic ImageMagick/Ghostscript RCE / SSRF / file-disclosure

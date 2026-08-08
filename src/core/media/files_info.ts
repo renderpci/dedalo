@@ -143,7 +143,8 @@ export function getQualityFileInfo(
 /**
  * Scan the full files_info for a media identity (PHP get_files_info :1343).
  * For each quality: the thumb tier uses the thumb extension; every other tier
- * iterates unique([default, ...allowed, ...alternate]) extensions. Absent files
+ * iterates `spec.managedExtensions` — every extension a file of this type may
+ * carry on disk, default FIRST; see the comment at the list itself. Absent files
  * are skipped (include_empty=false parity). The raw+normalized `original` twin
  * and the image `modified` twin are appended from the stored names.
  */
@@ -168,11 +169,20 @@ export function scanFilesInfo(
 	if (spec.hasThumb && !qualities.includes(thumbQuality)) {
 		qualities.push(thumbQuality);
 	}
-	const extensions = uniqueLower([
-		spec.defaultExtension,
-		...spec.allowedExtensions,
-		...spec.alternateExtensions,
-	]);
+	// ORDER IS LOAD-BEARING, and the DEFAULT EXTENSION MUST STAY FIRST: entries
+	// come out in this order, and resolve/relation_list.ts:463 plus four
+	// component_image views pick a tier's file by QUALITY ALONE — i.e. the first
+	// entry of that quality. A tier holding both jpg and avif must therefore
+	// still yield the jpg first. `managedExtensions` is built default-first for
+	// exactly that reason (concepts/media.ts).
+	//
+	// IT IS THE MANAGED LIST, NOT THE BUILT ONE: the pdf cover is built whether or
+	// not the config lists it, and a configured-but-REFUSED extension (av/svg/3d,
+	// which have no builder) may already exist on disk from v6. Scanning the built
+	// list alone un-indexed both classes — the files kept existing and the record
+	// stopped seeing them. Scanning cannot invent an entry: `getQualityFileInfo`
+	// emits one only for a file that exists.
+	const extensions = spec.managedExtensions;
 
 	const filesInfo: FileInfoEntry[] = [];
 	for (const quality of qualities) {
@@ -226,20 +236,6 @@ function appendNormalizedTwin(
 	if (entry.file_exist && !filesInfo.some((e) => e.file_path === entry.file_path)) {
 		filesInfo.push(entry);
 	}
-}
-
-/** Lowercase + de-duplicate an extension list, preserving first-seen order. */
-function uniqueLower(values: string[]): string[] {
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const value of values) {
-		const lower = value.toLowerCase();
-		if (!seen.has(lower)) {
-			seen.add(lower);
-			out.push(lower);
-		}
-	}
-	return out;
 }
 
 /**

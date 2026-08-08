@@ -75,8 +75,74 @@ export interface MediaTypeSpec {
 	readonly defaultExtension: string;
 	/** Upload allowlist. */
 	readonly allowedExtensions: readonly string[];
-	/** Extra derivative extensions built alongside the default. */
+	/**
+	 * The alternate TWIN extensions this type really builds — already FILTERED to
+	 * what a writer exists for (see ALTERNATE_BUILDER_BY_MODEL); whatever the
+	 * config named for a model with no writer is in `refusedAlternateExtensions`
+	 * instead, never here.
+	 *
+	 * WHAT A TWIN IS (2026-08-07, the builder that closes "config read, never
+	 * honoured"): a per-tier COMPANION of that tier's normalized file — the same
+	 * picture, same tier, other container. NOT "every quality with every format":
+	 *
+	 *  - a DERIVED tier that has its `.<defaultExtension>` file gets one twin per
+	 *    extension listed here, built FROM THE MASTER (never transcoded from the
+	 *    sibling jpg, which is already flattened onto white);
+	 *  - a derived tier with no such file gets none, and any twin found there is
+	 *    RETIRED — `exists(Q/<id>.E) ⇒ exists(Q/<id>.jpg)` for every derived Q,
+	 *    the one direction the engine holds at ALL times (a twin may legitimately
+	 *    be absent; a twin without its companion is always wrong);
+	 *  - MASTER tiers never (a machine-authored file parked in a master tier
+	 *    becomes resolvable AS the master — resolveMaster walks allowedExtensions);
+	 *  - the THUMB tier never (files_info scans thumb with the thumb extension
+	 *    alone, so a twin there would be permanently unindexable).
+	 */
 	readonly alternateExtensions: readonly string[];
+	/**
+	 * The configured alternate extensions this type CANNOT build, kept rather than
+	 * dropped so the refusal is VISIBLE (boot log) instead of silent. Non-empty
+	 * only for the models in NO_ALTERNATE_BUILDER_REASON.
+	 */
+	readonly refusedAlternateExtensions: readonly string[];
+	/** The config key both lists come from, so a refusal can name what to edit. */
+	readonly alternateExtensionsConfigKey: string;
+	/**
+	 * Extensions of the COVER files this type builds into its default quality
+	 * from a source it cannot itself display — today only pdf, whose first page is
+	 * rasterized to `<defaultQuality>/<id>.jpg` (+ every alternate).
+	 *
+	 * SCANNED UNCONDITIONALLY by files_info: the jpg cover is built whether or not
+	 * the config lists it, so deriving the scan list from the config alone would
+	 * let an operator who empties DEDALO_PDF_ALTERNATIVE_EXTENSIONS un-index every
+	 * cover already on disk — the file keeps existing and the record stops seeing
+	 * it. Empty for every other type.
+	 */
+	readonly coverExtensions: readonly string[];
+	/**
+	 * EVERY extension a file of this type may legitimately carry on disk — what the
+	 * engine must SEE, COPY and SOFT-DELETE, as opposed to `alternateExtensions`,
+	 * which is what it BUILDS. Default extension FIRST (the order is load-bearing —
+	 * see files_info.ts), then the upload allowlist, the built twins, the covers,
+	 * and finally the configured-but-refused ones.
+	 *
+	 * THE TWO LISTS ARE DIFFERENT QUESTIONS AND CONFLATING THEM LOSES FILES.
+	 * Measured, before this field existed:
+	 *
+	 *  - `duplicateMediaFiles` enumerated `[default, allowed, alternates]`, so a pdf
+	 *    whose `DEDALO_PDF_ALTERNATIVE_EXTENSIONS` an operator had emptied lost its
+	 *    jpg COVER on every duplicate_record — the cover is built whether or not the
+	 *    key lists it, and it is the only visual a pdf record has in a list view;
+	 *  - narrowing `alternateExtensions` at construction (the D5 capability filter)
+	 *    additionally made a REFUSED extension invisible: with
+	 *    `DEDALO_AV_ALTERNATIVE_EXTENSIONS=["ogg"]` a legacy `404/<id>.ogg` on disk
+	 *    was no longer scanned into files_info, no longer copied by duplicate_record
+	 *    and no longer moved by delete_quality — it stayed on disk, unreferenced,
+	 *    forever. Refusing to BUILD a format is right; refusing to SEE the files
+	 *    that already exist is data loss by omission.
+	 *
+	 * A file the engine will not build is still a file the engine must not lose.
+	 */
+	readonly managedExtensions: readonly string[];
 	/**
 	 * The qualities projected into list-mode reads (replaces the old hardcoded
 	 * media_list_value LIST_QUALITIES — now covers av/3d too). Default quality +
@@ -89,13 +155,79 @@ export interface MediaTypeSpec {
 
 /** Model → its config block + folder label (the only place the mapping lives). */
 const MODEL_TO_TYPE: Readonly<
-	Record<MediaModel, { readonly folder: MediaTypeFolder; readonly cfg: () => MediaTypeConfig }>
+	Record<
+		MediaModel,
+		{
+			readonly folder: MediaTypeFolder;
+			readonly cfg: () => MediaTypeConfig;
+			/** The env key `cfg.alternateExtensions` is read from (config.ts readList). */
+			readonly alternateKey: string;
+		}
+	>
 > = {
-	component_image: { folder: 'image', cfg: () => config.media.image },
-	component_av: { folder: 'av', cfg: () => config.media.av },
-	component_pdf: { folder: 'pdf', cfg: () => config.media.pdf },
-	component_svg: { folder: 'svg', cfg: () => config.media.svg },
-	component_3d: { folder: '3d', cfg: () => config.media.threeD },
+	component_image: {
+		folder: 'image',
+		cfg: () => config.media.image,
+		alternateKey: 'DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS',
+	},
+	component_av: {
+		folder: 'av',
+		cfg: () => config.media.av,
+		alternateKey: 'DEDALO_AV_ALTERNATIVE_EXTENSIONS',
+	},
+	component_pdf: {
+		folder: 'pdf',
+		cfg: () => config.media.pdf,
+		alternateKey: 'DEDALO_PDF_ALTERNATIVE_EXTENSIONS',
+	},
+	component_svg: {
+		folder: 'svg',
+		cfg: () => config.media.svg,
+		alternateKey: 'DEDALO_SVG_ALTERNATIVE_EXTENSIONS',
+	},
+	component_3d: {
+		folder: '3d',
+		cfg: () => config.media.threeD,
+		alternateKey: 'DEDALO_3D_ALTERNATIVE_EXTENSIONS',
+	},
+};
+
+/**
+ * THE ALTERNATE-TWIN CAPABILITY CENSUS — every media model, stated once.
+ *
+ * The value is the WRITER that builds this model's alternate extensions, or null
+ * when there is none. A model with no writer must never advertise the key:
+ * `DEDALO_*_ALTERNATIVE_EXTENSIONS` was read by seven modules and written by
+ * none, so the engine scanned for, indexed and offered files nothing could ever
+ * produce. Filtering here makes every existing consumer correct with no edit of
+ * its own, and the refusal stays visible in `refusedAlternateExtensions`.
+ *
+ * ADDING A BUILDER = moving a model from NO_ALTERNATE_BUILDER_REASON to here.
+ * The two maps are exact complements, and the media_alternate_versions tripwire
+ * is what holds them to it.
+ */
+export const ALTERNATE_BUILDER_BY_MODEL: Readonly<Record<MediaModel, string | null>> = {
+	component_image: 'buildAlternateVersions (core/media/processing.ts)',
+	component_pdf: 'buildPdfCovers (core/media/processing.ts)',
+	component_av: null,
+	component_svg: null,
+	component_3d: null,
+};
+
+/**
+ * Why the models above have no alternate builder — the OPERATOR-facing half of
+ * the census (this text reaches the boot log next to the key and its value).
+ * Each reason names the code that would have to change.
+ */
+export const NO_ALTERNATE_BUILDER_REASON: Readonly<Record<MediaModel, string | null>> = {
+	component_image: null,
+	component_pdf: null,
+	component_av:
+		'every ffmpeg profile in core/media/engine/ffmpeg_profiles.ts forces the same container and codec (force: "mp4", videoCodec: "libx264"), and a profile is chosen by getFfmpegProfile(settingName), whose names carry only resolution/standard/aspect — there is no container axis to build a second format on',
+	component_svg:
+		'an svg derivative is a BYTE COPY of the master (regenerateSvg → copyToQuality in core/media/processing.ts): there is no encoder here to point at another extension',
+	component_3d:
+		'the 3d derivative is likewise a naive copy (regenerate3d in core/media/processing.ts) because the format converters are ledgered PHP-dead — nothing in this engine can transcode a mesh',
 };
 
 /** The thumb quality name from config (shared across types). */
@@ -186,6 +318,49 @@ function masterQualitiesFor(folder: MediaTypeFolder, cfg: MediaTypeConfig): stri
 	return masters;
 }
 
+/**
+ * The pdf COVER extension: the first page rasterized into the default quality
+ * (core/media/processing.ts buildPdfCovers). It is a LITERAL, not a config
+ * value — a pdf's default extension is `pdf` (the stored document), so the type
+ * has no configured extension for the picture of it, and the cover has been jpg
+ * since v6 (create_alternative_version). Alternates are built BESIDE it, never
+ * instead of it.
+ */
+export const PDF_COVER_EXTENSION = 'jpg';
+
+/**
+ * The ONE derivative of a type that is built unconditionally, whatever the
+ * config says — so nothing may make it conditional on a probe or a list.
+ *
+ * For pdf it is the jpg cover (v6 create_alternative_version has built one since
+ * before the key existed, and it is the only visual a pdf record has in a list
+ * view). For every other type the type's own `defaultExtension` plays that role
+ * and is never routed through the alternate machinery at all.
+ */
+export function canonicalCoverExtension(spec: MediaTypeSpec): string | null {
+	return spec.typeFolder === 'pdf' ? PDF_COVER_EXTENSION : null;
+}
+
+/** Lowercase + de-duplicate, first-seen order kept (the twin of files_info's). */
+function uniqueLower(values: readonly string[]): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const value of values) {
+		const lower = value.toLowerCase();
+		if (!seen.has(lower)) {
+			seen.add(lower);
+			out.push(lower);
+		}
+	}
+	return out;
+}
+
+/** The cover extensions of a type: pdf builds one, nothing else does. */
+function coverExtensionsFor(folder: MediaTypeFolder, alternates: readonly string[]): string[] {
+	if (folder !== 'pdf') return [];
+	return uniqueLower([PDF_COVER_EXTENSION, ...alternates]);
+}
+
 const specCache = new Map<MediaModel, MediaTypeSpec>();
 
 /**
@@ -198,6 +373,15 @@ export function mediaTypeOf(model: string): MediaTypeSpec | null {
 	const cached = specCache.get(model as MediaModel);
 	if (cached !== undefined) return cached;
 	const cfg = entry.cfg();
+	// NARROW THE SPEC AT CONSTRUCTION, and keep what was dropped: a model with no
+	// writer (ALTERNATE_BUILDER_BY_MODEL) must not advertise extensions the engine
+	// can never produce — scanners, the upload allowlist message and
+	// `features.alternative_extensions` all read this list and would otherwise
+	// describe files that cannot exist. The refusal is not silent: it is carried
+	// in refusedAlternateExtensions and named in the boot log with its config key.
+	const configuredAlternates = uniqueLower(cfg.alternateExtensions);
+	const hasBuilder = ALTERNATE_BUILDER_BY_MODEL[model as MediaModel] !== null;
+	const alternateExtensions = hasBuilder ? configuredAlternates : [];
 	const spec: MediaTypeSpec = Object.freeze({
 		model: model as MediaModel,
 		typeFolder: entry.folder,
@@ -208,7 +392,22 @@ export function mediaTypeOf(model: string): MediaTypeSpec | null {
 		masterQualities: Object.freeze(masterQualitiesFor(entry.folder, cfg)),
 		defaultExtension: cfg.extension,
 		allowedExtensions: cfg.allowedExtensions,
-		alternateExtensions: cfg.alternateExtensions,
+		alternateExtensions: Object.freeze(alternateExtensions),
+		refusedAlternateExtensions: Object.freeze(hasBuilder ? [] : configuredAlternates),
+		alternateExtensionsConfigKey: entry.alternateKey,
+		coverExtensions: Object.freeze(coverExtensionsFor(entry.folder, alternateExtensions)),
+		// EVERY extension that may exist on disk, default first (see the field).
+		// The REFUSED ones are in here on purpose: the engine will not build them,
+		// and must still see, copy and soft-delete the ones an install already has.
+		managedExtensions: Object.freeze(
+			uniqueLower([
+				cfg.extension,
+				...cfg.allowedExtensions,
+				...alternateExtensions,
+				...coverExtensionsFor(entry.folder, alternateExtensions),
+				...(hasBuilder ? [] : configuredAlternates),
+			]),
+		),
 		listQualities: Object.freeze(listQualitiesFor(entry.folder, cfg)),
 		hasThumb: typeHasThumb(entry.folder),
 	});

@@ -31,8 +31,10 @@ import { refreshStoredFilesInfo } from './files_info.ts';
 import { resolveMediaPathOptions } from './ontology_path.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
 import {
+	buildAlternateVersions,
 	buildImageVersion,
 	buildThumbVersion,
+	derivedTwinQualities,
 	regenerate3d,
 	regeneratePdf,
 	regenerateSvg,
@@ -134,11 +136,15 @@ export async function refreshMediaItems(input: {
 		const rawExtension = typeof rawName === 'string' ? (rawName.split('.').pop() ?? null) : null;
 		if (regenerate) {
 			try {
-				await regenerateMissingDerivatives(model, spec, identity, pathOpts, {
-					rawExtension,
-					deleteNormalized,
-					bulkProcessId: input.bulkProcessId ?? null,
-				});
+				// Non-fatal per-file failures (a twin this host cannot encode) come
+				// back as values; only a fatal one throws. Both land in `errors`.
+				errors.push(
+					...(await regenerateMissingDerivatives(model, spec, identity, pathOpts, {
+						rawExtension,
+						deleteNormalized,
+						bulkProcessId: input.bulkProcessId ?? null,
+					})),
+				);
 			} catch (error) {
 				errors.push((error as Error).message);
 			}
@@ -176,9 +182,16 @@ export async function refreshMediaItems(input: {
  *  5. pdf/svg/3d: their whole derivative set builds only when the default
  *     quality file is absent (the builders are internally idempotent copies;
  *     they need the original).
+ *  6. image alternate-extension twins (v6 checks them too): build the MISSING
+ *     ones from the master, per derived tier that holds its own file. See the
+ *     step in the body for why it is LAST and per-extension wrapped, and
+ *     processing.ts buildAlternateVersions for why repair never retires or
+ *     re-encodes a twin that already exists.
  *
- * Alternate-extension builds (v6 checks them too) are a LEDGERED gap: the TS
- * processing layer has no alternate-extension builder yet.
+ * RETURNS the NON-FATAL failures (today: twin builds) rather than throwing them.
+ * The caller merges them into its own `errors`, which is the channel the sweep
+ * and the tool already report through. A throw here would abort steps 3-5 for the
+ * item — the opposite of what a repair pass is for.
  *
  * Exported for the unit gate (tool_update_cache.test.ts thumb parity).
  */
@@ -192,7 +205,8 @@ export async function regenerateMissingDerivatives(
 		deleteNormalized: boolean;
 		bulkProcessId: number | null;
 	},
-): Promise<void> {
+): Promise<string[]> {
+	const errors: string[] = [];
 	// The original is needed only by the ORIGINAL-SOURCED steps (default-quality
 	// build, delete_normalized). Thumb + envelope derive from the DEFAULT file —
 	// they must run even when the original is not on this box (v6 create_thumb).
@@ -209,7 +223,14 @@ export async function regenerateMissingDerivatives(
 	// 1. delete_normalized_files — move (never unlink) the normalized default-
 	//    quality files to deleted/; the uploaded original itself is never touched.
 	if (options.deleteNormalized && source !== null) {
-		const extensions = [spec.defaultExtension, ...spec.alternateExtensions];
+		// The NORMALIZED files of the default quality: the type's own file, the twins
+		// beside it, and — for pdf — the COVER, which is built whether or not the
+		// config lists it and would otherwise survive the wipe and be re-served as a
+		// stale picture of a document that has just been rebuilt. NOT the upload
+		// allowlist: a file an operator parked in this tier is theirs, not ours.
+		const extensions = [
+			...new Set([spec.defaultExtension, ...spec.alternateExtensions, ...spec.coverExtensions]),
+		];
 		for (const extension of extensions) {
 			const location = buildMediaLocation(spec, identity, spec.defaultQuality, extension, pathOpts);
 			if (location.absolutePath !== source && existsSync(location.absolutePath)) {
@@ -239,11 +260,47 @@ export async function regenerateMissingDerivatives(
 					fixEnvelopeRasterPath(overlay.absolutePath, spec, identity, pathOpts);
 				}
 			}
+			// 6. ALTERNATE-EXTENSION TWINS — MISSING ONLY, and deliberately AFTER the
+			//    thumb + envelope block, with EVERY EXTENSION INDIVIDUALLY WRAPPED.
+			//    The thumb and the envelope are the two things tool_update_cache exists
+			//    to fix (a record whose edit view renders nothing has a missing
+			//    envelope, not a missing avif), and a twin is the one derivative whose
+			//    encoder may simply be absent on the host. Placed earlier, or wrapped
+			//    as one block, an AVIF delegate missing from a box would abort the
+			//    repair of every record in the sweep — turning the repair tool off for
+			//    a reason unrelated to what it repairs.
+			//
+			//    buildAlternateVersions collects per-file failures rather than throwing,
+			//    so this try/catch only catches a PROGRAMMING error (a bad tier list);
+			//    it is here so that even that cannot cost the item its repair.
+			if (source !== null) {
+				for (const extension of spec.alternateExtensions) {
+					try {
+						const outcome = await buildAlternateVersions(spec, identity, pathOpts, source, {
+							qualities: derivedTwinQualities(spec),
+							extensions: [extension],
+							// Repair's contract: build what is MISSING, never re-encode or
+							// remove what is there. A STALE twin is therefore not corrected
+							// here — it is corrected by the next master change, and the engine
+							// cannot tell it from an operator-authored one without per-tier
+							// provenance (the ledgered gap). Missing-only also never retires,
+							// so a partial-media box cannot lose a twin to a repair sweep.
+							mode: 'missing-only',
+						});
+						errors.push(...outcome.errors);
+					} catch (error) {
+						errors.push(`alternate '.${extension}': ${(error as Error).message}`);
+					}
+				}
+			}
 			break;
 		}
 		case 'component_pdf':
 			if (!existsSync(defaultLocation.absolutePath) && source !== null) {
-				await regeneratePdf(spec, identity, pathOpts);
+				// Its cover failures are VALUES, for the same reason step 6's are: a
+				// cover format this host cannot encode must cost the sweep a cover, not
+				// the repair of every remaining record.
+				errors.push(...(await regeneratePdf(spec, identity, pathOpts)).errors);
 			}
 			break;
 		case 'component_svg':
@@ -262,6 +319,7 @@ export async function regenerateMissingDerivatives(
 			break;
 		// component_av: async transcode — deliberately not enqueued here.
 	}
+	return errors;
 }
 
 /**

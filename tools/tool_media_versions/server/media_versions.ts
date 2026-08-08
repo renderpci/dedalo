@@ -150,14 +150,32 @@ async function logMediaActivity(
 	});
 }
 
-/** build_version: build one quality derivative (av async → job id). */
+/**
+ * build_version: build one quality derivative (av async → job id).
+ *
+ * `target_extension` (optional) builds EXACTLY ONE file — that tier in that
+ * container — for recovering a single alternate twin without re-encoding the
+ * tier's own file (and with it any rotation the operator applied). Omitted, the
+ * tier is built COMPLETE: its normalized file plus every configured twin.
+ *
+ * `extension` IS GONE, with no alias (2026-08-07). It looked like a target and
+ * was threaded in as the SOURCE selector, so an API caller sending
+ * `extension:'avif'` got a jpg built from whichever master that extension
+ * happened to resolve — a silent wrong answer. The client never sent it
+ * (tool_media_versions.js build_version posts tipo/section/quality/async only),
+ * so nothing in the repo loses a capability; a caller that did send it now gets
+ * the documented `target_extension` instead of a lie.
+ */
 export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
 		const mediaContext = await resolveMediaToolContext(ctx.options);
 		const { spec, identity, pathOpts } = mediaContext;
 		const quality = String(ctx.options.quality ?? spec.defaultQuality);
-		const extension = typeof ctx.options.extension === 'string' ? ctx.options.extension : null;
-		const built = await buildVersionCore(spec, identity, pathOpts, quality, extension);
+		const targetExtension =
+			typeof ctx.options.target_extension === 'string' ? ctx.options.target_extension : null;
+		// The SOURCE selector is not the caller's to choose: it is the raw master
+		// extension, resolved from the disk (resolveMaster walks the allowlist).
+		const built = await buildVersionCore(spec, identity, pathOpts, quality, null, targetExtension);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		// Persist only for synchronous builds; av transcodes finish in a background
 		// job and refresh files_info when the next read/save re-scans.
@@ -167,11 +185,19 @@ export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse
 			quality,
 			source_quality: String(ctx.options.source_quality ?? spec.defaultQuality),
 			target_quality: quality,
+			...(targetExtension === null ? {} : { target_extension: targetExtension }),
 		});
 		return {
+			// The tier BUILT — a twin this host cannot encode is not a failed build,
+			// so `result` stays true and the refusal travels in `msg` + `errors`, the
+			// two fields the panel reads (a `result:false` here would tell the operator
+			// nothing was produced when the tier and its jpg were).
 			result: true,
-			msg: 'ok',
-			errors: [],
+			msg:
+				built.errors.length === 0
+					? 'ok'
+					: `Version built, but not every configured format could be written: ${built.errors.join('; ')}`,
+			errors: built.errors,
 			built: built.built,
 			job_id: built.jobId,
 			files_info: freshFilesInfo,
@@ -255,6 +281,23 @@ function withRebuildFailure(message: string, errors: string[]): string {
 	return `${message} — WARNING: the derived tiers could NOT be rebuilt from the remaining master and may still show the deleted one: ${errors.join('; ')}`;
 }
 
+/**
+ * MORE FILES LEFT THE TIER THAN THE OPERATOR NAMED, and they must be told.
+ *
+ * An alternate-extension twin is a COMPANION of its tier's normalized file
+ * (processing.ts buildAlternateVersions): deleting that file takes the twin with
+ * it, because a twin left behind is indexed, openable, and — once the jpg is gone
+ * — the FIRST entry `files_info` reports for that quality, so every reader that
+ * picks a tier by quality alone would serve it. Leaving that unsaid would make one
+ * click remove a file the operator never mentioned. Same channel as
+ * withRebuildFailure and for the same measured reason: `msg` is what the panel
+ * shows, `errors` is what a non-browser caller reads.
+ */
+function withRetiredTwins(message: string, retired: string[]): string {
+	if (retired.length === 0) return message;
+	return `${message} — the accompanying alternate version(s) went with it (moved to the deleted folder, recoverable): ${retired.join(', ')}`;
+}
+
 /** delete_quality: soft-delete EVERY extension of one quality tier. */
 export async function deleteQuality(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
@@ -280,9 +323,13 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 		});
 		return {
 			result: true,
-			msg: withRebuildFailure(`File deleted successfully. ${quality}`, outcome.errors),
+			msg: withRetiredTwins(
+				withRebuildFailure(`File deleted successfully. ${quality}`, outcome.errors),
+				outcome.retired,
+			),
 			errors: outcome.errors,
 			moved: outcome.moved,
+			retired: outcome.retired,
 			files_info: outcome.filesInfo,
 		};
 	} catch (error) {
@@ -316,9 +363,13 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		});
 		return {
 			result: true,
-			msg: withRebuildFailure('OK file delete successfully', outcome.errors),
+			msg: withRetiredTwins(
+				withRebuildFailure('OK file delete successfully', outcome.errors),
+				outcome.retired,
+			),
 			errors: outcome.errors,
 			moved: outcome.moved,
+			retired: outcome.retired,
 			files_info: outcome.filesInfo,
 		};
 	} catch (error) {

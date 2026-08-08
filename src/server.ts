@@ -1363,6 +1363,18 @@ export async function startServer() {
 			);
 		}
 
+		// ALTERNATE-EXTENSION PRE-FLIGHT — advisory, never fatal, and the ONLY place
+		// an operator learns that a format they configured is refused or unencodable
+		// on this host. The rule, the reasons and the gate live with it in
+		// core/media/alternate_preflight.ts (an inline fire-and-forget block with no
+		// awaited effect is the shape a refactor deletes as dead).
+		void (async () => {
+			const { reportAlternateExtensionSupport } = await import(
+				'./core/media/alternate_preflight.ts'
+			);
+			await reportAlternateExtensionSupport();
+		})();
+
 		// Observer subscription registry boot probe (Act 2 remediation,
 		// 2026-08-02): the DEC-12 gates validate the subscription contract
 		// against the SUITE database only — a strict subset of a production

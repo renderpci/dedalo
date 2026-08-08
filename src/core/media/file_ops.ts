@@ -100,13 +100,12 @@ export function duplicateMediaFiles(
 	const thumbExtension = config.media.thumb.extension;
 	const qualities = [...spec.qualities];
 	if (spec.hasThumb && !qualities.includes(thumbQuality)) qualities.push(thumbQuality);
-	const extensions = [
-		...new Set(
-			[spec.defaultExtension, ...spec.allowedExtensions, ...spec.alternateExtensions].map((e) =>
-				e.toLowerCase(),
-			),
-		),
-	];
+	// EVERY extension the type may hold on disk — never the BUILT list. A copy that
+	// enumerates only what the engine builds silently drops the pdf COVER (built
+	// whether or not the config lists it) and every configured-but-refused legacy
+	// file, leaving the duplicated record without the only visual a pdf has in a
+	// list view. See MediaTypeSpec.managedExtensions for the measurement.
+	const extensions = spec.managedExtensions;
 	const created: string[] = [];
 	for (const quality of qualities) {
 		const exts = quality === thumbQuality ? [thumbExtension] : extensions;

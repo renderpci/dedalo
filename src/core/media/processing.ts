@@ -22,12 +22,14 @@
 
 import { copyFileSync, existsSync } from 'node:fs';
 import { config } from '../../config/config.ts';
-import type { MediaTypeSpec } from '../concepts/media.ts';
+import { canonicalCoverExtension, type MediaTypeSpec } from '../concepts/media.ts';
 import { writeAtomically, writeAtomicallySync } from './atomic.ts';
 import {
+	assertWritableTargetExtension,
 	backgroundForTarget,
 	buildThumb,
 	convertImage,
+	getDimensions,
 	type SceneSelection,
 	type ThumbOptions,
 } from './engine/imagemagick.ts';
@@ -383,6 +385,14 @@ export function noteOutrankingMaster(
  * are gone: an unreadable source silently disabled the CMYK branch and the
  * resize budget, and per the ingest change it no longer costs the record its
  * index to fail here.
+ *
+ * `extension` defaults to the type's normalized extension and is the ONLY thing
+ * that differs between a tier's own file and its alternate TWIN: the recipe is
+ * identical, and every extension-dependent decision is already derived from the
+ * TARGET PATH inside it — `backgroundForTarget` (an alpha-capable twin keeps its
+ * transparency, the jpg is composited onto white) and `compressionForTarget`
+ * (png's `-quality` is a zlib/filter code, not a quality). That is why a twin is
+ * built through this function and not through a second recipe: two recipes drift.
  */
 export async function buildImageVersion(
 	spec: MediaTypeSpec,
@@ -390,14 +400,9 @@ export async function buildImageVersion(
 	quality: string,
 	source: string,
 	pathOpts: MediaPathOptions,
+	extension: string = spec.defaultExtension,
 ): Promise<string> {
-	const target = buildMediaLocation(
-		spec,
-		identity,
-		quality,
-		spec.defaultExtension,
-		pathOpts,
-	).absolutePath;
+	const target = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
 	const probe = await probeImageSource(source);
 	const label = `${buildMediaIdentifier(identity)} ${quality}`;
 	const recipe = await recipeFromProbe(probe, source, target, label);
@@ -463,29 +468,89 @@ export async function buildThumbVersion(
 	return buildThumbAtomically(source, target, `${buildMediaIdentifier(identity)} ${thumbQuality}`);
 }
 
-/** Rasterize the PDF's first page to the jpg cover (PHP create_alternative_version). */
-export async function buildPdfCover(
+/**
+ * Rasterize the PDF's first page into EVERY cover extension the type declares
+ * (PHP create_alternative_version). `spec.coverExtensions` is the canonical jpg
+ * FIRST, then whatever `DEDALO_PDF_ALTERNATIVE_EXTENSIONS` adds — see that field.
+ *
+ * THE COVER IS ALWAYS COMPOSITED ONTO WHITE, for every target extension, and
+ * that is why this function does NOT call `backgroundForTarget`. Elsewhere the
+ * background is decided by what the target can STORE, because the source's alpha
+ * is the picture's own. A PDF page has no such alpha: it is glyphs and vectors on
+ * the DEVICE background, and the white paper exists only because the rasterizer
+ * puts it there. MEASURED through this exact recipe on both pdf masters in this
+ * install, as avif covers: rasterized onto 'none' a glyph-sparse page comes out
+ * `alpha_mean 0.0496` (media/pdf/original/0/test85_test3_1.pdf) — a 95%-
+ * transparent sheet of floating glyphs, illegible over any dark UI — while a page
+ * that paints its own background comes out 0.9998
+ * (media/pdf/original/0/rsc37_rsc176_4.pdf) and hides the hazard completely.
+ * Onto '#ffffff' BOTH measure 0.9998. The number is page-dependent; the rule is
+ * not, and a page that happens to be self-opaque is exactly why this must never
+ * be decided per file. Today's jpg cover is safe only by accident (jpg is in
+ * OPAQUE_TARGET_EXTENSIONS), so generalising the alpha rule here would have
+ * shipped blank covers the moment an install configured avif or png.
+ *
+ * FAILURE POLICY: every cover is attempted and the failures come back as VALUES,
+ * so an extension this host cannot encode never costs the record the covers it
+ * CAN build — and never turns a pdf build the operator watched succeed into a
+ * `result:false`. `regeneratePdf` additionally builds the thumb before this runs.
+ */
+export async function buildPdfCovers(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	source: string,
 	pathOpts: MediaPathOptions,
-): Promise<string> {
-	const target = buildMediaLocation(
-		spec,
-		identity,
-		spec.defaultQuality,
-		'jpg',
-		pathOpts,
-	).absolutePath;
-	// Page 1 by model declaration (see buildThumbVersion's pdf branch).
-	return writeAtomically(target, async (temp) => {
-		await convertImage(source, temp, {
-			quality: spec.defaultQuality,
-			selection: 'representative',
-			background: backgroundForTarget(target),
-			pdfDensity: config.media.imagePrintDpi,
-		});
-	});
+): Promise<{ created: string[]; errors: string[] }> {
+	const created: string[] = [];
+	const errors: string[] = [];
+	const canonical = canonicalCoverExtension(spec);
+	for (const extension of spec.coverExtensions) {
+		const target = buildMediaLocation(
+			spec,
+			identity,
+			spec.defaultQuality,
+			extension,
+			pathOpts,
+		).absolutePath;
+		try {
+			// Refuse a format this host cannot write BEFORE anything is produced: with
+			// the coder token an unwritable target fails loudly, but the operator needs
+			// to read the config key, not an ImageMagick sentence (see
+			// assertWritableTargetExtension).
+			//
+			// THE CANONICAL COVER IS NEVER PROBED. It is not a configured alternate —
+			// it is the type's own output, built since v6 — so gating it on a probe
+			// makes a derivative that has no config behind it fail with a sentence
+			// naming a config key that does not control it. The probe is also memoized
+			// per process, so one transient failure (a full or unwritable tmpdir at the
+			// moment of the first probe) would take the jpg cover out for the lifetime
+			// of the server. If this host truly cannot write it, the encoder says so
+			// loudly through the coder token, which is where that belongs.
+			if (extension !== canonical) {
+				await assertWritableTargetExtension(
+					extension,
+					`${spec.alternateExtensionsConfigKey} (the ${spec.model} cover of ${buildMediaIdentifier(identity)})`,
+				);
+			}
+			// Page 1 by model declaration (see buildThumbVersion's pdf branch).
+			created.push(
+				await writeAtomically(target, async (temp) => {
+					await convertImage(source, temp, {
+						quality: spec.defaultQuality,
+						selection: 'representative',
+						// ALWAYS opaque — see the header. Never backgroundForTarget(target).
+						background: '#ffffff',
+						pdfDensity: config.media.imagePrintDpi,
+					});
+				}),
+			);
+		} catch (error) {
+			errors.push(
+				`${spec.defaultQuality}.${extension} cover of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+			);
+		}
+	}
+	return { created, errors };
 }
 
 /** Copy the original to a target quality with the same extension (PHP base build_version copy). */
@@ -505,6 +570,377 @@ export function copyToQuality(
 	return writeAtomicallySync(target, (temp) => {
 		copyFileSync(source, temp);
 	});
+}
+
+/**
+ * The tiers an alternate TWIN may live in: every DERIVED tier of the ladder.
+ *
+ * Masters are excluded because a machine-authored file parked in a master tier
+ * becomes resolvable AS THE MASTER (`resolveMaster` walks `allowedExtensions`,
+ * which holds png/heic/webp) — the engine would then build every derivative from
+ * a file it wrote itself. The thumb is excluded because `scanFilesInfo` walks the
+ * thumb tier with `config.media.thumb.extension` ALONE, so a twin there is
+ * permanently unindexable: it would exist on disk, cost an encode per upload, and
+ * be invisible to every reader.
+ */
+export function derivedTwinQualities(spec: MediaTypeSpec): string[] {
+	return spec.qualities.filter(
+		(quality) => !spec.masterQualities.includes(quality) && quality !== config.media.thumb.quality,
+	);
+}
+
+/**
+ * A tier the caller believes is a twin target. Masters and the thumb are refused
+ * LOUDLY rather than skipped: a caller that passes one has a wrong model of what
+ * a twin is, and silently dropping it is how "config read, never honoured" gets
+ * recreated one call site at a time.
+ */
+function assertTwinTier(spec: MediaTypeSpec, quality: string): void {
+	if (spec.masterQualities.includes(quality)) {
+		throw new Error(
+			`buildAlternateVersions: '${quality}' is a MASTER tier of ${spec.model} — a twin there would be resolvable as the master itself (see derivedTwinQualities)`,
+		);
+	}
+	if (quality === config.media.thumb.quality) {
+		throw new Error(
+			`buildAlternateVersions: '${quality}' is the thumb tier — files_info scans it with the '${config.media.thumb.extension}' extension alone, so a twin there could never be indexed`,
+		);
+	}
+}
+
+/**
+ * The extensions of a type that are TWINS — companions of a derived tier's own
+ * file, built by `buildAlternateVersions`.
+ *
+ * The pdf COVER is deliberately excluded although it is in `alternateExtensions`:
+ * a cover is not a companion of the stored `.pdf`, it is the PICTURE of it, so it
+ * neither follows the `.pdf` into deleted/ nor is rebuilt beside it (buildPdfCovers
+ * owns it). Everything else configured for a model that has a twin builder is one.
+ */
+function twinExtensions(spec: MediaTypeSpec): string[] {
+	return spec.alternateExtensions.filter((extension) => !spec.coverExtensions.includes(extension));
+}
+
+/**
+ * RETIRE every twin in `qualities` whose companion file is gone — the ⟺
+ * invariant's other direction, on the paths that REMOVE a file rather than build
+ * one. Returns the '<quality>.<extension>' labels moved into deleted/.
+ *
+ * WHY IT IS NOT ENOUGH TO DO THIS INSIDE THE RECONCILER. `buildAlternateVersions`
+ * runs when a MASTER changed; deleting a derived tier's own file changes no
+ * master, so nothing ran at all. MEASURED on the shipped code before this
+ * function existed: one `delete_version('1.5MB','jpg')` click left
+ * `1.5MB/<id>.avif` on disk, and `scanFilesInfo` then reported the ORPHAN as the
+ * 1.5MB entry — so `resolve/relation_list.ts` and `resolve/media_list_value.ts`,
+ * which pick a tier by QUALITY ALONE, served an AVIF url for a record whose web
+ * version the operator had just deleted. Before this change the state was
+ * unreachable except from v6 leftovers; the twin builder made it one click away,
+ * which is exactly why the invariant has to be enforced where files are removed.
+ *
+ * IT NEVER BUILDS. A twin deleted ON ITS OWN is the operator saying "not that
+ * format on this record": the tier keeps its file, the panel's build gear (with
+ * `target_extension`) brings the twin back, and the next master change rebuilds
+ * it. Restoring it here would make the panel's per-file delete a no-op.
+ */
+export function retireOrphanTwins(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	qualities: readonly string[],
+): string[] {
+	const retired: string[] = [];
+	const extensions = twinExtensions(spec);
+	if (extensions.length === 0) return retired;
+	for (const quality of qualities) {
+		const tierFile = buildMediaLocation(
+			spec,
+			identity,
+			quality,
+			spec.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		if (existsSync(tierFile)) continue;
+		for (const extension of extensions) {
+			const twin = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
+			if (moveToDeleted(twin, { mediaRoot: pathOpts.mediaRoot })) {
+				retired.push(`${quality}.${extension}`);
+			}
+		}
+	}
+	return retired;
+}
+
+/**
+ * Relative aspect-ratio distance above which a tier's own file is NOT a plain
+ * resize of the master any more — i.e. an operator rotated or cropped it.
+ *
+ * MEASURED on this install, master vs every ladder tier through the real recipe:
+ * the worst rounding drift is 1.03e-3 (the smallest tier of a 1849x2047 master),
+ * and it is 0 wherever the budget does not resize. A 90° rotation of the medal
+ * master moves it by 9e-1 — three orders of magnitude away. 2% is ~20x the
+ * measured rounding and still catches any rotation of an image whose aspect is
+ * outside 0.99–1.01.
+ */
+const COMPANION_ASPECT_TOLERANCE = 0.02;
+
+/**
+ * Is this tier's own file still a faithful derivative of the master? Returns a
+ * description of the disagreement, or null when they agree.
+ *
+ * WHY IT IS ASKED AT ALL. A twin is built FROM THE MASTER (see
+ * buildAlternateVersions — it is the only way the alpha survives), and the master
+ * knows nothing about a rotation or crop an operator applied to the TIER.
+ * MEASURED on the shipped code before this check: rotate 1.5MB by 90° (jpg and
+ * avif both become 852x620, correctly — applyRotationCore walks every extension),
+ * delete the avif, then recover it with `build_version(target_extension:'avif')`
+ * or let tool_update_cache's repair sweep rebuild it, and the tier ends up
+ * holding a 852x620 jpg beside a 618x850 avif: two files of one tier, ninety
+ * degrees apart, reported by files_info as present and current, with no error.
+ * The repair case is the migration case — the first sweep after an install turns
+ * the key on manufactures one of those for EVERY already-rotated tier.
+ *
+ * TRANSCODING THE TIER'S OWN FILE INSTEAD WAS EVALUATED AND REJECTED. It would
+ * always produce a geometrically correct companion, but it silently produces a
+ * FLATTENED one whenever this heuristic is wrong (the tier's jpg has already been
+ * composited onto white — measured PSNR 3.31 against the master vs 44.56 from the
+ * master), which is the precise damage the twin exists to avoid. A refusal costs
+ * a twin and says so; a wrong source costs the picture and does not.
+ *
+ * RESIDUAL, STATED NOT NARROWED: dimensions cannot see a 180° rotation, nor a 90°
+ * one of an almost-square image, and an EXIF orientation outside the two
+ * `getDimensions` swaps would read as a disagreement that is not one (a loud,
+ * non-destructive false refusal). The durable fix is the one already ledgered in
+ * tools/rotation.ts: store the rotation/crop as RECORD STATE and re-apply it
+ * after any rebuild — then a twin is built from the master and transformed like
+ * its companion, and no heuristic is needed.
+ */
+async function companionDisagreesWithMaster(
+	master: string,
+	tierFile: string,
+): Promise<string | null> {
+	const [masterDims, tierDims] = await Promise.all([
+		getDimensions(master),
+		getDimensions(tierFile),
+	]);
+	if (masterDims.height <= 0 || tierDims.height <= 0) return null; // unmeasurable: never condemn
+	const masterAspect = masterDims.width / masterDims.height;
+	const tierAspect = tierDims.width / tierDims.height;
+	const distance = Math.abs(tierAspect - masterAspect) / masterAspect;
+	if (distance <= COMPANION_ASPECT_TOLERANCE) return null;
+	return (
+		`its ${String(tierDims.width)}x${String(tierDims.height)} file is not a plain resize of the ` +
+		`${String(masterDims.width)}x${String(masterDims.height)} master (aspect off by ${(distance * 100).toFixed(1)}%), ` +
+		'so it carries a rotation or crop the master does not. A twin built from the master would be a companion ' +
+		'of a different picture. Rebuild the tier itself to get both files from the master (that discards the ' +
+		'rotation, exactly as any master change already does), then rotate again'
+	);
+}
+
+/** What one `buildAlternateVersions` pass did. Never throws for a per-file failure. */
+export interface AlternateVersionsResult {
+	/** Twin files written (absolute paths). */
+	created: string[];
+	/** Twins moved to deleted/ — '<quality>.<extension>' labels. */
+	retired: string[];
+	/** Per-file failures, each naming the config key that asked for the format. */
+	errors: string[];
+}
+
+/**
+ * THE ALTERNATE-EXTENSION TWIN RECONCILER — the writer `DEDALO_*_ALTERNATIVE_
+ * EXTENSIONS` never had. Before 2026-08-07 the key was read by seven modules and
+ * written by NONE: the engine scanned for, indexed and advertised twins that
+ * nothing could produce, and the one twin class that did exist (v6-migrated)
+ * silently depicted a superseded master.
+ *
+ * A TWIN IS A PER-TIER COMPANION of that tier's normalized file — same picture,
+ * same tier, other container. The invariant, stated in the direction the engine
+ * can actually hold at ALL times:
+ *
+ *     exists(Q/<id>.<E>)  ⇒  exists(Q/<id>.<defaultExtension>)   for every derived Q
+ *
+ * NO TWIN WITHOUT ITS COMPANION, EVER — enforced here (absent tier file → any
+ * twin found is RETIRED to deleted/) and, just as importantly, on the paths that
+ * REMOVE a companion rather than build one (`retireOrphanTwins`, called from the
+ * delete seam: a delete changes no master, so nothing here would have run).
+ *
+ * The converse is a RECONCILIATION, not a disk state: with the tier's own file
+ * present the twin is (re)built FROM THE MASTER here, but it may legitimately be
+ * absent in between — the key can be empty, the format may not be encodable on
+ * this host, an operator may have deleted that one file, or the tier may carry a
+ * rotation the master does not (see companionDisagreesWithMaster). Every one of
+ * those is a case the engine reports rather than a state it silently fixes.
+ *
+ * THE SOURCE IS THE MASTER, NEVER THE TIER'S SIBLING JPG. Transcoding the jpg
+ * would be cheaper and is WRONG: that file has already been composited onto white
+ * by `backgroundForTarget`, so the alpha the twin exists to carry is gone before
+ * the transcode starts. MEASURED on the layered medal master through this exact
+ * recipe — from the MASTER the avif comes out `srgba`, `opaque=False`, PSNR 44.56
+ * against the master; from the tier's jpg it comes out `opaque=True`, PSNR 3.31,
+ * the cut-out destroyed. Building from the jpg would produce a file that passes
+ * every existence check and depicts the wrong thing, which is the defect class
+ * this whole subsystem exists to end.
+ *
+ * `mode`:
+ *  - 'reconcile' (a master changed) — build, replace and retire to restore the
+ *    invariant;
+ *  - 'missing-only' (repair) — build ONLY absent twins, never retire anything.
+ *    That is repair's contract: it fixes what is missing and never re-encodes or
+ *    removes what an operator may have authored. A STALE twin is therefore NOT
+ *    repaired here (it is corrected by the next master change) — stated, not
+ *    narrowed: the engine cannot tell a stale twin from an operator-authored one
+ *    without per-tier provenance, which is the ledgered gap.
+ *
+ * NEVER THROWS for a per-file failure. A host with no AVIF delegate must be left
+ * honestly twin-LESS rather than stale, which is exactly what the retire branch
+ * gives it — today's behaviour, now gated. The failures travel in `errors`, each
+ * naming `spec.alternateExtensionsConfigKey`, so an operator reads WHICH key
+ * asked for a format this box cannot write.
+ */
+export async function buildAlternateVersions(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	master: string,
+	options: {
+		/** The derived tiers to reconcile (see derivedTwinQualities). */
+		qualities: readonly string[];
+		/** Defaults to every configured alternate of the type. */
+		extensions?: readonly string[];
+		/** Defaults to 'reconcile'. */
+		mode?: 'reconcile' | 'missing-only';
+	},
+): Promise<AlternateVersionsResult> {
+	const result: AlternateVersionsResult = { created: [], retired: [], errors: [] };
+	/**
+	 * Retire one twin, and REPORT a retirement that could not happen instead of
+	 * throwing it. This function's contract is that a per-file failure never
+	 * escapes (a box with no delegate must still get its jpg ladder), and a
+	 * `moveToDeleted` can itself fail — a read-only quality directory, a full
+	 * disk — which would otherwise take the whole pass with it from inside a
+	 * catch block.
+	 */
+	const retire = (twin: string, label: string): void => {
+		try {
+			if (moveToDeleted(twin, { mediaRoot: pathOpts.mediaRoot })) result.retired.push(label);
+		} catch (error) {
+			result.errors.push(`${label}: could not be retired — ${(error as Error).message}`);
+		}
+	};
+	const mode = options.mode ?? 'reconcile';
+	const extensions = options.extensions ?? twinExtensions(spec);
+	const label = buildMediaIdentifier(identity);
+	// Asked at most ONCE per tier, and only for a tier that is about to be built
+	// into — the check costs one `identify -ping` pair (~20 ms) and the answer
+	// cannot change inside one pass. See companionDisagreesWithMaster.
+	const companionCheck = new Map<string, string | null>();
+	const companionVerdict = async (quality: string, tierFile: string): Promise<string | null> => {
+		const cached = companionCheck.get(quality);
+		if (cached !== undefined) return cached;
+		const verdict = await companionDisagreesWithMaster(master, tierFile);
+		companionCheck.set(quality, verdict);
+		return verdict;
+	};
+	for (const extension of extensions) {
+		// The tier's own file is not a twin of itself.
+		if (extension === spec.defaultExtension) continue;
+		// Probed ONCE per extension (and once per process — canWriteImageFormat
+		// memoizes), not once per tier: a box without the delegate must report one
+		// operator-readable line, not one per quality.
+		let capabilityFailure: string | null = null;
+		try {
+			await assertWritableTargetExtension(
+				extension,
+				`${spec.alternateExtensionsConfigKey} (${spec.model} ${label})`,
+			);
+		} catch (error) {
+			capabilityFailure = (error as Error).message;
+		}
+		let capabilityReported = false;
+		for (const quality of options.qualities) {
+			assertTwinTier(spec, quality);
+			const twin = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
+			const tierFile = buildMediaLocation(
+				spec,
+				identity,
+				quality,
+				spec.defaultExtension,
+				pathOpts,
+			).absolutePath;
+			if (!existsSync(tierFile)) {
+				// THE OTHER DIRECTION OF THE INVARIANT, and it is not a tidiness rule:
+				// one `delete_version('6MB','jpg')` click leaves the twin behind, and
+				// nothing would ever touch it again — indexed, openable, depicting a
+				// master the tier no longer has. Handling twins only inside the
+				// tier-present branch is strictly worse than the code this replaces.
+				// 'missing-only' never removes anything (repair's contract).
+				if (mode === 'reconcile') retire(twin, `${quality}.${extension}`);
+				continue;
+			}
+			if (mode === 'missing-only' && existsSync(twin)) continue;
+			if (capabilityFailure !== null) {
+				if (!capabilityReported) {
+					result.errors.push(capabilityFailure);
+					capabilityReported = true;
+				}
+				// A twin that cannot be rebuilt must not stay: it depicts the previous
+				// master. Honestly twin-less beats quietly stale.
+				if (mode === 'reconcile') retire(twin, `${quality}.${extension}`);
+				continue;
+			}
+			// A COMPANION OF WHAT? Refuse to write a twin whose tier file carries a
+			// transform the master does not (measured: a recovered twin ninety degrees
+			// from its own jpg, silently, in both the panel and the repair sweep). Any
+			// twin already there is left ALONE — it was rotated with its companion and
+			// is correct.
+			const disagreement = await companionVerdict(quality, tierFile);
+			if (disagreement !== null) {
+				result.errors.push(
+					`${quality}.${extension}: not built — ${disagreement} (configured by ${spec.alternateExtensionsConfigKey})`,
+				);
+				continue;
+			}
+			try {
+				if (shouldBackUpTwin(spec, quality, extension)) {
+					renameOldFiles(twin, new Date(), pathOpts.mediaRoot);
+				}
+				result.created.push(
+					await buildImageVersion(spec, identity, quality, master, pathOpts, extension),
+				);
+			} catch (error) {
+				// The write is atomic, so a failure leaves the PREVIOUS twin in place —
+				// which is the stale-twin state itself. Retire it, so the failure costs
+				// the record a twin and never a lie.
+				retire(twin, `${quality}.${extension}`);
+				result.errors.push(
+					`${quality}.${extension}: ${(error as Error).message} (configured by ${spec.alternateExtensionsConfigKey})`,
+				);
+			}
+		}
+	}
+	return result;
+}
+
+/**
+ * Whether a twin about to be replaced is backed up into deleted/ first.
+ *
+ * HIGHER TIERS ALWAYS, for the same reason their jpg is (see regenerateImage):
+ * they are minted on demand and an operator may have curated or rotated them.
+ *
+ * THE DEFAULT TIER ONLY WHEN THE EXTENSION IS ALSO IN THE UPLOAD ALLOWLIST.
+ * That is not a size heuristic — it is the exact test for "could a human have put
+ * this file here?". `assertNormalizedExtensionForTier` admits an upload into a
+ * derived tier only for `[defaultExtension, ...alternateExtensions]`, and
+ * `assertAllowedExtension` additionally requires the upload allowlist, so a `.png`
+ * twin in the default tier may be an operator's file while an `.avif` one cannot
+ * be — avif is not in image's `allowedExtensions`. The default tier is rebuilt on
+ * EVERY master ingest, so backing up a machine-authored twin there would turn
+ * every upload on the install into deleted/ churn for bytes nobody authored. On
+ * this install (image alternates = ['avif']) that is zero new churn per upload.
+ */
+function shouldBackUpTwin(spec: MediaTypeSpec, quality: string, extension: string): boolean {
+	if (quality !== spec.defaultQuality) return true;
+	return spec.allowedExtensions.includes(extension);
 }
 
 /**
@@ -541,15 +977,24 @@ export function copyToQuality(
  * asymmetry is the honest state, not an oversight — see the report gap on
  * per-tier provenance, which is what would let the engine tell "machine-built"
  * from "operator-authored" and stop guessing.
+ *
+ * IT RETURNS A RESULT OBJECT, NOT A PATH LIST (2026-08-07). The alternate twins
+ * are built here, and a twin failure is NON-FATAL by construction (a box with no
+ * AVIF delegate must still get its jpg ladder). With a `string[]` return that
+ * failure had nowhere to go: `derivativeErrors` was populated at exactly ONE
+ * site — the ingest catch — so a host that cannot write the configured format
+ * would have reported every upload as a complete success while the format was
+ * silently not produced. That is the defect this whole change exists to end, so
+ * the channel is part of the signature.
  */
 export async function regenerateImage(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension?: string | null,
-): Promise<string[]> {
+): Promise<RegenerateImageResult> {
 	const master = resolveMaster(spec, identity, pathOpts, rawExtension);
-	if (master === null) return [];
+	if (master === null) return { created: [], replaced: [], retired: [], errors: [] };
 	const source = master.path;
 	const created: string[] = [];
 	const defaultPath = await buildImageVersion(
@@ -572,54 +1017,71 @@ export async function regenerateImage(
 	const { createDefaultSvgFile } = await import('./svg_overlay.ts');
 	const svgPath = await createDefaultSvgFile(spec, identity, pathOpts);
 	if (svgPath !== null) created.push(svgPath);
-	// Re-encode the OTHER ladder tiers that already exist, and retire the stale
-	// alternate-extension twins of every derived tier (see the header note).
+	// Re-encode the OTHER ladder tiers that already exist (see the header note).
 	// Masters are excluded — they are sources, never rebuilt — and so is the thumb
 	// (built above, from the default tier, and it has no alternate twin: its
-	// extension is fixed by config.media.thumb).
+	// extension is fixed by config.media.thumb). derivedTwinQualities states that
+	// same exclusion once, for the twin pass below.
 	const replaced: string[] = [];
-	const retired: string[] = [];
-	for (const quality of spec.qualities) {
-		if (spec.masterQualities.includes(quality)) continue;
-		if (quality === config.media.thumb.quality) continue;
-		if (quality !== spec.defaultQuality) {
-			const existing = buildMediaLocation(
-				spec,
-				identity,
-				quality,
-				spec.defaultExtension,
-				pathOpts,
-			).absolutePath;
-			if (existsSync(existing)) {
-				// deleted/ FIRST, then rebuild: the operator's previous bytes must
-				// survive the replacement (header note). If the rebuild then fails the
-				// tier is ABSENT rather than stale — which is the honest of the two
-				// states, the re-scan reports it, and the backup is one move away.
+	/** Higher-tier re-encode failures — non-fatal per tier, see the catch below. */
+	const tierErrors: string[] = [];
+	const twinQualities = derivedTwinQualities(spec);
+	for (const quality of twinQualities) {
+		if (quality === spec.defaultQuality) continue;
+		const existing = buildMediaLocation(
+			spec,
+			identity,
+			quality,
+			spec.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		if (existsSync(existing)) {
+			// deleted/ FIRST, then rebuild: the operator's previous bytes must
+			// survive the replacement (header note). If the rebuild then fails the
+			// tier is ABSENT rather than stale — which is the honest of the two
+			// states, the re-scan reports it, and the backup is one move away.
+			try {
 				renameOldFiles(existing, new Date(), pathOpts.mediaRoot);
 				created.push(await buildImageVersion(spec, identity, quality, source, pathOpts));
 				replaced.push(quality);
-			}
-		}
-		// THE ALTERNATE TWINS ARE RETIRED, NOT REBUILT, because this engine has no
-		// builder for them: nothing in src/ ever writes an .avif/.png twin (v6's
-		// create_alternative_version was not ported), so a twin on disk came from
-		// v6 or from an operator. It now depicts a master the record no longer
-		// has, and files_info reports it present and current — the panel offers a
-		// cell that opens the PREVIOUS picture. Measured: 6MB.jpg went blue while
-		// 6MB.avif stayed red. Serving a lie is the one thing an archive may not
-		// do, so the twin goes to deleted/ and is named below.
-		// GAP, stated rather than narrowed: files_info also scans the UPLOAD
-		// ALLOWLIST in derived tiers, so a legacy '6MB/<id>.tif' goes just as
-		// stale and is NOT retired here — only the configured alternate twins are.
-		// The durable fix for both is porting an alternate-version builder.
-		for (const extension of spec.alternateExtensions) {
-			const twin = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
-			if (!existsSync(twin)) continue;
-			if (moveToDeleted(twin, { mediaRoot: pathOpts.mediaRoot }) !== null) {
-				retired.push(`${quality}.${extension}`);
+			} catch (error) {
+				// PER TIER, NOT PER PASS, and it is the ⟺ invariant that forces it: a
+				// throw here escaped the whole function, so the twin pass below never
+				// ran and the tier was left with NO normalized file and its twin still
+				// on disk — indexed, openable, and the first entry files_info reports
+				// for that quality. Collecting it instead lets the reconciler retire
+				// that twin, and stops one unbuildable higher tier from costing the
+				// record every tier after it.
+				tierErrors.push(
+					`${quality}.${spec.defaultExtension}: ${(error as Error).message} (previous bytes are in deleted/)`,
+				);
 			}
 		}
 	}
+	// THE ALTERNATE TWINS ARE RECONCILED AGAINST THE NEW MASTER — built where the
+	// tier's own file exists, retired where it does not (buildAlternateVersions
+	// owns the rule and the measurements). Until 2026-08-07 they could only be
+	// RETIRED, because nothing in src/ ever wrote one: a twin on disk came from v6
+	// or from an operator, it depicted a master the record no longer had, and
+	// files_info reported it present and current — the panel offered a cell that
+	// opened the PREVIOUS picture (measured: 6MB.jpg went blue while 6MB.avif
+	// stayed red). Retirement survives as the FAILURE branch, so a box that cannot
+	// encode the configured format is left honestly twin-less rather than stale.
+	//
+	// GAP, stated rather than narrowed: files_info also scans the UPLOAD
+	// ALLOWLIST in derived tiers, so a legacy '6MB/<id>.tif' goes just as
+	// stale and is NOT retired here — only the configured alternate twins are.
+	// The durable fix for both is porting an alternate-version builder.
+	// [2026-08-07: the twin half of that fix is now HERE; the upload-allowlist
+	// half is still open — narrowing the scan was evaluated and REJECTED, because
+	// it is a shrink that holdShrink would discard on exactly the migrated records
+	// it targets. It stays a ledger row, not a silent narrowing.]
+	const alternates = await buildAlternateVersions(spec, identity, pathOpts, source, {
+		qualities: twinQualities,
+		mode: 'reconcile',
+	});
+	created.push(...alternates.created);
+	const retired = alternates.retired;
 	if (replaced.length > 0 || retired.length > 0) {
 		// LOUD ON PURPOSE. Everything this line names was replaced or removed by a
 		// master change the operator may not connect to it — a rotation or crop
@@ -631,27 +1093,78 @@ export async function regenerateImage(
 					? ` Re-encoded (previous bytes in deleted/): ${replaced.join(', ')}.`
 					: '') +
 				(retired.length > 0
-					? ` Retired to deleted/ — this engine cannot rebuild them: ${retired.join(', ')}.`
+					? ` Retired to deleted/ — the tier holds no ${spec.defaultExtension} for them to accompany, or this host cannot encode them: ${retired.join(', ')}.`
 					: '') +
 				' Any rotation or crop applied to those tiers no longer applies to them.',
 		);
 	}
-	return created;
+	const errors = [...tierErrors, ...alternates.errors];
+	if (errors.length > 0) {
+		// The twin pass and the per-tier re-encode are both non-fatal, so this is the
+		// operator's ONLY server-log sighting of them; the same strings ride back to
+		// the caller in `errors`.
+		console.warn(
+			`[media] ${spec.model} ${buildMediaIdentifier(identity)}: derivative(s) NOT built: ${errors.join('; ')}`,
+		);
+	}
+	return { created, replaced, retired, errors };
 }
 
-/** Regenerate a PDF record: web copy + jpg cover + thumb. */
+/** What one `regenerateImage` pass did — see that function for why it is an object. */
+export interface RegenerateImageResult {
+	/** Files written (default tier, thumb, SVG envelope, re-encoded tiers, twins). */
+	created: string[];
+	/** Higher tiers re-encoded from the new master (previous bytes in deleted/). */
+	replaced: string[];
+	/** Alternate twins moved to deleted/ — '<quality>.<extension>' labels. */
+	retired: string[];
+	/** NON-FATAL twin failures, each naming the config key that asked for the format. */
+	errors: string[];
+}
+
+/** What one `regeneratePdf` pass did — the pdf twin of RegenerateImageResult. */
+export interface RegeneratePdfResult {
+	/** Files written (web copy, thumb, covers). */
+	created: string[];
+	/** NON-FATAL cover failures, each naming the config key that asked for the format. */
+	errors: string[];
+}
+
+/**
+ * Regenerate a PDF record: web copy + thumb + every cover extension.
+ *
+ * THE COVERS ARE BUILT LAST, and that order is load-bearing: a configured cover
+ * format this host cannot encode must not cost the record its document copy or
+ * its thumb — the one derivative every list view depends on. Same law as
+ * repair.ts step 6.
+ *
+ * IT RETURNS A RESULT OBJECT for the same reason regenerateImage does (D9): a
+ * cover failure is non-fatal, so with a `string[]` return it had nowhere to go
+ * and every caller reported a complete success. It also removes an asymmetry the
+ * operator could see — the image path kept `result:true` with the failure in
+ * `errors`, while the pdf path turned a build whose copy, thumb and jpg cover all
+ * landed into a red `result:false`.
+ */
 export async function regeneratePdf(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
-): Promise<string[]> {
+): Promise<RegeneratePdfResult> {
 	const source = resolveMasterSource(spec, identity, pathOpts, 'pdf');
-	if (source === null) return [];
+	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
 	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
-	created.push(await buildPdfCover(spec, identity, source, pathOpts));
 	created.push(await buildThumbVersion(spec, identity, source, pathOpts));
-	return created;
+	const covers = await buildPdfCovers(spec, identity, source, pathOpts);
+	created.push(...covers.created);
+	if (covers.errors.length > 0) {
+		// The only server-log sighting of a non-fatal cover failure; the same strings
+		// ride back to the caller in `errors` (see regenerateImage's twin note).
+		console.warn(
+			`[media] ${spec.model} ${buildMediaIdentifier(identity)}: cover(s) NOT built: ${covers.errors.join('; ')}`,
+		);
+	}
+	return { created, errors: covers.errors };
 }
 
 /** Regenerate an SVG record: web copy + raster thumb. */

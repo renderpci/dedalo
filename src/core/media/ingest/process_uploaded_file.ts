@@ -111,7 +111,10 @@ export interface IngestResult {
 	/**
 	 * Derivative-build failures, one message per failing pass. EMPTY on success —
 	 * a non-empty array means the ORIGINAL landed and is indexed, but one or more
-	 * derived tiers (thumb / web quality / SVG envelope) are missing.
+	 * derived tiers (thumb / web quality / SVG envelope / an alternate-extension
+	 * twin) are missing. The twin entries name their config key, because "this
+	 * host cannot encode what DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS asks for" is an
+	 * operator decision, not a bug report.
 	 *
 	 * Why these are NOT thrown (2026-08-04): by the time the derivative pass runs,
 	 * `addFile` has already moved the staged upload IRREVERSIBLY into the original
@@ -207,11 +210,26 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 			// the noise that would bury the one case it exists for.
 			noteOutrankingMaster(spec, identity, pathOpts, quality ?? spec.originalQuality, 'uploaded');
 			switch (spec.model) {
-				case 'component_image':
-					await regenerateImage(spec, identity, pathOpts, added.extension);
+				case 'component_image': {
+					// THE TWIN CHANNEL (2026-08-07). regenerateImage builds the configured
+					// alternate-extension twins, and a twin failure is NON-FATAL there by
+					// design — a host with no AVIF delegate must still get its jpg ladder.
+					// So its `errors` MUST be threaded here: `derivativeErrors` is otherwise
+					// populated at exactly ONE site (the catch below), and without this line
+					// a box that cannot write the configured format would report every
+					// upload as a complete success while that format was silently never
+					// produced — the exact "config read, never honoured" defect this
+					// subsystem exists to end.
+					const outcome = await regenerateImage(spec, identity, pathOpts, added.extension);
+					derivativeErrors.push(...outcome.errors);
 					break;
+				}
 				case 'component_pdf':
-					await regeneratePdf(spec, identity, pathOpts);
+					// Same channel as the image twins above: a cover format this host
+					// cannot encode is non-fatal, and without this line the upload would
+					// be reported as a complete success while the configured cover was
+					// never written.
+					derivativeErrors.push(...(await regeneratePdf(spec, identity, pathOpts)).errors);
 					break;
 				case 'component_svg':
 					await regenerateSvg(spec, identity, pathOpts);
@@ -226,11 +244,15 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 			// placed (see isMasterTier). regenerateMissingDerivatives has no
 			// component_av branch — av derivatives are an async transcode — so the av
 			// case is handled with the submit below.
-			await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
-				rawExtension: added.extension,
-				deleteNormalized: false,
-				bulkProcessId: null,
-			});
+			// Its NON-FATAL failures (a twin this host cannot encode) come back as
+			// values, and are threaded for the same reason as the master branch above.
+			derivativeErrors.push(
+				...(await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
+					rawExtension: added.extension,
+					deleteNormalized: false,
+					bulkProcessId: null,
+				})),
+			);
 		}
 	} catch (error) {
 		// Never swallowed: logged here for the operator's server log AND returned
