@@ -342,6 +342,164 @@ its own persist commits. Jobs also run detached from the submitter's transaction
 ALS (`runDetachedFromTransaction`, `engineering/REQUEST_ISOLATION.md`) — a job
 outlives the request whose handle expires at COMMIT.
 
+### 6.5 Alternate-extension versions — the twins (2026-08-07, `engineering/wire_contract/WC-2026-08-07-media-alternate-version-builder.md`)
+
+`DEDALO_*_ALTERNATIVE_EXTENSIONS` (§3) was read by seven modules and written by
+none: PHP `component_image::create_alternative_version` (`:1422` for pdf covers)
+was not ported at the cutover, so the engine scanned for, indexed and advertised
+files it could not produce. This section defines what the key means now.
+
+**A twin is a per-tier COMPANION of that tier's normalized file** — same picture,
+same tier, other container. It is NOT "every quality with every format". The
+invariant, stated in the direction the engine can hold at ALL times, for every
+DERIVED quality Q:
+
+```
+exists(Q/<id>.<E>)  ⇒  exists(Q/<id>.<defaultExtension>)
+```
+
+- **No twin without its companion, ever.** Tier file present → the twin is
+  (re)built by the reconciler; absent → any twin there is RETIRED to `deleted/`
+  (No-hard-delete law), both inside `buildAlternateVersions` AND in the paths that
+  REMOVE a companion (`retireOrphanTwins`, called from `deleteAndResyncCore`). The
+  second call site is the one that matters in practice: a delete changes no
+  master, so the reconciler never runs, and MEASURED, one
+  `delete_version('1.5MB','jpg')` left the twin on disk where `files_info` then
+  reported it as the tier's FIRST entry — `relation_list.ts` and
+  `media_list_value.ts` pick a tier by quality alone, so the record served an AVIF
+  url for the web version that had just been deleted.
+- The converse is a RECONCILIATION, not a disk state. A twin may legitimately be
+  absent — empty key, unencodable format on this host, an operator's per-file
+  delete (which is honoured, not undone), or a tier carrying a transform the
+  master does not — and every one of those is reported rather than silently fixed.
+- **Masters are never a build target.** `resolveMaster` walks
+  `allowedExtensions`, so a machine-authored file parked in a master tier becomes
+  resolvable AS the master. (v6 built twins in `original`/`modified` and chained
+  `original/<id>.avif → 1.5MB/<id>.avif`; not ported, deliberately.)
+- **The thumb never.** `files_info.ts` scans the thumb tier with the thumb
+  extension alone, so a twin there would be permanently unindexable.
+- **Absent higher tiers are not minted** — twins inherit `regenerateImage`'s
+  standing rule that a tier is created on demand, never speculatively. v6
+  invalidated twins only for `[original, modified, default]`, so a `6MB` twin
+  went stale in v6 too: the reported symptom is v6's own bug and porting the
+  oracle would not have fixed it.
+
+**THE SOURCE IS THE MASTER, NEVER THE TIER'S SIBLING JPG.** Transcoding the jpg
+is cheaper and wrong: that file has already been composited onto white by
+`backgroundForTarget`, so the alpha the twin exists to carry is gone before the
+transcode starts. Measured on the layered medal master through the exact 1.5MB
+recipe — from the master `srgba`, `opaque=False`, PSNR 44.56; from the tier's jpg
+`opaque=True`, PSNR 3.31, the cut-out destroyed, and every existence check still
+green. **This is what makes `tool_image_rotation`'s automatic background removal
+visible in Dédalo for the first time** (its alpha PNG lands in the retouched
+master; before this, every derived tier was jpg and flattened it) — together with
+the client half, since `build(true)` is a no-op on a built instance and the
+removal flow discarded the upload response that carries the fresh `files_info`.
+
+**A twin is only built beside a file the ENGINE produced from that master.** The
+two rules above collide on a tier an operator has rotated or cropped: its file is
+no longer a plain resize of the master, so a twin built from the master is a
+companion of a different picture. MEASURED on the shipped builder — rotate 1.5MB
+90° (both extensions rotate together, correctly), lose the twin, recover it with
+`build_version(target_extension)` or let the repair sweep rebuild it, and the tier
+holds an 852×620 jpg beside a 618×850 avif, reported present and current, no
+error. `companionDisagreesWithMaster` refuses the build and names both geometries;
+transcoding the tier's own file instead was REJECTED because it silently produces
+a flattened twin wherever the heuristic is wrong, which is the damage the twin
+exists to avoid. Residual, stated: dimensions cannot see a 180° rotation nor a 90°
+one of an almost-square image. The durable fix is storing the rotation/crop as
+record state and re-applying it after a rebuild (already ledgered in
+`tools/rotation.ts`), at which point no heuristic is needed.
+
+**One managed-extension list, not three.** `spec.managedExtensions` (default
+extension first, then the upload allowlist, the twins, the covers and the
+configured-but-REFUSED formats) is what every enumeration of a record's files
+reads — `files_info`'s scan and `duplicateMediaFiles`. `alternateExtensions` says
+what the engine BUILDS; `managedExtensions` says what it must SEE, COPY and
+SOFT-DELETE, and conflating them loses files: measured, `duplicateMediaFiles`
+dropped a pdf's jpg cover whenever the key did not list jpg, and the D5 capability
+filter additionally made a legacy `404/<id>.ogg` invisible to the scanner, the
+duplicator and `delete_quality` at once.
+
+**Per-model capability, declared once.** `ALTERNATE_BUILDER_BY_MODEL` /
+`NO_ALTERNATE_BUILDER_REASON` (`concepts/media.ts`) are exact complements over
+the five models. `component_image` (`buildAlternateVersions`) and `component_pdf`
+(`buildPdfCovers`) have writers; `component_av` has none (every profile in
+`engine/ffmpeg_profiles.ts` forces `mp4`/`libx264` and `getFfmpegProfile`'s names
+carry only resolution/standard/aspect — no container axis), nor `component_svg`
+(derivatives are byte copies) nor `component_3d` (converters ledgered PHP-dead,
+§Out-of-scope). `mediaTypeOf` FILTERS `alternateExtensions` at construction and
+keeps the rest in `refusedAlternateExtensions` with its config key, so every
+existing consumer — the scanner, the versions panel, `features.alternative_extensions`
+— becomes correct with zero edits, and the refusal is named once in the boot log
+rather than silently dropped. Refusing at config-read, at boot, or at ingest were
+all rejected: they brick scripts and tests, turn "no ImageMagick" into "no
+engine", or refuse inconsistently.
+
+**PDF covers are the same mechanism with one exception.** `spec.coverExtensions`
+= `['jpg', ...alternates]`, and the jpg cover is built AND scanned whether or not
+the key lists it, so emptying `DEDALO_PDF_ALTERNATIVE_EXTENSIONS` cannot
+un-index covers already on disk. Every cover composites onto `'#ffffff'`, never
+`backgroundForTarget`: a page has no paper. Measured through the exact recipe on
+both pdf masters in this install, as avif covers: onto `none` a glyph-sparse page
+comes out `alpha_mean 0.0496` (`media/pdf/original/0/test85_test3_1.pdf`) — a
+95%-transparent sheet of floating glyphs — while a page that paints its own
+background comes out 0.9998 (`.../rsc37_rsc176_4.pdf`) and hides the hazard
+entirely. Onto `'#ffffff'` both measure 0.9998. The number is page-dependent, the
+rule is not, and the self-opaque page is exactly why it must never be decided per
+file. Today's jpg cover is safe only because jpg is in `OPAQUE_TARGET_EXTENSIONS`;
+the naive generalisation would have shipped blank covers. The CANONICAL jpg cover
+is additionally never gated on the writability probe: it is the type's own output
+rather than a configured alternate, and the probe is memoized per process.
+
+**Synchronous, with the cost stated.** Per-encode wall time (median of 3, exact
+recipe): avif +0.16 s (0.57 Mpx master, 1.5MB tier) to +0.37 s (3.8 Mpx master,
+6MB tier), and at higher tiers the avif is SMALLER than the jpg it accompanies
+(180 KB vs 256 KB at 6MB). A job queue was rejected: it manufactures the very lie
+being fixed (a master path captured at submit time rebuilds higher tiers from a
+superseded master), and `processUploadedFile` scans and returns `files_info`
+immediately after the derivative pass. On-demand is impossible — no serving path
+names a twin (`resolve/media_list_value.ts:48-50` actively DE-prefers avif/webp).
+**PNG is the honest limit, documented not hidden:** 1.25–4.33 s and 7.6–10 MB per
+tier on a 3.8 Mpx master. No runtime cap — a cap is a silent narrowing. The cost
+that reaches the operator is the WHOLE pass, measured end to end through
+`regenerateImage` on this install's largest master (19.9 MB, 3.8 Mpx, median of
+3): **273 ms** with the key empty, **594 ms** with `["avif"]` (+118%), **1868 ms**
+with `["avif","png"]` (+584%). A bulk `tool_import_files` run multiplies that by
+the file count, inside the request.
+
+**Encoder discipline that came with it** (`engine/imagemagick.ts`): every output
+token carries an explicit coder prefix on an ABSOLUTE path (`AVIF:/abs/x.avif`),
+because `magick src.png out.jxl` exits 0 with empty stderr and writes 316 bytes
+of PNG into a file named `.jxl` — it passes `nonEmptyFile`, passes the scene-count
+post-condition, enters `files_info` and is served with the wrong MIME; the same
+unrecognised coder with an absolute path exits 1 and writes nothing. Capability
+is probed with a REAL 1×1 encode, never `magick -list format` (it reports
+`PS PS rw+` while the hardened policy refuses `PS:`, and marks `PNG* PNG rw-`, so
+an `rw+` test would refuse the engine's own default extension). `-quality` is per
+target — png/webp 90, everything else 82 — because PNG's `-quality` is not
+quality but `zlib_level*10 + filter_type`: 82 costs +34.9% bytes on the medal at
+the 1.5MB tier and +24.0% on this install's largest master at full size.
+
+**Error channel and repair.** `regenerateImage` returns
+`{created, replaced, retired, errors}` and `regenerateMissingDerivatives` returns
+its non-fatal failures; both reach `IngestResult.derivativeErrors`, so a host
+that cannot write a configured format can no longer report every upload a clean
+success. Repair (`media/repair.ts` step 6, and `tool_update_cache` through it)
+builds MISSING twins only, per-extension wrapped, AFTER the thumb + envelope
+block — a missing delegate must never abort what the sweep exists to fix.
+Retirement survives as the FAILURE branch: a box with no AVIF delegate is left
+honestly twin-less rather than quietly stale.
+
+**Known-open, stated rather than narrowed:** a v6-era STALE twin is corrected by
+the next master change, not by a sweep (repair is missing-only by contract, and
+the engine cannot tell a stale twin from an operator-authored one without
+per-tier provenance); twins v6 left in MASTER tiers are neither rebuilt nor
+removed, for the same reason; and the companion-geometry refusal reads DIMENSIONS
+(see above), so a 180° rotation and an EXIF orientation outside `getDimensions`'
+two swaps are its two residuals — the first a silent miss, the second a loud,
+non-destructive false refusal.
+
 ---
 
 ## 7. Phased strangler-fig plan
