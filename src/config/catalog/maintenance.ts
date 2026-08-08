@@ -133,6 +133,12 @@ ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://mast
 
 It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
 
+The update panel interrogates each master **from the browser**, so the engine adds every origin
+named here to its own \`connect-src\` Content-Security-Policy automatically — there is no second
+setting to keep in step. The policy is built at boot, so **restart** after adding a master, or
+the browser refuses the call before it leaves and the panel reports
+\`Max retries reached, request failed\`.
+
 Local ontologies can be provided by other installations in parallel by adding new
 entries to this list. Every Dédalo server can provide its own ontologies.`,
 	},

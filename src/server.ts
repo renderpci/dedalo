@@ -311,15 +311,18 @@ function jsonResponse(body: unknown, status = 200): Response {
  * WHY COMPRESSING AN AUTHENTICATED BODY IS SAFE HERE (BREACH). Every response
  * carries `csrf_token` (dispatch.ts appends it for client transparency), and
  * compressing a secret alongside attacker-influenced text is the BREACH shape.
- * It is not reachable on this door: the attack needs the victim's browser to
- * issue MANY cross-origin requests whose reflected content the attacker
- * controls, and this API rejects exactly that twice over — `verifyCsrf`
- * (dispatch.ts) fails any request without the `x-dedalo-csrf-token` header, and
- * that custom header forces a CORS preflight that only an ALLOWLISTED origin
- * survives (security/cors.ts). An attacker who could already satisfy both would
- * not need a compression oracle. If the CORS allowlist is ever widened to
- * untrusted origins, or the CSRF gate is relaxed, REVISIT THIS — the mitigation
- * is that gate, not anything in this function.
+ * It is not reachable on this door, and the load-bearing reason is the COOKIE,
+ * not the origin list. BREACH needs the victim's browser to issue many
+ * cross-origin requests that come back carrying the VICTIM'S secret; the
+ * session cookie is `SameSite=Lax` (see sessionCookieHeader), so it never rides
+ * a cross-site POST however the calling page asks for it. A cross-origin
+ * response is therefore an ANONYMOUS one: it holds no session of the victim's
+ * to compress a token against. `verifyCsrf` (dispatch.ts) and the CORS
+ * allowlist (security/cors.ts) narrow the door further, but they are not what
+ * closes it — an operator running a PUBLIC ontology master sets
+ * `DEDALO_CORS_ALLOWED_ORIGINS=["*"]` and the analysis above still holds. If
+ * the session cookie's SameSite posture is ever relaxed, or a cross-origin
+ * response is ever allowed to carry credentials, REVISIT THIS.
  */
 export function jsonApiResponse(
 	body: unknown,

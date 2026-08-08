@@ -36,9 +36,13 @@ import { config } from '../../config/config.ts';
  * `style-src 'unsafe-inline'` (CKEditor + inline style=), external map-tile
  * hosts in `img-src` (Leaflet), `blob:`/`data:` for generated media, workers
  * from `blob:`. Two IMPROVEMENTS over the PHP policy: (1) NO third-party origin
- * in `script-src`/`connect-src` — the jsdelivr/huggingface allowances are gone,
- * aligning with the no-remote-code invariant (RC-01); local in-browser models
+ * in `script-src`, ever — the jsdelivr/huggingface allowances are gone, aligning
+ * with the no-remote-code invariant (RC-01); local in-browser models
  * (browser_whisper) load from this install's own /dedalo/ai_models store.
+ * `connect-src` carries exactly two classes of CONFIG-DERIVED origin, both
+ * naming servers this install already depends on and neither able to supply
+ * code: its own media host (MEDIA_CSP_ORIGIN) and its configured update masters
+ * (UPDATE_MASTER_CSP_ORIGINS). Nothing is ever hardcoded there.
  * `'unsafe-eval'` stays for the onnxruntime/transformers WASM glue (the active
  * transcription feature) — it does NOT weaken the XSS control above (that rests
  * on no-unsafe-inline); tightening it to `'wasm-unsafe-eval'` is a follow-up
@@ -75,6 +79,69 @@ const withMedia = (sources: string): string =>
 	MEDIA_CSP_ORIGIN === '' ? sources : `${sources} ${MEDIA_CSP_ORIGIN}`;
 
 /**
+ * The UPDATE MASTERS this install is configured to pull from — the origins of
+ * `ONTOLOGY_SERVERS` and `CODE_SERVERS` — for `connect-src` ONLY.
+ *
+ * Both update panels interrogate a remote master **from the browser**, not
+ * through the local engine: `render_update_ontology.js` on_submit posts
+ * `get_ontology_update_info` to `server.url`, and `update_code.js` posts
+ * `get_code_update_info` the same way. Without the master's origin here the
+ * browser refuses the fetch before it leaves ("violates the following Content
+ * Security Policy directive: connect-src …", observed live 2026-08-08 on a
+ * LAN client pointed at a separate master), and the panel reports
+ * `Max retries reached, request failed`.
+ *
+ * This is the SAME asymmetry the CORS emitter documents from the other side
+ * (`core/security/cors.ts`), and it bites in the same way: the reachability
+ * probe next to the button is a server-to-server Bun `fetch` that neither CSP
+ * nor CORS applies to, so the panel shows a master "ready" and then cannot talk
+ * to it. Two browser-side gates now have to agree with that probe — the
+ * MASTER's origin allowlist, and this, the CLIENT's.
+ *
+ * DERIVED, never a new key. An operator naming a server in `ONTOLOGY_SERVERS`
+ * has already declared it trusted to rewrite this install's entire ontology; a
+ * config that offers a master the browser is forbidden to reach is incoherent,
+ * not safe. The widening is narrow and stays that way: `connect-src` only —
+ * NEVER `script-src`, so no-remote-code (RC-01) is untouched and a master can
+ * still only hand us DATA. A relative or malformed url contributes nothing.
+ */
+/**
+ * PURE derivation — exported so the tripwire can prove the rules (scheme
+ * filter, de-duplication, origin-not-url) on SYNTHETIC entries. Deriving from
+ * `config` alone would leave the gate vacuous on any box that happens to
+ * configure no master, which is most of them, including every ontology MASTER.
+ */
+export function deriveUpdateMasterOrigins(
+	entries: readonly { readonly url: string }[],
+): readonly string[] {
+	const origins = new Set<string>();
+	for (const entry of entries) {
+		// http/https only: a `file:`/`data:` url is not something to reach over
+		// the network, and CSP would not honour it as a source anyway.
+		if (!/^https?:\/\//i.test(entry.url)) continue;
+		try {
+			// The ORIGIN, never the url — CSP matches scheme+host+port, and a path
+			// on the source would silently narrow it to that one endpoint.
+			origins.add(new URL(entry.url).origin);
+		} catch {
+			/* a url the operator mistyped: it cannot be reached anyway, so it is
+			   not something to widen the policy for. */
+		}
+	}
+	return Object.freeze([...origins]);
+}
+
+export const UPDATE_MASTER_CSP_ORIGINS: readonly string[] = deriveUpdateMasterOrigins([
+	...config.ontologyIo.servers,
+	...config.update.codeServers,
+	// The 'Local files' pseudo-server is built from publicOrigin() at request
+	// time and is this app's own origin — `'self'` already covers it.
+]);
+
+/** `connect-src` sources: self + media origin + every configured update master. */
+const CONNECT_SRC: string = [withMedia("'self' blob:"), ...UPDATE_MASTER_CSP_ORIGINS].join(' ');
+
+/**
  * The ONE media URL prefix the app may embed as `<object>`, on a split-origin
  * install: the image folder, and nothing else on that host. `<object>` opens a
  * nested browsing context, so an SVG loaded into one EXECUTES its script in the
@@ -102,7 +169,7 @@ export const APP_CSP = [
 	`img-src ${withMedia("'self' data: blob:")} *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se`,
 	`media-src ${withMedia("'self' blob:")}`,
 	"font-src 'self' data:",
-	`connect-src ${withMedia("'self' blob:")}`,
+	`connect-src ${CONNECT_SRC}`,
 	"frame-src 'self' blob:",
 	"frame-ancestors 'self'",
 	// MEDIA-03, other half: component_image's default edit view hosts the

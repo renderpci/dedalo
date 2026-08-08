@@ -40,17 +40,40 @@ so the master must name the client origins here. The server-to-server probe
 (\`checkRemoteServer\`) is unaffected — it is a Bun \`fetch\`, and CORS is a browser rule.
 
 An entry is matched as an **exact, case-sensitive origin string** — scheme + host + port, no
-path, no trailing slash, no wildcards. \`https://a.example.org\` does not match
+path, no trailing slash, no partial wildcards. \`https://a.example.org\` does not match
 \`https://a.example.org:443\` or \`http://a.example.org\`.
 
-Only a listed origin is echoed back in \`Access-Control-Allow-Origin\`; \`*\` is never sent, and
-neither is \`Access-Control-Allow-Credentials\` — the client calls cross-origin with
-\`credentials: 'same-origin'\` (\`data_manager.js\`), so no cookie ever rides one of these
-requests. A cross-origin caller is therefore ALWAYS unauthenticated and reaches only what the
+Only a listed origin is echoed back in \`Access-Control-Allow-Origin\`; \`*\` is never sent on
+the wire, and neither is \`Access-Control-Allow-Credentials\` — the client calls cross-origin
+with \`credentials: 'same-origin'\` (\`data_manager.js\`), and the session cookie is
+\`SameSite=Lax\`, so no cookie ever rides one of these requests whatever the calling page asks
+for. A cross-origin caller is therefore ALWAYS unauthenticated and reaches only what the
 API opens to an anonymous request; listing an origin does not grant it a session.
 
 \`\`\`bash
 DEDALO_CORS_ALLOWED_ORIGINS=["https://archive.example.org","https://museum.example.org"]
+\`\`\`
+
+**A PUBLIC ontology master sets the single entry \`*\`, meaning any origin.** It is the only
+way to express a master that serves its manifest to installations you do not know in advance:
+that set of client origins is unbounded, so it cannot be enumerated. \`*\` is a whole-list
+sentinel, not a pattern — it simply wins over any other entry, and there is no
+\`*.example.org\` form, because a suffix rule is the classic CORS bypass. The request origin
+is still what gets echoed back, so \`Vary: Origin\` keeps meaning what it says.
+
+What \`*\` changes is **who may ASK**: from "any HTTP client" — already true today, since CORS
+is a browser rule and not a firewall — to "any HTTP client, plus any web page in a visitor's
+browser". The surface it opens is the anonymous one \`curl\` already reaches: the update
+manifest and the reachability probe (still behind the \`ONTOLOGY_SERVER_CODE\` access code
+every client presents), plus login and password reset, which are throttled per client address
+(\`LOGIN_MAX_ATTEMPTS\`) — note that a page running in a visitor's browser spends the
+VISITOR's address against that throttle. Nothing authenticated is reachable either way, on
+any setting. Use \`*\` on a deliberately public master; on an ordinary installation, name the
+origins.
+
+\`\`\`bash
+# public ontology master (IS_AN_ONTOLOGY_SERVER=true) serving unknown clients
+DEDALO_CORS_ALLOWED_ORIGINS=["*"]
 \`\`\``,
 	},
 	DEDALO_LOCK_COMPONENTS: {

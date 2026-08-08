@@ -558,7 +558,13 @@ The update-info manifest when this host is an ontology master and the code/versi
 Served **only** when this instance is an ontology master, to callers presenting a configured access code. Pre-auth master-server surface.
 
 !!! warning
-    The update panel of the client installation calls this action **from the browser**, cross-origin — not through its own server. A master therefore has to name every client origin in [`DEDALO_CORS_ALLOWED_ORIGINS`](../../config/config.md#cross-origin-api-callers-cors), or the browser's preflight fails and the panel dies with a network error. The reachability probe next to it (`get_server_ready_status`) is a server-to-server request and is **not** affected, so a master can report itself *ready* and still be unreachable from the panel. A cross-origin caller carries no session cookie: it reaches only this pre-auth surface, and listing an origin grants nothing more.
+    The update panel of the client installation calls this action **from the browser**, cross-origin — not through its own server, so it has to get past a gate at *each* end.
+
+    On the **master**: the client's origin must be accepted by [`DEDALO_CORS_ALLOWED_ORIGINS`](../../config/config.md#cross-origin-api-callers-cors) — named exactly, or covered by the single entry `*` on a master serving installations it does not know in advance. Otherwise the preflight fails and the panel dies with a network error.
+
+    On the **client**: its own `connect-src` Content-Security-Policy must carry the master's origin, or the browser refuses the call before it leaves. The engine derives that from the client's [`ONTOLOGY_SERVERS`](../../config/config.md#ontology-servers) automatically, but at boot — a client that has just added a master must be restarted.
+
+    The reachability probe next to it (`get_server_ready_status`) is a server-to-server request and is affected by **neither**, so a master can report itself *ready* and still be unreachable from the panel. A cross-origin caller carries no session cookie: it reaches only this pre-auth surface, and admitting an origin grants nothing more.
 
 ## get_code_update_info
 
