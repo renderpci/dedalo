@@ -656,9 +656,21 @@ const get_buttons = function(self) {
 				const msg = self.get_tool_label('backgroun_removal_completed') || 'Background removal completed.';
 				status_container.innerHTML = `<span class="success_text">${msg}</span>`;
 
-				// // create the image
-				// const image = URL.createObjectURL(blob)
-				await self.main_element.build(true)
+				// REFRESH THE COMPONENT'S OWN files_info FROM THE UPLOAD RESPONSE.
+				// `build(true)` is a NO-OP on an already-built instance — component_common
+				// .build returns immediately when status==='built' — so it never refetched
+				// anything, and every lookup below still read the PRE-removal scan. The
+				// upload response is the only fresh files_info in this flow: the server
+				// rebuilt every derivative of the new 'modified' master (including the
+				// alternate-extension twins) and answers with the disk scan taken after
+				// that pass. Without this line the file the tool asks for a few lines
+				// down exists on disk and is invisible here, and the preview never
+				// changes on the FIRST removal — which is exactly the symptom the twin
+				// builder was written to end.
+				const fresh_files_info = response?.files_info
+				if (Array.isArray(fresh_files_info) && self.main_element.data?.entries?.[0]) {
+					self.main_element.data.entries[0].files_info = fresh_files_info
+				}
 
 				// Get the valid extensions and check if any match with the images in the component
 				// The process only show the result correctly when you have a transparent format as default extension
@@ -676,10 +688,18 @@ const get_buttons = function(self) {
 				const image_file = self.main_element.get_quality_file_info('1.5MB', extension)
 
 				if( !image_file ){
+					// The engine could not produce a transparent version (no avif/png
+					// configured, or this host cannot encode it — the server says which in
+					// its response). Say so instead of returning silently: the removal DID
+					// happen and is stored in the 'modified' master.
+					const detail = (response?.errors?.length) ? response.errors.join(' | ') : (response?.msg || '')
+					console.warn('[tool_image_rotation] background removal stored, but no', extension, 'version of the 1.5MB tier to preview.', detail)
 					return
 				}
 				// asing the new processed image to the tool to show it
-				const image = DEDALO_MEDIA_URL + image_file?.file_path
+				// The path does not change across rebuilds, so without a cache-buster the
+				// browser re-serves the bytes it already has and the preview looks untouched.
+				const image = DEDALO_MEDIA_URL + image_file?.file_path + '?v=' + Date.now()
 				nodes.main_element_image.src = image;
 			})
 		}

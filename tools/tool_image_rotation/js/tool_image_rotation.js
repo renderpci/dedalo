@@ -420,11 +420,11 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 					const blob = await canvas.convertToBlob({ type: 'image/png' });
 
 					// upload the final data to server
-					await upload_image({
+					const upload_response = await upload_image({
 						image_blob : blob
 					})
 
-					resolve( true )
+					resolve( upload_response )
 					break;
 			}
 		}
@@ -491,7 +491,17 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 			if(SHOW_DEBUG===true) {
 				console.log('image file_data (on upload finish):', file_data);
 			}
-			return true
+
+			// THE RESPONSE IS THE ONLY FRESH files_info THERE IS, so it is returned
+			// instead of a bare `true`. process_uploaded_file rebuilt every derivative
+			// of the 'modified' master — including the alternate-extension TWINS the
+			// engine writes since 2026-08-07 — and answers with the disk scan taken
+			// after that pass. The caller needs it: `component_common.build(true)` is a
+			// no-op on an already-built instance (it returns immediately when
+			// status==='built'), so nothing else in this flow ever refreshes
+			// `data.entries[key].files_info`, and the removal's transparent version
+			// stayed invisible until a full page reload.
+			return api_response_upload_done
 		}
 	})
 
