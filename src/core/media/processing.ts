@@ -23,7 +23,7 @@
 import { copyFileSync, existsSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { canonicalCoverExtension, type MediaTypeSpec } from '../concepts/media.ts';
-import { writeAtomically, writeAtomicallySync } from './atomic.ts';
+import { withTempSibling, writeAtomically, writeAtomicallySync } from './atomic.ts';
 import {
 	assertWritableTargetExtension,
 	backgroundForTarget,
@@ -40,6 +40,7 @@ import {
 	probeImageSource,
 	probeMetaChannels,
 } from './engine/probe.ts';
+import { rasterizeSvg } from './engine/svg.ts';
 import { moveToDeleted, renameOldFiles } from './file_ops.ts';
 import {
 	buildMediaIdentifier,
@@ -447,6 +448,36 @@ export async function buildThumbVersion(
 		thumbExtension,
 		pathOpts,
 	).absolutePath;
+	if (spec.model === 'component_svg') {
+		// PHP component_svg::create_thumb — render the vector at a chosen dpi, then
+		// reduce THAT raster to the thumb box.
+		//
+		// THE RENDER IS NOT IMAGEMAGICK'S (engine/svg.ts owns the why): its SVG
+		// renderer emits MVG, which the hardened policy disables, so `magick x.svg`
+		// is refused outright on this engine. librsvg draws the vector into an
+		// intermediate PNG and the shared thumb recipe takes it from there — so an
+		// SVG thumb gets the same box, background, blank-guard and atomic write as
+		// every other thumb, and the raster the record actually indexes is still
+		// produced under the policy.
+		//
+		// The intermediate is a full-resolution render of an arbitrary uploaded
+		// vector, so it is a TEMP and goes through the temp gear (withTempSibling:
+		// unique name, dir ensured, removed on every path including the failures).
+		// Named `.png` because a media binary picks its output format from the
+		// filename, and invisible to readers while it lives: files_info resolves the
+		// thumb tier by EXACT name, never by listing the directory.
+		return withTempSibling(target, '.render.png', async (raster) => {
+			await rasterizeSvg(source, raster);
+			// The shared gear from here on: probe the RASTER (probing the vector
+			// tells the thumb recipe nothing it can use), then the standard recipe,
+			// blank-guard and atomic rename.
+			return buildThumbAtomically(
+				raster,
+				target,
+				`${buildMediaIdentifier(identity)} ${thumbQuality}`,
+			);
+		});
+	}
 	if (spec.model === 'component_pdf') {
 		// PHP component_pdf::create_thumb — rasterize ONLY the first page via the
 		// PDF-aware convert recipe (density/antialias/cropbox), fit to the thumb box.
@@ -1010,7 +1041,20 @@ export async function regenerateImage(
 	// get_media_filepath(quality_default): single-scene, already composited, already
 	// CMYK-converted, so the thumb recipe cannot meet a sequence at all.
 	// repair.ts:232-233 already does this and versions.ts:87-100 already prefers it.
-	created.push(await buildThumbVersion(spec, identity, defaultPath, pathOpts));
+	// NON-FATAL, like every other derivative of this pass (the twins below, the pdf
+	// covers, the svg thumb). It used to throw straight out of the regenerate, so a
+	// thumb this host could not encode also cost the record its SVG ENVELOPE — and
+	// without the envelope the edit view renders the placeholder, i.e. a thumbnail
+	// failure made the image itself disappear from the form.
+	/** Thumb failure — merged into this pass's `errors` beside the tier/twin ones. */
+	const thumbErrors: string[] = [];
+	try {
+		created.push(await buildThumbVersion(spec, identity, defaultPath, pathOpts));
+	} catch (error) {
+		thumbErrors.push(
+			`${config.media.thumb.quality} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+		);
+	}
 	// The edit view renders the raster through an SVG envelope (PHP
 	// component_image regenerate re-creates it); without it the client falls back
 	// to the placeholder and the image never shows. Built from the default tier.
@@ -1098,7 +1142,7 @@ export async function regenerateImage(
 				' Any rotation or crop applied to those tiers no longer applies to them.',
 		);
 	}
-	const errors = [...tierErrors, ...alternates.errors];
+	const errors = [...thumbErrors, ...tierErrors, ...alternates.errors];
 	if (errors.length > 0) {
 		// The twin pass and the per-tier re-encode are both non-fatal, so this is the
 		// operator's ONLY server-log sighting of them; the same strings ride back to
@@ -1154,9 +1198,20 @@ export async function regeneratePdf(
 	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
 	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'pdf', pathOpts));
-	created.push(await buildThumbVersion(spec, identity, source, pathOpts));
+	const errors: string[] = [];
+	// NON-FATAL (2026-08-08): an unwrapped throw here took the COVERS with it — the
+	// jpg cover is the only visual a pdf record has in a list view, so a thumb
+	// failure used to remove the record's picture twice over.
+	try {
+		created.push(await buildThumbVersion(spec, identity, source, pathOpts));
+	} catch (error) {
+		errors.push(
+			`${config.media.thumb.quality} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+		);
+	}
 	const covers = await buildPdfCovers(spec, identity, source, pathOpts);
 	created.push(...covers.created);
+	errors.push(...covers.errors);
 	if (covers.errors.length > 0) {
 		// The only server-log sighting of a non-fatal cover failure; the same strings
 		// ride back to the caller in `errors` (see regenerateImage's twin note).
@@ -1164,20 +1219,51 @@ export async function regeneratePdf(
 			`[media] ${spec.model} ${buildMediaIdentifier(identity)}: cover(s) NOT built: ${covers.errors.join('; ')}`,
 		);
 	}
-	return { created, errors: covers.errors };
+	return { created, errors };
 }
 
-/** Regenerate an SVG record: web copy + raster thumb. */
+/** What one `regenerateSvg` pass did — the svg twin of RegeneratePdfResult. */
+export interface RegenerateSvgResult {
+	/** Files written (web copy, thumb). */
+	created: string[];
+	/** NON-FATAL thumb failure (no rasterizer on this host, unrenderable vector). */
+	errors: string[];
+}
+
+/**
+ * Regenerate an SVG record: web copy + raster thumb.
+ *
+ * THE THUMB IS BUILT FROM THE WEB COPY, not from the master, and the copy
+ * therefore happens first: they are the same bytes here (an svg derivative is a
+ * byte copy), but the thumb of every other type depicts the DELIVERED file, and a
+ * future svg pipeline that sanitizes or rewrites the web copy must not leave the
+ * thumb depicting something the record does not serve.
+ *
+ * THE THUMB IS NON-FATAL, like the pdf covers and the image twins. It is the one
+ * step here that needs an external renderer that an install may not have
+ * (engine/svg.ts — librsvg), and the web copy has already landed: reporting the
+ * whole regeneration as failed would hide a record whose deliverable file is
+ * perfectly in place. The failure travels as a VALUE so the caller can put it in
+ * front of the operator (this used to be a silent no-op: `regenerateSvg` never
+ * built a thumb at all, which is what left every SVG record without one).
+ */
 export async function regenerateSvg(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
-): Promise<string[]> {
+): Promise<RegenerateSvgResult> {
 	const source = resolveMasterSource(spec, identity, pathOpts, 'svg');
-	if (source === null) return [];
+	if (source === null) return { created: [], errors: [] };
 	const created: string[] = [];
 	created.push(copyToQuality(spec, identity, spec.defaultQuality, source, 'svg', pathOpts));
-	return created;
+	try {
+		created.push(await buildThumbVersion(spec, identity, created[0] as string, pathOpts));
+	} catch (error) {
+		const message = `${spec.defaultQuality} thumb of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`;
+		console.warn(`[media] ${spec.model} thumb NOT built: ${message}`);
+		return { created, errors: [message] };
+	}
+	return { created, errors: [] };
 }
 
 /** Regenerate a 3D record: web copy (converters are ledgered PHP-dead — naive copy). */

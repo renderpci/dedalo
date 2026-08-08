@@ -61,3 +61,39 @@ export async function resolveMediaActionContext(
 	const pathOpts = await resolveMediaPathOptions(tipo, sectionTipo);
 	return { ctx: { spec, identity, pathOpts } };
 }
+
+/**
+ * Write the record's files_info back after a posterframe action changed what is
+ * on disk — the persistence half these handlers owe the filesystem cores.
+ *
+ * The posterframe cores are filesystem-only BY DESIGN (so they can be gated
+ * against a scratch tree with real binaries), which means nobody was persisting
+ * the thumb they build. On av that stayed invisible: `component_emit` re-scans av
+ * on every read. On 3d it was not — a posterframe captured in the browser wrote a
+ * thumb the stored index never learned about, so the record's list view kept
+ * showing the placeholder until some unrelated action re-scanned it.
+ *
+ * `reconcileStoredFilesInfo` NEVER mints: a component with no stored item is left
+ * alone (that is the passive-scan rule — only the operator's explicit sync_files
+ * may create one). Failures are logged, never thrown: the file operation already
+ * happened, and the panel's own re-scan will show the truth.
+ */
+export async function persistMediaFilesInfo(ctx: MediaContext): Promise<void> {
+	try {
+		const { scanFilesInfo } = await import('../../media/files_info.ts');
+		const { reconcileStoredFilesInfo } = await import('../../media/tools/files_info_persist.ts');
+		const { identity, spec, pathOpts } = ctx;
+		await reconcileStoredFilesInfo({
+			sectionTipo: identity.sectionTipo,
+			sectionId: identity.sectionId,
+			componentTipo: identity.componentTipo,
+			lang: identity.lang,
+			freshFilesInfo: scanFilesInfo(spec, identity, pathOpts),
+		});
+	} catch (error) {
+		const { buildMediaIdentifier } = await import('../../media/path.ts');
+		console.warn(
+			`[media] files_info NOT persisted for ${buildMediaIdentifier(ctx.identity)}: ${(error as Error).message}`,
+		);
+	}
+}

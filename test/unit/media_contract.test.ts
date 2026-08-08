@@ -79,8 +79,17 @@ describe('media contract — type catalog (env-config)', () => {
 		expect(pdf.listQualities).toEqual([pdf.defaultQuality, thumbQuality()]);
 
 		const svg = mediaTypeOf('component_svg')!;
-		expect(svg.hasThumb).toBe(false);
-		expect(svg.listQualities).toEqual([svg.defaultQuality]);
+		// svg HAS a thumb tier: a raster rendition of the vector, built by librsvg
+		// (engine/svg.ts) because ImageMagick's SVG renderer is refused by the
+		// hardened policy. This pinned `false` until 2026-08-08 and that was the
+		// rewrite gap itself — PHP component_svg::create_thumb built one, and with
+		// the flag false `assertValidQuality` refused the tier, so the media-versions
+		// thumb gear answered "Unknown media quality 'thumb' for component_svg".
+		expect(svg.hasThumb).toBe(true);
+		// …and it is projected into list mode like every other type — the law, not a
+		// per-type list (PHP get_list_value :1554). Emits an entry only once the file
+		// exists (media_list_value drops qualities with no file), exactly as PHP did.
+		expect(svg.listQualities).toEqual([svg.defaultQuality, thumbQuality()]);
 
 		const threeD = mediaTypeOf('component_3d')!;
 		expect(threeD.defaultExtension).toBe('glb');

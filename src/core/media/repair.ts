@@ -25,11 +25,17 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { config } from '../../config/config.ts';
 import { type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
 import { moveToDeleted } from './file_ops.ts';
 import { refreshStoredFilesInfo } from './files_info.ts';
 import { resolveMediaPathOptions } from './ontology_path.ts';
-import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
+import {
+	buildMediaIdentifier,
+	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
+} from './path.ts';
 import {
 	buildAlternateVersions,
 	buildImageVersion,
@@ -41,6 +47,7 @@ import {
 	resolveMasterSource,
 } from './processing.ts';
 import { createDefaultSvgFile, defaultRasterUrl, svgOverlayLocation } from './svg_overlay.ts';
+import { rebuildThumb, thumbIsMissing } from './thumb.ts';
 
 export interface MediaItemsRefreshResult {
 	/** The stored items with a fresh files_info spliced per item (same order, same length). */
@@ -242,6 +249,34 @@ export async function regenerateMissingDerivatives(
 		}
 	}
 
+	// THE THUMB, FOR EVERY MODEL, IN ONE PLACE — build it when it is MISSING and a
+	// source exists (thumb.ts owns what "a source" means per model, and mints an av
+	// posterframe when that is what is missing).
+	//
+	// It used to be four different rules and two silences: image rebuilt it always,
+	// svg only when missing, pdf only when the whole default tier was absent, and
+	// av/3d never — so a deleted av or 3d thumb was UNREPAIRABLE by the tool whose
+	// entire job is repairing derived files. The image "always" survives below,
+	// because that branch also fixes the envelope and is the one path with a
+	// measured reason to re-encode.
+	//
+	// Failures are VALUES, like the twins and the covers: a host without an SVG
+	// rasterizer, an audio-only av, a 3d record whose posterframe only a browser can
+	// make — none of those may cost the sweep the repair of every remaining record.
+	if (
+		spec.hasThumb &&
+		model !== 'component_image' &&
+		thumbIsMissing({ spec, identity, pathOpts })
+	) {
+		try {
+			await rebuildThumb({ spec, identity, pathOpts });
+		} catch (error) {
+			errors.push(
+				`${config.media.thumb.quality} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+			);
+		}
+	}
+
 	switch (model) {
 		case 'component_image': {
 			// 2. default quality only when absent — and only when the original is here
@@ -305,7 +340,11 @@ export async function regenerateMissingDerivatives(
 			break;
 		case 'component_svg':
 			if (!existsSync(defaultLocation.absolutePath) && source !== null) {
-				await regenerateSvg(spec, identity, pathOpts);
+				// Its thumb failure is a VALUE for the same reason the pdf covers' are:
+				// a host with no SVG rasterizer must cost the sweep a thumbnail, not the
+				// repair of every remaining record. (When the web copy IS present, the
+				// generic missing-thumb pass above has already handled the thumb.)
+				errors.push(...(await regenerateSvg(spec, identity, pathOpts)).errors);
 			}
 			break;
 		case 'component_3d':

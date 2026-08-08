@@ -26,14 +26,23 @@ import {
 	assertAllowedExtension,
 	assertIngestableQuality,
 	assertNormalizedExtensionForTier,
+	hasPosterframe,
 	type MediaTypeSpec,
 	mediaTypeOf,
 } from '../../concepts/media.ts';
 // The av encoder lives in ../av_versions.ts — ONE encoder for ingest and for the
 // media-versions tool's per-quality build (see that module's header).
 import { submitAvTranscode } from '../av_versions.ts';
+import { moveToDeleted } from '../file_ops.ts';
 import { type FileInfoEntry, scanContextFromItem, scanFilesInfo } from '../files_info.ts';
-import { buildMediaLocation } from '../path.ts';
+import {
+	buildMediaIdentifier,
+	buildMediaLocation,
+	type MediaIdentity,
+	type MediaPathOptions,
+	mediaThumbLocation,
+	posterframeLocation,
+} from '../path.ts';
 import {
 	noteOutrankingMaster,
 	regenerate3d,
@@ -156,6 +165,38 @@ export interface IngestResult {
  * best master; any other tier parks the upload and builds only what is missing
  * around it — see isMasterTier.
  */
+/**
+ * RETIRE the posterframe and the thumb that depict a master this record no longer
+ * holds — the invalidation half of the thumb rule (thumb.ts), for the two models
+ * whose thumb does not come from the delivered file.
+ *
+ * Both go to `deleted/` (never unlink): on a partial-media box, and on a mistaken
+ * re-upload, those bytes are one move away. Returns non-fatal messages only —
+ * failing to retire must never fail an upload that already landed.
+ */
+function retireStalePosterframeAndThumb(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+): string[] {
+	if (!hasPosterframe(spec.model)) return [];
+	try {
+		const poster = posterframeLocation(spec, identity, pathOpts);
+		if (poster !== null && existsSync(poster.absolutePath)) {
+			moveToDeleted(poster.absolutePath, { mediaRoot: pathOpts.mediaRoot });
+		}
+		const thumb = mediaThumbLocation(spec, identity, pathOpts);
+		if (thumb !== null && existsSync(thumb.absolutePath)) {
+			moveToDeleted(thumb.absolutePath, { mediaRoot: pathOpts.mediaRoot });
+		}
+		return [];
+	} catch (error) {
+		return [
+			`retiring the previous posterframe/thumb of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+		];
+	}
+}
+
 export async function processUploadedFile(input: IngestInput): Promise<IngestResult> {
 	const { spec, identity, pathOpts } = input;
 	// '' is "unset", not a tier: the client sends an empty selector value, and
@@ -232,10 +273,21 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 					derivativeErrors.push(...(await regeneratePdf(spec, identity, pathOpts)).errors);
 					break;
 				case 'component_svg':
-					await regenerateSvg(spec, identity, pathOpts);
+					// Same channel again: the web copy landed, but a host with no SVG
+					// rasterizer cannot build the thumb, and an upload reported as a
+					// complete success would leave the operator hunting for a thumbnail
+					// nothing is going to write.
+					derivativeErrors.push(...(await regenerateSvg(spec, identity, pathOpts)).errors);
 					break;
 				case 'component_3d':
 					regenerate3d(spec, identity, pathOpts, added.extension);
+					// A NEW MESH MAKES THE OLD PICTURE A LIE. The posterframe and the
+					// thumb depict the model that was just replaced, and nothing here can
+					// re-render a mesh — so both are RETIRED to deleted/ rather than left
+					// serving. The browser normally captures a new posterframe seconds
+					// later (component_3d.upload_handler); until it does, the record shows
+					// its placeholder, which is the honest state.
+					derivativeErrors.push(...retireStalePosterframeAndThumb(spec, identity, pathOpts));
 					break;
 				// component_av: submitted LAST, below — see the barrier note there.
 			}
@@ -334,6 +386,28 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 			isMaster || resolveMasterSource(spec, identity, pathOpts, added.extension) !== null;
 		if (canDerive && (isMaster || !existsSync(defaultFile))) {
 			startTranscode = (): string => submitAvTranscode(spec, identity, pathOpts, added.extension);
+		}
+		// THE PICTURE, NOW — not when the transcode finishes and not when an operator
+		// remembers. A new master makes the old posterframe a picture of a video this
+		// record no longer holds, and a fresh av record had NO picture at all: the
+		// transcode job writes tiers only, so every new av landed in every list as the
+		// grey placeholder until someone opened tool_posterframe. PHP did not wait
+		// either — component_av::create_thumb minted a posterframe on demand
+		// (class.component_av.php:581). Retire the stale pair, then rebuild: the mint
+		// is one ffmpeg frame off the file that is already on disk, so it costs the
+		// upload milliseconds and does not depend on the transcode at all.
+		if (isMaster) {
+			derivativeErrors.push(...retireStalePosterframeAndThumb(spec, identity, pathOpts));
+			try {
+				const { rebuildThumb } = await import('../thumb.ts');
+				await rebuildThumb({ spec, identity, pathOpts });
+			} catch (error) {
+				// Audio-only, or a source ffmpeg cannot read a frame from: the upload
+				// stands, the record is honestly pictureless, and the reason travels.
+				derivativeErrors.push(
+					`posterframe of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+				);
+			}
 		}
 	}
 

@@ -10,23 +10,30 @@
  * ffmpeg binary against a scratch tree.
  */
 
-import { existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
-import { config } from '../../../config/config.ts';
-import type { MediaTypeSpec } from '../../concepts/media.ts';
-import { createPosterframe, probeStreams } from '../engine/ffmpeg.ts';
+import {
+	CLIENT_POSTERFRAME_REMEDY,
+	hasPosterframe,
+	type MediaTypeSpec,
+	POSTERFRAME_WRITER_BY_MODEL,
+} from '../../concepts/media.ts';
+import { writeAtomically } from '../atomic.ts';
+import { createPosterframe, probeFormat, probeStreams } from '../engine/ffmpeg.ts';
+import { moveToDeleted } from '../file_ops.ts';
 import { type FileInfoEntry, scanFilesInfo } from '../files_info.ts';
 import { sanitizeSegment, stagingDir } from '../ingest/add_file.ts';
 import {
-	absoluteFromRelative,
-	additionalPath,
 	buildMediaIdentifier,
 	buildMediaLocation,
+	buildMediaSegmentLocation,
 	type MediaIdentity,
 	type MediaPathOptions,
+	type MediaSegment,
+	posterframeLocation,
 } from '../path.ts';
 import {
-	buildThumbAtomically,
+	buildThumbVersion,
 	noteOutrankingMaster,
 	regenerateImage,
 	resolveMasterSource,
@@ -128,85 +135,60 @@ export async function createIdentifyingImageCore(
 }
 
 /**
- * Absolute path for one of the AV component's derived media files, built with the
- * standard media grammar (`{folder}{initial_media_path}/{segment}{bucket}/{id}.{ext}`)
- * but WITHOUT buildMediaLocation's quality gate — the AV posterframe lives in a
- * folder the ladder gate rejects (posterframe is not a quality at all; the thumb
- * IS a real av tier — av.hasThumb — but this helper predates that and serves the
- * posterframe segment). PHP: component_media_common::get_media_filepath.
- */
-function avDerivedPath(
-	spec: MediaTypeSpec,
-	identity: MediaIdentity,
-	pathOpts: MediaPathOptions,
-	segment: string,
-	extension: string,
-): string {
-	const identifier = buildMediaIdentifier(identity);
-	const bucket =
-		pathOpts.additionalPathOverride != null && pathOpts.additionalPathOverride !== ''
-			? pathOpts.additionalPathOverride
-			: additionalPath(identity.sectionId, pathOpts.maxItemsFolder);
-	const relativePath = `${spec.folder}${pathOpts.initialMediaPath}/${segment}${bucket}/${identifier}.${extension}`;
-	return absoluteFromRelative(relativePath, pathOpts.mediaRoot);
-}
-
-/**
- * The AV component's OWN posterframe file path. The posterframe lives in a
- * dedicated `posterframe` sub-folder (a sibling of the quality folders, NOT a
- * quality itself). Built to match EXACTLY the URL the section read serves
- * (read.ts:941 — `{folder}{initial_media_path}/posterframe{bucket}/{id}.{ext}`)
- * so the file we write is the file the client displays. PHP:
- * component_av::get_posterframe_filepath.
+ * The component's OWN posterframe file path (av + 3d), via the ONE grammar
+ * producer (`path.ts buildMediaSegmentLocation`). The posterframe lives in a
+ * dedicated `posterframe` sub-folder — a sibling of the quality folders, NOT a
+ * quality — which is why it needs the segment builder rather than
+ * `buildMediaLocation`. Kept as a named helper because it is the file every
+ * posterframe caller means. PHP: component_av::get_posterframe_filepath.
  */
 export function posterframeAbsolutePath(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 ): string {
-	return avDerivedPath(
-		spec,
-		identity,
-		pathOpts,
-		'posterframe',
-		config.media.avExtras.posterframeExtension,
-	);
+	const location = posterframeLocation(spec, identity, pathOpts);
+	if (location === null) {
+		throw new Error(`${spec.model} has no posterframe`);
+	}
+	return location.absolutePath;
 }
 
 /**
- * Build the AV thumb FROM the component's posterframe (PHP component_av::
- * create_thumb → ImageMagick::dd_thumb(posterframe → av/thumb/id.jpg)).
+ * Build the thumb of a POSTERFRAME MODEL from its posterframe — av AND 3d
+ * (PHP component_{av,3d}::create_thumb → ImageMagick::dd_thumb(posterframe →
+ * {type}/thumb/id.jpg)).
  *
- * The av thumb is an IMAGE derived from the posterframe, never an ffmpeg output
- * — which is why the media-versions panel's thumb gear routes here instead of
- * through the transcoder. Throws when there is no posterframe: the operator's
- * next step is tool_posterframe, and a silent no-op would leave the panel
- * waiting for a file nothing is writing.
+ * IT IS A THIN ALIAS OF THE SHARED HANDLER (`thumb.ts rebuildThumb`) and exists
+ * only for the callers that have just WRITTEN a posterframe and want the thumb put
+ * back in step with it. The source resolution, the av self-heal and the refusal
+ * text all live in the handler — this must never grow a second copy of them.
  */
-export async function buildAvThumbFromPosterframe(ctx: MediaContext): Promise<string> {
-	if (ctx.spec.model !== 'component_av') throw new Error('av thumb source must be component_av');
-	const posterframe = posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
-	if (!existsSync(posterframe)) {
-		throw new Error('build_version: no posterframe to build the thumb from');
+export async function buildThumbFromPosterframe(ctx: MediaContext): Promise<string> {
+	assertPosterframeModel(ctx.spec);
+	const { rebuildThumb } = await import('../thumb.ts');
+	const outcome = await rebuildThumb(ctx);
+	if (outcome.built === null) {
+		throw new Error(`build thumb: nothing built for ${buildMediaIdentifier(ctx.identity)}`);
 	}
-	const thumbTarget = avDerivedPath(
-		ctx.spec,
-		ctx.identity,
-		ctx.pathOpts,
-		config.media.thumb.quality,
-		config.media.thumb.extension,
-	);
-	mkdirSync(dirname(thumbTarget), { recursive: true, mode: 0o775 });
-	// Probing + atomic gear (buildThumbAtomically): the posterframe is normally a
-	// single ffmpeg-written frame, but it can also be a client-uploaded canvas
-	// snapshot (moveUploadedToMediaDir below) — arbitrary bytes, so no recipe here
-	// may assume one image, and a failed run must leave no debris in a live av dir.
-	await buildThumbAtomically(
-		posterframe,
-		thumbTarget,
-		`${buildMediaIdentifier(ctx.identity)} av thumb`,
-	);
-	return thumbTarget;
+	return outcome.built;
+}
+
+/**
+ * Write the component's thumb tier from one image file.
+ *
+ * `source` is a PARAMETER, not re-derived from the identity, because the caller
+ * that binds a client-uploaded posterframe knows the extension the BROWSER sent,
+ * which need not be the configured posterframe extension.
+ *
+ * The target path and the recipe are NOT decided here: it delegates to
+ * `buildThumbVersion`, the same writer image/pdf/svg go through, so the av/3d
+ * thumb lands at the gated `buildMediaLocation` path like every other thumb. It
+ * used to write through a private, ungated path helper — one file written by one
+ * grammar and read back (files_info) by another.
+ */
+async function writeThumbFrom(ctx: MediaContext, source: string): Promise<string> {
+	return buildThumbVersion(ctx.spec, ctx.identity, source, ctx.pathOpts);
 }
 
 /**
@@ -249,19 +231,38 @@ export async function createAvPosterframe(av: MediaContext, timecode: string): P
 	if (video?.width == null || video?.height == null) return false;
 
 	const target = posterframeAbsolutePath(av.spec, av.identity, av.pathOpts);
-	mkdirSync(dirname(target), { recursive: true, mode: 0o775 });
 
-	const created = await createPosterframe(source, timecode, target, {
-		width: Number(video.width),
-		height: Number(video.height),
+	// ATOMIC, like every other derivative (atomic.ts): ffmpeg used to write
+	// straight to the final path, so a reader could serve a half-written JPEG and a
+	// failed run left the debris behind. The posterframe is served directly to the
+	// client as `posterframe_url` — it is the one derivative a browser fetches by
+	// name without going through files_info — so a partial file there is visible.
+	let created = false;
+	await writeAtomically(target, async (temp) => {
+		created = await createPosterframe(source as string, timecode, temp, {
+			width: Number(video.width),
+			height: Number(video.height),
+		});
+		if (!created) {
+			// Nothing to rename into place; the temp is swept by writeAtomically.
+			throw new PosterframeNotCreated();
+		}
+	}).catch((error) => {
+		if (error instanceof PosterframeNotCreated) return '';
+		throw error;
 	});
 	if (!created) return false;
 
 	// Regenerate the thumb FROM the freshly written posterframe (PHP create_thumb:
 	// ImageMagick::dd_thumb(posterframe → av/thumb/id.jpg)). Best-effort, mirroring
 	// PHP where create_thumb's result does not gate create_posterframe's return.
+	//
+	// The LOW-LEVEL writer, deliberately: this function has just written the
+	// posterframe, so it knows the source and has nothing to resolve. Going through
+	// `rebuildThumb` here would also re-enter the mint path it may have been called
+	// FROM (rebuildThumb → mintPosterframe → here), building the same thumb twice.
 	try {
-		await buildAvThumbFromPosterframe(av);
+		await writeThumbFrom(av, target);
 	} catch (error) {
 		// posterframe already written; a thumb failure must not fail the operation —
 		// but it is logged, not silent (same rule as moveUploadedToMediaDir below).
@@ -272,24 +273,156 @@ export async function createAvPosterframe(av: MediaContext, timecode: string): P
 	return true;
 }
 
-/** Media models that carry a posterframe (PHP tool_posterframe ar_allowed). */
+/**
+ * The frame an auto-minted av posterframe is taken at, in seconds.
+ *
+ * PHP `component_av::create_thumb` (frozen class.component_av.php:581) used the
+ * literal 10.00 — mirrored here, like the pdf thumb's density/quality literals.
+ * Its own doc block flags the flaw ("may produce a black frame for very short
+ * clips"), and `mintPosterframe` fixes exactly that by clamping to the middle of
+ * anything shorter: a still nobody can see is not a thumbnail.
+ */
+const AV_AUTO_POSTERFRAME_SECONDS = 10;
+
+/** Internal signal: ffmpeg reported "no frame" — not an error, just nothing to rename. */
+class PosterframeNotCreated extends Error {}
+
+/**
+ * MINT a posterframe the engine is able to produce by itself — the av self-heal,
+ * and the reason an av thumb never waits for an operator (PHP did the same, at a
+ * fixed t=10, inside create_thumb).
+ *
+ * Called by `thumb.ts rebuildThumb` when the census says the model's posterframe
+ * writer is `server_frame_extract` and none is on disk. Throws when the frame
+ * cannot be produced (no source, audio-only) — the caller turns that into the
+ * operator-facing refusal, so the reason survives.
+ *
+ * THE TIMECODE IS CLAMPED to the clip: `min(10s, duration/2)`. A 4-second
+ * interview clip probed at t=10 yields ffmpeg's last-frame-or-nothing, which is
+ * how records ended up with a black posterframe that looked like a broken file.
+ */
+export async function mintPosterframe(ctx: MediaContext): Promise<string> {
+	const writer = POSTERFRAME_WRITER_BY_MODEL[ctx.spec.model];
+	if (writer !== 'server_frame_extract') {
+		throw new Error(
+			`${ctx.spec.model} posterframes cannot be minted by this engine — ${CLIENT_POSTERFRAME_REMEDY[ctx.spec.model] ?? 'create it first'}`,
+		);
+	}
+	const source = resolveAvSource(ctx);
+	if (source === null) {
+		throw new Error(
+			`no ${ctx.spec.model} source file to extract a posterframe from (${buildMediaIdentifier(ctx.identity)})`,
+		);
+	}
+	const format = (await probeFormat(source)) as { format?: { duration?: unknown } } | null;
+	const duration = Number(format?.format?.duration ?? 0);
+	const seconds =
+		Number.isFinite(duration) && duration > 0
+			? Math.min(AV_AUTO_POSTERFRAME_SECONDS, duration / 2)
+			: AV_AUTO_POSTERFRAME_SECONDS;
+	const created = await createAvPosterframe(ctx, seconds.toFixed(3));
+	if (!created) {
+		throw new Error(
+			`no video frame to build a posterframe from (${buildMediaIdentifier(ctx.identity)} — an audio-only source has no picture)`,
+		);
+	}
+	return posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
+}
+
+/**
+ * The av file a posterframe is extracted from: the master, else the delivered
+ * default-quality file across the type's extensions (PHP's fallback when the
+ * original is not on this box). Extracted from createAvPosterframe so the mint
+ * path and the explicit-timecode path resolve it identically.
+ */
+function resolveAvSource(ctx: MediaContext): string | null {
+	const master = resolveMasterSource(ctx.spec, ctx.identity, ctx.pathOpts);
+	if (master !== null) return master;
+	for (const ext of [ctx.spec.defaultExtension, ...ctx.spec.allowedExtensions]) {
+		const loc = buildMediaLocation(
+			ctx.spec,
+			ctx.identity,
+			ctx.spec.defaultQuality,
+			ext,
+			ctx.pathOpts,
+		);
+		if (existsSync(loc.absolutePath)) return loc.absolutePath;
+	}
+	return null;
+}
+
+/**
+ * Media models that carry a posterframe (PHP tool_posterframe ar_allowed). The
+ * census itself lives in concepts/media.ts POSTERFRAME_MODELS — the thumb builder
+ * branches on the same set, and two hand-written model lists would be one edit
+ * away from disagreeing about which models have a posterframe at all.
+ */
 function assertPosterframeModel(spec: MediaTypeSpec): void {
-	if (spec.model !== 'component_av' && spec.model !== 'component_3d') {
+	if (!hasPosterframe(spec.model)) {
 		throw new Error('posterframe target must be component_av or component_3d');
 	}
 }
 
+export interface DeletePosterframeResult {
+	/** true when a posterframe was really removed (false = there was none). */
+	result: boolean;
+	/** The thumb retired with it, or null (see below). */
+	retiredThumb: string | null;
+	/** The thumb rebuilt from a freshly minted replacement (av), or null. */
+	rebuiltThumb: string | null;
+}
+
 /**
- * Delete a component's own posterframe (PHP component_{av,3d}::delete_posterframe).
- * Direct unlink (not a move-to-deleted); returns false when the file is absent,
- * which PHP treats as a non-error since the desired end state already holds.
+ * Delete a component's own posterframe (PHP component_{av,3d}::delete_posterframe)
+ * AND put the thumb back in step with it — the two are one operation, because the
+ * thumb IS a picture of the posterframe (THUMB_SOURCE_BY_MODEL).
+ *
+ * WHAT THIS FIXES. The delete used to remove the posterframe alone. The thumb
+ * stayed on disk and in files_info, so every list view kept serving a picture of a
+ * file the operator had just deleted, reported as present and current — measured
+ * on both the av and the 3d handler. The engine's own doctrine already says this
+ * out loud for alternate twins ("no twin without its companion", versions.ts
+ * retireOrphanTwins); a thumb without its posterframe is the same wrong, one
+ * derivative up.
+ *
+ * IT IS A MOVE, NOT AN UNLINK, for the posterframe too. PHP unlinked it, and that
+ * made it the ONE file in the media subsystem that left without going to
+ * `deleted/` (the No-hard-delete law, file_ops.ts). The parity was not worth a
+ * law exception: an operator who deletes the wrong posterframe of an irreplaceable
+ * recording should be one move away from it, not one restore-from-backup away.
+ *
+ * FOR AV THE THUMB IS REBUILT, not just retired: the engine can mint a replacement
+ * posterframe from the video itself, so "delete the posterframe" means "drop this
+ * frame choice", not "leave this record pictureless". For 3d there is nothing to
+ * mint from, so the thumb is retired and the record honestly shows its placeholder
+ * until someone captures a new scene.
  */
-export function deletePosterframe(ctx: MediaContext): boolean {
+export async function deletePosterframe(ctx: MediaContext): Promise<DeletePosterframeResult> {
 	assertPosterframeModel(ctx.spec);
 	const target = posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
-	if (!existsSync(target)) return false;
-	rmSync(target);
-	return true;
+	if (!existsSync(target)) {
+		return { result: false, retiredThumb: null, rebuiltThumb: null };
+	}
+	moveToDeleted(target, { mediaRoot: ctx.pathOpts.mediaRoot });
+
+	const { rebuildThumb, retireThumb } = await import('../thumb.ts');
+	// Retire FIRST: whatever happens next, the thumb that depicted the deleted
+	// posterframe must not survive this call.
+	const retiredThumb = retireThumb(ctx);
+	if (POSTERFRAME_WRITER_BY_MODEL[ctx.spec.model] !== 'server_frame_extract') {
+		return { result: true, retiredThumb, rebuiltThumb: null };
+	}
+	try {
+		const outcome = await rebuildThumb(ctx);
+		return { result: true, retiredThumb, rebuiltThumb: outcome.built };
+	} catch (error) {
+		// An audio-only av, or a box with no source file: the delete stands, the
+		// record is honestly thumb-less, and the reason is said out loud.
+		console.warn(
+			`[posterframe] ${buildMediaIdentifier(ctx.identity)}: posterframe deleted, no replacement minted: ${(error as Error).message}`,
+		);
+		return { result: true, retiredThumb, rebuiltThumb: null };
+	}
 }
 
 /** The extension of a client-supplied file name, lower-cased and charset-gated. */
@@ -330,35 +463,36 @@ export async function moveUploadedToMediaDir(input: {
 	}
 	if (!existsSync(source) || !statSync(source).isFile()) return false;
 
-	// Target: {folder}{initial}/{segment}{bucket}/{identifier}.{ext} — the identifier
-	// name (PHP file_data.name is the identifier; we recompute it, never trusting the
-	// client stem) at the uploaded extension.
-	const target = avDerivedPath(
+	// Target: the SEGMENT builder, which is an allowlist (path.ts MEDIA_SEGMENTS) —
+	// the identifier name (PHP file_data.name is the identifier; we recompute it,
+	// never trusting the client stem) at the uploaded extension.
+	//
+	// THE ALLOWLIST IS THE POINT. `target_dir` arrives from the client and used to be
+	// only charset-sanitized, so a caller with section-write could bind a staged file
+	// into ANY folder of the grammar — 'original', 'web', 'thumb' — at any
+	// `[a-z0-9]+` extension, walking straight past `assertIngestableQuality`,
+	// `assertNormalizedExtensionForTier` and the upload allowlist every other upload
+	// passes. A file parked in a master tier is resolvable AS THE MASTER
+	// (resolveMasterSource walks allowedExtensions), so that is a write into the
+	// archival record through the posterframe door. Only declared segments now.
+	const target = buildMediaSegmentLocation(
 		ctx.spec,
 		ctx.identity,
-		ctx.pathOpts,
-		segment,
+		segment as MediaSegment,
 		uploadedExtension(fileName),
-	);
+		ctx.pathOpts,
+	).absolutePath;
 	mkdirSync(dirname(target), { recursive: true, mode: 0o750 });
 	renameSync(source, target);
 
-	// Regenerate the thumb from a freshly moved posterframe (PHP create_thumb).
+	// Regenerate the thumb from a freshly moved posterframe (PHP create_thumb) —
+	// FROM `target`, the file just bound, not from the configured posterframe path:
+	// they are the same file whenever the client uploads the configured extension
+	// (the 3D capture sends jpg), and when they are not, the thumb must depict what
+	// the operator actually uploaded.
 	if (segment === 'posterframe') {
 		try {
-			const thumbTarget = avDerivedPath(
-				ctx.spec,
-				ctx.identity,
-				ctx.pathOpts,
-				config.media.thumb.quality,
-				config.media.thumb.extension,
-			);
-			mkdirSync(dirname(thumbTarget), { recursive: true, mode: 0o775 });
-			await buildThumbAtomically(
-				target,
-				thumbTarget,
-				`${buildMediaIdentifier(ctx.identity)} ${segment} thumb`,
-			);
+			await writeThumbFrom(ctx, target);
 		} catch (error) {
 			// The posterframe is already in place; a thumb failure must not fail the
 			// move. But it is SAID OUT LOUD: this swallow used to make a missing av

@@ -7,7 +7,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -23,6 +23,7 @@ import {
 	moveUploadedToMediaDir,
 	posterframeAbsolutePath,
 } from '../../src/core/media/tools/posterframe.ts';
+import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { mustGet } from '../helpers/assert.ts';
@@ -168,17 +169,47 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 		},
 	);
 
-	test.if(HAVE_BOTH)('delete removes the posterframe; a second delete returns false', async () => {
+	test.if(HAVE_BOTH)(
+		'delete removes the posterframe and MINTS a replacement for the thumb',
+		async () => {
+			rmSync(ROOT, { recursive: true, force: true });
+			await makeAv('rsc439_rsc170_8', true);
+			await createAvPosterframe(avCtx(), '00:00:00');
+			const thumb = `${ROOT}/av/${config.media.thumb.quality}/rsc439_rsc170_8.${config.media.thumb.extension}`;
+			expect(existsSync(thumb)).toBe(true);
+
+			const outcome = await deletePosterframe(avCtx());
+			expect(outcome.result).toBe(true);
+			// The thumb it depicted was retired in the same call — never left serving a
+			// picture of a file the operator just deleted…
+			expect(outcome.retiredThumb).not.toBeNull();
+			// …and because the engine CAN mint an av posterframe, the record does not
+			// go pictureless: a replacement frame and its thumb are already back.
+			expect(outcome.rebuiltThumb).toBe(thumb);
+			expect(existsSync(thumb)).toBe(true);
+			expect(existsSync(posterframeAbsolutePath(av, avIdentity, pathOpts))).toBe(true);
+		},
+	);
+
+	test.if(HAVE_BOTH)('the deleted posterframe is RECOVERABLE (moved, never unlinked)', async () => {
 		rmSync(ROOT, { recursive: true, force: true });
 		await makeAv('rsc439_rsc170_8', true);
 		await createAvPosterframe(avCtx(), '00:00:00');
-		expect(deletePosterframe(avCtx())).toBe(true);
-		expect(existsSync(posterframeAbsolutePath(av, avIdentity, pathOpts))).toBe(false);
-		expect(deletePosterframe(avCtx())).toBe(false);
+		await deletePosterframe(avCtx());
+		// The No-hard-delete law: the operator's bytes are one move away.
+		const deleted = `${ROOT}/av/posterframe/deleted`;
+		expect(existsSync(deleted)).toBe(true);
+		expect(readdirSync(deleted).length).toBeGreaterThan(0);
 	});
 
-	test('rejects an unsupported model', () => {
-		expect(() => deletePosterframe(imageCtx())).toThrow(/component_av or component_3d/);
+	test('a delete with nothing to delete reports it, and does nothing else', async () => {
+		rmSync(ROOT, { recursive: true, force: true });
+		const outcome = await deletePosterframe(avCtx());
+		expect(outcome).toEqual({ result: false, retiredThumb: null, rebuiltThumb: null });
+	});
+
+	test('rejects an unsupported model', async () => {
+		await expect(deletePosterframe(imageCtx())).rejects.toThrow(/component_av or component_3d/);
 	});
 });
 
@@ -268,8 +299,53 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 		).rejects.toThrow();
 	});
 
+	// THE 3D THUMB IS BUILT FROM THE POSTERFRAME, NEVER FROM THE MESH. Before this
+	// route existed the media-versions panel's thumb gear fell through to the
+	// generic image branch, which handed `3d/web/0/<id>.glb` to ImageMagick and
+	// answered `identify: no decode delegate for this image format`. Both halves are
+	// gated: the build that works, and the refusal that names how to get a
+	// posterframe — the refusal is the half that runs on a box with no binaries, and
+	// the one an operator meets when nothing has captured the scene yet.
+	describe('build_version thumb (the panel gear)', () => {
+		test.if(HAVE_BOTH)('builds the thumb from the posterframe', async () => {
+			rmSync(ROOT, { recursive: true, force: true });
+			await stageJpg('up_thumb.jpg');
+			await moveUploadedToMediaDir({
+				ctx: tdCtx(),
+				userId: USER,
+				keyDir: '3d',
+				tmpName: 'up_thumb.jpg',
+				fileName: 'rsc36_rsc170_8.jpg',
+				targetDir: 'posterframe',
+			});
+			const thumb = `${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`;
+			rmSync(thumb, { force: true }); // the move already built one — start from none
+			const out = await buildVersionCore(threeD, tdIdentity, pathOpts, config.media.thumb.quality);
+			expect(out.built).toEqual([thumb]);
+			expect(existsSync(thumb)).toBe(true);
+			expect(out.jobId).toBeNull();
+		});
+
+		test('with no posterframe it refuses, naming the 3D viewer as the source', async () => {
+			rmSync(ROOT, { recursive: true, force: true });
+			// A model file in the web tier is present — the exact state that used to
+			// send a .glb to the raster thumbnailer instead of refusing.
+			const model = `${ROOT}/3d/${threeD.defaultQuality}/rsc36_rsc170_8.${threeD.defaultExtension}`;
+			mkdirSync(model.slice(0, model.lastIndexOf('/')), { recursive: true });
+			writeFileSync(model, 'glTF-not-an-image');
+			await expect(
+				buildVersionCore(threeD, tdIdentity, pathOpts, config.media.thumb.quality),
+			).rejects.toThrow(/has no posterframe yet.*3D viewer/s);
+			expect(
+				existsSync(
+					`${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`,
+				),
+			).toBe(false);
+		});
+	});
+
 	test.if(HAVE_BOTH)(
-		'delete removes the 3D posterframe; a second delete returns false',
+		'delete removes the 3D posterframe AND retires the thumb (nothing can re-render a mesh)',
 		async () => {
 			rmSync(ROOT, { recursive: true, force: true });
 			await stageJpg('up_del.jpg');
@@ -281,8 +357,20 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 				fileName: 'rsc36_rsc170_8.jpg',
 				targetDir: 'posterframe',
 			});
-			expect(deletePosterframe(tdCtx())).toBe(true);
-			expect(deletePosterframe(tdCtx())).toBe(false);
+			const thumb = `${ROOT}/3d/${config.media.thumb.quality}/rsc36_rsc170_8.${config.media.thumb.extension}`;
+			expect(existsSync(thumb)).toBe(true);
+
+			const outcome = await deletePosterframe(tdCtx());
+			expect(outcome.result).toBe(true);
+			// Retired WITH the posterframe — and NOT rebuilt, because this engine has
+			// no mesh renderer: the record honestly falls back to its placeholder
+			// until a browser captures a new scene.
+			expect(outcome.retiredThumb).not.toBeNull();
+			expect(outcome.rebuiltThumb).toBeNull();
+			expect(existsSync(thumb)).toBe(false);
+			expect(existsSync(posterframeAbsolutePath(threeD, tdIdentity, pathOpts))).toBe(false);
+
+			expect((await deletePosterframe(tdCtx())).result).toBe(false);
 		},
 	);
 });

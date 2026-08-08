@@ -70,6 +70,10 @@ describe('thumb builds from the default-quality file (no original needed)', () =
 		mkdirSync(join(scratchRoot, 'image'), { recursive: true });
 		await expect(
 			buildVersionCore(spec, identity, pathOpts, config.media.thumb.quality),
-		).rejects.toThrow(/no 1\.5MB file and no original/);
+			// The wording moved into the shared handler (media/thumb.ts) when the five
+			// per-trigger source rules became one; what this pins is unchanged — a
+			// record with neither a delivered file nor a master fails LOUDLY, naming
+			// both things it looked for, instead of returning an empty success.
+		).rejects.toThrow(/no 1\.5MB file and no master to build the thumb/);
 	});
 });

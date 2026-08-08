@@ -276,6 +276,12 @@ export interface MediaBinariesConfig {
 	readonly pdfinfo: string;
 	readonly ocrmypdf: string; // PDF_OCR_ENGINE
 	readonly file: string; // libmagic CLI fallback for ambiguous MIME sniffs
+	/**
+	 * librsvg's CLI (DEDALO_RSVG_CONVERT_PATH) — the ONLY SVG rasterizer in the
+	 * engine. ImageMagick cannot be used for this: the hardened policy disables
+	 * the MVG coder its internal SVG renderer emits (see engine/svg.ts).
+	 */
+	readonly rsvgConvert: string;
 }
 
 /** Upload service settings (PHP DEDALO_UPLOAD_SERVICE_* + DEDALO_UPLOAD_TMP_DIR). */
@@ -346,6 +352,8 @@ export interface MediaConfig {
 	};
 	/** Image print DPI (DEDALO_IMAGE_PRINT_DPI). */
 	readonly imagePrintDpi: number;
+	/** Rasterization resolution for the SVG thumb (DEDALO_SVG_THUMB_DPI). */
+	readonly svgThumbDpi: number;
 	/** Retouched-image twin quality (PHP DEDALO_IMAGE_QUALITY_RETOUCHED, default 'modified'). */
 	readonly imageQualityRetouched: string;
 	/**
@@ -711,6 +719,7 @@ function buildMediaConfig(): MediaConfig {
 			subtitlesExtension: readString('DEDALO_AV_SUBTITLES_EXTENSION'),
 		}),
 		imagePrintDpi: readNumber('DEDALO_IMAGE_PRINT_DPI'),
+		svgThumbDpi: readNumber('DEDALO_SVG_THUMB_DPI'),
 		imageQualityRetouched: readString('DEDALO_IMAGE_QUALITY_RETOUCHED'),
 		// null (unset) is MEANINGFUL: it means "derive the defaults from this install's
 		// quality catalog", which is not the same as an explicitly EMPTY list (= no folder
@@ -735,6 +744,7 @@ function buildMediaConfig(): MediaConfig {
 			pdfinfo: readString('DEDALO_PDFINFO_PATH'),
 			ocrmypdf: readString('PDF_OCR_ENGINE'),
 			file: readString('DEDALO_FILE_BIN_PATH'),
+			rsvgConvert: readString('DEDALO_RSVG_CONVERT_PATH'),
 		}),
 		upload: Object.freeze({
 			chunkFilesMb: readNumber('DEDALO_UPLOAD_SERVICE_CHUNK_FILES'),

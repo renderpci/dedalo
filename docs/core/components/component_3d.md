@@ -205,7 +205,7 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 
 Modes:
 
-- **edit** — read/write. Loads the three.js viewer to display the `web`-quality model interactively; a quality selector lists the existing `glb` files; the posterframe image is the fallback/preview. `tool_upload` binds a new model; `tool_posterframe` captures a still (the client renders the current view to a JPG, uploads it and calls the `dd_component_3d_api` action `move_file_to_dir`, which also builds the thumb).
+- **edit** — read/write. Loads the three.js viewer to display the `web`-quality model interactively; a quality selector lists the existing `glb` files; the posterframe image is the fallback/preview. `tool_upload` binds a new model; `tool_posterframe` **and the media-versions panel's thumb gear** both capture a still the same way (the client renders the current view to a JPG, uploads it and calls the `dd_component_3d_api` action `move_file_to_dir`, which also builds the thumb and persists `files_info`). Both wait for the viewer to finish mounting — `component_3d.ensure_viewer()` — because the scene loads lazily. A new model upload retires the previous posterframe and thumb: nothing here can re-render a mesh, so the record shows its placeholder until the browser captures the new scene.
 - **list / tm** — read-only. `tm` (Time Machine) reuses the list render. Both show the still image (thumb, falling back to posterframe), never the heavy model.
 - **search** — builds a simple text filter input; one `input` per filter, publishing `change_search_element`.
 

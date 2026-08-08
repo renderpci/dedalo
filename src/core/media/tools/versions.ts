@@ -23,7 +23,6 @@ import {
 	buildAlternateVersions,
 	buildImageVersion,
 	buildPdfCovers,
-	buildThumbVersion,
 	copyToQuality,
 	derivedTwinQualities,
 	regenerateImage,
@@ -32,7 +31,7 @@ import {
 	resolveMasterSource,
 	retireOrphanTwins,
 } from '../processing.ts';
-import { buildAvThumbFromPosterframe } from './posterframe.ts';
+import { rebuildThumb } from '../thumb.ts';
 import { applyRotationCore } from './rotation.ts';
 
 /**
@@ -124,57 +123,31 @@ export async function buildVersionCore(
 	}
 	const thumbQuality = config.media.thumb.quality;
 
+	// THE THUMB IS ONE OPERATION FOR ALL FIVE MODELS — `thumb.ts rebuildThumb`
+	// resolves the source from the census (the delivered file, or the posterframe),
+	// mints the source when the engine can (av), and refuses with the remedy when it
+	// cannot (3d needs a browser). This branch used to be three: an av/3d
+	// posterframe path, a default-else-master path, and a pdf/svg fallback comment —
+	// each with its own source rule.
+	if (quality === thumbQuality) {
+		const outcome = await rebuildThumb({ spec, identity, pathOpts });
+		// A minted posterframe rides in `built` because it IS a file this click
+		// wrote: the operator asked for a thumb and also got the still the record
+		// now shows in every list, and the panel lists what was built.
+		return {
+			built: [outcome.mintedPosterframe, outcome.built].filter(
+				(path): path is string => path !== null,
+			),
+			jobId: null,
+			errors: [],
+		};
+	}
 	if (spec.model === 'component_av') {
-		// The av thumb is NOT a transcode: PHP component_av::create_thumb resizes
-		// the POSTERFRAME (ImageMagick), so routing it through ffmpeg would build a
-		// video into the thumb tier. No posterframe ⇒ refuse loudly; the operator's
-		// next step is tool_posterframe, not a longer wait.
-		if (quality === thumbQuality) {
-			return {
-				built: [await buildAvThumbFromPosterframe({ spec, identity, pathOpts })],
-				jobId: null,
-				errors: [],
-			};
-		}
 		// ONE quality — the tier the operator clicked. Pre-flight refusals surface
 		// as a failed request, not as an accepted job that dies later.
 		return {
 			built: [],
 			jobId: await submitAvVersionBuild(spec, identity, pathOpts, quality, sourceExtension),
-			errors: [],
-		};
-	}
-
-	// THUMB builds from the DEFAULT-QUALITY file, not the original (v6
-	// component_image::create_thumb :393 — get_media_filepath(default_quality)).
-	// On a partial-media box the default file is usually present while the
-	// original is not; requiring the original here made the thumb gear fail with
-	// 'original not found' for exactly those records.
-	//
-	// The fallback to the ORIGINAL is deliberately kept (2026-08-04): the
-	// component_pdf / component_svg thumb gears reach it by design — their
-	// defaultExtension is not a raster tier — and deleting it would break exactly
-	// the partial-media boxes above. It is safe on a raw master because
-	// buildThumbVersion now probes its source, selects a scene and converts CMYK.
-	if (quality === thumbQuality) {
-		const defaultLocation = buildMediaLocation(
-			spec,
-			identity,
-			spec.defaultQuality,
-			spec.defaultExtension,
-			pathOpts,
-		);
-		const thumbSource = existsSync(defaultLocation.absolutePath)
-			? defaultLocation.absolutePath
-			: resolveMasterSource(spec, identity, pathOpts, sourceExtension);
-		if (thumbSource === null) {
-			throw new Error(
-				`build_version: no ${spec.defaultQuality} file and no original to build the thumb from`,
-			);
-		}
-		return {
-			built: [await buildThumbVersion(spec, identity, thumbSource, pathOpts)],
-			jobId: null,
 			errors: [],
 		};
 	}
@@ -396,8 +369,10 @@ export async function rebuildDerivedTiersAfterMasterDelete(
 				const outcome = await regeneratePdf(spec, identity, pathOpts);
 				return { rebuilt: outcome.created, errors: outcome.errors };
 			}
-			case 'component_svg':
-				return { rebuilt: await regenerateSvg(spec, identity, pathOpts), errors: [] };
+			case 'component_svg': {
+				const outcome = await regenerateSvg(spec, identity, pathOpts);
+				return { rebuilt: outcome.created, errors: outcome.errors };
+			}
 			default:
 				// component_3d needs the raw extension it cannot know here; component_av
 				// derivatives are an async transcode owned by the job manager. Neither

@@ -543,6 +543,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_PDFTOHTML_PATH',
 	'DEDALO_PDFINFO_PATH',
 	'DEDALO_FILE_BIN_PATH',
+	// The SVG rasterizer. NEW_IN_V7 with no v6 counterpart BY CONSTRUCTION: v6 built
+	// its svg thumb with ImageMagick, which v7 cannot do — the hardened policy
+	// disables the MVG coder ImageMagick's SVG renderer emits, so the renderer is a
+	// separate program (src/core/media/engine/svg.ts) and therefore a new key.
+	'DEDALO_RSVG_CONVERT_PATH',
+	'DEDALO_SVG_THUMB_DPI',
 	'DEDALO_MEDIA_JOB_CONCURRENCY',
 	'DEDALO_MEDIA_PROCESSES_DIR',
 	'MEDIA_DEV_ROUTE_ENABLED',

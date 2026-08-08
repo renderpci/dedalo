@@ -97,6 +97,41 @@ export function writeAtomicallySync(target: string, produce: (temp: string) => v
 }
 
 /**
+ * Run `use` with a temp sibling of `target` that is ALWAYS removed afterwards —
+ * for a producer that needs an INTERMEDIATE file rather than a staged final one.
+ *
+ * The one caller today is the SVG thumb: librsvg renders the vector to a
+ * full-resolution PNG, and the ImageMagick thumb recipe reduces THAT (see
+ * processing.ts buildThumbVersion). The intermediate is not a version of the
+ * record and must never survive the call.
+ *
+ * IT LIVES HERE BECAUSE TEMP LIFECYCLE DOES. `processing.ts` may not call
+ * `rmSync` at all — `media_alternate_versions_tripwire` forbids a hard delete in
+ * every twin-producing module, since a file leaving a tier must MOVE into
+ * `deleted/` (the No-hard-delete law). That rule cannot distinguish "removes a
+ * record's file" from "removes its own scratch", so the scratch is removed where
+ * the exemption already holds and is already justified — beside the temp sweep it
+ * is the twin of.
+ *
+ * `extension` carries the leading dot (e.g. '.png'): every media binary infers
+ * its output FORMAT from the filename, so the intermediate's extension is a
+ * parameter, not the target's.
+ */
+export async function withTempSibling<T>(
+	target: string,
+	extension: string,
+	use: (temp: string) => Promise<T>,
+): Promise<T> {
+	ensureDir(target);
+	const temp = tempSibling(`${target}${extension}`);
+	try {
+		return await use(temp);
+	} finally {
+		cleanTemp(temp);
+	}
+}
+
+/**
  * Remove the temp and any `<tempStem>-N<ext>` siblings a sequence-emitting
  * producer left. After a successful rename the temp is already gone, so the
  * `rmSync` is a no-op (`force: true`) and the sweep finds nothing — the cost of

@@ -19,7 +19,12 @@
 
 import { resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
-import { assertValidQuality, type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
+import {
+	assertValidQuality,
+	hasPosterframe,
+	type MediaTypeSpec,
+	mediaTypeOf,
+} from '../concepts/media.ts';
 import { assertValidTipo } from '../search/identifier_gate.ts';
 
 /** A media component instance's identity (the identifier inputs). */
@@ -127,6 +132,79 @@ export function buildMediaLocation(
 	const root = requireMediaRoot(opts.mediaRoot);
 	const absolutePath = assertInsideMediaRoot(resolve(root, `.${relativePath}`), root);
 	return { relativeDir, relativePath, absolutePath };
+}
+
+/**
+ * The SEGMENT files a media record can carry beside its quality ladder — files
+ * that live in a folder of the same grammar but are NOT a quality.
+ *
+ * `posterframe` is the only one today. It is a closed list because this is the
+ * gate that replaces `buildMediaLocation`'s quality check: a segment name reaches
+ * the filesystem as a directory, so it may not come from a caller's string.
+ */
+export type MediaSegment = 'posterframe';
+const MEDIA_SEGMENTS: ReadonlySet<string> = new Set<MediaSegment>(['posterframe']);
+
+/**
+ * A segment file's location — same grammar as a quality
+ * (`{folder}{initial_media_path}/{segment}{bucket}/{id}.{ext}`), with the quality
+ * ladder gate replaced by the segment allowlist above.
+ *
+ * IT LIVES HERE BECAUSE THE GRAMMAR MUST HAVE ONE PRODUCER. Before this, the
+ * posterframe path was built in THREE places: a private helper in
+ * tools/posterframe.ts (which also wrote the av/3d THUMB through it, so one file
+ * was written by an ungated builder and read back by the gated one), and an inline
+ * template string in component_emit.ts that ignored `additionalPathOverride`
+ * entirely. They agreed character-for-character only by luck, and nothing
+ * mechanical held them together — `media_thumb_census_tripwire.test.ts` now does, against
+ * this function.
+ */
+export function buildMediaSegmentLocation(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	segment: MediaSegment,
+	extension: string,
+	opts: MediaPathOptions,
+): MediaLocation {
+	if (!MEDIA_SEGMENTS.has(segment)) {
+		throw new Error(`Invalid media segment '${segment}' for ${spec.model}`);
+	}
+	const identifier = buildMediaIdentifier(identity);
+	const cleanExtension = String(extension).replace(/^\./, '');
+	if (!/^[A-Za-z0-9]+$/.test(cleanExtension)) {
+		throw new Error(`Invalid media extension '${extension}'`);
+	}
+	const bucket =
+		opts.additionalPathOverride != null && opts.additionalPathOverride !== ''
+			? opts.additionalPathOverride
+			: additionalPath(identity.sectionId, opts.maxItemsFolder);
+	const relativeDir = `${spec.folder}${opts.initialMediaPath}/${segment}${bucket}`;
+	const relativePath = `${relativeDir}/${identifier}.${cleanExtension}`;
+	const root = requireMediaRoot(opts.mediaRoot);
+	const absolutePath = assertInsideMediaRoot(resolve(root, `.${relativePath}`), root);
+	return { relativeDir, relativePath, absolutePath };
+}
+
+/**
+ * The posterframe's location for the models that carry one, else null — the ONE
+ * resolver for both the file (tools/posterframe.ts) and the URL the client is
+ * given (component_emit.ts). PURE: it does not stat the file; a caller that needs
+ * "renderable now" tests `absolutePath` itself, exactly as `mediaThumbLocation`
+ * documents for the thumb.
+ */
+export function posterframeLocation(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	opts: MediaPathOptions,
+): MediaLocation | null {
+	if (!hasPosterframe(spec.model)) return null;
+	return buildMediaSegmentLocation(
+		spec,
+		identity,
+		'posterframe',
+		config.media.avExtras.posterframeExtension,
+		opts,
+	);
 }
 
 /**

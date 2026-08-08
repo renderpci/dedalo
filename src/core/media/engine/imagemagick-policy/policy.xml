@@ -24,18 +24,22 @@
   `identify -ping` on a `.png` holding PostScript reports `PS` and exits 0
   unpoliced, and is refused here.
 
-  KNOWN-OPEN (measured 2026-08-04, PRE-EXISTING — not introduced by the scene
-  selection change): on a build with no librsvg delegate, ImageMagick RASTERIZES
+  RESOLVED 2026-08-08 — the SVG note below stands as the REASON, not as a gap.
+  ImageMagick is no longer asked to rasterize SVG at all: `engine/svg.ts` renders
+  the vector with librsvg (`rsvg-convert`) and hands the PNG to the thumb recipe,
+  so the MVG coder stays disabled and component_svg still gets its thumbnail. Do
+  not "fix" the thumb by relaxing the rule below.
+
+  WHY THAT DECISION HAD TO BE MADE (measured 2026-08-04): on a build with no
+  librsvg delegate, ImageMagick RASTERIZES
   an SVG through its own MSVG renderer, which emits MVG — so `coder MVG rights
   none` also blocks every SVG→raster conversion:
     magick 'x.svg[0]' -background '#ffffff' -flatten -thumbnail 222x148 out.jpg
     → "not allowed by the security policy `MVG'", exit 1, no file
-  PROBING an SVG is unaffected (identify -ping reads the header only), so this
-  costs the component_svg THUMB gear, not the record. Deciding between a
-  librsvg delegate requirement and a narrower policy is a security decision for
-  the MEDIA-02 owner, not a side effect of a media-writer change; until then the
-  failure is at least loud (runMagickTo names the policy in its diagnostic,
-  where the old text-only rule turned it into an ENOENT on rename).
+  PROBING an SVG is unaffected (identify -ping reads the header only). The choice
+  was between requiring a librsvg delegate and narrowing the policy; requiring
+  librsvg won, as a DEDICATED renderer rather than an ImageMagick delegate — a
+  program that parses SVG and nothing else has no coder dispatch to reach.
 -->
 <policymap>
   <!-- Remote fetch / SSRF via delegates -->

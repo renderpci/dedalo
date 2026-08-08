@@ -16,7 +16,11 @@ import {
 	requirePrincipal,
 } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
-import { avActionFail, resolveMediaActionContext } from './media_action_context.ts';
+import {
+	avActionFail,
+	persistMediaFilesInfo,
+	resolveMediaActionContext,
+} from './media_action_context.ts';
 
 /**
  * dd_component_3d_api::move_file_to_dir — bind a staged upload to a 3D record (the
@@ -42,7 +46,7 @@ async function threeDMoveFileAction(rqo: Rqo, context: ApiRequestContext): Promi
 	}
 
 	const { moveUploadedToMediaDir } = await import('../../media/tools/posterframe.ts');
-	const result = await moveUploadedToMediaDir({
+	const result: boolean = await moveUploadedToMediaDir({
 		ctx: resolved.ctx,
 		userId: (context.session as Session).userId,
 		keyDir,
@@ -50,6 +54,15 @@ async function threeDMoveFileAction(rqo: Rqo, context: ApiRequestContext): Promi
 		fileName,
 		targetDir,
 	});
+	// The bind wrote the posterframe AND rebuilt the thumb from it; persist the
+	// index so LIST MODE sees the thumb. 3d serves the stored files_info verbatim
+	// (only av re-scans per read), so without this the freshly captured picture
+	// existed on disk and nowhere else — measured: the panel showed it, every list
+	// kept the placeholder.
+	if (result === true) {
+		await persistMediaFilesInfo(resolved.ctx);
+	}
+
 	return {
 		status: 200,
 		body: {
@@ -68,8 +81,17 @@ async function threeDDeletePosterframeAction(
 	const resolved = await resolveMediaActionContext(rqo, context, 2, 'component_3d');
 	if ('error' in resolved) return resolved.error;
 
+	// Deleting the posterframe RETIRES THE THUMB WITH IT — the thumb is a picture of
+	// the posterframe, and nothing here can re-render a mesh, so the record goes
+	// back to its placeholder rather than serving a still of a file that is gone.
 	const { deletePosterframe } = await import('../../media/tools/posterframe.ts');
-	const result = deletePosterframe(resolved.ctx);
+	const outcome = await deletePosterframe(resolved.ctx);
+	const result = outcome.result;
+	// Persist: 3d is NOT re-scanned per read (unlike av), so without this the stored
+	// index keeps claiming a thumb that has just left the tier.
+	if (result === true) {
+		await persistMediaFilesInfo(resolved.ctx);
+	}
 
 	// Activity audit (PHP logger 'DELETE FILE' code 12, component_3d :665 —
 	// byte-identical payload to the av twin). Only on a real deletion.

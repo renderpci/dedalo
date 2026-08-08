@@ -123,6 +123,17 @@ Binaries `DEDALO_AV_FFMPEG_PATH` / `_FFPROBE_PATH` / `_FASTSTART_PATH` (§3). Se
 
 ### 4.4 SVG / 3D
 - SVG thumb: rasterized via `ImageMagick::convert` (`component_svg:395`).
+  **AS BUILT (2026-08-08) the renderer is librsvg, not ImageMagick** — `src/core/media/engine/svg.ts`
+  (`rsvg-convert`, `DEDALO_RSVG_CONVERT_PATH`, dpi `DEDALO_SVG_THUMB_DPI`), whose PNG the shared
+  thumb recipe then reduces. The hardened `imagemagick-policy/policy.xml` disables the `MVG` coder
+  that ImageMagick's own SVG renderer emits, so the PHP recipe is REFUSED on this engine (measured:
+  `magick 'x.svg[0]' … → "not authorized by the security policy 'MVG'"`, and the same command
+  succeeds with the policy removed). That was left KNOWN-OPEN in the policy file as "a security
+  decision"; rendering the vector in a dedicated program is that decision, and it keeps MVG closed.
+  Until it landed, `component_svg` had `hasThumb: false` and the media-versions thumb gear answered
+  "Unknown media quality 'thumb' for component_svg (not in ladder [original, web])" on every SVG
+  record. Gate: `test/unit/media_svg_thumb.test.ts` (which is also the tripwire against rerouting
+  the render back through ImageMagick — it fails with that policy error).
 - 3D: `web` = naive copy via base `build_version :3543` (no override); 3D thumb via `ImageMagick::dd_thumb` from an auto-posterframe (`component_3d:440`). Converters ledgered PHP-dead (§Out-of-scope).
 
 ### 4.5 Rewrite gotchas (carry over)
@@ -329,7 +340,81 @@ default-quality file, and never a tier from itself. Refusals knowable up front
 the original as target) are raised BEFORE a job id exists, because the panel
 shows *Processing* the moment it receives one. The av THUMB is not a transcode:
 it is the posterframe resized (PHP `create_thumb`), so it routes to
-`buildAvThumbFromPosterframe`, not to ffmpeg.
+`buildThumbFromPosterframe`, not to ffmpeg.
+
+### 6.6 The thumb/posterframe handler — one rule for five models (2026-08-08, `engineering/wire_contract/WC-2026-08-08-media-thumb-handler.md`)
+
+**THE RULE: the thumb depicts its SOURCE; when that source changes or disappears,
+the thumb is rebuilt or retired in the same seam.** The source is declared per
+model in `concepts/media.ts` and nowhere else:
+
+| model | `THUMB_SOURCE_BY_MODEL` | `POSTERFRAME_WRITER_BY_MODEL` | recipe |
+|---|---|---|---|
+| image | `default_tier` | — | resize |
+| pdf | `default_tier` | — | page-1 rasterize (density/quality literals from PHP) |
+| svg | `default_tier` | — | librsvg render → resize (`engine/svg.ts`) |
+| av | `posterframe` | `server_frame_extract` | resize of the frame |
+| 3d | `posterframe` | `client_capture` | resize of the canvas snapshot |
+
+`media/thumb.ts` is THE entry point (`rebuildThumb` / `resolveThumbSource` /
+`retireThumb` / `thumbIsMissing`); the media-versions gear, the repair sweep, the
+ingest seam and the posterframe writers all go through it. Before it, five
+triggers resolved a thumb source five different ways, and the gaps between those
+rules were where the defects lived — a fresh av record with no picture at all
+until an operator opened tool_posterframe, an av/3d thumb the repair sweep could
+not rebuild, a thumb outliving the posterframe and the master it depicted.
+
+**Only two things stay model-specific, and both are irreducible:** the RECIPE
+(one dispatch in `processing.ts buildThumbVersion`) and WHO MAY WRITE A
+POSTERFRAME. ffmpeg can pull an av frame here and now, so `rebuildThumb` MINTS one
+when it is missing — PHP did the same inside `create_thumb`
+(class.component_av.php:581, fixed t=10; the TS mint clamps to `min(10s,
+duration/2)` so a short clip is not sampled past its end). A mesh must be
+RENDERED and this engine has no renderer, so the 3d refusal names the browser gear
+instead (`CLIENT_POSTERFRAME_REMEDY`).
+
+**Invalidation, stated once and enforced at each seam:** a new master retires the
+stale posterframe+thumb (av then re-mints; 3d shows its placeholder until the
+browser recaptures); deleting a posterframe retires its thumb in the same call
+(av re-mints); the repair sweep rebuilds any model's MISSING thumb; a posterframe
+write is persisted to `files_info` by the API layer, because 3d — unlike av — is
+not re-scanned per read. The posterframe now leaves its tier by MOVING to
+`deleted/` like every other media file (it was the one hard unlink in the
+subsystem) and is written atomically.
+
+**One grammar:** `path.ts buildMediaSegmentLocation` / `posterframeLocation` is
+the only producer of the posterframe path and URL. It replaced three copies — one
+of which ignored `additionalPathOverride` — and the av/3d thumb, which used to be
+written through an ungated helper and read back through the gated one.
+`section/indexation_grid.ts` keeps its own, deliberately different export grammar
+(no `initial_media_path`, custom id) as a NAMED exemption in the gate.
+
+Gates: `media_thumb_census_tripwire.test.ts` (declarations, grammar, one-writer/one-handler)
+and `media_thumb_consistency.test.ts` (the behaviour, with real binaries).
+
+**THE POSTERFRAME MODELS' THUMB (2026-08-08) — av AND 3d, one route.**
+`POSTERFRAME_MODELS` (`concepts/media.ts`) is the census of models whose thumb is
+a PICTURE OF THEIR POSTERFRAME rather than a derivative of their own file, which
+is what `DEDALO_QUALITY_THUMB` documents in prose ("AV | Will render the
+posterframe", "3d | Will render the posterframe"). `buildVersionCore` routes the
+thumb tier of both through `buildThumbFromPosterframe`; neither model's own file
+may ever reach a thumb recipe (av through ffmpeg would write a VIDEO into the
+thumb tier, and `identify` on a mesh answers `no decode delegate for this image
+format` — measured, that was the media-versions panel's thumb gear on every 3d
+record). With no posterframe the build REFUSES, naming the gear that writes one.
+
+The two models differ only in WHO writes the posterframe. ffmpeg extracts the av
+one (`createAvPosterframe`). A 3d posterframe is a snapshot of a RENDERED scene
+and **this engine has no mesh renderer**, so the browser's WebGL canvas is the
+only thing in the stack that can produce it: `component_3d.create_posterframe`
+captures `viewer.get_image()`, uploads it through service_upload, and
+`dd_component_3d_api::move_file_to_dir` binds it and derives the thumb
+(`moveUploadedToMediaDir`). That is why the media-versions panel's 3d thumb cell
+CAPTURES instead of asking the server to build (`create_3d_posterframe` in
+`render_tool_media_versions.js`), falling back to a server build — from a
+posterframe already on disk — when no viewer is available. Gates:
+`tool_posterframe.test.ts` (build + the refusal) and
+`media_versions_client_contract.test.ts` (the panel routes 3d to the capture).
 
 **The AV transcode records its own result, and the CALLER starts it.**
 `submitAvTranscode`'s worker re-scans and reconciles after the encode, so the
