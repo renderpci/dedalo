@@ -14,19 +14,9 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
-import { parseVersionString } from './version.ts';
-
-/**
- * A safe git ref: refs/heads/… or a plain branch/tag name. No shell metachars,
- * and — CMD-05 (2026-07-28 audit) — NO leading `-`: the ref is the last argv
- * element of `git archive … -o <file> <ref>`, so a `-`-leading value like
- * `--output=/evil` would be parsed by git as an OPTION (output redirect), not a
- * ref. Git itself forbids refs starting with `-`, so this only rejects attacks.
- */
-const GIT_REF_RE = /^[A-Za-z0-9._/][A-Za-z0-9._/-]{0,199}$/;
+import { planCodeBuild } from './code_build_plan.ts';
 
 export interface CodeBuildResponse {
 	result: boolean;
@@ -46,40 +36,19 @@ export async function buildVersionFromGit(options: {
 	ref?: string;
 }): Promise<CodeBuildResponse> {
 	const response: CodeBuildResponse = { result: false, msg: '', errors: [] };
-	if (config.update.isCodeServer !== true) {
-		response.msg = 'Error. This instance is not a code server';
-		response.errors.push('not a code server');
+	// All refusal gates (code-server flag → dirs → version → ref → confinement)
+	// and the release path live in the pure planner.
+	const plan = planCodeBuild(options, {
+		isCodeServer: config.update.isCodeServer,
+		codeServerGitDir: config.update.codeServerGitDir,
+		codeFilesDir: config.update.codeFilesDir,
+	});
+	if (plan.ok !== true) {
+		response.msg = plan.msg;
+		response.errors.push(plan.error);
 		return response;
 	}
-	const gitDir = config.update.codeServerGitDir;
-	const filesDir = config.update.codeFilesDir;
-	if (gitDir === undefined || filesDir === undefined) {
-		response.msg =
-			'Error. Define DEDALO_CODE_SERVER_GIT_DIR and DEDALO_CODE_FILES_DIR to build releases';
-		response.errors.push('code build dirs unconfigured');
-		return response;
-	}
-	const triple = parseVersionString(options.version);
-	if (triple.length !== 3 || triple.some((n) => !Number.isInteger(n) || n < 0)) {
-		response.msg = 'Error. Invalid version number';
-		response.errors.push(`invalid version: ${options.version}`);
-		return response;
-	}
-	const ref = options.ref ?? options.version;
-	if (!GIT_REF_RE.test(ref)) {
-		response.msg = 'Error. Invalid git ref';
-		response.errors.push(`invalid ref: ${ref}`);
-		return response;
-	}
-
-	const versionString = triple.join('.');
-	const targetDir = join(filesDir, String(triple[0]), `${triple[0]}.${triple[1]}`);
-	const filePath = join(targetDir, `${versionString}.zip`);
-	if (!resolve(filePath).startsWith(`${resolve(filesDir)}${sep}`)) {
-		response.msg = 'Error. Unconfined release path';
-		response.errors.push('unconfined release path');
-		return response;
-	}
+	const { gitDir, ref, versionString, targetDir, filePath } = plan;
 	try {
 		mkdirSync(targetDir, { recursive: true });
 	} catch (error) {
