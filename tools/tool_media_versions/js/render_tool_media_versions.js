@@ -275,6 +275,7 @@ const render_sync_data = function(self) {
 
 				self.sync_files()
 				.then(function(response){
+					report_side_effects(self, response)
 					if (response.result===true) {
 						self.refresh({
 							build_autoload	: false,
@@ -1010,6 +1011,7 @@ const render_file_versions = function(quality, self) {
 
 					self.delete_version(quality, extension)
 					.then(function(response){
+						report_side_effects(self, response)
 						if (response.result===true) {
 							// destroy:false — see the note in render_build_version: a
 							// destroying refresh nulls main_element.context and the
@@ -1055,8 +1057,22 @@ const render_file_versions = function(quality, self) {
 */
 const render_file_delete = function(quality, self) {
 
-	// custom_files_info: include original quality entries alongside safe (primary-extension) ones
-		const custom_files_info = self.files_info_safe.concat(self.files_info_original)
+	// custom_files_info: the primary-extension entries, plus the 'original' ones,
+	// PLUS the thumb — which belongs to no model's primary extension but one.
+	//
+	// The thumb is always a jpg while `files_info_safe` is filtered to the
+	// component's own extension, so this cell rendered a Delete button for
+	// component_image and an EMPTY CELL for av, pdf, svg and 3d: the same action,
+	// present on one model and invisible on four, with nothing on screen to explain
+	// the difference (the file was still deletable, but only through the per-file
+	// row below). A quality is deletable or it is not; that cannot depend on which
+	// media type the operator happens to be looking at.
+		const thumb_entries = (self.files_info_alternative || []).filter(
+			(el) => el.quality===THUMB_QUALITY
+		)
+		const custom_files_info = self.files_info_safe
+			.concat(self.files_info_original)
+			.concat(thumb_entries)
 
 	// info columns
 	const file_info_node = ui.create_dom_element({
@@ -1082,7 +1098,10 @@ const render_file_delete = function(quality, self) {
 				self.node.classList.add('loading')
 				// exec delete_quality: confirmation is handled inside self.delete_quality
 				const response = await self.delete_quality(quality)
-				if (response===true) {
+				// The full response now (see tool_media_versions.js delete_quality):
+				// a successful delete can still have taken companion files with it.
+				report_side_effects(self, response)
+				if (response && response.result===true) {
 					// self.main_element_quality = quality
 					self.refresh({
 						build_autoload	: false,
@@ -1121,6 +1140,18 @@ const render_file_delete = function(quality, self) {
 *    the gear back so the operator can retry. self.timer holds the pending
 *    setTimeout so destroy() can clear it.
 *
+*  component_3d thumb:
+*    THE 3D THUMB IS NOT BUILT ON THE SERVER AT ALL — it is a resize of the
+*    record's posterframe, and a posterframe of a mesh can only be produced by
+*    something that can RENDER a mesh. This engine cannot: there is no server-side
+*    3D renderer, and handing the .glb to the raster thumbnailer is what made this
+*    very gear answer `identify: no decode delegate for this image format`. So the
+*    click captures the live Three.js scene as a JPEG and uploads it exactly like
+*    the edit form does after an upload (component_3d.create_posterframe →
+*    service_upload → dd_component_3d_api::move_file_to_dir), and the server
+*    derives the thumb from the posterframe it just bound. See
+*    create_3d_posterframe for the viewer-less fallback.
+*
 *  All other models (images, etc.):
 *    Processing is fast enough that a single dd_request_idle_callback refresh
 *    after the build call is sufficient.
@@ -1131,6 +1162,141 @@ const render_file_delete = function(quality, self) {
 * @param {Object} self - the tool_media_versions instance
 * @returns {HTMLElement} file_info_node containing the build button (empty for 'original')
 */
+
+/** The thumb tier's name (DEDALO_QUALITY_THUMB's canonical value). */
+const THUMB_QUALITY = 'thumb'
+
+
+
+
+/**
+* REPORT_SIDE_EFFECTS
+* Put the server's own account of a SUCCESSFUL action in front of the operator.
+*
+* WHAT THIS FIXES. The engine composes careful sentences for the things an
+* operator cannot see and did not ask for — "the accompanying alternate
+* version(s) went with it (moved to the deleted folder, recoverable)", "the
+* derived tiers could NOT be rebuilt from the remaining master", "not every
+* configured format could be written", "N file(s) could NOT be rebuilt" — and
+* attaches them to a `result:true` response, because the action itself DID
+* happen. This panel then read `result` alone and threw the rest away: one click
+* could remove files the operator never named, or leave a tier stale, and the only
+* record of it was the server log. The sentences existed; nobody ever saw them.
+*
+* It is a dismissible banner, not an alert(): the action succeeded, so it must not
+* block the refresh that follows. Failures keep their alert() — those need the
+* operator to stop.
+*
+* @param {Object} self - the tool_media_versions instance
+* @param {Object} response - the raw API response
+* @returns {boolean} true when something was reported
+*/
+const report_side_effects = function(self, response) {
+
+	if (!response || response.result!==true) {
+		return false
+	}
+
+	// The TRIGGER is structured data (errors / retired), never a string match on
+	// msg — a sentence that changes wording must not silently stop being shown.
+	const errors	= Array.isArray(response.errors) ? response.errors : []
+	const retired	= Array.isArray(response.retired) ? response.retired : []
+	if (errors.length===0 && retired.length===0) {
+		return false
+	}
+
+	// The server's `msg` already composes the whole account (withRetiredTwins /
+	// withRebuildFailure build it); fall back to the raw lists if it is absent.
+	const message = response.msg || [...errors, ...retired].join('; ')
+	const wrapper = self.node?.content_data || self.node
+	if (wrapper) {
+		ui.show_message(wrapper, message, errors.length>0 ? 'error' : 'warning')
+	}else{
+		alert(message)
+	}
+
+
+	return true
+}//end report_side_effects
+
+
+/**
+* CREATE_3D_POSTERFRAME
+* The 3D half of the "build thumb" cell: capture the record's posterframe from
+* the live 3D scene and let the server derive the thumb from it.
+*
+* WHY THE CLIENT DOES THE WORK. For component_3d the thumb tier is a resize of the
+* record's posterframe (DEDALO_QUALITY_THUMB: "3d | Will render the posterframe"),
+* and the posterframe is a picture of a RENDERED mesh. This engine has no mesh
+* renderer — the only thing in the whole stack that can draw the model is the
+* browser's WebGL canvas — so the file cannot be produced server-side at all. That
+* is why this panel's gear had nothing to call and why routing it to the generic
+* image builder made the server hand a .glb to ImageMagick, which answered
+* `no decode delegate for this image format`.
+*
+* It reuses the component's OWN method (component_3d.prototype.create_posterframe,
+* the same one the edit form fires after an upload): viewer.get_image() → upload to
+* the staging tree via service_upload → dd_component_3d_api::move_file_to_dir with
+* target_dir 'posterframe'. The server binds the snapshot and rebuilds the thumb
+* from it in the same call, so nothing here needs a second request.
+*
+* FALLBACK, and it is a real case: with no viewer on this box (WebGL unavailable,
+* a preview that never mounted, a model that failed to load) the panel still asks
+* the SERVER to build the thumb — which succeeds whenever a posterframe already
+* exists on disk, and otherwise fails with the engine's own message naming what is
+* missing. Losing the ability to rebuild a thumb from an existing posterframe just
+* because the scene will not draw would be the worse failure.
+*
+* @param {Object} self - the tool_media_versions instance
+* @returns {Promise<Object>} `{result:boolean, msg:string}` — the shape the click
+*   handler reads (same contract as self.build_version's response)
+*/
+const create_3d_posterframe = async function(self) {
+
+	const main_element = self.main_element
+
+	// viewer: resolved BEFORE the confirmation, because which of the two paths runs
+	// decides who asks for it (self.build_version confirms on its own, and asking
+	// twice for one click is worse than asking late).
+		// The WAIT lives on the component (component_3d.ensure_viewer), so this panel
+		// and tool_posterframe cannot disagree about whether to wait for the scene.
+		const viewer = (typeof main_element.ensure_viewer === 'function')
+			? await main_element.ensure_viewer()
+			: null
+
+	// fallback: no viewer here — let the server rebuild the thumb from the
+	// posterframe already on disk (and report its own refusal when there is none)
+		if (!viewer) {
+			if(SHOW_DEBUG===true) {
+				console.log('3d posterframe: no viewer available, falling back to server build_version');
+			}
+			return await self.build_version(THUMB_QUALITY)
+		}
+
+	// confirm: the capture OVERWRITES the current posterframe (and the thumb derived
+	// from it) with the camera angle on screen right now — the same confirmation
+	// every other mutating gear in this panel asks for.
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
+			return { result : false, msg : '' }
+		}
+
+	// capture path: the component's own posterframe method, driven by the live viewer
+		const created = await main_element.create_posterframe(viewer)
+		if (created===true) {
+			return { result : true, msg : 'ok' }
+		}
+
+	// A refusal THIS function produced has no server round-trip behind it, so it is
+	// alerted here — self.build_version alerts its own (tool_media_versions.js), and
+	// the click handler must not alert a second time on the fallback path.
+		const msg = 'The 3D scene could not be captured or uploaded. Check the browser console.'
+		alert('Error: ' + msg)
+
+
+	return { result : false, msg : msg }
+}//end create_3d_posterframe
+
+
 
 /** Poll cadence of the AV build watcher, ms. */
 const BUILD_POLL_INTERVAL = 2000
@@ -1149,11 +1315,17 @@ const render_build_version = function(quality, self) {
 			return file_info_node
 		}
 
+	// is_3d_posterframe: this cell CAPTURES the posterframe instead of asking the
+	// server to build a version — see the doc-block and create_3d_posterframe.
+		const is_3d_posterframe = self.main_element.model==='component_3d' && quality===THUMB_QUALITY
+
 	// button_build_version
 		const button_build_version = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button gear',
-			title			: (get_label.build || 'Build') + ` ${quality} ` + (get_label.version || 'version'),
+			title			: is_3d_posterframe
+				? (self.get_tool_label('create_posterframe') || 'Create posterframe from the 3D scene')
+				: (get_label.build || 'Build') + ` ${quality} ` + (get_label.version || 'version'),
 			parent			: file_info_node
 		})
 		const fn_click = async function (e) {
@@ -1163,8 +1335,16 @@ const render_build_version = function(quality, self) {
 
 			// exec build_version: the server accepted the job when result===true,
 			// and for AV it hands back the job_id of the transcode it started.
-			const response	= await self.build_version(quality)
+			// The 3D thumb goes the other way round — the browser produces the file
+			// and the server derives the thumb from it (create_3d_posterframe).
+			const response	= is_3d_posterframe
+				? await create_3d_posterframe(self)
+				: await self.build_version(quality)
 			const accepted	= response && response.result===true
+			// A build that SUCCEEDED can still have failed to write a configured
+			// format (the twin channel) — the server says so, and this is where the
+			// operator hears it.
+			report_side_effects(self, response)
 			if (accepted) {
 
 				// replace button with a blinking "Processing" indicator
@@ -1229,7 +1409,7 @@ const render_build_version = function(quality, self) {
 					})
 				}
 
-				if (self.main_element.model === 'component_av' && quality !== 'thumb') {
+				if (self.main_element.model === 'component_av' && quality !== THUMB_QUALITY) {
 
 					const job_id	= response.job_id || null
 					const started	= Date.now()

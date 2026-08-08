@@ -296,10 +296,15 @@ const get_buttons = function(self) {
 		})
 
 		// button_create_posterframe
+			// The label SAYS WHAT IT DOES. A bare "Create" beside a picture of the
+			// current posterframe reads as "create one if there is none"; the button
+			// always overwrites, and for a 3D model it captures whatever is on screen.
 			const button_create_posterframe = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning gear create_posterframe',
-				inner_html		: get_label.create || 'Create',
+				inner_html		: self.main_element.model==='component_3d'
+					? (self.get_tool_label('create_from_scene') || 'Create posterframe from the 3D scene')
+					: (self.get_tool_label('create_from_frame') || 'Create posterframe from this frame'),
 				parent			: manage_posterframe_block
 			})
 

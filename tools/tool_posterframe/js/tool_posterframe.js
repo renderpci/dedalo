@@ -195,8 +195,31 @@ tool_posterframe.prototype.create_posterframe = async function() {
 			return false
 		}
 
+	// confirm: creating REPLACES the current posterframe — the still this record
+	// shows in every list — and for a 3D model it replaces it with whatever camera
+	// angle happens to be on screen. Every other destructive control in the media
+	// tools asks first (delete_posterframe two functions below asks, and it is the
+	// less consequential of the two: a deleted posterframe is recoverable, an
+	// overwritten frame choice is not).
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
+			return false
+		}
+
 	// execute 'create_posterframe' in client side by component
 		const result = await self.main_element.create_posterframe()
+
+	// A failure used to be SILENT here: the caller swapped the preview to the
+	// fallback image and nothing said why, which is indistinguishable from "this
+	// record has no posterframe". The component logs the detail to the console; the
+	// operator gets the fact.
+		if (result!==true) {
+			alert(
+				(get_label.error || 'Error') + ': ' +
+				(self.main_element.model==='component_3d'
+					? 'the 3D scene could not be captured — the viewer must be visible and the model loaded'
+					: 'the posterframe could not be created from this file')
+			)
+		}
 
 	// refresh
 	// Only refresh the main_element when it had no posterframe before this call

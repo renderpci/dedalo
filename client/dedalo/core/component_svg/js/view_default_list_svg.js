@@ -6,8 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -169,47 +168,20 @@ export const get_content_data = function(self) {
 				parent			: content_data
 			})
 
-	// open viewer
-		const fn_mousedown = function (e) {
-			e.stopPropagation();
-
-			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so
-			// it could be used, else open the player to show the image
-			const file_exist = files_info.find(item => item.file_exist===true)
-			if(!file_exist){
-
-				// get the upload tool to be fired
-					const tool_upload_context = self.tools.find(el => el.model === 'tool_upload')
-
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload_context || 'tool_upload',
-						caller			: self
-					})
-			}else{
-
-				// open a new window
-					// Constructs a page URL pointing to the viewer sub-page of
-					// this record. session_save and menu are both false so the
-					// viewer opens as a minimal, standalone lightbox window.
-					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						id				: self.section_id,
-						mode			: 'edit',
-						view			: 'viewer',
-						session_save	: false,
-						menu			: false
-					})
-					open_window({
-						url		: url,
-						target	: 'viewer',
-						width	: 1024,
-						height	: 720
-					})
-			}
-		}
-		image.addEventListener('mousedown', fn_mousedown)
+	// open viewer — THE SHARED HANDLER (component_media_common.handler_open_viewer),
+	// the one the other four media list views use.
+	//
+	// This view carried its own copy, and the copy had drifted in two ways that the
+	// operator meets: it did not check `self.permissions`, so a READ-ONLY user
+	// clicking an empty SVG got the upload dialog offered to them, and it ignored
+	// `external_source`, so a record whose vector lives outside Dédalo opened the
+	// upload tool instead of the viewer. Neither is svg-specific behaviour — they
+	// are the shared rules, minus the shared code.
+	//
+	// `open_window_features` is how a list view states its own viewer size; the
+	// handler reads it off the node.
+		image.open_window_features = { width: 1024, height: 720 }
+		image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 
 	return content_data
