@@ -328,15 +328,82 @@ export function getSession(rawToken: string): Session | null {
  * mutates the in-memory session so the SAME request's context stamp
  * (sqo_session) sees the just-stored value — PHP stores before resolving the
  * context and stamps the fresh value.
+ *
+ * The row write is a READ-MERGE-WRITE, NOT a dump of the in-memory map, and the
+ * merge is what fixes the bug. `session` is this request's own snapshot —
+ * getSession builds a fresh object with a freshly parsed map on every call — and
+ * it is taken at the START of a request that then awaits many times before
+ * reaching here. Two overlapping requests therefore both hold snapshots that
+ * predate the other's write, so dumping the snapshot back dropped the sibling's
+ * key. It showed up as a filter that silently did not apply: opening several
+ * related-record windows at once (render_open_list_with_direct_relations)
+ * persists one SQO per target section, and every one but the last lost its
+ * filter, so those windows listed the WHOLE section instead of the related
+ * records.
+ *
+ * The IMMEDIATE transaction is for a different reader: other PROCESSES on the
+ * same session file (a second dev instance, a script). It buys nothing
+ * in-process — bun:sqlite is synchronous and this function has no await, so two
+ * in-process calls can never interleave at the SQL level. IMMEDIATE, not the
+ * default DEFERRED: a deferred transaction that SELECTs and then UPDATEs has to
+ * upgrade its lock, and under WAL that upgrade fails with SQLITE_BUSY_SNAPSHOT
+ * the moment another connection committed in between — a failure for which
+ * SQLite does NOT invoke the busy handler, so the busy_timeout set at open would
+ * not save it. Taking the write lock up front keeps the timeout in play.
  */
 export function setSessionSqo(session: Session, sqoId: string, sqo: unknown): void {
-	session.sqoSession ??= {};
-	session.sqoSession[sqoId] = sqo;
 	// Synthetic (harness) sessions carry no tokenHash — in-memory only.
-	if (session.tokenHash !== undefined) {
+	if (session.tokenHash === undefined) {
+		session.sqoSession ??= {};
+		session.sqoSession[sqoId] = sqo;
+		return;
+	}
+
+	const tokenHash = session.tokenHash;
+	// Holder, not a plain `let`: the closure's assignment is invisible to TS's
+	// narrowing, and the value is only trustworthy once COMMIT has returned.
+	const outcome: { merged: Record<string, unknown> | null } = { merged: null };
+
+	const merge = database.transaction(() => {
+		const row = database
+			.query('SELECT sqo_session FROM sessions WHERE token_hash = ?')
+			.get(tokenHash) as { sqo_session: string | null } | null;
+		if (row === null) {
+			// The session was destroyed under us (logout, eviction, expiry sweep).
+			// Nothing to merge into; the in-memory fallback below is all there is.
+			return;
+		}
+
+		let stored: Record<string, unknown> = {};
+		if (row.sqo_session !== null && row.sqo_session !== '') {
+			try {
+				const parsed = JSON.parse(row.sqo_session) as unknown;
+				if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+					stored = parsed as Record<string, unknown>;
+				}
+			} catch (error) {
+				// Same policy as getSession: a corrupt blob is dropped, not fatal.
+				console.error('[session_store] corrupt sqo_session JSON dropped', error);
+			}
+		}
+
+		stored[sqoId] = sqo;
 		database
 			.query('UPDATE sessions SET sqo_session = ? WHERE token_hash = ?')
-			.run(JSON.stringify(session.sqoSession), session.tokenHash);
+			.run(JSON.stringify(stored), tokenHash);
+		outcome.merged = stored;
+	});
+	merge.immediate();
+
+	// AFTER commit only. The same response stamps this map back to the client as
+	// `sqo_session` (section/context.ts), so publishing it before the row is
+	// durable would advertise a filter the next request cannot find. A throw
+	// above leaves the in-memory map untouched and propagates, as it did before.
+	if (outcome.merged !== null) {
+		session.sqoSession = outcome.merged;
+	} else {
+		session.sqoSession ??= {};
+		session.sqoSession[sqoId] = sqo;
 	}
 }
 

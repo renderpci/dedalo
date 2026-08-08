@@ -98,6 +98,38 @@ describe('sqo_session store + context stamp', () => {
 		expect(reloaded?.sqoSession?.[SECTION]).toBeUndefined();
 	});
 
+	// CONCURRENT WRITES. `session` is the request's own snapshot, so dumping it
+	// back dropped whatever a sibling request had stored meanwhile — a lost
+	// update. Opening several related-record windows at once stores one sqo per
+	// TARGET SECTION concurrently; every one but the last lost its filter and
+	// its window then listed the whole section instead of the related records.
+	test('concurrent writes for different sections MERGE, they do not clobber', () => {
+		const token = createSession(-1, 'root', true);
+
+		// Two requests, each holding its OWN snapshot of the same session — the
+		// shape getSession hands every request.
+		const request_a = getSession(token);
+		const request_b = getSession(token);
+		expect(request_a).not.toBeNull();
+		expect(request_b).not.toBeNull();
+
+		setSessionSqo(request_a as NonNullable<typeof request_a>, 'oh1', { limit: 11 });
+		// request_b's snapshot predates that write and knows nothing about oh1.
+		setSessionSqo(request_b as NonNullable<typeof request_b>, 'rsc197', { limit: 22 });
+
+		const reloaded = getSession(token);
+		expect(reloaded?.sqoSession?.oh1).toEqual({ limit: 11 });
+		expect(reloaded?.sqoSession?.rsc197).toEqual({ limit: 22 });
+	});
+
+	test('a re-write of the SAME key replaces it', () => {
+		const token = createSession(-1, 'root', true);
+		const session = getSession(token);
+		setSessionSqo(session as NonNullable<typeof session>, 'oh1', { limit: 11 });
+		setSessionSqo(session as NonNullable<typeof session>, 'oh1', { limit: 33 });
+		expect(getSession(token)?.sqoSession?.oh1).toEqual({ limit: 33 });
+	});
+
 	test('sessions are isolated: one session’s navigation never leaks into another', async () => {
 		if (!dbReady) return;
 		const tokenA = createSession(-1, 'root', true);

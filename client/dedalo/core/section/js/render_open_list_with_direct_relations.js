@@ -16,50 +16,165 @@
 
 
 /**
+* BUILD_CALLER_RECORD
+* The { section_tipo, section_id } of the record the caller has open, or null
+* when it has none (list mode, or no caller instance was passed).
+*
+* Used only to tell the auto single-record pin apart from a real result set —
+* see is_own_record_pin.
+*
+* @param {Object|null} self_caller - The caller SECTION instance.
+* @returns {Object|null}
+*/
+const build_caller_record = function(self_caller) {
+
+	const section_tipo	= self_caller?.section_tipo ?? self_caller?.tipo
+	const section_id	= self_caller?.section_id
+
+	if (!section_tipo || section_id===null || section_id===undefined) {
+		return null
+	}
+
+	return {
+		section_tipo	: section_tipo,
+		section_id		: section_id
+	}
+}//end build_caller_record
+
+
+
+/**
+* IS_OWN_RECORD_PIN
+* True when `pins` is exactly the AUTO-GENERATED single-record pin for the
+* caller's own open record.
+*
+* `filter_by_locators` carries two completely different things and they must not
+* be confused:
+*   - the auto pin: ONE locator naming the section's own open record, written by
+*     common.js build_rqo_show when the instance already knows its section_id;
+*   - a genuine RESULT SET the user is looking at — a semantic/RAG search resolves
+*     its ranked hits into filter_by_locators plus order 'locator_position'
+*     (search/js/search.js exec_search), including a `section_id:-1` sentinel that
+*     means "zero hits, show an honest empty list".
+*
+* Only the first may ever be discarded. Widening past a semantic result set would
+* silently open relations for records the user never searched for — or, with the
+* sentinel, for the entire section.
+*
+* @param {Array} pins - sqo.filter_by_locators (already normalised to an array).
+* @param {Object|null} caller_record - { section_tipo, section_id } of the record
+*   the caller has open, or null when the caller could not name one.
+* @returns {boolean}
+*/
+const is_own_record_pin = function(pins, caller_record) {
+
+	if (pins.length!==1 || !caller_record || caller_record.section_id===null || caller_record.section_id===undefined) {
+		return false
+	}
+
+	const pin = pins[0]
+
+	return pin?.section_tipo===caller_record.section_tipo
+		&& String(pin?.section_id)===String(caller_record.section_id)
+}//end is_own_record_pin
+
+
+
+/**
 * BUILD_SCOPED_SQO
 * Derives the SQO that read_raw must receive for the chosen scope from the
 * caller section's CURRENT view SQO.
 *
-* The caller's SQO describes what the section is showing right now, which in
-* edit mode is NOT what either scope means:
-*   - `filter_by_locators` holds an auto-generated single-record pin built from
-*     the open section_id (see section.js build_rqo_show / navigate_to_new_section);
-*   - `limit`/`offset` hold the record's POSITION inside the found set
-*     (record 2 of 3 → limit:1, offset:1);
-*   - `filter` holds the user's real search, independent of both.
+* The caller's SQO describes what the section is showing right now, and the open
+* record is identified in ONE OF TWO WAYS depending on how the user got there.
+* The two need OPPOSITE handling of the offset:
 *
-* Sending it verbatim made the 'current' scope return nothing: the pin already
-* narrows the search to a single row, so a non-zero offset skipped it and the
-* server answered with an empty result — the dialog then opened no window and
-* said nothing.
+*   - navigated from the LIST (the pen button, render_list_section.js): the SQO is
+*     the list's, with `limit:1, offset:<row position>` and NO pin — `section_id`
+*     is deliberately kept off the source, so build_rqo_show never generates one.
+*     Here the OFFSET IS THE RECORD SELECTOR and must be preserved; resetting it
+*     asks the server for the FIRST found record instead of the open one.
+*   - loaded with a known section_id (a direct url): build_rqo_show adds the auto
+*     single-record pin and the offset is 0, so the pin alone selects the record.
+*
+* A third, DEGRADED state exists and is what this originally had to survive: a
+* stale stored edit pagination can pair the pin with a non-zero offset, and the
+* offset then skips the only pinned row. (In that state the section's own edit
+* form is empty too — the same conflict breaks the record read, not just this
+* dialog — so the real repair is upstream; here we simply do not compound it.)
+*
+* Hence: reset the offset only when the pin set already names exactly one record.
 *
 * @param {Object} sqo - The caller's Search Query Object. Never mutated: the
 *   portal caller hands over its parent section's live object.
 * @param {string} scope - 'current' | 'found'.
+* @param {Object|null} caller_record - { section_tipo, section_id } of the open
+*   record, used to tell the auto pin apart from a real result set. When null the
+*   pin is treated as a result set (the conservative direction: never widen).
 * @returns {Object} A cloned SQO scoped for the read_raw call.
 */
-export const build_scoped_sqo = function(sqo, scope) {
+export const build_scoped_sqo = function(sqo, scope, caller_record) {
 
-	const scoped_sqo = clone(sqo)
+	const scoped_sqo	= clone(sqo)
+	const pins			= Array.isArray(scoped_sqo.filter_by_locators)
+		? scoped_sqo.filter_by_locators
+		: []
 
 	if (scope==='found') {
-		// All found records: drop the single-record pin so the user's own
-		// filter (sqo.filter) alone decides the set, and take every row —
-		// the opened windows re-paginate on their own.
-		scoped_sqo.filter_by_locators	= []
-		scoped_sqo.limit				= 0
-		scoped_sqo.offset				= 0
-	}else{
-		// Current record only: the pin already selects exactly one row, so any
-		// found-set offset would skip it. (Without a pin — a section that is
-		// not in edit mode — this degrades to the first found record, which is
-		// the closest meaning 'current' can have there.)
-		scoped_sqo.limit	= 1
+		// All found records: take every row, and drop the pin ONLY when it is the
+		// caller's own auto single-record pin. Any other pin set is the result the
+		// user is actually looking at and stays. sqo.filter is untouched either way.
+		if (is_own_record_pin(pins, caller_record)===true) {
+			scoped_sqo.filter_by_locators = []
+		}
+		scoped_sqo.limit	= 0
 		scoped_sqo.offset	= 0
+	}else{
+		// Current record only.
+		scoped_sqo.limit = 1
+		// A one-locator pin set already names the record, so the found-set offset
+		// is stale and would skip it. With no pin — or with several — the offset is
+		// what picks the record out of the set and MUST survive.
+		if (pins.length===1) {
+			scoped_sqo.offset = 0
+		}
 	}
 
 	return scoped_sqo
 }//end build_scoped_sqo
+
+
+
+/**
+* FLATTEN_READ_RAW_RESULT
+* Normalises a `read_raw` result into ONE flat list of locators.
+*
+* read_raw answers in a different shape per options.type
+* (src/core/api/handlers/read_raw.ts):
+*   - 'target_section' → one FLAT array of the matched locators;
+*   - 'component'      → one entry PER MATCHED RECORD, each entry being that
+*     record's whole raw component value — an ARRAY of locators for a portal —
+*     or null where the record does not hold the component at all.
+*
+* Reading the 'component' shape as if it were the flat one looked for
+* `section_tipo` on an array, got undefined for every entry, and left nothing to
+* open: the portal's "list from component data" button therefore never opened
+* anything, for any record. Entries without a usable locator pair are dropped
+* rather than carried forward as holes.
+*
+* @param {Array} result - The `result` array of a read_raw API response.
+* @returns {Array<Object>} Flat locator list, each with section_tipo + section_id.
+*/
+export const flatten_read_raw_result = function(result) {
+
+	if (!Array.isArray(result)) {
+		return []
+	}
+
+	return result
+		.flatMap(el => Array.isArray(el) ? el : [el])
+		.filter(el => el?.section_tipo !== undefined && el?.section_id !== undefined)
+}//end flatten_read_raw_result
 
 
 
@@ -187,7 +302,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 		// SQO and patch the number in when it resolves; the initial render stays
 		// synchronous. Only sections expose get_total.
 		if (typeof self_caller?.get_total === 'function') {
-			self_caller.get_total( build_scoped_sqo(sqo, 'found') )
+			self_caller.get_total( build_scoped_sqo(sqo, 'found', build_caller_record(self_caller)) )
 			.then(found_total => {
 				if (found_total===undefined || found_total===null || found_total===total_records) {
 					return
@@ -472,8 +587,10 @@ export const render_open_list_with_direct_relations = ( options ) => {
 *      record's position in the found set), which is not what either scope means
 *      and must not be mutated.
 *   5. API call: sends action:'read_raw' with the caller's rqo_options and the
-*      scoped sqo.  The server returns an array of locator objects
-*      ({ section_tipo, section_id }).
+*      scoped sqo, then FLATTENS the answer — its shape depends on
+*      rqo_options.type: 'target_section' returns one flat locator array, while
+*      'component' returns one entry per matched record, each holding that
+*      record's whole raw component value (an array of locators for a portal).
 *   6. Window opening: groups locators by unique section_tipo and calls
 *      open_records_in_window once per group, staggering each window 30 px to
 *      the right/down so they do not completely overlap.
@@ -558,7 +675,11 @@ const open_related_data = async function( options ){
 	// scope (see build_scoped_sqo). Derived on a CLONE: the portal caller passes
 	// its parent section's live sqo, which must not be re-paginated behind the
 	// user's back.
-	const scoped_sqo = build_scoped_sqo(sqo, data_selection.selected_value)
+	const scoped_sqo = build_scoped_sqo(
+		sqo,
+		data_selection.selected_value,
+		build_caller_record(self_caller)
+	)
 
 	// read_raw from Dédalo API
 	// action:'read_raw' asks the server to return raw locator objects for the
@@ -578,15 +699,14 @@ const open_related_data = async function( options ){
 		console.error('Failed api response:', api_response);
 		return false
 	}
-	//value is the result as an array of locators
-	// Each locator has at minimum { section_tipo, section_id }.
-	const value = api_response.result
+	// locators
+		const value = flatten_read_raw_result(api_response.result)
 
 	// section tipo
 	// get the target section tipos in the data
 	// Deduplicate section tipos so we open exactly one window per target type,
 	// even when multiple components point to the same section.
-		const ar_section_tipo			= value.map(el => el?.section_tipo).filter(tipo => tipo !== undefined)
+		const ar_section_tipo			= value.map(el => el.section_tipo)
 		const unique_ar_section_tipo	= [...new Set(ar_section_tipo)];
 
 	// empty case
@@ -601,6 +721,14 @@ const open_related_data = async function( options ){
 	// open every target section in different windows
 	// Iterate in reverse so that the first entry's window ends up on top
 	// (each successive window.open with the same target name re-focuses it).
+	// (!) NOT awaited, deliberately. Each open_records_in_window persists its
+	// filter in the server session before opening its window; those writes used
+	// to race and all but the last lost their filter, but that is fixed at the
+	// source (session_store.setSessionSqo merges instead of overwriting), so the
+	// windows stay INDEPENDENT here. Awaiting them would chain the failures: a
+	// popup blocked by the browser throws inside open_window (util.js has no null
+	// guard on window.open) and would take every remaining window down with it.
+	// Each call therefore reports its own failure and does not block its siblings.
 		const target_sections_len = unique_ar_section_tipo.length
 		for (let i = target_sections_len - 1; i >= 0; i--) {
 			const current_section_tipo = unique_ar_section_tipo[i]
@@ -624,8 +752,13 @@ const open_related_data = async function( options ){
 			}
 
 			// open_records_in_window
-			open_records_in_window( window_options );
-			// open_records_in_window(self, current_section_tipo, ar_section_id, current_section_tipo);
+			open_records_in_window( window_options )
+			.catch(error => {
+				// Fire-and-forget, so nothing else would ever see this rejection:
+				// without the catch a blocked popup or a failed dummy-section build
+				// is an unhandled rejection and the window silently never appears.
+				console.error(`Failed to open the related records window for '${current_section_tipo}':`, error);
+			})
 		}
 }//end open_related_data
 
