@@ -42,6 +42,7 @@ export const generic_suites_green = [
 	'test_ts_object_extended',
 	'test_component_common_changed_data',
 	'test_section_record',
+	'test_open_related_data',         // the "open relationships" dialog's SQO scoping — the edit-mode found-set offset used to skip the single pinned row, so read_raw returned nothing and no window opened; backend-free (data_manager.request patched on the shared singleton)
 	'test_ui_render_edit_modal',      // the per-cell edit modal's caller chain — the surface that makes component tools reachable from a section LIST (WC-059 sibling work); backend-free (fake instance pre-registered in the shared registry)
 	'test_service_autocomplete',
 	'test_service_time_machine',

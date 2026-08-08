@@ -659,10 +659,8 @@ const get_content_data = function(self) {
 					},
 					label		: self.caller.label,
 					total		: self.caller.total,
-					// (!) duplicate key: the first 'self_caller : self' (inspector instance)
-					// is silently overwritten by the second assignment 'self_caller : self.caller'
-					// (section instance). Flagged — the first line is dead code.
-					self_caller : self,
+					// the section instance: forwarded as the opener of every window
+					// the dialog spawns, and the source of the found-records total.
 					self_caller : self.caller
 				}
 				render_open_list_with_direct_relations( options )

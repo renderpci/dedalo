@@ -9,6 +9,7 @@
 	import { ui } from '../../common/js/ui.js'
 	import { render_open_list_with_direct_relations } from '../../section/js/render_open_list_with_direct_relations.js'
 	import {
+		clone,
 		object_to_url_vars,
 		open_window,
 		get_caller_by_model
@@ -514,11 +515,15 @@ buttons.render_button_list = (self) => {
 * token is pushed to self.events_tokens so it is cleaned up on destroy().
 *
 * The options bag forwarded to render_open_list_with_direct_relations includes:
-*   - sqo: the parent section's current Search Query Object (from
-*     caller_section.rqo.sqo), used to scope the found-set query.
+*   - sqo: a CLONE of the parent section's current Search Query Object (from
+*     caller_section.rqo.sqo), which the dialog scopes per the user's choice.
+*     Cloned here because that object is the parent section's live pagination
+*     state — it must not move behind the user's back.
 *   - caller_tipo / rqo_options: locator information so the dialog can build
 *     the correct raw-read API request for this specific portal component.
 *   - label / total: display strings shown in the dialog body.
+*   - self_caller: the parent section — opener of the spawned windows and the
+*     source of the found-records total.
 *
 * @param {Object} self - Live component_portal instance.
 * @returns {HTMLElement} Span element with class 'button list'.
@@ -542,7 +547,7 @@ buttons.render_list_from_component_data_button = (self) => {
 		}
 
 		const options = {
-			sqo	: caller_section.rqo?.sqo || {},
+			sqo	: clone(caller_section.rqo?.sqo || {}),
 			caller_tipo		: self.tipo,
 			rqo_options		: {
 				type			: 'component',
@@ -551,7 +556,10 @@ buttons.render_list_from_component_data_button = (self) => {
 				model			: self.model
 			},
 			label		: self.label,
-			total		: self.caller?.caller?.total ?? 0
+			total		: caller_section.total ?? 0,
+			// the parent section: opener of the spawned windows and the source
+			// of the found-records total shown in the dialog body.
+			self_caller	: caller_section
 		}
 		render_open_list_with_direct_relations( options )
 	}

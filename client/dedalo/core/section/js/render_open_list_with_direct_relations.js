@@ -8,9 +8,58 @@
 	import { is_filter_empty } from '../../search/js/search_utils.js'
 	import { data_manager } from '../../common/js/data_manager.js'
 	import {
+		clone,
 		open_records_in_window,
 		printf
 	} from '../../common/js/utils/index.js'
+
+
+
+/**
+* BUILD_SCOPED_SQO
+* Derives the SQO that read_raw must receive for the chosen scope from the
+* caller section's CURRENT view SQO.
+*
+* The caller's SQO describes what the section is showing right now, which in
+* edit mode is NOT what either scope means:
+*   - `filter_by_locators` holds an auto-generated single-record pin built from
+*     the open section_id (see section.js build_rqo_show / navigate_to_new_section);
+*   - `limit`/`offset` hold the record's POSITION inside the found set
+*     (record 2 of 3 → limit:1, offset:1);
+*   - `filter` holds the user's real search, independent of both.
+*
+* Sending it verbatim made the 'current' scope return nothing: the pin already
+* narrows the search to a single row, so a non-zero offset skipped it and the
+* server answered with an empty result — the dialog then opened no window and
+* said nothing.
+*
+* @param {Object} sqo - The caller's Search Query Object. Never mutated: the
+*   portal caller hands over its parent section's live object.
+* @param {string} scope - 'current' | 'found'.
+* @returns {Object} A cloned SQO scoped for the read_raw call.
+*/
+export const build_scoped_sqo = function(sqo, scope) {
+
+	const scoped_sqo = clone(sqo)
+
+	if (scope==='found') {
+		// All found records: drop the single-record pin so the user's own
+		// filter (sqo.filter) alone decides the set, and take every row —
+		// the opened windows re-paginate on their own.
+		scoped_sqo.filter_by_locators	= []
+		scoped_sqo.limit				= 0
+		scoped_sqo.offset				= 0
+	}else{
+		// Current record only: the pin already selects exactly one row, so any
+		// found-set offset would skip it. (Without a pin — a section that is
+		// not in edit mode — this degrades to the first found record, which is
+		// the closest meaning 'current' can have there.)
+		scoped_sqo.limit	= 1
+		scoped_sqo.offset	= 0
+	}
+
+	return scoped_sqo
+}//end build_scoped_sqo
 
 
 
@@ -35,8 +84,10 @@
 * its own browser window (via open_records_in_window).
 *
 * @param {Object} options - Configuration bag passed in by the caller.
-* @param {Object} options.sqo - The current section's Search Query Object.
-*   Must be non-null; the function returns early with console.error otherwise.
+* @param {Object} options.sqo - The caller section's CURRENT view Search Query
+*   Object.  Must be non-null; the function returns early with console.error
+*   otherwise.  Never sent as-is and never mutated: each scope derives its own
+*   clone through build_scoped_sqo().
 * @param {Array}  options.target_sections - Array of { tipo, label } objects
 *   describing every target section the main section points to.  Empty when the
 *   caller is a component (no target selection is shown in that case).
@@ -53,13 +104,16 @@
 *   'section' or 'component_portal'.
 * @param {string} options.label - Human-readable label of the caller field,
 *   e.g. 'Images'.  Inserted into the modal body via printf.
-* @param {number} options.total - Total number of records currently found for
-*   the main section tipo; shown to the user in the body message.
+* @param {number} options.total - The caller's current record count, shown in
+*   the body message.  In edit mode this is 1 (the caller's SQO is pinned to the
+*   open record), so it is replaced asynchronously by the real found-set total
+*   whenever options.self_caller can compute one.
 * @param {string} options.caller_tipo - Ontology tipo of the caller
 *   ('oh24', 'oh1', …).
-* @param {Object} options.self - Reference to the live caller instance.
-*   Forwarded to open_records_in_window so the opened list window can track
-*   its opener.
+* @param {Object} options.self_caller - Reference to the live caller SECTION
+*   instance (`options.self` is accepted as a legacy alias).  Forwarded to
+*   open_records_in_window so the opened list window can track its opener, and
+*   used to recompute the found-records total via its get_total(sqo).
 * @returns {void} The function creates and attaches the modal as a side effect;
 *   it does not return the modal element to the caller.
 */
@@ -71,7 +125,10 @@ export const render_open_list_with_direct_relations = ( options ) => {
 	const caller_label		= options.label
 	const total_records		= options.total
 	const caller_tipo 		= options.caller_tipo
-	const self_caller		= options.self
+	// self_caller. Callers disagree on the key name (the inspector passes
+	// 'self_caller', older code passed 'self'), so accept both — reading only
+	// options.self left the caller undefined on every real call site.
+	const self_caller		= options.self_caller ?? options.self
 
 	if (!sqo) {
 		console.error('Missing SQO in section in its request config object');
@@ -116,12 +173,29 @@ export const render_open_list_with_direct_relations = ( options ) => {
 		const raw_body_label = get_label.open_relationships_of_field || 'Open relationships of {0} from the current record (1) or from all found records ({1})?'
 		const body_label = printf(raw_body_label, bold_caller_label, total_records)
 
-		ui.create_dom_element({
+		const body_label_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
 			inner_html		: body_label,
 			parent			: body
 		})
+
+		// found total.
+		// options.total is the caller's CURRENT count, which in edit mode is 1
+		// (the section SQO is pinned to the open record) — the prompt then read
+		// "…or from all found records (1)?". Recompute it from the found-scope
+		// SQO and patch the number in when it resolves; the initial render stays
+		// synchronous. Only sections expose get_total.
+		if (typeof self_caller?.get_total === 'function') {
+			self_caller.get_total( build_scoped_sqo(sqo, 'found') )
+			.then(found_total => {
+				if (found_total===undefined || found_total===null || found_total===total_records) {
+					return
+				}
+				body_label_node.innerHTML = printf(raw_body_label, bold_caller_label, found_total)
+			})
+			.catch(error => console.error('Failed to resolve the found records total:', error))
+		}
 
 		// current or found records
 			// Scope selector is rendered BEFORE the (potentially very long) target
@@ -382,29 +456,35 @@ export const render_open_list_with_direct_relations = ( options ) => {
 * browser window.
 *
 * Flow:
-*   1. Guard: bail out early when rqo_options.section_tipo is missing — this
-*      happens when the main-section caller has no target-section radio selected
-*      yet (the type is required by the server-side read_raw handler).
-*   2. Filter check: call is_filter_empty() on sqo.filter to determine whether
+*   1. Close the modal.  Done FIRST so that every exit path below — the guard,
+*      a cancelled confirm(), an empty result — leaves the dialog gone, and so
+*      the confirm() is not stacked on top of it.
+*   2. Guard: bail out when rqo_options.section_tipo is missing.  Reached when
+*      the main-section caller offered no target-section radio at all, so the
+*      user could not pick one (the tipo is required by the server-side read_raw
+*      handler).  The user is told rather than left with a silent no-op.
+*   3. Filter check: call is_filter_empty() on sqo.filter to determine whether
 *      the user has an active search filter.  When 'found' is selected without
 *      any filter the result could be the entire database; the user is warned via
-*      confirm() before proceeding.  The modal is closed before the confirm() so
-*      the dialog is not visually stacked.
-*   3. Pagination reset: when 'found' is selected, sqo.limit and sqo.offset are
-*      zeroed so the API returns ALL matching records, not just the current page.
-*      The opened window will re-apply its own pagination independently.
-*   4. API call: sends action:'read_raw' with the caller's rqo_options and sqo.
-*      The server returns an array of locator objects ({ section_tipo, section_id }).
-*   5. Window opening: groups locators by unique section_tipo and calls
+*      confirm() before proceeding.
+*   4. Scope: derive the request SQO with build_scoped_sqo() — the caller's SQO
+*      describes the section's current VIEW (a single-record pin plus the
+*      record's position in the found set), which is not what either scope means
+*      and must not be mutated.
+*   5. API call: sends action:'read_raw' with the caller's rqo_options and the
+*      scoped sqo.  The server returns an array of locator objects
+*      ({ section_tipo, section_id }).
+*   6. Window opening: groups locators by unique section_tipo and calls
 *      open_records_in_window once per group, staggering each window 30 px to
 *      the right/down so they do not completely overlap.
 *      Windows are iterated in reverse order so the first target ends on top.
+*      An empty group set is reported to the user, not swallowed.
 *
-* @see class.dd_core_api.php — read_raw() for the server-side implementation
-*   and the full rqo shape.
+* @see src/core/api/handlers/read_raw.ts — the server-side implementation and
+*   the full rqo shape.
 * @param {Object} options - Options bag.
-* @param {Object} options.sqo - The current section's Search Query Object.
-*   Mutated in place (limit/offset zeroed) when 'found' mode is selected.
+* @param {Object} options.sqo - The caller section's current view Search Query
+*   Object.  Read only: the request is built from a scoped clone of it.
 * @param {Object} options.rqo_options - Forwarded verbatim to the `read_raw`
 *   API action.  Must contain a non-null section_tipo or the function returns
 *   early.
@@ -429,13 +509,6 @@ const open_related_data = async function( options ){
 	const data_selection	= options.data_selection
 	const modal				= options.modal
 
-	// Guard: section_tipo is required by the server read_raw handler.
-	// This condition is reached when the caller is the main section and the user
-	// has not yet selected a target section from the radio group.
-	if(!rqo_options.section_tipo){
-		return
-	}
-
 	// check if the filter is empty
 	// when the user don't find anything, the result can be huge
 	// test the sqo filter
@@ -446,8 +519,19 @@ const open_related_data = async function( options ){
 		: true
 
 	// close modal
-	// Close before the confirm() dialog to avoid stacking UI chrome.
+	// Closed FIRST so every exit path below leaves the dialog gone: the
+	// section_tipo guard used to return before this and left the modal stuck
+	// open with no way forward. Also avoids stacking chrome under confirm().
 	modal.close()
+
+	// Guard: section_tipo is required by the server read_raw handler.
+	// Reached when the caller is the main section and no target section could be
+	// selected — the radio group is empty (a section with no portals, e.g. in
+	// list mode), so the user has nothing to pick and must be told.
+	if(!rqo_options.section_tipo){
+		alert(get_label.no_target_sections || 'No related sections available')
+		return false
+	}
 
 	// when the user select 'found', the API will get data from the selected component in all records found
 	if( data_selection.selected_value === 'found' ){
@@ -467,15 +551,14 @@ const open_related_data = async function( options ){
 				return false
 			}
 		}
-
-		//remove the limit and offset when the found data is selected
-		// Note: open windows will be paginated, but here is necessary all data of the component.
-		// (!) Mutates sqo in place — zeroing limit/offset ensures the read_raw
-		// call returns the complete locator list across all found records rather
-		// than just the current page window.
-		sqo.limit = 0
-		sqo.offset = 0
 	}
+
+	// scoped_sqo
+	// The caller's sqo describes the section's current view, not the requested
+	// scope (see build_scoped_sqo). Derived on a CLONE: the portal caller passes
+	// its parent section's live sqo, which must not be re-paginated behind the
+	// user's back.
+	const scoped_sqo = build_scoped_sqo(sqo, data_selection.selected_value)
 
 	// read_raw from Dédalo API
 	// action:'read_raw' asks the server to return raw locator objects for the
@@ -483,7 +566,7 @@ const open_related_data = async function( options ){
 	const rqo = {
 		action	: 'read_raw',
 		options	: rqo_options,
-		sqo		: sqo
+		sqo		: scoped_sqo
 	}
 
 	// perform the search and get the result
@@ -505,6 +588,15 @@ const open_related_data = async function( options ){
 	// even when multiple components point to the same section.
 		const ar_section_tipo			= value.map(el => el?.section_tipo).filter(tipo => tipo !== undefined)
 		const unique_ar_section_tipo	= [...new Set(ar_section_tipo)];
+
+	// empty case
+	// No locators means there is nothing to open. Say so: the loop below would
+	// simply not run and the user would be left with a dialog that closed and
+	// did nothing.
+		if (unique_ar_section_tipo.length < 1) {
+			alert(get_label.no_records || 'No records found')
+			return false
+		}
 
 	// open every target section in different windows
 	// Iterate in reverse so that the first entry's window ends up on top

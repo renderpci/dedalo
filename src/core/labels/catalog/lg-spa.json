@@ -277,6 +277,7 @@
 	"no_records": "No se han encontrado registros",
 	"no_results": "Ninguna jerarquía coincide con el filtro.",
 	"no_tag_selected": "No hay ninguna etiqueta seleccionada. Si continúa, se indexará todo el registro.",
+	"no_target_sections": "No hay secciones relacionadas disponibles",
 	"no_tools_match": "Ninguna herramienta coincide con su búsqueda",
 	"not_allow_to_create_note": "No puede crear notas de un cambio que no es suyo",
 	"note": "Nota",
