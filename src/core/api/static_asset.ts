@@ -166,8 +166,14 @@ const COMPRESSIBLE_EXTENSIONS: ReadonlySet<string> = new Set([
 	'.wasm',
 ]);
 
-/** Below this size gzip overhead outweighs the byte savings. */
-const MIN_GZIP_BYTES = 1024;
+/**
+ * Below this size gzip overhead outweighs the byte savings.
+ *
+ * Exported because server.ts negotiates gzip for API JSON against the SAME
+ * threshold: one number, one reason, so the static and dynamic doors cannot
+ * drift apart into two different definitions of "worth compressing".
+ */
+export const MIN_GZIP_BYTES = 1024;
 
 /**
  * Process-lifetime compressed-bytes cache, keyed by absolute path. NOT a

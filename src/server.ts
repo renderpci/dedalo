@@ -37,7 +37,7 @@ import { type ApiRequestContext, dispatchRqo } from './core/api/dispatch.ts';
 import { handleEnvironmentView } from './core/api/environment_view.ts';
 import { getProcessPoison } from './core/api/process_health.ts';
 import { handleRawView } from './core/api/raw_view.ts';
-import { SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
+import { MIN_GZIP_BYTES, SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
 import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
@@ -281,6 +281,64 @@ function jsonResponse(body: unknown, status = 200): Response {
 		status,
 		headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS },
 	});
+}
+
+/**
+ * The dispatch response, gzip-negotiated.
+ *
+ * NOT a wire-contract entry: `engineering/WIRE_CONTRACT.md` ledgers divergences
+ * in the JSON API OUTPUT, and the JSON bytes here are byte-identical either way
+ * — only `Content-Encoding` changes. The invariant is tripwired instead, by
+ * `test/unit/api_gzip_native.test.ts`, whose central assertion is that what the
+ * client parses after decompression equals what the plain door would have sent.
+ *
+ * A section EDIT read is ~297 KB of JSON and 92.7% of it is compressible
+ * redundancy (25.7% is exact-duplicate field values — the repeated `tools`
+ * block alone is 39,738 B across 46 of 81 context entries). Measured on the
+ * numisdata3/1 edit payload: level 1 → 31,831 B in 1.1 ms (10.7% of the
+ * original); level 9 → 21,734 B but costs several times the CPU. Level 1 is
+ * the right default — it buys 89% of the level-9 win for ~1 ms.
+ *
+ * This is a TRANSPORT concern, so it lives here next to the cookie policy and
+ * not in api/response.ts, which owns the envelope. The JSON bytes are
+ * unchanged, so there is no wire-shape divergence — only Content-Encoding.
+ *
+ * `Vary: Accept-Encoding` is emitted whenever we compress: authenticated
+ * payloads already carry `Cache-Control: no-store`, but unauthenticated ones do
+ * not, and an intermediary that cached a gzipped body without Vary would serve
+ * it to a client that never asked for gzip.
+ *
+ * WHY COMPRESSING AN AUTHENTICATED BODY IS SAFE HERE (BREACH). Every response
+ * carries `csrf_token` (dispatch.ts appends it for client transparency), and
+ * compressing a secret alongside attacker-influenced text is the BREACH shape.
+ * It is not reachable on this door: the attack needs the victim's browser to
+ * issue MANY cross-origin requests whose reflected content the attacker
+ * controls, and this API rejects exactly that twice over — `verifyCsrf`
+ * (dispatch.ts) fails any request without the `x-dedalo-csrf-token` header, and
+ * that custom header forces a CORS preflight that only an ALLOWLISTED origin
+ * survives (security/cors.ts). An attacker who could already satisfy both would
+ * not need a compression oracle. If the CORS allowlist is ever widened to
+ * untrusted origins, or the CSRF gate is relaxed, REVISIT THIS — the mitigation
+ * is that gate, not anything in this function.
+ */
+export function jsonApiResponse(
+	body: unknown,
+	status: number,
+	headers: Headers,
+	request: Request,
+): Response {
+	const json = JSON.stringify(body);
+	const bytes = new TextEncoder().encode(json);
+	const acceptsGzip = (request.headers.get('accept-encoding') ?? '').includes('gzip');
+	// Threshold on the ENCODED length, not json.length — a multibyte-heavy
+	// payload (this is a multilingual heritage system) is bigger on the wire
+	// than its JS string length suggests.
+	if (!acceptsGzip || bytes.byteLength <= MIN_GZIP_BYTES) {
+		return new Response(json, { status, headers });
+	}
+	headers.set('Content-Encoding', 'gzip');
+	headers.append('Vary', 'Accept-Encoding');
+	return new Response(Bun.gzipSync(bytes, { level: 1 }) as BodyInit, { status, headers });
 }
 
 /**
@@ -923,7 +981,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				},
 			});
 		}
-		return new Response(JSON.stringify(outcome.body), { status: outcome.status, headers });
+		return jsonApiResponse(outcome.body, outcome.status, headers, request);
 	}
 
 	return jsonResponse({ result: false, msg: 'Not found' }, 404);
