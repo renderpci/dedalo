@@ -45,6 +45,7 @@ export interface RecoveryFileResponse {
 /** Build the recovery file (PHP build_recovery_version_file). */
 export async function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
+	outFile: string = RECOVERY_FILE_PATH,
 ): Promise<RecoveryFileResponse> {
 	const response: RecoveryFileResponse = { result: false, msg: '', errors: [] };
 	try {
@@ -69,7 +70,7 @@ export async function buildRecoveryVersionFile(
 			},
 		});
 		const gzip = createGzip();
-		const sink = createWriteStream(RECOVERY_FILE_PATH);
+		const sink = createWriteStream(outFile);
 		gzip.pipe(sink);
 		for await (const chunk of child.stdout) {
 			gzip.write(chunk);
@@ -84,7 +85,7 @@ export async function buildRecoveryVersionFile(
 		}
 		response.result = true;
 		response.msg = 'OK. Request done successfully';
-		response.file_size = `${statSync(RECOVERY_FILE_PATH).size} Bytes`;
+		response.file_size = `${statSync(outFile).size} Bytes`;
 		return response;
 	} catch (error) {
 		response.errors.push((error as Error).message);
@@ -98,16 +99,17 @@ export async function buildRecoveryVersionFile(
 /** Restore the slice table from the recovery file (PHP restore twin). */
 export async function restoreDdOntologyRecoveryFromFile(
 	conn: DbConnDescriptor = connFromConfig(),
+	inFile: string = RECOVERY_FILE_PATH,
 ): Promise<RecoveryFileResponse> {
 	const response: RecoveryFileResponse = { result: false, msg: '', errors: [] };
-	if (!existsSync(RECOVERY_FILE_PATH)) {
+	if (!existsSync(inFile)) {
 		response.errors.push('source sql_file do not exists');
 		response.msg = 'Error. source sql_file do not exists';
 		return response;
 	}
-	const plainPath = RECOVERY_FILE_PATH.slice(0, -'.gz'.length);
+	const plainPath = inFile.slice(0, -'.gz'.length);
 	try {
-		await gunzipWithCaps(RECOVERY_FILE_PATH, plainPath);
+		await gunzipWithCaps(inFile, plainPath);
 		const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-f', plainPath]);
 		if (run.exitCode !== 0) {
 			response.errors.push(`psql restore failed: ${run.stderr.trim()}`);
