@@ -732,8 +732,12 @@ describe('the target section and the field list are resolved from the ontology',
 		// The fields_map is hydrated from the DDO'S OWN NODE. Asserted on the call
 		// SHAPE rather than one spelling of the loop variable, so a rename cannot
 		// silently vacate the check: whatever it is called, the argument must be a
-		// `.tipo` of the ddo being hydrated — never a value off the request.
-		expect(/getPropertiesByTipo\(\s*\w+\.tipo\s*\)/.test(source)).toBe(true);
+		// `.tipo` of the ddo being hydrated — never a value off the request. Since
+		// the hydration loop was extracted (hydrateExternalSearchDdos), the reader
+		// is a loader lambda whose single parameter IS that tipo, so the bare
+		// `tipo` spelling is accepted too; `callerTipo` and friends still do not
+		// match, which is the point of the check.
+		expect(/getPropertiesByTipo\(\s*(\w+\.)?tipo\s*\)/.test(source)).toBe(true);
 		expect(source).toContain('parseFieldsMap(nodeProperties?.fields_map');
 		// No branch may read a field list, a url or a host off the incoming rqo.
 		for (const forbidden of ['rqo.options.fields', 'api_url', 'apiUrlSearch', 'options.host']) {
