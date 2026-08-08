@@ -587,14 +587,16 @@ MAIN_SECTION="oh1"
 
 DEDALO_3D_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-This parameter defines the standards file types that will use to create alternative versions of the uploaded 3d files.
+**This engine builds no alternative versions of 3d files, so this parameter has no effect.** Keep it empty.
 
-Dédalo will use this parameter to create extra versions of every 3d file, besides the standard defined in DEDALO_3D_EXTENSION. When the parameter is active, every 3d file uploaded will be processed in every quality with every format defined here, so the storage and the processing time grow with each format added.
+The reason is structural, not a missing option: the web version of a 3d file is a plain copy of the uploaded model, and no mesh converter is called anywhere in the engine, so there is nothing here that could write a second format.
 
-By default the list is empty: no alternative version is created and Dédalo stores only the original file and the standard format.
+A value set here is not silently obeyed and not silently ignored either: the formats are refused at start-up, and the server log names this parameter, its value and this reason. Nothing is scanned for, indexed or offered in the versions panel for a file that cannot be produced.
+
+Dédalo stores the uploaded file and the web version, and nothing else.
 
 ```bash
-DEDALO_3D_ALTERNATIVE_EXTENSIONS=["gltf"]
+DEDALO_3D_ALTERNATIVE_EXTENSIONS=[]
 ```
 
 *Default: []*
@@ -701,14 +703,16 @@ DEDALO_3D_QUALITY_ORIGINAL="original"
 
 DEDALO_AV_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-This parameter defines the standards file types that will use to create alternative versions of the uploaded audiovisual files.
+**This engine builds no alternative versions of audiovisual files, so this parameter has no effect.** Keep it empty.
 
-Dédalo will use this parameter to compress extra versions of every audiovisual file, besides the encapsulation defined in DEDALO_AV_EXTENSION. When the parameter is active, every file uploaded will be compressed in every quality of DEDALO_AV_AR_QUALITY with every format defined here — a second format therefore doubles the transcoding time and the disk used by the derivatives.
+The reason is structural, not a missing option: every compression profile Dédalo ships forces the same container and the same video codec (mp4 / h264), and a profile is chosen by a name that carries only the resolution, the television standard and the aspect ratio. There is no container axis to build a second format on, and there is no second encoder to point at one.
 
-By default the list is empty: Dédalo keeps the original file untouched and compresses only to the standard mp4 encapsulation.
+A value set here is not silently obeyed and not silently ignored either: the formats are refused at start-up, and the server log names this parameter, its value and this reason. Nothing is scanned for, indexed or offered in the versions panel for a file that cannot be produced.
+
+Dédalo keeps the uploaded file untouched and compresses only to the standard encapsulation defined in DEDALO_AV_EXTENSION.
 
 ```bash
-DEDALO_AV_ALTERNATIVE_EXTENSIONS=["webm"]
+DEDALO_AV_ALTERNATIVE_EXTENSIONS=[]
 ```
 
 *Default: []*
@@ -957,12 +961,29 @@ DEDALO_IDENTIFY_PATH="/usr/bin/identify"
 
 DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-This parameter defines the standards file types that will use to create versions of the uploaded image files.
+This parameter defines the extra file formats Dédalo builds beside the standard image format defined in DEDALO_IMAGE_EXTENSION.
 
-Dédalo will use this parameter to create alternative versions of the images uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every image uploaded will be processed in every quality with every format define it.
+Each format listed here produces a companion file of the version Dédalo already stores in a quality: the same picture, the same quality, another container. It is not a copy of every quality in every format, and it never replaces the standard version:
+
+- a quality that holds its standard file gets one companion per format listed here, built from the master image (the retouched one when the record has it, otherwise the original), so that transparency, colour and detail come from the best source the record holds — never from the already delivered standard file, which has lost them;
+- a quality that holds no standard file gets no companion, and a companion found there is moved to the `deleted` folder: a file whose version is gone would keep showing a picture the record no longer has;
+- the original and the retouched qualities never get companions. They hold the files a person uploaded, and a generated file among them would be taken for one of them;
+- the thumbnail quality never gets companions. Thumbnails are stored in the thumbnail format alone, so any other file there would never be seen.
+
+**avif is the format to add here.** Of the formats this engine can write it is the one that keeps transparency, which is what makes an automatic background removal visible: the cut-out survives into the avif companion, while the standard jpg version is always composited onto white. Measured on this reference machine it costs 0.16 to 0.37 seconds per quality, and at the larger qualities it is smaller than the jpg it accompanies (180 KB against 256 KB at the 6MB quality).
+
+Every companion is built while the person who uploaded the image is waiting, so the whole list is added to the time an upload takes. Measured on this reference machine, one 19.9 MB master through the complete upload processing: 0.27 seconds with the list empty, 0.59 seconds with avif, 1.87 seconds with avif and png.
+
+png also keeps transparency and is lossless, so it is a defensible archival choice, but state its cost before adding it: measured on a 3.8 megapixel master it takes 1.25 to 4.33 seconds and 7.6 to 10 MB per quality — 25 to 70 times the disk the jpg uses. There is no size or time cap: Dédalo builds exactly what you list.
+
+If a format is listed that the image processing program on this server cannot write, no file is produced for it, any companion already on disk is moved to the `deleted` folder rather than left showing an outdated picture, and the refusal is reported in the upload response and named in the server log when Dédalo starts.
+
+A companion is only ever built beside a version that Dédalo itself produced from the master. If someone has rotated or cropped a quality, that file no longer shows what the master shows, and a companion built from the master would show a different picture in the same quality: Dédalo declines to build it and says so, naming both sizes. Rebuilding the quality itself produces both files together again — which discards the rotation, exactly as any change of the master already does.
+
+By default the list is empty: no companion file is created and Dédalo stores only the uploaded file and the standard format.
 
 ```bash
-DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS=["avif","png"]
+DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS=["avif"]
 ```
 
 Example:
@@ -971,25 +992,22 @@ Original file: **my_image.tif**
 
 Default format defined in DEDALO_IMAGE_EXTENSION: **jpg**
 
-Alternatives formats defined in DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: **\['avif','png'\]**
+Alternative formats defined in DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: **\['avif'\]**
 
 Result:
 
-In original quality directory:
+In original quality directory (a master quality — no companion is built here):
 > ../media/image/original/rsc29_rsc170_1.tif
 >
 > ../media/image/original/rsc29_rsc170_1.jpg
->
-> ../media/image/original/rsc29_rsc170_1.avif
->
-> ../media/image/original/rsc29_rsc170_1.png
 
 In 1.5MB quality directory:
 > ../media/image/1.5MB/rsc29_rsc170_1.jpg
 >
 > ../media/image/1.5MB/rsc29_rsc170_1.avif
->
-> ../media/image/1.5MB/rsc29_rsc170_1.png
+
+In thumb quality directory (thumbnails take no companion):
+> ../media/image/thumb/rsc29_rsc170_1.jpg
 
 *Default: []*
 
@@ -1259,35 +1277,37 @@ Do not confuse it with DEDALO_MEDIA_EXPORT_BASE, which builds the media cells of
 
 DEDALO_PDF_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-This parameter defines the standards file types that will use to create versions of the uploaded PDF files.
+This parameter defines the image formats Dédalo renders the cover of an uploaded PDF into.
 
-Dédalo will use this parameter to create alternative versions of the PDF uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every PDF uploaded will be processed for every quality with every alternative format defines.
+The cover is the first page of the document, rasterized into the web quality so that a viewer that cannot display a PDF still has a picture of it. One cover is written per format listed here, always composited onto white: a page has no paper of its own, so a cover built on a transparent background is a sheet of floating glyphs.
+
+**The jpg cover is built whether or not this list names it.** It is what the record, the lists and the search results show, so it is not optional: removing jpg from this list does not stop it being built, and it does not un-index the covers already on disk. Adding another format here adds a cover beside the jpg one; it never replaces it.
+
+Formats other than jpg are only worth adding for a specific consumer — avif for a web front end that prefers it, for instance. Each one is rendered at the same high density as the jpg cover, so it multiplies the part of the upload wait described in the warning below.
+
+If a format is listed that the image processing program on this server cannot write, no cover is produced for it, the jpg cover is still built, and the refusal is reported in the upload response and named in the server log when Dédalo starts.
 
 ```bash
-DEDALO_PDF_ALTERNATIVE_EXTENSIONS=["avif","jpg"]
+DEDALO_PDF_ALTERNATIVE_EXTENSIONS=["jpg"]
 ```
 
 Example:
 
-Original file: **my_pfd.pdf**
+Original file: **my_pdf.pdf**
 
-Alternatives formats defined in DEDALO_PDF_ALTERNATIVE_EXTENSIONS: **\['avif','jpg'\]**
+Formats defined in DEDALO_PDF_ALTERNATIVE_EXTENSIONS: **\['avif','jpg'\]**
 
 Result:
 
-In original quality directory:
+In original quality directory (the uploaded file, untouched — no cover is built here):
 > ../media/pdf/original/rsc37_rsc176_1.pdf
->
-> ../media/pdf/original/rsc37_rsc176_1.avif
->
-> ../media/pdf/original/rsc37_rsc176_1.jpg
 
 In web quality directory:
 > ../media/pdf/web/rsc37_rsc176_1.pdf
 >
-> ../media/pdf/web/rsc37_rsc176_1.avif
->
 > ../media/pdf/web/rsc37_rsc176_1.jpg
+>
+> ../media/pdf/web/rsc37_rsc176_1.avif
 
 !!! warning "About increment time when uploaded PDF files render alternative versions"
     Alternative versions of PDF increase the rendering process time of uploaded PDF files by ~5 times.
@@ -1464,14 +1484,16 @@ DEDALO_SUBTITLES_FOLDER="/subtitles"
 
 DEDALO_SVG_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-This parameter defines the standards file types that will use to create alternative versions of the uploaded svg files.
+**This engine builds no alternative versions of svg files, so this parameter has no effect.** Keep it empty.
 
-Dédalo will use this parameter to create extra versions of every svg file, besides the standard defined in DEDALO_SVG_EXTENSION. When the parameter is active, every svg uploaded will be processed in every quality with every format defined here — a raster copy of a vector drawing, typically, for a consumer that cannot render svg.
+The reason is structural, not a missing option: the web version of an svg is a byte copy of the uploaded drawing, so there is no conversion step here that could be pointed at another format. A raster copy of a vector drawing would need an encoder this part of the engine does not have.
 
-By default the list is empty: Dédalo stores the original file and the web version, and nothing else.
+A value set here is not silently obeyed and not silently ignored either: the formats are refused at start-up, and the server log names this parameter, its value and this reason. Nothing is scanned for, indexed or offered in the versions panel for a file that cannot be produced.
+
+Dédalo stores the uploaded file and the web version, and nothing else.
 
 ```bash
-DEDALO_SVG_ALTERNATIVE_EXTENSIONS=["png"]
+DEDALO_SVG_ALTERNATIVE_EXTENSIONS=[]
 ```
 
 *Default: []*
