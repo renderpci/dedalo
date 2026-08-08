@@ -241,7 +241,7 @@ export async function resolveRelationTargetValues(
  * join with the frame's fields_separator; multiple frames join the same way.
  * Null pairId (PHP null id_key) or zero pairs → null (contributes nothing).
  */
-async function resolveDataframeFlatValue(
+export async function resolveDataframeFlatValue(
 	record: { columns: { relation?: unknown } },
 	frameTipo: string,
 	mainComponentTipo: string,

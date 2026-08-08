@@ -1,0 +1,524 @@
+/**
+ * `resolveCellValue` + `resolveRelationTargetValues` — the per-FAMILY branch
+ * inventory of the relation_list / export cell resolver
+ * (src/core/resolve/relation_list.ts:302 and :121).
+ *
+ * The existing gate `relation_list_cell_value.test.ts` covers three cells on
+ * an rsc197 fixture that does NOT exist on this install (two of its three
+ * cases die on "fixture missing"). This file is the test3-playground twin: it
+ * reaches every flat-value family the resolver dispatches on, plus the
+ * early-return and seam contracts of the per-target half.
+ *
+ * WHAT IS PINNED (each line is a distinct branch of the two functions):
+ *   - the DERIVED-family early returns (unknown model / unknown section);
+ *   - family 'section_id'  → the record's own id, fail-CLOSED on a missing row;
+ *   - family 'string'      → lang slice, multi-item join by the CALLER's
+ *                            itemSeparator (the export-atoms ' | ' → ', ' flip);
+ *   - family 'date'        → year-only, d-m-Y, and the 'start <> end' range;
+ *   - family 'iri'         → the bare iri (the stored `title` must NOT leak);
+ *   - family 'media'       → exportBase + the default-quality file_path, and a
+ *                            media model with no default quality → ledgered;
+ *   - family 'datalist'    → the two halves of resolveRelationTargetValues:
+ *                            the CONFIG-CHILDREN branch (skips invalid
+ *                            locators, joins by the component's
+ *                            fields_separator, stored order) and the
+ *                            no-children DATALIST branch (keeps every locator
+ *                            slot, labels via resolveLocatorLabels);
+ *   - an uncovered model   → null + a LEDGERED `unresolved` entry, never a
+ *                            guessed string;
+ *   - the `loadRecord` seam, including the parity keystone that it is
+ *                            consulted only AFTER the null-table early return.
+ *
+ * Scratch surfaces (this item's namespace): test3 / 925020-925029 in
+ * matrix_test, created and deleted here. Read-only fixtures: the canonical
+ * test3 records 1 and 27, which the preload re-seeds every run.
+ */
+
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { config } from '../../src/config/config.ts';
+import { sql } from '../../src/core/db/postgres.ts';
+import {
+	resolveCellValue,
+	resolveRelationTargetValues,
+} from '../../src/core/resolve/relation_list.ts';
+
+const SECTION = 'test3';
+/** Every scratch id this file writes — the sweep list and the cleanup proof. */
+const IDS = {
+	/** test52 = 'Alpha' (single lg-eng item). */
+	alpha: 925020,
+	/** test52 = 'Beta'. */
+	beta: 925021,
+	/** test52 = two lg-eng items (the multi-item join fixture). */
+	twoItems: 925022,
+	/** date only: a YEAR-ONLY test145 item (no string column at all). */
+	yearOnly: 925023,
+	/** date only: a start+end test145 item (the range fixture). */
+	range: 925024,
+	/** relation: test80 → [beta, alpha]; test101 → [invalid, valid]. */
+	owner: 925025,
+};
+const SCRATCH_IDS = Object.values(IDS);
+
+async function sweep(): Promise<number> {
+	let deleted = 0;
+	for (const id of SCRATCH_IDS) {
+		const rows = (await sql.unsafe(
+			'DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2 RETURNING section_id',
+			[SECTION, id],
+		)) as unknown[];
+		deleted += rows.length;
+		await sql.unsafe(
+			'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+			[SECTION, id],
+		);
+	}
+	return deleted;
+}
+
+beforeAll(async () => {
+	await sweep(); // pre-clean a crashed prior run
+
+	// PRECONDITION: never write over a coordinate this gate did not create.
+	const occupied: number[] = [];
+	for (const id of SCRATCH_IDS) {
+		const rows = (await sql.unsafe(
+			'SELECT section_id FROM matrix_test WHERE section_tipo = $1 AND section_id = $2',
+			[SECTION, id],
+		)) as unknown[];
+		if (rows.length > 0) occupied.push(id);
+	}
+	if (occupied.length > 0) {
+		throw new Error(
+			`relation_list cell gate: scratch ids ${SCRATCH_IDS.join(',')} are not free after the sweep — refusing to write over records this gate did not create.`,
+		);
+	}
+
+	const seedString = async (id: number, tipo: string, items: unknown[]): Promise<void> => {
+		await sql.unsafe(
+			`INSERT INTO matrix_test (section_id, section_tipo, string)
+			 VALUES ($1, $2, jsonb_build_object($3::text, $4::text::jsonb))`,
+			[id, SECTION, tipo, JSON.stringify(items)],
+		);
+	};
+	const seedDate = async (id: number, items: unknown[]): Promise<void> => {
+		await sql.unsafe(
+			`INSERT INTO matrix_test (section_id, section_tipo, date)
+			 VALUES ($1, $2, jsonb_build_object('test145', $3::text::jsonb))`,
+			[id, SECTION, JSON.stringify(items)],
+		);
+	};
+
+	await seedString(IDS.alpha, 'test52', [{ id: 1, lang: 'lg-eng', value: 'Alpha' }]);
+	await seedString(IDS.beta, 'test52', [{ id: 1, lang: 'lg-eng', value: 'Beta' }]);
+	await seedString(IDS.twoItems, 'test52', [
+		{ id: 1, lang: 'lg-eng', value: 'Alpha' },
+		{ id: 2, lang: 'lg-eng', value: 'Beta' },
+	]);
+	await seedDate(IDS.yearOnly, [{ id: 1, lang: 'lg-nolan', start: { year: 1975 } }]);
+	await seedDate(IDS.range, [
+		{
+			id: 1,
+			lang: 'lg-nolan',
+			start: { year: 1628, month: 6, day: 9 },
+			end: { year: 2024, month: 6, day: 25 },
+		},
+	]);
+
+	// The relation owner. test80 is a component_portal whose ontology config
+	// declares ONE child (test52) — the config-children branch. test101 is a
+	// component_filter with NO config children — the datalist branch. Both
+	// carry a deliberately INVALID first locator in the test101 slot.
+	await sql.unsafe(
+		`INSERT INTO matrix_test (section_id, section_tipo, relation)
+		 VALUES ($1, $2, jsonb_build_object('test80', $3::text::jsonb, 'test101', $4::text::jsonb))`,
+		[
+			IDS.owner,
+			SECTION,
+			JSON.stringify([
+				// STORED order is beta-then-alpha on purpose: the resolver must not sort.
+				{
+					id: 1,
+					type: 'dd151',
+					section_id: String(IDS.beta),
+					section_tipo: SECTION,
+					from_component_tipo: 'test80',
+				},
+				{
+					id: 2,
+					type: 'dd151',
+					section_id: String(IDS.alpha),
+					section_tipo: SECTION,
+					from_component_tipo: 'test80',
+				},
+			]),
+			JSON.stringify([
+				// no section_tipo — a corrupt/half-written locator slot
+				{ id: 1, type: 'dd675', section_id: '1' },
+				{
+					id: 2,
+					type: 'dd675',
+					section_id: '1',
+					section_tipo: 'dd153',
+					from_component_tipo: 'test101',
+				},
+			]),
+		],
+	);
+}, 60000);
+
+afterAll(async () => {
+	const deleted = await sweep();
+	if (deleted !== SCRATCH_IDS.length) {
+		throw new Error(
+			`relation_list cell gate cleanup deleted ${deleted} of ${SCRATCH_IDS.length} scratch rows in matrix_test — a seeded row vanished mid-run or was never created.`,
+		);
+	}
+});
+
+describe('resolveCellValue — per-family dispatch', () => {
+	test('unknown model and unknown section return null before any read', async () => {
+		const unresolved: string[] = [];
+		// getModelByTipo → null: no dd_ontology node at all.
+		expect(await resolveCellValue(SECTION, 1, 'zzz_no_such_tipo', 'lg-eng', unresolved)).toBeNull();
+		// getMatrixTableFromTipo → null: no section.
+		expect(
+			await resolveCellValue('zzz_no_such_section', 1, 'test52', 'lg-eng', unresolved),
+		).toBeNull();
+		// Neither is an "uncovered model" — nothing may be ledgered.
+		expect(unresolved).toEqual([]);
+	});
+
+	test('the loadRecord seam is consulted only AFTER the null-table early return', async () => {
+		// Parity keystone (the function's own comment): a cached loader must
+		// never resolve what the default loader could not reach.
+		let calls = 0;
+		const loadRecord = async (): Promise<never> => {
+			calls++;
+			throw new Error('loadRecord must not be called for an unknown section');
+		};
+		const unresolved: string[] = [];
+		expect(
+			await resolveCellValue('zzz_no_such_section', 1, 'test52', 'lg-eng', unresolved, ' | ', {
+				loadRecord,
+			}),
+		).toBeNull();
+		expect(calls).toBe(0);
+
+		// …and on a REAL section it IS the loader that supplies the record.
+		const seen: [string, string, number][] = [];
+		const value = await resolveCellValue(SECTION, 1, 'test52', 'lg-eng', unresolved, ' | ', {
+			loadRecord: async (table, sectionTipo, sectionId) => {
+				seen.push([table, sectionTipo, sectionId]);
+				return null; // a loader that resolves nothing ⇒ the cell is null
+			},
+		});
+		expect(value).toBeNull();
+		expect(seen).toEqual([['matrix_test', SECTION, 1]]);
+	});
+
+	test("family 'section_id' echoes the record id, and fails CLOSED on a missing record", async () => {
+		const unresolved: string[] = [];
+		// test102 is the test3 component_section_id.
+		expect(await resolveCellValue(SECTION, 1, 'test102', 'lg-eng', unresolved)).toBe('1');
+		expect(await resolveCellValue(SECTION, IDS.alpha, 'test102', 'lg-eng', unresolved)).toBe(
+			String(IDS.alpha),
+		);
+		// A nonexistent record must NOT get its id echoed back.
+		expect(
+			await resolveCellValue(SECTION, 999_999_999, 'test102', 'lg-eng', unresolved),
+		).toBeNull();
+		expect(unresolved).toEqual([]);
+	});
+
+	test("family 'string' joins the lang slice with the CALLER's separator", async () => {
+		const unresolved: string[] = [];
+		// The canonical playground value (preload-restored, also pinned by the
+		// info-widget golden).
+		expect(await resolveCellValue(SECTION, 1, 'test52', 'lg-eng', unresolved)).toBe(
+			'input text content of one',
+		);
+		// Default separator = the export-atoms depth-0 records separator.
+		expect(await resolveCellValue(SECTION, IDS.twoItems, 'test52', 'lg-eng', unresolved)).toBe(
+			'Alpha | Beta',
+		);
+		// Deeper export-atom levels pass ', ' — the join must follow the ARGUMENT.
+		expect(
+			await resolveCellValue(SECTION, IDS.twoItems, 'test52', 'lg-eng', unresolved, ', '),
+		).toBe('Alpha, Beta');
+		// A record with no data for the component is null, not ''.
+		expect(
+			await resolveCellValue(SECTION, IDS.yearOnly, 'test52', 'lg-eng', unresolved),
+		).toBeNull();
+		expect(unresolved).toEqual([]);
+	});
+
+	test("family 'date' formats year-only, d-m-Y and the 'start <> end' range", async () => {
+		const unresolved: string[] = [];
+		// Canonical: two single-date items → the multi-item join.
+		expect(await resolveCellValue(SECTION, 1, 'test145', 'lg-nolan', unresolved)).toBe(
+			'09-06-1628 | 25-06-2024',
+		);
+		// Year without month/day → the bare year.
+		expect(await resolveCellValue(SECTION, IDS.yearOnly, 'test145', 'lg-nolan', unresolved)).toBe(
+			'1975',
+		);
+		// start + end → the range separator (both ends zero-padded d-m-Y).
+		expect(await resolveCellValue(SECTION, IDS.range, 'test145', 'lg-nolan', unresolved)).toBe(
+			'09-06-1628 <> 25-06-2024',
+		);
+		// No date items at all → null.
+		expect(
+			await resolveCellValue(SECTION, IDS.alpha, 'test145', 'lg-nolan', unresolved),
+		).toBeNull();
+		expect(unresolved).toEqual([]);
+	});
+
+	test("family 'iri' emits the iri itself, never the stored title", async () => {
+		const unresolved: string[] = [];
+		// test3/1's test140 item carries title 'Title or IRI'; the flat cell is
+		// the iri plus (only) its paired dd560 label frame — and there is none.
+		const value = await resolveCellValue(SECTION, 1, 'test140', 'lg-nolan', unresolved);
+		expect(value).toBe('http://elraspa.com');
+		expect(value).not.toContain('Title or IRI');
+		expect(unresolved).toEqual([]);
+	});
+
+	test("family 'media' composes exportBase + the default-quality file_path", async () => {
+		const unresolved: string[] = [];
+		// test85 is the test3 component_pdf; its stored files_info holds the
+		// model's default quality. The expected URL is COMPUTED from config +
+		// the stored path, never hardcoded — the contract is the composition.
+		const rows = (await sql.unsafe(
+			`SELECT media->'test85' AS items FROM matrix_test WHERE section_tipo = $1 AND section_id = 1`,
+			[SECTION],
+		)) as { items: { files_info?: { quality?: string; file_path?: string }[] }[] | null }[];
+		const filesInfo = rows[0]?.items?.[0]?.files_info ?? [];
+		if (filesInfo.length === 0) {
+			throw new Error('fixture missing: test3/1 test85 has no files_info — gate cannot assert');
+		}
+		const value = await resolveCellValue(SECTION, 1, 'test85', 'lg-eng', unresolved);
+		const exportBase = config.media.exportBase;
+		if (exportBase === undefined || exportBase === '') {
+			// exportBase unset ⇒ LEDGERED, never a guessed relative URL. (The
+			// in-process flip of this key is impossible: config freezes at import.)
+			expect(value).toBeNull();
+			expect(unresolved).toContain('component_pdf');
+		} else {
+			// The quality is the model CONTRACT's default, never the first
+			// files_info entry (the stored bag also holds 'original' first).
+			const { mediaTypeOf } = await import('../../src/core/concepts/media.ts');
+			const quality = mediaTypeOf('component_pdf')?.defaultQuality;
+			expect(quality).toBeDefined();
+			const path = filesInfo.find((info) => info?.quality === quality)?.file_path ?? '';
+			expect(path).not.toBe('');
+			expect(value).toBe(`${exportBase}${path}`);
+			expect(unresolved).toEqual([]);
+		}
+	});
+
+	test('a media model with no declared default quality is LEDGERED, never guessed', async () => {
+		// test26 is a component_3d — a media model the media CONTRACT declares
+		// no default quality for, so the cell is null and the model ledgered.
+		const unresolved: string[] = [];
+		expect(await resolveCellValue(SECTION, 1, 'test26', 'lg-eng', unresolved)).toBeNull();
+		expect(unresolved).toEqual(['component_3d']);
+	});
+
+	test('an uncovered model is LEDGERED (null + unresolved), and ledgered ONCE', async () => {
+		// Anti-vacuity: prove the record exists, so null cannot be "no record".
+		const exists = (await sql.unsafe(
+			'SELECT 1 FROM matrix_test WHERE section_tipo = $1 AND section_id = 1',
+			[SECTION],
+		)) as unknown[];
+		if (exists.length === 0) {
+			throw new Error('fixture missing: test3/1 does not exist — gate cannot assert');
+		}
+		const unresolved: string[] = [];
+		// test18 is a component_json — outside the value scope.
+		expect(await resolveCellValue(SECTION, 1, 'test18', 'lg-eng', unresolved)).toBeNull();
+		expect(unresolved).toEqual(['component_json']);
+		// Second call on the same array must not duplicate the ledger entry.
+		expect(await resolveCellValue(SECTION, 1, 'test18', 'lg-eng', unresolved)).toBeNull();
+		expect(unresolved).toEqual(['component_json']);
+	});
+
+	test("family 'datalist' joins the target parts in STORED order", async () => {
+		const unresolved: string[] = [];
+		// test80 stores [→beta, →alpha]; the cell must not sort.
+		expect(await resolveCellValue(SECTION, IDS.owner, 'test80', 'lg-eng', unresolved)).toBe(
+			'Beta | Alpha',
+		);
+		expect(unresolved).toEqual([]);
+	});
+});
+
+describe('resolveRelationTargetValues — per-target halves', () => {
+	test('early returns: unknown model, unknown section, missing record, empty slot', async () => {
+		const unresolved: string[] = [];
+		expect(
+			await resolveRelationTargetValues(SECTION, 1, 'zzz_no_such_tipo', 'lg-eng', unresolved),
+		).toEqual([]);
+		expect(
+			await resolveRelationTargetValues('zzz_no_such_section', 1, 'test80', 'lg-eng', unresolved),
+		).toEqual([]);
+		expect(
+			await resolveRelationTargetValues(SECTION, 999_999_999, 'test80', 'lg-eng', unresolved),
+		).toEqual([]);
+		// test54 exists on test3/1 with an EMPTY locator array.
+		expect(await resolveRelationTargetValues(SECTION, 1, 'test54', 'lg-eng', unresolved)).toEqual(
+			[],
+		);
+		expect(unresolved).toEqual([]);
+	});
+
+	test('the loadRecord seam is consulted only AFTER the null-table early return', async () => {
+		let calls = 0;
+		const unresolved: string[] = [];
+		expect(
+			await resolveRelationTargetValues('zzz_no_such_section', 1, 'test80', 'lg-eng', unresolved, {
+				loadRecord: async () => {
+					calls++;
+					throw new Error('loadRecord must not be called for an unknown section');
+				},
+			}),
+		).toEqual([]);
+		expect(calls).toBe(0);
+
+		// On a real section the loader IS the record source: returning null ⇒ [].
+		const seen: [string, string, number][] = [];
+		expect(
+			await resolveRelationTargetValues(SECTION, IDS.owner, 'test80', 'lg-eng', unresolved, {
+				loadRecord: async (table, sectionTipo, sectionId) => {
+					seen.push([table, sectionTipo, sectionId]);
+					return null;
+				},
+			}),
+		).toEqual([]);
+		expect(seen).toEqual([['matrix_test', SECTION, IDS.owner]]);
+	});
+
+	test('CONFIG-CHILDREN branch: stored order, RAW index, child values per target', async () => {
+		const unresolved: string[] = [];
+		const targets = await resolveRelationTargetValues(
+			SECTION,
+			IDS.owner,
+			'test80',
+			'lg-eng',
+			unresolved,
+		);
+		expect(targets).toEqual([
+			{ index: 0, sectionTipo: SECTION, sectionId: String(IDS.beta), parts: ['Beta'] },
+			{ index: 1, sectionTipo: SECTION, sectionId: String(IDS.alpha), parts: ['Alpha'] },
+		]);
+		expect(unresolved).toEqual([]);
+	});
+
+	test('CONFIG-CHILDREN branch: an invalid locator is SKIPPED but still consumes its index', async () => {
+		// Rewrite the test80 slot in place: [invalid, →beta]. The invalid entry
+		// (no section_tipo) must produce no target, and the surviving one must
+		// keep its RAW stored position 1 — the index is the export's addressing.
+		await sql.unsafe(
+			`UPDATE matrix_test SET relation = jsonb_set(relation, '{test80}', $2::text::jsonb)
+			 WHERE section_tipo = $1 AND section_id = $3`,
+			[
+				SECTION,
+				JSON.stringify([
+					{ id: 1, type: 'dd151', section_id: String(IDS.alpha) },
+					{
+						id: 2,
+						type: 'dd151',
+						section_id: String(IDS.beta),
+						section_tipo: SECTION,
+						from_component_tipo: 'test80',
+					},
+				]),
+				IDS.owner,
+			],
+		);
+		try {
+			const unresolved: string[] = [];
+			const targets = await resolveRelationTargetValues(
+				SECTION,
+				IDS.owner,
+				'test80',
+				'lg-eng',
+				unresolved,
+			);
+			expect(targets.length).toBe(1);
+			expect(targets[0]?.index).toBe(1);
+			expect(targets[0]?.sectionId).toBe(String(IDS.beta));
+			expect(targets[0]?.parts).toEqual(['Beta']);
+		} finally {
+			// Restore the seeded slot for any later reader.
+			await sql.unsafe(
+				`UPDATE matrix_test SET relation = jsonb_set(relation, '{test80}', $2::text::jsonb)
+				 WHERE section_tipo = $1 AND section_id = $3`,
+				[
+					SECTION,
+					JSON.stringify([
+						{
+							id: 1,
+							type: 'dd151',
+							section_id: String(IDS.beta),
+							section_tipo: SECTION,
+							from_component_tipo: 'test80',
+						},
+						{
+							id: 2,
+							type: 'dd151',
+							section_id: String(IDS.alpha),
+							section_tipo: SECTION,
+							from_component_tipo: 'test80',
+						},
+					]),
+					IDS.owner,
+				],
+			);
+		}
+	});
+
+	test('DATALIST branch (no config children): every locator slot survives, labelled', async () => {
+		// test101 is a component_filter: no config ddo_map and no COMPONENT
+		// implicit relations, so the target label comes from the datalist.
+		// Unlike the children branch, this half pushes a target for EVERY
+		// stored slot — the invalid first locator keeps index 0 with a null
+		// sectionTipo and no parts.
+		const unresolved: string[] = [];
+		const targets = await resolveRelationTargetValues(
+			SECTION,
+			IDS.owner,
+			'test101',
+			'lg-eng',
+			unresolved,
+		);
+		expect(targets.length).toBe(2);
+		expect(targets[0]?.index).toBe(0);
+		expect(targets[0]?.sectionTipo).toBeNull();
+		expect(targets[0]?.parts).toEqual([]);
+		expect(targets[1]).toEqual({
+			index: 1,
+			sectionTipo: 'dd153',
+			sectionId: '1',
+			parts: ['General project'],
+		});
+		// resolveRelationTargetValues resolves the targets, but component_filter
+		// is NOT a flat-value family — resolveCellValue still ledgers it.
+		expect(unresolved).toEqual([]);
+		const cellUnresolved: string[] = [];
+		expect(
+			await resolveCellValue(SECTION, IDS.owner, 'test101', 'lg-eng', cellUnresolved),
+		).toBeNull();
+		expect(cellUnresolved).toEqual(['component_filter']);
+	});
+
+	test('DATALIST branch: the canonical playground record resolves its label', async () => {
+		// test3/1's test101 points at dd153/1 — a read-only canonical fixture,
+		// so the branch is proven against data this file did not write.
+		const unresolved: string[] = [];
+		const targets = await resolveRelationTargetValues(SECTION, 1, 'test101', 'lg-eng', unresolved);
+		expect(targets).toEqual([
+			{ index: 0, sectionTipo: 'dd153', sectionId: '1', parts: ['General project'] },
+		]);
+	});
+});
