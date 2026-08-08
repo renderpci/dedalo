@@ -9994,11 +9994,14 @@ body:has(.assistant_container.standalone.show) {
 * Included from dd_grid.less file
 */
 .wrapper_dd_grid.view_indexation {
-  contain: content;
+  contain: layout paint style inline-size;
   --icon_height: 1.05rem;
   max-height: 80vh;
   overflow: auto;
   position: relative;
+}
+.wrapper_dd_grid.view_indexation.measuring {
+  --grid_scroll_w: 100% !important;
 }
 .wrapper_dd_grid.view_indexation .top_container {
   background-color: var(--color_grey_14);
@@ -10117,6 +10120,7 @@ body:has(.assistant_container.standalone.show) {
   padding: 0px;
   margin: 0.5em;
   margin-left: 4rem;
+  margin-right: 0;
   box-shadow: none;
   --base_color: var(--color_grey_4);
 }
@@ -18448,6 +18452,7 @@ body.inspector_resizing {
   font-size: 1rem;
   height: auto;
   width: 100%;
+  min-width: 0;
 }
 .wrap_ts_object > .content_data > .indexations_container .css_spinner {
   float: left;

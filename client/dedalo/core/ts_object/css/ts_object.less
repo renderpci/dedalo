@@ -550,6 +550,15 @@
 			.inline_common();
 			height: auto;
 			width: 100%;
+			// (!) This is a flex item of `.wrap_ts_object > .content_data`, so its
+			// automatic minimum size is the min-content size of the indexation grid
+			// inside it — the exact edge through which a pinned --grid_scroll_w used
+			// to widen the whole tree and make every OTHER open grid measure bigger.
+			// The grid wrapper now has inline-size containment
+			// (dd_grid/css/view_indexation.less), which already zeroes that
+			// contribution; this is the second, independent cut, so a future
+			// non-contained child cannot reopen the path.
+			min-width: 0;
 
 			.css_spinner {
 				float: left;

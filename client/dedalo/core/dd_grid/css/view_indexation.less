@@ -7,7 +7,21 @@
 
 // view_indexation
 .wrapper_dd_grid.view_indexation {
-	contain: content;
+	// (!) FEEDBACK CUT. This pane's width must be a function of its OWN
+	// ancestors and of nothing else. `contain: content` is layout+paint+style —
+	// it gives NO size containment — so the definite px width JS pins on
+	// `.top_container` (--grid_scroll_w) became this box's min-content size, and
+	// the first flex ancestor above it (ts_object `.indexations_container`,
+	// default min-width:auto) turned that into a hard floor that widened the
+	// SHARED tree containers. That is how a SECOND open grid inflated the first
+	// one's measurement, cycle after cycle, without bound.
+	// `inline-size` containment makes this box size in the inline axis as if it
+	// were EMPTY: its min/max-content contributions are 0, so no descendant —
+	// present or future — can push a shared ancestor open. Contents still
+	// overflow and still scroll; only the OUTWARD pressure is cut.
+	// (!) NOT `size`/`strict`: those contain the BLOCK axis too and would
+	// collapse this pane (it has no definite height, only max-height: 80vh).
+	contain: layout paint style inline-size;
 	@padding_left: 140px;
 	@color_grey_14: @color_grey_10;
 	--icon_height: 1.05rem;
@@ -15,6 +29,16 @@
 	max-height: 80vh;
 	overflow: auto;
 	position: relative;
+
+	// Measurement state, set for ONE task by sync_sticky_width(). The sticky
+	// bars are sized FROM --grid_scroll_w, so they must be collapsed back to the
+	// scrollport before the scroll width is read or the previous value pins
+	// itself open and can never shrink. `!important` because the measured value
+	// is an INLINE style on this same node; nothing is painted while the class
+	// is set (add → read → remove, all in one task).
+	&.measuring {
+		--grid_scroll_w: 100% !important;
+	}
 
 	// (!) This is a TWO-AXIS scroll container: the per-section grids below (and
 	// view_indexation_audiovisual.less) declare fixed column tracks wider than
@@ -172,6 +196,13 @@
 				padding: 0px;
 				margin: 0.5em;
 				margin-left: 4rem;
+				// (!) no right margin: the sticky label below is sized
+				// `var(--grid_scroll_w) - 4rem` to pay for this box's own 4rem
+				// indent, so ANY right margin makes this caption's MARGIN box
+				// `--grid_scroll_w + <margin>` wide — i.e. every measurement
+				// cycle hands the next one a value 0.5em larger. A slow ratchet,
+				// only ever hidden by the collapse-before-measure step.
+				margin-right: 0;
 				box-shadow: none;
 
 				--base_color: @color_grey_4; // default value. Will be overwrite with section color form properties

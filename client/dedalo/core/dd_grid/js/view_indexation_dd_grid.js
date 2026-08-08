@@ -176,6 +176,15 @@ view_indexation_dd_grid.render = async function(self, options) {
 		// sticky bars. Keep --grid_scroll_w in sync with the real scroll width
 		// (see the note in view_indexation.less: the sticky filter bar and the
 		// section labels are sized from it so they cover what scrolls under them)
+		// (!) render() builds a NEW wrapper on every call — a re-open recycles the
+		// dd_grid instance (ts_object show_indexations) and a 'full' refresh
+		// replaces self.node — so the observers of the wrapper we are about to
+		// replace are disconnected here, or they stay registered on the abandoned
+		// node for the life of the page. self.node is still the OLD wrapper at
+		// this point (common.render reassigns it after this function returns).
+		if (self.node && self.node.sticky_width_observers) {
+			self.node.sticky_width_observers.disconnect()
+		}
 		observe_sticky_width(wrapper)
 		// set pointers
 		// (!) Expose content_data on the wrapper so dd_grid.refresh() can
@@ -199,9 +208,16 @@ view_indexation_dd_grid.render = async function(self, options) {
 * a deep sibling of the bars, so CSS alone cannot size them from it — hence this
 * measurement.
 *
-* (!) The var is reset to 100% before measuring: the bars are themselves sized
-* from it, so measuring while they are already wide would pin the value open and
-* never let it shrink back.
+* (!) The measurement is taken with the `measuring` class set, which collapses
+* the var back to 100%: the bars are themselves sized from it, so measuring while
+* they are already wide would pin the value open and never let it shrink back.
+* The class is used instead of overwriting the inline value so the measured value
+* survives an early return and the equality guard below can skip the DOM write.
+*
+* (!) The measured width is NODE-LOCAL by construction: the wrapper carries
+* inline-size containment (view_indexation.less), so no other open grid can widen
+* a shared ancestor and inflate this one's clientWidth. Without that containment
+* two open grids escalate each other's width without bound.
 *
 * (!) `scrollWidth` is NOT used: it drops the margin-left of the overflowing
 * rows and came out 52px short here. Clamping scrollLeft to its maximum and
@@ -213,20 +229,36 @@ view_indexation_dd_grid.render = async function(self, options) {
 */
 const sync_sticky_width = function(wrapper) {
 
-	// detached nodes measure 0 — nothing useful to set yet
-	if (!wrapper.isConnected) {
+	// (!) Bail out WITHOUT writing on any state where the measurement is
+	// meaningless: a detached node, or one inside a still-hidden
+	// indexations_container (`.hide` is display:none). Both measure 0 and would
+	// pin `--grid_scroll_w: 0px`, collapsing both sticky bars. Keeping the last
+	// good value is always better than 0.
+	if (!wrapper.isConnected || wrapper.clientWidth===0) {
 		return
 	}
 
-	const previous_scroll_left = wrapper.scrollLeft
+	// collapse the bars to the scrollport for the duration of the measurement
+	wrapper.classList.add('measuring')
 
-	wrapper.style.setProperty('--grid_scroll_w', '100%')
+	const previous_scroll_left	= wrapper.scrollLeft
+	wrapper.scrollLeft			= wrapper.scrollWidth // clamps to the real maximum
+	const scroll_width			= Math.round(wrapper.scrollLeft + wrapper.clientWidth)
 
-	wrapper.scrollLeft = wrapper.scrollWidth // clamps to the real maximum
-	const scroll_width = wrapper.scrollLeft + wrapper.clientWidth
+	wrapper.classList.remove('measuring')
+
+	// (!) Write the value BEFORE restoring the scroll position: restoring while
+	// the bars are still collapsed shrinks the scrollable area, so the browser
+	// CLAMPS the assignment and a user scrolled to the right is yanked back on
+	// every observer cycle.
+	// (!) The equality guard is what stops the ResizeObserver loop: once the
+	// width has settled, a sync mutates no style at all.
+	if (wrapper.grid_scroll_w!==scroll_width) {
+		wrapper.style.setProperty('--grid_scroll_w', scroll_width + 'px')
+		wrapper.grid_scroll_w = scroll_width
+	}
+
 	wrapper.scrollLeft = previous_scroll_left
-
-	wrapper.style.setProperty('--grid_scroll_w', scroll_width + 'px')
 }//end sync_sticky_width
 
 
@@ -244,15 +276,29 @@ const sync_sticky_width = function(wrapper) {
 *                     childList mutation on the wrapper and can change the
 *                     scroll width.
 *
-* Both observers are reachable only through the wrapper node, so they are
-* collected with it when the grid is destroyed.
+* (!) The handler NEVER mutates layout inside the ResizeObserver callback: the
+* write would be delivered to the same observation cycle ("ResizeObserver loop
+* completed with undelivered notifications"). It only schedules, coalescing every
+* trigger of a frame into one measurement.
+*
+* The returned handle is stored on the wrapper and consumed by render() when the
+* wrapper is replaced, so an abandoned node never keeps live observers.
 *
 * @param {HTMLElement} wrapper - The `.wrapper_dd_grid.view_indexation` node.
 * @returns {void}
 */
 const observe_sticky_width = function(wrapper) {
 
-	const handler = () => sync_sticky_width(wrapper)
+	let frame_id = 0
+	const handler = function() {
+		if (frame_id) {
+			return
+		}
+		frame_id = requestAnimationFrame(function(){
+			frame_id = 0
+			sync_sticky_width(wrapper)
+		})
+	}
 
 	const resize_observer = new ResizeObserver(handler)
 	resize_observer.observe(wrapper)
@@ -260,8 +306,18 @@ const observe_sticky_width = function(wrapper) {
 	const mutation_observer = new MutationObserver(handler)
 	mutation_observer.observe(wrapper, {childList: true})
 
-	// keep the references alive with the node they belong to
-	wrapper.sticky_width_observers = [resize_observer, mutation_observer]
+	// keep the references alive with the node they belong to, and give the
+	// caller one door to shut them all
+	wrapper.sticky_width_observers = {
+		disconnect : function() {
+			if (frame_id) {
+				cancelAnimationFrame(frame_id)
+				frame_id = 0
+			}
+			resize_observer.disconnect()
+			mutation_observer.disconnect()
+		}
+	}
 }//end observe_sticky_width
 
 
