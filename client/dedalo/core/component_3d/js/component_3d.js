@@ -178,6 +178,62 @@ component_3d.prototype.upload_handler = async function() {
 
 
 /**
+* ENSURE_VIEWER
+* Resolve this instance's live Three.js viewer, waiting for it to mount.
+*
+* The viewer is loaded LAZILY by view_default_edit_3d (only once the component
+* scrolls into the viewport) and announced with 'viewer_ready_<id>'. Anything that
+* needs to CAPTURE the scene — the posterframe, from either of the two tools that
+* offer it — must therefore be able to wait, and must be able to give up: a
+* browser with no WebGL, a model that fails to parse, or a preview that never
+* entered the viewport will never produce one.
+*
+* IT LIVES ON THE COMPONENT, not in a tool, because both tool_posterframe and the
+* media-versions panel need exactly this and a second copy would drift (one of
+* them waited, the other did not — that WAS the state of things).
+*
+* The subscription token is pushed onto self.events_tokens so a destroyed instance
+* takes the pending wait down with it.
+*
+* @param {number} [timeout_ms=20000]
+* @returns {Promise<Object|null>} the viewer instance, or null on timeout
+*/
+component_3d.prototype.ensure_viewer = function( timeout_ms ) {
+
+	const self = this
+
+	if (self.viewer) {
+		return Promise.resolve(self.viewer)
+	}
+
+	const wait_ms = timeout_ms || 20000
+
+	return new Promise(function(resolve){
+		let token = null
+		const timer = setTimeout(
+			() => {
+				if (token) {
+					event_manager.unsubscribe(token)
+				}
+				// Prefer a viewer that arrived without publishing to this
+				// subscription (an instance built before the call) over a null.
+				resolve(self.viewer || null)
+			},
+			wait_ms
+		)
+		token = event_manager.subscribe('viewer_ready_'+self.id, (viewer) => {
+			clearTimeout(timer)
+			event_manager.unsubscribe(token)
+			resolve(viewer)
+		})
+		if (Array.isArray(self.events_tokens)) {
+			self.events_tokens.push(token)
+		}
+	})
+}//end ensure_viewer
+
+
+/**
 * CREATE_POSTERFRAME
 * Captures the current 3D scene view as a JPEG image and stores it as the
 * posterframe for this component record.  The posterframe is used in list
@@ -215,8 +271,13 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	const self = this
 
-	// fallback to fixed self.viewer
-		viewer = viewer || self.viewer
+	// fallback to fixed self.viewer, WAITING for it when the scene is still
+	// mounting. The viewer loads lazily (view_default_edit_3d, when_in_viewport →
+	// dynamic import → load) and publishes 'viewer_ready_<id>' when the model is
+	// actually on screen, so a caller that arrives first used to console.error and
+	// return false — which is what tool_posterframe's Create button did, with the
+	// operator seeing only the fallback image swapped in.
+		viewer = viewer || await self.ensure_viewer()
 		if (!viewer) {
 			console.error('Error getting viewer. 3D viewer is not set');
 			return false

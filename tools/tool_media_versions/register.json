@@ -538,6 +538,36 @@
           },
           {
             "lang": "lg-eng",
+            "name": "create_posterframe",
+            "value": "Create posterframe from the 3D scene"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "create_posterframe",
+            "value": "Crear posterframe desde la escena 3D"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "create_posterframe",
+            "value": "Crear posterframe des de l'escena 3D"
+          },
+          {
+            "lang": "lg-por",
+            "name": "create_posterframe",
+            "value": "Criar posterframe a partir da cena 3D"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "create_posterframe",
+            "value": "Créer le posterframe à partir de la scène 3D"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "create_posterframe",
+            "value": "Creare il posterframe dalla scena 3D"
+          },
+          {
+            "lang": "lg-eng",
             "name": "view",
             "value": "View"
           },

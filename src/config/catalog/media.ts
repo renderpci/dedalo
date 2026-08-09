@@ -417,6 +417,35 @@ The path is derived from DEDALO_BINARY_BASE, so a normal ImageMagick install nee
 DEDALO_IDENTIFY_PATH="/usr/bin/identify"
 \`\`\``,
 	},
+	DEDALO_RSVG_CONVERT_PATH: {
+		type: 'string',
+		scope: 'operator',
+		default: (get: CatalogGet) => `${get('DEDALO_BINARY_BASE')}/rsvg-convert`,
+		defaultDoc: '`<DEDALO_BINARY_BASE>/rsvg-convert`',
+		heading: 'SVG',
+		typeLabel: 'string',
+		doc: `This parameter defines the path to the \`rsvg-convert\` program in the server, shipped with [librsvg](https://gitlab.gnome.org/GNOME/librsvg). Dédalo uses it — and only it — to turn a vector SVG into a raster image, which is how the thumbnail of an SVG record is produced.
+
+ImageMagick is deliberately NOT used for this. Dédalo runs ImageMagick under a hardened policy that disables its scripting coders (\`MVG\`/\`MSL\`), a long-standing remote-code-execution vector; on a build without a librsvg delegate ImageMagick renders SVG through its own renderer, which emits MVG, so every SVG rasterization is refused by that policy. Rendering the vector in a dedicated program instead keeps the ImageMagick hardening intact.
+
+Install librsvg (\`brew install librsvg\`, \`apt install librsvg2-bin\`) and the path is derived from DEDALO_BINARY_BASE, so no configuration is needed. Set this key only to point at a binary in a non-standard location. Without it, SVG records keep working — upload, storage, display and download are unaffected — but their thumbnail cannot be built, and the media-versions panel says so.
+
+\`\`\`bash
+DEDALO_RSVG_CONVERT_PATH="/usr/bin/rsvg-convert"
+\`\`\``,
+	},
+	DEDALO_SVG_THUMB_DPI: {
+		type: 'number',
+		scope: 'operator',
+		default: 150,
+		heading: 'SVG',
+		typeLabel: 'int',
+		doc: `This parameter defines the resolution, in dots per inch, at which an SVG is rendered before it is reduced to a thumbnail. A vector file has no pixels of its own, so a resolution has to be chosen for it; 150 dpi is enough for a crisp thumbnail without rendering a needlessly large intermediate image.
+
+\`\`\`bash
+DEDALO_SVG_THUMB_DPI=150
+\`\`\``,
+	},
 	DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: {
 		type: 'string_list',
 		scope: 'operator',
@@ -928,7 +957,7 @@ DEDALO_SVG_ALTERNATIVE_EXTENSIONS=[]
 This parameter will use to store different svg version files to specific quality.
 
 \`\`\`bash
-DEDALO_SVG_AR_QUALITY=[DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT]
+DEDALO_SVG_AR_QUALITY=[DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT, DEDALO_QUALITY_THUMB]
 \`\`\``,
 	},
 	DEDALO_SVG_EXTENSION: {

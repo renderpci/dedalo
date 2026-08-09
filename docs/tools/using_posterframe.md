@@ -39,6 +39,13 @@ Posterframe surfaces as a button on audiovisual components (`component_av`, and 
 | Identifying-image selector | Lists the related records configured to accept an identifying image captured from this clip. |
 | Create identifying image | Captures the current frame and stores it as the chosen related record's identifying image. |
 
+!!! note "Creating replaces the current posterframe"
+    The create button always writes a new posterframe over the existing one — for
+    a 3D model, using whatever camera angle is on screen — so it asks you to
+    confirm first. If it cannot capture (a 3D viewer that has not finished
+    loading, an audio-only file), it now says so rather than quietly showing the
+    placeholder image.
+
 ## Tips and gotchas
 
 !!! tip

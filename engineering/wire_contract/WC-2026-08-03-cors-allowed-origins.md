@@ -87,3 +87,44 @@ narrower by design.
 No fixture change and **no re-harvest** (`engineering/ORACLE_HARVEST.md`): the
 frozen store holds response *bodies*, and this entry adds only headers, on a
 path that emits none of them unless an operator opts in.
+
+## Addendum 2026-08-08 — the `*` sentinel (a PUBLIC ontology master)
+
+The entry above assumed a master that knows its clients. A **public** master
+does not: it advertises its ontology to any Dédalo on the internet, so the set
+of client origins is unbounded and an enumerated allowlist cannot express the
+configuration at all. The single list entry `*` is therefore read as **any
+origin** (`isAllowed` in `src/core/security/cors.ts`).
+
+- **Whole-list sentinel, not a pattern.** Only a bare `*` matches; `*.example.org`
+  and `https://*` stay ordinary literal entries that match nothing, because a
+  suffix rule is the classic CORS bypass this file refuses by construction. `*`
+  present alongside other entries simply wins.
+- **Config-only — never on the wire.** The REQUEST origin is still what is
+  echoed in `Access-Control-Allow-Origin`, so `Vary: Origin` keeps its meaning
+  and a literal `*` can never pair with a credentials header a later change
+  adds. The "never `*`" invariant of the original entry is unchanged as a
+  statement about emitted bytes.
+- **The literal `"null"` origin** (sandboxed iframe, `file://`) matches under
+  `*` like anything else. "Any origin except that one" would be an arbitrary
+  carve-out: a page on an origin the attacker controls is already allowed.
+- **What it widens.** Who may ASK, from "any HTTP client" — already true, CORS
+  being a browser rule and not a firewall — to "any HTTP client, plus any web
+  page in a visitor's browser". The reachable surface is exactly the anonymous
+  one (`NO_LOGIN_ACTIONS`); nothing authenticated moves, because the session
+  cookie is `SameSite=Lax` and never rides a cross-site POST regardless of what
+  the calling page requests, and no `Allow-Credentials` is ever sent. The one
+  operational consequence worth stating: an attacker page spends the VISITOR's
+  address against the per-address login throttle (`LOGIN_MAX_ATTEMPTS`).
+- **A comment corrected, not a behaviour changed.** `jsonApiResponse`
+  (`src/server.ts`) argued BREACH-safety from the CORS allowlist and told a
+  future reader to REVISIT if it were ever widened to untrusted origins. That
+  argument was resting on the wrong gate: what closes the door is the
+  `SameSite=Lax` cookie, which makes every cross-origin response an anonymous
+  one with no victim secret to compress against. The comment now says so, and
+  points the revisit trigger at the cookie posture instead.
+
+Gate: the `` `*` sentinel — any origin `` block in `test/unit/cors_native.test.ts`,
+plus a partial-wildcard case added to the exact-match table (a pattern entry must
+keep matching NOTHING). Still no fixture change and no re-harvest, for the
+reason given above.

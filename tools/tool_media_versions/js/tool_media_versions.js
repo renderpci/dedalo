@@ -503,9 +503,14 @@ tool_media_versions.prototype.delete_quality = async function(quality) {
 					dd_console("-> delete_quality API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				// THE WHOLE RESPONSE, not `result` alone. The server attaches to a
+				// SUCCESSFUL delete the account of what else left the tier — the
+				// alternate twins that went with the file, a derived-tier rebuild that
+				// failed — and resolving the boolean threw all of it away, so a click
+				// that removed files the operator never named looked identical to one
+				// that removed exactly what was asked. The render layer reports it
+				// (report_side_effects).
+				resolve(response)
 			})
 		})
 }//end delete_quality

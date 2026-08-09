@@ -103,7 +103,7 @@ sudo apt install -y git unzip gzip file ca-certificates curl
 3.1 Install OS libraries dependecies
 
 ```shell
-sudo apt install -y ffmpeg imagemagick poppler-utils ocrmypdf
+sudo apt install -y ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin
 ```
 
 | Tool | Used for |
@@ -113,6 +113,10 @@ sudo apt install -y ffmpeg imagemagick poppler-utils ocrmypdf
 | ImageMagick | image derivatives, thumbnails, colour-space conversion |
 | `pdftotext`, `pdftohtml`, `pdfinfo` (poppler) | PDF text extraction and page rendering |
 | `ocrmypdf` | optional automatic OCR of uploaded PDFs |
+| `rsvg-convert` (librsvg) | thumbnails of SVG records — the ONLY vector rasterizer Dédalo uses |
+
+!!! note "Why SVG thumbnails do not go through ImageMagick"
+    ImageMagick can render SVG, but only through the coder (`MVG`) that Dédalo's hardened ImageMagick policy disables — that coder is a long-standing remote-code-execution vector, and the policy is what keeps a hostile upload from reaching it. Vector rendering is therefore delegated to `rsvg-convert`, which parses SVG and nothing else. Without librsvg installed, SVG records still upload, store, display and download normally; only their thumbnail cannot be built, and the media-versions panel reports why.
 
 !!! note "ImageMagick 6 is supported"
     Ubuntu 24.04 ships **ImageMagick 6**, which provides `convert` and `identify` but **no `magick` binary**. This is fine: the image engine probes for `magick` first and falls back to `convert`/`identify` when it is absent (`resolveMagick()` in `src/core/media/engine/imagemagick.ts`). Nothing to configure.
@@ -122,7 +126,7 @@ Binaries are resolved from a platform base directory (`/usr/bin` on Linux) and e
 3.2 Check the installation of libraries
 
 ```shell
-command -v ffmpeg ffprobe qt-faststart convert identify pdftotext ocrmypdf
+command -v ffmpeg ffprobe qt-faststart convert identify pdftotext ocrmypdf rsvg-convert
 ```
 
 If `qt-faststart` is missing or lives elsewhere, set its absolute path in the `.env` you write in step 9:

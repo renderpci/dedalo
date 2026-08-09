@@ -24,6 +24,18 @@
  * A cross-origin caller is therefore ALWAYS unauthenticated: it carries no
  * session, and reaches only what the API already opens to an anonymous request.
  * Listing an origin widens who may ASK, never what they may have.
+ *
+ * THE PUBLIC-MASTER CASE (2026-08-08). An enumerated allowlist cannot express a
+ * PUBLIC ontology master — one that serves its update manifest to any Dédalo on
+ * the internet — because the set of client origins is unbounded and unknown to
+ * the operator. The single entry `*` is therefore read as "any origin". It is a
+ * deliberate, operator-typed opt-in, and it is safe for the same structural
+ * reason the whole feature is: the session cookie is `SameSite=Lax`, so it never
+ * rides a cross-site POST no matter what the calling page asks for, and no
+ * `Allow-Credentials` is ever sent. `*` widens the anonymous API surface from
+ * "any HTTP client" (already true — CORS is a browser rule, not a firewall) to
+ * "any HTTP client, plus any web page in a visitor's browser". What it does NOT
+ * do is expose one byte of authenticated data.
  */
 
 import { readList } from '../../config/readers.ts';
@@ -59,19 +71,35 @@ const ALLOWED_HEADERS = 'Content-Type, X-Dedalo-Csrf-Token, X-Dedalo-Report-Toke
 const MAX_AGE = '86400';
 
 /**
- * Exact-match check. No wildcards, no suffix matching, no scheme coercion: an
- * origin is a scheme+host+port triple and a prefix/suffix rule on it is the
+ * The one sentinel: an allowlist holding it answers EVERY origin (the public
+ * ontology-master case in the header). It is spelled `*` because that is the
+ * token every operator already reads as "any origin" — but it is only ever a
+ * value in the CONFIG, never a value on the wire: the request origin is echoed
+ * back, so `Vary: Origin` keeps meaning what it says and a literal `*` can
+ * never pair with a credentials header some later change adds.
+ */
+const ANY_ORIGIN = '*';
+
+/**
+ * Exact-match check, or the wildcard. No suffix matching, no scheme coercion:
+ * an origin is a scheme+host+port triple and a prefix/suffix rule on it is the
  * classic CORS bypass (`https://evil-example.org` suffix-matching
- * `example.org`). If it is not character-for-character in the list, it is not
- * allowed.
+ * `example.org`). Absent the sentinel, if it is not character-for-character in
+ * the list, it is not allowed.
  *
  * `null` is the origin of a sandboxed iframe or a `file://` document, and
- * arrives as the LITERAL STRING "null" — allowlisting it would open the API to
- * any such document anywhere, so it can only ever match if an operator typed it
- * verbatim into the list, which the doc tells them not to do.
+ * arrives as the LITERAL STRING "null". Under an enumerated list it can only
+ * match if an operator typed it verbatim, which the doc tells them not to do.
+ * Under `*` it matches like anything else — "any origin except that one" would
+ * be an arbitrary carve-out that buys nothing: a page served from an origin the
+ * attacker controls is already allowed.
+ *
+ * A MISSING Origin header (`null` the JS value, not the string) is same-origin
+ * or a non-browser caller and is never echoed — there is nothing to echo.
  */
 function isAllowed(origin: string | null, allowlist: ReadonlySet<string>): origin is string {
-	return origin !== null && allowlist.has(origin);
+	if (origin === null) return false;
+	return allowlist.has(ANY_ORIGIN) || allowlist.has(origin);
 }
 
 /**

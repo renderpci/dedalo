@@ -38,16 +38,35 @@ Media versions surfaces as a button on the media components themselves — `comp
 | --- | --- |
 | Show data | Reveals the comparison between the qualities recorded in the database and those found on disk, so you can see exactly what is missing or extra. |
 | Rebuild (per quality) | Regenerates one quality from the preserved master. |
+| Rebuild `thumb` (audio/video) | Builds the thumbnail from the record's posterframe. If the record has no posterframe yet, one is taken from the video automatically, so the button always produces a picture — use [Posterframe](using_posterframe.md) when you want to choose the frame yourself. |
+| Rebuild `thumb` (3D models) | Captures the model as it is framed in the preview above and stores that picture as the record's posterframe, then derives the thumbnail from it. Orbit and zoom the preview to the view you want before you press it — that is the view lists will show. |
 | Rotate (images only) | Rotates the files of the selected image quality. |
 | Conform headers (audiovisual only) | Rewrites an audiovisual file's headers so it seeks/plays correctly in the browser. |
 | Delete quality / Delete version | Removes a whole quality, or one specific file of a quality. |
-| Delete normalized files | When ticked before regenerating, clears the existing derived files first. |
-| Regenerate | Rebuilds the quality set and writes correct file information back to the record. |
+| Delete normalized files | When ticked before regenerating, clears the existing derived files first, so they are rebuilt from the preserved master rather than kept. Your uploaded original is never touched. |
+| Regenerate | Rebuilds the derived files that are MISSING — the web-sized versions, the thumbnail, the alternative formats — and then writes correct file information back to the record. Files that are already there are never re-encoded, so pressing it twice is harmless. Anything it could not rebuild (a format this server has no encoder for, a record whose master is not on this machine) is reported instead of passing in silence. |
 
 ## Tips and gotchas
 
 !!! tip
     When a record warns that its media is out of sync, open **Show data** first to see what actually differs before regenerating — a single missing thumbnail needs far less than a full rebuild.
+
+!!! note "Where a thumbnail comes from"
+    Every media record has a thumbnail, and every one of them is a picture of
+    something the record already holds: for images, PDFs and SVGs it is made from
+    the file the record delivers; for audio/video and 3D models it is made from
+    the record's **posterframe**, the still image that stands in for something a
+    thumbnailer cannot read. That is why replacing the media file, or deleting a
+    posterframe, also updates or removes the thumbnail — a thumbnail that outlived
+    what it depicts would quietly misrepresent the record in every list.
+
+!!! note
+    A 3D model's thumbnail is not generated from the model file — nothing on the
+    server can draw a mesh. It is a snapshot of the interactive viewer, taken in
+    your browser, so the thumbnail always shows the view the preview was framed
+    on when you pressed the button. Rebuilding it needs the preview to have
+    loaded; on a machine where the viewer cannot run, the button falls back to
+    rebuilding the thumbnail from the posterframe already stored.
 
 !!! warning
     Deleting a quality or a version removes a real file from disk, and rebuilds and audiovisual transcodes can take several minutes and write across the quality set. These actions ask you to confirm first. The preserved master (the `original` quality) is never overwritten by rotate or rebuild, so you can always regenerate the derivatives from it.

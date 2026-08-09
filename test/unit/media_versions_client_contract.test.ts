@@ -215,6 +215,119 @@ describe('media-versions panel ↔ engine contract', () => {
 		});
 	});
 
+	/**
+	 * THE 3D THUMB IS CAPTURED, NOT BUILT (2026-08-08).
+	 *
+	 * For component_3d the thumb tier is a resize of the record's POSTERFRAME
+	 * (DEDALO_QUALITY_THUMB: "3d | Will render the posterframe"), and a posterframe
+	 * of a mesh can only come from something that can RENDER a mesh. Nothing on the
+	 * server can: the panel's gear therefore has to drive the browser's viewer
+	 * (component_3d.create_posterframe → service_upload → move_file_to_dir) and let
+	 * the engine derive the thumb from the file it binds.
+	 *
+	 * Sending that click to `build_version` instead is not a missing feature but a
+	 * MEASURED failure: the generic image branch handed `3d/web/0/<id>.glb` to
+	 * ImageMagick and the operator got `identify: no decode delegate for this image
+	 * format` in an alert. The server half now refuses that (tool_posterframe.test.ts
+	 * — build_version thumb), so this is the half that keeps the panel from asking.
+	 */
+	test('a component_3d thumb click captures the posterframe from the viewer', () => {
+		const source = readFileSync(RENDER_JS, 'utf8');
+		// The routing decision, and that it is the one the click reads.
+		expect(source).toMatch(
+			/is_3d_posterframe\s*=\s*self\.main_element\.model===['"]component_3d['"]\s*&&\s*quality===THUMB_QUALITY/,
+		);
+		expect(source).toMatch(/is_3d_posterframe\s*\n?\s*\?\s*await create_3d_posterframe\(self\)/);
+		// The capture goes through the COMPONENT's own method — the same one the edit
+		// form fires after an upload — never a re-implementation of the upload dance.
+		expect(source).toContain('await main_element.create_posterframe(viewer)');
+		// The viewer-less fallback stays: rebuilding a thumb from a posterframe that
+		// IS on disk must not depend on WebGL drawing the scene again.
+		expect(source).toMatch(/await self\.build_version\(THUMB_QUALITY\)/);
+	});
+
+	/**
+	 * THE OPERATOR HEARS WHAT THE ENGINE SAYS (2026-08-08).
+	 *
+	 * The server composes careful sentences for side effects the operator did not
+	 * ask for and cannot see — "the accompanying alternate version(s) went with it
+	 * (moved to the deleted folder, recoverable)", "the derived tiers could NOT be
+	 * rebuilt", "not every configured format could be written" — and attaches them
+	 * to a `result:true` response, because the action itself happened. The panel
+	 * read `result` alone: one click could remove files nobody named, or leave a
+	 * tier stale, and the only witness was the server log.
+	 *
+	 * Gated from BOTH ends, because either half alone is dead: the client must read
+	 * the structured fields, and `delete_quality` must hand the whole response over
+	 * instead of resolving the boolean it used to.
+	 */
+	describe('side effects of a SUCCESSFUL action reach the operator', () => {
+		test('the panel reports errors/retired on result:true', () => {
+			const source = readFileSync(RENDER_JS, 'utf8');
+			expect(source).toContain('const report_side_effects = function(self, response)');
+			// Triggered by STRUCTURED data, never by matching the prose of `msg` —
+			// a reworded sentence must not silently stop being shown.
+			expect(source).toMatch(/response\.errors\)\s*\?\s*response\.errors\s*:\s*\[\]/);
+			expect(source).toMatch(/response\.retired\)\s*\?\s*response\.retired\s*:\s*\[\]/);
+			// Every mutating path calls it: build, delete_version, delete_quality, sync.
+			expect(
+				(source.match(/report_side_effects\(self, response\)/g) ?? []).length,
+			).toBeGreaterThanOrEqual(4);
+		});
+
+		test('delete_quality resolves the WHOLE response, not just the boolean', () => {
+			const source = readFileSync(TOOL_JS, 'utf8');
+			const body = source.slice(source.indexOf('delete_quality = async function'));
+			const head = body.slice(0, body.indexOf('}//end delete_quality'));
+			// The line that threw the account away: `const result = response.result`
+			// followed by `resolve(result)`.
+			expect(head).not.toMatch(/resolve\(\s*result\s*\)/);
+			expect(head).toMatch(/resolve\(\s*response\s*\)/);
+		});
+	});
+
+	/**
+	 * REGENERATE REALLY REGENERATES (2026-08-08). The control is labelled
+	 * "Regenerate files", its tooltip promises "re-create alternatives and thumb",
+	 * and it ships a "Delete normalized files" checkbox the client sends as
+	 * `regenerate_options` — while the handler re-scanned the disk and built
+	 * nothing, then reported success. A control that reports success for work it
+	 * did not do is worse than a missing control.
+	 */
+	test('sync_files rebuilds derivatives and honours the checkbox', () => {
+		const source = readFileSync(
+			join(REPO_ROOT, 'tools/tool_media_versions/server/media_versions.ts'),
+			'utf8',
+		);
+		const body = source.slice(source.indexOf('export async function syncFiles('));
+		expect(body).toContain('regenerateMissingDerivatives(');
+		// The operator's checkbox reaches the pass that acts on it…
+		expect(body).toMatch(/delete_normalized_files/);
+		expect(body).toMatch(/deleteNormalized:\s*options\.delete_normalized_files === true/);
+		// …and a derivative that could not be rebuilt is reported, not swallowed.
+		expect(body).toMatch(/errors:\s*rebuildErrors/);
+	});
+
+	/**
+	 * ONE VIEWER WAIT, ON THE COMPONENT (2026-08-08). Capturing a 3D scene needs the
+	 * lazily-mounted viewer; the media-versions gear waited for it and
+	 * tool_posterframe did not, so the same action failed from one tool and worked
+	 * from the other. The wait belongs to component_3d, and both callers use it.
+	 */
+	test('both posterframe entry points wait for the 3D viewer', () => {
+		const component = readFileSync(
+			join(REPO_ROOT, 'client/dedalo/core/component_3d/js/component_3d.js'),
+			'utf8',
+		);
+		expect(component).toContain('component_3d.prototype.ensure_viewer');
+		// create_posterframe itself waits, which is what fixes tool_posterframe.
+		expect(component).toMatch(/viewer\s*=\s*viewer \|\| await self\.ensure_viewer\(\)/);
+		// …and the panel does not keep a private copy of the wait.
+		const panel = readFileSync(RENDER_JS, 'utf8');
+		expect(panel).toContain('main_element.ensure_viewer()');
+		expect(panel).not.toContain('const wait_for_viewer');
+	});
+
 	test('the client reads the DB side of the comparison from the server only', () => {
 		const source = readFileSync(TOOL_JS, 'utf8');
 		// The assignment that made the warning lie: files_info_db taken from the

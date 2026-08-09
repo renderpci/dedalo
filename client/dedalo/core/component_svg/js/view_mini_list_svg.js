@@ -149,10 +149,19 @@ export const get_value_fragment = function(self) {
 		// (!) Loop counter `i` is never used inside the body — see function-level note above.
 		for (let i = 0; i < value_length; i++) {
 
-			// // media url from data.datalist based on selected context quality
-				const file_info	= files_info.find(el => el.quality===quality)
-				const url		= file_info
-					? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			// THE THUMB FIRST, like every other media mini view (image, av, pdf, 3d).
+			// This one loaded the FULL VECTOR at the active quality, cache-busted on
+			// every single render, and never checked that the file existed — so a
+			// grid of autocompletes re-downloaded N complete SVG documents to draw
+			// them at thumbnail size, and a record with no file asked the browser for
+			// a URL that 404s instead of showing the placeholder. component_svg has a
+			// raster thumb since 2026-08-08; this is the view it was built for.
+				const thumb		= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
+				const file_info	= thumb
+					|| files_info.find(el => el.quality===quality && el.file_exist===true)
+					|| files_info.find(el => el.quality===quality)
+				const url		= file_info?.file_path
+					? DEDALO_MEDIA_URL + file_info.file_path + (thumb ? '' : '?t=' + (new Date()).getTime())
 					: page_globals.fallback_image
 
 			const image	= ui.create_dom_element({

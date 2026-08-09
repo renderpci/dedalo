@@ -149,7 +149,10 @@ export interface MediaTypeSpec {
 	 * thumb where the type has one.
 	 */
 	readonly listQualities: readonly string[];
-	/** Whether this type builds a thumbnail (image/av/pdf/3d yes; svg no). */
+	/**
+	 * Whether this type builds a thumbnail. ALL FIVE do — see THUMB_IS_UNIVERSAL
+	 * for why the field survives an all-true census.
+	 */
 	readonly hasThumb: boolean;
 }
 
@@ -236,40 +239,152 @@ export function thumbQuality(): string {
 }
 
 /**
- * List qualities per type: the default quality, plus the thumb for the types
- * that have one (image/pdf/3d). svg has no thumb (single 'web'). av lists its
- * default ('404') — historically absent from the TS projection, now covered.
+ * WHERE A MODEL'S THUMB COMES FROM — the census every thumb trigger dispatches
+ * on, so that "when is a thumbnail (re)built" has ONE answer per model instead of
+ * one per call site.
+ *
+ *  - `default_tier`: the record's own delivered file (default quality, falling
+ *    back to the master). image, pdf and svg differ only in the RECIPE that turns
+ *    it into a raster — plain resize, page-1 rasterization, librsvg render — and
+ *    that recipe lives in ONE place (processing.ts buildThumbVersion).
+ *  - `posterframe`: a still picture stored beside the qualities, because the
+ *    record's own file is not an image at all (a video, a mesh). See
+ *    POSTERFRAME_WRITER_BY_MODEL for who produces it.
+ *
+ * The distinction is not cosmetic: it decides what INVALIDATES a thumb. A
+ * `default_tier` thumb is stale when the delivered file changes; a `posterframe`
+ * thumb is stale when the POSTERFRAME changes, and survives a master it no longer
+ * depicts unless something retires it.
  */
-function listQualitiesFor(folder: MediaTypeFolder, cfg: MediaTypeConfig): string[] {
-	const thumb = config.media.thumb.quality;
-	switch (folder) {
-		case 'image':
-			return [cfg.defaultQuality, thumb];
-		case 'pdf':
-			return [cfg.defaultQuality, thumb];
-		case '3d':
-			return [cfg.defaultQuality, thumb];
-		case 'av':
-			// PHP component_media_common::get_list_value projects [default_quality,
-			// thumb_quality] for EVERY media type, av included — the stored thumb is
-			// the posterframe-derived jpg the list view shows (extension filtering
-			// keeps the jpg over the mp4 for the thumb row).
-			return [cfg.defaultQuality, thumb];
-		case 'svg':
-			return [cfg.defaultQuality];
-	}
+export const THUMB_SOURCE_BY_MODEL: Readonly<Record<MediaModel, 'default_tier' | 'posterframe'>> = {
+	component_image: 'default_tier',
+	component_pdf: 'default_tier',
+	component_svg: 'default_tier',
+	component_av: 'posterframe',
+	component_3d: 'posterframe',
+};
+
+/**
+ * WHO WRITES THE POSTERFRAME — the one irreducible difference between the two
+ * posterframe models, stated as a fact rather than discovered as a branch.
+ *
+ *  - `server_frame_extract`: the engine can mint one unaided (ffmpeg pulls a
+ *    frame). PHP did exactly this on demand — `component_av::create_thumb`
+ *    (frozen class.component_av.php:560) auto-generates a posterframe at t=10
+ *    whenever one is missing and only then gives up — so an av thumb is never
+ *    blocked on an operator.
+ *  - `client_capture`: only a browser can produce it (a mesh must be RENDERED,
+ *    and this engine has no renderer). The thumb of such a model is therefore the
+ *    one thing the server cannot self-heal, which is why the refusal has to name
+ *    the gear that can.
+ *  - `null`: the model has no posterframe at all.
+ */
+export const POSTERFRAME_WRITER_BY_MODEL: Readonly<
+	Record<MediaModel, 'server_frame_extract' | 'client_capture' | null>
+> = {
+	component_image: null,
+	component_pdf: null,
+	component_svg: null,
+	component_av: 'server_frame_extract',
+	component_3d: 'client_capture',
+};
+
+/**
+ * How an operator gets a posterframe the ENGINE cannot mint — the operator-facing
+ * half of the census above, and the text every refusal ends with. Non-null
+ * exactly for the `client_capture` models (the tripwire holds the two maps to it).
+ */
+export const CLIENT_POSTERFRAME_REMEDY: Readonly<Record<MediaModel, string | null>> = {
+	component_image: null,
+	component_pdf: null,
+	component_svg: null,
+	component_av: null,
+	component_3d:
+		"open the record's 3D viewer and use the media-versions panel's thumb gear: it renders the live scene to a canvas and uploads that as the posterframe (there is no server-side mesh renderer in this engine)",
+};
+
+/**
+ * THE POSTERFRAME MODELS — the models whose THUMB IS A PICTURE OF THEIR
+ * POSTERFRAME, and never a derivative of the media file itself. DERIVED from
+ * THUMB_SOURCE_BY_MODEL: one census, not two lists to keep in step.
+ *
+ * The posterframe is not a quality: it lives in its own `posterframe` sub-folder
+ * beside the quality dirs (`{folder}{initial}/posterframe{bucket}/{id}.jpg`), is
+ * never scanned into files_info, and reaches the client as `posterframe_url`
+ * (media/component_emit.ts). The THUMB tier is the resize of it — which is what
+ * `DEDALO_QUALITY_THUMB` documents in so many words: "AV | Will render the
+ * posterframe", "3d | Will render the posterframe" (config/catalog/media.ts).
+ *
+ * IT IS A CENSUS BECAUSE THE THUMB BUILDER HAS TO BRANCH ON IT. Neither model's
+ * own file can be handed to ImageMagick: an mp4 would put a video in the thumb
+ * tier, and a mesh has no decode delegate at all. MEASURED on the shipped code,
+ * the media-versions panel's thumb gear on a .glb answered `identify: no decode
+ * delegate for this image format .../3d/web/0/test26_test3_207.glb` — the generic
+ * image branch had fed the model file to the raster thumbnailer.
+ *
+ * The two models differ ONLY in who writes the posterframe: ffmpeg extracts the
+ * av one from a frame (createAvPosterframe), while a 3d posterframe can only be
+ * a snapshot of a RENDERED scene — this engine has no mesh renderer, so the
+ * browser's WebGL canvas captures it and uploads it (component_3d.js
+ * create_posterframe → dd_component_3d_api::move_file_to_dir).
+ */
+export const POSTERFRAME_MODELS: ReadonlySet<MediaModel> = new Set<MediaModel>(
+	(Object.keys(THUMB_SOURCE_BY_MODEL) as MediaModel[]).filter(
+		(model) => THUMB_SOURCE_BY_MODEL[model] === 'posterframe',
+	),
+);
+
+/** Whether this model's thumb is built from its posterframe (see POSTERFRAME_MODELS). */
+export function hasPosterframe(model: MediaModel): boolean {
+	return POSTERFRAME_MODELS.has(model);
 }
 
 /**
- * Whether the type exposes a generic 'thumb' quality tier. image/av/pdf/3d do;
- * svg has none. av's thumb is the posterframe-derived jpg written by
- * tool_posterframe into the standard thumb quality dir — PHP
- * component_media_common::get_list_value projects [default, thumb] for av, so
- * the scanner must treat thumb as a real av tier (thumbExtension jpg).
+ * List qualities per type: `[default_quality, thumb_quality]` — THE SAME PAIR FOR
+ * EVERY TYPE, because that is what the projection law says.
+ *
+ * PHP `component_media_common::get_list_value` builds
+ * `$ar_quality_to_include = [get_default_quality(), get_thumb_quality()]`
+ * (frozen class.component_media_common.php:1554) with no per-type branch at all.
+ * The per-type switch this replaces carried one exception — svg returned the
+ * default alone — which was the same missing-thumb assumption `hasThumb` carried
+ * (see THUMB_IS_UNIVERSAL), not a projection rule.
+ *
+ * ADDING THE THUMB EMITS NOTHING BY ITSELF: `media_list_value.ts` drops any
+ * quality with no existing file, so a record gains a thumb entry exactly when a
+ * thumb file appears on disk — which is what PHP did too. It restores parity
+ * rather than diverging: the divergence was TS refusing to project a tier PHP
+ * always projected.
  */
-function typeHasThumb(folder: MediaTypeFolder): boolean {
-	return folder === 'image' || folder === 'av' || folder === 'pdf' || folder === '3d';
+function listQualitiesFor(_folder: MediaTypeFolder, cfg: MediaTypeConfig): string[] {
+	return [cfg.defaultQuality, config.media.thumb.quality];
 }
+
+/**
+ * EVERY media type builds a thumbnail — the census, stated once.
+ *
+ * The thumb is NOT part of a type's configured ladder for most of them: it is
+ * appended beyond it (files_info.ts, PHP get_files_info :1347), which is why
+ * `hasThumb` exists as a field of its own rather than as `qualities.includes`.
+ * The value is a CONSTANT rather than a per-type predicate because there is no
+ * longer a type that lacks one, and a `folder => boolean` function whose body is
+ * `true` invites someone to "restore" an exception without the evidence below.
+ *
+ * SVG WAS THE EXCEPTION AND THAT WAS A REWRITE GAP (fixed 2026-08-08). PHP built
+ * one: `component_svg::create_thumb` (frozen class.component_svg.php:353)
+ * rasterizes the default-quality file into the thumb path, and its own
+ * `get_ar_quality` says so — "the 'thumb' raster quality is handled separately by
+ * the base class and does not appear in this list". Everything downstream still
+ * assumed it: `MEDIA_SPEC §4.4`, the fixture corpus (§11 "svg fixture | web raster
+ * thumb"), `buildVersionCore`'s own comment about "the component_pdf /
+ * component_svg thumb gears", and the client's list view, which PREFERS the thumb
+ * jpg over re-rendering the vector (view_default_list_svg.js:145). With the flag
+ * false, `assertValidQuality` refused the tier before any of that could run, so
+ * the media-versions panel's thumb gear answered "Unknown media quality 'thumb'
+ * for component_svg (not in ladder [original, web])" — MEASURED, on every SVG
+ * record. The renderer it needs is `engine/svg.ts` (librsvg, NOT ImageMagick).
+ */
+const THUMB_IS_UNIVERSAL = true;
 
 /**
  * The canonical name of the retouched tier — the BELT, never the primary read.
@@ -409,7 +524,7 @@ export function mediaTypeOf(model: string): MediaTypeSpec | null {
 			]),
 		),
 		listQualities: Object.freeze(listQualitiesFor(entry.folder, cfg)),
-		hasThumb: typeHasThumb(entry.folder),
+		hasThumb: THUMB_IS_UNIVERSAL,
 	});
 	specCache.set(model as MediaModel, spec);
 	return spec;

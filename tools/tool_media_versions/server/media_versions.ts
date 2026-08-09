@@ -19,6 +19,7 @@ import {
 	scanContextFromItem,
 } from '../../../src/core/media/files_info.ts';
 import { buildMediaIdentifier, type MediaIdentity } from '../../../src/core/media/path.ts';
+import { regenerateMissingDerivatives } from '../../../src/core/media/repair.ts';
 import {
 	type MediaToolContext,
 	resolveMediaToolContext,
@@ -216,6 +217,55 @@ export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 	try {
 		const mediaContext = await resolveMediaToolContext(ctx.options);
 		const { spec, identity, pathOpts } = mediaContext;
+
+		// IT REGENERATES BEFORE IT RE-INDEXES — which is what the button has always
+		// said and what it never did.
+		//
+		// The panel's control is labelled "Regenerate files", its tooltip promises
+		// "re-create alternatives and thumb", and it ships a "Delete normalized
+		// files" checkbox whose value the client dutifully sends as
+		// `regenerate_options`. The handler read NONE of it: it re-scanned the disk
+		// and persisted the result, so on a record whose derivatives were missing —
+		// the exact case the unsync warning appears for — the operator pressed
+		// Regenerate, was told "Success", and nothing was built. A control that
+		// reports success for work it did not do is worse than a missing control.
+		//
+		// `regenerateMissingDerivatives` is the same pass tool_update_cache runs
+		// (repair.ts): build what is MISSING, never re-encode what is there, with
+		// every model's thumb going through the shared handler. Its failures are
+		// VALUES — a host that cannot encode one format must not cost the operator
+		// the whole repair — and they travel to the panel below.
+		const options = (ctx.options.regenerate_options ?? {}) as {
+			delete_normalized_files?: unknown;
+		};
+		const item =
+			mediaContext.items.find((entry) => (entry.lang ?? null) === identity.lang) ??
+			mediaContext.items[0];
+		const originalName = (item as { original_normalized_name?: unknown } | undefined)
+			?.original_normalized_name;
+		//
+		// THE REBUILD MAY NOT COST THE RE-INDEX. Re-indexing is the operation the
+		// operator asked for — it is what repairs a record whose files sit on disk
+		// while its media key is NULL — and rebuilding is best-effort on top of it.
+		// A pass that throws (no master on this box, a binary this host lacks) must
+		// therefore become a VALUE here, not a failed request: with an unguarded
+		// await, a record with nothing to rebuild FROM answered `result:false` and
+		// its index was never repaired. Same doctrine as the twins and the covers,
+		// applied to the whole pass.
+		let rebuildErrors: string[] = [];
+		try {
+			rebuildErrors = await regenerateMissingDerivatives(spec.model, spec, identity, pathOpts, {
+				// The raw upload extension behind a normalized name (the '.tif' behind a
+				// '.jpg'), so the pass resolves the right master — same cue repair.ts uses.
+				rawExtension:
+					typeof originalName === 'string' ? (originalName.split('.').pop() ?? null) : null,
+				deleteNormalized: options.delete_normalized_files === true,
+				bulkProcessId: null,
+			});
+		} catch (error) {
+			rebuildErrors = [(error as Error).message];
+		}
+
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 
 		// repairStoredFilesInfo: this is the ONE path that may MINT a stored item —
@@ -249,16 +299,28 @@ export async function syncFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 			}),
 			identity,
 		);
+		// A derivative that could not be rebuilt is reported BESIDE the success: the
+		// re-index really did happen, and telling the operator the whole thing failed
+		// would be as wrong as the old silence.
+		const note =
+			rebuildErrors.length === 0
+				? ''
+				: ` — but ${rebuildErrors.length} file(s) could NOT be rebuilt: ${rebuildErrors.join('; ')}`;
 		if (outcome.action === 'created') {
 			return {
 				result: true,
-				msg: `Success. Recorded ${freshFilesInfo.length} file(s) the component had no stored value for.`,
-				errors: [],
+				msg: `Success. Recorded ${freshFilesInfo.length} file(s) the component had no stored value for.${note}`,
+				errors: rebuildErrors,
 				files_info: freshFilesInfo,
 			};
 		}
 		// 'refreshed' / 'noop': the record exists and now matches the disk.
-		return { result: true, msg: 'Success. Request done', errors: [], files_info: freshFilesInfo };
+		return {
+			result: true,
+			msg: `Success. Request done${note}`,
+			errors: rebuildErrors,
+			files_info: freshFilesInfo,
+		};
 	} catch (error) {
 		return fail((error as Error).message);
 	}

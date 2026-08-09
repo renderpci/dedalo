@@ -18,7 +18,7 @@ import {
 	requirePrincipal,
 } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
-import { resolveMediaActionContext } from './media_action_context.ts';
+import { persistMediaFilesInfo, resolveMediaActionContext } from './media_action_context.ts';
 
 /**
  * dd_component_av_api::create_posterframe / delete_posterframe. Both need section
@@ -37,10 +37,24 @@ async function posterframeAction(
 	const { createAvPosterframe, deletePosterframe } = await import(
 		'../../media/tools/posterframe.ts'
 	);
+	// A posterframe write or delete is ALWAYS a thumb change too — the thumb is a
+	// picture of the posterframe (THUMB_SOURCE_BY_MODEL) — and both cores keep the
+	// two in step. What the CORE cannot do is persist: it is filesystem-only by
+	// design, so the stored files_info is written back here (see below).
 	const result =
 		op === 'create'
 			? await createAvPosterframe(resolved.ctx, String(options.current_time ?? '0'))
-			: deletePosterframe(resolved.ctx);
+			: (await deletePosterframe(resolved.ctx)).result;
+
+	// PERSIST what just changed on disk. Without this the record's stored index
+	// still claims the old thumb state, and every reader that trusts the cache —
+	// list mode's projection, the export path — serves it. av is re-scanned per
+	// read (component_emit.ts) so this was invisible on av alone; the same handler
+	// shape on 3d was NOT, which is how a freshly captured 3d thumb stayed
+	// invisible in lists.
+	if (result === true) {
+		await persistMediaFilesInfo(resolved.ctx);
+	}
 
 	// Activity audit (PHP logger 'DELETE FILE' code 12). Logged HERE rather than
 	// in deletePosterframe, which is synchronous and whose MediaContext carries

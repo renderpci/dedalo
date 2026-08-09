@@ -1021,6 +1021,38 @@ DEDALO_IDENTIFY_PATH="/usr/bin/identify"
 
 ---
 
+### SVG
+
+DEDALO_RSVG_CONVERT_PATH `string`
+
+This parameter defines the path to the `rsvg-convert` program in the server, shipped with [librsvg](https://gitlab.gnome.org/GNOME/librsvg). Dédalo uses it — and only it — to turn a vector SVG into a raster image, which is how the thumbnail of an SVG record is produced.
+
+ImageMagick is deliberately NOT used for this. Dédalo runs ImageMagick under a hardened policy that disables its scripting coders (`MVG`/`MSL`), a long-standing remote-code-execution vector; on a build without a librsvg delegate ImageMagick renders SVG through its own renderer, which emits MVG, so every SVG rasterization is refused by that policy. Rendering the vector in a dedicated program instead keeps the ImageMagick hardening intact.
+
+Install librsvg (`brew install librsvg`, `apt install librsvg2-bin`) and the path is derived from DEDALO_BINARY_BASE, so no configuration is needed. Set this key only to point at a binary in a non-standard location. Without it, SVG records keep working — upload, storage, display and download are unaffected — but their thumbnail cannot be built, and the media-versions panel says so.
+
+```bash
+DEDALO_RSVG_CONVERT_PATH="/usr/bin/rsvg-convert"
+```
+
+*Default: `<DEDALO_BINARY_BASE>/rsvg-convert`*
+
+---
+
+### SVG
+
+DEDALO_SVG_THUMB_DPI `int`
+
+This parameter defines the resolution, in dots per inch, at which an SVG is rendered before it is reduced to a thumbnail. A vector file has no pixels of its own, so a resolution has to be chosen for it; 150 dpi is enough for a crisp thumbnail without rendering a needlessly large intermediate image.
+
+```bash
+DEDALO_SVG_THUMB_DPI=150
+```
+
+*Default: 150*
+
+---
+
 ### Image
 
 DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS `array` *optional*
@@ -1573,7 +1605,7 @@ This parameter defines the different qualities that can be used transformed svg 
 This parameter will use to store different svg version files to specific quality.
 
 ```bash
-DEDALO_SVG_AR_QUALITY=[DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT]
+DEDALO_SVG_AR_QUALITY=[DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT, DEDALO_QUALITY_THUMB]
 ```
 
 *Default: ["original","web"]*
@@ -1888,17 +1920,40 @@ so the master must name the client origins here. The server-to-server probe
 (`checkRemoteServer`) is unaffected — it is a Bun `fetch`, and CORS is a browser rule.
 
 An entry is matched as an **exact, case-sensitive origin string** — scheme + host + port, no
-path, no trailing slash, no wildcards. `https://a.example.org` does not match
+path, no trailing slash, no partial wildcards. `https://a.example.org` does not match
 `https://a.example.org:443` or `http://a.example.org`.
 
-Only a listed origin is echoed back in `Access-Control-Allow-Origin`; `*` is never sent, and
-neither is `Access-Control-Allow-Credentials` — the client calls cross-origin with
-`credentials: 'same-origin'` (`data_manager.js`), so no cookie ever rides one of these
-requests. A cross-origin caller is therefore ALWAYS unauthenticated and reaches only what the
+Only a listed origin is echoed back in `Access-Control-Allow-Origin`; `*` is never sent on
+the wire, and neither is `Access-Control-Allow-Credentials` — the client calls cross-origin
+with `credentials: 'same-origin'` (`data_manager.js`), and the session cookie is
+`SameSite=Lax`, so no cookie ever rides one of these requests whatever the calling page asks
+for. A cross-origin caller is therefore ALWAYS unauthenticated and reaches only what the
 API opens to an anonymous request; listing an origin does not grant it a session.
 
 ```bash
 DEDALO_CORS_ALLOWED_ORIGINS=["https://archive.example.org","https://museum.example.org"]
+```
+
+**A PUBLIC ontology master sets the single entry `*`, meaning any origin.** It is the only
+way to express a master that serves its manifest to installations you do not know in advance:
+that set of client origins is unbounded, so it cannot be enumerated. `*` is a whole-list
+sentinel, not a pattern — it simply wins over any other entry, and there is no
+`*.example.org` form, because a suffix rule is the classic CORS bypass. The request origin
+is still what gets echoed back, so `Vary: Origin` keeps meaning what it says.
+
+What `*` changes is **who may ASK**: from "any HTTP client" — already true today, since CORS
+is a browser rule and not a firewall — to "any HTTP client, plus any web page in a visitor's
+browser". The surface it opens is the anonymous one `curl` already reaches: the update
+manifest and the reachability probe (still behind the `ONTOLOGY_SERVER_CODE` access code
+every client presents), plus login and password reset, which are throttled per client address
+(`LOGIN_MAX_ATTEMPTS`) — note that a page running in a visitor's browser spends the
+VISITOR's address against that throttle. Nothing authenticated is reachable either way, on
+any setting. Use `*` on a deliberately public master; on an ordinary installation, name the
+origins.
+
+```bash
+# public ontology master (IS_AN_ONTOLOGY_SERVER=true) serving unknown clients
+DEDALO_CORS_ALLOWED_ORIGINS=["*"]
 ```
 
 *Default: []*
@@ -4448,6 +4503,12 @@ ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://mast
 ```
 
 It gets the tld from the [ACTIVE_ONTOLOGY_TLDS](#defining-active-ontology-tlds) definition.
+
+The update panel interrogates each master **from the browser**, so the engine adds every origin
+named here to its own `connect-src` Content-Security-Policy automatically — there is no second
+setting to keep in step. The policy is built at boot, so **restart** after adding a master, or
+the browser refuses the call before it leaves and the panel reports
+`Max retries reached, request failed`.
 
 Local ontologies can be provided by other installations in parallel by adding new
 entries to this list. Every Dédalo server can provide its own ontologies.
