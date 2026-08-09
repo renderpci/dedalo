@@ -7,7 +7,26 @@
  * widget output as {id,key,value,widget} items); an empty row falls back to
  * LIVE widget compute (PHP get_db_data → get_data), which emits the
  * insertion-ordered {widget,key,widget_id,value} shape. Gated in
- * test/parity/info_widget_differential.test.ts.
+ * test/unit/info_widget_native.test.ts (the DEC-14b twin of the retired
+ * differential) + test/unit/component_info_legacy_state_native.test.ts.
+ *
+ * PHP's `empty($data)` is preserved verbatim for null and [] — the ONE
+ * divergence (WC-2026-08-09-info-legacy-stored-value-fallthrough) is that a
+ * stored array which is ENTIRELY v5 residue also falls through. "Residue" is
+ * isLegacyStateResidue: a POSITIVE identification of the v5-era
+ * `{id,state:{lg-…:{…}},value:null,section_id,section_tipo,component_tipo}`
+ * blob — still on ~690 records of the reference install — which reached a
+ * client that selects widget items by `widget`/`key`/`widget_id` and therefore
+ * drew nothing. It is deliberately NOT the negative test "no entry carries a
+ * widget tag": that would also discard every stored shape we have not
+ * enumerated, and an unclassifiable stored array must keep PHP's generic
+ * behaviour instead. The live compute the residue falls through to is correct,
+ * cheap, and self-heals the row on its next save. The discarded value is
+ * COUNTED (component_info_legacy_stored_value) so the remaining corpus stays
+ * visible to ops instead of vanishing quietly. NO data migration: nothing is
+ * rewritten, and a curator's stored values are never at risk. When the ddo
+ * declares no widgets the live compute returns null, so such a record serves
+ * null where PHP served the (unrenderable) blob.
  *
  * WC-026 (deliberate divergence): both branches then pass through
  * normalizeWidgetEntryKeys — every top-level widget item carries BOTH `id`
@@ -24,6 +43,7 @@
  * principal (background/test contexts) falls back to the superuser tool set.
  */
 
+import { incrementCounter } from '../../api/counters.ts';
 import { currentPrincipal } from '../../security/request_context.ts';
 import type { ComponentEmitHook, EmitHookContext } from '../emit_hooks.ts';
 
@@ -32,8 +52,16 @@ export const infoEmitHook: ComponentEmitHook = {
 		value: unknown[] | null,
 		context: EmitHookContext,
 	): Promise<unknown[] | null> {
-		const { normalizeWidgetEntryKeys } = await import('./widgets/widget_common.ts');
-		if (value !== null && value.length > 0) return normalizeWidgetEntryKeys(value);
+		const { isLegacyStateResidue, normalizeWidgetEntryKeys } = await import(
+			'./widgets/widget_common.ts'
+		);
+		if (value !== null && value.length > 0) {
+			// PHP: any non-empty stored array wins. It still does — UNLESS every
+			// entry is a positively identified v5 state blob, which no renderer
+			// can read. Then fall through to the live compute and publish the fact.
+			if (!isLegacyStateResidue(value)) return normalizeWidgetEntryKeys(value);
+			incrementCounter('component_info_legacy_stored_value');
+		}
 		const { computeInfoWidgets } = await import('./widgets/registry.ts');
 		const principal = currentPrincipal();
 		const computed = await computeInfoWidgets(context.ddo.tipo, {

@@ -14,11 +14,29 @@
  * Write path: the VERIFIED apply_value direct path (persistRecordKeys +
  * recordTimeMachine), NOT saveComponentData — only it threads the bulk id.
  * The chokepoint stamps the record's modified metadata like every PHP save.
+ *
+ * DATAFRAME-PAIRED components take the SAME frame path as apply_value
+ * (dataframe_restore.ts): the pre-batch snapshot's dd490 entries are replayed
+ * into their slots and stripped out of the main column. PHP's bulk_revert did
+ * neither — it fed the raw snapshot to set_data — which writes frame locators
+ * into the main component's own key and leaves the slots at today's values.
+ * That is the same corruption apply_value's strip exists to prevent, so the
+ * two doors share one primitive rather than one of them keeping the defect
+ * (deliberate divergence,
+ * WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames).
+ * A row whose pre-batch snapshot carries NO frames over LIVE frames is skipped
+ * with a surfaced error instead of reverted (`refuseFramelessWipe` — the
+ * unported capture half would make that revert an unrecoverable deletion).
+ *
+ * The observer cascade fires per reverted component, POST-COMMIT — PHP
+ * reverted through `element->save()`, whose last act is
+ * `propagate_to_observers()`.
  */
 
 import { dbTimestamp } from '../../../src/core/db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
-import { sql } from '../../../src/core/db/postgres.ts';
+import { absorbComponentItemIds } from '../../../src/core/db/matrix_write.ts';
+import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
 import {
 	getColumnNameByModel,
@@ -29,7 +47,17 @@ import { createSectionRecord } from '../../../src/core/section/record/create_rec
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
+import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	applyDataframeRestore,
+	composeTimeMachineSnapshot,
+	type DataframeSlotRestore,
+	planDataframeRestore,
+	refuseFramelessWipe,
+	resolveDataframeSlotTipos,
+} from './dataframe_restore.ts';
+import { propagateRestoreToObservers, readComponentItems } from './restore_common.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
@@ -187,22 +215,80 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				errors.push(`no column/table for ${model}/${row.section_tipo}`);
 				continue;
 			}
-			await persistRecordKeys(
-				{ table, sectionTipo: row.section_tipo, sectionId: row.section_id },
-				[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertData }],
-				{ userId },
+			const writeTarget = { table, sectionTipo: row.section_tipo, sectionId: row.section_id };
+
+			// A `component_dataframe` row IS a slot: its snapshot's dd490 entries
+			// are its own value, so it takes neither the frame strip nor a slot
+			// plan (there is no TM preview to disagree with here, unlike
+			// apply_value — see that door's header).
+			const isSlotRow = model === 'component_dataframe';
+			const mainData = isSlotRow ? revertData : stripDataframeFramesFromTmMain(model, revertData);
+			const framePlan: DataframeSlotRestore[] = isSlotRow
+				? []
+				: await planDataframeRestore(
+						row.tipo,
+						revertData,
+						await resolveDataframeSlotTipos(row.tipo),
+					);
+
+			// Same frameless-wipe guard as apply_value: a snapshot with no frames
+			// over live frames would DELETE them unrecoverably (the CAPTURE half is
+			// unported — dataframe_restore.ts). Surfaced per row, never silent, and
+			// this component is left untouched rather than half-reverted.
+			const framelessRefusal = await refuseFramelessWipe(writeTarget, row.tipo, framePlan);
+			if (framelessRefusal !== null) {
+				errors.push(`${row.section_tipo}/${row.tipo}#${row.section_id}: ${framelessRefusal}`);
+				continue;
+			}
+
+			// The locators this revert DROPS — the observer cascade needs them.
+			const preRevertItems = await readComponentItems(
+				table,
+				row.section_tipo,
+				row.section_id,
+				column,
+				row.tipo,
 			);
-			await recordTimeMachine(
-				{
-					sectionTipo: row.section_tipo,
-					sectionId: row.section_id,
-					componentTipo: row.tipo,
-					lang: row.lang,
-					userId,
-					data: revertData,
-					bulkProcessId: newBulkId,
-				},
-				dbTimestamp(),
+
+			await withTransaction(async () => {
+				// Frames FIRST (PHP apply_value's order; see dataframe_restore.ts).
+				await applyDataframeRestore(writeTarget, framePlan);
+				await persistRecordKeys(
+					writeTarget,
+					[{ column: column as MatrixJsonbColumn, key: row.tipo, value: mainData }],
+					{ userId },
+				);
+				// Reverted items carry explicit ids; raise the counter so a later
+				// insert cannot mint a duplicate (PHP raises on every set_data).
+				await absorbComponentItemIds(
+					table,
+					row.section_tipo,
+					row.section_id,
+					row.tipo,
+					Array.isArray(mainData) ? mainData : [],
+				);
+				await recordTimeMachine(
+					{
+						sectionTipo: row.section_tipo,
+						sectionId: row.section_id,
+						componentTipo: row.tipo,
+						lang: row.lang,
+						userId,
+						data: composeTimeMachineSnapshot(mainData, framePlan),
+						bulkProcessId: newBulkId,
+					},
+					dbTimestamp(),
+				);
+			});
+
+			// POST-COMMIT (a cascade hop refuses to run inside a transaction).
+			await propagateRestoreToObservers(
+				row.tipo,
+				row.section_tipo,
+				row.section_id,
+				preRevertItems,
+				mainData,
+				userId,
 			);
 			// One activity row PER REVERTED COMPONENT — PHP logs inside its loop
 			// too (tool_time_machine :419). A wide bulk therefore appends many

@@ -38,6 +38,14 @@ export interface BuilderContext {
 	/** The component model (dispatch key). */
 	model: string;
 	/**
+	 * component_date leaves only: the ontology node's `date_mode` property
+	 * ('date' | 'range' | 'period' | 'time' | 'date_time'), which selects the
+	 * per-mode SQL handler exactly as PHP get_date_search_context does. Absent
+	 * ⇒ PHP's own `?? 'date'` fallback; an unrecognised value THROWS in the
+	 * builder rather than emitting a silently empty predicate.
+	 */
+	dateMode?: string;
+	/**
 	 * string-column leaves only: the physical table is COVERED by the
 	 * matrix_string_search per-value store (its sync trigger exists — see
 	 * search_store.ts), so builder_string may prepend its trigram-served
@@ -45,6 +53,17 @@ export interface BuilderContext {
 	 * SQL (byte-identical, store-less behavior).
 	 */
 	searchStoreCovered?: boolean;
+	/**
+	 * relation-family leaves only: a full SQL EXPRESSION to compare against in
+	 * place of the default `<alias>.<column>`. Built by the builder itself from
+	 * already-gated identifiers — never from leaf input — so it carries the same
+	 * security invariant as `column`. Its one use is the autocomplete_hi ancestor
+	 * wrap, which must read `relation_search` NULL-safely on its NEGATING arm:
+	 * that column is NULL on 1964 of 2175 live `matrix` rows, and three-valued
+	 * logic turned `NOT (NULL @> q)` into NULL, hiding 72 of 76 `oh1` records
+	 * from a "different from X" search.
+	 */
+	columnExpr?: string;
 }
 
 /** A resolved SQL fragment: sentence with _Q1_-style tokens + their values. */

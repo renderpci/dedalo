@@ -36,6 +36,7 @@ import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { resolveLangItems } from '../resolve/lang_fallback.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
+import { SUPERUSER_ID } from '../security/permissions.ts';
 import {
 	AFFECTED_MODELS_SECTION_TIPO,
 	MODEL_NAME_COMPONENT,
@@ -120,16 +121,33 @@ export async function getSuperuserUserTools(): Promise<ToolSimpleContext[]> {
 
 /**
  * The AUTHORIZED tools of one user (PHP tool_common::get_user_tools).
- * Superusers/global admins receive every active tool; anyone else receives
- * the tools their PROFILE record grants (dd234's dd1067 locators → tool
- * registry section_ids) plus tools flagged always_active. A user without a
- * profile gets only the always_active set (fail-closed).
+ *
+ * THE UNFILTERED LIST BELONGS TO THE SUPERUSER ID ALONE. PHP's only unfiltered
+ * branch is `if ($user_id == DEDALO_SUPERUSER)` (tools/tool_common/
+ * class.tool_common.php:1403) — there is no admin FLAG in that decision. Every
+ * other user, global admin included, receives the tools their PROFILE record
+ * grants (dd234's dd1067 locators → tool registry section_ids) plus the tools
+ * flagged always_active; a user without a profile gets only the always_active
+ * set (fail-closed).
+ *
+ * 2026-08-09 (audit OH1 finding 5): this function used to open with
+ * `if (isGlobalAdmin) return getSuperuserUserTools()`, so every non-superuser
+ * global admin was over-granted EVERY tool at six of the seven call sites — the
+ * menu door alone had been corrected, in isolation, by passing the rule
+ * (`userId === SUPERUSER_ID`) instead of the caller's flag. The rule now lives
+ * HERE, once, so every door inherits it.
+ *
+ * @param deprecatedIsGlobalAdmin IGNORED — kept only so the call sites that
+ * still pass `principal.isGlobalAdmin` compile until they are cleaned up
+ * (handoff). Passing `true` cannot widen the result, and omitting it changes
+ * nothing: both are pinned in test/unit/user_tools_admin_flag_native.test.ts.
  */
 export async function getUserTools(
 	userId: number,
-	isGlobalAdmin: boolean,
+	deprecatedIsGlobalAdmin?: boolean,
 ): Promise<ToolSimpleContext[]> {
-	if (isGlobalAdmin) return getSuperuserUserTools();
+	void deprecatedIsGlobalAdmin;
+	if (userId === SUPERUSER_ID) return getSuperuserUserTools();
 
 	const allowedIds = await getProfileGrantedToolIds(userId);
 	const rows = await fetchActiveToolRows();

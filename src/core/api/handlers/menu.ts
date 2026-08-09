@@ -37,8 +37,8 @@
  * - section_tool nodes WITH a `tool_config`: tipo/model rewritten to the
  *   target section and a tool_context (the tool's simple context + the
  *   enriched tool_config, ddo_map 'self' resolution + model/translatable/
- *   label stamps) injected into config. A node whose named tool is not in
- *   user_tools is dropped like PHP does — but recorded in `skipped`.
+ *   label stamps) injected into config. A node whose named tool is not in the
+ *   VIEWER's user_tools is dropped like PHP does — but recorded in `skipped`.
  * - the two thesaurus VIRTUAL areas (hierarchy56/hierarchy57): model becomes
  *   area_thesaurus with the swap_tipo (dd100) config; hierarchy57 adds the
  *   model view mode + url_vars.
@@ -329,7 +329,7 @@ export async function getMenuTreeDatalist(viewer?: {
 		// and injects a tool_context so the client activates the tool.
 		const toolConfigBag = area.properties?.tool_config as Record<string, unknown> | undefined;
 		if (area.model === 'section_tool' && toolConfigBag != null) {
-			const item = await buildSectionToolItem(area, parent, toolConfigBag);
+			const item = await buildSectionToolItem(area, parent, toolConfigBag, viewer);
 			if (item === null) {
 				// The named tool is not installed/authorized — PHP silently drops
 				// the entry; we drop AND record it.
@@ -382,15 +382,35 @@ export async function getMenuTreeDatalist(viewer?: {
  * Build the rewritten datalist item for one section_tool area (PHP menu
  * section_tool case + tool_common::create_tool_simple_context tool_config
  * enrichment, shared via tools/section_tool_context.ts). Returns null when the
- * named tool is not in the user's tools.
+ * named tool is not in the VIEWER's tools.
+ *
+ * PHP resolves the named tool against `tool_common::get_user_tools(
+ * logged_user_id())` (class.menu.php:231) — the CALLER's list, not the
+ * superuser's — and PHP's unfiltered branch is `$user_id == DEDALO_SUPERUSER`
+ * ALONE (tools/tool_common/class.tool_common.php:1403). A global-admin FLAG
+ * grants no tool: an admin whose profile does not grant it loses the menu entry
+ * exactly like anyone else. `viewer === undefined` is the internal/superuser
+ * tree (the catalog callers), which keeps the unfiltered list.
+ *
+ * That rule now lives in ONE place — `tools/registry.ts` getUserTools, which
+ * tests `userId === SUPERUSER_ID` itself (audit OH1 finding 5, landed
+ * 2026-08-09). This door therefore just names the viewer; it used to pass the
+ * rule as the second argument because getUserTools opened with
+ * `if (isGlobalAdmin) return getSuperuserUserTools()` and the fix could only be
+ * made locally. Gated from both sides in
+ * test/unit/oh1_permissions_native.test.ts (superuser keeps the entry; a
+ * non-superuser global admin without the profile grant loses it).
  */
 async function buildSectionToolItem(
 	area: AreaNode,
 	parent: string | null,
 	toolConfigBag: Record<string, unknown>,
+	viewer?: { userId: number },
 ): Promise<MenuTreeItem | null> {
-	const { getSuperuserUserTools } = await import('../../tools/registry.ts');
-	const toolContext = await buildSectionToolContext(toolConfigBag, await getSuperuserUserTools());
+	const { getSuperuserUserTools, getUserTools } = await import('../../tools/registry.ts');
+	const viewerTools =
+		viewer === undefined ? await getSuperuserUserTools() : await getUserTools(viewer.userId);
+	const toolContext = await buildSectionToolContext(toolConfigBag, viewerTools);
 	if (toolContext === null) return null;
 
 	const areaConfig = (area.properties?.config ?? {}) as Record<string, unknown>;

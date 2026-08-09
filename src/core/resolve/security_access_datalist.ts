@@ -31,12 +31,20 @@
  *   hard list, DEDALO_AR_EXCLUDE_COMPONENTS (empty on this install), and the
  *   per-child recursion.
  *
- * LEDGER — pending principal threading (non-admin filtering): PHP narrows the
- * area list by security::get_user_security_access($user_id) for non-global
- * admins (get_datalist:214-236). This port implements ONLY the global-admin /
- * unfiltered branch, because the TS read path currently runs as admin/root. A
- * future ACL-threading pass must pass the principal here and filter `getAreas`
- * to the areas present in the user's own security-access data.
+ * NON-ADMIN FILTERING (2026-08-09, oh1 beta audit §7). PHP narrows the area
+ * list for a non-global-admin to the areas already present in the caller's OWN
+ * component_security_access data (get_datalist:214-236) — otherwise the widget
+ * hands every authenticated user the whole ontology structure. The port now
+ * does the same: the caller's dd774 grant tipos come from
+ * security/permissions.ts getGrantedTipos (PRESENCE by TIPO, any level — PHP's
+ * `array_find($user_data, fn($el) => $el->tipo === $current_area->tipo)`), and
+ * a global admin still receives the unfiltered tree.
+ *
+ * The principal is passed explicitly where the caller has one and falls back to
+ * the request scope (security/request_context.ts currentPrincipal) otherwise —
+ * the emit hook is a leaf with no principal parameter, the same case that scope
+ * accessor exists for. NO principal at all (unit harnesses, background warmups)
+ * means NO filter, the posture ddoIsAuthorized already takes.
  *
  * LEDGER — config_areas deny: PHP area::get_areas() always subtracts the
  * installation's config_areas `areas_deny` (entity-specific; for monedaiberica
@@ -60,6 +68,8 @@ import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
+import { getGrantedTipos, type Principal } from '../security/permissions.ts';
+import { currentPrincipal } from '../security/request_context.ts';
 import { getEffectiveAreasDeny } from './server_state.ts';
 
 /** One flat datalist item (PHP datalist_item shape — order of keys is not significant). */
@@ -557,11 +567,23 @@ async function getAreas(): Promise<AreaObj[]> {
 // -----------------------------------------------------------------------------
 
 /**
- * Build the full ontology ACL datalist for the global-admin (unfiltered) case,
- * exactly reproducing PHP component_security_access::get_datalist($admin_id).
+ * Build the ontology ACL datalist, exactly reproducing PHP
+ * component_security_access::get_datalist($user_id): the unfiltered tree for a
+ * global admin, and for anyone else only the areas whose tipo appears in their
+ * own dd774 data (see the module header). `viewer` defaults to the current
+ * request's principal; undefined on both means no filter.
  */
-export async function getSecurityAccessDatalist(): Promise<SecurityAccessDatalistItem[]> {
-	const areas = await getAreas();
+export async function getSecurityAccessDatalist(
+	viewer?: Principal,
+): Promise<SecurityAccessDatalistItem[]> {
+	let areas = await getAreas();
+
+	// PHP get_datalist:203-236 — the non-global-admin narrowing.
+	const principal = viewer ?? currentPrincipal();
+	if (principal !== undefined && !principal.isGlobalAdmin) {
+		const granted = await getGrantedTipos(principal.userId);
+		areas = areas.filter((area) => granted.has(area.tipo));
+	}
 
 	const datalist: SecurityAccessDatalistItem[] = [];
 	const arCheck = new Set<string>();

@@ -10,6 +10,13 @@
  *              diffusion_info:null, created_by_user_id}  (PHP build_metadata)
  *   relation = {dd200: [created-by user locator → dd128]}
  *   date     = {dd199: [{id:1, start:<virtual date>, lang:'lg-nolan'}]}
+ * BIRTH DEFAULTS (WC-2026-08-09-record-birth-defaults): since the create door
+ * also seeds the record's ontology-declared initial state, the `relation`
+ * column additionally carries the section's project filter and every
+ * `properties.dato_default` — which PHP wrote on the first EDIT-FORM BUILD
+ * instead. The golden keeps both halves exact: the dd200 locator verbatim, and
+ * the rest of the column pinned to EXACTLY what the ontology declares.
+ *
  * The differential pinned the data key set/values (created_date normalized),
  * the relation column VERBATIM, and the dd199 item shape (start instant
  * normalized). The label VALUE is section-dependent (ontology term) — the
@@ -108,17 +115,41 @@ describe('record-creation audit metadata (TS-native, PHP build_metadata shape)',
 	});
 
 	test('relation: the dd200 created-by locator, verbatim (differential-pinned)', () => {
-		expect((row as CreatedRow).relation).toEqual({
-			dd200: [
-				{
-					id: 1,
-					type: 'dd151',
-					section_id: String(USER_ID),
-					section_tipo: 'dd128',
-					from_component_tipo: 'dd200',
-				},
-			],
-		});
+		expect((row as CreatedRow).relation.dd200).toEqual([
+			{
+				id: 1,
+				type: 'dd151',
+				section_id: String(USER_ID),
+				section_tipo: 'dd128',
+				from_component_tipo: 'dd200',
+			},
+		]);
+	});
+
+	test('relation: dd200 + EXACTLY the ontology-declared birth defaults, nothing else', async () => {
+		// THE GOLDEN'S RECONCILIATION (WC-2026-08-09-record-birth-defaults).
+		// The retired differential compared TS against a PHP create, and PHP's
+		// create writes ONLY dd200 into `relation` — it seeds `properties.
+		// dato_default` and the project filter later, as a side effect of BUILDING
+		// the first edit form. TS seeds them in the create INSERT instead: the
+		// divergence is WHEN, not WHAT, and it is declared.
+		//
+		// So the golden is NOT weakened to "dd200 is present somewhere": the
+		// relation column must be dd200 plus PRECISELY the set this section's
+		// ontology declares — numisdata6 today means numisdata127 (the project
+		// filter), numisdata266 (dd501/1) and numisdata434 (dd64/2). Anything
+		// else appearing in a fresh record's relation column still reddens.
+		const { buildRecordDefaultColumns } = await import(
+			'../../src/core/section/record/record_defaults.ts'
+		);
+		const declared = (await buildRecordDefaultColumns(SECTION, USER_ID)).relation ?? {};
+		expect(Object.keys(declared).length).toBeGreaterThan(0); // never vacuous
+		expect(Object.keys((row as CreatedRow).relation).sort()).toEqual(
+			['dd200', ...Object.keys(declared)].sort(),
+		);
+		for (const [tipo, items] of Object.entries(declared)) {
+			expect((row as CreatedRow).relation[tipo]).toEqual(items);
+		}
 	});
 
 	test('date: one dd199 item (id 1, lg-nolan) with a consistent virtual-date start', () => {

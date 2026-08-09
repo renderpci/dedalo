@@ -29,6 +29,7 @@ import { deletePortalLocator } from '../../src/core/relations/save.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
+import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
 const HOST_SECTION = 'numisdata3'; // matrix
@@ -150,8 +151,15 @@ describe('dataframe cascade on the three removal paths (S1-05)', () => {
 
 	test('portal unlink (delete_locator): removed locator cascades its frames', async () => {
 		const hostId = await seedHost();
+		// The actor must genuinely hold level 2 on numisdata3: deletePortalLocator
+		// runs PHP's `security::assert_section_permission($section_tipo, 2)` (a
+		// matrix lookup through common::get_permissions, which has NO admin
+		// bypass), not an isGlobalAdmin flag. User 1 owns no dd1725 profile in the
+		// suite DB, so it resolves to level 0. The superuser is the only fabricable
+		// principal that short-circuits to 3; the gate itself is pinned in
+		// record_defaults_native.test.ts against real level-0 / level-2 users.
 		const response = await deletePortalLocator(
-			{ isGlobalAdmin: true, userId: USER_ID },
+			{ isGlobalAdmin: true, userId: SUPERUSER_ID },
 			{ tipo: PORTAL, section_tipo: HOST_SECTION, section_id: hostId },
 			{
 				locator: {

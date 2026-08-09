@@ -277,22 +277,41 @@ counts, not an absolute date):
 ]
 ```
 
-How these resolve to a flat display string (`resolveCellValue()`'s `date`
-family, `src/core/resolve/relation_list.ts`) — currently covers the `date`
-and `range` modes only:
+How these resolve to a flat display string. There is exactly **one** formatter
+in the engine — `dateItemToValue()` in
+`src/core/components/component_date/date_value.ts` — and every surface that
+shows a date as text calls it: the relation-list ("Referencias") cells, the
+export cells and the thesaurus indexation grid. It dispatches on the node's
+`date_mode` property, and it degrades gracefully as the stored parts thin out,
+so a partial date **never** loses a field it does carry:
 
 ```text
-full day+month+year  →  "07-11-2012"                 (d-m-Y)
-range                →  "07-11-2012 <> 08-12-2012"    (start <> end)
-year only, or
-year+month (no day)  →  "2012"                        (falls back to bare year)
-BCE year              →  "-205"
+date_mode 'date'  (the default)
+  year+month+day     →  "2012/11/07"
+  year+month, no day →  "2012/11"        (the month is KEPT)
+  year only          →  "2012"           (unpadded)
+  BCE year only      →  "-205"
+  BCE year+month     →  "-205/03"        (padded to four, sign included)
+
+date_mode 'range'
+  →  "2012/11/07 <> 2012/12/08"          (each end degrades on its own)
+  →  "1987 <> 1988"                       (year-only ends)
+
+date_mode 'time' / 'time_range'
+  →  "17:33:49"  /  "01:02:03 <> 04:05:06"
+
+date_mode 'date_time'
+  →  "2012/11/07 17:33:49"
+
+date_mode 'period'
+  →  "2 years 3 months 4 days"            (unit words in the interface language)
 ```
 
-!!! info "Period and clock-time modes not yet covered"
-    `resolveCellValue()`'s `date` family reads only `year`/`month`/`day` on
-    `start`/`end`; the `period` and `time`/`time_range`/`date_time` modes are
-    not yet formatted through this path.
+!!! warning "Never write a second date formatter"
+    A duplicate of this function once rendered `d-m-Y` and dropped the month
+    from every day-less date, silently damaging real catalogue records.
+    `test/unit/date_flat_value_single_source_tripwire.test.ts` now fails if a
+    second date assembler appears anywhere in `src/`.
 
 ---
 

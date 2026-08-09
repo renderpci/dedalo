@@ -346,12 +346,25 @@ describe('generate_virtual_section — TS-native provisioning of a scratch TLD',
 		expect(rows[0]?.properties).toEqual({ main_tld: TLD, color: '#2d8894' });
 	});
 
+	// The two key-set pins below carry the section's BIRTH DEFAULTS as well as
+	// what the provisioner writes explicitly (WC-2026-08-09-record-birth-defaults):
+	// ontology0 declares a component_filter (ontology26, the project) and a
+	// `dato_default` on ontology30 ("Is model" → dd64/2 = no). Both are what a
+	// real ontology node record carries — all 41 ontology0 records in the dev
+	// install AND all 41 in the production one have ontology26 and ontology30 —
+	// so the previous expectation pinned a TS-only impoverished row, not PHP's.
+	// A per-caller `seedDefaults:false` would have kept the old bytes by making
+	// provisioned records structurally different from curator-made ones; a
+	// record's ontology-declared birth state does not depend on which door made
+	// it.
 	test('descriptor <tld>0/1 component-key sets (the shapes the differential derives live)', async () => {
 		const rec1 = await nodeRecordCols(1);
 		expect(ontologyKeys(rec1.relation)).toEqual([
 			'ontology10', // connected-to → the real source section
 			'ontology15', // parent (hierarchytype grouper)
+			'ontology26', // project filter (birth default)
 			'ontology3', // publication yes
+			'ontology30', // "Is model" = dd64/2 "no" (ontology30 dato_default)
 			'ontology4', // is_descriptor yes
 			'ontology6', // model → dd0/6
 			'ontology8', // translatable no
@@ -359,18 +372,37 @@ describe('generate_virtual_section — TS-native provisioning of a scratch TLD',
 		expect(ontologyKeys(rec1.string)).toEqual(['ontology5', 'ontology7']);
 	});
 
-	test('model <tld>0/2 component-key sets = descriptor set + ontology30', async () => {
+	test('model <tld>0/2 component-key sets = the descriptor set, ontology30 FLIPPED', async () => {
 		const rec2 = await nodeRecordCols(2);
 		expect(ontologyKeys(rec2.relation)).toEqual([
 			'ontology10',
 			'ontology15',
+			'ontology26',
 			'ontology3',
-			'ontology30', // is_model — the ONLY key the model twin adds
+			'ontology30', // the provisioner OVERWRITES the dd64/2 default with dd64/1
 			'ontology4',
 			'ontology6',
 			'ontology8',
 		]);
 		expect(ontologyKeys(rec2.string)).toEqual(['ontology5', 'ontology7']);
+	});
+
+	test('ontology30 is the "no" DEFAULT on the descriptor and the explicit "yes" on the model', async () => {
+		// The birth default must not survive where the provisioner means the
+		// opposite: a model twin born with dd64/2 and never overwritten would
+		// parse as `is_model:false` and the whole section would stop being a model.
+		const rec1 = await nodeRecordCols(1);
+		const rec2 = await nodeRecordCols(2);
+		expect(
+			(rec1.relation?.ontology30 as { section_id?: unknown }[] | undefined)?.map(
+				(item) => item.section_id,
+			),
+		).toEqual(['2']); // dd64/2 = "no"
+		expect(
+			(rec2.relation?.ontology30 as { section_id?: unknown }[] | undefined)?.map(
+				(item) => item.section_id,
+			),
+		).toEqual(['1']); // dd64/1 = "yes"
 	});
 
 	test('byte pins: descriptor tld item is lg-spa; ontology15 parent locators are BARE', async () => {

@@ -22,12 +22,37 @@
  * client-supplied ddo_maps. It is a strict field whitelist — `.strip()` (zod's
  * default for z.object) drops any key not listed, which is exactly the PHP
  * behavior of sanitize_client_ddo_map. Do NOT add server-only fields here.
+ *
+ * KEY WHITELIST vs VALUE TYPES (audit 2026-08 §7). PHP whitelists KEYS and
+ * never types their values — only `limit`/`offset` are shape-checked
+ * (class.request_config_object.php:723-729). TS additionally types every
+ * value, which is a real improvement ONLY while each declared type is the type
+ * the ontology actually authors: `rqoSchema` embeds this schema and server.ts
+ * answers 400 "Invalid RQO" on a parse failure, so one wrong type does not
+ * degrade a field — it kills every request carrying that ddo_map. `hover` was
+ * typed `string` against 16 install-wide component_portal nodes (oh17 among
+ * them) that author the BOOLEAN `true`. The types below are therefore derived
+ * from the real dd_ontology corpus and RE-DERIVED mechanically on every run by
+ * test/unit/ddo_schema_native.test.ts, which parses every ddo_map entry in
+ * dd_ontology through this schema.
  */
 
 import { z } from 'zod';
 
 /** Sentinel meaning "the calling section/component" in section_tipo / parent. */
 export const SELF_SENTINEL = 'self' as const;
+
+/**
+ * `limit` / `offset` — the ONLY two fields PHP shape-checks, and it DROPS the
+ * key rather than rejecting the ddo: "pagination fields must be non-negative
+ * integers (0 = all). Drop any other shape so a tampered value can't reach
+ * pagination->limit" (class.request_config_object.php:723-729). They bound the
+ * OUTPUT slice of an already permission-resolved component, so they are not a
+ * permission boundary — but a negative or fractional value reaching
+ * `pagination.limit` is nonsense the oracle never allowed through, and
+ * docs/core/dd_object.md has always documented this exact rule.
+ */
+const paginationField = z.number().int().nonnegative().optional().catch(undefined);
 
 /**
  * Client-allowed ddo fields — the display whitelist. Mirrors PHP
@@ -42,8 +67,12 @@ export const ddoSchema = z.object({
 	 * (hierarchy_types portals) carry the full ARRAY of target tipos — the
 	 * client echoes back the shape our own context responses ship. */
 	section_tipo: z.union([z.string(), z.array(z.string())]).optional(),
-	/** Explicit record id (rare; usually resolved at runtime). */
-	section_id: z.union([z.number(), z.string()]).optional(),
+	/** Explicit record id (rare; usually resolved at runtime). Ontology-authored
+	 * tool/button ddos that name a section but NO record write an explicit null
+	 * (rsc36/oh83 tool_transcription roles, numisdata672), and the client echoes
+	 * it back — same client-null class as the SQO fields pinned by
+	 * test/unit/sqo_client_nulls.test.ts. */
+	section_id: z.union([z.number(), z.string()]).nullable().optional(),
 	/** Parent tipo in the ddo_map tree; 'self' = direct child of the caller. */
 	parent: z.string().optional(),
 	/** Render mode: edit | list | search | ... */
@@ -67,18 +96,56 @@ export const ddoSchema = z.object({
 	width: z.string().optional(),
 	/** Mosaic layout flag. */
 	in_mosaic: z.boolean().optional(),
-	/** Tooltip text. */
-	hover: z.string().optional(),
+	/** Show this ddo's value as the row's TOOLTIP instead of a column (portal
+	 * mosaic view). A FLAG, not text: every authoring node stores the boolean
+	 * `true` and the client tests it strictly
+	 * (`columns_map.filter(el => el.hover===true)`,
+	 * client/dedalo/core/component_portal/js/view_mosaic_edit_portal.js:204). */
+	hover: z.boolean().optional(),
 	/** Pagination limit (0 = all). */
-	limit: z.number().optional(),
+	limit: paginationField,
 	/** Pagination offset. */
-	offset: z.number().optional(),
+	offset: paginationField,
 });
 
 export type Ddo = z.infer<typeof ddoSchema>;
 
-/** A ddo_map: flat list, tree via `parent` links. */
-export const ddoMapSchema = z.array(ddoSchema);
+/**
+ * A ddo_map: flat list, tree via `parent` links.
+ *
+ * PER-ENTRY, NOT ALL-OR-NOTHING (audit 2026-08 §7). PHP's sanitize_client_ddo_map
+ * loops the map and `continue`s past an entry it cannot use, logging a WARNING —
+ * it NEVER aborts the map, let alone the request. A plain `z.array(ddoSchema)`
+ * does the opposite: one unusable entry fails the array, which fails `rqoSchema`,
+ * which makes server.ts answer 400 for the whole RQO. The ontology itself
+ * authors entries no ddo consumer can use — a bare `{}` (test188) and
+ * tipo-less entries (numisdata1138/1139) — so the strict array turns authoring
+ * noise into a dead screen.
+ *
+ * So: parse each entry, keep the ones that survive, and say out loud which ones
+ * did not (the DEC-07 posture — narrow if you must, never in silence). A `tipo`
+ * is still MANDATORY for an entry to survive: the whole resolution graph keys on
+ * it (getDirectChildren/getDescendants), and PHP's own downstream
+ * validate_requested_ddo resolves nothing for a tipo-less ddo anyway.
+ *
+ * This resilience is NOT a licence for type drift: it would have hidden the
+ * `hover` mismatch. The mechanical guard against that is the ontology-wide
+ * census in test/unit/ddo_schema_native.test.ts, which parses every authored
+ * ddo through `ddoSchema` STRICTLY.
+ */
+export const ddoMapSchema = z.array(z.unknown()).transform((entries) =>
+	entries.flatMap((entry) => {
+		const parsed = ddoSchema.safeParse(entry);
+		if (parsed.success) return [parsed.data];
+		const tipo = (entry as { tipo?: unknown } | null)?.tipo;
+		console.warn(
+			`[ddo] dropped unusable ddo_map entry (tipo ${JSON.stringify(tipo)}): ${parsed.error.issues
+				.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+				.join('; ')}`,
+		);
+		return [];
+	}),
+);
 export type DdoMap = z.infer<typeof ddoMapSchema>;
 
 /**
@@ -88,7 +155,8 @@ export type DdoMap = z.infer<typeof ddoMapSchema>;
 export function sanitizeClientDdoMap(untrustedDdoMap: unknown): DdoMap {
 	const parsed = ddoMapSchema.safeParse(untrustedDdoMap);
 	if (!parsed.success) {
-		// Fail closed: a malformed ddo_map resolves nothing rather than something unexpected.
+		// Only a non-ARRAY reaches here (per-entry failures are dropped inside the
+		// schema). Fail closed: resolve nothing rather than something unexpected.
 		return [];
 	}
 	return parsed.data;

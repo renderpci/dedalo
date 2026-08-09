@@ -6,7 +6,10 @@
  * component_info at runtime) has NO stored row data of its own by default; the
  * section read serves the STORED misc value when the client save cycle has
  * persisted one (use_db_data — PHP get_db_data reads parent::get_data first),
- * and falls back to LIVE widget compute when the row holds nothing. This
+ * and falls back to LIVE widget compute when the row holds nothing — null, [],
+ * or (the one divergence) an array every entry of which is positively
+ * identified v5-era `misc` residue
+ * (WC-2026-08-09-info-legacy-stored-value-fallthrough). This
  * registry is that fallback: it resolves the ontology `properties.widgets`
  * definitions (widget_name + ipo Input-Process-Output blocks) and dispatches
  * BY NAME to the per-discipline widget modules under widgets/<tld>/ — the

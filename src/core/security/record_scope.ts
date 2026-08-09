@@ -17,6 +17,16 @@
  * CALLER (they never reach here in the write handlers) — this function makes no
  * admin exception itself so it always answers the literal question "is this
  * record inside the projects filter?".
+ *
+ * NO SECTION IS SPECIAL-CASED HERE, and none may be. A rule that binds a
+ * section (the USERS section's own-record/created_by/shared-projects rule is the
+ * one that tempted it) belongs in the ASSEMBLER, where the list, the count, the
+ * UNION branches and this existence probe all inherit it at once; a copy here
+ * would be an ACL that answers one thing per record and another per list — the
+ * exact shape of the oracle bug WC-2026-08-09-users-section-record-scope
+ * records. This module therefore contains NO section tipo comparison at all.
+ * Gated behaviourally by test/unit/oh1_permissions_native.test.ts "the
+ * per-record answer EQUALS the list answer, record by record".
  */
 
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
@@ -29,6 +39,23 @@ import { getPermissions, type Principal } from './permissions.ts';
  * returns the record — i.e. it is inside the caller's projects filter. Callers
  * that grant global admins unconditional access must check `isGlobalAdmin`
  * themselves before calling this.
+ *
+ * ONE RULE, TWO DOORS. Every section — the USERS section (dd128) included —
+ * answers through the SAME predicate the list/search path applies, because this
+ * function runs the real assembler (search/sql_assembler.ts buildSearchSql) with
+ * the principal attached. The dd128 rule therefore lives in exactly one place,
+ * buildUsersProjectsFilter, and a per-record answer can never drift from what
+ * the list shows.
+ *
+ * DIVERGENCE FROM THE ORACLE, declared as
+ * WC-2026-08-09-users-section-record-scope: PHP's per-record helper
+ * security::user_can_access_record (class.security.php:1035-1058) short-circuits
+ * only the caller's OWN dd128 row and then falls through to the component_filter
+ * lookup, which dd128 has none of, so PHP `return true`s for EVERY user record —
+ * an IDOR against its own list filter, which hides those same records. TS makes
+ * the two doors agree on the restrictive side. PHP's own-record allowance is
+ * kept, moved into the assembler predicate so the list honours it too (a
+ * projects-less user must be able to read their own account).
  */
 export async function isRecordInScope(
 	sectionTipo: string,

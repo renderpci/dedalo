@@ -14,7 +14,9 @@
  *   - family 'section_id'  → the record's own id, fail-CLOSED on a missing row;
  *   - family 'string'      → lang slice, multi-item join by the CALLER's
  *                            itemSeparator (the export-atoms ' | ' → ', ' flip);
- *   - family 'date'        → year-only, d-m-Y, and the 'start <> end' range;
+ *   - family 'date'        → the ONE formatter (component_date/date_value.ts)
+ *                            on the node's date_mode; the shape corpus itself
+ *                            lives in date_flat_value_native.test.ts;
  *   - family 'iri'         → the bare iri (the stored `title` must NOT leak);
  *   - family 'media'       → exportBase + the default-quality file_path, and a
  *                            media model with no default quality → ledgered;
@@ -253,19 +255,28 @@ describe('resolveCellValue — per-family dispatch', () => {
 		expect(unresolved).toEqual([]);
 	});
 
-	test("family 'date' formats year-only, d-m-Y and the 'start <> end' range", async () => {
+	test("family 'date' formats through the ONE formatter, on the node's date_mode", async () => {
+		// REBASED 2026-08-09 (audit §5.6). This case used to pin 'd-m-Y' joined
+		// with '-' and an unconditional 'start <> end' — the divergent formatter
+		// this branch carried, which also dropped the month on a day-less date.
+		// The branch now calls the single `dateItemToValue`
+		// (components/component_date/date_value.ts), i.e. PHP
+		// component_date::data_item_to_value: 'Y/m/d', and 'test145' declares NO
+		// date_mode, so PHP's default 'date' renders the START only.
+		// Contract + corpus: test/unit/date_flat_value_native.test.ts.
 		const unresolved: string[] = [];
 		// Canonical: two single-date items → the multi-item join.
 		expect(await resolveCellValue(SECTION, 1, 'test145', 'lg-nolan', unresolved)).toBe(
-			'09-06-1628 | 25-06-2024',
+			'1628/06/09 | 2024/06/25',
 		);
-		// Year without month/day → the bare year.
+		// Year without month/day → the bare year (unpadded, PHP padding=false).
 		expect(await resolveCellValue(SECTION, IDS.yearOnly, 'test145', 'lg-nolan', unresolved)).toBe(
 			'1975',
 		);
-		// start + end → the range separator (both ends zero-padded d-m-Y).
+		// start + end on a date_mode 'date' node → the start; the range separator
+		// belongs to date_mode 'range' and is asserted in the date gate.
 		expect(await resolveCellValue(SECTION, IDS.range, 'test145', 'lg-nolan', unresolved)).toBe(
-			'09-06-1628 <> 25-06-2024',
+			'1628/06/09',
 		);
 		// No date items at all → null.
 		expect(

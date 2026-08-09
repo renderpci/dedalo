@@ -83,9 +83,10 @@ import {
 	resolveTranscriberConfig,
 	resolveTranscriberProvider,
 	resolveTranscriberStatusProvider,
+	statusPollNeedsExternalAudioUrl,
 } from '../../../src/core/tools/transcription_asr.ts';
 
-interface MediaDdo {
+export interface MediaDdo {
 	component_tipo?: unknown;
 	section_id?: unknown;
 	section_tipo?: unknown;
@@ -172,6 +173,67 @@ function externalMediaUrl(relativePath: string): string {
 		);
 	}
 	return `${base}${relativePath}`;
+}
+
+/**
+ * The `av_url` a status poll must send for this engine — the CLIENT poll's half
+ * of the rule `statusPollNeedsExternalAudioUrl` states (audit 2026-08 §5.6/3).
+ *
+ * `null` is the caller SAYING there is no published URL, which is the only
+ * correct answer for the on-premise sidecar: it was POSTed the audio BYTES and
+ * keys its job by its own id, and `engineering/TRANSCRIPTION.md` forbids making
+ * on-premise inference depend on publishing the recording. Asking for one there
+ * is not merely useless — on an install that publishes nothing (the normal
+ * on-premise state) `externalMediaUrl` throws, which is exactly how the client
+ * poll died with a live pid and a permanently disabled transcribe button.
+ *
+ * Exported so the seam itself is gated
+ * (test/unit/transcription_client_poll_av_url_native.test.ts). That is only HALF
+ * a gate, though, and the weaker half: pinning a helper proves the helper is
+ * right, never that the handler still calls it — which is exactly how the
+ * unconditional call site survived the first fix. `StatusPollSeams` exists so
+ * the other half (the HANDLER's observed av_url) is gated too.
+ */
+export function statusPollAvUrl(engine: string, audioRelativePath: string): string | null {
+	return statusPollNeedsExternalAudioUrl(engine) ? externalMediaUrl(audioRelativePath) : null;
+}
+
+/**
+ * The WORLD-TOUCHING collaborators of `check_server_transcriber_status`, each
+ * defaulting to the production one — the same dependency seam
+ * `pollTranscriptionCompletion` already uses for its provider/save pair.
+ *
+ * It exists for ONE reason, and the reason is an invariant rather than a
+ * convenience: `engineering/TRANSCRIPTION.md` forbids on-premise inference from
+ * depending on publishing the recording, so the poll this handler performs must
+ * never ask the media publication layer for a URL when the engine is the local
+ * sidecar. That is a property OF THE HANDLER — of the argument it actually
+ * passes — and the only honest way to assert it is to run the handler and read
+ * the request the provider received. Everything the handler needs to get that
+ * far (the permission gate, the tool config row, the media context) is a
+ * database read; injecting exactly those three, and nothing else, keeps the
+ * av_url decision and the path build on the REAL code path.
+ *
+ * Gate: test/unit/transcription_client_poll_av_url_native.test.ts (it also pins
+ * that `tool.apiActions.check_server_transcriber_status.handler` IS this
+ * function, so the gate cannot drift onto a copy the wire never reaches).
+ */
+export interface StatusPollSeams {
+	/** PHP's in-method READ gate (level 1) on the media_ddo record. */
+	readonly gate?: (ddo: MediaDdo, ctx: ToolActionContext) => Promise<ToolResponse | null>;
+	/** The transcriber's uri/key entry for this engine, or null when unconfigured. */
+	readonly transcriberConfig?: (engine: string) => Promise<{ uri: string; key: string } | null>;
+	/** Media spec/identity/path options for the polled component_av record. */
+	readonly mediaContext?: typeof resolveMediaToolContext;
+	/** Engine → status provider routing. */
+	readonly statusProvider?: typeof resolveTranscriberStatusProvider;
+}
+
+/** Config entry by the ORIGINAL engine name (PHP $transcriber_name). */
+async function defaultTranscriberConfig(
+	engine: string,
+): Promise<{ uri: string; key: string } | null> {
+	return resolveTranscriberConfig(await getToolConfig('tool_transcription'), engine);
 }
 
 async function createTranscribableAudioFile(ctx: ToolActionContext): Promise<ToolResponse> {
@@ -393,12 +455,19 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
  * :669-788). READ gate (level 1) on media_ddo: polling reconstructs the audio
  * URL but writes nothing. delete_result=false — only the server-side
  * background poll may let babel clean up the finished result.
+ *
+ * `seams` defaults to the production collaborators; see StatusPollSeams for why
+ * the gate that matters has to invoke THIS function.
  */
-async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<ToolResponse> {
+export async function checkServerTranscriberStatus(
+	ctx: ToolActionContext,
+	seams: StatusPollSeams = {},
+): Promise<ToolResponse> {
 	// PHP gates BEFORE validation, only when media_ddo->section_tipo is present.
 	const ddo = readMediaDdo(ctx.options);
 	if (!phpEmpty(ddo.section_tipo)) {
-		const denied = await gateRecord(ddo, ctx, 1);
+		const gate = seams.gate ?? ((target, context) => gateRecord(target, context, 1));
+		const denied = await gate(ddo, ctx);
 		if (denied !== null) return denied;
 	}
 
@@ -415,11 +484,12 @@ async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<Too
 			return fail(`Missing required parameters: ${missing.join(', ')}`);
 		}
 
-		// Config entry by the ORIGINAL engine name (PHP $transcriber_name).
-		const cfg = resolveTranscriberConfig(await getToolConfig('tool_transcription'), engine);
+		const cfg = await (seams.transcriberConfig ?? defaultTranscriberConfig)(engine);
 		if (cfg === null) return fail(`Transcriber config (uri/key) is not defined for '${engine}'`);
 
-		const { provider, error: providerError } = resolveTranscriberStatusProvider(engine);
+		const { provider, error: providerError } = (
+			seams.statusProvider ?? resolveTranscriberStatusProvider
+		)(engine);
 		if (provider === null) {
 			return {
 				result: false,
@@ -429,9 +499,11 @@ async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<Too
 		}
 
 		// Rebuild av_url EXACTLY as automatic_transcription submitted it (same
-		// context resolution, same URL builder) — the transcriber backend
-		// identifies the job by this URL, so it must match byte-for-byte.
-		const { spec, identity, pathOpts } = await resolveMediaToolContext({
+		// context resolution, same URL builder) — an EXTERNAL transcriber backend
+		// identifies the job by this URL, so it must match byte-for-byte. The
+		// on-premise engine was submitted no URL at all (audioUrl '') and must be
+		// polled with none: see statusPollAvUrl.
+		const { spec, identity, pathOpts } = await (seams.mediaContext ?? resolveMediaToolContext)({
 			component_tipo: ddo.component_tipo,
 			section_tipo: ddo.section_tipo,
 			section_id: ddo.section_id,
@@ -455,7 +527,7 @@ async function checkServerTranscriberStatus(ctx: ToolActionContext): Promise<Too
 		const result = await provider({
 			uri: cfg.uri,
 			key: cfg.key,
-			avUrl: externalMediaUrl(audioRel),
+			avUrl: statusPollAvUrl(engine, audioRel),
 			engine: mapTranscriberEngine(engine),
 			userId: ctx.userId,
 			entityName: config.entity,

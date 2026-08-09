@@ -199,8 +199,18 @@ export interface TranscriberStatusRequest {
 	/** The transcriber server endpoint (also POSTed as the 'url' field — PHP does the same). */
 	uri: string;
 	key: string;
-	/** Must match the av_url submitted at transcribe time (babel keys the job by it). */
-	avUrl: string;
+	/**
+	 * The PUBLISHED audio URL, which must match the one submitted at transcribe
+	 * time byte-for-byte (babel keys the job by it).
+	 *
+	 * NULLABLE, and required to be stated: the on-premise engine has none, and
+	 * must not — its sidecar was POSTed the audio BYTES precisely so no recording
+	 * is ever published (engineering/TRANSCRIPTION.md). `null` is the caller
+	 * SAYING there is no published URL, which is different from forgetting one;
+	 * `statusPollNeedsExternalAudioUrl` decides which engines may say it, and
+	 * passing null for an engine that needs one throws.
+	 */
+	avUrl: string | null;
 	/** Engine name as POSTed — already mapped through mapTranscriberEngine. */
 	engine: string;
 	userId: number;
@@ -220,12 +230,63 @@ export interface TranscriberStatusRequest {
  */
 export type TranscriberStatusProvider = (req: TranscriberStatusRequest) => Promise<unknown>;
 
-/** The exact POST body of a babel check_status call (pure — unit-testable). */
+/**
+ * Whether a status poll for this engine needs the PUBLISHED external audio URL.
+ *
+ * Only the EXTERNAL (babel-family) transcribers do: they were handed a fetchable
+ * URL at submit time and key the running job by it, so the poll must rebuild the
+ * same string. The on-premise engine was handed the audio BYTES and keys its job
+ * by its own id — asking the media layer for a published URL there is not merely
+ * unnecessary, it is the one thing engineering/TRANSCRIPTION.md forbids
+ * ("on-premise inference must never require publishing the audio").
+ *
+ * This used to be nobody's decision, so `check_server_transcriber_status` built
+ * the URL for every engine and an on-premise poll died with a
+ * DEDALO_MEDIA_EXPORT_BASE configuration error — the client stopped polling and
+ * left the button disabled with a live pid (audit 2026-08 §5.6).
+ *
+ * THE CLIENT POLL CONSULTS IT (fixed 2026-08-09).
+ * `tools/tool_transcription/server/index.ts` (checkServerTranscriberStatus) used
+ * to call `externalMediaUrl(audioRel)` unconditionally, before any provider was
+ * chosen; it now routes through that file's `statusPollAvUrl`, which is this
+ * decision plus the URL builder.
+ *
+ * Gates: test/unit/transcription_status_poll_native.test.ts (this decision and
+ * the provider routing) + test/unit/transcription_client_poll_av_url_native.test.ts
+ * (the seam AND the handler itself — the latter runs
+ * `checkServerTranscriberStatus` with a capturing provider and asserts the
+ * observed av_url, because pinning a helper never proves the call site still
+ * calls it).
+ */
+export function statusPollNeedsExternalAudioUrl(engine: string): boolean {
+	return engine !== LOCAL_ASR_ENGINE;
+}
+
+/**
+ * The exact POST body of a babel check_status call (pure — unit-testable).
+ *
+ * Reached only by the BABEL-FAMILY providers: the on-premise engine has its own
+ * status provider (`GET jobs/<id>`) and never builds this form. The engine test
+ * is kept all the same, because `resolveTranscriberStatusProvider` routes every
+ * UNKNOWN engine here by default — so an engine added tomorrow that keys its job
+ * by something other than a published URL gets a body without one instead of the
+ * string "undefined".
+ */
 export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSearchParams {
-	const body = new URLSearchParams({
-		key: req.key,
-		url: req.uri,
-		av_url: req.avUrl,
+	const needsAudioUrl = statusPollNeedsExternalAudioUrl(req.engine);
+	if (needsAudioUrl && (req.avUrl === null || req.avUrl === '')) {
+		// Fail LOUDLY: this used to POST the literal string "undefined", so babel
+		// answered about a job that did not exist and the client polled a handle
+		// that could never complete. Thrown, not enveloped — see
+		// babelTranscriberStatusProvider.
+		throw new Error(
+			`buildTranscriberStatusBody: engine '${req.engine}' keys its job by av_url, but none was supplied — the poll cannot identify the job`,
+		);
+	}
+	// Field ORDER is kept exactly as PHP sent it (key, url, av_url, engine, …).
+	const fields: Record<string, string> = { key: req.key, url: req.uri };
+	if (needsAudioUrl && req.avUrl !== null) fields.av_url = req.avUrl;
+	Object.assign(fields, {
 		engine: req.engine,
 		method_name: 'check_status',
 		user_id: String(req.userId),
@@ -233,6 +294,7 @@ export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSe
 		pid: String(req.pid),
 		delete_result: req.deleteResult ? 'true' : 'false',
 	});
+	const body = new URLSearchParams(fields);
 	if (req.lang != null && req.lang !== '') body.set('lang', req.lang);
 	return body;
 }
@@ -240,8 +302,14 @@ export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSe
 /** Real babel status poll — POSTs check_status, returns the decoded inner result. */
 export const babelTranscriberStatusProvider: TranscriberStatusProvider = async (req) => {
 	if (!isSafeTranscriberUrl(req.uri)) return { result: false, msg: 'invalid transcriber URL' };
+	// The body is built OUTSIDE the try on purpose. `{result:false, msg}` is the
+	// vocabulary for "the transcriber said no / is unreachable"; a caller that
+	// did not supply the av_url the job is keyed by is a PROGRAMMING error, and
+	// laundering it into that envelope hid the real message behind the poll's
+	// generic "status not valid" report.
+	const requestBody = buildTranscriberStatusBody(req);
 	try {
-		const res = await fetch(req.uri, { method: 'POST', body: buildTranscriberStatusBody(req) });
+		const res = await fetch(req.uri, { method: 'POST', body: requestBody });
 		if (!res.ok) return { result: false, msg: `transcriber HTTP ${res.status}` };
 		const body = (await res.json()) as { result?: unknown };
 		return body.result ?? null;
@@ -412,6 +480,10 @@ export interface TranscriptionPollJob {
 }
 
 export interface TranscriptionPollOptions {
+	/**
+	 * Override the status provider. Left unset (the production path), the provider
+	 * is resolved FROM THE JOB'S ENGINE — see pollTranscriptionCompletion.
+	 */
 	provider?: TranscriberStatusProvider;
 	/** Injectable save fn (tests stub it — the real one writes through the tx+TM chokepoint). */
 	save?: typeof saveTranscriptionResult;
@@ -429,12 +501,30 @@ export interface TranscriptionPollOptions {
  *   3 → done: process_file-equivalent save (guarded against overwrite).
  * Bounded: after maxAttempts the poll gives up LOUDLY (console.error + a
  * failed job record) — it never throws into the server.
+ *
+ * THE PROVIDER FOLLOWS THE ENGINE (audit 2026-08 §5.6). This defaulted to
+ * `babelTranscriberStatusProvider` for every job, whatever engine had produced
+ * it. The engine picks the SUBMIT provider (resolveTranscriberProvider), so a
+ * `local_whisper` job was submitted to the on-premise sidecar and then polled by
+ * POSTing babel's `check_status` form at it — a sidecar whose only status
+ * endpoint is `GET jobs/<id>`. The job therefore never reported done and the
+ * transcript was never written back: on-premise recognition could not complete on
+ * the server side at all. Same engine, same routing table, both directions.
  */
 export async function pollTranscriptionCompletion(
 	job: TranscriptionPollJob,
 	opts: TranscriptionPollOptions = {},
 ): Promise<{ result: boolean; msg: string }> {
-	const provider = opts.provider ?? babelTranscriberStatusProvider;
+	const resolved = resolveTranscriberStatusProvider(job.status.engine);
+	const provider = opts.provider ?? resolved.provider;
+	if (provider === null || provider === undefined) {
+		// Never fall back to babel for an engine the routing table refuses: that is
+		// how a job gets polled by a protocol its server does not speak.
+		const msg =
+			resolved.error ?? `no status provider for transcriber engine '${job.status.engine}'`;
+		console.error(`[tool_transcription] ${msg} (pid ${job.status.pid})`);
+		return { result: false, msg };
+	}
 	const save = opts.save ?? saveTranscriptionResult;
 	const maxAttempts = opts.maxAttempts ?? 450;
 	const intervalMs = opts.intervalMs ?? 4000;

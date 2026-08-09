@@ -72,8 +72,22 @@ describe('translateItems (stub provider)', () => {
 });
 
 describe('translation helpers', () => {
-	test('babelDirection strips lg- and joins', () => {
-		expect(babelDirection('lg-spa', 'lg-eng')).toBe('spa-eng');
+	// The golden moved on 2026-08: this used to expect 'spa-eng' (a whole-ISO-code
+	// join). The ORACLE is babel::get_babel_direction —
+	// tools/tool_lang/translators/class.babel.php:190-201 — which does
+	// `substr($lang, 3, 2)`, i.e. the FIRST TWO letters of the ISO code, so
+	// ('lg-spa','lg-eng') → 'sp-en' (Apertium mode names). 'spa-eng' names a mode
+	// the box does not have, which is how the `Error: Mode …` bodies audit §5.6
+	// found written over target-language slots were produced. Exhaustive cases
+	// (malformed lang, German as TARGET) live in translation_pipeline_native.test.ts.
+	test('babelDirection takes the first TWO letters of each ISO code (PHP substr 3,2)', () => {
+		expect(babelDirection('lg-spa', 'lg-eng')).toBe('sp-en');
+	});
+	test('babelDirection: the German SOURCE exception keeps the full three-letter codes', () => {
+		// class.babel.php:194-199 — 'lg-deu' source → 'deu'; the target is
+		// reassigned to 'eng' ONLY when it is English, else generic extraction.
+		expect(babelDirection('lg-deu', 'lg-eng')).toBe('deu-eng');
+		expect(babelDirection('lg-deu', 'lg-spa')).toBe('deu-sp');
 	});
 	test('resolveTranslationProvider: babel default, browser/google rejected', () => {
 		expect(resolveTranslationProvider('babel').provider).not.toBeNull();

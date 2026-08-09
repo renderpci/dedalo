@@ -159,8 +159,15 @@ export function getRelationResolver(model: string): RelationModelResolver {
 //   implemented 2026-08-06 behind dd_external_api::search), never through
 //   SQO. It also declares no `resolveData` —
 //   the throw above fires first, so the order here is load-bearing.
-// The legacy component_autocomplete_hi ancestor wrap is deliberately NOT
-// wired (PHP live defect — see builder_relation.ts module doc).
+// NOT DISPATCHED HERE: the legacy component_autocomplete_hi ancestor wrap
+// (buildRelationSearchAncestorFragment). It is LIVE since 2026-08-09
+// (WC-2026-08-09-autocomplete-hi-ancestor-search), but it cannot key off this
+// registry — the registry dispatches on the RUNTIME model, and by the time a
+// leaf arrives here component_autocomplete_hi has already been replaced by
+// component_portal. conform.ts applies the wrap instead, keyed on the leaf
+// node's STORED ontology model, which is the same test save_component.ts uses
+// before maintaining the index (PHP answers the same question with
+// ontology_node::get_legacy_model_by_tipo).
 // ---------------------------------------------------------------------------
 
 /** One relation model's SQO leaf → SQL fragment builder (sync or async). */
