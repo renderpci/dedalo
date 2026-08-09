@@ -966,6 +966,11 @@ class v6_to_v7 {
 		// to avoid flooding the log file with millions of routine debug entries.
 		$_ENV['DEDALO_UPDATING'] = true;
 
+		// HISTORY IS NEVER REPAIRED. Makes the value-level repairs inert for this pass: a TM
+		// row says what the data WAS, so rewriting it there falsifies the past. Rows whose
+		// whole payload is the fabricated map centre are DELETED below instead.
+		v6_to_v7_normalize::$history_pass = true;
+
 		// Pre-fetch value type map once
 		// Shared across the closure via 'use'; see get_value_type_map() for the contract.
 		$value_type_map = v6_to_v7::get_value_type_map();
@@ -1092,6 +1097,37 @@ class v6_to_v7 {
 					);
 
 				}else{
+
+					// Fabricated map centre: DELETE the row, never migrate or empty it.
+					// The v6 client wrote the studio default (39.462571/-0.376295) on save
+					// whether or not the operator touched the map, so a TM row whose WHOLE
+					// payload is that centre records a change that never happened. Migrating
+					// it carries the fabrication into v7 history; emptying it to NULL leaves
+					// a husk row asserting an empty change. Deleting is the only honest
+					// outcome. A row that also carries drawn geometry — or any real
+					// coordinate — is NOT disposable and falls through untouched.
+					if (v6_to_v7_normalize::is_disposable_studio_default_list((array)$data)) {
+						if ($save) {
+							tm_db_manager::delete( (int)$id );
+						}
+						v6_to_v7_normalize::add(
+							$response,
+							'TM_FABRICATED_CENTRE_DELETED',
+							v6_to_v7_normalize::SEVERITY_FIXED,
+							[
+								'table'			=> $table,
+								'section_tipo'	=> $section_tipo,
+								'section_id'	=> $row['section_id'] ?? '',
+								'tipo'			=> $tipo,
+								'model'			=> 'component_geolocation'
+							],
+							'Time-machine row deleted: its whole payload was the fabricated map'
+								. ' centre the v6 client wrote on save, so it records a change'
+								. ' that never happened. Rows carrying drawn geometry or a real'
+								. ' coordinate are kept exactly as stored.'
+						);
+						return;
+					}
 
 					// component case
 					$migrated_data_response = v6_to_v7::migrate_component_data(

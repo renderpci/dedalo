@@ -64,6 +64,22 @@ class v6_to_v7_normalize {
 	public static bool $auto_fix = true;
 
 	/**
+	* HISTORY IS NEVER REPAIRED.
+	* Set for the matrix_time_machine pass, where geolocation_value() must be inert: a TM row
+	* records what the data WAS at a timestamp, so rewriting a value there — dropping a
+	* coordinate, or worse stamping in a machine-derived centre — makes the past assert
+	* something that never happened. The TM pass instead DELETES the rows whose whole payload
+	* is the fabricated centre (is_disposable_studio_default_list) and leaves every other row
+	* exactly as stored.
+	*
+	* Named rather than left to call order: this ran over the TM table by accident once, and
+	* the only symptom was history rows silently emptied to NULL.
+	*
+	* @var bool $history_pass
+	*/
+	public static bool $history_pass = false;
+
+	/**
 	* Aggregated findings, keyed by code|tipo|model. Reset by reset() at the start of
 	* each reformat pass and read by get_report().
 	* @var array<string,stdClass> $groups
@@ -391,6 +407,12 @@ class v6_to_v7_normalize {
 			return null;
 		}
 
+		// History is never repaired — see $history_pass. The TM pass deletes the rows whose
+		// whole payload is the fabricated centre and leaves everything else byte for byte.
+		if (self::$history_pass === true) {
+			return null;
+		}
+
 		$bare		= 0;	// fabricated pair, nothing drawn
 		$derived	= 0;	// fabricated pair, geometry drawn
 		$other		= 0;	// everything else, including 0/0 and any real coordinate
@@ -538,6 +560,44 @@ class v6_to_v7_normalize {
 		return self::coord_key($item->lat ?? null) === self::SENTINEL_LAT
 			&& self::coord_key($item->lon ?? null) === self::SENTINEL_LON;
 	}//end is_sentinel_centred
+
+
+
+	/**
+	* IS_DISPOSABLE_STUDIO_DEFAULT_LIST
+	* True when a component's WHOLE value list is fabricated map centre and nothing else:
+	* a non-empty list in which every item is centred on the studio default and none carries
+	* drawn geometry or any other position.
+	*
+	* This is the TIME MACHINE decision, and it is deliberately narrower than the live-data
+	* repair. A history row exists to say what the data WAS at a timestamp:
+	*  · when its whole payload is the fabricated centre, the row records an event that never
+	*    happened — the client wrote a coordinate nobody entered — and the row is DELETED
+	*    (see reformat_matrix_time_machine_data);
+	*  · when it carries anything real, it is left EXACTLY as stored. History is never
+	*    repaired and never gets a machine-derived centre stamped into it: that would make the
+	*    past assert a framing which did not exist at that time.
+	*
+	* @param array $items - the per-lang item list, as a plain list
+	* @return bool
+	*/
+	public static function is_disposable_studio_default_list(array $items) : bool {
+
+		if (empty($items)) {
+			return false;
+		}
+
+		foreach ($items as $item) {
+			if (!is_object($item)) {
+				return false;
+			}
+			if (!self::is_sentinel_centred($item) || self::has_drawn_geometry($item)) {
+				return false;
+			}
+		}
+
+		return true;
+	}//end is_disposable_studio_default_list
 
 
 
