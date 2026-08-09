@@ -209,7 +209,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "1.0.1"
+        "value": "1.1.0"
       }
     ],
     "dd1328": [
@@ -1174,6 +1174,306 @@
             "lang": "lg-nep",
             "name": "status_unavailable",
             "value": "स्थिति उपलब्ध छैन"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "filter_placeholder",
+            "value": "Search by TLD or name…"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "filter_placeholder",
+            "value": "Buscar por TLD o nombre…"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "filter_placeholder",
+            "value": "Cerca per TLD o nom…"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "filter_placeholder",
+            "value": "Bilatu TLD edo izenaren arabera…"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "filter_placeholder",
+            "value": "Rechercher par TLD ou nom…"
+          },
+          {
+            "lang": "lg-por",
+            "name": "filter_placeholder",
+            "value": "Pesquisar por TLD ou nome…"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "filter_placeholder",
+            "value": "Nach TLD oder Name suchen…"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "filter_placeholder",
+            "value": "Cerca per TLD o nome…"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "filter_placeholder",
+            "value": "Αναζήτηση με TLD ή όνομα…"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "filter_placeholder",
+            "value": "TLD वा नामद्वारा खोज्नुहोस्…"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "filter_no_matches",
+            "value": "No ontologies match your search"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "filter_no_matches",
+            "value": "Ninguna ontología coincide con la búsqueda"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "filter_no_matches",
+            "value": "Cap ontologia coincideix amb la cerca"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "filter_no_matches",
+            "value": "Ez dago bilaketarekin bat datorren ontologiarik"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "filter_no_matches",
+            "value": "Aucune ontologie ne correspond à la recherche"
+          },
+          {
+            "lang": "lg-por",
+            "name": "filter_no_matches",
+            "value": "Nenhuma ontologia corresponde à pesquisa"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "filter_no_matches",
+            "value": "Keine Ontologie entspricht der Suche"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "filter_no_matches",
+            "value": "Nessuna ontologia corrisponde alla ricerca"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "filter_no_matches",
+            "value": "Καμία οντολογία δεν ταιριάζει με την αναζήτηση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "filter_no_matches",
+            "value": "कुनै पनि ओन्टोलोजी खोजसँग मेल खाँदैन"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "selected_count",
+            "value": "selected"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "selected_count",
+            "value": "seleccionadas"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "selected_count",
+            "value": "seleccionades"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "selected_count",
+            "value": "hautatuta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "selected_count",
+            "value": "sélectionnées"
+          },
+          {
+            "lang": "lg-por",
+            "name": "selected_count",
+            "value": "selecionadas"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "selected_count",
+            "value": "ausgewählt"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "selected_count",
+            "value": "selezionate"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "selected_count",
+            "value": "επιλεγμένες"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "selected_count",
+            "value": "चयन गरिएका"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "show_selected_only",
+            "value": "Show selected only"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "show_selected_only",
+            "value": "Mostrar solo las seleccionadas"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "show_selected_only",
+            "value": "Mostra només les seleccionades"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "show_selected_only",
+            "value": "Erakutsi hautatutakoak soilik"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "show_selected_only",
+            "value": "Afficher uniquement les sélectionnées"
+          },
+          {
+            "lang": "lg-por",
+            "name": "show_selected_only",
+            "value": "Mostrar apenas as selecionadas"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "show_selected_only",
+            "value": "Nur ausgewählte anzeigen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "show_selected_only",
+            "value": "Mostra solo le selezionate"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "show_selected_only",
+            "value": "Εμφάνιση μόνο των επιλεγμένων"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "show_selected_only",
+            "value": "चयन गरिएका मात्र देखाउनुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "clear_selection",
+            "value": "Clear selection"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "clear_selection",
+            "value": "Borrar selección"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "clear_selection",
+            "value": "Esborra la selecció"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "clear_selection",
+            "value": "Garbitu hautaketa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "clear_selection",
+            "value": "Effacer la sélection"
+          },
+          {
+            "lang": "lg-por",
+            "name": "clear_selection",
+            "value": "Limpar seleção"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "clear_selection",
+            "value": "Auswahl löschen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "clear_selection",
+            "value": "Cancella selezione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "clear_selection",
+            "value": "Καθαρισμός επιλογής"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "clear_selection",
+            "value": "चयन खाली गर्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "confirm_clear_selection",
+            "value": "Clear the whole ontology selection?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "confirm_clear_selection",
+            "value": "¿Borrar toda la selección de ontologías?"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "confirm_clear_selection",
+            "value": "Esborrar tota la selecció d'ontologies?"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "confirm_clear_selection",
+            "value": "Ontologien hautaketa osoa garbitu?"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "confirm_clear_selection",
+            "value": "Effacer toute la sélection d'ontologies ?"
+          },
+          {
+            "lang": "lg-por",
+            "name": "confirm_clear_selection",
+            "value": "Limpar toda a seleção de ontologias?"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "confirm_clear_selection",
+            "value": "Die gesamte Ontologie-Auswahl löschen?"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "confirm_clear_selection",
+            "value": "Cancellare l'intera selezione di ontologie?"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "confirm_clear_selection",
+            "value": "Καθαρισμός ολόκληρης της επιλογής οντολογιών;"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "confirm_clear_selection",
+            "value": "सम्पूर्ण ओन्टोलोजी चयन खाली गर्ने?"
           }
         ]
       }

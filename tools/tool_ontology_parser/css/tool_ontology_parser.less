@@ -42,6 +42,143 @@
 		>.ontologies_list_container {
 			min-height: 10rem;
 
+			// filter_bar — search + selection header of the TLD picker.
+			// Sticky: with ~200 tlds the search box must stay reachable while the operator
+			// scrolls the groups it is filtering.
+			.filter_bar {
+				position: sticky;
+				top: 0;
+				z-index: 2;
+				background-color: @color_grey_16;
+				padding: 0.5rem 0 0.6rem 0;
+				margin-bottom: 0.25rem;
+				border-bottom: 1px solid @color_grey_13;
+
+				.filter_row {
+					display: flex;
+					align-items: center;
+					gap: 0.75rem;
+
+					&.filter_selection_row {
+						margin-top: 0.4rem;
+						font-size: 0.9rem;
+					}
+				}
+
+				// input + its clear affordance share one box so the × sits inside the field
+				.filter_search {
+					position: relative;
+					flex: 1 1 auto;
+					max-width: 26rem;
+
+					>.filter_input {
+						width: 100%;
+						box-sizing: border-box;
+						padding: 0.35rem 1.9rem 0.35rem 0.5rem;
+						font-size: 1rem;
+						line-height: 1.3rem;
+						border: 1px solid @color_grey_12;
+						border-radius: 3px;
+						// input[type='search'] is NOT in general.less's shared field selector, so it
+						// would keep the browser's white default and read as a light box on a dark
+						// panel. Inherit the surface instead of painting a second one.
+						background-color: transparent;
+						color: inherit;
+
+						&:focus {
+							outline: none;
+							border-color: @tool_color;
+						}
+
+						// the tool draws its own × (see below); the WebKit one would double it
+						&::-webkit-search-cancel-button {
+							-webkit-appearance: none;
+							appearance: none;
+						}
+					}
+
+					>.filter_clear_query {
+						position: absolute;
+						right: 0.25rem;
+						top: 50%;
+						transform: translateY(-50%);
+						width: 1.4rem;
+						height: 1.4rem;
+						padding: 0;
+						line-height: 1.4rem;
+						font-size: 1.1rem;
+						background: none;
+						border: none;
+						color: @color_grey_8;
+						cursor: pointer;
+
+						&:hover { color: @color_grey_4; }
+					}
+				}
+
+				>.filter_row >.filter_count {
+					color: @color_grey_8;
+					font-size: 0.9rem;
+					white-space: nowrap;
+				}
+
+				>.filter_selection_row >.filter_selected {
+					color: @color_grey_7;
+					font-weight: 600;
+				}
+
+				// the two selection actions: quiet, secondary — they must not compete with
+				// the Reconcile / Rebuild / Export buttons below the list.
+				.filter_toggle,
+				.filter_clear_selection {
+					padding: 0.2rem 0.6rem;
+					font-size: 0.85rem;
+					line-height: 1.1rem;
+					background-color: transparent;
+					border: 1px solid @color_grey_12;
+					border-radius: 3px;
+					color: @color_grey_7;
+					cursor: pointer;
+
+					&:hover:not(:disabled) {
+						border-color: @tool_color;
+						color: @tool_color;
+					}
+					&:disabled {
+						opacity: 0.45;
+						cursor: default;
+					}
+				}
+				.filter_toggle.active {
+					background-color: @tool_color;
+					border-color: @tool_color;
+					color: white;
+
+					&:hover:not(:disabled) { color: white; }
+				}
+
+				>.filter_no_matches {
+					margin-top: 0.5rem;
+					color: @color_grey_8;
+					font-style: italic;
+				}
+			}
+
+			// filtering — rows and whole groups the search excluded. The nodes STAY in the
+			// DOM with their checkbox state; only visibility changes.
+			.item_label.no_match,
+			.children_container.no_match {
+				display: none;
+			}
+
+			// While a filter is active a group collapsed by the user must still show its
+			// matches — otherwise a hit lands inside a closed box and reads as "not found".
+			// This overrides the global `.hide` (display:none !important) WITHOUT writing
+			// collapse_toggle_track's persisted state, so clearing the box restores it.
+			&.filtering >.children_container.hide {
+				display: grid !important;
+			}
+
 			// generic label
 			.item_label {
 				overflow: hidden;

@@ -43,6 +43,10 @@ Both writes run the LLM-map post-step (its errors are merged in; the write's res
 
 **Client** (`tools/tool_ontology_parser/js/`). A checkbox tree of ontologies grouped by typology; a **status panel** (`paint_status`, fed by `inspect_ontologies`) showing each selected TLD as ✓ in-sync or ✗ with its drift counts; and four buttons — **Reconcile** (the safe default), **Regenerate** (rebuild), **Export**, **Refresh status**. One `run_action` path drives every button (confirm → run → render messages → repaint the panel → always clear the spinner), so the destructive and non-destructive actions carry **distinct** confirmations, and no response can leave the tool hanging.
 
+**Finding a TLD.** The census runs to ~200 ontologies, most of them two-letter country codes, so the tree is headed by a search bar (`build_filter_bar`, matching in `js/ontologies_filter.js`). It matches case- and diacritic-insensitively on the **tld**, the **full name** (including the `|` segments the row does not display) and the **typology name** — so `espana` finds *España*, and typing a group name reveals that whole group. Whitespace-separated tokens are ANDed and order-independent. Alongside it: a `N selected` readout, a **Show selected only** toggle (composes with the query) and **Clear selection** — the selection is restored from `localStorage` and would otherwise be invisible across collapsed groups.
+
+Filtering **hides** rows, it never re-renders them: every checkbox keeps its state and its handler, so a search can never alter `selected_ontologies`. Two consequences are load-bearing — a typology checkbox cascades to **visible children only** (otherwise it would silently check rows the operator cannot see, and the buttons below rebuild `dd_ontology` for exactly those TLDs), and a group the user collapsed is force-opened for the duration of a filter through a CSS `filtering` class, leaving the persisted collapse state unwritten.
+
 ## Actions & options
 
 | Action | Permission | Reads from `options` | Returns |
@@ -58,7 +62,12 @@ Both writes run the LLM-map post-step (its errors are merged in; the write's res
 
 ## How it is registered & surfaced
 
-`tools/tool_ontology_parser/register.json` restricts the tool (via `affected_tipos`) to the **Ontology section** (`dd5`), where it appears as the *Ontology parser* action. The action labels for the buttons resolve from the descriptor's label map and fall back to English, so the tool works before the labels are translated: `reconcile`, `regenerate`, `export`, `refresh_status`, and the `confirm_*` / `status_*` strings.
+`tools/tool_ontology_parser/register.json` restricts the tool (via `affected_tipos`) to the **Ontology section** (`dd5`), where it appears as the *Ontology parser* action. The action labels for the buttons resolve from the descriptor's label map and fall back to English, so the tool works before the labels are translated: `reconcile`, `regenerate`, `export`, `refresh_status`, the filter bar's `filter_placeholder` / `filter_no_matches` / `selected_count` / `show_selected_only` / `clear_selection`, and the `confirm_*` / `status_*` strings.
+
+That English fallback is also what makes a missing translation invisible, so it is gated: `test/unit/tool_ontology_parser.test.ts` extracts every `get_tool_label('x')` key from the tool's own JS and fails if one is absent from the seed, is missing a language the seed already speaks, or is defined twice for the same language. Add a label and its ten translations in the same commit, or the gate says so.
+
+!!! note "Editing `register.json` does not change a running install"
+    The file is a **seed**; the runtime reads `matrix_tools`. The Register tools maintenance widget is dormant unless `TOOLS_ENABLE_REGISTRY_IMPORT=true`, and turning that on rewrites the `string` / `relation` / `misc` columns of *every* registered tool. To land one tool's edit, do a scoped merge instead: read that row's own column, merge only what changed, and `updateMatrixRecord('matrix_tools', 'dd1324', <section_id>, { misc })` — it writes only the columns you pass. Follow it with `invalidateAllToolCaches()` (or a dev-server restart), since `matrix_tools` is cached. Labels live in `misc.dd1372[0].value` as `{lang, name, value}` entries, and `buildToolElementContext` serves only the current application lang.
 
 ## Related
 
