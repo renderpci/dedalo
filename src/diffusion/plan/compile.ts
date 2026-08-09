@@ -36,6 +36,23 @@
  * ParserStepConfig, 'rewriter' steps are ABSORBED (recorded as
  * 'rewriter:<fn>@<field>' warnings until the resolver phase lands their plan
  * rewrites), 'unknown' fns THROW naming the field (never a silent skip).
+ *
+ * FAILURE POLICY — what is fatal and what degrades (audit 2026-08 B3):
+ * STRUCTURAL violations refuse the whole element, because publishing under a
+ * wrong name or an unknown format is worse than not publishing: the format,
+ * the target database/service_name, the section/table resolution, the SQL
+ * identifier chokepoint and an unknown parser fn. A FIELD-LOCAL violation —
+ * today: a ddo tipo that is not in the ontology — degrades that ddo instead,
+ * exactly like the oracle (diffusion_chain_processor::resolve_ddo_value :133-
+ * 152, which logs and returns [] for that ddo). The entry KEEPS its place in
+ * the compiled chain as a `degraded` ResolveStep that resolves to zero atoms:
+ * the oracle's `columns` come from the FULL ddo_map (build_datum_context
+ * :1288-1308), so removing it would silently re-shape the field's column set.
+ * Degrade the VALUE, never the SHAPE. It is recorded as a structured
+ * PlanDegradation carried on the plan and printed by the run report, so a
+ * narrowed column is always visible — never dropped in silence.
+ * Ledger: engineering/wire_contract/WC-2026-08-09-diffusion-degradation-and-loud-ddo-fns.md
+ * Gate: test/unit/diffusion_compile_degrade_native.test.ts
  */
 
 import { config } from '../../config/config.ts';
@@ -50,6 +67,7 @@ import type {
 	FieldPlan,
 	FieldPolicy,
 	ParserStepConfig,
+	PlanDegradation,
 	PublicationPlan,
 	ResolveStep,
 	SectionPlan,
@@ -83,22 +101,32 @@ export function diffusionResolveLevels(): number {
 /** How a parser fn participates in the new engine (parsers/registry.ts). */
 export type ParserClassifier = (fn: string) => 'runtime' | 'rewriter' | 'unknown';
 
+/** Ontology model lookup (injected so the compiler can be exercised hermetically). */
+export type ModelResolver = (tipo: string) => Promise<string | null>;
+
 /**
  * Compile failed — carries EVERY violation found (not just the first), each
- * naming its element/section/field, plus the warnings gathered before the
- * failure so `validate` can report both.
+ * naming its element/section/field, plus the warnings AND the field-local
+ * degradations gathered before the failure, so `validate` reports all three.
  */
 export class PlanCompileError extends Error {
 	readonly elementTipo: string;
 	readonly compileErrors: string[];
 	readonly compileWarnings: string[];
+	readonly compileDegradations: PlanDegradation[];
 
-	constructor(elementTipo: string, errors: string[], warnings: string[]) {
+	constructor(
+		elementTipo: string,
+		errors: string[],
+		warnings: string[],
+		degradations: PlanDegradation[] = [],
+	) {
 		super(`diffusion plan compile failed for element '${elementTipo}':\n- ${errors.join('\n- ')}`);
 		this.name = 'PlanCompileError';
 		this.elementTipo = elementTipo;
 		this.compileErrors = errors;
 		this.compileWarnings = warnings;
+		this.compileDegradations = degradations;
 	}
 }
 
@@ -111,6 +139,17 @@ export interface CompileOptions {
 	classifyParserFn?: ParserClassifier;
 	/** Reuse an already-built virtual tree (validate-all, test suites). */
 	tree?: VirtualDiffusionTree;
+	/**
+	 * Ontology model lookup for ddo tipos. Defaults to the cached
+	 * `getModelByTipo`; injected by the degradation gate so the compiler's
+	 * field-local failure policy can be pinned without a database.
+	 */
+	resolveModelByTipo?: ModelResolver;
+}
+
+/** Operator-facing lines for a plan's field-local degradations (run report). */
+export function planDegradationReportLines(plan: PublicationPlan): string[] {
+	return (plan.degradations ?? []).map((entry) => `plan degradation: ${entry.message}`);
 }
 
 /** Lazy default classifier — resolved once, then cached. */
@@ -140,6 +179,8 @@ interface DdoEntry {
 	sectionFilter?: string[];
 	/** relation_list component_filter (relation-origin whitelist). */
 	componentFilter?: string[];
+	/** Verbatim ddo `options` bag (PHP $ddo->options — media quality/extension). */
+	options?: Record<string, unknown>;
 }
 
 /** Normalize an ontology string-array property ('a' | ['a','b'] | junk). */
@@ -174,6 +215,7 @@ function buildDdoMap(
 			const tipo = typeof ddo.tipo === 'string' ? ddo.tipo : '';
 			const declaredSection = typeof ddo.section_tipo === 'string' ? ddo.section_tipo : undefined;
 			const declaredParent = typeof ddo.parent === 'string' ? ddo.parent : '';
+			const rawOptions = ddo.options;
 			entries.push({
 				tipo,
 				sectionTipo: declaredSection === 'self' ? sectionTipo : declaredSection,
@@ -183,6 +225,10 @@ function buildDdoMap(
 				lang: typeof ddo.lang === 'string' && ddo.lang !== '' ? ddo.lang : undefined,
 				sectionFilter: stringArrayOf(ddo.section_filter),
 				componentFilter: stringArrayOf(ddo.component_filter),
+				options:
+					rawOptions !== null && typeof rawOptions === 'object' && !Array.isArray(rawOptions)
+						? (rawOptions as Record<string, unknown>)
+						: undefined,
 			});
 		}
 		return entries;
@@ -199,19 +245,55 @@ function buildDdoMap(
 	}));
 }
 
-/** Accumulates errors/warnings during one element compile. */
+/**
+ * The chain-tree key of one ddo: root entries (parent === the section) compile
+ * with NO `parent`; deeper entries hang under their parent ddo's tipo.
+ */
+function parentOf(ddo: DdoEntry, sectionTipo: string): string | undefined {
+	return ddo.parent !== '' && ddo.parent !== sectionTipo ? ddo.parent : undefined;
+}
+
+/**
+ * Every ddo hanging (transitively) under `rootTipo` in this ddo_map. Used to
+ * name the subtree a dangling ddo disables: the oracle reaches a child ddo only
+ * through its parent hop's resolved locators (resolve_chain), and a ddo that is
+ * not in the ontology resolves to none — so the whole subtree publishes empty.
+ * That is the oracle's behaviour; naming it is the part that was missing.
+ */
+function descendantDdoTipos(ddoMap: DdoEntry[], rootTipo: string): string[] {
+	const disabled: string[] = [];
+	const frontier = [rootTipo];
+	const seen = new Set<string>([rootTipo]);
+	while (frontier.length > 0) {
+		const current = frontier.pop() as string;
+		for (const ddo of ddoMap) {
+			if (ddo.parent !== current || ddo.tipo === '' || seen.has(ddo.tipo)) continue;
+			seen.add(ddo.tipo);
+			disabled.push(ddo.tipo);
+			frontier.push(ddo.tipo);
+		}
+	}
+	return disabled;
+}
+
+/** Accumulates errors/warnings/degradations during one element compile. */
 interface CompileDiagnostics {
 	errors: string[];
 	warnings: string[];
+	/** Field-local narrowings: the element still compiles (see PlanDegradation). */
+	degradations: PlanDegradation[];
 }
 
 /**
  * Compile one ddo chain into ResolveStep[]. Each entry becomes a 'component'
- * step (plain value read) or a 'relation-hop' step (the chain continues
- * through the component's locators) depending on whether the component model
+ * step (plain value read), a 'relation-hop' step (the chain continues
+ * through the component's locators) — depending on whether the component model
  * stores relation locators (descriptor column === 'relation' — the TS twin of
  * the PHP relation family — plus the pseudo-model relation_list, which PHP
- * special-cases into the relation branch: chain_processor :161-162).
+ * special-cases into the relation branch: chain_processor :161-162) — or a
+ * 'degraded' step when the tipo is not in the ontology at all. EVERY entry
+ * produces exactly one step: the chain is 1:1 with the ddo_map, which is what
+ * keeps the field's leaf/column topology identical to the oracle's.
  * Chain topology: root entries have parent === sectionTipo (compiled with NO
  * `parent`); deeper entries hang under their parent ddo's tipo (compiled with
  * `parent` = that tipo), kept in ddo_map order — the resolver's recursive
@@ -223,6 +305,8 @@ async function compileSourceChain(
 	sectionTipo: string,
 	fieldTipo: string,
 	fieldLabel: string,
+	columnName: string,
+	resolveModel: ModelResolver,
 	diagnostics: CompileDiagnostics,
 ): Promise<ResolveStep[]> {
 	const chain: ResolveStep[] = [];
@@ -231,16 +315,54 @@ async function compileSourceChain(
 			diagnostics.errors.push(`field '${fieldTipo}' (${fieldLabel}): ddo_map entry without tipo`);
 			continue;
 		}
-		const model = await getModelByTipo(ddo.tipo);
-		if (model === null) {
-			diagnostics.errors.push(
-				`field '${fieldTipo}' (${fieldLabel}): ddo tipo '${ddo.tipo}' not found in the ontology`,
-			);
-			continue;
-		}
 		// Root entries carry parent === sectionTipo (buildDdoMap normalization);
 		// only a ddo-tipo parent survives into the step (the resolver's tree key).
-		const parent = ddo.parent !== '' && ddo.parent !== sectionTipo ? ddo.parent : undefined;
+		const parent = parentOf(ddo, sectionTipo);
+		const model = await resolveModel(ddo.tipo);
+		if (model === null) {
+			// FIELD-LOCAL (audit B3). The oracle skips THIS ddo's VALUE and keeps
+			// going (resolve_ddo_value :133-152 → get_instance :394-406 returns
+			// null, logged, []); aborting the element instead made one dangling
+			// tipo (mht2's zenon4/5/6/9) block every publication run.
+			//
+			// The entry STAYS in the chain as a 'degraded' step. build_datum_context
+			// :1288-1308 derives the datum's `columns` from the FULL ddo_map with no
+			// ontology lookup at all, so a dangling ddo IS one of the field's
+			// columns — an empty slot the merge joins (`empty_columns` defaults to
+			// true). Dropping it would silently narrow the field's leaf topology:
+			// rsc1194 would publish 'Historia' where the oracle publishes
+			// 'Historia, '. Degrade the value, never the shape.
+			//
+			// Never silent either: the plan carries a structured degradation the
+			// run report prints, naming the field, the column, the ddo AND every
+			// ddo hanging under it (nothing reaches a child of a hop that resolves
+			// to no locators — the oracle's outcome, made visible).
+			const step: Extract<ResolveStep, { kind: 'degraded' }> = {
+				kind: 'degraded',
+				tipo: ddo.tipo,
+				reason: 'dangling_ddo_tipo',
+			};
+			if (parent !== undefined) step.parent = parent;
+			if (ddo.id !== undefined) step.ddoId = ddo.id;
+			chain.push(step);
+
+			const disabled = descendantDdoTipos(ddoMap, ddo.tipo);
+			diagnostics.degradations.push({
+				fieldId: fieldTipo,
+				columnName,
+				reason: 'dangling_ddo_tipo',
+				ddoTipo: ddo.tipo,
+				disabledDdoTipos: disabled,
+				message:
+					`field '${fieldTipo}' (${fieldLabel}): ddo tipo '${ddo.tipo}' not found in the ontology` +
+					' — it resolves to nothing (its column slot publishes empty); the field keeps its' +
+					' column topology and its remaining ddos resolve normally' +
+					(disabled.length === 0
+						? ''
+						: `; the ddos hanging under it (${disabled.join(', ')}) are disabled too`),
+			});
+			continue;
+		}
 		const isRelationFamily =
 			getComponentModel(model)?.column === 'relation' || model === 'relation_list';
 		if (isRelationFamily) {
@@ -277,6 +399,10 @@ async function compileSourceChain(
 			if (ddo.fn !== undefined) step.fn = ddo.fn;
 			if (ddo.id !== undefined) step.ddoId = ddo.id;
 			if (ddo.lang !== undefined) step.pinLang = ddo.lang;
+			// PHP $ddo->options (media quality/extension, fn arguments). Carried
+			// VERBATIM: the resolver decides what it implements and refuses the
+			// rest loudly — the compiler must not silently drop an option.
+			if (ddo.options !== undefined) step.options = ddo.options;
 			chain.push(step);
 		}
 	}
@@ -344,6 +470,7 @@ async function compileFieldPlan(
 	sectionTipo: string,
 	sqlTarget: boolean,
 	classify: ParserClassifier,
+	resolveModel: ModelResolver,
 	diagnostics: CompileDiagnostics,
 ): Promise<FieldPlan | null> {
 	const node = await tree.index.nodeOf(fieldTipo);
@@ -373,7 +500,15 @@ async function compileFieldPlan(
 	}
 
 	const ddoMap = buildDdoMap(properties, await tree.index.relationTipos(fieldTipo), sectionTipo);
-	const sourceChain = await compileSourceChain(ddoMap, sectionTipo, fieldTipo, label, diagnostics);
+	const sourceChain = await compileSourceChain(
+		ddoMap,
+		sectionTipo,
+		fieldTipo,
+		label,
+		columnName,
+		resolveModel,
+		diagnostics,
+	);
 	const transform = compileTransform(properties, classify, fieldTipo, label, diagnostics);
 
 	// Emit policies (build_datum_context :1354-1364 + process_datum :1170).
@@ -403,9 +538,16 @@ async function compileFieldPlan(
 	if (typeof process?.output_format === 'string') {
 		outputFormat = process.output_format;
 	} else {
+		// PHP: `$first_ddo = $ddo_map[0]; get_model_by_tipo($first_ddo->tipo)` — a
+		// dangling FIRST ddo yields no model and so no fallback output_format,
+		// which the 'degraded' step reproduces exactly. (Dropping the entry, as
+		// the first version of this fix did, promoted the SECOND ddo to first and
+		// could invent a 'json' format the oracle never picks.)
 		const firstStep = sourceChain[0];
 		const firstModel =
-			firstStep === undefined || firstStep.kind === 'system' ? null : firstStep.model;
+			firstStep === undefined || firstStep.kind === 'system' || firstStep.kind === 'degraded'
+				? null
+				: firstStep.model;
 		if (firstModel !== null && getComponentModel(firstModel)?.column === 'relation') {
 			outputFormat = 'json';
 		}
@@ -431,6 +573,7 @@ async function compileSectionPlan(
 	sectionTipo: string,
 	sqlTarget: boolean,
 	classify: ParserClassifier,
+	resolveModel: ModelResolver,
 	diagnostics: CompileDiagnostics,
 ): Promise<SectionPlan | null> {
 	const label = tableNode.label ?? '';
@@ -471,6 +614,7 @@ async function compileSectionPlan(
 			sectionTipo,
 			sqlTarget,
 			classify,
+			resolveModel,
 			diagnostics,
 		);
 		if (fieldPlan !== null) fields.push(fieldPlan);
@@ -519,8 +663,9 @@ function buildLangPolicy(): { langs: string[]; mainLang: string | null } {
 export async function compileElementPlan(
 	elementTipo: string,
 	options: CompileOptions = {},
-): Promise<PublicationPlan> {
+): Promise<PublicationPlan & { degradations: PlanDegradation[] }> {
 	const classify = options.classifyParserFn ?? (await defaultClassifier());
+	const resolveModel = options.resolveModelByTipo ?? getModelByTipo;
 	const tree = options.tree ?? (await buildVirtualDiffusionTree());
 	if (tree === null) {
 		throw new PlanCompileError(
@@ -532,7 +677,7 @@ export async function compileElementPlan(
 		);
 	}
 
-	const diagnostics: CompileDiagnostics = { errors: [], warnings: [] };
+	const diagnostics: CompileDiagnostics = { errors: [], warnings: [], degradations: [] };
 
 	// The element as it appears VIRTUALLY (alias tipo kept, alias contract on
 	// properties applied by the tree walk).
@@ -617,6 +762,7 @@ export async function compileElementPlan(
 			sectionTipo,
 			sqlTarget,
 			classify,
+			resolveModel,
 			diagnostics,
 		);
 		if (sectionPlan !== null) sections.push(sectionPlan);
@@ -626,7 +772,12 @@ export async function compileElementPlan(
 		if (target === null && diagnostics.errors.length === 0) {
 			diagnostics.errors.push('unable to resolve a publication target');
 		}
-		throw new PlanCompileError(elementTipo, diagnostics.errors, diagnostics.warnings);
+		throw new PlanCompileError(
+			elementTipo,
+			diagnostics.errors,
+			diagnostics.warnings,
+			diagnostics.degradations,
+		);
 	}
 
 	const maxLevels = diffusionResolveLevels();
@@ -641,6 +792,7 @@ export async function compileElementPlan(
 		recursion: { maxLevels },
 		langPolicy: buildLangPolicy(),
 		warnings: diagnostics.warnings,
+		degradations: diagnostics.degradations,
 	};
 }
 
@@ -649,11 +801,19 @@ export interface PlanValidationResult {
 	result: PublicationPlan | null;
 	errors: string[];
 	warnings: string[];
+	/**
+	 * Field-local degradations (PlanDegradation): the element publishes, but
+	 * these columns resolve less than the ontology asks for. Reported in BOTH
+	 * outcomes — a compile that fails on an unrelated structural violation must
+	 * still tell the operator what was already found degraded.
+	 */
+	degradations: PlanDegradation[];
 }
 
 /**
  * Compile wrapped for the `validate` action: violations come back as data
- * instead of an exception, warnings are reported in both outcomes.
+ * instead of an exception; warnings and degradations are reported in both
+ * outcomes.
  */
 export async function validateElementPlan(
 	elementTipo: string,
@@ -661,11 +821,21 @@ export async function validateElementPlan(
 ): Promise<PlanValidationResult> {
 	try {
 		const plan = await compileElementPlan(elementTipo, options);
-		return { result: plan, errors: [], warnings: plan.warnings };
+		return {
+			result: plan,
+			errors: [],
+			warnings: plan.warnings,
+			degradations: plan.degradations,
+		};
 	} catch (error) {
 		if (error instanceof PlanCompileError) {
-			return { result: null, errors: error.compileErrors, warnings: error.compileWarnings };
+			return {
+				result: null,
+				errors: error.compileErrors,
+				warnings: error.compileWarnings,
+				degradations: error.compileDegradations,
+			};
 		}
-		return { result: null, errors: [String(error)], warnings: [] };
+		return { result: null, errors: [String(error)], warnings: [], degradations: [] };
 	}
 }

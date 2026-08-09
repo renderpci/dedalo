@@ -106,17 +106,93 @@ export function decodeHtmlEntities(input: string): string {
 }
 
 /**
+ * The ddo `options` keys the MEDIA branch implements (PHP
+ * component_media_common::get_diffusion_data :530-536 reads five). Anything
+ * else is refused loudly rather than ignored — see mediaOptionsOf.
+ */
+const SUPPORTED_MEDIA_OPTIONS: ReadonlySet<string> = new Set(['quality', 'extension']);
+
+/**
+ * PHP truthiness, because that is the test the oracle applies to these keys:
+ * every unimplemented media option is read as `$ddo->options->x ?? false` and
+ * then used as a bool (component_media_common :530-536 → get_url). So
+ * `"absolute": false` is BYTE-IDENTICAL to omitting the key, and refusing on
+ * key PRESENCE would reject a ddo that merely spells out PHP's own defaults.
+ */
+function isPhpFalsy(value: unknown): boolean {
+	if (value === undefined || value === null || value === false) return true;
+	if (value === 0 || value === '' || value === '0') return true;
+	return Array.isArray(value) && value.length === 0;
+}
+
+/**
+ * Read a media ddo's tier selectors. `quality`/`extension` default to the
+ * model's own defaults (PHP `$ddo->options->quality ?? $this->get_default_quality()`).
+ *
+ * Any OTHER key set to a TRUTHY value throws. PHP also honours `test_file`,
+ * `absolute` and `default_add`, which this engine cannot reproduce faithfully:
+ * `absolute` prefixes DEDALO_PROTOCOL.DEDALO_HOST, constants the TS engine
+ * derives rather than configures, and `test_file`/`default_add` substitute a
+ * placeholder or a fallback file after a filesystem stat, which this pure
+ * primitive does not do. Ignoring them would publish the WRONG URL under a
+ * config that asked for another one — precisely the silent narrowing the hard
+ * rules ban — so an ontology that ASKS for one gets a named per-field error.
+ *
+ * An ontology that sets them FALSY is asking for the behaviour this engine
+ * already has, and publishes normally: the refusal is about capability, not
+ * about vocabulary.
+ *
+ * Ledger: engineering/wire_contract/WC-2026-08-09-diffusion-degradation-and-loud-ddo-fns.md
+ */
+function mediaOptionsOf(
+	options: Record<string, unknown> | undefined,
+	componentTipo: string,
+	defaults: { quality: string; extension: string },
+): { quality: string; extension: string } {
+	if (options === undefined) return defaults;
+	const unsupported = Object.keys(options).filter(
+		(key) => !SUPPORTED_MEDIA_OPTIONS.has(key) && !isPhpFalsy(options[key]),
+	);
+	if (unsupported.length > 0) {
+		throw new Error(
+			`media ddo '${componentTipo}': unsupported options ${unsupported.join(', ')} — this engine ` +
+				`implements ${[...SUPPORTED_MEDIA_OPTIONS].join('/')} only (refusing to publish a URL the ontology did not ask for)`,
+		);
+	}
+	return {
+		quality: typeof options.quality === 'string' ? options.quality : defaults.quality,
+		extension: typeof options.extension === 'string' ? options.extension : defaults.extension,
+	};
+}
+
+/**
  * Resolve one NON-relation component's publication atoms from a loaded matrix
  * record. `model` must be the canonical (alias-resolved) descriptor model.
  * Empty slice → empty array (the oracle's "no data").
+ *
+ * `ddoOptions` is the ddo's verbatim `options` bag (ResolveStep.options): the
+ * media branch reads the requested quality/extension tier from it.
  */
 export function defaultPublicationValue(
 	record: MatrixRecord,
 	componentTipo: string,
 	model: string,
 	provenance: ValueProvenance,
+	ddoOptions?: Record<string, unknown>,
 ): MetaValueIR[] {
 	const meta = metaFrom(provenance);
+	const mediaSpec = mediaTypeOf(model);
+	// Validated BEFORE the empty-slice return: an option the engine does not
+	// implement is a configuration fault of the ontology, and it must be
+	// reported on the first record that carries the field, not only on the ones
+	// that happen to hold media.
+	const mediaTier =
+		mediaSpec === null
+			? null
+			: mediaOptionsOf(ddoOptions, componentTipo, {
+					quality: mediaSpec.defaultQuality,
+					extension: mediaSpec.defaultExtension,
+				});
 
 	// component_section_id reads the structural column, not a JSONB slice.
 	if (model === 'component_section_id') {
@@ -128,12 +204,17 @@ export function defaultPublicationValue(
 
 	// MEDIA models publish their FILE URL, not the stored dato object
 	// (component_media_common::get_diffusion_data :453-580): external source
-	// wins; else the DEFAULT quality + type extension entry of the stored
+	// wins; else the REQUESTED quality + extension entry of the stored
 	// files_info must exist (file_exist), and the value is its public URL
 	// (get_url → DEDALO_MEDIA_URL + grammar path == the stored file_path).
 	// No matching published file → NO value (the PHP null dd-object outcome).
-	const mediaSpec = mediaTypeOf(model);
-	if (mediaSpec !== null) {
+	//
+	// The tier comes from the ddo (`options.quality` / `options.extension`,
+	// PHP :530-536) and falls back to the model defaults. Before this the
+	// defaults were HARDCODED, so a publication field could only ever emit the
+	// default tier however the ontology was configured.
+	if (mediaTier !== null) {
+		const tier = mediaTier;
 		const first = items[0] as StoredItem & {
 			external_source?: unknown;
 			files_info?: {
@@ -148,8 +229,8 @@ export function defaultPublicationValue(
 		}
 		const found = (first.files_info ?? []).find(
 			(entry) =>
-				entry.quality === mediaSpec.defaultQuality &&
-				entry.extension === mediaSpec.defaultExtension &&
+				entry.quality === tier.quality &&
+				entry.extension === tier.extension &&
 				entry.file_exist === true &&
 				typeof entry.file_path === 'string' &&
 				entry.file_path !== '',

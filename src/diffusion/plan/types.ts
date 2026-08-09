@@ -38,6 +38,14 @@ export type ResolveStep =
 			 * and emit it lang-neutral (component_common::get_diffusion_data pin).
 			 */
 			pinLang?: string;
+			/**
+			 * Verbatim ddo `options` bag (PHP `$ddo->options`). The media primitive
+			 * reads `quality`/`extension` from it (component_media_common::
+			 * get_diffusion_data :530-536); ANY other key is refused loudly at
+			 * resolution time rather than ignored — an option the engine does not
+			 * implement must never narrow a publication silently.
+			 */
+			options?: Record<string, unknown>;
 	  }
 	| {
 			kind: 'relation-hop';
@@ -60,6 +68,33 @@ export type ResolveStep =
 	| {
 			kind: 'system';
 			source: 'publish_timestamp' | 'section_id' | 'section_tipo';
+	  }
+	| {
+			/**
+			 * A ddo the compiler could not turn into a readable step (today: a
+			 * tipo absent from the ontology). It stays in the chain and resolves
+			 * to ZERO atoms.
+			 *
+			 * It is NOT dropped, because the oracle derives a datum's `columns`
+			 * from the FULL ddo_map — dd_diffusion_api::build_datum_context :1294
+			 * keeps every ddo that is not referenced as another ddo's `parent`,
+			 * WITHOUT looking the tipo up; danglingness is only discovered later,
+			 * at resolve time (diffusion_chain_processor::resolve_ddo_value :133-
+			 * 152 returns [] for it). Dropping the entry would silently re-shape
+			 * the field's leaf/column topology: mht2's rsc1194 would publish
+			 * 'Historia' where the oracle publishes 'Historia, ' (the empty slot
+			 * of the dangling zenon4 column, `empty_columns` defaulting to true).
+			 * DEGRADE THE VALUE, NEVER THE SHAPE.
+			 */
+			kind: 'degraded';
+			/** The ddo tipo VERBATIM as the ontology declares it. */
+			tipo: string;
+			/** ddo_map chain parent TIPO (undefined = root step). */
+			parent?: string;
+			/** ddo_map entry id — the handle parser patterns reference ('${a}'). */
+			ddoId?: string;
+			/** Machine-readable cause; mirrors PlanDegradation.reason. */
+			reason: 'dangling_ddo_tipo';
 	  };
 
 /** Per-field emit policies (compiled from the old context side-channels). */
@@ -145,6 +180,45 @@ export interface PlanLangPolicy {
 	mainLang: string | null;
 }
 
+/**
+ * A FIELD-LOCAL degradation found at compile time: the element still
+ * publishes, but this field resolves less than the ontology asks for. It is a
+ * STRUCTURED channel of its own (never mixed into `warnings`, whose strings
+ * are parsed by the resolver's rewriter/hop-fn recovery) because the operator
+ * has to be told exactly which column lost what.
+ *
+ * Oracle: diffusion_chain_processor::resolve_ddo_value :133-152 —
+ * component_common::get_instance returns null for a tipo that is not in the
+ * ontology, PHP logs "Component instance not found" and returns [] for THAT
+ * ddo. The rest of the field, and every other field of the element, still
+ * publishes. Before this, the TS compiler raised a fatal element error, so one
+ * dangling tipo (mht2's zenon4/5/6/9 bibliography ddos) blocked every run.
+ *
+ * The degradation is about the VALUE only: the ddo keeps its place in the
+ * compiled chain as a `degraded` ResolveStep, so the field's column topology
+ * is the oracle's (see that step's doc comment).
+ */
+export interface PlanDegradation {
+	/** The diffusion field node whose resolution was narrowed. */
+	fieldId: string;
+	/** The column that will publish empty / partial. */
+	columnName: string;
+	/** Machine-readable cause (one per known degradation kind). */
+	reason: 'dangling_ddo_tipo';
+	/** The offending ddo tipo. */
+	ddoTipo: string;
+	/**
+	 * ddos hanging UNDER the degraded one (transitively). They keep their place
+	 * in the chain and their column slots, but nothing ever executes them: the
+	 * oracle reaches a child ddo only through its parent's resolved locators,
+	 * and this parent resolves to none. Named so the operator sees the whole
+	 * disabled subtree, not just its root. Empty for a leaf ddo.
+	 */
+	disabledDdoTipos: string[];
+	/** Operator-facing sentence (what was skipped and what the effect is). */
+	message: string;
+}
+
 /** The compiled plan for one diffusion element. */
 export interface PublicationPlan {
 	/** Cache key: elementTipo + ontology revision at compile time. */
@@ -159,4 +233,11 @@ export interface PublicationPlan {
 	langPolicy: PlanLangPolicy;
 	/** Compile diagnostics surfaced by the `validate` action (never silent). */
 	warnings: string[];
+	/**
+	 * Field-local degradations (see PlanDegradation). OPTIONAL on the type so a
+	 * hand-built plan literal (writer/integration fixtures) stays valid;
+	 * `compileElementPlan` ALWAYS sets it, and every consumer reads it through
+	 * `plan.degradations ?? []`.
+	 */
+	degradations?: PlanDegradation[];
 }

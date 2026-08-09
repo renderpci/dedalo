@@ -56,7 +56,7 @@ import { readComponentItems } from '../../core/resolve/component_data.ts';
 import { findInverseReferences } from '../../core/search/search_related.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { getTermByLocator, getTermDataByLocator } from '../../core/ts_object/term_resolver.ts';
-import type { MetaValueIR, ParserContext } from '../parsers/types.ts';
+import type { MetaValueIR, ParserContext, ValueMeta } from '../parsers/types.ts';
 import type {
 	FieldPlan,
 	ParserStepConfig,
@@ -543,6 +543,130 @@ async function mapParentToNorder(record: MatrixRecord): Promise<number> {
 }
 
 /**
+ * The RUN-STATE a component ddo fn may consult. Narrow on purpose: everything
+ * else a fn needs comes from the record and the step, which is what lets this
+ * dispatch be exercised without a run (and therefore without a database).
+ */
+export interface ComponentFnEnv {
+	/** plan.langPolicy.langs — the diffusion langs a per-lang fn emits for. */
+	langs: readonly string[];
+	/** text_area tipo → its PAIRED component_geolocation tipo (run-cached). */
+	pairedGeolocationTipo: (textAreaTipo: string) => Promise<string | null>;
+}
+
+/**
+ * map_section_id_to_subtitles_url (PHP diffusion_fn :311-339 +
+ * shared/class.subtitles.php::get_subtitles_url :682-720): the publication
+ * server's subtitles ENDPOINT, one URL per diffusion language. This is NOT the
+ * media-tree .vtt file URL (core/media/path.ts subtitlesUrl): the published
+ * value points at `publication/server_api/v1/subtitles/`, which renders the
+ * transcript on demand for the requested language and time code — which is why
+ * the field is language-tagged and carries no file extension.
+ *
+ * The base is the application web root, the same `/dedalo` prefix every other
+ * URL this engine builds is rooted at (server.ts APP_ENTRY_PATH,
+ * config media webBase `/dedalo/<mediaDir>`), and it reproduces the value the
+ * ontology node itself documents in `properties->process->output_sample`
+ * (rsc546: '/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng').
+ */
+const SUBTITLES_ENDPOINT_BASE = '/dedalo/publication/server_api/v1/subtitles/';
+
+export function subtitlesUrlAtoms(
+	sectionId: number | string,
+	langs: readonly string[],
+	meta: ValueMeta,
+): MetaValueIR[] {
+	return langs.map((lang) => ({
+		kind: 'scalar' as const,
+		value: `${SUBTITLES_ENDPOINT_BASE}?section_id=${sectionId}&lang=${lang}`,
+		lang,
+		meta,
+	}));
+}
+
+/**
+ * Resolve ONE component ddo that declares a custom `fn` (PHP
+ * component_common::get_diffusion_data :3270-3326 fn branch).
+ *
+ * THE RULE (audit 2026-08 §5.3): a fn this engine has not ported is a LOUD
+ * per-field error, never an empty emission. PHP logs an ERROR and returns a
+ * null-valued dd object; the published artifact is the same empty column
+ * either way, but under TS the log had nowhere to go — `validate` reported the
+ * element clean and the run reported success. That combination published the
+ * AV subtitles column (rsc546, map_section_id_to_subtitles_url) as silently
+ * empty on every oral-history run. Throwing here surfaces the field in
+ * ResolvedBatch.errors → the job's error list, which is the operator's only
+ * view of a partial publication.
+ *
+ * The throw is the DEFAULT: every ported fn returns before it. Adding a fn
+ * means adding a branch — there is no path that quietly yields nothing.
+ *
+ * Ledger: engineering/wire_contract/WC-2026-08-09-diffusion-degradation-and-loud-ddo-fns.md
+ * Gate: test/unit/diffusion_compile_degrade_native.test.ts
+ */
+export async function resolveComponentFnAtoms(
+	env: ComponentFnEnv,
+	record: MatrixRecord,
+	step: Extract<ResolveStep, { kind: 'component' }>,
+): Promise<MetaValueIR[]> {
+	const meta: ValueMeta = { tipo: step.tipo };
+	if (step.ddoId !== undefined) meta.sourceId = step.ddoId;
+
+	switch (step.fn) {
+		case 'get_diffusion_data_info':
+			return [infoAtomOf(record, step.tipo)];
+
+		case 'map_parent_to_norder':
+			return [{ kind: 'scalar', value: await mapParentToNorder(record), lang: null, meta }];
+
+		case 'parse_tag_to_html': {
+			// diffusion_fn::parse_tag_to_html (:367-404): per stored item with a
+			// non-empty value, tags → HTML (+ the text_area override's entity
+			// decode). Empty slice = the PHP value-null dd object (no atoms).
+			const stored = (readComponentItems(record, step.tipo, step.model) ?? []) as {
+				value?: unknown;
+				lang?: string | null;
+			}[];
+			const out: MetaValueIR[] = [];
+			for (const item of stored) {
+				const raw = item?.value;
+				// PHP !empty($current_data->value): '' AND '0' are both skipped.
+				if (typeof raw !== 'string' || raw === '' || raw === '0') continue;
+				out.push({
+					kind: 'scalar',
+					value: parseTagValueToHtml(raw),
+					lang: !item.lang || item.lang === 'lg-nolan' ? null : item.lang,
+					meta,
+				});
+			}
+			return out;
+		}
+
+		case 'get_geojson_data': {
+			// component_text_area::get_geojson_data (:1612-1665): the PAIRED
+			// component_geolocation's lib_data layers (point fallback included),
+			// published lang-neutral as one json atom. No pair / no layers = the
+			// PHP empty outcome (no atoms).
+			const geoTipo = await env.pairedGeolocationTipo(step.tipo);
+			if (geoTipo === null) return [];
+			const layers = buildGeojsonLayers(
+				readComponentItems(record, geoTipo, 'component_geolocation'),
+			);
+			return layers.length > 0 ? [{ kind: 'json', value: layers, lang: null, meta }] : [];
+		}
+
+		case 'map_section_id_to_subtitles_url':
+			return subtitlesUrlAtoms(record.section_id, env.langs, meta);
+
+		default:
+			throw new Error(
+				`unported ddo fn '${step.fn}' on component '${step.tipo}' — refusing to publish an ` +
+					'empty value that would read as success (port the fn or fix the ontology)',
+			);
+	}
+}
+
+/**
  * map_locator_to_section_label (PHP diffusion_fn :457-513): each linked
  * locator's SECTION ontology term, one atom per available translation.
  * Term translations come from dd_ontology (cached per run).
@@ -712,11 +836,30 @@ function normalizeParserSteps(raw: unknown): ParserStepConfig[] {
 	return steps;
 }
 
-/** Leaf steps of a source chain — PHP 'columns' (dd_diffusion_api :1247-1308). */
-function leafMergeColumns(chain: ResolveStep[]): MergeColumnRef[] {
+/**
+ * The MODEL a step contributes to its merge column. A `degraded` ddo has none:
+ * the oracle's column entry is a clone of the raw ddo_map entry, which never
+ * carried a model either (get_ddo_map :1252-1308 stores only tipo/section_tipo/
+ * parent/fn/id), so the column slot exists with no model-specific handling.
+ */
+function stepColumnModel(step: Exclude<ResolveStep, { kind: 'system' }>): string {
+	return step.kind === 'degraded' ? '' : step.model;
+}
+
+/**
+ * Leaf steps of a source chain — PHP 'columns' (dd_diffusion_api :1247-1308).
+ *
+ * EXPORTED for its gate (diffusion_compile_degrade_native.test.ts): this
+ * function IS the field's published column topology, and the audit's B3 fix
+ * silently re-shaped it once already. A rule that decides what a table's
+ * columns are deserves a direct test, not one mediated by a full run.
+ */
+export function leafMergeColumns(chain: ResolveStep[]): MergeColumnRef[] {
 	// PHP leaf rule (:1294): every ddo NOT referenced as another ddo's parent
-	// is a target column. Steps carry that linkage since the compile fix; a
-	// legacy chain without it falls back to the old positional heuristic.
+	// is a target column — computed over the FULL ddo_map, with no ontology
+	// lookup, so a DANGLING ddo is a column too (an always-empty slot the merge
+	// joins). Steps carry that linkage since the compile fix; a legacy chain
+	// without it falls back to the old positional heuristic.
 	const hasParentInfo = chain.some((step) => step.kind !== 'system' && step.parent !== undefined);
 	if (hasParentInfo) {
 		const parents = new Set<string>();
@@ -726,15 +869,16 @@ function leafMergeColumns(chain: ResolveStep[]): MergeColumnRef[] {
 		const leaves: MergeColumnRef[] = [];
 		for (const step of chain) {
 			if (step.kind === 'system') continue;
-			if (!parents.has(step.tipo)) leaves.push({ tipo: step.tipo, model: step.model });
+			if (!parents.has(step.tipo)) leaves.push({ tipo: step.tipo, model: stepColumnModel(step) });
 		}
 		return leaves;
 	}
 	const leaves: MergeColumnRef[] = [];
 	chain.forEach((step, index) => {
 		if (step.kind === 'system') return;
-		if (step.kind === 'component') {
-			leaves.push({ tipo: step.tipo, model: step.model });
+		// A terminal ddo (component read or dangling) is always a leaf column.
+		if (step.kind === 'component' || step.kind === 'degraded') {
+			leaves.push({ tipo: step.tipo, model: stepColumnModel(step) });
 			return;
 		}
 		// A hop is a leaf only when nothing follows it (its targets feed no
@@ -961,83 +1105,47 @@ async function walkChainLevel(
 			continue;
 		}
 
+		// A DEGRADED ddo (tipo absent from the ontology) resolves to zero atoms,
+		// which is exactly what the oracle does at this point:
+		// resolve_ddo_value :133-152 → component_common::get_instance returns
+		// null, PHP logs it and the ddo contributes []. Its COLUMN still exists
+		// (leafMergeColumns keeps it) and publishes an empty slot; the compile
+		// degradation already named it in the run report.
+		if (step.kind === 'degraded') continue;
+
 		// PHP resolve_chain child filter (:97-99): a section-scoped ddo only
 		// executes against records of its declared section.
 		if (step.sectionTipo !== '' && step.sectionTipo !== record.section_tipo) continue;
 
 		if (step.kind === 'component') {
-			// Custom ddo fn dispatch (component_common :3274-3326) — ported fns
-			// resolve here; anything else fails loud into the field error list.
-			if (step.fn === 'get_diffusion_data_info') {
-				atoms.push(infoAtomOf(record, step.tipo));
-				continue;
-			}
-			if (step.fn === 'map_parent_to_norder') {
-				atoms.push({
-					kind: 'scalar',
-					value: await mapParentToNorder(record),
-					lang: null,
-					meta: { sourceId: step.ddoId, tipo: step.tipo },
-				});
-				continue;
-			}
-			if (step.fn === 'parse_tag_to_html') {
-				// diffusion_fn::parse_tag_to_html (:367-404): per stored item with a
-				// non-empty value, tags → HTML (+ the text_area override's entity
-				// decode). Empty slice = the PHP value-null dd object (no atoms).
-				const stored = (readComponentItems(record, step.tipo, step.model) ?? []) as {
-					value?: unknown;
-					lang?: string | null;
-				}[];
-				for (const item of stored) {
-					const raw = item?.value;
-					// PHP !empty($current_data->value): '' AND '0' are both skipped.
-					if (typeof raw !== 'string' || raw === '' || raw === '0') continue;
-					atoms.push({
-						kind: 'scalar',
-						value: parseTagValueToHtml(raw),
-						lang: !item.lang || item.lang === 'lg-nolan' ? null : item.lang,
-						meta: { sourceId: step.ddoId, tipo: step.tipo },
-					});
-				}
-				continue;
-			}
-			if (step.fn === 'get_geojson_data') {
-				// component_text_area::get_geojson_data (:1612-1665): the PAIRED
-				// component_geolocation's lib_data layers (point fallback included),
-				// published lang-neutral as one json atom. No pair / no layers = the
-				// PHP empty outcome (no atoms).
-				const geoTipo = await pairedGeolocationTipoOf(ctx, step.tipo);
-				if (geoTipo !== null) {
-					const layers = buildGeojsonLayers(
-						readComponentItems(record, geoTipo, 'component_geolocation'),
-					);
-					if (layers.length > 0) {
-						atoms.push({
-							kind: 'json',
-							value: layers,
-							lang: null,
-							meta: { sourceId: step.ddoId, tipo: step.tipo },
-						});
-					}
-				}
-				continue;
-			}
+			// Custom ddo fn dispatch (component_common :3274-3326). ONE door, and
+			// it either resolves or throws — see resolveComponentFnAtoms.
 			if (step.fn !== undefined) {
-				// Unported fn on an EMPTY slice is a legitimate empty outcome (PHP
-				// returns a value-null dd object either way); only real data whose
-				// transformation we cannot reproduce fails loud (ledgered).
-				const stored = readComponentItems(record, step.tipo, step.model);
-				if (stored === null || stored.length === 0) continue;
-				throw new Error(`unported component fn '${step.fn}' on '${step.tipo}' (ledgered)`);
+				atoms.push(
+					...(await resolveComponentFnAtoms(
+						{
+							langs: ctx.plan.langPolicy.langs,
+							pairedGeolocationTipo: (textAreaTipo) => pairedGeolocationTipoOf(ctx, textAreaTipo),
+						},
+						record,
+						step,
+					)),
+				);
+				continue;
 			}
 			// Terminal atoms carry NO section identity — the first-ddo relation
 			// stamps its locator identity on them (chain_processor :322-341),
 			// exactly like the PHP dd objects.
-			let stepAtoms = defaultPublicationValue(record, step.tipo, step.model, {
-				sourceId: step.ddoId,
-				tipo: step.tipo,
-			});
+			let stepAtoms = defaultPublicationValue(
+				record,
+				step.tipo,
+				step.model,
+				{
+					sourceId: step.ddoId,
+					tipo: step.tipo,
+				},
+				step.options,
+			);
 			if (step.pinLang !== undefined) {
 				// ddo lang pin (component_common :3341-3349): keep the pinned lang's
 				// entries (nolan passes) and emit them lang-neutral.
@@ -1094,7 +1202,10 @@ async function resolveHop(
 	// Child section whitelist (chain_processor :237-243).
 	const whitelist = new Set<string>();
 	for (const child of children) {
-		if (child.kind !== 'system' && child.sectionTipo !== '') whitelist.add(child.sectionTipo);
+		// A degraded child declares no section (it never executes), so it
+		// narrows nothing — the oracle's whitelist comes from resolvable ddos.
+		if (child.kind === 'system' || child.kind === 'degraded') continue;
+		if (child.sectionTipo !== '') whitelist.add(child.sectionTipo);
 	}
 	const isFirstDdo = prepared.field.sourceChain[0] === hop;
 
@@ -1163,6 +1274,7 @@ async function resolveHop(
 			const applicable = children.some(
 				(child) =>
 					child.kind !== 'system' &&
+					child.kind !== 'degraded' &&
 					(child.sectionTipo === '' || child.sectionTipo === sectionTipo),
 			);
 			if (applicable) {
@@ -1574,8 +1686,13 @@ export async function* resolvePublication(
 // - a missing matrix-table mapping falls back to the 'matrix' table (the
 //   legacy `?? 'matrix'` read), instead of resolving to "no record".
 
-/** A chain step that reads data (export chains never compile system steps). */
-export type ExportChainStep = Exclude<ResolveStep, { kind: 'system' }>;
+/**
+ * A chain step that reads data. Export chains are compiled by
+ * export/compile_columns.ts from the user's own column path, so they never
+ * contain a 'system' step nor a 'degraded' one (the export front-end resolves
+ * its own tipos); both kinds are excluded here and filtered at the entry point.
+ */
+export type ExportChainStep = Exclude<ResolveStep, { kind: 'system' } | { kind: 'degraded' }>;
 
 /** The per-request state of one export resolution run (caches only). */
 export interface ExportAtomRun {
@@ -1697,7 +1814,9 @@ export async function resolveRecordAtoms(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<ExportLeafAtom[]> {
-	const chain = field.sourceChain.filter((step): step is ExportChainStep => step.kind !== 'system');
+	const chain = field.sourceChain.filter(
+		(step): step is ExportChainStep => step.kind !== 'system' && step.kind !== 'degraded',
+	);
 	const out: ExportLeafAtom[] = [];
 	if (chain.length === 0) return out;
 
