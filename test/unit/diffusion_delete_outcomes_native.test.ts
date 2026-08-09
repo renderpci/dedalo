@@ -241,7 +241,7 @@ describe('deleteDiffusionRecord — sql outcomes', () => {
 });
 
 describe('deleteDiffusionRecord — file-type elements', () => {
-	test('KNOWN-RED (D10): a file-only section never reaches the dd1758 ledger', async () => {
+	test('D10 (fixed 2026-08-09): a file-only section DOES reach the dd1758 ledger', async () => {
 		let calls = 0;
 		registerNativeDiffusionSqlDelete(async () => {
 			calls++;
@@ -256,14 +256,18 @@ describe('deleteDiffusionRecord — file-type elements', () => {
 		expect(outcome.pending).toEqual(['rdf:zzd7']);
 		expect(calls).toBe(0); // no sql target → the executor is never consulted
 
-		// D10 — PINNED CURRENT BEHAVIOUR, NOT THE INTENT: `if (sqlTargets.length
-		// === 0) return outcome;` (diffusion_delete.ts:218) returns before
-		// logUnpublishOutcome (:260), so a file-only section's FAILED unlink
-		// produces a pending outcome with no dd1758 row and retryPendingDiffusion
-		// can never see it. Once D10 is fixed this becomes:
-		//   [{ element:'zzd0', elementId:'7', action:'3' },
-		//    { element:'zzd0', elementId:'8', action:'2' }]
-		expect(await activityRowsFor(FILE_SECTION, 932010)).toEqual([]);
+		// D10, FIXED 2026-08-09: the old `if (sqlTargets.length === 0) return
+		// outcome;` returned before logUnpublishOutcome, so a file-only section's
+		// FAILED unlink produced a pending outcome with NO dd1758 row —
+		// retryPendingDiffusion could never see it and the published file stayed
+		// live forever (an access-control failure, not just a retry bug). The
+		// ledger is now reached on every path that produced an outcome, and this
+		// pins the CORRECT behaviour: one row per element, action 3 for the
+		// unresolvable rdf element, action 2 for the idempotent xml one.
+		expect(await activityRowsFor(FILE_SECTION, 932010)).toEqual([
+			{ element: 'zzd0', elementId: '7', action: '3' },
+			{ element: 'zzd0', elementId: '8', action: '2' },
+		]);
 	});
 });
 

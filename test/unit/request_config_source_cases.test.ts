@@ -61,6 +61,44 @@ describe('hierarchy_terms source (PHP :2850-65)', () => {
 	});
 });
 
+describe('a SCALAR `value` is one element, not nothing (D20)', () => {
+	test("{source:'section', value:'lg1'} resolves to ['lg1']", async () => {
+		// D20, FIXED 2026-08-09: the branch read `Array.isArray(value) ? value : []`,
+		// so this LIVE declaration — dd_ontology carries it on 8 component_select_lang
+		// nodes (hierarchy8, oh20, test89, test147, rsc251, rsc666, rsc263, rsc854) —
+		// resolved to NOTHING. PHP iterates `(array)$value`, and the frozen oracle
+		// fixture component_datalist_lifecycle_differential records PHP emitting
+		// target_sections [{tipo:'lg1'}] for rsc251, so the empty result was a
+		// REGRESSION: every bare-id import into those components was refused with
+		// "IGNORED: Trying to import invalid target_section_tipo", and the client
+		// received empty target_sections.
+		expect(
+			await resolveSqoSectionTipos([{ source: 'section', value: 'lg1' }], context('test3')),
+		).toEqual(['lg1']);
+		// the array form is unchanged, and the two agree
+		expect(
+			await resolveSqoSectionTipos([{ source: 'section', value: ['lg1'] }], context('test3')),
+		).toEqual(['lg1']);
+		// a scalar 'self' still resolves to the owner section
+		expect(
+			await resolveSqoSectionTipos([{ source: 'section', value: 'self' }], context('test3')),
+		).toEqual(['test3']);
+		// an EMPTY scalar stays empty — it names no section
+		expect(
+			await resolveSqoSectionTipos([{ source: 'section', value: '' }], context('test3')),
+		).toEqual([]);
+	});
+
+	test('a scalar hierarchy_terms locator is honoured too (same helper)', async () => {
+		expect(
+			await resolveSqoSectionTipos(
+				[{ source: 'hierarchy_terms', value: { section_id: '1', section_tipo: 'numisdata4' } }],
+				context('test3'),
+			),
+		).toEqual(['numisdata4']);
+	});
+});
+
 describe('ontology_sections source (PHP class.ontology.php:1509-51)', () => {
 	test('resolves every registry target; value ignored; cached', async () => {
 		clearOntologySectionsCache();

@@ -75,6 +75,15 @@ export function confinedPath(baseDir: string, fileName: string): string | null {
 	return resolved;
 }
 
+/**
+ * Is an operator override URL configured? ONE reading of the rule, shared by
+ * `candidateUrls` (which URLs to try) and `downloadCountryDb` (whether to
+ * origin-pin), so the two can never disagree about what "an override" is.
+ */
+function hasOperatorOverride(override: string | undefined): boolean {
+	return override !== undefined && override.trim() !== '';
+}
+
 /** The default DB-IP monthly URL for a given year/month. */
 function dbipUrl(year: number, month: number): string {
 	const mm = String(month).padStart(2, '0');
@@ -86,8 +95,8 @@ function dbipUrl(year: number, month: number): string {
  * month followed by the previous month.
  */
 export function candidateUrls(override: string | undefined, now: Date = new Date()): string[] {
-	if (override !== undefined && override.trim() !== '') {
-		return [override.trim()];
+	if (hasOperatorOverride(override)) {
+		return [(override as string).trim()];
 	}
 	const year = now.getUTCFullYear();
 	const month = now.getUTCMonth() + 1; // 1-12
@@ -146,9 +155,9 @@ export function assertAcceptableResponse(
 	maxBytes: number = MAX_DOWNLOAD_BYTES,
 ): ReadableStream<Uint8Array> {
 	if (remote.status === 404) {
-		// NOTE: `notFound` is written here and read NOWHERE — downloadCountryDb
-		// falls through to the next candidate on ANY error. Dead state, pinned
-		// (quirk: pinned, not fixed).
+		// `notFound` is READ by downloadCountryDb's candidate loop (D11, wired
+		// 2026-08-09): only a 404 — "this month is not published yet" — may
+		// consume the next candidate month. Any other failure aborts the loop.
 		throw Object.assign(new Error(`not found: ${url}`), { notFound: true });
 	}
 	if (!remote.ok) {
@@ -287,7 +296,7 @@ export async function downloadCountryDb(
 		return { ok: false, error: 'unconfined geoip download path' };
 	}
 
-	const pinToDbip = !(urlOverride !== undefined && urlOverride.trim() !== '');
+	const pinToDbip = !hasOperatorOverride(urlOverride);
 	const urls = candidateUrls(urlOverride);
 
 	try {
@@ -298,22 +307,62 @@ export async function downloadCountryDb(
 
 	let lastError = 'no candidate URL';
 	for (const url of urls) {
-		try {
-			await fetchFile(url, gzPath, pinToDbip);
-			await decompress(gzPath, mmdbPath);
-			rmSync(gzPath, { force: true });
-			return { ok: true, mmdbPath };
-		} catch (error) {
-			rmSync(gzPath, { force: true });
-			// Defence in depth: a half-written .mmdb must never survive a failed
-			// candidate. A leftover zero-byte file dates to NOW, so decideGeoipAction
-			// reads it as present+fresh and suppresses the re-download for the whole
-			// REFRESH_AFTER_MS window — one bad response would disable geoip for 30 days.
-			rmSync(mmdbPath, { force: true });
-			lastError = (error as Error).message;
-			// A 404 means this month is not published yet — the loop falls through
-			// to the next (previous-month) candidate. Any other error does too.
-		}
+		const attempt = await attemptCandidate(url, gzPath, mmdbPath, pinToDbip, fetchFile, decompress);
+		if (attempt.ok) return { ok: true, mmdbPath };
+		lastError = attempt.error;
+		// D11 (wired 2026-08-09): ONLY a 404 — "this month is not published yet"
+		// — falls through to the previous-month candidate. A hard failure
+		// (origin mismatch, cap trip, stall, TLS refusal) is not month-specific:
+		// retrying burns the fallback and reports the wrong cause, so it stops
+		// here with its own message.
+		if (!attempt.notFound) break;
 	}
 	return { ok: false, error: lastError };
+}
+
+/**
+ * One candidate URL: fetch, decompress, drop the .gz. On failure the partial
+ * files are removed and the 404 marker (`notFound`) is surfaced so the caller
+ * can decide whether the next candidate month is worth trying.
+ */
+async function attemptCandidate(
+	url: string,
+	gzPath: string,
+	mmdbPath: string,
+	pinToDbip: boolean,
+	fetchFile: (url: string, destPath: string, pinToDbip: boolean) => Promise<number>,
+	decompress: (srcPath: string, destPath: string) => Promise<number>,
+): Promise<{ ok: true } | { ok: false; error: string; notFound: boolean }> {
+	try {
+		await fetchFile(url, gzPath, pinToDbip);
+		await decompress(gzPath, mmdbPath);
+		safeRemove(gzPath);
+		return { ok: true };
+	} catch (error) {
+		safeRemove(gzPath);
+		// Defence in depth: a half-written .mmdb must never survive a failed
+		// candidate. A leftover zero-byte file dates to NOW, so decideGeoipAction
+		// reads it as present+fresh and suppresses the re-download for the whole
+		// REFRESH_AFTER_MS window — one bad response would disable geoip for 30 days.
+		safeRemove(mmdbPath);
+		return {
+			ok: false,
+			error: (error as Error).message,
+			notFound: (error as { notFound?: boolean }).notFound === true,
+		};
+	}
+}
+
+/**
+ * Best-effort unlink. `rmSync(force:true)` still throws on EACCES/EPERM/EBUSY
+ * (a root-owned or read-only cache dir), which would break downloadCountryDb's
+ * documented "never throws" contract and, through it, skip ensureGeoipDb's
+ * load of a perfectly good pre-existing .mmdb (D13, fixed 2026-08-09).
+ */
+function safeRemove(path: string): void {
+	try {
+		rmSync(path, { force: true });
+	} catch (error) {
+		console.warn(`[geoip] could not remove ${path}: ${(error as Error).message}`);
+	}
 }

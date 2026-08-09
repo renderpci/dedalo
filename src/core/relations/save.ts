@@ -40,6 +40,7 @@ import {
 	type DataframePairing,
 	dataframeEntriesEqual,
 	dataframeEntryMatches,
+	isDataframeEntry,
 	normalizeDataframeEntry,
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
@@ -402,6 +403,32 @@ export async function validateRelationInsert(
 			if (dataframeEntriesEqual(item, normalized)) return null; // already framed — ignored
 		}
 		return normalized;
+	}
+
+	/**
+	 * A frame arriving with NO caller pairing — import, and every maintenance
+	 * door — is STILL a frame, and frame identity is still id_key-scoped.
+	 *
+	 * WC-2026-08-09-dataframe-import-id-key-identity. Without this arm the entry
+	 * fell to the generic relation dedup below, whose key is
+	 * [section_id, section_tipo, type, tag_id] — `id_key` is absent from it, so
+	 * two frames pointing at the SAME target record from DIFFERENT main items
+	 * hashed identically and the second was silently dropped as "already
+	 * linked". That is the precise mistake `dataframeEntriesEqual`'s own header
+	 * warns against; it was simply unreachable when `pairing` was null, which is
+	 * exactly the case on every CSV import (`dataframePairingOf` needs a caller
+	 * ddo, and an import has none).
+	 *
+	 * Nothing is normalized here: with no caller context there is nothing
+	 * authoritative to stamp, so the entry's OWN `id_key`/`main_component_tipo`
+	 * — carried in the file, written by the export — are the identity. That is
+	 * what makes a raw export round trip.
+	 */
+	if (isDataframeEntry(value)) {
+		for (const item of context.existingItems) {
+			if (dataframeEntriesEqual(item, value)) return null; // the same frame twice — ignored
+		}
+		return value;
 	}
 
 	// Duplicate rejection (hash-key equality like PHP build_locator_lookup_key;

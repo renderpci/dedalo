@@ -21,11 +21,17 @@
  * publish their measured state to the assertions that follow (`requireMain`
  * throws if the run did not happen, so a skipped setup cannot fake a pass).
  *
- * DROPPED from the plan: the `{old:'BAD TIPO'}` sub-case. Invalid items are
- * silently filtered with no `recorder.error`, so `counts === {}` holds whether
- * or not TIPO_RE regressed — the assertion could not fail. (The silent drop of
- * an operator's malformed definition line is itself a finding, not a test.)
- * The plan's "SQL injection" framing is also wrong: `old`/`new` are bound
+ * D1/D2/D3 ARE FIXED (2026-08-09, one wire entry:
+ * WC-2026-08-09-changes-in-locators-integrity). Rewriting this header's earlier
+ * paragraph rather than deleting it, because it recorded WHY a case was dropped
+ * and that reason no longer holds: the `{old:'BAD TIPO'}` sub-case used to be
+ * vacuous (invalid items were filtered SILENTLY, so `counts === {}` held whether
+ * or not TIPO_RE regressed). D3 turned that silent drop into a recorded
+ * `recorder.error`, so the malformed-items case below now asserts the ERRORS and
+ * can fail. D1 (the destination counter is advanced past the ids the move
+ * consumed) and D2 (the matrix_time_machine tail moves with the section) are
+ * pinned by their own cases.
+ * The plan's "SQL injection" framing is still wrong: `old`/`new` are bound
  * params; only table names are interpolated, from a constant allowlist.
  */
 
@@ -103,6 +109,28 @@ async function readSection(sectionTipo: string): Promise<ScratchRow[]> {
 		 FROM matrix_test WHERE section_tipo = $1 ORDER BY section_id`,
 		[sectionTipo],
 	)) as ScratchRow[];
+}
+
+/** Seed one matrix_time_machine row at the given coordinates (D2 fixture). */
+async function seedTmRow(sectionId: number, sectionTipo: string, tipo: string): Promise<number> {
+	const rows = (await sql.unsafe(
+		`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id)
+		 VALUES ($1, $2, $3, 'lg-eng', '2026-08-09 10:00:00', -1) RETURNING id`,
+		[sectionId, sectionTipo, tipo],
+	)) as { id: number }[];
+	const id = rows[0]?.id;
+	if (typeof id !== 'number') throw new Error('seedTmRow: no id returned — DB write failed');
+	return id;
+}
+
+async function readTmRow(id: number): Promise<{ section_id: number; section_tipo: string }> {
+	const rows = (await sql.unsafe(
+		'SELECT section_id, section_tipo FROM matrix_time_machine WHERE id = $1',
+		[id],
+	)) as { section_id: number; section_tipo: string }[];
+	const row = rows[0];
+	if (row === undefined) throw new Error(`readTmRow: matrix_time_machine id ${id} is gone`);
+	return row;
 }
 
 async function setCounter(tipo: string, value: number): Promise<void> {
@@ -311,16 +339,24 @@ test('execute: a row that only mentions the old tipo is selected but never rewri
 	expect(rewrite?.detail).toBe('rebase relation');
 });
 
-test('D1: the destination counter is NOT advanced past the ids the move just consumed', () => {
+test('D1 (FIXED 2026-08-09): the destination counter is advanced to the top id consumed', () => {
 	const state = requireMain();
-	// KNOWN-RED DEFECT D1 (rewrite/CRAP_COVERAGE_PLAN.md §2.1). Two records were
-	// moved into section ids 501 and 502 above the base, but matrix_counter is
-	// never bumped — so the next create in zztlocmvb1 hands out id 501 again and
-	// silently collides with a just-moved record.
-	// Pinned to CURRENT behaviour: value stays at the pre-move base.
-	// Once D1 is fixed this assertion must become `toBeGreaterThanOrEqual(902)`
-	// (base + the highest offset id consumed, i.e. 500 + 2 records worth).
-	expect(state.counterAfter).toBe(BASE);
+	// D1 FIXED. The two records landed at 901501/901502, so the destination
+	// counter is raised to the highest section_id the move consumed. Before the
+	// fix it stayed at the pre-move base (500) and a SECOND entry into the same
+	// destination re-read that same base, overlapped this entry's id range, and
+	// left the section PARTIALLY moved when the unique index threw mid-sweep.
+	// (The comment this replaces prescribed `toBeGreaterThanOrEqual(902)`; that
+	// was arithmetically wrong for this fixture — it read `BASE + record count`
+	// where the rule is MAX(section_id) of the moved rows.)
+	expect(state.counterAfter).toBe(901502);
+	// GREATEST semantics: never lowered below the pre-move base.
+	expect(state.counterAfter).toBeGreaterThanOrEqual(BASE);
+	// …and it is reported, so an operator sees it in the run's deltas.
+	const advance = state.sample.find((delta) => delta.op === 'advance_counter');
+	expect(advance?.table).toBe('matrix_counter');
+	expect(advance?.target).toBe(NEW_TIPO);
+	expect(advance?.detail).toBe(`value ≥ 901502 (was ${BASE})`);
 });
 
 // ---------------------------------------------------------------------------
@@ -350,10 +386,15 @@ test(
 		await executeChangesInLocators([moveItem()], recorder);
 
 		expect(recorder.errors).toEqual([]);
-		expect(recorder.counts).toEqual({ update: 1, rewrite_locator: 1 });
+		// D1 (2026-08-09): the counter advance is PREDICTED by the dry run — an
+		// operator's preview would otherwise omit a write the execute performs.
+		expect(recorder.counts).toEqual({ update: 1, advance_counter: 1, rewrite_locator: 1 });
 		const update = recorder.sample.find((delta) => delta.op === 'update');
 		expect(update?.table).toBe('matrix_test');
 		expect(update?.detail).toBe(`→${NEW_TIPO}, id+=${BASE} (1 rows)`);
+		expect(recorder.sample.find((delta) => delta.op === 'advance_counter')?.detail).toBe(
+			`value ≥ ${901021 + BASE} (was ${BASE})`,
+		);
 		expect(recorder.sample.find((delta) => delta.op === 'rewrite_locator')?.detail).toBe(
 			'rebase relation',
 		);
@@ -394,11 +435,70 @@ test(
 );
 
 // ---------------------------------------------------------------------------
+// D2 — the matrix_time_machine tail moves WITH the section
+// ---------------------------------------------------------------------------
+
+test(
+	'D2 (FIXED 2026-08-09): the TM history re-keys with the move, a foreign TM row does not',
+	async () => {
+		await cleanScratch();
+		expect(await scratchRowCount()).toBe(0);
+		await setCounter(NEW_TIPO, BASE);
+		await seedRow({ section_id: 901051, section_tipo: OLD_TIPO });
+		// The moved record's own history…
+		const movedTm = await seedTmRow(901051, OLD_TIPO, KEY_TIPO);
+		// …and a TM row of a DIFFERENT section, which must stay byte-identical.
+		const foreignTm = await seedTmRow(901051, OTHER_TIPO, KEY_TIPO);
+		const foreignBefore = await readTmRow(foreignTm);
+
+		const recorder = new TransformRecorder(false);
+		await executeChangesInLocators([moveItem()], recorder);
+
+		expect(recorder.errors).toEqual([]);
+		// BEFORE the fix, matrix_time_machine was absent from MATRIX_TABLE_ALLOWLIST
+		// and no statement named it, so this row kept (zztlocmva1, 901051) — a dead
+		// coordinate, and the record's whole audit trail was orphaned. It now moves
+		// with the SAME base as the primary rows.
+		const moved = await readTmRow(movedTm);
+		expect(moved.section_tipo).toBe(NEW_TIPO);
+		expect(moved.section_id).toBe(901051 + BASE);
+		expect(await readTmRow(foreignTm)).toEqual(foreignBefore);
+		// and it is reported, not silent
+		expect(recorder.sample.find((delta) => delta.table === 'matrix_time_machine')?.detail).toBe(
+			`→${NEW_TIPO}, id+=${BASE} (1 rows)`,
+		);
+	},
+	RUN_TIMEOUT,
+);
+
+test(
+	'D2: the dry run predicts the TM re-key and moves nothing',
+	async () => {
+		await cleanScratch();
+		expect(await scratchRowCount()).toBe(0);
+		await setCounter(NEW_TIPO, BASE);
+		await seedRow({ section_id: 901061, section_tipo: OLD_TIPO });
+		const tmId = await seedTmRow(901061, OLD_TIPO, KEY_TIPO);
+		const before = await readTmRow(tmId);
+
+		const recorder = new TransformRecorder(true);
+		await executeChangesInLocators([moveItem()], recorder);
+
+		expect(recorder.errors).toEqual([]);
+		expect(recorder.sample.find((delta) => delta.table === 'matrix_time_machine')?.detail).toBe(
+			`→${NEW_TIPO}, id+=${BASE} (1 rows)`,
+		);
+		expect(await readTmRow(tmId)).toEqual(before);
+	},
+	RUN_TIMEOUT,
+);
+
+// ---------------------------------------------------------------------------
 // malformed input — the filter is the only thing protecting the seeded rows
 // ---------------------------------------------------------------------------
 
 test(
-	'malformed items are filtered out and no row is touched',
+	'malformed items are REPORTED, not silently dropped, and no row is touched',
 	async () => {
 		await cleanScratch();
 		expect(await scratchRowCount()).toBe(0);
@@ -423,8 +523,34 @@ test(
 		);
 
 		expect(recorder.counts).toEqual({});
-		expect(recorder.errors).toEqual([]);
+		// D3 FIXED (2026-08-09): an operator's malformed `type:'section'` line is
+		// reported, so a typo can no longer read as a clean run. TWO errors, not
+		// three — the `type:'component'` entry is legitimate definition-file content
+		// (handled by move_tld) and MUST stay silent, or every real run floods.
+		expect(recorder.errors).toEqual([
+			`changes_in_locators: invalid item ${OLD_TIPO}→`,
+			`changes_in_locators: invalid item ${OLD_TIPO}→ZZTLOC MVB1`,
+		]);
 		expect(await readRow(idA)).toEqual(before);
+	},
+	RUN_TIMEOUT,
+);
+
+test(
+	'D3: an invalid item does not abort the batch — the valid sibling still moves',
+	async () => {
+		await cleanScratch();
+		expect(await scratchRowCount()).toBe(0);
+		const idA = await seedRow({ section_id: 901071, section_tipo: OLD_TIPO });
+
+		const recorder = new TransformRecorder(false);
+		await executeChangesInLocators(
+			[{ old: OLD_TIPO, new: 'ZZTLOC MVB1', type: 'section', perform: [] }, moveItem()],
+			recorder,
+		);
+
+		expect(recorder.errors).toEqual([`changes_in_locators: invalid item ${OLD_TIPO}→ZZTLOC MVB1`]);
+		expect((await readRow(idA)).section_tipo).toBe(NEW_TIPO);
 	},
 	RUN_TIMEOUT,
 );

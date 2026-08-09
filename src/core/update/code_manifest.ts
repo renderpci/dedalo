@@ -75,13 +75,12 @@ export function linearUpgradeTargets(
 		}
 	}
 	const boundary = nextMinor ?? nextMajor;
-	if (
-		boundary !== null &&
-		!targets.some((triple) => compareVersionArrays(triple, boundary) === 0)
-	) {
-		targets.push(boundary);
-	}
-	return targets.sort(compareVersionArrays);
+	if (boundary !== null) targets.push(boundary);
+	// One dedupe over the WHOLE list (defect D17, fixed 2026-08-09): the same
+	// triple can be reached from two catalog keys, not only from the boundary
+	// candidate, and a duplicated rung would be advertised twice in the manifest.
+	const unique = [...new Map(targets.map((triple) => [triple.join('.'), triple])).values()];
+	return unique.sort(compareVersionArrays);
 }
 
 /**

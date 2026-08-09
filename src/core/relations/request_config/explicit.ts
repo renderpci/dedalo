@@ -66,6 +66,21 @@ const KNOWN_SQO_SOURCES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * An enriched entry's `value` as a list. PHP iterates `(array)$value`, so a
+ * SCALAR value is one element — not nothing (D20, fixed 2026-08-09: the four
+ * branches each wrote `Array.isArray(value) ? value : []`, which SILENTLY
+ * DROPPED the live `{"value":"lg1","source":"section"}` string form; the 8
+ * component_select_lang nodes declaring it resolved ZERO target sections, so
+ * every bare-id import into them was refused "invalid target_section_tipo"
+ * and the client got empty target_sections). ONE helper on purpose: four
+ * inline coercions is exactly how the branches drifted apart.
+ */
+function asSqoValueList(value: unknown): unknown[] {
+	if (Array.isArray(value)) return value;
+	return value === undefined || value === null || value === '' ? [] : [value];
+}
+
+/**
  * Flatten an explicit sqo.section_tipo declaration to plain tipos: entries are
  * strings, or enriched {value: [tipos], source} objects; 'self' resolves to
  * the owner's section. Cases mirror PHP get_request_config_section_tipo
@@ -107,7 +122,7 @@ export async function resolveSqoSectionTipos(
 			// the ACTIVE hierarchy sections of those typologies (PHP
 			// get_hierarchy_sections_from_types).
 			if (source === 'hierarchy_types') {
-				const typeIds = (Array.isArray(value) ? value : []).map((id) => Number(id));
+				const typeIds = asSqoValueList(value).map((id) => Number(id));
 				resolved.push(...(await resolveHierarchySectionsFromTypes(typeIds)));
 				continue;
 			}
@@ -126,7 +141,7 @@ export async function resolveSqoSectionTipos(
 			// that resolve to a section model (PHP :2744-2848 — hierarchy1's
 			// hierarchy45/hierarchy59 resolve the active hierarchies' targets).
 			if (source === 'field_value') {
-				const componentTipos = (Array.isArray(value) ? value : []).filter(
+				const componentTipos = asSqoValueList(value).filter(
 					(tipo): tipo is string => typeof tipo === 'string',
 				);
 				resolved.push(
@@ -139,7 +154,7 @@ export async function resolveSqoSectionTipos(
 			// matter only to get_fixed_filter (./filters.ts:174), not here
 			// (PHP :2850-65). Zero live sqo users — parity insurance.
 			if (source === 'hierarchy_terms') {
-				for (const term of Array.isArray(value) ? value : []) {
+				for (const term of asSqoValueList(value)) {
 					const sectionTipo = (term as { section_tipo?: unknown } | null)?.section_tipo;
 					if (typeof sectionTipo === 'string') resolved.push(sectionTipo);
 				}
@@ -154,7 +169,7 @@ export async function resolveSqoSectionTipos(
 					`[request_config/explicit] unknown sqo section_tipo source '${source}' resolved with section semantics (PHP default branch)`,
 				);
 			}
-			for (const tipo of Array.isArray(value) ? value : []) {
+			for (const tipo of asSqoValueList(value)) {
 				if (typeof tipo === 'string') {
 					if (tipo === 'self') {
 						resolved.push(context.ownerSectionTipo);

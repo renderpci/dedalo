@@ -5,7 +5,7 @@
 	"root": "src/core",
 	"summary": {
 		"files": 452,
-		"functions": 3383,
+		"functions": 3417,
 		"functionsOverCap": 672,
 		"filesOverCap": 268
 	},
@@ -157,7 +157,7 @@
 		"src/core/ontology/ontology_update_target.ts": 12,
 		"src/core/ontology/ontology_write.ts": 19,
 		"src/core/ontology/parser.ts": 32,
-		"src/core/ontology/recovery_file.ts": 10,
+		"src/core/ontology/recovery_file.ts": 9,
 		"src/core/ontology/resolver.ts": 14,
 		"src/core/ontology/section_map.ts": 9,
 		"src/core/relations/children.ts": 12,
@@ -174,7 +174,7 @@
 		"src/core/relations/related.ts": 14,
 		"src/core/relations/relation_core.ts": 56,
 		"src/core/relations/request_config/build.ts": 21,
-		"src/core/relations/request_config/explicit.ts": 31,
+		"src/core/relations/request_config/explicit.ts": 27,
 		"src/core/relations/request_config/external.ts": 8,
 		"src/core/relations/request_config/filters.ts": 31,
 		"src/core/relations/request_config/implicit.ts": 27,
@@ -266,17 +266,17 @@
 		"src/core/update/code_build.ts": 7,
 		"src/core/update/code_build_plan.ts": 9,
 		"src/core/update/code_download.ts": 13,
-		"src/core/update/code_manifest.ts": 18,
+		"src/core/update/code_manifest.ts": 17,
 		"src/core/update/code_update.ts": 31,
 		"src/core/update/engine.ts": 37,
 		"src/core/update/transform/definitions.ts": 9,
 		"src/core/update/transform/engine.ts": 9,
-		"src/core/update/transform/lang.ts": 19,
+		"src/core/update/transform/lang.ts": 16,
 		"src/core/update/transform/locator_rewrite.ts": 11,
 		"src/core/update/transform/locators.ts": 15,
 		"src/core/update/transform/portalize.ts": 10,
 		"src/core/update/transform/portalize_plan.ts": 8,
-		"src/core/update/transform/tables.ts": 10,
+		"src/core/update/transform/tables.ts": 7,
 		"src/core/update/transform/tipos.ts": 11
 	}
 }

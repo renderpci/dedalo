@@ -288,6 +288,31 @@ describe('component_text_area — stores HTML, so a plain cell is paragraph-wrap
 	});
 });
 
+describe('component_iri — the json branch', () => {
+	// D21 (2026-08-09): the `IGNORED: expected array and get: <type>` arm this
+	// branch used to carry was UNREACHABLE — decodeCell only reports isJson for a
+	// string that decodes to a non-null object — and was DELETED rather than
+	// fake-tested. These pin the two arms that ARE live, so the deletion cannot
+	// quietly take a real one with it.
+	test('a json ARRAY of iri objects conforms element-wise', async () => {
+		const out = await conform('component_iri', '[{"iri":"https://a.test/1"}]');
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ iri: 'https://a.test/1' }]);
+	});
+	test('a single json OBJECT is wrapped into a one-element list', async () => {
+		const out = await conform('component_iri', '{"iri":"https://a.test/2"}');
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ iri: 'https://a.test/2' }]);
+	});
+	test('a bare scalar never reaches the json branch (isJson refuses it)', async () => {
+		// '42' is NOT json per PHP json_handler::is_json, so it takes the STRING
+		// path — the reason the deleted arm could never fire.
+		const out = await conform('component_iri', '42');
+		expect(out.result).toBeNull();
+		expect(out.errors[0]?.msg).toContain('malformed data');
+	});
+});
+
 describe('component_json — the wrapper is what disambiguates a dato from a value', () => {
 	test('WRAPPED: the cell IS the stored dato and round-trips verbatim', async () => {
 		const out = await conform('component_json', '[{"id":1,"value":{"a":2}}]', { wrapped: true });

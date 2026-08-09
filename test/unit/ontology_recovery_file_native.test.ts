@@ -134,7 +134,7 @@ describe('buildRecoveryVersionFile', () => {
 		expect((after as unknown as { t: string | null }[])[0]?.t).toBeNull();
 	}, 60_000);
 
-	test('pg_dump failure reports the error — and LEAVES the artifact behind (D9)', async () => {
+	test('pg_dump failure leaves NO artifact in the recovery slot (D9 fixed 2026-08-09)', async () => {
 		const outFile = join(workDir, 'build_fail.sql.gz');
 		const badConn: DbConnDescriptor = { ...conn, database: 'zzt04_no_such_database' };
 		const response = await buildRecoveryVersionFile(badConn, outFile);
@@ -144,14 +144,30 @@ describe('buildRecoveryVersionFile', () => {
 		expect(response.errors[0]?.startsWith('pg_dump failed:')).toBe(true);
 		expect(response.file_size).toBeUndefined();
 
-		// KNOWN-RED, defect D9: the half-written file is left at the output path, so
-		// a later restore happily feeds a truncated dump to psql. Pinning today's
-		// behaviour. Once D9 is fixed (unlink, or .part + rename) this must become
-		// expect(existsSync(outFile)).toBe(false).
-		expect(existsSync(outFile)).toBe(true);
+		// D9 FIXED 2026-08-09 (.part + rename): the dump streams to `<out>.part`
+		// and is renamed onto the slot only after pg_dump exits 0, so a failure
+		// can no longer overwrite the last good recovery artifact with a
+		// partial-but-valid gzip that restores as a silently truncated table.
+		expect(existsSync(outFile)).toBe(false);
+		expect(existsSync(`${outFile}.part`)).toBe(false);
 
 		const after = await sql.unsafe(`SELECT to_regclass('dd_ontology_recovery')::text AS t`, []);
 		expect((after as unknown as { t: string | null }[])[0]?.t).toBeNull();
+	}, 60_000);
+
+	test('a failed build does not destroy the PREVIOUS recovery artifact (D9)', async () => {
+		// The production caller passes no outFile, so every failure landed on the
+		// single RECOVERY_FILE_PATH slot — this is the loss that D9 caused.
+		const outFile = join(workDir, 'build_keeps_previous.sql.gz');
+		const previous = gzipSync(Buffer.from('-- previous good dump\n'));
+		writeFileSync(outFile, previous);
+
+		const badConn: DbConnDescriptor = { ...conn, database: 'zzt04_no_such_database' };
+		const response = await buildRecoveryVersionFile(badConn, outFile);
+
+		expect(response.result).toBe(false);
+		expect(readFileSync(outFile)).toEqual(previous);
+		expect(existsSync(`${outFile}.part`)).toBe(false);
 	}, 60_000);
 });
 

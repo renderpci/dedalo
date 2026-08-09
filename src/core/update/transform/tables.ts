@@ -14,6 +14,39 @@ import type { TransformRecorder } from './report.ts';
 
 const TIPO_RE = /^[a-z]+[0-9]+$/;
 
+/**
+ * Validate ONE definition item; returns the message to record, or null when the
+ * item may run. Identifier gate: `source_section` must be a tipo and both table
+ * names must be allowlist members (they are interpolated into raw SQL).
+ *
+ * D4 (FIXED 2026-08-09) — `source_table === target_table` is now REFUSED before
+ * any SQL runs. The self-move issued `INSERT INTO t SELECT … FROM t WHERE
+ * section_tipo = $1` followed by `DELETE FROM t WHERE section_tipo = $1`, so on
+ * `matrix_activity_diffusion` — the ONE allowlisted table with no
+ * UNIQUE (section_id, section_tipo) — the section was duplicated and then BOTH
+ * copies deleted inside a COMMITTED transaction, with `errors: []` and a report
+ * claiming a clean move. These transforms write no Time Machine trail, so the
+ * loss was unrecoverable short of a database backup. On the other 22 tables the
+ * unique index turned the same item into a raw PostgresError that escaped the
+ * executor and silently dropped every remaining item of the definition file.
+ */
+function validateTableMoveItem(item: TableMoveItem): string | null {
+	const sectionTipo = item.source_section;
+	const source = item.source_table;
+	const target = item.target_table;
+	if (
+		!TIPO_RE.test(sectionTipo ?? '') ||
+		!MATRIX_TABLE_ALLOWLIST.includes(source) ||
+		!MATRIX_TABLE_ALLOWLIST.includes(target)
+	) {
+		return `move_to_table: invalid item ${sectionTipo} ${source}→${target}`;
+	}
+	if (source === target) {
+		return `move_to_table: refused self-move ${sectionTipo} ${source}→${target} (source and target table are the same)`;
+	}
+	return null;
+}
+
 export async function executeMoveToTable(
 	rawItems: unknown,
 	recorder: TransformRecorder,
@@ -25,12 +58,9 @@ export async function executeMoveToTable(
 		const sectionTipo = item.source_section;
 		const source = item.source_table;
 		const target = item.target_table;
-		if (
-			!TIPO_RE.test(sectionTipo ?? '') ||
-			!MATRIX_TABLE_ALLOWLIST.includes(source) ||
-			!MATRIX_TABLE_ALLOWLIST.includes(target)
-		) {
-			recorder.error(`move_to_table: invalid item ${sectionTipo} ${source}→${target}`);
+		const invalid = validateTableMoveItem(item);
+		if (invalid !== null) {
+			recorder.error(invalid);
 			continue;
 		}
 

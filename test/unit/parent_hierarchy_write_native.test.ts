@@ -303,7 +303,7 @@ test('a NON-descendant parent two levels up the same tree is accepted (the cycle
 // dedup-append — and D15
 // ---------------------------------------------------------------------------
 
-test('a duplicate addParent is refused, but setChildOrder has ALREADY polluted the order component (D15)', async () => {
+test('a duplicate addParent is refused BEFORE it allocates an id or writes an order value (D15 fixed 2026-08-09)', async () => {
 	await seedNode({ section_id: 916040 });
 	await seedNode({ section_id: 916041, descriptor: true });
 
@@ -325,22 +325,17 @@ test('a duplicate addParent is refused, but setChildOrder has ALREADY polluted t
 	expect(await parentLocators(916041)).toHaveLength(1);
 	expect(Number((await parentLocators(916041))[0]?.id)).toBe(1);
 
-	// D15 — CURRENT (defective) BEHAVIOUR PINNED. addParent calls setChildOrder
-	// (parent.ts:326) BEFORE the dedup check (:341), so the refused duplicate has
-	// already allocated item id 2 and written an order value keyed to it — an id
-	// that never lands in the relation column. 916041 was a descriptor child of
-	// 916040 by then, so the stray value is 1 + 1 = 2.
-	// WHEN D15 IS FIXED this must become: toEqual([{ id: 1, value: 1 }]) and the
-	// meta counter must still read 1.
-	expect(await orderItems(916041)).toEqual([
-		{ id: 1, value: 1 },
-		{ id: 2, value: 2 },
-	]);
+	// D15 FIXED 2026-08-09 — CORRECT behaviour pinned. addParent used to call
+	// allocateComponentItemId + setChildOrder BEFORE the dedup check, so a
+	// refused duplicate burnt item id 2 and left an order value keyed to it — an
+	// id that never lands in the relation column. The dedup check now runs
+	// first, so a refusal writes NOTHING: one order item and the counter at 1.
+	expect(await orderItems(916041)).toEqual([{ id: 1, value: 1 }]);
 	const meta = JSON.parse((await readRow(916041)).meta ?? '{}') as Record<
 		string,
 		{ count?: number }[]
 	>;
-	expect(meta[PARENT_TIPO]?.[0]?.count).toBe(2); // the burnt id — also D15.
+	expect(meta[PARENT_TIPO]?.[0]?.count).toBe(1); // no burnt id.
 });
 
 test('the dedup key is FOUR-part: a link differing only in type — or only in from_component_tipo — is NOT a duplicate', async () => {

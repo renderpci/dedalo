@@ -10,12 +10,15 @@
  * scratch surface (section_tipo `zzt02s1`, tipos `zzt021..zzt024`, section
  * ids 902000-902999) that no other gate touches.
  *
- * D5 — ACCEPTED DATA LOSS, PINNED. When the target language key already holds
- * a value, the move OVERWRITES it: `jsonb_set(col #- [tipo,from], [tipo,to], …)`
- * has no collision guard, so the pre-existing target value is destroyed with no
- * error and no report line. The collision test below pins TODAY's behaviour
- * exactly. See its inline comment for what the assertion must become if/when
- * the collision is refused or merged.
+ * D5 — FIXED 2026-08-09 (WC-2026-08-09-move-lang-collision-refused). Rewriting
+ * this paragraph rather than deleting it, because it recorded the defect: when
+ * the target language key already held a value, the move OVERWROTE it —
+ * `jsonb_set(col #- [tipo,from], [tipo,to], …)` tested only the SOURCE key, so
+ * the pre-existing target value was destroyed with no error and no report line,
+ * on a write with no Time Machine snapshot to restore from. A row carrying BOTH
+ * languages is now REFUSED (both values left in place) and reported through
+ * `recorder.error` plus an `op: 'refuse_collision'` delta, identically in dry
+ * run and execute. The collision test below pins the refusal.
  *
  * Scratch hygiene: every write is under `section_tipo = 'zzt02s1'` (matrix_test)
  * or `tipo LIKE 'zzt02%'` (matrix_time_machine); `afterAll` deletes both ends and
@@ -222,7 +225,7 @@ describe('executeMoveLang — execute', () => {
 	);
 
 	test(
-		'D5 (PINNED): a target-lang collision DESTROYS the pre-existing target value',
+		'D5 (FIXED 2026-08-09): a target-lang collision is REFUSED, both values survive',
 		async () => {
 			await wipeScratch();
 			await seedRow(902003, {
@@ -236,20 +239,133 @@ describe('executeMoveLang — execute', () => {
 			);
 
 			const after = await readData(902003);
-			// PIN OF CURRENT BEHAVIOUR (defect D5): 'PRE-EXISTING' is gone —
-			// jsonb_set overwrites the target key unconditionally. The loss is
-			// silent: no error, and the delta reports a plain successful update.
-			// WHEN D5 IS FIXED this must become either (a) a refusal — errors
-			// naming the collision and `{lg-spa:['source'], lg-eng:['PRE-EXISTING']}`
-			// intact — or (b) a documented merge; until then, this is the contract.
-			expect(after.zzt023).toEqual({ 'lg-eng': ['source'] });
-			expect(recorder.errors).toEqual([]);
+			// D5 FIXED — landing point (a), refusal. Before the fix 'PRE-EXISTING'
+			// was gone (jsonb_set overwrote the target key unconditionally) and the
+			// loss was silent: no error, and a delta reporting a plain successful
+			// update. Both values now stay put, byte-identical…
+			expect(after.zzt023).toEqual({ 'lg-spa': ['source'], 'lg-eng': ['PRE-EXISTING'] });
+			// …the refusal is NAMED, with the row count…
+			expect(recorder.errors).toEqual([
+				'move_lang: 1 row(s) in matrix_test.data already carry zzt023 lg-eng — ' +
+					'lg-spa→lg-eng refused there, both values left in place',
+			]);
+			// …and it is a delta, so the report carries it, not just the error list.
+			expect(recorder.sample).toContainEqual({
+				op: 'refuse_collision',
+				table: 'matrix_test',
+				target: 'data.zzt023',
+				detail: 'lang lg-spa→lg-eng collision (1)',
+			});
+			// The refused row is NOT also counted as a move.
+			expect(recorder.sample).not.toContainEqual({
+				op: 'update',
+				table: 'matrix_test',
+				target: 'data.zzt023',
+				detail: 'lang lg-spa→lg-eng (1)',
+			});
+		},
+		SLOW,
+	);
+
+	test(
+		'D5: refusing is IDEMPOTENT — a second run refuses again, it never eventually overwrites',
+		async () => {
+			await wipeScratch();
+			await seedRow(902014, {
+				zzt023: { 'lg-spa': ['source'], 'lg-eng': ['PRE-EXISTING'] },
+			});
+			const before = await readDataText(902014);
+
+			for (const pass of [1, 2]) {
+				const recorder = new TransformRecorder(false);
+				await executeMoveLang(
+					[{ component_tipo: 'zzt023', from_lang: 'lg-spa', to_lang: 'lg-eng' }],
+					recorder,
+				);
+				expect(recorder.errors.length).toBe(1);
+				expect(await readDataText(902014)).toBe(before);
+				expect(pass).toBeLessThanOrEqual(2);
+			}
+		},
+		SLOW,
+	);
+
+	test(
+		'D5: a colliding row does not block a clean sibling row in the same run',
+		async () => {
+			await wipeScratch();
+			await seedRow(902015, { zzt023: { 'lg-spa': ['clean'] } });
+			await seedRow(902016, { zzt023: { 'lg-spa': ['source'], 'lg-eng': ['KEEP'] } });
+
+			const recorder = new TransformRecorder(false);
+			await executeMoveLang(
+				[{ component_tipo: 'zzt023', from_lang: 'lg-spa', to_lang: 'lg-eng' }],
+				recorder,
+			);
+
+			expect(await readData(902015)).toEqual({ zzt023: { 'lg-eng': ['clean'] } });
+			expect(await readData(902016)).toEqual({
+				zzt023: { 'lg-spa': ['source'], 'lg-eng': ['KEEP'] },
+			});
+			expect(recorder.errors.length).toBe(1);
 			expect(recorder.sample).toContainEqual({
 				op: 'update',
 				table: 'matrix_test',
 				target: 'data.zzt023',
 				detail: 'lang lg-spa→lg-eng (1)',
 			});
+		},
+		SLOW,
+	);
+
+	test(
+		'D5: the DRY RUN predicts the refusal — the preview matches what the execute does',
+		async () => {
+			await wipeScratch();
+			await seedRow(902017, { zzt023: { 'lg-spa': ['clean'] } });
+			await seedRow(902018, { zzt023: { 'lg-spa': ['source'], 'lg-eng': ['KEEP'] } });
+			const collidingBefore = await readDataText(902018);
+
+			const recorder = new TransformRecorder(true);
+			await executeMoveLang(
+				[{ component_tipo: 'zzt023', from_lang: 'lg-spa', to_lang: 'lg-eng' }],
+				recorder,
+			);
+
+			// An operator's whole safety gate is the preview: a dry run reporting N
+			// moves where the execute refuses M of them is a second defect.
+			expect(recorder.errors).toEqual([
+				'move_lang: 1 row(s) in matrix_test.data already carry zzt023 lg-eng — ' +
+					'lg-spa→lg-eng refused there, both values left in place',
+			]);
+			expect(recorder.counts.refuse_collision).toBe(1);
+			expect(recorder.sample).toContainEqual({
+				op: 'update',
+				table: 'matrix_test',
+				target: 'data.zzt023',
+				detail: 'lang lg-spa→lg-eng (1)', // the ONE movable row, not two
+			});
+			expect(await readDataText(902018)).toBe(collidingBefore);
+		},
+		SLOW,
+	);
+
+	test(
+		'D5: lg-nolan is guarded identically — an existing lg-nolan value is not overwritten',
+		async () => {
+			await wipeScratch();
+			await seedRow(902019, {
+				zzt023: { [DEFAULT_LANG]: ['source'], 'lg-nolan': ['PRE-EXISTING'] },
+			});
+
+			const recorder = new TransformRecorder(false);
+			await executeMoveLang([{ component_tipo: 'zzt023', to_nolan: true }], recorder);
+
+			expect(await readData(902019)).toEqual({
+				zzt023: { [DEFAULT_LANG]: ['source'], 'lg-nolan': ['PRE-EXISTING'] },
+			});
+			expect(recorder.errors.length).toBe(1);
+			expect(recorder.errors[0]).toContain('already carry zzt023 lg-nolan');
 		},
 		SLOW,
 	);

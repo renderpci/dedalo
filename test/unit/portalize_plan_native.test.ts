@@ -32,22 +32,34 @@
  *    scratch row (the delta ORDER and per-op detail strings are pinned; the
  *    multi-row accumulation is not).
  *
- * D6 (named, pinned, NOT fixed): portalize.ts step 2 writes
- * `{column:'relation', key:item.portal, value:[portalLocator]}` — an
- * UNCONDITIONAL REPLACE of the portal key. Any pre-existing content of that
- * portal on the source record is clobbered, on a TM-suppressed write, i.e.
- * unrecoverable. Pinned by a source assertion below.
+ * D6 FIXED 2026-08-09 (WC-2026-08-09-portalize-portal-merge). portalize.ts
+ * step 2 used to write `{column:'relation', key:item.portal,
+ * value:[portalLocator]}` — an UNCONDITIONAL REPLACE that clobbered any
+ * pre-existing portal content on a TM-suppressed (unrecoverable) write. It is
+ * now a READ-THEN-MERGE via `planPortalWrite`: absent/null → `[locator]`,
+ * array → append UNLESS an equal locator is already there (in which case NO
+ * write happens at all, which is what makes a re-run idempotent), anything else
+ * → refuse the row untouched. Section 8 below pins the new law; the source
+ * assertion in section 5 is flipped to assert the clobber is GONE.
  *
- * NOT WRITTEN, deliberately: `planPortalWrite` / append-instead-of-replace.
- * Appending would make re-runs non-idempotent (duplicate locators); it is a
- * behaviour change needing a decision + an engineering/wire_contract/ entry.
+ * Same fix, two companions, also pinned below: `planPortalizeWrites` resolves
+ * two moves claiming one (column, target_tipo) FIRST-WINS with the loser left
+ * intact on the source (was: last-write-wins, silent loss), and the executor
+ * catches a per-row JSON.parse failure instead of aborting the transform.
  */
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../src/core/db/matrix.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { executePortalize, portalizeOne } from '../../src/core/update/transform/portalize.ts';
-import { collectPortalizeMoves } from '../../src/core/update/transform/portalize_plan.ts';
+import {
+	collectPortalizeMoves,
+	decodeColumnText,
+	planPortalizeWrites,
+	planPortalWrite,
+	planTmRelocations,
+	portalValueRefusal,
+} from '../../src/core/update/transform/portalize_plan.ts';
 import { TransformRecorder } from '../../src/core/update/transform/report.ts';
 
 const SRC = 'zztportsrc1';
@@ -207,10 +219,11 @@ test('an empty component list yields no moves and never parses a column', () => 
 	expect(collectPortalizeMoves({ data: '{not json' }, [])).toEqual([]);
 });
 
-test('malformed column JSON THROWS (faithful to the pre-extraction executor)', () => {
-	// FOUND, NOT FIXED: portalizeOne has no try/catch around this parse, so one
-	// corrupt row aborts the whole transform mid-run (see the partial-application
-	// window noted in the header). Pinned as-is.
+test('malformed column JSON THROWS out of the PLAN layer', () => {
+	// The plan layer still throws — that contract is unchanged. What changed with
+	// D6 (2026-08-09) is the EXECUTOR: it catches per row, reports it and skips
+	// that row, so one corrupt column no longer aborts the whole transform
+	// mid-write (pinned in section 8 by a source assertion + a dry-run case).
 	expect(() => collectPortalizeMoves({ data: '{not json' }, MAP)).toThrow();
 });
 
@@ -241,14 +254,27 @@ test('the inline move-collection loop is DELETED from portalize.ts', () => {
 	}
 });
 
-test('D6 pinned, not fixed: the portal key is written as an UNCONDITIONAL REPLACE', () => {
-	// portalize.ts step 2 replaces the portal key with a single-element array,
-	// clobbering any pre-existing portal content on a TM-suppressed write.
-	expect(PORTALIZE_SRC).toContain(
+test('D6 FIXED 2026-08-09: the unconditional portal REPLACE is gone, read-merge is in', () => {
+	// The clobbering write must never come back.
+	expect(PORTALIZE_SRC).not.toContain(
 		"{ column: 'relation', key: item.portal, value: [portalLocator] }",
 	);
-	// there is no read-merge of the existing portal value anywhere in the file
-	expect(PORTALIZE_SRC).not.toContain('existingPortal');
+	// the existing portal value is read from the row and merged through the plan.
+	expect(PORTALIZE_SRC).toContain('existingPortalValue');
+	expect(PORTALIZE_SRC).toContain('planPortalWrite(context.existingPortalValue, portalLocator)');
+	// and the merged value is what is written.
+	expect(PORTALIZE_SRC).toContain('key: item.portal, value: portalPlan.value');
+});
+
+test('D6 FIXED: the row write steps are transaction-wrapped and the parse is guarded', () => {
+	expect(PORTALIZE_SRC).toContain('withTransaction(() =>');
+	expect(PORTALIZE_SRC).toContain('applyPortalizeRow(');
+	// per-row parse guard: a corrupt column skips its row, it does not abort.
+	expect(PORTALIZE_SRC).toContain('portalize: unreadable jsonb on');
+	// the target/source writes go through the deduped plan, never raw moves.
+	expect(PORTALIZE_SRC).toContain('plan.targetWrites');
+	expect(PORTALIZE_SRC).toContain('plan.sourceNulls');
+	expect(PORTALIZE_SRC).not.toContain('moves.map(');
 });
 
 // ---------------------------------------------------------------------------
@@ -394,4 +420,217 @@ test('portalizeOne dry-run with an unmapped component records nothing', async ()
 	);
 	expect(recorder.counts).toEqual({});
 	expect(recorder.errors).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------
+// 8. D6 (FIXED 2026-08-09): the portal read-then-merge + the collision law
+// ---------------------------------------------------------------------------
+
+const NEW_LOCATOR = {
+	section_id: 5001,
+	section_tipo: 'test3',
+	from_component_tipo: 'test99',
+	type: 'dd151',
+};
+
+test('D6: an absent / null portal writes the single-locator array (happy path unchanged)', () => {
+	expect(planPortalWrite(undefined, NEW_LOCATOR)).toEqual({
+		action: 'write',
+		value: [NEW_LOCATOR],
+	});
+	expect(planPortalWrite(null, NEW_LOCATOR)).toEqual({ action: 'write', value: [NEW_LOCATOR] });
+});
+
+test('D6: PRE-EXISTING portal content SURVIVES — the new locator is appended last', () => {
+	const existing = [
+		{ section_id: 77, section_tipo: 'test3', from_component_tipo: 'test99', type: 'dd151' },
+		{ section_id: 78, section_tipo: 'test3', from_component_tipo: 'test99', type: 'dd151' },
+	];
+	const plan = planPortalWrite(existing, NEW_LOCATOR);
+	expect(plan).toEqual({ action: 'write', value: [...existing, NEW_LOCATOR] });
+	// the caller's array is not mutated (the row text stays the source of truth)
+	expect(existing.length).toBe(2);
+});
+
+test('D6: IDEMPOTENT — feeding run 1 output back in writes NOTHING on run 2', () => {
+	const before = [
+		{ section_id: 77, section_tipo: 'test3', from_component_tipo: 'test99', type: 'dd151' },
+	];
+	const run1 = planPortalWrite(before, NEW_LOCATOR);
+	if (run1.action !== 'write') throw new Error('run 1 must write');
+	const run2 = planPortalWrite(run1.value, NEW_LOCATOR);
+	expect(run2.action).toBe('skip');
+	// nothing to write ⇒ the stored value after run 2 IS the value after run 1.
+	expect(run1.value).toEqual([...before, NEW_LOCATOR]);
+});
+
+test('D6: the already-linked test ignores `type` and compares section_id loosely', () => {
+	// a locator stored without `type`, or with section_id as a string, is still
+	// the same link — appending it again would duplicate the portal row.
+	expect(
+		planPortalWrite(
+			[{ section_id: '5001', section_tipo: 'test3', from_component_tipo: 'test99' }],
+			NEW_LOCATOR,
+		).action,
+	).toBe('skip');
+	// a DIFFERENT target record is not the same link — it appends.
+	expect(
+		planPortalWrite(
+			[{ section_id: 5002, section_tipo: 'test3', from_component_tipo: 'test99' }],
+			NEW_LOCATOR,
+		).action,
+	).toBe('write');
+});
+
+test('D6: null / scalar elements inside the existing array do not crash the merge', () => {
+	const plan = planPortalWrite([null, 'x', 7], NEW_LOCATOR);
+	expect(plan).toEqual({ action: 'write', value: [null, 'x', 7, NEW_LOCATOR] as never });
+});
+
+test('D6: a NON-ARRAY portal payload is REFUSED, never overwritten', () => {
+	for (const corrupt of ['a string', 42, { section_id: 1 }, true]) {
+		expect(portalValueRefusal(corrupt)).toContain('refusing to overwrite');
+		expect(planPortalWrite(corrupt, NEW_LOCATOR).action).toBe('refuse');
+	}
+	// absent / null / array are all mergeable
+	expect(portalValueRefusal(undefined)).toBeNull();
+	expect(portalValueRefusal(null)).toBeNull();
+	expect(portalValueRefusal([])).toBeNull();
+});
+
+test('D6: the single-move happy path plans exactly one target write and one null', () => {
+	const moves = collectPortalizeMoves(cols({ data: { [SRC]: 'V' } }), MAP);
+	expect(planPortalizeWrites(moves)).toEqual({
+		targetWrites: [{ column: 'data', key: TGT, value: 'V' }],
+		sourceNulls: [{ column: 'data', key: SRC, value: null }],
+		collisions: [],
+	});
+});
+
+test('D6: a shared target_tipo is DETERMINISTIC — first move in plan order wins', () => {
+	// two source components mapped onto ONE target tipo in the SAME column.
+	const row = cols({ data: { a1: 'A', b1: 'B' } });
+	const forward = planPortalizeWrites(
+		collectPortalizeMoves(row, [
+			{ source_tipo: 'a1', target_tipo: 'z9' },
+			{ source_tipo: 'b1', target_tipo: 'z9' },
+		]),
+	);
+	expect(forward.targetWrites).toEqual([{ column: 'data', key: 'z9', value: 'A' }]);
+	// the LOSER is not nulled — its data stays on the source, recoverable.
+	expect(forward.sourceNulls).toEqual([{ column: 'data', key: 'a1', value: null }]);
+	expect(forward.collisions).toEqual([
+		{ column: 'data', targetTipo: 'z9', keptSourceTipo: 'a1', droppedSourceTipo: 'b1' },
+	]);
+	// reversing the mapping order reverses the winner — deterministically, from
+	// the INPUT alone (never from row/DB iteration order).
+	const reversed = planPortalizeWrites(
+		collectPortalizeMoves(row, [
+			{ source_tipo: 'b1', target_tipo: 'z9' },
+			{ source_tipo: 'a1', target_tipo: 'z9' },
+		]),
+	);
+	expect(reversed.targetWrites).toEqual([{ column: 'data', key: 'z9', value: 'B' }]);
+	expect(reversed.collisions[0]?.droppedSourceTipo).toBe('a1');
+});
+
+test('D6: same target tipo in DIFFERENT columns is not a collision (distinct keys)', () => {
+	const moves = collectPortalizeMoves(cols({ data: { [SRC]: 'D' }, string: { [SRC]: 'S' } }), MAP);
+	const plan = planPortalizeWrites(moves);
+	expect(plan.collisions).toEqual([]);
+	expect(plan.targetWrites.map((w) => w.column)).toEqual(['data', 'string']);
+	expect(plan.sourceNulls.map((w) => w.column)).toEqual(['data', 'string']);
+});
+
+test('D6: one source tipo fanned to TWO target tipos nulls the source key ONCE', () => {
+	const plan = planPortalizeWrites(
+		collectPortalizeMoves(cols({ data: { [SRC]: 'V' } }), [
+			{ source_tipo: SRC, target_tipo: 't1' },
+			{ source_tipo: SRC, target_tipo: 't2' },
+		]),
+	);
+	expect(plan.targetWrites.map((w) => w.key)).toEqual(['t1', 't2']);
+	expect(plan.sourceNulls).toEqual([{ column: 'data', key: SRC, value: null }]);
+	expect(plan.collisions).toEqual([]);
+});
+
+test('D6: TM relocation drops a collision loser whose data never moved', () => {
+	const components = [
+		{ source_tipo: 'a1', target_tipo: 'z9' },
+		{ source_tipo: 'b1', target_tipo: 'z9' },
+	];
+	const plan = planPortalizeWrites(
+		collectPortalizeMoves(cols({ data: { a1: 'A', b1: 'B' } }), components),
+	);
+	expect(planTmRelocations(components, plan)).toEqual([{ source_tipo: 'a1', target_tipo: 'z9' }]);
+	// with no collision every mapped component still relocates (unchanged).
+	const clean = planPortalizeWrites(collectPortalizeMoves(cols({ data: { [SRC]: 'V' } }), MAP));
+	expect(planTmRelocations(MAP, clean)).toEqual(MAP);
+});
+
+test('decodeColumnText: {} for null/absent, parsed object otherwise, throws on garbage', () => {
+	expect(decodeColumnText(null)).toEqual({});
+	expect(decodeColumnText(undefined)).toEqual({});
+	expect(decodeColumnText('{"a1":1}')).toEqual({ a1: 1 });
+	expect(() => decodeColumnText('{nope')).toThrow();
+});
+
+// ---------------------------------------------------------------------------
+// 9. DB SCRATCH (D6): the executor REFUSES a row whose portal is not an array
+//    Scratch namespace: section_tipo='test3', section_id 941008; component
+//    tipo `zzpportsrc1` (unique to this file).
+// ---------------------------------------------------------------------------
+
+const REFUSE_ID = 941008;
+const REFUSE_SRC = 'zzpportsrc1';
+
+beforeAll(async () => {
+	await sql.unsafe(
+		`INSERT INTO matrix_test (section_id, section_tipo, data, relation)
+		 VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)`,
+		[
+			REFUSE_ID,
+			SCRATCH_TIPO,
+			JSON.stringify({ [REFUSE_SRC]: 'keep me' }),
+			// the portal key holds a SCALAR — the pre-D6 code would have replaced
+			// it (and any real content) with [portalLocator].
+			JSON.stringify({ test99: 'not-a-locator-array' }),
+		] as (string | number)[],
+	);
+});
+
+afterAll(async () => {
+	await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2', [
+		SCRATCH_TIPO,
+		REFUSE_ID,
+	]);
+	await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2', [
+		SCRATCH_TIPO,
+		REFUSE_ID,
+	]);
+});
+
+test('D6: a row whose portal holds a non-array is reported and SKIPPED, not clobbered', async () => {
+	const recorder = new TransformRecorder(true);
+	await portalizeOne(
+		{
+			source_section: SCRATCH_TIPO,
+			target_section: SCRATCH_TIPO,
+			portal: 'test99',
+			components: [{ source_tipo: REFUSE_SRC, target_tipo: 'zzpporttgt1' }],
+		},
+		recorder,
+	);
+	// the row HAD a move (data.zzpportsrc1) — it is refused before any op.
+	expect(recorder.counts).toEqual({});
+	expect(recorder.errors.length).toBe(1);
+	expect(recorder.errors[0]).toContain('refusing to overwrite');
+	expect(recorder.errors[0]).toContain(`${SCRATCH_TIPO}/${REFUSE_ID}`);
+	// and the row is untouched.
+	const after = (await sql.unsafe(
+		'SELECT data::text AS data, relation::text AS relation FROM matrix_test WHERE section_tipo = $1 AND section_id = $2',
+		[SCRATCH_TIPO, REFUSE_ID],
+	)) as { data: string; relation: string }[];
+	expect(JSON.parse(after[0]?.data ?? 'null')).toEqual({ [REFUSE_SRC]: 'keep me' });
+	expect(JSON.parse(after[0]?.relation ?? 'null')).toEqual({ test99: 'not-a-locator-array' });
 });

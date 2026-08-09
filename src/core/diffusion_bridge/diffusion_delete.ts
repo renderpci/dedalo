@@ -192,11 +192,20 @@ export async function deleteDiffusionRecord(
 	logActivity = true,
 	/** The acting user for the dd1758 ledger; absent → dd1762 omitted. */
 	userId?: number,
+	/**
+	 * Restrict the run to these element tipos (PHP retry_pending's
+	 * `only_element_tipos`). The retry loop passes the pending row's dd1766
+	 * element so its flip criterion is that element's outcome, never the
+	 * record's; absent → every element of the section.
+	 */
+	onlyElementTipos?: readonly string[],
 ): Promise<DiffusionDeleteOutcome> {
 	const outcome: DiffusionDeleteOutcome = { deleted: [], pending: [] };
+	// Hoisted so the dd1758 fold below sees the SAME (restricted) target set
+	// this run acted on — and is reached on every path that produced one.
+	let targets: readonly DiffusionSqlTarget[] = [];
 	try {
-		const targets = await getSectionDiffusionTargets(sectionTipo);
-		if (targets.length === 0) return outcome;
+		targets = restrictToElements(await getSectionDiffusionTargets(sectionTipo), onlyElementTipos);
 
 		const sqlTargets = targets.filter(
 			(target) =>
@@ -216,50 +225,82 @@ export async function deleteDiffusionRecord(
 				else outcome.pending.push(targetKey(target));
 			}
 		}
-		if (sqlTargets.length === 0) return outcome;
 
 		// NATIVE path (DIFFUSION_SPEC §4.2) — the ONLY executor since the
 		// 2026-07-11 cutover: MariaDB deletes run through the registered
 		// in-process executor, then execution falls through to the dd1758
-		// ledger below.
-		if (nativeSqlDeleteExecutor === null) {
-			// DEC-19: sql targets exist but no native executor is registered —
-			// delete propagation is NOT running and published rows/markers will
-			// rot. Loud, per DECISIONS.md:391-395. (No dd1758 rows here — the
-			// deliberate fresh-install no-op posture; with the executor
-			// registered at boot this branch only fires when that registration
-			// failed, which server.ts already reports as FATAL-FOR-DELETES.)
-			console.error(
-				`[diffusion] DEC-19: record ${sectionTipo}/${sectionId} has ${sqlTargets.length} sql publication target(s) but no native delete executor is registered — unpublish is deferred to pending rows. Fix the boot registration (src/server.ts).`,
-			);
-			for (const target of sqlTargets) {
-				outcome.pending.push(targetKey(target));
+		// ledger below. No sql target → nothing to execute, and execution
+		// falls through to that same ledger (D10, fixed 2026-08-09: the old
+		// `if (sqlTargets.length === 0) return outcome;` returned first and
+		// left a file-only section's failed unlink with no pending row).
+		if (sqlTargets.length > 0) {
+			if (nativeSqlDeleteExecutor === null) {
+				// DEC-19: sql targets exist but no native executor is registered —
+				// delete propagation is NOT running and published rows/markers will
+				// rot. Loud, per DECISIONS.md:391-395. (No dd1758 rows here — the
+				// deliberate fresh-install no-op posture; with the executor
+				// registered at boot this branch only fires when that registration
+				// failed, which server.ts already reports as FATAL-FOR-DELETES.)
+				console.error(
+					`[diffusion] DEC-19: record ${sectionTipo}/${sectionId} has ${sqlTargets.length} sql publication target(s) but no native delete executor is registered — unpublish is deferred to pending rows. Fix the boot registration (src/server.ts).`,
+				);
+				for (const target of sqlTargets) {
+					outcome.pending.push(targetKey(target));
+				}
+				return outcome;
 			}
-			return outcome;
-		}
-
-		const native = await nativeSqlDeleteExecutor(
-			sqlTargets.map((target) => ({
-				database_name: target.database_name,
-				table_name: target.table_name,
-				section_ids: [sectionId],
-				section_tipo: sectionTipo, // enables media marker removal in the store
-			})),
-		);
-		const confirmed = new Set(native.deleted);
-		for (const target of sqlTargets) {
-			const key = targetKey(target);
-			if (confirmed.has(key)) outcome.deleted.push(key);
-			else outcome.pending.push(key);
-		}
-		if (native.errors.length > 0) {
-			console.error('diffusion unpublish reported errors:', native.errors);
+			await executeNativeSqlDeletes(
+				nativeSqlDeleteExecutor,
+				sqlTargets,
+				sectionTipo,
+				sectionId,
+				outcome,
+			);
 		}
 	} catch (error) {
 		console.error('diffusion unpublish failed (swallowed, pending rows persist):', error);
 	}
-	await logUnpublishOutcome(sectionTipo, sectionId, outcome, logActivity, userId);
+	await logUnpublishOutcome(targets, sectionTipo, sectionId, outcome, logActivity, userId);
 	return outcome;
+}
+
+/**
+ * Keep only the named elements (PHP retry_pending's `only_element_tipos`).
+ * An absent/empty restriction means "every element", never "no element".
+ */
+function restrictToElements(
+	targets: readonly DiffusionSqlTarget[],
+	onlyElementTipos: readonly string[] | undefined,
+): readonly DiffusionSqlTarget[] {
+	if (onlyElementTipos === undefined || onlyElementTipos.length === 0) return targets;
+	return targets.filter((target) => onlyElementTipos.includes(target.element_tipo));
+}
+
+/** Hand the sql/socrata targets to the registered executor and record each outcome. */
+async function executeNativeSqlDeletes(
+	executor: NativeSqlDeleteExecutor,
+	sqlTargets: readonly DiffusionSqlTarget[],
+	sectionTipo: string,
+	sectionId: number,
+	outcome: DiffusionDeleteOutcome,
+): Promise<void> {
+	const native = await executor(
+		sqlTargets.map((target) => ({
+			database_name: target.database_name,
+			table_name: target.table_name,
+			section_ids: [sectionId],
+			section_tipo: sectionTipo, // enables media marker removal in the store
+		})),
+	);
+	const confirmed = new Set(native.deleted);
+	for (const target of sqlTargets) {
+		const key = targetKey(target);
+		if (confirmed.has(key)) outcome.deleted.push(key);
+		else outcome.pending.push(key);
+	}
+	if (native.errors.length > 0) {
+		console.error('diffusion unpublish reported errors:', native.errors);
+	}
 }
 
 /**
@@ -293,12 +334,15 @@ export function foldElementOutcomes(
 }
 
 /**
- * dd1758 diffusion log: one row per sql element — unpublished (2) when every
- * one of its targets confirmed, unpublish_pending (3) otherwise. Shared by
+ * dd1758 diffusion log: one row per element (sql AND file) — unpublished (2)
+ * when every one of its targets confirmed, unpublish_pending (3) otherwise.
+ * Shared by
  * the native and engine-socket delete paths so the ledger is identical
  * regardless of executor.
  */
 async function logUnpublishOutcome(
+	/** The targets this run acted on — already restricted by onlyElementTipos. */
+	targets: readonly DiffusionSqlTarget[],
 	sectionTipo: string,
 	sectionId: number,
 	outcome: DiffusionDeleteOutcome,
@@ -307,7 +351,6 @@ async function logUnpublishOutcome(
 ): Promise<void> {
 	if (!logActivity) return;
 	try {
-		const targets = await getSectionDiffusionTargets(sectionTipo);
 		const elements = foldElementOutcomes(targets, new Set(outcome.deleted));
 		for (const [elementTipo, success] of elements) {
 			await logDiffusionActivity({
@@ -415,22 +458,37 @@ export async function retryPendingDiffusion(
 	const rows = (await sql.unsafe(
 		`SELECT section_id,
 		        relation->'dd1763'->0->>'section_tipo' AS target_section,
-		        relation->'dd1763'->0->>'section_id' AS target_id
+		        relation->'dd1763'->0->>'section_id' AS target_id,
+		        relation->'dd1766'->0->>'section_tipo' AS element_section,
+		        relation->'dd1766'->0->>'section_id' AS element_id
 		 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 		 WHERE section_tipo = 'dd1758'
 		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb
 		 ORDER BY section_id ASC LIMIT ${Math.max(1, Math.floor(limit))}`,
-	)) as { section_id: number; target_section: string | null; target_id: string | null }[];
+	)) as {
+		section_id: number;
+		target_section: string | null;
+		target_id: string | null;
+		element_section: string | null;
+		element_id: string | null;
+	}[];
 	const outcome = { total: rows.length, retried: 0, remaining: 0 };
 	for (const row of rows) {
 		if (row.target_section === null || row.target_id === null) {
 			outcome.remaining++;
 			continue;
 		}
+		const element = pendingRowElementTipo(row.element_section, row.element_id);
 		const retry = await deleteDiffusionRecord(
 			row.target_section,
 			Number(row.target_id),
 			false, // the pending row already represents the intent — no new rows
+			undefined,
+			// D10b (fixed 2026-08-09): restrict the retry to THIS row's element
+			// (PHP retry_pending `only_element_tipos`). Without it the flip below
+			// — record-level `retry.deleted.length > 0` — marks a still-failing
+			// element 'unpublished' because a SIBLING element succeeded.
+			element === null ? undefined : [element],
 		);
 		if (retry.deleted.length > 0) {
 			// flip unpublish_pending → unpublished in place
@@ -446,6 +504,23 @@ export async function retryPendingDiffusion(
 		}
 	}
 	return outcome;
+}
+
+/**
+ * Rebuild an element tipo from a dd1766 locator — the inverse of the
+ * ontology-node-as-record encoding logDiffusionActivity writes
+ * ({tld}0 / numeric part → 'zzd0' + '7' = 'zzd7'). Null when the row carries
+ * no element locator (a record-level pending row): the retry then runs
+ * unrestricted, exactly as before.
+ */
+export function pendingRowElementTipo(
+	elementSection: string | null,
+	elementId: string | null,
+): string | null {
+	if (elementSection === null || elementId === null) return null;
+	const match = elementSection.match(/^([a-z]+)0$/);
+	if (match === null) return null;
+	return `${match[1]}${elementId}`;
 }
 
 /** PHP sanitize_file_name + beautify (delete-side subset: dash-safe names). */

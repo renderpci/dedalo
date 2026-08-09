@@ -323,30 +323,21 @@ export async function walkDiffusionTargets(
  * holds rows worth indexing (real-preferred, first-alias fallback). Order is
  * section-major — the engine treats the list as a set.
  *
- * NOTE (pinned behaviour, not a bug to fix here): `chosen` is keyed on
- * database_name ALONE, so when ONE database holds TWO real tables only the
- * first survives — the second real table's media markers are never built.
- * Widening the key is a wire-contract decision, not a refactor.
+ * D12, FIXED 2026-08-09: the selection key was `database_name` ALONE, so when
+ * one database held TWO REAL tables only the first survived and the second
+ * table's media markers were never built (published media denied/absent for
+ * that whole table). The key is now (database, table) — PHP's own
+ * resolve_media_index_targets dedupes on the db|table|section triple, so this
+ * RESTORES parity. The real-preferred / first-alias-fallback rule is the
+ * remaining deliberate divergence and is ledgered:
+ * engineering/wire_contract/WC-2026-08-09-media-index-target-selection.md.
  */
 export function selectMediaIndexTargets(
 	bySection: ReadonlyMap<string, DiffusionSqlTarget[]>,
 ): MediaIndexTarget[] {
 	const targets: MediaIndexTarget[] = [];
 	for (const [sectionTipo, list] of bySection) {
-		// per (database, section): real table wins, else the first alias
-		const chosen = new Map<string, DiffusionSqlTarget>();
-		for (const target of list) {
-			if (target.type !== 'sql' && target.type !== 'socrata') continue;
-			if (target.database_name === '' || target.table_name === '') continue;
-			const current = chosen.get(target.database_name);
-			if (
-				current === undefined ||
-				(current.table_is_alias === true && target.table_is_alias !== true)
-			) {
-				chosen.set(target.database_name, target);
-			}
-		}
-		for (const target of chosen.values()) {
+		for (const target of selectSectionMediaIndexTargets(list)) {
 			targets.push({
 				database_name: target.database_name,
 				table_name: target.table_name,
@@ -355,4 +346,34 @@ export function selectMediaIndexTargets(
 		}
 	}
 	return targets;
+}
+
+/**
+ * One section's indexable targets, in first-seen order: every distinct
+ * (database, table) pair, minus the alias tables of any database that also
+ * publishes to a REAL table (the engine only ever writes the real one), and
+ * minus every alias after the first in a database that has no real table.
+ */
+function selectSectionMediaIndexTargets(list: readonly DiffusionSqlTarget[]): DiffusionSqlTarget[] {
+	const eligible = list.filter(
+		(target) =>
+			(target.type === 'sql' || target.type === 'socrata') &&
+			target.database_name !== '' &&
+			target.table_name !== '',
+	);
+	const databasesWithRealTable = new Set(
+		eligible.filter((target) => target.table_is_alias !== true).map((t) => t.database_name),
+	);
+	const aliasedDatabases = new Set<string>();
+	const chosen = new Map<string, DiffusionSqlTarget>();
+	for (const target of eligible) {
+		if (target.table_is_alias === true) {
+			if (databasesWithRealTable.has(target.database_name)) continue; // real wins
+			if (aliasedDatabases.has(target.database_name)) continue; // first alias only
+			aliasedDatabases.add(target.database_name);
+		}
+		const key = `${target.database_name}|${target.table_name}`;
+		if (!chosen.has(key)) chosen.set(key, target);
+	}
+	return [...chosen.values()];
 }

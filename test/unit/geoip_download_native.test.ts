@@ -11,7 +11,15 @@
  */
 
 import { afterAll, afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -83,8 +91,9 @@ describe('assertAcceptableResponse', () => {
 	});
 
 	test('404 carries the notFound marker', () => {
-		// quirk: pinned, not fixed — `notFound` is written and read NOWHERE
-		// (downloadCountryDb falls through on ANY error). Dead state.
+		// D11, FIXED 2026-08-09: `notFound` is no longer dead state — it is the
+		// marker downloadCountryDb's candidate loop reads to decide whether the
+		// previous-month URL may be tried (see the two loop tests below).
 		let caught: unknown;
 		try {
 			assertAcceptableResponse(new Response('', { status: 404 }), 'u');
@@ -275,9 +284,13 @@ describe('downloadCountryDb', () => {
 		const dir = join(SCRATCH, 'loop');
 		const seen: string[] = [];
 		const result = await downloadCountryDb(dir, undefined, {
+			// D11 (wired 2026-08-09): only a 404 consumes the next candidate, so
+			// the walk is driven by notFound-marked errors.
 			streamToFile: async (url) => {
 				seen.push(url);
-				throw new Error(seen.length === 1 ? 'first' : 'second');
+				throw Object.assign(new Error(seen.length === 1 ? 'first' : 'second'), {
+					notFound: true,
+				});
 			},
 			gunzipWithCaps: async () => {
 				throw new Error('must not decompress');
@@ -301,13 +314,50 @@ describe('downloadCountryDb', () => {
 		const result = await downloadCountryDb(dir, undefined, {
 			streamToFile: async () => {
 				calls += 1;
-				if (calls === 1) throw new Error('404-ish');
+				if (calls === 1) throw Object.assign(new Error('404-ish'), { notFound: true });
 				return 10;
 			},
 			gunzipWithCaps: async () => 20,
 		});
 		expect(result).toEqual({ ok: true, mmdbPath: join(dir, DB_BASENAME) });
 		expect(calls).toBe(2);
+	});
+
+	test('D11 (wired 2026-08-09): a hard failure does NOT consume the second candidate', async () => {
+		// Before the fix `notFound` was written and read nowhere, so ANY error
+		// fell through: an origin mismatch or a cap trip burned the previous-month
+		// attempt and the caller was told the WRONG cause (the second URL's).
+		const dir = join(SCRATCH, 'hard_error');
+		const seen: string[] = [];
+		const result = await downloadCountryDb(dir, undefined, {
+			streamToFile: async (url) => {
+				seen.push(url);
+				throw new Error('geoip download origin mismatch');
+			},
+			gunzipWithCaps: async () => {
+				throw new Error('must not decompress');
+			},
+		});
+		expect(seen.length).toBe(1);
+		expect(result).toEqual({ ok: false, error: 'geoip download origin mismatch' });
+	});
+
+	test('D13 (fixed 2026-08-09): a cleanup that throws still resolves ok:false', async () => {
+		// downloadCountryDb is documented "never throws"; three bare rmSync calls
+		// made that false on EACCES/EPERM (a root-owned cache dir), and the
+		// escaping rejection skipped ensureGeoipDb's load of an EXISTING .mmdb —
+		// country resolution stayed off for the whole process life. safeRemove
+		// swallows the fs error, so the boundary contract is now true.
+		const dir = join(SCRATCH, 'unremovable');
+		mkdirSync(dir, { recursive: true });
+		// A DIRECTORY at the .gz path: rmSync(force:true) on it raises ERR_FS_EISDIR.
+		mkdirSync(join(dir, `${DB_BASENAME}.gz`), { recursive: true });
+		const result = await downloadCountryDb(dir, 'https://mirror.test/db.gz', {
+			streamToFile: async () => {
+				throw Object.assign(new Error('not found: u'), { notFound: true });
+			},
+		});
+		expect(result).toEqual({ ok: false, error: 'not found: u' });
 	});
 
 	test('an override is pin-free and tried once', async () => {

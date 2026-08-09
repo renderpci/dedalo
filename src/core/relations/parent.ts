@@ -312,20 +312,10 @@ export async function addParent(
 	if (locator.from_component_tipo === undefined) locator.from_component_tipo = parentRelationTipo;
 	if (locator.type === undefined) locator.type = RELATION_TYPE_PARENT;
 
-	// pre-allocate the item id (the order dataframe pairing key).
-	if (locator.id === undefined || locator.id === null || locator.id === '') {
-		locator.id = await allocateComponentItemId(
-			table,
-			childSectionTipo,
-			childSectionId,
-			parentRelationTipo,
-		);
-	}
-
-	// initial sibling order (paired by the just-allocated id).
-	await setChildOrder(childSectionTipo, childSectionId, locator);
-
 	// dedup-append (PHP add_locator_to_data equality: section_tipo/section_id/type/from_component_tipo).
+	// The check runs BEFORE the id allocation and the order write (defect D15,
+	// fixed 2026-08-09): a refused duplicate used to burn an item id and leave a
+	// stray order-component entry keyed to a locator that never lands.
 	const record = await readMatrixRecord(table, childSectionTipo, childSectionId);
 	const existing =
 		((record?.columns.relation as Record<string, ParentLocator[]> | null)?.[parentRelationTipo] as
@@ -339,6 +329,19 @@ export async function addParent(
 			stored.from_component_tipo === locator.from_component_tipo,
 	);
 	if (isDuplicate) return { ok: false, errors };
+
+	// pre-allocate the item id (the order dataframe pairing key).
+	if (locator.id === undefined || locator.id === null || locator.id === '') {
+		locator.id = await allocateComponentItemId(
+			table,
+			childSectionTipo,
+			childSectionId,
+			parentRelationTipo,
+		);
+	}
+
+	// initial sibling order (paired by the just-allocated id).
+	await setChildOrder(childSectionTipo, childSectionId, locator);
 
 	const merged = [...existing, locator];
 	await updateMatrixKeyData(

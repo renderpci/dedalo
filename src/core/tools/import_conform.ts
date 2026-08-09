@@ -1030,10 +1030,14 @@ const conformIri: ImportConformFn = async (value, json, ctx) => {
 			return ok(out);
 		}
 
-		const items = Array.isArray(decoded) ? decoded : isObject(decoded) ? [decoded] : null;
-		if (items === null) {
-			return fail(ctx, `IGNORED: expected array and get: ${phpType(decoded)}`, value);
-		}
+		// decodeCell (import_data.ts:67) is the ONLY producer of a JsonCell, and it
+		// sets isJson ONLY when the string starts with '[' or '{' AND decodes to a
+		// NON-NULL object — so inside this branch `decoded` is an array or an
+		// object, never a scalar. D21 (2026-08-09): the `items === null` →
+		// "IGNORED: expected array and get: …" arm that stood here was unreachable
+		// by construction; it is DELETED rather than kept as false comfort in a
+		// coverage report ("invariants are tripwired or deleted").
+		const items: unknown[] = Array.isArray(decoded) ? decoded : [decoded];
 		const conformed: unknown[] = [];
 		for (const item of items) {
 			if (isObject(item)) {

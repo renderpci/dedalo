@@ -285,6 +285,35 @@ describe('retryPendingDiffusion', () => {
 		expect(await pendingRowCount()).toBe(0);
 	});
 
+	test('D10b (fixed 2026-08-09): a retry is restricted to its OWN row element', async () => {
+		// Two sql elements → two pending rows for the SAME record. The executor
+		// now confirms only the FIRST element's target. Before the fix each row
+		// re-ran the WHOLE record, so the record-level flip criterion
+		// (`retry.deleted.length > 0`) marked the still-failing element
+		// 'unpublished' because its sibling succeeded — the pending row vanished
+		// with nothing unpublished. PHP restricts by only_element_tipos.
+		await seedPending(932045);
+		const batches: number[] = [];
+		registerNativeDiffusionSqlDelete(async (targets) => {
+			batches.push(targets.length);
+			return {
+				deleted: targets
+					.map((target) => `${target.database_name}|${target.table_name}`)
+					.filter((key) => key === SQL_KEY_ONE),
+				errors: [],
+			};
+		});
+
+		const result = await retryPendingDiffusion(10);
+
+		expect(result).toEqual({ total: 2, retried: 1, remaining: 1 });
+		// one target per call — the row's element, never the whole record
+		expect(batches).toEqual([1, 1]);
+		// the confirmed element flipped; the failing one stays pending
+		expect(await actionsOf(932045)).toEqual(['2', '3']);
+		expect(await pendingRowCount()).toBe(1);
+	});
+
 	test('a pending row with no resolvable record locator is counted, never retried', async () => {
 		// dd1763 carries a section_tipo but NO section_id: without the null guard
 		// this would drive a real delete of section_id 0.

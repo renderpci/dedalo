@@ -231,6 +231,10 @@ export async function updateOntology(
 	const recoveryDir = join(ioPath, 'recovery', String(Date.now()));
 	const messages: string[] = [];
 	const mutated: StagedFile[] = [];
+	// TLDs whose registry record + dd_ontology root node were provisioned before
+	// their import (defect D7): those writes are NOT covered by the Phase-B
+	// snapshots, so a restore cannot undo them.
+	const provisioned: string[] = [];
 
 	try {
 		// ------------------------------------------------------------------
@@ -250,6 +254,14 @@ export async function updateOntology(
 		// ------------------------------------------------------------------
 		// Phase B — recovery snapshot BEFORE the first destructive statement
 		// ------------------------------------------------------------------
+		// Pre-import schema for the operator-facing changes artifact. Captured
+		// HERE — before the first destructive statement — not after the import
+		// as PHP did (defect D8, fixed 2026-08-09; see the wire-contract entry
+		// WC-2026-08-09-simple-schema-changes-pre-import). PHP read it after the
+		// import and before optimize_tables, and since the read is uncached the
+		// two sides were always identical: the artifact was permanently `[]`.
+		const oldSchema = await getSimpleSchemaOfSections();
+
 		mkdirSync(recoveryDir, { recursive: true });
 		for (const file of staged) {
 			const outFile = confinedPath(recoveryDir, `${file.tld}.copy`);
@@ -283,7 +295,7 @@ export async function updateOntology(
 				if (imported.result !== true) {
 					response.errors.push(...imported.errors);
 					await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-					response.msg = 'Error. Import failed — previous state restored';
+					response.msg = restoreFailureMessage(provisioned, response.errors);
 					return response;
 				}
 				mutated.push(file);
@@ -305,6 +317,7 @@ export async function updateOntology(
 				>[0],
 				userId,
 			);
+			provisioned.push(file.tld);
 			const imported = await importFromCopyFile({
 				sectionTipo: file.sectionTipo,
 				filePath: file.stagedPath,
@@ -315,7 +328,7 @@ export async function updateOntology(
 			if (imported.result !== true) {
 				response.errors.push(...imported.errors);
 				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-				response.msg = 'Error. Import failed — previous state restored';
+				response.msg = restoreFailureMessage(provisioned, response.errors);
 				return response;
 			}
 			if (!(await consolidateSectionCounter(file.sectionTipo, 'matrix_ontology', conn))) {
@@ -337,9 +350,6 @@ export async function updateOntology(
 			messages.push(rebuilt.msg);
 			if (rebuilt.result !== true) response.errors.push(...rebuilt.errors);
 		}
-
-		// PHP order: snapshot old schema AFTER import/reindex, BEFORE optimize.
-		const oldSchema = await getSimpleSchemaOfSections();
 
 		const optimizeErrors = await optimizeTables(OPTIMIZE_TABLES, conn);
 		response.errors.push(...optimizeErrors);
@@ -377,13 +387,34 @@ export async function updateOntology(
 		response.errors.push((error as Error).message);
 		if (mutated.length > 0) {
 			await restoreSnapshots(mutated, recoveryDir, conn, response.errors);
-			response.msg = 'Error. Import failed — previous state restored';
+			response.msg = restoreFailureMessage(provisioned, response.errors);
 		}
 		return response;
 	} finally {
 		rmSync(stagingDir, { recursive: true, force: true });
 		updateInFlight = false;
 	}
+}
+
+/**
+ * The message an import failure is allowed to make (defect D7, fixed
+ * 2026-08-09 — WC-2026-08-09-ontology-update-partial-restore).
+ *
+ * The Phase-B snapshots cover matrix_ontology / matrix_dd ONLY. For every
+ * non-`matrix_dd` TLD, Phase C provisions a `matrix_ontology_main` registry
+ * record (addMainSection) and a `dd_ontology` root node (+ its ontologytype
+ * grouper) BEFORE the row import, through raw matrix writes with no Time
+ * Machine trail. restoreSnapshots cannot undo any of that, so claiming
+ * "previous state restored" after a provisioned TLD is a FALSE statement about
+ * the database — the actual defect. When nothing was provisioned the original
+ * claim is true and its PHP bytes are kept verbatim.
+ */
+export function restoreFailureMessage(provisioned: readonly string[], errors: string[]): string {
+	if (provisioned.length === 0) return 'Error. Import failed — previous state restored';
+	errors.push(
+		`registry record (matrix_ontology_main) and dd_ontology root node NOT reverted for: ${provisioned.join(', ')} — MANUAL REVIEW REQUIRED`,
+	);
+	return 'Error. Import failed — matrix rows restored; registry and dd_ontology state may be partial';
 }
 
 /** Restore every mutated table from the Phase-B snapshots (best-effort, loud). */
