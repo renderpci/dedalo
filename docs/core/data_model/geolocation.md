@@ -102,22 +102,87 @@ Layers exist so a transcription [`component_text_area`](../components/component_
 can pair each drawn shape with a `geo` tag in the text — the layer is
 loaded/removed as the tag is inserted/removed.
 
-### Default-value sentinel
+### Absence is structural — there is no magic coordinate
 
-When a value has never been set, the client seeds the map with the project home
-(Valencia):
+**A record with no position stores no geolocation item.** Emptiness is the
+absence of a value, never a particular value:
 
-```json
-{"lat": 39.462571, "lon": -0.376295, "zoom": 16, "alt": 0}
-```
+| stored | meaning |
+| --- | --- |
+| no item for the component tipo | no position — nothing is resolved, nothing is published |
+| `lat` / `lon` `null`, `undefined`, `""`, or unparseable text | no coordinate — the point is not built, and the missing axis is **never** completed with a zero |
+| any finite `lat`/`lon`, **`0` included** | a real coordinate — `[0, 0]`, the equator and the prime meridian are legal positions and publish like any other |
+| `lat`/`lon` as a JSON **string** (`"41.5"`) or **number** (`41.5`) | identical; both forms occur in the same column |
 
-The server treats this exact center as **"no value"**: `get_latitude()` /
-`get_longitude()` return `null` for `lat === "39.462571"` /
-`lon === "-0.376295"`, and `get_diffusion_value_as_geojson()` returns `null` for
-it — so an untouched map is never published as a real location. The match is on
-**latitude/longitude only**; the sentinel `zoom`/`alt` are not part of the test
-(a legacy comment in the diffusion path notes a `zoom 12 / alt 16` default for
-the same center).
+Both axes are required together: a point needs `lat` **and** `lon`.
+
+!!! info "The opening camera is a view, never a value"
+    Where the map *opens* when a record has no coordinate is server
+    configuration — `DEDALO_GEO_DEFAULT_LAT` / `DEDALO_GEO_DEFAULT_LON` /
+    `DEDALO_GEO_DEFAULT_ZOOM`, delivered to the editor as
+    `context.features.default_view` (see [Configuration](../../config/config.md)).
+    It is a camera position: it is never stored in the record and never
+    published. Opening a record and saving it stores **no** coordinate.
+
+!!! danger "Legacy data: the retired studio default"
+    Earlier engines seeded the editor with `39.462571 / -0.376295` — the
+    coordinates of the Dédalo facilities, shipped as the factory default map
+    position — and treated that exact pair as "no location set". It is an
+    ordinary coordinate now: a stored pair publishes as the place it is.
+    Installs upgraded from those versions carry items centred on it that no
+    cataloguer ever entered, and they must be repaired **before** the engine
+    stops special-casing the pair; otherwise every one of them publishes the
+    studio's position as a real location. The repair is
+    `scripts/repair_geolocation_studio_default.ts` (dry-run by default;
+    `--table` and `--user` are both mandatory, and `--apply` is refused on any
+    table that has not been authorised in writing). It handles the two stores
+    that carry the pair — the record store and the thesaurus store.
+
+    Because the pair is a **factory default rather than a place**, an item
+    holding it exactly is always fabricated: nobody positions a map on the
+    studio to six decimals, and a genuinely geocoded record carries its own
+    coordinates. Exact equality is therefore a safe test, and nothing correct
+    is caught by it.
+
+    The repair is **not reversible** — assume there is no Time Machine row to
+    restore from.
+
+!!! warning "The one coordinate the engine authors"
+    The engine never invents a coordinate: only an operator's own entry is
+    stored. The repair above takes **one** narrow, owner-approved exception
+    (2026-08-09). For a sentinel-centred item that **also carries drawn
+    geometry**, it neither keeps the fabricated pair nor clears it: it
+    **derives** a new center as the bounding-box center of every feature across
+    that item's `lib_data` layers, and rewrites the item with it — `zoom`,
+    `alt`, `lib_data`, `id` and every other key preserved byte for byte. For a
+    single drawn Point the derived center *is* that point, returned verbatim.
+    This coordinate is **machine-derived from user-drawn geometry** and it is
+    the only one the engine authors anywhere; it is recorded as such in the
+    repair script's header and in the wire-contract ledger. It is not a
+    location claim either: under *Geometry wins over the center* the derived
+    value is framing, and the standalone publication path does not emit it. If
+    the geometry yields no usable position the item is held untouched, never
+    guessed.
+
+### Geometry wins over the center
+
+When an item carries **drawn geometry** — at least one `lib_data` layer whose
+`layer_data.features` array is non-empty — the geometry **is** the record's
+location, and the stored `lat`/`lon` are only the **framing**: where that
+drawing is displayed from. Every publication path reads it that way, and the
+standalone path drops `lat`/`lon` from what it emits (see
+[Server-side handling](#server-side-handling)).
+
+Two consequences follow, and both are intended:
+
+- panning or zooming a record that holds drawn geometry updates its framing,
+  and that is real curatorial work — not a fabricated coordinate, because
+  nothing downstream reads it as a coordinate claim;
+- a center stored beside geometry is never an asserted position, so no consumer
+  can mistake framing for a coordinate somebody entered.
+
+On a record with **no** geometry, `lat`/`lon` are exactly what they look like:
+the recorded position.
 
 ## Database column
 
@@ -134,7 +199,7 @@ component tipo** — there is an extra object level around the item array:
 
 ```json
 {
-  "rsc120": [
+  "numisdata264": [
     { "lat": 41.562363, "lon": 2.012151, "zoom": 16, "alt": 0, "lib_data": [ /* … */ ] }
   ]
 }
@@ -146,7 +211,7 @@ properties with a wildcard path that crosses both the tipo key and the array:
 ```sql
 -- GIN index sample (src/core/db/db_pg_definitions.json)
 SELECT * FROM matrix
-WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{"lat":"39.462571"}]'
+WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{"lat":"42.31412288249575"}]'
 LIMIT 10;
 ```
 
@@ -176,11 +241,15 @@ entirely through the generic item pipeline. The read side is
 `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`) and the model→column entry
 resolves from `component_geolocation/descriptor.ts` (`column: 'geo'`).
 
-**The sentinel "no value" guard IS implemented**: `geojsonPointFallbackLayers()`
-(`src/diffusion/resolve/ddo_fns.ts`) recognises the exact Valencia center
-(`lat === '39.462571' && lon === '-0.376295'`, after normalizing comma
-decimals) and returns no layer for it, so an untouched map is never turned
-into a real-location point.
+**Emptiness is enforced structurally, in every emitting path.**
+`geojsonPointFallbackLayers()` (`src/diffusion/resolve/ddo_fns.ts`) builds a
+point only when `lat` **and** `lon` both parse to a finite number (comma
+decimals normalized first); `null`, `undefined`, `''` and unparseable text
+yield no layer, and neither axis is ever defaulted to `0`. A stored `0` is a
+coordinate and does build a point. `parser_geo::geojson`
+(`src/diffusion/parsers/parser_misc.ts`) answers identically — see
+[Diffusion parsers](../../diffusion/parsers.md). No coordinate pair is treated
+as magic anywhere in the engine.
 
 That fallback-point builder is wired into one specific diffusion path today:
 a paired `component_text_area`'s `get_geojson_data` step
@@ -194,9 +263,25 @@ empty (`buildGeojsonLayers()`, `src/diffusion/resolve/ddo_fns.ts`).
     text-area geo tag) diffuses as a raw `'geo'` atom
     (`src/diffusion/resolve/default_value.ts`) — it strips the item `id` but
     does **not** reshape the value into a GeoJSON `Point` or a layer-wrapped
-    `FeatureCollection`; it carries the same `{lat, lon, zoom, alt, lib_data?}`
-    shape as storage. There is also no `geo`-family search builder yet —
-    geolocation values cannot currently be matched by a search query.
+    `FeatureCollection`; it carries essentially the storage shape. There is
+    also no `geo`-family search builder yet — geolocation values cannot
+    currently be matched by a search query.
+
+That atom obeys both laws, per stored item and in this order:
+
+1. **drawn geometry** → the geometry is published, and `lat`/`lon` are
+   **removed** from the atom (`zoom`, `alt`, `lib_data` and any other key are
+   kept verbatim). The stored center is framing, and a consumer reading `.lat`
+   could not tell framing from an entered coordinate, so framing never reaches
+   the wire as one;
+2. else a **usable coordinate** (both axes parse, `0` included) → the point is
+   published, `id` stripped, otherwise verbatim;
+3. else **no atom at all**.
+
+The two other emission paths — `parser_geo::geojson`
+(`src/diffusion/parsers/parser_misc.ts`) and `buildGeojsonLayers`
+(`src/diffusion/resolve/ddo_fns.ts`) — already published `lib_data` in
+preference to the point; step 1 is what aligns the third one with them.
 
 ## Client-side model
 
@@ -211,28 +296,40 @@ the [Leaflet-Geoman](https://geoman.io/) draw editor
 stored value maps onto Leaflet as follows:
 
 ```javascript
-// the value item → Leaflet map state
-const entries  = self.data.entries || [self.default_value]
-const map_data = {
-    x    : entries[0].lat,   // L.LatLng first arg  = latitude
-    y    : entries[0].lon,   // L.LatLng second arg = longitude
-    zoom : entries[0].zoom,
-    alt  : entries[0].alt
-}
+// the CAMERA (view only) — the stored coordinate when there is one,
+// otherwise the server-configured default view. Never a stored value.
+const map_data = self.get_view(0)
 self.map = new L.Map(map_container, {
-    center : new L.LatLng(map_data.x, map_data.y),   // (lat, lon)
+    center : new L.LatLng(map_data.lat, map_data.lon),   // (lat, lon)
     zoom   : map_data.zoom
 })
 
-// the seed when there is no stored value
-self.default_value = { lat: 39.462571, lon: -0.376295, zoom: 16, alt: 0 }
+// the default view, delivered by the server (DEDALO_GEO_DEFAULT_*)
+self.default_view = self.context.features.default_view   // {lat:20, lon:0, zoom:2}
 ```
+
+The component's **value** is a separate thing from the camera:
+`self.get_stored_entry(0)` returns the stored item or `null` and never
+fabricates one, so a record the user did not touch has no value to save. The
+four coordinate inputs render empty on absence — and render `0` when the
+stored coordinate *is* zero.
 
 Notes on the client model:
 
 - The map **never auto-saves** on pan/zoom; saving is always explicit via the
-  save button. Editing the `lat`/`lon`/`zoom`/`alt` inputs recenters the map via
-  `panTo` / `setZoom`.
+  save button, and the button only writes when something actually changed.
+  Navigation is not data entry: on a record with **no** value at all, panning
+  and zooming write nothing — there is nothing to frame. On a record that
+  already holds a coordinate or drawn geometry, a pan or a zoom updates the
+  framing and marks the component dirty, which is what makes re-framing your
+  own drawing storable work.
+- A record whose value is drawn geometry with **no** stored center opens fitted
+  to the extent of that geometry, not on the world view — the camera is
+  computed from the drawing (the same bounding-box rule the repair script uses)
+  and is never stored.
+- Editing the `lat`/`lon`/`zoom`/`alt` inputs recenters the map through a single
+  non-animated camera move, so a typed coordinate is never overwritten by the
+  animation settling afterwards.
 - Each drawn `lib_data` layer becomes a Leaflet `L.FeatureGroup` keyed by
   `layer_id`; `layer_id` is also the overlay name in the layer control. The
   active layer defaults to `1` (`self.active_layer_id = 1`).
@@ -247,7 +344,7 @@ Notes on the client model:
 
 ```json
 {
-  "rsc120": [{
+  "numisdata264": [{
     "id": 3,
     "alt": 16,
     "lat": 28.760289075631214,
@@ -277,10 +374,10 @@ Notes on the client model:
 
 ### Import shapes
 
-The import value is the bare data array (no lang keys). Two shapes round-trip
-correctly through the generic import path (`conformImportData()`,
-`src/core/tools/import_data.ts`), which is model-agnostic and does not carry
-a `component_geolocation`-specific override:
+The import value is the bare data array (no lang keys). The model has its own
+conform step (`src/core/tools/import_conform.ts`, reached through
+`conformImportData()`), and all four documented shapes are converted into the
+canonical item shape:
 
 ```json
 // a full array of items — parses and passes through as-is
@@ -292,12 +389,35 @@ a `component_geolocation`-specific override:
 {"lat": 39.4625, "lon": -0.3762}
 ```
 
-!!! warning "FeatureCollection extraction and flat-string import: TS gap"
-    Two further shapes are **not implemented**: importing a bare GeoJSON
-    `FeatureCollection` (extracting the center from its first Point feature)
-    and importing a flat text cell (`"lat, lon[, zoom[, alt]]"`) — neither is
-    converted into the canonical item shape today. There is also no
-    `lat`/`lon` range validation or `zoom`/`alt` defaulting on import.
+```json
+// a bare GeoJSON FeatureCollection — the center is its first Point feature,
+// the whole collection is stored as lib_data layer 1
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-0.3762,39.4625]}}]}
+```
+
+```text
+a flat text cell, latitude first, dot decimals: lat, lon[, zoom[, alt]]
+39.4625, -0.3762, 16
+```
+
+**Absence is structural at the import door too, and a refusal is not a clear.**
+The import never fabricates a coordinate — no default center, no default
+framing — and the three outcomes are kept distinct:
+
+| the source cell | outcome |
+| --- | --- |
+| a usable item | stored |
+| an item that **states** there is no location — both coordinate keys present and blank, or an item carrying a `lib_data` key — or an empty cell | the component is **cleared**: the source said so |
+| anything else with no usable coordinate: one axis without the other, a typo'd header, `{}`, `{"zoom":12}` | **refused**, reported in the run's failed rows, and the stored value is left untouched |
+
+An item with no coordinate but with drawn `lib_data` features is a value in its
+own right and imports as geometry-only. `zoom` defaults to `16` and `alt` to
+`0` on a coordinate item; comma decimals are normalized in the JSON shapes
+(the flat cell uses the comma as its own separator, so it needs dot decimals);
+and this is the one door that enforces the coordinate **ranges**
+(`lat` −90..90, `lon` −180..180) — by refusing loudly, never by silently
+dropping a value. A field with **any** refused value is not written at all,
+including its values that did conform; the run report says so.
 
 See the full import definition in
 [Importing data](../importing_data.md#geolocation) and the round-trip raw format
@@ -317,9 +437,17 @@ in [Exporting data](../exporting_data.md#raw-export-and-round-trip).
 - **Single-point-per-component model.** Although the value is an array, the
   editor manages one map (key `0`); multiple positions are expressed as multiple
   GeoJSON features inside `lib_data`, not as multiple array items.
-- **Sentinel-as-empty.** The Valencia default center doubles as the "unset"
-  marker, keeping the column free of accidental real coordinates from untouched
-  maps.
+- **No magic coordinate.** Emptiness is the absence of a value, not a reserved
+  position: an untouched map stores nothing, so no place on earth is
+  unrecordable and `0` is a legal coordinate. The opening camera moved out of
+  the data and into configuration (`DEDALO_GEO_DEFAULT_LAT` /
+  `DEDALO_GEO_DEFAULT_LON` / `DEDALO_GEO_DEFAULT_ZOOM`), delivered as
+  `context.features.default_view` — a view, operator-configurable per install
+  and per component, never a value.
+- **Geometry wins over the center.** Where an item carries drawn shapes, those
+  shapes are the location and the stored center is only framing; the three
+  publication paths now agree on that, and the standalone one drops the center
+  rather than letting a consumer read framing as a coordinate.
 
 ## See also
 

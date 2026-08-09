@@ -242,7 +242,11 @@ output: [{layer_id:1, text:'', layer_data:{type:'FeatureCollection',
                      geometry:{type:'Point', coordinates:[2.1, 41.5]}}]}}]
 ```
 
-Stored map layers (`lib_data`) that already carry features pass through as-is; otherwise a Point FeatureCollection is built from `lat`/`lon` (comma decimal separators normalized, GeoJSON `[lon, lat]` order). The installer's demo coordinates (`39.462571, -0.376295`) signal "no real data" and publish nothing.
+Stored map layers (`lib_data`) that already carry features pass through as-is; otherwise a Point FeatureCollection is built from `lat`/`lon` (comma decimal separators normalized, GeoJSON `[lon, lat]` order), accepting both the string and the number form of a coordinate.
+
+**Geometry wins over the center, on every path.** This parser and the paired `get_geojson_data` fallback have always preferred the drawn layers; the standalone geolocation atom (`src/diffusion/resolve/default_value.ts`) now agrees, and it goes one step further because it is the only path that could emit a bare center: when the item carries drawn geometry it publishes the geometry and **removes** `lat`/`lon` from the value. On a record with geometry the stored center is only the map framing, and a consumer reading `.lat` could not tell framing from a coordinate somebody entered (see [Geolocation values](../core/data_model/geolocation.md#geometry-wins-over-the-center)).
+
+**Emptiness is structural: no coordinate pair is magic.** `lat` and `lon` must both parse to a finite number or nothing is published for the item — `null`, `undefined`, `""` and unparseable text are absence, and a missing axis is never completed with a zero. Conversely `0` is a real coordinate: `[0, 0]`, the equator and the prime meridian publish like any other position. Earlier engines reserved the pair `39.462571, -0.376295` (Valencia) as a "no real data" marker; it publishes as the ordinary coordinate it is (see [Geolocation values](../core/data_model/geolocation.md#absence-is-structural--there-is-no-magic-coordinate)).
 
 ### Publish IRIs as one flat string
 

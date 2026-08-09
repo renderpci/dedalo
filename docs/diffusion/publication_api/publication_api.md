@@ -1247,8 +1247,8 @@ Response:
         "time": "",
         "space": {
           "alt": 16,
-          "lat": "39.462571",
-          "lon": "-0.376295",
+          "lat": "42.31412288249575",
+          "lon": "2.930315820425362",
           "zoom": 15
         },
         "lang": "lg-eng",
@@ -1274,8 +1274,8 @@ Response:
         "time": "",
         "space": {
           "alt": 16,
-          "lat": "39.462571",
-          "lon": "-0.376295",
+          "lat": "41.652251",
+          "lon": "-4.724532",
           "zoom": 12
         },
         "lang": "lg-eng",
@@ -1297,6 +1297,25 @@ Response:
   }
 }
 ```
+
+!!! note "`space` carries only positions that were actually recorded"
+    The `space` member mirrors the term's published geolocation. A term whose
+    map was never set has **no** coordinates published for it — emptiness is
+    the absence of a value, not a reserved coordinate, and no pair of
+    coordinates has a special meaning (see
+    [Geolocation values](../../core/data_model/geolocation.md#absence-is-structural--there-is-no-magic-coordinate)).
+    `0` is a legal coordinate, so a `lat` or `lon` of `0` is a real position on
+    the equator or the prime meridian and must not be read as "unset".
+
+!!! note "`space` may carry drawn geometry instead of a coordinate pair"
+    When the term's map holds **drawn shapes** rather than (or as well as) a
+    center, the shapes are the term's location: `space` then carries the
+    `lib_data` layers and **no `lat`/`lon` at all**. The stored center of such a
+    term is only the map framing — where the drawing is displayed from — and it
+    is deliberately not published, so that a consumer reading `space.lat` can
+    never mistake framing for a position somebody recorded. Read `space` as:
+    layers if present, else the coordinate pair, else no location (see
+    [Geolocation values](../../core/data_model/geolocation.md#geometry-wins-over-the-center)).
 
 #### exclude_tld
 

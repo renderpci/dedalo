@@ -117,11 +117,39 @@ This is the mode that tells you whether your data is clean. It classifies every 
 
 | Bucket | Meaning | What you do |
 | --- | --- | --- |
-| **auto-fixed** | repaired in memory during the run — most often a value stored as a bare language map, which gets wrapped | nothing |
+| **auto-fixed** | repaired in memory during the run — most often a value stored as a bare language map, which gets wrapped, or a fabricated map centre, which is [repaired below](#the-fabricated-map-centre) | nothing |
 | **notices** | dropped on purpose, typically a value under a tipo that no longer exists in the ontology | read them, decide whether the loss matters |
 | **needs attention** | the ontology model and the stored shape disagree — a human must decide | **fix it before migrating**; this is the only bucket that blocks |
 
 A non-empty *needs attention* bucket fails the preflight. See [when something goes wrong](#8-when-something-goes-wrong-data-errors).
+
+Both counters and the review file are written **before** the migration writes a single converted row, so a large *auto-fixed* count is something you read and understand first, not something you discover afterwards. Only this mode produces real counts for the repair below: a plain preflight runs without the ontology, so no component model resolves and no geolocation finding can appear.
+
+#### The fabricated map centre
+
+An *auto-fixed* count in the tens of thousands is normal, and it is almost always this. It has one cause, and the migration repairs it while it converts.
+
+Earlier editors seeded the map component with a fixed opening centre — `39.462571 / -0.376295`, the centre of the city of Valencia — **into the record's value**, at the moment the form was drawn, and the save button did not ask whether anything had actually changed. So merely opening a record and pressing save stored a coordinate the cataloguer never entered. The engine then recognised that exact pair and hid it from every publication: a magic value standing for "no location set".
+
+v7 has no magic coordinate. Absence is the absence of a value, `0` is a legal coordinate, and `39.462571 / -0.376295` publishes as the place it is — which is the whole point, since a findspot in Valencia has to be recordable. Any surviving fabricated pair would therefore **publish as a real location in Valencia**. The repair happens here, in the migration, so that no v7 database is ever born carrying it.
+
+What the run does with each affected item:
+
+| Stored value | What the migration does |
+| --- | --- |
+| the fabricated pair, and nothing drawn on the map | the coordinate is **dropped**. The record ends with *no* location — which is the truth about a record nobody ever located |
+| the fabricated pair, with hand-drawn geometry on the record | the geometry is kept untouched, and the centre is **derived** from it: the bounding-box centre of every feature drawn on that item. Zoom, altitude and the drawing itself are preserved exactly |
+| anything else | untouched. `0 / 0` is a coordinate like any other and survives; no other value is special-cased |
+
+!!! warning "The derived centre is authored by the engine, not by a curator"
+    This is the one coordinate the engine writes by itself anywhere, and it is deliberate rather than incidental. It applies only to a record that carries hand-drawn geometry, where the stored centre was never a claim about *where the thing is* — it is the framing the editor saved beside the drawing, i.e. where the map looks from. Replacing it with the centre of the drawing keeps that framing pointing at the operator's own work. Keeping the fabricated pair instead is not the neutral option: it would leave the record asserting a location that can be hundreds of kilometres from the geometry the curator actually drew. For a single drawn point the derived centre *is* that point. If the geometry yields no usable position, nothing is derived and the item is left exactly as it is.
+
+    The value is machine-derived from user-drawn geometry, and it is recorded as such here and in [geolocation](../core/data_model/geolocation.md).
+
+!!! danger "A record genuinely located in central Valencia loses its coordinate"
+    The fabricated pair is a real place: nothing can distinguish it from a coordinate a cataloguer entered on purpose for the city of Valencia. That is exactly what retiring a magic value means, and the migration does not guess — it clears the pair everywhere, including where it happened to be right. If you catalogue material located in central Valencia, list those records before you migrate and re-enter their coordinates afterwards.
+
+Where the numbers are: the **auto-fixed** counter on the panel, and `var/data_review.json` next to the log, which counts the dropped and the derived items on separate lines so you can tell the two apart. Expect the thesaurus store to dominate the count: the geolocation field hangs off a section group every thesaurus section inherits, so a term that never had anything to do with a place can still carry a fabricated coordinate. Read your own preflight for the figures — there is no representative number to compare against.
 
 !!! note "The ontology step is safe to leave in place"
     Building the v7 ontology only *adds* — the matrix tables are not rewritten and the v6 data is intact. An install can sit at that state and continue later. Run steps 1 and 2 (the numbered list in [3.3](#33-migrate)) are idempotent, so re-running after a partial failure is safe.
@@ -141,9 +169,12 @@ The panel is only a tail: closing it does not stop the run. From the shell, `ps 
 What the run does, in order:
 
 1. **Backup**, then build the v7 ontology.
-2. **Schema and data transform**: adds the v7 typed columns (`data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta`) to 23 matrix tables, then redistributes each record's single v6 value blob into them by component model. Rebuilds the time machine, drops the legacy `datos` column, then migrates the dataframe pairing locators to the v7 contract, materialises IRI titles, and finally builds and backfills the two derived search stores.
+2. **Schema and data transform**: adds the v7 typed columns (`data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta`) to 23 matrix tables, then redistributes each record's single v6 value blob into them by component model — applying, on the way, the same repairs the deep preflight counted, including [the fabricated map centre](#the-fabricated-map-centre). Rebuilds the time machine, drops the legacy `datos` column, then migrates the dataframe pairing locators to the v7 contract, materialises IRI titles, and finally builds and backfills the two derived search stores.
 3. **Passwords**: converts every recoverable account to Argon2id.
 4. **Diffusion ontology**: rewrites the diffusion properties.
+
+!!! note "The review and the run are the same pass"
+    The deep preflight and the migration run the same transform; the preflight simply does not save. So the *auto-fixed* counts you read in [3.2](#32-deep-preflight) are not a prediction of what the run might do — they are what it will do. Every repair is applied in memory, on the way into the v7 columns; the legacy value column is never rewritten in place, and the backup taken as the run's first step is the undo for all of it.
 
 Duration is a function of how many rows you have. There is no progress bar: the runner prints a `progress:` heartbeat about every 10 seconds. **No heartbeat for several minutes means the run is stuck** — read the log tail and check the database for locks.
 
@@ -161,6 +192,7 @@ Duration is a function of how many rows you have. There is no progress bar: the 
 
     Each hit names the failing step and the affected table and record id. Note them, re-run the migration (it is idempotent) and grep again; rows that still fail are data errors — treat them as [needs attention](#81-needs-attention-findings-v6-host-before-phase-a) findings and fix the record before Phase B.
 
+- If the review counted [fabricated map centres](#the-fabricated-map-centre), open a few of those records once v7 is serving (Phase D): a record that never had a location must show an empty map, opening at the configured default view, with no coordinate stored; a record with drawn geometry must still show its drawing, now centred on it. Then re-enter by hand any coordinate for material genuinely located in central Valencia.
 - Passwords and diffusion run **after** the stamp and are deliberately non-fatal. A failure there does not mean the database migration failed; each can be re-run on its own afterwards. If the password phase reports no Argon2 support in the interpreter, fix the interpreter and re-run just that phase — you can also do the equivalent on the v7 side later (see [Phase D](#62-migrate-the-passwords)).
 
 ### Result codes you can meet
