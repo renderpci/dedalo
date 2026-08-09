@@ -78,6 +78,14 @@ export async function importMappedRecords(
 			// set_data_lang), and a flat merged save would lose translations (the
 			// old code even pushed a lang-keyed OBJECT as a single item).
 			const groups = new Map<string, unknown[]>();
+			// A REFUSED cell and an EXPLICIT EMPTY are opposite intents and must not
+			// share a write. `set_data []` below is the import's CLEAR — the source
+			// said "no value". A conform error says the cell was never readable, and
+			// the refusal message promises the stored value was left untouched; so a
+			// field with ANY refused value is not written at all. Same per-column
+			// all-or-nothing the CSV executor applies (import_csv_execute.ts: an
+			// errored column is skipped before any saveComponentData).
+			let refused = false;
 			for (const value of field.values) {
 				const conform = await conformImportData({
 					model,
@@ -90,6 +98,7 @@ export async function importMappedRecords(
 				});
 				if (conform.errors.length > 0) {
 					failed.push(...conform.errors);
+					refused = true;
 					continue;
 				}
 				for (const [lang, items] of groupItemsByLang(conform.result, componentLang)) {
@@ -97,6 +106,20 @@ export async function importMappedRecords(
 					if (group === undefined) groups.set(lang, [...items]);
 					else group.push(...items);
 				}
+			}
+			if (refused) {
+				// The dropped-siblings line: a multi-occurrence field whose other
+				// values DID conform is still not written, so say so — silence here
+				// would read as "only the bad one was skipped".
+				if (groups.size > 0) {
+					failed.push({
+						section_id: sectionId,
+						data: field.values,
+						component_tipo: field.component_tipo,
+						msg: 'IGNORED: the field was NOT written — one of its values was refused, so the record keeps its stored value',
+					});
+				}
+				continue;
 			}
 			if (groups.size === 0) groups.set(componentLang, []);
 			for (const [lang, items] of groups) {

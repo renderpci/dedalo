@@ -28,6 +28,7 @@ import {
 	type TagRenderOptions,
 } from '../../core/components/component_text_area/tag_html.ts';
 import { decodeHtmlEntities } from './default_value.ts';
+import { hasCoordinate, toCoordinate } from './geo_coordinate.ts';
 
 // ---------------------------------------------------------------------------
 // parse_tag_to_html — TR::add_tag_img_on_the_fly twin (moved to
@@ -73,33 +74,27 @@ export interface StoredGeolocationItem {
 }
 
 /**
- * PHP number_format((float)$v, 16, '.', '') — %.16f of the double. The decimal
- * is within half-ulp of the double for the coordinate ranges involved, so the
- * JSON round-trip (json_decode → json_encode = shortest repr) reproduces the
- * original number; Number() + JSON.stringify is the byte-equivalent.
- */
-function coordinateOf(raw: unknown): number {
-	// PHP `!empty($value->lon)`: null/''/0/'0' → the literal 0.
-	if (raw === null || raw === undefined || raw === '' || raw === 0 || raw === '0') return 0;
-	const parsed = Number(raw);
-	return Number.isFinite(parsed) ? parsed : 0;
-}
-
-/**
- * component_geolocation::get_diffusion_value_as_geojson (:362-433) as a layer
- * list: the single-point FeatureCollection built from the stored lat/lon, with
- * the factory-default sentinel guard (Valencia 39.462571/-0.376295 = "no
- * location set"). Returns [] when no point can be built (PHP null).
+ * component_geolocation::get_diffusion_value_as_geojson (PHP :362-433) as a
+ * layer list: the single-point FeatureCollection built from the stored
+ * lat/lon. Returns [] when there is no point to build.
+ *
+ * DIVERGES from the PHP oracle by law, not by accident:
+ * - no sentinel. The Valencia pair PHP treated as "no location set" is an
+ *   ordinary coordinate; the client no longer fabricates a camera position
+ *   into the stored value, so absence is representable directly;
+ * - absence is structural (geo_coordinate.ts): PHP's `!empty()` coerced
+ *   ''/null to the literal 0 and published Greenwich. Only a real coordinate
+ *   publishes now, and 0 is one.
+ *
+ * Number formatting parity is unchanged: PHP number_format((float)$v,16,'.','')
+ * is within half-ulp of the double, so the JSON round-trip reproduces the
+ * original number — Number() + JSON.stringify is the byte-equivalent.
  */
 export function geojsonPointFallbackLayers(
 	item: StoredGeolocationItem | undefined,
 ): GeojsonLayer[] {
 	if (item === undefined || item === null) return [];
-	if (item.lon === undefined || item.lat === undefined) return [];
-	// Sentinel: normalise comma decimals, compare as strings (PHP :383-395).
-	const latStr = String(item.lat).replace(/,/g, '.');
-	const lonStr = String(item.lon).replace(/,/g, '.');
-	if (latStr === '39.462571' && lonStr === '-0.376295') return [];
+	if (!hasCoordinate(item.lat) || !hasCoordinate(item.lon)) return [];
 	// Key order is the PHP JSON literal's: type, properties, geometry.
 	return [
 		{
@@ -113,7 +108,7 @@ export function geojsonPointFallbackLayers(
 						properties: {},
 						geometry: {
 							type: 'Point',
-							coordinates: [coordinateOf(item.lon), coordinateOf(item.lat)],
+							coordinates: [toCoordinate(item.lon), toCoordinate(item.lat)],
 						},
 					},
 				],

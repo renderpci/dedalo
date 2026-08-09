@@ -120,6 +120,140 @@ describe('component_geolocation', () => {
 	});
 });
 
+/**
+ * THE GEO LAW at the import door (src/core/concepts/geo_coordinate.ts).
+ *
+ * Absence is structural and NEVER fabricated — but "nothing to store" is only
+ * silent when the SOURCE SAID SO. A conform result of `null` with NO errors is
+ * the import's explicit CLEAR: the executor saves `set_data []` for it and the
+ * record's stored coordinate is deleted. So every shape that is merely
+ * unreadable must carry an `error` instead — an error both reaches the run
+ * report and (since the executor's refusal fix) keeps the stored value.
+ * conform.warnings reach no report today; that is why the malformed shapes
+ * below are errors, not warnings.
+ *
+ * The write side of that distinction is gated in
+ * test/unit/import_execute_refusal.test.ts, which drives import_execute against
+ * a scratch record. This file only pins which outcome each source shape gets.
+ */
+describe('component_geolocation — absence, emptiness and the ex-sentinel', () => {
+	const geo = (value: unknown) => conform('component_geolocation', JSON.stringify(value));
+
+	test('lat/lon present and BLANK states no location: nothing to store, no error', async () => {
+		const out = await geo([{ lat: '', lon: '' }]);
+		expect(out.result).toBeNull();
+		expect(out.errors).toHaveLength(0);
+	});
+
+	test('a geometry-only item (no coordinate, real features) is kept for its layers', async () => {
+		const layer = {
+			layer_id: 1,
+			layer_data: {
+				type: 'FeatureCollection',
+				features: [
+					{ type: 'Feature', geometry: { type: 'Point', coordinates: [3.14754, 41.858199] } },
+				],
+			},
+		};
+		const out = await geo([{ lat: '', lon: '', lib_data: [layer] }]);
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ lib_data: [layer] }]);
+		// No coordinate is invented for it — the import never frames a map.
+		const item = (out.result as Record<string, unknown>[])[0] as Record<string, unknown>;
+		expect('lat' in item).toBe(false);
+		expect('lon' in item).toBe(false);
+	});
+
+	test('an EMPTY lib_data is not content: no coordinate-less husk is stored', async () => {
+		// The exact shape a record produces after its last drawn layer is removed.
+		const out = await geo([{ lat: '', lon: '', lib_data: [] }]);
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toBeNull();
+	});
+
+	test('a layer list whose layers carry NO feature is not content either', async () => {
+		const empty = { layer_id: 1, layer_data: { type: 'FeatureCollection', features: [] } };
+		const out = await geo([{ lat: '', lon: '', lib_data: [empty] }]);
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toBeNull();
+	});
+
+	test("'0, 0' is Null Island, a LEGAL coordinate — never an absence", async () => {
+		const out = await conform('component_geolocation', '0, 0');
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ lat: 0, lon: 0, zoom: 16, alt: 0 }]);
+	});
+
+	test('the ex-sentinel Valencia pair is ORDINARY data, special-cased in NEITHER direction', async () => {
+		const flat = await conform('component_geolocation', '39.462571, -0.376295');
+		expect(flat.errors).toHaveLength(0);
+		expect(flat.result).toEqual([{ lat: 39.462571, lon: -0.376295, zoom: 16, alt: 0 }]);
+		// …and it conforms exactly like any other point: same shape, same defaults.
+		const other = await conform('component_geolocation', '41.3874, 2.1686');
+		const [sentinel] = flat.result as [Record<string, unknown>];
+		const [ordinary] = other.result as [Record<string, unknown>];
+		expect(Object.keys(sentinel)).toEqual(Object.keys(ordinary));
+	});
+
+	test('lat without lon is a malformed PAIR and is REFUSED', async () => {
+		const out = await geo([{ lat: 41.3874 }]);
+		expect(out.result).toBeNull();
+		expect(out.errors[0]?.msg).toContain('lat and lon must be given together');
+	});
+
+	test('lon without lat is refused the same way', async () => {
+		const out = await geo([{ lat: '', lon: 2.1686 }]);
+		expect(out.result).toBeNull();
+		expect(out.errors[0]?.msg).toContain('lat and lon must be given together');
+	});
+
+	test('a comma decimal is the same coordinate as a dot one (one law, both doors)', async () => {
+		// geo_coordinate.ts normalizes ',' -> '.' in the publication path (PHP
+		// str_replace parity); the import door must not refuse what publishes.
+		const out = await geo([{ lat: '39,5', lon: '-0,25' }]);
+		expect(out.errors).toHaveLength(0);
+		expect(out.result).toEqual([{ lat: 39.5, lon: -0.25, zoom: 16, alt: 0 }]);
+	});
+
+	test('multi-comma text is not a coordinate', async () => {
+		const out = await geo([{ lat: '3,1,4', lon: 2 }]);
+		expect(out.result).toBeNull();
+		expect(out.errors[0]?.msg).toContain('numeric properties are mandatory');
+	});
+
+	test('the RANGE law is enforced at this door, loudly', async () => {
+		const out = await geo([{ lat: 999, lon: 2.1 }]);
+		expect(out.result).toBeNull();
+		expect(out.errors[0]?.msg).toContain('out of range');
+	});
+
+	// The silent-clear guard. Each of these once conformed to
+	// {result:null, errors:[]} — an OK report over a deleted coordinate.
+	test.each([
+		['a wrong-named pair (latitude/longitude)', { latitude: 41.3, longitude: 2.1 }],
+		['a wrong-cased pair (Lat/Lon)', { Lat: 41.3, Lon: 2.1 }],
+		['an empty object', {}],
+		['framing only, no location', { zoom: 12 }],
+	])('%s is REFUSED, never a silent clear', async (_label, source) => {
+		const out = await geo([source]);
+		expect(out.result).toBeNull();
+		expect(out.errors).toHaveLength(1);
+		expect(out.errors[0]?.msg).toContain('lat and lon properties are mandatory');
+	});
+
+	test('the refusal is a ConformFailure — the row an operator reads in the run report', async () => {
+		const out = await geo([{ latitude: 41.3, longitude: 2.1 }]);
+		// Shape only. That this row reaches `failed` AND that the stored coordinate
+		// survives is asserted against a real write in import_execute_refusal.test.ts.
+		expect(out.msg).toBe('Error. Request failed');
+		expect(out.errors[0]).toMatchObject({
+			section_id: 7,
+			component_tipo: 't1',
+			msg: expect.stringContaining('IGNORED: malformed data.'),
+		});
+	});
+});
+
 describe('component_input_text', () => {
 	test('a plain cell becomes one value item', async () => {
 		expect((await conform('component_input_text', 'hello')).result).toEqual([{ value: 'hello' }]);

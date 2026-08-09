@@ -17,6 +17,37 @@
 * - Creating the Leaflet map instance for every `data.entries` entry in `get_map`.
 * - Keeping `current_value` in sync with the map view and geometry edits so the
 *   save button always commits the most recent state.
+*
+* (!) CAMERA vs VALUE — the load-bearing distinction of this component.
+* The position the map OPENS at (`self.default_view`, the camera) and the position
+* the record STORES (`data.entries[key]` / `current_value[key]`, the value) are
+* different things. The camera is view-only and is NEVER written. Absence is
+* structural: no entry means no coordinate, the inputs render empty and the save
+* button sends nothing. A record only acquires a value on an EXPLICIT act of data
+* entry: typing a coordinate, clicking add-point, drawing geometry, inserting a
+* geo-tag, or an observer copying a caller's coordinates.
+*
+* (!) NAVIGATION IS NOT DATA ENTRY. Panning and zooming move the camera and
+* nothing else. On a record that has no coordinate and no drawn geometry they
+* create NO value: `update_input_values` takes an explicit `intent` and refuses
+* the write (see its header). Without that refusal the camera centre — the world
+* view — became a saveable coordinate on any map interaction, which is the
+* Valencia sentinel defect relocated, and worse: a fabricated {20,0} is
+* indistinguishable downstream from an operator-entered coordinate.
+* On a record that DOES hold a value — a coordinate, or drawn geometry — the same
+* pan or zoom updates lat/lon, and that is framing, not fabrication: publication
+* reads the GEOMETRY as the location of a record that has one, so the stored
+* centre of a geometry record is where the drawing is displayed from, never an
+* asserted location (see fn_has_value). Framing is still never auto-saved: the
+* component is only marked dirty, and only an explicit save commits it.
+* A second guard, `self.camera_is_moving`, covers the component's OWN camera
+* moves: `move_camera` is the single door and it suppresses the map's event
+* feedback, so a programmatic setView can never write Leaflet's pixel-rounded
+* centre over the exact value the user just typed or the observer just borrowed.
+* Before this rule the view seeded `current_value[0]` at render time, so merely
+* opening a record and pressing save stored a fabricated coordinate — which the
+* diffusion parsers then had to recognise as a magic "no location" sentinel.
+* No magic coordinate exists anywhere any more; 0 is a legal coordinate.
 * - Bridging with linked `component_text_area` instances through `event_manager`
 *   events: inserting/removing geo-tags triggers `load_tag_into_geo_editor` /
 *   `handle_click_no_tag`, while geometry edits publish `updated_layer_data_<id_base>`.
@@ -26,8 +57,8 @@
 * Data shape stored in `data.entries[key]`:
 * ```json
 * {
-*   "lat"      : 39.462571,
-*   "lon"      : -0.376295,
+*   "lat"      : 41.652300,
+*   "lon"      : -4.724500,
 *   "zoom"     : 16,
 *   "alt"      : 0,
 *   "lib_data" : [
@@ -85,6 +116,237 @@ const TILE_ATTR = {
 * @returns {boolean}
 */
 const fn_is_dark   = () => document.documentElement.dataset.theme === 'dark'
+
+/**
+* DEFAULT_VIEW_FALLBACK
+* The hard camera fallback: the whole world. Used when the server emits no
+* `context.features.default_view`. It is a VIEW, never a value, so it carries no
+* `alt` (a camera has no altitude).
+* (!) Operator-configurable through the ontology → `context.features.default_view`.
+* @type {Object}
+*/
+const DEFAULT_VIEW_FALLBACK = {
+	lat		: 20,
+	lon		: 0,
+	zoom	: 2
+}
+
+/**
+* FN_FINITE_NUMBER
+* The single "is this a coordinate?" predicate of the component.
+*
+* Absence is structural: null / undefined / '' mean NO coordinate and resolve to
+* null. Everything else is coerced and kept only when finite, so 0 survives
+* (Greenwich, the equator are legal coordinates) and a half-typed '-' does not.
+*
+* (!) Coordinates arrive as BOTH strings and numbers from the store (mixed in the
+* same column) and always as strings from the DOM inputs — coercion here is the
+* normal case, not a fallback.
+*
+* @param {*} value - Raw coordinate as stored or typed.
+* @returns {number|null} The finite number, or null meaning "no coordinate".
+*/
+const fn_finite_number = function(value) {
+
+	if (value===null || value===undefined || value==='') {
+		return null
+	}
+
+	const number = Number(value)
+
+	return Number.isFinite(number)
+		? number
+		: null
+}//end fn_finite_number
+
+/**
+* FN_HAS_DRAWN_GEOMETRY
+* True when a stored/in-memory entry carries at least one drawn feature.
+*
+* Used by the navigation guard: framing (lat/lon/zoom from the camera) is real
+* user work for a record whose value is a drawn shape — the map position is how
+* that work is displayed — but it is NOT a location claim for a record that
+* holds nothing. A layer with an empty (or absent) FeatureCollection is not
+* geometry; it is an empty container.
+*
+* @param {*} lib_data - The entry's `lib_data` array, or anything else.
+* @returns {boolean}
+*/
+const fn_has_drawn_geometry = function(lib_data) {
+
+	if (!Array.isArray(lib_data)) {
+		return false
+	}
+
+	return lib_data.some(
+		(layer) => Array.isArray(layer?.layer_data?.features) && layer.layer_data.features.length > 0
+	)
+}//end fn_has_drawn_geometry
+
+/**
+* FN_HAS_VALUE
+* True when the entry is already a VALUE: a usable coordinate pair, or drawn
+* geometry. Half-typed input (a lone lat, a lone zoom) is not a value.
+*
+* (!) FRAMING, NOT A LOCATION CLAIM — why drawn geometry counts here.
+* On a record whose value is drawn geometry the stored lat/lon is the map
+* FRAMING saved alongside the work; it is NOT an asserted location. Every
+* publication path reads the GEOMETRY as the record's location when the item
+* carries `lib_data` features (src/diffusion/resolve/default_value.ts,
+* parsers/parser_misc.ts geoGeojson, resolve/ddo_fns.ts buildGeojsonLayers all
+* let lib_data win), so the centre is only where that drawing is displayed
+* from. Re-framing your own drawing is therefore real curatorial work and MUST
+* be storable: a pan or a zoom on a geometry record updates lat/lon and that is
+* correct, not a fabricated coordinate, because nothing downstream reads it as
+* a coordinate claim.
+* On a record with NO geometry and NO coordinate there is nothing to frame, so
+* navigation writes nothing at all (update_input_values refuses it).
+* Framing is never auto-saved either way: update_input_values only marks the
+* component dirty — only an explicit click of the save button commits it.
+*
+* @param {Object|null|undefined} entry - current_value[key] or a stored entry.
+* @returns {boolean}
+*/
+const fn_has_value = function(entry) {
+
+	if (entry===null || entry===undefined) {
+		return false
+	}
+
+	const has_coordinates = fn_finite_number(entry.lat)!==null && fn_finite_number(entry.lon)!==null
+
+	return has_coordinates || fn_has_drawn_geometry(entry.lib_data)
+}//end fn_has_value
+
+/**
+* FN_COLLECT_POSITIONS
+* Flattens any GeoJSON `coordinates` member into a list of `[lon, lat]` pairs,
+* whatever its nesting depth (Point, LineString, Polygon rings, Multi*).
+* Positions whose lon/lat are not finite are dropped (coordinates arrive as
+* strings too, see fn_finite_number).
+*
+* @param {*} coordinates - A GeoJSON coordinates member, or anything else.
+* @param {Array} out - Accumulator, mutated.
+* @returns {Array} `out`, holding `[lon, lat]` pairs.
+*/
+const fn_collect_positions = function(coordinates, out) {
+
+	if (!Array.isArray(coordinates) || coordinates.length===0) {
+		return out
+	}
+
+	// a position is a flat array of scalars: [lon, lat, (alt)]
+	if (!Array.isArray(coordinates[0])) {
+		const lon = fn_finite_number(coordinates[0])
+		const lat = fn_finite_number(coordinates[1])
+		if (lon!==null && lat!==null) {
+			out.push([lon, lat])
+		}
+		return out
+	}
+
+	coordinates.forEach((item) => fn_collect_positions(item, out))
+
+	return out
+}//end fn_collect_positions
+
+/**
+* FN_GEOMETRY_POSITIONS
+* Every drawn position of an entry, across ALL its lib_data layers, including
+* the members of a GeometryCollection.
+*
+* @param {*} lib_data - The entry's `lib_data` array, or anything else.
+* @returns {Array} `[lon, lat]` pairs; empty when nothing is drawn.
+*/
+const fn_geometry_positions = function(lib_data) {
+
+	const out = []
+
+	if (!Array.isArray(lib_data)) {
+		return out
+	}
+
+	const fn_geometry = function(geometry) {
+		if (!geometry || typeof geometry!=='object') {
+			return
+		}
+		if (Array.isArray(geometry.geometries)) {
+			geometry.geometries.forEach(fn_geometry)
+			return
+		}
+		fn_collect_positions(geometry.coordinates, out)
+	}
+
+	lib_data.forEach((layer) => {
+		const features = layer?.layer_data?.features
+		if (!Array.isArray(features)) {
+			return
+		}
+		features.forEach((feature) => fn_geometry(feature?.geometry))
+	})
+
+	return out
+}//end fn_geometry_positions
+
+/**
+* FN_GEOMETRY_BOUNDS
+* Bounding box of everything the operator drew in an entry, in Leaflet's
+* `[[south, west], [north, east]]` shape.
+*
+* (!) This is CAMERA maths only: it tells the map where to look, and nothing
+* computed here is ever stored. It mirrors the migration's server-side
+* deriveCentreFromGeometry rule (scripts/repair_geolocation_sentinel.ts) so a
+* geometry record is framed the same way on both sides.
+*
+* @param {*} lib_data - The entry's `lib_data` array, or anything else.
+* @returns {Array|null} `[[min_lat, min_lon], [max_lat, max_lon]]`, or null when
+*   nothing usable is drawn.
+*/
+const fn_geometry_bounds = function(lib_data) {
+
+	const positions = fn_geometry_positions(lib_data)
+	if (positions.length===0) {
+		return null
+	}
+
+	let min_lat = positions[0][1]
+	let max_lat = positions[0][1]
+	let min_lon = positions[0][0]
+	let max_lon = positions[0][0]
+
+	positions.forEach(([lon, lat]) => {
+		if (lat < min_lat) min_lat = lat
+		if (lat > max_lat) max_lat = lat
+		if (lon < min_lon) min_lon = lon
+		if (lon > max_lon) max_lon = lon
+	})
+
+	return [[min_lat, min_lon], [max_lat, max_lon]]
+}//end fn_geometry_bounds
+
+/**
+* FN_BOUNDS_CENTRE
+* Centre of a bounds pair. Rounded to 6 decimals (≈0.1 m, the precision the
+* component stores) EXCEPT when the extent is degenerate on an axis — a single
+* drawn point is returned verbatim, exactly as drawn, never re-rounded. Same
+* rule as the migration's deriveCentreFromGeometry.
+*
+* @param {Array} bounds - `[[min_lat, min_lon], [max_lat, max_lon]]`.
+* @returns {Object} `{lat, lon}`.
+*/
+const fn_bounds_centre = function(bounds) {
+
+	const [[min_lat, min_lon], [max_lat, max_lon]] = bounds
+
+	const fn_axis = (min, max) => (min===max)
+		? min
+		: Math.round(((min + max) / 2) * 1e6) / 1e6
+
+	return {
+		lat	: fn_axis(min_lat, max_lat),
+		lon	: fn_axis(min_lon, max_lon)
+	}
+}//end fn_bounds_centre
 
 /**
 * FN_OSM_LAYER
@@ -247,6 +509,7 @@ component_geolocation.prototype.init = async function(options) {
 		self.tile_layer			= null  // active Leaflet TileLayer (OSM provider only)
 		self.theme_observer		= null  // MutationObserver watching data-theme for dark mode tile swap
 		self.layer_control		= false // Leaflet layer-control widget; false = not yet created
+		self.camera_is_moving	= false // true while move_camera drives the map; see move_camera
 
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
 	// We need a temporary value for all current values of the inputs (lat, lon, zoom, alt)
@@ -264,13 +527,18 @@ component_geolocation.prototype.init = async function(options) {
 	// this var will not save in DB, if the user delete the tag and do not undo in the same session or close the window the buffer will erase
 		self.ar_data_buffer = []  // sparse array indexed by layer_id; allows undo of geo-tag removal
 
-	// self default value when the component doesn't has any value, data = null
-	// default value — Valencia city centre; used when data.entries is absent or empty
-		self.default_value = {
-			lat		: 39.462571,
-			lon		: -0.376295,
-			zoom	: 16,
-			alt		: 0
+	// default_view — the CAMERA: where the map OPENS when the record stores nothing.
+	// (!) It is NOT a value and is never written to current_value or to the record.
+	// It replaces the old `default_value`, whose only job was to fabricate a
+	// coordinate for records that had none.
+	// Source: context.features.default_view (operator-configurable per section/
+	// component through the ontology), hard fallback = the world view.
+	// No `alt`: altitude is data entered by the user, a camera has none.
+		const context_default_view = self.context?.features?.default_view
+		self.default_view = {
+			lat		: fn_finite_number(context_default_view?.lat)  ?? DEFAULT_VIEW_FALLBACK.lat,
+			lon		: fn_finite_number(context_default_view?.lon)  ?? DEFAULT_VIEW_FALLBACK.lon,
+			zoom	: fn_finite_number(context_default_view?.zoom) ?? DEFAULT_VIEW_FALLBACK.zoom
 		}
 
 	// load dependencies js/css. Set the self specific libraries and variables not defined by the generic init
@@ -295,25 +563,212 @@ component_geolocation.prototype.init = async function(options) {
 
 
 /**
-* GET_ENTRIES
-* Normalized read of the component's stored entries, guaranteed non-empty.
+* MOVE_CAMERA
+* The SINGLE door for every programmatic map move. Moving the camera is never
+* data entry, so this method makes the map's own move feedback inert while it
+* runs: `camera_is_moving` is raised, and the dragend/zoomend handlers installed
+* by get_map return immediately when they see it.
+*
+* (!) ONE setView with animate:false, never panTo + setZoom. Three measured
+* reasons, all of which produced fabricated values before:
+*  a) a setZoom CANCELS an in-flight panTo animation, so the map never moved;
+*  b) setZoom fires zoomend ASYNCHRONOUSLY (~250ms), so its handler ran after
+*     the caller had already restored/written the value and overwrote it;
+*  c) even when the move lands, Leaflet's getCenter() is the PIXEL-ROUNDED
+*     centre of the container — writing it back replaces the exact typed
+*     41.6523 with 41.65229…
+* animate:false fires the map events synchronously, inside this call, so the
+* flag below is enough to cover them; the try/finally lowers it even if Leaflet
+* throws on a degenerate view.
+*
+* @param {number} lat  - Camera latitude (finite).
+* @param {number} lon  - Camera longitude (finite).
+* @param {number} zoom - Camera zoom level (finite).
+* @returns {boolean} True when the map moved, false when there is no map yet.
+*/
+component_geolocation.prototype.move_camera = function(lat, lon, zoom) {
+
+	const self = this
+
+	if (!self.map) {
+		return false
+	}
+
+	self.camera_is_moving = true
+	try {
+		self.map.setView([lat, lon], zoom, {animate:false})
+	} finally {
+		self.camera_is_moving = false
+	}
+
+	return true
+}//end move_camera
+
+
+
+/**
+* GET_STORED_ENTRY
+* Honest read of what the record actually stores for `key`. Returns the entry
+* verbatim, or null when there is nothing stored — it NEVER invents one.
 *
 * (!) WC-001: the engine ALWAYS emits an array for data.entries — `[]` where the
 * PHP oracle emitted `null`. The PHP-era truthiness idiom
-* (`self.data.entries || [self.default_value]`) is therefore wrong: an empty
-* array is truthy, so an unsaved record fell through to `entries[0].lat` and
-* threw, leaving self.map null (blank map + every map method broken).
+* (`self.data.entries || [...]`) is therefore wrong: an empty array is truthy, so
+* an unsaved record fell through to `entries[0].lat` and threw.
 *
-* @returns {Array<Object>} entries, or [default_value] when nothing is stored
+* This replaces the former `get_entries`, whose non-empty guarantee was itself the
+* fabrication: callers could not tell a stored coordinate from an invented one.
+*
+* @param {number} key - Index into data.entries (always 0 today).
+* @returns {Object|null} The stored entry, or null when absent.
 */
-component_geolocation.prototype.get_entries = function() {
+component_geolocation.prototype.get_stored_entry = function(key) {
 
 	const entries = this.data?.entries
 
-	return (Array.isArray(entries) && entries.length > 0)
-		? entries
-		: [this.default_value]
-}//end get_entries
+	if (!Array.isArray(entries)) {
+		return null
+	}
+
+	const entry = entries[key]
+
+	return (entry!==undefined && entry!==null)
+		? entry
+		: null
+}//end get_stored_entry
+
+
+
+/**
+* GET_VIEW
+* Resolves the CAMERA for `key`: where the map should open. This is a view, never
+* a value — nothing returned here is ever stored.
+*
+* A stored entry supplies the camera when it carries usable coordinates (mixed
+* string/number is the normal case, see fn_finite_number); otherwise the component
+* opens on `default_view`. A stored entry without a usable lat/lon is absence for
+* camera purposes, so it does NOT drag the map to (0,0).
+*
+* (!) GEOMETRY FRAMES ITSELF. An entry can hold drawn geometry and NO coordinate
+* — that is the normal shape of a shape drawn without typing a coordinate, and of
+* an imported geometry-only cell. Opening such a record on `default_view` put the
+* operator's own drawing off-screen on the world map: it read as lost work. So the
+* camera is derived from the bbox centre of the drawn geometry. Derived here means
+* SHOWN, never stored: get_view returns a camera and nothing else writes it back
+* (fit_camera_to_geometry then fits the zoom to the same extent).
+*
+* (!) zoom falls back per field: an entry can carry coordinates but no zoom.
+*
+* @param {number} key - Index into data.entries (always 0 today).
+* @returns {Object} `{lat, lon, zoom}` — always finite numbers.
+*/
+component_geolocation.prototype.get_view = function(key) {
+
+	const self = this
+
+	const entry = self.get_stored_entry(key)
+	if (!entry) {
+		return self.default_view
+	}
+
+	const zoom = fn_finite_number(entry.zoom) ?? self.default_view.zoom
+
+	const lat = fn_finite_number(entry.lat)
+	const lon = fn_finite_number(entry.lon)
+	if (lat===null || lon===null) {
+		// no coordinate: frame the drawn geometry when there is any
+		const bounds = fn_geometry_bounds(entry.lib_data)
+		if (bounds) {
+			const centre = fn_bounds_centre(bounds)
+			return {
+				lat		: centre.lat,
+				lon		: centre.lon,
+				zoom	: zoom
+			}
+		}
+		return self.default_view
+	}
+
+	return {
+		lat		: lat,
+		lon		: lon,
+		zoom	: zoom
+	}
+}//end get_view
+
+
+
+/**
+* GET_GEOMETRY_BOUNDS
+* The extent of the geometry stored for `key`, in Leaflet's
+* `[[south, west], [north, east]]` shape, or null when nothing is drawn.
+* Read-only: this is camera input, never a value.
+*
+* @param {number} key - Index into data.entries (always 0 today).
+* @returns {Array|null}
+*/
+component_geolocation.prototype.get_geometry_bounds = function(key) {
+
+	const entry = this.get_stored_entry(key)
+
+	return entry
+		? fn_geometry_bounds(entry.lib_data)
+		: null
+}//end get_geometry_bounds
+
+
+
+/**
+* FIT_CAMERA_TO_GEOMETRY
+* Fits the map to the extent of the STORED geometry of `key` — the zoom half of
+* the geometry framing get_view starts (get_view can only supply a centre).
+*
+* Applied ONLY when the entry has no usable coordinate: a stored lat/lon on a
+* geometry record IS the operator's chosen framing and must be obeyed as-is.
+*
+* (!) it goes through camera_is_moving, exactly like move_camera: fitBounds is
+* the component's own move and its dragend/zoomend feedback must not be read
+* back as data (fn_has_value is true on a geometry record, so the navigation
+* guard would otherwise let that write through).
+*
+* @param {number} key - Index into data.entries (always 0 today).
+* @returns {boolean} True when the map was fitted.
+*/
+component_geolocation.prototype.fit_camera_to_geometry = function(key) {
+
+	const self = this
+
+	if (!self.map) {
+		return false
+	}
+
+	const entry = self.get_stored_entry(key)
+	if (!entry) {
+		return false
+	}
+	if (fn_finite_number(entry.lat)!==null && fn_finite_number(entry.lon)!==null) {
+		return false
+	}
+
+	const bounds = self.get_geometry_bounds(key)
+	if (!bounds) {
+		return false
+	}
+
+	self.camera_is_moving = true
+	try {
+		// maxZoom caps the degenerate case: a single drawn point has a zero-size
+		// extent and Leaflet would otherwise slam to the maximum zoom level.
+		self.map.fitBounds(bounds, {animate:false, padding:[20,20], maxZoom:16})
+	} catch (error) {
+		console.warn('component_geolocation fit_camera_to_geometry: error fitting bounds', error)
+		return false
+	} finally {
+		self.camera_is_moving = false
+	}
+
+	return true
+}//end fit_camera_to_geometry
 
 
 
@@ -419,10 +874,12 @@ component_geolocation.prototype.load_libs = async function () {
 *
 * Sequence:
 *  1. Lazily loads Leaflet and companion libraries via `load_libs`.
-*  2. Reads coordinate data from `data.entries[key]`; falls back to
-*     `default_value` when entries is absent.
-*  3. Clones the entry into `current_value[key]` and `ar_layer_loaded` so that
-*     subsequent edits do not mutate the server-received data directly.
+*  2. Resolves the CAMERA through `get_view(key)` — the stored coordinates when
+*     the record has them, `default_view` otherwise. The camera is never stored.
+*  3. Clones the STORED entry (when there is one) into `current_value[key]` and
+*     `ar_layer_loaded` so that subsequent edits do not mutate the server-received
+*     data directly. With no stored entry both stay empty: opening a map is not
+*     editing, so an untouched record must have nothing to save.
 *  4. Constructs the Leaflet Map and tile layers according to
 *     `context.features.geo_provider`. Provider-specific notes:
 *     - OSM: single tile layer with automatic dark/light swap via MutationObserver.
@@ -450,34 +907,27 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	// load libs
 		await self.load_libs()
 
-	// defaults — when data is absent (or an empty WC-001 array) use the
-	// component's geographic fallback position
-		const entries = self.get_entries()
+	// stored entry — null when the record has no geolocation value
+		const stored_entry = self.get_stored_entry(key)
 
-	// get data
-		const field_lat		= entries[key].lat
-		const field_lon		= entries[key].lon
-		const field_zoom	= entries[key].zoom
-		const field_alt		= entries[key].alt
+	// map_data — the CAMERA. Always finite (get_view guarantees it), so
+	// new L.LatLng() can never receive undefined and throw (Invalid LatLng object).
+		const map_data = self.get_view(key)
 
 	// update the current_value with the data from DDBB
 	// current_value will be update with different changes to create change_data to save
-		self.current_value[key] = clone(entries[key])
+	// (!) ONLY when something is stored. Opening a map is not editing: on a record
+	// with no value current_value[key] stays undefined so build_changed_data_item
+	// returns null and the save button sends nothing. Every edit path creates the
+	// entry on first touch (`current_value[key] = current_value[key] || {}`).
+		if (stored_entry) {
+			self.current_value[key] = clone(stored_entry)
+		}
 
 	// load all layers — deep-clone so that geometry edits don't mutate data.entries
-		self.ar_layer_loaded = typeof entries[key].lib_data!=='undefined'
-			? clone(entries[key].lib_data)
+		self.ar_layer_loaded = (stored_entry && typeof stored_entry.lib_data!=='undefined')
+			? clone(stored_entry.lib_data)
 			: []
-
-	// map_data
-	// fall back to default_value per field when the entry has no coordinates,
-	// otherwise new L.LatLng() receives undefined and throws (Invalid LatLng object)
-		const map_data = {
-			x		: field_lat  ?? self.default_value.lat,
-			y		: field_lon  ?? self.default_value.lon,
-			zoom	: field_zoom ?? self.default_value.zoom,
-			alt		: field_alt  ?? self.default_value.alt
-		}
 
 	// new map vars
 		let arcgis		= null
@@ -491,7 +941,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		switch(self.context.features?.geo_provider) {
 
 			case 'OSM':
-				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom})
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.lat, map_data.lon), zoom: map_data.zoom})
 				self.tile_layer = fn_osm_layer().addTo(self.map)
 
 				// swap tile layer when the user toggles dark/light mode
@@ -503,14 +953,14 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				break;
 
 			case 'GOOGLE':
-				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.lat, map_data.lon), zoom: map_data.zoom});
 				const googleLayer = new L.Google('ROADMAP');
 				//map.addLayer(googleLayer);
 				googleLayer.addTo(self.map);
 				break;
 
 			case 'ARCGIS':
-				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.lat, map_data.lon), zoom: map_data.zoom});
 				L.tileLayer('http://server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
 				maxZoom: 18,
 				attribution: 'Tiles &copy; Esri — '
@@ -535,7 +985,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				osm = fn_osm_layer({ maxNativeZoom: 19 });
 
 				// MAP
-				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.lat, map_data.lon), zoom: map_data.zoom});
 
 				// LAYER SELECTOR — allows toggling among dare, arcgis, and osm base layers
 				base_maps = {
@@ -558,7 +1008,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 				osm = fn_osm_layer();
 				// MAP
-				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
+				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.lat, map_data.lon), zoom: map_data.zoom});
 
 				// layer selector
 				base_maps = {
@@ -571,6 +1021,12 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				break;
 		}//end switch(self.context.features.geo_provider)
 
+	// geometry framing — a record whose value is a drawn shape and no coordinate
+	// opens ON its work, not on the world view. get_view already centred the map;
+	// this fits the zoom to the same extent. Camera only, nothing is stored, and
+	// it runs before the map move listeners exist.
+		self.fit_camera_to_geometry(key)
+
 	// set active layer — when the user checks an overlay in the layer control, track it
 		self.map.on('overlayadd', function(e) {
 			self.active_layer_id = e.name
@@ -582,11 +1038,17 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		// disable tap handler, if present.
 		// if (self.map.tap) self.map.tap.disable();
 
-	// map move listeners — sync coordinate inputs and current_value after user interaction
+	// map move listeners — sync coordinate inputs and current_value after user
+	// NAVIGATION. Both are declared 'navigation': panning and zooming are how the
+	// operator LOOKS at the map, not how a coordinate is entered, so on a record
+	// with no value they must write nothing (update_input_values enforces it).
+	// The camera_is_moving guard skips the component's own moves (move_camera) —
+	// a programmatic setView must never feed its rounded centre back as data.
 
-		self.map.on('dragend', function(){
-
-			// Update input values after the user pans the map
+		const fn_camera_sync = function(){
+			if (self.camera_is_moving===true) {
+				return
+			}
 			self.update_input_values(
 				key,
 				{
@@ -594,22 +1056,13 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 					lon		: self.map.getCenter().lng,
 					zoom	: self.map.getZoom()
 				},
-				map_container
+				map_container,
+				'navigation'
 			)
-		});
-		self.map.on('zoomend', function(){
-			// Update input values after the user zooms the map
-			self.update_input_values(
-				key,
-				{
-					key		: key,
-					lat		: self.map.getCenter().lat,
-					lon		: self.map.getCenter().lng,
-					zoom	: self.map.getZoom()
-				},
-				map_container
-			)
-		});
+		}
+
+		self.map.on('dragend', fn_camera_sync);
+		self.map.on('zoomend', fn_camera_sync);
 		self.map.on('click', function(e){
 			// disable layers — clicking the map canvas (not a feature) exits geometry edit mode
 			for (let feature in self.FeatureGroup) {
@@ -667,15 +1120,43 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 * new position to the database. See the disabled block at the end of the method
 * body for the original intent.
 *
+* (!) INTENT — the guard that keeps the camera out of the record.
+* This method is reached by two very different kinds of caller, and it cannot
+* tell them apart from the values alone (a camera centre and a typed coordinate
+* are both just numbers):
+*   'entry'      — the caller IS data entry and its values are the record's:
+*                  the update_value observer (map_update_coordinates) and the
+*                  refresh button restoring the STORED entry.
+*   'navigation' — the caller is a map move (dragend/zoomend). The values are
+*                  the CAMERA. They may only refine the framing of a value that
+*                  already exists; they may never create one.
+* So a 'navigation' call on an entry that is not yet a value (fn_has_value:
+* no coordinate pair and no drawn geometry) returns immediately — nothing
+* written, inputs untouched, dirty flag untouched. Leaving the inputs blank is
+* part of the guard: they are the VALUE fields, and add-point reads them, so a
+* camera-filled input would launder the camera into the record one click later.
+* The default is 'navigation', the safe side: a caller that has not stated that
+* it is entering data cannot fabricate a coordinate.
+*
 * @param {number} key - Index into `current_value` identifying the active entry.
 * @param {Object} data - New coordinate values: `{lat, lon, zoom, [alt]}`.
 * @param {HTMLElement} map_container - The map's root element; its `parentNode`
 *   is expected to contain the `input[data-name=*]` coordinate fields.
-* @returns {boolean} Always true.
+* @param {string} [intent='navigation'] - 'entry' | 'navigation'. See above.
+* @returns {boolean} True when the values were written, false when a navigation
+*   call was refused on a valueless record.
 */
-component_geolocation.prototype.update_input_values = function(key, data, map_container) {
+component_geolocation.prototype.update_input_values = function(key, data, map_container, intent='navigation') {
 
 	const self = this
+
+	// navigation guard — moving the map is not entering data
+		if (intent!=='entry' && !fn_has_value(self.current_value[key])) {
+			if (SHOW_DEBUG === true) {
+				console.log('Ignored camera move: the record has no value to frame', key)
+			}
+			return false
+		}
 
 	const content_value = map_container.parentNode
 
@@ -685,10 +1166,18 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		const input_zoom	= content_value.querySelector("input[data-name='zoom']")
 		const input_alt		= content_value.querySelector("input[data-name='alt']")
 
-	// Set values to inputs — guard for inputs not present in the current view
-		if (input_lat) input_lat.value	= data.lat
-		if (input_lon) input_lon.value	= data.lon
-		if (input_zoom) input_zoom.value = data.zoom
+	// Set values to inputs — guard for inputs not present in the current view.
+	// (!) absence renders EMPTY: a geometry-only entry carries no lat/lon/zoom and
+	// assigning undefined to a node value renders the literal string 'undefined'
+	// in the VALUE fields, which add-point and handle_coord_change read back. 0
+	// survives — it is a legal coordinate. The buffer below keeps the raw value,
+	// so absence is never persisted as ''.
+		const fn_node_value = (value) => (value===null || value===undefined)
+			? ''
+			: value
+		if (input_lat) input_lat.value	= fn_node_value(data.lat)
+		if (input_lon) input_lon.value	= fn_node_value(data.lon)
+		if (input_zoom) input_zoom.value = fn_node_value(data.zoom)
 
 	// get the value from alt input — altitude is not provided by Leaflet events; read from the DOM
 		if (input_alt) {
@@ -698,12 +1187,28 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		}
 
 	// set the current value — keep in-memory buffer in sync for the next save
+	// (!) create on first touch: a record with no stored value has no
+	// current_value[key] until the user acts. Only 'entry' callers reach this
+	// line with an absent entry — a camera move was already refused above.
+		self.current_value[key] = self.current_value[key] || {}
 		self.current_value[key].lat		= data.lat
 		self.current_value[key].lon		= data.lon
 		self.current_value[key].zoom	= data.zoom
 		// use != null so a valid altitude of 0 is stored and an explicit null clears it
 		// (the previous truthiness check silently dropped both 0 and null).
 		self.current_value[key].alt		= (data.alt != null) ? data.alt : null
+
+	// mark dirty — the save button READS this flag (view_default_edit_geolocation
+	// fn_save). Re-framing a record that ALREADY has a value (a coordinate or a
+	// drawn shape) is real user work, so it must be saveable. On a geometry
+	// record the stored centre is FRAMING, not a location claim — publication
+	// takes the location from lib_data — so moving it is curation, not a
+	// fabricated coordinate (see fn_has_value).
+	// (!) dirty is not saved: nothing here commits. Only an explicit click of the
+	// save button writes the new framing to the record.
+	// (!) fn_refresh also routes through here and resets the flag to false right
+	// after, so restoring the DB state does not leave the component dirty.
+		self.is_data_changed = true
 
 	// track changes in self.data.changed_data
 		// (!) DISABLED because, when changing the position of the map, it is not saved unintentionally.
@@ -735,17 +1240,62 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 * The item is frozen via `Object.freeze` to prevent accidental mutation before
 * it reaches the server request.
 *
+* Returns NULL when `current_value[key]` does not exist: an untouched record has
+* no value, and "no value" must be sent as nothing at all, not as a fabricated
+* coordinate. Callers MUST handle null (see fn_save in the edit view).
+*
+* (!) `key` is mandatory in the emitted item. component_common's unchanged-guards
+* (save + set_changed_data) resolve the DB twin as
+* `db_data.entries.find(e => e.id===item.id)` when `id` is set and
+* `db_data.entries[item.key]` otherwise. A new record has no id, so without `key`
+* the lookup was `db_data.entries[undefined]` → always undefined → never equal →
+* the guard never fired and every open+save wrote a row.
+*
+* (!) `id` IS THE REPLACE/APPEND SWITCH — it must be recovered from the STORED
+* entry, not only from current_value. component_geolocation is not translatable,
+* so the server takes the non-sliced branch of applyUpdate
+* (src/core/section/record/save_component.ts): an id-less 'update' returns
+* `[...items, change.value]` — an APPEND — and `key` is honoured only in the
+* lang-sliced branch, so it cannot rescue it. The value CREATED by a first save
+* does get a server-side id (save_component.ts stamps every id-less item with
+* allocateComponentItemId before the write) and the save response replaces
+* self.data, so `get_stored_entry(key).id` holds it afterwards — but
+* current_value[key] is the client's own buffer and is never refreshed, so its
+* id stayed null and the SECOND save appended a second item: the map reloaded at
+* the stale first position and the record published two points.
+* Reading the id back from the stored entry closes it, and stamping it into
+* current_value keeps every later save (and component_common's id-keyed
+* unchanged-guard) targeting the same item.
+*
 * @param {number} key - Index into `current_value` identifying the active entry.
-* @returns {Object} Immutable changed_data_item: `{action:'update', id, value}`.
+* @returns {Object|null} Immutable changed_data_item `{action, key, id, value}`,
+*   or null when there is no value to send.
 */
 component_geolocation.prototype.build_changed_data_item = function(key) {
 
 	const self = this
 
+	const value = self.current_value[key]
+
+	// absence is structural: nothing touched, nothing to save
+	if (value===undefined || value===null) {
+		return null
+	}
+
+	// id — the client's buffer first, the stored entry as the recovery source
+	const stored_id = self.get_stored_entry(key)?.id
+	const id = value.id ?? stored_id ?? null
+	if (id!==null && (value.id===undefined || value.id===null)) {
+		// stamp it so the NEXT save still replaces, and so the unchanged-guard
+		// compares against the same shape the DB holds
+		value.id = id
+	}
+
 	const changed_data_item = Object.freeze({
 		action	: 'update',
-		id		: self.current_value[key]?.id || null,
-		value	: self.current_value[key]
+		key		: key,
+		id		: id,
+		value	: value
 	})
 
 	return changed_data_item
@@ -783,19 +1333,35 @@ component_geolocation.prototype.handle_coord_change = function(key, name, val) {
 	// mark as changed
 	self.is_data_changed = true
 
-	// map updates
+	// map updates — the camera follows what was typed; the typed value is the
+	// record's, so it must survive the move untouched.
+	// (!) fn_finite_number, NOT isNaN: isNaN(null) and isNaN('') are both FALSE,
+	// so a half-filled form used to pan to (0,0) — the map jumping to the Gulf of
+	// Guinea while the user was still typing the second coordinate.
+	// (!) move_camera, never panTo + setZoom: typing a lat and then a zoom used to
+	// cancel the pan AND let the async zoomend write the stale camera centre back
+	// over both inputs. move_camera moves once, synchronously, with the map's
+	// event feedback suppressed — see its header.
 	if (self.map) {
-		const lat	= self.current_value[key].lat
-		const lon	= self.current_value[key].lon
-		const zoom	= self.current_value[key].zoom
+		const lat	= fn_finite_number(self.current_value[key].lat)
+		const lon	= fn_finite_number(self.current_value[key].lon)
+		const zoom	= fn_finite_number(self.current_value[key].zoom)
 
 		if (name === 'lat' || name === 'lon') {
-			if (!isNaN(lat) && !isNaN(lon)) {
-				self.map.panTo(new L.LatLng(lat, lon))
+			// both coordinates required: a lone lat is not a position
+			if (lat!==null && lon!==null) {
+				self.move_camera(lat, lon, zoom ?? self.map.getZoom())
 			}
 		} else if (name === 'zoom') {
-			if (!isNaN(zoom)) {
-				self.map.setZoom(zoom)
+			// zoom alone re-frames whatever the map is already looking at: keep
+			// the typed coordinates when there are any, the current centre otherwise
+			if (zoom!==null) {
+				const centre = self.map.getCenter()
+				self.move_camera(
+					(lat!==null && lon!==null) ? lat : centre.lat,
+					(lat!==null && lon!==null) ? lon : centre.lng,
+					zoom
+				)
 			}
 		}
 	}
@@ -1366,7 +1932,7 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 * Used by `get_popup_content` for Marker and Circle popups.
 *
 * @param {Object} latlng - Leaflet LatLng object with `lat` and `lng` properties.
-* @returns {string} Formatted string, e.g. `'(39.462571, -0.376295)'`.
+* @returns {string} Formatted string, e.g. `'(41.652300, -4.724500)'`.
 */
 component_geolocation.prototype.str_lat_lng = function(latlng) {
 
@@ -1575,6 +2141,9 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 			}
 		)
 
+		// create on first touch — drawing on a record with no stored value is the
+		// action that CREATES the value; current_value[key] is undefined until now
+		self.current_value[key] = self.current_value[key] || {}
 		self.current_value[key].lib_data = self.ar_layer_loaded
 
 
@@ -1679,19 +2248,60 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 	if(target_geolocation_data){
 		// geolocation doesn't has multiple maps and the key of the data array is always 0
 		const key = 0
-		self.current_value = target_geolocation_data.entries
+
+		// borrowed entries. (!) CLONE: current_value is mutated in place by
+		// update_input_values, and assigning the caller's array by reference wrote
+		// this component's altitude back into the observed record's datum.
+		const borrowed_entries = Array.isArray(target_geolocation_data.entries)
+			? clone(target_geolocation_data.entries)
+			: []
+		if (borrowed_entries[key]===undefined || borrowed_entries[key]===null) {
+			// the target record has no coordinates: nothing to borrow, nothing to save
+			return
+		}
+
+		// (!) THE COORDINATES ARE BORROWED, THE IDENTITY IS NOT. A stored entry of
+		// the OBSERVED record carries its OWN item id. Keeping it would make this
+		// record's save target a foreign id: build_changed_data_item prefers
+		// value.id, applyUpdate (save_component.ts, non-sliced branch) finds no
+		// item with that id and APPENDS — the record ends up holding two geo
+		// items, reloads at the stale first one, and publishes both points.
+		// Dropping it lets build_changed_data_item recover THIS record's own id
+		// from its stored entry, so the borrowed coordinates REPLACE the value.
+			borrowed_entries.forEach((entry) => {
+				if (entry && typeof entry==='object') {
+					delete entry.id
+				}
+			})
+
+		self.current_value = borrowed_entries
+
+		// move the map to the borrowed point. move_camera is the single door: it
+		// moves once (animate:false) and suppresses the map's own event feedback,
+		// so the borrowed coordinates are never overwritten by the map centre.
+		const view_lat	= fn_finite_number(self.current_value[key].lat)
+		const view_lon	= fn_finite_number(self.current_value[key].lon)
+		const view_zoom	= fn_finite_number(self.current_value[key].zoom)
+		if (self.map && view_lat!==null && view_lon!==null) {
+			self.move_camera(view_lat, view_lon, view_zoom ?? self.map.getZoom())
+		}
+
+		// 'entry': the observer IS data entry — these are the record's values,
+		// borrowed from the caller, not a camera position.
 		self.update_input_values(
 			key,
 			self.current_value[key],
-			self.node.content_data[key].map_container
+			self.node.content_data[key].map_container,
+			'entry'
 		)
-		// move the map to the new point and zoom with the values
-		self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
-		self.map.setZoom(self.current_value[key].zoom);
+
 		// modify his own data with the new values — change_value persists the borrowed coordinates
-		const changed_data = [self.build_changed_data_item(key)]
+		const changed_data_item = self.build_changed_data_item(key)
+		if (!changed_data_item) {
+			return
+		}
 		self.change_value({
-			changed_data	: changed_data,
+			changed_data	: [changed_data_item],
 			refresh			: false
 		})
 	}
@@ -1758,6 +2368,9 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				self.ar_layer_loaded.push(recover_layer)
 				self.load_layer(recover_layer)
 
+				// create on first touch — inserting a geo-tag on a record with no
+				// stored value is the action that CREATES the value
+				self.current_value[key] = self.current_value[key] || {}
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
 				const recover_changed_data = [self.build_changed_data_item(key)]
@@ -1792,6 +2405,9 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				const index = self.ar_layer_loaded.findIndex((item) => item.layer_id===layer_id)
 				self.ar_layer_loaded.splice(index,1)
 
+				// create on first touch — removing a tag can arrive before any other
+				// edit, so the entry may still be absent here too
+				self.current_value[key] = self.current_value[key] || {}
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
 				const changed_data = [self.build_changed_data_item(key)]

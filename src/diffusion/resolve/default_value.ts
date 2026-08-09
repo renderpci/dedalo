@@ -12,7 +12,11 @@
  * - component_text_area (:2441-2453): html_entity_decode on every value;
  * - component_iri (:406-446): ONE atom whose value is the {iri,title} entry
  *   array with lang stripped (parser_iri::flat consumes exactly that);
- * - component_geolocation (:336-358): per-point `id` stripped;
+ * - component_geolocation (:336-358): per-point `id` stripped — plus the GEO
+ *   LAW divergence (geo_coordinate.ts): an item with no coordinate and no
+ *   drawn layer emits NO atom, where PHP published the raw stored object, and
+ *   drawn geometry WINS over the stored centre (the centre is framing, so its
+ *   lat/lon are dropped) as in the other two geo publication paths;
  * - component_date / geolocation: typed 'date'/'geo' atoms (record_ir.ts);
  * - component_section_id: the record's own section_id scalar (pseudo-column).
  *
@@ -28,6 +32,7 @@ import { mediaTypeOf } from '../../core/concepts/media.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
 import type { MetaValueIR, ValueMeta } from '../parsers/types.ts';
+import { hasCoordinate } from './geo_coordinate.ts';
 
 /** A stored literal item ({id?, value, lang?} — component_data.ts contract). */
 interface StoredItem {
@@ -76,6 +81,26 @@ function rawToAtom(raw: unknown, lang: string | null, meta: ValueMeta): MetaValu
 			: { kind: 'json', value: raw, lang };
 	atom.meta = meta;
 	return atom;
+}
+
+/**
+ * Does the item carry hand-drawn geometry? A lib_data layer with at least one
+ * feature. An empty lib_data (or layers with no feature) is editor state, not
+ * geometry — same predicate as parser_misc.ts geoGeojson (`hasFeatures`).
+ */
+function hasDrawnGeometry(stored: Record<string, unknown>): boolean {
+	const libData = stored.lib_data;
+	if (!Array.isArray(libData)) return false;
+	return libData.some((layer) => {
+		const features = (layer as { layer_data?: { features?: unknown } } | null)?.layer_data
+			?.features;
+		return Array.isArray(features) && features.length > 0;
+	});
+}
+
+/** A usable coordinate pair (0 included; ''/null/absent/unparseable are not). */
+function hasPoint(stored: Record<string, unknown>): boolean {
+	return hasCoordinate(stored.lat) && hasCoordinate(stored.lon);
 }
 
 /**
@@ -170,15 +195,42 @@ export function defaultPublicationValue(
 
 		case 'component_geolocation': {
 			// PHP strips the editor point id; atoms are typed 'geo'.
-			return items.map((item) => {
+			// GEO LAW (geo_coordinate.ts): an item with no real coordinate and no
+			// drawn layer is NOT a location — emit no atom. PHP published the
+			// stored object raw, so a record the operator never placed on the map
+			// still reached consumers (as the ex-sentinel Valencia point). 0 is a
+			// coordinate; ''/null/absent is not.
+			//
+			// GEOMETRY WINS (owner decision 2026-08-09), aligning this third
+			// publication path with parser_misc.ts geoGeojson and ddo_fns.ts
+			// buildGeojsonLayers, which already let lib_data beat the point: when
+			// the item carries drawn geometry, the GEOMETRY is the location and the
+			// stored lat/lon are DROPPED from the atom. There the stored pair is
+			// only the map FRAMING the client saved beside the work (tchi1/113
+			// draws on the Costa Brava while its stored centre was the Valencia
+			// sentinel, ~400 km away), and a consumer reading `.lat` cannot tell
+			// framing from an asserted coordinate — so framing must never reach the
+			// wire as one. Every other key (zoom, alt, lib_data, …) is preserved
+			// verbatim: camera/annotation fields no consumer reads as a position.
+			// CONSEQUENCE, and the point of the decision: stored lat/lon on a
+			// geometry record is FRAMING everywhere, never a location claim — so the
+			// migration's engine-derived centre is not a location claim either, and
+			// a curator's pan/zoom updating it is correct, not a coordinate leak.
+			const atoms: MetaValueIR[] = [];
+			for (const item of items) {
 				const raw = item.value ?? item;
-				let value = raw;
-				if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-					const { id: _stripped, ...clone } = raw as Record<string, unknown>;
-					value = clone;
+				if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) continue;
+				const stored = raw as Record<string, unknown>;
+				const { id: _stripped, ...value } = stored;
+				if (hasDrawnGeometry(stored)) {
+					const { lat: _lat, lon: _lon, ...framedGeometry } = value;
+					atoms.push({ kind: 'geo', value: framedGeometry, lang: null, meta } as MetaValueIR);
+					continue;
 				}
-				return { kind: 'geo', value, lang: null, meta } as MetaValueIR;
-			});
+				if (!hasPoint(stored)) continue;
+				atoms.push({ kind: 'geo', value, lang: null, meta } as MetaValueIR);
+			}
+			return atoms;
 		}
 
 		case 'component_date': {

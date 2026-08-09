@@ -529,9 +529,9 @@
 			],
 			"add": "CREATE INDEX IF NOT EXISTS {$table}_geo_gin_idx ON {$table} USING gin (geo jsonb_path_ops);",
 			"drop": "DROP INDEX IF EXISTS {$table}_geo_gin_idx",
-			"sample": "SELECT * FROM matrix WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{\"lat\":\"39.462571\"}]' LIMIT 10",
+			"sample": "SELECT * FROM matrix WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{\"lat\":\"41.385064\",\"lon\":\"2.173403\"}]' LIMIT 10",
 			"name": "all_matrix_geo_gin_idx",
-			"info": "Used to search geolocation data by any of its properties: lat, lng or alt."
+			"info": "Used to search geolocation data by any of its properties: lat, lon, zoom or alt. The coordinate in the sample is just an EXAMPLE point: there is no magic coordinate, and no location is the absent key, never a value. Coordinates are stored mixed as strings and numbers, so the operand must match the stored form."
 		},
 		{
 			"tables": [

@@ -29,6 +29,7 @@
  */
 
 import type { ImportConformId } from '../components/types.ts';
+import { hasCoordinate, isCoordinateInRange, toCoordinate } from '../concepts/geo_coordinate.ts';
 import type { ConformFailure, ConformResult } from './import_data.ts';
 
 /** Context a facet needs beyond the cell itself (resolved by the caller). */
@@ -383,56 +384,145 @@ const conformEmail: ImportConformFn = async (value, json, ctx) => {
 // ---------------------------------------------------------------------------
 
 interface GeoItem {
-	lat: number;
-	lon: number;
-	zoom: number;
-	alt: number;
+	/** Absent when the source carried NO coordinate — absence is structural. */
+	lat?: number;
+	lon?: number;
+	zoom?: number;
+	alt?: number;
 	lib_data?: unknown[];
 }
 
-/** PHP $conform_item (:517-553): the coordinate + layer validator. */
+/**
+ * A coordinate is ABSENT when it is null/undefined/'' — and only then. 0 is a
+ * legal coordinate (Greenwich, the equator), never an absence: no falsy test
+ * anywhere on lat/lon.
+ */
+function isAbsentCoordinate(value: unknown): boolean {
+	return (
+		value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
+	);
+}
+
+/**
+ * zoom / alt are FRAMING, not coordinates: they get no comma-decimal
+ * normalization and no range law. Keep them out of the coordinate predicate.
+ */
+function isNumericFraming(value: unknown): boolean {
+	return (
+		(typeof value === 'number' && Number.isFinite(value)) ||
+		(typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)))
+	);
+}
+
+/** A lib_data layer set carries CONTENT only when some layer holds a feature. */
+function hasDrawnGeometry(libData: unknown[] | null): boolean {
+	if (libData === null) return false;
+	return libData.some((layer) => {
+		const features = (layer as { layer_data?: { features?: unknown } } | null)?.layer_data
+			?.features;
+		return Array.isArray(features) && features.length > 0;
+	});
+}
+
+/**
+ * Whether the SOURCE explicitly states "this record has no location" — the only
+ * shape allowed to conform to nothing SILENTLY: both coordinate keys present
+ * and blank, or an item that carries a lib_data key. Anything else with no
+ * usable coordinate (a typo'd header, `{}`, `{latitude,longitude}`, `{zoom:12}`)
+ * is malformed and must be REFUSED: the executor saves set_data [] for a field
+ * whose every value failed, so a silent null here would DELETE the record's
+ * stored coordinate while the run report said OK.
+ */
+function statesNoLocation(source: Record<string, unknown>): boolean {
+	return ('lat' in source && 'lon' in source) || 'lib_data' in source;
+}
+
+/** The drawn-layer validator (shared by both coordinate branches). */
+function conformGeoLibData(source: Record<string, unknown>): {
+	lib_data: unknown[] | null;
+	error: string;
+} {
+	if (source.lib_data === undefined || source.lib_data === null)
+		return { lib_data: null, error: '' };
+	if (!Array.isArray(source.lib_data)) {
+		return { lib_data: null, error: 'lib_data must be an array of layers' };
+	}
+	for (const layer of source.lib_data) {
+		const data = isObject(layer) ? (layer.layer_data as Record<string, unknown>) : null;
+		if (
+			!isObject(layer) ||
+			layer.layer_id === undefined ||
+			!isObject(data) ||
+			data.type !== 'FeatureCollection' ||
+			!Array.isArray(data.features)
+		) {
+			return {
+				lib_data: null,
+				error: 'lib_data layers must define layer_id and layer_data as GeoJSON FeatureCollection',
+			};
+		}
+	}
+	return { lib_data: source.lib_data, error: '' };
+}
+
+/**
+ * The coordinate + layer validator (PHP $conform_item :517-553, diverged).
+ *
+ * Absence is structural: the import NEVER fabricates a coordinate (no magic
+ * centre, no default framing). A source with neither lat nor lon stores no
+ * coordinate; it survives only to carry drawn geometry.
+ * ONE coordinate without the other is a malformed pair and is refused.
+ *
+ * The three outcomes, and the line between the last two is the whole point:
+ *   item        — something to store;
+ *   null, ''    — NOTHING to store, and the source SAID SO (statesNoLocation);
+ *   null, error — refused. Everything else with no usable coordinate lands
+ *                 here, because the caller's only operator-visible channel is
+ *                 the error list (import_execute.ts pushes conform.errors into
+ *                 the run's `failed`; conform.warnings reach NO report today),
+ *                 and a null with no error DELETES the stored coordinate.
+ *
+ * 0 passes every check unharmed. The coordinate parse + range law is the shared
+ * leaf src/core/concepts/geo_coordinate.ts — this door is where the range is
+ * enforced, by refusing loudly.
+ */
 function conformGeoItem(source: Record<string, unknown>): { item: GeoItem | null; error: string } {
 	const lat = source.lat;
 	const lon = source.lon;
-	const numeric = (v: unknown): boolean =>
-		(typeof v === 'number' && Number.isFinite(v)) ||
-		(typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)));
-	if (!numeric(lat) || !numeric(lon)) {
+
+	const { lib_data, error: libError } = conformGeoLibData(source);
+	if (libError !== '') return { item: null, error: libError };
+
+	if (isAbsentCoordinate(lat) && isAbsentCoordinate(lon)) {
+		if (hasDrawnGeometry(lib_data)) {
+			const geometryOnly: GeoItem = { lib_data: lib_data as unknown[] };
+			// Framing is view-only; keep it only when the source stated it.
+			if (isNumericFraming(source.zoom)) geometryOnly.zoom = Math.trunc(Number(source.zoom));
+			if (isNumericFraming(source.alt)) geometryOnly.alt = Math.trunc(Number(source.alt));
+			return { item: geometryOnly, error: '' };
+		}
+		// No coordinate and no feature: a layer list with no features is not
+		// content, so an empty lib_data is not stored as a coordinate-less husk.
+		if (statesNoLocation(source)) return { item: null, error: '' };
+		return { item: null, error: 'lat and lon properties are mandatory' };
+	}
+	if (isAbsentCoordinate(lat) || isAbsentCoordinate(lon)) {
+		return { item: null, error: 'lat and lon must be given together' };
+	}
+	if (!hasCoordinate(lat) || !hasCoordinate(lon)) {
 		return { item: null, error: 'lat and lon numeric properties are mandatory' };
 	}
-	const latNum = Number(lat);
-	const lonNum = Number(lon);
-	if (latNum < -90 || latNum > 90 || lonNum < -180 || lonNum > 180) {
+	if (!isCoordinateInRange(lat, 'lat') || !isCoordinateInRange(lon, 'lon')) {
 		return { item: null, error: 'lat or lon values are out of range' };
 	}
 	const item: GeoItem = {
-		lat: latNum,
-		lon: lonNum,
+		lat: toCoordinate(lat),
+		lon: toCoordinate(lon),
 		// PHP always sets both, defaulting a missing/non-numeric value.
-		zoom: numeric(source.zoom) ? Math.trunc(Number(source.zoom)) : 16,
-		alt: numeric(source.alt) ? Math.trunc(Number(source.alt)) : 0,
+		zoom: isNumericFraming(source.zoom) ? Math.trunc(Number(source.zoom)) : 16,
+		alt: isNumericFraming(source.alt) ? Math.trunc(Number(source.alt)) : 0,
 	};
-	if (source.lib_data !== undefined && source.lib_data !== null) {
-		if (!Array.isArray(source.lib_data)) {
-			return { item: null, error: 'lib_data must be an array of layers' };
-		}
-		for (const layer of source.lib_data) {
-			const data = isObject(layer) ? (layer.layer_data as Record<string, unknown>) : null;
-			if (
-				!isObject(layer) ||
-				layer.layer_id === undefined ||
-				!isObject(data) ||
-				data.type !== 'FeatureCollection' ||
-				!Array.isArray(data.features)
-			) {
-				return {
-					item: null,
-					error: 'lib_data layers must define layer_id and layer_data as GeoJSON FeatureCollection',
-				};
-			}
-		}
-		item.lib_data = source.lib_data;
-	}
+	if (lib_data !== null) item.lib_data = lib_data;
 	return { item, error: '' };
 }
 
@@ -495,6 +585,10 @@ const conformGeolocation: ImportConformFn = async (value, json, ctx) => {
 				);
 			}
 			const { item, error } = conformGeoItem(source);
+			// error '' with no item: the source EXPLICITLY stated no location and
+			// carried no geometry. Not a failure; the item simply does not exist.
+			// A malformed source never reaches here — it carries an error.
+			if (item === null && error === '') continue;
 			if (item === null) return fail(ctx, `IGNORED: malformed data. ${error}`, value);
 			conformed.push(item);
 		}
