@@ -530,8 +530,15 @@ const render_verdict = function(node, counts) {
 		'Findings a person has to decide about. These are what make the preflight fail.')
 	add_chip('notices', counts.notices + ' notices',
 		'Values that cannot be migrated and will be dropped. Nothing to repair.')
+	// A high 'auto-fixed' count on an upgraded install is normally the fabricated map centre
+	// (the old edit view stored Valencia's coordinates on any save). It is repaired here, but
+	// one branch of that repair WRITES a coordinate derived from the record's own drawn
+	// geometry, so the chip names it rather than letting it pass as routine housekeeping.
 	add_chip('fixed', counts.fixed + ' auto-fixed',
-		'Structural defects repaired automatically during the migration. No action needed.')
+		'Structural defects repaired automatically during the migration. No action needed. '
+			+ 'A large count is usually the fabricated map centre: bare fabricated coordinates '
+			+ 'are dropped, and a record with drawn geometry keeps it and gets its centre '
+			+ 'derived from that geometry. See the groups in var/data_review.json.')
 
 	// A review run WITHOUT the ontology cannot resolve component models, so its verdict is
 	// only about structure. Saying so prevents a clean plain-preflight from being read as a

@@ -126,6 +126,24 @@ class v6_to_v7_normalize {
 	*/
 	private const SIDECAR_KEYS = ['inf', 'info'];
 
+	/**
+	* THE FABRICATED MAP CENTRE — component_geolocation's retired magic sentinel.
+	*
+	* The v6 client SEEDED its edit view with a hardcoded map centre (the city of Valencia)
+	* and its save button consulted no dirty signal, so merely OPENING a record and pressing
+	* save wrote a coordinate the operator never entered. Server-side the pair was then read
+	* back as a magic value meaning "no location set". v7 retires that magic entirely:
+	* absence is STRUCTURAL (no stored value) and 0 is a legal coordinate — so every
+	* surviving sentinel PUBLISHES as a real location in Valencia.
+	*
+	* Held as TEXT: the comparison is done on normalized strings, never on floats.
+	*/
+	private const SENTINEL_LAT = '39.462571';
+	private const SENTINEL_LON = '-0.376295';
+
+	/** The one model this repair applies to. Every other model returns untouched. */
+	private const GEOLOCATION_MODEL = 'component_geolocation';
+
 
 
 	/**
@@ -283,6 +301,496 @@ class v6_to_v7_normalize {
 
 		return false;
 	}//end component_value
+
+
+
+	/**
+	* GEOLOCATION_VALUE
+	* Repairs ONE component_geolocation per-lang item list: drops the coordinate the v6
+	* client fabricated, or replaces it with the centre of the geometry the operator
+	* actually drew. A no-op for every other model.
+	*
+	* Called from v6_to_v7::migrate_component_data() with the whole item list, because the
+	* verdict is a property of the LIST, not of a single item (see MIXED below).
+	*
+	* Rules, in order, per item:
+	*
+	*   BARE sentinel (the fabricated pair, no drawn geometry)
+	*       GEOLOCATION_FABRICATED_CENTRE — the item asserts a location that was never
+	*       entered. Dropped: in v7 absence is structural, so the component simply gets no
+	*       value. Reported as 'fixed'.
+	*
+	*   sentinel WITH drawn geometry
+	*       GEOLOCATION_CENTRE_DERIVED — see the disclosure block below. Reported as 'fixed'.
+	*
+	*   sentinel with geometry but no extractable position
+	*       GEOLOCATION_GEOMETRY_NO_POSITION — nothing can be derived and nothing may be
+	*       guessed. The WHOLE list is migrated UNCHANGED, reported as 'notice'.
+	*
+	*   a BARE sentinel sharing the list with any other item
+	*       GEOLOCATION_SENTINEL_MIXED — ids are assigned by POSITION in the surviving list
+	*       (v6_to_v7::migrate_component_data, $value_key++), so dropping one item renumbers
+	*       the ones after it. The WHOLE list is migrated UNCHANGED, reported as 'notice'.
+	*
+	*   anything else
+	*       Untouched. 0 is a LEGAL coordinate: a record on the equator or the prime
+	*       meridian is a record with a location, and no value other than the exact
+	*       fabricated pair is special-cased — conflating two different fabrications is how
+	*       this one stayed hidden for years.
+	*
+	* ============================================================================
+	* (!) ENGINE-AUTHORED COORDINATE — a deliberate, owner-approved exception
+	* ============================================================================
+	* The standing law is that the engine NEVER invents a coordinate; only an operator's own
+	* entry may be stored. GEOLOCATION_CENTRE_DERIVED is one narrow exception, approved by
+	* the project owner on 2026-08-09.
+	*
+	* WHAT IS DERIVED: the BBOX CENTRE of every feature across the item's lib_data layers.
+	* zoom, alt, lib_data, id and every other property are preserved as they were. A single
+	* drawn Point derives to EXACTLY itself (a one-position bbox is its own centre, returned
+	* verbatim and unrounded).
+	*
+	* WHY IT IS NOT AN INVENTION: on an item carrying drawn geometry the stored pair was
+	* never an asserted location — it is the map FRAMING the client saved alongside the
+	* work. Framing that matches the work is honest. Keeping the sentinel instead is not
+	* neutral: it is a FALSE LOCATION CLAIM that the publication path emits verbatim as the
+	* record's location, hundreds of km from the geometry the operator drew. Clearing
+	* lat/lon instead would be safe but lossy — it discards framing the operator did choose.
+	*
+	* This coordinate is NOT user-entered. It is machine-derived from user-drawn geometry,
+	* it is the only coordinate this migration authors anywhere, and it is disclosed here,
+	* in its own finding code, and in the operator's run report. Where no position can be
+	* extracted the item is held, never guessed.
+	*
+	* The rule is the same law as the v7-side one-shot repair
+	* (v7 scripts/repair_geolocation_sentinel.ts, gated by
+	* test/unit/geolocation_sentinel_repair.test.ts): same sentinel test, same bbox maths,
+	* same hold classes. A v6-side and a v7-side answer that differ are a silent divergence.
+	*
+	* SCOPE: this runs wherever migrate_component_data() runs — the matrix tables AND the
+	* matrix_time_machine rows. The preflight reviews only the matrix tables (phase 1 does
+	* not walk matrix_time_machine), so the counts an operator sees are the matrix ones.
+	*
+	* @param ?string $model - resolved ontology model; anything but component_geolocation
+	*                         returns null immediately
+	* @param array $items - the per-lang item list, as a plain list
+	* @param array $ctx - finding context (section_tipo, section_id, tipo, model, …)
+	* @param object $response - the NESTED response; findings are deferred and the caller
+	*                           merges them once it knows the table
+	* @return array|null - the repaired item list, or null when nothing changes (no
+	*                      sentinel, a hold, another model, or --no-auto-fix)
+	*/
+	public static function geolocation_value(
+		?string $model,
+		array $items,
+		array $ctx,
+		object $response
+	) : ?array {
+
+		if ($model !== self::GEOLOCATION_MODEL) {
+			return null;
+		}
+
+		$bare		= 0;	// fabricated pair, nothing drawn
+		$derived	= 0;	// fabricated pair, geometry drawn
+		$other		= 0;	// everything else, including 0/0 and any real coordinate
+		$repaired	= [];
+
+		foreach ($items as $item) {
+
+			if (!is_object($item) || !self::is_sentinel_centred($item)) {
+				$other++;
+				$repaired[] = $item;
+				continue;
+			}
+
+			if (!self::has_drawn_geometry($item)) {
+				// dropped — deliberately NOT pushed onto $repaired
+				$bare++;
+				continue;
+			}
+
+			$centre = self::derive_centre_from_geometry($item);
+			if ($centre === null) {
+				// Geometry is there but yields no usable position. Never guess: the whole
+				// list is returned untouched and a human is told where to look.
+				self::defer(
+					$response,
+					'GEOLOCATION_GEOMETRY_NO_POSITION',
+					self::SEVERITY_NOTICE,
+					$ctx,
+					'Fabricated map centre KEPT: the item carries drawn geometry from which no'
+						. ' position can be extracted, so nothing is derived and the value is'
+						. " migrated unchanged for review. tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
+					$item
+				);
+				return null;
+			}
+
+			$derived++;
+			// clone, never mutate: the caller's decoded row is also the source the
+			// unrepaired branches return as-is.
+			$new_item = clone $item;
+			$new_item->lat = $centre['lat'];
+			$new_item->lon = $centre['lon'];
+			$repaired[] = $new_item;
+		}
+
+		// No fabricated coordinate anywhere: not this rule's business.
+		if ($bare === 0 && $derived === 0) {
+			return null;
+		}
+
+		if ($bare > 0 && ($derived > 0 || $other > 0)) {
+			// Dropping this item would shift the ids of every item after it (they are
+			// assigned by position, not carried by the value). Needs a human.
+			self::defer(
+				$response,
+				'GEOLOCATION_SENTINEL_MIXED',
+				self::SEVERITY_NOTICE,
+				$ctx,
+				'Fabricated map centre KEPT: it shares the component with other geolocation'
+					. ' items and dropping one would renumber the rest, so the value is migrated'
+					. " unchanged for review. tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
+				$items
+			);
+			return null;
+		}
+
+		// --no-auto-fix: report what WOULD be repaired and repair nothing, so the
+		// diagnostic mode shows the pre-repair picture. Reported as notices, not errors:
+		// this finding did not exist before the rule, and raising it as an error would
+		// invent a failure that never blocked a migration.
+		if (self::$auto_fix !== true) {
+			for ($i = 0; $i < $bare; $i++) {
+				self::defer(
+					$response,
+					'GEOLOCATION_FABRICATED_CENTRE',
+					self::SEVERITY_NOTICE,
+					$ctx,
+					'Fabricated map centre NOT repaired (--no-auto-fix): the v6 client wrote'
+						. ' ' . self::SENTINEL_LAT . '/' . self::SENTINEL_LON . ' on save and the value'
+						. " migrates as-is. tipo: '" . (string)($ctx['tipo'] ?? '') . "'"
+				);
+			}
+			for ($i = 0; $i < $derived; $i++) {
+				self::defer(
+					$response,
+					'GEOLOCATION_CENTRE_DERIVED',
+					self::SEVERITY_NOTICE,
+					$ctx,
+					'Fabricated map centre NOT replaced (--no-auto-fix): the item carries drawn'
+						. " geometry whose centre would have been derived. tipo: '"
+						. (string)($ctx['tipo'] ?? '') . "'"
+				);
+			}
+			return null;
+		}
+
+		if ($derived > 0) {
+			// One finding per repaired ITEM: the count is what the operator reads, and
+			// grouping keeps it to ONE object however many million times it fires.
+			for ($i = 0; $i < $derived; $i++) {
+				self::defer(
+					$response,
+					'GEOLOCATION_CENTRE_DERIVED',
+					self::SEVERITY_FIXED,
+					$ctx,
+					'Fabricated map centre replaced by the ENGINE-DERIVED centre of the drawn'
+						. ' geometry (bbox centre of the operator\'s own features; zoom, alt and'
+						. " lib_data kept). tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
+					$items
+				);
+			}
+			return $repaired;
+		}
+
+		for ($i = 0; $i < $bare; $i++) {
+			self::defer(
+				$response,
+				'GEOLOCATION_FABRICATED_CENTRE',
+				self::SEVERITY_FIXED,
+				$ctx,
+				'Fabricated map centre dropped (the v6 client wrote ' . self::SENTINEL_LAT . '/'
+					. self::SENTINEL_LON . ' on save; no location was ever entered). tipo: \''
+					. (string)($ctx['tipo'] ?? '') . "'",
+				$items
+			);
+		}
+
+		// Every item was fabricated: the component migrates with no value at all, which is
+		// exactly how v7 says "no location". ($repaired is empty here by construction.)
+		return $repaired;
+	}//end geolocation_value
+
+
+
+	/**
+	* IS_SENTINEL_CENTRED
+	* True only when BOTH axes normalize to exactly the fabricated pair. One axis off, or an
+	* absent axis, is not the sentinel.
+	*
+	* @param object $item
+	* @return bool
+	*/
+	public static function is_sentinel_centred(object $item) : bool {
+
+		return self::coord_key($item->lat ?? null) === self::SENTINEL_LAT
+			&& self::coord_key($item->lon ?? null) === self::SENTINEL_LON;
+	}//end is_sentinel_centred
+
+
+
+	/**
+	* HAS_DRAWN_GEOMETRY
+	* True when the item carries operator-drawn geometry: a lib_data layer whose layer_data
+	* is a FeatureCollection with at least one feature.
+	*
+	* A layer with layer_data:null is NOT geometry (they exist in real data), and neither is
+	* an empty feature list — both are bare sentinels.
+	*
+	* @param object $item
+	* @return bool
+	*/
+	public static function has_drawn_geometry(object $item) : bool {
+
+		$lib_data = $item->lib_data ?? null;
+		if (!is_array($lib_data)) {
+			return false;
+		}
+
+		foreach ($lib_data as $layer) {
+			$features = (is_object($layer) && isset($layer->layer_data) && is_object($layer->layer_data))
+				? ($layer->layer_data->features ?? null)
+				: null;
+			if (is_array($features) && count($features) > 0) {
+				return true;
+			}
+		}
+
+		return false;
+	}//end has_drawn_geometry
+
+
+
+	/**
+	* ITEM_POSITIONS
+	* Every [lon, lat] position of every feature across every lib_data layer of one item.
+	*
+	* @param object $item
+	* @return array<int,array{0:float,1:float}>
+	*/
+	public static function item_positions(object $item) : array {
+
+		$out = [];
+
+		$lib_data = $item->lib_data ?? null;
+		if (!is_array($lib_data)) {
+			return $out;
+		}
+
+		foreach ($lib_data as $layer) {
+			$features = (is_object($layer) && isset($layer->layer_data) && is_object($layer->layer_data))
+				? ($layer->layer_data->features ?? null)
+				: null;
+			if (!is_array($features)) {
+				continue;
+			}
+			foreach ($features as $feature) {
+				if (is_object($feature)) {
+					self::collect_geometry_positions($feature->geometry ?? null, $out);
+				}
+			}
+		}
+
+		return $out;
+	}//end item_positions
+
+
+
+	/**
+	* DERIVE_CENTRE_FROM_GEOMETRY
+	* (!) THE ENGINE-AUTHORED COORDINATE — see the disclosure block on geolocation_value().
+	*
+	* The bbox centre of every position of every feature of the item, or null when no
+	* position can be extracted (the item is then held, never guessed).
+	*
+	* An axis whose min equals its max is returned VERBATIM and unrounded, so a single drawn
+	* Point derives to exactly itself; otherwise the midpoint is rounded to 6 decimals
+	* (~0.1 m — the precision the client itself stores).
+	*
+	* @param object $item
+	* @return array{lat:float,lon:float}|null
+	*/
+	public static function derive_centre_from_geometry(object $item) : ?array {
+
+		$positions = self::item_positions($item);
+		if (empty($positions)) {
+			return null;
+		}
+
+		$min_lon = INF;  $max_lon = -INF;
+		$min_lat = INF;  $max_lat = -INF;
+		foreach ($positions as $position) {
+			$lon = $position[0];
+			$lat = $position[1];
+			if ($lon < $min_lon) $min_lon = $lon;
+			if ($lon > $max_lon) $max_lon = $lon;
+			if ($lat < $min_lat) $min_lat = $lat;
+			if ($lat > $max_lat) $max_lat = $lat;
+		}
+
+		return [
+			'lat' => ($min_lat === $max_lat) ? $min_lat : self::round6(($min_lat + $max_lat) / 2),
+			'lon' => ($min_lon === $max_lon) ? $min_lon : self::round6(($min_lon + $max_lon) / 2)
+		];
+	}//end derive_centre_from_geometry
+
+
+
+	/**
+	* COLLECT_GEOMETRY_POSITIONS
+	* Walks one GeoJSON geometry — including a GeometryCollection's children — appending
+	* every position it reaches.
+	*
+	* @param mixed $geometry
+	* @param array $out - by reference
+	* @return void
+	*/
+	private static function collect_geometry_positions(mixed $geometry, array &$out) : void {
+
+		if (!is_object($geometry)) {
+			return;
+		}
+
+		self::collect_positions($geometry->coordinates ?? null, $out);
+
+		$geometries = $geometry->geometries ?? null;
+		if (is_array($geometries)) {
+			foreach ($geometries as $child) {
+				self::collect_geometry_positions($child, $out);
+			}
+		}
+	}//end collect_geometry_positions
+
+
+
+	/**
+	* COLLECT_POSITIONS
+	* Walks a GeoJSON `coordinates` tree of ANY nesting depth — Point, LineString, Polygon
+	* rings, MultiPolygon, and anything deeper — appending each [lon, lat] it reaches.
+	*
+	* A node is a POSITION when neither of its first two entries is itself an array and both
+	* read as coordinates; otherwise it is a container and every child is walked. That test,
+	* not the declared geometry `type`, is what makes an unknown or malformed type harmless.
+	*
+	* @param mixed $node
+	* @param array $out - by reference
+	* @return void
+	*/
+	private static function collect_positions(mixed $node, array &$out) : void {
+
+		if (!is_array($node)) {
+			return;
+		}
+
+		$first	= $node[0] ?? null;
+		$second	= $node[1] ?? null;
+		if (!is_array($first) && !is_array($second)) {
+			$lon = self::coord_key($first);
+			$lat = self::coord_key($second);
+			if ($lon !== null && $lat !== null) {
+				$out[] = [(float)$lon, (float)$lat];
+				return;
+			}
+		}
+
+		foreach ($node as $child) {
+			self::collect_positions($child, $out);
+		}
+	}//end collect_positions
+
+
+
+	/**
+	* COORD_KEY
+	* The canonical decimal text of a stored coordinate, or null when there is none.
+	*
+	* Coordinates are stored MIXED — as numbers and as strings, sometimes with a comma
+	* decimal separator — so nothing may be compared until it is normalized. The result is a
+	* pure function of the resulting double, which is what makes the v6 and v7 verdicts
+	* identical on the same value.
+	*
+	* Absence is STRUCTURAL: null, a non-numeric string and an empty string are absent. 0 is
+	* a value, not an absence.
+	*
+	* @param mixed $raw
+	* @return string|null
+	*/
+	public static function coord_key(mixed $raw) : ?string {
+
+		if (is_int($raw)) {
+			return self::coord_text((float)$raw);
+		}
+		if (is_float($raw)) {
+			return is_finite($raw) ? self::coord_text($raw) : null;
+		}
+		if (!is_string($raw)) {
+			// bool / array / object / null: not a coordinate. Deliberately NOT cast —
+			// casting true to 1.0 would fabricate a coordinate on the prime meridian.
+			return null;
+		}
+
+		$text = str_replace(',', '.', trim($raw));
+		if ($text === '' || !is_numeric($text)) {
+			return null;
+		}
+
+		return self::coord_text((float)$text);
+	}//end coord_key
+
+
+
+	/**
+	* COORD_TEXT
+	* Shortest decimal text that round-trips to the same double.
+	*
+	* json_encode honours serialize_precision=-1 (the default since PHP 7.1), which is the
+	* same "shortest round-trip" rule JavaScript's String(Number(x)) uses — so the v7
+	* script's key and this one are the same text for the same double.
+	*
+	* @param float $value
+	* @return string
+	*/
+	private static function coord_text(float $value) : string {
+
+		$text = (string)json_encode($value);
+
+		// PHP marks a whole float AS a float ('20.0') on some versions; JS never does. The
+		// key must depend on the double alone, so the marker is stripped.
+		if (str_ends_with($text, '.0')) {
+			$text = substr($text, 0, -2);
+		}
+
+		// -0 and 0 are the same coordinate.
+		return ($text === '-0') ? '0' : $text;
+	}//end coord_text
+
+
+
+	/**
+	* ROUND6
+	* Rounds to 6 decimals the way JavaScript's toFixed(6) does — on the EXACT value of the
+	* double. PHP's round() pre-rounds first and can land on the other side; the two agree
+	* here only because this does not use it.
+	*
+	* @param float $value
+	* @return float
+	*/
+	private static function round6(float $value) : float {
+
+		return (float)sprintf('%.6F', $value);
+	}//end round6
 
 
 

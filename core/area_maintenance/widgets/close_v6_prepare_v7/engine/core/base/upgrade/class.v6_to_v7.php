@@ -781,16 +781,23 @@ class v6_to_v7 {
 								v6_to_v7_normalize::stored_model($literal_value)
 							);
 
+							// Fold in the findings ALWAYS, not only when the value was dropped.
+							// migrate_component_data has no idea which table it was called for, so the
+							// table is stamped on here.
+							// (!) A REPAIR is a SUCCESSFUL migration: merging only on ->result === false
+							// would make every repaired value silent, and a silent repair is the one
+							// thing this registry exists to prevent. Nothing is double-counted —
+							// defer() never touches ->errors, and merge() replays ->findings once.
+							v6_to_v7_normalize::merge($response, $migrate_component_data_response, $table);
+
 							if ($migrate_component_data_response->result === false) {
-								// If the data isn't useful for saving (legacy garbage), no findings are added
-								// to the response. This is not an error, it's just a skip.
-								// migrate_component_data has no idea which table it was called for, so the
-								// table is stamped on here as the findings are folded in.
-								v6_to_v7_normalize::merge($response, $migrate_component_data_response, $table);
+								// If the data isn't useful for saving (legacy garbage), this is not an
+								// error, it's just a skip.
 								continue;
 							}
 
-							// If the data is empty, skip it
+							// If the data is empty, skip it. Note the merge above already ran: an
+							// emptied result is exactly what a fully-repaired geolocation looks like.
 							if(empty($migrate_component_data_response->result)) continue;
 
 							// Set component data
@@ -1307,6 +1314,23 @@ class v6_to_v7 {
 		// typology
 		$value_type_map = v6_to_v7::get_value_type_map();
 		$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
+
+		// component_geolocation: the fabricated map-centre repair.
+		// The v6 client seeded its edit view with a hardcoded centre and saved it whether or
+		// not the operator touched the map, so opening a record was enough to store a
+		// location nobody entered. v7 has no magic coordinate, so an unrepaired value
+		// publishes as a real place. Adjudicated on the WHOLE item list (the verdict depends
+		// on its siblings) and IN MEMORY: the legacy `datos` column is never rewritten.
+		// A no-op for every other model. Findings are deferred; the caller merges them.
+		$geolocation_repaired = v6_to_v7_normalize::geolocation_value(
+			$model,
+			array_values((array)$ar_value),
+			$ctx,
+			$response
+		);
+		if ($geolocation_repaired !== null) {
+			$ar_value = $geolocation_repaired;
+		}
 
 		$final_data = [];
 		foreach (array_values((array)$ar_value) as $value) {
