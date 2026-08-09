@@ -29,7 +29,7 @@ for path in \
 	engine/core/base/update/updates.php \
 	engine/core/base/upgrade/class.v6_to_v7.php \
 	engine/core/base/upgrade/class.v6_to_v7_normalize.php \
-	run/lib/verify_geolocation_sentinel.php \
+	run/lib/verify_geolocation_studio_default.php \
 	engine/diffusion/migration/migrate_diffusion_properties.php \
 	engine/install/db/matrix_string_search.sql \
 	engine/install/db/matrix_relation_index.sql \

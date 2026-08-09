@@ -797,7 +797,7 @@ class v6_to_v7 {
 							}
 
 							// If the data is empty, skip it. Note the merge above already ran: an
-							// emptied result is exactly what a fully-repaired geolocation looks like.
+							// emptied result is exactly what an all-default geolocation looks like.
 							if(empty($migrate_component_data_response->result)) continue;
 
 							// Set component data
@@ -968,7 +968,7 @@ class v6_to_v7 {
 
 		// HISTORY IS NEVER REPAIRED. Makes the value-level repairs inert for this pass: a TM
 		// row says what the data WAS, so rewriting it there falsifies the past. Rows whose
-		// whole payload is the fabricated map centre are DELETED below instead.
+		// whole payload is the studio default map view are DELETED below instead.
 		v6_to_v7_normalize::$history_pass = true;
 
 		// Pre-fetch value type map once
@@ -1098,14 +1098,14 @@ class v6_to_v7 {
 
 				}else{
 
-					// Fabricated map centre: DELETE the row, never migrate or empty it.
-					// The v6 client wrote the studio default (39.462571/-0.376295) on save
+					// Studio default only: DELETE the row, never migrate or empty it.
+					// The v6 client wrote the default map view (39.462571/-0.376295) on save
 					// whether or not the operator touched the map, so a TM row whose WHOLE
-					// payload is that centre records a change that never happened. Migrating
+					// payload is that view records a change that never happened. Migrating
 					// it carries the fabrication into v7 history; emptying it to NULL leaves
 					// a husk row asserting an empty change. Deleting is the only honest
-					// outcome. A row that also carries drawn geometry — or any real
-					// coordinate — is NOT disposable and falls through untouched.
+					// outcome. A row that also carries features — or any real view — is NOT
+					// disposable and falls through untouched.
 					//
 					// Gated on the VALUE SHAPE, not on a resolved model: the predicate
 					// demands every item carry lat AND lon equal to the studio pair, which
@@ -1118,7 +1118,7 @@ class v6_to_v7 {
 						}
 						v6_to_v7_normalize::add(
 							$response,
-							'TM_FABRICATED_CENTRE_DELETED',
+							'TM_DEFAULT_ITEM_ROW_DELETED',
 							v6_to_v7_normalize::SEVERITY_FIXED,
 							[
 								'table'			=> $table,
@@ -1127,10 +1127,10 @@ class v6_to_v7 {
 								'tipo'			=> $tipo,
 								'model'			=> 'component_geolocation'
 							],
-							'Time-machine row deleted: its whole payload was the fabricated map'
-								. ' centre the v6 client wrote on save, so it records a change'
-								. ' that never happened. Rows carrying drawn geometry or a real'
-								. ' coordinate are kept exactly as stored.'
+							'Time-machine row deleted: its whole payload was the studio default map'
+								. ' view the v6 client wrote on save, so it records a change that'
+								. ' never happened. Rows carrying features or a real view are kept'
+								. ' exactly as stored.'
 						);
 						return;
 					}
@@ -1357,12 +1357,12 @@ class v6_to_v7 {
 		$value_type_map = v6_to_v7::get_value_type_map();
 		$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
 
-		// component_geolocation: the fabricated map-centre repair.
-		// The v6 client seeded its edit view with a hardcoded centre and saved it whether or
-		// not the operator touched the map, so opening a record was enough to store a
-		// location nobody entered. v7 has no magic coordinate, so an unrepaired value
-		// publishes as a real place. Adjudicated on the WHOLE item list (the verdict depends
-		// on its siblings) and IN MEMORY: the legacy `datos` column is never rewritten.
+		// component_geolocation: remove the old default data, nothing more.
+		// The v6 client seeded its edit view with the studio default map view and saved it
+		// whether or not the operator touched the map, so opening a record was enough to
+		// store a view nobody chose. A default-only item is removed; a default view sitting
+		// on real features is refitted to those features. Adjudicated on the WHOLE item list
+		// (the verdict depends on its siblings) and IN MEMORY: `datos` is never rewritten.
 		// A no-op for every other model. Findings are deferred; the caller merges them.
 		$geolocation_repaired = v6_to_v7_normalize::geolocation_value(
 			$model,

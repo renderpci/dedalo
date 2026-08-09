@@ -530,15 +530,15 @@ const render_verdict = function(node, counts) {
 		'Findings a person has to decide about. These are what make the preflight fail.')
 	add_chip('notices', counts.notices + ' notices',
 		'Values that cannot be migrated and will be dropped. Nothing to repair.')
-	// A high 'auto-fixed' count on an upgraded install is normally the fabricated map centre
-	// (the old edit view stored Valencia's coordinates on any save). It is repaired here, but
-	// one branch of that repair WRITES a coordinate derived from the record's own drawn
-	// geometry, so the chip names it rather than letting it pass as routine housekeeping.
+	// A high 'auto-fixed' count on an upgraded install is normally the studio default map view
+	// (the old edit view stored the factory map position on any save). One branch of that
+	// removal REWRITES the view of records that carry drawn features, so the chip names both
+	// outcomes rather than letting them pass as routine housekeeping.
 	add_chip('fixed', counts.fixed + ' auto-fixed',
 		'Structural defects repaired automatically during the migration. No action needed. '
-			+ 'A large count is usually the fabricated map centre: bare fabricated coordinates '
-			+ 'are dropped, and a record with drawn geometry keeps it and gets its centre '
-			+ 'derived from that geometry. See the groups in var/data_review.json.')
+			+ 'A large count is usually the studio default map view: an item holding nothing '
+			+ 'but that default is removed, and an item that also carries drawn features keeps '
+			+ 'them and has its view fitted to them. See the groups in var/data_review.json.')
 
 	// A review run WITHOUT the ontology cannot resolve component models, so its verdict is
 	// only about structure. Saying so prevents a clean plain-preflight from being read as a

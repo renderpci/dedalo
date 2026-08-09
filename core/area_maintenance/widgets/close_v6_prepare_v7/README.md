@@ -180,7 +180,7 @@ which the summary block and the widget's chips report separately:
 
 | Bucket | Meaning | Blocks? |
 |---|---|---|
-| **AUTO-FIXED** | Repaired automatically. The commonest by far is a component value stored as the bare language map (`{"lg-nolan":[…]}`) instead of `{"dato":{…}}`; it is wrapped. Empty values (`{}`) are skipped. On an upgraded install most of the count is usually the fabricated map centre — see below. | no |
+| **AUTO-FIXED** | Repaired automatically. The commonest by far is a component value stored as the bare language map (`{"lg-nolan":[…]}`) instead of `{"dato":{…}}`; it is wrapped. Empty values (`{}`) are skipped. On an upgraded install most of the count is usually the studio default map view — see below. | no |
 | **NOTICES** | Cannot be migrated and will be dropped — typically an *orphan tipo*: referenced by matrix data but absent from `jer_dd`, so no model resolves. Nothing to repair. | no |
 | **NEEDS ATTENTION** | The ontology model and the stored shape disagree (the report names both: "the ontology says `button_new` but the value was written as `component_input_text`"). A person has to decide. | **yes** |
 
@@ -206,35 +206,32 @@ legacy `datos` column is never rewritten.
 
 Exit code: **0** clean or only auto-fixed/notices · **6** something needs attention.
 
-### The fabricated map centre (why AUTO-FIXED can read 50 000+)
+### The studio default map view (why AUTO-FIXED can read 50 000+)
 
-`component_geolocation` was seeded by the edit view with a fixed opening centre — lat `39.462571` /
-lon `-0.376295`, the centre of Valencia — written **into the record's value** at render, with no
-dirty check on save. So opening a record and pressing save stored a coordinate nobody entered. v6
-then recognised that exact pair and refused to publish it: a magic value meaning "no location set".
+A `component_geolocation` item holds two independent things: a **view** (`lat` / `lon` / `zoom` —
+the map framing the operator panned and zoomed to) and the **features** they drew (`lib_data`). The
+view is not a feature and a feature does not set the view.
 
-v7 has retired the magic value. Absence is structural (no stored coordinate), `0` is legal, and the
-pair publishes as the place it is — so anything still carrying it would publish a real location in
-Valencia. The repair therefore runs inside this migration, and every v7 database is born clean:
+The v6 edit view opened on a fixed factory position — lat `39.462571` / lon `-0.376295`, the Dédalo
+facilities' own coordinates — and its save button consulted no dirty signal. So opening a record and
+pressing save stored a view nobody chose. That pair is a **factory default, not a place**: nobody
+frames a map on the studio to six decimals, and a record merely *named* after the studio's city
+carries it for the same fabricated reason as any other.
+
+The v6 update **removes the old default data, and nothing more**:
 
 | Stored item | Migration |
 |---|---|
-| the pair, **no** drawn geometry | the coordinate is **dropped** — the record ends with no location, which is the truth |
-| the pair, **with** hand-drawn geometry (a `lib_data` layer holding features) | the geometry is kept and the centre is **derived** from it: the bbox centre of every feature on that item. `zoom`, `alt` and `lib_data` are preserved byte for byte |
-| anything else | untouched. `0 / 0` is a legal coordinate; no other value is special-cased |
+| the default view, **no** features | the whole item is **removed** — nothing in it was operator data. Its `alt` goes with it |
+| the default view, **with** features (a `lib_data` layer holding features) | the features are kept untouched and the **view is fitted to them**: the bbox centre of every feature on that item. `zoom`, `alt`, `lib_data` and `id` are preserved byte for byte |
+| anything else | untouched. `0 / 0` is a legal view; no other value is special-cased |
 
-The derived centre is **authored by the engine, not by a curator** — the one coordinate the engine
-writes by itself, an explicit owner-approved exception. It applies only where geometry exists, and
-there the stored centre was never a location claim but the framing saved beside the drawing: a
-centre that matches the drawn work is honest, keeping the fabricated pair is a false location
-possibly hundreds of km away. For a single drawn Point the derived centre IS that point. Geometry
-that yields no position is left untouched, never guessed.
-
-Note the pair is a real place: a record genuinely located in central Valencia is indistinguishable
-and is cleared with the rest. List those records before migrating and re-enter them afterwards.
+Fitting a view to the item's own features is not authoring a location — it is what a view is for.
+For a single drawn Point the fitted view IS that point. Features that yield no position leave the
+item untouched, never guessed.
 
 Counts are visible in the deep preflight — chips + `var/data_review.json` — **before** phase 2
-writes anything, with the dropped and the derived groups counted separately. A *plain* preflight
+writes anything, with the removed and the fitted groups counted separately. A *plain* preflight
 cannot see them: without the ontology no model resolves, so no geolocation finding is raised.
 Neither does the review cover `matrix_time_machine`, which phase 2 converts unreviewed.
 

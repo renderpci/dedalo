@@ -66,11 +66,10 @@ class v6_to_v7_normalize {
 	/**
 	* HISTORY IS NEVER REPAIRED.
 	* Set for the matrix_time_machine pass, where geolocation_value() must be inert: a TM row
-	* records what the data WAS at a timestamp, so rewriting a value there — dropping a
-	* coordinate, or worse stamping in a machine-derived centre — makes the past assert
-	* something that never happened. The TM pass instead DELETES the rows whose whole payload
-	* is the fabricated centre (is_disposable_studio_default_list) and leaves every other row
-	* exactly as stored.
+	* records what the data WAS at a timestamp, so rewriting a value there — removing an item,
+	* or worse stamping in a refitted view — makes the past assert something that never
+	* happened. The TM pass instead DELETES the rows whose whole payload is the studio default
+	* (is_disposable_studio_default_list) and leaves every other row exactly as stored.
 	*
 	* Named rather than left to call order: this ran over the TM table by accident once, and
 	* the only symptom was history rows silently emptied to NULL.
@@ -143,19 +142,23 @@ class v6_to_v7_normalize {
 	private const SIDECAR_KEYS = ['inf', 'info'];
 
 	/**
-	* THE FABRICATED MAP CENTRE — component_geolocation's retired magic sentinel.
+	* THE STUDIO DEFAULT — the client's factory map position.
 	*
-	* The v6 client SEEDED its edit view with a hardcoded map centre (the city of Valencia)
-	* and its save button consulted no dirty signal, so merely OPENING a record and pressing
-	* save wrote a coordinate the operator never entered. Server-side the pair was then read
-	* back as a magic value meaning "no location set". v7 retires that magic entirely:
-	* absence is STRUCTURAL (no stored value) and 0 is a legal coordinate — so every
-	* surviving sentinel PUBLISHES as a real location in Valencia.
+	* component_geolocation stores, per item, a VIEW (lat/lon/zoom — the map framing) and,
+	* separately, the FEATURES the operator drew (lib_data). The two are independent: the
+	* view is not a feature and a feature does not set the view.
+	*
+	* 39.462571 / -0.376295 are the Dédalo facilities' own coordinates, shipped as the
+	* client's factory map position. The v6 client wrote that view on save whether or not
+	* anyone touched the map, so an item holding EXACTLY this pair is FABRICATED — it is a
+	* factory default, not a place. There is no true positive to protect: nobody hand-frames
+	* a map on the studio to six decimals, and a record merely NAMED after the studio's city
+	* is fabricated like any other.
 	*
 	* Held as TEXT: the comparison is done on normalized strings, never on floats.
 	*/
-	private const SENTINEL_LAT = '39.462571';
-	private const SENTINEL_LON = '-0.376295';
+	private const STUDIO_DEFAULT_LAT = '39.462571';
+	private const STUDIO_DEFAULT_LON = '-0.376295';
 
 	/** The one model this repair applies to. Every other model returns untouched. */
 	private const GEOLOCATION_MODEL = 'component_geolocation';
@@ -322,66 +325,55 @@ class v6_to_v7_normalize {
 
 	/**
 	* GEOLOCATION_VALUE
-	* Repairs ONE component_geolocation per-lang item list: drops the coordinate the v6
-	* client fabricated, or replaces it with the centre of the geometry the operator
-	* actually drew. A no-op for every other model.
+	* Removes the old default data from ONE component_geolocation per-lang item list, and
+	* nothing more. A no-op for every other model.
+	*
+	* An item holds a VIEW (lat/lon/zoom — the map framing the operator panned and zoomed
+	* to) and, independently, the FEATURES they drew (lib_data). The v6 client wrote the
+	* STUDIO DEFAULT view on save whether or not anyone touched the map, so that exact pair
+	* is factory data, never operator data.
 	*
 	* Called from v6_to_v7::migrate_component_data() with the whole item list, because the
 	* verdict is a property of the LIST, not of a single item (see MIXED below).
 	*
 	* Rules, in order, per item:
 	*
-	*   BARE sentinel (the fabricated pair, no drawn geometry)
-	*       GEOLOCATION_FABRICATED_CENTRE — the item asserts a location that was never
-	*       entered. Dropped: in v7 absence is structural, so the component simply gets no
+	*   the studio-default VIEW, no features
+	*       GEOLOCATION_DEFAULT_ITEM_REMOVED — the item is nothing but factory data, so the
+	*       whole item is REMOVED (its alt goes with it: alt is real data, but it belongs to
+	*       the removed item). In v7 absence is structural, so the component simply gets no
 	*       value. Reported as 'fixed'.
 	*
-	*   sentinel WITH drawn geometry
-	*       GEOLOCATION_CENTRE_DERIVED — see the disclosure block below. Reported as 'fixed'.
+	*   the studio-default VIEW, WITH features
+	*       GEOLOCATION_VIEW_FITTED_TO_GEOMETRY — the features are real work and stay; only
+	*       the factory view goes. It is replaced by a view FITTED to those features: the
+	*       bbox centre of every feature on the item. zoom, alt, lib_data, id and every other
+	*       property are preserved as they were. A single drawn Point fits to EXACTLY itself
+	*       (a one-position bbox is its own centre, returned verbatim and unrounded).
+	*       Computing a view from the features is not authoring a location — it is what a
+	*       view is for. Reported as 'fixed'.
 	*
-	*   sentinel with geometry but no extractable position
-	*       GEOLOCATION_GEOMETRY_NO_POSITION — nothing can be derived and nothing may be
-	*       guessed. The WHOLE list is migrated UNCHANGED, reported as 'notice'.
+	*   the studio-default view with features but no extractable position
+	*       GEOLOCATION_GEOMETRY_NO_POSITION — no view can be fitted and none may be guessed.
+	*       The WHOLE list is migrated UNCHANGED, reported as 'notice'.
 	*
-	*   a BARE sentinel sharing the list with any other item
-	*       GEOLOCATION_SENTINEL_MIXED — ids are assigned by POSITION in the surviving list
-	*       (v6_to_v7::migrate_component_data, $value_key++), so dropping one item renumbers
-	*       the ones after it. The WHOLE list is migrated UNCHANGED, reported as 'notice'.
+	*   a removable default-only item sharing the list with any other item
+	*       GEOLOCATION_DEFAULT_ITEM_MIXED — ids are assigned by POSITION in the surviving
+	*       list (v6_to_v7::migrate_component_data, $value_key++), so removing one item
+	*       renumbers the ones after it. The WHOLE list is migrated UNCHANGED, 'notice'.
 	*
 	*   anything else
 	*       Untouched. 0 is a LEGAL coordinate: a record on the equator or the prime
-	*       meridian is a record with a location, and no value other than the exact
-	*       fabricated pair is special-cased — conflating two different fabrications is how
-	*       this one stayed hidden for years.
-	*
-	* ============================================================================
-	* (!) ENGINE-AUTHORED COORDINATE — a deliberate, owner-approved exception
-	* ============================================================================
-	* The standing law is that the engine NEVER invents a coordinate; only an operator's own
-	* entry may be stored. GEOLOCATION_CENTRE_DERIVED is one narrow exception, approved by
-	* the project owner on 2026-08-09.
-	*
-	* WHAT IS DERIVED: the BBOX CENTRE of every feature across the item's lib_data layers.
-	* zoom, alt, lib_data, id and every other property are preserved as they were. A single
-	* drawn Point derives to EXACTLY itself (a one-position bbox is its own centre, returned
-	* verbatim and unrounded).
-	*
-	* WHY IT IS NOT AN INVENTION: on an item carrying drawn geometry the stored pair was
-	* never an asserted location — it is the map FRAMING the client saved alongside the
-	* work. Framing that matches the work is honest. Keeping the sentinel instead is not
-	* neutral: it is a FALSE LOCATION CLAIM that the publication path emits verbatim as the
-	* record's location, hundreds of km from the geometry the operator drew. Clearing
-	* lat/lon instead would be safe but lossy — it discards framing the operator did choose.
-	*
-	* This coordinate is NOT user-entered. It is machine-derived from user-drawn geometry,
-	* it is the only coordinate this migration authors anywhere, and it is disclosed here,
-	* in its own finding code, and in the operator's run report. Where no position can be
-	* extracted the item is held, never guessed.
+	*       meridian is a record with a view, and no value other than the exact studio
+	*       default is special-cased — conflating two different fabrications is how this one
+	*       stayed hidden for years.
 	*
 	* The rule is the same law as the v7-side one-shot repair
-	* (v7 scripts/repair_geolocation_sentinel.ts, gated by
-	* test/unit/geolocation_sentinel_repair.test.ts): same sentinel test, same bbox maths,
-	* same hold classes. A v6-side and a v7-side answer that differ are a silent divergence.
+	* (v7 scripts/repair_geolocation_studio_default.ts, gated by
+	* test/unit/geolocation_studio_default_repair.test.ts): same studio-default test, same
+	* bbox maths, same lat/lon order, same hold classes. GeoJSON positions are [lon,lat]
+	* while the item fields are latitude-first — a transposition there is silent and
+	* permanent. A v6-side and a v7-side answer that differ are a silent divergence.
 	*
 	* SCOPE: this runs wherever migrate_component_data() runs — the matrix tables AND the
 	* matrix_time_machine rows. The preflight reviews only the matrix tables (phase 1 does
@@ -393,8 +385,8 @@ class v6_to_v7_normalize {
 	* @param array $ctx - finding context (section_tipo, section_id, tipo, model, …)
 	* @param object $response - the NESTED response; findings are deferred and the caller
 	*                           merges them once it knows the table
-	* @return array|null - the repaired item list, or null when nothing changes (no
-	*                      sentinel, a hold, another model, or --no-auto-fix)
+	* @return array|null - the repaired item list, or null when nothing changes (no studio
+	*                      default, a hold, another model, or --no-auto-fix)
 	*/
 	public static function geolocation_value(
 		?string $model,
@@ -408,72 +400,72 @@ class v6_to_v7_normalize {
 		}
 
 		// History is never repaired — see $history_pass. The TM pass deletes the rows whose
-		// whole payload is the fabricated centre and leaves everything else byte for byte.
+		// whole payload is the studio default and leaves everything else byte for byte.
 		if (self::$history_pass === true) {
 			return null;
 		}
 
-		$bare		= 0;	// fabricated pair, nothing drawn
-		$derived	= 0;	// fabricated pair, geometry drawn
-		$other		= 0;	// everything else, including 0/0 and any real coordinate
+		$removed	= 0;	// studio-default view, no features: the whole item goes
+		$fitted		= 0;	// studio-default view, features drawn: the view is refitted
+		$other		= 0;	// everything else, including 0/0 and any real view
 		$repaired	= [];
 
 		foreach ($items as $item) {
 
-			if (!is_object($item) || !self::is_sentinel_centred($item)) {
+			if (!is_object($item) || !self::is_studio_default_view($item)) {
 				$other++;
 				$repaired[] = $item;
 				continue;
 			}
 
 			if (!self::has_drawn_geometry($item)) {
-				// dropped — deliberately NOT pushed onto $repaired
-				$bare++;
+				// removed — deliberately NOT pushed onto $repaired
+				$removed++;
 				continue;
 			}
 
-			$centre = self::derive_centre_from_geometry($item);
-			if ($centre === null) {
-				// Geometry is there but yields no usable position. Never guess: the whole
+			$view = self::fit_view_to_geometry($item);
+			if ($view === null) {
+				// Features are there but yield no usable position. Never guess: the whole
 				// list is returned untouched and a human is told where to look.
 				self::defer(
 					$response,
 					'GEOLOCATION_GEOMETRY_NO_POSITION',
 					self::SEVERITY_NOTICE,
 					$ctx,
-					'Fabricated map centre KEPT: the item carries drawn geometry from which no'
-						. ' position can be extracted, so nothing is derived and the value is'
+					'Default map view KEPT: the item carries features from which no position can'
+						. ' be extracted, so no view can be fitted to them and the value is'
 						. " migrated unchanged for review. tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
 					$item
 				);
 				return null;
 			}
 
-			$derived++;
+			$fitted++;
 			// clone, never mutate: the caller's decoded row is also the source the
 			// unrepaired branches return as-is.
 			$new_item = clone $item;
-			$new_item->lat = $centre['lat'];
-			$new_item->lon = $centre['lon'];
+			$new_item->lat = $view['lat'];
+			$new_item->lon = $view['lon'];
 			$repaired[] = $new_item;
 		}
 
-		// No fabricated coordinate anywhere: not this rule's business.
-		if ($bare === 0 && $derived === 0) {
+		// No studio default anywhere: not this rule's business.
+		if ($removed === 0 && $fitted === 0) {
 			return null;
 		}
 
-		if ($bare > 0 && ($derived > 0 || $other > 0)) {
-			// Dropping this item would shift the ids of every item after it (they are
+		if ($removed > 0 && ($fitted > 0 || $other > 0)) {
+			// Removing this item would shift the ids of every item after it (they are
 			// assigned by position, not carried by the value). Needs a human.
 			self::defer(
 				$response,
-				'GEOLOCATION_SENTINEL_MIXED',
+				'GEOLOCATION_DEFAULT_ITEM_MIXED',
 				self::SEVERITY_NOTICE,
 				$ctx,
-				'Fabricated map centre KEPT: it shares the component with other geolocation'
-					. ' items and dropping one would renumber the rest, so the value is migrated'
-					. " unchanged for review. tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
+				'Default-only geolocation item KEPT: it shares the component with other'
+					. ' geolocation items and removing one would renumber the rest, so the value'
+					. " is migrated unchanged for review. tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
 				$items
 			);
 			return null;
@@ -484,99 +476,103 @@ class v6_to_v7_normalize {
 		// this finding did not exist before the rule, and raising it as an error would
 		// invent a failure that never blocked a migration.
 		if (self::$auto_fix !== true) {
-			for ($i = 0; $i < $bare; $i++) {
+			for ($i = 0; $i < $removed; $i++) {
 				self::defer(
 					$response,
-					'GEOLOCATION_FABRICATED_CENTRE',
+					'GEOLOCATION_DEFAULT_ITEM_REMOVED',
 					self::SEVERITY_NOTICE,
 					$ctx,
-					'Fabricated map centre NOT repaired (--no-auto-fix): the v6 client wrote'
-						. ' ' . self::SENTINEL_LAT . '/' . self::SENTINEL_LON . ' on save and the value'
-						. " migrates as-is. tipo: '" . (string)($ctx['tipo'] ?? '') . "'"
+					'Default-only geolocation item NOT removed (--no-auto-fix): the v6 client wrote'
+						. ' the studio default view ' . self::STUDIO_DEFAULT_LAT . '/'
+						. self::STUDIO_DEFAULT_LON . ' on save and the item migrates as-is.'
+						. " tipo: '" . (string)($ctx['tipo'] ?? '') . "'"
 				);
 			}
-			for ($i = 0; $i < $derived; $i++) {
+			for ($i = 0; $i < $fitted; $i++) {
 				self::defer(
 					$response,
-					'GEOLOCATION_CENTRE_DERIVED',
+					'GEOLOCATION_VIEW_FITTED_TO_GEOMETRY',
 					self::SEVERITY_NOTICE,
 					$ctx,
-					'Fabricated map centre NOT replaced (--no-auto-fix): the item carries drawn'
-						. " geometry whose centre would have been derived. tipo: '"
+					'Default map view NOT refitted (--no-auto-fix): the item carries features the'
+						. " view would have been fitted to. tipo: '"
 						. (string)($ctx['tipo'] ?? '') . "'"
 				);
 			}
 			return null;
 		}
 
-		if ($derived > 0) {
+		if ($fitted > 0) {
 			// One finding per repaired ITEM: the count is what the operator reads, and
 			// grouping keeps it to ONE object however many million times it fires.
-			for ($i = 0; $i < $derived; $i++) {
+			for ($i = 0; $i < $fitted; $i++) {
 				self::defer(
 					$response,
-					'GEOLOCATION_CENTRE_DERIVED',
+					'GEOLOCATION_VIEW_FITTED_TO_GEOMETRY',
 					self::SEVERITY_FIXED,
 					$ctx,
-					'Fabricated map centre replaced by the ENGINE-DERIVED centre of the drawn'
-						. ' geometry (bbox centre of the operator\'s own features; zoom, alt and'
-						. " lib_data kept). tipo: '" . (string)($ctx['tipo'] ?? '') . "'",
+					'Default map view replaced by a view FITTED to the item\'s own features (the'
+						. ' bbox centre of every feature drawn on it). The features are untouched;'
+						. " zoom, alt and lib_data are kept. tipo: '"
+						. (string)($ctx['tipo'] ?? '') . "'",
 					$items
 				);
 			}
 			return $repaired;
 		}
 
-		for ($i = 0; $i < $bare; $i++) {
+		for ($i = 0; $i < $removed; $i++) {
 			self::defer(
 				$response,
-				'GEOLOCATION_FABRICATED_CENTRE',
+				'GEOLOCATION_DEFAULT_ITEM_REMOVED',
 				self::SEVERITY_FIXED,
 				$ctx,
-				'Fabricated map centre dropped (the v6 client wrote ' . self::SENTINEL_LAT . '/'
-					. self::SENTINEL_LON . ' on save; no location was ever entered). tipo: \''
+				'Default-only geolocation item removed: it held nothing but the studio default'
+					. ' view ' . self::STUDIO_DEFAULT_LAT . '/' . self::STUDIO_DEFAULT_LON
+					. ' the v6 client wrote on save, and no features. tipo: \''
 					. (string)($ctx['tipo'] ?? '') . "'",
 				$items
 			);
 		}
 
-		// Every item was fabricated: the component migrates with no value at all, which is
-		// exactly how v7 says "no location". ($repaired is empty here by construction.)
+		// Every item was default-only: the component migrates with no value at all, which is
+		// exactly how v7 says "nothing here". ($repaired is empty here by construction.)
 		return $repaired;
 	}//end geolocation_value
 
 
 
 	/**
-	* IS_SENTINEL_CENTRED
-	* True only when BOTH axes normalize to exactly the fabricated pair. One axis off, or an
-	* absent axis, is not the sentinel.
+	* IS_STUDIO_DEFAULT_VIEW
+	* True only when the item's VIEW is exactly the studio default: BOTH axes normalize to
+	* the factory pair. One axis off, or an absent axis, is a view of its own.
+	*
+	* Says nothing about the item's features — those are read separately.
 	*
 	* @param object $item
 	* @return bool
 	*/
-	public static function is_sentinel_centred(object $item) : bool {
+	public static function is_studio_default_view(object $item) : bool {
 
-		return self::coord_key($item->lat ?? null) === self::SENTINEL_LAT
-			&& self::coord_key($item->lon ?? null) === self::SENTINEL_LON;
-	}//end is_sentinel_centred
+		return self::coord_key($item->lat ?? null) === self::STUDIO_DEFAULT_LAT
+			&& self::coord_key($item->lon ?? null) === self::STUDIO_DEFAULT_LON;
+	}//end is_studio_default_view
 
 
 
 	/**
 	* IS_DISPOSABLE_STUDIO_DEFAULT_LIST
-	* True when a component's WHOLE value list is fabricated map centre and nothing else:
-	* a non-empty list in which every item is centred on the studio default and none carries
-	* drawn geometry or any other position.
+	* True when a component's WHOLE value list is the studio default and nothing else: a
+	* non-empty list in which every item carries the default view and no features.
 	*
 	* This is the TIME MACHINE decision, and it is deliberately narrower than the live-data
 	* repair. A history row exists to say what the data WAS at a timestamp:
-	*  · when its whole payload is the fabricated centre, the row records an event that never
-	*    happened — the client wrote a coordinate nobody entered — and the row is DELETED
-	*    (see reformat_matrix_time_machine_data);
+	*  · when its whole payload is the studio default, the row records an event that never
+	*    happened — the client wrote a view nobody chose — and the row is DELETED (see
+	*    reformat_matrix_time_machine_data);
 	*  · when it carries anything real, it is left EXACTLY as stored. History is never
-	*    repaired and never gets a machine-derived centre stamped into it: that would make the
-	*    past assert a framing which did not exist at that time.
+	*    repaired and never gets a fitted view stamped into it: that would make the past
+	*    assert a framing which did not exist at that time.
 	*
 	* @param array $items - the per-lang item list, as a plain list
 	* @return bool
@@ -591,7 +587,7 @@ class v6_to_v7_normalize {
 			if (!is_object($item)) {
 				return false;
 			}
-			if (!self::is_sentinel_centred($item) || self::has_drawn_geometry($item)) {
+			if (!self::is_studio_default_view($item) || self::has_drawn_geometry($item)) {
 				return false;
 			}
 		}
@@ -603,11 +599,11 @@ class v6_to_v7_normalize {
 
 	/**
 	* HAS_DRAWN_GEOMETRY
-	* True when the item carries operator-drawn geometry: a lib_data layer whose layer_data
-	* is a FeatureCollection with at least one feature.
+	* True when the item carries FEATURES: a lib_data layer whose layer_data is a
+	* FeatureCollection with at least one feature.
 	*
-	* A layer with layer_data:null is NOT geometry (they exist in real data), and neither is
-	* an empty feature list — both are bare sentinels.
+	* A layer with layer_data:null carries no features (they exist in real data), and neither
+	* does an empty feature list — an item holding either is default-only.
 	*
 	* @param object $item
 	* @return bool
@@ -669,20 +665,22 @@ class v6_to_v7_normalize {
 
 
 	/**
-	* DERIVE_CENTRE_FROM_GEOMETRY
-	* (!) THE ENGINE-AUTHORED COORDINATE — see the disclosure block on geolocation_value().
+	* FIT_VIEW_TO_GEOMETRY
+	* The VIEW that frames the item's own features: the bbox centre of every position of
+	* every feature, or null when no position can be extracted (the item is then held, never
+	* guessed).
 	*
-	* The bbox centre of every position of every feature of the item, or null when no
-	* position can be extracted (the item is then held, never guessed).
+	* This is a view computed from features, which is what a view is for — not a location
+	* claim. Positions arrive as GeoJSON [lon,lat]; the returned view is latitude-first.
 	*
 	* An axis whose min equals its max is returned VERBATIM and unrounded, so a single drawn
-	* Point derives to exactly itself; otherwise the midpoint is rounded to 6 decimals
-	* (~0.1 m — the precision the client itself stores).
+	* Point fits to exactly itself; otherwise the midpoint is rounded to 6 decimals (~0.1 m —
+	* the precision the client itself stores).
 	*
 	* @param object $item
 	* @return array{lat:float,lon:float}|null
 	*/
-	public static function derive_centre_from_geometry(object $item) : ?array {
+	public static function fit_view_to_geometry(object $item) : ?array {
 
 		$positions = self::item_positions($item);
 		if (empty($positions)) {
@@ -704,7 +702,7 @@ class v6_to_v7_normalize {
 			'lat' => ($min_lat === $max_lat) ? $min_lat : self::round6(($min_lat + $max_lat) / 2),
 			'lon' => ($min_lon === $max_lon) ? $min_lon : self::round6(($min_lon + $max_lon) / 2)
 		];
-	}//end derive_centre_from_geometry
+	}//end fit_view_to_geometry
 
 
 
