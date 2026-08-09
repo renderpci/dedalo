@@ -23,6 +23,7 @@
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { sanitizeSegment, stagingDir } from './add_file.ts';
+import { forgetStagedDisplayName } from './staged_name_record.ts';
 import { cancelStagedUpload, sweepStagedOrphans, UPLOAD_DIR_PREFIX } from './staging_gc.ts';
 import { stagedTmpName } from './upload.ts';
 
@@ -163,6 +164,11 @@ export function deleteStagedFile(
 	// The generated preview follows the file.
 	const thumb = resolve(dir, STAGED_THUMB_DIR, `${safeName}.jpg`);
 	if (thumb.startsWith(dir + sep) && existsSync(thumb)) rmSync(thumb, { force: true });
+	// So does the server's record of what the file was CALLED
+	// (staged_name_record.ts) — a record describes ONE staged file and has no
+	// meaning once that file is gone. Dropped here, with the file, rather than
+	// left for the age sweep.
+	forgetStagedDisplayName(dir, safeName);
 
 	// Sweep any parts of an ABORTED chunked upload of the same name
 	// (`<i>-<name>.blob`, `<name>.assembling`) — otherwise a cancelled upload

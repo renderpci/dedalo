@@ -116,6 +116,16 @@ const SAME_KEYS: readonly string[] = [
 	'DEDALO_3D_QUALITY_ORIGINAL',
 	'DEDALO_QUALITY_THUMB',
 	'DEDALO_THUMB_EXTENSION',
+	// The three media-tree folder names v6 kept configurable. They were DROPPED
+	// while the TS media tree hardcoded them (2026-08-09), which made the tree of
+	// a migrated install silently differ from the one its files are actually in —
+	// and, for the export path, removed a capability outright (v6 allowed an
+	// ABSOLUTE path on another volume; a hardcoded '<media>/export/files' cannot
+	// express one). The tree reads all three from the catalog now, so they carry
+	// across unchanged.
+	'DEDALO_IMAGE_WEB_FOLDER',
+	'DEDALO_HTML_FILES_FOLDER',
+	'DEDALO_TOOL_EXPORT_FOLDER_PATH',
 	// media — access + upload
 	'DEDALO_PROTECT_MEDIA_FILES',
 	// Rule-B public quality folders + the raw .htaccess addon lines. Same names as the
@@ -226,7 +236,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_IMAGE_FILE_URL',
 			'DEDALO_CODE_FILES_URL',
 			'DEDALO_TOOL_EXPORT_FOLDER_URL',
-			'DEDALO_TOOL_EXPORT_FOLDER_PATH',
 			'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',
 			'DEDALO_UPLOAD_TMP_DIR',
 			'DEDALO_UPLOAD_TMP_URL',
@@ -238,7 +247,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_BACKUP_PATH_STRUCTURE',
 			'DEDALO_BACKUP_PATH_USERS',
 			'COLOR_PROFILES_PATH',
-			'DEDALO_IMAGE_WEB_FOLDER',
 			'DEDALO_SOURCE_VERSION_URL',
 			'STRUCTURE_DOWNLOAD_JSON_FILE',
 			'CONFIG_DEFAULT_FILE_PATH',
@@ -300,7 +308,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_3D_GLTFPACK_PATH',
 			'DEDALO_3D_FBX2GLTF_PATH',
 			'DEDALO_3D_COLLADA2GLTF_PATH',
-			'DEDALO_HTML_FILES_FOLDER',
 			'DEDALO_HTML_FILES_EXTENSION',
 			'DEDALO_IMAGE_BEST_EXTENSIONS',
 			'DEDALO_AV_BEST_EXTENSIONS',
@@ -552,6 +559,10 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_MEDIA_JOB_CONCURRENCY',
 	'DEDALO_MEDIA_PROCESSES_DIR',
 	'MEDIA_DEV_ROUTE_ENABLED',
+	// The wall-clock budget of the per-BOOT media-tree pass. NEW_IN_V7 by
+	// construction: v6 re-ran the equivalent walk on every REQUEST and had no
+	// bound at all, so there is no v6 constant this could be a rename of.
+	'MEDIA_TREE_BOOT_BUDGET_MS',
 	'DEDALO_UPLOAD_TMP_SUBDIR',
 	'DEDALO_UPLOAD_MAX_SIZE_BYTES',
 	// v6 shipped *_ALTERNATIVE_EXTENSIONS only for image and pdf; v7 has all five.

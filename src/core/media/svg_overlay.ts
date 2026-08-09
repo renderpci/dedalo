@@ -14,11 +14,13 @@
  *   MEDIA_PATH + /image + initial_media_path + /svg + additional_path + /<id>.svg
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { config } from '../../config/config.ts';
-import type { MediaTypeSpec } from '../concepts/media.ts';
+import { type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
+import { getModelByTipo } from '../ontology/resolver.ts';
 import { writeAtomically } from './atomic.ts';
 import { getDimensions } from './engine/imagemagick.ts';
+import { resolveMediaPathOptions } from './ontology_path.ts';
 import {
 	additionalPath,
 	assertInsideMediaRoot,
@@ -85,9 +87,27 @@ export function defaultRasterUrl(
 }
 
 /**
- * Create/overwrite the default SVG envelope for an image (PHP create_svg_file via
- * regenerate_component). Reads the default-quality raster's dimensions to size
- * the envelope. No-op (returns null) when the default-quality raster is absent.
+ * Ensure the image's SVG envelope is on disk and in step with the raster (PHP
+ * create_svg_file via regenerate_component). Reads the default-quality raster's
+ * dimensions to size it. No-op (returns null) when that raster is absent.
+ *
+ * IT NEVER DESTROYS AN EXISTING ENVELOPE. PHP's regenerate_component
+ * (class.component_image.php:1501-1513) `unlink`ed the file and wrote the default
+ * template back, and the TS port inherited that — so every rebuild of a record's
+ * derived tiers (a retouch deleted, a master replaced, a tool "Regenerate", the
+ * post-delete tier resync in tools/versions.ts) silently threw away the vector
+ * ANNOTATION LAYERS an archivist had drawn on the object. The layer data survives
+ * in `lib_data`, so the record is not unrecoverable; what is destroyed is the
+ * RENDERED overlay, which on a heritage image is scholarship — a curator's marks
+ * on the object itself — and no derivative rebuild has any business deciding it
+ * is disposable. Divergence recorded in
+ * `engineering/wire_contract/WC-2026-08-09-image-svg-envelope-preserved.md`.
+ *
+ * So: absent (or unusable) → write the default template; present → keep every
+ * layer and only RE-POINT the raster, which is the thing a rebuild can legitimately
+ * have changed. The two branches are the same shape `media/repair.ts` already
+ * chose for its own sweep; here it is the function's own contract, so no caller
+ * can get it wrong by calling the obvious thing.
  */
 export async function createDefaultSvgFile(
 	spec: MediaTypeSpec,
@@ -117,15 +137,246 @@ export async function createDefaultSvgFile(
 		);
 	}
 	const rasterUrl = defaultRasterUrl(spec, identity, pathOpts);
-	const svg = buildDefaultSvgString(dims.width, dims.height, rasterUrl);
+	const location = svgOverlayLocation(spec, identity, pathOpts);
+
+	const existing = readEnvelope(location.absolutePath);
+	const svg =
+		existing === null
+			? buildDefaultSvgString(dims.width, dims.height, rasterUrl)
+			: repointEnvelopeRaster(existing, dims.width, dims.height, rasterUrl);
 
 	// Atomic like every other media write: the client fetches this envelope as an
 	// <object>, so a half-written file is a blank edit view for whoever loads it
 	// during the write.
-	const location = svgOverlayLocation(spec, identity, pathOpts);
 	return writeAtomically(location.absolutePath, async (temp) => {
 		writeFileSync(temp, svg);
 	});
+}
+
+/**
+ * The envelope currently on disk, or null when there is nothing worth keeping.
+ *
+ * "Nothing worth keeping" is deliberately narrow: absent, unreadable, or not an
+ * `<svg>` root at all. A truncated write or a stray zero-byte file is debris, not
+ * scholarship, and leaving it would leave the record's edit view showing the
+ * placeholder forever. Anything that IS an svg is treated as authored content.
+ */
+function readEnvelope(absolutePath: string): string | null {
+	if (!existsSync(absolutePath)) return null;
+	let content: string;
+	try {
+		content = readFileSync(absolutePath, 'utf8');
+	} catch {
+		return null;
+	}
+	return /<svg[\s>]/i.test(content) ? content : null;
+}
+
+/**
+ * Re-point an existing envelope at the raster it should depict, keeping every
+ * other node — i.e. every annotation layer — byte for byte.
+ *
+ * Two edits, both on the ROOT `<svg>` and the raster `<image>` only:
+ *  - the raster `<image>`'s `xlink:href`/`href` (the file may have moved host or
+ *    tier since the envelope was authored: this is v6 regenerate_component's own
+ *    drift fix, :1999-2012, and `media/repair.ts` does the same for its sweep);
+ *  - the root's `width`/`height`/`viewBox` and the raster `<image>`'s size, when
+ *    the rebuilt raster is a different size than the envelope was drawn against.
+ *
+ * The layer coordinates are NOT rescaled. A layer is drawn in the envelope's own
+ * user space, and inventing a transform for it would move a curator's marks off
+ * the features they annotate — silently, and with no record of the original
+ * position. A size change is reported by the viewBox alone; the marks stay where
+ * they were put.
+ */
+export function repointEnvelopeRaster(
+	content: string,
+	width: number,
+	height: number,
+	rasterUrl: string,
+): string {
+	let out = content;
+	// Root <svg …> attributes (the first tag only).
+	out = out.replace(/<svg\b[^>]*>/i, (tag) => {
+		let next = tag;
+		next = next.replace(/\swidth="[^"]*"/i, ` width="${String(width)}"`);
+		next = next.replace(/\sheight="[^"]*"/i, ` height="${String(height)}"`);
+		next = next.replace(/\sviewBox="[^"]*"/i, ` viewBox="0,0,${String(width)},${String(height)}"`);
+		return next;
+	});
+	// The raster <image …>: the FIRST one, which is the envelope's raster group
+	// (the default template puts it there and every editor export preserves it).
+	out = out.replace(/<image\b[^>]*>/i, (tag) => {
+		let next = tag;
+		next = next.replace(/\swidth="[^"]*"/i, ` width="${String(width)}"`);
+		next = next.replace(/\sheight="[^"]*"/i, ` height="${String(height)}"`);
+		next = next.replace(/\s(xlink:href|href)="[^"]*"/gi, ` $1="${rasterUrl}"`);
+		return next;
+	});
+	return out;
+}
+
+// ---------------------------------------------------------------------------
+// Persisting the client's annotation layers
+// ---------------------------------------------------------------------------
+
+/**
+ * A cap on an envelope, in bytes. It is a drawing over one image, not a corpus —
+ * 8 MB is orders of magnitude more than any real layer set and still small enough
+ * that a runaway export cannot fill a media volume one save at a time.
+ */
+const MAX_ENVELOPE_BYTES = 8 * 1024 * 1024;
+
+/**
+ * SVG CONSTRUCTS AN ENVELOPE MAY NOT CARRY. The envelope is the one file under
+ * the media root whose bytes come from a CLIENT (`svg_file_data`, exported by the
+ * vector editor), and it is served back to browsers from the media origin — where
+ * the documented production topology is a web server applying access rules and NO
+ * headers, so the app's CSP is not there to catch anything. PHP wrote whatever
+ * arrived (`file_put_contents`, class.component_image.php:987); porting that
+ * verbatim would port a stored-XSS surface with it.
+ *
+ * Each entry is REFUSED, not stripped. A drawing export contains none of them, so
+ * a refusal means the payload is not what it claims to be — and silently deleting
+ * part of an operator's save is exactly the "plausible-but-narrowed result" this
+ * codebase forbids. The write fails, loudly, and `lib_data` (the layer source of
+ * truth) is untouched either way.
+ */
+const ENVELOPE_REFUSALS: readonly { pattern: RegExp; what: string }[] = [
+	{ pattern: /<\s*script\b/i, what: '<script>' },
+	{ pattern: /<\s*foreignObject\b/i, what: '<foreignObject> (arbitrary HTML)' },
+	{
+		pattern: /<\s*(iframe|embed|object|animate|set|handler)\b/i,
+		what: 'an embedding/animation element',
+	},
+	{ pattern: /<!DOCTYPE/i, what: 'a DOCTYPE (entity expansion / XXE)' },
+	{ pattern: /<!ENTITY/i, what: 'an ENTITY declaration' },
+	// The QUOTE is required, and that is not a weakening: an envelope is served as
+	// image/svg+xml and loaded by the client through an <object>, i.e. parsed as
+	// XML, where an unquoted attribute value is a fatal parse error — `onload=x`
+	// without quotes cannot execute because the document never renders. Requiring
+	// it keeps the ANNOTATION TEXT of a drawing out of the refusal: a curator
+	// marking up a switch position ("on=off") wrote no attribute, and a save that
+	// refuses their drawing forever — the stored item replays through this gate on
+	// every later save — is a false positive with no way out.
+	{ pattern: /\son[a-z]+\s*=\s*["']/i, what: 'an inline event handler (on…=)' },
+	{
+		pattern: /(?:href|src|from|to|values)\s*=\s*["']?\s*(?:javascript|data:text\/html|vbscript)/i,
+		what: 'a script URL',
+	},
+];
+
+/**
+ * Persist the vector-editor's SVG string as the record's envelope (PHP
+ * component_image::save → create_svg_file, class.component_image.php:119-133).
+ *
+ * The client's `update_draw_data` / `vector_editor.save_data` put BOTH halves in
+ * the saved item: `lib_data` (the layers as JSON — the source of truth, which the
+ * editor reloads from) and `svg_file_data` (the same drawing already rendered).
+ * Only the first was ever stored: the rendered overlay had no server writer at
+ * all, so the annotations existed in the database and nowhere the image itself was
+ * shown. This is that writer.
+ *
+ * Atomic, confined to the media root, and gated by ENVELOPE_REFUSALS above.
+ */
+export async function writeSvgEnvelope(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	svgString: string,
+): Promise<string> {
+	if (spec.model !== 'component_image') {
+		throw new Error(`svg envelope: only component_image has one (got ${spec.model})`);
+	}
+	if (typeof svgString !== 'string' || svgString.trim() === '') {
+		throw new Error('svg envelope: empty payload');
+	}
+	if (Buffer.byteLength(svgString, 'utf8') > MAX_ENVELOPE_BYTES) {
+		throw new Error(
+			`svg envelope: payload is larger than the ${String(MAX_ENVELOPE_BYTES)} byte cap`,
+		);
+	}
+	if (!/^\s*<svg[\s>]/i.test(svgString)) {
+		throw new Error('svg envelope: payload does not start with an <svg> root element');
+	}
+	for (const { pattern, what } of ENVELOPE_REFUSALS) {
+		if (pattern.test(svgString)) {
+			throw new Error(
+				`svg envelope: refused — the payload carries ${what}. An annotation overlay is drawing markup only; nothing was written and the layer data in lib_data is unchanged`,
+			);
+		}
+	}
+	const location = svgOverlayLocation(spec, identity, pathOpts);
+	return writeAtomically(location.absolutePath, async (temp) => {
+		writeFileSync(temp, svgString);
+	});
+}
+
+/**
+ * The `svg_file_data` a saved component_image item carries, or null. The key is a
+ * TEMPORAL CONTAINER (PHP's word): the client ships it inside the item so the
+ * drawing needs no second round trip, and the SAVE PATH is what turns it into a
+ * file. Exported so the save chokepoint reads it through one definition rather
+ * than by string-matching a key it does not own.
+ */
+export function svgFileDataOf(item: unknown): string | null {
+	if (item === null || typeof item !== 'object') return null;
+	const value = (item as { svg_file_data?: unknown }).svg_file_data;
+	return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+/**
+ * THE SAVE-SIDE WIRING of the two functions above — called from the record-write
+ * chokepoint (`section_record/record_write.ts persistRecordKeys`) for every key
+ * write it performs, so EVERY save door reaches it: the client API, the MCP
+ * tools, the agent change-plan, the CSV/media imports.
+ *
+ * It is the port of PHP `component_image::save()`
+ * (class.component_image.php:119-133), which iterates the component's data and
+ * calls `create_svg_file($data_item->svg_file_data)` for every item carrying the
+ * key — on EVERY save of the component, not only when the drawing changed, and
+ * BEFORE `parent::save()` writes the row. Both properties are kept: the hook runs
+ * on the value being persisted, and it runs before the write, so a refused
+ * payload fails the save instead of following it.
+ *
+ * A write of anything other than the `media` column, of a non-image media
+ * component, or of items with no `svg_file_data`, is a no-op — which is the
+ * overwhelming majority of writes, and why the caller checks the column before
+ * importing this module at all.
+ */
+export async function persistSvgEnvelopesForKeys(
+	target: { sectionTipo: string; sectionId: number },
+	writes: readonly { column: string; key: string; value: unknown }[],
+): Promise<void> {
+	for (const write of writes) {
+		if (write.column !== 'media' || !Array.isArray(write.value)) continue;
+		const model = await getModelByTipo(write.key);
+		if (model !== 'component_image') continue;
+		const spec = mediaTypeOf(model);
+		if (spec === null) continue;
+		let pathOpts: MediaPathOptions | null = null;
+		for (const item of write.value as unknown[]) {
+			const svgString = svgFileDataOf(item);
+			if (svgString === null) continue;
+			// Resolved once per component, and ONLY when there is something to write:
+			// it reads the ontology and (for `additional_path`) the record itself.
+			pathOpts ??= await resolveMediaPathOptions(write.key, target.sectionTipo, target.sectionId);
+			await writeSvgEnvelope(
+				spec,
+				{
+					componentTipo: write.key,
+					sectionTipo: target.sectionTipo,
+					sectionId: target.sectionId,
+					// A translatable media component stores one item per lang and each
+					// has its own identifier on disk (the same fan-out the delete walk
+					// makes); the envelope belongs to the item's own lang.
+					lang: (item as { lang?: string } | null)?.lang ?? null,
+				},
+				pathOpts,
+				svgString,
+			);
+		}
+	}
 }
 
 /**

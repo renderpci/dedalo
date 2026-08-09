@@ -40,6 +40,7 @@ import { handleRawView } from './core/api/raw_view.ts';
 import { MIN_GZIP_BYTES, SECURITY_HEADERS, staticAssetResponse } from './core/api/static_asset.ts';
 import { CLIENT_LIB_URL_PREFIX, serveClientLibRequest } from './core/client_libs/serving.ts';
 import { handleTagRequest } from './core/components/component_text_area/tag_endpoint.ts';
+import { provisionMediaTreeAtBoot } from './core/install/media_tree.ts';
 import { resolveStagedPath, STAGED_URL_PREFIX } from './core/media/ingest/staged_files.ts';
 import {
 	currentMediaAuthCookie,
@@ -1408,6 +1409,22 @@ export async function startServer() {
 				error,
 			);
 		}
+
+		// MEDIA TREE (audit 2026-08_oh1_beta §5.2). PHP provisioned the whole tree
+		// under the media root on EVERY REQUEST (core/base/dd_init_test.php); the
+		// rewrite ported only the media ROOT, so `media/av/subtitles` was never
+		// created and tool_transcription refused to write a single VTT. The
+		// installer step alone cannot fix that: every existing install is long past
+		// the installer, so the pass has to run HERE, at boot, like PHP's did.
+		//
+		// BEFORE writeRuleFiles below, because the rule files are written INTO the
+		// media root and the .publication store lives under it. Synchronous and
+		// before serving: one stat per declared directory plus three write probes
+		// (sub-millisecond on a healthy tree), and a request must never observe a
+		// half-provisioned tree. NEVER fatal — provisionMediaTreeAtBoot swallows and
+		// logs everything (S1-15 posture: a broken media root is loud, not a refusal
+		// to serve the archive's records).
+		provisionMediaTreeAtBoot();
 
 		// Media access control (Rule A): refresh the generated web-server rules at BOOT,
 		// not only at login. On a fresh deploy or a wiped media dir the rule files would

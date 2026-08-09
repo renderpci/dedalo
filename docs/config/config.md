@@ -941,6 +941,24 @@ DEDALO_GEO_PROVIDER="VARIOUS"
 
 ---
 
+### Generated and exported files
+
+DEDALO_HTML_FILES_FOLDER `string`
+
+This parameter names the directory, inside the media directory, that holds self-contained HTML copies generated from records — the single files an institution hands to a visitor or publishes beside a catalogue.
+
+The directory is created and verified when the server starts, along with the rest of the media directories, so it always carries the same owner and permissions as the rest of the tree instead of being minted by whichever process happens to write there first. Nothing in this engine writes into it yet; it is provisioned so that an install keeps the shape it has always had and so no future subsystem has to create it on the fly.
+
+Change the value only to match a directory an install already carries. It names the folder Dédalo provisions — it does not move files that are already sitting in the old one, and it is a single folder name (a leading slash is optional and removed), never a path: the media directory is the only place this can live.
+
+```bash
+DEDALO_HTML_FILES_FOLDER="/html_files"
+```
+
+*Default: /html_files*
+
+---
+
 ### Image
 
 DEDALO_IDENTIFY_PATH `string`
@@ -1194,6 +1212,24 @@ DEDALO_IMAGE_THUMB_WIDTH=222
 ```
 
 *Default: 222*
+
+---
+
+### Image
+
+DEDALO_IMAGE_WEB_FOLDER `string`
+
+This parameter names the directory, inside the image directory, that holds browser-sized copies of pictures brought in from a rich-text field rather than from the image component itself.
+
+It sits beside the quality directories (`original`, `1.5MB`, `thumb`, …) and is created and verified when the server starts, so it carries the same owner and permissions as the rest of the media tree. Nothing in this engine writes into it yet; it is provisioned so that an install keeps the shape it has always had and so no future subsystem has to create it on the fly.
+
+The value is a single folder name (a leading slash is optional and removed), never a path.
+
+```bash
+DEDALO_IMAGE_WEB_FOLDER="/web"
+```
+
+*Default: /web*
 
 ---
 
@@ -1638,6 +1674,26 @@ DEDALO_THUMB_EXTENSION="jpg"
 
 ---
 
+### Generated and exported files
+
+DEDALO_TOOL_EXPORT_FOLDER_PATH `string` *optional — unset means the default location inside the media directory*
+
+This parameter defines where the export tool writes the bundles it produces.
+
+Left unset — the normal case — the bundles go to `export/files` inside the media directory, and that directory is created and verified with the rest of the media tree when the server starts.
+
+Set it to an ABSOLUTE path to put exports somewhere else entirely, which is the reason the setting exists: an export bundle can be large, is regenerated rather than curated, and an institution often wants it on a scratch volume, a shared mount, or a disk that is backed up on a different schedule from the archive itself. A relative value is refused rather than guessed at.
+
+When the path lands OUTSIDE the media directory, Dédalo will create the directory itself but not the volume above it: its parent must already exist, so that a mount that has not come up is reported as a problem you can see instead of quietly recreated as an empty local directory — which is how an export lands on the system disk and fills it.
+
+```bash
+DEDALO_TOOL_EXPORT_FOLDER_PATH="/srv/exports/dedalo"
+```
+
+*Default: `<media directory>/export/files` — inside the media tree*
+
+---
+
 ### Defining the maximum upload size
 
 DEDALO_UPLOAD_MAX_SIZE_BYTES `int`
@@ -1754,6 +1810,26 @@ MEDIA_PATH="/srv/dedalo/media"
 ```
 
 *Default: `<install dir>/media` — auto-derived; set only to relocate the media tree*
+
+---
+
+### Provisioning the media directories at start-up
+
+MEDIA_TREE_BOOT_BUDGET_MS `int (milliseconds)`
+
+Every time the server starts it walks the media directories, creates any that are missing and reports any that are wrong. This parameter is the wall-clock budget for that walk.
+
+On local storage the walk costs a couple of milliseconds and the budget is never reached. On network storage it is not free: the walk is around fifty directory look-ups plus three write probes, and at 200 ms of latency each that is a start-up that appears to hang. When the budget runs out, Dédalo stops the walk, reports the directory it stopped at and how many were left unchecked, and goes on to serve the archive — a slow media volume must never mean an archive that will not open. The directories it did not reach are simply checked again on the next start.
+
+Raise it on an install whose media volume lives on the network and whose start-up log says the budget was exhausted; 30000 (thirty seconds) is a reasonable ceiling for a mount that is slow but healthy. The value is never allowed below 100 ms, because a budget too small to complete a single look-up would turn every start-up into the same error.
+
+One limit is worth knowing, because no setting can remove it: if the media volume is not slow but UNREACHABLE — a hard network mount whose server is down — the very first look-up blocks inside the operating system, where nothing in Dédalo can interrupt it, and no budget of any size will expire. That situation is fixed in the mount (a soft mount, a timeout, an automounter), not here.
+
+```bash
+MEDIA_TREE_BOOT_BUDGET_MS=5000
+```
+
+*Default: 5000*
 
 ---
 

@@ -18,7 +18,11 @@ import {
 	requirePrincipal,
 } from '../handler_context.ts';
 import type { ApiResult } from '../response.ts';
-import { persistMediaFilesInfo, resolveMediaActionContext } from './media_action_context.ts';
+import {
+	avActionFail,
+	persistMediaFilesInfo,
+	resolveMediaActionContext,
+} from './media_action_context.ts';
 
 /**
  * dd_component_av_api::create_posterframe / delete_posterframe. Both need section
@@ -100,6 +104,69 @@ async function mediaStreamsAction(rqo: Rqo, context: ApiRequestContext): Promise
 	return { status: 200, body: { result: streams, msg: ['OK. Request done'], errors: [] } };
 }
 
+/**
+ * dd_component_av_api::download_fragment — cut the clip an AV index entry points
+ * at and answer its URL (PHP :98).
+ *
+ * PERMISSION: section READ, level 1, exactly as PHP asserts. It writes a file, so
+ * the instinct is to demand level 2 — but the file is a DERIVATIVE of bytes the
+ * caller may already stream in the player, in a folder that holds nothing else,
+ * and the button lives on every index row a reader can open. Raising the bar here
+ * would silently remove the capability from the consultation users it exists for,
+ * which is the "over-strict whitelist is itself a narrowing" failure. It stays a
+ * read gate, and CSRF still applies (the dispatch gate covers every action).
+ *
+ * The client waits up to an hour for this (component_av.js sets `timeout:
+ * 3600*1000`, `retries: 1`) because a long clip really can take that long. The
+ * handler therefore does not impose a budget of its own: the producer's
+ * INACTIVITY cap is what distinguishes slow from wedged.
+ *
+ * Failures ride as HTTP 200 + `result:false` + a message, which is the shape the
+ * client alerts with (`api_response.msg`).
+ */
+async function downloadFragmentAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
+	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');
+	if ('error' in resolved) return resolved.error;
+
+	const source = (rqo.source ?? {}) as { tag_id?: unknown };
+	const options = (rqo.options ?? {}) as {
+		quality?: unknown;
+		tc_in_secs?: unknown;
+		tc_out_secs?: unknown;
+		watermark?: unknown;
+	};
+	const { spec, identity, pathOpts } = resolved.ctx;
+	const quality =
+		typeof options.quality === 'string' && options.quality !== ''
+			? options.quality
+			: spec.defaultQuality;
+
+	const { buildAvFragment } = await import('../../media/tools/fragment.ts');
+	try {
+		const fragment = await buildAvFragment({
+			spec,
+			identity,
+			pathOpts,
+			quality,
+			tagId: String(source.tag_id ?? ''),
+			tcInSeconds: Number(options.tc_in_secs ?? 0),
+			tcOutSeconds: Number(options.tc_out_secs ?? 0),
+			watermark: options.watermark === true || options.watermark === 'true',
+		});
+		return {
+			status: 200,
+			body: { result: fragment.url, msg: 'OK. Request done successfully', errors: [] },
+		};
+	} catch (error) {
+		// PHP's wording, plus the REASON (WC-2026-08-09-av-fragment-failure-reason).
+		// PHP answered a fixed "Error on create the fragment file <name>", which told
+		// whoever clicked nothing at all — and the client renders this in a blocking
+		// alert(), so it is the only diagnosis anyone gets. Every message thrown by
+		// the core names exactly what was refused.
+		return avActionFail(`on create the fragment file: ${(error as Error).message}`);
+	}
+}
+
 /** dd_component_av_api action handlers, keyed by action (registered in dispatch.ts). */
 export const componentAvApiActions: Record<string, ActionHandler> = {
 	create_posterframe: async (rqo, context) => {
@@ -112,5 +179,9 @@ export const componentAvApiActions: Record<string, ActionHandler> = {
 	// view calls this on EVERY render — the tool's edit view can't open without it.
 	get_media_streams: async (rqo, context) => {
 		return mediaStreamsAction(rqo, context);
+	},
+	// The two "Download fragment" buttons on every AV index row (read, level 1).
+	download_fragment: async (rqo, context) => {
+		return downloadFragmentAction(rqo, context);
 	},
 };
