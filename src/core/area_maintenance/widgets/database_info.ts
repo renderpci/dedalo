@@ -5,9 +5,19 @@
  * include it (the panel loads through the get_widget_value action instead) —
  * widget_request DENIES it on both engines. The rebuild_db_* actions replay
  * install SQL asset files through db_assets.ts.
+ *
+ * (!) ONE DELIBERATE BEHAVIOUR CHANGE, 2026-08-08 (defect D14). The
+ * consolidate_tables renumber used to issue its `UPDATE … row_number()` and its
+ * `setval(<table>_id_seq, max(id))` as TWO independent statements: a crash, a
+ * statement timeout or a connection drop between them left the table renumbered
+ * with a sequence still pointing past the old high-water id (or, worse on a
+ * retry, below it) — a silent duplicate-key generator on the next insert. Both
+ * statements now run inside ONE `withTransaction` (see `consolidateOneTable`),
+ * so the renumber and its sequence reset commit or roll back together. Nothing
+ * else about the action's wire response, ordering or skip rules changed.
  */
 
-import { runWithoutStatementTimeout, sql } from '../../db/postgres.ts';
+import { runWithoutStatementTimeout, sql, withTransaction } from '../../db/postgres.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /**
@@ -227,6 +237,41 @@ async function databaseInfoAnalyzeDb(): Promise<WidgetResponse> {
 }
 
 /**
+ * Build the scoped `ANALYZE` statement for a list of table names, and report
+ * the names that were REJECTED.
+ *
+ * The names come from `pg_class`, but they are still INTERPOLATED into SQL, so
+ * provenance is not treated as a licence: every name must be a bare SQL
+ * identifier (`[A-Za-z_][A-Za-z0-9_]*`) before it is quoted. A name that is not
+ * — a quote-carrying name, a leading digit, anything a `CREATE TABLE "…"` could
+ * legally hold — is dropped from the statement and returned in `rejected` for
+ * the caller to warn about. `statement` is `null` when nothing survives (an
+ * empty input included), which the caller reads as "issue no SQL at all".
+ */
+export function buildAnalyzeStatement(tables: string[]): {
+	statement: string | null;
+	rejected: string[];
+} {
+	const safe = tables.filter((table) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(table));
+	const rejected = tables.filter((table) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(table));
+	if (safe.length === 0) return { statement: null, rejected };
+	return { statement: `ANALYZE ${safe.map((table) => `"${table}"`).join(', ')}`, rejected };
+}
+
+/**
+ * The analyze_statistics `msg` ladder, in the order the action reads it:
+ * errors first (they outrank a successful partial run), then the empty-set
+ * success ("nothing to do" is a success, not an error), then the count.
+ */
+export function analyzeStatisticsMessage(tableCount: number, errors: unknown[]): string {
+	return errors.length > 0
+		? 'Warning. Request done with errors'
+		: tableCount === 0
+			? 'OK. Table statistics were already healthy — nothing to analyze'
+			: `OK. ANALYZE done on ${tableCount} table(s)`;
+}
+
+/**
  * database_info.analyze_statistics — the repair the `statistics` verdict points
  * at (WC-074). Plain `ANALYZE`, scoped to the tables the verdict named.
  *
@@ -250,17 +295,14 @@ async function databaseInfoAnalyzeStatistics(): Promise<WidgetResponse> {
 	try {
 		tables = degradedTableNames(await readTableStatsRows());
 		if (tables.length > 0) {
-			// Identifiers come from pg_class, but they are still INTERPOLATED, so
-			// they are validated before quoting rather than trusted for provenance.
-			const safe = tables.filter((table) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(table));
-			if (safe.length !== tables.length) {
+			const { statement, rejected } = buildAnalyzeStatement(tables);
+			if (rejected.length > 0) {
 				errors.push('Warning. Some table names were rejected as non-identifiers and skipped');
 			}
-			if (safe.length > 0) {
-				const list = safe.map((table) => `"${table}"`).join(', ');
+			if (statement !== null) {
 				// Opts out of the pool-wide statement_timeout ceiling (WC-055):
 				// ANALYZE on a multi-million-row table can exceed it.
-				await runWithoutStatementTimeout(`ANALYZE ${list}`);
+				await runWithoutStatementTimeout(statement);
 			}
 		}
 	} catch (error) {
@@ -269,19 +311,82 @@ async function databaseInfoAnalyzeStatistics(): Promise<WidgetResponse> {
 	const response: WidgetResponse & { execution_time?: number } = {
 		result: errors.length > 0 ? false : { analyzed: tables },
 		errors,
-		msg:
-			errors.length > 0
-				? 'Warning. Request done with errors'
-				: tables.length === 0
-					? 'OK. Table statistics were already healthy — nothing to analyze'
-					: `OK. ANALYZE done on ${tables.length} table(s)`,
+		msg: analyzeStatisticsMessage(tables.length, errors),
 	};
 	response.execution_time = (performance.now() - start) / 1000;
 	return response as WidgetResponse;
 }
 
 /** The only tables consolidate_tables may touch (PHP allowlist). */
-const CONSOLIDATE_TABLES = ['dd_ontology', 'matrix_ontology', 'matrix_ontology_main', 'matrix_dd'];
+export const CONSOLIDATE_TABLES: readonly string[] = [
+	'dd_ontology',
+	'matrix_ontology',
+	'matrix_ontology_main',
+	'matrix_dd',
+];
+
+/**
+ * The ORDER BY a renumber may use — a CLOSED SET, never a caller string.
+ *
+ * `consolidateOneTable` interpolates this fragment directly into SQL (an ORDER
+ * BY list cannot be a bind parameter), so the type is the whole defence: widen
+ * it to `string` and the refactor hands the renumber an injection surface the
+ * inline original never had.
+ */
+export type ConsolidateOrder = 'tld, id' | 'section_tipo, section_id';
+
+/**
+ * Decide what `consolidate_tables` must do with one table, from its lowest id
+ * and its row count. PURE — the arithmetic is the whole decision.
+ *
+ * - no first id at all (`null`/`undefined`, i.e. the table is empty or the
+ *   probe returned nothing) → `'error'`: the action aborts the WHOLE run, not
+ *   just this table (PHP's behaviour, preserved).
+ * - `firstId <= rowCount` → `'noop'`: the ids already start inside the range a
+ *   compact numbering would occupy, so there is nothing to reclaim.
+ * - otherwise → `'consolidate'`.
+ *
+ * quirk: pinned, not fixed — the comparison is `Number(firstId) <= rowCount`,
+ * so a numeric-string first id compares as a number, and `firstId === 0`
+ * survives the null check (0 is a legal id here) while reading as `'noop'`.
+ */
+export function planConsolidation(
+	firstId: number | null | undefined,
+	rowCount: number,
+): 'error' | 'noop' | 'consolidate' {
+	if (firstId === null || firstId === undefined) return 'error';
+	if (Number(firstId) <= rowCount) return 'noop';
+	return 'consolidate';
+}
+
+/**
+ * Renumber one table's surrogate `id` PK to a gapless 1..n in `orderBy` order
+ * and reset its `<table>_id_seq` to the new maximum.
+ *
+ * TRANSACTED (2026-08-08, defect D14 — see the file header): the UPDATE and the
+ * `setval` used to be two independent statements, so a failure between them
+ * left the sequence disagreeing with the data. They now commit together.
+ *
+ * The table name is interpolated (an identifier cannot be a bind parameter);
+ * the caller is expected to have matched it against `CONSOLIDATE_TABLES`, and
+ * the identifier shape is re-checked here so the interpolation is safe on its
+ * own terms rather than on the caller's promise.
+ */
+export async function consolidateOneTable(table: string, orderBy: ConsolidateOrder): Promise<void> {
+	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) {
+		throw new Error(`consolidateOneTable: refusing non-identifier table name: ${table}`);
+	}
+	await withTransaction(async () => {
+		await sql.unsafe(
+			`UPDATE "${table}" t
+			 SET id = t1.new_id
+			 FROM (SELECT id, row_number() OVER (ORDER BY ${orderBy}) AS new_id FROM "${table}") t1
+			 WHERE t.id = t1.id`,
+			[],
+		);
+		await sql.unsafe(`SELECT setval('${table}_id_seq', max(id)) FROM "${table}"`, []);
+	});
+}
 
 /**
  * database_info.consolidate_tables — compact the surrogate `id` PK of the
@@ -306,7 +411,8 @@ async function databaseInfoConsolidateTables(
 		)) as { first_id: number | null; n: number | string }[];
 		const firstId = state[0]?.first_id;
 		const rowCount = Number(state[0]?.n ?? 0);
-		if (firstId === null || firstId === undefined) {
+		const plan = planConsolidation(firstId, rowCount);
+		if (plan === 'error') {
 			errors.push(`It is not possible to consolidate the table: ${table}`);
 			return {
 				result: false,
@@ -315,16 +421,10 @@ async function databaseInfoConsolidateTables(
 				...({ success: 0 } as Record<string, unknown>),
 			} as WidgetResponse;
 		}
-		if (Number(firstId) <= rowCount) continue; // already compact — no-op
-		const order = table === 'dd_ontology' ? 'tld, id' : 'section_tipo, section_id';
-		await sql.unsafe(
-			`UPDATE "${table}" t
-			 SET id = t1.new_id
-			 FROM (SELECT id, row_number() OVER (ORDER BY ${order}) AS new_id FROM "${table}") t1
-			 WHERE t.id = t1.id`,
-			[],
-		);
-		await sql.unsafe(`SELECT setval('${table}_id_seq', max(id)) FROM "${table}"`, []);
+		if (plan === 'noop') continue; // already compact
+		const order: ConsolidateOrder =
+			table === 'dd_ontology' ? 'tld, id' : 'section_tipo, section_id';
+		await consolidateOneTable(table, order);
 	}
 	return {
 		result: true,
@@ -396,7 +496,10 @@ async function databaseInfoOptimizeTables(
 		return { result: false, msg: 'Error. Request failed ', errors: ['Invalid tables parameter'] };
 	}
 	const { optimizeTables } = await import('../../db/db_assets.ts');
-	return (await optimizeTables(tables as string[])) as unknown as WidgetResponse;
+	// Opt-in preview: only an explicit boolean true is a dry run — anything else
+	// (absent, 'false', 0) keeps the historical destructive behaviour.
+	const dryRun = options.dry_run === true;
+	return (await optimizeTables(tables as string[], { dryRun })) as unknown as WidgetResponse;
 }
 
 /**

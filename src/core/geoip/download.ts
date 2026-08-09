@@ -16,6 +16,18 @@
  * current month is tried first, then the previous month (DB-IP publishes monthly
  * and the new file can lag in the first days). An operator override URL bypasses
  * the month logic entirely.
+ *
+ * COVERAGE POSTURE (rewrite/CRAP_COVERAGE_PLAN.md §3.15): every decision — URL
+ * policy, response policy, byte/stall ceilings, zip-bomb caps, month fallback,
+ * path confinement — is an exported, injectable seam gated by
+ * test/unit/geoip_download_native.test.ts. What stays EXEMPT is the
+ * `validate → fetch → assert → pump` composition inside `streamToFile` (4 lines,
+ * each step separately gated) — a real network fetch is never made in a test.
+ *
+ * `gunzipWithCaps` here is deliberately a SECOND implementation, not a re-export
+ * of src/core/ontology/data_io_import.ts's: different ceilings, different message
+ * text, and importing the ontology one would drag the ontology / DB / install
+ * graph into the lean geoip subsystem (see the paragraph above).
  */
 
 import { createWriteStream, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
@@ -56,7 +68,7 @@ function assertTlsVerificationOn(): void {
 }
 
 /** Confine a filename under a base dir, rejecting traversal / shell-hostile bytes. */
-function confinedPath(baseDir: string, fileName: string): string | null {
+export function confinedPath(baseDir: string, fileName: string): string | null {
 	if (fileName.includes('/') || fileName.includes('..') || fileName.includes('\0')) return null;
 	const resolved = resolve(join(baseDir, fileName));
 	if (!resolved.startsWith(resolve(baseDir) + sep)) return null;
@@ -73,11 +85,10 @@ function dbipUrl(year: number, month: number): string {
  * Candidate URLs to try in order: an operator override if set, else the current
  * month followed by the previous month.
  */
-function candidateUrls(override: string | undefined): string[] {
+export function candidateUrls(override: string | undefined, now: Date = new Date()): string[] {
 	if (override !== undefined && override.trim() !== '') {
 		return [override.trim()];
 	}
-	const now = new Date();
 	const year = now.getUTCFullYear();
 	const month = now.getUTCMonth() + 1; // 1-12
 	const prevYear = month === 1 ? year - 1 : year;
@@ -93,6 +104,21 @@ function candidateUrls(override: string | undefined): string[] {
  * next candidate month.
  */
 async function streamToFile(url: string, destPath: string, pinToDbip: boolean): Promise<number> {
+	const parsed = validateDownloadUrl(url, pinToDbip);
+	const remote = await fetch(parsed, {
+		redirect: 'error',
+		signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+	});
+	const body = assertAcceptableResponse(remote, url);
+	return await pumpToFile(body, destPath);
+}
+
+/**
+ * URL policy: syntactically valid, https, and (for the default month URLs)
+ * origin-pinned to DB-IP. An operator override is trusted to its own https
+ * origin. Returns the parsed URL, or throws.
+ */
+export function validateDownloadUrl(url: string, pinToDbip: boolean): URL {
 	let parsed: URL;
 	try {
 		parsed = new URL(url);
@@ -105,26 +131,51 @@ async function streamToFile(url: string, destPath: string, pinToDbip: boolean): 
 	if (pinToDbip && parsed.origin !== DBIP_ORIGIN) {
 		throw new Error(`geoip download origin mismatch: ${parsed.origin} != ${DBIP_ORIGIN}`);
 	}
+	return parsed;
+}
 
-	const remote = await fetch(parsed, {
-		redirect: 'error',
-		signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
-	});
+/**
+ * Response policy: 404 is marked so a caller could try the next candidate month,
+ * any other non-2xx is fatal, a declared content-length above the cap is refused
+ * before a byte is read, and a null body is "empty data". Returns the body
+ * stream, or throws.
+ */
+export function assertAcceptableResponse(
+	remote: Response,
+	url: string,
+	maxBytes: number = MAX_DOWNLOAD_BYTES,
+): ReadableStream<Uint8Array> {
 	if (remote.status === 404) {
+		// NOTE: `notFound` is written here and read NOWHERE — downloadCountryDb
+		// falls through to the next candidate on ANY error. Dead state, pinned
+		// (quirk: pinned, not fixed).
 		throw Object.assign(new Error(`not found: ${url}`), { notFound: true });
 	}
 	if (!remote.ok) {
 		throw new Error(`bad server response code: ${remote.status}`);
 	}
 	const declared = Number(remote.headers.get('content-length') ?? '0');
-	if (declared > MAX_DOWNLOAD_BYTES) {
-		throw new Error(`content-length ${declared} > ${MAX_DOWNLOAD_BYTES}`);
+	if (declared > maxBytes) {
+		throw new Error(`content-length ${declared} > ${maxBytes}`);
 	}
 	if (remote.body === null) {
 		throw new Error('empty data');
 	}
+	return remote.body as ReadableStream<Uint8Array>;
+}
 
-	const reader = remote.body.getReader();
+/**
+ * Drain `body` into `destPath` under a total-byte ceiling and a per-read idle
+ * (stall) guard. Returns the byte count; throws on a cap trip, a stall, or an
+ * empty stream.
+ */
+export async function pumpToFile(
+	body: ReadableStream<Uint8Array>,
+	destPath: string,
+	maxBytes: number = MAX_DOWNLOAD_BYTES,
+	stallMs: number = DOWNLOAD_STALL_TIMEOUT_MS,
+): Promise<number> {
+	const reader = body.getReader();
 	const sink = createWriteStream(destPath);
 	let total = 0;
 	try {
@@ -132,13 +183,13 @@ async function streamToFile(url: string, destPath: string, pinToDbip: boolean): 
 			const chunk = await Promise.race([
 				reader.read(),
 				new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error('download stalled')), DOWNLOAD_STALL_TIMEOUT_MS),
+					setTimeout(() => reject(new Error('download stalled')), stallMs),
 				),
 			]);
 			if (chunk.done) break;
 			total += chunk.value.byteLength;
-			if (total > MAX_DOWNLOAD_BYTES) {
-				throw new Error(`download exceeds the ${MAX_DOWNLOAD_BYTES}-byte cap`);
+			if (total > maxBytes) {
+				throw new Error(`download exceeds the ${maxBytes}-byte cap`);
 			}
 			if (!sink.write(chunk.value)) {
 				await new Promise<void>((drain) => sink.once('drain', () => drain()));
@@ -154,8 +205,22 @@ async function streamToFile(url: string, destPath: string, pinToDbip: boolean): 
 	return total;
 }
 
+/** Ceilings for `gunzipWithCaps`; each defaults to this module's constant. */
+export interface GunzipCaps {
+	maxBytes?: number;
+	maxRatio?: number;
+	ratioFloorBytes?: number;
+}
+
 /** Stream-gunzip `srcPath` to `destPath` under byte + ratio ceilings (zip-bomb guard). */
-async function gunzipWithCaps(srcPath: string, destPath: string): Promise<number> {
+export async function gunzipWithCaps(
+	srcPath: string,
+	destPath: string,
+	caps: GunzipCaps = {},
+): Promise<number> {
+	const maxBytes = caps.maxBytes ?? MAX_DECOMPRESSED_BYTES;
+	const maxRatio = caps.maxRatio ?? MAX_DECOMPRESSION_RATIO;
+	const ratioFloorBytes = caps.ratioFloorBytes ?? 1024 * 1024;
 	const compressedSize = statSync(srcPath).size;
 	const gunzip = createGunzip();
 	const sink = createWriteStream(destPath);
@@ -164,12 +229,12 @@ async function gunzipWithCaps(srcPath: string, destPath: string): Promise<number
 		await new Promise<void>((resolveDone, reject) => {
 			gunzip.on('data', (chunk: Buffer) => {
 				out += chunk.byteLength;
-				if (out > MAX_DECOMPRESSED_BYTES) {
-					gunzip.destroy(new Error(`decompressed output exceeds ${MAX_DECOMPRESSED_BYTES} bytes`));
+				if (out > maxBytes) {
+					gunzip.destroy(new Error(`decompressed output exceeds ${maxBytes} bytes`));
 					return;
 				}
-				if (compressedSize > 1024 * 1024 && out / compressedSize > MAX_DECOMPRESSION_RATIO) {
-					gunzip.destroy(new Error(`decompression ratio exceeds ${MAX_DECOMPRESSION_RATIO}x`));
+				if (compressedSize > ratioFloorBytes && out / compressedSize > maxRatio) {
+					gunzip.destroy(new Error(`decompression ratio exceeds ${maxRatio}x`));
 					return;
 				}
 				if (!sink.write(chunk)) {
@@ -183,7 +248,13 @@ async function gunzipWithCaps(srcPath: string, destPath: string): Promise<number
 		});
 		return out;
 	} catch (error) {
+		// `createWriteStream` opens the fd ASYNCHRONOUSLY. On a fast failure (a
+		// non-gzip body errors on the first chunk) that open is still pending here,
+		// so a bare rmSync deletes nothing and the open then RE-CREATES the file —
+		// measured at 27-45% of failures. Wait for 'close', which fires only after
+		// the pending open has resolved, so the unlink is deterministic.
 		sink.destroy();
+		await new Promise<void>((closed) => sink.once('close', () => closed()));
 		rmSync(destPath, { force: true });
 		throw error;
 	}
@@ -197,7 +268,13 @@ async function gunzipWithCaps(srcPath: string, destPath: string): Promise<number
 export async function downloadCountryDb(
 	dir: string,
 	urlOverride: string | undefined,
+	deps: {
+		streamToFile?: (url: string, destPath: string, pinToDbip: boolean) => Promise<number>;
+		gunzipWithCaps?: (srcPath: string, destPath: string) => Promise<number>;
+	} = {},
 ): Promise<GeoipDownloadResult> {
+	const fetchFile = deps.streamToFile ?? streamToFile;
+	const decompress = deps.gunzipWithCaps ?? gunzipWithCaps;
 	try {
 		assertTlsVerificationOn();
 	} catch (error) {
@@ -222,12 +299,17 @@ export async function downloadCountryDb(
 	let lastError = 'no candidate URL';
 	for (const url of urls) {
 		try {
-			await streamToFile(url, gzPath, pinToDbip);
-			await gunzipWithCaps(gzPath, mmdbPath);
+			await fetchFile(url, gzPath, pinToDbip);
+			await decompress(gzPath, mmdbPath);
 			rmSync(gzPath, { force: true });
 			return { ok: true, mmdbPath };
 		} catch (error) {
 			rmSync(gzPath, { force: true });
+			// Defence in depth: a half-written .mmdb must never survive a failed
+			// candidate. A leftover zero-byte file dates to NOW, so decideGeoipAction
+			// reads it as present+fresh and suppresses the re-download for the whole
+			// REFRESH_AFTER_MS window — one bad response would disable geoip for 30 days.
+			rmSync(mmdbPath, { force: true });
 			lastError = (error as Error).message;
 			// A 404 means this month is not published yet — the loop falls through
 			// to the next (previous-month) candidate. Any other error does too.
