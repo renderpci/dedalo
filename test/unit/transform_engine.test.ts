@@ -145,6 +145,66 @@ describe('executor dry-run smoke (no writes; queries must be valid)', () => {
 		// nothing in the DB carries these tipos → zero recorded deltas
 		expect(Object.keys(rec.counts).length).toBe(0);
 	}, 60000);
+
+	// -------------------------------------------------------------------------
+	// move_tld renames TIPOS, never TLD NAMESPACES (ONT-TLD). Both halves of that
+	// boundary are pinned here, because both were reached for by real migrations.
+	// -------------------------------------------------------------------------
+
+	test('a BARE-TLD entry is rejected — TIPO_RE is a boundary, not an oversight', async () => {
+		if (!(await dbUp())) return;
+		const rec = new TransformRecorder(true);
+		// The intuitive way to write `objet` → `object`, and the reason TIPO_RE
+		// demands digits: a bare tld lives in ontology7 as a plain string, which no
+		// tipo rewrite in this executor can reach. Loosening the regex to "support"
+		// this would silently half-rename every install that ran it.
+		await executeChangesInTipos([{ old: 'qdp', new: 'tch', type: 'section', perform: [] }], rec);
+
+		expect(rec.errors.join(' | ')).toContain('unsafe old/new tipo');
+		expect(Object.keys(rec.counts).length).toBe(0);
+	}, 60000);
+
+	test('an ONTOLOGY ROOT section (<tld>0) is REFUSED, pointing at the path that works', async () => {
+		if (!(await dbUp())) return;
+		const rec = new TransformRecorder(true);
+		// `qdp0` → `tch0` passes TIPO_RE but cannot work: the rows carry their tld in
+		// ontology7 (untouchable here), and matrix_ontology's UNIQUE (section_id,
+		// section_tipo) makes the bulk UPDATE abort part-way — with no transaction
+		// and no rollback in this executor, that is an unrecoverable half-rename.
+		await executeChangesInTipos([{ old: 'qdp0', new: 'tch0', type: 'section', perform: [] }], rec);
+
+		const errors = rec.errors.join(' | ');
+		expect(errors).toContain('ontology root section');
+		expect(errors).toContain('ontology7');
+		expect(errors).toContain('ontology master'); // the operation that DOES work
+		// Refused means refused: not one statement ran for it.
+		expect(Object.keys(rec.counts).length).toBe(0);
+	}, 60000);
+
+	test('refusing one entry does not cancel the SAFE entries beside it', async () => {
+		if (!(await dbUp())) return;
+		const rec = new TransformRecorder(true);
+		// The safe entry must MATCH SOMETHING, or this test cannot fail for the reason
+		// it exists: with a tipo that hits no row, rec.counts is empty whether the
+		// entry survived or was dropped, and asserting only on rec.errors leaves the
+		// non-cancellation claim ungated. `ontology5` is a real component tipo embedded
+		// in thousands of jsonb rows; the run is DRY, so nothing is written — the
+		// recorder only counts the rows the rewrite WOULD touch.
+		await executeChangesInTipos(
+			[
+				{ old: 'dd0', new: 'zztgone0', type: 'section', perform: [] }, // refused (<tld>0)
+				{ old: 'ontology5', new: 'zztgone5', type: 'component', perform: [] }, // safe, and real
+			],
+			rec,
+		);
+
+		expect(rec.errors.length).toBe(1);
+		expect(rec.errors.join(' ')).toContain('dd0');
+		// THE ASSERTION THAT PINS IT: the surviving entry actually ran.
+		const recorded = JSON.stringify(rec.counts);
+		expect(Object.keys(rec.counts).length).toBeGreaterThan(0);
+		expect(recorded).not.toContain('zztgone0'); // …and the refused one did not
+	}, 60000);
 });
 
 // ---------------------------------------------------------------------------

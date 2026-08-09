@@ -184,6 +184,53 @@ to `Ontology -> Instances -> <typology> -> <Your_ontology_name>`, where
 `<typology>` is the typology defined in `Ontology main` and `<Your_ontology_name>`
 is the name you gave in `Ontology main`. Then create the new node.
 
+!!! note "The TLD field fills itself, and you cannot edit it"
+    Every node carries its TLD in the `ontology7` component. You do not type it:
+    a node of the `mupreva0` section can only ever be `mupreva`, because its
+    identity is the TLD plus its record id (`mupreva7`, `mupreva23`, …). The
+    engine therefore derives the value when the record is created and renders the
+    field read-only.
+
+    This used to be a manual step, and it was the single easiest way to lose an
+    ontology record. A node whose TLD is empty cannot be resolved into an
+    identity, so it is skipped when the runtime definitions are compiled: the
+    record stays in the database, but it never appears in the ontology tree, with
+    no error shown anywhere. A typo was worse — it filed the node under a
+    *different* TLD's namespace.
+
+    If you are looking at an older install, the ontology parser tool reports any
+    such records, and its *repair TLDs* action rewrites a node whose TLD is wrong
+    back to its section's. Records that carry nothing but a TLD are left alone —
+    stamping those would only add unnamed nodes to the tree — so those are listed
+    for you to fill in or delete. See
+    [Using the ontology parser](../../tools/using_ontology_parser.md).
+
+#### Renaming a TLD
+
+A TLD is renamed in the **ontology master**, not in the install that consumes it,
+and the two halves of the job are separate:
+
+1. **The definitions.** Rename the TLD in the master ontology and redistribute it
+   with the ontology update. The import is what makes the rename land: it writes
+   every row into the TARGET TLD's section and stamps each node's `ontology7` to
+   match, so a set of nodes exported as `objet` and imported as `object` arrives
+   consistent rather than duplicated under the old name. If that stamping cannot
+   be completed the import ABORTS and restores the previous state — a
+   half-renamed ontology is never left behind. See
+   [Updating the ontology](../../management/updates/updating_ontology.md).
+2. **The stored records.** The `move_tld` maintenance transform rewrites the
+   *data* — section and component identifiers inside existing records — for the
+   sections whose identifiers changed. See
+   [area_maintenance](../areas/area_maintenance.md).
+
+!!! warning "`move_tld` does not rename a TLD"
+    Despite the name, `move_tld` renames *identifiers* (`objet1` → `object1`),
+    never a TLD namespace on its own. It cannot rename an ontology's root section
+    (`objet0` → `object0`) and refuses any such entry: the nodes carry their TLD
+    as a plain value that an identifier rewrite cannot reach, and the operation
+    would abort part-way through a transform that has no rollback. Use the
+    ontology master and the ontology update for the definition side, as above.
+
 ## In this section
 
 - **[Ontology authoring](authoring.md)** — the curator/developer reference for

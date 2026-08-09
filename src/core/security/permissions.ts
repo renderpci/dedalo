@@ -160,8 +160,12 @@ export async function resolveProfileId(userId: number): Promise<number | null> {
 	return readUserRelationTargetId(userId, PROFILE_SELECT_COMPONENT);
 }
 
-/** The projects component in the users section (PHP DEDALO_FILTER_MASTER_TIPO). */
-const FILTER_MASTER_COMPONENT = 'dd170';
+/**
+ * The projects component in the users section (PHP DEDALO_FILTER_MASTER_TIPO).
+ * EXPORTED so the dd128 branch of the search assembler's projects filter names
+ * the same constant instead of re-declaring it: the users ACL is stated once.
+ */
+export const FILTER_MASTER_COMPONENT = 'dd170';
 
 /**
  * A user's authorized project section_ids (PHP
@@ -332,6 +336,32 @@ export async function getAuthorizedAreasForUser(
 		if (key.slice(separator + 1) === sectionTipo) areas.push({ tipo: sectionTipo, value });
 	}
 	return areas;
+}
+
+/**
+ * Every `tipo` PRESENT in a user's dd774 grant table, regardless of which
+ * section keys it and regardless of its level — PHP
+ * component_security_access::get_datalist's non-admin narrowing
+ * (class.component_security_access.php:219-234), which matches an area with
+ * `array_find($user_data, fn($el) => $el->tipo === $current_area->tipo)`: by
+ * TIPO ALONE, and by PRESENCE, not by value.
+ *
+ * Deliberately NOT getAuthorizedAreaTipos: that one keeps only SELF-KEYED
+ * entries (`X_X`) because PHP's MENU filter reads
+ * security::get_ar_authorized_areas_for_user. The ACL-datalist filter reads the
+ * raw dd774 rows instead, so a tipo granted under another section's key still
+ * matches there. Two PHP call sites, two rules — never collapse them.
+ */
+export async function getGrantedTipos(userId: number): Promise<Set<string>> {
+	const table = await getPermissionsTable(userId);
+	const tipos = new Set<string>();
+	for (const key of table.keys()) {
+		// Keys are `${section_tipo}_${tipo}`; an ontology tipo never contains '_'.
+		const separator = key.indexOf('_');
+		if (separator === -1) continue;
+		tipos.add(key.slice(separator + 1));
+	}
+	return tipos;
 }
 
 /**
@@ -563,6 +593,11 @@ export async function resolveComponentContextPermission(
 		// the matrix already grants a level.
 		const ownRecordLevel = resolveOwnUserRecordPermission(principal, sectionTipo, tipo, sectionId);
 		if (ownRecordLevel !== null) return ownRecordLevel;
+		// NOTE: the ONT-TLD read-only cap on `ontology7` is NOT here. This function
+		// stamps only the MAIN element of a get_data; a section's component elements
+		// come from section/read.ts's subdatum loop, which never calls it. The rule
+		// lives at the one point both paths cross — resolve/structure_context.ts,
+		// beside the consultation-only cap.
 	}
 	return getPermissions(principal, sectionTipo, tipo);
 }

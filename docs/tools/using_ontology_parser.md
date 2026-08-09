@@ -29,9 +29,10 @@ The tool is restricted to the **Ontology section**, where it appears as the *Ont
 
 1. Open the tool. It shows a checkbox tree of ontologies grouped by typology.
 2. Tick the hierarchies you want to work on.
-3. Press **Refresh status**. The status panel marks each selected hierarchy as in-sync or out of sync, with counts of what drifted.
+3. Press **Refresh status**. The status panel marks each selected hierarchy as in-sync or out of sync, with counts of what drifted. A hierarchy can also be reported *in sync* and still carry a warning — "N records without a tld" — which is a different problem; see below.
 4. Choose an action:
    - **Reconcile** (the safe default) applies only the differences and never wipes. Running it on an in-sync ontology does nothing.
+   - **Repair TLDs** rewrites the TLD of any record whose declared TLD does not match the section it sits in. This is the only action that edits the ontology *records*, not the derived table.
    - **Regenerate** (rebuild) deletes the hierarchy's runtime nodes and re-derives them from the source. Reach for it only when Reconcile cannot converge (structural corruption).
    - **Export** writes the ontology definition files.
 5. Each action asks for its own confirmation, runs, then repaints the status panel so you can verify the result.
@@ -42,6 +43,7 @@ The tool is restricted to the **Ontology section**, where it appears as the *Ont
 | --- | --- |
 | **Refresh status** | Inspects the selected hierarchies and reports drift (missing / stale / orphaned nodes). Read-only. |
 | **Reconcile** | Applies only the delta; non-destructive. The everyday fix. |
+| **Repair TLDs** | Rewrites a record's TLD back to its section's. The only action that edits SOURCE records. |
 | **Regenerate** | Wipes and rebuilds a hierarchy's runtime nodes from the source, in one transaction per hierarchy. The fallback. |
 | **Export** | Writes the ontology definition files (JSON and per-hierarchy dumps) for sharing between installations. |
 
@@ -50,6 +52,28 @@ The tool is restricted to the **Ontology section**, where it appears as the *Ont
 
 !!! warning "Regenerate wipes the runtime nodes, not the source"
     A rebuild deletes the hierarchy's runtime nodes and re-derives them from the editable source. The **source records are never touched** — the projection is regenerated from them. It runs in one transaction per hierarchy, so a mid-run failure rolls that hierarchy back cleanly.
+
+!!! info "Two different problems: drift, and records without a TLD"
+    **Drift** means the runtime tree disagrees with its source — Reconcile fixes it.
+
+    **"Without a tld"** means the section holds records that carry no TLD at all. A record's
+    TLD is what gives it an identity, so such a record cannot become a node: it is invisible
+    in the tree, and no amount of reconciling will change that. It is reported as a warning
+    beside the hierarchy rather than as drift, precisely because no button can clear it.
+
+    Two ways to resolve one:
+
+    - the record has content but the **wrong** TLD → **Repair TLDs** corrects it;
+    - the record is **empty** (no term, no properties) → open it and fill it in, or delete it.
+      Repair deliberately skips these: stamping a TLD on an empty record would only add a
+      nameless node to the tree, which is worse than leaving it invisible.
+
+!!! warning "Repair TLDs edits the ontology records themselves"
+    Every other action here writes the derived runtime table. Repair writes the **source
+    records**. It changes only the TLD field, only where it disagrees with the section, and
+    only on records that carry content — but it is a source edit, so read the status panel
+    first and run **Reconcile** afterwards to re-derive the runtime tree from the corrected
+    records.
 
 ## Related
 

@@ -294,6 +294,11 @@
 					&.ok:before     { content: '✓'; color: @color_success; }
 					&.failed:before { content: '✗'; color: @tool_color; }
 					&.failed >.check_detail { color: @tool_color; font-weight: 600; }
+					// WARN — the projection is in sync, but the SECTION holds records that
+					// can never reach the tree (no tld). Its own mark, because a failure
+					// glyph on a state no button can clear teaches operators to ignore it.
+					&.warn:before   { content: '!'; color: @color_warning; }
+					&.warn >.check_detail { color: @color_grey_4; }
 				}
 			}
 		}

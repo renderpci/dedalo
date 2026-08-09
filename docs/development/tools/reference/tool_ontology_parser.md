@@ -29,19 +29,20 @@ The comparison is by **meaning, not bytes**: jsonb key order is normalized, `{}`
 
 ## How it works (server + client)
 
-**Server** (`tools/tool_ontology_parser/server/{index,tool_ontology_parser}.ts`). Developer-only. The dd_ontology writes are OWNED by `ontology_state.ts` (the single reconcile authority, guarded by `test/unit/ontology_single_writer_tripwire.test.ts`); this tool only gates and surfaces them. Five actions:
+**Server** (`tools/tool_ontology_parser/server/{index,tool_ontology_parser}.ts`). Developer-only. The dd_ontology writes are OWNED by `ontology_state.ts` (the single reconcile authority, guarded by `test/unit/ontology_single_writer_tripwire.test.ts`); this tool only gates and surfaces them. Six actions:
 
 | Action | Kind | Core |
 | --- | --- | --- |
 | `get_ontologies` | read (census) | every ontology's UI metadata (tld, name, typology) — feeds the checkbox tree |
 | `inspect_ontologies` | **read (drift)** | `inspectOntology` per selected TLD — the status panel |
 | `reconcile_ontologies` | **write, default** | `ensureOntology` — incremental, non-destructive |
+| `repair_tlds` | **write, SOURCE** | `normalizeOntologyTld` — rewrites a misfiled `ontology7` back to its section's tld |
 | `regenerate_ontologies` | write, nuclear | `rebuildOntology` — **transactional** wipe-and-rebuild |
 | `export_ontologies` | write (files) | the ordered export pipeline (info → `ontology.json` → per-TLD COPY dumps → private lists → LLM map); the per-TLD dumps run **bounded-parallel** (≤ `EXPORT_CONCURRENCY`), the surrounding steps stay sequential |
 
 Both writes run the LLM-map post-step (its errors are merged in; the write's result/msg stay). The rebuild wraps the delete + reinsert in **one transaction per TLD**, so a failure rolls back with no empty window and no leftover backup table — replacing the retired `regenerateRecordsInDdOntology`, whose `dd_ontology_bk` table was its only, untested, rollback.
 
-**Client** (`tools/tool_ontology_parser/js/`). A checkbox tree of ontologies grouped by typology; a **status panel** (`paint_status`, fed by `inspect_ontologies`) showing each selected TLD as ✓ in-sync or ✗ with its drift counts; and four buttons — **Reconcile** (the safe default), **Regenerate** (rebuild), **Export**, **Refresh status**. One `run_action` path drives every button (confirm → run → render messages → repaint the panel → always clear the spinner), so the destructive and non-destructive actions carry **distinct** confirmations, and no response can leave the tool hanging.
+**Client** (`tools/tool_ontology_parser/js/`). A checkbox tree of ontologies grouped by typology; a **status panel** (`paint_status`, fed by `inspect_ontologies`) showing each selected TLD as ✓ in-sync or ✗ with its drift counts; and five buttons — **Reconcile** (the safe default), **Repair TLDs**, **Regenerate** (rebuild), **Export**, **Refresh status**. One `run_action` path drives every button (confirm → run → render messages → repaint the panel → always clear the spinner), so the destructive and non-destructive actions carry **distinct** confirmations, and no response can leave the tool hanging.
 
 **Finding a TLD.** The census runs to ~200 ontologies, most of them two-letter country codes, so the tree is headed by a search bar (`build_filter_bar`, matching in `js/ontologies_filter.js`). It matches case- and diacritic-insensitively on the **tld**, the **full name** (including the `|` segments the row does not display) and the **typology name** — so `espana` finds *España*, and typing a group name reveals that whole group. Whitespace-separated tokens are ANDed and order-independent. Alongside it: a `N selected` readout, a **Show selected only** toggle (composes with the query) and **Clear selection** — the selection is restored from `localStorage` and would otherwise be invisible across collapsed groups.
 
@@ -52,10 +53,35 @@ Filtering **hides** rows, it never re-renders them: every checkbox keeps its sta
 | Action | Permission | Reads from `options` | Returns |
 | --- | --- | --- | --- |
 | `get_ontologies` | `developer` | — | `{ result: ontologies[], errors }` |
-| `inspect_ontologies` | `developer` | `selected_ontologies` | `{ result, states: [{tld, drift, inSync, mainNodeOk, matrixNodes, storedNodes}] }` |
+| `inspect_ontologies` | `developer` | `selected_ontologies` | `{ result, states: [{tld, drift, inSync, mainNodeOk, matrixNodes, storedNodes, foreignNodes, tldlessNodes, tldlessRecords}] }` |
 | `reconcile_ontologies` | `developer` | `selected_ontologies` | `{ result, msg, errors, ar_msg }` |
+| `repair_tlds` | `developer` | `selected_ontologies` | `{ result, msg, errors, ar_msg }` |
 | `regenerate_ontologies` | `developer` | `selected_ontologies` | `{ result, msg, errors, ar_msg }` |
 | `export_ontologies` | `developer` | `selected_ontologies` | `{ result, msg, errors, ar_msg }` |
+
+### Why `repair_tlds` exists, and why it is separate
+
+A node's tld is DERIVED from the section it sits in (`actv0` can only hold `actv`, because the
+node tipo is `<tld><section_id>`), so `ontology7` is emitted read-only in the edit form. That
+removed the only place an operator could correct a record whose tld is wrong — while
+`inspect_ontologies` still reports exactly those records. `repair_tlds` is that door.
+
+It is deliberately NOT folded into reconcile: reconcile writes the **projection**, this writes
+the **source**, and an operator is entitled to choose the second explicitly. It also cannot ride
+inside rebuild's transaction, because `normalizeOntologyTld` runs through `psql` on its own
+connection and would block on the rows that transaction holds.
+
+Its scope is narrow by construction: rows whose `string` is a JSON object carrying at least one
+component besides `ontology7` itself, and whose declared tld differs from the section's.
+Contentless rows — the `tldlessRecords` population — are untouched, because stamping a tld on
+one would MATERIALIZE a nameless node in the tree.
+
+!!! info "`tldlessRecords` is a warning channel, not drift"
+    `drift` means "dd_ontology disagrees with what the source parses to". A record with no tld
+    parses to nothing, so it is absent from *both* sides and disagrees with nothing — it does
+    not flip `inSync`. It was briefly modelled as a drift kind, which painted the panel red on
+    any install carrying legacy shells while Reconcile and Regenerate both reported success,
+    with no action able to clear it.
 
 !!! warning "Rebuild wipes the runtime nodes, not the source"
     A rebuild deletes the TLD's `dd_ontology` nodes and re-derives them from `matrix_ontology`. The editable **source records are never touched** — the projection is regenerated from them. It runs in one transaction, so a mid-run failure rolls the whole TLD back.

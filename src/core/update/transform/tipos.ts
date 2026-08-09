@@ -14,6 +14,7 @@
 
 import { MATRIX_JSONB_COLUMNS, MATRIX_TABLE_ALLOWLIST } from '../../db/matrix.ts';
 import { sql } from '../../db/postgres.ts';
+import { requiredOntologyTld } from '../../ontology/tld.ts';
 import type { TipoMoveItem } from './definitions.ts';
 import type { TransformRecorder } from './report.ts';
 import { scalarCount } from './sql_util.ts';
@@ -41,11 +42,36 @@ export async function executeChangesInTipos(
 	const items = Array.isArray(rawItems) ? (rawItems as TipoMoveItem[]) : [];
 	const map = items.filter((item) => TIPO_RE.test(item.old ?? '') && TIPO_RE.test(item.new ?? ''));
 	if (map.length !== items.length) {
+		// TIPO_RE is a DELIBERATE boundary, not an oversight: it requires digits, so a
+		// bare-tld entry (`{"old":"qdp","new":"tch"}`) can never be written. This tool
+		// renames TIPOS, never TLD NAMESPACES — see the ONT-TLD refusal below.
 		recorder.error('some map entries have an unsafe old/new tipo — skipped');
 	}
+	// ONT-TLD: an ontology ROOT section (`<tld>0`) is never renamed by this tool.
+	// It is not a gap to fill — it is an operation that cannot work here:
+	//  - the rows carry their tld in `ontology7`, a BARE string that no tipo rewrite
+	//    below can reach, so the whole ontology would keep declaring the old
+	//    namespace and parse into it (ontology_state's `foreign` drift, en masse);
+	//  - `matrix_ontology` has a UNIQUE (section_id, section_tipo) index, and two
+	//    real ontologies routinely share section_ids, so the bulk UPDATE aborts
+	//    part-way — with no transaction and no rollback here (WC-025), that leaves
+	//    the database half-renamed and unrecoverable.
+	// A tld rename is done in the ontology MASTER and redistributed by the ontology
+	// import, which rewrites ontology7 as it lands (data_io_import's
+	// normalizeOntologyTld). Refused loudly rather than half-performed.
+	const governed = map.filter(
+		(item) =>
+			requiredOntologyTld(item.old ?? '') !== null || requiredOntologyTld(item.new ?? '') !== null,
+	);
+	for (const item of governed) {
+		recorder.error(
+			`${item.old} → ${item.new}: an ontology root section (<tld>0) cannot be renamed here — its records carry the tld in ontology7, which this tool cannot rewrite. Rename the tld in the ontology master and redistribute it with the ontology import (update_ontology); move_tld migrates the DATA sections only`,
+		);
+	}
+	const safeMap = map.filter((item) => !governed.includes(item));
 
 	const tables = rewritableTables();
-	for (const entry of map) {
+	for (const entry of safeMap) {
 		const { old: oldTipo, new: newTipo, type } = entry;
 
 		// 1. section_tipo column rename (section-type entries only)

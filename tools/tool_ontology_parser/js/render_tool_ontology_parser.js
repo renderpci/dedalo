@@ -145,13 +145,24 @@ const paint_status = async function(self, container) {
 			other           ? other + ' other' : '',
 			state.mainNodeOk ? '' : 'no main node'
 		].filter(Boolean).join(', ')
-		const detail = state.inSync
+		// ONT-TLD: records with NO ontology7 at all. They parse to no node, so they are
+		// invisible in the ontology tree — worth saying every time. But they are NOT
+		// drift: nothing here disagrees with anything, and no button can clear them, so
+		// rendering them as a failed check left the panel permanently red with two
+		// buttons that reported success. A warning that rides ALONGSIDE the state.
+		const tldless = Number(state.tldlessNodes || 0)
+		const tldless_note = tldless
+			? ' — ' + tldless + ' record' + (tldless===1?'':'s') + ' without a tld (invisible in the tree)'
+			: ''
+		const detail = (state.inSync
 			? 'in sync (' + state.matrixNodes + ' node' + (state.matrixNodes===1?'':'s') + ')'
-			: (reasons || 'out of sync')
+			: (reasons || 'out of sync')) + tldless_note
 
+		// In sync with a tld-less warning is 'warn', not 'failed': the projection IS
+		// correct, and the operator still needs to see the invisible records.
 		const item = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: state.inSync ? 'check ok' : 'check failed',
+			class_name		: state.inSync ? (tldless ? 'check warn' : 'check ok') : 'check failed',
 			parent			: list
 		})
 		ui.create_dom_element({
@@ -632,6 +643,24 @@ const get_content_data = async function(self) {
 					() => self.reconcile_ontologies(),
 					self.get_tool_label('confirm_reconcile')
 						|| 'Reconcile the selected ontologies?\n\nOnly missing, changed or orphaned nodes are updated. Nothing is wiped.'
+				)
+			})
+
+		// Repair TLDs - the only action that writes SOURCE records, not the projection.
+		// A node's tld is DERIVED from its section (ONT-TLD), so the edit form renders it
+		// read-only — which is why this button exists: without it the status panel names
+		// misfiled records ("declares tld 'act', not 'actv'") that an operator has no way
+		// to correct. Contentless rows are deliberately untouched: stamping a tld on one
+		// would only add a nameless node to the tree, so those stay listed for a human.
+			make_action({
+				label	: self.get_tool_label('repair_tlds') || 'Repair TLDs',
+				cls		: 'warning repair',
+				desc	: self.get_tool_label('repair_tlds_desc')
+					|| 'Rewrite a record’s TLD to match its section. Fixes misfiled nodes.',
+				run		: (button) => run_action(button,
+					() => self.repair_tlds(),
+					self.get_tool_label('confirm_repair_tlds')
+						|| 'Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Reconcile afterwards.'
 				)
 			})
 

@@ -37,15 +37,18 @@ import {
 	TIME_MACHINE_SECTION_TIPO,
 	TIME_MACHINE_SORTABLE_TIPOS,
 } from '../concepts/section.ts';
+import { resolveDataTipo } from '../ontology/alias.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { labelByTipo } from '../ontology/labels.ts';
+import { ONTOLOGY_TLD } from '../ontology/ontology_tipos.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
 	getNode,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
+import { requiredOntologyTld } from '../ontology/tld.ts';
 import { stampSectionContext } from '../section/context.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentApplicationLang } from './request_lang.ts';
@@ -701,10 +704,41 @@ export async function buildStructureContext(options: {
 	// what actually makes the section read-only in the UI — the coarse per-request
 	// stamp in section/read.ts and read_tm.ts hands 3 to admins. Mirrors PHP
 	// section::get_section_permissions:1929 (the value the PHP client receives).
+	// ONT-TLD CAP, same chokepoint, same reason. `ontology7` on an ontology node
+	// section (`<tld>0`) is DERIVED from the section it sits in — `actv0` can only
+	// ever hold `actv` — so there is nothing for an administrator to decide, and
+	// every other value they could type loses the record: a different tld files it
+	// under another namespace, an empty one makes it unparseable and invisible in
+	// the ontology tree. Capped at read so component_input_text renders a static
+	// `div.content_value.read_only` (that model honours `permissions === 1`, and
+	// NOT `properties.show_interface.read_only`).
+	//
+	// It has to be HERE, not in resolveComponentContextPermission: that one
+	// computes only the MAIN element's level for the get_data door, while a
+	// section's component elements are stamped in section/read.ts's subdatum loop
+	// via getPermissions + inheritSubdatumPermission, which never consults it. The
+	// edit form is built from the latter, so a rule stated only there would leave
+	// the field editable in the one place it is actually shown.
+	//
+	// DISPLAY only: the save door computes its own level, so the write half lives
+	// in section/record/save_component.ts (ontologyTldRefusal) and covers the
+	// import/API/MCP doors that never render a form.
+	// The ALIAS hop matters here: `core.tipo` stays the alias's own by design
+	// (WC-020) while saveComponentData resolves it to the DATA tipo before the
+	// ONT-TLD refusal runs. Comparing the raw tipo made the two disagree — an
+	// alias onto ontology7 rendered an editable input whose every save was
+	// refused. The cap must ask the same question the writer asks.
+	const dataTipo = await resolveDataTipo(options.tipo);
+	const ontologyTldCapped =
+		options.permissions > 1 &&
+		dataTipo === ONTOLOGY_TLD &&
+		requiredOntologyTld(options.sectionTipo) !== null;
 	const permissions =
 		options.permissions > 1 && isConsultationOnlySection(options.sectionTipo)
 			? 1
-			: options.permissions;
+			: ontologyTldCapped
+				? 1
+				: options.permissions;
 
 	// Clone-before-stamp: shallow clone + deep-cloned properties (PHP :1644/:1653).
 	// The Site-B config feed + structural view are INTERNAL — destructured out

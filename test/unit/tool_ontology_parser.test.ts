@@ -32,6 +32,9 @@ const ACTIONS = [
 	'inspect_ontologies',
 	'reconcile_ontologies',
 	'regenerate_ontologies',
+	// The one action that writes SOURCE records: it rewrites a misfiled ontology7
+	// back to its section's tld (ONT-TLD), the repair the read-only edit field removed.
+	'repair_tlds',
 ];
 
 function ctx(principal: Principal, options: Record<string, unknown> = {}): ToolActionContext {
@@ -45,7 +48,7 @@ async function action(name: string): Promise<ToolActionSpec> {
 }
 
 describe('tool_ontology_parser module', () => {
-	test('registers the five actions, all developer-gated, none background-runnable', async () => {
+	test('registers the six actions, all developer-gated, none background-runnable', async () => {
 		const loaded = await getLoadedTool('tool_ontology_parser');
 		expect(loaded).not.toBeNull();
 		const actions = loaded!.module.apiActions;

@@ -49,6 +49,24 @@
  * saying so beats silently minting an `ES7` tipo. Gated by
  * test/unit/ontology_state_foreign_tld.test.ts.
  *
+ * TLD-LESS SOURCE RECORDS (`tldlessRecords`) — the same blind spot, from the other side.
+ * `ontology7` is MANDATORY: without it the parser returns null, so the record yields no tipo, no
+ * dd_ontology row, and no place in the ontology tree. It used to be skipped in silence here, and
+ * silence was indistinguishable from health — it could never appear in `stored` (there was no
+ * tipo to look up) so it could not even be `missing`, and inspect reported `inSync: true` over
+ * an administrator's invisible record. It is now named by its SOURCE RECORD, the only handle
+ * that exists for it.
+ *
+ * It is a WARNING CHANNEL, NOT A DRIFT KIND, and that distinction was itself a bug once: filed
+ * as drift it made `inSync` false, which the parser tool renders red — while nothing may write
+ * those records (report-only, and normalizeOntologyTld skips contentless shells), so Reconcile
+ * and Regenerate both reported success against a panel that could never go green again. `drift`
+ * means "dd_ontology disagrees with what the source parses to"; a record that parses to nothing
+ * is absent from both sides and disagrees with nothing. Prevention lives upstream:
+ * ontology/tld.ts requiredOntologyTld (the ONT-TLD rule), the birth stamp in
+ * section/record/record_defaults.ts, the save refusal in section/record/save_component.ts, and
+ * the post-COPY normalization in ontology/data_io_import.ts.
+ *
  * SINGLE WRITER: nothing outside this module wipe-and-rebuilds a TLD's dd_ontology. The
  * legacy `regenerateRecordsInDdOntology` is retired onto `rebuildOntology`. Guarded by
  * test/unit/ontology_single_writer_tripwire.test.ts.
@@ -62,6 +80,7 @@ import {
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
+import { ONTOLOGY_TLD } from './ontology_tipos.ts';
 import {
 	addMainSection,
 	createDdOntologyRootNode,
@@ -70,13 +89,19 @@ import {
 	getMainTypologyId,
 } from './ontology_write.ts';
 import { parseSectionRecordToOntologyNode } from './parser.ts';
-import { getMatrixTableFromTipo } from './resolver.ts';
+import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
 import { mapTldToTargetSectionTipo, safeTld } from './tld.ts';
 
 /**
  * One node's place in the diff. `foreign` is not a dd_ontology state at all — it is a SOURCE
  * record of this tld's section whose `ontology7` declares a different tld, so it can never be
  * part of this tld's projection. Reconcile refuses it and names it; only a data fix clears it.
+ */
+/**
+ * NOTE: tld-less source records are deliberately NOT a drift kind. They are not a
+ * disagreement between dd_ontology and its source (they are absent from both) —
+ * they ride `OntologyState.tldlessRecords` instead. Adding a kind here also breaks
+ * every consumer that enumerates the set, client and gate alike.
  */
 export type OntologyDriftKind = 'missing' | 'stale' | 'orphaned' | 'foreign';
 
@@ -102,6 +127,14 @@ export interface OntologyState {
 	mainNodeOk: boolean;
 	/** Count of source records of this tld's section that declare ANOTHER tld (misfiled). */
 	foreignNodes: number;
+	/** Count of source records of this tld's section that declare NO tld at all (unparseable). */
+	tldlessNodes: number;
+	/**
+	 * Those records, as `<section_tipo>/<section_id>` — the operator's only handle
+	 * on them (a record with no tld parses into no tipo). A WARNING channel, not
+	 * drift: see the emission in inspectOntology for why they are kept out of it.
+	 */
+	tldlessRecords: string[];
 	drift: OntologyDriftItem[];
 	/** No drift and the main node is present → dd_ontology matches its source. */
 	inSync: boolean;
@@ -128,24 +161,60 @@ interface ForeignRecord {
 	source: string;
 }
 
+/**
+ * A source record of this tld's section that declares NO tld at all (ONT-TLD violated).
+ *
+ * `parseSectionRecordToOntologyNode` returns null for it — `ontology7` is mandatory — so it
+ * produces no tipo, no dd_ontology row, and no presence in the ontology tree. Before this was
+ * tracked the record was SILENTLY skipped here: it never reached `stored` (the parse produced no
+ * tipo to look up), so it could not show as `missing`, and inspect reported `inSync: true` while
+ * the administrator's record was invisible. Exactly the blind spot the `foreign` kind was added
+ * to close, in the other direction.
+ */
+interface TldlessRecord {
+	/** `<section_tipo>/<section_id>` — the record the operator must fix or delete. */
+	source: string;
+}
+
 interface ParsedMatrixNodes {
 	/** Nodes that belong to the inspected tld, keyed by tipo — the projection. */
 	own: Map<string, DdOntologyNode>;
 	/** Records of the same section that parsed into ANOTHER tld (see the module header). */
 	foreign: ForeignRecord[];
+	/** Records of the same section that parsed into NOTHING, for want of an ontology7. */
+	tldless: TldlessRecord[];
 }
 
 /**
  * Parse every matrix record of the TLD's section, SPLIT by the tld the record declares.
  * `own` is scoped exactly as `storedNodes` (`tld = $1`) so the two sides of the diff cover the
- * same namespace; `foreign` carries the misfiled records so they are diagnosed, not chased.
+ * same namespace; `foreign` and `tldless` carry the unusable records so they are diagnosed,
+ * not chased.
  */
 async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	const sectionTipo = mapTldToTargetSectionTipo(tld);
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	const own = new Map<string, DdOntologyNode>();
 	const foreign: ForeignRecord[] = [];
-	if (table === null) return { own, foreign };
+	const tldless: TldlessRecord[] = [];
+	if (table === null) return { own, foreign, tldless };
+
+	// BEFORE blaming any record: can `ontology7` itself be resolved?
+	//
+	// parseSectionRecordToOntologyNode returns null for a record with no tld — AND
+	// for a perfectly good record when `getModelByTipo(ontology7)` cannot answer,
+	// which happens whenever dd_ontology has not been (re-)derived yet: mid
+	// update_ontology, after a partial import, on a half-installed ontology. An
+	// earlier version of this bucket assumed the first cause and attributed the
+	// second to the DATA: on such an install `inspect('dd')` reported 1726 tld-less
+	// records and named healthy ones (dd0/1, dd0/2 …) as the operator's fault.
+	// One shared cause must never be reported as N record-level defects.
+	if ((await getModelByTipo(ONTOLOGY_TLD)) === null) {
+		throw new Error(
+			`inspectOntology('${tld}'): the '${ONTOLOGY_TLD}' node cannot be resolved in dd_ontology, so NO record of '${sectionTipo}' can be parsed. This is an ontology-resolution failure, not a defect in the records — re-derive the 'ontology' tld first.`,
+		);
+	}
+
 	const rows = (await sql.unsafe(
 		`SELECT section_id FROM "${table}" WHERE section_tipo = $1 ORDER BY section_id ASC`,
 		[sectionTipo],
@@ -153,7 +222,12 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	for (const row of rows) {
 		const sectionId = Number(row.section_id);
 		const node = await parseSectionRecordToOntologyNode(sectionTipo, sectionId);
-		if (node === null) continue;
+		if (node === null) {
+			// With ontology7 resolvable (guarded above), the remaining cause is what
+			// this kind names: the RECORD declares no tld. Reported, never dropped.
+			tldless.push({ source: `${sectionTipo}/${sectionId}` });
+			continue;
+		}
 		if (node.tld !== tld) {
 			foreign.push({
 				tipo: node.tipo,
@@ -164,12 +238,48 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 		}
 		own.set(node.tipo, node);
 	}
-	return { own, foreign };
+	return { own, foreign, tldless };
 }
 
 /** The operator-facing line for one misfiled record: what is wrong, where, and that nothing ran. */
 function foreignError(item: ForeignRecord, tld: string): string {
 	return `${item.source} declares tld '${item.declaredTld}' (parses to node '${item.tipo}'), not '${tld}' — fix the record's ontology7; nothing was written for it`;
+}
+
+/**
+ * Did a reconcile achieve everything a reconcile CAN achieve?
+ *
+ * `inSync` is the answer for the projection, and tld-less records no longer disturb it (they
+ * ride their own channel). What this adds is a WHOLESALE-FAILURE floor: if the section holds
+ * records but NOT ONE of them parsed, the tld has no projection at all, and calling that
+ * "converged" would report a rebuild that deleted every node and re-inserted none as a success.
+ * Something systemic is wrong in that case — never a per-record data fault — so it must fail.
+ */
+function reconcileConverged(state: OntologyState): boolean {
+	if (state.matrixNodes === 0 && state.tldlessNodes > 0) return false;
+	return state.inSync;
+}
+
+/**
+ * The warning suffix appended to a SUCCESSFUL reconcile message, or ''.
+ *
+ * A tld-less record is a WARNING, not an error: unlike `foreign` — which would land a node in
+ * another tld's namespace, where this tld's own writers could never take it back — it
+ * contributes nothing to the projection, so reconciling the rest is perfectly safe. But it is
+ * still an administrator's record that the tree will never show, so a green run says so every
+ * time rather than letting it pass in silence (the whole bug this kind exists to close).
+ *
+ * Named, not just counted — an operator needs the record to open. Capped, because an install
+ * carrying legacy shells has dozens; the complete list is always in `state.tldlessRecords`.
+ */
+const TLDLESS_NAMED_LIMIT = 10;
+
+function tldlessNote(state: OntologyState): string {
+	if (state.tldlessNodes === 0) return '';
+	const sources = state.tldlessRecords;
+	const named = sources.slice(0, TLDLESS_NAMED_LIMIT).join(', ');
+	const rest = sources.length - TLDLESS_NAMED_LIMIT;
+	return ` — ${state.tldlessNodes} source record(s) declare no ontology7 and stay invisible in the tree: ${named}${rest > 0 ? ` (+${rest} more)` : ''}`;
 }
 
 /** Read every dd_ontology row for the TLD, keyed by tipo. */
@@ -270,11 +380,13 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 			storedNodes: 0,
 			mainNodeOk: false,
 			foreignNodes: 0,
+			tldlessNodes: 0,
+			tldlessRecords: [],
 			drift: [],
 			inSync: false,
 		};
 	}
-	const { own: parsed, foreign } = await parseMatrixNodes(tld);
+	const { own: parsed, foreign, tldless } = await parseMatrixNodes(tld);
 	const stored = await storedNodes(tld);
 	const mainTipo = `${tld}0`;
 	const mainNodeOk = (stored.get(mainTipo)?.is_main ?? false) === true;
@@ -305,13 +417,28 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 			declaredTld: item.declaredTld,
 		});
 	}
-
+	// Tld-less source records are reported on their OWN channel, NOT as drift.
+	//
+	// `drift` answers "does dd_ontology match what the source parses to", and a
+	// tld-less record parses to nothing — it is absent from both sides, so it is
+	// not a disagreement between them. Filing it as drift made `inSync` false, which
+	// this tool's client renders as a red "drifted" check; and since nothing may
+	// write those records (report-only, and normalizeOntologyTld deliberately skips
+	// contentless shells), Reconcile and Regenerate both returned success while the
+	// panel stayed red forever. An install carrying 92 legacy shells could not reach
+	// green by any action available to it.
+	//
+	// So: `inSync` keeps its meaning, and `tldlessRecords` carries the finding.
+	// Still loud — it is the whole point of the kind — but as a WARNING the operator
+	// can act on (fill the tld, or delete the record), not a failure state.
 	return {
 		tld,
 		matrixNodes: parsed.size,
 		storedNodes: stored.size,
 		mainNodeOk,
 		foreignNodes: foreign.length,
+		tldlessNodes: tldless.length,
+		tldlessRecords: tldless.map((item) => item.source),
 		drift,
 		inSync: drift.length === 0 && mainNodeOk,
 	};
@@ -402,12 +529,17 @@ export async function ensureOntology(rawTld: string, userId = -1): Promise<Ensur
 	}
 
 	const state = await inspectOntology(tld);
+	const converged = reconcileConverged(state);
 	return {
-		result: state.inSync && errors.length === 0,
-		msg: state.inSync
-			? applied.length === 0
-				? `Ontology '${tld}' is already in sync`
-				: `Ontology '${tld}' reconciled`
+		result: converged && errors.length === 0,
+		msg: converged
+			? // Converged. A tld-less record does not contradict that — it is not part of the
+				// projection at all — but it IS an invisible record, so say so every time.
+				`${
+					applied.length === 0
+						? `Ontology '${tld}' is already in sync`
+						: `Ontology '${tld}' reconciled`
+				}${tldlessNote(state)}`
 			: // Name the cause the operator can act on: a misfiled record is a DATA fix, not
 				// something a re-run will ever converge.
 				state.foreignNodes > 0
@@ -473,10 +605,11 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Ensu
 	}
 
 	const state = await inspectOntology(tld);
+	const converged = reconcileConverged(state);
 	return {
-		result: state.inSync,
-		msg: state.inSync
-			? `Ontology '${tld}' rebuilt`
+		result: converged,
+		msg: converged
+			? `Ontology '${tld}' rebuilt${tldlessNote(state)}`
 			: state.foreignNodes > 0
 				? `Ontology '${tld}' rebuilt; ${state.foreignNodes} source record(s) declare another tld and were skipped`
 				: `Ontology '${tld}' rebuilt with drift`,

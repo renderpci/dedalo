@@ -1474,6 +1474,156 @@
             "lang": "lg-nep",
             "name": "confirm_clear_selection",
             "value": "सम्पूर्ण ओन्टोलोजी चयन खाली गर्ने?"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "repair_tlds",
+            "value": "Reparar TLD"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "repair_tlds",
+            "value": "TLDs reparieren"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "repair_tlds",
+            "value": "Επιδιόρθωση TLD"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "repair_tlds",
+            "value": "Repair TLDs"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "repair_tlds",
+            "value": "TLDak konpondu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "repair_tlds",
+            "value": "Réparer les TLD"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "repair_tlds",
+            "value": "Ripara TLD"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "repair_tlds",
+            "value": "TLD मर्मत गर्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "repair_tlds",
+            "value": "Reparar TLDs"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "repair_tlds",
+            "value": "Reparar TLD"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "repair_tlds_desc",
+            "value": "Reescriu el TLD d’un registre perquè coincideixi amb la seva secció. Corregeix nodes mal ubicats."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "repair_tlds_desc",
+            "value": "Schreibt die TLD eines Datensatzes passend zu seinem Abschnitt neu. Korrigiert falsch abgelegte Knoten."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "repair_tlds_desc",
+            "value": "Ξαναγράφει το TLD μιας εγγραφής ώστε να ταιριάζει με την ενότητά της. Διορθώνει λανθασμένα καταχωρημένους κόμβους."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "repair_tlds_desc",
+            "value": "Rewrite a record’s TLD to match its section. Fixes misfiled nodes."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "repair_tlds_desc",
+            "value": "Erregistro baten TLDa bere atalarekin bat etor dadin berridazten du. Gaizki kokatutako nodoak zuzentzen ditu."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "repair_tlds_desc",
+            "value": "Réécrit le TLD d’un enregistrement pour qu’il corresponde à sa section. Corrige les nœuds mal classés."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "repair_tlds_desc",
+            "value": "Riscrive il TLD di un record per farlo corrispondere alla sua sezione. Corregge i nodi collocati erroneamente."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "repair_tlds_desc",
+            "value": "रेकर्डको TLD लाई त्यसको सेक्सनसँग मिल्ने गरी पुनर्लेखन गर्छ। गलत ठाउँमा राखिएका नोडहरू सच्याउँछ।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "repair_tlds_desc",
+            "value": "Reescreve o TLD de um registo para corresponder à sua secção. Corrige nós mal colocados."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "repair_tlds_desc",
+            "value": "Reescribe el TLD de un registro para que coincida con su sección. Corrige nodos mal ubicados."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "confirm_repair_tlds",
+            "value": "Voleu reescriure el TLD de cada registre el TLD del qual no coincideix amb la seva secció?\n\nAixò edita els REGISTRES de l’ontologia, no només la taula derivada. Els registres sense contingut no es modifiquen.\n\nExecuteu Reconciliar després."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "confirm_repair_tlds",
+            "value": "Die TLD jedes Datensatzes neu schreiben, dessen TLD nicht zu seinem Abschnitt passt?\n\nDies bearbeitet die ONTOLOGIE-DATENSÄTZE, nicht nur die abgeleitete Tabelle. Datensätze ohne Inhalt bleiben unverändert.\n\nFühren Sie danach Abgleichen aus."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "confirm_repair_tlds",
+            "value": "Να ξαναγραφεί το TLD κάθε εγγραφής της οποίας το TLD δεν ταιριάζει με την ενότητά της;\n\nΑυτό επεξεργάζεται τις ΕΓΓΡΑΦΕΣ της οντολογίας, όχι μόνο τον παραγόμενο πίνακα. Οι εγγραφές χωρίς περιεχόμενο δεν αλλάζουν.\n\nΕκτελέστε την Εναρμόνιση μετά."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "confirm_repair_tlds",
+            "value": "Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Reconcile afterwards."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "confirm_repair_tlds",
+            "value": "Bere atalarekin bat ez datorren TLDa duen erregistro bakoitzaren TLDa berridatzi?\n\nHonek ontologiaren ERREGISTROAK editatzen ditu, ez soilik eratorritako taula. Edukirik gabeko erregistroak ez dira ukitzen.\n\nExekutatu Bateratu ondoren."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "confirm_repair_tlds",
+            "value": "Réécrire le TLD de chaque enregistrement dont le TLD ne correspond pas à sa section ?\n\nCeci modifie les ENREGISTREMENTS de l’ontologie, pas seulement la table dérivée. Les enregistrements sans contenu ne sont pas touchés.\n\nExécutez Réconcilier ensuite."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "confirm_repair_tlds",
+            "value": "Riscrivere il TLD di ogni record il cui TLD non corrisponde alla sua sezione?\n\nQuesto modifica i RECORD dell’ontologia, non solo la tabella derivata. I record senza contenuto non vengono toccati.\n\nEseguire Riconcilia dopo."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "confirm_repair_tlds",
+            "value": "सेक्सनसँग नमिल्ने TLD भएका सबै रेकर्डको TLD पुनर्लेखन गर्ने?\n\nयसले ओन्टोलोजीका रेकर्डहरू सम्पादन गर्छ, केवल व्युत्पन्न तालिका मात्र होइन। सामग्री नभएका रेकर्डहरू छोइँदैनन्।\n\nत्यसपछि Reconcile चलाउनुहोस्।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "confirm_repair_tlds",
+            "value": "Reescrever o TLD de cada registo cujo TLD não corresponde à sua secção?\n\nIsto edita os REGISTOS da ontologia, não apenas a tabela derivada. Registos sem conteúdo não são alterados.\n\nExecute Reconciliar depois."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "confirm_repair_tlds",
+            "value": "¿Reescribir el TLD de cada registro cuyo TLD no coincide con su sección?\n\nEsto edita los REGISTROS de la ontología, no solo la tabla derivada. Los registros sin contenido no se modifican.\n\nEjecute Reconciliar después."
           }
         ]
       }

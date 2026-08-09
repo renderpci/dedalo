@@ -35,6 +35,28 @@ import type { ImportFileReport, ImportProgressFrame, ImportRowIssue } from './im
 /** The dataframe relation type (PHP DEDALO_RELATION_TYPE_DATAFRAME). */
 const RELATION_TYPE_DATAFRAME = 'dataframe';
 
+/**
+ * saveComponentData, with its REFUSAL honoured.
+ *
+ * The write engine answers `{ok:false, message}` for a refusal it wants the
+ * caller to surface — ONT-TLD (`ontology7` is derived, not typed),
+ * consultation-only sections, an incomplete dataframe pairing. Every call site
+ * here used to `await` and discard that, so a file whose column the engine
+ * refused was reported as "N updated, 0 failed" while nothing was written.
+ *
+ * Throwing is right at THIS door specifically: each row already runs inside one
+ * transaction with a catch that rolls it back and records an ImportRowIssue
+ * (see the row loop below), so a refusal lands in the operator's report with its
+ * message intact and the record is left exactly as it was — instead of a row
+ * half-written from the columns that happened to precede the refused one.
+ */
+async function saveOrRefuse(request: Parameters<typeof saveComponentData>[0]): Promise<void> {
+	const outcome = await saveComponentData(request);
+	if (outcome.ok === false) {
+		throw new Error(`save refused for '${request.componentTipo}': ${outcome.message}`);
+	}
+}
+
 export interface CsvExecuteRequest {
 	plan: PlannedRecord[];
 	sectionTipo: string;
@@ -164,7 +186,7 @@ async function writeDataframeFrames(
 				(item) => !isObject(item) || item.main_component_tipo !== mainComponentTipo,
 			);
 		}
-		await saveComponentData({
+		await saveOrRefuse({
 			componentTipo: slot,
 			sectionTipo,
 			sectionId,
@@ -275,7 +297,7 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 						const groups = groupItemsByLang(column.conform.result, column.lang);
 						if (groups.size === 0) {
 							// An explicit CLEAR (empty cell).
-							await saveComponentData({
+							await saveOrRefuse({
 								componentTipo: column.tipo,
 								sectionTipo,
 								sectionId,
@@ -288,7 +310,7 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 							});
 						}
 						for (const [lang, items] of groups) {
-							await saveComponentData({
+							await saveOrRefuse({
 								componentTipo: column.tipo,
 								sectionTipo,
 								sectionId,

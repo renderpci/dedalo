@@ -475,6 +475,15 @@ export async function createParentGrouper(
 	}
 
 	// Parent matrix record (<parentNodeTipo>/<parentSectionId>).
+	//
+	// ONT-TLD note: this row is created and NOTHING else is written to it, so since
+	// the birth stamp (record_defaults seed 3) it carries an `ontology7` and
+	// therefore PARSES — appearing in the tree as a node with no term. That is a
+	// deliberate trade, not an oversight: the alternative is what it did before,
+	// which was to parse to nothing, leaving the child's parent locator pointing at
+	// a record the ontology cannot resolve (the child silently becomes a root).
+	// A visible unnamed node is diagnosable; a dangling parent is not. This branch
+	// only fires as a repair backstop on an already-incomplete ontology.
 	if (parentSectionId !== null) {
 		await ensureMatrixRecord(parentNodeTipo, Number(parentSectionId), userId);
 	}

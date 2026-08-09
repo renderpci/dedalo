@@ -21,9 +21,13 @@
  *  - Each file's DELETE + \copy runs in ONE psql transaction
  *    (ON_ERROR_STOP) — a failed COPY rolls its DELETE back (PHP deletes
  *    first and can leave a half-emptied table).
- * Identifier discipline: target tables come from a 2-entry allowlist, the
- * column list is MATRIX_COPY_COLUMNS, and the only data-derived SQL value
- * (section_tipo) rides a psql -v variable (:'tipo'), never interpolation.
+ * Identifier discipline: target tables come from a 2-entry allowlist and the
+ * column list is MATRIX_COPY_COLUMNS. In the COPY script the data-derived
+ * section_tipo rides a psql -v variable (:'tipo'), never interpolation.
+ * The two statement helpers that cannot use a variable —
+ * consolidateSectionCounter and normalizeOntologyTld — interpolate a tld that
+ * `safeTld`/`requiredOntologyTld` has already constrained to `^[a-z]{2,}$`, so
+ * the value cannot carry a quote, a space or a semicolon by construction.
  */
 
 import {
@@ -45,6 +49,8 @@ import { readEnv } from '../../config/env.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { isSafeSectionTipo, safeTld } from './data_io.ts';
+import { DATA_NOLAN, ONTOLOGY_TLD } from './ontology_tipos.ts';
+import { requiredOntologyTld } from './tld.ts';
 
 // ---------------------------------------------------------------------------
 // Limits (Opus design constants)
@@ -505,16 +511,42 @@ export async function importFromCopyFile(
 		// -- one transaction: DELETE (scoped or whole) + \copy FROM the staged
 		//    file. Identifiers are static; the tipo rides a psql variable.
 		const columnsList = MATRIX_COPY_COLUMNS.map((column) => `"${column}"`).join(',');
-		const deleteLine = deleteTable
-			? `DELETE FROM "${options.matrixTable}";`
-			: `DELETE FROM "${options.matrixTable}" WHERE section_tipo = :'tipo';`;
-		const script = [
-			'BEGIN;',
-			deleteLine,
-			`\\copy "${options.matrixTable}" (${columnsList}) FROM '${uncompressed}'`,
-			'COMMIT;',
-			'',
-		].join('\n');
+		// SECTION-SCOPED IMPORT LANDS IN THE TARGET SECTION, BY CONSTRUCTION.
+		//
+		// A `.copy.gz` carries the `section_tipo` it was EXPORTED with, while the
+		// caller's `sectionTipo` is recomputed from the validated target tld. A
+		// straight `\copy` into the table honoured the FILE and ignored the target:
+		// importing an `objet0` export as tld `object` deleted the (empty) object0,
+		// re-inserted the rows as `objet0` — duplicating them, or violating the
+		// (section_id, section_tipo) unique index if objet0 still existed — and left
+		// the target section empty. Every downstream guard then looked correct while
+		// operating on nothing.
+		//
+		// Staging through a TEMP table and projecting `:'tipo'` over the file's own
+		// column makes the target authoritative: the rows land where the caller said,
+		// which is what makes export-as-X / import-as-Y a real tld rename rather than
+		// a duplication. The whole-table path (matrix_dd) has no single target tipo
+		// and keeps the direct COPY.
+		const projected = MATRIX_COPY_COLUMNS.map((column) =>
+			column === 'section_tipo' ? `:'tipo'` : `"${column}"`,
+		).join(',');
+		const script = deleteTable
+			? [
+					'BEGIN;',
+					`DELETE FROM "${options.matrixTable}";`,
+					`\\copy "${options.matrixTable}" (${columnsList}) FROM '${uncompressed}'`,
+					'COMMIT;',
+					'',
+				].join('\n')
+			: [
+					'BEGIN;',
+					`DELETE FROM "${options.matrixTable}" WHERE section_tipo = :'tipo';`,
+					`CREATE TEMP TABLE dd_import_stage (LIKE "${options.matrixTable}" INCLUDING DEFAULTS) ON COMMIT DROP;`,
+					`\\copy dd_import_stage (${columnsList}) FROM '${uncompressed}'`,
+					`INSERT INTO "${options.matrixTable}" (${columnsList}) SELECT ${projected} FROM dd_import_stage;`,
+					'COMMIT;',
+					'',
+				].join('\n');
 		const scriptPath = `${uncompressed}.import.sql`;
 		if (confinedPath(resolve(uncompressed, '..'), basename(scriptPath)) === null) {
 			response.errors.push('unconfined staging path');
@@ -580,9 +612,90 @@ ON CONFLICT (tipo) DO UPDATE SET value = GREATEST(matrix_counter.value, EXCLUDED
 }
 
 /**
+ * THE ONT-TLD POST-COPY NORMALIZATION — and the one door a global TLD RENAME
+ * actually goes through.
+ *
+ * A `.copy.gz` carries whatever `ontology7` its rows were EXPORTED with, while
+ * the import recomputes `section_tipo` from the TARGET tld. Export `objet` and
+ * import it as `object` — which is exactly how a tld is renamed in the ontology
+ * master and redistributed — and every row lands in section `object0` still
+ * declaring `objet`. The parser derives a node's identity from the record's own
+ * `ontology7`, not from its section, so the whole ontology would parse into the
+ * OLD namespace: `ontology_state`'s `foreign` drift, a thousand rows at a time.
+ *
+ * Forcing the target tld here makes export-as-X / import-as-Y a first-class
+ * rename instead of a trap. It is also the only enforcement this door can have:
+ * the COPY streams straight into the table through `psql`, so neither the birth
+ * stamp (record_defaults.ts) nor the save refusal (save_component.ts) ever sees
+ * these rows.
+ *
+ * TWO DELIBERATE LIMITS:
+ *  - rows with NO `string` column at all are left alone. Those carry no term and
+ *    no properties — contentless shells, not nodes — and stamping a tld on one
+ *    would MATERIALIZE a nameless node in the ontology tree, which is worse than
+ *    the invisibility it fixes. `ontology_state`'s `tldless` drift reports them
+ *    instead. ("Has a `string` column" is a sound proxy for "is a real node":
+ *    both `ontology5` and `ontology7` live there.)
+ *  - the RESTORE path (ontology_update's snapshot rollback) does NOT call this.
+ *    A restore's contract is "put back exactly what was here", not "improve it";
+ *    silently rewriting values during a rollback would make the rollback a lie.
+ *
+ * Driven by the TARGET SECTION, not by the manifest's tld string: the section is
+ * where the rows actually landed, and `requiredOntologyTld` is the one place the
+ * rule lives. That also makes the not-governed cases fall out for free rather
+ * than needing a caller-side list — `localontology0`, and the whole-table
+ * manifest entries `matrix` / `matrix_dd`, whose section tipo is not `<tld>0`
+ * shaped at all. Returns 0 for those: nothing to normalize is not a failure.
+ *
+ * The derived tld is `safeTld`-validated by construction (`^[a-z]{2,}$`), so it
+ * and the section tipo are safe to inline — the same posture as
+ * consolidateSectionCounter above.
+ * Returns the number of rows rewritten, or null when the statement failed.
+ */
+export async function normalizeOntologyTld(
+	sectionTipo: string,
+	conn: DbConnDescriptor = connFromConfig(),
+): Promise<number | null> {
+	const tld = requiredOntologyTld(sectionTipo);
+	if (tld === null) return 0;
+	const item = `[{"id": 1, "lang": "${DATA_NOLAN}", "value": "${tld}"}]`;
+	// THE SHAPE TEST IS "IS THIS A NODE", NOT "IS `string` NON-NULL".
+	//   - `jsonb_typeof(...) = 'object'` — a row whose `string` is a JSON SCALAR
+	//     makes jsonb_set raise "cannot set path in scalar", and ON_ERROR_STOP
+	//     then aborts the WHOLE section's normalization for one bad row.
+	//   - `EXISTS (… keys except ontology7)` — the contentless-shell skip the
+	//     header promises. `IS NOT NULL` only skipped SQL NULL, so `{}` and a row
+	//     carrying nothing but its own ontology7 still got stamped and
+	//     MATERIALIZED as a nameless node in the ontology tree — the outcome the
+	//     skip exists to prevent. A real node always carries at least one other
+	//     component (its ontology5 term).
+	const statement = `WITH upd AS (
+  UPDATE "matrix_ontology"
+     SET "string" = jsonb_set("string", '{${ONTOLOGY_TLD}}', '${item}'::jsonb)
+   WHERE section_tipo = '${sectionTipo}'
+     AND jsonb_typeof("string") = 'object'
+     AND EXISTS (
+           SELECT 1 FROM jsonb_object_keys("string") AS k(key)
+            WHERE k.key <> '${ONTOLOGY_TLD}'
+         )
+     AND ("string"->'${ONTOLOGY_TLD}'->0->>'value') IS DISTINCT FROM '${tld}'
+  RETURNING 1
+) SELECT count(*) FROM upd;`;
+	// `-X`: a server-side ~/.psqlrc (\timing, \pset …) prints banners on STDOUT,
+	// which is the only thing this function reads. Without it a developer's rc
+	// file turned a successful rewrite into an unparseable count — and, before
+	// the callers were made fatal, into a silently skipped normalization.
+	const run = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '-t', '-A', '-c', statement]);
+	if (run.exitCode !== 0) return null;
+	const rewritten = Number.parseInt(run.stdout.trim(), 10);
+	return Number.isFinite(rewritten) ? rewritten : null;
+}
+
+/**
  * Import one TLD's staged file into matrix_ontology (PHP import_from_file):
- * scoped DELETE + COPY, then counter consolidation. `section_tipo` is
- * RECOMPUTED from the validated tld (never trusted from the manifest).
+ * scoped DELETE + COPY, then ONT-TLD normalization + counter consolidation.
+ * `section_tipo` is RECOMPUTED from the validated tld (never trusted from the
+ * manifest).
  */
 export async function importOntologyFile(
 	fileItem: { tld: string; filePath: string },
@@ -599,6 +712,22 @@ export async function importOntologyFile(
 		conn,
 	});
 	if (imported.result === true) {
+		// ONT-TLD before the counter: a row whose tld still names the EXPORT's
+		// namespace is not this tld's node at all (see normalizeOntologyTld).
+		const rewritten = await normalizeOntologyTld(sectionTipo, conn);
+		if (rewritten === null) {
+			// FATAL, not a warning. An un-normalized import is an ontology whose
+			// every node declares the wrong namespace — the caller must not go on to
+			// re-derive dd_ontology from it and report success.
+			imported.result = false;
+			imported.errors.push(`ontology7 normalization failed for ${sectionTipo}`);
+			imported.msg = `Error. ONT-TLD normalization failed for ${sectionTipo} — the imported rows may declare another tld`;
+			return imported;
+		}
+		imported.tld_normalized = rewritten;
+		if (rewritten > 0) {
+			imported.msg = `${imported.msg} (rewrote ontology7 on ${rewritten} row(s) to '${fileItem.tld}')`;
+		}
 		const counter = await consolidateSectionCounter(sectionTipo, 'matrix_ontology', conn);
 		if (!counter) imported.errors.push(`counter consolidation failed for ${sectionTipo}`);
 	}

@@ -244,6 +244,13 @@
   color: var(--tool_ontology_parser);
   font-weight: 600;
 }
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.warn:before {
+  content: '!';
+  color: var(--color_warning);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.warn > .check_detail {
+  color: var(--color_grey_4);
+}
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container {
   padding: 2rem;
   padding-left: 0px;

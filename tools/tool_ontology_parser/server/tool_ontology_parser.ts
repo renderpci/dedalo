@@ -12,6 +12,8 @@
  *    missing, stale or orphaned vs the matrix source). The client's status panel.
  *  - reconcile_ontologies (WRITE, default): INCREMENTAL — apply only the delta
  *    (ensureOntology). Non-destructive; a TLD in sync is a no-op.
+ *  - repair_tlds (WRITE, SOURCE data): rewrite a misfiled `ontology7` back to its section's
+ *    tld. The read-only edit field left no other way to clear the drift inspect reports.
  *  - regenerate_ontologies (WRITE, nuclear): TRANSACTIONAL wipe-and-rebuild
  *    (rebuildOntology) for structural corruption the incremental path cannot fix.
  *  - both writes run the LLM-map post-step (PHP: export_llm_map errors merged in).
@@ -32,6 +34,7 @@ import {
 	getActiveOntologies,
 	updateOntologyInfo,
 } from '../../../src/core/ontology/data_io.ts';
+import { normalizeOntologyTld } from '../../../src/core/ontology/data_io_import.ts';
 import {
 	type EnsureOntologyResult,
 	ensureOntologies,
@@ -121,6 +124,62 @@ export async function toolOntologyParserReconcile(
 	const tlds = selectedTlds(context);
 	const outcomes = await ensureOntologies(tlds, context.userId);
 	return withLlmMap(summarize(outcomes, tlds, 'Reconciled'));
+}
+
+/**
+ * WRITE (source data): REPAIR the misfiled `ontology7` of each selected TLD's records.
+ *
+ * THE DOOR THIS RESTORES. `ontology7` is derived from the section (ONT-TLD), so the edit form
+ * renders it read-only — which removed the one place an operator could correct a record whose
+ * tld is wrong. Inspect still reports those records ("…declares tld 'act', not 'actv' — fix the
+ * record's ontology7"), so without this the tool named a defect and offered no way to clear it,
+ * and the node stayed misfiled or invisible forever.
+ *
+ * It is DELIBERATELY NOT folded into reconcile. Reconcile writes the PROJECTION
+ * (`dd_ontology`) from the source; this writes the SOURCE. Those are different blast radii and
+ * an operator is entitled to choose the second explicitly. It also cannot ride inside
+ * rebuild's transaction — normalizeOntologyTld runs through `psql` on its own connection, so
+ * it would block on the rows the transaction holds.
+ *
+ * SCOPE, from normalizeOntologyTld: only rows that ARE nodes (they carry a component besides
+ * their own ontology7) and whose declared tld differs from the section's. Contentless shells —
+ * the legacy `tldless` population — are untouched by design: stamping a tld on one would
+ * materialize a nameless node in the tree. Those stay reported, for a human to fill or delete.
+ */
+export async function toolOntologyParserRepairTlds(
+	context: ToolActionContext,
+): Promise<ToolResponse> {
+	if (!context.principal.isDeveloper) {
+		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
+	}
+	const tlds = selectedTlds(context);
+	const errors: string[] = [];
+	const ar_msg: string[] = [];
+	let repaired = 0;
+	for (const tld of tlds) {
+		const sectionTipo = `${tld}0`;
+		const rewritten = await normalizeOntologyTld(sectionTipo);
+		if (rewritten === null) {
+			errors.push(`${tld}: ontology7 repair failed`);
+			ar_msg.push(`${tld}: repair FAILED`);
+			continue;
+		}
+		repaired += rewritten;
+		ar_msg.push(
+			rewritten === 0
+				? `${tld}: nothing to repair`
+				: `${tld}: rewrote ontology7 on ${rewritten} record(s)`,
+		);
+	}
+	return {
+		result: errors.length === 0,
+		msg:
+			errors.length === 0
+				? `OK. Repaired ${repaired} record(s). Run Reconcile to re-derive dd_ontology.`
+				: 'Warning! Repair finished with errors',
+		errors,
+		ar_msg,
+	};
 }
 
 /**
