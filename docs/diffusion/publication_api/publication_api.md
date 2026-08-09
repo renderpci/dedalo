@@ -1301,21 +1301,25 @@ Response:
 !!! note "`space` carries only positions that were actually recorded"
     The `space` member mirrors the term's published geolocation. A term whose
     map was never set has **no** coordinates published for it — emptiness is
-    the absence of a value, not a reserved coordinate, and no pair of
-    coordinates has a special meaning (see
+    the absence of a value, never a reserved coordinate (see
     [Geolocation values](../../core/data_model/geolocation.md#absence-is-structural--there-is-no-magic-coordinate)).
     `0` is a legal coordinate, so a `lat` or `lon` of `0` is a real position on
-    the equator or the prime meridian and must not be read as "unset".
+    the equator or the prime meridian and must not be read as "unset". Terms on
+    the equator or the prime meridian published nothing under the v6 engine,
+    whose emptiness test was falsy-based; they publish their position now.
 
-!!! note "`space` may carry drawn geometry instead of a coordinate pair"
-    When the term's map holds **drawn shapes** rather than (or as well as) a
-    center, the shapes are the term's location: `space` then carries the
-    `lib_data` layers and **no `lat`/`lon` at all**. The stored center of such a
-    term is only the map framing — where the drawing is displayed from — and it
-    is deliberately not published, so that a consumer reading `space.lat` can
-    never mistake framing for a position somebody recorded. Read `space` as:
-    layers if present, else the coordinate pair, else no location (see
-    [Geolocation values](../../core/data_model/geolocation.md#geometry-wins-over-the-center)).
+!!! note "`space` may carry drawn geometry as well as the coordinate pair"
+    A term's map holds two independent things: the **view** (`lat`/`lon`/`zoom`,
+    the framing an operator chose) and the **features** (the drawn shapes). Both
+    publish, as stored — `space` may carry the coordinate pair, the `lib_data`
+    layers, or both, and neither is dropped because the other is present. Read
+    `space` as: whatever of the two is there (see
+    [Geolocation values](../../core/data_model/geolocation.md#the-view-and-the-features-are-independent)).
+
+    The one pair that never publishes is the **studio default**
+    `39.462571 / -0.376295` — the client's factory map position, which the v6
+    editor wrote into records on save. A term holding exactly that pair
+    publishes its features, if it has any, and no coordinates.
 
 #### exclude_tld
 

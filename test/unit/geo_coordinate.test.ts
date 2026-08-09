@@ -2,7 +2,7 @@
  * THE geo-coordinate law gate (src/core/concepts/geo_coordinate.ts) — the ONE
  * predicate behind the import door (import_conform.ts) and the three
  * publication paths (default_value.ts, ddo_fns.ts, parser_misc.ts), plus
- * scripts/repair_geolocation_sentinel.ts's candidate test.
+ * scripts/repair_geolocation_studio_default.ts's candidate test.
  *
  * It is pure and dependency-free, and it decides whether a stored location
  * publishes or vanishes, so it is pinned directly rather than through its

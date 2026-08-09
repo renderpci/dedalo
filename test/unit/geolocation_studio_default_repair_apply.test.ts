@@ -1,12 +1,12 @@
 /**
- * Gate on the geolocation sentinel repair's DESTRUCTIVE HALF.
+ * Gate on the geolocation studio-default repair's DESTRUCTIVE HALF.
  *
- * The sibling gate (geolocation_sentinel_repair.test.ts) covers the pure
+ * The sibling gate (geolocation_studio_default_repair.test.ts) covers the pure
  * predicates. Everything that actually DESTROYS data was prose only:
  *   - repairUnit's row lock + re-adjudication on the LOCKED value
  *     ("the scan's verdict is a plan, never an authority to write"),
  *   - the fail-loud abort when the record vanished mid-run,
- *   - the DERIVE array write and its time-machine row,
+ *   - the FIT_VIEW array write and its time-machine row,
  *   - the CLI refusals: --table / --user mandatory, APPLY_ADJUDICATED.
  * Project law: the most destructive code in the change is the code that must be
  * tripwired. This file drives repairUnit for real, on a SCRATCH surface
@@ -31,7 +31,7 @@ const GEO_TIPO = 'zzgeo1';
 const SIBLING_TIPO = 'zzgeo2';
 const REPAIR_USER = 424242;
 
-const SENTINEL = { lat: '39.462571', lon: '-0.376295' };
+const STUDIO_DEFAULT = { lat: '39.462571', lon: '-0.376295' };
 const REAL = { lat: '41.6523', lon: '-4.7245' };
 
 /** Distinct id per case: parallel files must not collide on one scratch row. */
@@ -88,7 +88,7 @@ describe('repairUnit — the write half, on a scratch surface', () => {
 	afterAll(cleanAll);
 
 	test('CLEAR removes ONLY this component key; the sibling component survives', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL, zoom: 12, alt: 16 }], 'CLEAR');
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT, zoom: 12, alt: 16 }], 'CLEAR');
 		expect(await repairUnit(unit, REPAIR_USER)).toBe('done');
 
 		const geo = await storedGeo(unit.sectionId);
@@ -98,7 +98,7 @@ describe('repairUnit — the write half, on a scratch surface', () => {
 	});
 
 	test('CLEAR audits the transition to the MANDATORY --user, with an empty snapshot', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL }], 'CLEAR');
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT }], 'CLEAR');
 		await repairUnit(unit, REPAIR_USER);
 
 		const history = await readTimeMachineHistory(SECTION_TIPO, unit.sectionId, GEO_TIPO);
@@ -108,11 +108,11 @@ describe('repairUnit — the write half, on a scratch surface', () => {
 		expect(history[0]?.data).toEqual([]);
 	});
 
-	test('DERIVE rewrites lat/lon and preserves id, zoom, alt and lib_data byte-for-byte', async () => {
+	test('FIT_VIEW rewrites lat/lon and preserves id, zoom, alt and lib_data byte-for-byte', async () => {
 		const libData = drawn([3.14754, 41.858199]);
 		const unit = await scratch(
-			[{ id: 7, ...SENTINEL, zoom: 13, alt: 16, lib_data: libData }],
-			'DERIVE',
+			[{ id: 7, ...STUDIO_DEFAULT, zoom: 13, alt: 16, lib_data: libData }],
+			'FIT_VIEW',
 		);
 		expect(await repairUnit(unit, REPAIR_USER)).toBe('done');
 
@@ -128,7 +128,7 @@ describe('repairUnit — the write half, on a scratch surface', () => {
 	});
 
 	test('the write is a single-key set: a concurrent component in the same column is not clobbered', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL, lib_data: drawn([1, 2]) }], 'DERIVE');
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT, lib_data: drawn([1, 2]) }], 'FIT_VIEW');
 		// A third component appears in `geo` after the scan, as a concurrent save would.
 		await updateMatrixKeysData(TABLE, SECTION_TIPO, unit.sectionId, [
 			{ column: 'geo', key: 'zzgeo3', value: [{ id: 1, lat: 1, lon: 1 }] },
@@ -152,7 +152,7 @@ describe('repairUnit — TOCTOU: the scan verdict is a PLAN, never an authority'
 	 * since changed — exactly what a curator saving mid-run produces.
 	 */
 	test('an operator saved a REAL coordinate after the scan: skipped as changed, value intact', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL }], 'CLEAR');
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT }], 'CLEAR');
 		await updateMatrixKeysData(TABLE, SECTION_TIPO, unit.sectionId, [
 			{ column: 'geo', key: GEO_TIPO, value: [{ id: 1, ...REAL }] },
 		]);
@@ -165,13 +165,13 @@ describe('repairUnit — TOCTOU: the scan verdict is a PLAN, never an authority'
 	});
 
 	test('the component became MIXED after the scan: the CLEAR is refused, not applied', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL }], 'CLEAR');
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT }], 'CLEAR');
 		await updateMatrixKeysData(TABLE, SECTION_TIPO, unit.sectionId, [
 			{
 				column: 'geo',
 				key: GEO_TIPO,
 				value: [
-					{ id: 1, ...SENTINEL },
+					{ id: 1, ...STUDIO_DEFAULT },
 					{ id: 2, ...REAL },
 				],
 			},
@@ -181,20 +181,20 @@ describe('repairUnit — TOCTOU: the scan verdict is a PLAN, never an authority'
 		expect((await storedGeo(unit.sectionId))[GEO_TIPO]).toHaveLength(2);
 	});
 
-	test('the geometry was deleted after the scan: DERIVE never degrades into a CLEAR', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL, lib_data: drawn([1, 2]) }], 'DERIVE');
+	test('the geometry was deleted after the scan: FIT_VIEW never degrades into a CLEAR', async () => {
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT, lib_data: drawn([1, 2]) }], 'FIT_VIEW');
 		await updateMatrixKeysData(TABLE, SECTION_TIPO, unit.sectionId, [
-			{ column: 'geo', key: GEO_TIPO, value: [{ id: 1, ...SENTINEL }] },
+			{ column: 'geo', key: GEO_TIPO, value: [{ id: 1, ...STUDIO_DEFAULT }] },
 		]);
 
-		// Verdict is now CLEAR, the plan said DERIVE ⇒ skip. A repair that trusted
+		// Verdict is now CLEAR, the plan said FIT_VIEW ⇒ skip. A repair that trusted
 		// the plan would have removed the key.
 		expect(await repairUnit(unit, REPAIR_USER)).toBe('changed');
-		expect((await storedGeo(unit.sectionId))[GEO_TIPO]).toEqual([{ id: 1, ...SENTINEL }]);
+		expect((await storedGeo(unit.sectionId))[GEO_TIPO]).toEqual([{ id: 1, ...STUDIO_DEFAULT }]);
 	});
 
 	test('the record vanished mid-run: FAIL LOUD, never continue silently', async () => {
-		const unit = await scratch([{ id: 1, ...SENTINEL }], 'CLEAR');
+		const unit = await scratch([{ id: 1, ...STUDIO_DEFAULT }], 'CLEAR');
 		await cleanScratchRecord(SECTION_TIPO, unit.sectionId, TABLE);
 
 		expect(repairUnit(unit, REPAIR_USER)).rejects.toThrow(/record vanished mid-run/);
@@ -218,7 +218,8 @@ describe('repairUnit — TOCTOU: the scan verdict is a PLAN, never an authority'
 // The CLI refusals — subprocess, because usage() exits the process.
 // ---------------------------------------------------------------------------
 
-const SCRIPT = new URL('../../scripts/repair_geolocation_studio_default.ts', import.meta.url).pathname;
+const SCRIPT = new URL('../../scripts/repair_geolocation_studio_default.ts', import.meta.url)
+	.pathname;
 
 async function run(...args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
 	const child = Bun.spawn(['bun', SCRIPT, ...args], { stdout: 'pipe', stderr: 'pipe' });

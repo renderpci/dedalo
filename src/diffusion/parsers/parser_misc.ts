@@ -4,7 +4,7 @@
  * parser_info.ts, parser_map.ts (behavior parity).
  */
 
-import { hasCoordinate, toCoordinate } from '../resolve/geo_coordinate.ts';
+import { hasCoordinate, isStudioDefault, toCoordinate } from '../resolve/geo_coordinate.ts';
 import type { ItemParserFn, ParserItem } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -136,14 +136,27 @@ export const geoGeojson: ItemParserFn = (items) => {
 /**
  * lat/lon → single-Point FeatureCollection layer, or null when there is no
  * coordinate. Same predicate as ddo_fns.ts geojsonPointFallbackLayers: the
- * three geo publication paths must agree. The old guard was falsy-based, so 0
- * (the equator / prime meridian) silently never published.
+ * three geo publication paths must agree.
+ *
+ * The VIEW publishes. lat/lon is the map framing, and for many records it is the
+ * only positional data there is, so publication has always read it and consumers
+ * depend on that — it is not dropped when the item also carries drawn features.
+ *
+ * TWO refusals, and only two:
+ *  · no coordinate (null/undefined/''), which is absence — 0 is NOT absence, it
+ *    is the equator and the prime meridian. The old guard was falsy-based and
+ *    silently dropped both.
+ *  · the STUDIO DEFAULT, the factory map position the v6 client wrote on save
+ *    whether or not anyone touched the map. It is fabricated wherever it
+ *    appears, so it never reaches a consumer as a position.
  */
 function buildGeojsonLayer(geoObj: GeoValue): GeoLayer | null {
 	if (!hasCoordinate(geoObj.lat) || !hasCoordinate(geoObj.lon)) return null;
 
 	const lat = toCoordinate(geoObj.lat);
 	const lon = toCoordinate(geoObj.lon);
+
+	if (isStudioDefault(lat, lon)) return null;
 
 	return {
 		layer_id: 1,

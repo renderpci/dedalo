@@ -525,8 +525,9 @@ describe(`COMPONENT_GEOLOCATION DATA OPERATIONS`, function() {
 // parsers then had to hardcode as "no location" — a magic coordinate in the data.
 //
 // The map's opening position is a CAMERA (self.default_view: lat/lon/zoom, no alt,
-// from context.features.default_view, hard fallback {20, 0, 2}) and is VIEW-ONLY:
-// it is never stored. The FIRST user action (drag, typing, drawing) creates the value.
+// from context.features.default_view, hard fallback {20, 0, 2}). Resolving it
+// stores nothing: the FIRST user action (drag, zoom, typing, drawing) is what
+// creates the value, and only an explicit save commits it.
 // Reported against numisdata6/564 (component numisdata264).
 describe(`COMPONENT_GEOLOCATION EMPTY RECORD (no stored value)`, function() {
 
@@ -891,21 +892,27 @@ describe(`COMPONENT_GEOLOCATION EMPTY RECORD FIRST-VALUE CREATION`, function() {
 
 
 
-// NAVIGATION IS NOT DATA ENTRY
-// Panning/zooming is how the operator LOOKS at the map. On a record that stores
-// nothing it must write NOTHING: no current_value, no dirty flag, no input text
-// (the inputs are the VALUE fields — fn_click_add_point reads them, so a
-// camera-filled input would launder the camera into the record one click later).
-// On a record that already HAS a value (a coordinate pair, or drawn geometry)
-// the same move is real work: it re-frames the value and must be saveable.
+// SETTING THE VIEW IS DATA
+// lat/lon/zoom are THE VIEW — the map framing an operator chose — and they are
+// savable data, independent of any drawn feature (lib_data). Panning and zooming
+// is how the view gets set, and the input fields track it live because reading
+// the coordinates while moving the map is how an operator approximates a
+// position. So a gesture CREATES the view on an empty record, marks the
+// component dirty, and the save button commits it.
 //
-// The defect this pins had NO gate: with the Valencia sentinel deleted, one
-// click of Leaflet's '+' control on an empty record stored the world-view
-// centre — a coordinate in the Atlantic that nothing downstream can recognise
-// as fabricated. Mechanism: update_input_values takes an explicit `intent`
-// (default 'navigation', the safe side) and refuses unless fn_has_value; plus
-// self.camera_is_moving, which makes the component's own move_camera moves inert.
-describe(`COMPONENT_GEOLOCATION NAVIGATION IS NOT DATA ENTRY`, function() {
+// The defect this suite pins is the refusal that used to sit here: a previous
+// revision classified pan/zoom as "navigation, not data entry" and refused to
+// write from it, so on a record with no stored value the view could never be
+// created and the save button logged "the record has no value to send". The
+// intent parameter and its guard are deleted.
+//
+// What still stops a FABRICATED value, and is asserted below:
+//  a) rendering/opening a record seeds nothing — an untouched record yields null
+//     from build_changed_data_item;
+//  b) a gesture only marks dirty, it never commits;
+//  c) the component's OWN camera moves (move_camera / fit_camera_to_geometry)
+//     run under camera_is_moving and write nothing at all.
+describe(`COMPONENT_GEOLOCATION SETTING THE VIEW IS DATA`, function() {
 
 	this.timeout(20000);
 
@@ -935,9 +942,33 @@ describe(`COMPONENT_GEOLOCATION NAVIGATION IS NOT DATA ENTRY`, function() {
 
 
 
-	it(`a map ZOOM on an empty record creates NO value`, async function() {
+	it(`an UNTOUCHED record still stores nothing`, async function() {
 
-		const { instance, node } = await build_mapped_instance('nav_zoom_empty')
+		// (a): rendering the component and creating the map is not the operator
+		// acting. No gesture ran, so no entry exists and there is nothing to send.
+		// Map creation and the lazy init must not fire an UNMASKED dragend/zoomend
+		// either — that is what this settle window checks.
+		const { instance, node } = await build_mapped_instance('view_untouched')
+
+		await settle()
+
+		assert.isUndefined(instance.current_value[0], 'current_value[0] expected undefined on an untouched record')
+		assert.notStrictEqual(instance.is_data_changed, true, 'is_data_changed expected not true without a gesture')
+		assert.isNull(instance.build_changed_data_item(0), 'build_changed_data_item expected null on an untouched record')
+		assert.equal(node.querySelector('.geo_active_input.lat').value, '', 'lat input expected blank')
+		assert.equal(node.querySelector('.geo_active_input.lon').value, '', 'lon input expected blank')
+		assert.equal(node.querySelector('.geo_active_input.zoom').value, '', 'zoom input expected blank')
+
+		await teardown(instance)
+	});
+
+
+
+	it(`a map ZOOM on an empty record CREATES the view`, async function() {
+
+		// THE REPORTED BUG: this used to be refused, so a record with no stored
+		// value could never save the framing an operator set by hand.
+		const { instance, node } = await build_mapped_instance('view_zoom_empty')
 
 		assert.isUndefined(instance.current_value[0], 'precondition: no value')
 
@@ -947,40 +978,72 @@ describe(`COMPONENT_GEOLOCATION NAVIGATION IS NOT DATA ENTRY`, function() {
 		// headless container swallowed the animated one
 		instance.map.fire('zoomend')
 
-		assert.isUndefined(instance.current_value[0], 'current_value[0] expected STILL undefined after a zoom')
-		assert.notStrictEqual(instance.is_data_changed, true, 'is_data_changed expected not true after a zoom')
-		assert.isNull(instance.build_changed_data_item(0), 'build_changed_data_item expected null after a zoom')
-		assert.equal(node.querySelector('.geo_active_input.lat').value, '', 'lat input expected still blank')
-		assert.equal(node.querySelector('.geo_active_input.lon').value, '', 'lon input expected still blank')
-		assert.equal(node.querySelector('.geo_active_input.zoom').value, '', 'zoom input expected still blank')
+		assert.isOk(instance.current_value[0], 'current_value[0] expected CREATED by the zoom')
+		assert.strictEqual(instance.current_value[0].zoom, instance.map.getZoom(), 'zoom expected taken from the map')
+		assert.closeTo(instance.current_value[0].lat, instance.map.getCenter().lat, 0.0001, 'lat expected taken from the map centre')
+		assert.closeTo(instance.current_value[0].lon, instance.map.getCenter().lng, 0.0001, 'lon expected taken from the map centre')
+		assert.isTrue(instance.is_data_changed, 'is_data_changed expected true: setting the view is real work')
+
+		// and it is savable: both save-button gates now pass
+		const changed_data_item = instance.build_changed_data_item(0)
+		assert.isNotNull(changed_data_item, 'build_changed_data_item expected non-null after a zoom')
+		assert.closeTo(changed_data_item.value.lat, instance.map.getCenter().lat, 0.0001, 'the sent value expected to carry the view')
+
+		// the inputs TRACK the map live — that readout is the point of the gesture
+		assert.equal(parseFloat(node.querySelector('.geo_active_input.zoom').value), instance.map.getZoom(), 'zoom input expected updated')
+		assert.closeTo(parseFloat(node.querySelector('.geo_active_input.lat').value), instance.map.getCenter().lat, 0.0001, 'lat input expected updated')
+
+		// (b) nothing auto-saved: only the save button commits
+		assert.isOk(Array.isArray(instance.data.changed_data)===false || instance.data.changed_data.length===0, 'no changed_data expected: a gesture does not commit')
 
 		await teardown(instance)
 	});
 
 
 
-	it(`a map DRAG on an empty record creates NO value`, async function() {
+	it(`a map DRAG on an empty record CREATES the view`, async function() {
 
-		const { instance, node } = await build_mapped_instance('nav_drag_empty')
+		const { instance, node } = await build_mapped_instance('view_drag_empty')
 
 		instance.map.panBy([120, 90], {animate:false})
 		instance.map.fire('dragend')
 		await settle()
 
-		assert.isUndefined(instance.current_value[0], 'current_value[0] expected STILL undefined after a drag')
-		assert.notStrictEqual(instance.is_data_changed, true, 'is_data_changed expected not true after a drag')
-		assert.isNull(instance.build_changed_data_item(0), 'build_changed_data_item expected null after a drag')
-		assert.equal(node.querySelector('.geo_active_input.lat').value, '', 'lat input expected still blank')
+		assert.isOk(instance.current_value[0], 'current_value[0] expected CREATED by the drag')
+		assert.closeTo(instance.current_value[0].lat, instance.map.getCenter().lat, 0.0001, 'lat expected taken from the map centre')
+		assert.isTrue(instance.is_data_changed, 'is_data_changed expected true after a drag')
+		assert.isNotNull(instance.build_changed_data_item(0), 'build_changed_data_item expected non-null after a drag')
+		assert.closeTo(parseFloat(node.querySelector('.geo_active_input.lat').value), instance.map.getCenter().lat, 0.0001, 'lat input expected updated')
 
 		await teardown(instance)
 	});
 
 
 
-	it(`a map zoom on a record that HAS a coordinate UPDATES the framing`, async function() {
+	it(`a PROGRAMMATIC move writes nothing (camera_is_moving)`, async function() {
 
-		// the negative twin: the guard must not be "fixed" by disabling the sync
-		const { instance, node } = await build_mapped_instance('nav_zoom_valued')
+		// (c): move_camera is the component's own door, not the operator's. Its
+		// dragend/zoomend feedback is masked, so it can neither create a view on
+		// an empty record nor overwrite one with Leaflet's rounded centre.
+		const { instance } = await build_mapped_instance('view_programmatic_move')
+
+		instance.move_camera(41.6523, -4.7245, 9)
+		await settle()
+
+		assert.isUndefined(instance.current_value[0], 'current_value[0] expected STILL undefined after a programmatic move')
+		assert.notStrictEqual(instance.is_data_changed, true, 'is_data_changed expected not true after a programmatic move')
+		assert.isNull(instance.build_changed_data_item(0), 'build_changed_data_item expected null after a programmatic move')
+		assert.isFalse(instance.camera_is_moving, 'camera_is_moving expected lowered after the move')
+
+		await teardown(instance)
+	});
+
+
+
+	it(`a map zoom on a record that HAS a coordinate UPDATES the view`, async function() {
+
+		// the live readout on a populated record: the same gesture, same law
+		const { instance, node } = await build_mapped_instance('view_zoom_valued')
 
 		instance.handle_coord_change(0, 'lat', 41.6523)
 		instance.handle_coord_change(0, 'lon', -4.7245)
@@ -1001,67 +1064,50 @@ describe(`COMPONENT_GEOLOCATION NAVIGATION IS NOT DATA ENTRY`, function() {
 
 
 
-	it(`a map zoom on a GEOMETRY-ONLY record updates the framing; an empty layer husk does not`, async function() {
+	it(`a map zoom on a record that carries FEATURES sets the view and leaves them alone`, async function() {
 
-		const { instance } = await build_mapped_instance('nav_zoom_geometry')
+		// the view and the features are INDEPENDENT: the gesture writes lat/lon/
+		// zoom and does not touch, derive from, or drop lib_data.
+		const { instance } = await build_mapped_instance('view_zoom_features')
 
-		// the owner's drawn-geometry rule: framing a drawn shape IS the work
-		instance.current_value[0] = {
-			lib_data : [{
-				layer_id	: instance.active_layer_id,
-				layer_data	: { type:'FeatureCollection', features:[{
-					type		: 'Feature',
-					properties	: {},
-					geometry	: { type:'Point', coordinates:[3.14754, 41.858199] }
-				}]}
-			}]
-		}
+		const lib_data = [{
+			layer_id	: instance.active_layer_id,
+			layer_data	: { type:'FeatureCollection', features:[{
+				type		: 'Feature',
+				properties	: {},
+				geometry	: { type:'Point', coordinates:[3.14754, 41.858199] }
+			}]}
+		}]
+		instance.current_value[0] = { lib_data : lib_data }
 		instance.is_data_changed = false
 
 		instance.map.setZoom(7)
 		instance.map.fire('zoomend')
 		await settle()
 
-		assert.isOk(Number.isFinite(instance.current_value[0].lat), 'lat expected written as framing for drawn geometry')
-		assert.isTrue(instance.is_data_changed, 'is_data_changed expected true for a geometry-bearing record')
+		assert.isOk(Number.isFinite(instance.current_value[0].lat), 'lat expected written as the view')
+		assert.strictEqual(instance.current_value[0].zoom, instance.map.getZoom(), 'zoom expected the map zoom')
+		assert.isTrue(instance.is_data_changed, 'is_data_changed expected true')
+		assert.deepEqual(instance.current_value[0].lib_data, lib_data, 'the drawn features expected untouched by a view change')
 
-		// the husk: a layer with an EMPTY FeatureCollection is a container, not geometry
-		const husk_instance = (await build_mapped_instance('nav_zoom_husk')).instance
-		husk_instance.current_value[0] = {
-			lib_data : [{
-				layer_id	: husk_instance.active_layer_id,
-				layer_data	: { type:'FeatureCollection', features:[] }
-			}]
-		}
-		husk_instance.is_data_changed = false
-
-		husk_instance.map.setZoom(husk_instance.map.getZoom() + 1)
-		husk_instance.map.fire('zoomend')
-		await settle()
-
-		assert.isUndefined(husk_instance.current_value[0].lat, 'lat expected NOT written for an empty-layer husk')
-		assert.notStrictEqual(husk_instance.is_data_changed, true, 'is_data_changed expected not true for an empty-layer husk')
-
-		await teardown(husk_instance)
 		await teardown(instance)
 	});
 
 
 
-	it(`update_input_values DEFAULTS to navigation`, async function() {
+	it(`update_input_values writes on a plain 3-argument call`, async function() {
 
-		// pins the safe default against a future caller added without an intent
-		const { instance, map_container } = await build_mapped_instance('nav_default_intent')
+		// the intent parameter is DELETED: there is no caller that may not write.
+		// A fourth argument, if any survived somewhere, must change nothing.
+		const { instance, map_container } = await build_mapped_instance('view_no_intent_param')
 
 		const written = instance.update_input_values(0, {lat:20, lon:0, zoom:2}, map_container)
 
-		assert.isFalse(written, 'update_input_values expected to REFUSE a 3-argument call on a valueless record')
-		assert.isUndefined(instance.current_value[0], 'current_value[0] expected still undefined')
+		assert.isTrue(written, 'a 3-argument call expected to write')
+		assert.equal(instance.current_value[0].lat, 20, 'lat expected written on a record that had no value')
+		assert.isTrue(instance.is_data_changed, 'is_data_changed expected true')
 
-		// and the explicit 'entry' intent still writes
-		const written_entry = instance.update_input_values(0, {lat:41.6523, lon:-4.7245, zoom:9}, map_container, 'entry')
-		assert.isTrue(written_entry, 'an explicit entry intent expected to write')
-		assert.equal(instance.current_value[0].lat, 41.6523, 'entry lat expected written')
+		assert.strictEqual(instance.update_input_values.length, 3, 'update_input_values expected exactly three parameters (no intent switch)')
 
 		await teardown(instance)
 	});
@@ -1237,7 +1283,7 @@ describe(`COMPONENT_GEOLOCATION GEOMETRY FRAMES ITSELF`, function() {
 		)
 
 		// a real extent: the centre is neither vertex, and it matches the
-		// migration script deriveCentreFromGeometry byte-for-byte (tchi1 numbers)
+		// migration script fitViewToGeometry byte-for-byte (tchi1 numbers)
 		const line_instance = await build_empty_instance('geo_frame_view_line')
 		line_instance.data.entries = [ {id:12, lib_data:line_geometry()} ]
 		const line_view = line_instance.get_view(0)
@@ -1284,9 +1330,9 @@ describe(`COMPONENT_GEOLOCATION GEOMETRY FRAMES ITSELF`, function() {
 
 	it(`fitBounds does not feed itself back as data`, async function() {
 
-		// fn_has_value is TRUE on a geometry record, so the navigation guard alone
-		// would let the fitted centre write through. camera_is_moving is what makes
-		// the component own move inert — it must be raised for the whole fit.
+		// a fit is the component's OWN move, not the operator's, so it must write
+		// nothing. camera_is_moving is what makes it inert, and it must be raised
+		// for the whole fit.
 		const { instance } = await build_stored_instance('geo_frame_no_feedback', {id:14, lib_data:line_geometry()})
 
 		// move away first, through the component own guarded door, so the fit
@@ -1402,14 +1448,14 @@ describe(`COMPONENT_GEOLOCATION GEOMETRY FRAMES ITSELF`, function() {
 
 		// absence, in all three flavours the callers actually produce
 		assert.isTrue(
-			instance.update_input_values(0, {lat:undefined, lon:null, zoom:undefined}, map_container, 'entry'),
-			'an entry call expected to write'
+			instance.update_input_values(0, {lat:undefined, lon:null, zoom:undefined}, map_container),
+			'the call expected to write'
 		)
 		assert.deepEqual([lat_node.value, lon_node.value, zoom_node.value], ['', '', ''], 'absence expected rendered EMPTY')
 		assert.notStrictEqual(instance.current_value[0].lat, '', 'the BUFFER expected to keep the raw absence, not an empty string')
 
 		// 0 is a value, not absence
-		instance.update_input_values(0, {lat:0, lon:0, zoom:0}, map_container, 'entry')
+		instance.update_input_values(0, {lat:0, lon:0, zoom:0}, map_container)
 		assert.deepEqual([lat_node.value, lon_node.value, zoom_node.value], ['0', '0', '0'], '0 expected rendered as 0')
 		assert.strictEqual(instance.current_value[0].lat, 0, '0 expected kept in the buffer')
 

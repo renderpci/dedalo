@@ -790,11 +790,18 @@ describe('parser_geo::geojson', () => {
 		]);
 	});
 
-	test('NO sentinel: the ex-factory Valencia pair is an ordinary coordinate', () => {
-		// The magic pair 39.462571/-0.376295 used to mean "no location set".
-		// The law is now structural: a stored coordinate publishes, always.
-		const out = run('parser_geo::geojson', [json([{ lat: '39.462571', lon: '-0.376295' }])]);
-		expect(JSON.stringify(strip(out))).toContain('"coordinates":[-0.376295,39.462571]');
+	test('the STUDIO DEFAULT never publishes — it is fabricated, not a position', () => {
+		// 39.462571/-0.376295 is the Dédalo facilities' own coordinates, shipped as
+		// the client's factory map position and written on save by the v6 client
+		// whether or not anyone touched the map. Refused here and in the other two
+		// publication paths; an ordinary coordinate everywhere else.
+		expect(run('parser_geo::geojson', [json([{ lat: '39.462571', lon: '-0.376295' }])])).toEqual(
+			[],
+		);
+		expect(run('parser_geo::geojson', [json([{ lat: 39.462571, lon: -0.376295 }])])).toEqual([]);
+		// one axis off is a real coordinate and publishes
+		const real = run('parser_geo::geojson', [json([{ lat: '39.462571', lon: '2.173403' }])]);
+		expect(JSON.stringify(strip(real))).toContain('"coordinates":[2.173403,39.462571]');
 	});
 
 	test('0 is a legal coordinate: [0,0], the equator and the prime meridian publish', () => {

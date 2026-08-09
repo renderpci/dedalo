@@ -1,12 +1,20 @@
 # WC-2026-08-08-geolocation-emptiness-explicit — geolocation absence is structural: the Valencia sentinel is retired and the opening camera becomes `features.default_view`
 
-> **(!) PARTLY SUPERSEDED — read the `## Addendum 2026-08-09` at the end before
-> acting on this entry.** The body below is the divergence as ADOPTED on
-> 2026-08-08 and is kept verbatim (amendment rule, `engineering/WIRE_CONTRACT.md`).
-> The addendum supersedes its migration policy (§Operational constraint: the
-> repair DERIVES, it does not hold), corrects its `default_view` validity and
-> gate-reconciliation clauses, and adds three further divergences that did not
-> exist when it was written.
+> **(!) READ THE LAST ADDENDUM FIRST — `## Addendum 2026-08-09 (second) — the
+> settled model` at the end of this file. It is the current law.** Everything
+> above it is kept verbatim as the historical record (amendment rule,
+> `engineering/WIRE_CONTRACT.md`), and parts of it are DEAD.
+>
+> The h1 title above is itself superseded: **the sentinel was never retired from
+> publication.** Publication refuses the studio-default pair, deliberately, and
+> that is the standing law. What changed is that the pair stopped being magic
+> everywhere ELSE in the engine.
+>
+> Dead on sight, wherever you meet them below: **"geometry wins" / divergence
+> (c)** (reverted — the view publishes as stored), the **ENGINE-AUTHORED
+> COORDINATE** section and its owner-approved exception (a view computed from
+> the features is not an authored location), and every mention of an **accidental
+> true positive** or a **place-name flag** (deleted machinery, not repaired).
 
 - **Date:** 2026-08-08.
 - **Decision:** — (geolocation emptiness law; DEC-12 gates:
@@ -176,7 +184,13 @@ restored.
 
 ---
 
-## Addendum 2026-08-09 — geometry WINS over the stored centre, the repair DERIVES a coordinate, the import door, and commit C's ship precondition
+## Addendum 2026-08-09 (first) — geometry WINS over the stored centre, the repair DERIVES a coordinate, the import door, and commit C's ship precondition
+
+> **(!) PARTLY DEAD.** Its divergence (c) was REVERTED and its
+> *ENGINE-AUTHORED COORDINATE* section is withdrawn — see the second addendum
+> below, which is the current law. Its divergences (d) IMPORT DOOR and
+> (e) MONOVALUE, and its corrections to the body's `default_view` and
+> gate-reconciliation clauses, stand unchanged.
 
 Adopted 2026-08-09, three closing passes into the same change. The body above is
 unchanged; this section is what supersedes it and what it did not yet cover.
@@ -409,9 +423,9 @@ divergence in this addendum is proven TS-side:
   Coordinate parsing/range: `test/unit/geo_coordinate.test.ts`.
 - **(e)** `test/unit/save_component_geolocation_item_id.test.ts` — two saves
   leave ONE item, multi-value models still append.
-- **the repair** — `test/unit/geolocation_sentinel_repair.test.ts` (predicates,
+- **the repair** — `test/unit/geolocation_studio_default_repair.test.ts` (predicates,
   the derived centre, the FLAGGED predicate) and
-  `test/unit/geolocation_sentinel_repair_apply.test.ts` (the destructive half on
+  `test/unit/geolocation_studio_default_repair_apply.test.ts` (the destructive half on
   a scratch surface: the CLEAR, the TM row, the DERIVE write, the re-adjudicate-
   under-lock refusals, the CLI refusals, and `APPLY_ADJUDICATED` pinned to
   `['matrix', 'matrix_hierarchy']` with a provenance block required per entry).
@@ -419,3 +433,155 @@ divergence in this addendum is proven TS-side:
   (the by-name lift described above) plus the native
   `test/unit/structure_context_geolocation_features.test.ts`, which owns the
   `default_view` validity law including the numeric-string and range clauses.
+
+---
+
+## Addendum 2026-08-09 (second) — the settled model: the VIEW and the FEATURES are independent, and the view publishes
+
+Adopted 2026-08-09 by the project owner, after this entry described the repo
+wrongly three times. **This section is the current law.** Where it disagrees with
+anything above, it wins.
+
+### THE MODEL — say it this way everywhere
+
+`component_geolocation` stores, per item: `{id?, lat, lon, zoom, alt?, lib_data?}`.
+
+- **`lat`/`lon`/`zoom` are THE VIEW** — the map framing, and nothing more. A view
+  is NOT the position of a feature: an operator frames the space they need to
+  see, and with several points, or context drawn around one, the useful frame is
+  often nowhere near any single feature. It is manually controlled.
+- **`lib_data` holds the FEATURES** — drawn geometry.
+- **The two are INDEPENDENT.** Features do not determine the view, and the view
+  asserts no feature.
+- **`alt` is real data** some installs use. It is never deleted, except as part
+  of removing a default-only item.
+
+The operator loop the code serves: panning/zooming changes the VIEW and the
+lat/lon/zoom inputs track it LIVE (that readout is how an operator approximates
+a position and sanity-checks bad manual data); the `map_point` button reads those
+inputs and CREATES A FEATURE. Gesture changes the view, button creates a feature,
+and **both are savable**.
+
+### What is DEAD in the sections above
+
+| clause | status |
+| --- | --- |
+| **Divergence (c) — GEOMETRY WINS in the standalone publication path** (first addendum) | **REVERTED, do not restore.** `lat`/`lon` are NOT dropped when the item carries features. The view publishes as stored; publication has read it since the first implementation and for many records it is the only positional data that exists. The revision that dropped it changed published bytes and was backed out. |
+| **The ENGINE-AUTHORED COORDINATE** section + the "ONE narrow exception", the owner-approved-exception framing and its three-place disclosure (first addendum) | **WITHDRAWN.** Computing a view from the item's own features is not authoring a location — it is what a view is for. There is no engine-authored-coordinate exception anywhere in this engine. The repair's verdict is now `FIT_VIEW` (`fitViewToGeometry`), and the `tchi1/113` "false location claim ~400 km away" rationale goes with it. |
+| **"There is NO accidental true positive"** as a *clause about place names*, and the **place-name flag** recorded as "still present in the script" (first addendum) | **DEAD MACHINERY, DELETED not repaired.** The premise stands and needs no defence: the pair is a factory default, not a place, so a record merely NAMED after the studio's city holds a fabricated view like any other. `SENTINEL_PLACE_NAMES`, `foldPlaceName`, `namesSentinelPlace`, `flaggedUnits`, the FLAGGED report sections and the `string::text` read that fed them are gone from `scripts/repair_geolocation_studio_default.ts`; a source-scanning tripwire in `test/unit/geolocation_studio_default_repair.test.ts` fails if any of them reappears. The repair no longer reads record text at all. |
+| the h1 title's **"the Valencia sentinel is retired"**, and the body's **"There is no sentinel coordinate anywhere in the engine"** / "`39.462571 / -0.376295` is now an ordinary coordinate and publishes as the point it is" | **CORRECTED.** The pair was never retired from publication. See *The publication law* below: it is refused at the publication door, and is an ordinary coordinate everywhere else. |
+| the body's **§Operational constraint** and the first addendum's **SHIP-ORDER PRECONDITION for commit C** | **MOOT as a blocker.** There is no guard-removal commit to sequence: the publication refusal is permanent law, not a temporary shim. The repair still runs on both stores (`matrix`, `matrix_hierarchy`) because a fabricated view is fabricated data — but publication is safe before, during and after it. |
+
+### The publication law — CURRENT, and it is not a temporary state
+
+Single definition: `isStudioDefault()` in `src/core/concepts/geo_coordinate.ts`.
+Read at the publication door ONLY.
+
+1. **The VIEW publishes, as stored.** `lat`/`lon`/`zoom` go out whether or not
+   the item also carries features. Nothing is dropped, reordered or reshaped.
+2. **The STUDIO DEFAULT (`lat 39.462571 / lon -0.376295`) never publishes.**
+   Those are the Dédalo facilities' own coordinates, shipped as the client's
+   factory map position; the v6 client wrote them on save whether or not anyone
+   touched the map, so an item holding exactly that pair is fabricated. It is
+   withheld at this one door and nowhere else.
+3. **An item whose view is the default but which carries real features still
+   publishes the features** — only the fabricated pair is withheld
+   (`src/diffusion/resolve/default_value.ts` emits the atom without `lat`/`lon`
+   in that case; every other key is verbatim).
+4. **`0` is a REAL coordinate** and publishes. **Absence is structural**:
+   `null` / `undefined` / `''` / blank / unparseable text publishes nothing, and
+   a missing axis is never completed with a zero.
+5. **Everywhere OTHER than this door the studio-default pair is an ordinary
+   coordinate** — stored, edited, searched and migrated like any other.
+
+The three paths that carry it: `src/diffusion/parsers/parser_misc.ts`
+(`parser_geo::geojson`), `src/diffusion/resolve/ddo_fns.ts`
+(`geojsonPointFallbackLayers` / `buildGeojsonLayers`) and
+`src/diffusion/resolve/default_value.ts` (the standalone atom).
+
+### PUBLISHED BYTES CHANGE — `0` on the equator and the prime meridian
+
+Stated plainly because it is the one clause here that moves the wire for records
+that already exist:
+
+**Before**, the guards were falsy-based (`!$geoObj->lat`, `!empty()`), so a
+stored `lat: 0` or `lon: 0` was read as emptiness and the record published NO
+position — while `lon: ''`/`null` was coerced to the literal `0` and published a
+point on the prime meridian that nobody entered.
+
+**Now**, `0` and `'0'` parse as the coordinates they are and publish; absence
+publishes nothing and is never completed with a zero. So a record on the equator
+or the prime meridian that published nothing yesterday publishes a position
+today, and a record with a blank axis that published an invented `0` stops doing
+so. **This is deliberate**, it needs no per-install decision, and it is the
+whole point of making absence structural: a Cultural Heritage engine cannot have
+a place on earth it is unable to record.
+
+Known-open consequence on the install measured for this work: the `es1`
+`hierarchy31` **zero cluster** (Spanish toponyms stored at `0/0`) is fabricated
+data that this law certifies as real and therefore publishes. It is a curatorial
+data question, deliberately NOT folded into the studio-default predicate, and it
+is ledgered as a known-open gap (`rewrite/LEDGER.md`).
+
+### The repair, and the v6 migration — what they actually do
+
+Both sides converged on the same vocabulary independently.
+
+- `scripts/repair_geolocation_studio_default.ts` (v7, `--table` + `--user`
+  mandatory, dry-run by default, `--apply` refused on any table not adjudicated
+  in writing) adjudicates a component's WHOLE item list into one of three
+  verdicts — `CLEAR`, `FIT_VIEW`, `HOLD` — plus "no verdict" for anything it does
+  not recognise:
+  **default-only item → `CLEAR`**, the item removed entire (`alt` included — a
+  default-only item is fabricated in its entirety); **default view + features →
+  `FIT_VIEW`**, the view rewritten to the bbox centre of every feature across the
+  item's `lib_data` layers, with features, `zoom`, `alt`, `id` and every other key
+  untouched (for a single drawn Point the fitted view IS that point, verbatim and
+  unrounded when min equals max); **anything else → UNTOUCHED**.
+  `HOLD` has TWO reasons, and the first is easy to miss:
+  · `MIXED` — a default-only item sharing the component with any other item. The
+    write is `updateMatrixKeysData` on the component's key, which is
+    all-or-nothing, so removing one item of several is not expressible: the whole
+    component is left alone. **A multi-item install therefore sees a no-op on
+    exactly the records the sweep exists for**, reported as HELD, and needs a
+    different tool or a curatorial decision.
+  · `NO_POSITION` — features from which no coordinate can be extracted; the view
+    is never guessed.
+- The **v6 migration** (`close_v6_prepare_v7`) does the same and nothing more,
+  reporting `GEOLOCATION_DEFAULT_ITEM_REMOVED`,
+  `GEOLOCATION_VIEW_FITTED_TO_GEOMETRY`, `GEOLOCATION_DEFAULT_ITEM_MIXED` and
+  `GEOLOCATION_GEOMETRY_NO_POSITION` (API: `STUDIO_DEFAULT_LAT/LON`,
+  `is_studio_default_view`, `fit_view_to_geometry`). A 27-case offline
+  differential across both sides agrees 27/27, lat/lon order included.
+- **History is never repaired.** The Time Machine pass rewrites nothing; a TM row
+  whose payload is ONLY the default view is DELETED, and a row carrying features
+  or a real coordinate is kept.
+
+Neither side is reversible; assume there is nothing to restore from. Neither
+stamps `dd197`/`dd201` — a mechanical sweep is not an edit.
+
+### Gate reconciliation (second addendum)
+
+**Still no fixture re-harvest, and none is possible (DEC-14b).** The frozen store
+holds no studio-default geolocation fixture and no geometry-bearing fixture on
+the standalone atom path, so no replayed response changes. TS-side:
+
+- `test/unit/diffusion_geo_precedence.test.ts` — the three-path agreement gate,
+  now asserting that the VIEW SURVIVES beside features and that only the studio
+  default is withheld.
+- `test/unit/geo_coordinate.test.ts` — the parse/range law, `0` included.
+- `test/unit/diffusion_parsers.test.ts`, `test/unit/diffusion_ddo_fns.test.ts` —
+  the other two publication paths against the same table.
+- `test/unit/geolocation_studio_default_repair.test.ts` (predicates, the fitted
+  view, `alt`, and the source-scanning tripwire that keeps the place-name
+  machinery deleted) + `test/unit/geolocation_studio_default_repair_apply.test.ts`
+  (the destructive half on a scratch surface). Both files were RENAMED with the
+  script; the first addendum's `geolocation_sentinel_repair*` names are dead.
+- `test/parity/component_geolocation_features_differential.test.ts` +
+  `test/unit/structure_context_geolocation_features.test.ts` — the context half,
+  unchanged by this addendum.
+- The client half: `COMPONENT_GEOLOCATION SETTING THE VIEW IS DATA` in
+  `client/dedalo/test/client/js/test_component_geolocation.js` (9 cases). The
+  old "NAVIGATION IS NOT DATA ENTRY" suite and the `update_input_values` intent
+  guard it defended are deleted: a gesture that changes the view is the operator
+  acting, and it is savable.

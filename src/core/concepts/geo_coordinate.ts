@@ -75,3 +75,25 @@ export function isCoordinateInRange(raw: unknown, axis: CoordinateAxis): boolean
 	const limit = AXIS_LIMIT[axis];
 	return value >= -limit && value <= limit;
 }
+
+/**
+ * The STUDIO DEFAULT — the coordinates of the Dédalo facilities, shipped as the
+ * client's factory map position.
+ *
+ * Until the client was fixed, the edit view seeded this pair into the record at
+ * render and the save button asked no questions, so merely opening a record and
+ * saving stored a position nobody chose. An item holding EXACTLY this pair is
+ * therefore fabricated: nobody hand-places a map on the studio to six decimals,
+ * and a genuinely positioned record carries its own coordinates.
+ *
+ * The pair is not magic anywhere else — it is an ordinary coordinate, stored and
+ * edited like any other. It is refused at ONE door only: publication never emits
+ * a fabricated position to a consumer.
+ */
+const STUDIO_DEFAULT_LAT = 39.462571;
+const STUDIO_DEFAULT_LON = -0.376295;
+
+/** True when the pair is exactly the studio default. Publication refuses it. */
+export function isStudioDefault(lat: number, lon: number): boolean {
+	return lat === STUDIO_DEFAULT_LAT && lon === STUDIO_DEFAULT_LON;
+}

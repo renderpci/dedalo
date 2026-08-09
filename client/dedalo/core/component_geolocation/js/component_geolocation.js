@@ -18,36 +18,42 @@
 * - Keeping `current_value` in sync with the map view and geometry edits so the
 *   save button always commits the most recent state.
 *
-* (!) CAMERA vs VALUE — the load-bearing distinction of this component.
-* The position the map OPENS at (`self.default_view`, the camera) and the position
-* the record STORES (`data.entries[key]` / `current_value[key]`, the value) are
-* different things. The camera is view-only and is NEVER written. Absence is
-* structural: no entry means no coordinate, the inputs render empty and the save
-* button sends nothing. A record only acquires a value on an EXPLICIT act of data
-* entry: typing a coordinate, clicking add-point, drawing geometry, inserting a
-* geo-tag, or an observer copying a caller's coordinates.
+* (!) THE MODEL — the view and the features are INDEPENDENT.
+* An entry stores `{id?, lat, lon, zoom, alt?, lib_data?}`, and those are two
+* separate things:
+*   · `lat`/`lon`/`zoom` are THE VIEW — the map framing, and nothing else. The
+*     view is NOT the position of a feature: an operator frames the space they
+*     need to see, and with several points, or with context drawn around one,
+*     the useful frame is often nowhere near any single feature. So they need
+*     manual control of it.
+*   · `lib_data` holds the FEATURES — the drawn geometry.
+* Features do not determine the view and the view does not assert a feature.
+* `alt` is real data some installs use and is never dropped.
 *
-* (!) NAVIGATION IS NOT DATA ENTRY. Panning and zooming move the camera and
-* nothing else. On a record that has no coordinate and no drawn geometry they
-* create NO value: `update_input_values` takes an explicit `intent` and refuses
-* the write (see its header). Without that refusal the camera centre — the world
-* view — became a saveable coordinate on any map interaction, which is the
-* Valencia sentinel defect relocated, and worse: a fabricated {20,0} is
-* indistinguishable downstream from an operator-entered coordinate.
-* On a record that DOES hold a value — a coordinate, or drawn geometry — the same
-* pan or zoom updates lat/lon, and that is framing, not fabrication: publication
-* reads the GEOMETRY as the location of a record that has one, so the stored
-* centre of a geometry record is where the drawing is displayed from, never an
-* asserted location (see fn_has_value). Framing is still never auto-saved: the
-* component is only marked dirty, and only an explicit save commits it.
-* A second guard, `self.camera_is_moving`, covers the component's OWN camera
-* moves: `move_camera` is the single door and it suppresses the map's event
-* feedback, so a programmatic setView can never write Leaflet's pixel-rounded
-* centre over the exact value the user just typed or the observer just borrowed.
-* Before this rule the view seeded `current_value[0]` at render time, so merely
-* opening a record and pressing save stored a fabricated coordinate — which the
-* diffusion parsers then had to recognise as a magic "no location" sentinel.
-* No magic coordinate exists anywhere any more; 0 is a legal coordinate.
+* (!) HOW AN OPERATOR WORKS, and what the code must therefore allow.
+* Panning and zooming changes the VIEW, freely, and the lat/lon/zoom INPUT
+* FIELDS TRACK IT LIVE — that live readout is load-bearing: moving the map and
+* reading the coordinates is how an operator approximates a position and how
+* they sanity-check bad manual data. The `map_point` button in the map_inputs
+* row then reads those inputs and CREATES A FEATURE. So a gesture changes the
+* view, the button creates a feature; both are the operator acting and BOTH ARE
+* SAVABLE. An earlier revision called pan/zoom "navigation, not data entry" and
+* refused to write from it, which left the component unable to save the view on
+* a record that had none ("Ignored geolocation save: the record has no value to
+* send"). That refusal is deleted.
+*
+* What stops a FABRICATED value is not a restriction on gestures, it is these
+* three, and they are the ones to keep:
+*   1. the view NEVER seeds current_value at render — the original defect was
+*      that merely opening a record gave it a value;
+*   2. nothing auto-saves — a gesture only marks the component dirty, and only
+*      an explicit click of the save button commits it;
+*   3. `self.camera_is_moving` masks the component's OWN camera moves, so a
+*      programmatic setView never feeds Leaflet's pixel-rounded centre back over
+*      a value the user typed or an observer borrowed.
+* Together: an untouched record still stores NOTHING — no gesture ran, so no
+* entry was ever created, current_value stays absent and the save button sends
+* nothing. 0 is a legal coordinate; there is no magic sentinel anywhere.
 * - Bridging with linked `component_text_area` instances through `event_manager`
 *   events: inserting/removing geo-tags triggers `load_tag_into_geo_editor` /
 *   `handle_click_no_tag`, while geometry edits publish `updated_layer_data_<id_base>`.
@@ -160,65 +166,6 @@ const fn_finite_number = function(value) {
 }//end fn_finite_number
 
 /**
-* FN_HAS_DRAWN_GEOMETRY
-* True when a stored/in-memory entry carries at least one drawn feature.
-*
-* Used by the navigation guard: framing (lat/lon/zoom from the camera) is real
-* user work for a record whose value is a drawn shape — the map position is how
-* that work is displayed — but it is NOT a location claim for a record that
-* holds nothing. A layer with an empty (or absent) FeatureCollection is not
-* geometry; it is an empty container.
-*
-* @param {*} lib_data - The entry's `lib_data` array, or anything else.
-* @returns {boolean}
-*/
-const fn_has_drawn_geometry = function(lib_data) {
-
-	if (!Array.isArray(lib_data)) {
-		return false
-	}
-
-	return lib_data.some(
-		(layer) => Array.isArray(layer?.layer_data?.features) && layer.layer_data.features.length > 0
-	)
-}//end fn_has_drawn_geometry
-
-/**
-* FN_HAS_VALUE
-* True when the entry is already a VALUE: a usable coordinate pair, or drawn
-* geometry. Half-typed input (a lone lat, a lone zoom) is not a value.
-*
-* (!) FRAMING, NOT A LOCATION CLAIM — why drawn geometry counts here.
-* On a record whose value is drawn geometry the stored lat/lon is the map
-* FRAMING saved alongside the work; it is NOT an asserted location. Every
-* publication path reads the GEOMETRY as the record's location when the item
-* carries `lib_data` features (src/diffusion/resolve/default_value.ts,
-* parsers/parser_misc.ts geoGeojson, resolve/ddo_fns.ts buildGeojsonLayers all
-* let lib_data win), so the centre is only where that drawing is displayed
-* from. Re-framing your own drawing is therefore real curatorial work and MUST
-* be storable: a pan or a zoom on a geometry record updates lat/lon and that is
-* correct, not a fabricated coordinate, because nothing downstream reads it as
-* a coordinate claim.
-* On a record with NO geometry and NO coordinate there is nothing to frame, so
-* navigation writes nothing at all (update_input_values refuses it).
-* Framing is never auto-saved either way: update_input_values only marks the
-* component dirty — only an explicit click of the save button commits it.
-*
-* @param {Object|null|undefined} entry - current_value[key] or a stored entry.
-* @returns {boolean}
-*/
-const fn_has_value = function(entry) {
-
-	if (entry===null || entry===undefined) {
-		return false
-	}
-
-	const has_coordinates = fn_finite_number(entry.lat)!==null && fn_finite_number(entry.lon)!==null
-
-	return has_coordinates || fn_has_drawn_geometry(entry.lib_data)
-}//end fn_has_value
-
-/**
 * FN_COLLECT_POSITIONS
 * Flattens any GeoJSON `coordinates` member into a list of `[lon, lat]` pairs,
 * whatever its nesting depth (Point, LineString, Polygon rings, Multi*).
@@ -295,7 +242,7 @@ const fn_geometry_positions = function(lib_data) {
 *
 * (!) This is CAMERA maths only: it tells the map where to look, and nothing
 * computed here is ever stored. It mirrors the migration's server-side
-* deriveCentreFromGeometry rule (scripts/repair_geolocation_sentinel.ts) so a
+* fitViewToGeometry rule (scripts/repair_geolocation_studio_default.ts) so a
 * geometry record is framed the same way on both sides.
 *
 * @param {*} lib_data - The entry's `lib_data` array, or anything else.
@@ -329,7 +276,7 @@ const fn_geometry_bounds = function(lib_data) {
 * Centre of a bounds pair. Rounded to 6 decimals (≈0.1 m, the precision the
 * component stores) EXCEPT when the extent is degenerate on an axis — a single
 * drawn point is returned verbatim, exactly as drawn, never re-rounded. Same
-* rule as the migration's deriveCentreFromGeometry.
+* rule as the migration's fitViewToGeometry.
 *
 * @param {Array} bounds - `[[min_lat, min_lon], [max_lat, max_lon]]`.
 * @returns {Object} `{lat, lon}`.
@@ -653,9 +600,15 @@ component_geolocation.prototype.get_stored_entry = function(key) {
 * — that is the normal shape of a shape drawn without typing a coordinate, and of
 * an imported geometry-only cell. Opening such a record on `default_view` put the
 * operator's own drawing off-screen on the world map: it read as lost work. So the
-* camera is derived from the bbox centre of the drawn geometry. Derived here means
-* SHOWN, never stored: get_view returns a camera and nothing else writes it back
-* (fit_camera_to_geometry then fits the zoom to the same extent).
+* camera is derived from the bbox centre of the drawn geometry.
+* get_view only COMPUTES a camera — it writes nothing itself, and
+* fit_camera_to_geometry then fits the zoom to the same extent.
+* (!) That derived camera is not sealed off from the record: the first user
+* gesture syncs whatever the map is showing into the view and marks the
+* component dirty, so a pan or a zoom here can commit the fitted framing.
+* That is correct — the view IS lat/lon/zoom, and framing a record's own
+* drawing is the operator's work — but it is why nothing may write the camera
+* WITHOUT a gesture: see camera_is_moving.
 *
 * (!) zoom falls back per field: an entry can carry coordinates but no zoom.
 *
@@ -727,9 +680,9 @@ component_geolocation.prototype.get_geometry_bounds = function(key) {
 * geometry record IS the operator's chosen framing and must be obeyed as-is.
 *
 * (!) it goes through camera_is_moving, exactly like move_camera: fitBounds is
-* the component's own move and its dragend/zoomend feedback must not be read
-* back as data (fn_has_value is true on a geometry record, so the navigation
-* guard would otherwise let that write through).
+* the component's OWN move, not the operator's, so its dragend/zoomend feedback
+* must not be read back as the view. Without the mask the derived frame would be
+* written into current_value and the record would save a view nobody set.
 *
 * @param {number} key - Index into data.entries (always 0 today).
 * @returns {boolean} True when the map was fitted.
@@ -875,7 +828,9 @@ component_geolocation.prototype.load_libs = async function () {
 * Sequence:
 *  1. Lazily loads Leaflet and companion libraries via `load_libs`.
 *  2. Resolves the CAMERA through `get_view(key)` — the stored coordinates when
-*     the record has them, `default_view` otherwise. The camera is never stored.
+*     the record has them, `default_view` otherwise. Resolving a camera stores
+*     nothing by itself; only a user gesture writes the view (camera_is_moving
+*     masks the component's own moves).
 *  3. Clones the STORED entry (when there is one) into `current_value[key]` and
 *     `ar_layer_loaded` so that subsequent edits do not mutate the server-received
 *     data directly. With no stored entry both stay empty: opening a map is not
@@ -1038,12 +993,14 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		// disable tap handler, if present.
 		// if (self.map.tap) self.map.tap.disable();
 
-	// map move listeners — sync coordinate inputs and current_value after user
-	// NAVIGATION. Both are declared 'navigation': panning and zooming are how the
-	// operator LOOKS at the map, not how a coordinate is entered, so on a record
-	// with no value they must write nothing (update_input_values enforces it).
-	// The camera_is_moving guard skips the component's own moves (move_camera) —
-	// a programmatic setView must never feed its rounded centre back as data.
+	// map move listeners — a USER pan/zoom sets the VIEW. lat/lon/zoom are the
+	// view, so the gesture writes them into current_value and into the input
+	// fields, which track the map live: reading the coordinates while moving the
+	// map is how an operator approximates a position. It marks the component
+	// dirty and nothing more — only the save button commits.
+	// The camera_is_moving guard skips the component's OWN moves (move_camera,
+	// fit_camera_to_geometry): a programmatic setView must never feed its
+	// rounded centre back over a typed or borrowed value.
 
 		const fn_camera_sync = function(){
 			if (self.camera_is_moving===true) {
@@ -1056,8 +1013,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 					lon		: self.map.getCenter().lng,
 					zoom	: self.map.getZoom()
 				},
-				map_container,
-				'navigation'
+				map_container
 			)
 		}
 
@@ -1108,55 +1064,45 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 /**
 * UPDATE_INPUT_VALUES
-* Writes new coordinate values into both the visible `<input>` fields and the
-* in-memory `current_value[key]` buffer. Called after every map drag, zoom, or
-* external coordinate update so that the inputs always reflect the map state.
+* Writes a new VIEW (lat/lon/zoom, plus the alt read back from the DOM) into
+* both the visible `<input>` fields and the in-memory `current_value[key]`
+* buffer, and marks the component dirty.
+*
+* (!) SETTING THE VIEW IS THE OPERATOR ACTING, so every caller here writes.
+* Three reach this method: a user pan/zoom (dragend/zoomend), the update_value
+* observer borrowing a caller's coordinates, and the refresh button restoring
+* the stored entry. lat/lon/zoom ARE the view — the map framing, independent of
+* any drawn feature — and panning is how a view gets set, so all three may
+* create the entry: `current_value[key]` is built on first touch below. The
+* inputs track the map live because reading the coordinates while moving is how
+* an operator approximates a position and checks bad manual data.
+* An earlier revision took an `intent` parameter and refused anything but
+* 'entry' on a record with no value; the result was a component that saved a
+* drawn marker but never the view. Both the parameter and its guard are gone.
+*
+* The component's OWN camera moves are a different matter and never reach here:
+* `move_camera` / `fit_camera_to_geometry` raise `camera_is_moving` and the map
+* handlers return early, so a programmatic setView cannot write its pixel-rounded
+* centre over the exact value a user typed or an observer borrowed.
+*
+* (!) It NEVER commits: no `set_changed_data`, no auto-save (see the disabled
+* block at the end of the body). It updates the inputs, keeps the buffer in sync
+* and sets the dirty flag; only an explicit click of the save button writes to
+* the record. An untouched record therefore still stores NOTHING — no gesture
+* ran, so no entry was ever created.
 *
 * The `alt` field is read back from the DOM rather than from `data` because
 * altitude is entered manually by the user and not emitted by Leaflet map events.
 *
-* (!) This method intentionally does NOT call `set_changed_data`. Panning and
-* zooming do not auto-save; only an explicit click of the save button commits the
-* new position to the database. See the disabled block at the end of the method
-* body for the original intent.
-*
-* (!) INTENT — the guard that keeps the camera out of the record.
-* This method is reached by two very different kinds of caller, and it cannot
-* tell them apart from the values alone (a camera centre and a typed coordinate
-* are both just numbers):
-*   'entry'      — the caller IS data entry and its values are the record's:
-*                  the update_value observer (map_update_coordinates) and the
-*                  refresh button restoring the STORED entry.
-*   'navigation' — the caller is a map move (dragend/zoomend). The values are
-*                  the CAMERA. They may only refine the framing of a value that
-*                  already exists; they may never create one.
-* So a 'navigation' call on an entry that is not yet a value (fn_has_value:
-* no coordinate pair and no drawn geometry) returns immediately — nothing
-* written, inputs untouched, dirty flag untouched. Leaving the inputs blank is
-* part of the guard: they are the VALUE fields, and add-point reads them, so a
-* camera-filled input would launder the camera into the record one click later.
-* The default is 'navigation', the safe side: a caller that has not stated that
-* it is entering data cannot fabricate a coordinate.
-*
 * @param {number} key - Index into `current_value` identifying the active entry.
-* @param {Object} data - New coordinate values: `{lat, lon, zoom, [alt]}`.
+* @param {Object} data - New view values: `{lat, lon, zoom, [alt]}`.
 * @param {HTMLElement} map_container - The map's root element; its `parentNode`
 *   is expected to contain the `input[data-name=*]` coordinate fields.
-* @param {string} [intent='navigation'] - 'entry' | 'navigation'. See above.
-* @returns {boolean} True when the values were written, false when a navigation
-*   call was refused on a valueless record.
+* @returns {boolean} Always true.
 */
-component_geolocation.prototype.update_input_values = function(key, data, map_container, intent='navigation') {
+component_geolocation.prototype.update_input_values = function(key, data, map_container) {
 
 	const self = this
-
-	// navigation guard — moving the map is not entering data
-		if (intent!=='entry' && !fn_has_value(self.current_value[key])) {
-			if (SHOW_DEBUG === true) {
-				console.log('Ignored camera move: the record has no value to frame', key)
-			}
-			return false
-		}
 
 	const content_value = map_container.parentNode
 
@@ -1188,8 +1134,9 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 
 	// set the current value — keep in-memory buffer in sync for the next save
 	// (!) create on first touch: a record with no stored value has no
-	// current_value[key] until the user acts. Only 'entry' callers reach this
-	// line with an absent entry — a camera move was already refused above.
+	// current_value[key] until the user acts. A pan or zoom IS the user acting,
+	// so it creates the entry here — that is how the view of a record that had
+	// none gets its first value.
 		self.current_value[key] = self.current_value[key] || {}
 		self.current_value[key].lat		= data.lat
 		self.current_value[key].lon		= data.lon
@@ -1199,13 +1146,10 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		self.current_value[key].alt		= (data.alt != null) ? data.alt : null
 
 	// mark dirty — the save button READS this flag (view_default_edit_geolocation
-	// fn_save). Re-framing a record that ALREADY has a value (a coordinate or a
-	// drawn shape) is real user work, so it must be saveable. On a geometry
-	// record the stored centre is FRAMING, not a location claim — publication
-	// takes the location from lib_data — so moving it is curation, not a
-	// fabricated coordinate (see fn_has_value).
+	// fn_save). Setting the view is real user work whether or not the record also
+	// carries features, so it must be saveable.
 	// (!) dirty is not saved: nothing here commits. Only an explicit click of the
-	// save button writes the new framing to the record.
+	// save button writes the new view to the record.
 	// (!) fn_refresh also routes through here and resets the flag to false right
 	// after, so restoring the DB state does not leave the component dirty.
 		self.is_data_changed = true
@@ -2286,13 +2230,11 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 			self.move_camera(view_lat, view_lon, view_zoom ?? self.map.getZoom())
 		}
 
-		// 'entry': the observer IS data entry — these are the record's values,
-		// borrowed from the caller, not a camera position.
+		// the observer's borrowed values become this record's own view
 		self.update_input_values(
 			key,
 			self.current_value[key],
-			self.node.content_data[key].map_container,
-			'entry'
+			self.node.content_data[key].map_container
 		)
 
 		// modify his own data with the new values — change_value persists the borrowed coordinates

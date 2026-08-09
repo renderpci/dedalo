@@ -22,20 +22,25 @@
 * Entry point: view_default_edit_geolocation.render() — called by
 * render_edit_component_geolocation when view is 'default', 'line', or 'print'.
 *
-* Coordinate value shape stored in self.current_value[0]:
+* Value shape stored in self.current_value[0]:
 * {
-*   lat      : {number}  - latitude   (WGS-84 decimal degrees)
-*   lon      : {number}  - longitude  (WGS-84 decimal degrees)
-*   zoom     : {number}  - Leaflet zoom level (integer 0–19)
+*   lat      : {number}  - latitude   (WGS-84 decimal degrees) ┐ THE VIEW
+*   lon      : {number}  - longitude  (WGS-84 decimal degrees) │ the map framing
+*   zoom     : {number}  - Leaflet zoom level (integer 0–19)   ┘
 *   alt      : {number}  - altitude in metres
-*   lib_data : {Array}   - Leaflet layer array managed by component_geolocation
+*   lib_data : {Array}   - THE FEATURES: drawn geometry, managed by component_geolocation
 * }
 *
-* (!) CAMERA vs VALUE. self.current_value[0] holds what the record STORES; where
-* the map opens is self.default_view (the camera) and is never stored. A record
-* with no stored geolocation renders the four inputs EMPTY and leaves
-* current_value[0] undefined — the view must fabricate nothing. The value is born
-* on the first user action; until then the save button is a no-op.
+* (!) THE VIEW AND THE FEATURES ARE INDEPENDENT. lat/lon/zoom are the framing an
+* operator chose, not the position of any feature; lib_data holds the features.
+* Both are savable data. In this view the two are set by two different controls:
+* a map gesture sets the VIEW (the inputs track it live), and the map_point
+* button reads those inputs and creates a FEATURE.
+*
+* (!) A record with no stored value renders the four inputs EMPTY and leaves
+* current_value[0] undefined — rendering fabricates nothing. The value is born on
+* the first user action (a gesture, a typed coordinate, a drawn shape); until
+* then the save button is a no-op.
 *
 * Public exports: view_default_edit_geolocation (namespace), get_content_data,
 * get_content_value, get_content_value_read.
@@ -160,10 +165,10 @@ export const get_content_data = function(self) {
 *   user types in an input → 'change' event → fn_coord_change → self.handle_coord_change
 *   self.handle_coord_change updates self.current_value[i] and pans/zooms the map.
 *
-* Map drag/zoom events update the inputs via self.update_input_values but do NOT
-* trigger an auto-save (intentional — use the save button). They are declared
-* 'navigation' there, so on a record with NO value they write nothing at all:
-* the inputs stay blank and no coordinate is created (see update_input_values).
+* Map drag/zoom sets the VIEW: it writes lat/lon/zoom through
+* self.update_input_values, so the inputs track the map live and the component
+* goes dirty — on an empty record too, that is how a view is first created. It
+* does NOT auto-save (intentional — use the save button).
 *
 * A ResizeObserver calls self.refresh_map whenever the content_value element is resized
 * so Leaflet recalculates tile positions after CSS-driven layout changes.
@@ -302,12 +307,12 @@ export const get_content_value = (i, stored_entry, self) =>{
 				//  b) setZoom fires zoomend ASYNCHRONOUSLY (~250ms) and that handler calls
 				//     update_input_values, which re-marks the component dirty and writes
 				//     the map CENTRE into current_value — both AFTER this function has
-				//     returned. On a record with no stored value that resurrected the
-				//     fabricated coordinate: click refresh, wait, and the camera (20/0)
+				//     returned. On a record with no stored value that resurrected a
+				//     fabricated view: click refresh, wait, and the camera (20/0)
 				//     had become a saveable value.
-				// Belt and braces today: update_input_values would also refuse that
-				// write now (a camera move on a valueless record), but the ordering
-				// stays explicit because refresh must be correct on its own.
+				// move_camera's camera_is_moving mask is the whole defence here: this
+				// is the component's own move, not the operator's, so it must write
+				// nothing at all.
 					const fn_move_camera = () => {
 						self.move_camera(view.lat, view.lon, view.zoom)
 					}
@@ -328,7 +333,8 @@ export const get_content_value = (i, stored_entry, self) =>{
 
 				// geometry framing — when the entry holds a drawn shape and no
 				// coordinate, get_view centred on the shape and this fits the zoom
-				// to its extent. Camera only, nothing stored (see the method header).
+				// to its extent. Fitting writes nothing by itself — but a later user
+				// gesture can commit the fitted framing, which is the point of a view.
 					self.fit_camera_to_geometry(i)
 
 				// alt is not written by update_input_values (it READS it back from the
@@ -338,10 +344,8 @@ export const get_content_value = (i, stored_entry, self) =>{
 						alt_node.value = fn_input_value(entry.alt)
 					}
 
-				// Update input values (writes the inputs AND current_value[i]).
-				// 'entry': these are the STORED values being restored, not a camera
-				// position — the navigation guard must not refuse them (an entry
-				// holding only geometry has no coordinate pair to test).
+				// Update input values (writes the inputs AND current_value[i]) —
+				// these are the STORED values being restored.
 				// (!) fn_input_value on ALL FOUR: update_input_values assigns
 				// data.lat/lon/zoom straight into the input nodes, and a
 				// geometry-only entry has none of them — unguarded that renders the
@@ -355,8 +359,7 @@ export const get_content_value = (i, stored_entry, self) =>{
 							zoom	: fn_input_value(entry.zoom),
 							alt		: fn_input_value(entry.alt)
 						},
-						map_container,
-						'entry'
+						map_container
 					)
 
 				// Update current_value — restore the stored entry verbatim, including lib_data
@@ -371,8 +374,11 @@ export const get_content_value = (i, stored_entry, self) =>{
 			}//end fn_refresh
 
 		// create point
-			// Reads lat/lon from the text inputs and calls self.create_point to add a Leaflet
-			// marker at those coordinates, then persists it via update_draw_data.
+			// The FEATURE half of the model. Reads lat/lon from the text inputs — which
+			// track the map live, so an operator can frame a spot and turn it into
+			// geometry — and calls self.create_point to add a Leaflet marker there,
+			// then persists it via update_draw_data. The view is left as it is: a
+			// feature does not assert the view and the view does not assert a feature.
 			// (!) Uses .lng (Leaflet LatLng property) in the point object, not .lon.
 			const add_point_node = ui.create_dom_element({
 				element_type	: 'span',
@@ -585,7 +591,10 @@ const get_buttons = (self) => {
 				e.stopPropagation()
 
 				// (!) TWO gates, both load-bearing. Without them, opening a record and
-				// pressing save committed a fabricated coordinate.
+				// pressing save committed a value nobody entered.
+					// They gate ABSENCE, never a gesture: setting the VIEW by panning or
+					// zooming creates current_value and marks the component dirty, so a
+					// pure view change passes both and saves.
 				// 1. no value at all → build_changed_data_item returns null
 					const changed_data_item = self.build_changed_data_item(0)
 					if (!changed_data_item) {

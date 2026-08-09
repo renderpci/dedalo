@@ -203,16 +203,21 @@ describe('get_geojson_data — lib_data layers verbatim + point fallback', () =>
 		);
 	});
 
-	test('NO sentinel: the ex-factory Valencia pair is an ordinary coordinate', () => {
-		// 39.462571/-0.376295 was a magic "no location set" marker. Absence is
-		// structural now — a stored pair always publishes.
+	test('the STUDIO DEFAULT never publishes — it is fabricated, not a position', () => {
+		// 39.462571/-0.376295 is the Dédalo facilities' own coordinates, shipped as
+		// the client's factory map position. The v6 client wrote it on save whether
+		// or not anyone touched the map, so an item holding exactly that pair is
+		// fabricated. It is an ordinary coordinate everywhere else — stored, edited,
+		// migrated like any other — and refused at this one door only.
+		expect(geojsonPointFallbackLayers({ lat: '39.462571', lon: '-0.376295' })).toEqual([]);
+		// comma-decimal locales normalise first, so they are caught too (PHP :389-391)
+		expect(geojsonPointFallbackLayers({ lat: '39,462571', lon: '-0,376295' })).toEqual([]);
+		// as numbers, not only as strings
+		expect(geojsonPointFallbackLayers({ lat: 39.462571, lon: -0.376295 })).toEqual([]);
+		// one axis off is NOT the default — it is somebody's real coordinate
 		expect(
-			JSON.stringify(geojsonPointFallbackLayers({ lat: '39.462571', lon: '-0.376295' })),
-		).toContain('"coordinates":[-0.376295,39.462571]');
-		// comma-decimal locales still normalise (PHP :389-391)
-		expect(
-			JSON.stringify(geojsonPointFallbackLayers({ lat: '39,462571', lon: '-0,376295' })),
-		).toContain('"coordinates":[-0.376295,39.462571]');
+			JSON.stringify(geojsonPointFallbackLayers({ lat: '39.462571', lon: '2.173403' })),
+		).toContain('"coordinates":[2.173403,39.462571]');
 	});
 
 	test('0 is a legal coordinate: [0,0], the equator and the prime meridian publish', () => {

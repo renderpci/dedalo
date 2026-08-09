@@ -1,21 +1,29 @@
 /**
- * GEOMETRY WINS — the geolocation publication precedence, gated on all three
- * publication paths at once (owner decision 2026-08-09).
+ * THE GEOLOCATION PUBLICATION LAW, gated on all three paths at once so they
+ * cannot drift.
  *
- * Precedence (identical in the three paths):
- *   1. lib_data carrying at least one non-empty features array → the GEOMETRY;
- *   2. else a usable lat/lon (0 included) → the point;
- *   3. else nothing is published.
+ * The VIEW (lat/lon/zoom) is published data and always has been. For many
+ * records it is the only positional data that exists, publication has read it
+ * since the first implementation, and consumers depend on it — so it is emitted
+ * as stored, alongside any drawn features rather than instead of them. A
+ * revision that dropped the view when features were present changed published
+ * bytes for existing records; that is what these tests now forbid.
  *
- * The standalone-component path (default_value.ts) additionally DROPS the
- * stored lat/lon when the geometry wins: on a geometry item the pair is the
- * map framing the client saved beside the work, and record_ir.ts
- * valueIrToString stringifies the whole atom onto the wire, so a consumer
- * reading `.lat` would read framing as an asserted location.
+ * Two refusals, and only two:
+ *   · ABSENCE — null/undefined/''/unparseable. `0` is NOT absence: it is the
+ *     equator and the prime meridian, and it publishes.
+ *   · the STUDIO DEFAULT — 39.462571/-0.376295, the Dédalo facilities' own
+ *     coordinates, shipped as the client's factory map position and written on
+ *     save by the v6 client whether or not anyone touched the map. Fabricated
+ *     wherever it appears, so it never reaches a consumer as a position. It
+ *     stays an ordinary coordinate everywhere else — stored, edited, migrated
+ *     like any other — and is refused at this one door only. An item whose view
+ *     is fabricated but which carries real drawn features still publishes them.
  *
- * The sibling paths (parser_misc.ts geoGeojson, ddo_fns.ts buildGeojsonLayers)
- * emit layer arrays only, so they never carried the centre at all — the third
- * path is asserted here beside them so the three cannot drift.
+ * The parser paths (parser_misc.ts geoGeojson, ddo_fns.ts buildGeojsonLayers)
+ * emit layer arrays; the standalone path (default_value.ts) emits the stored
+ * object as an atom that record_ir.ts valueIrToString stringifies onto the
+ * wire. All three are asserted here together.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -70,32 +78,31 @@ function payload(atom: unknown): Record<string, unknown> {
 	return (atom as { value?: Record<string, unknown> }).value as Record<string, unknown>;
 }
 
-describe('component_geolocation standalone atom — geometry wins over the centre', () => {
-	test('drawn geometry publishes the GEOMETRY and NO stored coordinate', () => {
+describe('component_geolocation standalone atom — the view and the features are independent', () => {
+	test('the VIEW is published ALONGSIDE the geometry, never dropped', () => {
+		// The view is the record's framing and is often the only positional data
+		// there is; publication has read it since the first implementation and
+		// consumers depend on it. An item carrying both publishes both.
 		const atoms = geoAtoms([
 			{ id: 1, lat: '41.5', lon: '2.1', zoom: 12, alt: 16, lib_data: [drawnPoint(3.14754, 41.85)] },
 		]);
 		expect(atoms).toHaveLength(1);
 		expect(atoms[0]?.kind).toBe('geo');
 		const value = payload(atoms[0]);
-		// the framing pair is gone; everything else survives byte-for-byte
-		expect(value.lat).toBeUndefined();
-		expect(value.lon).toBeUndefined();
-		expect(Object.keys(value).sort()).toEqual(['alt', 'lib_data', 'zoom']);
-		expect(value.zoom).toBe(12);
-		expect(value.alt).toBe(16);
+		// everything but the editor id survives byte-for-byte
+		expect(Object.keys(value).sort()).toEqual(['alt', 'lat', 'lib_data', 'lon', 'zoom']);
+		expect(value.lat).toBe('41.5');
+		expect(value.lon).toBe('2.1');
 		expect(value.lib_data).toEqual([drawnPoint(3.14754, 41.85)]);
-		// and what actually reaches a published cell carries no lat/lon either
 		const wire = valueIrToString(atoms[0] as never) ?? '';
 		expect(wire).toContain('"coordinates":[3.14754,41.85]');
-		expect(wire).not.toContain('"lat"');
-		expect(wire).not.toContain('"lon"');
+		expect(wire).toContain('"lat"');
 	});
 
-	test('tchi1/113: a geometry item whose centre is the EX-SENTINEL publishes the GEOMETRY', () => {
-		// The case the decision was taken for: the stored centre is Valencia,
-		// the operator drew on the Costa Brava ~400 km away. The centre is
-		// framing and must not reach the wire as the record's location.
+	test('a STUDIO-DEFAULT view is withheld, but the drawn geometry still publishes', () => {
+		// The view is fabricated (the factory position the v6 client wrote on
+		// save), so it is not emitted — but the operator's drawn work is real and
+		// must survive. Only the fabricated pair is withheld.
 		const atoms = geoAtoms([
 			{ id: 1, ...EX_SENTINEL, zoom: 8, alt: 16, lib_data: [drawnPoint(3.14754, 41.858199)] },
 		]);
@@ -105,6 +112,8 @@ describe('component_geolocation standalone atom — geometry wins over the centr
 		expect(value.lon).toBeUndefined();
 		expect(JSON.stringify(value)).not.toContain('39.462571');
 		expect(JSON.stringify(value)).toContain('41.858199');
+		expect(value.zoom).toBe(8);
+		expect(value.alt).toBe(16);
 	});
 
 	test('a centre-only item still publishes its point (id stripped)', () => {
@@ -113,11 +122,9 @@ describe('component_geolocation standalone atom — geometry wins over the centr
 		expect(payload(atoms[0])).toEqual({ lat: '41.5', lon: '2.1', zoom: 15, alt: 281 });
 	});
 
-	test('the ex-sentinel pair with NO geometry is an ordinary coordinate and publishes', () => {
+	test('a STUDIO-DEFAULT view with nothing else emits NO atom', () => {
 		const atoms = geoAtoms([{ id: 1, ...EX_SENTINEL, zoom: 12, alt: 16 }]);
-		expect(atoms).toHaveLength(1);
-		expect(payload(atoms[0]).lat).toBe(EX_SENTINEL.lat);
-		expect(payload(atoms[0]).lon).toBe(EX_SENTINEL.lon);
+		expect(atoms).toEqual([]);
 	});
 
 	test('0/0 publishes — the equator/prime meridian is a real position', () => {
@@ -175,7 +182,7 @@ describe('component_geolocation standalone atom — geometry wins over the centr
 		expect(payload(atoms[0])).toEqual({ lib_data: [drawnPoint(0, 0)] });
 	});
 
-	test('multi-item slices are resolved per item, each on its own precedence', () => {
+	test('multi-item slices are resolved per item, each on its own merits', () => {
 		const atoms = geoAtoms([
 			{ id: 1, lat: '41.5', lon: '2.1' },
 			{ id: 2, lat: '39.0', lon: '-0.3', lib_data: [drawnPoint(1, 2)] },
@@ -183,11 +190,16 @@ describe('component_geolocation standalone atom — geometry wins over the centr
 		]);
 		expect(atoms).toHaveLength(2);
 		expect(payload(atoms[0])).toEqual({ lat: '41.5', lon: '2.1' });
-		expect(payload(atoms[1])).toEqual({ lib_data: [drawnPoint(1, 2)] });
+		// the second item keeps BOTH its view and its geometry
+		expect(payload(atoms[1])).toEqual({
+			lat: '39.0',
+			lon: '-0.3',
+			lib_data: [drawnPoint(1, 2)],
+		});
 	});
 });
 
-describe('the three geo publication paths agree on precedence', () => {
+describe('the three geo publication paths agree on the law', () => {
 	const item = {
 		id: 1,
 		...EX_SENTINEL,
@@ -196,7 +208,7 @@ describe('the three geo publication paths agree on precedence', () => {
 		lib_data: [drawnPoint(3.14754, 41.858199)],
 	};
 
-	test('geometry wins in geoGeojson, buildGeojsonLayers and the standalone atom', () => {
+	test('a fabricated view never reaches the wire, in any of the three', () => {
 		// parser path: the drawn layers, verbatim
 		const parsed = geoGeojson([{ value: item }] as never, {}, NO_LANGS);
 		expect(JSON.stringify(parsed)).toContain('"coordinates":[3.14754,41.858199]');
@@ -207,8 +219,18 @@ describe('the three geo publication paths agree on precedence', () => {
 		expect(JSON.stringify(layers)).toContain('"coordinates":[3.14754,41.858199]');
 		expect(JSON.stringify(layers)).not.toContain('39.462571');
 
-		// standalone-component path: the geometry, centre dropped
+		// standalone-component path: geometry kept, the fabricated view withheld
 		expect(JSON.stringify(payload(geoAtoms([item])[0]))).not.toContain('39.462571');
+		expect(JSON.stringify(payload(geoAtoms([item])[0]))).toContain('41.858199');
+	});
+
+	test('a REAL view is published by all three, geometry or not', () => {
+		const real = { id: 1, lat: '41.5', lon: '2.1', zoom: 8 };
+		expect(JSON.stringify(geoGeojson([{ value: real }] as never, {}, NO_LANGS))).toContain(
+			'"coordinates":[2.1,41.5]',
+		);
+		expect(JSON.stringify(buildGeojsonLayers([real]))).toContain('"coordinates":[2.1,41.5]');
+		expect(payload(geoAtoms([real])[0])).toEqual({ lat: '41.5', lon: '2.1', zoom: 8 });
 	});
 
 	test('a centre-only item yields the point in all three', () => {

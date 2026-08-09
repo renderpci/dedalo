@@ -28,7 +28,7 @@ import {
 	type TagRenderOptions,
 } from '../../core/components/component_text_area/tag_html.ts';
 import { decodeHtmlEntities } from './default_value.ts';
-import { hasCoordinate, toCoordinate } from './geo_coordinate.ts';
+import { hasCoordinate, isStudioDefault, toCoordinate } from './geo_coordinate.ts';
 
 // ---------------------------------------------------------------------------
 // parse_tag_to_html — TR::add_tag_img_on_the_fly twin (moved to
@@ -95,6 +95,10 @@ export function geojsonPointFallbackLayers(
 ): GeojsonLayer[] {
 	if (item === undefined || item === null) return [];
 	if (!hasCoordinate(item.lat) || !hasCoordinate(item.lon)) return [];
+	// The STUDIO DEFAULT never publishes: it is the factory map position the v6
+	// client wrote on save, not a position anyone chose. Absence and the default
+	// are the only two refusals — 0 is a real coordinate (see geo_coordinate.ts).
+	if (isStudioDefault(toCoordinate(item.lat), toCoordinate(item.lon))) return [];
 	// Key order is the PHP JSON literal's: type, properties, geometry.
 	return [
 		{
