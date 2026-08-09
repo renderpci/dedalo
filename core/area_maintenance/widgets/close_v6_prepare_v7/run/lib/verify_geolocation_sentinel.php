@@ -372,38 +372,14 @@ check('and no error strings',						0,		$case['errors']);
 
 
 // ---------------------------------------------------------------------------
-// TIME MACHINE — the repaired shape the CALLER acts on, and why it matters
+// LIVE DATA — the repaired shape the caller acts on
 // ---------------------------------------------------------------------------
-// geolocation_value() knows nothing about tables: it returns a repaired item
-// LIST. But it runs wherever migrate_component_data() runs, and phase 2 runs
-// that over matrix_time_machine as well as the matrix tables. So the shape
-// pinned here IS the input the TM writer acts on, and the two cases below are
-// the whole decision:
-//
-//   bare-only  -> [] ............ an EMPTY list. The caller turns an empty list
-//                                 into a NULL data column, so a history row
-//                                 whose payload was only the fabricated centre
-//                                 does not migrate — its payload is erased and
-//                                 an empty husk row is left behind. That is a
-//                                 defect under EITHER policy: the row should be
-//                                 deleted outright, or its payload repaired
-//                                 like live data. Writing NULL is neither.
-//   with geometry -> [item] ..... the geometry survives and the centre is
-//                                 machine-derived. Stamped into a HISTORY row,
-//                                 that makes the past assert a framing which
-//                                 never existed at that timestamp.
-//
-// These assertions describe the code as it stands, so they stay true until the
-// TM policy is decided; when it is, the expectations below are what changes.
-echo "\nTIME MACHINE — the shape the caller acts on (policy undecided)\n";
+echo "\nLIVE DATA — the repaired shape the caller acts on\n";
 
 $tm_bare = run(GEO_MODEL, items('[{' . SENTINEL . ',"zoom":16,"alt":0}]'));
 check('a bare fabricated centre repairs to an EMPTY list',
 	[],
 	$tm_bare['value']);
-check('which is what makes the TM writer erase the payload',
-	true,
-	$tm_bare['value'] !== null && count($tm_bare['value']) === 0);
 
 $tm_geo = run(GEO_MODEL, items('[{' . SENTINEL . ',"zoom":12,"alt":16,' .
 	layers('{"type":"Point","coordinates":[3.14754,41.858199]}') . '}]'));
@@ -419,6 +395,53 @@ check('and the derived lon — GeoJSON is [lon,lat], the item is latitude-first'
 check('the drawn geometry itself is untouched',
 	true,
 	is_array($tm_geo['value']) && isset($tm_geo['value'][0]->lib_data));
+
+
+// ---------------------------------------------------------------------------
+// TIME MACHINE — history is never repaired; disposable rows are DELETED
+// ---------------------------------------------------------------------------
+// A TM row says what the data WAS at a timestamp. Two rules, both pinned here:
+//   1. $history_pass makes every value-level repair inert, so no coordinate is
+//      dropped and no machine-derived centre is ever stamped into the past.
+//   2. is_disposable_studio_default_list() decides deletion: a row whose WHOLE
+//      payload is the fabricated centre records a change that never happened
+//      and the row is deleted; anything real keeps the row byte for byte.
+echo "\nTIME MACHINE — history is never repaired; disposable rows are DELETED\n";
+
+v6_to_v7_normalize::$history_pass = true;
+$hist = run(GEO_MODEL, items('[{' . SENTINEL . ',"zoom":16,"alt":0}]'));
+check('history pass: a fabricated centre is NOT repaired',	null,	$hist['value']);
+check('history pass: and nothing is reported as fixed',		0,		count($hist['codes']));
+
+$hist_geo = run(GEO_MODEL, items('[{' . SENTINEL . ',"zoom":12,"alt":16,' .
+	layers('{"type":"Point","coordinates":[3.14754,41.858199]}') . '}]'));
+check('history pass: no centre is authored into the past',	null,	$hist_geo['value']);
+v6_to_v7_normalize::$history_pass = false;
+
+$disposable = fn(string $json) => v6_to_v7_normalize::is_disposable_studio_default_list(items($json));
+
+check('DELETE: payload is only the fabricated centre',
+	true,	$disposable('[{' . SENTINEL . ',"zoom":16,"alt":0}]'));
+check('DELETE: several fabricated items, nothing else',
+	true,	$disposable('[{' . SENTINEL . '},{' . SENTINEL . '}]'));
+check('DELETE: the pair stored as strings',
+	true,	$disposable('[{"lat":"39.462571","lon":"-0.376295"}]'));
+check('DELETE: an empty lib_data layer is not real work',
+	true,	$disposable('[{' . SENTINEL . ',"lib_data":[{"layer_data":{"type":"FeatureCollection","features":[]}}]}]'));
+
+check('KEEP: drawn geometry is real history',
+	false,	$disposable('[{' . SENTINEL . ',' .
+		layers('{"type":"Point","coordinates":[3.14754,41.858199]}') . '}]'));
+check('KEEP: a real coordinate',
+	false,	$disposable('[{"lat":41.385064,"lon":2.173403}]'));
+check('KEEP: 0/0 is a legal coordinate, not the fabricated pair',
+	false,	$disposable('[{"lat":0,"lon":0}]'));
+check('KEEP: the fabricated lat with another lon',
+	false,	$disposable('[{"lat":39.462571,"lon":2.173403}]'));
+check('KEEP: a fabricated item beside a real one',
+	false,	$disposable('[{' . SENTINEL . '},{"lat":41.385064,"lon":2.173403}]'));
+check('KEEP: an empty payload is not disposable',
+	false,	$disposable('[]'));
 
 
 echo "\n" . ($failed === 0 ? "PASS" : "FAIL") . " — $passed passed, $failed failed\n";

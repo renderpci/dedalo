@@ -1106,7 +1106,13 @@ class v6_to_v7 {
 					// a husk row asserting an empty change. Deleting is the only honest
 					// outcome. A row that also carries drawn geometry — or any real
 					// coordinate — is NOT disposable and falls through untouched.
-					if (v6_to_v7_normalize::is_disposable_studio_default_list((array)$data)) {
+					//
+					// Gated on the VALUE SHAPE, not on a resolved model: the predicate
+					// demands every item carry lat AND lon equal to the studio pair, which
+					// no other component model stores, and matrix_time_machine is the largest
+					// table in the database — an ontology lookup per row to learn what the
+					// shape already proves would cost the migration dearly.
+					if (v6_to_v7_normalize::is_disposable_studio_default_list(array_values((array)$data))) {
 						if ($save) {
 							tm_db_manager::delete( (int)$id );
 						}
