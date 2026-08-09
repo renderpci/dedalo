@@ -35,7 +35,10 @@
  *   alternation. 'end' carries the AUTHORITATIVE display order.
  * - value/dedalo_raw — static column modes: ONE column per top-component
  *   key, minted on the first record that carries the ddo (even atom-less);
- *   cells overwrite on key collision (PHP parity).
+ *   cells overwrite on key collision (PHP parity). dedalo_raw additionally
+ *   mints ONE column per dataframe slot of an exported component
+ *   (WC-2026-08-09-export-raw-dataframe-own-column — a divergence from the
+ *   oracle, which folded the frames into the main component's cell).
  *
  * Record SELECTION deliberately stays on sanitizeClientSqo + buildSearchSql
  * (the same §8.4 chokepoint the whole read side uses): the export contract
@@ -661,6 +664,32 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 					...(await buildRawCell(run, record, topComponent, topModel)),
 					topModel,
 				});
+				// The component's dataframe slots ride along as their OWN columns
+				// (WC-2026-08-09-export-raw-dataframe-own-column): separate
+				// components, separate stored data, one column each — headed by the
+				// frame tipo, so the import maps them like any other component and
+				// the `id_key` locator re-pairs them with the main's items.
+				// Ontology-driven (children of model component_dataframe), so the
+				// column set is the same for every record of the run, framed or not
+				// — and dedalo_raw stays a LOSSLESS dump: the tool UI cannot declare
+				// a dataframe step itself (atoms.ts hasDeclaredDataframeStep), so
+				// without this the frames would leave no column at all.
+				for (const frameTipo of await getDataframeChildTipos(topComponent)) {
+					entries.push({
+						kind: 'raw',
+						ddoIndex,
+						topKey: `${firstSection}_${frameTipo}`,
+						ownSegment: {
+							section_tipo: firstSection,
+							component_tipo: frameTipo,
+							model: 'component_dataframe',
+							item_index: null,
+							section_id: null,
+						},
+						...(await buildRawCell(run, record, frameTipo, 'component_dataframe')),
+						topModel: 'component_dataframe',
+					});
+				}
 				continue;
 			}
 
@@ -780,10 +809,16 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 }
 
 /**
- * dedalo_raw cell of the TOP component (PHP get_raw_export_value: raw export
- * does NOT recurse — the first path component's stored slice, dedalo_data
- * wrapped, dataframe frames alongside; component_section_id stays a plain
- * int, the re-import record key).
+ * dedalo_raw cell of ONE component (PHP get_raw_export_value: raw export does
+ * NOT recurse — the component's own stored slice, `{"dedalo_data": <slice>}`
+ * wrapped; component_section_id stays a plain int, the re-import record key).
+ *
+ * ONE component, ONE cell (WC-2026-08-09-export-raw-dataframe-own-column):
+ * a component_dataframe slot is a component with its OWN stored data, so it
+ * gets its OWN column through this same function — it is never folded into
+ * the main component's cell. The frame locator's `id_key` is what pairs it
+ * back to the main's item on import; nothing about that pairing needs the two
+ * to share a cell.
  */
 async function buildRawCell(
 	run: ExportRun,
@@ -801,17 +836,5 @@ async function buildRawCell(
 		componentTipo
 	];
 	if (raw === undefined || raw === null) return { raw: null, cellType: 'json' };
-	// Dataframe slots of this main: relation entries paired by
-	// main_component_tipo, ALL item ids (the raw-export contract).
-	const frames: unknown[] = [];
-	for (const frameTipo of await getDataframeChildTipos(componentTipo)) {
-		const bag =
-			((stored?.columns.relation as Record<string, unknown[]> | null)?.[frameTipo] as
-				| { main_component_tipo?: string }[]
-				| undefined) ?? [];
-		frames.push(...bag.filter((entry) => entry?.main_component_tipo === componentTipo));
-	}
-	const wrapped =
-		frames.length > 0 ? { dedalo_data: { dato: raw, dataframe: frames } } : { dedalo_data: raw };
-	return { raw: JSON.stringify(wrapped), cellType: 'json' };
+	return { raw: JSON.stringify({ dedalo_data: raw }), cellType: 'json' };
 }

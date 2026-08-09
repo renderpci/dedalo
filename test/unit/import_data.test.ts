@@ -168,7 +168,7 @@ describe('unwrapDedaloData', () => {
 	});
 	test('null inner → empty value, not wrapped (behaves as empty cell)', () => {
 		const out = unwrapDedaloData('{"dedalo_data":null}');
-		expect(out).toEqual({ value: '', wrapped: false, dataframe: null, hasDato: true });
+		expect(out).toEqual({ value: '', wrapped: false, dataframe: null, hasData: true });
 	});
 	test('{dato, dataframe} envelope splits out the dataframe', () => {
 		const out = unwrapDedaloData(
@@ -177,12 +177,12 @@ describe('unwrapDedaloData', () => {
 		expect(out.wrapped).toBe(true);
 		expect(JSON.parse(out.value)).toEqual([{ value: 'x' }]);
 		expect(out.dataframe).toEqual([{ id_key: 0 }]);
-		expect(out.hasDato).toBe(true);
+		expect(out.hasData).toBe(true);
 	});
-	test('a dataframe-ONLY envelope reports hasDato:false (do not touch the data)', () => {
+	test('a dataframe-ONLY envelope reports hasData:false (do not touch the data)', () => {
 		// The distinction that matters: this must NOT be read as "clear the component".
 		const out = unwrapDedaloData('{"dedalo_data":{"dataframe":[{"id_key":0}]}}');
-		expect(out.hasDato).toBe(false);
+		expect(out.hasData).toBe(false);
 		expect(out.dataframe).toEqual([{ id_key: 0 }]);
 		expect(out.value).toBe('');
 	});
@@ -191,7 +191,7 @@ describe('unwrapDedaloData', () => {
 			value: 'plain text',
 			wrapped: false,
 			dataframe: null,
-			hasDato: true,
+			hasData: true,
 		});
 	});
 });

@@ -6,7 +6,7 @@ Imports CSV files into Dédalo sections — notably the round-trip of `tool_expo
 
 `tool_import_dedalo_csv` ingests a CSV file where the first row is a header of component ontology tipos (plus a mandatory `section_id` column) and every following row is a record. For each cell it asks the target component to *conform* the raw text into stored v7 data, then creates or updates the matching record.
 
-It is the import counterpart of [`tool_export`](tool_export.md): a section exported in the `dedalo_raw` format (cells wrapped as `{"dedalo_data": <dato>}`) re-imports unchanged, so the tool is the backbone of export → edit → re-import workflows. It also accepts hand-authored CSVs using canonical v7 dato, legacy v6 arrays, lang-keyed objects, or simple flat strings — see [Importing data](../../../core/importing_data.md) for the full per-component format catalogue.
+It is the import counterpart of [`tool_export`](tool_export.md): a section exported in the `dedalo_raw` format (cells wrapped as `{"dedalo_data": <stored value>}`) re-imports unchanged, so the tool is the backbone of export → edit → re-import workflows. It also accepts hand-authored CSVs using canonical v7 dato, legacy v6 arrays, lang-keyed objects, or simple flat strings — see [Importing data](../../../core/importing_data.md) for the full per-component format catalogue.
 
 Concrete heritage scenario: a numismatics team exports the *Types* section (`numisdata3`) to CSV with `tool_export` in `dedalo_raw` format, cleans the legend transcriptions and date ranges in a spreadsheet, then re-imports the file here. Because each row carries its `section_id`, existing Type records are updated in place (not duplicated); empty cells clear the corresponding component for that record; and with the time-machine checkbox left on, the whole batch is reversible from the bulk-process record it creates.
 
@@ -115,7 +115,7 @@ const rqo = {
 
 ### The CSV being imported
 
-The `dedalo_raw` round-trip wraps each dato cell with `dedalo_data`; the `section_id` column stays a plain int (the record key) and empty cells clear data:
+The `dedalo_raw` round-trip wraps each cell with `dedalo_data` (one column per component, [dataframes](../../../core/importing_data.md#dataframe-columns) included); the `section_id` column stays a plain int (the record key) and empty cells clear data:
 
 ```text
 section_id;numisdata81;numisdata27
@@ -170,7 +170,7 @@ While the job runs, each frame instead carries an `ImportProgressFrame`:
 - [tool_import_files](tool_import_files.md) — ingest media files (not CSV record data).
 - [tool_import_marc21](tool_import_marc21.md), [tool_import_rdf](tool_import_rdf.md), [tool_import_zotero](tool_import_zotero.md) — format-specific importers.
 - [tool_propagate_component_data](tool_propagate_component_data.md) — SQO-driven bulk component edits with the same bulk-process / time-machine reversion model.
-- [Importing data](../../../core/importing_data.md) — the per-component CSV format catalogue, the `dedalo_data` wrapper and dataframe envelope, empty-cell semantics.
+- [Importing data](../../../core/importing_data.md) — the per-component CSV format catalogue, the `dedalo_data` wrapper, dataframe columns, empty-cell semantics.
 - [Exporting data](../../../core/exporting_data.md) — the export side of the round-trip.
 - [Creating tools](../creating_tools.md), [Server contract](../server_contract.md) — the tool model and the `ToolServerModule` contract.
 - Source: `tools/tool_import_dedalo_csv/server/index.ts`; import engine: `src/core/tools/{import_csv,import_conform,import_data,import_csv_execute,import_wire}.ts`; the write path: `src/core/section/record/{create_record,save_component}.ts`.

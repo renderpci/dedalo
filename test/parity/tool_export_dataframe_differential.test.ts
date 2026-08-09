@@ -10,9 +10,17 @@
  * frameless twin (pins empty-frame behavior AND the mid-stream column mint).
  *
  * Full projection equality vs live PHP across grid_value default/rows/
- * columns + value/default + dedalo_raw/default; plus the TS-only
- * declared-path loudness pin (PHP 500s on that shape — the pinned live
- * defect class, so only TS's clean error is assertable).
+ * columns + value/default; plus the TS-only declared-path loudness pin (PHP
+ * 500s on that shape — the pinned live defect class, so only TS's clean error
+ * is assertable).
+ *
+ * dedalo_raw/default is a DELIBERATE DIVERGENCE since 2026-08-09
+ * (WC-2026-08-09-export-raw-dataframe-own-column): PHP folds the frames into
+ * the main component's cell as {"dedalo_data":{"dato":…,"dataframe":…}}; TS
+ * gives the frame slot its OWN column and keeps every raw cell a bare
+ * {"dedalo_data": <slice>}. It is therefore asserted against the TS contract
+ * here, not against the oracle — the shape gate is
+ * test/unit/tool_export_raw_dataframe_native.test.ts.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -43,7 +51,8 @@ const COMBOS: { format: string; breakdown: string }[] = [
 	{ format: 'grid_value', breakdown: 'rows' },
 	{ format: 'grid_value', breakdown: 'columns' },
 	{ format: 'value', breakdown: 'default' },
-	{ format: 'dedalo_raw', breakdown: 'default' },
+	// dedalo_raw/default: NOT oracle-compared — see the header (WC-2026-08-09-
+	// export-raw-dataframe-own-column). Its own test is below.
 ];
 
 function buildRqo(format: string, breakdown: string, declaredFramePath = false) {
@@ -169,6 +178,62 @@ describe.if(hasPhpCredentials())('tool_export dataframe fan-out differential', (
 			expect(tsGrid.meta?.total).toBe(phpGrid.meta?.total as number);
 		}, 60000);
 	}
+
+	test('dedalo_raw DIVERGES: the frame slot is its own column, cells never enveloped', async () => {
+		if (!hasPhpCredentials()) return;
+		const rqo = buildRqo('dedalo_raw', 'default');
+		const phpGrid = ((
+			(await php.call(structuredClone(rqo) as Record<string, unknown>)).body as { result?: Grid }
+		).result ?? {}) as Grid;
+		const tsGrid = (((await tsCall(rqo)).body as { result?: Grid }).result ?? {}) as Grid;
+
+		/** The cells of one grid's row for a record, decoded. */
+		const cellsOf = (grid: Grid, recordId: string): Record<string, unknown>[] => {
+			const row = (grid.rows ?? []).find((candidate) => String(candidate.rec) === recordId);
+			return Object.values((row?.c ?? {}) as Record<string, string>).map(
+				(cell) => JSON.parse(cell) as Record<string, unknown>,
+			);
+		};
+
+		// The oracle's shape, asserted so the divergence stays a KNOWN one: PHP
+		// mints the main column only, with the frames folded into its cell.
+		expect((phpGrid.columns ?? []).map((column) => column.key)).toEqual([
+			`${SECTION}_${COMPONENT}`,
+		]);
+		const phpCells = cellsOf(phpGrid, RECORD_WITH_FRAMES);
+		expect(phpCells).toHaveLength(1);
+		expect(Object.keys((phpCells[0] as { dedalo_data: object }).dedalo_data).sort()).toEqual([
+			'dataframe',
+			'dato',
+		]);
+
+		// TS: one column per component, every cell a bare {"dedalo_data": …}.
+		expect((tsGrid.columns ?? []).map((column) => column.key)).toEqual([
+			`${SECTION}_${COMPONENT}`,
+			`${SECTION}_${FRAME_TIPO}`,
+		]);
+		const frameColumn = (tsGrid.columns ?? []).find(
+			(column) => column.key === `${SECTION}_${FRAME_TIPO}`,
+		);
+		const framedRow = (tsGrid.rows ?? []).find((row) => String(row.rec) === RECORD_WITH_FRAMES);
+		const frameCell = (framedRow?.c as Record<string, string>)[String(frameColumn?.i)];
+		// the frames, in their own cell, whole
+		expect(JSON.parse(frameCell ?? 'null')).toEqual({
+			dedalo_data: expect.arrayContaining([
+				expect.objectContaining({ type: 'dd490', from_component_tipo: FRAME_TIPO }),
+			]),
+		});
+		// EVERY ts cell of the framed record: the wrapper, an array under it, nothing else.
+		for (const cell of cellsOf(tsGrid, RECORD_WITH_FRAMES)) {
+			expect(Object.keys(cell)).toEqual(['dedalo_data']);
+			expect(Array.isArray(cell.dedalo_data)).toBe(true);
+		}
+		// Record identity and count still match the oracle exactly.
+		expect((tsGrid.rows ?? []).map((row) => String(row.rec))).toEqual(
+			(phpGrid.rows ?? []).map((row) => String(row.rec)),
+		);
+		expect(tsGrid.meta?.total).toBe(phpGrid.meta?.total as number);
+	}, 60000);
 
 	test('a DECLARED dataframe path step stays loud on TS (PHP 500s — not pinnable)', async () => {
 		if (!hasPhpCredentials()) return;

@@ -204,9 +204,9 @@ round-trip). This makes raw export a practical way to **back up** a section or
 **move data** between installations.
 
 See [The dedalo_data wrapper](importing_data.md#the-dedalo_data-wrapper) and
-[The dataframe envelope](importing_data.md#the-dataframe-envelope) for the details of
+[Dataframe columns](importing_data.md#dataframe-columns) for the details of
 the wire shape (including how [dataframe](components/component_dataframe.md) rows
-travel alongside the data).
+travel in their own column).
 
 !!! warning "Raw is not for reading"
 
@@ -319,10 +319,13 @@ added to the walkers rather than an override method.
 
 - The flat-join (`value` format) reference is `resolvePathValue()`.
 - `dedalo_raw` cells are the exact stored value JSON-encoded with the
-  `dedalo_data` wrapper (dataframe-carrying mains ship
-  `{dedalo_data:{dato, dataframe}}`) — see
-  [The dedalo_data wrapper](importing_data.md#the-dedalo_data-wrapper) for the
-  shared shape with the import side.
+  `dedalo_data` wrapper, always exactly that: `{dedalo_data: <stored value>}`.
+  A component with dataframe slots grows one EXTRA column per slot, headed by
+  the dataframe component's tipo and carrying that component's own stored
+  frames — see
+  [The dedalo_data wrapper](importing_data.md#the-dedalo_data-wrapper) and
+  [Dataframe columns](importing_data.md#dataframe-columns) for the shared shape
+  with the import side.
 
 ### Files
 

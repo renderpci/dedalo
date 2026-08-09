@@ -183,15 +183,21 @@ The wrapper identifies externally that the content is Dédalo format data and no
 
     Two cases are exported **without** the wrapper, and both re-import correctly as-is: the `section_id` column (a plain int, used as the record key on import) and components without data (empty cells). The wrapper is detected only when `dedalo_data` is the **only** property of the cell object — a JSON value that merely contains a `dedalo_data` property among others is treated as a normal value.
 
-### The dataframe envelope
+### Dataframe columns
 
-Components whose values carry paired [dataframe](components/component_dataframe.md) rows export them alongside the dato:
+A [dataframe](components/component_dataframe.md) is a component of its own, with its own stored data, so it travels in **its own column**, headed by the dataframe component's tipo — never inside the column of the component it frames:
 
-```json
-{"dedalo_data":{"dato":[{"value":"Hello","lang":"lg-eng","id":1}],"dataframe":[{"type":"dd490","section_tipo":"dd1706","section_id":"3","id_key":1,"from_component_tipo":"dd560","main_component_tipo":"rsc217"}]}}
-```
+| `rsc217` | `dd560` |
+|---|---|
+| `{"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}` | `{"dedalo_data":[{"type":"dd490","section_tipo":"dd1706","section_id":"3","id_key":1,"from_component_tipo":"dd560","main_component_tipo":"rsc217"}]}` |
 
-The `id_key` of each frame locator pairs it with the dato item carrying the same `id` (this is why explicit item ids round-trip). On import, the dato is conformed and saved as usual, then the frames are written replacing the component's previous frames in each slot (frames of other components sharing the slot are preserved). A `{"dedalo_data":{"dataframe":[...]}}` envelope without `dato` writes only the frames and leaves the component data untouched.
+A raw export writes the dataframe column right after the component it belongs to, and writes it for every record of the export — empty where a record has no frames.
+
+What links the two columns is the data, not their position: each frame locator's `id_key` pairs it with the item carrying the same `id` in the main component (this is why explicit item ids round-trip). Import the dataframe column like any other component column and the pairing is restored; import it alone and only the frames are written, leaving the framed component untouched.
+
+??? note "Legacy envelope (accepted)"
+
+    Files exported before Dédalo 7 (2026-08-09) carry the frames folded into the framed component's own cell, as `{"dedalo_data":{"data":[...],"dataframe":[...]}}` — with `dato` instead of `data` in v6-era files. Both spellings still import, frames included; neither is ever written any more. An envelope carrying only `dataframe` writes just the frames and leaves the component data untouched.
 
 ### Empty cells
 
