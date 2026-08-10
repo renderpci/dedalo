@@ -378,19 +378,17 @@ describe('generate_virtual_section — TS-native provisioning of a scratch TLD',
 		const rec2 = await nodeRecordCols(2);
 		// ontology7 lang lg-spa (DEDALO_DATA_LANG) — DIFFERS from the registration's lg-nolan.
 		expect(rec1.string?.ontology7).toEqual([{ id: 1, lang: 'lg-spa', value: TLD }]);
-		// BARE {section_tipo, section_id} — no type / from_component_tipo (PHP-pinned).
-		expect(rec1.relation?.ontology15).toEqual([
-			{ section_tipo: 'hierarchytype0', section_id: '1' },
-		]);
-		expect(rec2.relation?.ontology15).toEqual([
-			{ section_tipo: 'hierarchymtype0', section_id: '1' },
-		]);
+		// BARE {section_tipo, section_id} — no type / from_component_tipo (PHP-pinned
+		// shape; the id is int-canonical, WC-2026-08-10-section-id-int-canonical).
+		expect(rec1.relation?.ontology15).toEqual([{ section_tipo: 'hierarchytype0', section_id: 1 }]);
+		expect(rec2.relation?.ontology15).toEqual([{ section_tipo: 'hierarchymtype0', section_id: 1 }]);
 		// The is_model flip is a full link locator to dd64/1.
 		expect(rec2.relation?.ontology30).toEqual([
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: '1',
+				// int-canonical (WC-2026-08-10-section-id-int-canonical)
+				section_id: 1,
 				section_tipo: 'dd64',
 				from_component_tipo: 'ontology30',
 			},

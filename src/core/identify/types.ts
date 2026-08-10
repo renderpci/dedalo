@@ -147,7 +147,15 @@ export type CriterionValue =
 	| { kind: 'number'; values: number[] }
 	| { kind: 'date'; ranges: Array<{ from: number; to: number }> };
 
-/** The locator fields identity compares on (the transient `id` is never one). */
+/**
+ * The locator fields identity compares on (the transient `id` is never one).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): a criterion path reads
+ * RAW stored relation items, and an identification criterion legitimately lands
+ * on an EXTERNAL remote id ('001338683', 'Q42') — path_read skips those for the
+ * record hop and criteria.ts emits them verbatim into the SQO `q`, which is only
+ * possible while the non-int leg survives in the type.
+ */
 export interface ValueLocator {
 	section_tipo: string;
 	section_id: number | string;

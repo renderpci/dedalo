@@ -36,6 +36,7 @@ import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { resolveLangItems } from '../resolve/lang_fallback.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
+import { composeContains, locatorJsonVariants } from '../search/containment.ts';
 import {
 	AFFECTED_MODELS_SECTION_TIPO,
 	MODEL_NAME_COMPONENT,
@@ -78,6 +79,9 @@ const NO_TOOLS_MODELS: ReadonlySet<string> = new Set(['component_section_id', 'c
 interface ToolRow {
 	string: Record<string, { lang?: string; value?: string }[] | undefined> | null;
 	misc: Record<string, { value?: unknown }[] | undefined> | null;
+	// KEPT UNION: the raw jsonb relation column of matrix_tools — tool records
+	// imported from register.json (and every pre-sweep install) still carry the
+	// string form, which radioIsYes compares as text.
 	relation: Record<string, { section_id?: string | number }[] | undefined> | null;
 }
 
@@ -168,6 +172,9 @@ export async function getProfileGrantedToolIds(userId: number): Promise<Set<numb
 	const cached = profileToolGrantsCache.get(userId);
 	if (cached !== undefined) return cached;
 	const allowedIds = new Set<number>();
+	// KEPT UNION on grants[].section_id: the profile's dd1067 locators are raw
+	// stored jsonb — a pre-sweep install holds the string form; each is
+	// Number()-ed into the allowed-id set below.
 	const profileRows = (await sql.unsafe(
 		`SELECT p.relation->'${PROFILE_TOOLS_COMPONENT}' AS grants
 		 FROM matrix_profiles p
@@ -222,13 +229,29 @@ async function fetchActiveToolRows(): Promise<(ToolRow & { section_id: number })
 	if (activeToolRowsCache !== null) {
 		return activeToolRowsCache;
 	}
-	const rows = (await sql`
-		SELECT section_id, string, misc, relation
-		FROM matrix_tools
-		WHERE section_tipo = ${TOOLS_REGISTER_SECTION_TIPO}
-		  AND relation->${TIPO.ACTIVE} @> '[{"section_id":"1","section_tipo":"dd64"}]'
-		ORDER BY section_id
-	`) as (ToolRow & { section_id: number })[];
+	// The dd64/1 active flag is probed in BOTH typed section_id forms
+	// (WC-2026-08-10-section-id-int-canonical): registry locators are stored
+	// string-form until the int sweep and int-form after, and jsonb `@>` is
+	// type-strict — one form alone makes every tool look inactive on the other
+	// side of the migration. TIPO.ACTIVE is a code constant (no injection
+	// surface), so it stays interpolated as the jsonb key.
+	const queryParams: string[] = [TOOLS_REGISTER_SECTION_TIPO];
+	const activeClause = composeContains(
+		`relation->'${TIPO.ACTIVE}'`,
+		[locatorJsonVariants({ section_id: 1, section_tipo: 'dd64' }).map((json) => `[${json}]`)],
+		(payload) => {
+			queryParams.push(payload);
+			return `$${queryParams.length}`;
+		},
+	);
+	const rows = (await sql.unsafe(
+		`SELECT section_id, string, misc, relation
+		 FROM matrix_tools
+		 WHERE section_tipo = $1
+		   AND ${activeClause}
+		 ORDER BY section_id`,
+		queryParams,
+	)) as (ToolRow & { section_id: number })[];
 	activeToolRowsCache = rows;
 	return rows;
 }

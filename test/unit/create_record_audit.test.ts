@@ -113,7 +113,8 @@ describe('record-creation audit metadata (TS-native, PHP build_metadata shape)',
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd200',
 				},

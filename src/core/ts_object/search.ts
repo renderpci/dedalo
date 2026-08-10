@@ -17,6 +17,7 @@
  * "fixing" (ledgered) — the live PHP JSON is the contract.
  */
 
+import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { getTldFromTipo, safeTld } from '../ontology/tld.ts';
@@ -60,7 +61,8 @@ export interface SearchThesaurusResult {
 	msg: string;
 	errors: RecursionError[];
 	total: number;
-	found: { section_tipo: string; section_id: number | string }[];
+	/** The raw hits: `section_id` is the matrix table's own int PK column. */
+	found: { section_tipo: string; section_id: number }[];
 }
 
 /**
@@ -76,20 +78,22 @@ export async function searchThesaurus(
 	const built = await buildSearchSql(sanitized, { principal });
 	const hits = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
 		section_tipo: string;
-		section_id: number | string;
+		// The int PK column of the matrix table — never a stored jsonb value.
+		section_id: number;
 	}[];
 
 	const totalRecords = hits.length;
 	const tsObjectsMap = new Map<string, TsNodeData>();
-	const found: { section_tipo: string; section_id: number | string }[] = [];
+	const found: { section_tipo: string; section_id: number }[] = [];
 	const ancestorsCache = new Map<string, ParentLocator[]>();
 	const errors: RecursionError[] = [];
 
 	for (const row of hits) {
 		const sectionTipo = row.section_tipo;
 		const sectionId = row.section_id;
-		// PHP pushes the DB row section_id (a string) into `found`.
-		found.push({ section_tipo: sectionTipo, section_id: String(sectionId) });
+		// The DB row's own int address, emitted verbatim — repeals "PHP pushes
+		// the DB row section_id (a string)" (WC-2026-08-10-section-id-int-canonical).
+		found.push({ section_tipo: sectionTipo, section_id: sectionId });
 
 		const ancestorsKey = `${sectionTipo}_${sectionId}`;
 		let ancestors = ancestorsCache.get(ancestorsKey);
@@ -113,7 +117,13 @@ export async function searchThesaurus(
 		const path = [...ancestors].reverse();
 		for (let parentKey = 0; parentKey < path.length; parentKey++) {
 			const currentParent = path[parentKey] as ParentLocator;
-			const childrenSectionId = currentParent.section_id;
+			// The walk cursor comes off STORED parent locators (ParentLocator keeps
+			// the pre-sweep string leg), so the address is canonicalized here, once,
+			// before it addresses a record or builds a node. A non-address ancestor
+			// cannot be a tree node at all — skip it rather than build a NaN node
+			// (WC-2026-08-10-section-id-int-canonical).
+			const childrenSectionId = canonicalizeStoredSectionId(currentParent.section_id);
+			if (!isSectionId(childrenSectionId)) continue;
 			const childrenSectionTipo = currentParent.section_tipo;
 
 			// full sibling list of this ancestor.
@@ -141,7 +151,7 @@ export async function searchThesaurus(
 			}
 
 			// the ancestor node itself.
-			const parentNodeKey = `${currentParent.section_tipo}:${currentParent.section_id}`;
+			const parentNodeKey = `${childrenSectionTipo}:${childrenSectionId}`;
 			if (!tsObjectsMap.has(parentNodeKey)) {
 				const tsParent =
 					parentKey === 0
@@ -155,13 +165,7 @@ export async function searchThesaurus(
 				}
 				tsObjectsMap.set(
 					parentNodeKey,
-					await buildNodeData(
-						currentParent.section_tipo,
-						currentParent.section_id,
-						options,
-						tsParent,
-						principal,
-					),
+					await buildNodeData(childrenSectionTipo, childrenSectionId, options, tsParent, principal),
 				);
 			}
 		}
@@ -176,7 +180,14 @@ export async function searchThesaurus(
 	};
 }
 
-/** One pinned hierarchy_terms group (as stored in an area button's properties). */
+/**
+ * One pinned hierarchy_terms group (as stored in an area button's properties).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): these locators are
+ * ONTOLOGY-AUTHORED bytes in `properties`, not matrix data — nothing sweeps
+ * them, and the shipped configs hold the string form. The id travels into the
+ * SQO `q` verbatim, where builder_relation probes both typed forms.
+ */
 export interface HierarchyTerm {
 	value?: { section_tipo: string; section_id: number | string }[];
 }

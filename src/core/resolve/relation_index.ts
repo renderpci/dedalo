@@ -39,8 +39,10 @@ export function parseInverseEntry(hit: InverseReferenceLocatorHit): Record<strin
 	const entry: Record<string, unknown> = {
 		type: raw.type,
 		section_tipo: hit.section_tipo,
-		// PHP keeps the DB-driver string form of the owning record id.
-		section_id: String(hit.section_id),
+		// The owning record's address, canonical INT — the DB column's own type,
+		// passed through untouched (WC-2026-08-10-section-id-int-canonical
+		// repeals "PHP keeps the DB-driver string form").
+		section_id: hit.section_id,
 	};
 	if (raw.tag_component_tipo !== undefined) entry.component_tipo = raw.tag_component_tipo;
 	if (raw.tag_id !== undefined) entry.tag_id = raw.tag_id;

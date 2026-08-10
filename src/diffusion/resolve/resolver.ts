@@ -360,6 +360,8 @@ const MATRIX_VALUE_YES = 1;
 async function isRecordPublishable(ctx: RunContext, record: MatrixRecord): Promise<boolean> {
 	const publicationTipo = await publicationTipoOf(ctx, record.section_tipo);
 	if (publicationTipo === null) return true;
+	// RAW stored locators: section_id stays union-typed (unswept string form /
+	// external remote id) — WC-2026-08-10-section-id-int-canonical.
 	const items =
 		(readComponentItems(record, publicationTipo, 'component_publication') as
 			| { section_tipo?: string; section_id?: number | string }[]
@@ -846,7 +848,11 @@ async function prepareFields(
 // Chain walking (stage D per field)
 // ---------------------------------------------------------------------------
 
-/** A stored relation locator as read from the matrix slice. */
+/** A stored relation locator as read from the matrix slice. The union is raw-
+ * jsonb passthrough: an install not yet swept holds the PHP string form, and an
+ * external-service hop carries a remote id verbatim ('001338683') — the chain
+ * walker compares loosely and re-emits these bytes into the published (string-
+ * shaped) target. WC-2026-08-10-section-id-int-canonical. */
 interface StoredLocator {
 	section_tipo?: string;
 	section_id?: number | string;

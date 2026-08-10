@@ -95,7 +95,9 @@ describe('MCP write tools (Phase 8 gate)', () => {
 			section_tipo: SECTION_TIPO,
 			section_id,
 		});
-		expect(deleted).toEqual([String(section_id)]);
+		// WC-2026-08-10-section-id-int-canonical: the delete result carries int
+		// record addresses (the PHP-era string ids are repealed).
+		expect(deleted).toEqual([section_id]);
 		const remaining = (await sql.unsafe(
 			`SELECT 1 FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[SECTION_TIPO, section_id],

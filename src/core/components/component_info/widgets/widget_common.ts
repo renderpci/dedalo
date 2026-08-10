@@ -160,6 +160,9 @@ export function resolveCurrent(declared: unknown, own: string | number): string 
 export interface TypedInput {
 	type?: string;
 	section_tipo?: string;
+	// KEPT UNION: an ipo source descriptor is ONTOLOGY-authored config, and its
+	// id is not always an address — 'current' is the sentinel resolveCurrent()
+	// swaps for the host record's own id (WC-2026-08-10-section-id-int-canonical).
 	section_id?: string | number;
 	component_tipo?: string;
 }

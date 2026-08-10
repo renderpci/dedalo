@@ -267,7 +267,9 @@ export class RagQueue {
 
 interface RawQueueRow {
 	section_tipo: string;
-	section_id: number | string;
+	/** rag_index_queue.section_id is `integer` (QUEUE_DDL below) — the address
+	 * arrives typed (WC-2026-08-10-section-id-int-canonical). */
+	section_id: number;
 	op: string;
 	attempts: number | string;
 	enqueued_at: string;

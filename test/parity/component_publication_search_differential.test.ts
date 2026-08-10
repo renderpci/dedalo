@@ -28,6 +28,7 @@ import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData } from '../../src/core/section/read.ts';
 import { routeSectionRead } from '../../src/core/section/read_facade.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface DataItem {
@@ -77,9 +78,12 @@ describe.if(hasPhpCredentials())('component_publication search-mode datalist dif
 		if (!ready) return;
 		const rqo = searchRqo(SEARCH_ID);
 		const { body } = await client.call(structuredClone(rqo) as Record<string, unknown>);
-		const php = ((body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === 'rsc20');
-		const ts = ((await readComponentData(rqo)) as unknown as DataItem[]).find(
-			(d) => d.tipo === 'rsc20',
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		const php = normalizeSectionIdTypes(
+			((body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === 'rsc20'),
+		);
+		const ts = normalizeSectionIdTypes(
+			((await readComponentData(rqo)) as unknown as DataItem[]).find((d) => d.tipo === 'rsc20'),
 		);
 
 		// Presence FIRST (S2-40): undefined-vs-undefined must not pass vacuously.

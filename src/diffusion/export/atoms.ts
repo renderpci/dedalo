@@ -149,6 +149,10 @@ export interface ExportSegment {
 	/** RAW stored-locator position that reached this segment's owner record;
 	 * null when the owner is the exported row itself (no hop). */
 	item_index: number | null;
+	/** The owner address carried by that RAW stored locator — union kept
+	 * because it is stored-jsonb passthrough: an unswept install still holds the
+	 * PHP string form, and an external-service hop carries a remote id verbatim
+	 * ('001338683'). WC-2026-08-10-section-id-int-canonical. */
 	section_id: number | string | null;
 	/** Virtual sub-column discriminator (PHP component_info/inverse, parents). */
 	sub_id?: string;
@@ -616,7 +620,9 @@ async function fanOutRelation(
 			};
 			const segments = [...baseSegments, childSegment];
 
-			// Relation-model child: recurse into ITS stored locators.
+			// Relation-model child: recurse into ITS stored locators. The bag is
+			// RAW jsonb, so section_id stays union-typed (unswept string form /
+			// external remote id) — WC-2026-08-10-section-id-int-canonical.
 			if (getColumnNameByModel(childModel) === 'relation') {
 				const target = await loadExportRecord(run.atoms, locator.sectionTipo, locator.sectionId);
 				const bag =

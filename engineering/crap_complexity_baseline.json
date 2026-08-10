@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 452,
-		"functions": 3417,
+		"files": 456,
+		"functions": 3484,
 		"functionsOverCap": 672,
 		"filesOverCap": 268
 	},
@@ -19,7 +19,7 @@
 		"src/core/api/handlers/dd_component_av_api.ts": 8,
 		"src/core/api/handlers/dd_component_info.ts": 12,
 		"src/core/api/handlers/dd_component_text_area_api.ts": 21,
-		"src/core/api/handlers/dd_core_api.ts": 72,
+		"src/core/api/handlers/dd_core_api.ts": 71,
 		"src/core/api/handlers/dd_error_report_api.ts": 10,
 		"src/core/api/handlers/dd_external_api.ts": 26,
 		"src/core/api/handlers/dd_identify_api.ts": 48,

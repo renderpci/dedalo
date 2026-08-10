@@ -58,15 +58,18 @@ async function activityRowsFor(
 	sectionTipo: string,
 	sectionId: number,
 ): Promise<{ element: string | null; elementId: string | null; action: string | null }[]> {
+	// D16 + int-canonical (WC-2026-08-10-section-id-int-canonical): the action
+	// rides its own `diffusion_action` key and dd1763 stores the INT address —
+	// `->>` still projects text, so `action`/`elementId` stay strings here.
 	return (await sql.unsafe(
 		`SELECT relation->'dd1766'->0->>'section_tipo' AS element,
 		        relation->'dd1766'->0->>'section_id'   AS "elementId",
-		        relation->'dd1767'->0->>'section_id'   AS action
+		        relation->'dd1767'->0->>'diffusion_action' AS action
 		 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 		 WHERE section_tipo = 'dd1758'
 		   AND relation->'dd1763' @> $1::text::jsonb
 		 ORDER BY relation->'dd1766'->0->>'section_id'`,
-		[JSON.stringify([{ section_id: String(sectionId), section_tipo: sectionTipo }])],
+		[JSON.stringify([{ section_id: sectionId, section_tipo: sectionTipo }])],
 	)) as { element: string | null; elementId: string | null; action: string | null }[];
 }
 

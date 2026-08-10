@@ -29,6 +29,7 @@
 
 import { config } from '../../config/config.ts';
 import type { Ddo } from '../concepts/ddo.ts';
+import type { StoredSectionId } from '../concepts/locator.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
@@ -622,7 +623,10 @@ async function emitTmRow(
 						{
 							id: 1,
 							section_tipo: USERS_SECTION_TIPO,
-							section_id: String(row.user_id),
+							// `row.user_id` is already an int column of
+							// matrix_time_machine — emit the address as an address
+							// (WC-2026-08-10-section-id-int-canonical repeals the String()).
+							section_id: row.user_id,
 							type: 'dd151',
 							from_component_tipo: TIPO_USER,
 							paginated_key: 0,
@@ -640,7 +644,7 @@ async function emitTmRow(
 				// rendered blank. Same class as the select-family value fix that gave
 				// emitRelationCell its cellMode='list' (tm_component_value_differential).
 				emission.items.push({
-					section_id: String(row.user_id),
+					section_id: row.user_id,
 					section_tipo: USERS_SECTION_TIPO,
 					tipo: usernameTipo,
 					mode: 'list',
@@ -648,7 +652,7 @@ async function emitTmRow(
 					from_component_tipo: TIPO_USER,
 					entries: await usernameItems(row.user_id, usernameTipo),
 					parent_tipo: TM_SECTION_TIPO,
-					parent_section_id: String(row.user_id),
+					parent_section_id: row.user_id,
 					fallback_value: null,
 					row_section_id: row.id,
 				} as never);
@@ -675,7 +679,12 @@ async function emitTmRow(
 				// empty → [] (WC-001; PHP emits null).
 				const items = readComponentItems(await getTmRecord(), TIPO_NOTES, 'component_text_area');
 				const value = filterItemsByLang(items ?? [], lang) as Record<string, unknown>[];
-				const parentSectionId = (value[0]?.parent_section_id ?? null) as string | null;
+				// Lifted verbatim off the FIRST item. The value is minted canonical by
+				// tm_record.ts `tmNoteValue` (int, WC-2026-08-10-section-id-int-canonical);
+				// the union stays tolerant because the rest of this item array is
+				// ADOPTED STORED TM DATA, which this reader never rewrites — a
+				// snapshot must keep the bytes the engine of the day wrote.
+				const parentSectionId = (value[0]?.parent_section_id ?? null) as StoredSectionId | null;
 				const entries = value.map((item, index) => {
 					if (index !== 0) return item;
 					const { parent_section_id: _lifted, ...rest } = item;

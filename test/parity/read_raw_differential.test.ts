@@ -12,6 +12,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const COMPONENT_RQO = {
@@ -81,7 +82,11 @@ async function callBoth(rqo: Record<string, unknown>) {
 		csrfCandidate: session?.csrfToken ?? null,
 		principal,
 	});
-	return { php: phpBody as Record<string, unknown>, ts: tsResult.body };
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	return {
+		php: normalizeSectionIdTypes(phpBody as Record<string, unknown>),
+		ts: normalizeSectionIdTypes(tsResult.body),
+	};
 }
 
 describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {

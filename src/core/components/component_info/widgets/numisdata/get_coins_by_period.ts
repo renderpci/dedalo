@@ -62,6 +62,8 @@ async function computeGetCoinsByPeriod(
 		const period = findTyped(input, 'period') as
 			| (TypedInput & {
 					target_sections?: string[];
+					// KEPT UNION: ontology-authored widget config (properties.widgets[].ipo),
+					// where the shipped bytes are strings; compared numerically only.
 					target_model_section_id?: number | string;
 					use_parent?: boolean;
 			  })

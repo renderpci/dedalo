@@ -121,11 +121,12 @@ describe('install: activate an imported hierarchy', () => {
 		expect(row?.relation.hierarchy4?.[0]).toMatchObject({
 			type: 'dd151',
 			section_tipo: 'dd64',
-			section_id: '1', // YES
+			section_id: 1, // YES — int-canonical (WC-2026-08-10-section-id-int-canonical)
 			from_component_tipo: 'hierarchy4',
 		});
 		expect(row?.relation.hierarchy125?.[0]).toMatchObject({
-			section_id: '1',
+			// int-canonical (WC-2026-08-10-section-id-int-canonical)
+			section_id: 1,
 			from_component_tipo: 'hierarchy125',
 		});
 		// The template generateVirtualSection clones — without it, provisioning refuses.
@@ -163,7 +164,7 @@ describe('install: activate an imported hierarchy', () => {
 		const rows = (await sql.unsafe(
 			`SELECT count(*)::int AS n FROM "${HIERARCHY_TABLE}" t
 			 WHERE t.section_tipo = $1 AND t.section_id = $2
-			   AND t.relation @> '{"hierarchy4":[{"section_tipo":"dd64","section_id":"1","from_component_tipo":"hierarchy4"}]}'::jsonb`,
+			   AND t.relation @> '{"hierarchy4":[{"section_tipo":"dd64","section_id":1,"from_component_tipo":"hierarchy4"}]}'::jsonb`,
 			[HIERARCHY_SECTION, sectionId],
 		)) as { n: number }[];
 		expect(Number(rows[0]?.n)).toBe(1);

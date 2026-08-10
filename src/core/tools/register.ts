@@ -32,6 +32,10 @@ import { authoringRegisterSchema } from './register_schema.ts';
 /** Column-keyed tool record (the register.json dump shape / import unit). */
 export interface ToolRecord {
 	string?: Record<string, { lang?: string; value?: string }[] | undefined>;
+	// KEPT UNION: this is the on-disk `register.json` shape, authored by hand and
+	// shipped in the repo with quoted ids ("section_id": "1"). Those FILE bytes
+	// are not matrix data and no sweep rewrites them; the write path
+	// canonicalizes on the way into the record.
 	relation?: Record<string, { section_id?: string | number; section_tipo?: string }[] | undefined>;
 	misc?: Record<string, { value?: unknown }[] | undefined>;
 	[column: string]: unknown;
@@ -211,7 +215,7 @@ export async function convertAuthoringToV7(authoring: unknown): Promise<ToolReco
 /** Resolve model names to dd1342 locators (PHP resolve_affected_model_locators). */
 async function resolveAffectedModelLocators(
 	names: string[],
-): Promise<{ id: number; type: string; section_id: string; section_tipo: string }[]> {
+): Promise<{ id: number; type: string; section_id: number; section_tipo: string }[]> {
 	if (names.length === 0) return [];
 	const rows = (await sql.unsafe(
 		`SELECT section_id, string->'${TIPO_MODEL_NAME}'->0->>'value' AS model_name
@@ -221,7 +225,7 @@ async function resolveAffectedModelLocators(
 	for (const row of rows) {
 		if (row.model_name !== null) nameToId.set(row.model_name, row.section_id);
 	}
-	const locators: { id: number; type: string; section_id: string; section_tipo: string }[] = [];
+	const locators: { id: number; type: string; section_id: number; section_tipo: string }[] = [];
 	let id = 1;
 	for (const name of names) {
 		const sectionId = nameToId.get(name);
@@ -229,7 +233,9 @@ async function resolveAffectedModelLocators(
 		locators.push({
 			id: id++,
 			type: 'dd151',
-			section_id: String(sectionId),
+			// WC-2026-08-10-section-id-int-canonical: the dd1342 address comes off
+			// the PK column already an int; text-minting it was the old string law.
+			section_id: sectionId,
 			section_tipo: 'dd1342',
 		});
 	}

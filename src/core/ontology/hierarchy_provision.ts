@@ -33,6 +33,7 @@
  *    set_term_value) — deferred/ledgered; the seed itself is what the tree needs.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData, updateMatrixRecord } from '../db/matrix_write.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
@@ -90,18 +91,29 @@ export interface GenerateVirtualSectionResponse {
 	errors: string[];
 }
 
-/** relation locator with a string section_id (matrix byte shape). */
+/**
+ * A stored relation locator (matrix byte shape). The section_id is minted in
+ * CANONICAL INT form — WC-2026-08-10-section-id-int-canonical repeals the
+ * former "always a STRING in the matrix" law of this builder. Canonicalization,
+ * never String()/Number(): a numeric literal or numeric string becomes an int,
+ * while anything that is not a record address (an external remote id, or the
+ * `''` an unresolved tipo yields) is preserved verbatim rather than corrupted.
+ */
 function relLocator(fields: {
 	id?: number;
 	type: string;
 	section_tipo: string;
+	// KEPT UNION: callers feed tipo-derived ids (getSectionIdFromTipo returns the
+	// digits of 'dd47' as a STRING) and the `''` an unresolved tipo yields — the
+	// canonicalization below is exactly what turns the first into an int and
+	// preserves the second, so the door must accept both.
 	section_id: string | number;
 	from_component_tipo: string;
 }): Record<string, unknown> {
 	const locator: Record<string, unknown> = {};
 	if (fields.id !== undefined) locator.id = fields.id;
 	locator.type = fields.type;
-	locator.section_id = String(fields.section_id);
+	locator.section_id = canonicalizeStoredSectionId(fields.section_id);
 	locator.section_tipo = fields.section_tipo;
 	locator.from_component_tipo = fields.from_component_tipo;
 	return locator;
@@ -329,7 +341,7 @@ async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
 			id: 1,
 			type: RELATION_TYPE_LINK,
 			section_tipo: 'dd0',
-			section_id: '6',
+			section_id: 6, // dd0/6 = model 'section' (int-canonical)
 			from_component_tipo: ONTOLOGY_MODEL,
 		}),
 	]);
@@ -375,7 +387,11 @@ async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
 	const descriptorParentNodeTipo = `${getTldFromTipo(descriptorGrouperTipo)}0`;
 	const descriptorParentSectionId = getSectionIdFromTipo(descriptorGrouperTipo);
 	await writeDescriptor('relation', ONTOLOGY_PARENT, [
-		{ section_tipo: descriptorParentNodeTipo, section_id: String(descriptorParentSectionId ?? '') },
+		// BARE parent locator, section_id in canonical INT form (WC-2026-08-10).
+		{
+			section_tipo: descriptorParentNodeTipo,
+			section_id: canonicalizeStoredSectionId(descriptorParentSectionId ?? ''),
+		},
 	]);
 	if ((await insertDdOntologyRecord(nodeSectionTipo, 1)) === null) {
 		throw new Error(`insert_dd_ontology_record failed for descriptor: ${nodeSectionTipo}/1`);
@@ -417,7 +433,11 @@ async function provisionVirtualSections(args: ProvisionArgs): Promise<void> {
 	const modelParentNodeTipo = `${getTldFromTipo(modelGrouperTipo)}0`;
 	const modelParentSectionId = getSectionIdFromTipo(modelGrouperTipo);
 	await writeModel('relation', ONTOLOGY_PARENT, [
-		{ section_tipo: modelParentNodeTipo, section_id: String(modelParentSectionId ?? '') },
+		// BARE parent locator, section_id in canonical INT form (WC-2026-08-10).
+		{
+			section_tipo: modelParentNodeTipo,
+			section_id: canonicalizeStoredSectionId(modelParentSectionId ?? ''),
+		},
 	]);
 	if ((await insertDdOntologyRecord(nodeSectionTipo, 2)) === null) {
 		throw new Error(`insert_dd_ontology_record failed for model: ${nodeSectionTipo}/2`);

@@ -124,7 +124,8 @@ type ChildrenResult = {
 	pagination: Record<string, unknown> | null;
 };
 
-const resultOf = (response: { result: unknown }): ChildrenResult => response.result as ChildrenResult;
+const resultOf = (response: { result: unknown }): ChildrenResult =>
+	response.result as ChildrenResult;
 
 describe('get_children_data — the request envelope', () => {
 	test('a request with NO source is refused before anything else runs', async () => {

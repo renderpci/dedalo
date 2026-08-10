@@ -36,9 +36,14 @@ import type {
 	ToolServerModule,
 } from '../../../src/core/tools/module.ts';
 
+/** The caller-supplied portal host locator (`options.item_value`). */
 interface ItemValue {
 	component_portal?: string;
 	component_image?: string;
+	/** Union kept: the client echoes back the locator it was SERVED, so an
+	 * install whose jsonb is not yet swept still sends the legacy string form
+	 * (WC-2026-08-10-section-id-int-canonical); coerced below and re-checked as
+	 * an integer before the scope gate. Narrows at contraction. */
 	section_id?: number | string;
 	section_tipo?: string;
 }

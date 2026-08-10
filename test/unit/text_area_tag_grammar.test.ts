@@ -116,7 +116,9 @@ describe('parseTagId — short forms (what the endpoint receives)', () => {
 		).toMatchObject({
 			kind: 'locator',
 			section_tipo: 'rsc167',
-			section_id: '29',
+			// parsed representation is the canonical int; the inline MARKER byte
+			// form stays pinned (WC-2026-08-10-section-id-int-canonical)
+			section_id: 29,
 			component_tipo: 'rsc170',
 		});
 	});

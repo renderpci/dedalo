@@ -626,10 +626,16 @@ describe('live-ontology gates (suite DB)', () => {
 			-1,
 		);
 		expect(result).toHaveLength(1);
-		const item = result[0] as { tipo?: string; section_tipo?: string; section_id?: string };
+		const item = result[0] as {
+			tipo?: string;
+			section_tipo?: string;
+			section_id?: string | number;
+		};
 		expect(item.tipo).toBe('oh28');
 		expect(item.section_tipo).toBe('oh1');
-		expect(item.section_id).toBe(String(SCRATCH_OH1_ID));
+		// WC-2026-08-10-section-id-int-canonical: the recomputed item's address
+		// is emitted int (observers.ts canonicalizeStoredSectionId).
+		expect(item.section_id).toBe(SCRATCH_OH1_ID);
 		const tmRows = (await sql.unsafe(
 			`SELECT 1 FROM matrix_time_machine WHERE section_tipo = 'oh1' AND section_id = $1 AND tipo = 'oh28'`,
 			[SCRATCH_OH1_ID],

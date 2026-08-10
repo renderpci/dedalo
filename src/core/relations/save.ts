@@ -36,6 +36,7 @@
 
 import { getComponentModel } from '../components/registry.ts';
 import { compareLocators, isLocatorInArray } from '../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import {
 	type DataframePairing,
 	dataframeEntriesEqual,
@@ -241,7 +242,9 @@ export async function applyAddNewElement(
 	const locator = {
 		id: maxId + 1,
 		type: 'dd151',
-		section_id: String(newSectionId),
+		// WC-2026-08-10-section-id-int-canonical: createSectionRecord already
+		// returns the int address — minting it as text was the old string law.
+		section_id: newSectionId,
 		section_tipo: targetSectionTipo,
 		from_component_tipo: componentTipo,
 	};
@@ -318,8 +321,13 @@ export async function maintainRelationSearchIndex(
  *  - `from_component_tipo` FORCED to the component's own tipo (:1107-19);
  *  - translatable relation locators carry the request lang (:1121-35);
  *  - transient `paginated_key` never persists (:1138-41);
- *  - locator normalization stores section_id as a STRING (PHP new locator —
- *    byte-verified against the oracle: client 301 → stored "301");
+ *  - locator normalization CANONICALIZES section_id to an INT
+ *    (WC-2026-08-10-section-id-int-canonical, repealing the PHP-era string law
+ *    "client 301 → stored \"301\"" that this list carried: the record address is
+ *    an integer, so client 301 and client "301" both store 301). Values that are
+ *    NOT convertible to an address — external-service remote ids like
+ *    "001338683" or "Q42" — pass through VERBATIM; they are a different concept
+ *    wearing the same field name and must never be cast;
  *  - duplicate rejection over get_locator_properties_to_check
  *    ([section_id, section_tipo, type, tag_id] + lang when translatable,
  *    :1146-98) — a dup returns null so the item is not added and the client's
@@ -389,7 +397,9 @@ export async function validateRelationInsert(
 	}
 	// biome-ignore lint/performance/noDelete: PHP unset — paginated_key must be ABSENT in persisted data
 	delete value.paginated_key;
-	value.section_id = String(value.section_id);
+	// Canonical stored address (WC-2026-08-10-section-id-int-canonical): int for
+	// a record, verbatim for an external remote id. Never Number() blindly.
+	value.section_id = canonicalizeStoredSectionId(value.section_id);
 
 	// DATAFRAME normalization + dedup. The pairing fields are stamped from the
 	// SERVER's caller context (overriding whatever the client sent for `type`,
@@ -524,6 +534,8 @@ export async function removeDataframeDataById(
 	const policy = (node.properties as { dataframe?: { delete_policy?: unknown } } | null)?.dataframe
 		?.delete_policy;
 	const deleteTarget = policy === 'delete_target';
+	// KEPT UNION: targets are lifted from the RAW stored dataframe slot entries
+	// (unswept legacy string ids), so the collected id keeps the stored form.
 	const unlinkedTargets: { section_tipo: string; section_id: number | string }[] = [];
 
 	const { updateMatrixKeyData } = await import('../db/matrix_write.ts');
@@ -600,6 +612,9 @@ export async function removeDataframeDataById(
  */
 export async function deletePortalLocator(
 	principal: { isGlobalAdmin: boolean; userId: number },
+	// KEPT UNION: `source` is the RQO body of dd_component_portal_api
+	// .delete_locator, an uncoerced wire door — legacy clients still post the
+	// string form. Consumed numerically (Number()) for the row address only.
 	source: { tipo?: string; section_tipo?: string; section_id?: string | number },
 	options: { locator?: Record<string, unknown>; ar_properties?: string[] },
 ): Promise<{ result: unknown; msg: string[]; errors: string[] }> {

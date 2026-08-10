@@ -84,13 +84,14 @@ describe('datalist options carry their HIDE ddo values', () => {
 	test('every rating option resolves its colour into hide[0].literal', async () => {
 		const properties = (await getNode(RATING))?.properties ?? null;
 		const options = await getDatalist(RATING, properties, RATING_OWNER, 'lg-spa');
+		// WC-2026-08-10-section-id-int-canonical: option addresses are ints now.
 		const seeded = options.filter((option) =>
-			OPTIONS.some((fixture) => String(fixture.section_id) === option.section_id),
+			OPTIONS.some((fixture) => fixture.section_id === option.section_id),
 		);
 		expect(seeded.length).toBe(OPTIONS.length);
 
 		for (const option of seeded) {
-			const fixture = OPTIONS.find((entry) => String(entry.section_id) === option.section_id);
+			const fixture = OPTIONS.find((entry) => entry.section_id === option.section_id);
 			// The exact access path the client uses. Before the fix this was [].
 			const first = option.hide[0];
 			expect(first).toBeDefined();
@@ -108,8 +109,9 @@ describe('datalist options carry their HIDE ddo values', () => {
 		const properties = (await getNode(RATING))?.properties ?? null;
 		const spanish = await getDatalist(RATING, properties, RATING_OWNER, 'lg-spa');
 		const english = await getDatalist(RATING, properties, RATING_OWNER, 'lg-eng');
+		// WC-2026-08-10-section-id-int-canonical: int record address.
 		const find = (list: typeof spanish, sectionId: number) =>
-			list.find((option) => option.section_id === String(sectionId));
+			list.find((option) => option.section_id === sectionId);
 
 		for (const fixture of OPTIONS) {
 			// rsc1260 is stored lg-nolan: the effective-lang rule must resolve it

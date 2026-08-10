@@ -15,8 +15,11 @@
  *  - data[0] is ALWAYS the sections item `{typo:'sections', tipo, section_tipo,
  *    value:[locators]}` — even with zero hits (`value: []`), so the persons
  *    modal still renders the host record's own persons;
- *  - every section_id in the payload is a STRING (the clients group with
- *    strict `===` against string ids);
+ *  - every section_id in the payload is CANONICAL — an int for a matrix record
+ *    address (WC-2026-08-10-section-id-int-canonical, repealing the STRING half
+ *    of WC-065); the clients group these ids with the hardened comparison, and
+ *    the ids they group AGAINST come from this same payload, so both sides move
+ *    together;
  *  - per-column data entries carry `value: string[]` (flat resolveCellValue
  *    strings, 0..1 elements) — the clients `join(' | ')` them raw;
  *  - context lists, per referencing section, the SECTION entry FIRST (the
@@ -24,6 +27,7 @@
  *    `{model, tipo, section_tipo, label}` entry per relation-list column.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { termByTipo } from '../ontology/labels.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
 import { findInverseReferences } from '../search/search_related.ts';
@@ -55,6 +59,11 @@ export interface RelatedSectionsOptions {
 }
 
 export async function buildRelatedSections(
+	// KEPT UNION: this is the CANONICALIZING ENTRANCE the read_facade
+	// related_search door defers to — the host list arrives raw from the
+	// transcription/indexation tools (legacy string ids) and may name an
+	// external-service host whose remote id is a string by nature. The probe
+	// below canonicalizes each locator; nothing upstream does.
 	locators: { section_tipo: string; section_id: number | string }[],
 	options: RelatedSectionsOptions,
 ): Promise<RelatedSectionsResult> {
@@ -62,7 +71,12 @@ export async function buildRelatedSections(
 	const lang = options.lang ?? currentDataLang();
 
 	let hits = await findInverseReferences(
-		locators.map((l) => ({ section_tipo: l.section_tipo, section_id: String(l.section_id) })),
+		// Canonical address in — the index probe binds ::int, so String() minting
+		// only leaked the legacy form outward (WC-2026-08-10-section-id-int-canonical).
+		locators.map((l) => ({
+			section_tipo: l.section_tipo,
+			section_id: canonicalizeStoredSectionId(l.section_id) as string | number,
+		})),
 		{
 			sectionTipos: options.sectionTipos ?? 'all',
 			limit: options.limit ?? false,
@@ -77,12 +91,13 @@ export async function buildRelatedSections(
 	// Distinct referencing records (the index has one row per relation edge;
 	// a record referencing the host twice must list once).
 	const seenRecords = new Set<string>();
-	const records: { section_tipo: string; section_id: string }[] = [];
+	// `hit.section_id` is already an int off the relation index — emit it as-is.
+	const records: { section_tipo: string; section_id: number }[] = [];
 	for (const hit of hits) {
 		const key = `${hit.section_tipo}_${hit.section_id}`;
 		if (seenRecords.has(key)) continue;
 		seenRecords.add(key);
-		records.push({ section_tipo: hit.section_tipo, section_id: String(hit.section_id) });
+		records.push({ section_tipo: hit.section_tipo, section_id: hit.section_id });
 	}
 
 	const context: Record<string, unknown>[] = [];
@@ -122,7 +137,7 @@ export async function buildRelatedSections(
 		for (const columnTipo of columns) {
 			const value = await resolveCellValue(
 				record.section_tipo,
-				Number(record.section_id),
+				record.section_id,
 				columnTipo,
 				lang,
 				unresolved,

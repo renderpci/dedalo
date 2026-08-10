@@ -67,6 +67,9 @@ export async function filterNdjsonRecords(
 
 	const handleLine = (line: string): void => {
 		if (line === '') return;
+		// A PUBLISHED record line: its section_id keeps whatever form the writer
+		// emitted (the published shape is a pinned edge), so the union stays and
+		// the membership test compares as text — WC-2026-08-10-section-id-int-canonical.
 		const parsed = JSON.parse(line) as { section_id: number | string };
 		if (removedIds.has(String(parsed.section_id))) {
 			dropped++;

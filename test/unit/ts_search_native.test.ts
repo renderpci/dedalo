@@ -186,9 +186,10 @@ describe('searchThesaurus — a hit expands into its ancestor chain', () => {
 		expect(response.total).toBe(1);
 		expect(response.msg).toBe('Records found: 1');
 		expect(response.errors).toEqual([]);
-		// WIRE FACT: section_id comes back as a STRING, not the DB integer.
-		expect(response.found).toEqual([{ section_tipo: SECTION, section_id: String(CHILD) }]);
-		expect(typeof response.found[0]?.section_id).toBe('string');
+		// WIRE FACT: section_id comes back as the canonical INT
+		// (WC-2026-08-10-section-id-int-canonical; was string in the PHP era).
+		expect(response.found).toEqual([{ section_tipo: SECTION, section_id: CHILD }]);
+		expect(typeof response.found[0]?.section_id).toBe('number');
 
 		// insertion order: the ancestor's full sibling list first, the ancestor after.
 		expect(response.result.map((node) => node.ts_id)).toEqual([
@@ -200,8 +201,9 @@ describe('searchThesaurus — a hit expands into its ancestor chain', () => {
 		expect(child.ts_parent).toBe(`${SECTION}_${ROOT}`);
 		expect(child.order).toBe(1);
 		expect(child.mode).toBe('list');
-		expect(child.section_id).toBe(String(CHILD));
-		expect(typeof child.section_id).toBe('string');
+		// int-canonical node ids (WC-2026-08-10-section-id-int-canonical)
+		expect(child.section_id).toBe(CHILD);
+		expect(typeof child.section_id).toBe('number');
 
 		const root = nodeOf(response.result, ROOT);
 		expect(root.ts_parent).toBe('root');
@@ -278,7 +280,8 @@ describe('searchThesaurus — a hit with no parents is its own root', () => {
 			// the rootless branch passes `{}` — no order, and getMainOrder is not consulted.
 			expect(node.order).toBeNull();
 		}
-		expect(response.found.map((row) => row.section_id).sort()).toEqual([String(A), String(B)]);
+		// int-canonical found ids (WC-2026-08-10-section-id-int-canonical)
+		expect(response.found.map((row) => row.section_id).sort()).toEqual([A, B].sort());
 	}, 30000);
 });
 

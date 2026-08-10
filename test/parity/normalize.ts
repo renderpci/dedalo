@@ -78,3 +78,64 @@ export function adoptEntriesArrayContract<T>(value: T): T {
 	};
 	return walk(value) as T;
 }
+
+/**
+ * DELIBERATE WIRE DIVERGENCE — section_id INT-CANONICAL
+ * (WC-2026-08-10-section-id-int-canonical; the WC-001 gate-side-transform
+ * pattern — the frozen fixtures are NOT edited).
+ *
+ * The TS engine now emits record addresses as INTS where the frozen PHP
+ * fixtures carry numeric STRINGS ('7'). This transform maps every
+ * address-shaped key whose value is a STRICT-NUMERIC NO-LEADING-ZERO string
+ * to its int twin, at any depth, so the diff compares VALUE identity while
+ * every other byte stays verbatim. What it deliberately does NOT touch:
+ *   - non-numeric values (synthetic 'search_1' tokens, external 'Q42');
+ *   - leading-zero strings (external zenon ids — a transform that converted
+ *     them would hide a real corruption);
+ *   - booleans/null (some fixtures carry parent_section_id: false);
+ *   - any key not in the address set.
+ *
+ * TWO-SIDED during the expand window (applied to fixture AND live payload —
+ * old-shape data replayed through new code can still emit either form at
+ * unswept depths). The contraction release (plan P6) flips it FIXTURE-SIDE
+ * ONLY, so a server regression re-emitting '7' reddens parity again.
+ */
+const SECTION_ID_ADDRESS_KEYS: ReadonlySet<string> = new Set([
+	'section_id',
+	'parent_section_id',
+	'row_section_id',
+	'section_id_key',
+	'target_section_id',
+	'created_section_id',
+	// The tree-area boot payload's typology address (src/core/area/tree.ts
+	// canonicalizes it with canonicalizeStoredSectionId, exactly like a
+	// section_id) — same law, different field name.
+	'typology_section_id',
+]);
+const STRICT_NUMERIC_ADDRESS = /^(-?[1-9][0-9]*|0)$/;
+
+export function normalizeSectionIdTypes<T>(value: T): T {
+	const walk = (node: unknown): unknown => {
+		if (Array.isArray(node)) {
+			return node.map(walk);
+		}
+		if (node !== null && typeof node === 'object') {
+			const out: Record<string, unknown> = {};
+			for (const [key, entry] of Object.entries(node)) {
+				if (
+					SECTION_ID_ADDRESS_KEYS.has(key) &&
+					typeof entry === 'string' &&
+					STRICT_NUMERIC_ADDRESS.test(entry) &&
+					Number.isSafeInteger(Number(entry))
+				) {
+					out[key] = Number(entry);
+				} else {
+					out[key] = walk(entry);
+				}
+			}
+			return out;
+		}
+		return node;
+	};
+	return walk(value) as T;
+}

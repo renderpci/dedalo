@@ -14,11 +14,31 @@ export async function countPendingDiffusion(): Promise<number> {
 	// Whole-column containment (not relation->'dd1767' @> ...) so the existing
 	// relation GIN index serves the predicate — the arrow form seq-scans the
 	// multi-million-row table.
+	//
+	// The action is probed in EVERY stored shape — the D16 explicit
+	// `diffusion_action` key this engine writes, plus both typed section_id
+	// forms of the legacy locator shape (WC-2026-08-10-section-id-int-canonical:
+	// jsonb `@>` is type-strict, and the legacy form is a string until the int
+	// sweep, an int after). A single-shape probe would silently report zero
+	// pending unpublishes. The payload set is owned by the ledger writer, so the
+	// widget never restates it.
+	const { DIFFUSION_ACTION, diffusionActionContains } = await import(
+		'../../diffusion_bridge/diffusion_delete.ts'
+	);
+	const queryParams: string[] = [];
+	const pendingClause = diffusionActionContains(
+		'relation',
+		DIFFUSION_ACTION.unpublishPending,
+		(payload) => {
+			queryParams.push(payload);
+			return `$${queryParams.length}`;
+		},
+	);
 	const rows = (await sql.unsafe(
 		`SELECT COUNT(*) AS n FROM matrix_activity_diffusion
 		 WHERE section_tipo = 'dd1758'
-		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb`,
-		[],
+		   AND ${pendingClause}`,
+		queryParams,
 	)) as { n: number | string }[];
 	return Number(rows[0]?.n ?? 0);
 }

@@ -18,10 +18,21 @@
  * the config key's tipo (the related_sections locators). Each stored person
  * locator becomes one element with the ready-to-insert tag string.
  *
- * Wire law: every section_id emitted here is a STRING — the client groups
- * with strict `===` against string ids (WC-065).
+ * Wire law (WC-2026-08-10-section-id-int-canonical, repealing the STRING half
+ * of WC-065): every section_id in the emitted PAYLOAD is canonical — a stored
+ * numeric string becomes an int, an external remote id survives verbatim.
+ *
+ * (!) The `tag` field is an IN-TEXT MARKER, not payload: it is the exact byte
+ * string inserted into the transcription, and its embedded locator JSON KEEPS
+ * the historical string section_id (publication v1 LIKE-probes those bytes, and
+ * the whole corpus of already-written marks uses that form). `buildTagPerson`
+ * therefore takes a string-id locator BY TYPE — handing it the canonical int
+ * form is a compile error, not a silent byte change. The client reconciles the
+ * two sides with loose `==` (view_default_edit_text_area.js:1170).
  */
 
+import type { StoredSectionId } from '../../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import type { MatrixRecord } from '../../db/matrix.ts';
 import { readMatrixRecord } from '../../db/matrix.ts';
 import { termByTipo } from '../../ontology/labels.ts';
@@ -46,15 +57,28 @@ export interface TagsPersonsConfigEntry {
 	component_tipo?: string;
 	state?: string;
 	tag_id?: number | string;
+	// KEPT UNION: ontology-authored `properties.tags_persons` bytes (strings in
+	// every shipped config). Deliberately UNREAD — a self entry's stored id is
+	// stale by definition and the host's own address wins (PHP :1454).
 	section_id?: number | string;
 	info?: string;
+}
+
+/**
+ * The locator shape the IN-TEXT marker serializes — string section_id ONLY, so
+ * the canonical int form cannot reach the marker bytes by accident (see header).
+ */
+export interface PersonMarkerLocator {
+	section_tipo: string;
+	section_id: string;
+	component_tipo: string;
 }
 
 export interface PersonTagElement {
 	type: 'person';
 	/** OWNING record — the persons-modal grouping key, NOT the person. */
 	section_tipo: string;
-	section_id: string;
+	section_id: StoredSectionId;
 	/** Ready-to-insert wire tag: [person-a-1-DyaDa-data:{'…'}:data]. */
 	tag: string;
 	role: string;
@@ -63,8 +87,8 @@ export interface PersonTagElement {
 	tag_id: number | string;
 	/** Initials, the tag's visible label. */
 	label: string;
-	/** The PERSON record locator — tag identity on click/lookup. */
-	data: { section_tipo: string; section_id: string; component_tipo: string };
+	/** The PERSON record locator — tag identity on click/lookup (canonical id). */
+	data: { section_tipo: string; section_id: StoredSectionId; component_tipo: string };
 }
 
 /**
@@ -79,7 +103,7 @@ export function buildTagPerson(
 	state: string,
 	tagId: number | string,
 	label: string,
-	locator: PersonTagElement['data'],
+	locator: PersonMarkerLocator,
 ): string {
 	const safeLabel = label.trim().replace(/-/g, '_').slice(0, 22);
 	const data = JSON.stringify(locator).replace(/"/g, "'");
@@ -104,9 +128,11 @@ export function buildTagPerson(
  * LEGACY: a target section whose section_map resolves NO term scope falls
  * back to the PHP-hardcoded rsc85/rsc86 pair (name first, v6 bytes).
  */
-export async function getTagPersonLabel(
-	locator: PersonTagElement['data'],
-): Promise<{ initials: string; full_name: string; role: string }> {
+export async function getTagPersonLabel(locator: {
+	section_tipo: string;
+	section_id: StoredSectionId;
+	component_tipo: string;
+}): Promise<{ initials: string; full_name: string; role: string }> {
 	let full_name = '';
 	const termTipos = await getTermTipos(locator.section_tipo, 'default');
 	if (termTipos.length > 0) {
@@ -155,14 +181,16 @@ export async function getTagPersonLabel(
  */
 export async function buildTagsPersons(
 	config: Record<string, TagsPersonsConfigEntry[]>,
-	host: { section_tipo: string; section_id: number | string },
+	host: { section_tipo: string; section_id: StoredSectionId },
 	hostRecord: MatrixRecord | null,
-	relatedLocators: { section_tipo: string; section_id: string }[],
+	relatedLocators: { section_tipo: string; section_id: StoredSectionId }[],
 ): Promise<PersonTagElement[]> {
 	const result: PersonTagElement[] = [];
-	// Identity of the host row among owners (both sides built here with
-	// String() ids, so key equality is exact — no loose-numeric hazard).
-	const hostKey = `${host.section_tipo}_${String(host.section_id)}`;
+	// Identity of the host row among owners. Both sides go through the SAME
+	// canonicalization before being stringified into the key, so a pre-sweep
+	// '528' and a post-sweep 528 land on one key instead of two.
+	const hostSectionId = canonicalizeStoredSectionId(host.section_id) as StoredSectionId;
+	const hostKey = `${host.section_tipo}_${hostSectionId}`;
 
 	for (const [relatedSectionTipo, entries] of Object.entries(config)) {
 		if (!Array.isArray(entries)) continue;
@@ -170,7 +198,14 @@ export async function buildTagsPersons(
 		// get_tags_persons call): the same person may legitimately appear
 		// under two different related-section groups.
 		const resolved = new Set<string>();
-		const refs = relatedLocators.filter((l) => l.section_tipo === relatedSectionTipo);
+		const refs = relatedLocators
+			.filter((l) => l.section_tipo === relatedSectionTipo)
+			.map((l) => ({
+				section_tipo: l.section_tipo,
+				// The related feed may still hand us pre-sweep strings; the owner
+				// id is echoed as the grouping key, so canonicalize at the door.
+				section_id: canonicalizeStoredSectionId(l.section_id) as StoredSectionId,
+			}));
 
 		for (const entry of entries) {
 			if (typeof entry?.component_tipo !== 'string' || typeof entry.section_tipo !== 'string') {
@@ -180,7 +215,7 @@ export async function buildTagsPersons(
 			// section_id ignored — PHP :1454), one per related record otherwise.
 			const owners =
 				entry.section_tipo === host.section_tipo
-					? [{ section_tipo: host.section_tipo, section_id: String(host.section_id) }]
+					? [{ section_tipo: host.section_tipo, section_id: hostSectionId }]
 					: refs;
 
 			const state = typeof entry.state === 'string' && entry.state.length > 0 ? entry.state : 'a';
@@ -209,13 +244,24 @@ export async function buildTagsPersons(
 					if (typeof stored.section_tipo !== 'string' || stored.section_id === undefined) {
 						continue;
 					}
+					const componentTipo =
+						typeof stored.from_component_tipo === 'string'
+							? stored.from_component_tipo
+							: entry.component_tipo;
+					// PAYLOAD form — canonical id (int for a matrix address, verbatim
+					// for a remote id). This is what `data` carries.
 					const personLocator = {
 						section_tipo: stored.section_tipo,
+						section_id: canonicalizeStoredSectionId(stored.section_id) as StoredSectionId,
+						component_tipo: componentTipo,
+					};
+					// IN-TEXT MARKER form — string id, historical bytes (see header).
+					// Deliberately NOT derived from `personLocator` so the type keeps
+					// the two apart.
+					const personMarkerLocator: PersonMarkerLocator = {
+						section_tipo: stored.section_tipo,
 						section_id: String(stored.section_id),
-						component_tipo:
-							typeof stored.from_component_tipo === 'string'
-								? stored.from_component_tipo
-								: entry.component_tipo,
+						component_tipo: componentTipo,
 					};
 					const dedupKey = `${personLocator.section_tipo}_${personLocator.section_id}`;
 					if (resolved.has(dedupKey)) continue;
@@ -226,7 +272,7 @@ export async function buildTagsPersons(
 						type: 'person',
 						section_tipo: owner.section_tipo,
 						section_id: owner.section_id,
-						tag: buildTagPerson(state, tagId, label.initials, personLocator),
+						tag: buildTagPerson(state, tagId, label.initials, personMarkerLocator),
 						role: label.role,
 						full_name: label.full_name,
 						state,

@@ -63,6 +63,7 @@
  */
 
 import { incrementCounter } from '../../api/counters.ts';
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import { isInTransaction, registerCommitAction, sql } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/resolver.ts';
@@ -80,6 +81,13 @@ import {
 interface StoredLocator {
 	id?: number;
 	type?: string;
+	/**
+	 * KEPT UNION (WC-2026-08-10-section-id-int-canonical): this is the locator
+	 * as READ from unswept jsonb — legacy string addresses on an unmigrated
+	 * install, plus external remote ids that are strings by nature. Mirror
+	 * writes canonicalize on the way out (canonicalizeStoredSectionId), the
+	 * read side stays tolerant.
+	 */
 	section_id?: number | string;
 	section_tipo?: string;
 	from_component_tipo?: string;
@@ -707,9 +715,14 @@ async function recomputeInfoObserver(
 		const fromComponentTipo = Array.isArray(firstPath)
 			? firstPath[firstPath.length - 1]?.component_tipo
 			: undefined;
+		// The q locator is the SAVED RECORD'S ADDRESS: int, the canonical form
+		// (WC-2026-08-10-section-id-int-canonical repeals the String() minting
+		// that used to be needed to match the stored string bytes). The relation
+		// search builder probes both typed forms of section_id, so an int q still
+		// finds rows whose stored locators are the legacy strings.
 		const qLocator: Record<string, unknown> = {
 			section_tipo: savedSectionTipo,
-			section_id: String(savedSectionId),
+			section_id: savedSectionId,
 		};
 		if (fromComponentTipo !== undefined) qLocator.from_component_tipo = fromComponentTipo;
 		for (const clause of clauses) {
@@ -794,10 +807,13 @@ async function recomputeInfoObserver(
 			now,
 		);
 		// same-record target → the save response carries the recomputed item
-		// (PHP observers_data; section_id STRING as PHP emits it here)
+		// (PHP observers_data). WC-2026-08-10-section-id-int-canonical repeals
+		// the "section_id STRING as PHP emits it here" law: a record address on
+		// the app wire is emitted in canonical INT form; the client compares
+		// section_ids loosely (same_section_id), so both forms still match.
 		if (target.sectionTipo === savedSectionTipo && target.sectionId === savedSectionId) {
 			responseItems.push({
-				section_id: String(target.sectionId),
+				section_id: target.sectionId,
 				section_tipo: target.sectionTipo,
 				tipo: observerTipo,
 				mode: 'list',
@@ -924,7 +940,9 @@ export async function collectExternalSeed(
 	 * refusal adjudicates on. */
 	defects?: string[],
 ): Promise<ExternalSeedLocator[]> {
-	const peerBag: { section_tipo: string; section_id: string }[] = [];
+	// section_id is the canonical int for anything the graph could canonicalize
+	// and the verbatim stored form otherwise (WC-2026-08-10-section-id-int-canonical).
+	const peerBag: { section_tipo: string; section_id: number | string }[] = [];
 	const dataFromField = source?.data_from_field;
 	if (Array.isArray(dataFromField)) {
 		const { getStoredWithReferences } = await import('../../relations/related.ts');
@@ -1283,7 +1301,10 @@ export async function recomputeExternalRelation(
 			additions.push({
 				id: nextId++,
 				type: 'dd151',
-				section_id: String(reference.section_id),
+				// Stored mirror locator: canonical INT
+				// (WC-2026-08-10-section-id-int-canonical). Not a blind Number():
+				// a non-convertible id (external remote ref) survives verbatim.
+				section_id: canonicalizeStoredSectionId(reference.section_id) as number | string,
 				section_tipo: reference.section_tipo,
 				from_component_tipo: observerTipo,
 			});

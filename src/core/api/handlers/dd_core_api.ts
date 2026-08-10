@@ -12,8 +12,15 @@
 import { config } from '../../../config/config.ts';
 import { dispatchAreaRead, refuseAreaWrite } from '../../area/read.ts';
 import { isAreaModel } from '../../concepts/area.ts';
-import { isTemporalSource, type Rqo } from '../../concepts/rqo.ts';
+import { isTemporalSource, type Rqo, type RqoSource } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
+import {
+	canonicalizeStoredSectionId,
+	classifyWireSectionId,
+	coerceSectionId,
+	isConvertibleSectionIdString,
+	type WireSectionId,
+} from '../../concepts/section_id.ts';
 import { getSectionTipos } from '../../concepts/sqo.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
 import { routeSectionRead } from '../../section/read_facade.ts';
@@ -148,15 +155,39 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		const saveAreaRefusal = await refuseAreaWrite(source.section_tipo, source.model);
 		if (saveAreaRefusal !== null) return saveAreaRefusal;
+		// ONE classification replaces the scattered `startsWith('search_')` sniffs
+		// and the blind `Number(section_id)` casts below
+		// (WC-2026-08-10-section-id-int-canonical). Branch parity with the sniff
+		// era: 'record' → the write path (as the coerced int every downstream
+		// consumer shares), 'synthetic'/'external-ref' → the non-persisting
+		// resolve+echo branch, 'absent' → the required-field refusal. Deliberate,
+		// WC-noted divergences: '' is 'absent' (the NaN era read record 0 via
+		// Number('') === 0) and numeric-shaped junk ('007') refuses loudly instead
+		// of silently becoming record 7. Classified AFTER the temporal branch so
+		// the WC-059 sentinel never reaches the classifier.
+		let wireId: WireSectionId;
+		try {
+			wireId = await classifyWireSectionId(
+				source.section_id,
+				source.section_tipo,
+				'rqo.dd_core_api.save.section_id',
+			);
+		} catch (error) {
+			return denied(400, `save: ${error instanceof Error ? error.message : String(error)}`);
+		}
+		if (wireId.kind === 'absent') {
+			// '' lands here (the required-guard above only catches undefined/null).
+			return denied(400, 'save: source.tipo/section_tipo/section_id are required');
+		}
 		// Consultation-only sections (Activity dd542, Time Machine dd15, …) are
 		// read-only regardless of any component-level grant (PHP dd_core_api:1330
-		// "Illegal save to activity"). The search_* exception preserves saving a
-		// search/list preset within the section's list view. The write ENGINE
-		// (saveComponentData) enforces the same rule for MCP/agent doors.
-		if (
-			isConsultationOnlySection(source.section_tipo) &&
-			!String(source.section_id).startsWith('search_')
-		) {
+		// "Illegal save to activity"). Only a RECORD-addressed save is a write:
+		// synthetic ids (the search/list-preset flow within the section's list
+		// view) land in the resolve+echo branch below, which persists nothing —
+		// that is the old search_* exception, stated by kind instead of by prefix.
+		// The write ENGINE (saveComponentData) enforces the same rule for
+		// MCP/agent doors.
+		if (isConsultationOnlySection(source.section_tipo) && wireId.kind === 'record') {
 			return denied(403, `Illegal save to read-only section '${source.section_tipo}'`);
 		}
 		// SEARCH-MODE relation link (portal/relation link_record + unlink_record):
@@ -170,29 +201,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// written, and resolveSearchData applies its own per-target projects ACL.
 		// The merge + resolve + echo is the shared non-persisting core
 		// (section/record/resolve_echo.ts), which the temporal door reuses.
-		if (String(source.section_id).startsWith('search_')) {
-			if (!Array.isArray(dataPayload.changed_data)) {
-				return denied(400, 'save: data.changed_data must be an array');
-			}
-			const { getColumnNameByModel: columnOf, getModelByTipo: modelOf } = await import(
-				'../../ontology/resolver.ts'
-			);
-			const searchModel = await modelOf(source.tipo);
-			if (searchModel !== null && columnOf(searchModel) === 'relation') {
-				const searchLevel = await getPermissions(principal, source.section_tipo, source.tipo);
-				if (searchLevel < 1) {
-					return denied(403, "You don't have enough permissions to search this component");
-				}
-				const { currentChipsFromPayload, mergeRelationChips, resolveRelationEcho } = await import(
-					'../../section/record/resolve_echo.ts'
-				);
-				const picked = mergeRelationChips(
-					currentChipsFromPayload((rqo.data ?? {}) as { entries?: unknown; value?: unknown }),
-					dataPayload.changed_data,
-				);
-				return await resolveRelationEcho({ rqo, principal, picked, mode: 'search' });
-			}
+		// An external-service ref ('001338683', 'Q42') addresses no matrix row
+		// either, so it takes the same never-write branch (the classifier's
+		// BRANCH PARITY LAW).
+		if (wireId.kind === 'synthetic' || wireId.kind === 'external-ref') {
+			return resolveNonRecordSave(rqo, source, dataPayload, principal);
 		}
+		// From here down the save addresses a real record: the ONE coerced int that
+		// the permission resolver, scope gate, write engine, audit row and echo all
+		// share (the era of each site running its own Number()/String() is over).
+		const sectionId = wireId.id;
 		// dd128 OWN-record rules run BEFORE the matrix level and both raise and
 		// lower it (PHP component_common::save reaches the same resolver through
 		// get_component_permissions()). The DOWNGRADE half is the security half:
@@ -205,7 +223,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			principal,
 			source.section_tipo,
 			source.tipo,
-			source.section_id,
+			sectionId,
 		);
 		const level =
 			ownRecordLevel ?? (await getPermissions(principal, source.section_tipo, source.tipo));
@@ -218,7 +236,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// IDOR). Global admins are unscoped. Same rule as duplicate/delete/tools.
 		if (!principal.isGlobalAdmin) {
 			const { isRecordInScope } = await import('../../security/record_scope.ts');
-			if (!(await isRecordInScope(source.section_tipo, Number(source.section_id), principal))) {
+			if (!(await isRecordInScope(source.section_tipo, sectionId, principal))) {
 				return denied(403, 'Record is out of the user scope');
 			}
 		}
@@ -229,7 +247,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const outcome = await saveComponentData({
 			componentTipo: source.tipo,
 			sectionTipo: source.section_tipo,
-			sectionId: Number(source.section_id),
+			sectionId,
 			lang: source.lang ?? 'lg-nolan',
 			changedData: dataPayload.changed_data,
 			userId: principal.userId,
@@ -267,7 +285,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					lang: source.lang ?? 'lg-nolan',
 					tipo: source.tipo,
 					table: (await getMatrixTableFromTipo(source.section_tipo)) ?? 'matrix',
-					section_id: String(source.section_id),
+					// int, repealing the String() minting: a record address is emitted
+					// in canonical form (WC-2026-08-10-section-id-int-canonical).
+					section_id: sectionId,
 					section_tipo: source.section_tipo,
 					component_name: (await getModelByTipo(source.tipo)) ?? '',
 				},
@@ -307,7 +327,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		let savedDataItem = buildDataItem(
 			source.tipo,
 			source.section_tipo,
-			Number(source.section_id),
+			sectionId,
 			'edit',
 			source.lang ?? 'lg-nolan',
 			savedItems,
@@ -362,7 +382,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 						items.find(
 							(item) =>
 								(item as { tipo?: string }).tipo === source.tipo &&
-								String((item as { section_id?: unknown }).section_id) === String(source.section_id),
+								// String-compare on BOTH sides: stored items may still carry the
+								// legacy string form until the repair sweep lands (WC-2026-08-10).
+								String((item as { section_id?: unknown }).section_id) === String(sectionId),
 						);
 					// PHP pagination sync (dd_core_api::save :1453): the save rqo carries
 					// NO sqo, so the read would page at the component's config limit —
@@ -462,9 +484,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 						const { EmissionContext } = await import('../../resolve/component_data.ts');
 						const table = await tableFromTipo(source.section_tipo);
 						const record =
-							table === null
-								? null
-								: await readMatrixRecord(table, source.section_tipo, Number(source.section_id));
+							table === null ? null : await readMatrixRecord(table, source.section_tipo, sectionId);
 						if (record !== null) {
 							const lang = source.lang ?? 'lg-nolan';
 							await hook.decorateItem(savedDataItem as never, {
@@ -474,7 +494,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 									mode: 'edit',
 								} as never,
 								record,
-								row: { section_tipo: source.section_tipo, section_id: Number(source.section_id) },
+								row: { section_tipo: source.section_tipo, section_id: sectionId },
 								model: savedModel as string,
 								ddoMode: 'edit',
 								ddoLang: lang,
@@ -601,7 +621,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				host: hostFromClientIp(context.clientIp),
 				data: {
 					msg: 'Created section record',
-					section_id: String(sectionId),
+					// int, repealing the String() minting: a record address is emitted
+					// in canonical form (WC-2026-08-10-section-id-int-canonical).
+					section_id: sectionId,
 					section_tipo: sectionTipo,
 					tipo: sectionTipo,
 					table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
@@ -641,7 +663,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				`You don't have enough permissions to write to the section (${sectionTipo})`,
 			);
 		}
-		const sourceSectionId = Number(source.section_id);
+		// Coerce at the door (counted, deprecable string form) instead of the blind
+		// Number() that minted NaN for junk (WC-2026-08-10-section-id-int-canonical).
+		// A non-address refuses loudly here; the sniff era let NaN ride into the
+		// scope gate / duplicate engine.
+		let sourceSectionId: number;
+		try {
+			sourceSectionId = coerceSectionId(source.section_id, 'rqo.dd_core_api.duplicate.section_id');
+		} catch (error) {
+			return denied(400, `duplicate: ${error instanceof Error ? error.message : String(error)}`);
+		}
 		if (!principal.isGlobalAdmin) {
 			// Per-record scope gate: the source must be visible under the
 			// caller's projects filter (PHP assert_record_in_user_scope).
@@ -668,7 +699,8 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const source = (rqo.source ?? {}) as {
 			tipo?: string;
 			section_tipo?: string;
-			section_id?: number | string | null;
+			/** Raw wire value — unknown until coerceSectionId classifies it below. */
+			section_id?: unknown;
 			delete_mode?: string;
 		};
 		const sectionTipo = source.section_tipo ?? source.tipo;
@@ -713,7 +745,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// Multi-record deletes are a GLOBAL-ADMIN operation (fail closed).
 		let targets: number[];
 		if (source.section_id !== undefined && source.section_id !== null) {
-			const targetId = Number(source.section_id);
+			// Coerce at the door (counted, deprecable string form) instead of the
+			// blind Number() that minted NaN for junk
+			// (WC-2026-08-10-section-id-int-canonical). Loud refusal; the sniff era
+			// let NaN ride into the scope gate / delete engines.
+			let targetId: number;
+			try {
+				targetId = coerceSectionId(source.section_id, 'rqo.dd_core_api.delete.section_id');
+			} catch (error) {
+				return denied(400, `delete: ${error instanceof Error ? error.message : String(error)}`);
+			}
 			// Per-record scope gate (PHP assert_record_in_user_scope): a level-2
 			// user may only delete records inside their projects filter — the
 			// level gate alone would let them delete a record they can never see
@@ -743,7 +784,8 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				.filter((row) => row.section_tipo === sectionTipo)
 				.map((row) => Number(row.section_id));
 		}
-		const deleted: string[] = [];
+		// Int addresses (WC-2026-08-10-section-id-int-canonical).
+		const deleted: number[] = [];
 		const { logActivity, hostFromClientIp } = await import('./activity_log.ts');
 		const { getMatrixTableFromTipo: tableOf } = await import('../../ontology/resolver.ts');
 		const activityHost = hostFromClientIp(context.clientIp);
@@ -762,7 +804,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				const { deleteSectionRecord: cascadeDelete } = await import(
 					'../../section/record/delete_record.ts'
 				);
-				const cascaded: string[] = [];
+				// Int addresses, matching the plain-delete echo below
+				// (WC-2026-08-10-section-id-int-canonical — String() minting repealed).
+				const cascaded: number[] = [];
 				for (const targetId of targets) {
 					const cascade = await deleteOntologyMain(sectionTipo, targetId, (st, id) =>
 						cascadeDelete(st, id, principal.userId),
@@ -770,7 +814,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					if (!cascade.result) {
 						return denied(400, `delete: ontology cascade failed (${cascade.errors.join('; ')})`);
 					}
-					cascaded.push(String(targetId));
+					cascaded.push(targetId);
 				}
 				return { status: 200, body: { result: cascaded, msg: 'OK. Request done' } };
 			}
@@ -1038,11 +1082,19 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// page-element context (:480 section / :627 component) so the client
 		// instance knows its section_id; a component/viewer deep link that omits
 		// it leaves get_data reads with section_id null → they fall to
-		// readSection and 500. Kept numeric when numeric.
+		// readSection and 500.
+		//
+		// PERMANENT coercion door (WC-2026-08-10-section-id-int-canonical):
+		// URLSearchParams yields strings forever, so this conversion never
+		// deprecates — it counts under its own 'url.*' key, excluded from the
+		// RQO-body contraction gate. A convertible id becomes the canonical int;
+		// anything else (synthetic tokens, external refs like '001338683'/'Q42')
+		// rides VERBATIM — the old /^\d+$/ + Number() here silently turned a
+		// leading-zero remote id into a wrong record address.
 		const pageSectionIdRaw = pick(locator?.section_id, searchObj.id, searchObj.section_id);
 		const pageSectionId =
-			pageSectionIdRaw !== null && /^\d+$/.test(pageSectionIdRaw)
-				? Number(pageSectionIdRaw)
+			pageSectionIdRaw !== null && isConvertibleSectionIdString(pageSectionIdRaw)
+				? coerceSectionId(pageSectionIdRaw, 'url.search_obj')
 				: pageSectionIdRaw;
 		// The deep-link view (?view=viewer) — PHP element->set_view($view). It
 		// makes the client mount a DIFFERENT view (e.g. component_image's
@@ -1330,7 +1382,8 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const principal = requirePrincipal(context);
 		const source = (rqo.source ?? {}) as {
 			section_tipo?: string;
-			section_id?: string | number;
+			/** Raw wire value — unknown until coerceSectionId classifies it below. */
+			section_id?: unknown;
 			tipo?: string;
 			value?: unknown;
 		};
@@ -1360,11 +1413,32 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				},
 			};
 		}
+		// The grid host is the THESAURUS TERM record: coerce at the door
+		// (counted, deprecable RQO-body string form — the client still sends the
+		// tree node id as text) so the engine works on the canonical int
+		// (WC-2026-08-10-section-id-int-canonical). A non-address answers the
+		// section's own HTTP-200 failure envelope, never a 500.
+		let gridSectionId: number;
+		try {
+			gridSectionId = coerceSectionId(
+				source.section_id,
+				'rqo.dd_core_api.get_indexation_grid.section_id',
+			);
+		} catch (error) {
+			return {
+				status: 200,
+				body: {
+					result: false,
+					msg: `Error. Request failed Trigger Error: (get_indexation_grid) ${error instanceof Error ? error.message : String(error)}`,
+					errors: ['invalid rqo source'],
+				},
+			};
+		}
 		const { buildIndexationGrid } = await import('../../section/indexation_grid.ts');
 		const grid = await buildIndexationGrid(
 			{
 				sectionTipo: sectionTipo as string,
-				sectionId: source.section_id,
+				sectionId: gridSectionId,
 				tipo: source.tipo,
 				sqo: (rqo.sqo ?? {}) as import('../../section/indexation_grid.ts').IndexationGridSqo,
 			},
@@ -1455,6 +1529,51 @@ const ACTIVITY_EXCLUDED_PRESET_TIPOS: ReadonlySet<string> = new Set(['dd655', 'd
  * temp/search preset sections, and log ONLY section + area models (never a bare
  * component read, e.g. an autocomplete's get_data — dd_core_api :3628-3633).
  */
+/**
+ * The NON-PERSISTING half of the save door (hoisted out of `save` for the
+ * complexity ratchet): a synthetic search id or an external remote id
+ * addresses no matrix row, so a relation pick RESOLVES for the chip and
+ * ECHOES without writing (the old search_* exception stated by kind), and any
+ * other shape refuses loudly — the sniff era FELL THROUGH here and minted NaN
+ * into the write path (WC-2026-08-10-section-id-int-canonical).
+ */
+async function resolveNonRecordSave(
+	rqo: Rqo,
+	source: RqoSource,
+	dataPayload: { changed_data?: unknown },
+	principal: Principal,
+): Promise<ApiResult> {
+	if (!Array.isArray(dataPayload.changed_data)) {
+		return denied(400, 'save: data.changed_data must be an array');
+	}
+	const { getColumnNameByModel: columnOf, getModelByTipo: modelOf } = await import(
+		'../../ontology/resolver.ts'
+	);
+	const searchModel = await modelOf(source.tipo as string);
+	if (searchModel !== null && columnOf(searchModel) === 'relation') {
+		const searchLevel = await getPermissions(
+			principal,
+			source.section_tipo as string,
+			source.tipo as string,
+		);
+		if (searchLevel < 1) {
+			return denied(403, "You don't have enough permissions to search this component");
+		}
+		const { currentChipsFromPayload, mergeRelationChips, resolveRelationEcho } = await import(
+			'../../section/record/resolve_echo.ts'
+		);
+		const picked = mergeRelationChips(
+			currentChipsFromPayload((rqo.data ?? {}) as { entries?: unknown; value?: unknown }),
+			dataPayload.changed_data as Parameters<typeof mergeRelationChips>[1],
+		);
+		return await resolveRelationEcho({ rqo, principal, picked, mode: 'search' });
+	}
+	return denied(
+		400,
+		`save: section_id ${JSON.stringify(source.section_id)} addresses no record in '${source.section_tipo}'`,
+	);
+}
+
 async function logReadActivity(
 	rqo: Rqo,
 	principal: Principal,
@@ -1490,7 +1609,12 @@ async function logReadActivity(
 			const firstItem = body?.result?.data?.[0];
 			const sectionId =
 				firstItem?.entries?.[0]?.section_id ?? firstItem?.section_id ?? source.section_id ?? null;
-			if (sectionId !== null && sectionId !== undefined) data.id = sectionId;
+			// Canonical emission (WC-2026-08-10-section-id-int-canonical): the value
+			// may come from a stored entry that still carries the legacy string form
+			// — '7' becomes 7; a non-convertible value rides verbatim.
+			if (sectionId !== null && sectionId !== undefined) {
+				data.id = canonicalizeStoredSectionId(sectionId);
+			}
 		}
 
 		const { logActivity, hostFromClientIp } = await import('./activity_log.ts');

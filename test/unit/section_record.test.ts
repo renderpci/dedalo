@@ -79,7 +79,8 @@ describe('persistRecordKeys — the write chokepoint (real DB)', () => {
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: '7',
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: 7,
 				section_tipo: 'dd128',
 				from_component_tipo: 'dd197',
 			},

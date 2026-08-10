@@ -21,8 +21,9 @@
  * SOFTENED / TS-side notes (never oracle-pinned by the differential):
  *  - dd201's start instant: virtual-calendar self-consistency + wall-clock
  *    sanity (the differential normalized starts);
- *  - the result shape {deleted:[id-as-string], removed:false}: PHP
- *    sections::delete result contract, not differential-compared.
+ *  - the result shape {deleted:[id], removed:false}: PHP sections::delete
+ *    result contract, not differential-compared. Ids are INT since
+ *    WC-2026-08-10-section-id-int-canonical (PHP stringified them).
  *
  * Driven at the ENGINE chokepoint (deleteSectionData) — dispatch envelope +
  * activity row anatomy live in activity_log_native.test.ts. Fixture: the
@@ -109,7 +110,9 @@ afterAll(async () => {
 describe('delete_data end-state (TS-native, differential-pinned shapes)', () => {
 	test('the row survives with the component KEY REMOVED (column = {})', () => {
 		expect(row).toBeDefined();
-		expect(outcome).toEqual({ deleted: [String(recordId)], removed: false });
+		// WC-2026-08-10-section-id-int-canonical: DeleteRecordResult.deleted is
+		// int[] (the PHP-era string ids are repealed).
+		expect(outcome).toEqual({ deleted: [recordId], removed: false });
 		// The key is GONE, not null-valued — the emptied column keeps '{}'.
 		expect((row as SurvivingRow).string).toEqual({});
 	});
@@ -126,7 +129,8 @@ describe('delete_data end-state (TS-native, differential-pinned shapes)', () => 
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// WC-2026-08-10-section-id-int-canonical: audit locators mint int.
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd197',
 				},
@@ -135,7 +139,8 @@ describe('delete_data end-state (TS-native, differential-pinned shapes)', () => 
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// WC-2026-08-10-section-id-int-canonical: audit locators mint int.
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd200',
 				},

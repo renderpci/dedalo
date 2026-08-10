@@ -75,8 +75,10 @@ describe('logActivity writes exactly one dd543 actor locator (WC-056)', () => {
 		// Both halves present — the emitted predicate binds section_tipo too, so a
 		// locator missing either half would drop the clause instead of matching.
 		const actor = relation?.dd543?.[0] as Record<string, unknown>;
-		expect(typeof actor.section_id).toBe('string');
-		expect(actor.section_id).toBe(String(PROBE_USER));
+		// WC-2026-08-10-section-id-int-canonical: the actor address is an INT
+		// (activity_log.ts dd543 dropped its String(userId) cast).
+		expect(typeof actor.section_id).toBe('number');
+		expect(actor.section_id).toBe(PROBE_USER);
 		expect(actor.section_tipo).toBe('dd128');
 
 		// dd545 What is single too; it keeps containment (GIN-served) for now.

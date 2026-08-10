@@ -35,6 +35,12 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { isRecordInScope, principalCanAccessRecord } from '../../src/core/security/record_scope.ts';
 
 const USERS = 'dd128';
+/**
+ * The root locator as it arrives from the WIRE and as it sits in LEGACY stored
+ * bags — string form on purpose (WC-2026-08-10-section-id-int-canonical: int is
+ * canonical, but the boundary doors still coerce the string form and stored
+ * pre-sweep locators are string). The EMITTED forms below are int.
+ */
 const ROOT_LOCATOR = { section_tipo: USERS, section_id: '-1' };
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
@@ -144,7 +150,10 @@ describe('root user record stays resolvable by the direct-fetch paths (requires 
 
 	test('getDatalist still enumerates -1 (PHP edit-mode include_negative parity)', async () => {
 		const items = await getDatalist('zzroottrip2', USERS_ENUM_PROPERTIES, USERS, 'lg-nolan');
-		expect(items.some((item) => item.section_id === '-1')).toBe(true);
+		// WC-2026-08-10-section-id-int-canonical: datalist options carry the
+		// option record's address as an INT (this emission is the byte funnel
+		// the select family posts back and saves).
+		expect(items.some((item) => item.section_id === -1)).toBe(true);
 	});
 
 	test('resolve_data keeps the root chip for a NON-admin while still dropping out-of-scope records', async () => {
@@ -163,7 +172,9 @@ describe('root user record stays resolvable by the direct-fetch paths (requires 
 		} as unknown as Rqo;
 		const data = await resolveSearchData(rqo, NO_PROJECTS);
 		const emitted = JSON.stringify(data);
-		expect(emitted).toContain('"-1"');
+		// WC-2026-08-10-section-id-int-canonical: the echo canonicalizes the
+		// record address to int, so the chip is "section_id":-1 (was '"-1"').
+		expect(emitted).toContain('"section_id":-1');
 		expect(emitted).not.toContain('numisdata267');
 	});
 });

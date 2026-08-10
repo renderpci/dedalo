@@ -24,7 +24,15 @@ export interface NormalizedTermLocator {
 	/** `${section_tipo}_${section_id}` — the key of the response term map. */
 	key: string;
 	section_tipo: string;
-	/** Kept in its INCOMING form (string or number) — never coerced. */
+	/**
+	 * Kept in its INCOMING form (string or number) — never coerced.
+	 * KEPT UNION (WC-2026-08-10-section-id-int-canonical): the batch is a raw
+	 * client locator list and a NON-address legitimately flows — an external
+	 * remote id ('001338683') on an external-service node, or a graph node's
+	 * synthetic token. The response is a MAP keyed `${tipo}_${id}` that the
+	 * client looks up with the key built from its OWN locator, so any coercion
+	 * here would silently un-match the caller's key.
+	 */
 	section_id: string | number;
 }
 

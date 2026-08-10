@@ -108,7 +108,7 @@ export async function createRecord(
 export async function deleteRecord(
 	principal: Principal,
 	input: { section_tipo: string; section_id: number },
-): Promise<{ deleted: string[] }> {
+): Promise<{ deleted: number[] }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.delete.section_tipo');
 	await assertWritePermission(principal, sectionTipo, sectionTipo);
 	await assertRecordInScope(principal, sectionTipo, Math.floor(input.section_id));

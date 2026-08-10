@@ -21,28 +21,35 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 let php: PhpApiClient;
 let tsContext: Record<string, unknown>;
 
-/** Normalize one data item to the comparison surface. */
+/**
+ * Normalize one data item to the comparison surface. Called on BOTH sides, so
+ * the WC-2026-08-10-section-id-int-canonical transform below is two-sided:
+ * address keys (incl. the ones nested in `entries`) compare by VALUE, since
+ * the frozen fixtures keep the PHP-era numeric strings.
+ */
 function normalize(items: Record<string, unknown>[]): Record<string, unknown>[] {
-	return items
-		.filter((item) => item.typo !== 'sections')
-		.map((item) => ({
-			tipo: item.tipo,
-			section_tipo: item.section_tipo,
-			section_id: String(item.section_id),
-			mode: item.mode,
-			lang: item.lang,
-			from_component_tipo: item.from_component_tipo,
-			row_section_id: String(item.row_section_id ?? ''),
-			parent_tipo: item.parent_tipo ?? null,
-			entries: item.entries ?? null,
-			pagination: item.pagination ?? null,
-		}));
+	return normalizeSectionIdTypes(
+		items
+			.filter((item) => item.typo !== 'sections')
+			.map((item) => ({
+				tipo: item.tipo,
+				section_tipo: item.section_tipo,
+				section_id: String(item.section_id),
+				mode: item.mode,
+				lang: item.lang,
+				from_component_tipo: item.from_component_tipo,
+				row_section_id: String(item.row_section_id ?? ''),
+				parent_tipo: item.parent_tipo ?? null,
+				entries: item.entries ?? null,
+				pagination: item.pagination ?? null,
+			})),
+	);
 }
 
 async function phpData(rqo: Record<string, unknown>): Promise<Record<string, unknown>[]> {

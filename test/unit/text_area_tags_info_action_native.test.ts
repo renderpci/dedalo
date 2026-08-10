@@ -236,7 +236,7 @@ describe('get_tags_info — AUTHZ-01 record gate', () => {
 });
 
 describe('get_tags_info — resolved payload', () => {
-	test('index tags come back with STRING ids (WC-077/WC-065) and their term label', async () => {
+	test('index tags come back with INT ids (WC-077/WC-065) and their term label', async () => {
 		const result = await getTagsInfo(
 			rqoOf(hostSource(), { ar_type: ['index'] }),
 			contextFor(ADMIN),
@@ -250,7 +250,9 @@ describe('get_tags_info — resolved payload', () => {
 				data: {
 					id: 1,
 					type: 'dd151',
-					section_id: '1', // stringified from the stored NUMERIC 1
+					// WC-2026-08-10-section-id-int-canonical: emitted as the INT the
+					// stored locator already held (repeals the stringify).
+					section_id: 1,
 					section_tipo: 'test3',
 					from_component_tipo: 'rsc860',
 				},
@@ -292,7 +294,9 @@ describe('get_tags_info — the lang of the transcription', () => {
 		);
 		expect(notesOf(result)).toEqual([
 			{
-				data: { section_tipo: NOTE_SECTION, section_id: MISSING_NOTE_ID },
+				// WC-2026-08-10-section-id-int-canonical: the address parsed out of the
+				// note MARK (which keeps its quoted grammar) is emitted canonical int.
+				data: { section_tipo: NOTE_SECTION, section_id: Number(MISSING_NOTE_ID) },
 				// the note RECORD does not exist: text ddos default to [], bool to false
 				title: [],
 				body: [],

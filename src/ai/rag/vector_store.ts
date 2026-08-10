@@ -545,7 +545,10 @@ export async function lexicalQuery(
 
 interface RawCandidateRow {
 	section_tipo: string;
-	section_id: number | string;
+	/** rag_embeddings.section_id is `integer` — the address arrives typed
+	 * (WC-2026-08-10-section-id-int-canonical). The numeric siblings below stay
+	 * union-typed: pgvector distances / ts_rank come back as text. */
+	section_id: number;
 	component_tipo: string;
 	lang: string;
 	chunk_index: number | string;
@@ -588,10 +591,11 @@ function parseVectorText(text: string): number[] {
 
 /** Distinct section_ids with at least one vector in a section (reconcile drift). */
 export async function listSectionIds(sectionTipo: string): Promise<number[]> {
+	// `integer` column — the address arrives typed (WC-2026-08-10-section-id-int-canonical).
 	const rows = (await ragSql.unsafe(
 		'SELECT DISTINCT section_id FROM rag_embeddings WHERE section_tipo = $1',
 		[sectionTipo],
-	)) as { section_id: number | string }[];
+	)) as { section_id: number }[];
 	return rows.map((row) => Number(row.section_id));
 }
 

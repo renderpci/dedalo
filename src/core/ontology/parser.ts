@@ -53,7 +53,14 @@ import {
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
 import { getTldFromTipo } from './tld.ts';
 
-/** A stored relation locator (parent, model, connected-to). */
+/**
+ * A stored relation locator (parent, model, connected-to).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): these come off the
+ * ontology records' RAW jsonb relation column — pre-sweep installs still hold
+ * the string form, and the id is only ever consumed as text (`<tld><id>` term
+ * ids) or through a tolerant Number(), never re-persisted as an address.
+ */
 interface Locator {
 	section_tipo?: string;
 	section_id?: string | number;

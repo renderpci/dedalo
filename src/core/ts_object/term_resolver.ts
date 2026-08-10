@@ -42,7 +42,15 @@ const DEFAULT_FIELDS_SEPARATOR = ', ';
 /** section_map::SCOPE_FALLBACK. */
 const SCOPE_FALLBACK = ['main', 'thesaurus', 'relation_list'];
 
-/** A locator that identifies a node (plus optional decoration keys PHP appends). */
+/**
+ * A locator that identifies a node (plus optional decoration keys PHP appends).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): term resolution is fed
+ * RAW STORED locators — portal / autocomplete_hi / in-text tag values read off
+ * unswept jsonb — and it is also where an EXTERNAL remote id ('001338683',
+ * 'Q42') lands: those never address a matrix row, and the locator-string
+ * fallback below renders them verbatim instead of corrupting them into an int.
+ */
 export interface TermLocator {
 	section_tipo?: string;
 	section_id?: number | string;
@@ -79,7 +87,7 @@ registerOntologyCacheClearer(clearTermCache);
  * Targeted eviction after a tree write (PHP invalidate_node :304): drop every
  * `${tipo}_${id}_…` cache entry (all langs/scopes) for the mutated node.
  */
-export function invalidateNode(sectionTipo: string, sectionId: number | string): void {
+export function invalidateNode(sectionTipo: string, sectionId: number): void {
 	const prefix = `${sectionTipo}_${sectionId}_`;
 	for (const key of termByLocatorCache.keys()) {
 		if (key.startsWith(prefix)) termByLocatorCache.delete(key);
@@ -160,6 +168,9 @@ async function getMainLang(sectionTipo: string): Promise<string> {
 	const tld = (getTldFromTipo(sectionTipo) ?? '').toLowerCase();
 	if (tld !== '') {
 		// hierarchy1 record whose hierarchy6 TLD value equals the node's TLD.
+		// KEPT UNION on lang_items[].section_id: a stored relation slice off
+		// matrix_hierarchy_main — an install whose sweep has not run still holds
+		// the string form here (WC-2026-08-10-section-id-int-canonical).
 		const rows = (await sql.unsafe(
 			`SELECT relation#>'{hierarchy8}' AS lang_items
 			 FROM matrix_hierarchy_main

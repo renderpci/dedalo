@@ -20,9 +20,9 @@
  * SOFTENED / TS-side notes (never oracle-pinned by the differential):
  *  - data.data.section_id: normalized away cross-engine; a TS-created record
  *    stores null (build_metadata) — asserted as the TS engine fact;
- *  - result shape {deleted:[id-as-string], removed:true}: the PHP
- *    sections::delete result contract (delete_multi_native pins the string
- *    ids at the dispatch envelope);
+ *  - result shape {deleted:[id], removed:true}: the PHP sections::delete
+ *    result contract; the ids are INT since
+ *    WC-2026-08-10-section-id-int-canonical;
  *  - the TM row timestamp: wall-clock sanity only.
  *
  * Driven at the ENGINE chokepoint (deleteSectionRecord) — the dispatch
@@ -112,7 +112,8 @@ describe('delete_record TM snapshot (TS-native anatomy)', () => {
 			[SECTION, recordId],
 		)) as unknown[];
 		expect(rows.length).toBe(0);
-		expect(outcome).toEqual({ deleted: [String(recordId)], removed: true });
+		// WC-2026-08-10-section-id-int-canonical: DeleteRecordResult.deleted is int[].
+		expect(outcome).toEqual({ deleted: [recordId], removed: true });
 	});
 
 	test('exactly ONE TM row: the record-level snapshot header', () => {
@@ -143,7 +144,8 @@ describe('delete_record TM snapshot (TS-native anatomy)', () => {
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// WC-2026-08-10-section-id-int-canonical: audit locators mint int.
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd200',
 				},

@@ -12,7 +12,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSectionRows } from '../../src/core/section/read.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const READ_RQO = {
@@ -66,11 +66,13 @@ describe.if(hasPhpCredentials())('portal subdatum differential (Phase 4c gate)',
 		const { body } = await client.call(structuredClone(READ_RQO));
 		// DEC-02 / engineering/wire_contract/ WC-001: assert the adopted `entries: []`
 		// empty contract (PHP's `entries: null` is the fossil shape at this seam).
-		phpData = adoptEntriesArrayContract((body.result as { data: Record<string, unknown>[] }).data);
-		tsData = (await readSectionRows(READ_RQO as unknown as Rqo)) as unknown as Record<
-			string,
-			unknown
-		>[];
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		phpData = normalizeSectionIdTypes(
+			adoptEntriesArrayContract((body.result as { data: Record<string, unknown>[] }).data),
+		);
+		tsData = normalizeSectionIdTypes(
+			(await readSectionRows(READ_RQO as unknown as Rqo)) as unknown as Record<string, unknown>[],
+		);
 	});
 
 	test('portal item: paginated locator page + pagination total match', () => {

@@ -30,6 +30,7 @@
 
 import type { ImportConformId } from '../components/types.ts';
 import { hasCoordinate, isCoordinateInRange, toCoordinate } from '../concepts/geo_coordinate.ts';
+import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import type { ConformFailure, ConformResult } from './import_data.ts';
 
 /** Context a facet needs beyond the cell itself (resolved by the caller). */
@@ -838,7 +839,10 @@ const conformRelation: ImportConformFn = async (value, json, ctx) => {
 			}
 			const locator: Record<string, unknown> = {
 				section_tipo: targetSectionTipo,
-				section_id: rawId,
+				// WC-2026-08-10-section-id-int-canonical: the CSV cell is text, the
+				// stored address is an int. A padded id ('007') is NOT convertible and
+				// stays verbatim rather than being silently renumbered.
+				section_id: canonicalizeStoredSectionId(rawId),
 				from_component_tipo: ctx.componentTipo,
 			};
 			// component_relation_parent carries no type.
@@ -864,6 +868,29 @@ const conformRelation: ImportConformFn = async (value, json, ctx) => {
 			return fail(ctx, 'IGNORED: Trying to import invalid locator', value);
 		}
 		const locator: Record<string, unknown> = { ...item };
+		// WC-2026-08-10-section-id-int-canonical: the exported dato is the ONE
+		// import door that used to persist whatever section_id shape the file
+		// carried. Classify it against the TARGET section instead: a record address
+		// (int or convertible text) is stored as an int; an external-service remote
+		// id ('001338683', 'Q42') stays verbatim because it is a different concept;
+		// anything else — a synthetic wire token, a padded/out-of-range numeric
+		// string on a matrix tipo — is data the engine cannot address and is a
+		// conform ERROR, not a silently stored value.
+		const classified = await classifyWireSectionId(
+			item.section_id,
+			String(item.section_tipo),
+			'import_conform.relation_locator',
+		).catch((error: unknown) => {
+			// Only the classifier's own "this is not an address" TypeError is import
+			// data being wrong; anything else (a malformed api_config, a DB failure)
+			// is an ENGINE fault and must not be laundered into a per-cell error.
+			if (error instanceof TypeError) return null;
+			throw error;
+		});
+		if (classified === null || classified.kind === 'synthetic' || classified.kind === 'absent') {
+			return fail(ctx, 'IGNORED: Trying to import invalid section_id in locator', value);
+		}
+		locator.section_id = classified.kind === 'record' ? classified.id : classified.remoteId;
 		if (locator.type === undefined && relationType !== '') locator.type = relationType;
 		if (locator.from_component_tipo === undefined) locator.from_component_tipo = ctx.componentTipo;
 		locators.push(locator);
@@ -931,7 +958,9 @@ const conformSelectLang: ImportConformFn = async (value, json, ctx) => {
 		}
 		const locator: Record<string, unknown> = {
 			section_tipo: LANGS_SECTION_TIPO,
-			section_id: String(sectionId),
+			// WC-2026-08-10-section-id-int-canonical: getLangSectionIdByCode already
+			// resolves the int address of the lg1 record.
+			section_id: sectionId,
 			from_component_tipo: ctx.componentTipo,
 		};
 		if (relationType !== '') locator.type = relationType;

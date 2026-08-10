@@ -46,6 +46,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { canonicalizeStoredSectionId } from '../../src/core/concepts/section_id.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -65,11 +66,14 @@ const MAIN_SEED = [
 ];
 
 /** A frame locator in the differential's pinned property set. */
+// WC-2026-08-10-section-id-int-canonical: a persisted frame's record address
+// is an INT (normalizeDataframeEntry mints it via canonicalizeStoredSectionId),
+// so both the seeded bytes and the asserted end state carry ints.
 const frameOf = (id: number, idKey: number, targetId: string) => ({
 	id,
 	type: 'dd490',
 	id_key: idKey,
-	section_id: targetId,
+	section_id: canonicalizeStoredSectionId(targetId),
 	section_tipo: 'rsc1242',
 	from_component_tipo: FRAME,
 	main_component_tipo: MAIN,

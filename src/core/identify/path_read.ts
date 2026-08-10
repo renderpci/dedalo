@@ -59,6 +59,7 @@
 import { config } from '../../config/config.ts';
 import { getComponentModel, getSearchBuilderFamily } from '../components/registry.ts';
 import { buildLocatorLookupKey, type Locator } from '../concepts/locator.ts';
+import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { type DdDate, ddDateToSeconds } from '../media/file_date.ts';
 import {
@@ -324,8 +325,12 @@ async function walk(
 			for (const item of items) {
 				const locator = itemToLocator(item);
 				if (locator === null) continue;
-				const targetId = Number(locator.section_id);
-				if (!Number.isInteger(targetId)) continue;
+				// Canonical rule, not Number(): a blind cast would read a padded
+				// external remote id ('001338683') as matrix record 1338683 — a WRONG
+				// record, silently. Non-convertible ids address no matrix row, so the
+				// hop skips them (WC-2026-08-10-section-id-int-canonical).
+				const targetId = canonicalizeStoredSectionId(locator.section_id);
+				if (!isSectionId(targetId)) continue;
 				const targetTipo = String(locator.section_tipo);
 				const reachedKey = recordKey(targetTipo, targetId);
 				if (reached.has(reachedKey)) continue;

@@ -48,6 +48,7 @@ import { bareBrowseCount } from './bare_count.ts';
 import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
 import { conformFilter } from './conform.ts';
+import { composeContains, relationProbeGroups } from './containment.ts';
 import {
 	assertValidDataColumn,
 	assertValidLang,
@@ -495,9 +496,11 @@ const PROJECTS_FILTER_EXEMPT_TABLES: ReadonlySet<string> = new Set([
  * `{table}_relation_gin_idx` (gin jsonb_path_ops) index. The frozen-PHP-beta
  * `EXISTS(jsonb_array_elements(…))` shape scanned every candidate row and made
  * every non-admin list/count seconds-slow; never reintroduce it. Each project
- * id is matched in BOTH string and number form: locators store section_id as a
- * string, but legacy/imported rows may carry numbers, and `@>` containment is
- * type-strict where the old `::int` cast was not.
+ * id is matched in BOTH typed section_id forms — `@>` containment is
+ * type-strict where the old `::int` cast was not, and the stored form is a
+ * string until the int sweep, an int after
+ * (WC-2026-08-10-section-id-int-canonical). The dual-form assembly is
+ * delegated to search/containment.ts so the idiom has exactly one home.
  */
 async function buildProjectsFilter(
 	sectionTipo: string,
@@ -512,10 +515,16 @@ async function buildProjectsFilter(
 		// PHP: impossible clause — a user with no projects sees no gated records.
 		return `${alias}.relation ? 'IMPOSSIBLE VALUE (User without projects)'`;
 	}
-	const clauses = projects.flatMap((projectId) => [
-		`${alias}.relation @> ${params.getPlaceholder(`{"${filterTipo}":[{"section_id":"${projectId}"}]}`)}::text::jsonb`,
-		`${alias}.relation @> ${params.getPlaceholder(`{"${filterTipo}":[{"section_id":${projectId}}]}`)}::text::jsonb`,
-	]);
+	// One dual-form containment per project, OR'd: the user sees a record when
+	// it belongs to ANY of their projects.
+	const bind = (payload: string) => params.getPlaceholder(payload);
+	const clauses = projects.map((projectId) =>
+		composeContains(
+			`${alias}.relation`,
+			relationProbeGroups(filterTipo, [{ section_id: projectId }]),
+			bind,
+		),
+	);
 	return `(${clauses.join(' OR ')})`;
 }
 

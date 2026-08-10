@@ -141,8 +141,9 @@ afterAll(async () => {
 });
 
 describe('sqo multi-delete (TS-native contract)', () => {
-	test('result lists exactly the two SQO-matched ids, as strings', () => {
-		expect(result).toEqual(ids.slice(0, 2).map(String));
+	test('result lists exactly the two SQO-matched ids, as ints', () => {
+		// int-canonical delete result ids (WC-2026-08-10-section-id-int-canonical)
+		expect(result).toEqual(ids.slice(0, 2));
 	});
 
 	test('exactly the two matched rows are gone; the third twin is intact', async () => {

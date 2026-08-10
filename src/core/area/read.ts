@@ -277,10 +277,11 @@ async function readTreeArea(
 		);
 	} else if (Array.isArray(areaProps.hierarchy_terms) && areaProps.hierarchy_terms.length > 0) {
 		const { searchThesaurus, getHierarchyTermsSqo } = await import('../ts_object/search.ts');
+		// The pinned-terms shape is OWNED by getHierarchyTermsSqo (HierarchyTerm)
+		// — referenced, never re-declared here, so the stored-locator tolerance
+		// it documents has ONE definition (WC-2026-08-10-section-id-int-canonical).
 		const sqo = getHierarchyTermsSqo(
-			areaProps.hierarchy_terms as {
-				value?: { section_tipo: string; section_id: number | string }[];
-			}[],
+			areaProps.hierarchy_terms as import('../ts_object/search.ts').HierarchyTerm[],
 		);
 		item.ts_search = await searchThesaurus(sqo, principal);
 	}

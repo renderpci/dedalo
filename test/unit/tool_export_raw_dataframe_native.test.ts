@@ -201,7 +201,10 @@ describe('dedalo_raw: the dataframe slot is its own column', () => {
 		expect(conformed.errors).toEqual([]);
 		// id_key survives the round trip — it, and not the cell it travelled in,
 		// is what re-pairs the frame with the main's item.
-		expect(conformed.result).toEqual(frameItems);
+		// WC-2026-08-10-section-id-int-canonical: the EXPORT cell is the stored
+		// bytes verbatim (legacy string '27', asserted above), but the IMPORT
+		// conform canonicalizes the address — so the re-imported frame is int.
+		expect(conformed.result).toEqual(frameItems.map((f) => ({ ...f, section_id: 27 })));
 	});
 });
 

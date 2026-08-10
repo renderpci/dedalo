@@ -37,7 +37,7 @@ export async function isRecordInScope(
 ): Promise<boolean> {
 	const scopeSqo = sanitizeClientSqo({
 		section_tipo: [sectionTipo],
-		filter_by_locators: [{ section_tipo: sectionTipo, section_id: String(sectionId) }],
+		filter_by_locators: [{ section_tipo: sectionTipo, section_id: sectionId }],
 		limit: 1,
 	});
 	const scopeQuery = await buildSearchSql(scopeSqo, { principal });

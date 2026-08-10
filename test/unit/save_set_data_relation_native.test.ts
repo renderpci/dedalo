@@ -50,7 +50,7 @@ async function matchedByActiveFilter(): Promise<number> {
 	const rows = (await sql.unsafe(
 		`SELECT count(*)::int AS n FROM "${TABLE}" t
 		 WHERE t.section_tipo = $1 AND t.section_id = $2
-		   AND t.relation @> '{"hierarchy4":[{"section_tipo":"dd64","section_id":"1","from_component_tipo":"hierarchy4"}]}'::jsonb`,
+		   AND t.relation @> '{"hierarchy4":[{"section_tipo":"dd64","section_id":1,"from_component_tipo":"hierarchy4"}]}'::jsonb`,
 		[SECTION_TIPO, SECTION_ID],
 	)) as { n: number }[];
 	return Number(rows[0]?.n ?? 0);
@@ -83,7 +83,7 @@ describe('set_data on a relation component', () => {
 			id: 1,
 			type: 'dd151',
 			section_tipo: 'dd64',
-			section_id: '1', // locator law: section_id persists as a STRING
+			section_id: 1, // int-canonical persistence (WC-2026-08-10-section-id-int-canonical)
 			from_component_tipo: RELATION_TIPO,
 		});
 	});
@@ -118,7 +118,8 @@ describe('set_data on a relation component', () => {
 		expect(locators[0]).toMatchObject({
 			type: 'dd151',
 			from_component_tipo: RELATION_TIPO,
-			section_id: '1',
+			// int-canonical persistence (WC-2026-08-10-section-id-int-canonical)
+			section_id: 1,
 		});
 		expect(await matchedByActiveFilter()).toBe(1);
 	});
@@ -141,7 +142,8 @@ describe('set_data on a relation component', () => {
 
 		const locators = await storedLocators();
 		expect(locators).toHaveLength(1);
-		expect(locators[0]).toMatchObject({ section_id: '2', from_component_tipo: RELATION_TIPO });
+		// int-canonical persistence (WC-2026-08-10-section-id-int-canonical)
+		expect(locators[0]).toMatchObject({ section_id: 2, from_component_tipo: RELATION_TIPO });
 		expect(await matchedByActiveFilter()).toBe(0); // no longer "active"
 	});
 

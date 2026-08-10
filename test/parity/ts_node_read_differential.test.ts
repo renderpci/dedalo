@@ -13,6 +13,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const NODE = { section_tipo: 'tchi1', section_id: 602 };
@@ -22,8 +23,11 @@ let php: PhpApiClient;
 let tsContext: Parameters<typeof dispatchRqo>[1];
 
 async function callBoth(rqo: Record<string, unknown>) {
-	const phpBody = (await php.call(structuredClone(rqo))).body;
-	const tsBody = (await dispatchRqo(structuredClone(rqo) as never, tsContext)).body;
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	const phpBody = normalizeSectionIdTypes((await php.call(structuredClone(rqo))).body);
+	const tsBody = normalizeSectionIdTypes(
+		(await dispatchRqo(structuredClone(rqo) as never, tsContext)).body,
+	);
 	return { phpBody, tsBody };
 }
 

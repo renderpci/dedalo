@@ -58,6 +58,10 @@ export interface ParserItem {
 	value: unknown;
 	tipo: string | null;
 	lang: string | null;
+	/** Oracle field, union KEPT: parser bodies pass the IR/published form
+	 * through (raw stored bytes of an unswept install, an external remote id, or
+	 * an int address) and some emit it into the MariaDB target, whose string
+	 * shape is a pinned edge — WC-2026-08-10-section-id-int-canonical. */
 	section_id: string | number | null;
 	section_tipo: string | null;
 }

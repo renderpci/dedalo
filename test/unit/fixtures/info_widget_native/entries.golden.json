@@ -2016,10 +2016,10 @@
 			{
 				"value": {
 					"section_tipo": "dd174",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Acabado",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2027,10 +2027,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "2"
+					"section_id": 2
 				},
 				"label": "Para revisar",
-				"section_id": "2",
+				"section_id": 2,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2038,10 +2038,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Pendiente",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2049,10 +2049,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "3"
+					"section_id": 3
 				},
 				"label": "Validada",
-				"section_id": "3",
+				"section_id": 3,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2060,10 +2060,10 @@
 			{
 				"value": {
 					"section_tipo": "dd174",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Acabado",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2071,10 +2071,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "2"
+					"section_id": 2
 				},
 				"label": "Para revisar",
-				"section_id": "2",
+				"section_id": 2,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2082,10 +2082,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Pendiente",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2093,10 +2093,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "3"
+					"section_id": 3
 				},
 				"label": "Validada",
-				"section_id": "3",
+				"section_id": 3,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2104,10 +2104,10 @@
 			{
 				"value": {
 					"section_tipo": "dd174",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Acabado",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2115,10 +2115,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "2"
+					"section_id": 2
 				},
 				"label": "Para revisar",
-				"section_id": "2",
+				"section_id": 2,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2126,10 +2126,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Pendiente",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2137,10 +2137,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "3"
+					"section_id": 3
 				},
 				"label": "Validada",
-				"section_id": "3",
+				"section_id": 3,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2148,10 +2148,10 @@
 			{
 				"value": {
 					"section_tipo": "dd174",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Acabado",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2159,10 +2159,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "2"
+					"section_id": 2
 				},
 				"label": "Para revisar",
-				"section_id": "2",
+				"section_id": 2,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2170,10 +2170,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "1"
+					"section_id": 1
 				},
 				"label": "Pendiente",
-				"section_id": "1",
+				"section_id": 1,
 				"hide": [],
 				"widget": "state",
 				"key": 0
@@ -2181,10 +2181,10 @@
 			{
 				"value": {
 					"section_tipo": "dd501",
-					"section_id": "3"
+					"section_id": 3
 				},
 				"label": "Validada",
-				"section_id": "3",
+				"section_id": 3,
 				"hide": [],
 				"widget": "state",
 				"key": 0

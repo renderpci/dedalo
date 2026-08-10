@@ -28,7 +28,14 @@
  * SECURITY: no field is ever interpolated anywhere but XML text content, and the
  * renderer XML-escapes it (SEC-028 parity with the client `esc()` closure). The
  * `safeDecodeTagId` step reproduces SEC-027 (JSON-aware xss decode).
+ *
+ * (!) This module PARSES marker bytes, it never writes them: the stored in-text
+ * markers keep their historical string section_id spelling. Only the parsed-out
+ * value is canonicalized (WC-2026-08-10-section-id-int-canonical).
  */
+
+import type { StoredSectionId } from '../../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 
 /** Fixed <img> widths the client requests per type (tr.js). Height is always 15. */
 export const TAG_WIDTHS = {
@@ -69,7 +76,14 @@ export interface DrawTag {
 export interface LocatorTag {
 	readonly kind: 'locator';
 	readonly section_tipo: string;
-	readonly section_id: string;
+	/**
+	 * Canonical record address (WC-2026-08-10-section-id-int-canonical). The
+	 * in-text marker this was parsed OUT of still spells the id as a string —
+	 * those bytes are untouched — but the parsed value is canonicalized here so
+	 * no consumer has to re-guess. A non-address value (padded/opaque remote id)
+	 * survives verbatim and the endpoint fails it closed, as it always did.
+	 */
+	readonly section_id: StoredSectionId;
 	readonly component_tipo: string;
 }
 
@@ -135,6 +149,17 @@ const RE_DRAW = /^\[draw-([a-z])-([0-9]{1,6})(?:-([^-]{0,22}))?(?:-data:.*:data)
  * anything unrecognised so the endpoint can fail closed. `raw` must already have
  * been through `safeDecodeTagId` + URL-decoding by the caller.
  */
+/**
+ * A marker locator's section_id as a scalar, canonicalized — or null when it
+ * is not a scalar at all (fail closed rather than String()-ing an object into
+ * '[object …]').
+ */
+function scalarSectionIdOf(locator: Record<string, unknown>): StoredSectionId | null {
+	const raw = locator.section_id;
+	if (typeof raw !== 'string' && typeof raw !== 'number') return null;
+	return canonicalizeStoredSectionId(raw) as StoredSectionId;
+}
+
 export function parseTagId(raw: string): ParsedTag {
 	const text = raw.trim();
 	if (text === '') return { kind: 'invalid' };
@@ -146,8 +171,12 @@ export function parseTagId(raw: string): ParsedTag {
 			const normalised = text.replace(/&#0?39;|'/g, '"');
 			const locator = JSON.parse(normalised) as Record<string, unknown>;
 			const section_tipo = String(locator.section_tipo ?? '');
-			const section_id = String(locator.section_id ?? '');
 			const component_tipo = String(locator.component_tipo ?? '');
+			// The marker payload spells the id as a string; canonicalize the
+			// PARSED value (never the marker bytes) so the address leaves this
+			// grammar in the one form the rest of the engine speaks.
+			const section_id = scalarSectionIdOf(locator);
+			if (section_id === null) return { kind: 'invalid' };
 			if (section_tipo === '' || section_id === '') return { kind: 'invalid' };
 			return { kind: 'locator', section_tipo, section_id, component_tipo };
 		} catch {

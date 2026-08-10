@@ -173,7 +173,7 @@ describe('duplicate core contract (TS-native, differential-pinned anatomy)', () 
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: String(USER_ID),
+					section_id: USER_ID, // int-canonical (WC-2026-08-10-section-id-int-canonical)
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd197',
 				},
@@ -182,7 +182,7 @@ describe('duplicate core contract (TS-native, differential-pinned anatomy)', () 
 				{
 					id: 1,
 					type: 'dd151',
-					section_id: String(USER_ID),
+					section_id: USER_ID, // int-canonical (WC-2026-08-10-section-id-int-canonical)
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd200',
 				},

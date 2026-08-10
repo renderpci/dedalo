@@ -17,7 +17,11 @@
 
 import type { ItemParserFn, ParserItem } from './types.ts';
 
-/** The oracle locator shape produced by item_bridge from ResolvedLink. */
+/** The oracle locator shape produced by item_bridge from ResolvedLink. The
+ * union is the IR/published form: parser bodies emit these bytes into the
+ * MariaDB target, where publication v1 LIKE-probes the QUOTED string form —
+ * a pinned edge, never canonicalized here
+ * (WC-2026-08-10-section-id-int-canonical, "Pinned edges"). */
 interface LocatorLike {
 	section_tipo?: string | null;
 	section_id?: string | number | null;

@@ -122,7 +122,9 @@ export function auditUserLocator(userId: number, componentTipo: string): Record<
 	return {
 		id: 1,
 		type: RELATION_TYPE_LINK,
-		section_id: String(userId),
+		// WC-2026-08-10-section-id-int-canonical: the user's record address is an
+		// int, and userId already IS that int.
+		section_id: userId,
 		section_tipo: USERS_SECTION,
 		from_component_tipo: componentTipo,
 	};

@@ -22,6 +22,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** The §7 corpus rows this gate drives (component context in EDIT mode). */
@@ -172,9 +173,10 @@ describe.if(hasPhpCredentials())(
 					principal,
 				});
 				const tsEntry = ((tsResult.body.result as Record<string, unknown>[]) ?? [])[0];
+				// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 				results.set(testCase.tipo, {
-					php: configProjection(phpEntry?.request_config),
-					ts: configProjection(tsEntry?.request_config),
+					php: normalizeSectionIdTypes(configProjection(phpEntry?.request_config)),
+					ts: normalizeSectionIdTypes(configProjection(tsEntry?.request_config)),
 				});
 			}
 		});

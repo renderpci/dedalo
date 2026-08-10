@@ -219,7 +219,8 @@ describe('imported dataframe frames carry the ENGINE marker (D19)', () => {
 			type: DATAFRAME_RELATION_TYPE,
 			from_component_tipo: DATAFRAME,
 			section_tipo: SECTION,
-			section_id: String(DF_ID + 1),
+			// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+			section_id: DF_ID + 1,
 			id_key: 1,
 			main_component_tipo: TEXT,
 		});
@@ -284,8 +285,9 @@ describe('a bare section_id into component_select_lang imports (D20)', () => {
 			`SELECT relation -> '${SELECT_LANG}' AS langs
 			   FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
 			[SECTION, DF_ID],
-		)) as { langs: { section_tipo?: string; section_id?: string }[] | null }[];
-		expect(rows[0]?.langs?.[0]).toMatchObject({ section_tipo: 'lg1', section_id: '17344' });
+		)) as { langs: { section_tipo?: string; section_id?: number }[] | null }[];
+		// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+		expect(rows[0]?.langs?.[0]).toMatchObject({ section_tipo: 'lg1', section_id: 17344 });
 	});
 });
 

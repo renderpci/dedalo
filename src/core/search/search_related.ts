@@ -56,6 +56,13 @@ export interface InverseReferenceHit {
 
 export interface RelatedLocatorFilter {
 	section_tipo: string;
+	/**
+	 * KEPT UNION: the probe target as the CALLER holds it — canonicalized
+	 * stored locators (buildRelatedSections) still carry the verbatim form of
+	 * anything not convertible. The two clause builders normalize per column:
+	 * `locatorIndexClause` casts to the int index column, `locatorDataFieldClauses`
+	 * compares the raw jsonb text (see their asymmetry note).
+	 */
 	section_id?: string | number;
 	from_component_tipo?: string;
 	type?: string;

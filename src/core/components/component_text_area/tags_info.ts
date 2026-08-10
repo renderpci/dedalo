@@ -20,13 +20,26 @@
  *   tags_notes     {<section_tipo>:[{id,type,component_tipo}]} note ddo_map
  *   tags_persons   see tags_persons.ts (shared with the EDIT emit feed)
  *
- * Wire law (WC-077, the WC-065 rule applied here): every `section_id` and
- * `tag_id` emitted is a STRING — the client matches marks against this feed
- * with strict `===` on the values it scraped out of the text.
+ * Wire law (WC-2026-08-10-section-id-int-canonical, repealing the STRING half
+ * of WC-077/WC-065 for record addresses): every `section_id` in the PAYLOAD is
+ * emitted in canonical form — a stored numeric string becomes an int, while an
+ * external remote id ('001338683', 'Q42') survives verbatim.
+ *
+ * `tag_id` STAYS A STRING and is NOT part of that repeal: tool_tr_print matches
+ * it with strict `===` against a group captured out of the text by regex
+ * (render_tool_tr_print.js `el.data.tag_id === tag_id`), so it is a text token,
+ * not a record address. The note lookup on the same page already compares
+ * addresses with `parseInt()` on both sides, so int ids match there.
+ *
+ * (!) The IN-TEXT tag MARKERS (`[note-a-3-data:{'section_id':'12'}:data]`) keep
+ * their historical string serialization — those bytes live inside stored text
+ * scalars and publication v1 LIKE-probes them. Only the resolved payload built
+ * here is canonicalized.
  */
 
-import type { Locator } from '../../concepts/locator.ts';
+import type { Locator, StoredSectionId } from '../../concepts/locator.ts';
 import { compareLocators } from '../../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import type { MatrixRecord } from '../../db/matrix.ts';
 import { readMatrixRecord } from '../../db/matrix.ts';
 import { getEffectivePropertiesByTipo } from '../../ontology/alias.ts';
@@ -69,10 +82,11 @@ interface TextAreaTagProperties {
 	tags_persons?: Record<string, import('./tags_persons.ts').TagsPersonsConfigEntry[]>;
 }
 
-/** A stored tag locator, normalized to string ids (see the module wire law). */
+/** A stored tag locator, normalized to canonical ids (see the module wire law). */
 export interface TagLocator {
 	section_tipo: string;
-	section_id: string;
+	/** Canonical int for a matrix address; verbatim string for a remote id. */
+	section_id: StoredSectionId;
 	component_tipo?: string;
 	tag_id?: string;
 	type?: string;
@@ -103,11 +117,16 @@ export interface TagsInfoHost {
 	/** The text_area component tipo (whose properties declare the tag config). */
 	tipo: string;
 	section_tipo: string;
-	section_id: number | string;
+	/**
+	 * The HOST is always a matrix record, so its address is an int
+	 * (WC-2026-08-10-section-id-int-canonical): the one caller —
+	 * dd_component_text_area_api.get_tags_info — coerces at the door.
+	 */
+	section_id: number;
 }
 
 /** Read one record, tolerating a section whose matrix table cannot be resolved. */
-async function readRecord(sectionTipo: string, sectionId: number | string) {
+async function readRecord(sectionTipo: string, sectionId: StoredSectionId) {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return null;
 	return readMatrixRecord(table, sectionTipo, Number(sectionId));
@@ -131,15 +150,20 @@ async function readItems(
 	return filterItemsByLang(items, lang);
 }
 
-/** Normalize a stored locator to the string-id wire shape. */
+/** Normalize a stored locator to the canonical wire shape. */
 function normalizeLocator(stored: Record<string, unknown>): TagLocator | null {
 	const sectionTipo = stored.section_tipo;
 	if (typeof sectionTipo !== 'string' || stored.section_id === undefined) return null;
 	const locator: TagLocator = {
 		...stored,
 		section_tipo: sectionTipo,
-		section_id: String(stored.section_id),
+		// Stored data is still mixed (pre-sweep '12' next to post-sweep 12), so
+		// canonicalize on the way out instead of echoing whichever form the row
+		// happens to hold — a padded/opaque remote id stays untouched.
+		section_id: canonicalizeStoredSectionId(stored.section_id) as StoredSectionId,
 	};
+	// tag_id is a TEXT token, not an address: it is matched with strict `===`
+	// against a regex capture from the transcription text. Keep it a string.
 	if (stored.tag_id !== undefined && stored.tag_id !== null) {
 		locator.tag_id = String(stored.tag_id);
 	}
@@ -347,7 +371,15 @@ export async function buildTagsInfo(
 					const { buildRelatedSections } = await import('../../resolve/related_sections.ts');
 					const { buildTagsPersons } = await import('./tags_persons.ts');
 					const related = await buildRelatedSections(
-						[{ section_tipo: host.section_tipo, section_id: String(host.section_id) }],
+						[
+							{
+								section_tipo: host.section_tipo,
+								// Canonical address in, canonical addresses out — the
+								// related locators become the persons-feed grouping keys
+								// (the host id is coerced at the API door).
+								section_id: host.section_id,
+							},
+						],
 						{
 							callerTipo: host.section_tipo,
 							lang,
@@ -357,7 +389,7 @@ export async function buildTagsInfo(
 					);
 					const sectionsEntry = related.data.find(
 						(entry) => (entry as { typo?: string }).typo === 'sections',
-					) as { value?: { section_tipo: string; section_id: string }[] } | undefined;
+					) as { value?: { section_tipo: string; section_id: StoredSectionId }[] } | undefined;
 					tagsInfo.tags_persons = await buildTagsPersons(
 						properties.tags_persons,
 						{ section_tipo: host.section_tipo, section_id: host.section_id },

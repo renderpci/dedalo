@@ -5,6 +5,7 @@
  */
 
 import { sql } from '../../db/postgres.ts';
+import { composeContains, locatorJsonVariants } from '../../search/containment.ts';
 import { engineDenied, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
@@ -15,15 +16,30 @@ import { engineDenied, type WidgetModule, type WidgetResponse } from './support.
  * component save path (TM row + modification metadata included).
  */
 async function exportHierarchySyncActiveStatus(): Promise<WidgetResponse> {
+	// READ probe over the Postgres matrix (not the MariaDB diffusion side): the
+	// dd64/1 active flag is matched in BOTH typed section_id forms
+	// (WC-2026-08-10-section-id-int-canonical) because jsonb `@>` is
+	// type-strict and stored locators are string-form until the int sweep,
+	// int-form after. `active_ts` reads through `->>`, which renders either
+	// stored type as text, so the '1' comparison below is type-agnostic.
+	const queryParams: string[] = [];
+	const activeClause = composeContains(
+		`relation->'hierarchy4'`,
+		[locatorJsonVariants({ section_id: 1, section_tipo: 'dd64' }).map((json) => `[${json}]`)],
+		(payload) => {
+			queryParams.push(payload);
+			return `$${queryParams.length}`;
+		},
+	);
 	const rows = (await sql.unsafe(
 		`SELECT section_id,
 		        relation->'hierarchy125'->0->>'section_id' AS active_ts,
 		        COALESCE(data->'hierarchy53', string->'hierarchy53')->0->>'value' AS target
 		 FROM matrix_hierarchy_main
 		 WHERE section_tipo = 'hierarchy1'
-		   AND relation->'hierarchy4' @> '[{"section_id":"1","section_tipo":"dd64"}]'::jsonb
+		   AND ${activeClause}
 		 ORDER BY section_id`,
-		[],
+		queryParams,
 	)) as { section_id: number; active_ts: string | null; target: string | null }[];
 
 	let errorCount = 0;
@@ -41,13 +57,15 @@ async function exportHierarchySyncActiveStatus(): Promise<WidgetResponse> {
 				{
 					action: 'set_data',
 					id: null,
-					// NUMERICAL_MATRIX_VALUE_NO — the full locator shape PHP's
-					// component save persists for the radio_button
+					// NUMERICAL_MATRIX_VALUE_NO — the full locator shape the
+					// component save persists for the radio_button. section_id is
+					// minted as an INT: that is the canonical stored form
+					// (WC-2026-08-10-section-id-int-canonical), not a string.
 					value: [
 						{
 							id: 1,
 							type: 'dd151',
-							section_id: '2',
+							section_id: 2,
 							section_tipo: 'dd64',
 							from_component_tipo: 'hierarchy4',
 						},

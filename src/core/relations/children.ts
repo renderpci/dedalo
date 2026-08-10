@@ -47,10 +47,15 @@ export const PARENT_RELATION_TYPE = 'dd47';
 /** PHP DEDALO_RELATION_TYPE_CHILDREN_TIPO — stamped on computed child locators. */
 export const CHILDREN_RELATION_TYPE = 'dd48';
 
-/** One computed child locator (PHP get_children output shape — STRING id). */
+/**
+ * One computed child locator. The id is INT-canonical
+ * (WC-2026-08-10-section-id-int-canonical; the PHP cast-to-string law is
+ * repealed): children are never wire input — they are computed from the
+ * int-typed inverse relation index, so no non-int concept can reach here.
+ */
 export interface ChildLocator {
 	section_tipo: string;
-	section_id: string;
+	section_id: number;
 	from_component_tipo: string;
 	type: string;
 }
@@ -130,6 +135,10 @@ export async function resolveParentLinkIdKey(
 	const table = await getMatrixTableFromTipo(childSectionTipo);
 	if (table === null) return 0;
 	const record = await readMatrixRecord(table, childSectionTipo, Number(childSectionId));
+	// KEPT UNION: this is the RAW stored jsonb of the child's parent-link
+	// component — an unswept row still holds the legacy string form (and, on
+	// external tipos, a non-convertible remote id). Read tolerance only; the
+	// value is compared numerically below, never re-persisted from here.
 	const data =
 		((record?.columns.relation as Record<string, unknown[]> | null)?.[parentRelationTipo] as
 			| { id?: number | string; section_tipo?: string; section_id?: number | string }[]
@@ -238,8 +247,10 @@ export async function getChildren(
 	const page = limit > 0 ? hits.slice(offset, offset + limit) : hits.slice(offset);
 	return page.map((hit) => ({
 		section_tipo: hit.section_tipo,
-		// PHP locator::set_section_id casts to string (the wire shape).
-		section_id: String(hit.section_id),
+		// int-canonical wire shape (WC-2026-08-10-section-id-int-canonical; the
+		// PHP cast-to-string law is repealed). Hits come from the int-typed
+		// relation index — already the canonical form.
+		section_id: hit.section_id,
 		from_component_tipo: childrenTipo,
 		type: CHILDREN_RELATION_TYPE,
 	}));
@@ -366,7 +377,8 @@ export async function getChildrenOfType(
 	const page = limit > 0 ? hits.slice(offset, offset + limit) : hits.slice(offset);
 	return page.map((hit) => ({
 		section_tipo: hit.section_tipo,
-		section_id: String(hit.section_id),
+		// int-canonical wire shape (WC-2026-08-10-section-id-int-canonical).
+		section_id: hit.section_id,
 		from_component_tipo: childrenTipo,
 		type: CHILDREN_RELATION_TYPE,
 	}));

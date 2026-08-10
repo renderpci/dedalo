@@ -13,6 +13,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** A record with real TM history on this install. */
@@ -91,10 +92,13 @@ beforeAll(async () => {
 	const php = new PhpApiClient();
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	const phpResult = await php.call(structuredClone(TM_RQO) as Record<string, unknown>);
-	phpData = ((phpResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
-		string,
-		unknown
-	>[];
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	phpData = normalizeSectionIdTypes(
+		((phpResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+			string,
+			unknown
+		>[],
+	);
 
 	const token = createSession(-1, 'root', true);
 	const session = getSession(token);
@@ -109,10 +113,13 @@ beforeAll(async () => {
 			principal,
 		} as never,
 	);
-	tsData = ((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
-		string,
-		unknown
-	>[];
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	tsData = normalizeSectionIdTypes(
+		((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+			string,
+			unknown
+		>[],
+	);
 });
 
 describe.if(hasPhpCredentials())('time machine read differential', () => {

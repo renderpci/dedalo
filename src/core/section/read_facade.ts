@@ -20,6 +20,7 @@
 import type { ApiResult } from '../api/response.ts';
 import { denied } from '../api/response.ts';
 import { isTemporalSource, type Rqo } from '../concepts/rqo.ts';
+import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
 import { readSection } from './read.ts';
 
@@ -104,6 +105,12 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			section_tipo?: unknown;
 			filter_by_locators?: { section_tipo?: unknown; section_id?: unknown }[];
 		};
+		// KEPT UNION (WC-2026-08-10-section-id-int-canonical): filter_by_locators
+		// is a RAW wire list from the transcription/indexation tools, still sent
+		// in the legacy string form by an old client, and it may name an
+		// external-service host whose remote id is a string by nature. Narrowing
+		// the guard would DROP those hosts and answer a bogus 400;
+		// buildRelatedSections canonicalizes each locator at its own entrance.
 		const locators = (
 			Array.isArray(sqoOptions.filter_by_locators) ? sqoOptions.filter_by_locators : []
 		).filter(
@@ -181,15 +188,20 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			!resolved.some((d) => (d as { tipo?: string }).tipo === source.tipo)
 		) {
 			const { buildDataItem } = await import('../resolve/component_data.ts');
-			// Pass section_id AS GIVEN (string) — the client matches the item by
-			// String(el.section_id)===String(self.section_id), so coercing through
-			// Number() (which drops leading zeros, e.g. '000147689') would break
-			// the match and leave self.data empty.
+			// Canonical id echo (WC-2026-08-10-section-id-int-canonical — repeals
+			// the pass-AS-GIVEN string law that stood here): a record address emits
+			// as INT; an external remote id ('000147689' — leading zeros are the
+			// id's own bytes) and a synthetic 'search_<n>' token survive VERBATIM,
+			// which is exactly what canonicalizeStoredSectionId does. The client
+			// matches the item by String(el.section_id)===String(self.section_id),
+			// and both typed forms of a record address stringify identically, so
+			// the canonical form keeps the match; a blanket Number() would still
+			// break it (leading zeros dropped) and stays banned.
 			resolved.unshift(
 				buildDataItem(
 					source.tipo,
 					source.section_tipo,
-					(source.section_id as number | string | null) ?? 0,
+					(canonicalizeStoredSectionId(source.section_id) as number | string | null) ?? 0,
 					'search',
 					source.lang ?? 'lg-nolan',
 					[],
@@ -234,31 +246,46 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// isRecordInScope gate. Out of scope ⇒ PHP empty shell (never reveal the
 		// record's existence), not a 403.
 		//
-		// SYNTHETIC search-filter ids are EXEMPT: the search panel builds each
-		// filter component with a client-minted section_id ('search_<n>',
-		// search.js get_section_id) that addresses NO matrix record —
-		// readComponentData resolves a null record and returns only record-
-		// INDEPENDENT data (the option datalist, or an empty item). PHP does not
-		// gate this path at all (user_can_access_record is RAG-only; get_data serves
-		// the datalist to every searcher). Gating it here is meaningless AND harmful:
-		// isRecordInScope(NaN) returns false, blanking the whole search form for
-		// non-admins (search is enabled for all users). Skip ONLY non-numeric ids;
-		// every real numeric id — including non-positive ones (0, root -1) — stays
-		// gated, so no record reach is opened (principalCanAccessRecord blocks < 1).
+		// NON-record ids are EXEMPT — classified, not Number()-sniffed
+		// (WC-2026-08-10-section-id-int-canonical). A SYNTHETIC id: the search
+		// panel builds each filter component with a client-minted section_id
+		// ('search_<n>', search.js get_section_id) that addresses NO matrix
+		// record — readComponentData resolves a null record and returns only
+		// record-INDEPENDENT data (the option datalist, or an empty item). PHP
+		// does not gate this path at all (user_can_access_record is RAG-only;
+		// get_data serves the datalist to every searcher). Gating it here is
+		// meaningless AND harmful: an out-of-scope verdict on a no-record id
+		// blanks the whole search form for non-admins (search is enabled for all
+		// users). An EXTERNAL-REF likewise addresses no matrix record — the old
+		// NaN sniff already skipped opaque 'Q42'-style tokens, and classification
+		// fixes the digits-only remote ids ('001338683') the sniff mis-gated as a
+		// bogus record number. Every REAL record id — including non-positive ones
+		// (0, root -1) — stays gated, so no record reach is opened
+		// (principalCanAccessRecord blocks < 1). An `absent` id ('') also skips:
+		// no address, nothing to scope (the NaN era gated it as record 0 — the
+		// '' divergence recorded in the WC entry).
 		// TEMPORAL instances are exempt for the same reason as the synthetic
 		// search ids (WC-059): the sentinel `section_id: 1` addresses no record,
 		// so gating on it would blank a tool's editable clone for every user who
 		// happens to be out of scope for a record the clone never reads.
 		// readComponentData resolves it record-independently.
-		const recordId = Number(source.section_id);
-		if (
-			typeof source.section_tipo === 'string' &&
-			!Number.isNaN(recordId) &&
-			!isTemporalSource(source)
-		) {
-			const { principalCanAccessRecord } = await import('../security/record_scope.ts');
-			if (!(await principalCanAccessRecord(source.section_tipo, recordId, principal))) {
-				return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+		if (typeof source.section_tipo === 'string' && !isTemporalSource(source)) {
+			// Classifier refusal → skip the gate like any non-record kind: the id
+			// addresses nothing, and the downstream read serves the no-record
+			// widget (read.ts catches the same refusal). Never a 500 on a read.
+			const wireSectionId = await classifyWireSectionId(
+				source.section_id,
+				source.section_tipo,
+				'rqo.get_data.record_scope_gate',
+			).catch((error: unknown) => {
+				if (error instanceof TypeError) return { kind: 'absent' } as const;
+				throw error;
+			});
+			if (wireSectionId.kind === 'record') {
+				const { principalCanAccessRecord } = await import('../security/record_scope.ts');
+				if (!(await principalCanAccessRecord(source.section_tipo, wireSectionId.id, principal))) {
+					return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+				}
 			}
 		}
 		// §7.4 per-COMPONENT schema ACL — defense-in-depth (AUTHZ-06). The `read`

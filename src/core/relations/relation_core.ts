@@ -21,6 +21,7 @@
  */
 
 import type { Ddo } from '../concepts/ddo.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
@@ -435,8 +436,15 @@ export async function expandPortal(
 	// Expand each paginated locator through the child ddos (record-major).
 	for (const locator of page) {
 		const targetSectionTipo = locator.section_tipo as string;
-		// PHP keeps the locator's raw section_id type (often a string).
-		const targetSectionId = locator.section_id as number | string;
+		// CANONICAL address for every emission below (the child items, their
+		// row anchor and parent_section_id): the stored locator may still hold
+		// the legacy string form, so canonicalize ONCE here rather than pass
+		// the raw type through. External-service targets ('001338683', 'Q42')
+		// are not convertible and keep their own bytes — which is why this is
+		// canonicalizeStoredSectionId and not Number()
+		// (WC-2026-08-10-section-id-int-canonical; repeals "PHP keeps the
+		// locator's raw section_id type").
+		const targetSectionId = canonicalizeStoredSectionId(locator.section_id) as number | string;
 		const shape = childShapes.get(targetSectionTipo);
 		// A target every one of whose compatible children DERIVES has no stored
 		// row to look for — skip the pointless matrix query. Purely an
@@ -645,7 +653,7 @@ export async function expandPortal(
 				continue;
 			}
 			childItem.from_component_tipo = portalDdo.tipo; // the CREATING portal (PHP :2684)
-			childItem.section_id = targetSectionId; // keep the locator's raw type
+			childItem.section_id = targetSectionId; // canonical (see the expansion head)
 			// get_data children belong to the OUTER record; resolve_data children
 			// (injected locators, no outer record) belong to their TARGET.
 			childItem.row_section_id = options.childRowFromTarget ? targetSectionId : row.section_id;
@@ -723,6 +731,9 @@ export async function emitDataframeItem(
 	}
 	// component_alias data key (WC-020) — uniformity; no live alias targets a frame.
 	const { resolveDataTipo: resolveFrameDataTipo } = await import('../ontology/alias.ts');
+	// KEPT UNION below: the raw stored dataframe bag — unswept rows still hold
+	// the legacy string id, and a frame paired to an external target holds that
+	// service's non-convertible remote id. Entries are re-emitted VERBATIM.
 	const bag =
 		((bagRecord?.columns.relation as Record<string, unknown[]> | null)?.[
 			await resolveFrameDataTipo(frameDdo.tipo)

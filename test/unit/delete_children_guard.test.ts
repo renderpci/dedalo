@@ -138,7 +138,8 @@ describe('children-exist delete refusal (PHP sections::delete :535-593)', () => 
 		if (!dbReady) return;
 		const body = await dispatchDelete(parentId, 'delete_record', true);
 		expect(body.errors).toBeUndefined();
-		expect(body.result).toEqual([String(parentId)]);
+		// int-canonical delete result ids (WC-2026-08-10-section-id-int-canonical)
+		expect(body.result).toEqual([parentId]);
 		expect(await rowExists(parentId)).toBe(false);
 	});
 
@@ -146,7 +147,8 @@ describe('children-exist delete refusal (PHP sections::delete :535-593)', () => 
 		if (!dbReady) return;
 		const body = await dispatchDelete(childId, 'delete_record');
 		expect(body.errors).toBeUndefined();
-		expect(body.result).toEqual([String(childId)]);
+		// int-canonical delete result ids (WC-2026-08-10-section-id-int-canonical)
+		expect(body.result).toEqual([childId]);
 		expect(await rowExists(childId)).toBe(false);
 	});
 });

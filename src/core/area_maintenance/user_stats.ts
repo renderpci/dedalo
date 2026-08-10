@@ -55,12 +55,23 @@ const WHERE_SKIP: ReadonlySet<string> = new Set(['dd271', 'dd1224', 'dd1225']);
 /** The 'last publish' where-key routed to the publish histogram. */
 const WHERE_PUBLISH = 'dd1223';
 
-function userLocatorFilter(componentTipo: string, userId: number): string {
-	// json_codec even for the read-side @> containment params — one binding
-	// discipline for every jsonb param in this module (S2-07).
-	return encodeForJsonb({
-		[componentTipo]: [{ section_tipo: USERS_SECTION, section_id: String(userId) }],
-	});
+/**
+ * BOTH typed containment payloads for the user's actor locator — jsonb `@>` is
+ * type-strict and stored rows carry string-form ids until the int sweep (and
+ * int-form after it), so every probe ORs the pair (the dual-form law of
+ * core/search/containment.ts; WC-2026-08-10-section-id-int-canonical).
+ * json_codec even for the read-side params — one binding discipline for every
+ * jsonb param in this module (S2-07).
+ */
+function userLocatorFilterPair(componentTipo: string, userId: number): [string, string] {
+	return [
+		encodeForJsonb({
+			[componentTipo]: [{ section_tipo: USERS_SECTION, section_id: String(userId) }],
+		}),
+		encodeForJsonb({
+			[componentTipo]: [{ section_tipo: USERS_SECTION, section_id: userId }],
+		}),
+	];
 }
 
 /**
@@ -300,8 +311,8 @@ function foldTallies(tallies: ActivityTally[]): DayGroup {
 /** PHP delete_user_activity_stats: drop every dd1521 row of one user. */
 export async function deleteUserActivityStats(userId: number): Promise<boolean> {
 	await sql.unsafe(
-		'DELETE FROM matrix_stats WHERE section_tipo = $1 AND relation @> $2::text::jsonb',
-		[UA_SECTION, userLocatorFilter(UA_USER, userId)],
+		'DELETE FROM matrix_stats WHERE section_tipo = $1 AND (relation @> $2::text::jsonb OR relation @> $3::text::jsonb)',
+		[UA_SECTION, ...userLocatorFilterPair(UA_USER, userId)],
 	);
 	return true;
 }
@@ -344,8 +355,8 @@ export async function updateUserActivityStats(
 
 	// last aggregated day (newest stats row of the user)
 	const lastRows = (await sql.unsafe(
-		'SELECT date FROM matrix_stats WHERE relation @> $1::text::jsonb ORDER BY id DESC LIMIT 1',
-		[userLocatorFilter(UA_USER, userId)],
+		'SELECT date FROM matrix_stats WHERE (relation @> $1::text::jsonb OR relation @> $2::text::jsonb) ORDER BY id DESC LIMIT 1',
+		[...userLocatorFilterPair(UA_USER, userId)],
 	)) as {
 		date: Record<string, { start?: { year?: number; month?: number; day?: number } }[]> | null;
 	}[];
@@ -406,12 +417,12 @@ export async function updateUserActivityStats(
 		// skip already-saved days
 		const exists = (await sql.unsafe(
 			`SELECT 1 FROM matrix_stats
-			 WHERE relation @> $1::text::jsonb
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'year')::int = $2
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'month')::int = $3
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'day')::int = $4
+			 WHERE (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+			   AND ("date"->'${UA_DATE}'->0->'start'->>'year')::int = $3
+			   AND ("date"->'${UA_DATE}'->0->'start'->>'month')::int = $4
+			   AND ("date"->'${UA_DATE}'->0->'start'->>'day')::int = $5
 			 LIMIT 1`,
-			[userLocatorFilter(UA_USER, userId), year, month, dayNum],
+			[...userLocatorFilterPair(UA_USER, userId), year, month, dayNum],
 		)) as unknown[];
 		if (exists.length > 0) continue;
 
@@ -525,21 +536,21 @@ export async function crossUsersRangeData(
 	lang: string,
 ): Promise<CanonicalTotals | null> {
 	const rows = (await sql.unsafe(
-		`SELECT relation, misc->$4 AS totals, date
+		`SELECT relation, misc->$5 AS totals, date
 		 FROM matrix_stats
-		 WHERE section_tipo = $5
-		   AND relation @> $1::text::jsonb
+		 WHERE section_tipo = $6
+		   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
 		   AND make_date(
 		         ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'day')::int
-		       ) BETWEEN date($2) AND date($3)
+		       ) BETWEEN date($3) AND date($4)
 		 ORDER BY make_date(
 		         ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'day')::int
 		       ) ASC, id ASC`,
-		[userLocatorFilter(UA_USER, userId), dateIn, dateOut, UA_TOTALS, UA_SECTION],
+		[...userLocatorFilterPair(UA_USER, userId), dateIn, dateOut, UA_TOTALS, UA_SECTION],
 	)) as {
 		relation: { from_component_tipo?: string; section_tipo?: string; section_id?: unknown }[][];
 		totals: { value?: unknown }[] | { value?: unknown } | null;
@@ -772,7 +783,9 @@ async function saveUserActivity(
 	const userLocator = {
 		id: 1,
 		type: 'dd151',
-		section_id: String(userId),
+		// int-canonical (WC-2026-08-10-section-id-int-canonical); the read
+		// probes above OR both typed forms, so pre-sweep rows still match.
+		section_id: userId,
 		section_tipo: USERS_SECTION,
 		from_component_tipo: UA_USER,
 	};

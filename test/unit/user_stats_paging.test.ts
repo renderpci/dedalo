@@ -36,7 +36,12 @@ import { sql } from '../../src/core/db/postgres.ts';
 const UID = 424262;
 /** A second synthetic actor that deliberately has NO activity at all. */
 const SILENT_UID = 424263;
+// int-canonical actor locator (WC-2026-08-10-section-id-int-canonical): the
+// writer mints int now; the string twin covers pre-sweep rows.
 const USER_FILTER = JSON.stringify({
+	dd1522: [{ section_tipo: 'dd128', section_id: UID }],
+});
+const USER_FILTER_LEGACY = JSON.stringify({
 	dd1522: [{ section_tipo: 'dd128', section_id: String(UID) }],
 });
 const DAY_A = '2019-03-04';
@@ -200,12 +205,12 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		const leaked: string[] = [];
 		// dd1521 aggregates the save-path test produced, plus their TM audit rows
 		const statsIds = (await sql.unsafe(
-			`SELECT section_id FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[USER_FILTER],
+			`SELECT section_id FROM matrix_stats WHERE section_tipo = 'dd1521' AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[USER_FILTER, USER_FILTER_LEGACY],
 		)) as { section_id: number }[];
 		await sql.unsafe(
-			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[USER_FILTER],
+			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521' AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[USER_FILTER, USER_FILTER_LEGACY],
 		);
 		for (const row of statsIds) {
 			await sql.unsafe(
@@ -311,11 +316,12 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		const rows = (await sql.unsafe(
 			`SELECT misc->'dd1523' AS totals
 			 FROM matrix_stats
-			 WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb
+			 WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
 			 ORDER BY ("date"->'dd1530'->0->'start'->>'year')::int,
 			          ("date"->'dd1530'->0->'start'->>'month')::int,
 			          ("date"->'dd1530'->0->'start'->>'day')::int, id`,
-			[USER_FILTER],
+			[USER_FILTER, USER_FILTER_LEGACY],
 		)) as { totals: unknown }[];
 		return JSON.stringify(rows.map((row) => row.totals));
 	};

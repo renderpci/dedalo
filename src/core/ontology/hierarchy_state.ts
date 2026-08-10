@@ -354,11 +354,14 @@ const write = (
 ): Promise<void> =>
 	updateMatrixKeyData(HIERARCHY_MAIN_TABLE, HIERARCHY_SECTION, sectionId, column, tipo, value);
 
+// section_id is the INT constant itself (WC-2026-08-10-section-id-int-canonical
+// repeals the String() minting); the readers above compare loose-numerically
+// through compareLocators, so legacy '1'/'2' rows still match.
 const siNoLocator = (componentTipo: string, yes: boolean) => [
 	{
 		id: 1,
 		type: RELATION_TYPE_LINK,
-		section_id: String(yes ? SI_NO_YES : SI_NO_NO),
+		section_id: yes ? SI_NO_YES : SI_NO_NO,
 		section_tipo: SI_NO_SECTION,
 		from_component_tipo: componentTipo,
 	},
@@ -371,7 +374,8 @@ const rootLocatorItem = (componentTipo: string, targetSectionTipo: string, targe
 	// resolves ON the type (area/tree.ts keys on section_tipo+section_id only), but
 	// PHP's activation and ontology_write both stamp Child — so we stamp Child.
 	type: RELATION_TYPE_CHILDREN,
-	section_id: String(targetId),
+	// canonical INT address (WC-2026-08-10-section-id-int-canonical)
+	section_id: targetId,
 	section_tipo: targetSectionTipo,
 	from_component_tipo: componentTipo,
 });

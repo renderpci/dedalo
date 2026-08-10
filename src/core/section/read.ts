@@ -31,6 +31,7 @@ import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
 import { callerDataframePairing, isTemporalSource, type Rqo } from '../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../concepts/section.ts';
+import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { runWithRecordMemo } from '../db/record_memo.ts';
@@ -458,6 +459,13 @@ async function appendDerivedItemContexts(
  *
  * Returns data[] only (context is Phase 4 continuation for this action).
  */
+/** The classified record id, or NaN on any no-record kind (legacy local shape). */
+function recordIdOrNaN(wireSectionId: { kind: string; id?: number }): number {
+	return wireSectionId.kind === 'record' && wireSectionId.id !== undefined
+		? wireSectionId.id
+		: Number.NaN;
+}
+
 export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	const source = rqo.source ?? {};
 	const tipo = source.tipo;
@@ -536,22 +544,45 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		injectComponentData(target, await resolveDataTipo(tipo), model, scratchEntries);
 	};
 
-	// A synthetic search-filter id ('search_<n>', search.js get_section_id)
-	// addresses NO matrix record — its Number() is NaN. Resolve it to a null
-	// record WITHOUT touching the DB, so the search branches below build a
-	// record-independent widget (PHP get_data serves the datalist/empty item).
-	// This also spares VIRTUAL sections whose matrix "table" is not a readable
-	// record store: dd15 Time Machine → matrix_time_machine, which readMatrixRecord
-	// rejects via the identifier allowlist. Without this guard, dragging any dd15
-	// field into the search panel threw and every filter rendered "Invalid
-	// component". A real numeric id (incl. 0 and root -1) still reads normally.
+	// Classify the wire id ONCE (WC-2026-08-10-section-id-int-canonical) —
+	// replaces the Number()/NaN sniff. A SYNTHETIC search-filter id
+	// ('search_<n>', search.js get_section_id) addresses NO matrix record, and
+	// an EXTERNAL remote id ('001338683', 'Q42') is not a matrix address at all
+	// (the old sniff coerced a digits-only remote id into a bogus record read):
+	// both resolve to a null record WITHOUT touching the DB, so the branches
+	// below build a record-independent widget (PHP get_data serves the
+	// datalist/empty item). This also spares VIRTUAL sections whose matrix
+	// "table" is not a readable record store: dd15 Time Machine →
+	// matrix_time_machine, which readMatrixRecord rejects via the identifier
+	// allowlist. Without this guard, dragging any dd15 field into the search
+	// panel threw and every filter rendered "Invalid component". A real record
+	// id (incl. 0 and root -1) still reads normally.
+	// DELIBERATE DIVERGENCE (WC-2026-08-10-section-id-int-canonical): '' now
+	// classifies as `absent` and takes the no-record branch — the NaN era's
+	// Number('') === 0 slipped an empty id past this gate and read record 0.
 	// A TEMPORAL instance (source.is_temporal — a tool's throwaway editable
 	// clone, WC-059) is the second no-record case: its section_id is a client
 	// sentinel (1), so reading it would serve a STRANGER'S record as the clone's
 	// starting value. Same resolution as the synthetic search id — context and
 	// datalist, empty value.
-	const numericSectionId = Number(sectionId);
-	const hasRecordId = !Number.isNaN(numericSectionId) && !isTemporalSource(source);
+	// A classifier refusal ('007', out-of-range digits, non-scalar) on a READ is
+	// served as the no-record widget, never a 500: the value addresses nothing,
+	// and the read pipeline's honest answer to "no address" already exists.
+	// (The WRITE doors 400 instead — a refusal there must be visible.)
+	const wireSectionId = await classifyWireSectionId(
+		sectionId,
+		sectionTipo,
+		'rqo.section.read',
+	).catch((error: unknown) => {
+		if (error instanceof TypeError) {
+			console.warn(`[section/read] unusable section_id served as no-record: ${error.message}`);
+			return { kind: 'absent' } as const;
+		}
+		throw error;
+	});
+	const hasRecordId = wireSectionId.kind === 'record' && !isTemporalSource(source);
+	// Only meaningful under hasRecordId — the no-record branches never read it.
+	const numericSectionId = recordIdOrNaN(wireSectionId);
 
 	// Time Machine preview override (PHP component_common::get_data data_source
 	// ='tm' branch, dd_core_api :2372-2383): the tool_time_machine preview pane
@@ -619,7 +650,9 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		// parent locator are attached in the shared emitDdoData literal branch
 		// above. get_data-specific tweaks vs the section read (PHP get_data_item):
 		// the response SUBJECT is not a subdatum row, so it drops row_section_id,
-		// and its section_id / parent_section_id are the RAW string ids.
+		// and its section_id / parent_section_id echo the source id in CANONICAL
+		// form (WC-2026-08-10-section-id-int-canonical — repeals the raw-String()
+		// echo: a record address is an INT; anything else survives verbatim).
 		if (model === 'component_security_access') {
 			const item = literalData.find(
 				(entry): entry is DataItem => (entry as DataItem).tipo === tipo,
@@ -627,8 +660,9 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			if (item !== undefined) {
 				// biome-ignore lint/performance/noDelete: PHP parity — row_section_id must be ABSENT here
 				delete (item as { row_section_id?: unknown }).row_section_id;
-				item.section_id = String(sectionId);
-				item.parent_section_id = String(sectionId);
+				const canonicalId = canonicalizeStoredSectionId(sectionId) as number | string;
+				item.section_id = canonicalId;
+				item.parent_section_id = canonicalId;
 			}
 		}
 		return literalData as DataItem[];
@@ -815,10 +849,12 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		const mode = source.mode ?? 'edit';
 		const familyEmission = new EmissionContext();
 		const familyData = familyEmission.items;
-		// Echo a non-numeric synthetic id (the search filter's 'search_<n>')
-		// VERBATIM so the client build matches the instance by String() equality;
-		// real numeric ids stay numeric (unchanged output for stored records).
-		const emitSectionId = Number.isNaN(Number(sectionId)) ? sectionId : Number(sectionId);
+		// Echo a non-record id VERBATIM — the search filter's 'search_<n>' token
+		// and an external remote id both match the client instance by String()
+		// equality; a RECORD address emits as canonical INT
+		// (WC-2026-08-10-section-id-int-canonical — the old blanket Number()
+		// corrupted digits-only external ids, '001338683' → 1338683).
+		const emitSectionId = wireSectionId.kind === 'record' ? wireSectionId.id : sectionId;
 		await emitDdoData(
 			{ tipo, section_tipo: sectionTipo, mode, lang } as Ddo,
 			[],
@@ -1092,18 +1128,22 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 		injected = await filterLocatorsInScope(injected, principal, dedaloConfig.usersSectionTipo);
 	}
 
-	// PHP locator parity (class.locator.php set_section_id :338): the echoed
-	// locators carry section_id AS STRING. The client feeds these entries back
-	// verbatim as the search q (component_portal get_search_value), and the
-	// stored relation column's locators hold string section_id — a verbatim
-	// NUMERIC echo (the datalist publishes the envelope's numeric section_id)
-	// silently misses the @> containment and the search returns 0 rows.
+	// Canonical echo (WC-2026-08-10-section-id-int-canonical) — REPEALS the PHP
+	// string law this block used to enforce (class.locator.php set_section_id
+	// :338, "locators carry section_id AS STRING"). The client still feeds these
+	// entries back verbatim as the search q (component_portal get_search_value),
+	// but the byte-exact string echo is no longer what makes the search match:
+	// the relation containment probes are DUAL-FORM per element
+	// (search/containment.ts relationProbeGroups), so a canonical-int chip finds
+	// string-stored legacy rows and int-stored canonical rows alike. Emit
+	// canonical: int for a record address; an external remote id ('001338683',
+	// 'Q42') survives verbatim — never Number() blindly.
 	injected = injected.map((locator) =>
 		locator !== null &&
 		typeof locator === 'object' &&
 		locator.section_id !== undefined &&
 		locator.section_id !== null
-			? { ...locator, section_id: String(locator.section_id) }
+			? { ...locator, section_id: canonicalizeStoredSectionId(locator.section_id) }
 			: locator,
 	);
 
@@ -1190,7 +1230,9 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 
 	// Dataframe slot items: one per injected entry per paired dataframe ddo,
 	// EMPTY (no stored record ⇒ no frames), keyed by id_key = the entry id
-	// (PHP emits them even when empty; row_section_id carries the id_key).
+	// (PHP emits them even when empty; row_section_id carries the id_key —
+	// as canonical INT, WC-2026-08-10-section-id-int-canonical: it is a
+	// number-typed key here, so the old String() minting is repealed).
 	for (const dataframeDdo of dataframeDdos) {
 		for (let index = 0; index < Math.max(injected.length, 0); index++) {
 			const idKey = index + 1;
@@ -1207,7 +1249,7 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 				pagination: { total: 0, limit: 1, offset: 0 },
 				id_key: idKey,
 				main_component_tipo: tipo,
-				row_section_id: String(idKey),
+				row_section_id: idKey,
 			} as unknown as DataItem);
 		}
 	}

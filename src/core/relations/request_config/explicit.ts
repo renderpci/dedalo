@@ -30,6 +30,11 @@ import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
+import {
+	composeContains,
+	locatorJsonVariants,
+	relationProbeGroups,
+} from '../../search/containment.ts';
 import { registerSectionDataListener } from '../../section_record/save_event.ts';
 
 /** The parsing context: who owns the config and where it lives. */
@@ -211,6 +216,28 @@ async function isActiveTldTipo(tipo: string): Promise<boolean> {
 	return (await getActiveTlds()).includes(tld);
 }
 
+/**
+ * A `bind` for the compose helpers over positional `sql.unsafe` params: appends
+ * the payload and returns its `$N` placeholder. Positional params are
+ * order-independent in the sentence, so callers may compose clauses in any
+ * order as long as they share ONE collector.
+ */
+function bindPositional(params: string[]): (payload: string) => string {
+	return (payload: string) => {
+		params.push(payload);
+		return `$${params.length}`;
+	};
+}
+
+/**
+ * Probe group for an ARRAY-shaped column reference (`relation-><tipo>`): the
+ * `[<locator>]` payload of each typed section_id variant. The object-keyed
+ * whole-column shape is `relationProbeGroups` in search/containment.ts.
+ */
+function arrayProbeGroup(locator: Record<string, unknown>): string[] {
+	return locatorJsonVariants(locator).map((json) => `[${json}]`);
+}
+
 /** Cache: typology ids key → active hierarchy target section tipos. */
 const hierarchySectionsCache = createOntologyCache<string, string[]>();
 
@@ -243,20 +270,35 @@ export async function resolveHierarchySectionsFromTypes(typeIds: number[]): Prom
 	if (typeIds.length === 0) return [];
 
 	const { sql } = await import('../../db/postgres.ts');
+	// Both typed forms of every probed section_id
+	// (WC-2026-08-10-section-id-int-canonical): stored locators carry
+	// section_id as a string until the int sweep and as an int after, and
+	// jsonb `@>` is type-strict — a single-form literal silently loses half
+	// the rows during the expand window (and forever on old-backup restores).
+	const probeParams: string[] = [];
+	const bind = bindPositional(probeParams);
+	const activeClause = composeContains(
+		`relation->'hierarchy4'`,
+		[arrayProbeGroup({ section_id: 1, section_tipo: 'dd64' })],
+		bind,
+	);
 	const typologyClauses = typeIds
-		.map(
-			(id) =>
-				`relation->'hierarchy9' @> '[{"section_id":"${Math.floor(id)}","section_tipo":"hierarchy13"}]'::jsonb`,
+		.map((id) =>
+			composeContains(
+				`relation->'hierarchy9'`,
+				[arrayProbeGroup({ section_id: Math.floor(id), section_tipo: 'hierarchy13' })],
+				bind,
+			),
 		)
 		.join(' OR ');
 	const rows = (await sql.unsafe(
 		`SELECT COALESCE(data->'hierarchy53', string->'hierarchy53')->0->>'value' AS target
 		 FROM matrix_hierarchy_main
 		 WHERE section_tipo = 'hierarchy1'
-		   AND relation->'hierarchy4' @> '[{"section_id":"1","section_tipo":"dd64"}]'::jsonb
+		   AND ${activeClause}
 		   AND (${typologyClauses})
 		 ORDER BY section_id`,
-		[],
+		probeParams,
 	)) as { target: string | null }[];
 	const sections = rows
 		.map((row) => row.target)
@@ -333,6 +375,17 @@ async function resolveFieldValueSections(
 			);
 			continue;
 		}
+		// Whole-column active-flag containment, both typed section_id forms
+		// (WC-2026-08-10-section-id-int-canonical) — see the comment in
+		// resolveHierarchySectionsFromTypes.
+		const queryParams: string[] = [callerSectionTipo];
+		const activeClause = composeContains(
+			't.relation',
+			relationProbeGroups('hierarchy4', [
+				{ section_tipo: 'dd64', section_id: 1, from_component_tipo: 'hierarchy4' },
+			]),
+			bindPositional(queryParams),
+		);
 		const rows = (await sql.unsafe(
 			`SELECT elem->>'value' AS target
 			 FROM "${table}" t,
@@ -342,9 +395,9 @@ async function resolveFieldValueSections(
 			             ELSE '[]'::jsonb END
 			      ) elem
 			 WHERE t.section_tipo = $1
-			   AND t.relation @> '{"hierarchy4":[{"section_tipo":"dd64","section_id":"1","from_component_tipo":"hierarchy4"}]}'::jsonb
+			   AND ${activeClause}
 			 ORDER BY t.section_id`,
-			[callerSectionTipo],
+			queryParams,
 		)) as { target: string | null }[];
 		for (const row of rows) {
 			const candidate = row.target;

@@ -27,6 +27,7 @@
 import { config } from '../../config/config.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import { type MatrixRecord, readMatrixRecord, readMatrixRecordBatch } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
@@ -395,6 +396,9 @@ export async function resolveCellValue(
 		// id_key + main_component_tipo, label = dd1715 at the dd1706 target).
 		const iriItems = ((record.columns.iri as Record<string, unknown[]> | null)?.[componentTipo] ??
 			[]) as { iri?: unknown; id?: number | string }[];
+		// KEPT UNION below: the RAW stored dd560 label-frame bag — unswept rows
+		// hold the legacy string id, and an iri frame commonly targets an
+		// external service whose remote id is a string by nature.
 		const frameBag = ((record.columns.relation as Record<string, unknown[]> | null)?.dd560 ??
 			[]) as {
 			id_key?: number | string;
@@ -536,7 +540,15 @@ export async function buildRelationList(
 	// Request-scoped data lang backstop (S2-28), never a hardcoded lg-spa.
 	const lang = options.lang ?? currentDataLang();
 	let hits = await findInverseReferences(
-		[{ section_tipo: hostSectionTipo, section_id: String(hostSectionId) }],
+		// Canonical address in (WC-2026-08-10-section-id-int-canonical). The
+		// index probe binds ::int either way, so the old String() minting bought
+		// nothing and only spread the string form outward.
+		[
+			{
+				section_tipo: hostSectionTipo,
+				section_id: canonicalizeStoredSectionId(hostSectionId) as string | number,
+			},
+		],
 		{
 			sectionTipos: options.sectionTipos ?? 'all',
 			limit: options.limit ?? false,
@@ -618,15 +630,17 @@ export async function buildRelationList(
 		}
 
 		// One row: the id cell (no value key) + a value cell per column.
+		// `hit.section_id` is already an int off the relation index — emit it
+		// as-is (WC-2026-08-10-section-id-int-canonical repeals the String()).
 		data.push({
 			section_tipo: hit.section_tipo,
-			section_id: String(hit.section_id),
+			section_id: hit.section_id,
 			component_tipo: 'id',
 		});
 		for (const columnTipo of columns) {
 			const cell: Record<string, unknown> = {
 				section_tipo: hit.section_tipo,
-				section_id: String(hit.section_id),
+				section_id: hit.section_id,
 				component_tipo: columnTipo,
 			};
 			const value = await resolveCellValue(

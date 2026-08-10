@@ -15,6 +15,7 @@
  */
 
 import type { Rqo } from '../concepts/rqo.ts';
+import { coerceSectionId } from '../concepts/section_id.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
 import { acquireNodeLock, withTransaction } from '../db/postgres.ts';
@@ -53,6 +54,27 @@ export interface TsApiResponse {
 	[extra: string]: unknown;
 }
 
+/**
+ * THE dd_ts_api DOOR (WC-2026-08-10-section-id-int-canonical). Every section_id
+ * in this API's RQO body addresses a TREE NODE, i.e. a matrix record — so it is
+ * coerced here, once, counted under its own deprecable source key, instead of
+ * riding a string leg into the engine's Number() casts. Non-address junk (a
+ * synthetic token, a padded external id) refuses loudly through the caller's
+ * error envelope rather than reading a wrong record.
+ */
+function doorSectionId(raw: unknown, door: string): number {
+	return coerceSectionId(raw, `rqo.dd_ts_api.${door}`);
+}
+
+/** The refusal envelope for a door coercion that threw. */
+function badSectionIdResponse(response: TsApiResponse, error: unknown): TsApiResponse {
+	const message = error instanceof Error ? error.message : String(error);
+	response.result = false;
+	response.errors.push('invalid section_id');
+	response.msg = `Error. Invalid section_id: ${message}`;
+	return response;
+}
+
 // ===========================================================================
 // GET_NODE_DATA (PHP :95).
 // ===========================================================================
@@ -65,7 +87,15 @@ export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApi
 	}
 	const source = rqo.source as Record<string, unknown>;
 	const sectionTipo = (source.section_tipo as string | undefined) ?? null;
-	const sectionId = source.section_id;
+	let sectionId: number | undefined;
+	try {
+		sectionId =
+			source.section_id === undefined || source.section_id === null || source.section_id === ''
+				? undefined
+				: doorSectionId(source.section_id, 'get_node_data.section_id');
+	} catch (error) {
+		return badSectionIdResponse(response, error);
+	}
 	const childrenTipo = (source.children_tipo as string | undefined) ?? null;
 	const areaModel = (source.area_model as string | undefined) ?? 'area_thesaurus';
 	const options = (rqo.options ?? {}) as Record<string, unknown>;
@@ -84,7 +114,7 @@ export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApi
 	const tsOptions: TsOptions = { model: thesaurusViewMode === 'model', area_model: areaModel };
 	const locator: ParseLocator = {
 		section_tipo: sectionTipo ?? undefined,
-		section_id: sectionId as number | string | undefined,
+		section_id: sectionId,
 	};
 	if (childrenTipo !== null && childrenTipo !== '') locator.from_component_tipo = childrenTipo;
 
@@ -111,7 +141,15 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 	}
 	const source = rqo.source as Record<string, unknown>;
 	const sectionTipo = (source.section_tipo as string | undefined) ?? null;
-	const sectionId = source.section_id;
+	let sectionId: number | undefined;
+	try {
+		sectionId =
+			source.section_id === undefined || source.section_id === null || source.section_id === ''
+				? undefined
+				: doorSectionId(source.section_id, 'get_children_data.section_id');
+	} catch (error) {
+		return badSectionIdResponse(response, error);
+	}
 	const childrenTipo = (source.children_tipo as string | undefined) ?? null;
 	const areaModel = (source.model as string | undefined) ?? 'area_thesaurus';
 	const children = (source.children as ParseLocator[] | undefined) ?? null;
@@ -135,7 +173,7 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 	if ((children === null || children.length === 0) && sectionId && childrenTipo) {
 		const result = await tsGetChildrenData(
 			sectionTipo as string,
-			sectionId as number | string,
+			sectionId,
 			childrenTipo,
 			defaultLimit,
 			areaModel,
@@ -148,9 +186,7 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 
 	// mode B: pre-built children list.
 	const parentLocator =
-		sectionTipo && sectionId
-			? { section_tipo: sectionTipo, section_id: sectionId as number | string }
-			: null;
+		sectionTipo && sectionId ? { section_tipo: sectionTipo, section_id: sectionId } : null;
 	const arChildrenData = await parseChildData(
 		children ?? [],
 		areaModel,
@@ -188,7 +224,6 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiRes
 	};
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	const sectionTipo = source.section_tipo as string;
-	const sectionId = source.section_id as number | string;
 
 	// SEC-10: write ≥2.
 	const permissions = await getPermissions(principal, sectionTipo, sectionTipo);
@@ -196,6 +231,13 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiRes
 		response.errors.push('insufficient permissions');
 		response.msg = `Error. Insufficient permissions to create in section (${sectionTipo})`;
 		return response;
+	}
+
+	let sectionId: number;
+	try {
+		sectionId = doorSectionId(source.section_id, 'add_child.section_id');
+	} catch (error) {
+		return badSectionIdResponse(response, error);
 	}
 
 	// Validations BEFORE any write (no orphan window).
@@ -252,7 +294,7 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiRes
 
 			// ontology TLD inheritance: `<tld>0` sections copy ontology7 parent→child.
 			if (getSectionIdFromTipo(sectionTipo) === '0') {
-				const parentRecord = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+				const parentRecord = await readMatrixRecord(table, sectionTipo, sectionId);
 				const tldItems =
 					((parentRecord?.columns.string as Record<string, unknown[]> | null)?.ontology7 as
 						| unknown[]
@@ -303,10 +345,7 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	const sectionTipo = source.section_tipo as string;
-	const sectionId = source.section_id as number | string;
-	const oldParentSectionId = source.old_parent_section_id as number | string;
 	const oldParentSectionTipo = source.old_parent_section_tipo as string;
-	const newParentSectionId = source.new_parent_section_id as number | string;
 	const newParentSectionTipo = source.new_parent_section_tipo as string;
 
 	// SEC-11: write ≥2.
@@ -317,6 +356,23 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 		return response;
 	}
 
+	let sectionId: number;
+	let oldParentSectionId: number;
+	let newParentSectionId: number;
+	try {
+		sectionId = doorSectionId(source.section_id, 'update_parent_data.section_id');
+		oldParentSectionId = doorSectionId(
+			source.old_parent_section_id,
+			'update_parent_data.old_parent_section_id',
+		);
+		newParentSectionId = doorSectionId(
+			source.new_parent_section_id,
+			'update_parent_data.new_parent_section_id',
+		);
+	} catch (error) {
+		return badSectionIdResponse(response, error);
+	}
+
 	const parentTipo = await getParentTipo(sectionTipo);
 	if (parentTipo === null) {
 		response.errors.push('invalid component_relation_parent');
@@ -325,17 +381,10 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 	}
 
 	// PRE-mutation cycle guard.
-	const isSelfTarget =
-		newParentSectionTipo === sectionTipo &&
-		Math.trunc(Number(newParentSectionId)) === Math.trunc(Number(sectionId));
+	const isSelfTarget = newParentSectionTipo === sectionTipo && newParentSectionId === sectionId;
 	if (
 		isSelfTarget ||
-		(await isAncestor(
-			sectionTipo,
-			sectionId,
-			newParentSectionTipo,
-			Math.trunc(Number(newParentSectionId)),
-		))
+		(await isAncestor(sectionTipo, sectionId, newParentSectionTipo, newParentSectionId))
 	) {
 		response.errors.push('cycle');
 		response.msg = 'Error. The node cannot be moved under itself or under its own descendant';
@@ -346,15 +395,15 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 		await withTransaction(async () => {
 			// lock both parents in deterministic (strcmp) order.
 			const lockKeys: [string, number][] = [
-				[oldParentSectionTipo, Math.trunc(Number(oldParentSectionId))],
-				[newParentSectionTipo, Math.trunc(Number(newParentSectionId))],
+				[oldParentSectionTipo, oldParentSectionId],
+				[newParentSectionTipo, newParentSectionId],
 			];
 			lockKeys.sort((a, b) => `${a[0]}_${a[1]}`.localeCompare(`${b[0]}_${b[1]}`, 'en'));
 			for (const [tipo, id] of lockKeys) {
 				await acquireNodeLock(tipo, id);
 			}
 
-			const removed = await removeParent(sectionTipo, Number(sectionId), parentTipo, {
+			const removed = await removeParent(sectionTipo, sectionId, parentTipo, {
 				section_tipo: oldParentSectionTipo,
 				section_id: oldParentSectionId,
 				from_component_tipo: parentTipo,
@@ -365,7 +414,7 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 					`Remove old parent locator failed: ${oldParentSectionTipo}_${oldParentSectionId}`,
 				);
 
-			const added = await addParent(sectionTipo, Number(sectionId), parentTipo, {
+			const added = await addParent(sectionTipo, sectionId, parentTipo, {
 				section_tipo: newParentSectionTipo,
 				section_id: newParentSectionId,
 				from_component_tipo: parentTipo,
@@ -376,11 +425,7 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 					`Add new parent locator failed: ${newParentSectionTipo}_${newParentSectionId}`,
 				);
 
-			await recalculateSiblingOrders(
-				sectionTipo,
-				oldParentSectionTipo,
-				Math.trunc(Number(oldParentSectionId)),
-			);
+			await recalculateSiblingOrders(sectionTipo, oldParentSectionTipo, oldParentSectionId);
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
@@ -408,10 +453,10 @@ export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiRe
 	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	const sectionTipo = source.section_tipo as string;
-	const arLocators =
-		(source.ar_locators as { section_tipo: string; section_id: number | string }[]) ?? [];
+	const rawLocators =
+		(source.ar_locators as { section_tipo: string; section_id: unknown }[] | undefined) ?? [];
 	const parentSectionTipo = (source.parent_section_tipo as string | undefined) ?? null;
-	const parentSectionId = source.parent_section_id as number | string | undefined;
+	const rawParentSectionId = source.parent_section_id;
 
 	// SEC-12: write ≥2.
 	const permissions = await getPermissions(principal, sectionTipo, sectionTipo);
@@ -421,28 +466,39 @@ export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiRe
 		return response;
 	}
 
+	// Door coercion for the whole ordered list + the parent: each entry names a
+	// sibling RECORD whose order row is about to be rewritten.
+	let arLocators: { section_tipo: string; section_id: number }[];
+	let coercedParentSectionId: number | undefined;
+	try {
+		arLocators = rawLocators.map((locator) => ({
+			...locator,
+			section_id: doorSectionId(locator.section_id, 'save_order.ar_locators.section_id'),
+		}));
+		coercedParentSectionId =
+			rawParentSectionId === undefined || rawParentSectionId === null || rawParentSectionId === ''
+				? undefined
+				: doorSectionId(rawParentSectionId, 'save_order.parent_section_id');
+	} catch (error) {
+		return badSectionIdResponse(response, error);
+	}
+
 	if (
 		parentSectionTipo === null ||
 		parentSectionTipo === '' ||
-		parentSectionId === undefined ||
-		parentSectionId === null ||
-		parentSectionId === ''
+		coercedParentSectionId === undefined
 	) {
 		response.msg = 'Error. parent_section_tipo and parent_section_id are required';
 		response.errors.push('missing parent context');
 		return response;
 	}
+	const parentSectionId = coercedParentSectionId;
 
 	let result: Awaited<ReturnType<typeof sortChildren>>;
 	try {
 		result = await withTransaction(async () => {
-			await acquireNodeLock(parentSectionTipo, Math.trunc(Number(parentSectionId)));
-			return sortChildren(
-				sectionTipo,
-				arLocators,
-				parentSectionTipo,
-				Math.trunc(Number(parentSectionId)),
-			);
+			await acquireNodeLock(parentSectionTipo, parentSectionId);
+			return sortChildren(sectionTipo, arLocators, parentSectionTipo, parentSectionId);
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
@@ -464,7 +520,7 @@ export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiRe
 				},
 			})),
 			parentSectionTipo,
-			Math.trunc(Number(parentSectionId)),
+			parentSectionId,
 		);
 	}
 

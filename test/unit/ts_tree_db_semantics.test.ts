@@ -112,7 +112,8 @@ async function seedNode(input: {
 }): Promise<void> {
 	const relation: Record<string, unknown[]> = {};
 	if (input.parent_id !== undefined) relation[PARENT_TIPO] = [parentLink(input.parent_id)];
-	if (input.descriptor !== undefined) relation[DESCRIPTOR_TIPO] = [descriptorLink(input.descriptor)];
+	if (input.descriptor !== undefined)
+		relation[DESCRIPTOR_TIPO] = [descriptorLink(input.descriptor)];
 	const string =
 		input.term === undefined
 			? null
@@ -144,13 +145,14 @@ beforeAll(async () => {
 
 afterAll(sweepScratch);
 
-describe('getChildren — string section_id wire keys + homogeneous children', () => {
-	it('returns child locators with STRING section_id and the dd48 children shape', async () => {
+describe('getChildren — int section_id wire keys + homogeneous children', () => {
+	it('returns child locators with INT section_id and the dd48 children shape', async () => {
 		const children = await getChildren(MID, TREE_TIPO);
 		expect(children.length).toBe(3); // LEAF_A, LEAF_B, LEAF_C
 		const first = children[0];
-		// PHP locator::set_section_id casts to string — the wire shape.
-		expect(typeof first?.section_id).toBe('string');
+		// int-canonical wire shape (WC-2026-08-10-section-id-int-canonical;
+		// the PHP-era locator::set_section_id string cast is repealed).
+		expect(typeof first?.section_id).toBe('number');
 		expect(first?.type).toBe('dd48');
 		// The CHILDREN component tipo, never the dd47 parent tipo stored on the link.
 		expect(first?.from_component_tipo).toBe(CHILDREN_TIPO);

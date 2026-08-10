@@ -28,6 +28,7 @@
  */
 
 import { config } from '../../config/config.ts';
+import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -112,7 +113,11 @@ export interface TsElement {
  */
 export interface TsNodeData {
 	section_tipo: string;
-	section_id: number | string;
+	// A tree node IS a matrix record, so its address is an int
+	// (WC-2026-08-10-section-id-int-canonical): every producer canonicalizes
+	// before building — parseChildData at the locator boundary, the dd_ts_api
+	// door via coerceSectionId, search.ts straight off the int DB column.
+	section_id: number;
 	ts_id: string;
 	ts_parent: string | null;
 	order: number | string | null;
@@ -141,7 +146,7 @@ const resolvedChildCache = createDataCache<string, ChildLocator[]>((cache) => {
 });
 
 /** Targeted eviction after a tree write (PHP invalidate_node :1021). */
-export function invalidateNode(sectionTipo: string, sectionId: number | string): void {
+export function invalidateNode(sectionTipo: string, sectionId: number): void {
 	invalidateTermNode(sectionTipo, sectionId);
 	resolvedChildCache.clear();
 }
@@ -212,10 +217,7 @@ export async function getArElements(
 // ---------------------------------------------------------------------------
 // IS_INDEXABLE (PHP :827).
 // ---------------------------------------------------------------------------
-export async function isIndexable(
-	sectionTipo: string,
-	sectionId: number | string,
-): Promise<boolean> {
+export async function isIndexable(sectionTipo: string, sectionId: number): Promise<boolean> {
 	if (sectionTipo.startsWith('hierarchy') || sectionTipo.startsWith('ontology')) {
 		return false; // roots are always structural
 	}
@@ -229,7 +231,7 @@ export async function isIndexable(
 	if (typeof isIndexableTipo !== 'string') return false;
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) return false;
-	const record = await readMatrixRecord(table, sectionTipo, Number(sectionId));
+	const record = await readMatrixRecord(table, sectionTipo, sectionId);
 	const items =
 		((record?.columns.relation as Record<string, { section_id?: unknown }[]> | null)?.[
 			isIndexableTipo
@@ -301,7 +303,7 @@ interface CountGroupResult {
  */
 export async function getCountDataGroupBy(
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	componentTipo: string,
 	ddoEntry: DdoMapEntry,
 ): Promise<CountGroupResult> {
@@ -312,7 +314,7 @@ export async function getCountDataGroupBy(
 	// statically.
 	const { resolveIndexConfig } = await import('../relations/models/relation_index.ts');
 	const indexConfig = await resolveIndexConfig(componentTipo, sectionTipo);
-	const targets: { section_tipo: string; section_id: number | string }[] = [
+	const targets: { section_tipo: string; section_id: number }[] = [
 		{ section_tipo: sectionTipo, section_id: sectionId },
 	];
 	if (ddoEntry.show_data !== undefined) {
@@ -331,7 +333,7 @@ export async function getCountDataGroupBy(
 	const filterLocators = targets.map((target) => ({
 		type: indexConfig.relationType,
 		section_tipo: target.section_tipo,
-		section_id: Number(target.section_id),
+		section_id: target.section_id,
 	}));
 	const counted = await countInverseReferences(filterLocators, {
 		groupBy: ['section_tipo'],
@@ -383,7 +385,7 @@ function readItemsFromRecord(
 async function getComponentDataLang(
 	record: MatrixRecord | null,
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	tipo: string,
 	model: string,
 	lang: string,
@@ -400,8 +402,7 @@ async function getComponentDataLang(
 		// back with /^(.*) ([a-z]{2,}) ([0-9]+)$/ (render_ts_line.js render_ontology_term)
 		// — drop the id and the regex fails, so the whole "Term dd" string renders as
 		// the label and the [tipo] badge falls back to section_tipo+section_id.
-		const id = Math.trunc(Number(sectionId));
-		return [Number.isFinite(id) && id !== 0 ? id : null];
+		return [sectionId !== 0 ? sectionId : null];
 	}
 
 	let items = readItemsFromRecord(record, tipo, model);
@@ -486,7 +487,7 @@ function toStr(value: unknown): string {
 // HAS_CHILDREN_OF_TYPE (PHP :714).
 // ---------------------------------------------------------------------------
 async function hasChildrenOfType(
-	arChildren: { section_tipo?: string; section_id?: number | string }[],
+	arChildren: { section_tipo?: string; section_id?: number }[],
 	type: 'descriptor' | 'nd',
 	options: TsOptions,
 ): Promise<boolean> {
@@ -497,7 +498,7 @@ async function hasChildrenOfType(
 	const descriptorValue = type === 'descriptor' ? 1 : 2;
 	const flags = await batchDescriptorFlags(arChildren as NodeLocator[]);
 	for (const locator of arChildren) {
-		const key = `${locator.section_tipo}_${Math.trunc(Number(locator.section_id))}`;
+		const key = `${locator.section_tipo}_${locator.section_id}`;
 		if (flags.get(key) === descriptorValue) return true;
 	}
 	return false;
@@ -508,7 +509,7 @@ async function hasChildrenOfType(
 // ---------------------------------------------------------------------------
 export async function buildNodeData(
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	options: TsOptions,
 	tsParent: string | null,
 	principal: Principal,
@@ -528,9 +529,13 @@ export async function buildNodeData(
 	// Property insertion order mirrors PHP get_data() exactly.
 	const data: TsNodeData = {
 		section_tipo: sectionTipo,
-		// PHP builds the node through a locator, whose set_section_id casts to
-		// string — so the payload section_id is ALWAYS a string on the wire.
-		section_id: String(sectionId),
+		// WC-2026-08-10-section-id-int-canonical: repeals the PHP-era law this
+		// comment used to state ("set_section_id casts to string, so the payload
+		// section_id is ALWAYS a string on the wire"). A tree node addresses a
+		// matrix record, so the payload carries the canonical INT — the
+		// canonicalization now happens ONCE, at the boundary that builds the
+		// locator (parseChildData / the dd_ts_api door), never per emit.
+		section_id: sectionId,
 		ts_id: `${sectionTipo}_${sectionId}`,
 		ts_parent: tsParent,
 		order: options.order ?? null,
@@ -548,8 +553,7 @@ export async function buildNodeData(
 
 	// Preload the record once (all typed columns) for literal/relation reads.
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	const record =
-		table === null ? null : await readMatrixRecord(table, sectionTipo, Number(sectionId));
+	const record = table === null ? null : await readMatrixRecord(table, sectionTipo, sectionId);
 
 	for (const current of arElements) {
 		const currentTipo = current.tipo ?? null;
@@ -592,7 +596,7 @@ async function processElementDetails(
 	data: TsNodeData,
 	record: MatrixRecord | null,
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	options: TsOptions,
 ): Promise<boolean> {
 	for (const elementTipo of arElementTipo) {
@@ -792,7 +796,7 @@ async function resolveElementValue(
 	data: TsNodeData,
 	record: MatrixRecord | null,
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	options: TsOptions,
 ): Promise<boolean> {
 	switch (elementObj.type) {
@@ -841,7 +845,7 @@ async function resolveElementValue(
 		}
 		case 'link_children': {
 			data.children_tipo = elementTipo;
-			const children = componentData as { section_tipo?: string; section_id?: number | string }[];
+			const children = componentData as { section_tipo?: string; section_id?: number }[];
 			data.has_descriptor_children =
 				children.length === 0 ? false : await hasChildrenOfType(children, 'descriptor', options);
 			elementObj.value =
@@ -865,7 +869,14 @@ async function resolveElementValue(
 // PARSE_CHILD_DATA (PHP :329).
 // ---------------------------------------------------------------------------
 
-/** A locator as it arrives from a child list / request source. */
+/**
+ * A locator as it arrives from a child list / request source.
+ *
+ * KEPT UNION: this is a DOOR shape — `dd_ts_api.get_children_data` mode B hands
+ * `source.children` in verbatim, and the same interface types locators lifted
+ * off unswept stored jsonb. The canonicalization happens ONCE, in parseChildData
+ * below, so nothing past this boundary carries the string leg.
+ */
 export interface ParseLocator {
 	section_tipo?: string;
 	section_id?: number | string;
@@ -878,6 +889,11 @@ export interface ParseLocator {
  * homogeneous children (order tipo resolved from the FIRST locator). Prefetches
  * order + is_indexable in one batch, parent-aware when `parentLocator` is given.
  * Invalid locators are skipped.
+ *
+ * A locator whose id is not a RECORD ADDRESS after canonicalization (a synthetic
+ * token, an external remote id, junk) is skipped by that same rule: a tree node
+ * is a matrix record, and the pre-canonical code built it anyway with a NaN id —
+ * a node that could only render empty (WC-2026-08-10-section-id-int-canonical).
  */
 export async function parseChildData(
 	locators: ParseLocator[],
@@ -897,18 +913,13 @@ export async function parseChildData(
 	const prefetched = await fetchNodeInfo(locators as NodeLocator[], parentLocator);
 
 	for (const locator of locators) {
-		if (
-			typeof locator.section_tipo !== 'string' ||
-			locator.section_id === undefined ||
-			locator.section_id === null
-		) {
-			continue;
-		}
+		if (typeof locator.section_tipo !== 'string') continue;
+		const sectionId = canonicalizeStoredSectionId(locator.section_id);
+		if (!isSectionId(sectionId)) continue;
 		const sectionTipo = locator.section_tipo;
-		const sectionId = locator.section_id;
 		const tsOptions: TsOptions = { ...(tsObjectOptions ?? {}) };
 
-		const nodeInfo = prefetched.get(`${sectionTipo}_${Math.trunc(Number(sectionId))}`) ?? null;
+		const nodeInfo = prefetched.get(`${sectionTipo}_${sectionId}`) ?? null;
 		if (nodeInfo !== null) {
 			tsOptions.order = componentOrderTipo !== null ? nodeInfo.order : null;
 			tsOptions.is_indexable = nodeInfo.is_indexable;
@@ -940,7 +951,7 @@ export interface ChildrenDataResult {
  */
 export async function getChildrenData(
 	sectionTipo: string,
-	sectionId: number | string,
+	sectionId: number,
 	childrenTipo: string,
 	defaultLimit: number,
 	areaModel: string,

@@ -14,6 +14,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData, readSection } from '../../src/core/section/read.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface DataItem {
@@ -61,9 +62,14 @@ async function both(
 		sqo: { section_tipo: [sectionTipo] },
 	};
 	const { body } = await client.call(structuredClone(rqo) as Record<string, unknown>);
-	const php = ((body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === tipo);
-	const ts = ((await readComponentData(rqo as unknown as Rqo)) as unknown as DataItem[]).find(
-		(d) => d.tipo === tipo,
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	const php = normalizeSectionIdTypes(
+		((body.result as { data: DataItem[] }).data ?? []).find((d) => d.tipo === tipo),
+	);
+	const ts = normalizeSectionIdTypes(
+		((await readComponentData(rqo as unknown as Rqo)) as unknown as DataItem[]).find(
+			(d) => d.tipo === tipo,
+		),
 	);
 	// S2-40: assert presence FIRST — callers compare php?.x with ts?.x, so a
 	// missing item on BOTH sides used to pass every assertion vacuously.

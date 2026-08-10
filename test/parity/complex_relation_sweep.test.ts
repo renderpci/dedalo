@@ -23,7 +23,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 interface SweepCase {
@@ -138,9 +138,13 @@ beforeAll(async () => {
 		}
 		// WC-001 (unified []): PHP emits entries:null for empty values; the TS
 		// engine emits [] for EVERY model. Rewrite the PHP side only.
+		// WC-2026-08-10-section-id-int-canonical: address-shaped keys compared by
+		// VALUE, both sides (fixtures carry the PHP-era numeric strings).
 		phpBySweep.set(
 			key,
-			adoptEntriesArrayContract((phpBody.result.data ?? []) as Record<string, unknown>[]),
+			normalizeSectionIdTypes(
+				adoptEntriesArrayContract((phpBody.result.data ?? []) as Record<string, unknown>[]),
+			),
 		);
 
 		try {
@@ -154,12 +158,15 @@ beforeAll(async () => {
 					principal,
 				} as never,
 			);
+			// WC-2026-08-10-section-id-int-canonical: same transform on the live side.
 			tsBySweep.set(
 				key,
-				((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
-					string,
-					unknown
-				>[],
+				normalizeSectionIdTypes(
+					((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+						string,
+						unknown
+					>[],
+				),
 			);
 		} catch (error) {
 			tsBySweep.set(key, [{ __ts_error: error instanceof Error ? error.message : String(error) }]);

@@ -187,6 +187,9 @@ export async function expandFixedFilter(
 					'../../ontology/section_id_component.ts'
 				);
 				for (const rawTerm of descriptor.value ?? []) {
+					// KEPT UNION: `descriptor.value` is HAND-AUTHORED ontology config
+					// (properties.fixed_filter), not swept matrix jsonb — a term id
+					// written as "7" in dd_ontology is legitimate input here.
 					const term = rawTerm as {
 						section_id?: number | string;
 						section_tipo?: string;
@@ -235,6 +238,9 @@ export async function expandFixedFilter(
 async function resolveComponentDataRecursively(
 	ddoMap: { tipo?: string; parent?: string; last?: boolean; fn?: string; data_fn?: string }[],
 	current: { tipo?: string; last?: boolean; fn?: string; data_fn?: string },
+	// KEPT UNION: the walk cursor is fed by the previous level's STORED locator
+	// (see the fan-out below) — unswept string ids and external remote ids both
+	// reach here; the value is only ever Number()'d for the row read.
 	data: { section_tipo: string; section_id: number | string | null },
 ): Promise<unknown[]> {
 	const tipo = current.tipo;
@@ -265,6 +271,8 @@ async function resolveComponentDataRecursively(
 	const children = collectDdoDescendants(ddoMap, tipo);
 	const merged: unknown[] = [];
 	for (const element of componentData) {
+		// KEPT UNION: raw stored component element (unswept legacy string form /
+		// external remote id) passed on as the next level's read cursor.
 		const target = element as { section_tipo?: string; section_id?: number | string } | null;
 		if (typeof target?.section_tipo !== 'string' || target.section_id === undefined) continue;
 		for (const childDdo of children) {

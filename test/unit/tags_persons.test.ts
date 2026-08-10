@@ -115,16 +115,17 @@ afterAll(async () => {
 });
 
 describe('buildRelatedSections (WC-065 wire law)', () => {
-	test('sections item first, string ids, section context entry before its columns', async () => {
+	test('sections item first, int ids, section context entry before its columns', async () => {
 		const related = await buildRelatedSections(
 			[{ section_tipo: HOST_SECTION, section_id: hostId }],
 			{ callerTipo: HOST_SECTION, lang: 'lg-spa' },
 		);
-		// data[0] is the sections item, locators with STRING ids.
+		// data[0] is the sections item. WC-2026-08-10-section-id-int-canonical:
+		// the emitted locators carry INT addresses (was String()).
 		const sections = related.data[0] as { typo?: string; tipo?: string; value?: unknown[] };
 		expect(sections.typo).toBe('sections');
 		expect(sections.tipo).toBe(HOST_SECTION);
-		expect(sections.value).toEqual([{ section_tipo: OH_SECTION, section_id: String(ohId) }]);
+		expect(sections.value).toEqual([{ section_tipo: OH_SECTION, section_id: ohId }]);
 		// context: the SECTION entry first (the client `find`s by section_tipo
 		// and expects the section label), then the relation_list columns.
 		const ohEntries = related.context.filter((entry) => entry.section_tipo === OH_SECTION);
@@ -133,14 +134,15 @@ describe('buildRelatedSections (WC-065 wire law)', () => {
 		for (const entry of ohEntries) {
 			expect(typeof entry.label).toBe('string');
 		}
-		// Component entries: STRING section_id, value as string[].
+		// Component entries: INT section_id (WC-2026-08-10-section-id-int-canonical),
+		// value as string[].
 		const codeCell = related.data.find(
-			(entry) => entry.tipo === 'oh14' && entry.section_id === String(ohId),
+			(entry) => entry.tipo === 'oh14' && entry.section_id === ohId,
 		) as { value?: unknown } | undefined;
 		expect(codeCell).toBeDefined();
 		expect(codeCell?.value).toEqual(['OH-T1']);
 		const titleCell = related.data.find(
-			(entry) => entry.tipo === 'oh16' && entry.section_id === String(ohId),
+			(entry) => entry.tipo === 'oh16' && entry.section_id === ohId,
 		) as { value?: unknown } | undefined;
 		expect(titleCell?.value).toEqual([]); // empty cell = [], never null
 	});
@@ -226,25 +228,27 @@ describe('buildTagsPersons (PHP get_tags_persons)', () => {
 			'Luc',
 		]);
 		const [a, b, c] = persons;
-		// Grouping key = the OWNING record, ids as STRINGS.
+		// Grouping key = the OWNING record. WC-2026-08-10-section-id-int-canonical:
+		// the emitted addresses are INTs — the `tag` MARK below keeps its quoted
+		// string form (mark grammar, not an address field).
 		expect(a).toMatchObject({
 			section_tipo: OH_SECTION,
-			section_id: String(ohId),
+			section_id: ohId,
 			state: 'a',
 			tag_id: 1,
 			label: 'NavOrJa',
-			data: { section_tipo: PERSONS, section_id: String(personAId), component_tipo: 'oh24' },
+			data: { section_tipo: PERSONS, section_id: personAId, component_tipo: 'oh24' },
 		});
 		expect(a?.tag).toBe(
 			`[person-a-1-NavOrJa-data:{'section_tipo':'rsc197','section_id':'${personAId}','component_tipo':'oh24'}:data]`,
 		);
-		expect(b?.section_id).toBe(String(ohId));
+		expect(b?.section_id).toBe(ohId);
 		// Self entry: owner is the CURRENT host record — never ontology id 11.
 		expect(c).toMatchObject({
 			section_tipo: HOST_SECTION,
-			section_id: String(hostId),
+			section_id: hostId,
 			state: 'b',
-			data: { section_tipo: PERSONS, section_id: String(personCId), component_tipo: 'rsc50' },
+			data: { section_tipo: PERSONS, section_id: personCId, component_tipo: 'rsc50' },
 		});
 	});
 
@@ -262,10 +266,8 @@ describe('buildTagsPersons (PHP get_tags_persons)', () => {
 			[{ section_tipo: OH_SECTION, section_id: String(ohId) }],
 		);
 		// First entry wins; the duplicate contributes nothing.
-		expect(persons.map((person) => person.data.section_id)).toEqual([
-			String(personAId),
-			String(personBId),
-		]);
+		// WC-2026-08-10-section-id-int-canonical: int addresses.
+		expect(persons.map((person) => person.data.section_id)).toEqual([personAId, personBId]);
 		expect(persons.every((person) => person.state === 'a')).toBe(true);
 	});
 });
@@ -310,7 +312,8 @@ describe('emit gating: EDIT data carries the helpers, LIST never does', () => {
 		]);
 		const sections = item?.related_sections?.data?.[0];
 		expect(sections?.typo).toBe('sections');
-		expect(sections?.value).toEqual([{ section_tipo: OH_SECTION, section_id: String(ohId) }]);
+		// WC-2026-08-10-section-id-int-canonical: int address.
+		expect(sections?.value).toEqual([{ section_tipo: OH_SECTION, section_id: ohId }]);
 	});
 
 	test('LIST: both keys are ABSENT (edit-only payload)', async () => {

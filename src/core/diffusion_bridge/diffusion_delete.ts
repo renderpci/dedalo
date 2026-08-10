@@ -27,7 +27,9 @@
 
 import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { readEnv } from '../../config/env.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
+import { relationProbeGroups } from '../search/containment.ts';
 import { virtualDateNow } from '../section/record/create_record.ts';
 import type { DiffusionSqlTarget } from './diffusion_graph.ts';
 import { getSectionDiffusionTargets } from './diffusion_map.ts';
@@ -370,11 +372,69 @@ async function logUnpublishOutcome(
 export const DIFFUSION_ACTION = { published: 1, unpublished: 2, unpublishPending: 3 } as const;
 
 /**
+ * D16 — THE ACTION IS NOT AN ADDRESS.
+ *
+ * PHP wrote the dd1767 action id into a locator's `section_id`, pointing at a
+ * `dd1774` section that does not exist in the ontology and holds no records:
+ * the field named "record address" carried an ENUM TOKEN. Under
+ * WC-2026-08-10-section-id-int-canonical every `section_id` in the matrix is a
+ * record address, so the token gets its own key and stops lying:
+ *
+ *     { type, diffusion_action: 3, section_tipo: 'dd1774', from_component_tipo }
+ *
+ * `section_tipo: 'dd1774'` stays — it is the ledger's discriminator, and the
+ * probes below key on it. WRITE NEW, READ BOTH: rows written before this change
+ * (and rows whose legacy `section_id` a canonicalization sweep has since turned
+ * from '3' into 3) are still matched by diffusionActionProbePayloads, and the
+ * retry loop upgrades every row it flips to the new shape.
+ */
+export const DIFFUSION_ACTION_KEY = 'diffusion_action';
+const DIFFUSION_ACTION_SECTION = 'dd1774';
+const DIFFUSION_ACTION_COMPONENT = 'dd1767';
+
+/**
+ * Every stored shape of "the dd1767 action is `action`", as jsonb containment
+ * payloads to OR together: the new explicit-key shape first, then the two
+ * typed forms of the legacy locator shape (string and int section_id — the
+ * dual-probe law of core/search/containment.ts).
+ */
+export function diffusionActionProbePayloads(action: number): string[] {
+	const legacy = relationProbeGroups(DIFFUSION_ACTION_COMPONENT, [
+		{ section_id: String(action), section_tipo: DIFFUSION_ACTION_SECTION },
+	])[0] as string[];
+	return [
+		`{"${DIFFUSION_ACTION_COMPONENT}":[{"${DIFFUSION_ACTION_KEY}":${action},"section_tipo":"${DIFFUSION_ACTION_SECTION}"}]}`,
+		...legacy,
+	];
+}
+
+/**
+ * The shape-tolerant SQL predicate for the probe payloads above. `bind` maps a
+ * payload to its placeholder — callers bind, never inline (the payloads are
+ * built from numeric constants here, but the discipline is the module's).
+ */
+export function diffusionActionContains(
+	columnRef: string,
+	action: number,
+	bind: (payload: string) => string,
+): string {
+	const ors = diffusionActionProbePayloads(action).map(
+		(payload) => `${columnRef} @> ${bind(payload)}::text::jsonb`,
+	);
+	return `(${ors.join(' OR ')})`;
+}
+
+/**
  * Append one dd1758 diffusion-log row (matrix_activity_diffusion, sequence-
  * allocated section_id): dd1762 user, dd1763 processed-record locator,
  * dd1764 section_id number, dd1765 section_tipo string, dd1766 element
  * locator ({tld}0 / numeric part — the ontology-node-as-record convention),
- * dd1767 action locator (dd1774).
+ * dd1767 action (see DIFFUSION_ACTION_KEY).
+ *
+ * Every locator section_id is minted in canonical INT form
+ * (WC-2026-08-10-section-id-int-canonical) — the ledger's addresses are matrix
+ * record addresses, and readers below read them through `->>` (text either way)
+ * or through the dual-form probes.
  *
  * dd1762 records the REAL acting user; when no userId reaches us the field is
  * OMITTED entirely (PHP diffusion_activity_logger `if ($user_id)`) — never a
@@ -393,17 +453,18 @@ export async function logDiffusionActivity(entry: {
 		dd1763: [
 			{
 				type: 'dd151',
-				section_id: String(entry.sectionId),
+				section_id: entry.sectionId,
 				section_tipo: entry.sectionTipo,
 				from_component_tipo: 'dd1763',
 			},
 		],
-		dd1767: [
+		[DIFFUSION_ACTION_COMPONENT]: [
 			{
 				type: 'dd151',
-				section_id: String(entry.action),
-				section_tipo: 'dd1774',
-				from_component_tipo: 'dd1767',
+				// D16: the action token rides its OWN key, never section_id.
+				[DIFFUSION_ACTION_KEY]: entry.action,
+				section_tipo: DIFFUSION_ACTION_SECTION,
+				from_component_tipo: DIFFUSION_ACTION_COMPONENT,
 			},
 		],
 	};
@@ -412,7 +473,7 @@ export async function logDiffusionActivity(entry: {
 		relation.dd1762 = [
 			{
 				type: 'dd151',
-				section_id: String(entry.userId),
+				section_id: entry.userId,
 				section_tipo: 'dd128',
 				from_component_tipo: 'dd1762',
 			},
@@ -424,7 +485,10 @@ export async function logDiffusionActivity(entry: {
 			relation.dd1766 = [
 				{
 					type: 'dd151',
-					section_id: match[2],
+					// digits of the element tipo as an address: canonical int
+					// (canonicalize, not Number — a padded id would be preserved
+					// rather than silently renumbered).
+					section_id: canonicalizeStoredSectionId(match[2]),
 					section_tipo: `${match[1]}0`,
 					from_component_tipo: 'dd1766',
 				},
@@ -455,6 +519,15 @@ export async function retryPendingDiffusion(
 	limit = 100,
 ): Promise<{ total: number; retried: number; remaining: number }> {
 	await ensureActivityTable();
+	// `->>` yields text for a stored int as well as a stored string, so the
+	// projected target/element ids read identically in both typed forms; only
+	// the ACTION probe needs the shape tolerance (D16 + dual-form).
+	const pendingParams: string[] = [];
+	const pendingProbe = diffusionActionContains(
+		'relation',
+		DIFFUSION_ACTION.unpublishPending,
+		(payload) => `$${pendingParams.push(payload)}`,
+	);
 	const rows = (await sql.unsafe(
 		`SELECT section_id,
 		        relation->'dd1763'->0->>'section_tipo' AS target_section,
@@ -463,8 +536,9 @@ export async function retryPendingDiffusion(
 		        relation->'dd1766'->0->>'section_id' AS element_id
 		 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 		 WHERE section_tipo = 'dd1758'
-		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb
+		   AND ${pendingProbe}
 		 ORDER BY section_id ASC LIMIT ${Math.max(1, Math.floor(limit))}`,
+		pendingParams,
 	)) as {
 		section_id: number;
 		target_section: string | null;
@@ -491,12 +565,21 @@ export async function retryPendingDiffusion(
 			element === null ? undefined : [element],
 		);
 		if (retry.deleted.length > 0) {
-			// flip unpublish_pending → unpublished in place
+			// Flip unpublish_pending → unpublished in place, AND upgrade the
+			// element to the D16 shape in the same statement: drop whatever
+			// legacy `section_id` token the row carried (string '3' or the int 3
+			// a canonicalization sweep left) and stamp the action under its own
+			// key. Shape-agnostic, so it is correct for old and new rows alike.
 			await sql.unsafe(
 				`UPDATE "${DIFFUSION_ACTIVITY_TABLE}"
-				 SET relation = jsonb_set(relation, '{dd1767,0,section_id}', '"2"'::jsonb)
+				 SET relation = jsonb_set(
+				         relation,
+				         '{${DIFFUSION_ACTION_COMPONENT},0}',
+				         ((relation->'${DIFFUSION_ACTION_COMPONENT}'->0) - 'section_id')
+				             || jsonb_build_object('${DIFFUSION_ACTION_KEY}', $2::int)
+				     )
 				 WHERE section_tipo = 'dd1758' AND section_id = $1`,
-				[row.section_id],
+				[row.section_id, DIFFUSION_ACTION.unpublished],
 			);
 			outcome.retried++;
 		} else {
