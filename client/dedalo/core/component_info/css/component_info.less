@@ -90,16 +90,21 @@
 	&.list {
 		// display: contents;
 
-		>.wrapper_widget {
+		.wrapper_widget {
 
 			// ul
-			>.values_container {
+			.values_container {
 				display: contents;
 
 				// li
 				>.widget_item {
 					display: flex;
 					flex-wrap: wrap;
+
+					&.tags {
+						// This heigth allow test area to be displayed without scrolling
+						height: 8.3rem;
+					}
 
 					// span
 					>.state_icon {

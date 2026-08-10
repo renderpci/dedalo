@@ -20554,14 +20554,17 @@ body.inspector_resizing {
 .component_info .wrapper_widget .values_container > .widget_item label {
   padding-right: 0.5em;
 }
-.component_info.list > .wrapper_widget > .values_container {
+.component_info.list .wrapper_widget .values_container {
   display: contents;
 }
-.component_info.list > .wrapper_widget > .values_container > .widget_item {
+.component_info.list .wrapper_widget .values_container > .widget_item {
   display: flex;
   flex-wrap: wrap;
 }
-.component_info.list > .wrapper_widget > .values_container > .widget_item > .state_icon {
+.component_info.list .wrapper_widget .values_container > .widget_item.tags {
+  height: 8.3rem;
+}
+.component_info.list .wrapper_widget .values_container > .widget_item > .state_icon {
   display: inline-block;
 }
 /**
@@ -23581,7 +23584,7 @@ body.inspector_resizing {
 }
 .component_text_area.list > .content_data {
   padding: 0px;
-  max-height: 5rem;
+  max-height: 5.3rem;
 }
 .component_text_area.list img {
   height: 0.9rem;
