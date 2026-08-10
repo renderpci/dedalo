@@ -30,6 +30,7 @@ import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 
 const BULK_PROCESS_SECTION_TIPO = 'dd800';
 const BULK_PROCESS_LABEL_TIPO = 'dd796';
@@ -187,9 +188,15 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				errors.push(`no column/table for ${model}/${row.section_tipo}`);
 				continue;
 			}
+			// int-canonical convergence on the reverted value (WC-2026-08-10-
+			// section-id-int-canonical D6.2): pre-migration TM states carry
+			// string-form addresses; converting on the way back in keeps the
+			// revert from undoing the sweep. Same kernel, same rule.
+			const revertContainer = { value: revertData };
+			await normalizeRestoredSectionIds(revertContainer);
 			await persistRecordKeys(
 				{ table, sectionTipo: row.section_tipo, sectionId: row.section_id },
-				[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertData }],
+				[{ column: column as MatrixJsonbColumn, key: row.tipo, value: revertContainer.value }],
 				{ userId },
 			);
 			await recordTimeMachine(
@@ -216,7 +223,7 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				data: {
 					msg: 'Recovered component data from time machine',
 					model,
-					section_id: String(row.section_id),
+					section_id: row.section_id,
 					section_tipo: row.section_tipo,
 					table,
 					tm_id: newBulkId,

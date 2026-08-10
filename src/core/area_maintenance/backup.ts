@@ -46,8 +46,12 @@ export function getBackupDir(): string {
 /** Current data version from matrix_updates (PHP get_current_data_version). */
 export async function getCurrentDataVersion(): Promise<number[]> {
 	try {
+		// (!) `WHERE data ? 'dedalo_version'`: matrix_updates also carries NON-version
+		// rows (the section_id_int_normalize marker, WC-2026-08-10-section-id-int-canonical) — without the guard their NULL version sorts FIRST under DESC
+		// (Postgres NULLS FIRST default) and version detection silently breaks.
 		const rows = (await sql.unsafe(
 			`SELECT data FROM "matrix_updates"
+			 WHERE data ? 'dedalo_version'
 			 ORDER BY string_to_array(data->>'dedalo_version', '.')::int[] DESC LIMIT 1`,
 			[],
 		)) as { data: { dedalo_version?: string } | null }[];
