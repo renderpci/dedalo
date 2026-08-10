@@ -33,6 +33,15 @@ Live list with current status: `rewrite/LEDGER.md` "Tripwire index". What each g
 | `unit/client_serving.test.ts` | `client/` stays byte-identical to the PHP source | The copied vanilla-JS client silently breaks against a subtly-changed asset |
 | `parity/oracle_canary.test.ts` | Oracle absence is LOUD, never a silent green | Parity gates pass with no oracle actually compared — false confidence |
 
+(This table is the FOUNDING set — the authoritative, machine-read index has since
+grown far past 11: `engineering/TRIPWIRES.md`, mirrored exactly by
+`scripts/verify.ts`. Notable later addition touching every subsystem:
+`unit/section_id_int_tripwire.test.ts` — a matrix record address is an INT,
+WC-2026-08-10-section-id-int-canonical; writers mint via
+`canonicalizeStoredSectionId`, jsonb `@>` probes over locator data are dual-form
+(`src/core/search/containment.ts`), and `section_id: String(...)` outside the
+named exemptions is a red gate.)
+
 ## PHP is the oracle — never silently narrow scope
 
 When a code path can't yet handle a case, **throw loudly and record the gap in `rewrite/LEDGER.md` "Known-open gaps"** — never return a plausible-but-narrowed result. A silent narrowing looks green and diverges from PHP forever; a loud throw is a visible, ledgered TODO. This is why unregistered models THROW, unsupported search faces THROW, and `oracle_canary` refuses a silent pass. Verification harness: the `dedalo-parity-debugging` skill.

@@ -57,7 +57,7 @@ src/core/relations/
 
 ## Inverse-question engines (data-driven components own NO stored rows)
 
-- `children.ts`: `getChildren/countChildren/getChildrenRecursive` — inverse dd47 ("who declares me as parent?"), STRING section_ids, sibling-ordered via `resolveParentLinkIdKey` + `getInlineValueByIdKey`.
+- `children.ts`: `getChildren/countChildren/getChildrenRecursive` — inverse dd47 ("who declares me as parent?"), INT section_ids (`ChildLocator.section_id: number`, off the int-typed relation index; WC-2026-08-10-section-id-int-canonical), sibling-ordered via `resolveParentLinkIdKey` + `getInlineValueByIdKey`.
 - `related.ts`: transitive closure (dd620 none / dd467 one inverse hop / dd621 full symmetric closure, typeRel read from `properties.config_relation.relation_type_rel`) with cycle cache. **`getStoredWithReferences` (:264) is load-bearing OUTSIDE relations**: it is the peer-expansion primitive of the observer `set_dato_external` value law — measured, weakening the dd621 closure to the stored bag loses 247,933 locators over 19,908 numisdata3 records. The dispatch is polymorphic on purpose (only a `component_relation_related` peer computes the closure). Touch it only with **`dedalo-observers-ts`** in hand.
 - `relation_index.ts` (`models/`): computed inverse dd96 ("who calls me", tag_id anchors); `mode:external` inverse (hierarchy40). Preserves pinned PHP quirks.
 - `datalist.ts`: select-family option lists — a FAITHFUL C `natsort` port (whitespace-skipping strnatcmp; "Petit-Aledón" before "Petit 1981"), multi-ddo `' | '` labels.
@@ -68,7 +68,7 @@ src/core/relations/
 
 ### The persisted-frame contract (a frame the reader can't see IS corruption)
 
-Every frame write funnels through `normalizeDataframeEntry`, from BOTH doors — `validateRelationInsert` (`relations/save.ts`, via its `pairing` option) and `mergeCallerEntries` (`relations/dataframe.ts`). It FORCES `type: 'dd490'`, takes `from_component_tipo`/`main_component_tipo`/`id_key` from the **server's** caller context (never the payload), stringifies `section_id`, and strips `paginated_key` + the legacy `section_id_key`/`section_tipo_key`.
+Every frame write funnels through `normalizeDataframeEntry`, from BOTH doors — `validateRelationInsert` (`relations/save.ts`, via its `pairing` option) and `mergeCallerEntries` (`relations/dataframe.ts`). It FORCES `type: 'dd490'`, takes `from_component_tipo`/`main_component_tipo`/`id_key` from the **server's** caller context (never the payload), canonicalizes `section_id` to INT (`canonicalizeStoredSectionId` — WC-2026-08-10-section-id-int-canonical; external remote ids pass verbatim), and strips `paginated_key` + the legacy `section_id_key`/`section_tipo_key`.
 
 Dedup compares `DATAFRAME_TEST_EQUAL_PROPERTIES` — **excludes `id`** (minted per insert, so including it makes every duplicate unique) and **includes `id_key`** (framing the same target from two different main items is legitimate). The generic relation key `[section_id, section_tipo, type, tag_id]` must NOT be used: it would collapse those two.
 
@@ -101,7 +101,7 @@ Gates: `dataframe_write_contract_native.test.ts` (submits RAW client payloads ON
 
 ## Gotchas
 
-- **`section_id` type is FLOW-specific and load-bearing.** Locators keep the RAW string form (`get_subdatum` passes it as-is; the dd560 frame `section_id "17976"` is the pinned case). Children use STRING section_ids. Datalist `section_id` is a STRING (pg driver raw). Do not coerce blindly.
+- **`section_id` is INT-CANONICAL** (WC-2026-08-10-section-id-int-canonical, repealing the old string-canonical law): writers mint int via `canonicalizeStoredSectionId`, emissions (children, datalist, echoes) are int, and jsonb `@>` probes are DUAL-FORM + polarity-aware (`src/core/search/containment.ts`) because pre-sweep stored data still carries strings. External remote ids ('001338683', 'Q42') stay strings VERBATIM — protected by the value invariant (never strict-numeric-without-leading-zeros), NOT by tipo. Never blanket-`Number()` a stored value; never single-form a containment probe.
 - **`parent_section_id` on children differs by flow**: `resolve_data` chips stamp entry-carrying children; `get_data` stamps portal items only. Both are pinned by different gates — don't unify.
 - **Locator lookup key**: 5-field default predicate joined with `_` (PHP `class.locator.php`), NOT a 2-field or control-char join. Unit-gated in `locator_law.test.ts`.
 - **Empty portal still emits pagination `{total:0}`** for children; a real (non-children) empty relation emits nothing.
