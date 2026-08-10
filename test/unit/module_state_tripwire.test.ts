@@ -64,6 +64,13 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// lastPurgeAt throttles the daily residue purge on the sweeper cadence.
 	'server.ts:shuttingDown',
 	'diffusion/jobs/scheduler.ts:lastPurgeAt',
+	// section_id deprecation-counter observer (D10 of the WC entry
+	// WC-2026-08-10-section-id-int-canonical): wired ONCE at boot to
+	// api/counters incrementCounter (the
+	// registerOpsGauge inversion — concepts/ is a pure leaf and cannot import
+	// api/). Carries no request identity: the per-door SOURCE string is code-
+	// authored, never user data.
+	'core/concepts/section_id.ts:coercionObserver',
 	// The graceful-shutdown entry point injected ONCE by startServer so a planned
 	// restart drains like a SIGTERM (core/install must not import the process
 	// root). Boot-stable process wiring — carries no request identity.
@@ -210,6 +217,12 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// by design) --------------------------------------------------------------
 	'core/ontology/cache_invalidation.ts:registeredClearers',
 	'core/section_record/save_event.ts:sectionDataListeners',
+	// section_id coercion WARN sampler (WC-2026-08-10-section-id-int-canonical
+	// D10): per-door tallies deciding which coercions log (first + every
+	// 1000th). Process-lifetime like api/counters itself, request-independent
+	// (keys are code-authored door names); cleared only by the test seam
+	// resetSectionIdCoercionStateForTests.
+	'core/concepts/section_id.ts:warnCounts',
 	// File-processor registry (SEC-053 fail-closed, EMPTY until crop_50 is
 	// ported): registration-only like the two channels above — a Readonly type
 	// would outlaw the registerFileProcessor door it exists to provide.

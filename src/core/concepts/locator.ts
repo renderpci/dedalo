@@ -9,12 +9,15 @@
  *
  * PHP reference: core/common/class.locator.php.
  *
- * Contract highlights the rewrite MUST preserve:
+ * Contract highlights:
  * - `section_tipo` + `section_id` are the mandatory core. Everything else is
  *   optional and relation-flavour specific.
- * - `section_id` arrives sometimes as number, sometimes as numeric string in
- *   stored data. We accept both on parse and NEVER change what we re-persist
- *   (byte-compat rule, spec §2.2). Comparison, however, is value-based.
+ * - `section_id` CANONICAL FORM IS AN INT (WC-2026-08-10-section-id-int-canonical, repealing the historical string-canonical law). Stored legacy
+ *   data still contains numeric strings until the migration sweep runs, and
+ *   external-service locators carry STRING remote ids permanently (zenon
+ *   zero-padded, wikidata opaque) — so parse stays tolerant and comparison
+ *   stays value-based. Writers mint ints; see ./section_id.ts for the
+ *   record-address concept and the conversion rule.
  * - Dataframe pairing uses `id_key` (the stable id of the main component's data
  *   item). The legacy `section_id_key`/`section_tipo_key` fields still appear
  *   in old stored data and must be READ (BC) but never written anew.
@@ -26,12 +29,15 @@
 import { z } from 'zod';
 
 /**
- * A section id as stored in matrix JSON: canonical form is a number, but
- * legacy data contains numeric strings. Keep the union — normalization happens
- * in comparisons, never in storage.
+ * A section id as it appears in STORED matrix JSON. Canonical form is an INT
+ * (WC-2026-08-10-section-id-int-canonical); the string leg of the union is
+ * PARSE TOLERANCE for pre-migration data, old backups and TM snapshots, and
+ * narrows at contraction (plan P6). The record-address concept itself is the
+ * branded int in ./section_id.ts — this union is the storage-shape twin, not
+ * the concept.
  */
 export const sectionIdSchema = z.union([z.number(), z.string()]);
-export type SectionId = z.infer<typeof sectionIdSchema>;
+export type StoredSectionId = z.infer<typeof sectionIdSchema>;
 
 /**
  * The locator shape. `.passthrough()` is deliberate: stored locators may carry
