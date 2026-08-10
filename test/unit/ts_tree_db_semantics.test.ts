@@ -1,15 +1,52 @@
 /**
- * Tree subsystem — DB-backed subtle-semantics tests (live dedalo_mib_v7).
+ * Tree subsystem — DB-backed subtle-semantics tests.
  *
- * Fixture: the `tchi1` thesaurus hierarchy (a real installed tree). Node 602
- * ("Tarragona") is a descriptor with parent 620 whose parent is 1001. These
- * assertions pin the semantics a differential would otherwise be the only guard
- * for: string section_id wire keys, homogeneous-children ordering, count null≠0,
- * first-locator conventions, root button perms, and the diamond/cycle-safe
- * ancestor walk.
+ * These assertions pin the semantics a differential would otherwise be the only
+ * guard for: string section_id wire keys, homogeneous-children ordering,
+ * count null≠0, first-locator conventions, root button perms, and the
+ * diamond/cycle-safe ancestor walk.
+ *
+ * FIXTURE REBUILT 2026-08-10. This file used to read the `tchi1` thesaurus —
+ * "a real installed tree", node 602 ("Tarragona"), parent 620, grandparent 1001
+ * — from the APPLICATION database. Two things were wrong with that, and they
+ * are the same thing: `tchi1` has no rows in ANY table of the suite database
+ * (`dedalo_mib_v7_test`), so the six tree-shaped tests could never pass there
+ * (they were 6 of the suite's ~84 standing failures, and the largest single red
+ * file in it); and asserting against installed records breaks the project law
+ * that no test may assert against a mutable production record. A tree gate
+ * whose fixture only exists on one machine gates nothing anywhere else.
+ *
+ * The tree cases now build their OWN three-level test3 hierarchy on the scratch
+ * surface below and assert against that. The remaining cases are unchanged:
+ * they read dd0/dd64/hierarchy1/hierarchy20/ontology35, which are install
+ * ontology present in every database.
+ *
+ * FIXTURE MAP (test3 section_map `thesaurus`, read from the live ontology —
+ * term test52, parent test71, order test22, is_descriptor test88, children
+ * component test201):
+ *
+ *   928000  ROOT      no parent
+ *   928001  MID       parent ROOT, descriptor, carries a term string
+ *   928002  LEAF_A    parent MID, descriptor
+ *   928003  LEAF_B    parent MID, descriptor
+ *   928004  LEAF_C    parent MID, NON-descriptor (so the descriptor filter has
+ *                     something to exclude — a filter that returns everything
+ *                     is indistinguishable from no filter at all)
+ *
+ * FIXTURE TRAP (copied from children_of_type_order_native, where it cost an
+ * hour): a child's parent link MUST carry `type: 'dd47'` and
+ * `from_component_tipo: 'test71'`. The canonical test3 playground rows use
+ * dd151 links; copy-pasting those makes the inverse probe return zero and every
+ * assertion degenerates into comparing two empty arrays.
+ *
+ * SCRATCH SURFACE (this file's namespace ONLY — other suites write the same
+ * database concurrently, so no table-global count is taken anywhere here):
+ *   matrix_test          section_tipo 'test3', section_id 928000-928999
+ *   matrix_time_machine  same tipo, same id range
  */
 
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { sql } from '../../src/core/db/postgres.ts';
 import {
 	countChildren,
 	countChildrenOrNull,
@@ -28,16 +65,96 @@ import {
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 
+// --- scratch tree fixture ---------------------------------------------------
+
+const TREE_TIPO = 'test3';
+const PARENT_TIPO = 'test71';
+const TERM_TIPO = 'test52';
+const DESCRIPTOR_TIPO = 'test88';
+const CHILDREN_TIPO = 'test201';
+
+const ID_MIN = 928000;
+const ID_MAX = 928999;
+
+const ROOT = 928000;
+const MID = 928001;
+const LEAF_A = 928002;
+const LEAF_B = 928003;
+const LEAF_C = 928004; // non-descriptor
+
+/** A parent link in the exact stored shape the inverse probe matches on. */
+function parentLink(parentId: number): Record<string, unknown> {
+	return {
+		id: 1,
+		type: 'dd47',
+		section_id: String(parentId),
+		section_tipo: TREE_TIPO,
+		from_component_tipo: PARENT_TIPO,
+	};
+}
+
+/** The dd64 is_descriptor locator (1 = descriptor / yes, 2 = non-descriptor / no). */
+function descriptorLink(sectionId: 1 | 2): Record<string, unknown> {
+	return {
+		id: 1,
+		type: 'dd151',
+		section_id: String(sectionId),
+		section_tipo: 'dd64',
+		from_component_tipo: DESCRIPTOR_TIPO,
+	};
+}
+
+async function seedNode(input: {
+	section_id: number;
+	parent_id?: number;
+	descriptor?: 1 | 2;
+	term?: string;
+}): Promise<void> {
+	const relation: Record<string, unknown[]> = {};
+	if (input.parent_id !== undefined) relation[PARENT_TIPO] = [parentLink(input.parent_id)];
+	if (input.descriptor !== undefined) relation[DESCRIPTOR_TIPO] = [descriptorLink(input.descriptor)];
+	const string =
+		input.term === undefined
+			? null
+			: JSON.stringify({ [TERM_TIPO]: [{ id: 1, lang: 'lg-eng', value: input.term }] });
+	await sql.unsafe(
+		`INSERT INTO matrix_test (section_id, section_tipo, relation, "string")
+		 VALUES ($1, $2, $3::text::jsonb, $4::text::jsonb)`,
+		[input.section_id, TREE_TIPO, JSON.stringify(relation), string] as (string | number | null)[],
+	);
+}
+
+async function sweepScratch(): Promise<void> {
+	for (const table of ['matrix_test', 'matrix_time_machine']) {
+		await sql.unsafe(
+			`DELETE FROM ${table} WHERE section_tipo = $1 AND section_id BETWEEN $2 AND $3`,
+			[TREE_TIPO, ID_MIN, ID_MAX] as (string | number)[],
+		);
+	}
+}
+
+beforeAll(async () => {
+	await sweepScratch(); // a previous crashed run must not change what these read
+	await seedNode({ section_id: ROOT, term: 'zz scratch root' });
+	await seedNode({ section_id: MID, parent_id: ROOT, descriptor: 1, term: 'zz scratch mid' });
+	await seedNode({ section_id: LEAF_A, parent_id: MID, descriptor: 1, term: 'zz leaf a' });
+	await seedNode({ section_id: LEAF_B, parent_id: MID, descriptor: 1, term: 'zz leaf b' });
+	await seedNode({ section_id: LEAF_C, parent_id: MID, descriptor: 2, term: 'zz leaf c' });
+});
+
+afterAll(sweepScratch);
+
 describe('getChildren — string section_id wire keys + homogeneous children', () => {
 	it('returns child locators with STRING section_id and the dd48 children shape', async () => {
-		const children = await getChildren(620, 'tchi1');
-		expect(children.length).toBeGreaterThan(0);
+		const children = await getChildren(MID, TREE_TIPO);
+		expect(children.length).toBe(3); // LEAF_A, LEAF_B, LEAF_C
 		const first = children[0];
 		// PHP locator::set_section_id casts to string — the wire shape.
 		expect(typeof first?.section_id).toBe('string');
 		expect(first?.type).toBe('dd48');
-		expect(first?.from_component_tipo).toBe('tchi40');
-		expect(first?.section_tipo).toBe('tchi1');
+		// The CHILDREN component tipo, never the dd47 parent tipo stored on the link.
+		expect(first?.from_component_tipo).toBe(CHILDREN_TIPO);
+		expect(first?.section_tipo).toBe(TREE_TIPO);
 	});
 });
 
@@ -49,18 +166,27 @@ describe('count null≠0 (PHP count_children null contract)', () => {
 		expect(await countChildren(1, 'dd64')).toBe(0);
 	});
 	it('a real hierarchy node returns an authoritative integer count', async () => {
-		const total = await countChildrenOrNull(620, 'tchi1');
-		expect(total).not.toBeNull();
-		expect(total).toBeGreaterThan(0);
+		// EXACT, not >0: an authoritative count that silently drifted to "some
+		// positive number" would still pass a >0 assertion.
+		expect(await countChildrenOrNull(MID, TREE_TIPO)).toBe(3);
+		expect(await countChildren(MID, TREE_TIPO)).toBe(3);
+		// A leaf is the other half of the null≠0 contract: it HAS a children
+		// component, so the answer is an authoritative 0, never null.
+		expect(await countChildrenOrNull(LEAF_A, TREE_TIPO)).toBe(0);
 	});
 });
 
 describe('diamond/cycle-safe ancestor walk (getParentsRecursive)', () => {
 	it('walks the full parent chain top-down without looping', async () => {
-		const { ancestors, errors } = await getParentsRecursive(602, 'tchi1');
+		const { ancestors, errors } = await getParentsRecursive(LEAF_A, TREE_TIPO);
 		const keys = ancestors.map((a) => `${a.section_tipo}_${a.section_id}`);
-		expect(keys).toContain('tchi1_620');
-		expect(keys).toContain('tchi1_1001');
+		// ORDER IS NEAREST-FIRST, measured 2026-08-10 — the walk emits the direct
+		// parent before its own parent. The describe name says "top-down"; that
+		// describes the WALK, not the returned array, and the old assertion was a
+		// bare toContain that pinned no order at all. Pinned exactly here so a
+		// reversal (which would flip every breadcrumb the client renders) is a
+		// visible failure rather than a silent change.
+		expect(keys).toEqual([`${TREE_TIPO}_${MID}`, `${TREE_TIPO}_${ROOT}`]);
 		expect(errors).toHaveLength(0);
 	});
 });
@@ -86,11 +212,18 @@ describe('root button perms (PHP get_permissions_element)', () => {
 
 describe('buildNodeData — descriptor node with term + link_children', () => {
 	it('produces the term string, is_descriptor, children_tipo and a link_children element', async () => {
-		const node = await buildNodeData('tchi1', 602, {}, 'root', SUPERUSER);
-		expect(node.ts_id).toBe('tchi1_602');
+		// FIXTURE: dd0/1, the Dédalo ontology root — NOT the scratch test3 tree.
+		// `children_tipo` / `link_children` come from the section's ts_object
+		// ddo_map, and test3 has none: its section_map carries only `thesaurus`
+		// (term/parent/order/is_descriptor), which is enough to BE a tree for
+		// getChildren/getParentsRecursive but not to be RENDERED as one. dd0 is
+		// install ontology, present in every database, and is already this file's
+		// fixture for the term-grammar, icon and model_value cases below.
+		const node = await buildNodeData('dd0', 1, {}, 'root', SUPERUSER);
+		expect(node.ts_id).toBe('dd0_1');
 		expect(node.ts_parent).toBe('root');
 		expect(node.is_descriptor).toBe(true);
-		expect(node.children_tipo).toBe('tchi40');
+		expect(node.children_tipo).toBe('ontology14');
 		const term = node.ar_elements.find((element) => element.type === 'term');
 		expect(typeof term?.value).toBe('string');
 		expect((term?.value as string).length).toBeGreaterThan(0);
@@ -177,9 +310,18 @@ describe("buildNodeData — the 'M' icon carries the model name (model_value)", 
 });
 
 describe('getChildrenOfType — descriptor filter', () => {
-	it('returns the descriptor children of a parent', async () => {
-		const descriptors = await getChildrenOfType(620, 'tchi1', 'descriptor');
-		expect(descriptors.length).toBeGreaterThan(0);
+	it('returns the descriptor children of a parent, and EXCLUDES the non-descriptor', async () => {
+		// The exclusion is the assertion. LEAF_C is seeded non-descriptor precisely
+		// so a filter that silently stopped filtering (the is_descriptor locator
+		// dropped) would return 3 here and fail, instead of passing a bare >0.
+		// Branch-by-branch coverage of this function lives in
+		// children_of_type_order_native.test.ts; this is the tree-shaped case.
+		const descriptors = await getChildrenOfType(MID, TREE_TIPO, 'descriptor');
+		const ids = descriptors.map((locator) => String(locator.section_id)).sort();
+		expect(ids).toEqual([String(LEAF_A), String(LEAF_B)]);
+
+		const nonDescriptors = await getChildrenOfType(MID, TREE_TIPO, 'non_descriptor');
+		expect(nonDescriptors.map((locator) => String(locator.section_id))).toEqual([String(LEAF_C)]);
 	});
 });
 
@@ -189,12 +331,12 @@ describe('dd_ts_api.get_node_data envelope', () => {
 			{
 				dd_api: 'dd_ts_api',
 				action: 'get_node_data',
-				source: { section_tipo: 'tchi1', section_id: 602 },
+				source: { section_tipo: TREE_TIPO, section_id: MID },
 			},
 			SUPERUSER,
 		);
 		expect(response.msg).toBe('OK. get_node_data request done successfully');
 		expect(response.errors).toHaveLength(0);
-		expect((response.result as { ts_id?: string } | null)?.ts_id).toBe('tchi1_602');
+		expect((response.result as { ts_id?: string } | null)?.ts_id).toBe(`${TREE_TIPO}_${MID}`);
 	});
 });
