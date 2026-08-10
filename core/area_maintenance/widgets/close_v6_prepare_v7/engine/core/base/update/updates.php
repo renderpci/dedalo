@@ -642,6 +642,30 @@ $updates->$v = new stdClass();
 			] // Note that only ONE argument encoded is sent
 		];
 
+	// SECTION_ID INT UNIFICATION (v7 WC-2026-08-10-section-id-int-canonical).
+	// Converts every locator-carried section_id/section_id_key/parent_section_id
+	// stored as a convertible string into the canonical INT form, across all
+	// migrated content tables + matrix_time_machine + dd_ontology.relations.
+	// External-service locators (skip-tipo list below + the leading-zero rule)
+	// are never cast — the string IS the remote id. Junk ('', 'null', tokens)
+	// is REPORTED, never cast and never deleted here (operator-adjudicated
+	// purging lives in the v7 repair script). Writes the section_id_int_normalize
+	// marker row into matrix_updates on success.
+	// (!) Ordered AFTER the reformat/dataframe migrations (their output is what
+	// gets intified) and BEFORE the string-search/relation-index stores, so the
+	// derived stores backfill from int-form locators. Idempotent.
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Unify section_id as INT inside every stored locator (jsonb columns + time machine + dd_ontology); external remote ids kept verbatim',
+			'script_class'	=> 'v6_to_v7',
+			'script_method'	=> 'intify_section_id_locators',
+			'stop_on_error'	=> true,
+			'script_vars'	=> [
+				null,		// ar_tables. null = the full default sweep set
+				true,		// save option. On false, only data review is made. Not save
+				['zenon1']	// skip_tipos: external-service sections whose locator ids are remote ids
+			] // Note that only ONE argument encoded is sent
+		];
+
 	// STRING SEARCH STORE : Create the v7 per-value text-search store
 	// (matrix_string_search: btree_gin extension, table, sync triggers on every
 	// string-searchable matrix table, composite trigram index) and BACKFILL it

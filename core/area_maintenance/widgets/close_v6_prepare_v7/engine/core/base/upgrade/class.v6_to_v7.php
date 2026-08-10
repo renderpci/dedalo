@@ -2920,4 +2920,431 @@ class v6_to_v7 {
 
 
 
+	/**
+	* INTIFY_SECTION_ID_LOCATORS
+	*
+	* section_id → int unification sweep (v7 WC-2026-08-10-section-id-int-canonical).
+	* Rewrites every locator-carried section_id / section_id_key / parent_section_id
+	* stored as a CONVERTIBLE STRING inside the migrated jsonb columns into the
+	* canonical int form, so the TS engine boots on int-clean data.
+	*
+	* THE CONVERSION RULE (shared verbatim with the v7 kernel through the vector
+	* file run/lib/section_id_conversion_vectors.json — self-checked below before
+	* any write): strict numeric, no leading zero ('0' converts, '-0' does not),
+	* within IEEE-754 safe-int range. NEGATIVES ARE VALID (-1 root, -666 activity).
+	* Everything else is reported under a finding class and NEVER cast:
+	*   external/skip-tipo locators (zenon zero-padded remote ids), leading-zero,
+	*   out-of-range, '', 'null', tokens ('self', '${section_id}'), floats, null.
+	*
+	* ORDERING (updates.php): after reformat_matrix_data / reformat_matrix_time_
+	* machine_data / the dataframe migrations (their OUTPUT is what gets intified),
+	* BEFORE create_string_search_store / create_relation_index_store so the
+	* derived stores are backfilled from int-form locators.
+	*
+	* Idempotent: a second run finds nothing convertible and changes 0 rows.
+	* On success (save=true) writes the section_id_int_normalize marker row into
+	* matrix_updates — the machine-readable evidence the v7 engine's future
+	* contraction release checks at boot. (get_current_data_version is guarded
+	* with `WHERE data ? 'dedalo_version'` so the marker cannot shadow the
+	* version rows.)
+	*
+	* @param array|null $ar_tables  Tables to sweep; null = the full default set
+	*                               (matrix content tables + matrix_time_machine + dd_ontology).
+	* @param bool $save             false = dry-run (report only), true = write.
+	* @param array $skip_tipos      section_tipo values whose locators are skipped
+	*                               wholesale (external services — the string IS the
+	*                               remote id). Belt on top of the leading-zero rule.
+	* @return object response { result: bool, msg: string, converted: int, purged: int, findings: object }
+	*/
+	public static function intify_section_id_locators( ?array $ar_tables=null, bool $save=true, array $skip_tipos=['zenon1'] ) : object {
+
+		$response = new stdClass();
+			$response->result		= false;
+			$response->msg			= 'Error. Request failed';
+			$response->converted	= 0;
+			$response->changed_rows	= 0;
+			$response->findings		= new stdClass();
+
+		set_time_limit(0);
+
+		// SELF-CHECK against the shared vector file (the same vectors the v7 bun
+		// gate asserts). A drifted rule here silently corrupts addresses — refuse.
+			$vectors_file = dirname(dirname(dirname(dirname(__FILE__)))) . '/../run/lib/section_id_conversion_vectors.json';
+			$vectors_path = realpath($vectors_file);
+			if ($vectors_path===false) {
+				// engine/core/base/upgrade → package root is 4 levels up from engine/
+				$vectors_path = dirname(__FILE__, 5) . '/run/lib/section_id_conversion_vectors.json';
+			}
+			$vectors_raw = is_string($vectors_path) ? @file_get_contents($vectors_path) : false;
+			if ($vectors_raw===false) {
+				$response->msg = 'intify_section_id_locators: conversion vector file not found — refusing to run unverified';
+				debug_log(__METHOD__ . ' ' . $response->msg . ' (' . $vectors_path . ')', logger::ERROR);
+				return $response;
+			}
+			$vectors = json_handler::decode($vectors_raw);
+			foreach ($vectors->vectors as $vector) {
+				$converted_value = self::intify_convert_section_id($vector->input);
+				$is_convertible  = ($converted_value!==null);
+				if ($is_convertible !== $vector->convertible
+					|| ($is_convertible && $converted_value !== (int)$vector->output)) {
+					$response->msg = 'intify_section_id_locators: conversion rule DRIFTED from the shared vectors at input "'.$vector->input.'" — refusing to run';
+					debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
+					return $response;
+				}
+			}
+
+		// Default sweep set: every migrated content table (the reformat list) plus
+		// the TM snapshots (a restore must not re-inject strings) and dd_ontology.
+			$default_tables = [
+				'matrix', 'matrix_activities', 'matrix_activity', 'matrix_activity_diffusion',
+				'matrix_dataframe', 'matrix_dd', 'matrix_hierarchy', 'matrix_hierarchy_main',
+				'matrix_indexations', 'matrix_langs', 'matrix_layout', 'matrix_layout_dd',
+				'matrix_list', 'matrix_nexus', 'matrix_nexus_main', 'matrix_notes',
+				'matrix_ontology', 'matrix_ontology_main', 'matrix_profiles', 'matrix_projects',
+				'matrix_stats', 'matrix_test', 'matrix_tools', 'matrix_users',
+				'matrix_time_machine',
+				'dd_ontology'
+			];
+			$tables = $ar_tables ?? $default_tables;
+
+		// Columns per table: TM stores its payload in `data`; dd_ontology carries
+		// locators in `relations` (`properties` is a config DSL — named exemption,
+		// its 'self'/'current' markers are tokens by design and must not be touched;
+		// the walk would only report them, but excluding it keeps the sweep exact).
+			$jsonb_columns = ['data','relation','string','date','iri','geo','number','media','misc','relation_search','meta'];
+
+		$conn			= DBi::_getConnection();
+		$skip_map		= array_fill_keys($skip_tipos, true);
+		$total_converted= 0;
+		$total_purged	= 0;
+		$changed_rows	= 0;
+		$findings		= []; // class => ['count'=>n, 'samples'=>[...]]
+
+		foreach ($tables as $table) {
+
+			// skip tables not present on this installation
+				$exists_result = pg_query_params(
+					$conn,
+					"SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' AND table_name=$1",
+					[$table]
+				);
+				if ($exists_result===false || pg_num_rows($exists_result)===0) {
+					continue;
+				}
+
+			$columns = ($table==='matrix_time_machine')
+				? ['data']
+				: (($table==='dd_ontology') ? ['relations'] : $jsonb_columns);
+
+			$escaped_table = pg_escape_identifier($conn, $table);
+			// dd_ontology has no serial `id`; page on its primary tipo instead
+			$pk = ($table==='dd_ontology') ? 'tipo' : 'id';
+
+			foreach ($columns as $column) {
+
+				// column present?
+					$col_result = pg_query_params(
+						$conn,
+						"SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 AND column_name=$2",
+						[$table, $column]
+					);
+					if ($col_result===false || pg_num_rows($col_result)===0) {
+						continue;
+					}
+
+				$escaped_column = pg_escape_identifier($conn, $column);
+
+				// Keyset pagination over the PREFILTERED rows only: a string-typed
+				// address serializes as "section_id":"…" / "section_id_key":"…" /
+				// "parent_section_id":"…" — rows without any of the three never
+				// need decoding (the LIKE runs on the toasted text once per batch,
+				// which is the same trade reformat_matrix_data already makes).
+					// (!) jsonb::text renders `"key": "value"` WITH a space after the
+				// colon — a naive LIKE '%"section_id":"%' never matches. Cheap LIKE
+				// on the bare key first, then a regex anchored to a STRING value.
+				$like = "($escaped_column::text LIKE '%\"section_id\"%'
+						OR $escaped_column::text LIKE '%\"section_id_key\"%'
+						OR $escaped_column::text LIKE '%\"parent_section_id\"%')
+						AND $escaped_column::text ~ '\"(section_id|section_id_key|parent_section_id)\":\\s*\"'";
+
+				$last_pk = null;
+				while (true) {
+
+					$where_pk = ($last_pk===null) ? 'TRUE' : "$pk > \$1";
+					$params   = ($last_pk===null) ? [] : [$last_pk];
+					$sql_query = "
+						SELECT $pk AS pk, $escaped_column::text AS payload
+						FROM $escaped_table
+						WHERE $escaped_column IS NOT NULL
+						  AND $where_pk
+						  AND $like
+						ORDER BY $pk ASC
+						LIMIT 500";
+					$batch_result = pg_query_params($conn, $sql_query, $params);
+					if ($batch_result===false) {
+						$response->msg = "intify_section_id_locators: batch read failed on $table.$column: " . pg_last_error($conn);
+						debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
+						return $response;
+					}
+					$rows = pg_fetch_all($batch_result) ?: [];
+					if (count($rows)===0) {
+						break;
+					}
+
+					foreach ($rows as $row) {
+
+						$last_pk = $row['pk'];
+						$decoded = json_handler::decode($row['payload']);
+						if ($decoded===null) {
+							continue;
+						}
+
+						$stats = new stdClass();
+							$stats->converted	= 0;
+							$stats->findings	= [];
+						$changed = self::intify_walk($decoded, $skip_map, $stats);
+
+						// findings tally (identity-sampled so the operator can adjudicate)
+							foreach ($stats->findings as $finding) {
+								$class = $finding['class'];
+								if (!isset($findings[$class])) {
+									$findings[$class] = ['count'=>0, 'samples'=>[]];
+								}
+								$findings[$class]['count']++;
+								if (count($findings[$class]['samples']) < 25) {
+									$findings[$class]['samples'][] = $table.'.'.$column.' '.$pk.'='.$row['pk']
+										. ' tipo='.($finding['tipo'] ?? '?')
+										. ' value='.json_handler::encode($finding['value']);
+								}
+							}
+
+						if ($changed!==true) {
+							continue;
+						}
+						$total_converted += $stats->converted;
+						$changed_rows++;
+
+						if ($save===true) {
+							$encoded = json_handler::encode($decoded);
+							$update_result = pg_query_params(
+								$conn,
+								"UPDATE $escaped_table SET $escaped_column = \$1::jsonb WHERE $pk = \$2 AND $escaped_column IS NOT NULL",
+								[$encoded, $row['pk']]
+							);
+							if ($update_result===false || pg_affected_rows($update_result)===0) {
+								$response->msg = "intify_section_id_locators: UPDATE failed (0 rows) on $table.$column $pk=".$row['pk'].' — aborting';
+								debug_log(__METHOD__ . ' ' . $response->msg . ' ' . pg_last_error($conn), logger::ERROR);
+								return $response;
+							}
+						}
+					}
+
+					// CLI feedback
+						if ( running_in_cli()===true ) {
+							if (!isset(common::$pdata)) {
+								common::$pdata = new stdClass();
+							}
+							common::$pdata->msg = ' intify_section_id_locators'
+								. ' | ' . ($save===true ? 'APPLY' : 'DRY-RUN')
+								. ' | ' . $table . '.' . $column
+								. ' | last ' . $pk . ': ' . $last_pk
+								. ' | converted: ' . $total_converted
+								. ' | changed rows: ' . $changed_rows;
+							print_cli(common::$pdata);
+						}
+				}
+			}
+		}
+
+		// report
+			$findings_report = new stdClass();
+			foreach ($findings as $class => $info) {
+				$findings_report->$class = (object)['count'=>$info['count'], 'samples'=>$info['samples']];
+			}
+			$response->findings		= $findings_report;
+			$response->converted	= $total_converted;
+			$response->changed_rows	= $changed_rows;
+
+		debug_log(__METHOD__ . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			. ' intify_section_id_locators ' . ($save===true ? 'APPLY' : 'DRY-RUN') . ' complete' . PHP_EOL
+			. ' converted: ' . $total_converted . ' | changed rows: ' . $changed_rows . PHP_EOL
+			. ' findings: ' . json_handler::encode($findings_report) . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			, logger::WARNING
+		);
+
+		// marker row (save runs only): the machine-readable evidence for the v7
+		// contraction boot check. NOT a version row — both version readers are
+		// guarded with `data ? 'dedalo_version'`.
+			if ($save===true) {
+				$marker = json_handler::encode([
+					'section_id_int_normalize' => [
+						'date'			=> date('Y-m-d H:i:s'),
+						'converted'		=> $total_converted,
+						'changed_rows'	=> $changed_rows,
+						'findings'		=> $findings_report,
+						'origin'		=> 'close_v6_prepare_v7'
+					]
+				]);
+				$marker_result = pg_query_params(
+					$conn,
+					'INSERT INTO "matrix_updates" ("data") VALUES ($1::jsonb)',
+					[$marker]
+				);
+				if ($marker_result===false) {
+					$response->msg = 'intify_section_id_locators: marker row INSERT failed: ' . pg_last_error($conn);
+					debug_log(__METHOD__ . ' ' . $response->msg, logger::ERROR);
+					return $response;
+				}
+			}
+
+		$response->result	= true;
+		$response->msg		= 'OK. intify_section_id_locators ' . ($save===true ? 'applied' : 'dry-run')
+			. '. converted: ' . $total_converted . ', changed rows: ' . $changed_rows;
+
+		return $response;
+	}//end intify_section_id_locators
+
+
+
+	/**
+	* INTIFY_CONVERT_SECTION_ID
+	* The shared conversion rule, one place (vector-checked at run start):
+	* returns the int for a convertible string, null for everything else.
+	* Mirrors v7 concepts/section_id.ts isConvertibleSectionIdString exactly.
+	* @param mixed $value
+	* @return int|null
+	*/
+	public static function intify_convert_section_id( $value ) : ?int {
+
+		if (!is_string($value)) {
+			return null;
+		}
+		if (preg_match('/^(-?[1-9][0-9]*|0)$/', $value)!==1) {
+			return null;
+		}
+		// IEEE-754 safe-int range (the v7 engine is JS): |n| <= 2^53-1
+		$number = (float)$value;
+		if (abs($number) > 9007199254740991.0) {
+			return null;
+		}
+		return (int)$value;
+	}//end intify_convert_section_id
+
+
+
+	/**
+	* INTIFY_WALK
+	* Recursive in-place walk of a decoded jsonb value (mirror of the v7 kernel
+	* src/core/update/transform/section_id_intify.ts): converts the address keys
+	* of every object, recurses through arrays/objects, NEVER descends into
+	* string scalars (inline tag markers are a pinned wire edge).
+	* @param mixed &$value  decoded jsonb (objects as stdClass)
+	* @param array $skip_map  section_tipo => true for external skips
+	* @param object $stats  {converted:int, findings:array}
+	* @return bool  true when anything was converted
+	*/
+	public static function intify_walk( &$value, array $skip_map, object $stats ) : bool {
+
+		$changed = false;
+
+		if (is_array($value)) {
+			foreach ($value as &$element) {
+				if (self::intify_walk($element, $skip_map, $stats)===true) {
+					$changed = true;
+				}
+			}
+			unset($element);
+			return $changed;
+		}
+
+		if (!is_object($value)) {
+			return false; // scalars (incl. strings) are never descended into
+		}
+
+		// address keys of the locator shape
+		foreach (['section_id', 'section_id_key', 'parent_section_id'] as $key) {
+
+			if (!property_exists($value, $key)) {
+				continue;
+			}
+			$tipo_key	= ($key==='section_id_key') ? 'section_tipo_key' : 'section_tipo';
+			$tipo		= (property_exists($value, $tipo_key) && is_string($value->$tipo_key))
+				? $value->$tipo_key
+				: null;
+
+			// LOCATOR LAW: no paired tipo key → not a locator (e.g. a
+			// component_json user value carrying a 'section_id' key) → untouched.
+				if ($tipo===null) {
+					continue;
+				}
+
+			$current = $value->$key;
+
+			if (is_int($current)) {
+				// PHP ints reach 2^63 but the v7 engine is JS: beyond 2^53-1 the
+				// address is not representable — report, never pass as canonical.
+				if (abs($current) > 9007199254740991) {
+					$stats->findings[] = ['class'=>'out-of-range', 'tipo'=>$tipo, 'value'=>$current];
+				}
+				continue;
+			}
+			if (is_float($current)) {
+				$stats->findings[] = ['class'=>((float)(int)$current===$current ? 'out-of-range' : 'float'), 'tipo'=>$tipo, 'value'=>$current];
+				continue;
+			}
+			if ($current===null) {
+				$stats->findings[] = ['class'=>'null-value', 'tipo'=>$tipo, 'value'=>null];
+				continue;
+			}
+			if (!is_string($current)) {
+				$stats->findings[] = ['class'=>'other', 'tipo'=>$tipo, 'value'=>$current];
+				continue;
+			}
+
+			$converted = self::intify_convert_section_id($current);
+			if ($converted!==null) {
+				// A CONVERTIBLE string converts ON ANY TIPO — an address-shaped value
+				// is an address. True external remote ids are never convertible
+				// (zenon zero-padded, wikidata opaque); the skip list below guards
+				// only the non-convertible remote-id forms.
+				$value->$key = $converted;
+				$stats->converted++;
+				$changed = true;
+				continue;
+			}
+
+			// external/skip tipo: the NON-convertible string IS the remote id
+				if ($tipo!==null && isset($skip_map[$tipo])) {
+					$stats->findings[] = ['class'=>'external-skip', 'tipo'=>$tipo, 'value'=>$current];
+					continue;
+				}
+
+			// classed finding (mirror of the v7 kernel classes)
+				if ($current==='') {
+					$class = 'empty';
+				} else if ($current==='null') {
+					$class = 'null-literal';
+				} else if (preg_match('/^-?[0-9]+$/', $current)===1 || $current==='-0') {
+					// numeric-shaped but not convertible: leading zeros or out of range
+					$class = (preg_match('/^(-?[1-9][0-9]*|0)$/', $current)===1) ? 'out-of-range' : 'leading-zero';
+				} else {
+					$class = 'token';
+				}
+				$stats->findings[] = ['class'=>$class, 'tipo'=>$tipo, 'value'=>$current];
+		}
+
+		// recurse into the object's own values
+		foreach (get_object_vars($value) as $property => $property_value) {
+			if (self::intify_walk($value->$property, $skip_map, $stats)===true) {
+				$changed = true;
+			}
+		}
+
+		return $changed;
+	}//end intify_walk
+
+
+
 }//end class v6_to_v7

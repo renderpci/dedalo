@@ -2532,16 +2532,20 @@ function get_current_data_version() : array {
 				? DBi::check_column_exists('matrix_updates', 'data')
 				: true;
 
+			// (!) WHERE data ? 'dedalo_version': matrix_updates also carries non-version
+			//     rows (the section_id_int_normalize marker this migration writes) — without
+			//     the guard their NULL version sorts FIRST under DESC (pg NULLS FIRST) and
+			//     the version gate silently reports "no version".
 			$sql = $v7_column
-				? 'SELECT data FROM "matrix_updates" ORDER BY string_to_array(data->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;'
-				: 'SELECT datos as data FROM "matrix_updates" ORDER BY string_to_array(datos->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;';
+				? 'SELECT data FROM "matrix_updates" WHERE data ? \'dedalo_version\' ORDER BY string_to_array(data->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;'
+				: 'SELECT datos as data FROM "matrix_updates" WHERE datos ? \'dedalo_version\' ORDER BY string_to_array(datos->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;';
 			$db_result = matrix_db_manager::exec_search($sql, []);
 
 			// On error, try the other layout
 			if ($db_result===false) {
 				$sql = $v7_column
-					? 'SELECT datos as data FROM "matrix_updates" ORDER BY string_to_array(datos->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;'
-					: 'SELECT data FROM "matrix_updates" ORDER BY string_to_array(data->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;';
+					? 'SELECT datos as data FROM "matrix_updates" WHERE datos ? \'dedalo_version\' ORDER BY string_to_array(datos->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;'
+					: 'SELECT data FROM "matrix_updates" WHERE data ? \'dedalo_version\' ORDER BY string_to_array(data->>\'dedalo_version\', \'.\')::int[] DESC LIMIT 1;';
 				$db_result = matrix_db_manager::exec_search($sql, []);
 			}
 
