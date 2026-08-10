@@ -263,6 +263,7 @@ class DDModal extends HTMLElement {
 				background-color: var(--modal_header_bg, var(--color_orange_dedalo));
 				color: var(--modal_header_color, var(--color_white));
 				box-shadow: var(--modal_header_shadow, 0 2px 3px var(--color_grey_10));
+				height: 3.66rem;
 			}
 
 			.modal-body {
