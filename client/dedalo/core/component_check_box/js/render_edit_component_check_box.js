@@ -6,7 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {view_default_edit_check_box} from './view_default_edit_check_box.js'
 	import {view_tools_edit_check_box} from './view_tools_edit_check_box.js'
 	import {view_line_edit_check_box} from './view_line_edit_check_box.js'
@@ -288,7 +288,7 @@ const get_content_value = (i, current_value, self) => {
 		// checked option set on match
 			for (let j = 0; j < value_length; j++) {
 				if (entries[j] && datalist_value &&
-					entries[j].section_id===datalist_value.section_id &&
+					same_section_id(entries[j].section_id, datalist_value.section_id) &&
 					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input_checkbox.checked = 'checked'

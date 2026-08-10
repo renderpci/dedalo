@@ -39,6 +39,7 @@
 	import {component_portal} from '../../component_portal/js/component_portal.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {DATAFRAME_TYPE} from '../../component_common/js/dataframe.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -225,7 +226,7 @@ component_dataframe.prototype.get_rating = function() {
 			el.tipo === rating_ddo.tipo
 			&& el.from_component_tipo === self.tipo
 			&& el.section_tipo === locator.section_tipo
-			&& el.section_id === locator.section_id
+			&& same_section_id(el.section_id, locator.section_id)
 		)
 		return data_rating
 	}

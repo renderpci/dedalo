@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_instance, find_instances} from '../../common/js/instances.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, same_section_id} from '../../common/js/utils/index.js'
 	import {render_layer_selector} from './render_edit_component_text_area.js'
 
 
@@ -125,7 +125,7 @@ export const render_draw = async function(options) {
 			const found = component_tags_draw.datum.data.find(el =>
 				el.from_component_tipo === current_locator.from_component_tipo &&
 				el.section_tipo === current_locator.section_tipo &&
-				el.section_id === current_locator.section_id
+				same_section_id(el.section_id, current_locator.section_id)
 			)
 
 			if(found){

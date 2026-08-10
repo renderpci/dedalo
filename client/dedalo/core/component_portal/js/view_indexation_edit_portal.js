@@ -63,7 +63,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_all_instances} from '../../common/js/instances.js'
 	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {
 		render_column_component_info,
@@ -137,7 +137,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 		const entries_length	= entries.length
 		for (let i = 0; i < entries_length; i++) {
 			const item = entries[i]
-			const found = entries_combined.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
+			const found = entries_combined.find(el => el.section_tipo===item.section_tipo && same_section_id(el.section_id, item.section_id))
 			if (!found) {
 				entries_combined.push(item)
 			}

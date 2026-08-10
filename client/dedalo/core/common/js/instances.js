@@ -34,6 +34,7 @@
 
 // imports
 	import {data_manager} from './data_manager.js'
+	import {same_section_id} from './utils/index.js'
 
 
 
@@ -444,7 +445,8 @@ export const find_instances = function(options) {
 
 		if (instance.tipo === tipo &&
 			instance.section_tipo === section_tipo &&
-			instance.section_id === section_id &&
+			// section_id: strict match keeps the both-missing case true (areas/tools have no section_id)
+			(instance.section_id === section_id || same_section_id(instance.section_id, section_id)) &&
 			instance.mode === mode &&
 			instance.lang === lang
 			) {

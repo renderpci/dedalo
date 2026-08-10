@@ -7,7 +7,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -363,7 +363,8 @@ const build_grid_html = function(self, context, columns, data, count_data, CSS_s
 		data.forEach(function(current_data){
 
 			//check if the columns id the first column for create the ul node and the first id column
-			if(curent_section_id !== current_data.section_id){
+			// type-safe compare: a mid-array int/string section_id flip must not split one record into two rows
+			if(!same_section_id(curent_section_id, current_data.section_id)){
 
 				curent_section_id = current_data.section_id;
 

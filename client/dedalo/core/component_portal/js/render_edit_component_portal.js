@@ -61,7 +61,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
-	import {object_to_url_vars, open_window, get_caller_by_model} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, get_caller_by_model, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
@@ -550,7 +550,7 @@ export const render_column_component_info = function(options) {
 	// component_info
 		const component_info = self.datum.data.find(
 			item => item.tipo==='ddinfo' &&
-					item.section_id===section_id &&
+					same_section_id(item.section_id, section_id) &&
 					item.section_tipo===section_tipo &&
 					(!from_ddo_tipos || !item.from_ddo_tipo || from_ddo_tipos.includes(item.from_ddo_tipo))
 		)

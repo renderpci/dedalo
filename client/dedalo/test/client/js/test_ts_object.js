@@ -4,6 +4,7 @@
 import {ts_object,key_instances_builder} from '../../../core/ts_object/js/ts_object.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
+import {same_section_id} from '../../../core/common/js/utils/index.js'
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -189,6 +190,15 @@ describe('TS_OBJECT : ', function() {
 					virtual_order				: null // ts_object init sets `options.virtual_order || null`
 				}
 				for(const key in to_compare) {
+					// section_id crosses as number or string: assert identity, not type
+					if (key==='section_id') {
+						assert.deepEqual(
+							same_section_id(instance[key], to_compare[key]),
+							true,
+							'Expected section_id - ' + to_compare[key]
+						);
+						continue;
+					}
 					assert.deepEqual(
 						instance[key],
 						to_compare[key],
@@ -264,7 +274,8 @@ describe('TS_OBJECT : ', function() {
 				);
 
 				assert.deepEqual(
-					wrapper.dataset.section_id === instance.section_id,
+					// dataset reads are always strings; the instance id may be int or string
+					same_section_id(wrapper.dataset.section_id, instance.section_id),
 					true,
 					'Expected true'
 				);

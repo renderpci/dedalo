@@ -15,7 +15,7 @@
 		get_all_instances,
 		get_instances_custom_map
 	} from '../../common/js/instances.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -2765,7 +2765,7 @@ ts_object.prototype.save_order = async function( value ) {
 
 	// Find the current instance's index in the data array
 	const current_data_index = ar_children_data.findIndex(item =>
-		item.section_tipo === self.section_tipo && item.section_id === self.section_id
+		item.section_tipo === self.section_tipo && same_section_id(item.section_id, self.section_id)
 	)
 
 	if (current_data_index === -1) {
@@ -2801,7 +2801,7 @@ ts_object.prototype.save_order = async function( value ) {
 
 	ar_locators.forEach((loc, i) => {
 		const found = instances_pool.find(inst =>
-			inst.section_tipo === loc.section_tipo && inst.section_id === loc.section_id
+			inst.section_tipo === loc.section_tipo && same_section_id(inst.section_id, loc.section_id)
 		)
 		if (found) {
 			found.virtual_order = i + 1

@@ -6,6 +6,7 @@
 
 // imports
 	import {view_graph_solved_section} from './view_graph_solved_section.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -180,7 +181,7 @@ export const get_d3_data = function(options) {
 		// matched by the nexus record's own section_id + section_tipo.
 			const current_target = datum.data.find(el =>
 				el.tipo			=== graph_map.target &&
-				el.section_id	=== current_source.section_id &&
+				same_section_id(el.section_id, current_source.section_id) &&
 				el.section_tipo	=== current_source.section_tipo
 			)
 
@@ -219,7 +220,7 @@ export const get_d3_data = function(options) {
 		// Matched to the nexus record via section_id + section_tipo of the nexus row.
 			const source_role = datum.data.find(el =>
 				el.tipo			=== graph_map.source_role &&
-				el.section_id	=== current_source.section_id &&
+				same_section_id(el.section_id, current_source.section_id) &&
 				el.section_tipo	=== current_source.section_tipo
 			)
 
@@ -227,7 +228,7 @@ export const get_d3_data = function(options) {
 		// Role label for the target entity in this relation.
 			const target_role = datum.data.find(el =>
 				el.tipo			=== graph_map.target_role &&
-				el.section_id	=== current_source.section_id &&
+				same_section_id(el.section_id, current_source.section_id) &&
 				el.section_tipo	=== current_source.section_tipo
 			)
 
@@ -237,7 +238,7 @@ export const get_d3_data = function(options) {
 		// returned link object; reserved for future use (e.g. link styling by typology).
 			const typology = datum.data.find(el =>
 				el.tipo			=== graph_map.typology &&
-				el.section_id	=== current_source.section_id &&
+				same_section_id(el.section_id, current_source.section_id) &&
 				el.section_tipo	=== current_source.section_tipo
 			)
 
@@ -246,7 +247,7 @@ export const get_d3_data = function(options) {
 		// returned link object; reserved for future use.
 			const connection = datum.data.find(el =>
 				el.tipo			=== graph_map.connection &&
-				el.section_id	=== current_source.section_id &&
+				same_section_id(el.section_id, current_source.section_id) &&
 				el.section_tipo	=== current_source.section_tipo
 			)
 

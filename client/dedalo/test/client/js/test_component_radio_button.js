@@ -284,7 +284,7 @@ describe(`COMPONENT_RADIO_BUTTON DATA OPERATIONS`, function() {
 			// find a different datalist item than current value
 			const current_section_id = instance.data.entries?.[0]?.section_id
 			const different_item = datalist.find(el =>
-				el.value && el.value.section_id !== current_section_id
+				el.value && String(el.value.section_id) !== String(current_section_id)
 			)
 			if (different_item) {
 				// find the radio input for this datalist item

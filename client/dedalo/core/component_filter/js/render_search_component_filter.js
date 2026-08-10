@@ -57,6 +57,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 	import {get_input_element} from './render_edit_component_filter.js'
 
 
@@ -192,7 +193,7 @@ const get_content_data = function(self) {
 			// Both section_tipo and section_id must match to identify the correct parent.
 			const children_elements = datalist.filter(
 				el => el.parent && el.parent.section_tipo === element.section_tipo
-				&& el.parent.section_id === element.section_id
+				&& same_section_id(el.parent.section_id, element.section_id)
 			)
 			const children_elements_len = children_elements.length
 

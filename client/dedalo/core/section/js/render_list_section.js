@@ -11,7 +11,8 @@
 	import {
 		clone,
 		object_to_url_vars,
-		open_window
+		open_window,
+		same_section_id
 	} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {view_default_list_section} from './view_default_list_section.js'
@@ -870,7 +871,7 @@ const _update_link_button = async function(initiator, link_icon, link_button, se
 	// If so, fetch the full data from component data, and prevent fetching full data from API.
 	if (total !== undefined && (total <= limit)) {
 		caller_instance.data.entries_full = caller_instance.data.entries || []
-	} else if (!caller_instance.section_id || caller_instance.section_id === '0') {
+	} else if (!caller_instance.section_id || same_section_id(caller_instance.section_id, 0)) {
 		// Optimization: if it is a new record, it cannot have linked items.
 		caller_instance.data.entries_full = []
 	}

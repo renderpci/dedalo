@@ -40,7 +40,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, same_section_id} from '../../common/js/utils/index.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {render_list_section_record} from './render_list_section_record.js'
 	import {render_edit_section_record} from './render_edit_section_record.js'
@@ -951,7 +951,7 @@ section_record.prototype.get_component_info = function() {
 
 	// find the ddinfo pseudo-component for this exact record (section_tipo + section_id)
 	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
-		&& item.section_id===self.section_id
+		&& same_section_id(item.section_id, self.section_id)
 		&& item.section_tipo===self.section_tipo
 	)
 

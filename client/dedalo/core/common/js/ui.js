@@ -7,7 +7,8 @@
 // imports
 	import {
 		strip_tags,
-		prevent_open_new_window
+		prevent_open_new_window,
+		same_section_id
 	} from '../../common/js/utils/index.js'
 	import {when_in_dom,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -3080,7 +3081,7 @@ export const ui = {
 			const component		= all_instances.find( el =>
 				el.tipo === first_ddo.tipo &&
 				el.section_tipo === section_tipo &&
-				el.section_id === section_id &&
+				same_section_id(el.section_id, section_id) &&
 				el.parent === section_tipo
 			)
 

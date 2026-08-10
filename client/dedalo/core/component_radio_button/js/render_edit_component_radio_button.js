@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {view_default_edit_radio_button} from './view_default_edit_radio_button.js'
 	import {view_line_edit_radio_button} from './view_line_edit_radio_button.js'
 	import {view_rating_edit_radio_button} from './view_rating_edit_radio_button.js'
@@ -309,7 +309,7 @@ const get_content_value = (i, datalist_item, self) => {
 		const update_status = (input) => {
 			for (let j = 0; j < value_length; j++) {
 				if (entries[j] && datalist_value &&
-					entries[j].section_id===datalist_value.section_id &&
+					same_section_id(entries[j].section_id, datalist_value.section_id) &&
 					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input.checked = 'checked'

@@ -1318,6 +1318,39 @@ export const get_section_id_from_tipo = function (tipo) {
 
 
 /**
+* SAME_SECTION_ID
+* Type-safe equality for two section_id values that may arrive as number or
+* string depending on their origin (URL params and dataset reads are always
+* strings; bootstrap context and int-canonical wire payloads are numbers;
+* stored locator data is historically string).
+*
+* Compares String(a) === String(b). This deliberately DIVERGES from the
+* server's loose numeric compare on leading zeros ('05' vs 5 is NOT equal
+* here) — and that is safe precisely because leading-zero section_ids exist
+* ONLY on external-service records (e.g. zenon '001338683'), whose ids the
+* server echoes verbatim on every path: both sides of any client comparison
+* carry the identical byte form, so a numeric-value compare is never needed
+* for them. Synthetic tokens ('search_1') compare byte-wise, which is the
+* correct semantic too.
+*
+* null/undefined never equal anything (not even each other): a missing id is
+* "no address", and two missing addresses are not the same record.
+* @param {string|number|null|undefined} a
+* @param {string|number|null|undefined} b
+* @returns {bool}
+*/
+export const same_section_id = function(a, b) {
+
+	if (a===null || a===undefined || b===null || b===undefined) {
+		return false
+	}
+
+	return String(a) === String(b)
+}//end same_section_id
+
+
+
+/**
 * GET_CALLER_BY_MODEL
 * Walks the caller chain from instance upward and returns the first ancestor
 * whose .model property equals the given model string.

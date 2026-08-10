@@ -10,7 +10,7 @@
 	import {render_edit_component_radio_button} from './render_edit_component_radio_button.js'
 	import {render_list_component_radio_button} from './render_list_component_radio_button.js'
 	import {render_search_component_radio_button} from './render_search_component_radio_button.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -123,7 +123,7 @@ component_radio_button.prototype.get_checked_value_label = function() {
 	}
 
 	const checked_key = self.data.datalist.findIndex( (item) => {
-		return (item.section_id===self.data.entries[0]?.section_id)
+		return same_section_id(item.section_id, self.data.entries[0]?.section_id)
 	})
 
 	if (checked_key === -1) {

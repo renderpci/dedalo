@@ -30,6 +30,7 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_all_instances} from '../../common/js/instances.js'
 	import {render_delete_record_dialog} from './render_ts_dialogs.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -521,7 +522,7 @@ const render_order_form = function(options) {
 			// render_level:'content' re-renders only the row content (including the
 			// order number display) while leaving child subtrees untouched.
 			const instance = get_all_instances().find(el =>
-				el.section_id===item.section_id &&
+				same_section_id(el.section_id, item.section_id) &&
 				el.section_tipo===item.section_tipo &&
 				el.model==='ts_object'
 			);

@@ -53,7 +53,7 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {clone, object_to_url_vars, group_objects_by} from '../../common/js/utils/index.js'
+	import {clone, object_to_url_vars, group_objects_by, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
@@ -198,7 +198,7 @@ const get_content_data = async function(self) {
 				const item = current_group[i]
 
 				// Match each datum item back to the ordered entry locator by section_id.
-				const current_entry = self.data.entries.find(el => el.section_id === item.section_id)
+				const current_entry = self.data.entries.find(el => same_section_id(el.section_id, item.section_id))
 
 				grouped_value.push(current_entry)
 			}
@@ -625,7 +625,7 @@ const render_column_graph = function(options) {
 
 			// Find target section data
 			const target_section_data	= self.datum.data.find(el =>
-				el.section_id	=== section_id &&
+				same_section_id(el.section_id, section_id) &&
 				el.section_tipo	=== section_tipo &&
 				el.tipo			=== target_section_value
 			)

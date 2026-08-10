@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 	import {build_changed_data_item} from './component_select.js'
 
 
@@ -281,7 +282,7 @@ const get_content_value = (i, current_value, self) => {
 			// Both section_id and section_tipo must match to avoid false positives when
 			// multiple sections share the same section_id counter namespace.
 			if (current_value && datalist_item.value &&
-				current_value.section_id === datalist_item.value.section_id &&
+				same_section_id(current_value.section_id, datalist_item.value.section_id) &&
 				current_value.section_tipo === datalist_item.value.section_tipo
 				) {
 				option.selected = true
