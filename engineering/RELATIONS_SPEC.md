@@ -35,6 +35,18 @@ Standing spec for the relation family, companion to `engineering/REWRITE_SPEC.md
 > `use_function` flat names survive as wire vocabulary only (WC-012,
 > amendment 2). See `docs/core/system/search.md` → "The relation index".
 
+> **ADDENDUM 2026-08-10 (locator `section_id` is an INT).** The
+> string-canonical storage law this spec assumes is **repealed**: a stored
+> locator's `section_id` is a safe integer (negatives valid), minted by every
+> writer through `canonicalizeStoredSectionId()`
+> (`src/core/concepts/section_id.ts`) — `relations/save.ts`'s `String(...)` and
+> the emit-side stringifies are gone. Parse stays tolerant of the legacy string
+> form, `compareLocators` stays LOOSE on `section_id`, and relation expansion
+> probes jsonb containment in DUAL FORM (int + string) until the data sweep
+> completes. External-service remote ids and synthetic tokens are NOT addresses
+> and are stored/echoed verbatim.
+> Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`.
+
 > **ADDENDUM 2026-08-05 (multi-source components).** A relation component may
 > declare SEVERAL `request_config` items, and **every one of them contributes
 > children**: `src/core/relations/config_ddo_map.ts` flattens each item's

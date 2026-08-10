@@ -28,6 +28,21 @@ Three facts define everything else:
 2. **The remote id IS the `section_id`** — a zero-padded STRING (`"001338683"`).
    Never `Number()` it: that drops the padding and asks the service for a
    different record.
+
+    > **NOTE 2026-08-10 (section_id int unification).** A matrix record address
+    > is now an int, so a remote id is protected by the **VALUE invariant, not
+    > by its tipo**: a true remote id is never strict-numeric-without-leading-
+    > zeros (zero-padded, or opaque like `"Q42"`), and that shape is what
+    > `classifyWireSectionId()` keys on. `api_config` presence on a tipo does
+    > **not** make its convertible ids external — sections carrying legacy
+    > `api_config` residue (`rsc205`) hold thousands of real matrix records, and
+    > a tipo-keyed rule silently routed their saves into the never-write echo
+    > branch (S0, fixed same day). A convertible numeric value is a record
+    > address on ANY tipo; the `external-ref` classification applies only to
+    > NON-convertible strings on external tipos. Consequence for §4: an adapter
+    > must never mint a bare convertible integer as a remote id — that value is
+    > indistinguishable from a matrix record address and will be treated as one.
+    > Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`.
 3. **The traffic is one-directional.** Dédalo reads; it never writes to the
    service, and never writes a remote value into a local record (§9).
 

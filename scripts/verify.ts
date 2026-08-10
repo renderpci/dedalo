@@ -102,6 +102,7 @@ const TRIPWIRES = [
 	'test/unit/external_client_render_tripwire.test.ts',
 	'test/unit/external_search_target_tripwire.test.ts',
 	'test/unit/crap_complexity_ratchet.test.ts',
+	'test/unit/section_id_int_tripwire.test.ts',
 	'test/parity/oracle_canary.test.ts',
 ];
 
