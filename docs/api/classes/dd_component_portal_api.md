@@ -18,7 +18,7 @@ API for portal component operations (locators and portal-specific actions).
 - **Purpose:** remove matching locators from a component's `dato` (used when unlinking or clearing portal selections).
 - **Accepts:**
     - `source.section_tipo` (string)
-    - `source.section_id` (string|int)
+    - `source.section_id` (int; a numeric string still coerces, deprecated)
     - `source.tipo` (string)
     - optional `source.lang` (string)
     - `options.locator` (object) — full or partial locator, e.g. `{ "tag_id": "2", "type": "dd96" }`

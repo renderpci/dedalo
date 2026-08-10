@@ -93,7 +93,7 @@ The SQO is the query language, but not every SQO is equally trusted. **A client-
   - **section_tipo** : `string` name of the section to order by **optional**
   - **column_name** : `string` name of the column to order by **optional**
   - **column_values** : `array` array that defines the order of the values **optional**
-- **filter_by_locators** : `array of objects` pins the search to an explicit locator set; every object is a [locator](locator.md). The array ORDER is preserved in the result only when the SQO also carries the `{"mode":"locator_position"}` order entry (see [order](#order)) — without it rows come back in the default `section_id ASC`. Client lists are clamped to 1000 pins (loud server log on truncation). **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
+- **filter_by_locators** : `array of objects` pins the search to an explicit locator set; every object is a [locator](locator.md). The array ORDER is preserved in the result only when the SQO also carries the `{"mode":"locator_position"}` order entry (see [order](#order)) — without it rows come back in the default `section_id ASC`. Client lists are clamped to 1000 pins (loud server log on truncation). **optional** ex : `[{"section_tipo":"oh1", "section_id":8},{"section_tipo":"oh1", "section_id":3}]`
 - **allow_sub_select_by_id** : `bool` (true || false) create a sub-select in the SQL query that passes the filter and gets the id to select the main section. Default : true **optional** .
 - **children_recursive** : `bool` (true || false) filter the hierarchy term and get all children nodes that depend on the searched term. Default : false  **optional**
 - **remove_distinct** : `bool` (true || false) remove duplicate records when the SQL query has a sub-select with multiple criteria that can return duplicate records. Default : false **optional**
@@ -295,7 +295,7 @@ Example with multiple sections, using the `all` section: search 'Benimamet' in t
   "mode": "related",
   "filter_by_locators" : [{
     "section_tipo" : "rsc197",
-    "section_id" : "2"
+    "section_id" : 2
   }]
   }
 ```
@@ -307,16 +307,16 @@ the result is a mix of data from different sections:
   "result":[
     {
       "section_tipo" : "oh1",
-      "section_id" : "2",
+      "section_id" : 2,
       "string": {
         "oh16": [{ "lang": "lg-spa", "value": "my second interview" }]
       }
     },
     {
       "section_tipo" : "rsc197",
-      "section_id" : "88",
+      "section_id" : 88,
       "relation": {
-        "oh24": [{ "section_tipo" : "rsc197", "section_id" : "2" }]
+        "oh24": [{ "section_tipo" : "rsc197", "section_id" : 2 }]
       }
     }
   ]
@@ -1185,7 +1185,7 @@ Example: count the sections `Objects` [tch1](https://dedalo.dev/ontology/tch1) a
     "filter_by_locators": [
       {
         "section_tipo": "dc1",
-        "section_id": "1",
+        "section_id": 1,
         "tipo": "hierarchy40"
       }
     ],
@@ -1463,7 +1463,7 @@ LIMIT 10
 
 Defines an array of fixed [locators](locator.md) applied to the search. filter_by_locators is used when a query has fixed data to apply to every query; it is independent of the filter [q](#q) values and is used to get a set of records that is then filtered by the q criteria. filter_by_locators takes precedence over other criteria defined in the filter.
 
-Definition: `array of objects`; every object is a [locator](locator.md). To make the result FOLLOW the array order add the `{"mode":"locator_position"}` [order](#order) entry — the semantic-search rank mechanism (WC-047). Untrusted (client) SQOs are clamped to 1000 pins. **optional** ex : `[{"section_tipo":"oh1", "section_id":"8"},{"section_tipo":"oh1", "section_id":"3"}]`
+Definition: `array of objects`; every object is a [locator](locator.md). To make the result FOLLOW the array order add the `{"mode":"locator_position"}` [order](#order) entry — the semantic-search rank mechanism (WC-047). Untrusted (client) SQOs are clamped to 1000 pins. **optional** ex : `[{"section_tipo":"oh1", "section_id":8},{"section_tipo":"oh1", "section_id":3}]`
 
 Example: give me the section Types [numisdata3](https://dedalo.dev/ontology/numisdata3) that use the image [rsc170](https://dedalo.dev/ontology/rsc170) with section_id 69.
 
@@ -1474,7 +1474,7 @@ Example: give me the section Types [numisdata3](https://dedalo.dev/ontology/numi
   "filter_by_locators": [
     {
       "section_tipo": "rsc170",
-      "section_id": "69"
+      "section_id": 69
     }
   ]
 }
@@ -1619,7 +1619,7 @@ Data — stored in the audiovisual record's `relation` column, keyed by the inde
       {
           "type": "dd96",
           "tag_id": "1",
-          "section_id": "7",
+          "section_id": 7,
           "section_tipo": "rsc197",
           "tag_component_tipo": "rsc36",
           "from_component_tipo": "rsc860"
@@ -1627,7 +1627,7 @@ Data — stored in the audiovisual record's `relation` column, keyed by the inde
       {
           "type": "dd96",
           "tag_id": "2",
-          "section_id": "42",
+          "section_id": 42,
           "section_tipo": "rsc197",
           "tag_component_tipo": "rsc36",
           "from_component_tipo": "rsc860"
@@ -1635,7 +1635,7 @@ Data — stored in the audiovisual record's `relation` column, keyed by the inde
       {
           "type": "dd96",
           "tag_id": "3",
-          "section_id": "7",
+          "section_id": 7,
           "section_tipo": "rsc197",
           "tag_component_tipo": "rsc36",
           "from_component_tipo": "rsc860"
@@ -1657,7 +1657,7 @@ Example 1: `breakdown` set to `false`
         {
             "type" : "dd96",
             "section_tipo" : "rsc197",
-            "section_id" : "7"
+            "section_id" : 7
         }
     ],
    "breakdown": false
@@ -1680,7 +1680,7 @@ and the result is 1 row with the full audiovisual section data:
 
 | section_id | section_tipo | relation |
 | --- | --- | --- |
-| 1 | rsc167 | `{"rsc860":[{"type":"dd96","tag_id":"1","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"},{"type":"dd96","tag_id":"2","section_id":"42","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"},{"type":"dd96","tag_id":"3","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}]}` |
+| 1 | rsc167 | `{"rsc860":[{"type":"dd96","tag_id":"1","section_id":7,"section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"},{"type":"dd96","tag_id":"2","section_id":42,"section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"},{"type":"dd96","tag_id":"3","section_id":7,"section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}]}` |
 
 Example 2: `breakdown` set to `true`
 
@@ -1692,7 +1692,7 @@ Example 2: `breakdown` set to `true`
         {
             "type" : "dd96",
             "section_tipo" : "rsc197",
-            "section_id" : "7"
+            "section_id" : 7
         }
     ],
     "breakdown": true
@@ -1721,8 +1721,8 @@ The result is two rows, one for each locator calling person 7, like this:
 
 | section_id | section_tipo | locator_data |
 | --- | --- | --- |
-| 1 | rsc167 | `{"type":"dd96","tag_id":"1","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
-| 1 | rsc167 | `{"type":"dd96","tag_id":"3","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
+| 1 | rsc167 | `{"type":"dd96","tag_id":"1","section_id":7,"section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
+| 1 | rsc167 | `{"type":"dd96","tag_id":"3","section_id":7,"section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
 
 The result can be counted or paginated directly in a simple way.
 

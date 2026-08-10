@@ -135,7 +135,7 @@ A locator is sparse: a portal link may carry only `{section_tipo, section_id, ty
 | Property | Type | Meaning | Example |
 | --- | --- | --- | --- |
 | **section_tipo** | `string` | Ontology tipo of the **target** section | `rsc197` |
-| **section_id** | `string` | Record id of the **target** section (accepts the sentinel `'unknown'` for pre-creation) | `88` |
+| **section_id** | `int` | Record id of the **target** section — always an integer, negatives included (accepts the sentinel `'unknown'` for pre-creation, and an external-service remote id as a string; see [Canonical form of `section_id`](#canonical-form-of-section_id)) | `88` |
 
 ### Destination addressing (optional)
 
@@ -220,6 +220,24 @@ For **related** relations the `type_rel` descriptor records direction, read from
 
 ## How a locator is stored
 
+### Canonical form of `section_id`
+
+A record address is **always a safe integer** — negatives included (`-1` is the root record). Every writer mints the int form (`canonicalizeStoredSectionId()` in `src/core/concepts/section_id.ts`), and every app-API emission — reads, echoes, datalists, lock events — carries the int.
+
+Three values are **not** addresses and are stored/echoed verbatim, never converted:
+
+| value | what it is |
+| --- | --- |
+| `"001338683"`, `"Q42"` | an [external-service](system/external_services.md) remote id — the padding or the opaque token *is* the identifier. Protected by its own shape: a true remote id is never strict-numeric-without-leading-zeros |
+| `"search_1"`, `"tmp_export_2"` | a synthetic client token that addresses no record |
+| `"unknown"` | the pre-creation sentinel |
+
+Reads stay tolerant of the legacy string form (`"88"`) so an install whose data has not yet been swept keeps working, and locator comparison is loose on `section_id`. Because jsonb `@>` containment is type-strict, every locator search probe runs in **dual form** — int and string — until the stock is converted. A numeric string arriving on the wire coerces at the boundary, but is deprecated and counted (see [Metrics](../development/metrics.md#the-counters-endpoint)).
+
+Two edges keep the string form as contract, not legacy: the diffusion → published-database shape, and locator markers serialized inside text values (inline tags), both consumed by external readers.
+
+Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`.
+
 ### In the `relation` JSONB column, keyed by component tipo
 
 Relation-component data lives in the matrix table's **`relation`** JSONB column, **keyed by component tipo**:
@@ -227,7 +245,7 @@ Relation-component data lives in the matrix table's **`relation`** JSONB column,
 ```json
 {
     "oh24": [
-        { "section_tipo": "rsc197", "section_id": "88", "type": "dd151", "from_component_tipo": "oh24" }
+        { "section_tipo": "rsc197", "section_id": 88, "type": "dd151", "from_component_tipo": "oh24" }
     ]
 }
 ```

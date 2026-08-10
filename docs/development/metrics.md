@@ -41,6 +41,17 @@ The counters that always exist:
 a rising count means `DB_POOL_MAX` is too small for the concurrency the install
 actually sees.
 
+Counters minted on demand, one key per named boundary:
+
+| Counter | Meaning |
+| --- | --- |
+| `section_id_string_coercions.<source>` | a `section_id` arrived as a numeric **string** at the door `<source>` and was coerced to its canonical integer. A deprecation signal: RQO-body doors must trend to zero before the string form is removed. `url.*` doors (`URLSearchParams` yields strings forever) are permanent and excluded from that gate. Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md` |
+
+Read these against `uptime_s`: counters are process-lifetime, so a bare zero on a
+freshly restarted process is not evidence. Each coercion also emits a sampled
+`[section_id-string-coercion]` warning line — grep the access log for the tag to
+locate the caller.
+
 ## The access log
 
 `src/core/api/access_log.ts` is called once per request from `dispatchRqo()`'s

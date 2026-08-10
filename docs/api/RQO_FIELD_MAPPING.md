@@ -40,7 +40,7 @@ Unauthenticated (`session === null`) `start` returns the **login element context
 **RQO fields used**:
 - `source`: object
   - `section_tipo`: string — section type identifier
-  - `section_id`: string|int (optional) — specific record to read (kept as given; leading zeros are preserved)
+  - `section_id`: int (optional) — specific record to read. A record address is always an integer (negatives are valid: `-1` is the root record); a numeric string still coerces at the boundary but is **deprecated** and counted. Leading-zero or opaque values (`001338683`, `Q42`) are external-service remote ids, not addresses, and are kept verbatim; synthetic tokens (`search_1`) echo verbatim. Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`
   - `tipo`: string (optional) — component type
   - `model`: string (optional) — component model (a `component_*` model routes to a component read)
   - `mode`: string (optional) — `edit`, `list`, `search`
