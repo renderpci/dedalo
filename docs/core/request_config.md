@@ -290,7 +290,17 @@ The per-session SQO store (`src/core/security/session_store.ts`, see [Per-call o
 
 ## Caching and the cache key
 
-There is no config-level cache: every `buildRequestConfigForElement()` call is a fresh, stateless computation scoped to the current request (`AsyncLocalStorage`) — there is no cache key to compute and no clone boundary to protect, because nothing is ever cached in the first place. A handful of narrower intermediate lookups DO cache (the hierarchy-sections list, the all-ontologies target-section list, the active-presets list — each in its own module, invalidated on the relevant ontology/data write), but the assembled `request_config` result itself is always recomputed.
+There is no config-level cache: every `buildRequestConfigForElement()` call is a fresh, stateless computation scoped to the current request (`AsyncLocalStorage`) — there is no cache key to compute and no clone boundary to protect, because nothing is ever cached in the first place. A handful of narrower intermediate lookups DO cache (the hierarchy-sections list, the all-ontologies target-section list, the active-presets list, the per-section `button_new`/`button_delete` lookup — each in its own module, invalidated on the relevant ontology/data write), but the assembled `request_config` result itself is always recomputed.
+
+!!! note "Why the button lookup is one of them"
+    `buildSqoSectionTipoDdos()` enriches **every** resolved sqo target section, and above read
+    level it probes each for a `button_new` and a `button_delete` child. Uncached, a section
+    with neither cost four queries (two misses, then the virtual-section fallback's two) — so a
+    config whose `sqo.section_tipo` source is `ontology_sections`, which resolves to every
+    registered ontology's target section, paid that per target on every single build. On a
+    205-ontology install one such component resolved in 42 ms; cached, 0.64 ms. It is ontology
+    shape, not record data, so it invalidates with the rest of the ontology caches — authoring
+    a new `button_new` still shows up immediately.
 
 ## Error contract and warnings
 

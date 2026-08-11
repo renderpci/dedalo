@@ -79,3 +79,26 @@ distribution set. Documented in `docs/tools/using_ontology_parser.md` and
   step 5 of the export pipeline, always-runs, errors-merged.
 - **No re-harvest.** The frozen store holds no `regenerate_ontologies` response
   (it is a write action, never harvested), so no fixture moves.
+
+## Addendum 2026-08-11 — the cost argument shrank by 18×; the entry stands on the other one
+
+Same day, the `linkTargetSections` hot path was fixed: `findSectionButtonTipo`
+(`relations/request_config/explicit.ts`) probed dd_ontology **uncached**, twice per
+resolved sqo target and four times when the section has no such button. An sqo
+sourced from `ontology_sections` resolves to every ontology registry target — 205
+on dedalo7_mht — so `ontology10`/`ontology42` cost 42 ms per resolution. Memoized
+through `createOntologyCache` (hub-cleared, so a newly authored button still
+appears), they cost 0.64 ms. `buildLlmMap()` went 21 668 ms → 1 206 ms on the same
+install, output byte-identical (sha256 over 9 065 936 bytes).
+
+So the table above is now HISTORY. Removing the post-step saves ~1.2 s today, not
+~21 s. **The removal is not revisited**, because the cost was never its first
+reason: the map is a distribution artifact whose companions (`ontology.json`, the
+per-TLD dumps) a regenerate does not refresh either, so rebuilding it there made
+the served set no more coherent — and that is as true at 1.2 s as at 21 s. What
+changed is that the operator-visible argument is now "a rebuild is not a publish",
+not "a rebuild is unusably slow".
+
+Gate for the fix: `test/unit/request_config_section_button_cache.test.ts`
+(verified to FAIL without it). No wire divergence — a pure memoization of a
+dd_ontology-derived lookup.

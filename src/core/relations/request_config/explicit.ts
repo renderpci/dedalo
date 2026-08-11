@@ -651,11 +651,34 @@ export function extractSqoSectionTipos(item: ParsedRequestConfigItem | undefined
 	];
 }
 
+/**
+ * (sectionTipo, buttonModel) → the button tipo, or null. Pure dd_ontology shape,
+ * so it caches exactly like the resolver's own lookups (hub-cleared on every
+ * dd_ontology write by the factory).
+ *
+ * WHY IT NEEDS A CACHE. `buildSqoSectionTipoDdos` enriches EVERY resolved sqo
+ * target, and an sqo with a `source: 'ontology_sections'` resolves to every
+ * ontology registry target on the install — 205 sections on dedalo7_mht. Each
+ * one cost two probes (`button_new` + `button_delete`), and a section with no
+ * such child cost FOUR: the miss, then the virtual-section fallback's own two
+ * queries. `ontology10`/`ontology42` measured 42ms per resolution because of it,
+ * which is 17.3s of the 20.6s an LLM-map build spent — and the same 42ms is paid
+ * by the live autocomplete on those components. Nothing here is record data:
+ * the answer only moves when the ontology does.
+ *
+ * NULL IS A CACHED ANSWER. "no button of this model" is the common case and the
+ * expensive one (four queries), so it must be stored, not re-derived — hence
+ * `has()` rather than a truthiness check on `get()`.
+ */
+const sectionButtonCache = createOntologyCache<string, string | null>();
+
 /** button_new/button_delete direct children of a section (virtual-aware). */
 async function findSectionButtonTipo(
 	sectionTipo: string,
 	buttonModel: string,
 ): Promise<string | null> {
+	const cacheKey = `${sectionTipo} ${buttonModel}`;
+	if (sectionButtonCache.has(cacheKey)) return sectionButtonCache.get(cacheKey) ?? null;
 	const read = async (parent: string) =>
 		(await sql.unsafe('SELECT tipo FROM dd_ontology WHERE parent = $1 AND model = $2 LIMIT 1', [
 			parent,
@@ -669,7 +692,9 @@ async function findSectionButtonTipo(
 		const real = nodeRows[0]?.relations?.[0]?.tipo;
 		if (typeof real === 'string') rows = await read(real);
 	}
-	return rows[0]?.tipo ?? null;
+	const found = rows[0]?.tipo ?? null;
+	sectionButtonCache.set(cacheKey, found);
+	return found;
 }
 
 /**
