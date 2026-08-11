@@ -58,7 +58,7 @@ Organise records into hierarchies and shape the schema.
 - **[Hierarchy generator](using_hierarchy.md)** — build a custom ontology or virtual section from existing real sections.
 - **[Cataloging](using_cataloging.md)** — drag and drop records from source sections into a target hierarchy.
 - **[Ontology](using_ontology.md)** — parse ontology section records into the runtime table *(developer/administrator)*.
-- **[Ontology parser](using_ontology_parser.md)** — reconcile and rebuild the runtime ontology *(developer/administrator)*.
+- **[Ontology parser](using_ontology_parser.md)** — inspect and rebuild the runtime ontology *(developer/administrator)*.
 - **[Label authoring](using_dd_label.md)** — author a tool's multi-language interface labels.
 
 ## Transcription and indexation

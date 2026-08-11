@@ -1,11 +1,14 @@
 /**
- * ontology_state — inspect / ensure / rebuild. TS-NATIVE write-path contract.
+ * ontology_state — inspect / rebuild. TS-NATIVE write-path contract.
  *
  * `dd_ontology` is a projection of `matrix_ontology` (one node per record). The PHP-inherited
- * `regenerate` enforced that by WIPING every node for the TLD and rebuilding — slow, and
- * with a leftover `dd_ontology_bk` table as its only, untested, rollback. `ontology_state`
- * replaces it with a DIFF: inspect the drift, reconcile only the delta (no wipe), and keep a
- * TRANSACTIONAL rebuild for the nuclear case.
+ * `regenerate` enforced that by WIPING every node for the TLD and rebuilding, with a leftover
+ * `dd_ontology_bk` table as its only, untested, rollback. `ontology_state` keeps the wipe but
+ * makes it TRANSACTIONAL, and adds the DIFF that says why you would run one (`inspectOntology`).
+ *
+ * The incremental `ensureOntology` companion this file also used to gate was removed
+ * 2026-08-11 (module header): a transactional rebuild publishes atomically, so every case
+ * below is now asserted against `rebuildOntology` — the ONE writer.
  *
  * Scratch: TLD 'zzo'. Its matrix_ontology records are seeded DIRECTLY (section 'zzo0',
  * ontology7=tld, ontology5=term) so each test starts from a known source, independent of the
@@ -16,11 +19,7 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { deleteTldNodes, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
-import {
-	ensureOntology,
-	inspectOntology,
-	rebuildOntology,
-} from '../../src/core/ontology/ontology_state.ts';
+import { inspectOntology, rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
 
 const TLD = 'zzo';
 const SECTION = `${TLD}0`; // matrix_ontology section for this tld
@@ -90,42 +89,42 @@ describe('inspectOntology', () => {
 	});
 });
 
-describe('ensureOntology', () => {
-	test('reconciles missing nodes + the main node, and becomes in sync', async () => {
-		const outcome = await ensureOntology(TLD, USER_ID);
+describe('rebuildOntology', () => {
+	test('builds every parsed node + the main node, and becomes in sync', async () => {
+		const outcome = await rebuildOntology(TLD, USER_ID);
 
 		expect(outcome.result).toBe(true);
 		expect(outcome.state.inSync).toBe(true);
 		expect(outcome.state.mainNodeOk).toBe(true);
 		expect(await storedTerm('zzo1')).toBe('First');
-		expect(outcome.applied).toContain('+ zzo1');
-		expect(outcome.applied).toContain('+ zzo2');
+		expect(outcome.applied).toContain('rebuilt 2 node(s)');
 	});
 
-	test('is idempotent — the second reconcile changes nothing', async () => {
-		await ensureOntology(TLD, USER_ID);
-		const again = await ensureOntology(TLD, USER_ID);
+	test('is idempotent — the second rebuild lands the same projection', async () => {
+		await rebuildOntology(TLD, USER_ID);
+		const again = await rebuildOntology(TLD, USER_ID);
 
 		expect(again.result).toBe(true);
-		expect(again.applied).toEqual([]);
-		expect(again.msg).toContain('already in sync');
+		expect(again.state.inSync).toBe(true);
+		expect(again.state.storedNodes).toBe(3); // zzo0 (main) + zzo1 + zzo2
+		expect(await storedTerm('zzo1')).toBe('First');
 	});
 
 	test('re-creates a node deleted out from under it (missing drift)', async () => {
-		await ensureOntology(TLD, USER_ID);
+		await rebuildOntology(TLD, USER_ID);
 		await sql.unsafe("DELETE FROM dd_ontology WHERE tipo = 'zzo1'");
 		await clearOntologyDerivedCaches();
 
 		const before = await inspectOntology(TLD);
 		expect(drift(before, 'missing')).toEqual(['zzo1']);
 
-		const outcome = await ensureOntology(TLD, USER_ID);
+		const outcome = await rebuildOntology(TLD, USER_ID);
 		expect(outcome.state.inSync).toBe(true);
-		expect(outcome.applied).toEqual(['+ zzo1']);
+		expect(await storedTerm('zzo1')).toBe('First');
 	});
 
-	test('deletes an ORPHANED node the matrix source no longer produces', async () => {
-		await ensureOntology(TLD, USER_ID);
+	test('drops an ORPHANED node the matrix source no longer produces', async () => {
+		await rebuildOntology(TLD, USER_ID);
 		// A node with this tld but no backing matrix record (e.g. a record was deleted).
 		await upsertDdOntologyNode({
 			tipo: 'zzo9',
@@ -147,13 +146,13 @@ describe('ensureOntology', () => {
 		const before = await inspectOntology(TLD);
 		expect(drift(before, 'orphaned')).toEqual(['zzo9']);
 
-		const outcome = await ensureOntology(TLD, USER_ID);
+		const outcome = await rebuildOntology(TLD, USER_ID);
 		expect(outcome.state.inSync).toBe(true);
-		expect(outcome.applied).toEqual(['− zzo9']);
+		expect(drift(outcome.state, 'orphaned')).toEqual([]);
 	});
 
 	test('fixes a STALE node when the matrix source changed', async () => {
-		await ensureOntology(TLD, USER_ID);
+		await rebuildOntology(TLD, USER_ID);
 		// Edit the matrix record without updating dd_ontology (the drift scenario).
 		await sql.unsafe(
 			`UPDATE matrix_ontology SET string = jsonb_set(string, '{ontology5,0,value}', '"Renamed"')
@@ -167,26 +166,25 @@ describe('ensureOntology', () => {
 		expect(stale?.kind).toBe('stale');
 		expect(stale?.diffColumns).toContain('term');
 
-		const outcome = await ensureOntology(TLD, USER_ID);
+		const outcome = await rebuildOntology(TLD, USER_ID);
 		expect(outcome.state.inSync).toBe(true);
 		expect(await storedTerm('zzo1')).toBe('Renamed');
-		expect(outcome.applied).toEqual(['~ zzo1 (term)']);
 	});
 
-	test('does NOT delete the bootstrap main node as an orphan', async () => {
-		const outcome = await ensureOntology(TLD, USER_ID);
-		// zzo0 is created by the bootstrap, not parsed from a matrix record — it must
-		// survive every reconcile, or the tld loses its runtime root.
-		const again = await ensureOntology(TLD, USER_ID);
-		expect(again.applied).toEqual([]);
-		expect(again.state.mainNodeOk).toBe(true);
+	test('re-derives the bootstrap main node — the wipe never leaves the tld rootless', async () => {
+		const outcome = await rebuildOntology(TLD, USER_ID);
+		// zzo0 is created by the bootstrap, not parsed from a matrix record. deleteTldNodes
+		// takes it with the rest, so the rebuild MUST put it back or the tld loses its
+		// runtime root.
 		expect(outcome.state.mainNodeOk).toBe(true);
-	});
-});
+		expect(outcome.applied).toContain(`main node ${TLD}0`);
 
-describe('rebuildOntology', () => {
+		const again = await rebuildOntology(TLD, USER_ID);
+		expect(again.state.mainNodeOk).toBe(true);
+	});
+
 	test('rebuilds transactionally and leaves NO backup table behind', async () => {
-		await ensureOntology(TLD, USER_ID);
+		await rebuildOntology(TLD, USER_ID);
 
 		const outcome = await rebuildOntology(TLD, USER_ID);
 

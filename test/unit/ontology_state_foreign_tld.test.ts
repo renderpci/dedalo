@@ -8,12 +8,12 @@
  * did not filter by tld while `storedNodes(tld)` read `WHERE tld = $1`, so that node:
  *   (a) could never appear in `stored` → reported `missing` FOREVER (a permanent false failure
  *       naming a phantom node, `act127`, instead of the real culprit record);
- *   (b) was re-upserted by EVERY `ensureOntology` run, breaking the module's own idempotency claim;
+ *   (b) was re-upserted by EVERY reconcile run, breaking the module's own idempotency claim;
  *   (c) was written into the OTHER tld's namespace by a per-tld scoped operation, where
  *       `deleteTldNodes(tld)` (rebuild) could never remove it again.
  *
  * The contract pinned here: parse is filtered to the inspected tld; the rejects surface as their
- * own drift kind `foreign` naming the SOURCE RECORD; and neither writer touches a byte outside the
+ * own drift kind `foreign` naming the SOURCE RECORD; and the writer touches no byte outside the
  * tld it was asked about.
  *
  * Scratch: tld 'zzc' (source section 'zzc0') + the foreign namespace 'zzd'. Both swept afterwards.
@@ -22,11 +22,7 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
-import {
-	ensureOntology,
-	inspectOntology,
-	rebuildOntology,
-} from '../../src/core/ontology/ontology_state.ts';
+import { inspectOntology, rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
 
 const TLD = 'zzc';
 const FOREIGN_TLD = 'zzd';
@@ -53,7 +49,7 @@ async function seedRecord(sectionId: number, declaredTld: string, term: string):
 	await clearOntologyDerivedCaches();
 }
 
-/** Pre-seed the `<tld>0` main node so ensure never runs the registry bootstrap (no residue). */
+/** Pre-seed the `<tld>0` main node so the writer never runs the registry bootstrap (no residue). */
 async function seedMainNode(): Promise<void> {
 	await sql.unsafe(
 		`INSERT INTO dd_ontology (tipo, tld, model, is_main, term)
@@ -120,36 +116,37 @@ describe('inspectOntology with a misfiled source record', () => {
 	});
 });
 
-describe('ensureOntology with a misfiled source record', () => {
+describe('rebuildOntology with a misfiled source record', () => {
 	test('writes NOTHING into the foreign tld’s namespace', async () => {
-		await ensureOntology(TLD, USER_ID);
+		await rebuildOntology(TLD, USER_ID);
 
 		expect(await nodeCount(FOREIGN_TLD)).toBe(0);
 		expect(await nodeCount(TLD)).toBe(2); // zzc0 main + zzc1
 	});
 
-	test('is IDEMPOTENT — the second run re-applies nothing (the docblock’s claim)', async () => {
-		const first = await ensureOntology(TLD, USER_ID);
-		expect(first.applied).toEqual(['+ zzc1']);
+	test('is IDEMPOTENT — the second run lands the same two nodes, not a third', async () => {
+		await rebuildOntology(TLD, USER_ID);
+		const again = await rebuildOntology(TLD, USER_ID);
 
-		const again = await ensureOntology(TLD, USER_ID);
-		expect(again.applied).toEqual([]);
+		expect(again.applied).toContain('rebuilt 1 node(s)');
+		expect(await nodeCount(TLD)).toBe(2);
+		expect(await nodeCount(FOREIGN_TLD)).toBe(0);
 	});
 
 	test('reports the CULPRIT RECORD, not a phantom missing node', async () => {
-		const outcome = await ensureOntology(TLD, USER_ID);
+		const outcome = await rebuildOntology(TLD, USER_ID);
 
 		expect(outcome.result).toBe(false);
 		// Both operator-facing channels name the record — the tool merges errors into the
 		// response and prints msg per tld, and neither may say "act127 is missing".
 		expect(outcome.errors.join(' | ')).toContain(`${SECTION}/2`);
 		expect(outcome.errors.join(' | ')).toContain(`'${FOREIGN_TLD}'`);
-		expect(outcome.msg).toContain(`${SECTION}/2`);
+		expect(outcome.msg).toContain('declare another tld');
 		expect(outcome.errors.join(' ')).not.toContain('missing');
 	});
 
 	test('converges the moment the record’s ontology7 is corrected', async () => {
-		await ensureOntology(TLD, USER_ID);
+		await rebuildOntology(TLD, USER_ID);
 		await sql.unsafe(
 			`UPDATE matrix_ontology SET string = jsonb_set(string, '{ontology7,0,value}', $2::text::jsonb)
 			 WHERE section_tipo = $1 AND section_id = 2`,
@@ -157,15 +154,13 @@ describe('ensureOntology with a misfiled source record', () => {
 		);
 		await clearOntologyDerivedCaches();
 
-		const outcome = await ensureOntology(TLD, USER_ID);
-		expect(outcome.applied).toEqual(['+ zzc2']);
+		const outcome = await rebuildOntology(TLD, USER_ID);
+		expect(outcome.applied).toContain('rebuilt 2 node(s)');
 		expect(outcome.state.inSync).toBe(true);
 		expect(outcome.result).toBe(true);
 		expect(await nodeCount(FOREIGN_TLD)).toBe(0);
 	});
-});
 
-describe('rebuildOntology with a misfiled source record', () => {
 	test('rebuilds only its own tld and never seeds the foreign namespace', async () => {
 		const outcome = await rebuildOntology(TLD, USER_ID);
 

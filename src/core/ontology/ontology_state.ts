@@ -12,19 +12,26 @@
  * The PHP-inherited design enforced that invariant ONE way: `regenerate` WIPED every
  * node for the TLD and rebuilt from scratch (`ontology_write.ts` deleteTldNodes → reinsert),
  * even when a single record had changed, with a leftover `dd_ontology_bk` table as its only
- * — and completely untested — rollback. That is slow (rebuild the world) and fragile (a
- * crash between the wipe and the reinsert leaves the runtime ontology EMPTY; two concurrent
- * runs clobber each other's backup table).
+ * — and completely untested — rollback. That is fragile (a crash between the wipe and the
+ * reinsert leaves the runtime ontology EMPTY; two concurrent runs clobber each other's
+ * backup table).
  *
- * This module replaces that with a DIFF:
+ * This module replaces that with ONE READ and ONE WRITE:
  *   - `inspectOntology(tld)`  — pure read. The drift: which nodes are missing, stale or
  *     orphaned, and whether the main node is present. Nothing today can show you this.
- *   - `ensureOntology(tld)`   — idempotent INCREMENTAL reconcile: upsert the missing/stale
- *     nodes, delete the orphaned ones, bootstrap the main node if absent. NO WIPE, so the
- *     runtime ontology is never momentarily empty, and a healthy TLD is a no-op.
- *   - `rebuildOntology(tld)`  — the nuclear option (the old regenerate), but TRANSACTIONAL:
- *     the delete + reinsert run inside ONE `withTransaction`, so a mid-run failure rolls
- *     back automatically — no backup table, no leftover, no corruption window.
+ *   - `rebuildOntology(tld)`  — the wipe-and-rebuild, but TRANSACTIONAL: the delete +
+ *     reinsert run inside ONE `withTransaction`, so a mid-run failure rolls back
+ *     automatically — no backup table, no leftover, no corruption window.
+ *
+ * WHY THERE IS NO INCREMENTAL RECONCILE (removed 2026-08-11). An `ensureOntology` used to sit
+ * between the two: upsert the missing/stale nodes, delete the orphaned ones, fill the main node
+ * if absent. Its ONLY claim over rebuild was "NO WIPE, so the runtime ontology is never
+ * momentarily empty" — and that claim died the day rebuild became transactional. Under MVCC no
+ * other session ever observes the empty window: readers see the old rows until the commit
+ * publishes the new ones atomically. What remained was a strictly weaker writer (it FILLS the
+ * main node; rebuild re-derives it) offered next to the stronger one, i.e. a decision the
+ * operator had to make with no criterion to make it by — and a second write path to keep in
+ * step with the parser forever. One writer, no choice, no drift between them.
  *
  * NODE SOURCES (why orphan detection is clean). For tld `es`:
  *   - matrix records in section `es0` parse to nodes `es1, es2, …`  (the PROJECTION);
@@ -43,8 +50,8 @@
  * node could never appear in `stored`, so it was reported `missing` forever (an unfixable false
  * failure), re-upserted on every run (breaking idempotency), and WRITTEN into the other tld's
  * namespace by a per-tld operation — where `deleteTldNodes(tld)` could never take it back.
- * Neither writer here touches a byte outside the tld it was asked about: cleaning up a node the
- * old bug leaked into tld X is X's own reconcile (it sees it as an orphan). The comparison is
+ * Nothing here touches a byte outside the tld it was asked about: cleaning up a node the old bug
+ * leaked into tld X is X's own rebuild (its wipe is scoped to X). The comparison is
  * EXACT, not case- or whitespace-insensitive: `ontology7 = "ES"` is a misfiled record too, and
  * saying so beats silently minting an `ES7` tipo. Gated by
  * test/unit/ontology_state_foreign_tld.test.ts.
@@ -59,23 +66,23 @@
  *
  * It is a WARNING CHANNEL, NOT A DRIFT KIND, and that distinction was itself a bug once: filed
  * as drift it made `inSync` false, which the parser tool renders red — while nothing may write
- * those records (report-only, and normalizeOntologyTld skips contentless shells), so Reconcile
- * and Regenerate both reported success against a panel that could never go green again. `drift`
+ * those records (report-only, and normalizeOntologyTld skips contentless shells), so Rebuild
+ * reported success against a panel that could never go green again. `drift`
  * means "dd_ontology disagrees with what the source parses to"; a record that parses to nothing
  * is absent from both sides and disagrees with nothing. Prevention lives upstream:
  * ontology/tld.ts requiredOntologyTld (the ONT-TLD rule), the birth stamp in
  * section/record/record_defaults.ts, the save refusal in section/record/save_component.ts, and
  * the post-COPY normalization in ontology/data_io_import.ts.
  *
- * SINGLE WRITER: nothing outside this module wipe-and-rebuilds a TLD's dd_ontology. The
- * legacy `regenerateRecordsInDdOntology` is retired onto `rebuildOntology`. Guarded by
+ * SINGLE WRITER: nothing outside this module wipe-and-rebuilds a TLD's dd_ontology, and
+ * inside it there is exactly ONE writer. The legacy `regenerateRecordsInDdOntology` is
+ * retired onto `rebuildOntology`. Guarded by
  * test/unit/ontology_single_writer_tripwire.test.ts.
  */
 
 import {
 	type DdOntologyNode,
 	type DdOntologyRow,
-	deleteDdOntologyNode,
 	deleteTldNodes,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
@@ -95,7 +102,7 @@ import { mapTldToTargetSectionTipo, safeTld } from './tld.ts';
 /**
  * One node's place in the diff. `foreign` is not a dd_ontology state at all — it is a SOURCE
  * record of this tld's section whose `ontology7` declares a different tld, so it can never be
- * part of this tld's projection. Reconcile refuses it and names it; only a data fix clears it.
+ * part of this tld's projection. Rebuild refuses it and names it; only a data fix clears it.
  */
 /**
  * NOTE: tld-less source records are deliberately NOT a drift kind. They are not a
@@ -140,12 +147,12 @@ export interface OntologyState {
 	inSync: boolean;
 }
 
-export interface EnsureOntologyResult {
+export interface OntologyWriteResult {
 	result: boolean;
 	msg: string;
 	errors: string[];
 	state: OntologyState;
-	/** What ensure actually changed (empty on a no-op reconcile). */
+	/** What the write actually changed. */
 	applied: string[];
 }
 
@@ -247,7 +254,7 @@ function foreignError(item: ForeignRecord, tld: string): string {
 }
 
 /**
- * Did a reconcile achieve everything a reconcile CAN achieve?
+ * Did a rebuild achieve everything a rebuild CAN achieve?
  *
  * `inSync` is the answer for the projection, and tld-less records no longer disturb it (they
  * ride their own channel). What this adds is a WHOLESALE-FAILURE floor: if the section holds
@@ -255,17 +262,17 @@ function foreignError(item: ForeignRecord, tld: string): string {
  * "converged" would report a rebuild that deleted every node and re-inserted none as a success.
  * Something systemic is wrong in that case — never a per-record data fault — so it must fail.
  */
-function reconcileConverged(state: OntologyState): boolean {
+function rebuildConverged(state: OntologyState): boolean {
 	if (state.matrixNodes === 0 && state.tldlessNodes > 0) return false;
 	return state.inSync;
 }
 
 /**
- * The warning suffix appended to a SUCCESSFUL reconcile message, or ''.
+ * The warning suffix appended to a SUCCESSFUL rebuild message, or ''.
  *
  * A tld-less record is a WARNING, not an error: unlike `foreign` — which would land a node in
- * another tld's namespace, where this tld's own writers could never take it back — it
- * contributes nothing to the projection, so reconciling the rest is perfectly safe. But it is
+ * another tld's namespace, where this tld's own writer could never take it back — it
+ * contributes nothing to the projection, so rebuilding the rest is perfectly safe. But it is
  * still an administrator's record that the tree will never show, so a green run says so every
  * time rather than letting it pass in silence (the whole bug this kind exists to close).
  *
@@ -306,7 +313,7 @@ async function storedNodes(tld: string): Promise<Map<string, DdOntologyRow>> {
  * re-order is not a real diff), and every "absent" shape collapses to the same token: null,
  * `{}` and `[]` all read as absent. dd_ontology stores an empty component as SQL NULL, but
  * the parser may hand back `{}`/`[]`/`"{}"` for the same emptiness — comparing those as
- * different would churn live nodes on every reconcile for no semantic change.
+ * different would report every live node as drifted on every inspect for no semantic change.
  */
 function stable(value: unknown): string {
 	const norm = (v: unknown): unknown => {
@@ -325,10 +332,15 @@ function stable(value: unknown): string {
 /**
  * `propiedades` is a TEXT column holding v5-legacy JSON. The parser PRETTY-PRINTS it
  * (byte-exact PHP `JSON_PRETTY_PRINT` — 4-space indent), while a record written by an
- * older path may be MINIFIED. Those are the same content, and reconciling the whitespace
- * would rewrite huge swathes of the live ontology (779 of the `dd` tld's nodes) for zero
- * semantic gain — and churn the propiedades byte-contract. Compare by MEANING: parse both
- * and diff structurally; fall back to a text compare only when a side is not valid JSON.
+ * older path may be MINIFIED. Those are the same content, and calling the whitespace a
+ * difference would paint huge swathes of the live ontology as drifted (779 of the `dd` tld's
+ * nodes) for zero semantic gain, sending an operator to rebuild over nothing. Compare by
+ * MEANING: parse both and diff structurally; fall back to a text compare only when a side is
+ * not valid JSON.
+ *
+ * (A rebuild rewrites every row of the tld regardless, so it normalizes those bytes to the
+ * parser's pretty-printed form. That is the canonical shape — the point here is only that
+ * the DIFF must not manufacture a reason to run one.)
  */
 function propiedadesDiffer(a: string | null, b: string | null): boolean {
 	if ((a ?? '') === (b ?? '')) return false;
@@ -424,8 +436,8 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 	// not a disagreement between them. Filing it as drift made `inSync` false, which
 	// this tool's client renders as a red "drifted" check; and since nothing may
 	// write those records (report-only, and normalizeOntologyTld deliberately skips
-	// contentless shells), Reconcile and Regenerate both returned success while the
-	// panel stayed red forever. An install carrying 92 legacy shells could not reach
+	// contentless shells), Rebuild returned success while the panel stayed red
+	// forever. An install carrying 92 legacy shells could not reach
 	// green by any action available to it.
 	//
 	// So: `inSync` keeps its meaning, and `tldlessRecords` carries the finding.
@@ -460,107 +472,14 @@ async function ensureMainNode(tld: string, userId: number): Promise<{ error: str
 }
 
 /**
- * Converge ONE TLD's dd_ontology to its matrix source — INCREMENTALLY. The only
- * non-destructive writer: it upserts what is missing/stale and deletes what is
- * orphaned, so the runtime ontology is never momentarily empty.
- *
- * IDEMPOTENT, UNCONDITIONALLY: a TLD already in sync reports `applied: []`, and so does a
- * second run over a TLD that CANNOT reach sync (a misfiled source record — see the module
- * header). Everything this function writes lands inside `tld`'s own namespace, so a re-run
- * always sees its own effect; a write it could not observe would be re-applied forever.
- */
-export async function ensureOntology(rawTld: string, userId = -1): Promise<EnsureOntologyResult> {
-	const applied: string[] = [];
-	const errors: string[] = [];
-	const tld = safeTld(rawTld.trim().toLowerCase());
-	if (tld === null) {
-		const state = await inspectOntology(rawTld);
-		return {
-			result: false,
-			msg: `'${rawTld}' is not a valid TLD`,
-			errors: [`invalid tld '${rawTld}'`],
-			state,
-			applied,
-		};
-	}
-
-	const { own: parsed, foreign } = await parseMatrixNodes(tld);
-	const stored = await storedNodes(tld);
-	const mainTipo = `${tld}0`;
-
-	// 0. misfiled source records — REFUSED, never chased. Writing them would put a node in
-	// another tld's namespace (and this tld could never see it again, so every run would
-	// re-upsert it). They are reported as an error naming the record an operator can fix.
-	for (const item of foreign) errors.push(foreignError(item, tld));
-
-	// 1. upsert missing + stale (parse is authoritative — dd_ontology is its projection).
-	for (const [tipo, node] of parsed) {
-		const row = stored.get(tipo);
-		const isMissing = row === undefined;
-		const diff = isMissing ? [] : nodeDiffColumns(node, row);
-		if (isMissing || diff.length > 0) {
-			try {
-				await upsertDdOntologyNode(node);
-				applied.push(isMissing ? `+ ${tipo}` : `~ ${tipo} (${diff.join(',')})`);
-			} catch (error) {
-				errors.push(`upsert ${tipo}: ${String(error)}`);
-			}
-		}
-	}
-
-	// 2. delete orphans (a dd_ontology node the matrix source no longer produces).
-	for (const tipo of stored.keys()) {
-		if (tipo === mainTipo) continue;
-		if (!parsed.has(tipo)) {
-			try {
-				await deleteDdOntologyNode(tipo);
-				applied.push(`− ${tipo}`);
-			} catch (error) {
-				errors.push(`delete ${tipo}: ${String(error)}`);
-			}
-		}
-	}
-
-	// 3. the main node, only if absent (fill-only — a present one is rebuild's job to redo).
-	if ((stored.get(mainTipo)?.is_main ?? false) !== true) {
-		const main = await ensureMainNode(tld, userId);
-		if (main.error !== null) errors.push(main.error);
-		else applied.push(`main node ${mainTipo}`);
-	}
-
-	const state = await inspectOntology(tld);
-	const converged = reconcileConverged(state);
-	return {
-		result: converged && errors.length === 0,
-		msg: converged
-			? // Converged. A tld-less record does not contradict that — it is not part of the
-				// projection at all — but it IS an invisible record, so say so every time.
-				`${
-					applied.length === 0
-						? `Ontology '${tld}' is already in sync`
-						: `Ontology '${tld}' reconciled`
-				}${tldlessNote(state)}`
-			: // Name the cause the operator can act on: a misfiled record is a DATA fix, not
-				// something a re-run will ever converge.
-				state.foreignNodes > 0
-				? `Ontology '${tld}': ${state.foreignNodes} source record(s) declare another tld — ${foreign
-						.map((item) => `${item.source} → '${item.declaredTld}'`)
-						.join(', ')}`
-				: `Ontology '${tld}' is still out of sync`,
-		errors,
-		state,
-		applied,
-	};
-}
-
-/**
- * Wipe and rebuild ONE TLD's dd_ontology from its matrix source — the nuclear option,
+ * Wipe and rebuild ONE TLD's dd_ontology from its matrix source — the ONE writer,
  * TRANSACTIONAL. The delete + reinsert run inside one `withTransaction`: a failure at any
  * point rolls the whole thing back, so there is no window where the runtime ontology is
- * empty and no leftover backup table. Use only when the incremental `ensureOntology`
- * cannot converge (structural corruption). Returns the same shape as ensure.
+ * empty and no leftover backup table. Concurrent readers never see the wipe — MVCC publishes
+ * the new projection atomically at commit — which is why no incremental companion is needed
+ * (module header).
  */
-export async function rebuildOntology(rawTld: string, userId = -1): Promise<EnsureOntologyResult> {
+export async function rebuildOntology(rawTld: string, userId = -1): Promise<OntologyWriteResult> {
 	const tld = safeTld(rawTld.trim().toLowerCase());
 	if (tld === null) {
 		const state = await inspectOntology(rawTld);
@@ -605,7 +524,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Ensu
 	}
 
 	const state = await inspectOntology(tld);
-	const converged = reconcileConverged(state);
+	const converged = rebuildConverged(state);
 	return {
 		result: converged,
 		msg: converged
@@ -619,22 +538,12 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Ensu
 	};
 }
 
-/** Reconcile several TLDs, collecting a per-TLD outcome. */
-export async function ensureOntologies(
-	tlds: readonly string[],
-	userId = -1,
-): Promise<EnsureOntologyResult[]> {
-	const out: EnsureOntologyResult[] = [];
-	for (const tld of tlds) out.push(await ensureOntology(tld, userId));
-	return out;
-}
-
 /** Rebuild several TLDs, collecting a per-TLD outcome. */
 export async function rebuildOntologies(
 	tlds: readonly string[],
 	userId = -1,
-): Promise<EnsureOntologyResult[]> {
-	const out: EnsureOntologyResult[] = [];
+): Promise<OntologyWriteResult[]> {
+	const out: OntologyWriteResult[] = [];
 	for (const tld of tlds) out.push(await rebuildOntology(tld, userId));
 	return out;
 }

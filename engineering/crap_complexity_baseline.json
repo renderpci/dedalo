@@ -6,7 +6,7 @@
 	"summary": {
 		"files": 465,
 		"functions": 3685,
-		"functionsOverCap": 701,
+		"functionsOverCap": 700,
 		"filesOverCap": 275
 	},
 	"files": {
@@ -156,7 +156,7 @@
 		"src/core/ontology/hierarchy_state.ts": 26,
 		"src/core/ontology/labels.ts": 11,
 		"src/core/ontology/ontology_delete.ts": 9,
-		"src/core/ontology/ontology_state.ts": 20,
+		"src/core/ontology/ontology_state.ts": 15,
 		"src/core/ontology/ontology_update.ts": 28,
 		"src/core/ontology/ontology_update_target.ts": 12,
 		"src/core/ontology/ontology_write.ts": 19,

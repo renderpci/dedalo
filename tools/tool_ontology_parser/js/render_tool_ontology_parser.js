@@ -633,19 +633,6 @@ const get_content_data = async function(self) {
 				return button
 			}
 
-		// Reconcile - the DEFAULT: incremental, non-destructive. Only what drifted.
-			make_action({
-				label	: self.get_tool_label('reconcile') || 'Reconcile',
-				cls		: 'warning repair',
-				desc	: self.get_tool_label('reconcile_desc')
-					|| 'Update only what drifted. Non-destructive.',
-				run		: (button) => run_action(button,
-					() => self.reconcile_ontologies(),
-					self.get_tool_label('confirm_reconcile')
-						|| 'Reconcile the selected ontologies?\n\nOnly missing, changed or orphaned nodes are updated. Nothing is wiped.'
-				)
-			})
-
 		// Repair TLDs - the only action that writes SOURCE records, not the projection.
 		// A node's tld is DERIVED from its section (ONT-TLD), so the edit form renders it
 		// read-only — which is why this button exists: without it the status panel names
@@ -660,20 +647,22 @@ const get_content_data = async function(self) {
 				run		: (button) => run_action(button,
 					() => self.repair_tlds(),
 					self.get_tool_label('confirm_repair_tlds')
-						|| 'Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Reconcile afterwards.'
+						|| 'Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Rebuild afterwards.'
 				)
 			})
 
-		// Rebuild - the NUCLEAR option: transactional wipe-and-rebuild.
+		// Rebuild - the ONE write onto the projection: transactional wipe-and-rebuild.
+		// (The incremental "Reconcile" companion was removed 2026-08-11: a transactional
+		// rebuild publishes atomically, so it bought nothing but a choice with no criterion.)
 			make_action({
 				label	: self.get_tool_label('regenerate') || 'Rebuild',
 				cls		: 'warning gear',
 				desc	: self.get_tool_label('regenerate_desc')
-					|| 'Wipe & re-derive from source. Use only if Reconcile can’t fix it.',
+					|| 'Wipe & re-derive dd_ontology from the ontology records.',
 				run		: (button) => run_action(button,
 					() => self.regenerate_ontologies(),
 					self.get_tool_label('confirm_rebuild')
-						|| 'REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback). Use only when Reconcile cannot fix it.\n\nContinue?'
+						|| 'REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback): readers keep seeing the current ontology until it commits.\n\nContinue?'
 				)
 			})
 

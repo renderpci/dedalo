@@ -477,253 +477,103 @@
           },
           {
             "lang": "lg-eng",
-            "name": "reconcile",
-            "value": "Reconcile"
-          },
-          {
-            "lang": "lg-spa",
-            "name": "reconcile",
-            "value": "Reconciliar"
-          },
-          {
-            "lang": "lg-cat",
-            "name": "reconcile",
-            "value": "Reconciliar"
-          },
-          {
-            "lang": "lg-eus",
-            "name": "reconcile",
-            "value": "Bateratu"
-          },
-          {
-            "lang": "lg-fra",
-            "name": "reconcile",
-            "value": "Réconcilier"
-          },
-          {
-            "lang": "lg-por",
-            "name": "reconcile",
-            "value": "Reconciliar"
-          },
-          {
-            "lang": "lg-deu",
-            "name": "reconcile",
-            "value": "Abgleichen"
-          },
-          {
-            "lang": "lg-ita",
-            "name": "reconcile",
-            "value": "Riconcilia"
-          },
-          {
-            "lang": "lg-ell",
-            "name": "reconcile",
-            "value": "Συμφιλίωση"
-          },
-          {
-            "lang": "lg-nep",
-            "name": "reconcile",
-            "value": "मिलान गर्नुहोस्"
-          },
-          {
-            "lang": "lg-eng",
-            "name": "reconcile_desc",
-            "value": "Update only what drifted. Non-destructive."
-          },
-          {
-            "lang": "lg-spa",
-            "name": "reconcile_desc",
-            "value": "Actualiza solo lo que se ha desviado. No destructivo."
-          },
-          {
-            "lang": "lg-cat",
-            "name": "reconcile_desc",
-            "value": "Actualitza només allò que s'ha desviat. No destructiu."
-          },
-          {
-            "lang": "lg-eus",
-            "name": "reconcile_desc",
-            "value": "Aldendu dena bakarrik eguneratzen du. Ez suntsitzailea."
-          },
-          {
-            "lang": "lg-fra",
-            "name": "reconcile_desc",
-            "value": "Met à jour uniquement ce qui a dévié. Non destructif."
-          },
-          {
-            "lang": "lg-por",
-            "name": "reconcile_desc",
-            "value": "Atualiza apenas o que divergiu. Não destrutivo."
-          },
-          {
-            "lang": "lg-deu",
-            "name": "reconcile_desc",
-            "value": "Aktualisiert nur, was abgewichen ist. Nicht destruktiv."
-          },
-          {
-            "lang": "lg-ita",
-            "name": "reconcile_desc",
-            "value": "Aggiorna solo ciò che si è discostato. Non distruttivo."
-          },
-          {
-            "lang": "lg-ell",
-            "name": "reconcile_desc",
-            "value": "Ενημερώνει μόνο ό,τι έχει αποκλίνει. Μη καταστροφικό."
-          },
-          {
-            "lang": "lg-nep",
-            "name": "reconcile_desc",
-            "value": "भिन्न भएको मात्र अद्यावधिक गर्छ। विनाशकारी होइन।"
-          },
-          {
-            "lang": "lg-eng",
-            "name": "confirm_reconcile",
-            "value": "Reconcile the selected ontologies?\n\nOnly missing, changed or orphaned nodes are updated. Nothing is wiped."
-          },
-          {
-            "lang": "lg-spa",
-            "name": "confirm_reconcile",
-            "value": "¿Reconciliar las ontologías seleccionadas?\n\nSolo se actualizan los nodos que faltan, han cambiado o están huérfanos. No se borra nada."
-          },
-          {
-            "lang": "lg-cat",
-            "name": "confirm_reconcile",
-            "value": "Reconciliar les ontologies seleccionades?\n\nNomés s'actualitzen els nodes que falten, han canviat o són orfes. No s'esborra res."
-          },
-          {
-            "lang": "lg-eus",
-            "name": "confirm_reconcile",
-            "value": "Hautatutako ontologiak bateratu?\n\nFalta diren, aldatu diren edo umezurtz dauden nodoak baino ez dira eguneratzen. Ez da ezer ezabatzen."
-          },
-          {
-            "lang": "lg-fra",
-            "name": "confirm_reconcile",
-            "value": "Réconcilier les ontologies sélectionnées ?\n\nSeuls les nœuds manquants, modifiés ou orphelins sont mis à jour. Rien n'est effacé."
-          },
-          {
-            "lang": "lg-por",
-            "name": "confirm_reconcile",
-            "value": "Reconciliar as ontologias selecionadas?\n\nApenas os nós em falta, alterados ou órfãos são atualizados. Nada é apagado."
-          },
-          {
-            "lang": "lg-deu",
-            "name": "confirm_reconcile",
-            "value": "Die ausgewählten Ontologien abgleichen?\n\nEs werden nur fehlende, geänderte oder verwaiste Knoten aktualisiert. Es wird nichts gelöscht."
-          },
-          {
-            "lang": "lg-ita",
-            "name": "confirm_reconcile",
-            "value": "Riconciliare le ontologie selezionate?\n\nVengono aggiornati solo i nodi mancanti, modificati o orfani. Non viene cancellato nulla."
-          },
-          {
-            "lang": "lg-ell",
-            "name": "confirm_reconcile",
-            "value": "Συμφιλίωση των επιλεγμένων οντολογιών;\n\nΕνημερώνονται μόνο οι κόμβοι που λείπουν, έχουν αλλάξει ή είναι ορφανοί. Δεν διαγράφεται τίποτα."
-          },
-          {
-            "lang": "lg-nep",
-            "name": "confirm_reconcile",
-            "value": "चयन गरिएका ओन्टोलोजीहरू मिलान गर्ने?\n\nहराइरहेका, परिवर्तन भएका वा अनाथ नोडहरू मात्र अद्यावधिक हुन्छन्। केही पनि मेटिँदैन।"
-          },
-          {
-            "lang": "lg-eng",
             "name": "regenerate_desc",
-            "value": "Wipe & re-derive from source. Use only if Reconcile can’t fix it."
+            "value": "Wipe & re-derive dd_ontology from the ontology records."
           },
           {
             "lang": "lg-spa",
             "name": "regenerate_desc",
-            "value": "Borra y vuelve a derivar desde la fuente. Úsalo solo si Reconciliar no puede arreglarlo."
+            "value": "Borra y vuelve a derivar dd_ontology a partir de los registros de la ontología."
           },
           {
             "lang": "lg-cat",
             "name": "regenerate_desc",
-            "value": "Esborra i torna a derivar des de la font. Utilitza-ho només si Reconciliar no ho pot arreglar."
+            "value": "Esborra i torna a derivar dd_ontology a partir dels registres de l’ontologia."
           },
           {
             "lang": "lg-eus",
             "name": "regenerate_desc",
-            "value": "Ezabatu eta berriro eratorri iturritik. Erabili Bateratzeak konpondu ezin badu bakarrik."
+            "value": "Ezabatu eta dd_ontology berriro eratorri ontologiaren erregistroetatik."
           },
           {
             "lang": "lg-fra",
             "name": "regenerate_desc",
-            "value": "Efface et redérive à partir de la source. À n'utiliser que si Réconcilier ne peut pas corriger le problème."
+            "value": "Efface et redérive dd_ontology à partir des enregistrements de l’ontologie."
           },
           {
             "lang": "lg-por",
             "name": "regenerate_desc",
-            "value": "Apaga e volta a derivar a partir da fonte. Utilize apenas se Reconciliar não conseguir corrigir."
+            "value": "Apaga e volta a derivar dd_ontology a partir dos registos da ontologia."
           },
           {
             "lang": "lg-deu",
             "name": "regenerate_desc",
-            "value": "Löschen und aus der Quelle neu ableiten. Nur verwenden, wenn Abgleichen das Problem nicht beheben kann."
+            "value": "Löscht dd_ontology und leitet es aus den Ontologie-Datensätzen neu ab."
           },
           {
             "lang": "lg-ita",
             "name": "regenerate_desc",
-            "value": "Cancella e ricava nuovamente dalla sorgente. Usare solo se Riconcilia non riesce a risolvere."
+            "value": "Cancella e ricava nuovamente dd_ontology dai record dell’ontologia."
           },
           {
             "lang": "lg-ell",
             "name": "regenerate_desc",
-            "value": "Διαγράφει και παράγει εκ νέου από την πηγή. Χρησιμοποιήστε το μόνο αν η Συμφιλίωση δεν μπορεί να το διορθώσει."
+            "value": "Διαγράφει και παράγει εκ νέου το dd_ontology από τις εγγραφές της οντολογίας."
           },
           {
             "lang": "lg-nep",
             "name": "regenerate_desc",
-            "value": "मेटाएर स्रोतबाट पुनः व्युत्पन्न गर्छ। मिलान गर्नाले समाधान गर्न नसके मात्र प्रयोग गर्नुहोस्।"
+            "value": "dd_ontology मेटाएर ओन्टोलोजीका रेकर्डहरूबाट पुनः व्युत्पन्न गर्छ।"
           },
           {
             "lang": "lg-eng",
             "name": "confirm_rebuild",
-            "value": "REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback). Use only when Reconcile cannot fix it.\n\nContinue?"
+            "value": "REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback): readers keep seeing the current ontology until it commits.\n\nContinue?"
           },
           {
             "lang": "lg-spa",
             "name": "confirm_rebuild",
-            "value": "RECONSTRUIR borra y vuelve a derivar dd_ontology para los TLD seleccionados a partir de la fuente matrix.\n\nCada TLD se reconstruye en una sola transacción (reversión segura). Úsalo solo cuando Reconciliar no pueda arreglarlo.\n\n¿Continuar?"
+            "value": "RECONSTRUIR borra y vuelve a derivar dd_ontology para los TLD seleccionados a partir de la fuente matrix.\n\nCada TLD se reconstruye en una sola transacción (reversión segura): las lecturas siguen viendo la ontología actual hasta que se confirma.\n\n¿Continuar?"
           },
           {
             "lang": "lg-cat",
             "name": "confirm_rebuild",
-            "value": "RECONSTRUIR esborra i torna a derivar dd_ontology per als TLD seleccionats a partir de la font matrix.\n\nCada TLD es reconstrueix en una sola transacció (reversió segura). Utilitza-ho només quan Reconciliar no ho pugui arreglar.\n\nContinuar?"
+            "value": "RECONSTRUIR esborra i torna a derivar dd_ontology per als TLD seleccionats a partir de la font matrix.\n\nCada TLD es reconstrueix en una sola transacció (reversió segura): les lectures continuen veient l’ontologia actual fins que es confirma.\n\nContinuar?"
           },
           {
             "lang": "lg-eus",
             "name": "confirm_rebuild",
-            "value": "BERRERAIKITZEAK dd_ontology ezabatu eta berriro eratortzen du hautatutako TLDetarako matrix iturritik.\n\nTLD bakoitza transakzio bakarrean berreraikitzen da (atzera-bueltak seguru). Erabili Bateratzeak konpondu ezin duenean bakarrik.\n\nJarraitu?"
+            "value": "BERRERAIKITZEAK dd_ontology ezabatu eta berriro eratortzen du hautatutako TLDetarako matrix iturritik.\n\nTLD bakoitza transakzio bakarrean berreraikitzen da (atzera-bueltak seguru): irakurketek uneko ontologia ikusten jarraitzen dute berretsi arte.\n\nJarraitu?"
           },
           {
             "lang": "lg-fra",
             "name": "confirm_rebuild",
-            "value": "RECONSTRUIRE efface et redérive dd_ontology pour les TLD sélectionnés à partir de la source matrix.\n\nChaque TLD est reconstruit dans une seule transaction (annulation sûre). À n'utiliser que lorsque Réconcilier ne peut pas corriger le problème.\n\nContinuer ?"
+            "value": "RECONSTRUIRE efface et redérive dd_ontology pour les TLD sélectionnés à partir de la source matrix.\n\nChaque TLD est reconstruit dans une seule transaction (annulation sûre) : les lectures continuent de voir l’ontologie actuelle jusqu’à la validation.\n\nContinuer ?"
           },
           {
             "lang": "lg-por",
             "name": "confirm_rebuild",
-            "value": "RECONSTRUIR apaga e volta a derivar dd_ontology para os TLD selecionados a partir da fonte matrix.\n\nCada TLD é reconstruído numa única transação (reversão segura). Utilize apenas quando Reconciliar não conseguir corrigir.\n\nContinuar?"
+            "value": "RECONSTRUIR apaga e volta a derivar dd_ontology para os TLD selecionados a partir da fonte matrix.\n\nCada TLD é reconstruído numa única transação (reversão segura): as leituras continuam a ver a ontologia atual até ser confirmada.\n\nContinuar?"
           },
           {
             "lang": "lg-deu",
             "name": "confirm_rebuild",
-            "value": "NEU AUFBAUEN löscht dd_ontology für die ausgewählten TLD(s) und leitet sie erneut aus der Matrix-Quelle ab.\n\nJede TLD wird in einer Transaktion neu aufgebaut (sicheres Rollback). Nur verwenden, wenn Abgleichen das Problem nicht beheben kann.\n\nFortfahren?"
+            "value": "NEU AUFBAUEN löscht dd_ontology für die ausgewählten TLD(s) und leitet sie erneut aus der Matrix-Quelle ab.\n\nJede TLD wird in einer Transaktion neu aufgebaut (sicheres Rollback): Lesevorgänge sehen weiterhin die aktuelle Ontologie, bis der Commit erfolgt.\n\nFortfahren?"
           },
           {
             "lang": "lg-ita",
             "name": "confirm_rebuild",
-            "value": "RICOSTRUISCI cancella e ricava nuovamente dd_ontology per i TLD selezionati dalla sorgente matrix.\n\nOgni TLD viene ricostruito in un'unica transazione (rollback sicuro). Usare solo quando Riconcilia non riesce a risolvere il problema.\n\nContinuare?"
+            "value": "RICOSTRUISCI cancella e ricava nuovamente dd_ontology per i TLD selezionati dalla sorgente matrix.\n\nOgni TLD viene ricostruito in un'unica transazione (rollback sicuro): le letture continuano a vedere l'ontologia attuale fino al commit.\n\nContinuare?"
           },
           {
             "lang": "lg-ell",
             "name": "confirm_rebuild",
-            "value": "Η ΑΝΑΔΟΜΗΣΗ διαγράφει και παράγει εκ νέου το dd_ontology για τα επιλεγμένα TLD από την πηγή matrix.\n\nΚάθε TLD αναδομείται σε μία συναλλαγή (ασφαλής επαναφορά). Χρησιμοποιήστε το μόνο όταν η Συμφιλίωση δεν μπορεί να το διορθώσει.\n\nΣυνέχεια;"
+            "value": "Η ΑΝΑΔΟΜΗΣΗ διαγράφει και παράγει εκ νέου το dd_ontology για τα επιλεγμένα TLD από την πηγή matrix.\n\nΚάθε TLD αναδομείται σε μία συναλλαγή (ασφαλής επαναφορά): οι αναγνώσεις εξακολουθούν να βλέπουν την τρέχουσα οντολογία μέχρι την οριστικοποίηση.\n\nΣυνέχεια;"
           },
           {
             "lang": "lg-nep",
             "name": "confirm_rebuild",
-            "value": "पुनर्निर्माणले चयन गरिएका TLD का लागि dd_ontology मेटाएर म्याट्रिक्स स्रोतबाट पुनः व्युत्पन्न गर्छ।\n\nप्रत्येक TLD एउटै लेनदेनमा पुनर्निर्माण हुन्छ (सुरक्षित रोलब्याक)। मिलान गर्नाले समाधान गर्न नसक्दा मात्र प्रयोग गर्नुहोस्।\n\nजारी राख्ने?"
+            "value": "पुनर्निर्माणले चयन गरिएका TLD का लागि dd_ontology मेटाएर म्याट्रिक्स स्रोतबाट पुनः व्युत्पन्न गर्छ।\n\nप्रत्येक TLD एउटै लेनदेनमा पुनर्निर्माण हुन्छ (सुरक्षित रोलब्याक): कमिट नहुँदासम्म पढाइहरूले हालको ओन्टोलोजी नै देख्छन्।\n\nजारी राख्ने?"
           },
           {
             "lang": "lg-eng",
@@ -1578,52 +1428,52 @@
           {
             "lang": "lg-cat",
             "name": "confirm_repair_tlds",
-            "value": "Voleu reescriure el TLD de cada registre el TLD del qual no coincideix amb la seva secció?\n\nAixò edita els REGISTRES de l’ontologia, no només la taula derivada. Els registres sense contingut no es modifiquen.\n\nExecuteu Reconciliar després."
+            "value": "Voleu reescriure el TLD de cada registre el TLD del qual no coincideix amb la seva secció?\n\nAixò edita els REGISTRES de l’ontologia, no només la taula derivada. Els registres sense contingut no es modifiquen.\n\nExecuteu Regenerar després."
           },
           {
             "lang": "lg-deu",
             "name": "confirm_repair_tlds",
-            "value": "Die TLD jedes Datensatzes neu schreiben, dessen TLD nicht zu seinem Abschnitt passt?\n\nDies bearbeitet die ONTOLOGIE-DATENSÄTZE, nicht nur die abgeleitete Tabelle. Datensätze ohne Inhalt bleiben unverändert.\n\nFühren Sie danach Abgleichen aus."
+            "value": "Die TLD jedes Datensatzes neu schreiben, dessen TLD nicht zu seinem Abschnitt passt?\n\nDies bearbeitet die ONTOLOGIE-DATENSÄTZE, nicht nur die abgeleitete Tabelle. Datensätze ohne Inhalt bleiben unverändert.\n\nFühren Sie danach Regenerieren aus."
           },
           {
             "lang": "lg-ell",
             "name": "confirm_repair_tlds",
-            "value": "Να ξαναγραφεί το TLD κάθε εγγραφής της οποίας το TLD δεν ταιριάζει με την ενότητά της;\n\nΑυτό επεξεργάζεται τις ΕΓΓΡΑΦΕΣ της οντολογίας, όχι μόνο τον παραγόμενο πίνακα. Οι εγγραφές χωρίς περιεχόμενο δεν αλλάζουν.\n\nΕκτελέστε την Εναρμόνιση μετά."
+            "value": "Να ξαναγραφεί το TLD κάθε εγγραφής της οποίας το TLD δεν ταιριάζει με την ενότητά της;\n\nΑυτό επεξεργάζεται τις ΕΓΓΡΑΦΕΣ της οντολογίας, όχι μόνο τον παραγόμενο πίνακα. Οι εγγραφές χωρίς περιεχόμενο δεν αλλάζουν.\n\nΕκτελέστε την Αναγέννηση μετά."
           },
           {
             "lang": "lg-eng",
             "name": "confirm_repair_tlds",
-            "value": "Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Reconcile afterwards."
+            "value": "Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Regenerate afterwards."
           },
           {
             "lang": "lg-eus",
             "name": "confirm_repair_tlds",
-            "value": "Bere atalarekin bat ez datorren TLDa duen erregistro bakoitzaren TLDa berridatzi?\n\nHonek ontologiaren ERREGISTROAK editatzen ditu, ez soilik eratorritako taula. Edukirik gabeko erregistroak ez dira ukitzen.\n\nExekutatu Bateratu ondoren."
+            "value": "Bere atalarekin bat ez datorren TLDa duen erregistro bakoitzaren TLDa berridatzi?\n\nHonek ontologiaren ERREGISTROAK editatzen ditu, ez soilik eratorritako taula. Edukirik gabeko erregistroak ez dira ukitzen.\n\nExekutatu Birsortu ondoren."
           },
           {
             "lang": "lg-fra",
             "name": "confirm_repair_tlds",
-            "value": "Réécrire le TLD de chaque enregistrement dont le TLD ne correspond pas à sa section ?\n\nCeci modifie les ENREGISTREMENTS de l’ontologie, pas seulement la table dérivée. Les enregistrements sans contenu ne sont pas touchés.\n\nExécutez Réconcilier ensuite."
+            "value": "Réécrire le TLD de chaque enregistrement dont le TLD ne correspond pas à sa section ?\n\nCeci modifie les ENREGISTREMENTS de l’ontologie, pas seulement la table dérivée. Les enregistrements sans contenu ne sont pas touchés.\n\nExécutez Régénérer ensuite."
           },
           {
             "lang": "lg-ita",
             "name": "confirm_repair_tlds",
-            "value": "Riscrivere il TLD di ogni record il cui TLD non corrisponde alla sua sezione?\n\nQuesto modifica i RECORD dell’ontologia, non solo la tabella derivata. I record senza contenuto non vengono toccati.\n\nEseguire Riconcilia dopo."
+            "value": "Riscrivere il TLD di ogni record il cui TLD non corrisponde alla sua sezione?\n\nQuesto modifica i RECORD dell’ontologia, non solo la tabella derivata. I record senza contenuto non vengono toccati.\n\nEseguire Rigenerare dopo."
           },
           {
             "lang": "lg-nep",
             "name": "confirm_repair_tlds",
-            "value": "सेक्सनसँग नमिल्ने TLD भएका सबै रेकर्डको TLD पुनर्लेखन गर्ने?\n\nयसले ओन्टोलोजीका रेकर्डहरू सम्पादन गर्छ, केवल व्युत्पन्न तालिका मात्र होइन। सामग्री नभएका रेकर्डहरू छोइँदैनन्।\n\nत्यसपछि Reconcile चलाउनुहोस्।"
+            "value": "सेक्सनसँग नमिल्ने TLD भएका सबै रेकर्डको TLD पुनर्लेखन गर्ने?\n\nयसले ओन्टोलोजीका रेकर्डहरू सम्पादन गर्छ, केवल व्युत्पन्न तालिका मात्र होइन। सामग्री नभएका रेकर्डहरू छोइँदैनन्।\n\nत्यसपछि पुनः उत्पन्न गर्नुहोस् चलाउनुहोस्।"
           },
           {
             "lang": "lg-por",
             "name": "confirm_repair_tlds",
-            "value": "Reescrever o TLD de cada registo cujo TLD não corresponde à sua secção?\n\nIsto edita os REGISTOS da ontologia, não apenas a tabela derivada. Registos sem conteúdo não são alterados.\n\nExecute Reconciliar depois."
+            "value": "Reescrever o TLD de cada registo cujo TLD não corresponde à sua secção?\n\nIsto edita os REGISTOS da ontologia, não apenas a tabela derivada. Registos sem conteúdo não são alterados.\n\nExecute Regenerar depois."
           },
           {
             "lang": "lg-spa",
             "name": "confirm_repair_tlds",
-            "value": "¿Reescribir el TLD de cada registro cuyo TLD no coincide con su sección?\n\nEsto edita los REGISTROS de la ontología, no solo la tabla derivada. Los registros sin contenido no se modifican.\n\nEjecute Reconciliar después."
+            "value": "¿Reescribir el TLD de cada registro cuyo TLD no coincide con su sección?\n\nEsto edita los REGISTROS de la ontología, no solo la tabla derivada. Los registros sin contenido no se modifican.\n\nEjecute Regenerar después."
           }
         ]
       }

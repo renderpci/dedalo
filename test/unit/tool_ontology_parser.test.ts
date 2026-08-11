@@ -1,11 +1,12 @@
 /**
- * Gate: tool_ontology_parser — the module contract, the developer gate on all
- * five actions, and the two READ wires the client renders.
+ * Gate: tool_ontology_parser — the module contract, the developer gate on every
+ * action, and the two READ wires the client renders.
  *
  * `test/unit/ontology_data_io.test.ts` already covers the export pipeline's
  * ordering/abort semantics with an injected IO. What was untested is the part a
  * user actually touches first: the ACTION SURFACE (five developer-gated actions,
- * none background-runnable) and the two reads —
+ * none background-runnable — `reconcile_ontologies` was removed 2026-08-11, leaving
+ * `regenerate_ontologies` the ONE write onto the projection) and the two reads —
  *
  *  - get_ontologies      → the census the tool's checkbox list is built from.
  *    Its wire is EXACTLY five keys; adding a sixth leaks census internals
@@ -30,7 +31,6 @@ const ACTIONS = [
 	'export_ontologies',
 	'get_ontologies',
 	'inspect_ontologies',
-	'reconcile_ontologies',
 	'regenerate_ontologies',
 	// The one action that writes SOURCE records: it rewrites a misfiled ontology7
 	// back to its section's tld (ONT-TLD), the repair the read-only edit field removed.
@@ -48,7 +48,7 @@ async function action(name: string): Promise<ToolActionSpec> {
 }
 
 describe('tool_ontology_parser module', () => {
-	test('registers the six actions, all developer-gated, none background-runnable', async () => {
+	test('registers the five actions, all developer-gated, none background-runnable', async () => {
 		const loaded = await getLoadedTool('tool_ontology_parser');
 		expect(loaded).not.toBeNull();
 		const actions = loaded!.module.apiActions;
@@ -154,6 +154,7 @@ describe('tool_ontology_parser module', () => {
 			expect(res.errors).toContain('selected_ontologies must be a non-empty array');
 		}
 	});
+
 });
 
 /**

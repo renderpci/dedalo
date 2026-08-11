@@ -734,10 +734,9 @@ export async function setRecordsInDdOntology(
 
 // --- regenerate — RETIRED 2026-07-15 -----------------------------------------
 // The destructive dd_ontology rebuild moved to core/ontology/ontology_state.ts
-// `rebuildOntology` (transactional; no leftover backup table) alongside the
-// non-destructive `ensureOntology` reconcile. `regenerateRecordsInDdOntology` — the
-// backup-table-based version — is gone; nothing may wipe-and-rebuild a tld outside
-// ontology_state.ts (ontology_single_writer_tripwire).
+// `rebuildOntology` (transactional; no leftover backup table), the ONE writer.
+// `regenerateRecordsInDdOntology` — the backup-table-based version — is gone; nothing
+// may wipe-and-rebuild a tld outside ontology_state.ts (ontology_single_writer_tripwire).
 
 // --- order sync (PHP sync_order_to_dd_ontology) — CONSUMED BY THE TREE (A5) ---
 

@@ -28,7 +28,7 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { normalizeOntologyTld } from '../../src/core/ontology/data_io_import.ts';
-import { ensureOntology, inspectOntology } from '../../src/core/ontology/ontology_state.ts';
+import { inspectOntology, rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
 import { requiredOntologyTld } from '../../src/core/ontology/tld.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -411,7 +411,7 @@ describe('the `tldless` drift kind', () => {
 		// Reported loudly (tldlessNodes/tldlessRecords) but NOT as drift. Filing it as
 		// drift flipped inSync false, which the client paints as a failed check — and
 		// since no button may write those records, the panel could never go green
-		// again while Reconcile and Regenerate both reported success.
+		// again while Regenerate reported success.
 		await seedMainNode();
 		await seedRaw(1, { ontology5: [{ id: 1, lang: 'lg-eng', value: 'Invisible' }] });
 		const state = await inspectOntology(TLD);
@@ -421,8 +421,8 @@ describe('the `tldless` drift kind', () => {
 		expect(state.inSync).toBe(true);
 	});
 
-	test('does NOT block reconcile — unlike `foreign`, it writes nowhere', async () => {
-		// A tld-less record contributes nothing to the projection, so reconciling the rest is
+	test('does NOT block the rebuild — unlike `foreign`, it writes nowhere', async () => {
+		// A tld-less record contributes nothing to the projection, so rebuilding the rest is
 		// safe. Blocking would wedge every ontology in an install carrying legacy shells.
 		await seedRaw(1, { ontology5: [{ id: 1, lang: 'lg-eng', value: 'Invisible' }] });
 		await seedRaw(2, {
@@ -430,10 +430,10 @@ describe('the `tldless` drift kind', () => {
 			ontology5: [{ id: 1, lang: 'lg-eng', value: 'Real node' }],
 		});
 
-		const outcome = await ensureOntology(TLD, USER_ID);
+		const outcome = await rebuildOntology(TLD, USER_ID);
 
 		expect(outcome.result).toBe(true); // converged as far as a writer can
-		expect(outcome.applied).toContain(`+ ${TLD}2`); // the real node landed
+		expect(outcome.applied).toContain('rebuilt 1 node(s)'); // the real node landed
 		expect(outcome.msg).toContain(`${SECTION}/1`); // …and the invisible one is still named
 	});
 });
