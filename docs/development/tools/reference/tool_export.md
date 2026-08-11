@@ -96,11 +96,13 @@ The server emits NDJSON, one JSON object per line, discriminated by `t`:
 {"t":"end","columns":[0,1,2],"rows":340,"records":128}
 ```
 
-Raw round-trip cell shape (`data_format:'dedalo_raw'`), re-importable by the CSV import tool:
+Raw round-trip cell shape (`data_format:'dedalo_raw'`), re-importable by the CSV import tool — always the component's stored value wrapped exactly once:
 
 ```json
 {"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}
 ```
+
+A component with [dataframe](../../../core/components/component_dataframe.md) slots grows one extra column per slot, headed by the dataframe component's tipo and carrying its own frame locators (`WC-2026-08-09-export-raw-dataframe-own-column`).
 
 ## Related
 

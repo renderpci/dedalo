@@ -527,6 +527,12 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_PWRESET_MAX_ATTEMPTS',
 	// menu / areas / defaults
 	'AREAS_DENY',
+	// geolocation opening camera. NEW_IN_V7, no v6 rule: v6 had no default view —
+	// the client fabricated a hardcoded coordinate (Valencia) that the server then
+	// treated as a "no location" sentinel. The camera is now config, view-only.
+	'DEDALO_GEO_DEFAULT_LAT',
+	'DEDALO_GEO_DEFAULT_LON',
+	'DEDALO_GEO_DEFAULT_ZOOM',
 	// 'APPLICATION_LANGS' was DELETED here (2026-07-13). It was never a real key: nothing
 	// set it, the installer never wrote it, and it appeared in no .env. Three call sites read
 	// it and CSV-split it — which, since the actual UI-language key (DEDALO_APPLICATION_LANGS)

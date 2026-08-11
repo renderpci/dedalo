@@ -74,6 +74,14 @@ export interface TranslateItemsConfig {
  * surfaces the provider error on the first failure (PHP returns immediately). The
  * "Sorry. Quota exceeded" leading string is treated as an error, never persisted.
  */
+/*
+ * COVERAGE-EXEMPT — the PROVIDER CALL below (coverage plan §5.2; reason
+ * registered in engineering/crap_coverage_exempt.json): it posts to a
+ * third-party / sidecar service over the network. Never fetch in a test — a gate
+ * would be non-hermetic and hostage to someone else's uptime. The pure halves in
+ * these files (engine mapping, config resolution, URL safety, segment folding)
+ * ARE gateable and are not covered by this exemption.
+ */
 export async function translateItems(
 	sourceItems: readonly unknown[],
 	provider: TranslationProvider,

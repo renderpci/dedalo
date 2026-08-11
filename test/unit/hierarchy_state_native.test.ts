@@ -201,7 +201,8 @@ describe('ensureHierarchy', () => {
 		expect(outcome.result).toBe(true);
 		// the EXISTING root (lowest id) is linked; no third record is minted
 		expect(await terms(`${TLD}1`)).toEqual([7, 9]);
-		expect(await rootLocator('hierarchy45')).toMatchObject({ section_id: '7' });
+		// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+		expect(await rootLocator('hierarchy45')).toMatchObject({ section_id: 7 });
 	});
 
 	// A root term is the node the whole tree descends from. An unnamed one renders as an

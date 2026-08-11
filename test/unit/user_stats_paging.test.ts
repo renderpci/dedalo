@@ -36,9 +36,20 @@ import { sql } from '../../src/core/db/postgres.ts';
 const UID = 424262;
 /** A second synthetic actor that deliberately has NO activity at all. */
 const SILENT_UID = 424263;
+// int-canonical actor locator (WC-2026-08-10-section-id-int-canonical): the
+// writer mints int now; the string twin covers pre-sweep rows.
 const USER_FILTER = JSON.stringify({
+	dd1522: [{ section_tipo: 'dd128', section_id: UID }],
+});
+const USER_FILTER_LEGACY = JSON.stringify({
 	dd1522: [{ section_tipo: 'dd128', section_id: String(UID) }],
 });
+/**
+ * The one directly-inserted dd1521 row (the "already updated" case). Reserved
+ * scratch band 933000-933999; the afterAll sweep catches it through
+ * USER_FILTER like every other row of this actor.
+ */
+const YESTERDAY_SECTION_ID = 933010;
 const DAY_A = '2019-03-04';
 const DAY_B = '2019-03-05';
 const FROM = '2019-03-01';
@@ -200,12 +211,12 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		const leaked: string[] = [];
 		// dd1521 aggregates the save-path test produced, plus their TM audit rows
 		const statsIds = (await sql.unsafe(
-			`SELECT section_id FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[USER_FILTER],
+			`SELECT section_id FROM matrix_stats WHERE section_tipo = 'dd1521' AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[USER_FILTER, USER_FILTER_LEGACY],
 		)) as { section_id: number }[];
 		await sql.unsafe(
-			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[USER_FILTER],
+			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521' AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[USER_FILTER, USER_FILTER_LEGACY],
 		);
 		for (const row of statsIds) {
 			await sql.unsafe(
@@ -311,11 +322,12 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		const rows = (await sql.unsafe(
 			`SELECT misc->'dd1523' AS totals
 			 FROM matrix_stats
-			 WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb
+			 WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
 			 ORDER BY ("date"->'dd1530'->0->'start'->>'year')::int,
 			          ("date"->'dd1530'->0->'start'->>'month')::int,
 			          ("date"->'dd1530'->0->'start'->>'day')::int, id`,
-			[USER_FILTER],
+			[USER_FILTER, USER_FILTER_LEGACY],
 		)) as { totals: unknown }[];
 		return JSON.stringify(rows.map((row) => row.totals));
 	};
@@ -337,6 +349,76 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		// splits day A — the seams that could reorder or double-count.
 		expect(await rebuildAt(1)).toBe(reference);
 		expect(await rebuildAt(2)).toBe(reference);
+	}, 60000);
+
+	// ---- the "already updated" early return (plan §4.2.3) -----------------
+	// updateUserActivityStats:373-375 short-circuits when the newest saved stats
+	// day is yesterday or later. Uncovered until 2026-08-10 — every other case
+	// in this file rebuilds from an EMPTY history, where lastAggregated is null
+	// and the guard is unreachable. Without it every panel load re-runs the
+	// whole aggregation.
+
+	/** dd1521 rows of THE SCRATCH ACTOR only — never a table-global count. */
+	const scratchStatsCount = async (): Promise<number> => {
+		const rows = (await sql.unsafe(
+			`SELECT count(*)::int AS n FROM matrix_stats
+			 WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[USER_FILTER, USER_FILTER_LEGACY],
+		)) as { n: number }[];
+		return rows[0]?.n ?? 0;
+	};
+
+	test('a saved day of YESTERDAY short-circuits the whole aggregation', async () => {
+		// POSITIVE CONTROL: a rebuild from empty really does write rows, so the
+		// "count did not move" assertion below is a floor and not a tautology.
+		await deleteUserActivityStats(UID);
+		const rebuilt = await updateUserActivityStats(UID);
+		expect(rebuilt.errors).toEqual([]);
+		expect((rebuilt.result as { date: string }[]).map((day) => day.date)).toEqual([DAY_A, DAY_B]);
+		expect(await scratchStatsCount()).toBe(2);
+
+		// CONTRAST: the guard is DATE-conditional, not "any second call". The
+		// saved history is 2019, so calling again must NOT short-circuit — it
+		// re-scans [2019-03-06, today) and finds nothing.
+		const stale = await updateUserActivityStats(UID);
+		expect(stale.msg).toBe('No activity records found');
+		expect(stale.result).toEqual([]);
+
+		// Now make the newest saved day YESTERDAY. Same local-Date arithmetic the
+		// function uses, so the two cannot drift across a DST/timezone edge.
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
+		// Direct SQL: saveUserActivity would stamp today's aggregate, and the row
+		// only has to be the newest by id (which is what the guard's probe reads).
+		await sql.unsafe(
+			`INSERT INTO matrix_stats (section_id, section_tipo, relation, date, misc)
+			 VALUES ($1, 'dd1521', $2::text::jsonb, $3::text::jsonb, '{"dd1523":[]}'::jsonb)`,
+			[
+				YESTERDAY_SECTION_ID,
+				USER_FILTER,
+				JSON.stringify({
+					dd1530: [
+						{
+							start: {
+								year: yesterday.getFullYear(),
+								month: yesterday.getMonth() + 1,
+								day: yesterday.getDate(),
+							},
+						},
+					],
+				}),
+			],
+		);
+
+		const before = await scratchStatsCount();
+		expect(before).toBe(3);
+		const response = await updateUserActivityStats(UID);
+		// The exact early-return wire shape: result is the NUMBER 0, not [].
+		expect(response.result).toBe(0);
+		expect(response.msg).toBe('Stats are already updated');
+		expect(await scratchStatsCount()).toBe(before);
 	}, 60000);
 });
 

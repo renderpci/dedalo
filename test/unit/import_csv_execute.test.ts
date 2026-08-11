@@ -22,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
+import { DATAFRAME_RELATION_TYPE, isDataframeEntry } from '../../src/core/concepts/subdatum.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { ddDateToSeconds } from '../../src/core/media/file_date.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
@@ -32,6 +33,9 @@ import { mustGet } from '../helpers/assert.ts';
 const SECTION = 'test3';
 const USER = 987670;
 const ID = 900700; // far outside the canonical test3 ids
+const DF_ID = 914000; // the dataframe gate's own scratch record
+/** A component_dataframe of the test3 family (parent test45). */
+const DATAFRAME = 'test60';
 const CSV = 'execute_gate.csv';
 const dir = resolve(config.media.rootPath ?? '', 'import/files', String(USER));
 
@@ -49,14 +53,16 @@ beforeAll(() => {
 
 afterAll(async () => {
 	rmSync(dir, { recursive: true, force: true });
-	await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2', [
-		SECTION,
-		ID,
-	]);
-	await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2', [
-		SECTION,
-		ID,
-	]);
+	for (const id of [ID, DF_ID]) {
+		await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2', [
+			SECTION,
+			id,
+		]);
+		await sql.unsafe(
+			'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+			[SECTION, id],
+		);
+	}
 	for (const id of bulkProcessIds) {
 		await sql.unsafe(`DELETE FROM matrix_notes WHERE section_tipo = 'dd800' AND section_id = $1`, [
 			id,
@@ -165,6 +171,62 @@ describe('metadata columns get the dual write, with the modified stamp suppresse
 	});
 });
 
+describe('imported dataframe frames carry the ENGINE marker (D19)', () => {
+	test('a frame written by import satisfies isDataframeEntry (type dd490)', async () => {
+		// D19, FIXED 2026-08-09: writeDataframeFrames stamped the literal
+		// 'dataframe' from a module-local constant, overwriting even a correct
+		// dd490 the engine's OWN export had produced. No reader recognises it:
+		// isDataframeEntry/dataframeEntriesEqual test dd490, so the frame was
+		// invisible in the widget and undeletable through the UI — and WORSE, the
+		// `type !== 'dd490'` filters in save_component's observer diff and
+		// delete_record's cascade read it as a REAL portal edge.
+		const envelope = JSON.stringify({
+			dedalo_data: {
+				dato: ['a main value with a frame'],
+				dataframe: [
+					{
+						// the framed target locator (never the host record itself) + the
+						// engine's OWN export shape: a CORRECT dd490 the importer used to
+						// downgrade on a plain export → import round trip.
+						section_tipo: SECTION,
+						section_id: String(DF_ID + 1),
+						from_component_tipo: DATAFRAME,
+						id_key: 1,
+						type: 'dd490',
+					},
+				],
+			},
+		});
+		// CSV-quote the cell: the reader strips bare double quotes otherwise.
+		const cell = `"${envelope.replace(/"/g, '""')}"`;
+		const report = await importCsv(`section_id;${TEXT}\n${DF_ID};${cell}\n`, [
+			KEY_COLUMN,
+			{ tipo: TEXT, model: 'component_input_text', checked: true, map_to: TEXT },
+		]);
+		expect(report.failed).toEqual([]);
+		expect(report.created).toEqual([DF_ID]);
+
+		const rows = (await sql.unsafe(
+			`SELECT relation -> '${DATAFRAME}' AS frames
+			   FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, DF_ID],
+		)) as { frames: Record<string, unknown>[] | null }[];
+		const frames = rows[0]?.frames ?? [];
+		expect(frames.length).toBe(1);
+		// the REAL reader, not a string compare on the column
+		expect(isDataframeEntry(frames[0])).toBe(true);
+		expect(frames[0]).toMatchObject({
+			type: DATAFRAME_RELATION_TYPE,
+			from_component_tipo: DATAFRAME,
+			section_tipo: SECTION,
+			// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+			section_id: DF_ID + 1,
+			id_key: 1,
+			main_component_tipo: TEXT,
+		});
+	});
+});
+
 describe('the warnings channel (imported, but flagged)', () => {
 	test('a lang outside the project languages is IMPORTED and warned about', async () => {
 		// lg-vtvn resolves to a real lg1 record but is not in DEDALO_PROJECTS_DEFAULT_LANGS.
@@ -195,6 +257,37 @@ describe('the warnings channel (imported, but flagged)', () => {
 			[SECTION, ID],
 		)) as { langs: { section_tipo?: string }[] }[];
 		expect(rows[0]?.langs?.[0]?.section_tipo).toBe('lg1');
+	});
+});
+
+describe('a bare section_id into component_select_lang imports (D20)', () => {
+	test('the target section resolves, so the id is not refused as an invalid target', async () => {
+		// D20, FIXED 2026-08-09: test89 declares its sqo section_tipo as the
+		// SCALAR form {"value":"lg1","source":"section"}, which
+		// resolveSqoSectionTipos dropped — the component resolved ZERO target
+		// sections and conform refused every bare id with
+		// "IGNORED: Trying to import invalid target_section_tipo" (the pure gate
+		// is test/unit/request_config_source_cases.test.ts). The code form
+		// ('lg-spa') always worked, which is why this went unseen.
+		const report = await importCsv(`section_id;${SELECT_LANG}\n${DF_ID};17344\n`, [
+			KEY_COLUMN,
+			{
+				tipo: SELECT_LANG,
+				model: 'component_select_lang',
+				checked: true,
+				map_to: SELECT_LANG,
+			},
+		]);
+		expect(report.failed).toEqual([]);
+		expect(report.errors).toEqual([]);
+
+		const rows = (await sql.unsafe(
+			`SELECT relation -> '${SELECT_LANG}' AS langs
+			   FROM matrix_test WHERE section_tipo = $1 AND section_id = $2`,
+			[SECTION, DF_ID],
+		)) as { langs: { section_tipo?: string; section_id?: number }[] | null }[];
+		// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+		expect(rows[0]?.langs?.[0]).toMatchObject({ section_tipo: 'lg1', section_id: 17344 });
 	});
 });
 

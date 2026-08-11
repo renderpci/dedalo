@@ -1,0 +1,43 @@
+{
+	"_comment": [
+		"THE CONVERSION RULE of the section_id int unification",
+		"(WC-2026-08-10-section-id-int-canonical), as executable test vectors.",
+		"Consumed by BOTH runtimes: the v7 bun kernel gate",
+		"(test/unit/section_id_intify.test.ts) and the v6 migration step's",
+		"self-check (close_v6_prepare_v7 intify_section_id_locators — that package",
+		"is self-contained, so it carries ITS OWN COPY of this file; the bun gate",
+		"asserts the two copies are byte-identical whenever the v6 tree is present).",
+		"Rule: a string converts to int iff it is strict numeric with no leading",
+		"zero ('0' is fine, '-0' is not) and within IEEE-754 safe-integer range.",
+		"Negative addresses are VALID (-1 root, -666 activity). Everything else",
+		"is reported under its class and NEVER cast."
+	],
+	"vectors": [
+		{ "input": "7", "convertible": true, "output": 7 },
+		{ "input": "0", "convertible": true, "output": 0 },
+		{ "input": "-1", "convertible": true, "output": -1 },
+		{ "input": "-666", "convertible": true, "output": -666 },
+		{ "input": "123456789", "convertible": true, "output": 123456789 },
+		{ "input": "9007199254740991", "convertible": true, "output": 9007199254740991 },
+		{ "input": "9007199254740992", "convertible": false, "class": "out-of-range" },
+		{ "input": "-9007199254740991", "convertible": true, "output": -9007199254740991 },
+		{ "input": "007", "convertible": false, "class": "leading-zero" },
+		{ "input": "001338683", "convertible": false, "class": "leading-zero" },
+		{ "input": "-0", "convertible": false, "class": "leading-zero" },
+		{ "input": "-07", "convertible": false, "class": "leading-zero" },
+		{ "input": "", "convertible": false, "class": "empty" },
+		{ "input": "null", "convertible": false, "class": "null-literal" },
+		{ "input": "tmp", "convertible": false, "class": "token" },
+		{ "input": "Q42", "convertible": false, "class": "token" },
+		{ "input": "search_1", "convertible": false, "class": "token" },
+		{ "input": "self", "convertible": false, "class": "token" },
+		{ "input": "current", "convertible": false, "class": "token" },
+		{ "input": "${section_id}", "convertible": false, "class": "token" },
+		{ "input": "12.5", "convertible": false, "class": "token" },
+		{ "input": "1e3", "convertible": false, "class": "token" },
+		{ "input": " 7", "convertible": false, "class": "token" },
+		{ "input": "7 ", "convertible": false, "class": "token" },
+		{ "input": "+7", "convertible": false, "class": "token" },
+		{ "input": "0x10", "convertible": false, "class": "token" }
+	]
+}

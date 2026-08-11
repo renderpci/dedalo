@@ -123,12 +123,16 @@ function observedReferencer(targetId: number): string {
 	});
 }
 
-/** The exact mirror entry the set_dato_external law appends. */
+/**
+ * The exact mirror entry the set_dato_external law appends.
+ * WC-2026-08-10-section-id-int-canonical: the referencer address is an INT
+ * (the observer writer mints it via canonicalizeStoredSectionId).
+ */
 function mirrorEntry(itemId: number, referencerId: number): Record<string, unknown> {
 	return {
 		id: itemId,
 		type: 'dd151',
-		section_id: String(referencerId),
+		section_id: referencerId,
 		section_tipo: 'rsc205',
 		from_component_tipo: MIRROR,
 	};

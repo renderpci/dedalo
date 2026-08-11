@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_instance} from '../../common/js/instances.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -235,7 +236,7 @@ const render_content_value = function(options) {
 
 				const rating_value = rating_entries[0]
 				const rating = (rating_value)
-					? rating_data.datalist.find(el => el.section_id === rating_value.section_id )
+					? rating_data.datalist.find(el => same_section_id(el.section_id, rating_value.section_id) )
 					: {
 						hide:[{
 							literal: default_bk_color // gray/blue when the datalist is empty (the rating is not set)

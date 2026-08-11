@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_instance, find_instances} from '../../common/js/instances.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -195,7 +195,7 @@ export const render_reference = async function(options) {
 			const found = component_tags_reference.datum.data.find(el =>
 				el.from_component_tipo === current_locator.from_component_tipo &&
 				el.section_tipo === current_locator.section_tipo &&
-				el.section_id === current_locator.section_id
+				same_section_id(el.section_id, current_locator.section_id)
 			)
 
 			if(found){
@@ -467,7 +467,7 @@ export const render_reference = async function(options) {
 					const locator_data = new_locator
 					 	? reference_component.datum.data.find(el =>
 					 		// el.from_component_tipo === new_locator.from_component_tipo &&
-							el.section_id	=== new_locator.section_id &&
+							same_section_id(el.section_id, new_locator.section_id) &&
  							el.section_tipo	=== new_locator.section_tipo
 					 	  )
 					 	: null

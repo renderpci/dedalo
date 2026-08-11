@@ -258,6 +258,8 @@ See: [Introduction](index.md#definitions-of-dédalos-nomenclature). Related: [se
 *SQL equivalent: a per-table primary key (scoped to one section).*
 
 The unique record id **within** a [section_tipo](#section_tipo) — paired with `section_tipo` it addresses one specific row. Because one matrix table mixes many sections, two records can share `section_id = 1` if their `section_tipo` differs. Distinct from the table-wide [id](#id).
+
+Always an **integer**, negatives included (`-1` is the root record). Values that are not integers are a different concept sharing the field name: an external-service remote id (`001338683`, `Q42`) or a synthetic client token (`search_1`), both kept verbatim. See [Canonical form of `section_id`](locator.md#canonical-form-of-section_id).
 See: [Introduction](index.md#definitions-of-dédalos-nomenclature). Related: [id](#id), [section_tipo](#section_tipo), [locator](#locator), [matrix (table)](#matrix-table).
 
 ### section_tipo

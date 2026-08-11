@@ -17,6 +17,7 @@
  * the show-ddo label build), get_type_rel :231.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getNode } from '../ontology/resolver.ts';
@@ -29,7 +30,13 @@ export const RELATED_MULTIDIRECTIONAL = 'dd621';
 /** One computed back-reference (PHP get_references output — string section_id). */
 export interface RelatedReference {
 	section_tipo: string;
-	section_id: string;
+	/**
+	 * The canonical INT address (WC-2026-08-10-section-id-int-canonical). The
+	 * union keeps the READ side honest: entries walked out of not-yet-swept
+	 * stored bags still arrive as strings, and this graph must not corrupt one
+	 * it cannot convert (an external remote id keeps its own bytes).
+	 */
+	section_id: number | string;
 	from_component_tipo: string;
 }
 
@@ -57,12 +64,17 @@ export async function getReferences(
 	);
 	return hits.map((hit) => ({
 		section_tipo: hit.section_tipo,
-		section_id: String(hit.section_id),
+		// Already an int out of the inverse search — emitted verbatim.
+		section_id: hit.section_id,
 		from_component_tipo: tipo,
 	}));
 }
 
-/** A stored relation-column entry as the graph walk sees it (loose by design). */
+/**
+ * A stored relation-column entry as the graph walk sees it (loose by design).
+ * KEPT UNION: raw stored jsonb — unswept legacy string ids, plus external
+ * remote ids ('001338683') that are the value and are never converted.
+ */
 export interface StoredRelationLink {
 	section_tipo?: string;
 	section_id?: number | string;
@@ -145,6 +157,9 @@ const DB_GRAPH_IO: RelatedGraphIO = { getInverse: getReferences, readStored: rea
  */
 export async function getReferencesRecursive(
 	tipo: string,
+	// KEPT UNION: the walk cursor re-enters itself with nodes built from the
+	// STORED bag (canonicalize passes a non-convertible external id verbatim),
+	// so a non-int address legitimately reaches this parameter.
 	locator: { section_tipo: string; section_id: number | string; from_component_tipo: string },
 	typeRel: string = RELATED_MULTIDIRECTIONAL,
 	recursion = false,
@@ -198,7 +213,9 @@ export async function getReferencesRecursive(
 			if (cache.includes(key)) continue;
 			const element: RelatedReference = {
 				section_tipo: dataLocator.section_tipo,
-				section_id: String(dataLocator.section_id),
+				// Canonicalize what the stored bag holds ('7' → 7) instead of
+				// re-stringifying it; a non-convertible id passes verbatim.
+				section_id: canonicalizeStoredSectionId(dataLocator.section_id) as number | string,
 				from_component_tipo: dataLocator.from_component_tipo ?? locator.from_component_tipo,
 			};
 			// Only recursive calls add stored links (the root's own data is the
@@ -267,9 +284,12 @@ export async function getStoredWithReferences(
 	peerModel: string | null,
 	lang = 'lg-nolan',
 	io: RelatedGraphIO = DB_GRAPH_IO,
-): Promise<{ section_tipo: string; section_id: string }[]> {
+	// KEPT UNION (both decls): the stored half passes the bag's ids through
+	// canonicalizeStoredSectionId, which leaves a non-convertible external
+	// remote id verbatim — the observer seed must search on those bytes.
+): Promise<{ section_tipo: string; section_id: number | string }[]> {
 	const typeRel = getRelationTypeRel(peerProperties);
-	const merged: { section_tipo: string; section_id: string }[] = [];
+	const merged: { section_tipo: string; section_id: number | string }[] = [];
 	// Stored half (PHP get_dato()) — malformed entries carry nothing a locator
 	// seed could search on; they are dropped exactly like the traversal drops
 	// them (getReferencesRecursive's stored-link guard). dd490 frames are
@@ -279,7 +299,10 @@ export async function getStoredWithReferences(
 	for (const entry of stored) {
 		if (typeof entry?.section_tipo !== 'string' || entry.section_id === undefined) continue;
 		if (entry.type === DATAFRAME_RELATION_TYPE) continue;
-		merged.push({ section_tipo: entry.section_tipo, section_id: String(entry.section_id) });
+		merged.push({
+			section_tipo: entry.section_tipo,
+			section_id: canonicalizeStoredSectionId(entry.section_id) as number | string,
+		});
 	}
 	// References half (PHP get_calculated_references(true) — the typeRel
 	// switch), reached ONLY through the component_relation_related override

@@ -13,7 +13,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSectionRows } from '../../src/core/section/read.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** The replayed RQO: 3 string components of numisdata6, 5 records. */
@@ -72,11 +72,11 @@ describe.if(hasPhpCredentials())(
 			const result = body.result as { data: Record<string, unknown>[] };
 			// DEC-02 / engineering/wire_contract/ WC-001: assert the adopted `entries: []`
 			// empty contract (PHP's `entries: null` is the fossil shape at this seam).
-			phpData = adoptEntriesArrayContract(result.data);
-			tsData = (await readSectionRows(READ_RQO as unknown as Rqo)) as unknown as Record<
-				string,
-				unknown
-			>[];
+			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+			phpData = normalizeSectionIdTypes(adoptEntriesArrayContract(result.data));
+			tsData = normalizeSectionIdTypes(
+				(await readSectionRows(READ_RQO as unknown as Rqo)) as unknown as Record<string, unknown>[],
+			);
 		});
 
 		test('sections envelope matches (typo/tipo/entries incl. paginated_key)', () => {
@@ -126,13 +126,13 @@ describe.if(hasPhpCredentials())(
 			);
 			const { body } = await client.call(structuredClone(editRqo));
 			// DEC-02 / engineering/wire_contract/ WC-001 (see above).
-			const phpEdit = adoptEntriesArrayContract(
-				(body.result as { data: Record<string, unknown>[] }).data,
+			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+			const phpEdit = normalizeSectionIdTypes(
+				adoptEntriesArrayContract((body.result as { data: Record<string, unknown>[] }).data),
 			);
-			const tsEdit = (await readSectionRows(editRqo as unknown as Rqo)) as unknown as Record<
-				string,
-				unknown
-			>[];
+			const tsEdit = normalizeSectionIdTypes(
+				(await readSectionRows(editRqo as unknown as Rqo)) as unknown as Record<string, unknown>[],
+			);
 
 			const targetTipos = new Set(['numisdata16', 'numisdata17', 'numisdata18']);
 			const phpItems = phpEdit.filter((item) => targetTipos.has(item.tipo as string));

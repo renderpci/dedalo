@@ -850,7 +850,8 @@ section.prototype.build = async function(autoload=false) {
 				self.section_id = null; // Initialize to null
 				if (self.mode !== 'list' && self.data && Array.isArray(self.data.entries)) {
 					const found = self.data.entries.find(el => el.section_tipo === self.section_tipo);
-					if (found && found.section_id) {
+					// note the explicit null/undefined test: section_id 0 is a legitimate id
+					if (found && found.section_id !== undefined && found.section_id !== null) {
 						self.section_id = found.section_id;
 					} else {
 						console.warn('Empty value found or section_id missing in self.data.entries: ', self.data.entries);

@@ -160,7 +160,17 @@ export const textAreaEmitHook: ComponentEmitHook = {
 		);
 		const sectionsEntry = related.data.find(
 			(entry) => (entry as { typo?: string }).typo === 'sections',
-		) as { value?: { section_tipo: string; section_id: string }[] } | undefined;
+		) as
+			| {
+					value?: {
+						section_tipo: string;
+						// Canonical ids (WC-2026-08-10-section-id-int-canonical); the
+						// persons feed re-canonicalizes anyway, so pre-sweep strings
+						// arriving here are harmless.
+						section_id: import('../../concepts/locator.ts').StoredSectionId;
+					}[];
+			  }
+			| undefined;
 
 		const { buildTagsPersons } = await import('./tags_persons.ts');
 		item.related_sections = related;

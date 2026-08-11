@@ -10,6 +10,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 function relationListRqo(limit: number, offset: number): Record<string, unknown> {
@@ -52,7 +53,10 @@ async function tsCall(rqo: Record<string, unknown>): Promise<Record<string, unkn
 			principal,
 		} as never,
 	);
-	return (result.body as { result?: Record<string, unknown> }).result ?? {};
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	return normalizeSectionIdTypes(
+		(result.body as { result?: Record<string, unknown> }).result ?? {},
+	);
 }
 
 let php: PhpApiClient | null = null;
@@ -71,7 +75,8 @@ async function phpCall(rqo: Record<string, unknown>): Promise<Record<string, unk
 			}
 		).result ?? {};
 	const { debug: _debug, ...rest } = result;
-	return rest;
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	return normalizeSectionIdTypes(rest);
 }
 
 describe.if(hasPhpCredentials())('relation_list differential (Referencias panel)', () => {

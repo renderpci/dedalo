@@ -34,6 +34,7 @@ import {
 	getModelByTipo,
 } from '../../ontology/resolver.ts';
 import { readComponentItems } from '../../resolve/component_data.ts';
+import { composeContains, relationProbeGroups } from '../../search/containment.ts';
 import { currentPrincipal } from '../../security/request_context.ts';
 
 /** Section holding the presets (PHP DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO). */
@@ -149,18 +150,31 @@ export async function getActiveRequestConfigPresets(): Promise<RequestConfigPres
 	for (const column of ['string', 'relation', 'misc']) columns.add(column);
 	const columnProjection = [...columns].map((column) => `"${column}"`).join(', ');
 
-	// ACTIVE filter: dd1566 → dd64/1 (yes). Inline jsonb literal (fixed constant,
-	// no injection surface) mirrors the explicit.ts containment pattern and the
-	// PHP `@> '{"dd1566":[{"section_tipo":"dd64","section_id":"1"}]}'`.
+	// ACTIVE filter: dd1566 → dd64/1 (yes), the PHP
+	// `@> '{"dd1566":[{"section_tipo":"dd64","section_id":"1"}]}'` predicate.
+	// Probed in BOTH typed section_id forms
+	// (WC-2026-08-10-section-id-int-canonical): the flag locator is stored
+	// string-form until the int sweep and int-form after, and jsonb `@>` is
+	// type-strict — a single-form literal would make every preset look
+	// inactive on the other side of the migration.
+	const queryParams: string[] = [REQUEST_CONFIG_PRESETS_SECTION_TIPO];
+	const activeClause = composeContains(
+		'relation',
+		relationProbeGroups('dd1566', [{ section_tipo: 'dd64', section_id: 1 }]),
+		(payload) => {
+			queryParams.push(payload);
+			return `$${queryParams.length}`;
+		},
+	);
 	let rows: Record<string, unknown>[];
 	try {
 		rows = (await sql.unsafe(
 			`SELECT section_id, ${columnProjection}
 			 FROM "${table}"
 			 WHERE section_tipo = $1
-			   AND relation @> '{"dd1566":[{"section_tipo":"dd64","section_id":"1"}]}'::jsonb
+			   AND ${activeClause}
 			 ORDER BY section_id ASC`,
-			[REQUEST_CONFIG_PRESETS_SECTION_TIPO],
+			queryParams,
 		)) as Record<string, unknown>[];
 	} catch (error) {
 		// Never cache a failure state (PHP :134): a transient DB error must not

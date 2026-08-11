@@ -13,6 +13,13 @@
  * PHP array_filter KEY-PRESERVATION quirk: the emitted 'period' value is a
  * JSON OBJECT keyed by original index when the surviving terms are not a
  * 0-based contiguous prefix, an ARRAY otherwise. Replicated verbatim.
+ *
+ * Pure seams (extracted 2026-08-08, gate test/unit/coins_by_period_widget_native.test.ts):
+ * routeCoinsToPeriods / buildPeriodValue / expandHierarchyChildren /
+ * findParentWithModel. The two recursive ones carry CYCLE GUARDS — the only
+ * behaviour change; read each function header before touching them, above all
+ * why expandHierarchyChildren's guard is PATH-scoped and must never become a
+ * traversal-global de-duplicator.
  */
 
 import { sql } from '../../../../db/postgres.ts';
@@ -26,7 +33,7 @@ import {
 	type WidgetItem,
 } from '../widget_common.ts';
 
-interface HierarchyEntry {
+export interface HierarchyEntry {
 	section_id: unknown;
 	section_tipo: unknown;
 	parent: { section_tipo?: unknown; section_id?: unknown } | null;
@@ -55,6 +62,8 @@ async function computeGetCoinsByPeriod(
 		const period = findTyped(input, 'period') as
 			| (TypedInput & {
 					target_sections?: string[];
+					// KEPT UNION: ontology-authored widget config (properties.widgets[].ipo),
+					// where the shipped bytes are strings; compared numerically only.
 					target_model_section_id?: number | string;
 					use_parent?: boolean;
 			  })
@@ -146,88 +155,19 @@ async function computeGetCoinsByPeriod(
 			[coinSection, `{${idList.join(',')}}`],
 		)) as { section_id: unknown; relation: Record<string, unknown[]> | null }[];
 
-		// route each coin
-		let emptyPeriodCount: number | null = null;
-		const periodTipo = period.component_tipo ?? '';
-		const duplicatedTipo = duplicated.component_tipo ?? '';
-		for (const row of coinRows) {
-			const duplicatedData = (row.relation?.[duplicatedTipo] ?? []) as {
-				section_id?: unknown;
-			}[];
-			const duplicatedFirst = duplicatedData[0];
-			// PHP LOOSE == '2' here (unlike get_archive_weights' strict ===)
-			if (
-				duplicatedFirst !== undefined &&
-				duplicatedFirst !== null &&
-				String(duplicatedFirst.section_id) === '2'
-			) {
-				continue;
-			}
+		// route each coin (counts are stamped onto arHierarchies in place)
+		const emptyPeriodCount = routeCoinsToPeriods(
+			arHierarchies,
+			coinRows,
+			period.component_tipo ?? '',
+			duplicated.component_tipo ?? '',
+			useParent,
+			targetModelSectionId,
+		);
 
-			const periodData = (row.relation?.[periodTipo] ?? []) as {
-				section_tipo?: unknown;
-				section_id?: unknown;
-			}[];
-			if (periodData.length === 0) {
-				emptyPeriodCount = (emptyPeriodCount ?? 0) + 1;
-				continue;
-			}
-			for (const currentPeriod of periodData) {
-				// strict === on BOTH fields (type-mismatched ids fall to catch-all)
-				const tsTerm = arHierarchies.find(
-					(el) =>
-						el.section_tipo === currentPeriod.section_tipo &&
-						el.section_id === currentPeriod.section_id,
-				);
-				if (tsTerm === undefined) {
-					emptyPeriodCount = (emptyPeriodCount ?? 0) + 1;
-					continue;
-				}
-				if (useParent) {
-					const areaTerm = findParentWithModel(arHierarchies, tsTerm, targetModelSectionId);
-					if (areaTerm === null) {
-						emptyPeriodCount = (emptyPeriodCount ?? 0) + 1;
-					} else {
-						areaTerm.count = (areaTerm.count ?? 0) + 1;
-					}
-				} else {
-					tsTerm.count = (tsTerm.count ?? 0) + 1;
-				}
-			}
-		}
-
-		// array_filter preserves keys → object when non-contiguous
-		const surviving: [number, HierarchyEntry][] = [];
-		arHierarchies.forEach((el, index) => {
-			if (el.count !== null) surviving.push([index, el]);
-		});
-		const sentinel =
-			emptyPeriodCount !== null
-				? {
-						section_id: null,
-						section_tipo: null,
-						parent: null,
-						label: '?',
-						count: emptyPeriodCount,
-					}
-				: null;
-		let periodValue: unknown;
-		const contiguous = surviving.every(([index], position) => index === position);
-		if (contiguous) {
-			periodValue = sentinel
-				? [...surviving.map(([, el]) => el), sentinel]
-				: surviving.map(([, el]) => el);
-		} else {
-			const asObject: Record<string, unknown> = {};
-			for (const [index, el] of surviving) asObject[String(index)] = el;
-			if (sentinel) {
-				const nextKey = surviving.length > 0 ? Math.max(...surviving.map(([i]) => i)) + 1 : 0;
-				asObject[String(nextKey)] = sentinel;
-			}
-			periodValue = asObject;
-		}
-
-		const computed: Record<string, unknown> = { period: periodValue };
+		const computed: Record<string, unknown> = {
+			period: buildPeriodValue(arHierarchies, emptyPeriodCount),
+		};
 		for (const dataMap of output) {
 			const id = dataMap.id ?? '';
 			data.push({
@@ -241,47 +181,194 @@ async function computeGetCoinsByPeriod(
 	return data;
 }
 
-/** Depth-first flatten of one locator's subtree, stamping direct parents. */
-function expandHierarchyChildren(
-	tsRows: {
-		section_id: unknown;
-		section_tipo: string;
-		relation: Record<string, unknown[]> | null;
-		parent?: { section_tipo?: unknown; section_id?: unknown } | null;
-	}[],
+/** A thesaurus row as loaded from the target sections (pre-projection). */
+export interface ThesaurusRow {
+	section_id: unknown;
+	section_tipo: string;
+	relation: Record<string, unknown[]> | null;
+	parent?: { section_tipo?: unknown; section_id?: unknown } | null;
+}
+
+/** A coin row: its relation bag is where the period + duplicated locators live. */
+export interface CoinRow {
+	section_id: unknown;
+	relation: Record<string, unknown[]> | null;
+}
+
+/** Path key for the cycle guards — the row's OWN fields, so a locator whose
+ * section_id is typed differently than the row never aliases another node. */
+function pathKey(sectionTipo: unknown, sectionId: unknown): string {
+	return `${String(sectionTipo)}/${String(sectionId)}`;
+}
+
+/**
+ * Route every coin's period locators onto `arHierarchies`, stamping `count`
+ * IN PLACE, and return the '?' catch-all total (null when nothing fell
+ * through — the sentinel is only emitted when this is non-null).
+ *
+ * Catch-all feeders: a coin with no period locators at all, a locator with no
+ * STRICTLY (===) matching term, and — under use_parent — a term with no
+ * matching-model ancestor.
+ */
+export function routeCoinsToPeriods(
+	arHierarchies: HierarchyEntry[],
+	coinRows: CoinRow[],
+	periodTipo: string,
+	duplicatedTipo: string,
+	useParent: boolean,
+	targetModelSectionId: number | string,
+): number | null {
+	let emptyPeriodCount: number | null = null;
+	for (const row of coinRows) {
+		const duplicatedData = (row.relation?.[duplicatedTipo] ?? []) as {
+			section_id?: unknown;
+		}[];
+		const duplicatedFirst = duplicatedData[0];
+		// PHP LOOSE == '2' here (unlike get_archive_weights' strict ===)
+		if (
+			duplicatedFirst !== undefined &&
+			duplicatedFirst !== null &&
+			String(duplicatedFirst.section_id) === '2'
+		) {
+			continue;
+		}
+
+		const periodData = (row.relation?.[periodTipo] ?? []) as {
+			section_tipo?: unknown;
+			section_id?: unknown;
+		}[];
+		if (periodData.length === 0) {
+			emptyPeriodCount = (emptyPeriodCount ?? 0) + 1;
+			continue;
+		}
+		for (const currentPeriod of periodData) {
+			// strict === on BOTH fields (type-mismatched ids fall to catch-all)
+			const tsTerm = arHierarchies.find(
+				(el) =>
+					el.section_tipo === currentPeriod.section_tipo &&
+					el.section_id === currentPeriod.section_id,
+			);
+			if (tsTerm === undefined) {
+				emptyPeriodCount = (emptyPeriodCount ?? 0) + 1;
+				continue;
+			}
+			if (useParent) {
+				const areaTerm = findParentWithModel(arHierarchies, tsTerm, targetModelSectionId);
+				if (areaTerm === null) {
+					emptyPeriodCount = (emptyPeriodCount ?? 0) + 1;
+				} else {
+					areaTerm.count = (areaTerm.count ?? 0) + 1;
+				}
+			} else {
+				tsTerm.count = (tsTerm.count ?? 0) + 1;
+			}
+		}
+	}
+	return emptyPeriodCount;
+}
+
+/**
+ * The emitted `period` value: the counted terms plus the '?' sentinel.
+ *
+ * PHP array_filter KEY PRESERVATION: the surviving terms keep their ORIGINAL
+ * index. When those indices are a 0-based contiguous prefix the value is a
+ * JSON ARRAY; otherwise it is an OBJECT keyed by the original index, and the
+ * sentinel takes MAX(index)+1 (NOT surviving.length). Rewriting this as a
+ * plain `.filter()` flips the wire shape — it is a contract, not a style.
+ */
+export function buildPeriodValue(
+	arHierarchies: HierarchyEntry[],
+	emptyPeriodCount: number | null,
+): unknown {
+	const surviving: [number, HierarchyEntry][] = [];
+	arHierarchies.forEach((el, index) => {
+		if (el.count !== null) surviving.push([index, el]);
+	});
+	const sentinel =
+		emptyPeriodCount !== null
+			? {
+					section_id: null,
+					section_tipo: null,
+					parent: null,
+					label: '?',
+					count: emptyPeriodCount,
+				}
+			: null;
+	const contiguous = surviving.every(([index], position) => index === position);
+	if (contiguous) {
+		return sentinel ? [...surviving.map(([, el]) => el), sentinel] : surviving.map(([, el]) => el);
+	}
+	const asObject: Record<string, unknown> = {};
+	for (const [index, el] of surviving) asObject[String(index)] = el;
+	if (sentinel) {
+		const nextKey = surviving.length > 0 ? Math.max(...surviving.map(([i]) => i)) + 1 : 0;
+		asObject[String(nextKey)] = sentinel;
+	}
+	return asObject;
+}
+
+/**
+ * Depth-first flatten of one locator's subtree, stamping direct parents.
+ *
+ * CYCLE GUARD (behaviour change, 2026-08-08): `seen` is PATH-SCOPED — a key is
+ * added before descending and DELETED on the way back up. It stops a term that
+ * is its own ancestor (a curator-made loop in hierarchy49) from recursing
+ * forever; it deliberately does NOT de-duplicate. A term reachable from two
+ * roots, or from two disjoint branches, is LEGITIMATELY expanded twice, and a
+ * traversal-global Set would silently drop those real periods.
+ */
+export function expandHierarchyChildren(
+	tsRows: ThesaurusRow[],
 	locator: { section_tipo?: unknown; section_id?: unknown },
 	parent: { section_tipo?: unknown; section_id?: unknown } | null,
-	out: typeof tsRows,
+	out: ThesaurusRow[],
+	seen: Set<string> = new Set<string>(),
 ): void {
 	const row = tsRows.find(
 		(el) => el.section_tipo === locator.section_tipo && el.section_id === locator.section_id,
 	);
 	if (row === undefined) return;
+	const key = pathKey(row.section_tipo, row.section_id);
+	if (seen.has(key)) return; // already on THIS path → the edge closes a cycle
 	row.parent = parent;
 	out.push(row);
 	const children = (row.relation?.[TS_CHILDREN] ?? []) as {
 		section_tipo?: unknown;
 		section_id?: unknown;
 	}[];
+	seen.add(key);
 	for (const child of children) {
-		expandHierarchyChildren(tsRows, child, locator, out);
+		expandHierarchyChildren(tsRows, child, locator, out, seen);
 	}
+	seen.delete(key);
 }
 
-/** Ancestor whose model_section_id matches (int-cast compare), else null. */
-function findParentWithModel(
+/**
+ * Ancestor whose model_section_id matches (int-cast compare), else null.
+ *
+ * CYCLE GUARD (behaviour change, 2026-08-08): `seen` is call-scoped — this is
+ * a single upward WALK, so a term met twice can only mean a parent loop and
+ * revisiting it can never find a new answer. Returning null is safe by
+ * construction: under use_parent a null routes that coin to the '?' catch-all,
+ * exactly like a term with no matching-model ancestor.
+ */
+export function findParentWithModel(
 	arHierarchies: HierarchyEntry[],
 	term: HierarchyEntry,
 	targetModelSectionId: number | string,
+	seen: Set<string> = new Set<string>(),
 ): HierarchyEntry | null {
 	if (Number(term.model_section_id) === Number(targetModelSectionId)) return term;
+	const key = pathKey(term.section_tipo, term.section_id);
+	if (seen.has(key)) return null; // parent loop → no ancestor answer exists
+	seen.add(key);
 	const parent = term.parent;
 	if (parent === null || parent === undefined) return null;
 	const parentTerm = arHierarchies.find(
 		(el) => el.section_tipo === parent.section_tipo && el.section_id === parent.section_id,
 	);
 	if (parentTerm === undefined) return null;
-	return findParentWithModel(arHierarchies, parentTerm, targetModelSectionId);
+	return findParentWithModel(arHierarchies, parentTerm, targetModelSectionId, seen);
 }
 
 /** Thesaurus term label (PHP ts_object::get_term_by_locator): section_map term slice. */

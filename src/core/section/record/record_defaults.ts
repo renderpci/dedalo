@@ -100,6 +100,7 @@
  */
 
 import { buildLocatorLookupKey, type Locator } from '../../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import type { MatrixJsonbColumn } from '../../db/matrix.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
@@ -168,7 +169,9 @@ export async function resolveDefaultFilterData(
 	const locatorFor = (projectId: number | string): Record<string, unknown> => ({
 		id: 1,
 		type: RELATION_TYPE_FILTER,
-		section_id: String(projectId),
+		// int-canonical stored address (WC-2026-08-10-section-id-int-canonical):
+		// a project id IS a record address, so it is minted as an int.
+		section_id: canonicalizeStoredSectionId(projectId),
 		section_tipo: config.features.filterSectionTipo,
 		from_component_tipo: filterTipo,
 	});
@@ -375,7 +378,9 @@ export async function normalizeDefaultItems(
 			// PHP unsets the temporary marker before persisting (:1140-1143).
 			// biome-ignore lint/performance/noDelete: PHP unset — paginated_key must be ABSENT in persisted data
 			if ('paginated_key' in locator) delete locator.paginated_key;
-			locator.section_id = String(locator.section_id);
+			// Canonical stored address; a non-address value passes verbatim
+			// (WC-2026-08-10-section-id-int-canonical).
+			locator.section_id = canonicalizeStoredSectionId(locator.section_id);
 			const key = buildLocatorLookupKey(locator as unknown as Locator, keyProperties);
 			if (seen.has(key)) {
 				// PHP :1160-1167 — "Ignored set_data of already existing locator".

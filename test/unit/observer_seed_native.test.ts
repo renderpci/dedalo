@@ -520,12 +520,15 @@ function rsc387Referencer(targetId: number): string {
 	});
 }
 
-/** The exact D3 mirror entry shape the law appends. */
+/**
+ * The exact D3 mirror entry shape the law appends.
+ * WC-2026-08-10-section-id-int-canonical: int referencer address.
+ */
 function mirrorEntry(itemId: number, referencerId: number): Record<string, unknown> {
 	return {
 		id: itemId,
 		type: 'dd151',
-		section_id: String(referencerId),
+		section_id: referencerId,
 		section_tipo: 'rsc205',
 		from_component_tipo: OBSERVER_TIPO,
 	};

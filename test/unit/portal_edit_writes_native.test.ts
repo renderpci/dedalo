@@ -9,7 +9,8 @@
  *    component_relation_common.php:1058-1198): the picker's raw client
  *    locator normalizes to the stored bytes the differential pinned live
  *    2026-07-09 — `type` filled from the component's relation type,
- *    section_id stored as STRING, transient paginated_key stripped,
+ *    section_id stored as INT (was STRING until
+ *    WC-2026-08-10-section-id-int-canonical), transient paginated_key stripped,
  *    from_component_tipo forced; duplicate + autoreference inserts return
  *    null (ignored); extra properties beyond the locator law are PRESERVED
  *    (the dd96 tag-link shape round-trips byte-identically).
@@ -56,6 +57,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { canonicalizeStoredSectionId } from '../../src/core/concepts/section_id.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { getComponentFilterTipo } from '../../src/core/ontology/resolver.ts';
 import {
@@ -82,10 +84,13 @@ function track(sectionTipo: string, sectionId: number): number {
 	return sectionId;
 }
 
+// WC-2026-08-10-section-id-int-canonical: a stored record address is an int —
+// the relation writers mint it via canonicalizeStoredSectionId, so both the
+// seeded bytes and the asserted end states are int here.
 const locatorOf = (id: number, targetId: number | string, extra: Record<string, unknown> = {}) => ({
 	id,
 	type: 'dd151',
-	section_id: String(targetId),
+	section_id: canonicalizeStoredSectionId(targetId),
 	section_tipo: TARGET_SECTION,
 	from_component_tipo: PORTAL,
 	...extra,
@@ -201,7 +206,7 @@ describe('validateRelationInsert (PHP validate_data_element pins)', () => {
 		existingItems,
 	});
 
-	test('picker payload normalizes: type filled, section_id → string, paginated_key stripped', async () => {
+	test('picker payload normalizes: type filled, section_id → int, paginated_key stripped', async () => {
 		// The EXACT payload component_portal.link_record sends after a picker
 		// selection (numeric section_id, transient paginated_key, NO type).
 		const normalized = await validateRelationInsert(
@@ -213,11 +218,12 @@ describe('validateRelationInsert (PHP validate_data_element pins)', () => {
 			},
 			context(),
 		);
-		// The differential's byte pin (live 2026-07-09): client 101 → stored
-		// "101", type dd151 filled, paginated_key ABSENT.
+		// The differential's byte pin (live 2026-07-09) was the string "101";
+		// WC-2026-08-10-section-id-int-canonical flips the stored/emitted form
+		// to int. type dd151 filled, paginated_key ABSENT — unchanged.
 		expect(normalized).toEqual({
 			type: 'dd151',
-			section_id: '101',
+			section_id: 101,
 			section_tipo: TARGET_SECTION,
 			from_component_tipo: PORTAL,
 		});
@@ -258,7 +264,10 @@ describe('validateRelationInsert (PHP validate_data_element pins)', () => {
 			from_component_tipo: PORTAL,
 		};
 		const normalized = await validateRelationInsert({ ...tagLocator }, context());
-		expect(normalized).toEqual(tagLocator);
+		// WC-2026-08-10-section-id-int-canonical: the record address flips to int
+		// on the way in; every OTHER property (tag_id, section_top_id — a
+		// different concept the writer does not touch) round-trips verbatim.
+		expect(normalized).toEqual({ ...tagLocator, section_id: 101 });
 	});
 
 	test('relation type resolution: numisdata77 → dd151, rsc860 → its OWN dd96', async () => {
@@ -403,7 +412,8 @@ describe('portal edit writes, TS-native stored end states', () => {
 		expect(filter).toEqual([
 			{
 				type: 'dd675',
-				section_id: '1',
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: 1,
 				section_tipo: 'dd153',
 				from_component_tipo: targetFilterTipo,
 				id: 1,
@@ -449,7 +459,8 @@ describe('portal edit writes, TS-native stored end states', () => {
 		expect(filter).toEqual([
 			{
 				type: 'dd675',
-				section_id: '1',
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: 1,
 				section_tipo: 'dd153',
 				from_component_tipo: targetFilterTipo, // replaced (host tipo gone)
 				id: 1, // renumbered from 1
@@ -473,7 +484,9 @@ describe('portal edit writes, TS-native stored end states', () => {
 			saveRqo(host, [{ action: 'insert', id: null, value: { ...tagLocator } }]),
 		);
 		expect((response as { result?: unknown }).result).not.toBe(false);
-		expect(await portalDataOf(host)).toEqual([{ ...tagLocator, id: 1 }]);
+		// WC-2026-08-10-section-id-int-canonical: stored address int, the rest
+		// (tag_id, section_top_id) byte-identical.
+		expect(await portalDataOf(host)).toEqual([{ ...tagLocator, section_id: 101, id: 1 }]);
 	}, 60000);
 });
 

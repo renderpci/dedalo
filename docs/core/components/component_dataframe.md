@@ -83,11 +83,11 @@ Both the dataframe pairing AND the relation sibling-ordering have moved to `id_k
     ],
     "data"        : "array of frame locators",
     "sample_data" : [
-        {"type":"dd490","section_id":"3","section_tipo":"dd1706","id_key":2,"from_component_tipo":"dd560","main_component_tipo":"rsc217","id":1}
+        {"type":"dd490","section_id":3,"section_tipo":"dd1706","id_key":2,"from_component_tipo":"dd560","main_component_tipo":"rsc217","id":1}
     ],
     "value"        : "array of frame locators",
     "sample_value" : [
-        {"type":"dd490","section_id":"3","section_tipo":"dd1706","id_key":2,"from_component_tipo":"dd560","main_component_tipo":"rsc217","id":1}
+        {"type":"dd490","section_id":3,"section_tipo":"dd1706","id_key":2,"from_component_tipo":"dd560","main_component_tipo":"rsc217","id":1}
     ]
 }
 ```
@@ -137,7 +137,7 @@ main component data item              frame locator (relations container)
 { "id": 2, "iri": "https://..." } ←── { "type": "dd490", "id_key": 2,
                                         "main_component_tipo": "rsc217",
                                         "from_component_tipo": "dd560",
-                                        "section_tipo": "dd1706", "section_id": "3" }
+                                        "section_tipo": "dd1706", "section_id": 3 }
 ```
 
 A frame locator matches a main item when these four properties agree (the *match predicate*, `dataframeEntryMatches()`, `src/core/concepts/subdatum.ts`):
@@ -163,7 +163,7 @@ the single definition of the persisted shape:
 |---|---|
 | `type` **forced** to `dd490` | never trusted from the client, which sends it absent (autocomplete pick) or as `dd151` (portal tree view). A frame without the marker is stored-but-unreadable |
 | `from_component_tipo`, `main_component_tipo`, `id_key` taken from the **server's** caller context | the client sources its `id_key` from the last read echo, so trusting the payload lets one bad read corrupt every later write |
-| `section_id` stringified | the locator law's canonical form; a numeric one breaks jsonb `@>` containment |
+| `section_id` canonicalized to an **int** | a record address is an integer; a numeric string is the deprecated legacy form. Search containment is type-strict, so locator probes run in dual form while unconverted stock remains (`engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`) |
 | `paginated_key`, `section_id_key`, `section_tipo_key` **stripped** | a read-time transient the client echoes back, and the pre-v7 pairing keys (read-only BC) |
 
 Duplicate rejection compares **`DATAFRAME_TEST_EQUAL_PROPERTIES`**
@@ -233,7 +233,7 @@ Live `matrix` row `numisdata5/9`: the IRI value `id:1` of main component
 {
     "relation": {
         "dd560": [
-            {"id":1,"type":"dd490","id_key":1,"section_id":"60","section_tipo":"dd1706","from_component_tipo":"dd560","main_component_tipo":"numisdata215"}
+            {"id":1,"type":"dd490","id_key":1,"section_id":60,"section_tipo":"dd1706","from_component_tipo":"dd560","main_component_tipo":"numisdata215"}
         ]
     }
 }
@@ -258,7 +258,7 @@ under the SLOT's tipo — never under the main's:
     },
     "relation": {
         "oh130": [
-            {"id":1,"type":"dd490","id_key":2,"section_id":"4","section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}
+            {"id":1,"type":"dd490","id_key":2,"section_id":4,"section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}
         ]
     }
 }
@@ -274,9 +274,9 @@ The edit view renders the frame button next to the second value; reordering or e
 ```json
 {
     "relations": [
-        {"type":"dd151","section_id":"14","section_tipo":"rsc197","from_component_tipo":"oh24","id":1},
-        {"type":"dd151","section_id":"20","section_tipo":"rsc197","from_component_tipo":"oh24","id":2},
-        {"type":"dd490","section_id":"5","section_tipo":"ds1","id_key":1,"from_component_tipo":"oh115","main_component_tipo":"oh24","id":1}
+        {"type":"dd151","section_id":14,"section_tipo":"rsc197","from_component_tipo":"oh24","id":1},
+        {"type":"dd151","section_id":20,"section_tipo":"rsc197","from_component_tipo":"oh24","id":2},
+        {"type":"dd490","section_id":5,"section_tipo":"ds1","id_key":1,"from_component_tipo":"oh115","main_component_tipo":"oh24","id":1}
     ]
 }
 ```
@@ -573,18 +573,19 @@ DOM (list / default): `wrapper_component component_dataframe <tipo> <mode>` -> `
 
 ## Import / export model
 
-**Export.** A component that hosts frames exports them alongside its data inside the [dedalo_data wrapper](../importing_data.md). `buildRawCell()` (`src/diffusion/export/grid.ts`) collects the slot's frame locators via `getDataframeChildTipos()` and emits them next to the value:
+**Export.** A dataframe is a component with its own stored data, so a `dedalo_raw` export gives it **its own column**, headed by the dataframe component's tipo and placed right after the component it frames. Every cell is the plain [dedalo_data wrapper](../importing_data.md#the-dedalo_data-wrapper) around that component's stored slice:
 
-```json
-{"dedalo_data": {"data": [{"id":2,"value":"Segundo testimonio","lang":"lg-spa"}], "dataframe": [{"type":"dd490","id_key":2,"section_id":"4","section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}]}}
-```
+| `oh16` (the framed component) | `oh130` (the dataframe) |
+|---|---|
+| `{"dedalo_data": [{"id":2,"value":"Segundo testimonio","lang":"lg-spa"}]}` | `{"dedalo_data": [{"type":"dd490","id_key":2,"section_id":4,"section_tipo":"rolepos1","from_component_tipo":"oh130","main_component_tipo":"oh16"}]}` |
 
-Explicit item ids round-trip, which is exactly what keeps `id_key` valid across an export/import cycle.
+The column is minted from the ontology (`getDataframeChildTipos()` in `buildEntries`, `src/diffusion/export/grid.ts`), so it appears for every record of the export, empty where a record carries no frames. Explicit item ids round-trip, which is exactly what keeps `id_key` valid across an export/import cycle — the pairing lives in the data, which is why the two components can travel in separate columns at all.
 
-**Import.** `unwrapDedaloData()` (`src/core/tools/import_data.ts`) already parses the `{"dedalo_data":{"data":…, "dataframe":[...]}}` envelope and extracts the frame array as a distinct field, including the case of a `dataframe`-only envelope with no `data`.
+**Import.** The dataframe column maps like any other component column: the header resolves to the frame tipo, the relation conform facet (`src/core/tools/import_conform.ts`) writes the locators with `id_key`, `main_component_tipo` and `type: dd490` intact, and the slot is replaced by what the column carries.
 
-!!! warning "Gap: extracted frames are not written"
-    The CSV import driver (`src/core/tools/import_csv.ts`) and the import executor (`src/core/tools/import_execute.ts`) do not consume the `dataframe` field `unwrapDedaloData()` extracts — the frames are parsed out of the envelope and then dropped. Writing them (replacing the component's previous frames per slot, preserving frames of other components sharing the same slot, and accepting a pre-v7 export's `section_id_key` as the `id_key` source) has no confirmed port in this checkout. Only the main `data` half of the envelope round-trips today.
+Files exported before 2026-08-09 fold the frames into the framed component's own cell as `{"dedalo_data":{"data":…,"dataframe":[…]}}` (`dato` instead of `data` in v6-era files). `unwrapDedaloData()` (`src/core/tools/import_data.ts`) still accepts both spellings and splits the frame array out; `writeDataframeFrames()` (`src/core/tools/import_csv_execute.ts`) writes them per slot, preserving frames owned by other components in the same slot and accepting a pre-v7 export's `section_id_key` as the `id_key` source. A `dataframe`-only envelope writes just the frames and leaves the component's data untouched. Nothing emits that envelope any more.
+
+Wire contract: `WC-2026-08-09-export-raw-dataframe-own-column`.
 
 See [importing data](../importing_data.md) and [exporting data](../exporting_data.md).
 

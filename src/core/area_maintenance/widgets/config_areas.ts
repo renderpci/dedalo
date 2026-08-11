@@ -11,7 +11,17 @@ import { sql } from '../../db/postgres.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
-/** Root/admin/maintenance area tipos that may never be denied (anti-lockout). */
+/**
+ * Root/admin/maintenance area tipos that may never be denied (anti-lockout).
+ *
+ * COVERAGE-EXEMPT, this reader and the `configAreasGetValue` panel spread below
+ * (coverage plan §5.1; reason registered in engineering/crap_coverage_exempt.json):
+ * a single-predicate `dd_ontology` model lookup and its panel projection. The
+ * DECISIONS they feed — anti-lockout stripping, dedup and invalid classification —
+ * are gated as PURE functions over an INJECTED guarded list
+ * (`classifyAreaLists` / `configAreasMessage`, test/unit/area_lockout_lists_native.test.ts).
+ * Asserting the query results instead would pin INSTALLED ontology content.
+ */
 async function getGuardedAreaTipos(): Promise<string[]> {
 	const rows = (await sql.unsafe(
 		`SELECT tipo FROM dd_ontology WHERE model IN ('area_root', 'area_maintenance', 'area_admin')`,
@@ -20,26 +30,43 @@ async function getGuardedAreaTipos(): Promise<string[]> {
 	return rows.map((row) => row.tipo);
 }
 
-/** PHP config_areas::prepare_lists — validate, strip guarded, dedup. */
-async function prepareAreaLists(
-	areasDeny: unknown[],
-	areasAllow: unknown[],
-): Promise<{
+export interface AreaListClassification {
 	areas_deny: string[];
 	areas_allow: string[];
 	invalid: string[];
 	removed_guarded: string[];
-}> {
-	const guarded = await getGuardedAreaTipos();
-	const out = {
-		areas_deny: [] as string[],
-		areas_allow: [] as string[],
-		invalid: [] as string[],
-		removed_guarded: [] as string[],
+}
+
+/**
+ * THE ANTI-LOCKOUT CLASSIFIER — pure, with the guarded list and the tipo
+ * validity INJECTED (querying dd_ontology from a gate would pin installed
+ * content instead of the decision).
+ *
+ * The two loops are ASYMMETRIC ON PURPOSE and must stay that way:
+ *  - DENY: a guarded tipo (model area_root / area_maintenance / area_admin)
+ *    is diverted into `removed_guarded` and never reaches `areas_deny`.
+ *    Denying `area_maintenance` removes the very dashboard that could undo
+ *    the denial — recovery is hand-editing ts_state.json on the server.
+ *  - ALLOW: the SAME tipo survives into `areas_allow`. Allow-listing a
+ *    guarded area is legitimate; a "cleanup" that unifies the loops breaks it.
+ *
+ * Every entry is coerced with String() BEFORE dedup, so the client's `12` and
+ * `'12'` are one tipo, not two.
+ */
+export function classifyAreaLists(
+	areasDeny: unknown[],
+	areasAllow: unknown[],
+	guarded: string[],
+	isValidTipo: (tipo: string) => boolean,
+): AreaListClassification {
+	const out: AreaListClassification = {
+		areas_deny: [],
+		areas_allow: [],
+		invalid: [],
+		removed_guarded: [],
 	};
-	const validTipo = async (tipo: string): Promise<boolean> => (await getModelByTipo(tipo)) !== null;
 	for (const raw of [...new Set(areasDeny.map(String))]) {
-		if (!(await validTipo(raw))) {
+		if (!isValidTipo(raw)) {
 			out.invalid.push(raw);
 			continue;
 		}
@@ -50,13 +77,36 @@ async function prepareAreaLists(
 		out.areas_deny.push(raw);
 	}
 	for (const raw of [...new Set(areasAllow.map(String))]) {
-		if (!(await validTipo(raw))) {
+		if (!isValidTipo(raw)) {
 			out.invalid.push(raw);
 			continue;
 		}
 		out.areas_allow.push(raw);
 	}
 	return out;
+}
+
+/** The save envelope's operator feedback — the suffixes are the only signal
+ * that a requested denial was refused. */
+export function configAreasMessage(removedGuarded: string[], invalid: string[]): string {
+	return `OK. Configuration saved. Changes apply on the next request${
+		removedGuarded.length === 0 ? '' : '. Protected areas cannot be denied and were kept enabled.'
+	}${invalid.length === 0 ? '' : '. Invalid tipos were ignored.'}`;
+}
+
+/** PHP config_areas::prepare_lists — validate, strip guarded, dedup. */
+async function prepareAreaLists(
+	areasDeny: unknown[],
+	areasAllow: unknown[],
+): Promise<AreaListClassification> {
+	const guarded = await getGuardedAreaTipos();
+	// Resolve validity for every candidate up front so the classifier itself
+	// stays synchronous and pure.
+	const validTipos = new Set<string>();
+	for (const tipo of new Set([...areasDeny, ...areasAllow].map(String))) {
+		if ((await getModelByTipo(tipo)) !== null) validTipos.add(tipo);
+	}
+	return classifyAreaLists(areasDeny, areasAllow, guarded, (tipo) => validTipos.has(tipo));
 }
 
 async function configAreasGetValue(): Promise<WidgetResponse> {
@@ -95,11 +145,7 @@ async function configAreasSave(options: Record<string, unknown>): Promise<Widget
 	setServerState({ areas_deny: prepared.areas_deny, areas_allow: prepared.areas_allow });
 	return {
 		result: prepared,
-		msg: `OK. Configuration saved. Changes apply on the next request${
-			prepared.removed_guarded.length === 0
-				? ''
-				: '. Protected areas cannot be denied and were kept enabled.'
-		}${prepared.invalid.length === 0 ? '' : '. Invalid tipos were ignored.'}`,
+		msg: configAreasMessage(prepared.removed_guarded, prepared.invalid),
 		errors: [],
 	};
 }

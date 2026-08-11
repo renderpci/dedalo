@@ -36,7 +36,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {view_default_edit_filter} from './view_default_edit_filter.js'
 	import {view_line_edit_filter} from './view_line_edit_filter.js'
 
@@ -158,7 +158,7 @@ export const get_content_data = function(self) {
 			.filter(
 				el => el.parent &&
 				el.parent.section_tipo === element.section_tipo &&
-				el.parent.section_id === element.section_id
+				same_section_id(el.parent.section_id, element.section_id)
 			)
 			.sort((a, b) =>
 				(a.order - b.order) || ((a.label || '').localeCompare(b.label || ''))
@@ -373,7 +373,7 @@ export const get_input_element = (element, self) => {
 		// saved. Matching is done by section_id + section_tipo identity (type is not compared).
 			for (let j = 0; j < entries_length; j++) {
 				if (entries[j] && datalist_value &&
-					entries[j].section_id===datalist_value.section_id &&
+					same_section_id(entries[j].section_id, datalist_value.section_id) &&
 					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input_node.checked = true
@@ -434,7 +434,7 @@ export const get_input_element_read = (element, self) => {
 
 	// checked option set on match
 		const found = entries.find(el => datalist_value &&
-			el.section_id===datalist_value.section_id &&
+			same_section_id(el.section_id, datalist_value.section_id) &&
 			el.section_tipo===datalist_value.section_tipo
 		)
 

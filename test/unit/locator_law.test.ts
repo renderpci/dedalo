@@ -11,6 +11,15 @@
  * These are pure functions; every rule PHP applies is pinned here, including
  * the deliberate asymmetries between the strict compare path and the
  * stringified key path. Relation add/remove/dedup integrity depends on them.
+ *
+ * WC-2026-08-10-section-id-int-canonical scopes — but does NOT repeal — the
+ * laws below. What it repealed is the STORAGE law (a re-persisted section_id
+ * is an int now, not a string). The LOOSE section_id compare is permanent and
+ * must never be tightened to `===`: it is what lets a canonical int locator
+ * still match (a) legacy string-stored rows in an install whose data sweep has
+ * not run, (b) Time-Machine payloads restored from the string era, and (c) the
+ * external remote ids that stay strings BY DESIGN. Deleting any test here
+ * would silently break relation dedup/removal on those three populations.
  */
 
 import { describe, expect, test } from 'bun:test';

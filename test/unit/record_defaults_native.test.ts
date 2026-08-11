@@ -107,7 +107,10 @@ async function activityCountFor(userId: number, sectionTipo: string): Promise<nu
 		   AND relation @> $1::text::jsonb
 		   AND string @> $2::text::jsonb`,
 		[
-			JSON.stringify({ dd543: [{ section_id: String(userId) }] }),
+			// The actor address is minted INT (WC-2026-08-10-section-id-int-canonical,
+			// activity_log.ts) and jsonb `@>` is type-strict — probing the string
+			// form matched nothing and silently counted 0.
+			JSON.stringify({ dd543: [{ section_id: userId }] }),
 			JSON.stringify({ dd546: [{ value: sectionTipo }] }),
 		],
 	)) as { n: number }[];
@@ -157,7 +160,8 @@ beforeAll(async () => {
 					{
 						id: 1,
 						type: 'dd675',
-						section_id: String(SCRATCH_PROJECT),
+						// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+						section_id: SCRATCH_PROJECT,
 						section_tipo: config.features.filterSectionTipo,
 						from_component_tipo: 'dd170',
 					},
@@ -221,7 +225,8 @@ describe('B1: a record created by a NON-global-admin is born inside their projec
 			{
 				id: 1,
 				type: 'dd675', // DEDALO_RELATION_TYPE_FILTER
-				section_id: String(SCRATCH_PROJECT),
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: SCRATCH_PROJECT,
 				section_tipo: config.features.filterSectionTipo,
 				from_component_tipo: FILTER_TIPO,
 			},
@@ -242,7 +247,7 @@ describe('B1: a record created by a NON-global-admin is born inside their projec
 			{
 				id: 1,
 				type: 'dd675',
-				section_id: String(config.features.defaultProject),
+				section_id: config.features.defaultProject,
 				section_tipo: config.features.filterSectionTipo,
 				from_component_tipo: FILTER_TIPO,
 			},
@@ -255,7 +260,7 @@ describe('B1: a record created by a NON-global-admin is born inside their projec
 			{
 				id: 1,
 				type: 'dd675',
-				section_id: String(config.features.defaultProject),
+				section_id: config.features.defaultProject,
 				section_tipo: config.features.filterSectionTipo,
 				from_component_tipo: FILTER_TIPO,
 			},
@@ -275,7 +280,7 @@ describe('generic properties.dato_default seeding', () => {
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: '5',
+				section_id: 5,
 				section_tipo: 'dd889',
 				from_component_tipo: 'oh21',
 			},
@@ -284,7 +289,7 @@ describe('generic properties.dato_default seeding', () => {
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: '1',
+				section_id: 1,
 				section_tipo: 'dd501',
 				from_component_tipo: 'oh93',
 			},
@@ -293,7 +298,7 @@ describe('generic properties.dato_default seeding', () => {
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: '2',
+				section_id: 2,
 				section_tipo: 'dd64',
 				from_component_tipo: 'oh32',
 			},
@@ -524,13 +529,13 @@ describe('resolveDefaultFilterData cascade', () => {
 			{
 				id: 1,
 				type: 'dd675',
-				section_id: String(config.features.defaultProject),
+				section_id: config.features.defaultProject,
 				section_tipo: config.features.filterSectionTipo,
 				from_component_tipo: FILTER_TIPO,
 			},
 		]);
 		const own = await resolveDefaultFilterData(SCRATCH_USER, FILTER_TIPO);
-		expect((own[0] as { section_id: string }).section_id).toBe(String(SCRATCH_PROJECT));
+		expect((own[0] as { section_id: number }).section_id).toBe(SCRATCH_PROJECT);
 	}, 60000);
 
 	test('the engine holds no hardcoded project locator any more', () => {
@@ -569,7 +574,7 @@ describe('portal "+" creates as the REAL caller, in a project they can see', () 
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: String(SCRATCH_USER),
+				section_id: SCRATCH_USER,
 				section_tipo: 'dd128',
 				from_component_tipo: 'dd200',
 			},
@@ -583,7 +588,8 @@ describe('portal "+" creates as the REAL caller, in a project they can see', () 
 			{
 				id: 1,
 				type: 'dd675',
-				section_id: String(SCRATCH_PROJECT),
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: SCRATCH_PROJECT,
 				section_tipo: config.features.filterSectionTipo,
 				from_component_tipo: targetFilterTipo,
 			},
@@ -639,7 +645,7 @@ describe('portal "+" creates as the REAL caller, in a project they can see', () 
 			{
 				id: 1,
 				type: 'dd675',
-				section_id: String(config.features.defaultProject),
+				section_id: config.features.defaultProject,
 				section_tipo: config.features.filterSectionTipo,
 				from_component_tipo: targetFilterTipo,
 			},
@@ -666,7 +672,7 @@ describe('portal "+" creates as the REAL caller, in a project they can see', () 
 			`SELECT relation->$3 AS items FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[TARGET_SECTION, newId, targetFilterTipo],
 		)) as { items: Record<string, unknown>[] }[];
-		expect(rows[0]?.items?.[0]?.section_id).toBe(String(config.features.defaultProject));
+		expect(rows[0]?.items?.[0]?.section_id).toBe(config.features.defaultProject);
 	}, 60000);
 });
 

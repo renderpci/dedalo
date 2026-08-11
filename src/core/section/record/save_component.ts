@@ -304,6 +304,42 @@ export function isLangSlicedModel(model: string): boolean {
 	return descriptor?.classSupportsTranslation === true && descriptor.resolveData === undefined;
 }
 
+/**
+ * MONOVALUE models — data is an array but only element 0 is ever read (PHP
+ * component_common::$components_monovalue, class.component_common.php:180-196,
+ * ported verbatim). PHP consults it on the INSERT branch only ("For monovalue
+ * components, replace the existing value instead of appending", :4128-4131);
+ * its UPDATE branch appends an id-less change with a debug_log warning
+ * ("no id provided. Adding as new entry.", :4209-4213) — an acknowledged
+ * degenerate fallback, and the source of the recurring value-doubling bug
+ * class (component_publication, and now geolocation).
+ *
+ * Kept as a list here rather than a descriptor facet because it is a literal
+ * port of one PHP static array and this is its only consumer; the durable home
+ * is a `monovalue` facet on each descriptor.
+ */
+export const MONOVALUE_MODELS: ReadonlySet<string> = new Set([
+	'component_3d',
+	'component_av',
+	'component_geolocation',
+	'component_image',
+	'component_json',
+	'component_model',
+	'component_password',
+	'component_pdf',
+	'component_publication',
+	'component_section_id',
+	'component_security_access',
+	'component_select',
+	'component_select_lang',
+	'component_svg',
+	'component_text_area',
+]);
+
+export function isMonovalueModel(model: string): boolean {
+	return MONOVALUE_MODELS.has(model);
+}
+
 /** COMP-02: numeric-string ids normalize to int, else strict matching
  * appends duplicates instead of updating. */
 export function normalizeItemId(id: unknown): unknown {
@@ -351,7 +387,8 @@ export function getIdFromKey(
  * class.component_common.php:4152-4223): replace the FIRST item whose id
  * matches (PHP breaks after the first hit — translated items share ids by
  * design, so replacing every match destroys the sibling languages);
- * id-less/no-match appends (PHP fallback).
+ * id-less/no-match appends (PHP fallback) — EXCEPT for a populated monovalue
+ * model, which replaces (see MONOVALUE_MODELS).
  *
  * `sliceLang` non-null = the PHP lang-slice semantics for translation-
  * supporting literal components (supports_translation && !is_relation):
@@ -366,6 +403,7 @@ export function applyUpdate(
 	items: unknown[],
 	change: ChangedDataItem,
 	sliceLang: string | null,
+	monovalue = false,
 ): unknown[] {
 	let targetId: unknown = normalizeItemId(change.id ?? null);
 
@@ -392,6 +430,18 @@ export function applyUpdate(
 		// Non-sliced (relations & non-translatable classes): positional replace
 		// on the full array, first-match stop.
 		if (targetId === null) {
+			// MONOVALUE law (DELIBERATE PHP DIVERGENCE, see MONOVALUE_MODELS):
+			// only element 0 is ever read, so an id-less update of an
+			// already-populated single-value component REPLACES it. PHP appends
+			// and warns instead, which grows the array on every save: the map
+			// reloads at the stale first position and the record publishes two
+			// points. Narrow by construction — exactly one stored object item, so
+			// it cannot touch a multi-value model, an empty array (the first save
+			// must still create the item), or dirty legacy data.
+			if (monovalue && items.length === 1 && items[0] !== null && typeof items[0] === 'object') {
+				inheritId((items[0] as { id?: unknown }).id ?? null);
+				return [change.value];
+			}
 			return [...items, change.value];
 		}
 		const updated = [...items];
@@ -1003,7 +1053,12 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			if (validated === null) continue;
 			effectiveChange = { ...change, value: validated };
 		}
-		items = applyUpdate(items, effectiveChange, langSliced ? effectiveLang : null);
+		items = applyUpdate(
+			items,
+			effectiveChange,
+			langSliced ? effectiveLang : null,
+			isMonovalueModel(model),
+		);
 	}
 
 	// component_date SAVE override (PHP component_date::save → add_time): the

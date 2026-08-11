@@ -42,7 +42,15 @@
  */
 export type RawJsonText = string & { readonly __brand: 'RawJsonText' };
 
-/** Mark a string as raw JSON text (caller asserts it came from jsonb::text or this codec). */
+/**
+ * Mark a string as raw JSON text (caller asserts it came from jsonb::text or this codec).
+ *
+ * COVERAGE-EXEMPT (plan §4.1.9 → §5.1, adapter shell): the body is a TYPE
+ * assertion that erases to the identity function at runtime, so no executable
+ * behaviour exists to gate — every possible assertion would compare the input to
+ * itself. The claim it carries (only jsonb::text or encodeForJsonb output may be
+ * branded) is a compile-time one, enforced by the branded type itself.
+ */
 export function asRawJsonText(jsonText: string): RawJsonText {
 	return jsonText as RawJsonText;
 }
@@ -109,7 +117,16 @@ export function encodeForJsonb(value: unknown): RawJsonText {
 	return JSON.stringify(value) as RawJsonText;
 }
 
-/** Parse jsonb text back into a JS value (thin wrapper kept for symmetry/auditability). */
+/**
+ * Parse jsonb text back into a JS value (thin wrapper kept for symmetry/auditability).
+ *
+ * COVERAGE-EXEMPT (plan §4.1.9 → §5.1, adapter shell): a zero-branch,
+ * single-expression `JSON.parse` delegation. The only law worth pinning is the
+ * ROUND TRIP (decode(encode(x)) ≡ x, including the []-vs-{} and int-vs-float
+ * hazards), and that is gated where it belongs — against real rows in
+ * test/unit/json_codec_roundtrip.test.ts, over encodeForJsonb's assertJsonSafe
+ * walk. A test of this wrapper alone would assert that JSON.parse parses JSON.
+ */
 export function decodeFromJsonb(jsonText: string): unknown {
 	return JSON.parse(jsonText);
 }

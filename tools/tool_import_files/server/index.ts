@@ -79,6 +79,10 @@ function fail(message: string): ToolResponse {
 	return { result: false, msg: `Error. ${message}`, errors: [message] };
 }
 
+/** A locator as READ from a stored `relation` jsonb bag. The union is stored-
+ * legacy passthrough: an install not yet swept by
+ * scripts/migrate_section_id_locators.ts still holds the PHP string form
+ * (WC-2026-08-10-section-id-int-canonical) — narrows at contraction. */
 interface Locator {
 	section_tipo?: string;
 	section_id?: number | string;
@@ -628,6 +632,10 @@ interface ImportFileData {
 	tmp_name?: string;
 	extension?: string;
 	key_dir?: string;
+	/** Pre-matched target address, echoed back by the CLIENT from a matcher
+	 * response. Union kept: this RQO-body door still accepts the legacy numeric
+	 * STRING form (coerced at each use) until the contraction release —
+	 * WC-2026-08-10-section-id-int-canonical. */
 	section_id?: number | string;
 	/** The component_option ddo tipo chosen per file in the UI (portal routing). */
 	component_option?: string;

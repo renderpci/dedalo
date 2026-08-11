@@ -1154,6 +1154,15 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 
 	const images_factory_url = '../../core/component_text_area/tag/?id='
 
+	// Renderer fingerprint appended to every DETERMINISTIC badge src, exactly as
+	// tr.add_tag_img_on_the_fly does — the URL is otherwise version-free, so a
+	// browser holding a badge from an older drawing would never refetch it
+	// (see tr.tag_badge_version). The 'svg' tag is a media redirect, not a drawn
+	// badge, so it is left unversioned.
+	const version_suffix = (type==='svg')
+		? ''
+		: '&v=' + tr.tag_badge_version
+
 	// Bracket_in is different for close tag
 	const bracket_in = (type.indexOf('Out')!==-1)
 		? '[/'
@@ -1163,8 +1172,8 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 	const type_name = type.replace(/In|Out/, '');
 
 	const src = (type==='tc')
-		? images_factory_url  + '[TC_' + tag_id + '_TC]'
-		: images_factory_url  + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]"
+		? images_factory_url  + '[TC_' + tag_id + '_TC]' + version_suffix
+		: images_factory_url  + bracket_in + type_name + "-" + state + "-" + tag_id + "-" + label + "]" + version_suffix
 
 	const id = (type==='tc')
 		? tag_id

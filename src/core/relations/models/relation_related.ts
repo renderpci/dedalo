@@ -97,6 +97,10 @@ export const relationRelatedResolver: RelationModelResolver = {
 		// relation_related emits a list item even when empty (entries []) —
 		// PRECEDED by each related target's section_id component item (PHP
 		// list subdatum: the grid shows the related record ids as cells).
+		// KEPT UNION: raw stored jsonb read straight from the relation column —
+		// unswept legacy rows still hold the string form, and a related target
+		// on an external tipo holds a non-convertible remote id ('001338683').
+		// The page below re-emits these locators VERBATIM (stored passthrough).
 		const stored =
 			((record.columns.relation as Record<string, unknown[]> | null)?.[context.dataTipo] as
 				| { section_tipo?: string; section_id?: string | number }[]

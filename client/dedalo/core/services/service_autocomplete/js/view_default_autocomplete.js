@@ -27,7 +27,7 @@
 	import {ui} from '../../../common/js/ui.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
-	import {clone} from '../../../common/js/utils/index.js'
+	import {clone, same_section_id} from '../../../common/js/utils/index.js'
 	import {get_instance} from '../../../common/js/instances.js'
 	import {get_section_records} from '../../../section/js/section.js'
 	// the ONE label-key resolver for an external source_status. Shared with
@@ -1826,7 +1826,7 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 	// get the column data with last ddo
 	const ddo_item = current_path[current_path.length - 1];
 	// get the data into the full data from API and get the value (locator or final data as input_text data)
-	const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
+	const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && same_section_id(item.section_id, section_id))
 	const current_value = (current_element_data)
 		? current_element_data.value
 		: false

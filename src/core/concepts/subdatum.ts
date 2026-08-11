@@ -42,6 +42,7 @@
 
 import { z } from 'zod';
 import { contextEntrySchema, dataEntrySchema } from './context_data.ts';
+import { canonicalizeStoredSectionId } from './section_id.ts';
 
 /** The output of a subdatum expansion (PHP get_subdatum return). */
 export const subdatumSchema = z.object({
@@ -169,9 +170,13 @@ export interface DataframePairing {
  *      SERVER's caller context, not the payload: the client sources its
  *      `id_key` from the last read echo, so trusting it lets one broken read
  *      corrupt every subsequent write.
- *   3. `section_id` is stringified — the locator law's canonical form (all
- *      9698 PHP-written frames store it as a string; a numeric one breaks
- *      jsonb `@>` containment against a string-shaped probe).
+ *   3. `section_id` is CANONICALIZED to an int
+ *      (WC-2026-08-10-section-id-int-canonical, repealing the stringify law
+ *      this list used to state — "all 9698 PHP-written frames store it as a
+ *      string"). The containment argument that justified the string form is
+ *      gone: relation probes are now dual-form/typed (core/search/containment.ts),
+ *      so an int-shaped frame is matched by an int-shaped probe. Non-address
+ *      values (external remote ids) pass through verbatim.
  *   4. transients and legacy pairing keys are STRIPPED: `paginated_key` is a
  *      read-time index the client echoes back, and section_id_key /
  *      section_tipo_key are the pre-v7 pairing (read-only BC, never written).
@@ -188,7 +193,7 @@ export function normalizeDataframeEntry(
 		id_key: Math.trunc(Number(pairing.idKey)),
 	};
 	if (normalized.section_id !== undefined && normalized.section_id !== null) {
-		normalized.section_id = String(normalized.section_id);
+		normalized.section_id = canonicalizeStoredSectionId(normalized.section_id);
 	}
 	// biome-ignore lint/performance/noDelete: transient read-time index — must be ABSENT in stored data
 	delete normalized.paginated_key;

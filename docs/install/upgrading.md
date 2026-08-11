@@ -120,7 +120,53 @@ narrows your active ontologies is a bug report six months later.
     Add keys; do not rewrite the file. The one thing you *do* edit in place is a
     retired key's name. Every documented key is listed in `../private/sample.env`.
 
-## 5. Verify
+## 5. One-time data update — `section_id` becomes an integer
+
+Installs migrated from v6 **before** the unification step existed store locator
+addresses as strings (`"section_id": "7"`); the engine now writes and serves
+integers (`"section_id": 7`) and tolerates the old form only during a
+transition window. The one-time repair converts the stock:
+
+```shell
+# 1. maintenance mode ON, then a fresh backup (the repair writes no undo of its own)
+
+# 2. dry-run — read-only; review the report before anything changes
+bun scripts/migrate_section_id_locators.ts --all --user <your dd128 user id>
+
+# 3. apply — converts, re-verifies independently, re-backfills the relation
+#    index, and records the section_id_int_normalize marker in matrix_updates
+bun scripts/migrate_section_id_locators.ts --all --user <your dd128 user id> --apply
+
+# 4. a repeated dry-run must now report 0 changed rows; maintenance mode OFF
+```
+
+What to expect in the dry-run report:
+
+- The **conversion count** is the workload; on a large install it reaches
+  millions of values. Convertible means strictly numeric with no leading zero —
+  nothing else is ever cast.
+- **Findings** are values left alone, by class: external-service remote ids
+  (zero-padded or token-shaped — those strings *are* the value), `''` and
+  `"null"` junk (deletable only via the explicit
+  `--purge-class=empty,null-literal` flag, after you have read the identities),
+  and configuration tokens such as `"self"`. Findings are normal; an apply run
+  is refused as red only if *convertible* values remain afterwards.
+
+Three deliberate properties of the apply run:
+
+- **It does not touch curation metadata.** No modified-by / modified-date stamp
+  moves, and no Time Machine rows are written: a mechanical normalization is
+  not an edit, and stamping it would overwrite the real record of who last
+  curated each record. Recovery is the backup you took, not an undo trail.
+- **`--user` attributes the marker row only** — `matrix_updates` permanently
+  records who authorized the sweep. It never appears on any record.
+- **It is idempotent.** A re-run converts nothing and changes nothing, so an
+  interrupted run is simply run again.
+
+Installs migrated with the current `close_v6_prepare_v7` package need none of
+this — the same conversion runs inside the migration itself.
+
+## 6. Verify
 
 ```shell
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health

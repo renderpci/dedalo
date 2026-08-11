@@ -39,7 +39,9 @@ describe('normalizeDataframeEntry — the persisted-frame contract', () => {
 		expect(normalizeDataframeEntry(RAW_CLIENT_LOCATOR, PAIRING)).toEqual({
 			type: 'dd490',
 			id_key: 2,
-			section_id: '4', // stringified per the locator law
+			// WC-2026-08-10-section-id-int-canonical: the frame's record address is
+			// an INT (repeals the "stringified per the locator law" pin).
+			section_id: 4,
 			section_tipo: 'rolepos1',
 			from_component_tipo: 'oh115',
 			main_component_tipo: 'oh24',

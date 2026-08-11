@@ -54,8 +54,10 @@ describe('criterionToSqoLeaf — same_locator', () => {
 			locators: [{ section_tipo: 'numisdata3', section_id: '27' }],
 		};
 		const compiled = criterionToSqoLeaf(criterion('same_locator'), value);
+		// section_id emits CANONICAL (int) even when the seed stored '27'
+		// (WC-2026-08-10-section-id-int-canonical).
 		expect(compiled).toEqual({
-			q: [{ section_tipo: 'numisdata3', section_id: '27' }],
+			q: [{ section_tipo: 'numisdata3', section_id: 27 }],
 			path: PATH,
 		});
 		expectValidSqo(compiled);
@@ -79,8 +81,8 @@ describe('criterionToSqoLeaf — same_locator', () => {
 		for (const leaf of compiled.$or) {
 			expect(leaf.q).toHaveLength(1);
 		}
-		expect(compiled.$or[0]?.q).toEqual([{ section_tipo: 'numisdata3', section_id: '27' }]);
-		expect(compiled.$or[1]?.q).toEqual([{ section_tipo: 'numisdata3', section_id: '31' }]);
+		expect(compiled.$or[0]?.q).toEqual([{ section_tipo: 'numisdata3', section_id: 27 }]);
+		expect(compiled.$or[1]?.q).toEqual([{ section_tipo: 'numisdata3', section_id: 31 }]);
 		expectValidSqo(compiled);
 	});
 
@@ -98,10 +100,12 @@ describe('criterionToSqoLeaf — same_locator', () => {
 			],
 		};
 		const compiled = criterionToSqoLeaf(criterion('same_locator'), value) as { q: object[] };
-		expect(compiled.q[0]).toEqual({ section_tipo: 'numisdata3', section_id: '27' });
+		expect(compiled.q[0]).toEqual({ section_tipo: 'numisdata3', section_id: 27 });
 	});
 
-	test('section_id travels VERBATIM — jsonb containment is type-strict', () => {
+	test('section_id emits CANONICAL — int for addresses, verbatim for external ids (WC-2026-08-10)', () => {
+		// The old law here ("travels VERBATIM") is repealed: builder_relation now
+		// probes both typed forms, and the compiler emits the canonical one.
 		const asString = criterionToSqoLeaf(criterion('same_locator'), {
 			kind: 'locators',
 			locators: [{ section_tipo: 'test3', section_id: '27' }],
@@ -110,8 +114,15 @@ describe('criterionToSqoLeaf — same_locator', () => {
 			kind: 'locators',
 			locators: [{ section_tipo: 'test3', section_id: 27 }],
 		}) as { q: { section_id: unknown }[] };
-		expect(asString.q[0]?.section_id).toBe('27');
+		// A non-convertible external remote id is NOT an address in disguise —
+		// its stored bytes are the value and must survive untouched.
+		const asExternalRef = criterionToSqoLeaf(criterion('same_locator'), {
+			kind: 'locators',
+			locators: [{ section_tipo: 'zenon1', section_id: '001338683' }],
+		}) as { q: { section_id: unknown }[] };
+		expect(asString.q[0]?.section_id).toBe(27);
 		expect(asNumber.q[0]?.section_id).toBe(27);
+		expect(asExternalRef.q[0]?.section_id).toBe('001338683');
 	});
 
 	test('a non-locator value is a profile error, not a query', () => {

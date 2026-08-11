@@ -13,6 +13,7 @@
  * name.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
@@ -113,6 +114,8 @@ export async function buildDdInfoChain(
 		const rows = (await sql.unsafe(
 			`SELECT relation->$3 AS parents FROM "${table}" WHERE section_tipo = $1 AND section_id = $2`,
 			[currentSection, currentId, map.parent],
+			// KEPT UNION: raw stored jsonb parent locator — an unswept hierarchy
+			// row still holds the legacy string form.
 		)) as { parents: { section_tipo?: string; section_id?: string | number }[] | null }[];
 		const parentLocator = rows[0]?.parents?.[0];
 		if (parentLocator?.section_tipo === undefined || parentLocator.section_id === undefined) {
@@ -155,14 +158,24 @@ export async function isThesaurusTarget(sectionTipo: string): Promise<boolean> {
  * component_relation_parent::get_parents_recursive — the walk behind the
  * relation_search ancestor index). Same section_map parent resolution as the
  * ddinfo chain; cycle-guarded at 20 hops.
+ *
+ * The chain is emitted in CANONICAL form (int addresses,
+ * WC-2026-08-10-section-id-int-canonical) — it feeds both the wire and the
+ * relation_search ancestor INDEX that relations/save.ts writes, so its type is
+ * storage-visible.
+ *
+ * KEPT UNION on the emitted section_id (return type + `chain` below): the ids
+ * come from canonicalizeStoredSectionId over the STORED parent locator, whose
+ * contract is "convertible → int, anything else VERBATIM" — a non-convertible
+ * stored id is passed on unchanged rather than corrupted into a wrong address.
  */
 export async function getParentChainLocators(
 	targetSectionTipo: string,
 	targetSectionId: number | string,
-): Promise<{ section_tipo: string; section_id: string }[]> {
+): Promise<{ section_tipo: string; section_id: number | string }[]> {
 	const table = await getMatrixTableFromTipo(targetSectionTipo);
 	if (table === null) return [];
-	const chain: { section_tipo: string; section_id: string }[] = [];
+	const chain: { section_tipo: string; section_id: number | string }[] = [];
 	let currentSection = targetSectionTipo;
 	let currentId = Number(targetSectionId);
 	for (let depth = 0; depth < 20; depth++) {
@@ -170,12 +183,16 @@ export async function getParentChainLocators(
 		const rows = (await sql.unsafe(
 			`SELECT relation->$3 AS parents FROM "${table}" WHERE section_tipo = $1 AND section_id = $2`,
 			[currentSection, currentId, map.parent],
+			// KEPT UNION: raw stored jsonb parent locator — an unswept hierarchy
+			// row still holds the legacy string form.
 		)) as { parents: { section_tipo?: string; section_id?: string | number }[] | null }[];
 		const parentLocator = rows[0]?.parents?.[0];
 		if (parentLocator?.section_tipo === undefined || parentLocator.section_id === undefined) break;
 		chain.push({
 			section_tipo: String(parentLocator.section_tipo),
-			section_id: String(parentLocator.section_id),
+			// Canonicalize the stored parent id ('7' → 7); a non-convertible id
+			// (external ref) passes through verbatim.
+			section_id: canonicalizeStoredSectionId(parentLocator.section_id) as number | string,
 		});
 		currentSection = String(parentLocator.section_tipo);
 		currentId = Number(parentLocator.section_id);

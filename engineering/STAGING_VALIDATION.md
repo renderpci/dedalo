@@ -181,6 +181,43 @@ table — confirm staging uses the real table and the flake memory is retired.
 
 ---
 
+## H. section_id int migration drill (WC-2026-08-10-section-id-int-canonical)
+
+Before running `scripts/migrate_section_id_locators.ts --apply` on ANY real
+install, rehearse the full cycle against the pinned snapshot pair:
+
+```bash
+# 1. restore the frozen 2026-07-11 snapshot into a scratch database
+pg_restore -d <scratch_db> private/backups/db/2026-07-11_102750.*.custom.backup
+
+# 2. census (read-only) — record the convertible count
+bun scripts/census_section_id.ts
+
+# 3. dry-run — the report's residue must be ONLY: external-skip (zenon),
+#    token classes documented in the WC entry, null-value metadata
+bun scripts/migrate_section_id_locators.ts --all --user <id>
+
+# 4. apply — post-verify (independent jsonb_path census) must exit 0
+bun scripts/migrate_section_id_locators.ts --all --user <id> --apply
+
+# 5. idempotence — a re-run dry-run must report 0 changed rows
+bun scripts/migrate_section_id_locators.ts --all --user <id>
+
+# 6. parity replay against the frozen store (the normalizeSectionIdTypes
+#    transform absorbs the type flip; any OTHER divergence is a finding)
+bun test test/parity/
+
+# 7. app smoke on the swept scratch DB: relation search (positive AND
+#    negated operators), portal pick, selected states, TM restore of a
+#    pre-sweep snapshot (must converge to int — D6.2), projects-filter ACL
+#    list as a non-admin user
+```
+
+▢ post-verify exit 0 ▢ marker row present in matrix_updates ▢ version
+detection still answers 7.0.0 (`getCurrentDataVersion` — the marker must not
+shadow it) ▢ parity green ▢ smoke green. Only then schedule the production
+window: maintenance ON → fresh backup → dry-run → review → apply → OFF.
+
 ## Sign-off
 
 A staging pass = every ▢ observed, every ✅ met, every ⚠ understood. Until then,

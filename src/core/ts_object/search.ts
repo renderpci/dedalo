@@ -17,6 +17,7 @@
  * "fixing" (ledgered) — the live PHP JSON is the contract.
  */
 
+import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { getTldFromTipo, safeTld } from '../ontology/tld.ts';
@@ -60,7 +61,73 @@ export interface SearchThesaurusResult {
 	msg: string;
 	errors: RecursionError[];
 	total: number;
-	found: { section_tipo: string; section_id: number | string }[];
+	/** The raw hits: `section_id` is the matrix table's own int PK column. */
+	found: { section_tipo: string; section_id: number }[];
+}
+
+/**
+ * Expand ONE level of a hit's top-down ancestor path into `tsObjectsMap`: the
+ * ancestor's complete sibling list first (positional order — the PHP quirk),
+ * then the ancestor node itself, parented to the level above (or 'root', which
+ * takes its display order from the hierarchy main record). Already-seen nodes
+ * keep their first insertion, so the map preserves PHP's emission order.
+ */
+async function expandAncestorLevel(
+	path: ParentLocator[],
+	parentKey: number,
+	tsObjectsMap: Map<string, TsNodeData>,
+	principal: Principal,
+): Promise<void> {
+	const currentParent = path[parentKey] as ParentLocator;
+	// The walk cursor comes off STORED parent locators (ParentLocator keeps
+	// the pre-sweep string leg), so the address is canonicalized here, once,
+	// before it addresses a record or builds a node. A non-address ancestor
+	// cannot be a tree node at all — skip it rather than build a NaN node
+	// (WC-2026-08-10-section-id-int-canonical).
+	const childrenSectionId = canonicalizeStoredSectionId(currentParent.section_id);
+	if (!isSectionId(childrenSectionId)) return;
+	const childrenSectionTipo = currentParent.section_tipo;
+
+	// full sibling list of this ancestor.
+	const childrenData = await getChildren(childrenSectionId, childrenSectionTipo);
+	const prefetched = await fetchNodeInfo(childrenData as unknown as NodeLocator[], null);
+
+	for (const [childrenIndex, childLocator] of childrenData.entries()) {
+		const key = `${childLocator.section_tipo}:${childLocator.section_id}`;
+		if (tsObjectsMap.has(key)) continue;
+		const tsParent = `${childrenSectionTipo}_${childrenSectionId}`;
+		const nodeInfo = prefetched.get(
+			`${childLocator.section_tipo}_${Math.trunc(Number(childLocator.section_id))}`,
+		);
+		tsObjectsMap.set(
+			key,
+			await buildNodeData(
+				childLocator.section_tipo,
+				childLocator.section_id,
+				// order here is the POSITIONAL index (PHP quirk), not the stored value.
+				{ order: childrenIndex + 1, is_indexable: nodeInfo?.is_indexable },
+				tsParent,
+				principal,
+			),
+		);
+	}
+
+	// the ancestor node itself.
+	const parentNodeKey = `${childrenSectionTipo}:${childrenSectionId}`;
+	if (tsObjectsMap.has(parentNodeKey)) return;
+	const previous = path[parentKey - 1] as ParentLocator | undefined;
+	const tsParent =
+		previous === undefined ? 'root' : `${previous.section_tipo}_${previous.section_id}`;
+	const options: { order?: number } = {};
+	if (tsParent === 'root') {
+		const rootTld = getTldFromTipo(currentParent.section_tipo);
+		const rootOrder = await getMainOrder(rootTld);
+		if (rootOrder) options.order = rootOrder;
+	}
+	tsObjectsMap.set(
+		parentNodeKey,
+		await buildNodeData(childrenSectionTipo, childrenSectionId, options, tsParent, principal),
+	);
 }
 
 /**
@@ -76,20 +143,22 @@ export async function searchThesaurus(
 	const built = await buildSearchSql(sanitized, { principal });
 	const hits = (await sql.unsafe(built.sql, built.params as (string | number | null)[])) as {
 		section_tipo: string;
-		section_id: number | string;
+		// The int PK column of the matrix table — never a stored jsonb value.
+		section_id: number;
 	}[];
 
 	const totalRecords = hits.length;
 	const tsObjectsMap = new Map<string, TsNodeData>();
-	const found: { section_tipo: string; section_id: number | string }[] = [];
+	const found: { section_tipo: string; section_id: number }[] = [];
 	const ancestorsCache = new Map<string, ParentLocator[]>();
 	const errors: RecursionError[] = [];
 
 	for (const row of hits) {
 		const sectionTipo = row.section_tipo;
 		const sectionId = row.section_id;
-		// PHP pushes the DB row section_id (a string) into `found`.
-		found.push({ section_tipo: sectionTipo, section_id: String(sectionId) });
+		// The DB row's own int address, emitted verbatim — repeals "PHP pushes
+		// the DB row section_id (a string)" (WC-2026-08-10-section-id-int-canonical).
+		found.push({ section_tipo: sectionTipo, section_id: sectionId });
 
 		const ancestorsKey = `${sectionTipo}_${sectionId}`;
 		let ancestors = ancestorsCache.get(ancestorsKey);
@@ -112,58 +181,7 @@ export async function searchThesaurus(
 		// walk top-down: [root, …, immediate parent].
 		const path = [...ancestors].reverse();
 		for (let parentKey = 0; parentKey < path.length; parentKey++) {
-			const currentParent = path[parentKey] as ParentLocator;
-			const childrenSectionId = currentParent.section_id;
-			const childrenSectionTipo = currentParent.section_tipo;
-
-			// full sibling list of this ancestor.
-			const childrenData = await getChildren(childrenSectionId, childrenSectionTipo);
-			const prefetched = await fetchNodeInfo(childrenData as unknown as NodeLocator[], null);
-
-			for (const [childrenIndex, childLocator] of childrenData.entries()) {
-				const key = `${childLocator.section_tipo}:${childLocator.section_id}`;
-				if (tsObjectsMap.has(key)) continue;
-				const tsParent = `${childrenSectionTipo}_${childrenSectionId}`;
-				const nodeInfo = prefetched.get(
-					`${childLocator.section_tipo}_${Math.trunc(Number(childLocator.section_id))}`,
-				);
-				tsObjectsMap.set(
-					key,
-					await buildNodeData(
-						childLocator.section_tipo,
-						childLocator.section_id,
-						// order here is the POSITIONAL index (PHP quirk), not the stored value.
-						{ order: childrenIndex + 1, is_indexable: nodeInfo?.is_indexable },
-						tsParent,
-						principal,
-					),
-				);
-			}
-
-			// the ancestor node itself.
-			const parentNodeKey = `${currentParent.section_tipo}:${currentParent.section_id}`;
-			if (!tsObjectsMap.has(parentNodeKey)) {
-				const tsParent =
-					parentKey === 0
-						? 'root'
-						: `${(path[parentKey - 1] as ParentLocator).section_tipo}_${(path[parentKey - 1] as ParentLocator).section_id}`;
-				const options: { order?: number } = {};
-				if (tsParent === 'root') {
-					const rootTld = getTldFromTipo(currentParent.section_tipo);
-					const rootOrder = await getMainOrder(rootTld);
-					if (rootOrder) options.order = rootOrder;
-				}
-				tsObjectsMap.set(
-					parentNodeKey,
-					await buildNodeData(
-						currentParent.section_tipo,
-						currentParent.section_id,
-						options,
-						tsParent,
-						principal,
-					),
-				);
-			}
+			await expandAncestorLevel(path, parentKey, tsObjectsMap, principal);
 		}
 	}
 
@@ -176,7 +194,14 @@ export async function searchThesaurus(
 	};
 }
 
-/** One pinned hierarchy_terms group (as stored in an area button's properties). */
+/**
+ * One pinned hierarchy_terms group (as stored in an area button's properties).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): these locators are
+ * ONTOLOGY-AUTHORED bytes in `properties`, not matrix data — nothing sweeps
+ * them, and the shipped configs hold the string form. The id travels into the
+ * SQO `q` verbatim, where builder_relation probes both typed forms.
+ */
 export interface HierarchyTerm {
 	value?: { section_tipo: string; section_id: number | string }[];
 }

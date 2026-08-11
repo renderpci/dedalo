@@ -8,6 +8,16 @@
  * This gate drives the section read (the client render path) and asserts the
  * geolocation context carries features.geo_provider matching PHP. Fixture:
  * test3/1 component test100. See rewrite/STATUS.md "component_geolocation features".
+ *
+ * DELIBERATE WIRE DIVERGENCE (WC-2026-08-08-geolocation-emptiness-explicit):
+ * TS adds ONE key to this object, `features.default_view` — the map's opening
+ * CAMERA, which PHP never emitted because it fabricated a stored coordinate
+ * instead. Reconciled the WC-001 way: the ONE known-diverging key is lifted off
+ * the TS object by name and asserted STRICTLY on its own (exact shape, exact
+ * values from config); EVERY remaining byte is still compared verbatim with
+ * toEqual against the PHP/fixture response. A subset match is NOT used — a
+ * second additive key, a dropped or renamed geo_provider, or any value drift
+ * still fails here.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -62,7 +72,23 @@ describe.if(hasPhpCredentials())('component_geolocation features (edit context)'
 	test('geolocation edit context carries features.geo_provider matching PHP', () => {
 		if (!hasPhpCredentials()) return;
 		expect(phpFeatures).toBeDefined(); // PHP always appends it (full context)
-		expect(tsFeatures).toEqual(phpFeatures);
+		// Lift ONLY the ledgered divergence off the TS side, by name; everything
+		// else stays a strict byte comparison against PHP.
+		const { default_view, ...tsFeaturesRest } = tsFeatures as {
+			default_view?: unknown;
+			[key: string]: unknown;
+		};
+		// The lift is honest only while PHP has no counterpart key: if the fossil
+		// ever carried one, this must go back to a plain strict comparison.
+		expect((phpFeatures as { default_view?: unknown }).default_view).toBeUndefined();
+		expect(tsFeaturesRest).toEqual(phpFeatures as Record<string, unknown>);
 		expect((tsFeatures as { geo_provider?: unknown })?.geo_provider).toBeDefined();
+		// The lifted key is asserted TS-side, strictly: exact shape, exact values.
+		// PHP has no counterpart — it fabricated a stored coordinate instead.
+		expect(default_view).toEqual({
+			lat: config.geoDefaultView.lat,
+			lon: config.geoDefaultView.lon,
+			zoom: config.geoDefaultView.zoom,
+		});
 	});
 });

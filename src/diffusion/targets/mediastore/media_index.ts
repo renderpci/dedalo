@@ -379,6 +379,9 @@ async function fetchPublishedSectionIds(
 	tableName: string,
 ): Promise<(string | number)[]> {
 	const pool = getTargetPool(databaseName);
+	// The PUBLISHED MariaDB target, not the matrix: its section_id column carries
+	// the published string shape (a pinned edge — publication v1 LIKE-probes the
+	// quoted form), so the union stays. WC-2026-08-10-section-id-int-canonical.
 	const rows = (await pool.unsafe(
 		`SELECT DISTINCT section_id FROM ${escapeSqlIdentifier(tableName)}`,
 		[],

@@ -153,9 +153,10 @@ describe('relation_index configurable inverse question (get_data)', () => {
 			expect(entry.type).toBe('dd151'); // NEVER the dd96 default
 			expect(entry.section_tipo).toBe('test3');
 		}
-		expect(entries.some((entry) => entry.section_id === String(SCRATCH_DD151_ID))).toBe(true);
+		// entries carry the int-canonical section_id (WC-2026-08-10-section-id-int-canonical)
+		expect(entries.some((entry) => entry.section_id === SCRATCH_DD151_ID)).toBe(true);
 		// The dd96 scratch pointer is invisible to a dd151 component.
-		expect(entries.some((entry) => entry.section_id === String(SCRATCH_DD96_ID))).toBe(false);
+		expect(entries.some((entry) => entry.section_id === SCRATCH_DD96_ID)).toBe(false);
 		expect((item?.pagination as { total: number }).total).toBe(baseFiltered + 1);
 	});
 
@@ -166,7 +167,7 @@ describe('relation_index configurable inverse question (get_data)', () => {
 		for (const entry of entries) {
 			expect(entry.section_tipo).toBe('dd153');
 		}
-		expect(entries.some((entry) => entry.section_id === String(SCRATCH_DD151_ID))).toBe(false);
+		expect(entries.some((entry) => entry.section_id === SCRATCH_DD151_ID)).toBe(false);
 	});
 
 	test('no config → the dd96/all-sections defaults (test25)', async () => {
@@ -177,7 +178,7 @@ describe('relation_index configurable inverse question (get_data)', () => {
 		for (const entry of entries) {
 			expect(entry.type).toBe('dd96');
 		}
-		expect(entries.some((entry) => entry.section_id === String(SCRATCH_DD96_ID))).toBe(true);
+		expect(entries.some((entry) => entry.section_id === SCRATCH_DD96_ID)).toBe(true);
 		expect((item?.pagination as { total: number }).total).toBe(baseDefault + 1);
 	});
 });

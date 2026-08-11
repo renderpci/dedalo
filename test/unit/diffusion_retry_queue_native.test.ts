@@ -66,12 +66,18 @@ async function ledgerRows(where: string, params: unknown[] = []): Promise<Ledger
 	)) as LedgerRow[];
 }
 
-/** Every pending (action 3) row currently visible to retryPendingDiffusion. */
+/**
+ * Every pending (action 3) row currently visible to retryPendingDiffusion.
+ * Shape-tolerant like the engine's own probe: D16 `diffusion_action` key first,
+ * then both typed legacy locator forms (WC-2026-08-10-section-id-int-canonical).
+ */
 async function pendingRowCount(): Promise<number> {
 	const rows = (await sql.unsafe(
 		`SELECT count(*)::int AS n FROM "${DIFFUSION_ACTIVITY_TABLE}"
 		 WHERE section_tipo = 'dd1758'
-		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb`,
+		   AND ( relation @> '{"dd1767":[{"diffusion_action":3,"section_tipo":"dd1774"}]}'::jsonb
+		      OR relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb
+		      OR relation @> '{"dd1767":[{"section_id":3,"section_tipo":"dd1774"}]}'::jsonb )`,
 	)) as { n: number }[];
 	return rows[0]?.n ?? -1;
 }
@@ -139,7 +145,8 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 			dd1763: [
 				{
 					type: 'dd151',
-					section_id: '932030', // STRING (locator convention), not the number
+					// int-canonical address (WC-2026-08-10-section-id-int-canonical)
+					section_id: 932030,
 					section_tipo: 'zzd9',
 					from_component_tipo: 'dd1763',
 				},
@@ -147,7 +154,9 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 			dd1767: [
 				{
 					type: 'dd151',
-					section_id: '3',
+					// D16: the action token rides its OWN key, never section_id
+					// (WC-2026-08-10-section-id-int-canonical)
+					diffusion_action: 3,
 					section_tipo: 'dd1774',
 					from_component_tipo: 'dd1767',
 				},
@@ -155,7 +164,7 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 			dd1762: [
 				{
 					type: 'dd151',
-					section_id: '5',
+					section_id: 5,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd1762',
 				},
@@ -164,7 +173,7 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 			dd1766: [
 				{
 					type: 'dd151',
-					section_id: '29',
+					section_id: 29,
 					section_tipo: 'numisdata0',
 					from_component_tipo: 'dd1766',
 				},
@@ -181,7 +190,8 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 			[
 				'dd1',
 				932031,
-				[{ type: 'dd151', section_id: '1', section_tipo: 'dd0', from_component_tipo: 'dd1766' }],
+				// int-canonical (WC-2026-08-10-section-id-int-canonical)
+				[{ type: 'dd151', section_id: 1, section_tipo: 'dd0', from_component_tipo: 'dd1766' }],
 			],
 			['zz1a2', 932032, undefined], // regex miss (digits then letters) → NO key
 		];
@@ -210,7 +220,8 @@ describe('logDiffusionActivity — the dd1758 row shape', () => {
 		expect(rows.length).toBe(1);
 		expect((rows[0] as LedgerRow).relation.dd1766).toBeUndefined();
 		expect((rows[0] as LedgerRow).relation.dd1767).toEqual([
-			{ type: 'dd151', section_id: '1', section_tipo: 'dd1774', from_component_tipo: 'dd1767' },
+			// D16 shape (WC-2026-08-10-section-id-int-canonical)
+			{ type: 'dd151', diffusion_action: 1, section_tipo: 'dd1774', from_component_tipo: 'dd1767' },
 		]);
 	});
 
@@ -245,17 +256,19 @@ describe('retryPendingDiffusion', () => {
 		resetNativeDiffusionSqlDeleteForTests();
 	}
 
-	async function actionsOf(sectionId: number): Promise<string[]> {
+	async function actionsOf(sectionId: number): Promise<number[]> {
 		const rows = await ledgerRows(`relation->'dd1763'->0->>'section_id' = '${String(sectionId)}'`);
 		return rows.map((row) => {
-			const locator = (row.relation.dd1767 as { section_id: string }[])[0];
-			return locator?.section_id ?? '';
+			// D16: engine-written rows carry the action under its own key
+			// (WC-2026-08-10-section-id-int-canonical)
+			const locator = (row.relation.dd1767 as { diffusion_action?: number }[])[0];
+			return locator?.diffusion_action ?? -1;
 		});
 	}
 
 	test('DIFFU-08: a retry that confirms nothing leaves the rows pending', async () => {
 		await seedPending(932040);
-		expect(await actionsOf(932040)).toEqual(['3', '3']);
+		expect(await actionsOf(932040)).toEqual([3, 3]);
 
 		let calls = 0;
 		registerNativeDiffusionSqlDelete(async () => {
@@ -266,7 +279,7 @@ describe('retryPendingDiffusion', () => {
 
 		expect(result).toEqual({ total: 2, retried: 0, remaining: 2 });
 		expect(calls).toBe(2); // one re-run per pending row
-		expect(await actionsOf(932040)).toEqual(['3', '3']); // NOT flipped
+		expect(await actionsOf(932040)).toEqual([3, 3]); // NOT flipped
 		// the retry drives logActivity=false — no second generation of rows
 		expect(await pendingRowCount()).toBe(2);
 	});
@@ -281,8 +294,37 @@ describe('retryPendingDiffusion', () => {
 		const result = await retryPendingDiffusion(10);
 
 		expect(result).toEqual({ total: 2, retried: 2, remaining: 0 });
-		expect(await actionsOf(932041)).toEqual(['2', '2']); // unpublished
+		expect(await actionsOf(932041)).toEqual([2, 2]); // unpublished
 		expect(await pendingRowCount()).toBe(0);
+	});
+
+	test('D10b (fixed 2026-08-09): a retry is restricted to its OWN row element', async () => {
+		// Two sql elements → two pending rows for the SAME record. The executor
+		// now confirms only the FIRST element's target. Before the fix each row
+		// re-ran the WHOLE record, so the record-level flip criterion
+		// (`retry.deleted.length > 0`) marked the still-failing element
+		// 'unpublished' because its sibling succeeded — the pending row vanished
+		// with nothing unpublished. PHP restricts by only_element_tipos.
+		await seedPending(932045);
+		const batches: number[] = [];
+		registerNativeDiffusionSqlDelete(async (targets) => {
+			batches.push(targets.length);
+			return {
+				deleted: targets
+					.map((target) => `${target.database_name}|${target.table_name}`)
+					.filter((key) => key === SQL_KEY_ONE),
+				errors: [],
+			};
+		});
+
+		const result = await retryPendingDiffusion(10);
+
+		expect(result).toEqual({ total: 2, retried: 1, remaining: 1 });
+		// one target per call — the row's element, never the whole record
+		expect(batches).toEqual([1, 1]);
+		// the confirmed element flipped; the failing one stays pending
+		expect(await actionsOf(932045)).toEqual([2, 3]);
+		expect(await pendingRowCount()).toBe(1);
 	});
 
 	test('a pending row with no resolvable record locator is counted, never retried', async () => {
@@ -327,14 +369,17 @@ describe('retryPendingDiffusion', () => {
 
 		expect(result).toEqual({ total: 2, retried: 2, remaining: 0 });
 		// exactly the two lowest-id (oldest) rows flipped; the newer pair waits
-		expect(await actionsOf(932042)).toEqual(['2', '2']);
-		expect(await actionsOf(932043)).toEqual(['3', '3']);
+		expect(await actionsOf(932042)).toEqual([2, 2]);
+		expect(await actionsOf(932043)).toEqual([3, 3]);
 		expect(oldest).toEqual(
-			(await ledgerRows(`relation->'dd1767'->0->>'section_id' = '2'`)).map((row) => row.section_id),
+			// D16 key (WC-2026-08-10-section-id-int-canonical)
+			(await ledgerRows(`relation->'dd1767'->0->>'diffusion_action' = '2'`)).map(
+				(row) => row.section_id,
+			),
 		);
 		// a second pass with the same limit drains the rest
 		expect(await retryPendingDiffusion(2)).toEqual({ total: 2, retried: 2, remaining: 0 });
-		expect(await actionsOf(932043)).toEqual(['2', '2']);
+		expect(await actionsOf(932043)).toEqual([2, 2]);
 	});
 
 	test('a limit below 1 is clamped to a single row (never LIMIT 0 / a SQL error)', async () => {
@@ -345,6 +390,6 @@ describe('retryPendingDiffusion', () => {
 		}));
 
 		expect(await retryPendingDiffusion(0)).toEqual({ total: 1, retried: 1, remaining: 0 });
-		expect((await actionsOf(932044)).sort()).toEqual(['2', '3']);
+		expect((await actionsOf(932044)).sort()).toEqual([2, 3]);
 	});
 });

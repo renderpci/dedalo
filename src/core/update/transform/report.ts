@@ -7,7 +7,12 @@
  */
 
 export interface TransformDelta {
-	/** 'update' | 'insert' | 'delete' | 'null_component' | 'link_portal' | 'rewrite_locator'. */
+	/**
+	 * 'update' | 'insert' | 'delete' | 'null_component' | 'link_portal' |
+	 * 'rewrite_locator' | 'advance_counter' (move_locator raises the destination
+	 * matrix_counter — D1) | 'refuse_collision' (move_lang leaves a row whose
+	 * target lang is already populated untouched — D5).
+	 */
 	op: string;
 	table: string;
 	/** Human anchor: '<section_tipo>/<section_id>' or a tipo/lang key. */

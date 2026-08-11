@@ -36,10 +36,12 @@
 
 import { getComponentModel } from '../components/registry.ts';
 import { compareLocators, isLocatorInArray } from '../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import {
 	type DataframePairing,
 	dataframeEntriesEqual,
 	dataframeEntryMatches,
+	isDataframeEntry,
 	normalizeDataframeEntry,
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
@@ -206,7 +208,8 @@ async function inheritedHostFilterData(
 		return [
 			{
 				section_tipo: config.features.filterSectionTipo,
-				section_id: String(sectionId),
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical).
+				section_id: sectionId,
 				type: 'dd675',
 			},
 		];
@@ -230,7 +233,8 @@ async function inheritedHostFilterData(
 	const { getUserProjects } = await import('../security/permissions.ts');
 	const userProjects = (await getUserProjects(userId)).map((projectId) => ({
 		section_tipo: config.features.filterSectionTipo,
-		section_id: String(projectId),
+		// Canonical int form; the compare itself is loose on section_id anyway.
+		section_id: projectId,
 	}));
 	return stored.filter((locator) =>
 		isLocatorInArray(locator as never, userProjects as never[], ['section_tipo', 'section_id']),
@@ -253,7 +257,8 @@ async function defaultProjectFilterData(): Promise<Record<string, unknown>[]> {
 	return [
 		{
 			section_tipo: config.features.filterSectionTipo,
-			section_id: String(config.features.defaultProject),
+			// int-canonical stored address (WC-2026-08-10-section-id-int-canonical).
+			section_id: config.features.defaultProject,
 			type: RELATION_TYPE_FILTER,
 		},
 	];
@@ -327,7 +332,7 @@ export async function applyAddNewElement(
 			host: hostFromClientIp(currentRequestContext()?.clientIp),
 			data: {
 				msg: 'Created section record',
-				section_id: String(newSectionId),
+				section_id: newSectionId,
 				section_tipo: targetSectionTipo,
 				tipo: targetSectionTipo,
 				table: (await getMatrixTableFromTipo(targetSectionTipo)) ?? 'matrix',
@@ -344,7 +349,9 @@ export async function applyAddNewElement(
 	const locator = {
 		id: maxId + 1,
 		type: 'dd151',
-		section_id: String(newSectionId),
+		// WC-2026-08-10-section-id-int-canonical: createSectionRecord already
+		// returns the int address — minting it as text was the old string law.
+		section_id: newSectionId,
 		section_tipo: targetSectionTipo,
 		from_component_tipo: componentTipo,
 	};
@@ -421,8 +428,13 @@ export async function maintainRelationSearchIndex(
  *  - `from_component_tipo` FORCED to the component's own tipo (:1107-19);
  *  - translatable relation locators carry the request lang (:1121-35);
  *  - transient `paginated_key` never persists (:1138-41);
- *  - locator normalization stores section_id as a STRING (PHP new locator —
- *    byte-verified against the oracle: client 301 → stored "301");
+ *  - locator normalization CANONICALIZES section_id to an INT
+ *    (WC-2026-08-10-section-id-int-canonical, repealing the PHP-era string law
+ *    "client 301 → stored \"301\"" that this list carried: the record address is
+ *    an integer, so client 301 and client "301" both store 301). Values that are
+ *    NOT convertible to an address — external-service remote ids like
+ *    "001338683" or "Q42" — pass through VERBATIM; they are a different concept
+ *    wearing the same field name and must never be cast;
  *  - duplicate rejection over get_locator_properties_to_check
  *    ([section_id, section_tipo, type, tag_id] + lang when translatable,
  *    :1146-98) — a dup returns null so the item is not added and the client's
@@ -492,7 +504,9 @@ export async function validateRelationInsert(
 	}
 	// biome-ignore lint/performance/noDelete: PHP unset — paginated_key must be ABSENT in persisted data
 	delete value.paginated_key;
-	value.section_id = String(value.section_id);
+	// Canonical stored address (WC-2026-08-10-section-id-int-canonical): int for
+	// a record, verbatim for an external remote id. Never Number() blindly.
+	value.section_id = canonicalizeStoredSectionId(value.section_id);
 
 	// DATAFRAME normalization + dedup. The pairing fields are stamped from the
 	// SERVER's caller context (overriding whatever the client sent for `type`,
@@ -506,6 +520,32 @@ export async function validateRelationInsert(
 			if (dataframeEntriesEqual(item, normalized)) return null; // already framed — ignored
 		}
 		return normalized;
+	}
+
+	/**
+	 * A frame arriving with NO caller pairing — import, and every maintenance
+	 * door — is STILL a frame, and frame identity is still id_key-scoped.
+	 *
+	 * WC-2026-08-09-dataframe-import-id-key-identity. Without this arm the entry
+	 * fell to the generic relation dedup below, whose key is
+	 * [section_id, section_tipo, type, tag_id] — `id_key` is absent from it, so
+	 * two frames pointing at the SAME target record from DIFFERENT main items
+	 * hashed identically and the second was silently dropped as "already
+	 * linked". That is the precise mistake `dataframeEntriesEqual`'s own header
+	 * warns against; it was simply unreachable when `pairing` was null, which is
+	 * exactly the case on every CSV import (`dataframePairingOf` needs a caller
+	 * ddo, and an import has none).
+	 *
+	 * Nothing is normalized here: with no caller context there is nothing
+	 * authoritative to stamp, so the entry's OWN `id_key`/`main_component_tipo`
+	 * — carried in the file, written by the export — are the identity. That is
+	 * what makes a raw export round trip.
+	 */
+	if (isDataframeEntry(value)) {
+		for (const item of context.existingItems) {
+			if (dataframeEntriesEqual(item, value)) return null; // the same frame twice — ignored
+		}
+		return value;
 	}
 
 	// Duplicate rejection (hash-key equality like PHP build_locator_lookup_key;
@@ -601,6 +641,8 @@ export async function removeDataframeDataById(
 	const policy = (node.properties as { dataframe?: { delete_policy?: unknown } } | null)?.dataframe
 		?.delete_policy;
 	const deleteTarget = policy === 'delete_target';
+	// KEPT UNION: targets are lifted from the RAW stored dataframe slot entries
+	// (unswept legacy string ids), so the collected id keeps the stored form.
 	const unlinkedTargets: { section_tipo: string; section_id: number | string }[] = [];
 
 	const { updateMatrixKeyData } = await import('../db/matrix_write.ts');
@@ -681,6 +723,9 @@ export async function deletePortalLocator(
 	// maintenance AREA gate, which no portal section can ever be, and a caller
 	// that omits it is asserting "not a developer".
 	principal: Omit<Principal, 'isDeveloper'> & Partial<Pick<Principal, 'isDeveloper'>>,
+	// KEPT UNION: `source` is the RQO body of dd_component_portal_api
+	// .delete_locator, an uncoerced wire door — legacy clients still post the
+	// string form. Consumed numerically (Number()) for the row address only.
 	source: { tipo?: string; section_tipo?: string; section_id?: string | number },
 	options: { locator?: Record<string, unknown>; ar_properties?: string[] },
 ): Promise<{ result: unknown; msg: string[]; errors: string[] }> {

@@ -26,6 +26,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** A record with real rsc20 (component_publication, "public") TM history. */
@@ -113,17 +114,23 @@ let tsCtx: {
 
 async function tsData(rqo: Record<string, unknown>): Promise<Record<string, unknown>[]> {
 	const res = await dispatchRqo(structuredClone(rqo) as never, tsCtx as never);
-	return ((res.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
-		string,
-		unknown
-	>[];
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	return normalizeSectionIdTypes(
+		((res.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+			string,
+			unknown
+		>[],
+	);
 }
 async function phpData(rqo: Record<string, unknown>): Promise<Record<string, unknown>[]> {
 	const res = await php.call(structuredClone(rqo));
-	return ((res.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
-		string,
-		unknown
-	>[];
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	return normalizeSectionIdTypes(
+		((res.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+			string,
+			unknown
+		>[],
+	);
 }
 
 /** The value item's entries, keyed by its TM row id (matrix_id). */

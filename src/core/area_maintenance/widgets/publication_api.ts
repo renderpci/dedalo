@@ -10,6 +10,18 @@
 
 import type { WidgetModule } from './support.ts';
 
+/**
+ * LEDGER — coverage plan §4.4 D7, KNOWN-OPEN AND UNGATED. NOT an exempt adapter
+ * shell (the critics RESCUED it from the §5 exempt list): the whole-body catch
+ * below is an ERROR-ENVELOPE CHOICE with a wrong-output consequence. A THROWN
+ * diffusion-map scan (`getSectionDiffusionMap` reading a broken ontology
+ * diffusion config) collapses into a panel BYTE-IDENTICAL to "diffusion is not
+ * configured" — the operator is told nothing is published here, and no error is
+ * logged, raised or surfaced anywhere. Closing it means either taking the map
+ * reader as a parameter and gating the catch arm against an injected thrower, or
+ * distinguishing the two panels — the latter is a behaviour change and needs an
+ * engineering/wire_contract/ entry.
+ */
 async function buildPublicationApiValue(): Promise<Record<string, unknown>> {
 	try {
 		const { readEnv } = await import('../../../config/env.ts');

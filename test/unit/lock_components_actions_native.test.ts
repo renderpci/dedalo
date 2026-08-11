@@ -181,7 +181,8 @@ describe('dispatchLockComponentsActions', () => {
 		expect(entry.full_username).toBe(`scratch user ${USER_C}`);
 		expect(entry.component_tipo).toBe(COMPONENT_TIPO);
 		expect(entry.section_tipo).toBe(SECTION_TIPO);
-		expect(entry.section_id).toBe('990003');
+		// lock EVENTS to the client carry int (WC-2026-08-10-section-id-int-canonical)
+		expect(entry.section_id).toBe(990003);
 		expect(typeof entry.date).toBe('string');
 		expect(entry.date as string).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
 		// Enrichment fields are always present (empty string when unresolvable).

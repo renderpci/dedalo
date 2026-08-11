@@ -109,10 +109,13 @@ export async function searchSectionRecords(
 		{ section_tipo: [sectionTipo], limit, offset, filter },
 		{ principal },
 	);
+	// matrix.section_id is an INT column, so the row carries the address typed
+	// (WC-2026-08-10-section-id-int-canonical). `full_count` above stays
+	// union-typed: count(*) is bigint and the driver hands it back as text.
 	const rows = (await sql.unsafe(
 		pageQuery.sql,
 		pageQuery.params as (string | number | null)[],
-	)) as { section_id: number | string; section_tipo: string }[];
+	)) as { section_id: number; section_tipo: string }[];
 
 	return {
 		section_tipo: sectionTipo,
@@ -157,7 +160,7 @@ export async function readSectionRecord(
 		},
 		sqo: {
 			section_tipo: [sectionTipo],
-			filter_by_locators: [{ section_tipo: sectionTipo, section_id: String(sectionId) }],
+			filter_by_locators: [{ section_tipo: sectionTipo, section_id: sectionId }],
 			limit: 1,
 		},
 	} as unknown as Rqo;

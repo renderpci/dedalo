@@ -25,16 +25,21 @@
  * never read — a broader-term search silently under-returned.
  */
 
+import { composeContains, composeNotContains, relationProbeGroups } from '../containment.ts';
 import type { BuilderContext, BuilderResult } from './types.ts';
 import { compound, fragment } from './types.ts';
 
 /**
- * Normalize the q payload to the JSON text injected inside {"tipo":[ … ]}
- * (PHP extract_normalized_relation_q): accepts a locator object or an array
- * of locators; strips the transient 'id' field; returns the array content
- * WITHOUT the outer brackets. Null q → null (operator-only searches).
+ * Normalize the q payload to the LOCATOR OBJECTS the containment probes are
+ * built from (PHP extract_normalized_relation_q): accepts a locator object or
+ * an array of locators; strips the transient 'id' field. Null q → null
+ * (operator-only searches).
+ *
+ * Returns objects, not JSON text: dual-form probing (containment.ts) needs to
+ * re-type each locator's section_id, and the per-element decomposition needs
+ * the element boundaries — a pre-joined JSON string loses both.
  */
-function normalizeRelationQ(rawQ: unknown): string | null {
+function normalizeRelationQ(rawQ: unknown): Record<string, unknown>[] | null {
 	if (rawQ === undefined || rawQ === null || rawQ === '') {
 		return null;
 	}
@@ -50,8 +55,7 @@ function normalizeRelationQ(rawQ: unknown): string | null {
 	if (cleaned.some((entry) => entry === null)) {
 		return null;
 	}
-	const jsonArray = JSON.stringify(cleaned);
-	return jsonArray.slice(1, -1); // strip outer [ ]
+	return cleaned as Record<string, unknown>[];
 }
 
 /**
@@ -236,7 +240,9 @@ export function buildRelationFragment(
 		return buildRelationFragmentTm(rawQ, qOperator, context);
 	}
 	const operator = qOperator ?? '';
-	const qJson = normalizeRelationQ(rawQ);
+	const qLocators = normalizeRelationQ(rawQ);
+	// The comparison target: `<alias>.<column>`, or the context's explicit
+	// NULL-safe ancestor expression (BuilderContext.columnExpr).
 	const columnRef = columnRefOf(context);
 
 	// '!*' — empty: the component key is absent from the relation column.
@@ -260,26 +266,57 @@ export function buildRelationFragment(
 		return fragment(`(${columnRef} ? _Q1_)`, { _Q1_: context.tipo });
 	}
 
+	// The containment operators probe BOTH typed forms of section_id
+	// (containment.ts: per-element decomposition, polarity-aware negation) —
+	// stored locators are string-form until the int migration sweeps them and
+	// int-form after, and @> is type-strict either way.
+
 	// '!=' — has relations for this component AND does not contain q.
-	if (operator === '!=' && qJson !== null) {
-		return fragment(`(${columnRef} ? _Q2_) AND NOT (${columnRef} @> _Q1_::text::jsonb)`, {
-			_Q1_: `{"${context.tipo}":[${qJson}]}`,
-			_Q2_: context.tipo,
-		});
+	if (operator === '!=' && qLocators !== null) {
+		const tokenValues: Record<string, unknown> = { _K_: context.tipo };
+		const notContains = composeNotContains(
+			columnRef,
+			relationProbeGroups(context.tipo, qLocators),
+			bindSequential(tokenValues),
+		);
+		return fragment(`(${columnRef} ? _K_) AND ${notContains}`, tokenValues);
 	}
 
 	// '!==' — strict different: not-contains (includes records with no key).
-	if (operator === '!==' && qJson !== null) {
-		return fragment(`NOT (${columnRef} @> _Q1_::text::jsonb)`, {
-			_Q1_: `{"${context.tipo}":[${qJson}]}`,
-		});
+	if (operator === '!==' && qLocators !== null) {
+		const tokenValues: Record<string, unknown> = {};
+		const notContains = composeNotContains(
+			columnRef,
+			relationProbeGroups(context.tipo, qLocators),
+			bindSequential(tokenValues),
+		);
+		return fragment(notContains, tokenValues);
 	}
 
 	// Default / '==' — containment.
-	if (qJson === null) {
+	if (qLocators === null) {
 		return false;
 	}
-	return fragment(`${columnRef} @> _Q1_::text::jsonb`, {
-		_Q1_: `{"${context.tipo}":[${qJson}]}`,
-	});
+	const tokenValues: Record<string, unknown> = {};
+	const contains = composeContains(
+		columnRef,
+		relationProbeGroups(context.tipo, qLocators),
+		bindSequential(tokenValues),
+	);
+	return fragment(contains, tokenValues);
+}
+
+/**
+ * A `bind` for the compose helpers over the fragment token protocol: mints
+ * _P1_, _P2_… in sentence order (token insertion order must match token order
+ * in the sentence — types.ts contract).
+ */
+function bindSequential(tokenValues: Record<string, unknown>): (payload: string) => string {
+	let count = 0;
+	return (payload: string) => {
+		count++;
+		const token = `_P${count}_`;
+		tokenValues[token] = payload;
+		return token;
+	};
 }

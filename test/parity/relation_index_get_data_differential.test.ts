@@ -10,7 +10,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const CASES = [
@@ -69,10 +69,13 @@ beforeAll(async () => {
 	for (const testCase of CASES) {
 		const rqo = rqoOf(testCase.limit, testCase.offset);
 		// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
-		const phpData = adoptEntriesArrayContract(
-			((await php.call(structuredClone(rqo))).body as { result?: { data?: unknown[] } }).result
-				?.data ?? [],
-		) as Record<string, unknown>[];
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		const phpData = normalizeSectionIdTypes(
+			adoptEntriesArrayContract(
+				((await php.call(structuredClone(rqo))).body as { result?: { data?: unknown[] } }).result
+					?.data ?? [],
+			) as Record<string, unknown>[],
+		);
 		const tsResult = await dispatchRqo(
 			structuredClone(rqo) as never,
 			{
@@ -83,8 +86,13 @@ beforeAll(async () => {
 				principal,
 			} as never,
 		);
-		const tsData = ((tsResult.body as { result?: { data?: unknown[] } }).result?.data ??
-			[]) as Record<string, unknown>[];
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		const tsData = normalizeSectionIdTypes(
+			((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+				string,
+				unknown
+			>[],
+		);
 		results.set(testCase.name, { php: phpData, ts: tsData });
 	}
 }, 120000);

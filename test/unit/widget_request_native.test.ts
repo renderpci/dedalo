@@ -420,8 +420,21 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 	let statsRows: Record<string, unknown>[] = [];
 	const labels: Record<string, string | null> = {};
 
-	const userFilter = JSON.stringify({
+	// int-canonical actor locator (WC-2026-08-10-section-id-int-canonical): the
+	// writer mints an INT section_id now; the string twin still matches rows
+	// written before that sweep. Both probe AND sweep must OR the two forms —
+	// a single-form filter is what made this file red and self-leaking.
+	const USER_FILTER = JSON.stringify({
+		dd1522: [{ section_tipo: 'dd128', section_id: UID }],
+	});
+	const USER_FILTER_LEGACY = JSON.stringify({
 		dd1522: [{ section_tipo: 'dd128', section_id: String(UID) }],
+	});
+	const ACTIVITY_FILTER = JSON.stringify({
+		dd543: [{ section_tipo: 'dd128', section_id: UID }],
+	});
+	const ACTIVITY_FILTER_LEGACY = JSON.stringify({
+		dd543: [{ section_tipo: 'dd128', section_id: String(UID) }],
 	});
 
 	/** The differential's exact synthetic activity row (direct SQL — dd542 is consultation-only). */
@@ -488,20 +501,34 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 			`SELECT relation->'dd1522' AS u, string->'dd1531' AS t, date->'dd1530' AS d,
 			        misc->'dd1523' AS totals, meta
 			 FROM matrix_stats
-			 WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb
+			 WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
 			 ORDER BY id`,
-			[userFilter],
+			[USER_FILTER, USER_FILTER_LEGACY],
 		)) as Record<string, unknown>[];
 
 	beforeAll(async () => {
-		// defensive sweep of any leftovers from an earlier aborted run
+		// defensive sweep of any leftovers from an earlier aborted run (both
+		// locator forms; may legitimately match 0 rows on a clean database, so
+		// this one is NOT fail-loud — the afterAll sweep is)
+		const staleStats = (await sql.unsafe(
+			`DELETE FROM matrix_stats
+			 WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+			 RETURNING section_id`,
+			[USER_FILTER, USER_FILTER_LEGACY],
+		)) as { section_id: number }[];
+		for (const row of staleStats) {
+			await sql.unsafe(
+				`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd1521' AND section_id = $1`,
+				[row.section_id],
+			);
+		}
 		await sql.unsafe(
-			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[userFilter],
-		);
-		await sql.unsafe(
-			`DELETE FROM matrix_activity WHERE section_tipo = 'dd542' AND relation @> $1::text::jsonb`,
-			[JSON.stringify({ dd543: [{ section_tipo: 'dd128', section_id: String(UID) }] })],
+			`DELETE FROM matrix_activity
+			 WHERE section_tipo = 'dd542'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)`,
+			[ACTIVITY_FILTER, ACTIVITY_FILTER_LEGACY],
 		);
 
 		// the differential's exact 2-day provisioning
@@ -528,14 +555,19 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 
 	afterAll(async () => {
 		const leaked: string[] = [];
+		// fail-loud: the provisioning above ALWAYS produces dd1521 aggregates for
+		// this user, so a 0-row delete means the filter no longer matches what the
+		// writer mints — the exact bug (stale string-only locator) this repairs.
 		const statsIds = (await sql.unsafe(
-			`SELECT section_id FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[userFilter],
+			`DELETE FROM matrix_stats
+			 WHERE section_tipo = 'dd1521'
+			   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+			 RETURNING section_id`,
+			[USER_FILTER, USER_FILTER_LEGACY],
 		)) as { section_id: number }[];
-		await sql.unsafe(
-			`DELETE FROM matrix_stats WHERE section_tipo = 'dd1521' AND relation @> $1::text::jsonb`,
-			[userFilter],
-		);
+		if (statsIds.length === 0) {
+			leaked.push(`matrix_stats dd1521 sweep for user ${UID} deleted 0 rows (stale filter?)`);
+		}
 		for (const row of statsIds) {
 			await sql.unsafe(
 				`DELETE FROM matrix_time_machine WHERE section_tipo = 'dd1521' AND section_id = $1`,
@@ -569,11 +601,13 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 	test('one dd1521 aggregate row per provisioned day, PHP-algorithm content', () => {
 		expect(statsRows.length).toBe(2);
 
+		// int-canonical section_id (WC-2026-08-10-section-id-int-canonical) — the
+		// stale String(UID) pin here is half of what made this file red.
 		const userLocator = [
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: String(UID),
+				section_id: UID,
 				section_tipo: 'dd128',
 				from_component_tipo: 'dd1522',
 			},

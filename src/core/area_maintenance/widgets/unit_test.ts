@@ -16,9 +16,39 @@ import type { Principal } from '../../security/permissions.ts';
 import { resetTestSection } from '../../test_data/seed.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
+/**
+ * COVERAGE-EXEMPT — THE LOUDEST EXEMPTION IN THE TREE (coverage plan §5.2; reason
+ * registered in engineering/crap_coverage_exempt.json). `resetTestSection()`
+ * TRUNCATEs `matrix_test` — the suite's OWN `test3` fixture table
+ * (core/test_data/seed.ts: "Destroys EVERY row in the table, scratch tipos
+ * included") — mid-run, in the single shared Bun process, for every agent running
+ * concurrently against the suite database. NO scratch surface can contain it and
+ * NO gate may invoke it. The restorative semantics it exists for are gated
+ * through `restoreCanonicalTest3()`.
+ */
 async function unitTestCreateTestRecord(): Promise<WidgetResponse> {
 	await resetTestSection();
 	return { result: true, msg: 'OK. Request done unit_test::create_test_record', errors: [] };
+}
+
+/**
+ * The dev knobs of the long-process stream, CLAMPED: 1..10000 ticks, 50 ms..60 s
+ * apart. The upper clamps are the point — without them an admin can post
+ * `iterations:1e9 @ 60s` and pin a `mediaJobs` slot effectively forever (a
+ * self-inflicted availability bug on the one action built to be fired casually).
+ * Note the quirk, deliberately preserved: `|| 10` / `|| 1000` swallow 0 and NaN
+ * BEFORE the clamps, so `{iterations:0}` is 10, not 1.
+ * Extracted from unitTestLongProcessStream so the arithmetic is gateable without
+ * submitting a background job that outlives the test file.
+ */
+export function longProcessBounds(options: Record<string, unknown>): {
+	iterations: number;
+	updateRate: number;
+} {
+	return {
+		iterations: Math.min(10000, Math.max(1, Math.trunc(Number(options.iterations) || 10))),
+		updateRate: Math.min(60000, Math.max(50, Math.trunc(Number(options.update_rate) || 1000))),
+	};
 }
 
 /**
@@ -33,9 +63,7 @@ async function unitTestLongProcessStream(
 	options: Record<string, unknown>,
 	principal: Principal,
 ): Promise<WidgetResponse> {
-	// dev knobs, bounded: 1..10000 ticks, 50 ms..60 s apart.
-	const iterations = Math.min(10000, Math.max(1, Math.trunc(Number(options.iterations) || 10)));
-	const updateRate = Math.min(60000, Math.max(50, Math.trunc(Number(options.update_rate) || 1000)));
+	const { iterations, updateRate } = longProcessBounds(options);
 
 	const { mediaJobs } = await import('../../media/jobs.ts');
 	const record = mediaJobs.submit(

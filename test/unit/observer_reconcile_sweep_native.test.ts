@@ -361,13 +361,14 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 		expect(summary.shrinksSkipped).toBe(0);
 		expect(summary.bigResultRefused).toBe(0);
 		expect(lines.some((line) => line.includes('[repaired]'))).toBe(true);
-		// The byte shape the PHP oracle stores — id/type/section_id-as-string/
-		// section_tipo/from_component_tipo, in that content.
+		// The byte shape stored — id/type/section_id/section_tipo/
+		// from_component_tipo, in that content. WC-2026-08-10-section-id-int-canonical:
+		// the address is an INT now (the PHP oracle's string form is repealed).
 		expect(await mirrorBag()).toEqual([
 			{
 				id: 1,
 				type: 'dd151',
-				section_id: String(REFERENCER_ID),
+				section_id: REFERENCER_ID,
 				section_tipo: 'rsc205',
 				from_component_tipo: 'hierarchy93',
 			},
@@ -445,7 +446,8 @@ describe('reconcileObserverMirrors — the dry-run / apply / converge life cycle
 			{
 				id: 2,
 				type: 'dd151',
-				section_id: String(DEGRADED_HOLDER_ID),
+				// WC-2026-08-10-section-id-int-canonical: int address.
+				section_id: DEGRADED_HOLDER_ID,
 				section_tipo: 'rsc205',
 				from_component_tipo: 'hierarchy93',
 			},

@@ -115,11 +115,14 @@ async function insertReferencer(id: number): Promise<void> {
 }
 
 /** The exact mirror entry shape the law appends (PHP-oracle byte shape). */
+// WC-2026-08-10-section-id-int-canonical: the mirror writer mints the
+// referencer address as an INT (canonicalizeStoredSectionId), so every
+// recomputed bag asserted below carries ints.
 function mirrorEntry(itemId: number, referencerId: number): Record<string, unknown> {
 	return {
 		id: itemId,
 		type: 'dd151',
-		section_id: String(referencerId),
+		section_id: referencerId,
 		section_tipo: 'rsc205',
 		from_component_tipo: 'hierarchy93',
 	};

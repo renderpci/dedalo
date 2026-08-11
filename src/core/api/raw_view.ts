@@ -108,7 +108,7 @@ export async function handleRawView(request: Request, url: URL): Promise<Respons
 			sqo: {
 				section_tipo: [sectionTipo],
 				limit: 1,
-				filter_by_locators: [{ section_tipo: sectionTipo, section_id: String(sectionId) }],
+				filter_by_locators: [{ section_tipo: sectionTipo, section_id: sectionId }],
 			},
 		},
 		principal,

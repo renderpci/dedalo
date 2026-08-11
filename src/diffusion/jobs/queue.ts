@@ -54,6 +54,9 @@ export interface DiffusionJobRow {
 		total?: number;
 		msg?: string;
 		section_label?: string;
+		/** Progress marker echoing `RecordIR.sectionId` — the diffusion IR keeps
+		 * the raw/published form (string on an unswept install, or an external
+		 * remote id): WC-2026-08-10-section-id-int-canonical. */
 		current?: { section_id?: string | number; time?: number };
 		total_ms?: number;
 	};
@@ -241,6 +244,7 @@ export async function updateJobProgress(
 		counter: number;
 		msg?: string;
 		section_label?: string;
+		/** Same IR-marker union as DiffusionJobRow.totals.current above. */
 		current?: { section_id?: string | number; time?: number };
 		total_ms?: number;
 		error?: string;

@@ -13,7 +13,8 @@
  * No shell pipelines: pg_dump stdout streams through in-process gzip.
  */
 
-import { createWriteStream, existsSync, statSync } from 'node:fs';
+import { once } from 'node:events';
+import { createWriteStream, existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createGzip } from 'node:zlib';
 import { envSnapshot, projectRoot } from '../../config/env.ts';
@@ -42,6 +43,22 @@ export interface RecoveryFileResponse {
 	file_size?: string;
 }
 
+/**
+ * Stream a byte source through in-process gzip into `path`, honouring
+ * backpressure (a multi-hundred-MB dump must not buffer in memory), and
+ * resolve only once the file sink has closed.
+ */
+async function gzipStreamToFile(source: AsyncIterable<Uint8Array>, path: string): Promise<void> {
+	const gzip = createGzip();
+	const sink = createWriteStream(path);
+	gzip.pipe(sink);
+	for await (const chunk of source) {
+		if (!gzip.write(chunk)) await once(gzip, 'drain');
+	}
+	gzip.end();
+	await new Promise<void>((resolveDone) => sink.on('close', () => resolveDone()));
+}
+
 /** Build the recovery file (PHP build_recovery_version_file). */
 export async function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
@@ -55,6 +72,12 @@ export async function buildRecoveryVersionFile(
 		response.msg = 'Error. Unable to build the dd_ontology_recovery slice';
 		return response;
 	}
+	// Defect D9 (fixed 2026-08-09): the dump is written to a `.part` sibling and
+	// renamed onto the recovery slot ONLY after pg_dump exits 0 and the sink has
+	// closed. Writing straight to outFile destroyed the last good artifact on
+	// every failure, and a partial-but-valid gzip restores as a SILENTLY
+	// truncated dd_ontology_recovery table. Rename is atomic on the same fs.
+	const partFile = `${outFile}.part`;
 	try {
 		const args: string[] = [];
 		if (conn.host && !conn.socket) args.push('-h', conn.host);
@@ -69,20 +92,14 @@ export async function buildRecoveryVersionFile(
 				...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
 			},
 		});
-		const gzip = createGzip();
-		const sink = createWriteStream(outFile);
-		gzip.pipe(sink);
-		for await (const chunk of child.stdout) {
-			gzip.write(chunk);
-		}
-		gzip.end();
-		await new Promise<void>((resolveDone) => sink.on('close', () => resolveDone()));
+		await gzipStreamToFile(child.stdout, partFile);
 		const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
 		if (exitCode !== 0) {
 			response.errors.push(`pg_dump failed: ${stderr.trim()}`);
 			response.msg = 'Error. pg_dump failed building the recovery file';
 			return response;
 		}
+		renameSync(partFile, outFile);
 		response.result = true;
 		response.msg = 'OK. Request done successfully';
 		response.file_size = `${statSync(outFile).size} Bytes`;
@@ -92,6 +109,8 @@ export async function buildRecoveryVersionFile(
 		response.msg = 'Error. Request failed [build_recovery_version_file]';
 		return response;
 	} finally {
+		// A `.part` that survives here is a failed build: never a recovery slot.
+		rmSync(partFile, { force: true });
 		await dropRecoverySlice();
 	}
 }

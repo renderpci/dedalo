@@ -144,6 +144,15 @@ async function deleteHierarchyRows(
  * activate HERE: half the work in each. That is not a scenario we can serve, so we refuse
  * to activate and say so, rather than silently writing a hierarchy into the wrong database.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a ONE-SHOT install procedure that
+ * MUTATES THE MACHINE — config files, a database restore, root credentials, a
+ * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
+ * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
+ * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * (test/unit/tier1_install_native.test.ts).
+ */
 export async function installHierarchies(
 	tlds: string[],
 	conn?: DbConnDescriptor,

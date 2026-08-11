@@ -60,7 +60,9 @@ const OPTIONS = [
 	{ section_id: 929010, label: 'Item 10', second: 'note ten', marker: 'DROPTHIS' },
 	{ section_id: 929020, label: 'Item 20', second: 'note twenty', marker: 'DROPTHIS' },
 ];
-const SEEDED_IDS = OPTIONS.map((option) => String(option.section_id));
+// WC-2026-08-10-section-id-int-canonical: datalist emits INT record addresses,
+// so the projection key is the int id (was String(...)).
+const SEEDED_IDS = OPTIONS.map((option) => option.section_id);
 /** An extra id used only by the cache-eviction case (seeded mid-test). */
 const LATE_ID = 929030;
 
@@ -146,7 +148,7 @@ async function writeOption(
 }
 
 /** The built list projected onto the seeded ids, in build order. */
-function seededOnly(list: { section_id: string }[]): string[] {
+function seededOnly(list: { section_id: number }[]): number[] {
 	return list.filter((item) => SEEDED_IDS.includes(item.section_id)).map((i) => i.section_id);
 }
 
@@ -189,7 +191,7 @@ describe('getDatalist — label projection and ordering', () => {
 		clearDatalistCache();
 		const list = await getDatalist('zzdlorder1', properties({}), SECTION, LANG);
 		// Natural: 1 < 2 < 10 < 20. Byte order would give 1, 10, 2, 20.
-		expect(seededOnly(list)).toEqual(['929001', '929002', '929010', '929020']);
+		expect(seededOnly(list)).toEqual([929001, 929002, 929010, 929020]);
 		const labels = list
 			.filter((item) => SEEDED_IDS.includes(item.section_id))
 			.map((item) => item.label);
@@ -239,19 +241,23 @@ describe('getDatalist — label projection and ordering', () => {
 			SECTION,
 			LANG,
 		);
-		expect(mixed.filter((item) => item.section_id === '929001').map((item) => item.label)).toEqual([
+		// WC-2026-08-10-section-id-int-canonical: int record address.
+		expect(mixed.filter((item) => item.section_id === 929001).map((item) => item.label)).toEqual([
 			'Item 1',
 		]);
 	});
 
-	test('each option carries its locator, a string section_id and a hide array', async () => {
+	test('each option carries its locator, an int section_id and a hide array', async () => {
 		await seedOptions();
 		clearDatalistCache();
 		const list = await getDatalist('zzdlshape1', properties({}), SECTION, LANG);
-		const one = list.find((item) => item.section_id === '929001');
+		// WC-2026-08-10-section-id-int-canonical: the datalist emits the record
+		// address as an INT (both the option's own section_id and the locator
+		// under `value`); the repealed law stringified the raw row value.
+		const one = list.find((item) => item.section_id === 929001);
 		expect(one).toBeDefined();
-		expect(one?.value).toEqual({ section_tipo: SECTION, section_id: '929001' });
-		expect(typeof one?.section_id).toBe('string'); // PHP passes the raw row value
+		expect(one?.value).toEqual({ section_tipo: SECTION, section_id: 929001 });
+		expect(typeof one?.section_id).toBe('number');
 		expect(one?.hide).toEqual([]); // no hide ddos declared
 		expect(one?.tool_name).toBeUndefined(); // not the security-tools component
 		expect(one?.always_active).toBeUndefined();
@@ -268,7 +274,7 @@ describe('getDatalist — label projection and ordering', () => {
 			SECTION,
 			LANG,
 		);
-		expect(seededOnly(list)).toEqual(['929001', '929002', '929010', '929020']);
+		expect(seededOnly(list)).toEqual([929001, 929002, 929010, 929020]);
 		for (const item of list) expect(item.value.section_tipo).toBe(SECTION);
 	});
 });
@@ -283,13 +289,13 @@ describe('getDatalist — fixed_filter narrowing', () => {
 			SECTION,
 			LANG,
 		);
-		expect(filtered.map((item) => item.section_id)).toEqual(['929001', '929002']);
+		expect(filtered.map((item) => item.section_id)).toEqual([929001, 929002]);
 
 		// The CONTRAST, rebuilt from scratch (own tipo + cleared cache): without
 		// the filter the very same options list carries the dropped ids too.
 		clearDatalistCache();
 		const unfiltered = await getDatalist('zzdlfilter2', properties({}), SECTION, LANG);
-		expect(seededOnly(unfiltered)).toEqual(['929001', '929002', '929010', '929020']);
+		expect(seededOnly(unfiltered)).toEqual([929001, 929002, 929010, 929020]);
 	});
 
 	test('a fixed_filter that expands to NO group leaves the list unnarrowed', async () => {
@@ -316,7 +322,7 @@ describe('getDatalist — fixed_filter narrowing', () => {
 			SECTION,
 			LANG,
 		);
-		expect(seededOnly(unnarrowed)).toEqual(['929001', '929002', '929010', '929020']);
+		expect(seededOnly(unnarrowed)).toEqual([929001, 929002, 929010, 929020]);
 	});
 
 	test('a malformed fixed_filter descriptor is rejected by the config build', async () => {
@@ -350,7 +356,7 @@ describe('getDatalist — properties.sort_by', () => {
 			SECTION,
 			LANG,
 		);
-		expect(descending.map((item) => item.section_id)).toEqual(['929002', '929001']);
+		expect(descending.map((item) => item.section_id)).toEqual([929002, 929001]);
 
 		clearDatalistCache();
 		const ascending = await getDatalist(
@@ -359,7 +365,7 @@ describe('getDatalist — properties.sort_by', () => {
 			SECTION,
 			LANG,
 		);
-		expect(ascending.map((item) => item.section_id)).toEqual(['929001', '929002']);
+		expect(ascending.map((item) => item.section_id)).toEqual([929001, 929002]);
 	});
 
 	test('a non-numeric path falls back to strnatcmp, direction-aware', async () => {
@@ -372,7 +378,7 @@ describe('getDatalist — properties.sort_by', () => {
 			LANG,
 		);
 		// Natural order reversed: 20, 10, 2, 1 (byte-reversed would be 20,2,10,1).
-		expect(seededOnly(list)).toEqual(['929020', '929010', '929002', '929001']);
+		expect(seededOnly(list)).toEqual([929020, 929010, 929002, 929001]);
 	});
 
 	test('a path no item carries compares equal (the ?? 0 fallback), order preserved', async () => {
@@ -386,7 +392,7 @@ describe('getDatalist — properties.sort_by', () => {
 		);
 		// Both sides resolve `undefined ?? 0` → 0 → numeric diff 0: no throw and
 		// the enumeration order (section_id ascending) survives.
-		expect(list.map((item) => item.section_id)).toEqual(['929001', '929002']);
+		expect(list.map((item) => item.section_id)).toEqual([929001, 929002]);
 	});
 
 	test('only the FIRST sort_by rule is applied', async () => {
@@ -404,7 +410,7 @@ describe('getDatalist — properties.sort_by', () => {
 			SECTION,
 			LANG,
 		);
-		expect(list.map((item) => item.section_id)).toEqual(['929002', '929001']);
+		expect(list.map((item) => item.section_id)).toEqual([929002, 929001]);
 	});
 });
 
@@ -444,7 +450,7 @@ describe('getDatalist — the cache', () => {
 			LANG,
 		);
 		expect(second).toBe(first);
-		expect(seededOnly(second)).toEqual(['929001', '929002', '929010', '929020']);
+		expect(seededOnly(second)).toEqual([929001, 929002, 929010, 929020]);
 		// Pinned, not endorsed: this is why every case in this file clears the
 		// cache. In production the properties for a tipo come from that tipo's
 		// ontology node, so the key holds — a caller that passes synthetic
@@ -457,7 +463,7 @@ describe('getDatalist — the cache', () => {
 			LANG,
 		);
 		expect(rebuilt).not.toBe(first);
-		expect(rebuilt.map((item) => item.section_id)).toEqual(['929001', '929002']);
+		expect(rebuilt.map((item) => item.section_id)).toEqual([929001, 929002]);
 	});
 
 	test('the lang is part of the key: a second lang builds its own list', async () => {
@@ -477,7 +483,8 @@ describe('getDatalist — the cache', () => {
 		]);
 		clearDatalistCache();
 		const before = await getDatalist('zzdlevict1', properties({}), SECTION, LANG);
-		expect(before.some((item) => item.section_id === String(LATE_ID))).toBe(false);
+		// WC-2026-08-10-section-id-int-canonical: int record address.
+		expect(before.some((item) => item.section_id === LATE_ID)).toBe(false);
 
 		await writeOption(LATE_ID, 'Item 30', 'note thirty', 'DROPTHIS');
 		// Still cached — the row alone does not stale it (this half is what
@@ -488,7 +495,7 @@ describe('getDatalist — the cache', () => {
 		await fireSaveEvent(SECTION); // the durable S1-11 eviction channel
 		const after = await getDatalist('zzdlevict1', properties({}), SECTION, LANG);
 		expect(after).not.toBe(before);
-		expect(after.some((item) => item.section_id === String(LATE_ID))).toBe(true);
+		expect(after.some((item) => item.section_id === LATE_ID)).toBe(true);
 
 		await sql.unsafe('DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2', [
 			SECTION,

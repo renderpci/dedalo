@@ -180,8 +180,10 @@ describe.if(hasPhpCredentials())('root user (dd128,-1) hidden differential', () 
 		);
 		// Both mains keep the injected -1 entry (dropping it would blank the
 		// "who = root" chip); child items may resolve empty values (root has no
-		// dd452 full name) but the locator itself must survive on both.
-		expect(JSON.stringify(tsData)).toContain('"-1"');
+		// dd452 full name) but the locator itself must survive on both. TS now
+		// emits the canonical INT chip (WC-2026-08-10-section-id-int-canonical);
+		// the frozen PHP fixture keeps the string byte-form.
+		expect(JSON.stringify(tsData)).toContain('"section_id":-1');
 		expect(JSON.stringify(phpData)).toContain('"-1"');
 	});
 });

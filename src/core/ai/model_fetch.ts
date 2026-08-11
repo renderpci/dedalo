@@ -18,6 +18,15 @@
  * fetch fallback for hosts without curl. Files land only under the store root,
  * and only for model ids the CALLER has already validated against the catalog —
  * this module never invents a URL from user input on its own.
+ *
+ * The DECISIONS live in three pure exports — `resolveFetchTarget` (path
+ * confinement + URL policy), `curlArgv` (transport flags) and
+ * `isUsableCachedFile` (cache freshness) — gated by
+ * `test/unit/ai_model_fetch_native.test.ts`. What remains inside `fetchOneFile`
+ * is byte plumbing (`mkdirSync`, the spawn/await, the zero-length cleanup, the
+ * `fetch` + `Bun.write` fallback) and is NOT gated: it needs the network. The
+ * orchestration in `downloadModel` is drivable through the injectable
+ * `options.fetchFile`.
  */
 
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
@@ -57,6 +66,62 @@ export const OPTIONAL_FILES: readonly string[] = [
  */
 export const DIARIZATION_COMMON_FILES: readonly string[] = ['preprocessor_config.json'];
 
+/**
+ * Resolve where one model file lands on disk and where it comes from, or null
+ * when the request is refused.
+ *
+ * MODEL-01 (2026-07-28 audit): modelId/file flow into BOTH the hub URL and the
+ * on-disk path (join(store, modelId, file)). Reject traversal / URL-breaking
+ * segments so a crafted id cannot write outside the store or rewrite the fetch
+ * target, and confirm the resolved path stays under the store. (HUB_BASE is a
+ * pinned https:// constant. A full content checksum needs a per-file hash
+ * manifest, which the hub does not ship here — tracked separately.)
+ */
+export function resolveFetchTarget(
+	modelId: string,
+	file: string,
+	store: string,
+): { target: string; url: string } | null {
+	if (!isSafeModelSegment(modelId) || !isSafeModelSegment(file)) return null;
+	const target = join(store, modelId, file);
+	const storeRoot = resolve(store);
+	if (!resolve(target).startsWith(storeRoot + sep)) return null;
+	return { target, url: `${HUB_BASE}/${modelId}/resolve/main/${file}` };
+}
+
+/** True when a previous run already left this file complete on disk. */
+export function isUsableCachedFile(target: string): boolean {
+	return existsSync(target) && statSync(target).size > 0;
+}
+
+/**
+ * The curl transport invocation.
+ * -f: a 404 is a failure, not an HTML error page written to disk.
+ * -L: follow the CDN redirect. -C -: resume a partial file.
+ */
+export function curlArgv(target: string, url: string, quiet: boolean): string[] {
+	return [
+		'curl',
+		'-fL',
+		'-C',
+		'-',
+		'--retry',
+		'3',
+		quiet ? '-sS' : '--progress-bar',
+		'-o',
+		target,
+		url,
+	];
+}
+
+/** Fetch one file into the store; false = not obtained. */
+export type FetchFile = (
+	modelId: string,
+	file: string,
+	store: string,
+	quiet: boolean,
+) => Promise<boolean>;
+
 export interface DownloadOptions {
 	/** Target store root; defaults to the configured one. */
 	store?: string;
@@ -70,6 +135,9 @@ export interface DownloadOptions {
 	 * DIARIZATION_COMMON_FILES and an empty optional list. */
 	commonFiles?: readonly string[];
 	optionalFiles?: readonly string[];
+	/** Transport seam: defaults to the real curl/fetch implementation. Injected
+	 * by tests so the orchestration is drivable without the network. */
+	fetchFile?: FetchFile;
 }
 
 export interface DownloadReport {
@@ -104,39 +172,17 @@ async function fetchOneFile(
 	store: string,
 	quiet: boolean,
 ): Promise<boolean> {
-	// MODEL-01 (2026-07-28 audit): modelId/file flow into BOTH the hub URL and the
-	// on-disk path (join(store, modelId, file)). Reject traversal / URL-breaking
-	// segments so a crafted id cannot write outside the store or rewrite the fetch
-	// target, and confirm the resolved path stays under the store. (HUB_BASE is a
-	// pinned https:// constant. A full content checksum needs a per-file hash
-	// manifest, which the hub does not ship here — tracked separately.)
-	if (!isSafeModelSegment(modelId) || !isSafeModelSegment(file)) return false;
-	const target = join(store, modelId, file);
-	const storeRoot = resolve(store);
-	if (!resolve(target).startsWith(storeRoot + sep)) return false;
-	if (existsSync(target) && statSync(target).size > 0) return true;
+	const resolved = resolveFetchTarget(modelId, file, store);
+	if (resolved === null) return false;
+	const { target, url } = resolved;
+	if (isUsableCachedFile(target)) return true;
 
-	const url = `${HUB_BASE}/${modelId}/resolve/main/${file}`;
 	mkdirSync(dirname(target), { recursive: true });
 
 	if (haveCurl()) {
-		// -f: a 404 is a failure, not an HTML error page written to disk.
-		// -L: follow the CDN redirect. -C -: resume a partial file.
-		const argv = [
-			'curl',
-			'-fL',
-			'-C',
-			'-',
-			'--retry',
-			'3',
-			quiet ? '-sS' : '--progress-bar',
-			'-o',
-			target,
-			url,
-		];
 		// Async spawn: a server background job must never block the event loop on
 		// a gigabyte download (spawnSync would freeze every request in the process).
-		const proc = Bun.spawn(argv, {
+		const proc = Bun.spawn(curlArgv(target, url, quiet), {
 			stdout: quiet ? 'ignore' : 'inherit',
 			stderr: quiet ? 'ignore' : 'inherit',
 		});
@@ -175,11 +221,12 @@ export async function downloadModel(
 	// modelFiles carries config.json + the weights; union in the common files.
 	const wanted = [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])];
 	const optional = options.optionalFiles ?? OPTIONAL_FILES;
+	const fetchFile = options.fetchFile ?? fetchOneFile;
 
 	let gotWeights = false;
 	for (const file of wanted) {
 		options.onFile?.(file);
-		const ok = await fetchOneFile(modelId, file, store, quiet);
+		const ok = await fetchFile(modelId, file, store, quiet);
 		if (ok) {
 			report.files.push(file);
 			if (file.endsWith('.onnx')) gotWeights = true;

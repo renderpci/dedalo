@@ -23,6 +23,13 @@ import { gated, type WidgetModule, type WidgetResponse } from './support.ts';
  * update_version/updates come from the TS catalog (core/update/catalog.ts)
  * — null while no 7.x migration exists, exactly the pre-catalog panel bytes.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): it folds an EMPTY-BY-CONSTRUCTION
+ * catalog (no 7.x migration descriptor exists), so both descriptor fields are
+ * null and any assertion over them is vacuous — the precedent is
+ * test/unit/code_update.test.ts.
+ */
 async function updateDataVersionGetValue(): Promise<WidgetResponse> {
 	const { getCurrentDataVersion } = await import('../backup.ts');
 	const { getMatchedDescriptor, getUpdateVersion, toWireDescriptor } = await import(
@@ -68,6 +75,13 @@ async function updateDataVersionRun(
 /**
  * The OPEN (owned) branch: the TS migration engine. Same preconditions,
  * then background (mediaJobs) or inline execution.
+ */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a thin unwrap forwarding to the update
+ * engine, gated in its own suite; executing it MIGRATES STORED DATA. The
+ * precondition refusal it shares with the closed branch is gated by
+ * test/unit/update_preconditions.test.ts.
  */
 async function updateDataVersionRunOwned(
 	options: Record<string, unknown>,

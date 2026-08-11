@@ -159,9 +159,11 @@ async function tmNoteValue(tmRowId: number): Promise<unknown[]> {
 	const model = await getModelByTipo(TM_NOTES_TEXT);
 	const column = model !== null ? getColumnNameByModel(model) : null;
 
-	// PHP carries the searched section_id as the DB driver's string — the client
-	// echoes it back into the note open/delete RQOs; keep the string shape.
-	let noteSectionId: string | null = null;
+	// The note record's own address, MINTED here from an int PK column (PHP
+	// carried the DB driver's string; WC-2026-08-10-section-id-int-canonical
+	// repeals that shape). The client only tests it for presence and echoes it
+	// into the note open/create RQO, which reads addresses as ints.
+	let noteSectionId: number | null = null;
 	let noteItems: unknown[] | null = null;
 	if (table !== null && column !== null) {
 		assertMatrixTable(table);
@@ -182,8 +184,8 @@ async function tmNoteValue(tmRowId: number): Promise<unknown[]> {
 		)) as { section_id: number }[];
 		const found = rows[0]?.section_id ?? null;
 		if (found !== null) {
-			noteSectionId = String(found);
-			const noteRecord = await readMatrixRecord(table, TM_NOTES_SECTION_TIPO, Number(found));
+			noteSectionId = Number(found);
+			const noteRecord = await readMatrixRecord(table, TM_NOTES_SECTION_TIPO, noteSectionId);
 			const columnValue = noteRecord?.columns[column as MatrixJsonbColumn];
 			const items = (columnValue as Record<string, unknown> | null | undefined)?.[TM_NOTES_TEXT];
 			// PHP get_data coerces non-array data to [$data]; null keeps the placeholder.
@@ -258,7 +260,9 @@ export async function buildTmSectionRecord(
 	const userLocator = {
 		id: 1,
 		type: RELATION_TYPE_LINK,
-		section_id: String(row.user_id),
+		// `row.user_id` is an int column — the locator carries the address itself
+		// (WC-2026-08-10-section-id-int-canonical repeals the String() minting).
+		section_id: row.user_id,
 		section_tipo: USERS_SECTION_TIPO,
 		from_component_tipo: TM_COLUMN_USER_ID,
 	};

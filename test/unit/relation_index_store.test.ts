@@ -6,6 +6,20 @@
  *
  * The index is DERIVED and never authoritative; these gates pin that the
  * covered paths return exactly what the classic flat-GIN containment returns.
+ *
+ * LEDGER — coverage plan §4.4 D18, KNOWN-OPEN AND UNGATED. TWO defects live in
+ * this file's shape, both of which make it look stricter than it is:
+ *  1. MUTABLE-PRODUCTION FIXTURE. The `> 100` counts (and the "467 measured"
+ *     note) are asserted against INSTALLED `rsc` data — records nobody minted
+ *     for this gate and anyone may edit. The scratch law says never assert on a
+ *     row you did not mint; these assertions are hostage to the corpus.
+ *  2. INVISIBLE GREEN. Every case starts with `if (!(await storeReady())) return;`
+ *     — an early return, not a `test.if`/skip — so on any database where the
+ *     relation-index store is absent the whole file reports PASS having asserted
+ *     nothing. That is the green-suite trap in its ambient form: red becomes
+ *     invisible green rather than a visible skip.
+ * Repair is a fixture + skip-shape change, not a coverage edit; ledgered here so
+ * nobody reads these greens as evidence.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';

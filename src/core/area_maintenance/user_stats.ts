@@ -55,12 +55,23 @@ const WHERE_SKIP: ReadonlySet<string> = new Set(['dd271', 'dd1224', 'dd1225']);
 /** The 'last publish' where-key routed to the publish histogram. */
 const WHERE_PUBLISH = 'dd1223';
 
-function userLocatorFilter(componentTipo: string, userId: number): string {
-	// json_codec even for the read-side @> containment params — one binding
-	// discipline for every jsonb param in this module (S2-07).
-	return encodeForJsonb({
-		[componentTipo]: [{ section_tipo: USERS_SECTION, section_id: String(userId) }],
-	});
+/**
+ * BOTH typed containment payloads for the user's actor locator — jsonb `@>` is
+ * type-strict and stored rows carry string-form ids until the int sweep (and
+ * int-form after it), so every probe ORs the pair (the dual-form law of
+ * core/search/containment.ts; WC-2026-08-10-section-id-int-canonical).
+ * json_codec even for the read-side params — one binding discipline for every
+ * jsonb param in this module (S2-07).
+ */
+function userLocatorFilterPair(componentTipo: string, userId: number): [string, string] {
+	return [
+		encodeForJsonb({
+			[componentTipo]: [{ section_tipo: USERS_SECTION, section_id: String(userId) }],
+		}),
+		encodeForJsonb({
+			[componentTipo]: [{ section_tipo: USERS_SECTION, section_id: userId }],
+		}),
+	];
 }
 
 /**
@@ -300,8 +311,8 @@ function foldTallies(tallies: ActivityTally[]): DayGroup {
 /** PHP delete_user_activity_stats: drop every dd1521 row of one user. */
 export async function deleteUserActivityStats(userId: number): Promise<boolean> {
 	await sql.unsafe(
-		'DELETE FROM matrix_stats WHERE section_tipo = $1 AND relation @> $2::text::jsonb',
-		[UA_SECTION, userLocatorFilter(UA_USER, userId)],
+		'DELETE FROM matrix_stats WHERE section_tipo = $1 AND (relation @> $2::text::jsonb OR relation @> $3::text::jsonb)',
+		[UA_SECTION, ...userLocatorFilterPair(UA_USER, userId)],
 	);
 	return true;
 }
@@ -344,8 +355,8 @@ export async function updateUserActivityStats(
 
 	// last aggregated day (newest stats row of the user)
 	const lastRows = (await sql.unsafe(
-		'SELECT date FROM matrix_stats WHERE relation @> $1::text::jsonb ORDER BY id DESC LIMIT 1',
-		[userLocatorFilter(UA_USER, userId)],
+		'SELECT date FROM matrix_stats WHERE (relation @> $1::text::jsonb OR relation @> $2::text::jsonb) ORDER BY id DESC LIMIT 1',
+		[...userLocatorFilterPair(UA_USER, userId)],
 	)) as {
 		date: Record<string, { start?: { year?: number; month?: number; day?: number } }[]> | null;
 	}[];
@@ -355,6 +366,16 @@ export async function updateUserActivityStats(
 		lastAggregated = new Date(lastStart.year, lastStart.month - 1, lastStart.day);
 	}
 
+	// LEDGER — coverage plan §4.4 D5, CLOCK INCONSISTENCY, KNOWN-OPEN AND UNGATED.
+	// today/yesterday are derived from the PROCESS-LOCAL clock, while the widget
+	// that reads these aggregates (widgets/user_activity.ts activityWindow, and
+	// its comment at :54-62) deliberately uses dbTimestamp()'s DEDALO_TIMEZONE
+	// wall clock — the S1-03 lesson, re-learned in get_widget_data_differential
+	// on 2026-07-11 just after midnight. On a UTC-hosted install in a non-UTC
+	// zone the rebuild's "yesterday" and the widget's "yesterday" disagree for
+	// part of every day. No gate: pinning either clock would freeze the
+	// divergence as a contract. Fixing it is a behaviour change and needs a
+	// wire-contract entry.
 	const now = new Date();
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
@@ -406,12 +427,12 @@ export async function updateUserActivityStats(
 		// skip already-saved days
 		const exists = (await sql.unsafe(
 			`SELECT 1 FROM matrix_stats
-			 WHERE relation @> $1::text::jsonb
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'year')::int = $2
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'month')::int = $3
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'day')::int = $4
+			 WHERE (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+			   AND ("date"->'${UA_DATE}'->0->'start'->>'year')::int = $3
+			   AND ("date"->'${UA_DATE}'->0->'start'->>'month')::int = $4
+			   AND ("date"->'${UA_DATE}'->0->'start'->>'day')::int = $5
 			 LIMIT 1`,
-			[userLocatorFilter(UA_USER, userId), year, month, dayNum],
+			[...userLocatorFilterPair(UA_USER, userId), year, month, dayNum],
 		)) as unknown[];
 		if (exists.length > 0) continue;
 
@@ -517,6 +538,20 @@ function emptyWhen(): CanonicalEntry[] {
  * {who, what, where, when, publish}. Null when no stats rows exist in range.
  * Day-granular date compare over the stored dd1530 start triple (equivalent
  * to PHP's virtual-seconds bounds for the day records this section holds).
+ *
+ * LEDGER — TWO KNOWN-OPEN, UNGATED DEFECTS IN THE `make_date` PREDICATE BELOW
+ * (coverage plan §4.4 D15 and D16; the gate
+ * test/unit/user_stats_range_native.test.ts deliberately pins NEITHER, because
+ * pinning a defect retires it):
+ *  - D15 (a.k.a. L3) NARROWING: a stats row stored at YEAR- or MONTH-only
+ *    granularity has a NULL month/day, so `make_date` yields NULL, `BETWEEN` is
+ *    false, and the row is SILENTLY EXCLUDED. PHP compared the dd1530 virtual
+ *    seconds and included it. An undocumented wire divergence: closing it means
+ *    either widening the predicate or an engineering/wire_contract/ entry.
+ *  - D16 (a.k.a. L2) HARD FAILURE: a MALFORMED stored date (month 0, day 32)
+ *    makes `make_date` raise `date field value out of range`, which takes the
+ *    ENTIRE query down — the activity widget then 500s for that user forever,
+ *    with no per-row fail-soft.
  */
 export async function crossUsersRangeData(
 	dateIn: string,
@@ -525,33 +560,74 @@ export async function crossUsersRangeData(
 	lang: string,
 ): Promise<CanonicalTotals | null> {
 	const rows = (await sql.unsafe(
-		`SELECT relation, misc->$4 AS totals, date
+		`SELECT relation, misc->$5 AS totals, date
 		 FROM matrix_stats
-		 WHERE section_tipo = $5
-		   AND relation @> $1::text::jsonb
+		 WHERE section_tipo = $6
+		   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
 		   AND make_date(
 		         ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'day')::int
-		       ) BETWEEN date($2) AND date($3)
+		       ) BETWEEN date($3) AND date($4)
 		 ORDER BY make_date(
 		         ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
 		         ("date"->'${UA_DATE}'->0->'start'->>'day')::int
 		       ) ASC, id ASC`,
-		[userLocatorFilter(UA_USER, userId), dateIn, dateOut, UA_TOTALS, UA_SECTION],
-	)) as {
-		relation: { from_component_tipo?: string; section_tipo?: string; section_id?: unknown }[][];
-		totals: { value?: unknown }[] | { value?: unknown } | null;
-	}[];
+		[...userLocatorFilterPair(UA_USER, userId), dateIn, dateOut, UA_TOTALS, UA_SECTION],
+	)) as StatsRow[];
+	// (!) NULL-VS-EMPTY, AND WHY IT CANNOT MOVE INTO THE PURE HALF.
+	// `null` here does not describe the folded CONTENT — it is a statement about
+	// the STORE: this user has no dd1521 row in the range, i.e. the history has
+	// not been built yet, and the widget (user_activity.resolveActivityTotals)
+	// branches on exactly that to decide whether tier 3 runs. `foldStatsRows` is
+	// a total function over rows it is HANDED; it cannot tell "the query found
+	// nothing" from "the caller chose to fold nothing", and making it nullable
+	// would push a second, meaningless null into every other caller. So the
+	// decision stays with the statement that produced the rows.
 	if (rows.length === 0) return null;
 
 	const { termByTipo } = await import('../ontology/labels.ts');
+	return foldStatsRows(
+		rows,
+		(tipo) => termByTipo(tipo, lang),
+		(userKey) => resolveUserName(userKey, lang),
+	);
+}
+
+/** One `crossUsersRangeData` row as the SQL hands it over. */
+export interface StatsRow {
+	/**
+	 * The `relation` COLUMN as stored — a per-tipo object (`{dd1522:[locator]}`),
+	 * which is why `who` is permanently empty in production (see below). A flat
+	 * locator ARRAY is tolerated and IS matched.
+	 */
+	relation: unknown;
+	/** `misc->dd1523`: the component_json wrapper, a bare object, or null. */
+	totals: { value?: unknown }[] | { value?: unknown } | null;
+}
+
+/**
+ * The reduction half of `crossUsersRangeData` — TEST SEAM (precedent in this
+ * file: `aggregateActivity`'s `pageRows`). Takes the already-fetched stats rows
+ * plus the two label resolvers as injected functions, so the whole fold is
+ * reachable without a database; the SQL stays in `crossUsersRangeData` because
+ * `user_stats.ts` is the sole declared owner of `matrix_stats` SQL
+ * (sql_confinement_tripwire).
+ *
+ * Memoisation of BOTH resolvers lives here, not in the injected functions: a
+ * tipo repeated across a year of rows must cost one lookup, not one per row.
+ */
+export async function foldStatsRows(
+	rows: StatsRow[],
+	resolveTerm: (tipo: string) => Promise<string | null>,
+	resolveUser: (userKey: string) => Promise<string | null>,
+): Promise<CanonicalTotals> {
 	const termCache = new Map<string, string | null>();
-	const resolveTerm = async (tipo: string): Promise<string | null> => {
+	const cachedTerm = async (tipo: string): Promise<string | null> => {
 		let label = termCache.get(tipo);
 		if (label === undefined) {
-			label = await termByTipo(tipo, lang);
+			label = await resolveTerm(tipo);
 			termCache.set(tipo, label);
 		}
 		return label;
@@ -595,6 +671,11 @@ export async function crossUsersRangeData(
 		let whereActionsTotal = 0;
 		for (const item of totals) {
 			const type = item?.type;
+			// LEDGER — coverage plan §4.4 D4, second site (see mergeRawIntoCanonical
+			// above for the full statement): a non-numeric stored value becomes NaN
+			// and poisons the folded entry. KNOWN-OPEN; the fold's shape tolerance is
+			// gated by test/unit/user_stats_range_native.test.ts, the NaN law itself
+			// only by that file's merge twin (M11) — repairing it is a wire edit.
 			const value = Number(item?.value ?? 0);
 			if (type === 'what' || type === 'where' || type === 'publish') {
 				if (type === 'where') whereActionsTotal += value;
@@ -604,7 +685,7 @@ export async function crossUsersRangeData(
 				if (existing !== undefined) {
 					existing.value += value;
 				} else {
-					target.set(key, { key, label: await resolveTerm(key), value });
+					target.set(key, { key, label: await cachedTerm(key), value });
 				}
 			} else if (type === 'when') {
 				const hourKey = Number(item.hour);
@@ -624,7 +705,7 @@ export async function crossUsersRangeData(
 			} else {
 				let label = userLabelCache.get(userKey);
 				if (label === undefined) {
-					label = await resolveUserName(userKey, lang);
+					label = await resolveUser(userKey);
 					userLabelCache.set(userKey, label);
 				}
 				who.set(userKey, { key: userKey, label, value: whereActionsTotal });
@@ -645,6 +726,13 @@ export async function crossUsersRangeData(
 }
 
 /** The user record's name value (PHP DEDALO_USER_NAME_TIPO dd132 get_valor). */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): three dynamic imports and one component
+ * read turning a dd128 id into a display name — every branch is null-vs-value on
+ * its own read. Its callers INJECT it as a function into the gated fold
+ * (`foldStatsRows`), which is where the label behaviour is actually asserted.
+ */
 async function resolveUserName(userId: string, lang: string): Promise<string | null> {
 	const { readMatrixRecord } = await import('../db/matrix.ts');
 	const record = await readMatrixRecord('matrix_users', USERS_SECTION, Number(userId));
@@ -708,6 +796,13 @@ export async function mergeRawIntoCanonical(
 
 	for (const item of rawItems) {
 		if (item === null || typeof item !== 'object') continue;
+		// LEDGER — coverage plan §4.4 D4 (a.k.a. L4), NaN POISONING, KNOWN-OPEN.
+		// A non-numeric stored value yields NaN; `NaN === 0` is false, so the
+		// zero-guard below passes it through, `existing.value += NaN` poisons the
+		// key, and JSON.stringify emits `null` on the wire. Present in
+		// `foldStatsRows` too. GATED as CURRENT BEHAVIOUR (not as desirable) by
+		// test/unit/user_stats_merge_native.test.ts case M11 — repairing it is a
+		// wire edit and needs an engineering/wire_contract/ entry, not a silent fix.
 		const value = Number((item as { value?: unknown }).value ?? 0);
 		if (value === 0) continue;
 
@@ -772,7 +867,9 @@ async function saveUserActivity(
 	const userLocator = {
 		id: 1,
 		type: 'dd151',
-		section_id: String(userId),
+		// int-canonical (WC-2026-08-10-section-id-int-canonical); the read
+		// probes above OR both typed forms, so pre-sweep rows still match.
+		section_id: userId,
 		section_tipo: USERS_SECTION,
 		from_component_tipo: UA_USER,
 	};

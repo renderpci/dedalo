@@ -75,6 +75,19 @@ const FRAMES_A = [
 	},
 ];
 
+/**
+ * The SAME snapshot as it must be STORED after a restore: the fixtures above
+ * carry the historical string-form addresses on purpose (that is what a
+ * pre-sweep TM row holds), and the restore door converges them on the canonical
+ * int form (WC-2026-08-10-section-id-int-canonical, D6.2). Asserting against
+ * these twins gates the convergence — main AND frames, since a frame's
+ * section_id is a stored record address too.
+ */
+const intAddresses = <T extends Record<string, unknown>>(items: T[]): T[] =>
+	items.map((item) => ({ ...item, section_id: Number(item.section_id) }));
+const MAIN_A_STORED = intAddresses(MAIN_A);
+const FRAMES_A_STORED = intAddresses(FRAMES_A);
+
 /** TODAY's value — one main item, and a frame paired to an item that the
  * restore removes (`id_key: 9`): the orphan the old restore left behind. */
 const MAIN_B = [
@@ -180,11 +193,11 @@ describe('apply_value restores the paired dataframe frames', () => {
 			}),
 		);
 		expect(response.result).toBe(true);
-		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
 	});
 
 	test('the frame slot equals the snapshot frames — no survivors from today', async () => {
-		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A);
+		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A_STORED);
 	});
 
 	test('NO orphan frame survives: every id_key pairs with a live main item', async () => {
@@ -204,7 +217,7 @@ describe('apply_value restores the paired dataframe frames', () => {
 			 ORDER BY id DESC LIMIT 1`,
 			[SECTION, recordId, MAIN, tmRowId],
 		)) as { data: unknown }[];
-		expect(rows[0]?.data).toEqual([...MAIN_A, ...FRAMES_A]);
+		expect(rows[0]?.data).toEqual([...MAIN_A_STORED, ...FRAMES_A_STORED]);
 	});
 
 	test('the slot itself gets NO TM row (PHP suppresses it — the main row carries it)', async () => {
@@ -287,7 +300,7 @@ describe('apply_value applies a frameless snapshot when the slot is already empt
 			}),
 		);
 		expect(response.result).toBe(true);
-		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
 		expect(await storedKey(recordId, SLOT)).toBeUndefined();
 	});
 });
@@ -329,8 +342,8 @@ describe('apply_value drops a frame naming a tipo that is not a live slot', () =
 		expect(response.result).toBe(true);
 		// Not in the main column (the strip), not in the slot, not in a key of
 		// its own — inert, exactly as PHP left it.
-		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A);
-		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A_STORED);
 		expect(await storedKey(recordId, FOREIGN)).toBeUndefined();
 	});
 });
@@ -448,8 +461,8 @@ describe('bulk_revert_process restores the paired frames too', () => {
 		}
 		// PHP's bulk_revert fed the raw snapshot to set_data, which writes frame
 		// locators into the MAIN column and leaves the slot at today's values.
-		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A);
-		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A);
+		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
+		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_A_STORED);
 	});
 });
 

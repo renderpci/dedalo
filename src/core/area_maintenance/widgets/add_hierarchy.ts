@@ -22,6 +22,42 @@ import type { Principal } from '../../security/permissions.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /**
+ * The importer SEAM (test injection only; production always takes the default).
+ *
+ * The install and the reset handler differ by EXACTLY one thing — the options
+ * object they construct — so that argument IS the behaviour: swap them and the
+ * non-destructive "Install" button silently DELETEs and re-seeds an already
+ * installed thesaurus, discarding operator edits irreversibly. Injecting the
+ * importer lets a gate pin which handler carries `{replace:true}` without ever
+ * running the destructive import.
+ */
+export type HierarchiesImporter =
+	typeof import('../../install/hierarchy_import.ts').installHierarchies;
+
+async function realImporter(): Promise<HierarchiesImporter> {
+	const { installHierarchies } = await import('../../install/hierarchy_import.ts');
+	return installHierarchies;
+}
+
+/**
+ * The tld of a hierarchy TERM section tipo, or null when the tipo is not one.
+ *
+ * The anchoring is the whole point: a term section is `<tld>1` EXACTLY —
+ * `hierarchy1` → `hierarchy`, but `hierarchy125`, `test3` and `dd1758` are
+ * not term sections at all. Loosen the trailing `$` (or the leading `^`) and
+ * the installed set re-inflates the way the registry read once did — ~269
+ * hierarchies marked installed when ~14 were — and the panel again offers to
+ * skip imports that never happened.
+ *
+ * Pure on purpose: this used to be a `substring(… from …)` + `~` pair inside
+ * the SQL, i.e. two copies of one predicate that no gate could reach.
+ */
+export function installedTldFromSectionTipo(sectionTipo: string): string | null {
+	const match = /^([a-z]+)1$/.exec(sectionTipo);
+	return match === null ? null : (match[1] as string);
+}
+
+/**
  * The hierarchies actually INSTALLED, as unique {tld} objects — a tld is installed
  * when its `<tld>1` term section has rows in matrix_hierarchy. This is the SAME signal
  * the importer keys on (hierarchy_import.ts hierarchyRowsPresent), so the client marker
@@ -34,13 +70,15 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
  */
 async function installedHierarchies(): Promise<{ tld: string }[]> {
 	try {
-		const rows = (await sql.unsafe(
-			`SELECT DISTINCT substring(section_tipo from '^([a-z]+)1$') AS tld
-			 FROM matrix_hierarchy
-			 WHERE section_tipo ~ '^[a-z]+1$'`,
-			[],
-		)) as { tld: string | null }[];
-		return rows.filter((row) => row.tld).map((row) => ({ tld: row.tld as string }));
+		const rows = (await sql.unsafe(`SELECT DISTINCT section_tipo FROM matrix_hierarchy`, [])) as {
+			section_tipo: string | null;
+		}[];
+		const tlds: { tld: string }[] = [];
+		for (const row of rows) {
+			const tld = installedTldFromSectionTipo(String(row.section_tipo ?? ''));
+			if (tld !== null) tlds.push({ tld });
+		}
+		return tlds;
 	} catch (error) {
 		console.error('add_hierarchy: installed_hierarchies read failed:', error);
 		return [];
@@ -67,12 +105,14 @@ async function addHierarchyGetValue(): Promise<WidgetResponse> {
  * audited to the acting admin. An already-installed tld is SKIPPED (the import is
  * additive; `replace` stays false). ENGINE_NATIVE in update_ownership_tripwire.
  */
-async function addHierarchyInstall(
+export async function addHierarchyInstall(
 	options: Record<string, unknown>,
 	principal: Principal,
+	importer?: HierarchiesImporter,
 ): Promise<WidgetResponse> {
 	const tlds = Array.isArray(options.hierarchies) ? options.hierarchies.map(String) : [];
-	const { installHierarchies } = await import('../../install/hierarchy_import.ts');
+	const installHierarchies = importer ?? (await realImporter());
+	// NO fourth argument on purpose: `replace` stays false, i.e. additive.
 	const r = await installHierarchies(tlds, undefined, principal.userId);
 	return { result: r.result, msg: r.msg, errors: r.errors };
 }
@@ -83,12 +123,13 @@ async function addHierarchyInstall(
  * Discards any operator edits/additions to those hierarchies' terms; reached only through
  * the explicit, confirmed "Reset to seed" control. ENGINE_NATIVE in update_ownership_tripwire.
  */
-async function addHierarchyReset(
+export async function addHierarchyReset(
 	options: Record<string, unknown>,
 	principal: Principal,
+	importer?: HierarchiesImporter,
 ): Promise<WidgetResponse> {
 	const tlds = Array.isArray(options.hierarchies) ? options.hierarchies.map(String) : [];
-	const { installHierarchies } = await import('../../install/hierarchy_import.ts');
+	const installHierarchies = importer ?? (await realImporter());
 	const r = await installHierarchies(tlds, undefined, principal.userId, { replace: true });
 	return { result: r.result, msg: r.msg, errors: r.errors };
 }

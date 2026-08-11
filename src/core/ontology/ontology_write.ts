@@ -28,6 +28,7 @@
  *    explicit typology_id, so the DB probe is never reached. Ledgered.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import {
 	type DdOntologyNode,
 	deleteTldNodes,
@@ -94,18 +95,31 @@ export interface OntologyWriteResponse {
 
 // --- small item builders (byte-shape helpers) --------------------------------
 
-/** A stored relation locator. section_id is always a STRING in the matrix. */
+/**
+ * A stored relation locator. WC-2026-08-10-section-id-int-canonical repeals the
+ * former "section_id is always a STRING in the matrix" law: this writer mints
+ * the CANONICAL INT form. Canonicalization rather than Number(): whatever is
+ * not a record address (an external remote id, the `''` of an unresolved
+ * parent) is stored verbatim instead of being cast into a wrong address.
+ *
+ * The dd_ontology relations this builder feeds carried ZERO stored section_ids
+ * at the census, so no stored bytes flip here — the rule is stated for what
+ * this writer produces from now on.
+ */
 function relationLocator(fields: {
 	id?: number;
 	type: string;
 	section_tipo: string;
+	// KEPT UNION: same door as hierarchy_provision.relLocator — tipo-derived
+	// numeric strings (getSectionIdFromTipo) and the `''` of an unresolved
+	// parent both arrive here and are separated by canonicalizeStoredSectionId.
 	section_id: string | number;
 	from_component_tipo: string;
 }): Record<string, unknown> {
 	const locator: Record<string, unknown> = {};
 	if (fields.id !== undefined) locator.id = fields.id;
 	locator.type = fields.type;
-	locator.section_id = String(fields.section_id);
+	locator.section_id = canonicalizeStoredSectionId(fields.section_id);
 	locator.section_tipo = fields.section_tipo;
 	locator.from_component_tipo = fields.from_component_tipo;
 	return locator;

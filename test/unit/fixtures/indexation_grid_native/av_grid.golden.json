@@ -276,7 +276,7 @@
 														"action": null,
 														"value": [
 															{
-																"section_id": "90002",
+																"section_id": 90002,
 																"section_tipo": "rsc167"
 															}
 														],
@@ -313,7 +313,7 @@
 																		"caller": {
 																			"tipo": "rsc167",
 																			"section_tipo": "rsc167",
-																			"section_id": "90002",
+																			"section_id": 90002,
 																			"mode": "indexation_list",
 																			"model": "section",
 																			"lang": "lg-spa"
@@ -469,7 +469,7 @@
 																		"caller": {
 																			"tipo": "rsc167",
 																			"section_tipo": "rsc167",
-																			"section_id": "90002",
+																			"section_id": 90002,
 																			"mode": "indexation_list",
 																			"model": "section",
 																			"lang": "lg-spa"
@@ -622,13 +622,13 @@
 																		"caller": {
 																			"tipo": "rsc167",
 																			"section_tipo": "rsc167",
-																			"section_id": "90002",
+																			"section_id": 90002,
 																			"tag_id": "77",
 																			"mode": "indexation_list",
 																			"model": "section",
 																			"lang": "lg-spa",
 																			"section_top_tipo": "oh1",
-																			"section_top_id": "90002"
+																			"section_top_id": 90002
 																		},
 																		"tool_context": {
 																			"typo": "ddo",
@@ -727,7 +727,7 @@
 																	"module_path": "../../component_av/js/component_av.js",
 																	"options": {
 																		"section_tipo": "rsc167",
-																		"section_id": "90002",
+																		"section_id": 90002,
 																		"component_tipo": "rsc35",
 																		"tc_in_secs": 5,
 																		"tc_out_secs": 12.5
@@ -850,7 +850,7 @@
 																	"options": {
 																		"tipo": "rsc35",
 																		"section_tipo": "rsc167",
-																		"section_id": "90002",
+																		"section_id": 90002,
 																		"tag_id": "77",
 																		"lang": "lg-spa",
 																		"tc_in_secs": 5,
@@ -892,7 +892,7 @@
 																	"options": {
 																		"tipo": "rsc35",
 																		"section_tipo": "rsc167",
-																		"section_id": "90002",
+																		"section_id": 90002,
 																		"tag_id": "77",
 																		"lang": "lg-spa",
 																		"tc_in_secs": 5,

@@ -27,7 +27,9 @@
 
 import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { readEnv } from '../../config/env.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
+import { relationProbeGroups } from '../search/containment.ts';
 import { virtualDateNow } from '../section/record/create_record.ts';
 import type { DiffusionSqlTarget } from './diffusion_graph.ts';
 import { getSectionDiffusionTargets } from './diffusion_map.ts';
@@ -192,11 +194,20 @@ export async function deleteDiffusionRecord(
 	logActivity = true,
 	/** The acting user for the dd1758 ledger; absent → dd1762 omitted. */
 	userId?: number,
+	/**
+	 * Restrict the run to these element tipos (PHP retry_pending's
+	 * `only_element_tipos`). The retry loop passes the pending row's dd1766
+	 * element so its flip criterion is that element's outcome, never the
+	 * record's; absent → every element of the section.
+	 */
+	onlyElementTipos?: readonly string[],
 ): Promise<DiffusionDeleteOutcome> {
 	const outcome: DiffusionDeleteOutcome = { deleted: [], pending: [] };
+	// Hoisted so the dd1758 fold below sees the SAME (restricted) target set
+	// this run acted on — and is reached on every path that produced one.
+	let targets: readonly DiffusionSqlTarget[] = [];
 	try {
-		const targets = await getSectionDiffusionTargets(sectionTipo);
-		if (targets.length === 0) return outcome;
+		targets = restrictToElements(await getSectionDiffusionTargets(sectionTipo), onlyElementTipos);
 
 		const sqlTargets = targets.filter(
 			(target) =>
@@ -216,50 +227,82 @@ export async function deleteDiffusionRecord(
 				else outcome.pending.push(targetKey(target));
 			}
 		}
-		if (sqlTargets.length === 0) return outcome;
 
 		// NATIVE path (DIFFUSION_SPEC §4.2) — the ONLY executor since the
 		// 2026-07-11 cutover: MariaDB deletes run through the registered
 		// in-process executor, then execution falls through to the dd1758
-		// ledger below.
-		if (nativeSqlDeleteExecutor === null) {
-			// DEC-19: sql targets exist but no native executor is registered —
-			// delete propagation is NOT running and published rows/markers will
-			// rot. Loud, per DECISIONS.md:391-395. (No dd1758 rows here — the
-			// deliberate fresh-install no-op posture; with the executor
-			// registered at boot this branch only fires when that registration
-			// failed, which server.ts already reports as FATAL-FOR-DELETES.)
-			console.error(
-				`[diffusion] DEC-19: record ${sectionTipo}/${sectionId} has ${sqlTargets.length} sql publication target(s) but no native delete executor is registered — unpublish is deferred to pending rows. Fix the boot registration (src/server.ts).`,
-			);
-			for (const target of sqlTargets) {
-				outcome.pending.push(targetKey(target));
+		// ledger below. No sql target → nothing to execute, and execution
+		// falls through to that same ledger (D10, fixed 2026-08-09: the old
+		// `if (sqlTargets.length === 0) return outcome;` returned first and
+		// left a file-only section's failed unlink with no pending row).
+		if (sqlTargets.length > 0) {
+			if (nativeSqlDeleteExecutor === null) {
+				// DEC-19: sql targets exist but no native executor is registered —
+				// delete propagation is NOT running and published rows/markers will
+				// rot. Loud, per DECISIONS.md:391-395. (No dd1758 rows here — the
+				// deliberate fresh-install no-op posture; with the executor
+				// registered at boot this branch only fires when that registration
+				// failed, which server.ts already reports as FATAL-FOR-DELETES.)
+				console.error(
+					`[diffusion] DEC-19: record ${sectionTipo}/${sectionId} has ${sqlTargets.length} sql publication target(s) but no native delete executor is registered — unpublish is deferred to pending rows. Fix the boot registration (src/server.ts).`,
+				);
+				for (const target of sqlTargets) {
+					outcome.pending.push(targetKey(target));
+				}
+				return outcome;
 			}
-			return outcome;
-		}
-
-		const native = await nativeSqlDeleteExecutor(
-			sqlTargets.map((target) => ({
-				database_name: target.database_name,
-				table_name: target.table_name,
-				section_ids: [sectionId],
-				section_tipo: sectionTipo, // enables media marker removal in the store
-			})),
-		);
-		const confirmed = new Set(native.deleted);
-		for (const target of sqlTargets) {
-			const key = targetKey(target);
-			if (confirmed.has(key)) outcome.deleted.push(key);
-			else outcome.pending.push(key);
-		}
-		if (native.errors.length > 0) {
-			console.error('diffusion unpublish reported errors:', native.errors);
+			await executeNativeSqlDeletes(
+				nativeSqlDeleteExecutor,
+				sqlTargets,
+				sectionTipo,
+				sectionId,
+				outcome,
+			);
 		}
 	} catch (error) {
 		console.error('diffusion unpublish failed (swallowed, pending rows persist):', error);
 	}
-	await logUnpublishOutcome(sectionTipo, sectionId, outcome, logActivity, userId);
+	await logUnpublishOutcome(targets, sectionTipo, sectionId, outcome, logActivity, userId);
 	return outcome;
+}
+
+/**
+ * Keep only the named elements (PHP retry_pending's `only_element_tipos`).
+ * An absent/empty restriction means "every element", never "no element".
+ */
+function restrictToElements(
+	targets: readonly DiffusionSqlTarget[],
+	onlyElementTipos: readonly string[] | undefined,
+): readonly DiffusionSqlTarget[] {
+	if (onlyElementTipos === undefined || onlyElementTipos.length === 0) return targets;
+	return targets.filter((target) => onlyElementTipos.includes(target.element_tipo));
+}
+
+/** Hand the sql/socrata targets to the registered executor and record each outcome. */
+async function executeNativeSqlDeletes(
+	executor: NativeSqlDeleteExecutor,
+	sqlTargets: readonly DiffusionSqlTarget[],
+	sectionTipo: string,
+	sectionId: number,
+	outcome: DiffusionDeleteOutcome,
+): Promise<void> {
+	const native = await executor(
+		sqlTargets.map((target) => ({
+			database_name: target.database_name,
+			table_name: target.table_name,
+			section_ids: [sectionId],
+			section_tipo: sectionTipo, // enables media marker removal in the store
+		})),
+	);
+	const confirmed = new Set(native.deleted);
+	for (const target of sqlTargets) {
+		const key = targetKey(target);
+		if (confirmed.has(key)) outcome.deleted.push(key);
+		else outcome.pending.push(key);
+	}
+	if (native.errors.length > 0) {
+		console.error('diffusion unpublish reported errors:', native.errors);
+	}
 }
 
 /**
@@ -293,12 +336,15 @@ export function foldElementOutcomes(
 }
 
 /**
- * dd1758 diffusion log: one row per sql element — unpublished (2) when every
- * one of its targets confirmed, unpublish_pending (3) otherwise. Shared by
+ * dd1758 diffusion log: one row per element (sql AND file) — unpublished (2)
+ * when every one of its targets confirmed, unpublish_pending (3) otherwise.
+ * Shared by
  * the native and engine-socket delete paths so the ledger is identical
  * regardless of executor.
  */
 async function logUnpublishOutcome(
+	/** The targets this run acted on — already restricted by onlyElementTipos. */
+	targets: readonly DiffusionSqlTarget[],
 	sectionTipo: string,
 	sectionId: number,
 	outcome: DiffusionDeleteOutcome,
@@ -307,7 +353,6 @@ async function logUnpublishOutcome(
 ): Promise<void> {
 	if (!logActivity) return;
 	try {
-		const targets = await getSectionDiffusionTargets(sectionTipo);
 		const elements = foldElementOutcomes(targets, new Set(outcome.deleted));
 		for (const [elementTipo, success] of elements) {
 			await logDiffusionActivity({
@@ -327,11 +372,69 @@ async function logUnpublishOutcome(
 export const DIFFUSION_ACTION = { published: 1, unpublished: 2, unpublishPending: 3 } as const;
 
 /**
+ * D16 — THE ACTION IS NOT AN ADDRESS.
+ *
+ * PHP wrote the dd1767 action id into a locator's `section_id`, pointing at a
+ * `dd1774` section that does not exist in the ontology and holds no records:
+ * the field named "record address" carried an ENUM TOKEN. Under
+ * WC-2026-08-10-section-id-int-canonical every `section_id` in the matrix is a
+ * record address, so the token gets its own key and stops lying:
+ *
+ *     { type, diffusion_action: 3, section_tipo: 'dd1774', from_component_tipo }
+ *
+ * `section_tipo: 'dd1774'` stays — it is the ledger's discriminator, and the
+ * probes below key on it. WRITE NEW, READ BOTH: rows written before this change
+ * (and rows whose legacy `section_id` a canonicalization sweep has since turned
+ * from '3' into 3) are still matched by diffusionActionProbePayloads, and the
+ * retry loop upgrades every row it flips to the new shape.
+ */
+export const DIFFUSION_ACTION_KEY = 'diffusion_action';
+const DIFFUSION_ACTION_SECTION = 'dd1774';
+const DIFFUSION_ACTION_COMPONENT = 'dd1767';
+
+/**
+ * Every stored shape of "the dd1767 action is `action`", as jsonb containment
+ * payloads to OR together: the new explicit-key shape first, then the two
+ * typed forms of the legacy locator shape (string and int section_id — the
+ * dual-probe law of core/search/containment.ts).
+ */
+export function diffusionActionProbePayloads(action: number): string[] {
+	const legacy = relationProbeGroups(DIFFUSION_ACTION_COMPONENT, [
+		{ section_id: String(action), section_tipo: DIFFUSION_ACTION_SECTION },
+	])[0] as string[];
+	return [
+		`{"${DIFFUSION_ACTION_COMPONENT}":[{"${DIFFUSION_ACTION_KEY}":${action},"section_tipo":"${DIFFUSION_ACTION_SECTION}"}]}`,
+		...legacy,
+	];
+}
+
+/**
+ * The shape-tolerant SQL predicate for the probe payloads above. `bind` maps a
+ * payload to its placeholder — callers bind, never inline (the payloads are
+ * built from numeric constants here, but the discipline is the module's).
+ */
+export function diffusionActionContains(
+	columnRef: string,
+	action: number,
+	bind: (payload: string) => string,
+): string {
+	const ors = diffusionActionProbePayloads(action).map(
+		(payload) => `${columnRef} @> ${bind(payload)}::text::jsonb`,
+	);
+	return `(${ors.join(' OR ')})`;
+}
+
+/**
  * Append one dd1758 diffusion-log row (matrix_activity_diffusion, sequence-
  * allocated section_id): dd1762 user, dd1763 processed-record locator,
  * dd1764 section_id number, dd1765 section_tipo string, dd1766 element
  * locator ({tld}0 / numeric part — the ontology-node-as-record convention),
- * dd1767 action locator (dd1774).
+ * dd1767 action (see DIFFUSION_ACTION_KEY).
+ *
+ * Every locator section_id is minted in canonical INT form
+ * (WC-2026-08-10-section-id-int-canonical) — the ledger's addresses are matrix
+ * record addresses, and readers below read them through `->>` (text either way)
+ * or through the dual-form probes.
  *
  * dd1762 records the REAL acting user; when no userId reaches us the field is
  * OMITTED entirely (PHP diffusion_activity_logger `if ($user_id)`) — never a
@@ -350,17 +453,18 @@ export async function logDiffusionActivity(entry: {
 		dd1763: [
 			{
 				type: 'dd151',
-				section_id: String(entry.sectionId),
+				section_id: entry.sectionId,
 				section_tipo: entry.sectionTipo,
 				from_component_tipo: 'dd1763',
 			},
 		],
-		dd1767: [
+		[DIFFUSION_ACTION_COMPONENT]: [
 			{
 				type: 'dd151',
-				section_id: String(entry.action),
-				section_tipo: 'dd1774',
-				from_component_tipo: 'dd1767',
+				// D16: the action token rides its OWN key, never section_id.
+				[DIFFUSION_ACTION_KEY]: entry.action,
+				section_tipo: DIFFUSION_ACTION_SECTION,
+				from_component_tipo: DIFFUSION_ACTION_COMPONENT,
 			},
 		],
 	};
@@ -369,7 +473,7 @@ export async function logDiffusionActivity(entry: {
 		relation.dd1762 = [
 			{
 				type: 'dd151',
-				section_id: String(entry.userId),
+				section_id: entry.userId,
 				section_tipo: 'dd128',
 				from_component_tipo: 'dd1762',
 			},
@@ -381,7 +485,10 @@ export async function logDiffusionActivity(entry: {
 			relation.dd1766 = [
 				{
 					type: 'dd151',
-					section_id: match[2],
+					// digits of the element tipo as an address: canonical int
+					// (canonicalize, not Number — a padded id would be preserved
+					// rather than silently renumbered).
+					section_id: canonicalizeStoredSectionId(match[2]),
 					section_tipo: `${match[1]}0`,
 					from_component_tipo: 'dd1766',
 				},
@@ -412,33 +519,67 @@ export async function retryPendingDiffusion(
 	limit = 100,
 ): Promise<{ total: number; retried: number; remaining: number }> {
 	await ensureActivityTable();
+	// `->>` yields text for a stored int as well as a stored string, so the
+	// projected target/element ids read identically in both typed forms; only
+	// the ACTION probe needs the shape tolerance (D16 + dual-form).
+	const pendingParams: string[] = [];
+	const pendingProbe = diffusionActionContains(
+		'relation',
+		DIFFUSION_ACTION.unpublishPending,
+		(payload) => `$${pendingParams.push(payload)}`,
+	);
 	const rows = (await sql.unsafe(
 		`SELECT section_id,
 		        relation->'dd1763'->0->>'section_tipo' AS target_section,
-		        relation->'dd1763'->0->>'section_id' AS target_id
+		        relation->'dd1763'->0->>'section_id' AS target_id,
+		        relation->'dd1766'->0->>'section_tipo' AS element_section,
+		        relation->'dd1766'->0->>'section_id' AS element_id
 		 FROM "${DIFFUSION_ACTIVITY_TABLE}"
 		 WHERE section_tipo = 'dd1758'
-		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb
+		   AND ${pendingProbe}
 		 ORDER BY section_id ASC LIMIT ${Math.max(1, Math.floor(limit))}`,
-	)) as { section_id: number; target_section: string | null; target_id: string | null }[];
+		pendingParams,
+	)) as {
+		section_id: number;
+		target_section: string | null;
+		target_id: string | null;
+		element_section: string | null;
+		element_id: string | null;
+	}[];
 	const outcome = { total: rows.length, retried: 0, remaining: 0 };
 	for (const row of rows) {
 		if (row.target_section === null || row.target_id === null) {
 			outcome.remaining++;
 			continue;
 		}
+		const element = pendingRowElementTipo(row.element_section, row.element_id);
 		const retry = await deleteDiffusionRecord(
 			row.target_section,
 			Number(row.target_id),
 			false, // the pending row already represents the intent — no new rows
+			undefined,
+			// D10b (fixed 2026-08-09): restrict the retry to THIS row's element
+			// (PHP retry_pending `only_element_tipos`). Without it the flip below
+			// — record-level `retry.deleted.length > 0` — marks a still-failing
+			// element 'unpublished' because a SIBLING element succeeded.
+			element === null ? undefined : [element],
 		);
 		if (retry.deleted.length > 0) {
-			// flip unpublish_pending → unpublished in place
+			// Flip unpublish_pending → unpublished in place, AND upgrade the
+			// element to the D16 shape in the same statement: drop whatever
+			// legacy `section_id` token the row carried (string '3' or the int 3
+			// a canonicalization sweep left) and stamp the action under its own
+			// key. Shape-agnostic, so it is correct for old and new rows alike.
 			await sql.unsafe(
 				`UPDATE "${DIFFUSION_ACTIVITY_TABLE}"
-				 SET relation = jsonb_set(relation, '{dd1767,0,section_id}', '"2"'::jsonb)
+				 SET relation = jsonb_set(
+				         relation,
+				         '{${DIFFUSION_ACTION_COMPONENT},0}',
+				         ((relation->'${DIFFUSION_ACTION_COMPONENT}'->0) - 'section_id')
+				             || jsonb_build_object('${DIFFUSION_ACTION_KEY}', $2::int)
+				     )
 				 WHERE section_tipo = 'dd1758' AND section_id = $1`,
-				[row.section_id],
+				[row.section_id, DIFFUSION_ACTION.unpublished],
 			);
 			outcome.retried++;
 		} else {
@@ -446,6 +587,23 @@ export async function retryPendingDiffusion(
 		}
 	}
 	return outcome;
+}
+
+/**
+ * Rebuild an element tipo from a dd1766 locator — the inverse of the
+ * ontology-node-as-record encoding logDiffusionActivity writes
+ * ({tld}0 / numeric part → 'zzd0' + '7' = 'zzd7'). Null when the row carries
+ * no element locator (a record-level pending row): the retry then runs
+ * unrestricted, exactly as before.
+ */
+export function pendingRowElementTipo(
+	elementSection: string | null,
+	elementId: string | null,
+): string | null {
+	if (elementSection === null || elementId === null) return null;
+	const match = elementSection.match(/^([a-z]+)0$/);
+	if (match === null) return null;
+	return `${match[1]}${elementId}`;
 }
 
 /** PHP sanitize_file_name + beautify (delete-side subset: dash-safe names). */

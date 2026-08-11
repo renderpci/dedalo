@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData } from '../../src/core/section/read.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const GET_DATA_RQO = {
@@ -41,11 +41,17 @@ describe.if(hasPhpCredentials())('component get_data differential (Phase 4h gate
 		const { body } = await client.call(structuredClone(GET_DATA_RQO));
 		// WC-001 (unified []): PHP emits entries:null for empty values; the TS
 		// engine emits [] for EVERY model. Rewrite the PHP side only.
-		phpData = adoptEntriesArrayContract((body.result as { data: Record<string, unknown>[] }).data);
-		tsData = (await readComponentData(GET_DATA_RQO as unknown as Rqo)) as unknown as Record<
-			string,
-			unknown
-		>[];
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE,
+		// applied to BOTH sides (fixtures keep the PHP-era numeric strings).
+		phpData = normalizeSectionIdTypes(
+			adoptEntriesArrayContract((body.result as { data: Record<string, unknown>[] }).data),
+		);
+		tsData = normalizeSectionIdTypes(
+			(await readComponentData(GET_DATA_RQO as unknown as Rqo)) as unknown as Record<
+				string,
+				unknown
+			>[],
+		);
 	});
 
 	test('portal own item: paged locators + pagination total match PHP', () => {

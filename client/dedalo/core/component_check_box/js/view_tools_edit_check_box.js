@@ -6,7 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
-	import {strip_tags, tool_base_url} from '../../common/js/utils/index.js'
+	import {strip_tags, tool_base_url, same_section_id} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
 
 
@@ -356,10 +356,10 @@ const get_input_element = (i, current_value, self) => {
 			})
 		})//end change event
 		// checked input_checkbox set on match
-		// section_id and section_tipo both use strict equality (===)
+		// section_id compares type-tolerantly (same_section_id), section_tipo strictly
 		for (let j = 0; j < value_length; j++) {
 			if (entries[j] && datalist_value &&
-				entries[j].section_id===datalist_value.section_id &&
+				same_section_id(entries[j].section_id, datalist_value.section_id) &&
 				entries[j].section_tipo===datalist_value.section_tipo
 				) {
 					input_checkbox.checked = 'checked'

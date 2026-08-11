@@ -45,6 +45,8 @@ A locator (`section_tipo` + `section_id` + component coords) is how two records 
 
 Why it is a law: two matchers that disagree by even a hair (e.g. an inline `String(section_id) === …` vs the canonical 5-field predicate) resolve the "same" locator to **different rows** → you write to, or delete an inverse-ref from, the WRONG record (S1-06 / S2-03 / S2-04, DEC-21). NEVER inline a `String(section_id)` compare or a 2-field join.
 
+**section_id is INT-CANONICAL** (WC-2026-08-10-section-id-int-canonical): every locator writer applies `canonicalizeStoredSectionId` (`src/core/concepts/section_id.ts`) — convertible string → int, EVERYTHING else verbatim (external remote ids are protected by the value invariant: never strict-numeric-without-leading-zeros). Minting `section_id: String(...)` is a tripwired recontamination source (`section_id_int_tripwire` — named exemptions only: diffusion→MariaDB rewriters, inline tag markers, the locks text-table key, dual-probe variant generators). Pre-sweep stored data still carries strings, so `compareLocators`' loose section_id equality stays, and any jsonb `@>` probe over locator data must be dual-form + polarity-aware (`src/core/search/containment.ts` — a single-form probe silently returns 0 rows on the other typed half).
+
 Enforced by: **`ws_a_tripwires.test.ts`** (locator-law section) — grep for inline locator compares outside the allowlisted files (which use deliberate creation-time normalization, not stored-locator equality, and are documented in the test).
 
 ## 5. The ONE timestamp — `dbTimestamp`

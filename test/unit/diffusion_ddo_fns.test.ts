@@ -11,9 +11,12 @@
  * - get_geojson_data: PHP class.component_text_area.php :1612-1665 +
  *   build_geolocation_data :1697-1830 (geojson=true keeps lib_data layers
  *   VERBATIM, text always '') + component_geolocation::
- *   get_diffusion_value_as_geojson :362-433 (single-point fallback, factory
- *   default sentinel). The mints fixture reproduces the OLD ENGINE'S published
- *   web_numisdata_mib.mints#75 cell byte-for-byte.
+ *   get_diffusion_value_as_geojson :362-433 (single-point fallback). The mints
+ *   fixture reproduces the OLD ENGINE'S published web_numisdata_mib.mints#75
+ *   cell byte-for-byte.
+ *   GEO LAW (supersedes the PHP oracle): absence is structural —
+ *   null/undefined/'' = no coordinate, publish nothing; 0 is a legal
+ *   coordinate; there is NO sentinel pair anywhere.
  * - get_diffusion_iconography: PHP class.component_portal.php :477-529 join
  *   semantics (term | field | scene separators, null term → EMPTY slot —
  *   PHP `!empty([null])` is true and implode of [null] is '').
@@ -21,6 +24,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
+import type { MatrixRecord } from '../../src/core/db/matrix.ts';
 import {
 	addTagImgOnTheFly,
 	buildGeojsonLayers,
@@ -30,6 +34,7 @@ import {
 	parseTagValueToHtml,
 	svgUrlFromTagLocator,
 } from '../../src/diffusion/resolve/ddo_fns.ts';
+import { defaultPublicationValue } from '../../src/diffusion/resolve/default_value.ts';
 
 const TAG_URL = '../component_text_area/tag/?id=';
 
@@ -198,10 +203,46 @@ describe('get_geojson_data — lib_data layers verbatim + point fallback', () =>
 		);
 	});
 
-	test('factory-default sentinel coordinates mean "no location set" (PHP guard)', () => {
+	test('the STUDIO DEFAULT never publishes — it is fabricated, not a position', () => {
+		// 39.462571/-0.376295 is the Dédalo facilities' own coordinates, shipped as
+		// the client's factory map position. The v6 client wrote it on save whether
+		// or not anyone touched the map, so an item holding exactly that pair is
+		// fabricated. It is an ordinary coordinate everywhere else — stored, edited,
+		// migrated like any other — and refused at this one door only.
 		expect(geojsonPointFallbackLayers({ lat: '39.462571', lon: '-0.376295' })).toEqual([]);
-		// comma-decimal locales are normalised before the compare (PHP :389-391)
+		// comma-decimal locales normalise first, so they are caught too (PHP :389-391)
 		expect(geojsonPointFallbackLayers({ lat: '39,462571', lon: '-0,376295' })).toEqual([]);
+		// as numbers, not only as strings
+		expect(geojsonPointFallbackLayers({ lat: 39.462571, lon: -0.376295 })).toEqual([]);
+		// one axis off is NOT the default — it is somebody's real coordinate
+		expect(
+			JSON.stringify(geojsonPointFallbackLayers({ lat: '39.462571', lon: '2.173403' })),
+		).toContain('"coordinates":[2.173403,39.462571]');
+	});
+
+	test('0 is a legal coordinate: [0,0], the equator and the prime meridian publish', () => {
+		expect(JSON.stringify(geojsonPointFallbackLayers({ lat: 0, lon: 0 }))).toContain(
+			'"coordinates":[0,0]',
+		);
+		expect(JSON.stringify(geojsonPointFallbackLayers({ lat: 0, lon: 37.9 }))).toContain(
+			'"coordinates":[37.9,0]',
+		);
+		expect(JSON.stringify(geojsonPointFallbackLayers({ lat: 5.6, lon: 0 }))).toContain(
+			'"coordinates":[0,5.6]',
+		);
+		// '0' as stored string is a coordinate too, never absence.
+		expect(JSON.stringify(geojsonPointFallbackLayers({ lat: '0', lon: '0' }))).toContain(
+			'"coordinates":[0,0]',
+		);
+	});
+
+	test('string and number coordinates behave IDENTICALLY (mixed storage: 607/1803 strings)', () => {
+		expect(geojsonPointFallbackLayers({ lat: '39.5', lon: '2.1' })).toEqual(
+			geojsonPointFallbackLayers({ lat: 39.5, lon: 2.1 }),
+		);
+		expect(JSON.stringify(geojsonPointFallbackLayers({ lat: '39.5', lon: '2.1' }))).toContain(
+			'"coordinates":[2.1,39.5]',
+		);
 	});
 
 	test('missing lon/lat, empty items and empty lib_data resolve to []', () => {
@@ -215,9 +256,109 @@ describe('get_geojson_data — lib_data layers verbatim + point fallback', () =>
 		).toContain('"coordinates":[2.1,41.5]');
 	});
 
-	test('PHP !empty coercion: 0/"0"/"" coordinates publish as literal 0', () => {
-		const layers = geojsonPointFallbackLayers({ lat: '41.5', lon: '' });
-		expect(JSON.stringify(layers)).toContain('"coordinates":[0,41.5]');
+	test('absence is structural: null/undefined/"" coordinates publish NOTHING', () => {
+		// Was the PHP !empty coercion (''/null → the literal 0, published as
+		// Greenwich). An absent coordinate is now no coordinate at all.
+		expect(geojsonPointFallbackLayers({ lat: '41.5', lon: '' })).toEqual([]);
+		expect(geojsonPointFallbackLayers({ lat: '', lon: '2.1' })).toEqual([]);
+		expect(geojsonPointFallbackLayers({ lat: '', lon: '' })).toEqual([]);
+		expect(geojsonPointFallbackLayers({ lat: null, lon: null })).toEqual([]);
+		expect(geojsonPointFallbackLayers({ lat: '41.5', lon: null })).toEqual([]);
+		// unparseable text is absence too, never a silent 0
+		expect(geojsonPointFallbackLayers({ lat: 'x', lon: 'y' })).toEqual([]);
+	});
+
+	test('buildGeojsonLayers agrees with the fallback on 0 and on absence', () => {
+		expect(JSON.stringify(buildGeojsonLayers([{ lat: 0, lon: 0 }]))).toContain(
+			'"coordinates":[0,0]',
+		);
+		expect(buildGeojsonLayers([{ lat: '', lon: '' }])).toEqual([]);
+		expect(buildGeojsonLayers([{ zoom: 12, alt: 16 }])).toEqual([]);
+	});
+});
+
+describe('component_geolocation standalone atoms — no coordinate, no atom', () => {
+	// src/diffusion/resolve/default_value.ts :171-183 publishes the stored geo
+	// object RAW: the third path that escaped both geo guards.
+	const TIPO = 'numisdata264';
+
+	function geoRecord(items: unknown[]): MatrixRecord {
+		return {
+			id: 1,
+			section_id: 75,
+			section_tipo: 'numisdata6',
+			columns: { geo: { [TIPO]: items } },
+			rawText: {},
+		};
+	}
+
+	/** Atom payload (the union has no shared `value` member). */
+	function atomValue(atom: unknown): unknown {
+		return (atom as { value?: unknown } | undefined)?.value;
+	}
+
+	function geoAtoms(items: unknown[]) {
+		return defaultPublicationValue(geoRecord(items), TIPO, 'component_geolocation', {
+			tipo: TIPO,
+		});
+	}
+
+	test('a bare item with no usable coordinate and no lib_data features emits NO atom', () => {
+		expect(geoAtoms([{ id: 1, lat: '', lon: '', zoom: 2, alt: 0 }])).toEqual([]);
+		expect(geoAtoms([{ id: 1, lat: null, lon: null, zoom: 12, alt: 16 }])).toEqual([]);
+		expect(geoAtoms([{ id: 1, zoom: 2, alt: 0 }])).toEqual([]);
+		// an EMPTY lib_data does not rescue an empty point
+		expect(geoAtoms([{ id: 1, lat: '', lon: '', lib_data: [] }])).toEqual([]);
+		expect(
+			geoAtoms([
+				{
+					id: 1,
+					lat: '',
+					lon: '',
+					lib_data: [{ layer_id: 1, layer_data: { type: 'FeatureCollection', features: [] } }],
+				},
+			]),
+		).toEqual([]);
+	});
+
+	test('a real coordinate still emits one geo atom (id stripped) — 0 included', () => {
+		const point = geoAtoms([{ id: 1, lat: '41.5', lon: '2.1', zoom: 15, alt: 281 }]);
+		expect(point).toHaveLength(1);
+		expect(point[0]?.kind).toBe('geo');
+		expect(atomValue(point[0])).toEqual({ lat: '41.5', lon: '2.1', zoom: 15, alt: 281 });
+
+		const nullIsland = geoAtoms([{ id: 1, lat: 0, lon: 0, zoom: 2, alt: 0 }]);
+		expect(nullIsland).toHaveLength(1);
+		expect(atomValue(nullIsland[0])).toEqual({ lat: 0, lon: 0, zoom: 2, alt: 0 });
+	});
+
+	test('drawn geometry publishes even with no point (lib_data features are the value)', () => {
+		const drawn = geoAtoms([
+			{
+				id: 1,
+				lat: '',
+				lon: '',
+				zoom: 12,
+				alt: 16,
+				lib_data: [
+					{
+						layer_id: 1,
+						layer_data: {
+							type: 'FeatureCollection',
+							features: [
+								{
+									type: 'Feature',
+									properties: {},
+									geometry: { type: 'LineString', coordinates: [[-2.46, 41.76]] },
+								},
+							],
+						},
+					},
+				],
+			},
+		]);
+		expect(drawn).toHaveLength(1);
+		expect(JSON.stringify(atomValue(drawn[0]))).toContain('"LineString"');
 	});
 });
 

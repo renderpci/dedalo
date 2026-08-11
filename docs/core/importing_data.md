@@ -37,14 +37,14 @@ Example of [locator](locator.md):
 ```json
 [{
     "type":"dd151",
-    "section_id":"2",
+    "section_id":2,
     "section_tipo":"rsc723"
 }]
 ```
 
 Will need to be encoded in CSV format as:
 
-> "\[{""type"":""dd151"",""section_id"":""2"",""section_tipo"":""rsc723""}]"
+> "\[{""type"":""dd151"",""section_id"":2,""section_tipo"":""rsc723""}]"
 
 But you can use plain text to import flat data.
 
@@ -155,7 +155,7 @@ Dédalo v7 stores component data as **arrays of objects**. Every object in the a
 | `component_date` | `[{"start":{"year":2023,"month":10,"day":26}}]` | `start` / `end` |
 | `component_iri` | `[{"iri":"https://dedalo.dev"}]` | `iri` |
 | `component_geolocation` | `[{"lat":39.4625,"lon":-0.3762,"zoom":16,"alt":0}]` | `lat` / `lon` |
-| Relation components (select, portals, etc.) | `[{"section_id":"2","section_tipo":"rsc723"}]` | `section_id` / `section_tipo` |
+| Relation components (select, portals, etc.) | `[{"section_id":2,"section_tipo":"rsc723"}]` | `section_id` / `section_tipo` |
 
 The **v7 format is the canonical import format**: what you see in the component inspector and in raw exports is what you import.
 
@@ -183,15 +183,21 @@ The wrapper identifies externally that the content is Dédalo format data and no
 
     Two cases are exported **without** the wrapper, and both re-import correctly as-is: the `section_id` column (a plain int, used as the record key on import) and components without data (empty cells). The wrapper is detected only when `dedalo_data` is the **only** property of the cell object — a JSON value that merely contains a `dedalo_data` property among others is treated as a normal value.
 
-### The dataframe envelope
+### Dataframe columns
 
-Components whose values carry paired [dataframe](components/component_dataframe.md) rows export them alongside the dato:
+A [dataframe](components/component_dataframe.md) is a component of its own, with its own stored data, so it travels in **its own column**, headed by the dataframe component's tipo — never inside the column of the component it frames:
 
-```json
-{"dedalo_data":{"dato":[{"value":"Hello","lang":"lg-eng","id":1}],"dataframe":[{"type":"dd490","section_tipo":"dd1706","section_id":"3","id_key":1,"from_component_tipo":"dd560","main_component_tipo":"rsc217"}]}}
-```
+| `rsc217` | `dd560` |
+|---|---|
+| `{"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}` | `{"dedalo_data":[{"type":"dd490","section_tipo":"dd1706","section_id":3,"id_key":1,"from_component_tipo":"dd560","main_component_tipo":"rsc217"}]}` |
 
-The `id_key` of each frame locator pairs it with the dato item carrying the same `id` (this is why explicit item ids round-trip). On import, the dato is conformed and saved as usual, then the frames are written replacing the component's previous frames in each slot (frames of other components sharing the slot are preserved). A `{"dedalo_data":{"dataframe":[...]}}` envelope without `dato` writes only the frames and leaves the component data untouched.
+A raw export writes the dataframe column right after the component it belongs to, and writes it for every record of the export — empty where a record has no frames.
+
+What links the two columns is the data, not their position: each frame locator's `id_key` pairs it with the item carrying the same `id` in the main component (this is why explicit item ids round-trip). Import the dataframe column like any other component column and the pairing is restored; import it alone and only the frames are written, leaving the framed component untouched.
+
+??? note "Legacy envelope (accepted)"
+
+    Files exported before Dédalo 7 (2026-08-09) carry the frames folded into the framed component's own cell, as `{"dedalo_data":{"data":[...],"dataframe":[...]}}` — with `dato` instead of `data` in v6-era files. Both spellings still import, frames included; neither is ever written any more. An envelope carrying only `dataframe` writes just the frames and leaves the component data untouched.
 
 ### Empty cells
 
@@ -845,6 +851,16 @@ Basic locator has only two properties:
 
 `section_tipo` is the ontology tipo of the target section, `section_id` is the unique id of the target section.
 
+!!! note "`section_id` is an integer"
+
+    A CSV cell is text, but a record address is an **integer** (negatives valid). On import every locator's `section_id` is classified against its target section:
+
+    - an integer, or text convertible to one (`2`, `"2"`) → stored as the integer;
+    - a remote id of an [external service](system/external_services.md) section (`"001338683"`, `"Q42"`) → stored **verbatim**, it is not an address;
+    - anything else — a synthetic token, a zero-padded or out-of-range number on a normal section — is a **conform error**: the cell is rejected and reported, and the record keeps its previous value.
+
+    Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`.
+
 Also the locator has a `type`, that defines the relation type and `from_component_tipo` that defines the origin component (the field that point to target section, the portal).
 
 Data linked as:
@@ -876,7 +892,7 @@ In Dédalo format it will be: the record's row in the section's matrix table car
         "numisdata30":
         [
             {
-                "section_id":"5",
+                "section_id":5,
                 "section_tipo":"numisdata6",
                 "from_component_tipo": "numisdata30"
             }
@@ -891,14 +907,14 @@ And it could be represented in CSV spreadsheet columns in this way:
 
 | section_id    | numisdata30 |
 | ------------  | ----------- |
-| 1             | \[{"section_id":"5","section_tipo":"numisdata6","from_component_tipo": "numisdata30"}] |
+| 1             | \[{"section_id":5,"section_tipo":"numisdata6","from_component_tipo": "numisdata30"}] |
 
 #### Importing
 
 By default the import model uses the JSON format of its data, an array of [locators](locator.md).
 
 ```json
-[{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}]
+[{"type":"dd151","section_id":2,"section_tipo":"rsc723","from_component_tipo":"tch191"}]
 ```
 
 Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
@@ -907,19 +923,19 @@ The table to import
 
 | section_id    | tch191 |
 | ------------  | :----: |
-| 1             | \[{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}] |
+| 1             | \[{"type":"dd151","section_id":2,"section_tipo":"rsc723","from_component_tipo":"tch191"}] |
 
 Will need to be encoded in CSV format as:
 
 ```text
 section_id;tch191
-1;"[{""type"":""dd151"", ""section_id"":""2"", ""section_tipo"":""rsc723"", ""from_component_tipo"":""tch191""}]"
+1;"[{""type"":""dd151"", ""section_id"":2, ""section_tipo"":""rsc723"", ""from_component_tipo"":""tch191""}]"
 ```
 
 You can remove the `type` and `from_component_tipo` properties because the column head specifies the value of `from_component_tipo` and the component knows its own `type`. So you can define the previous locator to import in this way:
 
 ```json
-[{"section_id":"2","section_tipo":"rsc723"}]
+[{"section_id":2,"section_tipo":"rsc723"}]
 ```
 
 ##### Alternative formats to import related data
@@ -950,9 +966,9 @@ You can remove the `type` and `from_component_tipo` properties because the colum
 
     ```json
     [
-        {"type":"dd151","section_id":"1","section_tipo":"rsc723","from_component_tipo":"tch191"},
-        {"type":"dd151","section_id":"4","section_tipo":"rsc723","from_component_tipo":"tch191"},
-        {"type":"dd151","section_id":"6","section_tipo":"rsc723","from_component_tipo":"tch191"}
+        {"type":"dd151","section_id":1,"section_tipo":"rsc723","from_component_tipo":"tch191"},
+        {"type":"dd151","section_id":4,"section_tipo":"rsc723","from_component_tipo":"tch191"},
+        {"type":"dd151","section_id":6,"section_tipo":"rsc723","from_component_tipo":"tch191"}
     ]
     ```
 
@@ -992,7 +1008,7 @@ Component: `component_select_lang`. It is a relation component pointing to the D
 Canonical v7 input, array of locators:
 
 ```json
-[{"section_tipo":"lg1","section_id":"17344"}]
+[{"section_tipo":"lg1","section_id":17344}]
 ```
 
 #### Alternative formats to import languages

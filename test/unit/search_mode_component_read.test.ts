@@ -19,7 +19,9 @@
  *    get_search_value a numeric section_id and the final filter's JSONB
  *    containment missed the string-stored locators (0 rows). PHP's locator
  *    casts set_section_id to string (class.locator.php:338). Fixed by
- *    echoing section_id as string.
+ *    echoing a CANONICAL section_id — string then; INT since
+ *    WC-2026-08-10-section-id-int-canonical, where the containment probe went
+ *    dual-form so both stored types are matched regardless of the echo.
  *
  * 3. The REAL client pick lands on the SAVE action (link_record → change_value,
  *    host id 'search_1'), not resolve_data — and the dd_core_api search_ save
@@ -101,8 +103,12 @@ async function seedTwins(): Promise<void> {
 				JSON.stringify({
 					[WHO_PORTAL]: [
 						{
-							type: 'dd151',
+							// LEGACY string-stored address, kept deliberately: it is what a
+							// pre-sweep install holds, and the search below (an int chip
+							// against a string row) is live proof that the containment probe
+							// is DUAL-FORM (WC-2026-08-10-section-id-int-canonical).
 							section_id: String(TWIN_USER_ID),
+							type: 'dd151',
 							section_tipo: USERS,
 							from_component_tipo: WHO_PORTAL,
 						},
@@ -287,7 +293,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		expect(rootItems.length).toBe(0);
 	});
 
-	test('chip echo casts a numeric injected section_id to string (PHP locator parity)', async () => {
+	test('chip echo emits the injected section_id as int (WC-2026-08-10-section-id-int-canonical)', async () => {
 		const { body } = await dispatchRqo(echoRqo(TWIN_USER_ID), ctx);
 		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
 		expect(result).toBeDefined();
@@ -298,8 +304,10 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 			| undefined;
 		expect(mainItem).toBeDefined();
 		const entry = mainItem?.entries?.[0];
-		expect(typeof entry?.section_id).toBe('string');
-		expect(String(entry?.section_id)).toBe(String(TWIN_USER_ID));
+		// WC-2026-08-10-section-id-int-canonical: the echo emitted the string
+		// "999901" in the PHP-locator era; a record address is an int now.
+		expect(typeof entry?.section_id).toBe('number');
+		expect(entry?.section_id).toBe(TWIN_USER_ID);
 
 		// The chip label still resolves (the 2026-07-17 fix stays green).
 		const usernameItem = data.find((item) => item.tipo === USERNAME) as
@@ -308,7 +316,7 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		expect(usernameItem?.entries?.[0]?.value).toBe(TWIN_USERNAME);
 	});
 
-	test("save on the 'search_1' host echoes string entries under the synthetic id", async () => {
+	test("save on the 'search_1' host echoes int entries under the synthetic id", async () => {
 		const { body } = await dispatchRqo(pickSaveRqo([insertChange(TWIN_USER_ID)]), ctx);
 		const result = (body as { result?: { data?: Record<string, unknown>[] } }).result;
 		expect(result).toBeDefined();
@@ -324,10 +332,13 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 		) as { entries?: Record<string, unknown>[]; pagination?: { total?: number } } | undefined;
 		expect(mainItem).toBeDefined();
 
-		// The echoed chip carries the STRING section_id the containment needs.
+		// The echoed chip carries the INT section_id the containment needs
+		// (WC-2026-08-10-section-id-int-canonical; the containment probe is
+		// dual-form, the emitted address is not). The HOST id stays the
+		// synthetic 'search_1' token — a different concept, asserted above.
 		const entry = mainItem?.entries?.[0];
-		expect(typeof entry?.section_id).toBe('string');
-		expect(String(entry?.section_id)).toBe(String(TWIN_USER_ID));
+		expect(typeof entry?.section_id).toBe('number');
+		expect(entry?.section_id).toBe(TWIN_USER_ID);
 
 		// link_record's server-authoritative duplicate check reads pagination.total
 		// and requires it to exceed the pre-insert count (component_portal.js:1063).
@@ -357,26 +368,22 @@ describe('search-mode component read (Activity dd542 Who picker)', () => {
 
 		// Pick twin 1 on an empty filter, then twin 2 with twin 1 already chipped
 		// (the client sends clone(self.data) — the reconcile must KEEP chip 1).
+		// WC-2026-08-10-section-id-int-canonical: the echoed addresses are ints,
+		// so compare the values directly (no String() laundering).
 		const afterFirst = await saveEntries([insertChange(TWIN_USER_ID)], []);
-		expect(afterFirst.map((entry) => String(entry.section_id))).toEqual([String(TWIN_USER_ID)]);
+		expect(afterFirst.map((entry) => entry.section_id)).toEqual([TWIN_USER_ID]);
 
 		const afterSecond = await saveEntries([insertChange(TWIN_USER_ID_2)], afterFirst);
-		expect(afterSecond.map((entry) => String(entry.section_id))).toEqual([
-			String(TWIN_USER_ID),
-			String(TWIN_USER_ID_2),
-		]);
-		// Re-stamped ids 1..n, every section_id echoed as string.
+		expect(afterSecond.map((entry) => entry.section_id)).toEqual([TWIN_USER_ID, TWIN_USER_ID_2]);
+		// Re-stamped ids 1..n, every section_id echoed as int.
 		expect(afterSecond.map((entry) => entry.id)).toEqual([1, 2]);
 		for (const entry of afterSecond) {
-			expect(typeof entry.section_id).toBe('string');
+			expect(typeof entry.section_id).toBe('number');
 		}
 
 		// Duplicate pick: the reconcile drops it, the set is unchanged.
 		const afterDuplicate = await saveEntries([insertChange(TWIN_USER_ID)], afterSecond);
-		expect(afterDuplicate.map((entry) => String(entry.section_id))).toEqual([
-			String(TWIN_USER_ID),
-			String(TWIN_USER_ID_2),
-		]);
+		expect(afterDuplicate.map((entry) => entry.section_id)).toEqual([TWIN_USER_ID, TWIN_USER_ID_2]);
 
 		// Unlink chip 1 (unlink_record sends 'remove' by the entry id stamp):
 		// only its target drops — previously EVERY chip was cleared.

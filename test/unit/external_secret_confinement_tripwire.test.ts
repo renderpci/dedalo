@@ -301,6 +301,10 @@ describe('(d) the positive control drives BOTH publication paths', () => {
 			'src/core/api/handlers/dd_external_api.ts', // likewise: 'carries no api_config'
 			'src/core/concepts/request_config.ts', // the RQO SCHEMA field (inbound, never echoed)
 			'src/core/relations/request_config/implicit.ts', // stamps the literal null
+			// WC-2026-08-10-section-id-int-canonical: the externality-candidate
+			// query (`properties ? 'api_config'`) — a SQL predicate on the word,
+			// reads tipos only, never a config value, nothing reaches a wire object.
+			'src/core/db/dd_ontology.ts',
 		]);
 		const root = join(import.meta.dir, '..', '..', 'src');
 		const offenders: string[] = [];

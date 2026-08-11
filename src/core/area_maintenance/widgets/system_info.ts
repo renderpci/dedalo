@@ -15,8 +15,24 @@ function bytesToGb(bytes: number): string {
 	return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-/** Semver-ish compare (major.minor.patch); returns -1 | 0 | 1. */
-function compareSemver(a: string, b: string): number {
+/**
+ * Semver-ish compare (major.minor.patch); returns -1 | 0 | 1.
+ *
+ * UNPARSABLE INPUT IS FAIL-CLOSED, AND THAT IS THE CONTRACT. `Number('x')` is
+ * NaN, `NaN !== 0` is TRUE, so the loop RETURNS on the first segment, and
+ * `NaN > 0` is false ⇒ -1: an unparsable runtime version reports as BELOW the
+ * floor. (This CORRECTS the coverage plan's §4.4 D6, which claimed the NaN
+ * arithmetic fell through to 0 = EQUAL = SUPPORTED. Measured 2026-08-11:
+ * `compareSemver('x.y.z','1.3.9') === -1`. D6 is struck; there is no defect.)
+ *
+ * RESIDUAL, LEDGERED — the function is NOT ANTISYMMETRIC across an unparsable
+ * operand: both `compareSemver('x.y.z','1.3.9')` and `compareSemver('1.3.9','x.y.z')`
+ * return -1. Harmless for the sole caller below, which only asks `>= 0` against
+ * a literal MIN_BUN floor; a trap for any SECOND caller that assumes
+ * `cmp(a,b) === -cmp(b,a)` (a sort comparator would be the first one to break).
+ * GATED: test/unit/system_info_semver_native.test.ts pins both directions.
+ */
+export function compareSemver(a: string, b: string): number {
 	const pa = a.split('.').map(Number);
 	const pb = b.split('.').map(Number);
 	for (let i = 0; i < 3; i++) {
@@ -26,6 +42,14 @@ function compareSemver(a: string, b: string): number {
 	return 0;
 }
 
+/**
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): an os/probe projection whose every
+ * branch is a fail-soft try/catch around ONE syscall — the assertion would read
+ * the same host the code reads. Its one real DECISION, the Bun version-floor
+ * comparison, is extracted to `compareSemver` above and gated by
+ * test/unit/system_info_semver_native.test.ts.
+ */
 async function systemInfoGetValue(): Promise<WidgetResponse> {
 	const os = await import('node:os');
 	const errors: string[] = [];

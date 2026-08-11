@@ -158,7 +158,7 @@ function resolveLabel(labels: Record<string, string>, key: string): string {
 	return labels[key] ?? `<mark>${key}</mark>`;
 }
 
-function labelFor(labels: Record<string, string>, rule: LabelRule): string {
+export function labelFor(labels: Record<string, string>, rule: LabelRule): string {
 	switch (rule.kind) {
 		case 'label':
 			// PHP `get_label(key) ?? fallback` — get_label never returns null in
@@ -176,15 +176,50 @@ function labelFor(labels: Record<string, string>, rule: LabelRule): string {
 }
 
 /**
+ * Compute ONE widget's eager catalog value, FAIL-SOFT
+ * (WC-2026-08-10-maintenance-catalog-fail-soft).
+ *
+ * Best-effort by oracle contract: PHP computes these inside get_ar_widgets and
+ * a single failing block never withheld the dashboard. The eager values are the
+ * DB-touching ones (checkSequences, lock_components' active-lock read,
+ * publication_api's diffusion scan, check_config's connection probe), so a
+ * rejecting widget is EXPECTED on a degraded install — and that is precisely
+ * when the operator needs the dashboard that would let them fix it.
+ *
+ * Degraded behaviour: the widget joins the catalog with `value: null` — the
+ * same shape a widget with no eagerValue serves, which the client already
+ * renders (an error-object `value` would instead be a wire change, and the
+ * panel-load getValue path still reports the real failure). The failure is
+ * reported per CONVENTIONS §1: never silent.
+ */
+async function eagerValueOf(module: WidgetModule): Promise<MaintenanceWidget['value']> {
+	try {
+		return ((await module.eagerValue?.()) ?? null) as MaintenanceWidget['value'];
+	} catch (error) {
+		console.error(
+			`[area_maintenance] widget eager value failed, serving null widget=${module.spec.id}`,
+			error,
+		);
+		return null;
+	}
+}
+
+/**
  * Build the full ordered widget catalog (PHP get_ar_widgets), labels in the
  * application language. Eager per-widget values come from each module's
  * eagerValue (PHP computes these inside get_ar_widgets; fail-soft — a widget
- * value failure must never break the dashboard read).
+ * value failure must never break the dashboard read: see eagerValueOf).
+ *
+ * `modules` is a TEST SEAM (default = the served catalog): WIDGET_MODULES is a
+ * module-level const, so proving the fail-soft otherwise requires a real widget
+ * to break. Production callers never pass it.
  */
-export async function getMaintenanceWidgets(): Promise<MaintenanceWidget[]> {
+export async function getMaintenanceWidgets(
+	modules: readonly WidgetModule[] = WIDGET_MODULES,
+): Promise<MaintenanceWidget[]> {
 	const labels = await getLabels(currentApplicationLang());
 	const widgets: MaintenanceWidget[] = [];
-	for (const module of WIDGET_MODULES) {
+	for (const module of modules) {
 		const spec = module.spec;
 		widgets.push({
 			id: spec.id,
@@ -198,7 +233,7 @@ export async function getMaintenanceWidgets(): Promise<MaintenanceWidget[]> {
 			body: null,
 			run: [] as [],
 			trigger: null,
-			value: ((await module.eagerValue?.()) ?? null) as MaintenanceWidget['value'],
+			value: await eagerValueOf(module),
 			background: spec.background ?? false,
 		});
 	}

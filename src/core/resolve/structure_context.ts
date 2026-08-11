@@ -1170,10 +1170,45 @@ export async function buildStructureContext(options: {
 	// properties.geo_provider overrides the DEDALO_GEO_PROVIDER default; the
 	// 'simple' context (addRequestConfig:false) omits features (list/portal views
 	// render no interactive map).
+	// features.default_view is the map's opening CAMERA when the record stores no
+	// coordinate (DEDALO_GEO_DEFAULT_LAT/LON/ZOOM, world view 20/0/2). A view,
+	// never data: the client never seeds current_value from it, so an untouched
+	// record saves nothing. Instance properties.default_view ({lat,lon,zoom})
+	// overrides it, all-or-nothing — same precedence idiom as geo_provider.
+	// Numbers AND numeric strings are accepted: dd_ontology property JSON quotes
+	// numbers routinely, and the client's own predicate (fn_finite_number,
+	// component_geolocation.js) coerces — a server that took only unquoted
+	// numbers would call invalid what the client calls valid. Range-checked, so
+	// a typo cannot open the map off-planet; anything non-finite or out of range
+	// resolves to null and the whole override falls back to the config camera.
+	// Cache-safe: per-tipo, record-independent → stamped on the FRESH entry, never
+	// on the cached core (a leak there bleeds across requests).
 	if (core.model === 'component_geolocation' && options.addRequestConfig !== false) {
-		const geoProvider = (entry.properties as { geo_provider?: unknown } | undefined)?.geo_provider;
+		const props = entry.properties as
+			| { geo_provider?: unknown; default_view?: unknown }
+			| undefined;
+		const geoProvider = props?.geo_provider;
+		const propView = props?.default_view as
+			| { lat?: unknown; lon?: unknown; zoom?: unknown }
+			| undefined;
+		const num = (v: unknown, min: number, max: number): number | null => {
+			const n =
+				typeof v === 'number'
+					? v
+					: typeof v === 'string' && v.trim() !== ''
+						? Number(v)
+						: Number.NaN;
+			return Number.isFinite(n) && n >= min && n <= max ? n : null;
+		};
+		const lat = num(propView?.lat, -90, 90);
+		const lon = num(propView?.lon, -180, 180);
+		const zoom = num(propView?.zoom, 0, 22);
 		entry.features = {
 			geo_provider: typeof geoProvider === 'string' ? geoProvider : config.geoProvider,
+			default_view:
+				lat !== null && lon !== null && zoom !== null
+					? { lat, lon, zoom }
+					: { ...config.geoDefaultView },
 		};
 	}
 

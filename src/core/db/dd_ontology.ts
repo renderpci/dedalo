@@ -322,6 +322,19 @@ export async function searchDdOntology(
 	return rows.map((row) => row.tipo);
 }
 
+/**
+ * Tipos whose `properties` carries an `api_config` key — the CANDIDATE set for
+ * external-service sections (src/external/config.ts validates each; a key can
+ * exist and be malformed). Query lives here, not in src/external, so raw SQL
+ * stays confined to the db layer (sql_confinement tiering).
+ */
+export async function listTiposWithApiConfig(): Promise<string[]> {
+	const rows = (await sql.unsafe(
+		`SELECT tipo FROM dd_ontology WHERE properties ? 'api_config'`,
+	)) as { tipo: string }[];
+	return rows.map((row) => row.tipo);
+}
+
 // --- Active-TLD set (PHP ontology_utils::get_active_tlds / check_active_tld) --
 
 /**

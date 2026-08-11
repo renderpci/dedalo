@@ -45,6 +45,9 @@ export interface ProgressData {
 		counter: number;
 		total: number;
 		section_label?: string;
+		/** Progress marker echoing `RecordIR.sectionId` (the diffusion IR keeps
+		 * the published/raw form — string on an unswept install, or an external
+		 * remote id): WC-2026-08-10-section-id-int-canonical. */
 		current?: { section_id?: string | number; time?: number };
 		total_ms?: number;
 		diffusion_data?: unknown;

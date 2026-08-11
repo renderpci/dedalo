@@ -13,6 +13,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSection } from '../../src/core/section/read.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const SECTION = 'numisdata6';
@@ -53,11 +54,14 @@ describe.if(hasPhpCredentials())(
 				config.phpReference.password as string,
 			);
 			const { body } = await client.call(structuredClone(EDIT_RQO));
-			const phpData = (body.result as { data?: Record<string, unknown>[] })?.data ?? [];
+			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+			const phpData = normalizeSectionIdTypes(
+				(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
+			);
 			phpItem = phpData.find((item) => item.tipo === COMPONENT);
 
 			const tsResult = await readSection(structuredClone(EDIT_RQO) as unknown as Rqo);
-			const tsData = tsResult.data as Record<string, unknown>[];
+			const tsData = normalizeSectionIdTypes(tsResult.data as Record<string, unknown>[]);
 			tsItem = tsData.find((item) => item.tipo === COMPONENT);
 		});
 

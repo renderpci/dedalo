@@ -21,7 +21,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readComponentData, readSection } from '../../src/core/section/read.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 let php: PhpApiClient;
@@ -77,12 +77,17 @@ async function compareGetData(rqo: Record<string, unknown>): Promise<{
 }> {
 	const { body } = await php.call(structuredClone(rqo));
 	// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
-	const phpItems = adoptEntriesArrayContract(
-		(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
-	).map(itemProjection);
-	const tsItems = (
-		(await readComponentData(structuredClone(rqo) as unknown as Rqo)) as Record<string, unknown>[]
-	).map(itemProjection);
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	const phpItems = normalizeSectionIdTypes(
+		adoptEntriesArrayContract(
+			(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
+		).map(itemProjection),
+	);
+	const tsItems = normalizeSectionIdTypes(
+		(
+			(await readComponentData(structuredClone(rqo) as unknown as Rqo)) as Record<string, unknown>[]
+		).map(itemProjection),
+	);
 	return { php: phpItems, ts: tsItems };
 }
 
@@ -146,15 +151,18 @@ describe.if(hasPhpCredentials())('inverse/indexation family differential (spec g
 		};
 		const { body } = await php.call(structuredClone(rqo));
 		// WC-001 (unified []): rewrite the PHP side only (see engineering/wire_contract/).
-		const phpItems = adoptEntriesArrayContract(
-			(body.result as { data?: Record<string, unknown>[] })?.data ?? [],
-		)
-			.filter((item) => item.tipo === 'numisdata55')
-			.map(itemProjection);
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		const phpItems = normalizeSectionIdTypes(
+			adoptEntriesArrayContract((body.result as { data?: Record<string, unknown>[] })?.data ?? [])
+				.filter((item) => item.tipo === 'numisdata55')
+				.map(itemProjection),
+		);
 		const tsResult = await readSection(structuredClone(rqo) as unknown as Rqo);
-		const tsItems = (tsResult.data as Record<string, unknown>[])
-			.filter((item) => item.tipo === 'numisdata55')
-			.map(itemProjection);
+		const tsItems = normalizeSectionIdTypes(
+			(tsResult.data as Record<string, unknown>[])
+				.filter((item) => item.tipo === 'numisdata55')
+				.map(itemProjection),
+		);
 		expect(
 			((tsItems[0] as { references?: unknown[] } | undefined)?.references ?? []).length,
 		).toBeGreaterThan(0);

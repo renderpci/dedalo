@@ -21,7 +21,9 @@
 /** The per-turn UI context the client sends with a question. */
 export interface AgentUiContext {
 	section_tipo?: string;
-	section_id?: string | number;
+	/** Record address — INT (the dd_mcp_api door validates the digits and
+	 * coerces; WC-2026-08-10-section-id-int-canonical). */
+	section_id?: number;
 	component_tipo?: string;
 	mode?: string;
 	/** A short client-built summary line (length-capped by the handler). */

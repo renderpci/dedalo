@@ -17,6 +17,7 @@
  */
 
 import { AUDIT_TIPOS } from '../concepts/section.ts';
+import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
 import { readExistingSectionIds, readMatrixRecord } from '../db/matrix.ts';
 import { withTransaction } from '../db/postgres.ts';
 import {
@@ -31,9 +32,6 @@ import { saveComponentData } from '../section/record/save_component.ts';
 import type { PlannedColumn, PlannedRecord } from './import_csv.ts';
 import { groupItemsByLang } from './import_data.ts';
 import type { ImportFileReport, ImportProgressFrame, ImportRowIssue } from './import_wire.ts';
-
-/** The dataframe relation type (PHP DEDALO_RELATION_TYPE_DATAFRAME). */
-const RELATION_TYPE_DATAFRAME = 'dataframe';
 
 /**
  * saveComponentData, with its REFUSAL honoured.
@@ -119,7 +117,7 @@ function metadataPatchFor(column: PlannedColumn): {
 }
 
 /**
- * Write the {dato, dataframe} envelope's FRAMES (PHP trait.dataframe_common::
+ * Write a LEGACY {data, dataframe} envelope's FRAMES (PHP trait.dataframe_common::
  * import_dataframe_data). Frames are grouped by their slot (from_component_tipo);
  * within a slot, the frames of OTHER main components are preserved and only this
  * component's are replaced.
@@ -154,7 +152,16 @@ async function writeDataframeFrames(
 		const { section_id_key: _legacyId, section_tipo_key: _legacyTipo, ...rest } = raw;
 		const frame: Record<string, unknown> = {
 			...rest,
-			type: RELATION_TYPE_DATAFRAME,
+			// D19, FIXED 2026-08-09: this wrote the literal 'dataframe', which no
+			// reader recognises (isDataframeEntry/dataframeEntriesEqual test
+			// dd490), so an imported frame was invisible in the widget AND was
+			// read as a real portal edge by the `type !== 'dd490'` filters in
+			// save_component's observer diff and delete_record's cascade.
+			// KNOWN-OPEN, stated rather than narrowed: frames ALREADY written by
+			// a previous import still carry the literal 'dataframe' on disk. They
+			// need a one-shot repair (rewrite type 'dataframe' → dd490 on frames
+			// whose slot resolves component_dataframe); no migration ships here.
+			type: DATAFRAME_RELATION_TYPE,
 			id_key: Number(idKey),
 			main_component_tipo: raw.main_component_tipo ?? mainComponentTipo,
 		};
@@ -292,8 +299,8 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 					Object.assign(metadata, metadataPatchFor(column));
 
 					// A dataframe-ONLY envelope: the component's data is not touched, only
-					// its frames (below). Distinct from an empty dato, which CLEARS.
-					if (column.hasDato) {
+					// its frames (below). Distinct from an empty value, which CLEARS.
+					if (column.hasData) {
 						const groups = groupItemsByLang(column.conform.result, column.lang);
 						if (groups.size === 0) {
 							// An explicit CLEAR (empty cell).

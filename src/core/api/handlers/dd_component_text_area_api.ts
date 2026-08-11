@@ -17,6 +17,7 @@
  * PHP, where $response->result = ($n_deleted > 0).
  */
 
+import { coerceSectionId } from '../../concepts/section_id.ts';
 import type { ActionHandler } from '../handler_context.ts';
 import { requirePrincipal } from '../handler_context.ts';
 
@@ -33,8 +34,31 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 		const options = (rqo.options ?? {}) as { ar_type?: unknown };
 		const tipo = String(source.tipo ?? '');
 		const sectionTipo = String(source.section_tipo ?? '');
-		const sectionId = source.section_id;
-		if (tipo === '' || sectionTipo === '' || sectionId === undefined || sectionId === null) {
+		// The host of a transcription is always a matrix record: coerce at the
+		// door (counted, deprecable RQO-body string form) so nothing downstream
+		// carries a string leg (WC-2026-08-10-section-id-int-canonical). A
+		// non-address is REFUSED BY NAME — never folded into "mandatory field
+		// missing", which would hide a client sending the wrong kind of id.
+		let sectionId: number | undefined;
+		try {
+			sectionId =
+				source.section_id === undefined || source.section_id === null
+					? undefined
+					: coerceSectionId(
+							source.section_id,
+							'rqo.dd_component_text_area_api.get_tags_info.section_id',
+						);
+		} catch (error) {
+			return {
+				status: 200,
+				body: {
+					result: false,
+					msg: [` Bad request: ${error instanceof Error ? error.message : String(error)}`],
+					errors: ['bad_source'],
+				},
+			};
+		}
+		if (tipo === '' || sectionTipo === '' || sectionId === undefined) {
 			return {
 				status: 200,
 				body: {
@@ -67,7 +91,7 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 		// resolves the CONTENT of a record and of every record its tags point at.
 		// Gate the host record like every other door reading by (tipo, id).
 		const { principalCanAccessRecord } = await import('../../security/record_scope.ts');
-		if (!(await principalCanAccessRecord(sectionTipo, Number(sectionId), principal))) {
+		if (!(await principalCanAccessRecord(sectionTipo, sectionId, principal))) {
 			return {
 				status: 200,
 				body: { result: false, msg: [' Forbidden record'], errors: ['forbidden'] },
@@ -83,7 +107,7 @@ export const componentTextAreaApiActions: Record<string, ActionHandler> = {
 		const { buildTagsInfo } = await import('../../components/component_text_area/tags_info.ts');
 		const { tags_info, unknown_types } = await buildTagsInfo(
 			requestedTypes,
-			{ tipo, section_tipo: sectionTipo, section_id: sectionId as number | string },
+			{ tipo, section_tipo: sectionTipo, section_id: sectionId },
 			lang,
 		);
 

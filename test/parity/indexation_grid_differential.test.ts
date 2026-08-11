@@ -20,6 +20,7 @@ import { config } from '../../src/config/config.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 function adminContext(): ApiRequestContext {
@@ -113,7 +114,10 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			const rqo = gridRqo(termTipo, termId, target, limit ?? 200, offset ?? 0);
 			const [ts, php] = [await tsGrid(rqo), await client.call(rqo)];
 			expect(ts.status).toBe(200);
-			expect(ts.body.result).toEqual(php.body.result as never);
+			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+			expect(normalizeSectionIdTypes(ts.body.result)).toEqual(
+				normalizeSectionIdTypes(php.body.result) as never,
+			);
 		});
 	}
 

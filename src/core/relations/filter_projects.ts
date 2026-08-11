@@ -22,6 +22,7 @@
  */
 
 import { compareLocators, type Locator } from '../concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
@@ -41,8 +42,14 @@ const PROJECTS_ORDER_TIPO = 'dd1631'; // component_number 'Order'
 /** One authorized project (PHP get_user_authorized_projects element). */
 export interface AuthorizedProject {
 	label: string;
-	locator: { section_tipo: string; section_id: string };
-	parent: { section_tipo: string; section_id: string } | null;
+	/**
+	 * Canonical record addresses — INT since
+	 * WC-2026-08-10-section-id-int-canonical. These locators reach the wire
+	 * (the filter datalist) AND the save path (the host project filter), so a
+	 * string here would mint string-form bytes on every new selection.
+	 */
+	locator: { section_tipo: string; section_id: number };
+	parent: { section_tipo: string; section_id: unknown } | null;
 	order: number;
 }
 
@@ -50,10 +57,10 @@ export interface AuthorizedProject {
 export interface FilterDatalistItem {
 	type: 'project';
 	label: string;
+	section_id: number;
 	section_tipo: string;
-	section_id: string;
-	value: { section_tipo: string; section_id: string };
-	parent: { section_tipo: string; section_id: string } | null;
+	value: { section_tipo: string; section_id: number };
+	parent: { section_tipo: string; section_id: unknown } | null;
 	order: number;
 }
 
@@ -145,20 +152,27 @@ export async function getUserAuthorizedProjects(): Promise<AuthorizedProject[]> 
 				0,
 		);
 		// parent — nearest recursive ancestor that is itself authorized
-		let parent: { section_tipo: string; section_id: string } | null = null;
+		let parent: { section_tipo: string; section_id: unknown } | null = null;
 		const { ancestors } = await getParentsRecursive(id, PROJECTS_SECTION_TIPO);
 		for (const ancestor of ancestors) {
 			if (
 				String(ancestor.section_tipo) === PROJECTS_SECTION_TIPO &&
 				idSet.has(Number(ancestor.section_id))
 			) {
-				parent = { section_tipo: PROJECTS_SECTION_TIPO, section_id: String(ancestor.section_id) };
+				// Canonical emission: the ancestor's stored id may still be the
+				// legacy string form, so canonicalize rather than re-stringify
+				// (WC-2026-08-10-section-id-int-canonical).
+				parent = {
+					section_tipo: PROJECTS_SECTION_TIPO,
+					section_id: canonicalizeStoredSectionId(ancestor.section_id),
+				};
 				break;
 			}
 		}
 		projects.push({
 			label: typeof labelRaw === 'string' ? labelRaw : '',
-			locator: { section_tipo: PROJECTS_SECTION_TIPO, section_id: String(id) },
+			// `id` is already the int address (idSet is numeric) — emit it as-is.
+			locator: { section_tipo: PROJECTS_SECTION_TIPO, section_id: id },
 			parent,
 			order: Number.isFinite(order) ? order : 0,
 		});
@@ -195,9 +209,9 @@ export async function getFilterListValue(
 	const labels: string[] = [];
 	for (const project of projects) {
 		// Locator law (DEC-21): value-based section_tipo+section_id match via
-		// compareLocators (loose section_id — a numeric stored id matches the
-		// string form the projects list carries, same as the String() coercion
-		// this replaced).
+		// compareLocators (loose section_id — the projects list now carries the
+		// canonical int, and a not-yet-swept stored '5' must still match it;
+		// WC-2026-08-10-section-id-int-canonical).
 		const matched = storedLocators.some((locator) =>
 			compareLocators(locator as Locator, project.locator, ['section_tipo', 'section_id']),
 		);

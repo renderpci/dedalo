@@ -20,8 +20,13 @@
  *   8. limit > 0 → slice(offset, offset+limit); limit 0 → slice(offset). Paging
  *      happens AFTER the ordering, so page 2 of an order-sorted set is the 2nd
  *      ordered child, not the 2nd by id.
- *   9. The wire shape: section_id is a STRING, from_component_tipo is the CHILDREN
- *      tipo (test201 / test156), type is dd48 — never the dd47 stored on the link.
+ *   9. The wire shape: section_id is an INT
+ *      (WC-2026-08-10-section-id-int-canonical — the PHP cast-to-string law is
+ *      repealed), from_component_tipo is the CHILDREN tipo (test201 / test156),
+ *      type is dd48 — never the dd47 stored on the link. The SEEDED parent /
+ *      is_descriptor links below stay STRING on purpose: legacy stored data is
+ *      real and the emitted id comes from the row's own int section_id column,
+ *      not from the link's bytes.
  *
  * FIXTURE TRAP (cost an hour if ignored): a child's parent link MUST carry
  * `type: 'dd47'` and `from_component_tipo: 'test71'`. The canonical test3 playground
@@ -173,8 +178,11 @@ async function cleanScratch(): Promise<void> {
 	}
 }
 
-/** Just the child ids, in returned order — the ordering assertions' subject. */
-function ids(children: { section_id: string }[]): string[] {
+/**
+ * Just the child ids, in returned order — the ordering assertions' subject.
+ * INT since WC-2026-08-10-section-id-int-canonical.
+ */
+function ids(children: { section_id: number | string }[]): (number | string)[] {
 	return children.map((child) => child.section_id);
 }
 
@@ -254,22 +262,25 @@ test('descriptor partition splits the children by the dd64 is_descriptor locator
 	const descriptors = await getChildrenOfType(PARTITION_PARENT, T3, 'descriptor');
 	const nonDescriptors = await getChildrenOfType(PARTITION_PARENT, T3, 'non_descriptor');
 
-	expect(ids(descriptors)).toEqual([String(DESCRIPTOR_CHILD)]);
-	expect(ids(nonDescriptors)).toEqual([String(NON_DESCRIPTOR_CHILD)]);
+	// WC-2026-08-10-section-id-int-canonical: emitted child ids are int.
+	expect(ids(descriptors)).toEqual([DESCRIPTOR_CHILD]);
+	expect(ids(nonDescriptors)).toEqual([NON_DESCRIPTOR_CHILD]);
 });
 
-test('the emitted locator is the CHILDREN wire shape (string id, test201, dd48)', async () => {
+test('the emitted locator is the CHILDREN wire shape (int id, test201, dd48)', async () => {
 	const [child] = await getChildrenOfType(PARTITION_PARENT, T3, 'descriptor');
 
+	// WC-2026-08-10-section-id-int-canonical: int id (the seed's parent link is
+	// string — the emitted id is the row's own int address, not the link's).
 	expect(child).toEqual({
 		section_tipo: T3,
-		section_id: String(DESCRIPTOR_CHILD),
+		section_id: DESCRIPTOR_CHILD,
 		from_component_tipo: T3_CHILDREN_TIPO,
 		type: 'dd48',
 	});
-	// Explicit, because a Number() slip here reads as harmless and breaks the client:
-	// PHP locator::set_section_id casts to string and the wire contract keeps it.
-	expect(typeof child?.section_id).toBe('string');
+	// Explicit, because a String() slip here reads as harmless and re-injects the
+	// repealed string form into every stored children locator.
+	expect(typeof child?.section_id).toBe('number');
 	// The stored link is dd47; what comes back is the COMPUTED children type.
 	expect(child?.type).not.toBe('dd47');
 });
@@ -280,9 +291,7 @@ test("'descriptor' is the default type argument", async () => {
 	);
 	// …and the default is NOT the non_descriptor answer (otherwise the line above
 	// would hold for any default at all).
-	expect(ids(await getChildrenOfType(PARTITION_PARENT, T3))).not.toEqual([
-		String(NON_DESCRIPTOR_CHILD),
-	]);
+	expect(ids(await getChildrenOfType(PARTITION_PARENT, T3))).not.toEqual([NON_DESCRIPTOR_CHILD]);
 });
 
 test('an explicit componentTipo bypasses the children-tipo walk with the same answer', async () => {
@@ -297,7 +306,7 @@ test('an explicit componentTipo bypasses the children-tipo walk with the same an
 	// locator. (Without this, dropping the `componentTipo ??` override is invisible
 	// — every other case here passes the same tipo the walk resolves anyway.)
 	const overridden = await getChildrenOfType(PARTITION_PARENT, T3, 'descriptor', 'test52');
-	expect(ids(overridden)).toEqual([String(DESCRIPTOR_CHILD)]);
+	expect(ids(overridden)).toEqual([DESCRIPTOR_CHILD]);
 	expect(overridden[0]?.from_component_tipo).toBe('test52');
 });
 
@@ -306,28 +315,30 @@ test('children sort by their paired order value; the unvalued child sinks last',
 
 	// Stored order values are 2 (927101), 1 (927102), none (927103): the answer is
 	// NOT section_id order, which is what makes this assertion load-bearing.
-	expect(ids(children)).toEqual([String(ORDER_FIRST), String(ORDER_SECOND), String(ORDER_NONE)]);
+	// WC-2026-08-10-section-id-int-canonical: int ids.
+	expect(ids(children)).toEqual([ORDER_FIRST, ORDER_SECOND, ORDER_NONE]);
 });
 
 test('two unordered siblings keep section_id order (stable sort)', async () => {
 	const children = await getChildrenOfType(TIE_PARENT, T3, 'descriptor');
 
-	expect(ids(children)).toEqual([String(TIE_A), String(TIE_B)]);
+	expect(ids(children)).toEqual([TIE_A, TIE_B]);
 });
 
 test('limit/offset page the ORDERED list, not the id-ordered one', async () => {
 	// limit 1 / offset 1 → the order-2 child, which is the LOWEST id of the three:
 	// paging before ordering would answer 927102 here.
+	// WC-2026-08-10-section-id-int-canonical: int ids.
 	expect(ids(await getChildrenOfType(ORDER_PARENT, T3, 'descriptor', null, 1, 1))).toEqual([
-		String(ORDER_SECOND),
+		ORDER_SECOND,
 	]);
 	expect(ids(await getChildrenOfType(ORDER_PARENT, T3, 'descriptor', null, 1, 0))).toEqual([
-		String(ORDER_FIRST),
+		ORDER_FIRST,
 	]);
 	// limit 0 = "all from offset" (slice(offset)), not "none".
 	expect(ids(await getChildrenOfType(ORDER_PARENT, T3, 'descriptor', null, 0, 1))).toEqual([
-		String(ORDER_SECOND),
-		String(ORDER_NONE),
+		ORDER_SECOND,
+		ORDER_NONE,
 	]);
 	// offset past the end is an empty page, not a throw.
 	expect(await getChildrenOfType(ORDER_PARENT, T3, 'descriptor', null, 0, 9)).toEqual([]);
@@ -340,8 +351,9 @@ test('a BOOLEAN is_descriptor skips the filter: both children answer BOTH types'
 	const descriptors = await getChildrenOfType(BOOL_PARENT, T65, 'descriptor');
 	const nonDescriptors = await getChildrenOfType(BOOL_PARENT, T65, 'non_descriptor');
 
-	expect(ids(descriptors)).toEqual([String(BOOL_CHILD_A), String(BOOL_CHILD_B)]);
-	expect(ids(nonDescriptors)).toEqual([String(BOOL_CHILD_A), String(BOOL_CHILD_B)]);
+	// WC-2026-08-10-section-id-int-canonical: int ids.
+	expect(ids(descriptors)).toEqual([BOOL_CHILD_A, BOOL_CHILD_B]);
+	expect(ids(nonDescriptors)).toEqual([BOOL_CHILD_A, BOOL_CHILD_B]);
 	expect(descriptors[0]?.from_component_tipo).toBe(T65_CHILDREN_TIPO);
 	expect(descriptors[0]?.type).toBe('dd48');
 });

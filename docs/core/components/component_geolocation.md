@@ -116,24 +116,34 @@ A stored item with drawn shapes:
 
 `lib_data` is an array of **layers**; each layer is `{layer_id, layer_data}` where `layer_data` is a GeoJSON `FeatureCollection`. Each feature stamps its `layer_id` in `properties`. Non-point shapes carry extra `properties`: `shape:"circle"` + `radius` for circles, `color` for any drawn shape. Layers exist so that a transcription [component_text_area](component_text_area.md) can pair each drawn shape with a `geo` tag in the text (the layer is loaded/removed as the tag is inserted/removed).
 
-### Default value sentinel
+### No value, no data
 
-When the component has no real data, the client shows the default value `{lat:39.462571, lon:-0.376295, zoom:16, alt:0}` (Valencia, the project home). The server treats this exact pair as "empty": the resolved latitude/longitude and the GeoJSON diffusion value are all `null` for `39.462571 / -0.376295`, so an untouched map is never published as a real location.
+A component with no position **stores nothing**: absence is the absence of an item, never a particular coordinate. Opening a record and saving it writes no geolocation value, the four coordinate inputs render empty, and nothing is published. Every finite coordinate is real — `0` included, so the equator and the prime meridian are legal positions. See [Geolocation values](../data_model/geolocation.md#absence-is-structural--there-is-no-magic-coordinate) for the full storage law.
+
+Where the map *opens* on an empty component is a **camera**, not data: `default_view` (below). It is never stored and never published, and it is operator-configurable per install and per component.
+
+### The view and the features are independent
+
+`lat`/`lon`/`zoom` are the **view** — the map framing, manually controlled, asserting no feature. `lib_data` holds the **features**, the drawn shapes. Neither determines the other and neither is dropped in favour of the other: an operator frames the space they need to see, so the useful view is often nowhere near any single feature, and for very many records the view is the only positional data there is. Publication emits both, as stored. See [Geolocation values](../data_model/geolocation.md#the-view-and-the-features-are-independent).
+
+**Both of the operator's gestures are data.** Panning or zooming sets the view, writes it into the component's value and marks it dirty — on an empty record too, where it creates the view — and the `lat`/`lon`/`zoom` inputs track the map live. The `map_point` button in the map-inputs row reads those inputs and creates a **feature**. Nothing auto-saves: only the save button commits. A record whose value is features with no stored view opens fitted to the extent of its own drawing, which is a camera move and not a write.
+
+!!! danger "Legacy data: the studio default"
+    `39.462571 / -0.376295` is the coordinates of the Dédalo facilities, shipped as the client's factory map position. The v6 client wrote it into the record on save whether or not anyone touched the map, so an item holding exactly that pair is fabricated — and because it is a factory default rather than a place, a record merely *named* after the studio's city is fabricated like any other. **Publication refuses that pair**, at that one door; everywhere else it is an ordinary coordinate. To take the fabricated views out of an upgraded store, `scripts/repair_geolocation_studio_default.ts` removes a default-only item outright and, for an item that also carries features, **fits the view to the geometry** (bounding-box centre of its own features; features, `zoom`, `alt` and `id` untouched). Fitting a view to the features is not authoring a location — it is what a view is for. Full law: [Geolocation values](../data_model/geolocation.md#the-studio-default--the-one-pair-publication-refuses).
 
 ## Ontology instantiation
 
-Define the component as an ontology node whose `model` is `component_geolocation`, parented to the section (and, normally, to a `section_group` grouper). The node carries the structure (`tipo`, `model`, `parent`, `lg-*` label) and the `properties` JSON that configures behaviour.
+Define the component as an ontology node whose `model` is `component_geolocation`, parented to the section or (normally) to one of its `section_group` groupers. The node carries the structure (`tipo`, `model`, `parent`, `lg-*` label) and the `properties` JSON that configures behaviour. The example below is the live node of the `monedaiberica` install (`dedalo_mib_v7`): `numisdata264`, under the grouper `numisdata14` of section `numisdata6`; `numisdata585` is the `component_autocomplete_hi` it observes.
 
 Node JSON (structure):
 
 ```json
 {
-    "tipo"          : "rsc120",
+    "tipo"          : "numisdata264",
     "model"         : "component_geolocation",
-    "parent"        : "rsc197",
-    "parent_grouper": "rsc76",
-    "lg-eng"        : "Location",
-    "lg-spa"        : "Localización",
+    "parent"        : "numisdata14",
+    "lg-eng"        : "Map",
+    "lg-spa"        : "Mapa",
     "translatable"  : false
 }
 ```
@@ -149,7 +159,7 @@ Example `properties` block for this component (provider override + observers; se
                 "event"  : "update_value",
                 "perform": {"function": "map_update_coordinates"}
             },
-            "component_tipo": "rsc91"
+            "component_tipo": "numisdata585"
         }
     ]
 }
@@ -181,6 +191,22 @@ Selects the base tile layer(s) of the Leaflet map. The server stamps the resolve
 - `NUMISDATA` — layer selector offering the *Imperium* (DARE/ancient world) tiles + ArcGIS + OSM.
 - `VARIOUS` — layer selector offering ArcGIS + OSM.
 
+`default_view`
+
+options: `{"lat": <number>, "lon": <number>, "zoom": <number>}`
+
+default: the `DEDALO_GEO_DEFAULT_LAT` / `DEDALO_GEO_DEFAULT_LON` / `DEDALO_GEO_DEFAULT_ZOOM` env vars, read into the TS config catalog as `config.geoDefaultView` (see [Configuration](../../config/config.md)); shipped default is the world view `{lat: 20, lon: 0, zoom: 2}`.
+
+The position the map **opens** on when the record has no coordinate. It is a camera, not a value: it is never written into the record and never published, so a record the cataloguer never touched stays empty. The server resolves it per instance and stamps it into `context.features.default_view` (`src/core/resolve/structure_context.ts`, FULL context only — the `simple` list/portal context emits no `features`).
+
+The override is **all or nothing**: each of `lat`, `lon` and `zoom` must resolve to a usable number, or the whole `default_view` is discarded and the configured camera is used — a half-specified camera is a config error, not a blend. `0` is a valid member. A member may be written as a number **or as a numeric string** (`"41.65"`), because ontology `properties` JSON quotes numbers routinely and the client's own reader coerces them. Each is also **range-checked** — `lat` −90..90, `lon` −180..180, `zoom` 0..22 — so a typo cannot open the map off-planet; an out-of-range member invalidates the whole override, silently, and the configured camera is served instead. Set it (or the three env keys) when the collection is regional, so cataloguers do not pan the world map on every new record.
+
+```json
+{
+    "default_view": {"lat": 41.65, "lon": -4.72, "zoom": 12}
+}
+```
+
 `observe`
 
 options: array of observer rules `{client:{event, perform:{function}}, component_tipo}`
@@ -209,7 +235,7 @@ The component is built by the shared `ui.component` builders; the view is read f
 | `mini` | yes | yes | minimal map view |
 | `text` | — | yes | textual list rendering |
 
-The map disables scroll-wheel zoom by default and recenters via `panTo`/`setZoom` when the inputs change.
+The map disables scroll-wheel zoom by default and recenters through a single non-animated camera move when the inputs change, so a typed coordinate is not overwritten by an animation settling afterwards.
 
 !!! warning "Search mode under construction"
     `search` mode is wired (`render_search_component_geolocation`) but the search view is not currently exposed in the search list (`UNDER CONSTRUCTION` in the source). Consistent with that, the TS search dispatcher (`src/core/search/conform.ts`) has no `component_geolocation` branch either — a filter against this model would throw `builder for model 'component_geolocation' not implemented yet`. The component is also **not sortable**: its descriptor declares the `sortable: false` opt-out (sortability otherwise defaults to true — `resolveSortable()`, `src/core/resolve/structure_context.ts`), so a list cannot be ordered by it.
@@ -242,20 +268,24 @@ The component is non‑translatable, so the import value is the bare data array 
     39.4625, -0.3762, 16
     ```
 
-Validation: `lat`/`lon` are mandatory and numeric; `lat ∈ [-90,90]`, `lon ∈ [-180,180]`; `zoom` defaults to `16`, `alt` to `0`; `lib_data` (when present) must be an array of layers each defining `layer_id` and a `FeatureCollection`. An empty cell clears the component data (`result = null`). A legacy lang-keyed export object (`{"lg-nolan":[...]}`) is accepted by extracting the first lang value.
+All four shapes are converted by the model's own conform step (`importConform: 'geolocation'` on the descriptor → `src/core/tools/import_conform.ts`).
 
-!!! danger "Gap: only shapes (1) and (2) import correctly through the TS server"
-    `component_geolocation` is **not** a `VALUE_PROPERTY_MODELS` member in the generic TS import engine (`src/core/tools/import_data.ts`), which has no geolocation-specific handling. In practice: shape **(1)** (JSON array of items) and shape **(2)** (bare `{lat,lon}` object, which happens to already be a valid one-item array once wrapped) import correctly. Shape **(3)** (bare GeoJSON `FeatureCollection`) is **not** unpacked into `{lat, lon, lib_data}` — the generic engine stores the FeatureCollection object itself as the item, producing a malformed value. Shape **(4)** (flat `lat, lon[, zoom[, alt]]` string) is **not parsed at all** — a non-JSON cell falls through to the engine's raw-string branch and the plain text is stored verbatim, not as an object. Import geolocation columns as JSON (shape 1) until this is ported.
+Validation: `lat` and `lon` are needed **together** — one without the other is a malformed pair — and each must parse to a number in range (`lat ∈ [-90,90]`, `lon ∈ [-180,180]`); comma decimals are normalized in the JSON shapes, and `0` is a legal coordinate. `zoom` defaults to `16` and `alt` to `0`; `lib_data` (when present) must be an array of layers each defining `layer_id` and a `FeatureCollection`. A legacy lang-keyed export object (`{"lg-nolan":[...]}`) is accepted by extracting the first lang value.
+
+An item with **no coordinate but with drawn `lib_data` features** is a value in its own right and imports as geometry-only.
+
+!!! warning "A refusal is not a clear"
+    An empty cell — and only a source that **states** there is no location: both coordinate keys present and blank, or an item carrying a `lib_data` key — clears the component data. Everything else with no usable coordinate (a typo'd header, `{}`, `{latitude,longitude}`, `{"zoom":12}`, an out-of-range value) is **refused**: it is reported in the run's failed rows and the record's stored value is left untouched. A field with any refused value is not written at all, including the values of that field which did conform, and the report says so. This is the one door that enforces the coordinate ranges — by refusing loudly, never by silently dropping a stored value.
 
 See the full geolocation import definition in [Importing data](../importing_data.md#geolocation) and the round-trip raw format in [Exporting data](../exporting_data.md#raw-export-and-round-trip).
 
 ## Notes
 
 - **Storage column & language.** Data lives in the matrix `geo` column, pinned to `DEDALO_DATA_NOLAN` (language‑neutral). The component reads/saves only through its section.
-- **Coordinate accessors.** The center is resolved as floats (or `null` for the default sentinel) from `lat`/`lon`; a cache-rebuild reload-then-resave path (used by cache-update tooling) has not been verified for this pass.
-- **Diffusion.** The stored item can convert to a GeoJSON `Point` object `{type, coordinates:[lon, lat]}` (Socrata-style) or to an encoded `FeatureCollection` (layer wrapper, 16‑decimal `[lon, lat]` coordinates), yielding `null` for the default sentinel. Not evaluated against the native diffusion subsystem (`src/diffusion/`) for this pass — verify before relying on geolocation diffusion parity.
-- **Observers / observables (client).** Configured via the `observe` property. The flagship pattern is `map_update_coordinates`: a related component (e.g. a toponymy portal) is the *observable*; on its `update_value` it fires the observer geolocation, which copies the coordinates of the referenced record (the geolocation identified by `role: "target_geolocation_tipo"` in the observable's `request_config` `hide`) and re-centers the map, recording the change like any save.
+- **Coordinate accessors.** The center is resolved as floats from `lat`/`lon` when both parse to a finite number (`0` included); `null`, `""` and unparseable text resolve to no coordinate, and a missing axis is never completed with a zero. A cache-rebuild reload-then-resave path (used by cache-update tooling) has not been verified for this pass.
+- **Diffusion.** The stored item can convert to a GeoJSON `Point` object `{type, coordinates:[lon, lat]}` (Socrata-style) or to an encoded `FeatureCollection` (layer wrapper, 16‑decimal `[lon, lat]` coordinates). Precedence is the same on every path: drawn geometry publishes as the location (and on the standalone path the stored center is dropped from the published value), otherwise a usable coordinate publishes as the point, otherwise nothing is published at all. See [Diffusion parsers](../../diffusion/parsers.md).
+- **Observers / observables (client).** Configured via the `observe` property. The flagship pattern is `map_update_coordinates`: a related component (e.g. a toponymy portal) is the *observable*; on its `update_value` it fires the observer geolocation, which copies the coordinates of the referenced record (the geolocation identified by `role: "target_geolocation_tipo"` in the observable's `request_config` `hide`) and re-centers the map, recording the change like any save. Only the coordinate travels: the borrowed item's own id is dropped, so the copy replaces **this** record's item instead of appending a second one beside it.
 - **Text-area integration.** `lib_data` layers pair with `geo` tags in a [component_text_area](component_text_area.md) transcription; inserting/removing a tag loads/unloads the matching layer (`layer_data_change`, `load_tag_into_geo_editor`, `get_data_tag`). See the `geo` tag in [Importing data](../importing_data.md#geo).
 - **Default tools.** `tool_leaflet_special_tools`, `tool_propagate_component_data`, `tool_time_machine`, `tool_dev_template` (per the ontology node; exact set is ontology-driven).
-- **Client libraries.** Leaflet, Leaflet-Geoman, Turf (measurements) and iro (color picker) are lazy-loaded on first map build (`load_libs`). The map never auto-saves on pan/zoom — saving is always explicit via the save button.
+- **Client libraries.** Leaflet, Leaflet-Geoman, Turf (measurements) and iro (color picker) are lazy-loaded on first map build (`load_libs`). The map never auto-saves on pan/zoom — saving is always explicit via the save button, and navigating a record that holds no value writes nothing at all.
 - **Related docs:** [component_input_text](component_input_text.md), [component_portal](component_portal.md), [component_text_area](component_text_area.md), [component_json](component_json.md), [Introduction to components](index.md).

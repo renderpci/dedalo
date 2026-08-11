@@ -11,6 +11,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const CASES = [
@@ -72,11 +73,12 @@ beforeAll(async () => {
 		).body as {
 			result?: { data?: Record<string, unknown>[]; context?: Record<string, unknown>[] };
 		};
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 		results.set(testCase.model, {
-			php: (phpResult.result?.data?.[0] ?? {}) as Record<string, unknown>,
-			ts: (tsResult.result?.data?.[0] ?? {}) as Record<string, unknown>,
-			phpContext: phpResult.result?.context ?? [],
-			tsContext: tsResult.result?.context ?? [],
+			php: normalizeSectionIdTypes((phpResult.result?.data?.[0] ?? {}) as Record<string, unknown>),
+			ts: normalizeSectionIdTypes((tsResult.result?.data?.[0] ?? {}) as Record<string, unknown>),
+			phpContext: normalizeSectionIdTypes(phpResult.result?.context ?? []),
+			tsContext: normalizeSectionIdTypes(tsResult.result?.context ?? []),
 		});
 	}
 }, 120000);

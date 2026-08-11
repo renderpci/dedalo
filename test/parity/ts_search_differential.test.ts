@@ -13,7 +13,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { normalizeApiResponse } from './normalize.ts';
+import { normalizeApiResponse, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 // The area tipo of a thesaurus area whose properties gate the tchi hierarchy.
@@ -89,6 +89,9 @@ describe.if(hasPhpCredentials())('area_thesaurus ts_search injection differentia
 		expect(tsItem).toBeDefined();
 		// Both engines must agree on the found set and the assembled node map
 		// (PHP dev-mode debug/strQuery blocks stripped by normalizeApiResponse).
-		expect(normalizeApiResponse(tsItem)).toEqual(normalizeApiResponse(phpItem));
+		// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+		expect(normalizeSectionIdTypes(normalizeApiResponse(tsItem))).toEqual(
+			normalizeSectionIdTypes(normalizeApiResponse(phpItem)),
+		);
 	}, 60000);
 });

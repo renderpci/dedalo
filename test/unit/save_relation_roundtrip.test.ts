@@ -52,10 +52,11 @@ describe('relation save round-trip (write-path family coverage)', () => {
 
 		let record = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		let items = (
-			record?.columns.relation as Record<string, { id: number; section_id: string }[]>
+			record?.columns.relation as Record<string, { id: number; section_id: number }[]>
 		)?.[RELATION_TIPO];
 		expect(items?.length).toBe(1);
-		expect(items?.[0]?.section_id).toBe('42');
+		// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+		expect(items?.[0]?.section_id).toBe(42);
 		const allocatedId = items?.[0]?.id;
 		expect(allocatedId).toBeGreaterThan(0); // relation items get an allocated id too
 
@@ -72,7 +73,7 @@ describe('relation save round-trip (write-path family coverage)', () => {
 		record = await readMatrixRecord(TEST_TABLE, TEST_SECTION_TIPO, TEST_SECTION_ID);
 		items = (record?.columns.relation as Record<string, unknown[]>)?.[RELATION_TIPO] as {
 			id: number;
-			section_id: string;
+			section_id: number;
 		}[];
 		expect(items?.length ?? 0).toBe(0);
 	});

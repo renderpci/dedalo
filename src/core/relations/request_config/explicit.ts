@@ -30,6 +30,11 @@ import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
+import {
+	composeContains,
+	locatorJsonVariants,
+	relationProbeGroups,
+} from '../../search/containment.ts';
 import { registerSectionDataListener } from '../../section_record/save_event.ts';
 
 /** The parsing context: who owns the config and where it lives. */
@@ -64,6 +69,21 @@ const KNOWN_SQO_SOURCES: ReadonlySet<string> = new Set([
 	'section',
 	'section_tipo',
 ]);
+
+/**
+ * An enriched entry's `value` as a list. PHP iterates `(array)$value`, so a
+ * SCALAR value is one element — not nothing (D20, fixed 2026-08-09: the four
+ * branches each wrote `Array.isArray(value) ? value : []`, which SILENTLY
+ * DROPPED the live `{"value":"lg1","source":"section"}` string form; the 8
+ * component_select_lang nodes declaring it resolved ZERO target sections, so
+ * every bare-id import into them was refused "invalid target_section_tipo"
+ * and the client got empty target_sections). ONE helper on purpose: four
+ * inline coercions is exactly how the branches drifted apart.
+ */
+function asSqoValueList(value: unknown): unknown[] {
+	if (Array.isArray(value)) return value;
+	return value === undefined || value === null || value === '' ? [] : [value];
+}
 
 /**
  * Flatten an explicit sqo.section_tipo declaration to plain tipos: entries are
@@ -107,7 +127,7 @@ export async function resolveSqoSectionTipos(
 			// the ACTIVE hierarchy sections of those typologies (PHP
 			// get_hierarchy_sections_from_types).
 			if (source === 'hierarchy_types') {
-				const typeIds = (Array.isArray(value) ? value : []).map((id) => Number(id));
+				const typeIds = asSqoValueList(value).map((id) => Number(id));
 				resolved.push(...(await resolveHierarchySectionsFromTypes(typeIds)));
 				continue;
 			}
@@ -126,7 +146,7 @@ export async function resolveSqoSectionTipos(
 			// that resolve to a section model (PHP :2744-2848 — hierarchy1's
 			// hierarchy45/hierarchy59 resolve the active hierarchies' targets).
 			if (source === 'field_value') {
-				const componentTipos = (Array.isArray(value) ? value : []).filter(
+				const componentTipos = asSqoValueList(value).filter(
 					(tipo): tipo is string => typeof tipo === 'string',
 				);
 				resolved.push(
@@ -139,7 +159,7 @@ export async function resolveSqoSectionTipos(
 			// matter only to get_fixed_filter (./filters.ts:174), not here
 			// (PHP :2850-65). Zero live sqo users — parity insurance.
 			if (source === 'hierarchy_terms') {
-				for (const term of Array.isArray(value) ? value : []) {
+				for (const term of asSqoValueList(value)) {
 					const sectionTipo = (term as { section_tipo?: unknown } | null)?.section_tipo;
 					if (typeof sectionTipo === 'string') resolved.push(sectionTipo);
 				}
@@ -154,7 +174,7 @@ export async function resolveSqoSectionTipos(
 					`[request_config/explicit] unknown sqo section_tipo source '${source}' resolved with section semantics (PHP default branch)`,
 				);
 			}
-			for (const tipo of Array.isArray(value) ? value : []) {
+			for (const tipo of asSqoValueList(value)) {
 				if (typeof tipo === 'string') {
 					if (tipo === 'self') {
 						resolved.push(context.ownerSectionTipo);
@@ -196,6 +216,28 @@ async function isActiveTldTipo(tipo: string): Promise<boolean> {
 	return (await getActiveTlds()).includes(tld);
 }
 
+/**
+ * A `bind` for the compose helpers over positional `sql.unsafe` params: appends
+ * the payload and returns its `$N` placeholder. Positional params are
+ * order-independent in the sentence, so callers may compose clauses in any
+ * order as long as they share ONE collector.
+ */
+function bindPositional(params: string[]): (payload: string) => string {
+	return (payload: string) => {
+		params.push(payload);
+		return `$${params.length}`;
+	};
+}
+
+/**
+ * Probe group for an ARRAY-shaped column reference (`relation-><tipo>`): the
+ * `[<locator>]` payload of each typed section_id variant. The object-keyed
+ * whole-column shape is `relationProbeGroups` in search/containment.ts.
+ */
+function arrayProbeGroup(locator: Record<string, unknown>): string[] {
+	return locatorJsonVariants(locator).map((json) => `[${json}]`);
+}
+
 /** Cache: typology ids key → active hierarchy target section tipos. */
 const hierarchySectionsCache = createOntologyCache<string, string[]>();
 
@@ -228,20 +270,35 @@ export async function resolveHierarchySectionsFromTypes(typeIds: number[]): Prom
 	if (typeIds.length === 0) return [];
 
 	const { sql } = await import('../../db/postgres.ts');
+	// Both typed forms of every probed section_id
+	// (WC-2026-08-10-section-id-int-canonical): stored locators carry
+	// section_id as a string until the int sweep and as an int after, and
+	// jsonb `@>` is type-strict — a single-form literal silently loses half
+	// the rows during the expand window (and forever on old-backup restores).
+	const probeParams: string[] = [];
+	const bind = bindPositional(probeParams);
+	const activeClause = composeContains(
+		`relation->'hierarchy4'`,
+		[arrayProbeGroup({ section_id: 1, section_tipo: 'dd64' })],
+		bind,
+	);
 	const typologyClauses = typeIds
-		.map(
-			(id) =>
-				`relation->'hierarchy9' @> '[{"section_id":"${Math.floor(id)}","section_tipo":"hierarchy13"}]'::jsonb`,
+		.map((id) =>
+			composeContains(
+				`relation->'hierarchy9'`,
+				[arrayProbeGroup({ section_id: Math.floor(id), section_tipo: 'hierarchy13' })],
+				bind,
+			),
 		)
 		.join(' OR ');
 	const rows = (await sql.unsafe(
 		`SELECT COALESCE(data->'hierarchy53', string->'hierarchy53')->0->>'value' AS target
 		 FROM matrix_hierarchy_main
 		 WHERE section_tipo = 'hierarchy1'
-		   AND relation->'hierarchy4' @> '[{"section_id":"1","section_tipo":"dd64"}]'::jsonb
+		   AND ${activeClause}
 		   AND (${typologyClauses})
 		 ORDER BY section_id`,
-		[],
+		probeParams,
 	)) as { target: string | null }[];
 	const sections = rows
 		.map((row) => row.target)
@@ -318,6 +375,17 @@ async function resolveFieldValueSections(
 			);
 			continue;
 		}
+		// Whole-column active-flag containment, both typed section_id forms
+		// (WC-2026-08-10-section-id-int-canonical) — see the comment in
+		// resolveHierarchySectionsFromTypes.
+		const queryParams: string[] = [callerSectionTipo];
+		const activeClause = composeContains(
+			't.relation',
+			relationProbeGroups('hierarchy4', [
+				{ section_tipo: 'dd64', section_id: 1, from_component_tipo: 'hierarchy4' },
+			]),
+			bindPositional(queryParams),
+		);
 		const rows = (await sql.unsafe(
 			`SELECT elem->>'value' AS target
 			 FROM "${table}" t,
@@ -327,9 +395,9 @@ async function resolveFieldValueSections(
 			             ELSE '[]'::jsonb END
 			      ) elem
 			 WHERE t.section_tipo = $1
-			   AND t.relation @> '{"hierarchy4":[{"section_tipo":"dd64","section_id":"1","from_component_tipo":"hierarchy4"}]}'::jsonb
+			   AND ${activeClause}
 			 ORDER BY t.section_id`,
-			[callerSectionTipo],
+			queryParams,
 		)) as { target: string | null }[];
 		for (const row of rows) {
 			const candidate = row.target;

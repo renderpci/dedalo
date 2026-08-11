@@ -4,6 +4,7 @@
  * parser_info.ts, parser_map.ts (behavior parity).
  */
 
+import { hasCoordinate, isStudioDefault, toCoordinate } from '../resolve/geo_coordinate.ts';
 import type { ItemParserFn, ParserItem } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -82,14 +83,11 @@ interface GeoLayer {
 	layer_data: object;
 }
 
-/** PHP's default demo coordinates signal "no real data" and emit nothing. */
-const DEFAULT_TEST_LAT = '39.462571';
-const DEFAULT_TEST_LON = '-0.376295';
-
 /**
  * Emits a GeoJSON layer array per item: lib_data with real features passes
  * through as-is; otherwise a Point FeatureCollection is built from lat/lon
- * (comma decimal separators normalized, default test coordinates skipped).
+ * (comma decimal separators normalized). No sentinel coordinate: absence is
+ * structural (geo_coordinate.ts) — see the GEO LAW there.
  */
 export const geoGeojson: ItemParserFn = (items) => {
 	if (!items || items.length === 0) return null;
@@ -135,19 +133,30 @@ export const geoGeojson: ItemParserFn = (items) => {
 	return result.length > 0 ? result : null;
 };
 
-/** lat/lon → single-Point FeatureCollection layer, or null when unusable. */
+/**
+ * lat/lon → single-Point FeatureCollection layer, or null when there is no
+ * coordinate. Same predicate as ddo_fns.ts geojsonPointFallbackLayers: the
+ * three geo publication paths must agree.
+ *
+ * The VIEW publishes. lat/lon is the map framing, and for many records it is the
+ * only positional data there is, so publication has always read it and consumers
+ * depend on that — it is not dropped when the item also carries drawn features.
+ *
+ * TWO refusals, and only two:
+ *  · no coordinate (null/undefined/''), which is absence — 0 is NOT absence, it
+ *    is the equator and the prime meridian. The old guard was falsy-based and
+ *    silently dropped both.
+ *  · the STUDIO DEFAULT, the factory map position the v6 client wrote on save
+ *    whether or not anyone touched the map. It is fabricated wherever it
+ *    appears, so it never reaches a consumer as a position.
+ */
 function buildGeojsonLayer(geoObj: GeoValue): GeoLayer | null {
-	if (!geoObj.lat || !geoObj.lon) return null;
+	if (!hasCoordinate(geoObj.lat) || !hasCoordinate(geoObj.lon)) return null;
 
-	// Normalize decimal separator (mirrors PHP str_replace(',', '.', …))
-	const latStr = String(geoObj.lat).replace(',', '.');
-	const lonStr = String(geoObj.lon).replace(',', '.');
+	const lat = toCoordinate(geoObj.lat);
+	const lon = toCoordinate(geoObj.lon);
 
-	if (latStr === DEFAULT_TEST_LAT && lonStr === DEFAULT_TEST_LON) return null;
-
-	const lat = Number.parseFloat(latStr);
-	const lon = Number.parseFloat(lonStr);
-	if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+	if (isStudioDefault(lat, lon)) return null;
 
 	return {
 		layer_id: 1,

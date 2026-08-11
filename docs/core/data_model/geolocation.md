@@ -8,15 +8,27 @@
 
 ## What it is
 
-A **geolocation value** is a geographic position — a map center expressed as
-latitude / longitude / zoom / altitude — optionally accompanied by the **vector
-shapes** (points, circles, polygons, polylines) drawn over that position as
-GeoJSON. It exists because a single coordinate pair is rarely enough for
+A **geolocation value** holds two independent things: the **view** —
+`lat` / `lon` / `zoom`, the map framing — and the **features**, the vector shapes
+(points, circles, polygons, polylines) drawn on the map and stored as GeoJSON in
+`lib_data`. `alt` is an operator-editable altitude that travels with the item.
+
+It has two parts because a single coordinate pair is rarely enough for
 cultural-heritage description: an excavation site has an extent (a polygon), a
 findspot has a precise point, a survey transect is a polyline, a monument has a
-viewshed radius. The value captures both the **map state** (center + zoom + alt)
-and the **GeoJSON geometry** drawn on it, in a shape ready for mapping, spatial
-queries and diffusion to GIS targets.
+viewshed radius — and the frame an operator needs to *see* that work is a
+separate question from the work itself.
+
+!!! important "The view is a frame, not a feature"
+    `lat`/`lon`/`zoom` say where the map looks from; they assert no feature, and
+    the features do not determine them. An operator frames the space they need
+    to see, so with several points — or with context drawn around one — the
+    useful frame is often nowhere near any single feature. The view is under
+    manual control and it is **data**: changing it is the operator acting, and
+    it saves.
+
+    Both parts are ready for mapping, spatial queries and diffusion to GIS
+    targets.
 
 The value is **language-neutral**: it never carries `lg-*` keys. The producing
 component forces `lang = DEDALO_DATA_NOLAN`, so a position is the same in every
@@ -24,8 +36,8 @@ interface language.
 
 ## Canonical JSON shape
 
-The stored data is an **array of point items** (in practice one item — one map
-per component). Each item is the map center plus optional drawn shapes in
+The stored data is an **array of items** (in practice one item — one map per
+component). Each item is the view plus the optional drawn features in
 `lib_data`:
 
 ```json
@@ -53,11 +65,11 @@ The item fields:
 
 | key | type | meaning |
 | --- | --- | --- |
-| `lat` | float | map center **latitude**, range `[-90, 90]` (human-facing, latitude first) |
-| `lon` | float | map center **longitude**, range `[-180, 180]` |
-| `zoom` | int | Leaflet zoom level (default `16`) |
-| `alt` | int | altitude / elevation (default `0`) |
-| `lib_data` | array | optional drawn shapes as GeoJSON layers (the rendering-library data) |
+| `lat` | float | the **view**'s latitude, range `[-90, 90]` (human-facing, latitude first) |
+| `lon` | float | the **view**'s longitude, range `[-180, 180]` |
+| `zoom` | int | the **view**'s Leaflet zoom level (default `16`) |
+| `alt` | int | altitude / elevation — real data on the installs that use it (default `0`) |
+| `lib_data` | array | the **features**: drawn shapes as GeoJSON layers (the rendering-library data) |
 | `id` | int | per-item counter id (from the component `meta` counter) |
 
 !!! warning "Coordinate order — read this twice"
@@ -102,22 +114,94 @@ Layers exist so a transcription [`component_text_area`](../components/component_
 can pair each drawn shape with a `geo` tag in the text — the layer is
 loaded/removed as the tag is inserted/removed.
 
-### Default-value sentinel
+### Absence is structural — there is no magic coordinate
 
-When a value has never been set, the client seeds the map with the project home
-(Valencia):
+**A record with no position stores no geolocation item.** Emptiness is the
+absence of a value, never a particular value. (One pair *is* refused, but at
+the publication door only — see
+[the studio default](#the-studio-default--the-one-pair-publication-refuses).)
 
-```json
-{"lat": 39.462571, "lon": -0.376295, "zoom": 16, "alt": 0}
-```
+| stored | meaning |
+| --- | --- |
+| no item for the component tipo | no position — nothing is resolved, nothing is published |
+| `lat` / `lon` `null`, `undefined`, `""`, or unparseable text | no coordinate — the point is not built, and the missing axis is **never** completed with a zero |
+| any finite `lat`/`lon`, **`0` included** | a real coordinate — `[0, 0]`, the equator and the prime meridian are legal positions and publish like any other |
+| `lat`/`lon` as a JSON **string** (`"41.5"`) or **number** (`41.5`) | identical; both forms occur in the same column |
 
-The server treats this exact center as **"no value"**: `get_latitude()` /
-`get_longitude()` return `null` for `lat === "39.462571"` /
-`lon === "-0.376295"`, and `get_diffusion_value_as_geojson()` returns `null` for
-it — so an untouched map is never published as a real location. The match is on
-**latitude/longitude only**; the sentinel `zoom`/`alt` are not part of the test
-(a legacy comment in the diffusion path notes a `zoom 12 / alt 16` default for
-the same center).
+Both axes are required together: a point needs `lat` **and** `lon`.
+
+!!! info "The opening camera is a view, never a value"
+    Where the map *opens* when a record has no coordinate is server
+    configuration — `DEDALO_GEO_DEFAULT_LAT` / `DEDALO_GEO_DEFAULT_LON` /
+    `DEDALO_GEO_DEFAULT_ZOOM`, delivered to the editor as
+    `context.features.default_view` (see [Configuration](../../config/config.md)).
+    It is a camera position: it is never stored in the record and never
+    published. Opening a record and saving it stores **no** coordinate.
+
+### The studio default — the one pair publication refuses
+
+`39.462571 / -0.376295` is not a place. It is the **studio default**: the
+coordinates of the Dédalo facilities, shipped as the client's factory map
+position. The v6 client wrote it into the record on save whether or not anyone
+touched the map, so **an item holding exactly that pair is fabricated** — nobody
+frames a map on the studio to six decimals, and a genuinely positioned record
+carries its own coordinates. Exact equality is therefore a sound test.
+
+It is treated specially at **one door only, publication**: a fabricated view is
+never emitted to a consumer. `isStudioDefault()`
+(`src/core/concepts/geo_coordinate.ts`) is the single definition, and this is
+standing law, not a temporary shim.
+
+Everywhere else — storage, editing, search, import, migration — the pair is an
+**ordinary coordinate** with no special handling at all.
+
+!!! info "A factory default is not a place"
+    Because the pair is a factory default rather than a place, a record merely
+    *named* after the studio's city holds it as fabricated as any other record
+    does. There is no place-name test anywhere in the engine and there must
+    never be one again.
+
+!!! danger "Legacy data: repairing the fabricated views"
+    An install upgraded from those versions carries items whose stored view
+    nobody chose. Publication already withholds them, but they are still in the
+    store, edited and migrated like real data. The repair is
+    `scripts/repair_geolocation_studio_default.ts` — dry-run by default;
+    `--table` and `--user` are both mandatory, and `--apply` is refused on any
+    table that has not been authorised in writing. It covers the two stores that
+    carry the pair, the record store and the thesaurus store:
+
+    | the item | what the repair does |
+    | --- | --- |
+    | the studio-default view and **no** features | the whole item is **removed**, `alt` included — it is fabricated in its entirety and the record ends with no geolocation at all |
+    | the studio-default view **with** features | the view is **fitted to the geometry**: `lat`/`lon` become the bounding-box centre of every feature across the item's `lib_data` layers. Features, `zoom`, `alt`, `id` and every other key are untouched. For a single drawn Point the fitted view *is* that point, verbatim |
+    | anything else | **untouched** |
+
+    Fitting a view to the features is not authoring a location — it is what a
+    view is for.
+
+    Two cases are **held** rather than repaired, and the first surprises people:
+    a fabricated item that shares its component with **another item** is left
+    alone entirely, because the repair writes the component's whole key at once
+    and removing one item of several is not expressible — so on a record holding
+    several geolocation items you get a reported no-op, not a repair. The other
+    is features from which no coordinate can be extracted: the view is never
+    guessed. The repair is **not reversible**: assume there is no Time
+    Machine row to restore from.
+
+### The view and the features are independent
+
+The two parts of the value do not constrain each other:
+
+- an item may hold a view and no features — for very many records the view is
+  the only positional data that exists;
+- it may hold features and no view;
+- it may hold both, and the view need not be anywhere near them.
+
+Neither is derived from the other, and neither is dropped in favour of the
+other. Publication emits both, exactly as stored (the one refusal is the studio
+default, above). The operator's two gestures map straight onto the two parts:
+panning and zooming sets the **view**, and the `map_point` button reads the
+coordinate inputs and creates a **feature**. Both are savable.
 
 ## Database column
 
@@ -134,7 +218,7 @@ component tipo** — there is an extra object level around the item array:
 
 ```json
 {
-  "rsc120": [
+  "numisdata264": [
     { "lat": 41.562363, "lon": 2.012151, "zoom": 16, "alt": 0, "lib_data": [ /* … */ ] }
   ]
 }
@@ -146,7 +230,7 @@ properties with a wildcard path that crosses both the tipo key and the array:
 ```sql
 -- GIN index sample (src/core/db/db_pg_definitions.json)
 SELECT * FROM matrix
-WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{"lat":"39.462571"}]'
+WHERE jsonb_path_query_array(geo, '$.*[*]') @> '[{"lat":"42.31412288249575"}]'
 LIMIT 10;
 ```
 
@@ -176,11 +260,18 @@ entirely through the generic item pipeline. The read side is
 `MATRIX_JSONB_COLUMNS` (`src/core/db/matrix.ts`) and the model→column entry
 resolves from `component_geolocation/descriptor.ts` (`column: 'geo'`).
 
-**The sentinel "no value" guard IS implemented**: `geojsonPointFallbackLayers()`
-(`src/diffusion/resolve/ddo_fns.ts`) recognises the exact Valencia center
-(`lat === '39.462571' && lon === '-0.376295'`, after normalizing comma
-decimals) and returns no layer for it, so an untouched map is never turned
-into a real-location point.
+**Emptiness is enforced structurally, in every emitting path.**
+`geojsonPointFallbackLayers()` (`src/diffusion/resolve/ddo_fns.ts`) builds a
+point only when `lat` **and** `lon` both parse to a finite number (comma
+decimals normalized first); `null`, `undefined`, `''` and unparseable text
+yield no layer, and neither axis is ever defaulted to `0`. A stored `0` is a
+coordinate and does build a point. `parser_geo::geojson`
+(`src/diffusion/parsers/parser_misc.ts`) answers identically — see
+[Diffusion parsers](../../diffusion/parsers.md). The single parse law is
+`src/core/concepts/geo_coordinate.ts`, read by these paths and by the import
+door. The only pair with a meaning of its own is the
+[studio default](#the-studio-default--the-one-pair-publication-refuses), refused
+at the publication doors and ordinary everywhere else.
 
 That fallback-point builder is wired into one specific diffusion path today:
 a paired `component_text_area`'s `get_geojson_data` step
@@ -194,9 +285,26 @@ empty (`buildGeojsonLayers()`, `src/diffusion/resolve/ddo_fns.ts`).
     text-area geo tag) diffuses as a raw `'geo'` atom
     (`src/diffusion/resolve/default_value.ts`) — it strips the item `id` but
     does **not** reshape the value into a GeoJSON `Point` or a layer-wrapped
-    `FeatureCollection`; it carries the same `{lat, lon, zoom, alt, lib_data?}`
-    shape as storage. There is also no `geo`-family search builder yet —
-    geolocation values cannot currently be matched by a search query.
+    `FeatureCollection`; it carries essentially the storage shape. There is
+    also no `geo`-family search builder yet — geolocation values cannot
+    currently be matched by a search query.
+
+That atom publishes what is stored, per item:
+
+1. an item with a **usable view** (both axes parse, `0` included) or with
+   **features**, or both, publishes as it stands, `id` stripped and every other
+   key — `lat`, `lon`, `zoom`, `alt`, `lib_data` — verbatim. The view is never
+   dropped because the item also carries features;
+2. an item whose view is the **studio default** has that pair withheld: if it
+   carries features they publish without `lat`/`lon`; if it carries none, there
+   is **no atom**;
+3. an item with **neither** a usable view nor features produces **no atom**.
+
+The other two emission paths — `parser_geo::geojson`
+(`src/diffusion/parsers/parser_misc.ts`) and `buildGeojsonLayers`
+(`src/diffusion/resolve/ddo_fns.ts`) — publish stored `lib_data` layers when
+there are any and build a point from the view otherwise, and they refuse the
+studio default the same way.
 
 ## Client-side model
 
@@ -211,28 +319,42 @@ the [Leaflet-Geoman](https://geoman.io/) draw editor
 stored value maps onto Leaflet as follows:
 
 ```javascript
-// the value item → Leaflet map state
-const entries  = self.data.entries || [self.default_value]
-const map_data = {
-    x    : entries[0].lat,   // L.LatLng first arg  = latitude
-    y    : entries[0].lon,   // L.LatLng second arg = longitude
-    zoom : entries[0].zoom,
-    alt  : entries[0].alt
-}
+// the CAMERA (view only) — the stored coordinate when there is one,
+// otherwise the server-configured default view. Never a stored value.
+const map_data = self.get_view(0)
 self.map = new L.Map(map_container, {
-    center : new L.LatLng(map_data.x, map_data.y),   // (lat, lon)
+    center : new L.LatLng(map_data.lat, map_data.lon),   // (lat, lon)
     zoom   : map_data.zoom
 })
 
-// the seed when there is no stored value
-self.default_value = { lat: 39.462571, lon: -0.376295, zoom: 16, alt: 0 }
+// the default view, delivered by the server (DEDALO_GEO_DEFAULT_*)
+self.default_view = self.context.features.default_view   // {lat:20, lon:0, zoom:2}
 ```
+
+The component's **value** is a separate thing from the camera:
+`self.get_stored_entry(0)` returns the stored item or `null` and never
+fabricates one, so a record the user did not touch has no value to save. The
+four coordinate inputs render empty on absence — and render `0` when the
+stored coordinate *is* zero.
 
 Notes on the client model:
 
-- The map **never auto-saves** on pan/zoom; saving is always explicit via the
-  save button. Editing the `lat`/`lon`/`zoom`/`alt` inputs recenters the map via
-  `panTo` / `setZoom`.
+- **Setting the view is data entry.** Panning or zooming writes the new view
+  into the component's value and marks it dirty — on an empty record too, where
+  it *creates* the view. The `lat`/`lon`/`zoom` inputs track the map live, which
+  is how an operator approximates a position by eye and spots bad manual data.
+  The `map_point` button in the map-inputs row reads those inputs and creates a
+  **feature**; it does not touch the view.
+- The map **never auto-saves**: a gesture only marks the component dirty, and
+  only the save button commits. The component's own camera moves are masked
+  (`self.camera_is_moving`), so a programmatic `setView`/`fitBounds` never
+  writes Leaflet's pixel-rounded centre over a typed or stored value.
+- A record whose value is features with **no** stored view opens fitted to the
+  extent of that geometry rather than on the world view. That fit is a camera
+  move, not a write.
+- Editing the `lat`/`lon`/`zoom`/`alt` inputs recenters the map through a single
+  non-animated camera move, so a typed coordinate is never overwritten by the
+  animation settling afterwards.
 - Each drawn `lib_data` layer becomes a Leaflet `L.FeatureGroup` keyed by
   `layer_id`; `layer_id` is also the overlay name in the layer control. The
   active layer defaults to `1` (`self.active_layer_id = 1`).
@@ -247,7 +369,7 @@ Notes on the client model:
 
 ```json
 {
-  "rsc120": [{
+  "numisdata264": [{
     "id": 3,
     "alt": 16,
     "lat": 28.760289075631214,
@@ -277,10 +399,10 @@ Notes on the client model:
 
 ### Import shapes
 
-The import value is the bare data array (no lang keys). Two shapes round-trip
-correctly through the generic import path (`conformImportData()`,
-`src/core/tools/import_data.ts`), which is model-agnostic and does not carry
-a `component_geolocation`-specific override:
+The import value is the bare data array (no lang keys). The model has its own
+conform step (`src/core/tools/import_conform.ts`, reached through
+`conformImportData()`), and all four documented shapes are converted into the
+canonical item shape:
 
 ```json
 // a full array of items — parses and passes through as-is
@@ -292,12 +414,35 @@ a `component_geolocation`-specific override:
 {"lat": 39.4625, "lon": -0.3762}
 ```
 
-!!! warning "FeatureCollection extraction and flat-string import: TS gap"
-    Two further shapes are **not implemented**: importing a bare GeoJSON
-    `FeatureCollection` (extracting the center from its first Point feature)
-    and importing a flat text cell (`"lat, lon[, zoom[, alt]]"`) — neither is
-    converted into the canonical item shape today. There is also no
-    `lat`/`lon` range validation or `zoom`/`alt` defaulting on import.
+```json
+// a bare GeoJSON FeatureCollection — the center is its first Point feature,
+// the whole collection is stored as lib_data layer 1
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-0.3762,39.4625]}}]}
+```
+
+```text
+a flat text cell, latitude first, dot decimals: lat, lon[, zoom[, alt]]
+39.4625, -0.3762, 16
+```
+
+**Absence is structural at the import door too, and a refusal is not a clear.**
+The import never fabricates a coordinate — no default center, no default
+framing — and the three outcomes are kept distinct:
+
+| the source cell | outcome |
+| --- | --- |
+| a usable item | stored |
+| an item that **states** there is no location — both coordinate keys present and blank, or an item carrying a `lib_data` key — or an empty cell | the component is **cleared**: the source said so |
+| anything else with no usable coordinate: one axis without the other, a typo'd header, `{}`, `{"zoom":12}` | **refused**, reported in the run's failed rows, and the stored value is left untouched |
+
+An item with no coordinate but with drawn `lib_data` features is a value in its
+own right and imports as geometry-only. `zoom` defaults to `16` and `alt` to
+`0` on a coordinate item; comma decimals are normalized in the JSON shapes
+(the flat cell uses the comma as its own separator, so it needs dot decimals);
+and this is the one door that enforces the coordinate **ranges**
+(`lat` −90..90, `lon` −180..180) — by refusing loudly, never by silently
+dropping a value. A field with **any** refused value is not written at all,
+including its values that did conform; the run report says so.
 
 See the full import definition in
 [Importing data](../importing_data.md#geolocation) and the round-trip raw format
@@ -317,9 +462,21 @@ in [Exporting data](../exporting_data.md#raw-export-and-round-trip).
 - **Single-point-per-component model.** Although the value is an array, the
   editor manages one map (key `0`); multiple positions are expressed as multiple
   GeoJSON features inside `lib_data`, not as multiple array items.
-- **Sentinel-as-empty.** The Valencia default center doubles as the "unset"
-  marker, keeping the column free of accidental real coordinates from untouched
-  maps.
+- **No magic coordinate in the store.** Emptiness is the absence of a value, not
+  a reserved position: an untouched map stores nothing, so no place on earth is
+  unrecordable and `0` is a legal coordinate. The opening camera moved out of
+  the data and into configuration (`DEDALO_GEO_DEFAULT_LAT` /
+  `DEDALO_GEO_DEFAULT_LON` / `DEDALO_GEO_DEFAULT_ZOOM`), delivered as
+  `context.features.default_view` — a camera, operator-configurable per install
+  and per component, never a value. The one pair with a meaning left is the
+  studio default, and it means something at the publication door only.
+- **`0` publishes.** The v6 guards were falsy-based, so a stored `lat: 0` or
+  `lon: 0` published nothing while a blank axis was coerced to a literal `0` and
+  published an invented point. Both are gone: a record on the equator or the
+  prime meridian now publishes the position it holds, and a blank axis publishes
+  nothing. This changes the published bytes of such records, deliberately.
+- **The view and the features are both published.** The three publication paths
+  agree: nothing is dropped in favour of the other part of the value.
 
 ## See also
 

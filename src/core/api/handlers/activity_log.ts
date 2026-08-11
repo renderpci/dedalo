@@ -18,6 +18,7 @@
  * audit write must never fail the user action — PHP posture).
  */
 
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import { sql } from '../../db/postgres.ts';
 import { virtualDateNow } from '../../section/record/create_record.ts';
 
@@ -121,13 +122,22 @@ export async function logActivity(entry: ActivityEntry, now: Date = new Date()):
 			dd543: [
 				{
 					type: 'dd151',
-					section_id: String(entry.userId),
+					// WC-2026-08-10-section-id-int-canonical: the actor's dd128 address is
+					// an int and entry.userId already IS it.
+					section_id: entry.userId,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd543',
 				},
 			],
 			dd545: [
-				{ type: 'dd151', section_id: code, section_tipo: 'dd42', from_component_tipo: 'dd545' },
+				{
+					type: 'dd151',
+					// WC-2026-08-10-section-id-int-canonical: the WHAT code IS the dd42
+					// record address, so it is stored as an int like any other.
+					section_id: canonicalizeStoredSectionId(code),
+					section_tipo: 'dd42',
+					from_component_tipo: 'dd545',
+				},
 			],
 		};
 		const stringColumn = {

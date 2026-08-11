@@ -77,6 +77,7 @@
 		presets_section_tipo
 	} from './search_user_presets.js'
 	import {get_scope} from '../../common/js/section_map.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 	import {
 		apply_semantic_from_preset
 	} from './render_semantic.js'
@@ -1223,7 +1224,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	// sections list
 		const all_sections	= self.sections_selector_data.value || []
-		const ar_sections	= all_sections.filter(item => item.typology_section_id===typology_id)
+		const ar_sections	= all_sections.filter(item => same_section_id(item.typology_section_id, typology_id))
 
 	// ul node
 		const ul = parent

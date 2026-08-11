@@ -19,7 +19,7 @@ import { readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { apiResponseSchema, rqoSchema } from '../../src/core/concepts/rqo.ts';
-import { normalizeApiResponse } from './normalize.ts';
+import { normalizeApiResponse, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const fixturesDir = resolve(import.meta.dir, 'fixtures');
@@ -80,7 +80,10 @@ describe.if(hasPhpCredentials())('parity replay against live PHP', () => {
 				expect(loggedIn).toBe(true);
 			}
 			const { body } = await client.call(definition.rqo);
-			expect(normalizeApiResponse(body)).toEqual(captured.response);
+			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+			expect(normalizeSectionIdTypes(normalizeApiResponse(body))).toEqual(
+				normalizeSectionIdTypes(captured.response),
+			);
 		});
 	}
 });

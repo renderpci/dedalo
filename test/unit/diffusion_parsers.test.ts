@@ -790,10 +790,53 @@ describe('parser_geo::geojson', () => {
 		]);
 	});
 
-	test('PHP default test coordinates → no data', () => {
+	test('the STUDIO DEFAULT never publishes — it is fabricated, not a position', () => {
+		// 39.462571/-0.376295 is the Dédalo facilities' own coordinates, shipped as
+		// the client's factory map position and written on save by the v6 client
+		// whether or not anyone touched the map. Refused here and in the other two
+		// publication paths; an ordinary coordinate everywhere else.
 		expect(run('parser_geo::geojson', [json([{ lat: '39.462571', lon: '-0.376295' }])])).toEqual(
 			[],
 		);
+		expect(run('parser_geo::geojson', [json([{ lat: 39.462571, lon: -0.376295 }])])).toEqual([]);
+		// one axis off is a real coordinate and publishes
+		const real = run('parser_geo::geojson', [json([{ lat: '39.462571', lon: '2.173403' }])]);
+		expect(JSON.stringify(strip(real))).toContain('"coordinates":[2.173403,39.462571]');
+	});
+
+	test('0 is a legal coordinate: [0,0], the equator and the prime meridian publish', () => {
+		const nullIsland = run('parser_geo::geojson', [json([{ lat: 0, lon: 0 }])]);
+		expect(JSON.stringify(strip(nullIsland))).toContain('"coordinates":[0,0]');
+
+		const equator = run('parser_geo::geojson', [json([{ lat: 0, lon: 37.9 }])]);
+		expect(JSON.stringify(strip(equator))).toContain('"coordinates":[37.9,0]');
+
+		const greenwich = run('parser_geo::geojson', [json([{ lat: 5.6, lon: 0 }])]);
+		expect(JSON.stringify(strip(greenwich))).toContain('"coordinates":[0,5.6]');
+
+		// …and as the strings the matrix actually stores ('0' is not absence).
+		const asStrings = run('parser_geo::geojson', [json([{ lat: '0', lon: '0' }])]);
+		expect(JSON.stringify(strip(asStrings))).toContain('"coordinates":[0,0]');
+	});
+
+	test('string and number coordinates behave IDENTICALLY (mixed storage: 607/1803 strings)', () => {
+		const asString = run('parser_geo::geojson', [json([{ lat: '39.5', lon: '2.1' }])]);
+		const asNumber = run('parser_geo::geojson', [json([{ lat: 39.5, lon: 2.1 }])]);
+		expect(strip(asString)).toEqual(strip(asNumber));
+		expect(JSON.stringify(strip(asString))).toContain('"coordinates":[2.1,39.5]');
+	});
+
+	test('comma-decimal locales still normalize on both axes', () => {
+		const out = run('parser_geo::geojson', [json([{ lat: '39,5', lon: '-0,376295' }])]);
+		expect(JSON.stringify(strip(out))).toContain('"coordinates":[-0.376295,39.5]');
+	});
+
+	test('absence is structural: null/undefined/"" coordinates publish NOTHING', () => {
+		expect(run('parser_geo::geojson', [json([{ lat: '', lon: '' }])])).toEqual([]);
+		expect(run('parser_geo::geojson', [json([{ lat: null, lon: null }])])).toEqual([]);
+		expect(run('parser_geo::geojson', [json([{ lat: '41.5', lon: '' }])])).toEqual([]);
+		expect(run('parser_geo::geojson', [json([{ lat: null, lon: 2.1 }])])).toEqual([]);
+		expect(run('parser_geo::geojson', [json([{ zoom: 12, alt: 16 }])])).toEqual([]);
 	});
 
 	test('lib_data with real features passes through as-is', () => {

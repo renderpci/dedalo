@@ -15,6 +15,12 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
 /** The moment the server module loaded (uptime baseline). */
 const RUNTIME_STARTED_AT = Date.now();
 
+/**
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): a projection of process/Bun runtime
+ * globals with NO branch. Any assertion would compare a runtime read against the
+ * same runtime read.
+ */
 async function runtimeInfoGetValue(): Promise<WidgetResponse> {
 	const memory = process.memoryUsage();
 	return {
@@ -51,6 +57,15 @@ async function runtimeInfoGetValue(): Promise<WidgetResponse> {
  * The tools caches are NOT ontology-derived (registry rows, tool config, loaded
  * modules), so they stay an explicit second call.
  */
+/*
+ * COVERAGE-EXEMPT, this function and runtimeInfoClearSessions below (coverage
+ * plan §5.1; reason registered in engineering/crap_coverage_exempt.json): each
+ * calls into the cache-invalidation hub / pruneExpiredSessions, whose registry
+ * and expiry semantics are gated in the cache-factory and session-store suites.
+ * Bun runs the WHOLE SUITE IN ONE PROCESS, so invoking either flushes
+ * process-global caches or prunes the session store shared with every other test
+ * in the run — a first-class order-dependent flake generator.
+ */
 async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
 	const { clearOntologyDerivedCaches } = await import('../../ontology/cache_invalidation.ts');
 	await clearOntologyDerivedCaches();
@@ -63,7 +78,11 @@ async function runtimeInfoClearCaches(): Promise<WidgetResponse> {
 	};
 }
 
-/** clear_session_files — prune EXPIRED sessions from the TS session store. */
+/**
+ * clear_session_files — prune EXPIRED sessions from the TS session store.
+ * COVERAGE-EXEMPT — see the reason on runtimeInfoClearCaches above (shared
+ * entry in engineering/crap_coverage_exempt.json).
+ */
 async function runtimeInfoClearSessions(): Promise<WidgetResponse> {
 	const { pruneExpiredSessions } = await import('../../security/session_store.ts');
 	const pruned = pruneExpiredSessions();

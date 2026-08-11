@@ -22,6 +22,21 @@
  * lang files — UI labels are repo catalogs (WC-033) and in-process caches
  * are purged via clearOntologyDerivedCaches; the activity row is not
  * ported (ledgered).
+ *
+ * GATE: `test/unit/ontology_update_shell_native.test.ts` drives the real
+ * orchestrator through the `UpdateOntologyDeps` seam over the scratch TLD
+ * `zzd` — target refusal, the single-flight latch (refused AND released), the
+ * Phase-B abort, the Phase-C auto-restore + D7 message, and the success tail
+ * (schema-changes CONTENT, counter consolidation).
+ *
+ * COVERAGE-EXEMPT, deliberately and permanently:
+ *   - the real remote-download arm of Phase A — a gate never makes a network
+ *     fetch; the local fixture server IS the configured origin instead.
+ *   - the `engineOwnsInstall()` refusal — collapsed to `true` at the
+ *     2026-07-11 cutover, so its false arm is unreachable.
+ *   - `optimizeTables`' own REINDEX/VACUUM outcome: it is executed by the gate
+ *     (skipping it would prove a configuration nobody ships) but its errors are
+ *     non-fatal and unasserted.
  */
 
 import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -46,6 +61,7 @@ import {
 } from './data_io_import.ts';
 import { termByTipo } from './labels.ts';
 import {
+	type OntologyUpdateCatalog,
 	resolveUpdateTarget,
 	type StagedFile,
 	stageOntologyFiles,
@@ -177,15 +193,49 @@ async function optimizeTables(
 }
 
 /**
+ * The injectable edges of the pipeline. Every field defaults to exactly what
+ * the production call used before the seam existed, so the shipped path is the
+ * one the gate drives — no test-only flag changes what an operator runs.
+ *
+ * `catalog` is the load-bearing one: the target catalog comes from
+ * `config.ontologyIo`, which is env-shaped (`ONTOLOGY_SERVERS` /
+ * `IS_AN_ONTOLOGY_SERVER`) and therefore DIFFERENT on every machine. Without
+ * it a gate takes a different branch on a developer box than on a CI clone.
+ */
+export interface UpdateOntologyDeps {
+	/** psql seam for the snapshot/COPY steps; defaults to the configured DB. */
+	conn?: DbConnDescriptor;
+	/** Ontology-server catalog the target is re-resolved against (WC-023 D5). */
+	catalog?: OntologyUpdateCatalog;
+	/** Base dir the versioned IO dir (staging + recovery) is created under. */
+	ioBaseDir?: string;
+	/** Directory the operator-facing schema-changes artifact is written to. */
+	changesDir?: string;
+}
+
+/**
+ * Fill the injectable edges with their production defaults. Kept OUT of
+ * `updateOntology` so the seam adds no branches to an already-baselined
+ * function (the crap ratchet is a shrink-only contract).
+ */
+function resolveUpdateDeps(deps: UpdateOntologyDeps): {
+	conn: DbConnDescriptor;
+	catalog: OntologyUpdateCatalog;
+} {
+	return { conn: deps.conn ?? connFromConfig(), catalog: deps.catalog ?? config.ontologyIo };
+}
+
+/**
  * The full update pipeline. `userId` stamps the TM-audited registry writes.
- * `conn` is the psql seam for the COPY steps (tests); the dd_ontology rebuild
- * always runs on the configured pool.
+ * `deps.conn` is the psql seam for the COPY steps (tests); the dd_ontology
+ * rebuild always runs on the configured pool.
  */
 export async function updateOntology(
 	rawOptions: unknown,
 	userId: number,
-	conn: DbConnDescriptor = connFromConfig(),
+	deps: UpdateOntologyDeps = {},
 ): Promise<OntologyIoResponse> {
+	const { conn, catalog } = resolveUpdateDeps(deps);
 	const response: OntologyIoResponse = {
 		result: false,
 		msg: 'Error. Request failed [update_ontology::update_ontology]',
@@ -208,7 +258,7 @@ export async function updateOntology(
 	// The network target comes from the CONFIG catalog, never the client
 	// (WC-023 D5): match the selected server by code, or the localhost
 	// pseudo-server when this instance is an ontology master.
-	const target = resolveUpdateTarget(options.server, config.ontologyIo);
+	const target = resolveUpdateTarget(options.server, catalog);
 	if ('error' in target) {
 		response.errors.push(target.error);
 		response.msg = target.msg;
@@ -222,7 +272,7 @@ export async function updateOntology(
 	}
 	updateInFlight = true;
 
-	const ioPath = setOntologyIoPath();
+	const ioPath = setOntologyIoPath(deps.ioBaseDir);
 	if (ioPath === false) {
 		updateInFlight = false;
 		response.errors.push('unable to resolve the ontology IO directory');
@@ -232,6 +282,10 @@ export async function updateOntology(
 	const recoveryDir = join(ioPath, 'recovery', String(Date.now()));
 	const messages: string[] = [];
 	const mutated: StagedFile[] = [];
+	// TLDs whose registry record + dd_ontology root node were provisioned before
+	// their import (defect D7): those writes are NOT covered by the Phase-B
+	// snapshots, so a restore cannot undo them.
+	const provisioned: string[] = [];
 
 	try {
 		// ------------------------------------------------------------------
@@ -251,6 +305,14 @@ export async function updateOntology(
 		// ------------------------------------------------------------------
 		// Phase B — recovery snapshot BEFORE the first destructive statement
 		// ------------------------------------------------------------------
+		// Pre-import schema for the operator-facing changes artifact. Captured
+		// HERE — before the first destructive statement — not after the import
+		// as PHP did (defect D8, fixed 2026-08-09; see the wire-contract entry
+		// WC-2026-08-09-simple-schema-changes-pre-import). PHP read it after the
+		// import and before optimize_tables, and since the read is uncached the
+		// two sides were always identical: the artifact was permanently `[]`.
+		const oldSchema = await getSimpleSchemaOfSections();
+
 		mkdirSync(recoveryDir, { recursive: true });
 		for (const file of staged) {
 			const outFile = confinedPath(recoveryDir, `${file.tld}.copy`);
@@ -284,7 +346,7 @@ export async function updateOntology(
 				if (imported.result !== true) {
 					response.errors.push(...imported.errors);
 					await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-					response.msg = 'Error. Import failed — previous state restored';
+					response.msg = restoreFailureMessage(provisioned, response.errors);
 					return response;
 				}
 				mutated.push(file);
@@ -306,6 +368,7 @@ export async function updateOntology(
 				>[0],
 				userId,
 			);
+			provisioned.push(file.tld);
 			const imported = await importFromCopyFile({
 				sectionTipo: file.sectionTipo,
 				filePath: file.stagedPath,
@@ -316,7 +379,7 @@ export async function updateOntology(
 			if (imported.result !== true) {
 				response.errors.push(...imported.errors);
 				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-				response.msg = 'Error. Import failed — previous state restored';
+				response.msg = restoreFailureMessage(provisioned, response.errors);
 				return response;
 			}
 			// ONT-TLD: the staged file carries whatever ontology7 it was EXPORTED
@@ -359,9 +422,6 @@ export async function updateOntology(
 			if (rebuilt.result !== true) response.errors.push(...rebuilt.errors);
 		}
 
-		// PHP order: snapshot old schema AFTER import/reindex, BEFORE optimize.
-		const oldSchema = await getSimpleSchemaOfSections();
-
 		const optimizeErrors = await optimizeTables(OPTIMIZE_TABLES, conn);
 		response.errors.push(...optimizeErrors);
 
@@ -372,7 +432,7 @@ export async function updateOntology(
 
 		// schema-changes file — the ONE hard-fail tail step (PHP parity)
 		const newSchema = await getSimpleSchemaOfSections();
-		const schemaSaved = saveSimpleSchemaFile(oldSchema, newSchema);
+		const schemaSaved = saveSimpleSchemaFile(oldSchema, newSchema, deps.changesDir);
 		if (!schemaSaved.result) {
 			response.result = false;
 			response.msg = `Error saving simple_schema_file: ${schemaSaved.msg}`;
@@ -398,13 +458,34 @@ export async function updateOntology(
 		response.errors.push((error as Error).message);
 		if (mutated.length > 0) {
 			await restoreSnapshots(mutated, recoveryDir, conn, response.errors);
-			response.msg = 'Error. Import failed — previous state restored';
+			response.msg = restoreFailureMessage(provisioned, response.errors);
 		}
 		return response;
 	} finally {
 		rmSync(stagingDir, { recursive: true, force: true });
 		updateInFlight = false;
 	}
+}
+
+/**
+ * The message an import failure is allowed to make (defect D7, fixed
+ * 2026-08-09 — WC-2026-08-09-ontology-update-partial-restore).
+ *
+ * The Phase-B snapshots cover matrix_ontology / matrix_dd ONLY. For every
+ * non-`matrix_dd` TLD, Phase C provisions a `matrix_ontology_main` registry
+ * record (addMainSection) and a `dd_ontology` root node (+ its ontologytype
+ * grouper) BEFORE the row import, through raw matrix writes with no Time
+ * Machine trail. restoreSnapshots cannot undo any of that, so claiming
+ * "previous state restored" after a provisioned TLD is a FALSE statement about
+ * the database — the actual defect. When nothing was provisioned the original
+ * claim is true and its PHP bytes are kept verbatim.
+ */
+export function restoreFailureMessage(provisioned: readonly string[], errors: string[]): string {
+	if (provisioned.length === 0) return 'Error. Import failed — previous state restored';
+	errors.push(
+		`registry record (matrix_ontology_main) and dd_ontology root node NOT reverted for: ${provisioned.join(', ')} — MANUAL REVIEW REQUIRED`,
+	);
+	return 'Error. Import failed — matrix rows restored; registry and dd_ontology state may be partial';
 }
 
 /** Restore every mutated table from the Phase-B snapshots (best-effort, loud). */

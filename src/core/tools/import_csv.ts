@@ -1,7 +1,7 @@
 /**
  * CSV import PLANNER (PHP tool_import_dedalo_csv::import_dedalo_csv_file, the
  * read half). Parses a CSV and, against a resolved column map, produces a
- * per-record PLAN of conformed component datos.
+ * per-record PLAN of conformed component values.
  *
  * The plan is DB-free apart from the conform facets' own ontology lookups, so
  * the row→column→conform mapping is testable without a write, and the executor
@@ -154,10 +154,11 @@ export interface PlannedColumn {
 	/** The component's save lang ('lg-nolan' when not translatable). */
 	lang: string;
 	conform: ConformResult;
-	/** Frames from the {dato, dataframe} envelope — written after the component data. */
+	/** Frames from a LEGACY {data, dataframe} envelope — written after the component data.
+	 * Current exports give each dataframe slot its own column, so this is null there. */
 	dataframe: unknown[] | null;
 	/** False when the envelope carried ONLY frames: do not touch the component's data. */
-	hasDato: boolean;
+	hasData: boolean;
 }
 
 export interface PlannedRecord {
@@ -219,7 +220,7 @@ export async function planCsvImport(
 				lang: column.lang,
 				conform,
 				dataframe: unwrapped.dataframe,
-				hasDato: unwrapped.hasDato,
+				hasData: unwrapped.hasData,
 			});
 		}
 		plan.push({ sectionId, row: firstRowNumber + rowIndex, columns: plannedColumns });

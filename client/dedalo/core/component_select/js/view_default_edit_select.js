@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
@@ -318,7 +318,7 @@ const get_content_value = (i, current_value, self) => {
 			})
 			// selected options set on match
 			if (current_value && datalist_item.value &&
-				current_value.section_id===datalist_item.value.section_id &&
+				same_section_id(current_value.section_id, datalist_item.value.section_id) &&
 				current_value.section_tipo===datalist_item.value.section_tipo
 				) {
 

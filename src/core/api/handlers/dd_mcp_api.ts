@@ -244,10 +244,13 @@ function parseAgentChatOptions(
 		// (the value is rendered into a prompt block, never matched against a
 		// stored locator). Bound to a local first so the shape stays out of the
 		// locator-law ratchet's inline-matcher patterns (ws_a_tripwires).
+		// The door canonicalizes to INT: the digits check already excludes the
+		// synthetic tokens and external remote ids that carry no address to render
+		// (WC-2026-08-10-section-id-int-canonical).
 		const rawSectionId = raw.section_id;
 		if (typeof rawSectionId === 'number' || typeof rawSectionId === 'string') {
 			const id = String(rawSectionId);
-			if (/^[0-9]{1,12}$/.test(id)) uiContext.section_id = id;
+			if (/^[0-9]{1,12}$/.test(id)) uiContext.section_id = Number(id);
 		}
 		if (typeof raw.component_tipo === 'string' && TIPO_SHAPE.test(raw.component_tipo)) {
 			uiContext.component_tipo = raw.component_tipo;

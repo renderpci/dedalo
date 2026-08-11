@@ -112,21 +112,18 @@ describe('linearUpgradeTargets (the linear walk, injected catalog)', () => {
 		expect(linearUpgradeTargets([7, 0, 0], catalog)).toEqual([]);
 	});
 
-	test('KNOWN DEFECT D17: the same triple under two catalog keys is NOT deduped', () => {
+	test('the same triple under two catalog keys is deduped (D17 fixed 2026-08-09)', () => {
 		// A patch rung reachable twice (e.g. a hand-edited/mis-keyed catalog)
-		// is pushed once per descriptor: the only dedupe guard covers the
-		// nextMinor/nextMajor boundary, never the patch pushes.
-		// Asserting the CURRENT (defective) behaviour so this file stays green;
-		// once D17 is fixed this must become `toEqual([[7, 0, 1]])`.
+		// used to be pushed once per descriptor: the old dedupe guard only
+		// covered the nextMinor/nextMajor boundary — and that guard was dead,
+		// because a boundary triple can never equal a patch triple. The dedupe
+		// now runs over the whole target list, so a rung is advertised once.
 		const duplicated: Record<string, UpdateDescriptor> = {
 			'701': target(7, 0, 1),
 			'701_alias': target(7, 0, 1),
 		};
 		const result = linearUpgradeTargets([7, 0, 0], duplicated);
-		expect(result).toEqual([
-			[7, 0, 1],
-			[7, 0, 1],
-		]); // D17: SHOULD be length 1
+		expect(result).toEqual([[7, 0, 1]]);
 	});
 });
 

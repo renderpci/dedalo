@@ -12,7 +12,19 @@
  * - component_text_area (:2441-2453): html_entity_decode on every value;
  * - component_iri (:406-446): ONE atom whose value is the {iri,title} entry
  *   array with lang stripped (parser_iri::flat consumes exactly that);
- * - component_geolocation (:336-358): per-point `id` stripped;
+ * - component_geolocation (:336-358): per-point `id` stripped. THE VIEW
+ *   PUBLISHES AS STORED and is never dropped — lat/lon/zoom are the map
+ *   framing, for many records the only positional data there is, and consumers
+ *   have read them since the first implementation. Features (lib_data) and the
+ *   view are INDEPENDENT: neither replaces the other, and both go out together.
+ *   Two refusals only (geo_coordinate.ts): an item with no coordinate and no
+ *   drawn layer emits NO atom (PHP published the raw stored object), and the
+ *   STUDIO DEFAULT — the client's factory map position — is withheld as the
+ *   fabricated view it is, while any real features on that item still publish.
+ *   (!) An earlier revision made drawn geometry WIN and dropped the view's
+ *   lat/lon. That changed published bytes for existing records and was
+ *   REVERTED. Do not reinstate it: test/unit/diffusion_geo_precedence.test.ts
+ *   fails on the attempt;
  * - component_date / geolocation: typed 'date'/'geo' atoms (record_ir.ts);
  * - component_section_id: the record's own section_id scalar (pseudo-column).
  *
@@ -28,6 +40,7 @@ import { mediaTypeOf } from '../../core/concepts/media.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
 import type { MetaValueIR, ValueMeta } from '../parsers/types.ts';
+import { hasCoordinate, isStudioDefault, toCoordinate } from './geo_coordinate.ts';
 
 /** A stored literal item ({id?, value, lang?} — component_data.ts contract). */
 interface StoredItem {
@@ -76,6 +89,26 @@ function rawToAtom(raw: unknown, lang: string | null, meta: ValueMeta): MetaValu
 			: { kind: 'json', value: raw, lang };
 	atom.meta = meta;
 	return atom;
+}
+
+/**
+ * Does the item carry hand-drawn geometry? A lib_data layer with at least one
+ * feature. An empty lib_data (or layers with no feature) is editor state, not
+ * geometry — same predicate as parser_misc.ts geoGeojson (`hasFeatures`).
+ */
+function hasDrawnGeometry(stored: Record<string, unknown>): boolean {
+	const libData = stored.lib_data;
+	if (!Array.isArray(libData)) return false;
+	return libData.some((layer) => {
+		const features = (layer as { layer_data?: { features?: unknown } } | null)?.layer_data
+			?.features;
+		return Array.isArray(features) && features.length > 0;
+	});
+}
+
+/** A usable coordinate pair (0 included; ''/null/absent/unparseable are not). */
+function hasPoint(stored: Record<string, unknown>): boolean {
+	return hasCoordinate(stored.lat) && hasCoordinate(stored.lon);
 }
 
 /**
@@ -251,15 +284,48 @@ export function defaultPublicationValue(
 
 		case 'component_geolocation': {
 			// PHP strips the editor point id; atoms are typed 'geo'.
-			return items.map((item) => {
+			// GEO LAW (geo_coordinate.ts): an item with no real coordinate and no
+			// drawn layer is NOT a location — emit no atom. PHP published the
+			// stored object raw, so a record the operator never placed on the map
+			// still reached consumers (as the ex-sentinel Valencia point). 0 is a
+			// coordinate; ''/null/absent is not.
+			//
+			// THE VIEW PUBLISHES, AND IS NOT DROPPED. lat/lon is the map framing,
+			// and for many records it is the only positional data that exists —
+			// publication has read it since the first implementation and consumers
+			// depend on it, so the whole stored object goes out as before, drawn
+			// features and framing together. An earlier revision dropped lat/lon
+			// when the item carried geometry; that changed published bytes for
+			// existing records and is exactly what must not happen here.
+			//
+			// The one refusal is the STUDIO DEFAULT: the factory map position the
+			// v6 client wrote on save whether or not anyone touched the map. It is
+			// fabricated wherever it appears and never reaches a consumer. An item
+			// whose framing is the default but which carries real drawn features
+			// still publishes those features — only the fabricated pair is withheld.
+			const atoms: MetaValueIR[] = [];
+			for (const item of items) {
 				const raw = item.value ?? item;
-				let value = raw;
-				if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-					const { id: _stripped, ...clone } = raw as Record<string, unknown>;
-					value = clone;
+				if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) continue;
+				const stored = raw as Record<string, unknown>;
+				const { id: _stripped, ...value } = stored;
+				const fabricated =
+					hasPoint(stored) && isStudioDefault(toCoordinate(stored.lat), toCoordinate(stored.lon));
+				if (fabricated) {
+					if (!hasDrawnGeometry(stored)) continue;
+					const { lat: _lat, lon: _lon, ...withoutFabricatedView } = value;
+					atoms.push({
+						kind: 'geo',
+						value: withoutFabricatedView,
+						lang: null,
+						meta,
+					} as MetaValueIR);
+					continue;
 				}
-				return { kind: 'geo', value, lang: null, meta } as MetaValueIR;
-			});
+				if (!hasPoint(stored) && !hasDrawnGeometry(stored)) continue;
+				atoms.push({ kind: 'geo', value, lang: null, meta } as MetaValueIR);
+			}
+			return atoms;
 		}
 
 		case 'component_date': {

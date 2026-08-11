@@ -6,10 +6,13 @@
  *
  * Two response classes:
  *   1. DETERMINISTIC BADGES (tc/index/geo/page/person/note/lang/draw) — the badge
- *      is a pure function of the `?id=` string, so we render a tiny SVG and serve
- *      it PUBLIC + IMMUTABLE. That, plus the browser's automatic de-dup of
- *      identical ids, is what makes a text_area with hundreds of tags cost ~0
- *      network in steady state. No session needed: the badge only ever shows the
+ *      is a pure function of the `?id=` string AND of the renderer, so we render a
+ *      tiny SVG and serve it PUBLIC, immutable only when the caller pinned the
+ *      renderer in the URL (`&v=<fingerprint>`; bare `?id=` revalidates). That,
+ *      plus the browser's automatic de-dup of identical ids, is what makes a
+ *      text_area with hundreds of tags cost ~0 network in steady state — while a
+ *      renderer change still reaches browsers that already cached a badge.
+ *      No session needed: the badge only ever shows the
  *      number/label already present in the id the client itself supplied — nothing
  *      from the database.
  *   2. LOCATOR TAGS (`{…}` JSON / the `svg` tag, whose src IS the JSON payload) —
@@ -30,10 +33,27 @@ import { getSession, SESSION_COOKIE } from '../../security/session_store.ts';
 import { type LocatorTag, parseTagId, safeDecodeTagId } from './tag_grammar.ts';
 import { renderDrawTag, renderSpriteTag } from './tag_render.ts';
 
-/** One year — the deterministic badges never change for a given id. */
-const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
+/**
+ * One year, no revalidation — ONLY for a VERSION-ADDRESSED badge URL, i.e. one
+ * carrying the client's renderer token (`&v=<fingerprint>`, built in
+ * client/dedalo/core/common/js/tr.js and pinned by
+ * test/unit/text_area_tag_grammar.test.ts). Such a URL changes whenever the
+ * drawing changes, so promising immutability is TRUE for it.
+ */
+const VERSIONED_CACHE = 'public, max-age=31536000, immutable';
+/**
+ * Version-FREE badge URL (stored `<img src>` HTML, list/diffusion emit, any
+ * legacy client): the bytes are a function of the id AND of `tag_render.ts`,
+ * which does change — WC-2026-08-11-vector-tag-badges replaced every drawing.
+ * `immutable` there is a lie that pins the OLD badge in every warm browser for
+ * a year, so these responses stay short-lived and revalidating; the ETag is
+ * content-hashed, so a revalidation costs one 304 (~3ms).
+ */
+const REVALIDATE_CACHE = 'public, max-age=3600, must-revalidate';
 /** PHP parity for the live/locator responses (3 hours, private). */
 const PRIVATE_CACHE = 'private, max-age=10800';
+/** Query param carrying the client's badge-renderer fingerprint (cache key only). */
+const VERSION_PARAM = 'v';
 
 /** Fail-closed 404 — generic, no existence leak. */
 function notFound(): Response {
@@ -43,20 +63,25 @@ function notFound(): Response {
 	});
 }
 
-/** Serve a rendered SVG badge with an ETag + immutable caching (honours If-None-Match). */
-function svgResponse(svg: string, request: Request): Response {
+/**
+ * Serve a rendered SVG badge with a content-hashed ETag (honours If-None-Match).
+ * Caching depends on whether the URL is version-addressed: `&v=<fingerprint>`
+ * ⇒ immutable for a year, bare `?id=` ⇒ short-lived + revalidating.
+ */
+function svgResponse(svg: string, request: Request, versioned: boolean): Response {
 	const etag = `"${Bun.hash(svg).toString(16)}"`;
+	const cacheControl = versioned ? VERSIONED_CACHE : REVALIDATE_CACHE;
 	if (request.headers.get('if-none-match') === etag) {
 		return new Response(null, {
 			status: 304,
-			headers: { ETag: etag, 'Cache-Control': IMMUTABLE_CACHE },
+			headers: { ETag: etag, 'Cache-Control': cacheControl },
 		});
 	}
 	return new Response(svg, {
 		status: 200,
 		headers: {
 			'Content-Type': 'image/svg+xml; charset=utf-8',
-			'Cache-Control': IMMUTABLE_CACHE,
+			'Cache-Control': cacheControl,
 			ETag: etag,
 		},
 	});
@@ -127,12 +152,15 @@ export async function handleTagRequest(request: Request, url: URL): Promise<Resp
 
 	// SEC-027 JSON-aware xss decode, then classify.
 	const parsed = parseTagId(safeDecodeTagId(rawId));
+	// The token's VALUE is never trusted or matched — its presence only says the
+	// caller built a version-addressed URL, which is what makes `immutable` true.
+	const versioned = (url.searchParams.get(VERSION_PARAM) ?? '') !== '';
 
 	switch (parsed.kind) {
 		case 'sprite':
-			return svgResponse(renderSpriteTag(parsed), request);
+			return svgResponse(renderSpriteTag(parsed), request, versioned);
 		case 'draw':
-			return svgResponse(renderDrawTag(parsed), request);
+			return svgResponse(renderDrawTag(parsed), request, versioned);
 		case 'locator':
 			return resolveLocatorTag(parsed, request);
 		default:

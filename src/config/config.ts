@@ -596,6 +596,15 @@ export interface DedaloConfig {
 	 */
 	readonly geoProvider: string;
 	/**
+	 * Opening CAMERA of the geolocation map when the record has no coordinate
+	 * (DEDALO_GEO_DEFAULT_LAT/LON/ZOOM, default world view 20/0/2). Emitted in the
+	 * geolocation edit context as features.default_view; an instance
+	 * properties.default_view ({lat,lon,zoom}) overrides it per component. It is a
+	 * VIEW, never data: absence of a coordinate is structural (null/''), never a
+	 * magic coordinate, and nothing here is ever stored or published.
+	 */
+	readonly geoDefaultView: { readonly lat: number; readonly lon: number; readonly zoom: number };
+	/**
 	 * IANA timezone all DB timestamps are stamped in (PHP DEDALO_TIMEZONE,
 	 * identity.timezone catalog default 'Europe/Madrid'). PHP sets it via
 	 * date_default_timezone_set at bootstrap; the TS twin is db/db_timestamp.ts
@@ -813,6 +822,11 @@ export const config: DedaloConfig = Object.freeze({
 	mainSection: readString('MAIN_SECTION'),
 	mediaDir: readString('DEDALO_MEDIA_DIR'),
 	geoProvider: readString('DEDALO_GEO_PROVIDER'),
+	geoDefaultView: Object.freeze({
+		lat: readNumber('DEDALO_GEO_DEFAULT_LAT'),
+		lon: readNumber('DEDALO_GEO_DEFAULT_LON'),
+		zoom: readNumber('DEDALO_GEO_DEFAULT_ZOOM'),
+	}),
 	timezone: readString('DEDALO_TIMEZONE'),
 	usersSectionTipo: readString('DEDALO_SECTION_USERS_TIPO'),
 	db: Object.freeze({

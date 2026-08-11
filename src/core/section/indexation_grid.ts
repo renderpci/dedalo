@@ -38,6 +38,7 @@ import {
 	type PeriodLabels,
 } from '../components/component_date/date_value.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
@@ -124,10 +125,15 @@ interface IndexLocator {
 	type?: string;
 	/** The REFERRING record (holds the relation entry). */
 	section_tipo: string;
-	section_id: string;
+	/**
+	 * Canonical INT address (WC-2026-08-10-section-id-int-canonical) — it
+	 * reaches the wire through the record_link cell. The union tolerates the
+	 * unswept string form arriving from stored locator payloads.
+	 */
+	section_id: number | string;
 	component_tipo?: string;
 	tag_id?: string;
-	section_top_id?: string;
+	section_top_id?: number | string;
 	section_top_tipo?: string;
 	from_component_top_tipo?: string;
 }
@@ -755,7 +761,9 @@ async function textAreaIndexationCell(
 			fullRawText = typeof fallback[0]?.value === 'string' ? (fallback[0].value as string) : '';
 		}
 		const locSectionTipo = indexLocator.section_tipo;
-		const locSectionId = indexLocator.section_id;
+		// int-canonical on the app wire (WC-2026-08-10-section-id-int-canonical):
+		// the stored index locator may carry the legacy string form until the sweep.
+		const locSectionId = canonicalizeStoredSectionId(indexLocator.section_id);
 		let tagId = indexLocator.tag_id ?? '';
 
 		// fragment (PHP get_fragment_text_from_tag; 220-char truncation fallback)
@@ -835,7 +843,8 @@ async function textAreaIndexationCell(
 				const callerBase = {
 					tipo: sectionTipo,
 					section_tipo: sectionTipo,
-					section_id: sectionId,
+					// int-canonical (WC-2026-08-10-section-id-int-canonical).
+					section_id: canonicalizeStoredSectionId(sectionId),
 					mode: 'indexation_list',
 					model: 'section',
 					lang: callerLang,
@@ -1065,6 +1074,11 @@ async function relationCell(
 	let currentKey = -1;
 	for (const rawLocator of data) {
 		currentKey += 1;
+		// KEPT UNION: `data` is the record's OWN stored relation bag straight off
+		// jsonb — an unswept install still holds the legacy string form, and the
+		// bag also carries external-service targets whose remote id is a string
+		// by nature (WC-2026-08-10-section-id-int-canonical). Read tolerance
+		// only: nothing here re-persists the locator.
 		const locator = rawLocator as { section_tipo?: string; section_id?: string | number };
 		if (locator === null || typeof locator !== 'object' || locator.section_tipo === undefined) {
 			continue;
@@ -1389,12 +1403,17 @@ export async function buildIndexationGrid(
 		const locator: IndexLocator = {
 			type: typeof entry.type === 'string' ? entry.type : undefined,
 			section_tipo: hit.section_tipo,
-			section_id: String(hit.section_id),
+			// The DB column's own int — no re-stringify
+			// (WC-2026-08-10-section-id-int-canonical).
+			section_id: hit.section_id,
 		};
 		if (entry.tag_component_tipo !== undefined)
 			locator.component_tipo = String(entry.tag_component_tipo);
 		if (entry.tag_id !== undefined) locator.tag_id = String(entry.tag_id);
-		if (entry.section_top_id !== undefined) locator.section_top_id = String(entry.section_top_id);
+		// section_top_id is a record address too: canonicalize the stored form
+		// rather than stringify it (external refs pass verbatim).
+		if (entry.section_top_id !== undefined)
+			locator.section_top_id = canonicalizeStoredSectionId(entry.section_top_id) as number | string;
 		if (entry.section_top_tipo !== undefined)
 			locator.section_top_tipo = String(entry.section_top_tipo);
 		if (entry.from_component_tipo !== undefined) {
@@ -1407,7 +1426,9 @@ export async function buildIndexationGrid(
 	const groups = new Map<string, Map<string, IndexLocator[]>>();
 	for (const locator of locators) {
 		const topTipo = locator.section_top_tipo ?? locator.section_tipo;
-		const topId = locator.section_top_id ?? locator.section_id;
+		// The GROUPING key is a string by construction (a Map key, never
+		// emitted) — the locators inside keep their canonical typed ids.
+		const topId = String(locator.section_top_id ?? locator.section_id);
 		const byId = groups.get(topTipo) ?? new Map<string, IndexLocator[]>();
 		const list = byId.get(topId) ?? [];
 		list.push(locator);

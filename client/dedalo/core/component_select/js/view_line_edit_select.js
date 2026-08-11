@@ -5,7 +5,7 @@
 
 
 // imports
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {handle_select_change} from './component_select.js'
 	import {
@@ -203,7 +203,7 @@ const get_content_value = (i, current_value, self) => {
 			// selected options set on match
 			// Match by both section_id and section_tipo to uniquely identify the locator.
 			if (current_value && datalist_item.value &&
-				current_value.section_id===datalist_item.value.section_id &&
+				same_section_id(current_value.section_id, datalist_item.value.section_id) &&
 				current_value.section_tipo===datalist_item.value.section_tipo
 				) {
 				option_node.selected = true

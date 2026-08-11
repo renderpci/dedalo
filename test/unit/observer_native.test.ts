@@ -62,12 +62,16 @@ let termSeed: TermSeedHandle = { seededChain: false, seededSectionNode: false };
  * relation_search['rsc387'] after an rsc387 save targeting on1/58 — the
  * ancestor chain 8 → 2 → 1, closest-first, typed with the saved items'
  * relation type (dd96). CAPTURED FROM THE LIVE PHP ORACLE 2026-07-11 (the
- * differential pins TS === PHP byte-for-byte on this index).
+ * differential pinned TS === PHP byte-for-byte on this index).
+ *
+ * WC-2026-08-10-section-id-int-canonical: the addresses are INTs now — the
+ * index writer mints them through canonicalizeStoredSectionId. Everything
+ * else in the golden (order, type dd96, from_component_tipo) is untouched.
  */
 const RELATION_SEARCH_GOLDEN = [
-	{ type: 'dd96', section_id: '8', section_tipo: 'on1', from_component_tipo: 'rsc387' },
-	{ type: 'dd96', section_id: '2', section_tipo: 'on1', from_component_tipo: 'rsc387' },
-	{ type: 'dd96', section_id: '1', section_tipo: 'on1', from_component_tipo: 'rsc387' },
+	{ type: 'dd96', section_id: 8, section_tipo: 'on1', from_component_tipo: 'rsc387' },
+	{ type: 'dd96', section_id: 2, section_tipo: 'on1', from_component_tipo: 'rsc387' },
+	{ type: 'dd96', section_id: 1, section_tipo: 'on1', from_component_tipo: 'rsc387' },
 ];
 
 let original: unknown[] = [];
@@ -212,7 +216,8 @@ afterAll(async () => {
 });
 
 describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
-	test('first save APPENDS the mirror entry at the term: next id, dd151, string section_id', () => {
+	// WC-2026-08-10-section-id-int-canonical: the mirror entry's address is int.
+	test('first save APPENDS the mirror entry at the term: next id, dd151, int section_id', () => {
 		expect(afterFirst.length).toBe(original.length + 1);
 		// existing entries preserved byte-identically, in place
 		expect(afterFirst.slice(0, -1)).toEqual(original);
@@ -223,7 +228,7 @@ describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
 		expect(afterFirst[afterFirst.length - 1]).toEqual({
 			id: maxExistingId + 1,
 			type: 'dd151',
-			section_id: String(twinA),
+			section_id: twinA,
 			section_tipo: 'rsc205',
 			from_component_tipo: 'hierarchy93',
 		});
@@ -236,7 +241,7 @@ describe('observer propagation TS-native (rsc387 → hierarchy93)', () => {
 		expect(afterSecond[afterSecond.length - 1]).toEqual({
 			id: firstEntry.id + 1,
 			type: 'dd151',
-			section_id: String(twinB),
+			section_id: twinB,
 			section_tipo: 'rsc205',
 			from_component_tipo: 'hierarchy93',
 		});
@@ -299,14 +304,16 @@ describe('bypass doors fire the observer cascade', () => {
 			const afterRemoval = await termBag();
 			// The twin's entry is GONE; the duplicate's survives.
 			expect(afterRemoval.length).toBe(base.length + 1);
+			// WC-2026-08-10-section-id-int-canonical: mirror entries carry int
+			// addresses, so identify them by the int (no String() laundering).
 			expect(
 				afterRemoval.some(
-					(entry) => (entry as { section_id?: string }).section_id === String(twin),
+					(entry) => (entry as { section_id?: number | string }).section_id === twin,
 				),
 			).toBe(false);
 			expect(
 				afterRemoval.some(
-					(entry) => (entry as { section_id?: string }).section_id === String(copy),
+					(entry) => (entry as { section_id?: number | string }).section_id === copy,
 				),
 			).toBe(true);
 		} finally {

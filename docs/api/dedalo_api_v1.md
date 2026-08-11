@@ -153,7 +153,7 @@ Text-area tags have no API class of their own: tag resolution is served read-tim
 Callers typically send these `source` properties (`rqoSourceSchema`):
 
 - `model` / `tipo` / `section_tipo` — ontology model identifiers.
-- `section_id` — specific record id (string or number in the wild).
+- `section_id` — specific record id, an **integer** (negatives valid; `-1` is the root record). A numeric string still coerces at the boundary, deprecated and counted. External-service remote ids (`001338683`, `Q42`) and synthetic tokens (`search_1`) are not addresses and travel verbatim.
 - `mode` — `list`, `edit`, `search`, `tm`, and so on.
 - `lang` — language code.
 - `action` — a sub-action discriminator used by some methods (e.g. `read` → `get_data`, `resolve_data`, `get_relation_list`).

@@ -24,9 +24,19 @@
  * SEQUENCING: the `source === target` case (defect D4) was planned as a
  * fixture-destroying case, so it lives LAST, in its own describe, with its own
  * `beforeEach` wipe+re-seed and its own tipo (zzt032) — its blast radius is
- * confined to this namespace either way. MEASURED, it is NOT destructive: every
- * matrix table carries UNIQUE (section_id, section_tipo), so the self-INSERT
- * aborts the transaction and the rows survive. See the case comment.
+ * confined to this namespace either way.
+ *
+ * D4 IS FIXED (2026-08-09, WC-2026-08-09-move-to-table-self-move-refused): the
+ * gate now refuses `source_table === target_table` before any SQL runs, and the
+ * cases below pin the REFUSAL. Correcting this header's earlier claim, which
+ * generalised from `matrix_test`: it is NOT true that every matrix table carries
+ * UNIQUE (section_id, section_tipo). `matrix_activity_diffusion` is the one
+ * allowlisted table with only a pkey on `id` (verified in both
+ * dedalo_mib_v7 and dedalo_mib_v7_test), and a self-move there was MEASURED to
+ * duplicate the section and then delete BOTH copies inside a COMMITTED
+ * transaction — 3 scratch rows → 0, `errors: []`, `counts {insert:1,delete:1}`.
+ * The unique index was never a safety net, only a different failure mode (a raw
+ * PostgresError that silently dropped the rest of the definition file).
  */
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
@@ -421,33 +431,35 @@ describe('executeMoveToTable execute', () => {
 // D4 — source === target. LAST IN THE FILE, own fixture, own tipo (zzt032).
 // ---------------------------------------------------------------------------
 
-describe('executeMoveToTable source === target (defect D4)', () => {
+describe('executeMoveToTable source === target (defect D4 — FIXED 2026-08-09)', () => {
+	const SELF_MOVE_ERROR =
+		`move_to_table: refused self-move ${SAME_TABLE} ${SOURCE}→${SOURCE} ` +
+		'(source and target table are the same)';
+
 	beforeEach(async () => {
-		// This case DESTROYS its fixture against today's code, so it wipes and
-		// re-seeds for itself and never shares rows with any case above.
+		// This case DESTROYED its fixture before the fix, so it wipes and re-seeds
+		// for itself and never shares rows with any case above.
 		await wipe();
 		await seed(SOURCE, SAME_TABLE, [903020, 903021, 903022]);
 		expect(await countOf(SOURCE, SAME_TABLE)).toBe(3);
 	});
 
-	test('dry run reports a self-move as if it were legitimate', async () => {
+	test('dry run REFUSES a self-move and promises nothing', async () => {
 		const recorder = new TransformRecorder(true);
 		await executeMoveToTable(
 			[{ source_section: SAME_TABLE, source_table: SOURCE, target_table: SOURCE }],
 			recorder,
 		);
 
-		// DEFECT D4: there is no `source !== target` refusal, so the preview an
-		// operator reads promises a move that is really a self-destruct.
-		// WHEN FIXED, this must become:
-		//   expect(recorder.errors.length).toBe(1)  // 'move_to_table: invalid item …'
-		//   expect(recorder.counts).toEqual({})
-		expect(recorder.errors).toEqual([]);
-		expect(recorder.counts).toEqual({ insert: 1, delete: 1 });
+		// D4 FIXED: the gate refuses before any SQL, so the preview an operator
+		// gates the upgrade on no longer promises a move that is a self-destruct.
+		expect(recorder.errors).toEqual([SELF_MOVE_ERROR]);
+		expect(recorder.counts).toEqual({});
+		expect(recorder.sample).toEqual([]);
 		expect(await countOf(SOURCE, SAME_TABLE)).toBe(3);
 	});
 
-	test('EXECUTE throws a raw PostgresError instead of refusing (pinned)', async () => {
+	test('EXECUTE refuses through the recorder instead of throwing', async () => {
 		const recorder = new TransformRecorder(false);
 		let thrown: unknown = null;
 
@@ -458,29 +470,19 @@ describe('executeMoveToTable source === target (defect D4)', () => {
 			thrown = error;
 		});
 
-		// DEFECT D4 — pinned, NOT endorsed.
-		// MEASURED, and it corrects the plan's premise: the self-move does NOT
-		// silently commit a self-destruct. Every matrix table carries
-		// UNIQUE (section_id, section_tipo), so `INSERT … SELECT` from the table
-		// into itself violates it on the first row; withTransaction rolls the whole
-		// statement pair back, and the raw PostgresError ESCAPES the executor
-		// (nothing is written to recorder.errors — runTransform catches it one level
-		// up and aborts the remaining items of that definition file).
-		// So today's damage is an aborted batch + an operator-hostile DB error, not
-		// data loss. WHEN FIXED (a `source === target` refusal in the identifier
-		// gate) this case must become:
-		//   expect(thrown).toBeNull()
-		//   expect(recorder.errors.length).toBe(1)
-		expect(thrown).not.toBeNull();
-		expect(String(thrown)).toContain('duplicate key value violates unique constraint');
-		expect(recorder.errors).toEqual([]);
+		// D4 FIXED (2026-08-09): `source_table === target_table` is rejected in the
+		// identifier gate, before the INSERT…SELECT + DELETE pair. The refusal goes
+		// to recorder.errors — NOT a throw, which runTransform's per-FILE catch
+		// would swallow along with every remaining item of that definition file.
+		expect(thrown).toBeNull();
+		expect(recorder.errors).toEqual([SELF_MOVE_ERROR]);
 		expect(recorder.counts).toEqual({});
-		// the transaction rolled back: the fixture is intact, nothing was copied
+		// nothing copied, nothing deleted
 		expect(await countOf(SOURCE, SAME_TABLE)).toBe(3);
 		expect(await countOf(TARGET, SAME_TABLE)).toBe(0);
 	});
 
-	test('the throw ABORTS the batch: a later valid item never runs', async () => {
+	test('the refusal does NOT abort the batch: a later valid item still moves', async () => {
 		await seed(SOURCE, MOVABLE, [903001]);
 		const recorder = new TransformRecorder(false);
 		let thrown: unknown = null;
@@ -495,14 +497,16 @@ describe('executeMoveToTable source === target (defect D4)', () => {
 			thrown = error;
 		});
 
-		// DEFECT D4, second face: the loop has no per-item try/catch, so one bad
-		// definition line silently drops every line after it. WHEN FIXED, the
-		// refusal must be recorded and the MOVABLE item must still move
-		// (counts {insert:1, delete:1}, TARGET count 1).
-		expect(thrown).not.toBeNull();
-		expect(recorder.counts).toEqual({});
-		expect(await countOf(SOURCE, MOVABLE)).toBe(1);
-		expect(await countOf(TARGET, MOVABLE)).toBe(0);
+		// D4's second face, FIXED by the same gate: the self-move no longer throws,
+		// so one bad definition line can no longer silently drop every line after
+		// it. The refused item is reported and the MOVABLE item still moves.
+		expect(thrown).toBeNull();
+		expect(recorder.errors).toEqual([SELF_MOVE_ERROR]);
+		expect(recorder.counts).toEqual({ insert: 1, delete: 1 });
+		expect(await countOf(SOURCE, MOVABLE)).toBe(0);
+		expect(await countOf(TARGET, MOVABLE)).toBe(1);
+		// and the refused section is untouched on both ends
+		expect(await countOf(SOURCE, SAME_TABLE)).toBe(3);
 	});
 });
 

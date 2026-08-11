@@ -14,7 +14,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { readSectionRows } from '../../src/core/section/read.ts';
-import { adoptEntriesArrayContract } from './normalize.ts';
+import { adoptEntriesArrayContract, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** One data-bearing component per model family (verified via SQL). */
@@ -129,16 +129,19 @@ describe.if(hasPhpCredentials())('model coverage sweep (pre-Phase-6 measurement)
 			// values, so the normalizer rewrites the PHP side ONLY. The TS side
 			// is compared RAW — if the engine ever regresses to null, this sweep
 			// reddens (the shrunken normalization doubles as the tripwire).
-			const phpItems = adoptEntriesArrayContract(
-				((body.result as { data: Record<string, unknown>[] }).data ?? [])
+			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+			const phpItems = normalizeSectionIdTypes(
+				adoptEntriesArrayContract(
+					((body.result as { data: Record<string, unknown>[] }).data ?? [])
+						.filter((item) => item.tipo === target.tipo)
+						.map(comparable),
+				),
+			);
+			const tsItems = normalizeSectionIdTypes(
+				((await readSectionRows(rqo as unknown as Rqo)) as unknown as Record<string, unknown>[])
 					.filter((item) => item.tipo === target.tipo)
 					.map(comparable),
 			);
-			const tsItems = (
-				(await readSectionRows(rqo as unknown as Rqo)) as unknown as Record<string, unknown>[]
-			)
-				.filter((item) => item.tipo === target.tipo)
-				.map(comparable);
 
 			// Non-empty floor: empty-vs-empty must never count as "matched".
 			if (phpItems.length === 0) {

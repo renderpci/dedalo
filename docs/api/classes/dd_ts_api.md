@@ -16,7 +16,7 @@ Thesaurus / hierarchical-tree API. Use it to read nodes and their children, and 
 ## get_node_data
 
 - **Purpose:** return the parsed data for a thesaurus node.
-- **Accepts:** `source.section_tipo` (string), `source.section_id` (string|int), optional `source.children_tipo` (component tipo), optional `source.area_model` (string, defaults to `area_thesaurus`), optional `options.thesaurus_view_mode` (`default` | `model`).
+- **Accepts:** `source.section_tipo` (string), `source.section_id` (int; a numeric string still coerces, deprecated), optional `source.children_tipo` (component tipo), optional `source.area_model` (string, defaults to `area_thesaurus`), optional `options.thesaurus_view_mode` (`default` | `model`).
 - **Returns:** `result` holds the parsed node-data object (built by the ts_object node builder in `src/core/ts_object/`), or `false` on error; `msg` carries the status and `errors` holds any issues.
 
 ### Example request
@@ -72,7 +72,7 @@ Thesaurus / hierarchical-tree API. Use it to read nodes and their children, and 
 ## add_child
 
 - **Purpose:** add a child node under a parent.
-- **Accepts:** `source.section_tipo` (string, new child tipo), `source.section_id` (string|int, parent section id).
+- **Accepts:** `source.section_tipo` (string, new child tipo), `source.section_id` (int, parent section id; a numeric string still coerces, deprecated).
 - **Returns:** `result` is the newly created `section_id` (int) on success; `msg` carries the status and `errors` may hold issues.
 
 ### Example request

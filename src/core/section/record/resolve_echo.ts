@@ -25,6 +25,7 @@
 import type { ApiResult } from '../../api/response.ts';
 import { isLocatorInArray } from '../../concepts/locator.ts';
 import type { Rqo } from '../../concepts/rqo.ts';
+import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import type { Principal } from '../../security/permissions.ts';
 import type { ChangedDataItem } from './save_component.ts';
 
@@ -107,9 +108,12 @@ export async function resolveRelationEcho(options: {
 	// (synthetic record — read.ts expandPortal stamp), so match by tipo only and
 	// RE-STAMP the caller's id: the client picks its item by comparing the
 	// stringified record id against its own (component_common.js:400).
-	// The resolved entries are the string-cast locators the JSONB @> containment
-	// needs — rebuilding from the raw numeric `picked` here would echo a numeric
-	// section_id that misses every string-stored relation locator (0 rows).
+	// The resolved entries carry the canonical locator form. The old law here
+	// ("echo the string cast or the @> containment misses every string-stored
+	// locator") is REPEALED by WC-2026-08-10-section-id-int-canonical: search
+	// probes now try BOTH typed forms (search/containment.ts), so the echo is
+	// free to carry the canonical int and no longer has to pin the wire to the
+	// storage type of the moment.
 	let mainItem = resolved.find(
 		(item) =>
 			(item as { tipo?: string }).tipo === source.tipo &&
@@ -124,11 +128,15 @@ export async function resolveRelationEcho(options: {
 			source.section_id ?? null,
 			mode,
 			source.lang ?? 'lg-nolan',
-			// Same string cast as resolveSearchData's echo (PHP locator parity,
-			// class.locator.php set_section_id).
+			// Canonical emission (WC-2026-08-10-section-id-int-canonical): a
+			// record address goes out as an INT; an external remote id
+			// ('001338683', 'Q42') and a synthetic token survive VERBATIM —
+			// which is exactly what canonicalizeStoredSectionId does, and why
+			// the blanket String() cast (PHP class.locator.php set_section_id)
+			// is gone rather than inverted into a blanket Number().
 			picked.map((locator) =>
 				locator.section_id !== undefined && locator.section_id !== null
-					? { ...locator, section_id: String(locator.section_id) }
+					? { ...locator, section_id: canonicalizeStoredSectionId(locator.section_id) }
 					: locator,
 			),
 		);

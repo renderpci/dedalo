@@ -927,6 +927,70 @@ DEDALO_FILE_BIN_PATH="/usr/bin/file"
 
 ### Georeferencing variables
 
+DEDALO_GEO_DEFAULT_LAT `float`
+
+Latitude the geolocation map OPENS on when the record has no coordinate stored.
+
+This is a camera position, never data: it is only where the map is looking before the user
+places anything, and it is never saved into the record. A record without coordinates stays
+without coordinates, and nothing is published for it.
+
+The default (latitude 20, longitude 0, zoom 2) is a world view, chosen precisely because it
+cannot be mistaken for a real location. An institution whose records cluster in one region
+should set the three DEDALO_GEO_DEFAULT_* keys to that region so cataloguers do not have to
+pan the map on every new record.
+
+```bash
+DEDALO_GEO_DEFAULT_LAT="20"
+```
+
+*Default: 20*
+
+---
+
+### Georeferencing variables
+
+DEDALO_GEO_DEFAULT_LON `float`
+
+Longitude the geolocation map OPENS on when the record has no coordinate stored.
+
+The companion of DEDALO_GEO_DEFAULT_LAT: together with DEDALO_GEO_DEFAULT_ZOOM they define the
+opening camera of the map widget. It is a view, not a value — opening a record and saving it
+stores no coordinate.
+
+Change it, with the other two keys, when the collection is regional and the world view wastes
+the cataloguer's time.
+
+```bash
+DEDALO_GEO_DEFAULT_LON="0"
+```
+
+*Default: 0*
+
+---
+
+### Georeferencing variables
+
+DEDALO_GEO_DEFAULT_ZOOM `int`
+
+Zoom level the geolocation map OPENS on when the record has no coordinate stored.
+
+Leaflet zoom scale: 2 is the whole world, ~6 a country, ~12 a city, ~18 a street. The default 2
+matches the world-view default of DEDALO_GEO_DEFAULT_LAT / DEDALO_GEO_DEFAULT_LON.
+
+Raise it together with the two coordinate keys when every record of the install belongs to the
+same region, so the map opens already framed on it.
+
+```bash
+DEDALO_GEO_DEFAULT_ZOOM="2"
+```
+
+*Default: 2*
+
+---
+
+### Georeferencing variables
+
 DEDALO_GEO_PROVIDER `string`
 
 This parameter defines the tile maps provider to be used.

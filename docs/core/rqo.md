@@ -160,8 +160,8 @@ The API class method to execute. The core action set (`ACTION_REGISTRY['dd_core_
 | `start` | First-load bootstrap. Resolves the URL element (section / section_tool / area_* / tool_* / component_*) to its structure context plus environment. Handles recovery mode, install-not-ready and not-logged (login context). | `{context: array, data: []}`; always also `response.environment` |
 | `read` | Fetch context+data for a source element. Sub-dispatches on `source->action` (see below). | `{context: array, data: array}` |
 | `read_raw` | Unrendered JSONB straight from the matrix table, by `options->type` (`section` / `component` / `target_section`). Used by `tool_export`. | `result: array` of raw rows; plus `response.table` |
-| `create` | Insert an empty record into a section's matrix table (counter service). Requires write (≥ 2). | `result: string` new `section_id`, or `false` |
-| `duplicate` | Deep-copy a record. Two gates: section write (≥ 2) **and** the caller's project/tenant scope over the source record. | `result: string` new `section_id`, or `false` |
+| `create` | Insert an empty record into a section's matrix table (counter service). Requires write (≥ 2). | `result: int` new `section_id`, or `false` |
+| `duplicate` | Deep-copy a record. Two gates: section write (≥ 2) **and** the caller's project/tenant scope over the source record. | `result: int` new `section_id`, or `false` |
 | `delete` | Remove records. Target = `sqo` (preferred, multi-record) or `source->section_id`. Section model only, write (≥ 2). | forwarded result |
 | `save` | Persist component changes. Only `source->type:'component'` is implemented. | `result: {context, data}` (refreshed element) or `false` |
 | `count` | `COUNT(*)` for the SQO. Forces `full_count=true`, merges the session filter, returns `0` on permission denial (no leak). | `result: {total: int}` (or `0`) |
@@ -187,7 +187,7 @@ Identity of the calling element — built client-side by `create_source()` (`cor
 | `model` | `string` | Element model (`section`, `component_portal`, ...). Recalculated server-side from `tipo` when omitted |
 | `tipo` | `string` | Ontology tipo of the element |
 | `section_tipo` | `string` | Target section tipo (mandatory in `read`) |
-| `section_id` | `string\|int\|null` | Record id; `null` for lists/new records |
+| `section_id` | `int\|null` | Record id — always an integer (negatives valid; `-1` is the root record). `null` (or absent) for lists/new records. A numeric string still coerces at the boundary, deprecated and counted; external-service remote ids (`001338683`, `Q42`) and synthetic tokens (`search_1`) are not addresses and travel verbatim. Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md` |
 | `mode` | `string` | `edit` \| `list` \| `search` \| `tm` \| ... |
 | `lang` | `string` | Data language (`lg-eng`, `lg-nolan`, ...) |
 | `view` | `string` | View variant (`default`, `line`, `mosaic`, ...) |
@@ -537,7 +537,7 @@ The envelope is always `{result, msg, errors, action, csrf_token}`; only the **s
 | `read` (`get_value`) | the plain rendered component value |
 | `read_raw` | `array` of raw JSONB rows (+ `response.table`) |
 | `count` | `{total: <int>}` (or `0` on permission denial) |
-| `create` / `duplicate` | `<new section_id>` (string) or `false` |
+| `create` / `duplicate` | `<new section_id>` (int) or `false` |
 | `delete` | object forwarded from `sections::delete()` |
 | `save` | `{context, data}` of the refreshed element, or `false` |
 | `get_element_context` | a single context `object` |

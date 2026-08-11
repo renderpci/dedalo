@@ -72,6 +72,7 @@
 // imports
 	import {ui} from '../../../common/js/ui.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
+	import {same_section_id} from '../../../common/js/utils/index.js'
 
 
 
@@ -297,7 +298,7 @@ const build_detail_container = function(params) {
 		// selected option name
 		const datalist_item = (row.item && row.item.locator)
 			? self.datalist.find(item => item.value.section_tipo === row.item.locator.section_tipo
-									&& item.value.section_id === row.item.locator.section_id) || {label: ''}
+									&& same_section_id(item.value.section_id, row.item.locator.section_id)) || {label: ''}
 			: {label: ''}
 		const node_label_list = ui.create_dom_element({
 			element_type	: 'label',
@@ -829,7 +830,7 @@ const get_value_element = (i, data, self) => {
 					if(node.type==='detail'){
 						const datalist_item = (new_data.locator)
 							? self.datalist.find(item => item.value.section_tipo===new_data.locator.section_tipo
-													  && item.value.section_id===new_data.locator.section_id)
+													  && same_section_id(item.value.section_id, new_data.locator.section_id))
 							: {label: ''}
 
 						node.node_label_list.innerHTML = datalist_item.label

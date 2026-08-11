@@ -27,8 +27,14 @@ import { registerSectionDataListener } from '../section_record/save_event.ts';
  * {value, label, section_id}.
  */
 export interface SelectLangDatalistItem {
-	value: { section_tipo: string; section_id: string };
+	/** The lg1 record address — INT (WC-2026-08-10-section-id-int-canonical). */
+	value: { section_tipo: string; section_id: number };
 	label: string;
+	/**
+	 * NOT a record address: the 'lg-<code>' language token the widget keys its
+	 * options by. It stays a STRING verbatim — same field name, different
+	 * concept (concepts/section_id.ts header).
+	 */
 	section_id: string;
 }
 
@@ -168,7 +174,9 @@ function strcmp(a: string, b: string): number {
 export async function getSelectLangDatalist(lang: string): Promise<SelectLangDatalistItem[]> {
 	const langs = await resolveProjectLangs();
 	const items: SelectLangDatalistItem[] = langs.map((resolved) => ({
-		value: { section_tipo: LANGS_SECTION_TIPO, section_id: String(resolved.section_id) },
+		// Canonical int: this locator is what the widget posts back and save
+		// persists (WC-2026-08-10-section-id-int-canonical).
+		value: { section_tipo: LANGS_SECTION_TIPO, section_id: resolved.section_id },
 		label: fallbackLangValue(resolved.names, lang) ?? resolved.code,
 		section_id: `lg-${resolved.code}`,
 	}));

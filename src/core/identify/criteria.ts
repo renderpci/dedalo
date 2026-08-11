@@ -20,12 +20,15 @@
  * ────────────────────────────────────────────────────────────────────────────
  * An array of locators in ONE leaf is AND, not OR. Verified twice, end to end:
  *
- *  1. CODE. `search/builders/builder_relation.ts` normalizeRelationQ (:36-54)
- *     joins every locator of the q array into ONE JSON array and the default
- *     branch (:149-151) emits a SINGLE containment:
- *       `<alias>.relation @> '{"<tipo>":[loc1,loc2]}'::jsonb`
- *     jsonb `@>` requires EVERY element of the right-hand array to be contained
- *     in the left — so the record must hold loc1 AND loc2.
+ *  1. CODE. `search/builders/builder_relation.ts` compiles the q array through
+ *     `search/containment.ts` (relationProbeGroups + composeContains): one
+ *     probe GROUP per locator, ANDed together —
+ *       `(rel @> {"<tipo>":[loc1]} …) AND (rel @> {"<tipo>":[loc2]} …)`
+ *     which is the per-element decomposition of the historical whole-array
+ *     `@> '{"<tipo>":[loc1,loc2]}'` probe: same AND semantics (every locator
+ *     must be contained), now tolerant of mixed-typed stored data
+ *     (WC-2026-08-10-section-id-int-canonical). The record must still hold
+ *     loc1 AND loc2 — the DATABASE proof below remains the law.
  *  2. DATABASE. Against the live test store (matrix_test, test3/1, whose
  *     `test88` holds dd64/1 and dd64/2):
  *       @> {"test88":[dd64/1]}            → matches
@@ -40,10 +43,13 @@
  *
  * THIRD VERIFIED FACT — jsonb containment is TYPE-STRICT. `{"section_id": 1}`
  * does NOT match the stored `{"section_id": "1"}` (same probe: numeric id → no
- * rows). The compiler therefore passes the seed's `section_id` through
- * VERBATIM, exactly as the reader found it stored, and never normalizes it.
- * `concepts/locator.ts` compares section_ids loosely; jsonb does not, and jsonb
- * is what runs.
+ * rows). The old verbatim-pass law this fact used to justify is REPEALED
+ * (WC-2026-08-10-section-id-int-canonical): builder_relation now probes BOTH
+ * typed forms of every locator's section_id, so type-strictness can no longer
+ * lose rows whatever form the seed stored. The compiler therefore emits the
+ * CANONICAL form (canonicalizeStoredSectionId: '7'→7; a non-convertible
+ * external remote id like '001338683' stays verbatim — the stored form is the
+ * only form that exists for it).
  *
  * FOURTH VERIFIED FACT — the emitted q must carry only the fields identity
  * compares on. `@>` object containment is key-SUBSET, so extra fields only
@@ -54,6 +60,7 @@
  * (`id` is stripped by the reader and by normalizeRelationQ:46 anyway).
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import type { SqoFilterLeaf, SqoFilterNode } from '../concepts/sqo.ts';
 import type { Criterion, CriterionPathStep, CriterionValue, ValueLocator } from './types.ts';
 
@@ -108,11 +115,18 @@ function secondsToYear(seconds: number): number {
 /**
  * One relation leaf: ONE locator's containment at the criterion path. Only the
  * identity fields travel (see the module doc's fourth verified fact), and
- * `section_id` travels VERBATIM — jsonb containment is type-strict.
+ * `section_id` travels in CANONICAL form (WC-2026-08-10: int for a record
+ * address, verbatim for an external remote id) — recall does not depend on it,
+ * because builder_relation probes both typed forms of whatever we emit.
  */
 function locatorLeaf(locator: ValueLocator, path: CriterionPathStep[]): SqoFilterLeaf {
 	return {
-		q: [{ section_tipo: locator.section_tipo, section_id: locator.section_id }],
+		q: [
+			{
+				section_tipo: locator.section_tipo,
+				section_id: canonicalizeStoredSectionId(locator.section_id) as number | string,
+			},
+		],
 		path: sqoPath(path),
 	};
 }

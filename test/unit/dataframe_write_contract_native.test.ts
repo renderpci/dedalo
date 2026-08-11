@@ -190,7 +190,9 @@ describe('dataframe WRITE contract — a raw client locator is normalized, never
 			id: expect.any(Number), // minted from the slot counter
 			type: 'dd490', // FORCED by the server — the client sent none
 			id_key: 1, // from source.caller_dataframe, not the payload
-			section_id: '500', // STRING — the client sent the number 500
+			// WC-2026-08-10-section-id-int-canonical: the client sent the number
+			// 500 and it STAYS an int (repeals the "stored as string" pin).
+			section_id: 500,
 			section_tipo: 'rsc1242',
 			from_component_tipo: FRAME, // forced to the slot tipo
 			main_component_tipo: MAIN, // from the caller context

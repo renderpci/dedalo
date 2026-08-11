@@ -303,10 +303,13 @@ async function runLocatorPage(
 	sqo: Sqo,
 ): Promise<{ section_tipo: string; section_id: number }[]> {
 	const pageQuery = await buildSearchSql(sqo, { principal });
+	// matrix.section_id is an INT column, so the row carries the address typed
+	// (WC-2026-08-10-section-id-int-canonical); `full_count` below stays
+	// union-typed because count(*) is bigint and arrives as text.
 	const rows = (await sql.unsafe(
 		pageQuery.sql,
 		pageQuery.params as (string | number | null)[],
-	)) as { section_id: number | string; section_tipo: string }[];
+	)) as { section_id: number; section_tipo: string }[];
 	return rows.map((row) => ({
 		section_tipo: row.section_tipo,
 		section_id: Number(row.section_id),

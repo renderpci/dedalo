@@ -49,6 +49,7 @@ import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import {
 	applyDataframeRestore,
 	composeTimeMachineSnapshot,
@@ -217,17 +218,28 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 			}
 			const writeTarget = { table, sectionTipo: row.section_tipo, sectionId: row.section_id };
 
+			// int-canonical convergence on the reverted value (WC-2026-08-10-
+			// section-id-int-canonical D6.2): pre-migration TM states carry
+			// string-form addresses; converting on the way back in keeps the
+			// revert from undoing the sweep. Same kernel, same rule. Done BEFORE
+			// the frame strip/plan so both read the canonical addresses.
+			const revertContainer = { value: revertData };
+			await normalizeRestoredSectionIds(revertContainer);
+			const canonicalRevertData = revertContainer.value;
+
 			// A `component_dataframe` row IS a slot: its snapshot's dd490 entries
 			// are its own value, so it takes neither the frame strip nor a slot
 			// plan (there is no TM preview to disagree with here, unlike
 			// apply_value — see that door's header).
 			const isSlotRow = model === 'component_dataframe';
-			const mainData = isSlotRow ? revertData : stripDataframeFramesFromTmMain(model, revertData);
+			const mainData = isSlotRow
+				? canonicalRevertData
+				: stripDataframeFramesFromTmMain(model, canonicalRevertData);
 			const framePlan: DataframeSlotRestore[] = isSlotRow
 				? []
 				: await planDataframeRestore(
 						row.tipo,
-						revertData,
+						canonicalRevertData,
 						await resolveDataframeSlotTipos(row.tipo),
 					);
 
@@ -302,7 +314,7 @@ export async function toolTimeMachineBulkRevert(ctx: ToolActionContext): Promise
 				data: {
 					msg: 'Recovered component data from time machine',
 					model,
-					section_id: String(row.section_id),
+					section_id: row.section_id,
 					section_tipo: row.section_tipo,
 					table,
 					tm_id: newBulkId,

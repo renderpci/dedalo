@@ -102,7 +102,9 @@ export async function activateHierarchy(
 			{
 				id: 1,
 				type: RELATION_TYPE_LINK,
-				section_id: String(typology),
+				// WC-2026-08-10-section-id-int-canonical: typology is the int address of
+				// the hierarchy-types record.
+				section_id: typology,
 				section_tipo: HIERARCHY_TYPES_SECTION,
 				from_component_tipo: HIERARCHY_TYPOLOGY,
 			},

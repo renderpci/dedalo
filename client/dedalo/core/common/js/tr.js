@@ -35,6 +35,33 @@ export const tr = {
 
 
 	/**
+	* TAG_BADGE_VERSION
+	* Fingerprint of the SERVER-SIDE badge drawing
+	* (src/core/components/component_text_area/tag_render.ts), appended to every
+	* deterministic badge `<img>` src as `&v=`.
+	*
+	* Why it exists: the badge URL is otherwise version-free (`?id=[index-n-1-x]`),
+	* while the bytes it returns are a function of the renderer — and the renderer
+	* DOES change (WC-2026-08-11-vector-tag-badges redrew every badge). Without a
+	* token in the URL, a browser that already cached a badge keeps the old drawing
+	* for as long as its cached response is fresh, so a rendering fix never reaches
+	* the very users who reported it. The token changes the CACHE KEY only: the
+	* endpoint answers on `?id=` alone and ignores this param (it only uses its
+	* PRESENCE to decide it may answer `immutable`).
+	*
+	* BUMPING IT IS NOT OPTIONAL AND NOT MANUAL GUESSWORK: the value is the
+	* fingerprint of the rendered badge set, computed and pinned by
+	* test/unit/text_area_tag_grammar.test.ts ("badge renderer fingerprint"). Change
+	* any pill, icon or label geometry and that gate goes red with the new value to
+	* paste here.
+	*
+	* @type {string}
+	*/
+	tag_badge_version : 'b948b27e',
+
+
+
+	/**
 	* GET_MARK_PATTERN
 	* Returns the canonical compiled RegExp for a named Dédalo transcription
 	* tag type. Centralising patterns here ensures that detection, stripping,
@@ -223,7 +250,7 @@ export const tr = {
 	* Example transformation:
 	*   `[TC_00:00:25.684_TC]`
 	*   → `<img id="[TC_00:00:25.684_TC]" src="../../core/component_text_area/tag/?id=[TC_00:00:25.684_TC]"
-	*         width="82" height="15" class="tc" data-type="tc" ...>`
+	*         width="82" height="15" loading="lazy" class="tc" data-type="tc" ...>`
 	*
 	* Processing order matters: tags are replaced sequentially (indexIn before
 	* indexOut, etc.) so that overlapping patterns do not interfere.
@@ -253,6 +280,18 @@ export const tr = {
 		// The endpoint returns a small preview image for a given tag ID string.
 		const tag_url = '../../core/component_text_area/tag/?id=';
 
+		/**
+		* BADGE_SRC
+		* src for a DETERMINISTIC badge (tc/index/geo/page/person/note/lang/draw):
+		* the id plus the renderer fingerprint, so a redrawn badge is a new cache
+		* entry instead of a year-old one (see tr.tag_badge_version).
+		* The locator/`svg` tag does NOT use it: that src is a media redirect whose
+		* bytes do not come from the badge renderer.
+		* @param {string} id - already-escaped bracket tag id
+		* @returns {string} versioned badge URL
+		*/
+		const badge_src = (id) => `${tag_url}${id}&v=${tr.tag_badge_version}`
+
 		// SEC-028: escape attribute-context interpolation.
 		// (!) All capture-group values MUST pass through esc() before being
 		// placed inside an HTML attribute. Skipping this step re-opens the
@@ -279,14 +318,14 @@ export const tr = {
 			const pattern_indexIn = tr.get_mark_pattern('indexIn');
 			text = text.replace(pattern_indexIn, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="34" height="15" class="index" data-type="indexIn" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="34" height="15" loading="lazy" class="index" data-type="indexIn" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// INDEX OUT
 			const pattern_indexOut = tr.get_mark_pattern('indexOut');
 			text = text.replace(pattern_indexOut, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[/${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="34" height="15" class="index" data-type="indexOut" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="34" height="15" loading="lazy" class="index" data-type="indexOut" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// REFERENCE IN
@@ -302,35 +341,35 @@ export const tr = {
 		// TC. [TC_00:00:25.091_TC] — captures: 1=full_tag, 2=tc_value (digits/colons only)
 			const pattern_tc = tr.get_mark_pattern('tc');
 			text = text.replace(pattern_tc, (_m, g1, g2) => {
-				return `<img id="${esc(g1)}" src="${tag_url}${esc(g1)}" width="82" height="15" class="tc" data-type="tc" data-tag_id="${esc(g1)}" data-state="n" data-label="${esc(g2)}" data-data="${esc(g2)}">`
+				return `<img id="${esc(g1)}" src="${badge_src(esc(g1))}" width="82" height="15" loading="lazy" class="tc" data-type="tc" data-tag_id="${esc(g1)}" data-state="n" data-label="${esc(g2)}" data-data="${esc(g2)}">`
 			});
 
 		// SVG. captures: 2=type, 3=state, 4=tag_id, 6=label, 7=data
 			const pattern_svg = tr.get_mark_pattern('svg');
 			text = text.replace(pattern_svg, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${esc(g7)}" height="15" class="svg" data-type="svg" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${tag_url}${esc(g7)}" height="15" loading="lazy" class="svg" data-type="svg" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// DRAW
 			const pattern_draw = tr.get_mark_pattern('draw');
 			text = text.replace(pattern_draw, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" height="15" class="draw" data-type="draw" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" height="15" loading="lazy" class="draw" data-type="draw" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// GEO
 			const pattern_geo = tr.get_mark_pattern('geo');
 			text = text.replace(pattern_geo, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="38" height="15" class="geo" data-type="geo" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="38" height="15" loading="lazy" class="geo" data-type="geo" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// PAGE. captures: 2=type, 3=state, 4=tag_id, 5=outer optional, 6=label, 7=data
 			const pattern_page = tr.get_mark_pattern('page');
 			text = text.replace(pattern_page, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="38" height="15" class="page" data-type="page" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="38" height="15" loading="lazy" class="page" data-type="page" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// PERSON. pattern: /(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])/
@@ -338,21 +377,21 @@ export const tr = {
 			const pattern_person = tr.get_mark_pattern('person');
 			text = text.replace(pattern_person, (_m, _g1, g2, g3, g4, g5, g6) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g5)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="72" height="15" class="person" data-type="person" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g5)}" data-data="${esc(g6)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="72" height="15" loading="lazy" class="person" data-type="person" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g5)}" data-data="${esc(g6)}">`
 			});
 
 		// NOTE
 			const pattern_note = tr.get_mark_pattern('note');
 			text = text.replace(pattern_note, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="22" height="15" class="note" data-type="note" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="22" height="15" loading="lazy" class="note" data-type="note" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		// LANG
 			const pattern_lang = tr.get_mark_pattern('lang');
 			text = text.replace(pattern_lang, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
 				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
-				return `<img id="${id}" src="${tag_url}${id}" width="50" height="15" class="lang" data-type="lang" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+				return `<img id="${id}" src="${badge_src(id)}" width="50" height="15" loading="lazy" class="lang" data-type="lang" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
 			});
 
 		return text

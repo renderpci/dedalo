@@ -1,12 +1,13 @@
 /**
  * Import data engine (PHP component_common::conform_import_data +
- * unwrap_dedalo_data). Turns a CSV cell into a v7 component dato.
+ * unwrap_dedalo_data). Turns a CSV cell into a v7 component value.
  *
  * TWO PATHS, and the difference is the whole design:
  *
- *   - a cell that IS json is the STORED DATO coming back (a `dedalo_raw` export
- *     wraps each dato as {"dedalo_data": <dato>}). Re-importing it must reproduce
- *     the dato EXACTLY — the round-trip invariant. This path is mostly
+ *   - a cell that IS json is the STORED DATA coming back (a `dedalo_raw` export
+ *     wraps each component's stored slice as {"dedalo_data": <slice>}).
+ *     Re-importing it must reproduce it EXACTLY — the round-trip invariant.
+ *     This path is mostly
  *     model-agnostic, so it works for every component model, ported or not.
  *   - a cell that is NOT json is HUMAN input ('12-03-1998', '1.234,56',
  *     '41.38, 2.17', '273,418'). Parsing it is model-specific: each model
@@ -74,27 +75,57 @@ export interface UnwrapResult {
 	value: string;
 	/** Whether the {"dedalo_data":…} wrapper was recognized (its SOLE property). */
 	wrapped: boolean;
-	/** The dataframe array when the inner used the {dato, dataframe} envelope. */
+	/** The dataframe array when the inner used the LEGACY {data, dataframe} envelope. */
 	dataframe: unknown[] | null;
 	/**
-	 * False when the envelope carried ONLY frames ({"dataframe":[…]} with no
-	 * `dato`): the component's own data must then be left UNTOUCHED — only the
-	 * frames are written. Distinct from an empty dato, which CLEARS.
+	 * False when the legacy envelope carried ONLY frames ({"dataframe":[…]} with
+	 * no data key): the component's own data must then be left UNTOUCHED — only
+	 * the frames are written. Distinct from an empty value, which CLEARS.
 	 */
-	hasDato: boolean;
+	hasData: boolean;
+}
+
+/**
+ * The READ-ONLY LEGACY inner envelope
+ * (WC-2026-08-09-export-raw-dataframe-own-column): frames folded into their
+ * main component's cell as {data|dato, dataframe}. Since 2026-08-09 the raw
+ * export gives every dataframe slot its OWN column, so nothing we write ever
+ * carries this again — but files exported before that, and v6/PHP-era files
+ * (which spelled the key `dato`), must still import. Both spellings are
+ * accepted; neither is ever emitted.
+ *
+ * Returns null when `inner` is not that envelope, so the caller passes it
+ * through as an ordinary wrapped value.
+ */
+function splitLegacyFrameEnvelope(
+	inner: unknown,
+): { value: unknown; dataframe: unknown[] | null; hasData: boolean } | null {
+	if (inner === null || typeof inner !== 'object' || Array.isArray(inner)) return null;
+	const keys = Object.keys(inner);
+	if (!keys.includes('dataframe')) return null;
+	if (!keys.every((key) => key === 'data' || key === 'dato' || key === 'dataframe')) return null;
+
+	const envelope = inner as { data?: unknown; dato?: unknown; dataframe?: unknown };
+	const hasData = Object.hasOwn(envelope, 'data');
+	return {
+		value: (hasData ? envelope.data : envelope.dato) ?? null,
+		dataframe: Array.isArray(envelope.dataframe) ? envelope.dataframe : null,
+		hasData: hasData || Object.hasOwn(envelope, 'dato'),
+	};
 }
 
 /**
  * Strip the dedalo_data wrapper (PHP unwrap_dedalo_data). Recognized only when
  * `dedalo_data` is the SOLE property — {"dedalo_data":1,"other":2} is a legit
- * component_json value and passes through unchanged.
+ * component_json value and passes through unchanged. The legacy frame envelope
+ * inside it, if any, is split out by splitLegacyFrameEnvelope.
  */
 export function unwrapDedaloData(importValue: string): UnwrapResult {
 	const result: UnwrapResult = {
 		value: importValue,
 		wrapped: false,
 		dataframe: null,
-		hasDato: true,
+		hasData: true,
 	};
 	if (!isJson(importValue)) return result;
 	let decoded: unknown;
@@ -108,18 +139,11 @@ export function unwrapDedaloData(importValue: string): UnwrapResult {
 	if (keys.length !== 1 || keys[0] !== 'dedalo_data') return result;
 
 	let inner = (decoded as { dedalo_data: unknown }).dedalo_data;
-	// The {dato, dataframe} envelope (dataframe-paired components).
-	if (inner !== null && typeof inner === 'object' && !Array.isArray(inner)) {
-		const innerKeys = Object.keys(inner);
-		if (
-			innerKeys.includes('dataframe') &&
-			innerKeys.every((k) => k === 'dato' || k === 'dataframe')
-		) {
-			const env = inner as { dato?: unknown; dataframe?: unknown };
-			result.dataframe = Array.isArray(env.dataframe) ? env.dataframe : null;
-			result.hasDato = Object.hasOwn(env, 'dato');
-			inner = env.dato ?? null;
-		}
+	const legacy = splitLegacyFrameEnvelope(inner);
+	if (legacy !== null) {
+		inner = legacy.value;
+		result.dataframe = legacy.dataframe;
+		result.hasData = legacy.hasData;
 	}
 	if (inner === null) {
 		result.value = '';

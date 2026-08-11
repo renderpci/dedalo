@@ -117,11 +117,42 @@ This is the mode that tells you whether your data is clean. It classifies every 
 
 | Bucket | Meaning | What you do |
 | --- | --- | --- |
-| **auto-fixed** | repaired in memory during the run — most often a value stored as a bare language map, which gets wrapped | nothing |
+| **auto-fixed** | repaired in memory during the run — most often a value stored as a bare language map, which gets wrapped, or a fabricated map view, which is [repaired below](#the-fabricated-map-view) | nothing |
 | **notices** | dropped on purpose, typically a value under a tipo that no longer exists in the ontology | read them, decide whether the loss matters |
 | **needs attention** | the ontology model and the stored shape disagree — a human must decide | **fix it before migrating**; this is the only bucket that blocks |
 
 A non-empty *needs attention* bucket fails the preflight. See [when something goes wrong](#8-when-something-goes-wrong-data-errors).
+
+Both counters and the review file are written **before** the migration writes a single converted row, so a large *auto-fixed* count is something you read and understand first, not something you discover afterwards. Only this mode produces real counts for the repair below: a plain preflight runs without the ontology, so no component model resolves and no geolocation finding can appear.
+
+#### The fabricated map view
+
+An *auto-fixed* count in the tens of thousands is normal, and it is almost always this. It has one cause, and the migration repairs it while it converts.
+
+A geolocation item holds two independent things: the **view** — `lat` / `lon` / `zoom`, the map framing an operator chose — and the **features**, the shapes drawn on the map. Earlier editors seeded the view with the client's factory map position, `39.462571 / -0.376295` (the Dédalo facilities' own coordinates), **into the record's value** at the moment the form was drawn, and the save button did not ask whether anything had actually changed. So merely opening a record and pressing save stored a view nobody chose.
+
+That pair is a factory default, not a place. An item holding it exactly is fabricated, and the migration takes it out so that no v7 database is born carrying it. (v7 publication refuses the pair as well, so a fabricated view never reaches a consumer either way — but fabricated data has no business sitting in a new store.)
+
+What the run does with each affected item, and nothing more:
+
+| Stored value | What the migration does |
+| --- | --- |
+| the default view, and nothing drawn on the map | the **whole item is removed**, altitude included. The record ends with *no* geolocation — which is the truth about a record nobody ever located |
+| the default view, with features drawn on the map | the features are kept untouched and the **view is fitted to them**: `lat`/`lon` become the bounding-box centre of every feature on that item. Zoom, altitude and the drawing itself are preserved exactly |
+| anything else | untouched. `0 / 0` is a coordinate like any other and survives; no other value is special-cased |
+
+!!! note "Fitting a view to the features is not authoring a location"
+    A view is a frame, not a claim about where the thing is. When the fabricated pair sits on an item that carries features, clearing the view would discard framing for work that exists, and keeping it would frame the studio instead of the work — so the migration fits the frame to the work. That is what a view is for; it asserts no feature. For a single drawn point the fitted view *is* that point, verbatim. If the geometry yields no usable position, nothing is fitted and the item is **kept exactly as it is** for review.
+
+!!! warning "`0` publishes on v7, and it did not on v6"
+    The v6 emptiness test was falsy-based, so an item stored at `lat 0` or `lon 0` published nothing. On v7 `0` is a real coordinate — the equator and the prime meridian — and it publishes. The migration does not touch those items, deliberately: `0 / 0` is a legal position and mechanically indistinguishable from one somebody meant. If your v6 store used `0 / 0` as a placeholder, that is a **curatorial** clean-up to do before you publish, and the review file will not flag it.
+
+!!! note "A record genuinely located near the studio keeps its own coordinates"
+    There is no true positive to protect. The pair is the client's factory default, so a record merely *named* after that city carries it as fabricated as any other record does — a genuinely positioned record holds its own coordinates, which are not this pair. Nothing correct is caught, and there is no place-name test anywhere in the migration.
+
+Two more things the migration does not do: it never repairs **history** — the Time Machine pass rewrites nothing, and a history row whose payload is *only* the default view is deleted rather than edited — and it never renumbers a multi-item component: a default-only item sharing its component with other items is reported and migrated unchanged, for a human to decide.
+
+Where the numbers are: the **auto-fixed** counter on the panel, and `var/data_review.json` next to the log, which counts the removed items (`GEOLOCATION_DEFAULT_ITEM_REMOVED`) and the refitted views (`GEOLOCATION_VIEW_FITTED_TO_GEOMETRY`) on separate lines so you can tell the two apart; the two "kept for review" cases are notices (`GEOLOCATION_DEFAULT_ITEM_MIXED`, `GEOLOCATION_GEOMETRY_NO_POSITION`). Expect the thesaurus store to dominate the count: the geolocation field hangs off a section group every thesaurus section inherits, so a term that never had anything to do with a place can still carry a fabricated view. Read your own preflight for the figures — there is no representative number to compare against.
 
 !!! note "The ontology step is safe to leave in place"
     Building the v7 ontology only *adds* — the matrix tables are not rewritten and the v6 data is intact. An install can sit at that state and continue later. Run steps 1 and 2 (the numbered list in [3.3](#33-migrate)) are idempotent, so re-running after a partial failure is safe.
@@ -141,9 +172,12 @@ The panel is only a tail: closing it does not stop the run. From the shell, `ps 
 What the run does, in order:
 
 1. **Backup**, then build the v7 ontology.
-2. **Schema and data transform**: adds the v7 typed columns (`data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta`) to 23 matrix tables, then redistributes each record's single v6 value blob into them by component model. Rebuilds the time machine, drops the legacy `datos` column, then migrates the dataframe pairing locators to the v7 contract, materialises IRI titles, and finally builds and backfills the two derived search stores.
+2. **Schema and data transform**: adds the v7 typed columns (`data`, `relation`, `string`, `date`, `iri`, `geo`, `number`, `media`, `misc`, `relation_search`, `meta`) to 23 matrix tables, then redistributes each record's single v6 value blob into them by component model — applying, on the way, the same repairs the deep preflight counted, including [the fabricated map view](#the-fabricated-map-view). Rebuilds the time machine, drops the legacy `datos` column, migrates the dataframe pairing locators to the v7 contract, materialises IRI titles, then **unifies `section_id` as an integer** inside every stored locator (the historical string form `"7"` becomes `7`, across all content tables, the time machine and the ontology relations — external-service references such as zenon's zero-padded remote ids are recognised by shape and kept verbatim, and anything unconvertible is reported in the log, never guessed), and finally builds and backfills the two derived search stores from the unified form. The unification records a `section_id_int_normalize` marker row in `matrix_updates` — a future engine release refuses to boot without it, so do not delete it.
 3. **Passwords**: converts every recoverable account to Argon2id.
 4. **Diffusion ontology**: rewrites the diffusion properties.
+
+!!! note "The review and the run are the same pass"
+    The deep preflight and the migration run the same transform; the preflight simply does not save. So the *auto-fixed* counts you read in [3.2](#32-deep-preflight) are not a prediction of what the run might do — they are what it will do. Every repair is applied in memory, on the way into the v7 columns; the legacy value column is never rewritten in place, and the backup taken as the run's first step is the undo for all of it.
 
 Duration is a function of how many rows you have. There is no progress bar: the runner prints a `progress:` heartbeat about every 10 seconds. **No heartbeat for several minutes means the run is stuck** — read the log tail and check the database for locks.
 
@@ -161,6 +195,7 @@ Duration is a function of how many rows you have. There is no progress bar: the 
 
     Each hit names the failing step and the affected table and record id. Note them, re-run the migration (it is idempotent) and grep again; rows that still fail are data errors — treat them as [needs attention](#81-needs-attention-findings-v6-host-before-phase-a) findings and fix the record before Phase B.
 
+- If the review counted [fabricated map views](#the-fabricated-map-view), open a few of those records once v7 is serving (Phase D): a record that never had a location must show an empty map, opening at the configured default view, with no coordinate stored; a record with drawn features must still show its drawing, with the map now framed on it.
 - Passwords and diffusion run **after** the stamp and are deliberately non-fatal. A failure there does not mean the database migration failed; each can be re-run on its own afterwards. If the password phase reports no Argon2 support in the interpreter, fix the interpreter and re-run just that phase — you can also do the equivalent on the v7 side later (see [Phase D](#62-migrate-the-passwords)).
 
 ### Result codes you can meet

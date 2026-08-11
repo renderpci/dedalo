@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../common/js/ui.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
+	import {same_section_id} from '../../../common/js/utils/index.js'
 
 
 
@@ -274,7 +275,7 @@ const get_value_element = (i, data, self) => {
 					if(node.type==='detail'){
 						const datalist_item = (new_data.locator)
 							? self.datalist.find(item => item.value.section_tipo === new_data.locator.section_tipo
-													&& item.value.section_id === new_data.locator.section_id)
+													&& same_section_id(item.value.section_id, new_data.locator.section_id))
 							: {label: ''}
 
 						node.node_label_list.textContent = datalist_item.label
@@ -413,7 +414,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			// build the label with the list name
 			const datalist_item = (situation_items_data && situation_items_data.locator)
 				? self.datalist.find(item => item.value.section_tipo === situation_items_data.locator.section_tipo
-										  && item.value.section_id === situation_items_data.locator.section_id)
+										  && same_section_id(item.value.section_id, situation_items_data.locator.section_id))
 				: {label: ''}
 
 			// label_list_situation
@@ -489,7 +490,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			// build the label with the list name
 			const datalist_item_status = (state_item_data && state_item_data.locator)
 				? self.datalist.find(item => item.value.section_tipo === state_item_data.locator.section_tipo
-										  && item.value.section_id === state_item_data.locator.section_id)
+										  && same_section_id(item.value.section_id, state_item_data.locator.section_id))
 				: {label: ''}
 
 			// label_list_state

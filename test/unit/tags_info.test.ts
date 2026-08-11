@@ -124,14 +124,16 @@ afterAll(async () => {
 const host = () => ({ tipo: TEXT_AREA, section_tipo: HOST_SECTION, section_id: hostId });
 
 describe('buildTagsInfo — index / reference tags', () => {
-	test('locators resolve to a term label, ids served as STRINGS (WC-077)', async () => {
+	test('locators resolve to a term label, tag_id string / section_id int (WC-077)', async () => {
 		const { tags_info } = await buildTagsInfo(['index', 'reference'], host(), LANG);
 		const index = tags_info.tags_index ?? [];
 		expect(index).toHaveLength(1);
 		// The client filters with `el.data.tag_id === tag_id` against the STRING
 		// it scraped out of the mark — a stored number must not leak through.
 		expect(index[0]?.data.tag_id).toBe('7');
-		expect(index[0]?.data.section_id).toBe(String(termId));
+		// WC-2026-08-10-section-id-int-canonical: tag_id stays a STRING (it is a
+		// mark token, not an address) — the record address is emitted as an INT.
+		expect(index[0]?.data.section_id).toBe(termId);
 		expect(index[0]?.label).toBe('Lovelace, Ada');
 		// reference tags share the shape, from their own configured component
 		const reference = tags_info.tags_reference ?? [];
@@ -158,7 +160,8 @@ describe('buildTagsInfo — annotations', () => {
 		expect(notes).toHaveLength(1);
 		const note = notes[0] as NoteElement;
 		expect(note.data.section_tipo).toBe(NOTE_SECTION);
-		expect(note.data.section_id).toBe(String(noteId));
+		// WC-2026-08-10-section-id-int-canonical: int address.
+		expect(note.data.section_id).toBe(noteId);
 		// Literal ddos are string[] — the client does title.join(' | ') and
 		// concatenates body into a template (WC-077).
 		expect(note.title).toEqual(['Primera nota']);

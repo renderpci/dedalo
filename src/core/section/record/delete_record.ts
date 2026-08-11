@@ -41,8 +41,13 @@ import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
 
 export interface DeleteRecordResult {
-	/** Deleted section_ids as strings (PHP delete result shape). */
-	deleted: string[];
+	/**
+	 * Deleted section_ids. INT since
+	 * WC-2026-08-10-section-id-int-canonical — the PHP-era result shape stringified
+	 * them, and the client compares this list against record addresses it holds as
+	 * ints, so the string form forced a cast at every consumer.
+	 */
+	deleted: number[];
 	/** True when a matrix row was actually removed. */
 	removed: boolean;
 }
@@ -258,7 +263,7 @@ export async function deleteSectionRecord(
 		}
 	}
 
-	return { deleted: [String(sectionId)], removed: txOutcome.removedCount > 0 };
+	return { deleted: [sectionId], removed: txOutcome.removedCount > 0 };
 }
 
 /**
@@ -336,6 +341,11 @@ async function removeAllInverseReferences(
 		if (model === null || getColumnNameByModel(model) !== 'relation') continue; // PHP skips non-relation holders
 		const record = await readMatrixRecord(group.table, group.ownerSection, group.ownerId);
 		if (record === null) continue;
+		// KEPT UNION (WC-2026-08-10-section-id-int-canonical): the bag is the
+		// OWNER's stored relation payload read verbatim from unswept jsonb, and
+		// the SURVIVORS are re-persisted byte-for-byte below — canonicalizing
+		// them here would rewrite locators this delete never targeted (that is
+		// the data sweep's job) and would corrupt external remote ids.
 		const bag =
 			((record.columns.relation as Record<string, unknown[]> | null)?.[group.component] as
 				| { section_tipo?: string; section_id?: number | string; type?: string }[]
@@ -573,7 +583,9 @@ export async function deleteSectionData(
 				? [
 						{
 							type: 'dd151',
-							section_id: String(config.features.defaultProject), // DEDALO_DEFAULT_PROJECT
+							// DEDALO_DEFAULT_PROJECT — already an int config value
+							// (WC-2026-08-10-section-id-int-canonical).
+							section_id: config.features.defaultProject,
 							section_tipo: config.features.filterSectionTipo, // DEDALO_FILTER_SECTION_TIPO_DEFAULT
 							from_component_tipo: component.tipo,
 						},
@@ -690,5 +702,5 @@ export async function deleteSectionData(
 		}
 	}
 
-	return { deleted: [String(sectionId)], removed: false };
+	return { deleted: [sectionId], removed: false };
 }

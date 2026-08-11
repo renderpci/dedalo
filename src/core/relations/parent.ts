@@ -38,7 +38,13 @@ import {
 	updateInlineValueByIdKey,
 } from './dataframe.ts';
 
-/** A parent locator (as stored in the child's relation column). */
+/**
+ * A parent locator (as stored in the child's relation column).
+ *
+ * KEPT UNION: getParents returns the RAW stored jsonb items verbatim — an
+ * unswept row still holds the legacy string form. Writers canonicalize
+ * (canonicalizeStoredSectionId), readers stay tolerant.
+ */
 export interface ParentLocator {
 	section_tipo: string;
 	section_id: number | string;
@@ -48,7 +54,12 @@ export interface ParentLocator {
 	[extra: string]: unknown;
 }
 
-/** Accumulated recursion errors (PHP component_relation_parent::$errors). */
+/**
+ * Accumulated recursion errors (PHP component_relation_parent::$errors).
+ * KEPT UNION: `info` echoes the OFFENDING stored locator's id verbatim (the
+ * walk cursor comes from ParentLocator above) — a diagnostic must report the
+ * bytes that actually formed the loop, unswept string form included.
+ */
 export interface RecursionError {
 	type: string;
 	msg: string;
@@ -312,20 +323,10 @@ export async function addParent(
 	if (locator.from_component_tipo === undefined) locator.from_component_tipo = parentRelationTipo;
 	if (locator.type === undefined) locator.type = RELATION_TYPE_PARENT;
 
-	// pre-allocate the item id (the order dataframe pairing key).
-	if (locator.id === undefined || locator.id === null || locator.id === '') {
-		locator.id = await allocateComponentItemId(
-			table,
-			childSectionTipo,
-			childSectionId,
-			parentRelationTipo,
-		);
-	}
-
-	// initial sibling order (paired by the just-allocated id).
-	await setChildOrder(childSectionTipo, childSectionId, locator);
-
 	// dedup-append (PHP add_locator_to_data equality: section_tipo/section_id/type/from_component_tipo).
+	// The check runs BEFORE the id allocation and the order write (defect D15,
+	// fixed 2026-08-09): a refused duplicate used to burn an item id and leave a
+	// stray order-component entry keyed to a locator that never lands.
 	const record = await readMatrixRecord(table, childSectionTipo, childSectionId);
 	const existing =
 		((record?.columns.relation as Record<string, ParentLocator[]> | null)?.[parentRelationTipo] as
@@ -339,6 +340,19 @@ export async function addParent(
 			stored.from_component_tipo === locator.from_component_tipo,
 	);
 	if (isDuplicate) return { ok: false, errors };
+
+	// pre-allocate the item id (the order dataframe pairing key).
+	if (locator.id === undefined || locator.id === null || locator.id === '') {
+		locator.id = await allocateComponentItemId(
+			table,
+			childSectionTipo,
+			childSectionId,
+			parentRelationTipo,
+		);
+	}
+
+	// initial sibling order (paired by the just-allocated id).
+	await setChildOrder(childSectionTipo, childSectionId, locator);
 
 	const merged = [...existing, locator];
 	await updateMatrixKeyData(
@@ -399,7 +413,7 @@ export async function getChildrenOfType(
 	parentSectionId: number | string,
 	parentSectionTipo: string,
 	type: 'descriptor' | 'non_descriptor' = 'descriptor',
-): Promise<{ section_tipo: string; section_id: string }[]> {
+): Promise<{ section_tipo: string; section_id: number }[]> {
 	const locators = await getChildrenOfTypeLocators(parentSectionId, parentSectionTipo, type);
 	return locators.map((locator) => ({
 		section_tipo: locator.section_tipo,
@@ -469,7 +483,11 @@ export async function recalculateSiblingOrders(
 	return true;
 }
 
-/** One changed order record (PHP sort_children return shape). */
+/**
+ * One changed order record (PHP sort_children return shape).
+ * KEPT UNION: `locator` is the CALLER's locator echoed verbatim — see the
+ * sortChildren wire note below.
+ */
 export interface SortChange {
 	value: number;
 	locator: { section_tipo: string; section_id: number | string; [extra: string]: unknown };
@@ -483,6 +501,10 @@ export interface SortChange {
  */
 export async function sortChildren(
 	childSectionTipo: string,
+	// KEPT UNION: `locators` is the RQO body's ar_locators list (dd_ts_api
+	// save_order) — an uncoerced wire door, so the tree client's legacy string
+	// ids still arrive here. Consumed numerically only (Number()); never
+	// re-persisted as an address from this list.
 	locators: { section_tipo: string; section_id: number | string; [extra: string]: unknown }[],
 	parentSectionTipo: string,
 	parentSectionId: number,

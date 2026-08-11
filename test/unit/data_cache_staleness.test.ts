@@ -55,7 +55,9 @@ describe('datalist staleness: write + delete of a target-section record (S1-11)'
 	test('a record write through the chokepoint makes the datalist re-query', async () => {
 		const before = await warmDatalist();
 		expect(await warmDatalist()).toBe(before); // cache hit → same instance
-		expect(before.some((item) => item.section_id === String(NEW_SECTION_ID))).toBe(false);
+		// WC-2026-08-10-section-id-int-canonical: datalist option addresses are
+		// ints (was String(NEW_SECTION_ID)) — here and in the three probes below.
+		expect(before.some((item) => item.section_id === NEW_SECTION_ID)).toBe(false);
 
 		// WRITE a new record of the target section through the production
 		// chokepoint (persistRecordColumns → fireSaveEvent).
@@ -67,19 +69,19 @@ describe('datalist staleness: write + delete of a target-section record (S1-11)'
 
 		const after = await warmDatalist();
 		expect(after).not.toBe(before); // evicted → re-queried
-		expect(after.some((item) => item.section_id === String(NEW_SECTION_ID))).toBe(true);
+		expect(after.some((item) => item.section_id === NEW_SECTION_ID)).toBe(true);
 	});
 
 	test('a record DELETE makes the datalist re-query (delete_record fires the event)', async () => {
 		const before = await warmDatalist();
-		expect(before.some((item) => item.section_id === String(NEW_SECTION_ID))).toBe(true);
+		expect(before.some((item) => item.section_id === NEW_SECTION_ID)).toBe(true);
 
 		const result = await deleteSectionRecord(TARGET_SECTION, NEW_SECTION_ID, -1);
 		expect(result.removed).toBe(true);
 
 		const after = await warmDatalist();
 		expect(after).not.toBe(before);
-		expect(after.some((item) => item.section_id === String(NEW_SECTION_ID))).toBe(false);
+		expect(after.some((item) => item.section_id === NEW_SECTION_ID)).toBe(false);
 	});
 
 	test('a write to an UNRELATED section leaves the datalist cached', async () => {

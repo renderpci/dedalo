@@ -1247,8 +1247,8 @@ Response:
         "time": "",
         "space": {
           "alt": 16,
-          "lat": "39.462571",
-          "lon": "-0.376295",
+          "lat": "42.31412288249575",
+          "lon": "2.930315820425362",
           "zoom": 15
         },
         "lang": "lg-eng",
@@ -1274,8 +1274,8 @@ Response:
         "time": "",
         "space": {
           "alt": 16,
-          "lat": "39.462571",
-          "lon": "-0.376295",
+          "lat": "41.652251",
+          "lon": "-4.724532",
           "zoom": 12
         },
         "lang": "lg-eng",
@@ -1297,6 +1297,29 @@ Response:
   }
 }
 ```
+
+!!! note "`space` carries only positions that were actually recorded"
+    The `space` member mirrors the term's published geolocation. A term whose
+    map was never set has **no** coordinates published for it — emptiness is
+    the absence of a value, never a reserved coordinate (see
+    [Geolocation values](../../core/data_model/geolocation.md#absence-is-structural--there-is-no-magic-coordinate)).
+    `0` is a legal coordinate, so a `lat` or `lon` of `0` is a real position on
+    the equator or the prime meridian and must not be read as "unset". Terms on
+    the equator or the prime meridian published nothing under the v6 engine,
+    whose emptiness test was falsy-based; they publish their position now.
+
+!!! note "`space` may carry drawn geometry as well as the coordinate pair"
+    A term's map holds two independent things: the **view** (`lat`/`lon`/`zoom`,
+    the framing an operator chose) and the **features** (the drawn shapes). Both
+    publish, as stored — `space` may carry the coordinate pair, the `lib_data`
+    layers, or both, and neither is dropped because the other is present. Read
+    `space` as: whatever of the two is there (see
+    [Geolocation values](../../core/data_model/geolocation.md#the-view-and-the-features-are-independent)).
+
+    The one pair that never publishes is the **studio default**
+    `39.462571 / -0.376295` — the client's factory map position, which the v6
+    editor wrote into records on save. A term holding exactly that pair
+    publishes its features, if it has any, and no coordinates.
 
 #### exclude_tld
 

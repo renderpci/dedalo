@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -330,7 +331,7 @@ const render_content_data = function(self) {
 			// Filter and sort the hierarchy roots that belong to this typology.
 			// Sorting uses Intl.Collator with default locale for locale-aware
 			// alphabetical ordering of target_section_name (human-readable tree name).
-				const hierarchy_sections = hierarchy_nodes.filter(node => node.typology_section_id===typology_item.section_id)
+				const hierarchy_sections = hierarchy_nodes.filter(node => same_section_id(node.typology_section_id, typology_item.section_id))
 				// sort hierarchy_nodes by alphabetic
 				hierarchy_sections.sort((a, b) => new Intl.Collator().compare(a.target_section_name, b.target_section_name));
 				const hierarchy_sections_length = hierarchy_sections.length

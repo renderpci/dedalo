@@ -1,0 +1,91 @@
+/**
+ * `installedTldFromSectionTipo` — the installed-hierarchy tld rule extracted
+ * out of `installedHierarchies` (add_hierarchy.ts) per plan §4.1.7.
+ *
+ * A hierarchy's TERM section tipo is `<tld>1` EXACTLY. Loosen the anchoring
+ * and the installed set re-inflates the way the registry read once did — the
+ * function's own docstring records ~269 hierarchies marked installed when ~14
+ * actually were — and the panel again offers to skip imports that never
+ * happened.
+ *
+ * The rule USED to live inside the SQL, twice (a `substring(… from …)` and a
+ * `~` filter): two textual copies of one predicate, neither reachable from a
+ * gate. It is now one TS regex applied to the distinct section_tipo set.
+ *
+ * NOT asserted: the result set of the real `matrix_hierarchy` query. What is
+ * installed in the suite database is installed CONTENT, and pinning it is the
+ * trap behind the 87 fixture-absent failures.
+ */
+
+import { describe, expect, test } from 'bun:test';
+import { installedTldFromSectionTipo } from '../../src/core/area_maintenance/widgets/add_hierarchy.ts';
+
+const SOURCE_FILE = `${import.meta.dir}/../../src/core/area_maintenance/widgets/add_hierarchy.ts`;
+
+describe('installedTldFromSectionTipo — what is a term section', () => {
+	test('a real hierarchy term section yields its tld', () => {
+		expect(installedTldFromSectionTipo('hierarchy1')).toBe('hierarchy');
+		expect(installedTldFromSectionTipo('rsc1')).toBe('rsc');
+		expect(installedTldFromSectionTipo('es1')).toBe('es');
+	});
+
+	test('the trailing anchor is REQUIRED — a longer tipo is not a term section', () => {
+		// The killer: `^([a-z]+)1` without `$` matches these and re-inflates the
+		// installed set (hierarchy125 is the ACTIVE-flag component, not a section).
+		expect(installedTldFromSectionTipo('hierarchy125')).toBeNull();
+		expect(installedTldFromSectionTipo('rsc170')).toBeNull();
+		expect(installedTldFromSectionTipo('dd1758')).toBeNull();
+		expect(installedTldFromSectionTipo('es10')).toBeNull();
+		expect(installedTldFromSectionTipo('hierarchy11')).toBeNull();
+	});
+
+	test('a non-1 section number is not a term section', () => {
+		expect(installedTldFromSectionTipo('test3')).toBeNull();
+		expect(installedTldFromSectionTipo('dd64')).toBeNull();
+		expect(installedTldFromSectionTipo('numisdata3')).toBeNull();
+	});
+
+	test('the leading anchor is REQUIRED', () => {
+		// `([a-z]+)1$` without `^` would pull 'x' out of '9x1'.
+		expect(installedTldFromSectionTipo('9x1')).toBeNull();
+		expect(installedTldFromSectionTipo('_es1')).toBeNull();
+	});
+
+	test('the tld charset is lowercase letters only', () => {
+		expect(installedTldFromSectionTipo('ES1')).toBeNull();
+		expect(installedTldFromSectionTipo('es_x1')).toBeNull();
+		expect(installedTldFromSectionTipo('es21')).toBeNull();
+	});
+
+	test('degenerate inputs return null rather than throwing', () => {
+		// The caller feeds String(row.section_tipo ?? ''), so '' must be handled.
+		expect(installedTldFromSectionTipo('')).toBeNull();
+		expect(installedTldFromSectionTipo('1')).toBeNull(); // no tld at all
+		expect(installedTldFromSectionTipo('null')).toBeNull();
+	});
+
+	test('the capture is the tld ALONE — the trailing 1 is not part of it', () => {
+		expect(installedTldFromSectionTipo('hierarchy1')).not.toContain('1');
+	});
+});
+
+describe('the extraction is REWIRED, not duplicated', () => {
+	test('the SQL no longer carries the rule, and the reader calls the extraction', async () => {
+		const source = await Bun.file(SOURCE_FILE).text();
+		// The SQL copies are gone: no substring() extraction, no `~` filter.
+		expect(source).not.toContain('substring(section_tipo from');
+		expect(source).not.toContain("~ '^[a-z]+1$'");
+		// The call site reads the raw tipo and maps it through the extraction.
+		expect(source).toContain('SELECT DISTINCT section_tipo FROM matrix_hierarchy');
+		expect(source).toContain('installedTldFromSectionTipo(String(row.section_tipo ??');
+		// and the rule exists exactly once in the file
+		expect(source.split('/^([a-z]+)1$/').length - 1).toBe(1);
+	});
+
+	test('a non-matching tipo is DROPPED by the caller, not emitted as null', async () => {
+		// The wire shape is {tld: string}[]; a null tld would render an empty
+		// installed-marker chip in the panel.
+		const source = await Bun.file(SOURCE_FILE).text();
+		expect(source).toContain('if (tld !== null) tlds.push({ tld });');
+	});
+});

@@ -10,12 +10,86 @@ import { sql } from '../../db/postgres.ts';
 import { probeSchemaHealth } from '../../db/schema_probe.ts';
 import type { WidgetHandler, WidgetModule, WidgetResponse } from './support.ts';
 
+/** One catalog credential placeholder rule, as `CATALOG_PLACEHOLDERS` carries it. */
+export interface CredentialPlaceholder {
+	key: string;
+	value: string;
+	emptyIsValid: boolean;
+}
+
+/**
+ * The db_status credential fold — PURE, taking the LIVE values as a parameter.
+ *
+ * The injection is a precondition, not a style choice: closing over `readEnv`
+ * would make every assertion here a statement about THIS machine's
+ * ../private/.env — green locally, undefined on a clone.
+ *
+ * Two arms the dashboard header depends on:
+ *  - `emptyIsValid` (DB_PASSWORD): an EMPTY password is legitimate under
+ *    peer/trust auth, so only the literal sample value fails. Invert it and
+ *    every peer-auth install reports config_pw_check=false and a red header on
+ *    a perfectly healthy database (GAP-3).
+ *  - `global_status` is the AND of the folded credential checks, the
+ *    connection probe and the write probe. Turn it into an OR and a broken
+ *    database paints the header green.
+ *
+ * Key order is the client's wire shape (render_check_config.js reads each
+ * `db_status.*_check` by name) — keep it.
+ */
+export function evaluateCredentialChecks(
+	live: Record<string, string>,
+	placeholders: readonly CredentialPlaceholder[],
+	probes: { connection: boolean; writable: boolean },
+): Record<string, boolean> {
+	const stillOnSample = (key: string): boolean => {
+		const rule = placeholders.find((entry) => entry.key === key);
+		if (rule === undefined) return false;
+		const value = live[key] ?? '';
+		if (value === rule.value) return true;
+		return value === '' && !rule.emptyIsValid;
+	};
+	const configDbNameCheck = !stillOnSample('DB_NAME');
+	const configUserNameCheck = !stillOnSample('DB_USER');
+	const configPwCheck = !stillOnSample('DB_PASSWORD');
+	const configInformationCheck = !stillOnSample('DEDALO_ENTITY_LABEL');
+	const configInfoKeyCheck = !stillOnSample('ENTITY');
+	const configCheck =
+		configDbNameCheck &&
+		configUserNameCheck &&
+		configPwCheck &&
+		configInformationCheck &&
+		configInfoKeyCheck;
+	return {
+		config_db_name_check: configDbNameCheck,
+		config_user_name_check: configUserNameCheck,
+		config_pw_check: configPwCheck,
+		config_information_check: configInformationCheck,
+		config_info_key_check: configInfoKeyCheck,
+		config_check: configCheck,
+		db_connection_check: probes.connection,
+		db_writable_check: probes.writable,
+		// PHP ANDs every field on the object (config_check already folds the five
+		// credential checks, so this is: all credential checks && connection && writable).
+		global_status: configCheck && probes.connection && probes.writable,
+	};
+}
+
 /**
  * computeCheckConfig — config-source health + live DB probes. Returns the INNER
  * result payload the client stores as `self.value` (db_status + config_sources +
  * state) plus the soft errors that colour the envelope msg. Shared by getValue
  * (panel open) AND eagerValue (catalog pre-load), so the FOLDED dashboard card
  * and the OPENED panel paint from byte-identical data.
+ */
+/*
+ * COVERAGE-EXEMPT for execution, this probe shell (coverage plan §5.1; reason
+ * registered in engineering/crap_coverage_exempt.json): every remaining branch is
+ * a FAIL-SOFT I/O probe (`SELECT 1`, a TEMP-table write, `existsSync`,
+ * `probeSchemaHealth`) whose only decision is null-vs-value on its OWN result.
+ * The one real decision, the credential-placeholder fold, is extracted to
+ * `evaluateCredentialChecks` above — and this exemption is valid ONLY because
+ * that extraction TAKES `live` AS A PARAMETER: without the injection its gate
+ * would assert against this machine's ../private/.env and be undefined on a clone.
  */
 async function computeCheckConfig(): Promise<{
 	payload: {
@@ -80,25 +154,6 @@ async function computeCheckConfig(): Promise<{
 		ENTITY: entityKey,
 		DEDALO_ENTITY_LABEL: entityLabel,
 	};
-	const stillOnSample = (key: string): boolean => {
-		const rule = CATALOG_PLACEHOLDERS.find((entry) => entry.key === key);
-		if (rule === undefined) return false;
-		const value = live[key] ?? '';
-		if (value === rule.value) return true;
-		return value === '' && !rule.emptyIsValid;
-	};
-	const configDbNameCheck = !stillOnSample('DB_NAME');
-	const configUserNameCheck = !stillOnSample('DB_USER');
-	const configPwCheck = !stillOnSample('DB_PASSWORD');
-	const configInformationCheck = !stillOnSample('DEDALO_ENTITY_LABEL');
-	const configInfoKeyCheck = !stillOnSample('ENTITY');
-	const configCheck =
-		configDbNameCheck &&
-		configUserNameCheck &&
-		configPwCheck &&
-		configInformationCheck &&
-		configInfoKeyCheck;
-
 	// Live connection probe.
 	let dbConnectionCheck = true;
 	try {
@@ -129,19 +184,10 @@ async function computeCheckConfig(): Promise<{
 		}
 	}
 
-	const dbStatus = {
-		config_db_name_check: configDbNameCheck,
-		config_user_name_check: configUserNameCheck,
-		config_pw_check: configPwCheck,
-		config_information_check: configInformationCheck,
-		config_info_key_check: configInfoKeyCheck,
-		config_check: configCheck,
-		db_connection_check: dbConnectionCheck,
-		db_writable_check: dbWritableCheck,
-		// PHP ANDs every field on the object (config_check already folds the five
-		// credential checks, so this is: all credential checks && connection && writable).
-		global_status: configCheck && dbConnectionCheck && dbWritableCheck,
-	};
+	const dbStatus = evaluateCredentialChecks(live, CATALOG_PLACEHOLDERS, {
+		connection: dbConnectionCheck,
+		writable: dbWritableCheck,
+	});
 
 	// Config sources this SERVER actually reads, resolved through the SAME accessors
 	// the runtime uses — so a DEDALO_TS_STATE_PATH / DEDALO_SESSION_DB_PATH relocation

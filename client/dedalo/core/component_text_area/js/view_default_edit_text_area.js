@@ -10,7 +10,7 @@
 	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {pause, url_vars_to_object, same_section_id} from '../../common/js/utils/index.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
 	import {render_draw} from './render_draw.js'
@@ -1874,7 +1874,7 @@ const render_persons_list = function(self, text_editor, i) {
 				// check if the section to be processed is the self section, the section of the component_text_area, (only related sections need to be processed)
 				if(current_locator.section_tipo!==self.section_tipo){
 					const section_label		= context.find(el => el.section_tipo===current_locator.section_tipo).label
-					const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_tipo && el.section_id===current_locator.section_id)
+					const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_tipo && same_section_id(el.section_id, current_locator.section_id))
 
 					// get the ar_component_value of the components related to this section
 						const ar_component_value = []

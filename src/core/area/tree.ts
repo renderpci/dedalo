@@ -23,10 +23,12 @@
  * first-seen order.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { findFirstDescendantTipoByModel, getMatrixTableFromTipo } from '../ontology/resolver.ts';
+import { composeContains, locatorJsonVariants } from '../search/containment.ts';
 
 // Hierarchy/ontology component tipos this resolver reads (kept local — they are
 // this projection's concern, not the area taxonomy's).
@@ -47,12 +49,19 @@ const TYPOLOGY_LABEL_TIPO = 'hierarchy16';
 const TYPOLOGY_ORDER_TIPO = 'hierarchy106';
 
 interface HierarchyItem {
-	section_id: string;
+	/** Canonical INT address (WC-2026-08-10-section-id-int-canonical). */
+	section_id: number;
 	section_tipo: string;
 	target_section_tipo: string;
 	target_section_name: string | null;
 	children_tipo: string;
-	typology_section_id: string;
+	/**
+	 * The typology record's address in canonical form (int for a real typology
+	 * record; anything non-convertible passes verbatim). MUST stay type-equal
+	 * to TypologyItem.section_id below — the client groups the hierarchies
+	 * under their typology by comparing the two.
+	 */
+	typology_section_id: unknown;
 	order: number;
 	type: 'hierarchy';
 	active_in_thesaurus: boolean;
@@ -60,7 +69,8 @@ interface HierarchyItem {
 }
 
 interface TypologyItem {
-	section_id: string;
+	/** Canonical — see HierarchyItem.typology_section_id (identical values). */
+	section_id: unknown;
 	type: 'typology';
 	label: string | null;
 	order: number;
@@ -118,6 +128,20 @@ export async function readAreaHierarchyData(
 	// regular General-Term portal (hierarchy45 → <tld>1). The default path
 	// (termsAreModel=false) stays byte-equal to the pre-existing parity gate.
 	const rootTermTipo = termsAreModel ? ROOT_TERM_MODEL_TIPO : ROOT_TERM_TIPO;
+	// The dd64/1 active flag is probed in BOTH typed section_id forms
+	// (WC-2026-08-10-section-id-int-canonical): jsonb `@>` is type-strict and
+	// the stored locator is string-form until the int sweep, int-form after —
+	// a single-form literal would empty the whole thesaurus/ontology tree on
+	// the other side of the migration.
+	const queryParams: string[] = [mainSection];
+	const activeClause = composeContains(
+		`relation->'${ACTIVE_FILTER_TIPO}'`,
+		[locatorJsonVariants({ section_id: 1, section_tipo: 'dd64' }).map((json) => `[${json}]`)],
+		(payload) => {
+			queryParams.push(payload);
+			return `$${queryParams.length}`;
+		},
+	);
 	const rows = (await sql.unsafe(
 		`SELECT section_id,
 		        string->'${NAME_TIPO}' AS name_items,
@@ -128,9 +152,9 @@ export async function readAreaHierarchyData(
 		        COALESCE(number->'${ORDER_TIPO}', data->'${ORDER_TIPO}') AS order_items
 		 FROM "${table}"
 		 WHERE section_tipo = $1
-		   AND relation->'${ACTIVE_FILTER_TIPO}' @> '[{"section_id":"1","section_tipo":"dd64"}]'
+		   AND ${activeClause}
 		 ORDER BY section_id ASC`,
-		[mainSection],
+		queryParams,
 	)) as {
 		section_id: number;
 		name_items: { lang?: string; value?: unknown }[] | null;
@@ -166,12 +190,16 @@ export async function readAreaHierarchyData(
 		if (childrenTipo === null || childrenTipo === '') continue;
 
 		value.push({
-			section_id: String(row.section_id),
+			// The DB column's own int, emitted uncast: the client sites that
+			// consumed this were made type-tolerant in the same WC.
+			section_id: row.section_id,
 			section_tipo: mainSection,
 			target_section_tipo: target,
 			target_section_name: langSliceValue(row.name_items, lang),
 			children_tipo: childrenTipo,
-			typology_section_id: isOntology ? ONTOLOGY_TYPOLOGY_ID : String(typologyId),
+			typology_section_id: canonicalizeStoredSectionId(
+				isOntology ? ONTOLOGY_TYPOLOGY_ID : String(typologyId),
+			),
 			order: Number(row.order_items?.[0]?.value ?? 0),
 			type: 'hierarchy',
 			active_in_thesaurus: activeInThesaurus,
@@ -202,7 +230,9 @@ export async function readAreaHierarchyData(
 			order_items: { value?: unknown }[] | null;
 		}[];
 		typologies.push({
-			section_id: typologyId,
+			// The SAME canonicalization as typology_section_id above — the two
+			// are compared on the client and must not diverge in type.
+			section_id: canonicalizeStoredSectionId(typologyId),
 			type: 'typology',
 			label: langSliceValue(typologyRows[0]?.label_items, lang),
 			order: Number(typologyRows[0]?.order_items?.[0]?.value ?? 0),

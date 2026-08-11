@@ -13,12 +13,17 @@
  * The mock is restored to the real module in `afterAll` because `mock.module`
  * is process-global and `mock.restore()` does not revert it.
  *
- * KNOWN-UNREACHABLE: engine.ts:67-69 (`content === null` → "unparsable
- * definition file") cannot be reached through the production path —
- * `listDefinitionFiles` silently skips files whose JSON does not parse, so an
- * unparsable name never enters `available` and the loop `continue`s before the
- * load. It is left untested deliberately rather than covered through a seam
- * that production cannot take.
+ * CORRECTED 2026-08-09 (defect D16 was a LEDGER ERROR, not a code defect): the
+ * `content === null` → "unparsable definition file" branch in engine.ts is NOT
+ * unreachable. `JSON.parse('null')` RETURNS null without throwing, so a
+ * definition file containing the literal `null` is listed by
+ * `listDefinitionFiles` (it enters `available` with content null) and then
+ * loads as null — the branch fires. A file truncated or replaced between the
+ * list and the load (TOCTOU) reaches it too. The branch is correct behaviour
+ * and is now covered below. What genuinely disappears silently is a MALFORMED
+ * file: definitions.ts swallows the parse error and drops the name from the
+ * list with no report — a separate, deliberate PHP json_decode-null parity
+ * behaviour, left as-is here.
  */
 
 import { afterAll, afterEach, describe, expect, mock, test } from 'bun:test';
@@ -268,6 +273,26 @@ describe('runTransform definition-file confinement', () => {
 		expect(report.msg).toContain('Warning');
 		expect(report.msg).toContain('2 error(s)');
 		expect(report.counts).toEqual({ update: 1 });
+	});
+
+	test('a definition file whose content is null is REPORTED, not silently run (D16)', async () => {
+		// Reachability proof for engine.ts's `content === null` arm, which the
+		// defect ledger called unreachable: JSON.parse('null') does not throw, so
+		// a file holding the four bytes `null` is listed AND loads as null. The
+		// operator must be told the file was dropped; the executor must not run.
+		CATALOG = { 'nulldef.json': null, 'a.json': [{ old: 'x1', new: 'y1' }] };
+		const { calls, executor } = spyExecutor();
+		const report = await runTransform(
+			'move_to_table',
+			{ files_selected: ['nulldef.json', 'a.json'] },
+			executor,
+		);
+
+		expect(loadCalls).toEqual(['nulldef.json', 'a.json']);
+		expect(report.errors).toEqual(['unparsable definition file: nulldef.json']);
+		expect(calls.length).toBe(1);
+		expect(calls[0]!.items).toEqual([{ old: 'x1', new: 'y1' }]);
+		expect(report.result).toBe(false);
 	});
 
 	test('every list/load is scoped to the widget passed in', async () => {

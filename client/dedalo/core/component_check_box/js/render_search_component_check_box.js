@@ -57,6 +57,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {same_section_id} from '../../common/js/utils/index.js'
 	import {build_changed_data_item} from './component_check_box.js'
 
 
@@ -286,7 +287,7 @@ const get_input_element = (i, current_value, self) => {
 		// checked option set on match
 			for (let j = 0; j < value_length; j++) {
 				if (entries[j] && datalist_value &&
-					entries[j].section_id===datalist_value.section_id &&
+					same_section_id(entries[j].section_id, datalist_value.section_id) &&
 					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input_checkbox.checked = 'checked'

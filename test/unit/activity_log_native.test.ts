@@ -291,13 +291,16 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 			dd543: [
 				{
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// WC-2026-08-10-section-id-int-canonical: activity_log dd543 mints
+					// the actor address as an INT now (was String(userId)).
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd543',
 				},
 			],
 			dd545: [
-				{ type: 'dd151', section_id: '5', section_tipo: 'dd42', from_component_tipo: 'dd545' },
+				// WC-2026-08-10-section-id-int-canonical: WHAT-code address is int.
+				{ type: 'dd151', section_id: 5, section_tipo: 'dd42', from_component_tipo: 'dd545' },
 			],
 		});
 
@@ -335,13 +338,16 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 			dd543: [
 				{
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// WC-2026-08-10-section-id-int-canonical: activity_log dd543 mints
+					// the actor address as an INT now (was String(userId)).
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd543',
 				},
 			],
 			dd545: [
-				{ type: 'dd151', section_id: '4', section_tipo: 'dd42', from_component_tipo: 'dd545' },
+				// WC-2026-08-10-section-id-int-canonical: WHAT-code address is int.
+				{ type: 'dd151', section_id: 4, section_tipo: 'dd42', from_component_tipo: 'dd545' },
 			],
 		});
 
@@ -375,13 +381,16 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 			dd543: [
 				{
 					type: 'dd151',
-					section_id: String(USER_ID),
+					// WC-2026-08-10-section-id-int-canonical: activity_log dd543 mints
+					// the actor address as an INT now (was String(userId)).
+					section_id: USER_ID,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd543',
 				},
 			],
 			dd545: [
-				{ type: 'dd151', section_id: '3', section_tipo: 'dd42', from_component_tipo: 'dd545' },
+				// WC-2026-08-10-section-id-int-canonical: WHAT-code address is int.
+				{ type: 'dd151', section_id: 3, section_tipo: 'dd42', from_component_tipo: 'dd545' },
 			],
 		});
 
@@ -391,7 +400,9 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 
 		expect(row.misc.dd551?.[0]?.value).toEqual({
 			msg: 'Created section record',
-			section_id: String(createdRecordId),
+			// WC-2026-08-10-section-id-int-canonical: the dd551 payload carries the
+			// created record's address, minted int by create_record.
+			section_id: createdRecordId,
 			section_tipo: SECTION,
 			tipo: SECTION,
 			table: TABLE,
@@ -411,13 +422,16 @@ describe('activity log rows, TS-native (dd542 anatomy)', () => {
 			dd543: [
 				{
 					type: 'dd151',
-					section_id: '-666',
+					// WC-2026-08-10-section-id-int-canonical: the anonymous sentinel is
+					// an int address too (the invariant is INTEGER, not positive).
+					section_id: -666,
 					section_tipo: 'dd128',
 					from_component_tipo: 'dd543',
 				},
 			],
 			dd545: [
-				{ type: 'dd151', section_id: '1', section_tipo: 'dd42', from_component_tipo: 'dd545' },
+				// WC-2026-08-10-section-id-int-canonical: WHAT-code address is int.
+				{ type: 'dd151', section_id: 1, section_tipo: 'dd42', from_component_tipo: 'dd545' },
 			],
 		});
 

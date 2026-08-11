@@ -1311,6 +1311,20 @@ export async function startServer() {
 		// DEDALO_RAG_ENABLED is off). Must run before serving so writes are captured.
 		initRagHooks();
 
+		// section_id deprecation counters (WC-2026-08-10-section-id-int-canonical,
+		// D10): the pure concepts leaf can't import api/counters, so the observer
+		// is wired here — every legacy string→int coercion increments a per-door
+		// counter (`section_id_string_coercions.<source>`). The contraction gate
+		// reads these off /api/v1/counters (whose payload carries uptime_s, the
+		// evidence qualifier) — `url.*` doors are permanent and excluded from it.
+		{
+			const { registerSectionIdCoercionObserver } = await import('./core/concepts/section_id.ts');
+			const { incrementCounter } = await import('./core/api/counters.ts');
+			registerSectionIdCoercionObserver((source) =>
+				incrementCounter(`section_id_string_coercions.${source}`),
+			);
+		}
+
 		// Boot data-cache PRE-WARM (boot backlog #5): the lang-independent
 		// ontology caches that gate the FIRST interactive paint (the menu area
 		// walk and the active-TLD list) fill before the first request instead of

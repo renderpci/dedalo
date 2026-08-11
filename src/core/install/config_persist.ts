@@ -101,6 +101,15 @@ export interface PersistConfigResult {
 }
 
 /** Write ../private/.env + state from the posted wizard config. */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a ONE-SHOT install procedure that
+ * MUTATES THE MACHINE — config files, a database restore, root credentials, a
+ * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
+ * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
+ * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * (test/unit/tier1_install_native.test.ts).
+ */
 export async function persistConfig(o: Record<string, unknown>): Promise<PersistConfigResult> {
 	const str = (key: string, dflt = ''): string => {
 		const value = o[key];

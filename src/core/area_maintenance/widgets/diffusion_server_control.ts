@@ -14,11 +14,31 @@ export async function countPendingDiffusion(): Promise<number> {
 	// Whole-column containment (not relation->'dd1767' @> ...) so the existing
 	// relation GIN index serves the predicate — the arrow form seq-scans the
 	// multi-million-row table.
+	//
+	// The action is probed in EVERY stored shape — the D16 explicit
+	// `diffusion_action` key this engine writes, plus both typed section_id
+	// forms of the legacy locator shape (WC-2026-08-10-section-id-int-canonical:
+	// jsonb `@>` is type-strict, and the legacy form is a string until the int
+	// sweep, an int after). A single-shape probe would silently report zero
+	// pending unpublishes. The payload set is owned by the ledger writer, so the
+	// widget never restates it.
+	const { DIFFUSION_ACTION, diffusionActionContains } = await import(
+		'../../diffusion_bridge/diffusion_delete.ts'
+	);
+	const queryParams: string[] = [];
+	const pendingClause = diffusionActionContains(
+		'relation',
+		DIFFUSION_ACTION.unpublishPending,
+		(payload) => {
+			queryParams.push(payload);
+			return `$${queryParams.length}`;
+		},
+	);
 	const rows = (await sql.unsafe(
 		`SELECT COUNT(*) AS n FROM matrix_activity_diffusion
 		 WHERE section_tipo = 'dd1758'
-		   AND relation @> '{"dd1767":[{"section_id":"3","section_tipo":"dd1774"}]}'::jsonb`,
-		[],
+		   AND ${pendingClause}`,
+		queryParams,
 	)) as { n: number | string }[];
 	return Number(rows[0]?.n ?? 0);
 }
@@ -206,6 +226,10 @@ async function diffusionSetScheduler(options: Record<string, unknown>): Promise<
 	const { scheduler } = await diffusionModules();
 
 	if (action === 'drain_resume') {
+		// COVERAGE-EXEMPT, this already-draining arm (coverage plan §5.2; reason
+		// registered in engineering/crap_coverage_exempt.json): reaching it requires a
+		// real drain in flight on the run-shared scheduler singleton, which no gate may
+		// start. Already dropped once by a prior plan — do not re-propose it.
 		if (scheduler.isSchedulerDraining()) {
 			return {
 				result: false,
@@ -252,6 +276,11 @@ async function diffusionRetryPending(options: Record<string, unknown>): Promise<
 			errors: [],
 		};
 	}
+	// COVERAGE-EXEMPT, this `count_only=false` retry arm (coverage plan §5.2; reason
+	// registered in engineering/crap_coverage_exempt.json): it re-runs an UNFILTERED
+	// select over the run-shared dd1758 pending table and flips rows in place, so a
+	// gate would act on other agents' data. It is already gated by a SUBPROCESS test
+	// (prior-plan drop) — do not re-propose an in-process one.
 	const limit = typeof options.limit === 'number' ? options.limit : 100;
 	const { retryPendingDiffusion } = await import('../../diffusion_bridge/diffusion_delete.ts');
 	const outcome = await retryPendingDiffusion(limit);

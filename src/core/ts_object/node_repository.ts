@@ -25,7 +25,16 @@ import { sql } from '../db/postgres.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
 
-/** A node locator (section coords). */
+/**
+ * A node locator (section coords).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): the batch feeders hand
+ * this interface RAW STORED locators — the `link_children` / portal arrays read
+ * straight off unswept jsonb, plus the dd_ts_api mode-B `children` list — so a
+ * pre-sweep string id legitimately arrives here. groupLocators is the tolerance
+ * point: it validates and trunc-casts, throwing on anything that is not an
+ * address. Never narrow this without first narrowing what feeds it.
+ */
 export interface NodeLocator {
 	section_tipo?: string;
 	section_id?: number | string;

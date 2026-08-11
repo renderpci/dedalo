@@ -22,6 +22,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /** A record with real TM history on this install (same corpus as tm_read). */
@@ -186,8 +187,11 @@ beforeAll(async () => {
 	await php.login(config.phpReference.username as string, config.phpReference.password as string);
 	const phpResult = await php.call(historyRqo());
 	const phpBody = phpResult.body as { result?: { data?: unknown[]; context?: unknown[] } };
-	phpData = (phpBody.result?.data ?? []) as Record<string, unknown>[];
-	phpContext = (phpBody.result?.context ?? []) as Record<string, unknown>[];
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	phpData = normalizeSectionIdTypes((phpBody.result?.data ?? []) as Record<string, unknown>[]);
+	phpContext = normalizeSectionIdTypes(
+		(phpBody.result?.context ?? []) as Record<string, unknown>[],
+	);
 
 	const token = createSession(-1, 'root', true);
 	const session = getSession(token);
@@ -203,8 +207,9 @@ beforeAll(async () => {
 		} as never,
 	);
 	const tsBody = tsResult.body as { result?: { data?: unknown[]; context?: unknown[] } };
-	tsData = (tsBody.result?.data ?? []) as Record<string, unknown>[];
-	tsContext = (tsBody.result?.context ?? []) as Record<string, unknown>[];
+	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
+	tsData = normalizeSectionIdTypes((tsBody.result?.data ?? []) as Record<string, unknown>[]);
+	tsContext = normalizeSectionIdTypes((tsBody.result?.context ?? []) as Record<string, unknown>[]);
 });
 
 afterAll(async () => {

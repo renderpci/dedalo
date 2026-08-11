@@ -117,6 +117,13 @@ export type AvEncodeOutcome =
  * wall-clock budget, because an hour-long interview's two-pass encode
  * legitimately outruns any constant (engine/ffmpeg.ts PRODUCER_IDLE_TIMEOUT_MS).
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): requires the ffmpeg / ImageMagick
+ * BINARIES and MUTATES THE REAL MEDIA TREE, so no scratch surface can contain a
+ * run. The gateable content is the pure argv/profile builders in these files,
+ * gated in test/unit/tier1_media_argv_native.test.ts.
+ */
 export async function encodeAvQuality(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,

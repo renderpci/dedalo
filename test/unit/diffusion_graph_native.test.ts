@@ -692,12 +692,12 @@ describe('selectMediaIndexTargets', () => {
 		]);
 	});
 
-	test('D12 — TWO REAL tables in ONE database collapse to a SINGLE entry (pinned, not endorsed)', () => {
-		// `chosen` is keyed on database_name ALONE, so the second real table never
-		// reaches the marker store: its published rows get no media markers. This
-		// is the CURRENT contract; widening the key to (database, table) is a WIRE
-		// CONTRACT decision, not a refactor — do NOT flip it to make this pass
-		// differently.
+	test('D12 (fixed 2026-08-09): TWO REAL tables in ONE database both get entries', () => {
+		// The key was database_name ALONE, so the second real table never reached
+		// the marker store and its published rows got NO media markers. The key is
+		// now (database, table), which is also what PHP's resolve_media_index_targets
+		// emits (db|table|section triples). Ledger:
+		// engineering/wire_contract/WC-2026-08-09-media-index-target-selection.md.
 		const map = new Map([
 			[
 				'rsc197',
@@ -709,10 +709,11 @@ describe('selectMediaIndexTargets', () => {
 		]);
 		expect(selectMediaIndexTargets(map)).toEqual([
 			{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
+			{ database_name: 'web_a', table_name: 'places', section_tipo: 'rsc197' },
 		]);
 	});
 
-	test('a LATER real table does replace an EARLIER alias in the same database', () => {
+	test('a real table SUPPRESSES the aliases of its database, and every real table is kept', () => {
 		const map = new Map([
 			[
 				'rsc197',
@@ -723,9 +724,11 @@ describe('selectMediaIndexTargets', () => {
 				],
 			],
 		]);
-		// first real wins; the second real is dropped (same D12 collapse)
+		// D12 (fixed 2026-08-09): the alias drops out because the database has a
+		// real table; BOTH real tables are now kept (the second used to be lost).
 		expect(selectMediaIndexTargets(map)).toEqual([
 			{ database_name: 'web_a', table_name: 'people', section_tipo: 'rsc197' },
+			{ database_name: 'web_a', table_name: 'second_real', section_tipo: 'rsc197' },
 		]);
 	});
 });

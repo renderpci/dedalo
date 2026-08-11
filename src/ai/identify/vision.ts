@@ -103,6 +103,7 @@
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
 import { buildLocatorLookupKey, type Locator } from '../../core/concepts/locator.ts';
+import { canonicalizeStoredSectionId } from '../../core/concepts/section_id.ts';
 import { type ComponentGrant, criterionReadableOn } from '../../core/identify/component_access.ts';
 import {
 	type AccessFilter,
@@ -1128,17 +1129,23 @@ export const defaultVocabularyResolver: VocabularyResolver = async ({ criterion,
 };
 
 /**
- * A datalist option as a stored-shaped locator. The datalist carries
- * `section_id` as a STRING (PHP's raw row value); an accepted proposal is saved
- * next to values written as numbers, so an integer-looking id is normalized —
- * `buildLocatorLookupKey` would treat the two as one record either way, but the
- * value handed to the confirm flow should look like what the column holds.
+ * A datalist option as a stored-shaped locator. KEPT as a union: a criterion
+ * may target an EXTERNAL-service section, whose datalist options carry the
+ * remote id verbatim ('001338683', 'Q42') — never an int address. Convertible
+ * ids are canonicalized below so the value handed to the confirm flow looks
+ * like what the column holds (`buildLocatorLookupKey` matches either way).
  */
-function toValueLocator(value: { section_tipo: string; section_id: string }): ValueLocator {
-	const numeric = Number(value.section_id);
+function toValueLocator(value: {
+	section_tipo: string;
+	section_id: number | string;
+}): ValueLocator {
 	return {
 		section_tipo: value.section_tipo,
-		section_id: Number.isInteger(numeric) ? numeric : value.section_id,
+		// The datalist already emits the canonical int; this stays as the ONE
+		// normalization point for any other caller (and keeps an external
+		// remote id verbatim, which the old Number() sniff did too)
+		// — WC-2026-08-10-section-id-int-canonical.
+		section_id: canonicalizeStoredSectionId(value.section_id) as number | string,
 	};
 }
 

@@ -27,6 +27,15 @@ Standing spec for the section family, companion to `engineering/REWRITE_SPEC.md`
 > `prevent_lock`, list-column sortability) — check there before planning
 > work from this spec.
 
+> **ADDENDUM 2026-08-10 (section_id is an INT).** Wherever this spec shows a
+> `section_id` as a string — stored locators, emitted context/data, echoes —
+> the canonical form is now a **safe integer** (negatives valid). Writers mint
+> ints, every app-API surface emits ints, numeric strings still coerce at the
+> boundary as a counted deprecation, and external remote ids / synthetic tokens
+> stay verbatim. Locator comparison remains LOOSE on `section_id`, and locator
+> search probes are DUAL-FORM (int + string) while unconverted stock exists.
+> Law: `engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`.
+
 > **ADDENDUM 2026-07-22 (list_thesaurus read mode).** `readSectionRows`
 > now serves mode `'list_thesaurus'` (previously an uncovered-path throw).
 > It is a plain list read on the row side — PHP row acquisition is

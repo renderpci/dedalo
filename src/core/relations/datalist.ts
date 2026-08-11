@@ -49,18 +49,24 @@ export interface DatalistHideItem {
 	literal: string;
 	/** Which hide ddo produced it. */
 	tipo: string;
-	/** The option record this was read from — STRING, like the option's own. */
-	section_id: string;
+	/** The option record this was read from — INT, like the option's own. */
+	section_id: number;
 	section_tipo: string;
 }
 
 /** One datalist option (PHP get_list_of_values result item). */
 export interface DatalistItem {
-	/** The option locator — PHP stores section_id as a STRING here. */
-	value: { section_tipo: string; section_id: string };
+	/**
+	 * The option locator. INT since WC-2026-08-10-section-id-int-canonical —
+	 * this is the client→DB byte funnel of the whole select family: the widget
+	 * posts back the option's `value` verbatim and save persists those bytes,
+	 * so the type emitted HERE is the type NEW selections are stored as. The
+	 * old law ("PHP stores section_id as a STRING here") is repealed.
+	 */
+	value: { section_tipo: string; section_id: number };
 	label: string;
-	/** STRING too — PHP passes the pg driver's raw row value through. */
-	section_id: string;
+	/** INT too — the option record's address, not a display token. */
+	section_id: number;
 	/**
 	 * The option's HIDE-ddo values (PHP get_list_of_values :2931-2955,
 	 * `$ar_hide`): data the widget CONSUMES without rendering it as a column.
@@ -400,16 +406,19 @@ export async function getDatalist(
 						hideItems.push({
 							literal: await resolveDdoLabel(record, ddo.tipo, lang),
 							tipo: ddo.tipo,
-							section_id: String(row.section_id),
+							section_id: row.section_id,
 							section_tipo: targetSection,
 						});
 					}
 				}
 			}
 			items.push({
-				value: { section_tipo: targetSection, section_id: String(row.section_id) },
+				// The DB column is already an int — no cast in either direction
+				// (a String() here is what made every new select-family value
+				// persist as a string; WC-2026-08-10-section-id-int-canonical).
+				value: { section_tipo: targetSection, section_id: row.section_id },
 				label: labelParts.join(' | '),
-				section_id: String(row.section_id),
+				section_id: row.section_id,
 				hide: hideItems,
 			});
 		}

@@ -20,7 +20,7 @@ import definitions from './db_pg_definitions.json';
 import { classifyIndex, type LiveIndex, policyForTable } from './matrix_index_policy.ts';
 import { runWithoutStatementTimeout, sql, withTransaction } from './postgres.ts';
 
-interface AssetEntry {
+export interface AssetEntry {
 	tables?: string[];
 	add: string;
 	drop: string;
@@ -262,7 +262,7 @@ export async function recreateDbAssets(): Promise<{
  * INSERT…SELECT whose row filter MUST mirror the sync trigger function's —
  * a backfilled store must be indistinguishable from a trigger-maintained one.
  */
-const SEARCH_STORE_BACKFILLS: {
+export const SEARCH_STORE_BACKFILLS: {
 	store: string;
 	triggerEntry: string;
 	insert: (table: string) => string;
@@ -370,6 +370,187 @@ export interface EnsureSearchStoresResult {
 }
 
 /**
+ * The trigger identifiers the DDL probe expects to find, derived PURELY from
+ * the definitions: `{table}{suffix}` per declared table that EXISTS on this
+ * install, where the suffix is the entry name minus its `all_matrix` prefix
+ * (`all_matrix_string_search_sync` → `_string_search_sync`). The prefix is
+ * `all_matrix`, NOT `all_` — stripping only `all_` yields
+ * `matrix_testmatrix_string_search_sync`, which matches no trigger and would
+ * make every boot re-run the DDL pass. The derived name must equal the
+ * identifier in the entry's own `CREATE TRIGGER {$table}_…` add (pinned by the
+ * gate), which is why this is derivation and not a second source of truth.
+ */
+export function expectedTriggerNames(
+	entries: AssetEntry[],
+	present: ReadonlySet<string>,
+): string[] {
+	const expected: string[] = [];
+	for (const entry of entries) {
+		const suffix = entry.name.replace(/^all_matrix/, ''); // all_matrix_string_search_sync → _string_search_sync
+		for (const table of entry.tables ?? []) {
+			if (present.has(table)) expected.push(`${table}${suffix}`);
+		}
+	}
+	return expected;
+}
+
+/** What the READ-ONLY search-store DDL probe observed. */
+export interface SearchStoresInspection {
+	/** Declared source tables + store tables that exist as public BASE TABLEs. */
+	present: Set<string>;
+	/** The store table names (matrix_string_search, matrix_relation_index). */
+	storeTables: string[];
+	/** Trigger identifiers expected on the EXISTING declared tables. */
+	expectedTriggers: string[];
+	/** How many of those exist as non-internal triggers. */
+	presentTriggerCount: number;
+	/** True = a store table or a sync trigger is missing → DDL pass needed. */
+	ddlNeeded: boolean;
+}
+
+/**
+ * READ-ONLY half of ensureSearchStores step 1: two catalog queries (existing
+ * tables, then — only when both stores exist — the non-internal trigger count).
+ * Nothing here writes; it is the operator-previewable probe and the gate seam.
+ *
+ * A missing store table short-circuits: the trigger query is NOT issued (its
+ * expected list would be meaningless), so `expectedTriggers` is `[]` and
+ * `presentTriggerCount` 0 in that case — the same two-vs-one query shape the
+ * boot path has always had.
+ */
+export async function inspectSearchStores(): Promise<SearchStoresInspection> {
+	const triggerEntries = (definitions.ar_trigger as AssetEntry[]).filter((entry) =>
+		SEARCH_STORE_BACKFILLS.some(({ triggerEntry }) => triggerEntry === entry.name),
+	);
+	const declaredTables = [...new Set(triggerEntries.flatMap((entry) => entry.tables ?? []))];
+	const storeTables = SEARCH_STORE_BACKFILLS.map(({ store }) => store);
+	const presentRows = (await sql.unsafe(
+		`SELECT table_name FROM information_schema.tables
+		 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+		   AND table_name IN (SELECT jsonb_array_elements_text($1::text::jsonb))`,
+		[JSON.stringify([...declaredTables, ...storeTables])],
+	)) as { table_name: string }[];
+	const present = new Set(presentRows.map((row) => row.table_name));
+
+	if (storeTables.some((store) => !present.has(store))) {
+		return { present, storeTables, expectedTriggers: [], presentTriggerCount: 0, ddlNeeded: true };
+	}
+
+	const expectedTriggers = expectedTriggerNames(triggerEntries, present);
+	const triggerRows = (await sql.unsafe(
+		`SELECT count(*)::int AS n FROM pg_trigger
+		 WHERE NOT tgisinternal
+		   AND tgname IN (SELECT jsonb_array_elements_text($1::text::jsonb))`,
+		[JSON.stringify(expectedTriggers)],
+	)) as { n: number }[];
+	const presentTriggerCount = Number(triggerRows[0]?.n ?? 0);
+
+	return {
+		present,
+		storeTables,
+		expectedTriggers,
+		presentTriggerCount,
+		ddlNeeded: presentTriggerCount !== expectedTriggers.length,
+	};
+}
+
+/** What the READ-ONLY backfill probe observed about ONE derived store. */
+export interface SearchStoreObservation {
+	/** Store table name (matrix_string_search | matrix_relation_index). */
+	store: string;
+	/** The store table exists (false = the DDL pass above failed for it). */
+	exists: boolean;
+	/** The store holds no rows at all (`SELECT 1 … LIMIT 1` found nothing). */
+	empty: boolean;
+	/**
+	 * First PRESENT declared source table whose rows would produce store rows,
+	 * or null when none would. Short-circuits at the first hit exactly as the
+	 * inline loop did, so this is "at least one", never a full census.
+	 */
+	sourceWithRows: string | null;
+}
+
+/** The compute half of ensureSearchStores: what must be DONE, given what was OBSERVED. */
+export interface SearchStoresDecision {
+	/** A store table or a sync trigger is missing → run the DDL passes. */
+	ddlNeeded: boolean;
+	/** Stores to TRUNCATE + backfill (empty, existing, sources would fill them). */
+	storesNeedingBackfill: string[];
+	/** Nothing to do — derived from BOTH probes, never defaulted. */
+	healthy: boolean;
+}
+
+/**
+ * READ-ONLY second half of the ensureSearchStores probe: per declared store,
+ * does it exist, is it empty, and would any PRESENT declared source table
+ * produce rows for it. Nothing here writes; the ACT (TRUNCATE + backfill) is
+ * decided by decideSearchStores and run by the caller.
+ *
+ * `present` is the PRE-DDL table snapshot from inspectSearchStores — the source
+ * tables are filtered with it, exactly as the inline loop did. A non-empty store
+ * skips the source probes entirely (they cannot change the outcome).
+ */
+export async function observeSearchStores(
+	present: ReadonlySet<string>,
+): Promise<SearchStoreObservation[]> {
+	const observations: SearchStoreObservation[] = [];
+	for (const { store, triggerEntry, probe } of SEARCH_STORE_BACKFILLS) {
+		if (!(await tableExists(store))) {
+			// DDL failed above — already in errors
+			observations.push({ store, exists: false, empty: false, sourceWithRows: null });
+			continue;
+		}
+		const any = (await sql.unsafe(`SELECT 1 AS one FROM "${store}" LIMIT 1`, [])) as unknown[];
+		if (any.length > 0) {
+			observations.push({ store, exists: true, empty: false, sourceWithRows: null });
+			continue;
+		}
+		const entry = (definitions.ar_trigger as AssetEntry[]).find(
+			(candidate) => candidate.name === triggerEntry,
+		);
+		let sourceWithRows: string | null = null;
+		for (const table of entry?.tables ?? []) {
+			if (!present.has(table)) continue;
+			const rows = (await sql.unsafe(cleanSql(probe(table)), [])) as unknown[];
+			if (rows.length > 0) {
+				sourceWithRows = table;
+				break;
+			}
+		}
+		observations.push({ store, exists: true, empty: true, sourceWithRows });
+	}
+	return observations;
+}
+
+/**
+ * PURE fold: the boot decision, from the two read-only probes. Extracted from
+ * ensureSearchStores (which consumes exactly this object) because BOTH failure
+ * directions are expensive and silent — a false `ddlNeeded` re-runs the
+ * extension/table/function/trigger/index passes on every restart, and a lost
+ * `empty`/`exists` guard TRUNCATEs and rebuilds a populated 5M-row store on boot.
+ *
+ * A store is backfilled only when it EXISTS, is EMPTY, and some present source
+ * table would produce rows for it (the previous-beta signature). An empty store
+ * with no source rows is a legitimately empty install — nothing to do.
+ */
+export function decideSearchStores(
+	inspection: Pick<SearchStoresInspection, 'ddlNeeded'>,
+	observations: readonly SearchStoreObservation[],
+): SearchStoresDecision {
+	const storesNeedingBackfill = observations
+		.filter(
+			(observation) =>
+				observation.exists && observation.empty && observation.sourceWithRows !== null,
+		)
+		.map((observation) => observation.store);
+	return {
+		ddlNeeded: inspection.ddlNeeded,
+		storesNeedingBackfill,
+		healthy: !inspection.ddlNeeded && storesNeedingBackfill.length === 0,
+	};
+}
+
+/**
  * Boot-time self-provisioning of the derived search stores (owner directive
  * 2026-07-21: a database from a previous beta must heal on restart, not via a
  * runbook). Called by startServer AFTER runBootMigrations, BEFORE serving —
@@ -388,6 +569,16 @@ export interface EnsureSearchStoresResult {
  * deliberate: until it ran, relation searches would only fail loudly anyway
  * (requireRelationIndex). Failures are returned, not thrown; the caller logs
  * and serves (S1-15 fault-tolerant boot posture).
+ *
+ * COMPUTE-THEN-ACT: the probes (inspectSearchStores / observeSearchStores) and
+ * the fold (decideSearchStores) hold the whole decision and are gated by
+ * search_store_{ensure,decision}_native.test.ts; this shell only ACTS on it.
+ * COVERAGE-EXEMPT / NAMED EXEMPTION (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): the acted-upon passes themselves (createExtensions /
+ * rebuildTables / rebuildFunctions / rebuildTriggers / rebuildIndexes /
+ * backfillSearchStores) are never executed by a gate — they rewrite the shared
+ * schema and backfill multi-million-row stores — and that exemption is valid
+ * ONLY while the decision above stays gated.
  */
 export async function ensureSearchStores(): Promise<EnsureSearchStoresResult> {
 	const result: EnsureSearchStoresResult = {
@@ -397,77 +588,32 @@ export async function ensureSearchStores(): Promise<EnsureSearchStoresResult> {
 		errors: [],
 	};
 
-	// 1. DDL probe: both store tables + every sync trigger on every EXISTING
-	// declared table (one catalog query for tables, one for triggers).
-	const triggerEntries = (definitions.ar_trigger as AssetEntry[]).filter((entry) =>
-		SEARCH_STORE_BACKFILLS.some(({ triggerEntry }) => triggerEntry === entry.name),
-	);
-	const declaredTables = [...new Set(triggerEntries.flatMap((entry) => entry.tables ?? []))];
-	const storeTables = SEARCH_STORE_BACKFILLS.map(({ store }) => store);
-	const presentRows = (await sql.unsafe(
-		`SELECT table_name FROM information_schema.tables
-		 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-		   AND table_name IN (SELECT jsonb_array_elements_text($1::text::jsonb))`,
-		[JSON.stringify([...declaredTables, ...storeTables])],
-	)) as { table_name: string }[];
-	const present = new Set(presentRows.map((row) => row.table_name));
+	// 1. DDL probe (read-only): both store tables + every sync trigger on every
+	// EXISTING declared table. `present` is deliberately the PRE-DDL snapshot —
+	// step 2 filters its probe tables with it, exactly as before.
+	const inspection = await inspectSearchStores();
 
-	let ddlNeeded = storeTables.some((store) => !present.has(store));
-	if (!ddlNeeded) {
-		// expected trigger names: {table}{suffix} per entry, existing tables only
-		const expected: string[] = [];
-		for (const entry of triggerEntries) {
-			const suffix = entry.name.replace(/^all_matrix/, ''); // all_matrix_string_search_sync → _string_search_sync
-			for (const table of entry.tables ?? []) {
-				if (present.has(table)) expected.push(`${table}${suffix}`);
-			}
-		}
-		const triggerRows = (await sql.unsafe(
-			`SELECT count(*)::int AS n FROM pg_trigger
-			 WHERE NOT tgisinternal
-			   AND tgname IN (SELECT jsonb_array_elements_text($1::text::jsonb))`,
-			[JSON.stringify(expected)],
-		)) as { n: number }[];
-		ddlNeeded = Number(triggerRows[0]?.n ?? 0) !== expected.length;
-	}
-
-	if (ddlNeeded) {
-		result.healthy = false;
+	if (inspection.ddlNeeded) {
 		result.ddlApplied = true;
 		const passes = [
 			await createExtensions(),
 			await rebuildTables(),
 			await rebuildFunctions(),
 			await rebuildTriggers(),
-			await rebuildIndexes(storeTables),
+			await rebuildIndexes(inspection.storeTables),
 		];
 		for (const pass of passes) result.errors.push(...pass.errors);
 	}
 
-	// 2. Backfill probe per store: empty + sources would produce rows.
-	const needBackfill: string[] = [];
-	for (const { store, triggerEntry, probe } of SEARCH_STORE_BACKFILLS) {
-		if (!(await tableExists(store))) continue; // DDL failed above — already in errors
-		const any = (await sql.unsafe(`SELECT 1 AS one FROM "${store}" LIMIT 1`, [])) as unknown[];
-		if (any.length > 0) continue;
-		const entry = (definitions.ar_trigger as AssetEntry[]).find(
-			(candidate) => candidate.name === triggerEntry,
-		);
-		for (const table of entry?.tables ?? []) {
-			if (!present.has(table)) continue;
-			const rows = (await sql.unsafe(cleanSql(probe(table)), [])) as unknown[];
-			if (rows.length > 0) {
-				needBackfill.push(store);
-				break;
-			}
-		}
-	}
+	// 2. Backfill probe per store (read-only), then the DECISION both halves fold to.
+	const observations = await observeSearchStores(inspection.present);
+	const decision = decideSearchStores(inspection, observations);
+	result.healthy = decision.healthy;
 
-	if (needBackfill.length > 0) {
-		result.healthy = false;
-		const backfill = await backfillSearchStores(needBackfill);
+	if (decision.storesNeedingBackfill.length > 0) {
+		const backfill = await backfillSearchStores(decision.storesNeedingBackfill);
 		result.errors.push(...backfill.errors);
-		for (const store of needBackfill) {
+		for (const store of decision.storesNeedingBackfill) {
 			result.backfilled[store] = Number(backfill[`${store}_rows`] ?? 0);
 		}
 	}
@@ -600,8 +746,17 @@ export async function pruneMatrixIndexes(
  * directly). TS ADDITION (WC-046): a policy-governed append-only log
  * (matrix_activity/matrix_time_machine) is PRUNED first — drop the dead/
  * redundant PHP-era indexes so REINDEX does not rebuild bloat we are removing.
+ *
+ * `dryRun` makes the whole run non-destructive: validation still reports, the
+ * prune still CLASSIFIES (pruneMatrixIndexes' own dryRun) so the operator sees
+ * what would be dropped, and the REINDEX/VACUUM sentences are neither executed
+ * nor recorded — an empty `reindex`/`vacuum` map IS the "nothing was done"
+ * signal. Default (`dryRun` absent/false) is the destructive path, unchanged.
  */
-export async function optimizeTables(tables: string[]): Promise<{
+export async function optimizeTables(
+	tables: string[],
+	options: { dryRun?: boolean } = {},
+): Promise<{
 	result: boolean;
 	msg: string;
 	errors: unknown[];
@@ -639,15 +794,16 @@ export async function optimizeTables(tables: string[]): Promise<{
 	}
 	// Prune dead/redundant indexes on the governed logs BEFORE reindexing, so
 	// REINDEX does not waste work rebuilding indexes we are about to drop.
+	const dryRun = options.dryRun === true;
 	for (const table of validTables) {
 		try {
-			const pruned = await pruneMatrixIndexes(table);
+			const pruned = await pruneMatrixIndexes(table, { dryRun });
 			if (pruned !== null) response.prune[table] = pruned;
 		} catch (error) {
 			response.errors.push(`PRUNE failed for table ${table}: ${(error as Error).message}`);
 		}
 	}
-	for (const table of validTables) {
+	for (const table of dryRun ? [] : validTables) {
 		try {
 			await runWithoutStatementTimeout(`REINDEX TABLE CONCURRENTLY "${table}"`);
 			response.reindex[table] = 'REINDEX\n'; // psql command-tag echo, PHP shape
@@ -656,7 +812,7 @@ export async function optimizeTables(tables: string[]): Promise<{
 			response.errors.push(`REINDEX failed for table: ${table}`);
 		}
 	}
-	for (const table of validTables) {
+	for (const table of dryRun ? [] : validTables) {
 		try {
 			await runWithoutStatementTimeout(`VACUUM ANALYZE "${table}"`);
 			response.vacuum[table] = 'VACUUM\n'; // psql command-tag echo, PHP shape

@@ -67,6 +67,7 @@ import { persistRecordColumns, persistRecordKeys } from '../../../src/core/secti
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
 import { stripDataframeFramesFromTmMain } from '../../../src/core/tm_record/tm_record.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import { normalizeRestoredSectionIds } from '../../../src/core/update/transform/section_id_restore.ts';
 import {
 	applyDataframeRestore,
 	composeTimeMachineSnapshot,
@@ -109,6 +110,12 @@ async function restoreSection(
 			columns[column as MatrixJsonbColumn] = value;
 		}
 	}
+	// section_id int-canonical convergence (WC-2026-08-10-section-id-int-canonical, D6.2): TM snapshots — and any pre-migration backup restored
+	// into a post-migration install — carry string-form locator addresses; a
+	// verbatim write would re-inject them forever. The kernel converts what the
+	// sweep would convert (external remote ids and junk pass verbatim), so
+	// restores CONVERGE on the canonical form instead of undoing the sweep.
+	await normalizeRestoredSectionIds(columns);
 	await persistRecordColumns({ table, sectionTipo, sectionId }, columns, { userId });
 
 	// LEDGERED (no TS twin / no fixture): deleted-media relink, session-SQO
@@ -220,9 +227,9 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 				'RECOVER SECTION',
 				{
 					msg: 'Recovered section record from time machine',
-					section_id: String(sectionId),
+					section_id: sectionId,
 					section_tipo: sectionTipo,
-					top_id: String(sectionId),
+					top_id: sectionId,
 					top_tipo: sectionTipo,
 					table: (await getMatrixTableFromTipo(sectionTipo)) ?? 'matrix',
 					tm_id: matrixId,
@@ -244,10 +251,19 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		};
 	}
 
+	// int-canonical convergence on the WHOLE snapshot (D6.2 — see restoreSection),
+	// BEFORE the strip and the frame plan below: the frames replayed into the
+	// slots are stored addresses too, so normalizing only the main would write
+	// the main int-form and its frames string-form — half a convergence, and the
+	// legacy form re-injected on exactly the rows the sweep just fixed.
+	const snapshot = { value: tmRow.data };
+	await normalizeRestoredSectionIds(snapshot);
+	const canonicalSnapshot = snapshot.value;
+
 	// Main data: strip dataframe frames (iri: keep only entries carrying `iri`).
 	// SAME strip the tool_time_machine preview read applies (read.ts), so the
 	// value the user previewed is exactly what this restore writes.
-	const data = stripDataframeFramesFromTmMain(model, tmRow.data);
+	const data = stripDataframeFramesFromTmMain(model, canonicalSnapshot);
 
 	// Overwrite the live component value.
 	const column = getColumnNameByModel(model);
@@ -266,7 +282,11 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 	// leaving the record half-restored.
 	let framePlan: DataframeSlotRestore[];
 	try {
-		framePlan = await planDataframeRestore(tipo, tmRow.data, await resolveDataframeSlotTipos(tipo));
+		framePlan = await planDataframeRestore(
+			tipo,
+			canonicalSnapshot,
+			await resolveDataframeSlotTipos(tipo),
+		);
 	} catch (error) {
 		if (error instanceof DataframeRestoreError) {
 			return { result: false, msg: `Error. ${error.message}`, errors: ['uncovered_scope'] };
@@ -342,7 +362,7 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		{
 			msg: 'Recovered component data from time machine',
 			model,
-			section_id: String(sectionId),
+			section_id: sectionId,
 			section_tipo: sectionTipo,
 			table,
 			tm_id: matrixId,

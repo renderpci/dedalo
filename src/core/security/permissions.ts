@@ -22,6 +22,7 @@
 
 import { readString } from '../../config/readers.ts';
 import { AUDIT_TIPOS, isConsultationOnlySection } from '../concepts/section.ts';
+import { classifyWireSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { THESAURUS_SECTION } from '../ontology/ontology_tipos.ts';
@@ -92,7 +93,15 @@ export interface Principal {
 	isDeveloper: boolean;
 }
 
-/** Read the first locator's target section_id from a user's relation component. */
+/**
+ * Read the first locator's target section_id from a user's relation component.
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): the user record's
+ * relation bag is read straight off jsonb, and an unswept install still holds
+ * the legacy string form ('1' for the yes-flag target). Read tolerance here is
+ * what keeps a pre-sweep install's admins admins; the returned address is the
+ * canonical int.
+ */
 async function readUserRelationTargetId(
 	userId: number,
 	componentTipo: string,
@@ -187,6 +196,9 @@ export function clearUserProjectsCache(userId?: number): void {
 	else userProjectsCache.delete(userId);
 }
 
+// KEPT UNION on the row cast below, same law as readUserRelationTargetId: the
+// dd170 bag is unswept jsonb, so a legacy string project address must still
+// resolve (WC-2026-08-10-section-id-int-canonical); the returned ids are ints.
 export async function getUserProjects(userId: number): Promise<number[]> {
 	const cached = readFresh(userProjectsCache, userId);
 	if (cached !== undefined) return cached;
@@ -561,8 +573,10 @@ export function resolveOwnUserRecordPermission(
  * resolve_component_read_permission, class.component_common.php:3512-3540).
  * SEARCH mode grants every logged user level 2 on: the thesaurus template
  * section (all users may search the thesaurus), the metadata/section-info
- * components, and a SYNTHETIC section_id (the search panel's client-minted
- * 'search_<n>' ids — PHP (int)-casts them to 0). Everything else — and every
+ * components, and any NO-RECORD section_id — a SYNTHETIC token (the search
+ * panel's client-minted 'search_<n>' ids — PHP (int)-casts them to 0) or an
+ * EXTERNAL remote id, per classifyWireSectionId
+ * (WC-2026-08-10-section-id-int-canonical). Everything else — and every
  * non-search mode — resolves through the matrix.
  *
  * NON-SEARCH resolves the actor's own dd128 user record through
@@ -581,11 +595,28 @@ export async function resolveComponentContextPermission(
 	if (mode === 'search') {
 		if (sectionTipo === THESAURUS_SECTION) return 2;
 		if (METADATA_TIPOS.has(tipo)) return 2;
-		// PHP (int)$section_id === 0: a synthetic 'search_<n>' id (NaN here) or a
-		// literal 0 grants 2; an absent id falls through to the matrix.
+		// PHP (int)$section_id === 0: a no-record id grants 2 — classified now
+		// (WC-2026-08-10-section-id-int-canonical) instead of the NaN sniff. A
+		// SYNTHETIC token ('search_<n>') and an EXTERNAL remote id both keep the
+		// grant the NaN branch gave them: neither addresses a matrix record, so
+		// the matrix could only mis-deny the search widget. A literal record id 0
+		// keeps its grant ((int)-cast parity); any other record id falls through
+		// to the matrix. `absent` falls through too — including '' (the WC-entry
+		// divergence: the NaN era's Number('') === 0 granted 2 to an EMPTY id).
 		if (sectionId !== null && sectionId !== undefined) {
-			const numericId = Number(sectionId);
-			if (Number.isNaN(numericId) || numericId === 0) return 2;
+			// Classifier refusal ('007', unusable type) → fall through to the
+			// matrix walk like any real record id: no special grant on garbage,
+			// no 500 on a permission probe.
+			const wireSectionId = await classifyWireSectionId(
+				sectionId,
+				sectionTipo,
+				'permissions.component_context.search',
+			).catch((error: unknown) => {
+				if (error instanceof TypeError) return { kind: 'absent' } as const;
+				throw error;
+			});
+			if (wireSectionId.kind === 'synthetic' || wireSectionId.kind === 'external-ref') return 2;
+			if (wireSectionId.kind === 'record' && wireSectionId.id === 0) return 2;
 		}
 	} else {
 		// PHP evaluates the own-record cases only after the search branch has

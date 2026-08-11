@@ -168,7 +168,15 @@ export interface SectionsEnvelope {
 	entries: { section_tipo: string; section_id: number; paginated_key: number }[];
 }
 
-/** A data item as the API emits it (PHP get_data_item :3981). */
+/**
+ * A data item as the API emits it (PHP get_data_item :3981).
+ *
+ * KEPT UNION on `section_id`: an item's row anchor is int for every matrix
+ * record, but the SAME field carries the non-record concepts the API also
+ * emits — an EXTERNAL target's remote id (zenon '001338683', verbatim) and the
+ * client's synthetic tokens ('search_1' in search/tool modes) — plus null for
+ * the sectionless items (WC-2026-08-10-section-id-int-canonical).
+ */
 export interface DataItem {
 	section_id: number | string | null;
 	section_tipo: string;

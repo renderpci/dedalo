@@ -30,6 +30,7 @@
  * documented for the cutover, acceptable one-way during the transition.
  */
 
+import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 
 /** TS-owned lock table (created on first use; lives in the shared matrix DB). */
@@ -69,7 +70,13 @@ async function ensureTable(): Promise<void> {
 	tableReady = true;
 }
 
-/** The lock target triple. section_id is normalized to text (PHP loose ids). */
+/**
+ * The lock target triple — the DB KEY, not a wire address. section_id stays
+ * normalized to text: a NAMED EXEMPTION from
+ * WC-2026-08-10-section-id-int-canonical, because this key is a text composite
+ * shared with the legacy PHP registry's own text events. The emitted lock
+ * EVENTS are canonicalized instead (see getActiveLockUsers `enrich`).
+ */
 interface LockTriple {
 	section_tipo: string;
 	section_id: string;
@@ -348,12 +355,20 @@ export async function getActiveLockUsers(): Promise<{
 		const { currentDataLang } = await import('../resolve/request_lang.ts');
 		const labelLang = currentDataLang();
 
+		// NAMED EXEMPTION (WC-2026-08-10-section-id-int-canonical): the
+		// dedalo_ts_component_locks TABLE keeps its `section_id text` column and
+		// the String() key normalization in tripleOf — the lock key is a string
+		// composite shared with the legacy PHP registry's own text events, and
+		// re-typing it would break every live lock mid-flight for no gain.
+		// The EVENTS emitted from here are record addresses on the app wire, so
+		// they leave in canonical form; `row.section_id` therefore arrives as
+		// whatever that key store holds and is canonicalized once, here.
 		const enrich = async (row: {
 			user_id: number;
 			full_username: string;
 			component_tipo: string;
 			section_tipo: string;
-			section_id: string;
+			section_id: unknown;
 			date: string;
 		}): Promise<Record<string, unknown>> => ({
 			user_id: row.user_id,
@@ -362,7 +377,7 @@ export async function getActiveLockUsers(): Promise<{
 			component_tipo: row.component_tipo,
 			component_label: await termByTipo(row.component_tipo, labelLang),
 			section_tipo: row.section_tipo,
-			section_id: row.section_id,
+			section_id: canonicalizeStoredSectionId(row.section_id),
 			section_label: await termByTipo(row.section_tipo, labelLang),
 			date: row.date,
 		});
@@ -418,7 +433,8 @@ export async function getActiveLockUsers(): Promise<{
 					full_username: event.full_username ?? '',
 					component_tipo: event.component_tipo,
 					section_tipo: event.section_tipo,
-					section_id: String(event.section_id ?? ''),
+					// enrich() canonicalizes; no String() minting on the way in.
+					section_id: event.section_id ?? '',
 					date: event.date ?? '',
 				}),
 			);

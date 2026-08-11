@@ -259,7 +259,11 @@ describe('data identity — read round-trip on a scratch record (WC-020)', () =>
 		expect(own).toBeDefined(); // emitted under the ALIAS identity
 		expect((own?.entries as unknown[]).length).toBe(1); // alias sqo_config.limit 1
 		expect(own?.pagination).toEqual({ total: 2, limit: 1, offset: 0 });
-		expect((own?.entries as { section_id?: string }[])[0]?.section_id).toBe('11');
+		// NOT flipped by WC-2026-08-10-section-id-int-canonical: the seed above is
+		// LEGACY string-stored data and the entries array is emitted as the stored
+		// bytes verbatim (only the injected search chips and the expanded child
+		// items canonicalize). A pre-sweep row must still read back byte-exact.
+		expect((own?.entries as { section_id?: string | number }[])[0]?.section_id).toBe('11');
 	});
 
 	test('read via the TARGET sees the same stored data (alias↔target unity)', async () => {

@@ -41,6 +41,7 @@
 *   view_mini_list_dataframe.render       - async entry point; call from parent render
 */
 import {ui} from '../../common/js/ui.js'
+import {same_section_id} from '../../common/js/utils/index.js'
 
 
 
@@ -201,7 +202,7 @@ const render_content_value = function(options) {
 				// When rating_value is falsy (value array is empty), synthesise a sentinel
 				// object that supplies the blue fallback colour as hide[0].literal.
 				const rating = (rating_value)
-					? rating_data.datalist.find(el => el.section_id === rating_value.section_id )
+					? rating_data.datalist.find(el => same_section_id(el.section_id, rating_value.section_id) )
 					: {
 						hide:[{
 							literal: ui.css_var('--color_blue_3', '#006ed2') // default when the datalist is empty (rating not set)
