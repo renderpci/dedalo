@@ -17,7 +17,10 @@
  *    companion was removed 2026-08-11 — a transactional rebuild publishes atomically
  *    (MVCC: no reader ever sees the wipe), so the weaker writer bought nothing but a
  *    choice the operator had no criterion to make. See the ontology_state.ts header.
- *  - it runs the LLM-map post-step (PHP: export_llm_map errors merged in).
+ *    It does NOT rebuild the LLM map — that post-step moved to export_ontologies alone
+ *    (WC-2026-08-11-regenerate-drops-llm-map-post-step): the map is a DISTRIBUTION file
+ *    served next to ontology.json and the per-TLD dumps, none of which a regenerate
+ *    refreshes, and rebuilding it cost 21s of the tool's 22s on a 752-section install.
  *  - export_ontologies: the ordered export pipeline (PHP :301-409):
  *    update_ontology_info → export_ontology_info (both hard-abort) → per-TLD
  *    export_to_file (fail-and-continue, run BOUNDED-PARALLEL — see
@@ -171,6 +174,15 @@ export async function toolOntologyParserRepairTlds(
  * scratch (rebuildOntology). The ONE write door onto the projection. The delete + reinsert
  * run in one transaction per TLD, so a failure rolls back with no empty window and no
  * leftover backup table, and no reader ever observes the wipe.
+ *
+ * IT DOES NOT REBUILD THE LLM MAP (WC-2026-08-11-regenerate-drops-llm-map-post-step). PHP ran
+ * export_llm_map here and merged its errors in. `ontology_llm_map.json` is a DISTRIBUTION
+ * artifact — served by `serveOntologyIoFile` beside `ontology.json` and the per-TLD dumps,
+ * read by nothing in the engine — and a regenerate refreshes none of its companions, so the
+ * map alone being fresh made the export set no more coherent. It is rebuilt by
+ * `export_ontologies` (step 5), which is what publishes the rest. Measured cost of the removed
+ * step on dedalo7_mht: 21.2s of a 22.1s request (752 sections × 9408 link fields, each
+ * building its own request_config), against 76ms for the parse+diff of the TLD asked for.
  */
 export async function toolOntologyParserRegenerate(
 	context: ToolActionContext,
@@ -180,23 +192,7 @@ export async function toolOntologyParserRegenerate(
 	}
 	const tlds = selectedTlds(context);
 	const outcomes = await rebuildOntologies(tlds, context.userId);
-	return withLlmMap(summarize(outcomes, tlds, 'Rebuilt'));
-}
-
-/**
- * PHP regenerate_ontologies post-step: rebuild the LLM map after a dd_ontology write, even
- * when it partially failed (partial rows are still mappable). Its errors are MERGED in;
- * result/msg stay the write's.
- */
-async function withLlmMap(response: ToolResponse): Promise<ToolResponse> {
-	const errors = [...((response.errors as string[]) ?? [])];
-	try {
-		const llmMapResponse = await exportLlmMap();
-		if (!llmMapResponse.result) errors.push(...llmMapResponse.errors);
-	} catch (error) {
-		errors.push((error as Error).message);
-	}
-	return { ...response, errors };
+	return summarize(outcomes, tlds, 'Rebuilt');
 }
 
 /**

@@ -42,7 +42,22 @@ The comparison is by **meaning, not bytes**: jsonb key order is normalized, `{}`
 | `regenerate_ontologies` | **write, the one projection write** | `rebuildOntology` — **transactional** wipe-and-rebuild |
 | `export_ontologies` | write (files) | the ordered export pipeline (info → `ontology.json` → per-TLD COPY dumps → private lists → LLM map); the per-TLD dumps run **bounded-parallel** (≤ `EXPORT_CONCURRENCY`), the surrounding steps stay sequential |
 
-The rebuild runs the LLM-map post-step (its errors are merged in; the write's result/msg stay). It wraps the delete + reinsert in **one transaction per TLD**, so a failure rolls back with no empty window and no leftover backup table — replacing the retired `regenerateRecordsInDdOntology`, whose `dd_ontology_bk` table was its only, untested, rollback.
+The rebuild wraps the delete + reinsert in **one transaction per TLD**, so a failure rolls back with no empty window and no leftover backup table — replacing the retired `regenerateRecordsInDdOntology`, whose `dd_ontology_bk` table was its only, untested, rollback.
+
+!!! note "A rebuild does not refresh the export files (WC-2026-08-11-regenerate-drops-llm-map-post-step)"
+    A rebuild used to run `exportLlmMap` as a post-step and merge its errors into the
+    response. It no longer does. `ontology_llm_map.json` is a **distribution**
+    artifact — served beside `ontology.json` and the per-TLD dumps, read by nothing in the
+    engine — and a rebuild refreshes none of its companions, so the map alone being current
+    made the served set no more coherent. `export_ontologies` (step 5) rebuilds it, along
+    with everything else it publishes.
+
+    The removed step also dominated the tool's cost: it walks the **whole install** whatever
+    TLD was selected, building a full `request_config` per link field. Measured on a
+    752-section install, rebuilding one 178-record TLD — 76 ms for the parse and diff,
+    21.2 s for the map. It is likewise where the `[request_config/explicit] dropped sqo
+    target …` warnings on a regenerate came from: the map walk over *other* TLDs'
+    components, never the rebuild.
 
 **Client** (`tools/tool_ontology_parser/js/`). A checkbox tree of ontologies grouped by typology; a **status panel** (`paint_status`, fed by `inspect_ontologies`) showing each selected TLD as ✓ in-sync or ✗ with its drift counts; and four buttons — **Repair TLDs**, **Regenerate** (rebuild), **Export**, **Refresh status**. One `run_action` path drives every button (confirm → run → render messages → repaint the panel → always clear the spinner), so each action carries its **own** confirmation, and no response can leave the tool hanging.
 

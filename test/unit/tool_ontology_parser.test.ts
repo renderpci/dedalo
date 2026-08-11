@@ -155,6 +155,36 @@ describe('tool_ontology_parser module', () => {
 		}
 	});
 
+	/**
+	 * WC-2026-08-11-regenerate-drops-llm-map-post-step. PHP ran `export_llm_map` after the
+	 * dd_ontology write and merged its errors in. The map is a DISTRIBUTION artifact whose
+	 * companions (`ontology.json`, the per-TLD dumps) a regenerate does not refresh either,
+	 * and building it walks the WHOLE install: 21.2s of a measured 22.1s request on
+	 * dedalo7_mht, against 76ms for the parse+diff of the TLD actually asked for.
+	 *
+	 * Asserted against the SOURCE because the regression is a re-added call, not a wrong
+	 * value — a response-shape assertion cannot see the 21 seconds. The export handler is
+	 * read in the same pass so this can never pass by the map having left the file entirely:
+	 * `export_ontologies` must still be its one caller (its always-runs/errors-merged
+	 * semantics stay gated by `ontology_data_io.test.ts`).
+	 */
+	test('regenerate_ontologies does NOT rebuild the LLM map; export_ontologies still does', async () => {
+		const source = await Bun.file(
+			`${import.meta.dir}/../../tools/tool_ontology_parser/server/tool_ontology_parser.ts`,
+		).text();
+
+		const body = (fnName: string): string => {
+			const start = source.indexOf(`export async function ${fnName}(`);
+			expect(start).toBeGreaterThan(-1);
+			const next = source.indexOf('\nexport ', start + 1);
+			return source.slice(start, next === -1 ? source.length : next);
+		};
+
+		// The regenerate handler reaches nothing llm-map shaped (call or wrapper).
+		expect(body('toolOntologyParserRegenerate')).not.toMatch(/[Ll]lmMap\s*\(/);
+		// …and the export pipeline still runs it.
+		expect(body('runExportOntologies')).toMatch(/io\.exportLlmMap\s*\(/);
+	});
 });
 
 /**

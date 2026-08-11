@@ -51,6 +51,11 @@ The tool is restricted to the **Ontology section**, where it appears as the *Ont
 !!! note "The old *Reconcile* button is gone"
     Earlier versions offered a second, non-destructive button that applied only the differences. It was removed on 2026-08-11. Its one advantage was avoiding a moment where the runtime ontology was empty — and that stopped being possible once Regenerate started rebuilding inside a transaction. Two buttons with the same outcome only made you choose without a reason to.
 
+!!! info "Regenerate does not refresh the export files"
+    Regenerate rewrites the **runtime tree** only. The files other installations download —
+    the ontology definition files and the LLM map — are refreshed by **Export**, not by a
+    rebuild. If you rebuilt in order to publish the result, press Export afterwards.
+
 !!! warning "Regenerate wipes the runtime nodes, not the source"
     A rebuild deletes the hierarchy's runtime nodes and re-derives them from the editable source. The **source records are never touched** — the projection is regenerated from them. It runs in one transaction per hierarchy, so a mid-run failure rolls that hierarchy back cleanly.
 

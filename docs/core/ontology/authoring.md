@@ -436,8 +436,9 @@ flowchart TD
    wipe-and-rebuild (delete + reinsert in one `withTransaction`, rolled back on
    failure — no backup table). Because it commits atomically, no reader ever sees
    the empty window, which is why there is no incremental companion any more (the
-   `ensureOntology` reconcile was removed 2026-08-11). It then rebuilds the LLM map
-   (`exportLlmMap()`), merging any of its errors into the response.
+   `ensureOntology` reconcile was removed 2026-08-11). It does **not** rebuild the
+   LLM map or any other export file — those are refreshed by `export_ontologies`
+   (WC-2026-08-11-regenerate-drops-llm-map-post-step).
 3. **Compile one section (or one record)** without a full regenerate with
    `setRecordsInDdOntology({sectionTipo, sectionId})` (`tools/tool_ontology`).
    With no `sectionId`, list mode is a **full-section scan**: every record of

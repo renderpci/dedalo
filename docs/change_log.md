@@ -30,6 +30,25 @@ Dédalo version
     genuinely changes every sibling that moved, so "only what drifted" was the
     whole hierarchy anyway.
 
+### Changed
+- **Rebuilding an ontology no longer refreshes the export files**, and became
+  ~20× faster for it. *Regenerate* used to rebuild the LLM map for the **whole
+  installation** afterwards, whichever single hierarchy you had ticked. That map
+  is one of the files other installations download, and a rebuild refreshes none
+  of its companions — so keeping it alone current never made the published set
+  coherent, while costing 21 of the 22 seconds an operator spent waiting. The
+  files are refreshed by **Export**, which publishes all of them together.
+
+    !!! tip "If you rebuilt in order to publish"
+        Press **Export** afterwards. That was already true of the ontology
+        definition files; it is now true of the LLM map too.
+
+    This is also where the `dropped sqo target …` lines in the server log during
+    a rebuild came from — the whole-install map walk, reporting components that
+    point at ontologies this installation has registered but never imported.
+    They still appear on an export, and in normal editing of those components,
+    which is where they are actionable.
+
 ---
 
 ## [Unreleased] - A record is read once per read
