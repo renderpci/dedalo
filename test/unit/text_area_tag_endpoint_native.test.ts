@@ -11,7 +11,8 @@
  *   1. authenticated locator → 302 (proves the locator is resolvable at all);
  *   2. the SAME locator with no cookie / a garbage cookie → byte-identical 404
  *      (now a real ACL assertion, not a coincidence);
- *   3. deterministic badges → 200 + immutable cache + ETag/304 revalidation;
+ *   3. deterministic badges → 200 + ETag/304 revalidation, immutable ONLY for a
+ *      version-addressed (`&v=`) url;
  *   4. indistinguishability: every other miss is byte-identical to (2) — the
  *      guard against ADDING a branch that tells "no access" from "absent".
  *
@@ -55,10 +56,12 @@ function locatorId(
 /** Call the endpoint exactly the way server.ts does (same URL object, same request). */
 async function callTag(
 	id: string | null,
-	init: { cookie?: string; ifNoneMatch?: string } = {},
+	init: { cookie?: string; ifNoneMatch?: string; version?: string } = {},
 ): Promise<Response> {
 	const url = new URL(ENDPOINT);
 	if (id !== null) url.searchParams.set('id', id);
+	// The client's renderer fingerprint (`&v=`), when the caller pins one.
+	if (init.version !== undefined) url.searchParams.set('v', init.version);
 	const headers: Record<string, string> = {};
 	if (init.cookie !== undefined) headers.cookie = init.cookie;
 	if (init.ifNoneMatch !== undefined) headers['if-none-match'] = init.ifNoneMatch;
@@ -143,12 +146,18 @@ describe('handleTagRequest — 3. deterministic badges', () => {
 	// {kind:'invalid'} and would silently exercise the 404 branch instead.
 	const BADGE_ID = '[index-n-5]';
 
-	test('sprite badge → 200 svg, public+immutable, quoted ETag; no session needed', async () => {
+	/**
+	 * WC-2026-08-11-vector-tag-badges: `immutable` is only true for a
+	 * VERSION-ADDRESSED url. A bare `?id=` is not — its bytes moved when the badge
+	 * was redrawn — so it must stay revalidatable, or every warm browser keeps the
+	 * old drawing for a year and the redraw never reaches the reporter.
+	 */
+	test('sprite badge → 200 svg, revalidating cache, quoted ETag; no session needed', async () => {
 		const response = await callTag(BADGE_ID);
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get('Content-Type')).toBe('image/svg+xml; charset=utf-8');
-		expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600, must-revalidate');
 		const etag = response.headers.get('ETag');
 		expect(etag).not.toBeNull();
 		// Quoted, per RFC 7232 — an unquoted ETag is silently ignored by caches.
@@ -178,11 +187,37 @@ describe('handleTagRequest — 3. deterministic badges', () => {
 		expect(revalidated.status).toBe(304);
 		expect(revalidated.body).toBeNull();
 		expect(revalidated.headers.get('ETag')).toBe(etag);
-		expect(revalidated.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		expect(revalidated.headers.get('Cache-Control')).toBe('public, max-age=3600, must-revalidate');
 
 		// A stale validator must serve the body again, not a 304.
 		const stale = await callTag(BADGE_ID, { ifNoneMatch: '"deadbeef"' });
 		expect(stale.status).toBe(200);
+	});
+
+	/**
+	 * The client appends `&v=<renderer fingerprint>` (tr.tag_badge_version), which
+	 * makes the URL change whenever the drawing changes — THAT url may be pinned
+	 * for a year. The token's value is never interpreted: the badge is still a
+	 * pure function of `?id=`, so the bytes and the ETag are unchanged by it.
+	 */
+	test('version-addressed badge (&v=…) → same bytes, immutable for a year', async () => {
+		const bare = await callTag(BADGE_ID);
+		const versioned = await callTag(BADGE_ID, { version: 'b948b27e' });
+
+		expect(versioned.status).toBe(200);
+		expect(versioned.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		expect(versioned.headers.get('ETag')).toBe(bare.headers.get('ETag'));
+		expect(await versioned.text()).toBe(await bare.text());
+
+		// 304s on the versioned url carry the versioned policy too.
+		const etag = versioned.headers.get('ETag') as string;
+		const replay = await callTag(BADGE_ID, { version: 'b948b27e', ifNoneMatch: etag });
+		expect(replay.status).toBe(304);
+		expect(replay.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+
+		// An EMPTY token is not a version pin — it must not buy immutability.
+		const empty = await callTag(BADGE_ID, { version: '' });
+		expect(empty.headers.get('Cache-Control')).toBe('public, max-age=3600, must-revalidate');
 	});
 
 	test('draw tag → 200 svg on its own branch', async () => {
