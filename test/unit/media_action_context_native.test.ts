@@ -386,8 +386,12 @@ describe('threeDMoveFileAction (dd_component_3d_api move_file_to_dir)', () => {
 		target_dir: 'posterframe',
 		file_data: {
 			name: 'snapshot.jpg',
-			key_dir: 'crap222_no_such_key',
-			tmp_name: 'crap222_no_such_tmp.jpg',
+			// Deliberately nonexistent — only the PRESENCE of these fields is under
+			// test (the required-fields gate), never their content. Kept low-entropy
+			// and self-describing: a random-looking value next to a `key` field name
+			// reads as a credential to the secret scanner (gitleaks generic-api-key).
+			key_dir: 'no_such_key_dir',
+			tmp_name: 'no_such_tmp.jpg',
 		},
 	};
 	const move = mustGet(

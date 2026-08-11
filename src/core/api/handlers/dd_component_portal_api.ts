@@ -7,6 +7,17 @@
 import { coerceSectionId } from '../../concepts/section_id.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 
+/**
+ * Coerce an OPTIONAL RQO `section_id` at the door: absent stays absent (the
+ * handler's callee answers the required-fields envelope for it), present is
+ * counted and canonicalized like every other door
+ * (WC-2026-08-10-section-id-int-canonical). Throws on a non-address value.
+ */
+function coerceOptionalSectionId(raw: unknown, counterKey: string): number | undefined {
+	if (raw === undefined || raw === null) return undefined;
+	return coerceSectionId(raw, counterKey);
+}
+
 /** dd_component_portal_api action handlers (registered in dispatch.ts). */
 export const componentPortalApiActions: Record<string, ActionHandler> = {
 	delete_locator: async (rqo, context) => {
@@ -30,25 +41,22 @@ export const componentPortalApiActions: Record<string, ActionHandler> = {
 		// legacy string ride into the engine's Number() casts
 		// (WC-2026-08-10-section-id-int-canonical). Without a counted door here
 		// the contraction release has no evidence this door stopped receiving
-		// strings. Absent stays absent — deletePortalLocator answers the
-		// required-fields envelope for it (client contract, HTTP 200).
+		// strings.
 		let sectionId: number | undefined;
-		if (source.section_id !== undefined && source.section_id !== null) {
-			try {
-				sectionId = coerceSectionId(
-					source.section_id,
-					'rqo.dd_component_portal_api.delete_locator.section_id',
-				);
-			} catch (error) {
-				return {
-					status: 400,
-					body: {
-						result: false,
-						msg: `delete_locator: ${error instanceof Error ? error.message : String(error)}`,
-						errors: ['invalid section_id'],
-					},
-				};
-			}
+		try {
+			sectionId = coerceOptionalSectionId(
+				source.section_id,
+				'rqo.dd_component_portal_api.delete_locator.section_id',
+			);
+		} catch (error) {
+			return {
+				status: 400,
+				body: {
+					result: false,
+					msg: `delete_locator: ${error instanceof Error ? error.message : String(error)}`,
+					errors: ['invalid section_id'],
+				},
+			};
 		}
 		const body = await deletePortalLocator(
 			principal,

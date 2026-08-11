@@ -66,6 +66,16 @@ function doorSectionId(raw: unknown, door: string): number {
 	return coerceSectionId(raw, `rqo.dd_ts_api.${door}`);
 }
 
+/**
+ * The same door for an OPTIONAL section_id: absent (or the legacy empty-string
+ * spelling of absent) stays absent, present is coerced and counted. Throws like
+ * `doorSectionId` so the caller answers with `badSectionIdResponse`.
+ */
+function optionalDoorSectionId(raw: unknown, door: string): number | undefined {
+	if (raw === undefined || raw === null || raw === '') return undefined;
+	return doorSectionId(raw, door);
+}
+
 /** The refusal envelope for a door coercion that threw. */
 function badSectionIdResponse(response: TsApiResponse, error: unknown): TsApiResponse {
 	const message = error instanceof Error ? error.message : String(error);
@@ -89,10 +99,7 @@ export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApi
 	const sectionTipo = (source.section_tipo as string | undefined) ?? null;
 	let sectionId: number | undefined;
 	try {
-		sectionId =
-			source.section_id === undefined || source.section_id === null || source.section_id === ''
-				? undefined
-				: doorSectionId(source.section_id, 'get_node_data.section_id');
+		sectionId = optionalDoorSectionId(source.section_id, 'get_node_data.section_id');
 	} catch (error) {
 		return badSectionIdResponse(response, error);
 	}
@@ -132,6 +139,37 @@ export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApi
 // ===========================================================================
 // GET_CHILDREN_DATA (PHP :211).
 // ===========================================================================
+
+/** The get_children_data RQO, read into its typed fields (defaults applied). */
+interface ChildrenDataRequest {
+	sectionTipo: string | null;
+	sectionId: number | undefined;
+	childrenTipo: string | null;
+	areaModel: string;
+	children: ParseLocator[] | null;
+	pagination: Record<string, unknown> | null;
+	thesaurusViewMode: string;
+}
+
+/**
+ * Read the get_children_data RQO into `ChildrenDataRequest`, applying the PHP
+ * defaults. Throws only from the section_id door, so the caller answers a bad
+ * address with `badSectionIdResponse`.
+ */
+function parseChildrenDataRequest(rqo: Rqo): ChildrenDataRequest {
+	const source = rqo.source as Record<string, unknown>;
+	const options = (rqo.options ?? {}) as Record<string, unknown>;
+	return {
+		sectionTipo: (source.section_tipo as string | undefined) ?? null,
+		sectionId: optionalDoorSectionId(source.section_id, 'get_children_data.section_id'),
+		childrenTipo: (source.children_tipo as string | undefined) ?? null,
+		areaModel: (source.model as string | undefined) ?? 'area_thesaurus',
+		children: (source.children as ParseLocator[] | undefined) ?? null,
+		pagination: (options.pagination as Record<string, unknown> | undefined) ?? null,
+		thesaurusViewMode: (options.thesaurus_view_mode as string | undefined) ?? 'default',
+	};
+}
+
 export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<TsApiResponse> {
 	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
 	if (rqo.source === undefined) {
@@ -139,23 +177,13 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 		response.msg = 'Invalid request. Source data is missing.';
 		return response;
 	}
-	const source = rqo.source as Record<string, unknown>;
-	const sectionTipo = (source.section_tipo as string | undefined) ?? null;
-	let sectionId: number | undefined;
+	let request: ChildrenDataRequest;
 	try {
-		sectionId =
-			source.section_id === undefined || source.section_id === null || source.section_id === ''
-				? undefined
-				: doorSectionId(source.section_id, 'get_children_data.section_id');
+		request = parseChildrenDataRequest(rqo);
 	} catch (error) {
 		return badSectionIdResponse(response, error);
 	}
-	const childrenTipo = (source.children_tipo as string | undefined) ?? null;
-	const areaModel = (source.model as string | undefined) ?? 'area_thesaurus';
-	const children = (source.children as ParseLocator[] | undefined) ?? null;
-	const options = (rqo.options ?? {}) as Record<string, unknown>;
-	const pagination = (options.pagination as Record<string, unknown> | undefined) ?? null;
-	const thesaurusViewMode = (options.thesaurus_view_mode as string | undefined) ?? 'default';
+	const { sectionTipo, sectionId, childrenTipo, areaModel, children, pagination } = request;
 
 	if (sectionTipo !== null && sectionTipo !== '') {
 		const level = await getPermissions(principal, sectionTipo, sectionTipo);
@@ -166,7 +194,10 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 		}
 	}
 
-	const tsOptions: TsOptions = { model: thesaurusViewMode === 'model', area_model: areaModel };
+	const tsOptions: TsOptions = {
+		model: request.thesaurusViewMode === 'model',
+		area_model: areaModel,
+	};
 	const defaultLimit = 300;
 
 	// mode A: standard children resolution (delegates to ts_object.getChildrenData).
