@@ -23,6 +23,12 @@ import { engineDenied, gated, type WidgetModule, type WidgetResponse } from './s
  * legacy STRUCTURE_SERVER_URL/CODE fallback is not carried: TS installs are
  * v7-configured).
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): this panel is ALREADY exercised end to
+ * end through `dispatchGetWidgetValue` by test/unit/active_ontology_tlds.test.ts,
+ * so a second direct gate would assert the same fold twice.
+ */
 async function updateOntologyGetValue(): Promise<WidgetResponse> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
 	const { readDdOntologyRow } = await import('../../db/dd_ontology.ts');
@@ -90,7 +96,15 @@ async function updateOntologyGetValue(): Promise<WidgetResponse> {
 	};
 }
 
-/** The OPEN (owned) branch: the staged/recoverable import (WC-023). */
+/**
+ * The OPEN (owned) branch: the staged/recoverable import (WC-023).
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a two-field unwrap forwarding to
+ * `core/ontology/ontology_update.ts`, whose orchestrator IS gated (over the `zzd`
+ * scratch TLD) by test/unit/ontology_update_shell_native.test.ts. Executing it
+ * through this shell REPLACES THE SHARED ONTOLOGY.
+ */
 async function updateOntologyOwned(
 	options: Record<string, unknown>,
 	principal: Principal,

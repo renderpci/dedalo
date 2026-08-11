@@ -1250,6 +1250,11 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		) {
 			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
 			const toolName = source.model;
+			// LEDGER — coverage plan §4.4 D8 (a.k.a. L6), KNOWN-OPEN AND UNGATED:
+			// `context.session` is dereferenced through a cast with NO null check, so a
+			// session-less call reaching this branch THROWS (a 500 envelope) instead of
+			// returning the 40x every other arm of this handler returns. `requirePrincipal`
+			// above does not guarantee a session object — it guarantees a principal.
 			const authorized = await getUserTools(
 				(context.session as Session).userId,
 				principal.isGlobalAdmin,
@@ -1270,6 +1275,15 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		const sectionTipo = source.section_tipo ?? tipo;
 		const mode = source.mode ?? 'list';
+		// LEDGER — coverage plan §4.4 D9, KNOWN-OPEN: the fallback lang is HARDCODED
+		// 'lg-spa' in a codebase whose request lang is ALS-scoped
+		// (resolve/request_lang.ts currentApplicationLang / currentDataLang), so a
+		// caller that omits source.lang gets Spanish rather than its own request lang.
+		// GATED AS CURRENT BEHAVIOUR (not as desirable) by
+		// test/unit/get_element_context_native.test.ts ("source.lang defaults to
+		// 'lg-spa'"), which is the one element family where the default is observable
+		// on the wire — changing it is therefore a wire edit needing an
+		// engineering/wire_contract/ entry, not a silent repair.
 		const lang = source.lang ?? 'lg-spa';
 		const { getModelByTipo } = await import('../../ontology/resolver.ts');
 		const model = source.model ?? (await getModelByTipo(tipo));

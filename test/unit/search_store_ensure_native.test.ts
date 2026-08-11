@@ -209,7 +209,18 @@ describe('SEARCH_STORE_BACKFILLS row filter — the trigger twin', () => {
 	});
 });
 
-describe('ensureSearchStores rewire', () => {
+/**
+ * LEDGER — coverage plan §4.4 D17, NAMED RATHER THAN IMPLIED: the describe below
+ * is a SOURCE-TEXT gate. It `readFileSync`s db_assets.ts and matches strings; it
+ * EXECUTES none of `ensureSearchStores`, and it would stay green if that whole
+ * function body were replaced by
+ * `return { healthy: true, ddlApplied: false, backfilled: {}, errors: [] }`.
+ * That is a legitimate anti-duplication assertion (the extraction must not leave
+ * a parallel probe behind) and nothing more. The function's DECISION is gated,
+ * executing, in test/unit/search_store_decision_native.test.ts — read that file
+ * for coverage of the behaviour, not this describe.
+ */
+describe('ensureSearchStores rewire (SOURCE-TEXT gate — executes nothing)', () => {
 	test('the inline DDL probe is GONE from ensureSearchStores — it delegates to inspectSearchStores', () => {
 		const source = readFileSync(DB_ASSETS_PATH, 'utf-8');
 		const body = (source.split('export async function ensureSearchStores')[1] ?? '').split(

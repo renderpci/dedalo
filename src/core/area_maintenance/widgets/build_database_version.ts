@@ -10,6 +10,14 @@
 import type { WidgetModule, WidgetResponse } from './support.ts';
 import { engineDenied, gated } from './support.ts';
 
+/*
+ * COVERAGE-EXEMPT, all three functions in this file (coverage plan §5.2; reason
+ * registered in engineering/crap_coverage_exempt.json): single-expression
+ * delegations to core/ontology/recovery_file.ts, gated THERE (including the
+ * truncated-recovery-file case). `restoreDdOntologyRecoveryFromFile` REPLACES the
+ * shared `dd_ontology` wholesale — the single most destructive action in the
+ * maintenance area — and has no scratch equivalent.
+ */
 async function buildRecoveryOwned(): Promise<WidgetResponse> {
 	const { buildRecoveryVersionFile } = await import('../../ontology/recovery_file.ts');
 	return (await buildRecoveryVersionFile()) as unknown as WidgetResponse;

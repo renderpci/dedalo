@@ -352,7 +352,12 @@ describe('updateOntology is rewired to the extraction', () => {
 
 	test('the extraction is the code path actually taken', () => {
 		expect(source).toContain("from './ontology_update_target.ts'");
-		expect(source).toContain('resolveUpdateTarget(options.server, config.ontologyIo)');
+		// The catalog rides the UpdateOntologyDeps seam (added for the shell gate
+		// `ontology_update_shell_native.test.ts`), and STILL defaults to the
+		// config catalog — the client-supplied `server.url` is never consulted.
+		expect(source).toContain('resolveUpdateTarget(options.server, catalog)');
+		expect(source).toContain('catalog: deps.catalog ?? config.ontologyIo');
+		expect(source).not.toContain('options.server.url');
 		expect(source).toContain('stageOntologyFiles(options.files, target, { ioPath, stagingDir })');
 	});
 });

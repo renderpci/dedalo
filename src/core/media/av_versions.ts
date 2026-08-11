@@ -88,6 +88,13 @@ export type AvEncodeOutcome = { built: string } | { skipped: 'no_profile' | 'no_
  * profile for `<quality>_<standard>[_<aspect>]`; audio tiers extract. Output is
  * atomic (temp + rename) and the two-pass stats scratch is removed.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): requires the ffmpeg / ImageMagick
+ * BINARIES and MUTATES THE REAL MEDIA TREE, so no scratch surface can contain a
+ * run. The gateable content is the pure argv/profile builders in these files,
+ * gated in test/unit/tier1_media_argv_native.test.ts.
+ */
 export async function encodeAvQuality(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,

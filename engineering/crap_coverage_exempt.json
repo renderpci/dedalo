@@ -1,0 +1,353 @@
+{
+	"_": "THE CRAP-EXEMPT LIST — src/core/ functions that a gate may NOT execute, each with the reason. Part THREE of the two-part complexity ratchet (see engineering/crap_complexity_baseline.json for parts one and two). It answers the question the other two cannot: a function is missing from every test suite — is that a gap, or a decision? An entry here says DECISION, and the reason says why. Read every reason as ending in 'and therefore no test may call it'.",
+	"scope": "COVERAGE, i.e. LINE coverage (Bun emits no BRDA branch records, so every coverage figure discussed in this project is LINE coverage). This list has NO effect on the complexity ratchet: an exempt function is still measured, still counts toward summary.functionsOverCap, and still may not exceed its file's frozen max.",
+	"not_a_silencer": "AN EXEMPTION IS FOR CODE THAT CANNOT BE COVERED, NEVER A WAY TO SILENCE A COMPLEXITY REGRESSION. The ratchet is RED as of 2026-08-11 on three files from commit d1f5652783 (dd_component_portal_api.ts, ts_object/search.ts, ts_object/ts_api.ts). Those three are DELIBERATELY ABSENT from this list, and the gate enforces that generally: no file currently reporting a complexity REGRESSION may hold an exemption. A red ratchet is fixed by simplifying the code or by a deliberate, reviewed --allow-regression — never here.",
+	"the_two_admissible_reasons": "(a) UNRUNNABLE: executing it destroys or mutates something no scratch surface can contain (the shared schema, the whole media tree, the machine, a third party's service, the run-shared session/cache/scheduler singletons in Bun's single test process). (b) VACUOUS: it is a zero-decision projection or delegation, so the only assertion available restates the code or re-reads the same runtime/host the code read. 'Hard to test', 'no time' and 'later' are NOT reasons; a reason must name the structure.",
+	"how_it_is_gated": "test/unit/crap_complexity_ratchet.test.ts asserts, per entry: the file exists under the scan root, the symbol is present in it, the reason is substantive, no duplicate (file, symbol) pair, and — the load-bearing one — that the source file carries the marker COVERAGE-EXEMPT next to the code. Per DEC-12 an exemption stated only in a list is an invariant without a gate: the reason must live NEXT TO THE CODE, and this list is the index over those markers.",
+	"honest_limit": "It cannot verify that a listed function is genuinely uncovered, nor that an unlisted one is covered — there is no lcov artifact in CI. It gates the SHAPE of the decision (named, reasoned, marked, non-stale), not the measurement.",
+	"marker": "COVERAGE-EXEMPT",
+	"entries": [
+		{
+			"file": "src/core/api/handlers/dd_component_3d_api.ts",
+			"symbol": "threeDMoveFileAction",
+			"class": "binary-and-real-media-tree",
+			"reason": "Requires the ffmpeg/ImageMagick binaries and MOVES files in the real media tree; no scratch surface contains a media file the rest of the suite also reads. The gateable content is the pure argv builders, gated in tier1_media_argv_native.test.ts."
+		},
+		{
+			"file": "src/core/api/handlers/dd_component_av_api.ts",
+			"symbol": "posterframeAction",
+			"class": "binary-and-real-media-tree",
+			"reason": "Spawns ffmpeg against the real media tree and writes a derivative into it. Same class as the 3D move action: the decidable part is the argv builder, which is gated; the shell is not runnable in a suite that shares the media root."
+		},
+		{
+			"file": "src/core/area_maintenance/user_stats.ts",
+			"symbol": "resolveUserName",
+			"class": "vacuous-projection",
+			"reason": "Three dynamic imports and one component read to turn a dd128 id into a display name; every branch is null-vs-value on its own read. Its callers inject it as a function in the gated fold (foldStatsRows), which is where the label behaviour is actually asserted."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/build_database_version.ts",
+			"symbol": "buildRecoveryOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A single-expression delegation to core/ontology/recovery_file.ts, gated there; executing it writes an install-tree recovery dump. The delegation itself holds no decision to assert."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/build_database_version.ts",
+			"symbol": "restoreRecoveryOwned",
+			"class": "unrunnable-destructive",
+			"reason": "It REPLACES the shared dd_ontology wholesale — the single most destructive action in the maintenance area — and has no scratch equivalent. The restore semantics, including the truncated-recovery-file case, are gated in core/ontology/recovery_file.ts."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/build_database_version.ts",
+			"symbol": "buildDatabaseVersionGetValue",
+			"class": "vacuous-projection",
+			"reason": "A three-field panel projection of the configured database names and the dump directory: an assertion would read the same env the function reads and pin this machine's install."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/check_config.ts",
+			"symbol": "computeCheckConfig",
+			"class": "vacuous-projection",
+			"reason": "Every remaining branch is a fail-soft I/O probe (SELECT 1, a TEMP-table write, existsSync, probeSchemaHealth) whose only decision is null-vs-value on its own result. Valid ONLY because the one real decision, the credential-placeholder fold, is extracted to evaluateCredentialChecks AND that extraction takes `live` as a parameter — without the injection its gate would assert this machine's ../private/.env and be undefined on a clone."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/config_areas.ts",
+			"symbol": "getGuardedAreaTipos",
+			"class": "vacuous-projection",
+			"reason": "A single-predicate dd_ontology model lookup feeding a panel spread. The decisions it feeds — anti-lockout stripping, dedup, invalid classification — are gated as pure functions over an INJECTED guarded list; asserting the query result would pin installed ontology content instead."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/database_info.ts",
+			"symbol": "databaseInfoAnalyzeDb",
+			"class": "unrunnable-destructive",
+			"reason": "A parameterless operator action whose entire body is one unbounded VACUUM ANALYZE against the shared database, with the statement timeout deliberately removed (WC-055). There is no input to vary and no scratch surface to confine it to; its only branch is the try/catch envelope."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/database_info.ts",
+			"symbol": "databaseInfoConsolidateTables",
+			"class": "unrunnable-destructive",
+			"reason": "Executing it renumbers the surrogate primary keys of dd_ontology/matrix_* and setvals their sequences, which no scratch surface can contain while other agents share the database. Its pure decisions, planConsolidation and consolidateOrderFor, are gated individually."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/diffusion_server_control.ts",
+			"symbol": "diffusionSetScheduler",
+			"class": "unrunnable-shared-singleton",
+			"reason": "The drain_resume already-draining arm requires a real drain in flight on the run-shared scheduler singleton, which no gate may start in Bun's single test process. Dropped once by a prior plan; do not re-propose."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/diffusion_server_control.ts",
+			"symbol": "diffusionRetryPending",
+			"class": "unrunnable-shared-table",
+			"reason": "The count_only=false arm re-runs an UNFILTERED select over the run-shared dd1758 pending table and flips rows in place, so it would act on other agents' data. It is already gated by a subprocess test (prior-plan drop)."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/export_hierarchy.ts",
+			"symbol": "exportHierarchySyncActiveStatus",
+			"class": "unrunnable-destructive",
+			"reason": "Its SELECT is WHERE section_tipo='hierarchy1' with NO section_id bound — a whole-registry reconcile by design — so no scratch-scoped invocation exists: one call would deactivate every out-of-sync hierarchy in the suite database and write a TM row for each. The decision it drives is gated as shouldDeactivate()."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/make_backup.ts",
+			"symbol": "makeBackupPsql",
+			"class": "unrunnable-destructive",
+			"reason": "A six-field forward of initBackupSequence (gated in ops_backup.test.ts); invoking it spawns a detached pg_dump of the live database and writes a multi-GB artifact to disk."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/make_backup.ts",
+			"symbol": "makeBackupGetFiles",
+			"class": "vacuous-projection",
+			"reason": "A slice over getBackupFiles (gated in ops_backup.test.ts) plus the constant empty MySQL list required by the engine boundary — MariaDB is the diffusion engine's responsibility."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/media_control.ts",
+			"symbol": "mediaControlGetValue",
+			"class": "vacuous-projection",
+			"reason": "A field-by-field projection of core/media/protection.ts, whose mode resolution, rule generation and marker store are gated in the media-protection suite. It hides exactly ONE decision, named here rather than denied: countDirFiles returns NULL (not 0) when the path exists and is not a directory, and null-vs-0 is user-visible in the panel."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/menu_skip_tipos.ts",
+			"symbol": "getRootAreaTipos",
+			"class": "vacuous-projection",
+			"reason": "A single-predicate dd_ontology model lookup feeding a panel spread; the decisions (root-area rejection, dedup, invalid classification) are gated as pure functions over an INJECTED root list, so asserting the query would pin installed ontology content."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/move_common.ts",
+			"symbol": "moveWidgetGetValue",
+			"class": "vacuous-projection",
+			"reason": "The static body catalog plus listDefinitionFiles. Its `?? ''` fallback is UNREACHABLE by construction (all five buildMoveWidget call sites pass keys of MOVE_WIDGET_BODIES — ledgered as D20), and the registry-consistency claim it DOES carry is gated in move_widget_registry_native.test.ts, which asserts in both directions that every registered id is a switch arm and a body key."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/move_common.ts",
+			"symbol": "moveWidgetRun",
+			"class": "unrunnable-destructive",
+			"reason": "A zero-branch field rename over runTransform's report; the dry-run law and the transform semantics are gated in update_engine.test.ts and the per-transform gates. Running this shell executes a bulk rewrite of stored records against the shared database."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/publication_api.ts",
+			"symbol": "buildPublicationApiValue",
+			"class": "NOT-EXEMPT-RESCUED",
+			"reason": "RESCUED FROM THE EXEMPT LIST BY THE CRITICS AND KEPT HERE AS A TOMBSTONE so nobody re-adds it: its whole-body catch is an error-envelope CHOICE with a wrong-output consequence (a thrown diffusion-map scan renders byte-identically to 'diffusion is not configured'), not adapter plumbing. It is ledgered as the open defect D7 next to the code, and the gate below asserts this entry stays classified NOT-EXEMPT-RESCUED."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/runtime_info.ts",
+			"symbol": "runtimeInfoGetValue",
+			"class": "vacuous-projection",
+			"reason": "A projection of process/Bun runtime globals with no branch; any assertion would compare a runtime read against the same runtime read."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/runtime_info.ts",
+			"symbol": "runtimeInfoClearCaches",
+			"class": "unrunnable-shared-singleton",
+			"reason": "Bun runs the whole suite in ONE process, so invoking it flushes process-global caches shared with every other test in the run — a first-class order-dependent flake generator. The invalidation registry it calls is gated in the cache-factory suite."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/runtime_info.ts",
+			"symbol": "runtimeInfoClearSessions",
+			"class": "unrunnable-shared-singleton",
+			"reason": "It prunes the session store shared with every other test in the single-process run; the expiry semantics are gated in the session-store suite, where the store is owned rather than borrowed."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/system_info.ts",
+			"symbol": "systemInfoGetValue",
+			"class": "vacuous-projection",
+			"reason": "An os/probe projection whose every branch is a fail-soft try/catch around one syscall, so an assertion reads the same host the code reads. Its one real decision, the Bun version-floor comparison, is extracted to compareSemver and gated in system_info_semver_native.test.ts."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/unit_test.ts",
+			"symbol": "unitTestCreateTestRecord",
+			"class": "unrunnable-destructive",
+			"reason": "THE LOUDEST EXEMPTION IN THE TREE: it TRUNCATEs matrix_test — the suite's OWN test3 fixture table — mid-run, in the single shared Bun process, for every agent running concurrently. No scratch surface can contain it and no gate may invoke it; the restorative semantics are gated through restoreCanonicalTest3()."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_code.ts",
+			"symbol": "updateCodeGetValue",
+			"class": "network",
+			"reason": "A network probe loop over config.update.codeServers, empty on every default install (so the body is unreachable there), spreading checkRemoteServer's own response fields. A gate would assert an empty loop or make an outbound request."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_code.ts",
+			"symbol": "updateCodeOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A two-field unwrap forwarding to core/update/code_update.ts, gated in its own suite; executing it replaces the code tree on disk and restarts the process. The widget-level law worth pinning, the closed branch's non-superuser refusal, is gated by update_preconditions.test.ts."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_code.ts",
+			"symbol": "buildVersionOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A three-field unwrap forwarding to core/update/code_build.ts, gated in its own suite; running it shells out to git and writes a release archive into the tree."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_data_version.ts",
+			"symbol": "updateDataVersionGetValue",
+			"class": "vacuous-projection",
+			"reason": "It folds an empty-by-construction catalog (no 7.x migration descriptor exists), so both descriptor fields are null and any assertion over them is vacuous — the code_update.test.ts precedent."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_data_version.ts",
+			"symbol": "updateDataVersionRunOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A thin unwrap forwarding to the update engine, gated in its own suite; executing it MIGRATES STORED DATA on the shared database. Its precondition refusal is gated by update_preconditions.test.ts."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_ontology.ts",
+			"symbol": "updateOntologyGetValue",
+			"class": "vacuous-projection",
+			"reason": "Already exercised end to end through dispatchGetWidgetValue by active_ontology_tlds.test.ts, so a second direct gate would assert the same fold twice and move a percentage rather than a risk."
+		},
+		{
+			"file": "src/core/area_maintenance/widgets/update_ontology.ts",
+			"symbol": "updateOntologyOwned",
+			"class": "unrunnable-destructive",
+			"reason": "A two-field unwrap forwarding to core/ontology/ontology_update.ts, whose orchestrator IS gated over the zzd scratch TLD in ontology_update_shell_native.test.ts; executing it through this shell replaces the shared ontology."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "createExtensions",
+			"class": "unrunnable-destructive",
+			"reason": "A thin loop over db_pg_definitions.json that REWRITES THE SHARED SCHEMA; the definitions themselves are gated. This exemption is valid only alongside the ensureSearchStores DECISION gate (search_store_decision_native.test.ts) — these are the arms that fire when ddlNeeded flips."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "rebuildTables",
+			"class": "unrunnable-destructive",
+			"reason": "Replays the table DDL over the shared schema. Same conditional exemption as createExtensions: valid only while the decision that fires it stays gated."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "rebuildFunctions",
+			"class": "unrunnable-destructive",
+			"reason": "Replays the function DDL over the shared schema, replacing definitions every concurrently running gate depends on. Valid only alongside the ensureSearchStores decision gate."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "rebuildTriggers",
+			"class": "unrunnable-destructive",
+			"reason": "Drops and recreates the sync triggers on the live matrix tables; a run mid-suite would silently change what every other write gate observes. Valid only alongside the ensureSearchStores decision gate."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "rebuildConstraints",
+			"class": "unrunnable-destructive",
+			"reason": "Replays the constraint DDL over the shared schema; the definitions are gated as data, the replay is not runnable while other agents share the database."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "rebuildIndexes",
+			"class": "unrunnable-destructive",
+			"reason": "Drops and recreates indexes on the shared matrix tables — minutes of exclusive work and a different query plan for every concurrent gate. Valid only alongside the ensureSearchStores decision gate."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "execMaintenance",
+			"class": "unrunnable-destructive",
+			"reason": "Runs the maintenance SQL asset pass over the shared database; nothing in it is scoped to a scratch surface."
+		},
+		{
+			"file": "src/core/db/db_assets.ts",
+			"symbol": "backfillSearchStores",
+			"class": "unrunnable-destructive",
+			"reason": "Backfills multi-million-row derived stores on the shared database. The decision to call it (which stores need a backfill) is gated in search_store_decision_native.test.ts; the backfill itself is not runnable in a suite."
+		},
+		{
+			"file": "src/core/db/json_codec.ts",
+			"symbol": "asRawJsonText",
+			"class": "vacuous-projection",
+			"reason": "The body is a TYPE assertion that erases to the identity function at runtime, so no executable behaviour exists to gate — every possible assertion would compare the input to itself. The claim it carries (only jsonb::text or encodeForJsonb output may be branded) is a compile-time one, enforced by the branded type."
+		},
+		{
+			"file": "src/core/db/json_codec.ts",
+			"symbol": "decodeFromJsonb",
+			"class": "vacuous-projection",
+			"reason": "A zero-branch, single-expression JSON.parse delegation. The only law worth pinning is the ROUND TRIP (decode(encode(x)) is x, including the []-vs-{} and int-vs-float hazards), gated against real rows in json_codec_roundtrip.test.ts; a test of this wrapper alone would assert that JSON.parse parses JSON."
+		},
+		{
+			"file": "src/core/geoip/ensure.ts",
+			"symbol": "ensureGeoipDb",
+			"class": "network",
+			"reason": "Downloads the GeoIP database from a third-party provider. Never fetch in a test: the gate would be non-hermetic and hostage to someone else's uptime. Inject at the boundary if the surrounding logic is ever needed."
+		},
+		{
+			"file": "src/core/install/config_persist.ts",
+			"symbol": "persistConfig",
+			"class": "unrunnable-mutates-machine",
+			"reason": "A one-shot install procedure that writes the machine's configuration files. Blocked by danger, not by fixture: the hermetic logic in the same subsystem (deriveLangConfig, installIpAllowed) is gated in tier1_install_native.test.ts."
+		},
+		{
+			"file": "src/core/install/db_restore.ts",
+			"symbol": "installDbFromSeed",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Restores an entire database from the install seed — it would replace the suite database mid-run. The resolvable parts (pg binary resolution, connection descriptor) are gated separately."
+		},
+		{
+			"file": "src/core/install/hierarchy_import.ts",
+			"symbol": "installHierarchies",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Imports ~126 MB of hierarchy fixtures into the shared database as a one-shot install step; the hierarchy_meta readers it depends on are gated hermetically instead."
+		},
+		{
+			"file": "src/core/install/register_tools.ts",
+			"symbol": "registerInstallTools",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Writes the tool registry rows of an install; a run would rewrite the registry every other tool gate reads in the same process."
+		},
+		{
+			"file": "src/core/install/root_pw.ts",
+			"symbol": "setRootPassword",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Sets the install's ROOT CREDENTIALS. There is no scratch surface for the root user, and a run would change the identity every ACL gate authenticates against."
+		},
+		{
+			"file": "src/core/install/restart.ts",
+			"symbol": "scheduleServerRestart",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Schedules a restart of the server process — inside a test run that is the test runner's own process."
+		},
+		{
+			"file": "src/core/install/pg_bin.ts",
+			"symbol": "psqlResolvable",
+			"class": "vacuous-projection",
+			"reason": "Both arms probe THIS machine (existsSync on a resolved path, or Bun.spawnSync('psql --version')), so any assertion compares a probe against the same probe and answers differently on a clone or in CI. The decidable part, the candidate ORDER, is extracted to pgBinaryCandidates and gated."
+		},
+		{
+			"file": "src/core/media/av_versions.ts",
+			"symbol": "encodeAvQuality",
+			"class": "binary-and-real-media-tree",
+			"reason": "Requires the ffmpeg binary and writes transcoded derivatives into the real media tree. The pure profile/argv builders in the same file are gated in tier1_media_argv_native.test.ts."
+		},
+		{
+			"file": "src/core/media/tools/rotation.ts",
+			"symbol": "applyRotationCore",
+			"class": "binary-and-real-media-tree",
+			"reason": "Requires ImageMagick and rewrites a real media file in place; the decidable content, the argv construction, is gated separately."
+		},
+		{
+			"file": "src/core/ontology/ontology_update.ts",
+			"symbol": "updateOntology",
+			"class": "arms-only",
+			"reason": "PARTIAL, arms only — the orchestrator itself IS gated over the zzd scratch TLD (ontology_update_shell_native.test.ts). Exempt arms: the real remote-download fetch of Phase A (a gate never makes a network call; the local fixture server is the configured origin instead), the engineOwnsInstall() refusal (collapsed to true at the 2026-07-11 cutover, so the false arm is unreachable), and optimizeTables' own REINDEX/VACUUM outcome (executed, but its non-fatal errors are unasserted)."
+		},
+		{
+			"file": "src/core/tools/translation.ts",
+			"symbol": "translateItems",
+			"class": "network",
+			"reason": "Posts to a third-party translation provider; never fetch in a test. The pure halves of this file — engine mapping, direction, provider/config resolution — are gateable and are NOT covered by this exemption."
+		},
+		{
+			"file": "src/core/tools/transcription_asr.ts",
+			"symbol": "pollTranscriptionCompletion",
+			"class": "network",
+			"reason": "Polls a third-party ASR provider on a timer; non-hermetic and slow by construction. The pure halves (engine mapping, status body, segment folding, hasExistingTranscription) are gateable and not exempt."
+		},
+		{
+			"file": "src/core/tools/transcription_local_asr.ts",
+			"symbol": "localAsrProvider",
+			"class": "network",
+			"reason": "Posts audio to a local ASR sidecar over HTTP; the sidecar is not part of the suite. Its safety decision, isSafeLocalAsrUrl, is a pure function and is gated separately."
+		},
+		{
+			"file": "src/core/update/code_download.ts",
+			"symbol": "downloadReleaseArchive",
+			"class": "network",
+			"reason": "An outbound fetch of a release archive. A gate here would be non-hermetic and depend on a third party's availability; inject at the boundary if the surrounding logic is ever needed."
+		}
+	]
+}

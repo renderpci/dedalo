@@ -25,6 +25,14 @@ import { persistMediaFilesInfo, resolveMediaActionContext } from './media_action
  * WRITE (PHP level 2). Failures ride as HTTP 200 + result:false (the client reads
  * api_response.result).
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): this action requires the ffmpeg /
+ * ImageMagick BINARIES and MUTATES THE REAL MEDIA TREE — no scratch surface
+ * contains a media file the rest of the suite also reads. The gateable content
+ * is the pure argv builders (gated in test/unit/tier1_media_argv_native.test.ts),
+ * which is where a shell-injection or wrong-flag regression actually hides.
+ */
 async function posterframeAction(
 	rqo: Rqo,
 	context: ApiRequestContext,

@@ -217,6 +217,60 @@ export function loadBaseline(): ComplexityBaseline {
 	return parsed;
 }
 
+// ---------------------------------------------------------------------------
+// PART THREE OF THE RATCHET — the COVERAGE-EXEMPT list.
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the exemptions live. In engineering/ for the same reason the baseline
+ * is: a GATE reads it, and rewrite/ is not on a clone.
+ *
+ * It is a COVERAGE list, and coverage here means LINE coverage (Bun emits no
+ * BRDA branch records). It has NO effect on the complexity ratchet above: an
+ * exempt function is still measured, still counts toward functionsOverCap, and
+ * still may not exceed its file's frozen max. AN EXEMPTION IS FOR CODE THAT
+ * CANNOT BE COVERED — never a way to silence a complexity regression.
+ */
+export const COVERAGE_EXEMPT_PATH = 'engineering/crap_coverage_exempt.json';
+
+/** The marker every exempt function must carry NEXT TO THE CODE (DEC-12). */
+export const COVERAGE_EXEMPT_MARKER = 'COVERAGE-EXEMPT';
+
+/** Class for an entry the critics RESCUED — kept as a tombstone, NOT exempt. */
+export const RESCUED_CLASS = 'NOT-EXEMPT-RESCUED';
+
+export interface CoverageExemptEntry {
+	file: string;
+	symbol: string;
+	class: string;
+	reason: string;
+}
+
+export interface CoverageExemptList {
+	marker: string;
+	entries: CoverageExemptEntry[];
+	[prose: string]: unknown;
+}
+
+/** Read the exempt list. THROWS — a missing list must be red, never "no rules". */
+export function loadCoverageExempt(): CoverageExemptList {
+	const path = join(REPO_ROOT, COVERAGE_EXEMPT_PATH);
+	let parsed: CoverageExemptList;
+	try {
+		parsed = JSON.parse(readFileSync(path, 'utf-8')) as CoverageExemptList;
+	} catch (error) {
+		throw new Error(
+			`crap_baseline: ${COVERAGE_EXEMPT_PATH} is missing or not valid JSON — the coverage-exemption gate cannot run without it, and it must never degrade into "nothing is exempt, nothing is checked". (${String(error)})`,
+		);
+	}
+	if (!Array.isArray(parsed.entries) || parsed.marker !== COVERAGE_EXEMPT_MARKER) {
+		throw new Error(
+			`crap_baseline: ${COVERAGE_EXEMPT_PATH} is malformed (expected an "entries" array and marker "${COVERAGE_EXEMPT_MARKER}").`,
+		);
+	}
+	return parsed;
+}
+
 export interface Drift {
 	/** Files whose max complexity EXCEEDS their frozen entry (or the cap). */
 	regressions: string[];

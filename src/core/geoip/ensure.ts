@@ -79,6 +79,12 @@ export function decideGeoipAction(input: {
  * Ensure the country database is downloaded (if auto-update is on and the cache
  * is absent or stale) and loaded. Safe to await; never throws.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): it downloads the GeoIP database from a
+ * third-party provider. Never fetch in a test; inject at the boundary if the
+ * surrounding logic is ever needed.
+ */
 export async function ensureGeoipDb(): Promise<void> {
 	const dir = config.geoip.dir;
 	const dbPath = join(dir, DB_BASENAME);

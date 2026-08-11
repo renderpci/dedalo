@@ -226,6 +226,10 @@ async function diffusionSetScheduler(options: Record<string, unknown>): Promise<
 	const { scheduler } = await diffusionModules();
 
 	if (action === 'drain_resume') {
+		// COVERAGE-EXEMPT, this already-draining arm (coverage plan §5.2; reason
+		// registered in engineering/crap_coverage_exempt.json): reaching it requires a
+		// real drain in flight on the run-shared scheduler singleton, which no gate may
+		// start. Already dropped once by a prior plan — do not re-propose it.
 		if (scheduler.isSchedulerDraining()) {
 			return {
 				result: false,
@@ -272,6 +276,11 @@ async function diffusionRetryPending(options: Record<string, unknown>): Promise<
 			errors: [],
 		};
 	}
+	// COVERAGE-EXEMPT, this `count_only=false` retry arm (coverage plan §5.2; reason
+	// registered in engineering/crap_coverage_exempt.json): it re-runs an UNFILTERED
+	// select over the run-shared dd1758 pending table and flips rows in place, so a
+	// gate would act on other agents' data. It is already gated by a SUBPROCESS test
+	// (prior-plan drop) — do not re-propose an in-process one.
 	const limit = typeof options.limit === 'number' ? options.limit : 100;
 	const { retryPendingDiffusion } = await import('../../diffusion_bridge/diffusion_delete.ts');
 	const outcome = await retryPendingDiffusion(limit);

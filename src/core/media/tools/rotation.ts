@@ -98,6 +98,13 @@ export interface RotationResult {
  * `entries`. Returns the touched paths and any per-tier errors (PHP collects
  * rotate errors rather than aborting).
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): requires the ffmpeg / ImageMagick
+ * BINARIES and MUTATES THE REAL MEDIA TREE, so no scratch surface can contain a
+ * run. The gateable content is the pure argv/profile builders in these files,
+ * gated in test/unit/tier1_media_argv_native.test.ts.
+ */
 export async function applyRotationCore(
 	spec: MediaTypeSpec,
 	identity: MediaIdentity,

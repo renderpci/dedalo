@@ -56,6 +56,21 @@ const appDb = readEnv('DB_NAME') ?? readEnv('DEDALO_DATABASE_CONN') ?? '';
 const testDb = testDatabaseName();
 
 // The one guard that matters: never operate on the application's database.
+//
+// LEDGER — coverage plan §4.4 D13 + D12, KNOWN-OPEN AND UNGATED.
+//  - D13: this guard is ONLY name-equality with THIS checkout's DB_NAME. Point
+//    `DEDALO_TEST_DATABASE` at any OTHER real database on the same host — a
+//    second checkout's install, a colleague's, a production restore — and the
+//    script passes the guard and DROPS it. What it needs: refuse unless the
+//    target is ABSENT, was CREATED BY THIS SCRIPT (a provenance marker row), or
+//    `--force` is given.
+//  - D12: the database this builds does not stay clean. Measured 2026-08-10 on
+//    `dedalo_mib_v7_test`: `matrix_time_machine` 3,385 of 7,708 rows at
+//    section_id >= 900000, `matrix_test` carrying 902006, `matrix_stats` 2 rows
+//    both leaked, `matrix_users` id 0 a leaked password-reset user (D11). Gates
+//    sweep `matrix_*` and forget `matrix_time_machine`, or sweep with a filter
+//    that never matched what they wrote. A rebuild clears it; nothing PREVENTS
+//    it, and no gate reports it.
 if (testDb === appDb || testDb === '') {
 	console.error(
 		`REFUSING: the test database name (${testDb || '<empty>'}) is not distinct from the application database (${appDb}). This script DROPS the database it builds. Set DEDALO_TEST_DATABASE.`,

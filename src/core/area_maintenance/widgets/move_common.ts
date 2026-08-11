@@ -19,7 +19,7 @@ import {
 	type WidgetSpec,
 } from './support.ts';
 
-const MOVE_WIDGET_BODIES: Record<string, string> = {
+export const MOVE_WIDGET_BODIES: Record<string, string> = {
 	move_lang:
 		'Convert map items (e.g., hierarchy89) between translatable and non-translatable components (or vice-versa).<br>\n\t\t\t\t\t   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_lang.<br>\n\t\t\t\t\t   Note: This process can be very time-consuming, as it iterates through all relevant records in the database.',
 	move_locator:
@@ -33,7 +33,7 @@ const MOVE_WIDGET_BODIES: Record<string, string> = {
 };
 
 /** Resolve one widget's executor (lazy — avoids loading the whole engine per boot). */
-async function executorFor(
+export async function executorFor(
 	id: string,
 ): Promise<
 	(
@@ -67,6 +67,21 @@ async function executorFor(
 	}
 }
 
+/**
+ * COVERAGE-EXEMPT for execution (coverage plan §5.1; the reason is registered in
+ * engineering/crap_coverage_exempt.json, which test/unit/crap_complexity_ratchet.test.ts
+ * gates against this marker): the body is the static catalog lookup plus
+ * `listDefinitionFiles`.
+ *
+ * LEDGER — coverage plan §4.4 D20: the `?? ''` fallback below is DEAD. All five
+ * `buildMoveWidget` call sites pass ids that ARE keys of `MOVE_WIDGET_BODIES`
+ * (`move_lang` included — checked, since a missing key would have made the
+ * fallback live), so no input reaches it. It is UNREACHABLE BY CONSTRUCTION,
+ * not merely untested. What KEEPS it dead — and the one non-vacuous claim this
+ * function carries — IS GATED: test/unit/move_widget_registry_native.test.ts
+ * asserts, in both directions, that every registered move_* id is both an
+ * `executorFor` switch arm and a `MOVE_WIDGET_BODIES` key.
+ */
 function moveWidgetGetValue(widget: string): WidgetHandler {
 	return async () => {
 		const { listDefinitionFiles } = await import('../../update/transform/definitions.ts');
@@ -81,7 +96,16 @@ function moveWidgetGetValue(widget: string): WidgetHandler {
 	};
 }
 
-/** The OPEN (owned) transform run — dry-run mandatory before an execute. */
+/**
+ * The OPEN (owned) transform run — dry-run mandatory before an execute.
+ *
+ * COVERAGE-EXEMPT for execution (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): a zero-branch field rename over
+ * `runTransform`'s report. The dry-run law and the transform semantics are gated
+ * in test/unit/update_engine.test.ts and the per-transform gates; RUNNING this
+ * shell would execute a bulk rewrite of stored records against the shared suite
+ * database, which no scratch surface can contain.
+ */
 function moveWidgetRun(id: string): WidgetHandler {
 	return async (options): Promise<WidgetResponse> => {
 		const { runTransform } = await import('../../update/transform/engine.ts');

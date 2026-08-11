@@ -52,6 +52,12 @@
  *     throws on anything it cannot parse, but a file the glob never returned
  *     throws nothing at all — so the glob follows symlinks and dot-directories
  *     (this repo has a symlink culture), and everything left over is listed.
+ *  6. THE COVERAGE-EXEMPT LIST (2026-08-11, part three of the ratchet — its own
+ *     describe at the bottom of this file, with its own header): which src/core/
+ *     functions no gate may EXECUTE and why, indexed in
+ *     engineering/crap_coverage_exempt.json and MARKED next to the code. It is
+ *     about LINE coverage, changes nothing about complexity, and may never be
+ *     used to silence a complexity regression.
  *  4. ANTI-VACUITY FLOOR: the scan must prove it actually saw a plausible
  *     corpus. A broken glob, a moved directory or a parser returning [] would
  *     otherwise make rules 1-3 pass having checked NOTHING. This project has
@@ -98,17 +104,21 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
 	BASELINE_PATH,
 	CENSUS_FLOORS,
+	COVERAGE_EXEMPT_MARKER,
+	COVERAGE_EXEMPT_PATH,
 	computeDrift,
 	FIX_COMMAND,
 	formatDrift,
 	loadBaseline,
+	loadCoverageExempt,
 	measure,
+	RESCUED_CLASS,
 	SCAN_ROOT,
 	unmeasuredSources,
 } from '../../scripts/crap_baseline.ts';
@@ -396,5 +406,160 @@ describe('crap ratchet — the scan is not vacuous', () => {
 			`The set of source files under ${SCAN_ROOT} that this metric does NOT measure has changed. The scan measures *.ts only (minus *.test.ts and *.d.ts), so anything listed here is OUTSIDE the ratchet — which is fine only while it is DISCLOSED. ` +
 				`If a new .tsx/.mts/.js module appeared: either bring it into the metric (scripts/lib/complexity.ts MEASURED_EXTENSION) or add it to UNMEASURED_SOURCE_UNDER_SCAN_ROOT in this file with a note saying what it is. If a src/core module was named *.test.ts, rename it — that suffix is an undetectable escape hatch. Never delete this assertion to get green.`,
 		).toEqual(UNMEASURED_SOURCE_UNDER_SCAN_ROOT);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 6. THE COVERAGE-EXEMPT LIST — part three of the ratchet.
+// ---------------------------------------------------------------------------
+
+/**
+ * WHAT THIS PART ADDS. Rules 1-5 above freeze CYCLOMATIC COMPLEXITY. They say
+ * nothing about whether a function is exercised at all — and they cannot: there
+ * is no lcov artifact in CI, and any COVERAGE figure discussed in this project
+ * is LINE coverage, because Bun emits no BRDA branch records. So a src/core/
+ * function absent from every suite raises a question this gate answers by
+ * SHAPE rather than by measurement: is that a gap, or a decision?
+ * `engineering/crap_coverage_exempt.json` is where a DECISION is recorded, with
+ * a reason, and this describe is what makes the record honest.
+ *
+ * PER DEC-12, THE REASON MUST LIVE NEXT TO THE CODE. An invariant stated only in
+ * a list is an invariant without a gate, so the load-bearing assertion here is
+ * the MARKER check: the exempt source file must carry `COVERAGE-EXEMPT` next to
+ * the exempted symbol. The JSON is the index over those markers, not a substitute
+ * for them.
+ *
+ * IT IS NOT A SILENCER, AND THE GATE ENFORCES THAT. An exemption is for code that
+ * CANNOT be covered (it destroys something no scratch surface contains, or it has
+ * no decision to assert). It is never a way to quiet a complexity regression: as
+ * of 2026-08-11 the ratchet is RED on three files from commit d1f5652783
+ * (dd_component_portal_api.ts, ts_object/search.ts, ts_object/ts_api.ts) and
+ * those three are deliberately ABSENT from the list. The rule is general — no
+ * file currently reporting a regression above may hold an exemption — so nobody
+ * can clear a red ratchet by writing a paragraph here.
+ *
+ * WHAT IT CANNOT DO, said plainly: it cannot verify that a listed function is
+ * genuinely uncovered, nor that an unlisted one is covered. That needs the
+ * coverage run this project deliberately does not gate on.
+ */
+describe('crap ratchet — the COVERAGE-EXEMPT list is named, reasoned, marked and honest', () => {
+	const EXEMPT = loadCoverageExempt();
+	/** Anti-vacuity: a truncated list would make every check below trivially green. */
+	const MIN_ENTRIES = 20;
+	/** Words that are not a reason. A reason names the irreducible structure. */
+	const THIN_REASONS = /\b(todo|temporar|later|hard to test|no time|refactor soon)\b/i;
+
+	test('the list is a plausible corpus (a truncated list checks nothing)', () => {
+		expect(
+			EXEMPT.entries.length,
+			`${COVERAGE_EXEMPT_PATH} holds ${EXEMPT.entries.length} entries — below the floor ${MIN_ENTRIES}. Every assertion in this describe iterates the list, so a truncated or emptied file makes them all pass having inspected nothing. Restore the list; never lower the floor.`,
+		).toBeGreaterThanOrEqual(MIN_ENTRIES);
+	});
+
+	test('every entry names a real file and symbol, is unique, and carries a substantive reason', () => {
+		const problems: string[] = [];
+		const seen = new Set<string>();
+		for (const entry of EXEMPT.entries) {
+			const key = `${entry.file}::${entry.symbol}`;
+			if (seen.has(key)) problems.push(`${key}: DUPLICATE entry`);
+			seen.add(key);
+			if (!entry.file.startsWith(`${SCAN_ROOT}/`)) {
+				problems.push(
+					`${key}: file is outside ${SCAN_ROOT}/ — this list covers the scan root only`,
+				);
+				continue;
+			}
+			let source: string;
+			try {
+				source = readFileSync(entry.file, 'utf-8');
+			} catch {
+				problems.push(`${key}: file does not exist (deleted or moved) — the entry is STALE`);
+				continue;
+			}
+			if (!source.includes(entry.symbol)) {
+				problems.push(
+					`${key}: symbol not found in the file — renamed or removed, the entry is STALE`,
+				);
+			}
+			const reason = typeof entry.reason === 'string' ? entry.reason.trim() : '';
+			if (reason.split(/\s+/).length < 12 || THIN_REASONS.test(reason)) {
+				problems.push(`${key}: THIN reason ${JSON.stringify(reason)}`);
+			}
+			if (typeof entry.class !== 'string' || entry.class.trim() === '') {
+				problems.push(`${key}: no class`);
+			}
+		}
+		expect(
+			problems,
+			`${COVERAGE_EXEMPT_PATH} is stale or thin. This list records which src/core/ functions no test may execute, and why — it is about LINE COVERAGE (Bun emits no BRDA records, so nothing in this repo measures branch coverage) and has NO effect on the complexity ratchet. A reason must name the IRREDUCIBLE structure: what executing the function would destroy, or why there is no decision to assert. "Temporary" and "hard to test" are not reasons. If a symbol was renamed or deleted, update or remove the entry — a stale exemption makes the list look like it is doing work it is not.\n  ${problems.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test(`the reason lives NEXT TO THE CODE — every exempt file carries the ${COVERAGE_EXEMPT_MARKER} marker`, () => {
+		// THE LOAD-BEARING ONE (DEC-12). A reason readable only in engineering/ is
+		// invisible to the person editing the function, which is exactly who needs
+		// it. The JSON indexes the markers; it does not replace them.
+		const unmarked: string[] = [];
+		for (const entry of EXEMPT.entries) {
+			if (entry.class === RESCUED_CLASS) continue; // handled by its own test below
+			let source: string;
+			try {
+				source = readFileSync(entry.file, 'utf-8');
+			} catch {
+				continue; // already reported as stale above
+			}
+			if (!source.includes(COVERAGE_EXEMPT_MARKER)) {
+				unmarked.push(`${entry.file}::${entry.symbol}`);
+			}
+		}
+		expect(
+			unmarked,
+			`These exempt files carry no ${COVERAGE_EXEMPT_MARKER} marker. Per DEC-12 an invariant stated without a mechanical gate is prohibited, and an exemption stated only in ${COVERAGE_EXEMPT_PATH} is exactly that: place the reason in a comment ON the function, then this gate holds the two together. (Again: this is LINE-coverage bookkeeping, not a complexity rule.)\n  ${unmarked.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('a RESCUED entry is a tombstone: it carries no exemption marker and stays classified as not exempt', () => {
+		// The critics pulled buildPublicationApiValue back OUT of the exempt list:
+		// its whole-body catch is an error-envelope CHOICE with a wrong-output
+		// consequence (defect D7), not adapter plumbing. It stays in the file as a
+		// tombstone so nobody re-exempts it, and this asserts the tombstone did not
+		// quietly become an exemption.
+		const rescued = EXEMPT.entries.filter((entry) => entry.class === RESCUED_CLASS);
+		expect(
+			rescued.length,
+			`No ${RESCUED_CLASS} entry left in ${COVERAGE_EXEMPT_PATH}. The rescued shells are the ones most likely to be re-proposed as exemptions; keeping the tombstone is what stops that.`,
+		).toBeGreaterThanOrEqual(1);
+		const wrong: string[] = [];
+		for (const entry of rescued) {
+			const source = readFileSync(entry.file, 'utf-8');
+			if (source.includes(COVERAGE_EXEMPT_MARKER)) {
+				wrong.push(
+					`${entry.file}::${entry.symbol}: carries a ${COVERAGE_EXEMPT_MARKER} marker although it was RESCUED from the exempt list — a shell that turned out to hold a decision must NOT carry an exemption`,
+				);
+			}
+			if (!source.includes('RESCUED')) {
+				wrong.push(
+					`${entry.file}::${entry.symbol}: the ledger line naming it as rescued (and the open defect it carries) is gone from the source`,
+				);
+			}
+		}
+		expect(wrong, wrong.join('\n  ')).toEqual([]);
+	});
+
+	test('an exemption may NOT cover a file that is currently a complexity REGRESSION', () => {
+		// The one abuse this list invites. An exemption is about coverage — about
+		// code no test may execute. It says nothing about complexity, and it must
+		// never become the quiet way to clear a red ratchet: as of 2026-08-11 rule 1
+		// is red on three files from commit d1f5652783, and the fix for that is to
+		// simplify them or to raise their entry deliberately with
+		// `--allow-regression`, never to write a paragraph here.
+		const regressed = new Set(DRIFT.regressions.map((line) => line.split(':')[0] ?? ''));
+		const abuse = EXEMPT.entries
+			.filter((entry) => regressed.has(entry.file))
+			.map((entry) => `${entry.file}::${entry.symbol}`);
+		expect(
+			abuse,
+			`These files are exempt from COVERAGE and are ALSO currently over their frozen complexity max. The two are unrelated and this list may not be used to soften the first gate: an exemption is for code that CANNOT be covered, not a silencer for a legitimate complexity regression. Fix rule 1 (simplify, or \`${FIX_COMMAND} --allow-regression\` with the reason in the commit message), then re-add the coverage exemption if it is still true.\n  ${abuse.join('\n  ')}`,
+		).toEqual([]);
 	});
 });

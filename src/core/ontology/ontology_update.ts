@@ -22,6 +22,21 @@
  * lang files — UI labels are repo catalogs (WC-033) and in-process caches
  * are purged via clearOntologyDerivedCaches; the activity row is not
  * ported (ledgered).
+ *
+ * GATE: `test/unit/ontology_update_shell_native.test.ts` drives the real
+ * orchestrator through the `UpdateOntologyDeps` seam over the scratch TLD
+ * `zzd` — target refusal, the single-flight latch (refused AND released), the
+ * Phase-B abort, the Phase-C auto-restore + D7 message, and the success tail
+ * (schema-changes CONTENT, counter consolidation).
+ *
+ * COVERAGE-EXEMPT, deliberately and permanently:
+ *   - the real remote-download arm of Phase A — a gate never makes a network
+ *     fetch; the local fixture server IS the configured origin instead.
+ *   - the `engineOwnsInstall()` refusal — collapsed to `true` at the
+ *     2026-07-11 cutover, so its false arm is unreachable.
+ *   - `optimizeTables`' own REINDEX/VACUUM outcome: it is executed by the gate
+ *     (skipping it would prove a configuration nobody ships) but its errors are
+ *     non-fatal and unasserted.
  */
 
 import { mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -45,6 +60,7 @@ import {
 } from './data_io_import.ts';
 import { termByTipo } from './labels.ts';
 import {
+	type OntologyUpdateCatalog,
 	resolveUpdateTarget,
 	type StagedFile,
 	stageOntologyFiles,
@@ -176,15 +192,49 @@ async function optimizeTables(
 }
 
 /**
+ * The injectable edges of the pipeline. Every field defaults to exactly what
+ * the production call used before the seam existed, so the shipped path is the
+ * one the gate drives — no test-only flag changes what an operator runs.
+ *
+ * `catalog` is the load-bearing one: the target catalog comes from
+ * `config.ontologyIo`, which is env-shaped (`ONTOLOGY_SERVERS` /
+ * `IS_AN_ONTOLOGY_SERVER`) and therefore DIFFERENT on every machine. Without
+ * it a gate takes a different branch on a developer box than on a CI clone.
+ */
+export interface UpdateOntologyDeps {
+	/** psql seam for the snapshot/COPY steps; defaults to the configured DB. */
+	conn?: DbConnDescriptor;
+	/** Ontology-server catalog the target is re-resolved against (WC-023 D5). */
+	catalog?: OntologyUpdateCatalog;
+	/** Base dir the versioned IO dir (staging + recovery) is created under. */
+	ioBaseDir?: string;
+	/** Directory the operator-facing schema-changes artifact is written to. */
+	changesDir?: string;
+}
+
+/**
+ * Fill the injectable edges with their production defaults. Kept OUT of
+ * `updateOntology` so the seam adds no branches to an already-baselined
+ * function (the crap ratchet is a shrink-only contract).
+ */
+function resolveUpdateDeps(deps: UpdateOntologyDeps): {
+	conn: DbConnDescriptor;
+	catalog: OntologyUpdateCatalog;
+} {
+	return { conn: deps.conn ?? connFromConfig(), catalog: deps.catalog ?? config.ontologyIo };
+}
+
+/**
  * The full update pipeline. `userId` stamps the TM-audited registry writes.
- * `conn` is the psql seam for the COPY steps (tests); the dd_ontology rebuild
- * always runs on the configured pool.
+ * `deps.conn` is the psql seam for the COPY steps (tests); the dd_ontology
+ * rebuild always runs on the configured pool.
  */
 export async function updateOntology(
 	rawOptions: unknown,
 	userId: number,
-	conn: DbConnDescriptor = connFromConfig(),
+	deps: UpdateOntologyDeps = {},
 ): Promise<OntologyIoResponse> {
+	const { conn, catalog } = resolveUpdateDeps(deps);
 	const response: OntologyIoResponse = {
 		result: false,
 		msg: 'Error. Request failed [update_ontology::update_ontology]',
@@ -207,7 +257,7 @@ export async function updateOntology(
 	// The network target comes from the CONFIG catalog, never the client
 	// (WC-023 D5): match the selected server by code, or the localhost
 	// pseudo-server when this instance is an ontology master.
-	const target = resolveUpdateTarget(options.server, config.ontologyIo);
+	const target = resolveUpdateTarget(options.server, catalog);
 	if ('error' in target) {
 		response.errors.push(target.error);
 		response.msg = target.msg;
@@ -221,7 +271,7 @@ export async function updateOntology(
 	}
 	updateInFlight = true;
 
-	const ioPath = setOntologyIoPath();
+	const ioPath = setOntologyIoPath(deps.ioBaseDir);
 	if (ioPath === false) {
 		updateInFlight = false;
 		response.errors.push('unable to resolve the ontology IO directory');
@@ -361,7 +411,7 @@ export async function updateOntology(
 
 		// schema-changes file — the ONE hard-fail tail step (PHP parity)
 		const newSchema = await getSimpleSchemaOfSections();
-		const schemaSaved = saveSimpleSchemaFile(oldSchema, newSchema);
+		const schemaSaved = saveSimpleSchemaFile(oldSchema, newSchema, deps.changesDir);
 		if (!schemaSaved.result) {
 			response.result = false;
 			response.msg = `Error saving simple_schema_file: ${schemaSaved.msg}`;

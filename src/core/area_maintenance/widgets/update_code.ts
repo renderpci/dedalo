@@ -15,7 +15,15 @@ import { config } from '../../../config/config.ts';
 import { readEnv } from '../../../config/env.ts';
 import { engineDenied, gated, type WidgetModule, type WidgetResponse } from './support.ts';
 
-/** update_code panel (PHP get_value bytes). */
+/**
+ * update_code panel (PHP get_value bytes).
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): a NETWORK probe loop over
+ * `config.update.codeServers`, which is EMPTY on every default install (so the
+ * loop body is unreachable there), spreading `checkRemoteServer`'s own response
+ * fields. A gate would either assert an empty loop or make an outbound request.
+ */
 async function updateCodeGetValue(): Promise<WidgetResponse> {
 	const { checkRemoteServer } = await import('../../ontology/data_io_import.ts');
 	const servers: Record<string, unknown>[] = [];
@@ -43,13 +51,29 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 	};
 }
 
-/** The OPEN (owned) code-update: download + verify + extract + swap + restart. */
+/**
+ * The OPEN (owned) code-update: download + verify + extract + swap + restart.
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a two-field unwrap forwarding to
+ * `core/update/code_update.ts`, gated in its own suite. EXECUTING it replaces the
+ * code tree on disk and restarts the process. The one widget-level law worth
+ * pinning — the closed branch's non-superuser refusal — is already gated by
+ * test/unit/update_preconditions.test.ts.
+ */
 async function updateCodeOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { updateCode } = await import('../../update/code_update.ts');
 	return (await updateCode(options)) as unknown as WidgetResponse;
 }
 
-/** The OPEN (owned) release build: git archive of a ref. */
+/**
+ * The OPEN (owned) release build: git archive of a ref.
+ *
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a three-field unwrap forwarding to
+ * `core/update/code_build.ts`, gated in its own suite; running it shells out to
+ * git and writes a release archive.
+ */
 async function buildVersionOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
 	const version = typeof options.version === 'string' ? options.version : '';

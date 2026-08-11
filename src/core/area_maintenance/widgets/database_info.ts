@@ -217,6 +217,14 @@ export async function databaseInfoGetValue(): Promise<WidgetResponse> {
  * db_tasks::analyze_db). result serializes as {} on success (PHP json-encodes
  * the PgSql\Result object); execution_time in seconds.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a PARAMETERLESS operator action whose
+ * entire body is one unbounded `VACUUM ANALYZE` against the shared database, with
+ * the statement timeout DELIBERATELY removed (WC-055). There is no input to vary
+ * and no scratch surface to confine it to; its only branch is the try/catch
+ * envelope.
+ */
 async function databaseInfoAnalyzeDb(): Promise<WidgetResponse> {
 	const start = performance.now();
 	const errors: string[] = [];
@@ -360,6 +368,20 @@ export function planConsolidation(
 }
 
 /**
+ * The renumber ORDER for one consolidated table — pure, so the one table that
+ * does not share the matrix shape is pinnable.
+ *
+ * `dd_ontology` has no `section_tipo`/`section_id` columns: applying the
+ * matrix ordering to it makes the renumber's window `ORDER BY` reference
+ * columns the table lacks, and the action THROWS mid-transaction —
+ * on the one table that most needs compacting, after the operator already
+ * confirmed a destructive renumber.
+ */
+export function consolidateOrderFor(table: string): ConsolidateOrder {
+	return table === 'dd_ontology' ? 'tld, id' : 'section_tipo, section_id';
+}
+
+/**
  * Renumber one table's surrogate `id` PK to a gapless 1..n in `orderBy` order
  * and reset its `<table>_id_seq` to the new maximum.
  *
@@ -395,6 +417,14 @@ export async function consolidateOneTable(table: string, orderBy: ConsolidateOrd
  * (PHP logs and continues — the response still reports success); a table
  * whose first id ≤ row count needs no consolidation and is a no-op.
  */
+/*
+ * COVERAGE-EXEMPT for EXECUTION (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): running it RENUMBERS the surrogate
+ * primary keys of `dd_ontology`/`matrix_*` and setvals their sequences, which no
+ * scratch surface can contain. Its PURE decisions — `planConsolidation` and
+ * `consolidateOrderFor` — are gated individually
+ * (test/unit/consolidate_order_native.test.ts).
+ */
 async function databaseInfoConsolidateTables(
 	options: Record<string, unknown>,
 ): Promise<WidgetResponse> {
@@ -422,8 +452,7 @@ async function databaseInfoConsolidateTables(
 			} as WidgetResponse;
 		}
 		if (plan === 'noop') continue; // already compact
-		const order: ConsolidateOrder =
-			table === 'dd_ontology' ? 'tld, id' : 'section_tipo, section_id';
+		const order: ConsolidateOrder = consolidateOrderFor(table);
 		await consolidateOneTable(table, order);
 	}
 	return {
@@ -440,8 +469,25 @@ async function databaseInfoConsolidateTables(
  * → diffusion_section_stats delete + update). (!) Intentionally lossy when
  * the activity log is shorter than the stats history — an admin decision.
  */
-async function databaseInfoRebuildUserStats(
+export type UserStatsDeps = Pick<
+	typeof import('../user_stats.ts'),
+	'deleteUserActivityStats' | 'updateUserActivityStats'
+>;
+
+/**
+ * Resolve the aggregate writer pair — the injected one in a gate, the real
+ * module in production. A named helper, not an inline `??`, so the seam costs
+ * the already-branchy handler no cyclomatic complexity (the crap ratchet caps
+ * that file's max at its frozen 13).
+ */
+async function resolveUserStatsDeps(deps?: UserStatsDeps): Promise<UserStatsDeps> {
+	return deps ?? (await import('../user_stats.ts'));
+}
+
+export async function databaseInfoRebuildUserStats(
 	options: Record<string, unknown>,
+	_principal?: unknown,
+	deps?: UserStatsDeps,
 ): Promise<WidgetResponse> {
 	const users = Array.isArray(options.users) ? (options.users as unknown[]) : null;
 	const response: WidgetResponse & { updated_days?: unknown[] } = {
@@ -455,7 +501,9 @@ async function databaseInfoRebuildUserStats(
 		response.errors.push('invalid users');
 		return response as WidgetResponse;
 	}
-	const { deleteUserActivityStats, updateUserActivityStats } = await import('../user_stats.ts');
+	// SEAM (test injection only): the guard above returns BEFORE this line, so a
+	// gate can prove the dd1521 aggregate DELETE was never reached.
+	const { deleteUserActivityStats, updateUserActivityStats } = await resolveUserStatsDeps(deps);
 	for (const rawUserId of users) {
 		const userId = Number(rawUserId);
 		const deleted = await deleteUserActivityStats(userId);
@@ -464,6 +512,14 @@ async function databaseInfoRebuildUserStats(
 			continue;
 		}
 		const update = await updateUserActivityStats(userId);
+		// LEDGER — coverage plan §4.4 D3, KNOWN-OPEN AND UNGATED: two of the three
+		// disjuncts below are INERT. `update.result === 0` (the "stats are already
+		// updated" early return) and the empty-array-with-errors disjunct enter the
+		// guarded block and fall straight through, because its only statement is the
+		// `update.result === false` re-test. The code ADVERTISES three handled
+		// outcomes and implements one. Deleting the two dead disjuncts is
+		// behaviour-identical; it is left as written so the divergence is visible
+		// rather than quietly tidied by a coverage pass.
 		if (
 			update.result === false ||
 			update.result === 0 ||
@@ -485,8 +541,12 @@ async function databaseInfoRebuildUserStats(
  * selected tables (PHP db_tasks::optimize_tables; long locks on big tables —
  * an admin decision; the gate exercises matrix_test).
  */
-async function databaseInfoOptimizeTables(
+export type OptimizeTablesFn = typeof import('../../db/db_assets.ts').optimizeTables;
+
+export async function databaseInfoOptimizeTables(
 	options: Record<string, unknown>,
+	_principal?: unknown,
+	injectedOptimizeTables?: OptimizeTablesFn,
 ): Promise<WidgetResponse> {
 	const tables = options.tables;
 	if (tables === undefined || (Array.isArray(tables) && tables.length === 0)) {
@@ -495,7 +555,12 @@ async function databaseInfoOptimizeTables(
 	if (!Array.isArray(tables)) {
 		return { result: false, msg: 'Error. Request failed ', errors: ['Invalid tables parameter'] };
 	}
-	const { optimizeTables } = await import('../../db/db_assets.ts');
+	// SEAM (test injection only): both guards above return BEFORE this line, so a
+	// gate can prove REINDEX/VACUUM was never reached — notably for the bare-string
+	// case, where a relaxed guard would iterate a string CHARACTER BY CHARACTER
+	// into identifier positions.
+	const optimizeTables =
+		injectedOptimizeTables ?? (await import('../../db/db_assets.ts')).optimizeTables;
 	// Opt-in preview: only an explicit boolean true is a dry run — anything else
 	// (absent, 'false', 0) keeps the historical destructive behaviour.
 	const dryRun = options.dry_run === true;

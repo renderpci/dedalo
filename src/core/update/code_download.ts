@@ -26,6 +26,13 @@ export interface CodeDownloadResponse {
  * `targetPath`. Refuses redirects, caps bytes, and guards against a stalled
  * socket. The destination is assumed already confined by the caller.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): an OUTBOUND NETWORK fetch of a release
+ * archive. A test never fetches — a gate here would be non-hermetic and would
+ * depend on a third party's availability. If the surrounding logic is ever
+ * needed, inject at the boundary instead.
+ */
 export async function downloadReleaseArchive(options: {
 	url: string;
 	configuredOrigin: string;

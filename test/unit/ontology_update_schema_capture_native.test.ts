@@ -16,6 +16,13 @@
  * additions when it is actually handed a pre-import schema.
  *
  * No DB writes, no filesystem writes outside a mkdtemp scratch dir.
+ *
+ * LEDGER — coverage plan §4.4 D17, SAID OUT LOUD RATHER THAN IMPLIED: the order
+ * assertion here is a SOURCE-TEXT gate (`indexOf` over the module text). It
+ * executes NONE of `updateOntology`, so it measures no coverage of it and would
+ * survive any rewrite that kept the two markers in order. Its companion — the
+ * gate that actually EXECUTES the shell's decisions against an injected
+ * catalog/ioPath — is test/unit/ontology_update_shell_native.test.ts.
  */
 
 import { afterAll, expect, test } from 'bun:test';

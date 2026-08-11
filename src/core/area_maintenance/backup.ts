@@ -316,16 +316,38 @@ function artifactIsUsable(filePath: string): boolean {
  * newest-first before falling back to PATH.
  */
 export function resolvePgDump(): string {
-	const declared = config.ops.pgBinPath;
-	if (typeof declared === 'string' && declared !== '') {
-		const candidate = join(declared, 'pg_dump');
+	const candidates = pgDumpCandidates(config.ops.pgBinPath);
+	// The last entry is the bare-PATH fallback: it is RETURNED without an
+	// existsSync probe (PATH resolution is the shell's job), so only the
+	// preceding absolute paths are probed.
+	const fallback = candidates[candidates.length - 1] ?? 'pg_dump';
+	for (const candidate of candidates.slice(0, -1)) {
 		if (existsSync(candidate)) return candidate;
+	}
+	return fallback;
+}
+
+/**
+ * The pg_dump binaries `resolvePgDump` probes, IN ORDER — pure, so the order
+ * itself is gateable without touching the filesystem.
+ *
+ * The order is load-bearing and NEWEST-FIRST: a pg_dump older than the server
+ * refuses to dump, so a machine carrying both pg15 and pg19 must not pick
+ * pg15 — that backup fails silently into a `.log` nobody reads (audit S2-35).
+ * A newly released major belongs at the FRONT of the version list, never the
+ * end. The explicitly configured directory always wins, and the bare
+ * `pg_dump` (PATH) is always last.
+ */
+export function pgDumpCandidates(declaredDir: unknown): string[] {
+	const candidates: string[] = [];
+	if (typeof declaredDir === 'string' && declaredDir !== '') {
+		candidates.push(join(declaredDir, 'pg_dump'));
 	}
 	for (const version of [18, 17, 16, 15]) {
-		const candidate = `/opt/homebrew/opt/postgresql@${version}/bin/pg_dump`;
-		if (existsSync(candidate)) return candidate;
+		candidates.push(`/opt/homebrew/opt/postgresql@${version}/bin/pg_dump`);
 	}
-	return 'pg_dump';
+	candidates.push('pg_dump');
+	return candidates;
 }
 
 /** PHP backup::get_backup_files: newest-first {name, size} of *.backup files. */

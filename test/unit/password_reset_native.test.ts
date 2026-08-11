@@ -111,6 +111,19 @@ async function requestCode(): Promise<{ resetId: string; code: string }> {
 	return { resetId: response.reset_id, code };
 }
 
+/**
+ * LEDGER — coverage plan §4.4 D11, KNOWN-OPEN AND UNGATED (a suite-hygiene
+ * defect, not a product one). The two users below are minted through
+ * `insertMatrixRecordWithCounter`, so they land wherever the `dd128` counter
+ * points — measured 2026-08-10: `matrix_users` section_id 0, INSIDE the
+ * installed-user band, not the reserved >= 9xxxxx scratch band the scratch law
+ * requires. The write-path helper itself is the violator, so every gate that
+ * mints a user this way inherits it; the leaked `matrix_users` id 0 in the suite
+ * DB is this. Repairing it means minting at an explicit reserved id (as
+ * test/helpers/acl_identity_fixture.ts does at 930001/930002) rather than
+ * through the counter. Left as-is here so the defect is visible and one repair
+ * covers every inheritor at once.
+ */
 beforeAll(async () => {
 	const oldHash = await Bun.password.hash(OLD_PASSWORD, { algorithm: 'argon2id' });
 	const active = userColumns(USERNAME, EMAIL, '1');

@@ -7,6 +7,16 @@
 
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
+/**
+ * LEDGER — coverage plan §4.4 D14, KNOWN-OPEN AND UNGATED: the backup FILENAME
+ * GRAMMAR is implemented TWICE. The literal built below duplicates
+ * `timestampName()` + the `fileName` template in ../backup.ts (:68, :172), which
+ * is what `initBackupSequence` — the code that actually names the dump — uses.
+ * The panel therefore ADVERTISES one filename while the dump may land at
+ * another (they already differ in the forced/skip-time-range arm). The fix is
+ * DE-DUPLICATION — one exported builder, gated once — not a test that re-asserts
+ * this string; a test over the copy would freeze the divergence.
+ */
 async function makeBackupGetValue(): Promise<WidgetResponse> {
 	const { getBackupDir, getCurrentDataVersion } = await import('../backup.ts');
 	const { config } = await import('../../../config/config.ts');
@@ -29,6 +39,13 @@ async function makeBackupGetValue(): Promise<WidgetResponse> {
 	};
 }
 
+/**
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a six-field forward of
+ * `initBackupSequence`, which is gated in test/unit/ops_backup.test.ts.
+ * INVOKING IT spawns a detached `pg_dump` of the live database and writes a
+ * multi-GB artifact to disk — no scratch surface can contain that.
+ */
 async function makeBackupPsql(): Promise<WidgetResponse> {
 	const { initBackupSequence } = await import('../backup.ts');
 	const outcome = await initBackupSequence(-1, true);
@@ -47,6 +64,13 @@ async function makeBackupPsql(): Promise<WidgetResponse> {
 	} as WidgetResponse;
 }
 
+/**
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): a slice over `getBackupFiles` plus the
+ * constant empty MySQL list required by the engine boundary (MariaDB is the
+ * diffusion engine's responsibility). The listing itself is gated in
+ * test/unit/ops_backup.test.ts.
+ */
 async function makeBackupGetFiles(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { getBackupFiles } = await import('../backup.ts');
 	const maxFiles = typeof options.max_files === 'number' ? options.max_files : 10;

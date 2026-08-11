@@ -65,6 +65,15 @@ export function registerGracefulShutdown(handler: GracefulShutdown): void {
  * socket — because that logic is bound to SIGTERM/SIGINT only. A restart is a
  * planned shutdown; it deserves the same drain a supervisor's SIGTERM gets.
  */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a ONE-SHOT install procedure that
+ * MUTATES THE MACHINE — config files, a database restore, root credentials, a
+ * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
+ * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
+ * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * (test/unit/tier1_install_native.test.ts).
+ */
 export function scheduleServerRestart(reason: string): RestartOutcome {
 	// Never kill the test runner or the short-lived CLI (which reloads config by
 	// simply exiting on its own): both set DEDALO_INSTALL_NO_RESTART=true.

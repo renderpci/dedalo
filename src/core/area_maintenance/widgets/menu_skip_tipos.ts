@@ -9,7 +9,17 @@ import { sql } from '../../db/postgres.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
-/** Top-level area tipos (PHP area::get_ar_root_area_tipos) — never skippable. */
+/**
+ * Top-level area tipos (PHP area::get_ar_root_area_tipos) — never skippable.
+ *
+ * COVERAGE-EXEMPT, this reader and the `menuSkipTiposGetValue` panel spread below
+ * (coverage plan §5.1; reason registered in engineering/crap_coverage_exempt.json):
+ * a single-predicate `dd_ontology` model lookup and its panel projection. The
+ * DECISIONS — root-area rejection, dedup, invalid classification — are gated as
+ * PURE functions over an INJECTED root list (`classifyMenuSkipTipos` /
+ * `menuSkipTiposMessage`, test/unit/area_lockout_lists_native.test.ts). Asserting
+ * the query results would pin installed ontology content.
+ */
 async function getRootAreaTipos(): Promise<string[]> {
 	const placeholders = MENU_ROOT_MODEL_ORDER.map((_, index) => `$${index + 1}`).join(', ');
 	const rows = (await sql.unsafe(`SELECT tipo FROM dd_ontology WHERE model IN (${placeholders})`, [
@@ -53,11 +63,41 @@ async function menuSkipTiposGetValue(): Promise<WidgetResponse> {
 async function menuSkipTiposSave(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const raw = Array.isArray(options.tipos) ? options.tipos : [];
 	const rootTipos = await getRootAreaTipos();
+	const validTipos = new Set<string>();
+	for (const tipo of new Set(raw.map(String))) {
+		if ((await getModelByTipo(tipo)) !== null) validTipos.add(tipo);
+	}
+	const { tipos, invalid, removed } = classifyMenuSkipTipos(raw, rootTipos, (tipo) =>
+		validTipos.has(tipo),
+	);
+	const { setServerState } = await import('../../resolve/server_state.ts');
+	setServerState({ menu_skip_tipos: tipos });
+	return {
+		result: { tipos, invalid, removed },
+		msg: menuSkipTiposMessage(removed, invalid),
+		errors: [],
+	};
+}
+
+/**
+ * The PURE skip-list classifier — root list and tipo validity INJECTED (a gate
+ * that queried dd_ontology would pin installed content, not the decision).
+ *
+ * The root arm is the deforming one: skipping a TOP-LEVEL area promotes ALL of
+ * its children into the top menu bar, so a root-model tipo is diverted into
+ * `removed` and never reaches the persisted list. String() before dedup, so
+ * `12` and `'12'` are one tipo.
+ */
+export function classifyMenuSkipTipos(
+	rawTipos: unknown[],
+	rootTipos: string[],
+	isValidTipo: (tipo: string) => boolean,
+): { tipos: string[]; invalid: string[]; removed: string[] } {
 	const invalid: string[] = [];
 	const removed: string[] = [];
 	const tipos: string[] = [];
-	for (const tipo of [...new Set(raw.map(String))]) {
-		if ((await getModelByTipo(tipo)) === null) {
+	for (const tipo of [...new Set(rawTipos.map(String))]) {
+		if (!isValidTipo(tipo)) {
 			invalid.push(tipo);
 			continue;
 		}
@@ -67,13 +107,13 @@ async function menuSkipTiposSave(options: Record<string, unknown>): Promise<Widg
 		}
 		tipos.push(tipo);
 	}
-	const { setServerState } = await import('../../resolve/server_state.ts');
-	setServerState({ menu_skip_tipos: tipos });
-	return {
-		result: { tipos, invalid, removed },
-		msg: `OK. Configuration saved. Changes apply on the next request${removed.length === 0 ? '' : '. Top-level areas cannot be skipped and were ignored.'}${invalid.length === 0 ? '' : '. Invalid tipos were ignored.'}`,
-		errors: [],
-	};
+	return { tipos, invalid, removed };
+}
+
+/** The save envelope's operator feedback — the suffixes are the only signal
+ * that a requested skip was refused. */
+export function menuSkipTiposMessage(removed: string[], invalid: string[]): string {
+	return `OK. Configuration saved. Changes apply on the next request${removed.length === 0 ? '' : '. Top-level areas cannot be skipped and were ignored.'}${invalid.length === 0 ? '' : '. Invalid tipos were ignored.'}`;
 }
 
 export const widget: WidgetModule = {

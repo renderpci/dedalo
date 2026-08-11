@@ -16,6 +16,18 @@
 import type { Principal } from '../../security/permissions.ts';
 import { failed, type WidgetModule, type WidgetResponse } from './support.ts';
 
+/**
+ * COVERAGE-EXEMPT (coverage plan §5.1; reason registered in
+ * engineering/crap_coverage_exempt.json): a field-by-field projection of
+ * core/media/protection.ts, whose mode resolution, rule generation and marker
+ * store are gated in the media-protection suite.
+ *
+ * THE ONE DECISION THIS EXEMPTION HIDES, named rather than denied:
+ * `countDirFiles` returns NULL — not 0 — when the path exists and is not a
+ * directory, and null-vs-0 is a USER-VISIBLE difference in the panel ("unknown"
+ * versus "no markers"). This is not "no decisions"; it is one decision judged
+ * not worth executing the whole projection for.
+ */
 async function mediaControlGetValue(
 	_options: Record<string, unknown>,
 	principal: Principal,

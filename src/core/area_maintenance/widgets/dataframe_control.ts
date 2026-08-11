@@ -5,7 +5,22 @@
 
 import { sql } from '../../db/postgres.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
+import type { Principal } from '../../security/permissions.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
+
+/**
+ * The scan SEAM (test injection only; production always takes the default).
+ *
+ * `get_value`/`run_check` and `run_fix` are the SAME walk and differ by exactly
+ * one argument — `fix`. Flip it and a panel load stops being a read-only
+ * integrity report and becomes unscoped, irreversible orphan REMOVAL across
+ * every matrix table. The seam lets a gate pin the argument each handler
+ * constructs without ever running the scan.
+ */
+export type DataframeScan = (
+	fix: boolean,
+	scopedTables: string[] | null,
+) => Promise<WidgetResponse>;
 
 /** Models whose column is 'relation' (PHP get_components_with_relations). */
 async function isRelationModel(model: string | null): Promise<boolean> {
@@ -115,8 +130,12 @@ export function summarizeCoverage(coverage: TableCoverage[]): {
  * of the SAME row; unmatched frames report as orphans (details capped at
  * 500).
  */
-async function dataframeControlGetValue(): Promise<WidgetResponse> {
-	return dataframeControlScan(false, null);
+export async function dataframeControlGetValue(
+	_options?: Record<string, unknown>,
+	_principal?: Principal,
+	scan: DataframeScan = dataframeControlScan,
+): Promise<WidgetResponse> {
+	return scan(false, null);
 }
 
 /**
@@ -125,8 +144,12 @@ async function dataframeControlGetValue(): Promise<WidgetResponse> {
  * updated in place (PHP integrity_check(null, true)). Gated on a scoped
  * scratch fixture (matrix_test) — the API call covers every matrix table.
  */
-async function dataframeControlRunFix(): Promise<WidgetResponse> {
-	return dataframeControlScan(true, null);
+export async function dataframeControlRunFix(
+	_options?: Record<string, unknown>,
+	_principal?: Principal,
+	scan: DataframeScan = dataframeControlScan,
+): Promise<WidgetResponse> {
+	return scan(true, null);
 }
 
 export async function dataframeControlScan(

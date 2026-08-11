@@ -29,6 +29,15 @@ export interface RegisterToolsResult {
 }
 
 /** Import every discoverable tool registration into matrix_tools. */
+/*
+ * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): a ONE-SHOT install procedure that
+ * MUTATES THE MACHINE — config files, a database restore, root credentials, a
+ * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
+ * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
+ * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * (test/unit/tier1_install_native.test.ts).
+ */
 export async function registerInstallTools(): Promise<RegisterToolsResult> {
 	const { importTools } = await import('../tools/register.ts');
 	const raw = await importTools({ dryRun: false });

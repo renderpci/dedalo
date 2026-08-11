@@ -454,6 +454,102 @@ export async function inspectSearchStores(): Promise<SearchStoresInspection> {
 	};
 }
 
+/** What the READ-ONLY backfill probe observed about ONE derived store. */
+export interface SearchStoreObservation {
+	/** Store table name (matrix_string_search | matrix_relation_index). */
+	store: string;
+	/** The store table exists (false = the DDL pass above failed for it). */
+	exists: boolean;
+	/** The store holds no rows at all (`SELECT 1 … LIMIT 1` found nothing). */
+	empty: boolean;
+	/**
+	 * First PRESENT declared source table whose rows would produce store rows,
+	 * or null when none would. Short-circuits at the first hit exactly as the
+	 * inline loop did, so this is "at least one", never a full census.
+	 */
+	sourceWithRows: string | null;
+}
+
+/** The compute half of ensureSearchStores: what must be DONE, given what was OBSERVED. */
+export interface SearchStoresDecision {
+	/** A store table or a sync trigger is missing → run the DDL passes. */
+	ddlNeeded: boolean;
+	/** Stores to TRUNCATE + backfill (empty, existing, sources would fill them). */
+	storesNeedingBackfill: string[];
+	/** Nothing to do — derived from BOTH probes, never defaulted. */
+	healthy: boolean;
+}
+
+/**
+ * READ-ONLY second half of the ensureSearchStores probe: per declared store,
+ * does it exist, is it empty, and would any PRESENT declared source table
+ * produce rows for it. Nothing here writes; the ACT (TRUNCATE + backfill) is
+ * decided by decideSearchStores and run by the caller.
+ *
+ * `present` is the PRE-DDL table snapshot from inspectSearchStores — the source
+ * tables are filtered with it, exactly as the inline loop did. A non-empty store
+ * skips the source probes entirely (they cannot change the outcome).
+ */
+export async function observeSearchStores(
+	present: ReadonlySet<string>,
+): Promise<SearchStoreObservation[]> {
+	const observations: SearchStoreObservation[] = [];
+	for (const { store, triggerEntry, probe } of SEARCH_STORE_BACKFILLS) {
+		if (!(await tableExists(store))) {
+			// DDL failed above — already in errors
+			observations.push({ store, exists: false, empty: false, sourceWithRows: null });
+			continue;
+		}
+		const any = (await sql.unsafe(`SELECT 1 AS one FROM "${store}" LIMIT 1`, [])) as unknown[];
+		if (any.length > 0) {
+			observations.push({ store, exists: true, empty: false, sourceWithRows: null });
+			continue;
+		}
+		const entry = (definitions.ar_trigger as AssetEntry[]).find(
+			(candidate) => candidate.name === triggerEntry,
+		);
+		let sourceWithRows: string | null = null;
+		for (const table of entry?.tables ?? []) {
+			if (!present.has(table)) continue;
+			const rows = (await sql.unsafe(cleanSql(probe(table)), [])) as unknown[];
+			if (rows.length > 0) {
+				sourceWithRows = table;
+				break;
+			}
+		}
+		observations.push({ store, exists: true, empty: true, sourceWithRows });
+	}
+	return observations;
+}
+
+/**
+ * PURE fold: the boot decision, from the two read-only probes. Extracted from
+ * ensureSearchStores (which consumes exactly this object) because BOTH failure
+ * directions are expensive and silent — a false `ddlNeeded` re-runs the
+ * extension/table/function/trigger/index passes on every restart, and a lost
+ * `empty`/`exists` guard TRUNCATEs and rebuilds a populated 5M-row store on boot.
+ *
+ * A store is backfilled only when it EXISTS, is EMPTY, and some present source
+ * table would produce rows for it (the previous-beta signature). An empty store
+ * with no source rows is a legitimately empty install — nothing to do.
+ */
+export function decideSearchStores(
+	inspection: Pick<SearchStoresInspection, 'ddlNeeded'>,
+	observations: readonly SearchStoreObservation[],
+): SearchStoresDecision {
+	const storesNeedingBackfill = observations
+		.filter(
+			(observation) =>
+				observation.exists && observation.empty && observation.sourceWithRows !== null,
+		)
+		.map((observation) => observation.store);
+	return {
+		ddlNeeded: inspection.ddlNeeded,
+		storesNeedingBackfill,
+		healthy: !inspection.ddlNeeded && storesNeedingBackfill.length === 0,
+	};
+}
+
 /**
  * Boot-time self-provisioning of the derived search stores (owner directive
  * 2026-07-21: a database from a previous beta must heal on restart, not via a
@@ -473,6 +569,16 @@ export async function inspectSearchStores(): Promise<SearchStoresInspection> {
  * deliberate: until it ran, relation searches would only fail loudly anyway
  * (requireRelationIndex). Failures are returned, not thrown; the caller logs
  * and serves (S1-15 fault-tolerant boot posture).
+ *
+ * COMPUTE-THEN-ACT: the probes (inspectSearchStores / observeSearchStores) and
+ * the fold (decideSearchStores) hold the whole decision and are gated by
+ * search_store_{ensure,decision}_native.test.ts; this shell only ACTS on it.
+ * COVERAGE-EXEMPT / NAMED EXEMPTION (coverage plan §5.2; reason registered in
+ * engineering/crap_coverage_exempt.json): the acted-upon passes themselves (createExtensions /
+ * rebuildTables / rebuildFunctions / rebuildTriggers / rebuildIndexes /
+ * backfillSearchStores) are never executed by a gate — they rewrite the shared
+ * schema and backfill multi-million-row stores — and that exemption is valid
+ * ONLY while the decision above stays gated.
  */
 export async function ensureSearchStores(): Promise<EnsureSearchStoresResult> {
 	const result: EnsureSearchStoresResult = {
@@ -485,45 +591,29 @@ export async function ensureSearchStores(): Promise<EnsureSearchStoresResult> {
 	// 1. DDL probe (read-only): both store tables + every sync trigger on every
 	// EXISTING declared table. `present` is deliberately the PRE-DDL snapshot —
 	// step 2 filters its probe tables with it, exactly as before.
-	const { present, storeTables, ddlNeeded } = await inspectSearchStores();
+	const inspection = await inspectSearchStores();
 
-	if (ddlNeeded) {
-		result.healthy = false;
+	if (inspection.ddlNeeded) {
 		result.ddlApplied = true;
 		const passes = [
 			await createExtensions(),
 			await rebuildTables(),
 			await rebuildFunctions(),
 			await rebuildTriggers(),
-			await rebuildIndexes(storeTables),
+			await rebuildIndexes(inspection.storeTables),
 		];
 		for (const pass of passes) result.errors.push(...pass.errors);
 	}
 
-	// 2. Backfill probe per store: empty + sources would produce rows.
-	const needBackfill: string[] = [];
-	for (const { store, triggerEntry, probe } of SEARCH_STORE_BACKFILLS) {
-		if (!(await tableExists(store))) continue; // DDL failed above — already in errors
-		const any = (await sql.unsafe(`SELECT 1 AS one FROM "${store}" LIMIT 1`, [])) as unknown[];
-		if (any.length > 0) continue;
-		const entry = (definitions.ar_trigger as AssetEntry[]).find(
-			(candidate) => candidate.name === triggerEntry,
-		);
-		for (const table of entry?.tables ?? []) {
-			if (!present.has(table)) continue;
-			const rows = (await sql.unsafe(cleanSql(probe(table)), [])) as unknown[];
-			if (rows.length > 0) {
-				needBackfill.push(store);
-				break;
-			}
-		}
-	}
+	// 2. Backfill probe per store (read-only), then the DECISION both halves fold to.
+	const observations = await observeSearchStores(inspection.present);
+	const decision = decideSearchStores(inspection, observations);
+	result.healthy = decision.healthy;
 
-	if (needBackfill.length > 0) {
-		result.healthy = false;
-		const backfill = await backfillSearchStores(needBackfill);
+	if (decision.storesNeedingBackfill.length > 0) {
+		const backfill = await backfillSearchStores(decision.storesNeedingBackfill);
 		result.errors.push(...backfill.errors);
-		for (const store of needBackfill) {
+		for (const store of decision.storesNeedingBackfill) {
 			result.backfilled[store] = Number(backfill[`${store}_rows`] ?? 0);
 		}
 	}
