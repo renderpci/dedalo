@@ -209,6 +209,28 @@ The `diffusion_map.ts` section-map/delete-targets caches stay a SEPARATE
 domain: they register their own clearers with the same ontology
 cache-invalidation hub at module load (not by-products of plan compilation).
 
+**Uninstalled ontology packages** (stage B): a Dédalo install carries only some
+of the optional per-TLD ontology packages, so a shared diffusion element routinely
+names tipos that do not exist here (e.g. the `zenon*` bibliographic nodes of
+`src/external/services/zenon.ts` on an install that does not use Zenon). Compile
+therefore splits the two reasons a tipo has no `dd_ontology` node — the same split
+PHP draws with `check_active_tld` vs `check_tipo_is_valid`:
+
+- the tipo's **TLD carries no ontology content** → the package is not installed
+  on this deployment. Measured with `getPopulatedTlds`, NOT `getActiveTlds`:
+  declaring an ontology creates its registry root `<tld>0` before anything is
+  imported, and `check_active_tld` ("has rows") counts that lone row as
+  installed. The ddo (or whole field) is SKIPPED with a
+  `uninstalled-tld:<tld>@<field>` plan warning and a `[diffusion/compile]` log
+  line. The field keeps its column, empty: the published schema must not shift
+  with which optional packages an install happens to carry. A deployment fact
+  must never fail an element's compile, and never blocks a run.
+- the **TLD is installed but that node is missing** → an authoring defect, and
+  still a hard `PlanCompileError` naming the field.
+
+Gate: `test/unit/diffusion_plan_uninstalled_tld.test.ts` (both directions —
+without the second case the rule would degrade into "diffusion never complains").
+
 **RecordIR** (stage D output) replaces the dead PHP datum wire shape:
 `{sectionTipo, sectionId, status: 'publish'|'unpublish', fields:
 Map<planFieldId, FieldIR>}` where `FieldIR.values: ValueIR[]` are typed atoms

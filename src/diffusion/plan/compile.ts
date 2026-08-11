@@ -31,6 +31,12 @@
  * like 'nmo:TypeSeriesItem' or 'skos:prefLabel' are XML/RDF identities, not
  * SQL identifiers, and never reach a SQL string.
  *
+ * UNINSTALLED ONTOLOGY PACKAGES (spec §4.1): a ddo (or field) tipo whose TLD has
+ * NO dd_ontology rows is skipped with a 'uninstalled-tld:<tld>@<field>' warning
+ * — an optional package absent from THIS deployment must never fail a shared
+ * element's compile. A tipo whose TLD IS installed but whose node is missing
+ * stays a hard error: that is an authoring defect. See uninstalledTldOf.
+ *
  * Parser split (spec §5): each properties->process->parser step is classified
  * via the parser registry — 'runtime' steps survive IN ORDER as
  * ParserStepConfig, 'rewriter' steps are ABSORBED (recorded as
@@ -41,7 +47,9 @@
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { getComponentModel } from '../../core/components/registry.ts';
+import { getPopulatedTlds } from '../../core/db/dd_ontology.ts';
 import { getModelByTipo } from '../../core/ontology/resolver.ts';
+import { getTldFromTipo } from '../../core/ontology/tld.ts';
 import { currentOntologyRevision } from './cache.ts';
 import { KNOWN_FORMATS, TABLE_FORMATS } from './formats.ts';
 import { requireSqlIdentifier } from './identifier.ts';
@@ -206,6 +214,33 @@ interface CompileDiagnostics {
 }
 
 /**
+ * Two different reasons a tipo has no ontology node, and only ONE of them is a
+ * defect (the same split PHP draws with check_active_tld vs check_tipo_is_valid,
+ * see relations/request_config/explicit.ts :188-217):
+ *
+ * - its whole TLD carries no ontology content → the optional PACKAGE is not
+ *   installed on this deployment (e.g. a shared element referencing the `zenon`
+ *   bibliographic nodes on an install that does not use Zenon). A deployment
+ *   fact, never an authoring error: the element must still compile and publish.
+ * - the package IS installed but this node is missing → a real authoring defect
+ *   that must keep failing the compile loudly.
+ *
+ * getPopulatedTlds, NOT getActiveTlds: a declared-but-never-imported ontology
+ * leaves its registry root `<tld>0` behind, which check_active_tld counts as
+ * installed — the exact shape of the install that surfaced this (one `zenon0`
+ * row, no zenon1…11).
+ *
+ * Returns the uninstalled TLD (for the message) or null when this is NOT the
+ * package case — including a tipo with no TLD prefix at all, which is junk and
+ * stays a hard error.
+ */
+async function uninstalledTldOf(tipo: string): Promise<string | null> {
+	const tld = getTldFromTipo(tipo);
+	if (tld === null) return null;
+	return (await getPopulatedTlds()).includes(tld) ? null : tld;
+}
+
+/**
  * Compile one ddo chain into ResolveStep[]. Each entry becomes a 'component'
  * step (plain value read) or a 'relation-hop' step (the chain continues
  * through the component's locators) depending on whether the component model
@@ -233,6 +268,17 @@ async function compileSourceChain(
 		}
 		const model = await getModelByTipo(ddo.tipo);
 		if (model === null) {
+			const uninstalledTld = await uninstalledTldOf(ddo.tipo);
+			if (uninstalledTld !== null) {
+				// Optional package absent: drop this source, keep the field (its
+				// column still exists, empty — the published schema must not shift
+				// with which packages an install happens to have).
+				console.warn(
+					`[diffusion/compile] field '${fieldTipo}' (${fieldLabel}): skipped ddo tipo '${ddo.tipo}' — ontology '${uninstalledTld}' is not installed`,
+				);
+				diagnostics.warnings.push(`uninstalled-tld:${uninstalledTld}@${fieldTipo}`);
+				continue;
+			}
 			diagnostics.errors.push(
 				`field '${fieldTipo}' (${fieldLabel}): ddo tipo '${ddo.tipo}' not found in the ontology`,
 			);
@@ -348,6 +394,16 @@ async function compileFieldPlan(
 ): Promise<FieldPlan | null> {
 	const node = await tree.index.nodeOf(fieldTipo);
 	if (node === null) {
+		// Same split as compileSourceChain: a field belonging to an ontology
+		// package this install does not have is dropped, not a compile failure.
+		const uninstalledTld = await uninstalledTldOf(fieldTipo);
+		if (uninstalledTld !== null) {
+			console.warn(
+				`[diffusion/compile] skipped field '${fieldTipo}' — ontology '${uninstalledTld}' is not installed`,
+			);
+			diagnostics.warnings.push(`uninstalled-tld:${uninstalledTld}@${fieldTipo}`);
+			return null;
+		}
 		diagnostics.errors.push(`field '${fieldTipo}': node not found in the ontology`);
 		return null;
 	}
