@@ -20507,9 +20507,10 @@ body.inspector_resizing {
 }
 .component_info > .content_data > .content_value {
   contain: content;
+  min-height: var(--widget_reserved_height, 0px);
 }
 .component_info > .content_data > .content_value.widget_item_user_activity {
-  min-height: 27.65rem;
+  --widget_reserved_height: 27.65rem;
 }
 .component_info > .content_data > .content_value.widget_item_user_activity .loading_message {
   padding: 3rem;
@@ -20554,6 +20555,9 @@ body.inspector_resizing {
 .component_info .wrapper_widget .values_container > .widget_item label {
   padding-right: 0.5em;
 }
+.component_info.list > .content_data > .content_value.widget_item_tags {
+  --widget_reserved_height: 8.3rem;
+}
 .component_info.list .wrapper_widget .values_container {
   display: contents;
 }
@@ -20562,7 +20566,7 @@ body.inspector_resizing {
   flex-wrap: wrap;
 }
 .component_info.list .wrapper_widget .values_container > .widget_item.tags {
-  height: 8.3rem;
+  height: var(--widget_reserved_height);
 }
 .component_info.list .wrapper_widget .values_container > .widget_item > .state_icon {
   display: inline-block;

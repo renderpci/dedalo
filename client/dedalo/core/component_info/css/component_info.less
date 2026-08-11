@@ -11,9 +11,26 @@
 		>.content_value {
 			contain: content;
 
+			// LOADING-STATE RESERVATION.
+			// A widget slot is filled ASYNCHRONOUSLY (get_content_value,
+			// render_edit_component_info.js:185 — setTimeout + idle callback +
+			// opacity fade-in), so at first paint the slot holds only the
+			// 'Loading widget..' line. In list mode the .list_body grid rows are
+			// auto-sized by their tallest cell, so every row would grow the
+			// moment its widget lands — staggered per row, which reads as the
+			// list jumping while it loads.
+			// Reserving the widget's FINAL height up front makes the fade-in a
+			// pure opacity change with zero layout shift (and keeps the
+			// scrollbar/scroll position stable while the page fills).
+			// Opt-in per widget: set --widget_reserved_height on the slot, and
+			// let the rendered widget read the SAME custom property for its
+			// height (see &.list below) so the reserved box and the real box
+			// cannot drift apart.
+			min-height: var(--widget_reserved_height, 0px);
+
 			// used in user section to display 'loading widget..' message while load
 			&.widget_item_user_activity {
-				min-height: 27.65rem;
+				--widget_reserved_height: 27.65rem;
 
 				.loading_message {
 					padding: 3rem;
@@ -90,6 +107,18 @@
 	&.list {
 		// display: contents;
 
+		// Per-widget reserved height (see .content_value above). ONE declaration
+		// per widget: the loading slot reserves it and the rendered widget reads
+		// it back through inheritance, so the row height is identical before and
+		// after the widget lands.
+		>.content_data >.content_value {
+
+			&.widget_item_tags {
+				// This height allows the test area to be displayed without scrolling
+				--widget_reserved_height: 8.3rem;
+			}
+		}
+
 		.wrapper_widget {
 
 			// ul
@@ -102,8 +131,9 @@
 					flex-wrap: wrap;
 
 					&.tags {
-						// This heigth allow test area to be displayed without scrolling
-						height: 8.3rem;
+						// Same token the slot reserved while loading — never a
+						// second literal, or the row resizes on widget arrival.
+						height: var(--widget_reserved_height);
 					}
 
 					// span
