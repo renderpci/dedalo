@@ -34,7 +34,7 @@
 		"format": "biome format --write ."
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.115.0",
+		"@anthropic-ai/sdk": "^0.116.0",
 		"@geoman-io/leaflet-geoman-free": "2.20.0",
 		"@highlightjs/cdn-assets": "11.11.1",
 		"@huggingface/transformers": "4.2.0",
