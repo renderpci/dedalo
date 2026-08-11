@@ -20,7 +20,7 @@
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "postcss": "^8.5.25",
+    "postcss": "^8.5.26",
     "fast-uri": "^3.1.5",
     "hono": "^4.13.0",
     "ip-address": "^10.4.0"
