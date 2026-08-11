@@ -3,6 +3,21 @@
 *
 * Included from main.less file
 */
+// Edit-mode slot padding. Declared once because it is BOTH applied (below) and
+// folded into the loading-state reservation: box-sizing is border-box, so a
+// slot's min-height has to carry its own padding or the widget lands taller
+// than the box that was reserved for it.
+@info_edit_slot_padding_v: 1.5em; // 0.5em top + 1em bottom
+
+// state widget row metrics — the card is one header row plus one row per
+// configured IPO output, so its height is CONFIG-DEPENDENT (4 outputs on
+// oh28/rsc19, 1 on test180) and cannot be a literal. Derived from the
+// declarations in widgets/state/css/state.less (cell padding 0.4rem block,
+// line-height 1.35, header font 0.68rem, row font 0.86rem) — keep in step with
+// them, and they are the only place a row height is decided.
+@state_header_row_h: calc(0.8rem + 1.35 * 0.68rem); // 22.31px @13px root
+@state_row_h: calc(0.8rem + 1px + 1.35 * 0.86rem); // 26.47px @13px root
+
 .component_info {
 
 	>.content_data {
@@ -55,6 +70,21 @@
 	&.edit {
 		>.content_data >.content_value {
 			padding: 0.5em 1em 1em;
+
+			// state widget: header row + one row per IPO output (count published
+			// by get_content_value as --widget_ipo_outputs) + the card's 1px
+			// top/bottom border + this slot's own padding (border-box).
+			// Measured on rsc19/oh28 (4 outputs): 149.7px slot → the component
+			// wrapper settles at ~12.95rem, exactly where it lands once the
+			// widget has built. Nothing moves when it does.
+			&.widget_item_state {
+				--widget_reserved_height: calc(
+					@state_header_row_h
+					+ var(--widget_ipo_outputs, 4) * @state_row_h
+					+ 2px
+					+ @info_edit_slot_padding_v
+				);
+			}
 		}
 	}
 

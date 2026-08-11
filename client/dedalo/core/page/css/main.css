@@ -20525,6 +20525,9 @@ body.inspector_resizing {
 .component_info.edit > .content_data > .content_value {
   padding: 0.5em 1em 1em;
 }
+.component_info.edit > .content_data > .content_value.widget_item_state {
+  --widget_reserved_height: calc(calc(0.8rem + 1.35 * 0.68rem) + var(--widget_ipo_outputs, 4) * calc(0.8rem + 1px + 1.35 * 0.86rem) + 2px + 1.5em);
+}
 .component_info .wrapper_widget {
   font-size: 0.86rem;
   width: 100%;

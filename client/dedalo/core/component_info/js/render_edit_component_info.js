@@ -195,6 +195,22 @@ export const get_content_value = async (i, current_widget, self) => {
 			class_name		: `content_value widget_item_${widget_name}` + add_classes
 		})
 
+	// --widget_ipo_outputs. Loading-state reservation input (see
+	// component_info.less '.content_value'): the widget builds ASYNCHRONOUSLY
+	// below, so the slot must reserve the widget's FINAL height NOW or the row /
+	// grid resizes when the widget lands and the whole view jumps.
+	// Only the COUNT is published here — the one config-dependent fact the host
+	// can read without knowing anything about the widget. What a row is worth in
+	// rem stays in each widget's CSS, where the row is actually declared.
+	// Widgets whose height does not scale with the IPO outputs (tags,
+	// user_activity) ignore it and declare a flat --widget_reserved_height.
+		const ipo_outputs = Array.isArray(current_widget.ipo)
+			? current_widget.ipo.reduce((total, entry) => total + (entry?.output?.length || 0), 0)
+			: 0
+		if (ipo_outputs > 0) {
+			content_value.style.setProperty('--widget_ipo_outputs', ipo_outputs)
+		}
+
 	// loading_message
 		const loading_message = ui.create_dom_element({
 			element_type	: 'div',
