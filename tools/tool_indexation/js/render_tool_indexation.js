@@ -189,8 +189,11 @@ render_tool_indexation.prototype.edit = async function (options={render_level:'f
 *       – component_indexing_container  : wraps indexing_component (component_portal).
 *       – indexation_note               : container for the tag annotation note view.
 *   • references_container
-*       – component_references_container : wraps references_component if present;
-*         logs a console.error and skips render when absent.
+*       – component_references_container : wraps references_component. The
+*         instance is normally DEFERRED (built by the References tab click via
+*         _ensure_lazy_instance), so an absent instance here is the expected
+*         state, not an error. When the role is missing from the ddo_map
+*         entirely, the References tab is not created at all.
 *
 * Side effects:
 *   • self.info_container, self.indexation_note, self.tag_info_container are
@@ -386,6 +389,10 @@ const get_content_data_edit = async function(self) {
 			self.indexation_note = indexation_note
 
 		// references component
+		// configured = built already, or deferred and buildable on tab click.
+		// Anything else means the ontology does not declare the role at all.
+			const has_references = !!(self.references_component || self._lazy_ddos?.references_component)
+
 			const references_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'indexation_container',
@@ -397,15 +404,22 @@ const get_content_data_edit = async function(self) {
 				class_name		: 'component_indexing_container tab',
 				parent			: references_container
 			})
+			// fix pointer so the tab click handler can lazily render into it
+			self.component_references_container = component_references_container
 
+			// (!) three states, not two: an ALREADY BUILT instance renders here and
+			// now; a DEFERRED one (the normal case — build() sets autoload:false and
+			// the References tab click calls _ensure_lazy_instance) is silent, its
+			// render belongs to that click; only a role absent from the ddo_map is
+			// worth a line, and it is a warn — references is an optional role.
 			const references_component = self.references_component
 			if (references_component) {
 				references_component.render()
 				.then(function(references_component_node){
 					component_references_container.appendChild(references_component_node)
 				})
-			}else{
-				console.error('Ignored references_component render. Not found');
+			}else if (!self._lazy_ddos?.references_component) {
+				console.warn('Ignored references_component: role not defined in tool_config.ddo_map')
 			}
 
 		// tag_info_container. line info about tag
@@ -477,21 +491,34 @@ const get_content_data_edit = async function(self) {
 				})
 
 			// tab_references
-				const tab_references = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tab_label',
-					inner_html		: 'References',
-					parent			: info_container
-				})
-				tab_references.addEventListener('click', function(e){
-					e.stopPropagation()
-					activate_tab('references')
-				})
-				tab_nodes.push({
-					name: 'references',
-					node: tab_references,
-					component_node: component_references_container
-				})
+			// (!) only when the role is configured: a tab that can never show
+			// anything is a dead affordance, and the empty panel it opens reads
+			// as a data loss rather than as an install choice.
+				if (has_references) {
+					const tab_references = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'tab_label',
+						inner_html		: 'References',
+						parent			: info_container
+					})
+					tab_references.addEventListener('click', async function(e){
+						e.stopPropagation()
+						// lazy-create the deferred instance on first activation
+						if (!self.references_component && self._lazy_ddos?.references_component) {
+							self.references_component = await self._ensure_lazy_instance('references_component')
+							self.references_component.render()
+							.then(function(ref_node){
+								self.component_references_container.appendChild(ref_node)
+							})
+						}
+						activate_tab('references')
+					})
+					tab_nodes.push({
+						name: 'references',
+						node: tab_references,
+						component_node: component_references_container
+					})
+				}
 
 
 
@@ -928,9 +955,12 @@ const render_related_list = function(self){
 *   • people_section  — people/persons section browser linked as a relation linker.
 *   • media_component — AV player / media component.
 *
-* Labels are taken directly from the role component's .label property so they
-* reflect the ontology-configured display name.  If a role component is absent
-* on self, a descriptive fallback string is used (no throw).
+* Labels are taken from the role's ddo_map entry (.label, stamped server-side
+* by enrichToolConfig) so they reflect the ontology-configured display name
+* WITHOUT requiring the instance — media_component and people_section are
+* deferred and are still null when this runs.  A live instance's own .label
+* wins when it happens to exist.  A role that is absent from the ddo_map
+* altogether yields no option at all (no throw, no diagnostic string in the UI).
 *
 * Lazy rendering
 * ──────────────
@@ -955,8 +985,9 @@ const render_related_list = function(self){
 *   • left_container.media_component_node / .people_section_node are set on
 *     first lazy render.
 *
-* @param {Object} self    - The tool_indexation instance. Must have area_thesaurus,
-*   people_section, and media_component set (set in build_custom).
+* @param {Object} self    - The tool_indexation instance. Needs area_thesaurus
+*   (eager) plus self.tool_config.ddo_map / self._lazy_ddos for the deferred
+*   viewers; the deferred instances themselves are NOT required here.
 * @param {HTMLElement} left_container - The left pane node the selector acts on;
 *   the change handler reads/writes its *_node pointers and appends lazily
 *   rendered viewers to it.
@@ -966,39 +997,52 @@ const render_related_list = function(self){
 */
 const render_viewer_selector = function(self, left_container){
 
-	// short vars
-		const media_component	= self.media_component || {label:'Media component role is not defined'}
-		const area_thesaurus	= self.area_thesaurus || {label:'Area thesaurus role is not defined'}
-		const people_section	= self.people_section || {label:'People role is not defined'}
-		// items. Each carries a glyph prefix so the three viewers are told apart at
-		// a glance — the labels are ontology data ("Tesauro", "Audiovisual", a
-		// people section named whatever the install calls it) and read as three
-		// interchangeable words otherwise.
-		// (!) a <select> renders its options as TEXT: no <img>, no css mask, no
-		// icon element survives in there. A unicode glyph in the option label is
-		// the only mark that shows both in the open list AND in the closed
-		// control, which is where identification actually matters.
-		// Keyed by VALUE, never by label: the label is install-defined.
-		const items = [
-			{
-				label : area_thesaurus.label,
-				value : 'area_thesaurus',
-				icon  : '🌳' // the tree the thesaurus panel actually renders
-			},
-			{
-				label : people_section.label,
-				value : 'people_section',
-				icon  : '👤'
-			},
-			{
-				label : media_component.label,
-				value : 'media_component',
-				icon  : '🎬'
+	// items. Each carries a glyph prefix so the three viewers are told apart at
+	// a glance — the labels are ontology data ("Tesauro", "Audiovisual", a
+	// people section named whatever the install calls it) and read as three
+	// interchangeable words otherwise.
+	// (!) a <select> renders its options as TEXT: no <img>, no css mask, no
+	// icon element survives in there. A unicode glyph in the option label is
+	// the only mark that shows both in the open list AND in the closed
+	// control, which is where identification actually matters.
+	// Keyed by VALUE, never by label: the label is install-defined.
+	// (!) the label comes from the DDO, not from the instance: media_component
+	// and people_section are DEFERRED (build sets autoload:false and only
+	// instantiates them on first selection), so self[role] is null exactly when
+	// this toolbar is built. Reading the instance made a not-yet-built viewer
+	// look like an unconfigured role and printed the diagnostic string as the
+	// option label. The server stamps `label` on every ddo_map entry
+	// (enrichToolConfig), so it is available with or without an instance.
+		const icons = {
+			area_thesaurus	: '🌳', // the tree the thesaurus panel actually renders
+			people_section	: '👤',
+			media_component	: '🎬'
+		}
+		const build_item = function(role){
+
+			const instance	= self[role] || null
+			const ddo		= self._lazy_ddos?.[role]
+				|| self.tool_config?.ddo_map?.find(el => el.role===role)
+				|| null
+
+			// role genuinely absent from the ontology ddo_map: no viewer to offer.
+			// (an option that cannot resolve to anything is worse than no option)
+			if (!instance && !ddo) {
+				return null
 			}
-		]
+
+			return {
+				label	: instance?.label || ddo?.label || role,
+				value	: role,
+				icon	: icons[role]
+			}
+		}
+		const items = ['area_thesaurus', 'people_section', 'media_component']
+			.map(build_item)
+			.filter(Boolean)
 
 	// fix initial viewer name (Thesaurus)
-		self.viewer = items[0].value
+		self.viewer = items[0]?.value || 'area_thesaurus'
 
 	// description. Used as tooltip on both the caption and the select, so the
 	// scope is spelled out for anyone who hovers rather than infers it.
@@ -1063,9 +1107,9 @@ const render_viewer_selector = function(self, left_container){
 					if (media_component_node) {
 						media_component_node.classList.remove('hide')
 					}else{
-						// first call, do not exists
-						// self.media_component.mode = 'player'
-						self.media_component.render()
+						// first call, ensure the deferred instance exists
+						const component = await self._ensure_lazy_instance('media_component')
+						component.render()
 						.then(function(node){
 							left_container.appendChild(node)
 							// fix pointer
@@ -1080,9 +1124,9 @@ const render_viewer_selector = function(self, left_container){
 					if (people_section_node) {
 						people_section_node.classList.remove('hide')
 					}else{
-						// first call, do not exists
-						// self.people_section_node.mode = 'player'
-						self.people_section.render()
+						// first call, ensure the deferred instance exists
+						const section = await self._ensure_lazy_instance('people_section')
+						section.render()
 						.then(function(node){
 							left_container.appendChild(node)
 							// fix pointer

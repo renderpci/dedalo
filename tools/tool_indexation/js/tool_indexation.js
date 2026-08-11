@@ -70,6 +70,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, rebuild_component_in_lang} from '../../../core/common/js/common.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
 	import {tag_note} from './tag_note.js'
@@ -401,6 +402,21 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// Defer eager instantiation of non-default left-pane viewers (media,
+	// people) and the optional references component — they may never be
+	// selected.  Their instances are created lazily by _ensure_lazy_instance
+	// on first use.
+		self._lazy_ddos = {}
+		const deferred_roles = new Set(['media_component', 'people_section', 'references_component'])
+		if (self.tool_config?.ddo_map) {
+			for (const el of self.tool_config.ddo_map) {
+				if (deferred_roles.has(el.role)) {
+					el.autoload = false
+					self._lazy_ddos[el.role] = el
+				}
+			}
+		}
+
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload)
 
@@ -453,38 +469,35 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			self.indexing_component.show_interface.tools = false
 
 		// media_component. fix media_component for convenience
+		// (!) OPTIONAL left-pane viewer: an install that does not configure the
+		// role simply gets no media option in the viewer selector. Aborting build
+		// here (as it used to) also skipped area_thesaurus, the status components
+		// and related_sections_list — i.e. an optional viewer took down the tool.
 			const media_component_ddo = self.tool_config.ddo_map.find(el => el.role==='media_component')
 			if (!media_component_ddo) {
-				self.error = "Invalid media_component_ddo"
-				console.error('error:', self.error);
-				return true
+				console.warn('Ignored media_component: role not defined in tool_config.ddo_map')
+			} else {
+				self.media_component = self.ar_instances.find(el => el.tipo===media_component_ddo.tipo) || null
+				if (!self.media_component) {
+					self._lazy_ddos['media_component'] = media_component_ddo
+				} else {
+					self.media_component.show_interface.tools = false
+				}
 			}
-			self.media_component = self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
-			if (!self.media_component) {
-				self.error = "media_component not found"
-				console.error('error:', self.error);
-				return true
-			}
-			// show_interface
-			self.media_component.show_interface.tools = false
 
 		// people_section. fix people_section for convenience
+		// (!) OPTIONAL left-pane viewer — see the media_component note above.
 			const people_section_ddo = self.tool_config.ddo_map.find(el => el.role==='people_section')
 			if (!people_section_ddo) {
-				self.error = "Invalid people_section_ddo from tool_config.ddo_map"
-				console.error('error:', self.error);
-				console.log('self.tool_config.ddo_map', self.tool_config.ddo_map)
-				return true
+				console.warn('Ignored people_section: role not defined in tool_config.ddo_map')
+			} else {
+				self.people_section = self.ar_instances.find(el => el.tipo===people_section_ddo.tipo) || null
+				if (!self.people_section) {
+					self._lazy_ddos['people_section'] = people_section_ddo
+				} else {
+					self.people_section.linker = self.indexing_component
+				}
 			}
-			self.people_section = self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
-			if (!self.people_section) {
-				self.error = "people_section not found"
-				console.error('error:', self.error);
-				return true
-			}
-			// set instance in thesaurus mode 'relation'
-			// linker tells the people section to add relations via indexing_component
-			self.people_section.linker = self.indexing_component
 
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus');
@@ -517,8 +530,11 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		// Optional: not all ontology configurations include a references role; guard with null.
 			const references_component	= self.tool_config.ddo_map.find(el => el.role==="references_component");
 			self.references_component	= references_component
-				? self.ar_instances.find(el => el.tipo===references_component.tipo)
+				? self.ar_instances.find(el => el.tipo===references_component.tipo) || null
 				: null;
+			if (!self.references_component && references_component) {
+				self._lazy_ddos['references_component'] = references_component
+			}
 
 		// related_sections_list. load_related_sections_list. Get the relation list.
 		// This is used to build a select element to allow
@@ -667,6 +683,72 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 
 	return datum
 }//end load_related_sections_list
+
+
+
+/**
+* _ENSURE_LAZY_INSTANCE
+* Creates (or recovers) a deferred component/section instance for a given
+* ddo_map role that was skipped during eager build (autoload: false).
+*
+* Called by render_viewer_selector (for media_component / people_section
+* left-pane viewers) and by the tab system (for references_component).
+* The ddo config is looked up from self._lazy_ddos[role] (seeded in build).
+* Once created and built the instance is stored on self[role] and pushed
+* into self.ar_instances so the rest of the tool code sees it transparently.
+*
+* @param {string} role - ddo_map role key (e.g. 'media_component',
+*   'people_section', 'references_component').
+* @returns {Promise<Object>} Resolves with the live instance.
+*/
+tool_indexation.prototype._ensure_lazy_instance = async function(role) {
+
+	const self = this
+
+	// instance already created (e.g. by a previous switch back)
+	let instance = self[role]
+	if (instance) return instance
+
+	const ddo = self._lazy_ddos?.[role]
+	if (!ddo) {
+		throw new Error(`No lazy ddo config for role: ${role}`)
+	}
+
+	const lang = ddo.lang
+		|| (ddo.translatable !== undefined && ddo.translatable === false
+			? page_globals.dedalo_data_nolan
+			: page_globals.dedalo_data_lang)
+
+	const element_options = {
+		model			: ddo.model,
+		mode			: ddo.mode,
+		view			: ddo.view,
+		tipo			: ddo.tipo,
+		section_tipo		: ddo.section_tipo,
+		section_id		: ddo.section_id,
+		lang			: lang,
+		type			: ddo.type,
+		properties		: ddo.properties || null,
+		id_variant		: self.model,
+		caller			: self,
+		caller_dataframe	: ddo.caller_dataframe || null
+	}
+
+	instance = await get_instance(element_options)
+	await instance.build(true)
+
+	// Re-apply the wiring that build() would have done eagerly
+	if (role === 'media_component') {
+		instance.show_interface.tools = false
+	} else if (role === 'people_section') {
+		instance.linker = self.indexing_component
+	}
+
+	self[role] = instance
+	self.ar_instances.push(instance)
+
+	return instance
+}//end _ensure_lazy_instance
 
 
 
