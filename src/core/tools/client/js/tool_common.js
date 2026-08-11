@@ -520,6 +520,9 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
+					if (SHOW_DEBUG) {
+						console.log('tool common api_response: ' , api_response)
+					}
 					self.context = api_response.result?.[0] || null
 
 				// config update

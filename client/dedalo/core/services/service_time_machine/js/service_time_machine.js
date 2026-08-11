@@ -273,7 +273,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 				// server: wrong response
 				if (!api_response || !api_response.result) {
-					console.error('Error: Invalid API response', api_response);
+					console.error('Error: Invalid service time machine API response', api_response);
 					self.status = 'initialized' // do not leave the instance stuck in 'building'
 					return false
 				}
