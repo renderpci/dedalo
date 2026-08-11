@@ -10,7 +10,17 @@
 Three of the changes in this pass RESTORE the PHP oracle and need no ledger
 licence; they are named here because they land in the same commit:
 
-1. **A dangling ddo tipo degrades the ddo's VALUE, not the element and not the
+1. **[REPEALED 2026-08-11 — see
+   [WC-2026-08-11-diffusion-uninstalled-package-skip](WC-2026-08-11-diffusion-uninstalled-package-skip.md).**
+   The `degraded`-step mechanism described below no longer exists: a ddo whose
+   TLD carries no ontology content is now DROPPED (taking its column with it,
+   an accepted divergence), and a missing node inside an installed package is
+   fatal again. Points 2 and 3 of this entry stand unchanged. The paragraph is
+   kept verbatim because the oracle facts it cites — `build_datum_context`
+   deriving `columns` from the full ddo_map, and the two behaviours PHP keys on
+   ddo_map POSITION — are still true and still constrain the compiler.]**
+
+   **A dangling ddo tipo degrades the ddo's VALUE, not the element and not the
    field's SHAPE.** PHP `diffusion_chain_processor::resolve_ddo_value` :133-152 →
    `component_common::get_instance` :394-406 returns null for a tipo absent from
    the ontology, logs it, and returns `[]` for THAT ddo. The TS compiler raised

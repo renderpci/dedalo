@@ -131,6 +131,10 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/ontology/resolver.ts:componentModelFieldsLookup',
 	'core/search/search_related.ts:relationTablesCache',
 	'core/db/dd_ontology.ts:activeTldsCache',
+	// Same shape/lifecycle as activeTldsCache: ontology CONTENT (which TLDs carry
+	// nodes beyond their bare `<tld>0` registry root), carries no request
+	// identity, hub-cleared by the same registerOntologyCacheClearer callback.
+	'core/db/dd_ontology.ts:populatedTldsCache',
 	// GeoIP country reader (section Activity dd542 IP→country). A boot-stable,
 	// request-INDEPENDENT in-memory database loaded once from a static .mmdb file
 	// (mmdb-lib Reader) and shared read-only across requests — derives from a

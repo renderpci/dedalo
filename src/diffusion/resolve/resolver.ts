@@ -858,10 +858,13 @@ function stepColumnModel(step: Exclude<ResolveStep, { kind: 'system' }>): string
  */
 export function leafMergeColumns(chain: ResolveStep[]): MergeColumnRef[] {
 	// PHP leaf rule (:1294): every ddo NOT referenced as another ddo's parent
-	// is a target column — computed over the FULL ddo_map, with no ontology
-	// lookup, so a DANGLING ddo is a column too (an always-empty slot the merge
-	// joins). Steps carry that linkage since the compile fix; a legacy chain
-	// without it falls back to the old positional heuristic.
+	// is a target column — PHP computes it over the FULL ddo_map with no
+	// ontology lookup, so the oracle counts a dangling ddo as a column too.
+	// This engine no longer sees one: the compiler drops a ddo of an uninstalled
+	// package (its column with it) and fails on a missing node in an installed
+	// one, so the chain reaching here holds only resolvable steps — see
+	// WC-2026-08-11-diffusion-uninstalled-package-skip. Steps carry the parent
+	// linkage; a legacy chain without it falls back to the positional heuristic.
 	const hasParentInfo = chain.some((step) => step.kind !== 'system' && step.parent !== undefined);
 	if (hasParentInfo) {
 		const parents = new Set<string>();

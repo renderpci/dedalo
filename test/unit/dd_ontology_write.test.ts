@@ -14,6 +14,7 @@ import {
 	type DdOntologyNode,
 	deleteTldNodes,
 	getActiveTlds,
+	getPopulatedTlds,
 	readDdOntologyRow,
 	searchDdOntology,
 	updateDdOntologyColumns,
@@ -118,6 +119,23 @@ describe('getActiveTlds (check_active_tld = installed rows)', () => {
 	test('includes a TLD once it has dd_ontology rows', async () => {
 		await upsertDdOntologyNode(node({ tipo: 'zzt1' }));
 		expect(await getActiveTlds()).toContain(TLD);
+	});
+});
+
+describe('getPopulatedTlds (package CONTENT, not mere declaration)', () => {
+	test('a bare registry root <tld>0 is active but NOT populated', async () => {
+		// Declaring an ontology creates its root before anything is imported.
+		// Observed live: one 'zenon0' row, no zenon1…11 — check_active_tld said
+		// installed while every real zenon tipo resolved to null.
+		await deleteTldNodes(TLD);
+		await upsertDdOntologyNode(node({ tipo: 'zzt0', model: 'section' }));
+		expect(await getActiveTlds()).toContain(TLD);
+		expect(await getPopulatedTlds()).not.toContain(TLD);
+
+		// one imported node is enough to make it resolvable
+		await upsertDdOntologyNode(node({ tipo: 'zzt1', parent: 'zzt0' }));
+		expect(await getPopulatedTlds()).toContain(TLD);
+		await deleteTldNodes(TLD);
 	});
 });
 

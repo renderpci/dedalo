@@ -31,34 +31,49 @@
  * like 'nmo:TypeSeriesItem' or 'skos:prefLabel' are XML/RDF identities, not
  * SQL identifiers, and never reach a SQL string.
  *
+ * UNINSTALLED ONTOLOGY PACKAGES (spec §4.1): a ddo (or field) tipo whose TLD has
+ * NO dd_ontology rows is skipped with a 'uninstalled-tld:<tld>@<field>' warning
+ * — an optional package absent from THIS deployment must never fail a shared
+ * element's compile. A tipo whose TLD IS installed but whose node is missing
+ * stays a hard error: that is an authoring defect. See uninstalledTldOf.
+ *
  * Parser split (spec §5): each properties->process->parser step is classified
  * via the parser registry — 'runtime' steps survive IN ORDER as
  * ParserStepConfig, 'rewriter' steps are ABSORBED (recorded as
  * 'rewriter:<fn>@<field>' warnings until the resolver phase lands their plan
  * rewrites), 'unknown' fns THROW naming the field (never a silent skip).
  *
- * FAILURE POLICY — what is fatal and what degrades (audit 2026-08 B3):
+ * FAILURE POLICY — what is fatal and what is skipped:
  * STRUCTURAL violations refuse the whole element, because publishing under a
  * wrong name or an unknown format is worse than not publishing: the format,
  * the target database/service_name, the section/table resolution, the SQL
- * identifier chokepoint and an unknown parser fn. A FIELD-LOCAL violation —
- * today: a ddo tipo that is not in the ontology — degrades that ddo instead,
- * exactly like the oracle (diffusion_chain_processor::resolve_ddo_value :133-
- * 152, which logs and returns [] for that ddo). The entry KEEPS its place in
- * the compiled chain as a `degraded` ResolveStep that resolves to zero atoms:
- * the oracle's `columns` come from the FULL ddo_map (build_datum_context
- * :1288-1308), so removing it would silently re-shape the field's column set.
- * Degrade the VALUE, never the SHAPE. It is recorded as a structured
- * PlanDegradation carried on the plan and printed by the run report, so a
- * narrowed column is always visible — never dropped in silence.
+ * identifier chokepoint and an unknown parser fn. A missing ontology node is
+ * split by the rule above — absent PACKAGE (deployment fact) is skipped with a
+ * warning, missing node in an INSTALLED package is an authoring defect and
+ * stays fatal.
+ *
+ * SUPERSEDES the 2026-08-09 B3 "degrade in place" policy (a dangling ddo kept
+ * its slot in the chain as a `degraded` step so the field's column topology
+ * could not shift). That was reversed on 2026-08-11 in favour of the TLD split
+ * above: a skipped ddo now leaves the chain entirely. The consequence is
+ * deliberate and stated — on an install missing an optional package a
+ * multi-ddo field publishes one FEWER joined slot than the PHP oracle, whose
+ * `columns` come from the FULL ddo_map (build_datum_context :1288-1308):
+ * 'Historia' where the oracle emits 'Historia, '.
  * Ledger: engineering/wire_contract/WC-2026-08-09-diffusion-degradation-and-loud-ddo-fns.md
- * Gate: test/unit/diffusion_compile_degrade_native.test.ts
+ * Gate: test/unit/diffusion_plan_uninstalled_tld.test.ts
+ *
+ * The one thing that did NOT follow the reversal is the output_format
+ * fallback: it reads ddo_map[0] directly, never sourceChain[0], so a skipped
+ * FIRST ddo cannot promote the second one and invent a format. See its site.
  */
 
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
 import { getComponentModel } from '../../core/components/registry.ts';
+import { getPopulatedTlds } from '../../core/db/dd_ontology.ts';
 import { getModelByTipo } from '../../core/ontology/resolver.ts';
+import { getTldFromTipo } from '../../core/ontology/tld.ts';
 import { currentOntologyRevision } from './cache.ts';
 import { KNOWN_FORMATS, TABLE_FORMATS } from './formats.ts';
 import { requireSqlIdentifier } from './identifier.ts';
@@ -253,35 +268,39 @@ function parentOf(ddo: DdoEntry, sectionTipo: string): string | undefined {
 	return ddo.parent !== '' && ddo.parent !== sectionTipo ? ddo.parent : undefined;
 }
 
-/**
- * Every ddo hanging (transitively) under `rootTipo` in this ddo_map. Used to
- * name the subtree a dangling ddo disables: the oracle reaches a child ddo only
- * through its parent hop's resolved locators (resolve_chain), and a ddo that is
- * not in the ontology resolves to none — so the whole subtree publishes empty.
- * That is the oracle's behaviour; naming it is the part that was missing.
- */
-function descendantDdoTipos(ddoMap: DdoEntry[], rootTipo: string): string[] {
-	const disabled: string[] = [];
-	const frontier = [rootTipo];
-	const seen = new Set<string>([rootTipo]);
-	while (frontier.length > 0) {
-		const current = frontier.pop() as string;
-		for (const ddo of ddoMap) {
-			if (ddo.parent !== current || ddo.tipo === '' || seen.has(ddo.tipo)) continue;
-			seen.add(ddo.tipo);
-			disabled.push(ddo.tipo);
-			frontier.push(ddo.tipo);
-		}
-	}
-	return disabled;
-}
-
 /** Accumulates errors/warnings/degradations during one element compile. */
 interface CompileDiagnostics {
 	errors: string[];
 	warnings: string[];
 	/** Field-local narrowings: the element still compiles (see PlanDegradation). */
 	degradations: PlanDegradation[];
+}
+
+/**
+ * Two different reasons a tipo has no ontology node, and only ONE of them is a
+ * defect (the same split PHP draws with check_active_tld vs check_tipo_is_valid,
+ * see relations/request_config/explicit.ts :188-217):
+ *
+ * - its whole TLD carries no ontology content → the optional PACKAGE is not
+ *   installed on this deployment (e.g. a shared element referencing the `zenon`
+ *   bibliographic nodes on an install that does not use Zenon). A deployment
+ *   fact, never an authoring error: the element must still compile and publish.
+ * - the package IS installed but this node is missing → a real authoring defect
+ *   that must keep failing the compile loudly.
+ *
+ * getPopulatedTlds, NOT getActiveTlds: a declared-but-never-imported ontology
+ * leaves its registry root `<tld>0` behind, which check_active_tld counts as
+ * installed — the exact shape of the install that surfaced this (one `zenon0`
+ * row, no zenon1…11).
+ *
+ * Returns the uninstalled TLD (for the message) or null when this is NOT the
+ * package case — including a tipo with no TLD prefix at all, which is junk and
+ * stays a hard error.
+ */
+async function uninstalledTldOf(tipo: string): Promise<string | null> {
+	const tld = getTldFromTipo(tipo);
+	if (tld === null) return null;
+	return (await getPopulatedTlds()).includes(tld) ? null : tld;
 }
 
 /**
@@ -305,7 +324,6 @@ async function compileSourceChain(
 	sectionTipo: string,
 	fieldTipo: string,
 	fieldLabel: string,
-	columnName: string,
 	resolveModel: ModelResolver,
 	diagnostics: CompileDiagnostics,
 ): Promise<ResolveStep[]> {
@@ -318,49 +336,24 @@ async function compileSourceChain(
 		// Root entries carry parent === sectionTipo (buildDdoMap normalization);
 		// only a ddo-tipo parent survives into the step (the resolver's tree key).
 		const parent = parentOf(ddo, sectionTipo);
+		// Through the INJECTED resolver, not getModelByTipo directly: the compile
+		// gates drive this hermetically (no dev ontology, no DB).
 		const model = await resolveModel(ddo.tipo);
 		if (model === null) {
-			// FIELD-LOCAL (audit B3). The oracle skips THIS ddo's VALUE and keeps
-			// going (resolve_ddo_value :133-152 → get_instance :394-406 returns
-			// null, logged, []); aborting the element instead made one dangling
-			// tipo (mht2's zenon4/5/6/9) block every publication run.
-			//
-			// The entry STAYS in the chain as a 'degraded' step. build_datum_context
-			// :1288-1308 derives the datum's `columns` from the FULL ddo_map with no
-			// ontology lookup at all, so a dangling ddo IS one of the field's
-			// columns — an empty slot the merge joins (`empty_columns` defaults to
-			// true). Dropping it would silently narrow the field's leaf topology:
-			// rsc1194 would publish 'Historia' where the oracle publishes
-			// 'Historia, '. Degrade the value, never the shape.
-			//
-			// Never silent either: the plan carries a structured degradation the
-			// run report prints, naming the field, the column, the ddo AND every
-			// ddo hanging under it (nothing reaches a child of a hop that resolves
-			// to no locators — the oracle's outcome, made visible).
-			const step: Extract<ResolveStep, { kind: 'degraded' }> = {
-				kind: 'degraded',
-				tipo: ddo.tipo,
-				reason: 'dangling_ddo_tipo',
-			};
-			if (parent !== undefined) step.parent = parent;
-			if (ddo.id !== undefined) step.ddoId = ddo.id;
-			chain.push(step);
-
-			const disabled = descendantDdoTipos(ddoMap, ddo.tipo);
-			diagnostics.degradations.push({
-				fieldId: fieldTipo,
-				columnName,
-				reason: 'dangling_ddo_tipo',
-				ddoTipo: ddo.tipo,
-				disabledDdoTipos: disabled,
-				message:
-					`field '${fieldTipo}' (${fieldLabel}): ddo tipo '${ddo.tipo}' not found in the ontology` +
-					' — it resolves to nothing (its column slot publishes empty); the field keeps its' +
-					' column topology and its remaining ddos resolve normally' +
-					(disabled.length === 0
-						? ''
-						: `; the ddos hanging under it (${disabled.join(', ')}) are disabled too`),
-			});
+			const uninstalledTld = await uninstalledTldOf(ddo.tipo);
+			if (uninstalledTld !== null) {
+				// Optional package absent: drop this source, keep the field (its
+				// column still exists, empty — the published schema must not shift
+				// with which packages an install happens to have).
+				console.warn(
+					`[diffusion/compile] field '${fieldTipo}' (${fieldLabel}): skipped ddo tipo '${ddo.tipo}' — ontology '${uninstalledTld}' is not installed`,
+				);
+				diagnostics.warnings.push(`uninstalled-tld:${uninstalledTld}@${fieldTipo}`);
+				continue;
+			}
+			diagnostics.errors.push(
+				`field '${fieldTipo}' (${fieldLabel}): ddo tipo '${ddo.tipo}' not found in the ontology`,
+			);
 			continue;
 		}
 		const isRelationFamily =
@@ -475,6 +468,16 @@ async function compileFieldPlan(
 ): Promise<FieldPlan | null> {
 	const node = await tree.index.nodeOf(fieldTipo);
 	if (node === null) {
+		// Same split as compileSourceChain: a field belonging to an ontology
+		// package this install does not have is dropped, not a compile failure.
+		const uninstalledTld = await uninstalledTldOf(fieldTipo);
+		if (uninstalledTld !== null) {
+			console.warn(
+				`[diffusion/compile] skipped field '${fieldTipo}' — ontology '${uninstalledTld}' is not installed`,
+			);
+			diagnostics.warnings.push(`uninstalled-tld:${uninstalledTld}@${fieldTipo}`);
+			return null;
+		}
 		diagnostics.errors.push(`field '${fieldTipo}': node not found in the ontology`);
 		return null;
 	}
@@ -505,7 +508,6 @@ async function compileFieldPlan(
 		sectionTipo,
 		fieldTipo,
 		label,
-		columnName,
 		resolveModel,
 		diagnostics,
 	);
@@ -538,16 +540,28 @@ async function compileFieldPlan(
 	if (typeof process?.output_format === 'string') {
 		outputFormat = process.output_format;
 	} else {
-		// PHP: `$first_ddo = $ddo_map[0]; get_model_by_tipo($first_ddo->tipo)` — a
-		// dangling FIRST ddo yields no model and so no fallback output_format,
-		// which the 'degraded' step reproduces exactly. (Dropping the entry, as
-		// the first version of this fix did, promoted the SECOND ddo to first and
-		// could invent a 'json' format the oracle never picks.)
+		// PHP: `$first_ddo = $ddo_map[0]; get_model_by_tipo($first_ddo->tipo)`.
+		// Keyed off ddo_map[0], NOT off sourceChain[0]: a skipped first ddo
+		// (uninstalled package) has no model and so yields no fallback format —
+		// the oracle's own lookup returns null there too. Taking sourceChain[0]
+		// blindly would promote the SECOND ddo into first place and could stamp a
+		// 'json' format the oracle never picks.
+		//
+		// The compiled step is reused only when it IS that entry (same tipo), so
+		// the common path costs no extra ontology lookup — this runs for every
+		// field of every element, and re-resolving here measurably slowed the
+		// scheduler drain.
+		const firstDdoTipo = ddoMap[0]?.tipo;
 		const firstStep = sourceChain[0];
 		const firstModel =
-			firstStep === undefined || firstStep.kind === 'system' || firstStep.kind === 'degraded'
-				? null
-				: firstStep.model;
+			firstDdoTipo !== undefined &&
+			firstDdoTipo !== '' &&
+			firstStep !== undefined &&
+			firstStep.kind !== 'system' &&
+			firstStep.kind !== 'degraded' &&
+			firstStep.tipo === firstDdoTipo
+				? firstStep.model
+				: null;
 		if (firstModel !== null && getComponentModel(firstModel)?.column === 'relation') {
 			outputFormat = 'json';
 		}

@@ -71,7 +71,6 @@ import type { CompileOptions, ParserClassifier } from '../../src/diffusion/plan/
 import {
 	compileElementPlan,
 	PlanCompileError,
-	planDegradationReportLines,
 	validateElementPlan,
 } from '../../src/diffusion/plan/compile.ts';
 import type { ResolveStep } from '../../src/diffusion/plan/types.ts';
@@ -214,11 +213,22 @@ const ddo = (tipo: string, extra: Record<string, unknown> = {}): Record<string, 
 });
 
 // ---------------------------------------------------------------------------
-// 1. Dangling ddo tipo → field-local degradation (B3)
+// 1. A ddo of an UNINSTALLED package is skipped (2026-08-11, supersedes B3)
 // ---------------------------------------------------------------------------
+//
+// B3 (2026-08-09) kept a dangling ddo in the chain as a `degraded` step so the
+// field's column topology could not shift. That was REVERSED on 2026-08-11 in
+// favour of the TLD split (compile.ts uninstalledTldOf): an absent optional
+// PACKAGE is skipped outright, a missing node inside an INSTALLED package is an
+// authoring defect and stays fatal. These tests now pin the reversal — INCLUDING
+// the oracle divergence it accepts, which is asserted rather than glossed.
+//
+// `zenon*` is the real mht2 case AND an uninstalled package on every install
+// that does not use the DAI catalogue; the install-independent twin of these
+// scenarios lives in diffusion_plan_uninstalled_tld.test.ts.
 
-describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => {
-	test('the element still compiles and the degradation is reported', async () => {
+describe('a ddo of an uninstalled package is skipped, never fatal', () => {
+	test('the element still compiles; the skip is a WARNING, not a degradation', async () => {
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -240,33 +250,18 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 			'ref_publications_title',
 		]);
 
-		// The degraded field keeps its COLUMN, and the dangling ddo keeps its
-		// PLACE in the chain as a step that resolves to nothing. It is NOT
-		// dropped: the oracle derives `columns` from the full ddo_map without
-		// looking any tipo up (build_datum_context :1288-1308), so dropping it
-		// would silently re-shape the field's leaf topology.
-		const degraded = section.fields.find((field) => field.id === 'f_dangling');
-		expect(degraded?.sourceChain).toEqual([
-			{ kind: 'degraded', tipo: 'zenon4', reason: 'dangling_ddo_tipo' },
-		]);
+		// The FIELD survives with its column — which packages an install carries
+		// must not reshape the published schema at field level. The ddo itself is
+		// gone from the chain (the 2026-08-11 reversal; B3 kept it as `degraded`).
+		const skipped = section.fields.find((field) => field.id === 'f_dangling');
+		expect(skipped?.sourceChain).toEqual([]);
 
-		// ...and the operator is told exactly which field and which ddo tipo.
-		expect(plan.degradations).toEqual([
-			{
-				fieldId: 'f_dangling',
-				columnName: 'ref_publications_title',
-				reason: 'dangling_ddo_tipo',
-				ddoTipo: 'zenon4',
-				disabledDdoTipos: [],
-				message:
-					"field 'f_dangling' (ref_publications_title): ddo tipo 'zenon4' not found in the ontology" +
-					' — it resolves to nothing (its column slot publishes empty); the field keeps its' +
-					' column topology and its remaining ddos resolve normally',
-			},
-		]);
+		// Skipped, never silent — but a WARNING now, not a PlanDegradation.
+		expect(plan.warnings).toContain('uninstalled-tld:zenon@f_dangling');
+		expect(plan.degradations).toEqual([]);
 	});
 
-	test('a PARTIALLY dangling chain keeps its resolvable ddos (oracle: per-entry skip)', async () => {
+	test('a PARTIALLY skipped chain keeps its resolvable ddos', async () => {
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -284,19 +279,18 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 			]),
 		);
 		const field = plan.sections[0]?.fields[0];
-		// 1:1 with the ddo_map — the dangling entry is degraded IN PLACE.
+		// The skipped entry LEAVES the chain (no longer 1:1 with the ddo_map).
 		expect(
 			field?.sourceChain.map((step: ResolveStep) => ('tipo' in step ? step.tipo : '')),
-		).toEqual(['rsc368', 'rsc36', 'zenon9']);
+		).toEqual(['rsc368', 'rsc36']);
 		expect(field?.sourceChain.map((step: ResolveStep) => step.kind)).toEqual([
 			'relation-hop',
 			'component',
-			'degraded',
 		]);
-		expect(plan.degradations.map((entry) => entry.ddoTipo)).toEqual(['zenon9']);
+		expect(plan.warnings).toContain('uninstalled-tld:zenon@f_mixed');
 	});
 
-	test('THE mht2 CASE: the dangling ddo stays a COLUMN, and its empty slot is published', async () => {
+	test('THE mht2 CASE: the skipped ddo loses its column — the ACCEPTED oracle divergence', async () => {
 		// rsc1194 of the live mht ontology, verbatim (dedalo7_mht dd_ontology):
 		// ddo_map [rsc368 (autocomplete hop), rsc140 under it, zenon4 under it],
 		// no explicit parser → the parser-less merge path, merge:'string' with
@@ -320,17 +314,18 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 		const field = plan.sections[0]?.fields[0];
 		if (field === undefined) throw new Error('no field compiled');
 
-		// PHP leaf rule (:1294): parents = {rsc368}; every other ddo is a column
-		// — INCLUDING the dangling zenon4, whose tipo PHP never looks up.
+		// PHP leaf rule (:1294): parents = {rsc368}; every other ddo is a column,
+		// INCLUDING zenon4 — the oracle never looks its tipo up, so IT publishes
+		// two columns here. We publish one: the skipped ddo takes its column with
+		// it. That is the cost of the 2026-08-11 reversal, pinned here so it can
+		// never be mistaken for an accident.
 		expect(leafMergeColumns(field.sourceChain)).toEqual([
 			{ tipo: 'rsc140', model: 'component_input_text' },
-			{ tipo: 'zenon4', model: '' },
 		]);
 
-		// ...and that empty slot is VISIBLE in the published bytes: the oracle
-		// joins 'Historia' with the empty zenon4 column and emits 'Historia, '.
-		// Dropping the ddo produced 'Historia' — a silent wire divergence on the
-		// very field this whole change exists to unblock.
+		// The divergence in published BYTES, stated exactly: the oracle joins
+		// 'Historia' with the empty zenon4 slot and emits 'Historia, '; this
+		// engine emits 'Historia'. Only on an install missing the package.
 		const merged = merge(
 			[
 				{
@@ -345,13 +340,15 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 			{ columns: leafMergeColumns(field.sourceChain), merge: 'string' },
 			{ langs: ['lg-spa'], mainLang: 'lg-spa' },
 		);
-		expect(merged?.map((item) => item.value)).toEqual(['Historia, ']);
+		expect(merged?.map((item) => item.value)).toEqual(['Historia']);
 	});
 
-	test('ddos hanging UNDER a dangling one are named as disabled', async () => {
-		// The subtree can never execute (nothing reaches a child of a hop that
-		// resolved no locators — the oracle's outcome). It keeps its column
-		// slots; what was missing was saying so.
+	test('ddos hanging under a SKIPPED one are unreachable, and add no phantom column', async () => {
+		// The children keep a `parent` naming the skipped ddo, so they land in a
+		// chainTreeOf bucket no walk ever visits (resolver.ts: roots are the ''
+		// bucket) — unreachable, exactly like the subtree of a hop that resolved
+		// no locators. What matters is that they invent nothing: no orphan is
+		// promoted to root, and the leaf-column set is unchanged.
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -368,21 +365,27 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 				},
 			]),
 		);
-		const degradation = plan.degradations[0];
-		expect(degradation?.disabledDdoTipos).toEqual(['rsc36', 'rsc368']);
-		expect(degradation?.message).toContain('the ddos hanging under it (rsc36, rsc368)');
-		// The topology is untouched: zenon9 and rsc36 are parents, rsc368 is the
-		// single leaf column — exactly what the oracle's context would carry.
+		expect(plan.warnings).toContain('uninstalled-tld:zenon@f_subtree');
 		const field = plan.sections[0]?.fields[0];
 		if (field === undefined) throw new Error('no field compiled');
+		// The orphan still POINTS at the skipped ddo — that is what keeps it out
+		// of the root bucket. If this ever became `undefined`, rsc36 would run
+		// against the section itself and publish data the oracle never emits.
+		const orphan = field.sourceChain.find(
+			(step: ResolveStep) => step.kind !== 'system' && step.tipo === 'rsc36',
+		);
+		expect(orphan !== undefined && orphan.kind !== 'system' ? orphan.parent : null).toBe('zenon9');
+		// Leaf columns unchanged: rsc36 is still a parent, rsc368 still the one leaf.
 		expect(leafMergeColumns(field.sourceChain).map((column) => column.tipo)).toEqual(['rsc368']);
 	});
 
-	test('a dangling FIRST ddo does not promote the second (no invented output_format)', async () => {
+	test('a SKIPPED first ddo does not promote the second (no invented output_format)', async () => {
 		// PHP reads the model of ddo_map[0] for the output_format fallback; a
 		// tipo that is not in the ontology has none, so there is no fallback.
-		// Dropping the entry would have made the relation-family rsc368 first
-		// and stamped outputFormat 'json' the oracle never picks.
+		// This is the ONE place the 2026-08-11 reversal was NOT allowed to reach:
+		// the fallback reads ddo_map[0], never sourceChain[0], so skipping zenon5
+		// cannot promote the relation-family rsc368 and stamp a 'json' format the
+		// oracle never picks. Delete that and this goes green->wrong silently.
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -396,7 +399,7 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 		expect(plan.sections[0]?.fields[0]?.outputFormat).toBeUndefined();
 	});
 
-	test('EVERY dangling ddo is reported, not just the first', async () => {
+	test('EVERY skipped ddo is reported, not just the first', async () => {
 		const plan = await compileElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -406,16 +409,17 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 				{ tipo: 'f_d', label: 'ref_publications_url', process: { ddo_map: [ddo('zenon9')] } },
 			]),
 		);
-		expect(plan.degradations.map((entry) => entry.ddoTipo)).toEqual([
-			'zenon4',
-			'zenon5',
-			'zenon6',
-			'zenon9',
+		// One warning per FIELD, naming the package — four fields, four lines. The
+		// mht2 run reported nothing at all before any of this landed.
+		expect(plan.warnings.filter((warning) => warning.startsWith('uninstalled-tld:'))).toEqual([
+			'uninstalled-tld:zenon@f_a',
+			'uninstalled-tld:zenon@f_b',
+			'uninstalled-tld:zenon@f_c',
+			'uninstalled-tld:zenon@f_d',
 		]);
-		expect(planDegradationReportLines(plan)).toHaveLength(4);
 	});
 
-	test('validate reports the degradations alongside the compiled plan', async () => {
+	test('validate reports the skips alongside the compiled plan', async () => {
 		const validation = await validateElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -428,7 +432,7 @@ describe('B3: a dangling ddo tipo degrades the FIELD, never the element', () => 
 		);
 		expect(validation.errors).toEqual([]);
 		expect(validation.result).not.toBeNull();
-		expect(validation.degradations.map((entry) => entry.ddoTipo)).toEqual(['zenon4']);
+		expect(validation.warnings).toContain('uninstalled-tld:zenon@f_dangling');
 	});
 });
 
@@ -459,7 +463,7 @@ describe('structural failures stay FATAL (the chokepoints are deliberate)', () =
 		await expect(promise).rejects.toThrow(/unknown parser fn/);
 	});
 
-	test('a fatal compile STILL reports the degradations gathered on the way', async () => {
+	test('a fatal compile STILL reports the warnings gathered on the way', async () => {
 		const validation = await validateElementPlan(
 			ELEMENT_TIPO,
 			compileOptions([
@@ -473,7 +477,9 @@ describe('structural failures stay FATAL (the chokepoints are deliberate)', () =
 		);
 		expect(validation.result).toBeNull();
 		expect(validation.errors.join(' ')).toMatch(/Invalid column identifier/);
-		expect(validation.degradations.map((entry) => entry.ddoTipo)).toEqual(['zenon4']);
+		// The skip that happened BEFORE the fatal field is still reported: an
+		// operator debugging the failure sees the whole picture, not just the throw.
+		expect(validation.warnings).toContain('uninstalled-tld:zenon@f_dangling');
 	});
 });
 

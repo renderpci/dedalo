@@ -356,9 +356,40 @@ export async function getActiveTlds(): Promise<string[]> {
 	return activeTldsCache;
 }
 
-/** Register the active-TLD cache with the invalidation hub (dropped on any write). */
+/**
+ * The set of TLDs whose ontology package actually carries CONTENT.
+ *
+ * Declaring an ontology in the ontologies catalogue creates its registry root —
+ * `<tld>0` (ontology/tld.ts mapTldToTargetSectionTipo) — before anything is
+ * imported. A declared-but-never-imported package therefore leaves exactly that
+ * one row, which getActiveTlds (PHP check_active_tld: "has rows") counts as
+ * installed. For the question "can this deployment resolve nodes of this package
+ * at all" that answer is wrong, so this variant ignores the root row.
+ *
+ * Observed 2026-08-11: an install with a single `zenon0` row and no zenon1…11 —
+ * getActiveTlds said 'zenon', every real zenon tipo resolved to null.
+ *
+ * Module-cached and hub-cleared, same as getActiveTlds.
+ */
+let populatedTldsCache: string[] | null = null;
+
+export async function getPopulatedTlds(): Promise<string[]> {
+	if (populatedTldsCache !== null) {
+		return populatedTldsCache;
+	}
+	const rows = (await sql`
+		SELECT tld FROM dd_ontology WHERE tipo <> tld || '0' GROUP BY tld
+	`) as { tld: string | null }[];
+	populatedTldsCache = rows
+		.map((row) => row.tld)
+		.filter((tld): tld is string => tld !== null && tld !== '');
+	return populatedTldsCache;
+}
+
+/** Register the TLD caches with the invalidation hub (dropped on any write). */
 registerOntologyCacheClearer(() => {
 	activeTldsCache = null;
+	populatedTldsCache = null;
 });
 
 /**
