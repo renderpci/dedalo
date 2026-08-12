@@ -603,6 +603,34 @@ page.prototype.build = async function(autoload=false) {
 					}
 
 				// errors check
+				// AUTHORIZATION refusal (WC-2026-08-12-authorization-denial-token).
+				// The server answers a page the user holds no grant for with HTTP 403
+				// + `errors:['not_authorized']`. It is a normal answer, not a
+				// malfunction: it gets its own error type so the renderer can say so
+				// in the user's language, instead of the generic "check your server
+				// log" panel that used to read "Not retry-able HTTP error 403".
+					if (api_response?.errors?.includes('not_authorized')) {
+
+						// The refusal carries the environment (start is the first call —
+						// without it there is no get_label and the message could only be
+						// rendered in the source language). Inject it exactly like the
+						// success path below, so the panel speaks the user's language.
+						if (api_response.environment?.result) {
+							set_environment(api_response.environment.result)
+						}
+
+						page_globals.api_errors.push(
+							{
+								error	: 'not_authorized', // error type
+								msg		: (typeof get_label!=='undefined' && get_label.no_access_page)
+											|| 'You don\'t have permission to access this page',
+								trace	: 'page build'
+							}
+						)
+
+						return false
+					}
+
 				// error generic case starting the page
 				if (!api_response || !api_response.result) {
 					// api_response do not exists or result is false

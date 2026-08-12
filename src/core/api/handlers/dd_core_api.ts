@@ -42,7 +42,7 @@ import {
 	type ApiRequestContext,
 	requirePrincipal,
 } from '../handler_context.ts';
-import { type ApiResult, denied } from '../response.ts';
+import { type ApiResult, denied, notAuthorized } from '../response.ts';
 import { normalizeTermLocators } from './section_terms.ts';
 
 /** PHP safe_tipo grammar (shared/core_functions.php:2296). */
@@ -81,7 +81,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (source.section_tipo !== undefined && source.tipo !== undefined) {
 			const level = await getPermissions(principal, source.section_tipo, source.tipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		// Gate B: every SQO target section, self-keyed.
@@ -89,7 +89,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
 				const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 				if (level < 1) {
-					return denied(403, 'Insufficient permissions to read');
+					return notAuthorized('Insufficient permissions to read');
 				}
 			}
 		}
@@ -188,7 +188,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// The write ENGINE (saveComponentData) enforces the same rule for
 		// MCP/agent doors.
 		if (isConsultationOnlySection(source.section_tipo) && wireId.kind === 'record') {
-			return denied(403, `Illegal save to read-only section '${source.section_tipo}'`);
+			return notAuthorized(`Illegal save to read-only section '${source.section_tipo}'`);
 		}
 		// SEARCH-MODE relation link (portal/relation link_record + unlink_record):
 		// the picker lands on a CLIENT-MINTED synthetic id ('search_<n>', search.js
@@ -228,7 +228,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const level =
 			ownRecordLevel ?? (await getPermissions(principal, source.section_tipo, source.tipo));
 		if (level < 2) {
-			return denied(403, "You don't have enough permissions to edit this component");
+			return notAuthorized("You don't have enough permissions to edit this component");
 		}
 		// Per-record scope gate (PHP assert_record_in_user_scope): a level-2 user
 		// may only edit records inside their projects filter — the level gate
@@ -237,7 +237,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (!principal.isGlobalAdmin) {
 			const { isRecordInScope } = await import('../../security/record_scope.ts');
 			if (!(await isRecordInScope(source.section_tipo, sectionId, principal))) {
-				return denied(403, 'Record is out of the user scope');
+				return notAuthorized('Record is out of the user scope');
 			}
 		}
 		if (!Array.isArray(dataPayload.changed_data)) {
@@ -556,7 +556,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		for (const targetSectionTipo of targets) {
 			const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		const { readRaw } = await import('./read_raw.ts');
@@ -678,7 +678,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			// caller's projects filter (PHP assert_record_in_user_scope).
 			const { isRecordInScope } = await import('../../security/record_scope.ts');
 			if (!(await isRecordInScope(sectionTipo, sourceSectionId, principal))) {
-				return denied(403, 'Record is out of the user scope');
+				return notAuthorized('Record is out of the user scope');
 			}
 		}
 		const { duplicateSectionRecord } = await import('../../section/record/duplicate_record.ts');
@@ -762,13 +762,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			if (!principal.isGlobalAdmin) {
 				const { isRecordInScope } = await import('../../security/record_scope.ts');
 				if (!(await isRecordInScope(sectionTipo, targetId, principal))) {
-					return denied(403, 'Record is out of the user scope');
+					return notAuthorized('Record is out of the user scope');
 				}
 			}
 			targets = [targetId];
 		} else {
 			if (!principal.isGlobalAdmin) {
-				return denied(403, 'delete: sqo-based multi-delete requires global admin');
+				return notAuthorized('delete: sqo-based multi-delete requires global admin');
 			}
 			const { sanitizeClientSqo } = await import('../../concepts/sqo.ts');
 			const { buildSearchSql } = await import('../../search/sql_assembler.ts');
@@ -799,7 +799,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			);
 			if (ONTOLOGY_MAIN_SECTIONS.has(sectionTipo) && deleteMode === 'delete_record') {
 				if (!principal.isGlobalAdmin) {
-					return denied(403, 'delete: ontology-main cascade requires global admin');
+					return notAuthorized('delete: ontology-main cascade requires global admin');
 				}
 				const { deleteSectionRecord: cascadeDelete } = await import(
 					'../../section/record/delete_record.ts'
@@ -914,7 +914,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				if (typeof locator.section_tipo !== 'string') continue;
 				const level = await getPermissions(principal, locator.section_tipo, locator.section_tipo);
 				if (level < 1) {
-					return denied(403, 'Insufficient permissions to read');
+					return notAuthorized('Insufficient permissions to read');
 				}
 			}
 			const sectionTipos = Array.isArray(sqoRelated.section_tipo)
@@ -964,7 +964,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
 			const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		// The read STRATEGY owns counting: the default matrix source runs the
@@ -1047,7 +1047,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
 			const authorizedTools = await getUserTools(context.session.userId, principal.isGlobalAdmin);
 			if (!authorizedTools.some((tool) => tool.name === toolParam)) {
-				return denied(403, 'Tool not authorized for current user');
+				return notAuthorized('Tool not authorized for current user');
 			}
 			const toolElementContext = await buildToolElementContext(toolParam);
 			const toolStartContext: unknown[] = [];
@@ -1158,7 +1158,18 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// REROUTED target section — the element the context actually describes.
 		const pagePermissions = await getPermissions(principal, pageSectionTipo, pageTipo);
 		if (pagePermissions < 1) {
-			return denied(403, 'Insufficient permissions to read');
+			// THE ENVIRONMENT RIDES THE REFUSAL
+			// (WC-2026-08-12-authorization-denial-token). `start` is the client's
+			// FIRST call: without it there is no `get_label`, so the page could only
+			// render the refusal in the source language, whatever the operator's
+			// interface language is. It is the same block the success path builds,
+			// for the same authenticated caller — no permission is implied by it and
+			// nothing about the refused element is in it.
+			const refusal = notAuthorized('Insufficient permissions to read');
+			return {
+				...refusal,
+				body: { ...refusal.body, environment: await buildEnv(context.session, principal) },
+			};
 		}
 		// PHP start instantiates page elements with DEDALO_DATA_LANG and no
 		// nolan forcing (differentially verified: section + menu contexts
@@ -1260,7 +1271,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				principal.isGlobalAdmin,
 			);
 			if (!authorized.some((tool) => tool.name === toolName)) {
-				return denied(403, 'Tool not authorized for current user');
+				return notAuthorized('Tool not authorized for current user');
 			}
 			const toolContext = await buildToolElementContext(toolName);
 			return {
@@ -1304,7 +1315,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// Read gate: level >= 1 on (section_tipo, tipo) — PHP assert_section_permission.
 		const permissions = await getPermissions(principal, sectionTipo, tipo);
 		if (permissions < 1) {
-			return denied(403, 'Insufficient permissions to read');
+			return notAuthorized('Insufficient permissions to read');
 		}
 		const entry = await buildStructureContext({
 			tipo,
@@ -1486,7 +1497,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		// SEC: same permission boundary as the dashboard payload it extends.
 		if ((await getPermissions(principal, areaTipo, areaTipo)) < 1) {
-			return denied(403, 'Insufficient permissions to read');
+			return notAuthorized('Insufficient permissions to read');
 		}
 		const data = await getAreaActivityMetric(areaTipo, rangeDays);
 		return { status: 200, body: { result: true, data, msg: 'OK. Request done' } };
@@ -1571,7 +1582,7 @@ async function resolveNonRecordSave(
 			source.tipo as string,
 		);
 		if (searchLevel < 1) {
-			return denied(403, "You don't have enough permissions to search this component");
+			return notAuthorized("You don't have enough permissions to search this component");
 		}
 		const { currentChipsFromPayload, mergeRelationChips, resolveRelationEcho } = await import(
 			'../../section/record/resolve_echo.ts'

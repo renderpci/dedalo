@@ -263,6 +263,7 @@
 	"next_page": "下一页",
 	"no": "否",
 	"no_access": "无访问权限",
+	"no_access_page": "您没有访问此页面的权限",
 	"no_empty": "包含信息",
 	"no_records": "未找到记录",
 	"no_results": "没有层级匹配筛选条件。",

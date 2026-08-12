@@ -287,6 +287,7 @@
 	"next_page": "Next page",
 	"no": "no",
 	"no_access": "No access here",
+	"no_access_page": "You don't have permission to access this page",
 	"no_empty": "It contains information",
 	"no_records": "No records found",
 	"no_results": "No hierarchies match the filter.",

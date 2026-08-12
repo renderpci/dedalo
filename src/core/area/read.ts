@@ -9,7 +9,7 @@
  * exactly as before, so this relocation is zero behavior change).
  */
 
-import { type ApiResult, denied } from '../api/response.ts';
+import { type ApiResult, denied, notAuthorized } from '../api/response.ts';
 import { AREA_ONTOLOGY_TIPO, areaBehaviorOf, isAreaModel } from '../concepts/area.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
@@ -104,7 +104,7 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 	// Fail-closed: reject any non-superuser before touching the ontology.
 	if (model === 'area_ontology' || areaTipo === AREA_ONTOLOGY_TIPO) {
 		if (principal.userId !== SUPERUSER_ID) {
-			return denied(403, 'Insufficient permissions to read');
+			return notAuthorized('Insufficient permissions to read');
 		}
 	}
 
@@ -116,7 +116,7 @@ export async function dispatchAreaRead(rqo: Rqo, principal: Principal): Promise<
 		// Maintenance-area read (PHP area_maintenance_json): the widget catalog
 		// rides as `datalist`. Admin-only, like the PHP area.
 		if (!principal.isGlobalAdmin) {
-			return denied(403, 'Insufficient permissions to read');
+			return notAuthorized('Insufficient permissions to read');
 		}
 		const maintTipo = rqo.source?.tipo ?? '';
 		const permissions = await getPermissions(principal, maintTipo, maintTipo);
@@ -205,7 +205,7 @@ async function readTreeArea(
 	}
 	const level = await getPermissions(principal, areaTipo, areaTipo);
 	if (level < 1 && !principal.isGlobalAdmin) {
-		return denied(403, 'Insufficient permissions to read');
+		return notAuthorized('Insufficient permissions to read');
 	}
 
 	// terms_are_model (PHP build_options->terms_are_model): the ontology model

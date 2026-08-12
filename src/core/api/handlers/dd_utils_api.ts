@@ -10,7 +10,7 @@ import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { DEDALO_VERSION_TRIPLE, parseVersionString } from '../../update/version.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
-import { denied } from '../response.ts';
+import { denied, notAuthorized } from '../response.ts';
 
 /**
  * Human-readable SQL for the SQO dev console: substitute $N placeholders with
@@ -107,7 +107,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		{
 			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		const { updateLockComponentsState } = await import('../../section/locks.ts');
@@ -140,7 +140,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		{
 			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		const { getLockStatus } = await import('../../section/locks.ts');
@@ -577,7 +577,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// distinct returned ids, db_data = rows.
 		const principal = requirePrincipal(context);
 		if (!principal.isGlobalAdmin) {
-			return denied(403, 'Only global admins can use the SQO test environment');
+			return notAuthorized('Only global admins can use the SQO test environment');
 		}
 		const untrusted = (rqo.options ?? {}) as Record<string, unknown>;
 		try {

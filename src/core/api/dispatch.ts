@@ -49,7 +49,7 @@ import { toolsApiActions } from './handlers/dd_tools_api.ts';
 import { tsApiActions } from './handlers/dd_ts_api.ts';
 import { utilsApiActions } from './handlers/dd_utils_api.ts';
 import { isModulePoisonError, markProcessPoisoned } from './process_health.ts';
-import { type ApiResult, denied, notLogged } from './response.ts';
+import { type ApiResult, denied, notAuthorized, notLogged } from './response.ts';
 
 export type { ApiRequestContext } from './handler_context.ts';
 export type { ApiResult } from './response.ts';
@@ -255,7 +255,7 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	if (isInstallSurface) {
 		if (!installSurfaceReachable()) return denied(404, 'Not found');
 		if (!installIpAllowed(context.clientIp)) {
-			return denied(403, 'Install not permitted from this address');
+			return notAuthorized('Install not permitted from this address');
 		}
 	}
 
@@ -268,7 +268,7 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 			return denied(400, 'Undefined or unauthorized method (action)');
 		}
 		if (!reporterIpAllowed(context.clientIp)) {
-			return denied(403, 'Error report not permitted from this address');
+			return notAuthorized('Error report not permitted from this address');
 		}
 	}
 

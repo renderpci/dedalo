@@ -303,7 +303,13 @@ data_manager.request = async function(options) {
 			// expired session showed up as a network error with blank widgets. It is
 			// NOT an error to be reported either; `_record_api_error` would relay a
 			// routine logout to the error-report surface on every pending request.
-			if (response.status === 401) {
+			// WC-2026-08-12-authorization-denial-token: HTTP 403 is the SAME kind of
+			// answer for the same reason — the authorization gate replying with a
+			// normal API envelope (`errors:['not_authorized']`). Reported as a
+			// transport failure it became "Not retry-able HTTP error 403" over a
+			// blank page, with the real message ("Insufficient permissions to read")
+			// never reaching `.json()`.
+			if (response.status === 401 || response.status === 403) {
 				return response;
 			}
 			console.warn("-> HANDLE_ERRORS response:", response);
@@ -590,7 +596,10 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 			// envelope never reached `.json()`, `api_response_errors` never published,
 			// and the re-login modal never opened. Return it and let the normal
 			// response path dispatch on the token.
-			if (!response?.ok && response?.status !== 401) {
+			// 403 rides the same exemption for the same reason
+			// (WC-2026-08-12-authorization-denial-token): an authorization refusal is
+			// an ANSWER, not a transport failure, and retrying it is meaningless.
+			if (!response?.ok && response?.status !== 401 && response?.status !== 403) {
 				throw new HttpError(response.status, response.statusText, response);
 			}
 

@@ -18,7 +18,7 @@
  */
 
 import type { ApiResult } from '../api/response.ts';
-import { denied } from '../api/response.ts';
+import { denied, notAuthorized } from '../api/response.ts';
 import { isTemporalSource, type Rqo } from '../concepts/rqo.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
@@ -41,7 +41,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		}
 		const hostLevel = await getPermissions(principal, hostSectionTipo, hostSectionTipo);
 		if (hostLevel < 1) {
-			return denied(403, 'Insufficient permissions to read');
+			return notAuthorized('Insufficient permissions to read');
 		}
 		if ((source.mode ?? 'list') !== 'edit') {
 			// PHP relation_list_json: non-edit modes return the empty shell.
@@ -125,7 +125,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// the count-mode 'related' gate in the handler).
 		for (const locator of locators) {
 			if ((await getPermissions(principal, locator.section_tipo, locator.section_tipo)) < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		const rawSectionTipos = Array.isArray(sqoOptions.section_tipo)
@@ -162,7 +162,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		if (typeof tmSectionTipo === 'string') {
 			const { canAccessTimeMachineList } = await import('./list_definitions/time_machine_list.ts');
 			if (!(await canAccessTimeMachineList(principal, tmSectionTipo))) {
-				return denied(403, 'Insufficient permissions for the time machine of this section');
+				return notAuthorized('Insufficient permissions for the time machine of this section');
 			}
 		}
 		// fall through to the generic readSection below (routes to the TM source)

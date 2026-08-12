@@ -263,6 +263,7 @@
 	"next_page": "다음 페이지",
 	"no": "아니요",
 	"no_access": "접근 권한 없음",
+	"no_access_page": "이 페이지에 접근할 권한이 없습니다",
 	"no_empty": "정보 포함",
 	"no_records": "레코드를 찾을 수 없음",
 	"no_results": "필터와 일치하는 계층이 없습니다.",

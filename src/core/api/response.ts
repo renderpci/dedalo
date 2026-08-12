@@ -37,9 +37,38 @@ export interface ApiResult {
 	streamHeaders?: Record<string, string>;
 }
 
-/** Uniform permission/validation denial (PHP denied JSON output). */
+/**
+ * Uniform validation/refusal denial (PHP denied JSON output).
+ *
+ * NOT for authorization refusals — those are {@link notAuthorized} (403), which
+ * carries a machine token the client dispatches on. `denied(403, …)` is refused
+ * mechanically by `test/unit/authorization_denial_native.test.ts`.
+ */
 export function denied(status: number, message: string): ApiResult {
 	return { status, body: { result: false, msg: message, errors: [message] } };
+}
+
+/**
+ * The AUTHORIZATION denial (WC-2026-08-12-authorization-denial-token) — the 403
+ * sibling of {@link notLogged}, and for the same reason.
+ *
+ * `denied(403, 'Insufficient permissions to read')` put the human sentence in
+ * `errors`, the machine channel, so nothing could dispatch on it: the client's
+ * fetch layer classified the 403 as a non-retryable transport failure and
+ * painted a permanent red "Not retry-able HTTP error 403" over a blank page —
+ * the whole answer a user got for opening a page they lack a grant for.
+ *
+ * `errors` now carries the token `not_authorized`; the human message stays in
+ * `msg`. The client exempts 403 from its transport-error classification exactly
+ * as it does 401, reads the envelope, and renders the localized
+ * "no permission" page (`get_label.no_access_page`).
+ *
+ * The default message is deliberately generic: it is shown to the refused user,
+ * and naming the element they cannot reach is an information leak. Call sites
+ * that pass a specific sentence keep it — none of them name a record.
+ */
+export function notAuthorized(message = 'Insufficient permissions'): ApiResult {
+	return { status: 403, body: { result: false, msg: message, errors: ['not_authorized'] } };
 }
 
 /**
