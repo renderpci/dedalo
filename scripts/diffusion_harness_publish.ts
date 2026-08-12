@@ -417,6 +417,8 @@ interface SectionSummary {
 	rows: number;
 	unpublished: number;
 	errors: string[];
+	/** The section aborted mid-publish; its table holds a PARTIAL publication. */
+	failed?: boolean;
 }
 
 /**
@@ -481,41 +483,66 @@ try {
 					sectionSummaries.push(summary);
 					console.log(`\n[publish] ${section.sectionTipo} -> ${section.tableName}`);
 
-					// NO sqo: the resolver's default selection ({ section_tipo }) means
-					// EVERY record of the section, which is what a full-element v6 run does.
-					const batches = resolvePublication(plan, {
-						sectionTipo: section.sectionTipo,
-						runStartedAt,
-						...(batchSize !== null ? { batchSize } : {}),
-						maxLevels,
-						skipPublicationStateCheck,
-						principal,
-					});
-					for await (const batch of batches) {
-						if (batch.rows.length > 0) {
-							await activeSession.writeRows(batch.section, batch.rows);
-							summary.rows += batch.rows.length;
+					// PER-SECTION ERROR CONTAINMENT. A publish error is fatal to ITS SECTION
+					// only: without this the first bad column (a value longer than the width
+					// the v6 ontology declared, say) aborts the whole run and hides the state
+					// of every other table, so each defect costs a full re-run to find the
+					// next. The run still exits non-zero, failed sections are listed loudly
+					// and flagged in the run info, and the comparator's own guards (non-empty
+					// snapshot assertion, NOTHING COMPARED) keep a partially published table
+					// from ever being read as parity.
+					try {
+						// NO sqo: the resolver's default selection ({ section_tipo }) means
+						// EVERY record of the section, which is what a full-element v6 run does.
+						const batches = resolvePublication(plan, {
+							sectionTipo: section.sectionTipo,
+							runStartedAt,
+							...(batchSize !== null ? { batchSize } : {}),
+							maxLevels,
+							skipPublicationStateCheck,
+							principal,
+						});
+						for await (const batch of batches) {
+							if (batch.rows.length > 0) {
+								await activeSession.writeRows(batch.section, batch.rows);
+								summary.rows += batch.rows.length;
+							}
+							if (batch.unpublishIds.length > 0) {
+								await activeSession.removeRecords(batch.section, batch.unpublishIds);
+								summary.unpublished += batch.unpublishIds.length;
+							}
+							for (const fieldError of batch.errors) {
+								const message = `${fieldError.sectionTipo}:${fieldError.sectionId} ${fieldError.columnName}: ${fieldError.message}`;
+								summary.errors.push(message);
+								allErrors.push(message);
+								console.error(`  ERROR ${message}`);
+							}
+							summary.batches += 1;
+							console.log(
+								`  batch ${summary.batches}: level ${batch.level}, ${batch.section.sectionTipo} → ${batch.section.tableName}, ` +
+									`${batch.rows.length} row(s), ${batch.unpublishIds.length} unpublish, cursor ${batch.cursor}`,
+							);
 						}
-						if (batch.unpublishIds.length > 0) {
-							await activeSession.removeRecords(batch.section, batch.unpublishIds);
-							summary.unpublished += batch.unpublishIds.length;
-						}
-						for (const fieldError of batch.errors) {
-							const message = `${fieldError.sectionTipo}:${fieldError.sectionId} ${fieldError.columnName}: ${fieldError.message}`;
-							summary.errors.push(message);
-							allErrors.push(message);
-							console.error(`  ERROR ${message}`);
-						}
-						summary.batches += 1;
 						console.log(
-							`  batch ${summary.batches}: level ${batch.level}, ${batch.section.sectionTipo} → ${batch.section.tableName}, ` +
-								`${batch.rows.length} row(s), ${batch.unpublishIds.length} unpublish, cursor ${batch.cursor}`,
+							`  DONE ${section.sectionTipo}: ${summary.batches} batch(es), ${summary.rows} row(s), ` +
+								`${summary.unpublished} unpublished, ${summary.errors.length} error(s)`,
 						);
+					} catch (sectionError) {
+						const raw = sectionError instanceof Error ? sectionError.message : String(sectionError);
+						const message = `${section.sectionTipo} -> ${section.tableName}: ${raw}`;
+						summary.errors.push(message);
+						summary.failed = true;
+						allErrors.push(message);
+						console.error(`  SECTION FAILED ${message}`);
+						// A width overflow names the column but never the value, which is the one
+						// thing needed to diagnose it.
+						const overflow = /Data too long for column '([^']+)'/.exec(raw);
+						if (overflow !== null) {
+							console.error(
+								`  the value v7 resolved for '${overflow[1]}' exceeds the width the v6 ontology declared for it`,
+							);
+						}
 					}
-					console.log(
-						`  DONE ${section.sectionTipo}: ${summary.batches} batch(es), ${summary.rows} row(s), ` +
-							`${summary.unpublished} unpublished, ${summary.errors.length} error(s)`,
-					);
 				}
 			}),
 	);
