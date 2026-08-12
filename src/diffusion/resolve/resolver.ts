@@ -51,9 +51,14 @@ import {
 } from '../../core/ontology/resolver.ts';
 import { getSectionMapValue } from '../../core/ontology/section_map.ts';
 import { getChildren } from '../../core/relations/children.ts';
+import { resolveIndexConfig } from '../../core/relations/models/relation_index.ts';
 import { getParents, getParentsRecursive } from '../../core/relations/parent.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
-import { findInverseReferences } from '../../core/search/search_related.ts';
+import { parseInverseEntry } from '../../core/resolve/relation_index.ts';
+import {
+	findInverseReferenceLocators,
+	findInverseReferences,
+} from '../../core/search/search_related.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { getTermByLocator, getTermDataByLocator } from '../../core/ts_object/term_resolver.ts';
 import type { MetaValueIR, ParserContext } from '../parsers/types.ts';
@@ -207,6 +212,23 @@ interface RunContext {
 	 * (relation_list::get_data — every mint/type column of one coin repeats
 	 * the SAME related-mode query, so this cache is load-bearing). */
 	relationListCache: Map<string, StoredLocator[]>;
+	/** `${hop_tipo}|${owner_section_tipo}` → resolved inverse-question config
+	 * (relation type + target sections). resolveIndexConfig rebuilds the FULL
+	 * request_config per call when the component declares one (uncached,
+	 * ontology-query heavy) — one resolution per (component, section) per run
+	 * is the correct cost; the ontology is immutable for the run's duration. */
+	relationIndexConfigCache: Map<string, Awaited<ReturnType<typeof resolveIndexConfig>>>;
+	/** `${record}|${hop_tipo}|${relation_type}|${target_sections}` → computed
+	 * inverse-index locators (relation_index hops — see relationIndexLocators).
+	 * Keyed per hop tipo AND resolved filters: unlike relation_list, the query
+	 * depends on the component (a section can carry several index components
+	 * with different relation types / target scopes). */
+	relationIndexCache: Map<string, StoredLocator[]>;
+	/** `${record}|${hop_tipo}` → computed child locators (relation_children
+	 * hops — see relationChildrenLocators). Load-bearing, not cosmetic:
+	 * getChildren sibling-orders IN PROCESS (one record read per child) when
+	 * the section_map declares a thesaurus order. */
+	relationChildrenCache: Map<string, StoredLocator[]>;
 	/** section_tipo → section_map thesaurus 'model' element tipo (typology). */
 	typologyElementCache: Map<string, { tipo: string; model: string } | null>;
 	/** section_tipo → dd_ontology term translations (section-label hop fn). */
@@ -913,6 +935,103 @@ async function relationListLocators(
 }
 
 /**
+ * relation_index locators — component_relation_index STORES NOTHING: it is an
+ * inverse index computed per read from matrix_relation_index ("who points at
+ * me?"), so the stored-slice read yields [] and the field would publish NULL
+ * silently. This is the SAME computed flow the read path runs
+ * (readRelationIndexData, core/relations/models/relation_index.ts :310-333 —
+ * PHP class.component_relation_index.php get_data :160 /
+ * search_related::get_referenced_locators :489), reusing its two engines:
+ * resolveIndexConfig for the component's inverse question (relation type =
+ * properties.config_relation.relation_type ?? dd96; pointing sections = the
+ * request_config sqo targets, else 'all') and findInverseReferenceLocators for
+ * the hits — but WITHOUT pagination: a publication takes the FULL inverse set,
+ * never an edit page (limit: false; the component's editLimit is an edit-view
+ * concern). Hits map through parseInverseEntry (the PHP parse_data field
+ * mapping), whose output already satisfies the walker's locator contract:
+ * section_tipo (string) + section_id (canonical INT —
+ * WC-2026-08-10-section-id-int-canonical; relation_list's String() is a
+ * pinned frozen-consumer edge, NOT copied here). parse_data renames
+ * from_component_tipo → from_component_top_tipo, so the fallback link stamps
+ * hop.tipo — the same stamp relation_list locators take, kept deliberately.
+ * On an unmaintained instance requireRelationIndex THROWS (inside the find):
+ * that propagates into the per-field error list on purpose — swallowing it
+ * into an empty locator list would be silent scope narrowing.
+ */
+async function relationIndexLocators(
+	ctx: RunContext,
+	record: MatrixRecord,
+	hop: Extract<ResolveStep, { kind: 'relation-hop' }>,
+): Promise<StoredLocator[]> {
+	// The inverse-question config is ontology-derived and query-heavy when the
+	// component declares a request_config — resolve once per (hop, section).
+	const configKey = `${hop.tipo}|${record.section_tipo}`;
+	let config = ctx.relationIndexConfigCache.get(configKey);
+	if (config === undefined) {
+		config = await resolveIndexConfig(hop.tipo, record.section_tipo);
+		ctx.relationIndexConfigCache.set(configKey, config);
+	}
+
+	// The key carries EVERY resolved filter the query depends on: hop tipo
+	// (per-component question), relation type and target sections.
+	const targetsKey = config.targetSections === 'all' ? 'all' : config.targetSections.join(',');
+	const cacheKey = `${RECORD_KEY(record.section_tipo, record.section_id)}|${hop.tipo}|${config.relationType}|${targetsKey}`;
+	const cached = ctx.relationIndexCache.get(cacheKey);
+	if (cached !== undefined) return cached;
+
+	const hits = await findInverseReferenceLocators(
+		[
+			{
+				type: config.relationType,
+				section_tipo: record.section_tipo,
+				section_id: record.section_id,
+			},
+		],
+		{ sectionTipos: config.targetSections, limit: false, order: 'section_id' },
+	);
+	const locators = hits.map((hit) => parseInverseEntry(hit) as StoredLocator);
+	ctx.relationIndexCache.set(cacheKey, locators);
+	return locators;
+}
+
+/**
+ * relation_children locators — component_relation_children is the OTHER
+ * computed relation model: nothing is stored under its tipo; the children are
+ * derived from the inverse dd48 parent locators (records whose
+ * component_relation_parent points at this record). Reuses getChildren — the
+ * SAME engine relationChildrenResolver rides (core/relations/children.ts; PHP
+ * class.component_relation_children.php get_dato → get_children) — with
+ * limit 0 = ALL (a publication takes the whole set, not an edit page) and the
+ * hop's own tipo passed explicitly (else getChildren re-derives it through an
+ * ontology walk). ChildLocator already matches the walker's locator contract
+ * field-for-field: section_tipo, section_id (canonical INT, WC-2026-08-10),
+ * from_component_tipo (= the children tipo) and type ('dd48'); the map below
+ * restates the four fields so a future ChildLocator field change cannot leak
+ * unvetted extras into published values.
+ */
+async function relationChildrenLocators(
+	ctx: RunContext,
+	record: MatrixRecord,
+	hop: Extract<ResolveStep, { kind: 'relation-hop' }>,
+): Promise<StoredLocator[]> {
+	// Per-record cache is load-bearing: with a section_map thesaurus order
+	// getChildren sibling-orders in process — one target-record read PER CHILD.
+	const cacheKey = `${RECORD_KEY(record.section_tipo, record.section_id)}|${hop.tipo}`;
+	const cached = ctx.relationChildrenCache.get(cacheKey);
+	if (cached !== undefined) return cached;
+
+	const children = await getChildren(record.section_id, record.section_tipo, hop.tipo, 0, 0);
+	const locators: StoredLocator[] = children.map((child) => ({
+		section_tipo: child.section_tipo,
+		section_id: child.section_id,
+		from_component_tipo: child.from_component_tipo,
+		type: child.type,
+	}));
+	ctx.relationChildrenCache.set(cacheKey, locators);
+	return locators;
+}
+
+/**
  * Resolve one field's atoms for one record — the recursive twin of PHP
  * diffusion_chain_processor::resolve_chain: root ddos execute against the
  * record itself; each relation hop reads its locators, queues linked
@@ -1079,11 +1198,21 @@ async function resolveHop(
 		return iconographyAtoms(ctx, record, hop, prepared.iconography);
 	}
 
-	// Locator source: relation_list = inverse references; every other relation
-	// model reads its stored slice of the record.
+	// Locator source dispatch: the diffusion node defines the chain, but WHERE
+	// a hop's locators come from is the model's storage contract — three models
+	// are COMPUTED (they store nothing under their tipo, so a stored-slice read
+	// yields [] and the field publishes NULL silently): relation_list = inverse
+	// references (ddo-filtered), component_relation_index = the inverse index,
+	// component_relation_children = derived dd48 children. Every other relation
+	// model reads its stored slice of the record. ONLY the source differs —
+	// queueing, gates and child recursion below treat all hops identically.
 	let rawLocators: StoredLocator[];
 	if (hop.model === 'relation_list') {
 		rawLocators = await relationListLocators(ctx, record, hop);
+	} else if (hop.model === 'component_relation_index') {
+		rawLocators = await relationIndexLocators(ctx, record, hop);
+	} else if (hop.model === 'component_relation_children') {
+		rawLocators = await relationChildrenLocators(ctx, record, hop);
 	} else {
 		const items = readComponentItems(record, hop.tipo, hop.model) as StoredLocator[] | null;
 		rawLocators = (items ?? []).filter(
@@ -1514,6 +1643,9 @@ export async function* resolvePublication(
 		termCache: new Map(),
 		ancestorCache: new Map(),
 		relationListCache: new Map(),
+		relationIndexConfigCache: new Map(),
+		relationIndexCache: new Map(),
+		relationChildrenCache: new Map(),
 		typologyElementCache: new Map(),
 		sectionLabelCache: new Map(),
 		geoPairCache: new Map(),

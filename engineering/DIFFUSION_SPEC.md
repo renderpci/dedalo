@@ -248,6 +248,50 @@ targets repeat thousands of times per run); `Promise.all` within a batch
 files). Determinism for a given snapshot is a hard requirement (parity diffs +
 resume equivalence depend on it).
 
+**Computed-inverse relation hops** (stage D, added 2026-08-11): a `relation-hop`
+step normally reads the record's STORED slice for the hop's tipo
+(`record.columns.relation[<tipo>]`), because for most relation models the
+locators ARE the stored data. Three models store nothing under their own tipo —
+they are inverse questions answered per read, and a stored-slice dereference
+returns `[]` for them, which produced zero atoms, an early return in
+`fieldValuesToColumn`, and a NULL column with no error and no warning:
+
+- **`relation_list`** — inverse references of the host record, narrowed by the
+  ddo's section/component filters (`findInverseReferences`).
+- **`component_relation_index`** — the inverse index ("who points at me?"), read
+  from `matrix_relation_index`. The inverse question is ontology-derived:
+  `resolveIndexConfig` (`src/core/relations/models/relation_index.ts`) yields the
+  relation type (`properties.config_relation.relation_type ?? 'dd96'`) and the
+  pointing sections (the `request_config` sqo targets, else `all`), and
+  `findInverseReferenceLocators` (`src/core/search/search_related.ts`) answers
+  it — the SAME two engines the edit read path rides, minus pagination: a
+  publication takes the FULL inverse set, never an edit page (`limit: false`;
+  the component's `editLimit` is an edit-view concern).
+- **`component_relation_children`** — derived dd48 children, resolved through
+  `getChildren` (`src/core/relations/children.ts`), the same engine
+  `relationChildrenResolver` uses, with limit 0 = all.
+
+**Only the locator SOURCE is model-aware.** Everything downstream of the locator
+list is model-agnostic and driven by the diffusion node's own ddo chain: the
+child-ddo recursion per locator, the fallback-to-the-locator value, the
+breadth-first frontier queueing and its levels budget, the publishability gate
+(`STRUCTURAL_HOP_MODELS` already keeps unpublishable structural locators in
+values), `add_parents`, and the parser chain. A computed model must never grow a
+resolution special case borrowed from another model's shape — the node defines
+how its chain resolves, and resolution obeys THAT definition.
+
+Both computed sources are memoized in per-run `RunContext` maps beside
+`relationListCache`, keyed by record identity plus every resolved filter the
+query depends on (index: hop tipo + relation type + target sections; children:
+hop tipo). This is load-bearing, not cosmetic: an index hop on a hub record and
+a `section_map`-ordered children hop each cost real queries per call, and a
+publication revisits the same record through several fields. Locator
+`section_id` is the canonical INT
+(`engineering/wire_contract/WC-2026-08-10-section-id-int-canonical.md`);
+`relation_list`'s `String()` is a pinned frozen-consumer edge and is NOT copied
+to the computed sources. Ledger:
+`engineering/wire_contract/WC-2026-08-11-diffusion-computed-inverse-hops.md`.
+
 ### 4.2 Runtime (control plane / data plane)
 
 - **Control plane = main server.** All actions (`diffuse, get_process_status,
