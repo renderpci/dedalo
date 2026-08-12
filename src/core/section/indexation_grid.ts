@@ -875,7 +875,7 @@ async function textAreaIndexationCell(
 						action: {
 							event: 'click',
 							method: 'open_tool',
-							module_path: '../../../tools/tool_common/js/tool_common.js',
+							module_path: '../../../core/tools_common/js/tool_common.js',
 							options: {
 								caller: callerBase,
 								caller_options: { tag_id: tagId },
@@ -887,7 +887,7 @@ async function textAreaIndexationCell(
 						action: {
 							event: 'click',
 							method: 'open_tool',
-							module_path: '../../../tools/tool_common/js/tool_common.js',
+							module_path: '../../../core/tools_common/js/tool_common.js',
 							options: { caller: callerBase, tool_context: toolIndexation },
 						},
 					}),
@@ -899,7 +899,7 @@ async function textAreaIndexationCell(
 							action: {
 								event: 'click',
 								method: 'open_tool',
-								module_path: '../../../tools/tool_common/js/tool_common.js',
+								module_path: '../../../core/tools_common/js/tool_common.js',
 								options: {
 									// key order mirrors PHP (tag_id before mode) for byte parity
 									caller: {
@@ -913,6 +913,13 @@ async function textAreaIndexationCell(
 										section_top_tipo: indexLocator.section_top_tipo ?? null,
 										section_top_id: indexLocator.section_top_id ?? null,
 									},
+									// (!) tag_id ALSO here, not only inside caller:
+									// tool_common's view_window serialises the caller
+									// through a fixed-key caller_ddo whitelist which
+									// DROPS caller.tag_id — caller_options is the only
+									// channel that reaches the opened tool
+									// (WC-2026-08-12-indexation-tool-buttons).
+									caller_options: { tag_id: tagId },
 									tool_context: toolTranscription,
 								},
 							},

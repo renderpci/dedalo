@@ -2028,4 +2028,80 @@ component_text_area.prototype.focus_first_input = function() {
 
 
 
+/**
+* SELECT_TAG
+* Select and scroll to the index tag identified by `tag_id`, as if the user had
+* clicked it in the editor.
+*
+* This is the entry point used to OPEN a tool already positioned on one tag —
+* the indexation grid's tag buttons carry a tag_id and expect the tool to land
+* on that fragment rather than at the top of the transcription.
+*
+* (!) It deliberately does NOT re-implement selection/scrolling: it resolves the
+* tag's full attribute set from the editor view and republishes the very event
+* the real click publishes (`click_tag_index_<id_base>`). Everything downstream —
+* component activation, `set_selection_from_tag`, `scroll_to_selection`, and the
+* tool_indexation panels that subscribe to the same event (state selector, delete
+* button, note) — then behaves identically to a user click. Synthesising a
+* `{tag_id}`-only object instead would light up the panels with an undefined
+* state and a missing note.
+*
+* Editor readiness: the CKEditor service is created asynchronously, and this is
+* normally called right after the tool renders, so the editor is usually NOT
+* ready yet. In that case the call defers itself on `editor_ready_<id>` and
+* retries once.
+*
+* @param {string|number} tag_id - Tag identifier to select (matched as a string,
+*   which is how the tag attributes are stored in the view).
+* @returns {boolean} true when the tag was found and the event published; false
+*   when deferred, when the editor is unavailable, or when no such tag exists.
+*/
+component_text_area.prototype.select_tag = function(tag_id) {
+
+	const self = this
+
+	// tag_id check. An absent tag is a no-op, not an error: most tool opens
+	// carry no tag at all.
+		if (tag_id===null || tag_id===undefined || tag_id==='') {
+			return false
+		}
+
+	// short vars
+		const key			= 0; // key (only one editor is available but component could support multiple)
+		const text_editor	= self.text_editor[key]
+
+	// editor readiness. Defer once on the service's own ready event.
+		if (!text_editor || !text_editor.editor || !text_editor.editor.editing) {
+
+			const editor_ready_handler = () => {
+				self.select_tag(tag_id)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('editor_ready_' + self.id, editor_ready_handler)
+			)
+
+			return false
+		}
+
+	// tag attributes. Resolve the whole tag from the view ('indexIn' is the
+	// opening marker of the pair; set_selection_from_tag derives 'indexOut'
+	// from it).
+		const tag = text_editor.get_view_tag_attributes({
+			type	: 'indexIn',
+			tag_id	: String(tag_id)
+		})
+		if (!tag) {
+			console.warn('Ignored select_tag. Tag not found in editor. tag_id:', tag_id);
+			return false
+		}
+
+	// publish. Same event the user click publishes (see click_tag_index_handler)
+		event_manager.publish('click_tag_index_' + self.id_base, {tag: tag})
+
+
+	return true
+}//end select_tag
+
+
+
 // @license-end

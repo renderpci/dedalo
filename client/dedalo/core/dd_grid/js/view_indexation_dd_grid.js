@@ -589,25 +589,45 @@ export const get_button_column = function(current_data) {
 					// Inject the clicked element so the tool can position UI relative to it.
 					options.button_caller	= e.target
 
-				// module
-					// Dynamic import allows the button to invoke any registered tool module
-					// without a static dependency. The path is trusted (server-supplied).
-					const module = await import(value.action.module_path)
-
 				// method
 					const method_name = value.action.method
 
-				// function exec. Try with fallback
-					const fn = module[method_name] // direct exported method
-							|| module.default[method_name] // fallback to default method
-							|| module.default.prototype[method_name] // fallback to default prototyped method
+				// (!) The whole dispatch is guarded: this is an async listener, so an
+				// unhandled rejection here is INVISIBLE — the user clicks and nothing
+				// happens at all, with no trace beyond an unhandled-rejection line.
+				// Both failure modes below were live bugs: an unservable module_path
+				// (import rejects) and a module without a default export
+				// (module.default[…] throws TypeError before the optional chain).
+				try {
 
-					if (fn && typeof fn==='function') {
-						console.log('-> [button_column] Executing function:', method_name);
-						fn(options)
-					}else{
-						console.error('Unable to call method:', method_name);
-					}
+					// module
+						// Dynamic import allows the button to invoke any registered tool module
+						// without a static dependency. The path is trusted (server-supplied).
+						const module = await import(value.action.module_path)
+
+					// function exec. Try with fallback
+						const fn = module[method_name] // direct exported method
+								|| module.default?.[method_name] // fallback to default method
+								|| module.default?.prototype?.[method_name] // fallback to default prototyped method
+
+						if (typeof fn!=='function') {
+							throw new Error(`Method '${method_name}' is not exported by ${value.action.module_path}`)
+						}
+
+						await fn(options)
+
+				} catch (error) {
+					// Surface it: a dead action button is otherwise indistinguishable
+					// from a decorative one.
+					// (!) NOT ui.show_message here — it injects a banner node into the
+					// wrapper it is given, and this button lives inside the
+					// inline-size-contained, JS-measured indexation scroll pane
+					// (see sync_sticky_width). The failure is marked on the button
+					// itself instead, which costs the pane no layout.
+					console.error('[button_column] action failed:', method_name, error);
+					button.classList.add('error')
+					button.title = `${get_label.error || 'Error'}: ${error.message}`
+				}
 			})
 		}
 

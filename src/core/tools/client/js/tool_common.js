@@ -161,6 +161,13 @@ tool_common.prototype.init = async function(options) {
 		self.config			= options.config // specific configuration that define, in current installation, things like machine translation will be used.
 		self.tool_config	= options.tool_config
 		self.caller			= options.caller
+		// caller_options. Arbitrary per-open data from whoever opened the tool
+		// (e.g. the indexation grid's clicked tag_id). The NEW-WINDOW path sets
+		// it below, out of the URL payload; this is the DIRECT (modal) path,
+		// where view_modal forwards it through the instance options. Without
+		// this line the channel dead-ends in modal mode: view_modal received
+		// caller_options and dropped it on the floor.
+		self.caller_options	= options.caller_options ?? null
 
 		// caller. Could be direct assigned (modal) or by URL caller_id (new window)
 			// notify caller is already calculated (new window case)
@@ -1033,7 +1040,8 @@ const view_modal = async function(options) {
 
 	// instance options
 		const instance_options = Object.assign({
-			caller : caller // add caller to tool_context (only to refresh it on close the tool)
+			caller			: caller, // add caller to tool_context (only to refresh it on close the tool)
+			caller_options	: options.caller_options || null // per-open data, e.g. the tag_id to land on
 		}, tool_context)
 
 	// instance load / recover
