@@ -9,8 +9,16 @@
  * Example (mints test node):
  *   php run_v6_diffusion.php numisdata29 numisdata6 2
  *
- * Writes nothing to the live diffusion DB: diffusion_sql::$database_name redirects
- * every write to the scratch database (see the guarded override in class.diffusion_sql.php).
+ * (!) WRITE TARGET. This script does NOT redirect anything. The diffusion_sql::$database_name
+ * override that this header used to claim is COMMENTED OUT in class.diffusion_sql.php
+ * (:142-155), so assigning it was a silent no-op: every write goes to the database that
+ * diffusion_sql::get_diffusion_element_tables_map() resolves for the element, i.e. the one
+ * declared in the ontology. It only stayed harmless here because the numisdata test element
+ * already points at the scratch DB. Verify the element's target database equals
+ * HARNESS_SCRATCH_DB before running (run_v6_diffusion_full.php enforces this as a hard refusal).
+ *
+ * (!) SOURCE DRIFT. update_record calls diffusion::update_publication_data(), which writes 4
+ * publication components back into the v6 Postgres for every published record.
  */
 
 ob_start();
@@ -35,8 +43,7 @@ $_SESSION['dedalo']['auth']['is_logged']       = 1;
 
 fwrite(STDERR, "[v6] element=$element section=$section_tipo id=$section_id scratch=$scratch\n");
 
-// --- redirect all writes to scratch DB and start fresh ---
-diffusion_sql::$database_name = $scratch;
+// --- start fresh (the element itself must already target the scratch DB) ---
 harness_refresh_scratch($scratch);
 
 // --- run the v6 diffusion for this single record ---

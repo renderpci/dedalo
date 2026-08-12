@@ -88,28 +88,58 @@ if ($is_dry && $code === 3) {
 }
 
 // summarise the audit trail into the main log
-$pass = $fail = $warn = $pending = 0;
+// [UNMAPPED] (v6 propiedades that matched no mapping branch) and [FALLBACK] (a value the
+// migration could not derive from the ontology and took from overrides.json) are COVERAGE
+// signals: non-fatal, but a run with 30 of them is not the same as a clean one, and until
+// they were counted here the summary line said "warnings=0" for it.
+$pass = $fail = $warn = $pending = $unmapped = $fallback = 0;
 $total = '';
 if (is_file($diffusion_log) && ($fh = @fopen($diffusion_log, 'r')) !== false) {
 	while (($line = fgets($fh)) !== false) {
 		if (strpos($line, '[TEST PASS]') !== false) { $pass++; continue; }
 		if (strpos($line, '[TEST FAIL]') !== false) { $fail++; continue; }
 		if (strpos($line, '[WARN]')      !== false) { $warn++; continue; }
+		if (strpos($line, '[UNMAPPED]')  !== false) { $unmapped++; continue; }
+		if (strpos($line, '[FALLBACK]')  !== false) { $fallback++; continue; }
 		if (strpos($line, '[DRY RUN]')   !== false) { $pending++; continue; }
 		if (strpos($line, 'Total nodes processed:') !== false) { $total = trim($line); }
 	}
 	fclose($fh);
 }
 
+$coverage = 'unmapped=' . $unmapped . ' fallback=' . $fallback;
+
 if ($is_dry) {
 	$log('diffusion preview: ' . $pending . ' node(s) would be written, nothing changed'
+		. ' | ' . $coverage
 		. ($total !== '' ? ' | ' . $total : ''));
 	$log('Review the mapping (V6/V7 pairs per node) in ' . $diffusion_log . '.');
 	exit($code === 0 ? 0 : 7);
 }
 
 $log('diffusion nodes: verified=' . $pass . ' mismatched=' . $fail . ' warnings=' . $warn
+	. ' | ' . $coverage
 	. ($total !== '' ? ' | ' . $total : ''));
+
+// Green on nothing. A run that traversed ZERO nodes produces pass=0, fail=0, no total and
+// exit 0, which reads exactly like a clean migration. It becomes reachable the moment the
+// script's autorun guard (realpath($argv[0]) === realpath(__FILE__)) stops matching — e.g. a
+// future launcher that includes it instead of exec'ing it. Refuse rather than report success.
+if ($pass === 0 && $fail === 0 && $total === '') {
+	$log('ERROR: the diffusion migration produced no per-node audit output — it traversed nothing.');
+	$log('Check that ' . $script . ' ran as the entry script (see the autorun guard at its foot).');
+	exit(7);
+}
+
+// Coverage, not correctness: reported, never fatal.
+if ($unmapped > 0) {
+	$log('NOTE: ' . $unmapped . ' node(s) carry v6 propiedades that matched no mapping branch. '
+		. 'Search "[UNMAPPED]" in ' . $diffusion_log . ' — a coverage gap, not a failure.');
+}
+if ($fallback > 0) {
+	$log('NOTE: ' . $fallback . ' value(s) could not be derived from the ontology and came from '
+		. 'overrides.json (or were omitted). Search "[FALLBACK]" in ' . $diffusion_log . '.');
+}
 
 // A read-back mismatch means a node's properties were NOT stored as computed. The script
 // reports it inline and still exits 0, so surface it here rather than calling that success.

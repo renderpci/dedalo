@@ -1,0 +1,4 @@
+# Parity-harness artifacts. Snapshots, run info and comparison reports are per-machine,
+# per-run and large (a whole-element row dump is tens of MB) — they are evidence, not source.
+out/
+baseline/

@@ -1,0 +1,48 @@
+{
+	"info": [
+		"Install-specific exceptions for migrate_diffusion_properties.php. The mapping itself lives",
+		"in the script; only data that is TRUE FOR ONE ONTOLOGY belongs here. A missing file simply",
+		"means 'no overrides' — the migration never fails because of it.",
+		"Override the path with the env var MIGRATE_DIFFUSION_OVERRIDES.",
+		"",
+		"SCOPE. ddo_order_swap and code_component take two optional, OR-ed keys checked against the",
+		"NODE BEING MIGRATED: 'tld' (list of top level domains) and 'roots' (list of exact tipos).",
+		"A rule with neither key is UNSCOPED and fires on every node — the old hardcoded behaviour.",
+		"post_overrides has its own scope, checked against the ROOT THE CALLER MIGRATED: the root is",
+		"listed in 'roots', or 'roots' is empty and the entry's tipo has the same tld as the root.",
+		"That is TLD scoping, not reachability: migrating numisdata50 does rewrite numisdata1285."
+	],
+
+	"ddo_order_swap": [
+		{
+			"rule": "flip_people",
+			"pair": ["rsc85", "rsc86"],
+			"tld": ["numisdata", "tch"],
+			"info": "People name/surname order in the multi-section merge path. rsc85/rsc86 are SHARED rsc tipos referenced by portals across oh/ich/actv/nexus, so this rule is tld-scoped: without the scope it fired on any ontology reusing them, exactly like the old hardcode. The scope lists the tlds whose diffusion nodes ACTUALLY reach the component_autocomplete_hi multi-section merge branch on the seeded install (dedalo_mib): numisdata, plus tch (tch309 -> tch190, whose show.ddo_map spans two section_tipos). Scoping to numisdata alone would have silently stopped flipping tch309."
+		}
+	],
+
+	"code_component": {
+		"default": "hierarchy41",
+		"tld": ["numisdata", "rsc"],
+		"info": "Fallback 'official code' component, used only when it cannot be derived from the hop's own section (component_select_lang -> get_value_code). Printed as [FALLBACK] whenever it is used, and [DERIVED] when the ontology answered instead. tld 'rsc' is the tld of the seeded install's only get_value_code diffusion node (rsc993)."
+	},
+
+	"post_overrides": [
+		{
+			"tipo": "numisdata1285",
+			"roots": [],
+			"info": "authorship_roles -> simple ddo chain (portal -> autocomplete_hi -> term)",
+			"properties": {
+				"process": {
+					"ddo_map": [
+						{ "tipo": "numisdata1281", "section_tipo": "self" },
+						{ "tipo": "rsc1038", "parent": "numisdata1281" },
+						{ "tipo": "hierarchy25", "label": "Term", "parent": "rsc1038" }
+					],
+					"output_format": "string"
+				}
+			}
+		}
+	]
+}
