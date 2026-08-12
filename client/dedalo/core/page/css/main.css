@@ -20522,6 +20522,10 @@ body.inspector_resizing {
   color: var(--color_grey_8);
   font-size: 0.875rem;
 }
+.component_info.edit {
+  grid-template-rows: var(--component_label_height);
+  grid-auto-rows: auto;
+}
 .component_info.edit > .content_data > .content_value {
   padding: 0.5em 1em 1em;
 }
@@ -23955,17 +23959,24 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   margin-bottom: 1rem;
   outline: 1px solid var(--color_grey_13);
 }
+.wrapper_widget.descriptors.edit .values_container > .descriptors_list_container > .wrapper_dd_grid {
+  columns: 16rem;
+  column-gap: 1.5rem;
+}
 .wrapper_widget.descriptors.edit .values_container > .descriptors_list_container > .wrapper_dd_grid .descriptors_item {
   padding: 0.25rem;
   box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.24);
   display: flex;
   justify-content: space-between;
+  gap: 0.5rem;
+  break-inside: avoid;
 }
 .wrapper_widget.descriptors.edit .values_container > .descriptors_list_container > .wrapper_dd_grid .descriptors_item:hover {
   background-color: var(--color_grey_13);
 }
 .wrapper_widget.descriptors.edit .values_container > .descriptors_list_container > .wrapper_dd_grid .descriptors_item .descriptors_item_total {
   text-align: right;
+  flex: 0 0 auto;
 }
 /**
 * widget media_icons

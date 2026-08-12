@@ -44,11 +44,26 @@
 
 				>.wrapper_dd_grid {
 
+					// A term index is a LONG list of SHORT rows (91 terms on
+					// oh1/oh87, 141 on a fully indexed interview) drawn as one
+					// narrow name+count column — ~800px tall down a field that is
+					// 640-1160px wide, i.e. the record's vertical budget spent on a
+					// column of whitespace. Flow it into as many text columns as the
+					// field is wide enough to carry (column-width, not a count, so
+					// the two-column grouper gets 2 and a full-width field gets 4,
+					// with no breakpoint to keep in step).
+					// break-inside on the row: a term and its count are one line and
+					// must never be split across the column boundary.
+					columns: 16rem;
+					column-gap: 1.5rem;
+
 					.descriptors_item {
 						padding: 0.25rem;
 						box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.24);
 						display: flex;
 						justify-content: space-between;
+						gap: 0.5rem;
+						break-inside: avoid;
 
 						&:hover {
 							background-color: @color_grey_13;
@@ -56,6 +71,9 @@
 
 						.descriptors_item_total {
 							text-align: right;
+							// the count must never be the thing that wraps: it is
+							// 1-3 glyphs and the term name owns the slack
+							flex: 0 0 auto;
 						}
 					}
 				}
