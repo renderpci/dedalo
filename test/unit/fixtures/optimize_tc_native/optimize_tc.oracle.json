@@ -1,0 +1,382 @@
+{
+	"_source": "CAPTURED FROM THE FROZEN PHP ORACLE: v7_php_frozen/master_dedalo/shared/class.OptimizeTC.php (OptimizeTC v1.0.4) via a stub TR::get_mark_pattern carrying the verbatim tc/tc_value patterns. NEVER regenerate from TS output.",
+	"_captured": "2026-08-09",
+	"cases": [
+		{
+			"id": "near_prev_in",
+			"fn": "in",
+			"note": "previous TC within the 55-char margin → it wins",
+			"text": "<p>[TC_00:01:00.000_TC]la memoria del puebl[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la vo[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de qui[TC_00:02:00.000_TC]</p>",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:01:00.000"
+		},
+		{
+			"id": "far_prev_near_next_in",
+			"fn": "in",
+			"note": "previous TC beyond 55 chars, following TC inside it → forward fallback",
+			"text": "[TC_00:01:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de qui[index-n-77-fragmento av-data::data]la memoria[TC_00:01:40.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda [/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aq",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:01:40.000"
+		},
+		{
+			"id": "virtual_interpolation_in",
+			"fn": "in",
+			"note": "both neighbours beyond the margin → averaged virtual TC",
+			"text": "[TC_00:01:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aq[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aq[TC_00:03:00.000_TC]la memoria del pueblo se guarda en la voz de quien",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:01:52.886"
+		},
+		{
+			"id": "virtual_interpolation_out",
+			"fn": "out",
+			"note": "tc_out with the +100 margin, both neighbours far → averaged virtual TC",
+			"text": "[TC_00:01:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aq[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aq[TC_00:03:00.000_TC]la memoria del pueblo se guarda en la voz de quien",
+			"tag": "[/index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:02:17.566"
+		},
+		{
+			"id": "no_tc_in",
+			"fn": "in",
+			"note": "transcription with no TC marks at all",
+			"text": "la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda [index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda ",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": ""
+		},
+		{
+			"id": "no_tc_out",
+			"fn": "out",
+			"note": "transcription with no TC marks at all (out)",
+			"text": "la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda [index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda ",
+			"tag": "[/index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": ""
+		},
+		{
+			"id": "tc_at_position_zero_in",
+			"fn": "in",
+			"note": "prev TC found at absolute char 0 → PHP !$pos quirk empties the TC",
+			"text": "[TC_00:00:30.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuent[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuent[/index-n-77-fragmento av-data::data]",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": ""
+		},
+		{
+			"id": "tc_at_position_zero_out",
+			"fn": "out",
+			"note": "same quirk on the out side",
+			"text": "[TC_00:00:30.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuent[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuent[/index-n-77-fragmento av-data::data]",
+			"tag": "[/index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": ""
+		},
+		{
+			"id": "out_margin_steps_over_next_tc",
+			"fn": "out",
+			"note": "a TC 30 chars past tag_out is INSIDE the +100 margin, so it is not the \"next\" TC",
+			"text": "[TC_00:05:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda [index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guard[TC_00:05:20.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria d[TC_00:09:00.000_TC]la memoria del pueblo se guarda en la vo",
+			"tag": "[/index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:05:20.000"
+		},
+		{
+			"id": "out_near_next",
+			"fn": "out",
+			"note": "following TC 20 chars past indexPos → it wins",
+			"text": "[TC_00:05:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda [index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en l[TC_00:05:40.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de qui",
+			"tag": "[/index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:05:35.180"
+		},
+		{
+			"id": "astral_chars_in",
+			"fn": "in",
+			"note": "mb_* counts CHARACTERS: the 55-char margin must not be measured in UTF-16 code units",
+			"text": "[TC_00:03:00.000_TC]𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰𐌰la memoria[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aq[TC_00:06:00.000_TC]",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:03:00.000"
+		},
+		{
+			"id": "start_position_zero",
+			"fn": "in",
+			"note": "the intentional zero-position short circuit",
+			"text": "[TC_00:07:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del p[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]",
+			"tag": null,
+			"pos": 0,
+			"margin": 100,
+			"php": "00:00:00.000"
+		},
+		{
+			"id": "explicit_start_position",
+			"fn": "in",
+			"note": "free-search branch: a caller-supplied start position minus the margin",
+			"text": "[TC_00:07:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del p[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]",
+			"tag": null,
+			"pos": 156,
+			"margin": 100,
+			"php": ""
+		},
+		{
+			"id": "explicit_end_position",
+			"fn": "out",
+			"note": "free-search branch on the out side",
+			"text": "[TC_00:07:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del p[index-n-77-fragmento av-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[/index-n-77-fragmento av-data::data]",
+			"tag": null,
+			"pos": 216,
+			"margin": 100,
+			"php": ""
+		},
+		{
+			"id": "tag_absent_in",
+			"fn": "in",
+			"note": "mb_strpos false coerces to position 0 in PHP",
+			"text": "la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuent[TC_00:08:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de qui",
+			"tag": "[index-n-999-nope-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:00:00.000"
+		},
+		{
+			"id": "tag_absent_out",
+			"fn": "out",
+			"note": "same on the out side (0 + margin)",
+			"text": "la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuent[TC_00:08:00.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de qui",
+			"tag": "[index-n-999-nope-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:08:00.000"
+		},
+		{
+			"id": "corpus_tag_101_in",
+			"fn": "in",
+			"note": "realistic transcription shape",
+			"text": "<p>[TC_00:00:00.000_TC]la memoria dla memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:22.400_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la mem[index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de [/index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:48.900_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:15.200_TC]la memoria del pueblo se guarda e[index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de [/index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:44.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquela memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:10.750_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello [index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de [/index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:39.300_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en lla memoria del pueblo se guarda en la voz de quienes viviero</p>",
+			"tag": "[index-n-101-frag 1-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:00:32.886"
+		},
+		{
+			"id": "corpus_tag_101_out",
+			"fn": "out",
+			"note": "realistic transcription shape",
+			"text": "<p>[TC_00:00:00.000_TC]la memoria dla memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:22.400_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la mem[index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de [/index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:48.900_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:15.200_TC]la memoria del pueblo se guarda e[index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de [/index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:44.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquela memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:10.750_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello [index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de [/index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:39.300_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en lla memoria del pueblo se guarda en la voz de quienes viviero</p>",
+			"tag": "[/index-n-101-frag 1-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:00:48.986"
+		},
+		{
+			"id": "corpus_tag_103_in",
+			"fn": "in",
+			"note": "realistic transcription shape",
+			"text": "<p>[TC_00:00:00.000_TC]la memoria dla memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:22.400_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la mem[index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de [/index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:48.900_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:15.200_TC]la memoria del pueblo se guarda e[index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de [/index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:44.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquela memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:10.750_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello [index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de [/index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:39.300_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en lla memoria del pueblo se guarda en la voz de quienes viviero</p>",
+			"tag": "[index-n-103-frag 3-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:01:15.200"
+		},
+		{
+			"id": "corpus_tag_103_out",
+			"fn": "out",
+			"note": "realistic transcription shape",
+			"text": "<p>[TC_00:00:00.000_TC]la memoria dla memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:22.400_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la mem[index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de [/index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:48.900_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:15.200_TC]la memoria del pueblo se guarda e[index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de [/index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:44.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquela memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:10.750_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello [index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de [/index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:39.300_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en lla memoria del pueblo se guarda en la voz de quienes viviero</p>",
+			"tag": "[/index-n-103-frag 3-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:01:43.406"
+		},
+		{
+			"id": "corpus_tag_105_in",
+			"fn": "in",
+			"note": "realistic transcription shape",
+			"text": "<p>[TC_00:00:00.000_TC]la memoria dla memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:22.400_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la mem[index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de [/index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:48.900_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:15.200_TC]la memoria del pueblo se guarda e[index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de [/index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:44.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquela memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:10.750_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello [index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de [/index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:39.300_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en lla memoria del pueblo se guarda en la voz de quienes viviero</p>",
+			"tag": "[index-n-105-frag 5-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:02:20.709"
+		},
+		{
+			"id": "corpus_tag_105_out",
+			"fn": "out",
+			"note": "realistic transcription shape",
+			"text": "<p>[TC_00:00:00.000_TC]la memoria dla memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:22.400_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la mem[index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de [/index-n-101-frag 1-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:00:48.900_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:15.200_TC]la memoria del pueblo se guarda e[index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de [/index-n-103-frag 3-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:01:44.000_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en la voz de quienes vivieron aquela memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:10.750_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello [index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de [/index-n-105-frag 5-data::data]la memoria del pueblo se guarda en la voz de quienes viviero[TC_00:02:39.300_TC]la memoria del pueblo se guarda en la voz de quienes vivieron aquello y lo cuentan. la memoria del pueblo se guarda en lla memoria del pueblo se guarda en la voz de quienes viviero</p>",
+			"tag": "[/index-n-105-frag 5-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:02:10.750"
+		},
+		{
+			"id": "av_golden_seed_in",
+			"fn": "in",
+			"note": "the seed of test/unit/fixtures/indexation_grid_native/av_grid.golden.json",
+			"text": "<p>[TC_00:00:05.000_TC]Antes del fragmento [index-n-77-fragmento av-data::data]texto [TC_00:00:08.120_TC]etiquetado &amp; validado del fragmento AV[/index-n-77-fragmento av-data::data] despu&eacute;s[TC_00:00:12.500_TC] cola</p>",
+			"tag": "[index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 0,
+			"php": "00:00:05.000"
+		},
+		{
+			"id": "av_golden_seed_out",
+			"fn": "out",
+			"note": "the seed of test/unit/fixtures/indexation_grid_native/av_grid.golden.json",
+			"text": "<p>[TC_00:00:05.000_TC]Antes del fragmento [index-n-77-fragmento av-data::data]texto [TC_00:00:08.120_TC]etiquetado &amp; validado del fragmento AV[/index-n-77-fragmento av-data::data] despu&eacute;s[TC_00:00:12.500_TC] cola</p>",
+			"tag": "[/index-n-77-fragmento av-data::data]",
+			"pos": null,
+			"margin": 100,
+			"php": "00:00:12.500"
+		},
+		{
+			"id": "tc2seg_\"00:05:22.363\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "00:05:22.363",
+			"php": 322.363
+		},
+		{
+			"id": "tc2seg_\"00:00:00.000\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "00:00:00.000",
+			"php": 0
+		},
+		{
+			"id": "tc2seg_\"01:02:03.4\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "01:02:03.4",
+			"php": 3723.4
+		},
+		{
+			"id": "tc2seg_\"00:01:20\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "00:01:20",
+			"php": 80
+		},
+		{
+			"id": "tc2seg_\"\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "",
+			"php": 0
+		},
+		{
+			"id": "tc2seg_\"0\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "0",
+			"php": 0
+		},
+		{
+			"id": "tc2seg_\"nonsense\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "nonsense",
+			"php": 0
+		},
+		{
+			"id": "tc2seg_\"[TC_00:01:20.320_TC]\"",
+			"fn": "tc2seg",
+			"note": "TC2seg parity",
+			"text": "[TC_00:01:20.320_TC]",
+			"php": 80.32
+		},
+		{
+			"id": "seg2tc_0",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 0,
+			"php": "00:00:00.000"
+		},
+		{
+			"id": "seg2tc_322.363",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 322.363,
+			"php": "00:05:22.363"
+		},
+		{
+			"id": "seg2tc_3661.5",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 3661.5,
+			"php": "01:01:01.500"
+		},
+		{
+			"id": "seg2tc_7.5",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 7.5,
+			"php": "00:00:07.500"
+		},
+		{
+			"id": "seg2tc_-5",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": -5,
+			"php": "00:00:-5.000"
+		},
+		{
+			"id": "seg2tc_-0.25",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": -0.25,
+			"php": "00:00:-1.750"
+		},
+		{
+			"id": "seg2tc_1.9999",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 1.9999,
+			"php": "00:00:01.1000"
+		},
+		{
+			"id": "seg2tc_59.9996",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 59.9996,
+			"php": "00:00:59.1000"
+		},
+		{
+			"id": "seg2tc_3599.999",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 3599.999,
+			"php": "00:59:59.999"
+		},
+		{
+			"id": "seg2tc_86399.999",
+			"fn": "seg2tc",
+			"note": "seg2tc parity",
+			"text": "",
+			"seg": 86399.999,
+			"php": "23:59:59.999"
+		}
+	]
+}

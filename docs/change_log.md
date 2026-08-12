@@ -10,6 +10,62 @@ Dédalo version
 
 ---
 
+## [Unreleased] - The ontology parser: one write, and it is fast
+
+### Removed
+- **The ontology parser's *Reconcile* button.** The tool offered two writes onto
+  the runtime ontology — an incremental *Reconcile* that applied only what had
+  drifted, and *Regenerate*, which wipes the hierarchy's runtime nodes and
+  re-derives them. Reconcile's whole justification was that it never left the
+  ontology momentarily empty, and that stopped being true of Regenerate the day
+  the rebuild moved inside a single transaction: readers keep seeing the current
+  ontology until the new one commits, and a failure rolls back. What was left was
+  a strictly weaker write offered beside the stronger one, with nothing to tell an
+  operator which to press — and a second code path to keep in step with the
+  ontology parser forever.
+
+    **Regenerate is now the one write onto the runtime tree**, and *Refresh
+    status* still answers "what drifted" without changing anything. Ordering a
+    node no longer prompts the question the button existed to ask: reordering
+    genuinely changes every sibling that moved, so "only what drifted" was the
+    whole hierarchy anyway.
+
+### Changed
+- **Rebuilding an ontology no longer refreshes the export files**, and became
+  ~20× faster for it. *Regenerate* used to rebuild the LLM map for the **whole
+  installation** afterwards, whichever single hierarchy you had ticked. That map
+  is one of the files other installations download, and a rebuild refreshes none
+  of its companions — so keeping it alone current never made the published set
+  coherent, while costing 21 of the 22 seconds an operator spent waiting. The
+  files are refreshed by **Export**, which publishes all of them together.
+
+    !!! tip "If you rebuilt in order to publish"
+        Press **Export** afterwards. That was already true of the ontology
+        definition files; it is now true of the LLM map too.
+
+    This is also where the `dropped sqo target …` lines in the server log during
+    a rebuild came from — the whole-install map walk, reporting components that
+    point at ontologies this installation has registered but never imported.
+    They still appear on an export, and in normal editing of those components,
+    which is where they are actionable.
+
+### Fixed
+- **Any component offering "every ontology" as a search target took 42 ms to
+  configure — on every single request.** Resolving such a component's search
+  configuration enriches each target section it offers, and asked the database
+  twice per section whether it has a *new record* and a *delete record* button —
+  four times over for a section with neither. On an installation carrying 205
+  ontologies that is ~800 queries to draw one autocomplete, repeated on every
+  page that shows it, and nothing about the answers changes between requests.
+
+    The lookup is now remembered alongside the other ontology reads, so it costs
+    **0.64 ms**. Authoring a new button still shows up immediately — the memory
+    is dropped whenever the ontology is written, like every other ontology cache.
+    Building the LLM map, which resolves 9 408 such fields, went **21.7 s → 1.2 s**
+    on the same installation, producing a byte-for-byte identical file.
+
+---
+
 ## [Unreleased] - A record is read once per read
 
 ### Fixed

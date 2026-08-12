@@ -123,7 +123,12 @@ export async function importMappedRecords(
 			}
 			if (groups.size === 0) groups.set(componentLang, []);
 			for (const [lang, items] of groups) {
-				await saveComponentData({
+				// A REFUSED save is a per-field failure, never a silent no-op. The
+				// write engine answers `{ok:false, message}` for a refusal it wants the
+				// caller to show (ONT-TLD, consultation-only, dataframe pairing …);
+				// discarding it reported "N updated, 0 failed" for a run that wrote
+				// nothing, which is the one outcome an importer must never produce.
+				const outcome = await saveComponentData({
 					componentTipo: field.component_tipo,
 					sectionTipo,
 					sectionId,
@@ -131,6 +136,14 @@ export async function importMappedRecords(
 					changedData: [{ action: 'set_data', id: null, value: items }],
 					userId,
 				});
+				if (outcome.ok === false) {
+					failed.push({
+						section_id: sectionId,
+						data: items,
+						component_tipo: field.component_tipo,
+						msg: `IGNORED: ${outcome.message}`,
+					});
+				}
 			}
 		}
 	}

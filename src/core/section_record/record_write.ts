@@ -19,6 +19,12 @@
  *      guard). Implemented inside updateMatrixKeysData via `#-`.
  *   3. SAVE EVENT — dependent caches invalidated after every persist
  *      (save_event.ts).
+ *   4. THE COMPONENT_IMAGE SVG ENVELOPE — a `media`-column write persists any
+ *      `svg_file_data` its items carry to the .svg overlay file BEFORE the row
+ *      write (PHP component_image::save → create_svg_file, which likewise
+ *      precedes parent::save()). It is here, and not in one save door, because
+ *      PHP's hook is on the component save every door funnels through; see
+ *      media/svg_overlay.ts persistSvgEnvelopesForKeys.
  *
  * The SQL itself stays in db/matrix_write.ts (updateMatrixKeysData /
  * updateMatrixRecord) — this module owns the contract, not the statements.
@@ -98,6 +104,22 @@ export async function persistRecordKeys(
 ): Promise<void> {
 	if (savePath.length === 0) {
 		throw new Error('persistRecordKeys: empty savePath');
+	}
+
+	// 4. COMPONENT_IMAGE SVG ENVELOPE (PHP component_image::save :119-133 →
+	//    create_svg_file). The vector editor ships the drawing inside the saved
+	//    item as `svg_file_data`, a TEMPORAL CONTAINER, and the SAVE is what turns
+	//    it into the .svg envelope the edit view loads as an <object>; without this
+	//    the annotation layers ("Capas de dibujo") existed in the database and
+	//    nowhere the image itself is shown. It hangs off THIS chokepoint, not off
+	//    one save door, because PHP's hook is on the component save that every door
+	//    reaches — and it runs BEFORE the row write exactly as PHP's does (a
+	//    refused payload must fail the save, not follow it).
+	//    Column-gated before the import so the hot path of every non-media write
+	//    pays nothing.
+	if (savePath.some((item) => item.column === 'media')) {
+		const { persistSvgEnvelopesForKeys } = await import('../media/svg_overlay.ts');
+		await persistSvgEnvelopesForKeys(target, savePath);
 	}
 
 	const writes: SavePathItem[] = [

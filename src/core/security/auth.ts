@@ -22,6 +22,7 @@
 
 import { config } from '../../config/config.ts';
 import { sql } from '../db/postgres.ts';
+import { resolvePrincipal } from './permissions.ts';
 import {
 	buildAccountThrottleKey,
 	buildThrottleKey,
@@ -235,10 +236,21 @@ export async function login(
 	const { initMediaAuthCookie } = await import('../media/protection.ts');
 	const mediaAuthCookieValue = initMediaAuthCookie();
 
-	// PHP: superuser is user_id -1; global-admin flag also derives from the
-	// profile — v0 grants admin to the superuser only (profile-based admins
-	// are Phase 5 continuation alongside the permissions matrix).
-	const isGlobalAdmin = user.section_id === -1;
+	// GLOBAL-ADMIN SESSION STAMP (PHP login sets $_SESSION['dedalo']['auth']
+	// ['is_global_admin'] from security::is_global_admin(), class.security.php
+	// :636-690): the superuser (-1) is always admin, everyone else is admin iff
+	// their dd244 security-administrator locator points at dd64/1.
+	//
+	// It was `user.section_id === -1` — so a REAL global admin logged in with a
+	// non-admin session flag and was refused by every admin-only endpoint that
+	// reads the SESSION rather than the request Principal (api/counters.ts).
+	// resolvePrincipal is the ONE resolver of that grant (permissions.ts), so the
+	// session flag and the per-request Principal can never disagree.
+	//
+	// The stamp is a SNAPSHOT taken at login, exactly like PHP's: a grant flipped
+	// mid-session reaches the Principal on the next request (dispatch re-resolves
+	// it) but not this session row until the next login.
+	const { isGlobalAdmin } = await resolvePrincipal(user.section_id);
 	const sessionToken = createSession(user.section_id, username, isGlobalAdmin);
 	// AUTHZ-04 single-session policy (opt-in, DEDALO_SINGLE_SESSION). When on,
 	// evict every OTHER session of this user — a new login invalidates a token

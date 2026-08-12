@@ -95,10 +95,13 @@ function userLocatorFilterPair(componentTipo: string, userId: number): [string, 
  * be a false positive.
  *
  * (!) DELIBERATE DEVIATION from the containment predicate it replaced: `->>` is
- * type-lossy where `@>` was type-strict, so a NUMERIC section_id would match here
- * and would not have before. Inert, not an oversight — both writers stringify
- * (activity_log.ts `String(...)`; PHP locator::set_section_id casts), and all
- * 32.94M mdcat rows are string-typed with jsonb_array_length(dd543) = 1.
+ * type-lossy where `@>` was type-strict, so a NUMERIC section_id matches here and
+ * would not have before. That is now LOAD-BEARING, not inert: since
+ * WC-2026-08-10-section-id-int-canonical the actor address is minted as an INT
+ * (activity_log.ts dd543), while the 32.94M pre-sweep mdcat rows are string-typed
+ * — one text extraction spans both, where either typed `@>` probe alone would
+ * silently miss half the archive. (It read the opposite before that sweep, when
+ * both writers stringified.) jsonb_array_length(dd543) = 1 still holds.
  */
 function whoScope(userId: number, params: unknown[]): string {
 	params.push(String(userId), USERS_SECTION);

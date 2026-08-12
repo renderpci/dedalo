@@ -43,9 +43,24 @@ export interface MediaPathOptions {
 	/** properties.max_items_folder bucket size (usually 1000), or null (PHP get_additional_path :801). */
 	maxItemsFolder: number | null;
 	/**
-	 * A pre-resolved properties.additional_path value (another component's value),
-	 * leading slash forced / trailing slash stripped by the caller. Wins over the
-	 * max_items_folder bucket, matching PHP (:778 before :801). Usually null.
+	 * The resolved `properties.additional_path` bucket — a SIBLING component's
+	 * value on THIS record, leading slash forced / trailing slash stripped. Wins
+	 * over the max_items_folder bucket, matching PHP (:778 before :801).
+	 *
+	 * THREE STATES, and the difference is load-bearing:
+	 * - a string  → the named bucket ('/cession_files');
+	 * - `''`      → the property IS declared but this record's sibling is empty;
+	 *               PHP's `empty()` branch then falls back to the numeric bucket;
+	 * - `null`    → the component declares no `additional_path` at all;
+	 * - ABSENT    → NOT RESOLVED HERE. Only `resolveMediaPathOptions`'s
+	 *               record-scoped form (or `completeMediaPathOptions`) can answer
+	 *               it, because the answer is a record's data, not the ontology's.
+	 *
+	 * Until 2026-08-09 nothing ever set this field — it was declared and resolved
+	 * by nobody — so a component that uses the property wrote and read at the
+	 * numeric bucket instead of the named folder. `media/ontology_path.ts` is now
+	 * the single resolver; see its header for who still asks the section-scoped
+	 * question and why.
 	 */
 	additionalPathOverride?: string | null;
 	/**

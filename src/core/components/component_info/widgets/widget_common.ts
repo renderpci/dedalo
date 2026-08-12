@@ -66,6 +66,83 @@ export function normalizeWidgetEntryKeys(items: unknown[]): unknown[] {
 }
 
 /**
+ * Is this ONE stored entry a v5-era `component_info` state blob — the shape
+ * the pre-widget engine wrote into `misc` and that no renderer can read?
+ *
+ *   {"id":1,
+ *    "state":{"lg-spa":{"dd203_1":[100,0],"dd203_2":[100,0]}},
+ *    "value":null,
+ *    "section_id":"44","section_tipo":"oh1","component_tipo":"oh23"}
+ *
+ * POSITIVE identification, deliberately — the predicate names the legacy
+ * shape rather than asking "does this look modern?". The four discriminators,
+ * all four required:
+ *
+ *  1. no `widget` / `key` / `widget_id` — the three keys every client widget
+ *     renderer selects on (render_list_state.js:114,185; the archive-weights
+ *     and calculation renderers). A blob carrying any of them is renderable
+ *     and is therefore data, whatever else it holds.
+ *  2. `value` is present and NULL — the modern entries always carry a real
+ *     value; the v5 blob parked its payload in `state` and left `value` empty.
+ *  3. `state` is a non-empty object whose EVERY key is a `lg-` language code
+ *     (the v5 per-language state map). This is the shape's signature.
+ *  4. the record-identity quartet `id` / `section_id` / `section_tipo` /
+ *     `component_tipo` is present and typed as the archive holds it.
+ *
+ * Live-archive census (read-only, dedalo7_mht, 2026-08-09): every one of the
+ * 1365 entries in the 688 affected arrays has EXACTLY the key set
+ * {component_tipo,id,section_id,section_tipo,state,value} with
+ * id=number, value=null, the other three strings and exactly one `lg-` key —
+ * one shape, no variants, and it matches nothing else stored in `misc`
+ * (the dd477→dd596 arrays, 20 of them, are `{id,value:{…}}` component_json
+ * and are correctly NOT matched).
+ */
+function isLegacyStateEntry(entry: unknown): boolean {
+	if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return false;
+	const item = entry as Record<string, unknown>;
+	// 1. anything a renderer can select on is data, not residue
+	if ('widget' in item || 'key' in item || 'widget_id' in item) return false;
+	// 2. the payload-less value
+	if (!('value' in item) || item.value !== null) return false;
+	// 4. the record-identity quartet
+	if (!('id' in item)) return false;
+	if (typeof item.section_tipo !== 'string' || typeof item.component_tipo !== 'string')
+		return false;
+	if (typeof item.section_id !== 'string' && typeof item.section_id !== 'number') return false;
+	// 3. the per-language state map — the shape's signature
+	const state = item.state;
+	if (state === null || typeof state !== 'object' || Array.isArray(state)) return false;
+	const langs = Object.keys(state);
+	return langs.length > 0 && langs.every((lang) => lang.startsWith('lg-'));
+}
+
+/**
+ * Is this STORED component_info array entirely v5 residue — i.e. is EVERY
+ * entry a legacy state blob (see isLegacyStateEntry)?
+ *
+ * The fall-through in the emit hook is keyed on THIS, a positive test for the
+ * legacy shape, never on a negative test for the modern one
+ * (WC-2026-08-09-info-legacy-stored-value-fallthrough). The difference is the
+ * never-narrow law: "no entry carries a `widget` tag" also captures every
+ * stored shape we have not enumerated, and would discard it — a stored array
+ * this engine cannot classify must keep PHP's generic behaviour (stored data
+ * wins) instead of being recomputed on the strength of an absence.
+ *
+ * EVERY entry, therefore, not "any" — an array mixing a legacy blob with
+ * anything else is not residue, and the tags widget (whose output legitimately
+ * LEADS with the raw text-area items of its source component, no `widget` key
+ * — widgets/oh/tags.ts reproduces the PHP $data-reuse quirk) is honoured by
+ * discriminator 2 and 3 alone: its raw items carry a real `value` and no
+ * `state`, so they are not legacy entries and the array is served.
+ *
+ * An EMPTY array is not residue: PHP's own `empty($data)` already falls
+ * through for it, so it is not a divergence and must not be counted as one.
+ */
+export function isLegacyStateResidue(items: unknown[]): boolean {
+	return items.length > 0 && items.every(isLegacyStateEntry);
+}
+
+/**
  * The registry contract of one widget implementation (PHP <widget> extends
  * widget_common). `name` is the ontology/client identity and the registry
  * key; `path` mirrors the ontology-authored value and locates the CLIENT

@@ -651,11 +651,34 @@ export function extractSqoSectionTipos(item: ParsedRequestConfigItem | undefined
 	];
 }
 
+/**
+ * (sectionTipo, buttonModel) → the button tipo, or null. Pure dd_ontology shape,
+ * so it caches exactly like the resolver's own lookups (hub-cleared on every
+ * dd_ontology write by the factory).
+ *
+ * WHY IT NEEDS A CACHE. `buildSqoSectionTipoDdos` enriches EVERY resolved sqo
+ * target, and an sqo with a `source: 'ontology_sections'` resolves to every
+ * ontology registry target on the install — 205 sections on dedalo7_mht. Each
+ * one cost two probes (`button_new` + `button_delete`), and a section with no
+ * such child cost FOUR: the miss, then the virtual-section fallback's own two
+ * queries. `ontology10`/`ontology42` measured 42ms per resolution because of it,
+ * which is 17.3s of the 20.6s an LLM-map build spent — and the same 42ms is paid
+ * by the live autocomplete on those components. Nothing here is record data:
+ * the answer only moves when the ontology does.
+ *
+ * NULL IS A CACHED ANSWER. "no button of this model" is the common case and the
+ * expensive one (four queries), so it must be stored, not re-derived — hence
+ * `has()` rather than a truthiness check on `get()`.
+ */
+const sectionButtonCache = createOntologyCache<string, string | null>();
+
 /** button_new/button_delete direct children of a section (virtual-aware). */
 async function findSectionButtonTipo(
 	sectionTipo: string,
 	buttonModel: string,
 ): Promise<string | null> {
+	const cacheKey = `${sectionTipo} ${buttonModel}`;
+	if (sectionButtonCache.has(cacheKey)) return sectionButtonCache.get(cacheKey) ?? null;
 	const read = async (parent: string) =>
 		(await sql.unsafe('SELECT tipo FROM dd_ontology WHERE parent = $1 AND model = $2 LIMIT 1', [
 			parent,
@@ -669,28 +692,54 @@ async function findSectionButtonTipo(
 		const real = nodeRows[0]?.relations?.[0]?.tipo;
 		if (typeof real === 'string') rows = await read(real);
 	}
-	return rows[0]?.tipo ?? null;
+	const found = rows[0]?.tipo ?? null;
+	sectionButtonCache.set(cacheKey, found);
+	return found;
 }
 
 /**
  * Enrich resolved target-section tipos into the client-facing ddo objects
- * (PHP build_sqo_section_tipo_ddo): app-lang label, properties color (gray
- * default), the caller's permissions, and — with edit permissions — the
- * section's button_new/button_delete descriptors. Permissions carry the v0
- * admin posture (3) like every structure-context stamp; the per-caller ACL
- * cap is the standing Phase-5 ledger item.
+ * (PHP build_sqo_section_tipo_ddo, trait.request_config_utils.php:424): app-lang
+ * label, properties color (gray default), THE CALLER's permissions on the target
+ * section, and — only above read level — the section's button_new/button_delete
+ * descriptors, each carrying its OWN grant (build_section_buttons, :467).
+ *
+ * PERMISSIONS ARE THE CALLER's (audit 2026-08 §7, fixed 2026-08-09). This used
+ * to stamp a literal 3, so a user with write on a portal but read-only on its
+ * TARGET section was still offered "New", the row unlink and "Delete resource
+ * and all links": the server refused the writes, but offering an action that
+ * will be refused is its own defect. PHP reads `common::get_permissions($t,$t)`
+ * — the SECTION-level grant, NOT get_section_permissions (no consultation-only
+ * cap here).
+ *
+ * ABSENT PRINCIPAL = internal resolution (boot/tooling/tests outside a request
+ * scope): keep the v0 admin posture 3, exactly like the sibling per-ddo stamp
+ * at the end of hydrateDdoFieldsMap above. dispatchRqo seeds the principal for
+ * every SESSIONED request, so an authenticated caller never lands on the
+ * fallback; the sessionless actions that skip the seeding (login and the other
+ * gate-2 exemptions) build no request_config. These numbers are UI affordances
+ * either way — every read and write is authorized independently server-side.
  */
 export async function buildSqoSectionTipoDdos(tipos: string[]): Promise<SqoSectionTipoDdo[]> {
 	const { getMatrixTableFromTipo } = await import('../../ontology/resolver.ts');
-	const permissions = 3;
+	const { currentPrincipal } = await import('../../security/request_context.ts');
+	const { getPermissions } = await import('../../security/permissions.ts');
+	const principal = currentPrincipal();
 	const enriched: SqoSectionTipoDdo[] = [];
 	for (const tipo of tipos) {
+		const permissions = principal === undefined ? 3 : await getPermissions(principal, tipo, tipo);
 		const node = await getNode(tipo);
 		const buttons: { model: string; permissions: number }[] = [];
 		if (permissions > 1) {
 			for (const buttonModel of ['button_new', 'button_delete']) {
 				const buttonTipo = await findSectionButtonTipo(tipo, buttonModel);
-				if (buttonTipo !== null) buttons.push({ model: buttonModel, permissions });
+				if (buttonTipo === null) continue;
+				// PHP stamps the BUTTON's own grant, not the section's.
+				buttons.push({
+					model: buttonModel,
+					permissions:
+						principal === undefined ? 3 : await getPermissions(principal, tipo, buttonTipo),
+				});
 			}
 		}
 		enriched.push({

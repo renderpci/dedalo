@@ -25,6 +25,7 @@ import type { SqoFilterLeaf, SqoFilterNode } from '../concepts/sqo.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
+	getNode,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import { buildDateFragment } from './builders/builder_date.ts';
@@ -120,6 +121,12 @@ export async function buildJoinChain(
 }
 
 const BOOLEAN_OPERATORS: ReadonlySet<string> = new Set(['$and', '$or', '$not', '$nand', '$nor']);
+
+/** Tables with no `relation_search` ancestor index (scalar TM relation data). */
+const TIME_MACHINE_TABLES: ReadonlySet<string> = new Set([
+	'matrix_time_machine',
+	'matrix_activity',
+]);
 
 /**
  * One relation-leaf locator resolved to matrix_relation_index columns:
@@ -390,6 +397,20 @@ async function conformLeaf(
 
 	// component_alias (WC-020): the SQL fragment keys the TARGET's data slot.
 	const { resolveDataTipo } = await import('../ontology/alias.ts');
+	// date_mode (PHP get_date_search_context: `$properties->date_mode ?? 'date'`)
+	// selects the per-mode date SQL handler. Read ONLY for date leaves — every
+	// other family ignores it, and the effective-properties read is one more
+	// (cached) ontology hop per leaf.
+	let dateMode: string | undefined;
+	if (model === 'component_date') {
+		const { getEffectivePropertiesByTipo } = await import('../ontology/alias.ts');
+		const properties = (await getEffectivePropertiesByTipo(componentTipo)) as {
+			date_mode?: unknown;
+		} | null;
+		if (typeof properties?.date_mode === 'string' && properties.date_mode !== '') {
+			dateMode = properties.date_mode;
+		}
+	}
 	const context: BuilderContext = {
 		alias: leafAlias,
 		column,
@@ -399,6 +420,7 @@ async function conformLeaf(
 		lang,
 		translatable,
 		model,
+		...(dateMode === undefined ? {} : { dateMode }),
 		// string leaves: let builder_string prepend its search-store pre-filter
 		// when the table's sync trigger exists (cached catalog check). ONLY for
 		// NON-joined leaves (path length 1): on a hop-joined alias the join
@@ -415,9 +437,37 @@ async function conformLeaf(
 	let result: BuilderResult;
 	const builderFamily = getSearchBuilderFamily(model);
 	if (getColumnNameByModel(model) === 'relation') {
-		const { getRelationSearchFragmentBuilder } = await import('../relations/registry.ts');
-		const buildFragment = await getRelationSearchFragmentBuilder(model);
-		result = await buildFragment(leaf.q, leaf.q_operator ?? null, context);
+		// ANCESTOR INDEX (PHP resolve_query_object_sql step 4 + add_relation_search):
+		// the LEGACY component_autocomplete_hi model ALSO searches the
+		// `relation_search` column, so a broader term matches the records filed
+		// under its narrower ones ("search Spain, match Madrid" — the index
+		// save_component.ts maintains on every save of one of these components).
+		// Ledger: WC-2026-08-09-autocomplete-hi-ancestor-search.
+		//
+		// The decision belongs HERE and not in the relations registry: the
+		// registry dispatches on the RUNTIME model, and component_autocomplete_hi
+		// has already been replaced by component_portal by the time it gets
+		// there. This is the last place holding the tipo — PHP resolves the same
+		// question the same way, via ontology_node::get_legacy_model_by_tipo.
+		//
+		// The test must match the WRITER exactly (save_component.ts reads the
+		// node's OWN stored model before calling maintainRelationSearchIndex):
+		// wrapping a leaf whose index is never maintained would widen nothing and
+		// would cost a second GIN probe per row. TM tables carry no such index
+		// (their relation datum is the scalar user_id column) and are excluded.
+		const usesAncestorIndex =
+			!TIME_MACHINE_TABLES.has(leafTable) &&
+			(await getNode(componentTipo))?.model === 'component_autocomplete_hi';
+		if (usesAncestorIndex) {
+			const { buildRelationSearchAncestorFragment } = await import(
+				'./builders/builder_relation.ts'
+			);
+			result = buildRelationSearchAncestorFragment(leaf.q, leaf.q_operator ?? null, context);
+		} else {
+			const { getRelationSearchFragmentBuilder } = await import('../relations/registry.ts');
+			const buildFragment = await getRelationSearchFragmentBuilder(model);
+			result = await buildFragment(leaf.q, leaf.q_operator ?? null, context);
+		}
 	} else if (builderFamily !== undefined) {
 		result = FAMILY_BUILDERS[builderFamily](
 			leaf.q,

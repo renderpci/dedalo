@@ -280,6 +280,17 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 					file_data: {
 						key_dir: fileData.key_dir ?? null,
 						tmp_name: joined.tmpName ?? null,
+						// THE HUMAN FILE NAME (PHP file_data->name — the join MUTATES the
+						// client's file_data, so `name` survived it there). Taken from the
+						// SERVER's per-transfer meta, not from the relayed request.
+						//
+						// This key is for the CLIENT (the queue row's label, and the PHP
+						// wire shape). It is NOT how the archive gets the name: the ingest
+						// runs in a later request and reads the name the receiver persisted
+						// beside the staged file (media/ingest/staged_name_record.ts),
+						// precisely so a caller that does not relay this key still records
+						// 'María Piñón.jpg' rather than 'Mar_a_Pi_n.jpg'.
+						name: joined.name ?? null,
 						extension: joined.extension ?? null,
 						chunked: false,
 						complete: true,

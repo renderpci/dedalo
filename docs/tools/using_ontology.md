@@ -20,7 +20,7 @@ A concrete example: an ontology engineer adds a new "countermark position" selec
 - Right after editing ontology records — one record, or a whole section — when you need the runtime model to reflect them.
 - To repair or regenerate a branch of the ontology after a larger refactor.
 
-For dumping ontology definitions to JSON, restoring from a snapshot, or reconciling drift between the runtime table and its source across whole hierarchies, use [tool_ontology_parser](using_ontology_parser.md) instead.
+For dumping ontology definitions to JSON, restoring from a snapshot, or repairing drift between the runtime table and its source across whole hierarchies, use [tool_ontology_parser](using_ontology_parser.md) instead.
 
 ## Where to find it
 
@@ -39,7 +39,7 @@ The tool surfaces on ontology elements — inline on the matching **component** 
 
 ## Related
 
-- **[tool_ontology_parser](using_ontology_parser.md)** — reconcile/rebuild the runtime ontology against its source across whole hierarchies, and export to JSON.
+- **[tool_ontology_parser](using_ontology_parser.md)** — inspect and rebuild the runtime ontology against its source across whole hierarchies, and export to JSON.
 - **[tool_hierarchy](using_hierarchy.md)** — builds new hierarchies and virtual sections rather than syncing existing ontology records.
 - **[Developer reference](../development/tools/reference/tool_ontology.md)** — the single action, its two modes, the permission gate, and internals.
 - The [ontology](../core/ontology/index.md) documentation — the model this tool maintains.

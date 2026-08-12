@@ -32,7 +32,7 @@ The current TS implementation is judged **not done correctly** and is hereby sup
 - **Duplicate does not copy physical files.** `duplicate_record.ts:20` explicitly ledgers "media-file duplication (physical file copies + regenerate)" as a TODO; the jsonb `files_info` is copied but the files are not.
 - **Media protection is native and enforced** since 2026-07-12 — out of scope of THIS spec, but no longer a reporting shell (`engineering/MEDIA_PROTECTION.md`).
 
-**Salvage (proven — keep, do not rewrite blind):** the delete-time soft-move `removeSectionMediaFiles` (`src/core/section/record/delete_record.ts:119-162`, both datestamp formats, unit-gated `test/unit/delete_media_files.test.ts`); the dev-only session-gated serving route (`src/server.ts:126-155`, traversal-guarded, fail-closed 404); the media export cells (`tool_export` media URL resolution, `STATUS.md:594`); the `media_control.get_value` dashboard widget (`widget_request.ts:~1640`); the explicit tool dispatch registry (`src/core/resolve/tool_request.ts`, `TOOL_API_ACTIONS`); the media list/read differentials (image/svg/pdf list-mode byte-parity, `model_coverage_sweep.test.ts`). The differential suite is the validation harness: it must stay green throughout with **zero fixture/normalization changes** (the relations/section/area rebuild rule).
+**Salvage (proven — keep, do not rewrite blind):** the delete-time soft-move `removeSectionMediaFiles` (now `src/core/media/file_ops.ts`, paired with its restore and unit-gated by `test/unit/media_lifecycle_native.test.ts`; the `delete_record.ts` copy this line originally pointed at was inert on a default install and is deleted); the dev-only session-gated serving route (`src/server.ts:126-155`, traversal-guarded, fail-closed 404); the media export cells (`tool_export` media URL resolution, `STATUS.md:594`); the `media_control.get_value` dashboard widget (`widget_request.ts:~1640`); the explicit tool dispatch registry (`src/core/resolve/tool_request.ts`, `TOOL_API_ACTIONS`); the media list/read differentials (image/svg/pdf list-mode byte-parity, `model_coverage_sweep.test.ts`). The differential suite is the validation harness: it must stay green throughout with **zero fixture/normalization changes** (the relations/section/area rebuild rule).
 
 ---
 
@@ -241,13 +241,18 @@ PHP: detached `nohup`/`sh` + PID + on-disk process files + a `processes` DB tabl
 
 ### 5.6 File ops (`media/file_ops.ts`)
 ```ts
-export function moveToDeleted(absolutePath: string, opts?: { bulkProcessId?: string; now?: Date }): Promise<string>;
-export function renameOldFiles(absolutePath: string, now?: Date): Promise<string | null>;
-export function duplicateMediaFiles(spec, source: MediaIdentity, target: MediaIdentity, opts): Promise<string[]>; // (:1999)
-export function listDeletedVersions(spec, id: MediaIdentity, quality: string): Promise<string[]>;  // TM natsort scan
-export function restoreDeletedSectionMediaFiles(…): Promise<…>; // tool_time_machine section branch
+export function moveToDeleted(absolutePath: string, opts?: { bulkProcessId?: string; now?: Date; mediaRoot?: string }): string | null;
+export function renameOldFiles(absolutePath: string, now?: Date, mediaRoot?: string): string | null;
+export function duplicateMediaFiles(spec, source: MediaIdentity, target: MediaIdentity, opts): string[]; // (:1999)
+export function listDeletedVersions(spec, id: MediaIdentity, quality: string, extension: string, opts): string[]; // TM natsort scan
+// THE RECORD-LEVEL PAIR — one file, written against each other (§8):
+export function removeSectionMediaFiles(sectionTipo, sectionId, mediaColumn, opts?): Promise<SectionMediaFilesOutcome>;
+export function restoreDeletedSectionMediaFiles(sectionTipo, sectionId, mediaColumn, opts?): Promise<SectionMediaFilesOutcome>;
 ```
-**Two datestamp formats exist in PHP and BOTH are preserved per call-site**: `move_deleted_file :1929` uses `Y-m-d_Hi`; the already-ported section-delete path (`delete_record.ts:130-134`) uses `Y-m-d_Gis` (hour without leading zero). Do NOT unify — TM scanners and humans read both. `duplicateMediaFiles` closes the `duplicate_record.ts:20` ledger (copy the files, then `refreshStoredFilesInfo` + save on the duplicate so files_info carries the target's paths, not the source's). Posterframe delete stays a true `unlink`.
+The four file-level ops are SYNCHRONOUS (no `Promise`); the two record-level ones
+are async because they resolve the ontology per component.
+
+**Two datestamp formats exist in PHP and BOTH are preserved per call-site**: `move_deleted_file :1929` uses `Y-m-d_Hi` — and that is the one EVERY soft-delete goes through, the section delete included (PHP `remove_section_media_files` → `remove_component_media_files` → `move_deleted_file`). `rename_old_files :1226`, the pre-overwrite backup on UPLOAD, uses `Y-m-d_Gis` (hour without leading zero). Do NOT unify — TM scanners and humans read both. (Correction, 2026-08-09: this paragraph previously attributed `Y-m-d_Gis` to the section-delete path, citing a private copy of `removeSectionMediaFiles` that lived in `delete_record.ts`, walked `files_info`, resolved the media root from a bare `MEDIA_PATH` env read — normally UNSET — and therefore moved nothing on an ordinary install. That copy is deleted; the delete door calls `file_ops.ts`.) `duplicateMediaFiles` closes the `duplicate_record.ts:20` ledger (copy the files, then `refreshStoredFilesInfo` + save on the duplicate so files_info carries the target's paths, not the source's). The AV POSTERFRAME is part of both record-level directions (PHP `component_av` overrides both methods for it); a tier-level posterframe delete stays a true `unlink`.
 
 ---
 
@@ -680,7 +685,7 @@ Pin the live corpus for the gates (this install, `dedalo_mib_v7`):
 | posterframe/identifying_image exemplar | tool_posterframe | portal `identifying_image` property node |
 | a `deleted/`-carrying record | file_ops | TM `deleted/` scan fixture |
 
-Existing gates to keep green (zero fixture changes): `model_coverage_sweep.test.ts` (image/svg/pdf list-mode), `delete_media_files.test.ts`, `media_serving.test.ts`, `tool_export_differential.test.ts` (media cells). New gates land per §7.
+Existing gates to keep green (zero fixture changes): `model_coverage_sweep.test.ts` (image/svg/pdf list-mode), `media_lifecycle_native.test.ts` (the delete/restore pair — it replaces the retired `delete_media_files.test.ts`, which gated the inert `delete_record.ts` copy), `media_serving.test.ts`, `tool_export_differential.test.ts` (media cells). New gates land per §7.
 
 ---
 

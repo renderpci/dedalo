@@ -35,6 +35,7 @@
 
 import { runIdentify } from './binaries.ts';
 import { sceneToken } from './scene.ts';
+import { describeSpawnFailure } from './spawn.ts';
 
 /** One image inside a source sequence (a layer, a page, a frame). */
 export interface SceneInfo {
@@ -178,8 +179,21 @@ export async function probeImageSource(source: string): Promise<ImageSourceProbe
 	// choose (a `.png` holding PostScript selects PS). It must run under the
 	// hardened policy like every other ImageMagick process.
 	const result = await runIdentify(['-ping', '-quiet', '-format', PROBE_FORMAT, source]);
-	if (result.timedOut) {
-		throw new Error(`image probe timed out: ${source}`);
+	// A KILLED identify, not merely a TIMED-OUT one (audit 2026-08 B2, corrected
+	// 2026-08-09). `timedOut` is `capExpired && signal !== null` — a strict SUBSET
+	// of the kills — so the old `if (result.timedOut)` test was blind to every kill
+	// we did not order: the OOM killer on a gigapixel scan (this probe is the one
+	// call that stays cheap under `-ping`, but the box's other lanes are not), a
+	// crashed delegate, an operator's `kill -9`. Those left `stdout` holding the
+	// scene lines printed BEFORE the kill, and a truncated report parses perfectly:
+	// a 3-scene layered TIFF cut after line 1 reads as a single-scene source, which
+	// is exactly the "this file is one image" answer that makes every recipe skip
+	// scene selection. A partial report is not a smaller answer, it is a wrong one.
+	// A non-zero EXIT is deliberately still tolerated here (the empty-report check
+	// below is what judges it), because ImageMagick exits non-zero for warnings on
+	// sources it read perfectly well.
+	if (result.signal !== null) {
+		throw new Error(`image probe of ${source} was killed: ${describeSpawnFailure(result)}`);
 	}
 	const lines = result.stdout
 		.split('\n')
@@ -374,7 +388,13 @@ export async function probeMetaChannels(source: string): Promise<MetaChannelRepo
 		'%[channels]\n',
 		sceneToken(source, 'representative'),
 	]);
-	if (result.timedOut) return unknown;
+	// Any KILL, not just our own timeout — see probeImageSource for why `timedOut`
+	// is the wrong test. Here the cost of getting it wrong is subtler and worse: a
+	// killed identify can still have printed a channels line, and `'srgb  4.1'` cut
+	// to `'srgb  4.'` parses to metaChannels 0 / hasAlpha false — which is NOT the
+	// documented `unknown` (metaChannels 0 / hasAlpha TRUE). The alpha half would be
+	// a confident lie, and it is the half that decides whether the flatten runs.
+	if (result.signal !== null) return unknown;
 	const tokens = result.stdout.trim().split('\n')[0]?.trim().split(/\s+/);
 	const layout = tokens?.[0];
 	const numeric = tokens?.[1];
@@ -407,7 +427,13 @@ export async function probeMetaChannels(source: string): Promise<MetaChannelRepo
  */
 export async function probeContentSpread(path: string): Promise<number | null> {
 	const result = await runIdentify(['-quiet', '-format', '%[fx:standard_deviation]', path]);
-	if (result.timedOut) return null;
+	// Any KILL, not just our own timeout. This is the SAFETY NET for the meta-alpha
+	// promotion, and it is the one probe here that reads a FULL decode of a written
+	// derivative — the most likely thing on this box to meet the OOM killer. A
+	// killed run whose stdout happens to hold a parseable prefix (`0.106` cut to
+	// `0.10`) would hand the net a number it never measured, and the net's whole job
+	// is to condemn a blank derivative. `null` is the honest answer: no evidence.
+	if (result.signal !== null) return null;
 	const value = Number(result.stdout.trim());
 	return Number.isFinite(value) ? value : null;
 }

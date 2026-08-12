@@ -412,7 +412,8 @@ describe('portal edit writes, TS-native stored end states', () => {
 		expect(filter).toEqual([
 			{
 				type: 'dd675',
-				section_id: '1',
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: 1,
 				section_tipo: 'dd153',
 				from_component_tipo: targetFilterTipo,
 				id: 1,
@@ -458,7 +459,8 @@ describe('portal edit writes, TS-native stored end states', () => {
 		expect(filter).toEqual([
 			{
 				type: 'dd675',
-				section_id: '1',
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
+				section_id: 1,
 				section_tipo: 'dd153',
 				from_component_tipo: targetFilterTipo, // replaced (host tipo gone)
 				id: 1, // renumbered from 1

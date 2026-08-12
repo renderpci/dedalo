@@ -23,6 +23,116 @@
 .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container {
   min-height: 10rem;
 }
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--color_grey_16);
+  padding: 0.5rem 0 0.6rem 0;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color_grey_13);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_row.filter_selection_row {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_search {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 26rem;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_search > .filter_input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 1.9rem 0.35rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1.3rem;
+  border: 1px solid var(--color_grey_12);
+  border-radius: 3px;
+  background-color: transparent;
+  color: inherit;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_search > .filter_input:focus {
+  outline: none;
+  border-color: var(--tool_ontology_parser);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_search > .filter_input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_search > .filter_clear_query {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  line-height: 1.4rem;
+  font-size: 1.1rem;
+  background: none;
+  border: none;
+  color: var(--color_grey_8);
+  cursor: pointer;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_search > .filter_clear_query:hover {
+  color: var(--color_grey_4);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar > .filter_row > .filter_count {
+  color: var(--color_grey_8);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar > .filter_selection_row > .filter_selected {
+  color: var(--color_grey_7);
+  font-weight: 600;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle,
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_clear_selection {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.1rem;
+  background-color: transparent;
+  border: 1px solid var(--color_grey_12);
+  border-radius: 3px;
+  color: var(--color_grey_7);
+  cursor: pointer;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle:hover:not(:disabled),
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_clear_selection:hover:not(:disabled) {
+  border-color: var(--tool_ontology_parser);
+  color: var(--tool_ontology_parser);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle:disabled,
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_clear_selection:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle.active {
+  background-color: var(--tool_ontology_parser);
+  border-color: var(--tool_ontology_parser);
+  color: white;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar .filter_toggle.active:hover:not(:disabled) {
+  color: white;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .filter_bar > .filter_no_matches {
+  margin-top: 0.5rem;
+  color: var(--color_grey_8);
+  font-style: italic;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .item_label.no_match,
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .children_container.no_match {
+  display: none;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container.filtering > .children_container.hide {
+  display: grid !important;
+}
 .wrapper_tool.tool_ontology_parser > .content_data > .ontologies_list_container .item_label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -133,6 +243,13 @@
 .wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.failed > .check_detail {
   color: var(--tool_ontology_parser);
   font-weight: 600;
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.warn:before {
+  content: '!';
+  color: var(--color_warning);
+}
+.wrapper_tool.tool_ontology_parser > .content_data > .status_container > .status_checks > .check.warn > .check_detail {
+  color: var(--color_grey_4);
 }
 .wrapper_tool.tool_ontology_parser > .content_data > .buttons_container {
   padding: 2rem;

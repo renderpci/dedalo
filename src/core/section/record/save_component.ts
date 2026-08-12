@@ -49,12 +49,14 @@ import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts
 import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
+import { requiredOntologyTld } from '../../ontology/tld.ts';
 import {
 	applyAddNewElement,
 	applySortByColumn,
@@ -198,6 +200,89 @@ async function assertNotExternalWrite(componentTipo: string, sectionTipo: string
 		model,
 		door: 'saveComponentData',
 	});
+}
+
+/**
+ * THE ONT-TLD WRITE REFUSAL (`ontology7`).
+ *
+ * A record of an ontology node section `<tld>0` parses into node tipo
+ * `<tld><section_id>`, so its `ontology7` can only ever be `<tld>`. The value is
+ * DERIVED from the section, never typed. Two ways a write can break that, both
+ * of which lose the record:
+ *   - a DIFFERENT tld — the record parses into another namespace entirely
+ *     (ontology_state's `foreign` drift);
+ *   - an EMPTY value — parseSectionRecordToOntologyNode returns null, no
+ *     dd_ontology row is written, and the record vanishes from the ontology
+ *     tree with no error anywhere.
+ *
+ * `ok:false`, not a throw (contrast ExternalWriteRefused above): a caller that
+ * sends the wrong tld — an import file, an API client, a bulk edit — has made a
+ * fixable data mistake and deserves an actionable 400 naming the right value,
+ * not a 500. The edit form additionally renders the component read-only
+ * (permissions.ts forces level 1), so the interactive door can barely reach
+ * here; this is the belt for every other door.
+ *
+ * ALLOWLIST, NOT A BLOCKLIST — and the reason is a bug this guard shipped with.
+ * The first version inspected the incoming value and refused what LOOKED wrong,
+ * wrapping a non-array `set_data` value into `[value]` before checking it. The
+ * executor does the opposite: `set_data` coerces a non-array to `[]`
+ * (applySaveComponentData below). So `{action:'set_data', value:{…value:'actv'}}`
+ * — a bare object carrying the CORRECT tld — passed the guard and then CLEARED
+ * the component, losing the record in exactly the way ONT-TLD exists to prevent.
+ * A guard that models the write differently from the writer is not a guard.
+ *
+ * So: permit ONE shape, the only one whose result is verifiable without
+ * re-implementing the executor — a `set_data` carrying a non-empty ARRAY whose
+ * every item's value is the required tld. Refuse everything else by shape,
+ * naming the shape rather than a value that may never be stored. Fail-closed
+ * costs nothing here: the field is derived, so no door has a legitimate reason
+ * to send anything else, and every import door already sends exactly this shape
+ * (import_execute.ts, import_csv_execute.ts).
+ *
+ * Returns the refusal message, or null when the write is allowed. Pure — the
+ * answer depends only on the section tipo and the incoming values, which is why
+ * the caller runs it BEFORE opening the transaction.
+ */
+export function ontologyTldRefusal(request: SaveRequest): string | null {
+	if (request.componentTipo !== ONTOLOGY_TLD) return null;
+	const required = requiredOntologyTld(request.sectionTipo);
+	if (required === null) return null; // not a governed section (localontology0, ontology35, …)
+
+	const refuse = (received: string): string =>
+		`${ONTOLOGY_TLD} must be "${required}" in section '${request.sectionTipo}' — it is derived from the section, not typed (ONT-TLD); received ${received}`;
+
+	for (const change of request.changedData) {
+		// Only a whole-value replace can be checked against a derived value: an
+		// update/insert/remove is a delta against stored items this function
+		// deliberately does not read (it runs before the row is locked).
+		if (change.action !== 'set_data') {
+			return refuse(`action '${String(change.action)}' (only a full set_data replace is allowed)`);
+		}
+		// THE SHAPE, before the value: a non-array reaches the executor as `[]`.
+		if (!Array.isArray(change.value)) {
+			return refuse(
+				change.value === null || change.value === undefined
+					? 'an empty value'
+					: 'a non-array set_data value (the write engine stores that as an empty component)',
+			);
+		}
+		const items = change.value as unknown[];
+		// A bulk replace with nothing in it clears the component just as surely.
+		if (items.length === 0) return refuse('an empty value');
+		for (const item of items) {
+			// A stored literal item is an OBJECT carrying `value`. A bare scalar is
+			// not the stored shape, so it is refused as a shape too.
+			if (item === null || typeof item !== 'object') {
+				return refuse('a non-object item (a stored literal is {id, lang, value})');
+			}
+			const raw = (item as { value?: unknown }).value;
+			const value = raw === null || raw === undefined ? '' : String(raw);
+			if (value !== required) {
+				return refuse(value === '' ? 'an empty value' : `"${value}"`);
+			}
+		}
+	}
+	return null;
 }
 
 /**
@@ -470,6 +555,12 @@ export async function saveComponentData(request: SaveRequest): Promise<SaveResul
 	// there is nothing to roll back and no row to lock (see assertNotExternalWrite).
 	// After the alias hop, so an alias door onto an external tipo is refused too.
 	await assertNotExternalWrite(effectiveRequest.componentTipo, effectiveRequest.sectionTipo);
+	// ONT-TLD, same pre-transaction reasoning: the required value is a property of
+	// the section, so nothing to roll back and no row to lock.
+	const tldRefusal = ontologyTldRefusal(effectiveRequest);
+	if (tldRefusal !== null) {
+		return { ok: false, message: tldRefusal, data: [] };
+	}
 
 	const result = await withTransaction(() => applySaveComponentData(effectiveRequest));
 

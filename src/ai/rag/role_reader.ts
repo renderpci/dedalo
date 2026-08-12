@@ -15,11 +15,11 @@
  * never be compared against anything else in the engine.
  */
 
+import { dateItemToValue } from '../../core/components/component_date/date_value.ts';
 import { readMatrixRecord } from '../../core/db/matrix.ts';
 import { type DdDate, ddDateToSeconds } from '../../core/media/file_date.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../core/ontology/resolver.ts';
 import { resolveComponentValue } from '../../core/resolve/component_data.ts';
-import { dateItemToValue } from '../../core/section/indexation_grid.ts';
 import type { RoleReader } from './characterizer.ts';
 import { readComponentText } from './component_text.ts';
 

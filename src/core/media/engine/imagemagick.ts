@@ -32,7 +32,7 @@ import { pixelAreaBudget } from '../../concepts/media.ts';
 import { magickPolicyEnv, resolveIdentify, resolveMagick } from './binaries.ts';
 import { probeImageSource } from './probe.ts';
 import { type SceneSelection, sceneToken } from './scene.ts';
-import { runBinary, type SpawnResult } from './spawn.ts';
+import { describeSpawnFailure, runBinary, type SpawnResult } from './spawn.ts';
 
 // The binary resolvers and the scene-selector token live in leaf modules so that
 // `probe.ts` can use them without closing an import cycle with this file (see
@@ -518,8 +518,25 @@ async function runMagickTo(
 	// ImageMagick process in this engine loads — see that module for why the
 	// identify spawns carry it too.
 	const result = await runBinary(argv, { env: magickPolicyEnv() });
-	if (result.timedOut) {
-		throw new Error(`ImageMagick timed out writing ${expectedOutput}`);
+	// A KILLED magick, not merely a TIMED-OUT one (audit 2026-08 B2, corrected
+	// 2026-08-09). `timedOut` is `capExpired && signal !== null` — a strict SUBSET
+	// of the kills — so `if (result.timedOut)` let through every kill we did not
+	// order, and on this engine that is the LIKELY one: the measurements in
+	// `probe.ts` put a gigapixel TIFF convert at 23.8 GB RSS, which is an OOM kill,
+	// not a timeout. The partial file it leaves behind is non-empty and, cut inside
+	// a single-scene encode, pings back as ONE image — so the existence check passes
+	// and the scene post-condition passes, and a truncated derivative is published
+	// over a good one. The two conditions that made B2 invisible, met by a check
+	// that only ever looked at our own cap.
+	//
+	// The NON-ZERO EXIT stays tolerated below (the `console.warn` path): that is a
+	// real ImageMagick behaviour on sound output — TIFF-tag noise, a truncated but
+	// decodable JPEG — and failing it would narrow a capability the oracle had.
+	// A kill is categorically different: nothing was tolerated, the process died.
+	if (result.signal !== null) {
+		throw new Error(
+			`ImageMagick was killed writing ${expectedOutput}: ${describeSpawnFailure(result)}`,
+		);
 	}
 	if (fatalStderr?.test(result.stderr) === true) {
 		throw new Error(`ImageMagick failed: ${result.stderr}`);

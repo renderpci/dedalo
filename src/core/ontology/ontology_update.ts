@@ -56,6 +56,7 @@ import {
 	consolidateSectionCounter,
 	importFromCopyFile,
 	MAX_MANIFEST_FILES,
+	normalizeOntologyTld,
 	type OntologyIoResponse,
 } from './data_io_import.ts';
 import { termByTipo } from './labels.ts';
@@ -380,6 +381,26 @@ export async function updateOntology(
 				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
 				response.msg = restoreFailureMessage(provisioned, response.errors);
 				return response;
+			}
+			// ONT-TLD: the staged file carries whatever ontology7 it was EXPORTED
+			// with, while sectionTipo comes from the target tld — a tld renamed
+			// upstream would otherwise land a whole ontology in the OLD namespace.
+			// See data_io_import.normalizeOntologyTld. (The restore path below is
+			// deliberately NOT normalized: a rollback restores, it does not fix.)
+			const rewritten = await normalizeOntologyTld(file.sectionTipo, conn);
+			if (rewritten === null) {
+				// FATAL and ROLLED BACK, exactly like a failed import above. Continuing
+				// would run the dd_ontology re-derive below over rows that still
+				// declare the export's tld — projecting the whole ontology into the OLD
+				// namespace and finishing `result: true`. A warning here was the worst
+				// of both: the damage done, and the panel reporting success.
+				response.errors.push(`ontology7 normalization failed for ${file.sectionTipo}`);
+				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
+				response.msg = 'Error. ONT-TLD normalization failed — previous state restored';
+				return response;
+			}
+			if (rewritten > 0) {
+				messages.push(`${file.sectionTipo}: rewrote ontology7 on ${rewritten} row(s)`);
 			}
 			if (!(await consolidateSectionCounter(file.sectionTipo, 'matrix_ontology', conn))) {
 				response.errors.push(`counter consolidation failed for ${file.sectionTipo}`);

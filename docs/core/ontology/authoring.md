@@ -420,24 +420,25 @@ the old compiled `dd_ontology` row until you **regenerate**. The full path:
 
 ```mermaid
 flowchart TD
-    E["Edit node record<br/>(Ontology area)"] --> R["Reconcile / Rebuild<br/>(tool_ontology_parser → ontology_state)"]
+    E["Edit node record<br/>(Ontology area)"] --> R["Rebuild<br/>(tool_ontology_parser → ontology_state)"]
     R --> P["parseSectionRecordToOntologyNode()<br/>per record"]
-    P --> I["upsertDdOntologyNode() → dd_ontology UPSERT"]
+    P --> I["upsertDdOntologyNode() → dd_ontology UPSERT<br/>(one transaction per TLD)"]
     I --> C["clearOntologyDerivedCaches()<br/>(automatic — single chokepoint, every write)"]
     C --> L["Runtime reads new node<br/>(resolver.ts)"]
 ```
 
 1. **Edit** the node record in the Ontology area.
-2. **Reconcile (or Rebuild).** The developer-gated tool `tools/tool_ontology_parser`
-   drives `src/core/ontology/ontology_state.ts` — the single reconcile authority.
-   `reconcile_ontologies` calls `ensureOntology(tld)`: it diffs the runtime
-   projection against the parsed source and applies only the delta (upsert the
-   missing/stale nodes, delete the orphaned ones) — **incremental and
-   non-destructive**, a no-op on a TLD already in sync. `regenerate_ontologies`
-   calls `rebuildOntology(tld)`: a **transactional** wipe-and-rebuild for
-   structural corruption the reconcile cannot fix (delete + reinsert in one
-   `withTransaction`, rolled back on failure — no backup table). Both then rebuild
-   the LLM map (`exportLlmMap()`), merging any of its errors into the response.
+2. **Rebuild.** The developer-gated tool `tools/tool_ontology_parser` drives
+   `src/core/ontology/ontology_state.ts` — the single rebuild authority.
+   `inspect_ontologies` calls `inspectOntology(tld)`, a pure read that diffs the
+   runtime projection against the parsed source (missing / stale / orphaned).
+   `regenerate_ontologies` calls `rebuildOntology(tld)`: a **transactional**
+   wipe-and-rebuild (delete + reinsert in one `withTransaction`, rolled back on
+   failure — no backup table). Because it commits atomically, no reader ever sees
+   the empty window, which is why there is no incremental companion any more (the
+   `ensureOntology` reconcile was removed 2026-08-11). It does **not** rebuild the
+   LLM map or any other export file — those are refreshed by `export_ontologies`
+   (WC-2026-08-11-regenerate-drops-llm-map-post-step).
 3. **Compile one section (or one record)** without a full regenerate with
    `setRecordsInDdOntology({sectionTipo, sectionId})` (`tools/tool_ontology`).
    With no `sectionId`, list mode is a **full-section scan**: every record of
@@ -452,11 +453,11 @@ flowchart TD
    `section_map.ts`, `term_resolver.ts`, the active-TLD set, …) registers with at
    load time. There is no reset call to remember.
 
-!!! warning "Rebuild is a heavy write-side operation; prefer Reconcile"
+!!! warning "Rebuild is a heavy write-side operation"
     `rebuildOntology()` / `setRecordsInDdOntology()` parse and upsert a node for
-    *every* matched record. `ensureOntology()` (Reconcile) touches only what
-    drifted and is the everyday action; a full rebuild belongs to the recovery
-    flow, not a normal request. Normal reads always go through `resolver.ts`.
+    *every* matched record of the TLD, so it belongs to the authoring/recovery
+    flow, not a normal request. Run `inspectOntology()` first to see whether
+    anything drifted at all. Normal reads always go through `resolver.ts`.
 
 ## Examples
 
@@ -495,22 +496,19 @@ const tipo = await insertDdOntologyRecord('oh0', 12); // 'oh12' | null on failur
 // out clearOntologyDerivedCaches() as part of the write.
 ```
 
-### Reconcile a TLD into the runtime table (the live-apply step)
+### Rebuild a TLD into the runtime table (the live-apply step)
 
 ```ts
-import { inspectOntology, ensureOntology } from 'src/core/ontology/ontology_state.ts';
+import { inspectOntology, rebuildOntology } from 'src/core/ontology/ontology_state.ts';
 
 // see what drifted, without writing
 const state = await inspectOntology('oh');
 // state: { tld:'oh', inSync:false, drift:[{tipo:'oh12', kind:'stale', diffColumns:['term']}], … }
 
-// apply only the delta (idempotent; a synced TLD is a no-op)
-const outcome = await ensureOntology('oh');
-// outcome: { result, msg, errors, state, applied:['~ oh12 (term)'] }
-
-// for structural corruption a reconcile cannot fix, wipe-and-rebuild (transactional):
-//   import { rebuildOntology } from 'src/core/ontology/ontology_state.ts'
-//   await rebuildOntology('oh')
+// re-derive the whole TLD from its source, in ONE transaction (readers keep
+// seeing the current ontology until it commits; a failure rolls the TLD back)
+const outcome = await rebuildOntology('oh');
+// outcome: { result, msg, errors, state, applied:['rebuilt 412 node(s)', 'main node oh0'] }
 ```
 
 ### Author a node's css / observers (the properties you write)

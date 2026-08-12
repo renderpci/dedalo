@@ -141,10 +141,39 @@ export async function deleteSectionRecord(
 		return { deleted: [], removed: false };
 	}
 
-	// 6. Media files (POST-COMMIT): move every stored file to its quality dir's
-	//    'deleted/' sub-folder (PHP remove_section_media_files — recoverable, no
-	//    hard delete). No-op without a configured media root.
-	await removeSectionMediaFiles(txOutcome.snapshot.media as Record<string, unknown[]> | null, now);
+	// 6. Media files (POST-COMMIT): move every file of every media component into
+	//    its quality dir's 'deleted/' sub-folder — recoverable, never a hard
+	//    delete (PHP remove_section_media_files, class.section_record.php:1872,
+	//    which likewise runs in step 3, after the row is already gone).
+	//
+	//    ONE implementation, in media/file_ops.ts, written against the RESTORE it
+	//    is the inverse of (the tool_time_machine undelete calls that half). This
+	//    door used to carry a private copy that walked files_info and resolved the
+	//    media root from a bare `MEDIA_PATH` env read — a key that is normally
+	//    UNSET, because the root is a DERIVED default — so on an ordinary install
+	//    it moved NOTHING, and it never touched the AV posterframe (not a quality:
+	//    no files_info walk can reach it). Deleting an interview left its audio and
+	//    its still frame live in the tree under a deleted record's name.
+	//
+	//    The snapshot goes with it: `properties.additional_path` names a NAMED
+	//    bucket folder taken from a SIBLING COMPONENT'S VALUE in this record, and
+	//    the row no longer exists to read it from — without the snapshot the sweep
+	//    would look in the numeric bucket the ingest never wrote to.
+	{
+		const { removeSectionMediaFiles } = await import('../../media/file_ops.ts');
+		const outcome = await removeSectionMediaFiles(
+			sectionTipo,
+			sectionId,
+			txOutcome.snapshot.media as Record<string, unknown[]> | null,
+			{ now, snapshot: txOutcome.snapshot },
+		);
+		// PHP logs an ERROR per failing component and continues (the record IS
+		// deleted; a file left live is an operator's problem, not a reason to fail
+		// a committed delete). Reported, never swallowed.
+		for (const failure of outcome.errors) {
+			console.error(`[delete_record] media sweep of ${sectionTipo}/${sectionId}: ${failure}`);
+		}
+	}
 
 	// 7. Diffusion unpublish (POST-COMMIT — PHP diffusion_delete::delete_record):
 	//    sql targets via the native executor; file targets + retry queue ledgered.
@@ -235,59 +264,6 @@ export async function deleteSectionRecord(
 	}
 
 	return { deleted: [sectionId], removed: txOutcome.removedCount > 0 };
-}
-
-/**
- * Move a deleted record's media files into '{qualityDir}/deleted/' with the
- * PHP datestamp suffix ('{stem}_deleted_2024-11-15_143022.{ext}' —
- * date("Y-m-d_Gis"), hour WITHOUT leading zero). Walks the media column's
- * items' files_info; missing files and a missing media root are silent
- * no-ops (PHP logs and continues). `mediaRoot` is injectable for tests and
- * defaults to env MEDIA_PATH.
- */
-export async function removeSectionMediaFiles(
-	mediaColumn: Record<string, unknown[]> | null,
-	now: Date = new Date(),
-	mediaRoot?: string,
-): Promise<string[]> {
-	if (mediaColumn === null || mediaColumn === undefined) return [];
-	const { readEnv } = await import('../../../config/env.ts');
-	const root = mediaRoot ?? readEnv('MEDIA_PATH');
-	if (root === undefined || root === '') return [];
-
-	const { existsSync, mkdirSync, renameSync } = await import('node:fs');
-	const pad = (value: number): string => String(value).padStart(2, '0');
-	// PHP date("Y-m-d_Gis"): G = 24h hour WITHOUT leading zero.
-	const stamp =
-		`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-		`_${now.getHours()}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-
-	const moved: string[] = [];
-	for (const items of Object.values(mediaColumn)) {
-		if (!Array.isArray(items)) continue;
-		for (const item of items) {
-			const filesInfo = (item as { files_info?: { file_path?: string }[] } | null)?.files_info;
-			if (!Array.isArray(filesInfo)) continue;
-			for (const info of filesInfo) {
-				const filePath = info?.file_path;
-				if (typeof filePath !== 'string' || filePath === '') continue;
-				const source = `${root}${filePath}`;
-				if (!existsSync(source)) continue;
-				const slash = source.lastIndexOf('/');
-				const dir = source.slice(0, slash);
-				const fileName = source.slice(slash + 1);
-				const dot = fileName.lastIndexOf('.');
-				const stem = dot > 0 ? fileName.slice(0, dot) : fileName;
-				const extension = dot > 0 ? fileName.slice(dot + 1) : '';
-				const deletedDir = `${dir}/deleted`;
-				if (!existsSync(deletedDir)) mkdirSync(deletedDir, { recursive: true, mode: 0o775 });
-				const target = `${deletedDir}/${stem}_deleted_${stamp}${extension !== '' ? `.${extension}` : ''}`;
-				renameSync(source, target);
-				moved.push(target);
-			}
-		}
-	}
-	return moved;
 }
 
 /**
@@ -501,10 +477,16 @@ export const EXCLUDED_EMPTY_MODELS: ReadonlySet<string> = new Set([
  *     (jsonb_set_lax 'delete_key'; component_filter gets the user's default
  *     project instead of null);
  *   - then the modified stamps refresh (dd197 user locator + dd201 date,
- *     whole-key replace).
- * Meta counters are KEPT (PHP leaves them). LEDGERED: media file moves,
- * component_info observer rows (computed data, no stored key on TS-written
- * records), the activity log row.
+ *     whole-key replace);
+ *   - and every EMPTIED MEDIA component's files move into their `deleted/`
+ *     folders, exactly as the record delete moves them (PHP delete_data
+ *     :1123-1126 calls remove_component_media_files per media component it just
+ *     emptied). Emptying the column key while leaving the files live is how a
+ *     record ends up with an image nothing references and nothing will ever
+ *     clean up.
+ * Meta counters are KEPT (PHP leaves them). LEDGERED: component_info observer
+ * rows (computed data, no stored key on TS-written records), the activity log
+ * row.
  */
 export async function deleteSectionData(
 	sectionTipo: string,
@@ -569,6 +551,14 @@ export async function deleteSectionData(
 
 	/** Relation slots this wipe emptied — the observer cascade's input below. */
 	const emptied: { component: string; removed: unknown[]; remaining: unknown[] }[] = [];
+	/**
+	 * MEDIA slots this wipe emptied, in the shape the sweep walks (tipo → the
+	 * items as they stood BEFORE the wipe). Collected rather than read back
+	 * afterwards for the same reason the delete door passes its snapshot: by the
+	 * time the loop ends the keys are gone, and so is the sibling value that
+	 * `properties.additional_path` names.
+	 */
+	const emptiedMedia: Record<string, unknown[]> = {};
 	const { DATAFRAME_RELATION_TYPE } = await import('../../concepts/subdatum.ts');
 
 	for (const component of components) {
@@ -640,6 +630,9 @@ export async function deleteSectionData(
 			[{ column: column as MatrixJsonbColumn, key: component.tipo, value: newData }],
 			false,
 		);
+		if (column === 'media') {
+			emptiedMedia[component.tipo] = Array.isArray(stored) ? stored : [];
+		}
 		// Emptying a RELATION slot is a removal like any other — collect it for
 		// the observer cascade below (2026-08-06). This door used to be listed
 		// among the "healed by the reconciler later" bulk doors, which was
@@ -660,6 +653,23 @@ export async function deleteSectionData(
 					remaining: Array.isArray(newData) ? newData : [],
 				});
 			}
+		}
+	}
+
+	// Media files of the emptied media components (PHP delete_data :1123-1126:
+	// `remove_component_media_files()` per emptied media component) — the SAME
+	// implementation the record delete uses, so "this record's files" can never
+	// mean two different sets. The pre-wipe row is handed over as the snapshot:
+	// the `additional_path` sibling this loop may itself have just emptied is
+	// still in it.
+	if (Object.keys(emptiedMedia).length > 0) {
+		const { removeSectionMediaFiles } = await import('../../media/file_ops.ts');
+		const outcome = await removeSectionMediaFiles(sectionTipo, sectionId, emptiedMedia, {
+			now,
+			snapshot: record as unknown as Record<string, unknown>,
+		});
+		for (const failure of outcome.errors) {
+			console.error(`[delete_data] media sweep of ${sectionTipo}/${sectionId}: ${failure}`);
 		}
 	}
 

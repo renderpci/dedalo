@@ -25,6 +25,11 @@
  */
 
 import { config } from '../../config/config.ts';
+import {
+	dateItemToValue,
+	dateModeOf,
+	resolvePeriodLabels,
+} from '../components/component_date/date_value.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
@@ -368,24 +373,25 @@ export async function resolveCellValue(
 	}
 
 	if (family === 'date') {
-		// Flat date (PHP export atom): the start's year, or a d-m-Y date when
-		// day/month are present. Multiple items join like literals.
+		// Flat date (PHP component_date::get_export_value → data_item_to_value,
+		// then export_value::to_flat_string, which drops empty() atoms).
+		//
+		// This branch used to carry its OWN formatter — 'd-m-Y' joined with '-',
+		// no date_mode dispatch, and the MONTH dropped whenever the day was
+		// absent — while the oracle-correct one already existed elsewhere. It
+		// was losing the month on live rsc170/rsc26 "Dating" records in every
+		// Referencias cell and every tool_export cell (2026-08 oh1 beta §5.6).
+		// There is now exactly ONE formatter, in the component's own home;
+		// date_flat_value_single_source_tripwire.test.ts keeps it that way.
+		const dateMode = dateModeOf((await getNode(componentTipo))?.properties);
+		const periodLabels = dateMode === 'period' ? await resolvePeriodLabels() : undefined;
 		const { value } = await resolveComponentValue(record, componentTipo, model, lang);
-		type DdDate = { year?: number; month?: number; day?: number };
-		const formatDate = (date: DdDate | undefined): string => {
-			if (date?.year === undefined) return '';
-			if (date.month === undefined || date.day === undefined) return String(date.year);
-			const pad = (n: number): string => String(n).padStart(2, '0');
-			return `${pad(date.day)}-${pad(date.month)}-${date.year}`;
-		};
-		const parts = ((value ?? []) as { start?: DdDate; end?: DdDate }[])
-			.map((item) => {
-				const startText = formatDate(item?.start);
-				if (startText === '') return '';
-				const endText = formatDate(item?.end);
-				// Ranges render 'start <> end' (PHP dd_date range separator).
-				return endText !== '' ? `${startText} <> ${endText}` : startText;
-			})
+		const parts = ((value ?? []) as unknown[])
+			.map((item) =>
+				item === null || item === undefined || typeof item !== 'object'
+					? ''
+					: dateItemToValue(item as Record<string, unknown>, dateMode, { periodLabels }),
+			)
 			.filter((part) => part !== '');
 		return parts.length > 0 ? parts.join(itemSeparator) : null;
 	}

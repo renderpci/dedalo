@@ -39,6 +39,7 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
+	import {filter_ontologies} from './ontologies_filter.js'
 
 // SEC-031: helper to render API messages safely. Splits on `<br>` literals and emits
 // text nodes so api_response.msg / errors / ar_msg cannot inject HTML/script when
@@ -144,13 +145,24 @@ const paint_status = async function(self, container) {
 			other           ? other + ' other' : '',
 			state.mainNodeOk ? '' : 'no main node'
 		].filter(Boolean).join(', ')
-		const detail = state.inSync
+		// ONT-TLD: records with NO ontology7 at all. They parse to no node, so they are
+		// invisible in the ontology tree — worth saying every time. But they are NOT
+		// drift: nothing here disagrees with anything, and no button can clear them, so
+		// rendering them as a failed check left the panel permanently red with two
+		// buttons that reported success. A warning that rides ALONGSIDE the state.
+		const tldless = Number(state.tldlessNodes || 0)
+		const tldless_note = tldless
+			? ' — ' + tldless + ' record' + (tldless===1?'':'s') + ' without a tld (invisible in the tree)'
+			: ''
+		const detail = (state.inSync
 			? 'in sync (' + state.matrixNodes + ' node' + (state.matrixNodes===1?'':'s') + ')'
-			: (reasons || 'out of sync')
+			: (reasons || 'out of sync')) + tldless_note
 
+		// In sync with a tld-less warning is 'warn', not 'failed': the projection IS
+		// correct, and the operator still needs to see the invisible records.
 		const item = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: state.inSync ? 'check ok' : 'check failed',
+			class_name		: state.inSync ? (tldless ? 'check warn' : 'check ok') : 'check failed',
 			parent			: list
 		})
 		ui.create_dom_element({
@@ -167,6 +179,222 @@ const paint_status = async function(self, container) {
 		detail_node.appendChild(document.createTextNode(detail)) // SEC-031: text node, no innerHTML
 	})
 }
+
+
+
+/**
+* BUILD_FILTER_BAR
+* The search / selection header of the TLD picker.
+*
+* The census is ~200 ontologies, most of them two-letter country codes spread over
+* collapsible typology groups, so without this the operator can neither FIND a tld nor
+* SEE which ones are currently checked (the selection is restored from localStorage and
+* is scattered across groups that may be collapsed).
+*
+*   🔍 [ spa           × ]   12 / 204
+*   3 selected   [Show selected only]  [Clear selection]
+*
+* Filtering HIDES rows, it never re-renders them: every checkbox stays in the DOM with its
+* state and its change handler intact, so a search can never alter self.selected_ontologies.
+* Groups collapsed by the user are force-opened for the duration of a filter through a
+* `filtering` class (CSS only) — collapse_toggle_track's persisted state is not written, so
+* clearing the box restores each group exactly as it was.
+*
+* @param {Object} self - the tool instance
+* @param {Object} options
+* @param {Array} options.groups - the DOM index returned by render_ontologies_list
+* @param {HTMLElement} options.list_container - .ontologies_list_container (carries `filtering`)
+* @param {Function} options.on_after_clear - run after "Clear selection" (repaints the status panel)
+* @returns {Object} {node, refresh} — `refresh` re-reads the counters after an outside change
+*/
+const build_filter_bar = function(self, options) {
+
+	const groups			= options.groups
+	const list_container	= options.list_container
+	const on_after_clear	= options.on_after_clear || (() => {})
+
+	const total = (self.ontologies || []).length
+
+	// selected_only. Deliberately transient (not persisted): a saved "show only selected"
+	// would reopen the tool on a list that looks empty for no visible reason.
+	let selected_only = false
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'filter_bar'
+	})
+
+	// search row — input + native-looking clear + match count
+		const search_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_row',
+			parent			: node
+		})
+		const search_box = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_search',
+			parent			: search_row
+		})
+		const filter_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'search',
+			class_name		: 'filter_input',
+			placeholder		: self.get_tool_label('filter_placeholder') || 'Search by TLD or name…',
+			parent			: search_box
+		})
+		const clear_query_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'filter_clear_query hidden',
+			inner_html		: '×',
+			parent			: search_box
+		})
+		clear_query_button.type = 'button'
+		const count_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'filter_count',
+			parent			: search_row
+		})
+
+	// selection row — how many are checked, and the two ways to act on that
+		const selection_row = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_row filter_selection_row',
+			parent			: node
+		})
+		const selected_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'filter_selected',
+			parent			: selection_row
+		})
+		const selected_only_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'filter_toggle',
+			inner_html		: self.get_tool_label('show_selected_only') || 'Show selected only',
+			parent			: selection_row
+		})
+		selected_only_button.type = 'button'
+		const clear_selection_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'filter_clear_selection',
+			inner_html		: self.get_tool_label('clear_selection') || 'Clear selection',
+			parent			: selection_row
+		})
+		clear_selection_button.type = 'button'
+
+	// no_matches — the dead end has to say so, or an empty panel reads as a broken tool
+		const no_matches_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_no_matches hidden',
+			parent			: node
+		})
+		no_matches_node.appendChild(document.createTextNode(
+			self.get_tool_label('filter_no_matches') || 'No ontologies match your search'
+		)) // SEC-031: text node
+
+	/**
+	* PAINT_SELECTION_COUNTERS
+	* The "N selected" readout plus the enabled state of the two selection actions
+	* (with nothing checked they have nothing to do).
+	*/
+		const paint_selection_counters = () => {
+			const count = self.selected_ontologies.length
+			selected_node.replaceChildren(document.createTextNode(
+				count + ' ' + (self.get_tool_label('selected_count') || 'selected')
+			)) // SEC-031: text node
+			selected_only_button.disabled		= count===0
+			clear_selection_button.disabled		= count===0
+			selected_only_button.classList.toggle('active', selected_only)
+		}
+
+	/**
+	* APPLY_FILTER
+	* Resolves visibility for the whole census and pushes it onto the DOM index. Cheap
+	* enough (~200 class toggles) to run synchronously on every keystroke.
+	*/
+		const apply_filter = () => {
+
+			const query		= filter_input.value
+			const result	= filter_ontologies(self.ontologies, {
+				query			: query,
+				selected_only	: selected_only,
+				selected		: self.selected_ontologies
+			})
+
+			// `filtering` is what force-opens collapsed groups (CSS only, see the .less)
+			list_container.classList.toggle('filtering', query.trim()!=='' || selected_only)
+
+			groups.forEach(group => {
+				let visible_items = 0
+				group.items.forEach(item => {
+					const visible = result.visible_tlds.has(item.tld)
+					item.label.classList.toggle('no_match', !visible)
+					if (visible) visible_items++
+				})
+				const group_visible = visible_items > 0
+				group.label.classList.toggle('no_match', !group_visible)
+				group.container.classList.toggle('no_match', !group_visible)
+				// the group checkbox now speaks for a different set of rows
+				sync_group_checkbox(group)
+			})
+
+			count_node.replaceChildren(document.createTextNode(
+				result.match_count + ' / ' + total
+			)) // SEC-031: text node
+			no_matches_node.classList.toggle('hidden', result.match_count > 0)
+			clear_query_button.classList.toggle('hidden', query==='')
+			paint_selection_counters()
+		}
+
+	// events
+		filter_input.addEventListener('input', apply_filter)
+		filter_input.addEventListener('keydown', (e) => {
+			if (e.key==='Escape' && filter_input.value!=='') {
+				e.stopPropagation() // do not let Escape close the tool while it still clears a query
+				filter_input.value = ''
+				apply_filter()
+			}
+		})
+		clear_query_button.addEventListener('click', (e) => {
+			e.stopPropagation()
+			filter_input.value = ''
+			apply_filter()
+			filter_input.focus()
+		})
+		selected_only_button.addEventListener('click', (e) => {
+			e.stopPropagation()
+			selected_only = !selected_only
+			apply_filter()
+		})
+		clear_selection_button.addEventListener('click', (e) => {
+			e.stopPropagation()
+			if (self.selected_ontologies.length===0) {
+				return
+			}
+			const confirm_msg = self.get_tool_label('confirm_clear_selection')
+				|| 'Clear the whole ontology selection?'
+			if (!confirm(confirm_msg)) {
+				return
+			}
+			// uncheck without dispatching change: the array and localStorage are written once
+			// here instead of once per row.
+			groups.forEach(group => group.items.forEach(item => { item.checkbox.checked = false }))
+			self.selected_ontologies.length = 0
+			localStorage.setItem('selected_ontologies', JSON.stringify(self.selected_ontologies))
+			// leaving 'selected only' on would now show an empty list with no obvious cause
+			selected_only = false
+			apply_filter()
+			on_after_clear()
+		})
+
+	// initial paint
+		apply_filter()
+
+
+	return {
+		node	: node,
+		refresh	: paint_selection_counters
+	}
+}//end build_filter_bar
 
 
 
@@ -275,8 +503,13 @@ const get_content_data = async function(self) {
 			class_name 		: 'ontologies_list_container',
 			parent 			: fragment
 		});
-		const ontologies_list = render_ontologies_list(self)
-		ontologies_list_container.appendChild(ontologies_list)
+		// the filter bar is built AFTER the list (it drives the list's DOM index) but
+		// prepended above it; until then any selection change is a no-op.
+		let refresh_filter_bar = () => {}
+		const ontologies_list = render_ontologies_list(self, {
+			on_selection_change : () => refresh_filter_bar()
+		})
+		ontologies_list_container.appendChild(ontologies_list.fragment)
 
 	// status_container (declared here, RENDERED below the buttons — see get_content_data DOM
 	// order note). The per-TLD DRIFT the server reports (inspect_ontologies ->
@@ -288,6 +521,16 @@ const get_content_data = async function(self) {
 			element_type	: 'div',
 			class_name		: 'status_container'
 		})
+
+	// filter_bar — search + selection header, prepended above the typology tree. Built here
+	// because "Clear selection" changes what the status panel is reporting on.
+		const filter_bar = build_filter_bar(self, {
+			groups			: ontologies_list.groups,
+			list_container	: ontologies_list_container,
+			on_after_clear	: () => { paint_status(self, status_container) }
+		})
+		ontologies_list_container.prepend(filter_bar.node)
+		refresh_filter_bar = filter_bar.refresh
 
 	// spinner - ONE definition shared by every action (was duplicated per handler, and its
 	// early-returns left the spinner stuck on a falsy response; set_loading(false) now runs in a
@@ -390,29 +633,36 @@ const get_content_data = async function(self) {
 				return button
 			}
 
-		// Reconcile - the DEFAULT: incremental, non-destructive. Only what drifted.
+		// Repair TLDs - the only action that writes SOURCE records, not the projection.
+		// A node's tld is DERIVED from its section (ONT-TLD), so the edit form renders it
+		// read-only — which is why this button exists: without it the status panel names
+		// misfiled records ("declares tld 'act', not 'actv'") that an operator has no way
+		// to correct. Contentless rows are deliberately untouched: stamping a tld on one
+		// would only add a nameless node to the tree, so those stay listed for a human.
 			make_action({
-				label	: self.get_tool_label('reconcile') || 'Reconcile',
+				label	: self.get_tool_label('repair_tlds') || 'Repair TLDs',
 				cls		: 'warning repair',
-				desc	: self.get_tool_label('reconcile_desc')
-					|| 'Update only what drifted. Non-destructive.',
+				desc	: self.get_tool_label('repair_tlds_desc')
+					|| 'Rewrite a record’s TLD to match its section. Fixes misfiled nodes.',
 				run		: (button) => run_action(button,
-					() => self.reconcile_ontologies(),
-					self.get_tool_label('confirm_reconcile')
-						|| 'Reconcile the selected ontologies?\n\nOnly missing, changed or orphaned nodes are updated. Nothing is wiped.'
+					() => self.repair_tlds(),
+					self.get_tool_label('confirm_repair_tlds')
+						|| 'Rewrite the TLD of every record whose TLD does not match its section?\n\nThis edits the ontology RECORDS, not only the derived table. Records with no content are left alone.\n\nRun Rebuild afterwards.'
 				)
 			})
 
-		// Rebuild - the NUCLEAR option: transactional wipe-and-rebuild.
+		// Rebuild - the ONE write onto the projection: transactional wipe-and-rebuild.
+		// (The incremental "Reconcile" companion was removed 2026-08-11: a transactional
+		// rebuild publishes atomically, so it bought nothing but a choice with no criterion.)
 			make_action({
 				label	: self.get_tool_label('regenerate') || 'Rebuild',
 				cls		: 'warning gear',
 				desc	: self.get_tool_label('regenerate_desc')
-					|| 'Wipe & re-derive from source. Use only if Reconcile can’t fix it.',
+					|| 'Wipe & re-derive dd_ontology from the ontology records.',
 				run		: (button) => run_action(button,
 					() => self.regenerate_ontologies(),
 					self.get_tool_label('confirm_rebuild')
-						|| 'REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback). Use only when Reconcile cannot fix it.\n\nContinue?'
+						|| 'REBUILD wipes and re-derives dd_ontology for the selected TLD(s) from the matrix source.\n\nEach TLD rebuilds in one transaction (safe rollback): readers keep seeing the current ontology until it commits.\n\nContinue?'
 				)
 			})
 
@@ -511,9 +761,17 @@ const get_content_data = async function(self) {
 *   self.ontologies          {Array}  flat list of ontology descriptors
 *                                     (each has: tld, name, typology_id, typology_name)
 *   self.selected_ontologies {Array}  mutable array of currently selected tld strings
-* @returns {DocumentFragment} fragment containing the full typology/TLD tree.
+* @param {Object} [options]
+* @param {Function} [options.on_selection_change] - called after any checkbox change so the
+*   filter bar can refresh its "N selected" readout. Never called during render.
+* @returns {Object} {fragment, groups} — `groups` is the DOM INDEX the filter bar drives:
+*   [{typology_id, label, container, checkbox, items:[{tld, label, checkbox}]}]. Filtering
+*   toggles classes on these nodes instead of re-rendering, so checkbox state (and therefore
+*   self.selected_ontologies) is never disturbed by a search.
 */
-const render_ontologies_list = function (self) {
+const render_ontologies_list = function (self, options) {
+
+	const on_selection_change = options?.on_selection_change || (() => {})
 
 	const ontologies = self.ontologies || []
 
@@ -535,12 +793,21 @@ const render_ontologies_list = function (self) {
 			return a.typology_id < b.typology_id ? -1 : 0
 		})
 
-	const fragment = new DocumentFragment()
+	const fragment	= new DocumentFragment()
+	const groups	= []
 
 	const sorted_typologies_length = sorted_typologies.length
 	for (let i = 0; i < sorted_typologies_length; i++) {
 
 		const typology_item = sorted_typologies[i]
+		const group = {
+			typology_id	: typology_item.typology_id,
+			label		: null,
+			container	: null,
+			checkbox	: null,
+			items		: []
+		}
+		groups.push(group)
 
 		// typology_label — the collapsible group header.
 		// 'icon_arrow' CSS class renders the collapse indicator; the 'up' class
@@ -568,14 +835,24 @@ const render_ontologies_list = function (self) {
 				value			: typology_item.typology_id
 			})
 			// change event handler
-			// Cascade the parent checkbox state to every child input by dispatching
+			// Cascade the parent checkbox state to every VISIBLE child input by dispatching
 			// synthetic 'change' events so the children's own handlers run.
+			//
+			// (!) Two things this must not do:
+			//   - touch children hidden by the search filter. Cascading to the whole group
+			//     would silently (un)check rows the operator cannot see, on a panel whose
+			//     buttons then wipe and rebuild dd_ontology for exactly those tlds.
+			//   - re-read typology_input_checkbox.checked inside the loop: each child change
+			//     re-derives the parent state (sync_group_checkbox), so reading it per
+			//     iteration would flip the target halfway through. Capture it once.
 			const change_handler = (e) => {
-				const children_nodes = children_container.querySelectorAll('input')
+				const target_state = typology_input_checkbox.checked
+				const children_nodes = visible_group_inputs(group)
 				for (let k = children_nodes.length - 1; k >= 0; k--) {
-					children_nodes[k].checked = typology_input_checkbox.checked
+					children_nodes[k].checked = target_state
 					children_nodes[k].dispatchEvent( new Event('change') );
 				}
+				sync_group_checkbox(group)
 			}
 			typology_input_checkbox.addEventListener('change', change_handler)
 			// stopPropagation keeps the click from bubbling up to typology_label's
@@ -585,6 +862,8 @@ const render_ontologies_list = function (self) {
 				e.stopPropagation()
 			})
 			typology_label.append(typology_input_checkbox)
+			group.label		= typology_label
+			group.checkbox	= typology_input_checkbox
 
 		// children_container — holds the individual TLD rows for this typology.
 			const children_container = ui.create_dom_element({
@@ -592,6 +871,7 @@ const render_ontologies_list = function (self) {
 				class_name		: 'children_container',
 				parent			: fragment
 			})
+			group.container = children_container
 
 		// track collapse toggle state of content
 		// ui.collapse_toggle_track persists open/closed state per collapsed_id
@@ -631,8 +911,10 @@ const render_ontologies_list = function (self) {
 				// The server stores names as "TLD | human name | ..." pipe-separated.
 				// Only the first segment is shown; if it equals the TLD it would be
 				// redundant, so the <span> is omitted in that case.
-				const name_first_part = child.name.split(' | ')[0]
-				if (name_first_part!==child.tld) {
+				// (!) name is NULLABLE in the census (data_io.ts maps '' to null when the
+				// hierarchy has no term in the app lang) — a bare .split() threw there.
+				const name_first_part = String(child.name ?? '').split(' | ')[0]
+				if (name_first_part!=='' && name_first_part!==child.tld) {
 					 ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'item_label_name',
@@ -656,6 +938,11 @@ const render_ontologies_list = function (self) {
 					children_checked_counter++ // update counter
 				}
 				item_label.prepend(input_checkbox)
+				group.items.push({
+					tld			: child.tld,
+					label		: item_label,
+					checkbox	: input_checkbox
+				})
 				// change event handler
 				// Keeps self.selected_ontologies in sync with the checkbox state and
 				// persists the updated array to localStorage via an idle callback so
@@ -672,6 +959,9 @@ const render_ontologies_list = function (self) {
 							self.selected_ontologies.splice(index, 1)
 						}
 					}
+					// keep the group checkbox and the filter bar's "N selected" readout honest
+					sync_group_checkbox(group)
+					on_selection_change()
 					// save selected_ontologies value as localStorage
 					dd_request_idle_callback(
 						() => {
@@ -690,15 +980,62 @@ const render_ontologies_list = function (self) {
 				input_checkbox.addEventListener('change', change_handler)
 			}
 
-		// update grouper checked value. if all children are check, then parent id checked
-			if (children_checked_counter===children_len) {
+		// update grouper checked value. if all children are check, then parent is checked
+		// (children_checked_counter is kept for the zero-children case, where deriving from
+		// an empty list must NOT read as "all checked").
+			if (children_len > 0 && children_checked_counter===children_len) {
 				typology_input_checkbox.checked = true
 			}
 	}
 
 
-	return fragment
+	return {
+		fragment	: fragment,
+		groups		: groups
+	}
 }//end render_ontologies_list
+
+
+
+/**
+* VISIBLE_GROUP_INPUTS
+* The checkboxes of a group's rows that the search filter is currently SHOWING.
+* Every cascade and every parent-state derivation goes through this, so a filtered
+* group can only ever act on what the operator can see.
+*
+* @param {Object} group - entry of the render_ontologies_list index
+* @returns {HTMLInputElement[]}
+*/
+const visible_group_inputs = function(group) {
+
+	return group.items
+		.filter(item => !item.label.classList.contains('no_match'))
+		.map(item => item.checkbox)
+}//end visible_group_inputs
+
+
+
+/**
+* SYNC_GROUP_CHECKBOX
+* Re-derives a typology checkbox from its VISIBLE children: checked when all of them
+* are, indeterminate when only some are. A group with nothing visible is left unchecked
+* and determinate (there is nothing for it to cascade to).
+*
+* @param {Object} group - entry of the render_ontologies_list index
+* @returns {void}
+*/
+const sync_group_checkbox = function(group) {
+
+	if (!group.checkbox) {
+		return
+	}
+
+	const inputs	= visible_group_inputs(group)
+	const checked	= inputs.filter(input => input.checked).length
+
+	group.checkbox.checked			= inputs.length > 0 && checked===inputs.length
+	group.checkbox.indeterminate	= checked > 0 && checked < inputs.length
+}//end sync_group_checkbox
 
 
 

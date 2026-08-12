@@ -43,7 +43,12 @@ import {
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
-import { getUserProjects, type Principal } from '../security/permissions.ts';
+import {
+	getUserProjects,
+	PROFILES_SECTION,
+	type Principal,
+	FILTER_MASTER_COMPONENT as USERS_FILTER_MASTER_COMPONENT,
+} from '../security/permissions.ts';
 import { bareBrowseCount } from './bare_count.ts';
 import type { BuilderResult } from './builders/types.ts';
 import type { ConformedFilter } from './conform.ts';
@@ -486,13 +491,11 @@ const PROJECTS_FILTER_EXEMPT_TABLES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Projects filter (PHP build_sql_projects_filter) for one section: restrict to
- * records whose component_filter relation references one of the user's
- * projects. Returns '' when the section is not project-gated. A gated section
- * with a projects-less user yields an impossible clause (empty result).
+ * ONE project-membership disjunction: `relation @> {"<filterTipo>":[{…}]}`
+ * containments OR'd over the caller's projects. The SHARED shape behind both
+ * the generic filter and the USERS filter, so the two can never drift.
  *
- * SQL shape: whole-column `relation @> '{"<filterTipo>":[{"section_id":…}]}'`
- * containments OR'd per project — the v6 idiom, served by the
+ * SQL shape: whole-column containment — the v6 idiom, served by the
  * `{table}_relation_gin_idx` (gin jsonb_path_ops) index. The frozen-PHP-beta
  * `EXISTS(jsonb_array_elements(…))` shape scanned every candidate row and made
  * every non-admin list/count seconds-slow; never reintroduce it. Each project
@@ -501,20 +504,20 @@ const PROJECTS_FILTER_EXEMPT_TABLES: ReadonlySet<string> = new Set([
  * string until the int sweep, an int after
  * (WC-2026-08-10-section-id-int-canonical). The dual-form assembly is
  * delegated to search/containment.ts so the idiom has exactly one home.
+ *
+ * Matched on section_id ALONE, never on the locator's `type`: PHP's own default
+ * branch does the same (trait.where.php:895 `(item->>'section_id')::int IN …`),
+ * and the live archive stores the SAME dd170 project under two different types
+ * (dd675 ×52, dd151 ×2), so a type-strict predicate would deny real users.
+ * Declared as WC-2026-08-09-users-section-record-scope, which is where PHP's
+ * users branch DOES include the type.
  */
-async function buildProjectsFilter(
-	sectionTipo: string,
+function projectContainmentDisjunction(
+	filterTipo: string,
 	alias: string,
-	principal: Principal,
+	projects: readonly number[],
 	params: ParamsCollector,
-): Promise<string> {
-	const filterTipo = await getComponentFilterTipo(sectionTipo);
-	if (filterTipo === null) return ''; // not project-gated
-	const projects = await getUserProjects(principal.userId);
-	if (projects.length === 0) {
-		// PHP: impossible clause — a user with no projects sees no gated records.
-		return `${alias}.relation ? 'IMPOSSIBLE VALUE (User without projects)'`;
-	}
+): string {
 	// One dual-form containment per project, OR'd: the user sees a record when
 	// it belongs to ANY of their projects.
 	const bind = (payload: string) => params.getPlaceholder(payload);
@@ -526,6 +529,107 @@ async function buildProjectsFilter(
 		),
 	);
 	return `(${clauses.join(' OR ')})`;
+}
+
+/**
+ * THE USERS-SECTION (dd128) VISIBILITY RULE — the ENUMERATION half of the oh1
+ * beta audit's finding 3, and the ONLY statement of that rule in the engine:
+ *
+ *   section_id > 0 AND ( it IS my record
+ *                        OR I created it   (data.created_by_user_id = me)
+ *                        OR it shares one of MY projects (dd170) )
+ *
+ * dd128 carries NO `component_filter` child, so the GENERIC branch below
+ * resolves `getComponentFilterTipo('dd128') === null` and emitted NOTHING: any
+ * non-admin holding a dd128 read grant listed/searched every user record in the
+ * install. This branch is the door the audit finding is about — a per-record
+ * helper cannot close an enumeration. Conversely, the rule lives HERE and not
+ * in security/record_scope.ts so that the list, the count, every UNION branch
+ * and the per-record existence probe inherit one predicate; see that module's
+ * header for why a second copy is forbidden.
+ *
+ * Divergences from `case USERS` (trait.where.php:775-836), all declared in
+ * WC-2026-08-09-users-section-record-scope:
+ *
+ * - THE OWN-RECORD ARM. PHP states it one layer up, per record
+ *   (security::user_can_access_record:1038-1041), and NOT in this filter — so a
+ *   projects-less user whose account someone else created cannot list, and
+ *   therefore cannot READ, their own row. Every door that reads a record runs a
+ *   principal-scoped search, so omitting it here would lock such a user out of
+ *   the self-service profile editor. It leaks nothing: the caller knows their
+ *   own id by definition.
+ * - THE KEY IS `created_by_user_id`. PHP's filter literal says
+ *   `created_by_userID` (trait.where.php:791) but PHP's OWN metadata writer
+ *   stamps `created_by_user_id` (class.section_record.php:1688) and every live
+ *   row carries that spelling — the oracle's clause is dead code that matches
+ *   no row in any install. Reading the real key makes this predicate LIVE where
+ *   PHP's is inert.
+ * - A PROJECTS-LESS CALLER degrades to the own-record/created_by clauses
+ *   instead of PHP's `throw new Exception("Invalid filter master data")`
+ *   (:812): they see themselves and the accounts they created — never a 500.
+ *
+ * `section_id > 0` is repeated here even though buildSearchSql already pushes
+ * it for a users MAIN section: this predicate also rides the multi-section
+ * UNION branches, where that guard is not applied.
+ */
+async function buildUsersProjectsFilter(
+	alias: string,
+	principal: Principal,
+	params: ParamsCollector,
+): Promise<string> {
+	const access = [
+		`${alias}.section_id = ${params.getPlaceholder(principal.userId)}`,
+		`${alias}.data @> ${params.getPlaceholder(`{"created_by_user_id":${principal.userId}}`)}::text::jsonb`,
+		`${alias}.data @> ${params.getPlaceholder(`{"created_by_user_id":"${principal.userId}"}`)}::text::jsonb`,
+	];
+	// The SAME reader every other ACL door uses (cached, invalidation-registered).
+	const projects = await getUserProjects(principal.userId);
+	if (projects.length > 0) {
+		access.push(
+			projectContainmentDisjunction(USERS_FILTER_MASTER_COMPONENT, alias, projects, params),
+		);
+	}
+	return `(${alias}.section_id > 0 AND (${access.join(' OR ')}))`;
+}
+
+/**
+ * Projects filter (PHP build_sql_projects_filter) for one section: restrict to
+ * records whose component_filter relation references one of the user's
+ * projects. Returns '' when the section is not project-gated. A gated section
+ * with a projects-less user yields an impossible clause (empty result).
+ *
+ * The switch is PHP's, arm for arm: PROFILES and PROJECTS are UNGATED for
+ * everyone (`case DEDALO_SECTION_PROFILES_TIPO` / `case
+ * DEDALO_FILTER_SECTION_TIPO_DEFAULT`, no filter since 2018-03-31 — a user must
+ * be able to read the profile that grants them anything, and projects are
+ * globally visible); USERS takes {@link buildUsersProjectsFilter}; everything
+ * else takes the component_filter lookup. Both exemptions are currently
+ * IMPLIED by their sections having no component_filter child, but they are
+ * stated because PHP states them: adding one to dd234 must not silently start
+ * gating the profiles section.
+ */
+async function buildProjectsFilter(
+	sectionTipo: string,
+	alias: string,
+	principal: Principal,
+	params: ParamsCollector,
+): Promise<string> {
+	// PHP `case DEDALO_SECTION_PROFILES_TIPO` / `case DEDALO_FILTER_SECTION_TIPO_DEFAULT`.
+	if (sectionTipo === PROFILES_SECTION || sectionTipo === config.features.filterSectionTipo) {
+		return '';
+	}
+	// PHP `case DEDALO_SECTION_USERS_TIPO`.
+	if (sectionTipo === config.usersSectionTipo) {
+		return buildUsersProjectsFilter(alias, principal, params);
+	}
+	const filterTipo = await getComponentFilterTipo(sectionTipo);
+	if (filterTipo === null) return ''; // not project-gated
+	const projects = await getUserProjects(principal.userId);
+	if (projects.length === 0) {
+		// PHP: impossible clause — a user with no projects sees no gated records.
+		return `${alias}.relation ? 'IMPOSSIBLE VALUE (User without projects)'`;
+	}
+	return projectContainmentDisjunction(filterTipo, alias, projects, params);
 }
 
 /**

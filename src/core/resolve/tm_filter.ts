@@ -138,6 +138,12 @@ function emitDate(col: string, rawQ: unknown, operator: string, sink: ParamSink)
 	if (date === null) return null;
 	const effectiveOperator = date.op !== '' ? date.op : operator;
 	const predicates = timeMachineDatePredicates(date, effectiveOperator);
+	// A yearless q (e.g. `{start:{hour:14}}` typed into the dd559 "When" field)
+	// has no expression on a timestamptz column — timeMachineDatePredicates
+	// returns null and the clause is DROPPED, the same contract builder_date.ts
+	// applies on the matrix_activity path. leaf.q reaches here straight from the
+	// client SQO, so anything else here is a 500 from ordinary user input.
+	if (predicates === null) return null;
 	const parts = predicates.map((predicate) => {
 		// Every date match is a range — even "on this day" is `>= d AND < d+1`.
 		markRange(sink, predicate.cmp);

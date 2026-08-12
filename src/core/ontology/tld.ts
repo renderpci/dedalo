@@ -67,6 +67,52 @@ export function mapTldToTargetSectionTipo(tld: string): string {
 	return `${safe}0`;
 }
 
+/**
+ * The ontology node section whose records deliberately declare a FOREIGN tld: a
+ * localontology record OVERRIDES a canonical node (e.g. `rsc12`), so its
+ * `ontology7` names the overridden node's tld, never `localontology`. See the
+ * overwrite machinery in `parser.ts` (getOverwriteLocator + the `resolved`
+ * accessor). Exempt from ONT-TLD below.
+ */
+const LOCAL_ONTOLOGY_SECTION = 'localontology0';
+
+/**
+ * THE ONT-TLD RULE, in one place.
+ *
+ * The tld a record of `sectionTipo` MUST declare in its `ontology7` component,
+ * or null when the section is not governed by the invariant.
+ *
+ *   > ONT-TLD — a record of an ontology node section `<tld>0` (table
+ *   > `matrix_ontology`) declares `ontology7 = <tld>`.
+ *
+ * The value is DERIVED, never typed: a record of section `actv0` parses into
+ * node tipo `actv<section_id>` (parser.ts), so `actv` is the only tld it can
+ * ever have. A record whose `ontology7` is missing parses to nothing and is
+ * invisible in the ontology tree; one that names another tld parses into that
+ * OTHER namespace (ontology_state's `foreign` drift). Both are always bugs.
+ *
+ * Governed: any `<tld>0` section — `dd0`, `rsc0`, `actv0`, and the grouper
+ * sections `ontologytype0` / `hierarchytype0` / `hierarchymtype0` alike.
+ * NOT governed, and both carve-outs are load-bearing:
+ *   - `localontology0` (see above);
+ *   - `matrix_ontology_main` (section `ontology35`), which holds the tld being
+ *     DEFINED in `hierarchy6`, not `ontology7` — operator data, not derived.
+ *     It is not `<tld>0`-shaped, so it falls out here for free.
+ *
+ * Pure string rule, no DB: `<tld>0` implies `matrix_ontology`, so no table
+ * lookup is needed. The shape check is EXACT (`dd0x` is not `dd0`).
+ */
+export function requiredOntologyTld(sectionTipo: string): string | null {
+	if (sectionTipo === LOCAL_ONTOLOGY_SECTION) {
+		return null;
+	}
+	const tld = getTldFromTipo(sectionTipo);
+	if (tld === null || sectionTipo !== `${tld}0`) {
+		return null;
+	}
+	return safeTld(tld);
+}
+
 /** Build a tipo from a TLD and section_id (`es` + 1 → `es1`). */
 export function buildTipo(tld: string, sectionId: number | string): string {
 	return `${tld}${sectionId}`;

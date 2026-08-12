@@ -122,5 +122,9 @@ export async function compileExportPlan(
 		recursion: { maxLevels: 0 },
 		langPolicy: { langs: [], mainLang: null },
 		warnings: [],
+		// The export front-end resolves its ddos from a USER-BUILT column set,
+		// not from a dd1190 subtree, so there is no dangling-ontology-tipo case
+		// to degrade here: an unknown tipo never reaches this builder.
+		degradations: [],
 	};
 }

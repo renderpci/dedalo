@@ -83,6 +83,17 @@ export async function handleMediaUpload(
 			file_data: {
 				key_dir: parsed.keyDir,
 				tmp_name: received.tmpName ?? null,
+				// THE HUMAN FILE NAME (PHP file_data->name :1260 — 'My Picture 1.jpg').
+				// Restored 2026-08-09 for the CLIENT: the queue row's label, and the
+				// PHP wire shape. The ARCHIVE does not get the name from here — the
+				// ingest is a LATER request and would depend on the caller relaying
+				// this key back, which no ingest caller does. The receiver therefore
+				// also persists it beside the staged file and the ingest reads it
+				// there (staged_name_record.ts). With neither, the ingest had only
+				// `tmp_name` — the SANITIZED staged segment — so a record's
+				// `target_filename` field recorded 'Mar_a_Pi_n.jpg' for a file the
+				// curator uploaded as 'María Piñón.jpg'.
+				name: received.name ?? null,
 				extension: received.extension ?? null,
 				chunked: parsed.chunked,
 				chunk_index: received.chunkIndex ?? 0,

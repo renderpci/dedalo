@@ -489,6 +489,15 @@ export async function createParentGrouper(
 	}
 
 	// Parent matrix record (<parentNodeTipo>/<parentSectionId>).
+	//
+	// ONT-TLD note: this row is created and NOTHING else is written to it, so since
+	// the birth stamp (record_defaults seed 3) it carries an `ontology7` and
+	// therefore PARSES — appearing in the tree as a node with no term. That is a
+	// deliberate trade, not an oversight: the alternative is what it did before,
+	// which was to parse to nothing, leaving the child's parent locator pointing at
+	// a record the ontology cannot resolve (the child silently becomes a root).
+	// A visible unnamed node is diagnosable; a dangling parent is not. This branch
+	// only fires as a repair backstop on an already-incomplete ontology.
 	if (parentSectionId !== null) {
 		await ensureMatrixRecord(parentNodeTipo, Number(parentSectionId), userId);
 	}
@@ -725,10 +734,9 @@ export async function setRecordsInDdOntology(
 
 // --- regenerate — RETIRED 2026-07-15 -----------------------------------------
 // The destructive dd_ontology rebuild moved to core/ontology/ontology_state.ts
-// `rebuildOntology` (transactional; no leftover backup table) alongside the
-// non-destructive `ensureOntology` reconcile. `regenerateRecordsInDdOntology` — the
-// backup-table-based version — is gone; nothing may wipe-and-rebuild a tld outside
-// ontology_state.ts (ontology_single_writer_tripwire).
+// `rebuildOntology` (transactional; no leftover backup table), the ONE writer.
+// `regenerateRecordsInDdOntology` — the backup-table-based version — is gone; nothing
+// may wipe-and-rebuild a tld outside ontology_state.ts (ontology_single_writer_tripwire).
 
 // --- order sync (PHP sync_order_to_dd_ontology) — CONSUMED BY THE TREE (A5) ---
 

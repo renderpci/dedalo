@@ -32,6 +32,11 @@
  */
 
 import { config } from '../../config/config.ts';
+import {
+	dateItemToValue,
+	dateModeOf,
+	type PeriodLabels,
+} from '../components/component_date/date_value.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
@@ -49,6 +54,7 @@ import {
 } from '../ontology/resolver.ts';
 import { getTldFromTipo } from '../ontology/tld.ts';
 import { buildRequestConfigForElement } from '../relations/request_config/build.ts';
+import { optimizeTcIn, optimizeTcOut, secondsToTc, tcToSeconds } from '../resolve/optimize_tc.ts';
 import { currentApplicationLang, currentDataLang } from '../resolve/request_lang.ts';
 import { truncateHtml } from '../resolve/truncate_html.ts';
 import { findInverseReferenceLocators } from '../search/search_related.ts';
@@ -284,37 +290,10 @@ async function langData(
 // Atom values per model family (PHP get_export_value semantics).
 // ---------------------------------------------------------------------------
 
-/**
- * PHP component_date::data_item_to_value (modes date/range; sep '/'). Exported
- * because the RAG characterizer's role reader (src/ai/rag/role_reader.ts) needs
- * the SAME human-facing date label it puts in an export cell — a second copy of
- * this formatter would drift.
- */
-export function dateItemToValue(item: Record<string, unknown>, dateMode: string): string {
-	const pad = (n: number) => String(n).padStart(2, '0');
-	const partToString = (part: unknown): string => {
-		if (part === null || typeof part !== 'object') return '';
-		const p = part as { year?: number; month?: number; day?: number };
-		if (typeof p.year !== 'number') return '';
-		if (p.day !== undefined && p.day !== null)
-			return `${p.year}/${pad(p.month ?? 0)}/${pad(p.day)}`;
-		if (p.month !== undefined && p.month !== null) return `${p.year}/${pad(p.month)}`;
-		return String(p.year);
-	};
-	if (dateMode === 'range') {
-		let value = '';
-		if (item.start !== undefined && item.start !== null && typeof item.start === 'object') {
-			value += partToString(item.start);
-		}
-		if (item.end !== undefined && item.end !== null && typeof item.end === 'object') {
-			value += ` <> ${partToString(item.end)}`;
-		}
-		return value;
-	}
-	// 'date' + default: start ?? item itself
-	const target = item.start !== undefined && item.start !== null ? item.start : item;
-	return typeof target === 'object' ? partToString(target) : '';
-}
+// The date atom's formatter (PHP component_date::data_item_to_value) MOVED to
+// the component's own home — components/component_date/date_value.ts — when the
+// relation-list/export cell resolver was found carrying a second, divergent
+// copy of it (2026-08 oh1 beta audit §5.6). One implementation, no drift.
 
 interface AtomsResult {
 	value: unknown[];
@@ -379,11 +358,18 @@ async function resolveAtoms(
 	// resolution for BOTH (PHP component_date::get_export_value :266)
 	if (model === 'component_date') {
 		const sep = ddo.records_separator ?? properties.records_separator ?? ' | ';
-		const dateMode = properties.date_mode ?? 'date';
+		const dateMode = dateModeOf(properties);
+		// PHP label::get_label() for date_mode 'period'; the grid already holds
+		// the application-lang catalog, so no second fetch.
+		const periodLabels: PeriodLabels = {
+			years: ctx.uiLabels.years ?? 'years',
+			months: ctx.uiLabels.months ?? 'months',
+			days: ctx.uiLabels.days ?? 'days',
+		};
 		const value = items.map((item) =>
 			item === null || item === undefined
 				? ''
-				: dateItemToValue(item as Record<string, unknown>, dateMode),
+				: dateItemToValue(item as Record<string, unknown>, dateMode, { periodLabels }),
 		);
 		return {
 			value,
@@ -733,46 +719,6 @@ function decodeHtmlSpecialChars(text: string): string {
 		.replace(/&#0?39;/g, "'");
 }
 
-/** Nearest TC mark before tag_in / after tag_out (PHP OptimizeTC). */
-function optimizeTcIn(rawText: string, tagIn: string): string | null {
-	const pos = rawText.indexOf(tagIn);
-	if (pos < 0) return null;
-	const before = rawText.slice(0, pos);
-	const matches = [
-		...before.matchAll(/\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(?:\.[0-9]{1,3})?)_TC\]/g),
-	];
-	const last = matches[matches.length - 1];
-	return last?.[1] ?? null;
-}
-function optimizeTcOut(rawText: string, tagOut: string): string | null {
-	const pos = rawText.indexOf(tagOut);
-	if (pos < 0) return null;
-	const after = rawText.slice(pos + tagOut.length);
-	const match = /\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(?:\.[0-9]{1,3})?)_TC\]/.exec(after);
-	return match?.[1] ?? null;
-}
-function tcToSeconds(tc: string | null): number {
-	if (tc === null || tc === '') return 0;
-	const match = /([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(\.([0-9]{1,3}))?/.exec(tc);
-	if (match === null) return 0;
-	return (
-		Number(match[1]) * 3600 +
-		Number(match[2]) * 60 +
-		Number(match[3]) +
-		(match[5] !== undefined ? Number(`0.${match[5]}`) : 0)
-	);
-}
-function secondsToTc(seconds: number): string {
-	const sign = seconds < 0 ? '-' : '';
-	const abs = Math.abs(seconds);
-	const h = Math.floor(abs / 3600);
-	const m = Math.floor((abs % 3600) / 60);
-	const s = abs % 60;
-	const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
-	const frac = (s % 1).toFixed(3).slice(1); // '.000'
-	return `${sign}${pad(h)}:${pad(m)}:${pad(s)}${frac}`;
-}
-
 /**
  * The related component_av of a text_area (PHP get_related_component_av_tipo):
  * the ontology node's `relations` entries hold a related component_av tipo.
@@ -859,12 +805,19 @@ async function textAreaIndexationCell(
 				// tool_indexation off the text_area, tool_transcription off the
 				// related component_av); a missing tool → {} + label ''. Captured
 				// live 2026-07-10 (seeded oh1/rsc167 scratch chain, gate corpus).
+				// PHP component_text_area_value.php:191-211 — the tag STRING form of
+				// OptimizeTC (byte offsets shift after HTML-encoding differences, so
+				// the position-based overload is not used here), with PHP's own
+				// asymmetric margins: 0 going in, 100 going out. A falsy tag (null or
+				// '') yields a null cell, never a computed time code.
+				const tagIn = fragmentInfo.tag_in;
+				const tagOut = fragmentInfo.tag_out;
 				const tcIn =
-					fragmentInfo.tag_in !== null ? optimizeTcIn(fullRawText, fragmentInfo.tag_in) : null;
+					tagIn !== null && tagIn !== '' ? optimizeTcIn(fullRawText, tagIn, null, 0) : null;
 				const tcOut =
-					fragmentInfo.tag_out !== null ? optimizeTcOut(fullRawText, fragmentInfo.tag_out) : null;
-				const tcInSecs = tcToSeconds(tcIn);
-				const tcOutSecs = tcToSeconds(tcOut);
+					tagOut !== null && tagOut !== '' ? optimizeTcOut(fullRawText, tagOut, null, 100) : null;
+				const tcInSecs = tcToSeconds(tcIn ?? '');
+				const tcOutSecs = tcToSeconds(tcOut ?? '');
 				const durationTc = secondsToTc(tcOutSecs - tcInSecs);
 				const openLabel = ctx.uiLabels.open ?? 'Open';
 				const downloadLabel = ctx.uiLabels.download ?? 'Download';
@@ -1334,6 +1287,65 @@ async function processDdoMap(
 	return out;
 }
 
+/**
+ * AUTHZ-05 for the indexation grid: drop the section_top groups the caller
+ * cannot reach, through the SHARED helper.
+ *
+ * This used to be a private re-implementation that checked `isRecordInScope`
+ * alone — the PROJECTS half of the rule and nothing else. That is only half a
+ * gate: the sections in the projects-filter-exempt tables (matrix_hierarchy,
+ * matrix_dd, matrix_list, matrix_langs, …) are in scope for every
+ * authenticated user by design, so the SECTION READ GRANT is the only defence
+ * left there and the grid never asked for it. A user with zero permission on a
+ * section still read its row content off a thesaurus term's grid
+ * (2026-08 oh1 beta audit §5.4).
+ *
+ * `scopeInverseReferenceHits` is the one implementation of "may this caller
+ * see this record hit", it checks BOTH halves, and it is the export the
+ * AUTHZ-05 tripwire pins. The grid is a user-facing door over an inverse
+ * scan that runs unscoped by design (findInverseReferenceLocators), which is
+ * exactly what that helper exists for. Re-deciding a security rule per caller
+ * is the failure the "tripwire or delete" law is there to prevent — so this
+ * function only reshapes the grouping, never the boundary.
+ *
+ * DELIBERATE DIVERGENCE, DECLARED: WC-2026-08-09-indexation-grid-read-grant-scope.
+ * PHP's `get_ar_section_top_tipo()` filters by user PROJECTS only — it has no
+ * read-grant check at all — so requiring the grant makes this door STRICTER
+ * than the oracle, not equal to it. That is the point (it is the half that
+ * defends the projects-exempt tables), but it is a divergence and it carries
+ * its entry.
+ *
+ * Dynamic import, like the other AUTHZ-05 doors (resolve/relation_list.ts,
+ * resolve/related_sections.ts): record_scope pulls in the search assembler.
+ */
+export async function scopeIndexationGroups<T>(
+	groups: Map<string, Map<string, T[]>>,
+	principal: Principal,
+): Promise<Map<string, Map<string, T[]>>> {
+	const { scopeInverseReferenceHits } = await import('../security/record_scope.ts');
+	const hits = [...groups].flatMap(([topTipo, byId]) =>
+		[...byId.keys()].map((topId) => ({
+			section_tipo: topTipo,
+			section_id: Number(topId),
+			key: topId,
+		})),
+	);
+	const allowed = await scopeInverseReferenceHits(hits, principal);
+	const allowedKeys = new Set(allowed.map((hit) => `${hit.section_tipo}|${hit.key}`));
+
+	const scoped = new Map<string, Map<string, T[]>>();
+	for (const [topTipo, byId] of groups) {
+		const kept = new Map<string, T[]>();
+		for (const [topId, locators] of byId) {
+			if (allowedKeys.has(`${topTipo}|${topId}`)) kept.set(topId, locators);
+		}
+		// An emptied section leaves no husk group behind (PHP renders a caption
+		// per group, so a husk would leak the section's existence).
+		if (kept.size > 0) scoped.set(topTipo, kept);
+	}
+	return scoped;
+}
+
 // ---------------------------------------------------------------------------
 // main entry (PHP build_indexation_grid :196).
 // ---------------------------------------------------------------------------
@@ -1424,19 +1436,7 @@ export async function buildIndexationGrid(
 		groups.set(topTipo, byId);
 	}
 
-	// per-user projects filter (PHP: non-global-admin rows must intersect the
-	// caller's projects via the record's component_filter data)
-	if (!principal.isGlobalAdmin) {
-		const { isRecordInScope } = await import('../security/record_scope.ts');
-		for (const [topTipo, byId] of groups) {
-			for (const topId of [...byId.keys()]) {
-				if (!(await isRecordInScope(topTipo, Number(topId), principal))) {
-					byId.delete(topId);
-				}
-			}
-			if (byId.size === 0) groups.delete(topTipo);
-		}
-	}
+	const scopedGroups = await scopeIndexationGroups(groups, principal);
 
 	const ctx: GridContext = {
 		dataLang: currentDataLang(),
@@ -1450,14 +1450,14 @@ export async function buildIndexationGrid(
 
 	// Bun-native: prefetch every top record in one query per matrix table.
 	const prefetchTargets: { section_tipo: string; section_id: string }[] = [];
-	for (const [topTipo, byId] of groups) {
+	for (const [topTipo, byId] of scopedGroups) {
 		for (const topId of byId.keys()) {
 			prefetchTargets.push({ section_tipo: topTipo, section_id: topId });
 		}
 	}
 	await prefetchRecords(ctx, prefetchTargets);
 
-	for (const [topTipo, byId] of groups) {
+	for (const [topTipo, byId] of scopedGroups) {
 		// section caption column
 		const sectionNode = await getNode(topTipo);
 		const sectionColor = (sectionNode?.properties as { color?: string } | null)?.color;

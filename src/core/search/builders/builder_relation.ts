@@ -14,14 +14,15 @@
  * emits column-direct SQL there; buildRelationFragment dispatches by
  * context.table exactly like the PHP dispatch_relation_operator_sql.
  *
- * ANCESTOR WRAP (buildRelationSearchAncestorFragment): the CORRECT
- * relation_search $or wrap for the legacy component_autocomplete_hi model.
- * DELIBERATELY NOT wired into the live conform dispatch: PHP's
- * add_relation_search is LIVE-DEFECTIVE (the clone ignores component_path —
- * ancestor searches return 0 there), and the coexistence posture keeps the
- * TS wire result-equivalent (autocomplete_hi_search_differential pins both
- * sides). The correct machinery ships unit-gated against the maintained
- * relation_search column; wire it when PHP fixes the wrap.
+ * ANCESTOR WRAP (buildRelationSearchAncestorFragment): the relation_search
+ * wrap for the legacy component_autocomplete_hi model — LIVE since 2026-08-09
+ * (audits/2026-08_oh1_beta §5.5, and the ledger entry
+ * WC-2026-08-09-autocomplete-hi-ancestor-search). conform.ts applies it
+ * whenever the leaf's STORED model is component_autocomplete_hi — exactly when
+ * save_component.ts maintains the index. It was withheld while PHP shared the
+ * database, because PHP's own wrap is defective for '=='; PHP is decommissioned
+ * and the withholding turned a maintained-on-write index into an index that was
+ * never read — a broader-term search silently under-returned.
  */
 
 import { composeContains, composeNotContains, relationProbeGroups } from '../containment.ts';
@@ -153,29 +154,79 @@ function buildActivityWhoFragment(
 	return fragment(match, tokens);
 }
 
+/**
+ * The SQL expression a relation leaf compares against: `<alias>.<column>` by
+ * default, or the context's explicit `columnExpr` (the NULL-safe ancestor
+ * column — see BuilderContext.columnExpr).
+ */
+function columnRefOf(context: BuilderContext): string {
+	return context.columnExpr ?? `${context.alias}.${context.column}`;
+}
+
 /** matrix_activity components whose actor/target rides an expression index. */
 const ACTIVITY_EXPRESSION_INDEXED: ReadonlySet<string> = new Set(['dd543']);
 
+/** Operators whose two column clauses must BOTH hold (a negation excludes). */
+const NEGATING_RELATION_OPERATORS: ReadonlySet<string> = new Set(['!*', '!=', '!==']);
+
 /**
- * The CORRECT autocomplete_hi ancestor wrap (PHP add_relation_search as
- * DESIGNED, not as live-shipped): (relation contains q) OR (relation_search
- * contains q) — a term matches records linking it directly AND records
- * linking any of its DESCENDANTS ('search Spain matches Madrid', the index
- * the save path maintains). See the module doc for why this is NOT in the
- * live dispatch.
+ * The autocomplete_hi ancestor wrap — PHP add_relation_search
+ * (trait.search_component_relation_common.php:512), consulting BOTH the direct
+ * `relation` column and the `relation_search` ancestor index the save path
+ * maintains (relations/save.ts maintainRelationSearchIndex) in ONE pass. A
+ * search on a BROADER term therefore returns the records filed under its
+ * narrower ones ("search Spain matches Madrid"), as v6 did.
+ *
+ * GROUPING (PHP's own rule, corrected in two places — the ledger entry
+ * WC-2026-08-09-autocomplete-hi-ancestor-search states each correction):
+ *   - positive operators ('', '==', '*') → `$or`: a hit in EITHER column
+ *     satisfies the filter;
+ *   - negating operators ('!*', '!=', '!==') → `$and`: the record must fail
+ *     BOTH, or a record excluded by name would come back through its ancestors.
+ *
+ * Two corrections to PHP-as-shipped, both closing SILENT UNDER/OVER-RETURNS:
+ *   1. PHP skipped repointing the clone's column for `'=='`, so its "ancestor"
+ *      clause searched `relation` twice and the index was never read on the
+ *      one operator the picker actually sends. We always repoint.
+ *   2. PHP grouped `'!=='` with `$or` (`NOT direct OR NOT ancestor`), which
+ *      matches a record contained in `relation` whenever it is absent from
+ *      `relation_search` — the opposite of "different from". It is `$and` here.
+ * The `'!='` ancestor clause additionally uses the STRICT not-contains form:
+ *   PHP's `'!='` also demands `relation_search ? tipo`, which drops every
+ *   record whose term is a hierarchy ROOT (no ancestors are indexed for it).
+ *
+ * NULL-SAFETY ON THE NEGATING ARM. `relation_search` is written only when a
+ * term HAS ancestors, so it is NULL on most rows — 1964 of 2175 on the live
+ * `matrix`, 72 of 76 `oh1` records. Under three-valued logic
+ * `NOT (NULL @> q)` is NULL, not TRUE, so an `$and` of [direct, ancestor] is
+ * NULL for every such row and the row vanishes: a strict-different search that
+ * must return all 76 `oh1` records returned 4. A NULL index means "this record
+ * has no indexed ancestors", never "unknown", so the negating arm compares
+ * against `COALESCE(relation_search, '{}')`. It is applied ONLY there: a
+ * negation cannot ride the `matrix_relation_search_gin_idx` GIN index anyway,
+ * while the POSITIVE arm keeps the bare column and stays index-served (and is
+ * already NULL-safe, because `$or` absorbs a NULL beside a TRUE).
  */
 export function buildRelationSearchAncestorFragment(
 	rawQ: unknown,
 	qOperator: string | null,
 	context: BuilderContext,
 ): BuilderResult {
+	const operator = qOperator ?? '';
 	const direct = buildRelationFragment(rawQ, qOperator, context);
-	const ancestor = buildRelationFragment(rawQ, qOperator, {
+	if (direct === false) return false;
+	const negating = NEGATING_RELATION_OPERATORS.has(operator);
+	// '!=' on the ancestor column would additionally require the key to exist
+	// there; roots have no ancestors, so use the strict not-contains twin.
+	const ancestorOperator = operator === '!=' ? '!==' : qOperator;
+	const ancestorColumn = `${context.alias}.relation_search`;
+	const ancestor = buildRelationFragment(rawQ, ancestorOperator, {
 		...context,
 		column: 'relation_search',
+		columnExpr: negating ? `COALESCE(${ancestorColumn}, '{}'::jsonb)` : ancestorColumn,
 	});
-	if (direct === false || ancestor === false) return direct;
-	return compound('$or', [direct, ancestor]);
+	if (ancestor === false) return direct;
+	return compound(negating ? '$and' : '$or', [direct, ancestor]);
 }
 
 export function buildRelationFragment(
@@ -190,10 +241,13 @@ export function buildRelationFragment(
 	}
 	const operator = qOperator ?? '';
 	const qLocators = normalizeRelationQ(rawQ);
+	// The comparison target: `<alias>.<column>`, or the context's explicit
+	// NULL-safe ancestor expression (BuilderContext.columnExpr).
+	const columnRef = columnRefOf(context);
 
 	// '!*' — empty: the component key is absent from the relation column.
 	if (operator === '!*') {
-		return fragment(`NOT (${context.alias}.${context.column} ? _Q1_)`, { _Q1_: context.tipo });
+		return fragment(`NOT (${columnRef} ? _Q1_)`, { _Q1_: context.tipo });
 	}
 
 	// dd542 Activity's actor column rides an expression index instead of the
@@ -209,14 +263,13 @@ export function buildRelationFragment(
 
 	// '*' — not-empty: key exists.
 	if (operator === '*') {
-		return fragment(`(${context.alias}.${context.column} ? _Q1_)`, { _Q1_: context.tipo });
+		return fragment(`(${columnRef} ? _Q1_)`, { _Q1_: context.tipo });
 	}
 
 	// The containment operators probe BOTH typed forms of section_id
 	// (containment.ts: per-element decomposition, polarity-aware negation) —
 	// stored locators are string-form until the int migration sweeps them and
 	// int-form after, and @> is type-strict either way.
-	const columnRef = `${context.alias}.${context.column}`;
 
 	// '!=' — has relations for this component AND does not contain q.
 	if (operator === '!=' && qLocators !== null) {

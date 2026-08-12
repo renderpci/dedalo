@@ -108,7 +108,10 @@ export type SearchBuilderFamily = 'string' | 'number' | 'date' | 'iri' | 'sectio
  * - 'string': lang-sliced literal values joined ' | ';
  * - 'datalist': locators resolved to labels through the component datalist;
  * - 'section_id': the record's own numeric id (component_section_id);
- * - 'date': the dd_date flat form (year / d-m-Y, ranges 'start <> end');
+ * - 'date': the dd_date flat form, rendered by the ONE formatter
+ *   (components/component_date/date_value.ts `dateItemToValue`) on the node's
+ *   `date_mode` — 'Y/m/d' degrading to 'Y/m' and then a bare year, ranges
+ *   'start <> end', plus the clock and period modes;
  * - 'iri': the iri value + its dd560 label-dataframe field joined ', ';
  * - 'media': the default-quality file's absolute media URL
  *   (mediaTypeOf(model).defaultQuality — install-tunable via DEDALO_* keys).

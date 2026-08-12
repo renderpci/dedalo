@@ -35,6 +35,7 @@ import {
 import { submitAvTranscode } from '../av_versions.ts';
 import { moveToDeleted } from '../file_ops.ts';
 import { type FileInfoEntry, scanContextFromItem, scanFilesInfo } from '../files_info.ts';
+import { completeMediaPathOptions } from '../ontology_path.ts';
 import {
 	buildMediaIdentifier,
 	buildMediaLocation,
@@ -53,8 +54,10 @@ import {
 } from '../processing.ts';
 import { regenerateMissingDerivatives } from '../repair.ts';
 import { readStoredMediaItems } from '../tool_support.ts';
-import { type AddFileInput, addFile } from './add_file.ts';
+import { type AddFileInput, addFile, stagingDir } from './add_file.ts';
+import { writeMediaCompanions } from './companion_writes.ts';
 import { fireMediaIngestEvent } from './ingest_event.ts';
+import { forgetStagedDisplayName, readStagedDisplayName } from './staged_name_record.ts';
 
 export interface IngestInput extends Omit<AddFileInput, 'spec'> {
 	spec: MediaTypeSpec;
@@ -112,13 +115,33 @@ export function replacesArchivalCue(spec: MediaTypeSpec, quality: string | undef
 }
 
 export interface IngestResult {
-	/** The stored original's file name + extension. */
+	/**
+	 * The STORED original's file name + extension — the deterministic media
+	 * identifier ('rsc35_rsc167_12.mp4'), i.e. PHP's `ready.full_file_name`.
+	 * Despite the name it is NOT what the record's `original_file_name` key should
+	 * hold; that is {@link humanFileName}.
+	 */
 	originalFileName: string;
+	/**
+	 * The name the CURATOR uploaded ('María Piñón entrevista.mp4') — PHP's
+	 * `ready.original_file_name`. This is the value the record's provenance keys
+	 * and the `target_filename` companion field must carry. Persisting the staged
+	 * name instead is the audit's "upload loses the human filename".
+	 */
+	humanFileName: string;
 	extension: string;
 	/** Fresh files_info after derivative generation. */
 	filesInfo: FileInfoEntry[];
 	/**
-	 * Derivative-build failures, one message per failing pass. EMPTY on success —
+	 * Every NON-FATAL post-move failure, one message per failing pass: the
+	 * derivative builds AND (since 2026-08-09) the ontology-declared companion
+	 * writes (`properties.target_filename` / `target_duration` — companion_writes.ts).
+	 * The key keeps its name because it is the channel every caller already
+	 * surfaces, and both classes share the one property that defines it: the file
+	 * has landed and is indexed, but something the ontology asked for around it did
+	 * not happen.
+	 *
+	 * EMPTY on success —
 	 * a non-empty array means the ORIGINAL landed and is indexed, but one or more
 	 * derived tiers (thumb / web quality / SVG envelope / an alternate-extension
 	 * twin) are missing. The twin entries name their config key, because "this
@@ -198,7 +221,14 @@ function retireStalePosterframeAndThumb(
 }
 
 export async function processUploadedFile(input: IngestInput): Promise<IngestResult> {
-	const { spec, identity, pathOpts } = input;
+	const { spec, identity } = input;
+	// RECORD-SCOPED PATH OPTIONS. `properties.additional_path` names a sibling
+	// component whose value ON THIS RECORD is the bucket folder, so the options a
+	// caller resolved from (component, section) alone cannot carry it. Completing
+	// them here — before add_file computes a single path — is what makes the
+	// ingest write where PHP wrote; a caller that already resolved the record form
+	// stays authoritative (completeMediaPathOptions never overrides).
+	const pathOpts = await completeMediaPathOptions(identity, input.pathOpts);
 	// '' is "unset", not a tier: the client sends an empty selector value, and
 	// tool_upload / tool_import_files must not disagree about what it means. One
 	// normalisation for every entry point.
@@ -213,7 +243,23 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 		assertIngestableQuality(spec, quality);
 		assertNormalizedExtensionForTier(spec, quality, assertAllowedExtension(spec, input.extension));
 	}
-	const added = addFile({ ...input, quality });
+	// THE CURATOR'S FILE NAME, recovered from the SERVER (staged_name_record.ts).
+	//
+	// This is the line that makes the human-filename restoration reach production.
+	// The receiver knows the display name; the ingest is a LATER request and is
+	// handed only `tmp_name`, the sanitized staged segment. Relaying the name
+	// through the client would have required all three ingest callers (tool_upload,
+	// tool_import_files, the MCP media tool) to forward it, and none of them did —
+	// so the first attempt, wired only at the transport, recorded the staged name
+	// exactly as before. Read BEFORE add_file: the move is what consumes the staged
+	// file, and the record is dropped with it.
+	const stagingRoot = stagingDir(input.userId, input.keyDir, pathOpts.mediaRoot);
+	const recordedFileName = readStagedDisplayName(stagingRoot, input.tmpName);
+	const added = addFile({ ...input, pathOpts, quality, recordedFileName });
+	// The staged file is gone (add_file renamed it into the media tree), so its
+	// name record describes nothing. Dropped here rather than by the sweeper so an
+	// ingested file leaves no residue at all.
+	forgetStagedDisplayName(stagingRoot, input.tmpName);
 	// TWO DIFFERENT QUESTIONS, deliberately not one boolean:
 	//  - isMaster decides whether the derived tiers are re-encoded from this file
 	//    (any master does that — original OR retouched);
@@ -317,6 +363,26 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 		);
 	}
 
+	// THE ONTOLOGY-DECLARED COMPANION WRITES (properties.target_filename /
+	// target_duration — companion_writes.ts). Run here, after the derivative pass
+	// and before the index is written, because that is where PHP ran them and
+	// because the duration is measured from the file add_file has just placed.
+	//
+	// Same non-fatal posture and same channel as the derivative failures above:
+	// past the move, nothing may abort the ingest, and a companion the ontology
+	// asked for and did not get is a real failure that has to reach the operator
+	// rather than being logged into the void.
+	derivativeErrors.push(
+		...(await writeMediaCompanions({
+			componentTipo: identity.componentTipo,
+			sectionTipo: identity.sectionTipo,
+			sectionId: identity.sectionId,
+			userId: input.userId,
+			originalFileName: added.humanFileName,
+			mediaFilePath: added.originalFilePath,
+		})),
+	);
+
 	// The stored cues (external_source, the original/modified normalized-name
 	// twins) still describe this component — an upload into any other tier does
 	// not invalidate them, and dropping them loses the raw-original twin from the
@@ -413,6 +479,7 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 
 	return {
 		originalFileName: added.fileName,
+		humanFileName: added.humanFileName,
 		extension: added.extension,
 		filesInfo,
 		derivativeErrors,

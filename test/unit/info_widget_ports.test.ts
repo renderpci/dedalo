@@ -42,6 +42,31 @@ async function setColumn(
 	);
 }
 
+/**
+ * Remove a component from a column entirely — "this record has NO datum here".
+ *
+ * Required because record BIRTH is not a blank slate: `createSectionRecord`
+ * plants every `dato_default` the ontology declares, and `numisdata57`
+ * declares one (`dato_default: [{section_tipo:'dd64', section_id:'1'}]`).
+ * get_archive_states buckets purely on `section_id` (PHP
+ * `array_column($ar_answer,'section_id')`), so that default lands in the
+ * affirmative bucket exactly like a curator's answer would. A fixture that
+ * means "unanswered" has to SAY so instead of relying on a fresh record being
+ * empty — otherwise this gate silently re-measures record-birth policy.
+ */
+async function clearColumn(
+	sectionTipo: string,
+	sectionId: number,
+	column: string,
+	componentTipo: string,
+): Promise<void> {
+	await sql.unsafe(
+		`UPDATE matrix SET ${column} = COALESCE(${column}, '{}'::jsonb) - $1::text
+		 WHERE section_tipo = $2 AND section_id = $3`,
+		[componentTipo, sectionTipo, sectionId],
+	);
+}
+
 const locatorOf = (sectionTipo: string, sectionId: number, from: string, id = 1) => ({
 	id,
 	type: 'dd151',
@@ -64,6 +89,13 @@ beforeAll(async () => {
 	fixtures.coinA = track('numisdata4', await createSectionRecord('numisdata4', -1));
 	fixtures.coinB = track('numisdata4', await createSectionRecord('numisdata4', -1));
 	fixtures.coinC = track('numisdata4', await createSectionRecord('numisdata4', -1));
+	// Every coin starts from a DECLARED state, never from whatever record birth
+	// leaves behind: wipe the two state components on all three, then plant only
+	// what each scenario means (coinC stays wiped — it is the unanswered one).
+	for (const coin of [fixtures.coinA, fixtures.coinB, fixtures.coinC]) {
+		await clearColumn('numisdata4', coin, 'relation', 'numisdata57');
+		await clearColumn('numisdata4', coin, 'relation', 'numisdata157');
+	}
 	await setColumn(
 		'numisdata3',
 		fixtures.host,
@@ -94,7 +126,8 @@ beforeAll(async () => {
 	await setColumn('numisdata4', fixtures.coinB, 'date', 'numisdata491', [
 		{ id: 1, start: { year: 2021, month: 5, day: 10 } },
 	]);
-	// coinC: no states, no dates (excluded from counts; empty date pair)
+	// coinC: no states (explicitly cleared above), no dates — excluded from both
+	// dimension counts while still counting toward the percentage denominator.
 });
 
 afterAll(async () => {

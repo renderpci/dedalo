@@ -18,30 +18,25 @@
  * is never built from itself.
  */
 
-import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync } from 'node:fs';
 import { AUDIO_TR_QUALITY, assertValidQuality, type MediaTypeSpec } from '../concepts/media.ts';
-import { extractAudio, probeStreams, standardFromFps, transcodeTwoPass } from './engine/ffmpeg.ts';
+import { writeAtomically } from './atomic.ts';
+import {
+	applyFaststart,
+	extractAudio,
+	type FaststartOutcome,
+	probeStreams,
+	standardFromFps,
+	transcodeTwoPass,
+} from './engine/ffmpeg.ts';
 import { getFfmpegProfile, settingName } from './engine/ffmpeg_profiles.ts';
+import type { SpawnOptions } from './engine/spawn.ts';
 import { scanContextFromItem, scanFilesInfo } from './files_info.ts';
 import { mediaJobs } from './jobs.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
 import { resolveMasterSource } from './processing.ts';
 import { readStoredMediaItems } from './tool_support.ts';
 import { reconcileStoredFilesInfo } from './tools/files_info_persist.ts';
-
-/** Ensure the parent dir of an output file exists (mirrors processing.ts ensureDir). */
-function ensureMediaDir(absolutePath: string): void {
-	const dir = dirname(absolutePath);
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o775 });
-}
-
-/** Best-effort removal of ffmpeg's two-pass stats scratch (`${passLog}-0.log` + .mbtree). */
-function removePassLog(passLog: string): void {
-	for (const suffix of ['-0.log', '-0.log.mbtree']) {
-		rmSync(`${passLog}${suffix}`, { force: true });
-	}
-}
 
 /** 16x9 vs 4x3 from dimensions (PHP get_aspect_ratio). */
 function pickAspect(width?: number, height?: number): '16x9' | '4x3' | null {
@@ -58,9 +53,21 @@ export interface AvSourceProfile {
 	hasVideo: boolean;
 }
 
-/** Probe the source once; both encode branches read the result. */
+/**
+ * Probe the source once; both encode branches read the result.
+ *
+ * A NULL probe is a FAILED probe, never an empty source: `probeStreams` returns
+ * null only when ffprobe's output would not parse (a killed or crashed probe) —
+ * a genuinely stream-less file still answers `{"streams":[]}`. Guessing from it
+ * would silently narrow the encode: no audio stream detected ⇒ the audio tier is
+ * SKIPPED, and an oral-history interview whose whole value is its audio would be
+ * transcoded to a silent video with nothing anywhere saying why.
+ */
 export async function probeAvSource(source: string): Promise<AvSourceProfile> {
 	const probe = await probeStreams(source);
+	if (probe === null) {
+		throw new Error(`ffprobe could not read the streams of ${source} — refusing to guess`);
+	}
 	const video = probe?.streams?.find((entry) => entry.codec_type === 'video');
 	return {
 		standard: standardFromFps(video?.avg_frame_rate),
@@ -80,13 +87,35 @@ function isAudioTier(quality: string): boolean {
  * ingest tolerates both (a video-only source has no audio to extract; a tier
  * outside the profile table is not buildable on this install), while the tool
  * path turns either into a loud failure the operator can read.
+ *
+ * `faststart` reports the moov relocation for video tiers (null for the audio
+ * extraction, which PHP never faststarted). A `faststart.error` NEVER fails the
+ * encode — the file is sound, just not progressive — but every caller surfaces
+ * it, because an unreported degradation is how this step went missing for a
+ * whole release.
  */
-export type AvEncodeOutcome = { built: string } | { skipped: 'no_profile' | 'no_audio_stream' };
+export type AvEncodeOutcome =
+	| { built: string; faststart: FaststartOutcome | null }
+	| { skipped: 'no_profile' | 'no_audio_stream' };
 
 /**
  * Encode one av quality tier from `source`. Video tiers run the two-pass x264
- * profile for `<quality>_<standard>[_<aspect>]`; audio tiers extract. Output is
- * atomic (temp + rename) and the two-pass stats scratch is removed.
+ * profile for `<quality>_<standard>[_<aspect>]` and then relocate the moov atom
+ * (PHP's qt-faststart step); audio tiers extract. Output is atomic (temp +
+ * rename) and the two-pass stats scratch is removed.
+ *
+ * NOTHING IS PUBLISHED UNTIL IT IS PROVEN SOUND (audit 2026-08 B2). Both tiers
+ * go through `writeAtomically` (atomic.ts): the encode throws on a
+ * killed/timed-out/non-zero pass, the producer verifies its own output is
+ * non-empty, the moov relocation runs on the temp, and only then does the rename
+ * replace whatever was at `target`. A failure leaves the PREVIOUS derivative
+ * exactly as it was — for a heritage master that is the difference between
+ * "rebuild this tier" and "this recording is silently truncated forever".
+ *
+ * `spawnOptions` overrides the spawn policy; left empty (as every job runner
+ * leaves it) the producers apply their own — an INACTIVITY cap, never a
+ * wall-clock budget, because an hour-long interview's two-pass encode
+ * legitimately outruns any constant (engine/ffmpeg.ts PRODUCER_IDLE_TIMEOUT_MS).
  */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
@@ -102,6 +131,7 @@ export async function encodeAvQuality(
 	quality: string,
 	source: string,
 	profile: AvSourceProfile,
+	spawnOptions: SpawnOptions = {},
 ): Promise<AvEncodeOutcome> {
 	const target = buildMediaLocation(
 		spec,
@@ -115,29 +145,46 @@ export async function encodeAvQuality(
 		// A silent/video-only source makes ffmpeg emit "Output file does not
 		// contain any stream" and exit non-zero — a skip, not a failure.
 		if (!profile.hasAudio) return { skipped: 'no_audio_stream' };
-		ensureMediaDir(target);
-		await extractAudio(source, target, quality === AUDIO_TR_QUALITY ? 'audio_tr' : 'audio');
-		return { built: target };
+		// `extractAudio` is atomic in its own right (it is also called with a SERVED
+		// path by tools/transcription.ts), so there is no temp to hand-roll here.
+		await extractAudio(
+			source,
+			target,
+			quality === AUDIO_TR_QUALITY ? 'audio_tr' : 'audio',
+			spawnOptions,
+		);
+		return { built: target, faststart: null };
 	}
 
 	const profileName = settingName(quality, profile.standard, profile.aspect);
-	if (getFfmpegProfile(profileName) === null) return { skipped: 'no_profile' };
+	const ffmpegProfile = getFfmpegProfile(profileName);
+	if (ffmpegProfile === null) return { skipped: 'no_profile' };
 
-	// The quality tier's directory (e.g. av/576/<bucket>/) may not exist yet.
-	// ffmpeg pass 1 writes its two-pass stats file into this dir, so without the
-	// mkdir it dies with "ratecontrol_init: can't open stats file" and NO
-	// derivative is ever produced.
-	ensureMediaDir(target);
-	const temp = `${target}.tmp.${process.pid}`;
-	const passLog = `${target}.passlog`;
-	try {
-		await transcodeTwoPass(profileName, source, temp, passLog);
-		renameSync(temp, target);
-	} finally {
-		removePassLog(passLog);
-		rmSync(temp, { force: true });
+	// `writeAtomically` creates the tier's directory (av/576/<bucket>/) before the
+	// producer runs — ffmpeg pass 1 writes its statistics file beside the temp, so
+	// without it the encode dies with "ratecontrol_init: can't open stats file"
+	// and NO derivative is ever produced — and its `finally` sweeps the temp on
+	// every failure path.
+	let faststart: FaststartOutcome | null = null;
+	await writeAtomically(target, async (temp) => {
+		await transcodeTwoPass(profileName, source, temp, spawnOptions);
+		// PHP's `nice -n 19 <qt-faststart> <tmp> <target>` (class.Ffmpeg.php:782),
+		// on the temp: the rename writeAtomically does is the one publication step.
+		faststart = await applyFaststart(temp, { format: ffmpegProfile.force, ...spawnOptions });
+		if (faststart.error !== null) {
+			console.error(
+				`[media] av ${identity.sectionTipo}/${identity.sectionId}/${identity.componentTipo} '${quality}': ${faststart.error}`,
+			);
+		}
+	});
+	if (faststart === null) {
+		// The producer ran to completion without recording an outcome, which cannot
+		// happen — but a null here would report a derivative whose moov position
+		// nobody established, and an unreported degradation is how the faststart
+		// step went missing for a whole release.
+		throw new Error(`${profileName}: the encode published no faststart outcome for ${target}`);
 	}
-	return { built: target };
+	return { built: target, faststart };
 }
 
 /**
@@ -275,9 +322,18 @@ export function submitAvTranscode(
 
 		const persistError = await persistOrReport(spec, identity, pathOpts);
 		onProgress(100);
-		return { created, persist_error: persistError };
+		return {
+			created,
+			persist_error: persistError,
+			faststart_error: faststartErrorOf(video),
+		};
 	});
 	return record.id;
+}
+
+/** The degradation an outcome carries, for the job payload (null when sound). */
+function faststartErrorOf(outcome: AvEncodeOutcome): string | null {
+	return 'built' in outcome ? (outcome.faststart?.error ?? null) : null;
 }
 
 /** Why a per-quality build cannot even be submitted (the operator-facing reason). */
@@ -338,7 +394,12 @@ export async function submitAvVersionBuild(
 		onProgress(90);
 		const persistError = await persistOrReport(spec, identity, pathOpts);
 		onProgress(100);
-		return { created: [outcome.built], quality, persist_error: persistError };
+		return {
+			created: [outcome.built],
+			quality,
+			persist_error: persistError,
+			faststart_error: faststartErrorOf(outcome),
+		};
 	});
 	return record.id;
 }

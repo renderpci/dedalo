@@ -147,13 +147,40 @@ export function auditDateItem(now: Date): Record<string, unknown> {
  * ACCEPTED without error (the save path's materialize-on-save race, S1-02:
  * two concurrent saves both find no row and both try to create it; the loser
  * re-reads under its lock) and the requested sectionId is returned.
+ *
+ * BIRTH DEFAULTS (audit B1, WC-2026-08-09-record-birth-defaults). The insert also carries the record's
+ * ontology-declared initial state — the projects filter locator and every
+ * `properties.dato_default` — built by record_defaults.ts. THIS is the
+ * chokepoint for it: PHP wrote those on the first edit-form BUILD, which
+ * misses every non-rendering door (import, ts_api, MCP, the portal "+") and
+ * left a non-admin's new record outside the projects ACL — invisible in list
+ * and search, 403 on every save. One INSERT carries them, so the record is
+ * never momentarily unreachable and no Time Machine row records a "change"
+ * that is really the record's birth state.
+ *
+ * `options.filterData` supplies the project locators explicitly (PHP
+ * set_projects_to_new_section_record's `$component_filter_data` branch — the
+ * portal "+" inherits the HOST record's projects instead of the computed
+ * default).
+ *
+ * THERE IS NO PER-DOOR OPT-OUT, deliberately. A record's ontology-declared
+ * birth state does not depend on which door made it, and an opt-out is exactly
+ * the silent narrowing this module exists to end: the ontology/hierarchy
+ * provisioners would mint node records structurally different from the ones a
+ * curator makes, and the difference would surface as "this node has no project"
+ * months later. Where a provisioner means the opposite of a declared default it
+ * OVERWRITES it explicitly (hierarchy_provision's `ontology30` on the model
+ * twin), which is legible in the code that means it.
  */
 export async function createSectionRecord(
 	sectionTipo: string,
 	userId: number,
 	now: Date = new Date(),
 	sectionId?: number,
-	options: { conflictTolerant?: boolean } = {},
+	options: {
+		conflictTolerant?: boolean;
+		filterData?: readonly Record<string, unknown>[];
+	} = {},
 ): Promise<number> {
 	// Consultation-only sections are read-only for every caller (Activity dd542,
 	// Time Machine dd15, …). PHP refuses this at section::create_record:452; the
@@ -168,11 +195,22 @@ export async function createSectionRecord(
 	if (table === null) {
 		throw new Error(`createSectionRecord: no matrix table for section '${sectionTipo}'`);
 	}
+	// Ontology-declared birth state (project filter + properties.dato_default).
+	// Merged UNDER the audit metadata: no default may ever displace the
+	// created-by/created-date stamps.
+	const { buildRecordDefaultColumns } = await import('./record_defaults.ts');
+	const defaults = await buildRecordDefaultColumns(sectionTipo, userId, {
+		filterData: options.filterData,
+	});
 	const jsonbColumns = {
+		...defaults,
 		data: await buildRecordMetadata(sectionTipo, userId, now),
 		// created-by-user link + creation date (PHP build_modification_data 'new_record').
-		relation: { [CREATED_BY_USER]: [auditUserLocator(userId, CREATED_BY_USER)] },
-		date: { [CREATED_DATE]: [auditDateItem(now)] },
+		relation: {
+			...defaults.relation,
+			[CREATED_BY_USER]: [auditUserLocator(userId, CREATED_BY_USER)],
+		},
+		date: { ...defaults.date, [CREATED_DATE]: [auditDateItem(now)] },
 	};
 	const newSectionId =
 		sectionId === undefined
@@ -187,13 +225,16 @@ export async function createSectionRecord(
 	// create() :2074 → save_event()), and a create is a real cache input: the
 	// record now EXISTS, which is what the data-derived caches (datalist option
 	// lists, authorized projects, hierarchy targets …) enumerate.
-	// For the three tool sections a bare create is inert TODAY — every tools
-	// reader skips a nameless row and fetchActiveToolRows filters on the dd1354
-	// active relation, neither of which a fresh record carries — but "inert
-	// because of what the readers happen to select" is not an invariant anyone
-	// maintains; "every dd1324/dd996/dd234 write reaches invalidateAllToolCaches"
-	// is. Over-invalidation is cheap and harmless; a missed hop is permanent
-	// staleness. Fired unconditionally, including the conflictTolerant no-op
+	// For the three tool sections a bare create used to be inert because every
+	// tools reader skips a nameless row AND fetchActiveToolRows filters on the
+	// dd1354 active relation — but that second half is GONE since the birth
+	// defaults landed: dd1324/dd996 declare `dato_default` on dd1354, so a fresh
+	// tool-register row is now born ACTIVE (still nameless, so still skipped).
+	// "Inert because of what the readers happen to select" was never an
+	// invariant anyone maintained; "every dd1324/dd996/dd234 write reaches
+	// invalidateAllToolCaches" is. Over-invalidation is cheap and harmless; a
+	// missed hop is permanent staleness. Fired unconditionally, including the
+	// conflictTolerant no-op
 	// (the S1-02 materialize-on-save race loser) — that path is inside a
 	// transaction and fireSaveEvent self-defers its listener fan-out there.
 	await fireSaveEvent(sectionTipo);

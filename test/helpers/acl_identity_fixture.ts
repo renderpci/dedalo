@@ -83,6 +83,24 @@ export const ACL_NON_ADMIN_PROFILE_ID = 930012;
 /** dd153 project the non-admin's dd170 relation resolves to. */
 export const ACL_PROJECT_ID = 930021;
 
+/**
+ * The dd1324 registry row of the tool the ADMIN profile grants and the reader
+ * profile does not (`tool_export`).
+ *
+ * The grant is EXPLICIT because the tool ACL has no role shortcut: only the
+ * SUPERUSER id receives the unfiltered tool list (registry.ts getUserTools —
+ * audit OH1 finding 5), so a global admin sees exactly the tools their profile
+ * names plus the always_active ones, like everyone else. A fixture admin
+ * without this locator authorizes no restricted tool at all.
+ *
+ * The id is the SUITE DB's row for that name (asserted below by the fixture's
+ * own gate, so a re-seeded registry fails loudly instead of granting whatever
+ * tool happens to sit at this id).
+ */
+export const ACL_GRANTED_TOOL_REGISTRY_ID = 21;
+/** Its `dd1326` name — what a caller asks for as `source.model`. */
+export const ACL_GRANTED_TOOL_NAME = 'tool_export';
+
 /** The section the grants are written for — the real playground section. */
 export const ACL_GRANTED_SECTION = 'test3';
 /** Grant level held by the admin's profile on {@link ACL_GRANTED_SECTION}. */
@@ -102,6 +120,8 @@ const USERS_SECTION = 'dd128';
 const PROFILES_SECTION = 'dd234';
 const PROJECTS_SECTION = 'dd153';
 const YES_NO_SECTION = 'dd64';
+/** The tools REGISTRY section (dd1324) a dd1067 grant locator points into. */
+const TOOLS_REGISTER_SECTION = 'dd1324';
 /** dd64 record ids: 1 = Yes, 2 = No (the flag components point at these). */
 const YES = 1;
 const NO = 2;
@@ -192,8 +212,29 @@ export function clearAclIdentityCaches(): void {
  * Mint the fixture. Idempotent: a crashed previous run's rows are swept first
  * (leniently — nothing to delete is the normal case here).
  */
+/**
+ * The dd1067 grant addresses the registry by section_id, so a re-seeded or
+ * re-ordered dd1324 registry would silently move the grant onto a DIFFERENT
+ * tool and every consumer would still be green while testing the wrong thing.
+ * Assert the pair instead of trusting it.
+ */
+async function assertGrantedToolRow(): Promise<void> {
+	const rows = (await sql.unsafe(
+		`SELECT string->'dd1326'->0->>'value' AS name FROM matrix_tools
+		 WHERE section_tipo = $1 AND section_id = $2`,
+		[TOOLS_REGISTER_SECTION, ACL_GRANTED_TOOL_REGISTRY_ID],
+	)) as { name: string | null }[];
+	const name = rows[0]?.name ?? null;
+	if (name !== ACL_GRANTED_TOOL_NAME) {
+		throw new Error(
+			`acl_identity_fixture: dd1324/${ACL_GRANTED_TOOL_REGISTRY_ID} is '${name}', expected '${ACL_GRANTED_TOOL_NAME}' — the tool registry moved; re-read the id and update ACL_GRANTED_TOOL_REGISTRY_ID.`,
+		);
+	}
+}
+
 export async function installAclIdentityFixture(): Promise<void> {
 	assertScratchIds();
+	await assertGrantedToolRow();
 	await purge({ strict: false });
 
 	// The one project the non-admin is scoped to.
@@ -204,6 +245,12 @@ export async function installAclIdentityFixture(): Promise<void> {
 	// Profiles — the dd774 grant matrix getPermissionsTable reads off `misc`.
 	await insertScratchRecord('matrix_profiles', PROFILES_SECTION, ACL_ADMIN_PROFILE_ID, {
 		string: { dd237: [{ id: 1, lang: 'lg-eng', value: 'zzacl admin profile' }] },
+		// dd1067 — the profile's authorized-tools locators (→ dd1324 registry
+		// rows), the ONLY thing that authorizes a restricted tool for a
+		// non-superuser. See ACL_GRANTED_TOOL_REGISTRY_ID.
+		relation: {
+			dd1067: [recordLocator('dd1067', TOOLS_REGISTER_SECTION, ACL_GRANTED_TOOL_REGISTRY_ID)],
+		},
 		misc: {
 			dd774: [
 				{

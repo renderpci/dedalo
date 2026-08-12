@@ -33,6 +33,7 @@
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { sanitizeSegment, stagingDir } from './add_file.ts';
+import { pruneOrphanStagedNames } from './staged_name_record.ts';
 
 /** How long an untouched in-flight upload survives before it is collected. */
 export const STAGING_ORPHAN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -140,6 +141,12 @@ export function sweepStagedOrphans(
 			console.warn('[staging_gc] could not remove', entry, (error as Error).message);
 		}
 	}
+	// The display-name records (staged_name_record.ts) follow the same rule as the
+	// artifacts above: one belongs to ONE staged file, and is collectable once that
+	// file is gone AND it has been untouched for the retention window. Normally
+	// they are dropped with their file (by the ingest or by deleteStagedFile); this
+	// is the backstop for a file removed by something that did neither.
+	removed += pruneOrphanStagedNames(dir, now, STAGING_ORPHAN_TTL_MS);
 	return removed;
 }
 

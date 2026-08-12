@@ -1,11 +1,12 @@
 /**
- * Gate: tool_ontology_parser — the module contract, the developer gate on all
- * five actions, and the two READ wires the client renders.
+ * Gate: tool_ontology_parser — the module contract, the developer gate on every
+ * action, and the two READ wires the client renders.
  *
  * `test/unit/ontology_data_io.test.ts` already covers the export pipeline's
  * ordering/abort semantics with an injected IO. What was untested is the part a
  * user actually touches first: the ACTION SURFACE (five developer-gated actions,
- * none background-runnable) and the two reads —
+ * none background-runnable — `reconcile_ontologies` was removed 2026-08-11, leaving
+ * `regenerate_ontologies` the ONE write onto the projection) and the two reads —
  *
  *  - get_ontologies      → the census the tool's checkbox list is built from.
  *    Its wire is EXACTLY five keys; adding a sixth leaks census internals
@@ -30,8 +31,10 @@ const ACTIONS = [
 	'export_ontologies',
 	'get_ontologies',
 	'inspect_ontologies',
-	'reconcile_ontologies',
 	'regenerate_ontologies',
+	// The one action that writes SOURCE records: it rewrites a misfiled ontology7
+	// back to its section's tld (ONT-TLD), the repair the read-only edit field removed.
+	'repair_tlds',
 ];
 
 function ctx(principal: Principal, options: Record<string, unknown> = {}): ToolActionContext {
@@ -150,5 +153,109 @@ describe('tool_ontology_parser module', () => {
 			expect(res.result).toBe(false);
 			expect(res.errors).toContain('selected_ontologies must be a non-empty array');
 		}
+	});
+
+	/**
+	 * WC-2026-08-11-regenerate-drops-llm-map-post-step. PHP ran `export_llm_map` after the
+	 * dd_ontology write and merged its errors in. The map is a DISTRIBUTION artifact whose
+	 * companions (`ontology.json`, the per-TLD dumps) a regenerate does not refresh either,
+	 * and building it walks the WHOLE install: 21.2s of a measured 22.1s request on
+	 * dedalo7_mht, against 76ms for the parse+diff of the TLD actually asked for.
+	 *
+	 * Asserted against the SOURCE because the regression is a re-added call, not a wrong
+	 * value — a response-shape assertion cannot see the 21 seconds. The export handler is
+	 * read in the same pass so this can never pass by the map having left the file entirely:
+	 * `export_ontologies` must still be its one caller (its always-runs/errors-merged
+	 * semantics stay gated by `ontology_data_io.test.ts`).
+	 */
+	test('regenerate_ontologies does NOT rebuild the LLM map; export_ontologies still does', async () => {
+		const source = await Bun.file(
+			`${import.meta.dir}/../../tools/tool_ontology_parser/server/tool_ontology_parser.ts`,
+		).text();
+
+		const body = (fnName: string): string => {
+			const start = source.indexOf(`export async function ${fnName}(`);
+			expect(start).toBeGreaterThan(-1);
+			const next = source.indexOf('\nexport ', start + 1);
+			return source.slice(start, next === -1 ? source.length : next);
+		};
+
+		// The regenerate handler reaches nothing llm-map shaped (call or wrapper).
+		expect(body('toolOntologyParserRegenerate')).not.toMatch(/[Ll]lmMap\s*\(/);
+		// …and the export pipeline still runs it.
+		expect(body('runExportOntologies')).toMatch(/io\.exportLlmMap\s*\(/);
+	});
+});
+
+/**
+ * Gate: the tool's UI strings. Every `get_tool_label('x')` the client calls must exist in the
+ * register SEED, in every language the seed already speaks.
+ *
+ * Without this the failure is silent and slow: the JS `|| 'literal'` fallback means a label
+ * missing from the seed still RENDERS — in English — for every operator on the install, and
+ * nothing fails until someone notices one control is not translated. The client is the source
+ * of demand here, so the key list is extracted from it rather than restated.
+ */
+describe('tool_ontology_parser labels', () => {
+	const TOOL_DIR = `${import.meta.dir}/../../tools/tool_ontology_parser`;
+	const LABELS_TIPO = 'dd1372';
+
+	type LabelItem = { lang: string; name: string; value: string };
+
+	async function seedLabels(): Promise<LabelItem[]> {
+		const register = JSON.parse(await Bun.file(`${TOOL_DIR}/register.json`).text());
+		const value = register.misc?.[LABELS_TIPO]?.[0]?.value;
+		expect(Array.isArray(value)).toBe(true);
+		return value as LabelItem[];
+	}
+
+	/** The label keys the client actually asks for, read off the tool's own JS. */
+	async function requestedKeys(): Promise<string[]> {
+		const files = ['js/render_tool_ontology_parser.js', 'js/tool_ontology_parser.js'];
+		const keys = new Set<string>();
+		for (const file of files) {
+			const source = await Bun.file(`${TOOL_DIR}/${file}`).text();
+			for (const match of source.matchAll(/get_tool_label\(\s*'([^']+)'\s*\)/g)) {
+				keys.add(mustGet(match[1], 'label key'));
+			}
+		}
+		return [...keys].sort();
+	}
+
+	test('every label the client asks for is in the seed', async () => {
+		const labels = await seedLabels();
+		const defined = new Set(labels.map((item) => item.name));
+		const missing = (await requestedKeys()).filter((key) => !defined.has(key));
+		expect(missing).toEqual([]);
+	});
+
+	test('every label is translated into every language the seed speaks', async () => {
+		const labels = await seedLabels();
+		const langs = [...new Set(labels.map((item) => item.lang))].sort();
+		expect(langs.length).toBeGreaterThan(1); // guard: a one-lang seed would pass vacuously
+
+		const byName = new Map<string, Set<string>>();
+		for (const item of labels) {
+			const langsForName = byName.get(item.name) ?? new Set<string>();
+			langsForName.add(item.lang);
+			byName.set(item.name, langsForName);
+		}
+
+		const gaps = [...byName.entries()]
+			.map(([name, present]) => ({ name, missing: langs.filter((lang) => !present.has(lang)) }))
+			.filter((entry) => entry.missing.length > 0);
+		expect(gaps).toEqual([]);
+	});
+
+	test('no label is defined twice for the same language', async () => {
+		const labels = await seedLabels();
+		const seen = new Set<string>();
+		const duplicates: string[] = [];
+		for (const item of labels) {
+			const key = `${item.name}/${item.lang}`;
+			if (seen.has(key)) duplicates.push(key);
+			seen.add(key);
+		}
+		expect(duplicates).toEqual([]);
 	});
 });

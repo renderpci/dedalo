@@ -162,9 +162,20 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
  * against anything but a null/undefined presence check; (b) String()/Number()
  * coercions of a section_id compared strictly.
  */
+/*
+ * A `typeof x.section_id !== 'string'` TYPE GUARD is not a matcher either: its
+ * right-hand side is a typeof result name, never a section_id VALUE, so it
+ * cannot express the loose-numeric law this ratchet protects ('05' matching 5).
+ * The legacy-shape identifier in component_info/widgets/widget_common.ts is one
+ * of these, and counting it would have meant extending the ratchet upward for a
+ * file that never compares a locator at all.
+ */
+const TYPEOF_RESULT = String.raw`(?:string|number|object|undefined|boolean|bigint|symbol|function)`;
 const INLINE_PATTERNS: readonly RegExp[] = [
 	// Presence/emptiness checks (null / undefined / '') are NOT matchers.
-	/\.section_id\s*(?:===|!==|==|!=)(?!=)\s*(?=\S)(?!null\b|undefined\b|''|"")/,
+	new RegExp(
+		String.raw`\.section_id\s*(?:===|!==|==|!=)(?!=)\s*(?=\S)(?!null\b|undefined\b|''|"")(?!'${TYPEOF_RESULT}')(?!"${TYPEOF_RESULT}")`,
+	),
 	/(?:String|Number)\([^)\n]*section_id[^)\n]*\)\s*(?:===|!==)/,
 ];
 

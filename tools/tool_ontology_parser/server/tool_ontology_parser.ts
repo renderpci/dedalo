@@ -2,19 +2,25 @@
  * tool_ontology_parser handler — PHP
  * tools/tool_ontology_parser/class.tool_ontology_parser.php.
  *
- * Developer-only. The dd_ontology writes are OWNED by core/ontology/ontology_state.ts
- * (inspect/ensure/rebuild — the single reconcile authority); this tool is a gated door onto
- * it, matching the tool_hierarchy → hierarchy_state pattern. Registered actions:
+ * Developer-only. The dd_ontology write is OWNED by core/ontology/ontology_state.ts
+ * (inspect/rebuild — the single rebuild authority); this tool is a gated door onto it,
+ * matching the tool_hierarchy → hierarchy_state pattern. Registered actions:
  *  - get_ontologies: the census — every matrix_ontology_main record's UI metadata
  *    ({target_section_tipo, tld, name, typology_id, typology_name}); skips records missing
  *    target/tld (non-fatal). Shared with update_ontology_info (data_io.ts getActiveOntologies).
  *  - inspect_ontologies (READ): the drift of each selected TLD (which dd_ontology nodes are
  *    missing, stale or orphaned vs the matrix source). The client's status panel.
- *  - reconcile_ontologies (WRITE, default): INCREMENTAL — apply only the delta
- *    (ensureOntology). Non-destructive; a TLD in sync is a no-op.
- *  - regenerate_ontologies (WRITE, nuclear): TRANSACTIONAL wipe-and-rebuild
- *    (rebuildOntology) for structural corruption the incremental path cannot fix.
- *  - both writes run the LLM-map post-step (PHP: export_llm_map errors merged in).
+ *  - repair_tlds (WRITE, SOURCE data): rewrite a misfiled `ontology7` back to its section's
+ *    tld. The read-only edit field left no other way to clear the drift inspect reports.
+ *  - regenerate_ontologies (WRITE, the ONE projection write): TRANSACTIONAL
+ *    wipe-and-rebuild (rebuildOntology). The incremental `reconcile_ontologies`
+ *    companion was removed 2026-08-11 — a transactional rebuild publishes atomically
+ *    (MVCC: no reader ever sees the wipe), so the weaker writer bought nothing but a
+ *    choice the operator had no criterion to make. See the ontology_state.ts header.
+ *    It does NOT rebuild the LLM map — that post-step moved to export_ontologies alone
+ *    (WC-2026-08-11-regenerate-drops-llm-map-post-step): the map is a DISTRIBUTION file
+ *    served next to ontology.json and the per-TLD dumps, none of which a regenerate
+ *    refreshes, and rebuilding it cost 21s of the tool's 22s on a 752-section install.
  *  - export_ontologies: the ordered export pipeline (PHP :301-409):
  *    update_ontology_info → export_ontology_info (both hard-abort) → per-TLD
  *    export_to_file (fail-and-continue, run BOUNDED-PARALLEL — see
@@ -32,10 +38,10 @@ import {
 	getActiveOntologies,
 	updateOntologyInfo,
 } from '../../../src/core/ontology/data_io.ts';
+import { normalizeOntologyTld } from '../../../src/core/ontology/data_io_import.ts';
 import {
-	type EnsureOntologyResult,
-	ensureOntologies,
 	inspectOntology,
+	type OntologyWriteResult,
 	rebuildOntologies,
 } from '../../../src/core/ontology/ontology_state.ts';
 import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
@@ -46,8 +52,8 @@ function selectedTlds(context: ToolActionContext): string[] {
 	return Array.isArray(selected) ? selected.map((tld) => String(tld)) : [];
 }
 
-/** Roll a per-TLD reconcile/rebuild batch into one tool response. */
-function summarize(outcomes: EnsureOntologyResult[], tlds: string[], verb: string): ToolResponse {
+/** Roll a per-TLD rebuild batch into one tool response. */
+function summarize(outcomes: OntologyWriteResult[], tlds: string[], verb: string): ToolResponse {
 	const errors: string[] = [];
 	const ar_msg: string[] = [];
 	let applied = 0;
@@ -108,26 +114,75 @@ export async function toolOntologyParserInspect(context: ToolActionContext): Pro
 }
 
 /**
- * WRITE (default): INCREMENTAL reconcile — bring each selected TLD's dd_ontology in line
- * with its matrix source by applying only the delta (ensureOntology). Non-destructive: the
- * runtime ontology is never momentarily empty, and a TLD already in sync is a no-op.
+ * WRITE (source data): REPAIR the misfiled `ontology7` of each selected TLD's records.
+ *
+ * THE DOOR THIS RESTORES. `ontology7` is derived from the section (ONT-TLD), so the edit form
+ * renders it read-only — which removed the one place an operator could correct a record whose
+ * tld is wrong. Inspect still reports those records ("…declares tld 'act', not 'actv' — fix the
+ * record's ontology7"), so without this the tool named a defect and offered no way to clear it,
+ * and the node stayed misfiled or invisible forever.
+ *
+ * It is DELIBERATELY NOT folded into rebuild. Rebuild writes the PROJECTION
+ * (`dd_ontology`) from the source; this writes the SOURCE. Those are different blast radii and
+ * an operator is entitled to choose the second explicitly. It also cannot ride inside
+ * rebuild's transaction — normalizeOntologyTld runs through `psql` on its own connection, so
+ * it would block on the rows the transaction holds.
+ *
+ * SCOPE, from normalizeOntologyTld: only rows that ARE nodes (they carry a component besides
+ * their own ontology7) and whose declared tld differs from the section's. Contentless shells —
+ * the legacy `tldless` population — are untouched by design: stamping a tld on one would
+ * materialize a nameless node in the tree. Those stay reported, for a human to fill or delete.
  */
-export async function toolOntologyParserReconcile(
+export async function toolOntologyParserRepairTlds(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
 	if (!context.principal.isDeveloper) {
 		return { result: false, msg: 'Error. developer privileges required', errors: ['unauthorized'] };
 	}
 	const tlds = selectedTlds(context);
-	const outcomes = await ensureOntologies(tlds, context.userId);
-	return withLlmMap(summarize(outcomes, tlds, 'Reconciled'));
+	const errors: string[] = [];
+	const ar_msg: string[] = [];
+	let repaired = 0;
+	for (const tld of tlds) {
+		const sectionTipo = `${tld}0`;
+		const rewritten = await normalizeOntologyTld(sectionTipo);
+		if (rewritten === null) {
+			errors.push(`${tld}: ontology7 repair failed`);
+			ar_msg.push(`${tld}: repair FAILED`);
+			continue;
+		}
+		repaired += rewritten;
+		ar_msg.push(
+			rewritten === 0
+				? `${tld}: nothing to repair`
+				: `${tld}: rewrote ontology7 on ${rewritten} record(s)`,
+		);
+	}
+	return {
+		result: errors.length === 0,
+		msg:
+			errors.length === 0
+				? `OK. Repaired ${repaired} record(s). Run Rebuild to re-derive dd_ontology.`
+				: 'Warning! Repair finished with errors',
+		errors,
+		ar_msg,
+	};
 }
 
 /**
- * WRITE (nuclear): TRANSACTIONAL rebuild — wipe and re-derive each selected TLD's
- * dd_ontology from scratch (rebuildOntology). For structural corruption the incremental
- * reconcile cannot converge. The delete + reinsert run in one transaction per TLD, so a
- * failure rolls back with no empty window and no leftover backup table.
+ * WRITE: TRANSACTIONAL rebuild — wipe and re-derive each selected TLD's dd_ontology from
+ * scratch (rebuildOntology). The ONE write door onto the projection. The delete + reinsert
+ * run in one transaction per TLD, so a failure rolls back with no empty window and no
+ * leftover backup table, and no reader ever observes the wipe.
+ *
+ * IT DOES NOT REBUILD THE LLM MAP (WC-2026-08-11-regenerate-drops-llm-map-post-step). PHP ran
+ * export_llm_map here and merged its errors in. `ontology_llm_map.json` is a DISTRIBUTION
+ * artifact — served by `serveOntologyIoFile` beside `ontology.json` and the per-TLD dumps,
+ * read by nothing in the engine — and a regenerate refreshes none of its companions, so the
+ * map alone being fresh made the export set no more coherent. It is rebuilt by
+ * `export_ontologies` (step 5), which is what publishes the rest. Measured cost of the removed
+ * step on dedalo7_mht: 21.2s of a 22.1s request (752 sections × 9408 link fields, each
+ * building its own request_config), against 76ms for the parse+diff of the TLD asked for.
  */
 export async function toolOntologyParserRegenerate(
 	context: ToolActionContext,
@@ -137,23 +192,7 @@ export async function toolOntologyParserRegenerate(
 	}
 	const tlds = selectedTlds(context);
 	const outcomes = await rebuildOntologies(tlds, context.userId);
-	return withLlmMap(summarize(outcomes, tlds, 'Rebuilt'));
-}
-
-/**
- * PHP regenerate_ontologies post-step: rebuild the LLM map after a dd_ontology write, even
- * when it partially failed (partial rows are still mappable). Its errors are MERGED in;
- * result/msg stay the write's.
- */
-async function withLlmMap(response: ToolResponse): Promise<ToolResponse> {
-	const errors = [...((response.errors as string[]) ?? [])];
-	try {
-		const llmMapResponse = await exportLlmMap();
-		if (!llmMapResponse.result) errors.push(...llmMapResponse.errors);
-	} catch (error) {
-		errors.push((error as Error).message);
-	}
-	return { ...response, errors };
+	return summarize(outcomes, tlds, 'Rebuilt');
 }
 
 /**

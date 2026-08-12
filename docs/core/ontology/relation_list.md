@@ -114,7 +114,7 @@ ledgered**:
 | --- | --- |
 | `component_section_id` | the record's own numeric id, as a string |
 | string family (`component_input_text`, `component_text_area`, `component_email`, `component_number`) | lang-sliced literal values, multi-item joined with the separator (default `' \| '`, per-component `fields_separator` at deeper recursion levels) |
-| `component_date` | the flat date atom: year-only, or `d-m-Y`; a range renders `start <> end` |
+| `component_date` | the flat date atom, formatted on the node's `date_mode` by the engine's single date formatter (`src/core/components/component_date/date_value.ts`): `Y/m/d`, degrading to `Y/m` and then to a bare year as the stored parts thin out; ranges render `start <> end`; the clock (`time`, `time_range`, `date_time`) and `period` modes render their own shapes |
 | `component_iri` | the iri value plus its `dd560` label-dataframe pairing (id_key-matched), joined `', '` |
 | datalist-resolvable relation models (`component_select`, `component_radio_button`, `component_check_box`, `component_autocomplete`, `component_autocomplete_hi`, `component_relation_model`, `component_portal`) | the resolved datalist label per locator, **or** — when the component declares export-atom children (a `section_list`-style config) — each child's own flat value, joined by the child's `fields_separator` |
 | media models (`component_image`, `component_svg`, `component_pdf`, `component_av`) | the absolute URL of the model's default quality (`1.5MB`/`web`/`404`) under `DEDALO_MEDIA_EXPORT_BASE`; a missing env value or an unmapped default quality is **ledgered as unresolved**, never guessed |

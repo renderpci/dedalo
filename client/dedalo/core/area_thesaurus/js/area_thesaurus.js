@@ -156,9 +156,23 @@ export const area_thesaurus = function() {
 *
 * refresh / destroy / build_rqo_show  — delegated to common so all areas share the same
 *   implementation (session handling, dependency teardown, rqo construction).
-* edit / list — both point to render_area_thesaurus.prototype.list because the thesaurus
-*   area only has a single view mode (the paginated tree list); there is no separate 'edit'
-*   layout distinct from 'list'.
+* edit / list / relation — all point to render_area_thesaurus.prototype.list because the
+*   thesaurus area only has a single view mode (the paginated tree list); there is no
+*   separate 'edit' layout distinct from 'list'.
+*
+* (!) 'relation' is a mode this area genuinely runs in — the ontology declares it in the
+*   tool_indexation ddo_map ("mode":"relation", tipo dd100) and self.mode carries it (see
+*   the 'default|relation' note on the constructor). common.prototype.render resolves a
+*   mode by looking for a METHOD of that name and silently falls back to 'list', so an
+*   undeclared-but-valid mode logged "Invalid render_mode 'relation'" on every render of
+*   the indexation tool. Declaring the alias is the truthful fix: the mode is supported,
+*   and it is this renderer that supports it. What 'relation' actually changes lives
+*   downstream in context.thesaurus_mode (render_ts_line / render_ts_id_column), not in a
+*   different area layout — the renderer ignores render_mode entirely.
+*   (!) Do NOT "fix" this by normalising self.mode to 'list' the way section.js does for
+*   'list_thesaurus': self.mode is also the get_instance key of the area's search filter
+*   and the local-db id of its search-panel state, so collapsing it would make the tool's
+*   thesaurus share that state with the standalone thesaurus area.
 */
 // prototypes assign
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
@@ -166,6 +180,7 @@ export const area_thesaurus = function() {
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	area_thesaurus.prototype.edit			= render_area_thesaurus.prototype.list
 	area_thesaurus.prototype.list			= render_area_thesaurus.prototype.list
+	area_thesaurus.prototype.relation		= render_area_thesaurus.prototype.list
 
 
 

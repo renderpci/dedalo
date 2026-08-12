@@ -45,9 +45,9 @@ import {
 	normalizeDataframeEntry,
 } from '../concepts/subdatum.ts';
 import { dbTimestamp } from '../db/db_timestamp.ts';
-import { encodeForJsonb } from '../db/json_codec.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
+import type { Principal } from '../security/permissions.ts';
 
 export interface SortDataChange {
 	value: Record<string, unknown> | null;
@@ -164,9 +164,118 @@ export async function applySortByColumn(
 }
 
 /**
- * PHP add_new_element: create a record in the target section — inheriting
- * the HOST record's project filter (or the default project) into the
- * target's component_filter — then append the link locator to the portal.
+ * The project locators a portal "+" hands its new target record (PHP
+ * component_common::get_current_section_filter_data, :5141-5212):
+ *
+ *  - the host section IS the projects section (dd153) → the host RECORD is the
+ *    project ("project of projects": a sub-project inherits its parent);
+ *  - otherwise the host's own component_filter locators, INTERSECTED with the
+ *    caller's authorized projects ("only intersections are accepted") — a
+ *    cataloguer must never mint a record into a project they cannot see;
+ *  - nothing left → [], and add_new_element's OWN empty branch takes over.
+ *
+ * The intersection is the half TS was missing; the fallback used to be a
+ * HARDCODED `dd153/1` that ignored DEDALO_DEFAULT_PROJECT entirely.
+ *
+ * THE EMPTY CASE IS NOT THE CREATE DOOR'S CASCADE. PHP add_new_element
+ * (component_relation_common.php:3798-3813) handles it inline with
+ * DEDALO_SECTION_PROJECTS_TIPO / DEDALO_DEFAULT_PROJECT / the filter relation
+ * type; it never calls component_filter::get_default_data_for_user, so the
+ * caller's own FIRST project — which IS the create door's answer for a
+ * non-admin — is deliberately not used here. Falling through to
+ * resolveDefaultFilterData was an undeclared divergence (a non-admin's
+ * unreachable-host "+" silently landed in their first project instead of the
+ * default one). See defaultProjectFilterData below.
+ *
+ * NOTE the further asymmetry, also PHP's: `get_current_section_filter_data` has
+ * NO global-admin exemption, while `get_default_data_for_user` does. An admin
+ * carries no dd170 locators, so the intersection empties and the new record
+ * lands in DEDALO_DEFAULT_PROJECT rather than the host's project — pinned by
+ * portal_edit_writes_native.test.ts. Do not "fix" it without a WC entry.
+ */
+async function inheritedHostFilterData(
+	sectionTipo: string,
+	sectionId: number,
+	userId: number,
+): Promise<Record<string, unknown>[]> {
+	const { config } = await import('../../config/config.ts');
+	const { getComponentFilterTipo, getMatrixTableFromTipo } = await import(
+		'../ontology/resolver.ts'
+	);
+
+	if (sectionTipo === config.features.filterSectionTipo) {
+		// PHP :5150-5158 — the host record itself is the project.
+		return [
+			{
+				section_tipo: config.features.filterSectionTipo,
+				// int-canonical stored address (WC-2026-08-10-section-id-int-canonical).
+				section_id: sectionId,
+				type: 'dd675',
+			},
+		];
+	}
+
+	const hostFilterTipo = await getComponentFilterTipo(sectionTipo);
+	if (hostFilterTipo === null) return [];
+	const hostTable = await getMatrixTableFromTipo(sectionTipo);
+	if (hostTable === null) return [];
+	const { readMatrixRecord } = await import('../db/matrix.ts');
+	const hostRecord = await readMatrixRecord(hostTable, sectionTipo, sectionId);
+	const stored =
+		((hostRecord?.columns.relation as Record<string, unknown[]> | null)?.[hostFilterTipo] as Record<
+			string,
+			unknown
+		>[]) ?? [];
+	if (stored.length === 0) return [];
+
+	// Intersect with the CALLER's projects (PHP :5199-5205, in_array_locator
+	// over [section_tipo, section_id] — the locator law, loose section_id).
+	const { getUserProjects } = await import('../security/permissions.ts');
+	const userProjects = (await getUserProjects(userId)).map((projectId) => ({
+		section_tipo: config.features.filterSectionTipo,
+		// Canonical int form; the compare itself is loose on section_id anyway.
+		section_id: projectId,
+	}));
+	return stored.filter((locator) =>
+		isLocatorInArray(locator as never, userProjects as never[], ['section_tipo', 'section_id']),
+	);
+}
+
+/**
+ * PHP add_new_element's own empty-filter branch (:3798-3813): when
+ * get_current_section_filter_data yields nothing — an empty intersection, a
+ * host with no projects, a host section with no component_filter, or a TEMPORAL
+ * instance (`is_temporal===true` short-circuits it to null) — the new record
+ * gets the CONFIGURED default project, built from
+ * DEDALO_SECTION_PROJECTS_TIPO / DEDALO_DEFAULT_PROJECT /
+ * DEDALO_RELATION_TYPE_FILTER. `from_component_tipo` and `id` are stamped by
+ * the create door (stampFilterData), exactly as PHP re-stamps them at :3833.
+ */
+async function defaultProjectFilterData(): Promise<Record<string, unknown>[]> {
+	const { config } = await import('../../config/config.ts');
+	const { RELATION_TYPE_FILTER } = await import('../section/record/record_defaults.ts');
+	return [
+		{
+			section_tipo: config.features.filterSectionTipo,
+			// int-canonical stored address (WC-2026-08-10-section-id-int-canonical).
+			section_id: config.features.defaultProject,
+			type: RELATION_TYPE_FILTER,
+		},
+	];
+}
+
+/**
+ * PHP add_new_element (component_relation_common.php:3770-3860): create a
+ * record in the target section — inheriting the HOST record's project filter
+ * (or the create-door default) into the target's component_filter — then
+ * append the link locator to the portal.
+ *
+ * THE ACTOR IS THE REAL CALLER. This path used to hardcode user -1, so every
+ * record born from a portal "+" was attributed to the superuser and left no
+ * NEW activity row (audit §5.1). The principal is request-scoped
+ * (security/request_context.ts) — never captured at module level; outside any
+ * request scope (background jobs, unit harnesses) it falls back to the
+ * superuser exactly as the rest of the engine does.
  */
 export async function applyAddNewElement(
 	items: unknown[],
@@ -187,50 +296,48 @@ export async function applyAddNewElement(
 	},
 ): Promise<{ items: unknown[]; sectionId: number } | null> {
 	if (targetSectionTipo === '') return null;
-	const { getComponentFilterTipo, getMatrixTableFromTipo } = await import(
-		'../ontology/resolver.ts'
-	);
-	const { readMatrixRecord } = await import('../db/matrix.ts');
 	const { createSectionRecord } = await import('../section/record/create_record.ts');
+	const { currentPrincipal, currentRequestContext } = await import(
+		'../security/request_context.ts'
+	);
+	const { SUPERUSER_ID } = await import('../security/permissions.ts');
+	const userId = currentPrincipal()?.userId ?? SUPERUSER_ID;
 
-	// host project filter (or the default project locator)
-	let filterData: Record<string, unknown>[] = [];
-	const hostFilterTipo =
-		options?.skipHostFilterRead === true ? null : await getComponentFilterTipo(sectionTipo);
-	if (hostFilterTipo !== null) {
-		const hostTable = await getMatrixTableFromTipo(sectionTipo);
-		const hostRecord =
-			hostTable === null ? null : await readMatrixRecord(hostTable, sectionTipo, sectionId);
-		filterData =
-			((hostRecord?.columns.relation as Record<string, unknown[]> | null)?.[
-				hostFilterTipo
-			] as Record<string, unknown>[]) ?? [];
-	}
-	if (filterData.length === 0) {
-		// DEDALO_DEFAULT_PROJECT locator (dd153/1, relation type filter dd675)
-		filterData = [{ section_tipo: 'dd153', section_id: '1', type: 'dd675' }];
-	}
+	// Host project filter. EMPTY (no intersection, no host filter, or the
+	// temporal door) → PHP's own DEDALO_DEFAULT_PROJECT branch, NOT the create
+	// door's per-user cascade (:3798-3813 — see defaultProjectFilterData).
+	const inherited =
+		options?.skipHostFilterRead === true
+			? []
+			: await inheritedHostFilterData(sectionTipo, sectionId, userId);
+	const filterData = inherited.length > 0 ? inherited : await defaultProjectFilterData();
 
-	const newSectionId = await createSectionRecord(targetSectionTipo, -1);
+	// ONE insert carries the inherited filter (PHP passes it as create_record's
+	// `values`), so the record is never momentarily outside the projects ACL.
+	const newSectionId = await createSectionRecord(targetSectionTipo, userId, new Date(), undefined, {
+		filterData,
+	});
 	if (!newSectionId) return null;
 
-	// inherit the filter into the TARGET's component_filter (re-stamped)
-	const targetFilterTipo = await getComponentFilterTipo(targetSectionTipo);
-	if (targetFilterTipo !== null && filterData.length > 0) {
-		const stamped = filterData.map((locator, index) => ({
-			...locator,
-			from_component_tipo: targetFilterTipo,
-			id: index + 1,
-		}));
-		const targetTable = (await getMatrixTableFromTipo(targetSectionTipo)) ?? 'matrix';
-		// json_codec chokepoint (S2-07): matrix jsonb writes never bind bare
-		// JSON.stringify output — encodeForJsonb fails loud on undefined/NaN.
-		await sql.unsafe(
-			`UPDATE "${targetTable}"
-			 SET relation = COALESCE(relation, '{}'::jsonb) || jsonb_build_object($1::text, $2::text::jsonb)
-			 WHERE section_tipo = $3 AND section_id = $4`,
-			[targetFilterTipo, encodeForJsonb(stamped), targetSectionTipo, newSectionId],
-		);
+	// Activity audit (PHP logger 'NEW' code 3 — section::create_record step 7,
+	// which add_new_element reaches like every other create door). Never fails
+	// the create: logActivity swallows its own errors.
+	{
+		const { logActivity, hostFromClientIp } = await import('../api/handlers/activity_log.ts');
+		const { getMatrixTableFromTipo } = await import('../ontology/resolver.ts');
+		await logActivity({
+			what: 'NEW',
+			tipo: targetSectionTipo,
+			userId,
+			host: hostFromClientIp(currentRequestContext()?.clientIp),
+			data: {
+				msg: 'Created section record',
+				section_id: newSectionId,
+				section_tipo: targetSectionTipo,
+				tipo: targetSectionTipo,
+				table: (await getMatrixTableFromTipo(targetSectionTipo)) ?? 'matrix',
+			},
+		});
 	}
 
 	// append the link locator (dedup like PHP add_locator_to_data). PHP's
@@ -611,7 +718,11 @@ export async function removeDataframeDataById(
  * PHP response shape {result: <removed count>, msg: [], errors: []}.
  */
 export async function deletePortalLocator(
-	principal: { isGlobalAdmin: boolean; userId: number },
+	// `isDeveloper` is optional so an existing caller that only knows the
+	// identity + admin flag still type-checks; it is only consulted for the
+	// maintenance AREA gate, which no portal section can ever be, and a caller
+	// that omits it is asserting "not a developer".
+	principal: Omit<Principal, 'isDeveloper'> & Partial<Pick<Principal, 'isDeveloper'>>,
 	// KEPT UNION: `source` is the RQO body of dd_component_portal_api
 	// .delete_locator, an uncoerced wire door — legacy clients still post the
 	// string form. Consumed numerically (Number()) for the row address only.
@@ -635,10 +746,19 @@ export async function deletePortalLocator(
 		);
 		return response;
 	}
-	// SEC: write permission (PHP assert_section_permission level 2). The
-	// permissions matrix grants admins; non-admins denied for now (v0 parity
-	// with the dispatch save gate).
-	if (!principal.isGlobalAdmin) {
+	// SEC: write permission — PHP dd_component_portal_api::delete_locator runs
+	// `security::assert_section_permission($section_tipo, 2)`, i.e. the LEVEL-2
+	// matrix gate, not an admin flag. Gating on isGlobalAdmin (the old v0
+	// stand-in) half-completed the tool_indexation "delete index" for every
+	// ordinary cataloguer: the client had already stripped the transcription
+	// tags in every language before calling this, so the refusal left the
+	// rsc860 locator behind as an orphan (audit §5.4). getSectionPermissions is
+	// the section-level twin of PHP common::get_permissions(tipo, tipo) — it
+	// additionally caps consultation-only sections at read, which is exactly
+	// right for a removal.
+	const { getSectionPermissions } = await import('../security/permissions.ts');
+	const actor: Principal = { isDeveloper: false, ...principal };
+	if ((await getSectionPermissions(actor, sectionTipo)) < 2) {
 		response.errors.push('insufficient permissions');
 		return response;
 	}

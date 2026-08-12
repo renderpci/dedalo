@@ -1,6 +1,13 @@
 /**
- * IMAGEMAGICK BINARY RESOLUTION — the one place the magick/identify executables
- * are located, and the one place `identify` is SPAWNED.
+ * MEDIA BINARY RESOLUTION — the one place the magick/identify/qt-faststart
+ * executables are located, and the one place `identify` is SPAWNED.
+ *
+ * (`ffmpeg`/`ffprobe` resolve inside `ffmpeg.ts`, which is their only caller.
+ * `qt-faststart` resolves HERE, one layer down from its caller, because it is
+ * OPTIONAL: "which binary, or none?" is a CONFIGURATION question — its answer
+ * selects a whole different relocation route — and this module is where a media
+ * binary's location is decided. `ffmpeg.ts` is the argv/runner layer and must not
+ * also own a discovery rule.)
  *
  * These two resolvers used to live in `imagemagick.ts`. They were extracted
  * because BOTH layers need them and those layers depend on each other in ONE
@@ -42,6 +49,24 @@ export function resolveMagick(): string {
 	// config.media.binaries.magick is '<base>/magick'; the v6 fallback is '<base>/convert'.
 	const convert = magick.replace(/magick$/, 'convert');
 	return existsSync(convert) ? convert : magick;
+}
+
+/**
+ * Resolve the `qt-faststart` binary, or NULL when this install does not have it.
+ *
+ * Discovery is the CONFIGURED path only (`DEDALO_AV_FASTSTART_PATH`, default
+ * `/usr/bin/qt-faststart`) — deliberately no `$PATH` sniffing: which binary an
+ * archive's derivatives were produced with must be a property of the install's
+ * configuration, not of the shell environment whichever operator restarted the
+ * server happened to have.
+ *
+ * Null is a real answer, not an error: the moov relocation has a second route
+ * through ffmpeg itself (`ffmpeg.ts applyFaststart`), which is why this returns
+ * null instead of the unusable path `resolveMagick` returns.
+ */
+export function resolveFaststart(): string | null {
+	const configured = config.media.binaries.qtFaststart;
+	return configured !== '' && existsSync(configured) ? configured : null;
 }
 
 /** Resolve the identify binary: `magick identify` (v7) or `identify` (v6). */

@@ -265,12 +265,30 @@ describe('persist_config (P2)', () => {
 		}
 	});
 
-	test('check_directories creates + verifies the private tree', () => {
-		const r = checkDirectories({ create: true });
-		expect(r.result).toBe(true);
-		const priv = r.dirs.find((d) => d.label === 'Private config');
-		expect(priv?.exists).toBe(true);
-		expect(priv?.writable).toBe(true);
+	/**
+	 * `create:true` also provisions the MEDIA TREE (install/media_tree.ts), so this
+	 * test MUST redirect the media root: without `mediaRoot`, it mkdirs into the
+	 * live configured media root — which it did, on a real machine, before the seam
+	 * existed. A unit test never touches a live surface, filesystem included.
+	 *
+	 * It also makes the assertion honest: `result` folded in the writability of the
+	 * whole real media tree, so this test would have gone red on any box whose media
+	 * root belongs to the web-server user.
+	 */
+	test('check_directories creates + verifies the private tree (never the live media root)', () => {
+		const mediaRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_media_'));
+		try {
+			const r = checkDirectories({ create: true, mediaRoot });
+			expect(r.result).toBe(true);
+			const priv = r.dirs.find((d) => d.label === 'Private config');
+			expect(priv?.exists).toBe(true);
+			expect(priv?.writable).toBe(true);
+			// The media rows point at the scratch root, never at config.media.rootPath.
+			expect(r.dirs.find((d) => d.label === 'Media')?.path).toBe(mediaRoot);
+			expect(r.mediaTree?.root).toBe(mediaRoot);
+		} finally {
+			rmSync(mediaRoot, { recursive: true, force: true });
+		}
 	});
 
 	test('writes the four MANDATORY lang keys; JSON keys round-trip through parseEnvFile', async () => {

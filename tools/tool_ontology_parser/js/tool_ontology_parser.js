@@ -323,26 +323,31 @@ tool_ontology_parser.prototype.inspect_ontologies = function () {
 
 
 /**
-* RECONCILE_ONTOLOGIES
-* WRITE (default). INCREMENTAL reconcile — bring each selected TLD's dd_ontology in line with
-* its matrix source by applying only the delta (server ensureOntology). Non-destructive: the
-* runtime ontology is never momentarily empty, and a TLD already in sync is a no-op. This is
-* the everyday action; `regenerate` is the destructive fallback.
+* REPAIR_TLDS
+* WRITE (SOURCE data, not the projection). Rewrites `ontology7` back to the section's own TLD
+* on any record whose declared TLD disagrees with it. A node's TLD is DERIVED from the section
+* it sits in — `actv0` can only hold `actv` — so the edit form renders the field read-only,
+* and this is the door that replaces it: without it the status panel names misfiled records
+* the operator cannot correct anywhere.
+*
+* Records carrying no content are deliberately left alone: stamping a TLD on one would only
+* add a nameless node to the tree. Those stay listed as "without a tld" for a human to fill
+* in or delete. Run `regenerate` afterwards to re-derive dd_ontology from the repaired records.
 *
 * @returns {Promise<Object|false>} { result, msg, errors, ar_msg } or false when empty.
 */
-tool_ontology_parser.prototype.reconcile_ontologies = function () {
-	return this.send_action('reconcile_ontologies')
-}//end reconcile_ontologies
+tool_ontology_parser.prototype.repair_tlds = function () {
+	return this.send_action('repair_tlds')
+}//end repair_tlds
 
 
 /**
 * REGENERATE_ONTOLOGIES
-* WRITE (nuclear). TRANSACTIONAL wipe-and-rebuild of each selected TLD's dd_ontology from its
-* matrix source (server rebuildOntology). For structural corruption the incremental reconcile
-* cannot converge. The delete + reinsert run in one transaction per TLD — a failure rolls back
-* with no empty window and no leftover backup table. Prefer `reconcile` unless a rebuild is
-* genuinely needed.
+* WRITE. TRANSACTIONAL wipe-and-rebuild of each selected TLD's dd_ontology from its matrix
+* source (server rebuildOntology) — the ONE write door onto the projection. The delete +
+* reinsert run in one transaction per TLD: a failure rolls back with no empty window and no
+* leftover backup table, and no reader ever observes the wipe. (The incremental `reconcile`
+* companion was removed 2026-08-11 — it bought nothing a transactional rebuild does not.)
 *
 * @returns {Promise<Object|false>} { result, msg, errors, ar_msg } or false when empty.
 */
@@ -356,7 +361,7 @@ tool_ontology_parser.prototype.regenerate_ontologies = function () {
 * The ONE request path for every tool action (was duplicated per method). Posts the current
 * TLD selection to `dd_tools_api::tool_request` for the named server action.
 *
-* @param {string} action - server action: 'inspect_ontologies' | 'reconcile_ontologies' | 'regenerate_ontologies' | 'export_ontologies'
+* @param {string} action - server action: 'inspect_ontologies' | 'repair_tlds' | 'regenerate_ontologies' | 'export_ontologies'
 * @param {Object} [opts]
 * @param {boolean} [opts.allow_empty=false] - when true, an empty selection still sends (inspect wants "nothing selected → empty panel")
 * @returns {Promise<Object|false>} the API response, or false when the selection is empty and allow_empty is not set.

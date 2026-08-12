@@ -9,6 +9,12 @@
  *   batch (per-row re-gated on BOTH the schema pair and record scope); each
  *   matched component is reverted to its pre-batch value under a fresh bulk id
  *   (so the revert is revertible).
+ *
+ * Both write doors restore the DATAFRAME half of a paired component
+ * (dataframe_restore.ts) and fire the observer cascade post-commit
+ * (restore_common.ts) — a restore that touched only the main column left
+ * orphan frames and stale observer mirrors behind
+ * (WC-2026-08-09-time-machine-restore-replays-paired-dataframe-frames).
  * isAvailable: hidden on component_relation_children callers (PHP is_available),
  * relocated here from the core registry fallback.
  */

@@ -6,10 +6,15 @@
  *    SQL-string pinned (the search_Test pattern).
  * 2. The registry SEARCH face: relation-column models dispatch to the shared
  *    containment builder; children/index/external THROW their ledger reason.
- * 3. The CORRECT autocomplete_hi ancestor wrap
- *    (buildRelationSearchAncestorFragment — deliberately NOT live, PHP
- *    defect pin): executed directly against the shared DB, an ancestor
- *    locator present ONLY in relation_search matches the record.
+ * 3. The autocomplete_hi ancestor wrap (buildRelationSearchAncestorFragment),
+ *    executed directly against the shared DB: an ancestor locator present ONLY
+ *    in relation_search matches the record. It is LIVE since 2026-08-09
+ *    (WC-2026-08-09-autocomplete-hi-ancestor-search) — this header used to say
+ *    "deliberately NOT live, PHP defect pin", which was the pre-decommission
+ *    state: the wrap was withheld from dispatch pending a PHP fix that can
+ *    never come. conform.ts now applies it, keyed on the leaf node's STORED
+ *    ontology model; the LIVE dispatch is gated in
+ *    search_date_and_ancestors_native.test.ts, this file gates the BUILDER.
  * 4. search_related filter_by_locators_op 'AND': intersection semantics on
  *    the real §15657 fixture (holds BOTH object1/99 and object1/96 via
  *    numisdata34).
@@ -254,7 +259,7 @@ describe('relation_index builder (PHP trait.search_component_relation_index)', (
 	});
 });
 
-describe('autocomplete_hi ancestor wrap (correct machinery, unit-gated — NOT live)', () => {
+describe('autocomplete_hi ancestor wrap (LIVE since 2026-08-09 — the builder, unit-gated)', () => {
 	test('an ancestor locator present ONLY in relation_search matches through the wrap', async () => {
 		// A real maintained index row: numisdata155's relation_search on
 		// numisdata4 holds ancestor locators the relation column does NOT.
@@ -291,8 +296,9 @@ describe('autocomplete_hi ancestor wrap (correct machinery, unit-gated — NOT l
 		)) as { total: number }[];
 		expect(counted[0]?.total).toBe(1);
 
-		// The UNWRAPPED (live, PHP-parity) clause does NOT match — proving the
-		// wrap is what recovers ancestor hits.
+		// The UNWRAPPED clause — the relation-column-only fragment every OTHER
+		// relation model still gets — does NOT match, proving the wrap is what
+		// recovers ancestor hits (and that this test is not vacuous).
 		const direct = buildRelationFragment([fixture.ancestor], null, context);
 		const { sql: directSql, params: directParams } = render(direct);
 		const directCount = (await sql.unsafe(

@@ -228,8 +228,19 @@ PHP draws with `check_active_tld` vs `check_tipo_is_valid`:
 - the **TLD is installed but that node is missing** → an authoring defect, and
   still a hard `PlanCompileError` naming the field.
 
+The field keeps its column, but WITHIN a multi-ddo field the skipped entry takes
+its own leaf column with it, and that IS a wire divergence: PHP derives a datum's
+`columns` from the full `ddo_map` with no ontology lookup
+(`build_datum_context` :1288-1308), so the oracle joins an empty slot where this
+engine joins nothing — `Historia, ` vs `Historia` on `rsc1194`. Accepted
+deliberately; see `WC-2026-08-11-diffusion-uninstalled-package-skip`, which also
+records why the `output_format` fallback still reads `ddo_map[0]` rather than the
+pruned chain.
+
 Gate: `test/unit/diffusion_plan_uninstalled_tld.test.ts` (both directions —
-without the second case the rule would degrade into "diffusion never complains").
+without the second case the rule would degrade into "diffusion never complains")
+plus `test/unit/diffusion_compile_degrade_native.test.ts` for the divergence and
+the `output_format` carve-out.
 
 **RecordIR** (stage D output) replaces the dead PHP datum wire shape:
 `{sectionTipo, sectionId, status: 'publish'|'unpublish', fields:

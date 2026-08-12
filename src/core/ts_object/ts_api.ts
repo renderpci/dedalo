@@ -26,7 +26,7 @@ import {
 } from '../ontology/ontology_tipos.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
-import { getSectionIdFromTipo } from '../ontology/tld.ts';
+import { getSectionIdFromTipo, requiredOntologyTld } from '../ontology/tld.ts';
 import { getParentTipo } from '../relations/children.ts';
 import {
 	addParent,
@@ -323,8 +323,20 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiRes
 				);
 			}
 
-			// ontology TLD inheritance: `<tld>0` sections copy ontology7 parent→child.
-			if (getSectionIdFromTipo(sectionTipo) === '0') {
+			// ontology7 (ONT-TLD): for a GOVERNED `<tld>0` section nothing happens
+			// here — createSectionRecord's birth defaults derive the value from the
+			// section itself (record_defaults.ts seed 3). This code used to COPY it
+			// off the parent record instead, which inherited EMPTINESS whenever the
+			// parent was itself tld-less: the mechanism that produced the tree's
+			// invisible shell nodes. Deriving beats inheriting.
+			//
+			// EXCEPT for localontology0, which ONT-TLD exempts precisely because its
+			// records declare a FOREIGN tld on purpose (they override a canonical node,
+			// so they carry the OVERRIDDEN node's tld). Nothing derives that, so the
+			// parent copy is still the only thing that can supply it — dropping it
+			// wholesale left tree-created override records with no tld at all, which
+			// is the very bug this change exists to remove.
+			if (requiredOntologyTld(sectionTipo) === null && getSectionIdFromTipo(sectionTipo) === '0') {
 				const parentRecord = await readMatrixRecord(table, sectionTipo, sectionId);
 				const tldItems =
 					((parentRecord?.columns.string as Record<string, unknown[]> | null)?.ontology7 as

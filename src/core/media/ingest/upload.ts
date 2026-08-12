@@ -66,6 +66,7 @@ import { config } from '../../../config/config.ts';
 import { sniffAndValidate } from '../engine/mime.ts';
 import { verifyFileContent } from '../engine/verify_content.ts';
 import { sanitizeSegment, stagingDir } from './add_file.ts';
+import { recordStagedDisplayName } from './staged_name_record.ts';
 import { sweepStagedOrphans, UPLOAD_DIR_PREFIX, uploadArtifactDir } from './staging_gc.ts';
 
 /** The parsed upload request fields. */
@@ -103,6 +104,18 @@ export interface UploadReceiveResult {
 	 * final name is derived from (the client only counts these).
 	 */
 	tmpName?: string;
+	/**
+	 * The HUMAN file name of this transfer ('María Piñón.jpg') — PHP's
+	 * `file_data->name`, which the TS receiver dropped entirely.
+	 *
+	 * A DIFFERENT VALUE FROM `tmpName`, and deliberately so: `tmpName` is a
+	 * filesystem segment and is sanitized to be safe as one, which is lossy and
+	 * not injective. Persisting it as the record's `original_file_name` is how
+	 * 'María Piñón.jpg' entered the archive as 'Mar_a_Pi_n.jpg'. Protecting the
+	 * filesystem and recording provenance are two concerns and must not share one
+	 * string.
+	 */
+	name?: string;
 	/** The validated/declared extension. */
 	extension?: string;
 	/** Echoed back so the client can count chunk completion (chunked flow). */
@@ -223,6 +236,30 @@ export function stagedTmpName(fileName: string): string {
 	// A leading dot would make the staged file invisible to listStagedFiles (it
 	// skips dotfiles) and could collide with the `.up_<id>` artifact dirs.
 	return cleaned.startsWith('.') ? `_${cleaned}` : cleaned;
+}
+
+/**
+ * The DISPLAY name of an upload: the client's own file name, defanged but NOT
+ * transliterated. This is what the archive records as provenance, so it keeps
+ * every character a curator actually typed — accents, spaces, CJK.
+ *
+ * What it removes is what makes a string dangerous as a VALUE, not as a path
+ * segment: any directory prefix (both separator conventions — a Windows client
+ * sends `C:\Users\…\María.jpg`), C0/C1 control characters and NUL (a stored
+ * value that can rewrite a log line or truncate a C string), surrounding
+ * whitespace, and anything past 255 characters. It never rewrites a character
+ * into another one; if nothing survives, the transfer gets the neutral
+ * 'upload.bin' rather than an empty provenance field.
+ *
+ * NOT `stagedTmpName`, which answers the different question "what may this be
+ * called on disk" — see UploadReceiveResult.name.
+ */
+export function displayFileName(raw: string): string {
+	const base = raw.split(/[\\/]/).pop() ?? raw;
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping controls is the point
+	const cleaned = base.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim();
+	if (cleaned === '') return 'upload.bin';
+	return cleaned.length > 255 ? cleaned.slice(0, 255) : cleaned;
 }
 
 /** Validate a client-supplied upload id. Refuses — never rewrites — a bad one. */
@@ -351,6 +388,13 @@ interface UploadMeta {
 	proposal: string;
 	/** The extension the parts were declared under. */
 	extension: string;
+	/**
+	 * The HUMAN file name the chunks were sent under. Recorded HERE, by the server,
+	 * rather than read off the join request: the client relays `file_data` from the
+	 * last chunk and a name taken from that request could differ from the one the
+	 * parts were actually uploaded as. Same reasoning as `proposal`.
+	 */
+	name: string;
 }
 
 function writeUploadMeta(upDir: string, meta: UploadMeta): void {
@@ -365,9 +409,17 @@ function readUploadMeta(upDir: string): UploadMeta | null {
 	const path = resolve(upDir, 'meta.json');
 	if (!existsSync(path)) return null;
 	try {
-		const parsed = JSON.parse(readFileSync(path, 'utf8')) as UploadMeta;
+		const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<UploadMeta>;
 		if (typeof parsed?.proposal !== 'string' || typeof parsed?.extension !== 'string') return null;
-		return { proposal: sanitizeSegment(parsed.proposal), extension: parsed.extension };
+		return {
+			proposal: sanitizeSegment(parsed.proposal),
+			extension: parsed.extension,
+			// A transfer whose parts were written by an OLDER server has no `name` in
+			// its meta. That must not invalidate the meta (it would strand every
+			// in-flight upload across a deploy), so it degrades to the proposal — the
+			// same lossy value the engine used to record everywhere.
+			name: typeof parsed.name === 'string' ? displayFileName(parsed.name) : parsed.proposal,
+		};
 	} catch {
 		return null;
 	}
@@ -396,6 +448,9 @@ export function receiveUpload(
 	const upDir = uploadArtifactDir(userId, parsed.keyDir, uploadId, mediaRoot);
 	if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o750 });
 	const proposal = stagedTmpName(parsed.fileName);
+	// TWO NAMES, TWO PURPOSES: `proposal` is the filesystem segment, `name` is the
+	// provenance the record will carry (see UploadReceiveResult.name).
+	const name = displayFileName(parsed.fileName);
 	const extension = extensionOf(parsed.fileName);
 
 	if (!parsed.chunked) {
@@ -414,7 +469,21 @@ export function receiveUpload(
 			writeFileSync(whole, parsed.blob);
 			verifyFileContent(whole, extension);
 			const tmpName = claimStagedName(dir, proposal, whole);
-			return { complete: true, tmpName, extension, chunkIndex: 0, totalChunks: 1, uploadId };
+			// DOOR 1 (single-shot). Persist the display name BESIDE the staged file:
+			// the ingest runs in a LATER request and is handed only `tmp_name`, so a
+			// name that lives only in this response is a name the archive never sees
+			// (staged_name_record.ts). Keyed on the FINAL claimed name, not the
+			// proposal — a collision-suffixed twin is a different file.
+			recordStagedDisplayName(dir, tmpName, name);
+			return {
+				complete: true,
+				tmpName,
+				name,
+				extension,
+				chunkIndex: 0,
+				totalChunks: 1,
+				uploadId,
+			};
 		} finally {
 			// Drop OUR scratch file (a rejection leaves nothing staged), then the
 			// directory itself only if it is empty.
@@ -447,13 +516,14 @@ export function receiveUpload(
 		throw new Error('upload: chunk_index is outside the declared total_chunks');
 	}
 	mkdirSync(upDir, { recursive: true, mode: 0o700 });
-	writeUploadMeta(upDir, { proposal, extension });
+	writeUploadMeta(upDir, { proposal, extension, name });
 	writeFileSync(resolve(upDir, `${parsed.chunkIndex}.part`), parsed.blob);
 	return {
 		complete: false,
 		// The PROPOSAL, not the final name: the client uses it only to fill
 		// files_chunked[] and to carry file_data into the join.
 		tmpName: proposal,
+		name,
 		extension,
 		chunkIndex: parsed.chunkIndex,
 		totalChunks: parsed.totalChunks,
@@ -680,6 +750,10 @@ export async function joinChunkedUpload(
 	// later request.
 	const proposal = meta?.proposal ?? hint;
 	const extension = meta?.extension ?? extensionOf(hint);
+	// The SERVER's recorded human name, for the same reason as the proposal above:
+	// the join request relays the client's copy of file_data, and the name the
+	// archive records must be the one the parts were uploaded under.
+	const name = meta?.name ?? displayFileName(hint);
 
 	// A transfer already quarantined must not read as "missing chunks": say what
 	// actually happened, and that the bytes are still there.
@@ -788,6 +862,11 @@ export async function joinChunkedUpload(
 		);
 	}
 	const staged = claimStagedName(dir, proposal, assembled);
+	// DOOR 2 (the chunked join). Same reason as the single-shot door above, and
+	// the LAST moment this value exists: `meta.json` carried the server-recorded
+	// name across the chunk requests, and the artifact dir holding it is removed
+	// three lines below. Without this the name would die with it.
+	recordStagedDisplayName(dir, staged, name);
 	// Everything left in the artifact dir is garbage by definition: the client
 	// declared how many parts the file had, and it has been assembled and
 	// verified. Leaving a surplus part behind is the leak this change exists to
@@ -802,6 +881,7 @@ export async function joinChunkedUpload(
 	return {
 		complete: true,
 		tmpName: staged,
+		name,
 		extension,
 		chunkIndex: 0,
 		totalChunks,

@@ -82,6 +82,34 @@ export interface AddFileInput {
 	 * against this type's ladder + charset (assertValidQuality) before use.
 	 */
 	quality?: string;
+	/**
+	 * The HUMAN file name as uploaded ('María Piñón.mp4') — PHP add_file's `$name`,
+	 * which becomes `ready.original_file_name` and, from there, the record's
+	 * provenance keys and the `target_filename` companion field.
+	 *
+	 * NOT `tmpName`. The staged name is sanitized so it is safe as a FILESYSTEM
+	 * segment, and that transform is neither reversible nor injective; using it as
+	 * the recorded name is how an accented, spaced, human title became
+	 * 'Mar_a_Pi_n.mp4' in the archive.
+	 *
+	 * OPTIONAL, and no ingest door depends on it: the receiver persists the name
+	 * beside the staged file, so the ingest recovers it from the SERVER
+	 * ({@link recordedFileName}) rather than from a caller that may or may not
+	 * relay it. This key is for a caller that knows a better name than the one the
+	 * bytes arrived under — `tool_import_files`' per-entry operator name.
+	 */
+	originalFileName?: string;
+	/**
+	 * The name the SERVER recorded for this staged file when it received it
+	 * (`staged_name_record.ts`, read by `processUploadedFile` — the ONE caller of
+	 * this function). null when the staging area holds no record: a file dropped
+	 * in out of band, or one staged by a server older than 2026-08-09.
+	 *
+	 * Ranked BELOW `originalFileName` because an explicit caller name is a
+	 * statement, and ABOVE `tmpName` because it is the real name of these exact
+	 * bytes rather than the filesystem segment they were parked under.
+	 */
+	recordedFileName?: string | null;
 	now?: Date;
 }
 
@@ -92,6 +120,42 @@ export interface AddFileResult {
 	extension: string;
 	/** File name (stem.ext) of the stored original. */
 	fileName: string;
+	/**
+	 * The HUMAN name this upload is recorded under (PHP `ready.original_file_name`).
+	 * Decided HERE so the whole ingest has ONE answer to "what was this file
+	 * called"; see {@link humanFileNameOf} for why it is not `fileName`.
+	 */
+	humanFileName: string;
+}
+
+/**
+ * The human file name to record for an upload, in THREE ranks:
+ *
+ *   1. `originalFileName` — an explicit statement by the caller (only
+ *      `tool_import_files` makes one, from the operator's own queue entry);
+ *   2. `recordedFileName` — what the SERVER wrote down when it received these
+ *      bytes (`staged_name_record.ts`). This is the rank that carries every
+ *      ordinary upload, and it is why the restoration does not depend on any
+ *      caller cooperating: as of 2026-08-09 none of the three ingest callers
+ *      passes rank 1, and wiring the name only through the transport left the
+ *      defect fully live in production;
+ *   3. the staged name — the OLD, lossy behaviour, and the honest answer for a
+ *      file the server has no record of receiving: one dropped into the staging
+ *      area out of band, or staged by a server older than the record.
+ *
+ * Rank 3 is a real fallback and not a contract fiction, so it is not tripwired
+ * away; what IS gated is that ranks 1 and 2 both reach here from every door
+ * (test/unit/media_ingest_properties_native.test.ts).
+ */
+export function humanFileNameOf(input: {
+	originalFileName?: string;
+	recordedFileName?: string | null;
+	tmpName: string;
+}): string {
+	const supplied = input.originalFileName?.trim() ?? '';
+	if (supplied !== '') return supplied;
+	const recorded = input.recordedFileName?.trim() ?? '';
+	return recorded !== '' ? recorded : input.tmpName;
 }
 
 /**
@@ -132,5 +196,6 @@ export function addFile(input: AddFileInput): AddFileResult {
 		originalFilePath: target,
 		extension,
 		fileName: target.slice(target.lastIndexOf('/') + 1),
+		humanFileName: humanFileNameOf(input),
 	};
 }

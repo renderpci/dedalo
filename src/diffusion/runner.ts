@@ -88,6 +88,8 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 	const { getCompiledPlan } = await import('./plan/cache.ts');
 	const { getDiffusionWriter } = await import('./writers/registry.ts');
 	const { resolvePublication } = await import('./resolve/resolver.ts');
+	const { planDegradationReportLines } = await import('./plan/compile.ts');
+	const { retryPendingUnpublishOpportunistically } = await import('./jobs/pending_retry.ts');
 
 	const plan = await getCompiledPlan(job.spec.diffusion_element_tipo);
 	const writer = getDiffusionWriter(plan.format);
@@ -108,6 +110,31 @@ async function runPublicationJob(job: DiffusionJobRow): Promise<void> {
 		if (errors.length < MAX_PERSISTED_ERRORS) errors.push(message);
 		console.error(`[diffusion runner] ${message}`);
 	};
+
+	// COMPILE-TIME degradations (audit B3): fields whose ddo chain was narrowed
+	// so the element could publish at all. They are seeded into the run's error
+	// list — the operator's only view of a partial publication — so the run
+	// finishes "Partial success" naming every column that publishes empty
+	// instead of quietly shipping nulls forever.
+	for (const line of planDegradationReportLines(plan)) trackError(line);
+
+	// Opportunistic dd1758 unpublish retry (PHP dd_diffusion_api::diffuse
+	// :171-183): if the targets are up for publishing they are up for deleting.
+	// Fire-and-forget by construction — the helper never throws, and it
+	// single-flights itself across concurrent runners.
+	//
+	// FIRST INVOCATION ONLY, like the oracle (`if (empty($rqo->sqo->offset))`,
+	// :174): a checkpoint RESUME is the continuation of a run that already paid
+	// this debt, not a new occasion to pay it.
+	const isFirstInvocation = afterSectionId === 0 && processed === 0;
+	if (isFirstInvocation) {
+		const retryReport = await retryPendingUnpublishOpportunistically();
+		for (const line of retryReport.log) console.error(`[diffusion runner] ${line}`);
+		// A debt still owed after the retry is a PARTIAL publication in the only
+		// sense the operator cares about: records the archive deleted are still
+		// live on the public site. It belongs in the job row, not just on stderr.
+		for (const line of retryReport.errors) trackError(line);
+	}
 
 	try {
 		// Schema first, serialized, OUTSIDE any row transaction (DDL commits).
