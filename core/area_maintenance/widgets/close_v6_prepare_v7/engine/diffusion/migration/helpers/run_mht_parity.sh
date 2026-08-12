@@ -102,7 +102,13 @@ DO_MIGRATE=0
 YES_DROP=0
 SECTIONS_ARG=""
 SECTIONS_CSV=""
-NORMALIZE_ARG=""
+# MEDIA IS NORMALISED BY DEFAULT. v6 and v7 serve media from DIFFERENT LOCATIONS
+# (/dedalo/media_mib vs /dedalo/media on this install), so the URL PREFIX differs on every media
+# column while the filename half is identical. That is a deployment fact, not a migration defect.
+# The normaliser rewrites only the prefix and reports those columns as NORMALIZED(media) — they
+# stay visible in the report, they are never folded into a plain MATCH. Override with
+# --normalize=... (or --normalize= to compare raw).
+NORMALIZE_ARG="--normalize=media"
 EXAMPLES_ARG=""
 QUIET_ARG=""
 

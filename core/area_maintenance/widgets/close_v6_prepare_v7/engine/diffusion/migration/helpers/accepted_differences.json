@@ -8,18 +8,17 @@
 		"acceptances at all (the strictest run, useful to re-check a decision).",
 		"",
 		"Adding an entry is a DECISION, not a convenience: it says 'the published bytes differ and",
-		"the websites are still correct'. Record who decided it and why."
+		"the websites are still correct'. Record who decided it and why.",
+		"",
+		"MEDIA URL PREFIX is handled by the `media` NORMALISER, not by an entry here: v6 and v7 serve media from different locations (/dedalo/media_mib vs /dedalo/media), so only the prefix differs while the filename half is identical. run_mht_parity.sh enables --normalize=media by default; the affected columns report as NORMALIZED(media), never as MATCH. Decided 2026-08-12."
 	],
-
 	"unordered_json_columns": {
 		"indexation": "Computed inverse index (component_relation_index / dd96). The set of entries must match exactly and is compared element by element; only the ORDER is ignored. v6 itself is not deterministic here - the column is calculated per publication from a PostgreSQL query with no total order, so v6 emits a different sequence on different runs. Decided 2026-08-12."
 	},
-
 	"accepted_columns": {
 		"restringidos.space": "SCOPED TO THE rt1/restringidos COLUMN ONLY (node hierarchy72). v6 publishes a FABRICATED default map centre ({alt,lat,lon,zoom}) for records with no real geolocation; the v6 publication API strips it again before any website sees it. v7 publishes NULL there, which is the same information without the fiction. Decided 2026-08-12. NOT a blanket acceptance of every column named `space`: on games (node dd1269) v7 emits an OVERSIZED value where v6 emits nothing at all, which is an open defect, not an accepted difference.",
 		"related": "v6 writes '' where v7 writes NULL for a column it never populates. NULL is the correct v7 representation for an absent default and the publication API tolerates it. Decided 2026-08-12."
 	},
-
 	"accepted_schema": [
 		{
 			"attr": "columns only in v6: id",
