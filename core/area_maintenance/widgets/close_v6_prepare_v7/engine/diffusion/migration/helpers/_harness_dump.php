@@ -9,6 +9,13 @@
  * The scratch database isolates test runs: the live diffusion DB is never touched.
  */
 
+// The default is the historical numisdata scratch database and MUST stay a literal:
+// build_v7_dump.php and run_v6_diffusion.php call harness_refresh_scratch(HARNESS_SCRATCH_DB),
+// which DROPS EVERY TABLE in the resolved database. Reading $HARNESS_DB here would re-point
+// those legacy destructive callers at whatever database an unrelated orchestrator happened to
+// leave exported in the shell. A caller that wants another database defines the constant
+// BEFORE requiring this file (the guard below honours it) — see harness_dump_db.php,
+// harness_refresh_only.php and run_v6_diffusion_full.php.
 if (!defined('HARNESS_SCRATCH_DB')) {
 	define('HARNESS_SCRATCH_DB', 'web_numisdata_mib_difftest');
 }
@@ -131,7 +138,12 @@ function harness_dump_scratch(string $scratch_db = HARNESS_SCRATCH_DB) : array {
 
 		$order = '';
 		if (in_array('section_id', $cols, true) && in_array('lang', $cols, true)) {
-			$order = 'ORDER BY `section_id`, `lang`';
+			// thesaurus-shaped tables carry a `tld` column and their v6 unique key is
+			// (section_id,lang,tld): without tld in the ORDER BY the row order of a
+			// multi-tld table is undefined and the two snapshots stop being comparable.
+			$order = in_array('tld', $cols, true)
+				? 'ORDER BY `section_id`, `lang`, `tld`'
+				: 'ORDER BY `section_id`, `lang`';
 		} elseif (in_array('section_id', $cols, true)) {
 			$order = 'ORDER BY `section_id`';
 		} elseif (in_array('id', $cols, true)) {
@@ -146,6 +158,58 @@ function harness_dump_scratch(string $scratch_db = HARNESS_SCRATCH_DB) : array {
 			}
 		}
 		$out[$t] = $rows;
+	}
+
+	mysqli_close($conn);
+
+	return $out;
+}
+
+
+
+/**
+ * Dump the STRUCTURE of every table in the given database:
+ * [ table_name => [ column_name => ['type'=>..,'null'=>..,'key'=>..] ] ].
+ *
+ * Row snapshots alone cannot see a structural divergence: v6's diffusion_mysql
+ * generates `PRIMARY KEY (id)` + `UNIQUE KEY (section_id,lang[,tld])` with an
+ * AUTO_INCREMENT `id` column, while the v7 writer has no `id` at all and makes
+ * (section_id,lang) the PRIMARY KEY. Both produce the same cell values, so a
+ * value-only comparison reports a clean MATCH and the divergence stays invisible.
+ * Dumping SHOW COLUMNS makes it a first-class, diffable artifact.
+ *
+ * Column order is preserved as MariaDB reports it (ordinal position), so a
+ * reordered schema is visible too.
+ */
+function harness_dump_schema(string $db = HARNESS_SCRATCH_DB) : array {
+
+	$conn = harness_admin_conn();
+	mysqli_select_db($conn, $db);
+
+	$tables = [];
+	$res = mysqli_query($conn, 'SHOW TABLES');
+	if ($res) {
+		while ($row = mysqli_fetch_array($res, MYSQLI_NUM)) {
+			$tables[] = $row[0];
+		}
+	}
+	sort($tables);
+
+	$out = [];
+	foreach ($tables as $t) {
+
+		$columns = [];
+		$colres  = mysqli_query($conn, "SHOW COLUMNS FROM `$t`");
+		if ($colres) {
+			while ($c = mysqli_fetch_assoc($colres)) {
+				$columns[$c['Field']] = [
+					'type' => $c['Type'] ?? null,
+					'null' => $c['Null'] ?? null,
+					'key'  => $c['Key']  ?? null
+				];
+			}
+		}
+		$out[$t] = $columns;
 	}
 
 	mysqli_close($conn);
