@@ -273,7 +273,7 @@ byte-identical client (`client/dedalo/core/widgets/<tld>/<name>/js/`).
 |---|---|---|---|---|
 | `calculation` | — | `/calculation` | Generic IPO calculator: read `current`-scope components, run a static process fn (`summarize` / `to_euros` / `calculate_period`), emit `output` items. | emits `id` (not `widget_id`) |
 | `state` | — | `/state` | Per-record completion **state** %: follow each IPO path to a select/check_box pointing at the `dd174`/`dd501` vocabulary, emit per-column `detail` + `total` items. | **`computeDataList`** (edit datalist) |
-| `user_activity` | `dd` | `/dd/user_activity` | Three-tier user activity stats (saved range + today supplement + live full-range fallback). | **`isAsync`** — delivered only via `get_widget_data` |
+| `user_activity` | `dd` | `/dd/user_activity` | The user's WHOLE activity history: their saved stats span, plus the raw log for the tail after the last saved day. | **`isAsync`** — delivered only via `get_widget_data` |
 | `get_archive_states` | `dmm` | `/dmm/get_archive_states` | Aggregate radio_button state values (`answer`/`closed`, affirmative/negative counts + %) over linked records; 14 keyed outputs. | shape-gated (no instance declares it) |
 | `sum_dates` | `mdcat` | `/mdcat/sum_dates` | Sum date_in/date_out spans into a `DateInterval`-shaped total, with estimate/bridge handling. | **`computeDataParsed`** (grid/export humanizer) |
 | `get_archive_weights` | `numisdata` | `/numisdata/get_archive_weights` | Weight/diameter mean/max/min/count over the coins linked via the source portal. | — |
@@ -420,10 +420,12 @@ the engine's deliberate divergences:
   with all inputs empty it emits `total 0`. Pinned in
   `test/parity/info_widget_differential.test.ts` and the code comment in
   `widgets/calculation/functions.ts`.
-- **`user_activity` implements the full three-tier design.** Earlier tooling
-  never fully exercised the saved-stats tier, and its `who` dimension never
-  worked. The TS pipeline is faithful to the *intended* three-tier behaviour,
-  not to that historical gap.
+- **`user_activity` reports the WHOLE history, not a fixed window.** Earlier
+  tooling never fully exercised the saved-stats read, its `who` dimension never
+  worked, and the window was hardcoded to the last 365 days — on a decade-old
+  account that meant a widget titled "Total actions" reporting 21 of 284,743
+  events. The span now comes from the user's own saved stats rows
+  (`WC-2026-08-12-user-activity-full-history`); `who` stays dead, faithfully.
 - **An insert save used to double-fire before the cutover** — so historical,
   frozen data can contain two identical observer TM rows where the current
   engine writes one; the observer differential compares TM **counts deduped**

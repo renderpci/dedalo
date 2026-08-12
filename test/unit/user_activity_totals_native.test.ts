@@ -23,6 +23,7 @@ import type {
 import {
 	type ActivityDeps,
 	activityWindow,
+	dayAfter,
 	resolveActivityTotals,
 } from '../../src/core/components/component_info/widgets/dd/user_activity.ts';
 
@@ -31,14 +32,20 @@ const WIDGET_SOURCE_PATH = `${import.meta.dir}/../../src/core/components/compone
 /** A recording ActivityDeps triple; every override is a delta from "nothing". */
 function makeDeps(overrides: Partial<ActivityDeps> = {}): {
 	deps: ActivityDeps;
+	boundsCalls: unknown[][];
 	rangeCalls: unknown[][];
 	rawCalls: unknown[][];
 	mergeCalls: unknown[][];
 } {
+	const boundsCalls: unknown[][] = [];
 	const rangeCalls: unknown[][] = [];
 	const rawCalls: unknown[][] = [];
 	const mergeCalls: unknown[][] = [];
 	const base: ActivityDeps = {
+		savedStatsDayBounds: async (userId) => {
+			boundsCalls.push([userId]);
+			return overrides.savedStatsDayBounds ? await overrides.savedStatsDayBounds(userId) : null;
+		},
 		crossUsersRangeData: async (dateIn, dateOut, userId, lang) => {
 			rangeCalls.push([dateIn, dateOut, userId, lang]);
 			return overrides.crossUsersRangeData
@@ -58,7 +65,7 @@ function makeDeps(overrides: Partial<ActivityDeps> = {}): {
 				: emptyTotals();
 		},
 	};
-	return { deps: base, rangeCalls, rawCalls, mergeCalls };
+	return { deps: base, boundsCalls, rangeCalls, rawCalls, mergeCalls };
 }
 
 function emptyTotals(): CanonicalTotals {
@@ -169,68 +176,78 @@ describe('activityWindow — TZ-pinned subprocesses (the local-vs-UTC getter gat
 	}
 });
 
-describe('resolveActivityTotals — the three tiers', () => {
+describe('resolveActivityTotals — whole history, two branches', () => {
 	const W = activityWindow('2026-08-08');
 	const USER = 987654;
 	const LANG = 'lg-eng';
+	/** A decade-old account: the span the year-ago window used to hide. */
+	const OLD_BOUNDS = { firstDay: '2015-12-05', lastDay: '2026-08-06' };
 
-	test('tier 1 satisfied + no today rows: the tier-1 object is returned BY IDENTITY', async () => {
+	test('THE REGRESSION GATE: the saved span is read VERBATIM, never clamped to the year-ago window', async () => {
+		const t1 = nonEmptyTotals();
+		const { deps, rangeCalls } = makeDeps({
+			savedStatsDayBounds: async () => OLD_BOUNDS,
+			crossUsersRangeData: async () => t1,
+		});
+		await resolveActivityTotals(W, USER, LANG, deps);
+
+		// Measured on the oral-history archive before this fix: 705 saved days
+		// since 2015 existed and the widget read only the last 365.
+		expect(rangeCalls).toEqual([[OLD_BOUNDS.firstDay, OLD_BOUNDS.lastDay, USER, LANG]]);
+		expect(String(firstCall(rangeCalls)[0]) < W.dateIn).toBe(true);
+	});
+
+	test('saved history + no tail rows: the range object is returned BY IDENTITY', async () => {
 		const t1 = nonEmptyTotals();
 		const { deps, rangeCalls, rawCalls, mergeCalls } = makeDeps({
+			savedStatsDayBounds: async () => OLD_BOUNDS,
 			crossUsersRangeData: async () => t1,
 		});
 		const got = await resolveActivityTotals(W, USER, LANG, deps);
 
 		expect(got).toBe(t1); // identity, not structural equality
-		expect(rangeCalls).toEqual([[W.dateIn, W.yesterdayStr, USER, LANG]]);
-		expect(rawCalls).toEqual([[USER, W.todayStr, W.tomorrowStr]]);
-		expect(rawCalls.length).toBe(1);
+		expect(rangeCalls.length).toBe(1);
+		// the tail starts the day AFTER the last saved day and runs to tomorrow
+		expect(rawCalls).toEqual([[USER, '2026-08-07', W.tomorrowStr]]);
 		expect(mergeCalls.length).toBe(0);
 	});
 
-	test('tier 1 + a today merge: merge receives exactly (T1, rawArray, lang), one raw call', async () => {
+	test('saved history + tail rows: merge receives exactly (saved, rawArray, lang)', async () => {
 		const t1 = nonEmptyTotals();
 		const merged = nonEmptyTotals();
-		const rawToday: RawActivityItem[] = [{ type: 'when', hour: 11, value: 2 }];
+		const rawTail: RawActivityItem[] = [{ type: 'when', hour: 11, value: 2 }];
 		const { deps, rawCalls, mergeCalls } = makeDeps({
+			savedStatsDayBounds: async () => OLD_BOUNDS,
 			crossUsersRangeData: async () => t1,
-			getIntervalRawActivityData: async () => rawToday,
+			getIntervalRawActivityData: async () => rawTail,
 			mergeRawIntoCanonical: async () => merged,
 		});
 		const got = await resolveActivityTotals(W, USER, LANG, deps);
 
 		expect(got).toBe(merged);
-		expect(rawCalls).toEqual([[USER, W.todayStr, W.tomorrowStr]]);
+		expect(rawCalls).toEqual([[USER, '2026-08-07', W.tomorrowStr]]);
 		expect(mergeCalls.length).toBe(1);
 		expect(firstCall(mergeCalls)[0]).toBe(t1);
-		expect(firstCall(mergeCalls)[1]).toBe(rawToday);
+		expect(firstCall(mergeCalls)[1]).toBe(rawTail);
 		expect(firstCall(mergeCalls)[2]).toBe(LANG);
 	});
 
-	test('empty tier 1 and 2: the fallback raw call is (userId, dateIn, tomorrowStr) and merge base is NULL', async () => {
-		const rawFull: RawActivityItem[] = [{ type: 'where', tipo: 'rsc167', value: 5 }];
-		const merged = nonEmptyTotals();
-		let rawCallIndex = 0;
-		const { deps, rawCalls, mergeCalls } = makeDeps({
-			crossUsersRangeData: async () => null,
-			getIntervalRawActivityData: async () => (rawCallIndex++ === 0 ? null : rawFull),
-			mergeRawIntoCanonical: async () => merged,
+	test('saved through today: no tail read at all (the day after is in the future)', async () => {
+		const t1 = nonEmptyTotals();
+		const { deps, rawCalls } = makeDeps({
+			savedStatsDayBounds: async () => ({ firstDay: '2015-12-05', lastDay: W.todayStr }),
+			crossUsersRangeData: async () => t1,
 		});
 		const got = await resolveActivityTotals(W, USER, LANG, deps);
 
-		expect(got).toBe(merged);
-		expect(rawCalls.length).toBe(2);
-		expect(firstCall(rawCalls)).toEqual([USER, W.todayStr, W.tomorrowStr]);
-		expect(rawCalls[1]).toEqual([USER, W.dateIn, W.tomorrowStr]);
-		expect(mergeCalls.length).toBe(1);
-		expect(firstCall(mergeCalls)[0]).toBeNull(); // NULL base, not the empty tier-1 result
-		expect(firstCall(mergeCalls)[1]).toBe(rawFull);
+		expect(got).toBe(t1);
+		expect(rawCalls.length).toBe(0);
 	});
 
-	test('all-zero (non-null) tier 1: the fallback still fires — a null-check-only regression would not', async () => {
-		// Structurally present but with no actionable data: every dimension
-		// empty except a zero-valued `when` entry. `totals !== null` here, so
-		// only isCanonicalEmpty can trigger tier 3.
+	test('an all-zero saved range is still the answer — no second, unbounded scan is issued', async () => {
+		// Structurally present but with no actionable data. The retired pipeline
+		// re-scanned the whole window here; the tail read is now the only live
+		// aggregation, and it is bounded by the last saved day.
 		const allZero: CanonicalTotals = {
 			who: [],
 			what: [],
@@ -238,21 +255,31 @@ describe('resolveActivityTotals — the three tiers', () => {
 			publish: [],
 			when: [{ key: '00', label: null, value: 0 }],
 		};
-		const rawFull: RawActivityItem[] = [{ type: 'what', tipo: 'rsc167', value: 1, label: 'A' }];
-		const merged = nonEmptyTotals();
-		let rawCallIndex = 0;
-		const { deps, rawCalls, mergeCalls } = makeDeps({
+		const { deps, rawCalls } = makeDeps({
+			savedStatsDayBounds: async () => OLD_BOUNDS,
 			crossUsersRangeData: async () => allZero,
-			getIntervalRawActivityData: async () => (rawCallIndex++ === 0 ? null : rawFull),
+		});
+		const got = await resolveActivityTotals(W, USER, LANG, deps);
+
+		expect(got).toBe(allZero);
+		expect(rawCalls).toEqual([[USER, '2026-08-07', W.tomorrowStr]]);
+	});
+
+	test('NO saved history: the fallback window is live-aggregated with a NULL merge base', async () => {
+		const rawFull: RawActivityItem[] = [{ type: 'where', tipo: 'rsc167', value: 5 }];
+		const merged = nonEmptyTotals();
+		const { deps, rangeCalls, rawCalls, mergeCalls } = makeDeps({
+			savedStatsDayBounds: async () => null,
+			getIntervalRawActivityData: async () => rawFull,
 			mergeRawIntoCanonical: async () => merged,
 		});
 		const got = await resolveActivityTotals(W, USER, LANG, deps);
 
 		expect(got).toBe(merged);
-		expect(got).not.toBe(allZero);
-		expect(rawCalls.length).toBe(2);
-		expect(rawCalls[1]).toEqual([USER, W.dateIn, W.tomorrowStr]);
-		expect(firstCall(mergeCalls)[0]).toBeNull();
+		expect(rangeCalls.length).toBe(0); // nothing saved ⇒ nothing to read
+		expect(rawCalls).toEqual([[USER, W.dateIn, W.tomorrowStr]]);
+		expect(firstCall(mergeCalls)[0]).toBeNull(); // NULL base
+		expect(firstCall(mergeCalls)[1]).toBe(rawFull);
 	});
 
 	test('nothing anywhere: null, NOT {}', async () => {
@@ -261,8 +288,18 @@ describe('resolveActivityTotals — the three tiers', () => {
 
 		expect(got).toBeNull();
 		expect(got).not.toEqual({} as unknown as CanonicalTotals);
-		expect(rawCalls.length).toBe(2);
+		expect(rawCalls.length).toBe(1);
 		expect(mergeCalls.length).toBe(0);
+	});
+});
+
+describe('dayAfter — the tail start', () => {
+	test('rolls over month, year and the leap day', () => {
+		expect(dayAfter('2026-08-06')).toBe('2026-08-07');
+		expect(dayAfter('2026-01-31')).toBe('2026-02-01');
+		expect(dayAfter('2025-12-31')).toBe('2026-01-01');
+		expect(dayAfter('2024-02-28')).toBe('2024-02-29');
+		expect(dayAfter('2024-02-29')).toBe('2024-03-01');
 	});
 });
 
@@ -275,13 +312,12 @@ describe('rewire — the inline pipeline is GONE from the widget', () => {
 		// inline tier tokens must not appear inside computeUserActivity: each of
 		// these now exists exactly once, inside the extraction.
 		const computeBody = source.slice(source.indexOf('async function computeUserActivity'));
-		expect(computeBody).not.toContain('const endSaved =');
-		expect(computeBody).not.toContain('isCanonicalEmpty(totals)');
+		expect(computeBody).not.toContain('savedStatsDayBounds(userId)');
 		expect(computeBody).not.toContain('T12:00:00Z');
 		expect(computeBody).not.toContain('setUTCFullYear');
-		expect(computeBody).not.toContain('falling back to live full-range aggregation');
+		expect(computeBody).not.toContain('mergeRawIntoCanonical(');
 		// and there is exactly ONE occurrence of each in the whole file
-		for (const token of ['const endSaved =', 'T12:00:00Z', 'setUTCFullYear']) {
+		for (const token of ['setUTCFullYear', 'await deps.crossUsersRangeData(']) {
 			expect(source.split(token).length - 1).toBe(1);
 		}
 	});

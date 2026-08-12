@@ -542,6 +542,19 @@ function emptyWhen(): CanonicalEntry[] {
  * Day-granular date compare over the stored dd1530 start triple (equivalent
  * to PHP's virtual-seconds bounds for the day records this section holds).
  *
+ * ONE ROW PER DAY, LAST WRITTEN WINS (`DISTINCT ON (day) … ORDER BY day, id
+ * DESC`). A stats row IS that day's totals, so two rows for one day are two
+ * aggregation RUNS, not two facts: the writer resumes from its newest row and
+ * only ever appends, so re-aggregating a user who still has old rows leaves
+ * byte-identical twins behind. Measured on the oral-history archive: user 2 has
+ * 191 duplicated days out of 416, which summed to 41,051 events over a log
+ * holding 35,123. Folding both is not a bigger number, it is a wrong one — and
+ * it only became visible when the widget started reading the whole history
+ * (WC-2026-08-12-user-activity-full-history) instead of the last 365 days.
+ * Highest `id` is the most recent run for that day.
+ * (The duplicate ROWS are a separate, writer-side defect; this read refuses to
+ * report them as activity.)
+ *
  * LEDGER — TWO KNOWN-OPEN, UNGATED DEFECTS IN THE `make_date` PREDICATE BELOW
  * (coverage plan §4.4 D15 and D16; the gate
  * test/unit/user_stats_range_native.test.ts deliberately pins NEITHER, because
@@ -563,20 +576,32 @@ export async function crossUsersRangeData(
 	lang: string,
 ): Promise<CanonicalTotals | null> {
 	const rows = (await sql.unsafe(
-		`SELECT relation, misc->$5 AS totals, date
-		 FROM matrix_stats
-		 WHERE section_tipo = $6
-		   AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
-		   AND make_date(
-		         ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
-		         ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
-		         ("date"->'${UA_DATE}'->0->'start'->>'day')::int
-		       ) BETWEEN date($3) AND date($4)
-		 ORDER BY make_date(
-		         ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
-		         ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
-		         ("date"->'${UA_DATE}'->0->'start'->>'day')::int
-		       ) ASC, id ASC`,
+		`SELECT day.relation, day.totals
+		 FROM (
+		   SELECT DISTINCT ON (
+		            make_date(
+		              ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
+		              ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
+		              ("date"->'${UA_DATE}'->0->'start'->>'day')::int
+		            )
+		          )
+		          relation, misc->$5 AS totals, id,
+		          make_date(
+		            ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
+		            ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
+		            ("date"->'${UA_DATE}'->0->'start'->>'day')::int
+		          ) AS day_key
+		   FROM matrix_stats
+		   WHERE section_tipo = $6
+		     AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+		     AND make_date(
+		           ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
+		           ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
+		           ("date"->'${UA_DATE}'->0->'start'->>'day')::int
+		         ) BETWEEN date($3) AND date($4)
+		   ORDER BY day_key ASC, id DESC
+		 ) day
+		 ORDER BY day.day_key ASC, day.id ASC`,
 		[...userLocatorFilterPair(UA_USER, userId), dateIn, dateOut, UA_TOTALS, UA_SECTION],
 	)) as StatsRow[];
 	// (!) NULL-VS-EMPTY, AND WHY IT CANNOT MOVE INTO THE PURE HALF.
@@ -596,6 +621,50 @@ export async function crossUsersRangeData(
 		(tipo) => termByTipo(tipo, lang),
 		(userKey) => resolveUserName(userKey, lang),
 	);
+}
+
+/** The first and last calendar day this user has a saved dd1521 stats row for. */
+export interface SavedStatsBounds {
+	firstDay: string;
+	lastDay: string;
+}
+
+/**
+ * The SAVED span of one user's activity history: the min/max dd1530 day over
+ * their dd1521 rows, or null when the store holds none.
+ *
+ * This is what makes the user_activity widget show the WHOLE history instead of
+ * a fixed window (WC-2026-08-12-user-activity-full-history): the widget reads
+ * the saved range this returns, and aggregates the raw log only for the tail
+ * AFTER `lastDay` — so the cost of "everything" is the pre-aggregated rows,
+ * which is what the nightly catch-up built them for.
+ *
+ * Same `make_date` triple as `crossUsersRangeData` deliberately — one date
+ * expression, one exposure: the ledgered D15 (year/month-only rows excluded)
+ * and D16 (malformed date raises) apply to both identically, so the bounds can
+ * never disagree with the range read they bound.
+ */
+export async function savedStatsDayBounds(userId: number): Promise<SavedStatsBounds | null> {
+	const rows = (await sql.unsafe(
+		`SELECT to_char(min(day), 'YYYY-MM-DD') AS first_day,
+		        to_char(max(day), 'YYYY-MM-DD') AS last_day
+		 FROM (
+		   SELECT make_date(
+		            ("date"->'${UA_DATE}'->0->'start'->>'year')::int,
+		            ("date"->'${UA_DATE}'->0->'start'->>'month')::int,
+		            ("date"->'${UA_DATE}'->0->'start'->>'day')::int
+		          ) AS day
+		   FROM matrix_stats
+		   WHERE section_tipo = $3
+		     AND (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+		 ) days
+		 WHERE day IS NOT NULL`,
+		[...userLocatorFilterPair(UA_USER, userId), UA_SECTION],
+	)) as { first_day: string | null; last_day: string | null }[];
+	const first = rows[0]?.first_day ?? null;
+	const last = rows[0]?.last_day ?? null;
+	if (first === null || last === null) return null;
+	return { firstDay: first, lastDay: last };
 }
 
 /** One `crossUsersRangeData` row as the SQL hands it over. */

@@ -5,8 +5,8 @@
 	"root": "src/core",
 	"summary": {
 		"files": 466,
-		"functions": 3697,
-		"functionsOverCap": 700,
+		"functions": 3700,
+		"functionsOverCap": 699,
 		"filesOverCap": 275
 	},
 	"files": {

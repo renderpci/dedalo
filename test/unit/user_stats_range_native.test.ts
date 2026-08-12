@@ -426,7 +426,10 @@ describe('crossUsersRangeData (the SQL half)', () => {
 			marker: 'zzxu_out_hi',
 		});
 
-		// --- dual-form fixture, same day, int row first (lower id)
+		// --- dual-form fixture, one form per DAY (the int row first, lower id).
+		// Deliberately NOT the same day: a day is a single aggregation run, and
+		// the reader keeps one row per day (see the duplicate-day case below), so
+		// two same-day rows would test the dedup rather than the probe.
 		await insertStats({
 			sectionId: 932021,
 			year: 1903,
@@ -439,9 +442,28 @@ describe('crossUsersRangeData (the SQL half)', () => {
 			sectionId: 932022,
 			year: 1903,
 			month: 5,
-			day: 5,
+			day: 6,
 			idForm: 'string',
 			marker: 'zzxu_str',
+		});
+
+		// --- duplicate-day fixture: the SAME day aggregated twice (what a
+		// re-aggregation over a non-swept store leaves behind). Highest id wins.
+		await insertStats({
+			sectionId: 932031,
+			year: 1904,
+			month: 7,
+			day: 7,
+			idForm: 'int',
+			marker: 'zzxu_dup_old',
+		});
+		await insertStats({
+			sectionId: 932032,
+			year: 1904,
+			month: 7,
+			day: 7,
+			idForm: 'int',
+			marker: 'zzxu_dup_new',
 		});
 	});
 
@@ -495,5 +517,14 @@ describe('crossUsersRangeData (the SQL half)', () => {
 		// either disjunct of the containment pair makes half the history disappear.
 		expect(markers(totals)).toEqual(['zzxu_int', 'zzxu_str']);
 		expect(totals?.where.length).toBe(2);
+	});
+
+	test('a day aggregated TWICE is counted ONCE — the newest run wins', async () => {
+		const totals = await crossUsersRangeData('1904-07-01', '1904-07-31', UID, LANG);
+		// Both rows are the same day and each IS that day's totals: summing them
+		// reports more activity than the log holds (measured live: 191 duplicated
+		// days inflated one user to 41,051 events over a 35,123-row log).
+		expect(markers(totals)).toEqual(['zzxu_dup_new']);
+		expect(totals?.where.map((entry) => entry.value)).toEqual([1]);
 	});
 });
