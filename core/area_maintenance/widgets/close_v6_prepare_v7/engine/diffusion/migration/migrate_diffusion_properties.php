@@ -1,7 +1,5 @@
 <?php
 
-use PhpParser\Node\Stmt\Switch_;
-use Symfony\Component\Console\Formatter\NullOutputFormatter;
 /**
  * Migration Script: Diffusion Ontology Properties (v6 -> v7)
  * 
@@ -70,6 +68,365 @@ function diffusion_build_add_parents_process(string $value='term_id') : stdClass
 }
 
 /**
+* MIGRATE_DIFFUSION_OVERRIDES
+* Install-specific data that used to be hardcoded in this script (a shared rsc tipo pair,
+* a "standard code component" tipo, a per-node post-override). It lives in overrides.json
+* next to this file so that migrating a DIFFERENT ontology does not inherit another
+* install's exceptions.
+*
+* Path: getenv('MIGRATE_DIFFUSION_OVERRIDES') or <this dir>/overrides.json.
+* A missing or unreadable file simply means "no overrides" — never fatal, because the
+* overrides are exceptions, not the mapping itself.
+*
+* @return stdClass  decoded overrides (empty object when there are none)
+*/
+function migrate_diffusion_overrides() : stdClass {
+
+	static $overrides = null;
+	if ($overrides !== null) {
+		return $overrides;
+	}
+
+	$overrides   = new stdClass();
+	$env_path    = getenv('MIGRATE_DIFFUSION_OVERRIDES');
+	$is_explicit = !empty($env_path);
+	$path        = $is_explicit ? $env_path : __DIR__ . '/overrides.json';
+
+	// ABSENT is a supported state and means "no overrides". BROKEN is not: silently running with
+	// every override inactive produces different properties than a run with a valid file, and would
+	// otherwise still exit 0. Absent -> silent no-op; present-but-unusable -> counted as a failure.
+	if (!is_file($path) || !is_readable($path)) {
+		if ($is_explicit) {
+			echo "  [WARN] MIGRATE_DIFFUSION_OVERRIDES points to an unreadable file: $path (no overrides applied)\n";
+			$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
+		}
+		return $overrides;
+	}
+
+	$decoded = json_decode((string)file_get_contents($path));
+	if (!is_object($decoded)) {
+		echo "  [WARN] Could not parse overrides file $path (no overrides applied)\n";
+		$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
+		return $overrides;
+	}
+
+	$overrides = $decoded;
+	echo "Loaded diffusion migration overrides from: $path\n";
+
+	return $overrides;
+}//end migrate_diffusion_overrides
+
+/**
+* MIGRATE_DIFFUSION_SCOPE_MATCHES
+* Optional scope of an overrides.json rule, so an exception cannot fire outside the
+* ontology it was written for. Two independent, OR-ed keys:
+*   "tld":   ["numisdata"]    → only on nodes whose tipo belongs to one of these tlds
+*   "roots": ["numisdata29"]  → only on these exact node tipos
+* A rule carrying NEITHER key is UNSCOPED and fires on every node — that is exactly the
+* old hardcoded behaviour, so the shipped overrides.json scopes every rule it seeds.
+*
+* (`post_overrides` keeps its own, root-oriented check: there the unit of scoping is the
+* subtree the caller asked to migrate, not the node being written.)
+*
+* @param object $rule  overrides.json rule
+* @param string $tipo  node being migrated
+* @return bool
+*/
+function migrate_diffusion_scope_matches(object $rule, string $tipo) : bool {
+
+	$ar_tld  = (array)($rule->tld ?? []);
+	$ar_root = (array)($rule->roots ?? []);
+
+	if (empty($ar_tld) && empty($ar_root)) {
+		return true;
+	}
+	if (!empty($ar_root) && in_array($tipo, $ar_root, true)) {
+		return true;
+	}
+	if (!empty($ar_tld) && in_array((string)get_tld_from_tipo($tipo), $ar_tld, true)) {
+		return true;
+	}
+
+	return false;
+}//end migrate_diffusion_scope_matches
+
+/**
+* MIGRATE_DIFFUSION_APPLY_DDO_ORDER_SWAP
+* Declarative replacement of the hardcoded rsc85/rsc86 "flip_people" swap: for every
+* configured pair, when BOTH tipos are present in the given ddo_map their positions are
+* exchanged. The pairs are install data (rsc85/rsc86 are SHARED rsc tipos, so the old
+* hardcode fired on ANY node of ANY ontology reusing them), so they come from
+* overrides.json — and each rule carries the optional tld/roots scope enforced by
+* migrate_diffusion_scope_matches().
+*
+* @param array $ddo_map  list of ddo entries (objects with a ->tipo)
+* @param string $tipo    node being migrated (scope subject, reported in the [OVERRIDE] line)
+* @return array  the ddo_map, with any configured pair swapped
+*/
+function migrate_diffusion_apply_ddo_order_swap(array $ddo_map, string $tipo) : array {
+
+	$rules = migrate_diffusion_overrides()->ddo_order_swap ?? [];
+	if (empty($rules) || !is_array($rules)) {
+		return $ddo_map;
+	}
+
+	$tipos = array_column($ddo_map, 'tipo');
+
+	foreach ($rules as $rule) {
+		if (!is_object($rule) || !migrate_diffusion_scope_matches($rule, $tipo)) {
+			continue;
+		}
+		$pair = $rule->pair ?? null;
+		if (!is_array($pair) || count($pair) !== 2) {
+			continue;
+		}
+		$index_a = array_search($pair[0], $tipos, true);
+		$index_b = array_search($pair[1], $tipos, true);
+		if ($index_a === false || $index_b === false) {
+			continue;
+		}
+
+		$temp              = $ddo_map[$index_a];
+		$ddo_map[$index_a] = $ddo_map[$index_b];
+		$ddo_map[$index_b] = $temp;
+		$tipos             = array_column($ddo_map, 'tipo');
+
+		$rule_name = $rule->rule ?? ('ddo_order_swap:' . $pair[0] . '/' . $pair[1]);
+		echo "  [OVERRIDE] $rule_name applied on $tipo\n";
+	}
+
+	return $ddo_map;
+}//end migrate_diffusion_apply_ddo_order_swap
+
+/**
+* MIGRATE_DIFFUSION_DERIVE_SECTION_TIPO
+* Resolves the section a component hop points at. The ontology lookup itself is the
+* engine's own diffusion_utils::get_related_section_tipo() — reused rather than
+* re-implemented: the local copy called get_ar_tipo_by_model_and_relation() WITHOUT the
+* 4th arg, so $search_exact defaulted to false and 'section' str_contains-matched
+* section_list, section_group, section_record, section_tab and component_section_id.
+* Only the sqo fallback (autocomplete/portal hops that declare their target sections in
+* the search query object instead of relating to them) stays local.
+*
+* @param string|null $hop_tipo  component tipo whose target section is wanted
+* @return string|null  section tipo, or null when it cannot be derived
+*/
+function migrate_diffusion_derive_section_tipo(?string $hop_tipo) : ?string {
+
+	if (empty($hop_tipo)) {
+		return null;
+	}
+
+	$related_section_tipo = diffusion_utils::get_related_section_tipo($hop_tipo);
+	if (!empty($related_section_tipo)) {
+		return $related_section_tipo;
+	}
+
+	// Autocomplete/portal hops declare their target sections in the search query object
+	$hop_properties = ontology_node::get_instance($hop_tipo)->get_properties();
+	$ar_request_config = $hop_properties->source->request_config ?? [];
+	foreach ($ar_request_config as $request_config) {
+		$ar_section_tipo = $request_config->sqo->section_tipo ?? [];
+		foreach ($ar_section_tipo as $section_tipo) {
+			$value = $section_tipo->value ?? null;
+			if (is_array($value) && !empty($value[0])) {
+				return $value[0];
+			}
+			if (is_string($value) && $value !== '') {
+				return $value;
+			}
+		}
+	}
+
+	return null;
+}//end migrate_diffusion_derive_section_tipo
+
+/**
+* MIGRATE_DIFFUSION_TERM_IS_CODE
+* Does an ontology term name a section's "official code" component?
+*
+* Accent-folded, case-insensitive, WHOLE-WORD match against a fixed multi-language token
+* set. The former /\bcod/iu was wrong in both directions:
+*   - it never matched 'Código oficial' / 'Codi oficial' is fine but 'Código' does not even
+*     CONTAIN the literal substring 'cod' (the accent sits between the c and the d), so the
+*     rule was inert on any install whose data lang is Spanish or Portuguese;
+*   - it matched 'Codex Vaticanus', 'Codificación', … because a prefix is not a word.
+*
+* @param string $term  ontology term in the data lang (or the lg-eng retry)
+* @return bool
+*/
+function migrate_diffusion_term_is_code(string $term) : bool {
+
+	static $ar_token = [
+		'cod', 'cods', 'code', 'codes', 'codi', 'codis', 'codice', 'codici',
+		'codigo', 'codigos', 'kod', 'kode', 'koodi'
+	];
+	static $ar_fold = [
+		'á'=>'a', 'à'=>'a', 'ä'=>'a', 'â'=>'a', 'ã'=>'a', 'å'=>'a',
+		'é'=>'e', 'è'=>'e', 'ë'=>'e', 'ê'=>'e',
+		'í'=>'i', 'ì'=>'i', 'ï'=>'i', 'î'=>'i',
+		'ó'=>'o', 'ò'=>'o', 'ö'=>'o', 'ô'=>'o', 'õ'=>'o',
+		'ú'=>'u', 'ù'=>'u', 'ü'=>'u', 'û'=>'u',
+		'ç'=>'c', 'ñ'=>'n'
+	];
+
+	if ($term === '') {
+		return false;
+	}
+
+	$normalized = strtr(mb_strtolower($term, 'UTF-8'), $ar_fold);
+	$ar_word    = preg_split('/[^a-z0-9]+/', $normalized, -1, PREG_SPLIT_NO_EMPTY);
+
+	foreach ((array)$ar_word as $word) {
+		if (in_array($word, $ar_token, true)) {
+			return true;
+		}
+	}
+
+	return false;
+}//end migrate_diffusion_term_is_code
+
+/**
+* MIGRATE_DIFFUSION_DERIVE_CODE_COMPONENT
+* Resolves the "code" component of the section a hop points at (v6 hardcoded 'hierarchy41',
+* the code component of the lg1 langs thesaurus, for every install). Derivation: the hop's
+* own section → its structure (related) nodes → their input_text components → the one whose
+* term reads as a code. A successful derivation prints [DERIVED]; when it cannot be derived
+* the (scoped) overrides.json value is used and a [FALLBACK] line is printed — never silently.
+*
+* Returns null when it is neither derivable nor configured IN SCOPE. Callers must treat that
+* as a migration FAILURE and write nothing: a null ddo tipo round-trips through save_node()
+* as a clean [TEST PASS] and silently publishes 'lg-' instead of 'lg-cat'.
+*
+* @param string|null $hop_tipo  component tipo whose section carries the code component
+* @param string $tipo           node being migrated (reported in the [FALLBACK] line)
+* @param string $indent         current log indent
+* @return string|null  code component tipo, or null when neither derived nor configured
+*/
+function migrate_diffusion_derive_code_component(?string $hop_tipo, string $tipo, string $indent='') : ?string {
+
+	$section_tipo = migrate_diffusion_derive_section_tipo($hop_tipo);
+
+	if (!empty($section_tipo)) {
+		// The section's components live under the structure nodes the section relates to
+		$ar_structure = ontology_node::get_relation_nodes($section_tipo, true, true);
+		$ar_candidate = [];
+		foreach ((array)$ar_structure as $structure_tipo) {
+			$ar_components = ontology_node::get_ar_tipo_by_model_and_relation($structure_tipo, 'component_input_text', 'children_recursive');
+			foreach ($ar_components as $component_tipo) {
+				// $fallback=false (4th arg): get_term_by_tipo() otherwise falls back to the
+				// default data lang, so it NEVER returned '' and the lg-eng retry below was
+				// unreachable — an install whose terms are only translated to English matched
+				// nothing at all.
+				$term = (string)ontology_node::get_term_by_tipo($component_tipo, DEDALO_DATA_LANG, true, false);
+				if ($term === '') {
+					$term = (string)ontology_node::get_term_by_tipo($component_tipo, 'lg-eng', true, false);
+				}
+				// 'code' / 'codi' / 'codice' / 'código' …
+				if (migrate_diffusion_term_is_code($term)) {
+					$ar_candidate[$component_tipo] = true;
+				}
+			}
+		}
+		$ar_candidate = array_keys($ar_candidate);
+		if (count($ar_candidate) === 1) {
+			echo "{$indent}  [DERIVED] code component for $tipo: {$ar_candidate[0]} (from section $section_tipo)\n";
+			return $ar_candidate[0];
+		}
+	}
+
+	// Announced fallback. The rule is scoped like every other overrides.json rule, so a
+	// foreign install does not inherit this one's "standard code component".
+	$rule     = migrate_diffusion_overrides()->code_component ?? null;
+	$in_scope = is_object($rule) ? migrate_diffusion_scope_matches($rule, $tipo) : false;
+	$fallback = $in_scope ? ($rule->default ?? null) : null;
+	$reason   = !is_object($rule)
+		? 'none configured in overrides.json'
+		: (!$in_scope
+			? 'code_component override out of scope for this tipo'
+			: 'no code_component.default in overrides.json');
+
+	echo "{$indent}  [FALLBACK] code component not derivable for $tipo"
+		. (empty($section_tipo) ? ' (no section in scope)' : " (section $section_tipo)")
+		. ' → ' . (empty($fallback) ? $reason : $fallback) . "\n";
+
+	if (empty($fallback)) {
+		return null;
+	}
+
+	echo "{$indent}  [OVERRIDE] code_component applied on $tipo\n";
+
+	return (string)$fallback;
+}//end migrate_diffusion_derive_code_component
+
+/**
+* MIGRATE_DIFFUSION_APPLY_POST_OVERRIDES
+* Applies the overrides.json `post_overrides` entries — whole `properties` values that
+* replace what the mapping computed for one specific node — AFTER a subtree migration.
+* Each entry is scoped BY TLD, not by reachability: it is applied when the requested root is
+* listed in the entry's `roots`, or — when `roots` is empty — when the entry's tipo has the
+* SAME TLD as the requested root. So migrating another ontology can never rewrite a foreign
+* install's node, but migrating `numisdata50` does still rewrite `numisdata1285` even though
+* the latter is not under it. Use `roots` when an entry must be pinned to one subtree root.
+*
+* @param string $root_tipo  root the caller migrated
+* @return int  number of entries applied (write verified)
+*/
+function migrate_diffusion_apply_post_overrides(string $root_tipo) : int {
+
+	$ar_entry = migrate_diffusion_overrides()->post_overrides ?? [];
+	if (empty($ar_entry) || !is_array($ar_entry)) {
+		return 0;
+	}
+
+	$root_tld = get_tld_from_tipo($root_tipo);
+	$applied  = 0;
+
+	foreach ($ar_entry as $entry) {
+
+		$entry_tipo = $entry->tipo ?? null;
+		$properties = $entry->properties ?? null;
+		if (empty($entry_tipo) || !is_object($properties)) {
+			continue;
+		}
+
+		$ar_root  = (array)($entry->roots ?? []);
+		$in_scope = in_array($root_tipo, $ar_root, true)
+			|| (empty($ar_root) && get_tld_from_tipo($entry_tipo) === $root_tld);
+
+		if (!$in_scope) {
+			echo "  [POST-OVERRIDE SKIPPED - other tld than root $root_tipo] $entry_tipo\n";
+			continue;
+		}
+
+		if (defined('MIGRATE_DIFFUSION_DRY_RUN') && MIGRATE_DIFFUSION_DRY_RUN === true) {
+			echo "  [DRY RUN] would apply post-override on $entry_tipo: " . json_encode($properties) . "\n";
+			continue;
+		}
+
+		// The write can fail (bad tipo, DB error). It used to be discarded and the
+		// [POST-OVERRIDE] line printed anyway, so a failed override looked identical to an
+		// applied one — and, unlike save_node(), nothing here reads the value back.
+		$updated = dd_ontology_db_manager::update($entry_tipo, (object)['properties' => $properties]);
+		if ($updated !== true) {
+			echo "  [WARN] post-override write FAILED on $entry_tipo (dd_ontology_db_manager::update returned false)\n";
+			$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
+			continue;
+		}
+		if (isset(ontology_node::$instances[$entry_tipo])) {
+			unset(ontology_node::$instances[$entry_tipo]);
+		}
+		if (isset(dd_ontology_db_manager::$load_cache[$entry_tipo])) {
+			unset(dd_ontology_db_manager::$load_cache[$entry_tipo]);
+		}
+		$applied++;
+		echo "  [POST-OVERRIDE] $entry_tipo" . (isset($entry->info) ? ' - ' . $entry->info : '') . "\n";
+	}
+
+	return $applied;
+}//end migrate_diffusion_apply_post_overrides
+
+/**
 * DRY RUN
 * --dry-run computes and prints the full v6→v7 mapping for every diffusion node
 * (the "V6: … / V7: …" pair each node already reports) and writes NOTHING: the two
@@ -114,6 +471,39 @@ $total_nodes = 0;
 // Nodes a dry run would have written (never incremented on a real run)
 $dry_run_pending = 0;
 
+// FAILURE / WARNING COUNTERS
+// A node that did not round-trip (read-back mismatch), a node whose mapping could not be
+// completed (an underivable ddo tipo, a failed post-override) or an exception escaping the
+// traversal used to be printed and forgotten: the process still exited 0,
+// so the only way to notice was to grep the log. They are counted here and turned into exit 1 by
+// the shutdown handler below. Unmapped nodes are a COVERAGE warning, never a failure.
+$GLOBALS['migrate_diffusion_failures'] = 0;
+$GLOBALS['migrate_diffusion_unmapped'] = 0;
+
+register_shutdown_function(function() : void {
+
+	$failures = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0);
+	$unmapped = (int)($GLOBALS['migrate_diffusion_unmapped'] ?? 0);
+
+	if ($failures===0 && $unmapped===0) {
+		return;
+	}
+
+	fwrite(STDERR, 'diffusion migration summary: failures=' . $failures
+		. ' unmapped(warning)=' . $unmapped . PHP_EOL);
+
+	if ($unmapped > 0) {
+		fwrite(STDERR, 'WARNING: ' . $unmapped . ' node(s) carry v6 propiedades that matched no mapping '
+			. 'branch. Search "[UNMAPPED]" in the log — they are a coverage gap, not a failure.' . PHP_EOL);
+	}
+
+	if ($failures > 0) {
+		fwrite(STDERR, 'ERROR: ' . $failures . ' node(s) failed to migrate. Search "[TEST FAIL]" / '
+			. '"[WARN]" in the log.' . PHP_EOL);
+		exit(1);
+	}
+});
+
 function traverse_ontology_recursive($current_tipo, $level = 0) {
 	global $total_nodes;
     $total_nodes++;
@@ -123,16 +513,14 @@ function traverse_ontology_recursive($current_tipo, $level = 0) {
     echo "\nProcessing [{$current_tipo}] {$model} ({$term})...\n";
     
 	$children = ontology_node::get_ar_children($current_tipo);
-	// Process current node
+	// Process current node.
+	// No "could not load" branch: ontology_node::get_instance() is declared `: self` and always
+	// returns an object (it constructs an empty one for an unknown tipo), so the former else
+	// branch — and the failure it counted — was unreachable.
 	$node = ontology_node::get_instance($current_tipo);
-	if ($node) {
-		process_node($node, $level);
-		$total_nodes++;
-	} else {
-		echo "Error: Could not load node $current_tipo\n";
-		return;
-	}
-	
+	process_node($node, $level);
+	$total_nodes++;
+
 	// Find children using dd_ontology_db_manager
 	// We search for nodes where 'parent' column is $current_tipo
 	$children_tipos = dd_ontology_db_manager::search(['parent' => $current_tipo], true); // true = order by order_number
@@ -290,7 +678,7 @@ function process_node($node, $level) {
 							// Specific complex object for Enum + Relation
 							$parser_process = [
 								(object)[
-									'fn' => 'parser_locator::get_section_id'
+									'fn' => 'parser_locator::get_v6_section_id'
 								],
 								(object)[
 									'fn' => 'parser_helper::get_first'
@@ -366,7 +754,6 @@ function process_node($node, $level) {
 												'section_tipo' => 'self'
 											]
 										];
-										$flip_people = false;
 										foreach ($target_ddo_map as $ddo) {
 											$new_ddo = new stdClass();
 											$model = ontology_node::get_model_by_tipo($ddo->tipo);
@@ -380,25 +767,13 @@ function process_node($node, $level) {
 											}									
 											$new_ddo->tipo = $ddo->tipo;
 
-											if($ddo->tipo === 'rsc85'){
-												$flip_people = true;
-											}
 											$deep_ddo[] = $new_ddo;
 										}
-										
-										if($flip_people){
 
-											// Find indices of rsc85 and rsc86
-											$rsc85_index = array_search('rsc85', array_column($deep_ddo, 'tipo'));
-											$rsc86_index = array_search('rsc86', array_column($deep_ddo, 'tipo'));
-
-											// If both exist, swap them
-											if ($rsc85_index !== false && $rsc86_index !== false) {
-												$temp = $deep_ddo[$rsc85_index];
-												$deep_ddo[$rsc85_index] = $deep_ddo[$rsc86_index];
-												$deep_ddo[$rsc86_index] = $temp;
-											}
-										}								
+										// Declarative ddo order swaps (formerly the hardcoded rsc85/rsc86
+										// "flip_people"). rsc85/rsc86 are SHARED rsc tipos, so the pairs are
+										// install data and live in overrides.json, not here.
+										$deep_ddo = migrate_diffusion_apply_ddo_order_swap($deep_ddo, $tipo);
 
 										$parser_process = (object)[										
 											'parser' => [
@@ -1289,7 +1664,18 @@ function process_node($node, $level) {
 								$new_props = new stdClass();
 								$new_props->process = new stdClass();
 								$new_props->process = $parser_process;
-								$new_props->process->output_sample = 'numisdata4';
+
+								// output_sample is only an example of what this column emits: the section
+								// tipo the source hop points at. It used to be the literal 'numisdata4' of
+								// the install this rule was written on — a wrong sample is worse than none,
+								// so it is derived here and simply omitted when it cannot be.
+								$sample_section_tipo = migrate_diffusion_derive_section_tipo($rel_info['tipo'] ?? null);
+								if (!empty($sample_section_tipo)) {
+									$new_props->process->output_sample = $sample_section_tipo;
+									echo "{$indent}  [DERIVED] output_sample section tipo for $tipo: $sample_section_tipo\n";
+								} else {
+									echo "{$indent}  [FALLBACK] no section tipo in scope for output_sample on $tipo; key omitted\n";
+								}
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -1313,7 +1699,7 @@ function process_node($node, $level) {
 								
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									]								
 								];
 
@@ -2114,7 +2500,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -2141,7 +2527,7 @@ function process_node($node, $level) {
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
 								$parser_process = (object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 								];
 
 								$new_props = new stdClass();
@@ -2265,6 +2651,24 @@ function process_node($node, $level) {
 
 								if($component_method === 'get_value_code'){
 
+									// The code component of the hop's OWN section (v6 hardcoded hierarchy41,
+									// the code of the lg1 langs thesaurus). Derived from the ontology, with
+									// the overrides.json value as an announced [FALLBACK].
+									$code_component_tipo = migrate_diffusion_derive_code_component($rel_info['tipo'] ?? null, $tipo, $indent);
+
+									// A null tipo must NEVER reach the ddo_map: {"tipo":null} round-trips
+									// through save_node() as a clean [TEST PASS] and the published column
+									// silently becomes 'lg-' instead of 'lg-cat'. Nothing is written and the
+									// node is counted as a failure (precedent: output_sample below, which
+									// omits the key rather than write a wrong value).
+									if (empty($code_component_tipo)) {
+										echo "{$indent}- [$tipo] $model_name\n";
+										echo "{$indent}  [TEST FAIL] get_value_code: no code component for "
+											. ($rel_info['tipo'] ?? '?') . "; properties NOT written\n";
+										$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
+										return;
+									}
+
 									$ddo_map_sl = [
 										(object)[
 											'tipo'         => $rel_info['tipo'] ?? $tipo,
@@ -2272,7 +2676,7 @@ function process_node($node, $level) {
 										],
 										(object)[
 											'id'		=> 'a',
-											'tipo'		=> 'hierarchy41', // Standard code component for lg1
+											'tipo'		=> $code_component_tipo,
 											'label'		=> 'code',
 											'parent'	=> $rel_info['tipo'],
 										]
@@ -2403,7 +2807,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -2886,7 +3290,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -3029,7 +3433,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -3331,7 +3735,7 @@ function process_node($node, $level) {
 									$parser_process = (object)[
 										'parser' => [
 											(object)[
-												'fn' => 'parser_locator::get_section_id'
+												'fn' => 'parser_locator::get_v6_section_id'
 											]
 										],
 										'output_format' => 'json'
@@ -3453,7 +3857,7 @@ function process_node($node, $level) {
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
 								$parser_process = (object)[
-									'fn' => 'parser_locator::get_section_id',
+									'fn' => 'parser_locator::get_v6_section_id',
 									'output_format' => 'json'
 								];
 
@@ -3546,7 +3950,7 @@ function process_node($node, $level) {
 
 								$parser_process_rb = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -3629,7 +4033,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -3659,7 +4063,7 @@ function process_node($node, $level) {
 
 								$parser_process_rb_mv = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -4192,7 +4596,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -4848,7 +5252,7 @@ function process_node($node, $level) {
 
 								$parser_process = [
 									(object)[
-										'fn' => 'parser_locator::get_section_id',
+										'fn' => 'parser_locator::get_v6_section_id',
 									],
 									(object)[
 										'fn' => 'parser_helper::get_first',
@@ -5550,6 +5954,8 @@ function process_node($node, $level) {
 		|| isset($props->info)
 		|| isset($props->is_publicable)
 		|| isset($props->merge_columns)
+		|| isset($props->varchar)
+		|| isset($props->length)
 		|| (isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp')
 	) {
 		if (!$new_props) {
@@ -5571,6 +5977,19 @@ function process_node($node, $level) {
 			$new_props->is_publishable = $props->is_publicable;
 		}
 
+		// GLOBAL RULE: column length (varchar / length)
+		// v7 reads properties.varchar (else properties.length) to size the column; without this
+		// the length is lost and the column falls back to the engine default. A node whose ONLY
+		// v6 propiedad is a length matched NO mapping branch, so it used to be skipped entirely:
+		// v6 `code` varchar(256) came out as v7 varchar(255). Never overwrite a length a mapping
+		// branch already set from a more specific source.
+		if (isset($props->varchar) && !isset($new_props->varchar)) {
+			$new_props->varchar = $props->varchar;
+		}
+		if (isset($props->length) && !isset($new_props->varchar) && !isset($new_props->length)) {
+			$new_props->length = $props->length;
+		}
+
 		echo "{$indent}  V6: " . json_encode($props) . "\n";
 		echo "{$indent}  V7: " . json_encode($new_props) . "\n";
 
@@ -5578,22 +5997,45 @@ function process_node($node, $level) {
 			'tipo' => $tipo,
 			'properties' => $new_props
 		]);
+
+		return;
+	}
+
+	// COVERAGE DIAGNOSTIC
+	// The node carries v6 `propiedades` but matched no mapping branch and none of the global
+	// rules above: nothing at all was written for it and, until now, nothing was printed either,
+	// so a gap in this migration was invisible. Reported (and counted) as a WARNING — an
+	// unmapped node is a mapping still to be written, not a failed migration.
+	if (!empty($props) && (is_object($props) || is_array($props)) && count((array)$props) > 0) {
+		$related_model = $relations_info[0]['model'] ?? 'NO_RELATION';
+		echo "{$indent}[UNMAPPED] $tipo " . ($model_name ? $model_name : 'NO_MODEL')
+			. " $related_model " . json_encode($props) . "\n";
+		$GLOBALS['migrate_diffusion_unmapped'] = (int)($GLOBALS['migrate_diffusion_unmapped'] ?? 0) + 1;
 	}
 }
 
 
 
 // Execution
-try {
-	traverse_ontology_recursive($root_tipo);
-	echo "\nTotal nodes processed: $total_nodes\n";
-	if (MIGRATE_DIFFUSION_DRY_RUN) {
-		echo "DRY RUN complete: " . (int)($GLOBALS['dry_run_pending'] ?? 0)
-			. " node(s) would be written. Nothing was changed.\n";
-		echo "Re-run without --dry-run to apply.\n";
+// ONLY when this file IS the entry script (php .../migrate_diffusion_properties.php, i.e. the way
+// run/phase3_diffusion.php launches it). Helpers such as helpers/migrate_subtree.php require_once
+// this file for its functions: without the guard, the WHOLE diffusion tree was migrated at include
+// time, before the subtree the helper actually asked for.
+// MIGRATE_DIFFUSION_NO_AUTORUN, defined before the include, suppresses it in any case.
+$is_direct_run = isset($argv[0]) && realpath($argv[0]) === realpath(__FILE__);
+if ($is_direct_run && !defined('MIGRATE_DIFFUSION_NO_AUTORUN')) {
+	try {
+		traverse_ontology_recursive($root_tipo);
+		echo "\nTotal nodes processed: $total_nodes\n";
+		if (MIGRATE_DIFFUSION_DRY_RUN) {
+			echo "DRY RUN complete: " . (int)($GLOBALS['dry_run_pending'] ?? 0)
+				. " node(s) would be written. Nothing was changed.\n";
+			echo "Re-run without --dry-run to apply.\n";
+		}
+	} catch (Exception $e) {
+		echo "Error: " . $e->getMessage() . "\n";
+		$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
 	}
-} catch (Exception $e) {
-	echo "Error: " . $e->getMessage() . "\n";
 }
 
 
@@ -5741,9 +6183,12 @@ function save_node($node_info) {
 	if (diffusion_canonical_json($val) === diffusion_canonical_json($saved_val)) {
 		echo "  [TEST PASS] Data verified for $tld (dd_ontology)\n";
 	} else {
-		echo "  [TEST FAIL] dd_ontology Mismatch for $tld\n";
+		// The tipo is part of the message on purpose: a tld is shared by hundreds of nodes, so
+		// "[TEST FAIL] … for numisdata" alone does not say WHICH node did not round-trip.
+		echo "  [TEST FAIL] dd_ontology Mismatch for $tipo (tld $tld)\n";
 		echo "    Expected: $input_data_json\n";
 		echo "    Actual:   $saved_json\n";
+		$GLOBALS['migrate_diffusion_failures'] = (int)($GLOBALS['migrate_diffusion_failures'] ?? 0) + 1;
 	}
 }
 

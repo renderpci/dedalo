@@ -70,7 +70,7 @@ function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, 
 			$parser_process = (object)[					
 				'parser' => [
 					(object)[
-						'fn' => 'parser_locator::get_section_id'
+						'fn' => 'parser_locator::get_v6_section_id'
 					]
 				],
 				"output_format" => "json"

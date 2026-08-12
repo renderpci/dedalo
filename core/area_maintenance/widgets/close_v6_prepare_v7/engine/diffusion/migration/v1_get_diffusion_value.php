@@ -1,7 +1,5 @@
 <?php
 
-use PhpParser\Node\Stmt\Switch_;
-
 function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arguments, $output, $data_to_be_used, $option_obj, $ddo_map, $target_component_properties=null){
 
 	$process = new stdClass();
@@ -386,7 +384,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					$parser_process = (object)[
 						"parser" => [
 							(object)[
-								'fn' => 'parser_locator::get_section_id'
+								'fn' => 'parser_locator::get_v6_section_id'
 							]
 						],
 						"output_format" => "json"
@@ -1250,7 +1248,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							];
 							
 							$parser_prechain[] = (object)[
-								'fn' => 'parser_locator::get_section_id',
+								'fn' => 'parser_locator::get_v6_section_id',
 								'id' => $letter_id
 							];
 							
@@ -1467,7 +1465,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							$parser_process = (object)[
 								"parser" => [
 									(object)[
-										'fn' => 'parser_locator::get_section_id'
+										'fn' => 'parser_locator::get_v6_section_id'
 									]
 								],
 								"output_format" => "json"
@@ -1618,7 +1616,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					$parser_process = (object)[
 						"parser" => [
 							(object)[
-								'fn' => 'parser_locator::get_section_id'
+								'fn' => 'parser_locator::get_v6_section_id'
 							]
 						],
 						"output_format" => "json"
@@ -1634,7 +1632,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				case 'section_id':
 					// ddo_map[0] already has section_filter/component_filter applied by caller
 					$process = new stdClass();
-					$process->parser = [(object)['fn' => 'parser_locator::get_section_id']];
+					$process->parser = [(object)['fn' => 'parser_locator::get_v6_section_id']];
 					$process->output_format = 'json';
 					if(!empty($ddo_map)){
 						$process->ddo_map = $ddo_map;
@@ -1688,7 +1686,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							$target_format = $target_pda->format ?? null;
 							if ($target_format === 'section_id') {
 								$parsers[] = (object)[
-									'fn' => 'parser_locator::get_section_id',
+									'fn' => 'parser_locator::get_v6_section_id',
 									'options' => (object)[
 										'split' => true
 									]
