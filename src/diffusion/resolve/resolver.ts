@@ -1336,13 +1336,27 @@ async function resolveHop(
 		if (whitelist.size > 0 && !whitelist.has(sectionTipo)) continue;
 
 		// Fallback: the locator itself is the value (:385-423).
-		const link: ResolvedLink & { type?: string } = {
+		const link: ResolvedLink = {
 			sectionTipo,
 			sectionId,
 			fromComponentTipo: (locator.from_component_tipo as string | undefined) ?? hop.tipo,
 			model: hop.model,
 		};
 		if (typeof locator.type === 'string') link.type = locator.type;
+		// Carry the inverse-index edge extras parseInverseEntry reconstructed.
+		// Without these the index_meta projection can only emit the address half
+		// of the edge, and a nine-key v6 indexation cell publishes as five.
+		if (locator.tag_id !== undefined) link.tagId = locator.tag_id as string | number;
+		if (typeof locator.component_tipo === 'string') link.componentTipo = locator.component_tipo;
+		if (locator.section_top_id !== undefined) {
+			link.sectionTopId = locator.section_top_id as string | number;
+		}
+		if (typeof locator.section_top_tipo === 'string') {
+			link.sectionTopTipo = locator.section_top_tipo;
+		}
+		if (typeof locator.from_component_top_tipo === 'string') {
+			link.fromComponentTopTipo = locator.from_component_top_tipo;
+		}
 		if (prepared.hopEmitsSectionLabels) {
 			// map_locator_to_section_label: section-node terms, one atom per lang.
 			labelLinks.push(link);

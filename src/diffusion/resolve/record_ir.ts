@@ -28,6 +28,25 @@ export interface ResolvedLink {
 	typologyTermId?: string | null;
 	model?: string;
 	fromComponentTipo?: string;
+	/**
+	 * INVERSE-INDEX EDGE EXTRAS (component_relation_index, relation_list).
+	 *
+	 * parseInverseEntry (core/resolve/relation_index.ts) reconstructs the whole
+	 * dd96 edge from matrix_relation_index — type, tag_id, component_tipo,
+	 * section_top_id, section_top_tipo, from_component_top_tipo — and the
+	 * index_meta projection republishes all of it verbatim. They live here
+	 * because a link carrying only its own address cannot describe the edge it
+	 * arrived on: keeping just sectionTipo/sectionId reduced a v6 indexation
+	 * cell of nine keys to five, so the published column never matched.
+	 *
+	 * Absent on ordinary stored locators, which have no edge to describe.
+	 */
+	type?: string;
+	tagId?: string | number;
+	componentTipo?: string;
+	sectionTopId?: string | number;
+	sectionTopTipo?: string;
+	fromComponentTopTipo?: string;
 }
 
 /**

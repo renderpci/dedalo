@@ -292,11 +292,16 @@ function parentsFn(env: RewriterEnv): ExtraStepFn {
 // get_locator (oracle :357-410)
 // ---------------------------------------------------------------------------
 
-/** Optional relation-edge extras a link may carry from the stored locator. */
-interface LinkExtras {
-	type?: string;
-	fromComponentTopTipo?: string;
-}
+/**
+ * Optional relation-edge extras a link may carry from the stored locator.
+ * ResolvedLink now declares these directly (they are populated from
+ * parseInverseEntry's reconstructed dd96 edge); the alias is kept so the
+ * projection below reads as "the edge half" of the link.
+ */
+type LinkExtras = Pick<
+	ResolvedLink,
+	'type' | 'tagId' | 'componentTipo' | 'sectionTopId' | 'sectionTopTipo' | 'fromComponentTopTipo'
+>;
 
 function getLocatorFn(): ExtraStepFn {
 	return (values, options) => {
@@ -313,11 +318,24 @@ function getLocatorFn(): ExtraStepFn {
 				.map((link) => {
 					const extras = link as ResolvedLink & LinkExtras;
 					if (indexMeta) {
-						// v6 component_relation_index key order preserved exactly.
+						// v6 component_relation_index key order preserved exactly:
+						// type, tag_id, section_id, section_tipo, component_tipo,
+						// section_top_id, section_top_tipo, from_component_tipo,
+						// from_component_top_tipo. Scalars stay STRINGS: v6 published
+						// the DB-driver string form and already-published consumers
+						// read them as strings.
 						const locator: Record<string, unknown> = {};
 						if (extras.type != null) locator.type = extras.type;
+						if (extras.tagId != null) locator.tag_id = String(extras.tagId);
 						locator.section_id = String(link.sectionId);
 						locator.section_tipo = String(link.sectionTipo);
+						if (extras.componentTipo != null) locator.component_tipo = extras.componentTipo;
+						if (extras.sectionTopId != null) {
+							locator.section_top_id = String(extras.sectionTopId);
+						}
+						if (extras.sectionTopTipo != null) {
+							locator.section_top_tipo = extras.sectionTopTipo;
+						}
 						const fromTipo = link.fromComponentTipo ?? indexFromComponentTipo;
 						if (fromTipo != null) locator.from_component_tipo = fromTipo;
 						if (extras.fromComponentTopTipo != null) {
