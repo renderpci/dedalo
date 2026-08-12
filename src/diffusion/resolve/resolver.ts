@@ -927,6 +927,22 @@ function chainTreeOf(chain: ResolveStep[]): Map<string, ResolveStep[]> {
 	return childrenByParent;
 }
 
+/**
+ * PreparedField key. It MUST carry the section, not just the field id: the same
+ * field id appears in EVERY section that publishes the same real table, which is
+ * what a table_alias is. mht2 aliases hierarchy65 three times (antropologia/aa1,
+ * periodos/hp1, restringidos/rt1) and all three carry fields hierarchy70,
+ * hierarchy86, hierarchy87 … Keyed by field id alone, the last section prepared
+ * overwrote the others, so aa1 and hp1 resolved with rt1's steps — whose
+ * sourceChain is section-scoped to 'rt1'. The child filter in walkChainLevel then
+ * skipped EVERY data-bearing step, and both tables published only the columns
+ * that need no stored data (norder, dd_tm): 332 rows of nulls where v6 had a full
+ * publication.
+ */
+function preparedFieldKey(sectionTipo: string, fieldId: string): string {
+	return `${sectionTipo}|${fieldId}`;
+}
+
 /** Prepare every field of the plan once per run (recovery pass included). */
 async function prepareFields(
 	plan: PublicationPlan,
@@ -996,7 +1012,7 @@ async function prepareFields(
 				iconography = iconographyOptionsOf(fnDdo);
 			}
 			const PORTED_HOP_FNS = new Set(['map_locator_to_section_label', 'get_diffusion_iconography']);
-			prepared.set(field.id, {
+			prepared.set(preparedFieldKey(section.sectionTipo, field.id), {
 				field,
 				steps: mergeColumnsStep !== undefined ? [] : steps,
 				childrenByParent: chainTreeOf(field.sourceChain),
@@ -1565,7 +1581,9 @@ async function processRecord(
 	const deferredMergeColumns: PreparedField[] = [];
 
 	for (const field of sectionPlan.fields) {
-		const prepared = ctx.preparedFields.get(field.id);
+		const prepared = ctx.preparedFields.get(
+			preparedFieldKey(sectionPlan.sectionTipo, field.id),
+		);
 		if (prepared === undefined) continue;
 
 		if (field.policy.emptyToString !== undefined || field.policy.defaultValue !== undefined) {
