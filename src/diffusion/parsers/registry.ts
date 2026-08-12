@@ -27,7 +27,13 @@ import {
 	unixTimestamp,
 } from './parser_date.ts';
 import { count, getFirst, getTail, merge } from './parser_helper.ts';
-import { getSectionId, getSectionIdGrouped, getSectionTipo, getTermId } from './parser_locator.ts';
+import {
+	getSectionId,
+	getSectionIdGrouped,
+	getSectionTipo,
+	getTermId,
+	getV6SectionId,
+} from './parser_locator.ts';
 import { geoGeojson, infoDefault, infoWidget, iriFlat, mapCustom } from './parser_misc.ts';
 import { defaultJoin, mapValue, textFormat, v5Html } from './parser_text.ts';
 import type { RuntimeParserFn } from './types.ts';
@@ -57,6 +63,9 @@ export const PARSER_CLASSIFICATION: ReadonlyMap<string, ParserClassification> = 
 	['parser_text::v5_html', 'runtime'],
 	// the trivial locator projections keep their community names, now over chains
 	['parser_locator::get_section_id', 'runtime'],
+	// v6-compat twin of get_section_id: same projection, value emitted as a STRING
+	// so a migrated column publishes ["1"] where the v7-native one publishes [1].
+	['parser_locator::get_v6_section_id', 'runtime'],
 	['parser_locator::get_section_tipo', 'runtime'],
 	['parser_locator::get_term_id', 'runtime'],
 	['parser_locator::get_section_id_grouped', 'runtime'],
@@ -112,6 +121,7 @@ export const RUNTIME_PARSERS: ReadonlyMap<string, RuntimeParserFn> = new Map<
 	['parser_text::map_value', asRuntimeParser(mapValue)],
 	['parser_text::v5_html', asRuntimeParser(v5Html)],
 	['parser_locator::get_section_id', asRuntimeParser(getSectionId)],
+	['parser_locator::get_v6_section_id', asRuntimeParser(getV6SectionId)],
 	['parser_locator::get_section_tipo', asRuntimeParser(getSectionTipo)],
 	['parser_locator::get_term_id', asRuntimeParser(getTermId)],
 	['parser_locator::get_section_id_grouped', asRuntimeParser(getSectionIdGrouped)],

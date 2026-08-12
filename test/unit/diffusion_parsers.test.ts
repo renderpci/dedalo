@@ -131,16 +131,25 @@ const ORACLE_REGISTERED_FNS = [
 	'parser_map::custom',
 ] as const;
 
+/**
+ * Fns NEW in v7 — absent from the oracle lib/parsers/index.ts surface.
+ * get_v6_section_id: v6-compat string projection of section_id (a migrated
+ * column publishes ["1"] where the v7-native get_section_id publishes [1]).
+ */
+const V7_NATIVE_FNS = ['parser_locator::get_v6_section_id'] as const;
+
 describe('parser classification (spec §5)', () => {
 	test('every oracle-registered fn is classified — no gaps, no extras', () => {
-		expect([...PARSER_CLASSIFICATION.keys()].sort()).toEqual([...ORACLE_REGISTERED_FNS].sort());
-		for (const fn of ORACLE_REGISTERED_FNS) {
+		expect([...PARSER_CLASSIFICATION.keys()].sort()).toEqual(
+			[...ORACLE_REGISTERED_FNS, ...V7_NATIVE_FNS].sort(),
+		);
+		for (const fn of [...ORACLE_REGISTERED_FNS, ...V7_NATIVE_FNS]) {
 			expect(classifyParserFn(fn)).not.toBe('unknown');
 		}
 	});
 
 	test('runtime classification and implementation agree exactly', () => {
-		for (const fn of ORACLE_REGISTERED_FNS) {
+		for (const fn of [...ORACLE_REGISTERED_FNS, ...V7_NATIVE_FNS]) {
 			expect(RUNTIME_PARSERS.has(fn)).toBe(classifyParserFn(fn) === 'runtime');
 		}
 	});

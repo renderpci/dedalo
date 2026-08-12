@@ -89,6 +89,26 @@ export const getSectionId: ItemParserFn = (items, options) => {
 	);
 };
 
+/**
+ * v6-COMPATIBILITY projection of section_id: identical to get_section_id except
+ * that the value is emitted as a STRING.
+ *
+ * v7 treats section_id as an integer and get_section_id keeps that native type,
+ * so a json column publishes [1]. v6 published ["1"], and consumers of an
+ * already-published database read those values as strings. Migrated v6 columns
+ * therefore resolve through this parser to keep the wire bytes identical; new
+ * v7-native columns keep get_section_id and its integer.
+ *
+ * Only the scalar type differs — ordering, split and merge behaviour are shared.
+ */
+export const getV6SectionId: ItemParserFn = (items, options) => {
+	return projectLocatorField(items, options, (locator) =>
+		locator.section_id !== undefined && locator.section_id !== null
+			? String(locator.section_id)
+			: null,
+	);
+};
+
 // ---------------------------------------------------------------------------
 // get_section_tipo
 // ---------------------------------------------------------------------------
