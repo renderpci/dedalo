@@ -304,24 +304,10 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			}
 		}
 		const { readComponentData, buildGetDataContext } = await import('./read.ts');
+		// component_filter_records' datalist rides the SHARED emission hook
+		// (components/component_filter_records/emit.ts), so this door and the
+		// section read serve the same key — PHP's single json builder.
 		const componentData = await readComponentData(rqo);
-		// component_filter_records datalist (PHP get_datalist): the misc-column
-		// edit/search views render one text-input row per authorized SECTION the
-		// user can filter (level >= 2). It is USER-scoped, so it is computed here
-		// (principal in scope) rather than in the record-only read pipeline, which
-		// only stubs an empty array. Attach it to the component's own item.
-		if ((source.model ?? '') === 'component_filter_records') {
-			const { getFilterRecordsDatalist } = await import(
-				'../api/handlers/filter_records_datalist.ts'
-			);
-			const { currentDataLang } = await import('../resolve/request_lang.ts');
-			const datalist = await getFilterRecordsDatalist(principal.userId, currentDataLang());
-			for (const item of componentData) {
-				if ((item as { tipo?: string }).tipo === source.tipo) {
-					(item as { datalist?: unknown }).datalist = datalist;
-				}
-			}
-		}
 		const componentContext = await buildGetDataContext(rqo, componentData, principal);
 		return {
 			status: 200,

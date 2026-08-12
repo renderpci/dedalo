@@ -62,12 +62,13 @@ The Search Query Object is sent as part of the Request Query Object to be proces
 
 ## Security and access control
 
-The SQO is the query language, but not every SQO is equally trusted. **A client-built SQO arriving from the HTTP API is untrusted; an SQO a server class builds and runs directly is trusted.** The full configuration (the `DEDALO_SEARCH_CLIENT_MAX_LIMIT` and `DEDALO_FILTER_USER_RECORDS_BY_ID` constants, and the project filter) is documented in [Search configuration and access control](../config/search.md). In short:
+The SQO is the query language, but not every SQO is equally trusted. **A client-built SQO arriving from the HTTP API is untrusted; an SQO a server class builds and runs directly is trusted.** The full configuration (the `DEDALO_SEARCH_CLIENT_MAX_LIMIT` constant and the project filter) is documented in [Search configuration and access control](../config/search.md). In short:
 
 - **Client boundary** — `sanitizeClientSqo()` (`src/core/concepts/sqo.ts`) runs once for client SQOs only, at the API entry: recursively strips server-only SQL fields (`sentence`, `params`, `column_sql`, `table`, `table_alias`) and access-control flags (`skip_projects_filter`, `skip_duplicated`, `include_negative`), forces `parsed = false`, and clamps `limit` to `CLIENT_MAX_LIMIT` (1000). Server-internal builders bypass this gate.
 - **Identifier / language validation** — for **every** SQO, the `conformFilter()` chokepoint (`src/core/search/conform.ts`) validates each path `section_tipo`/`component_tipo` (`assertValidTipo`/`assertValidTipoOrColumn`, `src/core/search/identifier_gate.ts`) and each filter `lang` (`assertValidLang`) before they are interpolated verbatim into JSONB keys / jsonpath. Malformed values throw (they cannot be parameterized).
 - **Prepared parameters** — all literal `q` values reach SQL as bound `$n` parameters, never inlined.
 - **Project filter** — for non global-admin users a project-scope restriction is always added to `WHERE` (per section), and `skip_projects_filter` (which removes it) is not settable from a client SQO.
+- **Per-record filter** — when the caller's user record carries a [component_filter_records](components/component_filter_records.md) entry for a searched section, a `section_id IN (...)` restriction for that section is ANDed in as well. It has no flag and no client-settable escape hatch, and it applies to global admins too; a caller with no entry gets a byte-identical query.
 
 ## Parameters
 

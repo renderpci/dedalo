@@ -63,20 +63,19 @@ Dédalo already restricts access through **areas/projects** (see `component_filt
 within a section the user is otherwise authorized for, restrict visibility down to a specific
 set of record ids — regardless of project assignment.
 
-The feature is gated by the global flag `DEDALO_FILTER_USER_RECORDS_BY_ID` (default `false`,
-set in `../private/.env`). When enabled, the search engine is meant to read the logged user's
-stored per-section id list and add a `section_id IN (...)` restriction to the section's search
+**The restriction is live: there is no feature flag to turn it on.** Whenever the logged
+user's stored datum names the section being searched, the search adds a
+`section_id IN (...)` restriction for that section. A user with no entry for a section —
+the overwhelmingly common case — searches it exactly as before, with a byte-identical
 query.
 
-!!! danger "Gap: the enforcement gate is not implemented — edit UI works, search does not filter"
-    The TS server implements the **edit-time datalist** (`getFilterRecordsDatalist()`,
-    `src/core/resolve/filter_records_datalist.ts` — the authorized-sections list a
-    profile can restrict), so the component's edit/search views render and save
-    correctly. But `DEDALO_FILTER_USER_RECORDS_BY_ID` does not exist anywhere in the
-    TS config catalog (`src/config/`), and no module under `src/core/search/` reads
-    a stored filter or adds a `section_id IN (...)` restriction to a search query. A
-    profile's stored per-section id list is therefore **not enforced** at search
-    time on the TS server today, even though it can be configured through the UI.
+!!! warning "Saving an allow-list takes effect immediately"
+    There is no staging step and no global switch: the moment an entry is saved on a user
+    record, that user's next search of the named section is restricted. Clear the row (empty
+    the input) to remove the restriction — an entry saved with an **empty** id list is read
+    as *no restriction*, never as *sees nothing*. The restriction applies to global admins
+    too, so an allow-list written onto an administrator's own account restricts that
+    administrator.
 
 **When to use it**
 
@@ -91,8 +90,10 @@ query.
 - To grant or deny access to an entire section/area — use the project filter components
   (`component_filter` / `component_filter_master`) instead.
 - As a normal data field in cataloguing sections. This is a permissions/configuration
-  component; it only makes sense inside the Users section and only takes effect with
-  `DEDALO_FILTER_USER_RECORDS_BY_ID` turned on.
+  component; it only makes sense inside the Users section.
+- As the *only* barrier around sensitive records. It narrows what a user can reach through
+  the search path; it is one restriction ANDed on top of the section grant and the project
+  filter, not a replacement for either.
 
 ## Data model
 
@@ -123,15 +124,23 @@ that section, plus the standard counter-assigned `id`:
   comma split until saved.
 
 In the JSON-API datum the array is delivered under the `data` item's **`entries`** property,
-and in `edit` mode the resolved list of authorized sections is attached as `datalist` (see
-below).
+and in `edit` and `search` modes the resolved list of authorized sections is attached as
+`datalist` (see below). `list` and `tm` carry **no `datalist` key at all** — those views read
+only the stored entries.
 
-!!! warning "Consumption shape vs storage shape — no TS search consumer exists yet"
-    No TS search consumer reads this stored filter today (see the gap noted above). The stored
-    shape is the raw `entries` array (`[{id, tipo, value}, ...]`); a search consumer needs the
-    data as a **map keyed by `section_tipo`** (`section_tipo` → array of ids) to apply it as a
-    `section_id IN (...)` restriction. Building that consumer means transforming the stored
-    `entries` array into that map — the two shapes are not interchangeable.
+**Consumption shape.** The search layer reads the stored `entries` array into a map keyed by
+section tipo (`section_tipo` → id array) before it can restrict anything; that reader is
+`getUserFilterRecords()` (`src/core/security/filter_records.ts`). It is deliberately strict,
+because every id it returns reaches SQL as an integer literal:
+
+- an entry with no `tipo` names no section and contributes nothing (legacy data does carry
+  these, with a nested `{tipo, value}` payload under `value`);
+- ids are coerced to integers and kept only when positive; anything else is dropped;
+- an entry whose id list ends up **empty** is skipped — it is *no restriction*, not a lockout;
+- two entries for the same section (only reachable from hand-edited data) are **unioned**.
+
+The result is cached per user and dropped whenever any Users-section record is written, so an
+edited allow-list applies to the next search.
 
 ## Ontology instantiation
 
@@ -166,7 +175,8 @@ per-component factory to call: the descriptor at
 `classSupportsTranslation` flag) resolves through the same generic
 `src/core/resolve/component_data.ts` as any other literal component, and the
 authorized-sections datalist is built by `getFilterRecordsDatalist(userId, lang)`
-(`src/core/resolve/filter_records_datalist.ts`).
+(`src/core/api/handlers/filter_records_datalist.ts`), attached by the model's emit hook
+(`src/core/components/component_filter_records/emit.ts`).
 
 ## Properties & options
 
@@ -174,15 +184,18 @@ This component defines **no bespoke ontology properties**. Its `properties` bloc
 empty (`{}`), as shown in the shipped sample context. Behaviour is driven by:
 
 - the **`datalist`** — *not* an ontology property, computed server-side by
-  `getFilterRecordsDatalist()` (`src/core/resolve/filter_records_datalist.ts`, built from
+  `getFilterRecordsDatalist()` (`src/core/api/handlers/filter_records_datalist.ts`, built from
   `getAuthorizedAreasForUser()`, `src/core/security/permissions.ts`). It lists every section
   the logged user is authorized for, keeping only areas whose `model === 'section'` and whose
   permission `value >= 2` (write or higher), resolving each section label from the ontology and
   sorting alphabetically by label. Each datalist item is `{ tipo, permissions, label }`.
-- the global config constant **`DEDALO_FILTER_USER_RECORDS_BY_ID`** (`true`/`false`,
-  default `false`) — meant to enable/disable the whole feature at the search layer. **Not
-  present in the TS config catalog** (`src/config/`) — see the gap noted under
-  [Definition](#definition).
+- the **stored datum itself** — there is no config key. The presence of an entry for a section
+  IS the switch; see [Definition](#definition).
+
+!!! note "The datalist is the EDITOR's list, not the edited user's"
+    It is resolved from the *logged* user's own authorized areas, so it describes what the
+    person filling the form may restrict. Editing another user's record does not widen it: a
+    section the editor cannot administer cannot be given a restriction here.
 
 The standard generic component properties (e.g. `mandatory`, `css`, `request_config`) may be
 attached through the ontology node like any component; none are specific to or required by
@@ -240,24 +253,31 @@ shared component contract (the `dedalo_data` wrapper, atoms, NDJSON flat-table p
 - **Default tools** (from the shipped `context.json`): `tool_propagate_component_data` and
   `tool_time_machine`. Saves are recorded in Time Machine like any component
   (`tm` mode is read-only).
-- **Server entry point — gap.** No TS module reads a user's stored filter-records list into the
-  search path (see the gap under [Definition](#definition)) — there is no reader wired into the
-  TS search path at all yet, so the stored list has no effect unless
-  `DEDALO_FILTER_USER_RECORDS_BY_ID` gains a TS implementation.
-- **Datalist source:** `getFilterRecordsDatalist()` (`src/core/resolve/filter_records_datalist.ts`)
-  depends on the *logged user's* authorized areas, so the set of selectable sections in
-  `edit`/`search` reflects current permissions, filtered to sections with write-or-higher access
-  (`value >= 2`).
+- **Server entry point — enforcement.** `getUserFilterRecords()`
+  (`src/core/security/filter_records.ts`) reads the logged user's datum, and the search
+  assembler (`src/core/search/sql_assembler.ts`) turns it into one `section_id IN (...)`
+  predicate ANDed into the query it builds. Because the per-record scope check runs that same
+  assembler, the restriction covers the list, the row count, every branch of a multi-section
+  search and the "may this principal open this record" probe — one predicate, every door. A
+  multi-section search gates only the branches the datum names; sibling sections pass through
+  untouched.
+- **Datalist source:** `getFilterRecordsDatalist()`
+  (`src/core/api/handlers/filter_records_datalist.ts`) depends on the *logged user's*
+  authorized areas, so the set of selectable sections in `edit`/`search` reflects current
+  permissions, filtered to sections with write-or-higher access (`value >= 2`).
 - **Observers/observables:** none configured for this component.
-- **Read path — datalist attachment split by pipeline.** The plain section read
-  (`src/core/section/read.ts`, `emitDdoData`) only **stubs an empty `datalist: []`** on a
-  `component_filter_records` item (it has no principal in scope, and this stub exists solely
-  to stop the client's `render_search_component_filter_records` from crashing on
-  `datalist.length`). The **real**, user-scoped datalist (`getFilterRecordsDatalist()`) is
-  attached only by the component-level `get_data` dispatch path
-  (`src/core/api/dispatch.ts`, the `model === 'component_filter_records'` branch), which has
-  the calling principal available. A caller relying on the full-section read alone will see an
-  empty datalist, not the authorized-sections list.
+- **Read path — one attachment point.** The datalist is attached by the model's emit hook
+  (`src/core/components/component_filter_records/emit.ts`), which runs inside the shared
+  emission (`src/core/section/read.ts`, `emitDdoData`). The full-section read and the
+  component-level `get_data` therefore serve the *same* key: `edit`/`search` carry the
+  authorized-sections list, `list`/`tm` carry no `datalist` key. Identity comes from the
+  request-scoped principal; a call with no principal (a background job) gets an empty array
+  rather than somebody else's sections.
+- **Search-panel instances.** A filter row in the search panel addresses no record (its
+  `section_id` is a client-minted `search_<n>` sentinel). The component still answers with its
+  own item — empty `entries`, full `datalist`, the sentinel id echoed verbatim — because the
+  search render iterates `datalist` unconditionally and an absent item would leave the row
+  unrendered.
 - **Related components:**
   `component_filter` and `component_filter_master` (project/area-level access),
   `component_security_access` (also stored in `misc`), and

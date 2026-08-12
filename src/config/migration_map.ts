@@ -417,6 +417,18 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 		reason: 'v7 resolves the diffusion target database per publication, not from config',
 	},
 
+	// The v6 on/off switch of component_filter_records' row-level ACL. v7 has no
+	// switch: the SAVED allow-list is the intent, and the search assembler honors
+	// it whenever the datum names the searched section (a datum-less user gets a
+	// byte-identical query) — WC-2026-08-12-filter-records-enforced. So the KEY is
+	// gone while the FEATURE is live, which is the opposite of the plain
+	// no-consumer case below.
+	DEDALO_FILTER_USER_RECORDS_BY_ID: {
+		cls: 'DROPPED',
+		reason:
+			'no v7 key: the row-level record ACL (component_filter_records) is enforced whenever a user has an allow-list, not behind a flag',
+	},
+
 	// Read by nothing in the TS engine today.
 	...dropped(
 		[
@@ -424,7 +436,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 			'DEDALO_SECTION_ID_TEMP',
 			'NUMERICAL_MATRIX_VALUE_YES',
 			'NUMERICAL_MATRIX_VALUE_NO',
-			'DEDALO_FILTER_USER_RECORDS_BY_ID',
 			'DEDALO_ENTITY_MEDIA_AREA_TIPO',
 			'DEDALO_PUBLICATION_CLEAN_URL',
 			'DEDALO_PUBLICATION_ALERT',

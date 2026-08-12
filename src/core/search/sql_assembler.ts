@@ -43,6 +43,7 @@ import {
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
+import { getUserFilterRecords } from '../security/filter_records.ts';
 import {
 	getUserProjects,
 	PROFILES_SECTION,
@@ -677,6 +678,75 @@ async function buildMultiSectionProjectsFilter(
 }
 
 /**
+ * Append a WHERE fragment, skipping the empty one. `whereParts.length` is READ
+ * as a decision (the bare-browse and pure-ACL fast paths below), so an empty
+ * string may never be pushed as a placeholder.
+ */
+function pushFragment(parts: string[], fragment: string): void {
+	if (fragment !== '') parts.push(fragment);
+}
+
+/**
+ * ROW-LEVEL ACL BY RECORD ID (PHP trait.where::build_filter_by_user_records):
+ * when the caller's component_filter_records datum (dd478) names a searched
+ * section, only the listed section_ids pass. Returns '' when the user has no
+ * entry for ANY searched section — the overwhelmingly common case, and the
+ * query then stays byte-identical to the no-filter one.
+ *
+ * The ids are INT-VALIDATED at the reader (security/filter_records.ts) and
+ * interpolated as integer literals rather than bound: PHP does the same
+ * (SEARCH-04) to avoid an N-placeholder explosion on a large allow-list, and a
+ * validated integer has no injection surface. The section_tipo guards ARE
+ * bound, like every other tipo in this assembler.
+ *
+ * Multi-section: one guarded disjunct per section — a section the user has no
+ * entry for passes with a bare guard, so an allow-list on ONE branch of a UNION
+ * cannot silently drop the others (the buildMultiSectionProjectsFilter shape,
+ * and NOT PHP's first-section-only clause).
+ */
+async function buildUserRecordsFilter(
+	sectionTipos: string[],
+	alias: string,
+	principal: Principal | undefined,
+	params: ParamsCollector,
+	multiSection: boolean,
+): Promise<string> {
+	if (principal === undefined) return ''; // internal search — never gated
+	const allowed = await getUserFilterRecords(principal.userId);
+	if (allowed.size === 0) return '';
+	if (multiSection) return multiSectionUserRecordsFilter(sectionTipos, alias, allowed, params);
+	const ids = allowed.get(sectionTipos[0] as string);
+	return ids === undefined ? '' : `(${allowedIdsIn(alias, ids)})`;
+}
+
+/** The allow-list as an id predicate — validated ints, so literals (see above). */
+function allowedIdsIn(alias: string, ids: number[]): string {
+	return `${alias}.section_id IN (${ids.join(',')})`;
+}
+
+/** The per-branch shape of {@link buildUserRecordsFilter} for a UNION search. */
+function multiSectionUserRecordsFilter(
+	sectionTipos: string[],
+	alias: string,
+	allowed: Map<string, number[]>,
+	params: ParamsCollector,
+): string {
+	const disjuncts: string[] = [];
+	let anyFiltered = false;
+	for (const sectionTipo of [...new Set(sectionTipos)]) {
+		const guard = `${alias}.section_tipo = ${params.getPlaceholder(sectionTipo)}::text`;
+		const ids = allowed.get(sectionTipo);
+		if (ids === undefined) {
+			disjuncts.push(`(${guard})`);
+			continue;
+		}
+		anyFiltered = true;
+		disjuncts.push(`(${guard} AND ${allowedIdsIn(alias, ids)})`);
+	}
+	return anyFiltered ? `(${disjuncts.join(' OR ')})` : '';
+}
+
+/**
  * PROJECTS-FILTER PAGE-SHAPE probe (2026-07-19). With the ACL containment in
  * the WHERE, the planner serves `ORDER BY section_id LIMIT n` from the
  * (section_tipo, section_id) index and applies the filter PER ROW — assuming
@@ -895,6 +965,18 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 			}
 		}
 	}
+
+	// --- filter_records (row-level ACL by id, PHP build_filter_by_user_records)
+	// The caller's own component_filter_records datum (dd478), ANDed on top of
+	// everything above: the projects filter says which records the user's
+	// projects reach, this one names the individual records inside a section.
+	// Applies to global admins too — PHP's clause has no admin arm, and an
+	// admin with no allow-list (the normal case) is unaffected either way.
+	// Skipped for internal searches (no principal), like the projects filter.
+	pushFragment(
+		whereParts,
+		await buildUserRecordsFilter(sectionTipos, alias, principal, params, multiSection),
+	);
 
 	// --- filter_by_locators (dedicated shape, PHP :1382) --------------------
 	if (Array.isArray(sqo.filter_by_locators) && sqo.filter_by_locators.length > 0) {

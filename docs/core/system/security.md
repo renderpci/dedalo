@@ -65,6 +65,9 @@ It sits at the bottom of the authorization stack:
 - **Enforce per-record (project) visibility** — the second ACL tier
   (`getUserProjects` + the search projects filter), applied over every list/search
   query and re-checked per-record on writes.
+- **Enforce a per-user record allow-list**, when one is configured
+  (`getUserFilterRecords` + the search records filter — see
+  [Two ACL tiers](#two-acl-tiers)).
 - **Cache hygiene** — `clearPermissionsCache` / `clearUserProjectsCache` drop the
   per-user maps so a re-profiled user never serves a stale matrix.
 
@@ -101,6 +104,18 @@ subsystem:
    A write that receives a caller-supplied `section_id` outside a search — a
    duplicate, or an SQO-less delete — re-runs the same principal-scoped existence
    query to confirm the record is visible before mutating it.
+
+On top of those two, a **per-user record allow-list** may narrow layer 2 further:
+when the caller's own user record carries a
+[component_filter_records](../components/component_filter_records.md) entry for a
+searched section, `buildUserRecordsFilter()` (same module) ANDs a
+`section_id IN (...)` restriction for that section, reading the datum through
+`getUserFilterRecords()` (`src/core/security/filter_records.ts`, cached per user and
+dropped on any Users-section write). It is not a tier every request passes: it is
+data an administrator writes onto one account, absent for everyone else, and it has
+no flag and no client-settable escape hatch. Unlike the projects filter it also
+applies to global admins — an allow-list on an administrator's account restricts
+that administrator.
 
 ```mermaid
 flowchart TD
