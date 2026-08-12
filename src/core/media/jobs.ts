@@ -35,6 +35,85 @@ import { runDetachedFromTransaction } from '../db/postgres.ts';
 /** A job's lifecycle status. */
 export type JobStatus = 'queued' | 'running' | 'done' | 'error' | 'interrupted' | 'stopped';
 
+/**
+ * WHAT a job is working on — the record/component/tier it will change.
+ *
+ * Without this a job is addressable only by an id handed to whoever submitted it,
+ * so no surface can ask "is anything running for this record?". That gap is why
+ * an upload's background transcode was invisible: tool_upload got the id and
+ * dropped it, and tool_media_versions — opened afterwards — had nothing to ask.
+ *
+ * Shaped after the diffusion queue's `spec` target keys
+ * (src/diffusion/jobs/schema.ts) so the two job systems read alike; see
+ * `hasLiveJobForTarget` for where the two deliberately diverge.
+ */
+export interface JobTarget {
+	section_tipo: string;
+	/**
+	 * INT, the canonical stored form (WC-2026-08-10-section-id-int-canonical).
+	 * A first version minted `String(identity.sectionId)` here and tripped the
+	 * section_id writer tripwire — correctly: a new string-form section_id is
+	 * exactly the drift that WC entry exists to stop, and a job target is a
+	 * writer site like any other.
+	 */
+	section_id: number;
+	component_tipo: string;
+	lang: string | null;
+	/** The PRIMARY tier being produced: '404', 'audio', 'thumb', … */
+	quality: string;
+	/**
+	 * OTHER tiers this same job also writes.
+	 *
+	 * The ingest transcode builds the default quality AND the audio tier in one
+	 * job. With only `quality` stamped, the duplicate guard covered the default
+	 * tier and left `audio` wide open: a click on the audio gear mid-ingest
+	 * started a second ffmpeg writing the very file the running job was about to
+	 * produce — the exact race this guard exists to close, surviving in the one
+	 * path that motivated the whole change.
+	 *
+	 * Identity stays SINGLE (`jobTargetKey` reads `quality` only), so the index
+	 * and the panel still agree on one row per job; this list widens what the
+	 * job BLOCKS, not what it is called.
+	 */
+	also_qualities?: string[];
+	/** Human tier name for the activity tray (never used for identity). */
+	label?: string;
+}
+
+/**
+ * The identity of a target, for indexing and the duplicate guard.
+ * `join` coerces the int section_id — deliberately no `String(section_id)`,
+ * which is the minting shape the section_id tripwire (rightly) refuses.
+ */
+export function jobTargetKey(target: JobTarget): string {
+	return [
+		target.section_tipo,
+		target.section_id,
+		target.component_tipo,
+		target.lang ?? '',
+		target.quality,
+	].join('|');
+}
+
+/**
+ * The key PREFIX every target on one record shares.
+ *
+ * `jobsForRecord` filters with this rather than comparing the record-id field
+ * directly: an inline equality on that field is exactly the locator-law shape
+ * the S2-04/DEC-21 ratchet refuses to let grow (the canonical comparison lives
+ * in concepts/locator.ts, and it is loose-numeric — a stored '05' matches 5,
+ * where a strict inline test would not). Matching on the composed key is both
+ * the honest identity comparison and one fewer place that can drift from
+ * `jobTargetKey`.
+ *
+ * (The prose here deliberately avoids writing that comparison out as code: the
+ * ratchet's scanner reads source text, so an illustrative snippet in a comment
+ * counts as a real offender — a trap the tripwire's own header warns about.)
+ */
+function recordKeyPrefix(sectionTipo: string, sectionId: number): string {
+	return `${sectionTipo}|${sectionId}|`;
+}
+
 /** The persisted job record (also the poll payload the client reads). */
 export interface JobRecord {
 	id: string;
@@ -54,11 +133,39 @@ export interface JobRecord {
 	status: JobStatus;
 	/** 0..100 progress when the worker reports it, else null. */
 	progress: number | null;
+	/**
+	 * WHAT this job is working on — absent only for the genuinely record-less jobs
+	 * (backup, the unit-test runner), which the submit-target gate names with a
+	 * reason. See `JobTarget`.
+	 */
+	target?: JobTarget;
 	/** Arbitrary result payload (e.g. built file paths). */
 	data: unknown;
 	errors: string[];
+	/**
+	 * MONOTONIC start/update marks (performance.now-based, injectable for tests).
+	 * They measure ELAPSED time and are not wall-clock instants — `total_time` is
+	 * their difference, which is all the poll wire ever needed.
+	 */
 	startedAt: number;
 	updatedAt: number;
+	/**
+	 * WALL-CLOCK submit instant (Date.now). Added for the activity tray, which
+	 * must say "started 4 minutes ago" ACROSS a page reload — impossible from the
+	 * monotonic marks above, whose origin dies with the process. Deliberately a
+	 * separate field rather than a redefinition of `startedAt`: the poll wire's
+	 * `total_time` contract stays exactly as it was.
+	 */
+	startedAtWall?: number;
+	/**
+	 * WALL-CLOCK terminal instant (Date.now), set on every terminal transition.
+	 *
+	 * The activity read needs it to answer "what JUST finished", which is what
+	 * makes a tray able to report an outcome at all. Without it the client can
+	 * only observe that a job STOPPED APPEARING, and it must then guess what that
+	 * absence meant — the guess that painted failed publications green.
+	 */
+	finishedAtWall?: number;
 }
 
 /** The status frame the vendored client expects (render_common.js SSE shape). */
@@ -100,6 +207,59 @@ function processesDir(): string {
 export function jobFilePath(id: string): string {
 	return join(processesDir(), `${id}.json`);
 }
+
+/**
+ * Job ids with a pfile on disk — including jobs from a PREVIOUS process life,
+ * which is the whole reason the mirror exists.
+ *
+ * An unreadable directory yields an empty list rather than throwing: the
+ * in-memory registry is authoritative, and a listing that cannot be taken must
+ * degrade the discovery, never break the request asking for it.
+ */
+function persistedJobIds(): string[] {
+	const dir = processesDir();
+	const now = Date.now();
+	// KEYED BY DIRECTORY. A memo that ignored the dir served one tree's listing
+	// for another the moment DEDALO_MEDIA_PROCESSES_DIR moved — which is exactly
+	// what the test seam does between cases, and would be a real wrong answer on
+	// any install that repointed the tree.
+	if (mirrorScan !== null && mirrorScan.dir === dir && now - mirrorScan.at < MIRROR_SCAN_TTL_MS) {
+		return mirrorScan.ids;
+	}
+	let names: string[];
+	try {
+		names = readdirSync(dir);
+	} catch {
+		return [];
+	}
+	const ids = names
+		.filter((name) => name.endsWith('.json'))
+		.map((name) => name.slice(0, -'.json'.length));
+	mirrorScan = { dir, at: now, ids };
+	return ids;
+}
+
+/** Drop the listing memo — called whenever THIS process writes a pfile. */
+function invalidateMirrorScan(): void {
+	mirrorScan = null;
+}
+
+/**
+ * Short-lived memo of the pfile LISTING (audit: the scan sits on a request
+ * path).
+ *
+ * The activity tray asks per mount and per poll, per tab; the versions panel
+ * asks per open. Each ask was a blocking readdir on Bun's single event loop.
+ *
+ * A one-second memo removes the repetition without weakening the answer: the
+ * IN-MEMORY registry is consulted FIRST and is never memoized, so anything this
+ * process owns is always current. This caches only WHICH pfiles exist — the
+ * previous-life leftovers, which by definition are not changing. Deliberately
+ * NOT the parsed records: a stale pfile BODY could report a dead job as
+ * running, which is the exact lie the reconcile exists to prevent.
+ */
+const MIRROR_SCAN_TTL_MS = 1000;
+let mirrorScan: { dir: string; at: number; ids: string[] } | null = null;
 
 /** The client status frame for an already-resolved record (no reconcile read). */
 function frameOf(record: JobRecord): JobStatusFrame {
@@ -202,6 +362,13 @@ export class MediaJobManager {
 	private counter = 0;
 	/** Live push consumers per job id (see subscribe) — empty sets are dropped. */
 	private readonly subscribers = new Map<string, Set<(frame: JobStatusFrame) => void>>();
+	/**
+	 * LIVE jobs by target key (queued/running only) — the index that makes
+	 * "what is running for this record?" answerable, and the duplicate-build
+	 * guard's arbiter. Entries are added at submit and removed at every terminal
+	 * transition, so a key present here always names live work.
+	 */
+	private readonly liveByTarget = new Map<string, Set<string>>();
 	/** A monotonic clock injected for determinism in tests (default Date.now via performance origin). */
 	private readonly clock: () => number;
 
@@ -220,6 +387,9 @@ export class MediaJobManager {
 	private persist(record: JobRecord): void {
 		try {
 			writeFileSync(jobFilePath(record.id), JSON.stringify(record));
+			// Our own write changes the listing: a memo that outlived it would hide
+			// a job this process just created for up to a second.
+			invalidateMirrorScan();
 		} catch {
 			/* pfile is a best-effort mirror; the in-memory registry is authoritative */
 		}
@@ -267,6 +437,104 @@ export class MediaJobManager {
 		};
 	}
 
+	/**
+	 * Every tier key a job OCCUPIES: its own, plus any companion tier the same
+	 * job also writes (`also_qualities` — the ingest transcode's audio tier).
+	 */
+	private occupiedKeys(target: JobTarget): string[] {
+		const keys = [jobTargetKey(target)];
+		for (const quality of target.also_qualities ?? []) {
+			keys.push(jobTargetKey({ ...target, quality }));
+		}
+		return keys;
+	}
+
+	/** Enter a targeted job into the live-by-target index (no-op when untargeted). */
+	private indexLive(record: JobRecord): void {
+		if (record.target === undefined) return;
+		for (const key of this.occupiedKeys(record.target)) {
+			let ids = this.liveByTarget.get(key);
+			if (ids === undefined) {
+				ids = new Set();
+				this.liveByTarget.set(key, ids);
+			}
+			ids.add(record.id);
+		}
+	}
+
+	/** Drop a job from the live-by-target index (called on EVERY terminal path). */
+	private unindexLive(record: JobRecord): void {
+		if (record.target === undefined) return;
+		for (const key of this.occupiedKeys(record.target)) {
+			const ids = this.liveByTarget.get(key);
+			if (ids === undefined) continue;
+			ids.delete(record.id);
+			if (ids.size === 0) this.liveByTarget.delete(key);
+		}
+	}
+
+	/**
+	 * Is a job already live for this exact target? The duplicate-build guard.
+	 *
+	 * WHY IN MEMORY, when diffusion enforces its equivalent with a DB partial
+	 * unique index (src/diffusion/jobs/schema.ts): that queue dispatches to
+	 * SEPARATE runner processes, possibly on another host, so only the database
+	 * can arbitrate. Media jobs run in-process under one manager, where this
+	 * registry IS the arbiter. Not a lesser copy of diffusion's guard — a
+	 * different problem.
+	 *
+	 * THE LIMIT, stated rather than discovered: a SECOND server instance sharing
+	 * ../private/processes (a deployment `isStaleLiveRecord` explicitly
+	 * contemplates) has its own registry, so each instance could admit a build for
+	 * the same target. The cost is a wasted duplicate encode whose loser is
+	 * discarded by the atomic rename — never corruption — but if this ever needs
+	 * to be exact, the fix is to promote media jobs onto the durable queue, not to
+	 * bolt a lock onto this map.
+	 */
+	hasLiveJobForTarget(target: JobTarget): boolean {
+		return (this.liveByTarget.get(jobTargetKey(target))?.size ?? 0) > 0;
+	}
+
+	/**
+	 * Every job this process knows about: the in-memory registry FIRST, then the
+	 * pfile mirror for ids the registry has evicted or never owned (a previous
+	 * process life). Pfile reads go through `status()`, so the lazy reconcile
+	 * applies and a job orphaned by a dead server is reported 'interrupted' rather
+	 * than eternally 'running'.
+	 *
+	 * The directory scan is bounded by the 30-day pfile retention the boot sweep
+	 * enforces. It runs on a tray load and a widget open, not per frame.
+	 */
+	private allKnownRecords(): JobRecord[] {
+		const records = new Map<string, JobRecord>();
+		for (const record of this.registry.values()) records.set(record.id, record);
+		for (const id of persistedJobIds()) {
+			if (records.has(id)) continue;
+			const record = this.status(id);
+			if (record !== null) records.set(id, record);
+		}
+		return [...records.values()];
+	}
+
+	/**
+	 * Jobs touching a record — the answer tool_media_versions needs to render a
+	 * tier as "being built" instead of as an empty cell. Terminal jobs are
+	 * included: an `error`/`interrupted` tier must stay readable, because
+	 * reverting it to blank is exactly the "never built" lie this whole path
+	 * exists to remove.
+	 */
+	jobsForRecord(sectionTipo: string, sectionId: number): JobRecord[] {
+		const prefix = recordKeyPrefix(sectionTipo, sectionId);
+		return this.allKnownRecords().filter((record) =>
+			record.target === undefined ? false : jobTargetKey(record.target).startsWith(prefix),
+		);
+	}
+
+	/** A user's own jobs — the media half of the activity tray's read model. */
+	jobsForUser(userId: number): JobRecord[] {
+		return this.allKnownRecords().filter((record) => record.user_id === userId);
+	}
+
 	/** Acquire a concurrency slot (resolves when a lane is free). */
 	private acquire(): Promise<void> {
 		if (this.active < this.maxConcurrent) {
@@ -292,7 +560,11 @@ export class MediaJobManager {
 	 * `meta.userId` stamps the owner — REQUIRED for any job whose payload is user
 	 * data, because the status stream authorizes the poll against it.
 	 */
-	submit(kind: string, worker: JobWorker, meta: { userId?: number } = {}): JobRecord {
+	submit(
+		kind: string,
+		worker: JobWorker,
+		meta: { userId?: number; target?: JobTarget } = {},
+	): JobRecord {
 		const id = this.nextId(kind);
 		const now = this.clock();
 		const record: JobRecord = {
@@ -303,12 +575,15 @@ export class MediaJobManager {
 			user_id: meta.userId ?? null,
 			status: 'queued',
 			progress: null,
+			target: meta.target,
 			data: null,
 			errors: [],
 			startedAt: now,
 			updatedAt: now,
+			startedAtWall: Date.now(),
 		};
 		this.registry.set(id, record);
+		this.indexLive(record);
 		const controller = new AbortController();
 		this.controllers.set(id, controller);
 		this.commit(record);
@@ -364,6 +639,11 @@ export class MediaJobManager {
 		record.status = status;
 		record.progress = status === 'done' ? 100 : record.progress;
 		record.updatedAt = this.clock();
+		record.finishedAtWall = Date.now();
+		// Out of the live index BEFORE the frame is published: a subscriber woken by
+		// the terminal commit may immediately re-submit the same target (the panel's
+		// retry), and it must not be refused by the job that just ended.
+		this.unindexLive(record);
 		// The TERMINAL frame: subscribers see is_running:false and close their
 		// stream. Committed before the subscriber set is dropped below.
 		this.commit(record);
@@ -427,6 +707,8 @@ export class MediaJobManager {
 			record.status = 'interrupted';
 			record.errors.push(`interrupted: ${reason}`);
 			record.updatedAt = this.clock();
+			record.finishedAtWall = Date.now();
+			this.unindexLive(record);
 			this.commit(record);
 			this.subscribers.delete(record.id);
 			this.controllers.delete(record.id);

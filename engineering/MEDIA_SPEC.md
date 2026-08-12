@@ -239,6 +239,78 @@ PHP: detached `nohup`/`sh` + PID + on-disk process files + a `processes` DB tabl
 - **Client contract honored**: the status action serves the SSE stream the vendored `data_manager.request_stream`/`read_stream` expect (`data:\n<json>\n\n` frames of `{pid, pfile, is_running, data, errors, total_time}` — `render_common.js:640-780`, `data_manager.js:993`); `stop_process` and `get_server_ready_status` (= cap headroom) join the action table. Frame shape parity-gated by driving the real client in Chrome.
 - **Coexistence**: TS never reads/writes PHP's `processes` table or pfiles; the only shared surface is the media dir, protected by atomic renames and by never touching `original`. Trade-off recorded: we lose survive-the-restart *execution* (PHP's detached process would keep running) but gain progress, caps, cancellation, and guaranteed cleanup.
 
+### 5.5b Job VISIBILITY — what is running, and where an operator sees it (2026-08-12)
+
+Wire contract: `engineering/wire_contract/WC-2026-08-12-media-job-visibility.md`.
+
+§5.5 gives a job supervision, progress and cancellation. It did NOT give it an
+ADDRESS: a job was reachable only by an id handed to whoever submitted it, so no
+surface could ask "what is running for this record?". That gap is why an
+upload's background transcode was invisible — `tool_upload` received `job_id`
+and dropped it, and `tool_media_versions`, opened afterwards, had nothing to ask.
+An empty tier cell is indistinguishable from a tier that was never built.
+
+**Every job now carries a `JobTarget`** (`{section_tipo, section_id (INT),
+component_tipo, lang, quality, also_qualities?, label?}`). `jobTargetKey` is its
+identity; `also_qualities` widens what a job BLOCKS without changing what it is
+called — the ingest transcode writes the default tier AND the audio tier, and
+stamping only one left the other open to a duplicate encode.
+
+Three readers, one index (`MediaJobManager`):
+- `jobsForRecord(sectionTipo, sectionId)` — includes TERMINAL jobs, because a
+  failed tier must stay readable; reverting it to blank is the "never built" lie.
+- `jobsForUser(userId)` — the media half of the activity read model.
+- `hasLiveJobForTarget(target)` — the duplicate-build guard.
+
+**THE TWO JOB SYSTEMS.** This engine runs long work in two places, and they are
+different by design, not by accident:
+
+| | `mediaJobs` (§5.5) | diffusion queue (`src/diffusion/jobs/`) |
+|---|---|---|
+| durability | in-process + pfile mirror; **lost on restart** | Postgres; survives restart |
+| execution | in-process worker, concurrency lanes | one SPAWNED runner per job, heartbeat |
+| recovery | boot sweep → `interrupted` | sweeper RE-QUEUES under an attempt budget |
+| duplicate guard | in-memory (`hasLiveJobForTarget`) | partial unique index |
+| progress wire | `JobStatusFrame` + `get_job_events` SSE | `ProgressData`, byte-pinned to the old engine |
+
+`mediaJobs` is the GENERAL registry: AV transcodes, every tool background action
+(imports, indexation) via `core/tools/background.ts`, backup, the test runner.
+
+**The monitoring surface is a READ-SIDE PROJECTION over both**, not a merge:
+`core/api/activity.ts` defines `ActivityRow`, and each row names the stream its
+own system already serves (`stream: 'job_events' | 'diffusion'`), so the client
+subscribes THERE. Neither wire changed — diffusion's is pinned with golden
+fixtures. Core may not import `src/diffusion`, so the diffusion half arrives by
+the `registerActivityProvider` INVERSION (the `registerOpsGauge` pattern).
+
+Two doors, deliberately different scopes:
+- `dd_utils_api::get_record_jobs` — authorized by RECORD read permission (not job
+  ownership), operational shape only, never the job's `data`. A second operator
+  must see that a tier is busy or they start a duplicate encode.
+- `dd_utils_api::get_activity` — the caller's OWN work across both systems,
+  feeding the page-chrome activity tray. LIVE **plus finished within
+  `RECENT_TERMINAL_MS` (5 min)**, with `errors[]` on terminal rows: a live-only
+  answer would make the client infer outcomes from a row's disappearance, and
+  that inference painted failed publications green. Absence is never an outcome.
+
+**KNOWN LIMITS, stated rather than discovered.** Media jobs are still NOT
+durable: a restart mid-transcode loses the work, and this change makes that loss
+VISIBLE (`interrupted`) rather than fixing it. The duplicate guard is in-memory,
+so under a SECOND server instance sharing `../private/processes` it is not
+authoritative — and because the panel now HIDES the build control for a live
+tier, that non-authoritative answer is being presented as a guarantee. Both
+point at the same end state.
+
+**THE END STATE (adversarial review, 2026-08-12).** This section describes a
+read-side projection over two job systems, not one system. The structurally
+correct move — and the one this spec should be read as pointing at — is to make
+`mediaJobs` a FACADE over the durable diffusion queue: restart-surviving
+transcodes, an authoritative duplicate guard (a partial unique index instead of
+a Map), and one owner listing, all of which that queue already implements one
+directory away. Until then, treat `ActivityRow` as scaffolding: it is a third
+vocabulary over two wires plus the legacy `get_process_status` poll, and every
+surface built on it is one more thing the promotion must preserve.
+
 ### 5.6 File ops (`media/file_ops.ts`)
 ```ts
 export function moveToDeleted(absolutePath: string, opts?: { bulkProcessId?: string; now?: Date; mediaRoot?: string }): string | null;

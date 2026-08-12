@@ -1520,6 +1520,51 @@ export async function startServer() {
 					max_runners: getMaxRunners(),
 					paused: isSchedulerPaused(),
 				}));
+
+				// Publication rows for the ACTIVITY TRAY (dd_utils_api::get_activity),
+				// registered by the SAME inversion and for the same reason: core/api/
+				// activity.ts must not import src/diffusion. Without this the tray
+				// would show media work only and silently omit the longest-running
+				// process in the system, which reads as "nothing is happening".
+				const { listActiveJobsForOwner } = await import('./diffusion/jobs/queue.ts');
+				const { registerActivityProvider, DIFFUSION_STATUS, RECENT_TERMINAL_MS } = await import(
+					'./core/api/activity.ts'
+				);
+				registerActivityProvider('diffusion', async (userId) => {
+					// Live AND recently-finished, symmetric with the media half: a
+					// client that only ever sees live rows must GUESS what a row's
+					// disappearance meant, and that guess painted failed publications
+					// green. The outcome is stated, never inferred.
+					const jobs = await listActiveJobsForOwner(userId, RECENT_TERMINAL_MS);
+					return jobs.map((job) => {
+						// counter/total arrive as TEXT on purpose (see listActiveJobs):
+						// one malformed legacy value must degrade to "no percentage",
+						// never abort the whole read.
+						const counter = Number(job.counter_text);
+						const total = Number(job.total_text);
+						const progress =
+							Number.isFinite(counter) && Number.isFinite(total) && total > 0
+								? Math.max(0, Math.min(100, Math.round((counter / total) * 100)))
+								: null;
+						return {
+							source: 'diffusion' as const,
+							job_id: job.job_id,
+							label: job.msg ?? `Publication ${job.diffusion_element_tipo ?? ''}`.trim(),
+							record:
+								job.section_tipo === null
+									? null
+									: { section_tipo: job.section_tipo, section_id: null },
+							status: DIFFUSION_STATUS[job.state],
+							progress,
+							started_at: job.created_at === null ? null : new Date(job.created_at).getTime(),
+							// A failed publication must be able to say WHY, or the tray
+							// reports a red row with no reason and the operator has to go
+							// to the admin console to learn what happened.
+							errors: Array.isArray(job.errors) ? job.errors.map(String) : [],
+							stream: 'diffusion' as const,
+						};
+					});
+				});
 			})
 			.catch((error) => console.error('[diffusion] boot init failed:', error));
 

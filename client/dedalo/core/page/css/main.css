@@ -6917,6 +6917,171 @@ body:has(.assistant_container.standalone.show) {
   }
 }
 /**
+* job_tray
+*
+* The user's own background work (transcodes, imports, publications), shown in
+* the one global corner. A TENANT of #floating_dock — it sets no coordinates of
+* its own, because that corner is contested and the dock already solves it
+* (see floating_dock.less).
+*
+* States are carried as .state_* on the row rather than inline colours, so a
+* failed job stays legible in both themes and reads as a state, not as decoration.
+*
+* Included from main.less file
+*/
+.job_tray {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+.job_tray.hidden {
+  display: none;
+}
+.job_tray > .job_tray_toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 2.4rem;
+  height: 2.4rem;
+  padding: 0 0.7rem;
+  border: none;
+  border-radius: 1.2rem;
+  cursor: pointer;
+  color: var(--fg_inverse);
+  background-color: var(--color_grey_7);
+  box-shadow: var(--shadow-3);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+.job_tray > .job_tray_toggle:hover,
+.job_tray > .job_tray_toggle:focus-visible {
+  transform: scale(1.04);
+}
+.job_tray > .job_tray_toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-3), var(--shadow-focus);
+}
+.job_tray.has_live > .job_tray_toggle {
+  background-color: var(--color_info, #3f6f9f);
+}
+.job_tray > .job_tray_list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 22rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border-radius: 0.4rem;
+  background-color: var(--bg_surface, var(--color_white));
+  color: var(--fg_default, var(--color_grey_9));
+  box-shadow: var(--shadow-3);
+}
+.job_tray > .job_tray_list.hidden {
+  display: none;
+}
+.job_tray .job_tray_row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas: 'label elapsed action' 'track track  track';
+  gap: 0.2rem 0.5rem;
+  align-items: center;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid transparent;
+}
+.job_tray .job_tray_row.source_diffusion {
+  border-left-color: var(--color_grey_5);
+}
+.job_tray .job_tray_row.source_media {
+  border-left-color: var(--color_grey_6);
+}
+.job_tray .job_tray_row.state_running,
+.job_tray .job_tray_row.state_queued {
+  border-left-color: var(--color_info, #3f6f9f);
+}
+.job_tray .job_tray_row.state_done {
+  border-left-color: var(--color_success, #4a8a4a);
+  opacity: 0.7;
+}
+.job_tray .job_tray_row.state_error {
+  border-left-color: var(--color_danger);
+}
+.job_tray .job_tray_row.state_interrupted {
+  border-left-color: var(--color_warning, #b98b3a);
+}
+.job_tray .job_tray_row.state_cancelled {
+  border-left-color: var(--color_grey_5);
+  opacity: 0.7;
+}
+.job_tray .job_tray_label {
+  grid-area: label;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.job_tray .job_tray_label.linked {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.job_tray .job_tray_elapsed {
+  grid-area: elapsed;
+  color: var(--color_grey_6);
+  font-variant-numeric: tabular-nums;
+}
+.job_tray .job_tray_track {
+  grid-area: track;
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background-color: var(--color_grey_3);
+  overflow: hidden;
+}
+.job_tray .job_tray_track > .job_tray_fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background-color: var(--color_info, #3f6f9f);
+  transition: width 0.3s linear;
+}
+.job_tray .job_tray_track.indeterminate > .job_tray_fill {
+  animation: job_tray_sweep 1.4s ease-in-out infinite;
+  transition: none;
+}
+@keyframes job_tray_sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+.job_tray .job_tray_action {
+  grid-area: action;
+  justify-self: end;
+  width: 1.2rem;
+  height: 1.2rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.2rem;
+  background: transparent;
+  color: var(--color_grey_6);
+  cursor: pointer;
+  line-height: 1;
+}
+.job_tray .job_tray_action:hover:not(:disabled) {
+  color: var(--fg_default, var(--color_grey_9));
+}
+.job_tray .job_tray_action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.job_tray .job_tray_action.hidden {
+  visibility: hidden;
+}
+/**
 * installer
 *
 * Installer wizard UI, aligned with the unit-test client's "dev-dashboard / IDE"

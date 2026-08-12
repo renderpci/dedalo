@@ -24,29 +24,11 @@
 * assistant) and only CSS can see that rail open, close and resize.
 */
 
+// The dock itself lives in ./floating_dock.js — it is a SHARED facility with
+// more than one tenant now (the job tray), not this launcher's property.
+import {get_floating_dock} from './floating_dock.js'
+
 const BUTTON_ID = 'error_report_floating_launcher'
-const DOCK_ID	= 'floating_dock'
-
-
-/**
-* GET_FLOATING_DOCK
-* Returns the global floating-button dock, creating it on first use. The dock is
-* a bare positioning frame — everything visual is in floating_dock.less.
-* @returns {HTMLElement}
-*/
-function get_floating_dock() {
-
-	const found = document.getElementById(DOCK_ID)
-	if (found) {
-		return found
-	}
-
-	const dock = document.createElement('div')
-	dock.id = DOCK_ID
-	document.body.appendChild(dock)
-
-	return dock
-}//end get_floating_dock
 
 export function install_error_report_launcher() {
 

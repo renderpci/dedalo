@@ -83,6 +83,9 @@ const sourceProfile = {
 	aspect: '16x9' as const,
 	hasAudio: true,
 	hasVideo: true,
+	// No duration: these gates drive the FAILURE paths with fake binaries, so no
+	// percentage is computable and none should be invented.
+	durationSeconds: null,
 };
 
 // ── the fake binaries ───────────────────────────────────────────────────────

@@ -651,6 +651,61 @@ tool_media_versions.prototype.get_job_status = async function(job_id) {
 
 
 /**
+* GET_RECORD_JOBS
+* Asks the server what background work is running FOR THIS RECORD.
+*
+* This is the answer no surface could get before. A job used to be addressable
+* only by an id handed to whoever submitted it, so a transcode started by the
+* upload tool — or by another operator a minute ago — was invisible here: the
+* tier's cell was empty, which is exactly how a tier that was NEVER BUILT looks.
+* The operator's only reading was "nothing happened", and the natural next move
+* was to click the gear and start a second encode of the same file.
+*
+* Authorized by RECORD permission, not by job ownership, and the payload is
+* reduced to operational shape (tier, status, progress, who started it) — the
+* job's own `data` stays owner-only behind get_job_events. So a second operator
+* sees THAT the tier is busy without seeing the first one's payload.
+*
+* Dispatches to: dd_utils_api::get_record_jobs (src/core/api/handlers/dd_utils_api.ts).
+*
+* @returns {Promise<Array<Object>>} activity rows for this record; [] on any
+*   failure — a discovery that cannot answer must degrade to "nothing known",
+*   never break the panel that renders the files themselves.
+*/
+tool_media_versions.prototype.get_record_jobs = async function() {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_utils_api',
+		action	: 'get_record_jobs',
+		options	: {
+			section_tipo	: self.main_element.section_tipo,
+			section_id		: self.main_element.section_id
+		}
+	}
+
+	return new Promise(function(resolve){
+		data_manager.request({
+			body : rqo
+		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> get_record_jobs API response:",'DEBUG',response);
+			}
+			resolve((response && response.result===true && Array.isArray(response.jobs))
+				? response.jobs
+				: [])
+		})
+		.catch(function(){
+			resolve([])
+		})
+	})
+}//end get_record_jobs
+
+
+
+/**
 * CONFORM_HEADERS
 * 	Creates a new version from original in given quality rebuilding headers
 *

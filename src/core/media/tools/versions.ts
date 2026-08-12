@@ -113,6 +113,8 @@ export async function buildVersionCore(
 	quality: string,
 	sourceExtension?: string | null,
 	targetExtension?: string | null,
+	/** Who asked — stamped on the background job so it reaches their activity tray. */
+	userId?: number,
 ): Promise<BuildVersionResult> {
 	assertValidQuality(spec, quality);
 	const target = assertBuildableTargetExtension(spec, quality, targetExtension);
@@ -147,7 +149,7 @@ export async function buildVersionCore(
 		// as a failed request, not as an accepted job that dies later.
 		return {
 			built: [],
-			jobId: await submitAvVersionBuild(spec, identity, pathOpts, quality, sourceExtension),
+			jobId: await submitAvVersionBuild(spec, identity, pathOpts, quality, sourceExtension, userId),
 			errors: [],
 		};
 	}

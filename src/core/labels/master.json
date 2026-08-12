@@ -23,6 +23,7 @@
 	"back_to_login": "Back to login",
 	"backfill_search_stores": "Backfill search stores",
 	"backfill_search_stores_info": "Rebuilds the derived search stores (matrix_string_search, matrix_relation_index) from the record data. Use after \"Recreate database assets\". Takes minutes on large databases.",
+	"background_activity": "Background activity",
 	"beginning": "Beginning",
 	"begins_with": "Begins with",
 	"between": "Between",

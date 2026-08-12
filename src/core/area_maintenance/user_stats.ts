@@ -14,6 +14,7 @@
 
 import { encodeForJsonb } from '../db/json_codec.ts';
 import { sql } from '../db/postgres.ts';
+import { resolveUserName, USERS_SECTION } from '../security/user_identity.ts';
 
 /** dd1521 record components (PHP USER_ACTIVITY_* constants). */
 const UA_SECTION = 'dd1521';
@@ -21,7 +22,6 @@ const UA_USER = 'dd1522';
 const UA_TYPE = 'dd1531';
 const UA_DATE = 'dd1530';
 const UA_TOTALS = 'dd1523';
-const USERS_SECTION = 'dd128';
 
 /** matrix_activity components (logger_backend_activity). */
 const ACT_WHO = 'dd543';
@@ -805,17 +805,6 @@ export async function foldStatsRows(
  * its own read. Its callers INJECT it as a function into the gated fold
  * (`foldStatsRows`), which is where the label behaviour is actually asserted.
  */
-async function resolveUserName(userId: string, lang: string): Promise<string | null> {
-	const { readMatrixRecord } = await import('../db/matrix.ts');
-	const record = await readMatrixRecord('matrix_users', USERS_SECTION, Number(userId));
-	if (record === null) return null;
-	const { resolveComponentValue } = await import('../resolve/component_data.ts');
-	const { getModelByTipo } = await import('../ontology/resolver.ts');
-	const model = (await getModelByTipo('dd132')) ?? 'component_input_text';
-	const { value, fallbackValue } = await resolveComponentValue(record, 'dd132', model, lang);
-	const first = (value ?? fallbackValue)?.[0] as { value?: unknown } | undefined;
-	return typeof first?.value === 'string' ? first.value : null;
-}
 
 /**
  * PHP merge_raw_into_canonical: fold raw items into the canonical totals —

@@ -20,6 +20,49 @@
   margin-top: 0.25rem;
   word-break: break-word;
 }
+.wrapper_tool.tool_media_versions .job_progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+.wrapper_tool.tool_media_versions .job_progress .job_progress_label {
+  color: var(--color_grey_7);
+  white-space: nowrap;
+}
+.wrapper_tool.tool_media_versions .job_progress .job_progress_track {
+  position: relative;
+  width: 3.5rem;
+  height: 3px;
+  border-radius: 2px;
+  background-color: var(--color_grey_3);
+  overflow: hidden;
+}
+.wrapper_tool.tool_media_versions .job_progress .job_progress_track .job_progress_fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background-color: var(--tool_media_versions);
+  transition: width 0.3s linear;
+}
+.wrapper_tool.tool_media_versions .job_progress .job_progress_track.indeterminate .job_progress_fill {
+  animation: job_progress_sweep 1.4s ease-in-out infinite;
+  transition: none;
+}
+.wrapper_tool.tool_media_versions .job_progress .job_progress_elapsed {
+  color: var(--color_grey_6);
+  font-variant-numeric: tabular-nums;
+}
+.wrapper_tool.tool_media_versions .job_progress .job_progress_owner {
+  color: var(--color_grey_6);
+  font-style: italic;
+  max-width: 6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .wrapper_tool.tool_media_versions > .content_data {
   display: flex;
   flex-wrap: wrap;
@@ -146,5 +189,13 @@
 }
 .tool_header.tool_media_versions {
   background-color: var(--tool_media_versions);
+}
+@keyframes job_progress_sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 /*# sourceMappingURL=tool_media_versions.css.map */

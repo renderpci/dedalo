@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
+	import {follow_job, format_elapsed} from '../../../core/common/js/job_follow.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {bytes_format, download_file, open_window} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
@@ -121,6 +122,15 @@ render_tool_media_versions.prototype.edit = async function(options) {
 * @returns {Promise<HTMLElement>} content_data node ready to insert into the DOM
 */
 const get_content_data = async function(self) {
+
+	// RECORD JOBS, BEFORE THE GRID. Ask the server what background work is
+	// already running for this record, so a tier being built by an upload — or by
+	// another operator — renders as busy instead of as an empty cell. Awaited on
+	// purpose: the grid reads this to decide whether a tier gets a gear or a
+	// progress readout, and painting the gear first would offer a build that the
+	// server is about to refuse. get_record_jobs degrades to [] on any failure, so
+	// this can delay the panel but never break it.
+		self.record_jobs = await self.get_record_jobs()
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -1299,9 +1309,135 @@ const create_3d_posterframe = async function(self) {
 
 
 /** Poll cadence of the AV build watcher, ms. */
-const BUILD_POLL_INTERVAL = 2000
-/** Hard cap on the whole wait (1 h): a watcher must not outlive its own tab. */
-const BUILD_POLL_MAX_MS = 3600 * 1000
+/**
+* LIVE_JOB_FOR_QUALITY
+* The running job for one tier, from the server's record-scoped answer.
+*
+* The panel renders THIS rather than click-local state, which is the whole point:
+* before, "Processing" existed only inside the click handler that started a build,
+* so a transcode started by tool_upload seconds earlier — or by a colleague — was
+* invisible, and its tier looked exactly like one that had never been built.
+*
+* @param {Object} self
+* @param {string} quality
+* @returns {Object|null} the activity row, or null when nothing is running
+*/
+const live_job_for_quality = function(self, quality) {
+
+	const jobs = self.record_jobs
+	if (!Array.isArray(jobs)) {
+		return null
+	}
+	return jobs.find(job =>
+		job
+		&& job.record
+		&& job.record.component_tipo===self.main_element.tipo
+		// The job's OWN tier, or any companion tier it also writes: the ingest
+		// transcode produces the default quality AND the audio tier in one job,
+		// and the server refuses a build of either. Matching only `label` would
+		// leave the audio column showing an idle gear whose click is guaranteed
+		// to be refused — the panel contradicting the server.
+		&& (job.label===quality || (job.also_qualities || []).includes(quality))
+		&& (job.status==='running' || job.status==='queued')
+	) || null
+}//end live_job_for_quality
+
+
+
+/**
+* RENDER_JOB_PROGRESS
+* The busy readout for one tier: a label, a bar, and the elapsed time.
+*
+* Determinate ONLY when the server reported a percentage. A tier whose source
+* declares no duration yields progress null, and an indeterminate bar is the
+* honest rendering — a made-up number is the frozen-70% lie in a new costume.
+*
+* @param {Object} job - activity row {label, progress, started_at, owner_name}
+* @param {HTMLElement} parent
+* @returns {Object} {node, update(frame_progress)}
+*/
+const render_job_progress = function(job, parent) {
+
+	const wrapper = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'job_progress',
+		parent			: parent
+	})
+
+	const label = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'job_progress_label blink',
+		inner_html		: get_label.processing || 'Processing',
+		parent			: wrapper
+	})
+
+	const bar_track = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'job_progress_track',
+		parent			: wrapper
+	})
+	const bar_fill = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'job_progress_fill',
+		parent			: bar_track
+	})
+
+	const elapsed_node = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'job_progress_elapsed',
+		parent			: wrapper
+	})
+
+	// WHOSE work this is, but only when it is not the reader's own. An operator
+	// looking at a tier someone else is building needs to know that before they
+	// go hunting for why their gear is disabled.
+	if (job.owner_name) {
+		const owner_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'job_progress_owner',
+			parent			: wrapper
+		})
+		// textContent: owner_name is ANOTHER USER'S self-editable display name
+		// (dd132). Through innerHTML it is stored cross-user XSS.
+		owner_node.textContent = String(job.owner_name)
+	}
+
+	const apply = function(progress) {
+		if (typeof progress==='number' && isFinite(progress)) {
+			bar_track.classList.remove('indeterminate')
+			bar_fill.style.width = `${Math.max(0, Math.min(100, progress))}%`
+			label.innerHTML = `${(get_label.processing || 'Processing')} ${Math.round(progress)}%`
+		}else{
+			// No percentage is knowable — say "working", not a number.
+			bar_track.classList.add('indeterminate')
+			bar_fill.style.width = '100%'
+			label.innerHTML = get_label.processing || 'Processing'
+		}
+		elapsed_node.innerHTML = format_elapsed(job.started_at)
+	}
+	apply(job.progress)
+
+	// The elapsed readout ticks on its own: SSE frames arrive on state CHANGES,
+	// and a long encode legitimately reports nothing for a while. A frozen clock
+	// during that silence reads as a dead job.
+	const ticker = setInterval(() => {
+		elapsed_node.innerHTML = format_elapsed(job.started_at)
+	}, 1000)
+
+	return {
+		node	: wrapper,
+		update	: apply,
+		stop	: () => clearInterval(ticker)
+	}
+}//end render_job_progress
+
+
+
+// The 2 s poll ladder and its one-hour cap are GONE (2026-08-12): the panel now
+// follows a job over dd_utils_api::get_job_events, which pushes a frame on every
+// transition and ends on the terminal one. The cap existed because a poller that
+// never hears anything cannot tell "still encoding" from "the server died"; a
+// stream that closes without a terminal frame answers that directly.
 const render_build_version = function(quality, self) {
 
 	// file_info_node
@@ -1312,6 +1448,53 @@ const render_build_version = function(quality, self) {
 
 	// exclude original quality: nothing to "build" — original is the source, not a derivative
 		if (quality==='original') {
+			return file_info_node
+		}
+
+	// ALREADY BUILDING? The server's record-scoped answer decides, so a tier being
+	// transcoded by an upload — or by another operator — renders as busy the
+	// moment this panel opens, instead of as an empty cell offering a gear.
+	//
+	// The gear is NOT rendered at all in that state: the server refuses a second
+	// build for a live target (AvBuildRefused), and offering a click that is
+	// guaranteed to be refused is how the duplicate-encode race read as normal use.
+		const running_job = live_job_for_quality(self, quality)
+		if (running_job) {
+
+			const progress_ui = render_job_progress(running_job, file_info_node)
+
+			// Follow it to the end, then re-render the grid against the finished
+			// files — the panel that DISCOVERED a job gets the same completion
+			// behaviour as the one that started it.
+			follow_job(running_job.job_id, {
+				on_frame : function(frame) {
+					if (frame && typeof frame.progress==='number') {
+						progress_ui.update(frame.progress)
+					}
+				},
+				on_done : function(frame) {
+					progress_ui.stop()
+					const errors = (frame && Array.isArray(frame.errors)) ? frame.errors : []
+					if (errors.length>0) {
+						// A failed tier stays readable with its reason. Reverting it to a
+						// blank cell is the "never built" lie this whole path removes.
+						progress_ui.node.remove()
+						const err_node = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'build_error',
+							parent			: file_info_node
+						})
+						// Server error text carries paths and tool output; textContent.
+						err_node.textContent = (get_label.error || 'Error') + ': ' + errors.join('; ')
+						return
+					}
+					self.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
+				}
+			})
+
 			return file_info_node
 		}
 
@@ -1345,17 +1528,43 @@ const render_build_version = function(quality, self) {
 			// format (the twin channel) — the server says so, and this is where the
 			// operator hears it.
 			report_side_effects(self, response)
+			// A REFUSED build must be readable. report_side_effects deliberately
+			// answers only for result===true, so before this a rejection was
+			// completely silent — the gear simply did nothing and the operator had
+			// no way to learn why. That path is now reachable on purpose: the server
+			// refuses a tier that is already being built (AvBuildRefused), and a
+			// refusal nobody can see is the same defect as a job that dies quietly.
+			if (!accepted) {
+				const wrapper = self.node?.content_data || self.node
+				const reason = (response && response.msg) || 'the server refused this build'
+				if (wrapper) {
+					ui.show_message(wrapper, reason, 'warning')
+				}else{
+					alert(reason)
+				}
+				// The panel's view of what is running is now stale — the refusal
+				// usually MEANS someone else's job holds this tier. Re-render so the
+				// cell shows that job instead of the gear that was just refused.
+				self.refresh({
+					build_autoload	: false,
+					destroy			: false
+				})
+			}
 			if (accepted) {
 
-				// replace button with a blinking "Processing" indicator
+				// Replace the button with the SAME busy readout a discovered job
+				// renders (render_job_progress), so a build looks identical whether
+				// this browser started it or the panel found it already running.
 				button_build_version.remove()
 
-				const processing_label = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'blink',
-					inner_html		: get_label.processing || 'Processing',
-					parent			: file_info_node
-				})
+				const progress_ui = render_job_progress(
+					{
+						label		: quality,
+						progress	: null,
+						started_at	: Date.now()
+					},
+					file_info_node
+				)
 
 				// give_up: end the wait honestly — say WHY, and put the gear back so
 				// the operator can act. Never leave the label blinking on a build
@@ -1365,14 +1574,15 @@ const render_build_version = function(quality, self) {
 						clearTimeout(self.timer)
 						self.timer = null
 					}
-					processing_label.remove()
+					progress_ui.stop()
+					progress_ui.node.remove()
 					file_info_node.appendChild(button_build_version)
-					ui.create_dom_element({
+					const reason_node = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'build_error',
-						inner_html		: (get_label.error || 'Error') + ': ' + reason,
 						parent			: file_info_node
 					})
+					reason_node.textContent = (get_label.error || 'Error') + ': ' + reason
 				}
 
 				// done: the file is really there — re-render against it.
@@ -1381,6 +1591,7 @@ const render_build_version = function(quality, self) {
 						clearTimeout(self.timer)
 						self.timer = null
 					}
+					progress_ui.stop()
 					self.main_element_quality = quality
 
 					// NO force_save here. PHP needed one: its build ran outside the
@@ -1412,7 +1623,6 @@ const render_build_version = function(quality, self) {
 				if (self.main_element.model === 'component_av' && quality !== THUMB_QUALITY) {
 
 					const job_id	= response.job_id || null
-					const started	= Date.now()
 
 					// THE FILE CHECK. A quality counts as built only when the scan
 					// reports the entry present AND non-empty: a zero-byte file is a
@@ -1425,58 +1635,54 @@ const render_build_version = function(quality, self) {
 						return !!(found && found.file_exist===true && (found.file_size===null || found.file_size>0))
 					}
 
-					const check_job = async function() {
-
-						if (self.timer) {
-							clearTimeout(self.timer);
+					// PUSH, not poll. The job runs in the server process, so every
+					// transition is pushed as it happens and the stream ENDS on the
+					// terminal frame. The old setTimeout ladder (2 s, capped at an hour)
+					// is gone with its cap: a frame arrives when there is news, and a
+					// stream that closes without a terminal frame is itself the answer.
+					if (job_id===null) {
+						// A server that accepted the build without minting a job: nothing
+						// to follow. Check the disk once and report honestly either way.
+						if (await file_is_ready()) {
+							done()
+						}else{
+							give_up('the server accepted the build but returned no job to follow')
 						}
+					}else{
+						follow_job(job_id, {
+							on_frame : function(frame) {
+								if (frame && typeof frame.progress==='number') {
+									progress_ui.update(frame.progress)
+								}
+							},
+							on_done : async function(frame) {
+								progress_ui.stop()
 
-						if ((Date.now() - started) > BUILD_POLL_MAX_MS) {
-							return give_up((get_label.processing || 'Processing') + ' > 1h')
-						}
+								// No terminal frame: the stream died with the server. In-process
+								// jobs do not survive that, so this is "not running any more",
+								// never "still working" — but the file may have landed before
+								// the restart, so ask the disk before calling it a failure.
+								if (!frame) {
+									if (await file_is_ready()) {
+										return done()
+									}
+									return give_up('job lost (the server restarted while it ran)')
+								}
 
-						// No job id (a server that answered without one): fall back to
-						// watching the filesystem, still bounded by the cap above.
-						if (job_id===null) {
-							if (await file_is_ready()) {
+								// Errors win over everything else.
+								const errors = Array.isArray(frame.errors) ? frame.errors : []
+								if (errors.length>0) {
+									return give_up(errors.join('; '))
+								}
+								// Terminal and clean, but the tier is not on disk: the job did
+								// something other than what was asked. Say so instead of waiting.
+								if (!(await file_is_ready())) {
+									return give_up(quality + ' not built')
+								}
 								return done()
 							}
-							self.timer = setTimeout(check_job, BUILD_POLL_INTERVAL)
-							return
-						}
-
-						const status = await self.get_job_status(job_id)
-
-						// Still encoding.
-						if (status && status.result===true && status.is_running===true) {
-							self.timer = setTimeout(check_job, BUILD_POLL_INTERVAL)
-							return
-						}
-
-						// The job manager no longer knows this id: in-process jobs die
-						// with the server, so this is "not running any more", never
-						// "still working". The file may still have landed before the
-						// restart, so check the disk before calling it a failure.
-						if (!status || status.result!==true) {
-							if (await file_is_ready()) {
-								return done()
-							}
-							return give_up((status && status.msg) ? status.msg : 'job lost')
-						}
-
-						// Terminal. Errors win over everything else.
-						const errors = Array.isArray(status.errors) ? status.errors : []
-						if (errors.length>0) {
-							return give_up(errors.join('; '))
-						}
-						// Terminal and clean, but the tier is not on disk: the job did
-						// something other than what was asked. Say so instead of waiting.
-						if (!(await file_is_ready())) {
-							return give_up(quality + ' not built')
-						}
-						return done()
+						})
 					}
-					check_job()
 				}else{
 					// non-AV builds complete synchronously; refresh on the next idle frame
 					dd_request_idle_callback(

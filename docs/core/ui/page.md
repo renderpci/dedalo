@@ -62,6 +62,19 @@ The `page` instance consumes both.
   `notification`, `quit`, `change_lang`, `api_response_errors`).
 - **Notifications** — render the maintenance / recovery / `dedalo_notification`
   banners and the inspector "bubble" notification container.
+- **Activity tray** — `js/job_tray.js` mounts the user's own background work into
+  `#floating_dock`: media conversions, imports and publications alike, each with
+  progress, elapsed time and its OUTCOME. It reads one aggregated server model
+  (`dd_utils_api::get_activity`, live plus recently-finished) and then follows
+  each row over that row's OWN push stream, so neither job system's wire had to
+  change. A row can be cancelled while it runs (media only — the diffusion
+  cancel is admin-scoped and stays in Maintenance) and dismissed once terminal;
+  failures never auto-fade. Absence from the server's answer is never read as
+  success — an earlier version did, and painted failed publications green. It lives in the
+  document-level dock rather than in the page wrapper on purpose — the wrapper is
+  rebuilt on every navigation, and a tray that died with it would lose sight of a
+  transcode the moment the user moved elsewhere, which is the blindness it exists
+  to cure.
 - **Dynamic CSS** — own the runtime CSS-rule registry (`js/css.js`): inject,
   deduplicate, batch and garbage-collect per-element rules into a single
   `<style id="elements_style_sheet">` sheet.
@@ -112,6 +125,7 @@ client/dedalo/core/page/
 │   ├── page.js             # the `page` model: init/build/navigate/destroy, events, instantiate_page_element
 │   ├── render_page.js      # the render layer: edit(), get_content_data(), maintenance/recovery/notification banners
 │   ├── css.js              # dynamic CSS-rule registry: set_element_css, process_rule, prune_rules, ...
+│   ├── job_tray.js         # the activity tray: the user's own running jobs (media + publication), mounted in #floating_dock
 │   ├── theme.js            # light/dark theme API (localStorage 'dedalo_theme'), publishes 'theme_changed'
 │   ├── theme-init.js       # synchronous head script: applies data-theme="dark" before paint
 │   └── worker_cache.js     # Web Worker: on login, force-reload core/tool JS+CSS files (HTTP cache fallback)
@@ -123,6 +137,7 @@ client/dedalo/core/page/
         ├── functions.less  fonts.less
         ├── general.less   # html/body/#main, .loading/.hide, maintenance/recovery/notification containers
         ├── progress_bar.less  buttons.less  layout.less  list.less
+        ├── floating_dock.less  job_tray.less   # the one bottom-right corner and its tray tenant
         └── page.less      # the `.page` wrapper rules (content_data, bubbles_notification_container)
 ```
 
