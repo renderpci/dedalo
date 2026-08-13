@@ -108,8 +108,26 @@ const runtime_log = function() {
 	return log_tail.join('\n');
 }//end runtime_log
 
-/** The phase the worker is in, so a failure can say WHERE it happened. */
-let current_phase = 'model';
+// The phase the worker is in, so a failure can say WHERE it happened. Starts
+// 'audio': the FIRST work self.transcribe does is validating/decoding the caller's
+// PCM and VAD-planning the windows, before any model is touched — a failure there
+// reported as phase 'model' would send the archivist to re-download a model that
+// was never the problem. classify_failure() gives info.phase PRIORITY over its own
+// rule's phase (transcription_report.js), so a stale phase here silently overrides
+// otherwise-correct classification.
+let current_phase = 'audio';
+
+// The device actually in use (or last attempted), so a terminal failure can name
+// it even when the caller didn't pass one explicitly to post_failure. Sourced from
+// load_pipeline, which is the only place a device is chosen.
+let current_device = '';
+
+// Offsets (seconds) of windows that produced no decodable output THIS RUN. Counted
+// here, not posted per window: the panel APPENDS one block per 'warning' message,
+// so posting on every skip would fill it with dozens of identical blocks on a
+// badly-degrading long interview. self.transcribe posts ONE summarising warning
+// after the decode loop, once the count is known.
+let skipped_windows = [];
 
 /** Post a degradation the run survived. The caller shows it and continues. */
 const post_warning = function( label_key, message, detail ) {
@@ -131,9 +149,12 @@ const post_failure = function( error, device ) {
 		message = error.message;
 	} else if (typeof error==='string' && error.length>0) {
 		message = error;
-	} else if (error!==undefined && error!==null) {
-		message = String(error);
 	} else {
+		// Neither an Error with a message nor a non-empty string — a plain object
+		// would otherwise stringify to the useless "[object Object]", and an empty
+		// ErrorEvent (event.error undefined, event.message '') would otherwise
+		// stringify to '' or the literal text "undefined". Both are worse than
+		// saying plainly that the message is unknown.
 		message = 'Unknown error';
 	}
 	self.postMessage({
@@ -141,7 +162,7 @@ const post_failure = function( error, device ) {
 		data	: {
 			message	: message,
 			phase	: current_phase,
-			device	: device || '',
+			device	: device || current_device,
 			log		: runtime_log()
 		}
 	});
@@ -233,7 +254,16 @@ self.onunhandledrejection = function(event) {
 	post_failure( event.reason );
 }
 
+// preventDefault() here is load-bearing, not decoration: without it the browser
+// still propagates this exception to the PARENT's `Worker.onerror` after this
+// listener runs, so the caller would see the classified 'error' MESSAGE (good)
+// immediately followed by the parent's generic onerror handling (empty message,
+// "The transcription failed") for the SAME failure — a second, useless report
+// appended under the useful one, and delete_audio() run twice. A worker that
+// fails to LOAD (bad URL, a syntax error in a module import) never reaches this
+// line at all — that failure is still, correctly, the parent onerror's alone.
 self.addEventListener('error', function(event){
+	event.preventDefault();
 	post_failure( event.error || event.message );
 });
 
@@ -353,6 +383,10 @@ async function load_pipeline( model, requested_device, dtype, sources ) {
 		? (webgpu_available ? 'webgpu' : 'wasm')
 		: requested_device;
 
+	// Known before the attempt: a failure thrown BY the attempt still names the
+	// device it was trying, instead of leaving post_failure's device blank.
+	current_device = device;
+
 	try {
 		const transcriber = await pipeline('automatic-speech-recognition', model, {
 			device				: device,
@@ -380,6 +414,7 @@ async function load_pipeline( model, requested_device, dtype, sources ) {
 			'The graphics card could not be used; the transcription continued on the processor.',
 			message
 		);
+		current_device = 'wasm';
 		const transcriber = await pipeline('automatic-speech-recognition', model, {
 			device				: 'wasm',
 			dtype				: dtype,
@@ -527,12 +562,12 @@ async function transcribe_window( params ) {
 	}
 
 	if (best===null) {
+		// Administrator-visible per window, always. The ARCHIVIST-visible warning is
+		// collapsed to one at the end of the run (see self.transcribe) — one block
+		// per skipped fragment would fill the panel with identical text on a
+		// badly-degrading long interview, and the panel APPENDS, it never merges.
 		console.warn(`[browser_whisper] window at ${params.offset}s produced no decodable output — skipped`);
-		post_warning(
-			'warning_window_skipped',
-			'A fragment of the recording could not be transcribed and was skipped.',
-			`window at ${params.offset}s`
-		);
+		skipped_windows.push( params.offset );
 		return [];
 	}
 	return best;
@@ -742,6 +777,12 @@ async function embed_speaker_groups( audio, sample_rate, chunks, options ) {
 self.transcribe = async function( options ) {
 
 	aborted = false;
+	// Reset for this run: a stale phase/device from a PRIOR call (this worker is
+	// reused for consecutive transcriptions) must never leak into this one's
+	// failures or warnings.
+	current_phase = 'audio';
+	current_device = '';
+	skipped_windows = [];
 
 	const audio			= options.audio || options.audio_file;
 	const sample_rate	= options.sample_rate || REQUIRED_SAMPLE_RATE;
@@ -853,6 +894,19 @@ self.transcribe = async function( options ) {
 				speech_seconds	: speech_seconds
 			}
 		});
+	}
+
+	// One collapsed warning for every window this run skipped, instead of one per
+	// window — see skipped_windows' own comment. Never posted mid-loop: the count
+	// is only final once the loop is done.
+	if (skipped_windows.length>0) {
+		post_warning(
+			'warning_window_skipped',
+			skipped_windows.length===1
+				? 'A fragment of the recording could not be transcribed and was skipped.'
+				: `${skipped_windows.length} fragments of the recording could not be transcribed and were skipped.`,
+			`windows at ${skipped_windows.join('s, ')}s`
+		);
 	}
 
 	// 4. The deterministic clean-up (loops, boundary duplication, timing repair).
