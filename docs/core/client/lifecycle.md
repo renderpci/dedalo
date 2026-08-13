@@ -179,7 +179,9 @@ Specialised actions: `get_element_context` (with `prevent_lock:true`),
 `get_matrix_ontology_locator` (cached in `page_globals.ontology_info`),
 `get_page_element`, and streaming via
 `request_stream` / `request_fetch_stream` + `read_stream` (SSE / NDJSON,
-readers tracked in `page_globals.stream_readers`).
+readers tracked in `page_globals.stream_readers` and released by
+`release_stream_reader` — that registry drains on navigation, so a consumer that
+stops following earlier must give its connection back itself).
 
 !!! info "Local caching (IndexedDB)"
     `get_local_db` opens the `dedalo` DB (v11) with stores `rqo`, `context`,

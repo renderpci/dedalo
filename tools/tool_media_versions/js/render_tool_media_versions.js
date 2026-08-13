@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
-	import {follow_job, format_elapsed} from '../../../core/common/js/job_follow.js'
+	import {format_elapsed} from '../../../core/common/js/job_follow.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {bytes_format, download_file, open_window} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
@@ -131,6 +131,14 @@ const get_content_data = async function(self) {
 	// server is about to refuse. get_record_jobs degrades to [] on any failure, so
 	// this can delay the panel but never break it.
 		self.record_jobs = await self.get_record_jobs()
+
+	// RELEASE THE PREVIOUS PASS'S JOB STREAMS. A render replaces every node this
+	// panel owns, so the followers of the previous pass are writing to a DOM that
+	// no longer exists — and each one holds an HTTP connection for as long as its
+	// job runs. This pass re-discovers the same live jobs from self.record_jobs
+	// just below and follows them again, against the nodes it is about to build, so
+	// nothing stops being watched; only the orphans are given back.
+		self.job_followers.cancel_all()
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -1466,7 +1474,11 @@ const render_build_version = function(quality, self) {
 			// Follow it to the end, then re-render the grid against the finished
 			// files — the panel that DISCOVERED a job gets the same completion
 			// behaviour as the one that started it.
-			follow_job(running_job.job_id, {
+			//
+			// Through the INSTANCE GROUP, never follow_job directly: this stream
+			// outlives the panel unless the panel owns it (tool_media_versions.js
+			// job_followers).
+			self.job_followers.follow(running_job.job_id, {
 				on_frame : function(frame) {
 					if (frame && typeof frame.progress==='number') {
 						progress_ui.update(frame.progress)
@@ -1649,7 +1661,10 @@ const render_build_version = function(quality, self) {
 							give_up('the server accepted the build but returned no job to follow')
 						}
 					}else{
-						follow_job(job_id, {
+						// Through the instance group — a build started here and then
+						// abandoned (the operator closes the panel while it encodes) must
+						// give its connection back. See tool_media_versions.js job_followers.
+						self.job_followers.follow(job_id, {
 							on_frame : function(frame) {
 								if (frame && typeof frame.progress==='number') {
 									progress_ui.update(frame.progress)

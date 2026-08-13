@@ -8,6 +8,7 @@
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
+	import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_media_versions} from './render_tool_media_versions.js' // self tool rendered (called from render common)
 
@@ -114,6 +115,21 @@ export const tool_media_versions = function () {
 	*   polling loop (component_av only). Cleared in destroy() to avoid stale callbacks.
 	*/
 	this.timer					= null
+
+	/**
+	* @var {Object} job_followers - THE LIFETIME of every job stream this panel
+	*   opens (see job_follow.js create_job_follower_group). The render layer follows
+	*   through it, each render pass releases the previous pass's followers, and
+	*   destroy() releases them all.
+	*
+	*   (!) This is not tidiness. A followed transcode holds an HTTP connection for
+	*   as long as it runs and a browser grants six per origin: closing and
+	*   reopening this panel over one long encode used to leave a live stream behind
+	*   each time, and at the sixth every request on the page — including the
+	*   /health probe that tells a busy server from a dead one — queued forever,
+	*   which is what froze the panel on 'Loading…' with 6 s timeouts.
+	*/
+	this.job_followers			= create_job_follower_group()
 
 	/**
 	* @var {string|null} main_element_quality - When set before a refresh(), forces
@@ -356,6 +372,13 @@ tool_media_versions.prototype.destroy = async function(delete_self=true, delete_
 		if (self.timer) {
 			clearTimeout(self.timer);
 		}
+
+	// release job streams
+		// (!) The connection, not just the callback. An abandoned job stream stays
+		// open until the job ends, and six of them starve the origin — see the
+		// job_followers doc-block. Closing the panel must give them back, and the
+		// job keeps running server-side either way (this never cancels the work).
+		self.job_followers.cancel_all()
 
 	// call the generic common tool destroy
 		const common_destroy = await common.prototype.destroy.call(this, delete_self, delete_dependencies, remove_dom);

@@ -74,7 +74,11 @@ The `page` instance consumes both.
   document-level dock rather than in the page wrapper on purpose — the wrapper is
   rebuilt on every navigation, and a tray that died with it would lose sight of a
   transcode the moment the user moved elsewhere, which is the blindness it exists
-  to cure.
+  to cure. Following is done through `js/job_follow.js`, whose `cancel()` **closes
+  the stream** — a follower that only muted its callbacks would keep one of the
+  browser's six per-origin connections for the whole job (see
+  [data_manager](../client/data_manager.md)); a surface that opens several uses
+  `create_job_follower_group()` and releases them all in its teardown.
 - **Dynamic CSS** — own the runtime CSS-rule registry (`js/css.js`): inject,
   deduplicate, batch and garbage-collect per-element rules into a single
   `<style id="elements_style_sheet">` sheet.
