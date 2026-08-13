@@ -48,7 +48,8 @@
 *   { status:'diarize_progress', data:{ done_seconds, duration } }
 *   { status:'diarize_error',    data:{ message } }   best-effort: run continues
 *   { status:'end',              data:{ segments, aborted } }
-*   { status:'error',            data:{ message } }
+*   { status:'warning',          data:{ phase, label_key, message, detail } }   degradation the run survived
+*   { status:'error',            data:{ message, phase, device, log } }
 *
 * SEGMENT SHAPE returned to the caller: { text, start, end } with times in SECONDS
 * from the start of the recording — plus `speaker` (integer) when speaker
@@ -76,6 +77,75 @@ import {
 import { DEFAULT_DIARIZE, assign_speakers_to_segments, cluster_speaker_turns, stitch_diarization_chunks } from '../lib/diarize.js';
 import { clean_transcript, has_time_regression, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
 import { plan_windows, total_speech_seconds } from '../lib/vad.js';
+
+
+/**
+* RUNTIME LOG TAIL.
+*
+* onnxruntime writes the useful half of its diagnosis to the console and throws a
+* vaguer exception: "Can't create a session. ERROR_CODE: 7, ERROR_MESSAGE: Failed
+* to load model because protobuf parsing failed." is a LOG line, not an Error
+* message. Keeping the last few lines means the failure the caller reports can
+* name the actual cause instead of "Failed to load model".
+*/
+const log_tail = [];
+const LOG_TAIL_MAX = 12;
+for (const level of ['error', 'warn']) {
+	const original = console[level].bind( console );
+	console[level] = function(...args) {
+		try {
+			log_tail.push( args.map( arg => (typeof arg==='string' ? arg : String(arg && arg.message ? arg.message : arg)) ).join(' ') );
+			if (log_tail.length > LOG_TAIL_MAX) log_tail.shift();
+		} catch (capture_error) {
+			// The capture must never be why a message is lost.
+		}
+		original(...args);
+	};
+}
+
+/** The captured runtime log, newest last. */
+const runtime_log = function() {
+	return log_tail.join('\n');
+}//end runtime_log
+
+/** The phase the worker is in, so a failure can say WHERE it happened. */
+let current_phase = 'model';
+
+/** Post a degradation the run survived. The caller shows it and continues. */
+const post_warning = function( label_key, message, detail ) {
+	self.postMessage({
+		status	: 'warning',
+		data	: {
+			phase		: current_phase,
+			label_key	: label_key,
+			message		: message,
+			detail		: detail || ''
+		}
+	});
+}//end post_warning
+
+/** Post the terminal failure, with everything the classifier needs. Never throws. */
+const post_failure = function( error, device ) {
+	let message;
+	if (error && error.message) {
+		message = error.message;
+	} else if (typeof error==='string' && error.length>0) {
+		message = error;
+	} else if (error!==undefined && error!==null) {
+		message = String(error);
+	} else {
+		message = 'Unknown error';
+	}
+	self.postMessage({
+		status	: 'error',
+		data	: {
+			message	: message,
+			phase	: current_phase,
+			device	: device || '',
+			log		: runtime_log()
+		}
+	});
+}//end post_failure
 
 
 /**
@@ -145,12 +215,27 @@ self.onmessage = async (e) => {
 			}
 		});
 	} catch (error) {
-		self.postMessage({
-			status	: 'error',
-			data	: { message: (error && error.message) ? error.message : String(error) }
-		});
+		post_failure( error );
 	}
 }//end onmessage
+
+
+/**
+* The contract this module's header promises — "always answers with exactly one
+* terminal message, so the caller's promise can never hang" — was not enforced.
+* An ASR runtime that rejects from a promise OUTSIDE the awaited chain never
+* reached the try/catch above, the caller's onerror received an empty message, and
+* the user saw a button that stopped responding. These two handlers are what make
+* the promise true.
+*/
+self.onunhandledrejection = function(event) {
+	event.preventDefault?.();
+	post_failure( event.reason );
+}
+
+self.addEventListener('error', function(event){
+	post_failure( event.error || event.message );
+});
 
 
 /**
@@ -290,6 +375,11 @@ async function load_pipeline( model, requested_device, dtype, sources ) {
 			throw error;
 		}
 		console.warn('[browser_whisper] WebGPU pipeline failed, falling back to WASM:', error);
+		post_warning(
+			'warning_fallback_cpu',
+			'The graphics card could not be used; the transcription continued on the processor.',
+			message
+		);
 		const transcriber = await pipeline('automatic-speech-recognition', model, {
 			device				: 'wasm',
 			dtype				: dtype,
@@ -438,6 +528,11 @@ async function transcribe_window( params ) {
 
 	if (best===null) {
 		console.warn(`[browser_whisper] window at ${params.offset}s produced no decodable output — skipped`);
+		post_warning(
+			'warning_window_skipped',
+			'A fragment of the recording could not be transcribed and was skipped.',
+			`window at ${params.offset}s`
+		);
 		return [];
 	}
 	return best;
@@ -686,6 +781,7 @@ self.transcribe = async function( options ) {
 	}
 
 	// 2. Load the model.
+	current_phase = 'model';
 	const dtype						= resolve_dtype( model, options.dtype );
 	const { transcriber, device }	= await load_pipeline(
 		model,
@@ -707,6 +803,7 @@ self.transcribe = async function( options ) {
 	const collected			= Array.isArray(options.resume_segments) ? options.resume_segments.slice() : [];
 	let done_seconds		= 0;
 
+	current_phase = 'transcribe';
 	for (let index = 0; index < windows.length; index++) {
 
 		if (aborted===true) {
@@ -766,6 +863,7 @@ self.transcribe = async function( options ) {
 	// transcription: the segments are returned without speakers and the caller
 	// is told, loudly, through 'diarize_error'.
 	if (options.diarize && options.diarize.model && cleaned.length>0) {
+		current_phase = 'speakers';
 		try {
 			const turns = await diarize_audio( audio, sample_rate, {
 				model			: options.diarize.model,
