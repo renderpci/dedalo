@@ -73,6 +73,9 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *    standalone publication/site_builder daemon);
  *  - tool_identify (WC-062) — the object-identification curator panel
  *    (engineering/IDENTIFY_SPEC.md), TS-native with no PHP twin.
+ *  - ai_models maintenance widget
+ *    (WC-2026-08-13-maintenance-ai-models-widget) — the display-only panel over
+ *    the native local AI model store (src/core/ai/), which has no PHP peer.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
@@ -80,7 +83,8 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/') ||
 		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/') ||
-		entry.url.startsWith('/dedalo/tools/tool_identify/')
+		entry.url.startsWith('/dedalo/tools/tool_identify/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/')
 	);
 }
 

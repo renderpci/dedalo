@@ -1,0 +1,123 @@
+/**
+* ai_models
+*
+* Included from area_maintenance.less file.
+* The store readout, the model table, the notes and the refresh button all come
+* from the shared widget_kit (.dd_readout / .dd_table / .dd_note). Only the model
+* state chips and the table's own column layout live here.
+*
+* The chips are LOCAL (.model_state.state_*) rather than the kit's three-level
+* severity chips, because these five states are not a severity ladder:
+*   ready       every required file present and its size matches the record → green.
+*   unverified  present, never size-checked — the normal state of a store seeded
+*               before the manifest existed. IT RUNS: neutral, never orange. A
+*               dotted rule says "unmeasured", not "broken".
+*   incomplete  a required file is absent or truncated → amber, it needs a redownload.
+*   damaged     the bytes on disk are not a model payload → red.
+*   missing     nothing on disk. Muted: an install that never wanted this model is
+*               not in trouble, so this is a fact, not an alarm.
+*/
+.wrapper_widget.ai_models {
+
+	.ai_models_content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
+	}
+
+	// model · state · size
+	.ai_models_table {
+		grid-template-columns: minmax(8rem, 1.4fr) minmax(10rem, 2fr) max-content;
+	}
+
+	// name cell: catalog label above the machine id
+	.dd_td.ai_models_name {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.1rem;
+	}
+	.ai_models_label {
+		font-weight: 600;
+		color: var(--fg_default);
+	}
+	.ai_models_id {
+		font-family: @dd_mono;
+		font-size: 0.75rem;
+		color: var(--fg_muted);
+		word-break: break-all;
+	}
+
+	// state cell: chip above its remedy line
+	.dd_td.ai_models_state {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+	.ai_models_row_remedy {
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: var(--fg_muted);
+	}
+
+	// ---- state chips ----------------------------------------------------
+	.model_state {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.1rem 0.6rem 0.1rem 0.5rem;
+		border: 1px solid transparent;
+		border-radius: 999px;
+		font-size: 0.78rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+
+		&:before {
+			content: '';
+			flex: 0 0 auto;
+			width: 0.5rem;
+			height: 0.5rem;
+			border-radius: 50%;
+			background-color: currentColor;
+		}
+	}
+	.model_state.state_ready {
+		color: var(--color_success);
+		background-color: color-mix(in srgb, var(--color_success) 13%, transparent);
+		border-color: color-mix(in srgb, var(--color_success) 35%, transparent);
+	}
+	// runs, but never measured: the same calm surface as ready, with a dotted
+	// outline and a hollow dot — "unmeasured", not "wrong"
+	.model_state.state_unverified {
+		color: var(--fg_default);
+		background-color: var(--bg_surface_alt);
+		border-color: var(--border_default);
+		border-style: dashed;
+
+		&:before {
+			background-color: transparent;
+			box-shadow: inset 0 0 0 1px var(--fg_muted);
+		}
+	}
+	.model_state.state_incomplete {
+		color: var(--color_warning);
+		background-color: color-mix(in srgb, var(--color_warning) 13%, transparent);
+		border-color: color-mix(in srgb, var(--color_warning) 35%, transparent);
+	}
+	.model_state.state_damaged {
+		color: var(--color_danger);
+		background-color: color-mix(in srgb, var(--color_danger) 13%, transparent);
+		border-color: color-mix(in srgb, var(--color_danger) 35%, transparent);
+	}
+	.model_state.state_missing {
+		color: var(--fg_muted);
+		background-color: transparent;
+		border-color: var(--border_default);
+	}
+
+	.ai_models_footer {
+		display: flex;
+		padding-top: 0.9rem;
+		border-top: 1px solid var(--border_default);
+	}
+}

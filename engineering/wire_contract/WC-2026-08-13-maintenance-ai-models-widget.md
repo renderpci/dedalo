@@ -30,6 +30,12 @@
   - `test/parity/widgets_differential.test.ts` — `ai_models` joins
     `TS_ONLY_WIDGET_IDS`, filtered out of the catalog byte-compare against the
     frozen PHP oracle.
+  - `test/parity/dedalo_files_differential.test.ts` — the widget's CLIENT tree
+    (`/dedalo/core/area_maintenance/widgets/ai_models/`) joins `isTsOnlyEntry`,
+    the same normalization the error_reports (WC-018) and site_builder_status
+    (WC-035) widgets use: the frozen PHP census can never contain these files,
+    so they are filtered from BOTH sides of the set compare while the
+    every-TS-url-resolves test still proves they serve.
   - TS ground truth pinned natively by
     `test/unit/ai_models_widget_native.test.ts`, which drives the pure
     `buildAiModelsPanel` (and asserts the absent `apiActions`) without touching
