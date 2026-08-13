@@ -36,16 +36,22 @@ import { existsSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { config } from '../../../src/config/config.ts';
 import {
+	COMMON_FILES,
 	DIARIZATION_COMMON_FILES,
+	type DownloadReport,
 	downloadModel,
-	HUB_BASE,
 	headContentLength,
+	OPTIONAL_FILES,
+	resolveFetchTarget,
 } from '../../../src/core/ai/model_fetch.ts';
 import { forgetFile, recordFileComplete } from '../../../src/core/ai/model_manifest.ts';
 import {
 	AI_MODEL_URL_PREFIX,
+	fileEvidence,
+	type ModelFileEvidence,
+	type ModelState,
+	type ModelStateReport,
 	modelHubAllowed,
-	modelInstalled,
 	modelState,
 	modelStoreAvailable,
 	modelStoreRoot,
@@ -785,7 +791,7 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 				// so an older client is never made worse by this change. An
 				// unverified model is the normal state of every store seeded
 				// before the manifest existed: it runs, with a warning.
-				if (report.state === 'ready' || report.state === 'unverified') installed.push(entry.name);
+				if (isRunnableState(report.state)) installed.push(entry.name);
 			}
 		}
 	} catch (error) {
@@ -798,32 +804,20 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 	// quality picker): segmentation (WHO speaks WHEN) + the voice-fingerprint
 	// embedding model (the SAME voice keeps the SAME id across the whole
 	// recording — without it, long recordings fragment one voice into several
-	// detected speakers). The client enables the "Detect speakers" toggle only
-	// when BOTH are in the store; the admin Download button fetches both.
-	let diarization: {
-		name: string;
-		label?: string;
-		size_mb?: number;
-		installed: boolean;
-		state: string;
-		embedding_name?: string;
-	} | null = null;
+	// detected speakers).
+	//
+	// BOTH HALVES REPORT THEIR OWN STATE. `installed` here used to be
+	// `modelInstalled()` — the old `size > 0` test this whole change exists to
+	// retire — so a truncated pyannote file enabled the checkbox and the worker
+	// died with exactly the "ERROR_CODE: 7 … protobuf parsing failed" the ASR path
+	// no longer produces. And a single boolean could not say WHICH half was
+	// broken, so the remedy could not be aimed: the panel's Repair went to the
+	// selected ASR model, repaired something that was never broken, and reported
+	// success. `models` carries one entry per half, each with its own state and
+	// its own name to aim a remedy at.
+	let diarization: DiarizationPanel | null = null;
 	try {
-		const entry = await readDiarizationModel();
-		if (entry !== null) {
-			const embedding = await readDiarizationEmbeddingModel();
-			const segmentationInstalled = modelInstalled(entry.name, entry.dtype);
-			const embeddingInstalled =
-				embedding === null ? true : modelInstalled(embedding.name, embedding.dtype);
-			diarization = {
-				name: entry.name,
-				label: entry.label,
-				size_mb: (entry.size_mb ?? 0) + (embedding?.size_mb ?? 0),
-				installed: segmentationInstalled && embeddingInstalled,
-				state: modelState(entry.name, entry.dtype).state,
-				embedding_name: embedding?.name,
-			};
-		}
+		diarization = await readDiarizationPanel();
 	} catch (error) {
 		console.error('[tool_transcription] could not read the diarization model config:', error);
 	}
@@ -854,6 +848,90 @@ async function readDiarizationModel(): Promise<{
 	dtype?: Record<string, string>;
 } | null> {
 	return readModelConfigSlot('diarization_model');
+}
+
+/**
+ * A model state the browser may attempt. THE one rule, shared by the ASR
+ * `installed` list, the diarization panel and the widget's usable count — the
+ * five states must mean one thing everywhere or the picker and the refusal
+ * disagree again.
+ */
+function isRunnableState(state: ModelState): boolean {
+	return state === 'ready' || state === 'unverified';
+}
+
+/** One half of speaker detection, as the client reads it. */
+export interface DiarizationPart {
+	/** 'segmentation' (who speaks when) | 'embedding' (the voice fingerprint). */
+	role: string;
+	name: string;
+	label?: string;
+	state: ModelState;
+}
+
+export interface DiarizationPanel {
+	name: string;
+	label?: string;
+	size_mb?: number;
+	/** Every half runnable. Kept for older clients; `models` is the real answer. */
+	installed: boolean;
+	/** The WORST half's state — what the pair as a whole is in. */
+	state: ModelState;
+	models: DiarizationPart[];
+	embedding_name?: string;
+}
+
+/** Worst first: what the pair is in is what its unhealthiest half is in. */
+const STATE_SEVERITY: readonly ModelState[] = [
+	'missing',
+	'damaged',
+	'incomplete',
+	'unverified',
+	'ready',
+];
+
+function worstState(states: readonly ModelState[]): ModelState {
+	for (const candidate of STATE_SEVERITY) {
+		if (states.includes(candidate)) return candidate;
+	}
+	return 'missing';
+}
+
+/**
+ * The speaker-detection pair, each half answering for itself. Null when the
+ * install declares no segmentation model (speaker detection is simply absent).
+ */
+async function readDiarizationPanel(): Promise<DiarizationPanel | null> {
+	const entry = await readDiarizationModel();
+	if (entry === null) return null;
+	const embedding = await readDiarizationEmbeddingModel();
+
+	const models: DiarizationPart[] = [
+		{
+			role: 'segmentation',
+			name: entry.name,
+			label: entry.label,
+			state: modelState(entry.name, entry.dtype).state,
+		},
+	];
+	if (embedding !== null) {
+		models.push({
+			role: 'embedding',
+			name: embedding.name,
+			label: embedding.label,
+			state: modelState(embedding.name, embedding.dtype).state,
+		});
+	}
+
+	return {
+		name: entry.name,
+		label: entry.label,
+		size_mb: (entry.size_mb ?? 0) + (embedding?.size_mb ?? 0),
+		installed: models.every((part) => isRunnableState(part.state)),
+		state: worstState(models.map((part) => part.state)),
+		models,
+		embedding_name: embedding?.name,
+	};
 }
 
 /** The voice-fingerprint model slot (`diarization_embedding_model`), or null. */
@@ -959,15 +1037,27 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	if (entry === undefined) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}
-	if (modelInstalled(entry.name, entry.dtype)) {
+	// STATE-AWARE short-circuit. `modelInstalled` (the old size > 0 test) called a
+	// truncated or corrupted install "already installed", so the client — which
+	// offers Download for anything absent from `installed`, and that includes
+	// `incomplete` and `damaged` — read a success it then polled for thirty
+	// minutes against a model that was never going to appear. Only a RUNNABLE
+	// model is already installed; a broken one is told what actually fixes it.
+	const state = modelState(entry.name, entry.dtype).state;
+	if (isRunnableState(state)) {
 		return { result: true, msg: 'OK. Model already installed', errors: [] };
+	}
+	if (state !== 'missing') {
+		return fail(
+			`Model '${model}' is on disk but ${state}: downloading it again cannot fix that — repair it instead`,
+		);
 	}
 
 	const loaded = await getLoadedTool('tool_transcription');
 	if (loaded === undefined) {
 		return fail('tool module not loaded — cannot schedule the download');
 	}
-	scheduleBackground(
+	const scheduled = scheduleBackground(
 		loaded,
 		BACKGROUND_DOWNLOAD_ACTION,
 		{ permission: null, handler: backgroundDownloadModel },
@@ -975,7 +1065,16 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 		ctx.principal,
 		ctx.userId,
 	);
-	return { result: true, msg: 'OK. Download started', errors: [] };
+	if (scheduled.result === false) return scheduled;
+	// The job handle, so the client can learn that the download FAILED instead of
+	// polling the store for half an hour and then saying nothing.
+	return {
+		result: true,
+		msg: 'OK. Download started',
+		errors: [],
+		job_id: scheduled.job_id,
+		background_job_id: scheduled.background_job_id,
+	};
 }
 
 /** The detached download job. Reads its whole world from the enqueue-time options. */
@@ -1039,7 +1138,21 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 	let unreachable = 0;
 	for (const file of report.files) {
 		if (!file.present || file.expected !== null) continue;
-		const length = await headContentLength(`${HUB_BASE}/${entry.name}/resolve/main/${file.file}`);
+		// Through the SAME confinement helper the downloader uses. On the
+		// dtype-less path these names come from readdirSync, so they are disk
+		// content rather than catalog content: hand-assembling a hub URL from them
+		// is the one place this module would invent a URL from something it did not
+		// validate. Hardening, not a live hole — resolveModelPath already refuses a
+		// traversing name at the serving door.
+		const resolved = resolveFetchTarget(entry.name, file.file, store);
+		if (resolved === null) {
+			console.error(
+				`[tool_transcription] verify '${model}': refusing the unsafe file name '${file.file}'`,
+			);
+			unreachable++;
+			continue;
+		}
+		const length = await headContentLength(resolved.url);
 		if (length === null) {
 			unreachable++;
 			continue;
@@ -1078,12 +1191,43 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 export type ScheduleRepair = typeof scheduleBackground;
 
 /**
+ * REPAIRS IN FLIGHT — at most one per model, process-wide.
+ *
+ * A repair deletes files and re-fetches them. Two of them over the same paths
+ * race `rmSync` against a download: the second job can delete a file the first
+ * has just completed, and the first can record a manifest size for a file the
+ * second has already removed. With a visible button and a poll that says nothing
+ * for minutes, a second click is not an edge case — it is what an impatient
+ * administrator does.
+ *
+ * LIFECYCLE: added by `repairModelAction` immediately before scheduling (and
+ * dropped again if the schedule is refused), removed by `backgroundRepairModel`
+ * in a `finally`, so a throwing job cannot lock a model out. Process state, never
+ * request identity — the same shape as ontology_update's updateInFlight latch.
+ * A server restart clears it with the in-process jobs it guards.
+ */
+const repairsInFlight = new Set<string>();
+
+/**
+ * Release the guard for one model.
+ *
+ * TESTS ONLY: a stubbed `ScheduleRepair` never runs the job, so nothing would
+ * reach the `finally` that normally clears it. Never call this from the engine —
+ * releasing a lock whose job is still running is exactly the race it exists to
+ * prevent.
+ */
+export function releaseModelRepairLock(model: string): void {
+	repairsInFlight.delete(model);
+}
+
+/**
  * repair_model — discard the files that fail their check and fetch them again.
  *
  * The remedy for the state this whole change exists to surface. Same gates as
  * download_model (global admin, catalog names only) and the same detached job,
- * so nothing new can be reached from the wire and the client polls
- * get_model_sources exactly as it already does for a download.
+ * so nothing new can be reached from the wire; the client polls the returned job
+ * handle, so a repair that FAILS says so instead of leaving a progress line
+ * standing forever.
  */
 export async function repairModelAction(
 	ctx: ToolActionContext,
@@ -1097,12 +1241,18 @@ export async function repairModelAction(
 	if (entry === null) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}
+	// SERVER-side, because a disabled button is not a guard: the action is on the
+	// wire and two tabs reach it independently.
+	if (repairsInFlight.has(entry.name)) {
+		return fail(`A repair of '${entry.name}' is already running; wait for it to finish`);
+	}
 
 	const loaded = await getLoadedTool('tool_transcription');
 	if (loaded === undefined) {
 		return fail('tool module not loaded — cannot schedule the repair');
 	}
-	schedule(
+	repairsInFlight.add(entry.name);
+	const scheduled = schedule(
 		loaded,
 		BACKGROUND_REPAIR_ACTION,
 		{ permission: null, handler: backgroundRepairModel },
@@ -1110,50 +1260,204 @@ export async function repairModelAction(
 		ctx.principal,
 		ctx.userId,
 	);
-	return { result: true, msg: 'OK. Repair started', errors: [] };
+	if (scheduled.result === false) {
+		repairsInFlight.delete(entry.name);
+		return scheduled;
+	}
+	return {
+		result: true,
+		msg: 'OK. Repair started',
+		errors: [],
+		job_id: scheduled.job_id,
+		background_job_id: scheduled.background_job_id,
+	};
 }
 
-/** The detached repair job: delete what fails its check, then re-run the download. */
-async function backgroundRepairModel(ctx: ToolActionContext): Promise<ToolResponse> {
-	const model = String(ctx.options.model ?? '');
-	const dtype = (ctx.options.dtype ?? undefined) as Record<string, string> | undefined;
-	const store = modelStoreRoot();
-	const report = modelState(model, dtype);
+/**
+ * The WORLD-TOUCHING collaborator of the repair job, behind a seam.
+ *
+ * `backgroundRepairModel` is the only code in this subsystem that DELETES files,
+ * and it is where every remedy button in both clients ends up. Gating it must not
+ * mean fetching a gigabyte from a public hub, so the downloader is injectable;
+ * the store itself is relocated by DEDALO_AI_MODEL_STORE, exactly as the other
+ * store gates do it.
+ */
+export interface RepairSeams {
+	readonly download?: typeof downloadModel;
+}
 
-	for (const file of report.files) {
-		const suspect =
-			!file.present ||
-			file.size === 0 ||
-			(file.expected !== null && file.expected !== file.size) ||
-			report.state === 'damaged';
-		if (!suspect) continue;
-		const path = join(store, model, file.file);
-		try {
-			if (existsSync(path)) rmSync(path);
-		} catch (error) {
-			console.error(`[tool_transcription] could not remove '${path}' during repair:`, error);
+/** The non-weight files this kind of model needs, and which may legitimately be absent. */
+function commonFilesFor(kind: string): { common: readonly string[]; optional: readonly string[] } {
+	return kind === 'diarization'
+		? { common: DIARIZATION_COMMON_FILES, optional: [] }
+		: { common: COMMON_FILES, optional: OPTIONAL_FILES };
+}
+
+/** A file that fails its own check: absent, empty, the wrong KIND, or the wrong LENGTH. */
+function failsCheck(evidence: ModelFileEvidence): boolean {
+	if (!evidence.present || evidence.size === 0) return true;
+	if (!evidence.plausible) return true;
+	return evidence.expected !== null && evidence.expected !== evidence.size;
+}
+
+interface RepairPlan {
+	/** Files to delete and fetch again — EXACTLY these, by name. */
+	targets: string[];
+	/** Files that fail their check but must not be deleted (see planRepair). */
+	refused: string[];
+}
+
+/**
+ * What a repair may touch.
+ *
+ * TWO RULES, both learned from a way this used to be wrong:
+ *
+ * 1. PER FILE, never per model. It used to treat every file as suspect as soon as
+ *    the model's overall state was `damaged`, so one HTML error page written over
+ *    the tokenizer took the weights with it.
+ * 2. NEVER DELETE WHAT CANNOT BE NAMED AGAIN. On the dtype-less path the file
+ *    names come from the store itself, and when the store holds no complete
+ *    weight pair there are no names — `modelFiles()` supplies fp32 PLACEHOLDERS
+ *    (`report.namesKnown === false`). Deleting a weight file on that authority
+ *    and re-fetching `modelFiles(undefined)` is how a 400 MB working q4 install
+ *    became a ~3 GB fp32 set the browser never asks for. Refuse, and say why.
+ *
+ * The common files (tokenizer.json, preprocessor_config.json…) are checked here
+ * too: `modelState` only evidences what the model needs to LOAD, so a corrupt
+ * tokenizer used to survive a repair that then reported success.
+ */
+function planRepair(
+	store: string,
+	model: string,
+	report: ModelStateReport,
+	common: readonly string[],
+	optional: readonly string[],
+): RepairPlan {
+	const targets: string[] = [];
+	const refused: string[] = [];
+
+	for (const evidence of report.files) {
+		if (!failsCheck(evidence)) continue;
+		if (!report.namesKnown && evidence.file.endsWith('.onnx')) {
+			refused.push(evidence.file);
+			continue;
 		}
-		// The manifest's claim about a deleted file is stale; dropping it makes the
-		// next fetch ask the hub for the length again instead of trusting the record
-		// that let the truncation through.
-		forgetFile(store, model, file.file);
+		targets.push(evidence.file);
 	}
 
-	console.log(`[tool_transcription] repairing model '${model}'…`);
-	const fileOptions =
-		ctx.options.kind === 'diarization'
-			? { commonFiles: DIARIZATION_COMMON_FILES, optionalFiles: [] as string[] }
-			: {};
-	const download = await downloadModel(model, dtype, { quiet: true, ...fileOptions });
-	const after = modelState(model, dtype);
-	if (download.ok && (after.state === 'ready' || after.state === 'unverified')) {
-		console.log(`[tool_transcription] model '${model}' repaired (${after.state})`);
-		return { result: true, msg: `OK. Model repaired: ${model}`, errors: [] };
+	for (const file of common) {
+		if (targets.includes(file)) continue;
+		const evidence = fileEvidence(store, model, file);
+		// A model that simply does not publish this file is not broken.
+		if (!evidence.present && optional.includes(file)) continue;
+		if (failsCheck(evidence)) targets.push(file);
 	}
-	const errors =
-		download.errors.length > 0 ? download.errors : [`state after repair: ${after.state}`];
+
+	return { targets, refused };
+}
+
+/** Delete one file and drop the manifest's (now stale) claim about it. */
+function discardFile(store: string, model: string, file: string): void {
+	const path = join(store, model, file);
+	try {
+		if (existsSync(path)) rmSync(path);
+	} catch (error) {
+		console.error(`[tool_transcription] could not remove '${path}' during repair:`, error);
+	}
+	// The manifest's claim about a deleted file is stale; dropping it makes the
+	// next fetch ask the hub for the length again instead of trusting the record
+	// that let the truncation through.
+	forgetFile(store, model, file);
+}
+
+/**
+ * Did the repair actually work? Re-check EVERY file it touched, not just the
+ * ones the load path needs — reporting a success while a corrupt file survives
+ * is the one outcome this subsystem forbids.
+ */
+function repairVerdict(input: {
+	model: string;
+	dtype?: Record<string, string>;
+	store: string;
+	common: readonly string[];
+	optional: readonly string[];
+	plan: RepairPlan;
+	download: DownloadReport;
+}): ToolResponse {
+	const { model, store, plan, download } = input;
+	const after = modelState(model, input.dtype);
+	const stillFailing = plan.targets.filter((file) => {
+		const evidence = fileEvidence(store, model, file);
+		if (!evidence.present && input.optional.includes(file)) return false;
+		return failsCheck(evidence);
+	});
+
+	if (download.ok && isRunnableState(after.state) && stillFailing.length === 0) {
+		const msg = `OK. Model repaired: ${model} — ${plan.targets.length} file(s) re-fetched and re-checked (weights, config and ${input.common.length} common file(s)); state: ${after.state}`;
+		console.log(`[tool_transcription] ${msg}`);
+		return { result: true, msg, errors: [] };
+	}
+
+	const errors = [...download.errors];
+	if (stillFailing.length > 0) {
+		errors.push(`still failing after repair: ${stillFailing.join(', ')}`);
+	}
+	if (errors.length === 0) errors.push(`state after repair: ${after.state}`);
 	console.error(`[tool_transcription] model repair FAILED for '${model}':`, errors);
 	return { result: false, msg: errors.join('; '), errors };
+}
+
+/**
+ * The detached repair job: delete exactly the files that fail their check, fetch
+ * back exactly those, and re-check them before claiming anything.
+ */
+export async function backgroundRepairModel(
+	ctx: ToolActionContext,
+	seams: RepairSeams = {},
+): Promise<ToolResponse> {
+	const model = String(ctx.options.model ?? '');
+	try {
+		return await runModelRepair(model, ctx.options, seams);
+	} finally {
+		repairsInFlight.delete(model);
+	}
+}
+
+async function runModelRepair(
+	model: string,
+	options: Record<string, unknown>,
+	seams: RepairSeams,
+): Promise<ToolResponse> {
+	const dtype = (options.dtype ?? undefined) as Record<string, string> | undefined;
+	const store = modelStoreRoot();
+	const { common, optional } = commonFilesFor(String(options.kind ?? 'asr'));
+	const plan = planRepair(store, model, modelState(model, dtype), common, optional);
+
+	if (plan.refused.length > 0) {
+		const msg = `Repair refused for '${model}': this install's catalog declares no quantisation for it and the store holds no complete weight pair, so ${plan.refused.join(', ')} cannot be named to fetch back. Deleting them would destroy what cannot be restored. Re-import the tools registry so the catalog declares the model's dtype, or seed the store directly.`;
+		console.error(`[tool_transcription] ${msg}`);
+		return { result: false, msg, errors: [msg] };
+	}
+
+	if (plan.targets.length === 0) {
+		const msg = `OK. Nothing to repair: '${model}' passes every check (weights, config and ${common.length} common file(s))`;
+		console.log(`[tool_transcription] ${msg}`);
+		return { result: true, msg, errors: [] };
+	}
+
+	console.log(
+		`[tool_transcription] repairing model '${model}': ${plan.targets.length} file(s) — ${plan.targets.join(', ')}`,
+	);
+	for (const file of plan.targets) discardFile(store, model, file);
+
+	const download = await (seams.download ?? downloadModel)(model, dtype, {
+		quiet: true,
+		store,
+		// EXACTLY what was removed: see DownloadOptions.files.
+		files: plan.targets,
+	});
+
+	return repairVerdict({ model, dtype, store, common, optional, plan, download });
 }
 
 export const tool: ToolServerModule = {

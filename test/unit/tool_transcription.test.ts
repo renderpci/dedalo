@@ -10,7 +10,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -40,6 +40,8 @@ import {
 	type TranscriberStatusRequest,
 } from '../../src/core/tools/transcription_asr.ts';
 import {
+	backgroundRepairModel,
+	releaseModelRepairLock,
 	repairModelAction,
 	type ScheduleRepair,
 	tool,
@@ -1045,6 +1047,9 @@ describe('model actions are admin-gated and catalog-bound', () => {
 		expect(String(refused.msg)).toContain('not in the transcriber catalog');
 		// The refusal never reached scheduling: still just the one call above.
 		expect(calls).toHaveLength(1);
+		// The stub never runs the job, so the in-flight guard this accept path set
+		// would otherwise stay set and refuse every later repair of this model.
+		releaseModelRepairLock(KNOWN_CATALOG_MODEL);
 	});
 
 	// Deviation from the brief text: only repair_model is backgrounded (verify
@@ -1054,5 +1059,310 @@ describe('model actions are admin-gated and catalog-bound', () => {
 	test('the repair background action is allowlisted but not client-routable', () => {
 		expect(Object.keys(tool.apiActions)).not.toContain('background_repair_model');
 		expect(tool.backgroundRunnable).toContain('background_repair_model');
+	});
+});
+
+/**
+ * THE ONLY CODE IN THIS SUBSYSTEM THAT DELETES FILES.
+ *
+ * `backgroundRepairModel` is where every remedy button in both clients ends up,
+ * and the whole change exists to stop a wrong "success". Three ways it used to be
+ * wrong, each gated below:
+ *
+ *  - it treated EVERY file as suspect as soon as the model's overall state was
+ *    `damaged`, so one HTML error page took the healthy weights with it;
+ *  - it then re-fetched `modelFiles(dtype)` rather than what it removed, so a
+ *    dtype-less repair replaced a working q4 install with the fp32 set;
+ *  - it never looked at the common files at all, so a corrupt tokenizer survived
+ *    a repair that reported success.
+ *
+ * Driven through the injectable downloader seam over a SCRATCH store: never the
+ * network, never the real store.
+ */
+describe('backgroundRepairModel — deletes only what fails, restores only what it deleted', () => {
+	const REPAIR_STORE = `${ROOT}/repair_store`;
+	const MODEL = 'scratch/repair-model';
+	const DTYPE = { encoder_model: 'q4', decoder_model_merged: 'q4' };
+
+	/** A plausible ONNX payload: first byte 0x08 (protobuf field 1, ir_version). */
+	const ONNX = Buffer.from([0x08, 0x07, 0x12, 0x04, 0x74, 0x65, 0x73, 0x74]);
+
+	function seed(files: Record<string, Buffer | string>): void {
+		rmSync(`${REPAIR_STORE}/${MODEL}`, { recursive: true, force: true });
+		mkdirSync(`${REPAIR_STORE}/${MODEL}/onnx`, { recursive: true });
+		for (const [file, body] of Object.entries(files)) {
+			const path = `${REPAIR_STORE}/${MODEL}/${file}`;
+			mkdirSync(path.slice(0, path.lastIndexOf('/')), { recursive: true });
+			writeFileSync(path, body);
+		}
+	}
+
+	/** The healthy ASR set: config + q4 weights + every common file. */
+	function healthyFiles(): Record<string, Buffer | string> {
+		return {
+			'config.json': '{"model_type":"whisper"}',
+			'onnx/encoder_model_q4.onnx': ONNX,
+			'onnx/decoder_model_merged_q4.onnx': ONNX,
+			'tokenizer.json': '{"version":"1"}',
+			'tokenizer_config.json': '{}',
+			'generation_config.json': '{}',
+			'preprocessor_config.json': '{}',
+		};
+	}
+
+	/**
+	 * A downloader that records what it was asked for and re-creates it. `ok`
+	 * false makes the re-download fail without touching the network.
+	 */
+	function recordingDownload(options: { ok: boolean } = { ok: true }) {
+		const asked: string[][] = [];
+		const download = (async (
+			_model: string,
+			_dtype: Record<string, string> | undefined,
+			opts: { files?: readonly string[] } = {},
+		) => {
+			const files = [...(opts.files ?? [])];
+			asked.push(files);
+			if (!options.ok) {
+				return { ok: false, files: [], skipped: [], errors: ['download failed from the hub'] };
+			}
+			for (const file of files) {
+				const path = `${REPAIR_STORE}/${MODEL}/${file}`;
+				mkdirSync(path.slice(0, path.lastIndexOf('/')), { recursive: true });
+				writeFileSync(path, file.endsWith('.onnx') ? ONNX : '{"restored":true}');
+			}
+			return { ok: true, files, skipped: [], errors: [] };
+		}) as unknown as typeof import('../../src/core/ai/model_fetch.ts').downloadModel;
+		return { asked, download };
+	}
+
+	function ctx(options: Record<string, unknown>): ToolActionContext {
+		return {
+			options,
+			principal: { isGlobalAdmin: true },
+			userId: 1,
+		} as unknown as ToolActionContext;
+	}
+
+	let priorStore: string | undefined;
+	beforeAll(() => {
+		priorStore = process.env.DEDALO_AI_MODEL_STORE;
+		mkdirSync(REPAIR_STORE, { recursive: true });
+		process.env.DEDALO_AI_MODEL_STORE = REPAIR_STORE;
+	});
+	afterAll(() => {
+		if (priorStore === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
+		else process.env.DEDALO_AI_MODEL_STORE = priorStore;
+	});
+
+	test('one corrupt weight file: only that file is deleted, and exactly it is re-fetched', async () => {
+		const files = healthyFiles();
+		// An HTML error page written over ONE weight file — the `damaged` case.
+		files['onnx/encoder_model_q4.onnx'] = '<!doctype html><h1>502</h1>';
+		seed(files);
+		const decoderBefore = Bun.file(
+			`${REPAIR_STORE}/${MODEL}/onnx/decoder_model_merged_q4.onnx`,
+		).size;
+
+		const { asked, download } = recordingDownload();
+		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
+			download,
+		});
+
+		expect(response.result).toBe(true);
+		// EXACTLY the failing file: not the decoder, not the config, not a common file.
+		expect(asked).toEqual([['onnx/encoder_model_q4.onnx']]);
+		// The healthy weight was never touched.
+		expect(Bun.file(`${REPAIR_STORE}/${MODEL}/onnx/decoder_model_merged_q4.onnx`).size).toBe(
+			decoderBefore,
+		);
+		// And the quantisation that came back is the one that went away.
+		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
+		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model.onnx`)).toBe(false);
+	});
+
+	test('a corrupt COMMON file is repaired too, and the success names what was checked', async () => {
+		// modelState never evidences tokenizer.json, so a corrupt one used to
+		// survive a repair that then reported success — the one forbidden outcome.
+		const files = healthyFiles();
+		files['tokenizer.json'] = '<html>proxy error</html>';
+		seed(files);
+
+		const { asked, download } = recordingDownload();
+		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
+			download,
+		});
+
+		expect(response.result).toBe(true);
+		expect(asked).toEqual([['tokenizer.json']]);
+		expect(String(response.msg)).toContain('common file');
+	});
+
+	test('a healthy model reports nothing to repair and deletes nothing', async () => {
+		seed(healthyFiles());
+		const { asked, download } = recordingDownload();
+		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
+			download,
+		});
+		expect(response.result).toBe(true);
+		expect(String(response.msg)).toContain('Nothing to repair');
+		expect(asked).toEqual([]);
+		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
+	});
+
+	test('unknown quantisation: it REFUSES rather than deleting what it cannot fetch back', async () => {
+		// The live dtype-less case: the catalog declares no dtype and the store
+		// holds no complete weight pair, so the only file names available are the
+		// fp32 PLACEHOLDERS modelFiles() invents. Deleting a weight on that
+		// authority is how a working q4 install became a ~3 GB fp32 download.
+		seed({
+			'config.json': '{"model_type":"whisper"}',
+			'onnx/encoder_model_q4.onnx': ONNX,
+		});
+
+		const { asked, download } = recordingDownload();
+		const response = await backgroundRepairModel(ctx({ model: MODEL, kind: 'asr' }), { download });
+
+		expect(response.result).toBe(false);
+		expect(String(response.msg)).toContain('Repair refused');
+		expect(String(response.msg)).toContain('cannot be named to fetch back');
+		// Nothing was deleted and nothing was downloaded.
+		expect(asked).toEqual([]);
+		expect(existsSync(`${REPAIR_STORE}/${MODEL}/onnx/encoder_model_q4.onnx`)).toBe(true);
+	});
+
+	test('a failed re-download reports result:false — never a success over a missing file', async () => {
+		const files = healthyFiles();
+		files['onnx/encoder_model_q4.onnx'] = '<!doctype html>';
+		seed(files);
+
+		const { download } = recordingDownload({ ok: false });
+		const response = await backgroundRepairModel(ctx({ model: MODEL, dtype: DTYPE, kind: 'asr' }), {
+			download,
+		});
+
+		expect(response.result).toBe(false);
+		expect(String(response.msg)).toContain('download failed');
+	});
+
+	test('a second concurrent repair is refused SERVER-side', async () => {
+		// A disabled button is not a guard: the action is on the wire and two tabs
+		// reach it independently, racing rmSync and download over the same paths.
+		const calls: Parameters<ScheduleRepair>[] = [];
+		const stubSchedule: ScheduleRepair = (...args) => {
+			calls.push(args);
+			return { result: true, msg: 'OK. Background process started', errors: [] };
+		};
+		const KNOWN = 'onnx-community/whisper-large-v3-turbo';
+		const admin = { isGlobalAdmin: true } as unknown as ToolActionContext['principal'];
+		const request = () =>
+			repairModelAction(
+				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
+				stubSchedule,
+			);
+
+		try {
+			const first = await request();
+			expect(first.result).toBe(true);
+
+			const second = await request();
+			expect(second.result).toBe(false);
+			expect(String(second.msg)).toContain('already running');
+			// The refusal never reached scheduling.
+			expect(calls).toHaveLength(1);
+		} finally {
+			// The stub never runs the job, so nothing reaches the finally that
+			// normally clears the guard.
+			releaseModelRepairLock(KNOWN);
+		}
+
+		// Released: the model is repairable again.
+		const third = await request();
+		expect(third.result).toBe(true);
+		releaseModelRepairLock(KNOWN);
+	});
+});
+
+/**
+ * WHAT get_model_sources PROMISES THE CLIENT about the models it cannot pick in
+ * the quality dropdown, and what download_model does with a model that is on
+ * disk but broken.
+ */
+describe('model sources report a real state, and a download cannot claim a broken model', () => {
+	const SOURCES_STORE = `${ROOT}/sources_store`;
+	const KNOWN_CATALOG_MODEL = 'onnx-community/whisper-large-v3-turbo';
+	const admin = { isGlobalAdmin: true } as unknown as ToolActionContext['principal'];
+
+	let priorStore: string | undefined;
+	beforeAll(() => {
+		priorStore = process.env.DEDALO_AI_MODEL_STORE;
+		mkdirSync(SOURCES_STORE, { recursive: true });
+		process.env.DEDALO_AI_MODEL_STORE = SOURCES_STORE;
+	});
+	afterAll(() => {
+		if (priorStore === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
+		else process.env.DEDALO_AI_MODEL_STORE = priorStore;
+	});
+
+	test('the speaker pair answers per half, and `installed` follows those states', async () => {
+		const response = await tool.apiActions.get_model_sources!.handler({
+			options: {},
+			principal: admin,
+			userId: 1,
+		} as unknown as ToolActionContext);
+		const result = response.result as {
+			diarization: {
+				installed: boolean;
+				state: string;
+				models: { role: string; name: string; state: string }[];
+			} | null;
+		};
+		if (result.diarization === null) return; // this install declares no speaker model
+
+		// ONE ENTRY PER HALF, each with its own name and its own state — a single
+		// boolean could not say WHICH half was broken, so the remedy could not be
+		// aimed and repaired the selected ASR model instead.
+		expect(result.diarization.models.length).toBeGreaterThan(0);
+		for (const part of result.diarization.models) {
+			expect(typeof part.name).toBe('string');
+			expect(['ready', 'unverified', 'incomplete', 'damaged', 'missing']).toContain(part.state);
+			expect(['segmentation', 'embedding']).toContain(part.role);
+		}
+		// The empty scratch store: nothing is on disk, so nothing is runnable.
+		expect(result.diarization.installed).toBe(false);
+		expect(result.diarization.state).toBe('missing');
+		// `installed` is exactly "every half runnable" — the same rule the ASR
+		// list and the widget's usable count apply.
+		expect(result.diarization.installed).toBe(
+			result.diarization.models.every(
+				(part) => part.state === 'ready' || part.state === 'unverified',
+			),
+		);
+	});
+
+	test('download_model refuses a model that is present but damaged, instead of "already installed"', async () => {
+		// `modelInstalled` (size > 0) answered 'OK. Model already installed' here,
+		// so the client polled for thirty minutes for a model already on disk and
+		// unusable. A damaged model needs a repair, and is told so.
+		const dir = `${SOURCES_STORE}/${KNOWN_CATALOG_MODEL}/onnx`;
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(
+			`${SOURCES_STORE}/${KNOWN_CATALOG_MODEL}/config.json`,
+			'{"model_type":"whisper"}',
+		);
+		writeFileSync(`${dir}/encoder_model.onnx`, '<!doctype html><h1>502</h1>');
+		writeFileSync(`${dir}/decoder_model_merged.onnx`, '<!doctype html><h1>502</h1>');
+		try {
+			const response = await tool.apiActions.download_model!.handler({
+				options: { model: KNOWN_CATALOG_MODEL },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext);
+			expect(response.result).toBe(false);
+			expect(String(response.msg)).toContain('repair it instead');
+			expect(String(response.msg)).not.toContain('already installed');
+		} finally {
+			rmSync(`${SOURCES_STORE}/${KNOWN_CATALOG_MODEL}`, { recursive: true, force: true });
+		}
 	});
 });
