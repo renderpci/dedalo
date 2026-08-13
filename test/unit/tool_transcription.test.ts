@@ -39,8 +39,12 @@ import {
 	segmentsToTcText,
 	type TranscriberStatusRequest,
 } from '../../src/core/tools/transcription_asr.ts';
+import {
+	repairModelAction,
+	type ScheduleRepair,
+	tool,
+} from '../../tools/tool_transcription/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
-import { tool } from '../../tools/tool_transcription/server/index.ts';
 
 const ROOT = `${tmpdir()}/dedalo_transcription_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -125,9 +129,9 @@ describe('tool_transcription module', () => {
 			// read the install's configuration, so the operator's model-store and
 			// hub-fallback settings would otherwise be inert.
 			'get_model_sources',
-			// Admin-gated: resolve an `unverified` model into `ready`/`incomplete`.
-			'repair_model',
 			// Admin-gated: discard and re-fetch the files that fail their check.
+			'repair_model',
+			// Admin-gated: resolve an `unverified` model into `ready`/`incomplete`.
 			'verify_model',
 		]);
 		// permission: null → each handler gates imperatively against its ddo.
@@ -913,6 +917,89 @@ describe('model actions are admin-gated and catalog-bound', () => {
 			userId: 1,
 		} as unknown as ToolActionContext);
 		expect(response.result).toBe(false);
+	});
+
+	// A REAL name from the register default catalog (tools/tool_transcription/
+	// register.json dd1633.transcriber_quality) — present in the test DB the same
+	// way it is in any install, no scratch DB row needed. It exists precisely to
+	// prove the catalog gate ACCEPTS a valid name and not merely that it refuses
+	// invalid ones: the four refusal-only tests above would stay green even
+	// behind a stub that unconditionally returns `fail(...)`, and the "outside
+	// the catalog" test above passes `isGlobalAdmin: true` and so does NOT return
+	// from the admin gate — it reaches `catalogEntry()` (a real DB read) and is
+	// refused for the catalog reason. Neither proves the ACCEPT path.
+	const KNOWN_CATALOG_MODEL = 'onnx-community/whisper-large-v3-turbo';
+	const admin = { isGlobalAdmin: true } as unknown as ToolActionContext['principal'];
+
+	test('verify_model accepts a known catalog model and refuses a neighbor — no network', async () => {
+		// Empty scratch store: every file evidences `present: false`, so
+		// verifyModelAction's HEAD loop (`!file.present` guard) never fires a
+		// request — the catalog-acceptance proof stays honestly network-free.
+		const scratchStore = `${ROOT}/verify_store_scratch`;
+		mkdirSync(scratchStore, { recursive: true });
+		const prior = process.env.DEDALO_AI_MODEL_STORE;
+		process.env.DEDALO_AI_MODEL_STORE = scratchStore;
+		try {
+			const accepted = await tool.apiActions.verify_model!.handler({
+				options: { model: KNOWN_CATALOG_MODEL },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext);
+			// Distinct from the catalog-refusal message: the gate let it through.
+			expect(accepted.result).toBe(true);
+			expect(String(accepted.msg)).toContain('OK. Verified');
+			expect(String(accepted.msg)).not.toContain('not in the transcriber catalog');
+
+			const refused = await tool.apiActions.verify_model!.handler({
+				options: { model: 'evil/not-in-catalog' },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext);
+			expect(refused.result).toBe(false);
+			expect(String(refused.msg)).toContain('not in the transcriber catalog');
+		} finally {
+			if (prior === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
+			else process.env.DEDALO_AI_MODEL_STORE = prior;
+		}
+	});
+
+	test('repair_model reaches the scheduling seam for a known catalog model, refuses a neighbor', async () => {
+		// scheduleBackground fires a fully detached job (real network fetch, real
+		// store writes) that nothing inside repairModelAction can stop once
+		// called — so the ACCEPT path is proven through the injectable
+		// `ScheduleRepair` seam instead of the real one (see its doc comment in
+		// tools/tool_transcription/server/index.ts).
+		const calls: Parameters<ScheduleRepair>[] = [];
+		const stubSchedule: ScheduleRepair = (...args) => {
+			calls.push(args);
+			return { result: true, msg: 'OK. Background process started', errors: [] };
+		};
+
+		const accepted = await repairModelAction(
+			{
+				options: { model: KNOWN_CATALOG_MODEL },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext,
+			stubSchedule,
+		);
+		expect(accepted.result).toBe(true);
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.[1]).toBe('background_repair_model');
+		expect((calls[0]?.[3] as { model?: string } | undefined)?.model).toBe(KNOWN_CATALOG_MODEL);
+
+		const refused = await repairModelAction(
+			{
+				options: { model: 'evil/not-in-catalog' },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext,
+			stubSchedule,
+		);
+		expect(refused.result).toBe(false);
+		expect(String(refused.msg)).toContain('not in the transcriber catalog');
+		// The refusal never reached scheduling: still just the one call above.
+		expect(calls).toHaveLength(1);
 	});
 
 	// Deviation from the brief text: only repair_model is backgrounded (verify

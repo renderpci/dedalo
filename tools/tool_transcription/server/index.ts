@@ -38,8 +38,8 @@ import { config } from '../../../src/config/config.ts';
 import {
 	DIARIZATION_COMMON_FILES,
 	downloadModel,
-	headContentLength,
 	HUB_BASE,
+	headContentLength,
 } from '../../../src/core/ai/model_fetch.ts';
 import { forgetFile, recordFileComplete } from '../../../src/core/ai/model_manifest.ts';
 import {
@@ -772,7 +772,11 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 		if (Array.isArray(entries)) {
 			for (const rawEntry of entries) {
 				if (rawEntry === null || typeof rawEntry !== 'object') continue;
-				const entry = rawEntry as { name?: unknown; tier?: unknown; dtype?: Record<string, string> };
+				const entry = rawEntry as {
+					name?: unknown;
+					tier?: unknown;
+					dtype?: Record<string, string>;
+				};
 				if (typeof entry.name !== 'string') continue;
 				if (entry.tier !== undefined && entry.tier !== 'browser') continue;
 				const report = modelState(entry.name, entry.dtype);
@@ -1048,8 +1052,30 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 	if (unreachable > 0 && checked === 0) {
 		return fail(`Could not reach the model hub to verify '${model}'`);
 	}
+	// Partial unreachability must be VISIBLE, not swallowed into a plain "OK": an
+	// admin who reads only "ready" cannot tell a flaky hub (some files unchecked,
+	// try again) from a store that predates the manifest entirely (CONVENTIONS §1
+	// — nothing is silently dropped).
+	if (unreachable > 0) {
+		const note = `${unreachable} file(s) could not be reached and remain unchecked`;
+		console.warn(`[tool_transcription] verify '${model}': ${note}`);
+		return { result: true, msg: `OK. Verified: ${after.state} (${note})`, errors: [] };
+	}
 	return { result: true, msg: `OK. Verified: ${after.state}`, errors: [] };
 }
+
+/**
+ * The scheduling call `repair_model` makes, isolated behind a seam.
+ *
+ * Reaching this point already PROVES the catalog gate bound the requested name
+ * (a name outside the catalog fails earlier). The default is the real
+ * `scheduleBackground` (a live install has no other way to run a repair); tests
+ * inject a spy so a KNOWN catalog name can be proven to pass the gate without
+ * the real background job firing a network fetch or writing to the real store —
+ * `scheduleBackground` fires the job fully detached, so nothing inside
+ * `repairModelAction` itself can otherwise stop it once scheduled.
+ */
+export type ScheduleRepair = typeof scheduleBackground;
 
 /**
  * repair_model — discard the files that fail their check and fetch them again.
@@ -1059,7 +1085,10 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
  * so nothing new can be reached from the wire and the client polls
  * get_model_sources exactly as it already does for a download.
  */
-async function repairModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
+export async function repairModelAction(
+	ctx: ToolActionContext,
+	schedule: ScheduleRepair = scheduleBackground,
+): Promise<ToolResponse> {
 	if (ctx.principal?.isGlobalAdmin !== true) {
 		return fail('Only a global administrator can repair models');
 	}
@@ -1073,7 +1102,7 @@ async function repairModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 	if (loaded === undefined) {
 		return fail('tool module not loaded — cannot schedule the repair');
 	}
-	scheduleBackground(
+	schedule(
 		loaded,
 		BACKGROUND_REPAIR_ACTION,
 		{ permission: null, handler: backgroundRepairModel },
@@ -1121,7 +1150,8 @@ async function backgroundRepairModel(ctx: ToolActionContext): Promise<ToolRespon
 		console.log(`[tool_transcription] model '${model}' repaired (${after.state})`);
 		return { result: true, msg: `OK. Model repaired: ${model}`, errors: [] };
 	}
-	const errors = download.errors.length > 0 ? download.errors : [`state after repair: ${after.state}`];
+	const errors =
+		download.errors.length > 0 ? download.errors : [`state after repair: ${after.state}`];
 	console.error(`[tool_transcription] model repair FAILED for '${model}':`, errors);
 	return { result: false, msg: errors.join('; '), errors };
 }
@@ -1141,5 +1171,9 @@ export const tool: ToolServerModule = {
 	},
 	// Background-only actions: allowlisted here, absent from apiActions
 	// (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.
-	backgroundRunnable: [BACKGROUND_POLL_ACTION, BACKGROUND_DOWNLOAD_ACTION, BACKGROUND_REPAIR_ACTION],
+	backgroundRunnable: [
+		BACKGROUND_POLL_ACTION,
+		BACKGROUND_DOWNLOAD_ACTION,
+		BACKGROUND_REPAIR_ACTION,
+	],
 };

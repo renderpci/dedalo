@@ -188,3 +188,59 @@ describe('modelState — "installed" is not one bit', () => {
 		expect(modelState(STATE_MODEL, dtype).state).toBe('damaged');
 	});
 });
+
+describe('modelState — the dtype-less fallback (a catalog that predates per-model quantisation)', () => {
+	// getToolConfig reads straight from the DB, so a live install can have a
+	// pre-dtype catalog entry alongside quantised weights already on disk. The
+	// no-dtype default used to be the exact fp32 filenames, which reported this
+	// case as "missing" — directly breaking the wire promise that `installed`
+	// never narrows. modelInstalled already had the correct weaker fallback;
+	// modelState must give the same answer, with real file evidence.
+	const NO_DTYPE_MODEL = 'onnx-community/whisper-no-dtype-TEST';
+	const dir = () => join(STORE, NO_DTYPE_MODEL);
+
+	afterAll(() => rmSync(dir(), { recursive: true, force: true }));
+
+	test('quantised weights + no dtype: NOT missing (matches modelInstalled)', () => {
+		mkdirSync(join(dir(), 'onnx'), { recursive: true });
+		writeFileSync(join(dir(), 'config.json'), '{"model_type":"whisper"}');
+		writeFileSync(join(dir(), 'onnx', 'encoder_model_fp16.onnx'), '\x08ENCODER-FP16');
+		writeFileSync(join(dir(), 'onnx', 'decoder_model_merged_q4f16.onnx'), '\x08DECODER-Q4F16');
+
+		// modelInstalled's own behaviour is unchanged: the weaker "any variant" test.
+		expect(modelInstalled(NO_DTYPE_MODEL)).toBe(true);
+
+		const report = modelState(NO_DTYPE_MODEL);
+		expect(report.state).not.toBe('missing');
+		// No manifest was ever written for these files: unverified, not a false "ready".
+		expect(report.state).toBe('unverified');
+		// Evidence reflects the files actually found on disk, not the fp32 guess.
+		expect(report.files.map((entry) => entry.file).sort()).toEqual(
+			[
+				'config.json',
+				'onnx/decoder_model_merged_q4f16.onnx',
+				'onnx/encoder_model_fp16.onnx',
+			].sort(),
+		);
+		expect(report.files.every((entry) => entry.present)).toBe(true);
+	});
+
+	test('only one weight variant present + no dtype: still correctly unusable', () => {
+		const model = 'onnx-community/whisper-half-variant-TEST';
+		mkdirSync(join(STORE, model, 'onnx'), { recursive: true });
+		writeFileSync(join(STORE, model, 'config.json'), '{"model_type":"whisper"}');
+		writeFileSync(join(STORE, model, 'onnx', 'encoder_model_fp16.onnx'), '\x08ENCODER-FP16');
+		try {
+			expect(modelInstalled(model)).toBe(false);
+			// No decoder variant at all: the fp32 placeholder fallback correctly
+			// reports this as not usable (missing or incomplete, never ready/unverified).
+			expect(['missing', 'incomplete']).toContain(modelState(model).state);
+		} finally {
+			rmSync(join(STORE, model), { recursive: true, force: true });
+		}
+	});
+
+	test('nothing on disk + no dtype: still missing', () => {
+		expect(modelState('onnx-community/whisper-truly-absent-TEST').state).toBe('missing');
+	});
+});

@@ -38,8 +38,8 @@ function isSafeModelSegment(value: string): boolean {
 	return value !== '' && SAFE_MODEL_SEGMENT.test(value) && !value.split('/').includes('..');
 }
 
-import { modelFiles, modelStoreRoot } from './model_store.ts';
 import { expectedSize, recordFileComplete } from './model_manifest.ts';
+import { modelFiles, modelStoreRoot } from './model_store.ts';
 
 /** Where model files are fetched from when a download is requested. */
 export const HUB_BASE = 'https://huggingface.co';
@@ -109,13 +109,26 @@ export function isUsableCachedFile(target: string, expected?: number | null): bo
 }
 
 /**
+ * How long a HEAD probe waits before giving up. `verify_model` runs this
+ * INLINE on the request path (unlike `downloadModel`, which is a detached
+ * background job) — behind a drop-all firewall a bare `fetch` with no timeout
+ * never resolves, and an admin's click hangs forever instead of getting the
+ * clean "could not learn it" this function already promises.
+ */
+const HEAD_TIMEOUT_MS = 10_000;
+
+/**
  * The hub's byte length for one file, or null when it cannot be learnt (offline,
- * blocked, or a hub that does not answer HEAD). Null is not a failure: it drops
- * the caller back to the size-agnostic cache test.
+ * blocked, a timeout, or a hub that does not answer HEAD). Null is not a
+ * failure: it drops the caller back to the size-agnostic cache test.
  */
 export async function headContentLength(url: string): Promise<number | null> {
 	try {
-		const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+		const response = await fetch(url, {
+			method: 'HEAD',
+			redirect: 'follow',
+			signal: AbortSignal.timeout(HEAD_TIMEOUT_MS),
+		});
 		if (!response.ok) return null;
 		// The hub serves LFS weights through a CDN redirect; x-linked-size is the
 		// real object length when Content-Length describes the pointer.

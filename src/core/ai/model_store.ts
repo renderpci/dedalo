@@ -137,6 +137,31 @@ export function modelInstalled(modelId: string, dtype?: Record<string, string>):
 }
 
 /**
+ * The weight filenames `modelState` should evidence for a DTYPE-LESS lookup —
+ * the same "any variant present" fallback `modelInstalled` documents above,
+ * expressed as real filenames instead of a boolean. Empty when the store does
+ * not have BOTH an encoder and a decoder variant, so the caller falls back to
+ * the fp32 placeholder names (which correctly reports "missing"/"incomplete"
+ * for a genuinely empty or partial store — see modelState).
+ */
+function fallbackWeightsFiles(root: string, modelId: string): string[] {
+	let weights: string[];
+	try {
+		weights = readdirSync(resolve(root, modelId, 'onnx'));
+	} catch {
+		return [];
+	}
+	const encoder = weights.find(
+		(file) => file.startsWith('encoder_model') && file.endsWith('.onnx'),
+	);
+	const decoder = weights.find(
+		(file) => file.startsWith('decoder_model_merged') && file.endsWith('.onnx'),
+	);
+	if (encoder === undefined || decoder === undefined) return [];
+	return [`onnx/${encoder}`, `onnx/${decoder}`];
+}
+
+/**
  * What the store can honestly say about one model.
  *
  * `unverified` is not a hedge, it is the truth about a store seeded before the
@@ -186,7 +211,21 @@ function headerPlausible(path: string, file: string): boolean {
 
 export function modelState(modelId: string, dtype?: Record<string, string>): ModelStateReport {
 	const root = modelStoreRoot();
-	const wanted = modelFiles(dtype);
+	// No dtype declared: an older registered catalog that predates per-model
+	// quantisation — which getToolConfig reading straight from the DB makes a
+	// LIVE case, not a historical one. Guessing the fp32 filenames would report
+	// a quantised install as "missing"; use the real filenames on disk when the
+	// modelInstalled fallback (any encoder + any decoder variant) is satisfied,
+	// and only fall back to the fp32 placeholders when it is not — which keeps
+	// the correct "missing"/"incomplete" verdict for a genuinely empty/partial
+	// store.
+	const fallbackFound = dtype === undefined ? fallbackWeightsFiles(root, modelId) : [];
+	const wanted =
+		dtype !== undefined
+			? modelFiles(dtype)
+			: fallbackFound.length > 0
+				? [REQUIRED_CONFIG, ...fallbackFound]
+				: modelFiles();
 
 	const files: ModelFileEvidence[] = wanted.map((file) => {
 		const path = resolve(root, modelId, file);

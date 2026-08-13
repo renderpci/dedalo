@@ -9,10 +9,16 @@
  * "ERROR_CODE: 7 … protobuf parsing failed" — a message that names neither the
  * model nor the remedy.
  *
- * The manifest is written ONLY when a file completes, so its presence is the
- * claim "this many bytes arrived". Absence is not a failure: a store seeded before
- * this existed simply reports `unverified` (see model_store.ts modelState) rather
- * than being declared broken.
+ * Two writers, two honest claims — never conflate them:
+ *   - the DOWNLOADER (`recordFileComplete` from `model_fetch.ts`) records what
+ *     actually arrived: "this many bytes landed on disk just now";
+ *   - `verify_model` (`tools/tool_transcription/server/index.ts`) records what
+ *     the hub SAYS should be there for a file already present with no manifest
+ *     entry: "this many bytes are expected" — so a later size mismatch against
+ *     an unrelated local truncation is still detected as `incomplete`.
+ * Either way, absence is not a failure: a store seeded before this existed
+ * simply reports `unverified` (see model_store.ts modelState) rather than being
+ * declared broken.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
