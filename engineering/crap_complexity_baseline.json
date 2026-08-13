@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 466,
-		"functions": 3700,
+		"files": 469,
+		"functions": 3757,
 		"functionsOverCap": 699,
 		"filesOverCap": 275
 	},
@@ -90,7 +90,7 @@
 		"src/core/db/matrix_write.ts": 10,
 		"src/core/db/postgres.ts": 8,
 		"src/core/diffusion_bridge/diffusion_delete.ts": 17,
-		"src/core/diffusion_bridge/diffusion_graph.ts": 27,
+		"src/core/diffusion_bridge/diffusion_graph.ts": 15,
 		"src/core/error_report/gate.ts": 8,
 		"src/core/geoip/download.ts": 10,
 		"src/core/geoip/ensure.ts": 9,

@@ -132,6 +132,32 @@ export async function resolveAliasTarget(
 	return targetModel.includes('_alias') ? resolveAliasTarget(graph, target, depth - 1) : target;
 }
 
+/** Every descendant of `tipo`, depth-first (the node itself excluded). */
+async function subtreeOf(graph: DiffusionGraph, tipo: string): Promise<string[]> {
+	const acc: string[] = [];
+	const collect = async (current: string): Promise<void> => {
+		for (const child of await graph.children(current)) {
+			acc.push(child);
+			await collect(child);
+		}
+	};
+	await collect(tipo);
+	return acc;
+}
+
+/** The REAL nodes the given nodes' aliases point at (non-aliases contribute none). */
+async function aliasConsumedReals(
+	graph: DiffusionGraph,
+	tipos: readonly string[],
+): Promise<Set<string>> {
+	const consumed = new Set<string>();
+	for (const tipo of tipos) {
+		const real = await resolveAliasTarget(graph, tipo); // null unless an alias
+		if (real !== null) consumed.add(real);
+	}
+	return consumed;
+}
+
 /**
  * Real nodes consumed by an alias anywhere under the domain — they are
  * skipped in their raw tree position because the alias re-parents them.
@@ -140,28 +166,70 @@ export async function collectConsumedReals(
 	graph: DiffusionGraph,
 	domainTipo: string,
 ): Promise<Set<string>> {
-	const consumed = new Set<string>();
-	const subtree: string[] = [];
-	const collect = async (tipo: string): Promise<void> => {
-		for (const child of await graph.children(tipo)) {
-			subtree.push(child);
-			await collect(child);
-		}
-	};
-	await collect(domainTipo);
-	for (const tipo of subtree) {
-		if (((await graph.node(tipo))?.model ?? '').includes('_alias')) {
-			const real = await resolveAliasTarget(graph, tipo);
-			if (real !== null) consumed.add(real);
-		}
-	}
-	return consumed;
+	return aliasConsumedReals(graph, await subtreeOf(graph, domainTipo));
 }
 
 /**
- * Sections that participate in ANY diffusion output under the domain (the
- * getSectionDiffusionMap keys).
+ * Is this node re-parented AWAY from its raw tree position by an alias?
+ *
+ * The one skip rule of both walks, in one place. An alias node is never
+ * skipped (it IS the new position). A real ELEMENT is skipped domain-wide (an
+ * element alias re-parents the whole element); anything INSIDE an element is
+ * skipped only when an alias OF THAT ELEMENT consumes it — a table aliased by
+ * a different element still publishes its own section there.
+ *
+ * `elementKey` is the enclosing element's tipo (walkDiffusionSections) or its
+ * real tipo (walkDiffusionTargets); collectConsumedRealsByElement stores the
+ * set under BOTH, so either resolves.
  */
+function isReparentedAway(args: {
+	tipo: string;
+	model: string;
+	elementKey: string | null;
+	consumed: ReadonlySet<string>;
+	consumedByElement: ReadonlyMap<string, ReadonlySet<string>>;
+}): boolean {
+	const { tipo, model, elementKey, consumed, consumedByElement } = args;
+	if (model.includes('_alias')) return false;
+	if (ELEMENT_MODELS.has(model)) return consumed.has(tipo);
+	if (elementKey === null) return false;
+	return consumedByElement.get(elementKey)?.has(tipo) ?? false;
+}
+
+/**
+ * The node's related 'section' tipos, with the alias fallback: an alias that
+ * declares no relations of its own borrows its REAL node's (PHP resolve_node).
+ */
+async function relatedSections(
+	graph: DiffusionGraph,
+	tipo: string,
+	realTipo: string | null,
+): Promise<string[]> {
+	const sections = await relatedByModel(graph, tipo, 'section');
+	if (sections.length > 0 || realTipo === null) return sections;
+	return relatedByModel(graph, realTipo, 'section');
+}
+
+/**
+ * Children of the node, plus the real node's children when it is an alias
+ * (the alias descends into what it re-parents).
+ *
+ * `aliasRealTipo` is the ALIAS-RESOLVED target and MUST be null for a non-alias
+ * node — pass `resolveAliasTarget()`'s result only after the model check, never
+ * unconditionally, or a real node would absorb another node's children.
+ */
+async function walkChildren(
+	graph: DiffusionGraph,
+	tipo: string,
+	aliasRealTipo: string | null,
+): Promise<Set<string>> {
+	const children = new Set(await graph.children(tipo));
+	if (aliasRealTipo !== null) {
+		for (const child of await graph.children(aliasRealTipo)) children.add(child);
+	}
+	return children;
+}
+
 /**
  * Alias-consumed real nodes, SCOPED PER DIFFUSION ELEMENT.
  *
@@ -183,34 +251,15 @@ export async function collectConsumedRealsByElement(
 ): Promise<Map<string, ReadonlySet<string>>> {
 	const out = new Map<string, ReadonlySet<string>>();
 
-	const subtreeOf = async (tipo: string): Promise<string[]> => {
-		const acc: string[] = [];
-		const collect = async (current: string): Promise<void> => {
-			for (const child of await graph.children(current)) {
-				acc.push(child);
-				await collect(child);
-			}
-		};
-		await collect(tipo);
-		return acc;
-	};
-
 	const visit = async (tipo: string, depth: number): Promise<void> => {
 		if (depth > 20) return;
 		const model = (await graph.node(tipo))?.model ?? '';
 		if (ELEMENT_MODELS.has(model)) {
-			const set = new Set<string>();
-			for (const descendant of await subtreeOf(tipo)) {
-				if (((await graph.node(descendant))?.model ?? '').includes('_alias')) {
-					const real = await resolveAliasTarget(graph, descendant);
-					if (real !== null) set.add(real);
-				}
-			}
+			const set = await aliasConsumedReals(graph, await subtreeOf(graph, tipo));
 			out.set(tipo, set);
-			if (model.includes('_alias')) {
-				const realTipo = await resolveAliasTarget(graph, tipo);
-				if (realTipo !== null) out.set(realTipo, set);
-			}
+			// an element ALIAS answers under its real tipo too
+			const realTipo = await resolveAliasTarget(graph, tipo); // null unless an alias
+			if (realTipo !== null) out.set(realTipo, set);
 		}
 		for (const child of await graph.children(tipo)) await visit(child, depth + 1);
 	};
@@ -218,6 +267,10 @@ export async function collectConsumedRealsByElement(
 	return out;
 }
 
+/**
+ * Sections that participate in ANY diffusion output under the domain (the
+ * getSectionDiffusionMap keys).
+ */
 export async function walkDiffusionSections(
 	graph: DiffusionGraph,
 	domainTipo: string,
@@ -237,36 +290,21 @@ export async function walkDiffusionSections(
 	): Promise<void> => {
 		if (depth > 20) return;
 		const model = (await graph.node(tipo))?.model ?? '';
-		const isAlias = model.includes('_alias');
 		const isElement = ELEMENT_MODELS.has(model);
 		const currentElementTipo = isElement ? tipo : elementTipo;
-		if (!isAlias) {
-			if (isElement) {
-				if (consumed.has(tipo)) return; // whole element re-parented by an element alias
-			} else if (
-				currentElementTipo !== null &&
-				(consumedByElement.get(currentElementTipo)?.has(tipo) ?? false)
-			) {
-				return; // re-parented by an alias OF THIS ELEMENT
-			}
+		if (
+			isReparentedAway({ tipo, model, elementKey: currentElementTipo, consumed, consumedByElement })
+		) {
+			return;
 		}
-		const realTipo = isAlias ? await resolveAliasTarget(graph, tipo) : null;
+		const realTipo = model.includes('_alias') ? await resolveAliasTarget(graph, tipo) : null;
 
 		if (underElement) {
-			let sections = await relatedByModel(graph, tipo, 'section');
-			if (sections.length === 0 && realTipo !== null) {
-				sections = await relatedByModel(graph, realTipo, 'section');
-			}
-			for (const sectionTipo of sections) map.add(sectionTipo);
+			for (const sectionTipo of await relatedSections(graph, tipo, realTipo)) map.add(sectionTipo);
 		}
 
-		const nextUnder = underElement || ELEMENT_MODELS.has(model);
-		const children = new Set(await graph.children(tipo));
-		if (isAlias && realTipo !== null) {
-			for (const child of await graph.children(realTipo)) children.add(child);
-		}
-		for (const child of children) {
-			await walk(child, nextUnder, depth + 1, currentElementTipo);
+		for (const child of await walkChildren(graph, tipo, realTipo)) {
+			await walk(child, underElement || isElement, depth + 1, currentElementTipo);
 		}
 	};
 	await walk(domainTipo, false, 0, null);
@@ -278,6 +316,39 @@ interface ElementContext {
 	realTipo: string;
 	type: string;
 	database: string | null;
+}
+
+/** Frozen constant table (not a cache): the two database models. */
+const DATABASE_MODELS: ReadonlySet<string> = new Set(['database', 'database_alias']);
+
+/**
+ * The context an element node opens: its real tipo + its diffusion type. An
+ * alias inherits the real node's properties when it declares none of its own
+ * (PHP resolve_node); an element without a declared type is 'unknown'.
+ */
+async function resolveElementContext(
+	graph: DiffusionGraph,
+	tipo: string,
+	realTipo: string | null,
+): Promise<ElementContext> {
+	const properties = await elementProperties(graph, tipo, realTipo);
+	const declared = (properties as { diffusion?: { type?: string } } | null)?.diffusion?.type;
+	return {
+		realTipo: realTipo ?? tipo,
+		type: declared || 'unknown', // null / '' / absent all mean 'unknown'
+		database: null,
+	};
+}
+
+/** The element's own properties, or the real node's when it declares none. */
+async function elementProperties(
+	graph: DiffusionGraph,
+	tipo: string,
+	realTipo: string | null,
+): Promise<Record<string, unknown> | null> {
+	const own = await graph.properties(tipo);
+	if (realTipo === null) return own;
+	return own !== null && Object.keys(own).length > 0 ? own : await graph.properties(realTipo);
 }
 
 /**
@@ -314,55 +385,38 @@ export async function walkDiffusionTargets(
 		if (depth > 20) return;
 		const node = await graph.node(tipo);
 		const model = node?.model ?? '';
-		const isAlias = model.includes('_alias');
 		// Elements: domain-wide (an element alias re-parents the whole element).
 		// Inside an element: scoped — a real table aliased by a DIFFERENT element
 		// still publishes its own section here (mht96 -> mht72).
-		if (!isAlias) {
-			if (ELEMENT_MODELS.has(model)) {
-				if (consumed.has(tipo)) return;
-			} else if (
-				element !== null &&
-				(consumedByElement.get(element.realTipo)?.has(tipo) ?? false)
-			) {
-				return;
-			}
+		if (
+			isReparentedAway({
+				tipo,
+				model,
+				elementKey: element?.realTipo ?? null,
+				consumed,
+				consumedByElement,
+			})
+		) {
+			return;
 		}
-		const realTipo = isAlias ? await resolveAliasTarget(graph, tipo) : null;
+		const realTipo = model.includes('_alias') ? await resolveAliasTarget(graph, tipo) : null;
 		const label = termOf(node ?? undefined);
 
 		let currentElement = element;
 		if (ELEMENT_MODELS.has(model)) {
-			// the element context: real tipo + diffusion type (alias inherits the
-			// real node's properties when it declares none — PHP resolve_node).
-			let properties = await graph.properties(tipo);
-			if ((properties === null || Object.keys(properties).length === 0) && realTipo !== null) {
-				properties = await graph.properties(realTipo);
-			}
-			const diffusionType =
-				((properties as { diffusion?: { type?: string } } | null)?.diffusion?.type ?? 'unknown') ||
-				'unknown';
-			currentElement = { realTipo: realTipo ?? tipo, type: diffusionType, database: null };
-		} else if (element !== null && (model === 'database' || model === 'database_alias')) {
+			currentElement = await resolveElementContext(graph, tipo, realTipo);
+		} else if (element !== null && DATABASE_MODELS.has(model)) {
+			// database node label, FIRST-WINS for the element it hangs under
 			if (element.database === null && label !== null) element.database = label;
 		}
 
 		if (element !== null) {
-			// related sections of the node (alias real fallback)
-			let sections = await relatedByModel(graph, tipo, 'section');
-			if (sections.length === 0 && realTipo !== null) {
-				sections = await relatedByModel(graph, realTipo, 'section');
-			}
-			for (const section of sections) {
+			for (const section of await relatedSections(graph, tipo, realTipo)) {
 				pending.push({ section, element, table: label, tableIsAlias: model === 'table_alias' });
 			}
 		}
 
-		const children = new Set(await graph.children(tipo));
-		if (isAlias && realTipo !== null) {
-			for (const child of await graph.children(realTipo)) children.add(child);
-		}
-		for (const child of children) {
+		for (const child of await walkChildren(graph, tipo, realTipo)) {
 			await walk(child, currentElement, depth + 1);
 		}
 	};

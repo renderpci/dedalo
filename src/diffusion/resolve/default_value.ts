@@ -39,7 +39,7 @@ import { config } from '../../config/config.ts';
 import { mediaTypeOf } from '../../core/concepts/media.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
-import { phpTrim } from '../parsers/parser_text.ts';
+import { phpTrim } from '../parsers/php_string.ts';
 import type { MetaValueIR, ValueMeta } from '../parsers/types.ts';
 import { hasCoordinate, isStudioDefault, toCoordinate } from './geo_coordinate.ts';
 

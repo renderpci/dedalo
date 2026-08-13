@@ -7,7 +7,7 @@
  * parser_text::text_format (oracle port of PHP class.pattern_replacer.php).
  */
 
-import { phpTrim } from './parser_text.ts';
+import { phpTrim } from './php_string.ts';
 import type { ItemParserFn, ParserItem } from './types.ts';
 
 // ---------------------------------------------------------------------------
