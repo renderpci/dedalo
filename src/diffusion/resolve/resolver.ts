@@ -48,6 +48,7 @@ import {
 	getMatrixTableFromTipo,
 	getModelByTipo,
 	getNode,
+	getPropertiesByTipo,
 } from '../../core/ontology/resolver.ts';
 import { getSectionMapValue } from '../../core/ontology/section_map.ts';
 import { getChildren } from '../../core/relations/children.ts';
@@ -58,6 +59,7 @@ import { parseInverseEntry } from '../../core/resolve/relation_index.ts';
 import {
 	findInverseReferenceLocators,
 	findInverseReferences,
+	getRelationTables,
 } from '../../core/search/search_related.ts';
 import type { Principal } from '../../core/security/permissions.ts';
 import { getTermByLocator, getTermDataByLocator } from '../../core/ts_object/term_resolver.ts';
@@ -212,6 +214,11 @@ interface RunContext {
 	 * (relation_list::get_data — every mint/type column of one coin repeats
 	 * the SAME related-mode query, so this cache is load-bearing). */
 	relationListCache: Map<string, StoredLocator[]>;
+	/** `${section_tipo}|${section_id}` → hierarchy1 root-term parent id (null = none).
+	 * RUN-SCOPED on purpose: a module-level Map would outlive an edit to the
+	 * hierarchy45 root-term portal and serve a stale parent for the process's
+	 * whole life (and trips the module-state tripwire, WS-B/DEC-13). */
+	rootHierarchyParentCache: Map<string, number | null>;
 	/** `${hop_tipo}|${owner_section_tipo}` → resolved inverse-question config
 	 * (relation type + target sections). resolveIndexConfig rebuilds the FULL
 	 * request_config per call when the component declares one (uncached,
@@ -438,7 +445,15 @@ async function termRecordOf(
 		// Group per lang, join multi-values with ', ' (oracle parents :522-527).
 		const byLang = new Map<string, string[]>();
 		for (const item of items) {
-			if (typeof item.value !== 'string' || item.value === '') continue;
+			// EMPTY VALUES ARE KEPT HERE. A term component that EXISTS on the record
+			// but holds nothing resolves in v6 to '<mark></mark>' (the untranslated
+			// decoration fallback), which passes its !empty() guard and is stripped to
+			// '' only at the end — so the slot survives the ', ' join and
+			// publications.authors reads "Folguera Crespo et al., ".
+			// The DIRECT publication read does the opposite (see default_value.ts
+			// component_input_text): v6's get_valor drops empties, so authors_name
+			// publishes NULL for the same stored value. Two v6 paths, two rules.
+			if (typeof item.value !== 'string') continue;
 			const lang = item.lang ?? 'lg-nolan';
 			const bucket = byLang.get(lang);
 			if (bucket === undefined) byLang.set(lang, [item.value]);
@@ -682,12 +697,133 @@ export async function resolveComponentFnAtoms(
 		case 'map_section_id_to_subtitles_url':
 			return subtitlesUrlAtoms(record.section_id, env.langs, meta);
 
+		case 'get_diffusion_v5_references_html':
+			return v5ReferencesHtmlAtoms(record, step, meta);
+
 		default:
 			throw new Error(
 				`unported ddo fn '${step.fn}' on component '${step.tipo}' — refusing to publish an ` +
 					'empty value that would read as success (port the fn or fix the ontology)',
 			);
 	}
+}
+
+/**
+ * v6/v5 REFERENCE TAG PATTERN — TR::get_mark_pattern('reference', true)
+ * (v7_php_frozen shared/class.TR.php :61+). Matches the IN tag and the OUT tag
+ * (`\/{0,1}`) alike, which is what makes the oracle's even/odd pairing work:
+ * match 0 is an in-tag, match 1 its out-tag, and so on.
+ * Groups: 1 mark · 2 state letter · 3 tag id · 5 label · 6 data.
+ */
+const REFERENCE_TAG_PATTERN =
+	/\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]/g;
+
+/** A stored tags_reference locator: the companion portal's saved rows. */
+interface ReferenceTagLocator {
+	tag_id?: unknown;
+	tag_type?: unknown;
+	[extra: string]: unknown;
+}
+
+/**
+ * get_diffusion_v5_references_html (PHP component_text_area :2328-2421).
+ *
+ * v5/v6 embedded the reference LOCATOR inside the tag's data field; v7 moved it
+ * to a companion `tags_reference` portal. To keep already-published websites
+ * reading the same bytes, this re-inlines it: each in-tag is matched to its
+ * stored locator by numeric tag_id (tag_type 'reference'), the locator is
+ * JSON-encoded with " swapped for ' (the oracle's str_replace — the tag syntax
+ * cannot carry double quotes), and BOTH the in and out tag are rewritten to
+ * carry it. Only then are the tags rendered to HTML.
+ *
+ * Faithful to the oracle's shape, including:
+ * - EVEN indices only. Matches alternate in/out; the out tag is rewritten as
+ *   part of its in tag's iteration, never on its own.
+ * - No tags_reference declared → the value is rendered with tags→HTML alone
+ *   (the oracle returns exactly that).
+ * - An in-tag with no matching stored locator is left untouched, not dropped.
+ */
+async function v5ReferencesHtmlAtoms(
+	record: MatrixRecord,
+	step: Extract<ResolveStep, { kind: 'component' }>,
+	meta: ValueMeta,
+): Promise<MetaValueIR[]> {
+	const stored = (readComponentItems(record, step.tipo, step.model) ?? []) as {
+		value?: unknown;
+		lang?: string | null;
+	}[];
+	if (stored.length === 0) return [];
+
+	// properties.tags_reference.tipo on the TEXT component's ontology node.
+	const properties = (await getPropertiesByTipo(step.tipo)) as {
+		tags_reference?: { tipo?: unknown };
+	} | null;
+	const tagsReferenceTipo =
+		typeof properties?.tags_reference?.tipo === 'string' ? properties.tags_reference.tipo : null;
+
+	let locators: ReferenceTagLocator[] = [];
+	if (tagsReferenceTipo !== null) {
+		const model = (await getModelByTipo(tagsReferenceTipo)) ?? 'component_portal';
+		locators = (readComponentItems(record, tagsReferenceTipo, model) ??
+			[]) as ReferenceTagLocator[];
+	}
+
+	const out: MetaValueIR[] = [];
+	for (const item of stored) {
+		const raw = item?.value;
+		// PHP !empty($diffusion_value): '' AND '0' are both "no data".
+		if (typeof raw !== 'string' || raw === '' || raw === '0') continue;
+
+		let value = raw;
+		if (tagsReferenceTipo !== null) {
+			const matches = [...raw.matchAll(REFERENCE_TAG_PATTERN)];
+			for (let index = 0; index < matches.length; index += 2) {
+				const inMatch = matches[index];
+				const tagId = inMatch?.[3];
+				if (inMatch === undefined || tagId === undefined) continue;
+				const locator = locators.find(
+					(candidate) =>
+						Number(candidate?.tag_id) === Number(tagId) && candidate?.tag_type === 'reference',
+				);
+				if (locator === undefined) continue;
+
+				// The published locator carries NO `id`. v7 stores a per-item `id` on
+				// every component item; v6 never had one in the tag payload, and the
+				// oracle json_encodes the locator as its get_data() returned it. Keeping
+				// it would put `'id':1,` into every published reference tag — a byte
+				// difference on already-published pages.
+				const { id: _storedItemId, ...publishedLocator } = locator;
+				// section_id publishes as a STRING. v7 stores it int-canonical
+				// (WC-2026-08-10-section-id-int-canonical) but v6 embedded the string form
+				// in the tag payload, and the pages already published read it as one — the
+				// same v6-compat coercion parser_locator::get_v6_section_id makes for
+				// migrated section_id columns.
+				if (publishedLocator.section_id !== undefined && publishedLocator.section_id !== null) {
+					publishedLocator.section_id = String(publishedLocator.section_id);
+				}
+				const dataString = JSON.stringify(publishedLocator).replaceAll('"', "'");
+				value = value.replace(
+					inMatch[0],
+					`[reference-n-${tagId}-reference ${tagId}-data:[${dataString}]:data]`,
+				);
+				const outMatch = matches[index + 1];
+				if (outMatch?.[0].startsWith('[/reference') === true) {
+					value = value.replace(
+						outMatch[0],
+						`[/reference-n-${tagId}-reference ${tagId}-data:[${dataString}]:data]`,
+					);
+				}
+			}
+		}
+
+		out.push({
+			kind: 'scalar',
+			value: parseTagValueToHtml(value),
+			lang: !item.lang || item.lang === 'lg-nolan' ? null : item.lang,
+			meta,
+		});
+	}
+	return out;
 }
 
 /**
@@ -1069,12 +1205,61 @@ const VALUE_SOURCE_MODELS: ReadonlySet<string> = new Set([
  * kept as a STRING — the PHP wire carried matrix locator strings, and the
  * json output formats are byte-sensitive to it ('["4649"]' vs '[4649]').
  */
+/**
+ * ROOT-NODE PARENT (PHP component_relation_parent::get_possible_root_hierarchy,
+ * :74-122). A node with no stored parent is not necessarily parentless: if the
+ * hierarchy that OWNS its section lists it as a root term, v6 publishes that
+ * hierarchy1 record as the parent. That is where antropologia/periodos got
+ * ["hierarchy1_246"] / ["hierarchy1_247"] (and the terms "Antropología social"
+ * / "Periodos historico-políticos") while v7, reading only stored locators,
+ * published nothing at all for parent/parents/parents_term.
+ *
+ * The two PHP steps, folded into one query: find the hierarchy1 record whose
+ * hierarchy53 target IS this section, then confirm its hierarchy45 root-term
+ * portal points back at this record. Probed in BOTH id forms because jsonb `@>`
+ * is type-strict and stored locators carry section_id as string or int
+ * (WC-2026-08-10-section-id-int-canonical). The probes cast `::text::jsonb`,
+ * NOT `::jsonb`: bound as untyped parameters the single cast matches NOTHING
+ * (silently — no error), which is why every probe in core/search/containment.ts
+ * uses the double cast.
+ */
+async function rootHierarchyParentId(
+	ctx: RunContext,
+	sectionTipo: string,
+	sectionId: number | string,
+): Promise<number | null> {
+	const key = `${sectionTipo}|${sectionId}`;
+	const cached = ctx.rootHierarchyParentCache.get(key);
+	if (cached !== undefined) return cached;
+	const idInt = Number.parseInt(String(sectionId), 10);
+	const probeInt = JSON.stringify([{ section_tipo: sectionTipo, section_id: idInt }]);
+	const probeStr = JSON.stringify([{ section_tipo: sectionTipo, section_id: String(sectionId) }]);
+	const rows = (await sql.unsafe(
+		`SELECT m.section_id
+		   FROM matrix_hierarchy_main m
+		  WHERE m.section_tipo = 'hierarchy1'
+		    AND COALESCE(m.data->'hierarchy53', m.string->'hierarchy53')->0->>'value' = $1
+		    AND (m.relation->'hierarchy45' @> $2::text::jsonb OR m.relation->'hierarchy45' @> $3::text::jsonb)
+		  ORDER BY m.section_id
+		  LIMIT 1`,
+		[sectionTipo, probeInt, probeStr],
+	)) as { section_id: number }[];
+	const found = rows.length > 0 ? Number(rows[0]?.section_id) : null;
+	ctx.rootHierarchyParentCache.set(key, found);
+	return found;
+}
+
 async function relationListLocators(
 	ctx: RunContext,
 	record: MatrixRecord,
 	hop: Extract<ResolveStep, { kind: 'relation-hop' }>,
 ): Promise<StoredLocator[]> {
-	const cacheKey = `${RECORD_KEY(record.section_tipo, record.section_id)}|${(hop.sectionFilter ?? []).join(',')}|${(hop.componentFilter ?? []).join(',')}`;
+	// dedupeSections is part of the KEY: it selects grouped-per-section vs
+	// one-entry-per-relation, so two hops on the same record with the same
+	// filters but different granularity would otherwise share a cache entry and
+	// whichever resolved first would win (dd_relations vs a 'dato_full' column
+	// both commonly declare no filters).
+	const cacheKey = `${RECORD_KEY(record.section_tipo, record.section_id)}|${(hop.sectionFilter ?? []).join(',')}|${(hop.componentFilter ?? []).join(',')}|${hop.dedupeSections === true ? 'dedup' : 'raw'}`;
 	const cached = ctx.relationListCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 
@@ -1083,16 +1268,38 @@ async function relationListLocators(
 		hop.componentFilter !== undefined && hop.componentFilter.length > 0
 			? hop.componentFilter.map((tipo) => ({ ...host, from_component_tipo: tipo }))
 			: [host];
-	const hits = await findInverseReferences(filters, {
-		sectionTipos:
-			hop.sectionFilter !== undefined && hop.sectionFilter.length > 0 ? hop.sectionFilter : 'all',
-		limit: false,
-		order: 'section_id',
-	});
-	const locators: StoredLocator[] = hits.map((hit) => ({
-		section_tipo: hit.section_tipo,
-		section_id: String(hit.section_id),
-	}));
+	// v6 ROW GRANULARITY: ONE ENTRY PER STORED RELATION ELEMENT.
+	// relation_list::get_diffusion_dato (:238-375) runs the inverse search (one
+	// row per OWNER record) and then walks each owner's `relations` array,
+	// emitting one pseudo-locator per element that points back here. So an owner
+	// citing this record twice yields two entries (games.dd_relations publishes
+	// rsc167/84 twice). findInverseReferences GROUPs BY (section_tipo,
+	// section_id) and would collapse them; the breakdown keeps the granularity.
+	// 'dato_full' nodes are the exception — they publish each referencing
+	// SECTION once — which is what hop.dedupeSections selects below.
+	const sectionTipos =
+		hop.sectionFilter !== undefined && hop.sectionFilter.length > 0 ? hop.sectionFilter : 'all';
+	// dedupeSections ('dato_full' nodes) → one entry per referencing SECTION,
+	// which is exactly what the GROUPed query returns. Otherwise take the
+	// breakdown: one hit per stored relation, v6's own row granularity.
+	const hits = hop.dedupeSections === true
+		? await findInverseReferences(filters, { sectionTipos, limit: false, order: 'section_id' })
+		: await findInverseReferenceLocators(filters, { sectionTipos, limit: false, order: 'section_id' });
+	// OWNER SCOPE. v6 searches the relation-capable matrix tables only — a table
+	// whose ontology node sets inverse_relations=false (matrix_projects) is not
+	// scanned, so a project never appears as an inverse reference. The index
+	// spans every table regardless, so without this filter v7 published dd153
+	// project rows that v6 never emits (informant.dd_relations).
+	const relationTables = new Set(await getRelationTables());
+	const locators: StoredLocator[] = [];
+	for (const hit of hits) {
+		const table = (await getMatrixTableFromTipo(hit.section_tipo)) ?? 'matrix';
+		if (!relationTables.has(table)) continue;
+		locators.push({
+			section_tipo: hit.section_tipo,
+			section_id: String(hit.section_id),
+		});
+	}
 	ctx.relationListCache.set(cacheKey, locators);
 	return locators;
 }
@@ -1280,6 +1487,24 @@ async function walkChainLevel(
 			// Terminal atoms carry NO section identity — the first-ddo relation
 			// stamps its locator identity on them (chain_processor :322-341),
 			// exactly like the PHP dd objects.
+			// WHERE v6 TRIMS. component_input_text::get_valor (:218-229) trims each
+			// stored entry, so a component read DIRECTLY as the resolution target is
+			// published trimmed. A value reached as somebody else's LABEL is not:
+			// a portal ddo carrying `label` resolves through get_locator_value, and a
+			// component_select resolves through get_ar_list_of_values — neither calls
+			// get_valor. That is the whole rule, and it is why v6 publishes
+			// "Magazine article " (select label) and "…Gorka " (portal label) with
+			// their spaces intact while trimming "Alba " (direct read of rsc86).
+			const parentStep =
+				step.parent === undefined
+					? undefined
+					: prepared.field.sourceChain.find(
+							(candidate) => candidate.kind !== 'system' && candidate.tipo === step.parent,
+						);
+			const viaLabel =
+				parentStep !== undefined &&
+				parentStep.kind === 'relation-hop' &&
+				(parentStep.labelExpansion === true || parentStep.model === 'component_select');
 			let stepAtoms = defaultPublicationValue(
 				record,
 				step.tipo,
@@ -1288,14 +1513,24 @@ async function walkChainLevel(
 					sourceId: step.ddoId,
 					tipo: step.tipo,
 				},
-				step.options,
+				viaLabel ? { ...(step.options ?? {}), __via_label: true } : step.options,
 			);
 			if (step.pinLang !== undefined) {
 				// ddo lang pin (component_common :3341-3349): keep the pinned lang's
 				// entries (nolan passes) and emit them lang-neutral.
-				stepAtoms = stepAtoms
-					.filter((atom) => atom.lang === null || atom.lang === step.pinLang)
-					.map((atom) => ({ ...atom, lang: null }));
+				//
+				// PREFER, don't ELIMINATE. v6's component_select_lang::get_valor reads
+				// the lang NAMES resolved in DEDALO_DATA_LANG, but when a language has
+				// no name in that lang it still resolves one (interview/oh1-31
+				// publishes "English"). Filtering to the pinned lang unconditionally
+				// emptied the field instead, so the column published NULL where v6 had
+				// a value. Keep the pinned subset only when there IS one.
+				const pinned = stepAtoms.filter(
+					(atom) => atom.lang === null || atom.lang === step.pinLang,
+				);
+				if (pinned.length > 0) {
+					stepAtoms = pinned.map((atom) => ({ ...atom, lang: null }));
+				}
 			}
 			atoms.push(...stepAtoms);
 			continue;
@@ -1352,6 +1587,31 @@ async function resolveHop(
 		);
 	}
 
+	// Root-node parent fallback (see rootHierarchyParentId): only when the
+	// component stored nothing, so a real parent always wins.
+	if (hop.model === 'component_relation_parent' && rawLocators.length === 0) {
+		const rootId = await rootHierarchyParentId(ctx, record.section_tipo, record.section_id);
+		if (rootId !== null) {
+			rawLocators = [
+				{
+					section_tipo: 'hierarchy1',
+					section_id: String(rootId),
+					from_component_tipo: hop.tipo,
+					type: 'dd47',
+				} as unknown as StoredLocator,
+			];
+		}
+	}
+
+	// ddo data_slice — array_slice over the hop's LOCATORS before any resolve.
+	if (hop.dataSlice !== undefined) {
+		const { offset, length } = hop.dataSlice;
+		rawLocators =
+			length === undefined
+				? rawLocators.slice(offset)
+				: rawLocators.slice(offset, offset + length);
+	}
+
 	const children = prepared.childrenByParent.get(hop.tipo) ?? [];
 	// Child section whitelist (chain_processor :237-243).
 	const whitelist = new Set<string>();
@@ -1366,7 +1626,30 @@ async function resolveHop(
 	const atoms: MetaValueIR[] = [];
 	const labelLinks: ResolvedLink[] = [];
 
+	// v6 groups this field's output PER SOURCE LOCATOR (see ValueMeta.chainGroup).
+	// Only a relation_list hop that STARTS the chain defines those groups — the
+	// list it returns is get_diffusion_dato's, one entry per stored relation.
+	// ...and ONLY when the hop resolves something PER SOURCE. v6 groups in
+	// resolve_value, which loops the locator list and reads a TARGET COMPONENT on
+	// each (dd636: ww40 -> hierarchy40). A bare relation_list field with no child
+	// ddo (dd1756 dd_relations) never goes through resolve_value at all — it is
+	// relation_list::get_diffusion_value's `case 'dato'` (:889), a single flat
+	// list published as ONE array. Grouping those blew dd_relations up by 1552
+	// cells, measured.
+	// v6's resolve_value groups per source locator for ANY first component, not
+	// just relation_list: ref_publications_typology hops through a PORTAL
+	// (rsc368 -> rsc138) and still publishes ["28"] | ["20"].
+	// EXCEPT when the node declared output:'merged', which flattens every source
+	// into ONE array (:5283-5293) — those carry a merge parser after migration,
+	// so their presence is the marker to skip grouping.
+	const hasMergeParser = prepared.steps.some((step) => step.fn === 'parser_helper::merge');
+	const stampsChainGroup = isFirstDdo && children.length > 0 && !hasMergeParser;
+	// atoms.length at the START of each locator's expansion — the boundaries of
+	// its group. Recorded here (not stamped inline) because the loop body has
+	// several `continue` paths that would skip a trailing stamp.
+	const groupStarts: number[] = [];
 	for (const locator of rawLocators) {
+		groupStarts.push(atoms.length);
 		const sectionTipo = locator.section_tipo as string;
 		const sectionId = locator.section_id as number | string;
 		const key = RECORD_KEY(sectionTipo, sectionId);
@@ -1395,15 +1678,28 @@ async function resolveHop(
 			else bucket.add(sectionId);
 		}
 
+		// FIELD-LEVEL is_publishable OVERRIDE (v6 is_publicable). v6 reads it as
+		// `isset($args->is_publicable) ? (bool)$args->is_publicable : get_is_publicable($locator)`
+		// (diffusion_sql::resolve_value :5034-5040, count_data_elements :4396-4402): when the
+		// column declares it, the per-locator publication check is SKIPPED and every locator
+		// counts. v7 honoured is_publishable only on the table node, so the field-level override
+		// was dropped — publications.authors_count published 0 where v6 counted 1.
+		const publishableOverride = prepared.field.policy.publishableOverride === true;
+
 		// An unpublishable parent leaves TRUE locators untouched (:266-270).
-		if (isPublishable === false && currentPublishable === true) continue;
+		if (!publishableOverride && isPublishable === false && currentPublishable === true) continue;
 
 		// Value skip for unpublishable locators (chain_processor :282-314):
 		// structural hops keep theirs; a value-source select/portal read
 		// THROUGH to deeper ddos (or add_parents) keeps them too.
+		// The value-source exemption does NOT apply to columns migrated from
+		// diffusion_sql::resolve_value: v6 filters there unconditionally.
 		const isValueSource =
-			(children.length > 0 || hop.addParents === true) && VALUE_SOURCE_MODELS.has(hop.model);
+			prepared.field.policy.filterUnpublishable !== true &&
+			(children.length > 0 || hop.addParents === true) &&
+			VALUE_SOURCE_MODELS.has(hop.model);
 		if (
+			!publishableOverride &&
 			(isPublishable === false || currentPublishable === false) &&
 			!STRUCTURAL_HOP_MODELS.has(hop.model) &&
 			!isValueSource
@@ -1478,6 +1774,7 @@ async function resolveHop(
 		// Without these the index_meta projection can only emit the address half
 		// of the edge, and a nine-key v6 indexation cell publishes as five.
 		if (locator.tag_id !== undefined) link.tagId = locator.tag_id as string | number;
+		if (typeof locator.tag_type === 'string') link.tagType = locator.tag_type;
 		if (typeof locator.component_tipo === 'string') link.componentTipo = locator.component_tipo;
 		if (locator.section_top_id !== undefined) {
 			link.sectionTopId = locator.section_top_id as string | number;
@@ -1507,6 +1804,21 @@ async function resolveHop(
 		});
 	}
 
+	if (stampsChainGroup) {
+		// Walk the recorded boundaries and stamp every atom with the ordinal of
+		// the source locator it came from. Done before the section-label atoms
+		// below, which belong to no source group.
+		const groupEnd = atoms.length;
+		for (let index = 0; index < groupStarts.length; index += 1) {
+			const start = groupStarts[index] as number;
+			const end = index + 1 < groupStarts.length ? (groupStarts[index + 1] as number) : groupEnd;
+			for (let position = start; position < end; position += 1) {
+				const atom = atoms[position] as MetaValueIR;
+				atom.meta = { ...(atom.meta ?? {}), chainGroup: index };
+			}
+		}
+	}
+
 	if (labelLinks.length > 0) {
 		atoms.push(...(await sectionLabelAtoms(ctx, labelLinks, hop.tipo, hop.ddoId)));
 	}
@@ -1517,36 +1829,68 @@ async function resolveHop(
 // merge_columns — deferred record-level synthetic value (oracle :626-655)
 // ---------------------------------------------------------------------------
 
-function mergeColumnsValue(
+/**
+ * merge_columns is computed PER PUBLISHED LANGUAGE, not once.
+ *
+ * The oracle builds this column while SAVING each row, so every row merges its
+ * own language's values: the lg-cat row of informant.search_data carries
+ * "Espanya"/"Dona", the lg-fra row "Reino de España"/"Femme". Collapsing it to a
+ * single nolan string published the MAIN language into every row — 907 cells on
+ * informant.search_data alone, and invisible column-by-column because all twelve
+ * SOURCE columns matched perfectly; only their merge was wrong.
+ *
+ * Per lang the ladder is: the lang itself, then nolan (language-independent
+ * sources such as dates), then the main lang, then whatever exists — so an
+ * untranslated source still contributes its fallback exactly as the oracle's
+ * saved row did.
+ */
+function mergeColumnsValues(
 	fieldLangValues: Map<string, ColumnLangValues>,
 	options: Record<string, unknown>,
+	langs: readonly string[],
 	mainLang: string | null,
-): string | null {
+): ColumnLangValues {
 	const rawColumns = options.columns;
 	const columns: string[] = Array.isArray(rawColumns)
 		? rawColumns.map((column) => String(column))
 		: rawColumns
 			? [String(rawColumns)]
 			: [];
-	if (columns.length === 0) return null;
+	const out: ColumnLangValues = new Map();
+	if (columns.length === 0) return out;
 	const separator = options.fields_separator !== undefined ? String(options.fields_separator) : ' ';
 
-	const merged: string[] = [];
-	for (const [fieldId, langValues] of fieldLangValues) {
-		if (!columns.includes(fieldId)) continue;
-		const first = (): string | null | undefined => {
-			for (const [, value] of langValues) return value;
-			return undefined;
-		};
-		const value =
-			langValues.get(NOLAN_KEY) ??
-			(mainLang !== null ? langValues.get(mainLang) : undefined) ??
-			first() ??
-			null;
-		if (value === null || value === undefined || value === '') continue;
-		merged.push(String(value));
+	const mergeForLang = (lang: string | null): string | null => {
+		const merged: string[] = [];
+		// COLUMN ORDER is the declared one, not the resolution order the map happens
+		// to carry: search_data's twelve sources concatenate in a fixed sequence.
+		for (const fieldId of columns) {
+			const langValues = fieldLangValues.get(fieldId);
+			if (langValues === undefined) continue;
+			const first = (): string | null | undefined => {
+				for (const [, value] of langValues) return value;
+				return undefined;
+			};
+			const value =
+				(lang !== null ? langValues.get(lang) : undefined) ??
+				langValues.get(NOLAN_KEY) ??
+				(mainLang !== null ? langValues.get(mainLang) : undefined) ??
+				first() ??
+				null;
+			if (value === null || value === undefined || value === '') continue;
+			merged.push(String(value));
+		}
+		return merged.length > 0 ? merged.join(separator) : null;
+	};
+
+	for (const lang of langs) {
+		const value = mergeForLang(lang);
+		if (value !== null) out.set(lang, value);
 	}
-	return merged.length > 0 ? merged.join(separator) : null;
+	// nolan backstop for any language outside the plan's list.
+	const nolan = mergeForLang(null);
+	if (nolan !== null) out.set(NOLAN_KEY, nolan);
+	return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -1581,9 +1925,7 @@ async function processRecord(
 	const deferredMergeColumns: PreparedField[] = [];
 
 	for (const field of sectionPlan.fields) {
-		const prepared = ctx.preparedFields.get(
-			preparedFieldKey(sectionPlan.sectionTipo, field.id),
-		);
+		const prepared = ctx.preparedFields.get(preparedFieldKey(sectionPlan.sectionTipo, field.id));
 		if (prepared === undefined) continue;
 
 		if (field.policy.emptyToString !== undefined || field.policy.defaultValue !== undefined) {
@@ -1646,16 +1988,19 @@ async function processRecord(
 	// PHASE 1b — deferred merge_columns over the already-resolved columns.
 	for (const prepared of deferredMergeColumns) {
 		const field = prepared.field;
-		const langValues: ColumnLangValues = new Map();
-		const merged = mergeColumnsValue(
+		const langValues = mergeColumnsValues(
 			fieldLangValues,
 			prepared.mergeColumnsOptions ?? {},
+			ctx.plan.langPolicy.langs,
 			ctx.parserCtx.mainLang,
 		);
-		if (merged !== null && merged !== '') langValues.set(NOLAN_KEY, merged);
 		recordIr.fields.set(field.id, {
 			planFieldId: field.id,
-			values: merged === null ? [] : [{ kind: 'scalar', value: merged, lang: null }],
+			values: [...langValues].map(([lang, value]) => ({
+				kind: 'scalar' as const,
+				value,
+				lang: lang === NOLAN_KEY ? null : lang,
+			})),
 		});
 		fieldLangValues.set(field.id, langValues);
 		if (field.excludeColumn !== true) columnValues.set(field.columnName, langValues);
@@ -1790,6 +2135,7 @@ export async function* resolvePublication(
 		termCache: new Map(),
 		ancestorCache: new Map(),
 		relationListCache: new Map(),
+		rootHierarchyParentCache: new Map(),
 		relationIndexConfigCache: new Map(),
 		relationIndexCache: new Map(),
 		relationChildrenCache: new Map(),
