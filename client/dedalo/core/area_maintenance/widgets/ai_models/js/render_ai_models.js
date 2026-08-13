@@ -128,8 +128,14 @@ render_ai_models.prototype.list = async function(options) {
 		missing		: 'Not installed'
 	}
 	const STATE_REMEDIES = {
-		incomplete	: 'A required file is missing or truncated — download this model again.',
-		damaged		: 'A file on disk is not a valid model payload — delete it and download this model again.',
+		// `unverified` RUNS — it is the normal state of a store seeded before the
+		// manifest existed — but it is also the one state a verification can
+		// resolve, and the only person allowed to verify is the administrator
+		// reading this widget. Saying nothing here left them the one person never
+		// told they could check. It is phrased as an offer, not a fault.
+		unverified	: 'It runs, but its files were never size-checked — "Check the model files" in the transcription tool confirms them.',
+		incomplete	: 'A required file is missing or truncated — repair this model.',
+		damaged		: 'A file on disk is not a valid model payload — repair this model (downloading it again does not fix it).',
 		missing		: 'Nothing of this model is on disk — download it before it can be used.'
 	}
 	// the browser may attempt these two; everything else needs the remedy above
@@ -178,7 +184,7 @@ const get_content_data_edit = async function(self) {
 	// where the remedies are performed. Shown only when something needs one, so a
 	// healthy install carries no instruction it cannot act on
 		const needs_remedy = value.store_available===false
-			|| models.some((model) => !USABLE_STATES.includes(model.state))
+			|| models.some((model) => STATE_REMEDIES[model.state]!==undefined)
 		if (needs_remedy) {
 			const remedy_note = ui.create_dom_element({
 				element_type	: 'div',
@@ -309,9 +315,13 @@ const build_store_block = function(value, models, parent) {
 	// usable count + size on disk
 		const total_bytes = Number(value.total_bytes) || 0
 		const usable = Number(value.usable_count) || 0
+		// GREEN MEANS ALL OF THEM. `usable > 0` painted 1 ready + 4 damaged as a
+		// healthy install on the dashboard's aggregate — the single glance this
+		// widget exists to make honest. The headline claim is only true when every
+		// listed model is usable.
 		add_row('Models',
 			usable + ' of ' + models.length + ' usable · ' + format_mb(total_bytes) + ' on disk',
-			usable > 0 ? 'state_ok' : 'state_warning'
+			(models.length > 0 && usable===models.length) ? 'state_ok' : 'state_warning'
 		)
 
 

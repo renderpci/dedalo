@@ -16,7 +16,7 @@
 * identifier is not a remedy, so the fallback is stated here — once, for both the
 * report path and the readiness path.
 */
-const ACTION_LABELS = {
+export const ACTION_LABELS = {
 	action_repair_model		: 'Repair the model',
 	action_download_model	: 'Download the model',
 	action_verify_model		: 'Check the model files',
@@ -28,13 +28,33 @@ const ACTION_LABELS = {
 }
 
 /** The remedies that DO something when pressed; the rest render as a sentence. */
-const PRESSABLE_ACTIONS = [
+export const PRESSABLE_ACTIONS = [
 	'action_repair_model',
 	'action_download_model',
 	'action_verify_model',
 	'action_retry_cpu',
 	'action_retry'
 ]
+
+
+/**
+* ACTION_LABEL
+* A remedy's words: the install's own label, else the English fallback, never the
+* bare key. Exported because the model picker's own Download / Repair button must
+* read the same as the panel's — two spellings of one remedy is how a user learns
+* they are two different things.
+*
+* @param {Object} self - the tool_transcription instance (label source)
+* @param {string} key - an ACTION_LABELS key
+* @returns {string}
+*/
+export const action_label = function( self, key ) {
+
+	if (!key) return ''
+
+
+	return (self && self.get_tool_label(key)) || ACTION_LABELS[key] || key
+}//end action_label
 
 
 /**
@@ -59,8 +79,12 @@ const PRESSABLE_ACTIONS = [
 *
 * @param {Object} options
 * @param {Object} options.self - the tool_transcription instance (label source)
-* @param {Function} options.on_action - called with an action key when the user
-*                                       presses an offered remedy
+* @param {Function} options.on_action - called (action_key, action_model) when the
+*                                       user presses an offered remedy.
+*                                       `action_model` is the model THAT remedy is
+*                                       for — absent when the remedy is not about
+*                                       one particular model, and the caller then
+*                                       falls back to the selected quality model.
 * @returns {Object} {node, report, fail, progress, readiness, clear}
 */
 
@@ -76,8 +100,8 @@ export const create_status_panel = function( options ) {
 	}
 
 	/** A remedy's words. Never the bare key: see ACTION_LABELS. */
-	const action_label = function( key ) {
-		return label( key, ACTION_LABELS[key] )
+	const remedy_label = function( key ) {
+		return action_label( self, key )
 	}
 
 	const node = ui.create_dom_element({
@@ -110,7 +134,7 @@ export const create_status_panel = function( options ) {
 	* RENDER_REPORT
 	* One report as a block: message, cause, remedy button, technical detail.
 	*/
-	const render_report = function( report, action_key ) {
+	const render_report = function( report, action_key, action_model ) {
 
 		const block = ui.create_dom_element({
 			element_type	: 'div',
@@ -148,7 +172,11 @@ export const create_status_panel = function( options ) {
 				button.addEventListener('click', function(e){
 					e.stopPropagation()
 					button.classList.add('disable')
-					on_action( action_key )
+					// THE MODEL THE REMEDY IS FOR, never "the currently selected
+					// one": a Repair offered because the SPEAKER model is damaged
+					// used to repair the selected ASR model — a different model
+					// that was never broken — and then report success.
+					on_action( action_key, action_model )
 				})
 			} else {
 				const action_node = ui.create_dom_element({
@@ -187,7 +215,11 @@ export const create_status_panel = function( options ) {
 
 		/** Show a report. Never hidden — that is the whole point of this module. */
 		report : function( input ) {
-			render_report( build_report(input), input && input.action_key )
+			render_report(
+				build_report(input),
+				input && input.action_key,
+				input && input.action_model
+			)
 		},
 
 		/**
@@ -206,10 +238,11 @@ export const create_status_panel = function( options ) {
 					severity	: 'error',
 					message		: label(classified.message_key, 'The transcription failed'),
 					cause		: label(classified.cause_key, ''),
-					action		: action_label(classified.action_key),
+					action		: remedy_label(classified.action_key),
 					detail		: classified.detail
 				}),
-				classified.action_key
+				classified.action_key,
+				(context || {}).model
 			)
 		},
 
@@ -231,7 +264,7 @@ export const create_status_panel = function( options ) {
 
 		/**
 		* The pre-run truth.
-		* @param {Array<Object>} lines - [{severity, text, action_key}]
+		* @param {Array<Object>} lines - [{severity, text, action_key, action_model}]
 		*/
 		readiness : function( lines ) {
 			readiness_node.replaceChildren()
@@ -250,11 +283,11 @@ export const create_status_panel = function( options ) {
 						class_name		: 'light status_action',
 						parent			: row
 					})
-					button.textContent = action_label(line.action_key)
+					button.textContent = remedy_label(line.action_key)
 					button.addEventListener('click', function(e){
 						e.stopPropagation()
 						button.classList.add('disable')
-						on_action( line.action_key )
+						on_action( line.action_key, line.action_model )
 					})
 				}
 			}

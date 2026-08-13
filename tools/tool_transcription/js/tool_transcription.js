@@ -622,6 +622,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				cause		: info.cause || '',
 				action		: info.action || '',
 				action_key	: info.action_key,
+				// The model the remedy is FOR. Without it the panel falls back to
+				// whatever the picker holds when the button is finally pressed — which
+				// is how a remedy came to act on a model it was never offered for.
+				action_model: info.action_model,
 				detail		: info.detail || ''
 			})
 			console.error('[tool_transcription]', message);
@@ -777,6 +781,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 							|| 'Its files are incomplete or corrupted — usually an interrupted download.',
 						action		: self.get_tool_label(state_info.action_key) || 'Repair the model',
 						action_key	: state_info.action_key,
+						action_model: transcriber_quality,
 						detail		: `model: ${transcriber_quality}\nstate: ${model_state}`
 					}
 				)
@@ -786,7 +791,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					{
 						phase		: 'model',
 						action		: self.get_tool_label('action_download_model') || 'Download the model',
-						action_key	: 'action_download_model'
+						action_key	: 'action_download_model',
+						action_model: transcriber_quality
 					}
 				)
 			}
@@ -1265,6 +1271,42 @@ tool_transcription.prototype.verify_model = async function( model ) {
 		return false
 	}
 }//end verify_model
+
+
+
+/**
+* GET_BACKGROUND_JOB_STATUS
+* How is the download / repair job doing?
+*
+* `get_background_job_status` is a FRAMEWORK action the dispatcher serves for
+* every tool (src/core/tools/job_status.ts), scoped to this tool and to the
+* requesting user. It is what makes a FAILED job distinguishable from one that is
+* merely slow: without it a repair that could not reach the hub left the panel's
+* "Downloading the model…" line standing forever, because the only other signal —
+* the store's state — looks identical in both cases.
+*
+* @param {string} job_id - the handle returned by download_model / repair_model
+* @returns {Promise<Object|false>} the API response ({job:{status,error,response}}),
+*                                  or false on transport failure
+*/
+tool_transcription.prototype.get_background_job_status = async function( job_id ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'get_background_job_status'),
+		options	: { background_job_id: job_id }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not read the background job status:', error);
+		return false
+	}
+}//end get_background_job_status
 
 
 
