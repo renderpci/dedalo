@@ -1208,6 +1208,7 @@ const get_server_status = function (options) {
 				// SEC-XSS-006: status labels are plain text
 				nodes.status_panel.progress( self.get_tool_label('inactive') || 'Inactive' )
 				nodes.button_automatic_transcription.classList.remove('disable');
+				ui.set_button_busy( nodes.button_automatic_transcription, false )
 				break;
 
 			case 2:
@@ -1218,6 +1219,10 @@ const get_server_status = function (options) {
 
 				nodes.status_panel.progress( self.get_tool_label('processing') || 'Processing' )
 				nodes.button_automatic_transcription.classList.add('disable');
+				// A server-engine run found ALREADY in flight (a reload, or another
+				// window): the button has to look busy even though this page never
+				// pressed it.
+				ui.set_button_busy( nodes.button_automatic_transcription, true )
 				nodes.button_automatic_transcription.active = false
 
 				break;
@@ -1235,6 +1240,7 @@ const get_server_status = function (options) {
 					message		: self.get_tool_label('finished') || 'Process done'
 				})
 				nodes.button_automatic_transcription.classList.remove('disable');
+				ui.set_button_busy( nodes.button_automatic_transcription, false )
 
 				setTimeout(function(){
 					self.transcription_component.refresh()
@@ -1372,6 +1378,13 @@ const render_automatic_transcription = function (options) {
 				return
 			}
 			button_automatic_transcription.classList.add('disable')
+			// The spinner runs for the WHOLE job, which on a long interview is
+			// minutes to hours. That is the honest signal: `disable` alone makes a
+			// pressed button look merely dead, which is the reading that sent an
+			// archivist to the console in the first place. The panel below carries
+			// the detail (phase, percentage, live words); the button carries the
+			// one bit of "this is still yours and still running".
+			ui.set_button_busy( button_automatic_transcription, true )
 			button_automatic_transcription.blur()
 
 			// lang updated value form select lang selector at top
@@ -1438,6 +1451,15 @@ const render_automatic_transcription = function (options) {
 						const msg_type = (response.result===false) ? 'error' : 'ok'
 						ui.show_message(automatic_transcription_container, response.msg, msg_type)
 
+						// A REFUSED request never starts the status poll, and the poll
+						// is what would otherwise give the button back — so before this,
+						// a rejected server run left the trigger dead and spinning with
+						// no way to try again short of reopening the tool.
+						if(response.result===false){
+							button_automatic_transcription.classList.remove('disable')
+							ui.set_button_busy( button_automatic_transcription, false )
+						}
+
 						if(response.result!==false){
 
 							const pid = response.result.pid
@@ -1458,6 +1480,18 @@ const render_automatic_transcription = function (options) {
 							})
 						}
 					})
+					.catch((error)=>{
+						// A transport failure is the other way this promise ends, and
+						// it too never reaches the poll. Give the button back and say
+						// what happened, rather than spin forever.
+						console.error('[tool_transcription] the transcription server request failed:', error);
+						button_automatic_transcription.classList.remove('disable')
+						ui.set_button_busy( button_automatic_transcription, false )
+						nodes.status_panel.fail(
+							(error && error.message) ? error.message : String(error),
+							{ phase: 'transcribe' }
+						)
+					})
 					break;
 
 				case 'browser':
@@ -1475,6 +1509,7 @@ const render_automatic_transcription = function (options) {
 
 						button_cancel_transcription.classList.add('hide')
 						button_automatic_transcription.classList.remove('disable')
+						ui.set_button_busy( button_automatic_transcription, false )
 
 						// A failed or cancelled-to-nothing run already reported itself
 						// in the status area; there is no value to write.

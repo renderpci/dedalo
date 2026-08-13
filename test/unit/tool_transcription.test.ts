@@ -481,7 +481,18 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 
 	// biome-ignore lint/suspicious/noExplicitAny: browser globals the client module reads free.
 	const g = globalThis as any;
-	const prior = { data_manager: g.data_manager, setTimeout: g.setTimeout };
+	const prior = { data_manager: g.data_manager, setTimeout: g.setTimeout, ui: g.ui };
+	// `ui` is one of the module-scope imports the harness strips, so the poller
+	// reads it free like data_manager. Recording the busy toggles here is what
+	// keeps the trigger's spinner honest: every path that gives the button back
+	// must also stop it spinning, or a settled job leaves a live spinner over a
+	// panel that says the work is done.
+	const busy: boolean[] = [];
+	g.ui = {
+		set_button_busy: (_node: unknown, is_busy: boolean) => {
+			busy.push(is_busy);
+		},
+	};
 	g.data_manager = {
 		get_local_db_data: async (id: string) => (storedPid === null ? null : { id, pid: storedPid }),
 		delete_local_db_data: (id: string) => {
@@ -520,9 +531,10 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 	} finally {
 		g.data_manager = prior.data_manager;
 		g.setTimeout = prior.setTimeout;
+		g.ui = prior.ui;
 	}
 
-	return { deleted, scheduled, refreshes, requests, status_panel, button };
+	return { deleted, scheduled, refreshes, requests, status_panel, button, busy };
 }
 
 describe('client poll honesty (render_tool_transcription.get_server_status)', () => {
@@ -565,26 +577,31 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 		expect(run.button.classList.contains('disable')).toBe(true);
 	});
 
-	test('status 2 still re-polls and keeps the pid', async () => {
+	test('status 2 still re-polls and keeps the pid, and the trigger spins', async () => {
 		const run = await drivePoll({ result: { status: 2 }, msg: 'OK. Request done' });
 		expect(panelText(run.status_panel)).toBe('Processing');
 		expect(panelIsError(run.status_panel)).toBe(false);
 		expect(run.deleted).toEqual([]);
 		expect(run.scheduled).toEqual([4000]);
+		// A job found already running (a reload, or another window) must LOOK
+		// running, even though this page never pressed the button.
+		expect(run.busy).toEqual([true]);
 	});
 
-	test('status 3 still clears the pid and refreshes the component', async () => {
+	test('status 3 still clears the pid and refreshes the component, and stops the spinner', async () => {
 		const run = await drivePoll({ result: { status: 3 }, msg: 'OK. Request done' });
 		expect(panelText(run.status_panel)).toBe('Process done');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([4000]);
+		expect(run.busy).toEqual([false]);
 	});
 
-	test('status 1 still clears the stale pid and reads Inactive', async () => {
+	test('status 1 still clears the stale pid, reads Inactive and stops the spinner', async () => {
 		const run = await drivePoll({ result: { status: 1 }, msg: 'OK. Request done' });
 		expect(panelText(run.status_panel)).toBe('Inactive');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([]);
+		expect(run.busy).toEqual([false]);
 	});
 
 	/**

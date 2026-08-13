@@ -582,6 +582,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			panel.progress('')
 			if (nodes.button_automatic_transcription) {
 				nodes.button_automatic_transcription.classList.remove('disable')
+				// The spinner is set when the button is pressed; every path that
+				// gives the button back must also stop it, or a failed run leaves
+				// the trigger spinning over a panel that says it already failed.
+				ui.set_button_busy( nodes.button_automatic_transcription, false )
 			}
 		}
 
