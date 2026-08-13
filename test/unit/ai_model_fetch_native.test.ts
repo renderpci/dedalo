@@ -279,15 +279,19 @@ describe('downloadModel records completion in the manifest', () => {
 	test('every fetched file lands in the manifest at its on-disk size', async () => {
 		const store = join(scratch, 'manifest_seed');
 		const model = 'onnx-community/whisper-tiny-TEST';
-		const report = await downloadModel(model, { encoder_model: 'fp32' }, {
-			store,
-			fetchFile: async (modelId, file, target) => {
-				const path = join(target, modelId, file);
-				mkdirSync(dirname(path), { recursive: true });
-				writeFileSync(path, 'BYTES');
-				return true;
+		const report = await downloadModel(
+			model,
+			{ encoder_model: 'fp32' },
+			{
+				store,
+				fetchFile: async (modelId, file, target) => {
+					const path = join(target, modelId, file);
+					mkdirSync(dirname(path), { recursive: true });
+					writeFileSync(path, 'BYTES');
+					return true;
+				},
 			},
-		});
+		);
 		expect(report.ok).toBe(true);
 		expect(expectedSize(store, model, 'config.json')).toBe(5);
 	});

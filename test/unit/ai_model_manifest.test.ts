@@ -12,9 +12,9 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-	MANIFEST_FILE,
 	expectedSize,
 	forgetFile,
+	MANIFEST_FILE,
 	readManifest,
 	recordFileComplete,
 } from '../../src/core/ai/model_manifest.ts';
