@@ -48,7 +48,10 @@
 *   { status:'diarize_progress', data:{ done_seconds, duration } }
 *   { status:'diarize_error',    data:{ message } }   best-effort: run continues
 *   { status:'end',              data:{ segments, aborted } }
-*   { status:'warning',          data:{ phase, label_key, message, detail } }   degradation the run survived
+*   { status:'warning',          data:{ phase, label_key, message, detail, count } }   degradation the
+*                                 run survived; `count` is present only for a count-bearing warning
+*                                 (label_key's text then carries a `{count}` placeholder for the caller
+*                                 to fill in), and is `undefined` for every other warning
 *   { status:'error',            data:{ message, phase, device, log } }
 *
 * SEGMENT SHAPE returned to the caller: { text, start, end } with times in SECONDS
@@ -129,15 +132,21 @@ let current_device = '';
 // after the decode loop, once the count is known.
 let skipped_windows = [];
 
-/** Post a degradation the run survived. The caller shows it and continues. */
-const post_warning = function( label_key, message, detail ) {
+/**
+* Post a degradation the run survived. The caller shows it and continues.
+* `count` is optional: only the skipped-windows warning carries one, so the
+* receiver can substitute it into its label's `{count}` placeholder — a label
+* with no placeholder just ignores an extra field.
+*/
+const post_warning = function( label_key, message, detail, count ) {
 	self.postMessage({
 		status	: 'warning',
 		data	: {
 			phase		: current_phase,
 			label_key	: label_key,
 			message		: message,
-			detail		: detail || ''
+			detail		: detail || '',
+			count		: typeof count==='number' ? count : undefined
 		}
 	});
 }//end post_warning
@@ -900,12 +909,14 @@ self.transcribe = async function( options ) {
 	// window — see skipped_windows' own comment. Never posted mid-loop: the count
 	// is only final once the loop is done.
 	if (skipped_windows.length>0) {
+		const plural = skipped_windows.length>1;
 		post_warning(
-			'warning_window_skipped',
-			skipped_windows.length===1
-				? 'A fragment of the recording could not be transcribed and was skipped.'
-				: `${skipped_windows.length} fragments of the recording could not be transcribed and were skipped.`,
-			`windows at ${skipped_windows.join('s, ')}s`
+			plural ? 'warning_windows_skipped' : 'warning_window_skipped',
+			plural
+				? `${skipped_windows.length} fragments of the recording could not be transcribed and were skipped.`
+				: 'A fragment of the recording could not be transcribed and was skipped.',
+			`windows at ${skipped_windows.join('s, ')}s`,
+			skipped_windows.length
 		);
 	}
 

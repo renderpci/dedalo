@@ -948,14 +948,27 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				// still be told when it finishes (warnings accumulate; progress does
 				// not, so this can never be a progress line — it would be overwritten
 				// by the next percentage and the user would never see it).
-				case 'warning':
+				case 'warning': {
+					// The label wins over the worker's own message exactly as before —
+					// this only fills in a `{count}` the label's text may carry (e.g.
+					// "N fragments … were skipped"). A label with no placeholder is
+					// untouched: String.replace is a no-op when the pattern is absent,
+					// so the CPU-fallback warning renders exactly as it did before.
+					// The count is worker-reported data, not markup — it goes into the
+					// message text only, which render_report writes via textContent
+					// (SEC-031: no HTML path is opened by this substitution).
+					const label = self.get_tool_label(data.label_key) || data.message || ''
+					const message = (typeof data.count==='number')
+						? label.replace('{count}', String(data.count))
+						: label
 					panel.report({
 						phase		: data.phase || 'transcribe',
 						severity	: 'warning',
-						message		: self.get_tool_label(data.label_key) || data.message || '',
+						message		: message,
 						detail		: data.detail || ''
 					})
 					break;
+				}
 
 				// Best-effort: the transcript arrives without speakers; say so.
 				case 'diarize_error':

@@ -2180,6 +2180,11 @@
           },
           {
             "lang": "lg-eng",
+            "name": "warning_windows_skipped",
+            "value": "{count} fragments of the recording could not be transcribed and were skipped."
+          },
+          {
+            "lang": "lg-eng",
             "name": "speaker_detection_failed",
             "value": "Speaker detection failed — the transcription continues without speaker tags."
           },
