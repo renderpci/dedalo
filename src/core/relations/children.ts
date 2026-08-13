@@ -198,7 +198,7 @@ async function orderChildHits(
 			sectionId,
 		);
 		let order = UNORDERED;
-		if (idKey > 0) {
+		{
 			const table = await getMatrixTableFromTipo(hit.section_tipo);
 			const record =
 				table === null ? null : await readMatrixRecord(table, hit.section_tipo, hit.section_id);
@@ -210,7 +210,21 @@ async function orderChildHits(
 					: (((record?.columns.number as Record<string, unknown[]> | null)?.[
 							orderComponentTipo
 						] as { id?: number | string; value?: unknown }[]) ?? []);
-			const value = getInlineValueByIdKey(items, idKey);
+			// POSITIONAL FALLBACK. v6 reads the order POSITIONALLY —
+			// jsonb_path_query_first(datos, '…dato."lg-nolan"[0]')
+			// (component_relation_children::get_children :471-486) — it has no id_key
+			// concept at all, and its writer stores a flat single-value array
+			// (sort_children :855-881). Pairing by the parent-link id_key matches it
+			// for every ordinary record, but a POLYHIERARCHY child listed under a
+			// non-first parent has an id_key with no matching entry, so it scored
+			// UNORDERED and sank last: mht160/6 (parents 20 and 86, order value 1)
+			// sorted after mht160/8 (order 2), and games.norder published 0 for
+			// record 8 where v6 says 1.
+			// Keep the pairing where it resolves — it is v7's per-parent design and
+			// costs nothing on data that has one entry per component — and fall back
+			// to v6's positional read when it does not.
+			const paired = idKey > 0 ? getInlineValueByIdKey(items, idKey) : null;
+			const value = paired ?? items[0]?.value ?? null;
 			if (value !== null && value !== '') order = Number(value);
 		}
 		decorated.push({ hit, order, index });

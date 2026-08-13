@@ -39,6 +39,7 @@ import { config } from '../../config/config.ts';
 import { mediaTypeOf } from '../../core/concepts/media.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
+import { phpTrim } from '../parsers/parser_text.ts';
 import type { MetaValueIR, ValueMeta } from '../parsers/types.ts';
 import { hasCoordinate, isStudioDefault, toCoordinate } from './geo_coordinate.ts';
 
@@ -233,7 +234,19 @@ export function defaultPublicationValue(
 	}
 
 	const items = (readComponentItems(record, componentTipo, model) ?? []) as StoredItem[];
-	if (items.length === 0) return [];
+	if (items.length === 0) {
+		// component_json publishes the STRING "null" when it holds nothing.
+		// v6 component_json::get_diffusion_value (:184-208) does
+		// json_handler::encode($value) on a null dato, which yields the four-character
+		// "null", and its `!empty($value)` guard passes because that string is not
+		// empty — so the column gets "null", not SQL NULL (template_map.data).
+		// Scoped to this model on purpose: every other component publishes NULL when
+		// empty, which is what the rest of the columns already match on.
+		if (model === 'component_json') {
+			return [rawToAtom('null', null, meta)];
+		}
+		return [];
+	}
 
 	// MEDIA models publish their FILE URL, not the stored dato object
 	// (component_media_common::get_diffusion_data :453-580): external source
@@ -339,6 +352,27 @@ export function defaultPublicationValue(
 				const raw = item.value;
 				const decoded = typeof raw === 'string' ? decodeHtmlEntities(raw) : (raw ?? null);
 				return rawToAtom(decoded, atomLangOf(item.lang), meta);
+			});
+		}
+
+		case 'component_input_text': {
+			// v6 trims on the READ (component_input_text::get_valor :218-229) — but
+			// only when this component IS the resolution target. Reached as another
+			// ddo's label (portal `label`, or a component_select option) the value
+			// never passes through get_valor and v6 publishes it verbatim; the
+			// resolver marks that case with __via_label.
+			const viaLabel = ddoOptions?.__via_label === true;
+			return items.flatMap((item) => {
+				const raw =
+					item !== null && typeof item === 'object' && 'value' in item ? item.value : item;
+				// EMPTY ENTRIES PUBLISH NOTHING. get_valor keeps a trimmed entry only
+				// when it is non-empty (:226), so a component holding '' yields NULL —
+				// publications.authors_name is NULL for the record whose rsc85 is [""].
+				// The TERM path deliberately keeps that same slot (termRecordOf), which
+				// is what puts the trailing ", " in publications.authors.
+				if (typeof raw === 'string' && phpTrim(raw) === '') return [];
+				const value = typeof raw === 'string' && !viaLabel ? phpTrim(raw) : (raw ?? null);
+				return [rawToAtom(value, atomLangOf(item.lang), meta)];
 			});
 		}
 

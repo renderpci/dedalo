@@ -4,7 +4,12 @@
  * parser_info.ts, parser_map.ts (behavior parity).
  */
 
-import { hasCoordinate, isStudioDefault, toCoordinate } from '../resolve/geo_coordinate.ts';
+import {
+	hasCoordinate,
+	isStudioDefault,
+	phpNumberFormat16RoundTrip,
+	toCoordinate,
+} from '../resolve/geo_coordinate.ts';
 import type { ItemParserFn, ParserItem } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -39,8 +44,12 @@ export const iriFlat: ItemParserFn = (items, options) => {
 		for (const entry of entries) {
 			if (!entry || typeof entry !== 'object') continue;
 
-			const iri = entry.iri?.trim() ?? '';
-			const title = entry.title?.trim() ?? '';
+			// NO trim: v6's component_iri::get_diffusion_value (:672-692) pushes
+			// resolve_title()'s result and $value->iri VERBATIM, gating each only on
+			// PHP empty(). A stored iri ending in a space is published with it
+			// (bibliographic_references.ref_publications_url: ".../docs/2014-1 ").
+			const iri = entry.iri ?? '';
+			const title = entry.title ?? '';
 
 			const formatted = title && iri ? `${title}${fieldsSeparator}${iri}` : iri || title;
 			allFormattedEntries.push(formatted);
@@ -169,7 +178,8 @@ function buildGeojsonLayer(geoObj: GeoValue): GeoLayer | null {
 					properties: {},
 					geometry: {
 						type: 'Point',
-						coordinates: [lon, lat], // GeoJSON order: [longitude, latitude]
+						// v6 widens both through number_format(…,16) + json_decode.
+						coordinates: [phpNumberFormat16RoundTrip(lon), phpNumberFormat16RoundTrip(lat)], // GeoJSON order: [longitude, latitude]
 					},
 				},
 			],

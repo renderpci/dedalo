@@ -162,18 +162,94 @@ export async function collectConsumedReals(
  * Sections that participate in ANY diffusion output under the domain (the
  * getSectionDiffusionMap keys).
  */
+/**
+ * Alias-consumed real nodes, SCOPED PER DIFFUSION ELEMENT.
+ *
+ * A real node is "re-parented" only for the element whose own subtree carries
+ * the alias that points at it. The domain-wide variant above cannot express
+ * that: the ts_web table mht96 lives under element mht50 and publishes section
+ * mht72, but two aliases in OTHER elements (mht149 under mht2, mht147 under
+ * mht145) also target it — so mht96 counted as consumed everywhere and the
+ * section walk skipped it inside its own element too. mht72 then never entered
+ * the section map, `haveSectionDiffusion('mht72')` returned false and the
+ * Difusión tool disappeared for those records, while v6 (which enumerates
+ * table + table_alias per element and resolves each one's own section) offers
+ * it. Keyed by the element tipo AND its real tipo, so an element alias resolves
+ * to the same set.
+ */
+export async function collectConsumedRealsByElement(
+	graph: DiffusionGraph,
+	domainTipo: string,
+): Promise<Map<string, ReadonlySet<string>>> {
+	const out = new Map<string, ReadonlySet<string>>();
+
+	const subtreeOf = async (tipo: string): Promise<string[]> => {
+		const acc: string[] = [];
+		const collect = async (current: string): Promise<void> => {
+			for (const child of await graph.children(current)) {
+				acc.push(child);
+				await collect(child);
+			}
+		};
+		await collect(tipo);
+		return acc;
+	};
+
+	const visit = async (tipo: string, depth: number): Promise<void> => {
+		if (depth > 20) return;
+		const model = (await graph.node(tipo))?.model ?? '';
+		if (ELEMENT_MODELS.has(model)) {
+			const set = new Set<string>();
+			for (const descendant of await subtreeOf(tipo)) {
+				if (((await graph.node(descendant))?.model ?? '').includes('_alias')) {
+					const real = await resolveAliasTarget(graph, descendant);
+					if (real !== null) set.add(real);
+				}
+			}
+			out.set(tipo, set);
+			if (model.includes('_alias')) {
+				const realTipo = await resolveAliasTarget(graph, tipo);
+				if (realTipo !== null) out.set(realTipo, set);
+			}
+		}
+		for (const child of await graph.children(tipo)) await visit(child, depth + 1);
+	};
+	await visit(domainTipo, 0);
+	return out;
+}
+
 export async function walkDiffusionSections(
 	graph: DiffusionGraph,
 	domainTipo: string,
 ): Promise<Set<string>> {
 	const map = new Set<string>();
+	// Domain-wide for ELEMENTS (an element alias re-parents the whole element),
+	// element-scoped for the nodes INSIDE one (a table aliased by another
+	// element still publishes its own section).
 	const consumed = await collectConsumedReals(graph, domainTipo);
+	const consumedByElement = await collectConsumedRealsByElement(graph, domainTipo);
 
-	const walk = async (tipo: string, underElement: boolean, depth: number): Promise<void> => {
+	const walk = async (
+		tipo: string,
+		underElement: boolean,
+		depth: number,
+		elementTipo: string | null,
+	): Promise<void> => {
 		if (depth > 20) return;
 		const model = (await graph.node(tipo))?.model ?? '';
 		const isAlias = model.includes('_alias');
-		if (!isAlias && consumed.has(tipo)) return; // re-parented by an alias
+		const isElement = ELEMENT_MODELS.has(model);
+		const currentElementTipo = isElement ? tipo : elementTipo;
+		if (!isAlias) {
+			if (isElement) {
+				if (consumed.has(tipo)) return; // whole element re-parented by an element alias
+			} else if (
+				currentElementTipo !== null &&
+				(consumedByElement.get(currentElementTipo)?.has(tipo) ?? false)
+			) {
+				return; // re-parented by an alias OF THIS ELEMENT
+			}
+		}
 		const realTipo = isAlias ? await resolveAliasTarget(graph, tipo) : null;
 
 		if (underElement) {
@@ -190,10 +266,10 @@ export async function walkDiffusionSections(
 			for (const child of await graph.children(realTipo)) children.add(child);
 		}
 		for (const child of children) {
-			await walk(child, nextUnder, depth + 1);
+			await walk(child, nextUnder, depth + 1, currentElementTipo);
 		}
 	};
-	await walk(domainTipo, false, 0);
+	await walk(domainTipo, false, 0, null);
 	return map;
 }
 
@@ -221,6 +297,7 @@ export async function walkDiffusionTargets(
 ): Promise<Map<string, DiffusionSqlTarget[]>> {
 	const map = new Map<string, DiffusionSqlTarget[]>();
 	const consumed = await collectConsumedReals(graph, domainTipo);
+	const consumedByElement = await collectConsumedRealsByElement(graph, domainTipo);
 
 	const pending: {
 		section: string;
@@ -238,7 +315,19 @@ export async function walkDiffusionTargets(
 		const node = await graph.node(tipo);
 		const model = node?.model ?? '';
 		const isAlias = model.includes('_alias');
-		if (!isAlias && consumed.has(tipo)) return;
+		// Elements: domain-wide (an element alias re-parents the whole element).
+		// Inside an element: scoped — a real table aliased by a DIFFERENT element
+		// still publishes its own section here (mht96 -> mht72).
+		if (!isAlias) {
+			if (ELEMENT_MODELS.has(model)) {
+				if (consumed.has(tipo)) return;
+			} else if (
+				element !== null &&
+				(consumedByElement.get(element.realTipo)?.has(tipo) ?? false)
+			) {
+				return;
+			}
+		}
 		const realTipo = isAlias ? await resolveAliasTarget(graph, tipo) : null;
 		const label = termOf(node ?? undefined);
 

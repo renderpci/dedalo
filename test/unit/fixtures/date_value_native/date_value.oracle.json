@@ -1,348 +1,348 @@
 {
-    "_source": "v7_php_frozen/master_dedalo/core/component_date/class.component_date.php::data_item_to_value (method source eval'd verbatim over the real dd_date)",
-    "_php": "8.5.9",
-    "_recapture": "php test/unit/fixtures/date_value_native/harvest.php > test/unit/fixtures/date_value_native/date_value.oracle.json",
-    "_labels": "label::get_label(x) stubbed to return x — the master.json English strings for years/months/days",
-    "cases": [
-        {
-            "id": "date_full",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": 1628,
-                    "month": 6,
-                    "day": 9
-                }
-            },
-            "php": "1628/06/09"
-        },
-        {
-            "id": "date_year_month",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": 1975,
-                    "month": 3
-                }
-            },
-            "php": "1975/03"
-        },
-        {
-            "id": "date_year_only",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": 1975
-                }
-            },
-            "php": "1975"
-        },
-        {
-            "id": "date_bce_year_only",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": -238
-                }
-            },
-            "php": "-238"
-        },
-        {
-            "id": "date_bce_year_month",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": -44,
-                    "month": 3
-                }
-            },
-            "php": "-044/03"
-        },
-        {
-            "id": "date_short_year_full",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": 238,
-                    "month": 6,
-                    "day": 9
-                }
-            },
-            "php": "0238/06/09"
-        },
-        {
-            "id": "date_no_start_wrap",
-            "mode": "date",
-            "item": {
-                "year": 1912,
-                "month": 11
-            },
-            "php": "1912/11"
-        },
-        {
-            "id": "date_day_no_month",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "year": 1912,
-                    "day": 4
-                }
-            },
-            "php": "1912/00/04"
-        },
-        {
-            "id": "date_empty_start",
-            "mode": "date",
-            "item": {
-                "start": {}
-            },
-            "php": ""
-        },
-        {
-            "id": "date_yearless",
-            "mode": "date",
-            "item": {
-                "start": {
-                    "month": 6,
-                    "day": 9
-                }
-            },
-            "php": "0000/06/09"
-        },
-        {
-            "id": "date_null_start",
-            "mode": "date",
-            "item": {
-                "start": null,
-                "year": 1955
-            },
-            "php": "1955"
-        },
-        {
-            "id": "range_full",
-            "mode": "range",
-            "item": {
-                "start": {
-                    "year": 1628,
-                    "month": 6,
-                    "day": 9
-                },
-                "end": {
-                    "year": 2024,
-                    "month": 6,
-                    "day": 25
-                }
-            },
-            "php": "1628/06/09 <> 2024/06/25"
-        },
-        {
-            "id": "range_year_month",
-            "mode": "range",
-            "item": {
-                "start": {
-                    "year": 1987,
-                    "month": 4
-                },
-                "end": {
-                    "year": 1988,
-                    "month": 11
-                }
-            },
-            "php": "1987/04 <> 1988/11"
-        },
-        {
-            "id": "range_years",
-            "mode": "range",
-            "item": {
-                "start": {
-                    "year": 1987
-                },
-                "end": {
-                    "year": 1988
-                }
-            },
-            "php": "1987 <> 1988"
-        },
-        {
-            "id": "range_open_end",
-            "mode": "range",
-            "item": {
-                "start": {
-                    "year": 1987,
-                    "month": 4
-                }
-            },
-            "php": "1987/04"
-        },
-        {
-            "id": "range_mixed",
-            "mode": "range",
-            "item": {
-                "start": {
-                    "year": 1930,
-                    "month": 3
-                },
-                "end": {
-                    "year": 1930,
-                    "month": 3,
-                    "day": 15
-                }
-            },
-            "php": "1930/03 <> 1930/03/15"
-        },
-        {
-            "id": "time_full",
-            "mode": "time",
-            "item": {
-                "start": {
-                    "hour": 17,
-                    "minute": 33,
-                    "second": 49
-                }
-            },
-            "php": "17:33:49"
-        },
-        {
-            "id": "time_partial",
-            "mode": "time",
-            "item": {
-                "start": {
-                    "hour": 9
-                }
-            },
-            "php": "09:00:00"
-        },
-        {
-            "id": "time_no_start_wrap",
-            "mode": "time",
-            "item": {
-                "hour": 9,
-                "minute": 5
-            },
-            "php": "09:05:00"
-        },
-        {
-            "id": "time_range_full",
-            "mode": "time_range",
-            "item": {
-                "start": {
-                    "hour": 1,
-                    "minute": 2,
-                    "second": 3
-                },
-                "end": {
-                    "hour": 4,
-                    "minute": 5,
-                    "second": 6
-                }
-            },
-            "php": "01:02:03 <> 04:05:06"
-        },
-        {
-            "id": "time_range_open",
-            "mode": "time_range",
-            "item": {
-                "start": {
-                    "hour": 1,
-                    "minute": 2,
-                    "second": 3
-                }
-            },
-            "php": "01:02:03"
-        },
-        {
-            "id": "date_time_full",
-            "mode": "date_time",
-            "item": {
-                "start": {
-                    "year": 2012,
-                    "month": 11,
-                    "day": 7,
-                    "hour": 17,
-                    "minute": 33,
-                    "second": 49
-                }
-            },
-            "php": "2012/11/07 17:33:49"
-        },
-        {
-            "id": "date_time_partial",
-            "mode": "date_time",
-            "item": {
-                "start": {
-                    "year": 2012,
-                    "month": 11
-                }
-            },
-            "php": "2012/11/00 00:00:00"
-        },
-        {
-            "id": "datetime_alias",
-            "mode": "datetime",
-            "item": {
-                "start": {
-                    "year": 2012,
-                    "month": 11,
-                    "day": 7,
-                    "hour": 17,
-                    "minute": 33,
-                    "second": 49
-                }
-            },
-            "php": "2012/11/07 17:33:49"
-        },
-        {
-            "id": "period_full",
-            "mode": "period",
-            "item": {
-                "period": {
-                    "year": 2,
-                    "month": 3,
-                    "day": 4
-                }
-            },
-            "php": "2 years 3 months 4 days"
-        },
-        {
-            "id": "period_year_only",
-            "mode": "period",
-            "item": {
-                "period": {
-                    "year": 5
-                }
-            },
-            "php": "5 years  "
-        },
-        {
-            "id": "period_month_only",
-            "mode": "period",
-            "item": {
-                "period": {
-                    "month": 7
-                }
-            },
-            "php": " 7 months "
-        },
-        {
-            "id": "period_absent",
-            "mode": "period",
-            "item": {
-                "start": {
-                    "year": 1975
-                }
-            },
-            "php": ""
-        },
-        {
-            "id": "unknown_mode",
-            "mode": "not_a_mode",
-            "item": {
-                "start": {
-                    "year": 1975,
-                    "month": 3
-                }
-            },
-            "php": "1975/03"
-        }
-    ]
+	"_source": "v7_php_frozen/master_dedalo/core/component_date/class.component_date.php::data_item_to_value (method source eval'd verbatim over the real dd_date)",
+	"_php": "8.5.9",
+	"_recapture": "php test/unit/fixtures/date_value_native/harvest.php > test/unit/fixtures/date_value_native/date_value.oracle.json",
+	"_labels": "label::get_label(x) stubbed to return x — the master.json English strings for years/months/days",
+	"cases": [
+		{
+			"id": "date_full",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": 1628,
+					"month": 6,
+					"day": 9
+				}
+			},
+			"php": "1628/06/09"
+		},
+		{
+			"id": "date_year_month",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": 1975,
+					"month": 3
+				}
+			},
+			"php": "1975/03"
+		},
+		{
+			"id": "date_year_only",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": 1975
+				}
+			},
+			"php": "1975"
+		},
+		{
+			"id": "date_bce_year_only",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": -238
+				}
+			},
+			"php": "-238"
+		},
+		{
+			"id": "date_bce_year_month",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": -44,
+					"month": 3
+				}
+			},
+			"php": "-044/03"
+		},
+		{
+			"id": "date_short_year_full",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": 238,
+					"month": 6,
+					"day": 9
+				}
+			},
+			"php": "0238/06/09"
+		},
+		{
+			"id": "date_no_start_wrap",
+			"mode": "date",
+			"item": {
+				"year": 1912,
+				"month": 11
+			},
+			"php": "1912/11"
+		},
+		{
+			"id": "date_day_no_month",
+			"mode": "date",
+			"item": {
+				"start": {
+					"year": 1912,
+					"day": 4
+				}
+			},
+			"php": "1912/00/04"
+		},
+		{
+			"id": "date_empty_start",
+			"mode": "date",
+			"item": {
+				"start": {}
+			},
+			"php": ""
+		},
+		{
+			"id": "date_yearless",
+			"mode": "date",
+			"item": {
+				"start": {
+					"month": 6,
+					"day": 9
+				}
+			},
+			"php": "0000/06/09"
+		},
+		{
+			"id": "date_null_start",
+			"mode": "date",
+			"item": {
+				"start": null,
+				"year": 1955
+			},
+			"php": "1955"
+		},
+		{
+			"id": "range_full",
+			"mode": "range",
+			"item": {
+				"start": {
+					"year": 1628,
+					"month": 6,
+					"day": 9
+				},
+				"end": {
+					"year": 2024,
+					"month": 6,
+					"day": 25
+				}
+			},
+			"php": "1628/06/09 <> 2024/06/25"
+		},
+		{
+			"id": "range_year_month",
+			"mode": "range",
+			"item": {
+				"start": {
+					"year": 1987,
+					"month": 4
+				},
+				"end": {
+					"year": 1988,
+					"month": 11
+				}
+			},
+			"php": "1987/04 <> 1988/11"
+		},
+		{
+			"id": "range_years",
+			"mode": "range",
+			"item": {
+				"start": {
+					"year": 1987
+				},
+				"end": {
+					"year": 1988
+				}
+			},
+			"php": "1987 <> 1988"
+		},
+		{
+			"id": "range_open_end",
+			"mode": "range",
+			"item": {
+				"start": {
+					"year": 1987,
+					"month": 4
+				}
+			},
+			"php": "1987/04"
+		},
+		{
+			"id": "range_mixed",
+			"mode": "range",
+			"item": {
+				"start": {
+					"year": 1930,
+					"month": 3
+				},
+				"end": {
+					"year": 1930,
+					"month": 3,
+					"day": 15
+				}
+			},
+			"php": "1930/03 <> 1930/03/15"
+		},
+		{
+			"id": "time_full",
+			"mode": "time",
+			"item": {
+				"start": {
+					"hour": 17,
+					"minute": 33,
+					"second": 49
+				}
+			},
+			"php": "17:33:49"
+		},
+		{
+			"id": "time_partial",
+			"mode": "time",
+			"item": {
+				"start": {
+					"hour": 9
+				}
+			},
+			"php": "09:00:00"
+		},
+		{
+			"id": "time_no_start_wrap",
+			"mode": "time",
+			"item": {
+				"hour": 9,
+				"minute": 5
+			},
+			"php": "09:05:00"
+		},
+		{
+			"id": "time_range_full",
+			"mode": "time_range",
+			"item": {
+				"start": {
+					"hour": 1,
+					"minute": 2,
+					"second": 3
+				},
+				"end": {
+					"hour": 4,
+					"minute": 5,
+					"second": 6
+				}
+			},
+			"php": "01:02:03 <> 04:05:06"
+		},
+		{
+			"id": "time_range_open",
+			"mode": "time_range",
+			"item": {
+				"start": {
+					"hour": 1,
+					"minute": 2,
+					"second": 3
+				}
+			},
+			"php": "01:02:03"
+		},
+		{
+			"id": "date_time_full",
+			"mode": "date_time",
+			"item": {
+				"start": {
+					"year": 2012,
+					"month": 11,
+					"day": 7,
+					"hour": 17,
+					"minute": 33,
+					"second": 49
+				}
+			},
+			"php": "2012/11/07 17:33:49"
+		},
+		{
+			"id": "date_time_partial",
+			"mode": "date_time",
+			"item": {
+				"start": {
+					"year": 2012,
+					"month": 11
+				}
+			},
+			"php": "2012/11/00 00:00:00"
+		},
+		{
+			"id": "datetime_alias",
+			"mode": "datetime",
+			"item": {
+				"start": {
+					"year": 2012,
+					"month": 11,
+					"day": 7,
+					"hour": 17,
+					"minute": 33,
+					"second": 49
+				}
+			},
+			"php": "2012/11/07 17:33:49"
+		},
+		{
+			"id": "period_full",
+			"mode": "period",
+			"item": {
+				"period": {
+					"year": 2,
+					"month": 3,
+					"day": 4
+				}
+			},
+			"php": "2 years 3 months 4 days"
+		},
+		{
+			"id": "period_year_only",
+			"mode": "period",
+			"item": {
+				"period": {
+					"year": 5
+				}
+			},
+			"php": "5 years  "
+		},
+		{
+			"id": "period_month_only",
+			"mode": "period",
+			"item": {
+				"period": {
+					"month": 7
+				}
+			},
+			"php": " 7 months "
+		},
+		{
+			"id": "period_absent",
+			"mode": "period",
+			"item": {
+				"start": {
+					"year": 1975
+				}
+			},
+			"php": ""
+		},
+		{
+			"id": "unknown_mode",
+			"mode": "not_a_mode",
+			"item": {
+				"start": {
+					"year": 1975,
+					"month": 3
+				}
+			},
+			"php": "1975/03"
+		}
+	]
 }

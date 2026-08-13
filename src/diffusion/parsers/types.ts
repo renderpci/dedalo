@@ -42,6 +42,18 @@ export interface ValueMeta {
 	sectionId?: string | number | null;
 	/** Originating record section_tipo. */
 	sectionTipo?: string | null;
+	/**
+	 * SOURCE-GROUP ORDINAL. v6's resolve_value loops the field's own locator
+	 * list and json_encodes EACH source's result separately, imploding the
+	 * encoded arrays with ' | ' (class.diffusion_sql.php :5241-5299) — so one
+	 * cell holds several arrays, not one merged array. This is the index of the
+	 * originating locator inside that list; atoms that do not descend from such
+	 * a hop leave it undefined and collapse exactly as before.
+	 *
+	 * The INDEX, not the locator identity: a source that cites the record twice
+	 * must produce the group twice, which is what get_diffusion_dato does.
+	 */
+	chainGroup?: number;
 }
 
 /** A ValueIR atom possibly carrying parser provenance. */
@@ -64,6 +76,9 @@ export interface ParserItem {
 	 * shape is a pinned edge — WC-2026-08-10-section-id-int-canonical. */
 	section_id: string | number | null;
 	section_tipo: string | null;
+	/** Source-group ordinal — see ValueMeta.chainGroup. Carried through the
+	 * bridge so the collapse step can rebuild v6's per-source arrays. */
+	chainGroup?: number;
 }
 
 /** An oracle-shaped parser body; null = "no data" (wrapped to [] by the bridge). */

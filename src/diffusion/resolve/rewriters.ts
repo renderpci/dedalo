@@ -180,8 +180,24 @@ function applyChainFilters(
 // parents (oracle :455-624)
 // ---------------------------------------------------------------------------
 
-/** Term of one chain node in `lang`: exact → main_lang → first available. */
-function nodeTermForLang(link: ResolvedLink, lang: string, mainLang: string | null): string {
+/**
+ * Term of one chain node in `lang`: exact → main_lang → first PROJECT lang.
+ *
+ * The last rung must walk the PUBLICATION LANGS in their configured order, not
+ * whatever order the stored term object happens to enumerate. v6's fallback
+ * loops common::get_ar_all_langs() (component_input_text::get_diffusion_value
+ * :298-315), so a value stored under a lang OUTSIDE the project list is
+ * invisible to it. The place term of dz1/1143 holds only lg-ara ("وھران") and
+ * lg-fra ("Oran"); v6 publishes Oran because lg-fra is a project lang, while
+ * Object.values order handed v7 the Arabic one — visible in informant
+ * birthplace, birthplace_municipality, cut_birthplace and search_data.
+ */
+function nodeTermForLang(
+	link: ResolvedLink,
+	lang: string,
+	mainLang: string | null,
+	projectLangs?: readonly string[],
+): string {
 	const term = link.term;
 	if (term === undefined || term === null) return '';
 	const exact = term[lang];
@@ -189,6 +205,12 @@ function nodeTermForLang(link: ResolvedLink, lang: string, mainLang: string | nu
 	if (mainLang !== null) {
 		const main = term[mainLang];
 		if (typeof main === 'string' && main !== '') return main;
+	}
+	if (projectLangs !== undefined) {
+		for (const candidate of projectLangs) {
+			const value = term[candidate];
+			if (typeof value === 'string' && value !== '') return value;
+		}
 	}
 	for (const value of Object.values(term)) {
 		if (typeof value === 'string' && value !== '') return value;
@@ -241,7 +263,7 @@ function parentsFn(env: RewriterEnv): ExtraStepFn {
 				for (const lang of ctx.langs) {
 					const chainValues: string[] = [];
 					for (const node of nodes) {
-						const term = nodeTermForLang(node, lang, ctx.mainLang);
+						const term = nodeTermForLang(node, lang, ctx.mainLang, ctx.langs);
 						if (term !== '') chainValues.push(term);
 					}
 					if (chainValues.length > 0) pushChain(lang, chainValues);
@@ -300,11 +322,22 @@ function parentsFn(env: RewriterEnv): ExtraStepFn {
  */
 type LinkExtras = Pick<
 	ResolvedLink,
-	'type' | 'tagId' | 'componentTipo' | 'sectionTopId' | 'sectionTopTipo' | 'fromComponentTopTipo'
+	| 'type'
+	| 'tagId'
+	| 'tagType'
+	| 'componentTipo'
+	| 'sectionTopId'
+	| 'sectionTopTipo'
+	| 'fromComponentTopTipo'
 >;
 
 function getLocatorFn(): ExtraStepFn {
 	return (values, options) => {
+		// EMPTY DECLARED LABEL LIST — an OPTION, not a new fn: the registry is
+		// pinned to oracle-registered fns ("no gaps, no extras"), so this rides on
+		// get_locator exactly like v6_raw_dato and index_meta do.
+		if (options.empty_label_join === true) return emptyLabelJoin(values, options);
+
 		if (values.length === 0) return [];
 		const withMeta = options.with_meta === true;
 		const indexMeta = options.index_meta === true;
@@ -317,6 +350,61 @@ function getLocatorFn(): ExtraStepFn {
 				.filter((link) => link.sectionTipo != null || link.sectionId != null)
 				.map((link) => {
 					const extras = link as ResolvedLink & LinkExtras;
+					if (options.v6_raw_dato === true) {
+						// component_common::get_dato through diffusion_sql::resolve_component_value:
+						// the STORED locator, republished as-is. v6 key order, `id` dropped (a v7
+						// per-item counter that never existed in the v6 payload) and section_id back
+						// to its published STRING form (WC-2026-08-10 made it int-canonical in
+						// storage only). Emitting only the address half published `[null]`.
+						const locator: Record<string, unknown> = {};
+						// A dd96 INDEX EDGE stored on a relation_index component carries the
+						// whole edge, and get_dato() republishes all nine keys in the order
+						// they were STORED — which is NOT the index_meta construction order
+						// below (section_tipo precedes section_id, tag_id follows
+						// component_tipo, and the two from_* keys are reversed). Emitting
+						// only the address half dropped component_tipo, section_top_id,
+						// section_top_tipo and from_component_top_tipo from
+						// games.indexations_related on every populated row.
+						//
+						// Gated on the edge extras actually being present, so a PLAIN stored
+						// locator — the text_area reference lists (abstract_references,
+						// body_references) that share this projection and already match —
+						// keeps its shorter shape and key order untouched.
+						const isIndexEdge =
+							extras.componentTipo != null ||
+							extras.sectionTopId != null ||
+							extras.sectionTopTipo != null ||
+							extras.fromComponentTopTipo != null;
+						if (isIndexEdge) {
+							if (extras.type != null) locator.type = extras.type;
+							locator.section_tipo = String(link.sectionTipo);
+							locator.section_id = String(link.sectionId);
+							if (extras.componentTipo != null) locator.component_tipo = extras.componentTipo;
+							if (extras.tagId != null) locator.tag_id = String(extras.tagId);
+							if (extras.sectionTopId != null) {
+								locator.section_top_id = String(extras.sectionTopId);
+							}
+							if (extras.sectionTopTipo != null) {
+								locator.section_top_tipo = extras.sectionTopTipo;
+							}
+							if (extras.fromComponentTopTipo != null) {
+								locator.from_component_top_tipo = extras.fromComponentTopTipo;
+							}
+							if (link.fromComponentTipo != null) {
+								locator.from_component_tipo = link.fromComponentTipo;
+							}
+							return locator;
+						}
+						if (extras.type != null) locator.type = extras.type;
+						if (extras.tagId != null) locator.tag_id = String(extras.tagId);
+						if (extras.tagType != null) locator.tag_type = extras.tagType;
+						locator.section_id = String(link.sectionId);
+						locator.section_tipo = String(link.sectionTipo);
+						if (link.fromComponentTipo != null) {
+							locator.from_component_tipo = link.fromComponentTipo;
+						}
+						return locator;
+					}
 					if (indexMeta) {
 						// v6 component_relation_index key order preserved exactly:
 						// type, tag_id, section_id, section_tipo, component_tipo,
@@ -409,6 +497,39 @@ function mapSectionTipoToNameFn(env: RewriterEnv): ExtraStepFn {
  * the record) handled by the resolver's deferred pass — a chain containing it
  * never reaches the transform machine.
  */
+/**
+ * EMPTY LABEL JOIN — v6's autocomplete label for a component that declares NO
+ * related components.
+ *
+ * v5_component_autocomplete.php's $_get_valor reads the label parts from
+ * RecordObj_dd::get_relaciones() (:46-57). When that list is empty the inner
+ * loop never runs and every locator's label is implode(sep, []) === '' — and
+ * the empty-value skip that would drop them is COMMENTED OUT (:111-119), so the
+ * labels are still joined: three locators publish " |  | ".
+ * resolve_value then stores the joined string only when it is non-empty
+ * (class.diffusion_sql.php :5264) and nulls a wholly empty result (:5307), so a
+ * SINGLE locator yields NULL instead of ''.
+ *
+ * That is the whole rule, and it is why publications.other_people_full_names is
+ * " |  | " while bibliographic_references.ref_publications_other_people_name —
+ * same component, one locator — is NULL.
+ */
+function emptyLabelJoin(values: MetaValueIR[], options: Record<string, unknown>): MetaValueIR[] {
+	{
+		const separator = (options.fields_separator as string | undefined) ?? ' | ';
+		let count = 0;
+		for (const atom of values) {
+			const links = linksOf(atom);
+			count += links.length > 0 ? links.length : 1;
+		}
+		if (count === 0) return [];
+		const joined = new Array(count).fill('').join(separator);
+		// '' (a single locator) is v6's empty_value → the column publishes NULL.
+		if (joined === '') return [];
+		return [{ kind: 'scalar', value: joined, lang: null, meta: values[0]?.meta ?? {} }];
+	}
+}
+
 export function buildRewriterFns(env: RewriterEnv): ReadonlyMap<string, ExtraStepFn> {
 	const unsupported =
 		(fn: string, detail: string): ExtraStepFn =>

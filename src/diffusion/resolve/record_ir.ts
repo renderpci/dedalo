@@ -43,6 +43,7 @@ export interface ResolvedLink {
 	 */
 	type?: string;
 	tagId?: string | number;
+	tagType?: string;
 	componentTipo?: string;
 	sectionTopId?: string | number;
 	sectionTopTipo?: string;

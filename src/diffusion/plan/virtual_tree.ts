@@ -403,6 +403,46 @@ export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree 
 		}
 	}
 
+	// ...and the SAME thing computed PER ELEMENT. Domain-wide suppression is only
+	// right for whole elements (an element alias really does re-parent one); for a
+	// node INSIDE an element it is too broad: the ts_web table mht96 lives under
+	// element mht50 and relates to section mht72, but aliases in OTHER elements
+	// (mht149 under mht2, mht147 under mht145) also target it, so it vanished from
+	// the tree entirely and get_section_diffusion_nodes('mht72') returned [] — the
+	// diffusion tool opened with no nodes. v6 has no such suppression (it
+	// enumerates table + table_alias per element), and it does offer mht72.
+	const consumedByAliasByElement = new Map<string, Set<string>>();
+	const collectElementConsumed = async (tipo: string, depth = 0): Promise<void> => {
+		if (depth > MAX_WALK_DEPTH) return;
+		const model = index.byTipo.get(tipo)?.model ?? '';
+		if (DIFFUSION_ELEMENT_MODELS.has(model)) {
+			const sub: string[] = [];
+			const collect = (current: string): void => {
+				for (const child of index.inTreeChildren.get(current) ?? []) {
+					sub.push(child);
+					collect(child);
+				}
+			};
+			collect(tipo);
+			const set = new Set<string>();
+			for (const descendant of sub) {
+				if ((index.byTipo.get(descendant)?.model ?? '').includes('_alias')) {
+					const realTipo = await index.resolveAlias(descendant);
+					if (realTipo !== null) set.add(realTipo);
+				}
+			}
+			consumedByAliasByElement.set(tipo, set);
+			if (model.includes('_alias')) {
+				const realTipo = await index.resolveAlias(tipo);
+				if (realTipo !== null) consumedByAliasByElement.set(realTipo, set);
+			}
+		}
+		for (const child of index.inTreeChildren.get(tipo) ?? []) {
+			await collectElementConsumed(child, depth + 1);
+		}
+	};
+	await collectElementConsumed(domainTipo);
+
 	// Recursive-children helper (PHP ontology_node::get_ar_recursive_children):
 	// DFS preorder over sibling-ordered children, depth-capped defensively.
 	const recursiveChildren = async (tipo: string, depth = 0): Promise<string[]> => {
@@ -422,12 +462,25 @@ export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree 
 		currentTipo: string,
 		path: VirtualPathItem[],
 		depth: number,
+		elementTipo: string | null = null,
 	): Promise<void> => {
 		if (depth > MAX_WALK_DEPTH) return;
 		const resolved = await resolveNodeWithAlias(index, currentTipo);
 
-		// Real node consumed by an alias somewhere else: skip this raw branch.
-		if (!resolved.isAlias && consumedByAlias.has(currentTipo)) return;
+		const isElementNode = DIFFUSION_ELEMENT_MODELS.has(resolved.model);
+		const currentElementTipo = isElementNode ? currentTipo : elementTipo;
+		// Real node consumed by an alias: domain-wide for a whole ELEMENT (an
+		// element alias re-parents it), element-SCOPED for anything inside one.
+		if (!resolved.isAlias) {
+			if (isElementNode) {
+				if (consumedByAlias.has(currentTipo)) return;
+			} else if (
+				currentElementTipo !== null &&
+				(consumedByAliasByElement.get(currentElementTipo)?.has(currentTipo) ?? false)
+			) {
+				return;
+			}
+		}
 
 		// Merged recursive children: alias own children first, then the real
 		// node's children whose LABEL is not already taken (PHP :335-357 —
@@ -500,7 +553,7 @@ export async function buildVirtualDiffusionTree(): Promise<VirtualDiffusionTree 
 			directChildren.push(...(await index.childTipos(resolved.realTipo)));
 		}
 		for (const child of new Set(directChildren)) {
-			await walk(child, newPath, depth + 1);
+			await walk(child, newPath, depth + 1, currentElementTipo);
 		}
 	};
 	await walk(domainTipo, [], 0);

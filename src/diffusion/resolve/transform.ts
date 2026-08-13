@@ -86,6 +86,44 @@ function formatItemValue(value: unknown, outputFormat: string | undefined): stri
 	return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
+/**
+ * v6's PER-SOURCE grouping, rebuilt from the atoms' chainGroup ordinal.
+ *
+ * resolve_value loops the field's own locator list and json_encodes EACH
+ * source's result separately, then implodes the encoded arrays with ' | '
+ * (class.diffusion_sql.php :5241-5299) — so one cell holds SEVERAL json arrays,
+ * not one merged array (games.indexations_related: `[{…}] | [{…},{…}]`).
+ * An empty source contributes nothing at all (:5264 skips '' / '[]' / '{}').
+ *
+ * Returns null when no atom carries an ordinal, so every other json column
+ * keeps its existing single-array shape byte-for-byte. A single non-empty group
+ * also serializes exactly as before.
+ */
+function groupedJsonOrNull(items: ParserItem[], separator: string): string | null {
+	// EVERY atom must carry a group, or we do not group at all. A MIXED set
+	// (some stamped, some not) used to keep the stamped ones and silently drop
+	// the rest — section-label atoms are appended after the stamping block, and
+	// only the FIRST chain step stamps, so a second root step's atoms vanished
+	// from the column. Falling back to the flat join loses nothing.
+	if (!items.every((item) => item.chainGroup !== undefined)) return null;
+	const byGroup = new Map<number, unknown[]>();
+	for (const item of items) {
+		if (item.chainGroup === undefined) continue;
+		const bucket = byGroup.get(item.chainGroup);
+		const values = Array.isArray(item.value) ? item.value : [item.value];
+		const kept = values.filter((entry) => entry !== null && entry !== undefined && entry !== '');
+		if (bucket === undefined) byGroup.set(item.chainGroup, [...kept]);
+		else bucket.push(...kept);
+	}
+	const parts: string[] = [];
+	for (const ordinal of [...byGroup.keys()].sort((a, b) => a - b)) {
+		const values = byGroup.get(ordinal) as unknown[];
+		if (values.length === 0) continue; // v6 drops an empty source's slot
+		parts.push(JSON.stringify(values));
+	}
+	return parts.length > 0 ? parts.join(separator) : null;
+}
+
 /** Oracle join_items_to_string (parser_text.ts:33-60): the no-parser default. */
 function joinItemsToString(items: ParserItem[]): string | null {
 	if (items.length === 0) return null;
@@ -303,10 +341,11 @@ function applyDefaultCompletion(
 			}
 		}
 		const first = group[0] as ParserItem;
+		const grouped = spec.outputFormat === 'json' ? groupedJsonOrNull(group, separator) : null;
 		collapsed.push({
 			...first,
 			lang: key === '__nolan__' ? null : key,
-			value: spec.outputFormat === 'json' ? flat : flat.join(separator),
+			value: grouped ?? (spec.outputFormat === 'json' ? flat : flat.join(separator)),
 		});
 	}
 	return itemsToAtoms(collapsed);
@@ -412,7 +451,8 @@ export function fieldValuesToColumn(
 	for (const [lang, group] of langGroups) {
 		let columnValue: string | null;
 		if (spec.outputFormat === 'json') {
-			columnValue = JSON.stringify(group.flatMap((item) => item.value));
+			columnValue =
+				groupedJsonOrNull(group, ' | ') ?? JSON.stringify(group.flatMap((item) => item.value));
 		} else if (spec.outputFormat === 'int') {
 			const parsed = String(Number.parseInt(String(group[0]?.value), 10));
 			columnValue = parsed === 'NaN' ? '0' : parsed;

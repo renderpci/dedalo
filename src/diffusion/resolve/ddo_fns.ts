@@ -28,7 +28,12 @@ import {
 	type TagRenderOptions,
 } from '../../core/components/component_text_area/tag_html.ts';
 import { decodeHtmlEntities } from './default_value.ts';
-import { hasCoordinate, isStudioDefault, toCoordinate } from './geo_coordinate.ts';
+import {
+	hasCoordinate,
+	isStudioDefault,
+	phpNumberFormat16RoundTrip,
+	toCoordinate,
+} from './geo_coordinate.ts';
 
 // ---------------------------------------------------------------------------
 // parse_tag_to_html — TR::add_tag_img_on_the_fly twin (moved to
@@ -112,7 +117,10 @@ export function geojsonPointFallbackLayers(
 						properties: {},
 						geometry: {
 							type: 'Point',
-							coordinates: [toCoordinate(item.lon), toCoordinate(item.lat)],
+							coordinates: [
+								phpNumberFormat16RoundTrip(toCoordinate(item.lon)),
+								phpNumberFormat16RoundTrip(toCoordinate(item.lat)),
+							],
 						},
 					},
 				],

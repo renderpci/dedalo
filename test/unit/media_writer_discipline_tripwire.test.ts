@@ -810,10 +810,9 @@ describe('media writer discipline: no runner ignores the spawn outcome', () => {
 			'const { ok, stdout } = await runIdentify(argv);\nif (!ok) return null;',
 			'if (result.signal !== null) throw new Error("killed");',
 		]) {
-			expect(
-				CONSULTS_OUTCOME.test(consulting),
-				`CONSULTS_OUTCOME must accept: ${consulting}`,
-			).toBe(true);
+			expect(CONSULTS_OUTCOME.test(consulting), `CONSULTS_OUTCOME must accept: ${consulting}`).toBe(
+				true,
+			);
 		}
 		// Finding (b) as a unit: handling the TIMEOUT is not handling the KILL.
 		// `timedOut` is `capExpired && signal !== null`, so this branch is blind to
