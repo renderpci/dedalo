@@ -471,6 +471,61 @@
     opacity: 0;
   }
 }
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 200;
+  /* No fixed height and no overflow:hidden: the previous block
+						   was 1.5em tall with the overflow clipped, so any message
+						   longer than one line was cut mid-sentence. */
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_progress {
+  font-family: monospace;
+  color: var(--color_grey_7);
+  padding: 0.3rem 0;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report {
+  padding: 0.5rem 0.7rem;
+  margin: 0.3rem 0;
+  border-radius: 8px;
+  border-left: 4px solid var(--color_grey_5);
+  background-color: var(--color_grey_1);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.warning,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.warning {
+  border-left-color: var(--color_orange);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.error,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.error {
+  border-left-color: var(--color_danger);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_message {
+  font-weight: 400;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_cause,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_action_text {
+  font-size: 1.2rem;
+  color: var(--color_grey_7);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_action {
+  margin-top: 0.4rem;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail {
+  margin-top: 0.4rem;
+  font-size: 1.1rem;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail > pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 12em;
+  overflow: auto;
+  user-select: text;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status.hide {
+  display: none;
+}
 .wrapper_tool.tool_transcription .gutter {
   flex: 0 0 auto;
   position: relative;

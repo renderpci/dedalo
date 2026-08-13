@@ -2004,6 +2004,181 @@
             "value": "no instalado"
           },
           {
+            "lang": "lg-eng",
+            "name": "error_model_damaged",
+            "value": "The speech model on this server is damaged"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_model_damaged",
+            "value": "Its files are incomplete or corrupted — usually an interrupted download."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_model_missing",
+            "value": "The speech model is not installed on this server"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_model_missing",
+            "value": "Nobody has downloaded it into this installation's model store yet."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_out_of_memory",
+            "value": "This recording is too large for this computer at this quality"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_out_of_memory",
+            "value": "The model ran out of memory while transcribing."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_device_lost",
+            "value": "The graphics card stopped the transcription"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_device_lost",
+            "value": "The GPU dropped the job. It can be finished on the processor instead, more slowly."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_not_isolated",
+            "value": "This server is missing the security headers the engine needs"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_not_isolated",
+            "value": "Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy are required for in-browser transcription."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_audio_undecodable",
+            "value": "The recording's audio could not be read"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_audio_undecodable",
+            "value": "The audio file for this record could not be decoded by the browser."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_network",
+            "value": "The model could not be loaded from this server"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "cause_network",
+            "value": "The connection to the model store failed."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_unknown",
+            "value": "The transcription failed"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_repair_model",
+            "value": "Repair model"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_download_model",
+            "value": "Download model"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_verify_model",
+            "value": "Verify model"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_retry_cpu",
+            "value": "Retry on the processor"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_lower_quality",
+            "value": "Choose a lower quality in the settings"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_retry",
+            "value": "Try again"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_ask_admin",
+            "value": "Ask your administrator"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_check_media",
+            "value": "Check this record's audio file"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "technical_detail",
+            "value": "Technical detail"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "readiness_model",
+            "value": "Model"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "readiness_device",
+            "value": "Device"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "readiness_language",
+            "value": "Language"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "state_ready",
+            "value": "ready"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "state_unverified",
+            "value": "installed, not verified"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "state_incomplete",
+            "value": "incomplete download"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "state_damaged",
+            "value": "damaged"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "state_missing",
+            "value": "not installed"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "device_no_gpu",
+            "value": "no GPU detected — this will run on the processor, several times slower"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "warning_fallback_cpu",
+            "value": "The graphics card could not be used; the transcription continued on the processor."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "warning_window_skipped",
+            "value": "A fragment of the recording could not be transcribed and was skipped."
+          },
+          {
             "lang": "lg-ara",
             "name": "paragraphs",
             "value": "فقرات"

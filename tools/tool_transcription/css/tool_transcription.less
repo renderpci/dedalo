@@ -708,6 +708,55 @@
 							}
 						}
 					}
+
+					>.transcription_status {
+						width: 100%;
+						margin-bottom: 0.5rem;
+						font-size: 1.3rem;
+						font-weight: 200;
+						/* No fixed height and no overflow:hidden: the previous block
+						   was 1.5em tall with the overflow clipped, so any message
+						   longer than one line was cut mid-sentence. */
+
+						> .status_progress {
+							font-family: monospace;
+							color: @color_grey_7;
+							padding: 0.3rem 0;
+						}
+
+						> .status_readiness > .readiness_line,
+						> .status_messages > .status_report {
+							padding: 0.5rem 0.7rem;
+							margin: 0.3rem 0;
+							border-radius: 8px;
+							border-left: 4px solid @color_grey_5;
+							background-color: @color_grey_1;
+
+							&.warning { border-left-color: @color_orange; }
+							&.error   { border-left-color: @color_danger; }
+						}
+
+						.status_message { font-weight: 400; }
+						.status_cause,
+						.status_action_text { font-size: 1.2rem; color: @color_grey_7; }
+
+						.status_action { margin-top: 0.4rem; }
+
+						.status_detail {
+							margin-top: 0.4rem;
+							font-size: 1.1rem;
+
+							> pre {
+								white-space: pre-wrap;
+								word-break: break-word;
+								max-height: 12em;
+								overflow: auto;
+								user-select: text;
+							}
+						}
+
+						&.hide { display: none; }
+					}
 				}
 			}//end .subtitles
 		}
