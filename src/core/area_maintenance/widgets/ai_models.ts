@@ -19,9 +19,9 @@
 import { statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+	type ModelState,
 	modelFiles,
 	modelHubAllowed,
-	type ModelState,
 	modelState,
 	modelStoreAvailable,
 	modelStoreRoot,
@@ -86,6 +86,48 @@ function modelBytes(root: string, name: string, dtype?: Record<string, string>):
 	return total;
 }
 
+/** One usable catalog entry: named, with whatever else the config carries. */
+interface CatalogEntry {
+	name: string;
+	label?: unknown;
+	tier?: unknown;
+	dtype?: Record<string, string>;
+}
+
+/**
+ * The catalog array, from either config shape. getToolConfig returns the
+ * EFFECTIVE config — a flat map of key → resolved value — so `transcriber_quality`
+ * IS the array; the raw property-object form (`{ value: [...] }`) is tolerated
+ * like everywhere else that reads it.
+ */
+function catalogEntries(raw: unknown): unknown[] {
+	if (Array.isArray(raw)) return raw;
+	return (raw as { value?: unknown[] } | undefined)?.value ?? [];
+}
+
+/** A NAMED catalog entry, or null when the raw value cannot be one. */
+function namedEntry(rawEntry: unknown): CatalogEntry | null {
+	if (rawEntry === null || typeof rawEntry !== 'object') return null;
+	const entry = rawEntry as CatalogEntry;
+	if (typeof entry.name !== 'string') return null;
+	return entry;
+}
+
+/** Only the models the BROWSER runs are in this store; a tier-less entry is one. */
+function isBrowserTier(entry: CatalogEntry): boolean {
+	return entry.tier === undefined || entry.tier === 'browser';
+}
+
+/** One catalog entry → one panel row (the store answers state, the disk answers bytes). */
+function toModelRow(root: string, entry: CatalogEntry): AiModelRow {
+	return {
+		name: entry.name,
+		label: typeof entry.label === 'string' ? entry.label : entry.name,
+		state: modelState(entry.name, entry.dtype).state,
+		bytes: modelBytes(root, entry.name, entry.dtype),
+	};
+}
+
 /**
  * The I/O shell: read the transcriber catalog, ask the store about each entry.
  *
@@ -98,30 +140,10 @@ async function readAiModels(): Promise<AiModelsPanel> {
 	const root = modelStoreRoot();
 	const rows: AiModelRow[] = [];
 	try {
-		// getToolConfig returns the EFFECTIVE config — a flat map of key → resolved
-		// value — so `transcriber_quality` IS the catalog array. The raw
-		// property-object form is tolerated like everywhere else that reads it.
 		const toolConfig = await getToolConfig('tool_transcription');
-		const raw = toolConfig?.transcriber_quality;
-		const entries = Array.isArray(raw)
-			? raw
-			: ((raw as { value?: unknown[] } | undefined)?.value ?? []);
-		for (const rawEntry of entries) {
-			if (rawEntry === null || typeof rawEntry !== 'object') continue;
-			const entry = rawEntry as {
-				name?: unknown;
-				label?: unknown;
-				tier?: unknown;
-				dtype?: Record<string, string>;
-			};
-			if (typeof entry.name !== 'string') continue;
-			if (entry.tier !== undefined && entry.tier !== 'browser') continue;
-			rows.push({
-				name: entry.name,
-				label: typeof entry.label === 'string' ? entry.label : entry.name,
-				state: modelState(entry.name, entry.dtype).state,
-				bytes: modelBytes(root, entry.name, entry.dtype),
-			});
+		for (const rawEntry of catalogEntries(toolConfig?.transcriber_quality)) {
+			const entry = namedEntry(rawEntry);
+			if (entry !== null && isBrowserTier(entry)) rows.push(toModelRow(root, entry));
 		}
 	} catch (error) {
 		console.error('[ai_models] could not read the transcriber catalog:', error);

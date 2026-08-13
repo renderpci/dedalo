@@ -22,11 +22,12 @@
  * The DECISIONS live in three pure exports — `resolveFetchTarget` (path
  * confinement + URL policy), `curlArgv` (transport flags) and
  * `isUsableCachedFile` (cache freshness) — gated by
- * `test/unit/ai_model_fetch_native.test.ts`. What remains inside `fetchOneFile`
- * is byte plumbing (`mkdirSync`, the spawn/await, the zero-length cleanup, the
- * `fetch` + `Bun.write` fallback) and is NOT gated: it needs the network. The
- * orchestration in `downloadModel` is drivable through the injectable
- * `options.fetchFile`.
+ * `test/unit/ai_model_fetch_native.test.ts`. What remains is byte plumbing,
+ * split one concern per function (`acceptCached` / `recordIfComplete` for the
+ * manifest bookkeeping, `curlFetch` / `plainFetch` / `transport` for the wire),
+ * so `fetchOneFile` reads as the six-line sequence it is. That plumbing is NOT
+ * gated: it needs the network. The orchestration in `downloadModel` is drivable
+ * through the injectable `options.fetchFile`.
  */
 
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
@@ -208,8 +209,66 @@ function haveCurl(): boolean {
 	return curlChecked;
 }
 
+/** One file's identity on disk: which model, which file, where the store put it. */
+interface FileRef {
+	store: string;
+	modelId: string;
+	file: string;
+	target: string;
+}
+
 /**
- * Download one file into the store unless it is already there, non-empty.
+ * The already-on-disk answer. When a cached file proves complete against a size
+ * the manifest did not yet hold, the manifest learns it here — that is how a
+ * store seeded before the manifest existed becomes verifiable without a re-download.
+ */
+function acceptCached(ref: FileRef, expected: number | null, recorded: number | null): boolean {
+	if (!isUsableCachedFile(ref.target, expected)) return false;
+	if (expected !== null && recorded === null) {
+		recordFileComplete(ref.store, ref.modelId, ref.file, expected);
+	}
+	return true;
+}
+
+/** Post-transport verdict: complete on disk ⇒ record the actual size and accept. */
+function recordIfComplete(ref: FileRef, expected: number | null): boolean {
+	if (!isUsableCachedFile(ref.target, expected)) return false;
+	recordFileComplete(ref.store, ref.modelId, ref.file, statSync(ref.target).size);
+	return true;
+}
+
+/**
+ * curl transport. Async spawn: a server background job must never block the
+ * event loop on a gigabyte download (spawnSync would freeze every request in
+ * the process).
+ */
+async function curlFetch(target: string, url: string, quiet: boolean): Promise<boolean> {
+	const proc = Bun.spawn(curlArgv(target, url, quiet), {
+		stdout: quiet ? 'ignore' : 'inherit',
+		stderr: quiet ? 'ignore' : 'inherit',
+	});
+	const code = await proc.exited;
+	if (code === 0) return true;
+	// curl leaves a zero-length file behind on a 404; it must not look cached.
+	if (existsSync(target) && statSync(target).size === 0) rmSync(target);
+	return false;
+}
+
+/** Transport fallback for hosts without curl. */
+async function plainFetch(target: string, url: string): Promise<boolean> {
+	const response = await fetch(url);
+	if (!response.ok) return false;
+	await Bun.write(target, response);
+	return true;
+}
+
+/** The one transport door: curl when it exists, `fetch` otherwise. */
+function transport(target: string, url: string, quiet: boolean): Promise<boolean> {
+	return haveCurl() ? curlFetch(target, url, quiet) : plainFetch(target, url);
+}
+
+/**
+ * Download one file into the store unless it is already there, complete.
  * Returns false when the file is absent upstream (the caller decides whether
  * that is fatal — it is not for OPTIONAL_FILES).
  */
@@ -222,45 +281,56 @@ async function fetchOneFile(
 	const resolved = resolveFetchTarget(modelId, file, store);
 	if (resolved === null) return false;
 	const { target, url } = resolved;
+	const ref: FileRef = { store, modelId, file, target };
 
 	// What SHOULD be on disk: the manifest first (no network), the hub second.
 	// Without either, the cache test stays size-agnostic — see isUsableCachedFile.
 	const recorded = expectedSize(store, modelId, file);
 	const expected = recorded ?? (await headContentLength(url));
 
-	if (isUsableCachedFile(target, expected)) {
-		if (expected !== null && recorded === null) recordFileComplete(store, modelId, file, expected);
-		return true;
-	}
+	if (acceptCached(ref, expected, recorded)) return true;
 
 	mkdirSync(dirname(target), { recursive: true });
+	if (!(await transport(target, url, quiet))) return false;
+	return recordIfComplete(ref, expected);
+}
 
-	const complete = (): boolean => {
-		if (!isUsableCachedFile(target, expected)) return false;
-		recordFileComplete(store, modelId, file, statSync(target).size);
-		return true;
+/** Every default `DownloadOptions` leaves open, resolved once. */
+interface DownloadPlan {
+	store: string;
+	quiet: boolean;
+	/** The files to fetch, deduplicated. */
+	wanted: string[];
+	/** Of those, the ones a 404 may not fail. */
+	optional: readonly string[];
+	fetchFile: FetchFile;
+}
+
+function planDownload(
+	dtype: Record<string, string> | undefined,
+	options: DownloadOptions,
+): DownloadPlan {
+	return {
+		store: options.store ?? modelStoreRoot(),
+		quiet: options.quiet ?? true,
+		// modelFiles carries config.json + the weights; union in the common files.
+		wanted: [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])],
+		optional: options.optionalFiles ?? OPTIONAL_FILES,
+		fetchFile: options.fetchFile ?? fetchOneFile,
 	};
+}
 
-	if (haveCurl()) {
-		// Async spawn: a server background job must never block the event loop on
-		// a gigabyte download (spawnSync would freeze every request in the process).
-		const proc = Bun.spawn(curlArgv(target, url, quiet), {
-			stdout: quiet ? 'ignore' : 'inherit',
-			stderr: quiet ? 'ignore' : 'inherit',
-		});
-		const code = await proc.exited;
-		if (code !== 0) {
-			// curl leaves a zero-length file behind on a 404; it must not look cached.
-			if (existsSync(target) && statSync(target).size === 0) rmSync(target);
-			return false;
-		}
-		return complete();
+/**
+ * Record one obtained file at its ACTUAL on-disk size. fetchOneFile already does
+ * this on its own path; an injected transport (tests, or a future non-curl
+ * transport) still needs the manifest to end up correct, so the recording lives
+ * here too — recordFileComplete is idempotent.
+ */
+function recordObtained(store: string, modelId: string, file: string): void {
+	const resolved = resolveFetchTarget(modelId, file, store);
+	if (resolved !== null && existsSync(resolved.target)) {
+		recordFileComplete(store, modelId, file, statSync(resolved.target).size);
 	}
-
-	const response = await fetch(url);
-	if (!response.ok) return false;
-	await Bun.write(target, response);
-	return complete();
 }
 
 /**
@@ -274,30 +344,17 @@ export async function downloadModel(
 	dtype: Record<string, string> | undefined,
 	options: DownloadOptions = {},
 ): Promise<DownloadReport> {
-	const store = options.store ?? modelStoreRoot();
-	const quiet = options.quiet ?? true;
+	const { store, quiet, wanted, optional, fetchFile } = planDownload(dtype, options);
 	const report: DownloadReport = { ok: false, files: [], skipped: [], errors: [] };
 
 	mkdirSync(store, { recursive: true });
-
-	// modelFiles carries config.json + the weights; union in the common files.
-	const wanted = [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])];
-	const optional = options.optionalFiles ?? OPTIONAL_FILES;
-	const fetchFile = options.fetchFile ?? fetchOneFile;
 
 	let gotWeights = false;
 	for (const file of wanted) {
 		options.onFile?.(file);
 		const ok = await fetchFile(modelId, file, store, quiet);
 		if (ok) {
-			// Record completion at the file's ACTUAL on-disk size. fetchOneFile already
-			// does this on its own path; an injected transport (tests, or a future
-			// non-curl transport) still needs the manifest to end up correct, so the
-			// recording lives here too — recordFileComplete is idempotent.
-			const resolved = resolveFetchTarget(modelId, file, store);
-			if (resolved !== null && existsSync(resolved.target)) {
-				recordFileComplete(store, modelId, file, statSync(resolved.target).size);
-			}
+			recordObtained(store, modelId, file);
 			report.files.push(file);
 			if (file.endsWith('.onnx')) gotWeights = true;
 			continue;

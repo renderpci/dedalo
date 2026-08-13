@@ -4,13 +4,12 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 469,
-		"functions": 3757,
-		"functionsOverCap": 699,
-		"filesOverCap": 275
+		"files": 471,
+		"functions": 3793,
+		"functionsOverCap": 698,
+		"filesOverCap": 274
 	},
 	"files": {
-		"src/core/ai/model_fetch.ts": 11,
 		"src/core/ai/model_store.ts": 10,
 		"src/core/api/access_log.ts": 7,
 		"src/core/api/dedalo_files.ts": 12,
