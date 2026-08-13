@@ -44,7 +44,7 @@
   display: block;
   height: 100%;
   width: 0;
-  background-color: var(--tool_media_versions);
+  background-color: var(--color_green_success);
   transition: width 0.3s linear;
 }
 .wrapper_tool.tool_media_versions .job_progress .job_progress_track.indeterminate .job_progress_fill {
