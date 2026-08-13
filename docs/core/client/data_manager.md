@@ -121,9 +121,10 @@ allowlist) is enforced server-side — see the
 2. creates a fresh `AbortController` and arms `controller.abort()` after
    `timeout + delay` ms (the window grows with each retry);
 3. schedules a **mid-attempt health probe** at `timeout / 2` ms via
-   `check_server_health()` (a cache-busted GET to `<url>health/`). If the
-   server answers the probe, the main abort is **cancelled** so a legitimately
-   slow process can finish naturally instead of being killed;
+   `check_server_health()` (a cache-busted GET to `/health`, at the ORIGIN
+   root — not under the API path). If the server answers the probe, the main
+   abort is **cancelled** so a legitimately slow process can finish naturally
+   instead of being killed;
 4. retries only on statuses `[408, 429, 500, 502, 503, 504]`; any other 4xx
    throws immediately (non-retryable);
 5. surfaces progress to the user through `render_msg_to_inspector` ("Awaiting
@@ -149,6 +150,12 @@ There is no request queue: each `data_manager.request` is an independent
 of RQOs — the API endpoint decodes exactly one RQO per HTTP request (see
 [RQO](../rqo.md)). `page_globals.api_errors` is reset at the **start** of each
 `request`, so it reflects the most recent call.
+
+The **browser**, however, does queue: six connections per origin over HTTP/1.1.
+Ordinary requests finish and free their slot, so this is invisible for them —
+but a long-lived SSE stream occupies one for its whole life, and an abandoned
+one occupies it forever. See [the connection is the
+resource](#the-connection-is-the-resource).
 
 ### Local caching (IndexedDB)
 
@@ -191,10 +198,38 @@ For payloads delivered incrementally:
 - **`read_stream`** consumes an SSE stream chunk-by-chunk, reassembling messages
   that the HTTP server may split (`data:\n…\n\n` across chunks) or merge (two
   messages in one chunk), parsing each with `JSON_parse_safely`, and invoking
-  `on_read` / `on_done` callbacks. Each reader is registered in
-  `page_globals.stream_readers` so navigation can abort all in-flight readers.
+  `on_read` / `on_done` callbacks. It **returns the reader** driving the stream.
+  Each reader is also registered in `page_globals.stream_readers` so navigation
+  can abort all in-flight readers.
+- **`release_stream_reader(reader, reason)`** cancels one reader and splices it
+  out of that registry. It is the teardown for any consumer that stops following
+  a stream **before** the page unloads.
 
 Both streaming methods also attach the CSRF header.
+
+#### The connection is the resource
+
+!!! danger "A stream nobody reads still costs a connection — six of them freeze the page"
+    An open SSE stream holds one HTTP connection for as long as the server keeps
+    it open, and a browser grants **six per origin over HTTP/1.1**. Dropping the
+    callbacks is not dropping the stream: a consumer that merely stops listening
+    leaves the connection live, and at the sixth abandoned stream **every**
+    request on the page queues indefinitely.
+
+    Including `/health`. That is the probe `_fetch_with_retry_and_timeout` uses
+    to tell a busy server from a dead one, so a starved page cannot even detect
+    its own starvation: it reports timeouts and retries against a server that is
+    answering in milliseconds.
+
+    So `page_globals.stream_readers` is the LAST resort — it drains on
+    navigation, not on teardown. Any surface that can be closed, destroyed or
+    re-rendered while its stream is still open must call
+    `release_stream_reader` itself (job followers get this for free; see the
+    activity tray in [page](../ui/page.md)).
+
+    Splice **by identity**. The registry is shared with `make_backup`, the
+    `move_*` widgets, `tool_diffusion`, the unit-test runner and the job
+    followers — emptying it releases other consumers' readers too.
 
 ## JS files and functions
 
@@ -204,9 +239,9 @@ All in `core/common/js/data_manager.js` unless noted.
 | --- | --- | --- |
 | `data_manager` | exported namespace object | owns all client→server communication |
 | `data_manager.request(options)` | method | the central dispatcher (CSRF, recovery_mode, cache short-circuit, parse, CSRF retry, error surfacing) |
-| `data_manager.url` / `data_manager.health_url` | getters | API endpoint (`DEDALO_API_URL` → fallback `../api/v1/json/`) and `<url>health/` |
+| `data_manager.url` / `data_manager.health_url` | getters | API endpoint (`DEDALO_API_URL` → fallback `../api/v1/json/`) and `/health` (origin root) |
 | `_fetch_with_retry_and_timeout(url, opts, retries, base_delay, timeout)` | module function | the only native `fetch` for regular requests; backoff + timeout + health probe |
-| `check_server_health()` | exported | cache-busted probe of `<url>health/`; distinguishes "busy" from "down" |
+| `check_server_health()` | exported | cache-busted probe of `/health`; distinguishes "busy" from "down" |
 | `render_msg_to_inspector(msg, type, remove_time)` | exported | publishes the `notification` event for user-visible banners |
 | `_record_api_error(type, msg, trace, details)` | method | appends to `page_globals.api_errors` (read by the page renderer) |
 | `_create_error_response(msg, error)` | method | builds the normalized `{result:false,…}` failure object |
@@ -214,7 +249,8 @@ All in `core/common/js/data_manager.js` unless noted.
 | `resolve_model(tipo, section_tipo)` | method | model class for a tipo; cached in `page_globals.models` |
 | `get_matrix_ontology_locator(tipo)` | method | `{section_tipo, section_id}` for a tipo; cached in `page_globals.ontology_info` |
 | `get_page_element(options)` | method | fully rendered page element (`get_page_element` action) |
-| `request_stream` / `request_fetch_stream` / `read_stream` | methods | SSE / NDJSON streaming |
+| `request_stream` / `request_fetch_stream` / `read_stream` | methods | SSE / NDJSON streaming (`read_stream` returns its reader) |
+| `release_stream_reader(reader, reason)` | exported | cancel one reader and splice it out of `page_globals.stream_readers` — the teardown that gives the connection back |
 | `get_local_db()` | method | open/upgrade the `dedalo` IndexedDB (v11) |
 | `get_local_db_data` / `set_local_db_data` / `delete_local_db_data` / `delete_local_db_data_by_prefix` / `clear_local_db_table` / `delete_whole_local_db` | methods | IndexedDB read / write / delete / prefix-delete / clear / drop |
 | `download_url(url, filename)` / `download_data(data, filename)` | exported | browser-download helpers (blob → temporary `<a>`) |

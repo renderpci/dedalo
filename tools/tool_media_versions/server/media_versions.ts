@@ -176,7 +176,15 @@ export async function buildVersion(ctx: ToolActionContext): Promise<ToolResponse
 			typeof ctx.options.target_extension === 'string' ? ctx.options.target_extension : null;
 		// The SOURCE selector is not the caller's to choose: it is the raw master
 		// extension, resolved from the disk (resolveMaster walks the allowlist).
-		const built = await buildVersionCore(spec, identity, pathOpts, quality, null, targetExtension);
+		const built = await buildVersionCore(
+			spec,
+			identity,
+			pathOpts,
+			quality,
+			null,
+			targetExtension,
+			ctx.userId,
+		);
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		// Persist only for synchronous builds; av transcodes finish in a background
 		// job and refresh files_info when the next read/save re-scans.

@@ -119,6 +119,14 @@ Two mechanisms, in order:
    state survives. `msg` carries the human text; `errors` carries the token
    every client branch dispatches on.
 
+!!! note "A *re*-login, never a second login"
+    The modal opens only on a page that booted **logged in**
+    (`page_globals.is_logged`). A page loaded logged out is already showing the
+    login form, and overlaying a dimmed copy of it on top made the operator
+    enter the credentials twice — which is exactly what happened when the
+    activity tray read the server from the login screen. Any caller may
+    therefore answer `not_logged` pre-auth without duplicating the form.
+
 !!! warning "`not_logged` is load-bearing on both sides"
     The server must emit that exact token and the client must be able to
     *receive* it: `data_manager` exempts 401 from its retry-wrapper throw, or

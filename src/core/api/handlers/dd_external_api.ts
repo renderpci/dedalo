@@ -64,7 +64,7 @@ import { getModelByTipo, getNode, getPropertiesByTipo } from '../../ontology/res
 import { engineOf } from '../../relations/request_config/engine_select.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
-import { type ApiResult, denied } from '../response.ts';
+import { type ApiResult, denied, notAuthorized } from '../response.ts';
 
 /** The relation type the client stamps on a fabricated external record_data. */
 const EXTERNAL_RECORD_DATA_TYPE = 'dd687';
@@ -116,7 +116,7 @@ export const externalApiActions: Record<string, ActionHandler> = {
 			return denied(400, 'Error. Unknown source tipo');
 		}
 		if ((await getPermissions(principal, callerSectionTipo, callerTipo)) < 1) {
-			return denied(403, 'Error. Not authorized on this component');
+			return notAuthorized('Error. Not authorized on this component');
 		}
 
 		const options = (rqo.options ?? {}) as {

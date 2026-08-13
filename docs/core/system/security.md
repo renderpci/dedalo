@@ -65,6 +65,9 @@ It sits at the bottom of the authorization stack:
 - **Enforce per-record (project) visibility** — the second ACL tier
   (`getUserProjects` + the search projects filter), applied over every list/search
   query and re-checked per-record on writes.
+- **Enforce a per-user record allow-list**, when one is configured
+  (`getUserFilterRecords` + the search records filter — see
+  [Two ACL tiers](#two-acl-tiers)).
 - **Cache hygiene** — `clearPermissionsCache` / `clearUserProjectsCache` drop the
   per-user maps so a re-profiled user never serves a stale matrix.
 
@@ -102,6 +105,18 @@ subsystem:
    duplicate, or an SQO-less delete — re-runs the same principal-scoped existence
    query to confirm the record is visible before mutating it.
 
+On top of those two, a **per-user record allow-list** may narrow layer 2 further:
+when the caller's own user record carries a
+[component_filter_records](../components/component_filter_records.md) entry for a
+searched section, `buildUserRecordsFilter()` (same module) ANDs a
+`section_id IN (...)` restriction for that section, reading the datum through
+`getUserFilterRecords()` (`src/core/security/filter_records.ts`, cached per user and
+dropped on any Users-section write). It is not a tier every request passes: it is
+data an administrator writes onto one account, absent for everyone else, and it has
+no flag and no client-settable escape hatch. Unlike the projects filter it also
+applies to global admins — an allow-list on an administrator's account restricts
+that administrator.
+
 ```mermaid
 flowchart TD
     REQ["API request (logged user, Principal)"]
@@ -109,7 +124,7 @@ flowchart TD
     L1 -->|"getPermissions(principal, parent_tipo, tipo)"| TBL["permission table<br/>(profile's component_security_access)"]
     REQ --> L2["Layer 2: per-record scope<br/>buildProjectsFilter() in the search"]
     L2 -->|"getUserProjects(userId)"| PROJ["component_filter ∩ user projects"]
-    L1 -. fail .-> EX["denied(403, ...)"]
+    L1 -. fail .-> EX["notAuthorized(...)"]
     L2 -. fail .-> EX
     EX --> RESP["dispatch → uniform error response<br/>(result:false, HTTP 403)"]
 ```
@@ -120,7 +135,40 @@ type-level permission, which reads the profile's permission table built from
 `component_security_access`. Layer 2 (`buildProjectsFilter()`) checks per-record
 visibility by intersecting the record's `component_filter` with the user's
 projects from `getUserProjects()`. Either gate that fails produces a uniform
-`denied(403, …)` response — a `{result:false}` envelope the client reads.
+`notAuthorized(…)` response — a `{result:false}` envelope the client reads.
+
+### The refusal envelope
+
+`notAuthorized(message)` (`src/core/api/response.ts`) is the ONE constructor for
+an authorization refusal. It answers HTTP **403** with the machine token in
+`errors` and the prose in `msg`:
+
+```json
+{ "result": false,
+  "msg":    "Insufficient permissions to read",
+  "errors": ["not_authorized"] }
+```
+
+!!! warning "A 403 is an answer, not a transport failure"
+    The generic `denied(status, message)` helper copies its message into
+    `errors` — fine for a validation refusal, useless for authorization, because
+    the client dispatches on the CODE. `denied(403, …)` is therefore refused
+    mechanically by `test/unit/authorization_denial_native.test.ts`; use
+    `notAuthorized()`. A client must also read the envelope rather than
+    classifying the status as a network error: the client's fetch layer exempts
+    403 exactly as it exempts 401, and retrying a refusal is meaningless.
+
+    The default message is deliberately generic — it is shown to the refused
+    user, and naming the element they cannot reach tells them it exists.
+
+The `start` action's refusal additionally carries the `environment` block (the
+same one the success path returns). `start` is the client's first call, so
+without it the page would have no `get_label` and could only render the refusal
+in the master source language. The client turns the token into the localized
+"no permission" page (`get_label.no_access_page`); a component-level refusal
+inside a page the user CAN open keeps its own narrower label (`no_access`).
+Full rationale: `WC-2026-08-12-authorization-denial-token` in
+`engineering/wire_contract/`.
 
 ## Data model & caching
 
@@ -179,7 +227,7 @@ const perm = await getPermissions(principal, 'rsc197', 'rsc197'); // 0..3
 
 // or, inside a handler, gate an action and relay the uniform failure
 if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 2) {
-    return denied(403, "You don't have enough permissions to edit this component");
+    return notAuthorized("You don't have enough permissions to edit this component");
 }
 ```
 
@@ -231,7 +279,7 @@ Each handler gates **inline** and returns the uniform `denied()` envelope:
 1. **API entry (read).** `dd_core_api.read` resolves the read permission on the
    source `(section_tipo, tipo)` and on **every SQO target section**
    (self-keyed) *before* any search/DB work. Anything `< 1` short-circuits to
-   `denied(403, 'Insufficient permissions to read')`.
+   `notAuthorized('Insufficient permissions to read')`.
 
 2. **Per-element read filtering + honest context stamps.** Inside the section
    read (`src/core/section/read.ts`), every element the caller holds level `0`
@@ -249,7 +297,7 @@ Each handler gates **inline** and returns the uniform `denied()` envelope:
 
 3. **API entry (create / write).** `create`, `save`, `duplicate` and `delete`
    check `getPermissions(principal, section_tipo, …) < 2` and refuse with a
-   `denied(403, …)` "not enough permissions" message.
+   `notAuthorized(…)` "not enough permissions" message.
 
 4. **Per-record scope on writes.** `duplicate` and sqo-less `delete` re-run a
    principal-scoped existence search (the same `buildProjectsFilter` clause) and
@@ -267,7 +315,7 @@ flowchart LR
     GP --> TBL["permission table (cached per userId)"]
     API -->|"per-record"| PF["buildProjectsFilter() in the search"]
     PF --> PROJ["getUserProjects(userId)"]
-    GP -. below required .-> DEN["denied(403, ...)"]
+    GP -. below required .-> DEN["notAuthorized(...)"]
     PF -. out of scope .-> DEN
     DEN --> RESP["uniform {result:false} response"]
 ```
@@ -278,7 +326,7 @@ handler in `ACTION_REGISTRY`. The handler first applies its inline
 layer-2 per-record scope check against the projects filter). `getPermissions()`
 reads the per-`userId`-cached permission table; the projects filter reads
 `getUserProjects()`. A level below the requirement, or a record outside scope,
-produces a `denied(403, …)` — the uniform `{result:false}` response the client
+produces a `notAuthorized(…)` — the uniform `{result:false}` response the client
 reads.
 
 ## How it fits with the rest of Dédalo
@@ -308,9 +356,9 @@ reads.
 
 ```ts
 // Inside a dispatch handler: refuse anything below write on the target section.
-// On failure this returns the uniform denied(403, ...) response the client reads.
+// On failure this returns the uniform notAuthorized(...) response the client reads.
 if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 2) {
-    return denied(403, "You don't have enough permissions to edit this component");
+    return notAuthorized("You don't have enough permissions to edit this component");
 }
 
 // Resolve a level without gating (the read path):
@@ -333,7 +381,7 @@ if (!principal.isGlobalAdmin) {
     });
     const q = await buildSearchSql(scopeSqo, { principal });
     const visible = await sql.unsafe(q.sql, q.params);
-    if (visible.length === 0) return denied(403, 'Record is out of the user scope');
+    if (visible.length === 0) return notAuthorized('Record is out of the user scope');
 }
 ```
 

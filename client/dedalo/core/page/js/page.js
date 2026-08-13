@@ -490,6 +490,16 @@ page.prototype.init = async function(options) {
 			// Check API response events from data_manager.request
 			const api_response_errors_handler = (errors) => {
 				if(errors.includes('not_logged')) {
+					// RE-login, never a SECOND login. The overlay exists to recover a
+					// session that DIED under a working page; when this page loaded
+					// logged out it is already showing the login form, and stacking a
+					// dimmed overlay on top of it shows the panel twice and asks for the
+					// credentials twice (measured: any pre-auth 401 did this).
+					// page_globals.is_logged is the boot snapshot, so a session that
+					// expires mid-use still reaches the modal — which is the whole point.
+					if (page_globals.is_logged!==true) {
+						return
+					}
 					// Show login modal
 					render_relogin()
 				}
@@ -603,6 +613,34 @@ page.prototype.build = async function(autoload=false) {
 					}
 
 				// errors check
+				// AUTHORIZATION refusal (WC-2026-08-12-authorization-denial-token).
+				// The server answers a page the user holds no grant for with HTTP 403
+				// + `errors:['not_authorized']`. It is a normal answer, not a
+				// malfunction: it gets its own error type so the renderer can say so
+				// in the user's language, instead of the generic "check your server
+				// log" panel that used to read "Not retry-able HTTP error 403".
+					if (api_response?.errors?.includes('not_authorized')) {
+
+						// The refusal carries the environment (start is the first call —
+						// without it there is no get_label and the message could only be
+						// rendered in the source language). Inject it exactly like the
+						// success path below, so the panel speaks the user's language.
+						if (api_response.environment?.result) {
+							set_environment(api_response.environment.result)
+						}
+
+						page_globals.api_errors.push(
+							{
+								error	: 'not_authorized', // error type
+								msg		: (typeof get_label!=='undefined' && get_label.no_access_page)
+											|| 'You don\'t have permission to access this page',
+								trace	: 'page build'
+							}
+						)
+
+						return false
+					}
+
 				// error generic case starting the page
 				if (!api_response || !api_response.result) {
 					// api_response do not exists or result is false

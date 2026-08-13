@@ -66,6 +66,14 @@ describe('TOOL_MEDIA_VERSIONS CLIENT TEST', function() {
 		assert.equal(typeof tool_media_versions.prototype.rotate, 'function', 'expected rotate defined')
 		assert.equal(typeof tool_media_versions.prototype.sync_files, 'function', 'expected sync_files defined')
 		assert.equal(typeof tool_media_versions.prototype.delete_version, 'function', 'expected delete_version defined')
+		// RECORD-SCOPED JOB DISCOVERY (2026-08-12). Without this method the panel
+		// falls back to click-local state, which is precisely the bug it replaced:
+		// a transcode started by tool_upload — or by another operator — was
+		// invisible here, and the tier's empty cell was indistinguishable from a
+		// tier that had never been built.
+		assert.equal(typeof tool_media_versions.prototype.get_record_jobs, 'function', 'expected get_record_jobs defined')
+		// The legacy per-job poll is kept for callers that hold a job id directly.
+		assert.equal(typeof tool_media_versions.prototype.get_job_status, 'function', 'expected get_job_status defined')
 	})
 
 })

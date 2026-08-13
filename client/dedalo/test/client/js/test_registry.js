@@ -49,6 +49,7 @@ export const generic_suites_green = [
 	'test_components_lifecycle',     // green after component_iri label-dataframe port (dd560 request_config + context) + external search fix
 	'test_components_render',        // same — component_iri list/text + component_external search now render
 	'test_others_lifecycle',         // green after list_uploaded_files port (dispatch.ts); 'installer' element excluded — get_install_context 404s once install_status is sealed (permanent on this box), which can never reach 'rendered' (see test_others_lifecycle.js get_elelemnts comment)
+	'test_job_tray',                  // the LONG-PROCESS monitoring surface: format_elapsed's boundaries (the readout an operator watches during an hour-long transcode), the shared #floating_dock reuse law, and THE CONNECTION-RELEASE law (a cancelled follower must close its stream — six abandoned ones starve the origin's six HTTP/1.1 slots and freeze the whole page). Backend-free: pure/DOM + a stubbed request_stream — a rendered tray needs a logged-in backend with live jobs.
 	'test_additional_text_area'      // green after (1) dispatch catches handler throws → graceful result:false (was raw 500), (2) the dmm480 "map of grapes" demo ontology (src/core/test_data/dmm_map_of_grapes_fixture.ts, auto-provisioned by scripts/client_test_runner.ts pre-run) with dmm506's key_up_f2 observe, (3) the text_area edit-mode features.av_player port (structure_context.ts) that binds F2→build_tag. Matches the PHP oracle client 16/16.
 ]
 

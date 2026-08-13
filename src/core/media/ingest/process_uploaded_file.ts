@@ -451,7 +451,10 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 		const canDerive =
 			isMaster || resolveMasterSource(spec, identity, pathOpts, added.extension) !== null;
 		if (canDerive && (isMaster || !existsSync(defaultFile))) {
-			startTranscode = (): string => submitAvTranscode(spec, identity, pathOpts, added.extension);
+			// userId travels so the transcode appears in ITS OWN uploader's activity
+			// tray — an unowned job would be invisible to the person who started it.
+			startTranscode = (): string =>
+				submitAvTranscode(spec, identity, pathOpts, added.extension, input.userId);
 		}
 		// THE PICTURE, NOW — not when the transcode finishes and not when an operator
 		// remembers. A new master makes the old posterframe a picture of a video this

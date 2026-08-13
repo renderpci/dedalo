@@ -103,6 +103,14 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	'core/tools/paths.ts:rootsCache',
 	'core/tools/config.ts:defaultConfigCache',
 	'core/tools/config.ts:installConfigCache',
+	// One-second memo of WHICH job pfiles exist on disk (media/jobs.ts). Request-
+	// INDEPENDENT by construction: it caches a DIRECTORY LISTING of a private
+	// tree, never a record, a user or a language. The in-memory registry is read
+	// FIRST and is never memoized, so anything this process owns stays current;
+	// this only bounds the repeated blocking readdir the activity tray put on the
+	// request path. Deliberately not the parsed bodies — a stale body could report
+	// a dead job as running.
+	'core/media/jobs.ts:mirrorScan',
 	'core/section/locks.ts:tableReady',
 	// Bootstrap memo for the temporal scratch table (WC-079): a boolean, no
 	// request identity. Cleared only by a process restart, which is correct —
@@ -243,6 +251,13 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// never cleared by design.
 	'core/api/counters.ts:counters',
 	'core/api/counters.ts:gaugeProviders',
+	// Activity providers (the job tray's read model): the SAME inversion as
+	// gaugeProviders above and with the same lifecycle — subsystems register at
+	// BOOT because core/api may not import src/diffusion, and the map is written
+	// once per process and read-only thereafter. It holds FUNCTIONS, not data:
+	// nothing request-derived is stored, so there is nothing to leak between
+	// requests and nothing to invalidate.
+	'core/api/activity.ts:activityProviders',
 	// Diffusion MariaDB pool cache: one pool per DSN for the process lifetime;
 	// closed on shutdown by the graceful-drain path.
 	'diffusion/targets/mariadb/db.ts:poolCache',

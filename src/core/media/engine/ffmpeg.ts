@@ -25,6 +25,7 @@ import { config } from '../../../config/config.ts';
 import { withTempSibling, writeAtomically } from '../atomic.ts';
 import { resolveFaststart } from './binaries.ts';
 import { type FfmpegProfile, getFfmpegProfile } from './ffmpeg_profiles.ts';
+import { chainStdout, createFfmpegProgressReader } from './ffmpeg_progress.ts';
 import {
 	assertSpawnOk,
 	describeSpawnFailure,
@@ -669,26 +670,61 @@ export async function transcodeTwoPass(
 	source: string,
 	tempTarget: string,
 	spawnOptions: SpawnOptions = {},
+	progress: TranscodeProgress = {},
 ): Promise<void> {
 	const profile = getFfmpegProfile(settingName);
 	if (profile === null) throw new Error(`Unknown ffmpeg profile '${settingName}'`);
 	const audioCodec = await getAudioCodec();
 	const passLog = `${tempTarget}.passlog`;
+	// A two-pass encode is TWO full walks of the source, so each pass owns half the
+	// bar. Reporting each pass as 0..100 would run the bar to full, snap to zero,
+	// and run again — which reads as a failed-and-restarted job.
+	const passOptions = (index: 0 | 1): SpawnOptions =>
+		withProgressReader(spawnOptions, progress, index * 0.5, 0.5);
 	try {
 		const pass1 = await runProducer(
 			buildTranscodePass1Argv(profile, source, passLog),
-			spawnOptions,
+			passOptions(0),
 		);
 		assertSpawnOk(pass1, `ffmpeg pass 1 failed (${settingName})`);
 		const pass2 = await runProducer(
 			buildTranscodePass2Argv(profile, source, passLog, tempTarget, audioCodec),
-			spawnOptions,
+			passOptions(1),
 		);
 		assertSpawnOk(pass2, `ffmpeg pass 2 failed (${settingName})`);
 		assertProducedFile(tempTarget, `ffmpeg ${settingName} transcode`);
 	} finally {
 		removePassLog(passLog);
 	}
+}
+
+/**
+ * How a long encode reports itself. Both fields must be present for a percentage
+ * to exist — without the source duration no fraction is computable, and the
+ * reader stays silent rather than inventing one (`ffmpeg_progress.ts`).
+ */
+export interface TranscodeProgress {
+	durationSeconds?: number | null;
+	/** Receives 0..1 of the WHOLE operation this options bag describes. */
+	onFraction?: (fraction: number) => void;
+}
+
+/**
+ * Attach a `-progress` reader to a spawn, mapping this run's 0..1 into the
+ * `[offset, offset+span]` slice of the caller's overall progress.
+ */
+function withProgressReader(
+	spawnOptions: SpawnOptions,
+	progress: TranscodeProgress,
+	offset: number,
+	span: number,
+): SpawnOptions {
+	const { onFraction, durationSeconds } = progress;
+	if (onFraction === undefined) return spawnOptions;
+	const reader = createFfmpegProgressReader(durationSeconds ?? null, (fraction) =>
+		onFraction(offset + fraction * span),
+	);
+	return { ...spawnOptions, onStdout: chainStdout(spawnOptions.onStdout, reader) };
 }
 
 /** Remove ffmpeg's two-pass statistics scratch (`<passLog>-0.log` + .mbtree). */

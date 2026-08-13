@@ -273,6 +273,7 @@
 	"next_page": "Nächste Seite",
 	"no": "Nein",
 	"no_access": "Ohne Zugang hier",
+	"no_access_page": "Sie haben keine Berechtigung, auf diese Seite zuzugreifen",
 	"no_empty": "Enthält Informationen",
 	"no_records": "Keine Einträge gefunden",
 	"no_results": "Keine Hierarchie entspricht dem Filter.",

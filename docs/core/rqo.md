@@ -545,16 +545,25 @@ The envelope is always `{result, msg, errors, action, csrf_token}`; only the **s
 | `get_environment` | `{page_globals, plain_vars, get_label}` |
 | `get_section_terms` | `{ "<tipo>_<id>": "<term>", ... }` |
 
-On failure `result` is `false` and `errors[]` carries a code (`Undefined method`, `invalid_api_class`, `not_logged`, `csrf_failed`, `permissions error`, `permissions_denied`).
+On failure `result` is `false` and `errors[]` carries a code (`Undefined method`, `invalid_api_class`, `not_logged`, `not_authorized`, `csrf_failed`, `permissions error`, `permissions_denied`).
 
 !!! warning "`errors[]` carries CODES; `msg` carries the prose"
-    `not_logged` is the one every client branch dispatches on: it answers HTTP
-    **401** whenever the session is absent or expired (and for a non-root caller
-    under maintenance mode), and it is what raises the in-place re-login modal.
+    Two codes are load-bearing, and for the same reason:
+
+    - **`not_logged`** answers HTTP **401** whenever the session is absent or
+      expired (and for a non-root caller under maintenance mode); it raises the
+      in-place re-login modal.
+    - **`not_authorized`** answers HTTP **403** on every authorization refusal
+      (`notAuthorized()` in `src/core/api/response.ts` — no refusal may use the
+      generic `denied()` helper at 403, which is mechanically enforced); the
+      client renders the localized "no permission" page from it.
+
     The human sentence lives in `msg` — putting it in `errors[]` instead makes
     the code unmatchable and silently disables the client's whole recovery path.
-    Note that a client consuming 401 must read the envelope rather than treating
-    the status as a transport failure. See [login](system/login.md).
+    Note that a client consuming 401 or 403 must read the envelope rather than
+    treating the status as a transport failure: both are ANSWERS, and retrying
+    either is meaningless. See [login](system/login.md) and
+    [security](system/security.md).
 
 ## RQO and request_config
 

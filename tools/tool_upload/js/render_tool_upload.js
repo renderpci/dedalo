@@ -273,6 +273,16 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		process_file_info.textContent = response.msg || 'Processing file done successfully.'
 		process_file_info.classList.add('success')
 
+	// HAND THE TRANSCODE TO THE TRAY. The server has been returning `job_id` here
+	// all along and this client dropped it, which is why uploading a video looked
+	// finished while ffmpeg still had an hour of work to do: the UPLOAD was
+	// complete, the derivative was not, and nothing on screen distinguished the
+	// two. The tray carries it from here, so the message above stays true and the
+	// operator keeps sight of the work after this dialog closes.
+		if (response.job_id && page_globals.job_tray) {
+			page_globals.job_tray.refresh()
+		}
+
 	// hide service_upload elements. To upload again, user must to reload the page
 		dd_request_idle_callback(
 			() => {

@@ -240,8 +240,9 @@ See [component_inverse](../components/component_inverse.md).
 Per-user record-level access restrictions (used in the Users section `dd128`,
 canonical tipo `dd478`): the explicit set of `section_id`s a given user may
 access in each target section, finer-grained than project-based filtering.
-Non-translatable (`lg-nolan`). Gated by `DEDALO_FILTER_USER_RECORDS_BY_ID`; an
-empty array means *no restriction*.
+Non-translatable (`lg-nolan`). There is no feature flag: an empty array — or an
+entry with an empty id list — means *no restriction*, and a populated entry
+restricts that section on the user's next search.
 
 ```json
 [
@@ -256,14 +257,16 @@ empty array means *no restriction*.
 - `value` — array of integer `section_id`s the user may access in that section
   (validated client-side to positive, de-duplicated integers).
 
-!!! warning "This ACL gate is not yet applied to search"
-    This per-user, per-record restriction is **not yet enforced** by the TS
-    search WHERE builder (`src/core/search/builders/`) — a query is not
-    currently narrowed by a user's `component_filter_records` entries. Only
-    the **project**-based filter (`component_filter` / `component_filter_master`,
-    a different mechanism) is enforced, in
-    `src/core/relations/filter_projects.ts`. Do not assume
-    `DEDALO_FILTER_USER_RECORDS_BY_ID` narrowing applies to TS-served reads.
+!!! warning "This ACL is enforced — editing the row changes what a user can see"
+    The search assembler (`src/core/search/sql_assembler.ts`) reads the logged
+    user's entries through `getUserFilterRecords()`
+    (`src/core/security/filter_records.ts`) and ANDs a `section_id IN (...)`
+    restriction for every named section. It is a **second, independent**
+    restriction alongside the project filter (`component_filter` /
+    `component_filter_master`, enforced in
+    `src/core/relations/filter_projects.ts`): both apply, each narrowing the
+    other. Writing this row by hand — or through an import — silently changes
+    what that user can list, count and open.
 
 See [component_filter_records](../components/component_filter_records.md).
 

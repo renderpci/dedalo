@@ -68,6 +68,26 @@
 	// component's content. Restore the standard content spacing
 	// (layout.less .content_data: padding 1em, padding-top 0.5em) per value.
 	&.edit {
+
+		// FIELD-GRID ROW LAW FOR A MULTI-VALUE COMPONENT.
+		// layout.less gives EVERY .wrapper_component.edit exactly two rows —
+		// `var(--component_label_height) minmax(auto, 100%)` — because a normal
+		// component draws ONE value box. component_info draws N: .content_data is
+		// `display: contents` (above), so every widget slot is a grid item of the
+		// component grid in its own right, and the slots past the first land in
+		// IMPLICIT rows.
+		// The `100%` max then resolves against the component's own height and the
+		// tracks settle on an EQUAL SPLIT of it: measured on oh1/oh87 (media_icons
+		// 37.75px + descriptors 874.13px) both rows came out 455.94px — the
+		// one-line widget reserved ~420px of blank, and the tall one still spilled
+		// out of its own cell over the component below.
+		// One row per widget, each sized to ITS OWN content: no dead space, no
+		// overflow, and the vertical room goes to the widget that has data for it.
+		// The label keeps the shared row token so component_info's first line stays
+		// on the same baseline as every other field's.
+		grid-template-rows: var(--component_label_height);
+		grid-auto-rows: auto;
+
 		>.content_data >.content_value {
 			padding: 0.5em 1em 1em;
 

@@ -196,7 +196,8 @@ Specialized actions: `get_element_context` (with `prevent_lock:true`),
 `resolve_model` (cached in `page_globals.models`), `get_matrix_ontology_locator`
 (cached in `page_globals.ontology_info`), `get_page_element`, and streaming via
 `request_stream` / `request_fetch_stream` + `read_stream` (SSE/NDJSON, readers
-tracked in `page_globals.stream_readers`).
+tracked in `page_globals.stream_readers` and released by
+`release_stream_reader`).
 
 **RQO construction** lives in `common.js`. `create_source(self, action)` builds the
 `{typo:'source', type, action, model, tipo, section_tipo, section_id, mode, view,

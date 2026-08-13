@@ -10,7 +10,7 @@ import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { DEDALO_VERSION_TRIPLE, parseVersionString } from '../../update/version.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
-import { denied } from '../response.ts';
+import { denied, notAuthorized } from '../response.ts';
 
 /**
  * Human-readable SQL for the SQO dev console: substitute $N placeholders with
@@ -86,6 +86,24 @@ export function authorizeUpdateManifest(input: {
 	return { ok: true, version };
 }
 
+/**
+ * The {section_tipo, section_id} a record-scoped read names, or null when the
+ * request does not name one.
+ *
+ * Split out of `get_record_jobs` to keep that handler under the complexity cap:
+ * validation is its own concern, and INT is the canonical section_id form
+ * (WC-2026-08-10-section-id-int-canonical) — the client may send either
+ * spelling, and this is the boundary that settles it.
+ */
+function parseRecordRef(options: unknown): { sectionTipo: string; sectionId: number } | null {
+	const source = (options ?? {}) as { section_tipo?: unknown; section_id?: unknown };
+	const sectionTipo = typeof source.section_tipo === 'string' ? source.section_tipo : '';
+	const sectionId = Number(source.section_id);
+	if (sectionTipo === '') return null;
+	if (!Number.isInteger(sectionId) || sectionId <= 0) return null;
+	return { sectionTipo, sectionId };
+}
+
 /** dd_utils_api action handlers, keyed by action (registered in dispatch.ts). */
 export const utilsApiActions: Record<string, ActionHandler> = {
 	update_lock_components_state: async (rqo, context) => {
@@ -107,7 +125,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		{
 			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		const { updateLockComponentsState } = await import('../../section/locks.ts');
@@ -140,7 +158,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		{
 			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
 			if (level < 1) {
-				return denied(403, 'Insufficient permissions to read');
+				return notAuthorized('Insufficient permissions to read');
 			}
 		}
 		const { getLockStatus } = await import('../../section/locks.ts');
@@ -186,6 +204,45 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// The principal authorizes the poll: a job that carries user data (a tool's
 		// background run) streams only to its owner — the ids are guessable.
 		return getUtilsProcessStatus(rqo, principal);
+	},
+	get_record_jobs: async (rqo, context) => {
+		// "What is running for THIS record?" — the question no surface could ask
+		// before, which is why an upload's background transcode was invisible and an
+		// empty tier cell was indistinguishable from "never built".
+		//
+		// AUTHORIZED BY THE RECORD, NOT BY JOB OWNERSHIP, and deliberately so: a
+		// second operator looking at the same record must see that a tier is already
+		// being built, or they start a duplicate encode over the same output path.
+		// The payload is therefore reduced to OPERATIONAL SHAPE — never the job's
+		// `data`, which stays owner-only behind the untouched mayStreamJob (see
+		// job_stream.ts). jobs.ts already draws this exact line for unowned jobs.
+		const principal = requirePrincipal(context);
+		const ref = parseRecordRef(rqo.options);
+		if (ref === null) {
+			return {
+				status: 200,
+				body: { result: false, msg: 'section_tipo and an integer section_id are required' },
+			};
+		}
+		const { sectionTipo, sectionId } = ref;
+		const level = await getPermissions(principal, sectionTipo, sectionTipo);
+		if (level < 1) return notAuthorized();
+		const { mediaJobs } = await import('../../media/jobs.ts');
+		const { activityRowFromMediaJob, stampForeignOwnerNames } = await import('../activity.ts');
+		const records = mediaJobs.jobsForRecord(sectionTipo, sectionId);
+		const rows = records.map(activityRowFromMediaJob);
+		await stampForeignOwnerNames(records, rows, principal.userId);
+		return { status: 200, body: { result: true, jobs: rows } };
+	},
+	get_activity: async (_rqo, context) => {
+		// The activity tray's read model — the caller's OWN work across BOTH job
+		// systems (core/api/activity.ts explains why aggregating is the point).
+		const principal = requirePrincipal(context);
+		const { collectActivity } = await import('../activity.ts');
+		return {
+			status: 200,
+			body: { result: true, jobs: await collectActivity(principal.userId) },
+		};
 	},
 	stop_process: async (rqo, context) => {
 		// Stop a background job (PHP dd_utils_api::stop_process): the generic Stop
@@ -577,7 +634,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// distinct returned ids, db_data = rows.
 		const principal = requirePrincipal(context);
 		if (!principal.isGlobalAdmin) {
-			return denied(403, 'Only global admins can use the SQO test environment');
+			return notAuthorized('Only global admins can use the SQO test environment');
 		}
 		const untrusted = (rqo.options ?? {}) as Record<string, unknown>;
 		try {

@@ -401,7 +401,38 @@ export const render_server_response_error = function(errors) {
 					break;
 				}
 
-				case 'invalid_page_element': {
+				case 'not_authorized': {
+				// The user is logged in and the server understood them perfectly —
+				// they simply hold no grant here. Say that, in their language, and
+				// offer the way out (Home). No trace, no "see your server log": this
+				// is not a malfunction and there is nothing for the user to report.
+				// (WC-2026-08-12-authorization-denial-token; the message itself is
+				// `get_label.no_access_page`, resolved by the caller.)
+					ui.create_dom_element({
+						element_type	: 'h1',
+						class_name		: 'server_response_error',
+						inner_html		: errors[i].msg || 'You don\'t have permission to access this page',
+						parent			: error_container
+					})
+				// link_home
+					const link_home_denied = ui.create_dom_element({
+						element_type	: 'a',
+						class_name		: 'link home',
+						href			: home_url,
+						inner_html		: 'Home', // same literal as the sibling error cases
+						parent			: error_container
+					})
+					link_home_denied.addEventListener('click', function(e) {
+						e.stopPropagation()
+					})
+				// styles no_access_error add once
+					if (!error_container.classList.contains('no_access_error')) {
+						error_container.classList.add('no_access_error')
+					}
+				break;
+			}
+
+			case 'invalid_page_element': {
 					// server_response_error h1
 						ui.create_dom_element({
 							element_type	: 'h1',

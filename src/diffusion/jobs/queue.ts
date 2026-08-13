@@ -457,6 +457,58 @@ export async function listActiveJobs(): Promise<ActiveJobRow[]> {
 	)) as ActiveJobRow[];
 }
 
+/**
+ * One of the caller's own ACTIVE jobs, projected for the activity tray.
+ *
+ * (!) NOT listJobsForCaller(userId). That reader is the 24h HISTORY view — up to
+ * 200 rows of whole jsonb columns including `spec` (the entire sanitized SQO) and
+ * an unbounded `errors` — and its own comment warns against putting it on a
+ * repeating read. The tray asks "what of mine is running right now" on every page
+ * load, which is exactly that mistake in a new caller. This reader answers only
+ * that question, filtered by owner and projected to scalars in SQL.
+ *
+ * Served by the same partial `_state_idx` as listActiveJobs; the owner predicate
+ * narrows an already-tiny set.
+ */
+export interface OwnedActiveJobRow {
+	job_id: string;
+	client_process_id: string;
+	state: DiffusionJobState;
+	section_tipo: string | null;
+	diffusion_element_tipo: string | null;
+	counter_text: string | null;
+	total_text: string | null;
+	msg: string | null;
+	created_at: string;
+	/** Null while live; the terminal instant once finished. */
+	finished_at: string | null;
+	/** The job's own error list, so a FAILED publication can say why. */
+	errors: unknown;
+}
+
+export async function listActiveJobsForOwner(
+	ownerUserId: number,
+	recentTerminalMs: number,
+): Promise<OwnedActiveJobRow[]> {
+	await ensureDiffusionJobTables();
+	return (await sql.unsafe(
+		`SELECT job_id, client_process_id, state,
+		        spec->>'section_tipo'            AS section_tipo,
+		        spec->>'diffusion_element_tipo'  AS diffusion_element_tipo,
+		        totals->>'counter' AS counter_text,
+		        totals->>'total'   AS total_text,
+		        totals->>'msg'     AS msg,
+		        created_at, finished_at, errors
+		   FROM "${DIFFUSION_JOBS_TABLE}"
+		  WHERE owner_user_id = $1::int
+		    AND (state IN ('queued','running')
+		         OR finished_at > now() - ($2::int * interval '1 millisecond'))
+		  ORDER BY created_at DESC
+		  LIMIT 50`,
+		[ownerUserId, recentTerminalMs],
+	)) as OwnedActiveJobRow[];
+}
+
 /** Count of jobs waiting to be claimed (scheduler backlog — admin widget input). */
 export async function countQueuedJobs(): Promise<number> {
 	await ensureDiffusionJobTables();

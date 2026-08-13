@@ -303,7 +303,13 @@ data_manager.request = async function(options) {
 			// expired session showed up as a network error with blank widgets. It is
 			// NOT an error to be reported either; `_record_api_error` would relay a
 			// routine logout to the error-report surface on every pending request.
-			if (response.status === 401) {
+			// WC-2026-08-12-authorization-denial-token: HTTP 403 is the SAME kind of
+			// answer for the same reason — the authorization gate replying with a
+			// normal API envelope (`errors:['not_authorized']`). Reported as a
+			// transport failure it became "Not retry-able HTTP error 403" over a
+			// blank page, with the real message ("Insufficient permissions to read")
+			// never reaching `.json()`.
+			if (response.status === 401 || response.status === 403) {
 				return response;
 			}
 			console.warn("-> HANDLE_ERRORS response:", response);
@@ -590,7 +596,10 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 			// envelope never reached `.json()`, `api_response_errors` never published,
 			// and the re-login modal never opened. Return it and let the normal
 			// response path dispatch on the token.
-			if (!response?.ok && response?.status !== 401) {
+			// 403 rides the same exemption for the same reason
+			// (WC-2026-08-12-authorization-denial-token): an authorization refusal is
+			// an ANSWER, not a transport failure, and retrying it is meaningless.
+			if (!response?.ok && response?.status !== 401 && response?.status !== 403) {
 				throw new HttpError(response.status, response.statusText, response);
 			}
 
@@ -1034,13 +1043,20 @@ data_manager.request_fetch_stream = async function(options) {
 *   malformed messages; invalid JSON yields a synthetic error SSE response.
 *
 * The reader is pushed into `page_globals.stream_readers` so that navigation away
-* from the page can abort all in-flight readers.
+* from the page can abort all in-flight readers. That registry is the LAST resort,
+* not the lifecycle: a consumer that stops caring before the page unloads must
+* release its own reader with `release_stream_reader` — an SSE stream held open by
+* a dead consumer still occupies one of the browser's six per-origin HTTP/1.1
+* connections, and six of them starve the whole origin (`/health` included).
 *
 * @see https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
 * @param {ReadableStream} stream - Body stream obtained from `response.body`
 * @param {Function} on_read - Called for each complete SSE message: `on_read(sse_response, reader)`
 * @param {Function} on_done - Called once when the stream is fully consumed: `on_done(true)`
-* @returns {void}
+* @returns {ReadableStreamDefaultReader} the reader driving this stream, so the
+*   caller can release it (see `release_stream_reader`). Returned rather than only
+*   handed to `on_read`: a consumer that must cancel BEFORE the first frame arrives
+*   had no other way to reach it.
 */
 data_manager.read_stream = function(stream, on_read, on_done) {
 
@@ -1154,7 +1170,60 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 	};
 	// Start reading the first chunk
 	readChunk();
+
+
+	return reader
 }//end read_stream
+
+
+
+/**
+* RELEASE_STREAM_READER
+* Cancel one SSE reader and drop it from the shared `page_globals.stream_readers`
+* registry. THE teardown for any consumer that stops following a stream before the
+* page unloads.
+*
+* WHY IT MATTERS. Cancelling the reader is what closes the underlying HTTP
+* connection. A browser allows six per origin over HTTP/1.1, so six abandoned
+* streams — six panels opened over a long transcode, say — queue every subsequent
+* request on the page FOREVER, `/health` included. That starves the very probe
+* `_fetch_with_retry_and_timeout` uses to tell a busy server from a dead one, so
+* the UI reports timeouts against a server that is answering perfectly.
+*
+* (!) Splices the entry by IDENTITY. The registry is shared with make_backup,
+* unit_test, the move_* widgets, tool_diffusion and job_follow — a `length = 0`
+* here would silently orphan every other consumer's reader.
+*
+* @param {ReadableStreamDefaultReader|null} reader
+* @param {string} [reason='consumer released'] - passed to reader.cancel()
+* @returns {boolean} true when a reader was actually released
+*/
+export const release_stream_reader = function(reader, reason='consumer released') {
+
+	if (!reader) {
+		return false
+	}
+
+	try {
+		reader.cancel(reason)
+	} catch (error) {
+		if (SHOW_DEBUG===true) {
+			console.warn('release_stream_reader: cancel failed', error)
+		}
+	}
+
+	const registry = (typeof page_globals!=='undefined' && Array.isArray(page_globals.stream_readers))
+		? page_globals.stream_readers
+		: null
+	if (registry) {
+		const at = registry.indexOf(reader)
+		if (at !== -1) {
+			registry.splice(at, 1)
+		}
+	}
+
+	return true
+}//end release_stream_reader
 
 
 

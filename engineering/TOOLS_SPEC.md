@@ -209,6 +209,19 @@ answers immediately with `{job_id, background_job_id, pid, pfile}`.
   happens: no `{pid, pfile}` handle, no re-reading a file on a timer, no 0–1000 ms
   lag. The handle is `job_id` alone. The stream ends on the first `is_running:false`
   frame, and THAT frame's `data` is the handler's return value.
+
+  **A SUBSCRIPTION IS A CONNECTION, and the consumer owns its release.** The stream
+  stays open for the job's whole life (the server re-sends the current frame every
+  15 s so no proxy times it out), and a browser grants six per origin over
+  HTTP/1.1. `client/dedalo/core/common/js/job_follow.js` is therefore the only
+  client entry point: its `cancel()` cancels the reader and drops it from
+  `page_globals.stream_readers`, and `create_job_follower_group()` gives a surface
+  one `cancel_all()` for every stream it opened — called from its `destroy()` AND at
+  the head of each render pass, since a re-render orphans the previous pass's
+  followers. Measured cost of getting this wrong (2026-08-13, tool_media_versions):
+  six panel opens over one transcode starved the origin, `/health` included, so the
+  client reported timeouts and retries against a server answering in milliseconds.
+  Gated by `test_job_tray` in the client suite.
 - **POLL (legacy) — `dd_utils_api::get_process_status`**. A faithful port of a PHP
   workaround: PHP forked a detached CLI child that could not talk to the web request,
   so it wrote a JSON "process file" and the web layer TAILED it. `pid` + `pfile` are

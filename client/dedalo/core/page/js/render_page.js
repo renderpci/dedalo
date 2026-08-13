@@ -29,6 +29,7 @@
 	import {instantiate_page_element} from './page.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_update_data_maintenance} from '../../area_maintenance/js/render_update_data_maintenance.js'
+	import {render_job_tray} from './job_tray.js'
 
 
 
@@ -105,6 +106,14 @@ render_page.prototype.edit = async function(options) {
 			parent			: wrapper
 		})
 		self.bubbles_notification_container = bubbles_notification_container
+
+	// job_tray: the user's own background work, across BOTH job systems. It mounts
+	// itself into #floating_dock (document-level, outside this wrapper) on purpose:
+	// the wrapper is rebuilt on every area change, and a tray that died with it
+	// would lose sight of a transcode the moment the operator navigated away —
+	// which is the exact blindness it exists to cure. Idempotent per document; it
+	// hides itself when nothing is running.
+		render_job_tray()
 
 
  	return wrapper

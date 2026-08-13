@@ -275,6 +275,26 @@ Full request/response shapes:
 `user_activity` is the only ontology-declared async widget; its data comes from
 the pre-aggregated user-stats pipeline (`src/core/area_maintenance/user_stats.ts`).
 
+!!! note "It reports the user's WHOLE history"
+    The span is read from the data, not from a fixed window: `savedStatsDayBounds()`
+    gives the first and last day the user has a saved `dd1521` stats row for, that
+    range is folded, and the raw activity log is aggregated only for the tail after
+    the last saved day (today included — today is never saved). A user with **no**
+    saved rows is the one bounded case: their raw log is aggregated over the last
+    365 days and a warning naming the user is logged, because an unbounded live
+    aggregation over a multi-million-row actor is the statement timeout this
+    pipeline exists to avoid. Run the user-stats catch-up to give such a user a
+    real history.
+
+!!! warning "A day aggregated twice is counted once"
+    A `dd1521` row IS that day's totals, and the stats writer only ever appends
+    (it resumes from its newest row), so re-aggregating a user whose old rows
+    were never deleted leaves duplicate days behind. The range read keeps one row
+    per day — the highest `id`, i.e. the most recent run — because summing two
+    runs of the same day reports more activity than the log holds. Days the
+    catch-up never covered are still missing from the totals: the live tail read
+    starts after the last saved day, it does not fill holes in the middle.
+
 ## Security: no dynamic code loading
 
 The `calculation` widget's `process` step is attacker-relevant because the

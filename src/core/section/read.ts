@@ -466,6 +466,72 @@ function recordIdOrNaN(wireSectionId: { kind: string; id?: number }): number {
 		: Number.NaN;
 }
 
+/**
+ * Why a LITERAL component whose record resolved to null still deserves an
+ * emission — null means "serve the PHP empty shell" (`return []`):
+ *
+ * - 'tm'       — a TM preview of a component whose live record is gone
+ *                (restored-from-deletion history): PHP still plays the snapshot
+ *                back, so it needs an empty virtual record to carry it;
+ * - 'temporal' — a tool's throwaway editable clone (WC-059): the client's
+ *                `self.data = data || {}` leaves the widget with no entries
+ *                array at all when the item is missing;
+ * - 'search'   — SEARCH mode against a SYNTHETIC filter-row id ('search_<n>',
+ *                search.js get_section_id) addresses no record BY DESIGN. The
+ *                relation branch already serves this as "the component's own
+ *                item, entries:[]" (PHP get_json emits the item whenever
+ *                permissions > 0, record or not) and the literal branch used to
+ *                answer NOTHING: component_filter_records' search render
+ *                iterates self.data.datalist UNGUARDED
+ *                (render_search_component_filter_records:165), so that filter
+ *                row threw and never reached 'rendered'.
+ */
+function literalNoRecordKind(
+	source: { mode?: string },
+	tmOverride: unknown | null,
+): 'tm' | 'temporal' | 'search' | null {
+	if (tmOverride !== null) return 'tm';
+	if (isTemporalSource(source)) return 'temporal';
+	return (source.mode ?? 'edit') === 'search' ? 'search' : null;
+}
+
+/**
+ * The empty virtual record a null-record LITERAL read is served on, or null
+ * when the honest answer is the PHP empty shell (see literalNoRecordKind).
+ * `rowId` is the id the emission stamps: the SEARCH shell's wire id is
+ * SYNTHETIC (Number('search_1') is NaN), so it emits at 0 and the verbatim id
+ * is restored by stampSearchShellItems.
+ */
+async function materializeLiteralShell(
+	source: { mode?: string },
+	sectionTipo: string,
+	sectionId: unknown,
+	tmOverride: unknown | null,
+): Promise<{ record: MatrixRecord; rowId: number; searchShell: boolean } | null> {
+	const kind = literalNoRecordKind(source, tmOverride);
+	if (kind === null) return null;
+	const searchShell = kind === 'search';
+	const rowId = searchShell ? 0 : Number(sectionId);
+	const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
+	return { record: makeVirtualRecord(sectionTipo, rowId), rowId, searchShell };
+}
+
+/**
+ * The no-record SEARCH shell's item fixups (a no-op for every other read): the
+ * client resolves its filter row by
+ * `String(el.section_id)===String(self.section_id)`, so the SYNTHETIC id is
+ * echoed VERBATIM (the relation branch's search item does the same), and
+ * row_section_id — a subdatum-ROW stamp — has no meaning without a record.
+ */
+function stampSearchShellItems(items: DataItem[], sectionId: unknown, searchShell: boolean): void {
+	if (!searchShell) return;
+	for (const entry of items) {
+		entry.section_id = sectionId as number | string;
+		// biome-ignore lint/performance/noDelete: no record ⇒ the key must be ABSENT
+		delete (entry as { row_section_id?: unknown }).row_section_id;
+	}
+}
+
 export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 	const source = rqo.source ?? {};
 	const tipo = source.tipo;
@@ -611,18 +677,16 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		let literalRecord = hasRecordId
 			? await readMatrixRecord(literalTable, sectionTipo, numericSectionId)
 			: null;
+		/** The no-record SEARCH shell — drives the id fixups after the emission. */
+		let literalSearchShell = false;
+		let literalRowId = Number(sectionId);
 		if (literalRecord === null) {
-			// TM preview of a component whose live record is gone (restored-from-
-			// deletion history): PHP still plays back the snapshot, so materialize an
-			// empty virtual record to carry the override. No override ⇒ PHP empty shell.
-			// A TEMPORAL instance (WC-059) also lands here with no record, but must
-			// get the EMPTY record rather than the empty shell: the clone is an
-			// editable widget, and the client's `self.data = data || {}` leaves it
-			// with no entries array at all when the item is missing.
-			if (tmOverride === null && !isTemporalSource(source)) return [];
-			const { makeVirtualRecord } = await import('../section_record/virtual_record.ts');
-			literalRecord = makeVirtualRecord(sectionTipo, Number(sectionId));
-			// WC-079: the staged value, if the operator has one. Freshly built here,
+			const shell = await materializeLiteralShell(source, sectionTipo, sectionId, tmOverride);
+			if (shell === null) return []; // PHP empty shell
+			literalRecord = shell.record;
+			literalRowId = shell.rowId;
+			literalSearchShell = shell.searchShell;
+			// WC-079: the staged value, if the operator has one. Freshly built there,
 			// so no cloneRecord is needed. A TM preview still wins below — a history
 			// playback must never be overwritten by a scratch form.
 			await graftScratch(literalRecord);
@@ -639,12 +703,14 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			{ tipo, section_tipo: sectionTipo, mode: literalMode, lang } as Ddo,
 			[],
 			literalRecord,
-			{ section_tipo: sectionTipo, section_id: Number(sectionId) },
+			{ section_tipo: sectionTipo, section_id: literalRowId },
 			literalMode,
 			lang,
 			tipo,
 			literalEmission,
 		);
+
+		stampSearchShellItems(literalData as DataItem[], sectionId, literalSearchShell);
 
 		// component_security_access DIRECT get_data: the datalist / changes_files /
 		// parent locator are attached in the shared emitDdoData literal branch
@@ -1755,18 +1821,6 @@ export async function emitDdoData(
 	// literals attach it only when a fallback resolved.
 	if (fallbackValue !== null || model === 'component_text_area') {
 		item.fallback_value = fallbackValue;
-	}
-	// component_filter_records (misc column): the client search render reads
-	// self.data.datalist and iterates it (render_search_component_filter_records
-	// :165 datalist.length). Without the key the render throws
-	// "Cannot read properties of undefined (reading 'length')" and the instance
-	// never reaches 'rendered'. Attach an array so the render completes; the full
-	// filter-field datalist is uncovered scope (the dedicated suite's content
-	// asserts stay deferred), but this unblocks the component sweeps.
-	if (model === 'component_filter_records') {
-		item.datalist = Array.isArray((item as { datalist?: unknown }).datalist)
-			? (item as { datalist?: unknown }).datalist
-			: [];
 	}
 	item.row_section_id = row.section_id;
 	item.parent_tipo = callerTipo;

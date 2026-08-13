@@ -38,6 +38,66 @@
 		word-break: break-word;
 	}
 
+	// THE BUSY TIER. One readout for both paths — a build this browser started
+	// AND one it discovered already running (render_job_progress) — because a
+	// transcode must look the same whoever launched it. Local + inline for the
+	// same reason .build_error is: a tier being built is that CELL's state.
+	.job_progress {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.15rem;
+		font-size: 0.75rem;
+		line-height: 1.2;
+
+		.job_progress_label {
+			color: @color_grey_7;
+			white-space: nowrap;
+		}
+
+		// The bar. Determinate only when the server reported a percentage; an
+		// unprobeable source has no denominator, and .indeterminate is the honest
+		// rendering rather than a number nobody measured.
+		.job_progress_track {
+			position: relative;
+			width: 3.5rem;
+			height: 3px;
+			border-radius: 2px;
+			background-color: @color_grey_3;
+			overflow: hidden;
+
+			.job_progress_fill {
+				display: block;
+				height: 100%;
+				width: 0;
+				background-color: var(--color_green_success);
+				transition: width 0.3s linear;
+			}
+
+			&.indeterminate .job_progress_fill {
+				// A slab that sweeps: "working, duration unknown". Never a percentage.
+				animation: job_progress_sweep 1.4s ease-in-out infinite;
+				transition: none;
+			}
+		}
+
+		.job_progress_elapsed {
+			color: @color_grey_6;
+			font-variant-numeric: tabular-nums;
+		}
+
+		// Whose work this is — shown only for ANOTHER operator's job, which is why
+		// a disabled gear is not a broken panel.
+		.job_progress_owner {
+			color: @color_grey_6;
+			font-style: italic;
+			max-width: 6rem;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+
 	// content_data
 	>.content_data {
 		display: flex;
@@ -55,7 +115,7 @@
 					>.content_value {
 						height: var(--media_min_height);
 						max-height: var(--media_max_height);
-						
+
 						.image_container {
 							height: 100%;
 
@@ -201,4 +261,11 @@
 // modal header tool modification
 .tool_header.tool_media_versions {
 	background-color: @tool_color;
+}
+
+// The indeterminate bar's sweep. Outside the wrapper block because a keyframes
+// at-rule is not scoped by a selector — nesting it only obscures that.
+@keyframes job_progress_sweep {
+	0%   { transform: translateX(-100%); }
+	100% { transform: translateX(100%); }
 }

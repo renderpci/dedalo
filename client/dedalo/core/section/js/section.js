@@ -2244,10 +2244,13 @@ section.prototype.focus_first_input = function() {
 * Guards against invalid or unknown mode strings before they propagate into the
 * instance and cause silent render failures.
 *
-* The set of valid modes is: 'edit', 'list', 'list_thesaurus', 'solved', 'tm'.
+* The set of valid modes is: 'edit', 'list', 'list_thesaurus', 'indexation_list',
+* 'solved', 'tm'.
 * 'list_thesaurus' is a server-side-only mode alias that the build method
 * normalises to 'list' after the API response is received; it is listed here
 * because sections can be initialised with it before build runs.
+* 'indexation_list' arrives on the caller descriptor of a tool opened from an
+* indexation-grid button (see the note beside the set).
 *
 * (!) When an unrecognised mode is passed the function currently returns it
 * unchanged (with a console.error) rather than the intended default 'list'.
@@ -2260,7 +2263,14 @@ section.prototype.focus_first_input = function() {
 */
 function validate_mode(mode) {
 
-	const valid_modes = new Set(['edit', 'list', 'list_thesaurus', 'solved', 'tm'])
+	// (!) 'indexation_list' is a REAL engine mode, not a typo: the indexation
+	// grid builds its caller descriptor with it (src/core/section/indexation_grid.ts)
+	// and keys real behaviour off it server-side (thumb/posterframe quality
+	// instead of the 'edit' posture). It reaches this validator whenever a tool
+	// opened from an indexation-grid button rebuilds its section caller — i.e.
+	// on EVERY such open, where it used to raise a blocking alert() in dev mode
+	// and freeze the tool window.
+	const valid_modes = new Set(['edit', 'list', 'list_thesaurus', 'indexation_list', 'solved', 'tm'])
 	const default_mode = 'list';
 
 	if (!mode) {

@@ -32,7 +32,7 @@ import {
 import { getFfmpegProfile, settingName } from './engine/ffmpeg_profiles.ts';
 import type { SpawnOptions } from './engine/spawn.ts';
 import { scanContextFromItem, scanFilesInfo } from './files_info.ts';
-import { mediaJobs } from './jobs.ts';
+import { type JobTarget, mediaJobs } from './jobs.ts';
 import { buildMediaLocation, type MediaIdentity, type MediaPathOptions } from './path.ts';
 import { resolveMasterSource } from './processing.ts';
 import { readStoredMediaItems } from './tool_support.ts';
@@ -51,6 +51,12 @@ export interface AvSourceProfile {
 	aspect: '16x9' | '4x3' | null;
 	hasAudio: boolean;
 	hasVideo: boolean;
+	/**
+	 * Source length, for the encode's percentage (`engine/ffmpeg_progress.ts`).
+	 * Null when no stream declares one — a real case for some containers — and
+	 * then the job reports an INDETERMINATE bar rather than a made-up number.
+	 */
+	durationSeconds: number | null;
 }
 
 /**
@@ -74,7 +80,24 @@ export async function probeAvSource(source: string): Promise<AvSourceProfile> {
 		aspect: pickAspect(video?.width, video?.height),
 		hasAudio: probe?.streams?.some((entry) => entry.codec_type === 'audio') ?? false,
 		hasVideo: video !== undefined,
+		durationSeconds: longestStreamDuration(probe?.streams),
 	};
+}
+
+/**
+ * The longest declared stream duration, in seconds — the encode's denominator.
+ * The LONGEST, not the video stream's: an audio tier is extracted from a track
+ * that may outlast the video, and a bar that hits 100% with minutes still to run
+ * is the frozen-70% problem in a new costume.
+ */
+function longestStreamDuration(streams?: { duration?: string }[]): number | null {
+	let longest: number | null = null;
+	for (const stream of streams ?? []) {
+		const seconds = Number(stream.duration);
+		if (!Number.isFinite(seconds) || seconds <= 0) continue;
+		if (longest === null || seconds > longest) longest = seconds;
+	}
+	return longest;
 }
 
 /** Whether a quality is one of the audio-only tiers (no video pass). */
@@ -132,6 +155,7 @@ export async function encodeAvQuality(
 	source: string,
 	profile: AvSourceProfile,
 	spawnOptions: SpawnOptions = {},
+	onFraction?: (fraction: number) => void,
 ): Promise<AvEncodeOutcome> {
 	const target = buildMediaLocation(
 		spec,
@@ -156,6 +180,39 @@ export async function encodeAvQuality(
 		return { built: target, faststart: null };
 	}
 
+	return await encodeVideoTier({
+		spec,
+		identity,
+		quality,
+		source,
+		profile,
+		spawnOptions,
+		onFraction,
+		target,
+	});
+}
+
+/**
+ * The VIDEO half of `encodeAvQuality` — two-pass transcode, moov relocation,
+ * atomic publish.
+ *
+ * Split out when the progress plumbing pushed `encodeAvQuality` over its frozen
+ * complexity ceiling. The seam is the honest one anyway: the audio tier is an
+ * extraction with no profile, no passes and no faststart, so the two branches
+ * shared only their name.
+ */
+async function encodeVideoTier(input: {
+	spec: MediaTypeSpec;
+	identity: MediaIdentity;
+	quality: string;
+	source: string;
+	profile: AvSourceProfile;
+	spawnOptions: SpawnOptions;
+	onFraction?: (fraction: number) => void;
+	target: string;
+}): Promise<AvEncodeOutcome> {
+	const { identity, quality, source, profile, spawnOptions, onFraction, target } = input;
+
 	const profileName = settingName(quality, profile.standard, profile.aspect);
 	const ffmpegProfile = getFfmpegProfile(profileName);
 	if (ffmpegProfile === null) return { skipped: 'no_profile' };
@@ -167,7 +224,10 @@ export async function encodeAvQuality(
 	// every failure path.
 	let faststart: FaststartOutcome | null = null;
 	await writeAtomically(target, async (temp) => {
-		await transcodeTwoPass(profileName, source, temp, spawnOptions);
+		await transcodeTwoPass(profileName, source, temp, spawnOptions, {
+			durationSeconds: profile.durationSeconds,
+			onFraction,
+		});
 		// PHP's `nice -n 19 <qt-faststart> <tmp> <target>` (class.Ffmpeg.php:782),
 		// on the temp: the rename writeAtomically does is the one publication step.
 		faststart = await applyFaststart(temp, { format: ffmpegProfile.force, ...spawnOptions });
@@ -297,37 +357,87 @@ export function submitAvTranscode(
 	identity: MediaIdentity,
 	pathOpts: MediaPathOptions,
 	rawExtension: string,
+	userId?: number,
 ): string {
-	const record = mediaJobs.submit('av_transcode', async ({ onProgress }) => {
-		const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
-		if (source === null) throw new Error('AV original not found for transcode');
-		const profile = await probeAvSource(source);
-		const created: string[] = [];
+	// The job's target is the DEFAULT tier: that is the one an operator watches for
+	// after an upload, and the one whose empty cell in the versions panel started
+	// this. The audio tier rides along in the same job (it always has) and is named
+	// in the payload rather than given a target of its own — one job, one target,
+	// so the duplicate guard and the panel agree on what is busy.
+	const record = mediaJobs.submit(
+		'av_transcode',
+		async ({ onProgress, onData }) => {
+			const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
+			if (source === null) throw new Error('AV original not found for transcode');
+			const profile = await probeAvSource(source);
+			const created: string[] = [];
 
-		const video = await encodeAvQuality(
-			spec,
-			identity,
-			pathOpts,
-			spec.defaultQuality,
-			source,
-			profile,
-		);
-		if ('built' in video) created.push(video.built);
-		onProgress(70);
+			// TIER-SPLIT PROGRESS. The video encode owns 0-85% and the audio
+			// extraction 85-95%, each fed by ffmpeg's own -progress stream rather
+			// than by a step marker. Before this the bar sat at a hand-written 70
+			// for most of an hour on a long master, which reads as a wedged job.
+			const publishTier = (tier: string): ((fraction: number) => void) => {
+				return (fraction: number): void => {
+					const base = tier === 'audio' ? 85 : 0;
+					const span = tier === 'audio' ? 10 : 85;
+					onProgress(base + fraction * span);
+					onData({ msg: `Encoding ${tier}`, quality: tier, is_running: true });
+				};
+			};
 
-		if (spec.qualities.includes('audio')) {
-			const audio = await encodeAvQuality(spec, identity, pathOpts, 'audio', source, profile);
-			if ('built' in audio) created.push(audio.built);
-		}
+			const video = await encodeAvQuality(
+				spec,
+				identity,
+				pathOpts,
+				spec.defaultQuality,
+				source,
+				profile,
+				{},
+				publishTier(spec.defaultQuality),
+			);
+			if ('built' in video) created.push(video.built);
+			onProgress(85);
 
-		const persistError = await persistOrReport(spec, identity, pathOpts);
-		onProgress(100);
-		return {
-			created,
-			persist_error: persistError,
-			faststart_error: faststartErrorOf(video),
-		};
-	});
+			if (spec.qualities.includes('audio')) {
+				const audio = await encodeAvQuality(
+					spec,
+					identity,
+					pathOpts,
+					'audio',
+					source,
+					profile,
+					{},
+					publishTier('audio'),
+				);
+				if ('built' in audio) created.push(audio.built);
+			}
+			onProgress(95);
+
+			const persistError = await persistOrReport(spec, identity, pathOpts);
+			onProgress(100);
+			return {
+				created,
+				persist_error: persistError,
+				faststart_error: faststartErrorOf(video),
+			};
+		},
+		{
+			userId,
+			target: {
+				section_tipo: identity.sectionTipo,
+				section_id: identity.sectionId,
+				component_tipo: identity.componentTipo,
+				lang: identity.lang ?? null,
+				quality: spec.defaultQuality,
+				label: spec.defaultQuality,
+				// The audio tier is built by THIS SAME JOB, so it must be blocked
+				// too. Without it the guard covered the default tier and left audio
+				// open — a click on the audio gear mid-ingest started a second
+				// ffmpeg writing the very file this job was about to produce.
+				also_qualities: spec.qualities.includes('audio') ? ['audio'] : [],
+			},
+		},
+	);
 	return record.id;
 }
 
@@ -338,6 +448,72 @@ function faststartErrorOf(outcome: AvEncodeOutcome): string | null {
 
 /** Why a per-quality build cannot even be submitted (the operator-facing reason). */
 export class AvBuildRefused extends Error {}
+
+/**
+ * EVERY refusal knowable BEFORE a job id exists, in one place.
+ *
+ * The panel shows "Processing" the moment it gets a job id, so a refusal that
+ * can be known now must be raised now — an accepted job that dies two seconds
+ * later is the shape of the bug this whole path replaces. Extracted from
+ * `submitAvVersionBuild` when the duplicate guard pushed it over the frozen
+ * complexity ceiling; the seam is honest, since everything here is a question
+ * asked before any work starts.
+ *
+ * Returns the two things the encode needs and the pre-flight already resolved,
+ * so nothing is probed twice.
+ */
+async function preflightAvBuild(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	quality: string,
+	target: JobTarget,
+	rawExtension?: string | null,
+): Promise<{ source: string; profile: AvSourceProfile }> {
+	if (spec.model !== 'component_av') {
+		throw new AvBuildRefused('build_version: not an av component');
+	}
+	assertValidQuality(spec, quality);
+	if (quality === spec.originalQuality) {
+		throw new AvBuildRefused('build_version: the original is the source, it cannot be built');
+	}
+	// DUPLICATE-BUILD GUARD. Two operators looking at the same record — or one
+	// operator whose upload is still transcoding — could each start an encode
+	// writing the SAME output path. The atomic rename means the loser is discarded
+	// rather than corrupting anything, so this was never data loss; it was two full
+	// transcodes of an hour-long master to produce one file, with which one wins
+	// decided by a race. See MediaJobManager.hasLiveJobForTarget for why this is
+	// in-memory where diffusion's equivalent is a DB constraint.
+	if (mediaJobs.hasLiveJobForTarget(target)) {
+		throw new AvBuildRefused(
+			`build_version: '${quality}' is already being built for this record — wait for the running job to finish`,
+		);
+	}
+
+	const source = resolveAvBuildSource(spec, identity, pathOpts, quality, rawExtension);
+	if (source === null) {
+		throw new AvBuildRefused(
+			`build_version: no original and no ${spec.defaultQuality} file to build '${quality}' from`,
+		);
+	}
+	const profile = await probeAvSource(source);
+	assertTierIsEncodable(quality, profile);
+	return { source, profile };
+}
+
+/** The last pre-flight question: can THIS source produce THIS tier at all? */
+function assertTierIsEncodable(quality: string, profile: AvSourceProfile): void {
+	if (isAudioTier(quality)) {
+		if (!profile.hasAudio) {
+			throw new AvBuildRefused(`build_version: the source has no audio stream ('${quality}')`);
+		}
+		return;
+	}
+	const profileName = settingName(quality, profile.standard, profile.aspect);
+	if (getFfmpegProfile(profileName) === null) {
+		throw new AvBuildRefused(`build_version: no encode profile '${profileName}'`);
+	}
+}
 
 /**
  * Submit the TOOL's per-quality build (PHP build_version($quality, async)).
@@ -356,50 +532,59 @@ export async function submitAvVersionBuild(
 	pathOpts: MediaPathOptions,
 	quality: string,
 	rawExtension?: string | null,
+	userId?: number,
 ): Promise<string> {
-	if (spec.model !== 'component_av') {
-		throw new AvBuildRefused('build_version: not an av component');
-	}
-	assertValidQuality(spec, quality);
-	if (quality === spec.originalQuality) {
-		throw new AvBuildRefused('build_version: the original is the source, it cannot be built');
-	}
+	const target: JobTarget = {
+		section_tipo: identity.sectionTipo,
+		section_id: identity.sectionId,
+		component_tipo: identity.componentTipo,
+		lang: identity.lang ?? null,
+		quality,
+		label: quality,
+	};
+	const { source, profile } = await preflightAvBuild(
+		spec,
+		identity,
+		pathOpts,
+		quality,
+		target,
+		rawExtension,
+	);
 
-	const source = resolveAvBuildSource(spec, identity, pathOpts, quality, rawExtension);
-	if (source === null) {
-		throw new AvBuildRefused(
-			`build_version: no original and no ${spec.defaultQuality} file to build '${quality}' from`,
-		);
-	}
-	const profile = await probeAvSource(source);
-	if (isAudioTier(quality)) {
-		if (!profile.hasAudio) {
-			throw new AvBuildRefused(`build_version: the source has no audio stream ('${quality}')`);
-		}
-	} else {
-		const profileName = settingName(quality, profile.standard, profile.aspect);
-		if (getFfmpegProfile(profileName) === null) {
-			throw new AvBuildRefused(`build_version: no encode profile '${profileName}'`);
-		}
-	}
-
-	const record = mediaJobs.submit('av_transcode', async ({ onProgress }) => {
-		onProgress(5);
-		const outcome = await encodeAvQuality(spec, identity, pathOpts, quality, source, profile);
-		// Unreachable via the pre-flight above unless the source changed under us
-		// mid-flight — then it IS the job's failure, and the panel reads the reason.
-		if (!('built' in outcome)) {
-			throw new Error(`build_version: '${quality}' not built (${outcome.skipped})`);
-		}
-		onProgress(90);
-		const persistError = await persistOrReport(spec, identity, pathOpts);
-		onProgress(100);
-		return {
-			created: [outcome.built],
-			quality,
-			persist_error: persistError,
-			faststart_error: faststartErrorOf(outcome),
-		};
-	});
+	const record = mediaJobs.submit(
+		'av_transcode',
+		async ({ onProgress, onData }) => {
+			onProgress(5);
+			const outcome = await encodeAvQuality(
+				spec,
+				identity,
+				pathOpts,
+				quality,
+				source,
+				profile,
+				{},
+				// 5-90% is the encode itself; the persist owns the rest.
+				(fraction) => {
+					onProgress(5 + fraction * 85);
+					onData({ msg: `Encoding ${quality}`, quality, is_running: true });
+				},
+			);
+			// Unreachable via the pre-flight above unless the source changed under us
+			// mid-flight — then it IS the job's failure, and the panel reads the reason.
+			if (!('built' in outcome)) {
+				throw new Error(`build_version: '${quality}' not built (${outcome.skipped})`);
+			}
+			onProgress(90);
+			const persistError = await persistOrReport(spec, identity, pathOpts);
+			onProgress(100);
+			return {
+				created: [outcome.built],
+				quality,
+				persist_error: persistError,
+				faststart_error: faststartErrorOf(outcome),
+			};
+		},
+		{ userId, target },
+	);
 	return record.id;
 }

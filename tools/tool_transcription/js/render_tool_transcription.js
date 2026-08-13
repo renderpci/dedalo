@@ -135,6 +135,16 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 		const activity_info_node = await render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info_node)
 
+	// caller_options.tag_id. The tool can be opened already positioned on one
+	// tag — the indexation grid's transcription button (dd_grid view_indexation)
+	// sends the clicked fragment's tag_id through caller_options. select_tag
+	// republishes the normal click event, so the editor selects and scrolls to
+	// the tag. It self-defers until the CKEditor service is ready.
+		const caller_tag_id = self.caller_options?.tag_id ?? null
+		if (caller_tag_id!==null && self.transcription_component) {
+			self.transcription_component.select_tag(caller_tag_id)
+		}
+
 
 	return wrapper
 }//end edit

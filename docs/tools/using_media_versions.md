@@ -32,6 +32,42 @@ Media versions surfaces as a button on the media components themselves — `comp
 5. To rebuild the whole set from the master, use the regenerate control in the sync area. Optionally tick **Delete normalized files** first so stale derivatives are cleared before rebuilding. Press **Regenerate**.
 6. Long operations (rebuilds, transcodes) can take minutes. The tool waits and confirms before running the destructive ones.
 
+## While something is being built
+
+A quality that is being generated right now shows a **progress readout** in its
+column instead of a rebuild button: how far along it is, how long it has been
+running, and — when the work was started by someone else — who started it.
+
+This is read from the server, not from your own click, so it appears whoever
+started the work. That matters most right after an upload: uploading a video
+stores your file immediately and sends the web-sized version to be encoded in
+the background, so the quality is genuinely still being made for some minutes
+after the upload says it finished. Before, that column was simply empty, which
+looked exactly like a quality that had never been built.
+
+Because the server is doing the work, you do not have to keep the modal open.
+The **activity tray** in the bottom-right corner of the screen lists everything
+of yours that is running — media conversions, imports and publications alike —
+with progress and elapsed time, and follows you as you move around the
+application. Click a row to open the record it belongs to.
+
+The tray also **reports how things ended**. A job that finishes stays listed
+briefly with its result; one that fails stays until you dismiss it, and says
+why. Media conversions can be stopped from the tray while they run; publications
+are stopped from the diffusion panel in Maintenance, which is where that queue
+is managed.
+
+You cannot start a second build of a quality that is already being built; the
+button is not offered while its work is running. If a build fails, or the
+server is restarted while it runs, the column says so with the reason and
+offers the rebuild again — it does not go back to looking empty.
+
+!!! note "When there is no percentage"
+    Some source files do not declare how long they are, and for those the
+    progress bar shows movement without a number. The work is running normally;
+    only its total length is unknown, and the tool would rather show that than
+    invent a figure.
+
 ## Options
 
 | Control | What it does |
