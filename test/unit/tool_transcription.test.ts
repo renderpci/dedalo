@@ -26,6 +26,7 @@ import { secondsToTc } from '../../src/core/resolve/tr_marks.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getToolConfig, resetConfigCache } from '../../src/core/tools/config.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
+import type { ToolActionContext } from '../../src/core/tools/module.ts';
 import {
 	babelTranscriberStatusProvider,
 	buildTranscriberStatusBody,
@@ -39,6 +40,7 @@ import {
 	type TranscriberStatusRequest,
 } from '../../src/core/tools/transcription_asr.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { tool } from '../../tools/tool_transcription/server/index.ts';
 
 const ROOT = `${tmpdir()}/dedalo_transcription_${process.pid}`;
 const av = mediaTypeOf('component_av')!;
@@ -123,6 +125,10 @@ describe('tool_transcription module', () => {
 			// read the install's configuration, so the operator's model-store and
 			// hub-fallback settings would otherwise be inert.
 			'get_model_sources',
+			// Admin-gated: resolve an `unverified` model into `ready`/`incomplete`.
+			'repair_model',
+			// Admin-gated: discard and re-fetch the files that fail their check.
+			'verify_model',
 		]);
 		// permission: null → each handler gates imperatively against its ddo.
 		expect(
@@ -144,10 +150,12 @@ describe('tool_transcription module', () => {
 		expect(loaded!.module.backgroundRunnable).toEqual([
 			'check_background_transcriber_status',
 			'background_download_model',
+			'background_repair_model',
 		]);
 		// absent from apiActions — an action not in the map is unroutable.
 		expect(loaded!.module.apiActions.check_background_transcriber_status).toBeUndefined();
 		expect(loaded!.module.apiActions.background_download_model).toBeUndefined();
+		expect(loaded!.module.apiActions.background_repair_model).toBeUndefined();
 	});
 
 	test('download_model refuses everyone but a global administrator', async () => {
@@ -872,5 +880,47 @@ describe('remote ASR seam', () => {
 				'babel_transcriber',
 			),
 		).toBeNull();
+	});
+});
+
+describe('model actions are admin-gated and catalog-bound', () => {
+	const nonAdmin = { isGlobalAdmin: false } as unknown as ToolActionContext['principal'];
+
+	test('repair_model refuses a non-admin', async () => {
+		const response = await tool.apiActions.repair_model!.handler({
+			options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
+			principal: nonAdmin,
+			userId: 1,
+		} as unknown as ToolActionContext);
+		expect(response.result).toBe(false);
+		expect(String(response.msg)).toContain('administrator');
+	});
+
+	test('repair_model refuses a model outside the catalog', async () => {
+		const response = await tool.apiActions.repair_model!.handler({
+			options: { model: 'evil/not-in-catalog' },
+			principal: { isGlobalAdmin: true },
+			userId: 1,
+		} as unknown as ToolActionContext);
+		expect(response.result).toBe(false);
+		expect(String(response.msg)).toContain('not in the transcriber catalog');
+	});
+
+	test('verify_model refuses a non-admin', async () => {
+		const response = await tool.apiActions.verify_model!.handler({
+			options: { model: 'onnx-community/whisper-large-v3-turbo-ONNX' },
+			principal: nonAdmin,
+			userId: 1,
+		} as unknown as ToolActionContext);
+		expect(response.result).toBe(false);
+	});
+
+	// Deviation from the brief text: only repair_model is backgrounded (verify
+	// runs inline — see the design decision above), so there is no
+	// 'background_verify_model' action to assert about. This checks the
+	// background action that actually exists: allowlisted, never client-routable.
+	test('the repair background action is allowlisted but not client-routable', () => {
+		expect(Object.keys(tool.apiActions)).not.toContain('background_repair_model');
+		expect(tool.backgroundRunnable).toContain('background_repair_model');
 	});
 });

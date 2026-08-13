@@ -32,15 +32,23 @@
  * state).
  */
 
-import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { config } from '../../../src/config/config.ts';
-import { DIARIZATION_COMMON_FILES, downloadModel } from '../../../src/core/ai/model_fetch.ts';
+import {
+	DIARIZATION_COMMON_FILES,
+	downloadModel,
+	headContentLength,
+	HUB_BASE,
+} from '../../../src/core/ai/model_fetch.ts';
+import { forgetFile, recordFileComplete } from '../../../src/core/ai/model_manifest.ts';
 import {
 	AI_MODEL_URL_PREFIX,
 	modelHubAllowed,
 	modelInstalled,
+	modelState,
 	modelStoreAvailable,
+	modelStoreRoot,
 } from '../../../src/core/ai/model_store.ts';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
@@ -747,11 +755,12 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
  * configuration the logged-in user's own browser is about to act on.
  */
 async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
-	// Which catalog models are actually USABLE right now. Without this the picker
-	// happily offers a model nobody downloaded, and the run dies deep inside the
-	// ONNX runtime with "Could not locate file: …/config.json" — a message that
-	// tells an archivist nothing and an administrator almost nothing.
+	// Which catalog models are USABLE right now, and in what way. A boolean
+	// "installed" could not distinguish a model nobody downloaded from one whose
+	// download was killed mid-file — and it was the second that reached the
+	// browser as "ERROR_CODE: 7 … protobuf parsing failed" with nothing in the UI.
 	const installed: string[] = [];
+	const models: { name: string; state: string; files: unknown[] }[] = [];
 	try {
 		// getToolConfig returns the EFFECTIVE config — a flat map of key → resolved
 		// value — so `transcriber_quality` IS the catalog array.
@@ -761,12 +770,18 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 			? raw
 			: ((raw as { value?: unknown[] } | undefined)?.value ?? null);
 		if (Array.isArray(entries)) {
-			for (const raw of entries) {
-				if (raw === null || typeof raw !== 'object') continue;
-				const entry = raw as { name?: unknown; tier?: unknown; dtype?: Record<string, string> };
+			for (const rawEntry of entries) {
+				if (rawEntry === null || typeof rawEntry !== 'object') continue;
+				const entry = rawEntry as { name?: unknown; tier?: unknown; dtype?: Record<string, string> };
 				if (typeof entry.name !== 'string') continue;
 				if (entry.tier !== undefined && entry.tier !== 'browser') continue;
-				if (modelInstalled(entry.name, entry.dtype)) installed.push(entry.name);
+				const report = modelState(entry.name, entry.dtype);
+				models.push({ name: entry.name, state: report.state, files: report.files });
+				// `installed` KEEPS its old meaning — "the browser may try this" —
+				// so an older client is never made worse by this change. An
+				// unverified model is the normal state of every store seeded
+				// before the manifest existed: it runs, with a warning.
+				if (report.state === 'ready' || report.state === 'unverified') installed.push(entry.name);
 			}
 		}
 	} catch (error) {
@@ -786,6 +801,7 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 		label?: string;
 		size_mb?: number;
 		installed: boolean;
+		state: string;
 		embedding_name?: string;
 	} | null = null;
 	try {
@@ -800,6 +816,7 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 				label: entry.label,
 				size_mb: (entry.size_mb ?? 0) + (embedding?.size_mb ?? 0),
 				installed: segmentationInstalled && embeddingInstalled,
+				state: modelState(entry.name, entry.dtype).state,
 				embedding_name: embedding?.name,
 			};
 		}
@@ -813,6 +830,7 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 			allow_hub: modelHubAllowed(),
 			store_ready: modelStoreAvailable(),
 			installed,
+			models,
 			diarization,
 		},
 		msg: 'OK',
@@ -974,11 +992,147 @@ async function backgroundDownloadModel(ctx: ToolActionContext): Promise<ToolResp
 	return { result: false, msg: report.errors.join('; '), errors: report.errors };
 }
 
+/** The background repair action name (allowlisted, never client-routable). */
+const BACKGROUND_REPAIR_ACTION = 'background_repair_model';
+
+/** Catalog lookup shared by the model actions: ASR entry, else a diarization slot. */
+async function catalogEntry(
+	model: string,
+): Promise<{ name: string; dtype?: Record<string, string>; kind: 'asr' | 'diarization' } | null> {
+	const asr = (await readModelCatalog()).find(
+		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
+	);
+	if (asr !== undefined) return { name: asr.name, dtype: asr.dtype, kind: 'asr' };
+	const slots = [await readDiarizationModel(), await readDiarizationEmbeddingModel()];
+	const entry = slots.find((candidate) => candidate !== null && candidate.name === model);
+	return entry === undefined || entry === null
+		? null
+		: { name: entry.name, dtype: entry.dtype, kind: 'diarization' };
+}
+
+/**
+ * verify_model — resolve an `unverified` model into `ready` or `incomplete`.
+ *
+ * Asks the hub for each file's length and records the ones that match, so the
+ * store can answer from disk afterwards. Same two gates as download_model: this
+ * makes the server talk to a public host, an operator act. An install with no
+ * outbound internet gets a clean "could not be verified", never a false verdict —
+ * an air-gapped archive must be able to say "I cannot check", not "it is broken".
+ */
+async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
+	if (ctx.principal?.isGlobalAdmin !== true) {
+		return fail('Only a global administrator can verify models');
+	}
+	const model = String(ctx.options.model ?? '');
+	const entry = await catalogEntry(model);
+	if (entry === null) {
+		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+	}
+
+	const store = modelStoreRoot();
+	const report = modelState(entry.name, entry.dtype);
+	let checked = 0;
+	let unreachable = 0;
+	for (const file of report.files) {
+		if (!file.present || file.expected !== null) continue;
+		const length = await headContentLength(`${HUB_BASE}/${entry.name}/resolve/main/${file.file}`);
+		if (length === null) {
+			unreachable++;
+			continue;
+		}
+		recordFileComplete(store, entry.name, file.file, length);
+		checked++;
+	}
+
+	const after = modelState(entry.name, entry.dtype);
+	if (unreachable > 0 && checked === 0) {
+		return fail(`Could not reach the model hub to verify '${model}'`);
+	}
+	return { result: true, msg: `OK. Verified: ${after.state}`, errors: [] };
+}
+
+/**
+ * repair_model — discard the files that fail their check and fetch them again.
+ *
+ * The remedy for the state this whole change exists to surface. Same gates as
+ * download_model (global admin, catalog names only) and the same detached job,
+ * so nothing new can be reached from the wire and the client polls
+ * get_model_sources exactly as it already does for a download.
+ */
+async function repairModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
+	if (ctx.principal?.isGlobalAdmin !== true) {
+		return fail('Only a global administrator can repair models');
+	}
+	const model = String(ctx.options.model ?? '');
+	const entry = await catalogEntry(model);
+	if (entry === null) {
+		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+	}
+
+	const loaded = await getLoadedTool('tool_transcription');
+	if (loaded === undefined) {
+		return fail('tool module not loaded — cannot schedule the repair');
+	}
+	scheduleBackground(
+		loaded,
+		BACKGROUND_REPAIR_ACTION,
+		{ permission: null, handler: backgroundRepairModel },
+		{ model: entry.name, dtype: entry.dtype, kind: entry.kind },
+		ctx.principal,
+		ctx.userId,
+	);
+	return { result: true, msg: 'OK. Repair started', errors: [] };
+}
+
+/** The detached repair job: delete what fails its check, then re-run the download. */
+async function backgroundRepairModel(ctx: ToolActionContext): Promise<ToolResponse> {
+	const model = String(ctx.options.model ?? '');
+	const dtype = (ctx.options.dtype ?? undefined) as Record<string, string> | undefined;
+	const store = modelStoreRoot();
+	const report = modelState(model, dtype);
+
+	for (const file of report.files) {
+		const suspect =
+			!file.present ||
+			file.size === 0 ||
+			(file.expected !== null && file.expected !== file.size) ||
+			report.state === 'damaged';
+		if (!suspect) continue;
+		const path = join(store, model, file.file);
+		try {
+			if (existsSync(path)) rmSync(path);
+		} catch (error) {
+			console.error(`[tool_transcription] could not remove '${path}' during repair:`, error);
+		}
+		// The manifest's claim about a deleted file is stale; dropping it makes the
+		// next fetch ask the hub for the length again instead of trusting the record
+		// that let the truncation through.
+		forgetFile(store, model, file.file);
+	}
+
+	console.log(`[tool_transcription] repairing model '${model}'…`);
+	const fileOptions =
+		ctx.options.kind === 'diarization'
+			? { commonFiles: DIARIZATION_COMMON_FILES, optionalFiles: [] as string[] }
+			: {};
+	const download = await downloadModel(model, dtype, { quiet: true, ...fileOptions });
+	const after = modelState(model, dtype);
+	if (download.ok && (after.state === 'ready' || after.state === 'unverified')) {
+		console.log(`[tool_transcription] model '${model}' repaired (${after.state})`);
+		return { result: true, msg: `OK. Model repaired: ${model}`, errors: [] };
+	}
+	const errors = download.errors.length > 0 ? download.errors : [`state after repair: ${after.state}`];
+	console.error(`[tool_transcription] model repair FAILED for '${model}':`, errors);
+	return { result: false, msg: errors.join('; '), errors };
+}
+
 export const tool: ToolServerModule = {
 	name: 'tool_transcription',
 	apiActions: {
 		get_model_sources: { permission: null, handler: getModelSources },
 		download_model: { permission: null, handler: downloadModelAction },
+		verify_model: { permission: null, handler: verifyModelAction },
+		repair_model: { permission: null, handler: repairModelAction },
 		create_transcribable_audio_file: { permission: null, handler: createTranscribableAudioFile },
 		delete_transcribable_audio_file: { permission: null, handler: deleteTranscribableAudioFile },
 		automatic_transcription: { permission: null, handler: automaticTranscription },
@@ -987,5 +1141,5 @@ export const tool: ToolServerModule = {
 	},
 	// Background-only actions: allowlisted here, absent from apiActions
 	// (unroutable from the wire) — PHP BACKGROUND_RUNNABLE.
-	backgroundRunnable: [BACKGROUND_POLL_ACTION, BACKGROUND_DOWNLOAD_ACTION],
+	backgroundRunnable: [BACKGROUND_POLL_ACTION, BACKGROUND_DOWNLOAD_ACTION, BACKGROUND_REPAIR_ACTION],
 };
