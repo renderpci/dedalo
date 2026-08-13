@@ -38,6 +38,7 @@
 	import { open_tool } from '../../../core/tools_common/js/tool_common.js'
 	import { get_current_lang_info } from './tool_transcription.js'
 	import { create_status_panel } from './render_transcription_status.js'
+	import { MODEL_STATES, model_state_of } from './transcription_report.js'
 	import Split from '../../../lib/split/dist/split.es.js'
 
 // localStorage key holding the user's last pane ratio. @see activate_split
@@ -65,22 +66,37 @@
 * dialog, which freezes the tab and says nothing an archivist can act on. The
 * panel is published on the instance so every one of them reaches the same place.
 *
-* The console line is the fallback, never the primary: it only runs when the block
-* was not rendered at all (no `transcriber_engine` in the tool's config), in which
-* case there is no panel in the document to write into.
+* WHEN THERE IS NO PANEL there is still a user. An install with no
+* `transcriber_engine` configured never renders the automatic-transcription block
+* (see the guard in get_content_data_edit) — but it DOES render the subtitles
+* builder and "Assign speakers". Falling back to the console there would make a
+* failed subtitle build invisible on exactly those installs: the regression this
+* task exists to reverse. So the fallback is a visible banner (`ui.show_message`)
+* in the caller's own container, with the console line kept beside it for the
+* administrator reading a support request (CONVENTIONS §1).
 *
 * @param {Object} self - the tool_transcription instance
 * @param {Object} input - a report: {phase, severity, message, cause, action, detail}
-* @returns {bool}
+* @param {HTMLElement} [container] - where the fallback banner is shown
+* @returns {bool} true when the one panel took it
 */
-const tool_report = function(self, input) {
+const tool_report = function(self, input, container) {
+
+	const message = (input && input.message) || ''
 
 	if (self && self.status_panel) {
 		self.status_panel.report( input )
 		return true
 	}
 
-	console.error('[tool_transcription]', (input && input.message) || '');
+	console.error('[tool_transcription]', message);
+	if (container) {
+		ui.show_message(
+			container,
+			message,
+			(input && input.severity==='warning') ? 'warning' : 'error'
+		)
+	}
 	return false
 }//end tool_report
 
@@ -473,7 +489,9 @@ const get_content_data_edit = function(self) {
 									message		: response.msg
 										|| self.get_tool_label('subtitles_build_failed')
 										|| 'The subtitles file could not be built'
-								})
+								// an install with no transcriber_engine has no panel:
+								// the banner lands in this block instead
+								}, subtitles_block)
 							}else{
 								// success case
 								// update video to force load the new subtitles file
@@ -926,7 +944,9 @@ const render_transcription_options = async function(self) {
 						severity	: 'warning',
 						message		: self.get_tool_label('no_speaker_tags')
 							|| 'The transcription has no speaker tags to assign'
-					})
+					// no panel on this install? the banner lands in the button's own
+					// (live) parent — the fragment this was built into is long spent
+					}, button_assign_speakers_header.parentElement)
 				}
 			})
 		})
@@ -1246,7 +1266,9 @@ const get_server_status = function (options) {
 *       * Quality selector (`<select>`) — populated from `context.config.transcriber_quality`.
 *       * Lang-info display — shows the current transcription language as "Label | tld3 | tld2"
 *         and updates whenever the transcription component is re-rendered (language change).
-*   - A status display that shows processing state (hidden initially).
+*   - The tool's ONE status panel (render_transcription_status.js): the readiness
+*     line, the transient progress line, and every warning and failure — which is
+*     never hidden, by construction.
 *
 * Engine/quality/device selections are persisted to the local IndexedDB 'status' table so
 * that the user's preferences survive page reloads.
@@ -1262,8 +1284,12 @@ const get_server_status = function (options) {
 *     completion via `get_server_status()` using the returned process pid stored in the
 *     local DB.
 *
-* A pre-flight WebGPU capability check (`ua.check_transformers_webgpu()`) warns the user
-* if the browser cannot run the model efficiently before starting the job.
+* A READINESS LINE (`refresh_readiness`) states what is true BEFORE anything is
+* pressed: the selected model's real state in the install's store (with its Repair /
+* Download / Check remedy), whether the run will fall back to the processor because
+* the browser has no usable WebGPU, and the language being transcribed. It replaced
+* a blocking pre-flight question raised on every click — asked after the decision was
+* made, and nagging an archivist who had deliberately chosen the CPU device.
 *
 * The `nodes` object is used as an internal message bus between the button handler,
 * configuration inputs, and status display to avoid repeated DOM queries.
@@ -2197,6 +2223,32 @@ const render_automatic_transcription = function (options) {
 		// (see tool_report).
 			self.status_panel = status_panel
 
+		/**
+		* DEVICE_CAPABILITY
+		* Probe the browser's WebGPU support ONCE per tool window.
+		*
+		* ua.check_transformers_webgpu runs a million-iteration benchmark and creates
+		* and destroys a GPU adapter and device. As a per-click pre-flight that was
+		* paid once; the readiness line is recomputed on every model/device change,
+		* and re-paying it there would jank the main thread of exactly the weak
+		* machines the warning is written for. The answer cannot change while the
+		* page is open, so the PROMISE is memoized (concurrent callers share one
+		* probe, not two).
+		*/
+		let capability_probe = null
+		const device_capability = function() {
+			if (capability_probe===null) {
+				// An unanswerable probe is not a verdict: say nothing rather than
+				// warn about a GPU we could not ask about (and never let it reject
+				// the readiness line, which would leave the block silent again).
+				capability_probe = ua.check_transformers_webgpu().catch(function(){
+					return { overall : true }
+				})
+			}
+			return capability_probe
+		}
+
+
 	/**
 	* REFRESH_READINESS
 	* What is true BEFORE the button is pressed.
@@ -2209,15 +2261,11 @@ const render_automatic_transcription = function (options) {
 	* It costs one get_model_sources request, so it is wired ONLY to the events that
 	* can change its answer: the model picker, the device picker, and the completion
 	* of a download/repair/verification.
+	*
+	* What each model state MEANS is not decided here: MODEL_STATES is the one table,
+	* shared with the run's own refusal (transcription_report.js). The two used to
+	* disagree, and the refusal was the one that lied.
 	*/
-		const model_state_labels = {
-			ready		: 'state_ready',
-			unverified	: 'state_unverified',
-			incomplete	: 'state_incomplete',
-			damaged		: 'state_damaged',
-			missing		: 'state_missing'
-		}
-
 		const refresh_readiness = async function() {
 
 			const lines		= []
@@ -2228,34 +2276,25 @@ const render_automatic_transcription = function (options) {
 			const selected	= nodes.transcriber_engine_quality
 				? nodes.transcriber_engine_quality.value
 				: null
-			const entry		= models.find(el => el.name===selected) || null
+			const model_state	= model_state_of( models, selected )
+			const state_info	= model_state ? MODEL_STATES[model_state] : null
 
-			if (entry) {
+			if (state_info) {
 				// An UNVERIFIED model is not a fault: it is the normal state of every
 				// store seeded before the verification existed. Only incomplete,
-				// damaged and missing are refusals.
-				const state_label	= self.get_tool_label( model_state_labels[entry.state] ) || entry.state
-				const usable		= entry.state==='ready' || entry.state==='unverified'
+				// damaged and missing are refusals (MODEL_STATES.usable).
+				const state_label = self.get_tool_label( state_info.state_key ) || model_state
 				lines.push({
-					severity	: usable ? 'info' : 'error',
+					severity	: state_info.usable ? 'info' : 'error',
 					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${state_label}`,
-					action_key	: (entry.state==='damaged' || entry.state==='incomplete')
-						? 'action_repair_model'
-						: (entry.state==='missing'
-							? 'action_download_model'
-							: (entry.state==='unverified' ? 'action_verify_model' : null))
+					action_key	: state_info.action_key
 				})
 			}
 
 			// The device probe that used to be a blocking modal question on every click.
 			// It is stated, not asked: someone who deliberately chose the processor
 			// is not nagged, and someone who did not is told before they wait.
-			// An unanswerable probe is not a verdict: say nothing rather than warn
-			// about a GPU we could not ask about (and never let it reject the whole
-			// readiness line, which would leave the block silent again).
-			const capability	= await ua.check_transformers_webgpu().catch(function(){
-				return { overall : true }
-			})
+			const capability	= await device_capability()
 			const device		= nodes.transcriber_device_select
 				? nodes.transcriber_device_select.value
 				: 'auto'

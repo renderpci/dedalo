@@ -7,6 +7,37 @@
 
 
 /**
+* ACTION_LABELS
+* The English words behind every remedy key.
+*
+* A tool label falls back to the KEY when the install's catalog does not carry it,
+* and every one of these keys is new: on a live install seeded before this work,
+* the remedy button would read `action_repair_model`. A button whose text is an
+* identifier is not a remedy, so the fallback is stated here — once, for both the
+* report path and the readiness path.
+*/
+const ACTION_LABELS = {
+	action_repair_model		: 'Repair the model',
+	action_download_model	: 'Download the model',
+	action_verify_model		: 'Check the model files',
+	action_retry_cpu		: 'Run it on the processor instead',
+	action_retry			: 'Try again',
+	action_lower_quality	: 'Choose a smaller model',
+	action_check_media		: "Check this record's audio file",
+	action_ask_admin		: 'Ask your administrator'
+}
+
+/** The remedies that DO something when pressed; the rest render as a sentence. */
+const PRESSABLE_ACTIONS = [
+	'action_repair_model',
+	'action_download_model',
+	'action_verify_model',
+	'action_retry_cpu',
+	'action_retry'
+]
+
+
+/**
 * RENDER_TRANSCRIPTION_STATUS
 * The ONE place the transcription engine speaks to the user.
 *
@@ -32,6 +63,7 @@
 *                                       presses an offered remedy
 * @returns {Object} {node, report, fail, progress, readiness, clear}
 */
+
 export const create_status_panel = function( options ) {
 
 	const self		= options.self
@@ -41,6 +73,11 @@ export const create_status_panel = function( options ) {
 	const label = function( key, fallback ) {
 		if (!key) return ''
 		return self.get_tool_label(key) || fallback || key
+	}
+
+	/** A remedy's words. Never the bare key: see ACTION_LABELS. */
+	const action_label = function( key ) {
+		return label( key, ACTION_LABELS[key] )
 	}
 
 	const node = ui.create_dom_element({
@@ -100,9 +137,8 @@ export const create_status_panel = function( options ) {
 		// A remedy the user can PRESS. Keys with no server action behind them
 		// (ask_admin, lower_quality, check_media) render as a sentence instead:
 		// a button that does nothing is worse than a clear instruction.
-		const pressable = ['action_repair_model', 'action_download_model', 'action_verify_model', 'action_retry_cpu', 'action_retry']
 		if (report.action!=='') {
-			if (pressable.includes(action_key)) {
+			if (PRESSABLE_ACTIONS.includes(action_key)) {
 				const button = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light status_action',
@@ -170,7 +206,7 @@ export const create_status_panel = function( options ) {
 					severity	: 'error',
 					message		: label(classified.message_key, 'The transcription failed'),
 					cause		: label(classified.cause_key, ''),
-					action		: label(classified.action_key, ''),
+					action		: action_label(classified.action_key),
 					detail		: classified.detail
 				}),
 				classified.action_key
@@ -214,7 +250,7 @@ export const create_status_panel = function( options ) {
 						class_name		: 'light status_action',
 						parent			: row
 					})
-					button.textContent = label(line.action_key, '')
+					button.textContent = action_label(line.action_key)
 					button.addEventListener('click', function(e){
 						e.stopPropagation()
 						button.classList.add('disable')

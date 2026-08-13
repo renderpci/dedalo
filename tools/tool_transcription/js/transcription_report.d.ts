@@ -49,6 +49,28 @@ export interface TranscriptionReportInput {
 	detail?: string;
 }
 
+export type ModelState = 'ready' | 'unverified' | 'incomplete' | 'damaged' | 'missing';
+
+/**
+ * What one model state MEANS. `usable` is the run gate; `message_key`/`cause_key`
+ * are absent for the two usable states because there is nothing to report.
+ */
+export interface ModelStateInfo {
+	state_key: string;
+	usable: boolean;
+	message_key?: string;
+	cause_key?: string;
+	action_key: string | null;
+}
+
+export const MODEL_STATES: Readonly<Record<ModelState, ModelStateInfo>>;
+
+/** `null` = the server did not say (an older server), NOT a fault. */
+export function model_state_of(
+	models: { name?: string; state?: string }[] | undefined | null,
+	name: string | null | undefined,
+): ModelState | null;
+
 export const REPORT_PHASES: readonly ReportPhase[];
 export const REPORT_SEVERITIES: readonly ReportSeverity[];
 export function build_report(input: TranscriptionReportInput): TranscriptionReport;

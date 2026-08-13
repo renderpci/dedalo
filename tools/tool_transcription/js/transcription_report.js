@@ -105,6 +105,83 @@ const RULES = [
 
 
 /**
+* MODEL_STATES
+* What each state of a model in the install's store MEANS — ONE table, read by
+* both places that have to answer for it: the readiness line (before the button
+* is pressed) and the run's own refusal (after it is).
+*
+* They used to disagree. The refusal knew only `installed` — the list of models
+* that are ready OR unverified — so a DAMAGED model, being absent from it, was
+* announced as "not installed" and offered a Download button that the server
+* short-circuits ("Model already installed", because the files ARE there, just
+* broken). The archivist was told the wrong thing and handed a remedy that does
+* nothing, for precisely the failure this whole piece of work exists to fix.
+*
+* `usable` is the run gate: an UNVERIFIED model is NOT refused — it is the normal
+* state of every store seeded before verification existed.
+*/
+export const MODEL_STATES = {
+	ready : {
+		state_key	: 'state_ready',
+		usable		: true,
+		action_key	: null
+	},
+	unverified : {
+		state_key	: 'state_unverified',
+		usable		: true,
+		// Offered, never demanded: this is the only way to reach the check.
+		action_key	: 'action_verify_model'
+	},
+	incomplete : {
+		state_key	: 'state_incomplete',
+		usable		: false,
+		message_key	: 'error_model_damaged',
+		cause_key	: 'cause_model_damaged',
+		action_key	: 'action_repair_model'
+	},
+	damaged : {
+		state_key	: 'state_damaged',
+		usable		: false,
+		message_key	: 'error_model_damaged',
+		cause_key	: 'cause_model_damaged',
+		action_key	: 'action_repair_model'
+	},
+	missing : {
+		state_key	: 'state_missing',
+		usable		: false,
+		message_key	: 'error_model_missing',
+		cause_key	: 'cause_model_missing',
+		action_key	: 'action_download_model'
+	}
+}
+
+
+/**
+* MODEL_STATE_OF
+* The state one model is in, or null when the server cannot say.
+*
+* NULL IS A REAL ANSWER and must not be read as a fault: a server older than the
+* per-file verification sends no `models` array at all, and the caller keeps its
+* previous, coarser behaviour instead of inventing a verdict.
+*
+* @param {Array<Object>} models - get_model_sources → result.models
+* @param {string} name - catalog model id
+* @returns {string|null} 'ready' | 'unverified' | 'incomplete' | 'damaged' | 'missing' | null
+*/
+export const model_state_of = function( models, name ) {
+
+	if (!Array.isArray(models) || !name) {
+		return null
+	}
+	const entry = models.find(el => el && el.name===name)
+
+	return (entry && typeof entry.state==='string' && MODEL_STATES[entry.state]!==undefined)
+		? entry.state
+		: null
+}//end model_state_of
+
+
+/**
 * BUILD_REPORT
 * Normalize a report so every field is a string. The panel writes these straight
 * into text nodes; `undefined` would render as the word "undefined" and an unknown

@@ -75,6 +75,7 @@
 	import { render_tool_transcription } from './render_tool_transcription.js'
 	import { parse_transcript, segments_to_html, tc_to_seconds } from '../transcribers/lib/paragraphs.js'
 	import { ui } from '../../../core/common/js/ui.js'
+	import { MODEL_STATES, model_state_of } from './transcription_report.js'
 
 
 
@@ -618,6 +619,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				phase		: info.phase || 'preflight',
 				severity	: 'error',
 				message		: message,
+				cause		: info.cause || '',
 				action		: info.action || '',
 				action_key	: info.action_key,
 				detail		: info.detail || ''
@@ -735,7 +737,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			? sources_response.result
 			: { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true }
 
-		// Refuse EARLY and specifically when the chosen model is not in the store.
+		// Refuse EARLY and specifically when the chosen model cannot run.
 		// Left to the runtime, this fails as "Could not locate file: …/config.json"
 		// from inside the ONNX loader — after the audio has been prepared, and with
 		// a message that names neither the model nor what to do about it.
@@ -745,19 +747,47 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			|| sources.installed.includes(transcriber_quality)
 
 		if (sources.allow_hub!==true && (sources.store_ready===false || !model_ready)) {
-			const message = (sources.store_ready===false)
-				? (self.get_tool_label('model_store_empty')
-					|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).')
-				: `${self.get_tool_label('model_not_installed') || 'This model is not installed on this server'}: ${transcriber_quality}`
-			// `installed` = ready OR unverified (an unverified store is the normal
-			// state of every install seeded before the verification existed, and is
-			// NOT a refusal). Only a model that is missing, incomplete or damaged
-			// lands here — all three are answered with the download affordance.
-			set_message( message, {
-				phase		: 'model',
-				action		: self.get_tool_label('action_download_model') || 'Download the model',
-				action_key	: 'action_download_model'
-			})
+
+			// WHY the state and not just `installed`: a DAMAGED model is absent from
+			// `installed` too, and announcing it as "not installed" sent the
+			// archivist to a Download the server refuses as "already installed"
+			// (the files ARE there — broken). The state table is the one authority,
+			// shared with the readiness line (MODEL_STATES).
+			// A null state = a server that cannot say: keep the coarse message.
+			const model_state	= model_state_of( sources.models, transcriber_quality )
+			const state_info	= model_state ? MODEL_STATES[model_state] : null
+
+			if (sources.store_ready===false) {
+				set_message(
+					self.get_tool_label('model_store_empty')
+						|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).',
+					{ phase: 'model' }
+				)
+			} else if (state_info && state_info.action_key==='action_repair_model') {
+				// damaged / incomplete: the files ARE there and downloading them
+				// again is not what fixes it — repairing is.
+				set_message(
+					self.get_tool_label(state_info.message_key)
+						|| 'The speech model on this server is damaged',
+					{
+						phase		: 'model',
+						cause		: self.get_tool_label(state_info.cause_key)
+							|| 'Its files are incomplete or corrupted — usually an interrupted download.',
+						action		: self.get_tool_label(state_info.action_key) || 'Repair the model',
+						action_key	: state_info.action_key,
+						detail		: `model: ${transcriber_quality}\nstate: ${model_state}`
+					}
+				)
+			} else {
+				set_message(
+					`${self.get_tool_label('model_not_installed') || 'This model is not installed on this server'}: ${transcriber_quality}`,
+					{
+						phase		: 'model',
+						action		: self.get_tool_label('action_download_model') || 'Download the model',
+						action_key	: 'action_download_model'
+					}
+				)
+			}
 			delete_audio()
 			return false
 		}
@@ -959,7 +989,20 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			set_error( e.message || '', { phase: 'transcribe' } )
+			// A module worker that fails to LOAD raises an ErrorEvent with an empty
+			// `message`: classification then falls through to the generic failure
+			// with nothing in the technical detail — less than the console line this
+			// replaced. The file and line are what identify a load failure, so they
+			// go into the detail, always.
+			const where = [
+				e.filename ? `file: ${e.filename}` : '',
+				(typeof e.lineno==='number' && e.lineno>0) ? `line: ${e.lineno}` : ''
+			].filter(Boolean).join('\n')
+			set_error( e.message || '', {
+				phase	: 'transcribe',
+				device	: options.device || 'auto',
+				log		: where
+			})
 			resolve( false )
 		}
 
