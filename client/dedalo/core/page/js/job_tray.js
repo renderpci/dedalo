@@ -65,9 +65,22 @@ const DIFFUSION_REFRESH_TICKS = 10
 * RENDER_JOB_TRAY
 * Mount the tray into the page wrapper. Idempotent per page render.
 *
-* @returns {Object} the tray controller {node, add_job, refresh}
+* @returns {Object|null} the tray controller {node, add_job, refresh}, or NULL
+*   when nobody is logged in (see the guard below)
 */
 export const render_job_tray = function() {
+
+	// NOBODY IS LOGGED IN → NO TRAY, AND ABOVE ALL NO READ. render_page runs for
+	// the LOGIN element too, and this tray's first act is get_activity, which the
+	// session gate answers with 401 errors:['not_logged'] — correctly, the caller
+	// is anonymous. page.js turns that token into render_relogin(), so the tray
+	// used to raise the re-login OVERLAY on top of the boot login form: the user
+	// saw the login panel twice and had to type the credentials a second time.
+	// "The user's own background work" is meaningless without a user, so the fix
+	// belongs here and not at the mount site — any future mounter inherits it.
+	if (page_globals.is_logged!==true) {
+		return null
+	}
 
 	// ONE tray per document. render_page runs on every area change, and a second
 	// tray would double every row and every SSE subscription.

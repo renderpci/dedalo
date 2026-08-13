@@ -78,7 +78,12 @@ The `page` instance consumes both.
   the stream** — a follower that only muted its callbacks would keep one of the
   browser's six per-origin connections for the whole job (see
   [data_manager](../client/data_manager.md)); a surface that opens several uses
-  `create_job_follower_group()` and releases them all in its teardown.
+  `create_job_follower_group()` and releases them all in its teardown. The page
+  renders for the **login element** too, so the tray mounts only when
+  `page_globals.is_logged` is true and reads nothing while anonymous: "the
+  user's own work" has no meaning without a user, and its refused read used to
+  raise the re-login overlay on top of the login form (see
+  [login](../system/login.md)).
 - **Dynamic CSS** — own the runtime CSS-rule registry (`js/css.js`): inject,
   deduplicate, batch and garbage-collect per-element rules into a single
   `<style id="elements_style_sheet">` sheet.

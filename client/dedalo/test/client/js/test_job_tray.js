@@ -136,6 +136,55 @@ describe('JOB TRAY / LONG-PROCESS MONITORING CLIENT TEST', function() {
 	})
 
 
+	// ── NO USER, NO TRAY ──────────────────────────────────────────────────────
+	// Measured bug (2026-08-13): render_page mounts the tray for the LOGIN
+	// element too, and the tray's first act is get_activity — which the session
+	// gate answers 401 errors:['not_logged'] to an anonymous caller. page.js
+	// turns that token into the re-login OVERLAY, so the boot login form got a
+	// second login panel stacked on it and the operator typed the credentials
+	// twice. The guard is in the tray, so no mount site can reintroduce it.
+
+	it('render_job_tray mounts NOTHING and asks NOTHING when logged out', async function() {
+
+		const was_logged	= page_globals.is_logged
+		const was_tray		= page_globals.job_tray
+		const original		= data_manager.request
+		let requests		= 0
+
+		data_manager.request = async function() {
+			requests++
+			return {result: false}
+		}
+
+		// Counted, not asserted at zero: the harness page may legitimately carry a
+		// tray of its own — what must not happen is a NEW one.
+		const trays_before = document.querySelectorAll('.job_tray').length
+
+		try {
+			page_globals.is_logged	= false
+			page_globals.job_tray	= null
+
+			const tray = render_job_tray()
+
+			// let any (wrongly) fired read reach the stub
+			await new Promise(resolve => setTimeout(resolve, 50))
+
+			assert.equal(tray, null, 'expected NO tray controller for an anonymous page')
+			assert.equal(requests, 0, 'expected NO get_activity — its 401 is what raises the duplicate login panel')
+			assert.equal(page_globals.job_tray ?? null, null, 'expected no tray published to page_globals')
+			assert.equal(
+				document.querySelectorAll('.job_tray').length,
+				trays_before,
+				'expected no tray node added to the document'
+			)
+		} finally {
+			data_manager.request	= original
+			page_globals.is_logged	= was_logged
+			page_globals.job_tray	= was_tray
+		}
+	})
+
+
 	// ── THE CONNECTION IS THE RESOURCE ────────────────────────────────────────
 	// A followed job holds one HTTP connection for as long as it runs, and a
 	// browser grants six per origin over HTTP/1.1. Measured bug (2026-08-13):

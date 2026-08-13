@@ -490,6 +490,16 @@ page.prototype.init = async function(options) {
 			// Check API response events from data_manager.request
 			const api_response_errors_handler = (errors) => {
 				if(errors.includes('not_logged')) {
+					// RE-login, never a SECOND login. The overlay exists to recover a
+					// session that DIED under a working page; when this page loaded
+					// logged out it is already showing the login form, and stacking a
+					// dimmed overlay on top of it shows the panel twice and asks for the
+					// credentials twice (measured: any pre-auth 401 did this).
+					// page_globals.is_logged is the boot snapshot, so a session that
+					// expires mid-use still reaches the modal — which is the whole point.
+					if (page_globals.is_logged!==true) {
+						return
+					}
 					// Show login modal
 					render_relogin()
 				}
