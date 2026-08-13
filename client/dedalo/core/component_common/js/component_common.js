@@ -1207,7 +1207,9 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 *  7. Optional refresh if options.refresh === true — with self.status restored to
 *     its pre-change value for the duration of the call, because common.refresh
 *     refuses any status but 'rendered'. An instance that was never rendered keeps
-*     its real status, so refresh still refuses it.
+*     its real status, so refresh still refuses it. A refresh that THROWS is
+*     reported (console.error) and NOT propagated: the save is already committed,
+*     so the returned api_response stays the truth.
 *  8. Restore status, clear self.changing and drain the queue in the finally block
 *     (always runs).
 *  9. Publish 'sync_data_' + id_base_lang → sibling components sharing the same
@@ -1340,10 +1342,30 @@ component_common.prototype.change_value = async function(options) {
 				// whole try block, and the guard at the top of change_value reads THAT,
 				// so an overlapping call arriving mid-refresh queues as it always did.
 				self.status = prev_status
-				await self.refresh({
-					// build_autoload default value is false but could be a function callback
-					build_autoload : build_autoload
-				})
+				try {
+					await self.refresh({
+						// build_autoload default value is false but could be a function callback
+						build_autoload : build_autoload
+					})
+				} catch (error) {
+					// A refresh that THROWS (build() failing mid-rebuild) is a failure
+					// surface this call did not have before the cure: refresh used to
+					// refuse instantly and return false. It is handled here, not by the
+					// ~30 callers, and it is NEVER turned into a rejected change_value:
+					// the save is already COMMITTED, so a rejection would tell the
+					// caller "your change failed" — false, and the user would be told
+					// the edit was lost. @see engineering/CONVENTIONS.md §1 (a swallow
+					// is legal only when best-effort, REPORTED, and degraded-defined).
+					// Degraded behaviour: the value IS saved, the component keeps
+					// rendering the PREVIOUS data until something rebuilds it, and the
+					// sync_data_ / update_value_ events below still publish, so siblings
+					// and ontology observers are not stranded as well.
+					console.error('[component_common] change_value: the value was SAVED but the component could not be refreshed', {
+						model		: self.model,
+						tipo		: self.tipo,
+						section_id	: self.section_id
+					}, error);
+				}
 			}
 
 		// restore previous status value
@@ -1388,10 +1410,14 @@ component_common.prototype.change_value = async function(options) {
 
 	} finally {
 
-		// safety: ensure status is restored even on early-return/throw
-			if (self.status==='changing') {
-				self.status = prev_status
-			}
+		// safety: ensure status is restored even on early-return/throw.
+		// UNCONDITIONAL on purpose. The old `if (self.status==='changing')` guard
+		// could not fire once refresh() had begun mutating the status, so a rebuild
+		// that died mid-flight left a genuinely rendered instance describing itself
+		// as 'destroyed' or 'built' — and every later refresh() of it would then be
+		// refused forever. prev_status is what the instance really was before this
+		// save, so restoring it verbatim is both the truth and the recovery.
+			self.status = prev_status
 
 		// release the queue authority BEFORE draining, or the drained call would
 		// re-queue itself and the pool would never empty (deadlock).
@@ -1413,8 +1439,14 @@ component_common.prototype.change_value = async function(options) {
 * when self.changing === true the new call is queued here and the running
 * call drains it (pool.shift()()) in its finally block.
 *
-* The returned function is also resolved as the Promise value for the waiting
-* caller, so the caller gets the result once the queue entry executes.
+* (!) The queued caller does NOT get the change_value result. The wrapper
+* returned here is what change_value resolves its Promise with, and
+* `wrap_function` DISCARDS fn's return value — so a deferred caller resolves
+* with a Function, never the api_response. `await`ing a queued change_value
+* therefore says nothing about whether the save happened (a caller testing
+* `api_response.result` on it is testing a property of a Function: undefined).
+* Pre-existing behaviour, stated here so the comment stops asserting the
+* opposite; changing it is a separate contract edit.
 *
 * @param {Object} context - The `this` context to bind when the function executes (usually the component instance)
 * @param {Array} pool - The queue array to push the wrapped call onto

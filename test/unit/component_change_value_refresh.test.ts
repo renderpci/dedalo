@@ -167,16 +167,28 @@ function make_instance(status: string): { instance: Instance; calls: Calls } {
 const changed_data = () => [Object.freeze({ action: 'update', key: 0, value: 'new value' })];
 
 let warnings: string[] = [];
+let errors: string[] = [];
 const real_warn = console.warn;
+const real_error = console.error;
 beforeEach(() => {
 	warnings = [];
+	errors = [];
 	console.warn = (...args: unknown[]) => {
 		warnings.push(args.map(String).join(' '));
+	};
+	console.error = (...args: unknown[]) => {
+		errors.push(args.map(String).join(' '));
 	};
 });
 afterAll(() => {
 	console.warn = real_warn;
+	console.error = real_error;
 });
+
+/** Let the finally block's queue drain (and the drained call) settle. */
+const settle = async () => {
+	for (let i = 0; i < 8; i++) await Promise.resolve();
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -277,5 +289,98 @@ describe('the queueing invariant survives the fix', () => {
 		expect(calls.build, 'the refresh itself ran').toBe(1);
 		expect(calls.trace).toEqual(['save_1_start', 'save_1_end', 'save_2_start', 'save_2_end']);
 		expect(instance.changing).toBe(false);
+	});
+});
+
+describe('the throwing paths recover (no deadlock, no dropped queued call)', () => {
+	test('a save that throws: status restored, changing cleared, the queued call still runs', async () => {
+		const { instance, calls } = make_instance('rendered');
+
+		const ok_save = instance.save;
+		instance.save = async function (changed: unknown) {
+			// only the FIRST save fails; the queued one must still get through
+			if (calls.save === 0) {
+				calls.save = calls.save + 1;
+				calls.trace.push('save_1_start');
+				await Promise.resolve();
+				calls.trace.push('save_1_throw');
+				throw new Error('the network died mid-save');
+			}
+			return ok_save.call(this, changed);
+		};
+
+		const first = instance.change_value({ changed_data: changed_data(), refresh: false });
+		// the queued call arrives while the first is inside its throwing path
+		const queued = instance.change_value({ changed_data: changed_data(), refresh: false });
+		expect(instance.change_value_pool.length, 'the overlapping call was deferred').toBe(1);
+
+		await expect(first).rejects.toThrow('the network died mid-save');
+		void queued;
+		await settle();
+
+		expect(instance.status, 'a throw must never leave the status stuck').toBe('rendered');
+		expect(instance.changing, 'the in-flight flag must be released on the throwing path').toBe(
+			false,
+		);
+		expect(calls.save, 'the queued call was NOT dropped').toBe(2);
+		expect(instance.change_value_pool.length, 'the pool drained exactly once').toBe(0);
+		expect(calls.trace).toEqual(['save_1_start', 'save_1_throw', 'save_2_start', 'save_2_end']);
+	});
+
+	test('a refresh that throws: reported, NOT propagated — the save stands', async () => {
+		const { instance, calls } = make_instance('rendered');
+		instance.build = async function () {
+			calls.build = calls.build + 1;
+			this.status = 'built';
+			throw new Error('build died mid-rebuild');
+		};
+
+		// THE decision: the save is committed, so change_value RESOLVES with the
+		// api_response. A rejection here would tell ~30 callers the edit was lost.
+		const api_response = await instance.change_value({
+			changed_data: changed_data(),
+			refresh: true,
+		});
+
+		expect(api_response, 'the committed save is still the answer').toEqual({ result: true });
+		expect(calls.build, 'the rebuild was attempted').toBe(1);
+		expect(
+			errors.join(' '),
+			'CONVENTIONS §1: a swallowed failure must be REPORTED, never silent',
+		).toContain('[component_common] change_value');
+		expect(errors.join(' ')).toContain('build died mid-rebuild');
+		expect(
+			instance.status,
+			'a half-destroyed instance must not be left describing itself as destroyed/built',
+		).toBe('rendered');
+		expect(instance.changing).toBe(false);
+		expect(instance.change_value_pool.length).toBe(0);
+	});
+
+	test('a queued call arriving while the first is in its THROWING refresh path is not dropped', async () => {
+		const { instance, calls } = make_instance('rendered');
+
+		let queued: Promise<unknown> | null = null;
+		let pool_size_during_throw = -1;
+		instance.build = async function () {
+			calls.build = calls.build + 1;
+			this.status = 'built';
+			if (!queued) {
+				queued = instance.change_value({ changed_data: changed_data(), refresh: false });
+				pool_size_during_throw = instance.change_value_pool.length;
+			}
+			throw new Error('build died mid-rebuild');
+		};
+
+		await instance.change_value({ changed_data: changed_data(), refresh: true });
+		void queued;
+		await settle();
+
+		expect(pool_size_during_throw, 'the mid-rebuild call must be deferred').toBe(1);
+		expect(calls.save, 'and it must still run after the failure').toBe(2);
+		expect(instance.change_value_pool.length, 'the pool drained exactly once').toBe(0);
+		expect(instance.status).toBe('rendered');
+		expect(instance.changing).toBe(false);
+		expect(calls.trace).toEqual(['save_1_start', 'save_1_end', 'save_2_start', 'save_2_end']);
 	});
 });

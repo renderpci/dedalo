@@ -1551,19 +1551,23 @@ const render_automatic_transcription = function (options) {
 						// this chain used to re-do the refresh here to compensate).
 						// Nothing extra is refreshed here any more: a second rebuild is
 						// a wasted round trip and a visible flicker.
-						// The catch stays: the save's own refresh can still fail, and a
-						// saved-but-not-shown transcript must be reported, not silent.
+						// The catch now means what it says: only a failed SAVE reaches
+						// it. A refresh that dies mid-rebuild no longer rejects — the
+						// text is committed by then, so change_value reports it to the
+						// console and keeps the api_response (the editor simply still
+						// shows the old text until anything rebuilds it).
 						const save_promise = Promise.resolve( self.save_transcription( html ) )
 							.catch(function(error){
-								// The text IS saved at this point — only the on-screen
-								// update failed. Say so rather than leave the archivist
-								// believing the run was lost.
-								console.error('[tool_transcription] the transcription was saved but the editor could not be refreshed:', error);
+								// The run produced a transcript and it could NOT be
+								// written. Never leave that looking like a success.
+								console.error('[tool_transcription] the transcription could not be saved:', error);
 								nodes.status_panel.report({
 									phase		: 'done',
-									severity	: 'warning',
-									message		: self.get_tool_label('saved_reload_to_see')
-										|| 'The transcription was saved, but the editor could not be updated — reload the page to see it.',
+									severity	: 'error',
+									// Only an EXISTING label key: a new one with no
+									// register.json entry renders English forever.
+									message		: self.get_tool_label('transcription_error')
+										|| 'Transcription error',
 									detail		: (error && error.message) ? error.message : String(error)
 								})
 							})
