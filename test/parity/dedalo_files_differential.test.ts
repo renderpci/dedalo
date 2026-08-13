@@ -156,6 +156,25 @@ function isServiceUploadFoldAdditionEntry(entry: ManifestEntry): boolean {
 	);
 }
 
+/** The two modules the transcription STATUS PANEL added
+ * (WC-2026-08-13-transcription-status-panel): the DOM-free failure classifier
+ * (`transcription_report.js`) and the panel renderer that every user-facing
+ * failure now flows through instead of an `alert()`
+ * (`render_transcription_status.js`). TS-only: the frozen oracle's
+ * `tool_transcription` package (captured 2026-07-11) predates both.
+ *
+ * EXACT URLs, not a `startsWith` prefix, for the same reason as the
+ * service_upload fold above: `tool_transcription/` HAS a PHP twin, and a prefix
+ * over it would stop comparing the whole tool. Every future TS-only addition to
+ * a twinned package must be listed by name — one line of reviewable paperwork
+ * each, rather than silently widening the hole. */
+function isTranscriptionStatusAdditionEntry(entry: ManifestEntry): boolean {
+	return (
+		entry.url === '/dedalo/tools/tool_transcription/js/transcription_report.js' ||
+		entry.url === '/dedalo/tools/tool_transcription/js/render_transcription_status.js'
+	);
+}
+
 /** `service_dropzone` is DELETED
  * (WC-2026-08-03-service-dropzone-folded-into-service-upload, deletion half):
  * the package's two modules — `js/service_dropzone.js` and
@@ -247,6 +266,7 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isTsNativeCoreFileEntry(entry) &&
 			!isPhpUserRemovalEntry(entry) &&
 			!isServiceUploadFoldAdditionEntry(entry) &&
+			!isTranscriptionStatusAdditionEntry(entry) &&
 			!isDropzoneServiceRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
@@ -260,6 +280,11 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		// it — would slip through as silently as adding it.
 		expect(tsBody.result.filter(isServiceUploadFoldAdditionEntry).length).toBe(4);
 		expect(phpBody.result.filter(isServiceUploadFoldAdditionEntry)).toEqual([]);
+
+		// Same recovery for the transcription status panel: both modules must
+		// ACTUALLY serve, not merely be normalized away.
+		expect(tsBody.result.filter(isTranscriptionStatusAdditionEntry).length).toBe(2);
+		expect(phpBody.result.filter(isTranscriptionStatusAdditionEntry)).toEqual([]);
 
 		// Mirror image for the removal half: the TS census must contain NO
 		// service_dropzone file at all. Without this, a prefix filter would
