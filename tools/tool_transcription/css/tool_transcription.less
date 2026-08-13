@@ -167,10 +167,15 @@
 			}
 		}
 
-		.error {
-			background-color: transparent !important;
-			color: @color_danger;
-		}
+		// (the blanket `.error { background-color: transparent !important }` that
+		// used to sit here is GONE. It was inherited from the PHP tool and it
+		// half-undid the global `.error` affordance — killing the red fill with
+		// `!important` while leaving that rule's `color: white !important`
+		// standing — so everything wearing the class inside these panes rendered
+		// white-on-white: the readiness rows, the status reports, and every
+		// `ui.show_message(..., 'error')` this tool raises. The panel names its
+		// own severities now (`severity_error`, see render_transcription_status.js)
+		// and the global affordance is left to work as designed.)
 
 		.left_container {
 			>.wrapper_component {
@@ -656,15 +661,29 @@
 						}
 					}
 
+					// (!) MASKED, not a background image bleached with `filter`.
+					// gear.svg is a black glyph and `invert(75%)` painted it a
+					// fixed #bfbfbf — a light grey that has almost no contrast on
+					// the light theme's white panel and is theme-blind by
+					// construction. A mask takes its colour from a token, so the
+					// same rule reads correctly in both themes and can carry the
+					// tool's hue on hover like every other affordance here.
 					>.gear {
-						background-image: url('../img/gear.svg');
+						-webkit-mask-image: url('../img/gear.svg');
+						mask-image: url('../img/gear.svg');
+						-webkit-mask-size: contain;
+						mask-size: contain;
+						-webkit-mask-repeat: no-repeat;
+						mask-repeat: no-repeat;
+						-webkit-mask-position: center;
+						mask-position: center;
+						background-color: var(--fg_muted);
 						width: 18px;
 						height: 18px;
-						filter: invert(75%);
 						cursor: pointer;
 
 						&.open, &:hover {
-							filter: invert(45%);
+							background-color: @tool_color;
 						}
 					}
 
@@ -724,8 +743,11 @@
 							background-color: var(--bg_surface_alt);
 							color: var(--fg_default);
 
-							&.warning { border-left-color: var(--color_warning); }
-							&.error   { border-left-color: var(--color_danger); }
+							// (!) the panel's OWN severity vocabulary. A bare `.error`
+							// here would be the page-wide utility class, whose
+							// `color: white !important` made these rows unreadable.
+							&.severity_warning { border-left-color: var(--color_warning); }
+							&.severity_error   { border-left-color: var(--color_danger); }
 						}
 
 						> .status_readiness > .readiness_line {

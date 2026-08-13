@@ -138,7 +138,12 @@ export const create_status_panel = function( options ) {
 
 		const block = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `status_report ${report.severity}`,
+			// (!) `severity_` PREFIXED, never the bare word. `error` is a GLOBAL
+			// utility class (general.less: red slab + `color: white !important`),
+			// so a row that merely stated its own severity inherited white text
+			// and rendered invisible on the panel's light surface. A severity is
+			// this panel's vocabulary, not the page's.
+			class_name		: `status_report severity_${report.severity}`,
 			parent			: messages_node
 		})
 
@@ -310,7 +315,8 @@ export const create_status_panel = function( options ) {
 				const line	= notable[i]
 				const row	= ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: `readiness_line ${line.severity || 'info'}`,
+					// severity_ prefixed: see render_report above.
+					class_name		: `readiness_line severity_${line.severity || 'info'}`,
 					parent			: readiness_node
 				})
 
