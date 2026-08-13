@@ -7,6 +7,7 @@
  * parser_text::text_format (oracle port of PHP class.pattern_replacer.php).
  */
 
+import { phpTrim } from './parser_text.ts';
 import type { ItemParserFn, ParserItem } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -212,11 +213,14 @@ export const merge: ItemParserFn = (items, options, ctx) => {
 			const tipoMap = sectionData.get(sectionKey) as TipoMap;
 			return columns.map((col) => {
 				const v = resolveSlot(tipoMap, col.tipo, langKey);
-				// v6 resolves input_text columns via get_locator_value which applies
-				// strip_tags(trim()) — normalizes stray whitespace, keeps text_area HTML.
-				return col.model === 'component_input_text' && v !== ''
-					? v.replace(/<[^>]*>/g, '').trim()
-					: v;
+				// strip_tags only. v6's get_locator_value pushes $element_value VERBATIM
+				// and uses trim() solely as its emptiness test; the real trim happens on
+				// the component READ (see default_value.ts component_input_text).
+				if (col.model !== 'component_input_text' || v === '') return v;
+				const stripped = v.replace(/<[^>]*>/g, '');
+				// phpTrim, not JS trim: PHP's charlist excludes U+00A0, so a decoded
+				// &nbsp; slot is NON-empty to v6 and must survive here too.
+				return phpTrim(stripped) === '' ? '' : stripped;
 			});
 		});
 
@@ -383,11 +387,20 @@ export function cleanupFormatting(text: string): string {
 
 	// Any remaining markers, then whitespace/punctuation normalization
 	result = result.replace(new RegExp(marker, 'g'), '');
-	result = result.replace(/\s{2,}/g, ' ');
+	// NO whitespace collapse HERE.
+	// CAUTION — this is NOT "the oracle does not collapse": BOTH oracles do
+	// (frozen v7 parser_helper cleanup_formatting ends with /\s{2,}/ -> ' ' and
+	// trim(); v6 class.pattern_replacer.php :101,108 has '/\s+/' -> ' ' and
+	// trim()). The justification is EMPIRICAL: the values that reach this helper
+	// on the mht2 corpus are substituted by diffusion_sql itself, and collapsing
+	// them here diverged from v6's published bytes — removing it took
+	// ref_publications_authors 24 -> 4 cells and typology_name 2 -> 0, with no
+	// column regressing. Treat as a measured local deviation, not oracle parity;
+	// re-measure before reusing this helper on another path.
 	result = result.replace(/^\s*[,\-/|]\s*/, '');
 	result = result.replace(/\s*[,\-/|]\s*$/, '');
 
-	return result.trim();
+	return result;
 }
 
 /** Escape a literal for RegExp embedding. */
