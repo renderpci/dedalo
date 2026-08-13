@@ -16,11 +16,11 @@ The same rules are enforced at registration by `importTools()`: an invalid autho
 
 | Shape | Detected by | Status |
 | --- | --- | --- |
-| **Column-keyed dump** | top-level `data`/`string`/`relation`/… keys | Pass-through — validated and used as-is. **All 34 in-repo `register.json` files are this shape** — they are seeded matrix-row dumps of the "Tools development" section (dd1340), not hand-written files. |
+| **Column-keyed dump** | top-level `data`/`string`/`relation`/… keys | Pass-through — validated and used as-is. **All 34 in-repo `register.json` files are this shape**: matrix-row dumps of a "Tools development" (dd1340) record, produced by the inspector's *Download register file* button — see [Creating new tools](creating_tools.md#4-export-the-register-file). Never hand-edited: the record is edited and re-exported. |
 | **Authoring** (flat, hand-written) | top-level `name` key | Converted to the column-keyed shape before validation/import. This is the format `scripts/create_tool.ts` writes for a **new** tool. |
 | **Legacy v6** | top-level `components` key | **Not supported this wave** — none of the 34 in-repo tools use it, so this has not blocked any real port; `register.ts` reports it and does not import it. |
 
-New tools should use the **authoring** format below; do not hand-edit a column-keyed dump.
+Both supported shapes are legitimate ways to register a new tool: author the record in dd1340 and export it (the shipped tools' route), or hand-write the **authoring** format below (what the scaffolder gives you, and the portable one — `affected_models` are names resolved to dd1342 locators at import). What you must not do is hand-edit an exported dump.
 
 ## Minimal authoring file
 
