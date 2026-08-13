@@ -753,9 +753,11 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			// archivist to a Download the server refuses as "already installed"
 			// (the files ARE there — broken). The state table is the one authority,
 			// shared with the readiness line (MODEL_STATES).
-			// A null state = a server that cannot say: keep the coarse message.
+			// A null state (a server that cannot say) or a state this table has not
+			// learned yet (a server one version ahead) both keep the coarse message:
+			// we do not invent a verdict from a word we cannot read.
 			const model_state	= model_state_of( sources.models, transcriber_quality )
-			const state_info	= model_state ? MODEL_STATES[model_state] : null
+			const state_info	= model_state ? (MODEL_STATES[model_state] || null) : null
 
 			if (sources.store_ready===false) {
 				set_message(

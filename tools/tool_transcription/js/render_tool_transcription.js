@@ -2277,7 +2277,7 @@ const render_automatic_transcription = function (options) {
 				? nodes.transcriber_engine_quality.value
 				: null
 			const model_state	= model_state_of( models, selected )
-			const state_info	= model_state ? MODEL_STATES[model_state] : null
+			const state_info	= model_state ? (MODEL_STATES[model_state] || null) : null
 
 			if (state_info) {
 				// An UNVERIFIED model is not a fault: it is the normal state of every
@@ -2288,6 +2288,16 @@ const render_automatic_transcription = function (options) {
 					severity	: state_info.usable ? 'info' : 'error',
 					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${state_label}`,
 					action_key	: state_info.action_key
+				})
+			} else if (model_state) {
+				// The server answered with a word this build does not know — it is a
+				// version ahead of us. Say so with its own word rather than render
+				// nothing: an unreadable answer is still an answer, and a blank
+				// readiness line is the exact silence this panel exists to end.
+				// No remedy is offered: we cannot know which one would apply.
+				lines.push({
+					severity	: 'warning',
+					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${model_state}`
 				})
 			}
 

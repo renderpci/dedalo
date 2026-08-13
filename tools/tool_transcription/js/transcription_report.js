@@ -158,15 +158,24 @@ export const MODEL_STATES = {
 
 /**
 * MODEL_STATE_OF
-* The state one model is in, or null when the server cannot say.
+* The state the server says one model is in — its OWN word for it, not ours.
 *
 * NULL IS A REAL ANSWER and must not be read as a fault: a server older than the
 * per-file verification sends no `models` array at all, and the caller keeps its
-* previous, coarser behaviour instead of inventing a verdict.
+* previous, coarser behaviour instead of inventing a verdict. Null therefore means
+* only "not answered": no array, no entry for this model, or no state on it.
+*
+* AN UNKNOWN STATE IS RETURNED VERBATIM. It used to be flattened to null, which
+* made a state string this table has not learned yet vanish from the readiness
+* line entirely — and silence is the failure class this whole subsystem exists to
+* remove. These states cross a wire; a server one version ahead is exactly how an
+* unrecognised word arrives, and the honest answer is to show it. Callers look the
+* word up in MODEL_STATES and must handle a miss (`undefined`) as "cannot
+* interpret", never as "nothing to say".
 *
 * @param {Array<Object>} models - get_model_sources → result.models
 * @param {string} name - catalog model id
-* @returns {string|null} 'ready' | 'unverified' | 'incomplete' | 'damaged' | 'missing' | null
+* @returns {string|null} a MODEL_STATES key, an unrecognised state, or null
 */
 export const model_state_of = function( models, name ) {
 
@@ -175,7 +184,7 @@ export const model_state_of = function( models, name ) {
 	}
 	const entry = models.find(el => el && el.name===name)
 
-	return (entry && typeof entry.state==='string' && MODEL_STATES[entry.state]!==undefined)
+	return (entry && typeof entry.state==='string' && entry.state!=='')
 		? entry.state
 		: null
 }//end model_state_of

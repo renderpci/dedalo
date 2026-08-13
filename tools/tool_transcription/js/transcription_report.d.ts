@@ -65,11 +65,19 @@ export interface ModelStateInfo {
 
 export const MODEL_STATES: Readonly<Record<ModelState, ModelStateInfo>>;
 
-/** `null` = the server did not say (an older server), NOT a fault. */
+/**
+ * `null` = the server did not say (an older server, or no entry for this model) —
+ * NOT a fault. The return type is a bare `string` on purpose: an UNRECOGNISED state
+ * comes back verbatim rather than being flattened away, because these states cross a
+ * wire and a server one version ahead is how an unknown word arrives. Callers must
+ * treat a `MODEL_STATES` miss as "cannot interpret", never as "nothing to say".
+ */
 export function model_state_of(
-	models: { name?: string; state?: string }[] | undefined | null,
+	// entries are guarded one by one: a sparse/dirty array from the wire is data,
+	// not a crash
+	models: ({ name?: string; state?: string } | null | undefined)[] | undefined | null,
 	name: string | null | undefined,
-): ModelState | null;
+): ModelState | (string & {}) | null;
 
 export const REPORT_PHASES: readonly ReportPhase[];
 export const REPORT_SEVERITIES: readonly ReportSeverity[];

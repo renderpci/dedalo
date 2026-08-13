@@ -14,6 +14,8 @@ import { describe, expect, test } from 'bun:test';
 import {
 	build_report,
 	classify_failure,
+	MODEL_STATES,
+	model_state_of,
 } from '../../tools/tool_transcription/js/transcription_report.js';
 
 describe('classify_failure maps runtime strings to remedies', () => {
@@ -74,6 +76,123 @@ describe('classify_failure maps runtime strings to remedies', () => {
 		const report = classify_failure('', {});
 		expect(report.key).toBe('unknown');
 		expect(report.detail.length).toBeGreaterThan(0);
+	});
+});
+
+/**
+ * MODEL STATE TABLE GATE.
+ *
+ * MODEL_STATES is read by TWO call sites — the readiness line (before the button is
+ * pressed) and the run's own refusal (after it is). They used to hold separate
+ * opinions, and the refusal was the one that lied: a DAMAGED model is absent from
+ * the server's `installed` list exactly like a missing one, so it was announced as
+ * "not installed" and answered with a Download the server short-circuits as "already
+ * installed" — the files ARE there, just broken. That is the one failure this whole
+ * piece of work exists to fix, so the mapping is pinned here rather than trusted to
+ * stay in step in two places.
+ */
+describe('MODEL_STATES — one table, two call sites', () => {
+	test('damaged and incomplete are REPAIRED, never re-downloaded', () => {
+		// the defect in one line: both are present-but-broken, and a download is a
+		// no-op on them
+		for (const state of ['damaged', 'incomplete'] as const) {
+			expect(MODEL_STATES[state].action_key).toBe('action_repair_model');
+			expect(MODEL_STATES[state].message_key).toBe('error_model_damaged');
+			expect(MODEL_STATES[state].cause_key).toBe('cause_model_damaged');
+			expect(MODEL_STATES[state].usable).toBe(false);
+		}
+	});
+
+	test('missing is the only state that offers a download', () => {
+		expect(MODEL_STATES.missing.action_key).toBe('action_download_model');
+		expect(MODEL_STATES.missing.message_key).toBe('error_model_missing');
+		expect(MODEL_STATES.missing.cause_key).toBe('cause_model_missing');
+		expect(MODEL_STATES.missing.usable).toBe(false);
+
+		const downloadable = Object.keys(MODEL_STATES).filter(
+			(state) =>
+				MODEL_STATES[state as keyof typeof MODEL_STATES].action_key === 'action_download_model',
+		);
+		expect(downloadable).toEqual(['missing']);
+	});
+
+	test('ready and unverified both RUN — an unverified store is the normal one', () => {
+		// every install seeded before the per-file verification existed reports
+		// `unverified`; refusing those would break the tool for its whole user base
+		expect(MODEL_STATES.ready.usable).toBe(true);
+		expect(MODEL_STATES.unverified.usable).toBe(true);
+		expect(MODEL_STATES.ready.action_key).toBeNull();
+		// the ONLY route to the verification action in the whole UI
+		expect(MODEL_STATES.unverified.action_key).toBe('action_verify_model');
+
+		const runnable = Object.keys(MODEL_STATES).filter(
+			(state) => MODEL_STATES[state as keyof typeof MODEL_STATES].usable,
+		);
+		expect(runnable.sort()).toEqual(['ready', 'unverified']);
+	});
+
+	test('every state names a label key for its own word', () => {
+		for (const [state, info] of Object.entries(MODEL_STATES)) {
+			expect(info.state_key).toBe(`state_${state}`);
+		}
+	});
+
+	test('an unusable state always carries the words to explain itself', () => {
+		for (const info of Object.values(MODEL_STATES)) {
+			if (info.usable) continue;
+			// a refusal with no message and no remedy is the silence being removed
+			expect(typeof info.message_key).toBe('string');
+			expect(typeof info.cause_key).toBe('string');
+			expect(typeof info.action_key).toBe('string');
+		}
+	});
+});
+
+describe('model_state_of — null is "not answered", never "at fault"', () => {
+	const models = [
+		{ name: 'onnx-community/whisper-small-ONNX', state: 'ready' },
+		{ name: 'onnx-community/whisper-large-v3-turbo-ONNX', state: 'damaged' },
+	];
+
+	test('it reads the state of the named model', () => {
+		expect(model_state_of(models, 'onnx-community/whisper-small-ONNX')).toBe('ready');
+		expect(model_state_of(models, 'onnx-community/whisper-large-v3-turbo-ONNX')).toBe('damaged');
+	});
+
+	test('NO models array (an older server) is null, so the caller keeps its coarse message', () => {
+		// the compatibility case: a server predating the per-file verification sends
+		// no `models` at all. Inventing a verdict here would refuse runs that work.
+		expect(model_state_of(undefined, 'onnx-community/whisper-small-ONNX')).toBeNull();
+		expect(model_state_of(null, 'onnx-community/whisper-small-ONNX')).toBeNull();
+		expect(model_state_of([], 'onnx-community/whisper-small-ONNX')).toBeNull();
+	});
+
+	test('a model absent from the answer is null, not a fault', () => {
+		expect(model_state_of(models, 'onnx-community/whisper-medium-ONNX')).toBeNull();
+	});
+
+	test('a malformed entry is null rather than a bogus state', () => {
+		expect(model_state_of([{ name: 'x' }], 'x')).toBeNull();
+		expect(model_state_of([{ name: 'x', state: '' }], 'x')).toBeNull();
+		expect(model_state_of([null, undefined, { name: 'x', state: 'ready' }], 'x')).toBe('ready');
+	});
+
+	test('no name asked, nothing answered', () => {
+		expect(model_state_of(models, null)).toBeNull();
+		expect(model_state_of(models, '')).toBeNull();
+	});
+
+	/**
+	 * The load-bearing case, and the reason this returns a bare string: these states
+	 * cross a WIRE. A server one version ahead sends a word this build has not
+	 * learned, and flattening it to null made the readiness line render NOTHING —
+	 * the exact silence the status panel exists to end. It comes back verbatim so
+	 * the caller can show the server's own word with no remedy attached.
+	 */
+	test('an UNKNOWN state does not vanish — it comes back verbatim', () => {
+		expect(model_state_of([{ name: 'x', state: 'quarantined' }], 'x')).toBe('quarantined');
+		// and the caller's lookup misses, which is how it knows not to interpret it
+		expect(MODEL_STATES['quarantined' as keyof typeof MODEL_STATES]).toBeUndefined();
 	});
 });
 
