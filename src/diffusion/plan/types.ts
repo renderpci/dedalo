@@ -62,6 +62,28 @@ export type ResolveStep =
 			sectionFilter?: string[];
 			/** relation_list ddo component_filter: relation-origin whitelist. */
 			componentFilter?: string[];
+			/**
+			 * ddo data_slice — PHP array_slice(locators, offset, length), applied
+			 * BEFORE the hop resolves (frozen oracle class.relation_list.php
+			 * :1457-1460). v6's diffusion_sql::split_data filters the stored
+			 * locators by its `q` rule and only then asks the component for its
+			 * ordinary value, so the slice MUST happen on the locators: by the time
+			 * the values exist, the records_separator join has already collapsed
+			 * them into one string and slicing them is a no-op.
+			 */
+			dataSlice?: { offset: number; length?: number };
+			/**
+			 * relation_list only: publish each referencing SECTION once instead of
+			 * one entry per stored relation. Set by the migration for v6
+			 * `data_to_be_used: 'dato_full'` nodes, whose published list has no
+			 * repeats; empty-props relation_list nodes keep every relation.
+			 */
+			dedupeSections?: boolean;
+			/**
+			 * The ddo declared a `label`: its child components are a LABEL
+			 * expansion (v6 get_locator_value), not direct component reads.
+			 */
+			labelExpansion?: boolean;
 			/** ddo_map entry id — the handle parser patterns reference ('${a}'). */
 			ddoId?: string;
 	  }
@@ -99,6 +121,27 @@ export type ResolveStep =
 
 /** Per-field emit policies (compiled from the old context side-channels). */
 export interface FieldPolicy {
+	/**
+	 * v6 `is_publicable: true` on a FIELD (migrated to `is_publishable`): an
+	 * OVERRIDE that disables the per-locator publication check for THIS column.
+	 * v6 reads it in diffusion_sql::resolve_value (:5034-5040) and
+	 * count_data_elements (:4396-4402) as
+	 * `isset($args->is_publicable) ? (bool)$args->is_publicable : get_is_publicable($locator)`.
+	 * v7 previously honoured `is_publishable` only on the TABLE node, so the
+	 * field-level override was silently dropped and publications.authors_count
+	 * published 0 where v6 counted 1.
+	 */
+	publishableOverride?: boolean;
+	/**
+	 * v6 diffusion_sql::resolve_value FILTERS unpublishable locators outright
+	 * (:5034-5041) — no value-source exemption, unlike the generic chain walk.
+	 * Only columns migrated FROM resolve_value carry this, so the stricter rule
+	 * applies exactly where v6 applied it. Measured: dropping the exemption
+	 * globally fixed editorial (124→0) but broke eight previously-perfect
+	 * columns (authors_name 0→40, authors_surname 0→40, interview_place 0→8…),
+	 * which is why it is per-field rather than engine-wide.
+	 */
+	filterUnpublishable?: boolean;
 	emptyToString?: boolean;
 	defaultValue?: string;
 	emptyValue?: string;

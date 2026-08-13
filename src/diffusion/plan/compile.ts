@@ -194,8 +194,32 @@ interface DdoEntry {
 	sectionFilter?: string[];
 	/** relation_list component_filter (relation-origin whitelist). */
 	componentFilter?: string[];
+	/** ddo data_slice — array_slice(offset, length) over the hop's locators. */
+	dataSlice?: { offset: number; length?: number };
+	/** relation_list 'dato_full': publish each referencing section once. */
+	dedupeSections?: boolean;
+	/** ddo declared a `label` — its children are a LABEL expansion, not direct reads. */
+	labelExpansion?: boolean;
 	/** Verbatim ddo `options` bag (PHP $ddo->options — media quality/extension). */
 	options?: Record<string, unknown>;
+}
+
+/**
+ * A ddo `data_slice` as {offset, length}. PHP array_slice semantics: a missing or
+ * null length means "to the end". Anything unusable is ignored, never guessed.
+ */
+/** null → NaN so an explicit `"length": null` means 'to the end' (PHP array_slice), not 'take zero'. */
+function nullToNaN(value: unknown): number {
+	return value === null ? Number.NaN : Number(value);
+}
+
+function dataSliceOf(raw: unknown): { offset: number; length?: number } | undefined {
+	if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+	const source = raw as { offset?: unknown; length?: unknown };
+	const offset = Number(source.offset);
+	if (!Number.isInteger(offset)) return undefined;
+	const length = nullToNaN(source.length);
+	return Number.isInteger(length) ? { offset, length } : { offset };
 }
 
 /** Normalize an ontology string-array property ('a' | ['a','b'] | junk). */
@@ -240,6 +264,9 @@ function buildDdoMap(
 				lang: typeof ddo.lang === 'string' && ddo.lang !== '' ? ddo.lang : undefined,
 				sectionFilter: stringArrayOf(ddo.section_filter),
 				componentFilter: stringArrayOf(ddo.component_filter),
+				dataSlice: dataSliceOf(ddo.data_slice),
+				dedupeSections: ddo.dedupe_sections === true ? true : undefined,
+				labelExpansion: ddo.label !== undefined && ddo.label !== '' ? true : undefined,
 				options:
 					rawOptions !== null && typeof rawOptions === 'object' && !Array.isArray(rawOptions)
 						? (rawOptions as Record<string, unknown>)
@@ -371,6 +398,9 @@ async function compileSourceChain(
 			if (ddo.id !== undefined) hop.ddoId = ddo.id;
 			if (ddo.sectionFilter !== undefined) hop.sectionFilter = ddo.sectionFilter;
 			if (ddo.componentFilter !== undefined) hop.componentFilter = ddo.componentFilter;
+			if (ddo.dataSlice !== undefined) hop.dataSlice = ddo.dataSlice;
+			if (ddo.dedupeSections === true) hop.dedupeSections = true;
+			if (ddo.labelExpansion === true) hop.labelExpansion = true;
 			// add_parents (chain_processor :305): the hop emits each locator's own
 			// ancestor chain — a compile-time flag, not a runtime fn.
 			if (ddo.fn === 'add_parents') {
@@ -520,6 +550,10 @@ async function compileFieldPlan(
 	if (process?.default_value !== undefined) policy.defaultValue = String(process.default_value);
 	if (process?.empty_value !== undefined) policy.emptyValue = String(process.empty_value);
 	if (process?.preserve_order === true) policy.preserveOrder = true;
+	// FIELD-level is_publishable (v6 is_publicable) — an override of the per-locator
+	// publication check for this column, NOT the table-node publishability override.
+	if (properties?.is_publishable === true) policy.publishableOverride = true;
+	if (process?.filter_unpublishable === true) policy.filterUnpublishable = true;
 
 	// SQL schema hints (:1342-1352). 'varchar' and 'length' both size the
 	// column in the old sql_generator; varchar wins when both are present.
