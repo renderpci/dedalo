@@ -8452,6 +8452,14 @@ body:has(.assistant_container.standalone.show) {
   width: 100%;
   margin-top: var(--space-2);
 }
+.inspector > .inspector_content_data > .buttons_container.bottom > .register_download {
+  padding: 0.25rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0px;
+  display: block;
+  text-align: center;
+  color: var(--color_grey_7);
+}
 .inspector .css_section_group_content {
   display: table;
 }
@@ -11532,6 +11540,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   contain: content;
   width: 100%;
   padding: 1rem;
+  padding-top: 2rem;
 }
 .wrapper_tool > .content_data > .footer_node {
   contain: content;

@@ -901,7 +901,7 @@ const get_content_data = function(self) {
 				const register_download = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'warning download register_download',
-					text_content	: 'Download register file',
+					text_content	: get_label.download_register_file || 'Download register file',
 					parent			: buttons_bottom_container
 				})
 				const register_click_handler = async (e) => {
