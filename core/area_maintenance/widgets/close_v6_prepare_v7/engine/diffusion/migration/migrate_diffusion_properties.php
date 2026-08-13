@@ -581,6 +581,67 @@ function process_node($node, $level) {
 
 	// Prepare common variables
 	$props = is_string($propiedades) ? json_decode($propiedades) : $propiedades;
+
+	// diffusion_sql::split_data — FILTER THE COMPONENT'S LOCATORS, then resolve as normal.
+	// v6 (class.diffusion_sql.php :4418-4471) keeps a subset of the stored locators per the `q`
+	// rules and, with resolve_value:true, hands that subset back to the component and asks for its
+	// ordinary diffusion value. So the published value is the component's NORMAL value restricted
+	// to a slice — which v7 expresses as the normal chain plus one slicing parser:
+	//   {key:0, q_operator:'='} -> only the first  -> parser_helper::get_first
+	//   {key:0, q_operator:'>'} -> all but the first -> parser_helper::get_tail  (drops the first
+	//                                                   item per lang — the same thing)
+	// Rather than re-derive the component's base chain here (each component model builds it
+	// differently), the node is handed to its model's DEFAULT branch by removing process_dato, and
+	// the slice parser is appended to whatever that branch produced. Any other q shape is NOT
+	// expressible with the current parser set and is deliberately left unmapped (it will show up
+	// as [UNMAPPED]) rather than silently mis-published.
+	$split_data_slice = null;
+	if (is_object($props) && ($props->process_dato ?? null) === 'diffusion_sql::split_data') {
+		$split_q = $props->process_dato_arguments->q ?? [];
+		if (is_array($split_q) && count($split_q) === 1) {
+			$q0       = $split_q[0];
+			$q_key    = $q0->key ?? null;
+			$q_op     = $q0->q_operator ?? null;
+			$resolve  = $props->process_dato_arguments->resolve_value ?? false;
+			if ($resolve === true) {
+				// v6 slices the stored LOCATORS by the q rule, then resolves normally:
+				//   {key:N, '='} -> that one locator      -> offset N, length 1
+				//   {key:N, '>'} -> everything after it   -> offset N+1, to end
+				if ($q_op === '=') {
+					$split_data_slice = (object)['offset' => (int)$q_key, 'length' => 1];
+				} elseif ($q_op === '>') {
+					$split_data_slice = (object)['offset' => (int)$q_key + 1];
+				}
+			}
+		}
+		if ($split_data_slice !== null) {
+			unset($props->process_dato);
+			unset($props->process_dato_arguments);
+		}
+	}
+
+	// DES_ / DES__ PREFIX = DISABLED, v6's convention for commenting a propiedad out
+	// without deleting it (DES__process_dato, global_table_maps_DES…). The v6 engine never
+	// reads them, so the node behaves as if they were absent — and if what remains is
+	// nothing, v6 falls back to its DEFAULT behaviour for the component model.
+	// Keeping them made a node look non-empty, so it missed the "empty propiedades ->
+	// default" branches entirely and migrated to NO process at all: games.childrens
+	// (dd708, {"DES__process_dato": …}) published 480 rows of NULL against a full v6
+	// column. TOP-LEVEL keys only — `DES_display` inside a css block is not a propiedad.
+	// ts_map* is EDITOR STATE, never diffusion behaviour. Every $is_empty_*() closure in this file
+	// already unsets `ts_map` before deciding whether propiedades are behaviourally empty, but a
+	// SUFFIXED variant (oh71 carries "ts_map999999999999" — the v6 way of parking a value) slipped
+	// past and made the node look non-empty, so it missed its model's default branch and migrated
+	// to no process at all: interview.interview_place published NULL against v6's full ancestor
+	// chain on 268 cells. Stripping it here makes every closure agree, suffix or not.
+	if (is_object($props)) {
+		foreach (array_keys(get_object_vars($props)) as $prop_key) {
+			$key_string = (string)$prop_key;
+			if (strpos($key_string, 'DES_') === 0 || strpos($key_string, 'ts_map') === 0) {
+				unset($props->{$prop_key});
+			}
+		}
+	}
 	$new_props = null;
 
 	switch ($model_name) {
@@ -697,11 +758,33 @@ function process_node($node, $level) {
 
 							$new_props = new stdClass();
 							$new_props->process = new stdClass();
-							$new_props->process->parser = $parser_process;
-							$new_props->process->output_sample = "Yes";
 
-							echo "{$indent}- [$tipo] $model_name\n";
-							echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";							
+							// THE ENUM MAPPING IS THE field_enum COLUMN'S BEHAVIOUR, NOT the
+							// component's. The same component_publication relation is published by
+							// both a field_enum column (interview.publication, oh67 -> 'yes') and a
+							// field_text one (document.publication, rsc445 -> '["1"]'), from
+							// IDENTICAL propiedades carrying the same enum map. v6 applies the map
+							// only for field_enum; the non-enum column publishes the raw locator
+							// section_id array. Applying it everywhere turned document.publication
+							// into 'yes' against v6's '["1"]' on 212 cells.
+							if ($model_name === 'field_enum') {
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_sample = "Yes";
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+							} else {
+								$new_props->process->parser = [
+									(object)['fn' => 'parser_locator::get_v6_section_id']
+								];
+								$new_props->process->output_format = 'json';
+								$new_props->process->output_sample = ["1"];
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_publication on a non-enum column -> raw section_id json\n";
+							}
+
+							if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+							if(isset($props->info)){ $new_props->info = $props->info; }
 							break;
 
 						case 'component_autocomplete_hi':
@@ -954,6 +1037,14 @@ function process_node($node, $level) {
 
 									$parser_options = new stdClass();
 										$parser_options->value = "term_id";
+										// merge:'unique' is REQUIRED whenever parser_locator::parents feeds a json column.
+										// The oracle (v7_php_frozen diffusion/api/v1/lib/parsers/parser_locator.ts parents
+										// :598-612) branches on merge_style: 'unique' flatMaps the ancestor chain into the
+										// ARRAY of individual values v6 published, while the DEFAULT joins the chain into one
+										// string with records_separator. Same parser, same chain — the option alone decides
+										// array vs string. Without it informant.birthplace_id_full published
+										// 'es1_3410, es1_8817, …' where v6 had ["es1_3410","es1_8817",…] (1272 cells).
+										$parser_options->merge = 'unique';
 										$parser_options->include_parents = true;
 
 									$parser_process = (object)[											
@@ -993,6 +1084,14 @@ function process_node($node, $level) {
 
 									$parser_options = new stdClass();
 										$parser_options->value 			= "term_id";
+										// merge:'unique' is REQUIRED whenever parser_locator::parents feeds a json column.
+										// The oracle (v7_php_frozen diffusion/api/v1/lib/parsers/parser_locator.ts parents
+										// :598-612) branches on merge_style: 'unique' flatMaps the ancestor chain into the
+										// ARRAY of individual values v6 published, while the DEFAULT joins the chain into one
+										// string with records_separator. Same parser, same chain — the option alone decides
+										// array vs string. Without it informant.birthplace_id_full published
+										// 'es1_3410, es1_8817, …' where v6 had ["es1_3410","es1_8817",…] (1272 cells).
+										$parser_options->merge = 'unique';
 										$parser_options->parents_splice = [2];
 										$parser_options->include_self   = false;
 
@@ -1065,6 +1164,19 @@ function process_node($node, $level) {
 									$new_props->is_publishable = $props->is_publicable;
 								}
 
+								// v6 map_locator_to_terminoID checks publishability ONLY when the node
+								// asks: $check_publishable defaults to FALSE (class.diffusion_sql.php
+								// :3646-3647). v7 skips unpublishable locators on a childless hop, so
+								// informant.birthplace_id published NULL where v6 emits ["es1_8906"] —
+								// that place record carries no publication component at all.
+								// is_publishable is v7's per-locator publication-check override.
+								$chk_pub_mlt = $props->process_dato_arguments->check_publishable
+									?? $props->process_dato_arguments->custom_arguments->check_publishable
+									?? false;
+								if ($chk_pub_mlt !== true) {
+									$new_props->is_publishable = true;
+								}
+
 								// "varchar" = 256
 								if(isset($props->varchar)){
 									$new_props->varchar = $props->varchar;
@@ -1092,6 +1204,11 @@ function process_node($node, $level) {
 								$new_props = new stdClass();
 									$new_props->process = $parser_process;
 									$new_props->process->output_sample = 2;
+									// v6 count_data_elements returns (int)count($dato) — 0, never NULL, when
+									// the component holds nothing (class.diffusion_sql.php :4392-4416). Same
+									// empty-value contract as map_quality_to_int: publications.authors_count
+									// published NULL against v6's 0 on 164 cells.
+									$new_props->process->default_value = 0;
 									// parser_helper::count counts the resolved data items, so it needs a
 									// ddo_map that resolves the field's relation locators (e.g. authors
 									// rsc139) — without it there is nothing to count and the column is 0.
@@ -1726,7 +1843,46 @@ function process_node($node, $level) {
 
 							break;
 						case 'component_autocomplete':
-							// 
+
+							// "process_dato" = "diffusion_sql::resolve_value" with a TARGET component.
+							// v6 hops from this relation to target_component_tipo and applies that
+							// component's own method to it, so the published value belongs to the
+							// TARGET, not to the relation. Without the hop in the ddo_map the chain
+							// resolved the relation's own section_id instead:
+							// ref_publications_typology published ["106"] (the portal row) against
+							// v6's ["1"] (the typology the row points at) on 316 cells.
+							$rv_args_ac = $props->process_dato_arguments ?? null;
+							$rv_target_ac = $rv_args_ac->target_component_tipo ?? null;
+							if(($props->process_dato ?? null) === 'diffusion_sql::resolve_value'
+								&& !empty($rv_target_ac)
+								&& ($rv_args_ac->component_method ?? null) === 'get_diffusion_dato'){
+
+								$rv_target_ac = trim($rv_target_ac);
+								$rv_ddo_map_ac = [
+									(object)['tipo' => $rel_info['tipo'], 'section_tipo' => 'self'],
+									(object)['tipo' => $rv_target_ac, 'parent' => $rel_info['tipo']]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = get_diffusion_dato(
+									ontology_node::get_legacy_model_by_tipo($rv_target_ac),
+									null,
+									$rv_args_ac,
+									null,
+									$rv_ddo_map_ac
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+								if(isset($props->info)){ $new_props->info = $props->info; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] resolve_value + get_diffusion_dato -> hop to {$rv_target_ac}\n";
+								break;
+							}
+
 							$is_empty = function($props) {
 								if (empty($props)) return true;
 								$v5_props = is_object($props) ? clone($props) : (object)$props;
@@ -1914,6 +2070,14 @@ function process_node($node, $level) {
 
 									$parser_options = new stdClass();
 									$parser_options->value = "term_id";
+									// merge:'unique' is REQUIRED whenever parser_locator::parents feeds a json column.
+									// The oracle (v7_php_frozen diffusion/api/v1/lib/parsers/parser_locator.ts parents
+									// :598-612) branches on merge_style: 'unique' flatMaps the ancestor chain into the
+									// ARRAY of individual values v6 published, while the DEFAULT joins the chain into one
+									// string with records_separator. Same parser, same chain — the option alone decides
+									// array vs string. Without it informant.birthplace_id_full published
+									// 'es1_3410, es1_8817, …' where v6 had ["es1_3410","es1_8817",…] (1272 cells).
+									$parser_options->merge = 'unique';
 									$parser_options->include_parents = true;
 
 									$parser_process = (object)[											
@@ -1954,6 +2118,14 @@ function process_node($node, $level) {
 
 									$parser_options = new stdClass();
 									$parser_options->value 			= "term_id";
+									// merge:'unique' is REQUIRED whenever parser_locator::parents feeds a json column.
+									// The oracle (v7_php_frozen diffusion/api/v1/lib/parsers/parser_locator.ts parents
+									// :598-612) branches on merge_style: 'unique' flatMaps the ancestor chain into the
+									// ARRAY of individual values v6 published, while the DEFAULT joins the chain into one
+									// string with records_separator. Same parser, same chain — the option alone decides
+									// array vs string. Without it informant.birthplace_id_full published
+									// 'es1_3410, es1_8817, …' where v6 had ["es1_3410","es1_8817",…] (1272 cells).
+									$parser_options->merge = 'unique';
 									$parser_options->parents_splice = [2];
 									$parser_options->include_self   = false;
 
@@ -2053,6 +2225,11 @@ function process_node($node, $level) {
 								$new_props = new stdClass();
 									$new_props->process = $parser_process;
 									$new_props->process->output_sample = 2;
+									// v6 count_data_elements returns (int)count($dato) — 0, never NULL, when
+									// the component holds nothing (class.diffusion_sql.php :4392-4416). Same
+									// empty-value contract as map_quality_to_int: publications.authors_count
+									// published NULL against v6's 0 on 164 cells.
+									$new_props->process->default_value = 0;
 									// parser_helper::count counts the resolved data items, so it needs a
 									// ddo_map that resolves the field's relation locators (e.g. authors
 									// rsc139) — without it there is nothing to count and the column is 0.
@@ -2205,13 +2382,20 @@ function process_node($node, $level) {
 									}
 
 									if(isset($output) && $output === 'merged'){
-										if($model === 'component_input_text'){
-											// add the merge to pipe
-											$parser_process = (object)[
-												'fn' => 'parser_helper::merge'
-											];
-											$new_props->process->parser[] = $parser_process;
-										}
+										// v6 output:'merged' ALWAYS publishes a JSON ARRAY — resolve_value
+										// flattens every locator's value into one list, and even a SINGLE
+										// locator is emitted wrapped: verified against the v6 publication,
+										// where a one-image record reads ["…rsc29_rsc170_884.jpg"], not a
+										// bare string. The flattening is a property of `output:merged`,
+										// NOT of the target model, so gating the merge parser on
+										// component_input_text was wrong: an image/media target (dd1253
+										// -> rsc29) got output_format json with nothing to aggregate, so
+										// the engine's leaf-column path kept only the LAST locator and
+										// published it unwrapped (games.other_images_resolved, 100 cells).
+										$parser_process = (object)[
+											'fn' => 'parser_helper::merge'
+										];
+										$new_props->process->parser[] = $parser_process;
 
 										$new_props->process->output_format = 'json';
 									}
@@ -2400,6 +2584,19 @@ function process_node($node, $level) {
 												$ddo_map3
 											);
 
+											// ATTACH THE MAP THE CALLEE DROPPED. get_diffusion_value's
+											// component_input_text case returns ONLY the parser and leaves the
+											// ddo_map to its caller by design (v1_get_diffusion_value.php
+											// :220-224, so the chain is not resolved twice). This caller built
+											// $ddo_map3 — the full 3-hop chain — and then never attached it, so
+											// the field resolved NOTHING: its merge parser ran over an empty
+											// slot set and published bare separators where v6 publishes the
+											// resolved value (bibliographic_references
+											// .ref_publications_other_people_role: " | " against v6's "dir").
+											if (!isset($new_props->process->ddo_map)) {
+												$new_props->process->ddo_map = $ddo_map3;
+											}
+
 											// "is_publicable" = true
 											if(isset($props->is_publicable) && $props->is_publicable === true){
 												$new_props->is_publishable = $props->is_publicable;
@@ -2451,6 +2648,33 @@ function process_node($node, $level) {
 											'parent'       => $rel_info['tipo'] ?? $tipo
 										];
 										
+										// DISPATCH ON component_method, as the outer branches do. Every
+										// sub-entry was being sent through get_diffusion_value(), so an
+										// entry declaring get_dato (e.g. a component_date published as
+										// output:'split_date_range' + date_format:'year') returned no
+										// ->process at all, $multiple_parsers stayed EMPTY, and the field
+										// migrated with "parser": []. The raw date object then reached the
+										// column and was String()-coerced: bibliographic_references
+										// .ref_publications_date/_date_end/_url all published
+										// '[object Object]' (844 cells) instead of '1958'.
+										$sub_method = $sub_args->component_method ?? 'get_diffusion_value';
+										if ($sub_method === 'get_dato') {
+											$sub_resolved = get_dato(
+												$model,
+												$sub_args->custom_arguments ?? null,
+												$sub_args->output ?? null,
+												$sub_args->output_options ?? null,
+												$ddo_map
+											);
+										} elseif ($sub_method === 'get_diffusion_dato') {
+											$sub_resolved = get_diffusion_dato(
+												$model,
+												$sub_args->custom_arguments ?? null,
+												$sub_args,
+												$sub_args->output ?? null,
+												$ddo_map
+											);
+										} else {
 										$sub_resolved = get_diffusion_value(
 											$target_tipo,
 											$model,
@@ -2462,8 +2686,56 @@ function process_node($node, $level) {
 											$ddo_map
 										);
 										
-										if (isset($sub_resolved->process)) {
-											$multiple_parsers[] = $sub_resolved->process;
+										}
+
+										// FLATTEN into the field's single parser chain. v7 validates every
+										// entry of `parser` as a {fn:'class::method', options} step, so a
+										// nested process object is a hard compile error ("parser step
+										// without a 'class::method' fn") that fails the WHOLE element.
+										// get_dato/get_diffusion_dato return the process itself; the
+										// get_diffusion_value family wraps it under ->process.
+										$sub_process = $sub_resolved->process ?? $sub_resolved ?? null;
+										// `parser` is an ARRAY of steps in most trait paths but a SINGLE step
+										// object in several others (e.g. the get_v6_section_id shapes), so
+										// both forms are accepted. DEFENSIVE ONLY — measured against mht2 it
+										// changed nothing, so it is not the reason the get_diffusion_value
+										// sub-entries of ref_publications_authors still yield "parser": [].
+										$sub_steps = $sub_process->parser ?? null;
+										if (is_object($sub_steps)) {
+											$sub_steps = [$sub_steps];
+										}
+										if (is_array($sub_steps)) {
+											foreach ($sub_steps as $sub_step) {
+												if (isset($sub_step->fn)) {
+													$multiple_parsers[] = $sub_step;
+												}
+											}
+										}
+
+										// MERGE THE SUB-PROCESS'S OWN ddo_map. Its parser steps address ddos
+										// by letter id (pattern "${a}, ${b}"), and those ids live in the ddos
+										// the trait built — rsc86/rsc85 under the target. Flattening only the
+										// parser left the pattern pointing at ids the field's ddo_map did not
+										// contain, so ref_publications_authors resolved to nothing even with a
+										// correct-looking chain. Entries already present (same tipo+parent+id)
+										// are not duplicated.
+										$sub_ddos = $sub_process->ddo_map ?? null;
+										if (is_array($sub_ddos)) {
+											foreach ($sub_ddos as $sub_ddo) {
+												if (!isset($sub_ddo->tipo)) continue;
+												$already = false;
+												foreach ($ddo_map as $existing) {
+													if (($existing->tipo ?? null) === $sub_ddo->tipo
+														&& ($existing->parent ?? null) === ($sub_ddo->parent ?? null)
+														&& ($existing->id ?? null) === ($sub_ddo->id ?? null)) {
+														$already = true;
+														break;
+													}
+												}
+												if (!$already) {
+													$ddo_map[] = $sub_ddo;
+												}
+											}
 										}
 									}
 								}
@@ -2511,6 +2783,17 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no
+								// locator ($quality = 0 before the isset test — class.diffusion_sql.php
+								// :4635-4641). map_locator_to_int, which shares this branch and this parser
+								// chain, returns NULL in the same situation. Identical chain, different empty
+								// value: the default belongs ONLY to the quality variant, so it is attached
+								// here rather than in the shared process above. Without it image.rating
+								// published NULL against v6's 0 on 1220 of 2616 rows.
+								if ($process_dato === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -2603,6 +2886,26 @@ function process_node($node, $level) {
 									null,
 									$ddo_map_cb
 								);
+
+								// v6 component_select_lang publishes the language NAME resolved in
+								// DEDALO_DATA_LANG for EVERY published row, not in the row's own
+								// language: get_valor() takes a $lang argument but never uses it for
+								// the name — it resolves through
+								// common::get_ar_all_langs_resolved(DEDALO_DATA_LANG), with the
+								// lang-aware call left commented out
+								// (class.component_select_lang.php:48-49). So interview.primary_lang
+								// reads 'Castellano' in the es, en, fr … rows alike, while v7 resolved
+								// the term per row lang and published 'Spanish'/'Espagnol'/…
+								// Pin the leaf term ddo to the data lang to reproduce it.
+								$parents_sl = [];
+								foreach ((array)($new_props->process->ddo_map ?? []) as $ddo_sl) {
+									if (isset($ddo_sl->parent)) { $parents_sl[$ddo_sl->parent] = true; }
+								}
+								foreach ((array)($new_props->process->ddo_map ?? []) as $ddo_sl) {
+									if (!isset($parents_sl[$ddo_sl->tipo ?? ''])) {
+										$ddo_sl->lang = DEDALO_DATA_LANG;
+									}
+								}
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -2795,6 +3098,21 @@ function process_node($node, $level) {
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
 								}
+								// v6 map_locator_to_terminoID does NOT check publishability unless the
+								// node asks for it: $check_publishable defaults to FALSE
+								// (class.diffusion_sql.php :3646-3647, read from process_dato_arguments
+								// ->check_publishable ?? custom_arguments->check_publishable). v7 skips
+								// unpublishable locators for a hop with no children, so informant
+								// .birthplace_id published NULL where v6 emitted ["es1_8906"] — the
+								// target place record carries no publication component at all.
+								// is_publishable is v7's per-locator publication-check override.
+								$args_cp_pub = $props->process_dato_arguments ?? new stdClass();
+								$check_publishable_cp = $args_cp_pub->check_publishable
+									?? $args_cp_pub->custom_arguments->check_publishable
+									?? false;
+								if ($check_publishable_cp !== true) {
+									$new_props->is_publishable = true;
+								}
 								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
 								echo "{$indent}- [$tipo] $model_name\n";
@@ -2818,6 +3136,15 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no locator
+								// ($quality = 0 before the isset test — class.diffusion_sql.php :4635-4641).
+								// map_locator_to_int, which shares this branch and this parser chain, returns
+								// NULL in the same situation. Identical chain, different empty value, so the
+								// default belongs ONLY to the quality variant.
+								if ($process_dato_cp === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -2916,7 +3243,55 @@ function process_node($node, $level) {
 									$new_props->process->output_format = 'json';
 									$new_props->process->output_sample = ["es1_1"];
 									$new_props->process->ddo_map = $ddo_map_cp;
-									
+
+									// v6 output:'merged' flattens EVERY resolved locator's value into
+									// ONE json array, and wraps even a single value: a one-image games
+									// record publishes ["…rsc29_rsc170_884.jpg"], never a bare string.
+									// This early-return branch (no component_method in the v6 node, so
+									// no $final_method_cp) set output_format json but attached nothing
+									// to aggregate with, so the engine's leaf-column path kept only the
+									// LAST locator and published it unwrapped — dd1253
+									// (games.other_images_resolved) lost the first of two images in
+									// every multi-image record. The sibling branches below already
+									// honour 'merged'; this one skipped it.
+									// EMPTY DECLARED LABEL LIST on the chain's final target. v6 builds
+									// an autocomplete/portal label from the component's own legacy
+									// related-component list (v5_component_autocomplete.php :46-57); when
+									// that list is empty every locator's label is '' and v6 STILL joins
+									// them (its empty-skip is commented out :111-119), so three locators
+									// publish " |  | " and one publishes '' which resolve_value nulls.
+									// v7 resolved the locators and published NULL instead
+									// (publications.other_people_full_names).
+									$final_ddo_cp = end($ddo_map_cp) ?: null;
+									$final_tipo_cp = $final_ddo_cp->tipo ?? null;
+									if (!empty($final_tipo_cp)) {
+										$final_model_cp = ontology_node::get_model_by_tipo($final_tipo_cp);
+										$final_rels_cp  = ontology_node::get_instance($final_tipo_cp)->get_relations();
+										if (empty($final_rels_cp)
+											&& in_array($final_model_cp, ['component_autocomplete','component_autocomplete_hi','component_portal'], true)) {
+											$new_props->process->parser = [
+												(object)[
+													'fn'      => 'parser_locator::get_locator',
+													'options' => (object)['empty_label_join' => true, 'fields_separator' => ' | ']
+												]
+											];
+											$new_props->process->output_format = 'string';
+											unset($new_props->process->output_sample);
+											echo "{$indent}- [$tipo] $model_name\n";
+											echo "{$indent}  [RULE APPLIED] empty label list -> empty_label_join\n";
+											break;
+										}
+									}
+
+									$output_cp_fallback = $final_args->output
+										?? $props->process_dato_arguments->output
+										?? null;
+									if ($output_cp_fallback === 'merged') {
+										$new_props->process->parser = [
+											(object)['fn' => 'parser_helper::merge']
+										];
+									}
+
 
 									if(isset($props->is_publicable) && $props->is_publicable === true){
 										$new_props->is_publishable = $props->is_publicable;
@@ -3028,6 +3403,27 @@ function process_node($node, $level) {
 									$new_props->process = new stdClass();
 									$new_props->process->parser = $parser_pipeline;
 									$new_props->process->ddo_map = $ddo_map_cp;
+									// v6 output:'merged' PUBLISHES A JSON ARRAY, not a joined string. The
+									// trait states the rule directly (v1_get_diffusion_value.php :112-116:
+									// output==='merged' -> output_format 'json'); this hand-rolled branch
+									// mapped 'merged' to merge_option null and fell back to 'string', so
+									// publications.other_people_surname published
+									// 'Alpuente | Lorrio | Luis' against v6's
+									// ["Alpuente","Lorrio","Luis"]. The output lives on the CUSTOM
+									// sub-argument as often as on the outer args, so both are consulted —
+									// and the branch's own output_sample (["Name Surname"]) was already an
+									// array, i.e. the format was simply inconsistent with its own sample.
+									$merged_output_cp = $output_v5;
+									if ($merged_output_cp === null) {
+										foreach ($custom_arguments as $custom_argument) {
+											$candidate = $custom_argument->process_dato_arguments->output ?? null;
+											if ($candidate !== null) { $merged_output_cp = $candidate; break; }
+										}
+									}
+									if ($merged_output_cp === 'merged') {
+										$output_format = 'json';
+									}
+
 									$new_props->process->output_format = $output_format ?? 'string';
 									$new_props->process->output_sample = ["Name Surname"];
 									
@@ -3301,6 +3697,15 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no locator
+								// ($quality = 0 before the isset test — class.diffusion_sql.php :4635-4641).
+								// map_locator_to_int, which shares this branch and this parser chain, returns
+								// NULL in the same situation. Identical chain, different empty value, so the
+								// default belongs ONLY to the quality variant.
+								if ($process_dato_cb === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -3444,6 +3849,15 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no locator
+								// ($quality = 0 before the isset test — class.diffusion_sql.php :4635-4641).
+								// map_locator_to_int, which shares this branch and this parser chain, returns
+								// NULL in the same situation. Identical chain, different empty value, so the
+								// default belongs ONLY to the quality variant.
+								if ($process_dato_cs === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -3643,6 +4057,43 @@ function process_node($node, $level) {
 								break;
 							}
 
+							// 0.5 "process_dato" = "diffusion_sql::map_locator_to_terminoID_parent"
+							// v6 (class.diffusion_sql.php map_locator_to_terminoID_parent): take the
+							// FIRST stored parent locator and publish map_to_terminoID() of it, i.e.
+							// the scalar "{section_tipo}_{section_id}" — NOT the json array the plain
+							// map_locator_to_terminoID sibling emits. Hence get_term_id + get_first
+							// with output_format string.
+							//
+							// The v6 method ALSO force-publishes the parent record as a side effect
+							// (it flips skip_publication_state_check and calls update_record). That is
+							// a publication-SET effect, not a value effect: it changes WHICH records
+							// exist, never what this column contains. It is deliberately NOT modelled
+							// here — the v7 engine has no equivalent hook and a migration must not
+							// invent publication side effects.
+							if(($props->process_dato ?? null) === 'diffusion_sql::map_locator_to_terminoID_parent'){
+
+								$new_props = new stdClass();
+								$new_props->process = (object)[
+									'ddo_map' => $ddo_map_rp,
+									'parser'  => [
+										(object)['fn' => 'parser_locator::get_term_id'],
+										(object)['fn' => 'parser_helper::get_first']
+									],
+									'output_format' => 'string',
+									'output_sample' => 'es1_1'
+								];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+								if(isset($props->info)){ $new_props->info = $props->info; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID_parent -> get_term_id + get_first (scalar)\n";
+								break;
+							}
+
 							// 1 "option_obj" present
 							$option_obj_rp = $props->option_obj ?? null;
 							if($option_obj_rp){
@@ -3724,6 +4175,8 @@ function process_node($node, $level) {
 											(object)[
 												'fn' => 'parser_locator::parents',
 												'options' => (object)[
+													// see the merge:'unique' note above: json output = ARRAY.
+													'merge' => 'unique',
 													'value' => 'section_id'
 												]
 											]
@@ -3879,6 +4332,54 @@ function process_node($node, $level) {
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] component_relation_parent (relation) -> mapped section_id values\n";							
 								break;								
+							}
+
+							// 4 "process_dato" = "diffusion_sql::resolve_value" + "component_method" = "get_diffusion_value"
+							// The PARENT record is a hop like any other: v6 resolves the parent locator and
+							// then reads target_component_tipo ON THAT RECORD. rsc787 (publications
+							// .title_colective) publishes the parent publication's own title (rsc140);
+							// with no branch for this shape the node was skipped as [UNMAPPED], the field
+							// compiled to a bare parent hop with no leaf, and the column published NULL.
+							$process_dato_rp = $props->process_dato ?? null;
+							$args_rp         = $props->process_dato_arguments ?? null;
+							if ($process_dato_rp === 'diffusion_sql::resolve_value'
+								&& ($args_rp->component_method ?? null) === 'get_diffusion_value'
+								&& !isset($args_rp->custom_arguments)
+								&& !empty($args_rp->target_component_tipo)) {
+
+								$target_rp     = $args_rp->target_component_tipo;
+								$model_rp      = ontology_node::get_legacy_model_by_tipo($target_rp);
+								$ddo_map_rp_v  = $ddo_map_rp;
+								$ddo_map_rp_v[] = (object)[
+									'tipo'   => $target_rp,
+									'parent' => $rel_info['tipo']
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$target_rp,
+									$model_rp,
+									null,
+									$args_rp,
+									$args_rp->output ?? null,
+									null,
+									$option_obj ?? null,
+									$ddo_map_rp_v
+								);
+
+								// get_diffusion_value's component_input_text case returns ONLY the parser
+								// and leaves the map to the caller (v1_get_diffusion_value.php :220-224).
+								if (!isset($new_props->process->ddo_map)) {
+									$new_props->process->ddo_map = $ddo_map_rp_v;
+								}
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_relation_parent resolve_value -> get_diffusion_value on parent\n";
+								break;
 							}
 
 							break;
@@ -4044,6 +4545,15 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no locator
+								// ($quality = 0 before the isset test — class.diffusion_sql.php :4635-4641).
+								// map_locator_to_int, which shares this branch and this parser chain, returns
+								// NULL in the same situation. Identical chain, different empty value, so the
+								// default belongs ONLY to the quality variant.
+								if ($process_dato_rb === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -4396,6 +4906,27 @@ function process_node($node, $level) {
 									$new_props->process = new stdClass();
 									$new_props->process->parser = $parser_pipeline;
 									$new_props->process->ddo_map = $ddo_map_rr;
+									// v6 output:'merged' PUBLISHES A JSON ARRAY, not a joined string. The
+									// trait states the rule directly (v1_get_diffusion_value.php :112-116:
+									// output==='merged' -> output_format 'json'); this hand-rolled branch
+									// mapped 'merged' to merge_option null and fell back to 'string', so
+									// publications.other_people_surname published
+									// 'Alpuente | Lorrio | Luis' against v6's
+									// ["Alpuente","Lorrio","Luis"]. The output lives on the CUSTOM
+									// sub-argument as often as on the outer args, so both are consulted —
+									// and the branch's own output_sample (["Name Surname"]) was already an
+									// array, i.e. the format was simply inconsistent with its own sample.
+									$merged_output_cp = $output_v5;
+									if ($merged_output_cp === null) {
+										foreach ($custom_arguments as $custom_argument) {
+											$candidate = $custom_argument->process_dato_arguments->output ?? null;
+											if ($candidate !== null) { $merged_output_cp = $candidate; break; }
+										}
+									}
+									if ($merged_output_cp === 'merged') {
+										$output_format = 'json';
+									}
+
 									$new_props->process->output_format = $output_format ?? 'string';
 									$new_props->process->output_sample = ["Name Surname"];
 									
@@ -4502,6 +5033,34 @@ function process_node($node, $level) {
 						
 						case 'component_filter':
 
+							// "process_dato" = "diffusion_sql::map_project_to_section_id"
+							// v6 (class.diffusion_sql.php :4075-4090, post-4.9 path) maps every stored
+							// locator to its section_id and returns the ARRAY — the same shape as the
+							// data_to_be_used:'dato' mapping, so the same chain expresses it. The
+							// pre-4.9 branch (keys of an id:count map) is dead on any install this
+							// migration can run against: the runner refuses below data version 6.9.1.
+							if(($props->process_dato ?? null) === 'diffusion_sql::map_project_to_section_id'){
+
+								$new_props = new stdClass();
+								$new_props->process = (object)[
+									'parser' => [
+										(object)['fn' => 'parser_locator::get_v6_section_id']
+									],
+									'output_format' => 'json',
+									'output_sample' => ["1"]
+								];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+								if(isset($props->info)){ $new_props->info = $props->info; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_project_to_section_id -> get_v6_section_id (json)\n";
+								break;
+							}
+
 							$is_empty_cf = function($props) {
 								if (empty($props)) return true;
 								$v5_props = is_object($props) ? clone($props) : (object)$props;
@@ -4607,6 +5166,15 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no locator
+								// ($quality = 0 before the isset test — class.diffusion_sql.php :4635-4641).
+								// map_locator_to_int, which shares this branch and this parser chain, returns
+								// NULL in the same situation. Identical chain, different empty value, so the
+								// default belongs ONLY to the quality variant.
+								if ($process_dato_cf === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 								
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -5263,6 +5831,15 @@ function process_node($node, $level) {
 								$new_props->process = new stdClass();
 								$new_props->process->parser = $parser_process;
 								$new_props->process->output_format = 'int';
+								
+								// v6 map_quality_to_int RETURNS 0, NOT NULL, when the component holds no locator
+								// ($quality = 0 before the isset test — class.diffusion_sql.php :4635-4641).
+								// map_locator_to_int, which shares this branch and this parser chain, returns
+								// NULL in the same situation. Identical chain, different empty value, so the
+								// default belongs ONLY to the quality variant.
+								if ($process_dato_rc === 'diffusion_sql::map_quality_to_int') {
+									$new_props->process->default_value = 0;
+								}
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -5473,6 +6050,23 @@ function process_node($node, $level) {
 									null,
 									$ddo_map_relation_list
 								);
+
+								// 'dato_full' and EMPTY props are NOT the same list in v6.
+								// With empty props the inverse references pass through
+								// relation_list::get_dato verbatim — one entry per stored relation,
+								// so a record citing this one twice is published twice
+								// (games/informant dd_relations, nodes dd1756/rsc1055). With
+								// 'dato_full' v6 publishes each referencing SECTION once
+								// (antropologia/periodos/restringidos, node hierarchy85: zero
+								// repeats even where the owner holds six locators to the same
+								// target). Treating both alike cost 72 cells one way or 264 the
+								// other, depending on which behaviour was hardcoded — flag the
+								// dedupe so the engine can honour each.
+								if (($props->data_to_be_used ?? null) === 'dato_full') {
+									foreach ((array)($new_props->process->ddo_map ?? []) as $ddo_dedupe) {
+										$ddo_dedupe->dedupe_sections = true;
+									}
+								}
 
 								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
@@ -5903,6 +6497,26 @@ function process_node($node, $level) {
 			}
 		}
 
+	// Attach the split_data slice to the ddo whose locators v6 filtered — the field's own
+	// relation. The default branch often emits NO ddo_map at all (the chain relies on the
+	// auto-generated one from the node's relations), so the entry is created when missing.
+	// Getting this wrong is not academic: an earlier attempt attached the slice only when a
+	// ddo_map already existed, which silently did nothing for those nodes while removing the
+	// parser that had been standing in — publications.author_others went from 108 mismatching
+	// cells to 636.
+	if ($split_data_slice !== null && isset($new_props) && $new_props && isset($new_props->process)) {
+		if (!isset($new_props->process->ddo_map) || !is_array($new_props->process->ddo_map)
+			|| count($new_props->process->ddo_map) === 0) {
+			$new_props->process->ddo_map = [
+				(object)['tipo' => $rel_info['tipo'] ?? $tipo, 'section_tipo' => 'self']
+			];
+		}
+		$new_props->process->ddo_map[0]->data_slice = $split_data_slice;
+		$slice_desc = 'offset ' . $split_data_slice->offset
+			. (isset($split_data_slice->length) ? ', length ' . $split_data_slice->length : ', to end');
+		echo "{$indent}  [RULE APPLIED] diffusion_sql::split_data -> ddo data_slice ({$slice_desc})\n";
+	}
+
 	// GLOBAL RULE: merge_columns
 	if (isset($props->merge_columns)) {
 		$parser_process = (object)[
@@ -5977,7 +6591,41 @@ function process_node($node, $level) {
 			$new_props->is_publishable = $props->is_publicable;
 		}
 
-		// GLOBAL RULE: column length (varchar / length)
+		// GLOBAL RULE: resolve_value filters unpublishable locators
+	// v6 diffusion_sql::resolve_value (:5034-5041) skips every locator failing
+	// diffusion::get_is_publicable, UNLESS process_dato_arguments.is_publicable overrides it.
+	// The generic v6 chain walk does NOT filter, and v7 mirrors that with a value-source
+	// exemption — so the stricter rule has to be marked per COLUMN, not switched on engine-wide.
+	// Measured: disabling the exemption globally fixed publications.editorial (124 cells) but
+	// broke eight previously-perfect columns, so it is emitted only for resolve_value chains
+	// that carry no is_publicable override.
+	if (is_object($props)
+		&& ($props->process_dato ?? null) === 'diffusion_sql::resolve_value'
+		&& !isset($props->process_dato_arguments->is_publicable)
+		&& isset($new_props)
+		&& $new_props
+		&& isset($new_props->process)) {
+		$new_props->process->filter_unpublishable = true;
+	}
+
+	// GLOBAL RULE: field_enum default value
+	// v6 NEVER publishes NULL from a field_enum column. class.diffusion_sql.php :1668-1676 is
+	// explicit: "if (empty($dato) || ($dato!=='1' && $dato!=='2')) { $dato = 2; // Value 'No'
+	// default }", then it publishes enum[$dato]. So an empty enum component still yields the
+	// key-2 label. This is a property of the COLUMN MODEL, not of any one component, so it is a
+	// global rule rather than a per-branch one — ts_web.menu published NULL against v6's "no"
+	// while its component (mht153) is absent from BOTH databases.
+	if ($model_name === 'field_enum'
+		&& isset($props->enum)
+		&& isset($props->enum->{'2'})
+		&& isset($new_props)
+		&& $new_props
+		&& isset($new_props->process)
+		&& !isset($new_props->process->default_value)) {
+		$new_props->process->default_value = $props->enum->{'2'};
+	}
+
+	// GLOBAL RULE: column length (varchar / length)
 		// v7 reads properties.varchar (else properties.length) to size the column; without this
 		// the length is lost and the column falls back to the engine default. A node whose ONLY
 		// v6 propiedad is a length matched NO mapping branch, so it used to be skipped entirely:

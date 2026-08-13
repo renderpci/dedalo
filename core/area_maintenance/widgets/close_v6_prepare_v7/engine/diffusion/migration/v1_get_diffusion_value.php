@@ -409,6 +409,32 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$letter_ids = [];
 
 			$show = $properties->source->request_config[0]->show ?? null;
+
+			// EMPTY DECLARED LABEL LIST. v6 builds an autocomplete's label from the
+			// component's own legacy related-component list (v5_component_autocomplete
+			// .php :46-57 RecordObj_dd::get_relaciones()), NOT from request_config.
+			// rsc391 declares none, so every locator's label is '' and v6 still joins
+			// them (its empty-skip is commented out at :111-119): three locators
+			// publish " |  | ", one publishes '' which resolve_value nulls.
+			// Reading request_config instead gave rsc391 four label slots and produced
+			// "Teresa Ortiz Gómez  ".
+			$legacy_relations_ac = ontology_node::get_instance($tipo)->get_relations();
+			if (empty($legacy_relations_ac)) {
+				$process = (object)[
+					'parser' => [
+						(object)[
+							'fn'      => 'parser_locator::get_locator',
+							'options' => (object)['empty_label_join' => true, 'fields_separator' => $fields_separator]
+						]
+					],
+					'output_format' => 'string'
+				];
+				if($ddo_map){
+					$process->ddo_map = $ddo_map;
+				}
+				break;
+			}
+
 			if(!empty($show)) {
 				$deep_ddo = [];
 				foreach ($show->ddo_map as $ddo) {
@@ -673,10 +699,17 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				}
 			}
 
-			//empty options
-			if(empty($option_obj)) {
-
-				$option_obj = $target_component_properties->option_obj ?? null;
+			// DEFAULT RESOLUTION. Reaching this line already means none of the directive
+			// branches above matched — each of them breaks out — so it must run whether
+			// option_obj was EMPTY or merely carried no directive. Gating it on
+			// empty($option_obj) left the middle case unhandled: an option_obj of just
+			// {divisor, records_separator} (ref_publications_authors, rsc139) fell through
+			// every branch and the trait returned an EMPTY process, so the field migrated
+			// with "parser": [] and published nothing against v6's "Vander, Adrián".
+			// The incoming option_obj is kept when the target declares none of its own —
+			// it is where that divisor lives.
+			{
+				$option_obj = $target_component_properties->option_obj ?? $option_obj ?? null;
 
 				$fields_separator = $option_obj->separator_fields ?? ', ';
 				$records_separator = $option_obj->divisor ?? $option_obj->separator_rows  ?? ' - ';
