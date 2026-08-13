@@ -17,11 +17,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { recordFileComplete } from '../../src/core/ai/model_manifest.ts';
 import {
 	AI_MODEL_URL_PREFIX,
 	modelFiles,
 	modelHubAllowed,
 	modelInstalled,
+	modelState,
 	modelStoreAvailable,
 	resolveModelPath,
 } from '../../src/core/ai/model_store.ts';
@@ -138,5 +140,51 @@ describe('"installed" means USABLE, not merely present', () => {
 
 	test('an unknown model is never installed', () => {
 		expect(modelInstalled('nobody/at-all', { encoder_model: 'fp32' })).toBe(false);
+	});
+});
+
+describe('modelState — "installed" is not one bit', () => {
+	const STATE_MODEL = 'onnx-community/whisper-state-TEST';
+	const dtype = { encoder_model: 'fp32', decoder_model_merged: 'fp32' };
+	const files = () => join(STORE, STATE_MODEL);
+
+	test('nothing on disk is missing', () => {
+		expect(modelState('onnx-community/whisper-absent-TEST', dtype).state).toBe('missing');
+	});
+
+	test('all files present, no manifest: unverified — present but never size-checked', () => {
+		mkdirSync(join(files(), 'onnx'), { recursive: true });
+		writeFileSync(join(files(), 'config.json'), '{"model_type":"whisper"}');
+		writeFileSync(join(files(), 'onnx', 'encoder_model.onnx'), '\x08ENCODER-BYTES');
+		writeFileSync(join(files(), 'onnx', 'decoder_model_merged.onnx'), '\x08DECODER-BYTES');
+		expect(modelState(STATE_MODEL, dtype).state).toBe('unverified');
+	});
+
+	test('one required file absent while others are present: incomplete', () => {
+		rmSync(join(files(), 'onnx', 'decoder_model_merged.onnx'));
+		expect(modelState(STATE_MODEL, dtype).state).toBe('incomplete');
+		writeFileSync(join(files(), 'onnx', 'decoder_model_merged.onnx'), '\x08DECODER-BYTES');
+	});
+
+	test('the manifest size contradicts the disk: incomplete — the truncation case', () => {
+		recordFileComplete(STORE, STATE_MODEL, 'onnx/encoder_model.onnx', 999999);
+		const report = modelState(STATE_MODEL, dtype);
+		expect(report.state).toBe('incomplete');
+		const evidence = report.files.find((entry) => entry.file === 'onnx/encoder_model.onnx');
+		expect(evidence?.expected).toBe(999999);
+		expect(evidence?.size).toBe(14);
+	});
+
+	test('every manifest size matches the disk: ready', () => {
+		recordFileComplete(STORE, STATE_MODEL, 'config.json', 24);
+		recordFileComplete(STORE, STATE_MODEL, 'onnx/encoder_model.onnx', 14);
+		recordFileComplete(STORE, STATE_MODEL, 'onnx/decoder_model_merged.onnx', 14);
+		expect(modelState(STATE_MODEL, dtype).state).toBe('ready');
+	});
+
+	test('an HTML error page saved as weights: damaged', () => {
+		writeFileSync(join(files(), 'onnx', 'encoder_model.onnx'), '<!DOCTYPE html><html>404');
+		recordFileComplete(STORE, STATE_MODEL, 'onnx/encoder_model.onnx', 24);
+		expect(modelState(STATE_MODEL, dtype).state).toBe('damaged');
 	});
 });

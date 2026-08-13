@@ -27,11 +27,20 @@
  * HTTP — seeding is an operator action, not an engine action.
  */
 
-import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import {
+	closeSync,
+	existsSync,
+	openSync,
+	readdirSync,
+	readSync,
+	realpathSync,
+	statSync,
+} from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { staticAssetResponse } from '../api/static_asset.ts';
+import { expectedSize } from './model_manifest.ts';
 
 /** URL prefix the store is served at. */
 export const AI_MODEL_URL_PREFIX = '/dedalo/ai_models/';
@@ -125,6 +134,91 @@ export function modelInstalled(modelId: string, dtype?: Record<string, string>):
 	const has = (prefix: string): boolean =>
 		weights.some((file) => file.startsWith(prefix) && file.endsWith('.onnx'));
 	return has('encoder_model') && has('decoder_model_merged');
+}
+
+/**
+ * What the store can honestly say about one model.
+ *
+ * `unverified` is not a hedge, it is the truth about a store seeded before the
+ * completion manifest existed: TRUNCATION CANNOT BE SEEN IN THE BYTES. A header
+ * probe catches a file that is the wrong KIND of thing (an HTML error page saved
+ * as weights); only a comparison against a known expected length catches a file
+ * that is the right kind and half as long. This function performs no network I/O,
+ * so where there is no manifest there is no verdict to give — the `verify_model`
+ * action is what resolves it.
+ */
+export type ModelState = 'ready' | 'unverified' | 'incomplete' | 'damaged' | 'missing';
+
+export interface ModelFileEvidence {
+	file: string;
+	present: boolean;
+	size: number;
+	/** The manifest's recorded length, or null when never recorded. */
+	expected: number | null;
+}
+
+export interface ModelStateReport {
+	state: ModelState;
+	files: ModelFileEvidence[];
+}
+
+/**
+ * The leading bytes of a file that claims to be ONNX or JSON.
+ *
+ * An ONNX file is a protobuf ModelProto: its first field is `ir_version`
+ * (field 1, varint) so the first byte is 0x08 in every model the hub publishes.
+ * A JSON config starts with '{'. Anything else — most usefully '<' — is a
+ * transport artefact written to disk under a model file's name.
+ */
+function headerPlausible(path: string, file: string): boolean {
+	let fd: number | null = null;
+	try {
+		fd = openSync(path, 'r');
+		const head = Buffer.alloc(1);
+		if (readSync(fd, head, 0, 1, 0) < 1) return false;
+		return file.endsWith('.json') ? head[0] === 0x7b : head[0] === 0x08;
+	} catch {
+		return false;
+	} finally {
+		if (fd !== null) closeSync(fd);
+	}
+}
+
+export function modelState(modelId: string, dtype?: Record<string, string>): ModelStateReport {
+	const root = modelStoreRoot();
+	const wanted = modelFiles(dtype);
+
+	const files: ModelFileEvidence[] = wanted.map((file) => {
+		const path = resolve(root, modelId, file);
+		let size = 0;
+		let present = false;
+		try {
+			present = existsSync(path);
+			size = present ? statSync(path).size : 0;
+		} catch {
+			present = false;
+		}
+		return { file, present, size, expected: expectedSize(root, modelId, file) };
+	});
+
+	if (files.every((entry) => !entry.present || entry.size === 0)) {
+		return { state: 'missing', files };
+	}
+	if (files.some((entry) => !entry.present || entry.size === 0)) {
+		return { state: 'incomplete', files };
+	}
+	// Wrong KIND of content beats wrong LENGTH: an HTML error page is a damaged
+	// install whatever the manifest claims, and it names a different remedy.
+	if (files.some((entry) => !headerPlausible(resolve(root, modelId, entry.file), entry.file))) {
+		return { state: 'damaged', files };
+	}
+	if (files.some((entry) => entry.expected !== null && entry.expected !== entry.size)) {
+		return { state: 'incomplete', files };
+	}
+	if (files.every((entry) => entry.expected !== null)) {
+		return { state: 'ready', files };
+	}
+	return { state: 'unverified', files };
 }
 
 /**
