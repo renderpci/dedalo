@@ -16,6 +16,7 @@ import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
+import { mediaJobs } from '../../src/core/media/jobs.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
 import {
 	deleteTranscribableAudio,
@@ -41,6 +42,7 @@ import {
 } from '../../src/core/tools/transcription_asr.ts';
 import {
 	backgroundRepairModel,
+	buildModelSourcesPayload,
 	releaseModelRepairLock,
 	repairModelAction,
 	type ScheduleRepair,
@@ -1363,6 +1365,147 @@ describe('model sources report a real state, and a download cannot claim a broke
 			expect(String(response.msg)).not.toContain('already installed');
 		} finally {
 			rmSync(`${SOURCES_STORE}/${KNOWN_CATALOG_MODEL}`, { recursive: true, force: true });
+		}
+	});
+});
+
+/**
+ * THE DEGRADED-ANSWER CONTRACT of get_model_sources — the hinge every refusal
+ * and every remedy pivots on.
+ *
+ * A catalog read can fail: the tool config lives in the database. What the
+ * server then puts on the wire decides what an archivist is told, and the two
+ * possible sentences are not equally wrong — they are opposite. `installed: []`
+ * MEANS "nothing is installed" (the client greys the model out, refuses the run
+ * and offers a Download the server then contradicts); an ABSENT field means
+ * "this server cannot tell", and every consumer keeps its permissive behaviour.
+ *
+ * Driven through the pure `buildModelSourcesPayload`, so the catch path is
+ * gated without a database and without a mock that could leak into another file.
+ */
+describe('the degraded answer: absent means "cannot tell", never "none"', () => {
+	const base = { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true };
+
+	test('an unreadable catalog OMITS installed / models / diarization', () => {
+		const payload = buildModelSourcesPayload({ readable: false, asr: [], diarization: [] }, base);
+
+		// Not "present and empty" — ABSENT. `in` is the assertion that matters:
+		// JSON.stringify drops undefined, so an absent key is what reaches the wire.
+		expect('installed' in payload).toBe(false);
+		expect('models' in payload).toBe(false);
+		expect('diarization' in payload).toBe(false);
+		// What is still knowable is still answered: these come from config and the
+		// filesystem, not from the catalog.
+		expect(payload.model_host).toBe('/dedalo/ai_models/');
+		expect(payload.store_ready).toBe(true);
+	});
+
+	test('a readable catalog with no models answers EMPTY — a real "none"', () => {
+		const payload = buildModelSourcesPayload({ readable: true, asr: [], diarization: [] }, base);
+		expect(payload.installed).toEqual([]);
+		expect(payload.models).toEqual([]);
+		// null = this install declares no speaker detection. Also a real answer.
+		expect(payload.diarization).toBeNull();
+	});
+});
+
+/**
+ * THE GUARD MUST NOT OUTLIVE THE JOB IT GUARDS.
+ *
+ * `repairsInFlight` used to be a bare flag cleared by the repair job's own
+ * `finally` — which never runs when the job is CANCELLED WHILE STILL QUEUED:
+ * MediaJobManager.run finishes it 'stopped' without invoking the worker at all.
+ * Cancelling a queued job is a first-class button in the jobs UI, so one press
+ * left that model answering "a repair is already running" forever, with no
+ * recovery short of a server restart.
+ *
+ * The claim is now keyed on the JOB's liveness, so a job that is stopped (or
+ * failed, or died) releases the model whoever forgot to clear what.
+ */
+describe('a cancelled repair job does not lock the model out', () => {
+	const KNOWN = 'onnx-community/whisper-large-v3-turbo';
+	const admin = { isGlobalAdmin: true } as unknown as ToolActionContext['principal'];
+
+	test('a repair whose queued job was stopped leaves the model repairable', async () => {
+		// A REAL job record, stopped before its worker could run — exactly what the
+		// jobs UI's cancel button does to a queued job. Nothing else reaches the
+		// worker, so nothing else clears a flag.
+		const record = mediaJobs.submit('test_repair_guard', async () => {
+			throw new Error('the worker must never run for a job stopped while queued');
+		});
+		mediaJobs.stop(record.id);
+
+		const schedule: ScheduleRepair = () => ({
+			result: true,
+			msg: 'OK. Background process started',
+			errors: [],
+			job_id: record.id,
+			background_job_id: record.id,
+		});
+		const request = () =>
+			repairModelAction(
+				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
+				schedule,
+			);
+
+		try {
+			expect((await request()).result).toBe(true);
+			// The job never ran, and never will: it is 'stopped'.
+			expect(mediaJobs.status(record.id)?.status).toBe('stopped');
+
+			// The model is repairable again — the claim was released by the job's
+			// own death, not by anybody remembering to clear a flag.
+			const second = await request();
+			expect(second.result).toBe(true);
+			expect(String(second.msg)).not.toContain('already running');
+		} finally {
+			releaseModelRepairLock(KNOWN);
+		}
+	});
+
+	test('a LIVE job still refuses a second repair, and download shares the guard', async () => {
+		// The guard must still guard: a job the registry considers live blocks both
+		// write actions on that model (they write the same files).
+		let release: (() => void) | null = null;
+		const record = mediaJobs.submit('test_repair_guard_live', async () => {
+			await new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			return true;
+		});
+		const schedule: ScheduleRepair = () => ({
+			result: true,
+			msg: 'OK. Background process started',
+			errors: [],
+			job_id: record.id,
+			background_job_id: record.id,
+		});
+		try {
+			const first = await repairModelAction(
+				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
+				schedule,
+			);
+			expect(first.result).toBe(true);
+
+			const second = await repairModelAction(
+				{ options: { model: KNOWN }, principal: admin, userId: 1 } as unknown as ToolActionContext,
+				schedule,
+			);
+			expect(second.result).toBe(false);
+			expect(String(second.msg)).toContain('already running');
+
+			// download_model is the OTHER writer of the same files: same guard.
+			const download = await tool.apiActions.download_model!.handler({
+				options: { model: KNOWN },
+				principal: admin,
+				userId: 1,
+			} as unknown as ToolActionContext);
+			expect(download.result).toBe(false);
+			expect(String(download.msg)).toContain('already running');
+		} finally {
+			if (release !== null) (release as () => void)();
+			mediaJobs.stop(record.id);
+			releaseModelRepairLock(KNOWN);
 		}
 	});
 });

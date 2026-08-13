@@ -36,6 +36,12 @@ import { existsSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { config } from '../../../src/config/config.ts';
 import {
+	type CatalogModel,
+	findCatalogModel,
+	readTranscriberCatalog,
+	type TranscriberCatalog,
+} from '../../../src/core/ai/model_catalog.ts';
+import {
 	COMMON_FILES,
 	DIARIZATION_COMMON_FILES,
 	type DownloadReport,
@@ -49,6 +55,7 @@ import {
 	AI_MODEL_URL_PREFIX,
 	fileEvidence,
 	type ModelFileEvidence,
+	type ModelKind,
 	type ModelState,
 	type ModelStateReport,
 	modelHubAllowed,
@@ -59,6 +66,7 @@ import {
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { probeFormat } from '../../../src/core/media/engine/ffmpeg.ts';
+import { mediaJobs } from '../../../src/core/media/jobs.ts';
 import {
 	absoluteFromRelative,
 	buildMediaLocation,
@@ -761,43 +769,63 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
  * configuration the logged-in user's own browser is about to act on.
  */
 async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
+	// The facts that hold whatever the catalog does: they come from config and the
+	// filesystem, never from the database.
+	const base = {
+		model_host: AI_MODEL_URL_PREFIX,
+		allow_hub: modelHubAllowed(),
+		store_ready: modelStoreAvailable(),
+	};
+
+	return {
+		result: buildModelSourcesPayload(await readTranscriberCatalog(), base),
+		msg: 'OK',
+		errors: [],
+	};
+}
+
+/**
+ * THE DEGRADED-ANSWER CONTRACT, as a pure function of what the catalog read
+ * produced — so it can be gated without a database, and so the one decision it
+ * encodes (absent ≠ empty) has a name.
+ *
+ * Gate: test/unit/tool_transcription.test.ts, "the degraded answer".
+ */
+export function buildModelSourcesPayload(
+	catalog: TranscriberCatalog,
+	base: { model_host: string; allow_hub: boolean; store_ready: boolean },
+): Record<string, unknown> {
+	if (!catalog.readable) {
+		// THE DEGRADED ANSWER. `installed` and `models` are OMITTED — not empty.
+		//
+		// An empty array is a real answer ("nothing is installed") that the client
+		// acts on: it greys the model out, refuses the run, and offers a Download
+		// the server then contradicts. A momentary database hiccup would therefore
+		// tell every archivist their model was never installed. An ABSENT field is
+		// the wire's way of saying "this server cannot tell", and every consumer
+		// keeps its previous permissive behaviour when it sees one. Same rule for
+		// `diarization`: absent = cannot tell, null = this install declares no
+		// speaker detection.
+		console.error(
+			'[tool_transcription] get_model_sources: the model catalog could not be read — reporting the model fields as UNKNOWN (absent), never as empty',
+		);
+		return { ...base };
+	}
+
 	// Which catalog models are USABLE right now, and in what way. A boolean
 	// "installed" could not distinguish a model nobody downloaded from one whose
 	// download was killed mid-file — and it was the second that reached the
 	// browser as "ERROR_CODE: 7 … protobuf parsing failed" with nothing in the UI.
 	const installed: string[] = [];
 	const models: { name: string; state: string; files: unknown[] }[] = [];
-	try {
-		// getToolConfig returns the EFFECTIVE config — a flat map of key → resolved
-		// value — so `transcriber_quality` IS the catalog array.
-		const toolConfig = await getToolConfig('tool_transcription');
-		const raw = toolConfig?.transcriber_quality;
-		const entries = Array.isArray(raw)
-			? raw
-			: ((raw as { value?: unknown[] } | undefined)?.value ?? null);
-		if (Array.isArray(entries)) {
-			for (const rawEntry of entries) {
-				if (rawEntry === null || typeof rawEntry !== 'object') continue;
-				const entry = rawEntry as {
-					name?: unknown;
-					tier?: unknown;
-					dtype?: Record<string, string>;
-				};
-				if (typeof entry.name !== 'string') continue;
-				if (entry.tier !== undefined && entry.tier !== 'browser') continue;
-				const report = modelState(entry.name, entry.dtype);
-				models.push({ name: entry.name, state: report.state, files: report.files });
-				// `installed` KEEPS its old meaning — "the browser may try this" —
-				// so an older client is never made worse by this change. An
-				// unverified model is the normal state of every store seeded
-				// before the manifest existed: it runs, with a warning.
-				if (isRunnableState(report.state)) installed.push(entry.name);
-			}
-		}
-	} catch (error) {
-		// A missing/!unreadable catalog must not break the transcription flow: the
-		// client falls back to offering everything, exactly as it did before.
-		console.error('[tool_transcription] could not read the model catalog:', error);
+	for (const entry of catalog.asr) {
+		const report = modelState(entry.name, entry.dtype, entry.kind);
+		models.push({ name: entry.name, state: report.state, files: report.files });
+		// `installed` KEEPS its old meaning — "the browser may try this" — so an
+		// older client is never made worse by this change. An unverified model is
+		// the normal state of every store seeded before the manifest existed: it
+		// runs, with a warning.
+		if (isRunnableState(report.state)) installed.push(entry.name);
 	}
 
 	// The speaker-detection models (separate catalog slots — never in the ASR
@@ -815,39 +843,12 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 	// selected ASR model, repaired something that was never broken, and reported
 	// success. `models` carries one entry per half, each with its own state and
 	// its own name to aim a remedy at.
-	let diarization: DiarizationPanel | null = null;
-	try {
-		diarization = await readDiarizationPanel();
-	} catch (error) {
-		console.error('[tool_transcription] could not read the diarization model config:', error);
-	}
-
 	return {
-		result: {
-			model_host: AI_MODEL_URL_PREFIX,
-			allow_hub: modelHubAllowed(),
-			store_ready: modelStoreAvailable(),
-			installed,
-			models,
-			diarization,
-		},
-		msg: 'OK',
-		errors: [],
+		...base,
+		installed,
+		models,
+		diarization: buildDiarizationPanel(catalog.diarization),
 	};
-}
-
-/**
- * The diarization model declared by the tool config (`diarization_model`),
- * or null when the install declares none. Tolerates the raw property-object
- * form ({value: {…}}) like every other config read in this module.
- */
-async function readDiarizationModel(): Promise<{
-	name: string;
-	label?: string;
-	size_mb?: number;
-	dtype?: Record<string, string>;
-} | null> {
-	return readModelConfigSlot('diarization_model');
 }
 
 /**
@@ -899,34 +900,28 @@ function worstState(states: readonly ModelState[]): ModelState {
 
 /**
  * The speaker-detection pair, each half answering for itself. Null when the
- * install declares no segmentation model (speaker detection is simply absent).
+ * install declares no segmentation model (speaker detection is simply absent) —
+ * which is a REAL answer, unlike the absent field a degraded read produces.
+ *
+ * Pure: the catalog was already read (once) by the caller, so the same slots
+ * cannot be read twice and disagree.
  */
-async function readDiarizationPanel(): Promise<DiarizationPanel | null> {
-	const entry = await readDiarizationModel();
-	if (entry === null) return null;
-	const embedding = await readDiarizationEmbeddingModel();
+function buildDiarizationPanel(entries: readonly CatalogModel[]): DiarizationPanel | null {
+	const segmentation = entries.find((entry) => entry.role === 'segmentation');
+	if (segmentation === undefined) return null;
+	const embedding = entries.find((entry) => entry.role === 'embedding');
 
-	const models: DiarizationPart[] = [
-		{
-			role: 'segmentation',
-			name: entry.name,
-			label: entry.label,
-			state: modelState(entry.name, entry.dtype).state,
-		},
-	];
-	if (embedding !== null) {
-		models.push({
-			role: 'embedding',
-			name: embedding.name,
-			label: embedding.label,
-			state: modelState(embedding.name, embedding.dtype).state,
-		});
-	}
-
-	return {
+	const models: DiarizationPart[] = entries.map((entry) => ({
+		role: entry.role ?? 'segmentation',
 		name: entry.name,
 		label: entry.label,
-		size_mb: (entry.size_mb ?? 0) + (embedding?.size_mb ?? 0),
+		state: modelState(entry.name, entry.dtype, entry.kind).state,
+	}));
+
+	return {
+		name: segmentation.name,
+		label: segmentation.label,
+		size_mb: (segmentation.size_mb ?? 0) + (embedding?.size_mb ?? 0),
 		installed: models.every((part) => isRunnableState(part.state)),
 		state: worstState(models.map((part) => part.state)),
 		models,
@@ -934,63 +929,8 @@ async function readDiarizationPanel(): Promise<DiarizationPanel | null> {
 	};
 }
 
-/** The voice-fingerprint model slot (`diarization_embedding_model`), or null. */
-async function readDiarizationEmbeddingModel(): Promise<{
-	name: string;
-	label?: string;
-	size_mb?: number;
-	dtype?: Record<string, string>;
-} | null> {
-	return readModelConfigSlot('diarization_embedding_model');
-}
-
-async function readModelConfigSlot(slot: string): Promise<{
-	name: string;
-	label?: string;
-	size_mb?: number;
-	dtype?: Record<string, string>;
-} | null> {
-	const toolConfig = await getToolConfig('tool_transcription');
-	const raw = (toolConfig as Record<string, unknown> | null)?.[slot];
-	const entry =
-		raw !== null && typeof raw === 'object' && 'value' in (raw as Record<string, unknown>)
-			? (raw as { value?: unknown }).value
-			: raw;
-	if (entry === null || typeof entry !== 'object') return null;
-	const model = entry as {
-		name?: unknown;
-		label?: string;
-		size_mb?: number;
-		dtype?: Record<string, string>;
-	};
-	return typeof model.name === 'string'
-		? { name: model.name, label: model.label, size_mb: model.size_mb, dtype: model.dtype }
-		: null;
-}
-
 /** The background download action name (allowlisted, never client-routable). */
 const BACKGROUND_DOWNLOAD_ACTION = 'background_download_model';
-
-/**
- * Read the LIVE model catalog (transcriber_quality) as typed entries.
- * getToolConfig returns the effective config — a flat map — but the raw
- * property-object form is tolerated like everywhere else in this module.
- */
-async function readModelCatalog(): Promise<
-	{ name: string; tier?: string; size_mb?: number; dtype?: Record<string, string> }[]
-> {
-	const toolConfig = await getToolConfig('tool_transcription');
-	const raw = toolConfig?.transcriber_quality;
-	const entries = Array.isArray(raw)
-		? raw
-		: ((raw as { value?: unknown[] } | undefined)?.value ?? []);
-	return entries.filter(
-		(entry): entry is { name: string } =>
-			entry !== null &&
-			typeof entry === 'object' &&
-			typeof (entry as { name?: unknown }).name === 'string',
-	) as { name: string; tier?: string; size_mb?: number; dtype?: Record<string, string> }[];
-}
 
 /**
  * download_model — seed one catalog model into the local store, from the UI.
@@ -1021,29 +961,27 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 
 	const model = String(ctx.options.model ?? '');
 	// Catalog names only (see the gate list above). Two slots qualify: the ASR
-	// quality catalog, and the diarization model — which downloads a different
+	// quality catalog, and the diarization models — which download a different
 	// file set (no tokenizer; the preprocessor config is mandatory).
-	const asrEntry = (await readModelCatalog()).find(
-		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
-	);
-	const diarizationCandidates =
-		asrEntry === undefined
-			? [await readDiarizationModel(), await readDiarizationEmbeddingModel()]
-			: [];
-	const diarizationEntry =
-		diarizationCandidates.find((candidate) => candidate !== null && candidate.name === model) ??
-		undefined;
-	const entry = asrEntry ?? diarizationEntry;
-	if (entry === undefined) {
+	const entry = await findCatalogModel(model);
+	if (entry === null) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}
+	// SAME guard as repair, and the same reason: two `curl -C -` runs over one
+	// target interleave their resumes. One button, one poll that says nothing for
+	// minutes — a second click is what an impatient administrator does. Checked
+	// BEFORE the state is read, because a model another job is actively writing
+	// has no settled state to short-circuit on.
+	const busy = modelJobInFlight(entry.name);
+	if (busy !== null) return fail(busyMessage(entry.name, busy));
+
 	// STATE-AWARE short-circuit. `modelInstalled` (the old size > 0 test) called a
 	// truncated or corrupted install "already installed", so the client — which
 	// offers Download for anything absent from `installed`, and that includes
 	// `incomplete` and `damaged` — read a success it then polled for thirty
 	// minutes against a model that was never going to appear. Only a RUNNABLE
 	// model is already installed; a broken one is told what actually fixes it.
-	const state = modelState(entry.name, entry.dtype).state;
+	const state = modelState(entry.name, entry.dtype, entry.kind).state;
 	if (isRunnableState(state)) {
 		return { result: true, msg: 'OK. Model already installed', errors: [] };
 	}
@@ -1057,36 +995,42 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	if (loaded === undefined) {
 		return fail('tool module not loaded — cannot schedule the download');
 	}
-	const scheduled = scheduleBackground(
+	return scheduleModelJob({
+		action: BACKGROUND_DOWNLOAD_ACTION,
+		label: 'download',
+		handler: backgroundDownloadModel,
 		loaded,
-		BACKGROUND_DOWNLOAD_ACTION,
-		{ permission: null, handler: backgroundDownloadModel },
-		{ model: entry.name, dtype: entry.dtype, kind: asrEntry === undefined ? 'diarization' : 'asr' },
-		ctx.principal,
-		ctx.userId,
-	);
-	if (scheduled.result === false) return scheduled;
-	// The job handle, so the client can learn that the download FAILED instead of
-	// polling the store for half an hour and then saying nothing.
-	return {
-		result: true,
-		msg: 'OK. Download started',
-		errors: [],
-		job_id: scheduled.job_id,
-		background_job_id: scheduled.background_job_id,
-	};
+		entry,
+		ctx,
+		schedule: scheduleBackground,
+		okMsg: 'OK. Download started',
+	});
 }
 
 /** The detached download job. Reads its whole world from the enqueue-time options. */
 async function backgroundDownloadModel(ctx: ToolActionContext): Promise<ToolResponse> {
 	const model = String(ctx.options.model ?? '');
-	const dtype = (ctx.options.dtype ?? undefined) as Record<string, string> | undefined;
+	try {
+		return await runModelDownload(model, ctx.options);
+	} finally {
+		// Belt and braces: the claim is keyed on job liveness, so this only makes
+		// the model answerable again a poll earlier.
+		modelJobsInFlight.delete(model);
+	}
+}
+
+async function runModelDownload(
+	model: string,
+	options: Record<string, unknown>,
+): Promise<ToolResponse> {
+	const dtype = (options.dtype ?? undefined) as Record<string, string> | undefined;
+	const kind = modelKindOf(options.kind);
 	console.log(`[tool_transcription] downloading model '${model}' into the local store…`);
 	const fileOptions =
-		ctx.options.kind === 'diarization'
+		kind === 'diarization'
 			? { commonFiles: DIARIZATION_COMMON_FILES, optionalFiles: [] as string[] }
 			: {};
-	const report = await downloadModel(model, dtype, { quiet: true, ...fileOptions });
+	const report = await downloadModel(model, dtype, { quiet: true, kind, ...fileOptions });
 	if (report.ok) {
 		console.log(`[tool_transcription] model '${model}' installed (${report.files.length} files)`);
 		return { result: true, msg: `OK. Model installed: ${model}`, errors: [] };
@@ -1095,23 +1039,18 @@ async function backgroundDownloadModel(ctx: ToolActionContext): Promise<ToolResp
 	return { result: false, msg: report.errors.join('; '), errors: report.errors };
 }
 
+/**
+ * The enqueued `kind` back as a ModelKind. A job payload crosses a process
+ * boundary in shape only, but it still crosses one: an unreadable word is
+ * 'unknown' (the store then answers from what is on disk) rather than silently
+ * ASR, which is the assumption this whole finding is about.
+ */
+function modelKindOf(raw: unknown): ModelKind {
+	return raw === 'asr' || raw === 'diarization' ? raw : 'unknown';
+}
+
 /** The background repair action name (allowlisted, never client-routable). */
 const BACKGROUND_REPAIR_ACTION = 'background_repair_model';
-
-/** Catalog lookup shared by the model actions: ASR entry, else a diarization slot. */
-async function catalogEntry(
-	model: string,
-): Promise<{ name: string; dtype?: Record<string, string>; kind: 'asr' | 'diarization' } | null> {
-	const asr = (await readModelCatalog()).find(
-		(candidate) => candidate.name === model && (candidate.tier ?? 'browser') === 'browser',
-	);
-	if (asr !== undefined) return { name: asr.name, dtype: asr.dtype, kind: 'asr' };
-	const slots = [await readDiarizationModel(), await readDiarizationEmbeddingModel()];
-	const entry = slots.find((candidate) => candidate !== null && candidate.name === model);
-	return entry === undefined || entry === null
-		? null
-		: { name: entry.name, dtype: entry.dtype, kind: 'diarization' };
-}
 
 /**
  * verify_model — resolve an `unverified` model into `ready` or `incomplete`.
@@ -1127,13 +1066,13 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 		return fail('Only a global administrator can verify models');
 	}
 	const model = String(ctx.options.model ?? '');
-	const entry = await catalogEntry(model);
+	const entry = await findCatalogModel(model);
 	if (entry === null) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}
 
 	const store = modelStoreRoot();
-	const report = modelState(entry.name, entry.dtype);
+	const report = modelState(entry.name, entry.dtype, entry.kind);
 	let checked = 0;
 	let unreachable = 0;
 	for (const file of report.files) {
@@ -1161,7 +1100,7 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 		checked++;
 	}
 
-	const after = modelState(entry.name, entry.dtype);
+	const after = modelState(entry.name, entry.dtype, entry.kind);
 	if (unreachable > 0 && checked === 0) {
 		return fail(`Could not reach the model hub to verify '${model}'`);
 	}
@@ -1191,33 +1130,65 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 export type ScheduleRepair = typeof scheduleBackground;
 
 /**
- * REPAIRS IN FLIGHT — at most one per model, process-wide.
+ * MODEL JOBS IN FLIGHT — at most one download OR repair per model, process-wide.
  *
- * A repair deletes files and re-fetches them. Two of them over the same paths
- * race `rmSync` against a download: the second job can delete a file the first
- * has just completed, and the first can record a manifest size for a file the
- * second has already removed. With a visible button and a poll that says nothing
- * for minutes, a second click is not an edge case — it is what an impatient
- * administrator does.
+ * Both actions write the same files: a repair deletes and re-fetches them, a
+ * download resumes them with `curl -C -`. Two jobs over the same paths race —
+ * the second can delete a file the first has just completed, and the first can
+ * record a manifest size for a file the second has already removed. With a
+ * visible button and a poll that says nothing for minutes, a second click is not
+ * an edge case; it is what an impatient administrator does.
  *
- * LIFECYCLE: added by `repairModelAction` immediately before scheduling (and
- * dropped again if the schedule is refused), removed by `backgroundRepairModel`
- * in a `finally`, so a throwing job cannot lock a model out. Process state, never
- * request identity — the same shape as ontology_update's updateInFlight latch.
- * A server restart clears it with the in-process jobs it guards.
+ * KEYED ON THE JOB, NOT ON A FLAG. The guard used to be a bare Set cleared by
+ * the job's own `finally` — which never runs when the job is CANCELLED WHILE
+ * STILL QUEUED (`MediaJobManager.run` finishes it 'stopped' without invoking the
+ * worker at all). Cancelling a queued job is a first-class button in the jobs
+ * UI, so one press left that model answering "a repair is already running"
+ * forever, with no recovery short of a server restart. The claim now carries the
+ * job's id and is checked against the job registry: a job that is done, failed,
+ * stopped, interrupted or gone is not in flight, whoever forgot to clear what.
+ *
+ * A claim with NO job id (only a stubbed scheduler produces one) keeps the old
+ * flag behaviour, and `releaseModelJobLock` is how a test drops it.
  */
-const repairsInFlight = new Set<string>();
+interface ModelJobClaim {
+	/** What is running, for the refusal message. */
+	action: 'download' | 'repair';
+	/** The media-jobs handle whose liveness IS the guard. */
+	jobId?: string;
+}
+const modelJobsInFlight = new Map<string, ModelJobClaim>();
+
+/** A job the registry still considers live is one the job registry can still stop. */
+function isLiveJob(jobId: string): boolean {
+	const record = mediaJobs.status(jobId);
+	return record !== null && (record.status === 'queued' || record.status === 'running');
+}
+
+/** The claim on this model, or null — releasing a claim whose job is over. */
+function modelJobInFlight(model: string): ModelJobClaim | null {
+	const claim = modelJobsInFlight.get(model);
+	if (claim === undefined) return null;
+	if (claim.jobId !== undefined && !isLiveJob(claim.jobId)) {
+		modelJobsInFlight.delete(model);
+		return null;
+	}
+	return claim;
+}
+
+function busyMessage(model: string, claim: ModelJobClaim): string {
+	return `A ${claim.action} of '${model}' is already running; wait for it to finish`;
+}
 
 /**
  * Release the guard for one model.
  *
- * TESTS ONLY: a stubbed `ScheduleRepair` never runs the job, so nothing would
- * reach the `finally` that normally clears it. Never call this from the engine —
- * releasing a lock whose job is still running is exactly the race it exists to
- * prevent.
+ * TESTS ONLY: a stubbed scheduler returns no job handle, so there is no job
+ * whose liveness could answer for it. Never call this from the engine — releasing
+ * a claim whose job is still running is exactly the race it exists to prevent.
  */
 export function releaseModelRepairLock(model: string): void {
-	repairsInFlight.delete(model);
+	modelJobsInFlight.delete(model);
 }
 
 /**
@@ -1237,36 +1208,72 @@ export async function repairModelAction(
 		return fail('Only a global administrator can repair models');
 	}
 	const model = String(ctx.options.model ?? '');
-	const entry = await catalogEntry(model);
+	const entry = await findCatalogModel(model);
 	if (entry === null) {
 		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
 	}
 	// SERVER-side, because a disabled button is not a guard: the action is on the
 	// wire and two tabs reach it independently.
-	if (repairsInFlight.has(entry.name)) {
-		return fail(`A repair of '${entry.name}' is already running; wait for it to finish`);
-	}
+	const busy = modelJobInFlight(entry.name);
+	if (busy !== null) return fail(busyMessage(entry.name, busy));
 
 	const loaded = await getLoadedTool('tool_transcription');
 	if (loaded === undefined) {
 		return fail('tool module not loaded — cannot schedule the repair');
 	}
-	repairsInFlight.add(entry.name);
-	const scheduled = schedule(
+	return scheduleModelJob({
+		action: BACKGROUND_REPAIR_ACTION,
+		label: 'repair',
+		handler: backgroundRepairModel,
 		loaded,
-		BACKGROUND_REPAIR_ACTION,
-		{ permission: null, handler: backgroundRepairModel },
+		entry,
+		ctx,
+		schedule,
+		okMsg: 'OK. Repair started',
+	});
+}
+
+/**
+ * Claim the model and schedule the job — the ONE place both write actions are
+ * started, so the guard cannot be right in one of them and wrong in the other.
+ *
+ * The re-check here is not redundant: it is the half that runs with NO `await`
+ * between the check and the claim, which is what makes two concurrent requests
+ * impossible to interleave (the caller's earlier check only saves the work of
+ * loading the tool).
+ */
+async function scheduleModelJob(input: {
+	action: string;
+	label: 'download' | 'repair';
+	handler: (ctx: ToolActionContext) => Promise<ToolResponse>;
+	loaded: NonNullable<Awaited<ReturnType<typeof getLoadedTool>>>;
+	entry: CatalogModel;
+	ctx: ToolActionContext;
+	schedule: ScheduleRepair;
+	okMsg: string;
+}): Promise<ToolResponse> {
+	const { entry, ctx } = input;
+	const busy = modelJobInFlight(entry.name);
+	if (busy !== null) return fail(busyMessage(entry.name, busy));
+
+	const scheduled = input.schedule(
+		input.loaded,
+		input.action,
+		{ permission: null, handler: input.handler },
 		{ model: entry.name, dtype: entry.dtype, kind: entry.kind },
 		ctx.principal,
 		ctx.userId,
 	);
-	if (scheduled.result === false) {
-		repairsInFlight.delete(entry.name);
-		return scheduled;
-	}
+	if (scheduled.result === false) return scheduled;
+	modelJobsInFlight.set(entry.name, {
+		action: input.label,
+		jobId: typeof scheduled.job_id === 'string' ? scheduled.job_id : undefined,
+	});
+	// The job handle, so the client can learn that the job FAILED instead of
+	// polling the store for half an hour and then saying nothing.
 	return {
 		result: true,
-		msg: 'OK. Repair started',
+		msg: input.okMsg,
 		errors: [],
 		job_id: scheduled.job_id,
 		background_job_id: scheduled.background_job_id,
@@ -1286,11 +1293,20 @@ export interface RepairSeams {
 	readonly download?: typeof downloadModel;
 }
 
-/** The non-weight files this kind of model needs, and which may legitimately be absent. */
-function commonFilesFor(kind: string): { common: readonly string[]; optional: readonly string[] } {
-	return kind === 'diarization'
-		? { common: DIARIZATION_COMMON_FILES, optional: [] }
-		: { common: COMMON_FILES, optional: OPTIONAL_FILES };
+/**
+ * The non-weight files this kind of model needs, and which may legitimately be
+ * absent. An UNKNOWN kind demands NONE: inventing a requirement (the ASR
+ * tokenizer, for a model that may not be ASR at all) is how a healthy install
+ * gets called broken, and the repair then only touches the files the store's own
+ * evidence named.
+ */
+function commonFilesFor(kind: ModelKind): {
+	common: readonly string[];
+	optional: readonly string[];
+} {
+	if (kind === 'diarization') return { common: DIARIZATION_COMMON_FILES, optional: [] };
+	if (kind === 'unknown') return { common: [], optional: [] };
+	return { common: COMMON_FILES, optional: OPTIONAL_FILES };
 }
 
 /** A file that fails its own check: absent, empty, the wrong KIND, or the wrong LENGTH. */
@@ -1378,6 +1394,7 @@ function discardFile(store: string, model: string, file: string): void {
 function repairVerdict(input: {
 	model: string;
 	dtype?: Record<string, string>;
+	kind: ModelKind;
 	store: string;
 	common: readonly string[];
 	optional: readonly string[];
@@ -1385,7 +1402,7 @@ function repairVerdict(input: {
 	download: DownloadReport;
 }): ToolResponse {
 	const { model, store, plan, download } = input;
-	const after = modelState(model, input.dtype);
+	const after = modelState(model, input.dtype, input.kind);
 	const stillFailing = plan.targets.filter((file) => {
 		const evidence = fileEvidence(store, model, file);
 		if (!evidence.present && input.optional.includes(file)) return false;
@@ -1419,7 +1436,9 @@ export async function backgroundRepairModel(
 	try {
 		return await runModelRepair(model, ctx.options, seams);
 	} finally {
-		repairsInFlight.delete(model);
+		// Belt and braces: the claim is keyed on job liveness (see
+		// modelJobsInFlight), so this only frees the model a poll earlier.
+		modelJobsInFlight.delete(model);
 	}
 }
 
@@ -1429,12 +1448,26 @@ async function runModelRepair(
 	seams: RepairSeams,
 ): Promise<ToolResponse> {
 	const dtype = (options.dtype ?? undefined) as Record<string, string> | undefined;
+	const kind = modelKindOf(options.kind);
 	const store = modelStoreRoot();
-	const { common, optional } = commonFilesFor(String(options.kind ?? 'asr'));
-	const plan = planRepair(store, model, modelState(model, dtype), common, optional);
+	const { common, optional } = commonFilesFor(kind);
+	const plan = planRepair(store, model, modelState(model, dtype, kind), common, optional);
 
 	if (plan.refused.length > 0) {
-		const msg = `Repair refused for '${model}': this install's catalog declares no quantisation for it and the store holds no complete weight pair, so ${plan.refused.join(', ')} cannot be named to fetch back. Deleting them would destroy what cannot be restored. Re-import the tools registry so the catalog declares the model's dtype, or seed the store directly.`;
+		// The remedy has to fit the reason. "Re-import the tools registry so the
+		// catalog declares the dtype" is the fix when the KIND is known and only
+		// the quantisation is missing; it cannot help when the catalog declares a
+		// kind this build cannot read, because then the file shape itself is a
+		// guess and no dtype would settle it.
+		const remedy =
+			kind === 'unknown'
+				? "this install's catalog declares a model kind this engine does not recognise, so the files it needs cannot be named"
+				: "this install's catalog declares no quantisation for it and the store holds no complete weight pair";
+		const advice =
+			kind === 'unknown'
+				? 'Upgrade the engine or correct the catalog entry, or seed the store directly.'
+				: "Re-import the tools registry so the catalog declares the model's dtype, or seed the store directly.";
+		const msg = `Repair refused for '${model}': ${remedy}, so ${plan.refused.join(', ')} cannot be named to fetch back. Deleting them would destroy what cannot be restored. ${advice}`;
 		console.error(`[tool_transcription] ${msg}`);
 		return { result: false, msg, errors: [msg] };
 	}
@@ -1453,11 +1486,12 @@ async function runModelRepair(
 	const download = await (seams.download ?? downloadModel)(model, dtype, {
 		quiet: true,
 		store,
+		kind,
 		// EXACTLY what was removed: see DownloadOptions.files.
 		files: plan.targets,
 	});
 
-	return repairVerdict({ model, dtype, store, common, optional, plan, download });
+	return repairVerdict({ model, dtype, kind, store, common, optional, plan, download });
 }
 
 export const tool: ToolServerModule = {

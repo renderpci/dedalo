@@ -36,3 +36,35 @@
 - **Fixture interaction (DEC-14b):** NO re-harvest. The gate transforms both
   sides before diffing (the WC-001 pattern), so the frozen PHP-side fixture is
   unchanged.
+
+## Addendum 2026-08-13 — the DEGRADED ANSWER of `get_model_sources` (absent ≠ empty)
+
+- **What changed:** when the tool catalog cannot be read (it lives in the
+  database), `get_model_sources` now **OMITS** `installed`, `models` and
+  `diarization` instead of serving `installed: []`, `models: []`,
+  `diarization: null`. Everything still knowable — `model_host`, `allow_hub`,
+  `store_ready` — is still answered, because those come from config and the
+  filesystem.
+- **The contract, in one line:** an ABSENT field means "this server cannot
+  tell"; a PRESENT one — including an empty array, and including
+  `diarization: null` — is a real answer ("nothing is installed" / "this install
+  declares no speaker detection").
+- **Reason:** the catch path served empties, which the client acts on as the real
+  answer: it greyed the model out, refused the run and offered a Download the
+  server then contradicted ("Model already installed"). A momentary database
+  error therefore told every archivist that their model was not installed and
+  handed them a remedy that does nothing. A wrong sentence is worse than no
+  sentence.
+- **Consumers** (each treats absent as unknown, never as none): the run's
+  preflight (`tool_transcription.js`), `apply_installed_models` and the
+  model-action button, the readiness line (which now STATES the unknown rather
+  than rendering nothing), and the speaker-detection lines. The rule itself is
+  stated once, in `transcription_report.js` (`server_answered`,
+  `installed_answer`), and read by all of them.
+- **Gate reconciliation:** no parity gate is affected (this action is TS-only —
+  the frozen PHP oracle has no model store). Pinned natively:
+  `test/unit/tool_transcription.test.ts` ("the degraded answer", driving the pure
+  `buildModelSourcesPayload`, asserting the keys are ABSENT rather than empty)
+  and `test/unit/transcription_report.test.ts` ("absent is UNKNOWN, empty is
+  NONE") for the client mapping.
+- **Fixture interaction (DEC-14b):** none — no fixture carries this action.
