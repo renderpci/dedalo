@@ -300,6 +300,24 @@ describe('walkDiffusionSections', () => {
 		expect([...(await walkDiffusionSections(graph, 'D'))]).toEqual(['sec_alias']);
 	});
 
+	test('the consumption is ELEMENT-SCOPED: an alias in ANOTHER element does not skip the raw node', async () => {
+		// The mht96 → mht72 case. T lives under element E1 and publishes sec_real
+		// THERE; element E2 aliases it and relates a section of its OWN, so the
+		// alias fallback cannot re-emit sec_real. Domain-wide consumption drops
+		// sec_real from the map entirely — haveSectionDiffusion() then returns
+		// false and the Difusión tool disappears for those records.
+		const graph = makeGraph([
+			{ tipo: 'D', model: 'diffusion_domain' },
+			{ tipo: 'E1', parent: 'D', model: 'diffusion_element' },
+			{ tipo: 'T', parent: 'E1', model: 'table', relations: ['sec_real'] },
+			{ tipo: 'E2', parent: 'D', model: 'diffusion_element' },
+			{ tipo: 'TA', parent: 'E2', model: 'table_alias', relations: ['T', 'sec_alias'] },
+			{ tipo: 'sec_real', model: 'section' },
+			{ tipo: 'sec_alias', model: 'section' },
+		]);
+		expect([...(await walkDiffusionSections(graph, 'D'))]).toEqual(['sec_real', 'sec_alias']);
+	});
+
 	test("an alias also descends into its REAL node's children", async () => {
 		const graph = makeGraph([
 			{ tipo: 'D', model: 'diffusion_domain' },
