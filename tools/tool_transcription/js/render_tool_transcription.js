@@ -38,7 +38,7 @@
 	import { open_tool } from '../../../core/tools_common/js/tool_common.js'
 	import { get_current_lang_info } from './tool_transcription.js'
 	import { action_label, create_status_panel } from './render_transcription_status.js'
-	import { MODEL_STATES, model_state_of } from './transcription_report.js'
+	import { installed_answer, MODEL_STATES, model_state_of, server_answered } from './transcription_report.js'
 	import Split from '../../../lib/split/dist/split.es.js'
 
 // localStorage key holding the user's last pane ratio. @see activate_split
@@ -1834,7 +1834,10 @@ const render_automatic_transcription = function (options) {
 				* discovers which models exist and asks for them). The transcription run
 				* itself still refuses an unusable model up front.
 				*/
-				let installed_models = null
+				// The LAST answer the server gave, kept whole: which fields it
+				// answered is as much a part of it as their values (an absent field
+				// means "cannot tell" — see server_answered).
+				let last_sources = null
 				let model_entries = []
 
 				/** The suffix a state adds to an option's own label; '' when it runs. */
@@ -1854,7 +1857,7 @@ const render_automatic_transcription = function (options) {
 				const apply_installed_models = function( installed, models ) {
 
 					if (Array.isArray(installed)) {
-						installed_models = installed
+						last_sources = { installed : installed }
 					}
 					if (Array.isArray(models)) {
 						model_entries = models
@@ -1868,7 +1871,7 @@ const render_automatic_transcription = function (options) {
 						const state		= model_state_of( model_entries, option.value )
 						const suffix	= state
 							? state_suffix( state )
-							: (Array.isArray(installed_models) && !installed_models.includes(option.value)
+							: (installed_answer( last_sources, option.value )==='no'
 								? state_suffix( null )
 								: '')
 						option.text = `${base}${suffix}`
@@ -1907,7 +1910,7 @@ const render_automatic_transcription = function (options) {
 					// `installed` answer, which can still tell missing from usable.
 					const action_key = info
 						? info.action_key
-						: ((Array.isArray(installed_models) && !installed_models.includes(selected))
+						: (installed_answer( last_sources, selected )==='no'
 							? 'action_download_model'
 							: null)
 
@@ -2370,16 +2373,26 @@ const render_automatic_transcription = function (options) {
 
 			const lines		= []
 			const sources	= await self.get_model_sources()
-			const models	= (sources && sources.result && Array.isArray(sources.result.models))
-				? sources.result.models
-				: []
+			const result	= (sources && sources.result) ? sources.result : null
+			// ABSENT IS NOT EMPTY. A server that could not read its catalog omits
+			// `models` entirely; an empty array would be the real answer "nothing is
+			// installed". Absent means only that this server cannot tell — and a
+			// blank line where a verdict belongs is the silence this panel exists to
+			// end, so the unknown is STATED.
+			const models_known	= server_answered( result, 'models' ) && Array.isArray(result.models)
+			const models	= models_known ? result.models : []
 			const selected	= nodes.transcriber_engine_quality
 				? nodes.transcriber_engine_quality.value
 				: null
 			const model_state	= model_state_of( models, selected )
 			const state_info	= model_state ? (MODEL_STATES[model_state] || null) : null
 
-			if (state_info) {
+			if (!models_known) {
+				lines.push({
+					severity	: 'warning',
+					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`
+				})
+			} else if (state_info) {
 				// An UNVERIFIED model is not a fault: it is the normal state of every
 				// store seeded before the verification existed. Only incomplete,
 				// damaged and missing are refusals (MODEL_STATES.usable).
@@ -2422,8 +2435,15 @@ const render_automatic_transcription = function (options) {
 			// same labels the model line uses, and each carrying a remedy aimed at the
 			// half that is actually broken. A single `installed` boolean could say
 			// neither which half was wrong nor which model to repair.
-			const diarization = (sources && sources.result) ? sources.result.diarization : null
-			if (diarization && Array.isArray(diarization.models)) {
+			// Same rule again: `diarization` ABSENT = cannot tell (say so);
+			// `null` = this install declares no speaker detection (say nothing).
+			const diarization = result ? result.diarization : null
+			if (result && !server_answered( result, 'diarization' )) {
+				lines.push({
+					severity	: 'warning',
+					text		: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`
+				})
+			} else if (diarization && Array.isArray(diarization.models)) {
 				for (let i = 0; i < diarization.models.length; i++) {
 					const part		= diarization.models[i] || {}
 					const info		= part.state ? (MODEL_STATES[part.state] || null) : null

@@ -86,3 +86,22 @@ export function classify_failure(
 	raw_message: string,
 	context?: FailureContext,
 ): FailureClassification;
+
+/**
+ * THE DEGRADED-ANSWER CONTRACT of get_model_sources.
+ *
+ * ABSENT and EMPTY are different answers: an absent field means the server
+ * CANNOT TELL (every consumer keeps its permissive behaviour and says the state
+ * is unknown), while `installed: []` / `models: []` / `diarization: null` are
+ * real answers about a readable catalog.
+ */
+export function server_answered(
+	sources: Record<string, unknown> | null | undefined,
+	field: string,
+): boolean;
+
+/** 'yes' | 'no' | 'unknown' — 'unknown' must never be read as 'no'. */
+export function installed_answer(
+	sources: Record<string, unknown> | null | undefined,
+	name: string | null | undefined,
+): 'yes' | 'no' | 'unknown';

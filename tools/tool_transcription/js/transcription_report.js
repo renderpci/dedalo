@@ -191,6 +191,59 @@ export const model_state_of = function( models, name ) {
 
 
 /**
+* THE DEGRADED-ANSWER CONTRACT of get_model_sources.
+*
+* The server answers three questions about models — `installed`, `models`,
+* `diarization` — and it can fail to answer any of them (the catalog lives in the
+* database, and a read can fail). ABSENT AND EMPTY ARE NOT THE SAME ANSWER:
+*
+*   absent  the field is not on the wire at all: this server CANNOT TELL. Every
+*           consumer keeps its previous, permissive behaviour and says so where a
+*           verdict was expected — never a verdict.
+*   empty   `installed: []` / `models: []` / `diarization: null` are REAL answers:
+*           nothing is installed / no model is declared.
+*
+* It is the hinge every refusal and every remedy pivots on, so it is stated ONCE,
+* here, and read by the run's preflight, the model picker, the readiness line and
+* the tests — the same law in one place, never re-derived from `Array.isArray` in
+* four.
+*
+* @param {Object|null} sources - get_model_sources → result
+* @param {string} field - 'installed' | 'models' | 'diarization' | …
+* @returns {boolean} true when the server answered this field at all
+*/
+export const server_answered = function( sources, field ) {
+
+	return !!sources && typeof sources==='object' && sources[field]!==undefined
+}//end server_answered
+
+
+/**
+* INSTALLED_ANSWER
+* What the server says about ONE model's membership of `installed` — the coarse
+* "the browser may try this" list.
+*
+* 'unknown' is the answer for a server that did not send the list, and it must
+* never be treated as 'no': a momentary catalog failure would otherwise tell
+* every archivist that their model is not installed, and offer them a Download
+* the server itself then contradicts.
+*
+* @param {Object|null} sources - get_model_sources → result
+* @param {string} name - catalog model id
+* @returns {string} 'yes' | 'no' | 'unknown'
+*/
+export const installed_answer = function( sources, name ) {
+
+	if (!server_answered(sources, 'installed') || !Array.isArray(sources.installed) || !name) {
+		return 'unknown'
+	}
+
+
+	return sources.installed.includes(name) ? 'yes' : 'no'
+}//end installed_answer
+
+
+/**
 * BUILD_REPORT
 * Normalize a report so every field is a string. The panel writes these straight
 * into text nodes; `undefined` would render as the word "undefined" and an unknown

@@ -2165,6 +2165,11 @@
           },
           {
             "lang": "lg-eng",
+            "name": "state_unknown",
+            "value": "could not be checked on this server — the model catalog could not be read"
+          },
+          {
+            "lang": "lg-eng",
             "name": "device_no_gpu",
             "value": "no GPU detected — this will run on the processor, several times slower"
           },

@@ -75,7 +75,7 @@
 	import { render_tool_transcription } from './render_tool_transcription.js'
 	import { parse_transcript, segments_to_html, tc_to_seconds } from '../transcribers/lib/paragraphs.js'
 	import { ui } from '../../../core/common/js/ui.js'
-	import { MODEL_STATES, model_state_of } from './transcription_report.js'
+	import { installed_answer, MODEL_STATES, model_state_of } from './transcription_report.js'
 
 
 
@@ -586,6 +586,23 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		}
 
 	/**
+	* A RUN ATTEMPT STARTS HERE — so the standing messages are dropped HERE.
+	*
+	* They used to be cleared only once a run had PASSED preflight, which meant a
+	* refusal (an unusable model, an empty store, a failed audio conversion) piled
+	* one identical error block on top of another every time the button was
+	* pressed: the panel grew a wall of the same sentence and the newest report was
+	* the least visible thing in it.
+	*
+	* GUARDED, because clearing is destructive: a run still in progress has
+	* accumulated warnings that must survive to its end (a CPU fallback, a skipped
+	* fragment). A live worker IS a run in progress, so its messages are left alone.
+	*/
+		if (!self.transcribe_worker) {
+			panel.clear()
+		}
+
+	/**
 	* SET_STATUS
 	* The transient line: percentages and live tokens, overwritten, never stacked.
 	* Plain text throughout — worker output is recognised speech (SEC-031).
@@ -745,10 +762,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		// Left to the runtime, this fails as "Could not locate file: …/config.json"
 		// from inside the ONNX loader — after the audio has been prepared, and with
 		// a message that names neither the model nor what to do about it.
-		// `installed` absent = an older server that cannot tell (allow, as before);
-		// an EMPTY array is a real answer: nothing is installed.
-		const model_ready	= !Array.isArray(sources.installed)
-			|| sources.installed.includes(transcriber_quality)
+		// `installed` ABSENT = this server cannot tell (allow, as before); an EMPTY
+		// array is a real answer: nothing is installed. The one law, from
+		// transcription_report.js — never re-derived here.
+		const model_ready	= installed_answer( sources, transcriber_quality )!=='no'
 
 		if (sources.allow_hub!==true && (sources.store_ready===false || !model_ready)) {
 
@@ -815,9 +832,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 	return new Promise(async function(resolve){
 
-		// A new run: drop the previous run's standing messages, keep the readiness
-		// block (it states what is true of the install, not of this run).
-		panel.clear()
+		// The standing messages were already dropped at the START of this attempt
+		// (see the guarded panel.clear above): clearing again here would discard
+		// anything this run has reported since — and left the refusals of a run
+		// that never got this far standing on top of each other.
 		set_status( self.get_tool_label('processing_audio') || 'Processing audio...' )
 
 		let speech_seconds = 0

@@ -14,8 +14,10 @@ import { describe, expect, test } from 'bun:test';
 import {
 	build_report,
 	classify_failure,
+	installed_answer,
 	MODEL_STATES,
 	model_state_of,
+	server_answered,
 } from '../../tools/tool_transcription/js/transcription_report.js';
 
 describe('classify_failure maps runtime strings to remedies', () => {
@@ -213,5 +215,39 @@ describe('build_report normalizes', () => {
 		const report = build_report({ phase: 'nonsense', severity: 'nonsense', message: 'x' });
 		expect(report.phase).toBe('transcribe');
 		expect(report.severity).toBe('error');
+	});
+});
+
+/**
+ * THE CLIENT HALF of the degraded-answer contract (the server half lives in
+ * tool_transcription.test.ts). ABSENT ≠ EMPTY, and getting it backwards is how a
+ * momentary database error told every archivist their model was not installed
+ * and handed them a Download the server then refused.
+ */
+describe('absent is UNKNOWN, empty is NONE', () => {
+	test('an absent `installed` cannot answer for any model', () => {
+		expect(installed_answer({ store_ready: true }, 'whisper')).toBe('unknown');
+		expect(installed_answer(null, 'whisper')).toBe('unknown');
+	});
+
+	test('an EMPTY `installed` is a real answer: this model is not installed', () => {
+		expect(installed_answer({ installed: [] }, 'whisper')).toBe('no');
+	});
+
+	test('a listed model is installed; an unlisted one is not', () => {
+		expect(installed_answer({ installed: ['whisper'] }, 'whisper')).toBe('yes');
+		expect(installed_answer({ installed: ['other'] }, 'whisper')).toBe('no');
+	});
+
+	test('server_answered separates "did not say" from "said nothing is there"', () => {
+		// diarization null = this install declares no speaker detection (an answer).
+		expect(server_answered({ diarization: null }, 'diarization')).toBe(true);
+		expect(server_answered({ diarization: { name: 'x' } }, 'diarization')).toBe(true);
+		// absent = cannot tell.
+		expect(server_answered({}, 'diarization')).toBe(false);
+		expect(server_answered(null, 'diarization')).toBe(false);
+		// and the same rule for the two model fields.
+		expect(server_answered({ models: [] }, 'models')).toBe(true);
+		expect(server_answered({ installed: [] }, 'models')).toBe(false);
 	});
 });
