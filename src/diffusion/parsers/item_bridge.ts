@@ -36,6 +36,7 @@ export function toItems(values: ValueIR[]): ParserItem[] {
 			lang: atom.lang,
 			section_id: meta?.sectionId ?? null,
 			section_tipo: meta?.sectionTipo ?? null,
+			...(meta?.chainGroup !== undefined ? { chainGroup: meta.chainGroup } : {}),
 		};
 		if (atom.kind === 'chain') {
 			// Chains arrive fully resolved; project each link down to the oracle
@@ -63,6 +64,7 @@ function metaFromItem(item: ParserItem): ValueMeta | undefined {
 	if (item.section_tipo !== null && item.section_tipo !== undefined) {
 		meta.sectionTipo = item.section_tipo;
 	}
+	if (item.chainGroup !== undefined) meta.chainGroup = item.chainGroup;
 	return Object.keys(meta).length > 0 ? meta : undefined;
 }
 
