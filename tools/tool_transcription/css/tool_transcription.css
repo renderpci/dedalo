@@ -316,44 +316,32 @@
   background-color: var(--bg_surface);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription {
-  width: 14rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  white-space: nowrap;
+  min-width: 14rem;
+  padding: 0 0.9rem;
   margin: 0rem;
   height: 2.5em;
   position: relative;
   border-radius: 8px;
-  box-shadow: 0 0 0 1px var(--color_grey_16);
-  background: var(--color_grey_15);
+  box-shadow: 0 0 0 1px var(--border_default);
+  background: var(--bg_surface_alt);
+  color: var(--fg_default);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription:hover {
   background-color: var(--tool_transcription);
   border-color: var(--tool_transcription_border);
   color: var(--color_white);
 }
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.button_spinner::before {
+  margin-right: 0;
+}
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.disable {
   pointer-events: none;
-}
-.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.disable::after {
-  pointer-events: none;
-  position: absolute;
-  content: "";
-  top: 0px;
-  left: 0;
-  right: 0;
-  z-index: -1;
-  height: 100%;
-  width: 100%;
-  filter: blur(7px);
-  background: linear-gradient(60deg, #ffb7c2, #ff5770, #e4428d, #c42da8, #9e16c3, #6501de, #9e16c3, #c42da8, #e4428d, #ff5770, #ffb7c2);
-  background-size: 200% 200%;
-  animation: animateGlow 2.15s linear infinite;
-}
-@keyframes animateGlow {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
+  opacity: 0.65;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container .configuration_container {
   width: 100%;

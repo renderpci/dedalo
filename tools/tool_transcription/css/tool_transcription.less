@@ -499,13 +499,27 @@
 					background-color: var(--bg_surface);
 
 					>.button_automatic_transcription {
-						width: 14rem;
+						// A FLEX ROW, and never wrapping. It used to be a fixed 14rem
+						// box of centred inline text; when the spinner arrived its
+						// ::before took ~1.3em out of that fixed width and the label
+						// broke onto a second line, so the trigger read as damaged at
+						// exactly the moment it was working. min-width keeps the
+						// resting size, the row keeps the ring beside the label, and
+						// nowrap means no future label length can fold it again.
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						gap: 0.4em;
+						white-space: nowrap;
+						min-width: 14rem;
+						padding: 0 0.9rem;
 						margin: 0rem;
 						height: 2.5em;
 						position: relative;
 						border-radius: 8px;
-	  					box-shadow: 0 0 0 1px @color_grey_16;
-	  					background: @color_grey_15;
+						box-shadow: 0 0 0 1px var(--border_default);
+						background: var(--bg_surface_alt);
+						color: var(--fg_default);
 
 						&:hover {
 							background-color: @tool_color;
@@ -513,46 +527,24 @@
 							color: @color_white;
 						}
 
+						// The spinner ring is a flex item here, so the `gap` above
+						// spaces it and its own inline margin would double that.
+						&.button_spinner::before {
+							margin-right: 0;
+						}
+
+						// A disabled trigger is quiet: dimmed and unclickable. Whether it
+						// is BUSY is said by the spinner (ui.set_button_busy) and by the
+						// panel underneath, which carries the phase and the percentage.
+						//
+						// (This replaces a blurred, animated twelve-stop rainbow gradient
+						// that ran behind the button for the whole job. Two indicators for
+						// one state is one too many, and that one announced "something is
+						// happening" without saying what — the register this tool has just
+						// spent a rewrite getting away from.)
 						&.disable {
 							pointer-events: none;
-						}
-
-						&.disable::after {
-							pointer-events: none;
-							position: absolute;
-							content: "";
-							top: 0px;
-							left: 0;
-							right: 0;
-							z-index: -1;
-							height: 100%;
-							width: 100%;
-							filter: blur(7px);
-							background: linear-gradient(
-								60deg,
-								#ffb7c2,
-								#ff5770,
-								#e4428d,
-								#c42da8,
-								#9e16c3,
-								#6501de,
-								#9e16c3,
-								#c42da8,
-								#e4428d,
-								#ff5770,
-								#ffb7c2
-							);
-							background-size: 200% 200%;
-							animation: animateGlow 2.15s linear infinite;
-						}
-
-						@keyframes animateGlow {
-							0% {
-								background-position: 0% 50%;
-							}
-							100% {
-								background-position: 200% 50%;
-							}
+							opacity: 0.65;
 						}
 					}
 
