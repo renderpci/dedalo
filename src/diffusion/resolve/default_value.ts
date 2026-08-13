@@ -371,8 +371,7 @@ export function defaultPublicationValue(
 				// The TERM path deliberately keeps that same slot (termRecordOf), which
 				// is what puts the trailing ", " in publications.authors.
 				if (typeof raw === 'string' && phpTrim(raw) === '') return [];
-				const value =
-					typeof raw === 'string' && !viaLabel ? phpTrim(raw) : (raw ?? null);
+				const value = typeof raw === 'string' && !viaLabel ? phpTrim(raw) : (raw ?? null);
 				return [rawToAtom(value, atomLangOf(item.lang), meta)];
 			});
 		}

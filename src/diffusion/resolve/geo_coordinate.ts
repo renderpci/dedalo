@@ -41,49 +41,47 @@ export {
 const EXPONENT = 1e16; // php_intpow10(16), exact table constant
 
 function copysign(magnitude: number, sign: number): number {
-  return sign < 0 || Object.is(sign, -0)
-    ? -Math.abs(magnitude)
-    : Math.abs(magnitude);
+	return sign < 0 || Object.is(sign, -0) ? -Math.abs(magnitude) : Math.abs(magnitude);
 }
 
 /** _php_math_round(value, 16, PHP_ROUND_HALF_UP) — php-src PHP-8.5 math.c */
 function phpMathRound16HalfUp(value: number): number {
-  if (!Number.isFinite(value) || value === 0) {
-    return value;
-  }
+	if (!Number.isFinite(value) || value === 0) {
+		return value;
+	}
 
-  let tmpValue: number;
-  let tmpValue2: number;
+	let tmpValue: number;
+	let tmpValue2: number;
 
-  if (value >= 0) {
-    tmpValue = Math.floor(value * EXPONENT);
-    tmpValue2 = tmpValue + 1;
-  } else {
-    tmpValue = Math.ceil(value * EXPONENT);
-    tmpValue2 = tmpValue - 1;
-  }
+	if (value >= 0) {
+		tmpValue = Math.floor(value * EXPONENT);
+		tmpValue2 = tmpValue + 1;
+	} else {
+		tmpValue = Math.ceil(value * EXPONENT);
+		tmpValue2 = tmpValue - 1;
+	}
 
-  // Correction for floor/ceil landing one integer short because
-  // value * exponent was computed with a downward FP error.
-  if (tmpValue2 / EXPONENT === value) {
-    tmpValue = tmpValue2;
-  }
+	// Correction for floor/ceil landing one integer short because
+	// value * exponent was computed with a downward FP error.
+	if (tmpValue2 / EXPONENT === value) {
+		tmpValue = tmpValue2;
+	}
 
-  // Beyond our precision — rounding is pointless. (Every |value| >= 1
-  // takes this path with places = 16.)
-  if (Math.abs(tmpValue) >= 1e16) {
-    return value;
-  }
+	// Beyond our precision — rounding is pointless. (Every |value| >= 1
+	// takes this path with places = 16.)
+	if (Math.abs(tmpValue) >= 1e16) {
+		return value;
+	}
 
-  // php_round_helper, PHP_ROUND_HALF_UP branch.
-  const valueAbs = Math.abs(value);
-  const edgeCase = Math.abs((tmpValue + copysign(0.5, tmpValue)) / EXPONENT);
-  if (valueAbs >= edgeCase) {
-    tmpValue = tmpValue + copysign(1.0, tmpValue);
-  }
+	// php_round_helper, PHP_ROUND_HALF_UP branch.
+	const valueAbs = Math.abs(value);
+	const edgeCase = Math.abs((tmpValue + copysign(0.5, tmpValue)) / EXPONENT);
+	if (valueAbs >= edgeCase) {
+		tmpValue = tmpValue + copysign(1.0, tmpValue);
+	}
 
-  // abs(places) < 23 → simple division.
-  return tmpValue / EXPONENT;
+	// abs(places) < 23 → simple division.
+	return tmpValue / EXPONENT;
 }
 
 /**
@@ -92,23 +90,23 @@ function phpMathRound16HalfUp(value: number): number {
  * of it reproduces json_encode()'s bytes for these values.
  */
 export function phpNumberFormat16RoundTrip(value: number): number {
-  if (!Number.isFinite(value)) {
-    // number_format would print "NAN"/"INF"; out of scope for coordinates.
-    return value;
-  }
+	if (!Number.isFinite(value)) {
+		// number_format would print "NAN"/"INF"; out of scope for coordinates.
+		return value;
+	}
 
-  // _php_math_number_format_ex: is_negative split, work on fabs(d).
-  const isNegative = value < 0;
-  let d = Math.abs(value);
+	// _php_math_number_format_ex: is_negative split, work on fabs(d).
+	const isNegative = value < 0;
+	let d = Math.abs(value);
 
-  d = phpMathRound16HalfUp(d);
+	d = phpMathRound16HalfUp(d);
 
-  // strpprintf(0, "%.16F", d): correctly rounded fixed-point, 16 decimals.
-  const fixed = d.toFixed(16);
+	// strpprintf(0, "%.16F", d): correctly rounded fixed-point, 16 decimals.
+	const fixed = d.toFixed(16);
 
-  // Minus sign is dropped when the rounded value is 0.
-  const literal = isNegative && d !== 0 ? "-" + fixed : fixed;
+	// Minus sign is dropped when the rounded value is 0.
+	const literal = isNegative && d !== 0 ? '-' + fixed : fixed;
 
-  // json_decode: zend_strtod, correctly rounded nearest double == Number().
-  return Number(literal);
+	// json_decode: zend_strtod, correctly rounded nearest double == Number().
+	return Number(literal);
 }

@@ -451,7 +451,8 @@ export function fieldValuesToColumn(
 	for (const [lang, group] of langGroups) {
 		let columnValue: string | null;
 		if (spec.outputFormat === 'json') {
-			columnValue = groupedJsonOrNull(group, ' | ') ?? JSON.stringify(group.flatMap((item) => item.value));
+			columnValue =
+				groupedJsonOrNull(group, ' | ') ?? JSON.stringify(group.flatMap((item) => item.value));
 		} else if (spec.outputFormat === 'int') {
 			const parsed = String(Number.parseInt(String(group[0]?.value), 10));
 			columnValue = parsed === 'NaN' ? '0' : parsed;

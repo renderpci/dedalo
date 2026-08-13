@@ -1282,9 +1282,14 @@ async function relationListLocators(
 	// dedupeSections ('dato_full' nodes) → one entry per referencing SECTION,
 	// which is exactly what the GROUPed query returns. Otherwise take the
 	// breakdown: one hit per stored relation, v6's own row granularity.
-	const hits = hop.dedupeSections === true
-		? await findInverseReferences(filters, { sectionTipos, limit: false, order: 'section_id' })
-		: await findInverseReferenceLocators(filters, { sectionTipos, limit: false, order: 'section_id' });
+	const hits =
+		hop.dedupeSections === true
+			? await findInverseReferences(filters, { sectionTipos, limit: false, order: 'section_id' })
+			: await findInverseReferenceLocators(filters, {
+					sectionTipos,
+					limit: false,
+					order: 'section_id',
+				});
 	// OWNER SCOPE. v6 searches the relation-capable matrix tables only — a table
 	// whose ontology node sets inverse_relations=false (matrix_projects) is not
 	// scanned, so a project never appears as an inverse reference. The index
@@ -1525,9 +1530,7 @@ async function walkChainLevel(
 				// publishes "English"). Filtering to the pinned lang unconditionally
 				// emptied the field instead, so the column published NULL where v6 had
 				// a value. Keep the pinned subset only when there IS one.
-				const pinned = stepAtoms.filter(
-					(atom) => atom.lang === null || atom.lang === step.pinLang,
-				);
+				const pinned = stepAtoms.filter((atom) => atom.lang === null || atom.lang === step.pinLang);
 				if (pinned.length > 0) {
 					stepAtoms = pinned.map((atom) => ({ ...atom, lang: null }));
 				}
@@ -1607,9 +1610,7 @@ async function resolveHop(
 	if (hop.dataSlice !== undefined) {
 		const { offset, length } = hop.dataSlice;
 		rawLocators =
-			length === undefined
-				? rawLocators.slice(offset)
-				: rawLocators.slice(offset, offset + length);
+			length === undefined ? rawLocators.slice(offset) : rawLocators.slice(offset, offset + length);
 	}
 
 	const children = prepared.childrenByParent.get(hop.tipo) ?? [];

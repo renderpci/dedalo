@@ -514,10 +514,7 @@ function mapSectionTipoToNameFn(env: RewriterEnv): ExtraStepFn {
  * " |  | " while bibliographic_references.ref_publications_other_people_name —
  * same component, one locator — is NULL.
  */
-function emptyLabelJoin(
-	values: MetaValueIR[],
-	options: Record<string, unknown>,
-): MetaValueIR[] {
+function emptyLabelJoin(values: MetaValueIR[], options: Record<string, unknown>): MetaValueIR[] {
 	{
 		const separator = (options.fields_separator as string | undefined) ?? ' | ';
 		let count = 0;

@@ -4,7 +4,12 @@
  * parser_info.ts, parser_map.ts (behavior parity).
  */
 
-import { hasCoordinate, isStudioDefault, toCoordinate, phpNumberFormat16RoundTrip } from '../resolve/geo_coordinate.ts';
+import {
+	hasCoordinate,
+	isStudioDefault,
+	phpNumberFormat16RoundTrip,
+	toCoordinate,
+} from '../resolve/geo_coordinate.ts';
 import type { ItemParserFn, ParserItem } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -174,10 +179,7 @@ function buildGeojsonLayer(geoObj: GeoValue): GeoLayer | null {
 					geometry: {
 						type: 'Point',
 						// v6 widens both through number_format(…,16) + json_decode.
-						coordinates: [
-							phpNumberFormat16RoundTrip(lon),
-							phpNumberFormat16RoundTrip(lat),
-						], // GeoJSON order: [longitude, latitude]
+						coordinates: [phpNumberFormat16RoundTrip(lon), phpNumberFormat16RoundTrip(lat)], // GeoJSON order: [longitude, latitude]
 					},
 				},
 			],

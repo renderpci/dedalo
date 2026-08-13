@@ -224,7 +224,7 @@ async function orderChildHits(
 			// costs nothing on data that has one entry per component — and fall back
 			// to v6's positional read when it does not.
 			const paired = idKey > 0 ? getInlineValueByIdKey(items, idKey) : null;
-			const value = paired ?? (items[0]?.value ?? null);
+			const value = paired ?? items[0]?.value ?? null;
 			if (value !== null && value !== '') order = Number(value);
 		}
 		decorated.push({ hit, order, index });

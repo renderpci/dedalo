@@ -272,6 +272,7 @@ export const v5Html: ItemParserFn = (items) => {
  * ENTITY is stripped by the preg_replace above it; the DECODED character is not.
  */
 export function phpTrim(value: string): string {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: PHP trim's charlist is exactly this — \0 and \x0B included.
 	return value.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '');
 }
 
