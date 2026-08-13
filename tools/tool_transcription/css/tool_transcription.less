@@ -681,42 +681,90 @@
 					// writer left carrying `hide`. Replaced by .transcription_status
 					// below; see render_transcription_status.js.)
 
+					// The engine's one voice. (The old one-line status container is
+					// gone: a centred, overflow-hidden div that clipped every
+					// message past the first line.)
+					//
+					// EVERY COLOUR HERE IS A TOKEN. The first cut of this block used
+					// the static LESS palette (@color_grey_1 and friends) in a file
+					// whose every other rule is token-driven, so the rows ignored
+					// data-theme entirely and rendered as near-black slabs with dark
+					// text on them — unreadable, and exactly the class of bug the
+					// panel exists to stop.
 					>.transcription_status {
 						width: 100%;
 						margin-bottom: 0.5rem;
-						font-size: 1.3rem;
-						font-weight: 200;
+						font-size: 0.9rem;
 						/* No fixed height and no overflow:hidden: the previous block
 						   was 1.5em tall with the overflow clipped, so any message
 						   longer than one line was cut mid-sentence. */
 
 						> .status_progress {
 							font-family: monospace;
-							color: @color_grey_7;
+							font-size: 0.85rem;
+							color: var(--fg_muted);
 							padding: 0.3rem 0;
 						}
 
-						> .status_readiness > .readiness_line,
-						> .status_messages > .status_report {
-							padding: 0.5rem 0.7rem;
-							margin: 0.3rem 0;
-							border-radius: 8px;
-							border-left: 4px solid @color_grey_5;
-							background-color: @color_grey_1;
+						// Readiness, quiet register: one run-on line of unremarkable
+						// facts, middot-separated. Nothing here is a problem, so
+						// nothing here takes a border, a fill or a full-width row.
+						> .status_readiness > .readiness_summary {
+							font-size: 0.85rem;
+							color: var(--fg_muted);
+							padding: 0.2rem 0;
 
-							&.warning { border-left-color: @color_orange; }
-							&.error   { border-left-color: @color_danger; }
+							> .readiness_part + .readiness_part::before {
+								content: ' · ';
+								opacity: 0.6;
+							}
 						}
 
-						.status_message { font-weight: 400; }
-						.status_cause,
-						.status_action_text { font-size: 1.2rem; color: @color_grey_7; }
+						// Readiness, notable register + the standing messages: a row
+						// with an accent edge, and its remedy laid out BESIDE the
+						// text rather than inside the sentence.
+						> .status_readiness > .readiness_line,
+						> .status_messages > .status_report {
+							padding: 0.45rem 0.6rem;
+							margin: 0.3rem 0;
+							border-radius: 6px;
+							border-left: 3px solid var(--border_default);
+							background-color: var(--bg_surface_alt);
+							color: var(--fg_default);
 
-						.status_action { margin-top: 0.4rem; }
+							&.warning { border-left-color: var(--color_warning); }
+							&.error   { border-left-color: var(--color_danger); }
+						}
+
+						> .status_readiness > .readiness_line {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: 0.6rem;
+
+							> .readiness_text { min-width: 0; }
+							> .status_action { flex: 0 0 auto; margin-top: 0; }
+						}
+
+						.status_message { font-weight: 500; }
+						.status_cause,
+						.status_action_text {
+							font-size: 0.85rem;
+							color: var(--fg_muted);
+							margin-top: 0.15rem;
+						}
+
+						.status_action {
+							margin-top: 0.4rem;
+							font-size: 0.85rem;
+						}
 
 						.status_detail {
 							margin-top: 0.4rem;
-							font-size: 1.1rem;
+							font-size: 0.8rem;
+							color: var(--fg_muted);
+
+							> summary { cursor: pointer; }
 
 							> pre {
 								white-space: pre-wrap;
@@ -724,6 +772,11 @@
 								max-height: 12em;
 								overflow: auto;
 								user-select: text;
+								margin-top: 0.3rem;
+								padding: 0.4rem;
+								border: 1px solid var(--border_default);
+								border-radius: 4px;
+								background-color: var(--bg_surface);
 							}
 						}
 

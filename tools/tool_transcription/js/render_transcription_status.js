@@ -264,19 +264,67 @@ export const create_status_panel = function( options ) {
 
 		/**
 		* The pre-run truth.
+		*
+		* TWO REGISTERS, on purpose. Readiness is read BEFORE anything has gone
+		* wrong, and most of what it reports is unremarkable — `unverified` is the
+		* normal state of every store seeded before the manifest existed. Rendering
+		* every line as a full-width accented block made a healthy install shout
+		* three times over a state that is fine, which is how a panel teaches its
+		* reader to stop reading it.
+		*
+		* So: `info` lines join ONE quiet run-on line (`Model: … · Device: … ·
+		* Language: …`, the shape the spec asked for), and only a line that
+		* actually needs attention — warning or error — breaks out into a row of
+		* its own with an accent and its remedy button.
+		*
 		* @param {Array<Object>} lines - [{severity, text, action_key, action_model}]
 		*/
 		readiness : function( lines ) {
+
 			readiness_node.replaceChildren()
-			const list = Array.isArray(lines) ? lines : []
-			for (let i = 0; i < list.length; i++) {
-				const line	= list[i]
+
+			const list		= Array.isArray(lines) ? lines : []
+			const quiet		= list.filter( line => (line.severity || 'info')==='info' && !line.action_key )
+			const notable	= list.filter( line => !quiet.includes(line) )
+
+			// the quiet run-on line
+			if (quiet.length>0) {
+				const summary = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'readiness_summary',
+					parent			: readiness_node
+				})
+				for (let i = 0; i < quiet.length; i++) {
+					const part = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'readiness_part',
+						parent			: summary
+					})
+					part.textContent = quiet[i].text
+				}
+			}
+
+			// the lines that earn their own row
+			for (let i = 0; i < notable.length; i++) {
+
+				const line	= notable[i]
 				const row	= ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: `readiness_line ${line.severity || 'info'}`,
 					parent			: readiness_node
 				})
-				row.textContent = line.text
+
+				// The text is its OWN element rather than a bare text node: the row
+				// is a flex container, and a text node cannot be laid out against
+				// the button beside it (which is how the button ended up sitting in
+				// the middle of the sentence).
+				const text = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'readiness_text',
+					parent			: row
+				})
+				text.textContent = line.text
+
 				if (line.action_key) {
 					const button = ui.create_dom_element({
 						element_type	: 'button',
@@ -291,6 +339,7 @@ export const create_status_panel = function( options ) {
 					})
 				}
 			}
+
 			readiness_node.classList.toggle('hide', list.length===0)
 			if (list.length>0) node.classList.remove('hide')
 		},

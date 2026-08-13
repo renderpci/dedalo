@@ -445,47 +445,76 @@
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status {
   width: 100%;
   margin-bottom: 0.5rem;
-  font-size: 1.3rem;
-  font-weight: 200;
+  font-size: 0.9rem;
   /* No fixed height and no overflow:hidden: the previous block
 						   was 1.5em tall with the overflow clipped, so any message
 						   longer than one line was cut mid-sentence. */
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_progress {
   font-family: monospace;
-  color: var(--color_grey_7);
+  font-size: 0.85rem;
+  color: var(--fg_muted);
   padding: 0.3rem 0;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_summary {
+  font-size: 0.85rem;
+  color: var(--fg_muted);
+  padding: 0.2rem 0;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_summary > .readiness_part + .readiness_part::before {
+  content: ' · ';
+  opacity: 0.6;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line,
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report {
-  padding: 0.5rem 0.7rem;
+  padding: 0.45rem 0.6rem;
   margin: 0.3rem 0;
-  border-radius: 8px;
-  border-left: 4px solid var(--color_grey_5);
-  background-color: var(--color_grey_1);
+  border-radius: 6px;
+  border-left: 3px solid var(--border_default);
+  background-color: var(--bg_surface_alt);
+  color: var(--fg_default);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.warning,
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.warning {
-  border-left-color: var(--color_orange);
+  border-left-color: var(--color_warning);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.error,
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.error {
   border-left-color: var(--color_danger);
 }
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line > .readiness_text {
+  min-width: 0;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line > .status_action {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_message {
-  font-weight: 400;
+  font-weight: 500;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_cause,
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_action_text {
-  font-size: 1.2rem;
-  color: var(--color_grey_7);
+  font-size: 0.85rem;
+  color: var(--fg_muted);
+  margin-top: 0.15rem;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_action {
   margin-top: 0.4rem;
+  font-size: 0.85rem;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail {
   margin-top: 0.4rem;
-  font-size: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail > summary {
+  cursor: pointer;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail > pre {
   white-space: pre-wrap;
@@ -493,6 +522,11 @@
   max-height: 12em;
   overflow: auto;
   user-select: text;
+  margin-top: 0.3rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: var(--bg_surface);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status.hide {
   display: none;

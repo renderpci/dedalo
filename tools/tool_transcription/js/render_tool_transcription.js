@@ -2400,7 +2400,14 @@ const render_automatic_transcription = function (options) {
 				lines.push({
 					severity		: state_info.usable ? 'info' : 'error',
 					text			: `${self.get_tool_label('readiness_model') || 'Model'}: ${state_label}`,
-					action_key		: state_info.action_key,
+					// A remedy is offered only for a state that BLOCKS the run.
+					// `unverified` is usable and is the normal state of every store
+					// seeded before the manifest existed, so a button on it would
+					// badger every archivist, on every open, about nothing — and
+					// `verify_model` is global-admin-only, so for almost all of them
+					// it could not work anyway. Verification belongs to the
+					// administrator: the ai_models maintenance widget offers it there.
+					action_key		: state_info.usable ? null : state_info.action_key,
 					// The remedy is for THIS model, not for whatever is selected when
 					// the button is finally pressed.
 					action_model	: selected
@@ -2444,23 +2451,46 @@ const render_automatic_transcription = function (options) {
 					text		: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`
 				})
 			} else if (diarization && Array.isArray(diarization.models)) {
-				for (let i = 0; i < diarization.models.length; i++) {
-					const part		= diarization.models[i] || {}
-					const info		= part.state ? (MODEL_STATES[part.state] || null) : null
-					const role_key	= part.role==='embedding'
-						? 'readiness_speakers_embedding'
-						: 'readiness_speakers_segmentation'
-					const role_text	= self.get_tool_label(role_key)
-						|| (part.role==='embedding' ? 'voice fingerprint' : 'speaker segmentation')
-					const state_text = info
-						? (self.get_tool_label(info.state_key) || part.state)
-						: (part.state || '')
+
+				// The pair reads as ONE fact while both halves are fine — an
+				// archivist does not care that speaker detection is two models
+				// until one of them is the reason it will not run. Only a half
+				// that is NOT usable earns its own line, and then it names which
+				// half it is, because that is what the remedy has to aim at.
+				const parts		= diarization.models.map( part => part || {} )
+				const readable	= parts.every( part => part.state && MODEL_STATES[part.state] )
+				const all_usable= readable && parts.every( part => MODEL_STATES[part.state].usable )
+
+				if (all_usable) {
 					lines.push({
-						severity		: info ? (info.usable ? 'info' : 'error') : 'warning',
-						text			: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'} — ${role_text}: ${state_text}`,
-						action_key		: info ? info.action_key : null,
-						action_model	: part.name
+						severity	: 'info',
+						text		: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'}: ${self.get_tool_label(MODEL_STATES[parts[0].state].state_key) || parts[0].state}`
 					})
+				} else {
+					for (let i = 0; i < parts.length; i++) {
+
+						const part		= parts[i]
+						const info		= part.state ? (MODEL_STATES[part.state] || null) : null
+						if (info && info.usable) {
+							continue // the healthy half of a broken pair is not news
+						}
+
+						const role_key	= part.role==='embedding'
+							? 'readiness_speakers_embedding'
+							: 'readiness_speakers_segmentation'
+						const role_text	= self.get_tool_label(role_key)
+							|| (part.role==='embedding' ? 'voice fingerprint' : 'speaker segmentation')
+						const state_text = info
+							? (self.get_tool_label(info.state_key) || part.state)
+							: (part.state || '')
+
+						lines.push({
+							severity		: info ? 'error' : 'warning',
+							text			: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'} — ${role_text}: ${state_text}`,
+							action_key		: info ? info.action_key : null,
+							action_model	: part.name
+						})
+					}
 				}
 			}
 
