@@ -1539,7 +1539,36 @@ const render_automatic_transcription = function (options) {
 							&& Array.isArray(self.transcription_component.data.tags_persons))
 								? self.transcription_component.data.tags_persons
 								: []
-						const save_promise = self.save_transcription( html )
+						// The save carries `refresh: true`, but that refresh does NOT
+						// happen: change_value sets the instance status to 'changing'
+						// and only restores it AFTER the refresh block, while
+						// common.refresh REFUSES any status other than 'rendered' — it
+						// warns and returns false. So the transcript was written and
+						// the editor kept showing the old text until the page was
+						// reloaded, which is the whole reason this exists. (The server
+						// engine path in get_server_status works around the same thing
+						// with a 4-second setTimeout.)
+						//
+						// Refreshing HERE works because the save has settled by then and
+						// the status is 'rendered' again. It is a workaround, not the
+						// cure: the cure is in component_common.change_value.
+						const save_promise = Promise.resolve( self.save_transcription( html ) )
+							.then(function(){
+								return self.transcription_component.refresh()
+							})
+							.catch(function(error){
+								// The text IS saved at this point — only the on-screen
+								// update failed. Say so rather than leave the archivist
+								// believing the run was lost.
+								console.error('[tool_transcription] the transcription was saved but the editor could not be refreshed:', error);
+								nodes.status_panel.report({
+									phase		: 'done',
+									severity	: 'warning',
+									message		: self.get_tool_label('saved_reload_to_see')
+										|| 'The transcription was saved, but the editor could not be updated — reload the page to see it.',
+									detail		: (error && error.message) ? error.message : String(error)
+								})
+							})
 
 						// Speaker detection saved PLACEHOLDER tags (P1, P2 … empty
 						// data payloads)? Offer the identity binding right away —
@@ -1547,10 +1576,10 @@ const render_automatic_transcription = function (options) {
 						// dialog just leaves the placeholders for later
 						// ("Assign speakers" reopens it any time).
 						if (/\[person-[a-z]-[0-9]+-[^-]{0,22}?-data::data\]/.test(html)) {
-							Promise.resolve(save_promise).then(function(){
+							save_promise.then(function(){
 								// pass the saved html AND the persons snapshot: the
-								// component refresh is still in flight, and reading
-								// either from the instance here would race it
+								// component refresh has now run, and reading either
+								// from the instance here would race it
 								self.assign_speakers({ value: html, persons: persons_snapshot })
 							})
 						}

@@ -1809,6 +1809,11 @@
             "value": "Model installed."
           },
           {
+            "lang": "lg-eng",
+            "name": "saved_reload_to_see",
+            "value": "The transcription was saved, but the editor could not be updated — reload the page to see it."
+          },
+          {
             "lang": "lg-eus",
             "name": "model_ready",
             "value": "Eredua instalatuta."
