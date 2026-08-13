@@ -24,6 +24,7 @@ import { getLabels } from '../../labels/catalog.ts';
 import { currentApplicationLang } from '../../resolve/request_lang.ts';
 import type { Principal } from '../../security/permissions.ts';
 import { widget as add_hierarchy } from './add_hierarchy.ts';
+import { widget as ai_models } from './ai_models.ts';
 import { widget as build_database_version } from './build_database_version.ts';
 import { widget as check_config } from './check_config.ts';
 import { widget as config_areas } from './config_areas.ts';
@@ -119,6 +120,7 @@ const CORE_WIDGET_MODULES: readonly WidgetModule[] = [
 	runtime_info,
 	system_info,
 	site_builder_status,
+	ai_models,
 ];
 
 /** The total surface: every module in the code, gated or not. Ownership classifies THIS. */
