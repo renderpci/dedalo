@@ -244,3 +244,78 @@ describe('modelState — the dtype-less fallback (a catalog that predates per-mo
 		expect(modelState('onnx-community/whisper-truly-absent-TEST').state).toBe('missing');
 	});
 });
+
+/**
+ * PER-FILE EVIDENCE — what a repair is allowed to act on.
+ *
+ * `modelState` used to hand back a model-wide verdict only, so the repair path
+ * read "damaged" and treated EVERY file as suspect: one HTML error page written
+ * over the tokenizer took the healthy weights with it. And on the dtype-less path
+ * the file names are fp32 PLACEHOLDERS, not names anything on disk answers to —
+ * deleting a weight on that authority is unrecoverable, so the report has to say
+ * whether the names are real.
+ */
+describe('modelState evidences each file, and says whether it knows their names', () => {
+	const EV_STORE = join(import.meta.dir, '..', '..', '..', 'private', `ai_ev_test_${process.pid}`);
+	const EV_MODEL = 'scratch/evidence-model';
+	const ONNX = Buffer.from([0x08, 0x07, 0x12, 0x04]);
+	let prior: string | undefined;
+
+	beforeAll(() => {
+		prior = process.env.DEDALO_AI_MODEL_STORE;
+		mkdirSync(join(EV_STORE, EV_MODEL, 'onnx'), { recursive: true });
+		process.env.DEDALO_AI_MODEL_STORE = EV_STORE;
+	});
+	afterAll(() => {
+		if (prior === undefined) delete process.env.DEDALO_AI_MODEL_STORE;
+		else process.env.DEDALO_AI_MODEL_STORE = prior;
+		rmSync(EV_STORE, { recursive: true, force: true });
+	});
+
+	test('an HTML error page marks ONE file implausible, not the whole set', () => {
+		writeFileSync(join(EV_STORE, EV_MODEL, 'config.json'), '{"model_type":"whisper"}');
+		writeFileSync(join(EV_STORE, EV_MODEL, 'onnx', 'encoder_model_q4.onnx'), '<!doctype html>');
+		writeFileSync(join(EV_STORE, EV_MODEL, 'onnx', 'decoder_model_merged_q4.onnx'), ONNX);
+
+		const report = modelState(EV_MODEL, {
+			encoder_model: 'q4',
+			decoder_model_merged: 'q4',
+		});
+		expect(report.state).toBe('damaged');
+		const implausible = report.files.filter((file) => !file.plausible).map((file) => file.file);
+		expect(implausible).toEqual(['onnx/encoder_model_q4.onnx']);
+		// A declared dtype IS the names: a repair may delete and re-fetch them.
+		expect(report.namesKnown).toBe(true);
+	});
+
+	test('a pretty-printed JSON config is not "damaged"', () => {
+		writeFileSync(
+			join(EV_STORE, EV_MODEL, 'config.json'),
+			'\n\t{\n\t\t"model_type": "whisper"\n\t}',
+		);
+		writeFileSync(join(EV_STORE, EV_MODEL, 'onnx', 'encoder_model_q4.onnx'), ONNX);
+		const report = modelState(EV_MODEL, {
+			encoder_model: 'q4',
+			decoder_model_merged: 'q4',
+		});
+		expect(report.files.find((file) => file.file === 'config.json')?.plausible).toBe(true);
+	});
+
+	test('no dtype and no complete weight pair: the names are guesses, and it says so', () => {
+		rmSync(join(EV_STORE, EV_MODEL), { recursive: true, force: true });
+		mkdirSync(join(EV_STORE, EV_MODEL, 'onnx'), { recursive: true });
+		writeFileSync(join(EV_STORE, EV_MODEL, 'config.json'), '{}');
+		// An encoder without a decoder: fallbackWeightsFiles finds no pair.
+		writeFileSync(join(EV_STORE, EV_MODEL, 'onnx', 'encoder_model_q4.onnx'), ONNX);
+
+		const guessed = modelState(EV_MODEL);
+		expect(guessed.namesKnown).toBe(false);
+		expect(guessed.files.map((file) => file.file)).toContain('onnx/encoder_model.onnx');
+
+		// With the pair present the store itself supplies the real names.
+		writeFileSync(join(EV_STORE, EV_MODEL, 'onnx', 'decoder_model_merged_q4.onnx'), ONNX);
+		const known = modelState(EV_MODEL);
+		expect(known.namesKnown).toBe(true);
+		expect(known.files.map((file) => file.file)).toContain('onnx/encoder_model_q4.onnx');
+	});
+});

@@ -180,11 +180,31 @@ export interface ModelFileEvidence {
 	size: number;
 	/** The manifest's recorded length, or null when never recorded. */
 	expected: number | null;
+	/**
+	 * The leading bytes are the RIGHT KIND of payload (see headerPlausible).
+	 * PER FILE, not per model: a repair that deletes every file because ONE of
+	 * them is an HTML error page destroys the ones that were fine — and, on the
+	 * dtype-less path, cannot name them again to fetch them back.
+	 */
+	plausible: boolean;
 }
 
 export interface ModelStateReport {
 	state: ModelState;
 	files: ModelFileEvidence[];
+	/**
+	 * The file NAMES in `files` are real, not guessed.
+	 *
+	 * True when the catalog declared a `dtype` (the names follow from it) or when
+	 * the store itself supplied them (fallbackWeightsFiles reads the directory).
+	 * FALSE means the names are the fp32 placeholders `modelFiles()` invents for
+	 * a dtype-less catalog whose store holds no complete weight pair — a caller
+	 * may report on them, but must NEVER delete a weight file on their authority:
+	 * the quantisation actually installed is unknown, so what was removed could
+	 * not be fetched back (a 400 MB q4 install replaced by a ~3 GB fp32 set the
+	 * browser never asks for).
+	 */
+	namesKnown: boolean;
 }
 
 /**
@@ -192,21 +212,73 @@ export interface ModelStateReport {
  *
  * An ONNX file is a protobuf ModelProto: its first field is `ir_version`
  * (field 1, varint) so the first byte is 0x08 in every model the hub publishes.
- * A JSON config starts with '{'. Anything else — most usefully '<' — is a
- * transport artefact written to disk under a model file's name.
+ * A JSON payload starts with '{' or '[' (leading whitespace tolerated — a
+ * pretty-printed config is not damaged). Anything else — most usefully '<' — is
+ * a transport artefact written to disk under a model file's name.
+ *
+ * A file of a kind we have no rule for is NOT called implausible: no rule means
+ * no verdict, and inventing one here would report a healthy install damaged.
  */
+const JSON_WHITESPACE: ReadonlySet<number> = new Set([0x20, 0x09, 0x0a, 0x0d]);
+
+/** '{' or '[' after any leading whitespace — a pretty-printed config is fine. */
+function jsonHeadPlausible(head: Buffer, read: number): boolean {
+	for (let i = 0; i < read; i++) {
+		const byte = head[i] as number;
+		if (JSON_WHITESPACE.has(byte)) continue;
+		return byte === 0x7b || byte === 0x5b;
+	}
+	return false; // whitespace only
+}
+
+/** The verdict for the bytes we read, by file kind. Unknown kind ⇒ no verdict. */
+function headPlausible(head: Buffer, read: number, file: string): boolean {
+	if (file.endsWith('.json')) return jsonHeadPlausible(head, read);
+	if (file.endsWith('.onnx')) return head[0] === 0x08;
+	return true;
+}
+
 function headerPlausible(path: string, file: string): boolean {
 	let fd: number | null = null;
 	try {
 		fd = openSync(path, 'r');
-		const head = Buffer.alloc(1);
-		if (readSync(fd, head, 0, 1, 0) < 1) return false;
-		return file.endsWith('.json') ? head[0] === 0x7b : head[0] === 0x08;
+		const head = Buffer.alloc(8);
+		const read = readSync(fd, head, 0, 8, 0);
+		if (read < 1) return false;
+		return headPlausible(head, read, file);
 	} catch {
 		return false;
 	} finally {
 		if (fd !== null) closeSync(fd);
 	}
+}
+
+/**
+ * What the disk says about ONE file of one model, whatever list it came from.
+ *
+ * Exported because `modelState` only evidences the files a model NEEDS TO RUN
+ * (config + weights), while a repair must also answer for the common files
+ * (tokenizer.json, preprocessor_config.json…) — a corrupt tokenizer used to
+ * survive a repair that then reported success, and a wrong "success" is the one
+ * outcome this subsystem forbids.
+ */
+export function fileEvidence(root: string, modelId: string, file: string): ModelFileEvidence {
+	const path = resolve(root, modelId, file);
+	let size = 0;
+	let present = false;
+	try {
+		present = existsSync(path);
+		size = present ? statSync(path).size : 0;
+	} catch {
+		present = false;
+	}
+	return {
+		file,
+		present,
+		size,
+		expected: expectedSize(root, modelId, file),
+		plausible: present && size > 0 ? headerPlausible(path, file) : false,
+	};
 }
 
 export function modelState(modelId: string, dtype?: Record<string, string>): ModelStateReport {
@@ -227,37 +299,20 @@ export function modelState(modelId: string, dtype?: Record<string, string>): Mod
 				? [REQUIRED_CONFIG, ...fallbackFound]
 				: modelFiles();
 
-	const files: ModelFileEvidence[] = wanted.map((file) => {
-		const path = resolve(root, modelId, file);
-		let size = 0;
-		let present = false;
-		try {
-			present = existsSync(path);
-			size = present ? statSync(path).size : 0;
-		} catch {
-			present = false;
-		}
-		return { file, present, size, expected: expectedSize(root, modelId, file) };
-	});
+	const namesKnown = dtype !== undefined || fallbackFound.length > 0;
+	const files: ModelFileEvidence[] = wanted.map((file) => fileEvidence(root, modelId, file));
+	const verdict = (state: ModelState): ModelStateReport => ({ state, files, namesKnown });
 
-	if (files.every((entry) => !entry.present || entry.size === 0)) {
-		return { state: 'missing', files };
-	}
-	if (files.some((entry) => !entry.present || entry.size === 0)) {
-		return { state: 'incomplete', files };
-	}
+	if (files.every((entry) => !entry.present || entry.size === 0)) return verdict('missing');
+	if (files.some((entry) => !entry.present || entry.size === 0)) return verdict('incomplete');
 	// Wrong KIND of content beats wrong LENGTH: an HTML error page is a damaged
 	// install whatever the manifest claims, and it names a different remedy.
-	if (files.some((entry) => !headerPlausible(resolve(root, modelId, entry.file), entry.file))) {
-		return { state: 'damaged', files };
-	}
+	if (files.some((entry) => !entry.plausible)) return verdict('damaged');
 	if (files.some((entry) => entry.expected !== null && entry.expected !== entry.size)) {
-		return { state: 'incomplete', files };
+		return verdict('incomplete');
 	}
-	if (files.every((entry) => entry.expected !== null)) {
-		return { state: 'ready', files };
-	}
-	return { state: 'unverified', files };
+	if (files.every((entry) => entry.expected !== null)) return verdict('ready');
+	return verdict('unverified');
 }
 
 /**

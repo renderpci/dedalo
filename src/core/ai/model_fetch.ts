@@ -183,6 +183,16 @@ export interface DownloadOptions {
 	 * DIARIZATION_COMMON_FILES and an empty optional list. */
 	commonFiles?: readonly string[];
 	optionalFiles?: readonly string[];
+	/**
+	 * FETCH EXACTLY THESE FILES, instead of the computed set.
+	 *
+	 * The repair path's whole contract: re-fetch precisely what it removed. Left
+	 * to `modelFiles(dtype)` a dtype-less repair deletes the q4 weights it found
+	 * on disk and then downloads the fp32 set — deleting a 400 MB working install
+	 * to replace it with ~3 GB the browser never asks for. Names come from the
+	 * store's own evidence, so what comes back is what went away.
+	 */
+	files?: readonly string[];
 	/** Transport seam: defaults to the real curl/fetch implementation. Injected
 	 * by tests so the orchestration is drivable without the network. */
 	fetchFile?: FetchFile;
@@ -306,6 +316,19 @@ interface DownloadPlan {
 	fetchFile: FetchFile;
 }
 
+/**
+ * Which files this download is for. An explicit list is the WHOLE plan (the
+ * repair path re-fetches exactly what it removed); otherwise modelFiles carries
+ * config.json + the weights and the common files union in.
+ */
+function wantedFiles(
+	dtype: Record<string, string> | undefined,
+	options: DownloadOptions,
+): string[] {
+	if (options.files !== undefined) return [...new Set(options.files)];
+	return [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])];
+}
+
 function planDownload(
 	dtype: Record<string, string> | undefined,
 	options: DownloadOptions,
@@ -313,8 +336,7 @@ function planDownload(
 	return {
 		store: options.store ?? modelStoreRoot(),
 		quiet: options.quiet ?? true,
-		// modelFiles carries config.json + the weights; union in the common files.
-		wanted: [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])],
+		wanted: wantedFiles(dtype, options),
 		optional: options.optionalFiles ?? OPTIONAL_FILES,
 		fetchFile: options.fetchFile ?? fetchOneFile,
 	};
@@ -331,6 +353,17 @@ function recordObtained(store: string, modelId: string, file: string): void {
 	if (resolved !== null && existsSync(resolved.target)) {
 		recordFileComplete(store, modelId, file, statSync(resolved.target).size);
 	}
+}
+
+/**
+ * A model with no weights is a FAILED seed, never a quiet success: the browser
+ * would fail at transcription time, the surprise the store exists to prevent.
+ * Only when weights were ASKED FOR, though — a repair that re-fetches one corrupt
+ * tokenizer.json is complete without touching the weights, and calling that a
+ * failure would report a successful repair as broken.
+ */
+function weightsMissing(wanted: readonly string[], gotWeights: boolean): boolean {
+	return !gotWeights && wanted.some((file) => file.endsWith('.onnx'));
 }
 
 /**
@@ -366,9 +399,7 @@ export async function downloadModel(
 		report.errors.push(`${file}: download failed from ${HUB_BASE}/${modelId}`);
 	}
 
-	// A model with no weights is a FAILED seed, never a quiet success: the browser
-	// would then fail at transcription time, the surprise the store exists to prevent.
-	if (!gotWeights) {
+	if (weightsMissing(wanted, gotWeights)) {
 		report.errors.push(`${modelId}: no ONNX weights were obtained`);
 	}
 

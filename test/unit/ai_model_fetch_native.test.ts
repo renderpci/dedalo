@@ -318,3 +318,31 @@ describe('the inline duplicates are GONE from the production file', () => {
 		expect(source).toContain('options.fetchFile ?? fetchOneFile');
 	});
 });
+
+/**
+ * The repair path's contract with the downloader: fetch EXACTLY these files.
+ * Without it a dtype-less repair deleted the q4 weights it found on disk and
+ * downloaded the fp32 set — a working 400 MB install replaced by ~3 GB the
+ * browser never asks for.
+ */
+describe('downloadModel — an explicit file list is the whole plan', () => {
+	test('only the named files are fetched, and a weightless list is not a failure', async () => {
+		const store = join(scratch, 'explicit_files');
+		const asked: string[] = [];
+		const report = await downloadModel('acme/model', undefined, {
+			store,
+			files: ['tokenizer.json'],
+			fetchFile: async (_modelId, file, target) => {
+				asked.push(file);
+				mkdirSync(dirname(join(target, 'acme/model', file)), { recursive: true });
+				writeFileSync(join(target, 'acme/model', file), '{}');
+				return true;
+			},
+		});
+		expect(asked).toEqual(['tokenizer.json']);
+		// No .onnx was ASKED for, so "no ONNX weights were obtained" would be a
+		// false failure on a repair that only had to replace a corrupt tokenizer.
+		expect(report.errors).toEqual([]);
+		expect(report.ok).toBe(true);
+	});
+});
