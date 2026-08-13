@@ -11,7 +11,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import {
 	COMMON_FILES,
 	curlArgv,
@@ -22,6 +22,7 @@ import {
 	OPTIONAL_FILES,
 	resolveFetchTarget,
 } from '../../src/core/ai/model_fetch.ts';
+import { expectedSize } from '../../src/core/ai/model_manifest.ts';
 
 let scratch = '';
 
@@ -237,6 +238,58 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 		});
 		expect(existsSync(store)).toBe(true);
 		expect(report.ok).toBe(false);
+	});
+});
+
+describe('isUsableCachedFile — a truncated file is not a cache hit', () => {
+	const store = () => join(scratch, 'truncation');
+
+	test('no expected size: any non-empty file is accepted (legacy store)', () => {
+		const target = join(store(), 'legacy.onnx');
+		mkdirSync(store(), { recursive: true });
+		writeFileSync(target, 'ONNX-BYTES');
+		expect(isUsableCachedFile(target)).toBe(true);
+		expect(isUsableCachedFile(target, null)).toBe(true);
+	});
+
+	test('the expected size matches: a cache hit', () => {
+		const target = join(store(), 'complete.onnx');
+		writeFileSync(target, 'ONNX-BYTES'); // 10 bytes
+		expect(isUsableCachedFile(target, 10)).toBe(true);
+	});
+
+	test('the file is SHORTER than expected: NOT a cache hit — this is the bug', () => {
+		const target = join(store(), 'partial.onnx');
+		writeFileSync(target, 'ONNX'); // 4 of 10 bytes
+		expect(isUsableCachedFile(target, 10)).toBe(false);
+	});
+
+	test('the file is longer than expected: not a cache hit either', () => {
+		const target = join(store(), 'overlong.onnx');
+		writeFileSync(target, 'ONNX-BYTES-AND-MORE');
+		expect(isUsableCachedFile(target, 10)).toBe(false);
+	});
+
+	test('an absent file is never a cache hit', () => {
+		expect(isUsableCachedFile(join(store(), 'nothing.onnx'), 10)).toBe(false);
+	});
+});
+
+describe('downloadModel records completion in the manifest', () => {
+	test('every fetched file lands in the manifest at its on-disk size', async () => {
+		const store = join(scratch, 'manifest_seed');
+		const model = 'onnx-community/whisper-tiny-TEST';
+		const report = await downloadModel(model, { encoder_model: 'fp32' }, {
+			store,
+			fetchFile: async (modelId, file, target) => {
+				const path = join(target, modelId, file);
+				mkdirSync(dirname(path), { recursive: true });
+				writeFileSync(path, 'BYTES');
+				return true;
+			},
+		});
+		expect(report.ok).toBe(true);
+		expect(expectedSize(store, model, 'config.json')).toBe(5);
 	});
 });
 

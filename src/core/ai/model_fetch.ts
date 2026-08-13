@@ -39,6 +39,7 @@ function isSafeModelSegment(value: string): boolean {
 }
 
 import { modelFiles, modelStoreRoot } from './model_store.ts';
+import { expectedSize, recordFileComplete } from './model_manifest.ts';
 
 /** Where model files are fetched from when a download is requested. */
 export const HUB_BASE = 'https://huggingface.co';
@@ -89,9 +90,42 @@ export function resolveFetchTarget(
 	return { target, url: `${HUB_BASE}/${modelId}/resolve/main/${file}` };
 }
 
-/** True when a previous run already left this file complete on disk. */
-export function isUsableCachedFile(target: string): boolean {
-	return existsSync(target) && statSync(target).size > 0;
+/**
+ * True when a previous run already left this file COMPLETE on disk.
+ *
+ * `expected` is the authoritative byte length (the manifest's record, or the hub's
+ * Content-Length). Without one — an air-gapped install, or a store seeded before
+ * the manifest existed — the answer degrades to the old "non-empty" test, which is
+ * the best a machine with no reference can honestly say. WITH one, a short file is
+ * a partial download and must be re-fetched: accepting it is what shipped a
+ * truncated model to the browser as "installed".
+ */
+export function isUsableCachedFile(target: string, expected?: number | null): boolean {
+	if (!existsSync(target)) return false;
+	const size = statSync(target).size;
+	if (size === 0) return false;
+	if (expected === undefined || expected === null) return true;
+	return size === expected;
+}
+
+/**
+ * The hub's byte length for one file, or null when it cannot be learnt (offline,
+ * blocked, or a hub that does not answer HEAD). Null is not a failure: it drops
+ * the caller back to the size-agnostic cache test.
+ */
+export async function headContentLength(url: string): Promise<number | null> {
+	try {
+		const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+		if (!response.ok) return null;
+		// The hub serves LFS weights through a CDN redirect; x-linked-size is the
+		// real object length when Content-Length describes the pointer.
+		const linked = response.headers.get('x-linked-size');
+		const length = linked ?? response.headers.get('content-length');
+		const parsed = Number(length);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -175,9 +209,24 @@ async function fetchOneFile(
 	const resolved = resolveFetchTarget(modelId, file, store);
 	if (resolved === null) return false;
 	const { target, url } = resolved;
-	if (isUsableCachedFile(target)) return true;
+
+	// What SHOULD be on disk: the manifest first (no network), the hub second.
+	// Without either, the cache test stays size-agnostic — see isUsableCachedFile.
+	const recorded = expectedSize(store, modelId, file);
+	const expected = recorded ?? (await headContentLength(url));
+
+	if (isUsableCachedFile(target, expected)) {
+		if (expected !== null && recorded === null) recordFileComplete(store, modelId, file, expected);
+		return true;
+	}
 
 	mkdirSync(dirname(target), { recursive: true });
+
+	const complete = (): boolean => {
+		if (!isUsableCachedFile(target, expected)) return false;
+		recordFileComplete(store, modelId, file, statSync(target).size);
+		return true;
+	};
 
 	if (haveCurl()) {
 		// Async spawn: a server background job must never block the event loop on
@@ -192,13 +241,13 @@ async function fetchOneFile(
 			if (existsSync(target) && statSync(target).size === 0) rmSync(target);
 			return false;
 		}
-		return true;
+		return complete();
 	}
 
 	const response = await fetch(url);
 	if (!response.ok) return false;
 	await Bun.write(target, response);
-	return statSync(target).size > 0;
+	return complete();
 }
 
 /**
@@ -228,6 +277,14 @@ export async function downloadModel(
 		options.onFile?.(file);
 		const ok = await fetchFile(modelId, file, store, quiet);
 		if (ok) {
+			// Record completion at the file's ACTUAL on-disk size. fetchOneFile already
+			// does this on its own path; an injected transport (tests, or a future
+			// non-curl transport) still needs the manifest to end up correct, so the
+			// recording lives here too — recordFileComplete is idempotent.
+			const resolved = resolveFetchTarget(modelId, file, store);
+			if (resolved !== null && existsSync(resolved.target)) {
+				recordFileComplete(store, modelId, file, statSync(resolved.target).size);
+			}
 			report.files.push(file);
 			if (file.endsWith('.onnx')) gotWeights = true;
 			continue;
