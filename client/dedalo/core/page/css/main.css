@@ -14886,6 +14886,13 @@ dd-modal:has(.tool_header) {
   background-color: transparent;
   border-color: var(--border_default);
 }
+.wrapper_widget.ai_models .ai_models_group_title {
+  margin-bottom: -0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg_muted);
+}
 .wrapper_widget.ai_models .ai_models_footer {
   display: flex;
   padding-top: 0.9rem;

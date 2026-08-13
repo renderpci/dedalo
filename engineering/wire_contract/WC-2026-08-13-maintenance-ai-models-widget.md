@@ -43,3 +43,29 @@
 - **Fixture interaction (DEC-14b):** NO re-harvest. The gate filters the new id
   out of the TS side before diffing — the WC-018/WC-035 transform pattern — so
   the frozen PHP-side fixture is unchanged.
+
+## Addendum 2026-08-13 — the speaker pair joins the panel, and two honesty fields
+
+- **Shape after (TS), amended:** the panel value gains
+  - `speakers[]` — the speaker-detection pair (segmentation + voice-fingerprint
+    embedding), the same row shape as `models[]` plus
+    `role: 'segmentation' | 'embedding'`. Spec §6 asked for it as its own row
+    group and the first cut shipped without it, ledgered nowhere — which is the
+    "never silently narrow scope" law, so this entry records it;
+  - `catalog_readable: boolean` — FALSE when the tool catalog could not be read.
+    An empty `models` then means "not known", never "none declared" (the same
+    absent-≠-empty law the `get_model_sources` addendum states).
+  `usable_count` and `total_bytes` now count BOTH groups: reading only the ASR
+  catalog let the dashboard say "2 of 2 usable" in green while the transcription
+  tool showed a damaged segmentation model — two humans, two truths, one install.
+- **Also corrected:** a row's `bytes` is now summed over the SAME files its
+  `state` was read from. They disagreed (the bytes used the fp32 placeholder
+  names, the state the real ones on disk), so a healthy quantised install showed
+  "Installed, not verified" beside a size of "—".
+- **Still DISPLAY-ONLY:** no `apiActions`, nothing new on the wire.
+- **Gate reconciliation:** unchanged (the widget id is still filtered out of the
+  frozen-oracle catalog compare). TS ground truth extended in
+  `test/unit/ai_models_widget_native.test.ts`: the speaker group, the aggregate
+  over both groups, the unreadable-catalog case, and `toModelRow`'s size/state
+  agreement against a scratch store.
+- **Fixture interaction (DEC-14b):** NO re-harvest.

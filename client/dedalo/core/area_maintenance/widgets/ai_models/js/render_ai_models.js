@@ -24,13 +24,21 @@
 *     store_path      : string   // absolute filesystem path of the model store
 *     store_available : boolean  // the store directory is present and readable
 *     hub_allowed     : boolean  // missing models may be fetched from the model hub
+*     catalog_readable: boolean  // FALSE = the tool catalog could not be read, so
+*                                // an empty `models` means "cannot tell", NOT "none"
 *     models          : Array<{
 *        name  : string          // catalog id (machine string)
 *        label : string          // human name from the transcriber catalog
 *        state : 'ready'|'unverified'|'incomplete'|'damaged'|'missing'
 *        bytes : number          // bytes on disk for this model's required files
 *     }>
-*     usable_count    : number   // models the browser may attempt (ready + unverified)
+*     speakers        : Array<{ …same row shape…, role:'segmentation'|'embedding' }>
+*                                // the speaker-detection PAIR, its own row group:
+*                                // both halves are needed for speaker detection and
+*                                // both count against the headline (a damaged half
+*                                // must never leave "n of n usable" green)
+*     usable_count    : number   // models the browser may attempt (ready + unverified),
+*                                // over BOTH groups
 *     total_bytes     : number   // bytes on disk for the whole store
 *   }
 *
@@ -142,6 +150,15 @@ render_ai_models.prototype.list = async function(options) {
 	const USABLE_STATES = ['ready', 'unverified']
 	// the ONE place the remedies are performed (this widget has no actions)
 	const REMEDY_PLACE = 'Download, verify and repair are performed in the transcription tool, in its settings panel.'
+	// the catalog read failed: what is on this page about models is UNKNOWN, not
+	// empty. An empty list drawn here would tell the administrator that nothing is
+	// installed — a confident wrong sentence about an install that may be perfect
+	const CATALOG_UNREADABLE = 'The transcription tool\'s model catalog could not be read, so the models below are not known — this is not a statement that nothing is installed. Retry, and check the tool configuration if it persists.'
+	// what each half of the speaker pair does, in the archivist's terms
+	const SPEAKER_ROLES = {
+		segmentation	: 'Speaker segmentation (who speaks when)',
+		embedding		: 'Voice fingerprint (the same voice keeps one speaker)'
+	}
 
 
 
@@ -168,6 +185,10 @@ const get_content_data_edit = async function(self) {
 	// short vars
 		const value		= self.value || {}
 		const models	= Array.isArray(value.models) ? value.models : []
+		// The speaker pair is its OWN group but the SAME population for every
+		// aggregate: a damaged half is a damaged install.
+		const speakers	= Array.isArray(value.speakers) ? value.speakers : []
+		const all		= models.concat(speakers)
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -175,16 +196,32 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'content_data ai_models_content'
 		})
 
+	// the catalog itself could not be read: say THAT, and never draw the empty
+	// list a model-less install draws (a wrong sentence is worse than no sentence)
+		if (value.catalog_readable===false) {
+			const unknown_note = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note state_warning ai_models_unknown',
+				parent			: content_data
+			})
+			unknown_note.textContent = CATALOG_UNREADABLE
+		}
+
 	// store readout
-		build_store_block(value, models, content_data)
+		build_store_block(value, all, content_data)
 
 	// models table (or the honest empty state)
 		build_models_block(value, models, content_data)
 
+	// speaker detection: its own row group, same chips, same states
+		if (speakers.length) {
+			build_speakers_block(speakers, content_data)
+		}
+
 	// where the remedies are performed. Shown only when something needs one, so a
 	// healthy install carries no instruction it cannot act on
 		const needs_remedy = value.store_available===false
-			|| models.some((model) => STATE_REMEDIES[model.state]!==undefined)
+			|| all.some((model) => STATE_REMEDIES[model.state]!==undefined)
 		if (needs_remedy) {
 			const remedy_note = ui.create_dom_element({
 				element_type	: 'div',
@@ -315,6 +352,11 @@ const build_store_block = function(value, models, parent) {
 	// usable count + size on disk
 		const total_bytes = Number(value.total_bytes) || 0
 		const usable = Number(value.usable_count) || 0
+		if (value.catalog_readable===false) {
+			// No count can be honest when the catalog is unknown: say so and stop.
+			add_row('Models', 'Unknown — the model catalog could not be read', 'state_warning')
+			return store_block
+		}
 		// GREEN MEANS ALL OF THEM. `usable > 0` painted 1 ready + 4 damaged as a
 		// healthy install on the dashboard's aggregate — the single glance this
 		// widget exists to make honest. The headline claim is only true when every
@@ -323,6 +365,9 @@ const build_store_block = function(value, models, parent) {
 			usable + ' of ' + models.length + ' usable · ' + format_mb(total_bytes) + ' on disk',
 			(models.length > 0 && usable===models.length) ? 'state_ok' : 'state_warning'
 		)
+		// `models` here is EVERY row the widget lists — the ASR catalog AND the
+		// speaker pair. Counting only the ASR half is how the dashboard read
+		// "2 of 2 usable" in green beside a damaged segmentation model.
 
 
 	return store_block
@@ -355,11 +400,37 @@ const build_models_block = function(value, models, parent) {
 				class_name		: 'dd_note state_warning ai_models_empty',
 				parent			: parent
 			})
-			empty_note.textContent = value.store_available===true
-				? 'The transcription tool declares no in-browser speech model.'
-				: 'The model store is not reachable, so no model can be listed.'
+			empty_note.textContent = value.catalog_readable===false
+				? 'The model catalog could not be read, so no model can be listed.'
+				: (value.store_available===true
+					? 'The transcription tool declares no in-browser speech model.'
+					: 'The model store is not reachable, so no model can be listed.')
 			return empty_note
 		}
+
+	const table = build_table(parent, 'Model')
+
+	// one row per model
+		for (let i = 0; i < models.length; i++) {
+			build_model_row(table, models[i] || {})
+		}
+
+
+	return table
+}//end build_models_block
+
+
+
+/**
+* BUILD_TABLE
+* The shared three-column shell (Model / State / Size). Both groups use it, so a
+* speaker model is read with exactly the same eyes as an ASR model.
+*
+* @param {HTMLElement} parent
+* @param {string}      first_header - what the first column names in this group
+* @returns {HTMLElement} the table div
+*/
+const build_table = function(parent, first_header) {
 
 	const table = ui.create_dom_element({
 		element_type	: 'div',
@@ -367,99 +438,149 @@ const build_models_block = function(value, models, parent) {
 		parent			: parent
 	})
 
-	// header
-		const header = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'dd_tr',
-			parent			: table
-		})
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'dd_th',
-			inner_html		: 'Model',
-			parent			: header
-		})
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'dd_th',
-			inner_html		: 'State',
-			parent			: header
-		})
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'dd_th num',
-			inner_html		: 'Size',
-			parent			: header
-		})
-
-	// one row per model
-		for (let i = 0; i < models.length; i++) {
-
-			const model	= models[i] || {}
-			const state	= typeof model.state==='string' ? model.state : 'missing'
-
-			const row = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'dd_tr',
-				parent			: table
-			})
-
-			// name. label is the catalog's human name; the machine id goes under
-			// it, because that is what the transcription tool's panel lists
-			const name_cell = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'dd_td ai_models_name',
-				parent			: row
-			})
-			const name_label = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'ai_models_label',
-				parent			: name_cell
-			})
-			name_label.textContent = model.label || model.name || ''
-			if (model.name && model.name!==model.label) {
-				const name_id = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'ai_models_id',
-					parent			: name_cell
-				})
-				name_id.textContent = model.name
-			}
-
-			// state chip + remedy (remedy only for the states that need one)
-			const state_cell = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'dd_td ai_models_state',
-				parent			: row
-			})
-			const chip = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'model_state state_' + state,
-				parent			: state_cell
-			})
-			chip.textContent = STATE_LABELS[state] || state
-			const remedy = STATE_REMEDIES[state]
-			if (remedy) {
-				const remedy_node = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'ai_models_row_remedy',
-					parent			: state_cell
-				})
-				remedy_node.textContent = remedy
-			}
-
-			// size on disk
-			const size_cell = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'dd_td num',
-				parent			: row
-			})
-			size_cell.textContent = format_mb(Number(model.bytes) || 0)
-		}
+	const header = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_tr',
+		parent			: table
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_th',
+		inner_html		: first_header,
+		parent			: header
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_th',
+		inner_html		: 'State',
+		parent			: header
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_th num',
+		inner_html		: 'Size',
+		parent			: header
+	})
 
 
 	return table
-}//end build_models_block
+}//end build_table
+
+
+
+/**
+* BUILD_MODEL_ROW
+* One row: name (+ machine id, + role when the group has roles), the state chip
+* with its remedy, and the size on disk.
+*
+* SEC-031: every server string reaches the DOM as a TEXT NODE.
+*
+* @param {HTMLElement} table
+* @param {Object}      model - {name, label, state, bytes, role?}
+* @returns {HTMLElement} the row
+*/
+const build_model_row = function(table, model) {
+
+	const state	= typeof model.state==='string' ? model.state : 'missing'
+
+	const row = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dd_tr',
+		parent			: table
+	})
+
+	// name. label is the catalog's human name; the machine id goes under
+	// it, because that is what the transcription tool's panel lists
+	const name_cell = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_td ai_models_name',
+		parent			: row
+	})
+	const name_label = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'ai_models_label',
+		parent			: name_cell
+	})
+	// The ROLE is what an administrator can act on ("which half is broken?"); the
+	// vendor's model name alone answers a question nobody asked.
+	name_label.textContent = SPEAKER_ROLES[model.role] || model.label || model.name || ''
+	if (model.name && model.name!==name_label.textContent) {
+		const name_id = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'ai_models_id',
+			parent			: name_cell
+		})
+		name_id.textContent = model.name
+	}
+
+	// state chip + remedy (remedy only for the states that need one)
+	const state_cell = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_td ai_models_state',
+		parent			: row
+	})
+	const chip = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'model_state state_' + state,
+		parent			: state_cell
+	})
+	chip.textContent = STATE_LABELS[state] || state
+	const remedy = STATE_REMEDIES[state]
+	if (remedy) {
+		const remedy_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'ai_models_row_remedy',
+			parent			: state_cell
+		})
+		remedy_node.textContent = remedy
+	}
+
+	// size on disk
+	const size_cell = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_td num',
+		parent			: row
+	})
+	size_cell.textContent = format_mb(Number(model.bytes) || 0)
+
+
+	return row
+}//end build_model_row
+
+
+
+/**
+* BUILD_SPEAKERS_BLOCK
+* The speaker-detection pair as its OWN row group.
+*
+* Speaker detection needs BOTH halves — segmentation says who speaks when, the
+* voice fingerprint keeps one voice under one speaker id across a whole
+* recording — so each half states its own verdict and its own size. A single
+* boolean over the pair could say neither which half was broken nor which model
+* to repair, which is how the transcription tool's Repair button used to be
+* aimed at a model that was never broken.
+*
+* @param {Array}       speakers - value.speakers
+* @param {HTMLElement} parent
+* @returns {HTMLElement} the table div
+*/
+const build_speakers_block = function(speakers, parent) {
+
+	const caption = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'ai_models_group_title',
+		parent			: parent
+	})
+	caption.textContent = 'Speaker detection'
+
+	const table = build_table(parent, 'Model')
+	for (let i = 0; i < speakers.length; i++) {
+		build_model_row(table, speakers[i] || {})
+	}
+
+
+	return table
+}//end build_speakers_block
 
 
 
