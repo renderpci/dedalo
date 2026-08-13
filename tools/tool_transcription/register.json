@@ -2179,6 +2179,41 @@
             "value": "A fragment of the recording could not be transcribed and was skipped."
           },
           {
+            "lang": "lg-eng",
+            "name": "speaker_detection_failed",
+            "value": "Speaker detection failed — the transcription continues without speaker tags."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "no_speaker_tags",
+            "value": "The transcription has no speaker tags to assign"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "subtitles_build_failed",
+            "value": "The subtitles file could not be built"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_audio_conversion",
+            "value": "The recording could not be prepared for transcription"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "repair_failed",
+            "value": "The model could not be repaired"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "verify_failed",
+            "value": "The model could not be verified"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "transcription_error",
+            "value": "Transcription error"
+          },
+          {
             "lang": "lg-ara",
             "name": "paragraphs",
             "value": "فقرات"

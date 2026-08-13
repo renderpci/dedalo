@@ -37,6 +37,7 @@
 	import { render_node_info } from '../../../core/common/js/utils/notifications.js'
 	import { open_tool } from '../../../core/tools_common/js/tool_common.js'
 	import { get_current_lang_info } from './tool_transcription.js'
+	import { create_status_panel } from './render_transcription_status.js'
 	import Split from '../../../lib/split/dist/split.es.js'
 
 // localStorage key holding the user's last pane ratio. @see activate_split
@@ -51,6 +52,37 @@
 // Viewport width below which the panes stack and there is no horizontal axis
 // left to split. Must match the @width_break_point_0 media query in the less.
 	const SPLIT_MIN_VIEWPORT = 800
+
+
+
+/**
+* TOOL_REPORT
+* Speak through the ONE panel from anywhere in the tool.
+*
+* The panel belongs to the automatic-transcription block (its `nodes` bus is local
+* to render_automatic_transcription), but failures happen outside it too — the
+* subtitles builder, the speaker assignment. Those used to open a blocking modal
+* dialog, which freezes the tab and says nothing an archivist can act on. The
+* panel is published on the instance so every one of them reaches the same place.
+*
+* The console line is the fallback, never the primary: it only runs when the block
+* was not rendered at all (no `transcriber_engine` in the tool's config), in which
+* case there is no panel in the document to write into.
+*
+* @param {Object} self - the tool_transcription instance
+* @param {Object} input - a report: {phase, severity, message, cause, action, detail}
+* @returns {bool}
+*/
+const tool_report = function(self, input) {
+
+	if (self && self.status_panel) {
+		self.status_panel.report( input )
+		return true
+	}
+
+	console.error('[tool_transcription]', (input && input.message) || '');
+	return false
+}//end tool_report
 
 
 
@@ -432,9 +464,16 @@ const get_content_data_edit = function(self) {
 							// call server API
 							const response = await self.build_subtitles_file()
 							if (!response.result) {
-								// error case
-								// (!) alert() used here for error feedback — consider replacing with ui.show_message()
-								alert(response.msg || 'Unknown error on build_subtitles_file');
+								// error case. Reported in the tool's one panel: a
+								// blocking modal dialog freezes the tab and is gone
+								// the moment it is dismissed.
+								tool_report(self, {
+									phase		: 'done',
+									severity	: 'error',
+									message		: response.msg
+										|| self.get_tool_label('subtitles_build_failed')
+										|| 'The subtitles file could not be built'
+								})
 							}else{
 								// success case
 								// update video to force load the new subtitles file
@@ -882,10 +921,12 @@ const render_transcription_options = async function(self) {
 			self.assign_speakers({}).then(function(result){
 				// false = nothing to offer (null = user cancelled: say nothing)
 				if (result===false) {
-					alert(
-						self.get_tool_label('no_speaker_tags')
-						|| 'The transcription has no speaker tags to assign'
-					)
+					tool_report(self, {
+						phase		: 'speakers',
+						severity	: 'warning',
+						message		: self.get_tool_label('no_speaker_tags')
+							|| 'The transcription has no speaker tags to assign'
+					})
 				}
 			})
 		})
@@ -1069,7 +1110,7 @@ const render_activity_info = async function(self) {
 * @param {Object} options - Configuration object.
 * @param {Object} options.self  - The tool_transcription instance.
 * @param {Object} options.nodes - Named references to DOM nodes that must exist:
-*   `nodes.status_container`              — element showing current status text,
+*   `nodes.status_panel`                  — the tool's one status panel,
 *   `nodes.button_automatic_transcription` — the trigger button (enabled/disabled),
 *   `nodes.transcriber_engine_select`     — `<select>` holding the chosen engine name.
 * @returns {void}
@@ -1119,11 +1160,13 @@ const get_server_status = function (options) {
 			const error_msg = (response && response.msg)
 				? response.msg
 				: 'Transcriber server did not answer'
-			// SEC-XSS-006: status labels are plain text
-			nodes.status_container.textContent = (self.get_tool_label('transcription_error') || 'Transcription error') + ': ' + error_msg
-			nodes.status_container.classList.remove('processing');
-			nodes.status_container.classList.add('error');
-			nodes.status_container.classList.remove('hide');
+			// SEC-XSS-006: every panel field is a text node.
+			nodes.status_panel.report({
+				phase		: 'transcribe',
+				severity	: 'error',
+				message		: (self.get_tool_label('transcription_error') || 'Transcription error')
+					+ ': ' + error_msg
+			})
 			// The button is deliberately left as it is: the job's real state is
 			// UNKNOWN, so re-enabling it here would invite a duplicate submit over
 			// a transcription that may still be running on the transcriber server.
@@ -1143,8 +1186,7 @@ const get_server_status = function (options) {
 					'status'
 				)
 				// SEC-XSS-006: status labels are plain text
-			nodes.status_container.textContent = self.get_tool_label('inactive') || 'Inactive'
-				nodes.status_container.classList.remove('processing');
+				nodes.status_panel.progress( self.get_tool_label('inactive') || 'Inactive' )
 				nodes.button_automatic_transcription.classList.remove('disable');
 				break;
 
@@ -1154,8 +1196,7 @@ const get_server_status = function (options) {
 					check_current_server_status()
 				}, 4000)
 
-				nodes.status_container.textContent = self.get_tool_label('processing') || 'Processing'
-				nodes.status_container.classList.add('processing');
+				nodes.status_panel.progress( self.get_tool_label('processing') || 'Processing' )
 				nodes.button_automatic_transcription.classList.add('disable');
 				nodes.button_automatic_transcription.active = false
 
@@ -1168,8 +1209,11 @@ const get_server_status = function (options) {
 					server_process_id,
 					'status'
 				)
-				nodes.status_container.textContent = self.get_tool_label('finished') || 'Process done'
-				nodes.status_container.classList.remove('processing');
+				nodes.status_panel.report({
+					phase		: 'done',
+					severity	: 'info',
+					message		: self.get_tool_label('finished') || 'Process done'
+				})
 				nodes.button_automatic_transcription.classList.remove('disable');
 
 				setTimeout(function(){
@@ -1288,13 +1332,11 @@ const render_automatic_transcription = function (options) {
 		const button_automatic_transcription_click_handler = async function(e){
 			e.stopPropagation()
 
-			// Check the user agent can perform correctly and using webGPU
-			const is_a_valid_user_agent = await ua.check_transformers_webgpu()
-			if (!is_a_valid_user_agent.overall) {
-				if(!confirm("For optimal performance, use a webGPU-compatible browser. Your current browser may run this task very slowly. Continue?")) {
-					return false
-				}
-			}
+			// (No WebGPU pre-flight dialog here.) It used to be a blocking modal question
+			// on EVERY click — asked after the decision was made, nagging the
+			// archivist who deliberately chose the CPU device, and freezing the tab
+			// until dismissed. The readiness line states the same fact permanently,
+			// before anything is pressed. See refresh_readiness below.
 
 			if(button_automatic_transcription.active === false){
 				return
@@ -1411,13 +1453,18 @@ const render_automatic_transcription = function (options) {
 						if (response===false) {
 							return
 						}
-						const msg = self.get_tool_label('transcription_completed') || 'Transcription completed.';
-						// SEC-031: build success label via DOM; defence-in-depth on i18n label.
-						status_container.replaceChildren()
-						const success_span = document.createElement('span')
-						success_span.className = 'success_text'
-						success_span.textContent = msg
-						status_container.appendChild(success_span)
+						// SEC-031: every panel field is a text node.
+						// Retire the percentage line, but NOT the run's warnings: a
+						// run that fell back to the CPU or lost speaker detection
+						// must still say so next to "completed" (which is why this
+						// is progress('') and not clear()).
+						nodes.status_panel.progress('')
+						nodes.status_panel.report({
+							phase		: 'done',
+							severity	: 'info',
+							message		: self.get_tool_label('transcription_completed')
+								|| 'Transcription completed.'
+						})
 
 						// Persist as THE transcription: item id 1 of the current lang,
 						// replaced — never appended (see save_transcription).
@@ -1607,6 +1654,10 @@ const render_automatic_transcription = function (options) {
 					}
 				}
 
+				//save the pointer: the panel's "run on the processor instead" remedy
+				//switches the device and must re-apply the same restrictions
+					nodes.apply_device_limits = apply_device_limits
+
 				// local_db
 					const device_id = 'transcriber_device_select'
 					transcriber_device_select.addEventListener('change', function(){
@@ -1770,6 +1821,13 @@ const render_automatic_transcription = function (options) {
 
 					update_download_button()
 				}
+				// The status panel is created OUTSIDE this block (the quality picker
+				// is optional; the panel is not), so its remedy buttons reach the
+				// download affordance through the nodes bus and never through a
+				// closure identifier that may not exist — a ReferenceError here
+				// blanks the whole tool, which is the failure class this panel exists
+				// to end.
+				nodes.apply_installed_models = apply_installed_models
 
 				/**
 				* UPDATE_DOWNLOAD_BUTTON
@@ -1830,6 +1888,8 @@ const render_automatic_transcription = function (options) {
 					inner_html		: self.get_tool_label('download_model') || 'Download model',
 					parent			: quality_label
 				})
+				//save the pointer (see nodes.apply_installed_models above)
+					nodes.button_download_model = button_download_model
 				button_download_model.addEventListener('click', function(e){
 					e.stopPropagation()
 					const model = transcriber_engine_quality.value
@@ -1846,11 +1906,11 @@ const render_automatic_transcription = function (options) {
 							return
 						}
 
-						nodes.status_container.classList.remove('hide')
 						// SEC-031: i18n label, plain text only.
-						nodes.status_container.textContent =
+						nodes.status_panel.progress(
 							self.get_tool_label('downloading_model')
 							|| 'Downloading the model… this can take several minutes.'
+						)
 
 						// Poll until installed. Bounded: a download that outlives the
 						// cap is not declared failed — the job keeps running server-side
@@ -1860,9 +1920,10 @@ const render_automatic_transcription = function (options) {
 							if (++polls > 360) { // ~30 min at 5 s
 								clearInterval(poll)
 								button_download_model.classList.remove('disable')
-								nodes.status_container.textContent =
+								nodes.status_panel.progress(
 									self.get_tool_label('download_still_running')
 									|| 'Still downloading — the model will appear when it finishes.'
+								)
 								return
 							}
 							self.get_model_sources().then(function(sources){
@@ -1873,8 +1934,13 @@ const render_automatic_transcription = function (options) {
 									clearInterval(poll)
 									button_download_model.classList.remove('disable')
 									apply_installed_models( installed )
-									nodes.status_container.textContent =
-										self.get_tool_label('model_ready') || 'Model installed.'
+									nodes.status_panel.progress('')
+									nodes.status_panel.report({
+										phase		: 'model',
+										severity	: 'info',
+										message		: self.get_tool_label('model_ready') || 'Model installed.'
+									})
+									refresh_readiness()
 								}
 							})
 						}, 5000)
@@ -1895,6 +1961,11 @@ const render_automatic_transcription = function (options) {
 						if (sources && sources.result) {
 							apply_installed_models( sources.result.installed )
 						}
+						// The saved choice landed AFTER the first readiness line was
+						// computed, and setting `.value` fires no 'change' event: the
+						// line would stand describing a model the archivist did not
+						// pick. This is the third and last event wired to it.
+						refresh_readiness()
 					})
 			}//end if(transcriber_quality)
 
@@ -1986,10 +2057,10 @@ const render_automatic_transcription = function (options) {
 						)
 						return
 					}
-					nodes.status_container.classList.remove('hide')
-					nodes.status_container.textContent =
+					nodes.status_panel.progress(
 						self.get_tool_label('downloading_model')
 						|| 'Downloading the model… this can take several minutes.'
+					)
 					let polls = 0
 					const poll = setInterval(function(){
 						if (++polls > 120) { // ~10 min at 5 s — the model is ~6 MB
@@ -2003,8 +2074,12 @@ const render_automatic_transcription = function (options) {
 								clearInterval(poll)
 								button_download_speaker_model.classList.remove('disable')
 								apply_diarization( info )
-								nodes.status_container.textContent =
-									self.get_tool_label('model_ready') || 'Model installed.'
+								nodes.status_panel.progress('')
+								nodes.status_panel.report({
+									phase		: 'model',
+									severity	: 'info',
+									message		: self.get_tool_label('model_ready') || 'Model installed.'
+								})
 							}
 						})
 					}, 5000)
@@ -2034,13 +2109,212 @@ const render_automatic_transcription = function (options) {
 			event_manager.subscribe(`render_${self.transcription_component.id}`, update_lang_info);
 
 	// status
-		const status_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'status_container hide',
-			parent 			: automatic_transcription_container
+	// The ONE voice of the engine (see render_transcription_status.js). It replaces
+	// a one-line, overflow-hidden div that the error writer left carrying its `hide`
+	// class: every failure raised before the run started was invisible by
+	// construction, and the archivist saw a button that stopped responding.
+		const status_panel = create_status_panel({
+			self		: self,
+			on_action	: function( action_key ) {
+
+				// The selected model, when there is a quality picker at all.
+				const model = nodes.transcriber_engine_quality
+					? nodes.transcriber_engine_quality.value
+					: null
+
+				switch (action_key) {
+
+					case 'action_repair_model':
+						if (!model) break;
+						self.repair_model( model ).then(function(response){
+							if (!response || response.result===false) {
+								status_panel.report({
+									phase		: 'model',
+									severity	: 'error',
+									message		: (response && response.msg)
+										|| self.get_tool_label('repair_failed')
+										|| 'The model could not be repaired'
+								})
+								return
+							}
+							status_panel.progress(
+								self.get_tool_label('downloading_model')
+								|| 'Downloading the model… this can take several minutes.'
+							)
+							poll_model_state( model )
+						})
+						break;
+
+					case 'action_verify_model':
+						if (!model) break;
+						self.verify_model( model ).then(function(response){
+							if (!response || response.result===false) {
+								status_panel.report({
+									phase		: 'model',
+									severity	: 'error',
+									message		: (response && response.msg)
+										|| self.get_tool_label('verify_failed')
+										|| 'The model could not be verified'
+								})
+							}
+							refresh_readiness()
+						})
+						break;
+
+					// Reuse the download control rather than duplicating its polling:
+					// it lives inside the optional quality block, so it is reached
+					// through the nodes bus and simply absent when there is no picker.
+					case 'action_download_model':
+						if (nodes.button_download_model) {
+							nodes.button_download_model.classList.remove('hide')
+							nodes.button_download_model.classList.remove('disable')
+							nodes.button_download_model.click()
+						}
+						break;
+
+					case 'action_retry_cpu':
+						if (nodes.transcriber_device_select) {
+							nodes.transcriber_device_select.value = 'wasm'
+							if (nodes.apply_device_limits) {
+								nodes.apply_device_limits()
+							}
+							refresh_readiness()
+						}
+						button_automatic_transcription.click()
+						break;
+
+					case 'action_retry':
+						button_automatic_transcription.click()
+						break;
+				}
+			}
 		})
+		automatic_transcription_container.appendChild( status_panel.node )
 		//save the pointer
-			nodes.status_container = status_container
+			nodes.status_panel = status_panel
+		// and publish it on the instance: the subtitles builder and the speaker
+		// assignment live outside this block and must reach the same panel
+		// (see tool_report).
+			self.status_panel = status_panel
+
+	/**
+	* REFRESH_READINESS
+	* What is true BEFORE the button is pressed.
+	*
+	* The tool used to say nothing until something failed — and then say it in the
+	* console. This states the model's real state, the device that will actually be
+	* used and the language being transcribed, standing, from the moment the block
+	* renders.
+	*
+	* It costs one get_model_sources request, so it is wired ONLY to the events that
+	* can change its answer: the model picker, the device picker, and the completion
+	* of a download/repair/verification.
+	*/
+		const model_state_labels = {
+			ready		: 'state_ready',
+			unverified	: 'state_unverified',
+			incomplete	: 'state_incomplete',
+			damaged		: 'state_damaged',
+			missing		: 'state_missing'
+		}
+
+		const refresh_readiness = async function() {
+
+			const lines		= []
+			const sources	= await self.get_model_sources()
+			const models	= (sources && sources.result && Array.isArray(sources.result.models))
+				? sources.result.models
+				: []
+			const selected	= nodes.transcriber_engine_quality
+				? nodes.transcriber_engine_quality.value
+				: null
+			const entry		= models.find(el => el.name===selected) || null
+
+			if (entry) {
+				// An UNVERIFIED model is not a fault: it is the normal state of every
+				// store seeded before the verification existed. Only incomplete,
+				// damaged and missing are refusals.
+				const state_label	= self.get_tool_label( model_state_labels[entry.state] ) || entry.state
+				const usable		= entry.state==='ready' || entry.state==='unverified'
+				lines.push({
+					severity	: usable ? 'info' : 'error',
+					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${state_label}`,
+					action_key	: (entry.state==='damaged' || entry.state==='incomplete')
+						? 'action_repair_model'
+						: (entry.state==='missing'
+							? 'action_download_model'
+							: (entry.state==='unverified' ? 'action_verify_model' : null))
+				})
+			}
+
+			// The device probe that used to be a blocking modal question on every click.
+			// It is stated, not asked: someone who deliberately chose the processor
+			// is not nagged, and someone who did not is told before they wait.
+			// An unanswerable probe is not a verdict: say nothing rather than warn
+			// about a GPU we could not ask about (and never let it reject the whole
+			// readiness line, which would leave the block silent again).
+			const capability	= await ua.check_transformers_webgpu().catch(function(){
+				return { overall : true }
+			})
+			const device		= nodes.transcriber_device_select
+				? nodes.transcriber_device_select.value
+				: 'auto'
+			if (capability && !capability.overall && device!=='wasm') {
+				lines.push({
+					severity	: 'warning',
+					text		: `${self.get_tool_label('readiness_device') || 'Device'}: ${self.get_tool_label('device_no_gpu') || 'no GPU detected — this will run on the processor, several times slower'}`
+				})
+			}
+
+			lines.push({
+				severity	: 'info',
+				text		: `${self.get_tool_label('readiness_language') || 'Language'}: ${get_current_lang_info(self.transcription_component.lang)}`
+			})
+
+			status_panel.readiness( lines )
+		}
+
+	/**
+	* POLL_MODEL_STATE
+	* Watch one model until it stops being broken, after a repair.
+	*
+	* Bounded, and a hit of the cap is NOT a failure: the job runs server-side and
+	* outlives the poll, so the next open of the tool finds the model in place.
+	*/
+		const poll_model_state = function( model ) {
+
+			let polls = 0
+			const poll = setInterval(function(){
+				if (++polls > 360) { // ~30 min at 5 s
+					clearInterval(poll)
+					return
+				}
+				self.get_model_sources().then(function(sources){
+					const models = (sources && sources.result && Array.isArray(sources.result.models))
+						? sources.result.models
+						: []
+					const entry = models.find(el => el.name===model)
+					if (entry && (entry.state==='ready' || entry.state==='unverified')) {
+						clearInterval(poll)
+						status_panel.progress('')
+						if (nodes.apply_installed_models) {
+							nodes.apply_installed_models( sources.result.installed )
+						}
+						refresh_readiness()
+					}
+				})
+			}, 5000)
+		}
+
+		refresh_readiness()
+		// ONLY these two: a request per keystroke or per re-render is not a status
+		// line, it is a poll of the server.
+		if (nodes.transcriber_engine_quality) {
+			nodes.transcriber_engine_quality.addEventListener('change', refresh_readiness)
+		}
+		if (nodes.transcriber_device_select) {
+			nodes.transcriber_device_select.addEventListener('change', refresh_readiness)
+		}
 
 	// get and check the server status
 	// it change the button and display the status into the nodes.

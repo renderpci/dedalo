@@ -524,7 +524,7 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 * @param {Object} [options.decode] - decoding overrides (lib/browser_whisper DEFAULT_DECODE)
 * @param {string} [options.device] - 'auto' (default) | 'webgpu' | 'wasm'
 * @param {Object} options.nodes - DOM nodes held by the render layer:
-*   nodes.status_container, nodes.button_automatic_transcription
+*   nodes.status_panel, nodes.button_automatic_transcription
 * @returns {Promise<Array>} single-element array with the HTML for component_text_area
 */
 tool_transcription.prototype.automatic_transcription = async function(options) {
@@ -562,30 +562,68 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		}
 
 	/**
+	* PANEL
+	* The one voice. `set_status`/`set_error` as they were are gone: set_error wrote
+	* into a node whose `hide` class it never removed, so every failure raised before
+	* the run started — a failed audio conversion, a missing model, an empty store —
+	* was invisible by construction. Everything below routes through the panel
+	* (render_transcription_status.js), which cannot hide a report.
+	*/
+		const panel = nodes.status_panel
+
+	/**
+	* END_RUN
+	* A reported failure ends the run: retire the percentage line (an empty
+	* progress hides it — clear() would also drop the warnings this run
+	* accumulated, and those must survive) and give the trigger back.
+	*/
+		const end_run = function() {
+			panel.progress('')
+			if (nodes.button_automatic_transcription) {
+				nodes.button_automatic_transcription.classList.remove('disable')
+			}
+		}
+
+	/**
 	* SET_STATUS
-	* Write a line of plain text into the status area (never HTML — see SEC-031).
+	* The transient line: percentages and live tokens, overwritten, never stacked.
+	* Plain text throughout — worker output is recognised speech (SEC-031).
 	*/
 		const set_status = function(text) {
-			nodes.status_container.classList.remove('hide')
-			nodes.status_container.textContent = text
+			panel.progress( text )
 		}
 
 	/**
 	* SET_ERROR
-	* Show an error and give the button back, so a failed run can be retried.
-	* The message may contain a server path, so it is built as a text node.
+	* A RUNTIME failure in the engine's own words: classified into a message, a
+	* cause and a pressable remedy, with the raw text kept in the detail
+	* disclosure. Use set_message instead when the text is already a truthful
+	* sentence (a server `msg`), which classification would only overwrite.
 	*/
-		const set_error = function(message) {
+		const set_error = function(message, context) {
+			panel.fail( message, Object.assign({ model: transcriber_quality }, context || {}) )
+			end_run()
+		}
+
+	/**
+	* SET_MESSAGE
+	* A failure whose message is ALREADY the truth — the server's own `msg`, or a
+	* refusal this code composed. Reported verbatim, with its remedy when one
+	* exists; passing it through the classifier would replace it with the generic
+	* "The transcription failed" and bury the real sentence in the detail.
+	*/
+		const set_message = function(message, options) {
+			const info = options || {}
+			panel.report({
+				phase		: info.phase || 'preflight',
+				severity	: 'error',
+				message		: message,
+				action		: info.action || '',
+				action_key	: info.action_key,
+				detail		: info.detail || ''
+			})
 			console.error('[tool_transcription]', message);
-			nodes.status_container.classList.remove('loading_status')
-			nodes.status_container.replaceChildren()
-			const err_div = document.createElement('div')
-			err_div.className = 'error'
-			err_div.textContent = message
-			nodes.status_container.appendChild(err_div)
-			if (nodes.button_automatic_transcription) {
-				nodes.button_automatic_transcription.classList.remove('disable')
-			}
+			end_run()
 		}
 
 	/**
@@ -663,7 +701,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			dd_console("-> transcription_component API response:",'DEBUG',response);
 		}
 		if (!response?.result) {
-			set_error( response?.msg || 'Error converting audio' )
+			set_message(
+				response?.msg
+					|| self.get_tool_label('error_audio_conversion')
+					|| 'The recording could not be prepared for transcription',
+				{ phase: 'audio' }
+			)
 			return false
 		}
 		// From here a WAV of the interview exists on the server: arm the unload
@@ -706,7 +749,15 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				? (self.get_tool_label('model_store_empty')
 					|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).')
 				: `${self.get_tool_label('model_not_installed') || 'This model is not installed on this server'}: ${transcriber_quality}`
-			set_error( message )
+			// `installed` = ready OR unverified (an unverified store is the normal
+			// state of every install seeded before the verification existed, and is
+			// NOT a refusal). Only a model that is missing, incomplete or damaged
+			// lands here — all three are answered with the download affordance.
+			set_message( message, {
+				phase		: 'model',
+				action		: self.get_tool_label('action_download_model') || 'Download the model',
+				action_key	: 'action_download_model'
+			})
 			delete_audio()
 			return false
 		}
@@ -726,8 +777,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 	return new Promise(async function(resolve){
 
+		// A new run: drop the previous run's standing messages, keep the readiness
+		// block (it states what is true of the install, not of this run).
+		panel.clear()
 		set_status( self.get_tool_label('processing_audio') || 'Processing audio...' )
-		nodes.status_container.classList.add('loading_status')
 
 		let speech_seconds = 0
 
@@ -750,13 +803,16 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			delete_audio()
 			data_manager.set_local_db_data({ id: resume_id, segments: [], model: null }, 'status')
 
-			nodes.status_container.classList.remove('loading_status')
-
 			if (!Array.isArray(segments) || segments.length===0) {
-				set_error(
-					self.get_tool_label('no_speech_recognized')
-					|| 'No speech was recognized — the existing text was left untouched.'
-				)
+				// A WARNING, not an error: nothing failed — there was simply no
+				// speech, and the existing text was deliberately left alone.
+				panel.report({
+					phase		: 'done',
+					severity	: 'warning',
+					message		: self.get_tool_label('no_speech_recognized')
+						|| 'No speech was recognized — the existing text was left untouched.'
+				})
+				end_run()
 				resolve( false )
 				return
 			}
@@ -816,7 +872,6 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					break;
 
 				case 'window_start': {
-					nodes.status_container.classList.remove('loading_status')
 					const percent = speech_seconds>0
 						? Math.min( 99, Math.round((data.done_seconds / speech_seconds) * 100) )
 						: 0
@@ -826,9 +881,9 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 				// Live tokens while a window is decoded (greedy decoding only).
 				case 'partial':
-					nodes.status_container.classList.remove('loading_status')
 					// SEC-031: worker output is recognised speech; text only.
-					nodes.status_container.textContent = data.text
+					// The panel's progress line is a text node by construction.
+					set_status( data.text )
 					break;
 
 				// A window finished: persist so a closed tab can resume.
@@ -857,13 +912,29 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					break;
 				}
 
+				// A degradation, not a failure: the run continues and the user must
+				// still be told when it finishes (warnings accumulate; progress does
+				// not, so this can never be a progress line — it would be overwritten
+				// by the next percentage and the user would never see it).
+				case 'warning':
+					panel.report({
+						phase		: data.phase || 'transcribe',
+						severity	: 'warning',
+						message		: self.get_tool_label(data.label_key) || data.message || '',
+						detail		: data.detail || ''
+					})
+					break;
+
 				// Best-effort: the transcript arrives without speakers; say so.
 				case 'diarize_error':
 					console.warn('[tool_transcription] speaker detection failed:', data.message);
-					set_status(
-						self.get_tool_label('speaker_detection_failed')
-						|| 'Speaker detection failed — the transcription continues without speaker tags.'
-					)
+					panel.report({
+						phase		: 'speakers',
+						severity	: 'warning',
+						message		: self.get_tool_label('speaker_detection_failed')
+							|| 'Speaker detection failed — the transcription continues without speaker tags.',
+						detail		: data.message || ''
+					})
 					break;
 
 				case 'end':
@@ -874,7 +945,11 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					transcribe_worker.terminate()
 					self.transcribe_worker = null
 					delete_audio()
-					set_error( data.message )
+					set_error( data.message, {
+						phase	: data.phase || 'transcribe',
+						device	: data.device,
+						log		: data.log
+					})
 					resolve( false )
 					break;
 			}
@@ -884,7 +959,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			set_error( 'Worker error [transcribe]: ' + (e.message || '') )
+			set_error( e.message || '', { phase: 'transcribe' } )
 			resolve( false )
 		}
 
@@ -933,7 +1008,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			set_error( 'Could not decode the audio: ' + error.message )
+			set_error( error.message, { phase: 'audio' } )
 			resolve( false )
 		}
 	});
@@ -1071,6 +1146,67 @@ tool_transcription.prototype.download_model = async function( model ) {
 		return false
 	}
 }//end download_model
+
+
+
+/**
+* REPAIR_MODEL
+* Ask the server to discard the failing files of one catalog model and fetch them
+* again. Admin-gated and catalog-bound SERVER-side; the work runs as a background
+* job there and the caller polls get_model_sources exactly as a download does.
+*
+* @param {string} model - catalog model id
+* @returns {Promise<Object|false>} the API response, or false on transport failure
+*/
+tool_transcription.prototype.repair_model = async function( model ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'repair_model'),
+		options	: { model: model }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not start the model repair:', error);
+		return false
+	}
+}//end repair_model
+
+
+
+/**
+* VERIFY_MODEL
+* Ask the server to check one model's files against the hub's published lengths
+* and record the result, turning an `unverified` model into `ready` or
+* `incomplete`. Admin-gated; an install with no outbound internet gets a clean
+* refusal rather than a false verdict.
+*
+* @param {string} model - catalog model id
+* @returns {Promise<Object|false>} the API response, or false on transport failure
+*/
+tool_transcription.prototype.verify_model = async function( model ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'verify_model'),
+		options	: { model: model }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not verify the model:', error);
+		return false
+	}
+}//end verify_model
 
 
 

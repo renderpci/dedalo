@@ -177,11 +177,20 @@ export const create_status_panel = function( options ) {
 			)
 		},
 
-		/** The transient line. Not a report: it is overwritten, never stacked. */
+		/**
+		* The transient line. Not a report: it is overwritten, never stacked.
+		*
+		* An EMPTY text retires it. A run that ends — completed, refused or failed —
+		* must not leave "Processing : 99%" standing above the report that says it
+		* stopped; and `clear()` cannot be used for that, because clear() also drops
+		* the warnings the run accumulated, which are precisely what has to survive
+		* to the end (a CPU fallback, a skipped fragment, speakers not detected).
+		*/
 		progress : function( text ) {
-			progress_node.classList.remove('hide')
-			progress_node.textContent = text
-			node.classList.remove('hide')
+			const line = typeof text==='string' ? text : ''
+			progress_node.textContent = line
+			progress_node.classList.toggle('hide', line==='')
+			if (line!=='') node.classList.remove('hide')
 		},
 
 		/**

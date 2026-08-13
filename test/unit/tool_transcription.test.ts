@@ -392,6 +392,54 @@ function stubNode(...initial: string[]): StubNode {
 	};
 }
 
+/**
+ * The tool's ONE status panel (tools/…/js/render_transcription_status.js), stubbed.
+ *
+ * The poller used to write into a `status_container` div and toggle
+ * error/processing/hide classes on it; the panel replaced that node because its
+ * error writer never removed the `hide` class, so failures raised before a run
+ * were invisible. What the assertions below check is unchanged — the user must
+ * not read "Process done" for a failure — only WHERE it is now written.
+ */
+interface StubPanel {
+	reports: { severity?: string; message?: string }[];
+	/** everything shown, in order — a report's message or a progress line */
+	shown: string[];
+	report: (input: { severity?: string; message?: string }) => void;
+	progress: (text: string) => void;
+	clear: () => void;
+	readiness: (lines: unknown[]) => void;
+	node: unknown;
+}
+function stubPanel(): StubPanel {
+	const reports: { severity?: string; message?: string }[] = [];
+	const shown: string[] = [];
+	return {
+		reports,
+		shown,
+		report: (input) => {
+			reports.push(input);
+			shown.push(input?.message ?? '');
+		},
+		progress: (text: string) => {
+			shown.push(text);
+		},
+		clear: () => {
+			reports.length = 0;
+			shown.length = 0;
+		},
+		readiness: () => {},
+		node: null,
+	};
+}
+/** What the user reads: the last thing the panel was told to show. */
+function panelText(panel: StubPanel): string {
+	return panel.shown.at(-1) ?? '';
+}
+function panelIsError(panel: StubPanel): boolean {
+	return panel.reports.some((r) => r.severity === 'error');
+}
+
 let getServerStatus: (options: unknown) => void;
 
 async function loadClientPoller(): Promise<(options: unknown) => void> {
@@ -424,8 +472,7 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 	const scheduled: number[] = [];
 	const refreshes: number[] = [];
 	const requests: unknown[] = [];
-	// the real node is created as 'status_container hide' (.hide = display:none)
-	const status_container = stubNode('hide');
+	const status_panel = stubPanel();
 	const button = stubNode('disable');
 
 	// biome-ignore lint/suspicious/noExplicitAny: browser globals the client module reads free.
@@ -456,7 +503,7 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 		},
 	};
 	const nodes = {
-		status_container,
+		status_panel,
 		button_automatic_transcription: button,
 		transcriber_engine_select: { value: 'babel_transcriber' },
 	};
@@ -471,7 +518,7 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 		g.setTimeout = prior.setTimeout;
 	}
 
-	return { deleted, scheduled, refreshes, requests, status_container, button };
+	return { deleted, scheduled, refreshes, requests, status_panel, button };
 }
 
 describe('client poll honesty (render_tool_transcription.get_server_status)', () => {
@@ -486,13 +533,12 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 			errors: ['invalid transcriber URL'],
 		});
 		// the whole point: the user must not read "Process done"
-		expect(run.status_container.textContent).not.toBe('Process done');
-		expect(run.status_container.textContent).toContain('invalid transcriber URL');
-		expect(run.status_container.classList.contains('error')).toBe(true);
-		expect(run.status_container.classList.contains('processing')).toBe(false);
-		// the node ships hidden (.hide = display:none !important): an error written
-		// into it is only honest if it is actually shown.
-		expect(run.status_container.classList.contains('hide')).toBe(false);
+		expect(panelText(run.status_panel)).not.toBe('Process done');
+		expect(panelText(run.status_panel)).toContain('invalid transcriber URL');
+		expect(panelIsError(run.status_panel)).toBe(true);
+		// a failure is a REPORT, never the transient progress line: progress is
+		// overwritten by the next percentage, a report stands.
+		expect(run.status_panel.reports.length).toBe(1);
 		// the pid is the only handle on the running job — it must survive
 		expect(run.deleted).toEqual([]);
 		// polling STOPS: no re-poll, and no component refresh was scheduled
@@ -503,8 +549,8 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	test('a status-less / malformed envelope is treated as a failure, not as done', async () => {
 		for (const response of [undefined, null, {}, { result: null }, { result: 'unexpected' }]) {
 			const run = await drivePoll(response);
-			expect(run.status_container.textContent).not.toBe('Process done');
-			expect(run.status_container.classList.contains('error')).toBe(true);
+			expect(panelText(run.status_panel)).not.toBe('Process done');
+			expect(panelIsError(run.status_panel)).toBe(true);
 			expect(run.deleted).toEqual([]);
 			expect(run.scheduled).toEqual([]);
 		}
@@ -517,23 +563,22 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 
 	test('status 2 still re-polls and keeps the pid', async () => {
 		const run = await drivePoll({ result: { status: 2 }, msg: 'OK. Request done' });
-		expect(run.status_container.textContent).toBe('Processing');
-		expect(run.status_container.classList.contains('processing')).toBe(true);
-		expect(run.status_container.classList.contains('error')).toBe(false);
+		expect(panelText(run.status_panel)).toBe('Processing');
+		expect(panelIsError(run.status_panel)).toBe(false);
 		expect(run.deleted).toEqual([]);
 		expect(run.scheduled).toEqual([4000]);
 	});
 
 	test('status 3 still clears the pid and refreshes the component', async () => {
 		const run = await drivePoll({ result: { status: 3 }, msg: 'OK. Request done' });
-		expect(run.status_container.textContent).toBe('Process done');
+		expect(panelText(run.status_panel)).toBe('Process done');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([4000]);
 	});
 
 	test('status 1 still clears the stale pid and reads Inactive', async () => {
 		const run = await drivePoll({ result: { status: 1 }, msg: 'OK. Request done' });
-		expect(run.status_container.textContent).toBe('Inactive');
+		expect(panelText(run.status_panel)).toBe('Inactive');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([]);
 	});
@@ -548,8 +593,8 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 		const envelope = liveFailureEnvelope();
 		expect(envelope.result).toBe(false); // the harvest actually ran
 		const run = await drivePoll(envelope);
-		expect(run.status_container.textContent).toContain(envelope.msg);
-		expect(run.status_container.classList.contains('error')).toBe(true);
+		expect(panelText(run.status_panel)).toContain(envelope.msg);
+		expect(panelIsError(run.status_panel)).toBe(true);
 		expect(run.deleted).toEqual([]);
 		expect(run.scheduled).toEqual([]);
 	});
@@ -557,7 +602,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	test('no stored pid → the poll never calls the server at all', async () => {
 		const run = await drivePoll({ result: { status: 3 } }, null);
 		expect(run.requests).toEqual([]);
-		expect(run.status_container.textContent).toBe('');
+		expect(run.status_panel.shown).toEqual([]);
 	});
 });
 

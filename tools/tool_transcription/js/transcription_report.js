@@ -9,8 +9,8 @@
 * on.
 *
 * WHY THIS EXISTS. The engine used to speak in five voices — set_status, set_error,
-* ui.show_message, alert() and console — and the paths that mattered most spoke in
-* the last one. A failure to load the model surfaced as
+* ui.show_message, a blocking modal dialog and console — and the paths that
+* mattered most spoke in the last one. A failure to load the model surfaced as
 * "Can't create a session. ERROR_CODE: 7, ERROR_MESSAGE: Failed to load model
 * because protobuf parsing failed." in a console nobody had open, while the user
 * saw a button that stopped responding. One shape, produced everywhere, is what
