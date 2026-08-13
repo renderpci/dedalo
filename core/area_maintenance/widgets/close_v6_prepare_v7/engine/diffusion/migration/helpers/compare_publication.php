@@ -94,7 +94,7 @@
 	$example_width	= 200;
 	$quiet			= false;
 
-	$VALID_NORMALIZERS = ['media', 'json', 'numeric', 'ws'];
+	$VALID_NORMALIZERS = ['media', 'json', 'numeric', 'ws', 'float'];
 
 	foreach (array_slice($argv, 1) as $a) {
 		if (str_starts_with($a, '--schema6=')) {
@@ -179,8 +179,22 @@
 	 * comparison has already failed — so a column that matches outright is
 	 * never reported as merely accepted.
 	 */
-	$json_multiset_equal = function($a, $b) : bool {
+	$json_multiset_equal = function($a, $b) use (&$json_multiset_equal) : bool {
 		if (!is_string($a) || !is_string($b)) return false;
+		// PIPE-GROUPED payload: v6's resolve_value publishes one json array PER
+		// SOURCE, imploded with ' | ' (games.indexations_related). Compare it
+		// group by group — the GROUPS stay ordered (they carry v6's source
+		// order, which is deterministic), only the entries INSIDE a group are
+		// order-insensitive.
+		if (strpos($a, ' | ') !== false || strpos($b, ' | ') !== false) {
+			$ga = explode(' | ', $a);
+			$gb = explode(' | ', $b);
+			if (count($ga) !== count($gb)) return false;
+			foreach ($ga as $i => $part) {
+				if (!$json_multiset_equal($part, $gb[$i])) return false;
+			}
+			return true;
+		}
 		$da = json_decode($a, true);
 		$db = json_decode($b, true);
 		if (!is_array($da) || !is_array($db)) return false;
@@ -273,6 +287,37 @@
 		if (!is_string($v) || strpos($v, '/dedalo/') === false) {
 			return $v;
 		}
+		// JSON-CARRIED media. A column whose v6 form is a json ARRAY of paths
+		// (games.other_images_resolved -> ["/dedalo/media_mib/…1041.jpg", …])
+		// never starts with /dedalo/ as a whole, so the |-segment rule below
+		// left every element untouched and the column reported MISMATCH on the
+		// prefix alone — the exact difference this normaliser exists to absorb.
+		// Decode, rewrite each string element that IS a media path, re-encode.
+		// Both sides run through the same encoder, so the re-encoding itself
+		// cannot manufacture a difference.
+		$trimmed = ltrim($v);
+		if ($trimmed !== '' && ($trimmed[0] === '[' || $trimmed[0] === '{')) {
+			$decoded = json_decode($v);
+			if (json_last_error() === JSON_ERROR_NONE && (is_array($decoded) || is_object($decoded))) {
+				$walk = function($node) use (&$walk, $MEDIA_CANONICAL) {
+					if (is_string($node)) {
+						return str_starts_with($node, '/dedalo/')
+							? preg_replace('#^/dedalo/[^/]+/#', $MEDIA_CANONICAL, $node, 1)
+							: $node;
+					}
+					if (is_array($node)) {
+						foreach ($node as $k => $item) { $node[$k] = $walk($item); }
+						return $node;
+					}
+					if (is_object($node)) {
+						foreach (get_object_vars($node) as $k => $item) { $node->{$k} = $walk($item); }
+						return $node;
+					}
+					return $node;
+				};
+				return json_encode($walk($decoded), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+		}
 		$parts = explode('|', $v);
 		foreach ($parts as $i => $p) {
 			if (str_starts_with($p, '/dedalo/')) {
@@ -326,12 +371,58 @@
 	};
 
 	/** Apply one named normaliser to both sides and test equality. */
-	$apply = function(string $name, $a, $b) use ($norm_ws, $norm_media, $norm_json, $as_number) {
+	/**
+	 * float: JSON-CARRIED DOUBLES that are the same IEEE value written differently.
+	 *
+	 * v6 passes every geojson coordinate through number_format($v, 16) and
+	 * json_decode()s the text back (component_geolocation::
+	 * get_diffusion_value_as_geojson :464-470). PHP 8.5's round() shifts 1,643 of
+	 * this install's 133,872 stored coordinates by exactly ONE ULP, so v6 writes
+	 * -0.8792865200000001 where the stored value (and v7) is -0.87928652 — the
+	 * same coordinate to ~6 picometres, and the same double to every JSON reader
+	 * after one round of parsing.
+	 *
+	 * OFF BY DEFAULT and deliberately so: enabling it declares that a ≤1-ULP
+	 * coordinate difference is acceptable in the published bytes, which is a
+	 * DECISION for the operator, not a normalisation the harness may assume.
+	 * Run with --normalize=media,float to see what it absorbs.
+	 *
+	 * Re-encodes every number in a decoded JSON payload at 15 significant digits
+	 * (the precision both engines agree on); non-JSON values pass through.
+	 */
+	$norm_float = function($v) {
+		if (!is_string($v)) return $v;
+		$trimmed = ltrim($v);
+		if ($trimmed === '' || ($trimmed[0] !== '[' && $trimmed[0] !== '{')) return $v;
+		$decoded = json_decode($v);
+		if (json_last_error() !== JSON_ERROR_NONE || (!is_array($decoded) && !is_object($decoded))) {
+			return $v;
+		}
+		$walk = function($node) use (&$walk) {
+			if (is_float($node)) {
+				return (float)sprintf('%.15G', $node);
+			}
+			if (is_array($node)) {
+				foreach ($node as $k => $item) { $node[$k] = $walk($item); }
+				return $node;
+			}
+			if (is_object($node)) {
+				foreach (get_object_vars($node) as $k => $item) { $node->{$k} = $walk($item); }
+				return $node;
+			}
+			return $node;
+		};
+		return json_encode($walk($decoded), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	};
+
+	$apply = function(string $name, $a, $b) use ($norm_ws, $norm_media, $norm_json, $as_number, $norm_float) {
 		switch ($name) {
 			case 'ws':
 				return [$norm_ws($a), $norm_ws($b)];
 			case 'media':
 				return [$norm_media($a), $norm_media($b)];
+			case 'float':
+				return [$norm_float($a), $norm_float($b)];
 			case 'json':
 				return [$norm_json($a), $norm_json($b)];
 			case 'numeric':
