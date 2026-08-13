@@ -319,3 +319,93 @@ describe('modelState evidences each file, and says whether it knows their names'
 		expect(known.files.map((file) => file.file)).toContain('onnx/encoder_model_q4.onnx');
 	});
 });
+
+/**
+ * THE MODEL'S KIND DECIDES ITS FILES — never an ASR assumption.
+ *
+ * A pyannote SEGMENTATION model (and the WeSpeaker EMBEDDING model beside it) is
+ * `config.json` + `onnx/model.onnx`: no encoder, no merged decoder. Answering it
+ * with the ASR file list reported a perfectly healthy speaker model `incomplete`,
+ * which disabled the speaker-detection checkbox, printed "incomplete download" in
+ * the panel, and made the repair refusal tell the administrator to re-import the
+ * tools registry — advice that cannot help a model that is not ASR-shaped at all.
+ */
+describe('a diarization model answers for ITS OWN files', () => {
+	const SEG = 'onnx-community/pyannote-segmentation-TEST';
+	const dir = () => join(STORE, SEG);
+
+	beforeAll(() => {
+		mkdirSync(join(dir(), 'onnx'), { recursive: true });
+		writeFileSync(join(dir(), 'config.json'), '{"model_type":"pyannote"}');
+		writeFileSync(join(dir(), 'onnx', 'model.onnx'), '\x08SEGMENTATION-WEIGHTS');
+	});
+	afterAll(() => rmSync(dir(), { recursive: true, force: true }));
+
+	test('modelFiles asks for onnx/model.onnx, not an encoder/decoder pair', () => {
+		expect(modelFiles(undefined, 'diarization')).toEqual(['config.json', 'onnx/model.onnx']);
+		// A declared dtype names the parts itself; the kind changes nothing there.
+		expect(modelFiles({ model: 'q8' }, 'diarization')).toEqual([
+			'config.json',
+			'onnx/model_quantized.onnx',
+		]);
+	});
+
+	test('a healthy dtype-less diarization model is NOT reported incomplete', () => {
+		// THE REGRESSION: with the ASR shape this said `incomplete` and the
+		// checkbox went dead on a model with every file it needs.
+		const report = modelState(SEG, undefined, 'diarization');
+		expect(report.state).toBe('unverified'); // present, never size-checked
+		expect(report.files.map((entry) => entry.file)).toEqual(['config.json', 'onnx/model.onnx']);
+		expect(modelInstalled(SEG, undefined, 'diarization')).toBe(true);
+	});
+
+	test('with its dtype declared the answer is exact, and a truncation still shows', () => {
+		expect(modelState(SEG, { model: 'fp32' }, 'diarization').state).toBe('unverified');
+		recordFileComplete(STORE, SEG, 'onnx/model.onnx', 999999);
+		expect(modelState(SEG, { model: 'fp32' }, 'diarization').state).toBe('incomplete');
+	});
+
+	test('a genuinely missing diarization model is missing, not incomplete', () => {
+		expect(modelState('onnx-community/pyannote-absent-TEST', undefined, 'diarization').state).toBe(
+			'missing',
+		);
+	});
+
+	test('an UNRECOGNISED kind says what it can see instead of inventing a verdict', () => {
+		// The honest degradation: no file list can be DERIVED for a kind this build
+		// cannot read, so the report is built from the files actually on disk —
+		// never from guessed names that would manufacture an `incomplete` verdict
+		// about a healthy install.
+		const model = 'vendor/unknown-kind-TEST';
+		mkdirSync(join(STORE, model, 'onnx'), { recursive: true });
+		writeFileSync(join(STORE, model, 'config.json'), '{"model_type":"something-new"}');
+		writeFileSync(join(STORE, model, 'onnx', 'model.onnx'), '\x08WEIGHTS');
+		try {
+			const report = modelState(model, undefined, 'unknown');
+			expect(report.state).toBe('unverified');
+			expect(report.files.map((entry) => entry.file)).toEqual(['config.json', 'onnx/model.onnx']);
+		} finally {
+			rmSync(join(STORE, model), { recursive: true, force: true });
+		}
+	});
+});
+
+/**
+ * The completion manifest is INTERNAL bookkeeping. It is `.json`, so the
+ * extension allowlist would otherwise serve it on the anonymous model route — it
+ * leaks only byte sizes, but nothing the browser needs is in it and there is no
+ * reason for it to be public.
+ */
+describe('the bookkeeping manifest is not servable', () => {
+	test('.dedalo_model.json 404s while the files the browser needs still serve', async () => {
+		recordFileComplete(STORE, MODEL, 'config.json', 24);
+		const manifest = await get(`${AI_MODEL_URL_PREFIX}${MODEL}/.dedalo_model.json`);
+		expect(manifest.status).toBe(404);
+		expect(resolveModelPath(`${MODEL}/.dedalo_model.json`)).toBeNull();
+
+		// What the browser DOES need is untouched: the config, the tokenizer JSON
+		// beside it, and the weights.
+		expect(resolveModelPath(`${MODEL}/config.json`)).not.toBeNull();
+		expect((await get(`${AI_MODEL_URL_PREFIX}${MODEL}/config.json`)).status).toBe(200);
+	});
+});

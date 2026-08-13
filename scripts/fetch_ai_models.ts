@@ -128,7 +128,12 @@ function readCatalog(): CatalogModel[] {
  */
 function filesFor(model: CatalogModel): string[] {
 	const common = model.kind === 'diarization' ? DIARIZATION_COMMON_FILES : COMMON_FILES;
-	return [...common, ...modelFiles(model.dtype).filter((file) => file !== 'config.json')];
+	// The WEIGHT names follow the model's kind: a diarization folder is a single
+	// onnx/model.onnx, never an encoder/decoder pair.
+	return [
+		...common,
+		...modelFiles(model.dtype, model.kind ?? 'asr').filter((file) => file !== 'config.json'),
+	];
 }
 
 function usage(): void {
@@ -175,6 +180,7 @@ async function fetchModel(modelId: string, store: string): Promise<void> {
 		store,
 		quiet: false,
 		onFile: (file) => console.log(`  ↓ ${file}`),
+		kind: model.kind ?? 'asr',
 		...(model.kind === 'diarization'
 			? { commonFiles: DIARIZATION_COMMON_FILES, optionalFiles: [] as string[] }
 			: {}),

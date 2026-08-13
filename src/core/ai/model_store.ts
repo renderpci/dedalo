@@ -36,11 +36,11 @@ import {
 	realpathSync,
 	statSync,
 } from 'node:fs';
-import { extname, resolve, sep } from 'node:path';
+import { basename, extname, resolve, sep } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
 import { staticAssetResponse } from '../api/static_asset.ts';
-import { expectedSize } from './model_manifest.ts';
+import { expectedSize, MANIFEST_FILE } from './model_manifest.ts';
 
 /** URL prefix the store is served at. */
 export const AI_MODEL_URL_PREFIX = '/dedalo/ai_models/';
@@ -84,14 +84,60 @@ export const DTYPE_SUFFIX: Readonly<Record<string, string>> = {
 const REQUIRED_CONFIG = 'config.json';
 
 /**
+ * WHAT KIND OF MODEL THIS IS — because the required files follow from the kind,
+ * never from an assumption.
+ *
+ * An ASR (Whisper) folder is an encoder plus a merged decoder; a pyannote
+ * SEGMENTATION or a WeSpeaker EMBEDDING folder is a single `onnx/model.onnx`.
+ * Answering the second with the first's file list reported a perfectly healthy
+ * speaker-detection model as `incomplete`, which disabled the checkbox, printed
+ * "incomplete download" in the panel, and made the repair refusal tell the
+ * administrator to re-import the tools registry — advice that cannot help,
+ * because the model was never ASR-shaped at all.
+ *
+ * `unknown` is a real answer and NOT a synonym for `asr`: a caller that cannot
+ * say (a catalog entry with neither `kind` nor `dtype`) gets an honest verdict
+ * built from what is actually on disk, rather than a confident wrong one built
+ * from guessed filenames. The catalog knows the kind (`register.json` carries
+ * `kind: 'diarization'` on both speaker slots) — thread it, never infer it from
+ * the model id.
+ */
+export type ModelKind = 'asr' | 'diarization' | 'unknown';
+
+/**
+ * The weight parts a kind has when the catalog declares no `dtype` — the fp32
+ * placeholder names. `unknown` has none: there is nothing to place.
+ */
+const DEFAULT_PARTS: Readonly<Record<ModelKind, Record<string, string>>> = {
+	asr: { encoder_model: 'fp32', decoder_model_merged: 'fp32' },
+	diarization: { model: 'fp32' },
+	unknown: {},
+};
+
+/**
+ * The weight-file prefixes a kind's ONNX directory must hold, used by the
+ * dtype-less fallback to recognise a quantised install by its real filenames.
+ * EVERY prefix must be matched: an ASR model needs both halves, a diarization
+ * model needs its one.
+ */
+const WEIGHT_PREFIXES: Readonly<Record<ModelKind, readonly string[]>> = {
+	asr: ['encoder_model', 'decoder_model_merged'],
+	diarization: ['model'],
+	unknown: [],
+};
+
+/**
  * The exact files one catalog entry needs in the store to be USABLE — its config
  * plus the ONNX weights for the quantisation the catalog declares. A model whose
  * config is present but whose weights are the wrong variant is NOT installed, and
  * saying so here is what stops the browser failing later with "Could not locate
  * file" from inside the ONNX runtime.
+ *
+ * `kind` decides the placeholder names used when there is no `dtype`; with one,
+ * the declaration itself names the parts and the kind changes nothing.
  */
-export function modelFiles(dtype?: Record<string, string>): string[] {
-	const parts = dtype ?? { encoder_model: 'fp32', decoder_model_merged: 'fp32' };
+export function modelFiles(dtype?: Record<string, string>, kind: ModelKind = 'asr'): string[] {
+	const parts = dtype ?? DEFAULT_PARTS[kind];
 	const files = [REQUIRED_CONFIG];
 	for (const [part, quant] of Object.entries(parts)) {
 		const suffix = DTYPE_SUFFIX[quant];
@@ -111,7 +157,11 @@ export function modelFiles(dtype?: Record<string, string>): string[] {
  * would report every store empty. So the fallback asks the weaker but true
  * question: is there a config and at least one encoder AND one decoder variant?
  */
-export function modelInstalled(modelId: string, dtype?: Record<string, string>): boolean {
+export function modelInstalled(
+	modelId: string,
+	dtype?: Record<string, string>,
+	kind: ModelKind = 'asr',
+): boolean {
 	const root = modelStoreRoot();
 	const present = (file: string): boolean => {
 		const path = resolve(root, modelId, file);
@@ -122,18 +172,27 @@ export function modelInstalled(modelId: string, dtype?: Record<string, string>):
 		}
 	};
 
-	if (dtype !== undefined) return modelFiles(dtype).every(present);
+	if (dtype !== undefined) return modelFiles(dtype, kind).every(present);
 
 	if (!present(REQUIRED_CONFIG)) return false;
-	let weights: string[];
-	try {
-		weights = readdirSync(resolve(root, modelId, 'onnx'));
-	} catch {
-		return false;
-	}
+	const weights = onnxDirEntries(root, modelId);
+	if (weights === null) return false;
 	const has = (prefix: string): boolean =>
 		weights.some((file) => file.startsWith(prefix) && file.endsWith('.onnx'));
-	return has('encoder_model') && has('decoder_model_merged');
+	// An UNKNOWN kind has no prefix list to satisfy: any weight file at all is the
+	// most that can honestly be asserted (`every` over an empty list would say
+	// "installed" for a store with none, so ask the disk instead).
+	if (kind === 'unknown') return weights.some((file) => file.endsWith('.onnx'));
+	return WEIGHT_PREFIXES[kind].every(has);
+}
+
+/** The model's `onnx/` listing, or null when there is no such directory. */
+function onnxDirEntries(root: string, modelId: string): string[] | null {
+	try {
+		return readdirSync(resolve(root, modelId, 'onnx'));
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -144,21 +203,22 @@ export function modelInstalled(modelId: string, dtype?: Record<string, string>):
  * the fp32 placeholder names (which correctly reports "missing"/"incomplete"
  * for a genuinely empty or partial store — see modelState).
  */
-function fallbackWeightsFiles(root: string, modelId: string): string[] {
-	let weights: string[];
-	try {
-		weights = readdirSync(resolve(root, modelId, 'onnx'));
-	} catch {
-		return [];
+function fallbackWeightsFiles(root: string, modelId: string, kind: ModelKind): string[] {
+	const weights = onnxDirEntries(root, modelId);
+	if (weights === null) return [];
+	// An UNKNOWN kind cannot say which weights SHOULD be there, so it reports on
+	// the ones that ARE: real names, from the disk itself, and never a guess that
+	// would manufacture an `incomplete` verdict out of an assumption.
+	if (kind === 'unknown') {
+		return weights.filter((file) => file.endsWith('.onnx')).map((file) => `onnx/${file}`);
 	}
-	const encoder = weights.find(
-		(file) => file.startsWith('encoder_model') && file.endsWith('.onnx'),
-	);
-	const decoder = weights.find(
-		(file) => file.startsWith('decoder_model_merged') && file.endsWith('.onnx'),
-	);
-	if (encoder === undefined || decoder === undefined) return [];
-	return [`onnx/${encoder}`, `onnx/${decoder}`];
+	const found: string[] = [];
+	for (const prefix of WEIGHT_PREFIXES[kind]) {
+		const match = weights.find((file) => file.startsWith(prefix) && file.endsWith('.onnx'));
+		if (match === undefined) return []; // an incomplete pair names nothing
+		found.push(`onnx/${match}`);
+	}
+	return found;
 }
 
 /**
@@ -281,7 +341,11 @@ export function fileEvidence(root: string, modelId: string, file: string): Model
 	};
 }
 
-export function modelState(modelId: string, dtype?: Record<string, string>): ModelStateReport {
+export function modelState(
+	modelId: string,
+	dtype?: Record<string, string>,
+	kind: ModelKind = 'asr',
+): ModelStateReport {
 	const root = modelStoreRoot();
 	// No dtype declared: an older registered catalog that predates per-model
 	// quantisation — which getToolConfig reading straight from the DB makes a
@@ -291,14 +355,22 @@ export function modelState(modelId: string, dtype?: Record<string, string>): Mod
 	// and only fall back to the fp32 placeholders when it is not — which keeps
 	// the correct "missing"/"incomplete" verdict for a genuinely empty/partial
 	// store.
-	const fallbackFound = dtype === undefined ? fallbackWeightsFiles(root, modelId) : [];
+	//
+	// The file list follows the model's KIND, never an ASR assumption: a pyannote
+	// segmentation folder holds config.json + onnx/model.onnx and nothing else, so
+	// demanding an encoder/decoder pair of it reported a healthy speaker model
+	// `incomplete` and aimed a repair at a shape it does not have.
+	const fallbackFound = dtype === undefined ? fallbackWeightsFiles(root, modelId, kind) : [];
 	const wanted =
 		dtype !== undefined
-			? modelFiles(dtype)
+			? modelFiles(dtype, kind)
 			: fallbackFound.length > 0
 				? [REQUIRED_CONFIG, ...fallbackFound]
-				: modelFiles();
+				: modelFiles(undefined, kind);
 
+	// With an UNKNOWN kind and no dtype there are no placeholder names to fall
+	// back to (modelFiles yields the config alone), so a store holding weights we
+	// cannot classify is never called `incomplete` on the strength of a guess.
 	const namesKnown = dtype !== undefined || fallbackFound.length > 0;
 	const files: ModelFileEvidence[] = wanted.map((file) => fileEvidence(root, modelId, file));
 	const verdict = (state: ModelState): ModelStateReport => ({ state, files, namesKnown });
@@ -368,7 +440,7 @@ export function resolveModelPath(subPath: string): string | null {
 	if (fullPath !== canonicalRoot && !fullPath.startsWith(canonicalRoot + sep)) {
 		return null; // traversal attempt
 	}
-	if (!SERVABLE_EXTENSIONS.has(extname(fullPath).toLowerCase())) return null;
+	if (!isServableFile(fullPath)) return null;
 	if (!existsSync(fullPath)) return null;
 	// MODEL-02 (2026-07-28 audit): the string check above only confines resolve()'s
 	// path — a SYMLINK LEAF inside the store still reads its target. Realpath the
@@ -417,6 +489,21 @@ export async function serveModelRequest(
 		response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 	}
 	return response;
+}
+
+/**
+ * May this NAME be served at all? An allowlisted extension, and not the
+ * completion manifest.
+ *
+ * The manifest is INTERNAL bookkeeping and it is `.json`, so the extension
+ * allowlist alone would serve it on this anonymous route. The browser never asks
+ * for it — it loads config.json, the tokenizer/preprocessor JSON and the
+ * weights — while the manifest names this install's own files and their exact
+ * byte lengths. Nothing needs it; nobody outside gets it.
+ */
+function isServableFile(fullPath: string): boolean {
+	if (!SERVABLE_EXTENSIONS.has(extname(fullPath).toLowerCase())) return false;
+	return basename(fullPath) !== MANIFEST_FILE;
 }
 
 /** 404 without leaking whether the target exists. */

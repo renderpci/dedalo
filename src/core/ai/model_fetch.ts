@@ -40,7 +40,7 @@ function isSafeModelSegment(value: string): boolean {
 }
 
 import { expectedSize, recordFileComplete } from './model_manifest.ts';
-import { modelFiles, modelStoreRoot } from './model_store.ts';
+import { type ModelKind, modelFiles, modelStoreRoot } from './model_store.ts';
 
 /** Where model files are fetched from when a download is requested. */
 export const HUB_BASE = 'https://huggingface.co';
@@ -184,6 +184,13 @@ export interface DownloadOptions {
 	commonFiles?: readonly string[];
 	optionalFiles?: readonly string[];
 	/**
+	 * WHAT KIND of model this is — which decides the WEIGHT filenames when the
+	 * catalog declares no `dtype`. A diarization model is `onnx/model.onnx`, not
+	 * an encoder/decoder pair, so seeding a dtype-less speaker model as ASR asked
+	 * the hub for two files that do not exist and never fetched the one that does.
+	 */
+	kind?: ModelKind;
+	/**
 	 * FETCH EXACTLY THESE FILES, instead of the computed set.
 	 *
 	 * The repair path's whole contract: re-fetch precisely what it removed. Left
@@ -326,7 +333,9 @@ function wantedFiles(
 	options: DownloadOptions,
 ): string[] {
 	if (options.files !== undefined) return [...new Set(options.files)];
-	return [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])];
+	return [
+		...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype, options.kind)]),
+	];
 }
 
 function planDownload(
