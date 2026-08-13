@@ -63,8 +63,23 @@ const RULES = [
 		action_key	: 'action_lower_quality'
 	},
 	{
+		key			: 'audio_undecodable',
+		match		: /decode audio|decodeaudiodata|audiocontext|unsupported audio/i,
+		phase		: 'audio',
+		message_key	: 'error_audio_undecodable',
+		cause_key	: 'cause_audio_undecodable',
+		action_key	: 'action_check_media'
+	},
+	{
 		key			: 'device_lost',
-		match		: /device (was )?lost|adapter.*lost|createbuffer|gpu.*(failed|error)/i,
+		// "createbuffer" alone is NOT enough: AudioContext.createBuffer() is a real
+		// Web Audio API method, and a genuine audio failure such as "Failed to
+		// execute 'createBuffer' on 'BaseAudioContext': invalid number of channels"
+		// used to be misclassified as a lost GPU device (told the archivist to
+		// retry on the CPU, when the fix was to check the audio file). Require a
+		// GPU-side qualifier adjacent to createbuffer so only WebGPU's
+		// device.createBuffer collides here.
+		match		: /device (was )?lost|adapter.*lost|(gpu|webgpu|adapter|device).{0,40}createbuffer|createbuffer.{0,40}(gpu|webgpu|adapter|device)|gpu.*(failed|error)/i,
 		phase		: 'model',
 		message_key	: 'error_device_lost',
 		cause_key	: 'cause_device_lost',
@@ -77,14 +92,6 @@ const RULES = [
 		message_key	: 'error_not_isolated',
 		cause_key	: 'cause_not_isolated',
 		action_key	: 'action_ask_admin'
-	},
-	{
-		key			: 'audio_undecodable',
-		match		: /decode audio|decodeaudiodata|audiocontext|unsupported audio/i,
-		phase		: 'audio',
-		message_key	: 'error_audio_undecodable',
-		cause_key	: 'cause_audio_undecodable',
-		action_key	: 'action_check_media'
 	},
 	{
 		key			: 'network',

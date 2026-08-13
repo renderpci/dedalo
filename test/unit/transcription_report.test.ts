@@ -54,6 +54,14 @@ describe('classify_failure maps runtime strings to remedies', () => {
 		expect(classify_failure('Unable to decode audio data', {}).key).toBe('audio_undecodable');
 	});
 
+	test('a bare AudioContext.createBuffer failure is audio, not a lost GPU device', () => {
+		const report = classify_failure(
+			"Failed to execute 'createBuffer' on 'BaseAudioContext': invalid number of channels",
+			{},
+		);
+		expect(report.key).toBe('audio_undecodable');
+	});
+
 	test('an UNRECOGNISED failure still yields a complete report with the raw text', () => {
 		const report = classify_failure('kaboom 0x8007000E', { phase: 'transcribe' });
 		expect(report.key).toBe('unknown');
