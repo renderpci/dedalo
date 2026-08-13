@@ -1242,6 +1242,11 @@ const get_server_status = function (options) {
 				nodes.button_automatic_transcription.classList.remove('disable');
 				ui.set_button_busy( nodes.button_automatic_transcription, false )
 
+				// KEPT (not the change_value refresh workaround): this path never
+				// saves from the client — the transcriber ran server-side and wrote
+				// the text there, so a rebuild is the ONLY way it reaches the editor.
+				// The delay covers the gap between "pid finished" and the result
+				// being stored.
 				setTimeout(function(){
 					self.transcription_component.refresh()
 				}, 4000)
@@ -1539,23 +1544,16 @@ const render_automatic_transcription = function (options) {
 							&& Array.isArray(self.transcription_component.data.tags_persons))
 								? self.transcription_component.data.tags_persons
 								: []
-						// The save carries `refresh: true`, but that refresh does NOT
-						// happen: change_value sets the instance status to 'changing'
-						// and only restores it AFTER the refresh block, while
-						// common.refresh REFUSES any status other than 'rendered' — it
-						// warns and returns false. So the transcript was written and
-						// the editor kept showing the old text until the page was
-						// reloaded, which is the whole reason this exists. (The server
-						// engine path in get_server_status works around the same thing
-						// with a 4-second setTimeout.)
-						//
-						// Refreshing HERE works because the save has settled by then and
-						// the status is 'rendered' again. It is a workaround, not the
-						// cure: the cure is in component_common.change_value.
+						// The save carries `refresh: true` and that refresh now really
+						// happens (component_common.change_value restores the instance
+						// status around the refresh call — until then common.refresh
+						// refused it and the editor kept the old text until a reload;
+						// this chain used to re-do the refresh here to compensate).
+						// Nothing extra is refreshed here any more: a second rebuild is
+						// a wasted round trip and a visible flicker.
+						// The catch stays: the save's own refresh can still fail, and a
+						// saved-but-not-shown transcript must be reported, not silent.
 						const save_promise = Promise.resolve( self.save_transcription( html ) )
-							.then(function(){
-								return self.transcription_component.refresh()
-							})
 							.catch(function(error){
 								// The text IS saved at this point — only the on-screen
 								// update failed. Say so rather than leave the archivist

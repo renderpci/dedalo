@@ -201,6 +201,12 @@ component_common.prototype.init = async function(options) {
 	// value_pool. queue of component value changes (needed to avoid parallel change save collisions)
 		self.change_value_pool = []
 
+	// changing. True for the whole of a change_value call (save AND the optional
+	// refresh). It — not self.status — is what makes overlapping change_value
+	// calls queue, because the status is briefly restored around the refresh.
+	// @see component_common.change_value
+		self.changing = false
+
 	// is_data_changed. bool set as true when component data changes.
 		self.is_data_changed = false
 
@@ -1185,18 +1191,25 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 * directly from UI event handlers.
 *
 * Sequence:
-*  1. Queue guard: if a change_value is already in progress (self.status === 'changing'),
+*  1. Queue guard: if a change_value is already in progress (self.changing === true),
 *     the new call is deferred into self.change_value_pool and resolved when the
-*     current call drains the queue in its finally block.
+*     current call drains the queue in its finally block. The flag — not the
+*     'changing' status string — is the authority, because the status is briefly
+*     restored around the optional refresh (step 7).
 *  2. Remove-confirmation: if any item in changed_data has action === 'remove',
 *     a confirmation dialog is shown (custom or default). Returning false cancels.
-*  3. Mark self.status = 'changing' so subsequent overlapping calls queue up.
+*  3. Mark self.changing = true (and self.status = 'changing') so subsequent
+*     overlapping calls queue up.
 *  4. update_data_value() for each item — mutates self.data.entries in memory.
 *  5. save(changed_data) — POSTs to server, updates self.data and self.db_data.
 *  6. For non-standalone components, update_datum() propagates the server result
 *     into the shared section datum.
-*  7. Optional refresh if options.refresh === true.
-*  8. Restore status and drain the queue in the finally block (always runs).
+*  7. Optional refresh if options.refresh === true — with self.status restored to
+*     its pre-change value for the duration of the call, because common.refresh
+*     refuses any status but 'rendered'. An instance that was never rendered keeps
+*     its real status, so refresh still refuses it.
+*  8. Restore status, clear self.changing and drain the queue in the finally block
+*     (always runs).
 *  9. Publish 'sync_data_' + id_base_lang → sibling components sharing the same
 *     id_base update their DOM via events_subscription.js.
 * 10. Publish 'update_value_' + id_base → ontology-defined observers react
@@ -1216,7 +1229,11 @@ component_common.prototype.change_value = async function(options) {
 	const self = this
 
 	// queue overlapped calls to avoid server concurrence issues
-		if(self.status==='changing') {
+	// The in-flight flag — NOT the status string — is the queue authority: the
+	// status is briefly restored to its real value around the optional refresh
+	// (see below), and an overlapping call arriving in that window must still
+	// queue, never race the rebuild.
+		if(self.changing===true || self.status==='changing') {
 			//console.log(`Busy change_value delayed! ${options.changed_data.action} ${self.model}`, options.changed_data);
 			return new Promise(function(resolve) {
 				resolve( function_queue(self, self.change_value_pool, self.change_value, options) );
@@ -1272,6 +1289,7 @@ component_common.prototype.change_value = async function(options) {
 		// Mark as 'changing' so overlapping change_value calls are queued (see guard
 		// above) instead of racing into save() — where the second call hits the
 		// `self.saving` guard, returns false and silently drops the change.
+		self.changing = true
 		self.status = 'changing'
 
 	// Wrap the body in try/finally so the 'changing' status is ALWAYS restored and the
@@ -1309,6 +1327,19 @@ component_common.prototype.change_value = async function(options) {
 
 		// refresh (optional, default is false)
 			if (refresh===true) {
+				// common.refresh REFUSES any status but 'rendered' (it warns
+				// "/// destroyed fail" and returns false). While 'changing' was held
+				// across this block the refresh NEVER ran: the value was saved and the
+				// component kept showing the old data until a page reload.
+				// So state the truth to refresh(): the instance IS rendered right now
+				// (the DOM is there) — 'changing' describes the save, not the render.
+				// prev_status is restored VERBATIM, so an instance that was never
+				// rendered still carries its real status and refresh still refuses it,
+				// exactly as before.
+				// The queueing invariant is untouched: self.changing stays true for the
+				// whole try block, and the guard at the top of change_value reads THAT,
+				// so an overlapping call arriving mid-refresh queues as it always did.
+				self.status = prev_status
 				await self.refresh({
 					// build_autoload default value is false but could be a function callback
 					build_autoload : build_autoload
@@ -1316,6 +1347,8 @@ component_common.prototype.change_value = async function(options) {
 			}
 
 		// restore previous status value
+		// (after a successful refresh the instance already re-reached 'rendered';
+		// prev_status is the same value in that case)
 			self.status = prev_status
 
 		// event sync_data_ . Used to update the DOM elements of the instance
@@ -1360,6 +1393,10 @@ component_common.prototype.change_value = async function(options) {
 				self.status = prev_status
 			}
 
+		// release the queue authority BEFORE draining, or the drained call would
+		// re-queue itself and the pool would never empty (deadlock).
+			self.changing = false
+
 		// exec queue one by one
 			if(self.change_value_pool.length > 0) {
 				(self.change_value_pool.shift())();
@@ -1373,7 +1410,7 @@ component_common.prototype.change_value = async function(options) {
 * FUNCTION_QUEUE
 * Defers a function call by wrapping it in a closure and pushing it onto a pool
 * array. Used by change_value() to serialise concurrent value-change calls:
-* when self.status === 'changing' the new call is queued here and the running
+* when self.changing === true the new call is queued here and the running
 * call drains it (pool.shift()()) in its finally block.
 *
 * The returned function is also resolved as the Promise value for the waiting
