@@ -131,7 +131,8 @@ Tools need a register file carrying the configuration, labels and other informat
 
 ## 4. Export the register file
 
-![download register file](assets/20260813_131945_export_register_file.png){ width="275" align=right }
+![download register file](assets/20260813_131945_export_register_file.png#only-light){ width="245" align=right }
+![download register file](assets/20260813_131945_export_register_file-dark.png#only-dark){ width="245" align=right }
 
 When the record is complete, press **Download register file** in the inspector (bottom of the *Info* block, next to *View record data*). It is offered on `dd1340` records only.
 
