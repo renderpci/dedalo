@@ -145,3 +145,25 @@ describe('pool lifecycle (no database required)', () => {
     }
   });
 });
+
+/**
+ * The tests above only mean something if they run against the REAL module.
+ *
+ * `mock.module` is process-wide and bun runs every test file in one process, so a mock of
+ * this module installed by ANY other file replaces it here too. That happened: on the
+ * Linux CI runner tests/integration.test.ts's mock made this file die at load, and once
+ * the mock was completed, the memoization test below asserted against the stub instead —
+ * silently, and only on Linux (2026-08-14). Integration tests use the __setTestDbExecute
+ * seam in db/pool.ts instead, which is scoped and restored in an afterAll.
+ */
+test('no test file installs a process-wide mock of db/pool', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const dir = new URL('.', import.meta.url).pathname;
+
+  const offenders = readdirSync(dir)
+    .filter(file => file.endsWith('.test.ts'))
+    .filter(file => /mock\.module\(\s*['"][^'"]*db\/pool['"]/.test(readFileSync(join(dir, file), 'utf8')));
+
+  expect(offenders).toEqual([]);
+});
