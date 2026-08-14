@@ -230,11 +230,14 @@ The `sqo.section_tipo` is an **array of source descriptors** (`{source, value}`)
 | `section` (default) | TLD-active-checked literal section tipos in `value` |
 | `self` | the caller's own section_tipo, `value` ignored |
 | `hierarchy_types` | the ACTIVE hierarchy sections (`resolveHierarchySectionsFromTypes()`) whose typology matches the typology ids in `value` |
+| `section_model` | the MODEL section paired with each section in `value` (`getModelSectionForSection()`) — the hierarchy registry pairing `hierarchy53` → `hierarchy58`, else the caller's TLD followed by `2`; non-section candidates are refused. **No `value` = the caller's own section**, like `self` |
 | `ontology_sections` | every registered ontology's target section (`resolveOntologySections()`), `value` ignored |
 | `field_value` | a live read of the caller's own ACTIVE records, taking each named component's data values (`value`, a list of component tipos) as target tipos, keeping only the ones that resolve to a section model |
 | `hierarchy_terms` | each entry's locator `section_tipo` (the values are term locators) |
 
 A bare string `'self'` (not wrapped in a `{source, value}` object) also resolves directly. Every resolved tipo is deduplicated and then dropped if its ontology model cannot be resolved.
+
+A component model may also declare one of these sources as its **default target** (the descriptor facet `targetSource`, `src/core/relations/request_config/target_sources.ts`). The default is applied by `buildRequestConfigForElement()` only when the built config resolved no target section at all, so a declared `sqo.section_tipo` always wins. Today one model declares one: [component_relation_model](components/component_relation_model.md#target-resolution) declares `section_model`.
 
 ### `get_ddo_map` — dynamic ddo_map
 

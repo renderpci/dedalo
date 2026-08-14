@@ -43,29 +43,92 @@
     The client class is a thin alias: `client/dedalo/core/component_relation_model/js/component_relation_model.js` exports `component_relation_model = component_select`. All client behaviour (render files, views, edit/list/search UI) is therefore [component_select](component_select.md)'s. Server-side resolution, however, has its own model-specific target-resolution rules (see below).
 
 !!! info "TS server implementation"
-    The descriptor `src/core/components/component_relation_model/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`) — the same read-side resolver as `component_select`, resolving options/labels via `src/core/relations/datalist.ts`. **Gap:** the distinctive **target resolution** described below (a hierarchy-derived target vs. `target_mode: 'free'` / `target_values`) has no dedicated implementation in this checkout — `target_mode` and a hierarchy-target-section lookup do not appear in `src/core/relations/request_config/` or `src/core/ontology/resolver.ts`. Until it lands, this component resolves the same as `component_select` (target sections come from `sqo.section_tipo`, not from hierarchy inference). See the *dedalo-relations-ts* skill.
+    The descriptor `src/core/components/component_relation_model/descriptor.ts` registers `resolveData: selectFamilyResolver` (`src/core/relations/models/select_family.ts`) — the same read-side resolver as [component_select](component_select.md), resolving options and labels through `src/core/relations/datalist.ts`. What *is* model-specific is the **target**: the descriptor declares `targetSource: 'section_model'`, and the shared request-config builder applies that rule as the node's default target whenever the node's own config resolves none. See [Target resolution](#target-resolution).
 
 ## Definition
 
-`component_relation_model` creates a **model-type relation** between the current record and another record, where the link is constrained to a *target section that is itself derived from the ontology hierarchy model*. Its default relation type is `DEDALO_RELATION_TYPE_MODEL_TIPO = 'dd98'`, distinct from the generic link type `dd151` used by [component_portal](component_portal.md).
+`component_relation_model` creates a **model-type relation** between the current record and another record, where the link is constrained to a *target section derived from the caller's own section* rather than named in the node. Its default relation type is `DEDALO_RELATION_TYPE_MODEL_TIPO = 'dd98'`, distinct from the generic link type `dd151` used by [component_portal](component_portal.md).
 
-The defining trait is **target resolution**: the component does not hardcode which section it points at. The target section tipo(s) are resolved at runtime from the element's request config (`src/core/relations/request_config/build.ts`), and the ontology node can configure them two ways:
+The defining trait is **target resolution**: the component does not hardcode which section it points at. The target section tipo(s) are resolved at runtime from the element's request config (`src/core/relations/request_config/build.ts`), and — uniquely in the relation family — the model supplies a **default target that depends on the caller**, so one ontology node serves many sections and points somewhere different in each of them. The rule is spelled out in [Target resolution](#target-resolution) below.
 
-- **Hierarchy mode** (default): the target follows the hierarchy that owns the current `section_tipo` — the hierarchy declares which section it models, and that becomes the target section tipo.
-- **Free mode** (`properties.target_mode === 'free'`): the section tipos listed in `properties.target_values` are used directly, bypassing the hierarchy lookup.
-
-**Why it exists.** In Dédalo, a thesaurus / hierarchy is split into a *structure* (the hierarchy definition) and the *records* it governs. A model relation lets a record inside a hierarchy-driven section point at the canonical "model" section that the hierarchy declares as its target, without the cataloguer or the ontology author having to repeat that target tipo in every node. The component asks the hierarchy "which section do you model?" and offers exactly those records.
+**Why it exists.** In Dédalo, a thesaurus is split into a *terms* section (the vocabulary a cataloguer browses) and a *model* section (the typologies those terms are classified by). A model relation lets a term point at its own thesaurus's model section without the ontology author repeating that target tipo in every node — which would be impossible anyway, because the very same node is inherited by every thesaurus in the install.
 
 **When to use it.**
 
-- A field whose valid options are the records of whatever section the *hierarchy* declares as its target model, so the target follows the hierarchy configuration rather than being fixed in the field itself.
-- A fixed-but-declarative variant: pin the target with `target_mode: 'free'` + `target_values` when you want the simple, explicit list-of-targets behaviour but still want the model relation type (`dd98`) and the select UI.
+- A field whose valid options are the records of the model section paired with the caller's own section, so the target follows the thesaurus configuration rather than being fixed in the field itself.
+- A fixed target with model-relation semantics: declare `sqo.section_tipo` explicitly on the node when you want the plain, explicit list-of-targets behaviour but still want the model relation type (`dd98`) and the select UI. A declared target always wins over the model's default.
 
 **When not to use it.**
 
 - A generic link to one or more arbitrary sections with autocomplete / tree / mosaic UI -> use [component_portal](component_portal.md) (relation type `dd151`).
 - A flat single/multiple choice from a target component's option list with select / radio / checkbox UI -> use [component_select](component_select.md), [component_radio_button](component_radio_button.md) or [component_check_box](component_check_box.md).
 - A thesaurus parent / child / equivalence relation -> use [component_relation_parent](component_relation_parent.md), [component_relation_children](component_relation_children.md) or [component_relation_related](component_relation_related.md).
+
+## Target resolution
+
+One node, many sections. `hierarchy27` ("Tipology") is defined once, on the thesaurus template section `hierarchy20`, and is inherited by the 54 virtual sections built from it. The section whose records it must offer is different for **every caller**: a term in `es1` is typed by the records of `es2`, a term in `fr1` by `fr2`. That answer cannot be written into the node, so the engine derives it from the caller.
+
+The derivation lives in exactly one place, `getModelSectionForSection()` (`src/core/ontology/model_section.ts`), and reaches this component through the descriptor facet `targetSource: 'section_model'`. Candidates are tried **in order, and the first one that validates wins** — a candidate that fails validation does not stop the walk.
+
+The tipos and counts below are the live ones on the development install (`dedalo_v7_mht`); yours will differ in the hierarchies, not in the rule.
+
+### 1. The hierarchy registry (data, not a naming rule)
+
+Each hierarchy is declared by a record in the hierarchy registry, and that record names both faces of the pair: `hierarchy53` is the **target section** (the terms section) and `hierarchy58` is the **target model section**. The resolver looks for the registry record whose `hierarchy53` equals the caller's `section_tipo` and takes its `hierarchy58`.
+
+Two registry sections are consulted, because both carry the same registry components:
+
+| Registry section | Holds | Matrix table |
+| --- | --- | --- |
+| `hierarchy1` | thesaurus hierarchies | `matrix_hierarchy_main` |
+| `ontology35` | main ontologies (a virtual section of `hierarchy1`) | `matrix_ontology_main` |
+
+The family is **derived**, not hardcoded: every section whose real section tipo is `hierarchy1` is a registry, so a third one added later is read with no code change. The match is exact string equality on `hierarchy53` — never a prefix or search match, because tipos nest as substrings of one another (`ich1` inside `ich145`, `hierarchy1` inside `hierarchy13`, all four of them real sections). If two rows ever declared the same `hierarchy53`, the lowest `section_id` wins. A registry row whose `hierarchy58` is absent or empty falls through to the next candidate.
+
+!!! note "Why the registry cannot be replaced by the naming rule"
+    On this install the registry row for the `WW` hierarchy pairs `mht72` with `ww2`, while the naming rule below would answer `mht2` — a `diffusion_element`, not a section. The pairing is operator data and the operator is allowed to break the naming convention.
+
+### 2. The naming rule
+
+If no registry row answers, the candidate is the caller's TLD followed by `2`: `actv1` → `actv2`, `es1` → `es2`. This is what covers the sections that have no registry row at all, and it is not optional — most callers resolve here.
+
+### 3. Validation
+
+Every candidate — registry answer **and** naming-rule answer alike — is kept only if its ontology model is `section`. Two live examples are refused by this step: `hierarchy20` (the raw template) would yield `hierarchy2`, a `component_number`, and `ich145` would yield `ich2`, a `section_group`. A candidate that equals the registry row's own `hierarchy53` is refused as well: that would point the option list at the *terms* section, whose record counts run into the tens of thousands.
+
+Validation cannot be deferred to the consumer. The resolved targets are emitted to the client as `context.target_sections` and are the tipos the CSV importer accepts, so an unvalidated tipo would travel straight into a read of a table that does not exist.
+
+### 4. Nothing resolves
+
+When no candidate validates, the component resolves **no target**: the select renders empty, the list column renders blank, and the server logs one warning naming the component, the caller section and every rejected candidate with the model it resolved to. Nothing is thrown and no request fails — the degradation is loud and bounded, never silent.
+
+### The declared configuration always wins
+
+The rule above is a **default**: a node that DECLARES `sqo.section_tipo` in its own request config, and whose declaration resolves a section, keeps it untouched. This is what lets one node of this model be pinned to a fixed section (`actv6` in `actv1`, whose target is a fixed catalogue rather than a thesaurus twin) while `hierarchy27` stays caller-derived.
+
+A target reached through the **implicit relations walk** is *not* a declaration and does not survive: a node with no request config at all would otherwise take the first section in its ontology `relations`, which for `hierarchy27` is `hierarchy20` — the thesaurus template every hierarchy is cloned from, not a list of typologies. And when the rule resolves *nothing*, the answer is no target rather than a fallback to that walk: an empty option list with a logged reason is honest, a plausible wrong list is not.
+
+The same rule is also available **explicitly**, to any component, as an `sqo.section_tipo` source named `section_model`:
+
+```json
+{ "sqo": { "section_tipo": [ { "source": "section_model" } ] } }
+```
+
+With no `value`, it resolves the caller's own section; with `value`, it resolves the model section of each listed section (`{"source": "section_model", "value": ["es1", "fr1"]}` → `es2`, `fr2`). See the [source vocabulary](../request_config.md#sqosection_tipo-source-vocabulary).
+
+!!! note "A model section targets itself, and that is correct"
+    The model sections are themselves virtual sections of `hierarchy20`, so `hierarchy27` renders inside `es2` as well — where it resolves to `es2`, its own section. 27 of the 54 inheriting sections are this case. A typology may be typed by another typology; the option list is small (tens of records), and the relations engine rejects a locator that points a record at itself. Do not read it as a resolution bug.
+
+!!! warning "Retired: `target_mode` and `target_values`"
+    The ontology keys `properties.target_mode: "free"` and `properties.target_values` are **not read**. They were a vocabulary invented for this one model that said exactly what `sqo.section_tipo` says for every other component, and they forced any reader of a node to check two places to learn where it points.
+
+    Replace `{"target_mode": "free", "target_values": ["dd922"]}` with an ordinary source descriptor on the node's request config:
+
+    ```json
+    { "sqo": { "section_tipo": [ { "source": "section", "value": ["dd922"] } ] } }
+    ```
+
+    A node still carrying the old keys is **not** silently ignored: every build of that element logs one error naming the node and the exact replacement descriptor, and then resolves by the ordinary rule. On this install the playground node `test169` is the only one carrying them.
 
 ## Data model
 
@@ -119,7 +182,7 @@ Node definition (shape):
 }
 ```
 
-Realistic `properties` block — **free mode**, pinning the target section and the column the option list shows (verified from `samples/context.json`):
+Realistic `properties` block — a **pinned** target: the node names the target section itself, and the `show.ddo_map` names the component of that section whose value labels each option:
 
 ```json
 {
@@ -127,7 +190,9 @@ Realistic `properties` block — **free mode**, pinning the target section and t
         "mode": "autocomplete",
         "request_config": [
             {
-                "sqo": { "section_tipo": [] },
+                "sqo": {
+                    "section_tipo": [ { "source": "section", "value": ["dd922"] } ]
+                },
                 "show": {
                     "ddo_map": [
                         {
@@ -141,38 +206,42 @@ Realistic `properties` block — **free mode**, pinning the target section and t
                 }
             }
         ]
-    },
-    "target_mode"   : "free",
-    "target_values" : ["dd922"]
+    }
 }
 ```
 
-Hierarchy-mode `properties` simply omit `target_mode` / `target_values`; the component then resolves the target from the hierarchy's declared model section at runtime:
+A **caller-derived** target instead leaves `sqo.section_tipo` empty (or omits it) and lets the model default fill it — this is `hierarchy27`'s own definition, whose label ddo `hierarchy25` is resolved against whichever model section the caller resolves to:
 
 ```json
 {
     "source": {
-        "mode": "autocomplete",
-        "request_config": [ { "show": { "ddo_map": [ { "tipo": "dd924", "parent": "self", "section_tipo": "self" } ] } } ]
+        "request_config": [
+            {
+                "sqo": { "section_tipo": [] },
+                "show": {
+                    "ddo_map": [
+                        {
+                            "tipo": "hierarchy25",
+                            "parent": "self",
+                            "section_tipo": "self",
+                            "value_with_parents": false
+                        }
+                    ],
+                    "fields_separator": ", "
+                }
+            }
+        ]
     }
 }
 ```
+
+Declaring `{ "source": "section_model" }` explicitly asks for the same rule and is the clearer form for a new node; leaving the array empty relies on the model default.
 
 `section_tipo` / `parent` tell the section which column owns this component's locators; on save the section is the single writer to the database. The structure-context builder (`src/core/resolve/structure_context.ts`) resolves the target sections from the parsed `request_config` and attaches each as `context.target_sections` (`{tipo, label}`), so the client knows which sections it may link to. In `edit` mode the shared select-family resolver also attaches the `datalist` (`src/core/relations/datalist.ts`, `getDatalist`) of selectable options.
 
 ## Properties & options
 
-Properties live in the ontology node `properties` JSON. Verified names consumed by this component:
-
-### target_mode
-
-- **Values:** `"free"` | *(absent / any other value)* (default: hierarchy resolution).
-- **Effect:** selects how the target section(s) are resolved. `"free"` reads `target_values` directly from the ontology; the default (absent) calculates the target from the owning hierarchy's target model component, falling back to the hierarchy prefix followed by `2`.
-
-### target_values
-
-- **Values:** array of section tipos, e.g. `["dd922"]`.
-- **Effect:** used **only when** `target_mode` is `"free"`. The explicit list of target section tipos the relation may point at. Cast to array, so a single string is accepted.
+Properties live in the ontology node `properties` JSON. Verified names consumed by this component (`target_mode` and `target_values` are **not** among them — see [Retired](#target-resolution)):
 
 ### source
 
@@ -229,7 +298,7 @@ With multiple resolved targets, define the target section in the column header a
 
 ## Notes
 
-- **Server / client split.** Only the client layer aliases [component_select](component_select.md). Server-side resolution is its own: the descriptor declares its own model relation type (`dd98`) and, in the target-resolution design, its own hierarchy-derived target section — do not assume it behaves identically to `component_select` server-side (see the TS server implementation gap above).
+- **Server / client split.** Only the client layer aliases [component_select](component_select.md). Server-side resolution is its own: the descriptor declares its own model relation type (`dd98`) and its own default target source (`section_model`, see [Target resolution](#target-resolution)) — do not assume it behaves identically to `component_select` server-side.
 - **Default tools.** A non-translatable related instance exposes `tool_propagate_component_data` and `tool_time_machine` in `context.tools` (verified from `samples/context.json`). Tools are read-only context, assembled from the model + ontology, not hardcoded in the component.
 - **Observers / observables.** Wiring, when needed, is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section), not in the component code. Observer-driven data updates are applied by the shared propagation engine (`src/core/section/record/observers.ts`) — see [Server-side observers](../system/observers.md).
 - **Shared relation behaviour.** From the relations engine (`src/core/relations/`): locator normalization and validation, adding/removing a locator (with the dataframe cascade), grid / export / diffusion resolution, the relations-index persistence, JSON diffusion output in SQL targets, parent-reference cleanup on delete, and search.
