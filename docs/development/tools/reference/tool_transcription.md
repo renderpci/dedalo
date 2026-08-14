@@ -40,7 +40,7 @@ Permission gating: the write/read target for each action is a nested `media_ddo`
 
 Two transcription paths, chosen by the configured engine's `type`:
 
-- `type: "browser"` (default, e.g. the `local` engine) → `automatic_transcription()` (client) spins up `transcribers/browser_whisper/browser_whisper.js` as a Web Worker (Transformers.js Whisper), first calls the server `create_transcribable_audio_file` action to get the 16 kHz WAV URL, fetches it **from the web server** (never through the engine — see `engineering/TRANSCRIPTION.md`; a media host on another origin must allow CORS), decodes it via `AudioContext`, **transfers** the channel data to the worker, streams progress into the UI and, on `end`, formats the returned segments into paragraphs and `set_value`s them into the text area. `delete_transcribable_audio_file` fires on EVERY exit path — success, error, cancel — because the temporary WAV is a copy of the interview. Partial results are persisted per record/component in the local `status` store, so a closed window resumes instead of restarting.
+- `type: "browser"` (default, e.g. the `local` engine) → `automatic_transcription()` (client) spins up `transcribers/browser_whisper/browser_whisper.js` as a Web Worker (Transformers.js Whisper), first calls the server `create_transcribable_audio_file` action to get the 16 kHz WAV URL, fetches it **from the web server** (never through the engine — see `engineering/TRANSCRIPTION.md`; a media host on another origin must allow CORS), decodes it via `AudioContext`, **transfers** the channel data to the worker, streams progress into the UI and, on `end`, formats the returned segments into paragraphs and `set_value`s them into the text area. `delete_transcribable_audio_file` fires on EVERY exit path — success, error, cancel — because the temporary WAV is a copy of the interview. Partial results are persisted in the local `status` store (see *Interrupting a browser run* below), so a closed window resumes instead of restarting.
 - `type: "server"` → `automatic_transcription_server()` (client) sends the `automatic_transcription` action, stores the returned `pid` in the local status DB, and polls `check_server_transcriber_status` every ~4 s until the server reports done, then refreshes the text component. Two providers sit behind it: `babel_transcriber` (external service, fetches a public media URL — stub-verified only) and `local_whisper` (the institution's own recognition box, POSTed the audio bytes; see `engineering/TRANSCRIPTION.md`).
 
 #### The browser recognition pipeline
@@ -70,6 +70,85 @@ The three `transcribers/lib/*.js` modules are plain ESM with `.d.ts` siblings an
 no build step, imported unchanged by the Bun test gates and (for `paragraphs.js`)
 by the server write-back, so browser-produced and server-produced transcripts are
 formatted identically.
+
+#### The status panel
+
+Everything the engine says to the user goes through one panel
+(`js/render_transcription_status.js`), which cannot hide a message: it replaced a
+one-line, overflow-hidden div whose error writer never removed its `hide` class,
+so every failure raised before a run started was invisible by construction.
+
+It renders three kinds of thing, in three separate nodes, and the separation is
+load-bearing:
+
+- **readiness** — what is true BEFORE the button is pressed: the selected model
+  and its state, whether the run will fall back to the processor, the language,
+  and any interrupted run waiting to be resumed. Unremarkable facts join one
+  quiet run-on line; only a line that needs attention takes a row of its own,
+  with its remedy as a **button** beside the text rather than as a sentence
+  inside it. Machine identifiers (the model id, a language's codes) go on the
+  row's `title`, not into the sentence.
+- **progress** — the transient line: phases and percentages, overwritten, never
+  stacked.
+- **messages** — standing reports, oldest first. Warnings ACCUMULATE: a run that
+  fell back to the CPU or skipped a fragment must still say so when it finishes,
+  which is why they cannot share the transient node.
+
+Severity is the panel's own vocabulary (`REPORT_SEVERITIES` in
+`js/transcription_report.js`) and rows are classed `severity_<name>`, never the
+bare word: `error` and `warning` are page-wide utility classes, and a row wearing
+the bare `error` inherited that rule's `color: white !important` and rendered
+invisible on the panel's surface. `success` is a real severity rather than a
+shade of `info` — an outcome arriving in the same neutral grey as "the model is
+unverified" is an end the reader has to infer. An unknown severity coerces to
+`error`, so an outcome can never LOSE its colour in either direction.
+
+Every severity that can reach a row must have a rule that paints it; `info` (the
+neutral default) and `progress` (which never reaches a row) are the two
+documented exceptions. A gate enforces this — see *Gates* below.
+
+#### Interrupting a browser run
+
+A browser transcription lives in the tool's tab, so a reload or a close kills the
+worker mid-window. Three mechanisms make that survivable, and they are worth
+reading together because each one covers a gap the others leave:
+
+1. **A slot per model.** Every completed window is persisted to the local
+   `status` store under `partial_id(self)` — one key per record AND per
+   component, so two transcriptions open at once cannot overwrite each other. The
+   record is `{partials: {<model>: {segments, updated}}}`: keyed BY MODEL, because
+   a single slot meant the next run's first completed window destroyed the
+   previous one — an hour recognised under one quality died at window one of
+   another, before anything could ask. Writes are read-modify-write per window
+   (a second tool window on the same record must not erase the first's slots),
+   records in the older single-slot shape are migrated on read, and slots older
+   than `PARTIAL_MAX_AGE` (14 days) are dropped on write so the store cannot grow
+   a slot per model forever. A finished run clears only its own slot.
+2. **The readiness line reads that store.** Before the button is pressed, not
+   after — the defect this fixed was not a lost transcript but an unannounced
+   one: the store was read in a single place, inside the run, so the archivist
+   returned to a tool that looked untouched. The line states how far the run got
+   (`resume_seconds_of`, the same cursor the worker restarts from, so the stated
+   timecode and the actual restart point cannot disagree) and offers
+   `action_resume`. When the saved partial belongs to a DIFFERENT model, the line
+   is a warning naming that model and offering `action_use_saved_model`, which
+   moves the picker (dispatching `change`, since assigning `.value` fires no
+   event) and lets the readiness line re-offer the resume proper.
+3. **An unload guard.** `beforeunload` is armed when the worker starts — the
+   point from which work exists that no server holds a copy of — and disarmed by
+   both `end_run` and `delete_audio`, because the success path resolves straight
+   to the caller without passing through `end_run`. The browser ignores any
+   custom text, so there is no string to translate here.
+
+The **server** engine deliberately has none of this: the job runs on the
+transcriber, the PID is in the local status store, and `get_server_status()` is
+called on render — so reopening the tool re-polls a job that never noticed the
+reload. Warning about a reload there would be a lie.
+
+!!! note "Speaker detection is not resumable"
+    Diarization runs after the last decode window and writes no partial, so an
+    interruption during that stage keeps the transcript and restarts the speaker
+    pass.
 
 Client actions worth knowing about, beyond the API ones:
 
@@ -112,7 +191,26 @@ Notes:
 - **show_in_inspector** (dd1331 → dd64 §1 = Yes) **and** **show_in_component** (dd1332 → dd64 §1 = Yes): both true — the button renders both in the inspector panel and inline in the component.
 - `properties` (dd1335): `{ "open_as": "window", "windowFeatures": null }`.
 - `default_config` (dd1633): the `transcriber_engine` / `transcriber_quality` blocks described above.
-- UI labels (dd1372): a large multilingual set (`automatic_transcription`, `build_subtitles`, `quality`, `engine`, `chars_per_line`, `processing_audio`, `initializing`, `setting_up`, `transcription_completed`, `device`/`device_auto`/`device_gpu`/`cpu_device`, `paragraphs`, `tc_mode_*`, `cancel`, `regroup_paragraphs`, `large`/`small`/`medium`/`large_turbo`/`parakeet_v3`, …), fetched client-side via `get_tool_label(...)`.
+- UI labels (dd1372): a large multilingual set (`automatic_transcription`, `build_subtitles`, `quality`, `engine`, `chars_per_line`, `preparing_audio`, `processing_audio`, `initializing`, `setting_up`, `transcription_completed`, `readiness_model`/`readiness_language`/`readiness_speakers`/`readiness_interrupted`, `state_*`, `error_*`/`cause_*`/`action_*`, `warning_*`, `device`/`device_auto`/`device_gpu`/`cpu_device`, `paragraphs`, `tc_mode_*`, `cancel`, `regroup_paragraphs`, `large`/`small`/`medium`/`large_turbo`/`parakeet_v3`, …), fetched client-side via `get_tool_label(...)`.
+
+!!! warning "A missing label fails silently, and forever"
+    Every call site is written `get_tool_label('x') || 'English literal'`, so a key
+    absent from the seed still RENDERS — in English, for every operator on the
+    install. Nothing throws and nothing logs; the only symptom is one line of a
+    translated panel that is not translated.
+
+    Half this tool's strings are also reached INDIRECTLY, through key tables
+    rather than literal calls: `MODEL_STATES` and the failure rules name their
+    words as `state_key`/`message_key`/`cause_key`/`action_key`, `ACTION_LABELS`
+    keys the remedies, and the worker posts a `label_key` with each degradation
+    warning. Grepping for `get_tool_label('…')` therefore sees only half the
+    surface — when the gate below was first written, 30 of the 49 missing keys
+    lived in exactly that blind spot. Adding a NEW indirection means teaching the
+    gate to read it.
+
+    Editing the seed is not enough on a running install: the registry import is
+    dormant, so a label lands only when it is merged into the tool's live
+    `matrix_tools` row.
 
 Surfacing is element-driven (`getElementTools`, `src/core/tools/registry.ts`): once the user's profile is authorized for the tool, its button appears on any `component_av`, `component_image` or `component_pdf` element (matched against `affected_models`). The transcription workbench is most useful on AV components that have an adjacent transcription `component_text_area` declared in the section's `tool_config.ddo_map`.
 
@@ -162,6 +260,26 @@ data_manager.request({ body: rqo })
 ```
 
 The browser-Whisper path instead calls the `create_transcribable_audio_file` action (to get the 16 kHz WAV URL) and runs the model in a Web Worker client-side, writing the result straight into the text component with `set_value`.
+
+## Gates
+
+`test/unit/tool_transcription.test.ts` covers the server half (audio build,
+action surface, the remote-ASR seam and its fail-closed cases) and, for the
+client, the things that fail silently rather than loudly:
+
+| Gate | What it stops |
+| --- | --- |
+| label coverage | Every key the client asks for exists in the seed, in every language the seed speaks — reading the key TABLES as well as the literal calls. A companion test pins the extractor itself with one canary key per indirection, so a pattern that stops matching fails instead of quietly shrinking the surface. |
+| severity paint | Every emittable severity has a rule in the `.less` AND in the committed `.css`; and the panel prefixes the class (`severity_error`), so no row can collide with a page-wide utility. |
+| readiness facts | The language line renders no `undefined` when a project language has no 2-letter code, and the model line names its model. |
+| interrupted-run recovery | Partials stay isolated per model, records in the older single-slot shape still migrate, a finished run clears only its own slot, both resume remedies are pressable AND handled, and the unload guard is armed and disarmed at every exit. |
+
+The pure client functions are tested as the REAL bytes — sliced out of the source
+by their `}//end <name>` terminator, which the slice asserts — rather than
+re-implemented in the test. `js/tool_transcription.js` cannot be imported in
+isolation the way the render module can: its module body evaluates identifiers
+from the tool's own dependency graph, so stripping the imports would leave a stub
+chain that tests the stubs.
 
 ## Related
 

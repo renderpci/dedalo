@@ -27,7 +27,7 @@ The **Transcription** button attaches to media components — audiovisual, image
 
 1. Open the record and press **Transcription** on the media component. The tool opens in a new window: the transcription text area on the left, the media player on the right. When the record declares an **Original language** (interviews in one installation are recorded in different languages), the text area opens in that language — whatever the data-language menu is set to — and the recognizer uses it as its language hint. The tool's own language selector still lets you switch to work on a translation.
 2. To transcribe speech automatically, use the **Automatic transcription** block: choose a recognition **engine**, a **quality** (the model) and, if you want, how much timecode detail the text should carry. Then start it. With the browser engine the model runs on your own machine — it uses your GPU when there is one and falls back to a slower compatible mode by itself. With a server engine the job runs on the institution's transcription server and the tool reports progress until it is done.
-3. Progress is shown as a percentage of the speech in the recording. You can **Cancel** at any point: the tool keeps everything recognized so far instead of throwing it away. If the window is closed mid-job, the next run picks up where this one stopped rather than starting the interview again.
+3. The panel under the button says what the tool is doing at each stage — preparing the audio file, loading the model, the percentage of speech transcribed, detecting speakers — and, when the run ends, says so in green. Progress is shown as a percentage of the speech in the recording. You can **Cancel** at any point: the tool keeps everything recognized so far instead of throwing it away. If the window is closed or reloaded mid-job, the browser asks you to confirm first, and everything recognized up to that point is kept (see *If you close the window mid-job* below).
 4. When it completes, the recognized text lands in the text area as **paragraphs** — grouped at the speaker's pauses and sentence ends, not one paragraph per phrase — with `[TC_..._TC]` timecode marks. Correct the wording as needed.
 5. Use **Insert tag** to add a timecode mark at the current playhead while you work.
 6. To create subtitles, set the **characters per line** value and press **Build subtitles**. The tool writes a `.vtt` file synced to the recording's duration and returns its address.
@@ -54,7 +54,18 @@ The **Transcription** button attaches to media components — audiovisual, image
     Generate the transcription, correct the text, and only then press **Build subtitles** — the subtitle file is cut from the current text and its timecodes.
 
 !!! tip "Browser transcription runs in your tab"
-    When the browser engine is used, the recognizer runs inside your browser tab, and the recording never leaves your machine. Keep the window open while it works; if you do close it, the job stops but the text recognized so far is kept and the next run continues from there. A GPU-capable browser is much faster.
+    When the browser engine is used, the recognizer runs inside your browser tab, and the recording never leaves your machine. Keep the window open while it works. A GPU-capable browser is much faster. With a **server** engine the opposite is true: the job runs on the institution's machine, so closing or reloading the window costs nothing — reopening the tool picks the progress back up.
+
+!!! warning "If you close the window mid-job"
+    A browser transcription lives in your tab, so closing or reloading it stops the recognizer. Two things protect the work:
+
+    - the browser asks you to confirm before the page goes away, so it cannot happen by accident;
+    - everything transcribed up to the last completed stretch is kept anyway.
+
+    When you open the tool again, the panel says so — *Interrupted transcription — Small: 00:42:15 already transcribed* — with a **Resume the transcription** button that carries on from that point instead of re-doing the interview. Speaker detection is the exception: it runs after the recognition finishes, so if the window closes during that stage the transcript survives but the speaker pass starts over.
+
+!!! warning "The saved progress belongs to the model that made it"
+    Interrupted work is kept **per model**: a run under *Small* and a run under *Medium* are two different drafts and neither overwrites the other. So if you change the quality after an interruption, the panel warns you — *Interrupted transcription — Small: 00:42:15 transcribed with another model — running now starts from the beginning* — and offers **Go back to that model**. Starting anyway is a valid choice (a better model from scratch may be what you want); it just is not one the tool will make for you silently.
 
 !!! info "Nothing is uploaded, and nothing is downloaded from outside"
     The browser engine keeps the audio on your machine, and the models themselves come from your own installation rather than from an internet service — so it works in an archive with no outside connection, and no third party learns which recordings you are working on. Models marked *not installed* can be added by an administrator with the **Download model** button (or from the server with `scripts/fetch_ai_models.ts`; an air-gapped archive copies the model folder in instead).
