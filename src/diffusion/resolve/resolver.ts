@@ -54,6 +54,7 @@ import { getSectionMapValue } from '../../core/ontology/section_map.ts';
 import { getChildren } from '../../core/relations/children.ts';
 import { resolveIndexConfig } from '../../core/relations/models/relation_index.ts';
 import { getParents, getParentsRecursive } from '../../core/relations/parent.ts';
+import { getComponentModel } from '../../core/components/registry.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
 import { parseInverseEntry } from '../../core/resolve/relation_index.ts';
 import {
@@ -466,6 +467,101 @@ async function termRecordOf(
 	}
 	ctx.termCache.set(key, term);
 	return term;
+}
+
+/**
+ * The label components a dataframe FRAME node declares — its own
+ * `source.request_config[].show.ddo_map` (dd560 declares dd1715). Nothing is
+ * hardcoded: the frame tipo comes from the component descriptor and the label
+ * tipos from the frame's ontology config, so another install's vocabulary
+ * resolves through the same path. `getNode` is already memoized per run.
+ */
+async function frameLabelTipos(frameTipo: string): Promise<string[]> {
+	const properties = (await getNode(frameTipo))?.properties as
+		| { source?: { request_config?: { show?: { ddo_map?: { tipo?: unknown }[] } }[] } }
+		| null
+		| undefined;
+	const tipos: string[] = [];
+	for (const config of properties?.source?.request_config ?? []) {
+		for (const ddo of config.show?.ddo_map ?? []) {
+			if (typeof ddo.tipo === 'string' && !tipos.includes(ddo.tipo)) tipos.push(ddo.tipo);
+		}
+	}
+	return tipos;
+}
+
+/**
+ * component_iri's published title is its LABEL DATAFRAME, not the stored `title`.
+ *
+ * v6 `component_iri::resolve_title` (:518-547) builds the dd560 label dataframe
+ * paired to the item — `section_id_key` = the item's id, `main_component_tipo` =
+ * the iri component — and returns `$dataframe_label ?? $value->title`. The
+ * stored `title` is the LEGACY fallback (":542 … data item value (old values)"),
+ * not the value; the vocabulary term is authoritative and `title` is on its way
+ * out of the data model entirely.
+ *
+ * Publishing `title` alone emitted a stale string wherever an editor retargeted
+ * the label without rewriting the stored title — rsc205/169 stores
+ * "Reproducción Asistida ORG" while its frame points at dd1706/53
+ * "Acceso Reproducción Asistida ORG", and v6 published the latter into
+ * bibliographic_references.ref_publications_url. It surfaced on ONE row only
+ * because on the other 58 records carrying a frame the two happen to agree.
+ *
+ * Returns item id → resolved label; ids with no frame are absent and keep their
+ * stored title, exactly like the PHP `??`.
+ */
+async function iriLabelsByItemId(
+	ctx: RunContext,
+	record: MatrixRecord,
+	iriTipo: string,
+): Promise<Map<string, string>> {
+	const labels = new Map<string, string>();
+	for (const frameTipo of getComponentModel('component_iri')?.fixedDataframeTipos ?? []) {
+		const frames = readComponentItems(record, frameTipo, 'component_dataframe') ?? [];
+		if (frames.length === 0) continue;
+		const labelTipos = await frameLabelTipos(frameTipo);
+		if (labelTipos.length === 0) continue;
+		for (const frame of frames) {
+			if (frame === null || typeof frame !== 'object') continue;
+			const entry = frame as Record<string, unknown>;
+			// One column slice holds the frames of EVERY main that declares this
+			// frame node; only this component's are ours.
+			if (entry.main_component_tipo !== iriTipo) continue;
+			const sectionTipo = entry.section_tipo;
+			const sectionId = entry.section_id;
+			const idKey = entry.id_key;
+			if (typeof sectionTipo !== 'string') continue;
+			if (typeof sectionId !== 'number' && typeof sectionId !== 'string') continue;
+			if (typeof idKey !== 'number' && typeof idKey !== 'string') continue;
+			const target = (await loadRecords(ctx, sectionTipo, [sectionId])).get(
+				RECORD_KEY(sectionTipo, sectionId),
+			);
+			if (target === null || target === undefined) continue;
+			const parts: string[] = [];
+			for (const labelTipo of labelTipos) {
+				const model = (await getNode(labelTipo))?.model;
+				if (typeof model !== 'string') continue;
+				// A label is NOT a direct read: v6 reaches it through the frame's grid
+				// value, which never calls get_valor — so it is NOT trimmed (see the
+				// component_input_text branch of defaultPublicationValue).
+				const atoms = defaultPublicationValue(
+					target,
+					labelTipo,
+					model,
+					{ sourceId: frameTipo, tipo: labelTipo },
+					{ __via_label: true },
+				);
+				// v6 loads the frame in DEDALO_DATA_NOLAN (:534), so a nolan value wins
+				// over a translated one; the joiner is get_grid_value's default
+				// fields_separator.
+				const preferred = atoms.find((atom) => atom.lang === null) ?? atoms[0];
+				const raw = preferred?.kind === 'scalar' ? preferred.value : null;
+				if (typeof raw === 'string' && raw !== '') parts.push(raw);
+			}
+			if (parts.length > 0) labels.set(String(idKey), parts.join(', '));
+		}
+	}
+	return labels;
 }
 
 /**
@@ -1520,6 +1616,35 @@ async function walkChainLevel(
 				},
 				viaLabel ? { ...(step.options ?? {}), __via_label: true } : step.options,
 			);
+			// ONLY on the diffusion-VALUE path. v6 resolves the label inside
+			// component_iri::get_diffusion_value; a field asking for the raw stored
+			// dato (v6 `data_to_be_used: "dato"`, e.g. publications.url_data) is
+			// published verbatim by v6 and keeps the ORIGINAL stored title. v7's
+			// equivalent of get_diffusion_value is the iri parser, so gate on it —
+			// substituting unconditionally rewrote url_data and broke 12 cells that
+			// had been matching.
+			if (
+				step.model === 'component_iri' &&
+				stepAtoms.length > 0 &&
+				prepared.field.transform.some((parserStep) => parserStep.fn.startsWith('parser_iri::'))
+			) {
+				// The stored `title` is v6's LEGACY fallback; the dd560 label dataframe
+				// is the value (iriLabelsByItemId).
+				const labels = await iriLabelsByItemId(ctx, record, step.tipo);
+				if (labels.size > 0) {
+					stepAtoms = stepAtoms.map((atom) => {
+						if (atom.kind !== 'json' || !Array.isArray(atom.value)) return atom;
+						return {
+							...atom,
+							value: (atom.value as Record<string, unknown>[]).map((entry) => {
+								if (entry === null || typeof entry !== 'object') return entry;
+								const label = labels.get(String(entry.id));
+								return label === undefined ? entry : { ...entry, title: label };
+							}),
+						};
+					});
+				}
+			}
 			if (step.pinLang !== undefined) {
 				// ddo lang pin (component_common :3341-3349): keep the pinned lang's
 				// entries (nolan passes) and emit them lang-neutral.
