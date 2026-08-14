@@ -68,10 +68,16 @@ Notes:
 
 ## When v6 is wrong
 
-It happens, and it is a legitimate outcome. Some v6 behaviour is a defect (e.g. publishing
-a title belonging to a different record through component-instance reuse), and some is
-unreachable from v7's data model (the v6→v7 converter drops empty component keys, erasing
-a distinction v6's term builder depends on).
+It happens, and it is a legitimate outcome. Some v6 behaviour is unreachable from v7's data
+model (the v6→v7 converter drops empty component keys, erasing a distinction v6's term
+builder depends on).
+
+**But prove it before you call it.** The one difference on this install that was confidently
+labelled a v6 defect turned out to be a *missing resolution in v7* — v6 was right. The wrong
+call came from probing `matrix_dataframe`, finding it empty, and reasoning from that instead
+of loading the component and printing what it actually resolves. "v6 is wrong" is the
+conclusion that most needs a reproduction, because it is the one that ends the investigation.
+See the RUNBOOK §10.
 
 In those cases **do not hand-craft a hack to reproduce the wrong bytes.** Present the
 evidence and let the operator choose between accepting the difference and pursuing a

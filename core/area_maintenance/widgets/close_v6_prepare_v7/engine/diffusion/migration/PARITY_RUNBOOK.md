@@ -237,15 +237,114 @@ Recognise these fast on a new corpus; most were worth 8–184 cells each.
 | Float text differs | v6 pushes coordinates through `number_format(x,16)` + `json_decode`; PHP 8.4+ `round()` shifts ~1% of values by one ULP |
 | Column publishes `"null"` string | `component_json` json-encodes a null dato and its `!empty()` guard passes |
 | Separator noise (`" \| \| "`) | an autocomplete/portal component with an **empty declared label list** — v6 joins empty labels anyway |
+| An iri/URL column publishes a *different* title than the record stores | `component_iri::resolve_title` prefers the **dd560 label dataframe** (a locator into a term vocabulary) over the stored `title`, which is legacy fallback only. Frames live in `matrix.datos`, **not** in `matrix_dataframe` — querying the latter and finding it empty proves nothing |
+| Fixing one column breaks another fed by the SAME component | v6 publishes a component two ways: `get_diffusion_value` (resolved/formatted) and `data_to_be_used: "dato"` (stored bytes verbatim). A resolution added at the component level hits both. Gate it on the **field's** parser chain, which is what distinguishes them in v7 |
+
+### Where dataframe frames actually live
+
+`matrix_dataframe` being empty for a section does **not** mean the record has no frames.
+Component frames are stored inside the record's own `matrix.datos` under the component key.
+Two findings here were misdiagnosed by probing `matrix_dataframe` alone. When a value looks
+like it came from somewhere other than the obvious stored field, load the component in a
+throwaway PHP process and print the intermediate resolution rather than reasoning from SQL:
+
+```php
+require_once '<v6>/config/config.php';
+$c = component_common::get_instance('component_iri','rsc217',169,'list',DEDALO_DATA_NOLAN,'rsc205',false);
+$item = ($c->get_dato())[0];
+var_dump($item->title, $c->resolve_title($item), $c->get_diffusion_value(DEDALO_DATA_NOLAN));
+```
+
+That probe is read-only and settled in one run what two rounds of SQL got backwards.
+
+### `component_text_area` / `component_html_text` — checked, NOT reachable on this install
+
+A review flagged that v7 renders bracket tags to HTML where both oracles return raw text.
+The finding is real in code — v7 `resolve/resolver.ts:821` calls `parseTagValueToHtml`
+**outside** the `if (tagsReferenceTipo !== null)` guard, while v6 (`class.component_text_area.php:1272`)
+and the frozen oracle (`:2346-2417`) keep the whole render inside it. The comment at
+`resolver.ts:742-743` claiming "the oracle returns exactly that" is false; it was written
+against the PHP docblock, not the PHP code.
+
+It needs **all** of:
+
+1. the field's `process.fn` is `get_diffusion_v5_references_html`;
+2. the source component is `component_text_area` / legacy `component_html_text`;
+3. that component has **no** `properties.tags_reference.tipo` (or it is empty/non-string);
+4. some published record's stored text contains a bracket tag (`[reference-…]`, `[index-…]`,
+   `[svg-…]`, `[TC_…]`, `[geo-…]`, `[note-…]`, …).
+
+Neither migration script can emit 1 without 3 being satisfied (the `fn` is written only under
+`!empty($tags_reference_tipo)`), so it can only arise from a hand-authored ddo or from
+`tags_reference` being removed later. On mht only `dd703`/`dd704` carry the `fn`, and their
+components `ww20`/`ww21` both declare it (`ww49`/`ww50`) — the published `abstract`/`body`
+columns MATCH across 2332 populated cells.
+
+Check on a new install:
+
+```sql
+SELECT tipo, properties FROM dd_ontology
+WHERE properties::text LIKE '%get_diffusion_v5_references_html%';
+-- then, for each node's source component:
+SELECT tipo, properties->'tags_reference'->>'tipo' FROM dd_ontology WHERE tipo IN (…);
+```
+
+Two further divergences in the same v7 function, reachable **with** `tags_reference` present
+and unpinned by any test — watch for them if a text_area column mismatches:
+
+- the oracle emits **one** atom from `$data[0]` with `lang = null` (published into every
+  diffusion lang); v7 emits one atom **per stored item with that item's own lang**. Fires when
+  the text_area has ≥2 stored entries.
+- if the first stored entry is empty the oracle returns null even when later entries have
+  text; v7 skips the empty one and publishes the rest.
 
 ---
 
 ## 10. State at handover (this install)
 
-- **4 differing cells**, all in `bibliographic_references.ref_publications_url`, one row,
-  4 langs. Proven v6 defect: v6 publishes a title belonging to a *different* record
-  (`matrix_dataframe` is empty, so `resolve_title` should fall back to the record's own
-  title; 60 of 61 rows do). **v7 is correct.** Awaiting the operator's accept/replicate call.
+- **0 differing cells.** `RESULT` still prints DIVERGENCE because NULL_VS_EMPTY and the
+  schema notes are reported, never laundered — read the cell count, then the verdict table.
+  Current: 179 MATCH, 9 NORMALIZED, 77 UNTESTED, 12 NULL_VS_EMPTY, **0 MISMATCH**,
+  12 accepted, 7536 rows compared.
+
+- **FIXED (was the last mismatch):** `bibliographic_references.ref_publications_url`.
+  **v6 was CORRECT and v7 had a missing resolution** — it was nearly accepted as a v6 defect.
+
+  An earlier version of this runbook called it a v6 defect ("publishes a title belonging to
+  another record"). That was wrong, and the mistake was made by reading `matrix_dataframe`,
+  finding it empty for `rsc205`, and concluding the dataframe branch could not fire. The
+  frames are **not** in `matrix_dataframe` — they live in the record's own `matrix.datos`
+  under the component key.
+
+  The real chain, reproduced deterministically in a fresh process:
+
+  ```
+  rsc205/169  component_iri rsc217 item id=1
+      stored title = "Reproducción Asistida ORG"        ← what v7 publishes
+      dd560 label dataframe → locator dd1706/53 → dd1715 = "Acceso Reproducción Asistida ORG"
+                                                          ← what v6 publishes
+  ```
+
+  `component_iri::resolve_title` (v6 `core/component_iri/class.component_iri.php:518-547`)
+  is `$title = $dataframe_label ?? $value->title;` — the **dataframe label is authoritative**
+  and the stored `title` is explicitly the legacy fallback ("old values", :542). v7's
+  `parser_misc.ts` reads `entry.title` and never resolves `dd560`.
+
+  It showed on exactly one row because on the other 58 records carrying a `dd560` frame the
+  vocabulary term happens to equal the stored title. 59 of 200 `rsc205` records carry one,
+  so any install whose editors used the label vocabulary would have diverged more widely.
+
+  Fixed in `v7 src/diffusion/resolve/resolver.ts` — `iriLabelsByItemId` + `frameLabelTipos`,
+  applied to the `component_iri` step. Nothing is install-specific: the frame tipo comes from
+  the component descriptor (`fixedDataframeTipos`) and the label components from the frame
+  node's own `source.request_config[].show.ddo_map`.
+
+  **The gate matters as much as the fix.** Substituting the label unconditionally regressed
+  `publications.url_data` (12 cells, MATCH → MISMATCH): that field is v6
+  `data_to_be_used: "dato"`, which publishes the stored dato VERBATIM — original title and
+  all. v6 resolves the label inside `get_diffusion_value` only, so the substitution is gated
+  on the field's parser chain carrying `parser_iri::` (v7's equivalent of that method). One
+  component, two published forms, two rules — the same shape as the trim rule below.
 - **Known unfixed, needs an operator decision:** the v6→v7 **data converter**
   (`engine/core/base/upgrade/class.v6_to_v7.php`, `if (empty($ar_value) && $ar_value !== '0') continue`)
   drops components whose stored value is empty, erasing the *present-but-empty* distinction
