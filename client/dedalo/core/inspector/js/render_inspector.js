@@ -898,8 +898,11 @@ const get_content_data = function(self) {
 		// This button downloads the raw section record as a register.json file, which is the
 		// canonical serialization format for tool registration in the v7 tools architecture.
 			if (self.section_tipo==='dd1340') {
+				// Tag 'button' is required: the shared icon rules in buttons.less attach the
+				// download.svg glyph through `button.download:before` (a bare span matches
+				// neither `button&` nor `.button&`, so it rendered as flat unstyled text).
 				const register_download = ui.create_dom_element({
-					element_type	: 'span',
+					element_type	: 'button',
 					class_name		: 'warning download register_download',
 					text_content	: get_label.download_register_file || 'Download register file',
 					parent			: buttons_bottom_container

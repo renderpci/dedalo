@@ -119,12 +119,10 @@ export const component_info = function(){
 * Widget init receives the full current_widget descriptor as 'properties'
 * and a back-reference to this component_info as 'caller'.
 *
-* (!) After the parallel Promise.all completes, self.ar_instances is
-* REPLACED with the array of newly resolved widgets; any pre-existing
-* instance that was skipped via 'continue' is lost from the resulting
-* array. This is a known quirk: reloaded widgets are only in the cache
-* during the loop but are not re-collected into ar_promises, so they are
-* absent from the final ar_instances.
+* Result ordering: every widget — reused or newly imported — is pushed into
+* ar_promises, so the rebuilt self.ar_instances holds ALL widgets in
+* widgets_properties declaration order. Only widgets whose import or init
+* failed (resolved null) are dropped.
 *
 * @returns {Promise<Array>} Resolves to self.ar_instances, the array of
 *   initialised widget instances (one per widget descriptor).
@@ -180,6 +178,9 @@ component_info.prototype.get_widgets = async function() {
 				// Refresh in-place — avoid a new dynamic import and init cycle.
 				loaded_widget.value		= widget_value
 				loaded_widget.datalist	= widget_datalist
+				// Re-collect it: ar_instances is REBUILT from ar_promises below,
+				// so a reused widget must be in the array or it is lost.
+				ar_promises.push(Promise.resolve(loaded_widget))
 				continue
 			}
 
@@ -245,6 +246,8 @@ component_info.prototype.get_widgets = async function() {
 		}//end for loop
 
 		// instances. Await all instances are parallel init and fix.
+		// Reused widgets resolve immediately (Promise.resolve), so the array is
+		// the full widgets_properties declaration-order set.
 		// Filter out widgets that failed to load (null) so a single failure
 		// does not break the whole set.
 		self.ar_instances = (await Promise.all(ar_promises)).filter(Boolean)
@@ -302,10 +305,12 @@ component_info.prototype.update_data_value = function(changed_data_item) {
 			const widget_id			= self.id + '_'+ widget_name
 
 			const loaded_widget	= (self.ar_instances || []).find(item => item.id === widget_id)
-			// Filter entries that match both the widget name AND the loop index as key.
-			// The 'key' field on each entry mirrors the widget descriptor's position,
-			// allowing multiple widgets of the same widget_name to partition data.
-			const widget_value	= value.filter(item => item.widget === widget_name && item.key === i)
+			// Partition by widget name only — exactly as get_widgets() does.
+			// 'key' is NOT this loop's index: the server emits it as the IPO ENTRY
+			// index WITHIN the widget (component_info/widgets/oh/descriptors.ts,
+			// ipo.entries()), and each widget consumes it itself
+			// (render_edit_descriptors.js: self.value.filter(item => item.key===i)).
+			const widget_value	= value.filter(item => item.widget === widget_name)
 
 			if(loaded_widget){
 				loaded_widget.value = widget_value

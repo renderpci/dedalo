@@ -1,5 +1,6 @@
-import { describe, test, expect, mock } from 'bun:test';
-import { NotFoundError } from '../src/errors';
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { __setTestDbExecute } from '../src/db/pool';
+import type { DbRow } from '../src/db/types';
 import { dbNames } from '../src/config';
 import { MAX_RESOLVE_ROWS } from '../src/constants';
 
@@ -7,8 +8,10 @@ import { MAX_RESOLVE_ROWS } from '../src/constants';
 // Mocked database layer: pattern-matches the SQL the services produce.
 // ---------------------------------------------------------------------------
 
-const MOCK_DB = 'mockdb';
-const ALLOWED_DBS = new Set([MOCK_DB, ...dbNames]);
+// A CONFIGURED database name, not an invented one: the REAL assertKnownDb now guards
+// every route and dbExecute, so an unpublished name 404s — which is the allowlist doing
+// its job, and is what 'unknown database is a 404 problem' below asserts.
+const MOCK_DB = dbNames[0];
 
 const interviewRows = [
   {
@@ -82,8 +85,9 @@ function assertMockColumnsExist(s: string): void {
   }
 }
 
-async function mockDbExecute(db: string, sql: string, params: unknown[] = []): Promise<unknown[]> {
-  if (!ALLOWED_DBS.has(db)) throw new NotFoundError(`Unknown database: ${db}`);
+async function mockDbExecute(_db: string, sql: string, params: unknown[] = []): Promise<DbRow[]> {
+  // No allowlist check here any more: dbExecute runs the REAL assertKnownDb before it
+  // reaches this fake, so the 404-for-unknown-database path is production code.
   sqlLog.push({ sql, params });
   const s = sql.replace(/\s+/g, ' ').trim();
 
@@ -156,18 +160,17 @@ async function mockDbExecute(db: string, sql: string, params: unknown[] = []): P
   return [];
 }
 
-mock.module('../src/db/pool', () => ({
-  assertKnownDb(db: string): string {
-    if (!ALLOWED_DBS.has(db)) throw new NotFoundError(`Unknown database: ${db}`);
-    return db;
-  },
-  getPool(db: string) {
-    if (!ALLOWED_DBS.has(db)) throw new NotFoundError(`Unknown database: ${db}`);
-    return { query: async () => [[{ 1: 1 }]] };
-  },
-  dbExecute: mockDbExecute,
-  closePools: async () => {},
-}));
+// NO `mock.module` HERE, DELIBERATELY. It replaces a module for the whole PROCESS — bun
+// runs all 24 test files in one — so mocking '../src/db/pool' also replaced it for
+// tests/pool.test.ts, whose entire job is to test the REAL pool. On the Linux CI runner
+// that file first died at load (a mock factory missing an export) and then, once the
+// factory was completed, its memoization test silently asserted against the stub
+// (2026-08-14). macOS never reproduced either, so the gate was platform-dependent.
+//
+// The seam below is scoped and reversible: only dbExecute's SQL round-trip is replaced,
+// the real allowlist still guards it, and afterAll puts it back.
+beforeAll(() => __setTestDbExecute(mockDbExecute));
+afterAll(() => __setTestDbExecute(null));
 
 const { dispatch, routeRequest } = await import('../src/router');
 const { handleToolCall } = await import('../src/mcp/tools');

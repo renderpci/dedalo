@@ -30,11 +30,32 @@
  *  6. success envelope — `{result:<items>, msg:'OK. Request done successfully',
  *     errors:[]}` with the REAL test_info widget, whose placeholder value
  *     re-proves sectionTipo/sectionId threading without any mock.
+ *  7. MODE ROUTING — `source.mode` rides verbatim into the WidgetContext and
+ *     the oh87 `descriptors` widget is its live consumer: 'edit' emits the
+ *     `indexation` count + the `terms` grid, 'list' (and an ABSENT mode, the
+ *     handler's :44 default) short-circuits to []
+ *     (components/component_info/widgets/oh/descriptors.ts:23). That is the
+ *     DEFERRED-LOAD contract the client's on-demand "Terms" button depends on:
+ *     the list read stays deliberately cheap (no portal read + grid build per
+ *     row) and the cell fetches its own terms through THIS channel, with
+ *     mode:'edit'. A request that forgets the mode gets [] — pinned.
+ *
+ * This channel serves RAW widget items: no WC-026 `normalizeWidgetEntryKeys`
+ * (that is the read-path emit hook), so items carry `widget_id` and NO `id` —
+ * asserted, so a future dualisation cannot land unnoticed. The terms grid's
+ * COLUMN set resolves against live reference data (dd_ontology section_map +
+ * the dc1 target records, absent here), so it is pinned STRUCTURALLY; the byte
+ * pin is the read-path golden's job (fixtures/info_widget_native/
+ * entries.golden.json, cases.oh87 — untouched).
  *
  * Scratch surface (namespace: test3 ids 934000-934099): matrix_test test3/934000,
- * a component-less record, direct INSERT (no counter bump). Swept in afterAll
- * together with its matrix_time_machine tail, fail-loud on residue. No
- * dd_ontology write anywhere in this file.
+ * a component-less record, plus — in the SAME band but the DEFAULT `matrix`
+ * table — the oh87 descriptors chain oh1/934010 (relation oh25 → the tape) and
+ * rsc167/934011 (relation rsc860 → two descriptor locators), the same shape
+ * test/unit/info_widget_native.test.ts seeds at 900311. All direct INSERTs (no
+ * counter bump). Every row is swept in afterAll together with its
+ * matrix_time_machine tail, fail-loud on residue AND on a sweep that deletes
+ * nothing (a wrong-table DELETE leaks). No dd_ontology write anywhere.
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test';
@@ -58,6 +79,25 @@ const INFO_WITH_WIDGETS = 'test212'; // component_info, properties.widgets = [te
 const WIDGET_NAME = 'test_info';
 const NO_WIDGETS_TIPO = 'test52'; // component_input_text — no properties.widgets
 const UNKNOWN_TIPO = 'zzt_no_such_tipo_934000'; // getNode() → null
+
+// The oh87 descriptors chain, in the DEFAULT `matrix` table (oh1/rsc167 are
+// model 'section' with no matrix_table): oh1 --oh25--> rsc167 --rsc860--> terms.
+const OH_SECTION = 'oh1';
+const OH_ID = 934010;
+const TAPE_SECTION = 'rsc167';
+const TAPE_ID = 934011;
+const INFO_OH = 'oh87'; // component_info, properties.widgets = [media_icons, descriptors]
+const DESCRIPTORS_WIDGET = 'descriptors';
+const MEDIA_ICONS_WIDGET = 'media_icons';
+
+/** dd151 relation locator, the stored shape (info_widget_native.test.ts:110). */
+const locatorOf = (sectionTipo: string, sectionId: number | string, from: string, id = 1) => ({
+	id,
+	type: 'dd151',
+	section_id: String(sectionId),
+	section_tipo: sectionTipo,
+	from_component_tipo: from,
+});
 
 const ADMIN: Principal = { userId: 1, isGlobalAdmin: true, isDeveloper: true };
 /** No user record, hence no projects: every non-admin record scope check fails. */
@@ -90,39 +130,87 @@ const rqoOf = (source: unknown, options?: unknown): Rqo =>
 
 const getWidgetData = mustGet(componentInfoApiActions.get_widget_data, 'get_widget_data handler');
 
-async function purgeScratch(): Promise<number> {
-	const deleted = (await sql.unsafe(
-		'DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id = $2 RETURNING id',
-		[SECTION, SECTION_ID],
-	)) as unknown[];
-	await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2', [
-		SECTION,
-		SECTION_ID,
-	]);
-	return deleted.length;
+/** Every seeded scratch row — exact (table, section_tipo, section_id). */
+const SCRATCH_ROWS: { table: string; sectionTipo: string; sectionId: number }[] = [
+	{ table: 'matrix_test', sectionTipo: SECTION, sectionId: SECTION_ID },
+	{ table: 'matrix', sectionTipo: TAPE_SECTION, sectionId: TAPE_ID },
+	{ table: 'matrix', sectionTipo: OH_SECTION, sectionId: OH_ID },
+];
+
+const scratchKey = (row: { table: string; sectionTipo: string; sectionId: number }) =>
+	`${row.sectionTipo}/${row.sectionId} (table ${row.table})`;
+
+async function insertRow(
+	table: string,
+	sectionTipo: string,
+	sectionId: number,
+	columns: Record<string, unknown> = {},
+): Promise<void> {
+	const names = Object.keys(columns);
+	const columnSql = names.length > 0 ? `, ${names.join(', ')}` : '';
+	// jsonb columns bind as $N::text::jsonb (the Bun.sql jsonb bind rule).
+	const valueSql = names.map((_, index) => `, $${index + 3}::text::jsonb`).join('');
+	await sql.unsafe(
+		`INSERT INTO ${table} (section_id, section_tipo${columnSql}) VALUES ($1, $2${valueSql})`,
+		[sectionId, sectionTipo, ...names.map((name) => JSON.stringify(columns[name]))],
+	);
+}
+
+/** Remove every scratch row + its TM tail; returns the per-row deleted counts. */
+async function purgeScratch(): Promise<Map<string, number>> {
+	const counts = new Map<string, number>();
+	for (const row of SCRATCH_ROWS) {
+		const deleted = (await sql.unsafe(
+			`DELETE FROM ${row.table} WHERE section_tipo = $1 AND section_id = $2 RETURNING id`,
+			[row.sectionTipo, row.sectionId],
+		)) as unknown[];
+		counts.set(scratchKey(row), deleted.length);
+		await sql.unsafe(
+			'DELETE FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+			[row.sectionTipo, row.sectionId],
+		);
+	}
+	return counts;
 }
 
 beforeAll(async () => {
 	await purgeScratch(); // belt and braces: a crashed earlier run
-	await sql.unsafe('INSERT INTO matrix_test (section_id, section_tipo) VALUES ($1, $2)', [
-		SECTION_ID,
-		SECTION,
-	]);
+	await insertRow('matrix_test', SECTION, SECTION_ID);
+	// The descriptors chain: the tape holds TWO rsc860 descriptor locators
+	// (indexation count 2, two grid rows) and the interview points at the tape
+	// through oh25 — the hop whose result is the item `locator`.
+	await insertRow('matrix', TAPE_SECTION, TAPE_ID, {
+		relation: {
+			rsc860: [locatorOf('dc1', 187, 'rsc860'), locatorOf('dc1', 3, 'rsc860', 2)],
+		},
+	});
+	await insertRow('matrix', OH_SECTION, OH_ID, {
+		relation: { oh25: [locatorOf(TAPE_SECTION, TAPE_ID, 'oh25')] },
+	});
 });
 
 afterAll(async () => {
-	await purgeScratch();
-	const residue = (await sql.unsafe(
-		'SELECT id FROM matrix_test WHERE section_tipo = $1 AND section_id = $2',
-		[SECTION, SECTION_ID],
-	)) as unknown[];
-	const tmResidue = (await sql.unsafe(
-		'SELECT id FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
-		[SECTION, SECTION_ID],
-	)) as unknown[];
-	if (residue.length > 0 || tmResidue.length > 0) {
+	// A seeded row that deletes NOTHING means the fixed id collided or the
+	// DELETE hit the wrong matrix table — clean what we can, then fail loudly.
+	const counts = await purgeScratch();
+	const missing = [...counts.entries()].filter(([, count]) => count === 0).map(([key]) => key);
+	const residue: string[] = [];
+	for (const row of SCRATCH_ROWS) {
+		const rows = (await sql.unsafe(
+			`SELECT id FROM ${row.table} WHERE section_tipo = $1 AND section_id = $2`,
+			[row.sectionTipo, row.sectionId],
+		)) as unknown[];
+		const tmRows = (await sql.unsafe(
+			'SELECT id FROM matrix_time_machine WHERE section_tipo = $1 AND section_id = $2',
+			[row.sectionTipo, row.sectionId],
+		)) as unknown[];
+		if (rows.length > 0 || tmRows.length > 0) {
+			residue.push(`${scratchKey(row)}: ${rows.length} row(s) + ${tmRows.length} TM row(s)`);
+		}
+	}
+	if (missing.length > 0 || residue.length > 0) {
 		throw new Error(
-			`scratch residue: ${residue.length} matrix_test row(s) + ${tmResidue.length} TM row(s) for ${SECTION}/${SECTION_ID}`,
+			`scratch sweep: deleted 0 rows for [${missing.join(', ')}]; residue [${residue.join('; ')}]`,
 		);
 	}
 });
@@ -375,4 +463,101 @@ describe('get_widget_data — success envelope (real registry)', () => {
 			errors: [],
 		});
 	});
+});
+
+describe('get_widget_data — oh87 descriptors: the MODE-ROUTED deferred load', () => {
+	/** The SAME request every time; only source.mode differs (or is absent). */
+	const descriptorsRqo = (mode?: string): Rqo =>
+		rqoOf(
+			{
+				tipo: INFO_OH,
+				section_tipo: OH_SECTION,
+				section_id: OH_ID,
+				...(mode === undefined ? {} : { mode }),
+			},
+			{ widget_name: DESCRIPTORS_WIDGET },
+		);
+
+	type WidgetItem = {
+		widget: string;
+		key: number;
+		widget_id: string;
+		value: unknown;
+		locator: unknown;
+	};
+
+	async function descriptorItems(mode?: string): Promise<WidgetItem[]> {
+		const result = await getWidgetData(descriptorsRqo(mode), contextFor(ADMIN));
+		expect(result.status).toBe(200);
+		const body = result.body as { result: unknown; msg: unknown; errors: unknown };
+		// The short-circuit is a SUCCESS with no data, never a refusal — so the
+		// envelope must be the OK one in BOTH modes.
+		expect(body.msg).toBe('OK. Request done successfully');
+		expect(body.errors).toEqual([]);
+		expect(Array.isArray(body.result)).toBe(true);
+		return body.result as WidgetItem[];
+	}
+
+	test("mode 'edit' ⇒ the indexation count and the terms grid, over the oh25 hop", async () => {
+		const items = await descriptorItems('edit');
+
+		// One IPO entry (oh87's descriptors block) × its single path × two
+		// declared outputs — so `key` is 0 throughout and the ids are exactly
+		// the pair the client's render reads by widget_id.
+		expect(items.map((item) => item.widget_id)).toEqual(['indexation', 'terms']);
+		for (const item of items) {
+			expect(item.widget).toBe(DESCRIPTORS_WIDGET);
+			expect(item.key).toBe(0);
+			// RAW channel: no WC-026 dualisation (that is the read-path emit hook).
+			expect(Object.hasOwn(item, 'id')).toBe(false);
+			// The oh25 hop actually ran: the item locator IS the tape locator.
+			expect(item.locator).toEqual(locatorOf(TAPE_SECTION, TAPE_ID, 'oh25'));
+		}
+
+		// indexation = the number of rsc860 descriptor locators on the tape.
+		const indexation = mustGet(items[0], 'indexation item');
+		expect(indexation.value).toBe(2);
+
+		// terms = the merged portal grid. Its COLUMN set resolves against live
+		// reference data (absent in the test DB), so pin the structure only —
+		// the bytes are the read-path golden's job.
+		const terms = mustGet(items[1], 'terms item');
+		const grid = terms.value as { type: unknown; row_count: unknown; value: unknown[] };
+		expect(grid.type).toBe('column');
+		expect(grid.row_count).toBe(2); // one row per stored rsc860 locator
+		expect(grid.value).toHaveLength(2);
+		for (const row of grid.value) {
+			expect((row as { type: unknown }).type).toBe('row');
+		}
+	}, 30000);
+
+	test("mode 'list' ⇒ [] — the deliberate short-circuit the deferred load rests on", async () => {
+		// widgets/oh/descriptors.ts:23. Same record, same widget, same everything
+		// but the mode: a 50-row list must not pay a portal read + grid build per
+		// row, so the client fetches the terms for ONE cell on demand instead.
+		expect(await descriptorItems('list')).toEqual([]);
+	}, 30000);
+
+	test('an ABSENT source.mode takes the list branch ⇒ [] (handler default)', async () => {
+		// The exact trap the dead client autoload fell into: a request that does
+		// not send the mode gets nothing back, so the on-demand fetch MUST send
+		// mode:'edit'.
+		expect(await descriptorItems()).toEqual([]);
+	}, 30000);
+
+	test("mode 'list' is DESCRIPTORS-specific: media_icons on the same record still emits", async () => {
+		// What makes the case above a routing pin rather than 'this record has no
+		// data': the other widget declared by oh87 reads the same oh25 hop and
+		// returns rows in list mode.
+		const result = await getWidgetData(
+			rqoOf(
+				{ tipo: INFO_OH, section_tipo: OH_SECTION, section_id: OH_ID, mode: 'list' },
+				{ widget_name: MEDIA_ICONS_WIDGET },
+			),
+			contextFor(ADMIN),
+		);
+		const body = result.body as { result: unknown[]; errors: unknown };
+		expect(body.errors).toEqual([]);
+		expect(body.result.length).toBeGreaterThan(0);
+	}, 30000);
 });

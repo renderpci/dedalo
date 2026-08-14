@@ -39,6 +39,7 @@
  * (REWRITE_SPEC §4 / DIFFUSION_SPEC §2.7).
  */
 
+import { resolveIriTitles } from '../../core/components/component_iri/resolve_title.ts';
 import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
@@ -466,6 +467,46 @@ async function termRecordOf(
 	}
 	ctx.termCache.set(key, term);
 	return term;
+}
+
+/**
+ * The dd560 label of each iri item on this record — the RULE lives in
+ * component_iri/resolve_title.ts; this supplies the resolver's own record and
+ * value seams to it.
+ */
+async function iriTitlesByItemId(
+	ctx: RunContext,
+	record: MatrixRecord,
+	iriTipo: string,
+): Promise<Map<string, string>> {
+	return resolveIriTitles(record, iriTipo, async (frame) => {
+		const target = (await loadRecords(ctx, frame.sectionTipo, [frame.sectionId])).get(
+			RECORD_KEY(frame.sectionTipo, frame.sectionId),
+		);
+		if (target === null || target === undefined) return null;
+		const parts: string[] = [];
+		for (const labelTipo of frame.labelTipos) {
+			const model = (await getNode(labelTipo))?.model;
+			if (typeof model !== 'string') continue;
+			// A label is NOT a direct read: v6 reaches it through the frame's grid
+			// value, which never calls get_valor — so it is NOT trimmed (see the
+			// component_input_text branch of defaultPublicationValue).
+			const atoms = defaultPublicationValue(
+				target,
+				labelTipo,
+				model,
+				{ sourceId: frame.frameTipo, tipo: labelTipo },
+				{ __via_label: true },
+			);
+			// v6 loads the frame in DEDALO_DATA_NOLAN (:534), so a nolan value wins
+			// over a translated one; the joiner is get_grid_value's default
+			// fields_separator.
+			const preferred = atoms.find((atom) => atom.lang === null) ?? atoms[0];
+			const raw = preferred?.kind === 'scalar' ? preferred.value : null;
+			if (typeof raw === 'string' && raw !== '') parts.push(raw);
+		}
+		return parts.length > 0 ? parts.join(', ') : null;
+	});
 }
 
 /**
@@ -1520,6 +1561,36 @@ async function walkChainLevel(
 				},
 				viaLabel ? { ...(step.options ?? {}), __via_label: true } : step.options,
 			);
+			// ONLY on the diffusion-VALUE path. v6 resolves the label inside
+			// component_iri::get_diffusion_value; a field asking for the raw stored
+			// dato (v6 `data_to_be_used: "dato"`, e.g. publications.url_data) is
+			// published verbatim by v6 and keeps the ORIGINAL stored title. v7's
+			// equivalent of get_diffusion_value is the iri parser, so gate on it —
+			// substituting unconditionally rewrote url_data and broke 12 cells that
+			// had been matching.
+			if (
+				step.model === 'component_iri' &&
+				stepAtoms.length > 0 &&
+				prepared.field.transform.some((parserStep) => parserStep.fn.startsWith('parser_iri::'))
+			) {
+				// The title IS the dd560 label (component_iri/resolve_title.ts). An item
+				// with no frame publishes NO title — v6's `??` never falls through to
+				// the stored one — so the key is REMOVED, not left in place.
+				const titles = await iriTitlesByItemId(ctx, record, step.tipo);
+				stepAtoms = stepAtoms.map((atom) => {
+					if (atom.kind !== 'json' || !Array.isArray(atom.value)) return atom;
+					return {
+						...atom,
+						value: (atom.value as Record<string, unknown>[]).map((entry) => {
+							if (entry === null || typeof entry !== 'object') return entry;
+							const title = titles.get(String(entry.id));
+							if (title !== undefined) return { ...entry, title };
+							const { title: _dropped, ...withoutTitle } = entry;
+							return withoutTitle;
+						}),
+					};
+				});
+			}
 			if (step.pinLang !== undefined) {
 				// ddo lang pin (component_common :3341-3349): keep the pinned lang's
 				// entries (nolan passes) and emit them lang-neutral.

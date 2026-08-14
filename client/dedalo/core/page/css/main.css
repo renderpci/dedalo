@@ -8448,7 +8448,8 @@ body:has(.assistant_container.standalone.show) {
   padding: var(--space-3);
   padding-top: var(--space-2);
 }
-.inspector > .inspector_content_data > .buttons_container.bottom > .data_link {
+.inspector > .inspector_content_data > .buttons_container.bottom > .data_link,
+.inspector > .inspector_content_data > .buttons_container.bottom > .register_download {
   width: 100%;
   margin-top: var(--space-2);
 }

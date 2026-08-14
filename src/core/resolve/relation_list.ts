@@ -30,6 +30,7 @@ import {
 	dateModeOf,
 	resolvePeriodLabels,
 } from '../components/component_date/date_value.ts';
+import { resolveIriTitles } from '../components/component_iri/resolve_title.ts';
 import { getFlatValueFamily } from '../components/registry.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
@@ -397,42 +398,39 @@ export async function resolveCellValue(
 	}
 
 	if (family === 'iri') {
-		// Flat iri: the iri value + its dd560 label-dataframe field joined ', '
-		// per item ('Les dracmes empuritanes, Zenon' — the frame pairs by
-		// id_key + main_component_tipo, label = dd1715 at the dd1706 target).
+		// Flat iri: the iri value + its label-dataframe field joined ', ' per item
+		// ('Les dracmes empuritanes, Zenon'). v6 get_grid_value :466-483 — iri
+		// FIRST, then the title, the opposite order from get_diffusion_value.
+		//
+		// The title itself is the dd560 label and NEVER the stored `title` key:
+		// that rule (which frames pair with which item, which components carry
+		// the label, and "no frame ⇒ no title") lives in ONE place,
+		// components/component_iri/resolve_title.ts. Only the order and this
+		// path's own record seam are local.
 		const iriItems = ((record.columns.iri as Record<string, unknown[]> | null)?.[componentTipo] ??
 			[]) as { iri?: unknown; id?: number | string }[];
-		// KEPT UNION below: the RAW stored dd560 label-frame bag — unswept rows
-		// hold the legacy string id, and an iri frame commonly targets an
-		// external service whose remote id is a string by nature.
-		const frameBag = ((record.columns.relation as Record<string, unknown[]> | null)?.dd560 ??
-			[]) as {
-			id_key?: number | string;
-			main_component_tipo?: string;
-			section_tipo?: string;
-			section_id?: number | string;
-		}[];
-		const parts: string[] = [];
-		for (const item of iriItems) {
-			const fields: string[] = [];
-			if (typeof item?.iri === 'string' && item.iri !== '') fields.push(item.iri);
-			const frame = frameBag.find(
-				(entry) =>
-					entry?.main_component_tipo === componentTipo &&
-					String(entry?.id_key) === String(item?.id),
-			);
-			if (frame !== undefined && typeof frame.section_tipo === 'string') {
+		const titles = await resolveIriTitles(record, componentTipo, async (frame) => {
+			const labels: string[] = [];
+			for (const labelTipo of frame.labelTipos) {
 				const label = await resolveCellValue(
-					frame.section_tipo,
-					Number(frame.section_id),
-					'dd1715', // DEDALO label component of the dd1706 frame target
+					frame.sectionTipo,
+					Number(frame.sectionId),
+					labelTipo,
 					lang,
 					unresolved,
 					RECORDS_SEPARATOR,
 					opts,
 				);
-				if (label !== null && label !== '') fields.push(label);
+				if (label !== null && label !== '') labels.push(label);
 			}
+			return labels.length > 0 ? labels.join(', ') : null;
+		});
+		const parts: string[] = [];
+		for (const item of iriItems) {
+			const fields: string[] = [];
+			if (typeof item?.iri === 'string' && item.iri !== '') fields.push(item.iri);
+			const title = titles.get(String(item?.id));
+			if (title !== undefined) fields.push(title);
 			if (fields.length > 0) parts.push(fields.join(', '));
 		}
 		return parts.length > 0 ? parts.join(itemSeparator) : null;

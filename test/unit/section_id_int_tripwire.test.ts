@@ -102,7 +102,6 @@ const DECL_CEILINGS = new Map<string, number>([
 	['src/core/resolve/component_data.ts', 1],
 	['src/core/resolve/dd_info.ts', 4],
 	['src/core/resolve/related_sections.ts', 1],
-	['src/core/resolve/relation_list.ts', 1],
 	['src/core/search/search_related.ts', 1],
 	['src/core/section/indexation_grid.ts', 2],
 	['src/core/section/read_facade.ts', 1],

@@ -173,7 +173,15 @@ describe('session flow', () => {
     // While the first hangs, a second start must be refused.
     await expect(startSession('lock', 'again')).rejects.toThrow();
 
+    // stopSession only REQUESTS the interrupt: the wind-down (interrupt → git commit →
+    // writeMeta → persist turn_end) continues asynchronously. Without this poll the turn
+    // outlives the test and races afterEach's rm -rf, so it writes into a deleted
+    // workspace — ENOENT on the .meta.json.tmp, logged by the manager's guarded catch
+    // (seen on CI 2026-08-14). Worse than the noise: the wind-down can land DURING a
+    // later test, releasing a global slot and mutating running-state bookkeeping the
+    // mutual-exclusion tests below assert on. Settle it here, as the two tests below do.
     await stopSession(first.session_id);
+    await waitFor(() => getSessionState('lock').state !== 'running');
   });
 
   test('stop interrupts a running turn and marks it done', async () => {

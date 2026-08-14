@@ -82,11 +82,40 @@ export function normalizeValues(rows: DbRow[]): DbRow[] {
   return rows;
 }
 
+/** The one function a test may stand in for: SQL text in, canned rows out. */
+type DbExecuteFn = (db: string, sql: string, params: unknown[]) => Promise<DbRow[]>;
+
+let testExecute: DbExecuteFn | null = null;
+
+/**
+ * TEST SEAM — the ONLY supported way to run the routes/services without MariaDB.
+ *
+ * Why a seam and not `mock.module('../src/db/pool')`: bun runs every test file in ONE
+ * process and a module mock is process-wide, so mocking this module replaced it for
+ * tests/pool.test.ts too — which exists to test the REAL pool. That file died at load on
+ * the Linux CI runner (missing export) and, once that was fixed, its memoization test
+ * asserted against the stub instead of the code it is meant to gate (2026-08-14). A seam
+ * is scoped, explicit, and restored in an afterAll; a module mock is neither.
+ *
+ * Pass null to restore. Same shape as the site_builder daemon's `__setTestDriver`.
+ */
+export function __setTestDbExecute(fn: DbExecuteFn | null): void {
+  testExecute = fn;
+}
+
 export async function dbExecute<T extends DbRow[] = DbRow[]>(
   db: string,
   sql: string,
   params: unknown[] = [],
 ): Promise<T> {
+  // The allowlist runs FIRST and is never stubbed: it is the security boundary, so a test
+  // double must not be able to reach a database name the operator did not publish.
+  assertKnownDb(db);
+  if (testExecute !== null) {
+    // Normalized like the real path, so a fake cannot hand tests a shape production never
+    // produces (a Date where every real caller sees an ISO string).
+    return normalizeValues(await testExecute(db, sql, params)) as T;
+  }
   const pool = getPool(db);
   const rows = (await pool.unsafe(sql, params)) as DbRow[];
   return normalizeValues(rows) as T;
