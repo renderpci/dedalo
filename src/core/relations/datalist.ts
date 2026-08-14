@@ -33,6 +33,7 @@ import { readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
+import { registerPairingChangeListener } from '../ontology/model_section.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
 import { resolveComponentValue } from '../resolve/component_data.ts';
 import { registerSectionDataListener } from '../section_record/save_event.ts';
@@ -90,21 +91,36 @@ export interface DatalistItem {
 
 /**
  * Growth bound (S3-22): each entry pins a full target-section option list per
- * (component, lang), so an unbounded Map grows with every component×lang pair
- * ever requested. On overflow BOTH maps are dropped together (the O(1) wipe of
- * the term-resolver precedent, not LRU) — clearing the list cache without its
- * section index would leave unreachable keys behind.
+ * (component, owner section, lang), so an unbounded Map grows with every
+ * component×owner×lang triple ever requested. On overflow BOTH maps are
+ * dropped together (the O(1) wipe of the term-resolver precedent, not LRU) —
+ * clearing the list cache without its section index would leave unreachable
+ * keys behind. The owner-section key part (below) multiplies the key space by
+ * caller section against this cap, and the overflow is a TOTAL wipe, not an
+ * LRU eviction: a wide multi-hierarchy browse that thrashes past 500 entries
+ * rebuilds everything from zero — measure the hit rate there and raise the
+ * cap if it thrashes, never remove the owner from the key.
  */
 const MAX_DATALIST_CACHE_ENTRIES = 500;
 
-/** Per-component datalist cache (keyed tipo_lang — target lists are small + shared). */
+/**
+ * Per-component datalist cache. Keyed `componentTipo_ownerSectionTipo_lang`:
+ * the OWNER SECTION is part of the option-list identity because the built
+ * request_config's sqo can resolve `section_tipo` FROM THE CALLER — any
+ * `{source:'self'}` sqo, and the component_relation_model default
+ * (`section_model`: hierarchy27 in `es1` targets `es2`, the same tipo in
+ * `fr1` targets `fr2`). A tipo_lang key cannot express that answer: the first
+ * caller's list would be served to every other owner section, and a locator
+ * picked from the wrong list writes the wrong `section_tipo` into the record
+ * — silent cross-thesaurus corruption, not just a display bug.
+ */
 const datalistCache = createOntologyCache<string, DatalistItem[]>();
 
 /**
  * Populate-time index: target section tipo → the datalist cache keys built
- * from its records (S1-11). The cache key is `componentTipo_lang`, so without
- * this index a record write to a TARGET section could not be mapped back to
- * the cached option lists it staled.
+ * from its records (S1-11). It stores WHOLE cache keys (opaque strings), so
+ * without this index a record write to a TARGET section could not be mapped
+ * back to the cached option lists it staled.
  */
 const datalistKeysBySection = createOntologyCache<string, Set<string>>();
 
@@ -114,6 +130,19 @@ export function clearDatalistCache(): void {
 }
 // Ontology-derived too (request_config/ddo resolution) — hub-cleared (S1-11 stopgap).
 registerOntologyCacheClearer(clearDatalistCache);
+// REGISTRY RETARGET (2026-08-14). A component's target sections can now derive
+// from hierarchy-registry RECORD data (hierarchy53 → hierarchy58,
+// ontology/model_section.ts — the `section_model` sqo source and the
+// component_relation_model default). The per-section index below is keyed by the
+// resolved TARGET section, so a write to a REGISTRY section evicts nothing: an
+// operator retargeting the ES hierarchy from es2 to esX would clear the pairing
+// map while every already-built es1 list kept serving es2's options. A registry
+// section is not the target of anything, so there is no key to look up — the
+// honest eviction is the whole cache, and registry writes are rare operator
+// maintenance. Registered rather than polled so this file keeps its one
+// direction of dependency (relations → ontology), matching the
+// registerOntologyCacheClearer inversion above.
+registerPairingChangeListener(clearDatalistCache);
 // Data-derived: a write/delete of a TARGET section record evicts every option
 // list built from that section (the durable S1-11 channel).
 registerSectionDataListener((sectionTipo) => {
@@ -288,7 +317,10 @@ export async function probeDatalistSize(
 ): Promise<number> {
 	if (limit <= 0) return 0;
 	// A list already built is already paid for — count it rather than re-probe.
-	const cached = datalistCache.get(`${componentTipo}_${lang}`);
+	// SAME key shape as getDatalist (owner section included) — the doc-block on
+	// resolveDatalistSources is the contract: probe and build must never
+	// disagree about what the component's options ARE.
+	const cached = datalistCache.get(`${componentTipo}_${ownerSectionTipo}_${lang}`);
 	if (cached !== undefined) return Math.min(cached.length, limit);
 
 	const { targetSections, filterGroup } = await resolveDatalistSources(
@@ -349,7 +381,10 @@ export async function getDatalist(
 	ownerSectionTipo: string,
 	lang: string,
 ): Promise<DatalistItem[]> {
-	const cacheKey = `${componentTipo}_${lang}`;
+	// Owner section is part of the key — see the datalistCache doc-block: the
+	// sqo target can resolve from the CALLER, so the same component tipo means
+	// a different option list per owner section.
+	const cacheKey = `${componentTipo}_${ownerSectionTipo}_${lang}`;
 	const cached = datalistCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 

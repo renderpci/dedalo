@@ -79,6 +79,31 @@ export type ImportConformId =
 	| 'text_area';
 
 /**
+ * The TARGET-SOURCE IDs a descriptor may name in `targetSource`: the rule that
+ * says where a model's options come from when the NODE's own
+ * `sqo.section_tipo` names no usable target. Same DATA shape as `resolveData` /
+ * `emitHook` / `importConform` and for the same reason (audit S2-20):
+ * components/ keeps ZERO value-import edges into the engine — a descriptor that
+ * imported the resolver would drag relations/ + ontology/ back into the
+ * component homes and re-fuse the import SCC. The ID is bound to its
+ * implementation in relations/request_config/target_sources.ts
+ * TARGET_SOURCE_IMPLEMENTATIONS (NOT relations/registry.ts, which would close a
+ * 4-file cycle — see the plan's §3 placement rule), and applied at the single
+ * seam relations/request_config/build.ts buildRequestConfigForElement, so it
+ * covers the explicit AND the implicit config branches.
+ *
+ * Adding a source = add the ID here + its implementation entry in
+ * TARGET_SOURCE_IMPLEMENTATIONS.
+ *
+ * - 'section_model': the MODEL section paired with the caller's own section by
+ *   the hierarchy registry (`es1 → es2`), ontology/model_section.ts
+ *   getModelSectionForSection. The default of component_relation_model — one
+ *   node (hierarchy27) reused by every hierarchy, pointing somewhere different
+ *   per caller, which is exactly what a per-node sqo cannot express.
+ */
+export type TargetSourceId = 'section_model';
+
+/**
  * The search face of a relation model (mirrors the old SEARCH_UNCOVERED
  * ledger). Only relation-column models carry this; a model whose PHP search is
  * a dedicated, not-yet-ported pipeline is marked 'unported' with its reason and
@@ -219,6 +244,21 @@ export interface ComponentModel {
 	 * generic literal path.
 	 */
 	readonly emitHook?: EmitHookId;
+	/**
+	 * The model's DEFAULT target source, named as DATA (the `emitHook` /
+	 * `resolveData` shape — see TargetSourceId): where this model's options come
+	 * from when the node's own `sqo.section_tipo` resolves no target. The ID is
+	 * bound to its implementation in relations/request_config/target_sources.ts
+	 * and applied by relations/request_config/build.ts
+	 * buildRequestConfigForElement (the single seam — it covers the explicit AND
+	 * implicit config branches).
+	 *
+	 * A node's DECLARED sqo always wins; this is the fallback for the legacy
+	 * nodes that ship an empty `section_tipo: []` because their target is
+	 * per-caller ("calculated in class" in PHP). Omitted = no default: a node
+	 * with no usable sqo target resolves nothing, as today.
+	 */
+	readonly targetSource?: TargetSourceId;
 	/**
 	 * Dataframe FRAME tipos this model ALWAYS pairs with, regardless of
 	 * properties.has_dataframe (PHP component_iri_json's hardcoded

@@ -37,7 +37,11 @@
  *   thesaurus     hierarchy125 → dd64/1|2
  *   ontology      dd_ontology has `<tld>0|1|2`, and matrix_ontology has the two `<tld>0`
  *                 node records
- *   targets       hierarchy53 = `<tld>1`, hierarchy58 = `<tld>2`
+ *   targets       hierarchy53 (terms section) and hierarchy58 (model section) each name a
+ *                 real section — DEFAULTED to `<tld>1`/`<tld>2` when unset, never
+ *                 OVERWRITTEN: like hierarchy109 they are operator data, and a hierarchy
+ *                 may legitimately pair foreign sections (live: 'WW' pairs hierarchy53
+ *                 `mht72` with hierarchy58 `ww2`)
  *   root_term     hierarchy45 → an EXISTING record in `<tld>1`
  *   root_model    hierarchy59 → an EXISTING record in `<tld>2`
  *
@@ -320,14 +324,37 @@ export async function inspectHierarchy(sectionId: number): Promise<HierarchyStat
 	const ontology = await ontologyPresent(tld);
 	add('ontology', 'Ontology', ontology.ok, ontology.detail);
 
-	const target = literal(row, HIERARCHY_TARGET_SECTION);
-	const targetModel = literal(row, HIERARCHY_TARGET_SECTION_MODEL);
-	const targetsOk = target === `${tld}1` && targetModel === `${tld}2`;
+	// The target sections are OPERATOR DATA too, not tld-derived constants — the same rule
+	// as `source` above. hierarchy53 names the TERMS section, hierarchy58 the MODEL section
+	// the terms are typed by, and a hierarchy may legitimately pair foreign sections
+	// (live: hierarchy1/250 'WW' points hierarchy53 at `mht72` — a real section with
+	// records — and hierarchy58 at `ww2`). So the check is "does each name a section that
+	// EXISTS", not "does each equal `<tld>1`/`<tld>2`" — asserting the constants let
+	// `ensure` silently repoint that operator pairing at `ww1`, which the model-section
+	// resolver (ontology/model_section.ts) now READS, so a rewrite is no longer harmless.
+	// A set value that names a non-section is a data defect this check SURFACES — it is
+	// never silently repaired (live: hierarchy1/253 hierarchy58 `mht2`, a diffusion_element;
+	// hierarchy1/251 and /252 have no hierarchy58 at all).
+	const targetCheck = async (value: string, fallback: string): Promise<[boolean, string]> => {
+		if (value === '') return [false, `not set (defaults to ${fallback})`];
+		const model = await getModelByTipo(value);
+		return model === 'section'
+			? [true, value]
+			: [false, `'${value}' is not a section (model: ${model ?? 'unknown tipo'})`];
+	};
+	const [targetOk, targetDetail] = await targetCheck(
+		literal(row, HIERARCHY_TARGET_SECTION),
+		`${tld}1`,
+	);
+	const [targetModelOk, targetModelDetail] = await targetCheck(
+		literal(row, HIERARCHY_TARGET_SECTION_MODEL),
+		`${tld}2`,
+	);
 	add(
 		'targets',
 		'Target sections',
-		targetsOk,
-		targetsOk ? `${target} / ${targetModel}` : `${target || '—'} / ${targetModel || '—'}`,
+		targetOk && targetModelOk,
+		`${targetDetail} / ${targetModelDetail}`,
 	);
 
 	const rootTerm = await rootTermCheck(row, HIERARCHY_GENERAL_TERM, `${tld}1`);
@@ -638,14 +665,21 @@ export async function ensureHierarchy(
 
 	// 4. the target sections. generateVirtualSection writes them; when it was skipped
 	// (ontology already present) they may still be missing on an older record.
+	// DEFAULT them when unset — never OVERWRITE them (the same law as the source section,
+	// step 1). hierarchy53/hierarchy58 are the operator's pairing of terms section and
+	// model section, and a pairing that names foreign sections is legitimate (live:
+	// hierarchy1/250 'WW' → `mht72`/`ww2`) — rewriting it to the tld constants would
+	// quietly repoint the hierarchy, and the model-section resolver reads this pairing.
+	// A set value that does not name a section is a data defect the `targets` check
+	// surfaces — repairing it here would destroy the evidence the operator needs.
 	row = await readRegistry(sectionId);
-	if (literal(row, HIERARCHY_TARGET_SECTION) !== `${tld}1`) {
+	if (literal(row, HIERARCHY_TARGET_SECTION) === '') {
 		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION, [
 			{ id: 1, lang: 'lg-nolan', value: `${tld}1` },
 		]);
 		applied.push(`target section set to ${tld}1`);
 	}
-	if (literal(row, HIERARCHY_TARGET_SECTION_MODEL) !== `${tld}2`) {
+	if (literal(row, HIERARCHY_TARGET_SECTION_MODEL) === '') {
 		await write(sectionId, 'string', HIERARCHY_TARGET_SECTION_MODEL, [
 			{ id: 1, lang: 'lg-nolan', value: `${tld}2` },
 		]);
@@ -661,6 +695,21 @@ export async function ensureHierarchy(
 		const outcome = await ensureRootTerm(sectionId, componentTipo, targetSectionTipo, row);
 		if (outcome.error !== null) errors.push(outcome.error);
 		applied.push(...outcome.changed);
+	}
+
+	// ANNOUNCE THE REGISTRY WRITE (2026-08-14). Everything above goes to the
+	// registry through updateMatrixKeyData, which writes the row but fires NO
+	// save event — this module is not the ordinary record-save path. That was
+	// invisible until the hierarchy53/hierarchy58 pairing became READ DATA
+	// (ontology/model_section.ts): defaulting an absent hierarchy53 here, or
+	// provisioning a hierarchy, changes what a component_relation_model targets,
+	// and without the event the pairing map (and every option list derived from
+	// it) keeps the pre-write answer until an unrelated invalidation. Fired ONCE
+	// per ensure, after the last write, and only when something actually
+	// changed — no new writer, so the single-writer tripwire is unaffected.
+	if (applied.length > 0) {
+		const { fireSaveEvent } = await import('../section_record/save_event.ts');
+		await fireSaveEvent(HIERARCHY_SECTION);
 	}
 
 	const state = await inspectHierarchy(sectionId);

@@ -28,6 +28,7 @@ import { getActiveTlds } from '../../db/dd_ontology.ts';
 import { sql } from '../../db/postgres.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
+import { getModelSectionForSection } from '../../ontology/model_section.ts';
 import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { contextLabelOf } from '../../resolve/structure_context.ts';
 import {
@@ -56,6 +57,27 @@ export interface RequestConfigContext {
 	ownerSectionId?: number | string | null;
 	/** Request data lang for live expansions (filter_by_list datalists). */
 	lang?: string;
+	/**
+	 * The owner COMPONENT model's default target sections, already resolved by
+	 * its descriptor `targetSource` facet (./target_sources.ts, computed once in
+	 * ./build.ts before either strategy runs). Empty/absent for every model that
+	 * declares no facet — i.e. everything except component_relation_model today.
+	 *
+	 * WHY IT IS THREADED IN rather than applied to the finished config: it must
+	 * be in hand at the moment `targetTipos` is computed, because that value is
+	 * ALSO what `section_tipo: 'self'` resolves to in the show/search/choose/hide
+	 * ddo maps (processSingleDdo below). A default stamped onto the finished sqo
+	 * would leave every 'self' ddo pointing at the CALLER's section — hierarchy27
+	 * in es1 would emit "read hierarchy25 on es1" while its options came from es2.
+	 *
+	 * PRECEDENCE. A DECLARED sqo target always wins; this only fills silence.
+	 * "Declared" means the node's own `source.request_config` said so — the
+	 * IMPLICIT builder's relations walk does NOT count (implicit.ts), because the
+	 * section it finds there is the component's *belongs-to* ontology link, not a
+	 * statement about where its options come from: for hierarchy27 that link is
+	 * hierarchy20, the raw 69,148-row thesaurus template.
+	 */
+	modelDefaultTargets?: readonly string[];
 }
 
 /** Source names with a dedicated case below ('section_tipo' is a live alias
@@ -63,6 +85,7 @@ export interface RequestConfigContext {
 const KNOWN_SQO_SOURCES: ReadonlySet<string> = new Set([
 	'self',
 	'hierarchy_types',
+	'section_model',
 	'ontology_sections',
 	'field_value',
 	'hierarchy_terms',
@@ -83,6 +106,44 @@ const KNOWN_SQO_SOURCES: ReadonlySet<string> = new Set([
 function asSqoValueList(value: unknown): unknown[] {
 	if (Array.isArray(value)) return value;
 	return value === undefined || value === null || value === '' ? [] : [value];
+}
+
+/**
+ * `{source:'hierarchy_terms'}` — the values are term LOCATORS, and the sqo
+ * target is each locator's own `section_tipo`. `recursive`/`section_id` matter
+ * only to get_fixed_filter (./filters.ts:174), not here (PHP :2850-65). Zero
+ * live sqo users — parity insurance.
+ */
+function hierarchyTermSectionTipos(value: unknown): string[] {
+	const tipos: string[] = [];
+	for (const term of asSqoValueList(value)) {
+		const sectionTipo = (term as { section_tipo?: unknown } | null)?.section_tipo;
+		if (typeof sectionTipo === 'string') tipos.push(sectionTipo);
+	}
+	return tipos;
+}
+
+/**
+ * `{source:'section_model'}` — the MODEL TWIN of each named section (the
+ * hierarchy registry's hierarchy53 → hierarchy58 pairing, ontology/model_section.ts).
+ * No `value` (and the literal 'self') means the caller's own section, mirroring
+ * the {source:'self'} branch. Same id as the descriptor facet
+ * `targetSource: 'section_model'` on purpose — an ontology node can request the
+ * model's own default rule explicitly.
+ */
+async function resolveSectionModelSource(
+	value: unknown,
+	ownerSectionTipo: string,
+): Promise<string[]> {
+	const named = asSqoValueList(value).filter((tipo): tipo is string => typeof tipo === 'string');
+	const callerSections = named.length === 0 ? [ownerSectionTipo] : named;
+	const resolved: string[] = [];
+	for (const section of callerSections) {
+		resolved.push(
+			...(await getModelSectionForSection(section === 'self' ? ownerSectionTipo : section)),
+		);
+	}
+	return resolved;
 }
 
 /**
@@ -131,6 +192,29 @@ export async function resolveSqoSectionTipos(
 				resolved.push(...(await resolveHierarchySectionsFromTypes(typeIds)));
 				continue;
 			}
+			// section_model source (2026-08-14, no PHP sqo equivalent — it names
+			// declaratively what PHP's component_relation_model class override
+			// computed, v6 class.component_relation_model.php:115-177): each value
+			// tipo is a CALLER section resolved to its MODEL section — the
+			// terms→model twin the registry pairing declares (hierarchy53 = target
+			// section, hierarchy58 = target MODEL section), with the tld+'2'
+			// naming rule as fallback (ontology/model_section.ts). BOTH registries
+			// of the family are consulted: hierarchy1 (thesaurus, on
+			// matrix_hierarchy_main) and ontology35 (passive ontology — a VIRTUAL
+			// section of hierarchy1 carrying the same registry components on
+			// matrix_ontology_main). NO `value` means 'self' — the caller's own
+			// section, mirroring the {source:'self'} branch above. Grammar:
+			// {"source":"section_model"} = the model twin of the caller's own
+			// section; {"source":"section_model","value":["es1","fr1"]} = the
+			// model twins of those. Non-section candidates are refused LOUDLY
+			// inside the resolver (it warns and yields nothing for that caller),
+			// so the tail prune below needs no special case. Same id as the
+			// descriptor facet `targetSource: 'section_model'` on purpose — an
+			// ontology node can request the model's default rule explicitly.
+			if (source === 'section_model') {
+				resolved.push(...(await resolveSectionModelSource(value, context.ownerSectionTipo)));
+				continue;
+			}
 			// ontology_sections source: EVERY registered ontology's target section
 			// (PHP ontology::get_all_ontology_sections, class.ontology.php:1509-51 —
 			// all matrix_ontology_main rows' hierarchy53 value; no active filter,
@@ -159,10 +243,7 @@ export async function resolveSqoSectionTipos(
 			// matter only to get_fixed_filter (./filters.ts:174), not here
 			// (PHP :2850-65). Zero live sqo users — parity insurance.
 			if (source === 'hierarchy_terms') {
-				for (const term of asSqoValueList(value)) {
-					const sectionTipo = (term as { section_tipo?: unknown } | null)?.section_tipo;
-					if (typeof sectionTipo === 'string') resolved.push(sectionTipo);
-				}
+				resolved.push(...hierarchyTermSectionTipos(value));
 				continue;
 			}
 			// section source (and default — PHP's default serves any unknown name,
@@ -891,6 +972,31 @@ export async function processRqoChildren(
  * them), and non-dedalo engines get the target section's `api_config`
  * attached (./external.ts).
  */
+/**
+ * ONE config item's target sections, resolving the three-way precedence.
+ *
+ * @param declaredTipos what the item's own `sqo.section_tipo` resolved to, or
+ *   NULL when it declared no `section_tipo` key at all.
+ *
+ * 1. a DECLARED target that resolved something wins outright;
+ * 2. otherwise the owner MODEL's default applies when it has one — including an
+ *    EMPTY one, which means "this model owns the target and has none here"
+ *    (see the null-vs-[] contract on ./target_sources.ts). Falling through would
+ *    hand hierarchy27 its caller's own section as its option source;
+ * 3. otherwise the historical rules stand: an absent `section_tipo` targets the
+ *    CALLER's own section (PHP resolve_sqo_section_tipo :256-258 — the
+ *    self-targeting shape of relation_related configs like numisdata36), and a
+ *    present-but-unresolvable one stays empty.
+ */
+function resolveItemTargetTipos(
+	declaredTipos: string[] | null,
+	context: RequestConfigContext,
+): string[] {
+	if (declaredTipos !== null && declaredTipos.length > 0) return declaredTipos;
+	if (context.modelDefaultTargets !== undefined) return [...context.modelDefaultTargets];
+	return declaredTipos ?? [context.ownerSectionTipo];
+}
+
 export async function buildExplicitRequestConfig(
 	properties: unknown,
 	context: RequestConfigContext,
@@ -909,10 +1015,19 @@ export async function buildExplicitRequestConfig(
 		// relation_related configs like numisdata36/numisdata1006). The
 		// resolved tipos ship ENRICHED as ddo objects (the client contract);
 		// engine consumers project back via extractSqoSectionTipos.
-		const targetTipos =
+		const declaredTipos =
 			rawSqo.section_tipo === undefined
-				? [context.ownerSectionTipo]
+				? null
 				: await resolveSqoSectionTipos(rawSqo.section_tipo, context);
+		// MODEL DEFAULT fills silence, never overrides (context.modelDefaultTargets
+		// above): a declared sqo that RESOLVED something is kept verbatim; a sqo
+		// that is absent, or present-but-empty (hierarchy27 ships the honest
+		// `section_tipo: []` precisely because its target cannot be written into a
+		// node shared by 54 sections), falls to the owner model's targetSource.
+		// Only when there is no default either does the historical caller-section
+		// fallback apply (PHP resolve_sqo_section_tipo :256-258 — the
+		// self-targeting shape of relation_related configs like numisdata36).
+		const targetTipos = resolveItemTargetTipos(declaredTipos, context);
 		const sqo: ParsedRequestConfigItem['sqo'] = {
 			...rawSqo,
 			section_tipo: await buildSqoSectionTipoDdos(targetTipos),

@@ -95,6 +95,36 @@ export async function getMainRelatedSectionTipo(componentTipo: string): Promise<
 }
 
 /**
+ * MODEL DEFAULT BEATS THE WALK'S PICK (2026-08-14).
+ *
+ * The section node the relations walk finds is the component's *belongs-to*
+ * ontology link, not a statement about where its options come from — for a
+ * component_relation_model like hierarchy27 (relations [hierarchy20,
+ * hierarchy25]) it resolves to hierarchy20, the raw 69,148-row thesaurus
+ * TEMPLATE: plausible, silent and wrong. A model whose descriptor declares a
+ * `targetSource` therefore overrides it (context.modelDefaultTargets, resolved
+ * once in ./build.ts). This is NOT the "declared sqo wins" case — an implicit
+ * config is precisely the node that declared nothing.
+ *
+ * An EMPTY default is still the model's answer: the walk's pick is DISCARDED,
+ * never kept as a fallback. Keeping it would resurrect the exact hole this
+ * closes — a config-less relation_model in a section with no resolvable twin
+ * (`ich145`: no registry row, and the tld fallback `ich2` is a section_group)
+ * would silently enumerate hierarchy20. The resolver has already warned;
+ * carrying no target is the honest end state.
+ *
+ * Section owners are excluded: a section is its own target and carries no
+ * component-model facet.
+ */
+function applyModelDefaultTarget(
+	walkPick: string | null,
+	context: RequestConfigContext,
+): string | null {
+	if (context.ownerIsSection || context.modelDefaultTargets === undefined) return walkPick;
+	return context.modelDefaultTargets[0] ?? null;
+}
+
+/**
  * Implicit config from a node's ontology relation nodes (PHP resolve_ar_related_*
  * + clean_and_extract_related + build_legacy_ddo_map): the first
  * section-model node is the TARGET SECTION (stripped from the map), the rest
@@ -204,6 +234,17 @@ export async function buildImplicitComponentListConfig(
 	if (targetSectionTipo === null && context.ownerIsSection) {
 		targetSectionTipo = context.ownerSectionTipo;
 	}
+	// MODEL DEFAULT BEATS THE WALK'S PICK (2026-08-14). The section node found
+	// above is the component's *belongs-to* ontology link, not a statement about
+	// where its options come from — for a component_relation_model like
+	// hierarchy27 (relations [hierarchy20, hierarchy25]) it resolves to
+	// hierarchy20, the raw 69,148-row thesaurus TEMPLATE, which is plausible,
+	// silent and wrong. A model that declares a `targetSource` therefore
+	// overrides it here (context.modelDefaultTargets, resolved in ./build.ts).
+	// This is NOT the "declared sqo wins" case: an implicit config is precisely
+	// the node that declared nothing. Section owners are excluded — a section is
+	// its own target and carries no component-model facet.
+	targetSectionTipo = applyModelDefaultTarget(targetSectionTipo, context);
 	// Fix section_tipo for ddos read before the section node appeared.
 	if (targetSectionTipo !== null) {
 		for (const ddo of ddoMap) {

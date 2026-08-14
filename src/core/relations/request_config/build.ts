@@ -19,7 +19,7 @@
 
 import { selectRequestConfigStrategy } from '../../concepts/request_config.ts';
 import { sql } from '../../db/postgres.ts';
-import { getNode } from '../../ontology/resolver.ts';
+import { getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { getSectionRealTipo } from '../../resolve/security_access_datalist.ts';
 import {
 	buildExplicitRequestConfig,
@@ -28,6 +28,7 @@ import {
 	type RequestConfigContext,
 } from './explicit.ts';
 import { buildImplicitComponentListConfig, buildImplicitSectionEditConfig } from './implicit.ts';
+import { resolveTargetSourceFor } from './target_sources.ts';
 
 /**
  * Find an element's list-definition child tipo (dd_ontology, PLAIN direct
@@ -63,8 +64,121 @@ export async function findSectionListChild(
  * cached ontology properties are never mutated) so the section_list swap and
  * strategy selection below run over the preset exactly as PHP's
  * resolve_source_properties runs over resolve_preset_properties' override.
+ *
+ * STAGE-3 MODEL-DEFAULT TARGET (2026-08-14): after either strategy built the
+ * config, a component model's declared `targetSource` fills an sqo that
+ * resolved NO target section — see THE MODEL-DEFAULT TARGET SEAM comment in
+ * the body. Declared targets always win; the default only fills silence.
  */
 export async function buildRequestConfigForElement(
+	ownProperties: unknown,
+	context: RequestConfigContext,
+): Promise<ParsedRequestConfigItem[]> {
+	// Retired-grammar checkpoint: the OWNER node's own properties are in hand
+	// here (before the preset clone and the section_list swap), so this is the
+	// one place a node still carrying properties.target_mode gets its loud line.
+	reportRetiredTargetMode(ownProperties, context.ownerTipo);
+
+	// ================== THE MODEL-DEFAULT TARGET SEAM ==================
+	// The owner COMPONENT's model may declare a default target source (the
+	// descriptor facet `targetSource`, ./target_sources.ts —
+	// component_relation_model declares 'section_model': the caller section's
+	// terms→model twin via ontology/model_section.ts). It is resolved ONCE here,
+	// BEFORE either strategy runs, and threaded in as context.modelDefaultTargets
+	// so each builder can apply it at the moment it computes its targets.
+	//
+	// WHY HERE and not inside buildExplicitRequestConfig:
+	// component_relation_model is absent from EXPLICIT_CONFIG_REQUIRED_MODELS
+	// (concepts/request_config.ts:73-77), so a node with NO source.request_config
+	// takes the IMPLICIT branch (buildImplicitComponentListConfig), which walks
+	// node.relations and picks the first section-model entry — for hierarchy27's
+	// relation graph that is hierarchy20, the raw 69,148-row thesaurus template:
+	// plausible, silent and wrong. Only this function sees BOTH branches.
+	//
+	// WHY THREADED rather than stamped onto the finished config: `targetTipos` is
+	// also what `section_tipo: 'self'` resolves to in the show/search/choose/hide
+	// ddo maps. Stamping the sqo afterwards would leave hierarchy27 in es1
+	// emitting "read hierarchy25 on es1" while its options came from es2.
+	//
+	// PRECEDENCE (a deliberate divergence from PHP, which bypassed the sqo
+	// entirely for this model — v6 class.component_relation_model.php:115-177 —
+	// and kept the answer in a private field re-derived per consumer): a DECLARED
+	// sqo target wins; the default fills silence. The implicit walk's pick is not
+	// a declaration (see implicit.ts), so the default beats it.
+	//
+	// This is the ONE seam every consumer reads: datalist.ts:236
+	// (resolveDatalistSources → edit options + list labels),
+	// structure_context.ts:1009+1302 (target_sections),
+	// getElementTargetSectionTipos below (:158) — and through it
+	// import_conform.ts:821, section_elements_context.ts:258 and
+	// relation_index.ts:84 — and ai/mcp/tools/discovery.ts:245.
+	//
+	// When the source itself resolves nothing, the resolver has already reported
+	// its own degradation (CONVENTIONS §1 — model_section.ts warns naming every
+	// rejected candidate): NO second warn here, the build keeps the pre-existing
+	// empty-target behaviour rather than guessing.
+	// An EMPTY result is still an answer and is threaded in as such: a model that
+	// OWNS its target and cannot resolve one here must end with NO target, not
+	// fall through to a rule it was introduced to replace (see the null-vs-[]
+	// contract on resolveTargetSourceFor).
+	const buildContext = await withModelDefaultTargets(context);
+	return buildStrategyRequestConfig(ownProperties, buildContext);
+}
+
+/**
+ * Attach the owner MODEL's default target sections to the build context, when
+ * its descriptor declares a `targetSource` facet (./target_sources.ts).
+ * Returns the context unchanged for every model that declares none — the vast
+ * majority — so nothing else in the pipeline changes shape.
+ *
+ * Sections are skipped: `targetSource` is a COMPONENT-model facet, and a
+ * section IS its own target.
+ */
+async function withModelDefaultTargets(
+	context: RequestConfigContext,
+): Promise<RequestConfigContext> {
+	if (context.ownerIsSection) return context;
+	const ownerModel = await getModelByTipo(context.ownerTipo);
+	if (ownerModel === null) return context;
+	const defaultTargets = await resolveTargetSourceFor(ownerModel, context.ownerSectionTipo);
+	if (defaultTargets === null) return context;
+	return { ...context, modelDefaultTargets: defaultTargets };
+}
+
+/**
+ * RETIRED GRAMMAR TRIPLINE — properties.target_mode / properties.target_values
+ * (PHP component_relation_model 'free' mode, v6
+ * class.component_relation_model.php:115-177) are NOT ported: they were a
+ * second grammar for a fact the sqo already states —
+ * `{"source":"section","value":[...]}` says "options come from section X" in
+ * the vocabulary every other component uses. A node still carrying the old
+ * keys gets ONE loud line per build naming the node and the exact replacement
+ * sqo (CONVENTIONS §1: degraded, reported, defined), then resolves by the
+ * ordinary rule — an install that missed the ontology migration sees a
+ * greppable error, never silently different options.
+ */
+function reportRetiredTargetMode(ownProperties: unknown, ownerTipo: string): void {
+	const properties = ownProperties as
+		| { target_mode?: unknown; target_values?: unknown }
+		| null
+		| undefined;
+	const targetMode = properties?.target_mode;
+	if (targetMode === undefined || targetMode === null) return;
+	const targetValues = Array.isArray(properties?.target_values) ? properties.target_values : [];
+	console.error(
+		`[request_config/build] node '${ownerTipo}' carries RETIRED properties.target_mode ` +
+			`('${String(targetMode)}') — no longer read. Replace it with an explicit sqo section_tipo ` +
+			`entry {"source":"section","value":${JSON.stringify(targetValues)}}. ` +
+			'Resolving by the ordinary rule.',
+	);
+}
+
+/**
+ * The strategy core of {@link buildRequestConfigForElement} — the PHP
+ * source-property pipeline exactly as documented on the wrapper above, WITHOUT
+ * the model-default target seam (which must see this function's result).
+ */
+async function buildStrategyRequestConfig(
 	ownProperties: unknown,
 	context: RequestConfigContext,
 ): Promise<ParsedRequestConfigItem[]> {
