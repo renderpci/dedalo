@@ -443,9 +443,10 @@
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_progress {
   font-family: monospace;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   color: var(--fg_muted);
-  padding: 0.3rem 0;
+  padding: 0.5rem 0;
+  padding-top: 1rem;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_summary {
   font-size: 0.85rem;
@@ -472,6 +473,11 @@
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.severity_error,
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.severity_error {
   border-left-color: var(--color_danger);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.severity_success,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.severity_success {
+  border-left-color: var(--color_success);
+  background-color: color-mix(in srgb, var(--color_success) 12%, var(--bg_surface_alt));
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line {
   display: flex;

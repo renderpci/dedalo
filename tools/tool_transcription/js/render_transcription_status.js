@@ -24,7 +24,11 @@ export const ACTION_LABELS = {
 	action_retry			: 'Try again',
 	action_lower_quality	: 'Choose a smaller model',
 	action_check_media		: "Check this record's audio file",
-	action_ask_admin		: 'Ask your administrator'
+	action_ask_admin		: 'Ask your administrator',
+	// The two remedies for an interrupted run. Not failures: an offer to carry
+	// on, and an offer to go back to the model that holds the work.
+	action_resume			: 'Resume the transcription',
+	action_use_saved_model	: 'Go back to that model'
 }
 
 /** The remedies that DO something when pressed; the rest render as a sentence. */
@@ -33,7 +37,9 @@ export const PRESSABLE_ACTIONS = [
 	'action_download_model',
 	'action_verify_model',
 	'action_retry_cpu',
-	'action_retry'
+	'action_retry',
+	'action_resume',
+	'action_use_saved_model'
 ]
 
 
@@ -306,6 +312,14 @@ export const create_status_panel = function( options ) {
 						parent			: summary
 					})
 					part.textContent = quiet[i].text
+					// The exact identifiers behind the words — a model id, a lang's
+					// codes. They are what an administrator needs and what an
+					// archivist does not read, so they live one hover away instead
+					// of in the sentence. Text only: this is a title attribute, and
+					// the value is a server string (SEC-031).
+					if (quiet[i].title) {
+						part.title = quiet[i].title
+					}
 				}
 			}
 
@@ -330,6 +344,10 @@ export const create_status_panel = function( options ) {
 					parent			: row
 				})
 				text.textContent = line.text
+				// see the quiet line above: identifiers hover, they do not read
+				if (line.title) {
+					text.title = line.title
+				}
 
 				if (line.action_key) {
 					const button = ui.create_dom_element({

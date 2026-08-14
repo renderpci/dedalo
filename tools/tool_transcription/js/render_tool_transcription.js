@@ -36,7 +36,14 @@
 	import { keyboard_codes } from '../../../core/common/js/utils/keyboard.js'
 	import { render_node_info } from '../../../core/common/js/utils/notifications.js'
 	import { open_tool } from '../../../core/tools_common/js/tool_common.js'
-	import { get_current_lang_info } from './tool_transcription.js'
+	import {
+		get_current_lang_info,
+		get_lang_label,
+		partial_id,
+		read_partials,
+		resume_seconds_of
+	} from './tool_transcription.js'
+	import { seconds_to_tc } from '../transcribers/lib/paragraphs.js'
 	import { action_label, create_status_panel } from './render_transcription_status.js'
 	import { installed_answer, MODEL_STATES, model_state_of, server_answered } from './transcription_report.js'
 	import Split from '../../../lib/split/dist/split.es.js'
@@ -1236,7 +1243,7 @@ const get_server_status = function (options) {
 				)
 				nodes.status_panel.report({
 					phase		: 'done',
-					severity	: 'info',
+					severity	: 'success',
 					message		: self.get_tool_label('finished') || 'Process done'
 				})
 				nodes.button_automatic_transcription.classList.remove('disable');
@@ -1529,7 +1536,7 @@ const render_automatic_transcription = function (options) {
 						nodes.status_panel.progress('')
 						nodes.status_panel.report({
 							phase		: 'done',
-							severity	: 'info',
+							severity	: 'success',
 							message		: self.get_tool_label('transcription_completed')
 								|| 'Transcription completed.'
 						})
@@ -2370,6 +2377,29 @@ const render_automatic_transcription = function (options) {
 			case 'action_retry':
 				button_automatic_transcription.click()
 				break;
+
+			// An interrupted run, carried on. The trigger ALREADY resumes — the
+			// run reads this model's saved slot on its way in — so this is the
+			// same press, offered where the fact is stated instead of left for
+			// the archivist to guess at.
+			case 'action_resume':
+				button_automatic_transcription.click()
+				break;
+
+			// Go back to the model that holds the interrupted work. Only the
+			// picker moves: the run is NOT started here, because resuming an hour
+			// of transcription is a decision, and the readiness line re-reads
+			// itself on `change` and will now offer the resume proper.
+			case 'action_use_saved_model':
+				if (target && nodes.transcriber_engine_quality) {
+					nodes.transcriber_engine_quality.value = target
+					// `.value =` fires no 'change' event, so neither the saved
+					// preference nor the readiness line would follow the move.
+					nodes.transcriber_engine_quality.dispatchEvent(
+						new Event('change', { bubbles: true })
+					)
+				}
+				break;
 		}
 	}
 
@@ -2453,10 +2483,49 @@ const render_automatic_transcription = function (options) {
 			const model_state	= model_state_of( models, selected )
 			const state_info	= model_state ? (MODEL_STATES[model_state] || null) : null
 
+			/**
+			* THE MODEL LINE'S SUBJECT, in the picker's own words.
+			*
+			* "Model: unverified" named no model. The tool offers several and the
+			* archivist chose one of them a moment ago, so a state with no subject
+			* is a fact they cannot act on — and the remedy button beside it acts on
+			* a model the line never identified. The words come from the SELECTED
+			* OPTION (its `base_text`, the option's own label without the state
+			* suffix the picker appends), so the line and the picker cannot drift
+			* into two names for one thing.
+			*
+			* Shape: `Model — Small: installed, not verified`, which is the idiom the
+			* speaker-detection lines below already use (`what — which: state`).
+			*/
+			// ONE model, in the picker's words. Any model, not only the selected
+			// one: the interrupted-run line below names a model the archivist is
+			// NOT on, and it has to name it the way the picker does or they cannot
+			// find it.
+			const model_label_of = function( model ) {
+				const select = nodes.transcriber_engine_quality
+				const option = select
+					? [...select.options].find( item => item.value===model )
+					: null
+
+
+				return option
+					? (option.dataset.base_text || option.text || model || '')
+					: (model || '')
+			}
+
+			const model_words = function() {
+				const subject	= model_label_of( selected )
+				const label		= self.get_tool_label('readiness_model') || 'Model'
+
+
+				return subject!=='' ? `${label} — ${subject}` : label
+			}
+
 			if (!models_known) {
 				lines.push({
 					severity	: 'warning',
-					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`
+					text		: `${model_words()}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`,
+					title		: selected || ''
 				})
 			} else if (state_info) {
 				// An UNVERIFIED model is not a fault: it is the normal state of every
@@ -2465,7 +2534,9 @@ const render_automatic_transcription = function (options) {
 				const state_label = self.get_tool_label( state_info.state_key ) || model_state
 				lines.push({
 					severity		: state_info.usable ? 'info' : 'error',
-					text			: `${self.get_tool_label('readiness_model') || 'Model'}: ${state_label}`,
+					text			: `${model_words()}: ${state_label}`,
+					// the exact catalog id, for whoever has to act on it
+					title			: selected || '',
 					// A remedy is offered only for a state that BLOCKS the run.
 					// `unverified` is usable and is the normal state of every store
 					// seeded before the manifest existed, so a button on it would
@@ -2486,7 +2557,8 @@ const render_automatic_transcription = function (options) {
 				// No remedy is offered: we cannot know which one would apply.
 				lines.push({
 					severity	: 'warning',
-					text		: `${self.get_tool_label('readiness_model') || 'Model'}: ${model_state}`
+					text		: `${model_words()}: ${model_state}`,
+					title		: selected || ''
 				})
 			}
 
@@ -2560,10 +2632,71 @@ const render_automatic_transcription = function (options) {
 				}
 			}
 
+			// The language, NAMED — not spelled three times. This read
+			// `Language: Castellano | lg-spa | es`: one fact, once in words and
+			// twice in machine codes, in the line an archivist reads before
+			// pressing the button. The codes are the administrator's (and they
+			// could render `| undefined` for any lang with no ISO 639-1 code), so
+			// they moved to the row's title.
 			lines.push({
 				severity	: 'info',
-				text		: `${self.get_tool_label('readiness_language') || 'Language'}: ${get_current_lang_info(self.transcription_component.lang)}`
+				text		: `${self.get_tool_label('readiness_language') || 'Language'}: ${get_lang_label(self.transcription_component.lang)}`,
+				title		: get_current_lang_info(self.transcription_component.lang)
 			})
+
+			/**
+			* THE INTERRUPTED RUN.
+			*
+			* A browser transcription lives in this tab: a reload, a crash or a
+			* closed window kills the worker mid-window. Every completed window was
+			* already persisted (save_partial), so the work SURVIVES — but the store
+			* was read in exactly one place, inside the run, *after* the button was
+			* pressed. So the archivist came back to a tool that looked untouched,
+			* having watched an hour of transcription vanish, and the only way to
+			* discover it had not was to press the button and hope.
+			*
+			* It is stated here, before anything is pressed, with the button that
+			* acts on it — the panel's own idiom for "there is something to do".
+			*/
+			const partials	= read_partials(
+				await data_manager.get_local_db_data( partial_id(self), 'status' )
+			)
+			const reached	= function( entry ) {
+				// the tool's own timecode, without the milliseconds a person
+				// reading "how far did it get" has no use for
+				return seconds_to_tc( resume_seconds_of(entry.segments) ).slice(0, 8)
+			}
+
+			if (partials[selected]) {
+				// THIS model's work: pressing the trigger resumes from it, which is
+				// what the button already does — so the line says so and offers it.
+				lines.push({
+					severity		: 'info',
+					text			: `${self.get_tool_label('readiness_interrupted') || 'Interrupted transcription'} — ${model_label_of(selected)}: ${self.get_tool_label('resume_reached', reached(partials[selected])) || `${reached(partials[selected])} already transcribed`}`,
+					action_key		: 'action_resume',
+					action_model	: selected,
+					title			: selected || ''
+				})
+			} else {
+				// Another model's work, and it is about to be passed over in
+				// silence. NOT destroyed — the store keeps a slot per model now —
+				// but a run started here transcribes from zero while an hour of
+				// recognised speech sits one choice away. So: name the model that
+				// holds it, and offer the one press that goes back to it.
+				const other = Object.keys(partials)
+					.map( model => ({ model: model, entry: partials[model] }) )
+					.sort( (a, b) => (b.entry.updated || 0) - (a.entry.updated || 0) )[0]
+
+				if (other) {
+					lines.push({
+						severity		: 'warning',
+						text			: `${self.get_tool_label('readiness_interrupted') || 'Interrupted transcription'} — ${model_label_of(other.model)}: ${self.get_tool_label('resume_other_model', reached(other.entry)) || `${reached(other.entry)} transcribed with another model — running now starts from the beginning`}`,
+						action_key		: 'action_use_saved_model',
+						action_model	: other.model,
+						title			: other.model
+					})
+				}
+			}
 
 			status_panel.readiness( lines )
 		}
@@ -2695,7 +2828,7 @@ const render_automatic_transcription = function (options) {
 					settle_model_state( result )
 					status_panel.report({
 						phase		: 'model',
-						severity	: 'info',
+						severity	: 'success',
 						message		: self.get_tool_label('model_ready') || 'Model installed.'
 					})
 				}

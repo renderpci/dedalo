@@ -1814,6 +1814,56 @@
             "value": "The transcription was saved, but the editor could not be updated — reload the page to see it."
           },
           {
+            "lang": "lg-ara",
+            "name": "saved_reload_to_see",
+            "value": "تم حفظ النسخ، لكن تعذر تحديث المحرر؛ أعد تحميل الصفحة لعرضه."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "saved_reload_to_see",
+            "value": "La transcripció s'ha desat, però no s'ha pogut actualitzar l'editor: torneu a carregar la pàgina per veure-la."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "saved_reload_to_see",
+            "value": "Die Transkription wurde gespeichert, der Editor konnte jedoch nicht aktualisiert werden — laden Sie die Seite neu, um sie zu sehen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "saved_reload_to_see",
+            "value": "Η μεταγραφή αποθηκεύτηκε, αλλά δεν ήταν δυνατή η ενημέρωση του επεξεργαστή — ανανεώστε τη σελίδα για να τη δείτε."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "saved_reload_to_see",
+            "value": "Transkripzioa gorde da, baina ezin izan da editorea eguneratu: kargatu orria berriro ikusteko."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "saved_reload_to_see",
+            "value": "La transcription a été enregistrée, mais l'éditeur n'a pas pu être mis à jour : rechargez la page pour la voir."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "saved_reload_to_see",
+            "value": "La trascrizione è stata salvata, ma non è stato possibile aggiornare l'editor: ricarichi la pagina per vederla."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "saved_reload_to_see",
+            "value": "ट्रान्सक्रिप्सन सुरक्षित भयो, तर सम्पादक अद्यावधिक गर्न सकिएन — हेर्न पृष्ठ पुनः लोड गर्नुहोस्।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "saved_reload_to_see",
+            "value": "A transcrição foi guardada, mas não foi possível atualizar o editor: recarregue a página para a ver."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "saved_reload_to_see",
+            "value": "La transcripción se ha guardado, pero no se ha podido actualizar el editor: recargue la página para verla."
+          },
+          {
             "lang": "lg-eus",
             "name": "model_ready",
             "value": "Eredua instalatuta."
@@ -2014,9 +2064,109 @@
             "value": "The speech model on this server is damaged"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_model_damaged",
+            "value": "نموذج الكلام على هذا الخادم تالف"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_model_damaged",
+            "value": "El model de veu d'aquest servidor està malmès"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_model_damaged",
+            "value": "Das Sprachmodell auf diesem Server ist beschädigt"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_model_damaged",
+            "value": "Το μοντέλο φωνής σε αυτόν τον διακομιστή είναι κατεστραμμένο"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_model_damaged",
+            "value": "Zerbitzari honetako ahots-modeloa hondatuta dago"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_model_damaged",
+            "value": "Le modèle vocal de ce serveur est endommagé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_model_damaged",
+            "value": "Il modello vocale di questo server è danneggiato"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_model_damaged",
+            "value": "यो सर्भरको वाक् मोडेल बिग्रिएको छ"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_model_damaged",
+            "value": "O modelo de voz deste servidor está danificado"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_model_damaged",
+            "value": "El modelo de voz de este servidor está dañado"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_model_damaged",
             "value": "Its files are incomplete or corrupted — usually an interrupted download."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_model_damaged",
+            "value": "ملفاته ناقصة أو تالفة، وغالبًا ما يكون السبب تنزيلًا متوقفًا."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_model_damaged",
+            "value": "Els seus fitxers són incomplets o malmesos; sol ser una baixada interrompuda."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_model_damaged",
+            "value": "Seine Dateien sind unvollständig oder beschädigt — meist ein abgebrochener Download."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_model_damaged",
+            "value": "Τα αρχεία του είναι ελλιπή ή κατεστραμμένα — συνήθως μια διακοπείσα λήψη."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_model_damaged",
+            "value": "Bere fitxategiak osatugabeak edo hondatuta daude; normalean eten den deskarga bat."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_model_damaged",
+            "value": "Ses fichiers sont incomplets ou corrompus — généralement un téléchargement interrompu."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_model_damaged",
+            "value": "I suoi file sono incompleti o danneggiati: di solito un download interrotto."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_model_damaged",
+            "value": "यसका फाइलहरू अपूर्ण वा बिग्रिएका छन् — प्रायः अवरुद्ध डाउनलोडका कारण।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_model_damaged",
+            "value": "Os seus ficheiros estão incompletos ou danificados — normalmente um descarregamento interrompido."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_model_damaged",
+            "value": "Sus archivos están incompletos o dañados; suele deberse a una descarga interrumpida."
           },
           {
             "lang": "lg-eng",
@@ -2024,9 +2174,109 @@
             "value": "The speech model is not installed on this server"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_model_missing",
+            "value": "نموذج الكلام غير مثبت على هذا الخادم"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_model_missing",
+            "value": "El model de veu no està instal·lat en aquest servidor"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_model_missing",
+            "value": "Das Sprachmodell ist auf diesem Server nicht installiert"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_model_missing",
+            "value": "Το μοντέλο φωνής δεν είναι εγκατεστημένο σε αυτόν τον διακομιστή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_model_missing",
+            "value": "Ahots-modeloa ez dago zerbitzari honetan instalatuta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_model_missing",
+            "value": "Le modèle vocal n'est pas installé sur ce serveur"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_model_missing",
+            "value": "Il modello vocale non è installato su questo server"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_model_missing",
+            "value": "यो सर्भरमा वाक् मोडेल स्थापना गरिएको छैन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_model_missing",
+            "value": "O modelo de voz não está instalado neste servidor"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_model_missing",
+            "value": "El modelo de voz no está instalado en este servidor"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_model_missing",
             "value": "Nobody has downloaded it into this installation's model store yet."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_model_missing",
+            "value": "لم يقم أحد بتنزيله بعد في مخزن النماذج الخاص بهذا التثبيت."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_model_missing",
+            "value": "Encara ningú no l'ha baixat al magatzem de models d'aquesta instal·lació."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_model_missing",
+            "value": "Es hat noch niemand in den Modellspeicher dieser Installation heruntergeladen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_model_missing",
+            "value": "Κανείς δεν το έχει κατεβάσει ακόμη στην αποθήκη μοντέλων αυτής της εγκατάστασης."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_model_missing",
+            "value": "Oraindik inork ez du instalazio honen modelo-biltegira deskargatu."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_model_missing",
+            "value": "Personne ne l'a encore téléchargé dans la réserve de modèles de cette installation."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_model_missing",
+            "value": "Nessuno lo ha ancora scaricato nell'archivio dei modelli di questa installazione."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_model_missing",
+            "value": "यो स्थापनाको मोडेल भण्डारमा अझै कसैले डाउनलोड गरेको छैन।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_model_missing",
+            "value": "Ainda ninguém o descarregou para o repositório de modelos desta instalação."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_model_missing",
+            "value": "Todavía nadie lo ha descargado en el almacén de modelos de esta instalación."
           },
           {
             "lang": "lg-eng",
@@ -2034,9 +2284,109 @@
             "value": "This recording is too large for this computer at this quality"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_out_of_memory",
+            "value": "هذا التسجيل أكبر من قدرة هذا الحاسوب بهذه الجودة"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_out_of_memory",
+            "value": "Aquest enregistrament és massa gran per a aquest ordinador amb aquesta qualitat"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_out_of_memory",
+            "value": "Diese Aufnahme ist für diesen Rechner in dieser Qualität zu groß"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_out_of_memory",
+            "value": "Αυτή η ηχογράφηση είναι πολύ μεγάλη για αυτόν τον υπολογιστή σε αυτή την ποιότητα"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_out_of_memory",
+            "value": "Grabaketa hau handiegia da ordenagailu honentzat kalitate honekin"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_out_of_memory",
+            "value": "Cet enregistrement est trop volumineux pour cet ordinateur à cette qualité"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_out_of_memory",
+            "value": "Questa registrazione è troppo grande per questo computer a questa qualità"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_out_of_memory",
+            "value": "यो गुणस्तरमा यो रेकर्डिङ यस कम्प्युटरका लागि निकै ठूलो छ"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_out_of_memory",
+            "value": "Esta gravação é demasiado grande para este computador com esta qualidade"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_out_of_memory",
+            "value": "Esta grabación es demasiado grande para este ordenador con esta calidad"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_out_of_memory",
             "value": "The model ran out of memory while transcribing."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_out_of_memory",
+            "value": "نفدت ذاكرة النموذج أثناء النسخ."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_out_of_memory",
+            "value": "El model s'ha quedat sense memòria durant la transcripció."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_out_of_memory",
+            "value": "Dem Modell ist während der Transkription der Speicher ausgegangen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_out_of_memory",
+            "value": "Το μοντέλο εξάντλησε τη μνήμη κατά τη μεταγραφή."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_out_of_memory",
+            "value": "Modeloak memoriarik gabe geratu da transkribatzen ari zela."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_out_of_memory",
+            "value": "Le modèle a manqué de mémoire pendant la transcription."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_out_of_memory",
+            "value": "Il modello ha esaurito la memoria durante la trascrizione."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_out_of_memory",
+            "value": "ट्रान्सक्रिप्सन गर्दा मोडेलको मेमोरी सकियो।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_out_of_memory",
+            "value": "O modelo ficou sem memória durante a transcrição."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_out_of_memory",
+            "value": "El modelo se ha quedado sin memoria durante la transcripción."
           },
           {
             "lang": "lg-eng",
@@ -2044,9 +2394,109 @@
             "value": "The graphics card stopped the transcription"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_device_lost",
+            "value": "أوقفت بطاقة الرسوميات عملية النسخ"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_device_lost",
+            "value": "La targeta gràfica ha aturat la transcripció"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_device_lost",
+            "value": "Die Grafikkarte hat die Transkription gestoppt"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_device_lost",
+            "value": "Η κάρτα γραφικών σταμάτησε τη μεταγραφή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_device_lost",
+            "value": "Txartel grafikoak transkripzioa gelditu du"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_device_lost",
+            "value": "La carte graphique a interrompu la transcription"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_device_lost",
+            "value": "La scheda grafica ha interrotto la trascrizione"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_device_lost",
+            "value": "ग्राफिक्स कार्डले ट्रान्सक्रिप्सन रोक्यो"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_device_lost",
+            "value": "A placa gráfica interrompeu a transcrição"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_device_lost",
+            "value": "La tarjeta gráfica ha detenido la transcripción"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_device_lost",
             "value": "The GPU dropped the job. It can be finished on the processor instead, more slowly."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_device_lost",
+            "value": "تخلّت وحدة معالجة الرسوميات عن المهمة. يمكن إتمامها على المعالج، ولكن ببطء أكبر."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_device_lost",
+            "value": "La GPU ha abandonat la feina. Es pot acabar amb el processador, més a poc a poc."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_device_lost",
+            "value": "Die GPU hat den Auftrag abgebrochen. Er kann stattdessen langsamer auf dem Prozessor beendet werden."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_device_lost",
+            "value": "Η GPU εγκατέλειψε την εργασία. Μπορεί να ολοκληρωθεί στον επεξεργαστή, πιο αργά."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_device_lost",
+            "value": "GPUak lana utzi du. Prozesadorean amai daiteke, motelago."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_device_lost",
+            "value": "Le GPU a abandonné la tâche. Elle peut être terminée sur le processeur, plus lentement."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_device_lost",
+            "value": "La GPU ha abbandonato il lavoro. Può essere completato sul processore, più lentamente."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_device_lost",
+            "value": "GPU ले काम छोड्यो। यो प्रोसेसरमा सकिन सक्छ, तर ढिलो हुन्छ।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_device_lost",
+            "value": "A GPU abandonou o trabalho. Pode ser terminado no processador, mais lentamente."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_device_lost",
+            "value": "La GPU ha abandonado el trabajo. Puede terminarse en el procesador, más despacio."
           },
           {
             "lang": "lg-eng",
@@ -2054,9 +2504,109 @@
             "value": "This server is missing the security headers the engine needs"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_not_isolated",
+            "value": "تنقص هذا الخادم ترويسات الأمان التي يحتاجها المحرك"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_not_isolated",
+            "value": "A aquest servidor li falten les capçaleres de seguretat que necessita el motor"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_not_isolated",
+            "value": "Diesem Server fehlen die Sicherheits-Header, die die Engine benötigt"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_not_isolated",
+            "value": "Από αυτόν τον διακομιστή λείπουν οι κεφαλίδες ασφαλείας που χρειάζεται η μηχανή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_not_isolated",
+            "value": "Zerbitzari honi motorrak behar dituen segurtasun-goiburuak falta zaizkio"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_not_isolated",
+            "value": "Il manque à ce serveur les en-têtes de sécurité dont le moteur a besoin"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_not_isolated",
+            "value": "A questo server mancano le intestazioni di sicurezza richieste dal motore"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_not_isolated",
+            "value": "यो सर्भरमा इन्जिनलाई चाहिने सुरक्षा हेडरहरू छैनन्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_not_isolated",
+            "value": "Faltam a este servidor os cabeçalhos de segurança de que o motor necessita"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_not_isolated",
+            "value": "A este servidor le faltan las cabeceras de seguridad que necesita el motor"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_not_isolated",
             "value": "Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy are required for in-browser transcription."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_not_isolated",
+            "value": "يتطلب النسخ داخل المتصفح ترويستَي Cross-Origin-Opener-Policy وCross-Origin-Embedder-Policy."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_not_isolated",
+            "value": "La transcripció al navegador necessita les capçaleres Cross-Origin-Opener-Policy i Cross-Origin-Embedder-Policy."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_not_isolated",
+            "value": "Für die Transkription im Browser sind die Header Cross-Origin-Opener-Policy und Cross-Origin-Embedder-Policy erforderlich."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_not_isolated",
+            "value": "Η μεταγραφή στον περιηγητή απαιτεί τις κεφαλίδες Cross-Origin-Opener-Policy και Cross-Origin-Embedder-Policy."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_not_isolated",
+            "value": "Nabigatzaileko transkripzioak Cross-Origin-Opener-Policy eta Cross-Origin-Embedder-Policy goiburuak behar ditu."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_not_isolated",
+            "value": "La transcription dans le navigateur exige les en-têtes Cross-Origin-Opener-Policy et Cross-Origin-Embedder-Policy."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_not_isolated",
+            "value": "La trascrizione nel browser richiede le intestazioni Cross-Origin-Opener-Policy e Cross-Origin-Embedder-Policy."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_not_isolated",
+            "value": "ब्राउजरभित्रको ट्रान्सक्रिप्सनका लागि Cross-Origin-Opener-Policy र Cross-Origin-Embedder-Policy हेडरहरू आवश्यक छन्।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_not_isolated",
+            "value": "A transcrição no navegador exige os cabeçalhos Cross-Origin-Opener-Policy e Cross-Origin-Embedder-Policy."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_not_isolated",
+            "value": "La transcripción en el navegador necesita las cabeceras Cross-Origin-Opener-Policy y Cross-Origin-Embedder-Policy."
           },
           {
             "lang": "lg-eng",
@@ -2064,9 +2614,109 @@
             "value": "The recording's audio could not be read"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_audio_undecodable",
+            "value": "تعذرت قراءة صوت التسجيل"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_audio_undecodable",
+            "value": "No s'ha pogut llegir l'àudio de l'enregistrament"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_audio_undecodable",
+            "value": "Der Ton der Aufnahme konnte nicht gelesen werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_audio_undecodable",
+            "value": "Δεν ήταν δυνατή η ανάγνωση του ήχου της ηχογράφησης"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_audio_undecodable",
+            "value": "Ezin izan da grabaketaren audioa irakurri"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_audio_undecodable",
+            "value": "L'audio de l'enregistrement n'a pas pu être lu"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_audio_undecodable",
+            "value": "Non è stato possibile leggere l'audio della registrazione"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_audio_undecodable",
+            "value": "रेकर्डिङको अडियो पढ्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_audio_undecodable",
+            "value": "Não foi possível ler o áudio da gravação"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_audio_undecodable",
+            "value": "No se ha podido leer el audio de la grabación"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_audio_undecodable",
             "value": "The audio file for this record could not be decoded by the browser."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_audio_undecodable",
+            "value": "تعذر على المتصفح فك ترميز ملف الصوت الخاص بهذا السجل."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_audio_undecodable",
+            "value": "El navegador no ha pogut descodificar el fitxer d'àudio d'aquest registre."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_audio_undecodable",
+            "value": "Der Browser konnte die Audiodatei dieses Datensatzes nicht dekodieren."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_audio_undecodable",
+            "value": "Ο περιηγητής δεν μπόρεσε να αποκωδικοποιήσει το αρχείο ήχου αυτής της εγγραφής."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_audio_undecodable",
+            "value": "Nabigatzaileak ezin izan du erregistro honen audio-fitxategia deskodetu."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_audio_undecodable",
+            "value": "Le navigateur n'a pas pu décoder le fichier audio de cette fiche."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_audio_undecodable",
+            "value": "Il browser non è riuscito a decodificare il file audio di questa scheda."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_audio_undecodable",
+            "value": "ब्राउजरले यो रेकर्डको अडियो फाइल डिकोड गर्न सकेन।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_audio_undecodable",
+            "value": "O navegador não conseguiu descodificar o ficheiro de áudio deste registo."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_audio_undecodable",
+            "value": "El navegador no ha podido descodificar el archivo de audio de este registro."
           },
           {
             "lang": "lg-eng",
@@ -2074,9 +2724,109 @@
             "value": "The model could not be loaded from this server"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_network",
+            "value": "تعذر تحميل النموذج من هذا الخادم"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_network",
+            "value": "No s'ha pogut carregar el model des d'aquest servidor"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_network",
+            "value": "Das Modell konnte von diesem Server nicht geladen werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_network",
+            "value": "Δεν ήταν δυνατή η φόρτωση του μοντέλου από αυτόν τον διακομιστή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_network",
+            "value": "Ezin izan da modeloa zerbitzari honetatik kargatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_network",
+            "value": "Le modèle n'a pas pu être chargé depuis ce serveur"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_network",
+            "value": "Non è stato possibile caricare il modello da questo server"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_network",
+            "value": "यो सर्भरबाट मोडेल लोड गर्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_network",
+            "value": "Não foi possível carregar o modelo a partir deste servidor"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_network",
+            "value": "No se ha podido cargar el modelo desde este servidor"
+          },
+          {
             "lang": "lg-eng",
             "name": "cause_network",
             "value": "The connection to the model store failed."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "cause_network",
+            "value": "فشل الاتصال بمخزن النماذج."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "cause_network",
+            "value": "La connexió amb el magatzem de models ha fallat."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "cause_network",
+            "value": "Die Verbindung zum Modellspeicher ist fehlgeschlagen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "cause_network",
+            "value": "Η σύνδεση με την αποθήκη μοντέλων απέτυχε."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "cause_network",
+            "value": "Modelo-biltegirako konexioak huts egin du."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "cause_network",
+            "value": "La connexion à la réserve de modèles a échoué."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "cause_network",
+            "value": "La connessione all'archivio dei modelli non è riuscita."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "cause_network",
+            "value": "मोडेल भण्डारसँगको जडान असफल भयो।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "cause_network",
+            "value": "A ligação ao repositório de modelos falhou."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "cause_network",
+            "value": "La conexión con el almacén de modelos ha fallado."
           },
           {
             "lang": "lg-eng",
@@ -2084,9 +2834,109 @@
             "value": "The transcription failed"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_unknown",
+            "value": "فشلت عملية النسخ"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_unknown",
+            "value": "La transcripció ha fallat"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_unknown",
+            "value": "Die Transkription ist fehlgeschlagen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_unknown",
+            "value": "Η μεταγραφή απέτυχε"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_unknown",
+            "value": "Transkripzioak huts egin du"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_unknown",
+            "value": "La transcription a échoué"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_unknown",
+            "value": "La trascrizione non è riuscita"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_unknown",
+            "value": "ट्रान्सक्रिप्सन असफल भयो"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_unknown",
+            "value": "A transcrição falhou"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_unknown",
+            "value": "La transcripción ha fallado"
+          },
+          {
             "lang": "lg-eng",
             "name": "action_repair_model",
             "value": "Repair model"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "action_repair_model",
+            "value": "إصلاح النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_repair_model",
+            "value": "Reparar el model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_repair_model",
+            "value": "Modell reparieren"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_repair_model",
+            "value": "Επιδιόρθωση του μοντέλου"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_repair_model",
+            "value": "Konpondu modeloa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_repair_model",
+            "value": "Réparer le modèle"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_repair_model",
+            "value": "Ripara il modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_repair_model",
+            "value": "मोडेल मर्मत गर्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_repair_model",
+            "value": "Reparar o modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_repair_model",
+            "value": "Reparar el modelo"
           },
           {
             "lang": "lg-eng",
@@ -2094,9 +2944,109 @@
             "value": "Download model"
           },
           {
+            "lang": "lg-ara",
+            "name": "action_download_model",
+            "value": "تنزيل النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_download_model",
+            "value": "Baixar el model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_download_model",
+            "value": "Modell herunterladen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_download_model",
+            "value": "Λήψη του μοντέλου"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_download_model",
+            "value": "Deskargatu modeloa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_download_model",
+            "value": "Télécharger le modèle"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_download_model",
+            "value": "Scarica il modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_download_model",
+            "value": "मोडेल डाउनलोड गर्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_download_model",
+            "value": "Descarregar o modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_download_model",
+            "value": "Descargar el modelo"
+          },
+          {
             "lang": "lg-eng",
             "name": "action_verify_model",
             "value": "Verify model"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "action_verify_model",
+            "value": "التحقق من النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_verify_model",
+            "value": "Verificar el model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_verify_model",
+            "value": "Modell prüfen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_verify_model",
+            "value": "Έλεγχος του μοντέλου"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_verify_model",
+            "value": "Egiaztatu modeloa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_verify_model",
+            "value": "Vérifier le modèle"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_verify_model",
+            "value": "Verifica il modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_verify_model",
+            "value": "मोडेल प्रमाणित गर्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_verify_model",
+            "value": "Verificar o modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_verify_model",
+            "value": "Verificar el modelo"
           },
           {
             "lang": "lg-eng",
@@ -2104,9 +3054,109 @@
             "value": "Retry on the processor"
           },
           {
+            "lang": "lg-ara",
+            "name": "action_retry_cpu",
+            "value": "إعادة المحاولة على المعالج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_retry_cpu",
+            "value": "Tornar-ho a provar amb el processador"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_retry_cpu",
+            "value": "Erneut auf dem Prozessor versuchen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_retry_cpu",
+            "value": "Δοκιμή ξανά στον επεξεργαστή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_retry_cpu",
+            "value": "Saiatu berriro prozesadorearekin"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_retry_cpu",
+            "value": "Réessayer sur le processeur"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_retry_cpu",
+            "value": "Riprova sul processore"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_retry_cpu",
+            "value": "प्रोसेसरमा फेरि प्रयास गर्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_retry_cpu",
+            "value": "Tentar novamente no processador"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_retry_cpu",
+            "value": "Reintentar en el procesador"
+          },
+          {
             "lang": "lg-eng",
             "name": "action_lower_quality",
             "value": "Choose a lower quality in the settings"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "action_lower_quality",
+            "value": "اختر جودة أقل في الإعدادات"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_lower_quality",
+            "value": "Trieu una qualitat inferior a la configuració"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_lower_quality",
+            "value": "Wählen Sie in den Einstellungen eine geringere Qualität"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_lower_quality",
+            "value": "Επιλέξτε χαμηλότερη ποιότητα στις ρυθμίσεις"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_lower_quality",
+            "value": "Aukeratu kalitate baxuagoa ezarpenetan"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_lower_quality",
+            "value": "Choisissez une qualité inférieure dans les réglages"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_lower_quality",
+            "value": "Scelga una qualità inferiore nelle impostazioni"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_lower_quality",
+            "value": "सेटिङमा कम गुणस्तर छान्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_lower_quality",
+            "value": "Escolha uma qualidade inferior nas definições"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_lower_quality",
+            "value": "Elija una calidad menor en la configuración"
           },
           {
             "lang": "lg-eng",
@@ -2114,9 +3164,109 @@
             "value": "Try again"
           },
           {
+            "lang": "lg-ara",
+            "name": "action_retry",
+            "value": "حاول مرة أخرى"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_retry",
+            "value": "Tornar-ho a provar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_retry",
+            "value": "Erneut versuchen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_retry",
+            "value": "Δοκιμάστε ξανά"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_retry",
+            "value": "Saiatu berriro"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_retry",
+            "value": "Réessayer"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_retry",
+            "value": "Riprova"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_retry",
+            "value": "फेरि प्रयास गर्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_retry",
+            "value": "Tentar novamente"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_retry",
+            "value": "Intentarlo de nuevo"
+          },
+          {
             "lang": "lg-eng",
             "name": "action_ask_admin",
             "value": "Ask your administrator"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "action_ask_admin",
+            "value": "اسأل المسؤول عن النظام"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_ask_admin",
+            "value": "Pregunteu al vostre administrador"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_ask_admin",
+            "value": "Fragen Sie Ihre Administratorin oder Ihren Administrator"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_ask_admin",
+            "value": "Ρωτήστε τον διαχειριστή σας"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_ask_admin",
+            "value": "Galdetu zure administratzaileari"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_ask_admin",
+            "value": "Demandez à votre administrateur"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_ask_admin",
+            "value": "Chieda al suo amministratore"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_ask_admin",
+            "value": "आफ्नो प्रशासकलाई सोध्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_ask_admin",
+            "value": "Pergunte ao seu administrador"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_ask_admin",
+            "value": "Pregunte a su administrador"
           },
           {
             "lang": "lg-eng",
@@ -2124,9 +3274,109 @@
             "value": "Check this record's audio file"
           },
           {
+            "lang": "lg-ara",
+            "name": "action_check_media",
+            "value": "تحقق من ملف الصوت الخاص بهذا السجل"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_check_media",
+            "value": "Comproveu el fitxer d'àudio d'aquest registre"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_check_media",
+            "value": "Prüfen Sie die Audiodatei dieses Datensatzes"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_check_media",
+            "value": "Ελέγξτε το αρχείο ήχου αυτής της εγγραφής"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_check_media",
+            "value": "Egiaztatu erregistro honen audio-fitxategia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_check_media",
+            "value": "Vérifiez le fichier audio de cette fiche"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_check_media",
+            "value": "Controlli il file audio di questa scheda"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_check_media",
+            "value": "यो रेकर्डको अडियो फाइल जाँच्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_check_media",
+            "value": "Verifique o ficheiro de áudio deste registo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_check_media",
+            "value": "Compruebe el archivo de audio de este registro"
+          },
+          {
             "lang": "lg-eng",
             "name": "technical_detail",
             "value": "Technical detail"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "technical_detail",
+            "value": "التفاصيل التقنية"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "technical_detail",
+            "value": "Detall tècnic"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "technical_detail",
+            "value": "Technische Details"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "technical_detail",
+            "value": "Τεχνική λεπτομέρεια"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "technical_detail",
+            "value": "Xehetasun teknikoa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "technical_detail",
+            "value": "Détail technique"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "technical_detail",
+            "value": "Dettaglio tecnico"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "technical_detail",
+            "value": "प्राविधिक विवरण"
+          },
+          {
+            "lang": "lg-por",
+            "name": "technical_detail",
+            "value": "Detalhe técnico"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "technical_detail",
+            "value": "Detalle técnico"
           },
           {
             "lang": "lg-eng",
@@ -2134,9 +3384,109 @@
             "value": "Model"
           },
           {
+            "lang": "lg-ara",
+            "name": "readiness_model",
+            "value": "النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "readiness_model",
+            "value": "Model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "readiness_model",
+            "value": "Modell"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "readiness_model",
+            "value": "Μοντέλο"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "readiness_model",
+            "value": "Modeloa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "readiness_model",
+            "value": "Modèle"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "readiness_model",
+            "value": "Modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "readiness_model",
+            "value": "मोडेल"
+          },
+          {
+            "lang": "lg-por",
+            "name": "readiness_model",
+            "value": "Modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "readiness_model",
+            "value": "Modelo"
+          },
+          {
             "lang": "lg-eng",
             "name": "readiness_device",
             "value": "Device"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "readiness_device",
+            "value": "الجهاز"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "readiness_device",
+            "value": "Dispositiu"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "readiness_device",
+            "value": "Gerät"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "readiness_device",
+            "value": "Συσκευή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "readiness_device",
+            "value": "Gailua"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "readiness_device",
+            "value": "Périphérique"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "readiness_device",
+            "value": "Dispositivo"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "readiness_device",
+            "value": "उपकरण"
+          },
+          {
+            "lang": "lg-por",
+            "name": "readiness_device",
+            "value": "Dispositivo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "readiness_device",
+            "value": "Dispositivo"
           },
           {
             "lang": "lg-eng",
@@ -2144,9 +3494,109 @@
             "value": "Language"
           },
           {
+            "lang": "lg-ara",
+            "name": "readiness_language",
+            "value": "اللغة"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "readiness_language",
+            "value": "Idioma"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "readiness_language",
+            "value": "Sprache"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "readiness_language",
+            "value": "Γλώσσα"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "readiness_language",
+            "value": "Hizkuntza"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "readiness_language",
+            "value": "Langue"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "readiness_language",
+            "value": "Lingua"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "readiness_language",
+            "value": "भाषा"
+          },
+          {
+            "lang": "lg-por",
+            "name": "readiness_language",
+            "value": "Idioma"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "readiness_language",
+            "value": "Idioma"
+          },
+          {
             "lang": "lg-eng",
             "name": "state_ready",
             "value": "ready"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "state_ready",
+            "value": "جاهز"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "state_ready",
+            "value": "a punt"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "state_ready",
+            "value": "bereit"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "state_ready",
+            "value": "έτοιμο"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "state_ready",
+            "value": "prest"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "state_ready",
+            "value": "prêt"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "state_ready",
+            "value": "pronto"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "state_ready",
+            "value": "तयार"
+          },
+          {
+            "lang": "lg-por",
+            "name": "state_ready",
+            "value": "pronto"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "state_ready",
+            "value": "listo"
           },
           {
             "lang": "lg-eng",
@@ -2154,9 +3604,109 @@
             "value": "installed, not verified"
           },
           {
+            "lang": "lg-ara",
+            "name": "state_unverified",
+            "value": "مثبت وغير مُتحقَّق منه"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "state_unverified",
+            "value": "instal·lat, sense verificar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "state_unverified",
+            "value": "installiert, nicht geprüft"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "state_unverified",
+            "value": "εγκατεστημένο, χωρίς έλεγχο"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "state_unverified",
+            "value": "instalatuta, egiaztatu gabe"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "state_unverified",
+            "value": "installé, non vérifié"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "state_unverified",
+            "value": "installato, non verificato"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "state_unverified",
+            "value": "स्थापित, प्रमाणित नगरिएको"
+          },
+          {
+            "lang": "lg-por",
+            "name": "state_unverified",
+            "value": "instalado, não verificado"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "state_unverified",
+            "value": "instalado, sin verificar"
+          },
+          {
             "lang": "lg-eng",
             "name": "state_incomplete",
             "value": "incomplete download"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "state_incomplete",
+            "value": "تنزيل غير مكتمل"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "state_incomplete",
+            "value": "baixada incompleta"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "state_incomplete",
+            "value": "unvollständiger Download"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "state_incomplete",
+            "value": "ημιτελής λήψη"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "state_incomplete",
+            "value": "deskarga osatugabea"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "state_incomplete",
+            "value": "téléchargement incomplet"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "state_incomplete",
+            "value": "download incompleto"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "state_incomplete",
+            "value": "अपूर्ण डाउनलोड"
+          },
+          {
+            "lang": "lg-por",
+            "name": "state_incomplete",
+            "value": "descarregamento incompleto"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "state_incomplete",
+            "value": "descarga incompleta"
           },
           {
             "lang": "lg-eng",
@@ -2164,9 +3714,109 @@
             "value": "damaged"
           },
           {
+            "lang": "lg-ara",
+            "name": "state_damaged",
+            "value": "تالف"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "state_damaged",
+            "value": "malmès"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "state_damaged",
+            "value": "beschädigt"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "state_damaged",
+            "value": "κατεστραμμένο"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "state_damaged",
+            "value": "hondatuta"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "state_damaged",
+            "value": "endommagé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "state_damaged",
+            "value": "danneggiato"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "state_damaged",
+            "value": "बिग्रिएको"
+          },
+          {
+            "lang": "lg-por",
+            "name": "state_damaged",
+            "value": "danificado"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "state_damaged",
+            "value": "dañado"
+          },
+          {
             "lang": "lg-eng",
             "name": "state_missing",
             "value": "not installed"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "state_missing",
+            "value": "غير مثبت"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "state_missing",
+            "value": "no instal·lat"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "state_missing",
+            "value": "nicht installiert"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "state_missing",
+            "value": "μη εγκατεστημένο"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "state_missing",
+            "value": "instalatu gabe"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "state_missing",
+            "value": "non installé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "state_missing",
+            "value": "non installato"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "state_missing",
+            "value": "स्थापना नगरिएको"
+          },
+          {
+            "lang": "lg-por",
+            "name": "state_missing",
+            "value": "não instalado"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "state_missing",
+            "value": "no instalado"
           },
           {
             "lang": "lg-eng",
@@ -2174,9 +3824,109 @@
             "value": "could not be checked on this server — the model catalog could not be read"
           },
           {
+            "lang": "lg-ara",
+            "name": "state_unknown",
+            "value": "تعذر التحقق منه على هذا الخادم؛ تعذرت قراءة فهرس النماذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "state_unknown",
+            "value": "no s'ha pogut comprovar en aquest servidor: no s'ha pogut llegir el catàleg de models"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "state_unknown",
+            "value": "konnte auf diesem Server nicht geprüft werden — der Modellkatalog konnte nicht gelesen werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "state_unknown",
+            "value": "δεν ήταν δυνατός ο έλεγχος σε αυτόν τον διακομιστή — δεν ήταν δυνατή η ανάγνωση του καταλόγου μοντέλων"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "state_unknown",
+            "value": "ezin izan da zerbitzari honetan egiaztatu: ezin izan da modeloen katalogoa irakurri"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "state_unknown",
+            "value": "n'a pas pu être vérifié sur ce serveur : le catalogue des modèles n'a pas pu être lu"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "state_unknown",
+            "value": "non è stato possibile verificarlo su questo server: non è stato possibile leggere il catalogo dei modelli"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "state_unknown",
+            "value": "यो सर्भरमा जाँच्न सकिएन — मोडेल क्याटलग पढ्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "state_unknown",
+            "value": "não foi possível verificar neste servidor: não foi possível ler o catálogo de modelos"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "state_unknown",
+            "value": "no se ha podido comprobar en este servidor: no se ha podido leer el catálogo de modelos"
+          },
+          {
             "lang": "lg-eng",
             "name": "device_no_gpu",
             "value": "no GPU detected — this will run on the processor, several times slower"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "device_no_gpu",
+            "value": "لم يتم اكتشاف وحدة معالجة رسوميات، وسيجري التنفيذ على المعالج بسرعة أقل بعدة مرات"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "device_no_gpu",
+            "value": "no s'ha detectat cap GPU: s'executarà amb el processador, diverses vegades més lent"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "device_no_gpu",
+            "value": "keine GPU erkannt — die Ausführung erfolgt auf dem Prozessor, um ein Vielfaches langsamer"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "device_no_gpu",
+            "value": "δεν εντοπίστηκε GPU — θα εκτελεστεί στον επεξεργαστή, πολλές φορές πιο αργά"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "device_no_gpu",
+            "value": "ez da GPUrik detektatu: prozesadorean exekutatuko da, hainbat aldiz motelago"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "device_no_gpu",
+            "value": "aucun GPU détecté : l'exécution se fera sur le processeur, plusieurs fois plus lentement"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "device_no_gpu",
+            "value": "nessuna GPU rilevata: verrà eseguito sul processore, diverse volte più lentamente"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "device_no_gpu",
+            "value": "कुनै GPU भेटिएन — यो प्रोसेसरमा चल्नेछ, धेरै गुणा ढिलो"
+          },
+          {
+            "lang": "lg-por",
+            "name": "device_no_gpu",
+            "value": "nenhuma GPU detetada: será executado no processador, várias vezes mais lento"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "device_no_gpu",
+            "value": "no se ha detectado GPU: se ejecutará en el procesador, varias veces más lento"
           },
           {
             "lang": "lg-eng",
@@ -2184,9 +3934,109 @@
             "value": "The graphics card could not be used; the transcription continued on the processor."
           },
           {
+            "lang": "lg-ara",
+            "name": "warning_fallback_cpu",
+            "value": "تعذر استخدام بطاقة الرسوميات، واستمرت عملية النسخ على المعالج."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "warning_fallback_cpu",
+            "value": "No s'ha pogut fer servir la targeta gràfica; la transcripció ha continuat amb el processador."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "warning_fallback_cpu",
+            "value": "Die Grafikkarte konnte nicht genutzt werden; die Transkription wurde auf dem Prozessor fortgesetzt."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "warning_fallback_cpu",
+            "value": "Δεν ήταν δυνατή η χρήση της κάρτας γραφικών· η μεταγραφή συνεχίστηκε στον επεξεργαστή."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "warning_fallback_cpu",
+            "value": "Ezin izan da txartel grafikoa erabili; transkripzioak prozesadorean jarraitu du."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "warning_fallback_cpu",
+            "value": "La carte graphique n'a pas pu être utilisée ; la transcription s'est poursuivie sur le processeur."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "warning_fallback_cpu",
+            "value": "Non è stato possibile usare la scheda grafica; la trascrizione è proseguita sul processore."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "warning_fallback_cpu",
+            "value": "ग्राफिक्स कार्ड प्रयोग गर्न सकिएन; ट्रान्सक्रिप्सन प्रोसेसरमा जारी रह्यो।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "warning_fallback_cpu",
+            "value": "Não foi possível utilizar a placa gráfica; a transcrição continuou no processador."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "warning_fallback_cpu",
+            "value": "No se ha podido usar la tarjeta gráfica; la transcripción ha continuado en el procesador."
+          },
+          {
             "lang": "lg-eng",
             "name": "warning_window_skipped",
             "value": "A fragment of the recording could not be transcribed and was skipped."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "warning_window_skipped",
+            "value": "تعذر نسخ مقطع من التسجيل فتم تخطيه."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "warning_window_skipped",
+            "value": "No s'ha pogut transcriure un fragment de l'enregistrament i s'ha omès."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "warning_window_skipped",
+            "value": "Ein Abschnitt der Aufnahme konnte nicht transkribiert werden und wurde übersprungen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "warning_window_skipped",
+            "value": "Ένα απόσπασμα της ηχογράφησης δεν μπόρεσε να μεταγραφεί και παραλείφθηκε."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "warning_window_skipped",
+            "value": "Grabaketaren zati bat ezin izan da transkribatu eta saltatu egin da."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "warning_window_skipped",
+            "value": "Un fragment de l'enregistrement n'a pas pu être transcrit et a été ignoré."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "warning_window_skipped",
+            "value": "Un frammento della registrazione non è stato trascritto ed è stato saltato."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "warning_window_skipped",
+            "value": "रेकर्डिङको एउटा अंश ट्रान्सक्राइब गर्न नसकिएकाले छाडियो।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "warning_window_skipped",
+            "value": "Não foi possível transcrever um fragmento da gravação, que foi ignorado."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "warning_window_skipped",
+            "value": "No se ha podido transcribir un fragmento de la grabación y se ha omitido."
           },
           {
             "lang": "lg-eng",
@@ -2194,9 +4044,109 @@
             "value": "{count} fragments of the recording could not be transcribed and were skipped."
           },
           {
+            "lang": "lg-ara",
+            "name": "warning_windows_skipped",
+            "value": "تعذر نسخ {count} مقاطع من التسجيل فتم تخطيها."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "warning_windows_skipped",
+            "value": "No s'han pogut transcriure {count} fragments de l'enregistrament i s'han omès."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "warning_windows_skipped",
+            "value": "{count} Abschnitte der Aufnahme konnten nicht transkribiert werden und wurden übersprungen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "warning_windows_skipped",
+            "value": "{count} αποσπάσματα της ηχογράφησης δεν μπόρεσαν να μεταγραφούν και παραλείφθηκαν."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "warning_windows_skipped",
+            "value": "Grabaketaren {count} zati ezin izan dira transkribatu eta saltatu egin dira."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "warning_windows_skipped",
+            "value": "{count} fragments de l'enregistrement n'ont pas pu être transcrits et ont été ignorés."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "warning_windows_skipped",
+            "value": "{count} frammenti della registrazione non sono stati trascritti e sono stati saltati."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "warning_windows_skipped",
+            "value": "रेकर्डिङका {count} अंशहरू ट्रान्सक्राइब गर्न नसकिएकाले छाडिए।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "warning_windows_skipped",
+            "value": "Não foi possível transcrever {count} fragmentos da gravação, que foram ignorados."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "warning_windows_skipped",
+            "value": "No se han podido transcribir {count} fragmentos de la grabación y se han omitido."
+          },
+          {
             "lang": "lg-eng",
             "name": "speaker_detection_failed",
             "value": "Speaker detection failed — the transcription continues without speaker tags."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "speaker_detection_failed",
+            "value": "فشل التعرف على المتحدثين، وتستمر عملية النسخ دون وسوم للمتحدثين."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "speaker_detection_failed",
+            "value": "La detecció de parlants ha fallat: la transcripció continua sense etiquetes de parlant."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "speaker_detection_failed",
+            "value": "Die Sprechererkennung ist fehlgeschlagen — die Transkription wird ohne Sprecherkennzeichen fortgesetzt."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "speaker_detection_failed",
+            "value": "Η ανίχνευση ομιλητών απέτυχε — η μεταγραφή συνεχίζεται χωρίς ετικέτες ομιλητή."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "speaker_detection_failed",
+            "value": "Hizlarien detekzioak huts egin du: transkripzioak hizlari-etiketarik gabe jarraitzen du."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "speaker_detection_failed",
+            "value": "La détection des locuteurs a échoué : la transcription se poursuit sans étiquettes de locuteur."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "speaker_detection_failed",
+            "value": "Il rilevamento dei parlanti non è riuscito: la trascrizione prosegue senza etichette di parlante."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "speaker_detection_failed",
+            "value": "वक्ता पहिचान असफल भयो — ट्रान्सक्रिप्सन वक्ता ट्यागविनै जारी छ।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "speaker_detection_failed",
+            "value": "A deteção de falantes falhou: a transcrição continua sem etiquetas de falante."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "speaker_detection_failed",
+            "value": "La detección de hablantes ha fallado: la transcripción continúa sin etiquetas de hablante."
           },
           {
             "lang": "lg-eng",
@@ -2204,9 +4154,109 @@
             "value": "The transcription has no speaker tags to assign"
           },
           {
+            "lang": "lg-ara",
+            "name": "no_speaker_tags",
+            "value": "لا تحتوي عملية النسخ على وسوم متحدثين لتعيينها"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "no_speaker_tags",
+            "value": "La transcripció no té etiquetes de parlant per assignar"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "no_speaker_tags",
+            "value": "Die Transkription enthält keine Sprecherkennzeichen, die zugewiesen werden könnten"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "no_speaker_tags",
+            "value": "Η μεταγραφή δεν έχει ετικέτες ομιλητή για αντιστοίχιση"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "no_speaker_tags",
+            "value": "Transkripzioak ez du esleitzeko hizlari-etiketarik"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "no_speaker_tags",
+            "value": "La transcription ne comporte aucune étiquette de locuteur à attribuer"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "no_speaker_tags",
+            "value": "La trascrizione non ha etichette di parlante da assegnare"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "no_speaker_tags",
+            "value": "ट्रान्सक्रिप्सनमा तोक्नका लागि कुनै वक्ता ट्याग छैन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "no_speaker_tags",
+            "value": "A transcrição não tem etiquetas de falante para atribuir"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "no_speaker_tags",
+            "value": "La transcripción no tiene etiquetas de hablante que asignar"
+          },
+          {
             "lang": "lg-eng",
             "name": "subtitles_build_failed",
             "value": "The subtitles file could not be built"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "subtitles_build_failed",
+            "value": "تعذر إنشاء ملف الترجمات"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "subtitles_build_failed",
+            "value": "No s'ha pogut generar el fitxer de subtítols"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "subtitles_build_failed",
+            "value": "Die Untertiteldatei konnte nicht erzeugt werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "subtitles_build_failed",
+            "value": "Δεν ήταν δυνατή η δημιουργία του αρχείου υποτίτλων"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "subtitles_build_failed",
+            "value": "Ezin izan da azpitituluen fitxategia sortu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "subtitles_build_failed",
+            "value": "Le fichier de sous-titres n'a pas pu être généré"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "subtitles_build_failed",
+            "value": "Non è stato possibile generare il file dei sottotitoli"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "subtitles_build_failed",
+            "value": "सबटाइटल फाइल बनाउन सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "subtitles_build_failed",
+            "value": "Não foi possível gerar o ficheiro de legendas"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "subtitles_build_failed",
+            "value": "No se ha podido generar el archivo de subtítulos"
           },
           {
             "lang": "lg-eng",
@@ -2214,9 +4264,109 @@
             "value": "The recording could not be prepared for transcription"
           },
           {
+            "lang": "lg-ara",
+            "name": "error_audio_conversion",
+            "value": "تعذر تحضير التسجيل للنسخ"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_audio_conversion",
+            "value": "No s'ha pogut preparar l'enregistrament per a la transcripció"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_audio_conversion",
+            "value": "Die Aufnahme konnte nicht für die Transkription vorbereitet werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_audio_conversion",
+            "value": "Δεν ήταν δυνατή η προετοιμασία της ηχογράφησης για μεταγραφή"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "error_audio_conversion",
+            "value": "Ezin izan da grabaketa transkripziorako prestatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "error_audio_conversion",
+            "value": "L'enregistrement n'a pas pu être préparé pour la transcription"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "error_audio_conversion",
+            "value": "Non è stato possibile preparare la registrazione per la trascrizione"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_audio_conversion",
+            "value": "रेकर्डिङलाई ट्रान्सक्रिप्सनका लागि तयार गर्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "error_audio_conversion",
+            "value": "Não foi possível preparar a gravação para a transcrição"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_audio_conversion",
+            "value": "No se ha podido preparar la grabación para la transcripción"
+          },
+          {
             "lang": "lg-eng",
             "name": "repair_failed",
             "value": "The model could not be repaired"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "repair_failed",
+            "value": "تعذر إصلاح النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "repair_failed",
+            "value": "No s'ha pogut reparar el model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "repair_failed",
+            "value": "Das Modell konnte nicht repariert werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "repair_failed",
+            "value": "Δεν ήταν δυνατή η επιδιόρθωση του μοντέλου"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "repair_failed",
+            "value": "Ezin izan da modeloa konpondu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "repair_failed",
+            "value": "Le modèle n'a pas pu être réparé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "repair_failed",
+            "value": "Non è stato possibile riparare il modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "repair_failed",
+            "value": "मोडेल मर्मत गर्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "repair_failed",
+            "value": "Não foi possível reparar o modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "repair_failed",
+            "value": "No se ha podido reparar el modelo"
           },
           {
             "lang": "lg-eng",
@@ -2224,9 +4374,109 @@
             "value": "The model could not be verified"
           },
           {
+            "lang": "lg-ara",
+            "name": "verify_failed",
+            "value": "تعذر التحقق من النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "verify_failed",
+            "value": "No s'ha pogut verificar el model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "verify_failed",
+            "value": "Das Modell konnte nicht geprüft werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "verify_failed",
+            "value": "Δεν ήταν δυνατή η επαλήθευση του μοντέλου"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "verify_failed",
+            "value": "Ezin izan da modeloa egiaztatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "verify_failed",
+            "value": "Le modèle n'a pas pu être vérifié"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "verify_failed",
+            "value": "Non è stato possibile verificare il modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "verify_failed",
+            "value": "मोडेल प्रमाणित गर्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "verify_failed",
+            "value": "Não foi possível verificar o modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "verify_failed",
+            "value": "No se ha podido verificar el modelo"
+          },
+          {
             "lang": "lg-eng",
             "name": "transcription_error",
             "value": "Transcription error"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "transcription_error",
+            "value": "خطأ في النسخ"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "transcription_error",
+            "value": "Error de transcripció"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "transcription_error",
+            "value": "Transkriptionsfehler"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "transcription_error",
+            "value": "Σφάλμα μεταγραφής"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "transcription_error",
+            "value": "Transkripzio-errorea"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "transcription_error",
+            "value": "Erreur de transcription"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "transcription_error",
+            "value": "Errore di trascrizione"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "transcription_error",
+            "value": "ट्रान्सक्रिप्सन त्रुटि"
+          },
+          {
+            "lang": "lg-por",
+            "name": "transcription_error",
+            "value": "Erro de transcrição"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "transcription_error",
+            "value": "Error de transcripción"
           },
           {
             "lang": "lg-ara",
@@ -2564,9 +4814,19 @@
             "value": "جارٍ معالجة الصوت..."
           },
           {
+            "lang": "lg-ara",
+            "name": "preparing_audio",
+            "value": "جارٍ تحضير ملف الصوت..."
+          },
+          {
             "lang": "lg-cat",
             "name": "processing_audio",
             "value": "Processant l'àudio... "
+          },
+          {
+            "lang": "lg-cat",
+            "name": "preparing_audio",
+            "value": "Preparant el fitxer d'àudio..."
           },
           {
             "lang": "lg-deu",
@@ -2574,9 +4834,19 @@
             "value": "Audio wird verarbeitet..."
           },
           {
+            "lang": "lg-deu",
+            "name": "preparing_audio",
+            "value": "Audiodatei wird vorbereitet..."
+          },
+          {
             "lang": "lg-ell",
             "name": "processing_audio",
             "value": "Επεξεργασία ήχου..."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "preparing_audio",
+            "value": "Προετοιμασία του αρχείου ήχου..."
           },
           {
             "lang": "lg-eng",
@@ -2584,9 +4854,19 @@
             "value": "Processing audio... "
           },
           {
+            "lang": "lg-eng",
+            "name": "preparing_audio",
+            "value": "Preparing the audio file..."
+          },
+          {
             "lang": "lg-eus",
             "name": "processing_audio",
             "value": "Audioa prozesatzen... "
+          },
+          {
+            "lang": "lg-eus",
+            "name": "preparing_audio",
+            "value": "Audio-fitxategia prestatzen..."
           },
           {
             "lang": "lg-fra",
@@ -2594,9 +4874,19 @@
             "value": "Traitement audio en cours..."
           },
           {
+            "lang": "lg-fra",
+            "name": "preparing_audio",
+            "value": "Préparation du fichier audio..."
+          },
+          {
             "lang": "lg-ita",
             "name": "processing_audio",
             "value": "Elaborazione audio in corso... "
+          },
+          {
+            "lang": "lg-ita",
+            "name": "preparing_audio",
+            "value": "Preparazione del file audio..."
           },
           {
             "lang": "lg-nep",
@@ -2604,14 +4894,29 @@
             "value": "अडियो प्रशोधन गर्दै..."
           },
           {
+            "lang": "lg-nep",
+            "name": "preparing_audio",
+            "value": "अडियो फाइल तयार गर्दै..."
+          },
+          {
             "lang": "lg-por",
             "name": "processing_audio",
             "value": "Processamento de áudio... "
           },
           {
+            "lang": "lg-por",
+            "name": "preparing_audio",
+            "value": "Preparando o ficheiro de áudio..."
+          },
+          {
             "lang": "lg-spa",
             "name": "processing_audio",
             "value": "Procesando audio..."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "preparing_audio",
+            "value": "Preparando el archivo de audio..."
           },
           {
             "lang": "lg-ara",
@@ -3382,6 +5687,611 @@
             "lang": "lg-spa",
             "name": "related_record_description",
             "value": "Registro al que pertenece esta transcripción"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "detecting_speakers",
+            "value": "جارٍ التعرف على المتحدثين"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "detecting_speakers",
+            "value": "Detectant els parlants"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "detecting_speakers",
+            "value": "Sprecher werden erkannt"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "detecting_speakers",
+            "value": "Ανίχνευση ομιλητών"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "detecting_speakers",
+            "value": "Detecting speakers"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "detecting_speakers",
+            "value": "Hizlariak detektatzen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "detecting_speakers",
+            "value": "Détection des locuteurs"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "detecting_speakers",
+            "value": "Rilevamento dei parlanti"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "detecting_speakers",
+            "value": "वक्ताहरू पत्ता लगाउँदै"
+          },
+          {
+            "lang": "lg-por",
+            "name": "detecting_speakers",
+            "value": "A detetar os falantes"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "detecting_speakers",
+            "value": "Detectando los hablantes"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "download_failed",
+            "value": "تعذر تنزيل النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "download_failed",
+            "value": "No s'ha pogut baixar el model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "download_failed",
+            "value": "Das Modell konnte nicht heruntergeladen werden"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "download_failed",
+            "value": "Δεν ήταν δυνατή η λήψη του μοντέλου"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "download_failed",
+            "value": "The model could not be downloaded"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "download_failed",
+            "value": "Ezin izan da modeloa deskargatu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "download_failed",
+            "value": "Le modèle n'a pas pu être téléchargé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "download_failed",
+            "value": "Non è stato possibile scaricare il modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "download_failed",
+            "value": "मोडेल डाउनलोड गर्न सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "download_failed",
+            "value": "Não foi possível descarregar o modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "download_failed",
+            "value": "No se ha podido descargar el modelo"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "model_job_failed",
+            "value": "لم تكتمل مهمة النموذج بنجاح"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "model_job_failed",
+            "value": "La tasca del model no ha acabat correctament"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "model_job_failed",
+            "value": "Der Modellauftrag wurde nicht erfolgreich abgeschlossen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "model_job_failed",
+            "value": "Η εργασία του μοντέλου δεν ολοκληρώθηκε με επιτυχία"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "model_job_failed",
+            "value": "The model job did not finish successfully"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "model_job_failed",
+            "value": "Modeloaren lana ez da behar bezala amaitu"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "model_job_failed",
+            "value": "La tâche du modèle ne s'est pas terminée correctement"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "model_job_failed",
+            "value": "L'operazione sul modello non si è conclusa correttamente"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "model_job_failed",
+            "value": "मोडेलको काम सफलतापूर्वक सकिएन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "model_job_failed",
+            "value": "A tarefa do modelo não terminou corretamente"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "model_job_failed",
+            "value": "La tarea del modelo no ha terminado correctamente"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "model_job_unresolved",
+            "value": "يستغرق هذا وقتًا أطول من المتوقع. قد تكون المهمة ما زالت قيد التنفيذ على الخادم أو تكون قد توقفت؛ أعد فتح هذه الأداة لمعرفة الحالة الراهنة للنموذج."
+          },
+          {
+            "lang": "lg-cat",
+            "name": "model_job_unresolved",
+            "value": "Està trigant més del previst. La tasca pot continuar en marxa al servidor o haver-se aturat: torneu a obrir aquesta eina per veure l'estat actual del model."
+          },
+          {
+            "lang": "lg-deu",
+            "name": "model_job_unresolved",
+            "value": "Das dauert länger als erwartet. Der Auftrag läuft möglicherweise noch auf dem Server oder wurde beendet — öffnen Sie dieses Werkzeug erneut, um den aktuellen Zustand des Modells zu sehen."
+          },
+          {
+            "lang": "lg-ell",
+            "name": "model_job_unresolved",
+            "value": "Αυτό διαρκεί περισσότερο από το αναμενόμενο. Η εργασία μπορεί να εκτελείται ακόμη στον διακομιστή ή να έχει σταματήσει — ανοίξτε ξανά αυτό το εργαλείο για να δείτε την τρέχουσα κατάσταση του μοντέλου."
+          },
+          {
+            "lang": "lg-eng",
+            "name": "model_job_unresolved",
+            "value": "This is taking longer than expected. The job may still be running on the server, or it may have stopped — reopen this tool to see the model's current state."
+          },
+          {
+            "lang": "lg-eus",
+            "name": "model_job_unresolved",
+            "value": "Uste baino gehiago luzatzen ari da. Baliteke lana zerbitzarian oraindik martxan egotea edo gelditu izana: ireki berriro tresna hau modeloaren egungo egoera ikusteko."
+          },
+          {
+            "lang": "lg-fra",
+            "name": "model_job_unresolved",
+            "value": "Cela prend plus de temps que prévu. La tâche est peut-être toujours en cours sur le serveur, ou bien elle s'est arrêtée : rouvrez cet outil pour voir l'état actuel du modèle."
+          },
+          {
+            "lang": "lg-ita",
+            "name": "model_job_unresolved",
+            "value": "Sta impiegando più tempo del previsto. L'operazione potrebbe essere ancora in corso sul server oppure essersi interrotta: riapra questo strumento per vedere lo stato attuale del modello."
+          },
+          {
+            "lang": "lg-nep",
+            "name": "model_job_unresolved",
+            "value": "अपेक्षाभन्दा बढी समय लागिरहेको छ। काम सर्भरमा अझै चलिरहेको हुन सक्छ, वा रोकिएको पनि हुन सक्छ — मोडेलको अहिलेको अवस्था हेर्न यो उपकरण फेरि खोल्नुहोस्।"
+          },
+          {
+            "lang": "lg-por",
+            "name": "model_job_unresolved",
+            "value": "Está a demorar mais do que o previsto. A tarefa pode ainda estar em curso no servidor ou ter parado: reabra esta ferramenta para ver o estado atual do modelo."
+          },
+          {
+            "lang": "lg-spa",
+            "name": "model_job_unresolved",
+            "value": "Está tardando más de lo previsto. La tarea puede seguir en marcha en el servidor o haberse detenido: vuelva a abrir esta herramienta para ver el estado actual del modelo."
+          },
+          {
+            "lang": "lg-ara",
+            "name": "no_person_tag",
+            "value": "— غير مُعيَّن —"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "no_person_tag",
+            "value": "— sense assignar —"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "no_person_tag",
+            "value": "— nicht zugewiesen —"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "no_person_tag",
+            "value": "— χωρίς αντιστοίχιση —"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "no_person_tag",
+            "value": "— unassigned —"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "no_person_tag",
+            "value": "— esleitu gabe —"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "no_person_tag",
+            "value": "— non attribué —"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "no_person_tag",
+            "value": "— non assegnato —"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "no_person_tag",
+            "value": "— नतोकिएको —"
+          },
+          {
+            "lang": "lg-por",
+            "name": "no_person_tag",
+            "value": "— por atribuir —"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "no_person_tag",
+            "value": "— sin asignar —"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "readiness_speakers",
+            "value": "التعرف على المتحدثين"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "readiness_speakers",
+            "value": "Detecció de parlants"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "readiness_speakers",
+            "value": "Sprechererkennung"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "readiness_speakers",
+            "value": "Ανίχνευση ομιλητών"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "readiness_speakers",
+            "value": "Speaker detection"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "readiness_speakers",
+            "value": "Hizlarien detekzioa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "readiness_speakers",
+            "value": "Détection des locuteurs"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "readiness_speakers",
+            "value": "Rilevamento dei parlanti"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "readiness_speakers",
+            "value": "वक्ता पहिचान"
+          },
+          {
+            "lang": "lg-por",
+            "name": "readiness_speakers",
+            "value": "Deteção de falantes"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "readiness_speakers",
+            "value": "Detección de hablantes"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "readiness_interrupted",
+            "value": "نسخ متوقف"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "readiness_interrupted",
+            "value": "Transcripció interrompuda"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "readiness_interrupted",
+            "value": "Unterbrochene Transkription"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "readiness_interrupted",
+            "value": "Διακοπείσα μεταγραφή"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "readiness_interrupted",
+            "value": "Interrupted transcription"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "readiness_interrupted",
+            "value": "Eten den transkripzioa"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "readiness_interrupted",
+            "value": "Transcription interrompue"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "readiness_interrupted",
+            "value": "Trascrizione interrotta"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "readiness_interrupted",
+            "value": "अवरुद्ध ट्रान्सक्रिप्सन"
+          },
+          {
+            "lang": "lg-por",
+            "name": "readiness_interrupted",
+            "value": "Transcrição interrompida"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "readiness_interrupted",
+            "value": "Transcripción interrumpida"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "resume_reached",
+            "value": "تم نسخ {0} بالفعل"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "resume_reached",
+            "value": "{0} ja transcrits"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "resume_reached",
+            "value": "{0} bereits transkribiert"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "resume_reached",
+            "value": "{0} έχουν ήδη μεταγραφεί"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "resume_reached",
+            "value": "{0} already transcribed"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "resume_reached",
+            "value": "{0} transkribatuta jada"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "resume_reached",
+            "value": "{0} déjà transcrits"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "resume_reached",
+            "value": "{0} già trascritti"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "resume_reached",
+            "value": "{0} पहिले नै ट्रान्सक्राइब भइसकेको"
+          },
+          {
+            "lang": "lg-por",
+            "name": "resume_reached",
+            "value": "{0} já transcritos"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "resume_reached",
+            "value": "{0} ya transcritos"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "resume_other_model",
+            "value": "تم نسخ {0} بنموذج آخر؛ البدء الآن يعني النسخ من البداية"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "resume_other_model",
+            "value": "{0} transcrits amb un altre model: començar ara transcriu des del principi"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "resume_other_model",
+            "value": "{0} mit einem anderen Modell transkribiert — jetzt zu starten beginnt von vorn"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "resume_other_model",
+            "value": "{0} μεταγράφηκαν με άλλο μοντέλο — αν ξεκινήσετε τώρα, θα αρχίσει από την αρχή"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "resume_other_model",
+            "value": "{0} transcribed with another model — running now starts from the beginning"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "resume_other_model",
+            "value": "{0} beste modelo batekin transkribatuta: orain abiaraztean hasieratik hasiko da"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "resume_other_model",
+            "value": "{0} transcrits avec un autre modèle : lancer maintenant recommence depuis le début"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "resume_other_model",
+            "value": "{0} trascritti con un altro modello: avviare adesso ricomincia dall'inizio"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "resume_other_model",
+            "value": "{0} अर्को मोडेलले ट्रान्सक्राइब गरिएको — अहिले सुरु गरे सुरुदेखि नै हुनेछ"
+          },
+          {
+            "lang": "lg-por",
+            "name": "resume_other_model",
+            "value": "{0} transcritos com outro modelo: começar agora transcreve desde o início"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "resume_other_model",
+            "value": "{0} transcritos con otro modelo: empezar ahora transcribe desde el principio"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "action_resume",
+            "value": "استئناف النسخ"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_resume",
+            "value": "Reprendre la transcripció"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_resume",
+            "value": "Transkription fortsetzen"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_resume",
+            "value": "Συνέχιση της μεταγραφής"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_resume",
+            "value": "Resume the transcription"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_resume",
+            "value": "Jarraitu transkripzioarekin"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_resume",
+            "value": "Reprendre la transcription"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_resume",
+            "value": "Riprendi la trascrizione"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_resume",
+            "value": "ट्रान्सक्रिप्सन जारी राख्नुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_resume",
+            "value": "Retomar a transcrição"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_resume",
+            "value": "Reanudar la transcripción"
+          },
+          {
+            "lang": "lg-ara",
+            "name": "action_use_saved_model",
+            "value": "العودة إلى ذلك النموذج"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "action_use_saved_model",
+            "value": "Tornar a aquell model"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "action_use_saved_model",
+            "value": "Zu diesem Modell zurückkehren"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "action_use_saved_model",
+            "value": "Επιστροφή σε εκείνο το μοντέλο"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "action_use_saved_model",
+            "value": "Go back to that model"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "action_use_saved_model",
+            "value": "Itzuli modelo horretara"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "action_use_saved_model",
+            "value": "Revenir à ce modèle"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "action_use_saved_model",
+            "value": "Torna a quel modello"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "action_use_saved_model",
+            "value": "त्यही मोडेलमा फर्कनुहोस्"
+          },
+          {
+            "lang": "lg-por",
+            "name": "action_use_saved_model",
+            "value": "Voltar a esse modelo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "action_use_saved_model",
+            "value": "Volver a ese modelo"
           }
         ]
       }

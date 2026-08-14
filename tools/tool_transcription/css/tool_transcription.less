@@ -712,9 +712,10 @@
 
 						> .status_progress {
 							font-family: monospace;
-							font-size: 0.85rem;
+							font-size: 1.1rem;
 							color: var(--fg_muted);
-							padding: 0.3rem 0;
+							padding: 0.5rem 0;
+							padding-top: 1rem;
 						}
 
 						// Readiness, quiet register: one run-on line of unremarkable
@@ -748,6 +749,19 @@
 							// `color: white !important` made these rows unreadable.
 							&.severity_warning { border-left-color: var(--color_warning); }
 							&.severity_error   { border-left-color: var(--color_danger); }
+
+							// SUCCESS IS TINTED, not just edged. The three rows that
+							// carry an accent edge are all things gone wrong, so an
+							// outcome wearing the same shape reads as one more of
+							// them — "Transcription completed." arrived in the exact
+							// grey the panel uses for "the model is unverified". The
+							// fill is mixed FROM the token, so it tracks both themes
+							// from one line (a hand-picked pale green would be a
+							// light-theme constant sitting on a dark surface).
+							&.severity_success {
+								border-left-color: var(--color_success);
+								background-color: color-mix(in srgb, var(--color_success) 12%, var(--bg_surface_alt));
+							}
 						}
 
 						> .status_readiness > .readiness_line {

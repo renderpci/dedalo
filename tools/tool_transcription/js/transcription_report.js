@@ -25,8 +25,16 @@
 /** The stages a report can belong to, in the order they happen. */
 export const REPORT_PHASES = ['preflight', 'audio', 'model', 'transcribe', 'speakers', 'done']
 
-/** Severity, weakest first. The panel styles on this and never hides an error. */
-export const REPORT_SEVERITIES = ['info', 'progress', 'warning', 'error']
+/**
+* Severity, weakest first. The panel styles on this and never hides an error.
+*
+* `success` is a REAL severity and not a shade of `info`, because the panel is
+* the only place a run says it finished: an outcome that arrives in the same
+* neutral grey as "the model is unverified" is a run whose end the archivist has
+* to infer. It is also why an unknown severity coerces to `error` below — an
+* outcome must never be able to LOSE its colour, in either direction.
+*/
+export const REPORT_SEVERITIES = ['info', 'success', 'progress', 'warning', 'error']
 
 /**
 * The rules, in order. FIRST MATCH WINS, so the specific ones come first: a

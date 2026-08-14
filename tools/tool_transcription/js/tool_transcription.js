@@ -538,12 +538,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		const source_lang			= options.source_lang // self.transcription_component.lang
 		const format_options		= options.format_options || {}
 
-	// The key partial results are stored under. Per record AND per component, so
-	// two transcriptions open at once never overwrite each other's progress.
-		const resume_id = 'transcription_partial_'
-			+ self.media_component.section_tipo + '_'
-			+ self.media_component.section_id + '_'
-			+ self.transcription_component.tipo
+	// The key partial results are stored under (partial_id — ONE spelling, shared
+	// with the render layer, which reads the same store to announce an
+	// interrupted run before the button is pressed).
+		const resume_id = partial_id( self )
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -573,12 +571,82 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		const panel = nodes.status_panel
 
 	/**
+	* SAVE_PARTIAL
+	* Write THIS model's slot of the resume store, leaving every other model's
+	* alone. `undefined` segments retire this model's slot (the run finished).
+	*
+	* Read-modify-write, per window. The alternative — keeping the whole record in
+	* a closure and writing it back — would let a run started in a second tool
+	* window silently erase the first window's slots, and two transcriptions of
+	* the same record open at once is a normal working pattern here.
+	*
+	* @param {Array|undefined} segments
+	*/
+		const save_partial = async function( segments ) {
+
+			const stored	= await data_manager.get_local_db_data( resume_id, 'status' )
+			const partials	= read_partials( stored )
+			const now		= Date.now()
+
+			if (Array.isArray(segments) && segments.length>0) {
+				partials[transcriber_quality] = { segments: segments, updated: now }
+			} else {
+				delete partials[transcriber_quality]
+			}
+
+			// A partial is recognised speech from an interrupted run; past
+			// PARTIAL_MAX_AGE the recording has moved on and splicing it into new
+			// work would be worse than starting over. Dropped on write, so the
+			// store cannot grow a slot per model forever.
+			for (const model in partials) {
+				const updated = partials[model].updated || 0
+				if (updated>0 && (now - updated)>PARTIAL_MAX_AGE) {
+					delete partials[model]
+				}
+			}
+
+			data_manager.set_local_db_data({
+				id			: resume_id,
+				partials	: partials,
+				updated		: now
+			}, 'status')
+		}
+
+	/**
+	* UNLOAD GUARDS
+	* A browser run lives in THIS tab: a reload or a close kills the worker
+	* mid-window, and until now nothing said so — the global unsaved-data guard
+	* (client/dedalo/core/common/js/events.js) is commented out, so an archivist
+	* could throw away an hour of transcription with ⌘R and no dialog.
+	*
+	* Armed only while a browser run is actually in flight, and disarmed by every
+	* exit path (see end_run, which every one of them reaches). The SERVER engine
+	* deliberately gets no guard: that job runs on the transcriber and a reload
+	* re-polls it (get_server_status), so warning about it would be a lie.
+	*
+	* (!) The browser ignores any custom text and shows its own wording, so there
+	* is no label here to translate — `preventDefault` IS the whole API.
+	*/
+		const guard_unload = function( e ) {
+			e.preventDefault()
+			e.returnValue = '' // Safari and older Chrome still read this
+			return ''
+		}
+		const arm_unload_guard = function() {
+			window.addEventListener('beforeunload', guard_unload)
+		}
+		const disarm_unload_guard = function() {
+			window.removeEventListener('beforeunload', guard_unload)
+		}
+
+	/**
 	* END_RUN
 	* A reported failure ends the run: retire the percentage line (an empty
 	* progress hides it — clear() would also drop the warnings this run
 	* accumulated, and those must survive) and give the trigger back.
 	*/
 		const end_run = function() {
+			disarm_unload_guard()
 			panel.progress('')
 			if (nodes.button_automatic_transcription) {
 				nodes.button_automatic_transcription.classList.remove('disable')
@@ -698,8 +766,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	* cancel or closed tab — the one file in this flow that must not linger.
 	*/
 		const delete_audio = function() {
-			// the in-page exit ran; the unload hook is no longer needed
+			// the in-page exit ran; the unload hooks are no longer needed. BOTH of
+			// them: `finish` resolves straight to the caller on the success path
+			// without passing through end_run, so a guard disarmed only there
+			// would outlive the run and warn on every later reload.
 			window.removeEventListener('pagehide', page_cleanup)
+			disarm_unload_guard()
 
 			const cleanup_rqo = {
 				dd_api	: 'dd_tools_api',
@@ -719,6 +791,15 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 	// Server-side audio preparation. Long, because a large video has to be
 	// re-encoded before anything can be transcribed.
+	//
+	// SAID BEFORE IT IS WAITED FOR. This is the FIRST thing the run does and on a
+	// long interview it is minutes of re-encoding — and until now the panel said
+	// nothing for all of it: the only sign the tool had accepted the press was the
+	// spinner on the trigger, which says "busy" without saying at what. The first
+	// word the panel spoke was "Processing audio…", and it was not spoken until the
+	// WAV already existed. A phase that long has to name itself while it runs.
+		set_status( self.get_tool_label('preparing_audio') || 'Preparing the audio file...' )
+
 		const response = await data_manager.request({
 			body	: rqo,
 			retries	: 1, // one try only
@@ -821,11 +902,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			return false
 		}
 
-	// Anything already transcribed in a previous, interrupted run.
-		const saved_partial	= await data_manager.get_local_db_data( resume_id, 'status' )
-		const resume		= (saved_partial && saved_partial.model===transcriber_quality && Array.isArray(saved_partial.segments))
-			? saved_partial
-			: null
+	// Anything already transcribed in a previous, interrupted run — THIS model's
+	// slot. Another model's partial is left exactly where it is: the readiness
+	// line offered the choice before this point (see refresh_readiness), and a
+	// run that was not told to take it does not get to destroy it.
+		const stored_partials	= read_partials( await data_manager.get_local_db_data( resume_id, 'status' ) )
+		const resume			= stored_partials[transcriber_quality] || null
 
 	// The worker. Held on the instance so the cancel button can reach it.
 		const transcribe_worker = new Worker(
@@ -833,6 +915,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			{ type : 'module' }
 		)
 		self.transcribe_worker = transcribe_worker
+		// From here there is work in this tab that no server holds a copy of.
+		arm_unload_guard()
 
 	return new Promise(async function(resolve){
 
@@ -861,7 +945,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			data_manager.set_local_db_data({ id: resume_id, segments: [], model: null }, 'status')
+			// ONLY THIS RUN'S SLOT. A finished `small` run has no business
+			// clearing the hour of `medium` waiting in the next slot — it did not
+			// produce it and the archivist was never asked.
+			save_partial( undefined )
 
 			if (!Array.isArray(segments) || segments.length===0) {
 				// A WARNING, not an error: nothing failed — there was simply no
@@ -948,12 +1035,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 				// A window finished: persist so a closed tab can resume.
 				case 'progress':
-					data_manager.set_local_db_data({
-						id			: resume_id,
-						segments	: data.segments,
-						model		: transcriber_quality,
-						updated		: Date.now()
-					}, 'status')
+					save_partial( data.segments )
 					break;
 
 				// Speaker detection (after the last window): its own progress line.
@@ -1153,10 +1235,13 @@ const fetch_audio = async function( url ) {
 * The end of the last segment, not the count of segments: windows are planned on
 * the audio timeline, so seconds are the only meaningful cursor.
 *
+* Exported: the readiness line states the SAME cursor the worker will resume
+* from, so "reached 42:15" and where it actually restarts cannot disagree.
+*
 * @param {Array} segments
 * @returns {number} seconds
 */
-const resume_seconds_of = function( segments ) {
+export const resume_seconds_of = function( segments ) {
 
 	if (!Array.isArray(segments) || segments.length===0) {
 		return 0
@@ -1168,6 +1253,87 @@ const resume_seconds_of = function( segments ) {
 		? last.end
 		: (typeof last.start==='number' ? last.start : 0)
 }//end resume_seconds_of
+
+
+
+/**
+* PARTIAL_ID
+* The ONE spelling of the resume key. Per record AND per component, so two
+* transcriptions open at once never overwrite each other's progress.
+*
+* Exported because the render layer reads the same store to state, before the
+* button is pressed, that an interrupted run is waiting — and two spellings of
+* one key is a store that silently never matches.
+*
+* @param {Object} self - the tool_transcription instance
+* @returns {string}
+*/
+export const partial_id = function( self ) {
+
+	return 'transcription_partial_'
+		+ self.media_component.section_tipo + '_'
+		+ self.media_component.section_id + '_'
+		+ self.transcription_component.tipo
+}//end partial_id
+
+
+
+/**
+* How old a saved partial may be and still be offered, in ms. A partial is
+* recognised speech from a run that was interrupted; after a fortnight the
+* recording has almost certainly moved on and resuming from it would splice old
+* text into new work.
+*/
+export const PARTIAL_MAX_AGE = 14 * 24 * 3600 * 1000
+
+
+
+/**
+* READ_PARTIALS
+* The saved partials, ONE SLOT PER MODEL, as `{[model]: {segments, updated}}`.
+*
+* (!) PER MODEL, and this is the whole point of the shape. The store used to be a
+* single slot — `{segments, model}` — and the resume was gated on
+* `saved.model===selected`, which read as "a partial from another model is
+* ignored". It was worse than ignored: the next run's FIRST completed window
+* overwrote that one slot, so an hour of work under `small` was destroyed by
+* window one of a `medium` run, before anything could ask. A slot per model means
+* the two coexist and the choice stays the archivist's.
+*
+* Legacy records (the single slot) are migrated on read, so an interrupted run
+* from before this change is still offered.
+*
+* @param {Object} stored - the raw local_db record, or null
+* @returns {Object} model → {segments, updated}; empty when there is nothing
+*/
+export const read_partials = function( stored ) {
+
+	if (!stored) {
+		return {}
+	}
+
+	// the current shape
+	if (stored.partials && typeof stored.partials==='object') {
+		const out = {}
+		for (const model in stored.partials) {
+			const entry = stored.partials[model]
+			if (entry && Array.isArray(entry.segments) && entry.segments.length>0) {
+				out[model] = entry
+			}
+		}
+		return out
+	}
+
+	// the legacy single slot
+	if (typeof stored.model==='string' && stored.model!=='' && Array.isArray(stored.segments) && stored.segments.length>0) {
+		return {
+			[stored.model] : { segments: stored.segments, updated: stored.updated || 0 }
+		}
+	}
+
+
+	return {}
+}//end read_partials
 
 
 
@@ -1889,12 +2055,44 @@ tool_transcription.prototype.check_server_transcriber_status = async function(op
 export const get_current_lang_info = function( lang ) {
 
 	const found = (page_globals.dedalo_projects_default_langs || []).find(el => el.value === lang)
-	const current_lang_info = found
-		? `${found.label} | ${found.value} | ${found.tld2}`
-		: 'Unknown lang';
+	if (!found) {
+		return 'Unknown lang'
+	}
 
-	return current_lang_info
+	// (!) FILTERED, never a fixed three-part template. `tld2` is optional — a
+	// project lang with no ISO 639-1 code (they exist: most minority and
+	// historical langs have only a 3-letter code) rendered the literal word
+	// "undefined" as the third part, in a line whose whole job is to state a
+	// fact. An absent part is simply not a part.
+	return [ found.label, found.value, found.tld2 ]
+		.filter( part => typeof part==='string' && part!=='' )
+		.join(' | ')
 }//end get_current_lang_info
+
+
+
+/**
+* GET_LANG_LABEL
+* The language's NAME, for a reader — 'Castellano', not 'Castellano | lg-spa | es'.
+*
+* The codes belong to whoever is debugging a mapping, and the readiness panel is
+* not written for them: a line saying the same word three times, twice in machine
+* spelling, is noise in the one place the tool states what it is about to do. They
+* are kept, on the row's `title`, so nothing is lost — see refresh_readiness.
+*
+* @param {string} lang - Dédalo language tag, e.g. 'lg-ell'
+* @returns {string} the lang's label, or the tag itself when the project does not
+*   declare it (never 'undefined', never an empty string).
+*/
+export const get_lang_label = function( lang ) {
+
+	const found = (page_globals.dedalo_projects_default_langs || []).find(el => el.value === lang)
+
+
+	return (found && typeof found.label==='string' && found.label!=='')
+		? found.label
+		: (lang || 'Unknown lang')
+}//end get_lang_label
 
 
 

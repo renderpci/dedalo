@@ -591,6 +591,10 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	test('status 3 still clears the pid and refreshes the component, and stops the spinner', async () => {
 		const run = await drivePoll({ result: { status: 3 }, msg: 'OK. Request done' });
 		expect(panelText(run.status_panel)).toBe('Process done');
+		// A finished run reports as `success`, never as `info`: the panel paints
+		// severity, and an outcome sharing the neutral grey of "the model is
+		// unverified" is an end the archivist has to infer.
+		expect(run.status_panel.reports.at(-1)?.severity).toBe('success');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([4000]);
 		expect(run.busy).toEqual([false]);
@@ -1524,5 +1528,445 @@ describe('a cancelled repair job does not lock the model out', () => {
 			mediaJobs.stop(record.id);
 			releaseModelRepairLock(KNOWN);
 		}
+	});
+});
+
+/**
+ * Gate: the tool's UI strings. Every label key this tool's client asks for must
+ * exist in the register SEED, in every language the seed already speaks.
+ *
+ * The failure this stops is silent and permanent: `get_tool_label('x')` returns
+ * null for an unseeded key and every call site is written
+ * `get_tool_label('x') || 'English literal'`, so the string still RENDERS — in
+ * English, for every operator on the install, forever. Nothing throws, nothing
+ * logs, and the only symptom is one line of a translated panel that is not
+ * translated. When this gate was first written it found 49 such keys.
+ *
+ * (!) THE KEY SURFACE IS NOT JUST THE LITERAL CALLS. Half of this tool's strings
+ * are reached through key TABLES — MODEL_STATES and FAILURE_RULES in
+ * transcription_report.js name their words as `state_key`/`message_key`/
+ * `cause_key`/`action_key`, ACTION_LABELS keys its remedies, and the worker posts
+ * a `label_key` with each degradation warning — and the call site is then
+ * `get_tool_label(info.state_key)`, which a scan for `get_tool_label('…')` cannot
+ * see. Thirty of the forty-nine gaps lived in exactly that blind spot, so the
+ * extraction below reads the tables too. A NEW indirection needs a new pattern
+ * here, or it re-opens the hole.
+ */
+describe('tool_transcription labels', () => {
+	const TOOL_DIR = `${import.meta.dir}/../../tools/tool_transcription`;
+	const LABELS_TIPO = 'dd1372';
+	const SOURCES = [
+		'js/tool_transcription.js',
+		'js/render_tool_transcription.js',
+		'js/render_transcription_status.js',
+		'js/transcription_report.js',
+		'transcribers/browser_whisper/browser_whisper.js',
+	];
+
+	type LabelItem = { lang: string; name: string; value: string };
+
+	async function seedLabels(): Promise<LabelItem[]> {
+		const register = JSON.parse(await Bun.file(`${TOOL_DIR}/register.json`).text());
+		const value = register.misc?.[LABELS_TIPO]?.[0]?.value;
+		expect(Array.isArray(value)).toBe(true);
+		return value as LabelItem[];
+	}
+
+	/**
+	 * The label keys the client actually asks for, read off the tool's own JS —
+	 * the client is the source of demand, so the list is extracted, never restated.
+	 */
+	async function requestedKeys(): Promise<string[]> {
+		const keys = new Set<string>();
+		const patterns = [
+			// get_tool_label('x') — the direct calls
+			/get_tool_label\(\s*'([a-z0-9_]+)'/g,
+			// label('x', 'fallback') — the panel's own thin wrapper
+			/\blabel\(\s*'([a-z0-9_]+)'\s*,/g,
+			// the key TABLES: MODEL_STATES, FAILURE_RULES, the worker's warnings
+			/(?:message_key|cause_key|action_key|state_key|label_key|role_key)\s*[:=]\s*'([a-z0-9_]+)'/g,
+			// post_warning('x', …) — the worker names its own degradation labels
+			/post_warning\(\s*'([a-z0-9_]+)'/g,
+			// the plural/singular pair the worker chooses between inline
+			/\?\s*'(warning_[a-z0-9_]+)'\s*:\s*'(warning_[a-z0-9_]+)'/g,
+		];
+		for (const file of SOURCES) {
+			const source = await Bun.file(`${TOOL_DIR}/${file}`).text();
+			for (const pattern of patterns) {
+				for (const match of source.matchAll(pattern)) {
+					for (const captured of match.slice(1)) {
+						if (captured !== undefined) keys.add(captured);
+					}
+				}
+			}
+			// ACTION_LABELS: the remedy words, keyed by the same action_key strings
+			const table = source.match(/ACTION_LABELS\s*=\s*\{([\s\S]*?)\n\}/);
+			if (table !== null) {
+				for (const match of mustGet(table[1], 'ACTION_LABELS body').matchAll(
+					/^\s*([a-z0-9_]+)\s*:/gm,
+				)) {
+					keys.add(mustGet(match[1], 'action label key'));
+				}
+			}
+		}
+		return [...keys].sort();
+	}
+
+	test('the extraction sees the indirect key tables, not just the literal calls', async () => {
+		// A guard on the GATE: if a pattern above stops matching, the two tests
+		// below go quietly green on a shrunken surface. These four keys are each
+		// reached through a different indirection and none is ever written as
+		// get_tool_label('…') — they are the canary for each pattern.
+		const keys = await requestedKeys();
+		expect(keys).toContain('state_unverified'); // MODEL_STATES.state_key
+		expect(keys).toContain('cause_model_damaged'); // FAILURE_RULES.cause_key
+		expect(keys).toContain('action_repair_model'); // ACTION_LABELS
+		expect(keys).toContain('warning_fallback_cpu'); // the worker's post_warning
+		expect(keys.length).toBeGreaterThan(80);
+	});
+
+	test('every label the client asks for is in the seed', async () => {
+		const labels = await seedLabels();
+		const defined = new Set(labels.map((item) => item.name));
+		const missing = (await requestedKeys()).filter((key) => !defined.has(key));
+		expect(missing).toEqual([]);
+	});
+
+	test('every label is translated into every language the seed speaks', async () => {
+		const labels = await seedLabels();
+		const langs = [...new Set(labels.map((item) => item.lang))].sort();
+		expect(langs.length).toBeGreaterThan(1); // a one-lang seed would pass vacuously
+
+		const byName = new Map<string, Set<string>>();
+		for (const item of labels) {
+			const langsForName = byName.get(item.name) ?? new Set<string>();
+			langsForName.add(item.lang);
+			byName.set(item.name, langsForName);
+		}
+
+		const gaps = [...byName.entries()]
+			.map(([name, present]) => ({ name, missing: langs.filter((lang) => !present.has(lang)) }))
+			.filter((entry) => entry.missing.length > 0);
+		expect(gaps).toEqual([]);
+	});
+
+	test('no label is defined twice for the same language', async () => {
+		const labels = await seedLabels();
+		const seen = new Set<string>();
+		const duplicates: string[] = [];
+		for (const item of labels) {
+			const key = `${item.name}/${item.lang}`;
+			if (seen.has(key)) duplicates.push(key);
+			seen.add(key);
+		}
+		expect(duplicates).toEqual([]);
+	});
+
+	test('a label with a {count} placeholder keeps it in every language', async () => {
+		// The worker substitutes {count} into the plural warning; a translation
+		// that drops the placeholder renders "fragments of the recording were
+		// skipped" with no number in it, which is not the fact being reported.
+		const labels = await seedLabels();
+		const withCount = labels.filter((item) => item.name === 'warning_windows_skipped');
+		expect(withCount.length).toBeGreaterThan(1);
+		for (const item of withCount) {
+			expect(item.value).toContain('{count}');
+		}
+	});
+});
+
+/**
+ * Gate: every severity the panel can EMIT has a rule that paints it.
+ *
+ * The panel writes `severity_<x>` onto each row (render_transcription_status.js)
+ * and the tool's LESS names the ones that get an accent. A severity added to
+ * REPORT_SEVERITIES with no rule beside it does not fail anywhere — it renders in
+ * the neutral default, which is precisely how "Transcription completed." came to
+ * arrive in the same grey as "the model is unverified".
+ *
+ * `info` is the deliberate exception and is asserted as such: it IS the neutral
+ * default, and `progress` never reaches a row (it is the transient line, a node
+ * of its own). Everything else must be painted.
+ */
+describe('tool_transcription status severities', () => {
+	const TOOL_DIR = `${import.meta.dir}/../../tools/tool_transcription`;
+	const UNPAINTED = ['info', 'progress'];
+
+	async function severities(): Promise<string[]> {
+		const source = await Bun.file(`${TOOL_DIR}/js/transcription_report.js`).text();
+		const match = source.match(/REPORT_SEVERITIES\s*=\s*\[([^\]]*)\]/);
+		expect(match).not.toBeNull();
+		return [...mustGet(match, 'REPORT_SEVERITIES')[1]!.matchAll(/'([a-z_]+)'/g)].map((m) =>
+			mustGet(m[1], 'severity'),
+		);
+	}
+
+	test('the panel prefixes the class, so no severity can collide with a global utility', async () => {
+		// `error` and `warning` are page-wide utility classes (general.less gives
+		// `.error` a red slab AND `color: white !important`). A row that wore the
+		// bare word inherited that white and rendered invisible on the panel's own
+		// light surface — the reason for the prefix, restated as a test.
+		const source = await Bun.file(`${TOOL_DIR}/js/render_transcription_status.js`).text();
+		expect(source).toContain('status_report severity_${report.severity}');
+		expect(source).toContain("readiness_line severity_${line.severity || 'info'}");
+	});
+
+	test('every emittable severity is painted in the tool css', async () => {
+		const less = await Bun.file(`${TOOL_DIR}/css/tool_transcription.less`).text();
+		const unpainted = (await severities())
+			.filter((severity) => !UNPAINTED.includes(severity))
+			.filter((severity) => !less.includes(`&.severity_${severity}`));
+		expect(unpainted).toEqual([]);
+	});
+
+	test('the built css carries those rules, not only the source', async () => {
+		// The .css is a committed artifact (bun run css:build): a rule that exists
+		// only in the .less is a rule the browser never sees.
+		const css = await Bun.file(`${TOOL_DIR}/css/tool_transcription.css`).text();
+		const unbuilt = (await severities())
+			.filter((severity) => !UNPAINTED.includes(severity))
+			.filter((severity) => !css.includes(`.severity_${severity}`));
+		expect(unbuilt).toEqual([]);
+	});
+});
+
+/**
+ * Gate: the readiness line states facts a reader can act on.
+ *
+ * Both defects this pins were the same mistake in opposite directions — a line
+ * that says too much and a line that says too little:
+ *
+ *  - the language read `Castellano | lg-spa | es`: one fact spelled three times,
+ *    twice for a machine. And the third part is OPTIONAL — a project lang with no
+ *    ISO 639-1 code (most minority and historical langs) put the literal word
+ *    "undefined" in the panel whose whole job is to state what is true;
+ *  - the model read `Model: unverified`, naming no model, beside a remedy button
+ *    that acts on one.
+ *
+ * The codes did not disappear: they moved to the row's `title` (render layer), so
+ * the administrator keeps them and the archivist stops reading them.
+ */
+describe('tool_transcription readiness facts', () => {
+	const SOURCE = `${import.meta.dir}/../../tools/tool_transcription/js/tool_transcription.js`;
+
+	type LangEntry = { value: string; label: string; tld2?: string };
+	type LangProbe = {
+		get_current_lang_info: (lang: string) => string;
+		get_lang_label: (lang: string) => string;
+	};
+
+	afterAll(() =>
+		rmSync(`${tmpdir()}/dedalo_lang_probe_${process.pid}`, { recursive: true, force: true }),
+	);
+
+	/**
+	 * The two functions, run as the REAL bytes that ship — sliced out of the
+	 * client source rather than re-implemented here.
+	 *
+	 * (!) SLICED, not imported. tool_transcription.js cannot be loaded in
+	 * isolation the way render_tool_transcription.js can: its module body
+	 * evaluates `tool_common.prototype`, `common`, `render_tool_transcription`…,
+	 * so stripping the imports leaves a chain of free identifiers that would have
+	 * to be stubbed — a harness that breaks whenever the tool grows a dependency,
+	 * testing the stubs as much as the code. The `}//end <name>` terminator is
+	 * this codebase's convention and is asserted below, so a slice that stops
+	 * matching FAILS rather than silently testing nothing.
+	 */
+	async function loadLangProbe(langs: LangEntry[]): Promise<LangProbe> {
+		const raw = await Bun.file(SOURCE).text();
+		const slices: string[] = [];
+		for (const name of ['get_current_lang_info', 'get_lang_label']) {
+			const from = raw.indexOf(`export const ${name} = function(`);
+			const to = raw.indexOf(`}//end ${name}`, from);
+			if (from === -1 || to === -1) {
+				throw new Error(`lang harness: could not slice ${name} — the source shape changed`);
+			}
+			slices.push(raw.slice(from, to + 1).replace('export const', 'const'));
+		}
+		// its OWN directory, not ROOT: ROOT is shared with the media half of this
+		// file, which creates and removes trees under it while these tests run.
+		const dir = `${tmpdir()}/dedalo_lang_probe_${process.pid}`;
+		mkdirSync(dir, { recursive: true });
+		const probe = `${dir}/lang_info_${langs.length}.probe.mjs`;
+		await Bun.write(
+			probe,
+			`export const make = function( page_globals ) {\n${slices.join('\n')}\nreturn { get_current_lang_info, get_lang_label }\n}\n`,
+		);
+		const module = (await import(probe)) as {
+			make: (globals: { dedalo_projects_default_langs: LangEntry[] }) => LangProbe;
+		};
+		return module.make({ dedalo_projects_default_langs: langs });
+	}
+
+	test('a lang with no 2-letter code never renders the word "undefined"', async () => {
+		const probe = await loadLangProbe([
+			{ value: 'lg-spa', label: 'Castellano', tld2: 'es' },
+			{ value: 'lg-cha', label: 'Chamorro' }, // declared with no tld2
+		]);
+		expect(probe.get_current_lang_info('lg-spa')).toBe('Castellano | lg-spa | es');
+		expect(probe.get_current_lang_info('lg-cha')).toBe('Chamorro | lg-cha');
+		expect(probe.get_current_lang_info('lg-cha')).not.toContain('undefined');
+	});
+
+	test('the readable name is the label alone, and an unknown lang still names something', async () => {
+		const probe = await loadLangProbe([{ value: 'lg-spa', label: 'Castellano', tld2: 'es' }]);
+		expect(probe.get_lang_label('lg-spa')).toBe('Castellano');
+		// never empty and never 'undefined': the tag itself is a truthful fallback
+		expect(probe.get_lang_label('lg-xxx')).toBe('lg-xxx');
+	});
+
+	test('the model line names its model, and the language line drops the codes', async () => {
+		// The two lines are built inside refresh_readiness, which needs the whole
+		// tool DOM to run; what is pinned here is that neither reverts to the shape
+		// it had — the model line composed from `readiness_model` alone, the
+		// language line rendering the full triple as its text.
+		const client = await Bun.file(
+			`${import.meta.dir}/../../tools/tool_transcription/js/render_tool_transcription.js`,
+		).text();
+		expect(client).toContain('const model_words = function()');
+		expect(client).toContain(
+			"text\t\t: `${self.get_tool_label('readiness_language') || 'Language'}: ${get_lang_label(",
+		);
+		expect(client).not.toContain("|| 'Language'}: ${get_current_lang_info(");
+		// the codes are kept, on the row's title
+		expect(client).toContain('title\t\t: get_current_lang_info(');
+	});
+});
+
+/**
+ * Gate: an interrupted browser run is not lost, and not silently overwritten.
+ *
+ * A browser transcription lives in the tool's tab: ⌘R kills the worker mid-window.
+ * Every completed window was already persisted, so the WORK survived — but the
+ * store was read in one place only, inside the run and after the trigger was
+ * pressed, so the archivist came back to a tool that looked untouched.
+ *
+ * Worse, the store was ONE SLOT — `{segments, model}` — with the resume gated on
+ * `saved.model===selected`. That read as "another model's partial is ignored". It
+ * was not ignored: the next run's FIRST completed window overwrote the slot, so an
+ * hour recognised under `small` died at window one of a `medium` run, before
+ * anything could ask. A slot PER MODEL is what makes the choice the archivist's,
+ * and is what these tests pin.
+ */
+describe('tool_transcription interrupted-run recovery', () => {
+	const TOOL_DIR = `${import.meta.dir}/../../tools/tool_transcription`;
+
+	type Entry = { segments: unknown[]; updated?: number };
+	type PartialProbe = {
+		read_partials: (stored: unknown) => Record<string, Entry>;
+		resume_seconds_of: (segments: unknown[]) => number;
+	};
+
+	/** The real bytes, sliced — see the lang probe above for why not imported. */
+	async function loadPartialProbe(): Promise<PartialProbe> {
+		const raw = await Bun.file(`${TOOL_DIR}/js/tool_transcription.js`).text();
+		const slices: string[] = [];
+		for (const name of ['read_partials', 'resume_seconds_of']) {
+			const from = raw.indexOf(`export const ${name} = function(`);
+			const to = raw.indexOf(`}//end ${name}`, from);
+			if (from === -1 || to === -1) {
+				throw new Error(`partial harness: could not slice ${name} — the source shape changed`);
+			}
+			slices.push(raw.slice(from, to + 1));
+		}
+		const dir = `${tmpdir()}/dedalo_partial_probe_${process.pid}`;
+		mkdirSync(dir, { recursive: true });
+		const probe = `${dir}/partials.probe.mjs`;
+		await Bun.write(probe, slices.join('\n'));
+		return (await import(probe)) as unknown as PartialProbe;
+	}
+
+	afterAll(() =>
+		rmSync(`${tmpdir()}/dedalo_partial_probe_${process.pid}`, { recursive: true, force: true }),
+	);
+
+	test('two models keep two partials — neither can overwrite the other', async () => {
+		const probe = await loadPartialProbe();
+		const partials = probe.read_partials({
+			partials: {
+				'Xenova/whisper-small': { segments: [{ start: 0, end: 2530 }], updated: 10 },
+				'Xenova/whisper-medium': { segments: [{ start: 0, end: 90 }], updated: 20 },
+			},
+		});
+		expect(Object.keys(partials).sort()).toEqual(['Xenova/whisper-medium', 'Xenova/whisper-small']);
+		// and the cursor offered is the one the worker will actually resume from
+		expect(probe.resume_seconds_of(partials['Xenova/whisper-small']!.segments)).toBe(2530);
+	});
+
+	test('a partial saved before the per-model store still resumes', async () => {
+		// The legacy single slot. An archivist whose run was interrupted the day
+		// before this change must not lose it to the migration.
+		const probe = await loadPartialProbe();
+		const partials = probe.read_partials({
+			segments: [{ start: 0, end: 42 }],
+			model: 'Xenova/whisper-small',
+			updated: 7,
+		});
+		expect(Object.keys(partials)).toEqual(['Xenova/whisper-small']);
+		expect(probe.resume_seconds_of(partials['Xenova/whisper-small']!.segments)).toBe(42);
+	});
+
+	test('an empty or absent store offers nothing, and never throws', async () => {
+		const probe = await loadPartialProbe();
+		expect(probe.read_partials(null)).toEqual({});
+		expect(probe.read_partials({})).toEqual({});
+		// a slot emptied by a finished run is not an offer to resume
+		expect(probe.read_partials({ partials: { 'a/b': { segments: [], updated: 1 } } })).toEqual({});
+		// the legacy shape, already cleared
+		expect(probe.read_partials({ segments: [], model: null })).toEqual({});
+	});
+
+	test('the run writes its own slot only, and finish clears only its own', async () => {
+		const source = await Bun.file(`${TOOL_DIR}/js/tool_transcription.js`).text();
+		// the whole-record write that destroyed the other model's work is gone
+		expect(source).not.toContain('segments	: data.segments,');
+		expect(source).not.toContain('segments: [], model: null');
+		expect(source).toContain('save_partial( data.segments )');
+		expect(source).toContain('save_partial( undefined )');
+		// and the run reads its own slot, never "whatever was saved last"
+		expect(source).toContain('stored_partials[transcriber_quality]');
+	});
+
+	test('the readiness panel reads the store, and by the same key the run writes', async () => {
+		// The defect was not the store: it was that nothing READ it until the
+		// button had already been pressed. And one spelling of the key, shared —
+		// two spellings is a store that silently never matches.
+		const client = await Bun.file(`${TOOL_DIR}/js/render_tool_transcription.js`).text();
+		expect(client).toContain('read_partials(');
+		expect(client).toContain('partial_id(self)');
+		expect(client).toContain("action_key		: 'action_resume'");
+		expect(client).toContain("action_key		: 'action_use_saved_model'");
+
+		const source = await Bun.file(`${TOOL_DIR}/js/tool_transcription.js`).text();
+		expect(source).toContain('const resume_id = partial_id( self )');
+	});
+
+	test('both new remedies are pressable, or they render as a dead sentence', async () => {
+		// A readiness line offering a remedy that is not in PRESSABLE_ACTIONS
+		// renders as text with no button — the offer would be made and not honoured.
+		const panel = await Bun.file(`${TOOL_DIR}/js/render_transcription_status.js`).text();
+		const pressable = panel.match(/PRESSABLE_ACTIONS\s*=\s*\[([^\]]*)\]/);
+		expect(mustGet(pressable, 'PRESSABLE_ACTIONS')[1]).toContain('action_resume');
+		expect(mustGet(pressable, 'PRESSABLE_ACTIONS')[1]).toContain('action_use_saved_model');
+		// …and each is actually handled, or the press does nothing at all
+		const client = await Bun.file(`${TOOL_DIR}/js/render_tool_transcription.js`).text();
+		expect(client).toContain("case 'action_resume':");
+		expect(client).toContain("case 'action_use_saved_model':");
+	});
+
+	test('the unload guard is armed for a browser run and disarmed by every exit', async () => {
+		const source = await Bun.file(`${TOOL_DIR}/js/tool_transcription.js`).text();
+		expect(source).toContain('arm_unload_guard()');
+		// disarmed in BOTH: end_run (the paths that fail before a WAV exists) and
+		// delete_audio (finish resolves to the caller without passing end_run, so
+		// a guard removed only there would outlive the run).
+		const endRun = source.indexOf('const end_run = function() {');
+		const deleteAudio = source.indexOf('const delete_audio = function() {');
+		expect(source.slice(endRun, endRun + 200)).toContain('disarm_unload_guard()');
+		expect(source.slice(deleteAudio, deleteAudio + 500)).toContain('disarm_unload_guard()');
+		// the SERVER engine keeps no guard: that job survives the reload and
+		// get_server_status re-polls it, so a warning there would be a lie.
+		const serverRun = source.indexOf('automatic_transcription_server = async function');
+		expect(source.slice(serverRun, serverRun + 3000)).not.toContain('arm_unload_guard');
 	});
 });
