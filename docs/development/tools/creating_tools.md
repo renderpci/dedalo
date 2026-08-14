@@ -94,7 +94,7 @@ Tools need a register file carrying the configuration, labels and other informat
 
     > Development → Tools → [Tools development](https://dedalo.dev/ontology/dd1340)
 
-    ![Tools development menu](assets/tools_development_menu.png)
+    ![Tools development menu](assets/20231012_220243_tool_developer_menu.png)
 
     Its two sibling sections are read-only from your point of view here: *Registered tools* (`dd1324`) is what the register process writes, and *Tools configuration* (`dd996`) holds the per-install configuration overrides.
 
@@ -211,7 +211,7 @@ The final step that activates the tool is registering it. Go to:
 
 Locate the *Register tools* panel and look for your tool in the list — one row per tool, with columns *Active*, *Name*, *Developer*, *Installed*, *Version* and *Info*. If your tool is not there, check that the directory sits in `tools/`, that `register.json` is inside it, and that every required file is named correctly.
 
-![Register tools panel](assets/register_tools_panel.png){ width="420"}
+![Register tools panel](assets/20231012_222001_register_tools_panel.png){ width="420"}
 
 Press **Register tools**. The importer scans the tool roots, validates each package and reconciles it with the registered-tools section (`dd1324`). The leading *Active* checkbox is not a row selector: it is the tool's active state, and what you leave checked at submit time outranks the `active` value the file declares.
 
