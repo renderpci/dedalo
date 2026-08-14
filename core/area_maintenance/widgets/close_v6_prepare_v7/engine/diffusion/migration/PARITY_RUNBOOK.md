@@ -326,18 +326,40 @@ and unpinned by any test — watch for them if a text_area column mismatches:
   ```
 
   `component_iri::resolve_title` (v6 `core/component_iri/class.component_iri.php:518-547`)
-  is `$title = $dataframe_label ?? $value->title;` — the **dataframe label is authoritative**
-  and the stored `title` is explicitly the legacy fallback ("old values", :542). v7's
-  `parser_misc.ts` reads `entry.title` and never resolves `dd560`.
+  is `$title = $dataframe_label ?? $value->title;` — the **dataframe label is the value**.
+  v7's `parser_misc.ts` read `entry.title` and never resolved `dd560`.
+
+  **The `??` NEVER falls through — do not read that line as a fallback.** `get_value()`
+  returns the EMPTY STRING, not null, when the item has no frame; `'' ?? $title` is `''`,
+  and the caller's `!empty()` gate then drops it. Measured on the live install:
+
+  ```
+  resolve_title({id:99, title:'STORED TITLE'})  =>  ""      (NOT 'STORED TITLE')
+  ```
+
+  So the stored `title` is **dead on every resolved path**: no frame ⇒ no title, the iri
+  publishes alone. The ":542 fallback to data item value (old values)" comment describes an
+  intent the code does not implement. Implementing that comment instead of the code — which
+  the first version of this fix did — publishes a stale title v6 never emits. Not reachable
+  on this corpus (0 of 200 records hold a title without a frame), which is exactly why it
+  had to be measured against v6 rather than inferred.
 
   It showed on exactly one row because on the other 58 records carrying a `dd560` frame the
   vocabulary term happens to equal the stored title. 59 of 200 `rsc205` records carry one,
   so any install whose editors used the label vocabulary would have diverged more widely.
 
-  Fixed in `v7 src/diffusion/resolve/resolver.ts` — `iriLabelsByItemId` + `frameLabelTipos`,
-  applied to the `component_iri` step. Nothing is install-specific: the frame tipo comes from
-  the component descriptor (`fixedDataframeTipos`) and the label components from the frame
-  node's own `source.request_config[].show.ddo_map`.
+  Fixed in **`v7 src/core/components/component_iri/resolve_title.ts`** — ONE definition of
+  the rule (frame↔item pairing, label components, "no label ⇒ no title"), with the record/
+  value I/O injected by each caller. Two callers use it: the diffusion resolver
+  (`iriTitlesByItemId`, publishing `title, iri`) and the flat/export path
+  (`core/resolve/relation_list.ts`, `family === 'iri'`, publishing `iri, title`). The field
+  ORDER stays with the callers because v6 disagrees with itself there —
+  `get_diffusion_value` :672-692 vs `get_grid_value` :466-483 — and both are correct.
+
+  The export path had its own copy of the rule (hardcoded `dd560`/`dd1715`). Unifying was
+  safe but had to be MEASURED, since its differential gates need the numisdata dev DB and
+  are red on any other install: all 200 `rsc205` flat cells were swept before and after and
+  are byte-identical.
 
   **The gate matters as much as the fix.** Substituting the label unconditionally regressed
   `publications.url_data` (12 cells, MATCH → MISMATCH): that field is v6
