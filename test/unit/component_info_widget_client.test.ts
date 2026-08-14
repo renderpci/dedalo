@@ -44,13 +44,23 @@
  *      LEGAL coordinate (the guard tests null/undefined, not falsiness), and a
  *      caller that is not a component_info stays silent — the loud path must
  *      not fire for widgets that load their own data.
- *   4. THE LIST CELL SURVIVES A REFRESH. oh87 declares `observe` on rsc860, so
- *      saving an indexation refreshes this cell. `view_default_list_info.render`
- *      never set `wrapper.content_data` and ignored `options.render_level`,
- *      unlike its edit twins and every other model's list view. `common.render`
- *      defaults to `render_level:'content'`, whose branch then replaced the cell
- *      with `Invalid content_data DOM node [oh87]` and installed that error div
- *      as the pointer. Pinned end-to-end through the real `common.render`.
+ *   4. THE LIST CELL SURVIVES A REFRESH. `view_default_list_info.render` never
+ *      set `wrapper.content_data` and ignored `options.render_level`, unlike its
+ *      edit twins and unlike EVERY other model's list view (portal, svg,
+ *      section). `common.refresh` defaults to `render_level:'content'`
+ *      (common.js:720) and that branch reads `self.node.content_data`; missing,
+ *      it replaces the cell with `Invalid content_data DOM node [oh87]` and
+ *      installs that error div as the pointer. Pinned end-to-end through the
+ *      real `common.render`.
+ *      (!) This is a CONTRACT conformance pin, not a reproduction of a known
+ *      live trigger. The obvious candidate is not one: oh87's `properties.observe`
+ *      carries only a `server` key (no `client`), so
+ *      `component_common.init_events_subscription` skips it (component_common.js:509)
+ *      — and that function returns false for ANY non-edit mode (:485), so no
+ *      list cell of any tipo ever subscribes. What made the omission real is the
+ *      render contract itself: every caller that refreshes a rendered component
+ *      lands on the 'content' branch by default, and this view was the only list
+ *      view unable to serve it.
  *   5. NO WIDGET IS LOST ON A SECOND RENDER. `get_widgets` `continue`d on an
  *      already-loaded widget without pushing it into `ar_promises`, while
  *      `ar_instances` is REBUILT from `ar_promises` — so the second call
@@ -693,9 +703,9 @@ describe('view_default_list_info.render — the list cell refresh contract', () 
 		expect(content.classes).not.toContain('wrapper_component');
 	});
 
-	test('an observe-driven refresh swaps the cell in place through common.render', async () => {
-		// oh87 declares observe on rsc860: saving an indexation refreshes this
-		// cell at render_level 'content' (common.refresh's default).
+	test('a content-level re-render swaps the cell in place through common.render', async () => {
+		// common.refresh's default render_level is 'content' (common.js:720), so
+		// every caller that refreshes a rendered list cell arrives here.
 		const self = make_component_info({ data: { entries: LIST_ENTRIES, datalist: [] } });
 
 		const wrapper = await self.render({ render_level: 'full' });
