@@ -99,12 +99,15 @@ export const view_default_list_info = function() {
 */
 view_default_list_info.render = async function(self, options) {
 
+	// options
+		const render_level = options.render_level || 'full'
+
 	// widgets load
 		await self.get_widgets()
 
 	// content_data
 		const content_data = await get_content_data(self)
-		if (options.render_level==='content') {
+		if (render_level==='content') {
 			return content_data
 		}
 
