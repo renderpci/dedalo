@@ -32,10 +32,16 @@
 *     used when the build method makes an API request for widget data.
 *
 * The build() method on this base handles the component_info autoload path:
-* when `self.caller === 'component_info'` and `autoload === true` it fires a
+* when the caller IS a component_info and `autoload === true` it fires a
 * 'get_widget_data' request via dd_component_info and stores the resolved payload
 * in `self.value`. Concrete widgets whose data needs a different loading strategy
 * should override build() rather than extend this one.
+*
+* (!) The caller is the LIVE component_info instance, not its name — the test is
+* `caller.model === 'component_info'`. Comparing `caller` against the STRING
+* 'component_info' matched nothing, so this path never ran and every on-demand
+* widget load was silently dead (the oh 'descriptors' Terms button in a section
+* list rendered 'Total 0' forever). Gate: test/unit/component_info_widget_client.test.ts.
 *
 * Server peer:  core/widgets/widget_common/class.widget_common.php
 * API handler:  core/api/v1/common/class.dd_component_info.php (action get_widget_data)
@@ -176,7 +182,8 @@ widget_common.prototype.init = async function(options) {
 * the server via the dd_component_info API action 'get_widget_data'.
 *
 * The component_info autoload path:
-*   When `self.caller === 'component_info'` and `autoload === true`, constructs a
+*   When the caller is a component_info (`caller.model === 'component_info'`, or
+*   the legacy string 'component_info') and `autoload === true`, constructs a
 *   Request Query Object (RQO) targeting the dd_component_info API handler and
 *   awaits the response. If the response carries a truthy `result`, that value is
 *   stored in `self.value` and subsequently passed to the render method.
@@ -186,22 +193,22 @@ widget_common.prototype.init = async function(options) {
 *     action  : 'get_widget_data',
 *     dd_api  : 'dd_component_info',
 *     source  : {
-*       tipo         : self.caller.tipo,        // component_info ontology tipo
-*       section_tipo : self.caller.section_tipo, // owning section tipo
-*       section_id   : self.caller.section_id,   // record id
-*       mode         : self.mode                 // 'edit' | 'list' | etc.
+*       tipo         : caller.tipo,         // component_info ontology tipo
+*       section_tipo : caller.section_tipo, // owning section tipo
+*       section_id   : caller.section_id,   // record id
+*       mode         : self.mode            // 'edit' | 'list' | etc.
 *     },
 *     options : {
 *       widget_name  : self.name  // e.g. 'calculation', 'state'
 *     }
 *   }
 *
-* (!) When `self.caller` is the string 'component_info' rather than the live
-*     component_info object, the source fields `self.caller.tipo`,
-*     `self.caller.section_tipo`, and `self.caller.section_id` will all be
-*     undefined.  The RQO will still be sent, but the server will receive null
-*     coordinates — widgets relying on this path should ensure `caller` is the
-*     live instance, not the string identifier.
+*   section_tipo / section_id fall back to the widget's own coordinates (seeded in
+*   init) so the legacy string caller still resolves them. `tipo` has NO fallback —
+*   a widget's own `self.tipo` is always null — so an unresolvable tipo is a
+*   programming error: it logs a console.error and sends NOTHING. Sending empty
+*   coordinates would earn a `result:false` envelope and paint an empty widget,
+*   which is exactly the silent failure this path used to have.
 *
 * When `autoload === false` or the caller is not component_info, this method
 * does nothing beyond the status update. Concrete widgets that need a different
@@ -231,15 +238,38 @@ widget_common.prototype.build = async function(autoload=false) {
 			// component_info caller cases
 			// all component_info widgets are using this unified load data way
 			// for convenience we place this API request in the common build
-			if (self.caller==='component_info') {
+			// (!) The caller is the LIVE component_info instance (component_info.js
+			// get_widgets passes 'caller : self'). The legacy string form is still
+			// accepted, but it carries no component_info tipo, so it can only work
+			// when the widget itself was seeded with usable coordinates.
+			const caller_instance	= (self.caller && typeof self.caller==='object') ? self.caller : null
+			const is_component_info	= caller_instance
+				? caller_instance.model==='component_info'
+				: self.caller==='component_info'
+			if (is_component_info) {
+
+				// coordinates. The component_info tipo is the widget's only anchor
+				// and has no fallback (widget init sets self.tipo = null).
+				const tipo			= caller_instance ? caller_instance.tipo : null
+				const section_tipo	= (caller_instance ? caller_instance.section_tipo : null) ?? self.section_tipo
+				const section_id	= (caller_instance ? caller_instance.section_id : null) ?? self.section_id
+
+				// fail loud. Never send empty coordinates: the server would answer
+				// result:false and the widget would silently render an empty value.
+				if (!tipo || !section_tipo || section_id===null || section_id===undefined) {
+					console.error('Error. Unable to resolve component_info coordinates for widget:',
+						self.name, {tipo, section_tipo, section_id, caller:self.caller});
+					self.status = 'built'
+					return true
+				}
 
 				const rqo = {
 					action	: 'get_widget_data',
 					dd_api	: 'dd_component_info',
 					source	: {
-						tipo			: self.caller.tipo,
-						section_tipo	: self.caller.section_tipo,
-						section_id		: self.caller.section_id,
+						tipo			: tipo,
+						section_tipo	: section_tipo,
+						section_id		: section_id,
 						mode			: self.mode
 					},
 					options	: {
