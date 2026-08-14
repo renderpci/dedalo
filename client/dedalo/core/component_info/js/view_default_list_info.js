@@ -22,7 +22,8 @@
 *      child content_value <div> (with a fade-in transition applied after
 *      an idle-callback deferral).
 *   3. The content_data node is appended to the standard list wrapper
-*      produced by ui.component.build_wrapper_list.
+*      produced by ui.component.build_wrapper_list, and exposed as
+*      wrapper.content_data so refresh can swap the inner node in place.
 *
 * This view is activated by render_list_component_info when
 * context.view is 'default' (or absent). The 'mini' variant is handled
@@ -68,10 +69,16 @@ export const view_default_list_info = function() {
 *      receives the widget's rendered output via dd_request_idle_callback (see
 *      render_edit_component_info.js → get_content_value for the deferred
 *      fade-in rendering detail).
-*   3. Creates the standard list wrapper via ui.component.build_wrapper_list,
+*   3. When options.render_level is 'content' (the level common.prototype.refresh
+*      uses by default), returns the bare content_data node so the caller can
+*      swap it into the existing wrapper instead of rebuilding the cell.
+*   4. Creates the standard list wrapper via ui.component.build_wrapper_list,
 *      which attaches component/model/tipo/section_tipo CSS classes and the
 *      mode='list', view='default' markers.
-*   4. Appends content_data into the wrapper and returns it.
+*   5. Appends content_data into the wrapper and exposes it as
+*      wrapper.content_data, the pointer common.prototype.refresh reads on the
+*      'content' path; without it the refresh replaces the whole cell with an
+*      'Invalid content_data DOM node' notice. Returns the wrapper.
 *
 * Note: unlike view_default_edit_info, this list view does not attach a
 * buttons container or click-to-edit handler. The list view is read-only at
@@ -83,10 +90,12 @@ export const view_default_list_info = function() {
 *     self.data.entries   {Array<Object>} - raw data entries keyed by widget.
 *     self.data.datalist  {Array<Object>} - supporting datalist entries.
 *     self.ar_instances   {Array<Object>} - populated/refreshed by get_widgets().
-* @param {Object} options - Render options (currently unused by this view;
-*     passed through for API consistency with other view renderers).
-* @returns {Promise<HTMLElement>} The constructed list wrapper element
-*     containing all widget content nodes.
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'content' returns only the
+*     inner content_data node (the refresh path); 'full' (or omitted) returns
+*     the complete list wrapper.
+* @returns {Promise<HTMLElement>} The list wrapper element (render_level 'full')
+*     or the content_data element (render_level 'content').
 */
 view_default_list_info.render = async function(self, options) {
 
@@ -95,12 +104,20 @@ view_default_list_info.render = async function(self, options) {
 
 	// content_data
 		const content_data = await get_content_data(self)
+		if (options.render_level==='content') {
+			return content_data
+		}
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
 
 	// Set value
 		wrapper.appendChild(content_data)
+		// set pointers
+		// Expose content_data on the wrapper so common.prototype.refresh's
+		// 'content' branch can replace the inner node in place instead of
+		// destroying the cell.
+		wrapper.content_data = content_data
 
 
 	return wrapper
