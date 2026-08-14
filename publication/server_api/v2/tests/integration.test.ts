@@ -156,7 +156,19 @@ async function mockDbExecute(db: string, sql: string, params: unknown[] = []): P
   return [];
 }
 
+// `mock.module` REPLACES the module for the whole PROCESS, and bun runs every
+// test file in one process — so this factory is what OTHER test files link
+// against too. It must therefore expose EVERY real export: a missing one is not
+// a stub gap, it is a link error that kills an unrelated file at load time.
+// tests/pool.test.ts died exactly that way on the Linux CI runner (2026-08-14,
+// "Export named 'normalizeValues' not found") while macOS stayed green, so the
+// gate was platform-dependent and invisible here. Spreading the real namespace
+// makes completeness STRUCTURAL: a new export of pool.ts is covered the day it
+// lands, and only the DB-touching functions below are overridden.
+const realPool = await import('../src/db/pool');
+
 mock.module('../src/db/pool', () => ({
+  ...realPool,
   assertKnownDb(db: string): string {
     if (!ALLOWED_DBS.has(db)) throw new NotFoundError(`Unknown database: ${db}`);
     return db;

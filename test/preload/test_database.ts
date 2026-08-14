@@ -12,13 +12,19 @@
  * provisioned a scratch ontology node and DELETED a real one (test218) on its way out.
  * Tests get their own database; the app's is not theirs to touch.
  *
- * FAIL LOUD, NOT SILENT. If the test DB does not exist, the DB-backed gates fail with
- * connection errors that look like an engine bug. So we PROBE it here and, when it is
- * missing, say exactly what to run — and fall back to the configured DB, preserving the old
- * behaviour rather than bricking a working checkout. The hermetic CI tier has no Postgres at
- * all: the probe fails there too, warns, and the DB-less tripwires run exactly as before.
+ * FAIL LOUD, NOT SILENT — AND NEVER ON THE APP'S DATA. If the test DB does not exist, the
+ * DB-backed gates fail with connection errors that look like an engine bug. So we PROBE it
+ * here and, when it is missing, say exactly what to run. What we do NOT do is fall back to
+ * the configured database: that is the very footgun the WHY above describes (a gate deleting
+ * test218 out of a real install), and "your test DB is missing" is not a reason to hand the
+ * suite write access to production data. The missing name is set anyway, so a DB-backed gate
+ * dies with `database "…_test" does not exist` — the true cause, naming its own fix.
  *
- * Opt out with DEDALO_TEST_DB_DISABLE=true (runs against the configured DB, as before).
+ * The hermetic CI tier has no Postgres at all: the probe fails there too, warns, and the
+ * DB-less tripwires run exactly as before.
+ *
+ * Opt out with DEDALO_TEST_DB_DISABLE=true (runs against the configured DB, as before) —
+ * an explicit, typed-out choice to point the suite at your own data, never a default.
  */
 
 import { testDatabaseName } from '../helpers/test_database.ts';
@@ -48,8 +54,14 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 			process.env.DEDALO_DATABASE_CONN = testDb;
 			console.log(`[test-preload] suite database: ${testDb} (the app DB is untouched)`);
 		} else {
+			// Missing test DB (or no Postgres at all — the hermetic tier). Point at it
+			// ANYWAY: the app database is never the fallback. A DB-backed gate then fails
+			// with `database "<testDb>" does not exist` instead of silently reading and
+			// WRITING the application's records.
+			process.env.DB_NAME = testDb;
+			process.env.DEDALO_DATABASE_CONN = testDb;
 			console.warn(
-				`[test-preload] the test database '${testDb}' does not exist — falling back to the CONFIGURED database, so these tests read (and write) your application data, and the gates needing the numisdata test ontology will fail. Build it with:\n    bun run test:db:setup`,
+				`[test-preload] the test database '${testDb}' does not exist — the DB-backed gates will fail with 'database "${testDb}" does not exist'. The application database is NOT used as a fallback (the suite must never write to it). Harmless on the hermetic (DB-less) tier. Build it with:\n    bun run test:db:setup`,
 			);
 		}
 	}
