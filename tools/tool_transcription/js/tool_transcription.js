@@ -75,6 +75,7 @@
 	import { render_tool_transcription } from './render_tool_transcription.js'
 	import { parse_transcript, segments_to_html, tc_to_seconds } from '../transcribers/lib/paragraphs.js'
 	import { ui } from '../../../core/common/js/ui.js'
+	import { installed_answer, MODEL_STATES, model_state_of } from './transcription_report.js'
 
 
 
@@ -524,7 +525,7 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 * @param {Object} [options.decode] - decoding overrides (lib/browser_whisper DEFAULT_DECODE)
 * @param {string} [options.device] - 'auto' (default) | 'webgpu' | 'wasm'
 * @param {Object} options.nodes - DOM nodes held by the render layer:
-*   nodes.status_container, nodes.button_automatic_transcription
+*   nodes.status_panel, nodes.button_automatic_transcription
 * @returns {Promise<Array>} single-element array with the HTML for component_text_area
 */
 tool_transcription.prototype.automatic_transcription = async function(options) {
@@ -537,12 +538,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		const source_lang			= options.source_lang // self.transcription_component.lang
 		const format_options		= options.format_options || {}
 
-	// The key partial results are stored under. Per record AND per component, so
-	// two transcriptions open at once never overwrite each other's progress.
-		const resume_id = 'transcription_partial_'
-			+ self.media_component.section_tipo + '_'
-			+ self.media_component.section_id + '_'
-			+ self.transcription_component.tipo
+	// The key partial results are stored under (partial_id — ONE spelling, shared
+	// with the render layer, which reads the same store to announce an
+	// interrupted run before the button is pressed).
+		const resume_id = partial_id( self )
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -562,30 +561,164 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		}
 
 	/**
+	* PANEL
+	* The one voice. `set_status`/`set_error` as they were are gone: set_error wrote
+	* into a node whose `hide` class it never removed, so every failure raised before
+	* the run started — a failed audio conversion, a missing model, an empty store —
+	* was invisible by construction. Everything below routes through the panel
+	* (render_transcription_status.js), which cannot hide a report.
+	*/
+		const panel = nodes.status_panel
+
+	/**
+	* SAVE_PARTIAL
+	* Write THIS model's slot of the resume store, leaving every other model's
+	* alone. `undefined` segments retire this model's slot (the run finished).
+	*
+	* Read-modify-write, per window. The alternative — keeping the whole record in
+	* a closure and writing it back — would let a run started in a second tool
+	* window silently erase the first window's slots, and two transcriptions of
+	* the same record open at once is a normal working pattern here.
+	*
+	* @param {Array|undefined} segments
+	*/
+		const save_partial = async function( segments ) {
+
+			const stored	= await data_manager.get_local_db_data( resume_id, 'status' )
+			const partials	= read_partials( stored )
+			const now		= Date.now()
+
+			if (Array.isArray(segments) && segments.length>0) {
+				partials[transcriber_quality] = { segments: segments, updated: now }
+			} else {
+				delete partials[transcriber_quality]
+			}
+
+			// A partial is recognised speech from an interrupted run; past
+			// PARTIAL_MAX_AGE the recording has moved on and splicing it into new
+			// work would be worse than starting over. Dropped on write, so the
+			// store cannot grow a slot per model forever.
+			for (const model in partials) {
+				const updated = partials[model].updated || 0
+				if (updated>0 && (now - updated)>PARTIAL_MAX_AGE) {
+					delete partials[model]
+				}
+			}
+
+			data_manager.set_local_db_data({
+				id			: resume_id,
+				partials	: partials,
+				updated		: now
+			}, 'status')
+		}
+
+	/**
+	* UNLOAD GUARDS
+	* A browser run lives in THIS tab: a reload or a close kills the worker
+	* mid-window, and until now nothing said so — the global unsaved-data guard
+	* (client/dedalo/core/common/js/events.js) is commented out, so an archivist
+	* could throw away an hour of transcription with ⌘R and no dialog.
+	*
+	* Armed only while a browser run is actually in flight, and disarmed by every
+	* exit path (see end_run, which every one of them reaches). The SERVER engine
+	* deliberately gets no guard: that job runs on the transcriber and a reload
+	* re-polls it (get_server_status), so warning about it would be a lie.
+	*
+	* (!) The browser ignores any custom text and shows its own wording, so there
+	* is no label here to translate — `preventDefault` IS the whole API.
+	*/
+		const guard_unload = function( e ) {
+			e.preventDefault()
+			e.returnValue = '' // Safari and older Chrome still read this
+			return ''
+		}
+		const arm_unload_guard = function() {
+			window.addEventListener('beforeunload', guard_unload)
+		}
+		const disarm_unload_guard = function() {
+			window.removeEventListener('beforeunload', guard_unload)
+		}
+
+	/**
+	* END_RUN
+	* A reported failure ends the run: retire the percentage line (an empty
+	* progress hides it — clear() would also drop the warnings this run
+	* accumulated, and those must survive) and give the trigger back.
+	*/
+		const end_run = function() {
+			disarm_unload_guard()
+			panel.progress('')
+			if (nodes.button_automatic_transcription) {
+				nodes.button_automatic_transcription.classList.remove('disable')
+				// The spinner is set when the button is pressed; every path that
+				// gives the button back must also stop it, or a failed run leaves
+				// the trigger spinning over a panel that says it already failed.
+				ui.set_button_busy( nodes.button_automatic_transcription, false )
+			}
+		}
+
+	/**
+	* A RUN ATTEMPT STARTS HERE — so the standing messages are dropped HERE.
+	*
+	* They used to be cleared only once a run had PASSED preflight, which meant a
+	* refusal (an unusable model, an empty store, a failed audio conversion) piled
+	* one identical error block on top of another every time the button was
+	* pressed: the panel grew a wall of the same sentence and the newest report was
+	* the least visible thing in it.
+	*
+	* GUARDED, because clearing is destructive: a run still in progress has
+	* accumulated warnings that must survive to its end (a CPU fallback, a skipped
+	* fragment). A live worker IS a run in progress, so its messages are left alone.
+	*/
+		if (!self.transcribe_worker) {
+			panel.clear()
+		}
+
+	/**
 	* SET_STATUS
-	* Write a line of plain text into the status area (never HTML — see SEC-031).
+	* The transient line: percentages and live tokens, overwritten, never stacked.
+	* Plain text throughout — worker output is recognised speech (SEC-031).
 	*/
 		const set_status = function(text) {
-			nodes.status_container.classList.remove('hide')
-			nodes.status_container.textContent = text
+			panel.progress( text )
 		}
 
 	/**
 	* SET_ERROR
-	* Show an error and give the button back, so a failed run can be retried.
-	* The message may contain a server path, so it is built as a text node.
+	* A RUNTIME failure in the engine's own words: classified into a message, a
+	* cause and a pressable remedy, with the raw text kept in the detail
+	* disclosure. Use set_message instead when the text is already a truthful
+	* sentence (a server `msg`), which classification would only overwrite.
 	*/
-		const set_error = function(message) {
+		const set_error = function(message, context) {
+			panel.fail( message, Object.assign({ model: transcriber_quality }, context || {}) )
+			end_run()
+		}
+
+	/**
+	* SET_MESSAGE
+	* A failure whose message is ALREADY the truth — the server's own `msg`, or a
+	* refusal this code composed. Reported verbatim, with its remedy when one
+	* exists; passing it through the classifier would replace it with the generic
+	* "The transcription failed" and bury the real sentence in the detail.
+	*/
+		const set_message = function(message, options) {
+			const info = options || {}
+			panel.report({
+				phase		: info.phase || 'preflight',
+				severity	: 'error',
+				message		: message,
+				cause		: info.cause || '',
+				action		: info.action || '',
+				action_key	: info.action_key,
+				// The model the remedy is FOR. Without it the panel falls back to
+				// whatever the picker holds when the button is finally pressed — which
+				// is how a remedy came to act on a model it was never offered for.
+				action_model: info.action_model,
+				detail		: info.detail || ''
+			})
 			console.error('[tool_transcription]', message);
-			nodes.status_container.classList.remove('loading_status')
-			nodes.status_container.replaceChildren()
-			const err_div = document.createElement('div')
-			err_div.className = 'error'
-			err_div.textContent = message
-			nodes.status_container.appendChild(err_div)
-			if (nodes.button_automatic_transcription) {
-				nodes.button_automatic_transcription.classList.remove('disable')
-			}
+			end_run()
 		}
 
 	/**
@@ -633,8 +766,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	* cancel or closed tab — the one file in this flow that must not linger.
 	*/
 		const delete_audio = function() {
-			// the in-page exit ran; the unload hook is no longer needed
+			// the in-page exit ran; the unload hooks are no longer needed. BOTH of
+			// them: `finish` resolves straight to the caller on the success path
+			// without passing through end_run, so a guard disarmed only there
+			// would outlive the run and warn on every later reload.
 			window.removeEventListener('pagehide', page_cleanup)
+			disarm_unload_guard()
 
 			const cleanup_rqo = {
 				dd_api	: 'dd_tools_api',
@@ -654,6 +791,15 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 	// Server-side audio preparation. Long, because a large video has to be
 	// re-encoded before anything can be transcribed.
+	//
+	// SAID BEFORE IT IS WAITED FOR. This is the FIRST thing the run does and on a
+	// long interview it is minutes of re-encoding — and until now the panel said
+	// nothing for all of it: the only sign the tool had accepted the press was the
+	// spinner on the trigger, which says "busy" without saying at what. The first
+	// word the panel spoke was "Processing audio…", and it was not spoken until the
+	// WAV already existed. A phase that long has to name itself while it runs.
+		set_status( self.get_tool_label('preparing_audio') || 'Preparing the audio file...' )
+
 		const response = await data_manager.request({
 			body	: rqo,
 			retries	: 1, // one try only
@@ -663,7 +809,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			dd_console("-> transcription_component API response:",'DEBUG',response);
 		}
 		if (!response?.result) {
-			set_error( response?.msg || 'Error converting audio' )
+			set_message(
+				response?.msg
+					|| self.get_tool_label('error_audio_conversion')
+					|| 'The recording could not be prepared for transcription',
+				{ phase: 'audio' }
+			)
 			return false
 		}
 		// From here a WAV of the interview exists on the server: arm the unload
@@ -692,30 +843,71 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			? sources_response.result
 			: { model_host: '/dedalo/ai_models/', allow_hub: false, store_ready: true }
 
-		// Refuse EARLY and specifically when the chosen model is not in the store.
+		// Refuse EARLY and specifically when the chosen model cannot run.
 		// Left to the runtime, this fails as "Could not locate file: …/config.json"
 		// from inside the ONNX loader — after the audio has been prepared, and with
 		// a message that names neither the model nor what to do about it.
-		// `installed` absent = an older server that cannot tell (allow, as before);
-		// an EMPTY array is a real answer: nothing is installed.
-		const model_ready	= !Array.isArray(sources.installed)
-			|| sources.installed.includes(transcriber_quality)
+		// `installed` ABSENT = this server cannot tell (allow, as before); an EMPTY
+		// array is a real answer: nothing is installed. The one law, from
+		// transcription_report.js — never re-derived here.
+		const model_ready	= installed_answer( sources, transcriber_quality )!=='no'
 
 		if (sources.allow_hub!==true && (sources.store_ready===false || !model_ready)) {
-			const message = (sources.store_ready===false)
-				? (self.get_tool_label('model_store_empty')
-					|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).')
-				: `${self.get_tool_label('model_not_installed') || 'This model is not installed on this server'}: ${transcriber_quality}`
-			set_error( message )
+
+			// WHY the state and not just `installed`: a DAMAGED model is absent from
+			// `installed` too, and announcing it as "not installed" sent the
+			// archivist to a Download the server refuses as "already installed"
+			// (the files ARE there — broken). The state table is the one authority,
+			// shared with the readiness line (MODEL_STATES).
+			// A null state (a server that cannot say) or a state this table has not
+			// learned yet (a server one version ahead) both keep the coarse message:
+			// we do not invent a verdict from a word we cannot read.
+			const model_state	= model_state_of( sources.models, transcriber_quality )
+			const state_info	= model_state ? (MODEL_STATES[model_state] || null) : null
+
+			if (sources.store_ready===false) {
+				set_message(
+					self.get_tool_label('model_store_empty')
+						|| 'No local speech models are installed. Ask your administrator to seed the model store (scripts/fetch_ai_models.ts).',
+					{ phase: 'model' }
+				)
+			} else if (state_info && state_info.action_key==='action_repair_model') {
+				// damaged / incomplete: the files ARE there and downloading them
+				// again is not what fixes it — repairing is.
+				set_message(
+					self.get_tool_label(state_info.message_key)
+						|| 'The speech model on this server is damaged',
+					{
+						phase		: 'model',
+						cause		: self.get_tool_label(state_info.cause_key)
+							|| 'Its files are incomplete or corrupted — usually an interrupted download.',
+						action		: self.get_tool_label(state_info.action_key) || 'Repair the model',
+						action_key	: state_info.action_key,
+						action_model: transcriber_quality,
+						detail		: `model: ${transcriber_quality}\nstate: ${model_state}`
+					}
+				)
+			} else {
+				set_message(
+					`${self.get_tool_label('model_not_installed') || 'This model is not installed on this server'}: ${transcriber_quality}`,
+					{
+						phase		: 'model',
+						action		: self.get_tool_label('action_download_model') || 'Download the model',
+						action_key	: 'action_download_model',
+						action_model: transcriber_quality
+					}
+				)
+			}
 			delete_audio()
 			return false
 		}
 
-	// Anything already transcribed in a previous, interrupted run.
-		const saved_partial	= await data_manager.get_local_db_data( resume_id, 'status' )
-		const resume		= (saved_partial && saved_partial.model===transcriber_quality && Array.isArray(saved_partial.segments))
-			? saved_partial
-			: null
+	// Anything already transcribed in a previous, interrupted run — THIS model's
+	// slot. Another model's partial is left exactly where it is: the readiness
+	// line offered the choice before this point (see refresh_readiness), and a
+	// run that was not told to take it does not get to destroy it.
+		const stored_partials	= read_partials( await data_manager.get_local_db_data( resume_id, 'status' ) )
+		const resume			= stored_partials[transcriber_quality] || null
 
 	// The worker. Held on the instance so the cancel button can reach it.
 		const transcribe_worker = new Worker(
@@ -723,11 +915,16 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			{ type : 'module' }
 		)
 		self.transcribe_worker = transcribe_worker
+		// From here there is work in this tab that no server holds a copy of.
+		arm_unload_guard()
 
 	return new Promise(async function(resolve){
 
+		// The standing messages were already dropped at the START of this attempt
+		// (see the guarded panel.clear above): clearing again here would discard
+		// anything this run has reported since — and left the refusals of a run
+		// that never got this far standing on top of each other.
 		set_status( self.get_tool_label('processing_audio') || 'Processing audio...' )
-		nodes.status_container.classList.add('loading_status')
 
 		let speech_seconds = 0
 
@@ -748,15 +945,21 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			data_manager.set_local_db_data({ id: resume_id, segments: [], model: null }, 'status')
-
-			nodes.status_container.classList.remove('loading_status')
+			// ONLY THIS RUN'S SLOT. A finished `small` run has no business
+			// clearing the hour of `medium` waiting in the next slot — it did not
+			// produce it and the archivist was never asked.
+			save_partial( undefined )
 
 			if (!Array.isArray(segments) || segments.length===0) {
-				set_error(
-					self.get_tool_label('no_speech_recognized')
-					|| 'No speech was recognized — the existing text was left untouched.'
-				)
+				// A WARNING, not an error: nothing failed — there was simply no
+				// speech, and the existing text was deliberately left alone.
+				panel.report({
+					phase		: 'done',
+					severity	: 'warning',
+					message		: self.get_tool_label('no_speech_recognized')
+						|| 'No speech was recognized — the existing text was left untouched.'
+				})
+				end_run()
 				resolve( false )
 				return
 			}
@@ -816,7 +1019,6 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					break;
 
 				case 'window_start': {
-					nodes.status_container.classList.remove('loading_status')
 					const percent = speech_seconds>0
 						? Math.min( 99, Math.round((data.done_seconds / speech_seconds) * 100) )
 						: 0
@@ -826,19 +1028,14 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 				// Live tokens while a window is decoded (greedy decoding only).
 				case 'partial':
-					nodes.status_container.classList.remove('loading_status')
 					// SEC-031: worker output is recognised speech; text only.
-					nodes.status_container.textContent = data.text
+					// The panel's progress line is a text node by construction.
+					set_status( data.text )
 					break;
 
 				// A window finished: persist so a closed tab can resume.
 				case 'progress':
-					data_manager.set_local_db_data({
-						id			: resume_id,
-						segments	: data.segments,
-						model		: transcriber_quality,
-						updated		: Date.now()
-					}, 'status')
+					save_partial( data.segments )
 					break;
 
 				// Speaker detection (after the last window): its own progress line.
@@ -857,13 +1054,42 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					break;
 				}
 
+				// A degradation, not a failure: the run continues and the user must
+				// still be told when it finishes (warnings accumulate; progress does
+				// not, so this can never be a progress line — it would be overwritten
+				// by the next percentage and the user would never see it).
+				case 'warning': {
+					// The label wins over the worker's own message exactly as before —
+					// this only fills in a `{count}` the label's text may carry (e.g.
+					// "N fragments … were skipped"). A label with no placeholder is
+					// untouched: String.replace is a no-op when the pattern is absent,
+					// so the CPU-fallback warning renders exactly as it did before.
+					// The count is worker-reported data, not markup — it goes into the
+					// message text only, which render_report writes via textContent
+					// (SEC-031: no HTML path is opened by this substitution).
+					const label = self.get_tool_label(data.label_key) || data.message || ''
+					const message = (typeof data.count==='number')
+						? label.replace('{count}', String(data.count))
+						: label
+					panel.report({
+						phase		: data.phase || 'transcribe',
+						severity	: 'warning',
+						message		: message,
+						detail		: data.detail || ''
+					})
+					break;
+				}
+
 				// Best-effort: the transcript arrives without speakers; say so.
 				case 'diarize_error':
 					console.warn('[tool_transcription] speaker detection failed:', data.message);
-					set_status(
-						self.get_tool_label('speaker_detection_failed')
-						|| 'Speaker detection failed — the transcription continues without speaker tags.'
-					)
+					panel.report({
+						phase		: 'speakers',
+						severity	: 'warning',
+						message		: self.get_tool_label('speaker_detection_failed')
+							|| 'Speaker detection failed — the transcription continues without speaker tags.',
+						detail		: data.message || ''
+					})
 					break;
 
 				case 'end':
@@ -874,7 +1100,11 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					transcribe_worker.terminate()
 					self.transcribe_worker = null
 					delete_audio()
-					set_error( data.message )
+					set_error( data.message, {
+						phase	: data.phase || 'transcribe',
+						device	: data.device,
+						log		: data.log
+					})
 					resolve( false )
 					break;
 			}
@@ -884,7 +1114,20 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			set_error( 'Worker error [transcribe]: ' + (e.message || '') )
+			// A module worker that fails to LOAD raises an ErrorEvent with an empty
+			// `message`: classification then falls through to the generic failure
+			// with nothing in the technical detail — less than the console line this
+			// replaced. The file and line are what identify a load failure, so they
+			// go into the detail, always.
+			const where = [
+				e.filename ? `file: ${e.filename}` : '',
+				(typeof e.lineno==='number' && e.lineno>0) ? `line: ${e.lineno}` : ''
+			].filter(Boolean).join('\n')
+			set_error( e.message || '', {
+				phase	: 'transcribe',
+				device	: options.device || 'auto',
+				log		: where
+			})
 			resolve( false )
 		}
 
@@ -933,7 +1176,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 			transcribe_worker.terminate()
 			self.transcribe_worker = null
 			delete_audio()
-			set_error( 'Could not decode the audio: ' + error.message )
+			set_error( error.message, { phase: 'audio' } )
 			resolve( false )
 		}
 	});
@@ -992,10 +1235,13 @@ const fetch_audio = async function( url ) {
 * The end of the last segment, not the count of segments: windows are planned on
 * the audio timeline, so seconds are the only meaningful cursor.
 *
+* Exported: the readiness line states the SAME cursor the worker will resume
+* from, so "reached 42:15" and where it actually restarts cannot disagree.
+*
 * @param {Array} segments
 * @returns {number} seconds
 */
-const resume_seconds_of = function( segments ) {
+export const resume_seconds_of = function( segments ) {
 
 	if (!Array.isArray(segments) || segments.length===0) {
 		return 0
@@ -1007,6 +1253,87 @@ const resume_seconds_of = function( segments ) {
 		? last.end
 		: (typeof last.start==='number' ? last.start : 0)
 }//end resume_seconds_of
+
+
+
+/**
+* PARTIAL_ID
+* The ONE spelling of the resume key. Per record AND per component, so two
+* transcriptions open at once never overwrite each other's progress.
+*
+* Exported because the render layer reads the same store to state, before the
+* button is pressed, that an interrupted run is waiting — and two spellings of
+* one key is a store that silently never matches.
+*
+* @param {Object} self - the tool_transcription instance
+* @returns {string}
+*/
+export const partial_id = function( self ) {
+
+	return 'transcription_partial_'
+		+ self.media_component.section_tipo + '_'
+		+ self.media_component.section_id + '_'
+		+ self.transcription_component.tipo
+}//end partial_id
+
+
+
+/**
+* How old a saved partial may be and still be offered, in ms. A partial is
+* recognised speech from a run that was interrupted; after a fortnight the
+* recording has almost certainly moved on and resuming from it would splice old
+* text into new work.
+*/
+export const PARTIAL_MAX_AGE = 14 * 24 * 3600 * 1000
+
+
+
+/**
+* READ_PARTIALS
+* The saved partials, ONE SLOT PER MODEL, as `{[model]: {segments, updated}}`.
+*
+* (!) PER MODEL, and this is the whole point of the shape. The store used to be a
+* single slot — `{segments, model}` — and the resume was gated on
+* `saved.model===selected`, which read as "a partial from another model is
+* ignored". It was worse than ignored: the next run's FIRST completed window
+* overwrote that one slot, so an hour of work under `small` was destroyed by
+* window one of a `medium` run, before anything could ask. A slot per model means
+* the two coexist and the choice stays the archivist's.
+*
+* Legacy records (the single slot) are migrated on read, so an interrupted run
+* from before this change is still offered.
+*
+* @param {Object} stored - the raw local_db record, or null
+* @returns {Object} model → {segments, updated}; empty when there is nothing
+*/
+export const read_partials = function( stored ) {
+
+	if (!stored) {
+		return {}
+	}
+
+	// the current shape
+	if (stored.partials && typeof stored.partials==='object') {
+		const out = {}
+		for (const model in stored.partials) {
+			const entry = stored.partials[model]
+			if (entry && Array.isArray(entry.segments) && entry.segments.length>0) {
+				out[model] = entry
+			}
+		}
+		return out
+	}
+
+	// the legacy single slot
+	if (typeof stored.model==='string' && stored.model!=='' && Array.isArray(stored.segments) && stored.segments.length>0) {
+		return {
+			[stored.model] : { segments: stored.segments, updated: stored.updated || 0 }
+		}
+	}
+
+
+	return {}
+}//end read_partials
 
 
 
@@ -1071,6 +1398,103 @@ tool_transcription.prototype.download_model = async function( model ) {
 		return false
 	}
 }//end download_model
+
+
+
+/**
+* REPAIR_MODEL
+* Ask the server to discard the failing files of one catalog model and fetch them
+* again. Admin-gated and catalog-bound SERVER-side; the work runs as a background
+* job there and the caller polls get_model_sources exactly as a download does.
+*
+* @param {string} model - catalog model id
+* @returns {Promise<Object|false>} the API response, or false on transport failure
+*/
+tool_transcription.prototype.repair_model = async function( model ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'repair_model'),
+		options	: { model: model }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not start the model repair:', error);
+		return false
+	}
+}//end repair_model
+
+
+
+/**
+* VERIFY_MODEL
+* Ask the server to check one model's files against the hub's published lengths
+* and record the result, turning an `unverified` model into `ready` or
+* `incomplete`. Admin-gated; an install with no outbound internet gets a clean
+* refusal rather than a false verdict.
+*
+* @param {string} model - catalog model id
+* @returns {Promise<Object|false>} the API response, or false on transport failure
+*/
+tool_transcription.prototype.verify_model = async function( model ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'verify_model'),
+		options	: { model: model }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not verify the model:', error);
+		return false
+	}
+}//end verify_model
+
+
+
+/**
+* GET_BACKGROUND_JOB_STATUS
+* How is the download / repair job doing?
+*
+* `get_background_job_status` is a FRAMEWORK action the dispatcher serves for
+* every tool (src/core/tools/job_status.ts), scoped to this tool and to the
+* requesting user. It is what makes a FAILED job distinguishable from one that is
+* merely slow: without it a repair that could not reach the hub left the panel's
+* "Downloading the model…" line standing forever, because the only other signal —
+* the store's state — looks identical in both cases.
+*
+* @param {string} job_id - the handle returned by download_model / repair_model
+* @returns {Promise<Object|false>} the API response ({job:{status,error,response}}),
+*                                  or false on transport failure
+*/
+tool_transcription.prototype.get_background_job_status = async function( job_id ) {
+
+	const self = this
+
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: create_source(self, 'get_background_job_status'),
+		options	: { background_job_id: job_id }
+	}
+
+	try {
+		return await data_manager.request({ body: rqo, retries: 1 })
+	} catch (error) {
+		console.error('[tool_transcription] could not read the background job status:', error);
+		return false
+	}
+}//end get_background_job_status
 
 
 
@@ -1631,12 +2055,44 @@ tool_transcription.prototype.check_server_transcriber_status = async function(op
 export const get_current_lang_info = function( lang ) {
 
 	const found = (page_globals.dedalo_projects_default_langs || []).find(el => el.value === lang)
-	const current_lang_info = found
-		? `${found.label} | ${found.value} | ${found.tld2}`
-		: 'Unknown lang';
+	if (!found) {
+		return 'Unknown lang'
+	}
 
-	return current_lang_info
+	// (!) FILTERED, never a fixed three-part template. `tld2` is optional — a
+	// project lang with no ISO 639-1 code (they exist: most minority and
+	// historical langs have only a 3-letter code) rendered the literal word
+	// "undefined" as the third part, in a line whose whole job is to state a
+	// fact. An absent part is simply not a part.
+	return [ found.label, found.value, found.tld2 ]
+		.filter( part => typeof part==='string' && part!=='' )
+		.join(' | ')
 }//end get_current_lang_info
+
+
+
+/**
+* GET_LANG_LABEL
+* The language's NAME, for a reader — 'Castellano', not 'Castellano | lg-spa | es'.
+*
+* The codes belong to whoever is debugging a mapping, and the readiness panel is
+* not written for them: a line saying the same word three times, twice in machine
+* spelling, is noise in the one place the tool states what it is about to do. They
+* are kept, on the row's `title`, so nothing is lost — see refresh_readiness.
+*
+* @param {string} lang - Dédalo language tag, e.g. 'lg-ell'
+* @returns {string} the lang's label, or the tag itself when the project does not
+*   declare it (never 'undefined', never an empty string).
+*/
+export const get_lang_label = function( lang ) {
+
+	const found = (page_globals.dedalo_projects_default_langs || []).find(el => el.value === lang)
+
+
+	return (found && typeof found.label==='string' && found.label!=='')
+		? found.label
+		: (lang || 'Unknown lang')
+}//end get_lang_label
 
 
 

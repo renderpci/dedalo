@@ -36,7 +36,16 @@
 	import { keyboard_codes } from '../../../core/common/js/utils/keyboard.js'
 	import { render_node_info } from '../../../core/common/js/utils/notifications.js'
 	import { open_tool } from '../../../core/tools_common/js/tool_common.js'
-	import { get_current_lang_info } from './tool_transcription.js'
+	import {
+		get_current_lang_info,
+		get_lang_label,
+		partial_id,
+		read_partials,
+		resume_seconds_of
+	} from './tool_transcription.js'
+	import { seconds_to_tc } from '../transcribers/lib/paragraphs.js'
+	import { action_label, create_status_panel } from './render_transcription_status.js'
+	import { installed_answer, MODEL_STATES, model_state_of, server_answered } from './transcription_report.js'
 	import Split from '../../../lib/split/dist/split.es.js'
 
 // localStorage key holding the user's last pane ratio. @see activate_split
@@ -51,6 +60,52 @@
 // Viewport width below which the panes stack and there is no horizontal axis
 // left to split. Must match the @width_break_point_0 media query in the less.
 	const SPLIT_MIN_VIEWPORT = 800
+
+
+
+/**
+* TOOL_REPORT
+* Speak through the ONE panel from anywhere in the tool.
+*
+* The panel belongs to the automatic-transcription block (its `nodes` bus is local
+* to render_automatic_transcription), but failures happen outside it too — the
+* subtitles builder, the speaker assignment. Those used to open a blocking modal
+* dialog, which freezes the tab and says nothing an archivist can act on. The
+* panel is published on the instance so every one of them reaches the same place.
+*
+* WHEN THERE IS NO PANEL there is still a user. An install with no
+* `transcriber_engine` configured never renders the automatic-transcription block
+* (see the guard in get_content_data_edit) — but it DOES render the subtitles
+* builder and "Assign speakers". Falling back to the console there would make a
+* failed subtitle build invisible on exactly those installs: the regression this
+* task exists to reverse. So the fallback is a visible banner (`ui.show_message`)
+* in the caller's own container, with the console line kept beside it for the
+* administrator reading a support request (CONVENTIONS §1).
+*
+* @param {Object} self - the tool_transcription instance
+* @param {Object} input - a report: {phase, severity, message, cause, action, detail}
+* @param {HTMLElement} [container] - where the fallback banner is shown
+* @returns {bool} true when the one panel took it
+*/
+const tool_report = function(self, input, container) {
+
+	const message = (input && input.message) || ''
+
+	if (self && self.status_panel) {
+		self.status_panel.report( input )
+		return true
+	}
+
+	console.error('[tool_transcription]', message);
+	if (container) {
+		ui.show_message(
+			container,
+			message,
+			(input && input.severity==='warning') ? 'warning' : 'error'
+		)
+	}
+	return false
+}//end tool_report
 
 
 
@@ -432,9 +487,18 @@ const get_content_data_edit = function(self) {
 							// call server API
 							const response = await self.build_subtitles_file()
 							if (!response.result) {
-								// error case
-								// (!) alert() used here for error feedback — consider replacing with ui.show_message()
-								alert(response.msg || 'Unknown error on build_subtitles_file');
+								// error case. Reported in the tool's one panel: a
+								// blocking modal dialog freezes the tab and is gone
+								// the moment it is dismissed.
+								tool_report(self, {
+									phase		: 'done',
+									severity	: 'error',
+									message		: response.msg
+										|| self.get_tool_label('subtitles_build_failed')
+										|| 'The subtitles file could not be built'
+								// an install with no transcriber_engine has no panel:
+								// the banner lands in this block instead
+								}, subtitles_block)
 							}else{
 								// success case
 								// update video to force load the new subtitles file
@@ -882,10 +946,14 @@ const render_transcription_options = async function(self) {
 			self.assign_speakers({}).then(function(result){
 				// false = nothing to offer (null = user cancelled: say nothing)
 				if (result===false) {
-					alert(
-						self.get_tool_label('no_speaker_tags')
-						|| 'The transcription has no speaker tags to assign'
-					)
+					tool_report(self, {
+						phase		: 'speakers',
+						severity	: 'warning',
+						message		: self.get_tool_label('no_speaker_tags')
+							|| 'The transcription has no speaker tags to assign'
+					// no panel on this install? the banner lands in the button's own
+					// (live) parent — the fragment this was built into is long spent
+					}, button_assign_speakers_header.parentElement)
 				}
 			})
 		})
@@ -1069,7 +1137,7 @@ const render_activity_info = async function(self) {
 * @param {Object} options - Configuration object.
 * @param {Object} options.self  - The tool_transcription instance.
 * @param {Object} options.nodes - Named references to DOM nodes that must exist:
-*   `nodes.status_container`              — element showing current status text,
+*   `nodes.status_panel`                  — the tool's one status panel,
 *   `nodes.button_automatic_transcription` — the trigger button (enabled/disabled),
 *   `nodes.transcriber_engine_select`     — `<select>` holding the chosen engine name.
 * @returns {void}
@@ -1119,11 +1187,13 @@ const get_server_status = function (options) {
 			const error_msg = (response && response.msg)
 				? response.msg
 				: 'Transcriber server did not answer'
-			// SEC-XSS-006: status labels are plain text
-			nodes.status_container.textContent = (self.get_tool_label('transcription_error') || 'Transcription error') + ': ' + error_msg
-			nodes.status_container.classList.remove('processing');
-			nodes.status_container.classList.add('error');
-			nodes.status_container.classList.remove('hide');
+			// SEC-XSS-006: every panel field is a text node.
+			nodes.status_panel.report({
+				phase		: 'transcribe',
+				severity	: 'error',
+				message		: (self.get_tool_label('transcription_error') || 'Transcription error')
+					+ ': ' + error_msg
+			})
 			// The button is deliberately left as it is: the job's real state is
 			// UNKNOWN, so re-enabling it here would invite a duplicate submit over
 			// a transcription that may still be running on the transcriber server.
@@ -1143,9 +1213,9 @@ const get_server_status = function (options) {
 					'status'
 				)
 				// SEC-XSS-006: status labels are plain text
-			nodes.status_container.textContent = self.get_tool_label('inactive') || 'Inactive'
-				nodes.status_container.classList.remove('processing');
+				nodes.status_panel.progress( self.get_tool_label('inactive') || 'Inactive' )
 				nodes.button_automatic_transcription.classList.remove('disable');
+				ui.set_button_busy( nodes.button_automatic_transcription, false )
 				break;
 
 			case 2:
@@ -1154,9 +1224,12 @@ const get_server_status = function (options) {
 					check_current_server_status()
 				}, 4000)
 
-				nodes.status_container.textContent = self.get_tool_label('processing') || 'Processing'
-				nodes.status_container.classList.add('processing');
+				nodes.status_panel.progress( self.get_tool_label('processing') || 'Processing' )
 				nodes.button_automatic_transcription.classList.add('disable');
+				// A server-engine run found ALREADY in flight (a reload, or another
+				// window): the button has to look busy even though this page never
+				// pressed it.
+				ui.set_button_busy( nodes.button_automatic_transcription, true )
 				nodes.button_automatic_transcription.active = false
 
 				break;
@@ -1168,10 +1241,19 @@ const get_server_status = function (options) {
 					server_process_id,
 					'status'
 				)
-				nodes.status_container.textContent = self.get_tool_label('finished') || 'Process done'
-				nodes.status_container.classList.remove('processing');
+				nodes.status_panel.report({
+					phase		: 'done',
+					severity	: 'success',
+					message		: self.get_tool_label('finished') || 'Process done'
+				})
 				nodes.button_automatic_transcription.classList.remove('disable');
+				ui.set_button_busy( nodes.button_automatic_transcription, false )
 
+				// KEPT (not the change_value refresh workaround): this path never
+				// saves from the client — the transcriber ran server-side and wrote
+				// the text there, so a rebuild is the ONLY way it reaches the editor.
+				// The delay covers the gap between "pid finished" and the result
+				// being stored.
 				setTimeout(function(){
 					self.transcription_component.refresh()
 				}, 4000)
@@ -1202,7 +1284,9 @@ const get_server_status = function (options) {
 *       * Quality selector (`<select>`) — populated from `context.config.transcriber_quality`.
 *       * Lang-info display — shows the current transcription language as "Label | tld3 | tld2"
 *         and updates whenever the transcription component is re-rendered (language change).
-*   - A status display that shows processing state (hidden initially).
+*   - The tool's ONE status panel (render_transcription_status.js): the readiness
+*     line, the transient progress line, and every warning and failure — which is
+*     never hidden, by construction.
 *
 * Engine/quality/device selections are persisted to the local IndexedDB 'status' table so
 * that the user's preferences survive page reloads.
@@ -1218,8 +1302,12 @@ const get_server_status = function (options) {
 *     completion via `get_server_status()` using the returned process pid stored in the
 *     local DB.
 *
-* A pre-flight WebGPU capability check (`ua.check_transformers_webgpu()`) warns the user
-* if the browser cannot run the model efficiently before starting the job.
+* A READINESS LINE (`refresh_readiness`) states what is true BEFORE anything is
+* pressed: the selected model's real state in the install's store (with its Repair /
+* Download / Check remedy), whether the run will fall back to the processor because
+* the browser has no usable WebGPU, and the language being transcribed. It replaced
+* a blocking pre-flight question raised on every click — asked after the decision was
+* made, and nagging an archivist who had deliberately chosen the CPU device.
 *
 * The `nodes` object is used as an internal message bus between the button handler,
 * configuration inputs, and status display to avoid repeated DOM queries.
@@ -1288,13 +1376,11 @@ const render_automatic_transcription = function (options) {
 		const button_automatic_transcription_click_handler = async function(e){
 			e.stopPropagation()
 
-			// Check the user agent can perform correctly and using webGPU
-			const is_a_valid_user_agent = await ua.check_transformers_webgpu()
-			if (!is_a_valid_user_agent.overall) {
-				if(!confirm("For optimal performance, use a webGPU-compatible browser. Your current browser may run this task very slowly. Continue?")) {
-					return false
-				}
-			}
+			// (No WebGPU pre-flight dialog here.) It used to be a blocking modal question
+			// on EVERY click — asked after the decision was made, nagging the
+			// archivist who deliberately chose the CPU device, and freezing the tab
+			// until dismissed. The readiness line states the same fact permanently,
+			// before anything is pressed. See refresh_readiness below.
 
 			if(button_automatic_transcription.active === false){
 				return
@@ -1304,6 +1390,13 @@ const render_automatic_transcription = function (options) {
 				return
 			}
 			button_automatic_transcription.classList.add('disable')
+			// The spinner runs for the WHOLE job, which on a long interview is
+			// minutes to hours. That is the honest signal: `disable` alone makes a
+			// pressed button look merely dead, which is the reading that sent an
+			// archivist to the console in the first place. The panel below carries
+			// the detail (phase, percentage, live words); the button carries the
+			// one bit of "this is still yours and still running".
+			ui.set_button_busy( button_automatic_transcription, true )
 			button_automatic_transcription.blur()
 
 			// lang updated value form select lang selector at top
@@ -1338,9 +1431,11 @@ const render_automatic_transcription = function (options) {
 						? nodes.transcriber_tc_mode_select.value
 						: 'paragraph_anchors'
 				},
-				// Speaker detection: only when asked for AND the model is in the
-				// local store (the checkbox is disabled otherwise, but the run
-				// handler re-checks — the store answer may have changed).
+				// Speaker detection: only when asked for AND BOTH halves are runnable.
+				// `installed` is the server's "every half ready-or-unverified" answer
+				// (never the old size > 0 test), so this re-check — the checkbox is
+				// already disabled otherwise — cannot start a run on a truncated
+				// pyannote file and die inside the ONNX runtime.
 				detect_speakers		: (nodes.detect_speakers_checkbox
 					&& nodes.detect_speakers_checkbox.checked
 					&& nodes.diarization_info
@@ -1368,6 +1463,15 @@ const render_automatic_transcription = function (options) {
 						const msg_type = (response.result===false) ? 'error' : 'ok'
 						ui.show_message(automatic_transcription_container, response.msg, msg_type)
 
+						// A REFUSED request never starts the status poll, and the poll
+						// is what would otherwise give the button back — so before this,
+						// a rejected server run left the trigger dead and spinning with
+						// no way to try again short of reopening the tool.
+						if(response.result===false){
+							button_automatic_transcription.classList.remove('disable')
+							ui.set_button_busy( button_automatic_transcription, false )
+						}
+
 						if(response.result!==false){
 
 							const pid = response.result.pid
@@ -1388,6 +1492,18 @@ const render_automatic_transcription = function (options) {
 							})
 						}
 					})
+					.catch((error)=>{
+						// A transport failure is the other way this promise ends, and
+						// it too never reaches the poll. Give the button back and say
+						// what happened, rather than spin forever.
+						console.error('[tool_transcription] the transcription server request failed:', error);
+						button_automatic_transcription.classList.remove('disable')
+						ui.set_button_busy( button_automatic_transcription, false )
+						nodes.status_panel.fail(
+							(error && error.message) ? error.message : String(error),
+							{ phase: 'transcribe' }
+						)
+					})
 					break;
 
 				case 'browser':
@@ -1405,19 +1521,25 @@ const render_automatic_transcription = function (options) {
 
 						button_cancel_transcription.classList.add('hide')
 						button_automatic_transcription.classList.remove('disable')
+						ui.set_button_busy( button_automatic_transcription, false )
 
 						// A failed or cancelled-to-nothing run already reported itself
 						// in the status area; there is no value to write.
 						if (response===false) {
 							return
 						}
-						const msg = self.get_tool_label('transcription_completed') || 'Transcription completed.';
-						// SEC-031: build success label via DOM; defence-in-depth on i18n label.
-						status_container.replaceChildren()
-						const success_span = document.createElement('span')
-						success_span.className = 'success_text'
-						success_span.textContent = msg
-						status_container.appendChild(success_span)
+						// SEC-031: every panel field is a text node.
+						// Retire the percentage line, but NOT the run's warnings: a
+						// run that fell back to the CPU or lost speaker detection
+						// must still say so next to "completed" (which is why this
+						// is progress('') and not clear()).
+						nodes.status_panel.progress('')
+						nodes.status_panel.report({
+							phase		: 'done',
+							severity	: 'success',
+							message		: self.get_tool_label('transcription_completed')
+								|| 'Transcription completed.'
+						})
 
 						// Persist as THE transcription: item id 1 of the current lang,
 						// replaced — never appended (see save_transcription).
@@ -1429,7 +1551,33 @@ const render_automatic_transcription = function (options) {
 							&& Array.isArray(self.transcription_component.data.tags_persons))
 								? self.transcription_component.data.tags_persons
 								: []
-						const save_promise = self.save_transcription( html )
+						// The save carries `refresh: true` and that refresh now really
+						// happens (component_common.change_value restores the instance
+						// status around the refresh call — until then common.refresh
+						// refused it and the editor kept the old text until a reload;
+						// this chain used to re-do the refresh here to compensate).
+						// Nothing extra is refreshed here any more: a second rebuild is
+						// a wasted round trip and a visible flicker.
+						// The catch now means what it says: only a failed SAVE reaches
+						// it. A refresh that dies mid-rebuild no longer rejects — the
+						// text is committed by then, so change_value reports it to the
+						// console and keeps the api_response (the editor simply still
+						// shows the old text until anything rebuilds it).
+						const save_promise = Promise.resolve( self.save_transcription( html ) )
+							.catch(function(error){
+								// The run produced a transcript and it could NOT be
+								// written. Never leave that looking like a success.
+								console.error('[tool_transcription] the transcription could not be saved:', error);
+								nodes.status_panel.report({
+									phase		: 'done',
+									severity	: 'error',
+									// Only an EXISTING label key: a new one with no
+									// register.json entry renders English forever.
+									message		: self.get_tool_label('transcription_error')
+										|| 'Transcription error',
+									detail		: (error && error.message) ? error.message : String(error)
+								})
+							})
 
 						// Speaker detection saved PLACEHOLDER tags (P1, P2 … empty
 						// data payloads)? Offer the identity binding right away —
@@ -1437,10 +1585,10 @@ const render_automatic_transcription = function (options) {
 						// dialog just leaves the placeholders for later
 						// ("Assign speakers" reopens it any time).
 						if (/\[person-[a-z]-[0-9]+-[^-]{0,22}?-data::data\]/.test(html)) {
-							Promise.resolve(save_promise).then(function(){
+							save_promise.then(function(){
 								// pass the saved html AND the persons snapshot: the
-								// component refresh is still in flight, and reading
-								// either from the instance here would race it
+								// component refresh has now run, and reading either
+								// from the instance here would race it
 								self.assign_speakers({ value: html, persons: persons_snapshot })
 							})
 						}
@@ -1607,6 +1755,10 @@ const render_automatic_transcription = function (options) {
 					}
 				}
 
+				//save the pointer: the panel's "run on the processor instead" remedy
+				//switches the device and must re-apply the same restrictions
+					nodes.apply_device_limits = apply_device_limits
+
 				// local_db
 					const device_id = 'transcriber_device_select'
 					transcriber_device_select.addEventListener('change', function(){
@@ -1733,61 +1885,125 @@ const render_automatic_transcription = function (options) {
 
 				/**
 				* APPLY_INSTALLED_MODELS
-				* Mark the models that are NOT in the install's model store, and offer
-				* the download for them.
+				* Say, in the picker itself, what state each model is really in — and
+				* offer the remedy that state actually needs.
 				*
 				* A model the archivist can pick but nobody downloaded fails deep inside
 				* the ONNX runtime with "Could not locate file: …/config.json" — after
 				* the audio has been prepared, and with a message that helps no one. The
 				* store is the authority on what can actually run, so the picker asks it.
 				*
-				* Uninstalled models stay SELECTABLE on purpose: selecting one is how an
-				* administrator reaches the Download button below (and how anyone else
+				* IT USED TO ASK THE WRONG QUESTION. The option text and the button were
+				* driven by membership of `installed`, which is ready-or-unverified — so
+				* a DAMAGED model read "(not installed)" beside a readiness line saying
+				* "damaged", and was offered a Download the server answers with
+				* "OK. Model already installed". The client then polled for thirty
+				* minutes for a model that was never going to appear. Both now read
+				* MODEL_STATES, the same table the readiness line and the run's refusal
+				* read, so the three cannot disagree again.
+				*
+				* Unusable models stay SELECTABLE on purpose: selecting one is how an
+				* administrator reaches the remedy button below (and how anyone else
 				* discovers which models exist and asks for them). The transcription run
-				* itself still refuses an uninstalled model up front.
+				* itself still refuses an unusable model up front.
 				*/
-				const not_installed_suffix = ` — ${self.get_tool_label('not_installed') || 'not installed'}`
-				let installed_models = null
+				// The LAST answer the server gave, kept whole: which fields it
+				// answered is as much a part of it as their values (an absent field
+				// means "cannot tell" — see server_answered).
+				let last_sources = null
+				let model_entries = []
 
-				const apply_installed_models = function( installed ) {
-
-					if (!Array.isArray(installed)) {
-						return
+				/** The suffix a state adds to an option's own label; '' when it runs. */
+				const state_suffix = function( state ) {
+					const info = state ? MODEL_STATES[state] : null
+					if (info && info.usable) {
+						return ''
 					}
-					installed_models = installed
+					// An unknown state (a server one version ahead) is shown VERBATIM
+					// rather than dropped: silence is the failure class this work removes.
+					const text = info
+						? (self.get_tool_label(info.state_key) || state)
+						: (state || self.get_tool_label('not_installed') || 'not installed')
+					return ` — ${text}`
+				}
+
+				const apply_installed_models = function( installed, models ) {
+
+					if (Array.isArray(installed)) {
+						last_sources = { installed : installed }
+					}
+					if (Array.isArray(models)) {
+						model_entries = models
+					}
 
 					for (let i = 0; i < transcriber_engine_quality.options.length; i++) {
 						const option	= transcriber_engine_quality.options[i]
-						const present	= installed.includes(option.value)
-						const marked	= option.text.endsWith(not_installed_suffix)
-						if (!present && !marked) {
-							option.text = `${option.text}${not_installed_suffix}`
-						}
-						if (present && marked) {
-							option.text = option.text.slice(0, -not_installed_suffix.length)
-						}
+						const base		= option.dataset.base_text || option.text
+						// The state the SERVER reports; `installed` is the fallback for a
+						// server too old to send one (it can still say usable / not).
+						const state		= model_state_of( model_entries, option.value )
+						const suffix	= state
+							? state_suffix( state )
+							: (installed_answer( last_sources, option.value )==='no'
+								? state_suffix( null )
+								: '')
+						option.text = `${base}${suffix}`
 					}
 
-					update_download_button()
+					update_model_action_button()
 				}
+				// The status panel is created OUTSIDE this block (the quality picker
+				// is optional; the panel is not), so its remedy buttons reach the
+				// download affordance through the nodes bus and never through a
+				// closure identifier that may not exist — a ReferenceError here
+				// blanks the whole tool, which is the failure class this panel exists
+				// to end.
+				nodes.apply_installed_models = apply_installed_models
 
 				/**
-				* UPDATE_DOWNLOAD_BUTTON
-				* Show the download control exactly when the SELECTED model is missing
-				* from the store. The server gates the action (global admin only), so
-				* showing the button to everyone leaks nothing — a non-admin who clicks
-				* it gets the refusal that tells them who to ask.
+				* UPDATE_MODEL_ACTION_BUTTON
+				* Offer the SELECTED model's own remedy: Download when it is missing,
+				* Repair when it is on disk and broken, nothing when it runs.
+				*
+				* One button, whose key comes from MODEL_STATES — because the state is
+				* what decides which remedy exists, and a Download offered for a damaged
+				* model is a dead end the server refuses.
+				*
+				* The server gates both actions (global admin only), so showing the
+				* button to everyone leaks nothing — a non-admin who clicks it gets the
+				* refusal that tells them who to ask.
 				*/
-				const update_download_button = function() {
+				const update_model_action_button = function() {
+
 					const selected	= transcriber_engine_quality.value
-					const missing	= Array.isArray(installed_models) && !installed_models.includes(selected)
-					button_download_model.classList.toggle('hide', !missing)
+					const state		= model_state_of( model_entries, selected )
+					const info		= state ? MODEL_STATES[state] : null
+
+					// No state yet (or a state we cannot read): fall back to the coarse
+					// `installed` answer, which can still tell missing from usable.
+					const action_key = info
+						? info.action_key
+						: (installed_answer( last_sources, selected )==='no'
+							? 'action_download_model'
+							: null)
+
+					const offered = action_key==='action_download_model' || action_key==='action_repair_model'
+					button_model_action.classList.toggle('hide', !offered)
+					button_model_action.classList.remove('disable')
+					if (offered) {
+						button_model_action.textContent	= action_label( self, action_key )
+						button_model_action.dataset.action_key = action_key
+					}
 				}
+				// On the bus because the picker is OPTIONAL: everything outside this
+				// block reaches it through `nodes` or not at all (a ReferenceError on
+				// a closure identifier that may not exist blanks the whole tool).
+				nodes.update_model_action_button = update_model_action_button
 
 				// Ask the server which models are usable, once, while the rest renders.
 				self.get_model_sources().then(function(response){
 					if (response && response.result) {
-						apply_installed_models( response.result.installed )
+						apply_installed_models( response.result.installed, response.result.models )
 					}
 				})
 
@@ -1803,6 +2019,10 @@ const render_automatic_transcription = function (options) {
 						inner_html		: label,
 						parent			: transcriber_engine_quality
 					})
+					// The option's OWN words, kept apart from the state suffix: a
+					// suffix appended to a suffix is how "medium — damaged" became
+					// "medium — damaged — not installed" on the second refresh.
+					option.dataset.base_text = option.text
 
 					if (transcriber_quality.default===quality.label) {
 						option.selected = true
@@ -1816,69 +2036,29 @@ const render_automatic_transcription = function (options) {
 							id		: quality_id,
 							value	: transcriber_engine_quality.value
 						}, 'status')
-						update_download_button()
+						update_model_action_button()
 					})
 
-			// Download the selected model into the install's store, from the UI.
-			// The server gates it (global admin + catalog names only) and runs the
-			// download as a background job; here we start it and poll until the
-			// store reports the model usable. Before this button, seeding required
-			// shell access to the server — out of reach for a hosted install's admin.
-				const button_download_model = ui.create_dom_element({
+			// The SELECTED model's remedy, from the UI: Download when it is missing,
+			// Repair when it is on disk and broken (update_model_action_button decides
+			// which, from the state — a Download offered for a damaged model is a dead
+			// end the server refuses). The server gates both (global admin + catalog
+			// names only) and runs them as background jobs; the work of starting one
+			// and watching it live in ONE place (run_model_remedy) so the panel's own
+			// remedy buttons and this one cannot drift apart.
+				const button_model_action = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'light button_download_model hide',
 					inner_html		: self.get_tool_label('download_model') || 'Download model',
 					parent			: quality_label
 				})
-				button_download_model.addEventListener('click', function(e){
+				//save the pointer (see nodes.apply_installed_models above)
+					nodes.button_model_action = button_model_action
+				button_model_action.addEventListener('click', function(e){
 					e.stopPropagation()
-					const model = transcriber_engine_quality.value
-					button_download_model.classList.add('disable')
-
-					self.download_model( model ).then(function(response){
-						if (!response || response.result===false) {
-							button_download_model.classList.remove('disable')
-							ui.show_message(
-								automatic_transcription_container,
-								(response && response.msg) || 'Download failed',
-								'error'
-							)
-							return
-						}
-
-						nodes.status_container.classList.remove('hide')
-						// SEC-031: i18n label, plain text only.
-						nodes.status_container.textContent =
-							self.get_tool_label('downloading_model')
-							|| 'Downloading the model… this can take several minutes.'
-
-						// Poll until installed. Bounded: a download that outlives the
-						// cap is not declared failed — the job keeps running server-side
-						// and the next tool open will find the model in place.
-						let polls = 0
-						const poll = setInterval(function(){
-							if (++polls > 360) { // ~30 min at 5 s
-								clearInterval(poll)
-								button_download_model.classList.remove('disable')
-								nodes.status_container.textContent =
-									self.get_tool_label('download_still_running')
-									|| 'Still downloading — the model will appear when it finishes.'
-								return
-							}
-							self.get_model_sources().then(function(sources){
-								const installed = (sources && sources.result && Array.isArray(sources.result.installed))
-									? sources.result.installed
-									: []
-								if (installed.includes(model)) {
-									clearInterval(poll)
-									button_download_model.classList.remove('disable')
-									apply_installed_models( installed )
-									nodes.status_container.textContent =
-										self.get_tool_label('model_ready') || 'Model installed.'
-								}
-							})
-						}, 5000)
-					})
+					const action_key = button_model_action.dataset.action_key || 'action_download_model'
+					button_model_action.classList.add('disable')
+					run_model_remedy( action_key, transcriber_engine_quality.value )
 				})
 
 					data_manager.get_local_db_data(
@@ -1893,17 +2073,28 @@ const render_automatic_transcription = function (options) {
 						apply_device_limits()
 						const sources = await self.get_model_sources()
 						if (sources && sources.result) {
-							apply_installed_models( sources.result.installed )
+							apply_installed_models( sources.result.installed, sources.result.models )
 						}
+						// The saved choice landed AFTER the first readiness line was
+						// computed, and setting `.value` fires no 'change' event: the
+						// line would stand describing a model the archivist did not
+						// pick. This is the third and last event wired to it.
+						refresh_readiness()
 					})
 			}//end if(transcriber_quality)
 
 		// speaker detection (diarization)
-		// A separate model slot (never part of the ASR quality picker): the
-		// pyannote segmentation model detects WHO speaks WHEN, so the result
-		// can carry person tags at each speaker turn. The checkbox is enabled
-		// only when the model is in the local store; when it is missing, an
-		// admin gets the same Download affordance the ASR models have.
+		// A separate model slot (never part of the ASR quality picker), and a PAIR:
+		// the pyannote segmentation model detects WHO speaks WHEN, the embedding
+		// model keeps the SAME voice on the SAME id across the whole recording.
+		//
+		// THE CHECKBOX USED TO BE GATED ON A LIE. Its `installed` boolean was the
+		// server's old `size > 0` test — the very test this work exists to retire —
+		// so a truncated pyannote file enabled speaker detection and the worker died
+		// with the "ERROR_CODE: 7 … protobuf parsing failed" the ASR path no longer
+		// produces. It is now gated on the same runnable rule as everything else
+		// (MODEL_STATES.usable), for BOTH halves, and each half's own state is stated
+		// in the readiness panel with the same labels used everywhere.
 			const speakers_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name 		: 'speakers_label hide',
@@ -1929,6 +2120,44 @@ const render_automatic_transcription = function (options) {
 			nodes.diarization_info = null
 			const detect_speakers_id = 'transcriber_detect_speakers'
 
+			/**
+			* SPEAKER_PARTS
+			* The halves of speaker detection, each with its OWN name and state. A
+			* server too old to send `models` still yields one entry built from the
+			* fields it does send, so this never returns an empty pair for a declared
+			* model.
+			*/
+			const speaker_parts = function( diarization ) {
+
+				if (!diarization || !diarization.name) {
+					return []
+				}
+				if (Array.isArray(diarization.models) && diarization.models.length>0) {
+					return diarization.models
+				}
+				return [{
+					role	: 'segmentation',
+					name	: diarization.name,
+					label	: diarization.label,
+					state	: diarization.installed===true ? 'unverified' : 'missing'
+				}]
+			}
+
+			/** True when EVERY half is runnable — the one rule, from MODEL_STATES. */
+			const speakers_runnable = function( diarization ) {
+
+				const parts = speaker_parts( diarization )
+				if (parts.length<1) {
+					return false
+				}
+
+
+				return parts.every(function(part){
+					const info = part.state ? MODEL_STATES[part.state] : null
+					return info ? info.usable===true : false
+				})
+			}
+
 			const apply_diarization = function( diarization ) {
 				if (diarization===undefined) {
 					return // an older server: leave the block hidden
@@ -1939,11 +2168,27 @@ const render_automatic_transcription = function (options) {
 					return
 				}
 				speakers_label.classList.remove('hide')
-				detect_speakers_checkbox.disabled = diarization.installed!==true
-				button_download_speaker_model.classList.toggle('hide', diarization.installed===true)
-				if (diarization.installed!==true) {
+
+				const parts		= speaker_parts( diarization )
+				const runnable	= speakers_runnable( diarization )
+				detect_speakers_checkbox.disabled = !runnable
+				// A Download only helps a half that is genuinely ABSENT; a damaged or
+				// truncated one needs the Repair the readiness line offers, aimed at
+				// the half that is actually broken.
+				const any_missing = parts.some(part => part.state==='missing')
+				button_download_speaker_model.classList.toggle('hide', !any_missing)
+
+				if (!runnable) {
 					detect_speakers_checkbox.checked = false
-					speakers_label.title = `${diarization.label || diarization.name} — ${self.get_tool_label('not_installed') || 'not installed'}`
+					const worst = parts.find(function(part){
+						const info = part.state ? MODEL_STATES[part.state] : null
+						return !info || info.usable!==true
+					})
+					const info			= worst && worst.state ? MODEL_STATES[worst.state] : null
+					const state_text	= info
+						? (self.get_tool_label(info.state_key) || worst.state)
+						: ((worst && worst.state) || self.get_tool_label('not_installed') || 'not installed')
+					speakers_label.title = `${(worst && (worst.label || worst.name)) || diarization.name} — ${state_text}`
 				} else {
 					speakers_label.title = diarization.label || diarization.name
 					// Saved preference; DEFAULT ON — detection is the reason the
@@ -1955,6 +2200,7 @@ const render_automatic_transcription = function (options) {
 					})
 				}
 			}
+			nodes.apply_diarization = apply_diarization
 			detect_speakers_checkbox.addEventListener('change', function(){
 				data_manager.set_local_db_data({
 					id		: detect_speakers_id,
@@ -1969,45 +2215,39 @@ const render_automatic_transcription = function (options) {
 					return
 				}
 				button_download_speaker_model.classList.add('disable')
-				// both halves of speaker detection: segmentation + the voice-
-				// fingerprint model (the server skips whichever is installed)
-				const downloads = [ self.download_model( diarization.name ) ]
-				if (diarization.embedding_name) {
-					downloads.push( self.download_model( diarization.embedding_name ) )
+				// Only the halves that are actually MISSING: the server refuses a
+				// download for one that is present-but-broken, and re-downloading a
+				// working one would be a needless gigabyte over the LAN.
+				const wanted = speaker_parts( diarization )
+					.filter(part => part.state==='missing' && part.name)
+					.map(part => part.name)
+				if (wanted.length<1) {
+					button_download_speaker_model.classList.remove('disable')
+					return
 				}
-				Promise.all( downloads ).then(function(responses){
-					const response = responses.find(r => !r || r.result===false) || responses[0]
-					if (!response || response.result===false) {
-						button_download_speaker_model.classList.remove('disable')
-						ui.show_message(
-							automatic_transcription_container,
-							(response && response.msg) || 'Download failed',
-							'error'
-						)
+				Promise.all( wanted.map(name => self.download_model(name)) ).then(function(responses){
+					button_download_speaker_model.classList.remove('disable')
+					const failed = responses.find(r => !r || r.result===false)
+					if (failed!==undefined) {
+						nodes.status_panel.report({
+							phase		: 'model',
+							severity	: 'error',
+							message		: (failed && failed.msg)
+								|| self.get_tool_label('download_failed')
+								|| 'The model could not be downloaded'
+						})
 						return
 					}
-					nodes.status_container.classList.remove('hide')
-					nodes.status_container.textContent =
+					nodes.status_panel.progress(
 						self.get_tool_label('downloading_model')
 						|| 'Downloading the model… this can take several minutes.'
-					let polls = 0
-					const poll = setInterval(function(){
-						if (++polls > 120) { // ~10 min at 5 s — the model is ~6 MB
-							clearInterval(poll)
-							button_download_speaker_model.classList.remove('disable')
-							return
-						}
-						self.get_model_sources().then(function(sources){
-							const info = sources && sources.result ? sources.result.diarization : null
-							if (info && info.installed===true) {
-								clearInterval(poll)
-								button_download_speaker_model.classList.remove('disable')
-								apply_diarization( info )
-								nodes.status_container.textContent =
-									self.get_tool_label('model_ready') || 'Model installed.'
-							}
-						})
-					}, 5000)
+					)
+					// ONE watcher, the same one every other remedy uses: it reports a
+					// job that FAILED instead of leaving the line standing forever.
+					watch_model_job(
+						wanted[wanted.length-1],
+						responses[responses.length-1]
+					)
 				})
 			})
 
@@ -2033,14 +2273,577 @@ const render_automatic_transcription = function (options) {
 			}
 			event_manager.subscribe(`render_${self.transcription_component.id}`, update_lang_info);
 
+	/**
+	* RUN_MODEL_REMEDY
+	* Start ONE remedy, for ONE named model, and watch it to a verdict.
+	*
+	* THE MODEL IS AN ARGUMENT, not an assumption. Every remedy used to act on the
+	* SELECTED ASR quality model, whatever it was offered for: a Repair offered
+	* because the SPEAKER model was damaged repaired a different model that was
+	* never broken, and then reported success. `model` is the model the remedy was
+	* offered FOR; only when a remedy is not about a particular model at all does
+	* it fall back to the picker's current value.
+	*
+	* @param {string} action_key - an action key from MODEL_STATES / classify_failure
+	* @param {string} [model] - the model the remedy is for
+	*/
+	const run_model_remedy = function( action_key, model ) {
+
+		const target = model || (nodes.transcriber_engine_quality
+			? nodes.transcriber_engine_quality.value
+			: null)
+
+		switch (action_key) {
+
+			case 'action_repair_model':
+				if (!target) break;
+				self.repair_model( target ).then(function(response){
+					if (!response || response.result===false) {
+						status_panel.report({
+							phase		: 'model',
+							severity	: 'error',
+							message		: (response && response.msg)
+								|| self.get_tool_label('repair_failed')
+								|| 'The model could not be repaired',
+							detail		: `model: ${target}`
+						})
+						refresh_readiness()
+						return
+					}
+					status_panel.progress(
+						self.get_tool_label('downloading_model')
+						|| 'Downloading the model… this can take several minutes.'
+					)
+					watch_model_job( target, response )
+				})
+				break;
+
+			case 'action_download_model':
+				if (!target) break;
+				self.download_model( target ).then(function(response){
+					if (!response || response.result===false) {
+						status_panel.report({
+							phase		: 'model',
+							severity	: 'error',
+							message		: (response && response.msg)
+								|| self.get_tool_label('download_failed')
+								|| 'The model could not be downloaded',
+							detail		: `model: ${target}`
+						})
+						refresh_readiness()
+						return
+					}
+					// SEC-031: i18n label, plain text only.
+					status_panel.progress(
+						self.get_tool_label('downloading_model')
+						|| 'Downloading the model… this can take several minutes.'
+					)
+					watch_model_job( target, response )
+				})
+				break;
+
+			case 'action_verify_model':
+				if (!target) break;
+				self.verify_model( target ).then(function(response){
+					if (!response || response.result===false) {
+						// The server allows only a global administrator to verify. The
+						// button is offered to everyone on purpose — the refusal is the
+						// only thing that tells a cataloguer who to ask, and hiding it
+						// would leave the one person who CAN verify never told they can.
+						status_panel.report({
+							phase		: 'model',
+							severity	: 'error',
+							message		: (response && response.msg)
+								|| self.get_tool_label('verify_failed')
+								|| 'The model could not be verified',
+							detail		: `model: ${target}`
+						})
+					}
+					refresh_readiness()
+				})
+				break;
+
+			case 'action_retry_cpu':
+				if (nodes.transcriber_device_select) {
+					nodes.transcriber_device_select.value = 'wasm'
+					if (nodes.apply_device_limits) {
+						nodes.apply_device_limits()
+					}
+					refresh_readiness()
+				}
+				button_automatic_transcription.click()
+				break;
+
+			case 'action_retry':
+				button_automatic_transcription.click()
+				break;
+
+			// An interrupted run, carried on. The trigger ALREADY resumes — the
+			// run reads this model's saved slot on its way in — so this is the
+			// same press, offered where the fact is stated instead of left for
+			// the archivist to guess at.
+			case 'action_resume':
+				button_automatic_transcription.click()
+				break;
+
+			// Go back to the model that holds the interrupted work. Only the
+			// picker moves: the run is NOT started here, because resuming an hour
+			// of transcription is a decision, and the readiness line re-reads
+			// itself on `change` and will now offer the resume proper.
+			case 'action_use_saved_model':
+				if (target && nodes.transcriber_engine_quality) {
+					nodes.transcriber_engine_quality.value = target
+					// `.value =` fires no 'change' event, so neither the saved
+					// preference nor the readiness line would follow the move.
+					nodes.transcriber_engine_quality.dispatchEvent(
+						new Event('change', { bubbles: true })
+					)
+				}
+				break;
+		}
+	}
+
 	// status
-		const status_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'status_container hide',
-			parent 			: automatic_transcription_container
+	// The ONE voice of the engine (see render_transcription_status.js). It replaces
+	// a one-line, overflow-hidden div that the error writer left carrying its `hide`
+	// class: every failure raised before the run started was invisible by
+	// construction, and the archivist saw a button that stopped responding.
+		const status_panel = create_status_panel({
+			self		: self,
+			on_action	: function( action_key, action_model ) {
+				run_model_remedy( action_key, action_model )
+			}
 		})
+		automatic_transcription_container.appendChild( status_panel.node )
 		//save the pointer
-			nodes.status_container = status_container
+			nodes.status_panel = status_panel
+		// and publish it on the instance: the subtitles builder and the speaker
+		// assignment live outside this block and must reach the same panel
+		// (see tool_report).
+			self.status_panel = status_panel
+
+		/**
+		* DEVICE_CAPABILITY
+		* Probe the browser's WebGPU support ONCE per tool window.
+		*
+		* ua.check_transformers_webgpu runs a million-iteration benchmark and creates
+		* and destroys a GPU adapter and device. As a per-click pre-flight that was
+		* paid once; the readiness line is recomputed on every model/device change,
+		* and re-paying it there would jank the main thread of exactly the weak
+		* machines the warning is written for. The answer cannot change while the
+		* page is open, so the PROMISE is memoized (concurrent callers share one
+		* probe, not two).
+		*/
+		let capability_probe = null
+		const device_capability = function() {
+			if (capability_probe===null) {
+				// An unanswerable probe is not a verdict: say nothing rather than
+				// warn about a GPU we could not ask about (and never let it reject
+				// the readiness line, which would leave the block silent again).
+				capability_probe = ua.check_transformers_webgpu().catch(function(){
+					return { overall : true }
+				})
+			}
+			return capability_probe
+		}
+
+
+	/**
+	* REFRESH_READINESS
+	* What is true BEFORE the button is pressed.
+	*
+	* The tool used to say nothing until something failed — and then say it in the
+	* console. This states the model's real state, the device that will actually be
+	* used and the language being transcribed, standing, from the moment the block
+	* renders.
+	*
+	* It costs one get_model_sources request, so it is wired ONLY to the events that
+	* can change its answer: the model picker, the device picker, and the completion
+	* of a download/repair/verification.
+	*
+	* What each model state MEANS is not decided here: MODEL_STATES is the one table,
+	* shared with the run's own refusal (transcription_report.js). The two used to
+	* disagree, and the refusal was the one that lied.
+	*/
+		const refresh_readiness = async function() {
+
+			const lines		= []
+			const sources	= await self.get_model_sources()
+			const result	= (sources && sources.result) ? sources.result : null
+			// ABSENT IS NOT EMPTY. A server that could not read its catalog omits
+			// `models` entirely; an empty array would be the real answer "nothing is
+			// installed". Absent means only that this server cannot tell — and a
+			// blank line where a verdict belongs is the silence this panel exists to
+			// end, so the unknown is STATED.
+			const models_known	= server_answered( result, 'models' ) && Array.isArray(result.models)
+			const models	= models_known ? result.models : []
+			const selected	= nodes.transcriber_engine_quality
+				? nodes.transcriber_engine_quality.value
+				: null
+			const model_state	= model_state_of( models, selected )
+			const state_info	= model_state ? (MODEL_STATES[model_state] || null) : null
+
+			/**
+			* THE MODEL LINE'S SUBJECT, in the picker's own words.
+			*
+			* "Model: unverified" named no model. The tool offers several and the
+			* archivist chose one of them a moment ago, so a state with no subject
+			* is a fact they cannot act on — and the remedy button beside it acts on
+			* a model the line never identified. The words come from the SELECTED
+			* OPTION (its `base_text`, the option's own label without the state
+			* suffix the picker appends), so the line and the picker cannot drift
+			* into two names for one thing.
+			*
+			* Shape: `Model — Small: installed, not verified`, which is the idiom the
+			* speaker-detection lines below already use (`what — which: state`).
+			*/
+			// ONE model, in the picker's words. Any model, not only the selected
+			// one: the interrupted-run line below names a model the archivist is
+			// NOT on, and it has to name it the way the picker does or they cannot
+			// find it.
+			const model_label_of = function( model ) {
+				const select = nodes.transcriber_engine_quality
+				const option = select
+					? [...select.options].find( item => item.value===model )
+					: null
+
+
+				return option
+					? (option.dataset.base_text || option.text || model || '')
+					: (model || '')
+			}
+
+			const model_words = function() {
+				const subject	= model_label_of( selected )
+				const label		= self.get_tool_label('readiness_model') || 'Model'
+
+
+				return subject!=='' ? `${label} — ${subject}` : label
+			}
+
+			if (!models_known) {
+				lines.push({
+					severity	: 'warning',
+					text		: `${model_words()}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`,
+					title		: selected || ''
+				})
+			} else if (state_info) {
+				// An UNVERIFIED model is not a fault: it is the normal state of every
+				// store seeded before the verification existed. Only incomplete,
+				// damaged and missing are refusals (MODEL_STATES.usable).
+				const state_label = self.get_tool_label( state_info.state_key ) || model_state
+				lines.push({
+					severity		: state_info.usable ? 'info' : 'error',
+					text			: `${model_words()}: ${state_label}`,
+					// the exact catalog id, for whoever has to act on it
+					title			: selected || '',
+					// A remedy is offered only for a state that BLOCKS the run.
+					// `unverified` is usable and is the normal state of every store
+					// seeded before the manifest existed, so a button on it would
+					// badger every archivist, on every open, about nothing — and
+					// `verify_model` is global-admin-only, so for almost all of them
+					// it could not work anyway. Verification belongs to the
+					// administrator: the ai_models maintenance widget offers it there.
+					action_key		: state_info.usable ? null : state_info.action_key,
+					// The remedy is for THIS model, not for whatever is selected when
+					// the button is finally pressed.
+					action_model	: selected
+				})
+			} else if (model_state) {
+				// The server answered with a word this build does not know — it is a
+				// version ahead of us. Say so with its own word rather than render
+				// nothing: an unreadable answer is still an answer, and a blank
+				// readiness line is the exact silence this panel exists to end.
+				// No remedy is offered: we cannot know which one would apply.
+				lines.push({
+					severity	: 'warning',
+					text		: `${model_words()}: ${model_state}`,
+					title		: selected || ''
+				})
+			}
+
+			// The device probe that used to be a blocking modal question on every click.
+			// It is stated, not asked: someone who deliberately chose the processor
+			// is not nagged, and someone who did not is told before they wait.
+			const capability	= await device_capability()
+			const device		= nodes.transcriber_device_select
+				? nodes.transcriber_device_select.value
+				: 'auto'
+			if (capability && !capability.overall && device!=='wasm') {
+				lines.push({
+					severity	: 'warning',
+					text		: `${self.get_tool_label('readiness_device') || 'Device'}: ${self.get_tool_label('device_no_gpu') || 'no GPU detected — this will run on the processor, several times slower'}`
+				})
+			}
+
+			// Speaker detection: ONE LINE PER HALF, each naming its own state with the
+			// same labels the model line uses, and each carrying a remedy aimed at the
+			// half that is actually broken. A single `installed` boolean could say
+			// neither which half was wrong nor which model to repair.
+			// Same rule again: `diarization` ABSENT = cannot tell (say so);
+			// `null` = this install declares no speaker detection (say nothing).
+			const diarization = result ? result.diarization : null
+			if (result && !server_answered( result, 'diarization' )) {
+				lines.push({
+					severity	: 'warning',
+					text		: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'}: ${self.get_tool_label('state_unknown') || 'could not be checked on this server — the model catalog could not be read'}`
+				})
+			} else if (diarization && Array.isArray(diarization.models)) {
+
+				// The pair reads as ONE fact while both halves are fine — an
+				// archivist does not care that speaker detection is two models
+				// until one of them is the reason it will not run. Only a half
+				// that is NOT usable earns its own line, and then it names which
+				// half it is, because that is what the remedy has to aim at.
+				const parts		= diarization.models.map( part => part || {} )
+				const readable	= parts.every( part => part.state && MODEL_STATES[part.state] )
+				const all_usable= readable && parts.every( part => MODEL_STATES[part.state].usable )
+
+				if (all_usable) {
+					lines.push({
+						severity	: 'info',
+						text		: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'}: ${self.get_tool_label(MODEL_STATES[parts[0].state].state_key) || parts[0].state}`
+					})
+				} else {
+					for (let i = 0; i < parts.length; i++) {
+
+						const part		= parts[i]
+						const info		= part.state ? (MODEL_STATES[part.state] || null) : null
+						if (info && info.usable) {
+							continue // the healthy half of a broken pair is not news
+						}
+
+						const role_key	= part.role==='embedding'
+							? 'readiness_speakers_embedding'
+							: 'readiness_speakers_segmentation'
+						const role_text	= self.get_tool_label(role_key)
+							|| (part.role==='embedding' ? 'voice fingerprint' : 'speaker segmentation')
+						const state_text = info
+							? (self.get_tool_label(info.state_key) || part.state)
+							: (part.state || '')
+
+						lines.push({
+							severity		: info ? 'error' : 'warning',
+							text			: `${self.get_tool_label('readiness_speakers') || 'Speaker detection'} — ${role_text}: ${state_text}`,
+							action_key		: info ? info.action_key : null,
+							action_model	: part.name
+						})
+					}
+				}
+			}
+
+			// The language, NAMED — not spelled three times. This read
+			// `Language: Castellano | lg-spa | es`: one fact, once in words and
+			// twice in machine codes, in the line an archivist reads before
+			// pressing the button. The codes are the administrator's (and they
+			// could render `| undefined` for any lang with no ISO 639-1 code), so
+			// they moved to the row's title.
+			lines.push({
+				severity	: 'info',
+				text		: `${self.get_tool_label('readiness_language') || 'Language'}: ${get_lang_label(self.transcription_component.lang)}`,
+				title		: get_current_lang_info(self.transcription_component.lang)
+			})
+
+			/**
+			* THE INTERRUPTED RUN.
+			*
+			* A browser transcription lives in this tab: a reload, a crash or a
+			* closed window kills the worker mid-window. Every completed window was
+			* already persisted (save_partial), so the work SURVIVES — but the store
+			* was read in exactly one place, inside the run, *after* the button was
+			* pressed. So the archivist came back to a tool that looked untouched,
+			* having watched an hour of transcription vanish, and the only way to
+			* discover it had not was to press the button and hope.
+			*
+			* It is stated here, before anything is pressed, with the button that
+			* acts on it — the panel's own idiom for "there is something to do".
+			*/
+			const partials	= read_partials(
+				await data_manager.get_local_db_data( partial_id(self), 'status' )
+			)
+			const reached	= function( entry ) {
+				// the tool's own timecode, without the milliseconds a person
+				// reading "how far did it get" has no use for
+				return seconds_to_tc( resume_seconds_of(entry.segments) ).slice(0, 8)
+			}
+
+			if (partials[selected]) {
+				// THIS model's work: pressing the trigger resumes from it, which is
+				// what the button already does — so the line says so and offers it.
+				lines.push({
+					severity		: 'info',
+					text			: `${self.get_tool_label('readiness_interrupted') || 'Interrupted transcription'} — ${model_label_of(selected)}: ${self.get_tool_label('resume_reached', reached(partials[selected])) || `${reached(partials[selected])} already transcribed`}`,
+					action_key		: 'action_resume',
+					action_model	: selected,
+					title			: selected || ''
+				})
+			} else {
+				// Another model's work, and it is about to be passed over in
+				// silence. NOT destroyed — the store keeps a slot per model now —
+				// but a run started here transcribes from zero while an hour of
+				// recognised speech sits one choice away. So: name the model that
+				// holds it, and offer the one press that goes back to it.
+				const other = Object.keys(partials)
+					.map( model => ({ model: model, entry: partials[model] }) )
+					.sort( (a, b) => (b.entry.updated || 0) - (a.entry.updated || 0) )[0]
+
+				if (other) {
+					lines.push({
+						severity		: 'warning',
+						text			: `${self.get_tool_label('readiness_interrupted') || 'Interrupted transcription'} — ${model_label_of(other.model)}: ${self.get_tool_label('resume_other_model', reached(other.entry)) || `${reached(other.entry)} transcribed with another model — running now starts from the beginning`}`,
+						action_key		: 'action_use_saved_model',
+						action_model	: other.model,
+						title			: other.model
+					})
+				}
+			}
+
+			status_panel.readiness( lines )
+		}
+
+	/**
+	* MODEL_STATE_IN
+	* One model's state anywhere the server reports one: the ASR quality catalog
+	* or either half of the speaker pair. A remedy can be aimed at any of them, so
+	* the watcher has to be able to read any of them.
+	*/
+		const model_state_in = function( result, model ) {
+
+			const from_models = model_state_of(
+				(result && Array.isArray(result.models)) ? result.models : [],
+				model
+			)
+			if (from_models) {
+				return from_models
+			}
+			const parts = (result && result.diarization && Array.isArray(result.diarization.models))
+				? result.diarization.models
+				: []
+			const part = parts.find(el => el && el.name===model)
+
+
+			return (part && typeof part.state==='string' && part.state!=='') ? part.state : null
+		}
+
+	/**
+	* SETTLE_MODEL_STATE
+	* Re-read every affordance that depends on the store, from one answer.
+	*/
+		const settle_model_state = function( result ) {
+
+			if (!result) {
+				return
+			}
+			if (nodes.apply_installed_models) {
+				nodes.apply_installed_models( result.installed, result.models )
+			}
+			if (nodes.apply_diarization) {
+				nodes.apply_diarization( result.diarization )
+			}
+			refresh_readiness()
+		}
+
+	/**
+	* WATCH_MODEL_JOB
+	* Watch one download or repair to a VERDICT, and say what it was.
+	*
+	* A failed repair used to be permanent silence: the watcher acted only on
+	* success, so a repair that could not reach the hub — or that the server
+	* refused outright — left "Downloading the model… this can take several
+	* minutes." standing forever, and at the cap it simply stopped, saying nothing.
+	*
+	* Two independent questions are asked, and BOTH can end the watch:
+	*   - did the background JOB finish, and how? (`get_background_job_status`,
+	*     available whenever the action returned a job handle) — this is what makes
+	*     "it failed" distinguishable from "it is still running";
+	*   - is the model runnable NOW? (`get_model_sources`) — the answer that matters
+	*     even when there is no handle, e.g. an older server.
+	*
+	* The cap is honest rather than certain: at 30 minutes we do not know whether
+	* the job is slow or gone, and the message says exactly that instead of
+	* inventing either verdict.
+	*
+	* @param {string} model - the model the job is for
+	* @param {Object} [start_response] - the action's response, for its job handle
+	*/
+		const watch_model_job = function( model, start_response ) {
+
+			const job_id = start_response
+				? (start_response.background_job_id || start_response.job_id || null)
+				: null
+
+			const stop = function( poll ) {
+				clearInterval( poll )
+				status_panel.progress('')
+			}
+
+			let polls = 0
+			const poll = setInterval(async function(){
+
+				if (++polls > 360) { // ~30 min at 5 s
+					stop( poll )
+					status_panel.report({
+						phase		: 'model',
+						severity	: 'warning',
+						message		: self.get_tool_label('model_job_unresolved')
+							|| 'This is taking longer than expected. The job may still be running on the server, or it may have stopped — reopen this tool to see the model’s current state.',
+						detail		: `model: ${model}`
+					})
+					const late = await self.get_model_sources()
+					settle_model_state( late && late.result )
+					return
+				}
+
+				// 1) The job's own verdict, when we hold a handle for it.
+				if (job_id) {
+					const status	= await self.get_background_job_status( job_id )
+					const job		= (status && status.job) ? status.job : null
+					const failed	= job && (
+						job.status==='error'
+						|| (job.status==='done' && job.response && job.response.result===false)
+					)
+					if (failed) {
+						stop( poll )
+						status_panel.report({
+							phase		: 'model',
+							severity	: 'error',
+							message		: self.get_tool_label('model_job_failed')
+								|| 'The model job did not finish successfully',
+							cause		: (job.response && job.response.msg) || job.error || '',
+							detail		: `model: ${model}`
+						})
+						const after = await self.get_model_sources()
+						settle_model_state( after && after.result )
+						return
+					}
+				}
+
+				// 2) Is it runnable yet?
+				const sources	= await self.get_model_sources()
+				const result	= (sources && sources.result) ? sources.result : null
+				const state		= model_state_in( result, model )
+				const info		= state ? MODEL_STATES[state] : null
+				if (info && info.usable===true) {
+					stop( poll )
+					settle_model_state( result )
+					status_panel.report({
+						phase		: 'model',
+						severity	: 'success',
+						message		: self.get_tool_label('model_ready') || 'Model installed.'
+					})
+				}
+			}, 5000)
+		}
+
+		refresh_readiness()
+		// ONLY these two: a request per keystroke or per re-render is not a status
+		// line, it is a poll of the server.
+		if (nodes.transcriber_engine_quality) {
+			nodes.transcriber_engine_quality.addEventListener('change', refresh_readiness)
+		}
+		if (nodes.transcriber_device_select) {
+			nodes.transcriber_device_select.addEventListener('change', refresh_readiness)
+		}
 
 	// get and check the server status
 	// it change the button and display the status into the nodes.

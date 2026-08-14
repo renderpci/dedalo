@@ -4,13 +4,12 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 469,
-		"functions": 3757,
-		"functionsOverCap": 699,
-		"filesOverCap": 275
+		"files": 473,
+		"functions": 3824,
+		"functionsOverCap": 698,
+		"filesOverCap": 274
 	},
 	"files": {
-		"src/core/ai/model_fetch.ts": 11,
 		"src/core/ai/model_store.ts": 10,
 		"src/core/api/access_log.ts": 7,
 		"src/core/api/dedalo_files.ts": 12,
@@ -193,7 +192,7 @@
 		"src/core/resolve/optimize_tc.ts": 14,
 		"src/core/resolve/read_tm.ts": 17,
 		"src/core/resolve/related_sections.ts": 15,
-		"src/core/resolve/relation_list.ts": 47,
+		"src/core/resolve/relation_list.ts": 43,
 		"src/core/resolve/section_elements_context.ts": 22,
 		"src/core/resolve/security_access_datalist.ts": 20,
 		"src/core/resolve/structure_context.ts": 104,

@@ -167,10 +167,15 @@
 			}
 		}
 
-		.error {
-			background-color: transparent !important;
-			color: @color_danger;
-		}
+		// (the blanket `.error { background-color: transparent !important }` that
+		// used to sit here is GONE. It was inherited from the PHP tool and it
+		// half-undid the global `.error` affordance — killing the red fill with
+		// `!important` while leaving that rule's `color: white !important`
+		// standing — so everything wearing the class inside these panes rendered
+		// white-on-white: the readiness rows, the status reports, and every
+		// `ui.show_message(..., 'error')` this tool raises. The panel names its
+		// own severities now (`severity_error`, see render_transcription_status.js)
+		// and the global affordance is left to work as designed.)
 
 		.left_container {
 			>.wrapper_component {
@@ -499,13 +504,27 @@
 					background-color: var(--bg_surface);
 
 					>.button_automatic_transcription {
-						width: 14rem;
+						// A FLEX ROW, and never wrapping. It used to be a fixed 14rem
+						// box of centred inline text; when the spinner arrived its
+						// ::before took ~1.3em out of that fixed width and the label
+						// broke onto a second line, so the trigger read as damaged at
+						// exactly the moment it was working. min-width keeps the
+						// resting size, the row keeps the ring beside the label, and
+						// nowrap means no future label length can fold it again.
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						gap: 0.4em;
+						white-space: nowrap;
+						min-width: 14rem;
+						padding: 0 0.9rem;
 						margin: 0rem;
 						height: 2.5em;
 						position: relative;
 						border-radius: 8px;
-	  					box-shadow: 0 0 0 1px @color_grey_16;
-	  					background: @color_grey_15;
+						box-shadow: 0 0 0 1px var(--border_default);
+						background: var(--bg_surface_alt);
+						color: var(--fg_default);
 
 						&:hover {
 							background-color: @tool_color;
@@ -513,46 +532,24 @@
 							color: @color_white;
 						}
 
+						// The spinner ring is a flex item here, so the `gap` above
+						// spaces it and its own inline margin would double that.
+						&.button_spinner::before {
+							margin-right: 0;
+						}
+
+						// A disabled trigger is quiet: dimmed and unclickable. Whether it
+						// is BUSY is said by the spinner (ui.set_button_busy) and by the
+						// panel underneath, which carries the phase and the percentage.
+						//
+						// (This replaces a blurred, animated twelve-stop rainbow gradient
+						// that ran behind the button for the whole job. Two indicators for
+						// one state is one too many, and that one announced "something is
+						// happening" without saying what — the register this tool has just
+						// spent a rewrite getting away from.)
 						&.disable {
 							pointer-events: none;
-						}
-
-						&.disable::after {
-							pointer-events: none;
-							position: absolute;
-							content: "";
-							top: 0px;
-							left: 0;
-							right: 0;
-							z-index: -1;
-							height: 100%;
-							width: 100%;
-							filter: blur(7px);
-							background: linear-gradient(
-								60deg,
-								#ffb7c2,
-								#ff5770,
-								#e4428d,
-								#c42da8,
-								#9e16c3,
-								#6501de,
-								#9e16c3,
-								#c42da8,
-								#e4428d,
-								#ff5770,
-								#ffb7c2
-							);
-							background-size: 200% 200%;
-							animation: animateGlow 2.15s linear infinite;
-						}
-
-						@keyframes animateGlow {
-							0% {
-								background-position: 0% 50%;
-							}
-							100% {
-								background-position: 200% 50%;
-							}
+							opacity: 0.65;
 						}
 					}
 
@@ -664,49 +661,154 @@
 						}
 					}
 
+					// (!) MASKED, not a background image bleached with `filter`.
+					// gear.svg is a black glyph and `invert(75%)` painted it a
+					// fixed #bfbfbf — a light grey that has almost no contrast on
+					// the light theme's white panel and is theme-blind by
+					// construction. A mask takes its colour from a token, so the
+					// same rule reads correctly in both themes and can carry the
+					// tool's hue on hover like every other affordance here.
 					>.gear {
-						background-image: url('../img/gear.svg');
+						-webkit-mask-image: url('../img/gear.svg');
+						mask-image: url('../img/gear.svg');
+						-webkit-mask-size: contain;
+						mask-size: contain;
+						-webkit-mask-repeat: no-repeat;
+						mask-repeat: no-repeat;
+						-webkit-mask-position: center;
+						mask-position: center;
+						background-color: var(--fg_muted);
 						width: 18px;
 						height: 18px;
-						filter: invert(75%);
 						cursor: pointer;
 
 						&.open, &:hover {
-							filter: invert(45%);
+							background-color: @tool_color;
 						}
 					}
 
-					>.status_container {
+					// (the old one-line status container block is gone: a centred,
+					// overflow-hidden div the engine wrote into — and that its error
+					// writer left carrying `hide`. Replaced by .transcription_status
+					// below; see render_transcription_status.js.)
+
+					// The engine's one voice. (The old one-line status container is
+					// gone: a centred, overflow-hidden div that clipped every
+					// message past the first line.)
+					//
+					// EVERY COLOUR HERE IS A TOKEN. The first cut of this block used
+					// the static LESS palette (@color_grey_1 and friends) in a file
+					// whose every other rule is token-driven, so the rows ignored
+					// data-theme entirely and rendered as near-black slabs with dark
+					// text on them — unreadable, and exactly the class of bug the
+					// panel exists to stop.
+					>.transcription_status {
 						width: 100%;
-						text-align: center;
-						font-size: 1.3rem;
-						font-weight: 200;
-						border-radius: 8px;
-						padding: 0.5rem;
-						height: 1.5em;
-						overflow: hidden;
 						margin-bottom: 0.5rem;
+						font-size: 0.9rem;
+						/* No fixed height and no overflow:hidden: the previous block
+						   was 1.5em tall with the overflow clipped, so any message
+						   longer than one line was cut mid-sentence. */
 
-						&.loading_status {
-							color: @color_grey_7;
+						> .status_progress {
 							font-family: monospace;
+							font-size: 1.1rem;
+							color: var(--fg_muted);
+							padding: 0.5rem 0;
+							padding-top: 1rem;
 						}
 
-						&.processing {
-							color: @color_green_success;
-							font-weight: 400;
-							animation: 1s blink ease infinite;
-							animation-direction: alternate;
-						}
-						@keyframes blink {
+						// Readiness, quiet register: one run-on line of unremarkable
+						// facts, middot-separated. Nothing here is a problem, so
+						// nothing here takes a border, a fill or a full-width row.
+						> .status_readiness > .readiness_summary {
+							font-size: 0.85rem;
+							color: var(--fg_muted);
+							padding: 0.2rem 0;
 
-							from {
-								opacity: 1;
-							}
-							to {
-								opacity: 0;
+							> .readiness_part + .readiness_part::before {
+								content: ' · ';
+								opacity: 0.6;
 							}
 						}
+
+						// Readiness, notable register + the standing messages: a row
+						// with an accent edge, and its remedy laid out BESIDE the
+						// text rather than inside the sentence.
+						> .status_readiness > .readiness_line,
+						> .status_messages > .status_report {
+							padding: 0.45rem 0.6rem;
+							margin: 0.3rem 0;
+							border-radius: 6px;
+							border-left: 3px solid var(--border_default);
+							background-color: var(--bg_surface_alt);
+							color: var(--fg_default);
+
+							// (!) the panel's OWN severity vocabulary. A bare `.error`
+							// here would be the page-wide utility class, whose
+							// `color: white !important` made these rows unreadable.
+							&.severity_warning { border-left-color: var(--color_warning); }
+							&.severity_error   { border-left-color: var(--color_danger); }
+
+							// SUCCESS IS TINTED, not just edged. The three rows that
+							// carry an accent edge are all things gone wrong, so an
+							// outcome wearing the same shape reads as one more of
+							// them — "Transcription completed." arrived in the exact
+							// grey the panel uses for "the model is unverified". The
+							// fill is mixed FROM the token, so it tracks both themes
+							// from one line (a hand-picked pale green would be a
+							// light-theme constant sitting on a dark surface).
+							&.severity_success {
+								border-left-color: var(--color_success);
+								background-color: color-mix(in srgb, var(--color_success) 12%, var(--bg_surface_alt));
+							}
+						}
+
+						> .status_readiness > .readiness_line {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: 0.6rem;
+
+							> .readiness_text { min-width: 0; }
+							> .status_action { flex: 0 0 auto; margin-top: 0; }
+						}
+
+						.status_message { font-weight: 500; }
+						.status_cause,
+						.status_action_text {
+							font-size: 0.85rem;
+							color: var(--fg_muted);
+							margin-top: 0.15rem;
+						}
+
+						.status_action {
+							margin-top: 0.4rem;
+							font-size: 0.85rem;
+						}
+
+						.status_detail {
+							margin-top: 0.4rem;
+							font-size: 0.8rem;
+							color: var(--fg_muted);
+
+							> summary { cursor: pointer; }
+
+							> pre {
+								white-space: pre-wrap;
+								word-break: break-word;
+								max-height: 12em;
+								overflow: auto;
+								user-select: text;
+								margin-top: 0.3rem;
+								padding: 0.4rem;
+								border: 1px solid var(--border_default);
+								border-radius: 4px;
+								background-color: var(--bg_surface);
+							}
+						}
+
+						&.hide { display: none; }
 					}
 				}
 			}//end .subtitles

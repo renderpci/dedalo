@@ -73,11 +73,19 @@ async function frameLabelTipos(frameTipo: string): Promise<string[]> {
 		| undefined;
 	const tipos: string[] = [];
 	for (const config of properties?.source?.request_config ?? []) {
-		for (const ddo of config.show?.ddo_map ?? []) {
-			if (typeof ddo.tipo === 'string' && !tipos.includes(ddo.tipo)) tipos.push(ddo.tipo);
-		}
+		collectDdoTipos(config, tipos);
 	}
 	return tipos;
+}
+
+/** One request_config's shown ddo tipos, appended in order, deduplicated. */
+function collectDdoTipos(
+	config: { show?: { ddo_map?: { tipo?: unknown }[] } },
+	into: string[],
+): void {
+	for (const ddo of config.show?.ddo_map ?? []) {
+		if (typeof ddo.tipo === 'string' && !into.includes(ddo.tipo)) into.push(ddo.tipo);
+	}
 }
 
 /**
@@ -94,24 +102,87 @@ export async function iriLabelFrames(
 ): Promise<Map<string, IriLabelFrame>> {
 	const frames = new Map<string, IriLabelFrame>();
 	for (const frameTipo of getComponentModel('component_iri')?.fixedDataframeTipos ?? []) {
-		const stored = readComponentItems(record, frameTipo, 'component_dataframe') ?? [];
-		if (stored.length === 0) continue;
-		const labelTipos = await frameLabelTipos(frameTipo);
-		if (labelTipos.length === 0) continue;
-		for (const item of stored) {
-			if (item === null || typeof item !== 'object') continue;
-			const entry = item as Record<string, unknown>;
-			if (entry.main_component_tipo !== iriTipo) continue;
-			const sectionTipo = entry.section_tipo;
-			const sectionId = entry.section_id;
-			const idKey = entry.id_key;
-			if (typeof sectionTipo !== 'string') continue;
-			if (typeof sectionId !== 'number' && typeof sectionId !== 'string') continue;
-			if (typeof idKey !== 'number' && typeof idKey !== 'string') continue;
-			frames.set(String(idKey), { sectionTipo, sectionId, labelTipos, frameTipo });
+		for (const [idKey, frame] of await framesOfTipo(record, frameTipo, iriTipo)) {
+			frames.set(idKey, frame);
 		}
 	}
 	return frames;
+}
+
+/** This component's frames stored under ONE frame node. @see iriLabelFrames */
+async function framesOfTipo(
+	record: MatrixRecord,
+	frameTipo: string,
+	iriTipo: string,
+): Promise<Map<string, IriLabelFrame>> {
+	const frames = new Map<string, IriLabelFrame>();
+	const stored = readComponentItems(record, frameTipo, 'component_dataframe') ?? [];
+	if (stored.length === 0) return frames;
+	const labelTipos = await frameLabelTipos(frameTipo);
+	if (labelTipos.length === 0) return frames;
+	for (const item of stored) {
+		const paired = pairedFrame(item, iriTipo, labelTipos, frameTipo);
+		if (paired !== null) frames.set(paired.idKey, paired.frame);
+	}
+	return frames;
+}
+
+/**
+ * One stored dataframe item, read as this component's label frame — or `null`
+ * when it is not one.
+ *
+ * Extracted from the loop above rather than inlined: every line of it is a
+ * GUARD, and a guard chain inside a nested loop is what put that function at
+ * cyclomatic 15, over the ratchet's cap for a new file
+ * (`engineering/crap_complexity_baseline.json`). The guards are unchanged and in
+ * the same order — a stored frame is only ours when its `main_component_tipo`
+ * names this component, and every locator field must be present and of the right
+ * type before it can be trusted.
+ */
+function pairedFrame(
+	item: unknown,
+	iriTipo: string,
+	labelTipos: string[],
+	frameTipo: string,
+): { idKey: string; frame: IriLabelFrame } | null {
+	if (item === null || typeof item !== 'object') return null;
+	const entry = item as Record<string, unknown>;
+	if (entry.main_component_tipo !== iriTipo) return null;
+	const locator = frameLocator(entry);
+	if (locator === null) return null;
+
+	return {
+		idKey: locator.idKey,
+		frame: {
+			sectionTipo: locator.sectionTipo,
+			sectionId: locator.sectionId,
+			labelTipos,
+			frameTipo,
+		},
+	};
+}
+
+/** A dataframe id: v6 wrote both, so both are accepted, and neither is coerced here. */
+function isIdLike(value: unknown): value is number | string {
+	return typeof value === 'number' || typeof value === 'string';
+}
+
+/**
+ * The three stored fields that address the frame's record, validated together —
+ * they are one fact, and reading them as one is what keeps `pairedFrame` under
+ * the complexity cap. `id_key` is stringified because it is a Map key upstream;
+ * `section_id` is NOT, because it is a locator field (WC-2026-08-10: section_id
+ * stays the type it was stored as).
+ */
+function frameLocator(
+	entry: Record<string, unknown>,
+): { sectionTipo: string; sectionId: number | string; idKey: string } | null {
+	const sectionTipo = entry.section_tipo;
+	const sectionId = entry.section_id;
+	const idKey = entry.id_key;
+	if (typeof sectionTipo !== 'string' || !isIdLike(sectionId) || !isIdLike(idKey)) return null;
+
+	return { sectionTipo, sectionId, idKey: String(idKey) };
 }
 
 /**

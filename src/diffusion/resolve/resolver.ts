@@ -39,6 +39,7 @@
  * (REWRITE_SPEC §4 / DIFFUSION_SPEC §2.7).
  */
 
+import { resolveIriTitles } from '../../core/components/component_iri/resolve_title.ts';
 import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
@@ -54,7 +55,6 @@ import { getSectionMapValue } from '../../core/ontology/section_map.ts';
 import { getChildren } from '../../core/relations/children.ts';
 import { resolveIndexConfig } from '../../core/relations/models/relation_index.ts';
 import { getParents, getParentsRecursive } from '../../core/relations/parent.ts';
-import { resolveIriTitles } from '../../core/components/component_iri/resolve_title.ts';
 import { readComponentItems } from '../../core/resolve/component_data.ts';
 import { parseInverseEntry } from '../../core/resolve/relation_index.ts';
 import {

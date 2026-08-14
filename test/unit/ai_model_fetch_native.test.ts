@@ -11,7 +11,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, sep } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import {
 	COMMON_FILES,
 	curlArgv,
@@ -22,6 +22,7 @@ import {
 	OPTIONAL_FILES,
 	resolveFetchTarget,
 } from '../../src/core/ai/model_fetch.ts';
+import { expectedSize } from '../../src/core/ai/model_manifest.ts';
 
 let scratch = '';
 
@@ -240,6 +241,62 @@ describe('downloadModel — orchestration through the injected fetchFile', () =>
 	});
 });
 
+describe('isUsableCachedFile — a truncated file is not a cache hit', () => {
+	const store = () => join(scratch, 'truncation');
+
+	test('no expected size: any non-empty file is accepted (legacy store)', () => {
+		const target = join(store(), 'legacy.onnx');
+		mkdirSync(store(), { recursive: true });
+		writeFileSync(target, 'ONNX-BYTES');
+		expect(isUsableCachedFile(target)).toBe(true);
+		expect(isUsableCachedFile(target, null)).toBe(true);
+	});
+
+	test('the expected size matches: a cache hit', () => {
+		const target = join(store(), 'complete.onnx');
+		writeFileSync(target, 'ONNX-BYTES'); // 10 bytes
+		expect(isUsableCachedFile(target, 10)).toBe(true);
+	});
+
+	test('the file is SHORTER than expected: NOT a cache hit — this is the bug', () => {
+		const target = join(store(), 'partial.onnx');
+		writeFileSync(target, 'ONNX'); // 4 of 10 bytes
+		expect(isUsableCachedFile(target, 10)).toBe(false);
+	});
+
+	test('the file is longer than expected: not a cache hit either', () => {
+		const target = join(store(), 'overlong.onnx');
+		writeFileSync(target, 'ONNX-BYTES-AND-MORE');
+		expect(isUsableCachedFile(target, 10)).toBe(false);
+	});
+
+	test('an absent file is never a cache hit', () => {
+		expect(isUsableCachedFile(join(store(), 'nothing.onnx'), 10)).toBe(false);
+	});
+});
+
+describe('downloadModel records completion in the manifest', () => {
+	test('every fetched file lands in the manifest at its on-disk size', async () => {
+		const store = join(scratch, 'manifest_seed');
+		const model = 'onnx-community/whisper-tiny-TEST';
+		const report = await downloadModel(
+			model,
+			{ encoder_model: 'fp32' },
+			{
+				store,
+				fetchFile: async (modelId, file, target) => {
+					const path = join(target, modelId, file);
+					mkdirSync(dirname(path), { recursive: true });
+					writeFileSync(path, 'BYTES');
+					return true;
+				},
+			},
+		);
+		expect(report.ok).toBe(true);
+		expect(expectedSize(store, model, 'config.json')).toBe(5);
+	});
+});
+
 describe('the inline duplicates are GONE from the production file', () => {
 	test('fetchOneFile no longer builds the url, the argv or the cache check itself', async () => {
 		const source = await Bun.file(
@@ -259,5 +316,33 @@ describe('the inline duplicates are GONE from the production file', () => {
 		);
 		// The orchestration goes through the seam.
 		expect(source).toContain('options.fetchFile ?? fetchOneFile');
+	});
+});
+
+/**
+ * The repair path's contract with the downloader: fetch EXACTLY these files.
+ * Without it a dtype-less repair deleted the q4 weights it found on disk and
+ * downloaded the fp32 set — a working 400 MB install replaced by ~3 GB the
+ * browser never asks for.
+ */
+describe('downloadModel — an explicit file list is the whole plan', () => {
+	test('only the named files are fetched, and a weightless list is not a failure', async () => {
+		const store = join(scratch, 'explicit_files');
+		const asked: string[] = [];
+		const report = await downloadModel('acme/model', undefined, {
+			store,
+			files: ['tokenizer.json'],
+			fetchFile: async (_modelId, file, target) => {
+				asked.push(file);
+				mkdirSync(dirname(join(target, 'acme/model', file)), { recursive: true });
+				writeFileSync(join(target, 'acme/model', file), '{}');
+				return true;
+			},
+		});
+		expect(asked).toEqual(['tokenizer.json']);
+		// No .onnx was ASKED for, so "no ONNX weights were obtained" would be a
+		// false failure on a repair that only had to replace a corrupt tokenizer.
+		expect(report.errors).toEqual([]);
+		expect(report.ok).toBe(true);
 	});
 });

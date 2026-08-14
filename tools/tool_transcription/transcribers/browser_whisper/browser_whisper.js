@@ -48,7 +48,11 @@
 *   { status:'diarize_progress', data:{ done_seconds, duration } }
 *   { status:'diarize_error',    data:{ message } }   best-effort: run continues
 *   { status:'end',              data:{ segments, aborted } }
-*   { status:'error',            data:{ message } }
+*   { status:'warning',          data:{ phase, label_key, message, detail, count } }   degradation the
+*                                 run survived; `count` is present only for a count-bearing warning
+*                                 (label_key's text then carries a `{count}` placeholder for the caller
+*                                 to fill in), and is `undefined` for every other warning
+*   { status:'error',            data:{ message, phase, device, log } }
 *
 * SEGMENT SHAPE returned to the caller: { text, start, end } with times in SECONDS
 * from the start of the recording — plus `speaker` (integer) when speaker
@@ -76,6 +80,102 @@ import {
 import { DEFAULT_DIARIZE, assign_speakers_to_segments, cluster_speaker_turns, stitch_diarization_chunks } from '../lib/diarize.js';
 import { clean_transcript, has_time_regression, is_degenerate, repetition_score } from '../lib/transcript_postprocess.js';
 import { plan_windows, total_speech_seconds } from '../lib/vad.js';
+
+
+/**
+* RUNTIME LOG TAIL.
+*
+* onnxruntime writes the useful half of its diagnosis to the console and throws a
+* vaguer exception: "Can't create a session. ERROR_CODE: 7, ERROR_MESSAGE: Failed
+* to load model because protobuf parsing failed." is a LOG line, not an Error
+* message. Keeping the last few lines means the failure the caller reports can
+* name the actual cause instead of "Failed to load model".
+*/
+const log_tail = [];
+const LOG_TAIL_MAX = 12;
+for (const level of ['error', 'warn']) {
+	const original = console[level].bind( console );
+	console[level] = function(...args) {
+		try {
+			log_tail.push( args.map( arg => (typeof arg==='string' ? arg : String(arg && arg.message ? arg.message : arg)) ).join(' ') );
+			if (log_tail.length > LOG_TAIL_MAX) log_tail.shift();
+		} catch (capture_error) {
+			// The capture must never be why a message is lost.
+		}
+		original(...args);
+	};
+}
+
+/** The captured runtime log, newest last. */
+const runtime_log = function() {
+	return log_tail.join('\n');
+}//end runtime_log
+
+// The phase the worker is in, so a failure can say WHERE it happened. Starts
+// 'audio': the FIRST work self.transcribe does is validating/decoding the caller's
+// PCM and VAD-planning the windows, before any model is touched — a failure there
+// reported as phase 'model' would send the archivist to re-download a model that
+// was never the problem. classify_failure() gives info.phase PRIORITY over its own
+// rule's phase (transcription_report.js), so a stale phase here silently overrides
+// otherwise-correct classification.
+let current_phase = 'audio';
+
+// The device actually in use (or last attempted), so a terminal failure can name
+// it even when the caller didn't pass one explicitly to post_failure. Sourced from
+// load_pipeline, which is the only place a device is chosen.
+let current_device = '';
+
+// Offsets (seconds) of windows that produced no decodable output THIS RUN. Counted
+// here, not posted per window: the panel APPENDS one block per 'warning' message,
+// so posting on every skip would fill it with dozens of identical blocks on a
+// badly-degrading long interview. self.transcribe posts ONE summarising warning
+// after the decode loop, once the count is known.
+let skipped_windows = [];
+
+/**
+* Post a degradation the run survived. The caller shows it and continues.
+* `count` is optional: only the skipped-windows warning carries one, so the
+* receiver can substitute it into its label's `{count}` placeholder — a label
+* with no placeholder just ignores an extra field.
+*/
+const post_warning = function( label_key, message, detail, count ) {
+	self.postMessage({
+		status	: 'warning',
+		data	: {
+			phase		: current_phase,
+			label_key	: label_key,
+			message		: message,
+			detail		: detail || '',
+			count		: typeof count==='number' ? count : undefined
+		}
+	});
+}//end post_warning
+
+/** Post the terminal failure, with everything the classifier needs. Never throws. */
+const post_failure = function( error, device ) {
+	let message;
+	if (error && error.message) {
+		message = error.message;
+	} else if (typeof error==='string' && error.length>0) {
+		message = error;
+	} else {
+		// Neither an Error with a message nor a non-empty string — a plain object
+		// would otherwise stringify to the useless "[object Object]", and an empty
+		// ErrorEvent (event.error undefined, event.message '') would otherwise
+		// stringify to '' or the literal text "undefined". Both are worse than
+		// saying plainly that the message is unknown.
+		message = 'Unknown error';
+	}
+	self.postMessage({
+		status	: 'error',
+		data	: {
+			message	: message,
+			phase	: current_phase,
+			device	: device || current_device,
+			log		: runtime_log()
+		}
+	});
+}//end post_failure
 
 
 /**
@@ -145,12 +245,36 @@ self.onmessage = async (e) => {
 			}
 		});
 	} catch (error) {
-		self.postMessage({
-			status	: 'error',
-			data	: { message: (error && error.message) ? error.message : String(error) }
-		});
+		post_failure( error );
 	}
 }//end onmessage
+
+
+/**
+* The contract this module's header promises — "always answers with exactly one
+* terminal message, so the caller's promise can never hang" — was not enforced.
+* An ASR runtime that rejects from a promise OUTSIDE the awaited chain never
+* reached the try/catch above, the caller's onerror received an empty message, and
+* the user saw a button that stopped responding. These two handlers are what make
+* the promise true.
+*/
+self.onunhandledrejection = function(event) {
+	event.preventDefault?.();
+	post_failure( event.reason );
+}
+
+// preventDefault() here is load-bearing, not decoration: without it the browser
+// still propagates this exception to the PARENT's `Worker.onerror` after this
+// listener runs, so the caller would see the classified 'error' MESSAGE (good)
+// immediately followed by the parent's generic onerror handling (empty message,
+// "The transcription failed") for the SAME failure — a second, useless report
+// appended under the useful one, and delete_audio() run twice. A worker that
+// fails to LOAD (bad URL, a syntax error in a module import) never reaches this
+// line at all — that failure is still, correctly, the parent onerror's alone.
+self.addEventListener('error', function(event){
+	event.preventDefault();
+	post_failure( event.error || event.message );
+});
 
 
 /**
@@ -268,6 +392,10 @@ async function load_pipeline( model, requested_device, dtype, sources ) {
 		? (webgpu_available ? 'webgpu' : 'wasm')
 		: requested_device;
 
+	// Known before the attempt: a failure thrown BY the attempt still names the
+	// device it was trying, instead of leaving post_failure's device blank.
+	current_device = device;
+
 	try {
 		const transcriber = await pipeline('automatic-speech-recognition', model, {
 			device				: device,
@@ -290,6 +418,12 @@ async function load_pipeline( model, requested_device, dtype, sources ) {
 			throw error;
 		}
 		console.warn('[browser_whisper] WebGPU pipeline failed, falling back to WASM:', error);
+		post_warning(
+			'warning_fallback_cpu',
+			'The graphics card could not be used; the transcription continued on the processor.',
+			message
+		);
+		current_device = 'wasm';
 		const transcriber = await pipeline('automatic-speech-recognition', model, {
 			device				: 'wasm',
 			dtype				: dtype,
@@ -437,7 +571,12 @@ async function transcribe_window( params ) {
 	}
 
 	if (best===null) {
+		// Administrator-visible per window, always. The ARCHIVIST-visible warning is
+		// collapsed to one at the end of the run (see self.transcribe) — one block
+		// per skipped fragment would fill the panel with identical text on a
+		// badly-degrading long interview, and the panel APPENDS, it never merges.
 		console.warn(`[browser_whisper] window at ${params.offset}s produced no decodable output — skipped`);
+		skipped_windows.push( params.offset );
 		return [];
 	}
 	return best;
@@ -647,6 +786,12 @@ async function embed_speaker_groups( audio, sample_rate, chunks, options ) {
 self.transcribe = async function( options ) {
 
 	aborted = false;
+	// Reset for this run: a stale phase/device from a PRIOR call (this worker is
+	// reused for consecutive transcriptions) must never leak into this one's
+	// failures or warnings.
+	current_phase = 'audio';
+	current_device = '';
+	skipped_windows = [];
 
 	const audio			= options.audio || options.audio_file;
 	const sample_rate	= options.sample_rate || REQUIRED_SAMPLE_RATE;
@@ -686,6 +831,7 @@ self.transcribe = async function( options ) {
 	}
 
 	// 2. Load the model.
+	current_phase = 'model';
 	const dtype						= resolve_dtype( model, options.dtype );
 	const { transcriber, device }	= await load_pipeline(
 		model,
@@ -707,6 +853,7 @@ self.transcribe = async function( options ) {
 	const collected			= Array.isArray(options.resume_segments) ? options.resume_segments.slice() : [];
 	let done_seconds		= 0;
 
+	current_phase = 'transcribe';
 	for (let index = 0; index < windows.length; index++) {
 
 		if (aborted===true) {
@@ -758,6 +905,21 @@ self.transcribe = async function( options ) {
 		});
 	}
 
+	// One collapsed warning for every window this run skipped, instead of one per
+	// window — see skipped_windows' own comment. Never posted mid-loop: the count
+	// is only final once the loop is done.
+	if (skipped_windows.length>0) {
+		const plural = skipped_windows.length>1;
+		post_warning(
+			plural ? 'warning_windows_skipped' : 'warning_window_skipped',
+			plural
+				? `${skipped_windows.length} fragments of the recording could not be transcribed and were skipped.`
+				: 'A fragment of the recording could not be transcribed and was skipped.',
+			`windows at ${skipped_windows.join('s, ')}s`,
+			skipped_windows.length
+		);
+	}
+
 	// 4. The deterministic clean-up (loops, boundary duplication, timing repair).
 	const cleaned = clean_transcript( collected, options.postprocess );
 
@@ -766,6 +928,7 @@ self.transcribe = async function( options ) {
 	// transcription: the segments are returned without speakers and the caller
 	// is told, loudly, through 'diarize_error'.
 	if (options.diarize && options.diarize.model && cleaned.length>0) {
+		current_phase = 'speakers';
 		try {
 			const turns = await diarize_audio( audio, sample_rate, {
 				model			: options.diarize.model,

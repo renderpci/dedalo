@@ -89,7 +89,11 @@ describe.if(hasPhpCredentials())('maintenance widget catalog differential', () =
 		// is a native TS addition with no PHP oracle twin (see TS_ONLY_TOOLS for its
 		// tool counterpart) — normalize it out the same way. Its own shape is asserted
 		// natively by test/unit/site_builder_status_widget.test.ts.
-		const TS_ONLY_WIDGET_IDS = new Set(['error_reports', 'site_builder_status']);
+		// ai_models (WC-2026-08-13-maintenance-ai-models-widget) is TS-ONLY too: the
+		// local AI model store it reports on has no PHP peer — the engine that owns it
+		// did not exist there. Its own shape is asserted natively by
+		// test/unit/ai_models_widget_native.test.ts.
+		const TS_ONLY_WIDGET_IDS = new Set(['error_reports', 'site_builder_status', 'ai_models']);
 		const tsList = ((tsItem as { datalist?: Record<string, unknown>[] }).datalist ?? []).filter(
 			(item) => !TS_ONLY_WIDGET_IDS.has((item as { id?: string }).id ?? ''),
 		);

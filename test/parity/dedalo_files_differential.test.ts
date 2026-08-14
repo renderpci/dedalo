@@ -73,6 +73,9 @@ function isToolAssistantEntry(entry: ManifestEntry): boolean {
  *    standalone publication/site_builder daemon);
  *  - tool_identify (WC-062) — the object-identification curator panel
  *    (engineering/IDENTIFY_SPEC.md), TS-native with no PHP twin.
+ *  - ai_models maintenance widget
+ *    (WC-2026-08-13-maintenance-ai-models-widget) — the display-only panel over
+ *    the native local AI model store (src/core/ai/), which has no PHP peer.
  * Their files exist only in the TS census; filtered from BOTH sides. */
 function isTsOnlyEntry(entry: ManifestEntry): boolean {
 	return (
@@ -80,7 +83,8 @@ function isTsOnlyEntry(entry: ManifestEntry): boolean {
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/error_reports/') ||
 		entry.url.startsWith('/dedalo/tools/tool_sitebuilder/') ||
 		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/site_builder_status/') ||
-		entry.url.startsWith('/dedalo/tools/tool_identify/')
+		entry.url.startsWith('/dedalo/tools/tool_identify/') ||
+		entry.url.startsWith('/dedalo/core/area_maintenance/widgets/ai_models/')
 	);
 }
 
@@ -149,6 +153,25 @@ function isServiceUploadFoldAdditionEntry(entry: ManifestEntry): boolean {
 		entry.url === '/dedalo/core/services/service_upload/js/upload_queue.js' ||
 		entry.url === '/dedalo/core/services/service_upload/js/dropped_files.js' ||
 		entry.url === '/dedalo/core/services/service_upload/js/render_edit_service_upload_queue.js'
+	);
+}
+
+/** The two modules the transcription STATUS PANEL added
+ * (WC-2026-08-13-transcription-status-panel): the DOM-free failure classifier
+ * (`transcription_report.js`) and the panel renderer that every user-facing
+ * failure now flows through instead of an `alert()`
+ * (`render_transcription_status.js`). TS-only: the frozen oracle's
+ * `tool_transcription` package (captured 2026-07-11) predates both.
+ *
+ * EXACT URLs, not a `startsWith` prefix, for the same reason as the
+ * service_upload fold above: `tool_transcription/` HAS a PHP twin, and a prefix
+ * over it would stop comparing the whole tool. Every future TS-only addition to
+ * a twinned package must be listed by name — one line of reviewable paperwork
+ * each, rather than silently widening the hole. */
+function isTranscriptionStatusAdditionEntry(entry: ManifestEntry): boolean {
+	return (
+		entry.url === '/dedalo/tools/tool_transcription/js/transcription_report.js' ||
+		entry.url === '/dedalo/tools/tool_transcription/js/render_transcription_status.js'
 	);
 }
 
@@ -243,6 +266,7 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isTsNativeCoreFileEntry(entry) &&
 			!isPhpUserRemovalEntry(entry) &&
 			!isServiceUploadFoldAdditionEntry(entry) &&
+			!isTranscriptionStatusAdditionEntry(entry) &&
 			!isDropzoneServiceRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
@@ -256,6 +280,11 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		// it — would slip through as silently as adding it.
 		expect(tsBody.result.filter(isServiceUploadFoldAdditionEntry).length).toBe(4);
 		expect(phpBody.result.filter(isServiceUploadFoldAdditionEntry)).toEqual([]);
+
+		// Same recovery for the transcription status panel: both modules must
+		// ACTUALLY serve, not merely be normalized away.
+		expect(tsBody.result.filter(isTranscriptionStatusAdditionEntry).length).toBe(2);
+		expect(phpBody.result.filter(isTranscriptionStatusAdditionEntry)).toEqual([]);
 
 		// Mirror image for the removal half: the TS census must contain NO
 		// service_dropzone file at all. Without this, a prefix filter would

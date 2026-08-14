@@ -225,8 +225,14 @@ the install's own store.
 
 - **Models** (two, both required for coherent detection — the admin Download
   button and the seeder fetch both; `get_model_sources` reports
-  `diarization: {name, embedding_name, size_mb, installed}` with `installed`
-  true only when BOTH are in the store):
+  `diarization: {name, embedding_name, size_mb, installed, state, models[]}`,
+  where `models[]` carries one entry per half — `{role, name, label, state}` —
+  so a remedy can be aimed at the half that is actually broken, `state` is the
+  WORST half's, and `installed` stays true only when BOTH halves are runnable.
+  `diarization: null` means this install declares no speaker detection; the
+  field ABSENT means the server could not read its catalog — see the
+  degraded-answer addendum in
+  `engineering/wire_contract/WC-2026-08-13-transcription-status-panel.md`):
   - `onnx-community/pyannote-segmentation-3.0` (~6 MB, slot
     `diarization_model`): WHO speaks WHEN, per chunk;
   - `onnx-community/wespeaker-voxceleb-resnet34-LM` (~26 MB, slot
@@ -238,7 +244,14 @@ the install's own store.
   Separate catalog slots (never entries of the ASR quality picker); same
   store, same seeding doors; diarization file profile (no tokenizer, the
   preprocessor config is MANDATORY — `DIARIZATION_COMMON_FILES` in
-  `src/core/ai/model_fetch.ts`).
+  `src/core/ai/model_fetch.ts`). Their WEIGHTS are a single `onnx/model.onnx`,
+  not an ASR encoder/decoder pair: the store answers by the model's KIND
+  (`ModelKind` in `src/core/ai/model_store.ts`, threaded from the catalog's own
+  `kind` field through `src/core/ai/model_catalog.ts` — never inferred from the
+  id), because the ASR file list reported a healthy speaker model `incomplete`
+  and aimed its repair at a shape it does not have.
+  The `ai_models` maintenance widget lists the pair as its own row group, from
+  that same catalog module.
 - **Worker** (`browser_whisper.js diarize_audio`): runs after the last decode
   window, on WASM always (small recurrent model; CPU is faster than the
   WebGPU backend's op support is reliable). Long chunks (5 min) with a

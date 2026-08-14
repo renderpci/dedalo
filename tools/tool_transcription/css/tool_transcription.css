@@ -89,10 +89,6 @@
     overflow: visible;
   }
 }
-.wrapper_tool.tool_transcription > .content_data .error {
-  background-color: transparent !important;
-  color: var(--color_danger);
-}
 .wrapper_tool.tool_transcription > .content_data .left_container > .wrapper_component {
   height: 100%;
   grid-template-rows: auto minmax(0, 1fr);
@@ -316,44 +312,32 @@
   background-color: var(--bg_surface);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription {
-  width: 14rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  white-space: nowrap;
+  min-width: 14rem;
+  padding: 0 0.9rem;
   margin: 0rem;
   height: 2.5em;
   position: relative;
   border-radius: 8px;
-  box-shadow: 0 0 0 1px var(--color_grey_16);
-  background: var(--color_grey_15);
+  box-shadow: 0 0 0 1px var(--border_default);
+  background: var(--bg_surface_alt);
+  color: var(--fg_default);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription:hover {
   background-color: var(--tool_transcription);
   border-color: var(--tool_transcription_border);
   color: var(--color_white);
 }
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.button_spinner::before {
+  margin-right: 0;
+}
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.disable {
   pointer-events: none;
-}
-.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .button_automatic_transcription.disable::after {
-  pointer-events: none;
-  position: absolute;
-  content: "";
-  top: 0px;
-  left: 0;
-  right: 0;
-  z-index: -1;
-  height: 100%;
-  width: 100%;
-  filter: blur(7px);
-  background: linear-gradient(60deg, #ffb7c2, #ff5770, #e4428d, #c42da8, #9e16c3, #6501de, #9e16c3, #c42da8, #e4428d, #ff5770, #ffb7c2);
-  background-size: 200% 200%;
-  animation: animateGlow 2.15s linear infinite;
-}
-@keyframes animateGlow {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
+  opacity: 0.65;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container .configuration_container {
   width: 100%;
@@ -432,44 +416,117 @@
   border-top: 1px solid var(--border_default);
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .gear {
-  background-image: url('../img/gear.svg');
+  -webkit-mask-image: url('../img/gear.svg');
+  mask-image: url('../img/gear.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  background-color: var(--fg_muted);
   width: 18px;
   height: 18px;
-  filter: invert(75%);
   cursor: pointer;
 }
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .gear.open,
 .wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .gear:hover {
-  filter: invert(45%);
+  background-color: var(--tool_transcription);
 }
-.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .status_container {
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status {
   width: 100%;
-  text-align: center;
-  font-size: 1.3rem;
-  font-weight: 200;
-  border-radius: 8px;
-  padding: 0.5rem;
-  height: 1.5em;
-  overflow: hidden;
   margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  /* No fixed height and no overflow:hidden: the previous block
+						   was 1.5em tall with the overflow clipped, so any message
+						   longer than one line was cut mid-sentence. */
 }
-.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .status_container.loading_status {
-  color: var(--color_grey_7);
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_progress {
   font-family: monospace;
+  font-size: 1.1rem;
+  color: var(--fg_muted);
+  padding: 0.5rem 0;
+  padding-top: 1rem;
 }
-.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .status_container.processing {
-  color: var(--color_green_success);
-  font-weight: 400;
-  animation: 1s blink ease infinite;
-  animation-direction: alternate;
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_summary {
+  font-size: 0.85rem;
+  color: var(--fg_muted);
+  padding: 0.2rem 0;
 }
-@keyframes blink {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_summary > .readiness_part + .readiness_part::before {
+  content: ' · ';
+  opacity: 0.6;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report {
+  padding: 0.45rem 0.6rem;
+  margin: 0.3rem 0;
+  border-radius: 6px;
+  border-left: 3px solid var(--border_default);
+  background-color: var(--bg_surface_alt);
+  color: var(--fg_default);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.severity_warning,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.severity_warning {
+  border-left-color: var(--color_warning);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.severity_error,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.severity_error {
+  border-left-color: var(--color_danger);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line.severity_success,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_messages > .status_report.severity_success {
+  border-left-color: var(--color_success);
+  background-color: color-mix(in srgb, var(--color_success) 12%, var(--bg_surface_alt));
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line > .readiness_text {
+  min-width: 0;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status > .status_readiness > .readiness_line > .status_action {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_message {
+  font-weight: 500;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_cause,
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_action_text {
+  font-size: 0.85rem;
+  color: var(--fg_muted);
+  margin-top: 0.15rem;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_action {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail > summary {
+  cursor: pointer;
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status .status_detail > pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 12em;
+  overflow: auto;
+  user-select: text;
+  margin-top: 0.3rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: var(--bg_surface);
+}
+.wrapper_tool.tool_transcription > .content_data .right_container .block_separator.automatic_transcription_container > .transcription_status.hide {
+  display: none;
 }
 .wrapper_tool.tool_transcription .gutter {
   flex: 0 0 auto;

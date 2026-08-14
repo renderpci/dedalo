@@ -22,11 +22,12 @@
  * The DECISIONS live in three pure exports — `resolveFetchTarget` (path
  * confinement + URL policy), `curlArgv` (transport flags) and
  * `isUsableCachedFile` (cache freshness) — gated by
- * `test/unit/ai_model_fetch_native.test.ts`. What remains inside `fetchOneFile`
- * is byte plumbing (`mkdirSync`, the spawn/await, the zero-length cleanup, the
- * `fetch` + `Bun.write` fallback) and is NOT gated: it needs the network. The
- * orchestration in `downloadModel` is drivable through the injectable
- * `options.fetchFile`.
+ * `test/unit/ai_model_fetch_native.test.ts`. What remains is byte plumbing,
+ * split one concern per function (`acceptCached` / `recordIfComplete` for the
+ * manifest bookkeeping, `curlFetch` / `plainFetch` / `transport` for the wire),
+ * so `fetchOneFile` reads as the six-line sequence it is. That plumbing is NOT
+ * gated: it needs the network. The orchestration in `downloadModel` is drivable
+ * through the injectable `options.fetchFile`.
  */
 
 import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
@@ -38,7 +39,8 @@ function isSafeModelSegment(value: string): boolean {
 	return value !== '' && SAFE_MODEL_SEGMENT.test(value) && !value.split('/').includes('..');
 }
 
-import { modelFiles, modelStoreRoot } from './model_store.ts';
+import { expectedSize, recordFileComplete } from './model_manifest.ts';
+import { type ModelKind, modelFiles, modelStoreRoot } from './model_store.ts';
 
 /** Where model files are fetched from when a download is requested. */
 export const HUB_BASE = 'https://huggingface.co';
@@ -89,9 +91,55 @@ export function resolveFetchTarget(
 	return { target, url: `${HUB_BASE}/${modelId}/resolve/main/${file}` };
 }
 
-/** True when a previous run already left this file complete on disk. */
-export function isUsableCachedFile(target: string): boolean {
-	return existsSync(target) && statSync(target).size > 0;
+/**
+ * True when a previous run already left this file COMPLETE on disk.
+ *
+ * `expected` is the authoritative byte length (the manifest's record, or the hub's
+ * Content-Length). Without one — an air-gapped install, or a store seeded before
+ * the manifest existed — the answer degrades to the old "non-empty" test, which is
+ * the best a machine with no reference can honestly say. WITH one, a short file is
+ * a partial download and must be re-fetched: accepting it is what shipped a
+ * truncated model to the browser as "installed".
+ */
+export function isUsableCachedFile(target: string, expected?: number | null): boolean {
+	if (!existsSync(target)) return false;
+	const size = statSync(target).size;
+	if (size === 0) return false;
+	if (expected === undefined || expected === null) return true;
+	return size === expected;
+}
+
+/**
+ * How long a HEAD probe waits before giving up. `verify_model` runs this
+ * INLINE on the request path (unlike `downloadModel`, which is a detached
+ * background job) — behind a drop-all firewall a bare `fetch` with no timeout
+ * never resolves, and an admin's click hangs forever instead of getting the
+ * clean "could not learn it" this function already promises.
+ */
+const HEAD_TIMEOUT_MS = 10_000;
+
+/**
+ * The hub's byte length for one file, or null when it cannot be learnt (offline,
+ * blocked, a timeout, or a hub that does not answer HEAD). Null is not a
+ * failure: it drops the caller back to the size-agnostic cache test.
+ */
+export async function headContentLength(url: string): Promise<number | null> {
+	try {
+		const response = await fetch(url, {
+			method: 'HEAD',
+			redirect: 'follow',
+			signal: AbortSignal.timeout(HEAD_TIMEOUT_MS),
+		});
+		if (!response.ok) return null;
+		// The hub serves LFS weights through a CDN redirect; x-linked-size is the
+		// real object length when Content-Length describes the pointer.
+		const linked = response.headers.get('x-linked-size');
+		const length = linked ?? response.headers.get('content-length');
+		const parsed = Number(length);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -135,6 +183,23 @@ export interface DownloadOptions {
 	 * DIARIZATION_COMMON_FILES and an empty optional list. */
 	commonFiles?: readonly string[];
 	optionalFiles?: readonly string[];
+	/**
+	 * WHAT KIND of model this is — which decides the WEIGHT filenames when the
+	 * catalog declares no `dtype`. A diarization model is `onnx/model.onnx`, not
+	 * an encoder/decoder pair, so seeding a dtype-less speaker model as ASR asked
+	 * the hub for two files that do not exist and never fetched the one that does.
+	 */
+	kind?: ModelKind;
+	/**
+	 * FETCH EXACTLY THESE FILES, instead of the computed set.
+	 *
+	 * The repair path's whole contract: re-fetch precisely what it removed. Left
+	 * to `modelFiles(dtype)` a dtype-less repair deletes the q4 weights it found
+	 * on disk and then downloads the fp32 set — deleting a 400 MB working install
+	 * to replace it with ~3 GB the browser never asks for. Names come from the
+	 * store's own evidence, so what comes back is what went away.
+	 */
+	files?: readonly string[];
 	/** Transport seam: defaults to the real curl/fetch implementation. Injected
 	 * by tests so the orchestration is drivable without the network. */
 	fetchFile?: FetchFile;
@@ -161,8 +226,66 @@ function haveCurl(): boolean {
 	return curlChecked;
 }
 
+/** One file's identity on disk: which model, which file, where the store put it. */
+interface FileRef {
+	store: string;
+	modelId: string;
+	file: string;
+	target: string;
+}
+
 /**
- * Download one file into the store unless it is already there, non-empty.
+ * The already-on-disk answer. When a cached file proves complete against a size
+ * the manifest did not yet hold, the manifest learns it here — that is how a
+ * store seeded before the manifest existed becomes verifiable without a re-download.
+ */
+function acceptCached(ref: FileRef, expected: number | null, recorded: number | null): boolean {
+	if (!isUsableCachedFile(ref.target, expected)) return false;
+	if (expected !== null && recorded === null) {
+		recordFileComplete(ref.store, ref.modelId, ref.file, expected);
+	}
+	return true;
+}
+
+/** Post-transport verdict: complete on disk ⇒ record the actual size and accept. */
+function recordIfComplete(ref: FileRef, expected: number | null): boolean {
+	if (!isUsableCachedFile(ref.target, expected)) return false;
+	recordFileComplete(ref.store, ref.modelId, ref.file, statSync(ref.target).size);
+	return true;
+}
+
+/**
+ * curl transport. Async spawn: a server background job must never block the
+ * event loop on a gigabyte download (spawnSync would freeze every request in
+ * the process).
+ */
+async function curlFetch(target: string, url: string, quiet: boolean): Promise<boolean> {
+	const proc = Bun.spawn(curlArgv(target, url, quiet), {
+		stdout: quiet ? 'ignore' : 'inherit',
+		stderr: quiet ? 'ignore' : 'inherit',
+	});
+	const code = await proc.exited;
+	if (code === 0) return true;
+	// curl leaves a zero-length file behind on a 404; it must not look cached.
+	if (existsSync(target) && statSync(target).size === 0) rmSync(target);
+	return false;
+}
+
+/** Transport fallback for hosts without curl. */
+async function plainFetch(target: string, url: string): Promise<boolean> {
+	const response = await fetch(url);
+	if (!response.ok) return false;
+	await Bun.write(target, response);
+	return true;
+}
+
+/** The one transport door: curl when it exists, `fetch` otherwise. */
+function transport(target: string, url: string, quiet: boolean): Promise<boolean> {
+	return haveCurl() ? curlFetch(target, url, quiet) : plainFetch(target, url);
+}
+
+/**
+ * Download one file into the store unless it is already there, complete.
  * Returns false when the file is absent upstream (the caller decides whether
  * that is fatal — it is not for OPTIONAL_FILES).
  */
@@ -175,30 +298,81 @@ async function fetchOneFile(
 	const resolved = resolveFetchTarget(modelId, file, store);
 	if (resolved === null) return false;
 	const { target, url } = resolved;
-	if (isUsableCachedFile(target)) return true;
+	const ref: FileRef = { store, modelId, file, target };
+
+	// What SHOULD be on disk: the manifest first (no network), the hub second.
+	// Without either, the cache test stays size-agnostic — see isUsableCachedFile.
+	const recorded = expectedSize(store, modelId, file);
+	const expected = recorded ?? (await headContentLength(url));
+
+	if (acceptCached(ref, expected, recorded)) return true;
 
 	mkdirSync(dirname(target), { recursive: true });
+	if (!(await transport(target, url, quiet))) return false;
+	return recordIfComplete(ref, expected);
+}
 
-	if (haveCurl()) {
-		// Async spawn: a server background job must never block the event loop on
-		// a gigabyte download (spawnSync would freeze every request in the process).
-		const proc = Bun.spawn(curlArgv(target, url, quiet), {
-			stdout: quiet ? 'ignore' : 'inherit',
-			stderr: quiet ? 'ignore' : 'inherit',
-		});
-		const code = await proc.exited;
-		if (code !== 0) {
-			// curl leaves a zero-length file behind on a 404; it must not look cached.
-			if (existsSync(target) && statSync(target).size === 0) rmSync(target);
-			return false;
-		}
-		return true;
+/** Every default `DownloadOptions` leaves open, resolved once. */
+interface DownloadPlan {
+	store: string;
+	quiet: boolean;
+	/** The files to fetch, deduplicated. */
+	wanted: string[];
+	/** Of those, the ones a 404 may not fail. */
+	optional: readonly string[];
+	fetchFile: FetchFile;
+}
+
+/**
+ * Which files this download is for. An explicit list is the WHOLE plan (the
+ * repair path re-fetches exactly what it removed); otherwise modelFiles carries
+ * config.json + the weights and the common files union in.
+ */
+function wantedFiles(
+	dtype: Record<string, string> | undefined,
+	options: DownloadOptions,
+): string[] {
+	if (options.files !== undefined) return [...new Set(options.files)];
+	return [
+		...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype, options.kind)]),
+	];
+}
+
+function planDownload(
+	dtype: Record<string, string> | undefined,
+	options: DownloadOptions,
+): DownloadPlan {
+	return {
+		store: options.store ?? modelStoreRoot(),
+		quiet: options.quiet ?? true,
+		wanted: wantedFiles(dtype, options),
+		optional: options.optionalFiles ?? OPTIONAL_FILES,
+		fetchFile: options.fetchFile ?? fetchOneFile,
+	};
+}
+
+/**
+ * Record one obtained file at its ACTUAL on-disk size. fetchOneFile already does
+ * this on its own path; an injected transport (tests, or a future non-curl
+ * transport) still needs the manifest to end up correct, so the recording lives
+ * here too — recordFileComplete is idempotent.
+ */
+function recordObtained(store: string, modelId: string, file: string): void {
+	const resolved = resolveFetchTarget(modelId, file, store);
+	if (resolved !== null && existsSync(resolved.target)) {
+		recordFileComplete(store, modelId, file, statSync(resolved.target).size);
 	}
+}
 
-	const response = await fetch(url);
-	if (!response.ok) return false;
-	await Bun.write(target, response);
-	return statSync(target).size > 0;
+/**
+ * A model with no weights is a FAILED seed, never a quiet success: the browser
+ * would fail at transcription time, the surprise the store exists to prevent.
+ * Only when weights were ASKED FOR, though — a repair that re-fetches one corrupt
+ * tokenizer.json is complete without touching the weights, and calling that a
+ * failure would report a successful repair as broken.
+ */
+function weightsMissing(wanted: readonly string[], gotWeights: boolean): boolean {
+	return !gotWeights && wanted.some((file) => file.endsWith('.onnx'));
 }
 
 /**
@@ -212,22 +386,17 @@ export async function downloadModel(
 	dtype: Record<string, string> | undefined,
 	options: DownloadOptions = {},
 ): Promise<DownloadReport> {
-	const store = options.store ?? modelStoreRoot();
-	const quiet = options.quiet ?? true;
+	const { store, quiet, wanted, optional, fetchFile } = planDownload(dtype, options);
 	const report: DownloadReport = { ok: false, files: [], skipped: [], errors: [] };
 
 	mkdirSync(store, { recursive: true });
-
-	// modelFiles carries config.json + the weights; union in the common files.
-	const wanted = [...new Set([...(options.commonFiles ?? COMMON_FILES), ...modelFiles(dtype)])];
-	const optional = options.optionalFiles ?? OPTIONAL_FILES;
-	const fetchFile = options.fetchFile ?? fetchOneFile;
 
 	let gotWeights = false;
 	for (const file of wanted) {
 		options.onFile?.(file);
 		const ok = await fetchFile(modelId, file, store, quiet);
 		if (ok) {
+			recordObtained(store, modelId, file);
 			report.files.push(file);
 			if (file.endsWith('.onnx')) gotWeights = true;
 			continue;
@@ -239,9 +408,7 @@ export async function downloadModel(
 		report.errors.push(`${file}: download failed from ${HUB_BASE}/${modelId}`);
 	}
 
-	// A model with no weights is a FAILED seed, never a quiet success: the browser
-	// would then fail at transcription time, the surprise the store exists to prevent.
-	if (!gotWeights) {
+	if (weightsMissing(wanted, gotWeights)) {
 		report.errors.push(`${modelId}: no ONNX weights were obtained`);
 	}
 
