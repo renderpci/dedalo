@@ -11,7 +11,9 @@
  *     (resolveData + search + defaultRelationType, minus the ledgered
  *     PHP-component_common exception);
  *  3. facet placement is coherent (searchBuilder families match their matrix
- *     column; relation-only facets never appear on non-relation models);
+ *     column; relation-only facets never appear on non-relation models; every
+ *     declared `targetSource` id is bound to a real implementation, and the one
+ *     model whose target CANNOT be written into its node declares one);
  *  4. the derived engine sets (CSV import value-property, propagate's
  *     relation set) still equal the PHP oracle lists — a descriptor edit
  *     that silently changes an engine set fails HERE, with the diff visible;
@@ -31,6 +33,7 @@ import {
 	getSearchBuilderFamily,
 	relationDataModels,
 } from '../../src/core/components/registry.ts';
+import { TARGET_SOURCE_IMPLEMENTATIONS } from '../../src/core/relations/request_config/target_sources.ts';
 import { IMPORT_CONFORM } from '../../src/core/tools/import_conform.ts';
 import { VALUE_PROPERTY_MODELS } from '../../src/core/tools/import_data.ts';
 import { COMPONENTS_WITH_RELATIONS } from '../../tools/tool_propagate_component_data/server/propagate.ts';
@@ -301,6 +304,47 @@ describe('descriptor completeness (S2-26 tripwire)', () => {
 				`${descriptor.model} names an import parser that does not exist: '${descriptor.importConform}'`,
 			).toBe(true);
 		}
+	});
+
+	test('every targetSource facet names a real implementation', () => {
+		// Same idiom as importConform above, and the same failure mode it heads
+		// off: the facet is DATA (an id), so a typo would not surface at boot but
+		// inside a request — `TARGET_SOURCE_IMPLEMENTATIONS[<bad id>]` is
+		// `undefined` and calling it throws in the middle of a config build, i.e.
+		// one dead widget on one section, reported as an engine crash.
+		//
+		// There is deliberately NO dead-implementation twin of this test (the
+		// `no parser in IMPORT_CONFORM is dead` shape): a target-source id is also
+		// an sqo source name an ontology node may request explicitly
+		// (`{"source":"section_model"}`, request_config/explicit.ts
+		// KNOWN_SQO_SOURCES), so an implementation no DESCRIPTOR claims is a
+		// legitimate ontology-only rule, not dead code.
+		for (const descriptor of descriptors) {
+			if (descriptor.targetSource === undefined) continue;
+			expect(
+				Object.hasOwn(TARGET_SOURCE_IMPLEMENTATIONS, descriptor.targetSource),
+				`${descriptor.model} names a target source that has no implementation: '${descriptor.targetSource}'`,
+			).toBe(true);
+		}
+	});
+
+	test('component_relation_model declares the target source its node cannot state', () => {
+		// This model exists BECAUSE its target is caller-dependent: ONE node
+		// (hierarchy27 "Tipología") is reused by every hierarchy's virtual section
+		// and must point at that caller's MODEL section — es1 → es2, fr1 → fr2,
+		// mht72 → ww2 — which no per-node sqo can express. Its shipped ontology
+		// admits as much: `sqo.section_tipo: []` plus an `_info` note saying the
+		// value "is calculated in class" (PHP computed it in a class override, v6
+		// class.component_relation_model.php:115-177).
+		//
+		// Drop this one line and every consumer silently resolves NO target —
+		// empty select in edit, blank list column, `target_sections: []` on the
+		// wire, CSV import refusing the column — and nothing else in the suite
+		// goes red, which is precisely why the declaration is pinned here.
+		expect(
+			getComponentModel('component_relation_model')?.targetSource,
+			'component_relation_model without its targetSource: the options of every hierarchy Tipología resolve nowhere',
+		).toBe('section_model');
 	});
 
 	test('every relation-column model declares an import parser', () => {

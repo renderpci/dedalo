@@ -19,7 +19,10 @@
  *    enumeration unnarrowed;
  *  - the dd1067 security-tools enrichment (tool_name / always_active), absent
  *    on every other component;
- *  - the CACHE: key `${componentTipo}_${lang}`, eviction through the
+ *  - the CACHE: key `${componentTipo}_${ownerSectionTipo}_${lang}` (the owner
+ *    section joined the key on 2026-08-14 — a component's target sections can
+ *    resolve FROM THE CALLER, so one node serves different option lists to
+ *    different owners; see datalist_cache_key_native.test.ts), eviction through the
  *    section-data listener, and the agreement between a cold
  *    `probeDatalistSize` and the built list.
  *
@@ -437,7 +440,7 @@ describe('getDatalist — the dd1067 security-tools enrichment', () => {
 });
 
 describe('getDatalist — the cache', () => {
-	test('the cache key is componentTipo_lang and IGNORES componentProperties', async () => {
+	test('the cache key IGNORES componentProperties (tipo + owner section + lang only)', async () => {
 		await seedOptions();
 		clearDatalistCache();
 		const first = await getDatalist('zzdlcache1', properties({}), SECTION, LANG);

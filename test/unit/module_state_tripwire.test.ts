@@ -80,6 +80,14 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// download. Never cleared — the binary set does not change under a running
 	// server, and a wrong stale value only changes WHICH transport fetches.
 	'core/ai/model_fetch.ts:curlChecked',
+	// Registry-pairing cache GENERATION counter (2026-08-14): bumped by every
+	// invalidation of the hierarchy53→hierarchy58 map so a build that began
+	// before the bump refuses to install its stale snapshot (the populate/
+	// invalidate TOCTOU the pairing map would otherwise have). A monotonic
+	// integer compared only for equality — ontology/registry-derived, never
+	// request identity; the DATA it guards is the same ontology-scoped fact for
+	// every user, session and language.
+	'core/ontology/model_section.ts:pairingEpoch',
 	// Ontology-update single-flight latch (UPDATE_PROCESS Phase 2, WC-023):
 	// two concurrent ontology imports must never interleave DELETEs — ops
 	// state, never request identity; set/cleared around one admin operation.
@@ -229,6 +237,13 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// by design) --------------------------------------------------------------
 	'core/ontology/cache_invalidation.ts:registeredClearers',
 	'core/section_record/save_event.ts:sectionDataListeners',
+	// Registry-pairing invalidation channel (2026-08-14): the inversion that
+	// lets relations/datalist.ts drop option lists derived from a
+	// hierarchy53→hierarchy58 pairing without ontology/ importing relations/.
+	// Same class as the two channels above — registration-only, grows with
+	// module loads, never cleared by design, and its members are code-authored
+	// callbacks that carry no request identity.
+	'core/ontology/model_section.ts:pairingChangeListeners',
 	// section_id coercion WARN sampler (WC-2026-08-10-section-id-int-canonical
 	// D10): per-door tallies deciding which coercions log (first + every
 	// 1000th). Process-lifetime like api/counters itself, request-independent

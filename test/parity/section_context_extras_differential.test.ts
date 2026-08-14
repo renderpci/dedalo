@@ -79,6 +79,45 @@ describe.if(hasPhpCredentials())('section context extras differential (SECTION_S
 			const tsRelListTipo =
 				(ts.config as { relation_list_tipo?: unknown } | undefined)?.relation_list_tipo ?? null;
 			expect(tsRelListTipo).toEqual(phpRelListTipo);
+
+			// component_relation_model TARGET parity (the hierarchy27 regression,
+			// 2026-08-14). PHP resolves this model's targets registry-first —
+			// hierarchy53 == caller → hierarchy58, falling back to tld+'2' (v6
+			// class.component_relation_model.php:115-177) — and the frozen store
+			// already holds its answer for hierarchy27 in cult1: target_sections
+			// [{tipo:'cult2', label:'Cultura [m]'}]. TS resolved [] (the node's sqo
+			// declares section_tipo: [], and the calculation was never ported) while
+			// this gate compared ONLY the section entry — which is exactly how the
+			// regression stayed invisible. Greens via the model's `section_model`
+			// default target (request_config/target_sources.ts →
+			// ontology/model_section.ts).
+			//
+			// FIELD-SCOPED on target_sections, never the whole context entry: TS
+			// emits `request_config` on relation entries where PHP's
+			// component_relation_model_json passes add_request_config=false — an
+			// unrelated, PRE-EXISTING divergence a whole-entry compare would red on.
+			const phpRelationModels = phpContext.filter(
+				(entry) => entry.model === 'component_relation_model',
+			);
+			if (sectionTipo === 'cult1') {
+				// Non-vacuity pin: the ONE frozen relation_model datapoint lives in
+				// cult1's context (hierarchy27). If a fixture edit ever drained it,
+				// this sweep would go silently green — fail loudly instead.
+				expect(phpRelationModels.map((entry) => entry.tipo)).toContain('hierarchy27');
+			}
+			for (const phpEntry of phpRelationModels) {
+				const tsEntry = tsContext.find(
+					(entry) =>
+						entry.tipo === phpEntry.tipo &&
+						entry.model === 'component_relation_model' &&
+						entry.section_tipo === phpEntry.section_tipo,
+				);
+				if (tsEntry === undefined)
+					throw new Error(
+						`no TS context entry for component_relation_model ${String(phpEntry.tipo)} in ${sectionTipo}`,
+					);
+				expect(tsEntry.target_sections ?? null).toEqual(phpEntry.target_sections ?? null);
+			}
 		});
 	}
 });
