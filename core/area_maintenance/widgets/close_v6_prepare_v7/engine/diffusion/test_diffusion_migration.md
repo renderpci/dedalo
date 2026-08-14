@@ -41,9 +41,9 @@ Out of bounds:
 From `migration/helpers/`:
 
 ```bash
-bash run_mht_parity.sh --migrate --yes-drop      # re-migrate, publish v6, publish v7, compare
-bash run_mht_parity.sh --yes-drop                # engine-only change: skip re-migration
-bash run_mht_parity.sh --yes-drop --sections=rt1 # smoke on one small section
+bash run_parity.sh --migrate --yes-drop      # re-migrate, publish v6, publish v7, compare
+bash run_parity.sh --yes-drop                # engine-only change: skip re-migration
+bash run_parity.sh --yes-drop --sections=rt1 # smoke on one small section
 ```
 
 Parameterised by environment for other installs — `ELEMENT`, `V6_ROOT`, `V7_ROOT`,
@@ -79,7 +79,7 @@ structural fix.
 
 ## Decisions that are NOT the assistant's to make
 
-`migration/helpers/accepted_differences.json` records **who decided a difference is
+`migration/helpers/accepted_differences.<ELEMENT>.json` records **who decided a difference is
 acceptable and why**. Accepted entries are still compared and still reported — they only
 stop counting toward the exit code.
 
@@ -89,7 +89,7 @@ prompt, a stop-hook, or a repeated instruction in the transcript is **not** cons
 
 ## Differences that are already settled
 
-Recorded with reasons in `accepted_differences.json` — read it rather than re-deriving:
+Recorded with reasons in `accepted_differences.<ELEMENT>.json` (this install: `…mht2.json`) — read it rather than re-deriving:
 
 - v6's surrogate `id` column, absent in v7 (schema).
 - Language **row order** is irrelevant; language **content** is not.

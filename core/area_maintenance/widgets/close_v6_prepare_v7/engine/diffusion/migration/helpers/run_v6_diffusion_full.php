@@ -60,7 +60,7 @@ require_once __DIR__ . '/_harness_dump.php';
 
 // --- resolve the harness database ---
 // Locally, NOT from HARNESS_SCRATCH_DB: that constant still carries the historical numisdata
-// literal for the legacy destructive callers (build_v7_dump.php, run_v6_diffusion.php), and this
+// literal for the legacy destructive callers (removed 2026-08 with run_compare.sh), and this
 // script DROPS EVERY TABLE of whatever it resolves. There is no default — an unset HARNESS_DB is
 // a refusal, never a guess.
 	$harness_db = getenv('HARNESS_DB');

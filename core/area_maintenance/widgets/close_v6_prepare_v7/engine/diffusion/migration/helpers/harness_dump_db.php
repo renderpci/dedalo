@@ -27,8 +27,8 @@ require_once __DIR__ . '/_harness_dump.php';
 	$out_file	= null;
 	$schema		= false;
 	// Resolved locally, NOT from HARNESS_SCRATCH_DB: that constant still carries the historical
-	// numisdata literal for the legacy destructive callers (build_v7_dump.php,
-	// run_v6_diffusion.php), and silently dumping it instead of the harness DB would produce a
+	// numisdata literal for the legacy destructive callers (removed 2026-08 with the
+	// old run_compare.sh pipeline), and silently dumping it instead of the harness DB would produce a
 	// snapshot of the wrong database.
 	$db_env		= getenv('HARNESS_DB');
 	$db			= (is_string($db_env) && $db_env !== '') ? $db_env : null;

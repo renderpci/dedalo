@@ -8,7 +8,8 @@
  * reported, and anything it can only prove equal AFTER a normalisation is reported as such —
  * never laundered into a plain MATCH.
  *
- * (compare_tables.php is left untouched for its existing single-record numisdata-era callers.)
+ * (It replaced compare_tables.php, which was removed 2026-08 along with the rest of the
+ *  single-record numisdata-era pipeline.)
  *
  * Usage:
  *   php compare_publication.php <v6.json> <v7.json> [options]

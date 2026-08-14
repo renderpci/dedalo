@@ -10,7 +10,7 @@
  */
 
 // The default is the historical numisdata scratch database and MUST stay a literal:
-// build_v7_dump.php and run_v6_diffusion.php call harness_refresh_scratch(HARNESS_SCRATCH_DB),
+// The removed legacy pipeline called harness_refresh_scratch(HARNESS_SCRATCH_DB),
 // which DROPS EVERY TABLE in the resolved database. Reading $HARNESS_DB here would re-point
 // those legacy destructive callers at whatever database an unrelated orchestrator happened to
 // leave exported in the shell. A caller that wants another database defines the constant

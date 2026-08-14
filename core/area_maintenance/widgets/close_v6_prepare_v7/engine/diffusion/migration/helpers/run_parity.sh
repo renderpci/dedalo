@@ -2,7 +2,7 @@
 #
 # ONE-COMMAND v6↔v7 DIFFUSION PUBLICATION PARITY LOOP  (mht "Madres e hijas").
 #
-#   bash run_mht_parity.sh [--migrate] [--sections=a,b]
+#   bash run_parity.sh [--migrate] [--sections=a,b]
 #                          [--normalize=media,json,numeric,ws] [--examples=5] [--quiet]
 #
 #   --migrate   run migrate_diffusion_properties.php first (rewrites dd_ontology.properties
@@ -111,6 +111,14 @@ SECTIONS_CSV=""
 NORMALIZE_ARG="--normalize=media"
 EXAMPLES_ARG=""
 QUIET_ARG=""
+# ACCEPTED-DIFFERENCES FILE IS PER ELEMENT, and there is NO cross-install default.
+# Every entry records a decision taken about ONE corpus ("these bytes differ and the
+# websites are still correct"). Inheriting another install's decisions silently
+# suppresses real findings — the old shared accepted_differences.json even carried a
+# BARE `related` key, which would have hidden that column on any ontology. So: an
+# explicit --accepted= wins; otherwise accepted_differences.<ELEMENT>.json if it exists;
+# otherwise compare with NONE and say so loudly.
+ACCEPTED_ARG=""
 
 for a in "$@"; do
   case "$a" in
@@ -120,13 +128,14 @@ for a in "$@"; do
     --normalize=*)          NORMALIZE_ARG="$a" ;;
     --examples=*)           EXAMPLES_ARG="$a" ;;
     --quiet)                QUIET_ARG="--quiet" ;;
+    --accepted=*)           ACCEPTED_ARG="$a" ;;
     --limit-per-section=*)
-      echo "run_mht_parity: --limit-per-section is REMOVED." >&2
+      echo "run_parity: --limit-per-section is REMOVED." >&2
       echo "  A per-record limit cannot be made symmetric across the v7 frontier-hop resolver," >&2
       echo "  and an asymmetric limit produces a huge bogus diff that hides every real finding." >&2
       echo "  Use --sections=rt1 instead: it restricts BOTH sides identically." >&2
       exit 2 ;;
-    *) echo "run_mht_parity: unknown option '$a'" >&2; exit 2 ;;
+    *) echo "run_parity: unknown option '$a'" >&2; exit 2 ;;
   esac
 done
 
@@ -425,6 +434,17 @@ assert_snapshot_non_empty "$RUN_DIR/v7_rows.json" 'v7'
 # ─────────────────────────────────────────────────────────────────────────────
 
 step "compare"
+if [ -z "$ACCEPTED_ARG" ]; then
+  _accepted_default="$HELPERS/accepted_differences.${ELEMENT}.json"
+  if [ -f "$_accepted_default" ]; then
+    ACCEPTED_ARG="--accepted=$_accepted_default"
+  else
+    ACCEPTED_ARG="--accepted=none"
+    echo "  note: no accepted_differences.${ELEMENT}.json — comparing with NO acceptances."
+    echo "        Record decisions for this element there (never reuse another install's file)."
+  fi
+fi
+
 "$PHP" "$HELPERS/compare_publication.php" \
   "$RUN_DIR/v6_rows.json" "$RUN_DIR/v7_rows.json" \
   --schema6="$RUN_DIR/v6_schema.json" \
@@ -432,6 +452,7 @@ step "compare"
   --run-info6="$RUN_DIR/v6_run_info.json" \
   --run-info7="$RUN_DIR/v7_run_info.json" \
   --json="$RUN_DIR/report.json" \
+  ${ACCEPTED_ARG:+$ACCEPTED_ARG} \
   ${NORMALIZE_ARG:+$NORMALIZE_ARG} \
   ${EXAMPLES_ARG:+$EXAMPLES_ARG} \
   ${QUIET_ARG:+$QUIET_ARG}

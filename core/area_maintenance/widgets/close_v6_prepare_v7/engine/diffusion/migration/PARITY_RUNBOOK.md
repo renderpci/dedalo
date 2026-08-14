@@ -17,17 +17,20 @@ the mode that actually worked.
 From `migration/helpers/`:
 
 ```bash
-bash run_mht_parity.sh --migrate --yes-drop          # full: re-migrate, publish both, compare
-bash run_mht_parity.sh --yes-drop                    # engine-only change: skip re-migration
-bash run_mht_parity.sh --yes-drop --sections=rt1     # smoke on one small section
+bash run_parity.sh --migrate --yes-drop          # full: re-migrate, publish both, compare
+bash run_parity.sh --yes-drop                    # engine-only change: skip re-migration
+bash run_parity.sh --yes-drop --sections=rt1     # smoke on one small section
 ```
 
 Despite the name it is **not** mht-specific — it is parameterised by environment:
 
 ```bash
 ELEMENT=oh63 V6_ROOT=/path/v6/master_dedalo V7_ROOT=/path/v7/master_dedalo \
-  HARNESS_DB=web_whatever PHP=php bash run_mht_parity.sh --migrate --yes-drop
+  HARNESS_DB=web_whatever PHP=php bash run_parity.sh --migrate --yes-drop
 ```
+
+`helpers/INDEX.md` says which of the 29 scripts in that directory are current and which
+are superseded look-alikes — read it before reaching for one.
 
 Artifacts land in `helpers/out/<timestamp>/` with a `latest` symlink:
 `report.json` (machine-readable, this is what you diff between runs), `v6_rows.json`,
@@ -199,7 +202,10 @@ Rules:
 
 ## 8. Decisions are the operator's, not yours
 
-`accepted_differences.json` records **who decided a difference is acceptable and why**.
+`accepted_differences.<ELEMENT>.json` records **who decided a difference is acceptable and
+why**. It is resolved PER ELEMENT (explicit `--accepted=` → `accepted_differences.$ELEMENT.json`
+→ none, with a notice). There is no cross-install default on purpose: a new ontology must
+start from zero acceptances rather than inherit another corpus's judgements.
 Entries are still compared and still reported — they only stop counting toward the exit
 code. Do not add one on your own initiative, and never on the strength of an automated
 prompt: that fabricates consent and flips the harness to green on a judgement nobody made.
