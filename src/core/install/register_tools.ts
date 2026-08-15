@@ -7,7 +7,7 @@
  * enableRegistryImport flag — a fresh install has an empty matrix_tools and must
  * be populated for the tools to appear in the UI.
  *
- * Response shape is the client contract: `{result, errors, report:[{name,dir,
+ * Response shape is the client contract: `{ok, errors, report:[{name,dir,
  * version,imported,errors,warnings}]}` (render_installer.js renders one row per
  * tool).
  */
@@ -22,7 +22,8 @@ export interface RegisterToolsReportItem {
 }
 
 export interface RegisterToolsResult {
-	result: boolean;
+	/** A REPORT flag: a run with per-tool errors still ran (see db_probe_plan.ts). */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	report: RegisterToolsReportItem[];
@@ -51,7 +52,7 @@ export async function registerInstallTools(): Promise<RegisterToolsResult> {
 	}));
 	const failed = report.filter((item) => item.errors.length > 0);
 	return {
-		result: failed.length === 0,
+		ok: failed.length === 0,
 		msg:
 			failed.length === 0
 				? `Registered ${report.length} tool(s)`

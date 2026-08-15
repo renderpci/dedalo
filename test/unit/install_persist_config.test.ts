@@ -12,6 +12,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseEnvFile } from '../../src/config/env.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
@@ -44,7 +45,7 @@ const BASE_CFG = {
 describe('persist_config (P2)', () => {
 	test('writes .env with PHP key names, 0600, and generates the salt', async () => {
 		const result = await persistConfig({ ...BASE_CFG });
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		expect(result.generated.DEDALO_SALT_STRING).toMatch(/^[0-9a-f]{64}$/);
 
 		const envPath = join(scratch, '.env');
@@ -70,7 +71,7 @@ describe('persist_config (P2)', () => {
 		const envPath = join(scratch, '.env');
 		writeFileSync(envPath, 'DEDALO_SALT_STRING=deadbeef\nOLD=1\n');
 		const result = await persistConfig({ ...BASE_CFG });
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		// Salt preserved → NOT in `generated`.
 		expect(result.generated.DEDALO_SALT_STRING).toBeUndefined();
 		const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
@@ -90,7 +91,7 @@ describe('persist_config (P2)', () => {
 			mysql_username: 'diff',
 			mysql_password: 'dpw',
 		});
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		// OPS-04: the dead internal token is no longer minted (the control plane
 		// that used it was removed) — it must NOT appear in the generated secrets
 		// nor in the written .env.
@@ -114,7 +115,7 @@ describe('persist_config (P2)', () => {
 			smtp_from: 'noreply@example.org',
 			smtp_from_name: 'Dédalo',
 		});
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
 		expect(parsed.DEDALO_SMTP_HOST).toBe('smtp.example.org');
 		expect(parsed.DEDALO_SMTP_PORT).toBe('465');
@@ -132,7 +133,7 @@ describe('persist_config (P2)', () => {
 		process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch2;
 		try {
 			const result = await persistConfig({ ...BASE_CFG, smtp_host: 'smtp.example.org' });
-			expect(result.result).toBe(true);
+			expect(result.ok).toBe(true);
 			const parsed = parseEnvFile(readFileSync(join(scratch2, '.env'), 'utf8'));
 			// The smtp_* form fields are ignored without the explicit mailer:true flag.
 			expect(parsed.DEDALO_SMTP_HOST).toBeUndefined();
@@ -155,7 +156,7 @@ describe('persist_config (P2)', () => {
 			].join('\n'),
 		);
 		const result = await persistConfig({ ...BASE_CFG });
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
 		expect(parsed.DEDALO_SMTP_HOST).toBe('smtp.old.org');
 		expect(parsed.DEDALO_SMTP_USER).toBe('old');
@@ -191,7 +192,7 @@ describe('persist_config (P2)', () => {
 
 		// Re-save from a FRESH wizard page: no diffusion fields, no operator keys.
 		const result = await persistConfig({ ...BASE_CFG });
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 
 		const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
 
@@ -229,7 +230,7 @@ describe('persist_config (P2)', () => {
 				unix_socket: '/run/dedalo/dedalo_ts.sock',
 				media_access_mode: 'publication',
 			});
-			expect(result.result).toBe(true);
+			expect(result.ok).toBe(true);
 			const parsed = parseEnvFile(readFileSync(join(scratch2, '.env'), 'utf8'));
 			expect(parsed.MEDIA_PATH).toBe('/srv/dedalo/media');
 			expect(parsed.SERVER_UNIX_SOCKET).toBe('/run/dedalo/dedalo_ts.sock');
@@ -252,7 +253,7 @@ describe('persist_config (P2)', () => {
 				),
 			);
 			const result = await persistConfig({ ...BASE_CFG });
-			expect(result.result).toBe(true);
+			expect(result.ok).toBe(true);
 			const parsed = parseEnvFile(readFileSync(join(scratch2, '.env'), 'utf8'));
 			// Preserved verbatim — an empty flag must not clobber it.
 			expect(parsed.SERVER_UNIX_SOCKET).toBe('/run/dedalo/dedalo_ts.sock');
@@ -279,7 +280,7 @@ describe('persist_config (P2)', () => {
 		const mediaRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_media_'));
 		try {
 			const r = checkDirectories({ create: true, mediaRoot });
-			expect(r.result).toBe(true);
+			expect(r.ok).toBe(true);
 			const priv = r.dirs.find((d) => d.label === 'Private config');
 			expect(priv?.exists).toBe(true);
 			expect(priv?.writable).toBe(true);
@@ -299,7 +300,7 @@ describe('persist_config (P2)', () => {
 			app_lang_default: 'lg-eng',
 			data_lang_default: 'lg-spa',
 		});
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
 
 		// The two JSON-shaped keys must parse back EXACTLY (the raw-write contract:
@@ -323,7 +324,7 @@ describe('persist_config (P2)', () => {
 
 	test('no langs posted → defaults to the whole catalog (still bootable)', async () => {
 		const result = await persistConfig({ ...BASE_CFG });
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		const parsed = parseEnvFile(readFileSync(join(scratch, '.env'), 'utf8'));
 		const map = JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string) as Record<string, string>;
 		expect(Object.keys(map).length).toBe(10);
@@ -334,14 +335,19 @@ describe('persist_config (P2)', () => {
 		const scratch2 = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_langfail_'));
 		process.env.DEDALO_INSTALL_PRIVATE_DIR = scratch2;
 		try {
-			// default ∉ the selected set → refuse
-			const result = await persistConfig({
+			// default ∉ the selected set → refuse. P1 sweep: a refusal is a THROWN
+			// registered code, never a `result:false` body.
+			const error = await persistConfig({
 				...BASE_CFG,
 				langs: ['lg-eng'],
 				app_lang_default: 'lg-spa',
-			});
-			expect(result.result).toBe(false);
-			expect(result.msg).toContain('Language selection invalid');
+			}).then(
+				() => null,
+				(caught: unknown) => caught,
+			);
+			expect(isDedaloError(error)).toBe(true);
+			expect((error as { code: string }).code).toBe('install.invalid_input');
+			expect((error as Error).message).toContain('Language selection invalid');
 			// nothing written
 			const { existsSync } = await import('node:fs');
 			expect(existsSync(join(scratch2, '.env'))).toBe(false);

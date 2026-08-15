@@ -115,13 +115,13 @@ function moveWidgetRun(id: string): WidgetHandler {
 		// A refused/failed run throws with the transform's own sentence; a
 		// successful one keeps msg/errors and the diagnostic fields the widget
 		// renders generically (dry_run / counts / sample).
-		if (!report.result) {
+		if (!report.ok) {
 			failAction(
 				report.errors.length === 0 ? report.msg : `${report.msg} (${report.errors.join('; ')})`,
 			);
 		}
 		return {
-			data: report.result,
+			data: report.ok,
 			msg: report.msg,
 			...(report.errors.length === 0 ? {} : { errors: report.errors }),
 			extend: { dry_run: report.dryRun, counts: report.counts, sample: report.sample },

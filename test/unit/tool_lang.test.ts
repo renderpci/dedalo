@@ -6,6 +6,7 @@
  */
 
 import { afterAll, describe, expect, mock, test } from 'bun:test';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realPermissions from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
@@ -34,7 +35,8 @@ const cfg = { uri: 'https://tr.example.org', key: 'k', sourceLang: 'lg-eng', tar
 
 /** A stub that upper-cases + tags each text so we can assert per-item mapping. */
 const upperStub: TranslationProvider = async (req) => ({
-	result: `[${req.text.toUpperCase()}]`,
+	ok: true,
+	text: `[${req.text.toUpperCase()}]`,
 	msg: 'ok',
 });
 
@@ -56,14 +58,15 @@ describe('translateItems (stub provider)', () => {
 	});
 
 	test('provider failure short-circuits with the error', async () => {
-		const failStub: TranslationProvider = async () => ({ result: false, msg: 'boom' });
+		const failStub: TranslationProvider = async () => ({ ok: false, msg: 'boom' });
 		const out = await translateItems([{ value: 'x' }], failStub, cfg);
 		expect(out).toEqual({ items: [], error: 'boom' });
 	});
 
 	test('quota-exceeded result is treated as an error (never persisted)', async () => {
 		const quotaStub: TranslationProvider = async () => ({
-			result: 'Sorry. Quota exceeded today',
+			ok: true,
+			text: 'Sorry. Quota exceeded today',
 			msg: 'ok',
 		});
 		const out = await translateItems([{ value: 'x' }], quotaStub, cfg);
@@ -105,6 +108,24 @@ describe('translation helpers', () => {
 });
 
 describe('runAutomaticTranslation — gates and loud failures', () => {
+	/**
+	 * The DedaloError a run threw, or null when it returned an envelope. P1 error
+	 * sweep: every gate here REFUSES BY THROWING a registered code (the tool
+	 * dispatch chokepoint converts it), so the assertions are on the CODE.
+	 */
+	async function refusalOf(
+		run: () => Promise<unknown>,
+	): Promise<{ code: string; message: string; publicMessage?: string } | null> {
+		try {
+			await run();
+			return null;
+		} catch (error) {
+			return isDedaloError(error)
+				? { code: error.code, message: error.message, publicMessage: error.publicMessage }
+				: null;
+		}
+	}
+
 	const options = {
 		component_tipo: 'numisdata16',
 		section_tipo: 'test2',
@@ -115,22 +136,23 @@ describe('runAutomaticTranslation — gates and loud failures', () => {
 
 	test('missing required parameters are refused', async () => {
 		for (const bad of [{ target_lang: '' }, { component_tipo: '' }, { section_tipo: '' }]) {
-			const response = await runAutomaticTranslation(
-				{ options: { ...options, ...bad }, userId: -1, principal: SUPERUSER },
-				'tool_lang',
+			const refusal = await refusalOf(() =>
+				runAutomaticTranslation(
+					{ options: { ...options, ...bad }, userId: -1, principal: SUPERUSER },
+					'tool_lang',
+				),
 			);
-			expect(response.result).toBe(false);
-			expect(response.errors).toContain('invalid_request');
+			expect(refusal?.code).toBe('request.invalid_options');
+			// request.invalid_options is public-disclosure: the sentence reaches the wire.
+			expect(refusal?.publicMessage).toContain('Missing required parameters');
 		}
 	});
 
 	test('an ungranted caller is refused outright', async () => {
-		const response = await runAutomaticTranslation(
-			{ options, userId: 999999, principal: NO_ACCESS },
-			'tool_lang',
+		const refusal = await refusalOf(() =>
+			runAutomaticTranslation({ options, userId: 999999, principal: NO_ACCESS }, 'tool_lang'),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized');
+		expect(refusal?.code).toBe('perm.denied');
 	});
 
 	test('the (section_tipo, component_tipo) WRITE pair is asserted, not just the section', async () => {
@@ -145,12 +167,12 @@ describe('runAutomaticTranslation — gates and loud failures', () => {
 				sectionTipo === tipo ? 2 : 0, // section: write. component: nothing.
 		}));
 		try {
-			const response = await runAutomaticTranslation(
-				{ options, userId: 16, principal: SCOPED },
-				'tool_lang',
+			const refusal = await refusalOf(() =>
+				runAutomaticTranslation({ options, userId: 16, principal: SCOPED }, 'tool_lang'),
 			);
-			expect(response.result).toBe(false);
-			expect(response.msg).toContain('insufficient permissions on the target component');
+			expect(refusal?.code).toBe('perm.denied');
+			// the WHICH-half detail is LOG-side (perm.denied is operator-disclosure)
+			expect(refusal?.message).toContain('insufficient permissions on the target component');
 		} finally {
 			mock.module('../../src/core/security/permissions.ts', () => REAL_PERMISSIONS);
 		}
@@ -161,12 +183,14 @@ describe('runAutomaticTranslation — gates and loud failures', () => {
 			['browser_transformer', 'client-side only'],
 			['google_translation', 'not implemented'],
 		] as const) {
-			const response = await runAutomaticTranslation(
-				{ options: { ...options, translator }, userId: -1, principal: SUPERUSER },
-				'tool_lang',
+			const refusal = await refusalOf(() =>
+				runAutomaticTranslation(
+					{ options: { ...options, translator }, userId: -1, principal: SUPERUSER },
+					'tool_lang',
+				),
 			);
-			expect(response.result).toBe(false);
-			expect(response.msg).toContain(fragment);
+			expect(refusal?.code).toBe('request.invalid_options');
+			expect(refusal?.publicMessage).toContain(fragment);
 		}
 	});
 
@@ -174,15 +198,20 @@ describe('runAutomaticTranslation — gates and loud failures', () => {
 		// Either the install has no translator_config for this engine (the
 		// common case → the explicit config error) or it has one and the run
 		// stops at the empty source slice — never a fabricated translation.
-		const response = await runAutomaticTranslation(
+		const outcome = await runAutomaticTranslation(
 			{ options: { ...options, translator: 'babel' }, userId: -1, principal: SUPERUSER },
 			'tool_lang',
+		).then(
+			(envelope) => ({ envelope, error: null as unknown }),
+			(error: unknown) => ({ envelope: null, error }),
 		);
-		if (response.result === false) {
-			expect(String(response.msg)).toContain('Translator config');
+		if (outcome.envelope === null) {
+			expect(isDedaloError(outcome.error)).toBe(true);
+			expect((outcome.error as { code: string }).code).toBe('translation.not_configured');
+			expect(String((outcome.error as Error).message)).toContain('Translator config');
 		} else {
-			expect(response.msg).toBe('Ignored empty result. Nothing is saved!');
-			expect(response.count).toBe(0);
+			expect(outcome.envelope.msg).toBe('Ignored empty result. Nothing is saved!');
+			expect(outcome.envelope.count).toBe(0);
 		}
 	});
 });

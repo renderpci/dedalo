@@ -7,6 +7,7 @@
  */
 
 import { DedaloError } from '../../errors/dedalo_error.ts';
+import { type ApiEnvelope, ENVELOPE_RESERVED_KEYS } from '../../errors/schema.ts';
 import type { Principal } from '../../security/permissions.ts';
 
 /**
@@ -240,6 +241,35 @@ export function fromOutcome(
 		...(msg === undefined ? {} : { msg }),
 		...(errors.length === 0 ? {} : { errors }),
 		...(options.extend === undefined ? {} : { extend: options.extend }),
+	};
+}
+
+/**
+ * A subsystem that already answers an OK ENVELOPE (core/update/code_update.ts,
+ * code_build.ts — they refuse by throwing and build `ok(data, {extend})`
+ * themselves) → the widget payload, so the ONE wrapping site re-wraps it once
+ * instead of nesting an envelope inside `data`. `msg` / `errors` are lifted
+ * back to their widget fields; every other non-reserved key is the subsystem's
+ * own extension key and rides in `extend`.
+ */
+export function fromEnvelope(envelope: ApiEnvelope): WidgetResponse {
+	if (envelope.ok !== true) {
+		// Those subsystems refuse by THROWING; an err envelope handed over here is
+		// a contract slip — re-raise it typed rather than serve it as `data`.
+		throw new DedaloError(envelope.error.code, { message: envelope.error.message });
+	}
+	const reserved = new Set(ENVELOPE_RESERVED_KEYS);
+	const extend: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(envelope)) {
+		if (!reserved.has(key)) extend[key] = value;
+	}
+	const msg = typeof envelope.msg === 'string' ? envelope.msg : undefined;
+	const errors = Array.isArray(envelope.errors) ? envelope.errors.map(String) : [];
+	return {
+		data: envelope.data,
+		...(msg === undefined ? {} : { msg }),
+		...(errors.length === 0 ? {} : { errors }),
+		...(Object.keys(extend).length === 0 ? {} : { extend }),
 	};
 }
 

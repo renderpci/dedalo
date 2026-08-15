@@ -15,7 +15,7 @@ import { config } from '../../../config/config.ts';
 import { readEnv } from '../../../config/env.ts';
 import {
 	engineDenied,
-	fromOutcome,
+	fromEnvelope,
 	gated,
 	type WidgetModule,
 	type WidgetResponse,
@@ -69,10 +69,9 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
  */
 async function updateCodeOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { updateCode } = await import('../../update/code_update.ts');
-	// core/update/** still carries the legacy `result` discriminator (its own
-	// sweep); bind to it EXPLICITLY so a later rename is a compile error here.
-	const outcome = await updateCode(options);
-	return fromOutcome({ ...outcome, ok: outcome.result });
+	// core/update/** REFUSES BY THROWING (update.refused / update.failed) and
+	// answers an ok envelope; unwrap it so the widget dispatcher re-wraps it once.
+	return fromEnvelope(await updateCode(options));
 }
 
 /**
@@ -87,8 +86,7 @@ async function buildVersionOwned(options: Record<string, unknown>): Promise<Widg
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
 	const version = typeof options.version === 'string' ? options.version : '';
 	const ref = typeof options.ref === 'string' ? options.ref : undefined;
-	const outcome = await buildVersionFromGit({ version, ref });
-	return fromOutcome({ ...outcome, ok: outcome.result });
+	return fromEnvelope(await buildVersionFromGit({ version, ref }));
 }
 
 export const widget: WidgetModule = {

@@ -16,9 +16,11 @@ import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { SEED_DUMP_PATH } from './paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { refuseInstall } from './refuse.ts';
 
+/** The step's answer on the ONLY path that returns: restored (every refusal throws). */
 export interface DbRestoreResult {
-	result: boolean;
+	ok: true;
 	msg: string;
 }
 
@@ -49,13 +51,13 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 	// Empty-DB gate: never restore over an existing install.
 	const reachable = await runPsql(connection, ['-tAc', 'SELECT 1']);
 	if (reachable.exitCode !== 0) {
-		return { result: false, msg: `Database not reachable: ${reachable.stderr}` };
+		refuseInstall('install.step_failed', `Database not reachable: ${reachable.stderr}`);
 	}
 	if (!(await targetIsEmpty(connection))) {
-		return {
-			result: false,
-			msg: 'Database is not empty (matrix_users already exists) — restore refused',
-		};
+		refuseInstall(
+			'install.state_conflict',
+			'Database is not empty (matrix_users already exists) — restore refused',
+		);
 	}
 
 	// Decompress the seed to a temp .sql and restore with `psql -f` — far more
@@ -66,12 +68,19 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 		writeFileSync(tmpSql, gunzipSync(readFileSync(SEED_DUMP_PATH)));
 	} catch (error) {
 		rmSync(tmpSql, { force: true });
-		return { result: false, msg: `Cannot read/decompress seed: ${(error as Error).message}` };
+		refuseInstall(
+			'install.step_failed',
+			`Cannot read/decompress seed: ${(error as Error).message}`,
+			error,
+		);
 	}
 	try {
 		const restore = await runPsql(connection, ['-v', 'ON_ERROR_STOP=1', '--quiet', '-f', tmpSql]);
 		if (restore.exitCode !== 0) {
-			return { result: false, msg: `Restore failed: ${restore.stderr || 'psql nonzero exit'}` };
+			refuseInstall(
+				'install.step_failed',
+				`Restore failed: ${restore.stderr || 'psql nonzero exit'}`,
+			);
 		}
 		// Fresh installs get the full canonical test3 playground (WC-021 —
 		// single verified source, src/core/test_data/; the dump ships one bare
@@ -81,12 +90,12 @@ export async function installDbFromSeed(conn?: DbConnDescriptor): Promise<DbRest
 			const { resetTestSection } = await import('../test_data/seed.ts');
 			await resetTestSection();
 			return {
-				result: true,
+				ok: true,
 				msg: 'Database installed from seed + canonical test3 playground — OK',
 			};
 		}
 		return {
-			result: true,
+			ok: true,
 			msg: 'Database installed from seed — OK (test3 playground seed skipped: explicit connection)',
 		};
 	} finally {

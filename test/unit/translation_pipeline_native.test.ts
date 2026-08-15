@@ -315,8 +315,8 @@ describe('babelProvider — the round trip', () => {
 			targetLang: 'lg-eng',
 			text,
 		});
-		expect(out.result).not.toBe(false);
-		const result = out.result as string;
+		expect(out.ok).toBe(true);
+		const result = (out as { text: string }).text;
 		expect(result).toContain(MARKS.tc);
 		expect(result).toContain(MARKS.person);
 		// the unprotected prose WAS transformed by the engine…
@@ -334,7 +334,7 @@ describe('babelProvider — the round trip', () => {
 			targetLang: 'lg-eng',
 			text: 'hola mundo',
 		});
-		expect(out.result).toBe('hola mundo');
+		expect((out as { text?: string }).text).toBe('hola mundo');
 	});
 
 	for (const marker of BABEL_INVALID_RESPONSES) {
@@ -347,7 +347,7 @@ describe('babelProvider — the round trip', () => {
 				targetLang: 'lg-eng',
 				text: 'hola',
 			});
-			expect(out.result).toBe(false);
+			expect(out.ok).toBe(false);
 			expect(out.msg).toContain(marker);
 		});
 	}
@@ -434,7 +434,8 @@ describe('translateAndWrite — a LEGACY non-array stored value survives the mer
 		await seed(LEGACY_ID, { id: 1, lang: 'lg-eng', value: 'the retreat' });
 
 		const stub: TranslationProvider = async (req) => ({
-			result: `${req.text} (es)`,
+			ok: true,
+			text: `${req.text} (es)`,
 			msg: 'ok',
 		});
 		const outcome = await translateAndWrite({
@@ -483,7 +484,7 @@ describe('translateAndWrite — locked read-modify-write', () => {
 			(label: string): TranslationProvider =>
 			async (req) => {
 				await barrier();
-				return { result: `${req.text} [${label}]`, msg: 'ok' };
+				return { ok: true, text: `${req.text} [${label}]`, msg: 'ok' };
 			};
 
 		const run = (targetLang: string, label: string) =>

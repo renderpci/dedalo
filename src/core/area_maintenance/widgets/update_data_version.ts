@@ -65,6 +65,7 @@ async function updateDataVersionRun(
 	// PHP preconditions (superuser + maintenance mode) — they THROW their own
 	// typed refusal. backupWarn off: this branch carries no warnings channel.
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
+	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
 	checkUpdatePreconditions(principal, { backupWarn: false });
 	// Then the bespoke denial: migrations must run exactly once, on the engine
 	// that owns the catalog.
@@ -90,6 +91,7 @@ async function updateDataVersionRunOwned(
 	principal: Principal,
 ): Promise<WidgetResponse> {
 	const { checkUpdatePreconditions } = await import('../../update/preconditions.ts');
+	// A failed precondition THROWS (perm.superuser_required / maintenance.mode_required).
 	const preconditions = checkUpdatePreconditions(principal);
 	const updatesChecked = (options.updates_checked ?? {}) as Record<string, unknown>;
 	const { updateVersion } = await import('../../update/engine.ts');
@@ -112,7 +114,7 @@ async function updateDataVersionRunOwned(
 
 	const outcome = await updateVersion(updatesChecked);
 	const errors = [...preconditions.warnings, ...outcome.errors];
-	if (!outcome.result) {
+	if (!outcome.ok) {
 		failAction(
 			errors.length === 0
 				? outcome.msg.join('\n')

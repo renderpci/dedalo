@@ -53,9 +53,9 @@ describe('pgConnFromOptions', () => {
 });
 
 describe('classifyDbProbe', () => {
-	test('target reachable -> result/can_connect/db_exists true, can_create false', () => {
+	test('target reachable -> ok/can_connect/db_exists true, can_create false', () => {
 		const r = classifyDbProbe('mydb', { exitCode: 0, stderr: '' }, null);
-		expect([r.result, r.can_connect, r.db_exists, r.can_create]).toEqual([true, true, true, false]);
+		expect([r.ok, r.can_connect, r.db_exists, r.can_create]).toEqual([true, true, true, false]);
 		expect(r.msg).toBe("Connected to 'mydb' — OK");
 	});
 
@@ -65,12 +65,7 @@ describe('classifyDbProbe', () => {
 			{ exitCode: 2, stderr: 'FATAL: database "mydb" does not exist' },
 			{ exitCode: 0, stderr: '' },
 		);
-		expect([r.result, r.can_connect, r.db_exists, r.can_create]).toEqual([
-			false,
-			true,
-			false,
-			true,
-		]);
+		expect([r.ok, r.can_connect, r.db_exists, r.can_create]).toEqual([false, true, false, true]);
 		expect(r.msg).toContain("database 'mydb' does not exist");
 	});
 
@@ -80,12 +75,7 @@ describe('classifyDbProbe', () => {
 			{ exitCode: 2, stderr: 'psql: error: connection to server failed: no password supplied' },
 			{ exitCode: 2, stderr: 'psql: error: maintenance also refused' },
 		);
-		expect([r.result, r.can_connect, r.db_exists, r.can_create]).toEqual([
-			false,
-			false,
-			false,
-			false,
-		]);
+		expect([r.ok, r.can_connect, r.db_exists, r.can_create]).toEqual([false, false, false, false]);
 		expect(r.msg).toBe(
 			'Cannot connect: psql: error: connection to server failed: no password supplied',
 		);
@@ -130,7 +120,7 @@ describe('testDbConnection required-field guard', () => {
 		const spawnSpy = spyOn(Bun, 'spawn');
 		try {
 			const r = await testDbConnection({ db_database: 'x' });
-			expect([r.result, r.can_connect, r.db_exists, r.can_create]).toEqual([
+			expect([r.ok, r.can_connect, r.db_exists, r.can_create]).toEqual([
 				false,
 				false,
 				false,

@@ -1,9 +1,10 @@
 /**
  * core/update/preconditions.ts + the update_data_version EXECUTE refactored
  * onto it (UPDATE_PROCESS Phase 0). Since the P1 error sweep the refusals are
- * TYPED THROWS (engineering/ERRORS_SPEC.md §4), so what is pinned here is the
- * registered CODE plus the operator sentence each refusal carries — the
- * sentences themselves are still exact-string on purpose.
+ * TYPED THROWS (engineering/ERRORS_SPEC.md §4) of a registered code
+ * (`perm.superuser_required` / `maintenance.mode_required`), so what is pinned
+ * here is the CODE (the machine channel) plus the registry sentence each
+ * refusal carries — the PHP sentence itself moved into the registry.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -55,21 +56,19 @@ afterAll(() => {
 	setServerState({ maintenance_mode: false });
 });
 
-describe('checkUpdatePreconditions — required checks (PHP refusal bytes)', () => {
+describe('checkUpdatePreconditions — required checks (registered refusal codes)', () => {
 	test('non-superuser refused first, PHP order', () => {
 		setServerState({ maintenance_mode: false }); // must not matter: superuser first
 		const error = thrownBy(() => checkUpdatePreconditions(PLAIN_ADMIN));
-		expect(error.code).toBe('perm.developer_required');
-		expect(error.message).toBe('Error. Only Dédalo superuser can do this action');
+		expect(error.code).toBe('perm.superuser_required');
+		expect(error.message).toBe('Only the Dédalo superuser can perform this action');
 	});
 
 	test('superuser without maintenance mode refused', () => {
 		setServerState({ maintenance_mode: false });
 		const error = thrownBy(() => checkUpdatePreconditions(SUPERUSER));
-		expect(error.code).toBe('maintenance.action_refused');
-		expect(error.publicMessage).toBe(
-			'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
-		);
+		expect(error.code).toBe('maintenance.mode_required');
+		expect(error.message).toBe('This action requires maintenance mode to be enabled');
 	});
 
 	test('superuser + maintenance mode passes (backupWarn off → no warnings)', () => {
@@ -139,17 +138,15 @@ describe('update_data_version EXECUTE through the widget dispatch (typed refusal
 
 	test('non-superuser admin → the superuser refusal', async () => {
 		const error = await rejectedBy(() => run(PLAIN_ADMIN));
-		expect(error.code).toBe('perm.developer_required');
-		expect(error.message).toBe('Error. Only Dédalo superuser can do this action');
+		expect(error.code).toBe('perm.superuser_required');
+		expect(error.message).toBe('Only the Dédalo superuser can perform this action');
 	});
 
 	test('superuser, maintenance off → the maintenance-mode refusal', async () => {
 		setServerState({ maintenance_mode: false });
 		const error = await rejectedBy(() => run(SUPERUSER));
-		expect(error.code).toBe('maintenance.action_refused');
-		expect(error.publicMessage).toBe(
-			'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
-		);
+		expect(error.code).toBe('maintenance.mode_required');
+		expect(error.message).toBe('This action requires maintenance mode to be enabled');
 	});
 
 	test('the frozen whenClosed branch keeps the bespoke engine_denied bytes', async () => {

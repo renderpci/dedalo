@@ -21,7 +21,8 @@ export interface TransformDelta {
 }
 
 export interface TransformReport {
-	result: boolean;
+	/** A REPORT flag (did every file transform cleanly), never an envelope's `result`. */
+	ok: boolean;
 	dryRun: boolean;
 	msg: string;
 	errors: string[];
@@ -57,7 +58,7 @@ export class TransformRecorder {
 		const total = Object.values(this.counts).reduce((sum, n) => sum + n, 0);
 		const mode = this.dryRun ? 'DRY RUN' : 'executed';
 		return {
-			result: this.errors.length === 0,
+			ok: this.errors.length === 0,
 			dryRun: this.dryRun,
 			msg: `${this.errors.length === 0 ? 'OK' : 'Warning'}. ${msgPrefix} — ${mode}: ${total} change(s) across ${Object.keys(this.counts).length} op kind(s)${this.errors.length > 0 ? `, ${this.errors.length} error(s)` : ''}.`,
 			errors: this.errors,

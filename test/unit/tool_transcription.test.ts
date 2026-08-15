@@ -725,10 +725,10 @@ describe('remote ASR status seam', () => {
 	test('SSRF guard fails closed without any network call', async () => {
 		for (const uri of ['http://127.0.0.1/x', 'http://169.254.169.254/x', 'file:///etc/passwd']) {
 			const result = (await babelTranscriberStatusProvider({ ...statusRequest, uri })) as {
-				result: unknown;
+				ok: unknown;
 				msg: string;
 			};
-			expect(result.result).toBe(false);
+			expect(result.ok).toBe(false);
 			expect(result.msg).toBe('invalid transcriber URL');
 		}
 	});
@@ -844,7 +844,7 @@ describe('ASR write-back (process_file port)', () => {
 				sleeps += 1;
 			},
 		});
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(sleeps).toBe(2);
 		expect(seen).toHaveLength(3);
 		// server-side polls are the destructive ones (PHP delete_result=true)
@@ -868,7 +868,7 @@ describe('ASR write-back (process_file port)', () => {
 			maxAttempts: 2,
 			sleep: async () => {},
 		});
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('already has data');
 	});
 
@@ -879,7 +879,7 @@ describe('ASR write-back (process_file port)', () => {
 			maxAttempts: 3,
 			sleep: async () => {},
 		});
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('gave up after 3 poll attempts');
 	});
 
@@ -892,18 +892,18 @@ describe('ASR write-back (process_file port)', () => {
 			maxAttempts: 2,
 			sleep: async () => {},
 		});
-		expect(status1.result).toBe(false);
+		expect(status1.ok).toBe(false);
 		expect(status1.msg).toContain('status 1');
 
 		const invalid = await pollTranscriptionCompletion(pollJob, {
-			provider: async () => ({ result: false, msg: 'invalid transcriber URL' }),
+			provider: async () => ({ ok: false, msg: 'invalid transcriber URL' }),
 			save: async () => {
 				throw new Error('must not save');
 			},
 			maxAttempts: 2,
 			sleep: async () => {},
 		});
-		expect(invalid.result).toBe(false);
+		expect(invalid.ok).toBe(false);
 		expect(invalid.msg).toContain('status not valid');
 	});
 });

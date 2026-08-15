@@ -12,6 +12,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { LoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionSpec, ToolServerModule } from '../../src/core/tools/module.ts';
@@ -55,19 +56,33 @@ function makeLoaded(backgroundRunnable: readonly string[] | undefined): {
 	return { loaded: { module, dir: '/x', rootIndex: 0 }, spec, ran };
 }
 
+/** The DedaloError a call threw, or null when it returned. */
+function refusalOf(run: () => unknown): { code: string } | null {
+	try {
+		run();
+		return null;
+	} catch (error) {
+		return isDedaloError(error) ? { code: error.code } : null;
+	}
+}
+
 describe('background executor', () => {
 	test('refuses an action not in backgroundRunnable', () => {
 		const { loaded, spec, ran } = makeLoaded([]); // empty allowlist
-		const response = scheduleBackground(loaded, 'long_job', spec, {}, PRINCIPAL, -1);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('background_not_allowed');
+		// P1 sweep: the second allowlist REFUSES BY THROWING the registered code.
+		const refusal = refusalOf(() =>
+			scheduleBackground(loaded, 'long_job', spec, {}, PRINCIPAL, -1),
+		);
+		expect(refusal?.code).toBe('tool.background_not_allowed');
 		expect(ran.value).toBe(false); // never scheduled
 	});
 
 	test('refuses when backgroundRunnable is absent entirely', () => {
 		const { loaded, spec } = makeLoaded(undefined);
-		const response = scheduleBackground(loaded, 'long_job', spec, {}, PRINCIPAL, -1);
-		expect(response.result).toBe(false);
+		const refusal = refusalOf(() =>
+			scheduleBackground(loaded, 'long_job', spec, {}, PRINCIPAL, -1),
+		);
+		expect(refusal?.code).toBe('tool.background_not_allowed');
 	});
 
 	test('schedules an allowed action and runs it to completion', async () => {

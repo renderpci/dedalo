@@ -22,8 +22,15 @@ export function pgConnFromOptions(o: Record<string, unknown>): DbConnDescriptor 
 	};
 }
 
+/**
+ * A PROBE ANSWER, not a refusal: "the server is unreachable" is the successful
+ * outcome of asking, so this never becomes a thrown DedaloError — the router
+ * serves it as `ok(<ok>, {extend:{msg, can_connect, db_exists, can_create}})`
+ * and the wizard renders the four booleans either way. `ok` (not `result`) so
+ * no envelope-shaped body can leak out of the install engine.
+ */
 export interface DbProbeResult {
-	result: boolean;
+	ok: boolean;
 	can_connect: boolean;
 	db_exists: boolean;
 	can_create: boolean;
@@ -46,7 +53,7 @@ export function classifyDbProbe(
 ): DbProbeResult {
 	if (target.exitCode === 0) {
 		return {
-			result: true,
+			ok: true,
 			can_connect: true,
 			db_exists: true,
 			can_create: false,
@@ -57,7 +64,7 @@ export function classifyDbProbe(
 	// Distinguish "DB missing" from "auth/host wrong" via the maintenance DB.
 	if (maintenance !== null && maintenance.exitCode === 0) {
 		return {
-			result: false,
+			ok: false,
 			can_connect: true,
 			db_exists: false,
 			can_create: true,
@@ -66,7 +73,7 @@ export function classifyDbProbe(
 	}
 
 	return {
-		result: false,
+		ok: false,
 		can_connect: false,
 		db_exists: false,
 		can_create: false,

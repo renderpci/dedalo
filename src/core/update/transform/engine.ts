@@ -49,7 +49,7 @@ export async function runTransform(
 		: [];
 	if (selected.length === 0) {
 		return {
-			result: false,
+			ok: false,
 			dryRun,
 			msg: 'Error. No definition files selected',
 			errors: ['files_selected is required'],

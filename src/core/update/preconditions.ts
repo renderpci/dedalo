@@ -1,14 +1,19 @@
 /**
  * Shared operator preconditions for update/migration EXECUTEs (UPDATE_PROCESS
  * Phase 0) — the PHP update_data_version gate pair (superuser identity +
- * maintenance mode, refusal bytes verbatim) plus a non-blocking recent-backup
- * warning. PHP does not auto-chain backups before updates and neither do we:
- * a missing/stale backup WARNS, never refuses (the operator can waive it).
+ * maintenance mode) plus a non-blocking recent-backup warning. PHP does not
+ * auto-chain backups before updates and neither do we: a missing/stale backup
+ * WARNS, never refuses (the operator can waive it).
+ *
+ * A REQUIRED check REFUSES BY THROWING (engineering/ERRORS_SPEC.md §4) — the
+ * PHP refusal sentences became the registry messages of `perm.superuser_required`
+ * and `maintenance.mode_required`, so this module builds no body and the caller
+ * has nothing to forward.
  */
 
 import { config } from '../../config/config.ts';
 import { newestBackupMtimeMs } from '../area_maintenance/backup.ts';
-import { DedaloError } from '../errors/dedalo_error.ts';
+import { DedaloError } from '../errors/index.ts';
 import { getServerState } from '../resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 
@@ -21,10 +26,10 @@ export interface UpdatePreconditions {
  * Run the required checks in PHP order (superuser first, then maintenance
  * mode) and compute the backup warning. A REQUIRED check that fails THROWS
  * (engineering/ERRORS_SPEC.md §4 — a refusal is a typed throw, never a body):
- * `perm.developer_required` for a non-superuser (403; its sentence is
- * operator-disclosure and stays in the log by design), `maintenance.action_refused`
- * for a server that is not in maintenance mode (400, public — the operator must
- * be told exactly which switch to flip).
+ * `perm.superuser_required` for a non-superuser (403; operator-disclosure, the
+ * sentence stays in the log by design), `maintenance.mode_required` for a
+ * server that is not in maintenance mode (409, operator — the registry sentence
+ * names the switch to flip).
  *
  * `backupWarn: false` skips the backup scan for callers whose response is
  * byte-frozen (update_data_version). `backupDir` is a test seam; production
@@ -35,14 +40,10 @@ export function checkUpdatePreconditions(
 	options: { backupWarn?: boolean; backupDir?: string } = {},
 ): UpdatePreconditions {
 	if (principal.userId !== SUPERUSER_ID) {
-		throw new DedaloError('perm.developer_required', {
-			message: 'Error. Only Dédalo superuser can do this action',
-		});
+		throw new DedaloError('perm.superuser_required', { coordinates: { user: principal.userId } });
 	}
 	if (getServerState().maintenance_mode !== true) {
-		throw new DedaloError('maintenance.action_refused', {
-			publicMessage: 'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
-		});
+		throw new DedaloError('maintenance.mode_required');
 	}
 
 	const warnings: string[] = [];

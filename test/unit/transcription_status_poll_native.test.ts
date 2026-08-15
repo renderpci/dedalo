@@ -104,7 +104,7 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 			},
 		);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(seen).toEqual([{ url: 'https://asr.example.org/api/jobs/job-7', method: 'GET' }]);
 		expect(savedSegments).toEqual([[{ start: 0, end: 1.5, text: 'hola' }]]);
 	});
@@ -121,7 +121,7 @@ describe('pollTranscriptionCompletion — the provider follows the ENGINE', () =
 			userId: 16,
 		});
 
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('not implemented');
 	});
 

@@ -7,13 +7,14 @@
  * The runtime consumer of the persisted keys is core/mailer/mailer.ts; the
  * secure-mode mapping here matches it exactly, and TLS peer verification is
  * ALWAYS on (WC-023 D1 — never disableable; pin a private CA via
- * NODE_EXTRA_CA_CERTS). Never throws: the wizard shows {result,msg} inline.
+ * NODE_EXTRA_CA_CERTS). Never throws: the wizard shows the probe report inline.
  */
 
 import nodemailer from 'nodemailer';
 
+/** A PROBE ANSWER (see db_probe_plan.ts DbProbeResult): a refused relay is the outcome, not a throw. */
 export interface MailerProbeResult {
-	result: boolean;
+	ok: boolean;
 	msg: string;
 }
 
@@ -23,7 +24,7 @@ const PROBE_TIMEOUT_MS = 10_000;
 export async function testMailerConnection(o: Record<string, unknown>): Promise<MailerProbeResult> {
 	const host = String(o.smtp_host ?? '').trim();
 	if (host === '') {
-		return { result: false, msg: 'SMTP host is required' };
+		return { ok: false, msg: 'SMTP host is required' };
 	}
 	const secure = String(o.smtp_secure ?? 'tls').toLowerCase();
 	const user = String(o.smtp_user ?? '');
@@ -41,11 +42,11 @@ export async function testMailerConnection(o: Record<string, unknown>): Promise<
 			greetingTimeout: PROBE_TIMEOUT_MS,
 		});
 		await transporter.verify();
-		return { result: true, msg: 'OK. SMTP connection and authentication verified' };
+		return { ok: true, msg: 'OK. SMTP connection and authentication verified' };
 	} catch (error) {
 		// Surface the transport error verbatim — the operator needs the relay's
 		// reason (wrong port, refused AUTH, TLS mismatch) to fix the form.
 		const detail = (error as Error).message ?? String(error);
-		return { result: false, msg: `SMTP connection failed: ${detail}` };
+		return { ok: false, msg: `SMTP connection failed: ${detail}` };
 	}
 }

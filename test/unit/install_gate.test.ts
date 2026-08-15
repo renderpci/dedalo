@@ -79,12 +79,13 @@ describe('install window gate (P1)', () => {
 			{ action: 'install', dd_api: 'dd_utils_api', options: { action: 'to_update' } } as Rqo,
 			anon(),
 		);
-		// to_update is unsupported by design: a refusal (envelope v2 — the legacy
-		// install body rides the transitional adapter until the install sweep
-		// gives it its own code), NOT the 401 the auth gate would answer.
-		expect(res.status).toBe(400);
+		// to_update is unsupported by design: a refusal (envelope v2 —
+		// `engine.uncovered_scope`, 503, since the P1 install sweep), NOT the 401
+		// the auth gate would answer.
+		expect(res.status).toBe(503);
 		expect(res.body.ok).toBe(false);
 		expect(res.body.result).toBe(false);
+		expect((res.body.error as { code: string }).code).toBe('engine.uncovered_scope');
 	});
 
 	test('install: SEALED → 404 for every step', async () => {
@@ -136,7 +137,7 @@ describe('install window gate (P1)', () => {
 	// Regression (found driving the real browser wizard): the router spread the
 	// ASYNC verifyActiveConfig without awaiting, so the body was `{}` and the
 	// wizard stuck at Verify. A mismatched entity keeps this DB-free.
-	test('verify_active_config is AWAITED — body carries result/active, not {}', async () => {
+	test('verify_active_config is AWAITED — body carries the poll answer, not {}', async () => {
 		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo(
 			{
@@ -150,12 +151,13 @@ describe('install window gate (P1)', () => {
 			} as Rqo,
 			anon(),
 		);
-		// A mismatched entity is a refusal (ok:false, non-2xx) that still carries
-		// the wizard's `active` flag as an extension key — NOT absent (the {} bug).
-		expect(res.status).toBe(400);
+		// A mismatched entity is the ANSWER to the poll, not an engine failure: the
+		// envelope succeeds (200) and carries `active` as an extension key — NOT
+		// absent (the {} bug) — with the verdict on `data`/`result`.
+		expect(res.status).toBe(200);
 		expect(typeof res.body.active).toBe('boolean');
 		expect(res.body.result).toBe(false);
-		expect(res.body.ok).toBe(false);
+		expect(res.body.ok).toBe(true);
 	});
 
 	// Regression (found driving the real browser wizard): after persist_config

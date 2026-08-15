@@ -1176,6 +1176,106 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 	},
+
+	// --- install-update-tools (P1 sweep) -----------------------------------
+	// The install surface is PRE-AUTH and has NO label catalog (a fresh box has
+	// no ontology and the wizard renders `msg` verbatim), so these three codes
+	// are `public`: the refusing step states the exact reason as `publicMessage`
+	// and the compat mirror puts it back on `msg` where render_installer.js
+	// reads it. Their registry messages are readable ALONE, for the wire a
+	// non-wizard caller (the CLI, curl) sees.
+	'install.invalid_input': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_install_invalid_input',
+		message: 'The installer rejected a submitted value',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'install.state_conflict': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_install_state_conflict',
+		message: 'The install step cannot run in the current state',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'install.step_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_install_step_failed',
+		message: 'The install step could not be completed',
+		severity: 'error',
+		disclosure: 'public',
+		retryable: true,
+	},
+
+	// Update (data migration + code update). `refused` is a STATE refusal the
+	// operator can act on (not owned, not supervised, not linear, checksum
+	// mismatch); `failed` is the machine/network half of the same pipeline.
+	'update.refused': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_update_refused',
+		message: 'The update was refused in the current state',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'update.failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_update_failed',
+		message: 'The update could not be completed',
+		severity: 'error',
+		disclosure: 'public',
+		retryable: true,
+	},
+	'perm.superuser_required': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_perm_superuser_required',
+		message: 'Only the Dédalo superuser can perform this action',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'maintenance.mode_required': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_maintenance_mode_required',
+		message: 'This action requires maintenance mode to be enabled',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+
+	// Translation. WC-2026-08-09: the provider sentence is UNTRUSTED third-party
+	// prose (an Apertium box answers whole HTML error pages), so it rides as the
+	// declared `provider_message` DETAIL — truncated to the 512-byte budget by
+	// the caller — and never as a publicMessage that would replace the registry
+	// English on the wire.
+	'translation.provider_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_translation_provider_failed',
+		message: 'The translation service reported an error',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['provider_message'],
+	},
+	'translation.not_configured': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_translation_not_configured',
+		message: 'The translation service is not configured for this engine',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;
