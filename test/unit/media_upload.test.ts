@@ -22,6 +22,7 @@ import {
 	receiveUpload,
 } from '../../src/core/media/ingest/upload.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_media_upload_${process.pid}`;
 const image = mediaTypeOf('component_image')!;
@@ -112,6 +113,9 @@ describe('upload receiver — single-shot', () => {
 			formData: async () => form,
 		} as unknown as Request;
 		await expect(parseUploadRequest(request)).rejects.toThrow(/exceeds the maximum allowed size/);
+		// …and it is the REGISTERED refusal, not an untyped throw the endpoint has
+		// to guess at (ERRORS_SPEC §1).
+		expect((await refusalOf(parseUploadRequest(request))).code).toBe('media.too_large');
 	});
 });
 
@@ -663,6 +667,8 @@ describe('interrupted join — parts survive, and a stale assembly is recovered'
 		// A FRESH output means a join really is in flight: refuse, loudly.
 		writeFileSync(join(upDir, 'assembled'), 'partial');
 		await expect(call()).rejects.toThrow(/already being assembled/);
+		// A CONFLICT (409, retryable) — the competing join finishes and the retry works.
+		expect((await refusalOf(call())).code).toBe('media.upload_conflict');
 		// Both parts are still there — the interrupted attempt destroyed nothing.
 		expect(existsSync(join(upDir, '0.part'))).toBe(true);
 		expect(existsSync(join(upDir, '1.part'))).toBe(true);

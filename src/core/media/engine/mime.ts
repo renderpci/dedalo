@@ -11,6 +11,8 @@
  * (:3035), chunked re-sniff SEC-066 (:1481-1498).
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
+
 /** A sniffed file kind (the coarse family) + the extensions it maps to. */
 export interface SniffResult {
 	/** Canonical family label. */
@@ -205,19 +207,20 @@ export function sniffAndValidate(bytes: Uint8Array, declaredExtension: string): 
 		// Unknown signature. Allow only the extension-only text 3D formats, and
 		// only when the bytes are not a recognized binary of another family.
 		if (TEXT_3D_EXTENSIONS.has(ext)) return ext;
-		throw new Error(`Unrecognized file signature (declared '.${ext}') — rejected`);
+		// PUBLIC: `ext` is the lowercased declared extension and `kind` is this
+		// module's own family label — the curator needs both to fix the upload.
+		const reason = `Unrecognized file signature (declared '.${ext}') — rejected`;
+		throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 	}
 	if (result.extensions.length === 0) {
 		// A content class that is recognized but never accepted (html — MEDIA-01).
-		throw new Error(
-			`File content is ${result.kind}, which is not an allowed upload type — rejected`,
-		);
+		const reason = `File content is ${result.kind}, which is not an allowed upload type — rejected`;
+		throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 	}
 	if (!result.extensions.includes(ext)) {
 		// The bytes ARE a known type but not the declared extension.
-		throw new Error(
-			`File signature (${result.kind}) does not match declared extension '.${ext}' — rejected`,
-		);
+		const reason = `File signature (${result.kind}) does not match declared extension '.${ext}' — rejected`;
+		throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 	}
 	return ext;
 }

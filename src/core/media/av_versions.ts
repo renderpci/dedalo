@@ -20,6 +20,7 @@
 
 import { existsSync } from 'node:fs';
 import { AUDIO_TR_QUALITY, assertValidQuality, type MediaTypeSpec } from '../concepts/media.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { writeAtomically } from './atomic.ts';
 import {
 	applyFaststart,
@@ -368,7 +369,12 @@ export function submitAvTranscode(
 		'av_transcode',
 		async ({ onProgress, onData }) => {
 			const source = resolveMasterSource(spec, identity, pathOpts, rawExtension);
-			if (source === null) throw new Error('AV original not found for transcode');
+			if (source === null) {
+				throw new DedaloError('media.file_not_found', {
+					message: 'AV original not found for transcode',
+					publicMessage: 'AV original not found for transcode',
+				});
+			}
 			const profile = await probeAvSource(source);
 			const created: string[] = [];
 
@@ -446,8 +452,22 @@ function faststartErrorOf(outcome: AvEncodeOutcome): string | null {
 	return 'built' in outcome ? (outcome.faststart?.error ?? null) : null;
 }
 
-/** Why a per-quality build cannot even be submitted (the operator-facing reason). */
-export class AvBuildRefused extends Error {}
+/**
+ * Why a per-quality build cannot even be submitted (the operator-facing reason).
+ *
+ * A THIN `DedaloError` family (errors/families.ts pattern): it adds no
+ * behaviour, it only FORCES the `media.av_build_refused` code, so every
+ * pre-flight refusal converts to the same 400 and the panel renders the reason
+ * (the code is public-disclosure and every sentence below is engine data — a
+ * tier name, a profile name — never a path or a raw caller string). Existing
+ * `instanceof AvBuildRefused` catch sites keep working unchanged.
+ */
+export class AvBuildRefused extends DedaloError {
+	constructor(reason: string) {
+		super('media.av_build_refused', { message: reason, publicMessage: reason });
+		this.name = 'AvBuildRefused';
+	}
+}
 
 /**
  * EVERY refusal knowable BEFORE a job id exists, in one place.

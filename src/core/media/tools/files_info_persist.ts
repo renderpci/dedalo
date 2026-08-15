@@ -20,6 +20,7 @@ import type { MediaTypeSpec } from '../../concepts/media.ts';
 import type { MatrixJsonbColumn } from '../../db/matrix.ts';
 import { readMatrixKeyForUpdate, updateMatrixKeysData } from '../../db/matrix_write.ts';
 import { withTransaction } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { type DdDate, ddDateFromMtime, type FileInfoEntry } from '../files_info.ts';
 
@@ -87,9 +88,11 @@ export function assertRecordPresent(
 	target: { sectionTipo: string; sectionId: number },
 ): FilesInfoReconcileResult {
 	if (outcome.action === 'missing') {
-		throw new Error(
-			`media write-back: record ${target.sectionTipo}/${target.sectionId} no longer exists — nothing was written`,
-		);
+		throw new DedaloError('resource.not_found', {
+			message: `media write-back: record ${target.sectionTipo}/${target.sectionId} no longer exists — nothing was written`,
+			publicMessage: 'media write-back: the record no longer exists — nothing was written',
+			coordinates: { section_tipo: target.sectionTipo, section_id: target.sectionId },
+		});
 	}
 	return outcome;
 }
@@ -343,8 +346,11 @@ export async function persistUploadedMedia(input: UploadedMediaInput): Promise<v
 					return await writeItems(table, input, items);
 				});
 	if (affected === 0) {
-		throw new Error(
-			`media upload: record ${input.sectionTipo}/${input.sectionId} no longer exists — the file is on disk but nothing was recorded`,
-		);
+		throw new DedaloError('resource.not_found', {
+			message: `media upload: record ${input.sectionTipo}/${input.sectionId} no longer exists — the file is on disk but nothing was recorded`,
+			publicMessage:
+				'media upload: the record no longer exists — the file is on disk but nothing was recorded',
+			coordinates: { section_tipo: input.sectionTipo, section_id: input.sectionId },
+		});
 	}
 }

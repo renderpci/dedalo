@@ -319,6 +319,14 @@ describe('tool_media_versions core', () => {
 		await expect(conformHeadersCore(image, identity, pathOpts, '1.5MB')).rejects.toThrow(
 			/only supported/,
 		);
+		// Both are the SAME registered caller fact — a 400 the panel can render,
+		// not an untyped throw that reaches the wire as "unexpected" (ERRORS_SPEC §1).
+		expect((await refusalOf(rotateVersionCore(av, identity, pathOpts, '404', 90))).code).toBe(
+			'media.unsupported_operation',
+		);
+		expect((await refusalOf(conformHeadersCore(image, identity, pathOpts, '1.5MB'))).code).toBe(
+			'media.unsupported_operation',
+		);
 	});
 
 	test.if(HAVE_FFMPEG)(

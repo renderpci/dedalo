@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { config } from '../../../config/config.ts';
 import { pixelAreaBudget } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { magickPolicyEnv, resolveIdentify, resolveMagick } from './binaries.ts';
 import { probeImageSource } from './probe.ts';
 import { type SceneSelection, sceneToken } from './scene.ts';
@@ -188,9 +189,10 @@ function cmykProfileArgs(): string[] {
 	// so if it fires the install is missing shipped assets.
 	for (const profile of [CMYK_SOURCE_PROFILE, SRGB_TARGET_PROFILE]) {
 		if (!existsSync(profile)) {
-			throw new Error(
-				`ImageMagick CMYK→sRGB conversion needs the shipped ICC profile ${profile}, which is not installed`,
-			);
+			throw new DedaloError('media.engine_unavailable', {
+				message: `ImageMagick CMYK→sRGB conversion needs the shipped ICC profile ${profile}, which is not installed`,
+				coordinates: { profile },
+			});
 		}
 	}
 	return ['-profile', CMYK_SOURCE_PROFILE, '-profile', SRGB_TARGET_PROFILE, '-strip'];
@@ -746,11 +748,12 @@ export async function assertWritableTargetExtension(
 	context?: string,
 ): Promise<void> {
 	if (await canWriteImageFormat(extension)) return;
-	throw new Error(
-		`ImageMagick on this host cannot write '.${extension}' files (probed with a real 1x1 encode under the hardened policy)${
+	throw new DedaloError('media.engine_unavailable', {
+		message: `ImageMagick on this host cannot write '.${extension}' files (probed with a real 1x1 encode under the hardened policy)${
 			context === undefined || context === '' ? '' : ` — requested by ${context}`
 		}`,
-	);
+		coordinates: { extension },
+	});
 }
 
 /**

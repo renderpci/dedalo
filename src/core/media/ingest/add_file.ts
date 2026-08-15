@@ -20,6 +20,7 @@ import {
 	assertValidQuality,
 	type MediaTypeSpec,
 } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { renameOldFiles } from '../file_ops.ts';
 import {
 	buildMediaLocation,
@@ -43,7 +44,9 @@ export function sanitizeSegment(value: string): string {
 		value.includes('/') ||
 		!/^[A-Za-z0-9_.-]+$/.test(value)
 	) {
-		throw new Error(`Unsafe path segment '${value}'`);
+		// Disclosure `operator`: the rejected segment is raw client input and stays
+		// in the log-only `message`.
+		throw new DedaloError('media.invalid_path', { message: `Unsafe path segment '${value}'` });
 	}
 	return value;
 }
@@ -60,7 +63,10 @@ export function stagingDir(userId: number, keyDir: string, mediaRoot?: string): 
 	// Confine to the staging subtree under the media root.
 	const stagingBase = resolve(root, config.media.upload.tmpSubdir);
 	if (dir !== stagingBase && !dir.startsWith(stagingBase + sep)) {
-		throw new Error('Staging dir escapes the upload root');
+		throw new DedaloError('media.invalid_path', {
+			message: 'Staging dir escapes the upload root',
+			coordinates: { dir },
+		});
 	}
 	return dir;
 }
@@ -174,10 +180,17 @@ export function addFile(input: AddFileInput): AddFileResult {
 	const tmpName = sanitizeSegment(input.tmpName);
 	const source = resolve(dir, tmpName);
 	if (source !== resolve(dir, tmpName) || !source.startsWith(dir + sep)) {
-		throw new Error('Staged source escapes the staging dir');
+		throw new DedaloError('media.invalid_path', {
+			message: 'Staged source escapes the staging dir',
+			coordinates: { source },
+		});
 	}
 	if (!existsSync(source) || !statSync(source).isFile()) {
-		throw new Error('Staged upload not found');
+		throw new DedaloError('media.file_not_found', {
+			message: 'Staged upload not found',
+			publicMessage: 'Staged upload not found',
+			coordinates: { source },
+		});
 	}
 	// Target = the requested quality tier (original by default), raw extension.
 	const target = buildMediaLocation(

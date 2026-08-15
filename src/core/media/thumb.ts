@@ -38,6 +38,7 @@ import {
 	POSTERFRAME_WRITER_BY_MODEL,
 	THUMB_SOURCE_BY_MODEL,
 } from '../concepts/media.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { moveToDeleted } from './file_ops.ts';
 import {
 	buildMediaIdentifier,
@@ -136,7 +137,10 @@ export interface ThumbBuildResult {
 export async function rebuildThumb(ctx: ThumbContext): Promise<ThumbBuildResult> {
 	const { spec, identity, pathOpts } = ctx;
 	if (!spec.hasThumb) {
-		throw new Error(`${spec.model} has no thumb tier`);
+		throw new DedaloError('media.unsupported_operation', {
+			message: `${spec.model} has no thumb tier`,
+			publicMessage: `${spec.model} has no thumb tier`,
+		});
 	}
 
 	let resolution = resolveThumbSource(ctx);
@@ -153,7 +157,12 @@ export async function rebuildThumb(ctx: ThumbContext): Promise<ThumbBuildResult>
 	}
 
 	if (resolution.source === null) {
-		throw new Error(`build thumb: ${resolution.reason}`);
+		// The reason names the record identifier, so it stays in the log-only
+		// `message`; the wire gets the registry English.
+		throw new DedaloError('media.file_not_found', {
+			message: `build thumb: ${resolution.reason}`,
+			coordinates: { model: spec.model, identifier: buildMediaIdentifier(identity) },
+		});
 	}
 
 	const built = await buildThumbVersion(spec, identity, resolution.source, pathOpts);

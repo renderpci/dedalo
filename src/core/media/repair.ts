@@ -27,6 +27,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { moveToDeleted } from './file_ops.ts';
 import { refreshStoredFilesInfo } from './files_info.ts';
 import { resolveMediaPathOptions } from './ontology_path.ts';
@@ -118,7 +119,10 @@ export async function refreshMediaItems(input: {
 	const deleteNormalized = input.deleteNormalized === true;
 	const spec = mediaTypeOf(model);
 	if (spec === null) {
-		throw new Error(`refreshMediaItems: '${model}' is not a media model`);
+		throw new DedaloError('request.invalid_model', {
+			message: `refreshMediaItems: '${model}' is not a media model`,
+			coordinates: { model, component_tipo: componentTipo, section_tipo: sectionTipo },
+		});
 	}
 	const pathOpts = await resolveMediaPathOptions(componentTipo, sectionTipo);
 

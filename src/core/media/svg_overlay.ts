@@ -17,6 +17,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { config } from '../../config/config.ts';
 import { type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
 import { writeAtomically } from './atomic.ts';
 import { getDimensions } from './engine/imagemagick.ts';
@@ -286,24 +287,29 @@ export async function writeSvgEnvelope(
 	svgString: string,
 ): Promise<string> {
 	if (spec.model !== 'component_image') {
-		throw new Error(`svg envelope: only component_image has one (got ${spec.model})`);
+		const reason = `svg envelope: only component_image has one (got ${spec.model})`;
+		throw new DedaloError('media.unsupported_operation', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 	if (typeof svgString !== 'string' || svgString.trim() === '') {
-		throw new Error('svg envelope: empty payload');
+		throw new DedaloError('request.invalid_data', { message: 'svg envelope: empty payload' });
 	}
 	if (Buffer.byteLength(svgString, 'utf8') > MAX_ENVELOPE_BYTES) {
-		throw new Error(
-			`svg envelope: payload is larger than the ${String(MAX_ENVELOPE_BYTES)} byte cap`,
-		);
+		const reason = `svg envelope: payload is larger than the ${String(MAX_ENVELOPE_BYTES)} byte cap`;
+		throw new DedaloError('media.too_large', { message: reason, publicMessage: reason });
 	}
 	if (!/^\s*<svg[\s>]/i.test(svgString)) {
-		throw new Error('svg envelope: payload does not start with an <svg> root element');
+		throw new DedaloError('request.invalid_data', {
+			message: 'svg envelope: payload does not start with an <svg> root element',
+		});
 	}
 	for (const { pattern, what } of ENVELOPE_REFUSALS) {
 		if (pattern.test(svgString)) {
-			throw new Error(
-				`svg envelope: refused — the payload carries ${what}. An annotation overlay is drawing markup only; nothing was written and the layer data in lib_data is unchanged`,
-			);
+			// PUBLIC: `what` is the refusal table's own English, never the payload.
+			const reason = `svg envelope: refused — the payload carries ${what}. An annotation overlay is drawing markup only; nothing was written and the layer data in lib_data is unchanged`;
+			throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 		}
 	}
 	const location = svgOverlayLocation(spec, identity, pathOpts);
