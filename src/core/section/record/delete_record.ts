@@ -37,6 +37,7 @@ import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts
 import { deleteMatrixRecord } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
 
@@ -64,16 +65,23 @@ export async function deleteSectionRecord(
 	now: Date = new Date(),
 ): Promise<DeleteRecordResult> {
 	if (isConsultationOnlySection(sectionTipo)) {
-		throw new Error(
-			`deleteSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
-		);
+		throw new DedaloError('perm.denied', {
+			message: `deleteSectionRecord: section '${sectionTipo}' is consultation-only (read-only)`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId, operation: 'delete' },
+		});
 	}
 	if (sectionId < 1) {
-		throw new Error(`deleteSectionRecord: refusing to delete non-positive section_id ${sectionId}`);
+		throw new DedaloError('section_id.not_an_address', {
+			message: `deleteSectionRecord: refusing to delete non-positive section_id ${sectionId}`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId, operation: 'delete' },
+		});
 	}
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		throw new Error(`deleteSectionRecord: no matrix table for section '${sectionTipo}'`);
+		throw new DedaloError('section.no_matrix_table', {
+			message: `deleteSectionRecord: no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
 	}
 
 	// ATOMIC DB PHASE (S2-02): snapshot + TM audit + inverse-reference rewrites
@@ -495,14 +503,23 @@ export async function deleteSectionData(
 	now: Date = new Date(),
 ): Promise<DeleteRecordResult> {
 	if (isConsultationOnlySection(sectionTipo)) {
-		throw new Error(`deleteSectionData: section '${sectionTipo}' is consultation-only (read-only)`);
+		throw new DedaloError('perm.denied', {
+			message: `deleteSectionData: section '${sectionTipo}' is consultation-only (read-only)`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId, operation: 'delete_data' },
+		});
 	}
 	if (sectionId < 1) {
-		throw new Error(`deleteSectionData: refusing non-positive section_id ${sectionId}`);
+		throw new DedaloError('section_id.not_an_address', {
+			message: `deleteSectionData: refusing non-positive section_id ${sectionId}`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId, operation: 'delete_data' },
+		});
 	}
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		throw new Error(`deleteSectionData: no matrix table for section '${sectionTipo}'`);
+		throw new DedaloError('section.no_matrix_table', {
+			message: `deleteSectionData: no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
 	}
 	const columnList = MATRIX_JSONB_COLUMNS.map((column) => `"${column}"`).join(', ');
 	const rows = (await sql.unsafe(

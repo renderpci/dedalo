@@ -26,12 +26,6 @@
 		"src/core/components/registry.ts": 3,
 		"src/core/concepts/media.ts": 8,
 		"src/core/concepts/sqo.ts": 2,
-		"src/core/db/dd_ontology.ts": 4,
-		"src/core/db/json_codec.ts": 6,
-		"src/core/db/matrix.ts": 1,
-		"src/core/db/matrix_write.ts": 15,
-		"src/core/db/postgres.ts": 2,
-		"src/core/db/sql_identifier.ts": 1,
 		"src/core/diffusion_bridge/diffusion_delete.ts": 1,
 		"src/core/error_report/store.ts": 1,
 		"src/core/geoip/download.ts": 9,
@@ -94,17 +88,6 @@
 		"src/core/search/sql_assembler.ts": 4,
 		"src/core/section/indexation_grid.ts": 1,
 		"src/core/section/read.ts": 9,
-		"src/core/section/record/create_record.ts": 2,
-		"src/core/section/record/delete_record.ts": 6,
-		"src/core/section/record/duplicate_record.ts": 4,
-		"src/core/section/record/observer_subscriptions.ts": 1,
-		"src/core/section/record/observers.ts": 2,
-		"src/core/section/record/record_defaults.ts": 1,
-		"src/core/section/record/record_metadata.ts": 2,
-		"src/core/section/record/save_component.ts": 2,
-		"src/core/section/record/temporal_store.ts": 1,
-		"src/core/section_record/record_write.ts": 3,
-		"src/core/section_record/virtual_record.ts": 2,
 		"src/core/security/session_store.ts": 1,
 		"src/core/security/ssrf_guard.ts": 8,
 		"src/core/test_data/seed.ts": 1,
@@ -145,7 +128,7 @@
 		"tools/tool_transcription/server/index.ts": 1
 	},
 	"summary": {
-		"files": 141,
-		"total": 420
+		"files": 124,
+		"total": 365
 	}
 }

@@ -102,6 +102,7 @@
 import { buildLocatorLookupKey, type Locator } from '../../concepts/locator.ts';
 import { canonicalizeStoredSectionId } from '../../concepts/section_id.ts';
 import type { MatrixJsonbColumn } from '../../db/matrix.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import { DATA_NOLAN, ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
@@ -146,9 +147,10 @@ export function normalizeDatoDefault(raw: unknown, tipo: string): unknown[] {
 	if (!Array.isArray(raw) && typeof raw === 'object') {
 		const method = (raw as { method?: unknown }).method;
 		if (method !== undefined) {
-			throw new Error(
-				`record_defaults: properties.dato_default.method is not ported (tipo '${tipo}', method '${String(method)}') — PHP component_common::get_method`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `record_defaults: properties.dato_default.method is not ported (tipo '${tipo}', method '${String(method)}') — PHP component_common::get_method`,
+				coordinates: { tipo, method: String(method) },
+			});
 		}
 	}
 	return Array.isArray(raw) ? [...raw] : [raw];

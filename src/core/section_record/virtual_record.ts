@@ -30,6 +30,7 @@
 
 import type { MatrixJsonbColumn, MatrixRecord } from '../db/matrix.ts';
 import { MATRIX_JSONB_COLUMNS } from '../db/matrix.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { getColumnNameByModel } from '../ontology/resolver.ts';
 
 /**
@@ -89,11 +90,17 @@ export function injectComponentData(
 ): void {
 	const column = getColumnNameByModel(model);
 	if (column === null) {
-		throw new Error(`injectComponentData: no matrix column for model '${model}'`);
+		throw new DedaloError('internal.invariant', {
+			message: `injectComponentData: no matrix column for model '${model}'`,
+			coordinates: { tipo: componentTipo, model },
+		});
 	}
 	if (!MATRIX_JSONB_COLUMNS.includes(column as MatrixJsonbColumn)) {
 		// component_section_id → 'section_id' (the PK, not a jsonb column).
-		throw new Error(`injectComponentData: model '${model}' maps to non-jsonb column '${column}'`);
+		throw new DedaloError('internal.invariant', {
+			message: `injectComponentData: model '${model}' maps to non-jsonb column '${column}'`,
+			coordinates: { tipo: componentTipo, model, column },
+		});
 	}
 	const jsonbColumn = column as MatrixJsonbColumn;
 

@@ -49,6 +49,7 @@ import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn } from '../../db/matrix.ts
 import { absorbComponentItemIds, allocateComponentItemId } from '../../db/matrix_write.ts';
 import { sql, withTransaction } from '../../db/postgres.ts';
 import { recordTimeMachine } from '../../db/time_machine.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from '../../ontology/ontology_tipos.ts';
 import {
 	getColumnNameByModel,
@@ -156,15 +157,24 @@ export interface SaveResult {
  * could go", which is a contract violation by the caller and must reach the
  * operator's log with the tipo that caused it.
  */
-export class ExternalWriteRefused extends Error {
+export class ExternalWriteRefused extends DedaloError {
 	readonly componentTipo: string;
 	readonly sectionTipo: string;
 	readonly model: string;
 
 	constructor(fields: { componentTipo: string; sectionTipo: string; model: string; door: string }) {
-		super(
-			`${fields.door}: write refused to '${fields.componentTipo}' (${fields.model}) in section '${fields.sectionTipo}' — its value is DERIVED from a third-party service at read time, so the local record has no slot for it and the remote service is never written to`,
-		);
+		// Thin DedaloError family (ERRORS_SPEC §2.1): the fixed code
+		// `record.external_write_refused` (caller, 400) is the wire identity; the
+		// sentence below stays the LOG message; the tipos ride as coordinates.
+		super('record.external_write_refused', {
+			message: `${fields.door}: write refused to '${fields.componentTipo}' (${fields.model}) in section '${fields.sectionTipo}' — its value is DERIVED from a third-party service at read time, so the local record has no slot for it and the remote service is never written to`,
+			coordinates: {
+				tipo: fields.componentTipo,
+				section_tipo: fields.sectionTipo,
+				model: fields.model,
+				door: fields.door,
+			},
+		});
 		this.name = 'ExternalWriteRefused';
 		this.componentTipo = fields.componentTipo;
 		this.sectionTipo = fields.sectionTipo;
@@ -775,9 +785,15 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			change.action !== 'sort_by_column' &&
 			change.action !== 'add_new_element'
 		) {
-			throw new Error(
-				`saveComponentData: action '${change.action}' not implemented yet (Phase 5 uncovered scope)`,
-			);
+			throw new DedaloError('request.invalid_data', {
+				message: `saveComponentData: action '${change.action}' not implemented yet (Phase 5 uncovered scope)`,
+				coordinates: {
+					tipo: componentTipo,
+					section_tipo: sectionTipo,
+					section_id: sectionId,
+					action: change.action,
+				},
+			});
 		}
 
 		if (change.action === 'sort_data') {
@@ -959,7 +975,10 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 		if (change.action === 'insert') {
 			let value = change.value;
 			if (value === null || typeof value !== 'object') {
-				throw new Error('saveComponentData: insert value must be an object item');
+				throw new DedaloError('request.invalid_data', {
+					message: 'saveComponentData: insert value must be an object item',
+					coordinates: { tipo: componentTipo, section_tipo: sectionTipo, section_id: sectionId },
+				});
 			}
 			// Relation-family insert validation (PHP validate_data_element,
 			// component_relation_common.php:1058 — the service_autocomplete

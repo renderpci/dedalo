@@ -26,6 +26,14 @@ failure body of its own. An untyped `throw new Error` is still loud, and
 convention. The process-level unhandledRejection guard (S1-15) makes escaped
 rejections loud, never fatal. Canon: engineering/ERRORS_SPEC.md.
 
+**Write paths never absorb integrity errors** (P3, 2026-08-15 — ERRORS_SPEC
+§8). Between "the client asked to persist X" and COMMIT, every failure — a
+caller fault typed under its own code, or a contract violation typed
+`internal.invariant` — propagates out of `withTransaction` and rolls the
+transaction back. A catch on a write path may not turn a throw into a soft
+`{ok:false}`; the write-failure gates (`matrix_write_failure_native`,
+`save_component_failure_native`) hold that mechanically.
+
 **A catch may swallow ONLY when all three hold:**
 
 1. the operation is best-effort BY ORACLE CONTRACT (PHP logs-and-continues:

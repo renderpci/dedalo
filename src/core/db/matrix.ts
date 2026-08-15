@@ -22,6 +22,7 @@
  * section_tipo/section_id are always bound parameters.
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { sql } from './postgres.ts';
 
 /** JSONB data columns of a v7 matrix table (mirrors search trait.utils allowlist). */
@@ -98,9 +99,10 @@ export interface MatrixRecord {
 /** Throws unless tableName is a known matrix table (identifier gate). */
 export function assertMatrixTable(tableName: string): void {
 	if (!MATRIX_TABLE_ALLOWLIST.includes(tableName)) {
-		throw new Error(
-			`Refusing unknown matrix table '${tableName}' (identifier allowlist, spec §7.6)`,
-		);
+		throw new DedaloError('internal.invariant', {
+			message: `Refusing unknown matrix table '${tableName}' (identifier allowlist, spec §7.6)`,
+			coordinates: { table: tableName },
+		});
 	}
 }
 

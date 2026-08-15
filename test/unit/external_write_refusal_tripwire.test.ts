@@ -132,6 +132,8 @@ describe('the save door refuses a derived component', () => {
 		await attempt.catch((error: unknown) => {
 			expect(error).toBeInstanceOf(ExternalWriteRefused);
 			const refusal = error as ExternalWriteRefused;
+			// A thin DedaloError family: the fixed registry code is the wire identity.
+			expect(refusal.code).toBe('record.external_write_refused');
 			expect(refusal.componentTipo).toBe('test215');
 			expect(refusal.model).toBe('component_external');
 			// It THROWS rather than answering ok:false: there is no slot on disk,

@@ -99,6 +99,7 @@
 import { config } from '../../../config/config.ts';
 import { incrementCounter } from '../../api/counters.ts';
 import { getTransactionMemo, isInTransaction } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
 import {
@@ -262,9 +263,10 @@ function deepFreeze<T>(value: T): T {
  */
 function hardenMap<K, V>(map: Map<K, V>): Map<K, V> {
 	const refuse = (): never => {
-		throw new Error(
-			'observer subscription index is immutable — rebuild on invalidation, never patch (clearObserverSubscriptionRegistry + next read)',
-		);
+		throw new DedaloError('internal.invariant', {
+			message:
+				'observer subscription index is immutable — rebuild on invalidation, never patch (clearObserverSubscriptionRegistry + next read)',
+		});
 	};
 	Object.defineProperties(map, {
 		set: { value: refuse },
