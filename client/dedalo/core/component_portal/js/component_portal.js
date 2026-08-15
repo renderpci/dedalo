@@ -68,6 +68,7 @@
 	// the ONE picker module: its channel prefix and its wiring call. Nothing about the
 	// picker (mode, channel name, publisher, selection cap) is re-declared here.
 	import {PICKER_LINK_CHANNEL_PREFIX, attach_picker} from '../../area_thesaurus/js/thesaurus_picker.js'
+	import {response_data, request_failed} from '../../common/js/api_error.js'
 
 
 
@@ -785,7 +786,8 @@ component_portal.prototype.build = async function(autoload=false) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error!!!!, component without context:", api_response);
 					return false
 				}
@@ -808,7 +810,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				// overwrote self.context here we would lose the ddo_map customisation on every
 				// refresh.  Context is therefore treated as write-once from the outside.
 				if(!self.context){
-					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+					const context = datum.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
 					}else{
@@ -818,7 +820,7 @@ component_portal.prototype.build = async function(autoload=false) {
 
 			// set Data
 			// Match by tipo + section_tipo + section_id (string-coerced).
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id) === String(self.section_id))
+				const data = datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id) === String(self.section_id))
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
 				}
@@ -829,16 +831,16 @@ component_portal.prototype.build = async function(autoload=false) {
 			// datum that the parent section instance also holds, so sub-component
 			// instances that share the same datum are all kept in sync.
 				if(!self.standalone){
-					await self.update_datum(api_response.result)
+					await self.update_datum(datum)
 				}else{
 					// Standalone portals own their datum independently; assign directly.
-					self.datum.context	= api_response.result.context
-					self.datum.data		= api_response.result.data
+					self.datum.context	= datum.context
+					self.datum.data		= datum.data
 				}
 
 			// // context. update instance properties from context (type, label, tools, fields_separator, permissions)
-			// 	self.context		= api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
-			// 	self.datum.context	= api_response.result.context
+			// 	self.context		= datum.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+			// 	self.datum.context	= datum.context
 
 			// force re-assign self.total
 			// Reset so that the post-build logic reads total from the fresh data.pagination.
@@ -1374,7 +1376,8 @@ component_portal.prototype.link_records = async function(values, options={}) {
 			refresh			: false // not refresh here (!)
 		})
 
-		if (!api_response || !api_response.result) {
+		const saved_datum = response_data(api_response)
+		if (!api_response || !saved_datum) {
 			console.error('Invalid API response on link_records:', api_response);
 			for (let i = 0; i < accepted.length; i++) {
 				refused.push({locator: accepted[i], reason: 'api_error'})
@@ -1383,11 +1386,11 @@ component_portal.prototype.link_records = async function(values, options={}) {
 		}
 
 	// total check (after save) — server-authoritative duplicate detection (level 2)
-		const current_data	= api_response.result.data.find(el => el.tipo===self.tipo)
+		const current_data	= saved_datum.data.find(el => el.tipo===self.tipo)
 		const total			= current_data?.pagination?.total ?? 0
 		// error on add value case
 		if (total===0) {
-			console.warn("// link_records api_response.result.data (unexpected total):", api_response.result.data);
+			console.warn("// link_records saved data (unexpected total):", saved_datum.data);
 			for (let i = 0; i < accepted.length; i++) {
 				refused.push({locator: accepted[i], reason: 'not_stored'})
 			}
@@ -1508,7 +1511,7 @@ component_portal.prototype.link_records = async function(values, options={}) {
 * action is blocked before the API call.
 *
 * (!) Side effect: `self.created_section_id` is set to the section_id the server
-* created (api_response.result.created_section_id), or null when the server did
+* created (response_data(api_response).created_section_id), or null when the server did
 * not report one.  The add button opens THAT record — the return value stays a
 * boolean because the client test suite pins it.
 *
@@ -1560,13 +1563,14 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 			timeout : 10 * 1000 // 10 secs waiting response
 		})
 		// add value to current data
-		if (api_response.result) {
+		const created_datum = response_data(api_response)
+		if (created_datum) {
 
 			// created_section_id. The ADDRESS of the record the server just created.
 			// Read it before the refresh: the caller (buttons.render_button_add) opens
 			// this record instead of guessing it from the echoed page, which is only
 			// the new one when the whole list fits on that page.
-				self.created_section_id = api_response.result.created_section_id ?? null
+				self.created_section_id = created_datum.created_section_id ?? null
 
 			// save return the datum of the component
 			// Inject the save response as tmp_api_response so the build phase uses it
@@ -2130,7 +2134,7 @@ component_portal.prototype.sort_by_column = async function(column, direction) {
 
 	// column_order_state. Ephemeral indicator of the last applied column order
 	// (advisory only: manual drag and drop can change the order at any time)
-		if (api_response && api_response.result!==false) {
+		if (api_response && !request_failed(api_response)) {
 			self.column_order_state = {
 				tipo		: column.tipo,
 				direction	: direction
@@ -2240,7 +2244,7 @@ component_portal.prototype.unlink_record = async function(locator) {
 		})
 
 	// the user has selected cancel from delete dialog
-		if (api_response===false || api_response.result===false) {
+		if (api_response===false || request_failed(api_response)) {
 			console.warn("// unlink_record api_response failed ", api_response);
 			return false
 		}

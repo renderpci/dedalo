@@ -39,6 +39,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
 	import {render_installer} from './render_installer.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -197,7 +198,7 @@ installer.prototype.init = async function(options) {
 * by authenticated components, `get_install_context` does not require a session
 * token — the install wizard runs before any user is logged in.
 *
-* Response shape expected from `api_response.result`:
+* Response shape expected from the API payload:
 *   An array of context objects (one per model). This method filters for the
 *   entry where `element.model === self.model` and stores it as `self.context`.
 *   `self.data` is then set to an empty object `{}` (no record-level data exists
@@ -241,14 +242,15 @@ installer.prototype.build = async function(autoload=false) {
 					console.log('----> install build api_response', api_response);
 				}
 
-				if (!Array.isArray(api_response.result)) {
+				const install_context = response_data(api_response)
+				if (!Array.isArray(install_context)) {
 					console.error('Error on get install context. api_response:', api_response);
 					self.status = 'built'
 					return true
 				}
 
 			// set context and data to current instance
-				self.context	= api_response.result.find(element => element.model===self.model);
+				self.context	= install_context.find(element => element.model===self.model);
 				self.data		= {}
 		}
 

@@ -104,13 +104,14 @@ error }` where `error` is an `ApiError` (`core/common/js/api_error.js`) —
 the one payload accessor, and every consumer dispatches on `error.code`, never
 on HTTP status or message text.
 
-!!! note "Compat window"
-    While the server still mirrors the legacy fields (`result`, `msg`,
-    `errors:[code]`), the client normaliser also understands legacy failure
-    bodies (`{result:false, errors:[token]}` → `error.code = token`) and
-    `response_data` reads `data ?? result`. Both go away together with the
-    server compat block once the client no longer reads `.result` / `.msg` /
-    `.errors` (the `client_error_contract_tripwire` census).
+!!! note "The compat mirror is not read any more"
+    The server still MIRRORS the legacy fields (`result`, `msg`,
+    `errors:[code]`) beside the v2 ones, but no client file reads them: the
+    `client_error_contract_tripwire` census over `client/**` is 0, the
+    normaliser understands v2 only, and `response_data` reads `data`. A
+    handler-owned top-level field (`msg` on the maintenance/install surfaces,
+    `in_use` on the lock surface, …) is an EXTENSION KEY, read on a SUCCESS
+    only through `response_extension(api_response, key)` — never the mirror.
 
 ## Key concepts
 
@@ -144,8 +145,8 @@ it runs in the cache Worker and the Service Worker too). It defines:
   arrived: `client.network`, `client.timeout`, `client.aborted`,
   `client.bad_response`, `client.http_status`, `client.worker`,
   `client.offline`; each maps to an `error_client_*` label.
-- `normalize_api_error(response, body)` — envelope v2 → (compat v1) → bare
-  failure → non-JSON status → `null` on success.
+- `normalize_api_error(response, body)` — envelope v2 → `ok:false` without a
+  code → non-JSON status → `null` on success.
 - `normalize_transport_error(error, flags)` — classifies a `fetch` rejection
   **by class** (`AbortError` + our timer → `client.timeout`, `AbortError` →
   `client.aborted`, `TypeError` → `client.network`, else
@@ -153,7 +154,8 @@ it runs in the cache Worker and the Service Worker too). It defines:
 - `normalize_stream_error(frame)` — the same for an SSE/NDJSON end-of-run
   frame.
 - `request_failed(api_response)` / `response_data(api_response)` — the two
-  accessors callers use.
+  accessors callers use; `response_extension(api_response, key)` for a
+  handler-owned top-level key (success only).
 
 The policy (which code calls for which UI action: relogin, no-access page,
 page panel, toast, modal, inline, silent) lives in `error_policy.js`; the

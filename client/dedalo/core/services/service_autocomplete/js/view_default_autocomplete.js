@@ -695,10 +695,6 @@ export const render_search_notice = function(self, api_response) {
 				}
 			}
 		}
-		// COMPAT v1 token array (REMOVAL: client_error_contract_tripwire census 0)
-		if (api_response && Array.isArray(api_response.errors)) {
-			title_parts.push(api_response.errors.join(' · '))
-		}
 
 	// node
 		const notice = ui.create_dom_element({
@@ -2258,16 +2254,17 @@ const get_grid_choose_data = async function(self, section_record, params) {
 		})
 
 	// guard api_response
-		if (!api_response?.result || api_response.result===false) {
-			console.warn('[get_grid_choose_data] API returned no result')
+		const grid_datum = response_data(api_response)
+		if (!grid_datum) {
+			console.warn('[get_grid_choose_data] API returned no data')
 			return null
 		}
 
 	// grid_choose_data
 		const grid_choose_data = {
 			rqo_search	: rqo_search,
-			data		: api_response.result.data || [],
-			context		: api_response.result.context || []
+			data		: grid_datum.data || [],
+			context		: grid_datum.context || []
 		}
 
 

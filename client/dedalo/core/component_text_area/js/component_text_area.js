@@ -62,6 +62,8 @@
 	import {render_list_component_text_area} from './render_list_component_text_area.js'
 	import {render_search_component_text_area} from './render_search_component_text_area.js'
 	import {render_reference} from './render_reference.js'
+	import {response_data, request_failed} from '../../common/js/api_error.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -1377,7 +1379,7 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 		})
 		.then(async function(api_response){
 
-			if (api_response.result!==false) {
+			if (!request_failed(api_response)) {
 
 				// delete editor tags
 				await self.text_editor[key].delete_tag({
@@ -1401,13 +1403,13 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 * Used by annotation panels (indexation, notes, geo) to load the structured data
 * associated with each tag_id so the panel can render details and allow editing.
 *
-* (!) The Promise does not resolve when api_response.result is false — callers
+* (!) The Promise does not resolve when the call FAILED — callers
 *     that depend on a resolved value may hang if the server returns an error.
 *     This is a pre-existing design; do NOT change.
 *
 * @param {Array<string>} ar_type - List of annotation types to retrieve, e.g. ['index']
 * @param {number} [key=0] - Entry key (language slot) to query
-* @returns {Promise<*>} Resolves with api_response.result (the tags metadata array/object)
+* @returns {Promise<*>} Resolves with the response payload (the tags metadata array/object)
 */
 component_text_area.prototype.get_tags_info = function(ar_type, key=0) {
 
@@ -1433,8 +1435,8 @@ component_text_area.prototype.get_tags_info = function(ar_type, key=0) {
 		})
 		.then(async function(api_response){
 
-			if (api_response.result!==false) {
-				resolve(api_response.result)
+			if (!request_failed(api_response)) {
+				resolve(response_data(api_response))
 			}
 		})
 	})
@@ -1562,16 +1564,19 @@ component_text_area.prototype.add_component_history_note = async function(option
 		const api_response = await data_manager.request({
 			body : rqo
 		})
-		if (!api_response.result || api_response.result<1) {
+		const created_section_id = response_data(api_response)
+		if (!created_section_id || created_section_id<1) {
 			console.error('Error on create matrix note record. api_response:', api_response);
 			event_manager.publish('notification', {
-				msg			: api_response?.msg || 'Error on create matrix note record. api_response:',
+				msg			: request_failed(api_response)
+					? error_text(api_response.error)
+					: 'Error on create matrix note record',
 				type		: 'error',
 				remove_time	: 10000 // 10 secs
 			})
 			return null
 		}
-		const new_section_id = api_response.result || null
+		const new_section_id = created_section_id || null
 		if (!new_section_id) {
 			console.error('Error on create the note record:', api_response);
 			return null
@@ -1610,7 +1615,8 @@ component_text_area.prototype.add_component_history_note = async function(option
 		const code_api_response = await data_manager.request({
 			body : code_rqo
 		})
-		if (!code_api_response.result || code_api_response.result<1) {
+		const code_section_id = response_data(code_api_response)
+		if (!code_section_id || code_section_id<1) {
 			console.error('Error on set matrix note code. code_api_response:', code_api_response);
 			return null
 		}
@@ -1767,7 +1773,7 @@ component_text_area.prototype.build_tag = function(options) {
 			const api_response = await data_manager.request({
 				body:rqo
 			})
-			const note_section_id = api_response.result || null;
+			const note_section_id = response_data(api_response) || null;
 
 
 		return note_section_id;
@@ -1868,7 +1874,7 @@ component_text_area.prototype.build_tag = function(options) {
 			const api_response = await data_manager.request({
 				body:rqo
 			})
-			const note_section_id = api_response.result || null;
+			const note_section_id = response_data(api_response) || null;
 
 
 		return note_section_id;

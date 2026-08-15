@@ -45,6 +45,7 @@
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_graph} from './render_area_graph.js'
 	import {ts_object} from '../../ts_object/js/ts_object.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -273,7 +274,8 @@ area_graph.prototype.build = async function(autoload=true) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error!!!!, area_graph without context:", api_response);
 					return false
 				}
@@ -286,7 +288,7 @@ area_graph.prototype.build = async function(autoload=true) {
 				)
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = datum
 
 			// set context and data to current instance
 				if(!self.context){

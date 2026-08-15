@@ -33,7 +33,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {create_source} from '../../common/js/common.js'
 	import {preset_scope_tipo} from './preset_scope.js'
-	import {request_failed} from '../../common/js/api_error.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 
@@ -178,7 +178,8 @@ export const get_editing_preset_json_filter = async function(self) {
 		}
 
 	// response check
-		if (request_failed(api_response) || !api_response?.result) {
+		const preset_datum = response_data(api_response)
+		if (request_failed(api_response) || !preset_datum) {
 
 			// THE handler. A dead session (the usual cause here) reaches the
 			// relogin overlay; anything else is shown by its policy. The page
@@ -192,7 +193,7 @@ export const get_editing_preset_json_filter = async function(self) {
 		}
 
 	// editing_preset
-		const data					= api_response.result.data || []
+		const data					= preset_datum.data || []
 		const component_json_data	= data.find(el => el.tipo===presets_component_json_tipo)
 
 	// json_filter. existing section case
@@ -650,12 +651,13 @@ export const load_default_preset = async function(self) {
 			body		: rqo,
 			use_worker	: true
 		})
-		if (!api_response || !api_response.result) {
+		const preset_datum = response_data(api_response)
+		if (!preset_datum) {
 			return null
 		}
 
 	// json_filter from the matched record's dd625 component data.
-		const data				= api_response.result.data || []
+		const data				= preset_datum.data || []
 		const json_component	= data.find(el => el.tipo === presets_component_json_tipo)
 		const json_filter		= (json_component && json_component.entries && json_component.entries[0])
 			? json_component.entries[0]
@@ -711,12 +713,11 @@ export const create_new_search_preset = async function(options) {
 		use_worker	: true
 	})
 
-	if (!api_response.result || api_response.result <= 0) {
+	const new_section_id = response_data(api_response)
+	if (!new_section_id || new_section_id <= 0) {
 		console.error('Error on create new preset section. api_response:', api_response);
 		return false
 	}
-
-	const new_section_id = api_response.result
 
 	const save_promises = []
 
@@ -894,7 +895,7 @@ export const save_preset = async function(options) {
 	})
 
 	// error check
-	if (!api_response.result) {
+	if (!response_data(api_response)) {
 		console.error(`Error on save preset (${section_tipo} - ${section_id}). api_response:`, api_response);
 		return false
 	}

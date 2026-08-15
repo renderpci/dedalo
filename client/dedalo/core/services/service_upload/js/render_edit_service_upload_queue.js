@@ -88,6 +88,7 @@
 	import {create_source} from '../../../common/js/common.js'
 	import {upload_queue} from './upload_queue.js'
 	import {files_from_drop} from './dropped_files.js'
+	import {response_data} from '../../../common/js/api_error.js'
 
 
 
@@ -828,12 +829,13 @@ const restore_staged_files = async function(self) {
 			body : rqo
 		})
 
-	// (!) GUARD THE DEREF. On an expired session (or any error response) `result`
-	// is absent, and reading `.length` off it THREW — which aborted the whole
-	// render and left the entire tool panel blank instead of degrading to an
-	// empty file list.
-		const files = Array.isArray(response?.result)
-			? response.result
+	// (!) GUARD THE DEREF. On an expired session (or any error response) the
+	// payload is absent, and reading `.length` off it THREW — which aborted the
+	// whole render and left the entire tool panel blank instead of degrading to
+	// an empty file list.
+		const staged = response_data(response)
+		const files = Array.isArray(staged)
+			? staged
 			: []
 
 		for (let i = 0; i < files.length; i++) {

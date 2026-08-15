@@ -20,6 +20,7 @@ import {
 	run_search
 } from '../../../core/services/service_autocomplete/js/view_default_autocomplete.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -115,7 +116,7 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 			let captured_body = null
 			data_manager.request = async function(options) {
 				captured_body = options.body
-				return { result : { data: [] }, msg : 'OK. Request done' }
+				return { ok : true, data : { data: [] } }
 			}
 
 			try {
@@ -155,7 +156,7 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 			let called = 0
 			data_manager.request = async function() {
 				called++
-				return { result : { data: [] } }
+				return { ok : true, data : { data: [] } }
 			}
 
 			let response
@@ -166,7 +167,7 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 			}
 
 			assert.equal(called, 0, 'an empty query must cost no round trip')
-			assert.deepEqual(response.result.data, [], 'and it must answer with no rows')
+			assert.deepEqual(response_data(response).data, [], 'and it must answer with no rows')
 			assert.equal(response.source_status.state, 'empty_query')
 			assert.equal(response.source_status.label_key, 'external_search_empty_query',
 				'the message must be a labels-catalog key, never prose')
@@ -199,10 +200,13 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 
 			const self = { datalist : document.createElement('ul') }
 
+			// Envelope v2: a DEGRADED external search is a SUCCESS carrying the
+			// typed `source_status` extension key and a coded `notices[]` entry —
+			// the finer-grained token an operator quotes.
 			const notice = render_search_notice(self, {
-				result			: false,
-				msg				: 'Error. The external search did not complete',
-				errors			: ['external_blocked_host'],
+				ok				: true,
+				data			: { data : [] },
+				notices			: [{code: 'external_blocked_host', label_key: 'external_source_misconfigured', retryable: false}],
 				source_status	: {
 					service		: 'zenon',
 					state		: 'misconfigured',
@@ -234,7 +238,7 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 
 			const self = { datalist : document.createElement('ul') }
 
-			const notice = render_search_notice(self, { result : { data : [] } })
+			const notice = render_search_notice(self, { ok : true, data : { data : [] } })
 
 			assert.equal(notice, null, 'a working search must not grow a permanent warning')
 			assert.equal(self.datalist.querySelectorAll('.search_notice').length, 0)
@@ -411,7 +415,7 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 				autocomplete_search : async function() {
 					// a newer search starts and bumps the token before this resolves
 					self._search_seq = 99
-					return { result: { data: [] } }
+					return { ok: true, data: { data: [] } }
 				}
 			}
 
@@ -432,7 +436,7 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 				datalist	: datalist,
 				autocomplete_search : async function() {
 					// empty result ⇒ render_datalist clears and returns (no get_section_records)
-					return { result: { data: [] } }
+					return { ok: true, data: { data: [] } }
 				}
 			}
 

@@ -7,8 +7,9 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -440,12 +441,14 @@ const build_mode_selector = function(self, value, parent) {
 
 			const api_response = await self.set_media_access_mode(new_value)
 
-			// SEC-XSS: textContent prevents any HTML parsing of api_response.msg
+			// SEC-XSS: textContent prevents any HTML parsing of the server sentence
 			if (body_response) {
-				body_response.textContent = api_response.msg || (api_response.result ? 'Done' : 'Unknown error')
+				body_response.textContent = request_failed(api_response)
+					? error_text(api_response.error)
+					: (response_extension(api_response, 'msg') || (response_data(api_response) ? 'Done' : 'Unknown error'))
 			}
 
-			if (request_failed(api_response)===false && api_response.result===true) {
+			if (request_failed(api_response)===false && response_data(api_response)===true) {
 				// reload value and re-render the widget body
 				try {
 					self.value = await self.get_value()
@@ -544,16 +547,18 @@ const build_rebuild_block = function(self, value, parent) {
 			// SEC-XSS: textContent prevents any HTML parsing of server strings
 			if (body_response) {
 				const summary = {
-					result	: api_response.result===true,
-					msg		: api_response.msg || null,
+					result	: response_data(api_response)===true,
+					msg		: request_failed(api_response)
+						? error_text(api_response.error)
+						: (response_extension(api_response, 'msg') || null),
 					markers	: api_response.markers ?? null,
 					targets	: api_response.targets ?? null,
-					errors	: api_response.errors || []
+					errors	: response_extension(api_response, 'errors') || []
 				}
 				body_response.textContent = JSON.stringify(summary, null, 2)
 			}
 
-			if (request_failed(api_response)===false && api_response.result===true) {
+			if (request_failed(api_response)===false && response_data(api_response)===true) {
 				// reload value (marker counts changed)
 				try {
 					self.value = await self.get_value()

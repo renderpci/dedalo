@@ -23,6 +23,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {render_menu_skip_tipos} from './render_menu_skip_tipos.js'
+	import {response_data} from '../../../../common/js/api_error.js'
 
 
 
@@ -97,7 +98,7 @@ menu_skip_tipos.prototype.save = async function(tipos) {
 
 	// On success, force the live menu to recalculate so the admin sees the
 	// skip effect immediately, without a logout/reload.
-	if (api_response && api_response.result) {
+	if (api_response && response_data(api_response)) {
 		event_manager.publish('menu_config_changed', { source: 'menu_skip_tipos' })
 	}
 

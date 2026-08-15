@@ -8,6 +8,7 @@ import {event_manager} from '../../../core/common/js/event_manager.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone, pause} from '../../../core/common/js/utils/util.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -389,7 +390,7 @@ describe(`COMPONENT_PUBLICATION DATA OPERATIONS`, async function() {
 
 			// asserts
 			assert.notEqual(api_response, null, 'api_response must not be null')
-			assert.notEqual(api_response.result, null, 'api_response.result must not be null')
+			assert.notEqual(response_data(api_response), null, 'the api_response payload must not be null')
 
 			await instance.destroy(true, true, true)
 		})
@@ -766,7 +767,7 @@ describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 			})
 
 			assert.notEqual(add_resp, null, 'ADD: api_response must not be null')
-			assert.notEqual(add_resp.result, null, 'ADD: api_response.result must not be null')
+			assert.notEqual(response_data(add_resp), null, 'ADD: the api_response payload must not be null')
 
 		// CHANGE DATA - update locator
 			const data_before_change = Array.isArray(instance.data) ? instance.data : []

@@ -153,7 +153,7 @@ describe('JOB TRAY / LONG-PROCESS MONITORING CLIENT TEST', function() {
 
 		data_manager.request = async function() {
 			requests++
-			return {result: false}
+			return {ok: true, data: false}
 		}
 
 		// Counted, not asserted at zero: the harness page may legitimately carry a

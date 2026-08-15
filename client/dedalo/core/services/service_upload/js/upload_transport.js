@@ -36,6 +36,7 @@
 // imports
 	import { data_manager } from '../../../common/js/data_manager.js'
 	import { JSON_parse_safely } from '../../../common/js/utils/util.js'
+	import { ApiError, CLIENT_ERROR, normalize_api_error, request_failed, response_data } from '../../../common/js/api_error.js'
 
 
 
@@ -73,7 +74,7 @@
 *   @param {number} [options.max_size_bytes] - Size cap in bytes. Falsy = no cap.
 * @returns {Object} `{valid:boolean, code:string|null, msg:string|null}` where
 *   `code` is a get_label key ('invalid_extension' | 'filesize_is_too_big') and
-*   `msg` is the DETAIL text meant to be appended to that resolved label
+*   `detail` is the DETAIL text meant to be appended to that resolved label
 *   (keeping the legacy alert text byte-identical).
 */
 export const validate_file = function(options) {
@@ -87,7 +88,7 @@ export const validate_file = function(options) {
 		const valid_response = {
 			valid	: true,
 			code	: null,
-			msg		: null
+			detail	: null
 		}
 
 	// no file. Nothing to validate, nothing to refuse: the caller's own guard
@@ -104,7 +105,7 @@ export const validate_file = function(options) {
 			return {
 				valid	: false,
 				code	: 'invalid_extension',
-				msg		: ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions)
+				detail	: ": \n" + file_extension + "\nUse any of: \n" + JSON.stringify(allowed_extensions)
 			}
 		}
 
@@ -114,7 +115,7 @@ export const validate_file = function(options) {
 			return {
 				valid	: false,
 				code	: 'filesize_is_too_big',
-				msg		: " Max file size is " + Math.floor(max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024))
+				detail	: " Max file size is " + Math.floor(max_size_bytes / (1024*1024)) + " MB and current file is " + Math.floor(file_size_bytes / (1024*1024))
 			}
 		}
 
@@ -357,51 +358,44 @@ const to_text = function(value) {
 
 
 /**
-* ERROR_MESSAGE_FROM
-* Extracts the most specific human-readable failure text available, in the
-* order the server actually populates them:
-*   1. `errors[]` — handleMediaUpload puts the REAL cause here (bad magic bytes,
-*      path escape, oversize part). `msg` at that point is only the generic
-*      "Upload rejected", so reading msg first would discard the diagnosis.
-*   2. `msg` / `error` — a plain refusal without an errors array. The upload
-*      endpoint no longer emits `error` (it was the Dropzone-only key, removed
-*      with service_dropzone); the branch stays because this reader is also
-*      pointed at the generic dd_utils_api bodies, which do use it.
-*   3. the HTTP status — a proxy/gateway body that is not our JSON at all.
+* API_ERROR_FROM
+* The parsed upload body → ONE ApiError, through the ONE normaliser.
+*
+* The upload endpoint is converter-made like every other door
+* (media/ingest/upload_endpoint.ts: `ok(true, {extend:{file_data}})` or
+* `toErrorEnvelope`), so the diagnosis a curator needs — bad magic bytes, path
+* escape, oversize part — arrives as `error.code` + `error.message`, and the
+* renderer resolves it in the user's language. When the body is not our JSON at
+* all (a proxy/gateway HTML page) there is no envelope to read: the status
+* itself is the failure, and normalize_api_error mints `client.http_status`.
 *
 * @param {Object|null} api_response - Parsed body, or null when it was not JSON.
 * @param {number} status - The HTTP status code.
 * @param {string} [raw_text] - The raw responseText, used when parsing failed.
-* @returns {string} Never an object, never empty.
+* @returns {ApiError} never null: an unrecognised body still becomes one.
 */
-const error_message_from = function(api_response, status, raw_text) {
+const api_error_from = function(api_response, status, raw_text) {
 
-	if (api_response) {
-		const errors = api_response.errors
-		if (Array.isArray(errors) && errors.length > 0) {
-			const text = errors.map(to_text).filter(Boolean).join(' ')
-			if (text !== '') {
-				return text
-			}
-		}
-		if (typeof api_response.msg === 'string' && api_response.msg !== '') {
-			return api_response.msg
-		}
-		if (typeof api_response.error === 'string' && api_response.error !== '') {
-			return api_response.error
-		}
+	const ok		= status >= 200 && status < 300
+	const api_error	= normalize_api_error({ok:ok, status:status, statusText:''}, api_response)
+	if (api_error) {
+		return api_error
 	}
-	if (typeof raw_text === 'string' && raw_text !== '') {
-		// A body that is not our JSON is usually a proxy/gateway HTML error page.
-		// Truncate: the message goes straight into a UI slot, and a full HTML
-		// document there is noise that hides the status code that follows it.
-		return raw_text.length > 300
-			? raw_text.slice(0, 300) + '…'
-			: raw_text
-	}
+	// A body that is not our JSON is usually a proxy/gateway HTML error page.
+	// Truncate: the text goes straight into a UI slot, and a full HTML document
+	// there is noise that hides the status code that follows it.
+	const detail = (typeof raw_text === 'string' && raw_text !== '')
+		? (raw_text.length > 300 ? raw_text.slice(0, 300) + '…' : raw_text)
+		: 'Upload failed. HTTP status ' + status
 
-	return 'Upload failed. HTTP status ' + status
-}//end error_message_from
+	return new ApiError({
+		code		: CLIENT_ERROR.BAD_RESPONSE,
+		status		: status,
+		message		: detail,
+		transport	: true,
+		source		: 'transport'
+	})
+}//end api_error_from
 
 
 
@@ -786,7 +780,7 @@ export const create_transfer = function(options) {
 							// in exactly the case that populates it.
 							finish({
 								ok			: false,
-								msg			: error_message_from(api_response, status, raw_text),
+								error		: api_error_from(api_response, status, raw_text),
 								api_response: api_response
 							})
 							return
@@ -794,16 +788,16 @@ export const create_transfer = function(options) {
 						if (!api_response) {
 							console.error('Error in XMLHttpRequest load response. Invalid response is received')
 							finish({
-								ok	: false,
-								msg	: error_message_from(null, status, raw_text)
+								ok		: false,
+								error	: api_error_from(null, status, raw_text)
 							})
 							return
 						}
-						// A 200 can still carry result:false (an application refusal).
-						if (api_response.result !== true) {
+						// A 2xx body can still BE a failure envelope (ok:false).
+						if (request_failed(api_response) || response_data(api_response) !== true) {
 							finish({
 								ok			: false,
-								msg			: error_message_from(api_response, status, raw_text),
+								error		: api_error_from(api_response, status, raw_text),
 								api_response: api_response
 							})
 							return
@@ -995,10 +989,10 @@ export const create_transfer = function(options) {
 					file_data		: last_file_data,
 					files_chunked	: files_chunked
 				})
-				if (!join_response || join_response.result !== true) {
+				if (!join_response || request_failed(join_response) || response_data(join_response) !== true) {
 					settle({
-						result	: false,
-						msg		: error_message_from(join_response || null, 200)
+						ok		: false,
+						error	: api_error_from(join_response || null, 200)
 					}, 'error')
 					return
 				}
@@ -1008,8 +1002,11 @@ export const create_transfer = function(options) {
 				// this catch the rejection would escape into an unhandled promise and
 				// the caller would hang exactly as in D1.
 				settle({
-					result	: false,
-					msg		: 'Error joining the uploaded chunks. ' + to_text(error && error.message)
+					ok		: false,
+					error	: new ApiError({
+						code	: CLIENT_ERROR.BAD_RESPONSE,
+						message	: 'Error joining the uploaded chunks. ' + to_text(error && error.message)
+					})
 				}, 'error')
 			}
 		}//end run_chunked
@@ -1020,8 +1017,11 @@ export const create_transfer = function(options) {
 
 			if (outcome.aborted) {
 				settle({
-					result	: false,
-					msg		: 'User aborts upload'
+					ok		: false,
+					error	: new ApiError({
+						code	: CLIENT_ERROR.ABORTED,
+						message	: 'User aborts upload'
+					})
 				}, 'aborted')
 				return
 			}
@@ -1031,14 +1031,16 @@ export const create_transfer = function(options) {
 			if (outcome.cancelled) {
 				return
 			}
+			// ONE failure shape, the same the page transport answers with: an
+			// `error` ApiError the caller renders through error_text(). The
+			// server's own diagnosis rides inside it (code + message), so nothing
+			// has to be re-derived from prose.
 			const response = {
-				result	: false,
-				msg		: outcome.msg || 'Error on upload file'
-			}
-			// Forward the server's errors[] untouched when it sent one: the caller
-			// may want to render each line, and re-deriving them from `msg` is lossy.
-			if (outcome.api_response && Array.isArray(outcome.api_response.errors)) {
-				response.errors = outcome.api_response.errors
+				ok		: false,
+				error	: outcome.error || new ApiError({
+					code	: CLIENT_ERROR.BAD_RESPONSE,
+					message	: 'Error on upload file'
+				})
 			}
 			settle(response, 'error')
 		}//end settle_failure

@@ -206,7 +206,7 @@ export const handle_password_change = async function(self, input_value, input, i
 
 	// validated. Test password is acceptable string
 		const validation_obj	= self.validate_password_format(input_value)
-		const validated		= validation_obj.result
+		const validated		= validation_obj.valid
 		ui.component.error(!validated, input)
 		if (!validated) {
 			return null
@@ -232,7 +232,7 @@ export const handle_password_change = async function(self, input_value, input, i
 
 /**
 * VALIDATE_PASSWORD_FORMAT
-* Client-side password policy validator. Returns a result object indicating
+* Client-side password policy validator. Returns a verdict object indicating
 * whether `pw` meets all configured rules.
 *
 * Default policy (applied when `options` is omitted or partially provided):
@@ -249,12 +249,12 @@ export const handle_password_change = async function(self, input_value, input, i
 * keys are merged — unrecognised keys in `options` are copied in as-is.
 *
 * Empty password handling: an empty string passes validation immediately with
-* `result: true` and a descriptive message. This allows components to save a
+* `valid: true` and a descriptive message. This allows components to save a
 * blank field (clearing the credential) without triggering a policy error.
 *
 * Return shape in all cases:
 * ```js
-* { result: boolean, msg: string }
+* { valid: boolean, message: string }
 * ```
 *
 * Adapted from Password Validator 0.1 © 2007 Steven Levithan (MIT License).
@@ -276,17 +276,17 @@ export const handle_password_change = async function(self, input_value, input, i
 *   `noQwertySequences` {boolean} – if true, QWERTY runs are also banned (default false).
 *   `noSequential` {boolean}      – if true, identical adjacent chars are banned (default true,
 *                                   but the check is currently commented out — see inline note).
-* @returns {Object} Validation result: `{ result: boolean, msg: string }`.
-*   `result: true` means the password is acceptable; `result: false` means it is not,
-*   and `msg` carries a human-readable reason suitable for display.
+* @returns {Object} Validation result: `{ valid: boolean, message: string }`.
+*   `valid: true` means the password is acceptable; `valid: false` means it is not,
+*   and `message` carries a human-readable reason suitable for display.
 */
 component_password.prototype.validate_password_format = function (pw, options) {
 
 	// empty case
 		if (!pw || pw.length < 1) {
 			const response = {
-				result	: true,
-				msg		: "Password is empty. ignored validation"
+				valid	: true,
+				message	: "Password is empty. ignored validation"
 			}
 			return response;
 		}
@@ -327,8 +327,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 	// enforce min/max length
 		if (pw.length < o.length[0] || pw.length > o.length[1]) {
 			const response = {
-				result	: false,
-				msg		: "Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars "
+				valid	: false,
+				message	: "Password is too short! \nPlease use from " + o.length[0] + " to " + o.length[1] + " chars "
 			}
 			return response;
 		}
@@ -338,8 +338,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			if (!re.hasOwnProperty(rule)) continue;
 			if ((pw.match(re[rule]) || []).length < o[rule]) {
 				const response = {
-					result	: false,
-					msg		: "Password is invalid! \nPlease mix lowercase / uppercase chars and numbers"
+					valid	: false,
+					message	: "Password is invalid! \nPlease mix lowercase / uppercase chars and numbers"
 				}
 				return response;
 			}
@@ -349,8 +349,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		for (i = 0; i < o.badWords.length; i++) {
 			if (pw.toLowerCase().indexOf(o.badWords[i].toLowerCase()) > -1) {
 				const response = {
-					result	: false,
-					msg		: "Bad word! \nPlease use a different password"
+					valid	: false,
+					message	: "Bad word! \nPlease use a different password"
 				}
 				return response;
 			}
@@ -360,8 +360,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		for (i = 0; i < o.badChars.length; i++) {
 			if (pw.indexOf(o.badChars[i]) > -1) {
 				const response = {
-					result	: false,
-					msg		: "Invalid character '" + o.badChars[i] + "'! \nPlease use a different password"
+					valid	: false,
+					message	: "Invalid character '" + o.badChars[i] + "'! \nPlease use a different password"
 				}
 				return response;
 			}
@@ -373,8 +373,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		// currently accepted even though the policy declares them forbidden.
 		// if (o.noSequential && /([\S\s])\1/.test(pw)) {
 		// 	const response = {
-		// 		result	: false,
-		// 		msg		: 'identical characters in sequential order are not allowed'
+		// 		valid	: false,
+		// 		message	: 'identical characters in sequential order are not allowed'
 		// 	}
 		// 	return response;
 		// }
@@ -397,8 +397,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 					(o.noQwertySequences && qwerty.indexOf(seq) > -1)
 				) {
 					const response ={
-						result	: false,
-						msg		: 'alphabetical order not allowed | numerical order not allowed'
+						valid	: false,
+						message	: 'alphabetical order not allowed | numerical order not allowed'
 					}
 					return response;
 				}
@@ -411,16 +411,16 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			if (rule instanceof RegExp) {
 				if (!rule.test(pw)){
 					const response = {
-						result	: false,
-						msg		: 'invalid pw for rule ' + rule
+						valid	: false,
+						message	: 'invalid pw for rule ' + rule
 					}
 					return response;
 				}
 			} else if (rule instanceof Function) {
 				if (!rule(pw)){
 					const response ={
-						result	: false,
-						msg		: 'invalid pw for function ' + rule
+						valid	: false,
+						message	: 'invalid pw for function ' + rule
 					}
 					return response;
 				}
@@ -428,8 +428,8 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		}
 
 	const response = {
-		result	: true,
-		msg		: 'pw is valid '
+		valid	: true,
+		message	: 'pw is valid '
 	}
 
 	// great success!

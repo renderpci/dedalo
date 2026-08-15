@@ -10,11 +10,11 @@
 *
 * WHY THESE ASSERTIONS. The client dispatches on `api_error.code` and nothing
 * else, so every way a failure can reach the browser must land on the same
-* shape: an envelope v2 `{ok:false, error:{code}}`, a COMPAT v1
-* `{result:false, errors:[token]}`, a bare `result:false`, a foreign non-2xx
-* status page, a fetch rejection, a stream frame. Each branch below is one such
-* road, asserted on the CODE it produces (and on the compat marker, so the
-* removal of the compat window has something mechanical to flip).
+* shape: an envelope v2 `{ok:false, error:{code}}`, an `ok:false` without a
+* code, a foreign non-2xx status page, a fetch rejection, a stream frame. Each
+* branch below is one such road, asserted on the CODE it produces. The v1
+* mirror (`result`/`msg`/`errors`) is GONE from the client (P4): the tests that
+* asserted it now assert that it is ignored.
 *
 * Transport classification is BY CLASS (AbortError / TypeError), never by
 * message text — asserted with real DOMException / TypeError instances.
@@ -112,27 +112,14 @@ describe('API_ERROR — the one client error model', function() {
 		assert.isFalse(api_error.retryable)
 		assert.isFalse(api_error.transport)
 		assert.equal(api_error.source, 'envelope')
-		assert.notOk(api_error._compat)
 	})
 
-	it('normalize_api_error: COMPAT v1 {result:false, errors:[token]} → code=errors[0], label_key null, _compat', function() {
-		const api_error = normalize_api_error(fake_response(false, 401), {result: false, msg: 'Authentication required', errors: ['not_logged']})
-		assert.equal(api_error.code, 'not_logged')
-		assert.isNull(api_error.label_key)
-		assert.equal(api_error.message, 'Authentication required')
-		assert.isTrue(api_error._compat)
-		// msg arrays join
-		const joined = normalize_api_error(fake_response(true, 200), {result: false, msg: ['a', 'b'], errors: ['widget_not_defined']})
-		assert.equal(joined.message, 'a | b')
-	})
-
-	it('normalize_api_error: a v1 success carrying warnings in errors[] is NOT a failure', function() {
+	it('normalize_api_error: a body that is not ok:false is never a failure (the v1 mirror is gone)', function() {
 		assert.isNull(normalize_api_error(fake_response(true, 200), {result: {rows: []}, errors: ['a warning']}))
+		assert.isNull(normalize_api_error(fake_response(true, 200), {result: false, msg: 'x', errors: ['not_logged']}))
 	})
 
-	it('normalize_api_error: v1 bare error scalar / bare result:false / ok:false without code', function() {
-		assert.equal(normalize_api_error(fake_response(true, 200), {result: false, error: 'boom'}).code, 'boom')
-		assert.equal(normalize_api_error(fake_response(true, 200), {result: false}).code, 'server.unspecified')
+	it('normalize_api_error: ok:false without a coded error → server.unspecified', function() {
 		assert.equal(normalize_api_error(fake_response(false, 500), {ok: false}).code, 'server.unspecified')
 	})
 
@@ -167,11 +154,10 @@ describe('API_ERROR — the one client error model', function() {
 		assert.isTrue(normalize_transport_error(new TypeError('x')).transport)
 	})
 
-	it('normalize_stream_error: v2 frame.error.code, COMPAT data.errors / errors, already-normalised frames, clean frames', function() {
+	it('normalize_stream_error: v2 frame.error.code, already-normalised frames, clean frames', function() {
 		assert.equal(normalize_stream_error({is_running: false, error: {code: 'job.failed', message: 'x'}, request_id: 'rq'}).code, 'job.failed')
 		assert.equal(normalize_stream_error({is_running: false, error: {code: 'job.failed'}, request_id: 'rq'}).request_id, 'rq')
-		assert.equal(normalize_stream_error({data: {errors: ['not_logged']}}).code, 'not_logged')
-		assert.equal(normalize_stream_error({errors: ['Invalid JSON message']}).code, 'Invalid JSON message')
+		assert.isNull(normalize_stream_error({data: {errors: ['not_logged']}}), 'the v1 frame shape is no longer read')
 		const already = new ApiError({code: CLIENT_ERROR.BAD_RESPONSE, source: 'stream'})
 		assert.strictEqual(normalize_stream_error({error: already}), already)
 		assert.isNull(normalize_stream_error({data: {msg: 'running'}, is_running: true}))
@@ -184,8 +170,8 @@ describe('API_ERROR — the one client error model', function() {
 		assert.isFalse(request_failed({result: false, error: 'legacy string'}), 'a legacy scalar is not an ApiError')
 		assert.isFalse(request_failed(null))
 		assert.equal(response_data({ok: true, data: 'D'}), 'D')
-		assert.equal(response_data({result: 'R'}), 'R', 'COMPAT v1 read')
-		assert.equal(response_data({data: 'D', result: 'R'}), 'D', 'v2 wins')
+		assert.isUndefined(response_data({result: 'R'}), 'the v1 mirror is not a payload any more')
+		assert.equal(response_data({data: 'D', result: 'R'}), 'D')
 		assert.isUndefined(response_data(null))
 	})
 })
@@ -297,33 +283,21 @@ describe('DATA_MANAGER.request — the envelope it resolves', function() {
 		})
 	})
 
-	it('failure attaches the ApiError under `error`, keeps ok:false (+ COMPAT result:false) and publishes api_error + api_response_errors [code]', async function() {
-		const events = capture_events(['api_error', 'api_response_errors'])
+	it('failure attaches the ApiError under `error`, keeps ok:false and publishes api_error', async function() {
+		const events = capture_events(['api_error'])
 		try {
 			await with_stubbed_fetch(async () => json_response({ok: false, request_id: 'rq9', error: {code: 'auth.not_logged', message: 'Authentication required', retryable: false}}, 401), async () => {
 				const api_response = await data_manager.request({body: {action: 'read'}, retries: 3})
 				assert.isTrue(request_failed(api_response))
 				assert.equal(api_response.ok, false)
-				assert.equal(api_response.result, false, 'COMPAT mirror')
 				assert.equal(api_response.error.code, 'auth.not_logged')
 				assert.equal(api_response.error.request_id, 'rq9')
 			})
 			assert.equal(events.seen.api_error?.length, 1)
 			assert.equal(events.seen.api_error[0].code, 'auth.not_logged')
-			assert.deepEqual(events.seen.api_response_errors?.[0], ['auth.not_logged'], 'COMPAT event still fed for page.js')
 		} finally {
 			events.release()
 		}
-	})
-
-	it('a COMPAT v1 failure body resolves with the same contract (error.code = errors[0])', async function() {
-		await with_stubbed_fetch(async () => json_response({result: false, msg: 'Insufficient permissions to read', errors: ['not_authorized']}, 403), async () => {
-			const api_response = await data_manager.request({body: {action: 'read'}, retries: 3})
-			assert.isTrue(request_failed(api_response))
-			assert.equal(api_response.error.code, 'not_authorized')
-			assert.isTrue(api_response.error._compat)
-			assert.deepEqual(api_response.errors, ['not_authorized'], 'the legacy body is preserved during the window')
-		})
 	})
 
 	it('a network failure resolves (never rejects) with a synthesised envelope + client.network', async function() {
@@ -332,14 +306,12 @@ describe('DATA_MANAGER.request — the envelope it resolves', function() {
 			assert.isTrue(request_failed(api_response))
 			assert.equal(api_response.error.code, CLIENT_ERROR.NETWORK)
 			assert.equal(api_response.ok, false)
-			assert.equal(api_response.result, false)
 		})
 	})
 
-	it('csrf rejection is resent exactly once with the fresh token (v2 auth.csrf_failed and COMPAT csrf_failed)', async function() {
+	it('csrf rejection is resent exactly once with the fresh token (auth.csrf_failed)', async function() {
 		for (const body of [
-			{ok: false, error: {code: 'auth.csrf_failed', retryable: false}, csrf_token: 'fresh'},
-			{result: false, msg: 'csrf', errors: ['csrf_failed'], csrf_token: 'fresh'}
+			{ok: false, error: {code: 'auth.csrf_failed', retryable: false}, csrf_token: 'fresh'}
 		]) {
 			let calls = 0
 			const tokens = []

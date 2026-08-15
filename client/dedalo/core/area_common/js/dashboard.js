@@ -4,6 +4,7 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {response_data} from '../../common/js/api_error.js'
 // (!) FLAG: `event_manager` is used in navigate_to_section (lines ~307, ~569) but is NOT
 // imported here and is NOT listed in the /*global*/ pragma. It is presumed to arrive in
 // scope from the caller module (area_common.js) at runtime.  This is fragile: if
@@ -1796,9 +1797,14 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 
 		try {
 			const api_response = await data_manager.request({ body: rqo })
-			if (api_response && api_response.result === true && api_response.data) {
-				cache[range_key] = api_response.data
-				return api_response.data
+			// (!) THE PAYLOAD IS THE ANSWER. The old guard also demanded
+			// `result === true`, which the metric body never carries (the compat
+			// mirror repeats `data`, an OBJECT), so every wider range silently fell
+			// through to null and the timeline switch did nothing.
+			const metric = response_data(api_response)
+			if (metric) {
+				cache[range_key] = metric
+				return metric
 			}
 		} catch (err) {
 			if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {

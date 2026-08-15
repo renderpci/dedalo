@@ -86,11 +86,6 @@ describe('ERROR_STREAM — request_stream / request_fetch_stream failures reject
 			assert.equal(reason.request_id, 'rq-s')
 			assert.instanceOf(reason, Error, 'legacy .message readers still work')
 		})
-		// COMPAT v1 body
-		await with_stubbed_fetch(async () => new Response(JSON.stringify({result: false, msg: 'x', errors: ['not_logged']}), {status: 401, headers: {'content-type': 'application/json'}}), async () => {
-			const reason = await expect_rejection(data_manager.request_stream({body: {action: 'follow'}}))
-			assert.equal(reason.code, 'not_logged')
-		})
 	})
 
 	it('a non-2xx that is not an envelope rejects with client.http_status', async function() {
@@ -162,20 +157,19 @@ describe('ERROR_STREAM — read_stream frames', function() {
 		assert.equal(bad.error.source, 'stream')
 		assert.equal(bad.error.details.reason, 'invalid_json')
 		assert.isTrue(bad.data_string.startsWith('{not json at all'), 'the raw payload is kept for diagnosis')
-		assert.deepEqual(bad.errors, [CLIENT_ERROR.BAD_RESPONSE], 'COMPAT v1 frame shape kept during the window')
 		assert.strictEqual(normalize_stream_error(bad), bad.error)
 	})
 
-	it('a server end-of-run error frame (v2) normalises to its code; a COMPAT data.errors frame too', function() {
+	it('a server end-of-run error frame (v2) normalises to its code; a v1 data.errors frame is ignored', function() {
 		const v2 = normalize_stream_error({is_running: false, request_id: 'rq-e', error: {code: 'diffusion.job_failed', message: 'x', label_key: 'error_diffusion_job_failed', retryable: false}})
 		assert.equal(v2.code, 'diffusion.job_failed')
 		assert.equal(v2.request_id, 'rq-e')
 		assert.equal(v2.source, 'stream')
 		assert.equal(v2.label_key, 'error_diffusion_job_failed')
-		const compat = normalize_stream_error({is_running: false, data: {msg: 'Process failed', errors: ['not_logged']}, total_time: '2 sec'})
-		assert.equal(compat.code, 'not_logged')
-		assert.equal(compat.message, 'Process failed')
-		assert.isTrue(compat._compat)
+		assert.isNull(
+			normalize_stream_error({is_running: false, data: {msg: 'Process failed', errors: ['not_logged']}, total_time: '2 sec'}),
+			'the v1 frame shape is no longer read (P4)'
+		)
 	})
 
 	it('a BARE v2 error body (the agent SSE `event: error` data) normalises to its code', function() {
@@ -195,7 +189,6 @@ describe('ERROR_STREAM — read_stream frames', function() {
 		assert.equal(bare.label_key, 'error_ai_provider_failed')
 		assert.isTrue(bare.retryable)
 		assert.equal(bare.details.hint, 'Retry; the provider may be transient')
-		assert.isUndefined(bare._compat, 'a v2 body is never a compat error')
 		// the wrapper shapes still win, and a progress frame is still not an error
 		assert.isNull(normalize_stream_error({is_running: true, data: {msg: 'working'}}))
 		assert.isNull(normalize_stream_error({is_running: false}))

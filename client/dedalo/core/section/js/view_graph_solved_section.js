@@ -51,6 +51,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
 	import {open_window, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {response_data} from '../../common/js/api_error.js'
 	// import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
 	// D3. Note that to compile d3 using rollup, proceed as follows from the terminal:
 	// - cd '/mylocalpath/v7/master_dedalo/lib/d3'
@@ -650,9 +651,8 @@ const get_graph = async function(options) {
 						body : rqo
 					})
 					// if the server response is ok, it will send the new section_id
-					if (api_response.result && api_response.result>0) {
-
-						const section_id = api_response.result
+					const section_id = response_data(api_response)
+					if (section_id && section_id>0) {
 
 						// source
 						// assign the source data for the source component with the node value

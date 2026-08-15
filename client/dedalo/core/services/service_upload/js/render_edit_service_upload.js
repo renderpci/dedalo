@@ -64,6 +64,8 @@
 // imports
 	import {ui} from '../../../common/js/ui.js'
 	import {get_content_data_queue} from './render_edit_service_upload_queue.js'
+	import {response_data, request_failed} from '../../../common/js/api_error.js'
+	import {error_text} from '../../../common/js/render_api_error.js'
 
 
 
@@ -699,14 +701,17 @@ export const file_selected = async function(self, file) {
 		self.response_msg.classList.remove('success')
 
 	// on finish actions
-		// The message is SERVER text (a refusal sentence, a file name, an exception
-		// detail): it reaches the DOM as TEXT, never parsed as HTML (DS-1).
-		if (response.result===true) {
-			self.response_msg.textContent = response.msg || 'OK. File uploaded'
+		// The failure sentence comes from the ONE renderer (the coded error in the
+		// curator's language) and reaches the DOM as TEXT, never parsed as HTML
+		// (DS-1).
+		if (!request_failed(response) && response_data(response)===true) {
+			self.response_msg.textContent = 'OK. File uploaded'
 			self.response_msg.classList.add('success')
 
 		}else{
-			self.response_msg.textContent = response.msg || 'Error on upload file'
+			self.response_msg.textContent = request_failed(response)
+				? error_text(response.error)
+				: 'Error on upload file'
 			self.response_msg.classList.add('failed')
 		}
 

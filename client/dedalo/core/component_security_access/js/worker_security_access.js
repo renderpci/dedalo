@@ -60,12 +60,14 @@
 * }
 * ```
 *
-* Response shape posted back (`self.postMessage`):
+* Response shape posted back (`self.postMessage`) — the worker's OWN channel,
+* named after envelope v2 (`data` is the payload) because it is not a wire body
+* and never carries the API's compat keys:
 * ```
 * {
-*   result : {Array|false}  — return value of the called function, or false on error
-*   msg    : {string}       — human-readable status / timing message
-*   errors : {Array}        — list of error strings (empty on success)
+*   data       : {Array|false}  — return value of the called function, or false on error
+*   message    : {string}       — human-readable status / timing message
+*   error_list : {Array}        — list of error strings (empty on success)
 * }
 * ```
 *
@@ -77,7 +79,7 @@
 *     params : [item, datalist]
 *   });
 *   current_worker.onmessage = function(e) {
-*     const children = e.data.result
+*     const children = e.data.data
 *     fn_global_radio(children)
 *     current_worker.terminate()
 *   }
@@ -92,11 +94,11 @@
 self.onmessage = function(e) {
 	const t1 = performance.now()
 
-	// Initialise the response envelope; result is overwritten on success.
+	// Initialise the response payload; `data` is overwritten on success.
 	const response = {
-		result	: false,
-		msg		: 'onmessage error',
-		errors	: []
+		data		: false,
+		message		: 'onmessage error',
+		error_list	: []
 	}
 
 	// options
@@ -109,10 +111,10 @@ self.onmessage = function(e) {
 	// check function
 		if (typeof self[fn]!=='function') {
 			// error
-			response.result	= false
-			response.errors.push('Invalid target function name! ' + fn)
-			response.msg	= 'Task rejected'
-			console.error("Worker errors:", response.errors);
+			response.data		= false
+			response.error_list.push('Invalid target function name! ' + fn)
+			response.message	= 'Task rejected'
+			console.error("Worker errors:", response.error_list);
 			self.postMessage(response);
 			return
 		}
@@ -130,13 +132,13 @@ self.onmessage = function(e) {
 				result = self.get_parents(...params)
 				break;
 			default:
-				response.errors.push('Invalid target function name! ' + fn)
+				response.error_list.push('Invalid target function name! ' + fn)
 				break;
 		}
 
 	// response OK
-		response.result	= result
-		response.msg	= 'Task done in ms: ' + performance.now()-t1 + ' ms'
+		response.data		= result
+		response.message	= 'Task done in ms: ' + performance.now()-t1 + ' ms'
 
 
 	self.postMessage(response);

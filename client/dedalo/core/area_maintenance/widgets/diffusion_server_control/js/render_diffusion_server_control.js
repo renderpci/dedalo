@@ -7,8 +7,9 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
-	import {request_failed, normalize_transport_error} from '../../../../common/js/api_error.js'
+	import {request_failed, normalize_transport_error, response_data} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 	// the ONE progress model, shared with the live layer (see progress_model.js)
 	import {format_int, progress_view, row_signature} from './progress_model.js'
 	import {build_rollup_block} from './rollup_panel.js'
@@ -974,13 +975,13 @@ const build_config_block = function(value, parent) {
 *      a failed api_response so the rest of the flow always completes cleanly.
 *   4. Removes the spinner and releases the lock.
 *   5. Writes a JSON summary of the response to the `.body_response` <pre> element.
-*   6. On success (`result === true` or a non-null object), calls reload_widget to
+*   6. On success (payload `true` or a non-null object), calls reload_widget to
 *      re-fetch the server state and re-render. On failure, routes the ApiError
 *      through handle_api_error().
 *
-* The `ok` check accepts `typeof result === 'object' && result !== null` in addition to
-* `result === true` because some API actions (e.g. retry_pending_deletions) return a
-* result object instead of a boolean on success.
+* The `ok` check accepts `typeof data === 'object' && data !== null` in addition to
+* `data === true` because some API actions (e.g. retry_pending_deletions) return a
+* payload object instead of a boolean on success.
 *
 * (!) Failures NEVER reach alert(): they go through handle_api_error(), the ONE
 * client error model (policy decides toast / inline / relogin).
@@ -1004,9 +1005,7 @@ const run_action = async function(self, content_data, anchor, api_call) {
 		// a thrown transport failure becomes an ApiError like every other failure
 		api_response = {
 			ok		: false,
-			result	: false,
-			error	: normalize_transport_error(error),
-			msg		: (error && error.message) || 'Unknown error'
+			error	: normalize_transport_error(error)
 		}
 	}
 
@@ -1015,15 +1014,16 @@ const run_action = async function(self, content_data, anchor, api_call) {
 	// SEC-XSS: textContent prevents any HTML parsing of server strings
 	if (body_response) {
 		const summary = {
-			result	: api_response.result===true || (typeof api_response.result === 'object'),
-			msg		: api_response.msg || null,
-			errors	: api_response.errors || []
+			ok		: request_failed(api_response)===false,
+			data	: response_data(api_response) ?? null,
+			error	: request_failed(api_response) ? error_text(api_response.error) : null
 		}
 		body_response.textContent = JSON.stringify(summary, null, 2)
 	}
 
+	const action_data = response_data(api_response)
 	const ok = request_failed(api_response)===false
-		&& (api_response.result===true || (typeof api_response.result === 'object' && api_response.result!==null))
+		&& (action_data===true || (typeof action_data === 'object' && action_data!==null))
 	if (ok) {
 		await reload_widget(self, content_data)
 	} else {

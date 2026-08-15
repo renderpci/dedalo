@@ -2,7 +2,7 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
-// SEC-032: install runs WITHOUT authentication. All `*_status.innerHTML = api_response.msg`
+// SEC-032: install runs WITHOUT authentication. All `*_status.innerHTML = <server text>`
 // sites have been converted to `textContent` so that any reflection of attacker-controlled
 // input (DB host, password validator, hierarchy import errors, etc.) cannot trigger
 // pre-auth XSS. Counter tickers and reset-to-empty assignments were also converted for
@@ -18,7 +18,7 @@
 	import {component_password} from '../../component_password/js/component_password.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {toggle_theme, get_theme} from '../../page/js/theme.js'
-	import {request_failed} from '../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
 
 
@@ -28,13 +28,16 @@
 * The sentence to print for ONE installer API answer.
 *
 * A FAILURE is an ApiError on the envelope — envelope v2 carries NO `msg` on a
-* failure at all, so reading `api_response.msg` there prints nothing. The ONE
+* failure at all, so reading the step's `msg` there prints nothing. The ONE
 * renderer resolves it (label → English `message` → code), which is exactly what
 * this screen needs: the installer runs PRE-LOGIN with an empty label catalog, and
 * `error_text` degrades to the English message on its own without assuming
 * `get_label` exists.
 *
-* A SUCCESS keeps the server's own `msg` (arrays joined).
+* A SUCCESS keeps the step's own `msg` EXTENSION KEY (ERRORS_SPEC §3.0 — the
+* install router puts every field beside the verdict there: src/core/install/
+* engine.ts stepResult), read through response_extension so a failure can never
+* fall back onto the compat mirror. Arrays are joined.
 *
 * @param {Object} api_response
 * @param {string} [fallback]
@@ -46,7 +49,7 @@ const server_text = function(api_response, fallback) {
 		return error_text(api_response.error) || (fallback || '')
 	}
 
-	const msg = api_response ? api_response.msg : null
+	const msg = response_extension(api_response, 'msg')
 	if (Array.isArray(msg)) {
 		return msg.filter(line => line!==null && line!==undefined).join(' | ')
 	}
@@ -344,7 +347,7 @@ const set_status_result = function(status_node, api_response) {
 
 	// ONE error model: a failed call has no `msg` on the wire — its text comes from
 	// the ApiError through the ONE renderer (server_text).
-	if (request_failed(api_response) || api_response.result !== true) {
+	if (request_failed(api_response) || response_data(api_response) !== true) {
 		status_node.classList.add('error')
 	} else {
 		status_node.classList.add('ok')
@@ -1434,7 +1437,7 @@ const render_config_options = function(self) {
 					})
 
 				// manage result
-					if (request_failed(api_response) || api_response.result===false) {
+					if (request_failed(api_response) || response_data(api_response)===false) {
 						console.error("to_update failed:", api_response.error || api_response);
 					}else{
 						console.log("to_update api_response:", api_response);
@@ -1525,7 +1528,7 @@ const render_db_config_block = function(self) {
 				button_node	: test_button
 			})
 			set_status_result(status, api_response)
-			if (api_response.result===true) {
+			if (response_data(api_response)===true) {
 				reveal_section(self.node.content_data.entity_block)
 				update_step_indicator(self.node.content_data.step_indicator, 3)
 			}
@@ -1749,7 +1752,7 @@ const render_diffusion_block = function(self) {
 			button_node	: test_button
 		})
 		set_status_result(status, api_response)
-		tested_ok = (api_response.result===true)
+		tested_ok = (response_data(api_response)===true)
 	})
 
 	continue_button.addEventListener('mouseup', function() {
@@ -1839,7 +1842,7 @@ const render_mailer_block = function(self) {
 			timeout		: 20*1000
 		})
 		set_status_result(status, api_response)
-		tested_ok = (api_response.result===true)
+		tested_ok = (response_data(api_response)===true)
 	})
 
 	continue_button.addEventListener('mouseup', function() {
@@ -1893,7 +1896,7 @@ const render_persist_block = function(self) {
 			timeout		: 20*1000
 		})
 		set_status_result(status, api_response)
-		if (api_response.result!==true) {
+		if (response_data(api_response)!==true) {
 			return
 		}
 		// show generated secrets ONCE
@@ -1921,7 +1924,7 @@ const render_persist_block = function(self) {
 			button_node	: verify_button
 		})
 		set_status_result(verify_status, api_response)
-		if (api_response.result===true) {
+		if (response_data(api_response)===true) {
 			verify_button.remove()
 			reveal_section(self.node.content_data.directories_block)
 			update_step_indicator(self.node.content_data.step_indicator, 7)
@@ -1977,7 +1980,7 @@ const render_directories_block = function(self) {
 		})
 		render_dirs(api_response.dirs)
 		set_status_result(status, api_response)
-		if (api_response.result===true) {
+		if (response_data(api_response)===true) {
 			create_button.classList.add('hide')
 			reveal_section(self.node.content_data.installer_db_block)
 			update_step_indicator(self.node.content_data.step_indicator, 8)
@@ -2102,7 +2105,7 @@ const render_installer_db_block = function(self) {
 				})
 
 			// manage result
-				if (api_response.result===true) {
+				if (response_data(api_response)===true) {
 					console.log('DBB installed:', api_response);
 					set_status_result(installer_db_status, api_response)
 					// show set_root_password_block
@@ -2230,8 +2233,8 @@ const render_set_root_password_block = function(self) {
 		* user-event handlers that fire after the full fragment has been composed.
 		*
 		* @param {Object} validated_obj - Return value of component_password.validate_password_format
-		* @param {boolean} validated_obj.result - true if password meets all policy requirements
-		* @param {string}  validated_obj.msg    - human-readable failure reason (empty on success)
+		* @param {boolean} validated_obj.valid   - true if password meets all policy requirements
+		* @param {string}  validated_obj.message - human-readable failure reason (empty on success)
 		* @param {HTMLElement} input_node - The password input to decorate
 		* @returns {boolean} Always true
 		*/
@@ -2242,11 +2245,11 @@ const render_set_root_password_block = function(self) {
 				set_pw_status.classList.remove('error')
 				set_pw_status.textContent = ''
 
-			if (validated_obj.result===false) {
+			if (validated_obj.valid===false) {
 				input_node.classList.remove('valid')
 				input_node.classList.add('invalid')
 				set_pw_status.classList.add('error')
-				set_pw_status.textContent = validated_obj.msg
+				set_pw_status.textContent = validated_obj.message
 				change_root_pw_button.classList.add('loading')
 			}else{
 				input_node.classList.remove('invalid')
@@ -2285,8 +2288,8 @@ const render_set_root_password_block = function(self) {
 			)
 			set_message(
 				{
-					result	: input_new_pw_retype.value===input_new_pw.value && validated_obj.result===true,
-					msg		: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
+					valid	: input_new_pw_retype.value===input_new_pw.value && validated_obj.valid===true,
+					message	: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
 				},
 				input_new_pw_retype
 			)
@@ -2337,7 +2340,7 @@ const render_set_root_password_block = function(self) {
 					input_new_pw.value,
 					password_validation_options
 				)
-				if (validated_obj.result!==true) {
+				if (validated_obj.valid!==true) {
 					set_message(validated_obj, input_new_pw)
 					return false
 				}
@@ -2360,8 +2363,8 @@ const render_set_root_password_block = function(self) {
 				})
 
 			// manage result
-				if (api_response.result===true) {
-					console.log('api_response:', api_response.msg)
+				if (response_data(api_response)===true) {
+					console.log('api_response:', server_text(api_response))
 					set_status_result(set_pw_status, api_response)
 					change_root_pw_button.remove();
 					// show next block: login (root logs in inside the installer)
@@ -2432,7 +2435,7 @@ const render_login_block = async function(self) {
 			// the install wizard without navigating away from the page.
 				const custom_action_dispatch = function(api_response){
 
-					if (api_response.result===true) {
+					if (response_data(api_response)===true) {
 
 						// all is OK case
 							login_status.classList.add('ok')
@@ -2458,7 +2461,7 @@ const render_login_block = async function(self) {
 							console.warn('api_response:', api_response);
 					}
 
-					return api_response.result
+					return response_data(api_response)
 				}
 				login.custom_action_dispatch = custom_action_dispatch
 
@@ -2814,10 +2817,12 @@ export const render_hierarchies_import_block = function(options) {
 				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
-				// Backend contract: { result:bool (overall ok), msg, errors:[], responses:[] }.
-				// Success only when result===true AND no per-item errors were recorded.
-				const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
-				if (api_response.result===true && ar_errors.length===0) {
+				// Backend contract: the step's verdict is the payload; `msg`, `errors[]` and
+				// `responses[]` are its extension keys. Success only when the verdict is
+				// true AND no per-item errors were recorded.
+				const step_errors = response_extension(api_response, 'errors')
+				const ar_errors = Array.isArray(step_errors) ? step_errors : []
+				if (response_data(api_response)===true && ar_errors.length===0) {
 					import_hierarchies_status.classList.add('ok')
 					import_hierarchies_status.textContent = server_text(api_response)
 					import_hierarchies_button.remove()
@@ -2892,8 +2897,9 @@ export const render_hierarchies_import_block = function(options) {
 					console.log('reset_hierarchies response: ', api_response);
 
 				// manage result (same contract as import)
-					const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
-					if (api_response.result===true && ar_errors.length===0) {
+					const step_errors = response_extension(api_response, 'errors')
+				const ar_errors = Array.isArray(step_errors) ? step_errors : []
+					if (response_data(api_response)===true && ar_errors.length===0) {
 						import_hierarchies_status.classList.add('ok')
 						import_hierarchies_status.textContent = server_text(api_response)
 						if (typeof callback==='function') {
@@ -3038,8 +3044,9 @@ const render_register_tools_block = function(self) {
 		// status + advance.
 		// Best-effort: reveal Finish on any completed run so a single broken tool can't trap the
 		// install. A clean run removes the button; a run with per-tool errors keeps it for a retry.
-			const ar_errors = Array.isArray(api_response.errors) ? api_response.errors : []
-			if (api_response.result===true && ar_errors.length===0) {
+			const step_errors = response_extension(api_response, 'errors')
+				const ar_errors = Array.isArray(step_errors) ? step_errors : []
+			if (response_data(api_response)===true && ar_errors.length===0) {
 				status.classList.add('ok')
 				status.textContent = server_text(api_response)
 				register_button.remove()
@@ -3110,7 +3117,7 @@ const render_installer_finish_block = function(self) {
 				})
 
 			// manage result
-				if (request_failed(api_response) || api_response.result===false) {
+				if (request_failed(api_response) || response_data(api_response)===false) {
 
 					// fail case
 					// (!) The 'loading' class is NOT removed on error — intentional guard

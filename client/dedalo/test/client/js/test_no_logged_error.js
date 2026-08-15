@@ -11,9 +11,8 @@
 * the token `not_logged` (this file carried the typo `no_logged` for years and
 * asserted nothing — the panel it "tested" was the generic one).
 *
-* COMPAT: `page_globals.api_errors` is the legacy input of the page panel; the
-* v2 slot is `page_globals.page_error` (error_dispatch.js) — both are set here
-* so the assertion holds on either side of the compat window.
+* The page panel reads ONE slot, `page_globals.page_error` (error_dispatch.js):
+* an ApiError whose code selects the affordance.
 */
 
 import {get_instance} from '../../../core/common/js/instances.js'
@@ -39,14 +38,7 @@ describe("SECTION TEST_NO_LOGGED_ERROR", function() {
 
 		await section.build(true)
 
-		// the session died under a working page: legacy shape + v2 slot
-		page_globals.api_errors = [
-			{
-				error	: 'not_logged', // type
-				msg		: `User is not logged (fake message)`,
-				trace	: 'test SECTION TEST_NO_LOGGED_ERROR'
-			}
-		]
+		// the session died under a working page
 		page_globals.page_error = new ApiError({code: 'auth.not_logged', message: 'User is not logged (fake message)'})
 
 		const node = await section.render()
@@ -59,7 +51,6 @@ describe("SECTION TEST_NO_LOGGED_ERROR", function() {
 		assert.include(panel.textContent, 'User is not logged (fake message)')
 
 		// leave the globals clean for the next suite
-		page_globals.api_errors	= []
 		page_globals.page_error	= null
 	})
 

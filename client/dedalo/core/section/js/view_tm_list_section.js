@@ -12,6 +12,8 @@
 	import {set_element_css} from '../../page/js/css.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 	import {render_column_id as default_render_column_id} from './render_list_section.js'
+	import {response_data, request_failed} from '../../common/js/api_error.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -285,7 +287,7 @@ view_tm_list_section.render_column_id = function(options) {
 				lang			: page_globals.dedalo_data_nolan,
 				matrix_id		: matrix_id
 			})
-			if (response?.result===true) {
+			if (response_data(response)===true) {
 				await main_caller.refresh()
 				await list.refresh()
 				return
@@ -293,7 +295,7 @@ view_tm_list_section.render_column_id = function(options) {
 			console.warn('tool_time_machine apply_value response:', response)
 			await ui.confirm({
 				header	: 'Error',
-				body	: response?.msg || 'Error. Unknown error on apply tm value'
+				body	: request_failed(response) ? error_text(response.error) : 'Error. Unknown error on apply tm value'
 			})
 		}
 

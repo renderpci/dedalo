@@ -48,7 +48,7 @@ describe('TS_OBJECT EXTENDED : ', function() {
 
             console.warn(`[Mock] No response for action: ${action}, key: ${key}. Using original request.`);
             // return original_request(options);
-            return { result: true }; // Default success
+            return { ok: true, data: true }; // Default success
         };
     });
 
@@ -83,7 +83,8 @@ describe('TS_OBJECT EXTENDED : ', function() {
         it('INIT AND BUILD', async function() {
             // Mock responses must be set BEFORE actions that trigger them
             mock_responses.set(`get_node_data_${section_tipo}_${section_id}`, {
-                result: {
+                ok: true,
+                data: {
                     ts_id: `${section_tipo}_${section_id}`,
                     section_tipo: section_tipo,
                     section_id: section_id,
@@ -153,7 +154,8 @@ describe('TS_OBJECT EXTENDED : ', function() {
             assert.ok(main_instance, 'main_instance should be defined');
             // Mock get_children_data
             mock_responses.set('get_children_data', {
-                result: {
+                ok: true,
+                data: {
                     ar_children_data: [
                         {
                             ts_id: 'child_101', section_tipo: 'test3', section_id: '101', order: 1,
@@ -224,7 +226,7 @@ describe('TS_OBJECT EXTENDED : ', function() {
             await old_parent.render();
 
             // Mock update_parent_data
-            mock_responses.set('update_parent_data', { result: true, msg: 'Updated' });
+            mock_responses.set('update_parent_data', { ok: true, data: true });
 
             // Set up initial state
             old_parent.add_children_item(moving_child.data);

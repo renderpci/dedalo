@@ -331,17 +331,17 @@ describe(`COMPONENT_PASSWORD DATA OPERATIONS`, function() {
 	it(`validate_password_format validates correctly`, async function() {
 
 		// valid password (meets all rules: lower, upper, numeric, length 6-32)
-		assert.equal(instance.validate_password_format('V4l1dP4ss').result, true, 'expected valid password')
+		assert.equal(instance.validate_password_format('V4l1dP4ss').valid, true, 'expected valid password')
 		// invalid password (too short)
-		assert.equal(instance.validate_password_format('Ab1').result, false, 'expected too short password invalid')
+		assert.equal(instance.validate_password_format('Ab1').valid, false, 'expected too short password invalid')
 		// invalid password (no uppercase)
-		assert.equal(instance.validate_password_format('lower1').result, false, 'expected no uppercase invalid')
+		assert.equal(instance.validate_password_format('lower1').valid, false, 'expected no uppercase invalid')
 		// invalid password (no numeric)
-		assert.equal(instance.validate_password_format('NoNumber').result, false, 'expected no numeric invalid')
+		assert.equal(instance.validate_password_format('NoNumber').valid, false, 'expected no numeric invalid')
 		// empty password (allowed, ignored validation)
-		assert.equal(instance.validate_password_format('').result, true, 'expected empty password allowed')
+		assert.equal(instance.validate_password_format('').valid, true, 'expected empty password allowed')
 		// bad word
-		assert.equal(instance.validate_password_format('Password1').result, false, 'expected bad word invalid')
+		assert.equal(instance.validate_password_format('Password1').valid, false, 'expected bad word invalid')
 	});
 
 

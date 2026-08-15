@@ -12,9 +12,10 @@
 * LAW: NEVER innerHTML. Every message reaches the DOM through `text_content` /
 * text nodes — an `error.message` is server text, a `details` value can be a
 * user-typed string, and a stream frame can be anything (DS-1,
-* error_report_xss_tripwire). `render_common.render_server_response_error` is
-* the legacy panel this supersedes; its affordances (logo, reload on session
-* loss, Home link) are kept, its `inner_html` sinks are not.
+* error_report_xss_tripwire). It supersedes the legacy
+* `render_common.render_server_response_error` panel (DELETED at the P4 compat
+* removal); its affordances (logo, reload on session loss, Home link) are kept,
+* its `inner_html` sinks are not.
 */
 
 // imports

@@ -921,10 +921,10 @@ const get_filter_free_q = function(self) {
 * @param {Object|null} options - Unused; kept so the engine signature is uniform
 *   across dedalo_engine / external_engine.
 * @returns {Promise<Object>} the API response:
-*   { result: { context: Array, data: Array }, msg: string } on success,
-*   { result: false, msg, errors: string[], source_status: Object } on failure,
-*   { result: { data: [] }, source_status: {state:'empty_query'} } when nothing
-*   was typed (no request is made).
+*   { ok:true, data: { context: Array, data: Array } } on success,
+*   { ok:false, error: ApiError, source_status?: Object } on failure,
+*   { ok:true, data: { data: [] }, source_status: {state:'empty_query'} } when
+*   nothing was typed (no request is made).
 */
 service_autocomplete.prototype.external_engine = async function(options) {
 
@@ -939,11 +939,13 @@ service_autocomplete.prototype.external_engine = async function(options) {
 	// resolve by itself, and it is the one a curator most needs named — an empty
 	// datalist otherwise reads as "the catalogue has nothing".
 		if (q==='') {
+			// The client's own envelope, in the SERVER's shape (envelope v2): the
+			// caller reads it through response_data() like any other answer.
 			return {
-				result	: {
+				ok		: true,
+				data	: {
 					data : []
 				},
-				msg		: 'Empty query',
 				source_status : {
 					state		: 'empty_query',
 					label_key	: 'external_search_empty_query',

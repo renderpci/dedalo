@@ -8,6 +8,7 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {update_process_status} from '../../../../common/js/common.js'
+	import {response_data} from '../../../../common/js/api_error.js'
 
 
 
@@ -294,7 +295,7 @@ const get_content_data = async function(self) {
 			// call API to fire process and get PID
 			const api_response = await self.make_backup()
 
-			if (!api_response || !api_response.result) {
+			if (!api_response || !response_data(api_response)) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'error',
@@ -399,7 +400,7 @@ const refresh_files_list = async (self, type, container) => {
 	})
 
 	// message from API response
-	const msg = api_response?.result || ['Unknown error']
+	const msg = response_data(api_response) || ['Unknown error']
 	// print list
 	// server text as TEXT, never an HTML sink
 	container.textContent = JSON.stringify(msg, null, 2)

@@ -84,7 +84,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
@@ -484,7 +484,7 @@ const render_config_vars_status = function (self) {
 *   off, "Deactivate" when on.
 * - When maintenance mode is currently OFF the submit button receives the CSS class
 *   `danger` (red) to warn the operator before activating it.
-* - On successful API response (`api_response.result === true`) `page_globals.maintenance_mode`
+* - On successful API response (a truthy payload) `page_globals.maintenance_mode`
 *   is updated in-place and the page is refreshed via `dd_request_idle_callback` so
 *   all widgets re-render with the new flag state without a full navigation.
 * - The `trigger` object (rather than `on_submit`) is used here, meaning `build_form`
@@ -544,7 +544,7 @@ const render_maintenance_mode = (self) => {
 				}
 			},
 			on_done : (api_response) => {
-				if (request_failed(api_response)===false && api_response.result) {
+				if (request_failed(api_response)===false && response_data(api_response)) {
 					dd_request_idle_callback(
 						() => {
 							// update page_globals value
@@ -596,7 +596,7 @@ const render_maintenance_mode = (self) => {
 *   off, "Deactivate" when on.
 * - When recovery mode is currently OFF the submit button receives the CSS class
 *   `danger` (red) as a visual warning.
-* - On successful API response (`api_response.result === true`) `page_globals.recovery_mode`
+* - On successful API response (a truthy payload) `page_globals.recovery_mode`
 *   is updated in-place, the page is refreshed via `dd_request_idle_callback`, and the
 *   URL is cleaned up by stripping any `recovery` query parameter that may have been
 *   injected by a previous recovery-triggered redirect — otherwise the recovery param
@@ -656,7 +656,7 @@ const render_recovery_mode = (self) => {
 				}
 			},
 			on_done : (api_response) => {
-				if (api_response.result) {
+				if (response_data(api_response)) {
 					dd_request_idle_callback(
 						() => {
 							// update page_globals value
@@ -810,7 +810,7 @@ const render_notification = (self) => {
 					console.log('debug set_notification api_response:', api_response);
 				}
 
-				if (api_response.result) {
+				if (response_data(api_response)) {
 					// update page_globals value
 					page_globals.dedalo_notification = notification_value===false
 						? false
@@ -832,7 +832,7 @@ const render_notification = (self) => {
 					await handle_api_error(api_response.error, {wrapper: notification_body_response})
 				}else{
 					// server text as TEXT, never an HTML sink
-					const error_txt = api_response.msg || 'Error setting notification_value (unknown)'
+					const error_txt = response_extension(api_response, 'msg') || 'Error setting notification_value (unknown)'
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'error',

@@ -5,6 +5,7 @@
 
 
 import {get_instance} from '../../../core/common/js/instances.js'
+import {ApiError} from '../../../core/common/js/api_error.js'
 
 
 
@@ -24,13 +25,10 @@ describe("SECTION FORCED TEST_UNKNOWN_ERROR", async function() {
 
 	await section.build(true)
 
-	page_globals.api_errors = [
-		{
-			error	: 'unknown', // type
-			msg		: `Unknown error`,
-			trace	: 'test SECTION FORCED TEST_UNKNOWN_ERROR'
-		}
-	]
+	page_globals.page_error = new ApiError({
+		code	: 'internal.unexpected',
+		message	: 'Unknown error'
+	})
 
 	const node = await section.render()
 	container.appendChild(node)

@@ -8,6 +8,7 @@ import {event_manager} from '../../../core/common/js/event_manager.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {clone, pause} from '../../../core/common/js/utils/util.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -524,7 +525,7 @@ describe(`COMPONENT_RELATION_CHILDREN DATA OPERATIONS`, async function() {
 
 			// asserts - verify API response structure
 			assert.notEqual(api_response, null, 'api_response must not be null')
-			assert.ok(api_response.result, 'api_response.result must be truthy')
+			assert.ok(response_data(api_response), 'the api_response payload must be truthy')
 
 			await instance.destroy(true, true, true)
 		})

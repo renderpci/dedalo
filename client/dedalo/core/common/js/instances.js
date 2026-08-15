@@ -35,6 +35,7 @@
 // imports
 	import {data_manager} from './data_manager.js'
 	import {same_section_id} from './utils/index.js'
+	import {response_data} from './api_error.js'
 
 
 
@@ -190,12 +191,14 @@ export const get_instance = async function(options) {
 				mode			: mode
 			})
 
-			if(SHOW_DEBUG===true || !element_context_response.result) {
+			const element_context = response_data(element_context_response)
+
+			if(SHOW_DEBUG===true || !element_context) {
 				console.warn('// [get_instance] element_context API response:', element_context_response);
 			}
 
 			// resolved model
-			const resolved_model = element_context_response.result?.[0]?.model;
+			const resolved_model = element_context?.[0]?.model;
 			if (!resolved_model) {
 				console.error('Error: unable to resolve element context. options:', options);
 				return null;
@@ -206,12 +209,12 @@ export const get_instance = async function(options) {
 				// inject context to options
 				// Avoid a redundant context API call during instance.init() by
 				// piggy-backing the context the server already returned here.
-				options.context	= element_context_response.result[0]
+				options.context	= element_context[0]
 			}
 
 			// lang. Set again from more reliable calculated context
 			// Note that some components may change their lang depending on whether they are with_lang_versions or allow transliteration.
-			options.lang = element_context_response.result[0].lang
+			options.lang = element_context[0].lang
 
 			return resolved_model
 		})();

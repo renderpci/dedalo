@@ -17,7 +17,7 @@
 * overrides — a tool that softens `auth.not_logged` is a bug, not a feature.
 *
 * handle_api_error is exercised without a backend: the page-level actions only
-* set `page_globals.page_error` (+ the COMPAT api_errors entry), the toast goes
+* set `page_globals.page_error`, the toast goes
 * through the 'notification' event (captured, and asserted deduped), the relogin
 * action is asserted NOT to open when the page is not logged in (the "never a
 * SECOND login" rule) — a real overlay needs the login context from the server.
@@ -145,7 +145,6 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 	let original_debug
 	beforeEach(function() {
 		reset_error_dispatch_state()
-		page_globals.api_errors	= []
 		page_globals.page_error	= null
 		original_debug			= window.SHOW_DEBUG
 		window.SHOW_DEBUG		= false
@@ -194,15 +193,12 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		assert.equal(seen.length, 0)
 	})
 
-	it('no_access_page: sets page_globals.page_error and the COMPAT api_errors entry {error:not_authorized}', async function() {
+	it('no_access_page: sets page_globals.page_error — THE single page-level slot', async function() {
 		const api_error = new ApiError({code: 'perm.denied', message: 'Insufficient permissions', request_id: 'rq-p'})
 		const outcome = await handle_api_error(api_error)
 		assert.deepEqual(outcome, {recovered: false, action: 'no_access_page'})
 		assert.strictEqual(page_globals.page_error, api_error)
-		assert.equal(page_globals.api_errors.length, 1)
-		assert.equal(page_globals.api_errors[0].error, 'not_authorized')
-		assert.include(page_globals.api_errors[0].trace, 'perm.denied')
-		assert.include(page_globals.api_errors[0].trace, 'rq-p')
+		assert.isUndefined(page_globals.api_errors, 'the legacy array is gone (P4)')
 	})
 
 	it('no_access_page / page_panel render the panel into ctx.wrapper when given (text only)', async function() {
@@ -213,7 +209,7 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		assert.equal(panel.dataset.code, 'request.invalid_tipo')
 		assert.equal(panel.querySelector('h1').textContent, 'Invalid tipo <b>x</b>')
 		assert.isNull(panel.querySelector('b'))
-		assert.equal(page_globals.api_errors[0].error, 'invalid_page_element')
+		assert.strictEqual(page_globals.page_error.code, 'request.invalid_tipo')
 	})
 
 	it('inline: renders into ctx.wrapper via ui.show_message; falls back to a toast without a wrapper', async function() {

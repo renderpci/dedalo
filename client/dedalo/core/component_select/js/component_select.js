@@ -37,6 +37,7 @@
 	import {render_edit_component_select} from './render_edit_component_select.js'
 	import {render_list_component_select} from './render_list_component_select.js'
 	import {render_search_component_select} from './render_search_component_select.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -194,7 +195,7 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 			console.log('add_new_element api_response:', api_response);
 		}
 		// add value to current data
-		if (api_response.result) {
+		if (response_data(api_response)) {
 
 			// save return the datum of the component
 			// to refresh the component, inject this api_response to use as "read" api_response

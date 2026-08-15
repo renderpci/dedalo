@@ -29,14 +29,10 @@
 * client dispatches on `api_error.code` ONLY. `message` is the registry's
 * English (logs, curl); the browser renders `label_key` (render_api_error.js).
 *
-* COMPAT (bounded window — REMOVAL CONDITION: the
-* `client_error_contract_tripwire` census of `.msg` / `.errors` / `.result`
-* reads in client/** reaches ZERO; then every branch marked "COMPAT v1" here is
-* deleted in the same change as the server's ERROR_ENVELOPE_COMPAT block):
-*   - v1 failure bodies `{result:false, msg, errors:[token]}` normalise with
-*     `code = errors[0]`, `label_key = null` and `_compat:true`;
-*   - `response_data()` reads `data ?? result` so callers migrate onto ONE
-*     accessor instead of touching `.result` themselves.
+* The v1 compat window is CLOSED on this side (P4): nothing here reads the
+* mirror keys `result` / `msg` / `errors` any more. A failure is `ok:false` +
+* a coded `error`, a success is `data` — read through `response_data()` — and
+* a handler-owned top-level field through `response_extension()`.
 */
 
 
@@ -148,10 +144,6 @@ export class ApiError extends Error {
 		this.raw			= fields.raw===undefined ? null : fields.raw
 		this.category		= typeof fields.category==='string' ? fields.category : null
 		this.debug			= fields.debug ?? null
-		// COMPAT v1: marks an ApiError built from a legacy `{result:false, msg, errors}` body.
-		if (fields._compat===true) {
-			this._compat = true
-		}
 	}
 
 	/**
@@ -172,8 +164,7 @@ export class ApiError extends Error {
 			transport		: this.transport,
 			severity		: this.severity,
 			source			: this.source,
-			category		: this.category,
-			...(this._compat ? {_compat: true} : {})
+			category		: this.category
 		}
 	}
 }//end class ApiError
@@ -205,12 +196,10 @@ export const is_api_error = (value) => {
 * the ApiError, or null when the body is a success (or there is nothing to say).
 *
 * Order — the FIRST branch that recognises the body wins:
-*   1. v2       `body.ok===false && body.error?.code`         → copy the fields verbatim
-*   2. COMPAT v1 `Array.isArray(body.errors) && length` (and `result` not truthy) → code = errors[0], label_key null, _compat
-*   3. COMPAT v1 `body.error` truthy and NOT an object           → code = String(body.error)
-*   4. `body.result===false` / `body.ok===false` (nothing else)  → 'server.unspecified'
-*   5. `response && !response.ok` and no parseable body          → client.http_status
-*   6. null
+*   1. v2 `body.ok===false && body.error?.code`         → copy the fields verbatim
+*   2. `body.ok===false` and nothing else               → 'server.unspecified'
+*   3. `response && !response.ok` and no parseable body → client.http_status
+*   4. null
 *
 * @param {Response|{ok,status,statusText}|null} response - the fetch Response (or a lookalike); null when none
 * @param {*} body - the parsed JSON body; null/undefined when unparseable
@@ -243,63 +232,22 @@ export const normalize_api_error = (response, body, ctx = {}) => {
 		})
 	}
 
-	// 2. COMPAT v1: `{result:false, msg, errors:[token, …]}` (REMOVAL: census 0)
-	// A TRUTHY `result` next to a non-empty `errors` is a v1 success carrying
-	// warnings (maintenance widgets do this) — not a failure.
-	const v1_failed = is_object && body.ok!==true && (body.result===false || body.result===null || body.result===undefined)
-	if (v1_failed && Array.isArray(body.errors) && body.errors.length) {
-		const first	= body.errors[0]
-		const msg	= Array.isArray(body.msg)
-			? body.msg.filter((item) => typeof item==='string').join(' | ')
-			: (typeof body.msg==='string' ? body.msg : null)
-		return new ApiError({
-			code		: typeof first==='string' && first.length ? first : SERVER_UNSPECIFIED,
-			status		: status,
-			message		: msg || (typeof first==='string' ? first : null),
-			label_key	: null,
-			details		: {},
-			request_id	: typeof body.request_id==='string' ? body.request_id : null,
-			retryable	: false,
-			transport	: false,
-			source		: source,
-			raw			: body,
-			_compat		: true
-		})
-	}
-
-	// 3. COMPAT v1: bare `error` scalar (`{result:false, error:'not_logged'}`) (REMOVAL: census 0)
-	if (is_object && body.error && typeof body.error!=='object') {
-		return new ApiError({
-			code		: String(body.error),
-			status		: status,
-			message		: typeof body.msg==='string' ? body.msg : String(body.error),
-			label_key	: null,
-			request_id	: typeof body.request_id==='string' ? body.request_id : null,
-			retryable	: false,
-			transport	: false,
-			source		: source,
-			raw			: body,
-			_compat		: true
-		})
-	}
-
-	// 4. failed, unnamed
-	if (is_object && (body.result===false || body.ok===false)) {
+	// 2. failed, unnamed
+	if (is_object && body.ok===false) {
 		return new ApiError({
 			code		: SERVER_UNSPECIFIED,
 			status		: status,
-			message		: typeof body.msg==='string' ? body.msg : 'The server reported a failure without a code',
+			message		: 'The server reported a failure without a code',
 			label_key	: null,
 			request_id	: typeof body.request_id==='string' ? body.request_id : null,
 			retryable	: false,
 			transport	: false,
 			source		: source,
-			raw			: body,
-			...(body.ok===false ? {} : {_compat: true})
+			raw			: body
 		})
 	}
 
-	// 5. non-2xx with no envelope at all (proxy error page, empty body)
+	// 3. non-2xx with no envelope at all (proxy error page, empty body)
 	if (response && response.ok===false && !is_object) {
 		return new ApiError({
 			code		: CLIENT_ERROR.HTTP_STATUS,
@@ -315,7 +263,7 @@ export const normalize_api_error = (response, body, ctx = {}) => {
 		})
 	}
 
-	// 6. success
+	// 4. success
 	return null
 }//end normalize_api_error
 
@@ -373,7 +321,6 @@ export const normalize_transport_error = (error, flags = {}) => {
 * NORMALIZE_STREAM_ERROR
 * SSE / NDJSON frames are not envelopes: a failing run ends with a frame
 *   v2      {is_running:false, error:{code, message, label_key, details, request_id}}
-*   COMPAT  {…, data:{errors:[…]}} or {…, errors:[…]}   (REMOVAL: census 0)
 *   v2 BARE {code, category, message, label_key, retryable, details?, hint?}
 *
 * The BARE shape is a frame whose event NAME already says "terminal", so the
@@ -401,15 +348,6 @@ export const normalize_stream_error = (frame) => {
 		return normalize_api_error(null, {ok:false, error:frame.error, request_id:frame.request_id}, {source:'stream'})
 	}
 
-	// COMPAT v1 frames (REMOVAL: census 0)
-	const errors = Array.isArray(frame.data?.errors) && frame.data.errors.length
-		? frame.data.errors
-		: (Array.isArray(frame.errors) && frame.errors.length ? frame.errors : null)
-	if (errors) {
-		const api_error = normalize_api_error(null, {result:false, msg:frame.data?.msg ?? frame.msg, errors:errors}, {source:'stream'})
-		return api_error
-	}
-
 	// v2 BARE body: the frame IS the error body. Guarded on `code` being a string
 	// AND on the absence of both wrapper keys, so this branch can only ever catch
 	// what the branches above already refused.
@@ -425,8 +363,8 @@ export const normalize_stream_error = (frame) => {
 /**
 * REQUEST_FAILED
 * THE way to ask "did this call fail" on a data_manager.request envelope:
-* the transport attaches an ApiError under `error` on every failure (v2 or
-* compat), and NOTHING under it on success.
+* the transport attaches an ApiError under `error` on every failure, and
+* NOTHING under it on success.
 * @param {Object} api_response
 * @return bool
 */
@@ -436,13 +374,33 @@ export const request_failed = (api_response) => is_api_error(api_response?.error
 
 /**
 * RESPONSE_DATA
-* THE accessor for the payload of a successful call: v2 `data`, COMPAT v1
-* `result` (REMOVAL: census 0 — then this reads `data` only). Callers migrate
-* onto this instead of touching `.result`.
+* THE accessor for the payload of a successful call: the envelope's `data`.
+* A failure has no payload — it has `error` (request_failed / error_text).
 * @param {Object} api_response
 * @return *
 */
-export const response_data = (api_response) => api_response?.data ?? api_response?.result
+export const response_data = (api_response) => api_response?.data
+
+
+
+/**
+* RESPONSE_EXTENSION
+* THE accessor for a handler-owned EXTENSION KEY (ERRORS_SPEC §3.0): a
+* top-level field beside the envelope keys that ONE handler owns and the client
+* reads by name — `msg` / `errors` on the maintenance-widget and installer
+* surfaces, `in_use` on the lock surface, `environment` on `start`, …
+*
+* SUCCESS ONLY, and that is the whole point: the compat mirror ALSO writes
+* `msg` and `errors` onto a FAILURE body, so a bare `api_response.msg` reads
+* the mirror's prose whenever the call failed. Through here it cannot: a
+* failure has ONE channel, `api_response.error` (error_text / handle_api_error),
+* and this returns undefined for it.
+* @param {Object} api_response
+* @param {string} key - the extension key the handler owns
+* @return *
+*/
+export const response_extension = (api_response, key) =>
+	request_failed(api_response) ? undefined : api_response?.[key]
 
 
 

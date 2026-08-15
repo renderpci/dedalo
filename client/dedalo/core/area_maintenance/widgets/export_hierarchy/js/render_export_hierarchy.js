@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
@@ -317,11 +317,14 @@ const render_export_response = function(response, body_response) {
 			body_response.removeChild(body_response.firstChild)
 		}
 
-	// summary line (result + msg) — server text as TEXT, never an HTML sink
+	// summary line (payload + the widget's `msg` extension key) — server text as
+	// TEXT, never an HTML sink
+		const exported	= response_data(response)===true
+		const summary	= response_extension(response, 'msg')
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: response.result===true ? 'response_ok' : 'response_error',
-			text_content	: response.msg ? String(response.msg) : (response.result===true ? 'OK' : 'Error'),
+			class_name		: exported ? 'response_ok' : 'response_error',
+			text_content	: summary ? String(summary) : (exported ? 'OK' : 'Error'),
 			parent			: body_response
 		})
 
@@ -351,7 +354,8 @@ const render_export_response = function(response, body_response) {
 		}
 
 	// errors
-		const errors = Array.isArray(response.errors) ? response.errors : []
+		const response_errors = response_extension(response, 'errors')
+		const errors = Array.isArray(response_errors) ? response_errors : []
 		if (errors.length>0) {
 			const error_list = ui.create_dom_element({
 				element_type	: 'ul',

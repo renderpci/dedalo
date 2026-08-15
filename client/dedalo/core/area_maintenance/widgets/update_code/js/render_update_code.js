@@ -10,10 +10,11 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -253,8 +254,8 @@ const get_content_data_edit = async function(self) {
 				}
 
 				// result check
-					const result = server_code_api_response?.result
-					const errors = server_code_api_response?.errors || []
+					const result = response_data(server_code_api_response)
+					const errors = response_extension(server_code_api_response, 'errors') || []
 					if(request_failed(server_code_api_response) || !result || errors.length){
 						// remove spinner
 						e.target.classList.remove('lock')
@@ -267,9 +268,7 @@ const get_content_data_edit = async function(self) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error',
-								text_content	: server_code_api_response.msg
-									? String(server_code_api_response.msg)
-									: 'Error connecting server',
+								text_content	: String(response_extension(server_code_api_response, 'msg') || 'Error connecting server'),
 								parent			: body_response
 							})
 						}
@@ -842,19 +841,25 @@ const render_info_modal = function( self, versions_info ) {
 					// spinner
 					spinner.remove()
 
-					if (request_failed(api_response) || !api_response.result || api_response.errors?.length) {
+					// the update's own per-step findings: an EXTENSION KEY of the success
+					// body (core/update/code_update.ts → fromEnvelope), never the compat
+					// mirror — a FAILURE says it once, coded, through `error`.
+					const update_errors = response_extension(api_response, 'errors') || []
+					if (request_failed(api_response) || !response_data(api_response) || update_errors.length) {
 
-						// SEC-XSS-009: api_response.errors may contain shell/git output with
+						// SEC-XSS-009: the update errors may contain shell/git output with
 						// HTML metacharacters. Build the DOM: each error becomes a text
 						// node separated by <br>, so content is never HTML-parsed.
 						response.replaceChildren()
-						if (api_response.errors?.length) {
-							api_response.errors.forEach((err, idx) => {
+						if (update_errors.length) {
+							update_errors.forEach((err, idx) => {
 								if (idx > 0) response.appendChild(document.createElement('br'))
 								response.appendChild(document.createTextNode(String(err)))
 							})
 						} else {
-							response.textContent = api_response.msg || 'Unknown error on API update_code'
+							response.textContent = request_failed(api_response)
+								? error_text(api_response.error)
+								: (response_extension(api_response, 'msg') || 'Unknown error on API update_code')
 						}
 
 						button_update.classList.remove('hide')
@@ -863,7 +868,7 @@ const render_info_modal = function( self, versions_info ) {
 					}else{
 
 						// SEC-XSS-009
-						response.textContent = api_response.msg || 'OK'
+						response.textContent = response_extension(api_response, 'msg') || 'OK'
 
 						// force quit to clean browser cache
 						// The 1-second delay gives the response text time to render

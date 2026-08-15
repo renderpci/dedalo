@@ -140,13 +140,11 @@ export const check_server_health = async () => {
 * CLIENT_FAILURE
 * Builds the envelope `request` resolves when the call could not even be sent
 * (bad URL, unserialisable body): v2 shape + the ApiError under `error`.
-* COMPAT: `result:false` mirrored (REMOVAL: client_error_contract_tripwire census 0).
 * @param {ApiError} api_error
 * @returns {Object}
 */
 const client_failure = (api_error) => ({
 	ok		: false,
-	result	: false, // COMPAT v1
 	error	: api_error
 })
 
@@ -173,16 +171,14 @@ const client_failure = (api_error) => ({
 *     the `awaiting_busy_server` notice.
 *  7. Refresh `page_globals.csrf_token` from every envelope (success or
 *     failure) and publish `session_activity` (WC-051).
-*  8. `auth.csrf_failed` (COMPAT `csrf_failed`) → resend exactly once
+*  8. `auth.csrf_failed` → resend exactly once
 *     (`_csrf_retried`).
 *  9. Failure: attach `error` = the ApiError to the envelope (or synthesise
-*     `{ok:false, result:false, error}` when no JSON), publish `'api_error'`,
-*     COMPAT-publish `'api_response_errors'` with `[code]`, toast TRANSPORT
+*     `{ok:false, error}` when no JSON), publish `'api_error'`, toast TRANSPORT
 *     failures (the user must learn the network is down even when no caller
 *     handles the failure), resolve the envelope.
-* 10. Success: alias the COMPAT `result` mirror onto `data` (ONE object graph),
-*     publish `'api_notices'` when the envelope carries any, write through to
-*     IndexedDB on idle when cached; resolve the envelope.
+* 10. Success: publish `'api_notices'` when the envelope carries any, write
+*     through to IndexedDB on idle when cached; resolve the envelope.
 *
 * @param {Object} options - Request configuration
 * @param {string} [options.url] - Override the default API URL
@@ -271,11 +267,6 @@ data_manager.request = async function(options) {
 		}
 	}
 
-	// COMPAT: page.js / common.js still read `page_globals.api_errors` to draw the
-	// page panel; it is reset at the start of every request as before.
-	// (REMOVAL: client_error_contract_tripwire census 0 — `page_globals.page_error`
-	// is the single slot, set by error_dispatch.js.)
-	window.page_globals.api_errors = [];
 	window.page_globals.request_message = null;
 
 	// Check URL. Nothing can be sent: resolve a client failure, no network.
@@ -372,10 +363,9 @@ data_manager.request = async function(options) {
 	// rejection response already carries a fresh token (captured above), so
 	// we just resend the original request exactly once. The `_csrf_retried`
 	// flag on options prevents infinite loops if the server still refuses.
-	// (`csrf_failed` is the COMPAT v1 token — REMOVAL: census 0.)
 	if (
 		api_error
-		&& (api_error.code === 'auth.csrf_failed' || api_error.code === 'csrf_failed')
+		&& api_error.code === 'auth.csrf_failed'
 		&& !options._csrf_retried
 	) {
 		console.warn('CSRF token mismatch; retrying once with fresh token.');
@@ -392,12 +382,9 @@ data_manager.request = async function(options) {
 		// envelope: the server's own body when there is one, else synthesised
 		const envelope = (json && typeof json === 'object' && !Array.isArray(json))
 			? json
-			: {ok:false, result:false /* COMPAT v1 */}
+			: {ok:false}
 		envelope.ok		= false
 		envelope.error	= api_error
-		if (envelope.result === undefined) {
-			envelope.result = false // COMPAT v1 (REMOVAL: census 0)
-		}
 
 		// debug console message. Lock-state chatter is not worth a red line.
 		if (body?.action !== 'update_lock_components_state') {
@@ -407,11 +394,6 @@ data_manager.request = async function(options) {
 		// THE failure event: one ApiError, dispatched on its code by whoever listens
 		// (page.js relogin/no-access, error_dispatch.handle_api_error).
 		event_manager.publish('api_error', api_error);
-
-		// COMPAT: page.js still subscribes to 'api_response_errors' expecting the
-		// legacy token array; keep it fed with the code until error_dispatch
-		// replaces that subscriber. (REMOVAL: client_error_contract_tripwire census 0.)
-		event_manager.publish('api_response_errors', [api_error.code]);
 
 		// Transport failures (network/timeout/foreign status/unreadable body) get a
 		// toast HERE: no caller can act on them and the user must know the server
@@ -429,18 +411,6 @@ data_manager.request = async function(options) {
 		}
 
 		return envelope;
-	}
-
-	// COMPAT v1 (REMOVAL: client_error_contract_tripwire census 0 — the P4 commit
-	// that deletes the server's ERROR_ENVELOPE_COMPAT block and every `.result` /
-	// `.msg` / `.errors` read in client/**): the converter emits `result` as a
-	// MIRROR of `data`, and JSON.parse turns the mirror into a SECOND object
-	// graph — so a caller reading `response_data()` and one reading `.result`
-	// desync as soon as either mutates. Alias them to ONE object. api_transport
-	// already does this at the parse point for every surface; repeated here so
-	// the guarantee holds for any body that reaches this return by another road.
-	if (json && typeof json === 'object' && !Array.isArray(json) && json.ok === true && json.data !== undefined) {
-		json.result = json.data;
 	}
 
 	// notices[] (ERRORS_SPEC §3): a SUCCESS may carry non-fatal coded facts —
@@ -824,7 +794,6 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 							},
 							is_running	: true,
 							error		: api_error,
-							errors		: [api_error.code], // COMPAT v1 frame shape (REMOVAL: census 0)
 							total_time	: '0 sec',
 							data_string	: data_string
 						}
@@ -987,7 +956,7 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 			}
 		})
 
-	// model from context simple response (v2 `data`, COMPAT `result` — one accessor)
+	// model from context simple response (THE payload accessor)
 		const model = response_data(api_response)?.model || null
 
 	// store in cache

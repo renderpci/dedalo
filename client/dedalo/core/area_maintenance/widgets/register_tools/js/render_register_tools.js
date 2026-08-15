@@ -101,6 +101,8 @@
 	import {render_tree_data, format_label} from '../../../../common/js/common.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 	import {append_text_lines} from '../../../../common/js/utils/index.js'
+	import {response_data, response_extension, request_failed} from '../../../../common/js/api_error.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -920,8 +922,9 @@ const render_report = (container, api_response) => {
 		})
 
 	// short vars
-		const report		= Array.isArray(api_response?.result) ? api_response.result : []
-		const api_errors	= api_response?.errors || []
+		const report_data	= response_data(api_response)
+		const report		= Array.isArray(report_data) ? report_data : []
+		const api_errors	= response_extension(api_response, 'errors') || []
 
 	// report_node
 		const report_node = ui.create_dom_element({
@@ -942,7 +945,9 @@ const render_report = (container, api_response) => {
 				message_node,
 				api_errors.length
 					? api_errors
-					: [api_response?.msg || 'Unknown API response error']
+					: [request_failed(api_response)
+						? error_text(api_response.error)
+						: (response_extension(api_response, 'msg') || 'Unknown API response error')]
 			)
 			render_raw(report_node, api_response)
 			return container

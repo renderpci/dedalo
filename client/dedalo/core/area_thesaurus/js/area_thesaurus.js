@@ -74,6 +74,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -698,7 +699,8 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error!!!!, area_thesaurus without context:", api_response);
 					return false
 				}
@@ -718,7 +720,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				}
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = datum
 
 			// set context and data to current instance
 				if(!self.context){

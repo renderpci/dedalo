@@ -50,6 +50,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {toggle_theme} from '../../page/js/theme.js'
 	import {toggle_design, get_design} from '../../page/js/design.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 /**
 * SYNC_STANDALONE_POSITION
@@ -583,8 +584,9 @@ const get_content_data_edit = function(self) {
 									}
 								}
 							})
-							if (!api_response.result || !Array.isArray(api_response.result)) return
-							const tool_context = api_response.result.find(t => t.name === 'tool_assistant')
+							const tools_context = response_data(api_response)
+							if (!Array.isArray(tools_context)) return
+							const tool_context = tools_context.find(t => t.name === 'tool_assistant')
 							if (!tool_context) return
 
 						// build the tool instance to get assistant_config.

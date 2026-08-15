@@ -48,6 +48,7 @@
  	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
  	import {check_server_health,data_manager} from '../../../../common/js/data_manager.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
+	import {request_failed} from '../../../../common/js/api_error.js'
 
 
 
@@ -448,10 +449,11 @@ const render_health_list = function (self, datalist_container) {
 
 					const total_time = performance.now() - start_time;
 
-					value_node.textContent = JSON.stringify(response.result!==false, null, 2)
+					const reachable = request_failed(response)===false
+					value_node.textContent = JSON.stringify(reachable, null, 2)
 
 					// icon success / failed
-					if (response.result!==false) {
+					if (reachable) {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button icon check success',

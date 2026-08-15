@@ -10,6 +10,7 @@
 import {data_manager} from '../../../core/common/js/data_manager.js'
 import {set_environment} from '../../../core/common/js/common.js'
 import {url_vars_to_object} from '../../../core/common/js/utils/index.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 const url_vars = url_vars_to_object(window.location.search)
 const area = url_vars.area
@@ -38,7 +39,7 @@ let ready = false
 try {
 	await (async () => {
 		window.page_globals = {
-			api_errors: [],
+			page_error: null,
 			request_message: null
 		}
 		window.get_label = {}
@@ -54,7 +55,7 @@ try {
 			prevent_lock: true
 		}
 		const api_response = await data_manager.request({ body: rqo })
-		set_environment(api_response.result)
+		set_environment(response_data(api_response))
 	})()
 
 	if (page_globals.is_logged !== true) {

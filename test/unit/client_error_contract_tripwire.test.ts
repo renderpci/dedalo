@@ -19,6 +19,11 @@
  *     client/ or tools/*\/js defines a `request(` / `fetch_api(` function that
  *     wraps `fetch(` itself, other than api_transport.js. A second parse of the
  *     envelope is a second place for the contract to rot.
+ *  4. THE EXEMPTION LIST — `NON_ENVELOPE_READS` (the census's named blind
+ *     spots: an IDBRequest.result, a server-owned NESTED block spelled
+ *     `{result,msg,errors}`, a client-only diagnostics list) is re-checked
+ *     here: every entry must name a measured file and still MATCH a code line
+ *     in it. An exemption that stops matching is a blanket waiting to happen.
  *  3. THE COMPAT-READ CENSUS — client reads of the compat mirror keys
  *     `.msg` / `.errors` / `.result` (ERRORS_SPEC §3.1) are counted by
  *     scripts/lib/client_compat_census.ts and frozen SHRINK-ONLY in
@@ -67,6 +72,7 @@ import {
 	COMPAT_READ,
 	census,
 	countCompatReads,
+	NON_ENVELOPE_READS,
 	REPO_ROOT,
 	summarize,
 } from '../../scripts/lib/client_compat_census.ts';
@@ -395,5 +401,53 @@ describe(`client error contract — rule 3: compat-read census (baseline total $
 		// the regex itself: word boundary excludes the `_`-suffixed identifiers
 		expect('.result_options'.match(COMPAT_READ)).toBeNull();
 		expect('.result'.match(COMPAT_READ)).not.toBeNull();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Rule 4 — the exemption list stays honest.
+// ---------------------------------------------------------------------------
+
+describe('client error contract — rule 4: NON_ENVELOPE_READS is named, live and minimal', () => {
+	test('every exemption names a measured file, carries a reason and still matches', () => {
+		const measured = new Set(RESULTS.map((result) => result.file));
+		const dead: string[] = [];
+		for (const entry of NON_ENVELOPE_READS) {
+			if (!measured.has(entry.file)) {
+				dead.push(`${entry.file}: not a measured file (moved or deleted?)`);
+				continue;
+			}
+			expect(
+				entry.reason.length,
+				`${entry.file}: an exemption without a reason is a blanket`,
+			).toBeGreaterThan(20);
+			const code = codeOf(entry.file);
+			const matcher = new RegExp(entry.pattern.source, 'g');
+			if (!matcher.test(code)) {
+				dead.push(`${entry.file}: /${entry.pattern.source}/ matches nothing any more`);
+			}
+		}
+		expect(
+			dead,
+			`STALE EXEMPTIONS in NON_ENVELOPE_READS (scripts/lib/client_compat_census.ts). An exemption that no longer matches is dead cover: delete it. Current list:\n${NON_ENVELOPE_READS.map((entry) => `  ${entry.file} /${entry.pattern.source}/ — ${entry.reason}`).join('\n')}\nDead:\n  ${dead.join('\n  ')}`,
+		).toEqual([]);
+	});
+
+	test('an exemption blanks ONLY its own expression (self-test)', () => {
+		// the counter with no file exempts nothing…
+		expect(countCompatReads('const a = event.target.result;').reads).toBe(1);
+		// …and with the file it does — while a real envelope read on the SAME line still counts
+		expect(
+			countCompatReads(
+				'const a = event.target.result;',
+				'client/dedalo/core/common/js/data_manager.js',
+			).reads,
+		).toBe(0);
+		expect(
+			countCompatReads(
+				'const a = event.target.result + api_response.result;',
+				'client/dedalo/core/common/js/data_manager.js',
+			).reads,
+		).toBe(1);
 	});
 });

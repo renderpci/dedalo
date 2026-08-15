@@ -522,9 +522,8 @@ const render_item_hierarchy = (options) => {
 
 				// page error case. On an existing page-level failure, force a reload
 				// to refresh the page instance: a hard reload is safer than SPA
-				// navigation over a broken page state. (`api_errors` is the COMPAT
-				// array next to page_error — REMOVAL: census 0.)
-					if (page_globals.page_error || page_globals.api_errors?.length) {
+				// navigation over a broken page state.
+					if (page_globals.page_error) {
 						window.location.href = url
 						return
 					}

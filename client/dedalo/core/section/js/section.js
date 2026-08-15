@@ -71,7 +71,7 @@
 	import {render_list_section} from './render_list_section.js'
 	import {render_solved_section} from './render_solved_section.js'
 	import {render_common_section} from './render_common_section.js'
-	import {request_failed} from '../../common/js/api_error.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error, handle_api_notice} from '../../common/js/error_dispatch.js'
 
 
@@ -800,7 +800,8 @@ section.prototype.build = async function(autoload=false) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error, section without context:", api_response);
 					return false
 				}
@@ -813,7 +814,7 @@ section.prototype.build = async function(autoload=false) {
 				)
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = datum
 
 			// set Context
 				// context is set only when the origin context is empty,
@@ -1340,9 +1341,8 @@ section.prototype.create_section = async function () {
 			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
-		if (api_response.result && api_response.result>0) {
-
-			const new_section_id = api_response.result
+		const new_section_id = response_data(api_response)
+		if (new_section_id && new_section_id>0) {
 
 			return new_section_id
 
@@ -1397,9 +1397,8 @@ section.prototype.duplicate_section = async function (section_id) {
 			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
-		if (api_response.result && api_response.result>0) {
-
-			const new_section_id = api_response.result
+		const new_section_id = response_data(api_response)
+		if (new_section_id && new_section_id>0) {
 
 			return new_section_id
 
@@ -1490,7 +1489,8 @@ section.prototype.delete_section = async function (options) {
 			}
 		}
 
-		if (api_response?.result && api_response.result.length>0) {
+		const deleted = response_data(api_response)
+		if (deleted && deleted.length>0) {
 
 			// all is OK
 			return true
@@ -2048,13 +2048,13 @@ section.prototype.get_total = async function(sqo) {
 					})
 
 				// API error case
-					if ( api_count_response.result===false || api_count_response.errors?.length ) {
-						console.error('Error on count total : api_count_response:', api_count_response);
+					if ( request_failed(api_count_response) ) {
+						console.error('Error on count total : api_count_response:', api_count_response.error);
 						return
 					}
 
 				// set result
-					const total = api_count_response.result.total
+					const total = response_data(api_count_response).total
 
 				// only cache the default/unfiltered count on the instance
 				if (use_cache) {

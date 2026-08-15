@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {response_data} from '../../common/js/api_error.js'
 	import {
 		render_login,
 		render_files_loader
@@ -179,13 +180,14 @@ login.prototype.build = async function(autoload=false) {
 				if(SHOW_DEBUG===true) {
 					console.log('login api_response:', api_response);
 				}
-				if (!api_response.result) {
+				const login_context = response_data(api_response)
+				if (!login_context) {
 					console.error('Error on get login context. api_response:', api_response);
 					return false
 				}
 
 			// set context and data to current instance
-				self.context	= api_response.result.find(element => element.model===self.model);
+				self.context	= login_context.find(element => element.model===self.model);
 				self.data		= {}
 		}
 
@@ -224,7 +226,7 @@ login.prototype.build = async function(autoload=false) {
 * set of assets can be pulled on the next load. Cache deletion failures are caught and
 * logged without aborting the call.
 *
-* Callers should check api_response.result===true before trusting the rest of the response.
+* Callers should check the response payload is true before trusting the rest of the response.
 * Use action_dispatch() to handle post-login navigation and file loading.
 *
 * @param {Object} options - Login credentials
@@ -408,7 +410,7 @@ login.quit = async function() {
 		})
 
 		// manage result
-		if (api_response.result===true) {
+		if (response_data(api_response)===true) {
 
 			// reset some user preferences status from local database
 			// These keys hold panel open/closed state and should not persist across sessions.
@@ -484,7 +486,7 @@ login.quit = async function() {
 *
 * Handles three distinct post-login outcomes in priority order:
 * 1. custom_action_dispatch: if the caller injected its own handler, delegate entirely and return.
-* 2. Successful login (api_response.result===true): warm the file cache (via SW or worker),
+* 2. Successful login (payload true): warm the file cache (via SW or worker),
 *    show the animated progress ring, then navigate to the correct page once the worker reports
 *    'finish'. Navigation priority: server-supplied redirect → URL ?tipo param → user
 *    default_section → plain reload.
@@ -495,7 +497,7 @@ login.quit = async function() {
 * triggers a decorative loading animation reserved for the superuser (DEDALO_SUPERUSER = -1).
 *
 * @param {Object} api_response - Raw response object returned by login.prototype.login()
-* @param {boolean} api_response.result - true on successful authentication
+* @param {boolean} api_response.data - true on successful authentication
 * @param {Object} [api_response.result_options] - Extra data returned on success
 * @param {number} [api_response.result_options.user_id] - Numeric ID of the logged-in user;
 *   DEDALO_SUPERUSER (-1) activates the raspa_loading animation
@@ -513,7 +515,7 @@ login.prototype.action_dispatch = async function(api_response) {
 
 	// publish event always
 	// Subscribers (e.g. analytics, session monitors) can react to both outcomes.
-		const event_name = api_response.result===true
+		const event_name = response_data(api_response)===true
 			? 'login_successful'
 			: 'login_failed'
 		event_manager.publish(event_name, api_response)
@@ -527,7 +529,7 @@ login.prototype.action_dispatch = async function(api_response) {
 		}
 
 	// default behavior
-		if (api_response.result===true) {
+		if (response_data(api_response)===true) {
 
 			// short vars
 			const user_id				= api_response.result_options?.user_id
@@ -714,7 +716,7 @@ login.prototype.action_dispatch = async function(api_response) {
 					})
 				}
 
-		}//end if (api_response.result===true)
+		}//end if (response_data(api_response)===true)
 
 
 	return true

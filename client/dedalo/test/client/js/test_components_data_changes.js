@@ -6,6 +6,7 @@ import {
 	elements
 } from './elements.js'
 import {get_instance} from '../../../core/common/js/instances.js'
+import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -115,11 +116,11 @@ describe("COMPONENTS DATA CHANGES", async function() {
 							})
 							// console.log('changed_data:', changed_data);
 							// console.log('--- response:', response);
-							if (!response.result) {
+							if (!response_data(response)) {
 								console.error('response error:', response);
 							}
 
-						const data = response?.result?.data || []
+						const data = response_data(response)?.data || []
 						const response_value = data.find(el => el.tipo===old_instance.tipo)
 
 						// api_returned_value

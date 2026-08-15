@@ -61,6 +61,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {common} from '../../../common/js/common.js'
 	import {ui} from '../../../common/js/ui.js'
+	import {response_data} from '../../../common/js/api_error.js'
 
 
 
@@ -280,8 +281,9 @@ widget_common.prototype.build = async function(autoload=false) {
 					body: rqo
 				});
 
-				if(api_response.result) {
-					self.value = api_response.result
+				const value = response_data(api_response)
+				if(value) {
+					self.value = value
 				}
 
 			}else{

@@ -12,7 +12,7 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_inserted_rules} from '../../page/js/css.js'
-	import {render_server_response_error, render_stream} from '../../common/js/render_common.js'
+	import {render_stream} from '../../common/js/render_common.js'
 	// error system (api_error.js → error_policy.js → error_dispatch.js → render_api_error.js).
 	// The cycle common ↔ render_api_error (format_label) is resolved at call time:
 	// nothing here is used while the modules evaluate.
@@ -379,8 +379,7 @@ export const set_context_vars = function(self) {
 *   'rendered'  → if same render_level, returns existing node with a warning
 *
 * Pre-render guards (short-circuit to an error/empty node):
-*   - page_globals.page_error is set (or the COMPAT api_errors array is non-empty)
-*     → renders the error panel
+*   - page_globals.page_error is set → renders the error panel
 *   - type === 'component' and context is falsy → renders "invalid context" error
 *   - permissions < 1 → renders a "no access" span
 *
@@ -410,8 +409,7 @@ common.prototype.render = async function (options={}) {
 
 	// page error case
 	// page_globals.page_error is the ONE page-level failure (an ApiError set by
-	// error_dispatch / page.build); the legacy api_errors array is still read as
-	// a fallback until its census reaches 0 (COMPAT).
+	// error_dispatch / page.build).
 		if (page_globals.page_error) {
 
 			// debug
@@ -421,26 +419,12 @@ common.prototype.render = async function (options={}) {
 
 			return self.node
 		}
-		if (page_globals.api_errors?.length) {
-
-			// debug
-			console.warn('))) render page_globals.api_errors:', self.model, page_globals.api_errors);
-
-			// render generic response_error node
-			self.node = render_server_response_error(
-				page_globals.api_errors
-			);
-
-			return self.node
-		}
-
 	// context check
 		if (self.type==='component' && !self.context) {
-			return render_server_response_error([{
-				error	: 'invalid context',
-				msg		: 'Unable to render component without context',
-				trace	: 'common render',
-			}])
+			return render_error_panel(new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: 'Unable to render component without context'
+			}))
 		}
 
 	// permissions check
@@ -2111,8 +2095,8 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 * Renders four collapsible JSON trees into the returned fragment:
 *   - `response_debug`: combines response.debug, rqo_show_original, and CSS rule info
 *   - `dd_request`: the raw request object from the instance (if present)
-*   - `context`: response.result.context
-*   - `data`: response.result.data
+*   - `context`: response_data(response).context
+*   - `data`: response_data(response).data
 *
 * The fragment is returned to the caller (typically a section's build or debug panel)
 * to be appended wherever appropriate. No direct DOM insertion is performed here.
@@ -2140,10 +2124,11 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		const dd_request	= self.dd_request
 
 	// load_data_promise response check
-		if (response.result===false) {
-			console.error('API EXCEPTION:',response.msg);
+		if (request_failed(response)) {
+			console.error('API EXCEPTION:', response.error);
 			return false
 		}
+		const datum = response_data(response)
 
 	// fragment
 		const fragment = new DocumentFragment();
@@ -2191,24 +2176,24 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 		// context
 			const context_pre = ui.create_dom_element({
 				element_type	: 'pre',
-				text_content	: "context: \n", // + JSON.stringify(response.result.context, null, "  "),
+				text_content	: "context: \n", // + JSON.stringify(datum.context, null, "  "),
 				parent			: fragment
 			})
-			render_tree_data(response.result.context, context_pre)
+			render_tree_data(datum.context, context_pre)
 
 		// data
 			const data_pre = ui.create_dom_element({
 				element_type	: 'pre',
-				text_content	: "data: \n", // + JSON.stringify(response.result.data, null, "  "),
+				text_content	: "data: \n", // + JSON.stringify(datum.data, null, "  "),
 				parent			: fragment
 			})
-			render_tree_data(response.result.data, data_pre)
+			render_tree_data(datum.data, data_pre)
 
 	// time
 		// const time_info = "" +
 		// 	"Total time: " + response.debug.real_execution_time +
-		// 	"<br>Context exec_time: " + response.result.debug.context_exec_time +
-		// 	"<br>Data exec_time: " + response.result.debug.data_exec_time  + "<br>"
+		// 	"<br>Context exec_time: " + datum.debug.context_exec_time +
+		// 	"<br>Data exec_time: " + datum.debug.data_exec_time  + "<br>"
 
 		// const time_info_pre = ui.create_dom_element({
 		// 	element_type : "pre",
@@ -2471,9 +2456,9 @@ common.prototype.get_section_elements_context = async function(options) {
 					})
 
 				// fix
-					self.components_list[section_tipo] = api_response.result
+					self.components_list[section_tipo] = response_data(api_response)
 
-				return api_response.result
+				return self.components_list[section_tipo]
 			}
 		}
 		const components = get_components()
