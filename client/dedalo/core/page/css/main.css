@@ -16342,6 +16342,59 @@ dd-modal:has(.tool_header) {
 *
 * Included from area_maintenance.less file
 */
+.wrapper_widget.update_code .server_picker {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+}
+.wrapper_widget.update_code .server_picker .server_row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid var(--border_default);
+  cursor: pointer;
+}
+.wrapper_widget.update_code .server_picker .server_row:first-child {
+  border-top: 0;
+}
+.wrapper_widget.update_code .server_picker .server_row.on {
+  background-color: color-mix(in srgb, var(--color_primary) 6%, transparent);
+}
+.wrapper_widget.update_code .server_picker .server_row.off {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.wrapper_widget.update_code .server_picker .server_row input[type="radio"] {
+  width: unset;
+  height: unset;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  accent-color: var(--color_primary);
+  cursor: pointer;
+}
+.wrapper_widget.update_code .server_picker .server_row .meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.wrapper_widget.update_code .server_picker .server_row .meta .nm {
+  font-weight: 600;
+  color: var(--fg_default);
+}
+.wrapper_widget.update_code .server_picker .server_row .meta .url {
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--fg_muted);
+  word-break: break-all;
+}
+.wrapper_widget.update_code .server_picker .server_row .dd_badge {
+  flex: 0 0 auto;
+}
 .wrapper_widget.update_code > .content_data .config_grid {
   grid-template-columns: 3fr 6fr;
   gap: 0.25rem;

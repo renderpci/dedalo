@@ -13,28 +13,12 @@
 *
 * Included from area_maintenance.less.
 */
-.wrapper_widget.update_ontology {
-
-	// vertical rhythm between the note / sections / form / response
-	.update_ontology_content {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
-
-	// irreversible-overwrite callout (.dd_note.state_danger supplies the tint)
-	.overwrite_note {
-		margin: 0;
-	}
-
-	// eyebrow + block wrapper
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	// ---- master server picker ----------------------------------------------
+// ---- master server picker (SHARED) -----------------------------------------
+// `render_servers_list` lives in update_ontology/js but update_code reuses it,
+// so its styles cannot hang off `.wrapper_widget.update_ontology`. Defined here
+// as a mixin; update_code.less calls the same one (imported right after this
+// file in area_maintenance.less).
+.dd_server_picker() {
 	.server_picker {
 		.dd_surface();
 
@@ -91,6 +75,31 @@
 			}
 		}
 	}
+}
+
+.wrapper_widget.update_ontology {
+
+	// vertical rhythm between the note / sections / form / response
+	.update_ontology_content {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	// irreversible-overwrite callout (.dd_note.state_danger supplies the tint)
+	.overwrite_note {
+		margin: 0;
+	}
+
+	// eyebrow + block wrapper
+	.section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	// ---- master server picker ----------------------------------------------
+	.dd_server_picker();
 
 	// ---- installed → incoming transition -----------------------------------
 	.version_change {
