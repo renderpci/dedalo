@@ -245,41 +245,38 @@
 /**
 * THESAURUS PICKER PANE
 *
-* The picker surface: an area_thesaurus mounted on document.body — OUTSIDE the
-* caller component's DOM.
+* The picker surface: an area_thesaurus mounted on document.body — NEVER inside the
+* caller component's node — and placed flush under the component by MEASURING it
+* (component_portal position_thesaurus_pane sets top/left/width/max-height from
+* the component's bounding rect, on open and on every scroll/resize).
 *
-* That placement is the design, not a detail. tool_indexation, the working
-* reference, renders its thesaurus into its own `left_container`, a SIBLING of the
-* pane holding the components; the area is never a descendant of one. While this
-* pane lived inside the portal's wrapper it inherited every behaviour the portal
-* has — its drag events bubbled into the portal's dragover, it fought the
-* autocomplete for the same box, its height drove the component's, and it shared
-* the component's stacking context.
+* That gives the autocomplete dropdown's geometry without its parentage. The
+* parentage is the thing that must not happen: inside the wrapper the area's own
+* drags and clicks bubble into the portal's handlers — proven twice — and no guard
+* at the boundary is a substitute for not being a descendant.
 *
-* Being a body child, it is `position: fixed` and placed from the caller's viewport
-* rectangle by position_thesaurus_pane (anchored under the component, or above it
-* when there is no room below).
-*
-* Wide and tall on purpose: a thesaurus carries long terms and deep nested
+* Tall and resizable on purpose: a thesaurus carries long terms and deep nested
 * branches, and a branch can hold 50, 100 or more children.
 */
 .thesaurus_pane {
 
+	// top / left / max-height are set by position_thesaurus_pane on every
+	// scroll/resize; width / height ONCE on open (the operator's own drag is then
+	// left alone — a size rewritten on every scroll snapped back to default)
 	position: fixed;
-	z-index: 9000; // above component content (<= 999), below the global layers (10000+)
-
-	width: 50vw;
-	min-width: 24rem;
-	max-width: 96vw;
+	min-width: 50vh;
 	height: 60vh;
-	min-height: 16rem;
-	max-height: 88vh;
+	min-height: 10rem;
+	// above component content and the next components down the form
+	z-index: 3;
 
 	overflow: auto;
-	resize: both; // the component keeps its own size whatever happens here
+	resize: both; // the operator's size, remembered across scroll and reopen
 	background-color: @color_white;
 	border: 1px solid @color_grey_9;
-	border-radius: 2px;
+	border-top: 0;
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
 	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 
 	&.hide {

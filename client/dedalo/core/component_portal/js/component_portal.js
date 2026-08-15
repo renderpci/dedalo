@@ -195,13 +195,10 @@ export const component_portal = function() {
 	component_portal.prototype.refresh				= common.prototype.refresh
 	/**
 	* DESTROY
-	* The generic destroy, plus the ONE thing this component owns outside its own
-	* DOM: the thesaurus pane.
-	*
-	* The pane is appended to document.body (it must not be a descendant of the
-	* component — see toggle_thesaurus_pane), so the generic teardown, which only
-	* removes `self.node`, cannot reach it. Without this every portal that ever
-	* opened a picker would leave a detached pane and its listeners behind.
+	* The generic destroy, plus the two things this component owns OUTSIDE its own
+	* DOM: the thesaurus pane node (on document.body — it must never be inside
+	* self.node) and the pane's area (deliberately not in ar_instances, or refresh
+	* would destroy it on every pick). Nothing generic reaches either; this does.
 	*
 	* @param {...*} args - forwarded verbatim to common.prototype.destroy.
 	* @returns {Promise<*>} whatever the generic destroy returns.
@@ -210,10 +207,27 @@ export const component_portal = function() {
 
 		const self = this
 
-		if (self.thesaurus_pane) {
-			close_thesaurus_pane(self)
-			self.thesaurus_pane.remove()
-			self.thesaurus_pane = null
+		// (!) ONLY ON A FULL DESTROY (delete_self). refresh() calls destroy with
+		// delete_self=false to clear DEPENDENCIES only, and every successful pick
+		// runs refresh — so a pane torn down here on that path is a picker that
+		// closes on the click that just linked a term. The pane's lifetime is the
+		// COMPONENT's, not its refresh cycle.
+		const delete_self = args[0]===true
+		if (delete_self) {
+			if (self.thesaurus_pane_resize_observer) {
+				self.thesaurus_pane_resize_observer.disconnect()
+				self.thesaurus_pane_resize_observer = null
+			}
+			if (self.thesaurus_pane) {
+				close_thesaurus_pane(self)
+				self.thesaurus_pane.remove()
+				self.thesaurus_pane = null
+			}
+			// the pane's area is owned HERE (it is deliberately not in ar_instances)
+			if (self.thesaurus_area && self.thesaurus_area.status!=='destroyed') {
+				await self.thesaurus_area.destroy(true, true, true)
+			}
+			self.thesaurus_area = null
 		}
 
 		return common.prototype.destroy.apply(self, args)
@@ -511,6 +525,12 @@ component_portal.prototype.init = async function(options) {
 				if (component.id===self.id) {
 					if(SHOW_DEBUG===true) {
 						console.log('self.autocomplete_active:', self.autocomplete_active);
+					}
+					// the thesaurus pane closes with the component's blur: it is a
+					// picker FOR this component, and an open picker on a component the
+					// operator has left is a stale surface over the rest of the form
+					if (self.thesaurus_pane && !self.thesaurus_pane.classList.contains('hide')) {
+						close_thesaurus_pane(self)
 					}
 					if(self.autocomplete_active===true){
 						// Defer to the idle callback so the autocomplete can finish any
@@ -1398,6 +1418,17 @@ component_portal.prototype.link_records = async function(values, options={}) {
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
+
+	// picker. THE PANE STAYS OPEN ACROSS THE PICK. The refresh above rebuilt this
+	// component's own DOM; the pane is a body-level sibling and its area is not in
+	// ar_instances, so both survive — what the tree still needs is the stored
+	// truth about what is now linked (an optimistic pick may have been refused
+	// or deduped server-side), so the picked term repaints as linked and the
+	// remaining capacity moves. Picking several terms is several clicks, with
+	// the panel open the whole time.
+		if (self.picker && typeof self.picker.sync_linked==='function') {
+			self.picker.sync_linked()
+		}
 
 	// partial refusal. The server stored fewer locators than were sent
 		let linked = accepted
@@ -2626,23 +2657,54 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 			self.autocomplete.hide()
 		}
 
-	// pane. Created OUTSIDE the component DOM, on document.body.
-	// (!) THIS IS THE WHOLE FIX. tool_indexation renders the thesaurus into its own
-	// left_container, a SIBLING of the components — the area is never a descendant
-	// of one. While this pane lived inside the portal's wrapper it inherited every
-	// behaviour the portal has: its drag events bubbled into the portal's dragover
-	// (which claimed them, then died on a `tmp.data` that only the portal's own
-	// dragstart writes), it fought the autocomplete for the same box, its height
-	// drove the component's, and it shared the component's stacking context. None of
-	// those are portal bugs — the portal is right; the pane was in the wrong place.
+	// pane. On document.body — NEVER inside self.node — placed under the component
+	// by MEASURING it. The pane must not be a descendant of the component: inside
+	// the wrapper the area's own drags and clicks bubble into the portal's
+	// handlers (twice proven), and no amount of stopPropagation at the boundary is
+	// a substitute for not being there. It is positioned from the component's
+	// bounding rect instead, and re-measured on scroll/resize, so it stays flush
+	// under the caller — the same geometry as the autocomplete dropdown, without
+	// the parentage.
 		if (!self.thesaurus_pane) {
-			self.thesaurus_pane = document.createElement('div')
-			self.thesaurus_pane.classList.add('thesaurus_pane','hide')
-			document.body.appendChild(self.thesaurus_pane)
+			const pane = document.createElement('div')
+			pane.classList.add('thesaurus_pane','hide')
+			// A mousedown anywhere on the page deactivates the active component
+			// (component_common deactivate_components, on the page's own mousedown).
+			// The pane is a body child, so a click on a term would blur the very
+			// component it is picking for — and the pane closes on that blur (see the
+			// deactivate handler in init). Stopping mousedown at the pane keeps the
+			// caller active while the operator works in the tree, exactly as the
+			// autocomplete keeps it active by stopping mousedown on its own node.
+			pane.addEventListener('mousedown', (event) => { event.stopPropagation() })
+			document.body.appendChild(pane)
+			self.thesaurus_pane = pane
 		}
 		const pane = self.thesaurus_pane
 		pane.classList.remove('hide')
-		position_thesaurus_pane(self, pane)
+		position_thesaurus_pane(self, pane, { initial: true })
+
+	// keep it under the component while the page moves (position only — the size
+	// the operator drags to is theirs, see position_thesaurus_pane)
+		self.thesaurus_pane_reposition = () => position_thesaurus_pane(self, pane)
+		window.addEventListener('resize', self.thesaurus_pane_reposition)
+		window.addEventListener('scroll', self.thesaurus_pane_reposition, true)
+
+	// remember the size the operator drags the pane to, so it survives the next
+	// open too. `resize: both` fires no event of its own; the ResizeObserver is the
+	// one signal there is, and it also fires for the initial layout — which is
+	// harmless (it records the default).
+		if (!self.thesaurus_pane_resize_observer && typeof ResizeObserver!=='undefined') {
+			self.thesaurus_pane_resize_observer = new ResizeObserver(() => {
+				if (pane.classList.contains('hide')) {
+					return
+				}
+				self.thesaurus_pane_size = {
+					width	: pane.style.width  || `${pane.offsetWidth}px`,
+					height	: pane.style.height || `${pane.offsetHeight}px`
+				}
+			})
+			self.thesaurus_pane_resize_observer.observe(pane)
+		}
 
 	// ESC closes the picker, and closes it FIRST. Registered BEFORE the build so a
 	// pane left open on a FAILED build (which shows its reason rather than hiding)
@@ -2658,11 +2720,6 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 			close_thesaurus_pane(self)
 		}
 		document.addEventListener('keydown', self.thesaurus_pane_escape, true)
-
-	// reposition while the page moves under it
-		self.thesaurus_pane_reposition = () => position_thesaurus_pane(self, pane)
-		window.addEventListener('resize', self.thesaurus_pane_reposition)
-		window.addEventListener('scroll', self.thesaurus_pane_reposition, true)
 
 		open_picker_owner = self
 
@@ -2692,55 +2749,13 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 
 
 /**
-* POSITION_THESAURUS_PANE
-* Place the pane beside the component it belongs to.
-*
-* The pane is a `position:fixed` child of document.body — deliberately NOT a
-* descendant of the component — so it is positioned from the caller wrapper's
-* viewport rectangle rather than by CSS containment. Anchored under the component
-* when there is room below, above it otherwise, and clamped to the viewport so it
-* is never opened partly off-screen.
-*
-* @param {Object} self - The `component_portal` instance (module-private function).
-* @param {HTMLElement} pane - The pane node.
-* @returns {boolean}
-*/
-const position_thesaurus_pane = function(self, pane) {
-
-	const anchor = self.node
-	if (!anchor) {
-		return false
-	}
-
-	const rect		= anchor.getBoundingClientRect()
-	const margin	= 8
-	const width		= pane.offsetWidth || (window.innerWidth * 0.5)
-	const height	= pane.offsetHeight || (window.innerHeight * 0.6)
-
-	// below the component when it fits, above it otherwise
-	const space_below	= window.innerHeight - rect.bottom - margin
-	const top			= space_below >= height || space_below >= rect.top
-		? Math.min(rect.bottom + margin, window.innerHeight - height - margin)
-		: Math.max(margin, rect.top - height - margin)
-
-	const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin))
-
-	pane.style.top	= `${Math.max(margin, top)}px`
-	pane.style.left	= `${left}px`
-
-	return true
-}//end position_thesaurus_pane
-
-
-
-/**
 * CLOSE_THESAURUS_PANE
 * Hide the pane and release everything it owns while open.
 *
 * The AREA is deliberately kept built: reopening is then instant and the tree keeps
-* its expansion, scroll and search state. What must NOT survive are the three
-* document/window listeners, one set per open, on a surface an operator opens many
-* times over a record's life.
+* its expansion, scroll and search state. What must NOT survive is the document
+* Escape listener, one per open, on a surface an operator opens many times over a
+* record's life.
 *
 * @param {Object} self - The `component_portal` instance (module-private function).
 * @returns {boolean} Always false — "the pane is not open".
@@ -2775,6 +2790,80 @@ const close_thesaurus_pane = function(self) {
 
 	return false
 }//end close_thesaurus_pane
+
+
+
+/**
+* POSITION_THESAURUS_PANE
+* Place the body-level pane flush under the component by MEASURING the component.
+* This is how the pane gets the autocomplete dropdown's geometry without being a
+* descendant of the wrapper (which it must never be).
+*
+* Called on open and on every scroll/resize while open, so the pane tracks the
+* caller as the page moves.
+*
+* POSITION IS RE-MEASURED; SIZE IS THE OPERATOR'S. `top`/`left` follow the
+* component on every call. `width` and `height` are set ONCE, on open, and then
+* left alone: the pane is `resize: both`, and rewriting its size on every scroll
+* event threw away whatever the operator had just dragged it to — the panel
+* snapped back to its default on the first scroll. A size the operator chose
+* persists for as long as the pane is open, and across reopenings (kept on the
+* instance).
+*
+* @param {Object} self - The `component_portal` instance (module-private function).
+* @param {HTMLElement} pane - The pane node.
+* @param {Object} [options]
+*   @param {boolean} [options.initial=false] - true on open: apply the size too.
+* @returns {boolean}
+*/
+const position_thesaurus_pane = function(self, pane, options={}) {
+
+	const anchor = self.node
+	if (!anchor) {
+		return false
+	}
+
+	const rect = anchor.getBoundingClientRect()
+
+	// position: always
+	pane.style.top = `${Math.floor(rect.bottom)}px`
+
+	// HORIZONTAL EDGE: anchor to whichever side keeps the pane ON SCREEN. Pinned to
+	// the component's LEFT edge the pane is right for a component on the left of
+	// the form and runs off the viewport for one on the right (the pane is wider
+	// than the component: min-width, the operator's own drag). Rule: if it fits
+	// growing rightwards from the component's left edge, do that; otherwise grow
+	// leftwards from the component's RIGHT edge. Neither ever pushes it off-screen.
+	// (the -1 keeps the pane's border flush with the component's, as before)
+	const pane_width	= pane.offsetWidth || Math.floor(rect.width)
+	const fits_right	= rect.left + pane_width <= window.innerWidth - 8
+	if (fits_right) {
+		pane.style.left		= `${Math.floor(rect.left)-1}px`
+		pane.style.right	= 'auto'
+	} else {
+		pane.style.left		= 'auto'
+		pane.style.right	= `${Math.max(8, Math.floor(window.innerWidth - rect.right)-1)}px`
+	}
+
+	// size: on open only, and never over a size the operator already chose
+	if (options.initial===true) {
+		const remembered = self.thesaurus_pane_size || null
+		if (remembered) {
+			pane.style.width	= remembered.width
+			pane.style.height	= remembered.height
+		} else {
+			// default: the component's width; height from CSS
+			pane.style.width	= `${Math.round(rect.width)}px`
+			pane.style.height	= ''
+		}
+	}
+
+	// keep it inside the viewport vertically, whatever its size
+	const below = window.innerHeight - rect.bottom - 8
+	pane.style.maxHeight = `${Math.max(160, Math.round(below))}px`
+
+	return true
+}//end position_thesaurus_pane
 
 
 
@@ -2840,10 +2929,13 @@ const build_thesaurus_pane = async function(self, pane) {
 			})
 			await area.build(true)
 
-		// destroy with the component. Kept in ar_instances so the component's own
-		// destroy tears the tree down; toggle_thesaurus_pane tests this pointer's
-		// `status` before reusing it, because refresh() destroys dependencies too.
-			self.ar_instances.push(area)
+		// (!) NOT in self.ar_instances. The area's lifetime is the PANE's, not the
+		// component's refresh cycle. Every successful pick runs self.refresh(), and
+		// refresh destroys ar_instances (common.refresh → destroy(dependencies)) —
+		// so registering the area there killed the tree on the very click that
+		// linked a term: the panel went dark after ONE pick and had to be reopened
+		// for the next. The area is destroyed explicitly with the pane instead
+		// (close/destroy below), which is the one lifetime it actually has.
 			self.thesaurus_area = area
 
 		// wire. The three assignments, through the shared module

@@ -29,6 +29,9 @@ export const permissions	= 2
 
 
 // Per-suite test3 record isolation (WC-021 in-run isolation).
+// Relation new_value_params[0] MUST be a section the caller's ontology declares as
+// target (WC-2026-08-14-relation-insert-target-validation refuses `off_target`
+// at the save door); section_id is int-canonical (WC-2026-08-10).
 // The all-component save SWEEP (test_components_data_changes) writes to its
 // own record (test3/10, overridden inside that suite), and the run-order
 // fragile READ suites below bind their element to a private CLONE of record 1
