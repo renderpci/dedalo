@@ -46,6 +46,12 @@
  *    strings blanked, `page_globals` lines skipped): a write `.msg = …` counts,
  *    a computed `obj['msg']` does not; `client/dedalo/test/**` and `-min.js`
  *    twins are ungated by design.
+ *  - The three words are also the names of non-envelope shapes the client MUST
+ *    keep reading (FileReader.result, server job STREAM FRAMES, payload
+ *    diagnostic lists, named failure extension keys). Those are excused one
+ *    expression at a time by `NON_ENVELOPE_READS` (census, data + reason) — the
+ *    gate PRINTS that allowlist and fails on an entry that matches nothing, so
+ *    an excuse cannot outlive the read it covers.
  *  - Rule 2 finds a wrapper by NAME (`request` / `fetch_api`) — a differently
  *    named raw `fetch('/dedalo/core/api/…')` is outside it (a policy the
  *    client agent owns; see the api_transport header).
@@ -379,6 +385,28 @@ describe(`client error contract — rule 3: compat-read census (baseline total $
 		const seen = new Set(RESULTS.map((result) => result.file));
 		for (const file of TRANSPORT_CONSUMERS)
 			expect(seen.has(file), `${file} not in the census`).toBe(true);
+	});
+
+	test('the non-envelope allowlist is printed: every entry, its hit count and its reason', () => {
+		// The allowlist is DATA and is printed, so a reviewer sees every excuse
+		// (rule 4 below fails on a stale one).
+		const table = NON_ENVELOPE_READS.map((entry) => {
+			const hits = codeOf(entry.file).match(new RegExp(entry.pattern.source, 'g'))?.length ?? 0;
+			return `${entry.file} · /${entry.pattern.source}/ ×${hits} — ${entry.reason}`;
+		});
+		console.info(`non-envelope read allowlist (${NON_ENVELOPE_READS.length}):\n  ${table.join('\n  ')}`);
+		expect(table.length).toBe(NON_ENVELOPE_READS.length);
+	});
+
+	test('anti-vacuity: an allowlisted expression is the ONLY thing it blanks', () => {
+		// tools/tool_diffusion/js/report_model.js excuses `sse.result` (a persisted job
+		// record) — the neighbouring ENVELOPE read on the same line survives and is counted.
+		const file = 'tools/tool_diffusion/js/report_model.js';
+		const source = 'const a = sse.result; const b = api_response.result;';
+		expect(countCompatReads(source, file).reads).toBe(1);
+		expect(countCompatReads(source).reads).toBe(2);
+		// `literal()` escapes: `sse.result` never matches `sseXresult`
+		expect(countCompatReads('const a = sseXresult.result;', file).reads).toBe(1);
 	});
 
 	test('the counter is exact on the shapes it must and must not count (self-test)', () => {

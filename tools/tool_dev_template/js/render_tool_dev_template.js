@@ -12,6 +12,7 @@
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 
 
 
@@ -236,7 +237,7 @@ const get_content_data = async function(self) {
 					const value_node = ui.create_dom_element({
 						element_type	: 'pre',
 						class_name		: '',
-						text_content	: JSON.stringify(response.result, null, 2)
+						text_content	: JSON.stringify(response_data(response), null, 2)
 					})
 					return value_node
 				}
@@ -348,9 +349,11 @@ const get_content_data = async function(self) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
-					if (api_response.result && api_response.result>0) {
+					// `create` answers with the new section_id as the payload
+					const new_section_id = response_data(api_response)
+					if (new_section_id && new_section_id>0) {
 
-						const section_id = api_response.result
+						const section_id = new_section_id
 
 						// resource component used as tool_upload caller
 						// It is necessary because he knows the proper tool context

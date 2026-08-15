@@ -7,6 +7,7 @@
 // import needed modules
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_update_cache} from './render_tool_update_cache.js' // self tool rendered (called from render common)
@@ -213,7 +214,7 @@ tool_update_cache.prototype.get_components_list = async function() {
 			dd_console("-> get_component_list API response:",'DEBUG',response);
 		}
 
-		const components_list = response.result // array of objects
+		const components_list = response_data(response) // array of objects
 
 
 	return components_list
@@ -261,13 +262,12 @@ tool_update_cache.prototype.get_components_list = async function() {
 * (!) `SHOW_DEVELOPER` is referenced in the debug log below but is NOT declared
 * in the global-declarations comment at the top of this file.
 *
-* @returns {Promise<Object>} Resolves to the server response object:
+* @returns {Promise<Object>} Resolves to the response envelope:
 *   {
-*     result  : boolean,   // false on immediate error; pid/pfile present on success
-*     msg     : string,
-*     pid     : number,    // OS process-id of the forked CLI worker
-*     pfile   : string,    // path to the process status file polled by SSE
-*     errors? : string[]   // present only when result is false
+*     ok      : boolean,   // false on immediate refusal (then `error` carries the code)
+*     data    : Object,    // the run payload (summary, errors, regenerated, …)
+*     pid     : number,    // OS process-id of the forked CLI worker (extension key)
+*     pfile   : string     // path to the process status file polled by SSE (extension key)
 *   }
 */
 tool_update_cache.prototype.update_cache = function() {

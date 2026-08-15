@@ -60,6 +60,7 @@
 
 // import
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
@@ -276,7 +277,7 @@ tool_import_files.prototype.build = async function(autoload=false) {
 				section_tipo	: target_component.section_tipo
 			})
 
-			return element_context_response.result[0] || null
+			return response_data(element_context_response)?.[0] || null
 		}//end load_target_component_context
 		self.target_component_context = await load_target_component_context()
 

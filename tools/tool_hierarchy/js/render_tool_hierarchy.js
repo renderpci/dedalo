@@ -378,7 +378,8 @@ const get_content_data = async function(self) {
 						// behind the one sentence the dispatcher just printed: without it
 						// the panel can only say the run was refused, never which invariant
 						// refused it. NOT inside `error.details`, so it is read from here.
-							if (api_response.errors?.length) {
+							const check_errors = api_response.errors
+							if (check_errors?.length) {
 								append_text_lines(
 									ui.create_dom_element({
 										element_type	: 'div',
@@ -387,7 +388,7 @@ const get_content_data = async function(self) {
 									}),
 									// bare string prints as-is; a coded entry resolves through
 									// the ONE renderer
-									api_response.errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
+									check_errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
 								)
 							}
 					}else{
@@ -416,14 +417,15 @@ const get_content_data = async function(self) {
 						// A success carries none today (the server's per-check list rides on
 						// the REFUSAL, above) — read anyway, because a payload that grows one
 						// must not need a client change to be seen.
-							if (api_response_data.errors?.length) {
+							const payload_errors = api_response_data.errors
+							if (payload_errors?.length) {
 								append_text_lines(
 									ui.create_dom_element({
 										element_type	: 'div',
 										class_name		: 'error',
 										parent			: messages_container
 									}),
-									api_response_data.errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
+									payload_errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
 								)
 							}
 					}

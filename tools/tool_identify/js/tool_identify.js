@@ -737,7 +737,7 @@ tool_identify.prototype.accept_proposal = async function(proposal) {
 			})
 
 			// false = the change was cancelled or skipped by the component
-			if (api_response===false || !api_response || api_response.result===false) {
+			if (api_response===false || !api_response || request_failed(api_response)) {
 				return false
 			}
 
@@ -1118,7 +1118,7 @@ tool_identify.prototype.name_type_record = async function(label_component, secti
 			refresh	: false
 		})
 
-		return !(api_response===false || !api_response || api_response.result===false)
+		return !(api_response===false || !api_response || request_failed(api_response))
 
 	} catch (error) {
 		console.error('Error on tool_identify name_type_record:', error);

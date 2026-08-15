@@ -24,7 +24,7 @@
  *      miss alike, so `4321` for `432` wrote thirty locators onto a record that
  *      does not exist (a portal insert does not check its target). The server
  *      now answers existence AND readability, and only `exists:true` may arm.
- *  A3  'attached' DERIVED FROM `result` MERELY BEING TRUTHY, and 'already'
+ *  A3  'attached' DERIVED FROM THE ENVELOPE MERELY BEING OK, and 'already'
  *      derived from the LOADED PORTAL PAGE. A member whose existing link sat on
  *      page 2 was reported attached with nothing written. The outcome is now
  *      the server's echoed total, the same signal component_portal.link_record
@@ -287,8 +287,11 @@ describe('A2 — a hand-typed Type id is verified before it can arm a confirm', 
 /* ══════════════ A3 — the outcome is the server's answer ══════════════ */
 
 describe('A3 — attach_outcome reports what the save DID, not that it returned', () => {
+	// envelope v2 (ERRORS_SPEC §3): the payload is `data`, the component rows are
+	// `data.data[]` — the compat `result` mirror is gone from the client reads.
 	const ok = (total: number, tipo = 'numisdata161') => ({
-		result: { data: [{ tipo, pagination: { total, limit: 10, offset: 0 } }] },
+		ok: true,
+		data: { data: [{ tipo, pagination: { total, limit: 10, offset: 0 } }] },
 	});
 
 	test('THE SCENARIO: the existing link sits on page 2 — the total does not grow ⇒ already', () => {
@@ -316,7 +319,7 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 
 	test('a truthy result with NO reported total is unconfirmed — never attached', () => {
 		const outcome = attach_outcome({
-			api_response: { result: { data: [{ tipo: 'numisdata161' }] } },
+			api_response: { ok: true, data: { data: [{ tipo: 'numisdata161' }] } },
 			component_tipo: 'numisdata161',
 			total_before: 47,
 		});
@@ -358,9 +361,14 @@ describe('A3 — attach_outcome reports what the save DID, not that it returned'
 		expect(
 			attach_outcome({
 				api_response: {
-					result: false,
-					msg: 'Record is out of the user scope',
-					errors: ['forbidden'],
+					ok: false,
+					error: {
+						code: 'perm.out_of_scope',
+						category: 'permission',
+						message: 'Record is out of the user scope',
+						label_key: 'error_perm_out_of_scope',
+						retryable: false,
+					},
 				},
 				component_tipo: 'numisdata161',
 				total_before: 3,

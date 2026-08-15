@@ -1198,13 +1198,11 @@ const THUMB_QUALITY = 'thumb'
 * ACTION_SUCCEEDED
 * Did the action really run?
 *
-* Envelope v2 answers with `ok:true`; the compat block mirrors the payload into
-* `result`, so the old `result===true` test now compares an OBJECT to `true` and
-* is false for every successful action. `create_3d_posterframe` below is the one
-* caller that is NOT an envelope — it synthesises `{result:true, msg}` in the
-* browser — so that shape is honoured explicitly, not by accident.
+* Envelope v2 answers with `ok:true` — the ONE test, for a server answer and for
+* the shapes this client synthesises alike (`create_3d_posterframe` returns the
+* same `{ok}` discriminator, so there is no second convention to honour).
 *
-* @param {Object|false} response - an API envelope, or the synthesised shape
+* @param {Object|false} response - an API envelope (or a client-made one)
 * @returns {boolean}
 */
 const action_succeeded = (response) => {
@@ -1212,11 +1210,8 @@ const action_succeeded = (response) => {
 	if (!response || request_failed(response)) {
 		return false
 	}
-	if (response.ok===true) {
-		return true
-	}
-	// client-synthesised (create_3d_posterframe) — no envelope behind it
-	return response.result===true
+
+	return response.ok===true
 }//end action_succeeded
 
 
@@ -1262,9 +1257,10 @@ const report_side_effects = function(self, response) {
 	// the sentence — wording that changes must not silently stop being shown.
 	// Both lists are payload keys of every mutating action of this tool
 	// (tools/tool_media_versions/server/media_versions.ts:385-396, :423-434).
-	const errors	= Array.isArray(data.errors) ? data.errors : []
-	const retired	= Array.isArray(data.retired) ? data.retired : []
-	if (errors.length===0 && retired.length===0) {
+	const reported		= data.errors
+	const error_entries	= Array.isArray(reported) ? reported : []
+	const retired		= Array.isArray(data.retired) ? data.retired : []
+	if (error_entries.length===0 && retired.length===0) {
 		return false
 	}
 
@@ -1278,21 +1274,21 @@ const report_side_effects = function(self, response) {
 		? data.summary
 		: null
 	const wrapper	= self.node?.content_data || self.node
-	const severity	= errors.length>0 ? 'error' : 'warning'
+	const severity	= error_entries.length>0 ? 'error' : 'warning'
 	if (wrapper) {
 		if (summary!==null) {
 			// ui.show_message writes the text through `text_content` — never a sink
 			ui.show_message(wrapper, summary, severity)
 		}else{
 			// no sentence: each item on its own line, through the ONE renderer
-			for (const entry of [...errors, ...retired]) {
+			for (const entry of [...error_entries, ...retired]) {
 				render_error_inline(wrapper, entry)
 			}
 		}
 	}else{
 		// no node to host the banner — the ONE renderer's toast surface, text-only
 		render_error_toast({
-			message		: summary ?? [...errors, ...retired].map(item_line).join('; '),
+			message		: summary ?? [...error_entries, ...retired].map(item_line).join('; '),
 			severity	: severity
 		})
 	}
@@ -1359,13 +1355,15 @@ const create_3d_posterframe = async function(self) {
 	// from it) with the camera angle on screen right now — the same confirmation
 	// every other mutating gear in this panel asks for.
 		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
-			return { result : false, msg : '' }
+			// the user cancelled: the same `{ok}` discriminator every answer carries,
+			// with no ApiError behind it (nothing failed)
+			return { ok : false }
 		}
 
 	// capture path: the component's own posterframe method, driven by the live viewer
 		const created = await main_element.create_posterframe(viewer)
 		if (created===true) {
-			return { result : true, msg : 'ok' }
+			return { ok : true }
 		}
 
 	// A refusal THIS function produced has no server round-trip behind it — there is
@@ -1375,7 +1373,7 @@ const create_3d_posterframe = async function(self) {
 		alert('Error: ' + msg)
 
 
-	return { result : false, msg : msg }
+	return { ok : false }
 }//end create_3d_posterframe
 
 
@@ -1550,7 +1548,8 @@ const render_build_version = function(quality, self) {
 				},
 				on_done : function(frame) {
 					progress_ui.stop()
-					const errors = (frame && Array.isArray(frame.errors)) ? frame.errors : []
+					const reported	= frame && frame.errors
+					const errors	= Array.isArray(reported) ? reported : []
 					if (errors.length>0) {
 						// A failed tier stays readable with its reason. Reverting it to a
 						// blank cell is the "never built" lie this whole path removes.
@@ -1757,7 +1756,8 @@ const render_build_version = function(quality, self) {
 								}
 
 								// Errors win over everything else.
-								const errors = Array.isArray(frame.errors) ? frame.errors : []
+								const reported	= frame.errors
+								const errors	= Array.isArray(reported) ? reported : []
 								if (errors.length>0) {
 									return give_up(errors.join('; '))
 								}

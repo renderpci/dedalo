@@ -179,10 +179,15 @@ export const assistant_controller = class assistant_controller {
 				body : { action: 'agent_models', dd_api: 'dd_mcp_api', options: {} }
 			})
 		} catch(e) {
-			api_response = { result: false, msg: e.message }
+			// a throw at the transport becomes THE client error model, so the check
+			// below reads one shape whatever happened
+			api_response = { ok: false, error: new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: e.message
+			})}
 		}
 
-		if (!api_response || api_response.result === false || !api_response.data) {
+		if (!api_response || request_failed(api_response) || !response_data(api_response)) {
 			this._disabled = true
 			this._chat_render.hide_input()
 			this._chat_render.add_system_message(
@@ -191,7 +196,7 @@ export const assistant_controller = class assistant_controller {
 			return
 		}
 
-		this._capabilities = api_response.data
+		this._capabilities = response_data(api_response)
 
 		// resolve the active model: per-thread/pref choice if still in the
 		// catalog, else the server default, else the first entry

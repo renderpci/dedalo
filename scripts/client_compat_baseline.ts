@@ -70,7 +70,7 @@ const ROOTS_LABEL = SCAN_ROOTS.map((entry) => `${entry.root}/${entry.glob}`).joi
 const GENERATED_BY = `${FIX_COMMAND} (Glob().scanSync + readFileSync census of ${ROOTS_LABEL} via scripts/lib/client_compat_census.ts — never grep)`;
 
 const RULE = [
-	'SHRINK-ONLY ratchet on client reads of the envelope-v2 COMPAT keys `.msg` / `.errors` / `.result` (engineering/ERRORS_SPEC.md §3.1), per file, comments and string contents excluded, page_globals lines excluded.',
+	'SHRINK-ONLY ratchet on client reads of the envelope-v2 COMPAT keys `.msg` / `.errors` / `.result` (engineering/ERRORS_SPEC.md §3.1), per file, comments and string contents excluded, page_globals lines excluded, and the named non-envelope expressions of NON_ENVELOPE_READS (browser APIs, nested server blocks, server job stream frames, payload diagnostic lists, failure extension keys) excused one expression at a time with a reason.',
 	"Each entry is that file's count frozen at today's value; a file absent from the list is capped at 0.",
 	'An entry may only go DOWN. Raising one, or adding a file, means a new compat read: a deliberate act — the generator refuses it without --allow-regression, and the commit message MUST say why.',
 	'A file now BELOW its entry, or an entry for a deleted/moved file, is a GATE FAILURE (a stale entry lets the file quietly regress back up): re-freeze with the generator and commit this file in the same change.',

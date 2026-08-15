@@ -10,7 +10,7 @@
 	// (markdown.js has never exported a bare `render_markdown`, so the old named
 	// import was a hard ES-module load error that took the whole controller down).
 	import { markdown } from './markdown.js'
-	import { request_failed } from '../../../core/common/js/api_error.js'
+	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
 	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
 	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { register_error_policy } from '../../../core/common/js/error_policy.js'
@@ -122,7 +122,7 @@ sitebuilder_controller.prototype.boot = async function() {
 	if (request_failed(status)) {
 		return self.render_empty_state(error_text(status.error))
 	}
-	const value = status.result || {}
+	const value = response_data(status) || {}
 	// STATE, not error: the daemon answered, and what it answered is "there is
 	// nothing to build against". Prose, not a code.
 	if (value.configured === false) return self.render_empty_state(self.label('sitebuilder_unconfigured', 'The site builder is not configured on this server.'))
@@ -144,7 +144,7 @@ sitebuilder_controller.prototype.refresh_sites = async function() {
 
 	const res = await self.request('list_sites', {})
 	if (request_failed(res)) return self.report(res)
-	self.sites = (res.result && res.result.data) || []
+	self.sites = response_data(res)?.data || []
 	self.render_sites()
 }//end refresh_sites
 
@@ -325,7 +325,7 @@ sitebuilder_controller.prototype.load_history = async function() {
 	if (request_failed(res)) return
 	// The most recent session's events are streamed on demand; here we only show that a
 	// history exists. A full past-session browser is a later refinement.
-	const sessions = (res.result && res.result.data) || []
+	const sessions = response_data(res)?.data || []
 	if (sessions.length > 0 && self.chat_log) {
 		const note = document.createElement('div')
 		note.className = 'sb_history_note'
@@ -356,7 +356,8 @@ sitebuilder_controller.prototype.send = async function() {
 		res = await self.request('session_message', { session_id: self.session_id, message: prompt })
 	} else {
 		res = await self.request('session_start', { slug: self.selected, prompt: prompt })
-		if (res.result && res.result.session_id) self.session_id = res.result.session_id
+		const started = response_data(res)
+		if (started && started.session_id) self.session_id = started.session_id
 	}
 	if (request_failed(res)) return self.report(res)
 
@@ -465,7 +466,7 @@ sitebuilder_controller.prototype.run_build = async function() {
 	self.append_line('sb_build_status', 'Building…')
 	const res = await self.request('build', { slug: self.selected })
 	if (request_failed(res)) { self.building = false; return self.report(res) }
-	const build_id = res.result && res.result.build_id
+	const build_id = response_data(res)?.build_id
 	self.poll_build(build_id)
 }//end run_build
 
@@ -482,7 +483,7 @@ sitebuilder_controller.prototype.poll_build = async function(build_id) {
 
 	const self = this
 	const res = await self.request('get_build', { slug: self.selected, build_id: build_id })
-	const record = res.result || {}
+	const record = response_data(res) || {}
 	if (record.outcome === 'running') {
 		window.setTimeout(() => self.poll_build(build_id), 1500)
 		return
@@ -509,7 +510,7 @@ sitebuilder_controller.prototype.load_preview = async function(bust) {
 	if (!self.selected) return
 	const res = await self.request('preview', { slug: self.selected })
 	if (request_failed(res)) return
-	const preview = res.result || {}
+	const preview = response_data(res) || {}
 
 	const pane = self.nodes.preview
 	pane.replaceChildren()

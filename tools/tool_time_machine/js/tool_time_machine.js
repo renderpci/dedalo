@@ -63,6 +63,7 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
@@ -753,15 +754,12 @@ tool_time_machine.prototype.get_bulk_process_label = async function(options){
 			body : rqo
 		})
 		if(SHOW_DEVELOPER===true) {
-			console.log("-------------> get_value:",'DEBUG', api_response.result);
+			console.log("-------------> get_value:",'DEBUG', response_data(api_response));
 		}
 
-		// user messages
-		// const msg_type = (api_response.result===false) ? 'error' : 'ok'
-		// ui.show_message(buttons_container, api_response.msg, msg_type)
 
 	// Returns the raw result value: a string label, or null/false on failure
-	return api_response.result
+	return response_data(api_response)
 }//end get_bulk_process_label
 
 

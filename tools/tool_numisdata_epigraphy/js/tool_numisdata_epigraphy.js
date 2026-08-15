@@ -32,6 +32,7 @@
 // import
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_numisdata_epigraphy} from './render_tool_numisdata_epigraphy.js'
@@ -333,7 +334,7 @@ tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 			body : rqo
 		})
 
-	const datum = api_response.result
+	const datum = response_data(api_response)
 
 
 	return datum
@@ -389,7 +390,7 @@ tool_numisdata_epigraphy.prototype.get_user_tools = async function(ar_requested_
 					dd_console("[tool_numisdata_epigraphy.get_user_tools] api_response:",'DEBUG',api_response);
 				}
 
-				const result = api_response.result // array of objects
+				const result = response_data(api_response) // array of objects
 
 				resolve(result)
 			})

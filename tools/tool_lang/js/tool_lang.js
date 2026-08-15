@@ -7,6 +7,8 @@
 // import
 	import {clone, dd_console, get_json_langs} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {common, create_source, rebuild_component_in_lang} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
@@ -388,13 +390,22 @@ tool_lang.prototype.automatic_translation_server = async function(translator, so
 					dd_console("-> automatic_translation API response:",'DEBUG',response);
 				}
 
-				// user messages
-					const msg_type = (response.result===false) ? 'error' : 'ok'
-					ui.show_message(buttons_container, response.msg, msg_type)
+				// user messages. Envelope v2: a failure carries the coded, translated
+				// error (`error_text`); a success carries no prose on the wire, so the
+				// tool's own label speaks.
+					if (request_failed(response)) {
+						ui.show_message(buttons_container, error_text(response.error), 'error')
+					}else{
+						ui.show_message(buttons_container, self.get_tool_label('translation_completed') || 'Translation completed.', 'ok')
+					}
 
-				// reload target lang
-					const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
-					target_component.refresh()
+				// reload target lang (only when the translation actually landed)
+					const target_component = request_failed(response)
+						? null
+						: self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
+					if (target_component) {
+						target_component.refresh()
+					}
 					if(SHOW_DEVELOPER===true) {
 						dd_console('target_component', 'DEBUG', target_component)
 					}

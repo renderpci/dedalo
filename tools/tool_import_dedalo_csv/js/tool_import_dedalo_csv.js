@@ -7,6 +7,8 @@
 // import needed modules
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
@@ -235,9 +237,15 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 					dd_console("-> load_csv_files_list API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				// envelope v2 payload: `{files:[…], errors:[per-file read problems]}`.
+				// The caller wants the LIST — an unreadable CSV is reported per file
+				// and must not hide the ones that did parse.
+				const files_data	= response_data(response)
+				const file_errors	= files_data?.errors
+				if (Array.isArray(file_errors) && file_errors.length>0) {
+					console.error('load_csv_files_list file errors:', file_errors)
+				}
+				resolve(Array.isArray(files_data?.files) ? files_data.files : [])
 			})
 		})
 }//end load_csv_files_list
@@ -260,8 +268,7 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 *
 * @param {Object} item - File-descriptor object from csv_files_list; must have a
 *   {string} item.name property matching the file's basename on disk
-* @returns {Promise<*>} Resolves with response.result from the server (typically true
-*   on success or an error object on failure)
+* @returns {Promise<*>} Resolves with the response PAYLOAD (`{deleted:<file_name>}`)
 */
 tool_import_dedalo_csv.prototype.remove_file = function(item) {
 
@@ -300,9 +307,8 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 					dd_console("-> remove_file API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				// envelope v2 payload: `{deleted:<file_name>}`
+				resolve(response_data(response))
 			})
 		})
 }//end remove_file
@@ -485,22 +491,27 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 					dd_console("-> get_section_components_list API response:",'DEBUG',response);
 				}
 
-				if (!response.result) {
-					// error path: return a sentinel so callers can show the server error
+				// envelope v2: the payload is `{components, label}`; a refusal carries
+				// the coded error and no payload at all.
+				const list_data = request_failed(response) ? null : response_data(response)
+				if (!list_data || !Array.isArray(list_data.components)) {
+					// error path: return a sentinel so callers can show the refusal
 					// without having to catch a rejection
 					resolve({
 						list	: false,
 						label	: false,
-						msg		: response.msg
+						error	: request_failed(response)
+							? error_text(response.error)
+							: (self.get_tool_label('no_components') || 'No components found for this section')
 					})
 					return
 				}
 
 				// cache result
 				self.resolved_section_components_list[section_tipo] = {
-					list	: response.result,
-					label	: response.label,
-					msg		: response.msg
+					list	: list_data.components,
+					label	: list_data.label,
+					error	: null
 				}
 
 				resolve(self.resolved_section_components_list[section_tipo])
@@ -533,12 +544,12 @@ tool_import_dedalo_csv.prototype.get_section_components_list = function(section_
 * the actual files processed by this tool are always .csv. The shape of the descriptor
 * is the same regardless of file type because it comes from the generic service_upload.
 *
-* On success, response.result is the new file-descriptor object (same shape as entries
-* in csv_files_list) that the render layer uses to refresh the file list.
+* On success the payload is `{file_name}` — the render layer refreshes the file
+* list from it.
 *
 * @param {Object} file_data - Upload descriptor from service_upload (see above)
-* @returns {Promise<Object>} Resolves with the full API response; response.result is the
-*   new file descriptor on success, or falsy with response.msg on failure
+* @returns {Promise<Object>} Resolves with the full envelope; `response_data` holds
+*   `{file_name}` on success, and a refusal carries the coded `error`
 */
 tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 

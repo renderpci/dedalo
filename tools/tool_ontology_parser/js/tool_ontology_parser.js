@@ -37,6 +37,7 @@
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 // import data_manager if you want to access to Dédalo API
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {response_data} from '../../../core/common/js/api_error.js'
 // import common to use destroy, render, refresh and other useful methods
 	import {common, create_source} from '../../../core/common/js/common.js'
 // tool_common, basic methods used by all the tools
@@ -184,7 +185,7 @@ tool_ontology_parser.prototype.build = async function(autoload=false) {
 
 	// call API to get_ontologies and fix it
 		const api_response	= await self.get_ontologies()
-		self.ontologies		= api_response?.result
+		self.ontologies		= response_data(api_response)
 
 	// selected ontologies. Get previous user selections saved in local storage and fill selection for convenience
 		const saved_selected_ontologies			= localStorage.getItem('selected_ontologies')
@@ -228,8 +229,8 @@ tool_ontology_parser.prototype.build = async function(autoload=false) {
 *
 * No `options` payload is required for this read-only call.
 *
-* @returns {Promise<Object>} Resolves to the raw API response object:
-*   { result: Array<Object>|false, msg: string, errors: Array<string> }
+* @returns {Promise<Object>} Resolves to the raw envelope; the payload
+*   (`response_data`) is Array<{tld, name, target_section_tipo, …}>.
 * @throws {Error} Re-throws network or server errors so the caller (`build`) can
 *   handle them; currently `build` does not guard against rejection.
 */
@@ -298,9 +299,9 @@ tool_ontology_parser.prototype.get_ontologies = async function() {
 * immediately without making a network request. The render layer checks for `!api_response`
 * before rendering results, so returning false is safe.
 *
-* @returns {Promise<Object|false>} Resolves to the API response object:
-*   { result: boolean, msg: string, errors: Array<string>, ar_msg: Array<string> }
-*   or `false` when the selection is empty.
+* @returns {Promise<Object|false>} Resolves to the envelope — payload
+*   `{summary, ar_msg}` on success, `error` + the `errors`/`ar_msg` extension
+*   keys on a failed batch — or `false` when the selection is empty.
 */
 tool_ontology_parser.prototype.export_ontologies = function () {
 	return this.send_action('export_ontologies')
@@ -315,7 +316,7 @@ tool_ontology_parser.prototype.export_ontologies = function () {
 * layer paints this as a per-TLD status panel, so the operator SEES why an ontology is out of
 * sync before pressing anything. Writes nothing.
 *
-* @returns {Promise<Object|false>} { result, msg, errors, states:[{tld, drift, inSync, …}] } or false when empty.
+* @returns {Promise<Object|false>} the envelope — payload `{states:[{tld, drift, inSync, …}]}` — or false when empty.
 */
 tool_ontology_parser.prototype.inspect_ontologies = function () {
 	return this.send_action('inspect_ontologies', { allow_empty: true })
@@ -334,7 +335,8 @@ tool_ontology_parser.prototype.inspect_ontologies = function () {
 * add a nameless node to the tree. Those stay listed as "without a tld" for a human to fill
 * in or delete. Run `regenerate` afterwards to re-derive dd_ontology from the repaired records.
 *
-* @returns {Promise<Object|false>} { result, msg, errors, ar_msg } or false when empty.
+* @returns {Promise<Object|false>} the envelope — payload `{summary, ar_msg}`, or `error` + the
+*   `errors`/`ar_msg` extension keys on a failed batch — or false when empty.
 */
 tool_ontology_parser.prototype.repair_tlds = function () {
 	return this.send_action('repair_tlds')
@@ -349,7 +351,8 @@ tool_ontology_parser.prototype.repair_tlds = function () {
 * leftover backup table, and no reader ever observes the wipe. (The incremental `reconcile`
 * companion was removed 2026-08-11 — it bought nothing a transactional rebuild does not.)
 *
-* @returns {Promise<Object|false>} { result, msg, errors, ar_msg } or false when empty.
+* @returns {Promise<Object|false>} the envelope — payload `{summary, ar_msg}`, or `error` + the
+*   `errors`/`ar_msg` extension keys on a failed batch — or false when empty.
 */
 tool_ontology_parser.prototype.regenerate_ontologies = function () {
 	return this.send_action('regenerate_ontologies')
