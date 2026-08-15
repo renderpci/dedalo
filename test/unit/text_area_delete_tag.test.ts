@@ -32,6 +32,7 @@ import {
 	insertMatrixRecordWithCounter,
 } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { markPatternById } from '../../src/core/resolve/tr_marks.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
@@ -207,6 +208,24 @@ describe('deleteTagFromAllLangs', () => {
 	});
 });
 
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a refusal is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function refusalOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a refusal, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
+
 describe('dd_component_text_area_api::delete_tag envelope', () => {
 	/** The handler reads its identity from the request context (requirePrincipal). */
 	const context = {
@@ -239,10 +258,12 @@ describe('dd_component_text_area_api::delete_tag envelope', () => {
 				{ tag_id: '5', type: 'index' },
 			);
 			expect(result.status).toBe(200);
-			expect(result.body?.result).toBe(true);
-			expect((result.body?.msg as string[])[0]).toBe(
-				`Deleted tag: 5 (index) in 1 langs: ${SPA} (component_text_area - ${TEXT_AREA})`,
-			);
+			expect(result.body?.ok).toBe(true);
+			// PHP: result = ($n_deleted > 0). The client's editor-tag removal keys on
+			// this exact truthiness — it is the answer, not a status word.
+			expect(result.body?.data).toBe(true);
+			expect(result.body?.notices).toBeUndefined();
+			// The two owned top-level keys survive as extension keys.
 			expect(result.body?.langs_changed).toEqual([SPA]);
 			expect(result.body?.removed_count).toBe(2);
 		} finally {
@@ -251,29 +272,35 @@ describe('dd_component_text_area_api::delete_tag envelope', () => {
 	});
 
 	test('nothing matched stays FALSY — the client depends on it', async () => {
-		// tag 7 was already deleted by the first describe block.
+		// tag 7 was already deleted by the first describe block. "Nothing matched"
+		// is a FALSY SUCCESS, never an error: the client keeps its own markup.
 		const result = await call(source(), { tag_id: '7', type: 'index' });
-		expect(result.body?.result).toBe(false);
-		expect((result.body?.msg as string[])[0]).toContain('No tags are deleted');
+		expect(result.body?.ok).toBe(true);
+		expect(result.body?.data).toBe(false);
+		expect(result.body?.removed_count).toBe(0);
 	});
 
-	test('an unsupported tag type is refused with the type NAMED', async () => {
-		const result = await call(source(), { tag_id: '3', type: 'note' });
-		expect(result.body?.result).toBe(false);
-		expect((result.body?.msg as string[])[0]).toContain("Tag type 'note' is not deletable by id");
+	test('an unsupported tag type is refused, naming the CLOSED supported set', async () => {
+		const refusal = await refusalOf(call(source(), { tag_id: '3', type: 'note' }));
+		expect(refusal.code).toBe('request.invalid_options');
+		// The vetted public sentence states what IS supported; the rejected value
+		// (caller data) rides the log message only.
+		expect(refusal.publicMessage).toContain('options.type must be one of');
+		expect(refusal.message).toContain("tag type 'note' is not deletable by id");
 	});
 
 	test('a malformed tag_id is a rejected request, not a 500', async () => {
-		const result = await call(source(), { tag_id: '7|.*', type: 'index' });
-		expect(result.status).toBe(200);
-		expect(result.body?.result).toBe(false);
-		expect(result.body?.errors).toEqual(['bad_options']);
+		const refusal = await refusalOf(call(source(), { tag_id: '7|.*', type: 'index' }));
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.spec.status).toBe(400);
+		// The validator's own message names the offending id: cause only.
+		expect(refusal.publicMessage).toBe('options.tag_id is malformed');
 	});
 
 	test('missing coordinates are refused', async () => {
-		const result = await call({ tipo: TEXT_AREA }, { tag_id: '7', type: 'index' });
-		expect(result.body?.result).toBe(false);
-		expect(result.body?.errors).toEqual(['bad_source']);
+		const refusal = await refusalOf(call({ tipo: TEXT_AREA }, { tag_id: '7', type: 'index' }));
+		expect(refusal.code).toBe('request.invalid_source');
+		expect(refusal.spec.status).toBe(400);
 	});
 });
 

@@ -14,6 +14,7 @@
  * through diffusion/api/actions.ts.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 
 /** dd_diffusion_api action handlers, keyed by action (registered in dispatch.ts). */
@@ -71,14 +72,9 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		// validate / rebuild_media_index are admin-gated the same way.
 		const principal = requirePrincipal(context);
 		if (!principal.isGlobalAdmin) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: 'Error. Insufficient permissions to retry pending deletions.',
-					errors: ['insufficient permissions'],
-				},
-			};
+			throw new DedaloError('perm.denied', {
+				coordinates: { action: 'retry_pending_deletions', required: 'global_admin' },
+			});
 		}
 		const { retryPendingDeletionsAction } = await import('../../../diffusion/api/actions.ts');
 		return retryPendingDeletionsAction(rqo, principal);
@@ -88,27 +84,17 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		// the element and reports errors/warnings — the loud pre-run gate.
 		const principal = requirePrincipal(context);
 		if (!principal.isGlobalAdmin) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: 'Error. Insufficient permissions to validate.',
-					errors: ['insufficient permissions'],
-				},
-			};
+			throw new DedaloError('perm.denied', {
+				coordinates: { action: 'validate', required: 'global_admin' },
+			});
 		}
 		const options = (rqo.options ?? {}) as { diffusion_element_tipo?: unknown };
 		const elementTipo =
 			typeof options.diffusion_element_tipo === 'string' ? options.diffusion_element_tipo : null;
 		if (elementTipo === null) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: 'Error. Missing diffusion_element_tipo.',
-					errors: ['invalid_request'],
-				},
-			};
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.diffusion_element_tipo is required',
+			});
 		}
 		const { validateElementPlan } = await import('../../../diffusion/plan/compile.ts');
 		const validation = await validateElementPlan(elementTipo);
@@ -121,14 +107,9 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		// Cross-section operation — global admins only (PHP message parity).
 		const principal = requirePrincipal(context);
 		if (!principal.isGlobalAdmin) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: 'Error. Insufficient permissions to rebuild the media index.',
-					errors: ['insufficient permissions'],
-				},
-			};
+			throw new DedaloError('perm.denied', {
+				coordinates: { action: 'rebuild_media_index', required: 'global_admin' },
+			});
 		}
 		const { rebuildMediaIndex } = await import('../../diffusion_bridge/diffusion_delete.ts');
 		const body = await rebuildMediaIndex();

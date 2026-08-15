@@ -43,6 +43,7 @@ import {
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { ApiResult } from '../../src/core/api/response.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { ProfileError, parseProfile } from '../../src/core/identify/profile.ts';
 import type { IdentificationProfile } from '../../src/core/identify/types.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -136,8 +137,25 @@ function fakeDeps(overrides: Partial<IdentifyTypeLinkDeps> = {}): IdentifyTypeLi
 	};
 }
 
-const body = (res: ApiResult): Record<string, unknown> =>
-	res.body.result as Record<string, unknown>;
+const body = (res: ApiResult): Record<string, unknown> => res.body.data as Record<string, unknown>;
+
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a decline is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function declineOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a decline, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
 
 describe('typeLinkCandidates — the one rule, derived from the profile', () => {
 	test('only a criterion whose FIRST hop lands in the Type section reveals the link', () => {
@@ -299,7 +317,7 @@ describe('the Type-link rule has ONE definition — identify_by_image applies it
 			}),
 			ctx(SUPERUSER),
 		);
-		const answer = res.body.result as { results: { types: { section_id: number }[] }[] };
+		const answer = res.body.data as { results: { types: { section_id: number }[] }[] };
 		expect(answer.results[0]?.types.map((type) => type.section_id)).toEqual([REVEALED_TYPE_ID]);
 		// The decoy was never even READ: the rule decided which component to open,
 		// it did not filter the output of opening every portal.
@@ -321,10 +339,9 @@ describe('resolve_type_link — declines, in order', () => {
 	test('a missing or unusable section_tipo', async () => {
 		const handler = buildResolveTypeLink(fakeDeps());
 		for (const options of [{}, { section_tipo: '' }, { section_tipo: 'not a tipo!' }]) {
-			const res = await handler(rqo(options), ctx(SUPERUSER));
-			expect(res.status).toBe(200);
-			expect(res.body.result).toBe(false);
-			expect(res.body.errors).toEqual(['missing_section']);
+			const decline = await declineOf(handler(rqo(options), ctx(SUPERUSER)));
+			expect(decline.code).toBe('identify.missing_section');
+			expect(decline.spec.status).toBe(400);
 		}
 	});
 
@@ -332,46 +349,54 @@ describe('resolve_type_link — declines, in order', () => {
 		// Otherwise the decline codes become an oracle for which sections declare a
 		// typology, for a caller who cannot open the section at all.
 		let profileLoaded = false;
-		const res = await buildResolveTypeLink(
-			fakeDeps({
-				canReadSection: async () => false,
-				loadProfile: async () => {
-					profileLoaded = true;
-					return coinProfile();
-				},
-			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
-		expect(res.body.errors).toEqual(['forbidden']);
+		const decline = await declineOf(
+			buildResolveTypeLink(
+				fakeDeps({
+					canReadSection: async () => false,
+					loadProfile: async () => {
+						profileLoaded = true;
+						return coinProfile();
+					},
+				}),
+			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('perm.denied');
 		expect(profileLoaded).toBe(false);
 	});
 
 	test('no profile, and a malformed one (whose parser message travels)', async () => {
-		const none = await buildResolveTypeLink(fakeDeps({ loadProfile: async () => null }))(
-			rqo({ section_tipo: 'numisdata4' }),
-			ctx(SUPERUSER),
+		const none = await declineOf(
+			buildResolveTypeLink(fakeDeps({ loadProfile: async () => null }))(
+				rqo({ section_tipo: 'numisdata4' }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(none.body.errors).toEqual(['no_profile']);
+		expect(none.code).toBe('identify.no_profile');
 
-		const bad = await buildResolveTypeLink(
-			fakeDeps({
-				loadProfile: async () => {
-					throw new ProfileError("criterion 'legend' hop 1 names component 'x'");
-				},
-			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
-		expect(bad.body.errors).toEqual(['invalid_profile']);
-		expect(bad.body.msg).toContain("criterion 'legend' hop 1");
+		const bad = await declineOf(
+			buildResolveTypeLink(
+				fakeDeps({
+					loadProfile: async () => {
+						throw new ProfileError("criterion 'legend' hop 1 names component 'x'");
+					},
+				}),
+			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+		);
+		expect(bad.code).toBe('identify.invalid_profile');
+		// PUBLIC disclosure — the parser sentence reaches the wire.
+		expect(bad.publicMessage).toContain("criterion 'legend' hop 1");
 	});
 
 	test('NO TYPE SECTION is its own decline: a photo archive clusters and promotes nowhere', async () => {
-		const res = await buildResolveTypeLink(
-			fakeDeps({ loadProfile: async () => coinProfile({ typeSectionTipo: null }) }),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['no_type_section']);
-		// Said in words, because the panel repeats it instead of showing a button.
-		expect(res.body.msg).toContain('nothing to promote');
+		const decline = await declineOf(
+			buildResolveTypeLink(
+				fakeDeps({ loadProfile: async () => coinProfile({ typeSectionTipo: null }) }),
+			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.no_type_section');
+		// Said in words, because the panel repeats it instead of showing a button
+		// — and the code is PUBLIC disclosure, so the words reach the wire.
+		expect(decline.publicMessage).toContain('nothing to promote');
 	});
 
 	test('a Type section with NO criterion reaching it REFUSES rather than guessing a portal', async () => {
@@ -389,18 +414,19 @@ describe('resolve_type_link — declines, in order', () => {
 			],
 		});
 		let modelAsked = false;
-		const res = await buildResolveTypeLink(
-			fakeDeps({
-				loadProfile: async () => profile,
-				componentModel: async () => {
-					modelAsked = true;
-					return 'component_portal';
-				},
-			}),
-		)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['no_link_component']);
-		expect(res.body.msg).toContain('numisdata3');
+		const decline = await declineOf(
+			buildResolveTypeLink(
+				fakeDeps({
+					loadProfile: async () => profile,
+					componentModel: async () => {
+						modelAsked = true;
+						return 'component_portal';
+					},
+				}),
+			)(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.no_link_component');
+		expect(decline.publicMessage).toContain('numisdata3');
 		// It did not go looking for a plausible component either.
 		expect(modelAsked).toBe(false);
 	});
@@ -598,7 +624,7 @@ describe('resolve_type_link — the survey of the members', () => {
 				rqo({ section_tipo: 'numisdata4', records }),
 				ctx(SUPERUSER),
 			);
-			expect(res.body.result).not.toBe(false);
+			expect(res.body.ok).toBe(true);
 			expect(body(res).existing_types).toEqual([]);
 			expect(body(res).members_surveyed).toBe(0);
 		}

@@ -46,6 +46,7 @@ import {
 	readProposalSources,
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { IdentifyAccessError } from '../../src/core/identify/match.ts';
 import { ProfileError, parseProfile } from '../../src/core/identify/profile.ts';
 import type { IdentificationProfile } from '../../src/core/identify/types.ts';
@@ -249,7 +250,7 @@ describe('get_proposals — the vision source is OPT-IN', () => {
 		expect(spy.visionCalls.length).toBe(0);
 		expect(spy.voteCalls.length).toBe(1);
 
-		const result = res.body.result as Record<string, unknown>;
+		const result = res.body.data as Record<string, unknown>;
 		const sources = result.sources as Record<string, unknown>[];
 		const vision = sources.find((source) => source.source === 'vision_model');
 		expect(vision?.requested).toBe(false);
@@ -268,7 +269,7 @@ describe('get_proposals — the vision source is OPT-IN', () => {
 		expect(spy.visionCalls.length).toBe(1);
 		expect(spy.voteCalls.length).toBe(0);
 
-		const result = res.body.result as Record<string, unknown>;
+		const result = res.body.data as Record<string, unknown>;
 		const proposals = result.proposals as Record<string, unknown>[];
 		expect(proposals.every((proposal) => proposal.source === 'vision_model')).toBe(true);
 	});
@@ -283,7 +284,7 @@ describe('get_proposals — the vision source is OPT-IN', () => {
 		expect(spy.voteCalls.length).toBe(1);
 		expect(spy.visionCalls.length).toBe(1);
 
-		const result = res.body.result as Record<string, unknown>;
+		const result = res.body.data as Record<string, unknown>;
 		const proposals = result.proposals as Record<string, unknown>[];
 		expect(proposals.map((proposal) => proposal.source)).toEqual([
 			'neighbour_vote',
@@ -310,7 +311,7 @@ describe('get_proposals — provenance is on EVERY proposal', () => {
 			rqo(seedOptions({ source: 'all' })),
 			ctx(SUPERUSER),
 		);
-		const result = res.body.result as Record<string, unknown>;
+		const result = res.body.data as Record<string, unknown>;
 		const proposals = result.proposals as Record<string, unknown>[];
 
 		expect(proposals.length).toBe(2);
@@ -350,7 +351,7 @@ describe('get_proposals — provenance is on EVERY proposal', () => {
 			rqo(seedOptions({ source: 'all' })),
 			ctx(SUPERUSER),
 		);
-		const proposals = (res.body.result as Record<string, unknown>).proposals as Record<
+		const proposals = (res.body.data as Record<string, unknown>).proposals as Record<
 			string,
 			unknown
 		>[];
@@ -364,13 +365,32 @@ describe('get_proposals — provenance is on EVERY proposal', () => {
 
 /* ─────────────────────────── declines ───────────────────────────────────── */
 
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a decline is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function declineOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a decline, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
+
 describe('get_proposals — the clean declines', () => {
 	test('an unusable seed', async () => {
 		const spy = spyDeps();
-		const res = await buildGetProposals(spy.deps)(rqo({ section_tipo: '' }), ctx(SUPERUSER));
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['missing_seed']);
+		const decline = await declineOf(
+			buildGetProposals(spy.deps)(rqo({ section_tipo: '' }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.missing_seed');
+		expect(decline.spec.status).toBe(400);
 	});
 
 	test('a section the principal may not read — checked BEFORE the profile', async () => {
@@ -382,17 +402,20 @@ describe('get_proposals — the clean declines', () => {
 				return profile();
 			},
 		});
-		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		expect(res.body.errors).toEqual(['forbidden']);
+		const decline = await declineOf(
+			buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('perm.denied');
 		// The decline codes must not be an oracle for which sections have a profile.
 		expect(profileLoaded).toBe(false);
 	});
 
 	test('a section with no profile', async () => {
 		const spy = spyDeps({ loadProfile: async () => null });
-		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['no_profile']);
+		const decline = await declineOf(
+			buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.no_profile');
 	});
 
 	test('a malformed profile — declined, but the parser message travels', async () => {
@@ -401,18 +424,20 @@ describe('get_proposals — the clean declines', () => {
 				throw new ProfileError("criterion 'legend' hop 1 names component 'nope'");
 			},
 		});
-		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		expect(res.body.errors).toEqual(['invalid_profile']);
-		expect(res.body.msg).toContain("hop 1 names component 'nope'");
+		const decline = await declineOf(
+			buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.invalid_profile');
+		// PUBLIC disclosure — the parser sentence reaches the wire.
+		expect(decline.publicMessage).toContain("hop 1 names component 'nope'");
 	});
 
 	test('an unknown source name', async () => {
 		const spy = spyDeps();
-		const res = await buildGetProposals(spy.deps)(
-			rqo(seedOptions({ source: 'astrology' })),
-			ctx(SUPERUSER),
+		const decline = await declineOf(
+			buildGetProposals(spy.deps)(rqo(seedOptions({ source: 'astrology' })), ctx(SUPERUSER)),
 		);
-		expect(res.body.errors).toEqual(['invalid_source']);
+		expect(decline.code).toBe('identify.invalid_source');
 		expect(spy.voteCalls.length).toBe(0);
 		expect(spy.visionCalls.length).toBe(0);
 	});
@@ -423,11 +448,14 @@ describe('get_proposals — the clean declines', () => {
 				throw new IdentifyAccessError(SEED);
 			},
 		});
-		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['forbidden']);
-		expect(res.body.msg).toBe('Forbidden record');
+		const decline = await declineOf(
+			buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('perm.denied');
+		expect(decline.spec.status).toBe(403);
+		// `perm.denied` is OPERATOR disclosure: nothing about the record can be
+		// named on the wire, whatever the site passes.
+		expect(decline.spec.message).toBe('Insufficient permissions');
 	});
 
 	test('a SOURCE being unavailable is not a request failure', async () => {
@@ -442,8 +470,8 @@ describe('get_proposals — the clean declines', () => {
 			rqo(seedOptions({ source: 'all' })),
 			ctx(SUPERUSER),
 		);
-		expect(res.body.errors).toEqual([]);
-		const result = res.body.result as Record<string, unknown>;
+		expect(res.body.ok).toBe(true);
+		const result = res.body.data as Record<string, unknown>;
 		expect((result.proposals as unknown[]).length).toBe(1);
 		const vision = (result.sources as Record<string, unknown>[]).find(
 			(source) => source.source === 'vision_model',
@@ -466,7 +494,7 @@ describe('get_proposals — the clean declines', () => {
 			ctx(SUPERUSER),
 		);
 		const vision = (
-			(res.body.result as Record<string, unknown>).sources as Record<string, unknown>[]
+			(res.body.data as Record<string, unknown>).sources as Record<string, unknown>[]
 		).find((source) => source.source === 'vision_model');
 		expect(vision?.ran).toBe(false);
 		expect((vision?.declined as { reason: string }).reason).toBe('egress_forbidden');
@@ -490,7 +518,7 @@ describe('get_proposals — the principal is the gate', () => {
 		// is still evidence; it is simply not acceptable from here.
 		const spy = spyDeps({ componentGrant: async () => 1 });
 		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		const proposals = (res.body.result as Record<string, unknown>).proposals as Record<
+		const proposals = (res.body.data as Record<string, unknown>).proposals as Record<
 			string,
 			unknown
 		>[];
@@ -506,7 +534,7 @@ describe('get_proposals — where an accepted proposal would land', () => {
 	test('a single-hop criterion is writable, and names its exact component', async () => {
 		const spy = spyDeps();
 		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		const proposals = (res.body.result as Record<string, unknown>).proposals as Record<
+		const proposals = (res.body.data as Record<string, unknown>).proposals as Record<
 			string,
 			unknown
 		>[];
@@ -531,7 +559,7 @@ describe('get_proposals — where an accepted proposal would land', () => {
 			}),
 		});
 		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
-		const proposals = (res.body.result as Record<string, unknown>).proposals as Record<
+		const proposals = (res.body.data as Record<string, unknown>).proposals as Record<
 			string,
 			unknown
 		>[];
@@ -564,7 +592,7 @@ describe('get_proposals — where an accepted proposal would land', () => {
 		});
 		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
 		const target = (
-			(res.body.result as Record<string, unknown>).proposals as Record<string, unknown>[]
+			(res.body.data as Record<string, unknown>).proposals as Record<string, unknown>[]
 		)[0]?.target as Record<string, unknown>;
 		expect(target.open_records).toEqual([]);
 		expect(target.detail).toContain('nothing to open');
@@ -591,7 +619,7 @@ describe('get_proposals — where an accepted proposal would land', () => {
 		});
 		const res = await buildGetProposals(spy.deps)(rqo(seedOptions()), ctx(SUPERUSER));
 		const proposal = (
-			(res.body.result as Record<string, unknown>).proposals as Record<string, unknown>[]
+			(res.body.data as Record<string, unknown>).proposals as Record<string, unknown>[]
 		)[0];
 		// One string for one renderer, with the parts alongside.
 		expect(proposal?.display).toBe('1628 – 1650');

@@ -4,13 +4,14 @@
  *
  * Two things are being gated here, and only one of them is "does it work".
  *
- * 1. IT DECLINES, IT DOES NOT EXPLODE. A section with no profile, a malformed
- *    profile, and a record the caller may not read are all ORDINARY situations.
- *    Each must come back as the standard `{result:false, msg, errors:[code]}`
- *    envelope — an exception here would surface to the client as a 500 through
- *    the dispatcher's last-resort catch, which tells a curator nothing. A
- *    malformed profile still travels LOUDLY (the parser's exact message), it is
- *    simply not thrown at the socket.
+ * 1. IT DECLINES WITH A CODE, IT DOES NOT EXPLODE. A section with no profile, a
+ *    malformed profile, and a record the caller may not read are all ORDINARY
+ *    situations. Each must come back as a REGISTERED code
+ *    (`identify.no_profile`, `identify.invalid_profile`, `perm.denied`) that the
+ *    dispatch chokepoint converts into `{ok:false, error:{code}}` — never as an
+ *    `internal.unexpected` 500, which tells a curator nothing. A malformed
+ *    profile still travels LOUDLY: `identify.invalid_profile` is a
+ *    PUBLIC-disclosure code, so the parser's exact message reaches the wire.
  *
  * 2. THE PRINCIPAL IS THE GATE. `findMatches` requires a principal because an
  *    absent one means "internal search, skip the projects filter" to the SQL
@@ -36,6 +37,7 @@ import {
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { IdentifyAccessError, type MatchInput } from '../../src/core/identify/match.ts';
 import { ProfileError, parseProfile } from '../../src/core/identify/profile.ts';
 import type { IdentificationProfile } from '../../src/core/identify/types.ts';
@@ -130,6 +132,24 @@ function fakeDeps(overrides: Partial<Parameters<typeof buildFindMatches>[0]> = {
 	};
 }
 
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a decline is a THROWN registry
+ * code — the handler builds no failure body, and the dispatch chokepoint
+ * converts it (registry status, `{ok:false, error:{code}}`). This unwraps the
+ * throw so each case can assert the CODE, which is the contract now.
+ */
+async function declineOf(call: Promise<unknown>): Promise<DedaloError> {
+	const outcome = await call.then(
+		(value) => ({ threw: false as const, value }),
+		(error: unknown) => ({ threw: true as const, error }),
+	);
+	if (!outcome.threw) {
+		throw new Error(`expected a decline, got ${JSON.stringify(outcome.value)}`);
+	}
+	if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+	return outcome.error;
+}
+
 describe('find_matches — bad requests', () => {
 	test('a missing or unusable seed is declined, never thrown', async () => {
 		const handler = buildFindMatches(fakeDeps());
@@ -141,67 +161,72 @@ describe('find_matches — bad requests', () => {
 			{ section_tipo: 'test3', section_id: 'not a number' },
 			{ section_tipo: 'not a tipo!', section_id: 1 },
 		]) {
-			const res = await handler(rqo(options), ctx(SUPERUSER));
-			expect(res.status).toBe(200);
-			expect(res.body.result).toBe(false);
-			expect(res.body.errors).toEqual(['missing_seed']);
+			const decline = await declineOf(handler(rqo(options), ctx(SUPERUSER)));
+			expect(decline.code).toBe('identify.missing_seed');
+			expect(decline.spec.status).toBe(400);
 		}
 	});
 });
 
 describe('find_matches — the three clean declines', () => {
 	test('a section with no profile', async () => {
-		const res = await buildFindMatches(fakeDeps({ loadProfile: async () => null }))(
-			rqo({ section_tipo: 'test3', section_id: 1 }),
-			ctx(SUPERUSER),
+		const decline = await declineOf(
+			buildFindMatches(fakeDeps({ loadProfile: async () => null }))(
+				rqo({ section_tipo: 'test3', section_id: 1 }),
+				ctx(SUPERUSER),
+			),
 		);
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['no_profile']);
+		expect(decline.code).toBe('identify.no_profile');
+		expect(decline.spec.status).toBe(400);
 	});
 
 	test('a malformed profile — declined, but the parser message travels', async () => {
-		const res = await buildFindMatches(
-			fakeDeps({
-				loadProfile: async () => {
-					throw new ProfileError("criterion 'legend' hop 0 names component 'x'");
-				},
-			}),
-		)(rqo({ section_tipo: 'test3', section_id: 1 }), ctx(SUPERUSER));
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['invalid_profile']);
-		// The whole point of refusing loudly is that the curator learns WHAT.
-		expect(res.body.msg).toContain("criterion 'legend' hop 0");
+		const decline = await declineOf(
+			buildFindMatches(
+				fakeDeps({
+					loadProfile: async () => {
+						throw new ProfileError("criterion 'legend' hop 0 names component 'x'");
+					},
+				}),
+			)(rqo({ section_tipo: 'test3', section_id: 1 }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('identify.invalid_profile');
+		// The whole point of refusing loudly is that the curator learns WHAT — and
+		// this code's disclosure is PUBLIC, so the parser sentence reaches the wire.
+		expect(decline.spec.disclosure).toBe('public');
+		expect(decline.publicMessage).toContain("criterion 'legend' hop 0");
 	});
 
 	test('a record the principal may not read (the engine raised IdentifyAccessError)', async () => {
-		const res = await buildFindMatches(
-			fakeDeps({
-				runMatches: async () => {
-					throw new IdentifyAccessError({ sectionTipo: 'test3', sectionId: 1 });
-				},
-			}),
-		)(rqo({ section_tipo: 'test3', section_id: 1 }), ctx(SUPERUSER));
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['forbidden']);
+		const decline = await declineOf(
+			buildFindMatches(
+				fakeDeps({
+					runMatches: async () => {
+						throw new IdentifyAccessError({ sectionTipo: 'test3', sectionId: 1 });
+					},
+				}),
+			)(rqo({ section_tipo: 'test3', section_id: 1 }), ctx(SUPERUSER)),
+		);
+		expect(decline.code).toBe('perm.denied');
+		expect(decline.spec.status).toBe(403);
 	});
 
 	test('a section the principal may not read — checked BEFORE the profile', async () => {
 		// Otherwise the decline codes become an oracle for which sections have an
 		// identification descriptor.
 		let profileLoaded = false;
-		const res = await buildFindMatches(
-			fakeDeps({
-				canReadSection: async () => false,
-				loadProfile: async () => {
-					profileLoaded = true;
-					return textProfile();
-				},
-			}),
-		)(rqo({ section_tipo: 'test3', section_id: 1 }), ctx(NO_ACCESS));
-		expect(res.body.errors).toEqual(['forbidden']);
+		const decline = await declineOf(
+			buildFindMatches(
+				fakeDeps({
+					canReadSection: async () => false,
+					loadProfile: async () => {
+						profileLoaded = true;
+						return textProfile();
+					},
+				}),
+			)(rqo({ section_tipo: 'test3', section_id: 1 }), ctx(NO_ACCESS)),
+		);
+		expect(decline.code).toBe('perm.denied');
 		expect(profileLoaded).toBe(false);
 	});
 });
@@ -248,8 +273,8 @@ describe('find_matches — the answer', () => {
 			loadProfile: async () => textProfile(),
 		});
 		const res = await handler(rqo({ section_tipo: 'test3', section_id: SEED_ID }), ctx(SUPERUSER));
-		expect(res.body.msg).toBe('ok');
-		const body = res.body.result as {
+		expect(res.body.ok).toBe(true);
+		const body = res.body.data as {
 			seed: { section_tipo: string; section_id: number; thumb_url: string | null };
 			profile: { id: string; label: string };
 			results: Array<{
@@ -292,10 +317,11 @@ describe('find_matches — the answer', () => {
 			...defaultIdentifyApiDeps(),
 			loadProfile: async () => textProfile(),
 		});
-		const res = await handler(rqo({ section_tipo: 'test3', section_id: SEED_ID }), ctx(NO_ACCESS));
-		expect(res.status).toBe(200);
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['forbidden']);
+		const decline = await declineOf(
+			handler(rqo({ section_tipo: 'test3', section_id: SEED_ID }), ctx(NO_ACCESS)),
+		);
+		expect(decline.code).toBe('perm.denied');
+		expect(decline.spec.status).toBe(403);
 	});
 });
 
@@ -358,8 +384,8 @@ describe('find_matches — a partial answer says it is partial', () => {
 			rqo({ section_tipo: 'test3', section_id: 7 }),
 			ctx(SUPERUSER),
 		);
-		expect(res.body.msg).toBe('ok');
-		return res.body.result as {
+		expect(res.body.ok).toBe(true);
+		return res.body.data as {
 			results: Array<{
 				outcomes: Array<{
 					criterion_id: string;
@@ -488,7 +514,7 @@ describe('find_matches — the pictures', () => {
 			}),
 		)(rqo({ section_tipo: 'test3', section_id: 7 }), ctx(SUPERUSER));
 
-		const body = res.body.result as {
+		const body = res.body.data as {
 			seed: { thumb_url: string | null };
 			results: Array<{ thumb_url: string | null }>;
 		};
@@ -512,11 +538,11 @@ describe('find_matches — the pictures', () => {
 			resolveThumbs: undefined,
 		})(rqo({ section_tipo: 'test3', section_id: 7 }), ctx(SUPERUSER));
 
-		const body = res.body.result as {
+		const body = res.body.data as {
 			seed: { thumb_url: string | null };
 			results: Array<{ thumb_url: string | null }>;
 		};
-		expect(res.body.msg).toBe('ok');
+		expect(res.body.ok).toBe(true);
 		expect(body.seed.thumb_url).toBeNull();
 		expect(body.results[0]?.thumb_url).toBeNull();
 	});

@@ -37,18 +37,21 @@
  * MatchInput.principal note. This handler passes the request's seeded principal
  * (`requirePrincipal`) and nothing else: it is the ACL gate, not a parameter.
  *
- * DECLINING, not throwing. Three ordinary situations are answers, not errors —
- * the section has no profile, its profile is malformed, the caller may not read
- * the record — and each returns the standard `{result:false, msg, errors:[code]}`
- * envelope so the client can say something useful instead of surfacing a 500.
- * The engine's own contract is preserved: a malformed profile is still LOUD (it
- * reaches the curator as `invalid_profile` + the parser's exact message, never as
- * a quietly reduced result set), and an unreadable seed is refused rather than
- * answered with "no matches", which would be a worse answer than a refusal.
+ * DECLINING is CODED, not prose. Three ordinary situations are answers, not
+ * engine faults — the section has no profile, its profile is malformed, the
+ * caller may not read the record — and each THROWS its registered `identify.*`
+ * code (envelope v2, ERRORS_SPEC §4), which the dispatch chokepoint converts to
+ * `{ok:false, error:{code, …}}` with the registry status. That is the only wire
+ * change: a decline is still an ANSWER the client can act on, never a 500. The
+ * engine's own contract is preserved — a malformed profile is still LOUD
+ * (`identify.invalid_profile` is a PUBLIC-disclosure code, so the parser's exact
+ * message still reaches the curator), and an unreadable seed is refused rather
+ * than answered with "no matches", which would be a worse answer than a refusal.
  *
- * ORDER MATTERS. The section read grant is checked BEFORE the profile is loaded,
- * so a caller with no access to a section cannot use the decline codes to learn
- * whether it has an identification descriptor.
+ * ORDER MATTERS, and a THROW does not change it. The section read grant is
+ * still checked BEFORE the profile is loaded, so a caller with no access to a
+ * section cannot use the decline codes to learn whether it has an
+ * identification descriptor (there is no oracle for descriptor existence).
  *
  * EXPLANATIONS ARE NOT OPTIONAL. Every result carries its per-criterion
  * `outcomes`, and the response carries `blind_criteria` (criteria the SEED has no
@@ -96,6 +99,9 @@ import { envSnapshot } from '../../../config/env.ts';
 import { isValidTipo } from '../../concepts/ontology.ts';
 import type { Rqo } from '../../concepts/rqo.ts';
 import { readExistingSectionIds } from '../../db/matrix.ts';
+import { ok } from '../../errors/convert.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
+import type { ErrorCode } from '../../errors/registry.ts';
 import {
 	DEFAULT_POOL_CAP,
 	findMatches,
@@ -167,11 +173,20 @@ export function defaultIdentifyApiDeps(): IdentifyApiDeps {
 	};
 }
 
-function envelope(result: unknown, msg: string, errors: string[] = []): ApiResult {
-	return { status: 200, body: { result, msg, errors } };
+/** The one success door of this class (ERRORS_SPEC §4 — handlers return `ok`). */
+function envelope(data: unknown, requestId: string): ApiResult {
+	return { status: 200, body: ok(data, { requestId }) };
 }
 
-const decline = (msg: string, code: string): ApiResult => envelope(false, msg, [code]);
+/**
+ * The DECLINE — a throw, never a body, typed `never` so a call site cannot
+ * forget to relay it. `publicMessage` is the operator-authored sentence; it
+ * reaches the wire only for the public-disclosure `identify.*` codes (the
+ * registry decides, not the call site).
+ */
+function decline(code: ErrorCode, publicMessage?: string): never {
+	throw new DedaloError(code, publicMessage === undefined ? {} : { publicMessage });
+}
 
 /** Clamp a client-supplied limit to [1, MAX_LIMIT]; anything unusable → the default. */
 function clampLimit(value: unknown): number {
@@ -246,15 +261,11 @@ export function buildFindMatches(deps: IdentifyApiDeps): ActionHandler {
 		const options = rqo.options as Record<string, unknown> | undefined;
 
 		const seed = readSeed(options);
-		if (seed === null) {
-			return decline('Missing or invalid seed (section_tipo, section_id)', 'missing_seed');
-		}
+		if (seed === null) decline('identify.missing_seed');
 
 		// Section read grant FIRST: the decline codes below must not tell someone
 		// who cannot open this section whether it has a profile.
-		if (!(await deps.canReadSection(principal, seed.sectionTipo))) {
-			return decline('Forbidden record', 'forbidden');
-		}
+		if (!(await deps.canReadSection(principal, seed.sectionTipo))) decline('perm.denied');
 
 		let profile: IdentificationProfile | null;
 		try {
@@ -263,12 +274,10 @@ export function buildFindMatches(deps: IdentifyApiDeps): ActionHandler {
 			// A malformed descriptor is a curator-facing failure, so the parser's
 			// exact message travels: "criterion 'legend' hop 1 names component
 			// 'x', which does not exist" is the whole point of refusing loudly.
-			if (error instanceof ProfileError) return decline(error.message, 'invalid_profile');
+			if (error instanceof ProfileError) decline('identify.invalid_profile', error.message);
 			throw error;
 		}
-		if (profile === null) {
-			return decline(`Section '${seed.sectionTipo}' has no identification profile`, 'no_profile');
-		}
+		if (profile === null) decline('identify.no_profile');
 
 		let report: MatchReport;
 		try {
@@ -282,7 +291,7 @@ export function buildFindMatches(deps: IdentifyApiDeps): ActionHandler {
 		} catch (error) {
 			// The seed itself is not readable by this principal. Same envelope as the
 			// section denial above — a caller learns "not yours", never "it exists".
-			if (error instanceof IdentifyAccessError) return decline('Forbidden record', 'forbidden');
+			if (error instanceof IdentifyAccessError) decline('perm.denied');
 			throw error;
 		}
 
@@ -327,7 +336,7 @@ export function buildFindMatches(deps: IdentifyApiDeps): ActionHandler {
 				// already read off their profile, and never anything a record holds.
 				restricted_criteria: report.restrictedCriteria,
 			},
-			'ok',
+			context.requestId,
 		);
 	};
 }
@@ -365,10 +374,10 @@ export function buildFindMatches(deps: IdentifyApiDeps): ActionHandler {
  *
  * Media indexing off, RAG off, an egress policy that forbids the configured
  * provider, an unusable image, an encoder that failed — all ordinary answers, all
- * `{result:false, errors:[code]}` at HTTP 200. In particular `buildMultimodalProvider`
- * THROWS a legible operator message when the egress policy would ship the
- * photograph off the host; that message travels to the curator as a decline
- * rather than dying in the dispatcher's last-resort catch.
+ * REGISTERED `identify.*` codes. In particular `buildMultimodalProvider` throws a
+ * legible operator message when the egress policy would ship the photograph off
+ * the host; `identify.egress_forbidden` is public-disclosure, so that message
+ * still travels to the curator rather than dying in a last-resort catch.
  *
  * EMPTY INDEX IS NOT "NO MATCHES". `empty_index` says nothing has been indexed to
  * compare against; an `ok` answer with zero results says the corpus WAS searched
@@ -420,10 +429,10 @@ interface TypeLink {
 	label: string | null;
 }
 
-/** One accepted image, or the reason it was refused. */
+/** One accepted image, or the REGISTERED code its refusal carries. */
 type ImageInput =
 	| { ok: true; bytes: Uint8Array; kind: string }
-	| { ok: false; code: string; msg: string };
+	| { ok: false; code: ErrorCode; msg: string };
 
 /**
  * Decode + bound + sniff the client's image. Never throws, never trusts a
@@ -431,13 +440,17 @@ type ImageInput =
  */
 export function readImageInput(raw: unknown): ImageInput {
 	if (typeof raw !== 'string' || raw.trim() === '') {
-		return { ok: false, code: 'missing_image', msg: 'Missing image (base64 or data: URL)' };
+		return {
+			ok: false,
+			code: 'identify.missing_image',
+			msg: 'Missing image (base64 or data: URL)',
+		};
 	}
 	const trimmed = raw.trim();
 	if (trimmed.length > MAX_IMAGE_BASE64_CHARS) {
 		return {
 			ok: false,
-			code: 'image_too_large',
+			code: 'identify.image_too_large',
 			msg: `Image too large (limit ${MAX_IMAGE_BYTES} bytes)`,
 		};
 	}
@@ -448,15 +461,15 @@ export function readImageInput(raw: unknown): ImageInput {
 	try {
 		bytes = new Uint8Array(Buffer.from(base64, 'base64'));
 	} catch {
-		return { ok: false, code: 'invalid_image', msg: 'Image is not decodable base64' };
+		return { ok: false, code: 'identify.invalid_image', msg: 'Image is not decodable base64' };
 	}
 	if (bytes.length === 0) {
-		return { ok: false, code: 'invalid_image', msg: 'Image is empty' };
+		return { ok: false, code: 'identify.invalid_image', msg: 'Image is empty' };
 	}
 	if (bytes.length > MAX_IMAGE_BYTES) {
 		return {
 			ok: false,
-			code: 'image_too_large',
+			code: 'identify.image_too_large',
 			msg: `Image too large (limit ${MAX_IMAGE_BYTES} bytes)`,
 		};
 	}
@@ -464,7 +477,7 @@ export function readImageInput(raw: unknown): ImageInput {
 	if (sniffed === null || !EMBEDDABLE_IMAGE_KINDS.has(sniffed.kind)) {
 		return {
 			ok: false,
-			code: 'invalid_image',
+			code: 'identify.invalid_image',
 			msg: `Not an embeddable image (${sniffed === null ? 'unrecognised' : sniffed.kind}); expected one of ${[...EMBEDDABLE_IMAGE_KINDS].join(', ')}`,
 		};
 	}
@@ -656,11 +669,11 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 		// The feature switches first: they are installation facts, and answering
 		// them before anything is decoded keeps a disabled install from ever
 		// materialising an uploaded body.
-		if (!deps.ragEnabled()) return decline('RAG is disabled', 'rag_disabled');
-		if (!deps.mediaEnabled()) return decline('RAG media is disabled', 'media_disabled');
+		if (!deps.ragEnabled()) decline('identify.rag_disabled');
+		if (!deps.mediaEnabled()) decline('identify.media_disabled');
 
 		const image = readImageInput(options?.image);
-		if (!image.ok) return decline(image.msg, image.code);
+		if (!image.ok) decline(image.code, image.msg);
 
 		const cfg = deps.config();
 		let provider: MultimodalEmbeddingProvider;
@@ -671,9 +684,11 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 			// would send object images off this host under a 'local_only' policy.
 			// That message is written for an operator; it travels verbatim.
 			const message = error instanceof Error ? error.message : String(error);
-			return decline(
+			decline(
+				cfg.imageEgressPolicy === 'local_only'
+					? 'identify.egress_forbidden'
+					: 'identify.provider_unavailable',
 				message,
-				cfg.imageEgressPolicy === 'local_only' ? 'egress_forbidden' : 'provider_unavailable',
 			);
 		}
 
@@ -682,9 +697,9 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 		// empty answer here is "the encoder could not read this", not "no vector".
 		const [vector] = await provider.embedImage([image.bytes]);
 		if (vector === undefined || vector.length === 0) {
-			return decline(
+			decline(
+				'identify.embed_failed',
 				`The multimodal provider ('${cfg.provider}', model '${model}') returned no embedding for this image`,
-				'embed_failed',
 			);
 		}
 
@@ -698,9 +713,7 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 				scope.push(sectionTipo);
 			}
 		}
-		if (requested.length > 0 && scope.length === 0) {
-			return decline('Forbidden section scope', 'forbidden');
-		}
+		if (requested.length > 0 && scope.length === 0) decline('perm.denied');
 
 		const limit = clampLimit(options?.limit);
 		// Over-fetch so the ACL filter cannot starve the answer (object_retrieval's
@@ -715,11 +728,11 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 			// DISTINCT from "no matches": the ANN returns the nearest rows whatever
 			// their distance, so an empty answer means the partition it searched holds
 			// no vectors at all. A curator must never read this as "nothing like it".
-			return decline(
+			decline(
+				'identify.empty_index',
 				scope.length === 0
 					? `Nothing has been indexed to compare against: the image index holds no vectors for model '${model}'. Run the image indexer before identifying by photograph.`
 					: `Nothing has been indexed to compare against in ${scope.join(', ')}: those sections hold no image vectors for model '${model}'.`,
-				'empty_index',
 			);
 		}
 
@@ -851,7 +864,7 @@ export function buildIdentifyByImage(deps: IdentifyByImageDeps): ActionHandler {
 				// never a substitute for a decline (the answer itself is valid).
 				warnings,
 			},
-			'ok',
+			context.requestId,
 		);
 	};
 }
@@ -1284,29 +1297,23 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 		const options = rqo.options as Record<string, unknown> | undefined;
 
 		const seed = readSeed(options);
-		if (seed === null) {
-			return decline('Missing or invalid seed (section_tipo, section_id)', 'missing_seed');
-		}
+		if (seed === null) decline('identify.missing_seed');
 
 		// Section read grant FIRST, exactly as find_matches: the decline codes must
 		// not tell someone who cannot open this section whether it has a profile.
-		if (!(await deps.canReadSection(principal, seed.sectionTipo))) {
-			return decline('Forbidden record', 'forbidden');
-		}
+		if (!(await deps.canReadSection(principal, seed.sectionTipo))) decline('perm.denied');
 
 		const requested = readProposalSources(options?.source);
-		if (!requested.ok) return decline(requested.msg, 'invalid_source');
+		if (!requested.ok) decline('identify.invalid_source', requested.msg);
 
 		let profile: IdentificationProfile | null;
 		try {
 			profile = await deps.loadProfile(seed.sectionTipo);
 		} catch (error) {
-			if (error instanceof ProfileError) return decline(error.message, 'invalid_profile');
+			if (error instanceof ProfileError) decline('identify.invalid_profile', error.message);
 			throw error;
 		}
-		if (profile === null) {
-			return decline(`Section '${seed.sectionTipo}' has no identification profile`, 'no_profile');
-		}
+		if (profile === null) decline('identify.no_profile');
 
 		const lang = currentDataLang();
 		const topK = clampLimit(options?.limit);
@@ -1370,7 +1377,7 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 				});
 			} catch (error) {
 				// A denied SEED is the whole request's answer, not one source's.
-				if (error instanceof IdentifyAccessError) return decline('Forbidden record', 'forbidden');
+				if (error instanceof IdentifyAccessError) decline('perm.denied');
 				// Anything else is THIS SOURCE being unavailable: the other source's
 				// proposals still stand, and the failure travels rather than vanishing.
 				sources.push({
@@ -1447,7 +1454,7 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 					})),
 				});
 			} catch (error) {
-				if (error instanceof IdentifyAccessError) return decline('Forbidden record', 'forbidden');
+				if (error instanceof IdentifyAccessError) decline('perm.denied');
 				sources.push({
 					source: 'vision_model',
 					requested: true,
@@ -1492,7 +1499,7 @@ export function buildGetProposals(deps: IdentifyProposalsDeps): ActionHandler {
 				sources,
 				proposals: proposals.map((item) => item.wire),
 			},
-			'ok',
+			context.requestId,
 		);
 	};
 }
@@ -1748,36 +1755,30 @@ export function buildResolveTypeLink(deps: IdentifyTypeLinkDeps): ActionHandler 
 
 		const raw = options?.section_tipo;
 		const sectionTipo = typeof raw === 'string' ? raw.trim() : '';
-		if (sectionTipo === '' || !isValidTipo(sectionTipo)) {
-			return decline('Missing or invalid section_tipo', 'missing_section');
-		}
+		if (sectionTipo === '' || !isValidTipo(sectionTipo)) decline('identify.missing_section');
 
 		// Section read grant FIRST, exactly as find_matches: the decline codes below
 		// must not tell someone who cannot open this section whether it has a
 		// profile, or where its typology lives.
-		if (!(await deps.canReadSection(principal, sectionTipo))) {
-			return decline('Forbidden record', 'forbidden');
-		}
+		if (!(await deps.canReadSection(principal, sectionTipo))) decline('perm.denied');
 
 		let profile: IdentificationProfile | null;
 		try {
 			profile = await deps.loadProfile(sectionTipo);
 		} catch (error) {
-			if (error instanceof ProfileError) return decline(error.message, 'invalid_profile');
+			if (error instanceof ProfileError) decline('identify.invalid_profile', error.message);
 			throw error;
 		}
-		if (profile === null) {
-			return decline(`Section '${sectionTipo}' has no identification profile`, 'no_profile');
-		}
+		if (profile === null) decline('identify.no_profile');
 
 		// 1. IS THERE ANYWHERE TO PROMOTE INTO? Null is not a defect: a collection
 		//    with no published typology clusters perfectly well and simply has no
 		//    canonical Type to attach members to.
 		const typeSectionTipo = profile.typeSectionTipo;
 		if (typeSectionTipo === null) {
-			return decline(
+			decline(
+				'identify.no_type_section',
 				`The identification profile '${profile.label || profile.id}' declares no Type section, so there is nothing to promote a group into. Clustering still works — this collection just keeps no canonical Type records.`,
-				'no_type_section',
 			);
 		}
 
@@ -1786,9 +1787,9 @@ export function buildResolveTypeLink(deps: IdentifyTypeLinkDeps): ActionHandler 
 		//    and never a component of a SIBLING section this profile also covers.
 		const candidates = typeLinkCandidates(profile, sectionTipo);
 		if (candidates.length === 0) {
-			return decline(
+			decline(
+				'identify.no_link_component',
 				`No criterion in profile '${profile.label || profile.id}' starts on '${sectionTipo}' and reaches section '${typeSectionTipo}' in one hop, so the component that links a record to its Type cannot be derived. Add a criterion whose path starts on '${sectionTipo}' and hops into '${typeSectionTipo}', or link the records by hand — this refuses to guess which component is the Type link.`,
-				'no_link_component',
 			);
 		}
 
@@ -1961,7 +1962,7 @@ export function buildResolveTypeLink(deps: IdentifyTypeLinkDeps): ActionHandler 
 				// ONLY thing that may arm an attach to a hand-typed id.
 				type_record: typeRecord,
 			},
-			'ok',
+			context.requestId,
 		);
 	};
 }

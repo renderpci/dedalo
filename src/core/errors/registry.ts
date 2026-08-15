@@ -1062,6 +1062,72 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		reason: 'Parity table classification (test/parity/normalize.ts) — never thrown by the engine.',
 	},
+
+	// --- core handlers (P1 sweep) ------------------------------------------
+	// Codes born in the src/core/api/handlers/** + src/core/api/*_view.ts sweep,
+	// each replacing a hand-built legacy body. Deliberately few and reusable.
+	'auth.login_failed': {
+		category: 'auth',
+		status: 401,
+		label_key: 'error_auth_login_failed',
+		// The AMBIGUOUS refusal (security/auth.ts LOGIN_FAILED_MESSAGE): a wrong
+		// user, a wrong password and a lockout answer the same thing, so a probe
+		// cannot learn which accounts exist. Disclosure `operator` keeps it that
+		// way — no call site may narrow it with a publicMessage.
+		message: 'User does not exist or password is invalid',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'request.invalid_data': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_request_invalid_data',
+		// The twin of `request.invalid_source`, for the `data` half of an RQO
+		// (save's `data.changed_data must be an array`).
+		message: 'Invalid or incomplete request data',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'record.delete_failed': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_record_delete_failed',
+		message: 'The record could not be deleted',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'media.action_failed': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_media_action_failed',
+		// A media side operation (fragment cut, chunked-upload join, posterframe
+		// bind) that could not complete. The engine reason rides `cause` (log +
+		// DEDALO_DEBUG_API_ERRORS), never the wire: it is a filesystem/ffmpeg
+		// message and can carry paths.
+		message: 'The media operation could not be completed',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'update_server.refused': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_update_server_refused',
+		// The ontology/code master doors (dd_utils_api get_server_ready_status,
+		// get_ontology_update_info, get_code_update_info). ONE code for every
+		// refusal reason ON PURPOSE — "not a master", "invalid code" and "invalid
+		// version" must be indistinguishable, or a probe confirms master-ness by
+		// elimination (dd_utils_api authorizeUpdateManifest "ORDER IS SECURITY").
+		// Disclosure `public` so the PHP-parity sentence still reaches the peer
+		// install that speaks this machine-to-machine wire.
+		message: 'This server does not serve that request',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;

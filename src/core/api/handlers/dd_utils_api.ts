@@ -5,12 +5,13 @@
 
 import { config } from '../../../config/config.ts';
 import { readString } from '../../../config/readers.ts';
+import { ok } from '../../errors/convert.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { publicOrigin } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { DEDALO_VERSION_TRIPLE, parseVersionString } from '../../update/version.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
-import { denied, notAuthorized } from '../response.ts';
 
 /**
  * Human-readable SQL for the SQO dev console: substitute $N placeholders with
@@ -120,12 +121,17 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// Fail-closed (L4): section_tipo is required and the read gate runs
 		// unconditionally — never skip it when the field is absent/falsy.
 		if (!options.section_tipo) {
-			return denied(400, 'update_lock_components_state: section_tipo is required');
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.section_tipo is required',
+				message: 'update_lock_components_state: section_tipo is required',
+			});
 		}
 		{
 			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
 			if (level < 1) {
-				return notAuthorized('Insufficient permissions to read');
+				throw new DedaloError('perm.denied', {
+					coordinates: { section_tipo: options.section_tipo },
+				});
 			}
 		}
 		const { updateLockComponentsState } = await import('../../section/locks.ts');
@@ -153,12 +159,17 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// Fail-closed (L4): section_tipo is required and the read gate runs
 		// unconditionally — never skip it when the field is absent/falsy.
 		if (!options.section_tipo) {
-			return denied(400, 'get_lock_status: section_tipo is required');
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.section_tipo is required',
+				message: 'get_lock_status: section_tipo is required',
+			});
 		}
 		{
 			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
 			if (level < 1) {
-				return notAuthorized('Insufficient permissions to read');
+				throw new DedaloError('perm.denied', {
+					coordinates: { section_tipo: options.section_tipo },
+				});
 			}
 		}
 		const { getLockStatus } = await import('../../section/locks.ts');
@@ -219,20 +230,25 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const principal = requirePrincipal(context);
 		const ref = parseRecordRef(rqo.options);
 		if (ref === null) {
-			return {
-				status: 200,
-				body: { result: false, msg: 'section_tipo and an integer section_id are required' },
-			};
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.section_tipo and an integer options.section_id are required',
+			});
 		}
 		const { sectionTipo, sectionId } = ref;
 		const level = await getPermissions(principal, sectionTipo, sectionTipo);
-		if (level < 1) return notAuthorized();
+		if (level < 1) {
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: sectionTipo } });
+		}
 		const { mediaJobs } = await import('../../media/jobs.ts');
 		const { activityRowFromMediaJob, stampForeignOwnerNames } = await import('../activity.ts');
 		const records = mediaJobs.jobsForRecord(sectionTipo, sectionId);
 		const rows = records.map(activityRowFromMediaJob);
 		await stampForeignOwnerNames(records, rows, principal.userId);
-		return { status: 200, body: { result: true, jobs: rows } };
+		// `jobs` is the owned top-level key the activity tray reads by name.
+		return {
+			status: 200,
+			body: ok(true, { requestId: context.requestId, extend: { jobs: rows } }),
+		};
 	},
 	get_activity: async (_rqo, context) => {
 		// The activity tray's read model — the caller's OWN work across BOTH job
@@ -241,7 +257,10 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const { collectActivity } = await import('../activity.ts');
 		return {
 			status: 200,
-			body: { result: true, jobs: await collectActivity(principal.userId) },
+			body: ok(true, {
+				requestId: context.requestId,
+				extend: { jobs: await collectActivity(principal.userId) },
+			}),
 		};
 	},
 	stop_process: async (rqo, context) => {
@@ -250,17 +269,14 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// so the handler winds down cooperatively (core/api/process_status.ts).
 		const principal = requirePrincipal(context);
 		const { stopUtilsProcess } = await import('../process_status.ts');
-		return stopUtilsProcess(rqo, principal);
+		return stopUtilsProcess(rqo, principal, context.requestId);
 	},
-	get_system_info: async (_rqo, _context) => {
+	get_system_info: async (_rqo, context) => {
 		// Upload/import/media-edit init call (PHP dd_utils_api::get_system_info).
 		// Authenticated read (the router's session+CSRF gate already ran); returns
 		// the upload-limit negotiation payload the client reads before transfer.
 		const { buildSystemInfo } = await import('./system_info.ts');
-		return {
-			status: 200,
-			body: { result: buildSystemInfo(), msg: 'OK. Request done' },
-		};
+		return { status: 200, body: ok(buildSystemInfo(), { requestId: context.requestId }) };
 	},
 	join_chunked_files_uploaded: async (rqo, context) => {
 		// Assemble a chunked upload (PHP dd_utils_api::join_chunked_files_uploaded).
@@ -269,7 +285,8 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// fires this JSON RQO to join them + re-sniff (SEC-066). Fail-closed:
 		// anonymous → 404. State-changing: the router already enforced CSRF.
 		if (context.session === null) {
-			return { status: 404, body: { result: false, msg: 'Not found' } };
+			// Fail-closed: the same 404 shape a route miss answers (no existence leak).
+			throw new DedaloError('resource.not_found');
 		}
 		const options = (rqo.options ?? {}) as {
 			file_data?: {
@@ -283,6 +300,9 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			files_chunked?: unknown[];
 		};
 		const fileData = options.file_data ?? {};
+		// ONE coercion of the staging key: the join, the thumbnail and the failure
+		// coordinates all address the same directory.
+		const keyDir = String(fileData.key_dir ?? '');
 		const filesChunked = Array.isArray(options.files_chunked) ? options.files_chunked : [];
 		// total_chunks: the dense files_chunked array length, or the echoed count.
 		const totalChunks =
@@ -292,7 +312,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			// Awaited: the assembly is O(file size) and yields between windows so a
 			// multi-GB join does not freeze every other request (S-7).
 			const joined = await joinChunkedUpload({
-				keyDir: String(fileData.key_dir ?? ''),
+				keyDir,
 				tmpName: String(fileData.tmp_name ?? ''),
 				totalChunks,
 				userId: context.session.userId,
@@ -324,44 +344,46 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			const thumbnailUrl = joined.tmpName
 				? await createStagedThumbnail(
 						context.session.userId,
-						String(fileData.key_dir ?? ''),
+						keyDir,
 						joined.tmpName,
 						joined.extension ?? null,
 					)
 				: null;
 			return {
 				status: 200,
-				body: {
-					result: true,
-					msg: 'OK. Request done',
-					file_data: {
-						key_dir: fileData.key_dir ?? null,
-						tmp_name: joined.tmpName ?? null,
-						// THE HUMAN FILE NAME (PHP file_data->name — the join MUTATES the
-						// client's file_data, so `name` survived it there). Taken from the
-						// SERVER's per-transfer meta, not from the relayed request.
-						//
-						// This key is for the CLIENT (the queue row's label, and the PHP
-						// wire shape). It is NOT how the archive gets the name: the ingest
-						// runs in a later request and reads the name the receiver persisted
-						// beside the staged file (media/ingest/staged_name_record.ts),
-						// precisely so a caller that does not relay this key still records
-						// 'María Piñón.jpg' rather than 'Mar_a_Pi_n.jpg'.
-						name: joined.name ?? null,
-						extension: joined.extension ?? null,
-						chunked: false,
-						complete: true,
-						// null when the format is not rasterisable — the client keeps
-						// its own local preview in that case and must not blank the img.
-						thumbnail_url: thumbnailUrl,
+				body: ok(true, {
+					requestId: context.requestId,
+					extend: {
+						file_data: {
+							key_dir: fileData.key_dir ?? null,
+							tmp_name: joined.tmpName ?? null,
+							// THE HUMAN FILE NAME (PHP file_data->name — the join MUTATES the
+							// client's file_data, so `name` survived it there). Taken from the
+							// SERVER's per-transfer meta, not from the relayed request.
+							//
+							// This key is for the CLIENT (the queue row's label, and the PHP
+							// wire shape). It is NOT how the archive gets the name: the ingest
+							// runs in a later request and reads the name the receiver persisted
+							// beside the staged file (media/ingest/staged_name_record.ts),
+							// precisely so a caller that does not relay this key still records
+							// 'María Piñón.jpg' rather than 'Mar_a_Pi_n.jpg'.
+							name: joined.name ?? null,
+							extension: joined.extension ?? null,
+							chunked: false,
+							complete: true,
+							// null when the format is not rasterisable — the client keeps
+							// its own local preview in that case and must not blank the img.
+							thumbnail_url: thumbnailUrl,
+						},
 					},
-				},
+				}),
 			};
 		} catch (error) {
-			return {
-				status: 200,
-				body: { result: false, msg: 'Join failed', errors: [(error as Error).message] },
-			};
+			throw new DedaloError('media.action_failed', {
+				cause: error,
+				message: 'join_chunked_files_uploaded: join failed',
+				coordinates: { key_dir: keyDir, total_chunks: totalChunks },
+			});
 		}
 	},
 	change_lang: async (rqo, context) => {
@@ -394,7 +416,9 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			else if (dataLang !== undefined) applicationLang = dataLang;
 		}
 		if (applicationLang === undefined && dataLang === undefined) {
-			return { status: 200, body: { result: false, msg: 'No valid language supplied' } };
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'No valid language supplied',
+			});
 		}
 		if (context.sessionToken) {
 			const { setSessionLangs } = await import('../../security/session_store.ts');
@@ -404,20 +428,15 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			applicationLang !== undefined ? `dedalo_application_lang to ${applicationLang}` : null,
 			dataLang !== undefined ? `dedalo_data_lang to ${dataLang}` : null,
 		].filter(Boolean);
-		return {
-			status: 200,
-			body: { result: true, msg: `OK. Request done. Changed ${changed.join(', ')}` },
-		};
+		console.info(`[change_lang] changed ${changed.join(', ')}`);
+		return { status: 200, body: ok(true, { requestId: context.requestId }) };
 	},
-	get_login_context: async (_rqo, _context) => {
+	get_login_context: async (_rqo, context) => {
 		// The login form's own context request (PHP dd_utils_api::
 		// get_login_context) — pre-auth by design (the form must render
 		// before any session exists). Returns [login context].
 		const { buildLoginContext } = await import('./login_context.ts');
-		return {
-			status: 200,
-			body: { result: [await buildLoginContext()], msg: 'OK. Request done' },
-		};
+		return { status: 200, body: ok([await buildLoginContext()], { requestId: context.requestId }) };
 	},
 	list_uploaded_files: async (rqo, context) => {
 		// The upload service's multi-file queue lists the user's already-staged files (PHP
@@ -439,20 +458,20 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const options = (rqo.options ?? {}) as { key_dir?: unknown };
 		const keyDir = typeof options.key_dir === 'string' ? options.key_dir : '';
 		if (keyDir === '') {
-			return { status: 200, body: { result: [], msg: 'OK. Request done' } };
+			return { status: 200, body: ok([], { requestId: context.requestId }) };
 		}
 		const { listStagedFiles } = await import('../../media/ingest/staged_files.ts');
 		try {
 			return {
 				status: 200,
-				body: { result: listStagedFiles(principal.userId, keyDir), msg: 'OK. Request done' },
+				body: ok(listStagedFiles(principal.userId, keyDir), { requestId: context.requestId }),
 			};
 		} catch (error) {
 			// A malformed key_dir (or an unreadable staging root) must not poison
 			// page_globals.api_errors and break the sibling renders — log it and
 			// answer with the empty-but-well-shaped array.
 			console.error('[list_uploaded_files] staging scan failed:', (error as Error).message);
-			return { status: 200, body: { result: [], msg: 'OK. Request done' } };
+			return { status: 200, body: ok([], { requestId: context.requestId }) };
 		}
 	},
 	delete_uploaded_file: async (rqo, context) => {
@@ -481,7 +500,9 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const fileName = typeof options.file_name === 'string' ? options.file_name : '';
 		const uploadId = typeof options.upload_id === 'string' ? options.upload_id : null;
 		if (keyDir === '' || fileName === '') {
-			return { status: 200, body: { result: false, msg: 'key_dir and file_name are required' } };
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.key_dir and options.file_name are required',
+			});
 		}
 		const { deleteStagedFile } = await import('../../media/ingest/staged_files.ts');
 		try {
@@ -489,15 +510,18 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			// already removed the row, and a retry/double-fire must not surface an
 			// error the user cannot act on.
 			deleteStagedFile(principal.userId, keyDir, fileName, undefined, uploadId);
-			return { status: 200, body: { result: true, msg: 'OK. Request done' } };
+			return { status: 200, body: ok(true, { requestId: context.requestId }) };
 		} catch (error) {
 			// A rejected segment (traversal attempt / malformed name) is the only
-			// way here — report it without leaking the resolved path.
-			console.error('[delete_uploaded_file] refused:', (error as Error).message);
-			return { status: 200, body: { result: false, msg: 'Invalid file reference' } };
+			// way here — report it without leaking the resolved path (the resolver's
+			// own message rides `cause`, which is never serialized).
+			throw new DedaloError('request.invalid_options', {
+				cause: error,
+				publicMessage: 'Invalid file reference',
+			});
 		}
 	},
-	get_install_context: async (_rqo, _context) => {
+	get_install_context: async (_rqo, context) => {
 		// The installer's own context request (DEC-19 TS-native install). The
 		// client build reads result.find(el => el.model===self.model), so result
 		// is an ARRAY carrying the installer element. On a fresh machine there is
@@ -506,10 +530,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// reads — NOT buildStructureContext. The dispatch gate (Gate 1b) already
 		// blocked this action pre-seal-only + IP-gated; post-seal it 404s.
 		const { buildInstallContext } = await import('../../install/context.ts');
-		return {
-			status: 200,
-			body: { result: [buildInstallContext()], msg: 'OK. Request done' },
-		};
+		return { status: 200, body: ok([buildInstallContext()], { requestId: context.requestId }) };
 	},
 	install: async (rqo, context) => {
 		// The wizard step router (DEC-19). Every wizard step rides this one action
@@ -528,7 +549,10 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			context.clientIp,
 		);
 		if (!outcome.ok) {
-			return { status: 200, body: { result: false, msg: outcome.message } };
+			// The AMBIGUOUS refusal: `auth.login_failed`'s registry message IS
+			// LOGIN_FAILED_MESSAGE, and its disclosure is `operator`, so no call site
+			// can narrow it into an account-existence oracle.
+			throw new DedaloError('auth.login_failed', { coordinates: { client_ip: context.clientIp } });
 		}
 		// The fresh session's CSRF token must ship with the login response —
 		// every subsequent non-exempt action requires it (PHP appends the
@@ -538,12 +562,12 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const freshSession = getSession(outcome.sessionToken as string);
 		return {
 			status: 200,
-			body: {
-				result: true,
-				msg: 'ok',
-				user_id: outcome.userId,
-				csrf_token: freshSession?.csrfToken,
-			},
+			// `user_id` + `csrf_token` are owned top-level keys: the fresh session is
+			// created mid-handler, so the dispatch-level csrf_token append cannot see it.
+			body: ok(true, {
+				requestId: context.requestId,
+				extend: { user_id: outcome.userId, csrf_token: freshSession?.csrfToken },
+			}),
 			setSessionToken: outcome.sessionToken,
 			// Media access control (Rule A). Undefined when the mode is false, so a
 			// protection-off install emits exactly ONE Set-Cookie, as before.
@@ -610,7 +634,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// the standard SW-cleanup + root redirect when the field is absent).
 		return {
 			status: 200,
-			body: { result: true, msg: 'OK. Request done' },
+			body: ok(true, { requestId: context.requestId }),
 			clearSessionCookie: true,
 			// Clear the media-auth cookie too. UNCONDITIONAL, unlike PHP (which gated on
 			// the mode): clearing an absent cookie costs nothing, while the conditional's
@@ -634,7 +658,13 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// distinct returned ids, db_data = rows.
 		const principal = requirePrincipal(context);
 		if (!principal.isGlobalAdmin) {
-			return notAuthorized('Only global admins can use the SQO test environment');
+			// `perm.denied` is OPERATOR disclosure, so the sentence never reaches the
+			// wire — it is the named LOG line (and what the gate below reads).
+			throw new DedaloError('perm.denied', {
+				publicMessage: 'Only global admins can use the SQO test environment',
+				message: 'Only global admins can use the SQO test environment',
+				coordinates: { action: 'convert_search_object_to_sql_query' },
+			});
 		}
 		const untrusted = (rqo.options ?? {}) as Record<string, unknown>;
 		try {
@@ -655,54 +685,51 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			];
 			return {
 				status: 200,
-				body: {
-					result: true,
-					msg: resolved,
-					sql: built.sql,
-					ar_section_id: arSectionId,
-					db_data: rows,
-				},
+				// The console's ANSWER is the four pieces together, so they are the
+				// payload — not three top-level keys beside a boolean. PHP shipped the
+				// resolved SQL in `msg` (the human channel); envelope v2 has no prose
+				// channel, so it is a named field (`sql_resolved`) of the data.
+				body: ok(
+					{
+						sql_resolved: resolved,
+						sql: built.sql,
+						ar_section_id: arSectionId,
+						db_data: rows,
+					},
+					{ requestId: context.requestId },
+				),
 			};
 		} catch (error) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: `Error: ${(error as Error).message}`,
-					errors: [(error as Error).message],
-				},
-			};
+			throw new DedaloError('search.failed', {
+				cause: error,
+				message: 'convert_search_object_to_sql_query: build/execute failed',
+			});
 		}
 	},
-	get_server_ready_status: async (rqo) => {
+	get_server_ready_status: async (rqo, context) => {
 		// Remote reachability probe (PHP dd_utils_api::get_server_ready_status).
 		// Machine-to-machine, pre-auth (NO_LOGIN + CSRF-exempt like PHP): the
 		// only branch implemented is the ontology-server check; anything else
 		// answers the PHP default refusal. Fail-closed on the config flag.
 		const options = (rqo.options ?? {}) as { check?: unknown };
 		if (options.check === 'ontology_server' && config.ontologyIo.isOntologyServer === true) {
-			return {
-				status: 200,
-				body: { result: true, msg: 'OK. Ontology server is ready', errors: [] },
-			};
+			return { status: 200, body: ok(true, { requestId: context.requestId }) };
 		}
 		if (options.check === 'code_server' && config.update.isCodeServer === true) {
-			return {
-				status: 200,
-				body: { result: true, msg: 'OK. Code server is ready', errors: [] },
-			};
+			return { status: 200, body: ok(true, { requestId: context.requestId }) };
 		}
-		return {
-			status: 200,
-			body: { result: false, msg: 'Error. This is not an accessible Server', errors: [] },
-		};
+		// ONE refusal for every reason (see `update_server.refused` in the registry):
+		// a probe must not be able to tell "not that kind of server" from
+		// "unknown check" by elimination. PHP refusal bytes preserved.
+		throw new DedaloError('update_server.refused', {
+			publicMessage: 'Error. This is not an accessible Server',
+		});
 	},
-	get_ontology_update_info: async (rqo) => {
+	get_ontology_update_info: async (rqo, context) => {
 		// Ontology-update manifest (PHP dd_utils_api::get_ontology_update_info):
 		// served ONLY when this instance is an ontology master, to callers
 		// presenting a configured access code. PHP refusal bytes preserved.
 		const options = (rqo.options ?? {}) as { version?: unknown; code?: unknown };
-		const fail = (msg: string) => ({ status: 200, body: { result: false, msg, errors: [msg] } });
 		const auth = authorizeUpdateManifest({
 			isServer: config.ontologyIo.isOntologyServer === true,
 			configuredCodes: [
@@ -718,7 +745,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			serverKind: 'ontology',
 		});
 		if (auth.ok !== true) {
-			return fail(auth.msg);
+			throw new DedaloError('update_server.refused', { publicMessage: auth.msg });
 		}
 		const [major, minor] = auth.version as [number, number];
 		const { getOntologyIoPath, buildOntologyUpdateInfo } = await import(
@@ -726,18 +753,24 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		);
 		const ioPath = getOntologyIoPath(config.ops.ontologyDataIoDir, [major, minor]);
 		if (ioPath === false) {
-			return fail('Error. Invalid version number. This version does not contain ontology files. ');
+			throw new DedaloError('update_server.refused', {
+				publicMessage:
+					'Error. Invalid version number. This version does not contain ontology files. ',
+			});
 		}
 		const publicBaseUrl = `${publicOrigin()}/dedalo/install/import/ontology/${major}.${minor}`;
-		return { status: 200, body: buildOntologyUpdateInfo(ioPath, publicBaseUrl) };
+		// buildOntologyUpdateInfo still returns the PHP-era `{result, msg, errors}`
+		// body (src/core/ontology/data_io_import.ts — another sweep's file); only
+		// its PAYLOAD travels, wrapped by the one success builder.
+		const manifest = buildOntologyUpdateInfo(ioPath, publicBaseUrl);
+		return { status: 200, body: ok(manifest.result, { requestId: context.requestId }) };
 	},
-	get_code_update_info: async (rqo) => {
+	get_code_update_info: async (rqo, context) => {
 		// Code-release manifest (PHP dd_utils_api::get_code_update_info): served
 		// ONLY when this instance is a code master, to callers presenting a
 		// configured CODE_SERVERS code. PHP refusal bytes preserved. Advertises
 		// only built release archives on the caller's linear upgrade path.
 		const options = (rqo.options ?? {}) as { version?: unknown; code?: unknown };
-		const fail = (msg: string) => ({ status: 200, body: { result: false, msg, errors: [msg] } });
 		const auth = authorizeUpdateManifest({
 			isServer: config.update.isCodeServer === true,
 			configuredCodes: config.update.codeServers.map((entry) => entry.code),
@@ -749,7 +782,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			serverKind: 'code',
 		});
 		if (auth.ok !== true) {
-			return fail(auth.msg);
+			throw new DedaloError('update_server.refused', { publicMessage: auth.msg });
 		}
 		const clientVersion = auth.version;
 		const { buildCodeUpdateInfo } = await import('../../update/code_manifest.ts');
@@ -767,6 +800,6 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 				host: readString('DEDALO_HOST'),
 			},
 		});
-		return { status: 200, body: { result: info, msg: 'OK. request done', errors: [] } };
+		return { status: 200, body: ok(info, { requestId: context.requestId }) };
 	},
 };

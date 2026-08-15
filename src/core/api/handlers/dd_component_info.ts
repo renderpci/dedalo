@@ -8,14 +8,19 @@
  * section_tipo, section_id, mode}, options:{widget_name}} — the delivery
  * path for ASYNC widgets (user_activity) and any lazily-built widget slot.
  *
- * PHP contract preserved: failures ride as HTTP 200 + {result:false,
- * msg:[…], errors:[]} with the PHP message bytes; success is
- * {result: widget_data, msg:'OK. Request done successfully', errors:[]}.
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md): the PHP `{result:false, msg:[…]}`
+ * refusals are now THROWN registry codes — `perm.denied` (forbidden record),
+ * `widget.empty` (the component defines no widgets) and `widget.not_defined`
+ * (the named widget is not one of them). Those are exactly the codes the parity
+ * reconciler maps the frozen PHP bodies to (test/parity/normalize.ts
+ * FROZEN_ERROR_BODIES). Success is `ok(widget_data)`.
  * TS is STRONGER on one axis (spec §3 permits stronger only): the record is
  * AUTHZ-01 gated via principalCanAccessRecord before any compute — PHP
  * computes for any coordinates a logged-in user names.
  */
 
+import { ok } from '../../errors/convert.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getNode } from '../../ontology/resolver.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
 import type { ActionHandler } from '../handler_context.ts';
@@ -48,10 +53,9 @@ export const componentInfoApiActions: Record<string, ActionHandler> = {
 		// record like every other door reading by (tipo, id).
 		const { principalCanAccessRecord } = await import('../../security/record_scope.ts');
 		if (!(await principalCanAccessRecord(sectionTipo, Number(sectionId), principal))) {
-			return {
-				status: 200,
-				body: { result: false, msg: [' Forbidden record'], errors: ['forbidden'] },
-			};
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: sectionTipo, section_id: String(sectionId), tipo },
+			});
 		}
 
 		// The component's ontology widget definitions (PHP resolves the instance
@@ -59,35 +63,28 @@ export const componentInfoApiActions: Record<string, ActionHandler> = {
 		const node = await getNode(tipo);
 		const widgets = (node?.properties as { widgets?: WidgetDefWire[] } | null)?.widgets;
 		if (!Array.isArray(widgets) || widgets.length === 0) {
-			// PHP: ' Empty defined widgets for dd_component_info : <label> [<tipo>] <widgets>'
+			// PHP: ' Empty defined widgets for dd_component_info : <label> [<tipo>] '.
+			// The label is resolved for the LOG line only — the wire carries the code.
 			const { termByTipo } = await import('../../ontology/labels.ts');
 			const { currentApplicationLang } = await import('../../resolve/request_lang.ts');
 			const label = await termByTipo(tipo, currentApplicationLang());
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: [` Empty defined widgets for dd_component_info : ${label} [${tipo}] `],
-					errors: [],
-				},
-			};
+			throw new DedaloError('widget.empty', {
+				message: `Empty defined widgets for dd_component_info : ${label} [${tipo}]`,
+				coordinates: { tipo, section_tipo: sectionTipo },
+			});
 		}
 
 		// PHP array_find by widget_name — first match.
 		const widgetDef = widgets.find((widget) => widget.widget_name === widgetName);
 		if (widgetDef === undefined) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: [` Empty widget_obj for widget ${widgetName}`],
-					errors: [],
-				},
-			};
+			throw new DedaloError('widget.not_defined', {
+				message: `Empty widget_obj for widget ${widgetName}`,
+				coordinates: { tipo, widget_name: widgetName },
+			});
 		}
 
-		// Registry compute (fail-loud on unknown/unported — the dispatch
-		// Throwable catch degrades those to the client's result:false envelope).
+		// Registry compute (fail-loud on unknown/unported — the dispatch catch
+		// converts the throw into the v2 failure envelope).
 		// This channel computes ASYNC widgets too: it is their only delivery.
 		const { getInfoWidget, widgetComputeData } = await import(
 			'../../components/component_info/widgets/registry.ts'
@@ -103,9 +100,6 @@ export const componentInfoApiActions: Record<string, ActionHandler> = {
 			isAdmin: principal.isGlobalAdmin,
 		});
 
-		return {
-			status: 200,
-			body: { result: widgetData, msg: 'OK. Request done successfully', errors: [] },
-		};
+		return { status: 200, body: ok(widgetData, { requestId: context.requestId }) };
 	},
 };

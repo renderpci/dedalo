@@ -59,6 +59,7 @@ import {
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { ApiResult } from '../../src/core/api/response.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Criterion, IdentificationProfile } from '../../src/core/identify/types.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import {
@@ -83,8 +84,7 @@ const ctx = (principal: Principal): ApiRequestContext =>
 		principal,
 	}) as ApiRequestContext;
 
-const body = (res: ApiResult): Record<string, unknown> =>
-	res.body.result as Record<string, unknown>;
+const body = (res: ApiResult): Record<string, unknown> => res.body.data as Record<string, unknown>;
 
 const criterion = (overrides: Partial<Criterion> & Pick<Criterion, 'id' | 'path'>): Criterion => ({
 	label: overrides.id,
@@ -189,9 +189,15 @@ describe('A1 — a foreign section’s component is never offered as the Type li
 					}),
 			}),
 		);
-		const res = await handler(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER));
-		expect(res.body.result).toBe(false);
-		expect(res.body.errors).toEqual(['no_link_component']);
+		// ENVELOPE v2: the decline is a THROWN `identify.no_link_component` (400).
+		const outcome = await handler(rqo({ section_tipo: 'numisdata4' }), ctx(SUPERUSER)).then(
+			(value) => ({ threw: false as const, value }),
+			(error: unknown) => ({ threw: true as const, error }),
+		);
+		if (!outcome.threw) throw new Error(`expected a decline, got ${JSON.stringify(outcome.value)}`);
+		expect(outcome.error).toBeInstanceOf(DedaloError);
+		expect((outcome.error as DedaloError).code).toBe('identify.no_link_component');
+		expect((outcome.error as DedaloError).spec.status).toBe(400);
 	});
 });
 

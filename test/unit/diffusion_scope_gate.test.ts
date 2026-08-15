@@ -11,6 +11,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { diffusionApiActions } from '../../src/core/api/handlers/dd_diffusion_api.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { selectRecordBatches } from '../../src/diffusion/resolve/selection.ts';
 
@@ -44,16 +45,28 @@ describe('DIFF-01 — diffuse selection honors the enqueuing principal projects 
 });
 
 describe('DIFF-02 — retry_pending_deletions is admin-only', () => {
-	test('a non-admin is denied (result:false, insufficient permissions)', async () => {
+	// ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): the refusal is a THROWN
+	// `perm.denied` (403) — the handler builds no failure body, and the dispatch
+	// chokepoint converts. What the gate pins is the CODE, not the prose.
+	test('a non-admin is denied (perm.denied, 403)', async () => {
 		const context = { principal: NO_PROJECTS } as ApiRequestContext;
 		const handler = diffusionApiActions.retry_pending_deletions;
 		expect(handler).toBeDefined();
-		const result = await handler!(
+		const outcome = await handler!(
 			{ dd_api: 'dd_diffusion_api', action: 'retry_pending_deletions' } as never,
 			context,
+		).then(
+			(value) => ({ threw: false as const, value }),
+			(error: unknown) => ({ threw: true as const, error }),
 		);
-		const body = result.body as { result?: boolean; errors?: string[] };
-		expect(body.result).toBe(false);
-		expect(body.errors).toContain('insufficient permissions');
+		if (!outcome.threw) throw new Error(`expected a refusal, got ${JSON.stringify(outcome.value)}`);
+		expect(outcome.error).toBeInstanceOf(DedaloError);
+		expect((outcome.error as DedaloError).code).toBe('perm.denied');
+		expect((outcome.error as DedaloError).spec.status).toBe(403);
+		// The required level rides the LOG-ONLY coordinates, never the wire.
+		expect((outcome.error as DedaloError).coordinates).toMatchObject({
+			action: 'retry_pending_deletions',
+			required: 'global_admin',
+		});
 	});
 });
