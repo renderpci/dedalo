@@ -20,6 +20,7 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getLabels } from '../../labels/catalog.ts';
 import { currentApplicationLang } from '../../resolve/request_lang.ts';
 import type { Principal } from '../../security/permissions.ts';
@@ -51,7 +52,7 @@ import { widget as runtime_info } from './runtime_info.ts';
 import { widget as sequences_status } from './sequences_status.ts';
 import { widget as site_builder_status } from './site_builder_status.ts';
 import { widget as sqo_test_environment } from './sqo_test_environment.ts';
-import { failed, type LabelRule, type WidgetModule, type WidgetResponse } from './support.ts';
+import type { LabelRule, WidgetModule, WidgetResponse } from './support.ts';
 import { widget as system_info } from './system_info.ts';
 import { widget as unit_test } from './unit_test.ts';
 import { widget as update_code } from './update_code.ts';
@@ -258,30 +259,36 @@ export async function buildMaintenanceDataItem(): Promise<Record<string, unknown
 	};
 }
 
+/**
+ * The admin gate both dispatchers open with: the maintenance area is a
+ * global-admin surface (`perm.denied`, 403 — the message names nothing,
+ * it is shown to the refused user).
+ */
+function requireMaintenanceAdmin(principal: Principal): void {
+	if (!principal.isGlobalAdmin) {
+		throw new DedaloError('perm.denied', {
+			message: 'maintenance widgets are an admin surface',
+		});
+	}
+}
+
 /** Dispatch one get_widget_value RQO (admin-gated like the PHP manager). */
 export async function dispatchGetWidgetValue(
 	principal: Principal,
 	source: { model?: unknown },
 ): Promise<WidgetResponse> {
-	if (!principal.isGlobalAdmin) {
-		return failed('maintenance widgets are an admin surface', ['unauthorized']);
-	}
+	requireMaintenanceAdmin(principal);
 	const widgetId = typeof source.model === 'string' ? source.model : '';
 	if (!/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/.test(widgetId)) {
-		return {
-			result: false,
-			msg: 'Error. Request failed [get_widget_value]. ',
-			errors: ['Invalid widget name'],
-		};
+		throw new DedaloError('maintenance.widget_unknown', { coordinates: { widget: widgetId } });
 	}
 	const handler = MODULE_BY_ID.get(widgetId)?.getValue;
 	if (handler === undefined) {
-		// unported panel — the PHP missing-class error shape (loud, ledgered)
-		return {
-			result: false,
-			msg: 'Error. Request failed [get_widget_value]. ',
-			errors: ['Widget class file is unavailable'],
-		};
+		// unported panel — loud and ledgered, like the PHP missing-class refusal
+		throw new DedaloError('maintenance.widget_unavailable', {
+			publicMessage: `Error. The '${widgetId}' panel is not available on this engine.`,
+			coordinates: { widget: widgetId },
+		});
 	}
 	return handler({}, principal);
 }
@@ -294,7 +301,7 @@ export async function dispatchGetWidgetValue(
  *  1. ADMIN-ONLY — the maintenance area is a global-admin surface;
  *  2. options must be an object (PHP type guard);
  *  3. the widget id must be in the maintenance catalog;
- *  4. the method must be registered ('unauthorized_method' otherwise).
+ *  4. the method must be registered (`tool.method_not_allowed` otherwise).
  */
 export async function dispatchWidgetRequest(
 	principal: Principal,
@@ -302,12 +309,10 @@ export async function dispatchWidgetRequest(
 	options: unknown,
 ): Promise<WidgetResponse> {
 	// Gate 1: admin-only surface.
-	if (!principal.isGlobalAdmin) {
-		return failed('maintenance widgets are an admin surface', ['unauthorized']);
-	}
+	requireMaintenanceAdmin(principal);
 	// Gate 2: options must be an object when present.
 	if (options !== undefined && (typeof options !== 'object' || options === null)) {
-		return failed('invalid options', ['Invalid options type']);
+		throw new DedaloError('request.invalid_options', { publicMessage: 'invalid options' });
 	}
 	const widgetId = typeof source.model === 'string' ? source.model : '';
 	const method = typeof source.action === 'string' ? source.action : '';
@@ -318,7 +323,7 @@ export async function dispatchWidgetRequest(
 	// eager per-widget values.
 	const module = MODULE_BY_ID.get(widgetId);
 	if (module === undefined) {
-		return failed('invalid widget', [`Invalid widget name: ${widgetId}`]);
+		throw new DedaloError('maintenance.widget_unknown', { coordinates: { widget: widgetId } });
 	}
 
 	// Gate 4: explicit method registry. Resolve with Object.hasOwn + a
@@ -334,7 +339,10 @@ export async function dispatchWidgetRequest(
 			? module.apiActions[method]
 			: undefined;
 	if (typeof handler !== 'function') {
-		return failed(`widget method not allowed: ${method}`, ['unauthorized_method']);
+		throw new DedaloError('tool.method_not_allowed', {
+			details: { method },
+			coordinates: { widget: widgetId },
+		});
 	}
 
 	return handler((options ?? {}) as Record<string, unknown>, principal);

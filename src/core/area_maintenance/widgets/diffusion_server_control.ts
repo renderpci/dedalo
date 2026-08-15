@@ -7,6 +7,7 @@
 
 import type { DiffusionJobRow } from '../../../diffusion/jobs/queue.ts';
 import { sql } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /** Pending unpublish rows (dd1758 whose dd1767 action is unpublish_pending). */
@@ -127,7 +128,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 		formats: [...writers.WRITER_REGISTRY.keys()],
 	};
 	return {
-		result: {
+		data: {
 			engine: info.buildEngineAdvisory(true),
 			scheduler: {
 				running,
@@ -142,8 +143,6 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 			config,
 			is_admin: true, // the dispatch gate already enforced global admin
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -151,44 +150,29 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 async function diffusionCancelProcess(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const processId = options.process_id;
 	if (typeof processId !== 'string' || processId === '') {
-		return {
-			result: false,
-			msg: 'Error. Missing or invalid process_id',
-			errors: ['invalid_process_id'],
-		};
+		throw new DedaloError('diffusion.invalid_process_id');
 	}
 	const { queue } = await diffusionModules();
 	const { cancelled } = await queue.requestCancel(processId, null); // admin: any owner
-	return {
-		result: cancelled,
-		msg: cancelled
-			? `OK. Process ${processId} cancelled`
-			: `No active job for process ${processId}`,
-		errors: cancelled ? [] : ['not_found'],
-	};
+	if (!cancelled) {
+		throw new DedaloError('resource.not_found', { coordinates: { process_id: processId } });
+	}
+	return { data: true, msg: `OK. Process ${processId} cancelled` };
 }
 
 /** requeue_job — re-run a terminal/interrupted job, then kick the scheduler. */
 async function diffusionRequeueJob(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const jobId = options.job_id;
 	if (typeof jobId !== 'string' || jobId === '') {
-		return {
-			result: false,
-			msg: 'Error. Missing or invalid job_id',
-			errors: ['invalid_job_id'],
-		};
+		throw new DedaloError('diffusion.invalid_job_id');
 	}
 	const { queue, scheduler } = await diffusionModules();
 	const job = await queue.requeueTerminalJob(jobId);
 	if (job === null) {
-		return {
-			result: false,
-			msg: 'Job not found or not in a requeueable (failed/cancelled/interrupted) state',
-			errors: ['not_requeueable'],
-		};
+		throw new DedaloError('diffusion.not_requeueable', { coordinates: { job_id: jobId } });
 	}
 	void scheduler.schedulerTick(); // immediate non-blocking kick, mirrors the enqueue path
-	return { result: true, msg: `OK. Job ${jobId} requeued`, errors: [] };
+	return { data: true, msg: `OK. Job ${jobId} requeued` };
 }
 
 /** purge_jobs — housekeeping: drop aged terminal job rows. */
@@ -199,11 +183,7 @@ async function diffusionPurgeJobs(options: Record<string, unknown>): Promise<Wid
 			: 24;
 	const { queue } = await diffusionModules();
 	const { purged } = await queue.purgeTerminalJobs(hours);
-	return {
-		result: true,
-		msg: `OK. Purged ${purged} terminal job(s) older than ${hours}h`,
-		errors: [],
-	};
+	return { data: true, msg: `OK. Purged ${purged} terminal job(s) older than ${hours}h` };
 }
 
 /**
@@ -217,11 +197,7 @@ async function diffusionPurgeJobs(options: Record<string, unknown>): Promise<Wid
 async function diffusionSetScheduler(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const action = options.action;
 	if (action !== 'pause' && action !== 'resume' && action !== 'drain_resume') {
-		return {
-			result: false,
-			msg: "Error. Invalid scheduler action. Allowed: 'pause' | 'resume' | 'drain_resume'",
-			errors: ['invalid_action'],
-		};
+		throw new DedaloError('diffusion.invalid_action');
 	}
 	const { scheduler } = await diffusionModules();
 
@@ -231,11 +207,7 @@ async function diffusionSetScheduler(options: Record<string, unknown>): Promise<
 		// real drain in flight on the run-shared scheduler singleton, which no gate may
 		// start. Already dropped once by a prior plan — do not re-propose it.
 		if (scheduler.isSchedulerDraining()) {
-			return {
-				result: false,
-				msg: 'A drain is already in progress',
-				errors: ['already_draining'],
-			};
+			throw new DedaloError('diffusion.already_draining');
 		}
 		// STARTED, not awaited. The wait is bounded by DRAIN_TIMEOUT_MS (minutes),
 		// which outlives any request budget — SERVER_IDLE_TIMEOUT_S caps at 255 s
@@ -246,9 +218,8 @@ async function diffusionSetScheduler(options: Record<string, unknown>): Promise<
 			console.error('[diffusion] drain failed:', error);
 		});
 		return {
-			result: true,
+			data: true,
 			msg: 'OK. Draining — dispatch held until the running jobs finish, then resumed',
-			errors: [],
 		};
 	}
 
@@ -256,9 +227,8 @@ async function diffusionSetScheduler(options: Record<string, unknown>): Promise<
 	else scheduler.resumeScheduler();
 	const paused = scheduler.isSchedulerPaused();
 	return {
-		result: true,
+		data: true,
 		msg: paused ? 'OK. Scheduler paused (no new jobs dispatched)' : 'OK. Scheduler resumed',
-		errors: [],
 	};
 }
 
@@ -270,11 +240,7 @@ async function diffusionSetScheduler(options: Record<string, unknown>): Promise<
 async function diffusionRetryPending(options: Record<string, unknown>): Promise<WidgetResponse> {
 	if (options.count_only === true) {
 		const pending = await countPendingDiffusion();
-		return {
-			result: { pending } as unknown as WidgetResponse['result'],
-			msg: `OK. ${pending} pending deletion(s)`,
-			errors: [],
-		};
+		return { data: { pending }, msg: `OK. ${pending} pending deletion(s)` };
 	}
 	// COVERAGE-EXEMPT, this `count_only=false` retry arm (coverage plan §5.2; reason
 	// registered in engineering/crap_coverage_exempt.json): it re-runs an UNFILTERED
@@ -285,13 +251,8 @@ async function diffusionRetryPending(options: Record<string, unknown>): Promise<
 	const { retryPendingDiffusion } = await import('../../diffusion_bridge/diffusion_delete.ts');
 	const outcome = await retryPendingDiffusion(limit);
 	return {
-		result: {
-			total: outcome.total,
-			retried: outcome.retried,
-			remaining: outcome.remaining,
-		} as unknown as WidgetResponse['result'],
+		data: { total: outcome.total, retried: outcome.retried, remaining: outcome.remaining },
 		msg: `OK. Retried ${outcome.retried} of ${outcome.total} pending deletion(s); ${outcome.remaining} remaining`,
-		errors: [],
 	};
 }
 

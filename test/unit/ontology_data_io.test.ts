@@ -43,9 +43,9 @@ function makeContext(options: Record<string, unknown>, isDeveloper = true): Tool
 	};
 }
 
-const ok = (msg: string): OntologyIoResponse => ({ result: true, msg, errors: [] });
+const ok = (msg: string): OntologyIoResponse => ({ ok: true, msg, errors: [] });
 const fail = (msg: string, errors: string[]): OntologyIoResponse => ({
-	result: false,
+	ok: false,
 	msg,
 	errors,
 });
@@ -102,7 +102,7 @@ describe('COMP-06 identifier validation', () => {
 	test('exportToFile soft-rejects an invalid tld before any IO', async () => {
 		for (const bad of ['DD', 'dd0', "dd'; rm -rf /", '']) {
 			const response = await exportToFile(bad);
-			expect(response.result).toBe(false);
+			expect(response.ok).toBe(false);
 			expect(response.msg).toBe(`Error. Invalid tld: ${bad}`);
 			expect(response.errors).toEqual([`Invalid tld: ${bad}`]);
 		}

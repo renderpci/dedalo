@@ -164,7 +164,9 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 			)) as { max: number | string }[];
 
 			const body = await tsCall(WIDGET_RQO);
-			expect(body.msg).toBe('OK. Request done successfully');
+			// envelope v2: a plain OK carries no `msg` extension key (the
+			// boilerplate sentence is dropped by the P1 sweep).
+			expect(body.msg).toBeUndefined();
 			const result = body.result as { datalist?: Record<string, unknown>[]; errors?: string[] };
 
 			// every item carries EXACTLY the differential-pinned key set

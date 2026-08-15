@@ -47,6 +47,7 @@ import {
 import { dbTimestamp } from '../db/db_timestamp.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
+import { DedaloError } from '../errors/index.ts';
 import type { Principal } from '../security/permissions.ts';
 import {
 	isTargetAllowed,
@@ -1033,10 +1034,7 @@ function resultingCountInCapScope(
  * for every item of the main component, so "already stored" for a frame means
  * "already stored against this same main item".
  */
-function isAlreadyStored(
-	value: Record<string, unknown>,
-	context: RelationInsertContext,
-): boolean {
+function isAlreadyStored(value: Record<string, unknown>, context: RelationInsertContext): boolean {
 	const stored = context.storedItems;
 	if (stored === undefined || stored.length === 0) return false;
 
@@ -1234,6 +1232,17 @@ export async function removeDataframeDataById(
 }
 
 /**
+ * What {@link deletePortalLocator} ANSWERS with. Not a wire envelope: a refusal
+ * is a THROW, so `removed` is always a real count (0 = nothing matched).
+ */
+export interface PortalLocatorRemoval {
+	/** How many stored locators the call removed. */
+	removed: number;
+	/** The operator narrative the panel prints (PHP `msg`, one line per outcome). */
+	msg: string[];
+}
+
+/**
  * dd_component_portal_api.delete_locator (PHP): remove every stored locator
  * matching the given partial locator on ar_properties via
  * locator::compare_locators (empty ar_properties → full property-UNION strict
@@ -1241,8 +1250,10 @@ export async function removeDataframeDataById(
  * paginated_key always excluded). A missing locator.type auto-sets to the
  * component's relation type; a MISMATCHED type aborts (PHP
  * remove_locator_from_data guard). Each removed locator cascades its paired
- * dataframe slot entries (remove_dataframe_data_by_id, S1-05). Returns the
- * PHP response shape {result: <removed count>, msg: [], errors: []}.
+ * dataframe slot entries (remove_dataframe_data_by_id, S1-05). ANSWERS with a
+ * `PortalLocatorRemoval` payload (never a wire envelope) and REFUSES by
+ * THROWING — a missing address is `request.invalid_options`, a caller below
+ * level 2 is `perm.denied` (ERRORS_SPEC §4).
  */
 export async function deletePortalLocator(
 	// `isDeveloper` is optional so an existing caller that only knows the
@@ -1255,23 +1266,25 @@ export async function deletePortalLocator(
 	// string form. Consumed numerically (Number()) for the row address only.
 	source: { tipo?: string; section_tipo?: string; section_id?: string | number },
 	options: { locator?: Record<string, unknown>; ar_properties?: string[] },
-): Promise<{ result: unknown; msg: string[]; errors: string[] }> {
-	const response = { result: false as unknown, msg: [] as string[], errors: [] as string[] };
+): Promise<PortalLocatorRemoval> {
+	const msg: string[] = [];
 	const tipo = source.tipo ?? '';
 	const sectionTipo = source.section_tipo ?? '';
 	const sectionId = source.section_id;
 	const locator = options.locator;
-	if (tipo === '' || sectionTipo === '' || sectionId === undefined || sectionId === null) {
-		response.errors.push(
-			'Missing required source/options (section_tipo, tipo, section_id, locator)',
-		);
-		return response;
-	}
-	if (locator === undefined || locator === null || typeof locator !== 'object') {
-		response.errors.push(
-			'Missing required source/options (section_tipo, tipo, section_id, locator)',
-		);
-		return response;
+	if (
+		tipo === '' ||
+		sectionTipo === '' ||
+		sectionId === undefined ||
+		sectionId === null ||
+		locator === undefined ||
+		locator === null ||
+		typeof locator !== 'object'
+	) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Missing required source/options (section_tipo, tipo, section_id, locator)',
+			coordinates: { section_tipo: sectionTipo, tipo },
+		});
 	}
 	// SEC: write permission — PHP dd_component_portal_api::delete_locator runs
 	// `security::assert_section_permission($section_tipo, 2)`, i.e. the LEVEL-2
@@ -1286,8 +1299,9 @@ export async function deletePortalLocator(
 	const { getSectionPermissions } = await import('../security/permissions.ts');
 	const actor: Principal = { isDeveloper: false, ...principal };
 	if ((await getSectionPermissions(actor, sectionTipo)) < 2) {
-		response.errors.push('insufficient permissions');
-		return response;
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: sectionTipo, tipo, required_level: 2 },
+		});
 	}
 
 	const { getMatrixTableFromTipo, getModelByTipo, getColumnNameByModel } = await import(
@@ -1431,14 +1445,12 @@ export async function deletePortalLocator(
 	});
 
 	if (outcome.emptyData) {
-		response.msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
-		response.result = 0;
-		return response;
+		msg.push(`No locators are removed (${model} - ${tipo}). The component data is empty`);
+		return { removed: 0, msg };
 	}
 	if (outcome.typeMismatch) {
-		response.msg.push(`No locators are removed (${model} - ${tipo})`);
-		response.result = 0;
-		return response;
+		msg.push(`No locators are removed (${model} - ${tipo})`);
+		return { removed: 0, msg };
 	}
 	const removed = outcome.removed;
 	if (removed > 0) {
@@ -1475,11 +1487,9 @@ export async function deletePortalLocator(
 				principal.userId,
 			);
 		}
-		response.msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
-		response.result = removed;
+		msg.push(`Deleted ${removed} locators (${model} - ${tipo})`);
 	} else {
-		response.msg.push(`No locators are removed (${model} - ${tipo})`);
-		response.result = 0;
+		msg.push(`No locators are removed (${model} - ${tipo})`);
 	}
-	return response;
+	return { removed, msg };
 }

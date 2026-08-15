@@ -498,8 +498,8 @@ export async function rotate(ctx: ToolActionContext): Promise<ToolResponse> {
 		const freshFilesInfo = getFilesInfoCore(spec, identity, pathOpts, scanContext(mediaContext));
 		await writeBack(mediaContext, freshFilesInfo);
 		return {
-			result: outcome.result,
-			msg: outcome.result ? 'Success. Request done.' : 'Error on rotate file.',
+			result: outcome.ok,
+			msg: outcome.ok ? 'Success. Request done.' : 'Error on rotate file.',
 			errors: outcome.errors,
 			files_info: freshFilesInfo,
 		};

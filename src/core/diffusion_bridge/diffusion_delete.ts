@@ -29,6 +29,7 @@ import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { readEnv } from '../../config/env.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 import { relationProbeGroups } from '../search/containment.ts';
 import { virtualDateNow } from '../section/record/create_record.ts';
 import type { DiffusionSqlTarget } from './diffusion_graph.ts';
@@ -157,6 +158,12 @@ export function resetNativeDiffusionSqlDeleteForTests(): void {
  * error (the old-engine socket retired at the 2026-07-11 cutover).
  */
 export interface NativeMediaIndexOps {
+	/**
+	 * The FOREIGN shape of src/diffusion/targets/mediastore/media_index.ts
+	 * (`rebuildMediaIndexStore`) — declared here as the seam contract, owned
+	 * there. Its `result` flag is that module's field name, not a wire body:
+	 * `rebuildMediaIndex` below turns a false one into a typed throw.
+	 */
 	rebuild(
 		targets: { database_name: string; table_name: string; section_tipo: string }[],
 	): Promise<{ result: boolean; msg: string; markers: number; errors?: string[] }>;
@@ -702,11 +709,17 @@ export async function unlinkPublishedFiles(
 	}
 }
 
-/** The rebuild_media_index response envelope (PHP dd_diffusion_api shape). */
-export interface RebuildMediaIndexResponse {
-	result: boolean;
+/**
+ * What a completed rebuild REPORTS. Not a wire body: `msg` and `markers` are
+ * top-level extension keys the media_control panel reads by name
+ * (render_media_control.js :543-545), and the caller is the one that puts them
+ * on an `ok(...)` envelope. A rebuild that did NOT complete THROWS.
+ */
+export interface RebuildMediaIndexReport {
+	/** Operator sentence the panel prints. */
 	msg: string;
-	errors: unknown[];
+	/** Non-fatal per-target findings the store reported. */
+	errors: string[];
 	markers: number;
 	targets: number;
 }
@@ -718,43 +731,60 @@ export interface RebuildMediaIndexResponse {
  * full resync; idempotent — markers derive from the published rows). The
  * global-admin gate lives in the dispatch caller (PHP checks it in the API
  * method; TS keeps permission checks at the dispatch boundary).
+ *
+ * FAILURE IS A THROW (envelope v2): `media.operation_failed` carries the
+ * operator sentence as its public message, and the original exception rides as
+ * `cause` — a raw exception string never reaches a wire field again.
  */
-export async function rebuildMediaIndex(): Promise<RebuildMediaIndexResponse> {
-	const response: RebuildMediaIndexResponse = {
-		result: false,
-		msg: 'Error. Request failed [rebuild_media_index]',
-		errors: [],
-		markers: 0,
-		targets: 0,
-	};
+export async function rebuildMediaIndex(): Promise<RebuildMediaIndexReport> {
+	const { getAllMediaIndexTargets } = await import('./diffusion_map.ts');
+	let targets: { database_name: string; table_name: string; section_tipo: string }[];
 	try {
-		const { getAllMediaIndexTargets } = await import('./diffusion_map.ts');
-		const targets = await getAllMediaIndexTargets();
-		response.targets = targets.length;
-
-		if (nativeMediaIndexOps === null) {
-			// DEC-19: sql targets exist but the native marker store is not
-			// registered — the published surface can rot silently. Warn loudly;
-			// keep the PHP empty-engine-response envelope bytes.
-			if (targets.length > 0) {
-				console.error(
-					`[media_index] DEC-19: ${targets.length} sql publication target(s) exist but no native media-index is registered — the .publication/ marker store is NOT being maintained. Fix the boot registration (src/server.ts).`,
-				);
-			}
-			response.msg = 'Error. Empty engine response';
-			return response;
-		}
-
-		const native = await nativeMediaIndexOps.rebuild(targets);
-		response.result = native.result;
-		response.msg = native.msg;
-		response.markers = native.markers;
-		if (native.errors !== undefined && native.errors.length > 0) {
-			response.errors.push(...native.errors);
-		}
+		targets = await getAllMediaIndexTargets();
 	} catch (error) {
-		response.msg = `Error: ${(error as Error).message}`;
-		response.errors.push((error as Error).message);
+		throw new DedaloError('media.operation_failed', {
+			cause: error,
+			coordinates: { operation: 'rebuild_media_index.resolve_targets' },
+		});
 	}
-	return response;
+
+	if (nativeMediaIndexOps === null) {
+		// DEC-19: sql targets exist but the native marker store is not
+		// registered — the published surface can rot silently. Loud, and a
+		// refusal: an "empty engine response" reported as success is how the
+		// marker store rots unnoticed.
+		if (targets.length > 0) {
+			console.error(
+				`[media_index] DEC-19: ${targets.length} sql publication target(s) exist but no native media-index is registered — the .publication/ marker store is NOT being maintained. Fix the boot registration (src/server.ts).`,
+			);
+		}
+		throw new DedaloError('media.operation_failed', {
+			publicMessage: 'Error. Empty engine response',
+			coordinates: { operation: 'rebuild_media_index', targets: targets.length },
+		});
+	}
+
+	let native: Awaited<ReturnType<NativeMediaIndexOps['rebuild']>>;
+	try {
+		native = await nativeMediaIndexOps.rebuild(targets);
+	} catch (error) {
+		throw new DedaloError('media.operation_failed', {
+			cause: error,
+			coordinates: { operation: 'rebuild_media_index', targets: targets.length },
+		});
+	}
+	const errors = native.errors ?? [];
+	if (native.result !== true) {
+		// The store's own sentence is engine-authored (never caller data), so it
+		// is the one worth showing the operator; the per-target findings go to
+		// the log, which is the only place that keeps them all.
+		if (errors.length > 0) {
+			console.error('[media_index] rebuild reported errors:', errors);
+		}
+		throw new DedaloError('media.operation_failed', {
+			publicMessage: native.msg,
+			coordinates: { operation: 'rebuild_media_index', targets: targets.length },
+		});
+	}
+	return { msg: native.msg, errors, markers: native.markers, targets: targets.length };
 }

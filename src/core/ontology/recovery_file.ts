@@ -37,7 +37,8 @@ export const RECOVERY_PRESERVE_TLDS = [
 export const RECOVERY_FILE_PATH = join(projectRoot, 'install', 'db', 'dd_ontology_recovery.sql.gz');
 
 export interface RecoveryFileResponse {
-	result: boolean;
+	/** INTERNAL outcome discriminator (never a wire body). */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	file_size?: string;
@@ -64,7 +65,7 @@ export async function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
 	outFile: string = RECOVERY_FILE_PATH,
 ): Promise<RecoveryFileResponse> {
-	const response: RecoveryFileResponse = { result: false, msg: '', errors: [] };
+	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
 	try {
 		await createRecoverySlice(RECOVERY_PRESERVE_TLDS);
 	} catch (error) {
@@ -100,7 +101,7 @@ export async function buildRecoveryVersionFile(
 			return response;
 		}
 		renameSync(partFile, outFile);
-		response.result = true;
+		response.ok = true;
 		response.msg = 'OK. Request done successfully';
 		response.file_size = `${statSync(outFile).size} Bytes`;
 		return response;
@@ -120,7 +121,7 @@ export async function restoreDdOntologyRecoveryFromFile(
 	conn: DbConnDescriptor = connFromConfig(),
 	inFile: string = RECOVERY_FILE_PATH,
 ): Promise<RecoveryFileResponse> {
-	const response: RecoveryFileResponse = { result: false, msg: '', errors: [] };
+	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
 	if (!existsSync(inFile)) {
 		response.errors.push('source sql_file do not exists');
 		response.msg = 'Error. source sql_file do not exists';
@@ -135,7 +136,7 @@ export async function restoreDdOntologyRecoveryFromFile(
 			response.msg = 'Error. Request failed [restore_dd_ontology_recovery_from_file]';
 			return response;
 		}
-		response.result = true;
+		response.ok = true;
 		response.msg = 'OK. Request done successfully';
 		return response;
 	} catch (error) {

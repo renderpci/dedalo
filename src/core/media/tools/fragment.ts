@@ -174,8 +174,8 @@ export interface FragmentOutcome {
  * Cut the fragment and return its URL. Throws — with the reason — on every
  * refusal: an unknown quality, a missing source, a non-positive duration, a
  * missing watermark still, or an ffmpeg run that did not succeed. The handler
- * turns that into PHP's `result:false` + message; nothing here reports a URL for
- * a file that is not on disk.
+ * turns that into the refusal envelope; nothing here reports a URL for a file
+ * that is not on disk.
  */
 export async function buildAvFragment(request: FragmentRequest): Promise<FragmentOutcome> {
 	const { spec, identity, pathOpts, tagId, watermark } = request;

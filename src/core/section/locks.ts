@@ -22,6 +22,11 @@
  *   ENTIRE registry as `data` to any caller; the client never reads it, so we
  *   return null (don't leak who is editing what across the installation).
  *
+ * FAILURE SHAPE (ERRORS_SPEC §4): this module returns a PAYLOAD and THROWS a
+ * registered DedaloError for a malformed event. "Another user holds it" is NOT
+ * a failure — it is the answer the client polls for (`applied:false`,
+ * `in_use:true`, `full_username`), so it stays an ok:true outcome.
+ *
  * TWO-SERVER COEXISTENCE: the table lives in the shared matrix DB, so every
  * TS process sees the same locks. Locks held by PHP users (the legacy JSON
  * registry) are additionally consulted READ-ONLY on acquire/status, so a
@@ -32,6 +37,7 @@
 
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 
 /** TS-owned lock table (created on first use; lives in the shared matrix DB). */
 const LOCK_TABLE = 'dedalo_ts_component_locks';
@@ -43,7 +49,8 @@ const LEGACY_TABLE = 'matrix_notifications';
 const LEGACY_RECORD_ID = 1;
 
 export interface LockUpdateResult {
-	result: boolean;
+	/** Was the lock event applied? False only when another user holds the triple. */
+	applied: boolean;
 	msg: string;
 	/** Kept for wire-shape compatibility; always null (see module header). */
 	dato: null;
@@ -156,18 +163,15 @@ export async function updateLockComponentsState(event: {
 		case 'focus': {
 			const triple = tripleOf(event);
 			if (triple === null) {
-				return {
-					result: false,
-					msg: 'focus requires the full component triple',
-					dato: null,
-					in_use: false,
-				};
+				throw new DedaloError('request.invalid_options', {
+					publicMessage: 'focus requires the full component triple',
+				});
 			}
 			// PHP-held lock (coexistence): report in_use without acquiring.
 			const phpHolder = await legacyHolder(triple, event.user_id);
 			if (phpHolder !== null) {
 				return {
-					result: false,
+					applied: false,
 					msg: `Component in use by ${phpHolder}`,
 					dato: null,
 					in_use: true,
@@ -204,7 +208,7 @@ export async function updateLockComponentsState(event: {
 				],
 			)) as { user_id: number }[];
 			if (acquired.length > 0) {
-				return { result: true, msg: 'Lock acquired', dato: null, in_use: false };
+				return { applied: true, msg: 'Lock acquired', dato: null, in_use: false };
 			}
 			// Conflict — report the live holder (the client shows the modal + polls).
 			const holder = (await sql.unsafe(
@@ -214,7 +218,7 @@ export async function updateLockComponentsState(event: {
 			)) as { full_username: string }[];
 			const holderName = holder[0]?.full_username ?? 'another user';
 			return {
-				result: false,
+				applied: false,
 				msg: `Component in use by ${holderName}`,
 				dato: null,
 				in_use: true,
@@ -224,28 +228,22 @@ export async function updateLockComponentsState(event: {
 		case 'blur': {
 			const triple = tripleOf(event);
 			if (triple === null) {
-				return {
-					result: false,
-					msg: 'blur requires the full component triple',
-					dato: null,
-					in_use: false,
-				};
+				throw new DedaloError('request.invalid_options', {
+					publicMessage: 'blur requires the full component triple',
+				});
 			}
 			await sql.unsafe(
 				`DELETE FROM "${LOCK_TABLE}"
 				 WHERE section_tipo = $1 AND section_id = $2 AND component_tipo = $3 AND user_id = $4`,
 				[triple.section_tipo, triple.section_id, triple.component_tipo, event.user_id],
 			);
-			return { result: true, msg: 'Lock released', dato: null, in_use: false };
+			return { applied: true, msg: 'Lock released', dato: null, in_use: false };
 		}
 		case 'delete_user_section_locks': {
 			if (!event.section_tipo) {
-				return {
-					result: false,
-					msg: 'delete_user_section_locks requires section_tipo',
-					dato: null,
-					in_use: false,
-				};
+				throw new DedaloError('request.invalid_options', {
+					publicMessage: 'delete_user_section_locks requires section_tipo',
+				});
 			}
 			await sql.unsafe(`DELETE FROM "${LOCK_TABLE}" WHERE section_tipo = $1 AND user_id = $2`, [
 				event.section_tipo,
@@ -257,15 +255,12 @@ export async function updateLockComponentsState(event: {
 			await sql.unsafe(
 				`DELETE FROM "${LOCK_TABLE}" WHERE locked_at < now() - interval '${LOCK_TTL_SECONDS} seconds'`,
 			);
-			return { result: true, msg: 'User section locks released', dato: null, in_use: false };
+			return { applied: true, msg: 'User section locks released', dato: null, in_use: false };
 		}
 		default:
-			return {
-				result: false,
-				msg: `Error event_element->action not valid (${event.action})`,
-				dato: null,
-				in_use: false,
-			};
+			// The action is caller-supplied and closed: name it in `details` (the
+			// code declares the key) so the client can say WHICH action was refused.
+			throw new DedaloError('request.unknown_action', { details: { action: event.action } });
 	}
 }
 
@@ -278,10 +273,10 @@ export async function getLockStatus(event: {
 	section_tipo: string | null;
 	component_tipo: string | null;
 	user_id: number;
-}): Promise<{ result: boolean; in_use: boolean; full_username: string | null }> {
+}): Promise<{ in_use: boolean; full_username: string | null }> {
 	await ensureTable();
 	const triple = tripleOf(event);
-	if (triple === null) return { result: true, in_use: false, full_username: null };
+	if (triple === null) return { in_use: false, full_username: null };
 
 	const rows = (await sql.unsafe(
 		`SELECT full_username FROM "${LOCK_TABLE}"
@@ -291,13 +286,13 @@ export async function getLockStatus(event: {
 		[triple.section_tipo, triple.section_id, triple.component_tipo, event.user_id],
 	)) as { full_username: string }[];
 	if (rows.length > 0) {
-		return { result: true, in_use: true, full_username: rows[0]?.full_username ?? null };
+		return { in_use: true, full_username: rows[0]?.full_username ?? null };
 	}
 	const phpHolder = await legacyHolder(triple, event.user_id);
 	if (phpHolder !== null) {
-		return { result: true, in_use: true, full_username: phpHolder };
+		return { in_use: true, full_username: phpHolder };
 	}
-	return { result: true, in_use: false, full_username: null };
+	return { in_use: false, full_username: null };
 }
 
 /**

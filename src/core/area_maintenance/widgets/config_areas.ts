@@ -9,7 +9,7 @@
 
 import { sql } from '../../db/postgres.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { failAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * Root/admin/maintenance area tipos that may never be denied (anti-lockout).
@@ -117,22 +117,16 @@ async function configAreasGetValue(): Promise<WidgetResponse> {
 		);
 		const { config } = await import('../../../config/config.ts');
 		return {
-			result: {
+			data: {
 				areas: await getAllAreas(),
 				areas_deny: getEffectiveAreasDeny(config.menu.areasDeny),
 				areas_allow: getEffectiveAreasAllow(),
 				writable: isStateWritable(),
 			},
-			msg: 'OK. Request done successfully',
-			errors: [],
 		};
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return {
-			result: false,
-			msg: `Error building config_areas value: ${message}`,
-			errors: [message],
-		};
+		// The reason travels as `cause` (log / debug block), never on the wire.
+		failAction('Error building the config_areas panel value', { cause: error });
 	}
 }
 
@@ -143,11 +137,7 @@ async function configAreasSave(options: Record<string, unknown>): Promise<Widget
 	);
 	const { setServerState } = await import('../../resolve/server_state.ts');
 	setServerState({ areas_deny: prepared.areas_deny, areas_allow: prepared.areas_allow });
-	return {
-		result: prepared,
-		msg: configAreasMessage(prepared.removed_guarded, prepared.invalid),
-		errors: [],
-	};
+	return { data: prepared, msg: configAreasMessage(prepared.removed_guarded, prepared.invalid) };
 }
 
 export const widget: WidgetModule = {

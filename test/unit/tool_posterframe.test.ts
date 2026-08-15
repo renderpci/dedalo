@@ -179,7 +179,7 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 			expect(existsSync(thumb)).toBe(true);
 
 			const outcome = await deletePosterframe(avCtx());
-			expect(outcome.result).toBe(true);
+			expect(outcome.ok).toBe(true);
 			// The thumb it depicted was retired in the same call — never left serving a
 			// picture of a file the operator just deleted…
 			expect(outcome.retiredThumb).not.toBeNull();
@@ -205,7 +205,7 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 	test('a delete with nothing to delete reports it, and does nothing else', async () => {
 		rmSync(ROOT, { recursive: true, force: true });
 		const outcome = await deletePosterframe(avCtx());
-		expect(outcome).toEqual({ result: false, retiredThumb: null, rebuiltThumb: null });
+		expect(outcome).toEqual({ ok: false, retiredThumb: null, rebuiltThumb: null });
 	});
 
 	test('rejects an unsupported model', async () => {
@@ -361,7 +361,7 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 			expect(existsSync(thumb)).toBe(true);
 
 			const outcome = await deletePosterframe(tdCtx());
-			expect(outcome.result).toBe(true);
+			expect(outcome.ok).toBe(true);
 			// Retired WITH the posterframe — and NOT rebuilt, because this engine has
 			// no mesh renderer: the record honestly falls back to its placeholder
 			// until a browser captures a new scene.
@@ -370,7 +370,7 @@ describe('component_3d posterframe (move staged upload + delete)', () => {
 			expect(existsSync(thumb)).toBe(false);
 			expect(existsSync(posterframeAbsolutePath(threeD, tdIdentity, pathOpts))).toBe(false);
 
-			expect((await deletePosterframe(tdCtx())).result).toBe(false);
+			expect((await deletePosterframe(tdCtx())).ok).toBe(false);
 		},
 	);
 });

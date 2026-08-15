@@ -796,9 +796,9 @@ describe('W11: deletePortalLocator lock', () => {
 			{ tipo: 'rsc387', section_tipo: 'rsc205', section_id: 999999949 }, // no such row
 			{ locator: { type: 'dd96', section_id: '1', section_tipo: 'on1' } },
 		);
-		// byte-identical to the historical missing-record response
-		expect(response.result).toBe(0);
-		expect(response.errors).toEqual([]);
+		// same as the historical missing-record answer: nothing removed, and the
+		// narrative says why (it is an outcome, never a refusal).
+		expect(response.removed).toBe(0);
 		expect(response.msg.join(' ')).toContain('The component data is empty');
 	});
 
@@ -834,8 +834,8 @@ describe('W11: deletePortalLocator lock', () => {
 				},
 			);
 		const [first, second] = await Promise.all([remove(999999941), remove(999999942)]);
-		expect(first.result).toBe(1);
-		expect(second.result).toBe(1);
+		expect(first.removed).toBe(1);
+		expect(second.removed).toBe(1);
 		const rows = (await sql.unsafe(
 			`SELECT relation->'rsc387' AS bag FROM matrix WHERE section_tipo = 'rsc205' AND section_id = $1`,
 			[W11_RECORD],

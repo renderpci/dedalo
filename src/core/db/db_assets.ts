@@ -29,7 +29,8 @@ export interface AssetEntry {
 }
 
 interface AssetResponse {
-	result: boolean;
+	/** INTERNAL outcome discriminator (never a wire body). */
+	ok: boolean;
 	msg: string;
 	errors: unknown[];
 	success: number;
@@ -37,7 +38,7 @@ interface AssetResponse {
 }
 
 function newResponse(): AssetResponse {
-	return { result: false, msg: 'Error. Request failed ', errors: [], success: 0 };
+	return { ok: false, msg: 'Error. Request failed ', errors: [], success: 0 };
 }
 
 /** PHP clean_sql_sentence: tabs → spaces, trimmed. */
@@ -88,7 +89,7 @@ async function execLongSql(sqlQuery: string, errors: unknown[]): Promise<boolean
 }
 
 function finishResponse(response: AssetResponse): AssetResponse {
-	response.result = true;
+	response.ok = true;
 	response.msg =
 		response.errors.length > 0
 			? 'Warning. Request done with errors'
@@ -220,7 +221,8 @@ export async function execMaintenance(): Promise<AssetResponse> {
  * triggers follow functions (the function DROP CASCADE removed them).
  */
 export async function recreateDbAssets(): Promise<{
-	result: Record<string, unknown>;
+	/** Per-step outcome map — a PAYLOAD, not a discriminator. */
+	data: Record<string, unknown>;
 	msg: string;
 	errors: unknown[];
 	success: number;
@@ -241,14 +243,14 @@ export async function recreateDbAssets(): Promise<{
 	const maintenance = await execMaintenance();
 	errors.push(...maintenance.errors);
 	return {
-		result: {
-			extensions: extensions.result,
-			tables: tables.result,
-			constraints: constraints.result,
-			functions: functions.result,
-			triggers: triggers.result,
-			indexes: indexes.result,
-			maintenance: maintenance.result,
+		data: {
+			extensions: extensions.ok,
+			tables: tables.ok,
+			constraints: constraints.ok,
+			functions: functions.ok,
+			triggers: triggers.ok,
+			indexes: indexes.ok,
+			maintenance: maintenance.ok,
 		},
 		msg: errors.length > 0 ? 'Warning. Request done with errors' : 'OK. Request done successfully',
 		errors,
@@ -757,7 +759,7 @@ export async function optimizeTables(
 	tables: string[],
 	options: { dryRun?: boolean } = {},
 ): Promise<{
-	result: boolean;
+	ok: boolean;
 	msg: string;
 	errors: unknown[];
 	reindex: Record<string, string>;
@@ -765,7 +767,7 @@ export async function optimizeTables(
 	prune: Record<string, MatrixPruneReport>;
 }> {
 	const response = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed',
 		errors: [] as unknown[],
 		reindex: {} as Record<string, string>,
@@ -821,7 +823,7 @@ export async function optimizeTables(
 			response.errors.push(`VACUUM failed for table: ${table}`);
 		}
 	}
-	response.result = true;
+	response.ok = true;
 	response.msg =
 		response.errors.length > 0
 			? 'Warning. Request done with errors'

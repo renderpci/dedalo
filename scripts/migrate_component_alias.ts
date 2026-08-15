@@ -356,7 +356,7 @@ for (const sectionId of touchedIds) {
 		sectionId,
 		userId: -1,
 	});
-	if (response.result !== true) {
+	if (response.ok !== true) {
 		throw new Error(`dd_ontology re-derive FAILED for ${sectionId}: ${response.errors.join('; ')}`);
 	}
 	console.log(`re-derived dd_ontology for numisdata${sectionId}`);

@@ -87,7 +87,7 @@ export async function toolHierarchyGenerateVirtualSection(
 	await clearOntologyDerivedCaches();
 
 	return {
-		result: outcome.result,
+		result: outcome.ok,
 		msg: outcome.msg,
 		errors: outcome.errors,
 		state: outcome.state,

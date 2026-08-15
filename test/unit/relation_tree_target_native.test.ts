@@ -268,7 +268,7 @@ beforeAll(async () => {
 		},
 	]);
 	const provisioned = await ensureHierarchy(hierarchyId, provisionerUserId);
-	if (!provisioned.result) {
+	if (!provisioned.ok) {
 		throw new Error(
 			`relation tree target gate: the scratch thesaurus did not provision (${provisioned.msg}; ${provisioned.errors.join('; ')}) — every pin below would be vacuous.`,
 		);

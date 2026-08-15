@@ -10,8 +10,12 @@
  * orphan window), and invalidates caches only AFTER commit. Cache invalidation and
  * the dd_ontology order sync run post-commit, never inside the tx.
  *
- * The thin wrappers in api/dispatch.ts resolve the principal and forward here;
- * HTTP is always 200 (result:false on failure) — PHP parity.
+ * The thin wrappers in api/handlers/dd_ts_api.ts resolve the principal, forward
+ * here, and are the ONE site that turns the outcome below into an envelope.
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): an action ANSWERS with a
+ * `TsApiOutcome` payload and REFUSES by THROWING a registered DedaloError — the
+ * PHP "always HTTP 200, failures ride as result:false" parity is repealed here,
+ * so a refusal now carries the registry status and a machine-readable code.
  */
 
 import type { Rqo } from '../concepts/rqo.ts';
@@ -19,6 +23,7 @@ import { coerceSectionId } from '../concepts/section_id.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
 import { acquireNodeLock, withTransaction } from '../db/postgres.ts';
+import { DedaloError, isDedaloError, SectionIdRefused } from '../errors/index.ts';
 import {
 	RELATION_TYPE_LINK,
 	RELATION_TYPE_PARENT,
@@ -46,12 +51,21 @@ import {
 	getChildrenData as tsGetChildrenData,
 } from './ts_object.ts';
 
-/** Standard {result, msg, errors} envelope. */
-export interface TsApiResponse {
-	result: unknown;
-	msg: string;
-	errors: string[];
-	[extra: string]: unknown;
+/**
+ * What a dd_ts_api action ANSWERS with. Not a wire body: api/handlers/
+ * dd_ts_api.ts is the one site that wraps it in `ok(...)`. A refusal is a THROW,
+ * never a field here (ERRORS_SPEC §4).
+ */
+export interface TsApiOutcome {
+	/** The envelope `data` (the client reads it as `result` through the compat block). */
+	data: unknown;
+	/**
+	 * NON-FATAL findings the action completed in spite of (an incomplete
+	 * section_map). They ride as the top-level `errors` extension key, which is
+	 * where the tree client already reads them — a warning must not become a
+	 * refusal: add_child still creates the node.
+	 */
+	warnings?: string[];
 }
 
 /**
@@ -59,50 +73,76 @@ export interface TsApiResponse {
  * in this API's RQO body addresses a TREE NODE, i.e. a matrix record — so it is
  * coerced here, once, counted under its own deprecable source key, instead of
  * riding a string leg into the engine's Number() casts. Non-address junk (a
- * synthetic token, a padded external id) refuses loudly through the caller's
- * error envelope rather than reading a wrong record.
+ * synthetic token, a padded external id) refuses loudly as `section_id.
+ * not_an_address` — the caught reason is the CAUSE (logged), never the wire.
  */
 function doorSectionId(raw: unknown, door: string): number {
-	return coerceSectionId(raw, `rqo.dd_ts_api.${door}`);
+	try {
+		return coerceSectionId(raw, `rqo.dd_ts_api.${door}`);
+	} catch (error) {
+		throw new SectionIdRefused('section_id.not_an_address', {
+			cause: error,
+			coordinates: { door: `rqo.dd_ts_api.${door}` },
+		});
+	}
 }
 
 /**
  * The same door for an OPTIONAL section_id: absent (or the legacy empty-string
- * spelling of absent) stays absent, present is coerced and counted. Throws like
- * `doorSectionId` so the caller answers with `badSectionIdResponse`.
+ * spelling of absent) stays absent, present is coerced and counted. Refuses
+ * exactly like `doorSectionId`.
  */
 function optionalDoorSectionId(raw: unknown, door: string): number | undefined {
 	if (raw === undefined || raw === null || raw === '') return undefined;
 	return doorSectionId(raw, door);
 }
 
-/** The refusal envelope for a door coercion that threw. */
-function badSectionIdResponse(response: TsApiResponse, error: unknown): TsApiResponse {
-	const message = error instanceof Error ? error.message : String(error);
-	response.result = false;
-	response.errors.push('invalid section_id');
-	response.msg = `Error. Invalid section_id: ${message}`;
-	return response;
+/** The section grant every action gates on (reads 1, writes 2 — PHP parity). */
+async function requireSectionLevel(
+	principal: Principal,
+	sectionTipo: string,
+	minimum: number,
+): Promise<void> {
+	if ((await getPermissions(principal, sectionTipo, sectionTipo)) < minimum) {
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: sectionTipo, required_level: minimum },
+		});
+	}
+}
+
+/** The RQO carries no `source` — nothing addresses a node. */
+function requireSource(rqo: Rqo, action: string): Record<string, unknown> {
+	if (rqo.source === undefined) {
+		throw new DedaloError('request.invalid_source', { coordinates: { action } });
+	}
+	return rqo.source as Record<string, unknown>;
+}
+
+/**
+ * A mutation whose transaction rolled back. The caught reason is the CAUSE
+ * (logged, never serialized); a refusal that was ALREADY typed inside the tx
+ * passes through with its own code.
+ */
+function refuseRolledBack(
+	error: unknown,
+	action: string,
+	coordinates: Record<string, string | number>,
+): never {
+	if (isDedaloError(error)) throw error;
+	throw new DedaloError('tree.node_write_failed', {
+		publicMessage: `Error on ${action}. The process was rolled back`,
+		cause: error,
+		coordinates: { ...coordinates, action },
+	});
 }
 
 // ===========================================================================
 // GET_NODE_DATA (PHP :95).
 // ===========================================================================
-export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApiResponse> {
-	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
-	if (rqo.source === undefined) {
-		response.errors.push('Missing source property in the request object.');
-		response.msg = 'Invalid request. Source data is missing.';
-		return response;
-	}
-	const source = rqo.source as Record<string, unknown>;
+export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApiOutcome> {
+	const source = requireSource(rqo, 'get_node_data');
 	const sectionTipo = (source.section_tipo as string | undefined) ?? null;
-	let sectionId: number | undefined;
-	try {
-		sectionId = optionalDoorSectionId(source.section_id, 'get_node_data.section_id');
-	} catch (error) {
-		return badSectionIdResponse(response, error);
-	}
+	const sectionId = optionalDoorSectionId(source.section_id, 'get_node_data.section_id');
 	const childrenTipo = (source.children_tipo as string | undefined) ?? null;
 	const areaModel = (source.area_model as string | undefined) ?? 'area_thesaurus';
 	const options = (rqo.options ?? {}) as Record<string, unknown>;
@@ -110,12 +150,7 @@ export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApi
 
 	// SEC: read ≥1 on the section.
 	if (sectionTipo !== null && sectionTipo !== '') {
-		const level = await getPermissions(principal, sectionTipo, sectionTipo);
-		if (level < 1) {
-			response.errors.push('insufficient permissions');
-			response.msg = `Error. Insufficient permissions to read section (${sectionTipo})`;
-			return response;
-		}
+		await requireSectionLevel(principal, sectionTipo, 1);
 	}
 
 	const tsOptions: TsOptions = { model: thesaurusViewMode === 'model', area_model: areaModel };
@@ -126,14 +161,7 @@ export async function getNodeData(rqo: Rqo, principal: Principal): Promise<TsApi
 	if (childrenTipo !== null && childrenTipo !== '') locator.from_component_tipo = childrenTipo;
 
 	const arChildrenData = await parseChildData([locator], areaModel, tsOptions, null, principal);
-	const data = arChildrenData[0] ?? null;
-
-	response.result = data;
-	response.msg =
-		response.errors.length === 0
-			? 'OK. get_node_data request done successfully'
-			: 'Warning! get_node_data request done with errors';
-	return response;
+	return { data: arChildrenData[0] ?? null };
 }
 
 // ===========================================================================
@@ -153,8 +181,7 @@ interface ChildrenDataRequest {
 
 /**
  * Read the get_children_data RQO into `ChildrenDataRequest`, applying the PHP
- * defaults. Throws only from the section_id door, so the caller answers a bad
- * address with `badSectionIdResponse`.
+ * defaults. Refuses only through the section_id door.
  */
 function parseChildrenDataRequest(rqo: Rqo): ChildrenDataRequest {
 	const source = rqo.source as Record<string, unknown>;
@@ -170,28 +197,13 @@ function parseChildrenDataRequest(rqo: Rqo): ChildrenDataRequest {
 	};
 }
 
-export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<TsApiResponse> {
-	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
-	if (rqo.source === undefined) {
-		response.errors.push('Missing source property in the request object.');
-		response.msg = 'Invalid request. Source data is missing.';
-		return response;
-	}
-	let request: ChildrenDataRequest;
-	try {
-		request = parseChildrenDataRequest(rqo);
-	} catch (error) {
-		return badSectionIdResponse(response, error);
-	}
+export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<TsApiOutcome> {
+	requireSource(rqo, 'get_children_data');
+	const request = parseChildrenDataRequest(rqo);
 	const { sectionTipo, sectionId, childrenTipo, areaModel, children, pagination } = request;
 
 	if (sectionTipo !== null && sectionTipo !== '') {
-		const level = await getPermissions(principal, sectionTipo, sectionTipo);
-		if (level < 1) {
-			response.errors.push('insufficient permissions');
-			response.msg = `Error. Insufficient permissions to read section (${sectionTipo})`;
-			return response;
-		}
+		await requireSectionLevel(principal, sectionTipo, 1);
 	}
 
 	const tsOptions: TsOptions = {
@@ -202,17 +214,18 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 
 	// mode A: standard children resolution (delegates to ts_object.getChildrenData).
 	if ((children === null || children.length === 0) && sectionId && childrenTipo) {
-		const result = await tsGetChildrenData(
-			sectionTipo as string,
-			sectionId,
-			childrenTipo,
-			defaultLimit,
-			areaModel,
-			tsOptions,
-			pagination,
-			principal,
-		);
-		return { result: result.result, msg: result.msg, errors: result.errors };
+		return {
+			data: await tsGetChildrenData(
+				sectionTipo as string,
+				sectionId,
+				childrenTipo,
+				defaultLimit,
+				areaModel,
+				tsOptions,
+				pagination,
+				principal,
+			),
+		};
 	}
 
 	// mode B: pre-built children list.
@@ -225,12 +238,7 @@ export async function getChildrenData(rqo: Rqo, principal: Principal): Promise<T
 		parentLocator,
 		principal,
 	);
-	response.result = { ar_children_data: arChildrenData, pagination };
-	response.msg =
-		response.errors.length === 0
-			? 'OK. Request done successfully'
-			: 'Warning! Request done with errors';
-	return response;
+	return { data: { ar_children_data: arChildrenData, pagination } };
 }
 
 /** The default si/no "yes" locator (dd64/1) an is_descriptor/is_indexable defaults to. */
@@ -247,29 +255,14 @@ function siNoYesLocator(componentTipo: string): Record<string, unknown> {
 // ===========================================================================
 // ADD_CHILD (PHP :352).
 // ===========================================================================
-export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiResponse> {
-	const response: TsApiResponse = {
-		result: false,
-		msg: 'Error. Request failed [add_child]',
-		errors: [],
-	};
+export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiOutcome> {
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	const sectionTipo = source.section_tipo as string;
 
 	// SEC-10: write ≥2.
-	const permissions = await getPermissions(principal, sectionTipo, sectionTipo);
-	if (permissions < 2) {
-		response.errors.push('insufficient permissions');
-		response.msg = `Error. Insufficient permissions to create in section (${sectionTipo})`;
-		return response;
-	}
+	await requireSectionLevel(principal, sectionTipo, 2);
 
-	let sectionId: number;
-	try {
-		sectionId = doorSectionId(source.section_id, 'add_child.section_id');
-	} catch (error) {
-		return badSectionIdResponse(response, error);
-	}
+	const sectionId = doorSectionId(source.section_id, 'add_child.section_id');
 
 	// Validations BEFORE any write (no orphan window).
 	const sectionMap = await getSectionMap(sectionTipo);
@@ -277,17 +270,22 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiRes
 		is_descriptor?: unknown;
 		is_indexable?: unknown;
 	};
+	// NON-FATAL (unchanged): an incomplete section_map only skips the si/no
+	// default below — the child is still created, and the finding travels back
+	// as a warning.
+	const warnings: string[] = [];
 	if (thesaurus.is_descriptor === undefined) {
-		response.errors.push("Invalid section_map 'is_descriptor' property from section");
+		warnings.push("Invalid section_map 'is_descriptor' property from section");
 	}
 	if (thesaurus.is_indexable === undefined) {
-		response.errors.push("Invalid section_map 'is_indexable' property from section");
+		warnings.push("Invalid section_map 'is_indexable' property from section");
 	}
 	const parentRelationTipo = await getParentTipo(sectionTipo);
 	if (parentRelationTipo === null) {
-		response.msg = 'Error on get component_relation_parent from section. Model does not exists';
-		response.errors.push(`Invalid component_relation_parent from section: ${sectionTipo}`);
-		return response;
+		throw new DedaloError('tree.parent_unresolved', {
+			publicMessage: 'Error on get component_relation_parent from section. Model does not exists',
+			coordinates: { section_tipo: sectionTipo, action: 'add_child' },
+		});
 	}
 
 	let newSectionId: number;
@@ -364,63 +362,46 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiRes
 			return createdId;
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		response.msg = `Error on add_child. Process rolled back: ${message}`;
-		response.errors.push(`add_child failed: ${message}`);
-		return response;
+		refuseRolledBack(error, 'add_child', { section_tipo: sectionTipo, section_id: sectionId });
 	}
 
 	// post-commit invalidation.
 	invalidateNode(sectionTipo, sectionId);
 
-	response.result = Math.trunc(Number(newSectionId));
-	response.msg =
-		response.errors.length === 0
-			? 'OK. Added child successfully'
-			: 'Warning! Added child with errors';
-	return response;
+	return {
+		data: Math.trunc(Number(newSectionId)),
+		...(warnings.length === 0 ? {} : { warnings }),
+	};
 }
 
 // ===========================================================================
 // UPDATE_PARENT_DATA (PHP :627).
 // ===========================================================================
-export async function updateParentData(rqo: Rqo, principal: Principal): Promise<TsApiResponse> {
-	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
+export async function updateParentData(rqo: Rqo, principal: Principal): Promise<TsApiOutcome> {
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	const sectionTipo = source.section_tipo as string;
 	const oldParentSectionTipo = source.old_parent_section_tipo as string;
 	const newParentSectionTipo = source.new_parent_section_tipo as string;
 
 	// SEC-11: write ≥2.
-	const permissions = await getPermissions(principal, sectionTipo, sectionTipo);
-	if (permissions < 2) {
-		response.errors.push('insufficient permissions');
-		response.msg = `Error. Insufficient permissions to update in section (${sectionTipo})`;
-		return response;
-	}
+	await requireSectionLevel(principal, sectionTipo, 2);
 
-	let sectionId: number;
-	let oldParentSectionId: number;
-	let newParentSectionId: number;
-	try {
-		sectionId = doorSectionId(source.section_id, 'update_parent_data.section_id');
-		oldParentSectionId = doorSectionId(
-			source.old_parent_section_id,
-			'update_parent_data.old_parent_section_id',
-		);
-		newParentSectionId = doorSectionId(
-			source.new_parent_section_id,
-			'update_parent_data.new_parent_section_id',
-		);
-	} catch (error) {
-		return badSectionIdResponse(response, error);
-	}
+	const sectionId = doorSectionId(source.section_id, 'update_parent_data.section_id');
+	const oldParentSectionId = doorSectionId(
+		source.old_parent_section_id,
+		'update_parent_data.old_parent_section_id',
+	);
+	const newParentSectionId = doorSectionId(
+		source.new_parent_section_id,
+		'update_parent_data.new_parent_section_id',
+	);
 
 	const parentTipo = await getParentTipo(sectionTipo);
 	if (parentTipo === null) {
-		response.errors.push('invalid component_relation_parent');
-		response.msg = `Error. Unable to resolve component_relation_parent from section (${sectionTipo})`;
-		return response;
+		throw new DedaloError('tree.parent_unresolved', {
+			publicMessage: 'Error. Unable to resolve component_relation_parent from section',
+			coordinates: { section_tipo: sectionTipo, action: 'update_parent_data' },
+		});
 	}
 
 	// PRE-mutation cycle guard.
@@ -429,9 +410,14 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 		isSelfTarget ||
 		(await isAncestor(sectionTipo, sectionId, newParentSectionTipo, newParentSectionId))
 	) {
-		response.errors.push('cycle');
-		response.msg = 'Error. The node cannot be moved under itself or under its own descendant';
-		return response;
+		throw new DedaloError('tree.cycle', {
+			coordinates: {
+				section_tipo: sectionTipo,
+				section_id: sectionId,
+				new_parent_section_tipo: newParentSectionTipo,
+				new_parent_section_id: newParentSectionId,
+			},
+		});
 	}
 
 	try {
@@ -471,29 +457,23 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 			await recalculateSiblingOrders(sectionTipo, oldParentSectionTipo, oldParentSectionId);
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		response.msg = `Error. Update parent data failed and was rolled back: ${message}`;
-		response.errors.push(`update_parent_data failed: ${message}`);
-		return response;
+		refuseRolledBack(error, 'update_parent_data', {
+			section_tipo: sectionTipo,
+			section_id: sectionId,
+		});
 	}
 
 	invalidateNode(sectionTipo, sectionId);
 	invalidateNode(oldParentSectionTipo, oldParentSectionId);
 	invalidateNode(newParentSectionTipo, newParentSectionId);
 
-	response.result = true;
-	response.msg =
-		response.errors.length === 0
-			? 'OK. Parent data updated successfully'
-			: 'Warning! Parent data updated with errors';
-	return response;
+	return { data: true };
 }
 
 // ===========================================================================
 // SAVE_ORDER (PHP :841).
 // ===========================================================================
-export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiResponse> {
-	const response: TsApiResponse = { result: false, msg: 'Error. Request failed', errors: [] };
+export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiOutcome> {
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	const sectionTipo = source.section_tipo as string;
 	const rawLocators =
@@ -502,38 +482,28 @@ export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiRe
 	const rawParentSectionId = source.parent_section_id;
 
 	// SEC-12: write ≥2.
-	const permissions = await getPermissions(principal, sectionTipo, sectionTipo);
-	if (permissions < 2) {
-		response.errors.push('insufficient permissions');
-		response.msg = `Error. Insufficient permissions to update order in section (${sectionTipo})`;
-		return response;
-	}
+	await requireSectionLevel(principal, sectionTipo, 2);
 
 	// Door coercion for the whole ordered list + the parent: each entry names a
 	// sibling RECORD whose order row is about to be rewritten.
-	let arLocators: { section_tipo: string; section_id: number }[];
-	let coercedParentSectionId: number | undefined;
-	try {
-		arLocators = rawLocators.map((locator) => ({
-			...locator,
-			section_id: doorSectionId(locator.section_id, 'save_order.ar_locators.section_id'),
-		}));
-		coercedParentSectionId =
-			rawParentSectionId === undefined || rawParentSectionId === null || rawParentSectionId === ''
-				? undefined
-				: doorSectionId(rawParentSectionId, 'save_order.parent_section_id');
-	} catch (error) {
-		return badSectionIdResponse(response, error);
-	}
+	const arLocators = rawLocators.map((locator) => ({
+		...locator,
+		section_id: doorSectionId(locator.section_id, 'save_order.ar_locators.section_id'),
+	}));
+	const coercedParentSectionId =
+		rawParentSectionId === undefined || rawParentSectionId === null || rawParentSectionId === ''
+			? undefined
+			: doorSectionId(rawParentSectionId, 'save_order.parent_section_id');
 
 	if (
 		parentSectionTipo === null ||
 		parentSectionTipo === '' ||
 		coercedParentSectionId === undefined
 	) {
-		response.msg = 'Error. parent_section_tipo and parent_section_id are required';
-		response.errors.push('missing parent context');
-		return response;
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'Error. parent_section_tipo and parent_section_id are required',
+			coordinates: { section_tipo: sectionTipo, action: 'save_order' },
+		});
 	}
 	const parentSectionId = coercedParentSectionId;
 
@@ -544,33 +514,39 @@ export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiRe
 			return sortChildren(sectionTipo, arLocators, parentSectionTipo, parentSectionId);
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		response.msg = `Error. Save order failed and was rolled back: ${message}`;
-		response.errors.push(`save_order failed: ${message}`);
-		return response;
+		refuseRolledBack(error, 'save_order', {
+			section_tipo: sectionTipo,
+			parent_section_tipo: parentSectionTipo,
+			parent_section_id: parentSectionId,
+		});
 	}
 
-	if (result !== false) {
-		invalidateNode(parentSectionTipo, parentSectionId);
-		// mirror the new order into dd_ontology.order_number (Track B ontology_write).
-		const { syncOrderToDdOntology } = await import('../ontology/ontology_write.ts');
-		await syncOrderToDdOntology(
-			result.map((change) => ({
-				value: change.value,
-				locator: {
-					section_tipo: change.locator.section_tipo,
-					section_id: Math.trunc(Number(change.locator.section_id)),
-				},
-			})),
-			parentSectionTipo,
-			parentSectionId,
-		);
+	// The section_map declares no `order` key, so there is no column to write the
+	// sequence into: a STATE conflict, not a transport failure. Nothing was
+	// written (sortChildren answered false before touching a row), so nothing is
+	// invalidated or mirrored either — exactly as before.
+	if (result === false) {
+		throw new DedaloError('resource.conflict', {
+			publicMessage:
+				'Error. The order cannot be established. Invalid section map. Please, define a valid section list map such as {"order":"hierarchy49"}',
+			coordinates: { section_tipo: sectionTipo, action: 'save_order' },
+		});
 	}
 
-	response.msg =
-		result === false
-			? 'Error. The order cannot be established. Invalid section map. Please, define a valid section list map such as {"order":"hierarchy49"}'
-			: `OK. Order saved successfully. Changed values: ${result.length}`;
-	response.result = result;
-	return response;
+	invalidateNode(parentSectionTipo, parentSectionId);
+	// mirror the new order into dd_ontology.order_number (Track B ontology_write).
+	const { syncOrderToDdOntology } = await import('../ontology/ontology_write.ts');
+	await syncOrderToDdOntology(
+		result.map((change) => ({
+			value: change.value,
+			locator: {
+				section_tipo: change.locator.section_tipo,
+				section_id: Math.trunc(Number(change.locator.section_id)),
+			},
+		})),
+		parentSectionTipo,
+		parentSectionId,
+	);
+
+	return { data: result };
 }

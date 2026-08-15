@@ -125,7 +125,7 @@ async function scan(
 	tables: string[] | null,
 ): Promise<{ result: ScanResult; msg: string }> {
 	const response = await dataframeControlScan(fix, tables);
-	return { result: response.result as ScanResult, msg: String(response.msg) };
+	return { result: response.data as ScanResult, msg: String(response.msg) };
 }
 
 beforeAll(async () => {

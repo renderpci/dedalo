@@ -56,7 +56,7 @@ async function posterframeAction(
 	const result =
 		op === 'create'
 			? await createAvPosterframe(resolved.ctx, String(options.current_time ?? '0'))
-			: (await deletePosterframe(resolved.ctx)).result;
+			: (await deletePosterframe(resolved.ctx)).ok;
 
 	// PERSIST what just changed on disk. Without this the record's stored index
 	// still claims the old thumb state, and every reader that trusts the cache —

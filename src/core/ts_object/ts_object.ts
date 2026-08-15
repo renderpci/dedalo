@@ -31,6 +31,7 @@ import { config } from '../../config/config.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { labelByTipo, ONTOLOGY_STRUCTURE_LANG } from '../ontology/labels.ts';
 import {
@@ -938,10 +939,13 @@ export async function parseChildData(
 // GET_CHILDREN_DATA (PHP :594).
 // ---------------------------------------------------------------------------
 
+/**
+ * The children payload. NOT a wire body: ts_api wraps it (a refusal is a THROW
+ * — see the wrong-model refusal below), so nothing here spells `result:false`.
+ */
 export interface ChildrenDataResult {
-	result: false | { ar_children_data: TsNodeData[]; pagination: Record<string, unknown> };
-	msg: string;
-	errors: string[];
+	ar_children_data: TsNodeData[];
+	pagination: Record<string, unknown>;
 }
 
 /**
@@ -959,13 +963,17 @@ export async function getChildrenData(
 	pagination: Record<string, unknown> | null,
 	principal: Principal,
 ): Promise<ChildrenDataResult> {
-	const response: ChildrenDataResult = { result: false, msg: 'Error. Request failed', errors: [] };
-
 	const model = await getModelByTipo(childrenTipo);
 	if (model !== 'component_relation_children') {
-		response.errors.push('Wrong model');
-		response.msg += ` Expected model (component_relation_children) but calculated: ${model}`;
-		return response;
+		// The caller named a component that cannot have children: a caller fault,
+		// and the only refusal on this path.
+		throw new DedaloError('request.invalid_model', {
+			coordinates: {
+				children_tipo: childrenTipo,
+				section_tipo: sectionTipo,
+				calculated_model: String(model),
+			},
+		});
 	}
 
 	const currentPagination: Record<string, unknown> =
@@ -998,10 +1006,5 @@ export async function getChildrenData(
 		principal,
 	);
 
-	response.result = { ar_children_data: arChildrenData, pagination: currentPagination };
-	response.msg =
-		response.errors.length === 0
-			? 'OK. Request done successfully'
-			: 'Warning! Request done with errors';
-	return response;
+	return { ar_children_data: arChildrenData, pagination: currentPagination };
 }

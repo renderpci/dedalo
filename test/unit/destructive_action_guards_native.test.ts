@@ -51,7 +51,19 @@ import {
 	dataframeControlRunFix,
 	widget as dataframeControlWidget,
 } from '../../src/core/area_maintenance/widgets/dataframe_control.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+
+/** The DedaloError an async call rejected with (fails when nothing typed was thrown). */
+async function rejectedBy(run: () => Promise<unknown>): Promise<DedaloError> {
+	try {
+		await run();
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a DedaloError, nothing was thrown');
+}
 
 const ADMIN: Principal = { userId: 938001, isGlobalAdmin: true, isDeveloper: false };
 
@@ -66,7 +78,7 @@ function userStatsSpy(): { deps: UserStatsDeps; deleted: number[]; updated: numb
 		},
 		updateUserActivityStats: async (userId: number) => {
 			updated.push(userId);
-			return { result: [], msg: 'OK', errors: [] };
+			return { ok: true, value: [], msg: 'OK', errors: [] };
 		},
 	} as unknown as UserStatsDeps;
 	return { deps, deleted, updated };
@@ -75,22 +87,21 @@ function userStatsSpy(): { deps: UserStatsDeps; deleted: number[]; updated: numb
 describe('database_info.rebuild_user_stats — the aggregate DELETE is guarded', () => {
 	test('missing users → refusal is REPORTED and the delete never runs', async () => {
 		const spy = userStatsSpy();
-		const response = await databaseInfoRebuildUserStats({}, ADMIN, spy.deps);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['invalid users']);
-		expect(response.msg).toBe('Error. Request failed [rebuild_user_stats] Empty users value');
+		const error = await rejectedBy(() => databaseInfoRebuildUserStats({}, ADMIN, spy.deps));
+		expect(error.code).toBe('maintenance.action_refused');
 		// the operator-visible half: not a silent no-op
-		expect(String(response.msg)).toContain('Empty users value');
+		expect(String(error.publicMessage)).toContain('Empty users value');
 		expect(spy.deleted).toEqual([]);
 		expect(spy.updated).toEqual([]);
 	});
 
 	test('EMPTY users array → same refusal, delete never runs', async () => {
 		const spy = userStatsSpy();
-		const response = await databaseInfoRebuildUserStats({ users: [] }, ADMIN, spy.deps);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['invalid users']);
-		expect(response.msg).toBe('Error. Request failed [rebuild_user_stats] Empty users value');
+		const error = await rejectedBy(() =>
+			databaseInfoRebuildUserStats({ users: [] }, ADMIN, spy.deps),
+		);
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(String(error.publicMessage)).toContain('Empty users value');
 		expect(spy.deleted).toEqual([]);
 		expect(spy.updated).toEqual([]);
 	});
@@ -100,8 +111,8 @@ describe('database_info.rebuild_user_stats — the aggregate DELETE is guarded',
 		const response = await databaseInfoRebuildUserStats({ users: [938001] }, ADMIN, spy.deps);
 		expect(spy.deleted).toEqual([938001]);
 		expect(spy.updated).toEqual([938001]);
-		expect(response.result).toBe(true);
-		expect(response.errors).toEqual([]);
+		expect(response.data).toBe(true);
+		expect(response.errors).toBeUndefined();
 	});
 });
 
@@ -110,32 +121,34 @@ describe('database_info.optimize_tables — REINDEX/VACUUM is guarded', () => {
 		const calls: unknown[][] = [];
 		const fn = (async (...args: unknown[]) => {
 			calls.push(args);
-			return { result: true, msg: 'OK', errors: [], reindex: {}, vacuum: {}, prune: {} };
+			return { ok: true, msg: 'OK', errors: [], reindex: {}, vacuum: {}, prune: {} };
 		}) as unknown as OptimizeTablesFn;
 		return { fn, calls };
 	}
 
 	test('no tables key → "No tables selected" and optimizeTables never runs', async () => {
 		const spy = optimizeSpy();
-		const response = await databaseInfoOptimizeTables({}, ADMIN, spy.fn);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['No tables selected']);
+		const error = await rejectedBy(() => databaseInfoOptimizeTables({}, ADMIN, spy.fn));
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(String(error.publicMessage)).toContain('No tables selected');
 		expect(spy.calls.length).toBe(0);
 	});
 
 	test('EMPTY tables array → "No tables selected" and optimizeTables never runs', async () => {
 		const spy = optimizeSpy();
-		const response = await databaseInfoOptimizeTables({ tables: [] }, ADMIN, spy.fn);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['No tables selected']);
+		const error = await rejectedBy(() => databaseInfoOptimizeTables({ tables: [] }, ADMIN, spy.fn));
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(String(error.publicMessage)).toContain('No tables selected');
 		expect(spy.calls.length).toBe(0);
 	});
 
 	test('a BARE STRING → "Invalid tables parameter"; the string is never iterated into identifier positions', async () => {
 		const spy = optimizeSpy();
-		const response = await databaseInfoOptimizeTables({ tables: 'matrix_test' }, ADMIN, spy.fn);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['Invalid tables parameter']);
+		const error = await rejectedBy(() =>
+			databaseInfoOptimizeTables({ tables: 'matrix_test' }, ADMIN, spy.fn),
+		);
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(String(error.publicMessage)).toContain('Invalid tables parameter');
 		expect(spy.calls.length).toBe(0);
 	});
 

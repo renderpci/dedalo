@@ -79,14 +79,14 @@ beforeAll(async () => {
 
 	// Unsafe-tld refusal (writes nothing, returns an error).
 	const bad = await rebuildOntology('bad tld!');
-	captured.emptyRefused = bad.result === false && bad.errors.length > 0;
+	captured.emptyRefused = bad.ok === false && bad.errors.length > 0;
 
 	// Rebuild the scratch tld.
 	const response = await rebuildOntology(TLD);
 	captured.after = await tldTipos();
 	captured.bkLeft = await bkTableExists();
 	// keep 'response' referenced for clarity
-	expect(response.result).toBe(true);
+	expect(response.ok).toBe(true);
 }, 180000);
 
 afterAll(async () => {

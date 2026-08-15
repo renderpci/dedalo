@@ -131,7 +131,11 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 			};
 		}
 		const { rebuildMediaIndex } = await import('../../diffusion_bridge/diffusion_delete.ts');
-		const body = await rebuildMediaIndex();
-		return { status: 200, body: body as unknown as Record<string, unknown> };
+		// rebuildMediaIndex ANSWERS with a report and THROWS on failure (envelope
+		// v2, core-modules P1 sweep): the success flag this legacy body still
+		// carries is therefore a constant. The rest of this handler is the
+		// api-handlers sweep's; this line only keeps the wire byte-identical.
+		const report = await rebuildMediaIndex();
+		return { status: 200, body: { result: true, ...report } as unknown as Record<string, unknown> };
 	},
 };

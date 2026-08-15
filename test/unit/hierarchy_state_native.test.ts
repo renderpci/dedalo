@@ -166,7 +166,7 @@ describe('ensureHierarchy', () => {
 
 		const outcome = await ensureHierarchy(SCRATCH_ID, USER_ID);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(outcome.state.usable).toBe(true);
 		// the root was created (the section was empty), not linked to a phantom
 		expect(await terms(`${TLD}1`)).toHaveLength(1);
@@ -198,7 +198,7 @@ describe('ensureHierarchy', () => {
 
 		const outcome = await ensureHierarchy(SCRATCH_ID, USER_ID);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		// the EXISTING root (lowest id) is linked; no third record is minted
 		expect(await terms(`${TLD}1`)).toEqual([7, 9]);
 		// int-canonical stored address (WC-2026-08-10-section-id-int-canonical)
@@ -253,7 +253,7 @@ describe('ensureHierarchy', () => {
 
 		const outcome = await ensureHierarchy(SCRATCH_ID, USER_ID);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		const rows = (await sql.unsafe(
 			"SELECT string->'hierarchy25'->0->>'value' AS value FROM matrix_hierarchy WHERE section_tipo = $1 AND section_id = $2",
 			[`${TLD}1`, rootId],
@@ -269,7 +269,7 @@ describe('ensureHierarchy', () => {
 
 		const second = await ensureHierarchy(SCRATCH_ID, USER_ID);
 
-		expect(second.result).toBe(true);
+		expect(second.ok).toBe(true);
 		expect(second.applied).toEqual([]); // nothing left to do
 		expect(second.msg).toContain('Already consistent');
 		expect(await terms(`${TLD}1`)).toEqual(rootsAfterFirst); // no duplicate root
@@ -289,7 +289,7 @@ describe('ensureHierarchy', () => {
 
 		const outcome = await ensureHierarchy(SCRATCH_ID, USER_ID);
 
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		expect(outcome.msg).toContain('typology');
 		expect(await terms(`${TLD}1`)).toEqual([]); // no ontology, no root, no half-built state
 	});
@@ -312,7 +312,7 @@ describe('rebuildHierarchy', () => {
 			deleteSectionRecord(st, sid, USER_ID),
 		);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(outcome.state.usable).toBe(true);
 		expect(await terms(`${TLD}1`)).toEqual(before); // the TERMS survived the teardown
 		expect(outcome.applied[0]).toContain('tore down');

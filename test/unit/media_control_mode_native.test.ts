@@ -32,6 +32,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { widget } from '../../src/core/area_maintenance/widgets/media_control.ts';
 import type { WidgetModule } from '../../src/core/area_maintenance/widgets/support.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
 	getStateOverride,
 	MEDIA_AUTH_COOKIE,
@@ -93,7 +94,21 @@ afterEach(() => {
  * refusal cases. A silent failure here would make "nothing changed" unfalsifiable. */
 async function seedAsRoot(value: string): Promise<void> {
 	const seeded = await setAccessMode({ value }, ROOT);
-	expect(seeded.result).toBe(true);
+	expect(seeded.data).toBe(true);
+}
+
+/** The DedaloError a set-mode call rejected with (fails when it answered instead). */
+async function refusedMode(
+	options: Record<string, unknown>,
+	principal: Principal,
+): Promise<DedaloError> {
+	try {
+		await setAccessMode(options, principal);
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected the mode change to be refused, it applied');
 }
 
 describe('authorization — the gate that is the point of the function', () => {
@@ -104,13 +119,10 @@ describe('authorization — the gate that is the point of the function', () => {
 		// The seed must be a state the refused call would visibly destroy.
 		expect(seededRules).toContain('.publication/pub/$1_$2');
 
-		const response = await setAccessMode({ value: 'off' }, ADMIN);
+		const error = await refusedMode({ value: 'off' }, ADMIN);
 
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['unauthorized']);
-		expect(response.msg).toBe(
-			'Error. Request failed. only the root user can change the media access mode',
-		);
+		expect(error.code).toBe('perm.denied');
+		expect(error.message).toBe('only the root user can change the media access mode');
 		// Nothing moved: neither the persisted override nor the bytes on disk.
 		expect(getStateOverride()).toBe('publication');
 		expect(readFileSync(htaccess, 'utf8')).toBe(seededRules);
@@ -125,8 +137,7 @@ describe('authorization — the gate that is the point of the function', () => {
 			{ userId: 0, isGlobalAdmin: true, isDeveloper: true },
 			{ userId: 424262, isGlobalAdmin: false, isDeveloper: false },
 		] as Principal[]) {
-			const response = await setAccessMode({ value: 'off' }, principal);
-			expect(response.errors).toEqual(['unauthorized']);
+			expect((await refusedMode({ value: 'off' }, principal)).code).toBe('perm.denied');
 		}
 		expect(getStateOverride()).toBe('private');
 		expect(readFileSync(htaccess, 'utf8')).toBe(seededRules);
@@ -140,13 +151,12 @@ describe('value validation', () => {
 
 		// 'public' is the plausible typo for 'publication' — and the one that would
 		// otherwise fall through to a mode the resolver reads as OFF.
-		const response = await setAccessMode({ value: 'public' }, ROOT);
+		const error = await refusedMode({ value: 'public' }, ROOT);
 
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe(
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(error.publicMessage).toBe(
 			'Error. Invalid value. Allowed: config | off | private | publication',
 		);
-		expect(response.errors).toEqual(['invalid value']);
 		expect(getStateOverride()).toBe('publication');
 		expect(readFileSync(htaccess, 'utf8')).toBe(seededRules);
 	});
@@ -154,15 +164,13 @@ describe('value validation', () => {
 	test('missing / non-string values are refused too', async () => {
 		await seedAsRoot('private');
 		for (const value of [undefined, null, '', 0, false, true, ['off'], { value: 'off' }]) {
-			const response = await setAccessMode({ value }, ROOT);
-			expect(response.errors).toEqual(['invalid value']);
+			expect((await refusedMode({ value }, ROOT)).code).toBe('maintenance.action_refused');
 		}
 		expect(getStateOverride()).toBe('private');
 	});
 
 	test('the authorization gate runs BEFORE validation — a non-root bad token is unauthorized', async () => {
-		const response = await setAccessMode({ value: 'nonsense' }, ADMIN);
-		expect(response.errors).toEqual(['unauthorized']);
+		expect((await refusedMode({ value: 'nonsense' }, ADMIN)).code).toBe('perm.denied');
 	});
 });
 
@@ -178,8 +186,8 @@ describe('the override the widget persists', () => {
 		await seedAsRoot('private');
 		const response = await setAccessMode({ value: 'off' }, ROOT);
 
-		expect(response.result).toBe(true);
-		expect(response.errors).toEqual([]);
+		expect(response.data).toBe(true);
+		expect(response.errors).toBeUndefined();
 		// false, not null: null would mean "no opinion" and re-derive the mode from .env.
 		expect(getStateOverride()).toBe(false);
 		expect(resolveModeSource()).toBe('ts_state.json (media_access_mode, set from this widget)');
@@ -191,7 +199,7 @@ describe('the override the widget persists', () => {
 
 		const response = await setAccessMode({ value: 'config' }, ROOT);
 
-		expect(response.result).toBe(true);
+		expect(response.data).toBe(true);
 		expect(getStateOverride()).toBeNull();
 		// The source string must no longer name the widget's own state file.
 		expect(resolveModeSource()).not.toContain('ts_state.json');
@@ -202,7 +210,7 @@ describe('the generated rule files — the artifact the web server actually enfo
 	test("'off' WRITES the hardening-only template; it never unlinks the gate (SEC-088)", async () => {
 		await seedAsRoot('private');
 		const response = await setAccessMode({ value: 'off' }, ROOT);
-		expect(response.result).toBe(true);
+		expect(response.data).toBe(true);
 
 		expect(existsSync(htaccess)).toBe(true);
 		const text = readFileSync(htaccess, 'utf8');
@@ -286,7 +294,7 @@ describe('the notes and the mode label in the success message', () => {
 	test("'publication' asks for one media-index rebuild and warns about the nginx reload", async () => {
 		const response = await setAccessMode({ value: 'publication' }, ROOT);
 
-		expect(response.result).toBe(true);
+		expect(response.data).toBe(true);
 		expect(response.msg).toContain('OK. Media access mode applied: publication.');
 		expect(response.msg).toContain(
 			"If this instance has existing publications, run 'Rebuild media index' once.",
@@ -343,12 +351,11 @@ describe('the rule-file write failure — the mode/gate mismatch envelope', () =
 			chmodSync(nginxConf, 0o400);
 			chmodSync(mediaRoot, 0o500);
 
-			const response = await setAccessMode({ value: 'publication' }, ROOT);
+			const error = await refusedMode({ value: 'publication' }, ROOT);
 
-			expect(response.result).toBe(false);
-			expect(response.errors).toEqual(['rule file write failed']);
-			expect(response.msg).toContain('the gate on disk still enforces the PREVIOUS mode');
-			expect(response.msg).toContain('The mode was saved');
+			expect(error.code).toBe('maintenance.action_failed');
+			expect(error.publicMessage).toContain('the gate on disk still enforces the PREVIOUS mode');
+			expect(error.publicMessage).toContain('The mode was saved');
 
 			chmodSync(mediaRoot, 0o700);
 			// The saved override is 'publication'; the bytes on disk are still 'private'.

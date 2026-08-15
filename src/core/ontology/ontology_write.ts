@@ -83,9 +83,9 @@ const RELATION_TYPE_FILTER = 'dd675'; // DEDALO_RELATION_TYPE_FILTER
 const LANG_SECTION = 'lg1';
 const LANG_SPA_ID = '17344'; // lg-spa id in lg1
 
-/** Standard write response (PHP $response shape). */
+/** Standard write outcome (INTERNAL — `ok` is the discriminator, never a wire body). */
 export interface OntologyWriteResponse {
-	result: boolean;
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	total?: number;
@@ -617,7 +617,7 @@ export interface SetRecordsTarget {
 
 /**
  * Sync matrix ontology records into dd_ontology (PHP set_records_in_dd_ontology).
- * Partial success: result=true when at least one record processed.
+ * Partial success: ok=true when at least one record processed.
  *
  * SCOPE IS EXPLICIT OR IT IS REFUSED (WC-043). PHP list mode rebuilt the SQO from
  * the session and FAILED CLOSED when it was missing ('Not sqo_session found from
@@ -634,7 +634,7 @@ export async function setRecordsInDdOntology(
 ): Promise<OntologyWriteResponse> {
 	const userId = target.userId ?? -1;
 	const response: OntologyWriteResponse = {
-		result: false,
+		ok: false,
 		msg: '',
 		errors: [],
 		total: 0,
@@ -670,7 +670,7 @@ export async function setRecordsInDdOntology(
 	response.total = ids.length;
 
 	if (ids.length === 0) {
-		response.result = true;
+		response.ok = true;
 		response.msg = `OK. No records found to process for ${target.sectionTipo}`;
 		return response;
 	}
@@ -721,10 +721,10 @@ export async function setRecordsInDdOntology(
 
 	response.processed_count = processed;
 	if (response.errors.length === 0) {
-		response.result = true;
+		response.ok = true;
 		response.msg = `OK. Request completed successfully for ${target.sectionTipo}`;
 	} else if (processed > 0) {
-		response.result = true;
+		response.ok = true;
 		response.msg = `Partial success. Some records processed for ${target.sectionTipo}`;
 	} else {
 		response.msg = `Request failed for ${target.sectionTipo}`;

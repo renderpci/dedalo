@@ -199,8 +199,8 @@ async function writeThumbFrom(ctx: MediaContext, source: string): Promise<string
  * calls create_thumb() afterward so the two stay in sync).
  *
  * Returns false — never throws — when there is no usable source file or the
- * source carries no video stream (audio-only), matching the PHP contract that
- * feeds the client a plain result:false.
+ * source carries no video stream (audio-only). The handler turns that into the
+ * `ok:false` outcome the client renders (PHP fed it a plain false result).
  */
 export async function createAvPosterframe(av: MediaContext, timecode: string): Promise<boolean> {
 	if (av.spec.model !== 'component_av') throw new Error('posterframe source must be component_av');
@@ -365,7 +365,7 @@ function assertPosterframeModel(spec: MediaTypeSpec): void {
 
 export interface DeletePosterframeResult {
 	/** true when a posterframe was really removed (false = there was none). */
-	result: boolean;
+	ok: boolean;
 	/** The thumb retired with it, or null (see below). */
 	retiredThumb: string | null;
 	/** The thumb rebuilt from a freshly minted replacement (av), or null. */
@@ -401,7 +401,7 @@ export async function deletePosterframe(ctx: MediaContext): Promise<DeletePoster
 	assertPosterframeModel(ctx.spec);
 	const target = posterframeAbsolutePath(ctx.spec, ctx.identity, ctx.pathOpts);
 	if (!existsSync(target)) {
-		return { result: false, retiredThumb: null, rebuiltThumb: null };
+		return { ok: false, retiredThumb: null, rebuiltThumb: null };
 	}
 	moveToDeleted(target, { mediaRoot: ctx.pathOpts.mediaRoot });
 
@@ -410,18 +410,18 @@ export async function deletePosterframe(ctx: MediaContext): Promise<DeletePoster
 	// posterframe must not survive this call.
 	const retiredThumb = retireThumb(ctx);
 	if (POSTERFRAME_WRITER_BY_MODEL[ctx.spec.model] !== 'server_frame_extract') {
-		return { result: true, retiredThumb, rebuiltThumb: null };
+		return { ok: true, retiredThumb, rebuiltThumb: null };
 	}
 	try {
 		const outcome = await rebuildThumb(ctx);
-		return { result: true, retiredThumb, rebuiltThumb: outcome.built };
+		return { ok: true, retiredThumb, rebuiltThumb: outcome.built };
 	} catch (error) {
 		// An audio-only av, or a box with no source file: the delete stands, the
 		// record is honestly thumb-less, and the reason is said out loud.
 		console.warn(
 			`[posterframe] ${buildMediaIdentifier(ctx.identity)}: posterframe deleted, no replacement minted: ${(error as Error).message}`,
 		);
-		return { result: true, retiredThumb, rebuiltThumb: null };
+		return { ok: true, retiredThumb, rebuiltThumb: null };
 	}
 }
 

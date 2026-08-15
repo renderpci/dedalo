@@ -18,7 +18,14 @@
  */
 
 import { runWithoutStatementTimeout, sql, withTransaction } from '../../db/postgres.ts';
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
+import {
+	failAction,
+	fromOutcome,
+	refuseAction,
+	type WidgetModule,
+	type WidgetResponse,
+} from './support.ts';
 
 /**
  * A table above this size is one whose plans an operator actually cares about,
@@ -205,11 +212,7 @@ export async function databaseInfoGetValue(): Promise<WidgetResponse> {
 		statistics = null;
 	}
 
-	return {
-		result: { info, tables, indexes, statistics },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { info, tables, indexes, statistics } };
 }
 
 /**
@@ -235,13 +238,11 @@ async function databaseInfoAnalyzeDb(): Promise<WidgetResponse> {
 	} catch (error) {
 		errors.push(` Error Processing sql query Request: ${(error as Error).message}`);
 	}
-	const response: WidgetResponse & { execution_time?: number } = {
-		result: errors.length > 0 ? false : {},
-		errors,
-		msg: errors.length > 0 ? 'Warning. Request done with errors' : 'OK. Request done successfully',
+	return {
+		data: errors.length > 0 ? false : {},
+		...(errors.length === 0 ? {} : { msg: 'Warning. Request done with errors', errors }),
+		extend: { execution_time: (performance.now() - start) / 1000 },
 	};
-	response.execution_time = (performance.now() - start) / 1000;
-	return response as WidgetResponse;
 }
 
 /**
@@ -316,13 +317,12 @@ async function databaseInfoAnalyzeStatistics(): Promise<WidgetResponse> {
 	} catch (error) {
 		errors.push(` Error Processing sql query Request: ${(error as Error).message}`);
 	}
-	const response: WidgetResponse & { execution_time?: number } = {
-		result: errors.length > 0 ? false : { analyzed: tables },
-		errors,
+	return {
+		data: errors.length > 0 ? false : { analyzed: tables },
 		msg: analyzeStatisticsMessage(tables.length, errors),
+		...(errors.length === 0 ? {} : { errors }),
+		extend: { execution_time: (performance.now() - start) / 1000 },
 	};
-	response.execution_time = (performance.now() - start) / 1000;
-	return response as WidgetResponse;
 }
 
 /** The only tables consolidate_tables may touch (PHP allowlist). */
@@ -443,24 +443,19 @@ async function databaseInfoConsolidateTables(
 		const rowCount = Number(state[0]?.n ?? 0);
 		const plan = planConsolidation(firstId, rowCount);
 		if (plan === 'error') {
-			errors.push(`It is not possible to consolidate the table: ${table}`);
-			return {
-				result: false,
-				msg: 'Error. Request failed ',
-				errors,
-				...({ success: 0 } as Record<string, unknown>),
-			} as WidgetResponse;
+			failAction(`It is not possible to consolidate the table: ${table}`, {
+				coordinates: { table },
+			});
 		}
 		if (plan === 'noop') continue; // already compact
 		const order: ConsolidateOrder = consolidateOrderFor(table);
 		await consolidateOneTable(table, order);
 	}
 	return {
-		result: true,
-		msg: errors.length > 0 ? 'Warning. Request done with errors' : 'OK. Request done successfully',
-		errors,
-		...({ success: 0 } as Record<string, unknown>),
-	} as WidgetResponse;
+		data: true,
+		...(errors.length === 0 ? {} : { msg: 'Warning. Request done with errors', errors }),
+		extend: { success: 0 },
+	};
 }
 
 /**
@@ -490,16 +485,10 @@ export async function databaseInfoRebuildUserStats(
 	deps?: UserStatsDeps,
 ): Promise<WidgetResponse> {
 	const users = Array.isArray(options.users) ? (options.users as unknown[]) : null;
-	const response: WidgetResponse & { updated_days?: unknown[] } = {
-		result: false,
-		msg: 'Error. Request failed [rebuild_user_stats]',
-		errors: [],
-		updated_days: [],
-	};
+	const errors: string[] = [];
+	const updatedDays: unknown[] = [];
 	if (users === null || users.length === 0) {
-		response.msg += ' Empty users value';
-		response.errors.push('invalid users');
-		return response as WidgetResponse;
+		refuseAction('Error. Request failed [rebuild_user_stats]. Empty users value');
 	}
 	// SEAM (test injection only): the guard above returns BEFORE this line, so a
 	// gate can prove the dd1521 aggregate DELETE was never reached.
@@ -508,32 +497,26 @@ export async function databaseInfoRebuildUserStats(
 		const userId = Number(rawUserId);
 		const deleted = await deleteUserActivityStats(userId);
 		if (!deleted) {
-			response.errors.push(`failed delete user stats. User: ${userId}`);
+			errors.push(`failed delete user stats. User: ${userId}`);
 			continue;
 		}
 		const update = await updateUserActivityStats(userId);
-		// LEDGER — coverage plan §4.4 D3, KNOWN-OPEN AND UNGATED: two of the three
-		// disjuncts below are INERT. `update.result === 0` (the "stats are already
-		// updated" early return) and the empty-array-with-errors disjunct enter the
-		// guarded block and fall straight through, because its only statement is the
-		// `update.result === false` re-test. The code ADVERTISES three handled
-		// outcomes and implements one. Deleting the two dead disjuncts is
-		// behaviour-identical; it is left as written so the divergence is visible
-		// rather than quietly tidied by a coverage pass.
-		if (
-			update.result === false ||
-			update.result === 0 ||
-			(Array.isArray(update.result) && update.errors.length > 0 && update.result.length === 0)
-		) {
-			if (update.result === false) return update as WidgetResponse;
+		// A run that did not complete is the aggregate writer's own refusal — it
+		// used to be returned VERBATIM as the widget body (`update.result===false`);
+		// now it throws with the writer's sentence, which is the same information
+		// on the wire under the coded shape.
+		if (!update.ok) {
+			failAction(update.msg, { coordinates: { user_id: userId } });
 		}
-		response.errors.push(...update.errors);
-		response.updated_days?.push(update.result);
+		errors.push(...update.errors);
+		updatedDays.push(update.value);
 	}
-	response.result = response.errors.length === 0;
-	response.msg =
-		response.errors.length === 0 ? 'OK. Request done.' : 'Warning! Request done with errors';
-	return response as WidgetResponse;
+	return {
+		data: errors.length === 0,
+		msg: errors.length === 0 ? 'OK. Request done.' : 'Warning! Request done with errors',
+		...(errors.length === 0 ? {} : { errors }),
+		extend: { updated_days: updatedDays },
+	};
 }
 
 /**
@@ -550,10 +533,10 @@ export async function databaseInfoOptimizeTables(
 ): Promise<WidgetResponse> {
 	const tables = options.tables;
 	if (tables === undefined || (Array.isArray(tables) && tables.length === 0)) {
-		return { result: false, msg: 'Error. Request failed ', errors: ['No tables selected'] };
+		refuseAction('Error. Request failed. No tables selected');
 	}
 	if (!Array.isArray(tables)) {
-		return { result: false, msg: 'Error. Request failed ', errors: ['Invalid tables parameter'] };
+		refuseAction('Error. Request failed. Invalid tables parameter');
 	}
 	// SEAM (test injection only): both guards above return BEFORE this line, so a
 	// gate can prove REINDEX/VACUUM was never reached — notably for the bare-string
@@ -564,7 +547,7 @@ export async function databaseInfoOptimizeTables(
 	// Opt-in preview: only an explicit boolean true is a dry run — anything else
 	// (absent, 'false', 0) keeps the historical destructive behaviour.
 	const dryRun = options.dry_run === true;
-	return (await optimizeTables(tables as string[], { dryRun })) as unknown as WidgetResponse;
+	return fromOutcome(await optimizeTables(tables as string[], { dryRun }));
 }
 
 /**
@@ -587,11 +570,7 @@ async function databaseInfoRelationIntegrityReport(): Promise<WidgetResponse> {
 		[],
 	)) as { ok: boolean }[];
 	if (present[0]?.ok !== true) {
-		return {
-			result: false,
-			msg: 'Error. matrix_relation_index does not exist — run recreate_db_assets, then backfill_search_stores',
-			errors: ['store_missing'],
-		};
+		throw new DedaloError('maintenance.store_missing');
 	}
 
 	const totals = (await sql.unsafe(
@@ -654,15 +633,14 @@ async function databaseInfoRelationIntegrityReport(): Promise<WidgetResponse> {
 	}
 
 	return {
-		result: {
+		data: {
 			store_rows: Number(totals[0]?.rows ?? 0),
 			target_sections: totals[0]?.target_sections ?? 0,
 			dangling_targets_total: danglingTotal,
 			dangling_by_target_section: dangling,
 			non_numeric_locators_by_table: nonNumeric,
 		},
-		msg: errors.length > 0 ? 'Warning. Request done with errors' : 'OK. Request done successfully',
-		errors,
+		...(errors.length === 0 ? {} : { msg: 'Warning. Request done with errors', errors }),
 	};
 }
 
@@ -680,9 +658,9 @@ export const widget: WidgetModule = {
 		rebuild_user_stats: databaseInfoRebuildUserStats,
 		optimize_tables: databaseInfoOptimizeTables,
 		rebuild_db_functions: async () =>
-			(await import('../../db/db_assets.ts')).rebuildFunctions() as Promise<WidgetResponse>,
+			fromOutcome(await (await import('../../db/db_assets.ts')).rebuildFunctions()),
 		rebuild_db_constraints: async () =>
-			(await import('../../db/db_assets.ts')).rebuildConstraints() as Promise<WidgetResponse>,
+			fromOutcome(await (await import('../../db/db_assets.ts')).rebuildConstraints()),
 		rebuild_db_indexes: async (options) => {
 			const { rebuildIndexes } = await import('../../db/db_assets.ts');
 			const tables = Array.isArray(options.tables) ? (options.tables as string[]) : [];
@@ -691,13 +669,21 @@ export const widget: WidgetModule = {
 			// builders without a server restart.
 			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
 			clearSearchStoreCache();
-			return response as WidgetResponse;
+			return fromOutcome(response);
 		},
+		// recreateDbAssets answers with a per-step PAYLOAD (no ok discriminator):
+		// every step reports its own outcome inside `data`, so the action itself
+		// only fails by throwing.
 		recreate_db_assets: async () => {
 			const response = await (await import('../../db/db_assets.ts')).recreateDbAssets();
 			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
 			clearSearchStoreCache();
-			return response as unknown as WidgetResponse;
+			return {
+				data: response.data,
+				msg: response.msg,
+				...(response.errors.length === 0 ? {} : { errors: response.errors.map(String) }),
+				extend: { success: response.success },
+			};
 		},
 		// The derived-store backfill (matrix_string_search + matrix_relation_index):
 		// TRUNCATE + refill from the source tables. THE update path for an instance
@@ -708,7 +694,7 @@ export const widget: WidgetModule = {
 			const response = await (await import('../../db/db_assets.ts')).backfillSearchStores();
 			const { clearSearchStoreCache } = await import('../../search/search_store.ts');
 			clearSearchStoreCache();
-			return response as unknown as WidgetResponse;
+			return fromOutcome(response);
 		},
 	},
 	getValue: databaseInfoGetValue,

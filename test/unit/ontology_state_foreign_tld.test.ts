@@ -136,7 +136,7 @@ describe('rebuildOntology with a misfiled source record', () => {
 	test('reports the CULPRIT RECORD, not a phantom missing node', async () => {
 		const outcome = await rebuildOntology(TLD, USER_ID);
 
-		expect(outcome.result).toBe(false);
+		expect(outcome.ok).toBe(false);
 		// Both operator-facing channels name the record — the tool merges errors into the
 		// response and prints msg per tld, and neither may say "act127 is missing".
 		expect(outcome.errors.join(' | ')).toContain(`${SECTION}/2`);
@@ -157,7 +157,7 @@ describe('rebuildOntology with a misfiled source record', () => {
 		const outcome = await rebuildOntology(TLD, USER_ID);
 		expect(outcome.applied).toContain('rebuilt 2 node(s)');
 		expect(outcome.state.inSync).toBe(true);
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(await nodeCount(FOREIGN_TLD)).toBe(0);
 	});
 
@@ -167,7 +167,7 @@ describe('rebuildOntology with a misfiled source record', () => {
 		expect(await nodeCount(FOREIGN_TLD)).toBe(0);
 		expect(outcome.state.matrixNodes).toBe(1);
 		expect(outcome.errors.join(' | ')).toContain(`${SECTION}/2`);
-		expect(outcome.result).toBe(false); // honest: the source is still misfiled
+		expect(outcome.ok).toBe(false); // honest: the source is still misfiled
 		// …but its OWN projection is complete: zzc1 is stored and not stale.
 		expect(kinds(outcome.state, 'missing')).toEqual([]);
 		expect(kinds(outcome.state, 'stale')).toEqual([]);

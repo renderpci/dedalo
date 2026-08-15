@@ -91,7 +91,7 @@ async function panel(): Promise<{
 	registry_state: RegistryStateSummary;
 }> {
 	const response = await (widget.getValue as NonNullable<typeof widget.getValue>)({}, ADMIN);
-	return response.result as {
+	return response.data as {
 		datalist: ToolListItem[];
 		errors: string[] | null;
 		registry_state: RegistryStateSummary;

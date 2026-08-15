@@ -405,7 +405,7 @@ export async function dataframeControlScan(
 		: ` - INCOMPLETE, ${uncovered.length} of ${coverage.length} tables not fully examined`;
 
 	return {
-		result: {
+		data: {
 			scanned: report.scanned,
 			frames_checked: report.frames_checked,
 			orphans: report.unresolved,
@@ -424,6 +424,8 @@ export async function dataframeControlScan(
 						? ` - legacy (pre-migration) frames: ${report.legacy_unmigrated}`
 						: ''
 				}${scope}`,
+		// Passed unconditionally: the ONE wrapping site
+		// (api/handlers/dd_area_maintenance_api.ts) omits an empty list.
 		errors: report.errors,
 	};
 }

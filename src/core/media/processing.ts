@@ -524,7 +524,7 @@ export async function buildThumbVersion(
  * FAILURE POLICY: every cover is attempted and the failures come back as VALUES,
  * so an extension this host cannot encode never costs the record the covers it
  * CAN build — and never turns a pdf build the operator watched succeed into a
- * `result:false`. `regeneratePdf` additionally builds the thumb before this runs.
+ * failure. `regeneratePdf` additionally builds the thumb before this runs.
  */
 export async function buildPdfCovers(
 	spec: MediaTypeSpec,
@@ -1185,9 +1185,9 @@ export interface RegeneratePdfResult {
  * IT RETURNS A RESULT OBJECT for the same reason regenerateImage does (D9): a
  * cover failure is non-fatal, so with a `string[]` return it had nowhere to go
  * and every caller reported a complete success. It also removes an asymmetry the
- * operator could see — the image path kept `result:true` with the failure in
+ * operator could see — the image path reported SUCCESS with the failure in
  * `errors`, while the pdf path turned a build whose copy, thumb and jpg cover all
- * landed into a red `result:false`.
+ * landed into a red failure.
  */
 export async function regeneratePdf(
 	spec: MediaTypeSpec,

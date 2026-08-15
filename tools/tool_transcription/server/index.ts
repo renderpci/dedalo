@@ -719,7 +719,7 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
 			maxCharLine: maxCharline,
 			total_ms: totalMs,
 		});
-		if (subtitles.result === false) {
+		if (subtitles.data === false) {
 			return {
 				result: false,
 				msg: `Error: ${subtitles.msg}`,
@@ -738,7 +738,7 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
 				errors: [`subtitles dir not found: ${targetFolder}`],
 			};
 		}
-		writeFileSync(vttPath, subtitles.result);
+		writeFileSync(vttPath, subtitles.data);
 
 		return {
 			result: true,

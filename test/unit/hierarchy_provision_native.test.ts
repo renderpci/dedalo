@@ -247,7 +247,7 @@ afterAll(async () => {
 
 describe('generate_virtual_section — TS-native provisioning of a scratch TLD', () => {
 	test('provisioning succeeds with NO errors (the permission grant is ported)', () => {
-		expect(provisioned?.result).toBe(true);
+		expect(provisioned?.ok).toBe(true);
 		expect(provisioned?.errors).toEqual([]);
 	});
 

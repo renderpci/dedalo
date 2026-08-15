@@ -171,7 +171,7 @@ describe('dataframe cascade on the three removal paths (S1-05)', () => {
 				ar_properties: ['section_id', 'section_tipo', 'from_component_tipo', 'type'],
 			},
 		);
-		expect(response.result).toBe(1);
+		expect(response.removed).toBe(1);
 
 		const portalAfter = await relationKey(hostId, PORTAL);
 		expect(portalAfter.map((item) => item.id)).toEqual([2]);

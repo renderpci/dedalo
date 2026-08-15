@@ -7,7 +7,7 @@
 import { sql } from '../../db/postgres.ts';
 import { termByTipo } from '../../ontology/labels.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../ontology/resolver.ts';
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { refuseAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * counters_status.get_value — the matrix_counter audit (PHP
@@ -58,11 +58,7 @@ export async function countersStatusGetValue(): Promise<WidgetResponse> {
 		});
 	}
 
-	return {
-		result: { datalist, errors },
-		msg: 'OK. Request done successfully',
-		errors: [],
-	};
+	return { data: { datalist, errors } };
 }
 
 /**
@@ -80,7 +76,7 @@ async function countersStatusModifyCounter(
 	const sectionTipo = typeof options.section_tipo === 'string' ? options.section_tipo : '';
 	const counterAction = typeof options.counter_action === 'string' ? options.counter_action : '';
 	if (sectionTipo === '') {
-		return { result: false, msg: 'Error: empty mandatory section_tipo', errors: [] };
+		refuseAction('Error: empty mandatory section_tipo');
 	}
 
 	let result = false;
@@ -109,16 +105,15 @@ async function countersStatusModifyCounter(
 
 	// refreshed audit (PHP re-runs check_counters and attaches its datalist)
 	const audit = await countersStatusGetValue();
-	const auditDatalist = (audit.result as { datalist?: unknown[] } | null)?.datalist ?? [];
+	const auditDatalist = (audit.data as { datalist?: unknown[] } | null)?.datalist ?? [];
 
 	return {
-		result,
+		data: result,
 		msg: result
 			? `OK. ${counterAction} counter successfully ${sectionTipo}`
 			: `Error on ${counterAction} counter ${sectionTipo}`,
-		errors: [],
-		...({ datalist: auditDatalist } as Record<string, unknown>),
-	} as WidgetResponse;
+		extend: { datalist: auditDatalist },
+	};
 }
 
 export const widget: WidgetModule = {

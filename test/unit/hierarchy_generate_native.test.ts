@@ -132,7 +132,7 @@ describe('generate_virtual_section', () => {
 			userId: USER_ID,
 		});
 
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(await nodeRecordIds()).toEqual([1, 2]);
 	});
 
@@ -143,7 +143,7 @@ describe('generate_virtual_section', () => {
 			userId: USER_ID,
 		});
 
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.msg).toContain('already generated');
 		expect(response.errors.join(' ')).toContain('Force to create');
 		// and it stopped BEFORE the write phase — the existing nodes are untouched.

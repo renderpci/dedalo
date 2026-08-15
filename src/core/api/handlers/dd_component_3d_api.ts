@@ -94,7 +94,7 @@ async function threeDDeletePosterframeAction(
 	// back to its placeholder rather than serving a still of a file that is gone.
 	const { deletePosterframe } = await import('../../media/tools/posterframe.ts');
 	const outcome = await deletePosterframe(resolved.ctx);
-	const result = outcome.result;
+	const result = outcome.ok;
 	// Persist: 3d is NOT re-scanned per read (unlike av), so without this the stored
 	// index keeps claiming a thumb that has just left the tier.
 	if (result === true) {

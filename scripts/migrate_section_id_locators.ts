@@ -400,10 +400,8 @@ async function main(): Promise<number> {
 	let indexGreen = true;
 	if (args.tables === 'all') {
 		const backfill = await backfillSearchStores(['matrix_relation_index']);
-		indexGreen = backfill.result;
-		console.log(
-			`relation-index re-backfill: ${backfill.result ? 'OK' : `FAILED — ${backfill.msg}`}`,
-		);
+		indexGreen = backfill.ok;
+		console.log(`relation-index re-backfill: ${backfill.ok ? 'OK' : `FAILED — ${backfill.msg}`}`);
 	}
 
 	if (!residueGreen || !indexGreen) return 1;

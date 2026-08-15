@@ -132,7 +132,7 @@ export function renderConformedFilter(node: ConformedFilter, params: ParamsColle
 
 function parseConformedFilter(node: ConformedFilter, params: ParamsCollector): string {
 	if (node.kind === 'leaf') {
-		return resolveBuilderResult(node.result, params);
+		return resolveBuilderResult(node.fragment, params);
 	}
 	const fragments = node.items
 		.map((item) => {

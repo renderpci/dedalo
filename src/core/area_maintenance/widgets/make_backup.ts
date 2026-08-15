@@ -5,7 +5,7 @@
  * the diffusion ENGINE's responsibility) — the mysql list is always empty.
  */
 
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { failAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * LEDGER — coverage plan §4.4 D14, KNOWN-OPEN AND UNGATED: the backup FILENAME
@@ -28,14 +28,12 @@ async function makeBackupGetValue(): Promise<WidgetResponse> {
 		`_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}` +
 		`.${db.database ?? 'dedalo'}.postgresql_-1_forced_dbv${(await getCurrentDataVersion()).join('-')}.custom.backup`;
 	return {
-		result: {
+		data: {
 			dedalo_db_management: true,
 			backup_path: getBackupDir(),
 			file_name: fileName,
 			mysql_db: null,
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -49,19 +47,23 @@ async function makeBackupGetValue(): Promise<WidgetResponse> {
 async function makeBackupPsql(): Promise<WidgetResponse> {
 	const { initBackupSequence } = await import('../backup.ts');
 	const outcome = await initBackupSequence(-1, true);
+	if (!outcome.ok) {
+		failAction(
+			outcome.errors.length === 0 ? outcome.msg : `${outcome.msg} (${outcome.errors.join('; ')})`,
+		);
+	}
 	return {
-		result: outcome.result,
+		data: true,
 		msg: outcome.msg,
-		errors: outcome.errors,
 		// pid + pfile: the copied widget feeds them straight into
 		// update_process_status → dd_utils_api:get_process_status (SSE) so the
 		// operator watches the dump live and sees the failure tail (S2-35).
-		...({
+		extend: {
 			pid: outcome.pid ?? null,
 			file_path: outcome.file_path ?? null,
 			pfile: outcome.pfile ?? null,
-		} as Record<string, unknown>),
-	} as WidgetResponse;
+		},
+	};
 }
 
 /**
@@ -75,12 +77,10 @@ async function makeBackupGetFiles(options: Record<string, unknown>): Promise<Wid
 	const { getBackupFiles } = await import('../backup.ts');
 	const maxFiles = typeof options.max_files === 'number' ? options.max_files : 10;
 	return {
-		result: {
+		data: {
 			psql_backup_files: getBackupFiles().slice(0, maxFiles),
 			mysql_backup_files: [], // engine boundary: MariaDB is the diffusion engine's
 		},
-		msg: 'OK. Request done',
-		errors: [],
 	};
 }
 

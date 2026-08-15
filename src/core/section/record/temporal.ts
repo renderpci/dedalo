@@ -58,15 +58,16 @@
  */
 
 import type { ApiResult } from '../../api/response.ts';
-import { denied } from '../../api/response.ts';
 import type { Rqo, RqoSource } from '../../concepts/rqo.ts';
 import { isConsultationOnlySection } from '../../concepts/section.ts';
+import { DedaloError, ok } from '../../errors/index.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
 	getTranslatableByTipo,
 } from '../../ontology/resolver.ts';
 import type { Principal } from '../../security/permissions.ts';
+import { currentRequestId } from '../../security/request_context.ts';
 import {
 	currentChipsFromPayload,
 	mergeRelationChips,
@@ -279,13 +280,16 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 
 	const model = await getModelByTipo(componentTipo);
 	if (model === null) {
-		return denied(400, `save: unknown component tipo '${componentTipo}'`);
+		throw new DedaloError('request.invalid_tipo', { coordinates: { tipo: componentTipo } });
 	}
 	const column = getColumnNameByModel(model);
 
 	for (const change of changedData) {
 		if (!TEMPORAL_ACTIONS.has(change.action)) {
-			return denied(400, `action '${change.action}' is not available on a temporal instance`);
+			throw new DedaloError('record.temporal_action_refused', {
+				publicMessage: `action '${change.action}' is not available on a temporal instance`,
+				coordinates: { action: change.action, tipo: componentTipo },
+			});
 		}
 	}
 
@@ -331,7 +335,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			// dd542/dd15 — a 500 where a 400 is the honest answer.
 			const targetSectionTipo = String(change.value ?? '');
 			if (targetSectionTipo === '' || isConsultationOnlySection(targetSectionTipo)) {
-				return denied(400, `add_new_element: invalid target section '${targetSectionTipo}'`);
+				// The target is caller-supplied; it stays LOG-ONLY (echoing it back
+				// would confirm which sections are consultation-only).
+				throw new DedaloError('request.invalid_source', {
+					message: `add_new_element: invalid target section '${targetSectionTipo}'`,
+					coordinates: { target_section_tipo: targetSectionTipo },
+				});
 			}
 			const { applyAddNewElement } = await import('../../relations/save.ts');
 			const outcome = await applyAddNewElement(
@@ -343,7 +352,10 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 				{ skipHostFilterRead: true },
 			);
 			if (outcome === null) {
-				return denied(400, 'add_new_element failed');
+				throw new DedaloError('record.save_failed', {
+					message: 'add_new_element failed',
+					coordinates: { target_section_tipo: targetSectionTipo, tipo: componentTipo },
+				});
 			}
 			picked = outcome.items as Record<string, unknown>[];
 			createdSectionId = outcome.sectionId;
@@ -404,7 +416,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		lang,
 	});
 	if (!outcome.ok) {
-		return denied(400, `save failed: ${outcome.message}`);
+		// The applier's own diagnostic is engine detail: it rides the log line, not
+		// the wire (record.save_failed is operator-disclosure).
+		throw new DedaloError('record.save_failed', {
+			message: `save failed: ${outcome.message}`,
+			coordinates: { tipo: componentTipo, section_tipo: sectionTipo },
+		});
 	}
 	// TEMPORAL SCRATCH (WC-079). `outcome.items` is the normalized, lang-stamped,
 	// id-minted array — the same value the client will hold as its next
@@ -420,5 +437,8 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		lang,
 		outcome.items,
 	);
-	return { status: 200, body: { result: { context: [], data: [dataItem] }, msg: 'OK' } };
+	return {
+		status: 200,
+		body: ok({ context: [], data: [dataItem] }, { requestId: currentRequestId() }),
+	};
 }

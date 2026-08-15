@@ -11,8 +11,9 @@
  * - TLS certificate verification is ALWAYS on — the PHP
  *   DEDALO_SMTP_VERIFY_PEER=false escape hatch is NOT ported (WC-023 D1: peer
  *   verification is never disableable; pin a private CA via NODE_EXTRA_CA_CERTS);
- * - never throws to the caller; returns {result,msg,errors} and logs failures
- *   server-side. Email CONTENT (recovery codes…) is never logged here.
+ * - never throws to the caller; returns a SendMailResult (an internal outcome,
+ *   never a wire body) and logs failures server-side. Email CONTENT (recovery
+ *   codes…) is never logged here.
  *
  * Config: DEDALO_SMTP_* (catalog domain `mailer`). An empty DEDALO_SMTP_HOST
  * means "mailer disabled" — sendMail refuses without touching the network.
@@ -22,6 +23,7 @@
 
 import nodemailer from 'nodemailer';
 import { readNumber, readString } from '../../config/readers.ts';
+import type { ErrorCode } from '../errors/index.ts';
 
 export interface SendMailOptions {
 	/** Recipient address (required). */
@@ -38,10 +40,19 @@ export interface SendMailOptions {
 	replyTo?: string;
 }
 
+/**
+ * The send outcome — an INTERNAL object, never a wire body (ERRORS_SPEC §4):
+ * the only caller (security/password_reset.ts) logs it and answers the user
+ * generically, so a mail failure must not become the caller's own failure.
+ * `code` is the registered mailer.* code for the log/metric, not a token.
+ */
 export interface SendMailResult {
-	result: boolean;
+	/** Was the message handed to the relay? */
+	ok: boolean;
+	/** The registered failure code (absent on success). */
+	code?: ErrorCode;
+	/** Operator sentence for the server log. */
 	msg: string;
-	errors: string[];
 }
 
 /**
@@ -62,25 +73,25 @@ export function isValidEmail(value: string): boolean {
 
 /**
  * Send one email through the configured SMTP relay. Never throws; a failure is
- * logged (without the message content) and reported in the returned errors.
+ * logged (without the message content) and reported as `{ok:false, code}`.
  */
 export async function sendMail(options: SendMailOptions): Promise<SendMailResult> {
 	const host = readString('DEDALO_SMTP_HOST');
 	if (host === '') {
 		console.error('[mailer] not configured (DEDALO_SMTP_HOST missing) — mail not sent');
 		return {
-			result: false,
+			ok: false,
+			code: 'mailer.not_configured',
 			msg: 'Error. Mailer is not configured (DEDALO_SMTP_HOST missing)',
-			errors: ['mailer_not_configured'],
 		};
 	}
 
 	const to = cleanEmail(options.to);
 	if (to === '' || !isValidEmail(to)) {
 		return {
-			result: false,
+			ok: false,
+			code: 'mailer.invalid_recipient',
 			msg: 'Error. Invalid recipient address',
-			errors: ['invalid_recipient'],
 		};
 	}
 
@@ -91,9 +102,9 @@ export async function sendMail(options: SendMailOptions): Promise<SendMailResult
 			'[mailer] no From address configured (DEDALO_SMTP_FROM / DEDALO_SMTP_USER missing)',
 		);
 		return {
-			result: false,
+			ok: false,
+			code: 'mailer.not_configured',
 			msg: 'Error. Mailer From address not configured (DEDALO_SMTP_FROM missing)',
-			errors: ['mailer_not_configured'],
 		};
 	}
 
@@ -125,10 +136,10 @@ export async function sendMail(options: SendMailOptions): Promise<SendMailResult
 				? { html: options.bodyHtml }
 				: {}),
 		});
-		return { result: true, msg: 'OK. Mail sent', errors: [] };
+		return { ok: true, msg: 'OK. Mail sent' };
 	} catch (error) {
 		// Log the transport error only — never the message content.
 		console.error('[mailer] send failed:', (error as Error).message ?? error);
-		return { result: false, msg: 'Error. Mail send failed', errors: ['send_failed'] };
+		return { ok: false, code: 'mailer.send_failed', msg: 'Error. Mail send failed' };
 	}
 }

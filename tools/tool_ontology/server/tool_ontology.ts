@@ -46,7 +46,7 @@ export async function toolOntologySetRecords(context: ToolActionContext): Promis
 			sectionId,
 			userId: context.userId,
 		});
-		return { result: edited.result, msg: edited.msg, errors: edited.errors };
+		return { result: edited.ok, msg: edited.msg, errors: edited.errors };
 	}
 
 	// LIST mode: the scope is the caller's LIVE list sqo, and it is REQUIRED.
@@ -85,7 +85,7 @@ export async function toolOntologySetRecords(context: ToolActionContext): Promis
 		userId: context.userId,
 	});
 	return {
-		result: response.result,
+		result: response.ok,
 		msg: response.msg,
 		errors: response.errors,
 	};

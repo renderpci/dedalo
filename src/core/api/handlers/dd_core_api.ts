@@ -154,8 +154,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			const { resolveTemporalSave } = await import('../../section/record/temporal.ts');
 			return await resolveTemporalSave(rqo, principal);
 		}
-		const saveAreaRefusal = await refuseAreaWrite(source.section_tipo, source.model);
-		if (saveAreaRefusal !== null) return saveAreaRefusal;
+		await refuseAreaWrite(source.section_tipo, source.model);
 		// ONE classification replaces the scattered `startsWith('search_')` sniffs
 		// and the blind `Number(section_id)` casts below
 		// (WC-2026-08-10-section-id-int-canonical). Branch parity with the sniff
@@ -593,8 +592,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (isTemporalSource(source)) {
 			return denied(400, 'temporal instances cannot create records');
 		}
-		const createAreaRefusal = await refuseAreaWrite(sectionTipo, source.model);
-		if (createAreaRefusal !== null) return createAreaRefusal;
+		await refuseAreaWrite(sectionTipo, source.model);
 		// getSectionPermissions caps consultation-only sections at read (1), so a
 		// create is refused here (PHP section::create_record:452 refusal); the
 		// createSectionRecord engine backstops the same rule for other doors.
@@ -653,8 +651,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (isTemporalSource(source)) {
 			return denied(400, 'temporal instances cannot duplicate records');
 		}
-		const dupAreaRefusal = await refuseAreaWrite(sectionTipo, source.model);
-		if (dupAreaRefusal !== null) return dupAreaRefusal;
+		await refuseAreaWrite(sectionTipo, source.model);
 		// Consultation-only sections cap at read (1) → duplicate refused here; the
 		// duplicateSectionRecord engine backstops the same rule for other doors.
 		const level = await getSectionPermissions(principal, sectionTipo);
@@ -717,11 +714,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (isTemporalSource(rqo.source)) {
 			return denied(400, 'temporal instances cannot delete records');
 		}
-		const deleteAreaRefusal = await refuseAreaWrite(
-			sectionTipo,
-			(rqo.source as { model?: string })?.model,
-		);
-		if (deleteAreaRefusal !== null) return deleteAreaRefusal;
+		await refuseAreaWrite(sectionTipo, (rqo.source as { model?: string })?.model);
 		if (deleteMode !== 'delete_record' && deleteMode !== 'delete_data') {
 			return denied(400, `delete: unknown delete_mode '${deleteMode}'`);
 		}
@@ -812,7 +805,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					const cascade = await deleteOntologyMain(sectionTipo, targetId, (st, id) =>
 						cascadeDelete(st, id, principal.userId),
 					);
-					if (!cascade.result) {
+					if (!cascade.ok) {
 						return denied(400, `delete: ontology cascade failed (${cascade.errors.join('; ')})`);
 					}
 					cascaded.push(targetId);

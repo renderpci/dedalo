@@ -5,6 +5,7 @@
 
 import { config } from '../../../config/config.ts';
 import { readString } from '../../../config/readers.ts';
+import { ok } from '../../errors/index.ts';
 import { publicOrigin } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
 import { getPermissions } from '../../security/permissions.ts';
@@ -137,9 +138,17 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			user_id: principal.userId,
 			full_username: principal.userId < 0 ? 'Debug user' : (context.session?.username ?? ''),
 		});
+		// The lock answer is a PAYLOAD, not an envelope (section/locks.ts): the
+		// applied flag is the envelope `data`, and the keys the client reads by
+		// name (`in_use`, `full_username`, `msg`, plus the PHP `dato` /
+		// `dedalo_notification` fossils) ride as extension keys — ERRORS_SPEC §3.0.
+		const { applied, ...lockFields } = outcome;
 		return {
 			status: 200,
-			body: { ...outcome, dedalo_notification: null } as unknown as Record<string, unknown>,
+			body: ok(applied, {
+				requestId: context.requestId,
+				extend: { ...lockFields, dedalo_notification: null },
+			}),
 		};
 	},
 	get_lock_status: async (rqo, context) => {
@@ -168,7 +177,13 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			component_tipo: options.component_tipo ?? null,
 			user_id: principal.userId,
 		});
-		return { status: 200, body: outcome as unknown as Record<string, unknown> };
+		// `in_use` / `full_username` are the keys the client's release poll reads;
+		// `data` carries the boolean the PHP body spelled `result` (page.js checks
+		// `in_use`, but the compat mirror must stay a truthy answer, not null).
+		return {
+			status: 200,
+			body: ok(true, { requestId: context.requestId, extend: { ...outcome } }),
+		};
 	},
 	get_dedalo_files: async (_rqo, _context) => {
 		// The service-worker pre-cache manifest (PHP dd_utils_api::
@@ -557,8 +572,13 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// the same generic shape.
 		const options = (rqo.options ?? {}) as { identifier?: unknown };
 		const { requestPasswordReset } = await import('../../security/password_reset.ts');
-		const body = await requestPasswordReset(String(options.identifier ?? ''), context.clientIp);
-		return { status: 200, body: { ...body } };
+		const outcome = await requestPasswordReset(String(options.identifier ?? ''), context.clientIp);
+		// `reset_id` + `msg` are top-level keys render_login.js reads by name; the
+		// envelope `data` is the boolean the PHP body spelled `result: true`.
+		return {
+			status: 200,
+			body: ok(true, { requestId: context.requestId, extend: { ...outcome } }),
+		};
 	},
 	confirm_password_reset: async (rqo, context) => {
 		// Forgot-password step 2 (pre-auth by design, see request_password_reset).
@@ -568,13 +588,20 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			new_password?: unknown;
 		};
 		const { confirmPasswordReset } = await import('../../security/password_reset.ts');
-		const body = await confirmPasswordReset(
+		// Every refusal THROWS a registered password_reset.* code; the dispatch
+		// catch converts it (status from the registry).
+		const outcome = await confirmPasswordReset(
 			String(options.reset_id ?? ''),
 			String(options.code ?? ''),
 			String(options.new_password ?? ''),
 			context.clientIp,
 		);
-		return { status: 200, body: { ...body } };
+		// `data: true` — render_login.js gates the success branch on
+		// `api_response.result===true`, and the compat block mirrors `data`.
+		return {
+			status: 200,
+			body: ok(true, { requestId: context.requestId, extend: { ...outcome } }),
+		};
 	},
 	quit: async (_rqo, context) => {
 		// Log out (PHP dd_utils_api::quit → session teardown). The client's

@@ -59,7 +59,7 @@ function summarize(outcomes: OntologyWriteResult[], tlds: string[], verb: string
 	let applied = 0;
 	outcomes.forEach((outcome, index) => {
 		const tld = tlds[index] ?? outcome.state.tld ?? '?';
-		if (!outcome.result) errors.push(`${tld}: ${outcome.msg}`);
+		if (!outcome.ok) errors.push(`${tld}: ${outcome.msg}`);
 		errors.push(...outcome.errors.map((error) => `${tld}: ${error}`));
 		applied += outcome.applied.length;
 		ar_msg.push(
@@ -274,7 +274,7 @@ export async function runExportOntologies(
 
 		// 2. Shared metadata file — must exist before any per-TLD file.
 		const infoResponse = await io.exportOntologyInfo();
-		if (!infoResponse.result) {
+		if (!infoResponse.ok) {
 			response.errors.push('unable to export ontology info JSON file');
 			response.msg = 'Unable to export the ontology information JSON file';
 			return response;
@@ -312,7 +312,7 @@ export async function runExportOntologies(
 			if (result.status !== 'fulfilled') continue; // unreachable: rejects thrown above
 			const ontologyResponse = result.value;
 			arMsg.push(ontologyResponse.msg);
-			if (ontologyResponse.result === false) {
+			if (ontologyResponse.ok === false) {
 				response.errors.push(...(ontologyResponse.errors ?? []));
 				continue;
 			}
@@ -322,14 +322,14 @@ export async function runExportOntologies(
 		// 4. Private lists — always runs regardless of per-TLD errors.
 		const privateListResponse = await io.exportPrivateListsToFile();
 		arMsg.push(privateListResponse.msg);
-		if (privateListResponse.result === false) {
+		if (privateListResponse.ok === false) {
 			response.errors.push(...(privateListResponse.errors ?? []));
 		}
 
 		// 5. LLM map — regenerated so it stays in sync with the new files.
 		const llmMapResponse = await io.exportLlmMap();
 		arMsg.push(llmMapResponse.msg);
-		if (!llmMapResponse.result) {
+		if (!llmMapResponse.ok) {
 			response.errors.push(...(llmMapResponse.errors ?? []));
 		}
 
