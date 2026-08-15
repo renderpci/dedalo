@@ -8,7 +8,7 @@
  * Client-side coverage for the Time Machine tool.
  *
  * The tool's deeper render/open path needs a host section with a configured
- * caller component plus a live service_time_machine + API dispatch, none of
+ * caller component plus a live dd15 section list + API dispatch, none of
  * which is guaranteed in the headless harness. This suite therefore asserts the
  * reliable, fixture-free contract that every tool shares:
  *   - the module exports a constructor named exactly as its model,
@@ -40,7 +40,7 @@ describe('TOOL_TIME_MACHINE CLIENT TEST', function() {
 		assert.equal(instance.mode, null, 'expected mode null')
 		assert.equal(instance.node, null, 'expected node null')
 		assert.equal(instance.caller, null, 'expected caller null')
-		assert.equal(instance.service_time_machine, null, 'expected service_time_machine null')
+		assert.equal(instance.tm_list, null, 'expected tm_list null')
 		assert.equal(instance.button_apply, null, 'expected button_apply null')
 		assert.equal(instance.selected_matrix_id, null, 'expected selected_matrix_id null')
 		assert.equal(instance.modal_container, null, 'expected modal_container null')

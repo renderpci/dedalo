@@ -19,7 +19,6 @@
 * rendering to the appropriate view module.  It is assigned to the
 * component_email prototype via:
 *   component_email.prototype.list = render_list_component_email.prototype.list
-*   component_email.prototype.tm   = render_list_component_email.prototype.list
 *
 * Supported views:
 *   'mini'    → view_mini_email     (compact inline display; no edit-in-list)
@@ -44,8 +43,8 @@ export const render_list_component_email = function() {
 * for any unrecognised view value, matching the behaviour of sibling
 * render_list_* modules across the codebase.
 *
-* This method is also assigned to `component_email.prototype.tm` so that
-* the time-machine (tm) mode reuses the same list rendering pipeline.
+* Time Machine cells reuse this same pipeline: they are emitted as LIST cells
+* (WC-2026-08-14-tm-ddo-mode-retired), so no separate slot is needed.
 *
 * @param {Object} options - Options forwarded verbatim to the selected view renderer
 * @returns {Promise<HTMLElement>} Resolves to the rendered wrapper element

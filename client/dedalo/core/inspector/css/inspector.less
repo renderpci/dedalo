@@ -172,22 +172,13 @@
 				color: var(--field_value_fg);
 			}
 
-			// nav buttons: thin chevrons from the light icon family (the base
-			// play/forward triangles in paginator.less are solid-fill — the
-			// odd ones out); quiet at rest, warm on hover.
+			// nav buttons: colour treatment only. The chevron GLYPHS moved to the
+			// base (paginator.less, 2026-08-15) — every paginator in the app draws
+			// the same family now, so this block no longer re-declares masks; it
+			// keeps the inspector's quiet-at-rest / warm-on-hover colouring.
 			.nav_buttons >.btn {
 				background-color: var(--fg_muted);
 				transition: background-color var(--transition-fast), opacity 0.2s linear;
-
-				&.paginator_prev_icon, &.paginator_next_icon {
-					.fn_add_mask('chevron_light.svg');
-				}
-				&.paginator_first_icon, &.paginator_last_icon {
-					.fn_add_mask('chevron_double_light.svg');
-					// paginator.less forces 70% on the last icon — normalize
-					mask-size: contain;
-					-webkit-mask-size: contain;
-				}
 
 				&:hover:not(.inactive) {
 					background-color: var(--color_orange_dedalo);
@@ -603,6 +594,22 @@
 
 		>.icon_bs {
 
+		}
+	}
+
+	// latest changes
+	.tm_view_mini {
+
+		.paginator {
+
+		}
+	}
+
+	// component history
+	.tm_view_history {
+
+		.paginator {
+			padding-bottom: 0.5rem;
 		}
 	}
 

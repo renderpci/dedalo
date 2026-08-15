@@ -16,8 +16,8 @@
 * View-dispatcher for component_av in list and TM modes.
 *
 * This module acts as the render entry point for all list-context display of
-* audio/video components. It is mounted on component_av.prototype.list (and
-* reused for component_av.prototype.tm) from component_av.js.
+* audio/video components. It is mounted on component_av.prototype.list from
+* component_av.js; Time Machine cells are list cells and reuse it.
 *
 * The constructor is a no-op placeholder required by the prototype-assignment
 * pattern: all behaviour lives in the prototype methods below.
@@ -47,8 +47,8 @@ export const render_list_component_av = function() {
 * appropriate view module and delegates rendering entirely to it. Falls back
 * to 'default' when the view is absent or unrecognised.
 *
-* This method is also assigned to component_av.prototype.tm in component_av.js,
-* so the TM (time-machine) mode reuses the same list presentation.
+* Time Machine cells reuse this same list presentation — they are emitted as
+* LIST cells (WC-2026-08-14-tm-ddo-mode-retired).
 *
 * @param {Object} options - render options forwarded verbatim to the view module
 * @param {string} [options.render_level='full'] - 'full' builds the wrapper +

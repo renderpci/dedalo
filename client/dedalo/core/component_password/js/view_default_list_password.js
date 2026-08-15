@@ -43,7 +43,7 @@ export const view_default_list_password = function() {
 /**
 * RENDER
 * Builds and returns the wrapper DOM node for a password component rendered
-* inside a list context (mode 'list', 'tm', or 'search').
+* inside a list context (mode 'list' or 'search').
 *
 * Security contract: the actual password stored in `self.data.entries` is
 * intentionally NEVER used for display. A fixed mask string is passed to

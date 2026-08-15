@@ -79,7 +79,7 @@ export const view_text_list_date = function() {
 *   `wrapper_component <model> <mode> view_<view>`
 * where `self.view` is the short view name (e.g. 'text'), `self.model` is the
 * component model string (e.g. 'component_date'), and `self.mode` is the current
-* render mode (e.g. 'list' or 'tm').
+* render mode (e.g. 'list').
 *
 * Data shape expected on `self.data`:
 *   { entries: Array<dd_date_entry> }

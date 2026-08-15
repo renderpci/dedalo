@@ -88,7 +88,7 @@ export const area_common = function() {
 *   @param {string}   options.model      - Component model name, e.g. `'area'`, `'area_thesaurus'`.
 *   @param {string}   options.tipo       - Ontology tipo that identifies this area, e.g. `'oh27'`.
 *   @param {string}   [options.section_tipo] - Section-level tipo; falls back to `options.tipo`.
-*   @param {string}   options.mode       - Display/edit mode, e.g. `'edit'`, `'list'`, `'tm'`.
+*   @param {string}   options.mode       - Display/edit mode, e.g. `'edit'`, `'list'`.
 *   @param {string}   options.lang       - Active language code, e.g. `'lg-spa'`.
 *   @param {Object}   [options.properties]  - Additional configuration from the ontology context.
 *   @param {Object}   [options.parent]   - Parent DOM element or instance reference.

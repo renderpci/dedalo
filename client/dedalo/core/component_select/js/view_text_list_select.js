@@ -71,7 +71,7 @@ export const view_text_list_select = function() {
 * CSS classes applied to the wrapper span:
 *   'wrapper_component' — standard Dédalo component root marker
 *   self.model          — component model name, e.g. 'component_select'
-*   self.mode           — current render mode, e.g. 'list' or 'tm'
+*   self.mode           — current render mode, e.g. 'list'
 *   'view_<self.view>'  — current view variant, e.g. 'view_text'
 *
 * Data contract (from self):

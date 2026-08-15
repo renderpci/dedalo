@@ -68,7 +68,7 @@ export const view_text_list_number = function() {
 *   `wrapper_component <model> <mode> view_<view>`
 * where `self.view` is the short view name ('text'), `self.model` is the component
 * model string ('component_number'), and `self.mode` is the current render mode
-* ('list' or 'tm').
+* ('list').
 *
 * Data shape expected on `self.data`:
 *   { entries: Array<{ id: number|null, value: number|null }> }

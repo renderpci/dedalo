@@ -37,9 +37,9 @@ export const render_list_component_section_id = function() {
 * Dispatch rendering of the section_id value to the appropriate view module
 * based on the context view name.
 *
-* This method is assigned to both component_section_id.prototype.list and
-* component_section_id.prototype.tm so that Time Machine columns display
-* identically to ordinary list cells.
+* This method is assigned to component_section_id.prototype.list. Time Machine
+* columns display identically to ordinary list cells because they ARE ordinary
+* list cells now (WC-2026-08-14-tm-ddo-mode-retired).
 *
 * The view is read from self.context.view; when absent or unrecognised, the
 * 'default' branch renders a standard list-cell wrapper built by ui.component.

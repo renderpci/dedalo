@@ -26,7 +26,6 @@
 *
 * component_info.js wires this module's prototype methods onto the host class:
 *   component_info.prototype.list = render_list_component_info.prototype.list
-*   component_info.prototype.tm   = render_list_component_info.prototype.list
 *
 * The constructor is a no-op placeholder; it exists solely as a prototype carrier
 * following the standard Dédalo render-module pattern (export a function, attach
@@ -48,7 +47,7 @@ export const render_list_component_info = function() {
 * caller-supplied `options` verbatim.
 *
 * Called by `common.prototype.render` via `component_info.prototype.list`
-* (and `prototype.tm`). The returned wrapper element is appended by the
+*. The returned wrapper element is appended by the
 * caller to the enclosing section list row.
 *
 * Note: the `return null` statement after the switch is unreachable because

@@ -5,7 +5,7 @@
  * PHP builds the item in ONE place for every door (section read and the direct
  * component get_data both land in component_filter_records_json), and its rule
  * is mode-shaped:
- *   - 'list' / 'tm'      → get_list_value(), and NO `datalist` key at all;
+ *   - 'list'             → get_list_value(), and NO `datalist` key at all;
  *   - everything else    → the stored entries + `datalist` = get_datalist(),
  *     the sections the LOGGED user administers (level >= 2).
  * Both client renders that consume the key are UNGUARDED
@@ -26,9 +26,10 @@ import type { ComponentEmitHook, EmitHookContext } from '../emit_hooks.ts';
 
 export const filterRecordsEmitHook: ComponentEmitHook = {
 	async decorateItem(item: DataItem, context: EmitHookContext): Promise<void> {
-		// PHP `case 'list': case 'tm':` — the list views read only entries
+		// PHP `case 'list': case 'tm':` (the 'tm' display mode is retired — a Time
+		// Machine cell IS a list cell now) — the list views read only entries
 		// (view_default_list_filter_records:88), so the key stays ABSENT.
-		if (context.ddoMode === 'list' || context.ddoMode === 'tm') return;
+		if (context.ddoMode === 'list') return;
 
 		const { currentPrincipal } = await import('../../security/request_context.ts');
 		const principal = currentPrincipal();

@@ -19,7 +19,6 @@
 * component_password prototype (see component_password.js), making it the
 * entry point for all read-only render contexts:
 *   - mode === 'list'   → component_password.prototype.list
-*   - mode === 'tm'     → component_password.prototype.tm  (Time Machine; reuses list)
 *   - mode === 'search' → component_password.prototype.search (reuses list)
 *
 * Passwords are NEVER shown in plain text in any list view. Every view

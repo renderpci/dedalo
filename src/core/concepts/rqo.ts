@@ -132,6 +132,22 @@ export const rqoSourceSchema = z
 			})
 			.passthrough()
 			.nullish(),
+		/**
+		 * TIME MACHINE SURFACE (WC-2026-08-14-tm-scope-server-owned): WHICH dd15
+		 * block the caller is rendering — the inspector's record-history panel, its
+		 * component-history panel, or (unset) the full-width tool list.
+		 *
+		 * It names a SURFACE, never a column set: the server maps the name onto
+		 * columns, and an unrecognised value falls back to the SQO-derived scope
+		 * rather than 400-ing. So this cannot be used to widen a list, to reach
+		 * another section's history, or to add a column — the properties that made
+		 * the old client-built ddo_map not a permission boundary at all.
+		 *
+		 * Declared rather than left to `.passthrough()` for the same reason the two
+		 * notes above give: a key that rides through undeclared is a key no door
+		 * agrees about.
+		 */
+		tm_surface: z.string().max(64).nullish(),
 	})
 	.passthrough();
 export type RqoSource = z.infer<typeof rqoSourceSchema>;

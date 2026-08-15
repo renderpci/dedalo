@@ -9,7 +9,7 @@
 * Client-side list renderer for component_external.
 *
 * This module supplies the `list` prototype method that is mixed into
-* `component_external` instances when `mode === 'list'` or `mode === 'tm'`
+* `component_external` instances when `mode === 'list'`
 * (Time Machine). The same `list` method is reused for both modes because
 * component_external data is always read-only — the remote API is never
 * mutated by the client, so no separate historical-diff view is required.

@@ -133,7 +133,6 @@ export const component_filter = function(){
 
 	// render
 	component_filter.prototype.list					= render_list_component_filter.prototype.list
-	component_filter.prototype.tm					= render_list_component_filter.prototype.list // TM view reuses the standard list renderer unchanged
 	component_filter.prototype.edit					= render_edit_component_filter.prototype.edit
 	component_filter.prototype.search				= render_search_component_filter.prototype.search
 

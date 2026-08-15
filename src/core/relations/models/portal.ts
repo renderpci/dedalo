@@ -123,7 +123,7 @@ export const portalResolver: RelationModelResolver = {
 		let portalChildren = childDdos;
 		let portalDescendants: Ddo[] | undefined;
 		let cellLimit: number | null = null;
-		const isListCell = ddoMode === 'list' || ddoMode === 'tm';
+		const isListCell = ddoMode === 'list';
 		if (isListCell) {
 			// The cell page limit follows the effective list config even when
 			// the children come from the client map (PHP instance pagination).

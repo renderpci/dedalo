@@ -62,7 +62,7 @@
 .wrapper_tool.tool_time_machine > .content_data .tool_bar .button_apply {
   float: right;
 }
-.wrapper_tool.tool_time_machine > .content_data .service_time_machine {
+.wrapper_tool.tool_time_machine > .content_data .wrapper_section.dd15 {
   height: 100%;
   grid-column-start: 1;
   grid-column-end: 3;

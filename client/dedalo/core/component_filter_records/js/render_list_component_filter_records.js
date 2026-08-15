@@ -16,8 +16,8 @@
 * Client-side list renderer for component_filter_records.
 *
 * This constructor is used exclusively as a prototype mixin source: its `list`
-* method is copied onto `component_filter_records.prototype` (and aliased as
-* `prototype.tm` for Time Machine mode). It is never instantiated directly.
+* method is copied onto `component_filter_records.prototype`. It is never
+* instantiated directly.
 *
 * component_filter_records stores filter criteria for associated records as
 * an `entries` array inside `data`. Each entry holds a section tipo and the

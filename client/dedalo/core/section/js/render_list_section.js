@@ -19,6 +19,7 @@
 	import {view_graph_list_section} from './view_graph_list_section.js'
 	import {view_base_list_section} from './view_base_list_section.js'
 	import {view_thesaurus_list_section} from './view_thesaurus_list_section.js'
+	import {view_tm_list_section} from './view_tm_list_section.js'
 	import {view_search_user_presets} from './view_search_user_presets.js'
 	import {view_export_user_presets} from './view_export_user_presets.js'
 
@@ -82,8 +83,20 @@ render_list_section.list = async function(options) {
 
 	const self = this
 
+	// THE TIME MACHINE LIST.
+	// Keyed on the SECTION, not on a view string: a dd15 list IS the Time Machine
+	// list, always, for every consumer (the tool, the inspector's history blocks,
+	// the bare browse). Routing on `self.view` instead made the row action depend
+	// on an options hop that dd15's context — which declares no view of its own —
+	// could not reinforce, so a lost view silently downgraded the list to a plain
+	// read-only grid with no restore/preview affordance and no error.
+	// See WC-2026-08-14-tm-ddo-mode-retired.
+		if (self.section_tipo==='dd15') {
+			return view_tm_list_section.render(self, options)
+		}
+
 	// view
-		const view = self.context?.view || 'default'
+		const view = self.context?.view || self.view || 'default'
 
 	// wrapper
 		switch(view) {
@@ -96,6 +109,12 @@ render_list_section.list = async function(options) {
 
 			case 'thesaurus_list':
 				return view_thesaurus_list_section.render(self, options)
+
+			// The Time Machine list — an ordinary list whose leading Id cell is the
+			// restore/preview action (WC-2026-08-14-tm-ddo-mode-retired). Everything
+			// else is delegated to view_default_list_section.
+			case 'tm_list':
+				return view_tm_list_section.render(self, options)
 
 			case 'search_user_presets':
 				return view_search_user_presets.render(self, options)

@@ -51,13 +51,13 @@ export const view_text_list_pdf = function() {
 * CSS classes on the wrapper follow the shared Dédalo component-wrapper convention:
 *   'wrapper_component'  — identifies the node as a component wrapper
 *   self.model           — e.g. 'component_pdf'
-*   self.mode            — e.g. 'list', 'tm'
+*   self.mode            — e.g. 'list'
 *   'media'              — marks this as a media-type component node
 *   'view_<self.view>'   — e.g. 'view_text'
 *
 * @param {Object} self    - The component_pdf instance being rendered.
 *   self.model {string}   — component type identifier (e.g. 'component_pdf')
-*   self.mode  {string}   — render mode (e.g. 'list', 'tm')
+*   self.mode  {string}   — render mode (e.g. 'list')
 *   self.view  {string}   — view name (expected 'text' for this module)
 * @param {Object} options - Forwarded from render_list_component_pdf; not currently
 *   used by this view but accepted to satisfy the shared render(self, options) contract.

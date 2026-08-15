@@ -83,7 +83,7 @@ export const view_text_list_text_area = function() {
 *                            .data.fallback_value {Array}  parallel fallback strings
 *                            .context.fields_separator {string} entry join delimiter
 *                            .model {string}  component model name (CSS class)
-*                            .mode  {string}  render mode, e.g. 'list' or 'tm'
+*                            .mode  {string}  render mode, e.g. 'list'
 *                            .view  {string}  view name, 'text' in this module
 * @param {Object} options - Render options forwarded from render_list_component_text_area;
 *                           unused in this view but kept for API parity with sibling views

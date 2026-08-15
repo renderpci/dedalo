@@ -103,8 +103,8 @@ export const area = function() {
 * The rqo construction logic:
 *   - Priority: use an existing `self.rqo` if already set (avoids duplicate builds
 *     across refresh cycles).
-*   - `add_show` is forced true when `self.mode === 'tm'` (time-machine mode) so that
-*     the request includes the show definition needed for TM rendering.
+*   - `add_show` defaults to false unless the caller sets it (the old 'tm'-mode
+*     forcing is gone: no area is ever a Time Machine read).
 *   - When `self.context` already exists (re-build after first render), the
 *     request_config_object is sourced from `self.context.request_config` rather than
 *     `self.request_config` to stay consistent with any ddo_map overrides.
@@ -153,7 +153,7 @@ area.prototype.build = async function(autoload=true) {
 
 			// rqo build
 			const action	= 'get_data'
-			const add_show	= self.add_show ? self.add_show : self.mode==='tm' ? true : false
+			const add_show	= self.add_show ? self.add_show : false // (no area is ever a Time Machine read)
 			self.rqo = self.rqo || await self.build_rqo_show(
 				self.request_config_object, // object request_config_object
 				action,  // string action like 'get_data'

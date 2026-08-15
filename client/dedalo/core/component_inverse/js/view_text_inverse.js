@@ -73,7 +73,7 @@ export const view_text_inverse = function() {
 * CSS classes applied to the wrapper <span>:
 *   'wrapper_component' — standard Dédalo component wrapper marker
 *   self.model          — component model (e.g. 'component_inverse')
-*   self.mode           — current render mode (e.g. 'list', 'tm')
+*   self.mode           — current render mode (e.g. 'list')
 *   'view_<self.view>'  — current view variant (e.g. 'view_text')
 *
 * @param {Object} self    - The component_inverse instance. Must expose

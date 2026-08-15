@@ -18,7 +18,7 @@
 * Constructor for the list-mode render object of component_image.
 *
 * This module provides the `list` prototype method that component_image.prototype.list
-* and component_image.prototype.tm are both assigned to (see component_image.js).
+* is assigned to (see component_image.js).
 * It dispatches to the appropriate view module based on the context view value:
 *   - 'viewer'  → view_viewer_image   (standalone popup viewer window)
 *   - 'mini'    → view_mini_image     (compact thumbnail, e.g. autocomplete results)
@@ -41,9 +41,8 @@ export const render_list_component_image = function() {
 * to its static `render(self, options)` method. Falls through to 'default' for
 * any unrecognised view value.
 *
-* This method is assigned to both component_image.prototype.list and
-* component_image.prototype.tm so that the thesaurus-mode render uses the same
-* view dispatch as the regular record list.
+* This method is assigned to component_image.prototype.list, so the
+* thesaurus-mode render uses the same view dispatch as the regular record list.
 *
 * @param {Object} options - Render options forwarded verbatim to the view module.
 *   Relevant keys depend on the selected view; the mosaic view uses

@@ -84,7 +84,8 @@ const CREATE_DOM_ELEMENT_OPTIONS = new Set([
 	'element_type', 'id', 'type', 'href', 'src', 'class_name', 'style',
 	'title_label', 'title', 'dataset', 'data_set', 'value',
 	'inner_html', 'text_node', 'text_content',
-	'draggable', 'contenteditable', 'name', 'placeholder', 'pattern', 'parent'
+	'draggable', 'contenteditable', 'name', 'placeholder', 'pattern',
+	'disabled', 'selected', 'checked', 'parent'
 ])
 
 export const ui = {
@@ -526,7 +527,11 @@ export const ui = {
 				// Get the ontology CSS defined into the ontology properties.
 				// And insert the rules into CSS style set.
 				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
-				if (model !== 'component_filter' && mode !== 'tm' && Object.keys(element_css).length > 0) {
+				// Time Machine cells must NOT take ontology CSS. The test is the
+				// SECTION, not a render mode: dd15 cells are ordinary list cells now
+				// (WC-2026-08-14-tm-ddo-mode-retired), and every TM cell — meta column
+				// or snapshot column — is emitted under section_tipo 'dd15'.
+				if (model !== 'component_filter' && section_tipo !== 'dd15' && Object.keys(element_css).length > 0) {
 					// CSS is moved from properties to specific property in context
 					// Into tool time machine visualization case, do not add custom CSS from properties
 					set_element_css(
@@ -1816,6 +1821,9 @@ export const ui = {
 	*   name         {string}      — element.name
 	*   placeholder  {string}      — element.placeholder
 	*   pattern      {string}      — element.pattern
+	*   disabled     {boolean}     — element.disabled (input/select/option/button)
+	*   selected     {boolean}     — element.selected (option)
+	*   checked      {boolean}     — element.checked (checkbox/radio)
 	*   parent       {HTMLElement} — when provided, the new element is appended to this node
 	*
 	* Text-content priority (mutually exclusive; first match wins):
@@ -1949,6 +1957,17 @@ export const ui = {
 		// placeholder
 			if(options.placeholder) {
 				element.placeholder = options.placeholder
+			}
+
+		// disabled / selected / checked (boolean props, only when true)
+			if(options.disabled) {
+				element.disabled = true
+			}
+			if(options.selected) {
+				element.selected = true
+			}
+			if(options.checked) {
+				element.checked = true
 			}
 
 		// pattern

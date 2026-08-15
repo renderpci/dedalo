@@ -17,7 +17,7 @@
 * Constructor for the list-mode render object of component_svg.
 *
 * This module provides the `list` prototype method that is assigned to both
-* component_svg.prototype.list and component_svg.prototype.tm in component_svg.js.
+* component_svg.prototype.list in component_svg.js.
 * It dispatches to the appropriate view module based on `self.context.view`:
 *   - 'mini'    → view_mini_list_svg    (compact image thumbnail, e.g. autocomplete)
 *   - 'text'    → view_text_list_svg    (inline <span>/<img> with error fallback)
@@ -40,9 +40,9 @@ export const render_list_component_svg = function() {
 * view value. The method is declared `async` although none of the current view
 * modules return a Promise — they all return an HTMLElement synchronously.
 *
-* This method is assigned to both component_svg.prototype.list and
-* component_svg.prototype.tm so that thesaurus-mode rendering uses the same
-* view dispatch as the regular record list (see component_svg.js).
+* This method is assigned to component_svg.prototype.list, so thesaurus-mode
+* rendering uses the same view dispatch as the regular record list
+* (see component_svg.js).
 *
 * @param {Object} options - Render options forwarded verbatim to the selected view
 *   module. Relevant keys vary by view; `view_default_list_svg` reads

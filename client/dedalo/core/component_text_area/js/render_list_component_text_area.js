@@ -12,7 +12,6 @@
 * component_text_area via:
 *
 *   component_text_area.prototype.list = render_list_component_text_area.prototype.list
-*   component_text_area.prototype.tm   = render_list_component_text_area.prototype.list
 *
 * When `component.render()` is called in list or tm mode it eventually calls
 * `self.list(options)`, which arrives here. The method reads `self.context.view`
@@ -60,9 +59,10 @@ export const render_list_component_text_area = function() {
 * the matching view module. The returned HTMLElement is ready to be inserted into the
 * DOM by the caller (component_common.prototype.render).
 *
-* Called as both `prototype.list` (list mode) and `prototype.tm` (time-machine mode)
-* on component_text_area instances — the distinction is handled by the context, not
-* by this method.
+* Called as `prototype.list` on component_text_area instances. Time Machine cells
+* arrive here too: they are emitted as LIST cells
+* (WC-2026-08-14-tm-ddo-mode-retired), which is what gives a history column the
+* same 130-char truncation and tag rendering as the section's own list.
 *
 * View routing (self.context.view):
 *   'mini'    → view_mini_text_area.render    — autocomplete / datalist thumbnail

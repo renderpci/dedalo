@@ -29,31 +29,31 @@
 		}
 
 		// buttons definitions
+		// ONE icon family, everywhere (2026-08-15): the thin chevrons the
+		// inspector's section paginator introduced. They used to live as an
+		// inspector-only override while the base kept solid play/forward
+		// triangles — the inspector's own comment called the triangles "the odd
+		// ones out". The chevrons point RIGHT like play.svg did, so the
+		// scaleX(-1) mirrors for prev/first are unchanged; fn_add_mask (inside
+		// fn_build_button) sets mask-size:contain, which retires the 70%
+		// mask hacks the double-triangle glyph needed.
 		.btn {
 			&.paginator_first_icon {
-				.fn_build_button('forward.svg', @color_black, 1, 2em);
+				.fn_build_button('chevron_double_light.svg', @color_black, 1, 2em);
 				transform: scaleX(-1);
-				mask-size: 70%;
-				-webkit-mask-size: 70%;
-				mask-repeat: no-repeat;
-				-webkit-mask-repeat: no-repeat;
 			}
 
 			&.paginator_prev_icon {
-				.fn_build_button('play.svg', @color_black, 1, 2em);
+				.fn_build_button('chevron_light.svg', @color_black, 1, 2em);
 				transform: scaleX(-1);
 			}
 
 			&.paginator_next_icon {
-				.fn_build_button('play.svg', @color_black, 1, 2em);
+				.fn_build_button('chevron_light.svg', @color_black, 1, 2em);
 			}
 
 			&.paginator_last_icon {
-				.fn_build_button('forward.svg', @color_black, 1, 2em);
-				mask-size: 70%;
-				-webkit-mask-size: 70%;
-				mask-repeat: no-repeat;
-				-webkit-mask-repeat: no-repeat;
+				.fn_build_button('chevron_double_light.svg', @color_black, 1, 2em);
 			}
 		}
 

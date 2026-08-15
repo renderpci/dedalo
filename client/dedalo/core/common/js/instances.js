@@ -139,7 +139,7 @@ const key_order = ['model','tipo','section_tipo','section_id','mode','lang','par
 *   Optional (supply when known to skip the API round-trip):
 *     {string} model        - Model name (e.g. 'component_input_text').
 *     {string} section_id   - Record ID within the section (numeric string).
-*     {string} mode         - Render mode ('edit', 'list', 'tm', …). Defaults to 'list'.
+*     {string} mode         - Render mode ('edit', 'list', …). Defaults to 'list'.
 *     {string} lang         - Language code (e.g. 'lg-eng'). Defaults to page_globals.dedalo_data_lang.
 *     {string} key          - Pre-built cache key; skips key_instances_builder when provided.
 *     {*}      [...]        - Any additional properties passed through to instance.init().

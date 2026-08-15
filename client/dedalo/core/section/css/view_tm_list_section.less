@@ -1,0 +1,269 @@
+/**
+* view_tm_list_section — the INSPECTOR's two Time Machine panels
+*
+* Included from main.less file.
+*
+* PORTED VERBATIM from the deleted services/service_time_machine/css, renaming
+* only what the DOM renamed when the private list service became an ordinary
+* dd15 `section` instance (WC-2026-08-14-tm-scope-server-owned):
+*
+*   .service_time_machine         -> .tm_list          (the wrapper)
+*   .view_mini / .view_history    -> .tm_view_mini / .tm_view_history
+*   .column_service_time_machine  -> .column_section   (section_record builds the
+*                                    cell class as `column_<column_id>
+*                                    column_<caller model>`, and the caller model
+*                                    is now 'section')
+*
+* The RULES are unchanged on purpose. These panels are ~300px wide, where the
+* full section grid is unusable; the compact two-line block — an orange date line
+* over the value, the note icon pinned right — is the look this subsystem has
+* always had, and preserving it is the requirement.
+*
+* The full-width tool list needs none of this: it renders through the ordinary
+* section list and inherits the ordinary list styling.
+*/
+
+.tm_list {
+
+	// view_mini. Used in inspector section and component changes history
+	&.tm_view_mini {
+
+		>.paginator_container {
+
+			>.wrapper_paginator >.content_data {
+				height: 2rem;
+			}
+		}
+
+		.list_body {
+			display: grid;
+			grid-template-columns: 1fr 1.5fr 2fr !important;
+			align-items: end;
+
+			>.header_wrapper_list {
+
+				.head_column {
+					font-size: 0.85rem;
+					text-align: left;
+
+					// When column
+					&.dd559 {
+						display: none;
+					}
+
+					.name {
+					    margin-left: 0.1rem;
+					}
+				}
+			}
+
+			>.content_data {
+
+				>.section_record {
+					display: contents;
+
+					.column_section {
+						font-size: 0.82rem;
+						padding: 0.25rem;
+						overflow: hidden;
+
+						.span_value {
+							word-break: break-all;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							display: -webkit-box;
+							-webkit-line-clamp: 10; /* number of lines to show */
+							line-clamp: 10;
+							-webkit-box-orient: vertical;
+							height: 100%;
+						}
+
+						// When (date as 18/02/2026 09:40:42)
+						&.column_dd559 {
+							grid-column: 1;
+							grid-column-end: 4;
+							box-shadow: none;
+							// background-color: @color_grey_15;
+							padding: 0.33rem;
+							padding-bottom: 0px;
+							color: @color_orange_dedalo;
+						}
+
+						// Who (user name)
+						&.column_dd578 {
+							grid-column: 1;
+							.span_value();
+
+							span {
+								padding: 0px;
+							}
+						}
+
+						// What (value)
+						&.column_dd577 {
+							grid-column: 2;
+							.span_value();
+							word-break: normal;
+						}
+
+						// Value
+						&.column_dd1574 {
+							grid-column: 3;
+							.span_value();
+						}
+					}
+					// value
+					.column:nth-child(4) {
+						img {
+							max-height: 3rem;
+
+							&.tc, &.index, &.note, &.person, &.lang, &.geo, &.page {
+								max-height: 1rem;
+							}
+							&.view_text {
+								max-height: 4rem;
+							}
+							&.svg {
+								min-height: 2rem;
+							}
+							&.draw {
+								max-height: 1.2rem;
+							}
+						}
+					}
+				}//end >.section_record
+			}//end >.content_data
+		}
+	}//end &.tm_view_mini
+
+
+	&.tm_view_history {
+
+		.list_body {
+			display: contents;
+		}
+
+		.no_records {
+			position: relative;
+			top: 0px;
+		}
+
+		.content_data > .section_record {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr 2.65rem;
+			border-left: 2px solid @color_orange_dedalo;
+
+			.column {
+				display: grid;
+				outline: none;
+				// tightened for the panel: 0.33rem all round wrapped the date onto
+				// two lines and pushed each block ~10px taller than it needs to be
+				padding: 0.2rem 0.35rem;
+				font-size: 90%;
+				align-content: center;
+			}
+
+			@bg_color: @color_grey_13;
+
+			// when (date)
+			.column:nth-child(1)  {
+				grid-column: span 1;
+				background-color: @bg_color;
+			}
+			// who (user name)
+			.column:nth-child(2) {
+				grid-column: span 2;
+				background-color: @bg_color;
+			}
+			// value
+			.column:nth-child(3) {
+				grid-column: span 4;
+				font-size: 90%;
+				word-break: break-all;
+
+				img {
+					max-height: 1rem;
+					vertical-align: text-bottom;
+
+					&.view_text {
+						max-height: 4rem;
+					}
+					&.svg {
+						min-height: 2rem;
+					}
+				}
+			}
+			// notes icon
+			.column:nth-child(4) {
+				grid-column: span 1;
+				grid-column-start: 4;
+    			grid-row-start: 1;
+    			background-color: @bg_color;
+			}
+		}
+	}//end &.tm_view_history
+
+
+	// ---------------------------------------------------------------------
+	// PANEL FIT — both inspector variants
+	//
+	// These live in a ~300px side panel, so every unused pixel is one the value
+	// column does not get. The generic section wrapper brings `display:table` +
+	// 13px padding (a full-page shape) and `.content_data` brings its own flex
+	// padding/gap: together they inset each row ~26px horizontally and add dead
+	// vertical space between blocks. Neither is wanted here — the rows ARE the
+	// panel.
+	// ---------------------------------------------------------------------
+	&.tm_view_mini,
+	&.tm_view_history {
+		display: block;
+		padding: 0;
+		width: 100%;
+
+		// the ROWS are the grid; the list's content_data must not be a box of its
+		// own. Scoped to .list_body: an unscoped `.content_data` also hits the
+		// PAGINATOR's own content_data and collapses its layout.
+		> .list_body > .content_data,
+		.list_body > .content_data {
+			display: contents;
+		}
+
+		// The generic list body is `height: 100%` — right for a full page that
+		// should fill the viewport, wrong in a panel: combined with the mini
+		// variant's `align-items: end` it stretches the grid and settles every row
+		// against the BOTTOM, which reads as a large empty band under the
+		// paginator. Size to content and pack from the top.
+		> .list_body {
+			height: auto;
+			align-content: start;
+		}
+
+		// The paginator is one short line ('1-10 of 80'); it was costing ~39px of a
+		// ~300px panel between its forced 2rem content height and the generic
+		// content_data padding.
+		> .paginator_container {
+			// section.less pins .wrapper_section > .paginator_container to 39px and
+			// inspector.less gives it min-height:73px — both sized for the
+			// inspector's SECTION paginator card, which shares a surface with the
+			// actions toolbar. A Time Machine panel has no toolbar and no card to
+			// match, so it takes neither.
+			height: auto;
+			min-height: 0;
+			contain: none;
+			background-color: transparent;
+			padding: 0;
+			margin: 0;
+
+			> .wrapper_paginator {
+				margin: 0;
+
+				> .content_data {
+					height: auto;
+					min-height: 0;
+					padding: 0.1rem 0.25rem;
+				}
+			}
+		}
+	}//end panel fit
+
+}//end .tm_list

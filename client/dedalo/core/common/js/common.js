@@ -68,7 +68,7 @@ export const common = function(){
 * @param {string} options.tipo - Ontology tipo of this instance, e.g. 'dd345'
 * @param {string} options.section_tipo - Ontology tipo of the parent section, e.g. 'oh1'
 * @param {string|number} options.section_id - Record identifier within the section
-* @param {string} options.mode - Render mode: 'edit', 'list', 'search', 'tm', etc.
+* @param {string} options.mode - Render mode: 'edit', 'list', 'search', etc.
 * @param {string} options.lang - Active language tag, e.g. 'lg-eng'
 * @param {string} [options.type] - Instance type classifier: 'component', 'section', 'area', etc.
 * @param {Object|null} [options.context=null] - Server-resolved context (properties, tools, permissions, etc.)
@@ -535,9 +535,10 @@ common.prototype.render = async function (options={}) {
 
 		// warning when fallback render mode
 			if (current_render_mode!==render_mode) {
-				if(render_mode !== 'tm') {
-					console.warn(`Invalid render_mode '${render_mode}', falling back to 'list'.`);
-				}
+				// (The 'tm' exemption is gone with the render mode itself —
+				// WC-2026-08-14-tm-ddo-mode-retired. Nothing renders in 'tm' now, so
+				// any fallback reaching here is a genuine misconfiguration.)
+				console.warn(`Invalid render_mode '${render_mode}', falling back to 'list'.`);
 			}
 
 		// render options

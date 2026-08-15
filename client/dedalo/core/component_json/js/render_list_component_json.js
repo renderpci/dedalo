@@ -29,7 +29,7 @@
 *                                               the toggle to sibling elements)
 *
 * component_json assigns this module's `list` prototype method to both
-* `component_json.prototype.list` and `component_json.prototype.tm`, so
+* `component_json.prototype.list`, so
 * time-machine rows reuse the same rendering path without duplication.
 *
 * The constructor is never called directly; it exists only as a prototype
@@ -51,7 +51,7 @@ export const render_list_component_json = function() {
 * caller-supplied `options`.
 *
 * Called by `common.prototype.render` via `component_json.prototype.list`
-* (and `prototype.tm`). The returned wrapper node is appended to the
+*. The returned wrapper node is appended to the
 * section's list row by the framework.
 *
 * The 'collapse' case is the only view specific to this component's list

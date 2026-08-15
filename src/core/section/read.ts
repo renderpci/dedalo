@@ -30,7 +30,7 @@ import { type EmitHookContext, getEmitHook } from '../components/emit_hooks.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
 import { callerDataframePairing, isTemporalSource, type Rqo } from '../concepts/rqo.ts';
-import { isConsultationOnlySection } from '../concepts/section.ts';
+import { isConsultationOnlySection, TIME_MACHINE_SECTION_TIPO } from '../concepts/section.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
@@ -85,13 +85,57 @@ export interface ReadResult {
  * per resolved component ddo, deduplicated by context_key (tipo+section+mode,
  * first occurrence wins — PHP merge_unique_context).
  */
-export function readSection(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
+export async function readSection(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
 	// One read = one point-in-time view, so a matrix row fetched for one
 	// component is reused by every other component that wants it (see
 	// db/record_memo.ts — the component_info widgets otherwise re-read the same
 	// whole row once per declared path). The scope dies with the read; nothing
 	// on the write path opens it.
+	// A Time Machine read ALSO publishes its SCOPE — the caller section whose
+	// history it reads — for the per-ddo permission floor
+	// (WC-2026-08-14-tm-permission-floor). Here rather than in read_facade so
+	// direct callers (readTimeMachineData, the native gates) resolve the same
+	// permissions an HTTP request would. The scope is opened for EVERY TM read,
+	// browse included: its PRESENCE is the `data_source === 'tm'` signal, its
+	// SECTION is the authorization input, and an absent section (the bare browse)
+	// is the fail-closed "admin only" answer.
+	if ((rqo.sqo as { mode?: string } | undefined)?.mode === 'tm') {
+		const [{ resolveTimeMachineScopeSection }, { runWithTimeMachineScope }] = await Promise.all([
+			import('./list_definitions/time_machine_list.ts'),
+			import('./list_definitions/tm_scope_context.ts'),
+		]);
+		const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
+		return runWithTimeMachineScope(scope.sectionTipo, () =>
+			runWithRecordMemo(() => readSectionScoped(rqo, principal)),
+		);
+	}
+
 	return runWithRecordMemo(() => readSectionScoped(rqo, principal));
+}
+
+/**
+ * A read that declared `source.session_save:false` has declared itself OUTSIDE
+ * session navigation — so its context must not carry the section's stored
+ * session SQO back to the client either. The client ADOPTS `sqo_session`
+ * wholesale on its next build (section.js: `self.rqo.sqo = self.context
+ * .sqo_session`), so stamping it onto a session-less read hands that read a
+ * FOREIGN query: the embedded Time Machine panels share callerTipo 'dd15' with
+ * the standalone dd15 browse, and a panel that adopted the browse's stored sqo
+ * (offset 26, no filter) started listing the WHOLE 2.4M-row table on its first
+ * pagination — silently, as always. Persist and merge already honour the flag
+ * (readSectionRows); this closes the third door.
+ */
+function stripSessionSqoStamp(
+	context: StructureContextEntry[],
+	source: Record<string, unknown>,
+): StructureContextEntry[] {
+	if (source.session_save !== false) return context;
+	for (const entry of context) {
+		if ((entry as { sqo_session?: unknown }).sqo_session !== undefined) {
+			(entry as { sqo_session?: unknown }).sqo_session = null;
+		}
+	}
+	return context;
 }
 
 async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
@@ -172,7 +216,7 @@ async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadR
 			data.filter((item): item is DataItem => (item as { typo?: string }).typo !== 'sections'),
 			{ sectionTipo: source.section_tipo ?? callerTipo, lang, principal, capForReadTarget },
 		);
-		return { context: ownContext, data };
+		return { context: stripSessionSqoStamp(ownContext, source as Record<string, unknown>), data };
 	}
 
 	const context: StructureContextEntry[] = [];
@@ -308,7 +352,7 @@ async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadR
 
 	attachSectionTabChildren(context);
 
-	return { context, data };
+	return { context: stripSessionSqoStamp(context, source as Record<string, unknown>), data };
 }
 
 /**
@@ -1396,6 +1440,35 @@ async function resolveSectionColumnDdoMap(
 			);
 		}
 	}
+	// TIME MACHINE (dd15): the columns are derived from the AUTHORISED SCOPE, not
+	// from dd15's own ontology (WC-2026-08-14-tm-scope-server-owned). Resolved
+	// through the SAME helper the structure-context uses, so the data half and the
+	// context half cannot disagree — a client binds a cell to its context by an
+	// exact (tipo, mode, section_tipo) match and silently drops any column where
+	// the two differ. `null` = no server opinion (the bare browse), which falls
+	// through to the ordinary ontology derivation below.
+	if (sectionTipo === TIME_MACHINE_SECTION_TIPO) {
+		const { resolveTimeMachineScope, tmListColumns } = await import(
+			'./list_definitions/time_machine_list.ts'
+		);
+		const source = rqo.source ?? {};
+		const scope = resolveTimeMachineScope(rqo.sqo as Record<string, unknown> | undefined, {
+			surface: (source as { tm_surface?: unknown }).tm_surface,
+		});
+		const derived = await tmListColumns(scope);
+		if (derived !== null) {
+			return derived.map(
+				(column) =>
+					({
+						tipo: column.tipo,
+						section_tipo: TIME_MACHINE_SECTION_TIPO,
+						parent: TIME_MACHINE_SECTION_TIPO,
+						mode: 'list',
+						view: column.view ?? undefined,
+					}) as Ddo,
+			);
+		}
+	}
 	return deriveSectionDdoMap(callerTipo, sectionTipo, mode);
 }
 
@@ -1454,20 +1527,26 @@ export async function readSectionRows(
 	// with the given mode; row acquisition is mode-agnostic there). Normalize
 	// to 'list': 'search' is a UI mode, not a row-read mode — the emission
 	// path is the frozen BUG-0 picker contract (autocomplete_search_differential).
-	const mode = source.mode === 'search' ? 'list' : (source.mode ?? 'list');
+	// A Time Machine read is a LIST read (WC-2026-08-14-tm-ddo-mode-retired): the
+	// row SOURCE is chosen by sqo.mode, never by this render mode. DECLARED
+	// EXEMPTION — 'tm' is still ACCEPTED here and normalized rather than refused,
+	// because tool/component JS is served without a cachebust: a browser holding
+	// yesterday's client still sends the old render mode, and answering a 500 to a
+	// stale-but-honest request would break the history panel until a hard reload.
+	// The alias is input tolerance only; nothing downstream ever sees 'tm'.
+	const rawMode = source.mode === 'tm' ? 'list' : source.mode;
+	const mode = rawMode === 'search' ? 'list' : (rawMode ?? 'list');
 	// Request-scoped data lang, never a hardcoded install default (S2-28): an
 	// RQO that omits lang resolves the session's active data language.
 	const lang = source.lang ?? currentDataLang();
-	// 'tm' is served by the Time Machine read source (dd15) through this same
-	// generic path; 'list'/'edit' by the default matrix source.
 	// 'list_thesaurus' (the thesaurus section build — client section.js:800
 	// normalizes it back to 'list' after the fetch) is a plain list read on the
 	// row side (PHP dd_core_api :2256 row acquisition is mode-agnostic); the mode
 	// only steers the derived column selection (request_config build →
 	// section_list_thesaurus instead of section_list) and the context swap.
-	if (mode !== 'list' && mode !== 'edit' && mode !== 'tm' && mode !== 'list_thesaurus') {
+	if (mode !== 'list' && mode !== 'edit' && mode !== 'list_thesaurus') {
 		throw new Error(
-			`readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'tm', 'list_thesaurus')`,
+			`readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'list_thesaurus')`,
 		);
 	}
 	// The client's show.ddo_map wins; else a caller section_map get_ddo_map
@@ -1692,13 +1771,13 @@ export async function emitDdoData(
 				lang?: string;
 				value?: string;
 			}[]) ?? [];
-		const { termByTipo } = await import('../ontology/labels.ts');
+		// Same helper as the TM What/Where columns — one «term» [tipo] shape for
+		// every column that stores a tipo (WC-2026-08-14-tm-cells-obey-list-emit-policy).
+		const { ontologyTermLabel } = await import('../ontology/labels.ts');
 		const entries: unknown[] = [];
 		for (const item of stored) {
 			const raw = String(item?.value ?? '');
-			const resolved = /^[a-z]+[0-9]+$/.test(raw)
-				? `${await termByTipo(raw, defaultLang)} [${raw}]`
-				: raw;
+			const resolved = /^[a-z]+[0-9]+$/.test(raw) ? await ontologyTermLabel(raw, defaultLang) : raw;
 			entries.push({ ...item, value: resolved });
 		}
 		const whereItem = buildDataItem(

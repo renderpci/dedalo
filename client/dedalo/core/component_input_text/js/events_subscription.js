@@ -19,8 +19,8 @@
 *   1. events_subscription(self)   — shared layer defined in
 *        core/component_common/js/events_subscription.js.
 *        Registers the 'render_{id}' hilite subscription (search mode) and the
-*        'sync_data_{id_base}_{lang}' cross-DOM sync subscription (all modes
-*        except 'tm'). That shared function receives `self` as an explicit
+*        'sync_data_{id_base}_{lang}' cross-DOM sync subscription (skipped for
+*        Time Machine views). That shared function receives `self` as an explicit
 *        argument and is called from component_common.prototype.init.
 *
 *   2. self.events_subscription()  — this file; assigned to
@@ -76,8 +76,7 @@ export const events_subscription = function() {
 		// 	event_manager.subscribe('update_value_'+self.id_base, fn_update_value)
 		// )
 		// function fn_update_value (options) {
-
-		// 	if (self.mode==='tm') {
+		// 	if (self.mode==='tm') { // (the retired render mode; block already dead)
 		// 		return
 		// 	}
 		// 	console.log('self.mode:', self.mode);

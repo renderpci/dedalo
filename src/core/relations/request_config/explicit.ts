@@ -552,11 +552,12 @@ async function processSingleDdo(
 	}
 	const parent = rawDdo.parent === 'self' ? context.ownerTipo : ((rawDdo.parent as string) ?? '');
 
-	// step 7: mode — unset modes: tm propagates; non-section owners force
-	// 'list'; section owners inherit the caller mode (PHP resolve_ddo_mode).
+	// step 7: mode — unset modes: non-section owners force 'list'; section owners
+	// inherit the caller mode (PHP resolve_ddo_mode). The 'tm' propagation arm is
+	// gone with the display mode itself (WC-2026-08-14-tm-ddo-mode-retired): a
+	// Time Machine ddo now arrives as 'list' and takes the ordinary path.
 	const rawMode = rawDdo.mode as string | undefined;
-	const mode =
-		rawMode ?? (context.mode === 'tm' ? 'tm' : context.ownerIsSection ? context.mode : 'list');
+	const mode = rawMode ?? (context.ownerIsSection ? context.mode : 'list');
 
 	// step 5: label enrichment when absent.
 	const label = (rawDdo.label as string | undefined) ?? (await contextLabelOf(tipo));

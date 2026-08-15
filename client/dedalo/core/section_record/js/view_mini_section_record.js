@@ -76,7 +76,7 @@ export const view_mini_section_record = function() {
 *   @param {string}        self.id            - Stable DOM id for the wrapper element.
 *   @param {string}        self.model         - Always 'section_record'.
 *   @param {string}        self.tipo          - Ontology tipo of the owning component/section.
-*   @param {string}        self.mode          - Render mode (e.g. 'list', 'search', 'tm').
+*   @param {string}        self.mode          - Render mode (e.g. 'list', 'search').
 *   @param {Object}        self.context       - Record context descriptor.
 *   @param {string}        self.context.view  - Active view name, e.g. 'mini'.
 *   @param {string}        [self.context.fields_separator] - Separator injected between

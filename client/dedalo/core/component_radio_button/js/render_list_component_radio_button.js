@@ -23,7 +23,7 @@
 *   - 'text'    → view_text_list_radio_button      (plain <span> for embedding in rich text)
 *
 * component_radio_button assigns this module's `list` prototype method to both
-* `component_radio_button.prototype.list` and `component_radio_button.prototype.tm`,
+* `component_radio_button.prototype.list`,
 * so time-machine rows reuse the same rendering path.
 *
 * The constructor itself is never called directly; it exists only to act as a
@@ -45,7 +45,7 @@ export const render_list_component_radio_button = function() {
 * `options`.
 *
 * Called by `common.prototype.render` via `component_radio_button.prototype.list`
-* (and `prototype.tm`). The returned wrapper is appended to the section's list row.
+*. The returned wrapper is appended to the section's list row.
 *
 * @param {Object} options - Caller options forwarded verbatim to the view renderer.
 *   Contents vary by view; most views ignore this parameter in list mode.

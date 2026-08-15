@@ -136,7 +136,6 @@ export const component_av = function(){
 
 	// render — delegates to mode-specific render modules
 	component_av.prototype.list					= render_list_component_av.prototype.list
-	component_av.prototype.tm					= render_list_component_av.prototype.list // TM mode reuses the list renderer
 	component_av.prototype.edit					= render_edit_component_av.prototype.edit
 	component_av.prototype.search				= render_search_component_av.prototype.search
 

@@ -53,7 +53,7 @@ export const view_text_json = function() {
 * The wrapper span receives three CSS classes to allow targeted styling:
 *   - 'wrapper_component'   – shared Dédalo component wrapper marker
 *   - self.model            – e.g. 'component_json'
-*   - self.mode             – e.g. 'list' or 'tm'
+*   - self.mode             – e.g. 'list'
 *   - view_{self.view}      – e.g. 'view_text' (resolved from context.view)
 *
 * No click handlers, labels, or edit affordances are added; this is

@@ -106,8 +106,8 @@ render_tool_time_machine.prototype.edit = async function (options) {
 *        - revert_label <span> (shows either admin process info or a non-admin
 *          advisory message when a bulk-process row is selected)
 *        - "Apply and save" button (starts hidden; revealed on row selection)
-*   4. service_time_machine node — the rendered history list returned by
-*      self.service_time_machine.render(). This is the scrollable list of past
+*   4. tm_list node — the rendered history list returned by
+*      self.tm_list.render() (a dd15 `section` instance). The scrollable list of past
 *      snapshots with their timestamps, user info, and preview eye-icon actions.
 *
 * Side effects:
@@ -287,8 +287,8 @@ const get_content_data = async function(self) {
 				})
 		}//end if (self.caller!=='section')
 
-	// service_time_machine. Render instance
-		const time_machine_list_node = await self.service_time_machine.render()
+	// tm_list. Render the dd15 section instance
+		const time_machine_list_node = await self.tm_list.render()
 		fragment.appendChild(time_machine_list_node)
 
 	// content_data
@@ -312,7 +312,7 @@ const get_content_data = async function(self) {
 *      self.main_element is used directly (no API round-trip).
 *   2. tool_time_machine.init's tm_edit_record event subscriber — to populate
 *      preview_component_container with a historical snapshot. In this case
-*      matrix_id is the row id from matrix_time_machine and mode is 'tm'.
+*      matrix_id is the row id from matrix_time_machine.
 *
 * Loading pattern:
 *   ui.load_item_with_spinner shows a spinner placeholder inside container,
@@ -326,7 +326,7 @@ const get_content_data = async function(self) {
 *        show_interface.tools=false, show_interface.read_only=true. This prevents
 *        the user from accidentally editing the displayed value.
 *     c. Renders the component with render_mode:'edit' (the component's edit
-*        template is reused in read-only form; a dedicated 'tm' render template
+*        template is reused in read-only form; a dedicated read-only render template
 *        does not exist).
 *     d. Appends a time_label div below the rendered node showing the label
 *        string (e.g. "Now" or the formatted timestamp from the selected row).
@@ -334,9 +334,11 @@ const get_content_data = async function(self) {
 * The container is cleared before loading (preserve_content:false), so calling
 * this function again on the same container replaces the previous content.
 *
-* (!) When matrix_id is not null, callers MUST pass mode='tm' so that
-*     self.get_component() sets data_source:'tm'. Passing 'edit' would cause
-*     the component to load from the live table and show the current value again.
+* (!) What binds the preview to the historical row is `matrix_id` +
+*     `data_source:'tm'`, both set by self.get_component() — NOT a render mode.
+*     The ddo display mode 'tm' is retired (WC-2026-08-14-tm-ddo-mode-retired)
+*     and the `mode` argument below has always been ignored by get_component,
+*     which hardcodes 'edit' and then forces the render read-only.
 *
 * @param {Object} self - The tool_time_machine instance.
 * @param {HTMLElement} component_container - Target DOM node. Its children are
@@ -345,8 +347,9 @@ const get_content_data = async function(self) {
 *   Passing a falsy value clears the container and returns false immediately.
 * @param {string} label - Human-readable label shown in the time_label div,
 *   e.g. 'Now' or '2024-03-15 10:42:00'.
-* @param {string} mode - Component rendering mode. Use 'edit' for the live panel
-*   and 'tm' for the historical preview panel.
+* @param {string|null} mode - IGNORED (kept for call-site symmetry): the panel is
+*   always rendered from the component's edit template in read-only form. Which
+*   VALUE it shows is decided by matrix_id/data_source, not by this argument.
 * @param {number|null} [matrix_id=null] - Primary key of the matrix_time_machine
 *   row to display. null means "display the current live value".
 * @returns {HTMLElement|boolean} The spinner/placeholder node returned by

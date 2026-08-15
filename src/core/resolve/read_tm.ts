@@ -3,18 +3,21 @@
  * section::get_tm_context). Lists a record's change history from
  * matrix_time_machine (flat columns, NOT the jsonb matrix shape) as the
  * standard read wire contract: a dd15 sections envelope whose entries carry
- * matrix_id/timestamp/caller/user facts, plus per-row component items built
- * by TRANSFORMING the flat columns into component-shaped values
- * (tm_record::get_section_record):
+ * matrix_id/timestamp/caller/user facts, plus per-row component items.
  *
- *  - dd1371 bulk_process_id → number item (null stored ⇒ value 0)
- *  - dd559  timestamp       → date item {start: dd_date}
- *  - dd578  user_id         → portal locator into dd128 + a username SUBDATUM
- *                             item (from matrix_users; the dd128 component tipo
- *                             is resolved from dd578's ontology ddo_map — PHP
- *                             behavior, S2-43 channel 2)
- *  - dd577  tipo            → input_text item "«term» [tipo]" in the request
- *                             lang (PHP get_term_by_tipo + bracket suffix)
+ * ONE PIPELINE (WC-2026-08-14-tm-cells-obey-list-emit-policy). This module owns
+ * ROW ACQUISITION — the WHERE, the ORDER, the count, the envelope — and nothing
+ * else. Every CELL is emitted by the shared `emitDdoData` in LIST mode over the
+ * virtual dd15 record that `tm_record.ts` materializes per row, so the dd15 meta
+ * columns and the caller section's own columns render through exactly the same
+ * component emit hooks as they do in a section's own list: text_area truncation
+ * and tag resolution, `fallback_value`, original-language forcing, the portal
+ * subdatum. There is no second cell policy here any more; the flat columns are
+ * transformed into component-shaped values ONCE, in `buildTmSectionRecord`.
+ *
+ * The only cell knowledge left in this file is `TM_CELL_DECORATORS` (the rsc329
+ * note-navigation keys, which are not properties of any value) and the
+ * superuser display name — both named, both small, both enumerable.
  *
  * FILTERS: filter_by_locators and/or conformed sqo.filter columns (the _tm
  * builder twins; the inspector/tool record-history cases —
@@ -23,16 +26,17 @@
  * scope and denies loudly. ORDER: the TM id column only (PHP default).
  *
  * PERMISSIONS: the dispatch read gates apply per SQO target (the CALLER
- * section, level >= 1); dd15 itself is admin-only via the getPermissions
- * wrapper rule when addressed directly.
+ * section, level >= 1). dd15's own columns resolve through the ordinary per-ddo
+ * authz loop, floored by the §7.4 `time_machine_list` grant on the caller
+ * section (WC-2026-08-14-tm-permission-floor); the unscoped browse is
+ * global-admin only.
  */
 
 import { config } from '../../config/config.ts';
 import type { Ddo } from '../concepts/ddo.ts';
-import type { StoredSectionId } from '../concepts/locator.ts';
+import { compareLocators, type StoredSectionId } from '../concepts/locator.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
-import type { MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -40,7 +44,6 @@ import { termByTipo } from '../ontology/labels.ts';
 import {
 	getColumnNameByModel,
 	getModelByTipo,
-	getNode,
 	getTranslatableByTipo,
 } from '../ontology/resolver.ts';
 import type {
@@ -49,10 +52,9 @@ import type {
 	SectionReadSource,
 	SectionRow,
 } from '../section/read_source.ts';
-import type { Principal } from '../security/permissions.ts';
+import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import {
 	buildTmSectionRecord,
-	ddDateFromTimestamp,
 	TM_COLUMN_BULK_PROCESS_ID as TIPO_BULK_PROCESS,
 	TM_COLUMN_TIPO as TIPO_COMPONENT,
 	TM_COLUMN_DATA as TIPO_DATA,
@@ -64,7 +66,7 @@ import {
 	TM_COLUMN_USER_ID as TIPO_USER,
 	TM_NOTES_SECTION_TIPO,
 } from '../tm_record/tm_record.ts';
-import { EmissionContext, filterItemsByLang, readComponentItems } from './component_data.ts';
+import { EmissionContext } from './component_data.ts';
 import { currentDataLang } from './request_lang.ts';
 import type { StructureContextEntry } from './structure_context.ts';
 import { conformTmFilter, type ParamSink } from './tm_filter.ts';
@@ -83,6 +85,9 @@ function tipoColumnFilter(sqo: Record<string, unknown>): string | null {
 
 /** TM virtual section + the users section (the rest come from tm_record.ts). */
 const TM_SECTION_TIPO = 'dd15';
+
+/** The two properties that ADDRESS a record — the locator pair, nothing else. */
+const LOCATOR_ADDRESS_PROPERTIES = ['section_tipo', 'section_id'] as const;
 
 /**
  * dd15 list-column tipo → the matrix_time_machine FLAT COLUMN its header-click
@@ -139,27 +144,12 @@ const tmBareCountCache = createDataCache<string, { value: number; at: number }>(
 );
 const USERS_SECTION_TIPO = 'dd128';
 
-/**
- * The dd128 component shown as the dd578 user SUBDATUM. PHP resolves it from
- * the live ontology — dd578's properties `source.request_config[0].show
- * .ddo_map[0].tipo` — NOT from a constant. Hardcoding it (previously 'dd132')
- * pinned an ontology-driven value as code: when the shared ontology changed
- * the ddo to dd452, the three TM parity gates went red with zero TS change
- * (S2-43 channel 2). Derived per call through the hub-registered node cache,
- * with dd132 kept only as the last-resort fallback for a broken ontology row.
- */
-const USERNAME_COMPONENT_FALLBACK = 'dd132';
-async function usernameComponentTipo(): Promise<string> {
-	const node = await getNode(TIPO_USER);
-	const requestConfig = (
-		node?.properties as
-			| { source?: { request_config?: { show?: { ddo_map?: { tipo?: unknown }[] } }[] } }
-			| null
-			| undefined
-	)?.source?.request_config;
-	const ddoTipo = requestConfig?.[0]?.show?.ddo_map?.[0]?.tipo;
-	return typeof ddoTipo === 'string' && ddoTipo !== '' ? ddoTipo : USERNAME_COMPONENT_FALLBACK;
-}
+// The dd128 component shown as the dd578 username SUBDATUM is no longer resolved
+// here. It used to be read by hand off dd578's `source.request_config[0].show
+// .ddo_map[0].tipo` because the cell was hand-built; hardcoding it as 'dd132' had
+// previously reddened three TM gates when the shared ontology moved the ddo to
+// dd452 (S2-43 channel 2). The generic portal emission reads that same
+// request_config, so the ontology is once again the only place the answer lives.
 
 /**
  * The row shape this reader selects (a superset of the shared TimeMachineRow:
@@ -288,23 +278,45 @@ export interface TmReadData {
 	unhandled: string[];
 }
 
-/** The user-display items of one user record (matrix_users, ontology-derived tipo). */
-async function usernameItems(userId: number, usernameTipo: string): Promise<unknown[]> {
-	// usernameTipo comes from the ontology ddo_map (a dd-tipo like 'dd452'),
-	// interpolated as a jsonb key; parameterize defensively anyway.
-	const rows = (await sql.unsafe(
-		`SELECT COALESCE(data->$2::text, string->$2::text) AS items
-		 FROM matrix_users WHERE section_id = $1`,
-		[userId, usernameTipo],
-	)) as { items: unknown[] | null }[];
-	const items = rows[0]?.items ?? [];
-	// Root special resolution in 'tm' mode (PHP component_input_text::
-	// get_list_value): the superuser row (-1) typically stores no display name;
-	// PHP hard-resolves it to 'Root' so the history user column is not blank.
-	if (items.length === 0 && Number(userId) === -1) {
-		return [{ value: 'Root', lang: 'lg-nolan' }];
+/**
+ * The SUPERUSER display name in a history Who column (PHP
+ * component_input_text::get_list_value, the 'tm' branch).
+ *
+ * The superuser row (-1) typically stores no display name, so the generic portal
+ * emission resolves an empty username slice and the Who column renders blank —
+ * on installs where most history was written by root, that is most of the
+ * column. PHP hard-resolves it to 'Root'; this keeps that, applied to whichever
+ * nested subdatum item the portal emitted rather than to a hand-built cell.
+ *
+ * Kept as an explicit named step (not folded into a component hook): it is a
+ * property of the USERS section's superuser row, not of any component model.
+ */
+function applySuperuserDisplayName(slice: Record<string, unknown>[], userId: number): void {
+	if (Number(userId) !== SUPERUSER_ID) return;
+	// The item is ADDRESSED by a locator pair, so it is compared as one: the
+	// locator law owns section_id equality (loose-numeric — a stored '-1' matches
+	// -1, which an inline === would miss), and S2-04/DEC-21 forbids re-deriving
+	// that rule inline anywhere but concepts/locator.ts.
+	const superuserLocator = { section_tipo: USERS_SECTION_TIPO, section_id: SUPERUSER_ID };
+	for (const item of slice) {
+		if (!compareLocators(item as never, superuserLocator as never, LOCATOR_ADDRESS_PROPERTIES)) {
+			continue;
+		}
+		const entries = item.entries;
+		const empty =
+			entries === null ||
+			entries === undefined ||
+			(Array.isArray(entries) &&
+				(entries.length === 0 ||
+					entries.every(
+						(entry) =>
+							entry === null ||
+							typeof entry !== 'object' ||
+							(entry as { value?: unknown }).value === undefined ||
+							(entry as { value?: unknown }).value === '',
+					)));
+		if (empty) item.entries = [{ value: 'Root', lang: 'lg-nolan' }];
 	}
-	return items;
 }
 
 /** The TM row-plus that a SectionRow carries in `raw` for emitTmRow. */
@@ -495,11 +507,60 @@ function tmEnvelopeExtra(row: TmRow): Record<string, unknown> {
 }
 
 /**
- * Emit ONE dd15 row's data items into the emission context for every requested ddo tipo — the
- * who/when/where/what meta blocks (dd1371/dd559/dd578+username-ddo/dd577) and, in the
- * record-snapshot list, the section's own component cells resolved from the
- * virtual dd15 record (SELECT-family → flat 'list' labels, portal-family → 'tm'
- * locator+subdatum). `emitDdo` is the shared emitDdoData, passed in.
+ * Per-cell decorations that are NOT derivable from the virtual record — the one
+ * place dd15 still needs hand-written cell knowledge after the unification
+ * (WC-2026-08-14-tm-cells-obey-list-emit-policy).
+ *
+ * Exactly one member, and it earns its place: the rsc329 annotation item carries
+ * the note-record NAVIGATION keys the client note view consumes
+ * (view_note_text_area.js) — `matrix_id` (the TM row id; note creation aborts
+ * without it), `parent_section_tipo`/`parent_section_id` (the notes section
+ * rsc832 + the existing note record, or null) and `created_by_user_id`. None of
+ * those are properties of the VALUE, so no emit hook could produce them.
+ *
+ * `parent_section_id` is lifted OFF the first entry, where tm_record.ts's
+ * `tmNoteValue` parked it (PHP component_text_area_json's 'tm' branch did the
+ * same lift). The rest of the entry array is ADOPTED STORED TM DATA and is never
+ * rewritten — a snapshot must keep the bytes the engine of the day wrote.
+ *
+ * A dd15 column with no decorator is simply generic. That is the point: the
+ * default is the shared pipeline, and every deviation is enumerable here.
+ */
+const TM_CELL_DECORATORS: Readonly<
+	Record<string, (item: Record<string, unknown>, row: TmRow) => void>
+> = {
+	[TIPO_NOTES]: (item, row) => {
+		const entries = Array.isArray(item.entries) ? (item.entries as Record<string, unknown>[]) : [];
+		const first = entries[0];
+		const parentSectionId =
+			first !== undefined && first !== null && typeof first === 'object'
+				? ((first.parent_section_id ?? null) as StoredSectionId | null)
+				: null;
+		if (first !== undefined && first !== null && typeof first === 'object') {
+			const { parent_section_id: _lifted, ...rest } = first;
+			item.entries = [rest, ...entries.slice(1)];
+		}
+		item.parent_section_id = parentSectionId;
+		item.parent_section_tipo = TM_NOTES_SECTION_TIPO;
+		item.created_by_user_id = Number(row.user_id);
+		item.matrix_id = row.id;
+	},
+};
+
+/**
+ * Emit ONE dd15 row's data items — one generic cell per requested ddo, resolved
+ * from the virtual dd15 record that `tm_record.ts` materializes for the row.
+ *
+ * THE UNIFICATION (WC-2026-08-14-tm-cells-obey-list-emit-policy): every cell goes
+ * through the shared `emitDdoData` in LIST mode, so every component emit hook
+ * fires here exactly as it does in the section's own list — text_area truncation
+ * (130 chars) with `addTagImgOnTheFly` and the DOS-01 source cap, the
+ * `fallback_value` key, original-language forcing. The old private
+ * `emitScalarCell` pushed `readComponentItems()` straight onto `emission.items`
+ * and therefore skipped all of it, which is why a transcript column rendered
+ * hundreds of characters of raw `[TC_…]` / `[index-…]` markup into a list cell.
+ *
+ * `emitDdo` is the shared emitDdoData, passed in (read_source.ts seam).
  */
 async function emitTmRow(
 	row: TmRow,
@@ -517,208 +578,107 @@ async function emitTmRow(
 	}
 	const clientDdoMap = ddoMap as unknown[];
 
-	// The record-snapshot list resolves the section's OWN components from a
-	// virtual dd15 record materialized by the SINGLE dd15 builder (tm_record.ts).
-	// Built lazily: only the default (snapshot-component) branch needs it.
-	let tmRecord: MatrixRecord | null = null;
-	const getTmRecord = async (): Promise<MatrixRecord> => {
-		if (tmRecord === null) {
-			// TmRow is TimeMachineRow minus the parity `dataText` twin (unused here).
-			tmRecord = await buildTmSectionRecord(row as unknown as TimeMachineRow, lang);
+	// Every cell resolves from the virtual dd15 record materialized by the SINGLE
+	// dd15 builder (tm_record.ts) — the meta columns (who/when/where/what/process/
+	// note) AND the section's own components in the record-snapshot list. It is
+	// built once per row now rather than lazily: every branch needs it.
+	// TmRow is TimeMachineRow minus the parity `dataText` twin (unused here).
+	const tmRecord = await buildTmSectionRecord(row as unknown as TimeMachineRow, lang);
+
+	// THE AUDIT-LANG RULE. A snapshot renders in the language it was RECORDED in,
+	// never the language the menu happens to be on — `matrix_time_machine` carries
+	// its own `lang` column precisely so a historical value can be shown as it was
+	// stored. The old emitter applied no lang filter at all ("shows the stored
+	// value verbatim"), which was this rule stated as an absence.
+	//
+	// A row whose lang is lg-nolan is NOT a data lang: whole-record snapshots
+	// (delete/duplicate/section saves) are recorded that way and their snapshot
+	// holds every language, so those follow the request lang like any list. Using
+	// lg-nolan as a filter there would slice a translatable column to nothing and
+	// turn this fix from "too much text" into "no text" — on the surface a user
+	// reads to decide whether to restore.
+	const snapshotLang =
+		typeof row.lang === 'string' && row.lang !== '' && row.lang !== 'lg-nolan' ? row.lang : lang;
+
+	const { SELECT_FAMILY_MODELS } = await import('../relations/models/select_family.ts');
+
+	for (const tipo of requestedTipos) {
+		const model = await getModelByTipo(tipo);
+
+		// NAMED EXEMPTION — an unresolvable component tipo. emitDdoData THROWS on
+		// one where the old emitScalarCell silently emitted nothing, and a TM log
+		// is decade-scale on a long-lived install: a column whose ontology node has
+		// since been removed must not 500 the whole history browse. Emit an
+		// explicitly flagged empty cell instead. NOT a silent narrowing — the cell
+		// announces itself, and the reason lives here rather than in a ledger only.
+		if (model === null || getColumnNameByModel(model) === null) {
+			emission.items.push({
+				section_id: row.id,
+				section_tipo: TM_SECTION_TIPO,
+				tipo,
+				mode: 'list',
+				lang: 'lg-nolan',
+				parent_tipo: TM_SECTION_TIPO,
+				row_section_id: row.id,
+				entries: [],
+				fallback_value: null,
+				error: 'unresolved_component_tipo',
+				reason:
+					'This Time Machine row references a component whose ontology node no longer resolves a model. The snapshot is kept; the column cannot be rendered.',
+			} as never);
+			continue;
 		}
-		return tmRecord;
-	};
 
-	const baseItem = (tipo: string): Record<string, unknown> => ({
-		section_id: row.id,
-		section_tipo: TM_SECTION_TIPO,
-		tipo,
-		mode: 'tm',
-		lang: 'lg-nolan',
-		from_component_tipo: tipo,
-		parent_tipo: TM_SECTION_TIPO,
-		parent_section_id: row.id,
-		row_section_id: row.id,
-	});
+		// The NOTE column follows the REQUEST lang, not the snapshot lang: its
+		// context lang seeds the note modal's editor, so a note must be written in
+		// the same language the read filters by or a saved note never shows again
+		// (grey icon over existing text). Every other column follows the audit-lang
+		// rule. Non-translatable columns are nolan-forced by emitDdoData regardless.
+		const cellLang = tipo === TIPO_NOTES ? lang : snapshotLang;
+		const clientDdo = (ddoByTipo.get(tipo) ?? { tipo }) as Record<string, unknown>;
+		// LIST mode is the whole point: it is what makes every emit hook fire.
+		const cellDdo = { ...clientDdo, tipo, mode: 'list' };
 
-	// Emit ONE relation column of the virtual dd15 record per relation FAMILY —
-	// SELECT family → the flat get_list_value LABEL strings ('list' mode, e.g. a
-	// publication's "Sí"/"No"); PORTAL family → the paginated locator + its target
-	// SUBDATUM ('tm' mode). PHP stamps the request mode ('tm') back on every block
-	// and pins parent_section_id to each block's own record. Used by BOTH the
-	// record-snapshot list AND the per-component history surface — the history
-	// surface previously hardcoded 'tm', so a select-family value column (a
-	// publication flag) leaked its raw dd-locator to the client as '[object
-	// Object]' instead of the resolved label.
-	const emitRelationCell = async (cellTipo: string, model: string): Promise<void> => {
-		const { SELECT_FAMILY_MODELS } = await import('../relations/models/select_family.ts');
-		const cellMode = SELECT_FAMILY_MODELS.has(model) ? 'list' : 'tm';
-		const clientDdo = (ddoByTipo.get(cellTipo) ?? { tipo: cellTipo }) as Record<string, unknown>;
-		const cellDdo = { ...clientDdo, tipo: cellTipo, mode: cellMode };
 		const before = emission.items.length;
 		await emitDdo(
 			cellDdo as never,
 			clientDdoMap as never,
-			(await getTmRecord()) as never,
+			tmRecord as never,
 			{ section_tipo: TM_SECTION_TIPO, section_id: row.id },
-			cellMode,
-			lang,
+			'list',
+			cellLang,
 			TM_SECTION_TIPO,
 			emission,
 		);
+
+		// PORTAL family pins each nested block's parent to its own record; SELECT
+		// family (a flat resolved label) has no nested blocks to pin.
+		const isPortalFamily =
+			getColumnNameByModel(model) === 'relation' && !SELECT_FAMILY_MODELS.has(model);
 		for (let i = before; i < emission.items.length; i++) {
 			const item = emission.items[i] as Record<string, unknown>;
-			// Stamp the request mode 'tm' back ONLY on the TOP-LEVEL cell item (the
-			// block whose tipo IS the column) so it matches the 'tm' column ddo. A
-			// select-family value was emitted in 'list' mode to resolve its LABEL and
-			// needs this restamp; a portal's nested SUBDATUM items were emitted in the
-			// subdatum ddo's own 'list' mode and must KEEP it — forcing them to 'tm'
-			// broke the byte-identical client's (tipo, mode, section_tipo) subdatum
-			// bind (get_ar_columns_instances_list / get_component_data), the same
-			// blank-cell failure as the dd578 Who column. Portal family only ever hit
-			// select-less columns here before, so the old blanket restamp went unseen.
-			if (item.tipo === cellTipo) {
-				item.mode = 'tm';
-			}
-			if (cellMode !== 'list' && item.parent_section_id === undefined) {
+			if (item.tipo === tipo) {
+				// No mode restamp: the cell stays in the LIST mode it was emitted in,
+				// matching the column ddo the context now declares
+				// (WC-2026-08-14-tm-ddo-mode-retired). Context and data flipped
+				// together — the byte-identical client binds a cell to its context by
+				// an EXACT (tipo, mode, section_tipo) match and drops the column if the
+				// two ever disagree. Nested SUBDATUM items keep their own mode for the
+				// same reason (forcing them to 'tm' is what once blanked the dd578 Who
+				// column); they need no special handling now that nothing is restamped.
+				item.from_component_tipo ??= tipo;
+				item.parent_section_id ??= row.id;
+				TM_CELL_DECORATORS[tipo]?.(item, row);
+			} else if (isPortalFamily && item.parent_section_id === undefined) {
 				item.parent_section_id = item.section_id;
 			}
 		}
-	};
 
-	// Scalar snapshot column: read the stored items straight from the virtual
-	// record (no lang filter — the TM list shows the stored value verbatim).
-	// readComponentItems applies the same non-array→[data] coercion PHP does.
-	const emitScalarCell = async (cellTipo: string, model: string): Promise<void> => {
-		const { readComponentItems } = await import('./component_data.ts');
-		const items = readComponentItems(await getTmRecord(), cellTipo, model) ?? [];
-		emission.items.push({
-			...baseItem(cellTipo),
-			entries: items,
-			fallback_value: null,
-		} as never);
-	};
-
-	for (const tipo of requestedTipos) {
-		switch (tipo) {
-			case TIPO_BULK_PROCESS:
-				emission.items.push({
-					...baseItem(tipo),
-					entries: [{ id: 1, value: row.bulk_process_id ?? 0 }],
-				} as never);
-				break;
-			case TIPO_TIMESTAMP:
-				emission.items.push({
-					...baseItem(tipo),
-					entries: [{ id: 1, start: ddDateFromTimestamp(row.timestamp) }],
-				} as never);
-				break;
-			case TIPO_USER: {
-				// The user portal locator + its username SUBDATUM item (the dd128
-				// component tipo is resolved from dd578's ontology ddo_map like PHP).
-				const usernameTipo = await usernameComponentTipo();
-				emission.items.push({
-					...baseItem(tipo),
-					entries: [
-						{
-							id: 1,
-							section_tipo: USERS_SECTION_TIPO,
-							// `row.user_id` is already an int column of
-							// matrix_time_machine — emit the address as an address
-							// (WC-2026-08-10-section-id-int-canonical repeals the String()).
-							section_id: row.user_id,
-							type: 'dd151',
-							from_component_tipo: TIPO_USER,
-							paginated_key: 0,
-						},
-					],
-					pagination: { total: 1, limit: 1, offset: 0 },
-				} as never);
-				// SUBDATUM mode is 'list', NOT the row's 'tm': dd578's portal
-				// request_config declares its username subdatum ddo (dd132) in 'list'
-				// mode (the standard portal display mode), and the byte-identical
-				// client binds a subdatum to its context/data by an EXACT (tipo, mode,
-				// section_tipo) match (section_record get_ar_columns_instances_list +
-				// get_component_data). Emitting it as 'tm' made ddo('list') ≠ data/
-				// context('tm'), so the client dropped the column and the Who cell
-				// rendered blank. Same class as the select-family value fix that gave
-				// emitRelationCell its cellMode='list' (tm_component_value_differential).
-				emission.items.push({
-					section_id: row.user_id,
-					section_tipo: USERS_SECTION_TIPO,
-					tipo: usernameTipo,
-					mode: 'list',
-					lang: 'lg-nolan',
-					from_component_tipo: TIPO_USER,
-					entries: await usernameItems(row.user_id, usernameTipo),
-					parent_tipo: TM_SECTION_TIPO,
-					parent_section_id: row.user_id,
-					fallback_value: null,
-					row_section_id: row.id,
-				} as never);
-				break;
-			}
-			case TIPO_COMPONENT:
-				emission.items.push({
-					...baseItem(tipo),
-					entries: [
-						{ id: 1, lang: 'lg-nolan', value: `${await termByTipo(row.tipo, lang)} [${row.tipo}]` },
-					],
-					fallback_value: null,
-				} as never);
-				break;
-			case TIPO_NOTES: {
-				// The TM annotation (PHP component_text_area_json.php 'tm' branch,
-				// :305-336): the item carries the note-record navigation fields the
-				// client note view consumes (view_note_text_area.js) — matrix_id (the
-				// TM row id; note creation aborts without it), parent_section_tipo/
-				// parent_section_id (the notes section + the existing note record, or
-				// null), created_by_user_id (the virtual record's dd200 = the TM row
-				// user). Entries are the lang-filtered note text (PHP get_data_lang)
-				// with the injected parent_section_id lifted OFF the first item;
-				// empty → [] (WC-001; PHP emits null).
-				const items = readComponentItems(await getTmRecord(), TIPO_NOTES, 'component_text_area');
-				const value = filterItemsByLang(items ?? [], lang) as Record<string, unknown>[];
-				// Lifted verbatim off the FIRST item. The value is minted canonical by
-				// tm_record.ts `tmNoteValue` (int, WC-2026-08-10-section-id-int-canonical);
-				// the union stays tolerant because the rest of this item array is
-				// ADOPTED STORED TM DATA, which this reader never rewrites — a
-				// snapshot must keep the bytes the engine of the day wrote.
-				const parentSectionId = (value[0]?.parent_section_id ?? null) as StoredSectionId | null;
-				const entries = value.map((item, index) => {
-					if (index !== 0) return item;
-					const { parent_section_id: _lifted, ...rest } = item;
-					return rest;
-				});
-				emission.items.push({
-					...baseItem(tipo),
-					lang,
-					entries,
-					fallback_value: null,
-					parent_section_id: parentSectionId,
-					parent_section_tipo: TM_NOTES_SECTION_TIPO,
-					created_by_user_id: Number(row.user_id),
-					matrix_id: row.id,
-				} as never);
-				break;
-			}
-			default: {
-				// Any other requested column resolves from the virtual dd15 record
-				// materialized for this row (buildTmSectionRecord adopts a full-record
-				// snapshot wholesale for the record-snapshot LIST, or injects a
-				// per-component history snapshot under its own tipo). Either surface
-				// renders the same way per column model — the dd15 meta columns
-				// (dd1772/dd1212/rsc329) AND the section's own value columns (e.g. a
-				// publication flag in the component-history list).
-				const model = await getModelByTipo(tipo);
-				const column = model !== null ? getColumnNameByModel(model) : null;
-				if (column === 'relation' && model !== null) {
-					await emitRelationCell(tipo, model);
-				} else if (column !== null && model !== null) {
-					await emitScalarCell(tipo, model);
-				}
-				break;
-			}
+		if (tipo === TIPO_USER) {
+			applySuperuserDisplayName(
+				emission.items.slice(before) as unknown as Record<string, unknown>[],
+				row.user_id,
+			);
 		}
 	}
 }
@@ -772,16 +732,35 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 	const permissions = 1;
 	const { buildStructureContext } = await import('./structure_context.ts');
 
-	// dd15's LIST columns are the CLIENT's show.ddo_map when it sends them (the
-	// scoped history: the caller section's fields). When it sends NONE (the bare
-	// dd15 list opened directly), derive dd15's OWN default list columns from the
-	// ontology — same as readSectionRows does for the data (PHP build_request_config).
+	// dd15's LIST columns are DERIVED FROM THE AUTHORISED SCOPE
+	// (WC-2026-08-14-tm-scope-server-owned). The scope comes from the SQO the read
+	// is executed against, so the columns and the WHERE cannot disagree.
+	//
+	// The client's own show.ddo_map is still honoured when it sends one, and that
+	// is not laziness: a section instance sends the ddo_map the SERVER gave it in
+	// the previous context read, so the two agree by construction, and a browser
+	// holding a pre-unification client keeps working (tool JS ships with no
+	// cachebust). Server-derived wins when the client sends nothing.
+	//
+	// Nothing renders without one of these: the bare browse falls through to
+	// dd15's OWN ontology section_list, exactly like any other section.
 	const clientColumns = rqo.show?.ddo_map ?? [];
 	let columns: { tipo?: unknown; label?: unknown; view?: unknown; column_id?: unknown }[] =
 		clientColumns;
 	if (clientColumns.length === 0) {
-		const { deriveSectionDdoMap } = await import('../section/read.ts');
-		columns = (await deriveSectionDdoMap(TM_SECTION_TIPO, TM_SECTION_TIPO, 'list')) as never;
+		const { resolveTimeMachineScope, tmListColumns } = await import(
+			'../section/list_definitions/time_machine_list.ts'
+		);
+		const scope = resolveTimeMachineScope(rqo.sqo as Record<string, unknown> | undefined, {
+			surface: source.tm_surface,
+		});
+		const derived = await tmListColumns(scope);
+		if (derived !== null) {
+			columns = derived as never;
+		} else {
+			const { deriveSectionDdoMap } = await import('../section/read.ts');
+			columns = (await deriveSectionDdoMap(TM_SECTION_TIPO, TM_SECTION_TIPO, 'list')) as never;
+		}
 	}
 
 	const tmContext: StructureContextEntry[] = [];
@@ -813,7 +792,11 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 						tipo: ddo.tipo,
 						section_tipo: TM_SECTION_TIPO,
 						parent: TM_SECTION_TIPO,
-						mode: 'tm',
+						// LIST, not 'tm' (WC-2026-08-14-tm-ddo-mode-retired). The client
+						// binds a cell to its context by an EXACT (tipo, mode, section_tipo)
+						// match, so this and the data half flip together or the column
+						// silently disappears.
+						mode: 'list',
 						view: ddo.view ?? null,
 						label,
 						...(ddo.column_id !== undefined ? { column_id: ddo.column_id } : {}),
@@ -839,7 +822,7 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 		const entry = await buildStructureContext({
 			tipo: ddo.tipo,
 			sectionTipo: TM_SECTION_TIPO,
-			mode: 'tm',
+			mode: 'list',
 			lang: columnLang,
 			permissions,
 			parent: TM_SECTION_TIPO,

@@ -1609,7 +1609,15 @@ async function logReadActivity(
 		const source = rqo.source ?? {};
 		const tipo = source.tipo ?? '';
 		const mode = source.mode ?? '';
-		if (tipo === '' || mode === 'search' || mode === 'tm') return;
+		if (tipo === '' || mode === 'search') return;
+		// A TIME MACHINE read never logs activity. The test is the SQO's row source,
+		// not the render mode: dd15 cells emit mode 'list' now
+		// (WC-2026-08-14-tm-ddo-mode-retired), and `source.mode` was already 'list'
+		// on the service's reads, so a `mode === 'tm'` check here catches nothing.
+		// Without this every history browse, inspector history block and tool open
+		// would append a dd542 Activity row — a write side effect of a read-only
+		// surface, into the consultation-only twin of the section being read.
+		if ((rqo.sqo as { mode?: string } | undefined)?.mode === 'tm') return;
 		// (The self-log loop guard — dd542 and its own components — now lives in
 		// logActivity, so every emitter inherits it. Not repeated here.)
 		if (ACTIVITY_EXCLUDED_PRESET_TIPOS.has(tipo)) return;

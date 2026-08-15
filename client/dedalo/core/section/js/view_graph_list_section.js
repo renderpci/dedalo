@@ -114,7 +114,7 @@ view_graph_list_section.render = async function(self, options) {
 		}
 
 	// buttons add
-		if (self.buttons && self.mode !== 'tm') {
+		if (self.buttons) {
 			const buttons_node = get_buttons(self);
 			if (buttons_node) {
 				fragment.appendChild(buttons_node)
@@ -122,7 +122,7 @@ view_graph_list_section.render = async function(self, options) {
 		}
 
 	// search filter node
-		if (self.filter && self.mode !== 'tm') {
+		if (self.filter) {
 			const search_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'search_container',

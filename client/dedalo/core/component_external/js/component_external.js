@@ -64,7 +64,7 @@
 * - `tipo`          – ontology tipo key of this component instance (e.g. `'dd123'`).
 * - `section_tipo`  – ontology tipo of the containing section (e.g. `'dd456'`).
 * - `section_id`    – record identifier within the section (integer).
-* - `mode`          – current render mode: `'edit'`, `'list'`, `'search'`, `'tm'`.
+* - `mode`          – current render mode: `'edit'`, `'list'`, `'search'`.
 * - `lang`          – active UI language code (e.g. `'lg-eng'`).
 * - `section_lang`  – language in which the parent section is rendered.
 * - `context`       – server-provided context object containing properties, tools,
@@ -132,7 +132,6 @@ export const component_external = function(){
 
 	// render
 	component_external.prototype.list				= render_list_component_external.prototype.list
-	component_external.prototype.tm					= render_list_component_external.prototype.list
 	component_external.prototype.edit				= render_edit_component_external.prototype.edit
 	component_external.prototype.search				= render_search_component_external.prototype.search
 

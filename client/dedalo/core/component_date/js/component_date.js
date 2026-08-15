@@ -125,9 +125,8 @@ export const component_date = function() {
 	component_date.prototype.build_rqo				= common.prototype.build_rqo
 
 	// render — each mode delegates to the appropriate render module.
-	// 'tm' (Time Machine read-only mode) intentionally reuses the list renderer.
+	// Time Machine cells reuse the list renderer because they ARE list cells.
 	component_date.prototype.list					= render_list_component_date.prototype.list
-	component_date.prototype.tm						= render_list_component_date.prototype.list
 	component_date.prototype.edit					= render_edit_component_date.prototype.edit
 	component_date.prototype.search					= render_search_component_date.prototype.search
 

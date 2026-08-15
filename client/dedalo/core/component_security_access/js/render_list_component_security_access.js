@@ -16,7 +16,7 @@
 * View router for component_security_access in list and time-machine (tm) modes.
 *
 * Acts as the prototype host for the `list` method that is assigned to both
-* component_security_access.prototype.list and component_security_access.prototype.tm
+* component_security_access.prototype.list
 * in component_security_access.js. The constructor itself is never instantiated; it
 * exists purely so that the prototype method can be declared and later copied onto
 * the component class via prototype assignment.
@@ -55,9 +55,8 @@ export const render_list_component_security_access = function() {
 * string, ensuring the component degrades gracefully when a new view is configured
 * server-side but not yet handled here.
 *
-* Called via component_security_access.prototype.list and
-* component_security_access.prototype.tm — both prototype slots point to this
-* method (see component_security_access.js).
+* Called via component_security_access.prototype.list
+* (see component_security_access.js).
 *
 * @param {Object} options - Render options forwarded verbatim to the chosen view module
 * @returns {Promise<HTMLElement>} The wrapper element produced by the chosen view renderer

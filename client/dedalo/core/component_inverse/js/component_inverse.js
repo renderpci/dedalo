@@ -65,7 +65,7 @@ export const component_inverse = function(){
 	this.tipo         // {string}      component structure tipo, e.g. 'oh47'
 	this.section_tipo // {string}      parent section tipo, e.g. 'oh1'
 	this.section_id   // {number|string} current record's section_id
-	this.mode         // {string}      rendering mode: 'edit' | 'list' | 'tm' | 'search'
+	this.mode         // {string}      rendering mode: 'edit' | 'list' | 'search'
 	this.lang         // {string}      active language code, e.g. 'lg-eng'
 
 	this.section_lang // {string}      section-level language (may differ from component lang)
@@ -112,7 +112,6 @@ export const component_inverse = function(){
 	component_inverse.prototype.render		= common.prototype.render
 	component_inverse.prototype.refresh		= common.prototype.refresh
 	component_inverse.prototype.list		= render_list_component_inverse.prototype.list
-	component_inverse.prototype.tm			= render_list_component_inverse.prototype.list  // time-machine reuses the list renderer
 	component_inverse.prototype.edit		= render_edit_component_inverse.prototype.edit
 	component_inverse.prototype.search		= render_edit_component_inverse.prototype.edit  // search reuses the edit renderer
 

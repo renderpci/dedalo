@@ -191,11 +191,10 @@ export const TIME_MACHINE_SECTION_TIPO = 'dd15';
  * COLUMN, not per SQO, and a per-scope flag would let the same column advertise
  * different capabilities across surfaces. Matching dd542's per-section shape.
  */
-export const TIME_MACHINE_SORTABLE_TIPOS: ReadonlySet<string> = new Set([
-	'dd1573', // Id          → the `id` PK column (the TM row's own id / matrix_id)
-	'dd1212', // Section id  → the `section_id` column (the CALLER record's id)
-	'dd559', // When        → the `timestamp` column
-]);
+/** dd15 column tipos the sort policy names (see LOG_SECTION_POLICY). */
+export const TIME_MACHINE_MATRIX_ID_TIPO = 'dd1573';
+export const TIME_MACHINE_SECTION_ID_TIPO = 'dd1212';
+export const TIME_MACHINE_WHEN_TIPO = 'dd559';
 
 /**
  * The BULK PROCESS section (dd800) and its two descriptive components (PHP
@@ -250,3 +249,86 @@ export const CONSULTATION_ONLY_SECTIONS: ReadonlySet<string> = new Set([
 export function isConsultationOnlySection(sectionTipo: string): boolean {
 	return CONSULTATION_ONLY_SECTIONS.has(sectionTipo);
 }
+
+/**
+ * LOG SECTION POLICY — the append-only audit logs, and what the engine is
+ * allowed to do with them (2026-08-14, with the Time Machine unification).
+ *
+ * Two sections are system logs the user reads but never authors: Time Machine
+ * (dd15, over matrix_time_machine) and Activity (dd542, over matrix_activity).
+ * Nothing in the ontology says they are the same kind of thing, but the ENGINE
+ * has always treated them as one — in several separate literal sets across five
+ * modules, each of which had to be remembered independently. One of them had
+ * already drifted: dd542 was listed in SUPPRESS_SECTION_INFO as a deliberate
+ * divergence while dd15's identical need went unnoticed for months (WC-045).
+ *
+ * POLICY ONLY, deliberately NOT a shared read mechanism: `matrix_activity` is in
+ * MATRIX_TABLE_ALLOWLIST and dd542 reads through the ordinary matrixReadSource +
+ * buildSearchSql, while `matrix_time_machine` is deliberately outside it and
+ * dd15 has its own read source over physical columns. Two tables, two read
+ * paths, one policy. Consultation-only stays its own predicate below — it
+ * applies to these two today but is a property of a SECTION, not of logging.
+ */
+export interface LogSectionPolicy {
+	/**
+	 * The search-field panel omits the shared section-info group (dd196 +
+	 * created/modified/publication children): an append-only log has no editorial
+	 * metadata to search on. WC-045.
+	 */
+	readonly suppressSectionInfo: boolean;
+	/**
+	 * The ONLY list columns that may advertise a sort icon.
+	 *
+	 * A PERFORMANCE policy measured on real data, not a preference — and the two
+	 * entries have DIFFERENT causes, which is why the reason sits beside each:
+	 *  - dd542: its values live in jsonb, so any other sort is an unindexable
+	 *    full-table jsonb sort over the biggest table in the system (WC-044);
+	 *  - dd15: its columns ARE physical, so this is not a jsonb problem but index
+	 *    DIRECTION — the emitted `ORDER BY <col>, id` runs against `(col, id
+	 *    DESC)` indexes and a btree reads one way only, degrading to an
+	 *    Incremental Sort over a full index scan. Measured on the 50.5M-row mdcat
+	 *    log: 1.4 s (What), 7.9 s (Who), > 20 s (Process, Value); the allowed
+	 *    columns are index-served outright at 1–2 ms (WC-053).
+	 */
+	readonly sortableColumns: ReadonlySet<string>;
+}
+
+/** The registry. Adding a log section means adding ONE entry here. */
+export const LOG_SECTION_POLICY: ReadonlyMap<string, LogSectionPolicy> = new Map([
+	[
+		TIME_MACHINE_SECTION_TIPO,
+		{
+			suppressSectionInfo: true,
+			sortableColumns: new Set([
+				TIME_MACHINE_MATRIX_ID_TIPO, // dd1573 Id         → the `id` PK (the TM row's own id)
+				TIME_MACHINE_SECTION_ID_TIPO, // dd1212 Section id → the CALLER record's id
+				TIME_MACHINE_WHEN_TIPO, // dd559  When       → the `timestamp` column
+			]),
+		},
+	],
+	[
+		ACTIVITY_SECTION_TIPO,
+		{
+			suppressSectionInfo: true,
+			sortableColumns: new Set([ACTIVITY_WHEN_TIPO]),
+		},
+	],
+]);
+
+/** Whether `columnTipo` may advertise a sort icon on `sectionTipo`. */
+export function logSectionColumnIsSortable(sectionTipo: string, columnTipo: string): boolean {
+	const policy = LOG_SECTION_POLICY.get(sectionTipo);
+	return policy === undefined || policy.sortableColumns.has(columnTipo);
+}
+
+/** Whether `sectionTipo` omits the shared section-info group from its search panel. */
+export function logSectionSuppressesSectionInfo(sectionTipo: string): boolean {
+	return LOG_SECTION_POLICY.get(sectionTipo)?.suppressSectionInfo === true;
+}
+
+/**
+ * The dd15 sortable set, kept as a named export because `tm_sort_policy.test.ts`
+ * and the WC ledger both name it. Derived from the registry — one source.
+ */
+export const TIME_MACHINE_SORTABLE_TIPOS: ReadonlySet<string> =
+	LOG_SECTION_POLICY.get(TIME_MACHINE_SECTION_TIPO)?.sortableColumns ?? new Set<string>();

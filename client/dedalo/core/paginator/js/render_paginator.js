@@ -63,7 +63,15 @@ render_paginator.prototype.edit = async function(options) {
 	// refresh case. Only content data is returned
 		const content_data = await get_content_data(self)
 		if (render_level==='content') {
-			// await self.get_total()
+			// REFRESH swaps the strip that is already in the DOM (common.render
+			// 'content' replaces wrapper.content_data with this return). Await the
+			// ACTIVATION first: a strip handed over in its phase-1 state is all
+			// inactive arrows + "Loading data …" until get_total returns — and on a
+			// large log (dd15 is 2.4M rows; its bare COUNT is seconds) that reads as
+			// the icons dying and coming back on EVERY pagination click. Waiting here
+			// keeps the OLD strip live and clickable until the new one is complete,
+			// so the swap is a text change, never a dead-arrows flash.
+			await content_data.ready
 			return content_data
 		}
 
@@ -406,23 +414,33 @@ const get_content_data = async function(self) {
 	// ensuring that paint and layout are not blocked by the network round-trip.
 	// Once get_total resolves, all queued active_value callbacks are fired in
 	// registration order to activate buttons and fill in the page counts.
-		dd_request_idle_callback(
-			() => {
-				self.get_total()
-				.then(() => {
-					// fire all active_values functions
-					const active_values_length = active_values.length
-					for (let i = 0; i < active_values_length; i++) {
-						const item = active_values[i]
-						// value is from self assigned vars like 'self.total'
-						const value = self[item.name]
-						// execute function passing selected value as param
-						item.callback(value)
-					}
-					page_node.classList.remove('inactive')
-				})
-			}
-		)
+		// The activation is EXPOSED as `content_data.ready` so the refresh path can
+		// await a fully-activated strip before swapping it into the DOM (see edit()).
+		// The initial full render never awaits it — first paint stays progressive.
+		// Resolved on failure too: a hanging promise would freeze every refresh.
+		content_data.ready = new Promise((resolve) => {
+			dd_request_idle_callback(
+				() => {
+					self.get_total()
+					.then(() => {
+						// fire all active_values functions
+						const active_values_length = active_values.length
+						for (let i = 0; i < active_values_length; i++) {
+							const item = active_values[i]
+							// value is from self assigned vars like 'self.total'
+							const value = self[item.name]
+							// execute function passing selected value as param
+							item.callback(value)
+						}
+						page_node.classList.remove('inactive')
+					})
+					.catch((error) => {
+						console.error('paginator get_total failed:', error)
+					})
+					.finally(() => resolve(true))
+				}
+			)
+		})
 
 	// tooltips
 	ui.activate_tooltips(paginator_div_links, '.btn')

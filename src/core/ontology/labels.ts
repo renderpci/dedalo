@@ -127,3 +127,18 @@ export async function termByTipo(tipo: string, lang: string): Promise<string> {
 	termCache.set(cacheKey, resolved);
 	return resolved;
 }
+
+/**
+ * The display label for a value that IS an ontology tipo: `«term» [tipo]`.
+ *
+ * Several columns store a tipo as their value and must show which node it is —
+ * two nodes routinely share a term, so the term alone is ambiguous. PHP renders
+ * them all the same way; TS had the transform written out three times (the TM
+ * What column inside its emitter, the dd542 Activity `where` column inside
+ * emitDdoData, and nowhere at all for the TM Where column, which therefore
+ * showed a bare term). One helper, one shape
+ * (WC-2026-08-14-tm-cells-obey-list-emit-policy).
+ */
+export async function ontologyTermLabel(tipo: string, lang: string): Promise<string> {
+	return `${await termByTipo(tipo, lang)} [${tipo}]`;
+}

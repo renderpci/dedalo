@@ -250,7 +250,7 @@ const get_content_data = async function(self, ar_section_record) {
 					// section_record wrapper
 						// const row_wrapper = ui.create_dom_element({
 						// 	element_type	: 'div',
-						// 	class_name		: 'row_wrapper section_record ' + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
+						// 	class_name		: 'row_wrapper section_record ' + ' ' + self.tipo + ' ' + self.mode
 						// })
 						// row_wrapper.addEventListener("click", (e) => {
 						// 	// e.stopPropagation()

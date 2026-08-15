@@ -10,14 +10,14 @@
  *     SUBDATUM item. dd578's request_config declares that subdatum ddo in
  *     mode 'list'; the byte-identical client binds a subdatum to its
  *     context/data by an EXACT (tipo, mode, section_tipo) match. Restamping the
- *     nested item to the row's 'tm' mode broke the bind and the Who cell
+ *     nested item to the row's own mode broke the bind and the Who cell
  *     rendered BLANK. Gated below by `subdatum mode` + by the portal-family
  *     twin (the restamp must touch ONLY the item whose tipo IS the column).
  *
  *  2. `[object Object]` IN A SELECT CELL. A relation column of the virtual dd15
  *     record is emitted per relation FAMILY: SELECT family in 'list' mode (the
- *     resolved LABEL strings), PORTAL family in 'tm' (locator + subdatum). The
- *     per-component history surface hardcoded 'tm', so a select-family value
+ *     resolved LABEL strings), PORTAL family (locator + subdatum). The
+ *     per-component history surface hardcoded a TM-only mode, so a select-family value
  *     column leaked its raw dd-locator to the client, which rendered it as
  *     '[object Object]'. Gated below on BOTH surfaces (snapshot list AND
  *     per-component history) by asserting the entries are LABEL STRINGS.
@@ -297,7 +297,7 @@ describe('buildTmContext — the dd15 structure-context (read_tm.ts)', () => {
 		expect(byTipo.get('dd559')?.lang).toBe('lg-nolan'); // dd559 is not
 		expect(byTipo.get('dd578')?.lang).toBe('lg-nolan');
 		for (const tipo of ['dd559', 'rsc329', 'dd578']) {
-			expect(byTipo.get(tipo)?.mode, `mode on ${tipo}`).toBe('tm');
+			expect(byTipo.get(tipo)?.mode, `mode on ${tipo}`).toBe('list');
 			expect(byTipo.get(tipo)?.parent).toBe('dd15');
 		}
 	});
@@ -317,7 +317,7 @@ describe('buildTmContext — the dd15 structure-context (read_tm.ts)', () => {
 		expect(mirrored.map((ddo) => ddo.tipo)).toEqual(['dd559', 'rsc329', 'dd578']);
 		for (const ddo of mirrored) {
 			expect(ddo.typo).toBe('ddo');
-			expect(ddo.mode).toBe('tm');
+			expect(ddo.mode).toBe('list');
 			expect(ddo.section_tipo).toBe('dd15');
 			expect(ddo.parent).toBe('dd15');
 		}
@@ -380,18 +380,18 @@ describe('emitTmRow — the record-snapshot list surface', () => {
 		expect(base.section_id).toBe(snapshotRowId);
 		expect(base.parent_tipo).toBe('dd15');
 		expect(base.parent_section_id).toBe(snapshotRowId);
-		expect(base.mode).toBe('tm');
+		expect(base.mode).toBe('list');
 		expect(base.lang).toBe('lg-nolan');
 	});
 
 	test('REGRESSION (blank Who column): the dd578 username SUBDATUM stays in mode "list"', async () => {
 		// SHIPPED ONCE. The client binds a subdatum to its context/data by an exact
 		// (tipo, mode, section_tipo) match; dd578's request_config declares the
-		// username ddo in 'list'. Restamping it to the row's 'tm' broke the bind and
+		// username ddo in 'list'. Restamping it to a TM-only mode broke the bind and
 		// the Who cell rendered BLANK. Held by a comment until this test.
 		const { data } = await readTm(recordListSqo, ddoMap);
 		const user = itemOf(data, snapshotRowId, 'dd578');
-		expect(user.mode).toBe('tm'); // the COLUMN item itself is 'tm'
+		expect(user.mode).toBe('list'); // the COLUMN item, like every list cell
 		expect(user.pagination).toEqual({ total: 1, limit: 1, offset: 0 });
 		const entries = user.entries as Item[];
 		expect(entries.length).toBe(1);
@@ -413,12 +413,12 @@ describe('emitTmRow — the record-snapshot list surface', () => {
 
 	test('REGRESSION ([object Object] select cell): a SELECT-family column resolves to LABEL strings', async () => {
 		// SHIPPED ONCE. cellMode is chosen per relation FAMILY: SELECT → 'list' (the
-		// resolved get_list_value labels), PORTAL → 'tm' (locator + subdatum).
-		// Forcing 'tm' leaks the raw dd-locator OBJECT, which the client renders as
+		// resolved get_list_value labels), PORTAL → locator + subdatum.
+		// Forcing a TM-only mode leaks the raw dd-locator OBJECT, which the client renders as
 		// the literal string '[object Object]'.
 		const { data } = await readTm(recordListSqo, ddoMap);
 		const select = itemOf(data, snapshotRowId, SELECT_TIPO);
-		expect(select.mode, 'the column item is restamped back to the request mode').toBe('tm');
+		expect(select.mode, 'the column item is an ordinary list cell').toBe('list');
 		const entries = select.entries as unknown[];
 		expect(entries.length).toBe(1);
 		expect(typeof entries[0], 'THE [object Object] REGRESSION: a raw locator leaked').toBe(
@@ -430,10 +430,10 @@ describe('emitTmRow — the record-snapshot list surface', () => {
 	test('a PORTAL-family column keeps its locator shape AND its nested subdatum mode', async () => {
 		// The counterpart of the two regressions: the restamp applies ONLY to the
 		// item whose tipo IS the column. A blanket restamp forces the portal's
-		// nested subdatum to 'tm' — the same broken client bind as the Who column.
+		// nested subdatum to a different mode — the same broken bind as the Who column.
 		const { data } = await readTm(recordListSqo, ddoMap);
 		const portal = itemOf(data, snapshotRowId, PORTAL_TIPO);
-		expect(portal.mode).toBe('tm');
+		expect(portal.mode).toBe('list');
 		expect(portal.pagination).toEqual({ total: 1, limit: 1, offset: 0 });
 		expect((portal.entries as Item[])[0]?.section_tipo).toBe('test3');
 		expect(portal.parent_section_id).toBe(snapshotRowId);
@@ -448,15 +448,20 @@ describe('emitTmRow — the record-snapshot list surface', () => {
 		expect(nested[0]?.parent_section_id).toBe(nested[0]?.section_id);
 	});
 
-	test('a SCALAR column is read verbatim off the virtual dd15 record', async () => {
+	test('a SCALAR column resolves off the virtual dd15 record, through the generic emitter', async () => {
 		const { data } = await readTm(recordListSqo, ddoMap);
 		const scalar = itemsOf(data, snapshotRowId).filter(
 			(item) => item.tipo === SCALAR_TIPO && item.section_tipo === 'dd15',
 		);
 		expect(scalar.length).toBe(1);
 		expect(scalar[0]?.entries).toEqual([{ id: 1, lang: LANG, value: 'scratch scalar' }]);
-		expect(scalar[0]?.fallback_value).toBeNull();
-		expect(scalar[0]?.mode).toBe('tm');
+		expect(scalar[0]?.mode).toBe('list');
+		// fallback_value follows the GENERIC literal rule now that TM cells go
+		// through emitDdoData (WC-2026-08-14-tm-cells-obey-list-emit-policy): the key
+		// is attached only when a fallback actually resolved — component_text_area is
+		// the one model that attaches it unconditionally. The old TM emitter stamped
+		// `fallback_value: null` onto EVERY cell, which no section list does.
+		expect(scalar[0]).not.toHaveProperty('fallback_value');
 	});
 
 	test('record addresses are INTs on the wire (WC-2026-08-10-section-id-int-canonical)', async () => {
@@ -512,12 +517,12 @@ describe('emitTmRow — the per-component history surface', () => {
 
 	test('REGRESSION ([object Object]): the HISTORY surface also resolves a select cell to labels', async () => {
 		// This is the surface the regression actually shipped on — it hardcoded
-		// 'tm' for every relation cell, so a publication/select flag leaked its
+		// a TM-only mode for every relation cell, so a publication/select flag leaked its
 		// locator object into the history line.
 		const { data } = await readTm(historySqo(ID_HISTORY), [{ tipo: SELECT_TIPO }]);
 		const select = itemOf(data, historySelectRowId, SELECT_TIPO);
 		expect(select.entries).toEqual(['Sí']);
-		expect(select.mode).toBe('tm');
+		expect(select.mode).toBe('list');
 	});
 
 	test('the scalar history row emits the saved value verbatim', async () => {

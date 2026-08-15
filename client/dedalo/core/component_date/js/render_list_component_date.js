@@ -18,7 +18,6 @@
 * installed on the prototype by component_date.js and is invoked by the
 * component lifecycle whenever `mode === 'list'`. Time Machine mode (tm)
 * also reuses this renderer via the same prototype assignment:
-*   component_date.prototype.tm = render_list_component_date.prototype.list
 *
 * Dispatches to one of three view implementations depending on `context.view`:
 *   - 'default' — full wrapper built by ui.component.build_wrapper_list, with

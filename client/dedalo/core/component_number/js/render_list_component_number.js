@@ -23,8 +23,7 @@
 *
 * Prototype method wired by component_number.js:
 *   component_number.prototype.list = render_list_component_number.prototype.list
-*   component_number.prototype.tm   = render_list_component_number.prototype.list
-*   (the 'tm' alias means the same list render is reused for thesaurus-mode)
+*   (the same list render is reused for thesaurus-mode)
 *
 * Supported views (driven by context.view):
 *   'default' — full list cell with click-to-edit-in-modal activation
@@ -46,7 +45,7 @@ export const render_list_component_number = function() {
 * delegating, so view modules can safely read self.context.fields_separator
 * without their own null-guard.
 *
-* This method is aliased to both 'list' and 'tm' on component_number's
+* This method is aliased to 'list' on component_number's
 * prototype, meaning it handles both standard list cells and thesaurus-mode
 * (tm) render calls with the same logic.
 *

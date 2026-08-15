@@ -16,7 +16,7 @@
 * ---------------------
 * The tool is opened as a floating modal or detached window from a section's
 * toolbar, with `caller` pointing to the component (or section) whose history
-* is being inspected.  The tool instantiates one `service_time_machine` — a
+* is being inspected.  The tool instantiates one `tm_list` — a
 * paginated list of all historical snapshots, sorted by `timestamp DESC`.
 * When the user clicks the eye icon on a list row the service publishes the
 * `tm_edit_record` event (see `view_tool_time_machine_list.js`); the tool
@@ -43,7 +43,7 @@
 *
 * Key instance properties (set at construction time)
 * ---------------------------------------------------
-*   service_time_machine   — {Object|null}   the service_time_machine instance
+*   tm_list   — {Object|null}   the tm_list instance
 *   selected_matrix_id     — {number|null}   TM row PK chosen by the user
 *   button_apply           — {HTMLElement}   "Apply and save" button DOM node
 *   preview_component_container — {HTMLElement} container for the TM snapshot
@@ -90,7 +90,7 @@
 *
 * Properties specific to tool_time_machine:
 *   @var {Object|null}      caller               - The component or section instance that opened the tool
-*   @var {Object|null}      service_time_machine - Loaded service_time_machine instance (paginated list)
+*   @var {Object|null}      tm_list - Loaded tm_list instance (paginated list)
 *   @var {HTMLElement|null} button_apply         - "Apply and save" button; shown after user selects a row
 *   @var {number|null}      selected_matrix_id   - PK of the currently selected TM row (dd1573 value)
 *   @var {HTMLElement|null} modal_container      - Container node when the tool is opened as a modal
@@ -109,7 +109,7 @@ export const tool_time_machine = function () {
 	this.type					= null
 
 	this.caller					= null
-	this.service_time_machine	= null
+	this.tm_list	= null
 	this.button_apply			= null
 	this.selected_matrix_id		= null
 	this.modal_container		= null
@@ -192,13 +192,19 @@ tool_time_machine.prototype.init = async function(options) {
 			const label = (await modification_component_date.render()).textContent;
 
 			// render. Create and add new component to preview container
-			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
+			// The preview pane is the ONE place a Time Machine component is loaded
+			// EDITABLE-shaped: get_component overlays {mode:'edit', data_source:'tm'}
+			// and the render is then forced read-only. `data_source` — not a render
+			// mode — is what makes it read the matrix_time_machine row; the mode
+			// argument here has always been ignored (get_component hardcodes 'edit'),
+			// so it is no longer passed. Named exemption to the "dd15 never emits
+			// mode 'edit'" rule, see WC-2026-08-14-tm-ddo-mode-retired.
 			add_component(
 				self,
 				self.preview_component_container,
 				self.lang,
 				label,
-				load_mode,
+				null,
 				matrix_id
 			)
 
@@ -249,7 +255,7 @@ tool_time_machine.prototype.init = async function(options) {
 * BUILD (CUSTOM)
 * Extends tool_common.prototype.build with Time Machine-specific setup:
 * loading the main element (component or section being inspected) and wiring
-* up the `service_time_machine` instance that renders the history list.
+* up the `tm_list` instance that renders the history list.
 *
 * Step-by-step:
 *   1. Lang sync on ddo_map — before calling common build, iterate each entry
@@ -263,14 +269,14 @@ tool_time_machine.prototype.init = async function(options) {
 *      the section instance is not created by tool_common, so build creates it
 *      here manually with `get_instance` + `build(true)`.
 *   4. Locate `main_element` in ar_instances by tipo match.
-*   5. Build the `ddo_map` for service_time_machine:
-*        - For a component target: a single synthetic ddo with mode='tm'.
+*   5. Build the `ddo_map` for tm_list:
+*        - For a component target: a single synthetic ddo in list mode.
 *        - For a section target: the section's own `request_config_object.show.ddo_map`
 *          (which lists all components belonging to that section).
 *   6. Compute `ignore_columns` — for section targets the 'where' column (dd577)
 *      is suppressed because a section restore does not have a single component
 *      address to display.
-*   7. Instantiate `service_time_machine` via `get_instance` and build it with
+*   7. Instantiate `tm_list` via `get_instance` and build it with
 *      autoload=true.  Throws a string on failure so the catch block surfaces
 *      the error through `self.error` without crashing the caller.
 *   8. Force `caller_is_calculated = false` to prevent the new-window
@@ -303,7 +309,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload);
 
-	// service_time_machine
+	// tm_list
 		try {
 
 			// fix main_element for convenience
@@ -334,87 +340,100 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					console.error('Error: main_element_ddo not found in self.ar_instances', self.ar_instances)
 				}
 
-			// ddo_map for service_time_machine. Section uses is request_config_object show
-			// NOTE: The ddo_map will be changed in service_time_machine to mode = list
-				const ddo = {
-					tipo			: self.main_element.tipo,
-					type			: self.main_element.type,
-					typo			: 'ddo',
-					model			: self.main_element.model,
-					section_tipo	: self.main_element.section_tipo,
-					parent			: self.main_element.section_tipo,
-					label			: self.main_element.label,
-					mode			: 'tm',
-					view			: 'text'
+			// THE TIME MACHINE LIST IS AN ORDINARY SECTION LIST.
+			// It is a `section` instance pointed at dd15, exactly like the one
+			// tool_cataloging / tool_identify / tool_user_admin build for their own
+			// targets — no private list service any more
+			// (WC-2026-08-14-tm-scope-server-owned).
+			//
+			// What used to be hand-built client-side and mirrored back by the server
+			// is now DERIVED SERVER-SIDE from the SQO's scope: the column set, each
+			// column's view, and the debug snapshot column. So this passes NO
+			// ddo_map. It passes the SQO, because the SQO is the request.
+				const caller_section_tipo	= self.caller.section_tipo
+				const caller_section_id		= self.caller.section_id
+				const is_section_caller		= self.main_element.model==='section'
+
+			// sqo
+			// (!) `mode:'tm'` is the ROW SOURCE — it routes the read to
+			// matrix_time_machine instead of the caller section's own table. It is
+			// NOT a render mode (that one is retired) and must never be 'list':
+			// that returns the section's LIVE records instead of its history,
+			// silently and with no error.
+				const sqo = {
+					id			: 'time_machine_temporal',
+					mode		: 'tm',
+					section_tipo: [caller_section_tipo],
+					limit		: 10,
+					offset		: 0,
+					order		: [{
+						direction	: 'DESC',
+						path		: [{ component_tipo : 'id' }]
+					}],
+					skip_projects_filter : true
+				}
+				if (is_section_caller) {
+					// Whole-record snapshots of this section: WHERE tipo = section_tipo.
+					sqo.filter = { $and : [{ q : caller_section_tipo, column_name : 'tipo' }] }
+				}else{
+					// One component of one record.
+					sqo.filter_by_locators = [{
+						section_tipo	: caller_section_tipo,
+						section_id		: caller_section_id,
+						tipo			: self.main_element.tipo,
+						lang			: self.main_element.lang
+					}]
 				}
 
-				// For section targets re-use the section's own ddo_map so all
-				// components in that section appear in the history list.
-				const ddo_map = self.main_element.model==='section'
-					? self.main_element.request_config_object.show.ddo_map
-					: [ddo]
-
-			// // ignore_columns
-				// Suppress the 'where' column (dd577, component tipo) for section
-				// restores because a full-section snapshot has no single component address.
-				const ignore_columns = self.main_element.model==='section'
-					? [
-			// 			'dd1573', // matrix_id
-			// 			'dd1371', // bulk_process_id
-			// 			'dd559', // when
-						// 'who', // 'dd578'
-						'where' // 'dd577'
-						]
-					: []
-
-			//  // template_columns
-			// 	const template_columns = self.main_element.model==='section'
-			// 		? null
-			// 		: [
-			// 			// '8rem', // id
-			// 			'8rem', // tm matrix_id
-			// 			'8rem', // tm bulk_process_id
-			// 			'11.2rem', // date (when)
-			// 			'16rem', // user (who)
-			// 			'1fr', // component (where)
-			// 			'1fr', // annotation
-			// 			'5fr' // tm value
-			// 		  ].join(' ')
-
-			// service_time_machine. Create, build and assign the time machine service to the instance
-			// config is used in service_time_machine to get the ddo_map and send it to API
-				const config = {
-					id					: 'tool_tm',
-					model				: self.main_element.model,
-					tipo				: self.main_element.tipo,
-					lang				: self.main_element.lang,
-					// template_columns	: template_columns,
-					ignore_columns		: ignore_columns,
-					ddo_map				: ddo_map
-				}
+			// section instance (dd15)
 				const instance_options = {
-					model			: 'service_time_machine',
-					// (!) section_tipo / section_id come from the CALLER (live record),
-					// not from main_element — the service filters TM rows by those values.
-					section_tipo	: self.caller.section_tipo,
-					section_id		: self.caller.section_id,
-					view			: 'tool',
-					id_variant		: self.main_element.tipo +'_'+ self.model,
+					model			: 'section',
+					tipo			: 'dd15',
+					section_tipo	: 'dd15',
+					mode			: 'list',
+					// routes render to section/js/view_tm_list_section.js, whose only
+					// override is the Id-cell restore/preview action
+					view			: 'tm_list',
+					lang			: self.main_element.lang,
+					// record identity in the key: get_instance returns cached
+					// instances ignoring fresh options, so opening the tool on
+					// another record must resolve a DIFFERENT key
+					id_variant		: self.main_element.tipo +'_'+ caller_section_tipo +'_'+ caller_section_id +'_'+ self.model,
 					caller			: self,
-					config			: config
+					// An EMBEDDED panel: no section toolbar, no search panel. The
+					// section renders those for a full page; inside a tool they are
+					// neither wanted nor meaningful (this list is consultation-only).
+					buttons			: false,
+					filter			: false,
+					// never persist the tool's filter into the shared dd15 session —
+					// the standalone dd15 browse would merge it back
+					session_save	: false,
+					request_config	: [{
+						api_engine	: 'dedalo',
+						type		: 'main',
+						sqo			: sqo,
+						show		: {}
+					}]
 				}
-				self.config = config
 
-				self.service_time_machine = await get_instance(instance_options)
+				self.tm_list = await get_instance(instance_options)
 
-			// build service_time_machine
-				const build_result = await self.service_time_machine.build(true)
+			// view
+			// Set explicitly rather than relying on the options hop: dd15's section
+			// context declares no view of its own, and render_list_section falls back
+			// to self.view only when the context is silent. Without this the list
+			// renders through view_default_list_section and the Id cell loses its
+			// restore/preview action.
+				self.tm_list.view = 'tm_list'
+
+			// build the list
+				const build_result = await self.tm_list.build(true)
 				if (!build_result) {
-					throw 'Invalid service_time_machine build. See server log for details.'
+					throw 'Invalid time machine list build. See server log for details.'
 				}
 
 			// add to self instances list
-				self.ar_instances.push(self.service_time_machine)
+				self.ar_instances.push(self.tm_list)
 
 			// (!) force self.caller_is_calculated as false to avoid to re-use calculated
 			// component instances on lang change
