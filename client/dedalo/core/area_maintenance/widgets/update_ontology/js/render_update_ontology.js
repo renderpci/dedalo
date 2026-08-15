@@ -468,9 +468,11 @@ const get_content_data_edit = async function(self) {
 * `checkRemoteServer`); the client only reads `response_code` + `result`.
 *
 * @param {Object} value - widget value; `value.servers` is the descriptor list
+* @param {string} [env_key='ONTOLOGY_SERVERS'] - config key named in the empty
+*   notice; `update_code` reuses this picker over CODE_SERVERS
 * @returns {HTMLElement} the `.server_picker` container
 */
-export const render_servers_list = function (value) {
+export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') {
 
 	const servers = value.servers || []
 
@@ -483,7 +485,7 @@ export const render_servers_list = function (value) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note empty',
-			inner_html		: 'No master servers are configured (ONTOLOGY_SERVERS).',
+			inner_html		: `No master servers are configured (${env_key}).`,
 			parent			: picker
 		})
 		return picker

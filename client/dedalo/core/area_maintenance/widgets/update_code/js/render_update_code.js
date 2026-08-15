@@ -160,7 +160,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// servers. Show the possible servers to synchronize the ontology.
-		const servers_list = render_servers_list( value )
+		const servers_list = render_servers_list( value, 'CODE_SERVERS' )
 		content_data.appendChild(servers_list)
 
 		// dedalo_source_version_local_dir
