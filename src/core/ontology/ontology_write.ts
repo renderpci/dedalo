@@ -40,6 +40,7 @@ import {
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import {
 	DATA_NOLAN,
@@ -164,7 +165,10 @@ async function ensureMatrixRecord(
 ): Promise<void> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
 	if (table === null) {
-		throw new Error(`ensureMatrixRecord: no matrix table for '${sectionTipo}'`);
+		throw new DedaloError('request.invalid_tipo', {
+			message: `ensureMatrixRecord: no matrix table for '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
 	}
 	if (!(await matrixRecordExists(table, sectionTipo, sectionId))) {
 		await createSectionRecord(sectionTipo, userId, new Date(), sectionId);

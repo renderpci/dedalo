@@ -42,6 +42,7 @@
 
 import { assertMatrixTable } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { registerOntologyCacheClearer } from '../ontology/cache_invalidation.ts';
 import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import { assertValidTipo, VALID_DATA_COLUMNS } from './identifier_gate.ts';
@@ -129,7 +130,10 @@ function locatorIndexClause(
 		return `(${parts.join(' AND ')})`;
 	}
 	if (sectionId === null) {
-		throw new Error('search_related: a locator needs a section_id or a type');
+		throw new DedaloError('search.invalid_sqo', {
+			message: 'search_related: a locator needs a section_id or a type',
+			publicMessage: 'A related-search locator needs a section_id or a type',
+		});
 	}
 	parts.push(`r.target_section_id = ${push(sectionId)}::int`);
 	if (typeof locator.from_component_tipo === 'string' && locator.from_component_tipo !== '') {
@@ -281,7 +285,10 @@ export async function findInverseReferences(
 	} = {},
 ): Promise<InverseReferenceHit[]> {
 	if (locators.length === 0) {
-		throw new Error('search_related: filter_by_locators is required');
+		throw new DedaloError('search.invalid_sqo', {
+			message: 'search_related: filter_by_locators is required',
+			publicMessage: 'A related search needs filter_by_locators',
+		});
 	}
 	const tables = await getRelationTables();
 	if (options.tables !== undefined) {
@@ -600,7 +607,10 @@ export async function findInverseReferenceLocators(
 	} = {},
 ): Promise<InverseReferenceLocatorHit[]> {
 	if (locators.length === 0) {
-		throw new Error('search_related: filter_by_locators is required');
+		throw new DedaloError('search.invalid_sqo', {
+			message: 'search_related: filter_by_locators is required',
+			publicMessage: 'A related search needs filter_by_locators',
+		});
 	}
 	const tables = await getRelationTables();
 	// Coverage check stays ABOVE the owner probe: an uncovered instance must
@@ -872,7 +882,10 @@ export async function countInverseReferences(
 	options: { sectionTipos?: string[] | 'all'; groupBy?: string[] } = {},
 ): Promise<RelatedCountResult> {
 	if (locators.length === 0) {
-		throw new Error('search_related: filter_by_locators is required');
+		throw new DedaloError('search.invalid_sqo', {
+			message: 'search_related: filter_by_locators is required',
+			publicMessage: 'A related search needs filter_by_locators',
+		});
 	}
 	const tables = await getRelationTables();
 
@@ -893,9 +906,9 @@ export async function countInverseReferences(
 	// a real caller ever appears).
 	const groupByRaw = groupByFiltered;
 	if (groupByRaw.length > 0 && !(groupByRaw.length === 1 && groupByRaw[0] === 'section_tipo')) {
-		throw new Error(
-			`search_related: group_by [${groupByRaw.join(', ')}] is not supported by the relation index (only 'section_tipo'; flat-function scan removed 2026-07-20)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `search_related: group_by [${groupByRaw.join(', ')}] is not supported by the relation index (only 'section_tipo'; flat-function scan removed 2026-07-20)`,
+		});
 	}
 	await requireRelationIndex(tables);
 	{

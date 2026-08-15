@@ -35,6 +35,7 @@ import { getSectionTipos } from '../concepts/sqo.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
 import { policyForTable } from '../db/matrix_index_policy.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import {
 	getColumnNameByModel,
@@ -227,16 +228,17 @@ async function buildOrderClauses(
 				if (typeof pin?.section_tipo === 'string') tipos.add(pin.section_tipo);
 				const id = Number(pin?.section_id);
 				if (!Number.isSafeInteger(id)) {
-					throw new Error(
-						`search assembler: locator_position order refuses non-integer pin section_id ${JSON.stringify(pin?.section_id)}`,
-					);
+					throw new DedaloError('search.invalid_sqo', {
+						message: `search assembler: locator_position order refuses non-integer pin section_id ${JSON.stringify(pin?.section_id)}`,
+						publicMessage: 'A locator_position order pin needs an integer section_id',
+					});
 				}
 				ids.push(id);
 			}
 			if (tipos.size > 1) {
-				throw new Error(
-					'search assembler: locator_position order supports a single-tipo pin list (v1)',
-				);
+				throw new DedaloError('engine.uncovered_scope', {
+					message: 'search assembler: locator_position order supports a single-tipo pin list (v1)',
+				});
 			}
 			selectExtra.push(
 				`array_position(ARRAY[${ids.join(',')}]::int[], ${alias}.section_id) AS locator_position_order`,
@@ -299,7 +301,10 @@ async function buildOrderClauses(
 		const model = await getModelByTipo(componentTipo);
 		const column = model !== null ? getColumnNameByModel(model) : null;
 		if (model === null || column === null) {
-			throw new Error(`search assembler: cannot order by unknown tipo '${componentTipo}'`);
+			throw new DedaloError('request.invalid_tipo', {
+				message: `search assembler: cannot order by unknown tipo '${componentTipo}'`,
+				coordinates: { tipo: componentTipo },
+			});
 		}
 		const translatable = await getTranslatableByTipo(componentTipo);
 		const langRaw = (orderEntry as { lang?: string }).lang;
@@ -891,7 +896,9 @@ export async function buildSearchSql(sqo: Sqo, options: SearchOptions = {}): Pro
 	}
 	const matrixTable = tables[0];
 	if (matrixTable === undefined) {
-		throw new Error('search assembler: no resolvable matrix table for the SQO section_tipo');
+		throw new DedaloError('request.invalid_tipo', {
+			message: 'search assembler: no resolvable matrix table for the SQO section_tipo',
+		});
 	}
 	// Multi-section forces remove_distinct (PHP :397-401).
 	const removeDistinct = sqo.remove_distinct === true || multiSection;

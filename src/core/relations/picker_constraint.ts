@@ -29,6 +29,7 @@
 
 import { asSectionId, canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -146,11 +147,14 @@ async function resolveSelectionLimit(callerTipo: string): Promise<number | null>
 	const declared = properties?.data_limit;
 	if (declared === undefined || declared === null) return null;
 	if (typeof declared !== 'number' || !Number.isInteger(declared) || declared < 0) {
-		throw new Error(
-			`[relations/picker_constraint] node '${callerTipo}' declares an unusable ` +
+		throw new DedaloError('area.picker_caller_invalid', {
+			message:
+				`[relations/picker_constraint] node '${callerTipo}' declares an unusable ` +
 				`properties.data_limit (${JSON.stringify(declared)}). It must be a JSON number: a ` +
 				'non-negative integer, or absent for no limit.',
-		);
+			publicMessage: 'The picker caller declares an unusable data_limit',
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	return declared;
 }
@@ -183,18 +187,24 @@ async function countHeldLocators(
 	const model = await getModelByTipo(callerTipo);
 	const column = model === null ? null : getColumnNameByModel(model);
 	if (column !== 'relation') {
-		throw new Error(
-			`[relations/picker_constraint] node '${callerTipo}' (model '${String(model)}') does not ` +
+		throw new DedaloError('area.picker_caller_invalid', {
+			message:
+				`[relations/picker_constraint] node '${callerTipo}' (model '${String(model)}') does not ` +
 				`store in the relation column (resolved column: ${String(column)}), so it holds no ` +
 				'locators to count. Only relation-family components carry a picker constraint.',
-		);
+			publicMessage: 'Only relation-family components carry a picker constraint',
+			coordinates: { tipo: callerTipo, model: String(model) },
+		});
 	}
 	const table = await getMatrixTableFromTipo(callerSectionTipo);
 	if (table === null) {
-		throw new Error(
-			`[relations/picker_constraint] section '${callerSectionTipo}' resolves to no matrix ` +
+		throw new DedaloError('area.picker_caller_invalid', {
+			message:
+				`[relations/picker_constraint] section '${callerSectionTipo}' resolves to no matrix ` +
 				`table, so the locators held by '${callerTipo}' cannot be counted.`,
-		);
+			publicMessage: "The picker caller's section holds no records",
+			coordinates: { tipo: callerTipo, section_tipo: callerSectionTipo },
+		});
 	}
 	const record = await readMatrixRecord(table, callerSectionTipo, sectionId);
 	const items = (record?.columns.relation as Record<string, unknown[]> | null)?.[callerTipo];

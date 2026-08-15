@@ -36,6 +36,7 @@ import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { readComponentItems } from '../../src/core/resolve/component_data.ts';
 import { markPatternById } from '../../src/core/resolve/tr_marks.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
+import { refusalOfSync } from '../helpers/refusal.ts';
 
 const TABLE = 'matrix';
 const HOST_SECTION = 'rsc167';
@@ -318,9 +319,14 @@ describe('markPatternById — the id is validated, never interpolated raw', () =
 		expect(() => markPatternById('index', '7|.*')).toThrow(/not a valid tag id/);
 		expect(() => markPatternById('index', '')).toThrow(/not a valid tag id/);
 		expect(() => markPatternById('index', '1234567')).toThrow(/not a valid tag id/);
+		// The guard is a TYPED caller refusal (ERRORS_SPEC §7) — client input.
+		expect(refusalOfSync(() => markPatternById('index', '7|.*')).code).toBe('request.invalid');
 	});
 
 	test('a type outside the allowlist throws', () => {
 		expect(() => markPatternById('note' as 'index', '3')).toThrow(/not deletable by id/);
+		expect(refusalOfSync(() => markPatternById('note' as 'index', '3')).code).toBe(
+			'request.invalid',
+		);
 	});
 });

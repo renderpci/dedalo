@@ -43,6 +43,7 @@
  */
 
 import type { ExternalServiceCapabilities } from '../../../external/api/index.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 
 /** The implicit engine of a config item that declares none. */
 const DEFAULT_ENGINE = 'dedalo';
@@ -65,16 +66,27 @@ export interface EngineSelectableItem {
  */
 export type EngineConcern = keyof ExternalServiceCapabilities;
 
-/** A narrowing site refused because the surviving engine cannot do the job. */
-export class ExternalEngineConcernUnsupportedError extends Error {
+/**
+ * A narrowing site refused because the surviving engine cannot do the job.
+ *
+ * A THIN DedaloError family (engineering/ERRORS_SPEC.md §7, families.ts): the
+ * fixed code is `engine.uncovered_scope` — the request is well formed and the
+ * server simply cannot serve it with the one engine that survived the
+ * narrowing. The old sentence stays as `Error.message` (log-only) and
+ * site/service/concern ride as log-only `coordinates` AND as instance fields,
+ * which the census and the `instanceof` catch in section/indexation_grid.ts
+ * still read.
+ */
+export class ExternalEngineConcernUnsupportedError extends DedaloError {
 	readonly site: string;
 	readonly service: string;
 	readonly concern: EngineConcern;
 
 	constructor(fields: { site: string; service: string; concern: EngineConcern; detail?: string }) {
-		super(
-			`request_config narrowing refused at ${fields.site}: the only engine is '${fields.service}', whose adapter declares capabilities.${fields.concern} = false${fields.detail === undefined ? '' : ` (${fields.detail})`}`,
-		);
+		super('engine.uncovered_scope', {
+			message: `request_config narrowing refused at ${fields.site}: the only engine is '${fields.service}', whose adapter declares capabilities.${fields.concern} = false${fields.detail === undefined ? '' : ` (${fields.detail})`}`,
+			coordinates: { site: fields.site, service: fields.service, concern: fields.concern },
+		});
 		this.name = 'ExternalEngineConcernUnsupportedError';
 		this.site = fields.site;
 		this.service = fields.service;

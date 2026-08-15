@@ -31,6 +31,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
 import { expandFixedFilter } from '../../src/core/relations/request_config/filters.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const SECTION = 'test3';
@@ -221,6 +222,10 @@ describe('expandFixedFilter — descriptor list shell', () => {
 		).rejects.toThrow(/unknown fixed_filter source 'not_a_source'/);
 		await expect(expandFixedFilter([{ value: [] }], SECTION, OWNER)).rejects.toThrow(
 			/unknown fixed_filter source/,
+		);
+		// The refusal is TYPED: a misconfigured node, not an unexpected error.
+		expect((await refusalOf(expandFixedFilter([{ value: [] }], SECTION, OWNER))).code).toBe(
+			'ontology.invalid_node',
 		);
 	});
 

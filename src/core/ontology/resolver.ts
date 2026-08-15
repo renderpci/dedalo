@@ -23,6 +23,7 @@
  */
 
 import { isInTransaction, sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
 import { getSectionIdFromTipo } from './tld.ts';
@@ -250,16 +251,23 @@ export async function getModelByTipo(tipo: string): Promise<string | null> {
 async function aliasTargetTipoOf(tipo: string): Promise<string> {
 	const aliasOf = ((await getNode(tipo))?.properties as { alias_of?: unknown } | null)?.alias_of;
 	if (typeof aliasOf !== 'string' || aliasOf === '') {
-		throw new Error(`component_alias '${tipo}': properties.alias_of is required (WC-020)`);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `component_alias '${tipo}': properties.alias_of is required (WC-020)`,
+			coordinates: { tipo },
+		});
 	}
 	const target = await getNode(aliasOf);
 	if (target === null) {
-		throw new Error(`component_alias '${tipo}': alias_of target '${aliasOf}' does not exist`);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `component_alias '${tipo}': alias_of target '${aliasOf}' does not exist`,
+			coordinates: { tipo, alias_of: aliasOf },
+		});
 	}
 	if (target.model === 'component_alias') {
-		throw new Error(
-			`component_alias '${tipo}': alias-of-alias refused ('${tipo}' → '${aliasOf}' → …) — single hop only (WC-020)`,
-		);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `component_alias '${tipo}': alias-of-alias refused ('${tipo}' → '${aliasOf}' → …) — single hop only (WC-020)`,
+			coordinates: { tipo, alias_of: aliasOf },
+		});
 	}
 	return aliasOf;
 }

@@ -29,6 +29,7 @@
  */
 
 import { readMatrixRecord } from '../../db/matrix.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../../ontology/resolver.ts';
 import { readComponentItems } from '../../resolve/component_data.ts';
 
@@ -217,7 +218,10 @@ export async function expandFixedFilter(
 			}
 
 			default:
-				throw new Error(`expandFixedFilter: unknown fixed_filter source '${source}'`);
+				throw new DedaloError('ontology.invalid_node', {
+					message: `expandFixedFilter: unknown fixed_filter source '${source}'`,
+					coordinates: { fixed_filter_source: String(source) },
+				});
 		}
 
 		if (items.length > 0) {
@@ -250,9 +254,10 @@ async function resolveComponentDataRecursively(
 	const fn = current.fn ?? current.data_fn;
 	if (fn !== undefined) {
 		// PHP dispatches fn 'get_calculation_data'; no live fixed_filter uses it.
-		throw new Error(
-			`resolveComponentDataRecursively: fn '${fn}' is not implemented (uncovered scope)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `resolveComponentDataRecursively: fn '${fn}' is not implemented (uncovered scope)`,
+			coordinates: { fn: String(fn) },
+		});
 	}
 	const model = await getModelByTipo(tipo);
 	if (model === null) return [];

@@ -35,7 +35,7 @@ import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { runWithRecordMemo } from '../db/record_memo.ts';
-import { isErrorInDomain } from '../errors/dedalo_error.ts';
+import { DedaloError, isErrorInDomain } from '../errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -588,11 +588,16 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		sectionId === undefined ||
 		sectionId === null
 	) {
-		throw new Error('readComponentData: source.tipo/section_tipo/section_id are required');
+		throw new DedaloError('request.invalid_source', {
+			message: 'readComponentData: source.tipo/section_tipo/section_id are required',
+		});
 	}
 	const model = await getModelByTipo(tipo);
 	if (model === null) {
-		throw new Error(`readComponentData: unknown component tipo '${tipo}'`);
+		throw new DedaloError('request.invalid_tipo', {
+			message: `readComponentData: unknown component tipo '${tipo}'`,
+			coordinates: { tipo },
+		});
 	}
 	// Request-scoped data lang, never a hardcoded install default (S2-28): an
 	// RQO that omits lang resolves the session's active data language.
@@ -1211,11 +1216,16 @@ export async function resolveSearchData(rqo: Rqo, principal?: Principal): Promis
 	const tipo = source.tipo;
 	const sectionTipo = source.section_tipo;
 	if (tipo === undefined || sectionTipo === undefined) {
-		throw new Error('resolveSearchData: source.tipo/section_tipo are required');
+		throw new DedaloError('request.invalid_source', {
+			message: 'resolveSearchData: source.tipo/section_tipo are required',
+		});
 	}
 	const model = await getModelByTipo(tipo);
 	if (model === null || getColumnNameByModel(model) !== 'relation') {
-		throw new Error(`resolveSearchData: only relation components supported, got '${model}'`);
+		throw new DedaloError('request.invalid_model', {
+			message: `resolveSearchData: only relation components supported, got '${model}'`,
+			coordinates: { tipo, model: String(model) },
+		});
 	}
 	// Request-scoped data lang, never a hardcoded install default (S2-28): an
 	// RQO that omits lang resolves the session's active data language.
@@ -1519,7 +1529,9 @@ export async function readSectionRows(
 	const source = rqo.source ?? {};
 	const callerTipo = source.tipo;
 	if (callerTipo === undefined) {
-		throw new Error('readSectionRows: rqo.source.tipo is required');
+		throw new DedaloError('request.invalid_source', {
+			message: 'readSectionRows: rqo.source.tipo is required',
+		});
 	}
 	// A search-panel component read (the service_autocomplete picker, the
 	// input_text find_equal probe) stamps the COMPONENT's own mode ('search')
@@ -1546,9 +1558,10 @@ export async function readSectionRows(
 	// only steers the derived column selection (request_config build →
 	// section_list_thesaurus instead of section_list) and the context swap.
 	if (mode !== 'list' && mode !== 'edit' && mode !== 'list_thesaurus') {
-		throw new Error(
-			`readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'list_thesaurus')`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `readSectionRows: mode '${mode}' not implemented yet (covered: 'list', 'edit', 'list_thesaurus')`,
+			coordinates: { mode: String(mode) },
+		});
 	}
 	// The client's show.ddo_map wins; else a caller section_map get_ddo_map
 	// directive (the preset picker), else the section's ontology default (PHP
@@ -1576,9 +1589,10 @@ export async function readSectionRows(
 		ddoMap = authorized;
 	}
 	if (rqo.sqo === undefined) {
-		throw new Error(
-			'readSectionRows: rqo.sqo is required (PHP "non received case" dd_core_api :2201-2251 uncovered)',
-		);
+		throw new DedaloError('request.invalid_rqo', {
+			message:
+				'readSectionRows: rqo.sqo is required (PHP "non received case" dd_core_api :2201-2251 uncovered)',
+		});
 	}
 
 	// Session navigation read-back (PHP dd_core_api :2159-2199): with session
@@ -1758,7 +1772,10 @@ export async function emitDdoData(
 ): Promise<void> {
 	const model = await getModelByTipo(ddo.tipo);
 	if (model === null) {
-		throw new Error(`emitDdoData: unknown ddo tipo '${ddo.tipo}'`);
+		throw new DedaloError('request.invalid_tipo', {
+			message: `emitDdoData: unknown ddo tipo '${ddo.tipo}'`,
+			coordinates: { tipo: ddo.tipo },
+		});
 	}
 	if (!model.startsWith('component_')) {
 		return; // groupers etc. contribute context only (deferred)
@@ -1822,9 +1839,10 @@ export async function emitDdoData(
 				? model === 'component_portal'
 				: emitHook?.emitItem === undefined;
 		if (!aliasWired) {
-			throw new Error(
-				`component_alias '${ddo.tipo}': target model '${model}' is not alias-wired yet (WC-020 v1)`,
-			);
+			throw new DedaloError('engine.uncovered_scope', {
+				message: `component_alias '${ddo.tipo}': target model '${model}' is not alias-wired yet (WC-020 v1)`,
+				coordinates: { tipo: ddo.tipo, model },
+			});
 		}
 	}
 	const hookContext: EmitHookContext = {

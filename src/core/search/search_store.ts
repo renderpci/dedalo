@@ -20,6 +20,7 @@
  */
 
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 
 const triggerPresenceCache = createDataCache<string, boolean>(() => {
@@ -133,12 +134,13 @@ async function sourcesHoldNoIndexableLocators(tables: readonly string[]): Promis
  */
 export async function requireRelationIndex(tables: readonly string[]): Promise<void> {
 	if (await relationIndexCovers(tables)) return;
-	throw new Error(
-		'matrix_relation_index is not available: sync triggers are missing, or the store is empty ' +
+	throw new DedaloError('search.index_unavailable', {
+		message:
+			'matrix_relation_index is not available: sync triggers are missing, or the store is empty ' +
 			'while relation data exists. Relation searches run ONLY on the index (flat functions ' +
 			'removed 2026-07-20). Remediation: Area Maintenance → Database info → ' +
 			'"Recreate database assets", then "Backfill search stores"; retry afterwards.',
-	);
+	});
 }
 
 /** Called by the database_info maintenance widget after asset rebuilds. */

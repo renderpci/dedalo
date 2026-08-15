@@ -87,6 +87,7 @@ import {
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { ONTOLOGY_TLD } from './ontology_tipos.ts';
 import {
 	addMainSection,
@@ -218,9 +219,10 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 	// records and named healthy ones (dd0/1, dd0/2 …) as the operator's fault.
 	// One shared cause must never be reported as N record-level defects.
 	if ((await getModelByTipo(ONTOLOGY_TLD)) === null) {
-		throw new Error(
-			`inspectOntology('${tld}'): the '${ONTOLOGY_TLD}' node cannot be resolved in dd_ontology, so NO record of '${sectionTipo}' can be parsed. This is an ontology-resolution failure, not a defect in the records — re-derive the 'ontology' tld first.`,
-		);
+		throw new DedaloError('ontology.invalid_node', {
+			message: `inspectOntology('${tld}'): the '${ONTOLOGY_TLD}' node cannot be resolved in dd_ontology, so NO record of '${sectionTipo}' can be parsed. This is an ontology-resolution failure, not a defect in the records — re-derive the 'ontology' tld first.`,
+			coordinates: { tld, section_tipo: sectionTipo },
+		});
 	}
 
 	const rows = (await sql.unsafe(

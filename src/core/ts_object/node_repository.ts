@@ -22,6 +22,7 @@
  */
 
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo, getNode } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
 
@@ -69,7 +70,9 @@ function groupLocators(locators: NodeLocator[]): Map<string, number[]> {
 			sectionId === null ||
 			!Number.isFinite(Number(sectionId))
 		) {
-			throw new Error('ts_node_repository: invalid locator (missing section_tipo/section_id)');
+			throw new DedaloError('section.bad_locators', {
+				message: 'ts_node_repository: invalid locator (missing section_tipo/section_id)',
+			});
 		}
 		const list = groups.get(sectionTipo) ?? [];
 		list.push(Math.trunc(Number(sectionId)));
@@ -211,7 +214,10 @@ export async function fetchNodeInfo(
 	for (const [sectionTipo, sectionIds] of groups) {
 		const table = await getMatrixTableFromTipo(sectionTipo);
 		if (table === null || table === '') {
-			throw new Error(`fetch_node_info: no matrix table for section '${sectionTipo}'`);
+			throw new DedaloError('request.invalid_tipo', {
+				message: `fetch_node_info: no matrix table for section '${sectionTipo}'`,
+				coordinates: { section_tipo: sectionTipo },
+			});
 		}
 
 		const sectionMap = await getSectionMap(sectionTipo);
@@ -228,7 +234,10 @@ export async function fetchNodeInfo(
 			(orderTipo !== null && safeOrderTipo === null) ||
 			(isIndexableTipo !== null && safeIndexableTipo === null)
 		) {
-			throw new Error(`fetch_node_info: invalid tipo grammar in section_map of '${sectionTipo}'`);
+			throw new DedaloError('ontology.invalid_node', {
+				message: `fetch_node_info: invalid tipo grammar in section_map of '${sectionTipo}'`,
+				coordinates: { section_tipo: sectionTipo },
+			});
 		}
 
 		// Order component number format (type/precision from the order node props).
@@ -340,11 +349,17 @@ export async function batchDescriptorFlags(
 		}
 		const safeDescriptorTipo = safeTipo(isDescriptorTipo);
 		if (safeDescriptorTipo === null) {
-			throw new Error(`batch_descriptor_flags: invalid tipo '${isDescriptorTipo}'`);
+			throw new DedaloError('ontology.invalid_node', {
+				message: `batch_descriptor_flags: invalid tipo '${isDescriptorTipo}'`,
+				coordinates: { section_tipo: sectionTipo, is_descriptor_tipo: isDescriptorTipo },
+			});
 		}
 		const table = await getMatrixTableFromTipo(sectionTipo);
 		if (table === null || table === '') {
-			throw new Error(`batch_descriptor_flags: no matrix table for section '${sectionTipo}'`);
+			throw new DedaloError('request.invalid_tipo', {
+				message: `batch_descriptor_flags: no matrix table for section '${sectionTipo}'`,
+				coordinates: { section_tipo: sectionTipo },
+			});
 		}
 
 		const rows = (await sql.unsafe(

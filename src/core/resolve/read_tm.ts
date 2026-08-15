@@ -39,6 +39,7 @@ import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { termByTipo } from '../ontology/labels.ts';
 import {
@@ -380,7 +381,10 @@ async function queryTmRows(
 	const orderCol = orderPath?.component_tipo;
 	const orderColumn = orderCol === undefined ? 'id' : TM_ORDER_COLUMN[String(orderCol)];
 	if (orderColumn === undefined) {
-		throw new Error(`TM read: order by '${orderCol}' is uncovered scope`);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `TM read: order by '${orderCol}' is uncovered scope`,
+			coordinates: { order_column: String(orderCol) },
+		});
 	}
 	const direction = String(order[0]?.direction ?? 'DESC').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 	// TABLE-QUALIFIED, ALWAYS. The select list aliases `timestamp::text AS

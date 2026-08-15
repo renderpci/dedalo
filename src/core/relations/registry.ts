@@ -27,6 +27,7 @@ import { getComponentModel } from '../components/registry.ts';
 import type { RelationResolverId } from '../components/types.ts';
 import type { Ddo } from '../concepts/ddo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import type { DataItem, EmissionContext, SectionsEnvelope } from '../resolve/component_data.ts';
 import { filterResolver, portalResolver } from './models/portal.ts';
 import { relationChildrenResolver } from './models/relation_children.ts';
@@ -133,9 +134,10 @@ const RESOLVER_IMPLEMENTATIONS: Readonly<Record<RelationResolverId, RelationMode
 export function getRelationResolver(model: string): RelationModelResolver {
 	const resolverId = getComponentModel(model)?.resolveData;
 	if (resolverId === undefined) {
-		throw new Error(
-			`getRelationResolver: relation model '${model}' has no registered resolver (uncovered scope)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `getRelationResolver: relation model '${model}' has no registered resolver (uncovered scope)`,
+			coordinates: { model },
+		});
 	}
 	return RESOLVER_IMPLEMENTATIONS[resolverId];
 }
@@ -191,14 +193,16 @@ export async function getRelationSearchFragmentBuilder(
 ): Promise<RelationSearchFragmentBuilder> {
 	const descriptor = getComponentModel(model);
 	if (descriptor?.search?.status === 'unported') {
-		throw new Error(
-			`search conform: builder for model '${model}' not implemented yet (${descriptor.search.reason})`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `search conform: builder for model '${model}' not implemented yet (${descriptor.search.reason})`,
+			coordinates: { model },
+		});
 	}
 	if (descriptor?.resolveData === undefined) {
-		throw new Error(
-			`search conform: relation model '${model}' has no registered resolver (uncovered scope)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `search conform: relation model '${model}' has no registered resolver (uncovered scope)`,
+			coordinates: { model },
+		});
 	}
 	if (model === 'component_relation_children') {
 		const { buildRelationChildrenFragment } = await import(

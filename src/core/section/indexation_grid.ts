@@ -42,6 +42,7 @@ import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
 import { MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { getLabels } from '../labels/catalog.ts';
 import { additionalPath as mediaBucketPath } from '../media/path.ts';
 import { termByTipo } from '../ontology/labels.ts';
@@ -491,9 +492,10 @@ async function mediaCellUrl(
 	const spec = mediaTypeOf(model);
 	if (spec === null) {
 		// Unknown media-column model: fail LOUD (repo rule) rather than guess.
-		throw new Error(
-			`indexation_grid: no media spec for model '${model}' (${ddo.tipo} @ ${sectionTipo}/${sectionId})`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `indexation_grid: no media spec for model '${model}' (${ddo.tipo} @ ${sectionTipo}/${sectionId})`,
+			coordinates: { tipo: ddo.tipo, model, section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	const externalSource = await externalSourceUrl(ctx, ddo.tipo, sectionTipo, sectionId);
 

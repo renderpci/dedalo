@@ -22,3 +22,18 @@ export async function refusalOf(run: Promise<unknown>): Promise<DedaloError> {
 	}
 	throw new Error('expected a DedaloError refusal, but the call succeeded');
 }
+
+/**
+ * The SYNCHRONOUS twin of {@link refusalOf} — same contract, same vacuity
+ * guard, for the refusals a plain function throws (the search/ontology
+ * grammar guards of the P3 read-path burn-down).
+ */
+export function refusalOfSync(run: () => unknown): DedaloError {
+	try {
+		run();
+	} catch (error) {
+		if (isDedaloError(error)) return error;
+		throw error;
+	}
+	throw new Error('expected a DedaloError refusal, but the call succeeded');
+}

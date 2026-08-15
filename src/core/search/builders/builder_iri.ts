@@ -10,6 +10,7 @@
  * NOT YET COVERED (throws): '!!' duplicated self-join.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { BuilderContext, BuilderResult } from './types.ts';
 import { extractNormalizedQ, fragment, isLiteralQ } from './types.ts';
 
@@ -65,9 +66,9 @@ export function buildIriFragment(
 	}
 	// '!!' duplicated — deferred.
 	if (effective.startsWith('!!')) {
-		throw new Error(
-			"search builder_iri: '!!' duplicated operator not implemented yet (uncovered scope)",
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: "search builder_iri: '!!' duplicated operator not implemented yet (uncovered scope)",
+		});
 	}
 	// '!=' different
 	if (effective.startsWith('!=')) {

@@ -27,6 +27,7 @@
  * client input); every comparison VALUE travels as a bound `$N` parameter.
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	type NormalizedDate,
 	normalizeDateQ,
@@ -236,9 +237,10 @@ function emitLeaf(leaf: Record<string, unknown>, sink: ParamSink): string | null
 	if (componentTipo === undefined) return null;
 	const target = TM_FILTER_COLUMNS[componentTipo];
 	if (target === undefined) {
-		throw new Error(
-			`time machine search: component '${componentTipo}' has no matrix_time_machine column (uncovered — ledger, never silently narrowed)`,
-		);
+		throw new DedaloError('engine.uncovered_scope', {
+			message: `time machine search: component '${componentTipo}' has no matrix_time_machine column (uncovered — ledger, never silently narrowed)`,
+			coordinates: { tipo: componentTipo },
+		});
 	}
 	const operator = typeof leaf.q_operator === 'string' ? leaf.q_operator : '';
 	switch (target.kind) {

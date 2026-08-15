@@ -13,6 +13,7 @@
  */
 
 import { memoizedReadMatrixRecord } from '../../../db/record_memo.ts';
+import { DedaloError } from '../../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../../ontology/resolver.ts';
 
 /** One emitted widget data item (shape is widget-specific; keys ordered as PHP inserts them). */
@@ -173,18 +174,36 @@ export type InfoWidgetDescriptor =
 			unported: { reason: string };
 	  };
 
-/** A registered widget whose server compute is not ported yet (a substantive `unported.reason` is required). */
-export class WidgetUnportedError extends Error {
+/**
+ * A registered widget whose server compute is not ported yet (a substantive
+ * `unported.reason` is required).
+ *
+ * A thin DedaloError family (ERRORS_SPEC §7): the fixed code is
+ * `widget.unported` — the server has no implementation for it, which is a
+ * 503 the operator can act on. The declaration sentence stays as
+ * `Error.message` (log-only) so the `reason` never reaches the wire.
+ */
+export class WidgetUnportedError extends DedaloError {
 	constructor(name: string, reason: string) {
-		super(`component_info widget '${name}' is not ported: ${reason}`);
+		super('widget.unported', {
+			message: `component_info widget '${name}' is not ported: ${reason}`,
+			coordinates: { widget: name },
+		});
 		this.name = 'WidgetUnportedError';
 	}
 }
 
-/** An ontology-declared widget_name with no registry entry (PHP fatals on the include). */
-export class WidgetNotRegisteredError extends Error {
+/**
+ * An ontology-declared widget_name with no registry entry (PHP fatals on the
+ * include). Fixed code `widget.not_defined` — the same code the maintenance
+ * widget door already uses for a name nothing answers to.
+ */
+export class WidgetNotRegisteredError extends DedaloError {
 	constructor(name: string) {
-		super(`component_info widget '${name}' is not registered (widgets/registry.ts)`);
+		super('widget.not_defined', {
+			message: `component_info widget '${name}' is not registered (widgets/registry.ts)`,
+			coordinates: { widget: name },
+		});
 		this.name = 'WidgetNotRegisteredError';
 	}
 }

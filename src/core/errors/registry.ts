@@ -1255,7 +1255,8 @@ export const ERROR_REGISTRY = {
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: false,
-		reason: 'Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed form of a former `throw new Error(...)`. Coordinates carry the module + input; the sentence stays server-side.',
+		reason:
+			'Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed form of a former `throw new Error(...)`. Coordinates carry the module + input; the sentence stays server-side.',
 	},
 	'internal.module_poisoned': {
 		category: 'internal',
@@ -1610,6 +1611,58 @@ export const ERROR_REGISTRY = {
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: true,
+	},
+
+	// --- read paths (P3) ---------------------------------------------------
+	// The read side (search/conform, section read, relations resolution, the
+	// ontology accessors, the tree node repository) refused with untyped
+	// throws. Four codes cover every caller-actionable refusal it makes; the
+	// engine invariants there stay untyped under the ratchet.
+	'search.invalid_sqo': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_search_invalid_sqo',
+		message: 'The search query object is not valid',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+		hint: 'The search filter is malformed. Rebuild the SQO from the section schema and retry.',
+	},
+	'search.index_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_search_index_unavailable',
+		// Operator-actionable and the remediation IS the message: relation
+		// searches run only on matrix_relation_index, and the two maintenance
+		// actions that rebuild it are named here so the log line is the fix.
+		message:
+			'matrix_relation_index is not available: sync triggers are missing, or the store is ' +
+			'empty while relation data exists. Remediation: Area Maintenance → Database info → ' +
+			'"Recreate database assets", then "Backfill search stores".',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'ontology.invalid_node': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_ontology_invalid_node',
+		// Same shape as external.bad_config: the REQUEST was well formed, the
+		// definition behind it is not. Operator disclosure — the sentence names
+		// tipos and install structure, and travels in the log (`message`).
+		message: 'An ontology node definition is unusable; the install must be corrected',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'widget.unported': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_widget_unported',
+		message: 'This widget has no server implementation on this engine',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
 	},
 } as const satisfies Record<string, ErrorSpec>;
 
