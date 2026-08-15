@@ -130,3 +130,43 @@ granularity for one widget inside a page the user CAN open.
 interaction (the harvest ran as the superuser), so no fixture response changes.
 `test/unit/get_element_context_native.test.ts` and `count_native.test.ts` assert
 `body.msg`, which is unchanged.
+
+## Addendum 2026-08-15 — the token becomes the registered code `perm.denied`, and `denied()` is deleted
+
+This entry's contract is preserved and its vocabulary is folded into the closed
+taxonomy (`WC-2026-08-15-error-envelope-v2`).
+
+```json
+HTTP 403
+{ "ok": false, "request_id": "…",
+  "error": { "code": "perm.denied", "category": "permission",
+             "message": "Insufficient permissions",
+             "label_key": "no_access_page", "retryable": false },
+  "environment": { "result": { …page_globals, plain_vars, get_label… } },
+  "result": false, "msg": "Insufficient permissions", "errors": ["perm.denied"] }
+```
+
+- `not_authorized` → `perm.denied` at `error.code`, and (compat window) as the
+  single element of `errors`. `label_key` is the pre-existing `no_access_page`
+  key this entry introduced — reused, not renamed, because it already says the
+  right thing.
+- The default message still names nothing: it is shown to the refused user, so
+  naming the element would tell them it exists. `perm.*` codes are
+  OPERATOR disclosure, so a call site's own sentence no longer reaches the wire
+  at all — the finer grain lives in the log line and in `coordinates`.
+  `perm.out_of_scope`, `perm.section_not_writable`, `perm.developer_required`
+  and `perm.superuser_required` are separate codes for the refusals that ARE
+  distinguishable to the client.
+- **`denied()` is DELETED**, and `notAuthorized()` is now a throwing shell
+  (`: never`) kept only so unswept sites compile — both go at P1 exit with the
+  legacy body adapter. The ratchet in `authorization_denial_native.test.ts`
+  changes accordingly: it froze "no `denied(403` anywhere"; it now freezes the
+  shells' call-site count SHRINK-ONLY, to 0.
+- The `environment` extension key on the refused `start` SURVIVES, and is now
+  one of the two NAMED exceptions to "an extension key on a failure is
+  exceptional" (the other is the CSRF gate's `action`) — see ERRORS_SPEC §3.0.
+  Everything else a failure has to say goes in `error.details`.
+- The client-side 403 exemption this entry added to `data_manager` is gone as a
+  special case: `api_transport.js` parses the body on ANY status
+  (`WC-2026-08-15-error-status-is-a-channel`), so the exemption list that this
+  entry and WC-051 each extended by one status no longer exists.

@@ -33,3 +33,20 @@
 - Frozen fixtures still carry the WC-067 nested `{result:false,msg}` payload;
   `test/parity/normalize.ts` keeps classifying that nested pair as DATA (not
   an envelope) — a fixture value, not a live shape.
+
+## Addendum 2026-08-15 — where this sits in the envelope-v2 series
+
+Same day, same series. This entry is the NESTED case: `connection_status` is a
+value inside `data`, not an envelope, so it takes the shape's spirit (`ok` as a
+boolean, a registered `code`, a message for the log/curl side) without becoming
+one — it has no `request_id` and no `error` object.
+
+- The envelope itself: `WC-2026-08-15-error-envelope-v2`.
+- Why a probe REPORTS rather than fails, and how the install adapter maps this
+  verdict onto the wizard's step contract:
+  `WC-2026-08-15-install-refusals-typed`.
+- Why `test/parity/normalize.ts` keeps classifying the frozen nested
+  `{result:false, msg}` payload as DATA and not as an envelope — an
+  `adoptErrorEnvelopeV2` rule, listed with the eight root bodies in
+  `WC-2026-08-15-error-envelope-v2` and reasserted in
+  `WC-2026-08-15-stream-error-frames`.

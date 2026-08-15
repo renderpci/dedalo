@@ -35,7 +35,20 @@ interface ToolActionSpec {
 }
 ```
 
-`handler` receives `{ principal, userId, options, background, publishProgress?, clientIp? }` and returns a `ToolResponse` (`{ result, msg, errors?, ...extra }`) that **replaces the API envelope wholesale** — the handler owns `result`/`msg`/`errors` and may add extra fields (e.g. a streaming body).
+`handler` receives `{ principal, userId, options, background, publishProgress?, clientIp? }` and returns a `ToolResponse`, which **replaces the API envelope wholesale**. So a `ToolResponse` **is** the API envelope: build it with `ok(data, …)`, and add the extra top-level fields the client reads by name (a streaming body, a job id, a per-item report) as `extend`.
+
+**To fail, throw — never build a failure body.** A thrown `DedaloError` carries a registered code from the closed set, and the tools dispatcher converts it into the standard error envelope with the status that code's category implies. There is no `failed()` helper and no `'Error. Request failed.'` prefix any more.
+
+```ts
+handler: async ({ options, principal }) => {
+  const target = String(options.target ?? '');
+  if (target === '') throw new DedaloError('tool.invalid_target');          // → 400
+  const report = await runTheWork(target, principal);                        // may throw its own code
+  return ok({ processed: report.done, failures: report.failures }, { extend: { job_id: report.jobId } });
+}
+```
+
+Note where the per-item failures went: **inside `data`**. A run that processed 117 records and could not process 3 is a SUCCESS with a report — `ok: false` is reserved for "this run did not happen". The same rule as elsewhere in the engine: `ok` describes the request, not the quality of every row it touched. See [the API reference](../../api/dedalo_api_v1.md#response-envelope) for the envelope's full field list.
 
 Two of those fields are optional and carry a caveat:
 
@@ -86,7 +99,7 @@ The client sends this (built by the JS helper `this.tool_request()`):
 
 ## Background execution
 
-Long-running actions can run detached: the client passes `options.background_running = true`. Bun's server is a **persistent process**, so `scheduleBackground` (`src/core/tools/background.ts`) runs the handler as a fire-and-forget promise plus an in-process job record — it returns `{ result: true, msg: 'OK. Background process started', background_job_id }` immediately and runs the handler afterwards, capturing the outcome on the job record (`getBackgroundJob(id)`).
+Long-running actions can run detached: the client passes `options.background_running = true`. Bun's server is a **persistent process**, so `scheduleBackground` (`src/core/tools/background.ts`) runs the handler as a fire-and-forget promise plus an in-process job record — it returns an `ok` envelope with the job id as an extension key immediately and runs the handler afterwards, capturing the outcome on the job record (`getBackgroundJob(id)`).
 
 The method must ALSO be listed in the module's `backgroundRunnable`:
 

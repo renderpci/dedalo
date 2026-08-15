@@ -55,3 +55,41 @@ the 401 exemption in `data_manager`, and that every client branch still names
 `not_logged` — so the server token can never be orphaned again) ·
 `test/parity/environment_differential.test.ts` (the three keys asserted TS-only,
 then stripped, exactly as WC-031).
+
+## Addendum 2026-08-15 — `not_logged` is now the registered code `auth.not_logged`
+
+Point 2 above holds, with the token promoted into the closed taxonomy
+(`WC-2026-08-15-error-envelope-v2`).
+
+The auth gate now THROWS `auth.not_logged`; the dispatch chokepoint converts it
+(`src/core/errors/convert.ts`). On the wire:
+
+```json
+HTTP 401
+{ "ok": false, "request_id": "…",
+  "error": { "code": "auth.not_logged", "category": "auth",
+             "message": "Authentication required",
+             "label_key": "error_auth_not_logged", "retryable": false },
+  "result": false, "msg": "Authentication required", "errors": ["auth.not_logged"] }
+```
+
+- The literal the client dispatches on moves from `not_logged` to
+  `auth.not_logged`, at `error.code`. During the compat window the same literal
+  is ALSO the single element of `errors` (`ERROR_ENVELOPE_COMPAT`), so an
+  unswept client branch that matched `errors[0]` keeps working — against the new
+  dotted token, not the bare one. Every client re-login branch was swept in
+  `4470734785`.
+- The maintenance-mode gate keeps its own identity: `auth.maintenance`, also
+  401, because the client's relogin policy keys on BOTH.
+- `notLogged()` in `src/core/api/response.ts` is now a throwing shell
+  (`: never`) kept only so unswept call sites compile; it is deleted at P1 exit
+  with the legacy body adapter.
+- The 401 EXEMPTION in `data_manager` that this entry introduced is gone as a
+  special case — `api_transport.js` parses the body on ANY status, so no
+  per-status exemption list exists any more
+  (`WC-2026-08-15-error-status-is-a-channel`).
+
+Points 1 and 3 (the media cookie bound to the session, the three TS-only
+`page_globals` keys) are unchanged. Gate: `session_not_logged_contract.test.ts`
+keeps asserting the token over real HTTP and that every client branch still
+names it.

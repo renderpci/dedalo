@@ -12,11 +12,19 @@ change.
 The operator's question is always: **"no data, or swallowed failure?"** Every
 catch must leave that answerable.
 
-**The default is fail-loud.** Uncovered scope, contract violations, and
-impossible states THROW with a message naming the module and the input
-(`'search conform: model X declares no searchBuilder family…'`). The
-dispatch envelope converts throws into error responses; the process-level
-unhandledRejection guard (S1-15) makes escaped rejections loud, never fatal.
+**The default is fail-loud AND TYPED.** Uncovered scope, contract violations
+and impossible states THROW a `DedaloError` carrying a REGISTERED code
+(`src/core/errors/registry.ts` — the only place a code may be born; grammar
+`<domain>.<condition>`), with the module and the input in the message and in
+`coordinates`: `throw new DedaloError('engine.uncovered_scope', {message:
+'search conform: model X declares no searchBuilder family…', coordinates:
+{tipo}})`. Throws become error responses through the SINGLE CONVERTER
+(`src/core/errors/convert.ts`: `toDedaloError` → `toErrorEnvelope` /
+`toStructuredErr` / `toStreamFrame`) — no handler, helper or route builds a
+failure body of its own. An untyped `throw new Error` is still loud, and
+`toDedaloError` classifies it as `internal.unexpected`; it is a debt, not a
+convention. The process-level unhandledRejection guard (S1-15) makes escaped
+rejections loud, never fatal. Canon: engineering/ERRORS_SPEC.md.
 
 **A catch may swallow ONLY when all three hold:**
 
@@ -32,7 +40,10 @@ unhandledRejection guard (S1-15) makes escaped rejections loud, never fatal.
    instead (empty list, stale cache entry, skipped side effect).
 
 **Log line grammar**: `[subsystem] imperative summary` + the thrown error +
-identifying coordinates (tipo/section_id/job id). Request-scale telemetry
+identifying coordinates (tipo/section_id/job id) — which is what
+`logError(error, {subsystem, requestId})` (`src/core/errors/log.ts`) emits, at
+the registry severity, incrementing `errors_total` and `error_<code>`. Prefer
+it to a bare `console.*` on any path that already has a typed error. Request-scale telemetry
 belongs in the structured access log (S2-37, `src/server.ts`), not scattered
 console lines. Never log secrets or full record payloads.
 

@@ -71,3 +71,35 @@ string.
 - **No re-harvest.** The frozen oracle store carries no failing-translator
   fixture — the PHP shape above is recorded from the frozen source, as a fossil.
   The gate is a native unit gate, not a differential.
+
+## Addendum 2026-08-15 — the truncated provider text moves into `details.provider_message`
+
+The truncation rule is unchanged: the same 512-BYTE budget measured with
+`TextEncoder`, the cut walked back off any UTF-8 continuation byte, the `..`
+suffix, and the divergence-from-PHP reasoning above.
+
+What changed is WHERE the truncated string lands
+(`WC-2026-08-15-error-envelope-v2`): a failing translation is now a thrown
+`translation.provider_failed`, and the provider's own text is a DECLARED detail
+rather than the response's `msg`:
+
+```json
+{ "ok": false, "request_id": "…",
+  "error": { "code": "translation.provider_failed", "category": "unavailable",
+             "message": "…", "label_key": "…", "retryable": true,
+             "details": { "provider_message": "<the 512-byte truncation>" } } }
+```
+
+- `provider_message` is a declared `details_keys` entry, so the converter lets
+  it through as a scalar and nothing else from the throw reaches the wire.
+- `translation.not_configured` is the sibling code for "no provider is
+  configured at all", which the single truncated sentence used to blur into the
+  same failure.
+- `truncateProviderMessage` (`src/core/tools/translation.ts`) is unmoved and
+  still the one producer of the string; it is now called on the way INTO the
+  detail rather than on the way into `msg`. The gate
+  (`translation_pipeline_native.test.ts`, the six byte-boundary cases) is
+  unchanged.
+
+Keeping the budget matters more than ever: a `details` value is a bounded scalar
+by contract, and 512 bytes is the bound this entry already justified.

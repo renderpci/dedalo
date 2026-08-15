@@ -172,9 +172,75 @@ Example `source` snippet:
 
 ## Response envelope
 
-- Handlers return an `ApiResult` (`src/core/api/response.ts`): an HTTP status plus a body. Most bodies use the `{ result, msg, errors }` shape.
-- On an unexpected handler exception the dispatcher degrades to the client envelope — HTTP 200 with `result: false` — rather than a raw 500, because the client decides failure by reading `result` from a parsed JSON body. The exception detail stays server-side, logged against the response's `request_id`.
-- When a session exists, the dispatcher appends the session's `csrf_token` to every response for the client's transparent-retry logic.
+Every JSON body is one of exactly two shapes, discriminated by the boolean `ok`:
+
+```json
+{ "ok": true,  "request_id": "…", "data": { "context": [ ], "data": [ ] },
+  "notices": [ ], "csrf_token": "…" }
+
+{ "ok": false, "request_id": "…",
+  "error": { "code": "section.bad_locators", "category": "caller",
+             "message": "Invalid or empty locators",
+             "label_key": "error_section_bad_locators",
+             "retryable": false, "details": { } },
+  "csrf_token": "…" }
+```
+
+- **`request_id`** is top level on success and on failure. It is the join key to
+  the access log line for the same request, which also carries `error_code` and
+  `error_category` when the outcome was a failure.
+- **`data`** is the payload — for a read, the `{context, data}` unit described in
+  [dd_object](../core/dd_object.md). A handler never puts payload anywhere else.
+- **`error.code`** is a member of a CLOSED set. Codes are written
+  `<domain>.<condition>` (`auth.not_logged`, `perm.denied`,
+  `request.invalid_rqo`, `external.timeout`, `internal.unexpected`) and every
+  one of them is declared, with its category, status, label and retry semantics,
+  in the registry — `src/core/errors/registry.ts`. Branch on the code; never on
+  the message.
+- **`error.message`** is registry-owned English for logs and command-line use. It
+  never interpolates caller data. What a browser renders is **`error.label_key`**,
+  a key of the UI label catalogs, so a failure is translated like everything else.
+- **`error.details`** carries a small, per-code set of declared scalar values
+  (a service name, a rejected path list, a count). Record coordinates and the
+  underlying exception are server-side only; `error.debug` appears only when the
+  installation is running with API error debugging switched on.
+- **`notices`** is the non-fatal channel on a SUCCESSFUL response:
+  `{code, label_key, retryable, details?}`. A degraded external source, a
+  truncated value or a partial result is reported here — the request succeeded,
+  something about the answer is worth saying.
+- **Extension keys** may sit at top level beside the envelope keys when the
+  client reads them by name (`total`, `job_id`, `pid`, `environment`,
+  `source_status`, …). They can never override an envelope key.
+- **`csrf_token`** is appended by the dispatcher to every response of a session,
+  success and failure alike, for the client's transparent-retry logic.
+
+### The HTTP status is part of the answer
+
+`ok: false` always means a non-2xx status, and the status is derived from the
+error code's category:
+
+| category | status | what the caller should do |
+|---|---|---|
+| `caller` | 400 | fix the request |
+| `auth` | 401 | authenticate (or re-authenticate), then retry |
+| `permission` | 403 | nothing — retrying changes nothing |
+| `not_found` | 404 | the resource does not exist (one shape for every miss) |
+| `conflict` | 409 | re-read the state, then decide |
+| `limit` | 429 | wait for `Retry-After`, then retry |
+| `unavailable` | 503 | a dependency is down; retry later |
+| `internal` | 500 | report it — the request was well-formed |
+
+`limit` and `unavailable` failures may carry a `Retry-After` header. Read the
+BODY on any status: a non-2xx response is still a well-formed envelope, and it is
+where the reason lives.
+
+### Compat window
+
+Until the browser client's last legacy reader is removed, every body ALSO carries
+the previous shape's three keys: `result` (a mirror of `data`, or `false` on a
+failure), `msg` (the error message) and `errors` (a one-element array holding the
+error code). They are mirrors, never a second source of truth — read `ok`,
+`data` and `error`.
 
 ## Where to look in the code
 
@@ -183,7 +249,7 @@ Example `source` snippet:
 - RQO DTO (Zod schema): `src/core/concepts/rqo.ts`
 - SQO DTO + boundary sanitizer: `src/core/concepts/sqo.ts` (`sanitizeClientSqo`)
 - Auth + sessions: `src/core/security/` (`auth.ts`, `session_store.ts`, `permissions.ts`)
-- Response envelope: `src/core/api/response.ts`
+- Response envelope + the one converter: `src/core/errors/` (`registry.ts`, `convert.ts`, `schema.ts`); the handler result type stays in `src/core/api/response.ts`
 
 ## Class reference
 

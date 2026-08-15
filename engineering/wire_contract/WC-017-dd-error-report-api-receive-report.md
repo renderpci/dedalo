@@ -22,3 +22,25 @@
   to normalize). TS ground truth pinned in
   `test/unit/error_report_receiver.test.ts` (flag off/token/throttle/schema/
   stamping paths).
+
+## Addendum 2026-08-15 — the Gate-1c mimicry becomes a CODE identity
+
+The intake's exposure posture is unchanged. What changes is HOW the "a probe
+cannot learn the endpoint exists" property is expressed
+(`WC-2026-08-15-error-envelope-v2`, `WC-2026-08-15-install-refusals-typed`):
+
+- A disabled Gate 1c and an unregistered action now throw the SAME
+  `DedaloError`, from the same `unknownAction()` constructor in
+  `src/core/api/dispatch.ts`: `request.unknown_action` (400) with
+  `details.action`. The two bodies are byte-identical minus `request_id`, and
+  they stay identical because there is one constructor, not two hand-built
+  bodies that drift the moment either is edited — which is the whole value of
+  the mimicry.
+- The IP refusal is `install.ip_denied` (403); a request that gets past the gate
+  and fails the handler's own hardening throws its own registered code, so a
+  throttle rejection is no longer indistinguishable from a schema rejection.
+- A relaying installation that reaches an engine where the receiver is off now
+  gets `error.code = "request.unknown_action"` rather than prose, which is what
+  the relay (WC-019) reports to its admin.
+- Gate: `error_report_receiver.test.ts` (unchanged in substance) plus
+  `dispatch_error_native.test.ts`, which pins the two bodies EQUAL.
