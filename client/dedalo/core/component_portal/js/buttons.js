@@ -620,12 +620,27 @@ buttons.render_button_tree_selector = (self) => {
 	const mousedown_handler = (e) => {
 		e.stopPropagation()
 
-		try {
-            // open new area_thesaurus/area_ontology window for relation
-            self.open_ontology_window('relation')
-        } catch (error) {
-            console.error('Error opening ontology window:', error);
-        }
+		// show/hide the INLINE thesaurus pane — THE picker surface. The pane keeps this
+		// component on screen beside the tree, so a picked term is seen landing in it.
+		// Never call open_ontology_window with a mode here: the mode string it used to
+		// pass is no longer a client declaration (the server grants it from the caller).
+		//
+		// (!) THE PANE IS BUILT BY THE TREE VIEW ONLY. Six shipped ontology nodes declare
+		// `button_tree:true` without a tree view, so this button also renders where there
+		// is no pane. Those callers keep the separate BROWSE window they had before —
+		// picking there has been dead since the cutover, but a button that does nothing
+		// at all is a worse answer than one that opens the tree to look at.
+		if (typeof self.toggle_thesaurus_pane==='function' && self.node?.querySelector('.thesaurus_pane')) {
+			self.toggle_thesaurus_pane().catch(error => {
+				console.error('Error toggling the thesaurus pane:', error);
+			})
+		} else {
+			try {
+				self.open_ontology_window(null, null)
+			} catch (error) {
+				console.error('Error opening ontology window:', error);
+			}
+		}
 	}
 	button_tree_selector.addEventListener('mousedown', mousedown_handler)
 
