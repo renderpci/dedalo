@@ -65,7 +65,8 @@
 		const section_tipo			= arguments[0][0]
 		const from_component_tipo	= arguments[0][1]
 		// const paginated_key		= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
-		const section_id			= (random_number(50) || 1).toString()
+		// WC-2026-08-10: a record address is int-canonical on the wire and in storage
+		const section_id			= random_number(50) || 1
 
 		const value = {
 			type				: "dd151",
@@ -95,7 +96,7 @@
 
 		const value = {
 			section_tipo		: section_tipo, // "dd501"
-			section_id			: (section_id).toString(),
+			section_id			: Number(section_id), // WC-2026-08-10 int-canonical
 			from_component_tipo	: from_component_tipo, // "test144"
 			type				: type,
 			id					: 1
