@@ -38,7 +38,8 @@ function printReport(results: readonly FileCompatReads[]): number {
 	const offenders = [...results]
 		.filter((result) => result.reads > 0)
 		.sort((a, b) => b.reads - a.reads || byPath(a, b));
-	for (const result of offenders) console.log(`  ${String(result.reads).padStart(5)}  ${result.file}`);
+	for (const result of offenders)
+		console.log(`  ${String(result.reads).padStart(5)}  ${result.file}`);
 	console.error(
 		'\nCOMPAT READS PRESENT: the server no longer emits `result`/`msg`/`errors` on the envelope (removed 2026-08-16). Read `data` / `error.code` / `error.label_key`, or — for a NON-envelope shape (stream frame, payload key, browser API) — add a NON_ENVELOPE_READS entry with its reason.',
 	);

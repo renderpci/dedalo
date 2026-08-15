@@ -413,7 +413,10 @@ describe('A. source laws (zero)', () => {
 		const errorsDir = CORPUS.filter((file) => inErrorsDir(file.path));
 		expect(errorsDir.length).toBeGreaterThan(3);
 		for (const file of errorsDir) {
-			expect(countResultFalse(file.tokens), `${file.path}: result:false is the retired compat mirror`).toBe(0);
+			expect(
+				countResultFalse(file.tokens),
+				`${file.path}: result:false is the retired compat mirror`,
+			).toBe(0);
 		}
 		const convert = CORPUS.find((file) => file.path === 'src/core/errors/convert.ts');
 		expect(convert).toBeDefined();

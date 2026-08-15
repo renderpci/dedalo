@@ -161,13 +161,24 @@ describe('error envelope v2 transform — anti-vacuity', () => {
 			adoptErrorEnvelopeV2({
 				ok: false,
 				request_id: 'r',
-				error: { code: 'perm.denied', category: 'permission', message: 'x', label_key: 'k', retryable: false },
+				error: {
+					code: 'perm.denied',
+					category: 'permission',
+					message: 'x',
+					label_key: 'k',
+					retryable: false,
+				},
 			}).kind,
 		).toBe('ts_body_refused');
 		// a server REGRESSION: the compat mirror back on a TS body (`ok` + `result:false` +
 		// prose) must NOT become adoptable — the gate that fed it reddens on `matched`
 		expect(
-			adoptErrorEnvelopeV2({ ok: false, result: false, msg: 'Insufficient permissions', errors: ['perm.denied'] }),
+			adoptErrorEnvelopeV2({
+				ok: false,
+				result: false,
+				msg: 'Insufficient permissions',
+				errors: ['perm.denied'],
+			}),
 		).toEqual({ matched: false, kind: 'ts_body_refused', projection: null });
 		expect(adoptErrorEnvelopeV2({ ok: true, result: [1], data: [1] }).matched).toBe(false);
 	});

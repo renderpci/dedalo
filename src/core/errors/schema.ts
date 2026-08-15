@@ -109,7 +109,13 @@ export const errEnvelopeSchema = z
  * `extend` first). `msg` / `errors` are NOT here: they are handler extension
  * keys, written by a handler on purpose and never by the converter.
  */
-export const ENVELOPE_RESERVED_KEYS: readonly string[] = ['ok', 'request_id', 'data', 'notices', 'error'];
+export const ENVELOPE_RESERVED_KEYS: readonly string[] = [
+	'ok',
+	'request_id',
+	'data',
+	'notices',
+	'error',
+];
 export type ErrEnvelope = z.infer<typeof errEnvelopeSchema>;
 
 export const apiEnvelopeSchema = z.discriminatedUnion('ok', [okEnvelopeSchema, errEnvelopeSchema]);

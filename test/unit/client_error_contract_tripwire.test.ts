@@ -307,7 +307,10 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 	test('no client file reads `.msg` / `.errors` / `.result` off an API body', () => {
 		const offenders = RESULTS.filter((result) => result.reads > 0)
 			.sort((a, b) => b.reads - a.reads || byPath(a, b))
-			.map((result) => `${result.file}: ${result.reads} (msg ${result.byKey.msg}, errors ${result.byKey.errors}, result ${result.byKey.result})`);
+			.map(
+				(result) =>
+					`${result.file}: ${result.reads} (msg ${result.byKey.msg}, errors ${result.byKey.errors}, result ${result.byKey.result})`,
+			);
 		expect(
 			offenders,
 			`COMPAT READS in the client. The server stopped emitting \`result\`/\`msg\`/\`errors\` on the envelope on 2026-08-16 (WC-2026-08-16-error-envelope-compat-removal): such a read is undefined at runtime. Read \`data\` / \`error.code\` / \`error.label_key\` — or, for a NON-envelope shape (browser API, server stream frame, payload key, named failure extension key), add a NON_ENVELOPE_READS entry WITH ITS REASON in scripts/lib/client_compat_census.ts. Report: \`${FIX_COMMAND}\`.\n  ${offenders.join('\n  ')}`,
@@ -347,7 +350,9 @@ describe('client error contract — rule 3: compat-read census is 0 and the comp
 			const hits = codeOf(entry.file).match(new RegExp(entry.pattern.source, 'g'))?.length ?? 0;
 			return `${entry.file} · /${entry.pattern.source}/ ×${hits} — ${entry.reason}`;
 		});
-		console.info(`non-envelope read allowlist (${NON_ENVELOPE_READS.length}):\n  ${table.join('\n  ')}`);
+		console.info(
+			`non-envelope read allowlist (${NON_ENVELOPE_READS.length}):\n  ${table.join('\n  ')}`,
+		);
 		expect(table.length).toBe(NON_ENVELOPE_READS.length);
 	});
 
