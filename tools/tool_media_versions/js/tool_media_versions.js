@@ -7,6 +7,8 @@
 // import needed modules
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
@@ -605,13 +607,16 @@ tool_media_versions.prototype.build_version = async function(quality) {
 				retries : 1, // one try only
 				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
-			.then(function(response){
+			.then(async function(response){
 				if(SHOW_DEVELOPER===true) {
 					dd_console("-> build_version API response:",'DEBUG',response);
 				}
 
-				if (response.result===false && response.msg) {
-					alert('Error: ' + response.msg);
+				// failure. ONE error model: the dispatcher owns policy and rendering
+				// (never alert() with server text — it is untrusted and unlocalised)
+				if (request_failed(response)) {
+					console.error('build_version failed:', response.error)
+					await handle_api_error(response.error, {})
 				}
 
 				resolve(response)

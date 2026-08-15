@@ -71,6 +71,8 @@
 	import {render_list_section} from './render_list_section.js'
 	import {render_solved_section} from './render_solved_section.js'
 	import {render_common_section} from './render_common_section.js'
+	import {request_failed} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 
 
@@ -1308,8 +1310,8 @@ section.prototype.load_section_tool_files = function() {
 * section tipo, lang, and credentials into the standard source envelope that the
 * Dédalo PHP API expects.
 *
-* Errors returned by the API are surfaced via alert() so the user is informed even
-* if the promise is not awaited at the call site.
+* A refused request is handed to `handle_api_error`, which renders it through the
+* one policy/renderer pair (see error_policy.js).
 *
 * @returns {Promise<number|string|null>} The new record's section_id (positive
 *   integer) on success; null if the API returned a falsy or non-positive result
@@ -1331,9 +1333,11 @@ section.prototype.create_section = async function () {
 		})
 
 		// manage errors
-		const errors = api_response?.errors || []
-		if (errors.length>0) {
-			alert('Errors: \n' + errors.join('\n'));
+		// The policy renders the refusal (toast / no-access panel / relogin) in
+		// the user's language; the console line stays for the developer.
+		if (request_failed(api_response)) {
+			console.error('create_section api_response error:', api_response.error);
+			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
 		if (api_response.result && api_response.result>0) {
@@ -1343,8 +1347,7 @@ section.prototype.create_section = async function () {
 			return new_section_id
 
 		}else{
-			console.error('api_response.errors:', api_response.errors);
-			console.error( api_response.msg || 'Error on create record!');
+			console.error('Error on create record!', api_response);
 		}
 
 
@@ -1387,9 +1390,11 @@ section.prototype.duplicate_section = async function (section_id) {
 		})
 
 		// manage errors
-		const errors = api_response?.errors || []
-		if (errors.length>0) {
-			alert('Errors: \n' + errors.join('\n'));
+		// The policy renders the refusal (toast / no-access panel / relogin) in
+		// the user's language; the console line stays for the developer.
+		if (request_failed(api_response)) {
+			console.error('duplicate_section api_response error:', api_response.error);
+			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
 		if (api_response.result && api_response.result>0) {
@@ -1399,8 +1404,7 @@ section.prototype.duplicate_section = async function (section_id) {
 			return new_section_id
 
 		}else{
-			console.error('api_response.errors:', api_response.errors);
-			console.error( api_response.msg || 'Error on duplicate record!');
+			console.error('Error on duplicate record!', api_response);
 		}
 
 
@@ -1460,9 +1464,11 @@ section.prototype.delete_section = async function (options) {
 		})
 
 		// manage errors
-		const errors = api_response?.errors || []
-		if (errors.length>0) {
-			alert('Errors: \n' + errors.join('\n'));
+		// The policy renders the refusal (toast / no-access panel / relogin) in
+		// the user's language; the console line stays for the developer.
+		if (request_failed(api_response)) {
+			console.error('delete_section api_response error:', api_response.error);
+			await handle_api_error(api_response.error, {wrapper: self.node});
 		}
 
 		if (api_response?.result && api_response.result.length>0) {
@@ -1472,8 +1478,7 @@ section.prototype.delete_section = async function (options) {
 		}
 
 	// delete has failed. Notify and return false
-		console.error('api_response.errors:', api_response.errors);
-		console.error( api_response.msg || 'Error on delete records!');
+		console.error('Error on delete records!', api_response);
 
 
 	return false

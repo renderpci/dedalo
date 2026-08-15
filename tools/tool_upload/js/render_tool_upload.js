@@ -8,6 +8,8 @@
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -253,7 +255,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		process_file_info.classList.remove('success')
 
 	// response failed case
-		if (!response.result) {
+		if (request_failed(response) || !response.result) {
 
 			// ERROR case
 			// SEC-XSS-005: server messages may contain file paths / error text
@@ -261,8 +263,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 			process_file_info.textContent = response.msg || 'Error on processing file!'
 			process_file_info.classList.add('failed')
 
-			if (response.errors?.length) {
-				alert(response.errors.join(' | '));
+			if (request_failed(response)) {
+				handle_api_error(response.error, {wrapper: process_file_info.parentNode});
 			}
 
 			return false

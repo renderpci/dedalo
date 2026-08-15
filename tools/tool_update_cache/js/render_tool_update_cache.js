@@ -9,6 +9,8 @@
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {render_footer} from '../../../core/tools_common/js/render_tool_common.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -241,12 +243,13 @@ const get_content_data = async function(self) {
 				const api_response = await self.update_cache()
 
 			// response failed case
-				if (api_response.result===false) {
+				if (request_failed(api_response) || api_response.result===false) {
 					button_apply.classList.remove('loading')
 					button_apply.classList.remove('button_spinner')
-					response_message.innerHTML = api_response.msg || 'Unknown error. Perhaps a timeout occurred'
-					if (api_response.errors?.length) {
-						alert(api_response.errors.join(' | '));
+					// text, never innerHTML: this is server text
+					response_message.textContent = api_response.msg || 'Unknown error. Perhaps a timeout occurred'
+					if (request_failed(api_response)) {
+						handle_api_error(api_response.error, {wrapper: response_message.parentNode});
 					}
 					return
 				}
@@ -882,7 +885,9 @@ const update_process_status = (options) => {
 						parent			: info_node
 					})
 				}
-				ui.update_node_content(info_node.msg_node, msg)
+				// `msg` is server stream text (labels, record ids, exception details):
+				// TEXT only — update_node_content parses HTML (DS-1).
+				info_node.msg_node.textContent = msg
 			})
 		}
 

@@ -47,6 +47,8 @@
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
 	import {render_list_component_av} from '../../component_av/js/render_list_component_av.js'
 	import {render_search_component_av} from '../../component_av/js/render_search_component_av.js'
+	import {request_failed} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 
 
@@ -516,13 +518,12 @@ export const open_av_player = async function(options) {
 *  1. Adds a 'loading' CSS class to the optional button_caller element.
 *  2. Posts a 'download_fragment' request to dd_component_av_api via data_manager.
 *  3. On success, triggers a browser download via download_file().
-*  4. On failure, logs the error and shows a blocking alert().
+*  4. On failure, logs the error and hands it to handle_api_error (policy-rendered).
 *  5. Removes the 'loading' class from button_caller in both cases.
 *
 * The request uses a 1-hour timeout because FFmpeg encoding of long clips can
 * take substantial time on the server.
 *
-* (!) Uses alert() for error feedback — blocking UI; no async-safe alternative
 *     is currently wired up. Do not change this without updating all callers.
 *
 * @param {Object} options - fragment request options
@@ -611,12 +612,12 @@ export const download_av_fragment = async function(options) {
 				button_caller.classList.remove('loading')
 			}
 
-			if (api_response.result===false) {
+			if (request_failed(api_response)) {
 
-				// error case
-				const msg = api_response.msg || 'Error on create fragment'
-				console.error(msg)
-				alert(msg); // (!) blocking alert; see doc-block note above
+				// error case. The policy renders it (toast by default), in the
+				// user's language, without blocking the page.
+				console.error('Error on create fragment:', api_response.error)
+				await handle_api_error(api_response.error);
 
 			}else{
 

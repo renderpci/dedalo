@@ -6,6 +6,8 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {request_failed} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -225,9 +227,14 @@ const render_response = function(self, container, api_response) {
 	const result = api_response?.result
 
 	// failed / refused scan: never a report
-	if (!result || typeof result!=='object') {
+	if (request_failed(api_response) || !result || typeof result!=='object') {
 		self.error = api_response?.msg || 'the server returned no report'
 		render_error(container, self.error)
+		if (request_failed(api_response)) {
+			// ONE error model: policy + renderer decide the surface (relogin, toast, …)
+			handle_api_error(api_response.error, {wrapper: container})
+				.catch((error) => console.error('dataframe_control error dispatch failed', error))
+		}
 		return
 	}
 

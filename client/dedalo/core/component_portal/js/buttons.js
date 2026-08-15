@@ -14,6 +14,8 @@
 		open_window,
 		get_caller_by_model
 	} from '../../common/js/utils/index.js'
+	import { ApiError, CLIENT_ERROR } from '../../common/js/api_error.js'
+	import { handle_api_error } from '../../common/js/error_dispatch.js'
 
 
 
@@ -232,7 +234,13 @@ buttons.render_button_add = (self) => {
 			}//end if (result===true)
 		} catch (error) {
 			console.error('Error adding new element:', error);
-			alert('An error occurred while adding the new element');
+			// client-side failure: one ApiError through the same policy/renderer
+			// as a server refusal (no blocking browser dialog)
+			handle_api_error(new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: 'An error occurred while adding the new element',
+				raw		: error
+			}), {wrapper: self.node});
 		}
 
 		// Clean up. Remove aux items
@@ -397,7 +405,11 @@ buttons.render_button_link = (self) => {
 					}
 				} catch (error) {
 					console.error('Error creating modal:', error);
-					alert('An error occurred while opening the link dialog');
+					handle_api_error(new ApiError({
+						code	: CLIENT_ERROR.BAD_RESPONSE,
+						message	: 'An error occurred while opening the link dialog',
+						raw		: error
+					}), {wrapper: self.node});
 				}
 		})()
 

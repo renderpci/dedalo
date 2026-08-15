@@ -7,6 +7,9 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
+	import {append_text_lines} from '../../../core/common/js/utils/index.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -266,7 +269,7 @@ const get_content_data = async function(self) {
 			[messages_container].forEach(el => el.classList.remove('error'))
 			// Loading
 			content_data.classList.add('loading')
-			messages_container.innerHTML = ''
+			messages_container.replaceChildren()
 
 			// Add spinner to the button
 			button_generate.classList.add('button_spinner')
@@ -274,40 +277,47 @@ const get_content_data = async function(self) {
 			// Call API to process records in dd_ontology
 			const api_response = await self.set_records_in_dd_ontology()
 
-			// User messages
-			const msg = api_response.msg
-				? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-				: 'Unknown error'
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg',
-				inner_html		: msg,
-				parent			: messages_container
-			})
-
-			// Handle API errors
-			if (api_response.errors && Array.isArray(api_response.errors) && api_response.errors.length > 0) {
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'error',
-					inner_html		: api_response.errors.join('<br>'),
-					parent			: messages_container
-				})
+			// Failure: the ONE error surface. The policy decides what to show and
+			// renders the server text as TEXT (DS-1) — no HTML sink here.
+			if (request_failed(api_response)) {
+				messages_container.classList.add('error')
+				await handle_api_error(api_response.error, {wrapper: messages_container})
+				return
 			}
 
-			// Add error class on result false
-			if (api_response.result === false) {
-				messages_container.classList.add('error')
-			} else {
-				// Handle success case
+			// User messages. Server text (labels, tipos, file paths): appended as
+			// TEXT nodes separated by real <br> elements, never parsed as HTML.
+			const msg_lines = Array.isArray(api_response.msg)
+				? api_response.msg
+				: [api_response.msg || 'Unknown error']
+			append_text_lines(
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg',
+					parent			: messages_container
+				}),
+				msg_lines
+			)
+
+			// A SUCCESS can still carry warnings in `errors` — same TEXT treatment.
+			if (api_response.errors && Array.isArray(api_response.errors) && api_response.errors.length > 0) {
+				append_text_lines(
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error',
+						parent			: messages_container
+					}),
+					api_response.errors
+				)
 			}
 
 		} catch (error) {
 			console.error('Error in click_handler:', error)
+			// exception text: TEXT only (DS-1)
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
-				inner_html		: 'Error: ' + (error.message || 'Unknown error'),
+				text_content	: 'Error: ' + (error.message || 'Unknown error'),
 				parent			: messages_container
 			})
 			messages_container.classList.add('error')

@@ -38,6 +38,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_diffusion} from './render_tool_diffusion.js' // self tool rendered (called from render common)
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -377,6 +378,20 @@ tool_diffusion.prototype.export = function(options) {
 			})
 			.then(function(stream){
 				resolve(stream)
+			})
+			.catch(function(api_error){
+				// request_stream REJECTS with an ApiError (its @throws) when the run
+				// never opens — a dead socket, or the session that expired between
+				// loading the panel and pressing Publish. Without this handler that
+				// rejection was unhandled AND the promise never settled, so the caller
+				// awaited a stream that could not arrive and the button stayed
+				// 'loading' for the rest of the session. Route it (auth.not_logged
+				// reaches the relogin overlay) and resolve NULL so the caller unlocks.
+				handle_api_error(api_error, {scope:'tool_diffusion'})
+					.catch(function(dispatch_error){
+						console.error('[tool_diffusion] error dispatch failed:', dispatch_error)
+					})
+				resolve(null)
 			})
 		})
 }//end export

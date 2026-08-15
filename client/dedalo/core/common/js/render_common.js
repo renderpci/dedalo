@@ -7,6 +7,9 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {ApiError, is_api_error, request_failed, normalize_stream_error} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {render_error_panel, render_error_inline} from '../../common/js/render_api_error.js'
 
 
 
@@ -17,7 +20,7 @@
 *
 * Exports:
 *  - render_components_list      Build a draggable component picker for a section.
-*  - render_server_response_error  Render a full-page error panel from server errors.
+*  - render_server_response_error  Thin wrapper over render_api_error.render_error_panel.
 *  - render_stream               Create a live-updating SSE progress panel.
 *  - render_error                Render Dédalo standard inline error blocks.
 *  - render_lang_behavior_check  Render the "search in all langs" toggle for translatable components.
@@ -137,7 +140,7 @@ export const render_components_list = function(options) {
 				const handle_click = (e) => {
 					e.stopPropagation()
 					if (target_div.classList.contains('target_list_container')) {
-						target_div.innerHTML = ''
+						target_div.replaceChildren()
 					}
 				}
 				section_bar.addEventListener('click', handle_click)
@@ -313,226 +316,41 @@ const toggle_section_group_label_siblings = function (e) {
 
 /**
 * RENDER_SERVER_RESPONSE_ERROR
-* Render a full-page error panel displayed when the server returns a fatal error.
+* THIN WRAPPER over the ONE error panel (`render_api_error.render_error_panel`).
+* Kept as an export because callers across the client still name it; it does no
+* rendering of its own — and, unlike the switch it replaces, it never writes
+* server text through `inner_html`.
 *
-* Builds and returns a detached `<div class="page_error_container">` that the
-* caller is responsible for inserting into the DOM.  The panel always includes
-* the Dédalo logo and one block per error item in `errors`.
+* Accepts either shape:
+*   - an ApiError (the new page-level model, `page_globals.page_error`);
+*   - COMPAT v1: the legacy `page_globals.api_errors` array of
+*     `{error, msg, trace}` descriptors (REMOVAL: census 0). The FIRST entry is
+*     rendered — a page has ONE fatal error — with its legacy discriminator used
+*     as the code so the panel keeps picking the right affordance
+*     (`not_logged` → Reload, `not_authorized` → no-access, else Home).
 *
-* Recognised `error` discriminator values and their rendering strategy:
-*  - `'not_logged'`       — session expired; shows a Reload button.
-*  - `'invalid_page_element'` — bad page configuration; shows a Home link.
-*  - `'data_manager'` / default — generic server fault; shows message, optional
-*    `dedalo_last_error` detail, a Home link, and a "see server log" hint.
-*    Multiple items of this type accumulate into the same container
-*    (the `added_header_node` flag suppresses duplicate headings and links).
-*
-* @param {Array} errors - Array of error descriptor objects from the server response.
-*   Each object may carry:
-*   - `{string}  error`             — discriminator key (see above).
-*   - `{string}  [msg]`             — human-readable message (may contain HTML).
-*   - `{string}  [trace]`           — call-site hint appended to `msg` in parentheses.
-*   - `{string}  [dedalo_last_error]` — last PHP error string (default case only).
-* @returns {HTMLElement} Detached error container element ready to be appended to the page.
+* @param {ApiError|Array|Object} errors
+* @returns {HTMLElement} Detached error container ready to be appended to the page.
 */
 export const render_server_response_error = function(errors) {
 
-	// error_container
-		const error_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'page_error_container'
-		})
-
-	// icon_dedalo
-		const icon_url = '../../core/themes/default/dedalo_logo.svg'
-		ui.create_dom_element({
-			element_type	: 'img',
-			class_name		: 'icon_dedalo',
-			src				: icon_url,
-			parent			: error_container
-		})
-
-	// short vars
-		const home_url	= '../../core/page/'
-		// added_header_node prevents duplicate h1/home-link/more_info blocks when
-		// the errors array contains multiple 'data_manager'/default entries.
-		let added_header_node = false
-
-	// errors
-		const errors_length = errors.length
-		for (let i = 0; i < errors_length; i++) {
-
-			const error				= errors[i].error
-			const trace				= errors[i].trace || ''
-			// Append the trace context in parentheses so the developer sees where
-			// the error originated without a separate stack panel.
-			const msg				= errors[i].msg
-				? errors[i].msg   + '<br> (' + trace + ')'
-				: 'Unknown error' + '<br> (' + trace + ')'
-
-			const dedalo_last_error	= errors[i].dedalo_last_error || null
-
-			switch (error) {
-
-				case 'not_logged': {
-					// server_response_error h1
-						ui.create_dom_element({
-							element_type	: 'h1',
-							class_name		: 'server_response_error',
-							inner_html		: msg,
-							parent			: error_container
-						})
-					// link reload
-					// A forced page reload re-initiates the authentication handshake.
-						const link = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'link reload',
-							inner_html		: 'Reload',
-							parent			: error_container
-						})
-						link.addEventListener('click', function(e) {
-							e.stopPropagation()
-							location.reload()
-						})
-					// styles not_logged_error add once
-						if (!error_container.classList.contains('not_logged_error')) {
-							error_container.classList.add('not_logged_error')
-						}
-					break;
-				}
-
-				case 'not_authorized': {
-				// The user is logged in and the server understood them perfectly —
-				// they simply hold no grant here. Say that, in their language, and
-				// offer the way out (Home). No trace, no "see your server log": this
-				// is not a malfunction and there is nothing for the user to report.
-				// (WC-2026-08-12-authorization-denial-token; the message itself is
-				// `get_label.no_access_page`, resolved by the caller.)
-					ui.create_dom_element({
-						element_type	: 'h1',
-						class_name		: 'server_response_error',
-						inner_html		: errors[i].msg || 'You don\'t have permission to access this page',
-						parent			: error_container
-					})
-				// link_home
-					const link_home_denied = ui.create_dom_element({
-						element_type	: 'a',
-						class_name		: 'link home',
-						href			: home_url,
-						inner_html		: 'Home', // same literal as the sibling error cases
-						parent			: error_container
-					})
-					link_home_denied.addEventListener('click', function(e) {
-						e.stopPropagation()
-					})
-				// styles no_access_error add once
-					if (!error_container.classList.contains('no_access_error')) {
-						error_container.classList.add('no_access_error')
-					}
-				break;
-			}
-
-			case 'invalid_page_element': {
-					// server_response_error h1
-						ui.create_dom_element({
-							element_type	: 'h1',
-							class_name		: 'server_response_error',
-							inner_html		: msg,
-							parent			: error_container
-						})
-					// link_home
-						const link_home = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'link home',
-							href			: home_url,
-							inner_html		: 'Home',
-							parent			: error_container
-						})
-						link_home.addEventListener('click', function(e) {
-							e.stopPropagation()
-						})
-					// styles raspa_error add once
-						if (!error_container.classList.contains('raspa_error')) {
-							error_container.classList.add('raspa_error')
-						}
-					break;
-				}
-
-				case 'data_manager':
-				default: {
-					// server_response_error h1
-					// The h1 intro header ("Server response msg:") and the Home link /
-					// more_info hint are rendered only for the first error in the loop
-					// to avoid repeating chrome for every subsequent error object.
-						if (msg) {
-							if (!added_header_node) {
-								ui.create_dom_element({
-									element_type	: 'h1',
-									class_name		: 'server_response_error',
-									inner_html		: 'Server response msg: ',
-									parent			: error_container
-								})
-							}
-							ui.create_dom_element({
-								element_type	: 'h2',
-								class_name		: 'server_response_error',
-								inner_html		: msg,
-								parent			: error_container
-							})
-						}
-					// dedalo_last_error
-					// PHP populates this with the last recorded error string from the
-					// error log when available; surface it as a secondary block so
-					// developers do not have to tail the log for obvious failures.
-						if (dedalo_last_error) {
-							ui.create_dom_element({
-								element_type	: 'h1',
-								class_name		: 'server_response_error',
-								inner_html		: 'Server error (last): ',
-								parent			: error_container
-							})
-							ui.create_dom_element({
-								element_type	: 'h2',
-								class_name		: 'server_response_error',
-								inner_html		: dedalo_last_error,
-								parent			: error_container
-							})
-						}
-					// link home
-						if (!added_header_node) {
-							const link_home = ui.create_dom_element({
-								element_type	: 'a',
-								class_name		: 'link home',
-								href			: home_url,
-								inner_html		: 'Home',
-								parent			: error_container
-							})
-							link_home.addEventListener('click', function(e) {
-								e.stopPropagation()
-							})
-						}
-					// more_info
-						if (!added_header_node) {
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'more_info',
-								inner_html		: 'Received data format is not as expected. See your server log for details',
-								parent			: error_container
-							})
-						}
-					// styles raspa_error add once
-						if (!error_container.classList.contains('raspa_error')) {
-							error_container.classList.add('raspa_error')
-						}
-
-					added_header_node = true
-					break;
-				}
-			}
+	// already the new model
+		if (is_api_error(errors)) {
+			return render_error_panel(errors)
 		}
 
+	// COMPAT v1: legacy descriptor array (REMOVAL: census 0)
+		const item = Array.isArray(errors)
+			? (errors[0] || {})
+			: (errors || {})
 
-	return error_container
+		const trace		= item.trace ? ' (' + item.trace + ')' : ''
+		const detail	= item.dedalo_last_error ? ' — ' + item.dedalo_last_error : ''
+
+		return render_error_panel(new ApiError({
+			code	: item.error || 'server.unspecified',
+			message	: (item.msg || 'Unknown error') + trace + detail
+		}))
 }//end render_server_response_error
 
 
@@ -637,7 +455,7 @@ export const render_stream = function(options) {
 		const button_stop_process = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'gear button_stop_process' + (has_stop_capability ? '' : ' hide'),
-			inner_html		: 'Stop',
+			text_content	: 'Stop',
 			parent			: process_status_node
 		})
 		button_stop_process.addEventListener('click', function(e) {
@@ -670,8 +488,8 @@ export const render_stream = function(options) {
 				if(SHOW_DEBUG===true) {
 					console.log('stop_process API response:', response);
 				}
-				if (response.errors && response.errors.length) {
-					alert("Errors: " + response.errors.join('\n') );
+				if (request_failed(response)) {
+					handle_api_error(response.error, {wrapper: container})
 				}
 			})
 		})
@@ -738,17 +556,8 @@ export const render_stream = function(options) {
 
 					// msg
 					// SEC-XSS-002: server-provided messages may contain HTML
-					// metacharacters (file paths, exception text). Escape before
-					// DOM insertion so they render as text, not parsed markup.
-					const esc = (s) => {
-						if (s === null || s === undefined) return '';
-						return String(s)
-							.replace(/&/g, '&amp;')
-							.replace(/</g, '&lt;')
-							.replace(/>/g, '&gt;')
-							.replace(/"/g, '&quot;')
-							.replace(/'/g, '&#39;');
-					};
+					// metacharacters (file paths, exception text) and reach the DOM
+					// as TEXT NODES only — never through inner_html.
 					if(is_running===true) {
 
 						// Short messages (≤3 chars) are likely malformed; show a safe default.
@@ -756,7 +565,7 @@ export const render_stream = function(options) {
 							? data.msg
 							: 'Process running... please wait'
 
-						ui.update_node_content(info_node.msg_node, esc(msg))
+						info_node.msg_node.textContent = msg
 
 						if (has_stop_capability) {
 							button_stop_process.classList.remove('hide')
@@ -769,24 +578,28 @@ export const render_stream = function(options) {
 						// Build a completion line that distinguishes success from error
 						// so the user never sees a blank or stale "running" message.
 
-						const has_errors = Array.isArray(data.errors) && data.errors.length > 0;
+						// A failed run ends with a coded frame; normalize_stream_error
+						// reads both the v2 `{is_running:false, error:{code,…}}` shape
+						// and the COMPAT `errors:[…]` one.
+						const api_error = normalize_stream_error(sse_response)
 
-						const msg_end = [
-						  has_errors
-							? `${get_label?.proceso || 'Process'} ${sse_response.total_time}`
-							: `${get_label?.proceso_completado || 'Process completed'} ${sse_response.total_time}`
-						];
+						info_node.msg_node.textContent = api_error
+							? `${get_label?.proceso || 'Process'} ${sse_response.total_time ?? ''}`
+							: `${get_label?.proceso_completado || 'Process completed'} ${sse_response.total_time ?? ''}`
 
-						if (has_errors) {
-						  const msg_error = data.errors.length === 1
-							? `${get_label?.error || 'Error'}: ${data.errors[0] || ''}`
-							: `${get_label?.errors || 'Errors'}:<br>${data.errors.join('<br>')}`;
-
-						  msg_end.push(msg_error);
-						  info_node.msg_node.classList.add('error');
+						if (api_error) {
+							info_node.msg_node.classList.add('error')
+							// the reason, in the user's language, inside the panel the
+							// user is already looking at (text-only)
+							render_error_inline(info_node.msg_node, api_error)
+							// … and the recovery on top of it: a session that died
+							// mid-job must reach the relogin overlay, not a dead line
+							// of text. Every other code is already stated inline, so
+							// the policy's toast would only repeat it.
+							if (api_error.code.startsWith('auth.') || api_error.code==='not_logged') {
+								handle_api_error(api_error)
+							}
 						}
-
-						ui.update_node_content(info_node.msg_node, msg_end.map(esc).join('<br>'))
 
 						button_stop_process.classList.add('hide')
 					}
@@ -804,7 +617,8 @@ export const render_stream = function(options) {
 							parent			: info_node
 						})
 					}
-					ui.update_node_content(info_node.display_json_box, JSON.stringify(sse_response, null, 2))
+					// text, not HTML: the dump quotes whatever the server sent
+					info_node.display_json_box.textContent = JSON.stringify(sse_response, null, 2)
 				}
 
 			// running state check. If false, delete local DB reference
@@ -868,7 +682,7 @@ export const render_stream = function(options) {
 * @param {Array|Object} error - A single error descriptor object or an array of them.
 *   Each descriptor has the shape:
 *   - `{string}  [type]` — machine-readable error category label.
-*   - `{string}  [msg]`  — human-readable message (may contain HTML).
+*   - `{string}  [msg]`  — human-readable message (rendered as TEXT).
 *   - `{*}       [info]` — arbitrary detail object; serialised to JSON for display.
 * @returns {HTMLElement} Detached wrapper `<div>` element.
 */
@@ -888,7 +702,7 @@ export const render_error = function (error) {
 	const title = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'wrapper_error_title',
-		inner_html		: (get_label.errors_found || 'Errors found'),
+		text_content	: (get_label.errors_found || 'Errors found'),
 		parent			: wrapper
 	})
 	ui.create_dom_element({
@@ -916,15 +730,17 @@ export const render_error = function (error) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'error_type',
-			inner_html		: 'Type: ' + type,
+			text_content	: 'Type: ' + type,
 			parent			: error_wrap
 		})
 
 		// msg
+		// text_content, never inner_html: `msg` is server text (and may quote a
+		// user-typed value) — see error_report_xss_tripwire.
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'error_msg',
-			inner_html		: msg,
+			text_content	: msg,
 			parent			: error_wrap
 		})
 
@@ -933,7 +749,7 @@ export const render_error = function (error) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error_info',
-				inner_html		: JSON.stringify(info, null, 2),
+				text_content	: JSON.stringify(info, null, 2),
 				parent			: error_wrap
 			})
 		}

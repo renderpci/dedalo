@@ -270,7 +270,7 @@ const render_build_install_version = function (self, value) {
 				ui.create_dom_element({
 					element_type	: 'pre',
 					class_name		: '',
-					inner_html		: JSON.stringify(api_response, null, 2),
+					text_content	: JSON.stringify(api_response, null, 2),
 					parent			: process_response
 				})
 			} finally {
@@ -377,7 +377,7 @@ const render_build_recovery_version_file = function (self, value) {
 				ui.create_dom_element({
 					element_type	: 'pre',
 					class_name		: 'response',
-					inner_html		: JSON.stringify(api_response, null, 2),
+					text_content	: JSON.stringify(api_response, null, 2),
 					parent			: process_response
 				})
 			} finally {
@@ -476,7 +476,7 @@ const render_restore_dd_ontology_recovery_from_file = function (self, value) {
 				ui.create_dom_element({
 					element_type	: 'pre',
 					class_name		: 'response',
-					inner_html		: JSON.stringify(api_response, null, 2),
+					text_content	: JSON.stringify(api_response, null, 2),
 					parent			: process_response
 				})
 			} finally {
@@ -557,7 +557,7 @@ const render_build_matrix_hierarchy_main_sql = function (self, value) {
 				ui.create_dom_element({
 					element_type	: 'pre',
 					class_name		: 'response',
-					inner_html		: JSON.stringify(api_response, null, 2),
+					text_content	: JSON.stringify(api_response, null, 2),
 					parent			: process_response
 				})
 			} finally {

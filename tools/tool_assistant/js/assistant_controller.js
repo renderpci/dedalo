@@ -7,6 +7,8 @@
 // import
 	import { data_manager } from '../../../core/common/js/data_manager.js'
 	import { agent_stream } from './agent_stream.js'
+	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
+	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { chat_render } from './chat_render.js'
 	import { client_context } from './client_context.js'
 	import { conversation_store } from './conversation_store.js'
@@ -323,6 +325,7 @@ export const assistant_controller = class assistant_controller {
 
 		let started		= false
 		let final_data	= null
+		/** @type {ApiError|null} the ONE error model (api_error.js), never a hand-rolled body */
 		let error_data	= null
 
 		const ensure_started = function() {
@@ -362,7 +365,7 @@ export const assistant_controller = class assistant_controller {
 				}
 			},
 			on_final: function(data) { final_data = data },
-			on_error: function(data) { error_data = data }
+			on_error: function(api_error) { error_data = api_error }
 		})
 
 		const aborted = this._abort_controller.signal.aborted
@@ -380,10 +383,14 @@ export const assistant_controller = class assistant_controller {
 
 		if (error_data) {
 			this._chat_render.finalize_assistant_message()
-			const hint = error_data.hint ? ' — ' + error_data.hint : ''
-			this._chat_render.add_system_message(
-				(error_data.code || 'error') + ': ' + (error_data.message || '') + hint
-			)
+			// The transcript keeps the sentence — it is the record of what happened to
+			// this turn, and it must survive a toast. The ACTION is the dispatcher's:
+			// a session that died mid-turn raises the relogin overlay from here.
+			const hint = (error_data.details && error_data.details.hint)
+				? ' — ' + error_data.details.hint
+				: ''
+			this._chat_render.add_system_message(error_text(error_data) + hint)
+			await handle_api_error(error_data, {scope:'tool_assistant'})
 			this._persist()
 			return
 		}

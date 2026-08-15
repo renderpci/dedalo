@@ -54,6 +54,7 @@
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
 	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
+	import {ApiError} from '../../common/js/api_error.js'
 
 
 
@@ -454,7 +455,17 @@ component_date.prototype.parse_string_date = function(string_date) {
 			result	: dd_date
 		}
 		if (error.length>0) {
-			response.error = error
+			// ONE typed error, exactly like a server refusal: the client's own
+			// validation domain (`validation.*` → the `inline` policy). No
+			// label_key — the messages above are ALREADY resolved through
+			// get_label, so error_text must keep them verbatim.
+			response.error = new ApiError({
+				code		: 'validation.invalid_date_format',
+				message		: error.map((item) => item.msg).join(' · '),
+				details		: {fields: error.map((item) => item.type).join(', ')},
+				severity	: 'warning',
+				source		: 'client'
+			})
 		}
 
 
@@ -805,7 +816,17 @@ component_date.prototype.parse_string_time = function(string_time) {
 			result : dd_date
 		}
 		if (error.length>0) {
-			response.error = error
+			// ONE typed error, exactly like a server refusal: the client's own
+			// validation domain (`validation.*` → the `inline` policy). No
+			// label_key — the messages above are ALREADY resolved through
+			// get_label, so error_text must keep them verbatim.
+			response.error = new ApiError({
+				code		: 'validation.invalid_date_format',
+				message		: error.map((item) => item.msg).join(' · '),
+				details		: {fields: error.map((item) => item.type).join(', ')},
+				severity	: 'warning',
+				source		: 'client'
+			})
 		}
 
 
@@ -905,7 +926,17 @@ component_date.prototype.parse_string_period = function(values) {
 			result : dd_date
 		}
 		if (error.length>0) {
-			response.error = error
+			// ONE typed error, exactly like a server refusal: the client's own
+			// validation domain (`validation.*` → the `inline` policy). No
+			// label_key — the messages above are ALREADY resolved through
+			// get_label, so error_text must keep them verbatim.
+			response.error = new ApiError({
+				code		: 'validation.invalid_date_format',
+				message		: error.map((item) => item.msg).join(' · '),
+				details		: {fields: error.map((item) => item.type).join(', ')},
+				severity	: 'warning',
+				source		: 'client'
+			})
 		}
 
 

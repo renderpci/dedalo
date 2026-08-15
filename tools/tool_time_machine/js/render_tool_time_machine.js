@@ -6,6 +6,8 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -240,7 +242,9 @@ const get_content_data = async function(self) {
 								}else{
 									// error case
 									console.warn('response:',response);
-									alert(response.msg || 'Error. Unknown error on apply tm value');
+									if (request_failed(response)) {
+										handle_api_error(response.error, {wrapper: self.node});
+									}
 								}
 							})
 						}
@@ -281,7 +285,9 @@ const get_content_data = async function(self) {
 						}else{
 							// error case
 							console.warn('response:',response);
-							alert(response.msg || 'Error. Unknown error on apply tm value');
+							if (request_failed(response)) {
+								handle_api_error(response.error, {wrapper: self.node});
+							}
 						}
 					})
 				})

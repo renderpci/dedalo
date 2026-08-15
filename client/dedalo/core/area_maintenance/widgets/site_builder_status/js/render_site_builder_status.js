@@ -80,7 +80,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'sb_status_line ' + (reachable ? 'ok' : 'warn'),
-			inner_html		: status_text,
+			text_content	: status_text,
 			parent			: content_data
 		})
 
@@ -92,7 +92,7 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'sb_drivers',
-				inner_html		: 'Agents: ' + (available.length ? available.join(', ') : 'none available'),
+				text_content	: 'Agents: ' + (available.length ? available.join(', ') : 'none available'),
 				parent			: content_data
 			})
 		}
@@ -139,7 +139,7 @@ const get_content_data = async function(self) {
 				const when = row.ts ? row.ts.replace('T', ' ').slice(0, 19) : ''
 				ui.create_dom_element({
 					element_type	: 'li',
-					inner_html		: (row.site || '?') + ' — ' + who + ' — ' + when,
+					text_content	: (row.site || '?') + ' — ' + who + ' — ' + when,
 					parent			: list
 				})
 			}

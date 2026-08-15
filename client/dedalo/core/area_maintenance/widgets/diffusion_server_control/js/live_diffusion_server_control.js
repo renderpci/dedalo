@@ -9,6 +9,8 @@
 	// patches can never disagree with the bar that was rendered
 	import {format_int, progress_view, row_signature} from './progress_model.js'
 	import {paint_rollup} from './rollup_panel.js'
+	import {normalize_stream_error} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -167,17 +169,26 @@ export const create_live_controller = function(self, content_data, options={}) {
 			return
 		}
 
+		// A failing frame is an ApiError like any other failure — normalised BEFORE
+		// the kind discriminator, because an error frame carries no `kind`. This is
+		// what makes a mid-job `auth.not_logged` reach the relogin policy instead of
+		// dying as a JSON blob in the response area.
+		const api_error = normalize_stream_error(frame)
+		if (api_error) {
+			const body_response = content_data.querySelector('.body_response')
+			// server text as TEXT, never an HTML sink
+			if (body_response) body_response.textContent = api_error.message || api_error.code
+			set_chip('state_warning', 'Live updates unavailable')
+			// apply_frame is sync (the stream loop does not await it): the dispatch
+			// runs on its own, its failure must never stall the reader
+			handle_api_error(api_error, {wrapper: content_data})
+				.catch((error) => console.error('[diffusion live] error dispatch failed', error))
+			return
+		}
+
 		// read_stream injects a synthetic first frame ({data:{msg:'Preparing…'}})
 		// before any server bytes arrive; the discriminator rejects it.
 		if (!frame || frame.kind !== 'diffusion_queue') return
-
-		if (Array.isArray(frame.errors) && frame.errors.length>0) {
-			// surfaced in the widget's existing response area, numbers untouched
-			const body_response = content_data.querySelector('.body_response')
-			if (body_response) body_response.textContent = JSON.stringify(frame.errors, null, 2)
-			set_chip('state_warning', 'Live updates unavailable')
-			return
-		}
 
 		strikes = 0
 		set_chip('pill_ok', 'Live')

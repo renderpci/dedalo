@@ -54,6 +54,8 @@
 	import { events_subscription } from './events_subscription.js'
 	import { ui } from '../../common/js/ui.js'
 	import { set_element_css } from '../../page/js/css.js'
+	import { request_failed, normalize_transport_error } from '../../common/js/api_error.js'
+	import { handle_api_error } from '../../common/js/error_dispatch.js'
 
 
 
@@ -700,7 +702,7 @@ component_common.prototype.save = async function(new_changed_data) {
 					// debug
 					if(SHOW_DEBUG===true) {
 						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
-						if (!api_response.result) {
+						if (request_failed(api_response)) {
 							console.error('[component_common.save] api_response ERROR:', api_response);
 						}
 					}
@@ -709,11 +711,13 @@ component_common.prototype.save = async function(new_changed_data) {
 
 			} catch(error) {
 				console.error("+++++++ COMPONENT SAVE ERROR:", error);
-				// Consistent error return structure matches API response format
+				// A rejection here never reached the server (the transport resolves
+				// its own failures into an envelope). Return the SAME failure
+				// envelope shape the transport does, with a typed ApiError.
 				return {
-					result	: false,
-					msg		: error.message,
-					error	: error
+					ok		: false,
+					result	: false, // COMPAT v1 (REMOVAL: census 0)
+					error	: normalize_transport_error(error)
 				}
 			}
 		}
@@ -728,9 +732,16 @@ component_common.prototype.save = async function(new_changed_data) {
 
 
 	// Process Result
+	// (!) `.result` ON PURPOSE, not response_data(): during the compat window the
+	// server sends the payload TWICE (`data` + the `result` mirror), and JSON.parse
+	// makes them two SEPARATE object graphs. change_value() feeds
+	// `api_response.result` to update_datum, so reading `data` here would hand the
+	// instance a different copy than the datum holds and the next save would ship
+	// stale entries. ONE accessor per flow — this flow is on `result` until the
+	// compat mirror is deleted (P4), when this becomes response_data().
 		const result = api_response.result
 
-		if (result === false) {
+		if (request_failed(api_response)) {
 
 			// ERROR CASE
 			// restore 'modified': the data is still unsaved, so the orange marker
@@ -740,29 +751,20 @@ component_common.prototype.save = async function(new_changed_data) {
 				self.node.classList.add('error', 'modified')
 			}
 
-			// Determine exact error
-			const error = api_response.error || (api_response.errors ? api_response.errors[0] : null) || 'Unknown error';
+			console.error('component save error:', api_response.error)
 
-			switch (error) {
-				case 'not_logged': {
-					// Handle session expiration: wait for login and retry
-					let token
-					const login_successful_handler = async () => {
-						if (token) event_manager.unsubscribe(token);
-
-						// restore styles
-						self.node?.classList.remove('error')
-
-						// retry save
-						self.save(changed_data)
-					}
-					token = event_manager.subscribe('login_successful', login_successful_handler)
-					break;
-				}
-
-				default:
-					console.error('component save error:', api_response?.error || error)
-					break;
+			// THE handler. `recovered:true` means the cause is gone (the user
+			// re-logged in), so the save is worth repeating; anything else was
+			// already shown to the user by the policy.
+			const {recovered} = await handle_api_error(api_response.error, {wrapper: self.node})
+			if (recovered===true) {
+				// restore styles
+				self.node?.classList.remove('error')
+				// release the concurrency guard BEFORE repeating the call, or the
+				// retry hits the "already saving" short-circuit at the top. The
+				// repeated save publishes its own 'save' event.
+				self.saving = false
+				return self.save(changed_data)
 			}
 
 		} else {

@@ -21,6 +21,8 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_edit_ts_object} from './render_edit_ts_object.js'
 	import {render_children} from './view_default_edit_ts_object.js'
+	import {ApiError, CLIENT_ERROR, request_failed} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 
 
@@ -1393,9 +1395,8 @@ ts_object.prototype.open_record = function(section_id, section_tipo) {
 * ADD_CHILD
 * Creates a new child thesaurus term record under this node by calling
 * dd_ts_api (action: 'add_child'). On server-side failure the method
-* surfaces the error via alert() (legacy UX pattern). On success the caller
-* is expected to refresh the children list.
-* (!) Uses alert() for error feedback — legacy pattern; not changed here.
+* hands the refusal to `handle_api_error` (one policy, one renderer). On success
+* the caller is expected to refresh the children list.
 * @returns {Promise<Object>} The raw api_response from the server.
 */
 ts_object.prototype.add_child = async function() {
@@ -1426,15 +1427,17 @@ ts_object.prototype.add_child = async function() {
 
 		if (!api_response) {
 
-			// Server script error
-			alert('Error on add_child. See server log for details');
+			// no answer at all (the transport always resolves an envelope, so this
+			// is a caller/programming fault rather than a server one)
+			await handle_api_error(new ApiError({
+				code	: CLIENT_ERROR.BAD_RESPONSE,
+				message	: 'Error on add_child. See server log for details'
+			}), {wrapper: this.node})
 
-		}else{
+		}else if (request_failed(api_response)) {
 
-			if (api_response.result===false) {
-				// Problems found on add
-				alert(api_response.msg);
-			}
+			// Problems found on add: the policy renders the refusal
+			await handle_api_error(api_response.error, {wrapper: this.node})
 		}
 
 

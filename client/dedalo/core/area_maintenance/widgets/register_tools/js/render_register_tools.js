@@ -100,6 +100,7 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {render_tree_data, format_label} from '../../../../common/js/common.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
+	import {append_text_lines} from '../../../../common/js/utils/index.js'
 
 
 
@@ -325,13 +326,13 @@ const render_content_data = async function(self) {
 
 	// info errors
 		if (errors.length) {
-			const text = `Errors found. Fix this errors before continue: <br>` + errors.join('<br>')
-			ui.create_dom_element({
+			// server text: text nodes + real <br>, never an HTML sink
+			const errors_node = ui.create_dom_element({
 				element_type	: 'div',
-				inner_html		: text,
 				class_name		: 'info_text error',
 				parent			: content_data
 			})
+			append_text_lines(errors_node, ['Errors found. Fix this errors before continue:'].concat(errors))
 		}
 
 	// body_response
@@ -563,7 +564,7 @@ const render_datalist = (self, datalist_container, active_state) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_td name_td',
-			inner_html		: name,
+			text_content	: String(name ?? ''),
 			parent			: tool_item
 		})
 
@@ -573,7 +574,7 @@ const render_datalist = (self, datalist_container, active_state) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_td dev_td',
-			inner_html		: developer,
+			text_content	: String(developer ?? ''),
 			parent			: tool_item
 		})
 
@@ -581,7 +582,7 @@ const render_datalist = (self, datalist_container, active_state) => {
 		const installed_version_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_td num',
-			inner_html		: installed_version,
+			text_content	: String(installed_version ?? ''),
 			parent			: tool_item
 		})
 		// The registry copy is the WRONG one when the two differ, so it is the cell
@@ -599,7 +600,7 @@ const render_datalist = (self, datalist_container, active_state) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_td num',
-			inner_html		: version,
+			text_content	: String(version ?? ''),
 			parent			: tool_item
 		})
 
@@ -636,12 +637,13 @@ const render_datalist = (self, datalist_container, active_state) => {
 			parent			: tool_item
 		})
 		if (ar_warning.length) {
-			ui.create_dom_element({
+			// server warning text as TEXT lines (<br> elements), never an HTML sink
+			const warning_badge = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'dd_badge state_warning',
-				inner_html		: ar_warning.join('<br>'),
 				parent			: warning_node
 			})
+			append_text_lines(warning_badge, ar_warning)
 		}
 	}
 
@@ -821,7 +823,7 @@ const render_version_notice = (node, value) => {
 
 	// textContent, never innerHTML: a version string is author-supplied data read
 	// straight out of a register.json file, and this node is rendered for an admin.
-	node.innerHTML = ''
+	node.replaceChildren()
 	for (const line of lines) {
 		const p = document.createElement('p')
 		p.textContent = line
@@ -858,7 +860,7 @@ const refresh_active_summary = (active_state) => {
 	// summary
 		const summary_node = active_state.summary_node
 		if (summary_node) {
-			summary_node.innerHTML = disabled>0
+			summary_node.textContent = disabled>0
 				? disabled + ' ' + (get_label.disabled || 'disabled')
 				: ''
 		}
@@ -930,14 +932,18 @@ const render_report = (container, api_response) => {
 
 	// non-report envelope (refusal / error): show the message and stop
 		if (!report.length) {
-			ui.create_dom_element({
+			// server text as TEXT lines (<br> elements), never an HTML sink
+			const message_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: api_errors.length ? 'api_response error' : 'api_response',
-				inner_html		: api_errors.length
-					? api_errors.join('<br>')
-					: (api_response?.msg || 'Unknown API response error'),
 				parent			: report_node
 			})
+			append_text_lines(
+				message_node,
+				api_errors.length
+					? api_errors
+					: [api_response?.msg || 'Unknown API response error']
+			)
 			render_raw(report_node, api_response)
 			return container
 		}
@@ -998,15 +1004,16 @@ const render_report = (container, api_response) => {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'report_tool',
-					inner_html		: item.name,
+					text_content	: String(item.name ?? ''),
 					parent			: row
 				})
-				ui.create_dom_element({
+				// per-tool server error text as TEXT lines, never an HTML sink
+				const detail_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'report_detail',
-					inner_html		: item.errors.join('<br>'),
 					parent			: row
 				})
+				append_text_lines(detail_node, item.errors)
 			}
 		}
 
@@ -1022,7 +1029,7 @@ const render_report = (container, api_response) => {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'dd_badge',
-					inner_html		: deactivated[i].name,
+					text_content	: String(deactivated[i].name ?? ''),
 					parent			: chips
 				})
 			}
@@ -1060,13 +1067,13 @@ const render_report = (container, api_response) => {
 				const detail = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'report_detail',
-					inner_html		: message,
+					text_content	: String(message ?? ''),
 					parent			: row
 				})
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'report_names',
-					inner_html		: names.join(', '),
+					text_content	: names.join(', '),
 					parent			: detail
 				})
 			}

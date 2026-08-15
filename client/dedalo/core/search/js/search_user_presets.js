@@ -33,6 +33,8 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {create_source} from '../../common/js/common.js'
 	import {preset_scope_tipo} from './preset_scope.js'
+	import {request_failed} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 
 
@@ -78,7 +80,7 @@
 *
 * Side effects:
 *   - Populates self.component_json_data on first successful resolution.
-*   - On API failure, pushes an entry to page_globals.api_errors (standard error
+*   - On API failure, hands the ApiError to handle_api_error (standard error
 *     handling that surfaces login / permission problems to the UI wrapper).
 *
 * @param {Object} self - The search instance. Must expose section_tipo and component_json_data.
@@ -176,22 +178,14 @@ export const get_editing_preset_json_filter = async function(self) {
 		}
 
 	// response check
-		if (!api_response || !api_response.result) {
+		if (request_failed(api_response) || !api_response?.result) {
 
-			// api_errors.
-				// It's important to set instance as api_errors because this
-				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
-				// the instance could be built and rendered again replacing the temporal wrapper
-				page_globals.api_errors.push(
-					{
-						error	: 'request', // error type
-						msg		: `${self.model} build get_editing_preset_json_filter api_response: `+ (api_response.msg || api_response.error),
-						trace	: 'search user preset get_editing_preset_json_filter'
-					}
-				)
-				// debug
-				if(SHOW_DEBUG===true) {
-					console.error('SERVER: page_globals.api_errors:', page_globals.api_errors);
+			// THE handler. A dead session (the usual cause here) reaches the
+			// relogin overlay; anything else is shown by its policy. The page
+			// keeps working — a missing preset filter is not a fatal page error.
+				if (request_failed(api_response)) {
+					console.error(`${self.model} get_editing_preset_json_filter failed:`, api_response.error);
+					handle_api_error(api_response.error, {scope:'search user preset get_editing_preset_json_filter'})
 				}
 
 			return null

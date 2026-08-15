@@ -6,8 +6,10 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
-	import {time_unit_auto} from '../../../core/common/js/utils/index.js'
+	import {time_unit_auto, append_text_lines} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
@@ -299,10 +301,12 @@ const get_content_data_edit = async function(self) {
 				self.node.classList.remove('loading')
 
 				// error case
-				// (!) alert() is used here for legacy UI consistency; a modal would be preferred.
-				if (!api_response.result) {
-					const msg = "Error importing files " + (api_response.msg || 'Unknown')
-					alert(msg);
+				// ONE error model: the failure is an ApiError on the envelope, the
+				// dispatcher chooses the surface and the renderer emits TEXT. Never
+				// alert() a server string — it is untrusted and unlocalised.
+				if (request_failed(api_response)) {
+					console.error('import_files failed:', api_response.error)
+					await handle_api_error(api_response.error, {wrapper: response_message})
 					return
 				}
 
@@ -603,12 +607,16 @@ const update_process_status = (options) => {
 				// Render any server-reported errors at the end of the stream.
 				if (is_running===false) {
 					if (sse_response.data.errors && sse_response.data.errors.length>0) {
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'container error',
-							inner_html		: sse_response.data.errors.join('<br>'),
-							parent			: container
-						})
+						// TEXT nodes + real <br> elements: a stream frame is server text
+						// (paths, tool output) and must never be parsed as HTML
+						append_text_lines(
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'container error',
+								parent			: container
+							}),
+							sse_response.data.errors
+						)
 					}
 				}
 
@@ -661,7 +669,8 @@ const update_process_status = (options) => {
 						parent			: info_node
 					})
 				}
-				ui.update_node_content(info_node.msg_node, msg)
+				// textContent: `msg` embeds the server's own `data.msg`
+				info_node.msg_node.textContent = msg
 			})
 		}
 

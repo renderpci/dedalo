@@ -197,8 +197,10 @@ service_upload.prototype.init = async function(options) {
 				const response_msg	= self.response_msg
 
 			// progress
+				// `msg` is server/transport text (file names, refusal sentences,
+				// exception details): TEXT only, never an HTML sink (DS-1).
 				if (progress_info) {
-					progress_info.innerHTML	= msg // progress text info
+					progress_info.textContent = msg // progress text info
 				}
 				if (progress_line) {
 					progress_line.value = value // percentage line
@@ -207,10 +209,10 @@ service_upload.prototype.init = async function(options) {
 			// messages
 				if (response_msg) {
 					if(value===false) {
-						response_msg.innerHTML = msg
+						response_msg.textContent = msg
 					}
 					else if(value===100) {
-						response_msg.innerHTML = 'Upload done.'
+						response_msg.textContent = 'Upload done.'
 					}
 				}
 		}

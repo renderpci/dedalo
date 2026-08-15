@@ -116,15 +116,14 @@ render_sequences_status.prototype.list = async function(options) {
 * The rendering is intentionally minimal: the server already produces an
 * HTML-formatted report string (self.value.msg) that contains per-table
 * status lines, bold WARNING notices, and the setval() SQL commands needed
-* to fix any remaining drift. This function creates a container div and
-* injects that pre-formatted HTML directly via inner_html so that the
-* diagnostic detail (colours, bold text, <hr> separators, SQL fragments)
-* is preserved exactly as the server composed it.
+* to fix any remaining drift. Server text may NEVER reach an HTML sink, so the
+* report is rendered as TEXT inside a <pre> — see the TODO(server) below: the
+* server must emit structured rows instead of a pre-formatted HTML blob.
 *
 * self.value shape expected:
 * {
 *   result : boolean  — overall health flag (not rendered directly here)
-*   msg    : string   — HTML diagnostic report; injected as innerHTML
+*   msg    : string   — HTML diagnostic report; rendered as TEXT (see TODO(server))
 *   values : Array    — per-table structured data (not rendered here; present
 *                       for callers that may inspect it programmatically)
 * }
@@ -147,11 +146,17 @@ const get_content_data_edit = async function(self) {
 			class_name	 : 'content_data'
 		})
 
-	// version
+	// report
+	// TODO(server): `value.msg` is an HTML diagnostic report composed server-side
+	// (bold WARNING notices, <hr> separators, setval() SQL fragments). Server text
+	// may never reach an HTML sink, so it is rendered as TEXT here — the markup is
+	// visible as tags. The server should emit STRUCTURED rows (one object per
+	// table: {table, sequence, current, max, drift, fix_sql}) and let this renderer
+	// build the DOM; then the report reads correctly again without an HTML sink.
 		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: '',
-			inner_html		: list,
+			element_type	: 'pre',
+			class_name		: 'sequences_report',
+			text_content	: String(list ?? ''),
 			parent			: content_data
 		})
 

@@ -6,6 +6,8 @@
 
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {request_failed} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
@@ -171,12 +173,12 @@ counters_status.prototype.build = async function(autoload=false) {
 *      so the in-memory state reflects the DB state.
 *   3. Schedules a DOM-only `refresh` via `dd_request_idle_callback` so the
 *      table re-renders with updated sync status without a full network reload.
-*   4. Shows `api_response.msg` in a browser `alert()` dialog.
-*      (!) `alert()` blocks the main thread — this is intentional to force the
+*   4. Writes `api_response.msg` into `body_response` as text (no blocking dialog).
+*      (!) historical: an `alert()` blocked the main thread here to force the
 *      administrator to acknowledge the result before proceeding.
 *
 * On error:
-*   Writes the error message to `body_response` and shows it in an `alert()`.
+*   Writes the error message to `body_response` and routes the ApiError through handle_api_error().
 *
 * Timeout: 1 hour — a 'fix' on a very large section can take many minutes.
 * Retries: 1 (one attempt only; counter ops must not be retried automatically).
@@ -189,7 +191,7 @@ counters_status.prototype.build = async function(autoload=false) {
 *   (e.g. 'oh1').
 * @param {string} options.counter_action - Operation to perform: 'fix' | 'reset'.
 * @returns {Promise<boolean>} Always resolves to true after handling the
-*   server response; errors are surfaced via alert() and body_response text.
+*   server response; errors are surfaced via handle_api_error() and body_response text.
 */
 counters_status.prototype.modify_counter = async function(options) {
 
@@ -228,7 +230,7 @@ counters_status.prototype.modify_counter = async function(options) {
 			console.log('modify_counter api_response:', api_response);
 		}
 
-		if (api_response.result===true) {
+		if (request_failed(api_response)===false && api_response.result===true) {
 
 			// success
 
@@ -248,15 +250,17 @@ counters_status.prototype.modify_counter = async function(options) {
 				}
 			)
 
-			alert(api_response.msg)
+			// no blocking alert(): the server message is already shown as text in body_response
 
 		}else{
 			// error
+			console.error('counters_status modify_counter failed:', api_response)
 
 			// SEC-XSS-011
 			body_response.textContent = api_response.msg || 'Unknown error'
 
-			alert('Error! \n' + (api_response.msg || 'Unknown error'))
+			// ONE error model: policy + renderer decide the surface (never alert() with server text)
+			await handle_api_error(api_response.error, {wrapper: body_response})
 		}
 
 

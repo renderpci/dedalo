@@ -199,10 +199,11 @@ const get_content_data = async function(self) {
 
 					await pause(700) // fake process wait
 
+					// record data serialised into a <pre>: TEXT only (DS-1)
 					const value_node = ui.create_dom_element({
 						element_type	: 'pre',
 						class_name		: '',
-						inner_html		: JSON.stringify(self.main_element.data.value, null, 2)
+						text_content	: JSON.stringify(self.main_element.data.value, null, 2)
 					})
 					return value_node
 				}
@@ -231,10 +232,11 @@ const get_content_data = async function(self) {
 
 					const response = await self.get_some_data_from_server()
 
+					// server payload serialised into a <pre>: TEXT only (DS-1)
 					const value_node = ui.create_dom_element({
 						element_type	: 'pre',
 						class_name		: '',
-						inner_html		: JSON.stringify(response.result, null, 2)
+						text_content	: JSON.stringify(response.result, null, 2)
 					})
 					return value_node
 				}
@@ -285,8 +287,10 @@ const get_content_data = async function(self) {
 						await self.file_upload_handler(response)
 						// remove service
 						await service_upload.destroy(true, true, true)
-						// add info
-						value_container.innerHTML = 'File "'+response.file_data.name+'" uploaded successfully. Processing file.. please wait'
+						// add info. The file NAME is user data: TEXT only (DS-1)
+						value_container.replaceChildren(
+							document.createTextNode('File "'+response.file_data.name+'" uploaded successfully. Processing file.. please wait')
+						)
 					}
 
 					return service_upload_node
@@ -410,7 +414,7 @@ const get_content_data = async function(self) {
 										ui.create_dom_element({
 											element_type	: 'pre',
 											class_name		: '',
-											inner_html		: JSON.stringify(files_info, null, 2),
+											text_content	: JSON.stringify(files_info, null, 2),
 											parent			: value_container
 										})
 
@@ -429,7 +433,7 @@ const get_content_data = async function(self) {
 												ui.create_dom_element({
 													element_type	: 'pre',
 													class_name		: '',
-													inner_html		: JSON.stringify(files_info[k], null, 2),
+													text_content	: JSON.stringify(files_info[k], null, 2),
 													parent			: value_container
 												})
 											}

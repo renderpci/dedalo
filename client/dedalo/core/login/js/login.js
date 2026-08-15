@@ -756,8 +756,13 @@ export const run_service_worker = async (options) => {
 		try {
 			// register serviceWorker
 			// Once registered, it will be loaded in every page load across the site
+			// {type:'module'}: sw.js imports the shared transport (core/common/js/
+			// api_transport.js) instead of carrying its own copy of the request
+			// algorithm. A classic SW cannot `import`; every supported browser
+			// (Chromium 91+, Firefox 114+, Safari 16.4+) runs module SWs.
 			const registration = await navigator.serviceWorker.register(
-				DEDALO_ROOT_WEB + '/core/sw.js'
+				DEDALO_ROOT_WEB + '/core/sw.js',
+				{ type: 'module' }
 			);
 
 			// debug info about registration status

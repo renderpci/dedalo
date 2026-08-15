@@ -14,7 +14,7 @@
 *                  Despite the "cookie" name, all persistence goes through localStorage,
 *                  not HTTP cookies.
 *   ./util.js    — General-purpose browser utilities: deep equality (is_equal,
-*                  array_equals, object_equals), DOM helpers (find_up_node,
+*                  array_equals, object_equals), DOM helpers (append_text_lines, find_up_node,
 *                  find_up_tag, load_style, load_script, observe_changes),
 *                  URL helpers (object_to_url_vars, url_vars_to_object),
 *                  window management (open_window, open_window_with_post,

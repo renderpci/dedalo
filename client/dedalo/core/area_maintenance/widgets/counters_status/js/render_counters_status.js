@@ -160,10 +160,11 @@ const get_content_data_edit = async function(self) {
 				inner_html		: 'Some errors found',
 				parent			: content_data
 			})
+			// server error text NEVER reaches an HTML sink
 			ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'error_pre',
-				inner_html		: errors.join('\n'),
+				text_content	: errors.join('\n'),
 				parent			: errors_container
 			})
 		}
@@ -225,7 +226,7 @@ const get_content_data_edit = async function(self) {
 					const section_tipo_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: (is_header ? 'dd_th' : 'dd_td'),
-						inner_html		: item.section_tipo,
+						text_content	: String(item.section_tipo ?? ''),
 						parent			: datalist_item_container
 					})
 					if (item.type!=='header') {
@@ -248,7 +249,7 @@ const get_content_data_edit = async function(self) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: (is_header ? 'dd_th' : 'dd_td'),
-						inner_html		: item.label,
+						text_content	: String(item.label ?? ''),
 						parent			: datalist_item_container
 					})
 
@@ -256,7 +257,7 @@ const get_content_data_edit = async function(self) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: (is_header ? 'dd_th num' : 'dd_td num'),
-						inner_html		: item.counter_value,
+						text_content	: String(item.counter_value ?? ''),
 						parent			: datalist_item_container
 					})
 
@@ -271,7 +272,7 @@ const get_content_data_edit = async function(self) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: lsid_class,
-						inner_html		: last_section_id,
+						text_content	: String(last_section_id ?? ''),
 						parent			: datalist_item_container
 					})
 

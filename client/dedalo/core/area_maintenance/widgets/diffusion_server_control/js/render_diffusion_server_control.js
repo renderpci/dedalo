@@ -7,6 +7,8 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+	import {request_failed, normalize_transport_error} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 	// the ONE progress model, shared with the live layer (see progress_model.js)
 	import {format_int, progress_view, row_signature} from './progress_model.js'
 	import {build_rollup_block} from './rollup_panel.js'
@@ -973,14 +975,15 @@ const build_config_block = function(value, parent) {
 *   4. Removes the spinner and releases the lock.
 *   5. Writes a JSON summary of the response to the `.body_response` <pre> element.
 *   6. On success (`result === true` or a non-null object), calls reload_widget to
-*      re-fetch the server state and re-render. On failure, shows an alert.
+*      re-fetch the server state and re-render. On failure, routes the ApiError
+*      through handle_api_error().
 *
 * The `ok` check accepts `typeof result === 'object' && result !== null` in addition to
 * `result === true` because some API actions (e.g. retry_pending_deletions) return a
 * result object instead of a boolean on success.
 *
-* (!) Uses `alert()` for error feedback — intentional for this admin widget where a
-* prominent blocking dialog is appropriate. Do not replace with console.warn.
+* (!) Failures NEVER reach alert(): they go through handle_api_error(), the ONE
+* client error model (policy decides toast / inline / relogin).
 *
 * @param {Object}      self         - the diffusion_server_control widget instance
 * @param {HTMLElement} content_data - top-level widget content node (lock target + body_response host)
@@ -998,7 +1001,13 @@ const run_action = async function(self, content_data, anchor, api_call) {
 		api_response = await api_call()
 	} catch (error) {
 		console.error(error)
-		api_response = { result: false, msg: (error && error.message) || 'Unknown error' }
+		// a thrown transport failure becomes an ApiError like every other failure
+		api_response = {
+			ok		: false,
+			result	: false,
+			error	: normalize_transport_error(error),
+			msg		: (error && error.message) || 'Unknown error'
+		}
 	}
 
 	content_data.classList.remove('lock')
@@ -1013,11 +1022,14 @@ const run_action = async function(self, content_data, anchor, api_call) {
 		body_response.textContent = JSON.stringify(summary, null, 2)
 	}
 
-	const ok = api_response.result===true || (typeof api_response.result === 'object' && api_response.result!==null)
+	const ok = request_failed(api_response)===false
+		&& (api_response.result===true || (typeof api_response.result === 'object' && api_response.result!==null))
 	if (ok) {
 		await reload_widget(self, content_data)
 	} else {
-		alert('Error! \n' + (api_response.msg || 'Unknown error'))
+		console.error('diffusion_server_control run_action failed:', api_response)
+		// ONE error model: policy + renderer decide the surface (never alert() with server text)
+		await handle_api_error(api_response.error, {wrapper: anchor || content_data})
 	}
 }//end run_action
 

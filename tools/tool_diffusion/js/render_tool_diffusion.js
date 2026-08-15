@@ -11,6 +11,12 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
 	import {build_report_model, tsv_tables, tsv_errors} from './report_model.js'
+	// ONE error model for the stream: a frame that ENDED the run is read by
+	// normalize_stream_error and routed by the shared dispatcher — the report
+	// panel below keeps rendering the per-record error list, which is a RESULT,
+	// not the failure that stopped the job.
+	import {is_api_error, normalize_stream_error, request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 
 
 
@@ -917,7 +923,17 @@ const publish_content = async (self, options) => {
 			process_id				: process_id
 		})
 		if (!stream) {
-			ui.update_node_content(response_message, 'Error: no stream received from server')
+			// The failure itself was already routed as ONE ApiError by export()
+			// (tool_diffusion.js): here the panel only says the run did not start and
+			// gives the button back. text_content, never update_node_content — that
+			// helper is insertAdjacentHTML (ui.js).
+			response_message.replaceChildren()
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'stream_not_opened',
+				text_content	: 'The publication did not start.',
+				parent			: response_message
+			})
 			response_message.classList.add('error')
 			publication_button.classList.remove('loading')
 			console.error('Error: data_manager.request_stream did not return a valid stream.');
@@ -950,8 +966,8 @@ const publish_content = async (self, options) => {
 					if(SHOW_DEBUG===true) {
 						console.log('cancel_process API response:', response);
 					}
-					if (response.errors && response.errors.length) {
-						alert("Errors: " + response.errors.join('<br>') );
+					if (request_failed(response)) {
+						handle_api_error(response.error, {wrapper: response_message?.parentNode});
 					}
 				})
 			}
@@ -1059,8 +1075,8 @@ const update_process_status = (options) => {
 					if(SHOW_DEBUG===true) {
 						console.log('cancel_process API response:', response);
 					}
-					if (response.errors && response.errors.length) {
-						alert("Errors: " + response.errors.join('<br>') );
+					if (request_failed(response)) {
+						handle_api_error(response.error, {wrapper: container});
 					}
 				})
 			}
@@ -1223,6 +1239,38 @@ const build_stream_handlers = function(options) {
 	const lock_items		= options.lock_items || []
 
 	let last_sse_response = null
+	// The failure that ended the run is announced ONCE: a stream can deliver
+	// several frames after it, and a diffusion run legitimately reports dozens of
+	// per-record errors that are not this.
+	let error_dispatched = false
+
+	/**
+	* ROUTE_FRAME_ERROR
+	* A TERMINAL frame (or one read_stream could not parse) may carry the failure
+	* that ended the run — envelope v2 `error`, or the COMPAT `errors[]` of a body
+	* with no result. Everything else is a progress frame and says nothing here.
+	*
+	* @param {Object|null} sse_response
+	*/
+	const route_frame_error = (sse_response) => {
+
+		if (error_dispatched || !sse_response) {
+			return
+		}
+		const terminal = sse_response.is_running===false || is_api_error(sse_response.error)
+		if (!terminal) {
+			return
+		}
+		const api_error = normalize_stream_error(sse_response)
+		if (!api_error) {
+			return
+		}
+		error_dispatched = true
+		// not awaited: the report panel must paint now, whatever surface the
+		// policy chooses (a relogin overlay can stay open for minutes)
+		handle_api_error(api_error, {wrapper: container, scope: 'tool_diffusion'})
+			.catch((dispatch_error) => console.error('[tool_diffusion] error dispatch failed:', dispatch_error))
+	}
 
 	// on_read (every chunk)
 	const on_read = (sse_response) => {
@@ -1258,6 +1306,8 @@ const build_stream_handlers = function(options) {
 		)
 
 		render_run_report({self, item, sse_response, container})
+
+		route_frame_error(sse_response)
 
 		last_sse_response = sse_response
 	}

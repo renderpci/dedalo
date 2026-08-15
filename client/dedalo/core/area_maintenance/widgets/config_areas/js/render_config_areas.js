@@ -6,6 +6,8 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {request_failed, response_data} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -113,7 +115,7 @@ const get_content_data = function(self) {
 
 	// (re)build the chip list from deny_list
 	const render_chips = () => {
-		ui.update_node_content(chips_node, '')
+		chips_node.replaceChildren()
 
 		if (deny_list.length===0) {
 			ui.create_dom_element({
@@ -134,12 +136,17 @@ const get_content_data = function(self) {
 				parent			: chips_node
 			})
 
-			// inner_html source is trusted server-side ontology data (admin-curated labels/tipos), not end-user input
-			ui.create_dom_element({
+			// ontology labels/tipos are SERVER text: DOM built node by node, never an HTML sink
+			const chip_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'config_areas_chip_label',
-				inner_html		: label_for(tipo) + ' <small>' + meta_for(tipo) + '</small>',
+				text_content	: label_for(tipo) + ' ',
 				parent			: chip
+			})
+			ui.create_dom_element({
+				element_type	: 'small',
+				text_content	: meta_for(tipo),
+				parent			: chip_label
 			})
 
 			const button_remove = ui.create_dom_element({
@@ -187,14 +194,14 @@ const get_content_data = function(self) {
 			deny_list.push(tipo)
 		}
 		search_input.value = ''
-		ui.update_node_content(suggestions, '')
+		suggestions.replaceChildren()
 		suggestions.classList.add('hide')
 		render_chips()
 	}
 
 	search_input.addEventListener('input', () => {
 		const q = search_input.value.trim().toLowerCase()
-		ui.update_node_content(suggestions, '')
+		suggestions.replaceChildren()
 		if (q.length===0) {
 			suggestions.classList.add('hide')
 			return
@@ -218,12 +225,17 @@ const get_content_data = function(self) {
 		suggestions.classList.remove('hide')
 		for (let i = 0; i < matches.length; i++) {
 			const a = matches[i]
-			// inner_html source is trusted server-side ontology data, not end-user input
+			// ontology labels/tipos are SERVER text: DOM built node by node, never an HTML sink
 			const row = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'config_areas_suggestion',
-				inner_html		: (a.label || '(no label)') + ' <small>' + a.tipo + ' · ' + a.model + '</small>',
+				text_content	: (a.label || '(no label)') + ' ',
 				parent			: suggestions
+			})
+			ui.create_dom_element({
+				element_type	: 'small',
+				text_content	: a.tipo + ' · ' + a.model,
+				parent			: row
 			})
 			row.addEventListener('mousedown', (e) => {
 				// mousedown (not click) so it fires before the input's blur hides the list
@@ -256,29 +268,35 @@ const get_content_data = function(self) {
 	button_save.addEventListener('click', async (e) => {
 		e.stopPropagation()
 		button_save.classList.add('button_spinner')
-		ui.update_node_content(body_response, '')
+		body_response.replaceChildren()
 		try {
 			const api_response = await self.save(deny_list.slice(), areas_allow)
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: (api_response && api_response.result) ? 'response_node' : 'response_node error',
-				inner_html		: (api_response && api_response.msg) ? api_response.msg : 'Unknown error calling API',
-				parent			: body_response
-			})
-			// reflect what the server actually persisted (it strips guarded/invalid + dedupes)
-			if (api_response && api_response.result && Array.isArray(api_response.result.areas_deny)) {
-				deny_list.length = 0
-				for (let i = 0; i < api_response.result.areas_deny.length; i++) {
-					deny_list.push(api_response.result.areas_deny[i])
+			if (request_failed(api_response)) {
+				await handle_api_error(api_response.error, {wrapper: body_response})
+			} else {
+				// server text is TEXT, never an HTML sink
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'response_node',
+					text_content	: (api_response && api_response.msg) ? String(api_response.msg) : 'OK',
+					parent			: body_response
+				})
+				// reflect what the server actually persisted (it strips guarded/invalid + dedupes)
+				const data = response_data(api_response)
+				if (data && Array.isArray(data.areas_deny)) {
+					deny_list.length = 0
+					for (let i = 0; i < data.areas_deny.length; i++) {
+						deny_list.push(data.areas_deny[i])
+					}
+					render_chips()
 				}
-				render_chips()
 			}
 		} catch (error) {
 			console.error('config_areas save error:', error);
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'response_node error',
-				inner_html		: 'Unknown error calling API',
+				text_content	: 'Unknown error calling API',
 				parent			: body_response
 			})
 		} finally {

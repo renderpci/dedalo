@@ -23,9 +23,10 @@ It owns four concerns that would otherwise be re-implemented per caller:
 
 1. **The wire envelope** — JSON body, `Content-Type: application/json`,
    `credentials: same-origin`, and the `X-Dedalo-Csrf-Token` header (SEC-008).
-2. **Resilience** — exponential-backoff retry, per-attempt timeout, and a
-   mid-attempt server-health probe that keeps a long-running request alive
-   instead of aborting it.
+2. **Resilience** — the shared transport (`core/common/js/api_transport.js`)
+   retries only what is retryable (`api_error.retryable` / `Retry-After`),
+   applies a per-attempt timeout, and runs a mid-attempt server-health probe
+   that keeps a long-running request alive instead of aborting it.
 3. **Local caching** — an optional short-circuit read/write against IndexedDB
    (database `dedalo`, v11), plus the persistence of UI/pagination state.
 4. **Streaming** — SSE / NDJSON readers for long row-by-row payloads
@@ -53,12 +54,13 @@ flowchart TD
     B --> C{cache_handler<br/>localdb?}
     C -->|hit| H["return cached response<br/>(no network)"]
     C -->|miss / none| D["attach X-Dedalo-Csrf-Token<br/>inject recovery_mode<br/>JSON.stringify(body)"]
-    D --> E["_fetch_with_retry_and_timeout<br/>POST api/v1/json/"]
-    E -->|2xx| F["parse JSON envelope<br/>refresh page_globals.csrf_token"]
-    E -->|"408/429/5xx"| E
-    F -->|"errors includes csrf_failed"| R["retry once with fresh token"]
+    D --> E["fetch_api (api_transport.js)<br/>POST api/v1/json/<br/>read body once → JSON → normalize_api_error"]
+    E -->|"api_error.retryable or Retry-After"| E
+    E --> F["refresh page_globals.csrf_token<br/>publish session_activity"]
+    F -->|"error.code auth.csrf_failed"| R["retry once with fresh token"]
     R --> E
-    F -->|ok| G["cache write on idle<br/>publish api_response_errors<br/>return {result, msg, errors}"]
+    F -->|"ok:true"| G["cache write on idle<br/>return {ok:true, data, request_id}"]
+    F -->|"api_error"| X["envelope.error = ApiError<br/>publish api_error<br/>return {ok:false, error, request_id}"]
 ```
 
 A `request` call runs this sequence:
@@ -73,25 +75,42 @@ A `request` call runs this sequence:
 4. **Recovery mode** — if `page_globals.recovery_mode` is set, inject
    `recovery_mode: true` into the body so the server skips non-essential side
    effects.
-5. **Reset** `page_globals.api_errors` (and `request_message`) so this call's
-   error state starts clean.
-6. **Dispatch** through `_fetch_with_retry_and_timeout` after JSON-stringifying
-   the body.
-7. **Parse + refresh** — parse the JSON envelope and copy any
-   `json_response.csrf_token` back into `page_globals.csrf_token` (the server
-   may rotate it on auth state changes).
-8. **CSRF retry** — if the envelope is `{result:false, errors:[…'csrf_failed'…]}`
-   and the call has not already retried, resend it once with the fresh token
-   (the `_csrf_retried` flag guards against an infinite loop).
-9. **Surface errors** — fatal `error` is recorded via `_record_api_error` (the
-   page renderer reads `page_globals.api_errors`); non-fatal `errors[]` publish
-   the `api_response_errors` event on the [event bus](../ui/index.md).
-10. **Cache write** — on a successful result (`result !== false`), write the
-    response back to IndexedDB on idle (`dd_request_idle_callback`).
+5. **Validate** — an empty URL or an unserialisable body resolves a client
+   failure envelope (`client.network`) without touching the network.
+6. **Dispatch** through `fetch_api` (`core/common/js/api_transport.js`): fetch
+   never throws on status; the body is read **once**, parsed when it is JSON,
+   and passed to `normalize_api_error`. A failure is retried **only** when
+   `api_error.retryable` is true or the server sent `Retry-After` (honoured
+   over the backoff) — there is no status list and no 401/403 carve-out: an
+   auth or permission answer is an envelope like any other, dispatched on its
+   code.
+7. **Refresh** — copy any `csrf_token` (present on success **and** failure
+   envelopes) back into `page_globals.csrf_token` and publish
+   `session_activity`.
+8. **CSRF retry** — if `error.code === 'auth.csrf_failed'` and the call has not
+   already retried, resend it once with the fresh token (the `_csrf_retried`
+   flag guards against an infinite loop).
+9. **Failure** — attach the `ApiError` under `envelope.error` (or synthesise
+   `{ok:false, error}` when no JSON arrived), publish the `api_error` event on
+   the [event bus](../ui/index.md), toast transport failures (network,
+   timeout, foreign status page), and return the envelope.
+10. **Success / cache write** — return the envelope; when cached, write it back
+    to IndexedDB on idle (`dd_request_idle_callback`).
 
-The return is **always an object**. On failure it has the shape
-`{ result:false, msg, error, errors }` so callers can destructure without
-null-checking.
+The return is **always an object**: the envelope v2. On success it is
+`{ ok:true, request_id, data, notices? }`; on failure `{ ok:false, request_id,
+error }` where `error` is an `ApiError` (`core/common/js/api_error.js`) —
+`request_failed(api_response)` is the one test, `response_data(api_response)`
+the one payload accessor, and every consumer dispatches on `error.code`, never
+on HTTP status or message text.
+
+!!! note "Compat window"
+    While the server still mirrors the legacy fields (`result`, `msg`,
+    `errors:[code]`), the client normaliser also understands legacy failure
+    bodies (`{result:false, errors:[token]}` → `error.code = token`) and
+    `response_data` reads `data ?? result`. Both go away together with the
+    server compat block once the client no longer reads `.result` / `.msg` /
+    `.errors` (the `client_error_contract_tripwire` census).
 
 ## Key concepts
 
@@ -103,7 +122,7 @@ bootstrap `start` action. `data_manager`:
 - **reads** it and sends it as the `X-Dedalo-Csrf-Token` header on every
   request (and on both streaming variants);
 - **refreshes** it from every response (`json_response.csrf_token`);
-- **retries once** transparently on a `csrf_failed` rejection — this absorbs the
+- **retries once** transparently on an `auth.csrf_failed` rejection — this absorbs the
   bootstrap race where a non-exempt action fires before `start` has returned a
   token (parallel menu/read calls during page build, or the post-login reload
   that resets `page_globals`).
@@ -112,35 +131,60 @@ The set of actions exempt from the token check (and the separate no-login
 allowlist) is enforced server-side — see the
 [RQO security model](../rqo.md#security-model-summary).
 
+### The error model: `ApiError`
+
+`core/common/js/api_error.js` is a **pure** module (no DOM, no page globals —
+it runs in the cache Worker and the Service Worker too). It defines:
+
+- `ApiError` — `{code, status, message, label_key, details, request_id,
+  retryable, transport, severity, source, raw}`; extends `Error` so legacy
+  `.message` readers keep working, and carries `is_api_error:true` so it
+  survives a `postMessage` clone.
+- `CLIENT_ERROR` — the codes the client itself produces when no envelope
+  arrived: `client.network`, `client.timeout`, `client.aborted`,
+  `client.bad_response`, `client.http_status`, `client.worker`,
+  `client.offline`; each maps to an `error_client_*` label.
+- `normalize_api_error(response, body)` — envelope v2 → (compat v1) → bare
+  failure → non-JSON status → `null` on success.
+- `normalize_transport_error(error, flags)` — classifies a `fetch` rejection
+  **by class** (`AbortError` + our timer → `client.timeout`, `AbortError` →
+  `client.aborted`, `TypeError` → `client.network`, else
+  `client.bad_response`); never by message text.
+- `normalize_stream_error(frame)` — the same for an SSE/NDJSON end-of-run
+  frame.
+- `request_failed(api_response)` / `response_data(api_response)` — the two
+  accessors callers use.
+
+The policy (which code calls for which UI action: relogin, no-access page,
+page panel, toast, modal, inline, silent) lives in `error_policy.js`; the
+executor `handle_api_error(api_error, ctx) → {recovered}` in
+`error_dispatch.js`; the text-only renderer (`error_text`, toast, inline,
+panel, modal — labels first, `SHOW_DEBUG` suffix `[code · request_id]`) in
+`render_api_error.js`.
+
 ### Retry, timeout and the health probe
 
-`_fetch_with_retry_and_timeout` is the **only** place that calls native
-`fetch()` for regular (non-streaming) requests. Per attempt it:
+`fetch_api` (`core/common/js/api_transport.js`) is the **only** place that
+calls native `fetch()` for regular (non-streaming) requests, and it is the same
+function the cache Worker (`page/js/worker_cache.js`) and the module Service
+Worker (`core/sw.js`) use — there is one request algorithm. Per attempt it:
 
 1. computes `delay = base_delay * 2^(attempt-1)` (exponential backoff);
-2. creates a fresh `AbortController` and arms `controller.abort()` after
-   `timeout + delay` ms (the window grows with each retry);
+2. creates a fresh `AbortController` (chained to the caller's `signal`) and
+   arms it after `timeout + delay` ms (the window grows with each retry);
 3. schedules a **mid-attempt health probe** at `timeout / 2` ms via
-   `check_server_health()` (a cache-busted GET to `/health`, at the ORIGIN
-   root — not under the API path). If the server answers the probe, the main
-   abort is **cancelled** so a legitimately slow process can finish naturally
-   instead of being killed;
-4. retries only on statuses `[408, 429, 500, 502, 503, 504]`; any other 4xx
-   throws immediately (non-retryable);
-5. surfaces progress to the user through `render_msg_to_inspector` ("Awaiting
-   for busy server…", "Retrying in N ms…", timeout/network notices).
+   `check_health()` (a cache-busted GET to `/health`, at the ORIGIN root — not
+   under the API path). If the server answers the probe, the main abort is
+   **cancelled** so a legitimately slow process can finish naturally, and the
+   `on_wait` hook fires with reason `'busy'` (`data_manager` shows the
+   `awaiting_busy_server` notice);
+4. reads the body once, parses it, normalises it; retries only when
+   `api_error.retryable` is true or `Retry-After` was sent — a caller abort is
+   never retried;
+5. emits **no UI** itself: `on_wait(attempt, delay, reason)` is its only hook.
 
-When retries are exhausted it throws, and `data_manager.request` catches it and
-returns the normalized error envelope.
-
-!!! note "Two dormant alternatives"
-    `_fetch_with_race` (fire N staggered fetches, take the first to finish via
-    `Promise.race`) and the Worker path (`_handle_worker_request` +
-    `worker_data.js`) are both present but **not wired into `request`** —
-    `_fetch_with_retry_and_timeout` is the active strategy. `worker_data.js` is
-    a self-contained, minimal copy of `request` for a background thread; the
-    `use_worker` option exists but the call is commented out (deactivated
-    2025-05-22 while network debugging is in progress).
+When attempts are exhausted it returns `{json, api_error, response}` and
+`data_manager.request` builds the failure envelope from it.
 
 ### Concurrency
 
@@ -148,8 +192,8 @@ There is no request queue: each `data_manager.request` is an independent
 `async` call. Batching several operations is done with several concurrent
 `fetch` calls (the callers await them in parallel), **not** by sending an array
 of RQOs — the API endpoint decodes exactly one RQO per HTTP request (see
-[RQO](../rqo.md)). `page_globals.api_errors` is reset at the **start** of each
-`request`, so it reflects the most recent call.
+[RQO](../rqo.md)). The page-level error slot (`page_globals.page_error`, set by
+`error_dispatch`) reflects the most recent handled failure.
 
 The **browser**, however, does queue: six connections per origin over HTTP/1.1.
 Ordinary requests finish and free their slot, so this is invisible for them —
@@ -193,11 +237,15 @@ For payloads delivered incrementally:
   `Content-Type: text/event-stream`) and resolves with the raw `response.body`
   `ReadableStream`.
 - **`request_fetch_stream`** is the generic NDJSON variant (used by
-  `tool_export`); it does **not** set `is_stream` and throws immediately on a
-  non-2xx response.
+  `tool_export`); it does **not** set `is_stream`. Both variants **reject with
+  an `ApiError`** on a non-2xx answer (the server's `error.code` when the body
+  is an envelope — a mid-job `auth.not_logged` triggers relogin — else
+  `client.http_status`) and on a network failure (`client.*`).
 - **`read_stream`** consumes an SSE stream chunk-by-chunk, reassembling messages
   that the HTTP server may split (`data:\n…\n\n` across chunks) or merge (two
-  messages in one chunk), parsing each with `JSON_parse_safely`, and invoking
+  messages in one chunk), parsing each with `JSON_parse_safely` (an unparseable
+  message becomes a frame carrying `error` = `ApiError client.bad_response`;
+  consumers read frames with `normalize_stream_error`), and invoking
   `on_read` / `on_done` callbacks. It **returns the reader** driving the stream.
   Each reader is also registered in `page_globals.stream_readers` so navigation
   can abort all in-flight readers.
@@ -216,7 +264,7 @@ Both streaming methods also attach the CSRF header.
     leaves the connection live, and at the sixth abandoned stream **every**
     request on the page queues indefinitely.
 
-    Including `/health`. That is the probe `_fetch_with_retry_and_timeout` uses
+    Including `/health`. That is the probe `fetch_api` uses
     to tell a busy server from a dead one, so a starved page cannot even detect
     its own starvation: it reports timeouts and retries against a server that is
     answering in milliseconds.
@@ -240,11 +288,13 @@ All in `core/common/js/data_manager.js` unless noted.
 | `data_manager` | exported namespace object | owns all client→server communication |
 | `data_manager.request(options)` | method | the central dispatcher (CSRF, recovery_mode, cache short-circuit, parse, CSRF retry, error surfacing) |
 | `data_manager.url` / `data_manager.health_url` | getters | API endpoint (`DEDALO_API_URL` → fallback `../api/v1/json/`) and `/health` (origin root) |
-| `_fetch_with_retry_and_timeout(url, opts, retries, base_delay, timeout)` | module function | the only native `fetch` for regular requests; backoff + timeout + health probe |
+| `fetch_api(url, init, options)` | `api_transport.js` | the only native `fetch` for regular requests (page, cache Worker, Service Worker); read-once body, normalise, retry on `retryable`/`Retry-After`, timeout + health probe |
 | `check_server_health()` | exported | cache-busted probe of `/health`; distinguishes "busy" from "down" |
-| `render_msg_to_inspector(msg, type, remove_time)` | exported | publishes the `notification` event for user-visible banners |
-| `_record_api_error(type, msg, trace, details)` | method | appends to `page_globals.api_errors` (read by the page renderer) |
-| `_create_error_response(msg, error)` | method | builds the normalized `{result:false,…}` failure object |
+| `render_msg_to_inspector(msg, type, remove_time)` | exported | publishes the `notification` event (busy-server notice) |
+| `ApiError`, `normalize_api_error`, `normalize_transport_error`, `normalize_stream_error`, `request_failed`, `response_data` | `api_error.js` | the error model and its accessors |
+| `resolve_error_policy`, `register_error_policy` | `error_policy.js` | code → UI action table (exact → `domain.*` → `*`) |
+| `handle_api_error(api_error, ctx)` | `error_dispatch.js` | executes the policy; owns the relogin-then-retry recovery (`{recovered}`) |
+| `error_text`, `render_error_toast` / `_inline` / `_panel` / `_modal` | `render_api_error.js` | text-only rendering, labels first |
 | `get_element_context(source)` | method | `get_element_context` action, always `prevent_lock:true` (context, no data) |
 | `resolve_model(tipo, section_tipo)` | method | model class for a tipo; cached in `page_globals.models` |
 | `get_matrix_ontology_locator(tipo)` | method | `{section_tipo, section_id}` for a tipo; cached in `page_globals.ontology_info` |
@@ -254,8 +304,6 @@ All in `core/common/js/data_manager.js` unless noted.
 | `get_local_db()` | method | open/upgrade the `dedalo` IndexedDB (v11) |
 | `get_local_db_data` / `set_local_db_data` / `delete_local_db_data` / `delete_local_db_data_by_prefix` / `clear_local_db_table` / `delete_whole_local_db` | methods | IndexedDB read / write / delete / prefix-delete / clear / drop |
 | `download_url(url, filename)` / `download_data(data, filename)` | exported | browser-download helpers (blob → temporary `<a>`) |
-| `_fetch_with_race(...)` / `_handle_worker_request(...)` | functions | **dormant** alternative strategies (not wired into `request`) |
-| `worker_data.js` | separate file | self-contained background-Worker copy of `request` (currently deactivated) |
 
 The RQO body these methods carry is assembled by the caller in
 `core/common/js/common.js` (`create_source`, `build_rqo_show`,
@@ -267,6 +315,8 @@ A section list reading its first page, with the response cached in IndexedDB:
 
 ```js
 import {data_manager} from '../../common/js/data_manager.js'
+import {request_failed, response_data} from '../../common/js/api_error.js'
+import {handle_api_error} from '../../common/js/error_dispatch.js'
 
 // rqo built from the section's request_config (see build_rqo_show in common.js)
 const rqo = {
@@ -293,21 +343,21 @@ const api_response = await data_manager.request({
     cache_handler : { handler:'localdb', id:'section_oh1_list_p0' } // optional
 })
 
-if (api_response.result === false) {
-    // failure envelope: { result:false, msg, error, errors }
-    console.error(api_response.errors)
+if (request_failed(api_response)) {
+    // failure envelope: { ok:false, request_id, error:ApiError }
+    await handle_api_error(api_response.error)   // relogin / toast / panel per policy
 } else {
-    const { context, data } = api_response.result // {context, data}
+    const { context, data } = response_data(api_response) // {context, data}
     // ... hand to the section instance to render
 }
 ```
 
 Under the hood: the CSRF header is attached from `page_globals.csrf_token`; if
 the `localdb` key is present the cached envelope is returned with no network
-hit; otherwise `_fetch_with_retry_and_timeout` POSTs the JSON, retrying on a
-transient 5xx and keeping the request alive if the health probe shows the server
-is merely busy; the response refreshes the token and is written back to the
-`data` store on idle.
+hit; otherwise `fetch_api` POSTs the JSON, retrying only a retryable answer and
+keeping the request alive if the health probe shows the server is merely busy;
+the response refreshes the token and is written back to the `data` store on
+idle.
 
 A lightweight context lookup (no data, never locks the section):
 
@@ -319,7 +369,7 @@ const ctx = await data_manager.get_element_context({
     section_id   : null,
     mode         : 'edit'
 })
-const context = ctx.result // structure context only
+const context = response_data(ctx) // structure context only
 ```
 
 A streaming export (NDJSON, row by row):
@@ -339,11 +389,12 @@ const reader = stream.getReader()
 - [SQO](../sqo.md) — the `filter`/`limit`/`order` query carried inside the RQO.
 - [UI building blocks](../ui/index.md) — the consumers that render the
   `{context, data}` datum a `request` returns, and the `event_manager` bus the
-  transport publishes `notification` / `api_response_errors` to.
+  transport publishes `notification` / `api_error` to.
 - `core/common/js/common.js` — the client RQO builders (`create_source`,
   `build_rqo_show`, `build_rqo_search`).
-- `core/common/js/worker_data.js` — the dormant background-Worker copy of
-  `request`.
+- `core/common/js/api_transport.js`, `api_error.js`, `error_policy.js`,
+  `error_dispatch.js`, `render_api_error.js` — the transport core, the error
+  model, the policy, its executor and the renderer.
 - `src/core/api/dispatch.ts` (served by `src/server.ts` at
   `/api/v1/json` and `/dedalo/core/api/v1/json[/]`) — the server endpoint the
   transport POSTs to.

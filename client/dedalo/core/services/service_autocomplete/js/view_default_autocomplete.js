@@ -27,7 +27,7 @@
 	import {ui} from '../../../common/js/ui.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
-	import {clone, same_section_id} from '../../../common/js/utils/index.js'
+	import {clone, same_section_id, append_text_lines} from '../../../common/js/utils/index.js'
 	import {get_instance} from '../../../common/js/instances.js'
 	import {get_section_records} from '../../../section/js/section.js'
 	// the ONE label-key resolver for an external source_status. Shared with
@@ -175,16 +175,20 @@ const get_content_data = function(self) {
 			}
 		}
 		if (all_ar_section.length<1) {
-			const ontology_link = ui.get_ontology_term_link(self.tipo)
-			const msg = `Invalid target section tipo (empty).
-						Please, configure at least one target section tipo for current component:
-						${ontology_link.outerHTML}`
-			ui.create_dom_element({
+			// The ontology link is an ELEMENT, appended as a node. The sentence goes
+			// in as text lines — nothing here is ever parsed as HTML (DS-1).
+			const ontology_link		= ui.get_ontology_term_link(self.tipo)
+			const debug_container	= ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'debug',
-				inner_html		: msg,
 				parent			: fragment
 			})
+			append_text_lines(debug_container, [
+				'Invalid target section tipo (empty).',
+				'Please, configure at least one target section tipo for current component:'
+			])
+			debug_container.appendChild(document.createElement('br'))
+			debug_container.appendChild(ontology_link)
 			return fragment
 		}
 

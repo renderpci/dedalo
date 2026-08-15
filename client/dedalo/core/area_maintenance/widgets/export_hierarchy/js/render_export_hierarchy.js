@@ -7,6 +7,8 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {request_failed} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -245,7 +247,7 @@ export const render_export_hierarchy_node = function (options) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'value',
-					inner_html		: value,
+					text_content	: String(value ?? ''),
 					parent			: config_grid
 				})
 			}
@@ -278,8 +280,13 @@ export const render_export_hierarchy_node = function (options) {
 
 				// API process fire
 				self.exec_export_hierarchy(section_tipo)
-				.then(function(response){
+				.then(async function(response){
 
+					if (request_failed(response)) {
+						// ONE error model: policy + renderer decide the surface
+						await handle_api_error(response.error, {wrapper: body_response})
+						return
+					}
 					render_export_response(response, body_response)
 				})
 			}
@@ -310,11 +317,11 @@ const render_export_response = function(response, body_response) {
 			body_response.removeChild(body_response.firstChild)
 		}
 
-	// summary line (result + msg)
+	// summary line (result + msg) — server text as TEXT, never an HTML sink
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: response.result===true ? 'response_ok' : 'response_error',
-			inner_html		: response.msg || (response.result===true ? 'OK' : 'Error'),
+			text_content	: response.msg ? String(response.msg) : (response.result===true ? 'OK' : 'Error'),
 			parent			: body_response
 		})
 
@@ -463,11 +470,18 @@ export const render_sync_hierarchy_active_status_node = function (options) {
 
 				// API process fire
 				self.sync_hierarchy_active_status()
-				.then(function(response){
+				.then(async function(response){
 
+					if (request_failed(response)) {
+						// ONE error model: policy + renderer decide the surface
+						await handle_api_error(response.error, {wrapper: body_response})
+						return
+					}
+
+					// the raw response carries server strings: TEXT, never an HTML sink
 					const json_node = ui.create_dom_element({
 						element_type	: 'pre',
-						inner_html		: JSON.stringify(response, null, 2),
+						text_content	: JSON.stringify(response, null, 2),
 						parent			: body_response
 					})
 					// Double-clicking the response node removes it from the DOM,

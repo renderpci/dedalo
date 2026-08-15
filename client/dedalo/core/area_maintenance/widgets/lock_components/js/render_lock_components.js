@@ -7,6 +7,8 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {request_failed} from '../../../../common/js/api_error.js'
+	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
 
@@ -342,6 +344,12 @@ const get_content_data_edit = async function(self) {
 						result	: api_response.result,
 						msg		: api_response.msg
 					}, null, 2)
+
+					// ONE error model: policy + renderer decide the surface
+					if (request_failed(api_response)) {
+						console.error('lock_components force_unlock_all_components failed:', api_response)
+						await handle_api_error(api_response.error, {wrapper: info_node.parentNode || info_node})
+					}
 			} finally {
 					button_force_unlock_all_components.classList.remove('button_spinner')
 			}

@@ -624,7 +624,9 @@ const update_process_status = (options) => {
 						parent			: info_node
 					})
 				}
-				ui.update_node_content(info_node.msg_node, msg)
+				// `msg` is server stream text (labels, record ids, exception details):
+				// TEXT only — update_node_content parses HTML (DS-1).
+				info_node.msg_node.textContent = msg
 			})
 		}
 

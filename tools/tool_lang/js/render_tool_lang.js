@@ -678,7 +678,14 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					components_container.classList.remove('loading')
 					const msg = self.get_tool_label('translation_completed') || 'Translation completed.'
 					status_container.classList.remove('loading_status')
-					status_container.innerHTML = `<span class="success_text">${msg}</span>`
+					// build the node, set the message as TEXT (never an HTML sink, DS-1)
+					status_container.replaceChildren()
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'success_text',
+						text_content	: msg,
+						parent			: status_container
+					})
 				})
 				.catch((error)=>{
 					components_container.classList.remove('loading')

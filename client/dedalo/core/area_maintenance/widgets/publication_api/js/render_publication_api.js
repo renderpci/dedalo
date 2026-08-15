@@ -216,7 +216,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: '',
-			inner_html		: JSON.stringify(value, null, 2),
+			text_content	: JSON.stringify(value, null, 2),
 			parent			: content_data
 		})
 

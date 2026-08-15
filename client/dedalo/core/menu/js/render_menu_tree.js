@@ -313,7 +313,7 @@ const render_level_hierarchy = (options) => {
  * Navigation:
  *  - Normal click  → publishes 'user_navigation' via event_manager (SPA navigation).
  *  - Alt+click     → opens the URL in a new browser tab.
- *  - api_errors    → falls back to a full page reload to clear stale state.
+ *  - page_error     → falls back to a full page reload to clear stale state.
  *  - swap_tipo     → items may carry config.swap_tipo to redirect to a different
  *                    ontology node than the one listed (e.g. a proxy area).
  *
@@ -520,10 +520,11 @@ const render_item_hierarchy = (options) => {
 						safe_item.tipo = safe_item.config.swap_tipo
 					}
 
-				// api_errors case. On existing api_errors, force  to reload the page to refresh the page instance
-				// If prior API calls left error state on page_globals, a hard reload
-				// is safer than attempting SPA navigation over a broken page state.
-					if (page_globals.api_errors?.length) {
+				// page error case. On an existing page-level failure, force a reload
+				// to refresh the page instance: a hard reload is safer than SPA
+				// navigation over a broken page state. (`api_errors` is the COMPAT
+				// array next to page_error — REMOVAL: census 0.)
+					if (page_globals.page_error || page_globals.api_errors?.length) {
 						window.location.href = url
 						return
 					}

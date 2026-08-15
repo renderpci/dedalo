@@ -41,6 +41,11 @@
 	// dd_console is an import too — a bare call throws INSIDE the promise chain,
 	// where the module's own .catch swallows it and the tray silently shows nothing.
 	import {dd_console} from '../../common/js/utils/index.js'
+	// The ONE error model: a terminal frame's failure is read through
+	// normalize_stream_error and SHOWN through error_text. The dispatch (relogin,
+	// toast) is job_follow's — routing it twice would double every notice.
+	import {normalize_stream_error} from '../../common/js/api_error.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -143,7 +148,9 @@ export const render_job_tray = function() {
 				live++
 			}
 		}
-		count_node.innerHTML = String(live)
+		// textContent: this file's law (see add_job) admits no innerHTML sink, not
+		// even for a number nobody can poison today.
+		count_node.textContent = String(live)
 		container.classList.toggle('hidden', rows.size===0)
 		container.classList.toggle('has_live', live>0)
 	}
@@ -304,16 +311,20 @@ export const render_job_tray = function() {
 					}
 				},
 				on_done : function(frame) {
-					const errors = (frame && Array.isArray(frame.errors)) ? frame.errors : []
 					if (!frame) {
 						// The stream closed without a terminal frame: the server went
 						// away while the job ran. Not a success and not "still working".
 						update('interrupted', null)
 						return
 					}
-					if (errors.length>0) {
+					// ONE reading of "did this job fail": the terminal frame's error
+					// (envelope v2) or its COMPAT `errors[]` — the same normaliser
+					// job_follow dispatched on, so the row and the notice cannot disagree.
+					const api_error = normalize_stream_error(frame)
+					if (api_error) {
 						update('error', null)
-						label_node.setAttribute('title', errors.join('; '))
+						// setAttribute, not innerHTML: the sentence is server text.
+						label_node.setAttribute('title', error_text(api_error))
 						// A failure PERSISTS until dismissed — fading it away is how a
 						// failed transcode becomes something nobody ever learns about.
 						return

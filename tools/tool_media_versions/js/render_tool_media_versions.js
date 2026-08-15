@@ -9,6 +9,9 @@
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {format_elapsed} from '../../../core/common/js/job_follow.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {render_error_toast} from '../../../core/common/js/render_api_error.js'
 	import {bytes_format, download_file, open_window} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 
@@ -292,7 +295,7 @@ const render_sync_data = function(self) {
 				self.node.content_data.classList.add('loading')
 
 				self.sync_files()
-				.then(function(response){
+				.then(async function(response){
 					report_side_effects(self, response)
 					if (response.result===true) {
 						self.refresh({
@@ -301,7 +304,10 @@ const render_sync_data = function(self) {
 						})
 					}else{
 						self.node.content_data.classList.remove('loading')
-						alert('Error: ' + (response.msg || 'Unknown') )
+						// ONE error model: the dispatcher decides the surface and the
+						// renderer emits TEXT (server msg is untrusted, never alert/HTML)
+						console.error('sync_files failed:', response.error)
+						await handle_api_error(response.error, {wrapper: self.node.content_data})
 					}
 				})
 			})
@@ -333,7 +339,7 @@ const render_sync_data = function(self) {
 			const pre_data = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'pre hide',
-				inner_html		: JSON.stringify({
+				text_content	: JSON.stringify({
 					files_info_db				: files_info_db,
 					files_info_disk				: files_info_disk,
 					original_file_name			: original_file_name,
@@ -1007,7 +1013,7 @@ const render_file_versions = function(quality, self) {
 					element_type	: 'span',
 					class_name		: 'button file_info_extension',
 					title			: get_label.extension || 'Extension',
-					inner_html		: extension,
+					text_content	: extension,
 					parent			: cell_node
 				})
 
@@ -1028,7 +1034,7 @@ const render_file_versions = function(quality, self) {
 					self.node.content_data.classList.add('loading')
 
 					self.delete_version(quality, extension)
-					.then(function(response){
+					.then(async function(response){
 						report_side_effects(self, response)
 						if (response.result===true) {
 							// destroy:false — see the note in render_build_version: a
@@ -1040,7 +1046,8 @@ const render_file_versions = function(quality, self) {
 							})
 						}else{
 							self.node.content_data.classList.remove('loading')
-							alert('Error: ' + (response.msg || 'Unknown') )
+							console.error('delete_version failed:', response.error)
+							await handle_api_error(response.error, {wrapper: self.node.content_data})
 						}
 					})
 				})
@@ -1201,9 +1208,9 @@ const THUMB_QUALITY = 'thumb'
 * could remove files the operator never named, or leave a tier stale, and the only
 * record of it was the server log. The sentences existed; nobody ever saw them.
 *
-* It is a dismissible banner, not an alert(): the action succeeded, so it must not
-* block the refresh that follows. Failures keep their alert() — those need the
-* operator to stop.
+* It is a dismissible banner, not a blocking dialog: the action succeeded, so it
+* must not block the refresh that follows. Real FAILURES go the other way — they
+* are ApiErrors and the dispatcher (handle_api_error) owns their surface.
 *
 * @param {Object} self - the tool_media_versions instance
 * @param {Object} response - the raw API response
@@ -1230,7 +1237,11 @@ const report_side_effects = function(self, response) {
 	if (wrapper) {
 		ui.show_message(wrapper, message, errors.length>0 ? 'error' : 'warning')
 	}else{
-		alert(message)
+		// no node to host the banner — the ONE renderer's toast surface, text-only
+		render_error_toast({
+			message		: message,
+			severity	: errors.length>0 ? 'error' : 'warning'
+		})
 	}
 
 
@@ -1304,9 +1315,9 @@ const create_3d_posterframe = async function(self) {
 			return { result : true, msg : 'ok' }
 		}
 
-	// A refusal THIS function produced has no server round-trip behind it, so it is
-	// alerted here — self.build_version alerts its own (tool_media_versions.js), and
-	// the click handler must not alert a second time on the fallback path.
+	// A refusal THIS function produced has no server round-trip behind it — there is
+	// no ApiError to dispatch, so it is reported here as a client-side failure.
+	// Server refusals travel the other path (self.build_version → handle_api_error).
 		const msg = 'The 3D scene could not be captured or uploaded. Check the browser console.'
 		alert('Error: ' + msg)
 
@@ -1548,11 +1559,19 @@ const render_build_version = function(quality, self) {
 			// refusal nobody can see is the same defect as a job that dies quietly.
 			if (!accepted) {
 				const wrapper = self.node?.content_data || self.node
-				const reason = (response && response.msg) || 'the server refused this build'
-				if (wrapper) {
-					ui.show_message(wrapper, reason, 'warning')
+				if (request_failed(response)) {
+					// a real server refusal: ONE error model, ONE renderer (text-only)
+					console.error('build_version refused:', response.error)
+					await handle_api_error(response.error, {wrapper: wrapper})
 				}else{
-					alert(reason)
+					// a refusal THIS client synthesised (create_3d_posterframe) — no
+					// envelope behind it, so there is no ApiError to dispatch
+					const reason = 'the server refused this build'
+					if (wrapper) {
+						ui.show_message(wrapper, reason, 'warning')
+					}else{
+						render_error_toast({message: reason, severity: 'warning'})
+					}
 				}
 				// The panel's view of what is running is now stale — the refusal
 				// usually MEANS someone else's job holds this tier. Re-render so the

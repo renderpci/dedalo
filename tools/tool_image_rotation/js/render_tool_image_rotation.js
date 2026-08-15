@@ -38,6 +38,8 @@
 
 // imports
 	import { ui } from '../../../core/common/js/ui.js'
+	import { request_failed } from '../../../core/common/js/api_error.js'
+	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
 	import { render_tool_image_crop } from './render_tool_image_crop.js'
 	import { ua } from '../../../core/common/js/ua.js'
 
@@ -552,13 +554,23 @@ const get_buttons = function(self) {
 					self.node.content_data.classList.remove('loading')
 					return
 				}
+				// Do not fail silently: the server reports per-tier errors (e.g. an
+				// out-of-bounds crop box) that the user must see. ONE error model —
+				// the dispatcher picks the surface, the renderer emits TEXT.
+				if (request_failed(response)) {
+					console.error('apply_rotation failed:', response.error)
+					await handle_api_error(response.error, {wrapper: options_container})
+					self.node.content_data.classList.remove('loading')
+					return
+				}
 				if (response?.result!==true) {
-					// Do not fail silently: the server reports per-tier errors
-					// (e.g. an out-of-bounds crop box) that the user must see.
-					const msg = (response?.errors?.length)
-						? response.errors.join(' | ')
-						: (response?.msg || 'Error')
-					ui.show_message(options_container, msg, 'error')
+					// answered, but not with the success this action needs and with no
+					// ApiError behind it: a CLIENT sentence, never a raw server string
+					ui.show_message(
+						options_container,
+						self.get_tool_label('rotation_not_applied') || 'The rotation could not be applied',
+						'error'
+					)
 					self.node.content_data.classList.remove('loading')
 					return
 				}
@@ -654,7 +666,14 @@ const get_buttons = function(self) {
 				// set the status done
 				button_remove_background.classList.remove('disable')
 				const msg = self.get_tool_label('backgroun_removal_completed') || 'Background removal completed.';
-				status_container.innerHTML = `<span class="success_text">${msg}</span>`;
+				// the label is served content — an ELEMENT with text, never a markup string
+				status_container.textContent = ''
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'success_text',
+					text_content	: msg,
+					parent			: status_container
+				})
 
 				// REFRESH THE COMPONENT'S OWN files_info FROM THE UPLOAD RESPONSE.
 				// `build(true)` is a NO-OP on an already-built instance — component_common

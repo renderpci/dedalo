@@ -233,7 +233,7 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'info_text success_text',
-				inner_html		: 'Data format is updated: ' + current_version_in_db.join('.'),
+				text_content	: 'Data format is updated: ' + current_version_in_db.join('.'),
 				parent			: content_data
 			})
 			// Button quit. Allows the user quit from Dédalo here
@@ -259,7 +259,7 @@ const get_content_data = async function(self) {
 		const info = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text error_text',
-			inner_html		: text,
+			text_content	: text,
 			parent			: content_data
 		})
 
@@ -292,7 +292,7 @@ const get_content_data = async function(self) {
 								element_type	: 'h2',
 								class_name		: 'alert_update',
 								// item.command is the legacy key; item.notification is the v7 key
-								inner_html		: item.command || item.notification,
+								text_content	: String(item.command || item.notification || ''),
 								parent			: content_data
 							})
 						}
@@ -313,7 +313,7 @@ const get_content_data = async function(self) {
 									ui.create_dom_element({
 										element_type	: 'h6',
 										class_name		: '',
-										inner_html		: key,
+										text_content	: String(key),
 										parent			: content_data
 									})
 								}
@@ -329,7 +329,7 @@ const get_content_data = async function(self) {
 								ui.create_dom_element({
 									element_type	: 'span',
 									class_name		: 'vkey',
-									inner_html		: i+1,
+									text_content	: String(i+1),
 									parent			: command_node
 								})
 
@@ -360,7 +360,7 @@ const get_content_data = async function(self) {
 									class_name		: 'vkey_value',
 									// Objects (e.g. components_update entries) are pretty-printed
 									// as JSON; plain strings (SQL or script paths) are trimmed.
-									inner_html		: typeof item==='string' ? item.trim() : JSON.stringify(item, null, 2),
+									text_content	: typeof item==='string' ? item.trim() : JSON.stringify(item, null, 2),
 									parent			: command_node
 								})
 

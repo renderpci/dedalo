@@ -57,7 +57,11 @@ const t0 = performance.now()
 
 		// page_globals. Set basic properties
 			window.page_globals = {
-				// API response errors
+				// THE page-level failure: one ApiError, set by error_dispatch /
+				// page.build and rendered by render_api_error.render_error_panel
+				page_error : null,
+				// COMPAT v1 legacy error array, kept next to page_error until the
+				// client_error_contract_tripwire census reaches 0
 				api_errors : [],
 				// API response last message
 				request_message : null,

@@ -13,6 +13,12 @@
 	import {ui} from '../../common/js/ui.js'
 	import {get_inserted_rules} from '../../page/js/css.js'
 	import {render_server_response_error, render_stream} from '../../common/js/render_common.js'
+	// error system (api_error.js → error_policy.js → error_dispatch.js → render_api_error.js).
+	// The cycle common ↔ render_api_error (format_label) is resolved at call time:
+	// nothing here is used while the modules evaluate.
+	import {request_failed, response_data} from '../../common/js/api_error.js'
+	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {render_error_panel} from '../../common/js/render_api_error.js'
 
 
 
@@ -373,7 +379,8 @@ export const set_context_vars = function(self) {
 *   'rendered'  → if same render_level, returns existing node with a warning
 *
 * Pre-render guards (short-circuit to an error/empty node):
-*   - page_globals.api_errors is non-empty → renders server error display
+*   - page_globals.page_error is set (or the COMPAT api_errors array is non-empty)
+*     → renders the error panel
 *   - type === 'component' and context is falsy → renders "invalid context" error
 *   - permissions < 1 → renders a "no access" span
 *
@@ -401,8 +408,20 @@ common.prototype.render = async function (options={}) {
 			? render_mode
 			: 'list'
 
-	// api_errors case
-		if (page_globals.api_errors.length) {
+	// page error case
+	// page_globals.page_error is the ONE page-level failure (an ApiError set by
+	// error_dispatch / page.build); the legacy api_errors array is still read as
+	// a fallback until its census reaches 0 (COMPAT).
+		if (page_globals.page_error) {
+
+			// debug
+			console.warn('))) render page_globals.page_error:', self.model, page_globals.page_error);
+
+			self.node = render_error_panel(page_globals.page_error)
+
+			return self.node
+		}
+		if (page_globals.api_errors?.length) {
 
 			// debug
 			console.warn('))) render page_globals.api_errors:', self.model, page_globals.api_errors);
@@ -2687,14 +2706,12 @@ export const push_browser_history = function(options) {
 * request. This allows refresh() to inject a previously fetched response (e.g. the
 * response from a save operation) to avoid a redundant round-trip.
 *
-* Error handling:
-*   - 'not_logged' error: subscribes once to 'login_successful'; when the user logs in,
-*     resets status and triggers a full rebuild+render automatically (only when no
-*     unsaved data is present on the page).
-*   - All other errors: publishes a 'notification' event (listened by the page's
-*     notification bubble container) with type 'error' and a 30-second display timeout.
-*   - In both error cases, status is reset to `previous_status` ('initialized') and
-*     false is returned so the calling build() knows to abort.
+* Error handling: the failure envelope carries an ApiError, and
+* `handle_api_error` executes its policy (relogin overlay for `auth.not_logged`,
+* no-access panel for `perm.denied`, toast for the rest). When it reports
+* `recovered:true` — the user logged back in — a full rebuild+render is retried,
+* unless the page holds unsaved data. Status is always reset to `previous_status`
+* ('initialized') and false is returned so the calling build() knows to abort.
 *
 * Developer mode logging: when SHOW_DEVELOPER or SHOW_DEBUG is true, the raw
 * api_response is logged to the console. Errors are additionally highlighted.
@@ -2713,8 +2730,8 @@ export const build_autoload = async function(self) {
 
 	// debug last server error. Only for development
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
-			if (api_response.errors?.length) {
-				console.error(`${self.model} build api_response with errors:`, JSON.parse( JSON.stringify(api_response) ) );
+			if (request_failed(api_response)) {
+				console.error(`${self.model} build api_response failed [${api_response.error.code}]:`, JSON.parse( JSON.stringify(api_response) ) );
 			}else{
 				console.log(`${self.model} build api_response:`, JSON.parse( JSON.stringify(api_response) ) );
 			}
@@ -2733,59 +2750,31 @@ export const build_autoload = async function(self) {
 		}
 
 	// response check
-		if (!api_response || !api_response.result) {
+		if (request_failed(api_response) || !response_data(api_response)) {
 
 			// previous_status
 				const previous_status = 'initialized'
 
-			// error
-				const error = api_response.error
-					? api_response.error
-					: api_response.errors
-						? api_response.errors[0] || null
-						: null
-
-			// custom behaviors
-				switch (error) {
-					case 'not_logged': {
-						// wait for login successful event
-						let token
-						const login_successful_handler = async () => {
-							// unsubscribe safely
-							if (token) {
-								event_manager.unsubscribe(token)
-							}
-							self.status = previous_status
-							const unsaved_data = window.unsaved_data ?? false
-							// login success actions
-							if (!unsaved_data) {
-								await self.build(true)
-								await self.render({
-									render_level	: 'full', // content|full
-									render_mode		: self.mode
-								})
-							}
-						}
-						token = event_manager.subscribe('login_successful', login_successful_handler)
-						break;
-					}
-
-					default:
-						// notification.
-						// Fires a notification event that is listened by page and rendered in bubbles_notification_container
-						event_manager.publish('notification', {
-							msg			: api_response?.msg || error,
-							type		: 'error',
-							remove_time	: 30000 // 30 secs
-						})
-						break;
-				}
-
-			// status update
+			// status update. Set BEFORE the (awaited) dispatch so a rebuild
+			// triggered by the recovery starts from a coherent state.
 				self.status = previous_status // 'initialized' or 'rendered'
 
+			// THE handler. The policy decides the surface (relogin overlay,
+			// no-access panel, toast); `recovered` is true only when the cause
+			// is gone — today that means the user logged back in.
+				if (request_failed(api_response)) {
+					const {recovered} = await handle_api_error(api_response.error, {wrapper: self.node})
+					if (recovered===true && !(window.unsaved_data ?? false)) {
+						await self.build(true)
+						await self.render({
+							render_level	: 'full', // content|full
+							render_mode		: self.mode
+						})
+					}
+				}
+
 			return false
-		}//end if (!api_response || !api_response.result)
+		}//end if (request_failed(api_response) || !response_data(api_response))
 
 
 	return api_response

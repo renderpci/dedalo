@@ -164,7 +164,7 @@ const get_content_data_edit = async function(self) {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: '',
-		inner_html		: `Database ${database} ${server} ${host}`,
+		text_content	: `Database ${database} ${server} ${host}`,
 		parent			: content_data
 	})
 
@@ -173,7 +173,7 @@ const get_content_data_edit = async function(self) {
 	ui.create_dom_element({
 		element_type	: 'pre',
 		class_name		: 'version_info',
-		inner_html		: JSON.stringify(info, null, 2),
+		text_content	: JSON.stringify(info, null, 2),
 		parent			: content_data
 	})
 
@@ -286,7 +286,7 @@ const render_indexes_table = (indexes) => {
 		ui.create_dom_element({
 			element_type	: 'h4',
 			class_name		: 'indexes_table_name',
-			inner_html		: table_name,
+			text_content	: String(table_name ?? ''),
 			parent			: indexes_content
 		})
 
@@ -337,19 +337,19 @@ const render_indexes_table = (indexes) => {
 			ui.create_dom_element({
 				element_type	: 'td',
 				class_name		: 'index_name',
-				inner_html		: index.indexname || '',
+				text_content	: String(index.indexname || ''),
 				parent			: row
 			})
 			ui.create_dom_element({
 				element_type	: 'td',
 				class_name		: 'index_size',
-				inner_html		: index.index_size || '',
+				text_content	: String(index.index_size || ''),
 				parent			: row
 			})
 			ui.create_dom_element({
 				element_type	: 'td',
 				class_name		: 'indexdef',
-				inner_html		: index.indexdef || '',
+				text_content	: String(index.indexdef || ''),
 				parent			: row
 			})
 		}
@@ -417,7 +417,7 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'response_node',
-			inner_html		: JSON.stringify(api_response, null, 2),
+			text_content	: JSON.stringify(api_response, null, 2),
 			parent			: body_response
 		})
 	}else{

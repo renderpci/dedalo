@@ -56,6 +56,7 @@
 
 // imports
 	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
+	import {append_text_lines} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data, format_label} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -1593,9 +1594,9 @@ const render_widget = async (item, self) => {
 *   1. An "eraser" button (class `button reset eraser`) that clears the container again
 *      on mouseup, allowing the admin to dismiss the result without re-running the action.
 *   2. Error block — rendered only when `api_response.errors` is a non-empty array;
-*      each error string is joined with `<br>` and rendered as inner HTML.
-*   3. Message block — rendered from `api_response.msg`. Accepts either a string (with
-*      `\\n` replaced by `<br>`) or an array of strings joined with `<br>`.
+*      each error string is rendered as a TEXT node, separated by `<br>` elements.
+*   3. Message block — rendered from `api_response.msg` as TEXT. Accepts either a
+*      string (line breaks become `<br>` elements) or an array of strings.
 *      Falls back to `'Unknown API response error'` when `msg` is absent or falsy.
 *   4. Tree view — the full `api_response` object rendered by `render_tree_data` into
 *      a `<div class="pre">` for structured inspection.
@@ -1634,27 +1635,28 @@ export const print_response = (container, api_response) => {
 		})
 
 	// errors
+	// Server text NEVER reaches an HTML sink: one text node per line, <br> between.
 		if (api_response.errors && api_response.errors.length) {
-			ui.create_dom_element({
+			const errors_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'api_response error',
-				parent			: container,
-				inner_html		: api_response.errors.join('<br>')
+				parent			: container
 			})
+			append_text_lines(errors_node, api_response.errors)
 		}
 
 	// msg
-		const api_msg = api_response && api_response.msg
-			? Array.isArray(api_response.msg)
-				? api_response.msg.join('<br>')
-				: api_response.msg.replace(/\\n/g, '<br>')
-			: 'Unknown API response error'
-		ui.create_dom_element({
+		const api_msg_lines = (api_response && api_response.msg)
+			? (Array.isArray(api_response.msg)
+				? api_response.msg
+				: String(api_response.msg).split(/\\n|\n/))
+			: ['Unknown API response error']
+		const msg_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'api_response',
-			parent			: container,
-			inner_html		: api_msg
+			parent			: container
 		})
+		append_text_lines(msg_node, api_msg_lines)
 
 	// JSON response result
 		const result = ui.create_dom_element({

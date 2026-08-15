@@ -1,0 +1,382 @@
+// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global it, describe, assert, page_globals */
+/*eslint no-undef: "error"*/
+'use strict';
+
+/**
+* TEST_API_ERROR
+* The client's ONE error model (core/common/js/api_error.js) and the transport
+* built on it (api_transport.js, data_manager.request).
+*
+* WHY THESE ASSERTIONS. The client dispatches on `api_error.code` and nothing
+* else, so every way a failure can reach the browser must land on the same
+* shape: an envelope v2 `{ok:false, error:{code}}`, a COMPAT v1
+* `{result:false, errors:[token]}`, a bare `result:false`, a foreign non-2xx
+* status page, a fetch rejection, a stream frame. Each branch below is one such
+* road, asserted on the CODE it produces (and on the compat marker, so the
+* removal of the compat window has something mechanical to flip).
+*
+* Transport classification is BY CLASS (AbortError / TypeError), never by
+* message text — asserted with real DOMException / TypeError instances.
+*
+* NO BACKEND, BY CONSTRUCTION: `fetch` is stubbed on window for the transport
+* blocks and restored in `finally`, so a failing assertion cannot leave the
+* suite talking to a fake network.
+*/
+
+import {
+	ApiError,
+	CLIENT_ERROR,
+	CLIENT_ERROR_LABEL_KEY,
+	is_api_error,
+	normalize_api_error,
+	normalize_transport_error,
+	normalize_stream_error,
+	request_failed,
+	response_data
+} from '../../../core/common/js/api_error.js'
+import {fetch_api} from '../../../core/common/js/api_transport.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
+import {event_manager} from '../../../core/common/js/event_manager.js'
+
+
+
+// fake_response — the subset of Response that normalize_api_error reads
+	const fake_response = (ok, status, status_text='') => ({ok, status, statusText: status_text})
+
+// with_stubbed_fetch — replace window.fetch, run fn, always restore
+	const with_stubbed_fetch = async (impl, fn) => {
+		const original = window.fetch
+		window.fetch = impl
+		try {
+			await fn()
+		} finally {
+			window.fetch = original
+		}
+	}
+
+// json_response — a real Response carrying a JSON body
+	const json_response = (body, status=200, headers={}) => new Response(
+		JSON.stringify(body),
+		{status, headers: {'content-type': 'application/json', ...headers}}
+	)
+
+
+
+describe('API_ERROR — the one client error model', function() {
+
+	it('CLIENT_ERROR codes follow the <domain>.<condition> grammar and each has a label key', function() {
+		for (const code of Object.values(CLIENT_ERROR)) {
+			assert.match(code, /^client\.[a-z_]+$/, code)
+			assert.equal(CLIENT_ERROR_LABEL_KEY[code], 'error_' + code.replace('.', '_'))
+		}
+	})
+
+	it('ApiError is an Error (message survives for legacy .message readers) and is duck-typed after clone', function() {
+		const api_error = new ApiError({code: 'perm.denied', message: 'Insufficient permissions', request_id: 'rq1'})
+		assert.instanceOf(api_error, Error)
+		assert.equal(api_error.message, 'Insufficient permissions')
+		assert.equal(api_error.code, 'perm.denied')
+		assert.isTrue(is_api_error(api_error))
+		// structured clone (postMessage / worker) drops the prototype but not the marker
+		const cloned = JSON.parse(JSON.stringify(api_error))
+		assert.isTrue(is_api_error(cloned))
+		assert.equal(cloned.code, 'perm.denied')
+		assert.equal(cloned.request_id, 'rq1')
+		assert.isFalse(is_api_error({code: 'x'}), 'a bare object with a code is not an ApiError')
+		assert.isFalse(is_api_error(null))
+	})
+
+	it('client codes default retryable/transport/label from the code alone', function() {
+		assert.isTrue(new ApiError({code: CLIENT_ERROR.NETWORK}).retryable)
+		assert.isTrue(new ApiError({code: CLIENT_ERROR.TIMEOUT}).retryable)
+		assert.isFalse(new ApiError({code: CLIENT_ERROR.ABORTED}).retryable)
+		assert.isTrue(new ApiError({code: CLIENT_ERROR.NETWORK}).transport)
+		assert.isFalse(new ApiError({code: 'auth.not_logged'}).transport)
+		assert.equal(new ApiError({code: CLIENT_ERROR.OFFLINE}).label_key, 'error_client_offline')
+	})
+
+	it('normalize_api_error: envelope v2 copies the fields verbatim (code, label_key, details, request_id, retryable)', function() {
+		const api_error = normalize_api_error(fake_response(false, 403), {
+			ok			: false,
+			request_id	: 'rq-v2',
+			error		: {code: 'perm.denied', category: 'permission', message: 'Insufficient permissions', label_key: 'no_access_page', retryable: false, details: {tipo: 'oh1'}}
+		})
+		assert.isTrue(is_api_error(api_error))
+		assert.equal(api_error.code, 'perm.denied')
+		assert.equal(api_error.status, 403)
+		assert.equal(api_error.label_key, 'no_access_page')
+		assert.deepEqual(api_error.details, {tipo: 'oh1'})
+		assert.equal(api_error.request_id, 'rq-v2')
+		assert.equal(api_error.category, 'permission')
+		assert.isFalse(api_error.retryable)
+		assert.isFalse(api_error.transport)
+		assert.equal(api_error.source, 'envelope')
+		assert.notOk(api_error._compat)
+	})
+
+	it('normalize_api_error: COMPAT v1 {result:false, errors:[token]} → code=errors[0], label_key null, _compat', function() {
+		const api_error = normalize_api_error(fake_response(false, 401), {result: false, msg: 'Authentication required', errors: ['not_logged']})
+		assert.equal(api_error.code, 'not_logged')
+		assert.isNull(api_error.label_key)
+		assert.equal(api_error.message, 'Authentication required')
+		assert.isTrue(api_error._compat)
+		// msg arrays join
+		const joined = normalize_api_error(fake_response(true, 200), {result: false, msg: ['a', 'b'], errors: ['widget_not_defined']})
+		assert.equal(joined.message, 'a | b')
+	})
+
+	it('normalize_api_error: a v1 success carrying warnings in errors[] is NOT a failure', function() {
+		assert.isNull(normalize_api_error(fake_response(true, 200), {result: {rows: []}, errors: ['a warning']}))
+	})
+
+	it('normalize_api_error: v1 bare error scalar / bare result:false / ok:false without code', function() {
+		assert.equal(normalize_api_error(fake_response(true, 200), {result: false, error: 'boom'}).code, 'boom')
+		assert.equal(normalize_api_error(fake_response(true, 200), {result: false}).code, 'server.unspecified')
+		assert.equal(normalize_api_error(fake_response(false, 500), {ok: false}).code, 'server.unspecified')
+	})
+
+	it('normalize_api_error: non-2xx without an envelope → client.http_status with the status in details', function() {
+		const api_error = normalize_api_error(fake_response(false, 502, 'Bad Gateway'), null)
+		assert.equal(api_error.code, CLIENT_ERROR.HTTP_STATUS)
+		assert.equal(api_error.status, 502)
+		assert.deepEqual(api_error.details, {status: 502, status_text: 'Bad Gateway'})
+		assert.isTrue(api_error.transport)
+		assert.isTrue(api_error.retryable, 'a gateway page is transient')
+		assert.isFalse(normalize_api_error(fake_response(false, 404), null).retryable)
+	})
+
+	it('normalize_api_error: success bodies (v2 ok:true, v1 truthy result) → null', function() {
+		assert.isNull(normalize_api_error(fake_response(true, 200), {ok: true, data: {a: 1}}))
+		assert.isNull(normalize_api_error(fake_response(true, 200), {result: {context: [], data: []}, errors: []}))
+		assert.isNull(normalize_api_error(null, null))
+	})
+
+	it('normalize_transport_error classifies BY CLASS: AbortError+timed_out→timeout, AbortError→aborted, TypeError→network, else bad_response', function() {
+		const abort = new DOMException('The user aborted a request.', 'AbortError')
+		assert.equal(normalize_transport_error(abort, {timed_out: true}).code, CLIENT_ERROR.TIMEOUT)
+		assert.equal(normalize_transport_error(abort, {}).code, CLIENT_ERROR.ABORTED)
+		assert.equal(normalize_transport_error(abort, {timed_out: true, caller_aborted: true}).code, CLIENT_ERROR.ABORTED, 'the caller wins')
+		assert.equal(normalize_transport_error(new TypeError('Failed to fetch')).code, CLIENT_ERROR.NETWORK)
+		assert.equal(normalize_transport_error(new TypeError('anything at all')).code, CLIENT_ERROR.NETWORK, 'no message matching')
+		assert.equal(normalize_transport_error(new SyntaxError('Unexpected token')).code, CLIENT_ERROR.BAD_RESPONSE)
+		assert.equal(normalize_transport_error('a string').code, CLIENT_ERROR.BAD_RESPONSE)
+		assert.isTrue(normalize_transport_error(new TypeError('x')).retryable)
+		assert.isTrue(normalize_transport_error(abort, {timed_out: true}).retryable)
+		assert.isFalse(normalize_transport_error(abort, {}).retryable)
+		assert.isTrue(normalize_transport_error(new TypeError('x')).transport)
+	})
+
+	it('normalize_stream_error: v2 frame.error.code, COMPAT data.errors / errors, already-normalised frames, clean frames', function() {
+		assert.equal(normalize_stream_error({is_running: false, error: {code: 'job.failed', message: 'x'}, request_id: 'rq'}).code, 'job.failed')
+		assert.equal(normalize_stream_error({is_running: false, error: {code: 'job.failed'}, request_id: 'rq'}).request_id, 'rq')
+		assert.equal(normalize_stream_error({data: {errors: ['not_logged']}}).code, 'not_logged')
+		assert.equal(normalize_stream_error({errors: ['Invalid JSON message']}).code, 'Invalid JSON message')
+		const already = new ApiError({code: CLIENT_ERROR.BAD_RESPONSE, source: 'stream'})
+		assert.strictEqual(normalize_stream_error({error: already}), already)
+		assert.isNull(normalize_stream_error({data: {msg: 'running'}, is_running: true}))
+		assert.isNull(normalize_stream_error(null))
+	})
+
+	it('request_failed / response_data are the two accessors callers migrate onto', function() {
+		assert.isTrue(request_failed({ok: false, error: new ApiError({code: 'x'})}))
+		assert.isFalse(request_failed({ok: true, data: 1}))
+		assert.isFalse(request_failed({result: false, error: 'legacy string'}), 'a legacy scalar is not an ApiError')
+		assert.isFalse(request_failed(null))
+		assert.equal(response_data({ok: true, data: 'D'}), 'D')
+		assert.equal(response_data({result: 'R'}), 'R', 'COMPAT v1 read')
+		assert.equal(response_data({data: 'D', result: 'R'}), 'D', 'v2 wins')
+		assert.isUndefined(response_data(null))
+	})
+})
+
+
+
+describe('API_TRANSPORT — fetch_api', function() {
+
+	it('success: reads the body once, parses JSON, returns {json, api_error:null}', async function() {
+		await with_stubbed_fetch(async () => json_response({ok: true, data: {a: 1}}), async () => {
+			const out = await fetch_api('/fake', {method: 'POST'}, {retries: 2, base_delay: 1, timeout_ms: 2000})
+			assert.isNull(out.api_error)
+			assert.deepEqual(out.json, {ok: true, data: {a: 1}})
+			assert.equal(out.response.status, 200)
+		})
+	})
+
+	it('failure envelope with retryable:false is returned after ONE attempt (no status list, 401/403 included)', async function() {
+		for (const status of [401, 403, 409, 500]) {
+			let calls = 0
+			await with_stubbed_fetch(async () => { calls++; return json_response({ok: false, error: {code: 'auth.not_logged', retryable: false}}, status) }, async () => {
+				const out = await fetch_api('/fake', {}, {retries: 4, base_delay: 1, timeout_ms: 2000})
+				assert.equal(out.api_error.code, 'auth.not_logged')
+				assert.equal(out.api_error.status, status)
+				assert.equal(calls, 1, `status ${status}: an answer is not retried`)
+			})
+		}
+	})
+
+	it('retry is keyed on api_error.retryable and honours Retry-After over the backoff; on_wait is the only hook', async function() {
+		let calls = 0
+		const waits = []
+		await with_stubbed_fetch(async (url) => {
+			if (String(url).endsWith('/health')) return new Response('ok')
+			calls++
+			return calls < 3
+				? json_response({ok: false, error: {code: 'unavailable.busy', retryable: true}}, 503, {'retry-after': '0'})
+				: json_response({ok: true, data: 'done'})
+		}, async () => {
+			const out = await fetch_api('/fake', {}, {retries: 5, base_delay: 50, timeout_ms: 2000, on_wait: (attempt, delay, reason) => waits.push({attempt, delay, reason})})
+			assert.isNull(out.api_error)
+			assert.equal(out.json.data, 'done')
+			assert.equal(calls, 3)
+			assert.deepEqual(waits.map(w => w.reason), ['retry', 'retry'])
+			assert.deepEqual(waits.map(w => w.delay), [0, 0], 'Retry-After: 0 wins over the 50/100ms backoff')
+		})
+	})
+
+	it('a fetch rejection (TypeError) → client.network, retried up to retries', async function() {
+		let calls = 0
+		await with_stubbed_fetch(async () => { calls++; throw new TypeError('Failed to fetch') }, async () => {
+			const out = await fetch_api('/fake', {}, {retries: 3, base_delay: 1, timeout_ms: 2000})
+			assert.equal(out.api_error.code, CLIENT_ERROR.NETWORK)
+			assert.isNull(out.response)
+			assert.isNull(out.json)
+			assert.equal(calls, 3)
+		})
+	})
+
+	it('a 2xx that is not JSON → client.bad_response; a non-2xx status page → client.http_status', async function() {
+		await with_stubbed_fetch(async () => new Response('<html>', {status: 200, headers: {'content-type': 'text/html'}}), async () => {
+			const out = await fetch_api('/fake', {}, {retries: 1, base_delay: 1})
+			assert.equal(out.api_error.code, CLIENT_ERROR.BAD_RESPONSE)
+		})
+		await with_stubbed_fetch(async () => new Response('<html>', {status: 404, headers: {'content-type': 'text/html'}}), async () => {
+			const out = await fetch_api('/fake', {}, {retries: 3, base_delay: 1})
+			assert.equal(out.api_error.code, CLIENT_ERROR.HTTP_STATUS)
+			assert.equal(out.api_error.details.status, 404)
+		})
+	})
+
+	it('our own timeout → client.timeout; the caller\'s AbortSignal → client.aborted and NO retry', async function() {
+		const never = (url, init) => new Promise((resolve, reject) => {
+			if (String(url).endsWith('/health')) { resolve(new Response('', {status: 503})); return }
+			init.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+		})
+		await with_stubbed_fetch(never, async () => {
+			const out = await fetch_api('/fake', {}, {retries: 2, base_delay: 1, timeout_ms: 30})
+			assert.equal(out.api_error.code, CLIENT_ERROR.TIMEOUT)
+		})
+		let calls = 0
+		await with_stubbed_fetch((url, init) => { calls++; return never(url, init) }, async () => {
+			const controller = new AbortController()
+			setTimeout(() => controller.abort(), 10)
+			const out = await fetch_api('/fake', {signal: controller.signal}, {retries: 3, base_delay: 1, timeout_ms: 5000})
+			assert.equal(out.api_error.code, CLIENT_ERROR.ABORTED)
+			assert.equal(calls, 1)
+		})
+	})
+})
+
+
+
+describe('DATA_MANAGER.request — the envelope it resolves', function() {
+
+	// collect the events one request publishes
+	const capture_events = (names) => {
+		const seen = {}
+		const tokens = names.map((name) => event_manager.subscribe(name, (payload) => { (seen[name] = seen[name] || []).push(payload) }))
+		return {seen, release: () => tokens.forEach((t) => event_manager.unsubscribe(t))}
+	}
+
+	it('success resolves the server envelope untouched (no error attached)', async function() {
+		await with_stubbed_fetch(async () => json_response({ok: true, data: {x: 1}, csrf_token: 'tok-1'}), async () => {
+			const api_response = await data_manager.request({body: {action: 'noop'}, retries: 1})
+			assert.isFalse(request_failed(api_response))
+			assert.deepEqual(response_data(api_response), {x: 1})
+			assert.equal(page_globals.csrf_token, 'tok-1', 'the token is refreshed from every envelope')
+		})
+	})
+
+	it('failure attaches the ApiError under `error`, keeps ok:false (+ COMPAT result:false) and publishes api_error + api_response_errors [code]', async function() {
+		const events = capture_events(['api_error', 'api_response_errors'])
+		try {
+			await with_stubbed_fetch(async () => json_response({ok: false, request_id: 'rq9', error: {code: 'auth.not_logged', message: 'Authentication required', retryable: false}}, 401), async () => {
+				const api_response = await data_manager.request({body: {action: 'read'}, retries: 3})
+				assert.isTrue(request_failed(api_response))
+				assert.equal(api_response.ok, false)
+				assert.equal(api_response.result, false, 'COMPAT mirror')
+				assert.equal(api_response.error.code, 'auth.not_logged')
+				assert.equal(api_response.error.request_id, 'rq9')
+			})
+			assert.equal(events.seen.api_error?.length, 1)
+			assert.equal(events.seen.api_error[0].code, 'auth.not_logged')
+			assert.deepEqual(events.seen.api_response_errors?.[0], ['auth.not_logged'], 'COMPAT event still fed for page.js')
+		} finally {
+			events.release()
+		}
+	})
+
+	it('a COMPAT v1 failure body resolves with the same contract (error.code = errors[0])', async function() {
+		await with_stubbed_fetch(async () => json_response({result: false, msg: 'Insufficient permissions to read', errors: ['not_authorized']}, 403), async () => {
+			const api_response = await data_manager.request({body: {action: 'read'}, retries: 3})
+			assert.isTrue(request_failed(api_response))
+			assert.equal(api_response.error.code, 'not_authorized')
+			assert.isTrue(api_response.error._compat)
+			assert.deepEqual(api_response.errors, ['not_authorized'], 'the legacy body is preserved during the window')
+		})
+	})
+
+	it('a network failure resolves (never rejects) with a synthesised envelope + client.network', async function() {
+		await with_stubbed_fetch(async () => { throw new TypeError('Failed to fetch') }, async () => {
+			const api_response = await data_manager.request({body: {action: 'read'}, retries: 1, base_delay: 1})
+			assert.isTrue(request_failed(api_response))
+			assert.equal(api_response.error.code, CLIENT_ERROR.NETWORK)
+			assert.equal(api_response.ok, false)
+			assert.equal(api_response.result, false)
+		})
+	})
+
+	it('csrf rejection is resent exactly once with the fresh token (v2 auth.csrf_failed and COMPAT csrf_failed)', async function() {
+		for (const body of [
+			{ok: false, error: {code: 'auth.csrf_failed', retryable: false}, csrf_token: 'fresh'},
+			{result: false, msg: 'csrf', errors: ['csrf_failed'], csrf_token: 'fresh'}
+		]) {
+			let calls = 0
+			const tokens = []
+			await with_stubbed_fetch(async (url, init) => {
+				calls++
+				tokens.push(init.headers['X-Dedalo-Csrf-Token'])
+				return calls === 1 ? json_response(body, 403) : json_response({ok: true, data: 'ok'})
+			}, async () => {
+				page_globals.csrf_token = 'stale'
+				const api_response = await data_manager.request({body: {action: 'save'}, retries: 1})
+				assert.equal(calls, 2)
+				assert.equal(tokens[1], 'fresh', 'the retry carries the token the rejection delivered')
+				assert.equal(response_data(api_response), 'ok')
+			})
+		}
+	})
+
+	it('an empty URL is a client failure envelope, no network', async function() {
+		// `options.url || data_manager.url` — the only way to reach an empty URL is
+		// an empty DEDALO_API_URL (a broken bootstrap), so that is what is simulated
+		const original_api_url = window.DEDALO_API_URL
+		let calls = 0
+		try {
+			window.DEDALO_API_URL = ''
+			await with_stubbed_fetch(async () => { calls++; return json_response({ok: true}) }, async () => {
+				const api_response = await data_manager.request({body: {action: 'x'}})
+				assert.isTrue(request_failed(api_response))
+				assert.equal(api_response.error.code, CLIENT_ERROR.NETWORK)
+				assert.equal(api_response.error.details.reason, 'invalid_url')
+				assert.equal(calls, 0)
+			})
+		} finally {
+			window.DEDALO_API_URL = original_api_url
+		}
+	})
+})
+
+
+
+// @license-end

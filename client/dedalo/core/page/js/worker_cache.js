@@ -38,12 +38,16 @@
  *   { status: 'finish',  total_files: number, time: number }
  *   { status: 'finish',  error: string }   (on API failure)
  *
- * This Worker is intentionally self-contained: it bundles its own minimal
- * `data_manager` object (see below) rather than importing the full
- * `core/common/js/data_manager.js`, because that module depends on browser
- * globals (`page_globals`, event_manager, etc.) not available inside a Worker
- * context.
+ * This Worker does NOT import the full `core/common/js/data_manager.js` (that
+ * module depends on page globals a Worker scope lacks); it uses the shared,
+ * DOM-free transport `core/common/js/api_transport.js` — the same one
+ * data_manager.js and core/sw.js use, so there is no second copy of the
+ * request algorithm.
  */
+
+// imports
+	import {fetch_api} from '../../common/js/api_transport.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -80,7 +84,7 @@ self.addEventListener('message', async (event) => {
 		// Fetch the manifest of all cacheable Dédalo files from the server.
 		// The API call is unauthenticated in the worker context; the server
 		// validates the session via the cookie forwarded by `same-origin` credentials.
-		const api_response = await data_manager.request({
+		const api_response = await api_request({
 			url : url,
 			body : {
 				action	: 'get_dedalo_files',
@@ -88,18 +92,20 @@ self.addEventListener('message', async (event) => {
 			}
 		});
 
-		// API error case
-		if (!api_response.result) {
+		// API error case. The envelope carries an ApiError under `error`; the
+		// caller (login.js) only needs to know the cache pass did not run.
+		const files = response_data(api_response)
+		if (api_response.error || !Array.isArray(files)) {
 			console.error('Error on get api response:', api_response);
 			self.postMessage({
 				status	: 'finish',
-				error	: 'Error on get api response'
+				error	: api_response.error?.code || 'Error on get api response'
 			});
 			return
 		}
 
 	// response data
-		const api_response_result_length = api_response.result.length
+		const api_response_result_length = files.length
 
 	// worker msg
 		// Notify the caller of the total file count so the UI can initialize
@@ -150,7 +156,7 @@ self.addEventListener('message', async (event) => {
 		const ar_promises = []
 		for (let i = 0; i < api_response_result_length; i++) {
 
-			const item = api_response.result[i]
+			const item = files[i]
 
 			const file_url = item.url
 
@@ -213,135 +219,34 @@ self.addEventListener('message', async (event) => {
 
 
 /**
- * DATA_MANAGER REQUEST CUSTOM
- * Avoid to use data_manager module to allow happy Firefox users
- *
- * A lightweight, self-contained HTTP client intentionally duplicated from
- * `core/common/js/data_manager.js`. It exists here because Web Workers cannot
- * import browser-globals-dependent modules (page_globals, event_manager, etc.)
- * and Firefox historically had issues with service-worker module imports.
- *
- * Only `request` is implemented; the full data_manager feature set (streaming,
- * retry, health checks, response cache) is not needed in this worker context.
- *
- * Exposed as a plain object literal (not a class) so it has no shared state;
- * concurrent calls are safe because all values are scoped to local `const`.
+ * API_REQUEST
+ * One JSON POST through the shared transport (`fetch_api`). Resolves the
+ * envelope; on failure it carries `error` (an ApiError) — read
+ * `response_data()` for the payload. Never rejects.
+ * @param {Object} options - {url, body}
+ * @return Promise<Object>
  */
-const data_manager = {
-	/**
-	 * REQUEST
-	 * Sends a JSON POST to a Dédalo API endpoint and returns the parsed response.
-	 * All fetch options default to Dédalo conventions (POST, cors, no-cache,
-	 * same-origin credentials). The body is always JSON-serialised.
-	 *
-	 * Error handling:
-	 *   - HTTP-level errors (non-2xx) are caught by `handle_errors` and rethrown.
-	 *   - API-level errors (`result.error` truthy) are logged but still returned
-	 *     so the caller can inspect `api_response.result` directly.
-	 *   - Network-level errors (fetch rejection) are caught and returned as a
-	 *     synthetic `{ result: false, msg, error }` object so the caller never
-	 *     receives a rejected Promise.
-	 *
-	 * @param {Object} options - Request configuration
-	 * @param {string} options.url - Target API endpoint URL
-	 * @param {Object} [options.body] - Request body; serialised with JSON.stringify
-	 * @param {string} [options.method='POST'] - HTTP method
-	 * @param {string} [options.mode='cors'] - Fetch mode
-	 * @param {string} [options.cache='no-cache'] - Cache mode
-	 * @param {string} [options.credentials='same-origin'] - Credentials policy
-	 * @param {Object} [options.headers={'Content-Type':'application/json'}] - HTTP headers
-	 * @param {string} [options.redirect='follow'] - Redirect behaviour
-	 * @param {string} [options.referrer='no-referrer'] - Referrer policy
-	 * @returns {Promise<Object>} Parsed JSON response from the API, or a synthetic
-	 *   error object `{ result: false, msg: string, error: Error }` on failure
-	 */
-	request : async function(options) {
-
-		// options (local variables prevent shared-state races on concurrent calls)
-			const url			= options.url
-			const method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-			const mode			= options.mode || 'cors' // no-cors, cors, *same-origin
-			const cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-			const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
-			const headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-			const redirect		= options.redirect || 'follow' // manual, *follow, error
-			const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
-			const body			= options.body // body data type must match "Content-Type" header
-
-		// handle_errors
-			// Converts a non-OK HTTP response into a thrown Error so the
-			// Promise chain's `.catch` handler can intercept transport failures
-			// separately from application-level `result.error` values.
-			const handle_errors = function(response) {
-				if (!response.ok) {
-					console.warn("-> HANDLE_ERRORS response:",response);
-					throw Error(response.statusText);
-				}
-				return response;
-			}
-
-		const api_response = fetch(
-			url,
-			{
-				method		: method,
-				mode		: mode,
-				cache		: cache,
-				credentials	: credentials,
-				headers		: headers,
-				redirect	: redirect,
-				referrer	: referrer,
-				body		: JSON.stringify(body)
-			})
-			.then(handle_errors)
-			.then(response => {
-				const json_parsed = response.json().then((result)=>{
-
-					if (result.error) {
-
-						// debug console message
-							console.error("result error:",result);
-
-						// alert msg to user
-							const msg = result.msg || result.error
-							console.error("An error occurred in the connection with the API (worker cache data_manager). \n" + msg);
-
-						// custom behaviors
-							switch (result.error) {
-								case 'not_logged':
-									// redirect to login page
-									// location.reload();
-									console.warn('Result error. no logged!', result);
-									break;
-
-								default:
-									// write message to the console
-									break;
-							}
-					}
-
-					return result
-				})
-
-				return json_parsed
-			})
-			.catch(error => {
-				// Network or parse failure: return a synthetic object so the
-				// caller always receives a plain Object (never a rejected Promise).
-				// The caller must check `api_response.result === false` to detect
-				// this error path.
-				console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
-				console.warn("options:", options);
-				return {
-					result	: false,
-					msg		: error.message,
-					error	: error
-				}
-			});
-
-
-		return api_response
+const api_request = async (options) => {
+	const {json, api_error} = await fetch_api(
+		options.url,
+		{
+			method		: 'POST',
+			mode		: 'cors',
+			cache		: 'no-cache',
+			credentials	: 'same-origin',
+			headers		: {'Content-Type': 'application/json'},
+			redirect	: 'follow',
+			referrer	: 'no-referrer',
+			body		: JSON.stringify(options.body)
+		},
+		{timeout_ms: 30000, retries: 3, health_url: '/health'}
+	)
+	if (api_error) {
+		console.error('[worker_cache] API request failed:', api_error.code, api_error.message, api_error)
+		return {ok:false, result:false, error:api_error}
 	}
-}//end data_manager
+	return json
+}//end api_request
 
 
 

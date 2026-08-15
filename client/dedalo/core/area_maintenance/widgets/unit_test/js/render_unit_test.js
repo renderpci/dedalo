@@ -173,7 +173,8 @@ const get_content_data_edit = async function(self) {
 		})
 		import('../../../../../test/client/js/list.js')
 		.then(function(module){
-			ui.update_node_content(list_of_test, JSON.stringify(module.list_of_test, null, 2))
+			// module data as TEXT, never an HTML sink
+			list_of_test.textContent = JSON.stringify(module.list_of_test, null, 2)
 		})
 
 	// body_response
