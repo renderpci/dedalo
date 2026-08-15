@@ -13,7 +13,7 @@ import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
-import { normalizeSectionIdTypes } from './normalize.ts';
+import { adoptErrorEnvelopeV2, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 const NODE = { section_tipo: 'tchi1', section_id: 602 };
@@ -58,8 +58,15 @@ describe.if(hasPhpCredentials())('dd_ts_api.get_node_data differential', () => {
 			options: {},
 		};
 		const { phpBody, tsBody } = await callBoth(rqo);
-		expect(tsBody.result).toEqual(phpBody.result);
-		expect(tsBody.msg).toBe(phpBody.msg);
+		// The frozen PHP body speaks the dd_manager envelope; project it onto v2
+		// and compare the PAYLOADS. `msg` is not a wire fact on TS (envelope v2:
+		// success carries no prose), so the old msg byte-equality is restated as
+		// "both engines answered a SUCCESS".
+		const adopted = adoptErrorEnvelopeV2(phpBody);
+		expect(adopted.matched).toBe(true);
+		expect(adopted.kind).toBe('ok');
+		expect(tsBody.ok).toBe(true);
+		expect(tsBody.data).toEqual((adopted.projection as { data: unknown }).data);
 	});
 });
 
@@ -74,9 +81,12 @@ describe.if(hasPhpCredentials())('dd_ts_api.get_children_data differential (mode
 			options: {},
 		};
 		const { phpBody, tsBody } = await callBoth(rqo);
-		const phpResult = phpBody.result as { ar_children_data?: unknown[] };
-		const tsResult = tsBody.result as { ar_children_data?: unknown[] };
+		const adopted = adoptErrorEnvelopeV2(phpBody);
+		expect(adopted.matched).toBe(true);
+		expect(adopted.kind).toBe('ok');
+		expect(tsBody.ok).toBe(true);
+		const phpResult = (adopted.projection as { data: { ar_children_data?: unknown[] } }).data;
+		const tsResult = tsBody.data as { ar_children_data?: unknown[] };
 		expect(tsResult.ar_children_data).toEqual(phpResult.ar_children_data);
-		expect(tsBody.msg).toBe(phpBody.msg);
 	});
 });

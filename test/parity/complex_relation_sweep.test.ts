@@ -162,7 +162,7 @@ beforeAll(async () => {
 			tsBySweep.set(
 				key,
 				normalizeSectionIdTypes(
-					((tsResult.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+					((tsResult.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
 						string,
 						unknown
 					>[],

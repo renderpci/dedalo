@@ -1,6 +1,7 @@
 /**
  * dd_ts_api mutation differential (plan A6): mutate on TS, read the post-state,
- * revert. Covers the cycle-rejection envelope (byte-equal msg + errors:['cycle'])
+ * revert. Covers the cycle-rejection envelope (envelope v2: ok:false +
+ * error.code 'tree.cycle' — the registry twin of the PHP-era errors:['cycle'])
  * and an add_child round-trip (dd64/1 is_descriptor default + dd47 parent locator,
  * then delete to revert).
  *
@@ -40,7 +41,7 @@ beforeAll(async () => {
 }, 60000);
 
 describe.if(hasPhpCredentials())('dd_ts_api.update_parent_data — cycle rejection', () => {
-	test('self-target is rejected with the VERBATIM msg + errors:["cycle"]', async () => {
+	test('self-target is rejected with error.code tree.cycle (envelope v2)', async () => {
 		if (!hasPhpCredentials()) return;
 		const body = await ts({
 			dd_api: 'dd_ts_api',
@@ -55,11 +56,12 @@ describe.if(hasPhpCredentials())('dd_ts_api.update_parent_data — cycle rejecti
 				new_parent_section_id: 602, // moving under itself
 			},
 		});
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['cycle']);
-		expect(body.msg).toBe(
-			'Error. The node cannot be moved under itself or under its own descendant',
-		);
+		// The PHP-era refusal (`result:false` + `errors:['cycle']` + a verbatim
+		// Spanish/English msg) is restated in envelope v2: the CODE is the wire
+		// fact, the prose is label-driven and no longer a contract
+		// (registry.ts LEGACY token map: cycle → tree.cycle).
+		expect(body.ok).toBe(false);
+		expect((body.error as { code: string }).code).toBe('tree.cycle');
 	});
 });
 
@@ -74,10 +76,13 @@ describe.if(hasPhpCredentials())(
 				prevent_lock: true,
 				source: PARENT,
 			});
-			const newId = created.result as number;
+			const newId = created.data as number;
 			try {
 				// Asserted INSIDE the try so a failure still reverts the created record.
-				expect(created.errors).toEqual([]);
+				expect(created.ok).toBe(true);
+				// No non-fatal findings ⇒ dd_ts_api emits NO `errors` extension key
+				// (handlers/dd_ts_api.ts tsApiResult: an empty set emits nothing).
+				expect(created.errors).toBeUndefined();
 				expect(typeof newId).toBe('number');
 				expect(newId).toBeGreaterThan(0);
 

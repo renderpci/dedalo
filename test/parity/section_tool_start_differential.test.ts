@@ -30,9 +30,15 @@ const EMPTY_TIPO = 'numisdata625';
 describe.if(hasPhpCredentials())('section_tool start differential', () => {
 	const phpBodies: Record<string, Record<string, unknown>> = {};
 	const tsBodies: Record<string, Record<string, unknown>> = {};
-	const contextsOf = (body: Record<string, unknown>): Record<string, unknown>[] => {
+	/** PHP oracle body — the frozen dd_manager envelope: payload under `result`. */
+	const phpContextsOf = (body: Record<string, unknown>): Record<string, unknown>[] => {
 		const result = body.result as { context?: Record<string, unknown>[] } | false | null;
 		return result && typeof result === 'object' ? (result.context ?? []) : [];
+	};
+	/** TS body — envelope v2: payload under `data` (absent on a failure). */
+	const tsContextsOf = (body: Record<string, unknown>): Record<string, unknown>[] => {
+		const data = body.data as { context?: Record<string, unknown>[] } | null | undefined;
+		return data && typeof data === 'object' ? (data.context ?? []) : [];
 	};
 
 	beforeAll(async () => {
@@ -71,8 +77,8 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 	for (const tipo of REROUTED_TIPOS) {
 		test(`${tipo}: reroutes to the target section (tipo/model/type/label match PHP)`, () => {
 			if (!hasPhpCredentials()) return;
-			const php = contextsOf(phpBodies[tipo]!)[0]!;
-			const ts = contextsOf(tsBodies[tipo]!)[0]!;
+			const php = phpContextsOf(phpBodies[tipo]!)[0]!;
+			const ts = tsContextsOf(tsBodies[tipo]!)[0]!;
 			expect(php).toBeDefined();
 			expect(ts).toBeDefined();
 			expect(ts.tipo).toBe(php.tipo); // the TARGET section, not the section_tool
@@ -83,8 +89,8 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 
 		test(`${tipo}: config is byte-equal (tool_context + enriched ddo_map)`, () => {
 			if (!hasPhpCredentials()) return;
-			const php = contextsOf(phpBodies[tipo]!)[0]!;
-			const ts = contextsOf(tsBodies[tipo]!)[0]!;
+			const php = phpContextsOf(phpBodies[tipo]!)[0]!;
+			const ts = tsContextsOf(tsBodies[tipo]!)[0]!;
 			// WC-020 normalizer (numisdata201 only, post-alias-migration): the coins
 			// role points at the component_alias numisdata203, which PHP cannot
 			// resolve (it enriches model:'component_alias' verbatim; TS resolves the
@@ -129,17 +135,19 @@ describe.if(hasPhpCredentials())('section_tool start differential', () => {
 
 		test(`${tipo}: start context WITHOUT top-level request_config (PHP parity)`, () => {
 			if (!hasPhpCredentials()) return;
-			expect(contextsOf(phpBodies[tipo]!)[0]!.request_config).toBeUndefined();
-			expect(contextsOf(tsBodies[tipo]!)[0]!.request_config).toBeUndefined();
+			expect(phpContextsOf(phpBodies[tipo]!)[0]!.request_config).toBeUndefined();
+			expect(tsContextsOf(tsBodies[tipo]!)[0]!.request_config).toBeUndefined();
 		});
 	}
 
-	test(`${EMPTY_TIPO} (no config/tool_config): BOTH engines refuse with result:false`, () => {
+	test(`${EMPTY_TIPO} (no config/tool_config): BOTH engines refuse`, () => {
 		if (!hasPhpCredentials()) return;
 		// PHP fatals building a section on the non-section tipo (set_lang on
-		// false) and answers result:false; TS refuses loudly with the same
-		// envelope (message text is TS's own — the SHAPE is the contract).
+		// false) and answers `result:false`; TS refuses loudly in envelope v2
+		// (`ok:false` — the failure is the contract, the message text is TS's
+		// own). The frozen PHP body is a php_fault_not_reproduced row in
+		// FROZEN_ERROR_BODIES, so there is no code to reconcile against.
 		expect(phpBodies[EMPTY_TIPO]!.result).toBe(false);
-		expect(tsBodies[EMPTY_TIPO]!.result).toBe(false);
+		expect(tsBodies[EMPTY_TIPO]!.ok).toBe(false);
 	});
 });

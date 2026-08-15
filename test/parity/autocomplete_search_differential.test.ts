@@ -152,7 +152,7 @@ async function tsCall(rqo: Record<string, unknown>): Promise<ReadResult> {
 			principal,
 		} as never,
 	);
-	return (dispatched.body as { result: ReadResult }).result;
+	return (dispatched.body as { data: ReadResult }).data;
 }
 
 let php: PhpApiClient | null = null;

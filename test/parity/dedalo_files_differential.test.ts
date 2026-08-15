@@ -4,7 +4,7 @@
  * every production-posture login (the SW got HTTP 400 and never posted
  * 'finish').
  *
- * Compared byte-for-byte: msg, the {type,url} entry shape (including the PHP
+ * Compared byte-for-byte: the {type,url} entry shape (including the PHP
  * quirk that tools-branch css entries are typed 'js'), main.css pinned first,
  * and the FULL file SET. Normalizations (each justified, nothing else):
  *  - ORDER: PHP emits RecursiveDirectoryIterator (filesystem-dependent) order;
@@ -37,10 +37,19 @@ interface ManifestEntry {
 	type: string;
 	url: string;
 }
-interface ManifestBody {
+/** The FROZEN PHP-era body: `result` + the `msg` prose (untouched, fixture-side). */
+interface PhpManifestBody {
 	result: ManifestEntry[];
 	dedalo_version: string;
 	msg: string;
+}
+/** Envelope v2 (ERRORS_SPEC §3): the manifest rides in `data`, the SW cache key
+ * `dedalo_version` as a handler extension key. No `result`/`msg` mirror
+ * (WC-2026-08-16-error-envelope-compat-removal). */
+interface TsManifestBody {
+	ok: boolean;
+	data: ManifestEntry[];
+	dedalo_version: string;
 }
 
 const RQO = { action: 'get_dedalo_files', dd_api: 'dd_utils_api' };
@@ -193,8 +202,9 @@ function isDropzoneServiceRemovalEntry(entry: ManifestEntry): boolean {
 }
 
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
-	let phpBody: ManifestBody;
-	let tsBody: ManifestBody;
+	let phpBody: PhpManifestBody;
+	let tsBody: TsManifestBody;
+	let tsStatus = 0;
 
 	beforeAll(async () => {
 		if (!hasPhpCredentials()) return;
@@ -204,7 +214,7 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			config.phpReference.password as string,
 		);
 		const { body } = await client.call(RQO);
-		phpBody = body as unknown as ManifestBody;
+		phpBody = body as unknown as PhpManifestBody;
 
 		const token = createSession(-1, 'root', true);
 		const session = getSession(token);
@@ -216,7 +226,8 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			csrfCandidate: session?.csrfToken ?? null,
 			principal,
 		});
-		tsBody = tsResult.body as unknown as ManifestBody;
+		tsStatus = tsResult.status;
+		tsBody = tsResult.body as unknown as TsManifestBody;
 	});
 
 	test('anonymous call is refused (authenticated action, like PHP)', async () => {
@@ -227,12 +238,19 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			csrfCandidate: null,
 		});
 		expect(result.status).toBe(401);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
+		expect(result.body.ok === false ? result.body.error.code : null).toBe('auth.not_logged');
 	});
 
-	test('envelope: msg byte-equal, dedalo_version present on both', () => {
+	test('envelope: success signalled, dedalo_version present on both', () => {
 		if (!hasPhpCredentials()) return;
-		expect(tsBody.msg).toBe(phpBody.msg);
+		// v2 restatement of the old `msg` byte-equality: PHP carried its success
+		// prose in `msg`; envelope v2 signals success with `ok:true` + 200 and
+		// carries no prose (WC-2026-08-16-error-envelope-compat-removal). The
+		// frozen PHP prose is still pinned so a fixture drift reddens.
+		expect(tsStatus).toBe(200);
+		expect(tsBody.ok).toBe(true);
+		expect(phpBody.msg).toBe('OK. Request done successfully');
 		// Deploy stamp — presence/type only (see header note).
 		expect(typeof tsBody.dedalo_version).toBe('string');
 		expect(tsBody.dedalo_version.length).toBeGreaterThan(0);
@@ -242,14 +260,14 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 
 	test('main.css is pinned first on both sides (the one contractual order)', () => {
 		if (!hasPhpCredentials()) return;
-		expect(tsBody.result[0]).toEqual({ type: 'css', url: '/dedalo/core/page/css/main.css' });
+		expect(tsBody.data[0]).toEqual({ type: 'css', url: '/dedalo/core/page/css/main.css' });
 		expect(phpBody.result[0]).toEqual({ type: 'css', url: '/dedalo/core/page/css/main.css' });
 	});
 
 	test('entry shape: exactly {type,url}, type js|css, root-relative url', () => {
 		if (!hasPhpCredentials()) return;
-		expect(tsBody.result.length).toBeGreaterThan(100);
-		for (const entry of tsBody.result) {
+		expect(tsBody.data.length).toBeGreaterThan(100);
+		for (const entry of tsBody.data) {
 			expect(Object.keys(entry).sort()).toEqual(['type', 'url']);
 			expect(['js', 'css']).toContain(entry.type);
 			expect(entry.url.startsWith('/dedalo/')).toBe(true);
@@ -269,7 +287,7 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isTranscriptionStatusAdditionEntry(entry) &&
 			!isDropzoneServiceRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
-		const tsSet = tsBody.result.filter(keep).map(comparableLine).sort();
+		const tsSet = tsBody.data.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
 
 		// Two-sided filtering is what keeps the frozen store honest (it records what
@@ -278,24 +296,24 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		// explicitly: the four fold modules must ACTUALLY be present, not merely
 		// normalized away. Without this, deleting one of them — or never shipping
 		// it — would slip through as silently as adding it.
-		expect(tsBody.result.filter(isServiceUploadFoldAdditionEntry).length).toBe(4);
+		expect(tsBody.data.filter(isServiceUploadFoldAdditionEntry).length).toBe(4);
 		expect(phpBody.result.filter(isServiceUploadFoldAdditionEntry)).toEqual([]);
 
 		// Same recovery for the transcription status panel: both modules must
 		// ACTUALLY serve, not merely be normalized away.
-		expect(tsBody.result.filter(isTranscriptionStatusAdditionEntry).length).toBe(2);
+		expect(tsBody.data.filter(isTranscriptionStatusAdditionEntry).length).toBe(2);
 		expect(phpBody.result.filter(isTranscriptionStatusAdditionEntry)).toEqual([]);
 
 		// Mirror image for the removal half: the TS census must contain NO
 		// service_dropzone file at all. Without this, a prefix filter would
 		// happily normalize away a resurrected (or never-deleted) package.
-		expect(tsBody.result.filter(isDropzoneServiceRemovalEntry)).toEqual([]);
+		expect(tsBody.data.filter(isDropzoneServiceRemovalEntry)).toEqual([]);
 		expect(phpBody.result.filter(isDropzoneServiceRemovalEntry).length).toBeGreaterThan(0);
 	});
 
 	test('WC-013: the TS tool_assistant census is the server-driven file set', () => {
 		if (!hasPhpCredentials()) return;
-		const tsAssistant = tsBody.result
+		const tsAssistant = tsBody.data
 			.filter(isToolAssistantEntry)
 			.map((entry) => entry.url.split('/').pop())
 			.sort();
@@ -319,7 +337,7 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 
 	test('every TS url resolves through the static surfaces the server serves', () => {
 		if (!hasPhpCredentials()) return;
-		for (const entry of tsBody.result) {
+		for (const entry of tsBody.data) {
 			let servedPath: string | null = null;
 			if (entry.url.startsWith('/dedalo/core/tools_common/')) {
 				servedPath = resolveToolCommonAssetPath(

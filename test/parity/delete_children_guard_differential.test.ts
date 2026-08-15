@@ -86,17 +86,23 @@ describe.if(hasLivePhpOracle())('children-exist delete refusal differential', ()
 	test('TS engine: parent with child is refused; childless deletes succeed', async () => {
 		if (!hasLivePhpOracle()) return;
 		const parentRes = await tsCall(addChildRqo(SCRATCH_PARENT.section_id));
-		const parentId = Number(parentRes.result);
+		const parentId = Number(parentRes.data);
 		expect(parentId).toBeGreaterThan(0);
 		createdIds.push(parentId);
 		const childRes = await tsCall(addChildRqo(parentId));
-		const childId = Number(childRes.result);
+		const childId = Number(childRes.data);
 		expect(childId).toBeGreaterThan(0);
 		createdIds.push(childId);
 		try {
 			const refused = await tsCall(deleteRqo(parentId));
-			expect(refused.result).toEqual([]);
-			expect((refused.errors as string[])[0]).toContain(`has children : ${parentId}`);
+			// Envelope v2: the deleted set is the payload and the skip is a CODED
+			// notice (`record.delete_children_refused`, details.not_deleted) — the
+			// v2 twin of the PHP-era `errors` prose line
+			// (WC-2026-08-16-error-envelope-compat-removal).
+			expect(refused.data).toEqual([]);
+			const notices = refused.notices as { code: string; details?: { not_deleted?: string } }[];
+			expect(notices[0]?.code).toBe('record.delete_children_refused');
+			expect(String(notices[0]?.details?.not_deleted).split(',')).toContain(String(parentId));
 			expect(await rowExists(parentId)).toBe(true);
 		} finally {
 			await tsCall(deleteRqo(childId));

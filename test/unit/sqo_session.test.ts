@@ -79,7 +79,7 @@ describe('sqo_session store + context stamp', () => {
 		const stored = session?.sqoSession?.[SECTION] as { limit?: number } | undefined;
 		expect(stored?.limit).toBe(7);
 		// The response's SECTION context entry carries the stamp.
-		const context = (dispatched.body as { result: { context: Record<string, unknown>[] } }).result
+		const context = (dispatched.body as { data: { context: Record<string, unknown>[] } }).data
 			.context;
 		const sectionEntry = context.find(
 			(entry) => entry.tipo === SECTION && entry.model === 'section',
@@ -149,9 +149,9 @@ describe('sqo_session store + context stamp', () => {
 		const token = createSession(-1, 'root', true);
 		// Discover real ids to filter on.
 		const { dispatched: probe } = await dispatchWith(token, readRqo(undefined));
-		const probeData = (
-			probe.body as { result: { data: Record<string, unknown>[] } }
-		).result.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
+		const probeData = (probe.body as { data: { data: Record<string, unknown>[] } }).data.data.find(
+			(el) => el.typo === 'sections' && el.tipo === SECTION,
+		);
 		const probeEntries = (probeData?.entries ?? []) as { section_id: unknown }[];
 		expect(probeEntries.length).toBeGreaterThan(1);
 		const targetIds = probeEntries.slice(0, 2).map((entry) => String(entry.section_id));
@@ -182,13 +182,13 @@ describe('sqo_session store + context stamp', () => {
 		const { dispatched } = await dispatchWith(token, readRqo(undefined));
 		expect(dispatched.status).toBe(200);
 		const body = dispatched.body as {
-			result: { context: Record<string, unknown>[]; data: Record<string, unknown>[] };
+			data: { context: Record<string, unknown>[]; data: Record<string, unknown>[] };
 		};
-		const data = body.result.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
+		const data = body.data.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
 		const entries = (data?.entries ?? []) as { section_id: unknown }[];
 		expect(entries.map((entry) => String(entry.section_id)).sort()).toEqual(targetIds.sort());
 		// The same response's context echoes the MERGED sqo (client resyncs on it).
-		const sectionEntry = body.result.context.find(
+		const sectionEntry = body.data.context.find(
 			(entry) => entry.tipo === SECTION && entry.model === 'section',
 		);
 		expect((sectionEntry?.sqo_session as { filter?: unknown } | null)?.filter).toBeDefined();
@@ -217,8 +217,8 @@ describe('sqo_session store + context stamp', () => {
 			},
 		});
 		const { dispatched } = await dispatchWith(token, readRqo(false));
-		const body = dispatched.body as { result: { data: Record<string, unknown>[] } };
-		const data = body.result.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
+		const body = dispatched.body as { data: { data: Record<string, unknown>[] } };
+		const data = body.data.data.find((el) => el.typo === 'sections' && el.tipo === SECTION);
 		const entries = (data?.entries ?? []) as unknown[];
 		// The impossible-id filter was NOT merged: the read returns rows.
 		expect(entries.length).toBeGreaterThan(0);
@@ -229,7 +229,7 @@ describe('sqo_session store + context stamp', () => {
 		const token = createSession(-1, 'root', true);
 		// session_save=false → nothing stored → the stamp is null, key present.
 		const { dispatched } = await dispatchWith(token, readRqo(false));
-		const context = (dispatched.body as { result: { context: Record<string, unknown>[] } }).result
+		const context = (dispatched.body as { data: { context: Record<string, unknown>[] } }).data
 			.context;
 		const sectionEntry = context.find(
 			(entry) => entry.tipo === SECTION && entry.model === 'section',

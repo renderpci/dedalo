@@ -90,12 +90,12 @@ beforeAll(async () => {
 					principal,
 				} as never,
 			)
-		).body as { result?: { context?: unknown[]; data?: Record<string, unknown>[] } };
+		).body as { data?: { context?: unknown[]; data?: Record<string, unknown>[] } };
 		results.set(testCase.tipo, {
 			phpItem: (phpResult.result?.data?.[0] ?? {}) as Record<string, unknown>,
-			tsItem: (tsResult.result?.data?.[0] ?? {}) as Record<string, unknown>,
+			tsItem: (tsResult.data?.data?.[0] ?? {}) as Record<string, unknown>,
 			phpContext: phpResult.result?.context ?? [],
-			tsContext: tsResult.result?.context ?? [],
+			tsContext: tsResult.data?.context ?? [],
 		});
 	}
 	// Generous hook budget: the fetch loop makes sequential PHP calls, and under

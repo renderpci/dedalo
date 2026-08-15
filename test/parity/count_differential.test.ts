@@ -40,7 +40,7 @@ async function tsCount(sqo: Record<string, unknown>, context = adminContext()): 
 		context,
 	);
 	expect(outcome.status).toBe(200);
-	return (outcome.body.result as { total: number }).total;
+	return (outcome.body as { data: { total: number } }).data.total;
 }
 
 describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
@@ -126,7 +126,7 @@ describe.if(hasPhpCredentials())('count differential (Phase 5g gate)', () => {
 			  AND EXISTS (SELECT 1 FROM jsonb_array_elements(relation->'numisdata21') e WHERE e->>'section_id' = '7')
 		`) as { n: number }[];
 		if (outcome.status === 200) {
-			expect((outcome.body.result as { total: number }).total).toBe(truth[0]?.n as number);
+			expect((outcome.body as { data: { total: number } }).data.total).toBe(truth[0]?.n as number);
 		} else {
 			expect(outcome.status).toBe(403); // schema-level denial is also fail-closed
 		}

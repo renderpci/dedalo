@@ -63,9 +63,9 @@ beforeAll(async () => {
 	);
 	const tsBody = (
 		tsResult.body as {
-			result?: { data?: unknown[]; context?: Record<string, unknown>[] };
+			data?: { data?: unknown[]; context?: Record<string, unknown>[] };
 		}
-	).result;
+	).data;
 	tsItem = (tsBody?.data?.[0] ?? null) as Record<string, unknown> | null;
 	tsContext = tsBody?.context ?? [];
 });

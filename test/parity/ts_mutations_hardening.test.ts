@@ -39,8 +39,12 @@ async function addChild(): Promise<number> {
 		prevent_lock: true,
 		source: PARENT,
 	});
-	expect(body.errors).toEqual([]);
-	return body.result as number;
+	// Envelope v2: a successful add_child is ok:true with the new id under
+	// `data`; an empty warning set emits NO `errors` extension key
+	// (handlers/dd_ts_api.ts tsApiResult).
+	expect(body.ok).toBe(true);
+	expect(body.errors).toBeUndefined();
+	return body.data as number;
 }
 
 async function deleteRecord(sectionId: number): Promise<void> {
@@ -60,7 +64,7 @@ async function childrenOrders(): Promise<Map<number, number | string | null>> {
 		prevent_lock: true,
 		source: { ...PARENT, children_tipo: 'tchi40', area_model: 'area_thesaurus' },
 	});
-	const rows = ((body.result as { ar_children_data?: unknown[] })?.ar_children_data ?? []) as {
+	const rows = ((body.data as { ar_children_data?: unknown[] })?.ar_children_data ?? []) as {
 		section_id: number | string;
 		order: number | string | null;
 	}[];

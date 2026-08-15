@@ -130,7 +130,7 @@ async function dispatchAsRoot(rqo: Rqo): Promise<{ status: number; result: ReadR
 	} as never);
 	return {
 		status: dispatched.status,
-		result: (dispatched.body as { result: ReadResult | false }).result,
+		result: (dispatched.body as { data: ReadResult | false }).data,
 	};
 }
 

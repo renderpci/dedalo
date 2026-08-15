@@ -91,9 +91,10 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 		const ts = await tsTerms({ locators, lang: 'lg-spa' });
 		const php = await phpTerms({ locators, lang: 'lg-spa' });
 		expect(ts.status).toBe(200);
-		expect(ts.body.result).toEqual(php.result as Record<string, unknown>);
+		// TS speaks envelope v2 (`data`); the frozen PHP oracle body keeps `result`.
+		expect(ts.body.data).toEqual(php.result as Record<string, unknown>);
 		// the gate is not vacuous: the es1 records DID resolve a term
-		const resolved = ts.body.result as Record<string, unknown>;
+		const resolved = ts.body.data as Record<string, unknown>;
 		expect(Object.keys(resolved)).toContain(`es1_${es1Ids[0]}`);
 		expect(typeof resolved[`es1_${es1Ids[0]}`]).toBe('string');
 	});
@@ -103,7 +104,7 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 		const locators = es1Ids.map((id) => ({ section_tipo: 'es1', section_id: id }));
 		const ts = await tsTerms({ locators, lang: 'lg-eng' });
 		const php = await phpTerms({ locators, lang: 'lg-eng' });
-		expect(ts.body.result).toEqual(php.result as Record<string, unknown>);
+		expect(ts.body.data).toEqual(php.result as Record<string, unknown>);
 	});
 
 	test('bad locators → the SAME refusal, restated as envelope v2 (section.bad_locators, 400)', async () => {

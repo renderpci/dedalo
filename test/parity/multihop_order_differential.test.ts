@@ -69,9 +69,9 @@ beforeAll(async () => {
 		} as never,
 	);
 	const tsBody = tsResult.body as {
-		result?: { data?: { entries?: { section_id: unknown }[] }[] };
+		data?: { data?: { entries?: { section_id: unknown }[] }[] };
 	};
-	tsIds = (tsBody.result?.data?.[0]?.entries ?? []).map((entry) => Number(entry.section_id));
+	tsIds = (tsBody.data?.data?.[0]?.entries ?? []).map((entry) => Number(entry.section_id));
 }, 60000);
 
 describe.if(hasPhpCredentials())(

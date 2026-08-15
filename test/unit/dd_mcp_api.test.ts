@@ -172,15 +172,19 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			proxyRqo({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
 			contextFor(admin) as never,
 		);
-		expect((missing.body as { result: boolean }).result).toBe(false);
+		expect((missing.body as { ok: boolean }).ok).toBe(false);
 		expect((missing.body as { error: { code: string } }).error.code).toBe('mcp.session_invalid');
-		expect((missing.body as { msg: string }).msg).toBe('No valid MCP session ID provided');
+		expect((missing.body as { error: { message: string } }).error.message).toBe(
+			'No valid MCP session ID provided',
+		);
 
 		const stale = await dispatchRqo(
 			proxyRqo({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, 'deadbeef'),
 			contextFor(admin) as never,
 		);
-		expect((stale.body as { msg: string }).msg).toBe('No valid MCP session ID provided');
+		expect((stale.body as { error: { message: string } }).error.message).toBe(
+			'No valid MCP session ID provided',
+		);
 	});
 
 	test('non-allowlisted JSON-RPC methods get a JSON-RPC error', async () => {
@@ -302,12 +306,11 @@ describe('agent_apply', () => {
 			// status); the perm code is the wire identity, `op_id` an extension key.
 			const body = result.body as {
 				ok: boolean;
-				result: unknown;
 				error?: { code: string };
 			};
 			expect(result.status).toBe(403);
 			expect(body.ok).toBe(false);
-			expect(body.result).toBe(false);
+			expect('result' in body).toBe(false);
 			expect(body.error?.code).toBe('perm.denied');
 		} finally {
 			process.env.DEDALO_AGENT_ALLOW_WRITE = '';

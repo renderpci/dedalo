@@ -104,7 +104,7 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 
 	test('component read_raw returns the same raw value + table as PHP', () => {
 		if (!hasPhpCredentials()) return;
-		expect(component.ts.result).toEqual(component.php.result);
+		expect(component.ts.data).toEqual(component.php.result);
 		expect(component.ts.table).toBe(component.php.table);
 	});
 
@@ -112,7 +112,7 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 		if (!hasPhpCredentials()) return;
 		// PHP fetch_all rows carry the jsonb columns; compare the columns TS emits
 		// against PHP for the matched record (section_id + each jsonb column).
-		const tsRow = (section.ts.result as Record<string, unknown>[])[0];
+		const tsRow = (section.ts.data as Record<string, unknown>[])[0];
 		const phpRow = (section.php.result as Record<string, unknown>[])[0];
 		expect(tsRow).toBeDefined();
 		expect(phpRow).toBeDefined();
@@ -127,7 +127,7 @@ describe.if(hasPhpCredentials())('read_raw differential (Phase 6 gate)', () => {
 		if (!hasPhpCredentials()) return;
 		const phpLocators = targetSection.php.result as Record<string, unknown>[];
 		expect(phpLocators.length).toBeGreaterThan(0);
-		expect(targetSection.ts.result).toEqual(phpLocators);
+		expect(targetSection.ts.data).toEqual(phpLocators);
 		expect(targetSection.ts.table).toBe(targetSection.php.table);
 	});
 });

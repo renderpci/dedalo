@@ -214,15 +214,13 @@ describe.if(hasLivePhpOracle())('component_info observer recompute differential'
 			result?: { data?: { tipo?: string }[] };
 		};
 		const tsResponse = (await dispatchRqo(usedSaveRqo(tsChain.coin) as never, tsContext as never))
-			.body as { result?: { data?: { tipo?: string }[] } };
+			.body as { data?: { data?: { tipo?: string }[] } };
 
 		// neither response carries the cross-section observer item
 		expect((phpResponse.result?.data ?? []).some((item) => item.tipo === 'numisdata595')).toBe(
 			false,
 		);
-		expect((tsResponse.result?.data ?? []).some((item) => item.tipo === 'numisdata595')).toBe(
-			false,
-		);
+		expect((tsResponse.data?.data ?? []).some((item) => item.tipo === 'numisdata595')).toBe(false);
 
 		// TM rows at each engine's archive: byte-equal computed data (DEDUPED —
 		// PHP's insert save double-fires, see header)
@@ -247,10 +245,10 @@ describe.if(hasLivePhpOracle())('component_info observer recompute differential'
 		};
 		const tsResponse = (
 			await dispatchRqo(stateSaveRqo(tsChain.person) as never, tsContext as never)
-		).body as { result?: { data?: Record<string, unknown>[] } };
+		).body as { data?: { data?: Record<string, unknown>[] } };
 
 		const phpItem = (phpResponse.result?.data ?? []).find((item) => item.tipo === 'rsc19');
-		const tsItem = (tsResponse.result?.data ?? []).find((item) => item.tipo === 'rsc19');
+		const tsItem = (tsResponse.data?.data ?? []).find((item) => item.tipo === 'rsc19');
 		expect(phpItem).toBeDefined();
 		expect(tsItem).toBeDefined();
 		// WC-026: normalize the PHP entries with the production fn; twin ids

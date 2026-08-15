@@ -249,9 +249,9 @@ describe('WC-059 — the temporal READ serves no record', () => {
 		// no entries array at all. Assert the item EXISTS, addressed at the
 		// sentinel, with an empty value.
 		const temporalBody = temporalRead.body as {
-			result: { data: Record<string, unknown>[] };
+			data: { data: Record<string, unknown>[] };
 		};
-		const temporalItem = temporalBody.result.data.find((entry) => entry.tipo === LITERAL);
+		const temporalItem = temporalBody.data.data.find((entry) => entry.tipo === LITERAL);
 		expect(temporalItem).toBeDefined();
 		expect(String(temporalItem?.section_id)).toBe(String(SENTINEL_ID));
 		expect(temporalItem?.entries).toEqual([]);
@@ -283,8 +283,8 @@ describe('WC-059 — the temporal READ serves no record', () => {
 			tsContext as never,
 		);
 		expect(response.status).toBe(200);
-		const body = response.body as { result: { data: Record<string, unknown>[] } };
-		const item = body.result.data.find((entry) => entry.tipo === SELECT);
+		const body = response.body as { data: { data: Record<string, unknown>[] } };
+		const item = body.data.data.find((entry) => entry.tipo === SELECT);
 		expect(item).toBeDefined();
 		expect(Array.isArray(item?.datalist)).toBe(true);
 		expect((item?.datalist as unknown[]).length).toBeGreaterThan(0);
@@ -322,8 +322,8 @@ describe('WC-059 — the temporal SAVE echo carries the select datalist', () => 
 			tsContext as never,
 		);
 		expect(response.status).toBe(200);
-		const body = response.body as { result: { data: Record<string, unknown>[] } };
-		const item = body.result.data.find((entry) => entry.tipo === SELECT);
+		const body = response.body as { data: { data: Record<string, unknown>[] } };
+		const item = body.data.data.find((entry) => entry.tipo === SELECT);
 		expect(item).toBeDefined();
 		expect(Array.isArray(item?.datalist)).toBe(true);
 		expect((item?.datalist as unknown[]).length).toBeGreaterThan(0);
@@ -416,9 +416,9 @@ describe('WC-059 — add_new_element creates the TARGET, never the host', () => 
 		expect(response.status).toBe(200);
 
 		const body = response.body as {
-			result: { data: Record<string, unknown>[]; created_section_id?: unknown };
+			data: { data: Record<string, unknown>[]; created_section_id?: unknown };
 		};
-		const item = body.result.data.find((entry) => entry.tipo === PORTAL);
+		const item = body.data.data.find((entry) => entry.tipo === PORTAL);
 		const entries = (item?.entries ?? []) as Record<string, unknown>[];
 		expect(entries.length).toBe(1);
 		const created = Number(entries[0]?.section_id);
@@ -427,7 +427,7 @@ describe('WC-059 — add_new_element creates the TARGET, never the host', () => 
 
 		// WC-081: this door stamps the created ADDRESS too — the add button is the
 		// same button on a temporal portal, and it opens the record by address.
-		expect(body.result.created_section_id).toBe(created);
+		expect(body.data.created_section_id).toBe(created);
 
 		// The TARGET record really exists (this action is a genuine write — the
 		// only one a temporal instance may cause).

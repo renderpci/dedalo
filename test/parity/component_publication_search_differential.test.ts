@@ -114,12 +114,12 @@ describe('search-filter synthetic id — read_facade ACL gate carve-out', () => 
 
 	test('non-admin gets the component_publication datalist for a synthetic search id', async () => {
 		const res = (await routeSectionRead(searchRqo(SEARCH_ID), NON_ADMIN)) as unknown as {
-			body: { result: { context: unknown[]; data: DataItem[] } };
+			body: { data: { context: unknown[]; data: DataItem[] } };
 		};
-		const data = res.body.result.data ?? [];
+		const data = res.body.data.data ?? [];
 		const item = data.find((d) => d.tipo === 'rsc20');
 		// Not an empty shell: the component's own item + its structure context.
-		expect(res.body.result.context.length).toBeGreaterThan(0);
+		expect(res.body.data.context.length).toBeGreaterThan(0);
 		expect(item).toBeDefined();
 		expect(Array.isArray(item?.datalist)).toBe(true);
 		expect((item?.datalist as unknown[]).length).toBeGreaterThan(0);
@@ -147,10 +147,10 @@ describe('search-filter synthetic id — read_facade ACL gate carve-out', () => 
 			sqo: { section_tipo: ['rsc170'] },
 		} as unknown as Rqo;
 		const res = (await routeSectionRead(rqo, NON_ADMIN)) as unknown as {
-			body: { result: { context: unknown[]; data: DataItem[] } };
+			body: { data: { context: unknown[]; data: DataItem[] } };
 		};
-		// The gate executed (numeric id): result is a well-formed envelope, never a throw.
-		expect(res.body.result).toBeDefined();
-		expect(Array.isArray(res.body.result.data)).toBe(true);
+		// The gate executed (numeric id): data is a well-formed envelope, never a throw.
+		expect(res.body.data).toBeDefined();
+		expect(Array.isArray(res.body.data.data)).toBe(true);
 	});
 });

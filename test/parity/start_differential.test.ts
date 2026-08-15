@@ -50,8 +50,10 @@ describe.if(hasPhpCredentials())('start action differential', () => {
 			{ action: 'start', dd_api: 'dd_core_api', options: { search_obj: {}, menu: false } } as Rqo,
 			adminContext,
 		);
-		tsSection = (outcome.body.result as { context: Record<string, unknown>[] })
-			.context[0] as Record<string, unknown>;
+		tsSection = (outcome.body.data as { context: Record<string, unknown>[] }).context[0] as Record<
+			string,
+			unknown
+		>;
 	});
 
 	test('default-section context matches (tipo/model/label/matrix_table/config)', () => {

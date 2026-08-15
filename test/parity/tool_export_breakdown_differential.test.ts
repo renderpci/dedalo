@@ -230,7 +230,7 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 						principal,
 					} as never,
 				);
-				const tsGrid = ((tsResult.body as { result?: Grid }).result ?? {}) as Grid;
+				const tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
 
 				// Non-vacuous: the corpus must produce columns AND rows on PHP.
 				expect(phpGrid.columns?.length ?? 0).toBeGreaterThan(0);
@@ -280,7 +280,7 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 						principal,
 					} as never,
 				);
-				const tsGrid = ((tsResult.body as { result?: Grid }).result ?? {}) as Grid;
+				const tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
 
 				// PHP side of the pin: the oracle FANS OUT — multi-segment keys.
 				expect(phpGrid.columns?.length ?? 0).toBeGreaterThan(1);
@@ -330,7 +330,7 @@ describe.if(hasPhpCredentials())('tool_export deep-breakdown differential', () =
 				principal,
 			} as never,
 		);
-		const tsGrid = ((tsResult.body as { result?: Grid }).result ?? {}) as Grid;
+		const tsGrid = ((tsResult.body as { data?: Grid }).data ?? {}) as Grid;
 		// Three ddos share the numisdata75 top component → one column.
 		expect(tsGrid.columns?.length).toBe(1);
 		expect(tsGrid.columns?.[0]?.key).toBe('numisdata3_numisdata75');

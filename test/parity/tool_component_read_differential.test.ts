@@ -126,7 +126,7 @@ describe.if(hasPhpCredentials())('tool component read (source.properties overrid
 			const outcome = await dispatchRqo(rqo as Rqo, adminContext);
 			cases[name] = {
 				php: (body as { result: CasePair['php'] }).result,
-				ts: (outcome.body as { result: CasePair['ts'] }).result,
+				ts: (outcome.body as { data: CasePair['ts'] }).data,
 			};
 		}
 	});

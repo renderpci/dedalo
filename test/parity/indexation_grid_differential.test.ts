@@ -116,7 +116,7 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			const [ts, php] = [await tsGrid(rqo), await client.call(rqo)];
 			expect(ts.status).toBe(200);
 			// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
-			expect(normalizeSectionIdTypes(ts.body.result)).toEqual(
+			expect(normalizeSectionIdTypes(ts.body.data)).toEqual(
 				normalizeSectionIdTypes(php.body.result) as never,
 			);
 		});
@@ -125,7 +125,7 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 	test('the gate is not vacuous: the rich case resolves real values', async () => {
 		if (!hasPhpCredentials()) return;
 		const ts = await tsGrid(gridRqo('cont1', '10', ['rsc205']));
-		const json = JSON.stringify(ts.body.result);
+		const json = JSON.stringify(ts.body.data);
 		// real record values, not just structure
 		expect(json).toContain('Ercávica celtibérica');
 		expect(json).toContain('component_portal');
