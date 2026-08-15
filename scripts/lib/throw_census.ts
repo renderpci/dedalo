@@ -92,8 +92,12 @@ export const ZERO_TIER = [
  * enforced test then fails on ANY untyped throw under a ZERO_TIER prefix, no
  * baseline entry can excuse it, and the baseline generator refuses to write an
  * entry for a zero-tier file.
+ *
+ * P3 EXIT (2026-08-15): flipped to `true` — every ZERO_TIER prefix reached 0
+ * (api/security/tools/tools/ via errors/p3-periphery, section/record + db via
+ * errors/p3-write-paths with matrix_write_failure_native + save_component_failure_native).
  */
-export const ZERO_TIER_ENFORCED = false;
+export const ZERO_TIER_ENFORCED = true;
 
 /** Whitespace-tolerant shapes of the counted tokens. */
 const UNTYPED_THROW = /\bthrow\s+new\s+Error\s*\(/g;
