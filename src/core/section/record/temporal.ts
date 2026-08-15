@@ -251,6 +251,61 @@ async function persistTemporalScratch(
 }
 
 /**
+ * The echoed `data` array of a temporal relation save's ok() envelope, and the
+ * entry in it that is the saved component itself (the "main" entry).
+ */
+function temporalEchoMainEntry(
+	echo: ApiResult,
+	componentTipo: string,
+	sectionTipo: string,
+): Record<string, unknown> | undefined {
+	const echoed = ((echo.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
+		string,
+		unknown
+	>[];
+	return echoed.find((entry) => entry.tipo === componentTipo && entry.section_tipo === sectionTipo);
+}
+
+/**
+ * Select-family components re-render from data.datalist (e.g.
+ * component_radio_button get_checked_value_label reads it after a save), and
+ * the persisted door attaches it — so the temporal door must too, or the
+ * post-save render dereferences undefined. It belongs on the RELATION branch,
+ * not the literal one: every SELECT_FAMILY_MODELS member is a relation-column
+ * component, so a datalist attach placed after the `column === 'relation'`
+ * return could never run at all.
+ */
+async function attachTemporalEchoDatalist(
+	echo: ApiResult,
+	args: { model: string; componentTipo: string; sectionTipo: string; lang: string },
+): Promise<void> {
+	const { model, componentTipo, sectionTipo, lang } = args;
+	const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
+	if (!SELECT_FAMILY_MODELS.has(model)) return;
+	const { getDatalist } = await import('../../relations/datalist.ts');
+	const { getNode } = await import('../../ontology/resolver.ts');
+	const node = await getNode(componentTipo);
+	const main = temporalEchoMainEntry(echo, componentTipo, sectionTipo);
+	if (main !== undefined) {
+		main.datalist = await getDatalist(componentTipo, node?.properties ?? null, sectionTipo, lang);
+	}
+}
+
+/**
+ * WC-081: the persisted door stamps the same key — a temporal portal's add
+ * button is the same button, and it must be able to open the same record.
+ * The echo is an ok() envelope: the address rides INSIDE `data` (the payload),
+ * exactly where dd_core_api.ts's persisted save puts it.
+ */
+function stampTemporalEchoCreatedSectionId(echo: ApiResult, createdSectionId: number | null): void {
+	if (createdSectionId === null) return;
+	const echoData = (echo.body as { ok?: boolean; data?: Record<string, unknown> }).data;
+	if (echoData !== undefined && echoData !== null && typeof echoData === 'object') {
+		echoData.created_section_id = createdSectionId;
+	}
+}
+
+/**
  * The temporal SAVE door: normalize the client's value and echo it in the
  * canonical shape the client resolves by. No matrix read of the addressed
  * record, no write to it, no Time Machine row, no modified stamp, no activity row.
@@ -372,44 +427,8 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			picked,
 			mode: source.mode ?? 'edit',
 		});
-		// Select-family components re-render from data.datalist (e.g.
-		// component_radio_button get_checked_value_label reads it after a save), and
-		// the persisted door attaches it — so this one must too, or the post-save
-		// render dereferences undefined. It belongs HERE, not on the literal branch:
-		// every SELECT_FAMILY_MODELS member is a relation-column component, so a
-		// datalist attach placed after the `column === 'relation'` return could
-		// never run at all.
-		const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
-		if (SELECT_FAMILY_MODELS.has(model)) {
-			const { getDatalist } = await import('../../relations/datalist.ts');
-			const { getNode } = await import('../../ontology/resolver.ts');
-			const node = await getNode(componentTipo);
-			const echoed = ((echo.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
-				string,
-				unknown
-			>[];
-			const main = echoed.find(
-				(entry) => entry.tipo === componentTipo && entry.section_tipo === sectionTipo,
-			);
-			if (main !== undefined) {
-				main.datalist = await getDatalist(
-					componentTipo,
-					node?.properties ?? null,
-					sectionTipo,
-					lang,
-				);
-			}
-		}
-		// WC-081: the persisted door stamps the same key — a temporal portal's add
-		// button is the same button, and it must be able to open the same record.
-		if (createdSectionId !== null) {
-			// The echo is an ok() envelope: the address rides INSIDE `data` (the
-			// payload), exactly where dd_core_api.ts's persisted save puts it.
-			const echoData = (echo.body as { ok?: boolean; data?: Record<string, unknown> }).data;
-			if (echoData !== undefined && echoData !== null && typeof echoData === 'object') {
-				echoData.created_section_id = createdSectionId;
-			}
-		}
+		await attachTemporalEchoDatalist(echo, { model, componentTipo, sectionTipo, lang });
+		stampTemporalEchoCreatedSectionId(echo, createdSectionId);
 		return echo;
 	}
 
