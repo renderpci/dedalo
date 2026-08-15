@@ -62,6 +62,8 @@ const TRIPWIRES = [
 	'test/unit/agent_egress_tripwire.test.ts',
 	'test/unit/matrix_copy_columns_tripwire.test.ts',
 	'test/unit/consultation_only_sections_tripwire.test.ts',
+	'test/unit/tm_mode_retired_tripwire.test.ts',
+	'test/unit/log_section_policy_tripwire.test.ts',
 	'test/unit/root_user_hidden_tripwire.test.ts',
 	'test/unit/test3_canonical_fixture.test.ts',
 	'test/unit/update_ownership_tripwire.test.ts',
