@@ -183,6 +183,67 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 			assert.equal(portal.ar_instances.length, 0, 'no second instance was built')
 		})
 
+		it('opening the tree turns the AUTOCOMPLETE off: they share one space', async function() {
+			// the two input paths overlap in the component, and the autocomplete's
+			// datalist/settings panel paints over the tree. The ontology declaration
+			// is untouched; this is a runtime exclusion while the tree shows.
+			let destroyed = 0
+			const portal = make_portal({
+				id				: 'pane_autocomplete_off',
+				pane_child		: true,
+				thesaurus_area	: { status:'built' }
+			})
+			portal.picker				= { sync_linked: () => true }
+			portal.autocomplete_active	= true
+			portal.autocomplete			= { destroy: () => { destroyed++; return true } }
+
+			await portal.toggle_thesaurus_pane()
+
+			assert.equal(destroyed, 1, 'the autocomplete service is torn down')
+			assert.equal(portal.autocomplete_active, false)
+			assert.equal(portal.autocomplete, null)
+		})
+
+		it('ESC closes the pane, and stops there', async function() {
+			const portal = make_portal({
+				id				: 'pane_escape',
+				pane_child		: true,
+				thesaurus_area	: { status:'built' }
+			})
+			portal.picker = { sync_linked: () => true }
+			const pane = pane_of(portal)
+
+			await portal.toggle_thesaurus_pane()
+			assert.equal(pane.classList.contains('hide'), false)
+
+			let propagated = false
+			document.addEventListener('keydown', () => { propagated = true })
+			document.dispatchEvent(new KeyboardEvent('keydown', {
+				key: 'Escape', bubbles: true, cancelable: true
+			}))
+
+			assert.equal(pane.classList.contains('hide'), true, 'ESC closes the picker')
+			assert.equal(propagated, false,
+				'while the tree is open ESC means "close the tree" and nothing else —'
+				+ ' the component must not also be deactivated by the same keypress')
+		})
+
+		it('the ESC listener is dropped on close: one open must not leak one listener', async function() {
+			const portal = make_portal({
+				id				: 'pane_escape_cleanup',
+				pane_child		: true,
+				thesaurus_area	: { status:'built' }
+			})
+			portal.picker = { sync_linked: () => true }
+
+			await portal.toggle_thesaurus_pane() // open
+			assert.equal(typeof portal.thesaurus_pane_escape, 'function')
+			await portal.toggle_thesaurus_pane() // close
+			assert.equal(portal.thesaurus_pane_escape, null,
+				'this surface is opened many times over a record life; each open must'
+				+ ' remove its own document listener')
+		})
+
 		it('toggling a live pane closes it without destroying the tree', async function() {
 			const portal = make_portal({
 				id				: 'pane_toggle_close',

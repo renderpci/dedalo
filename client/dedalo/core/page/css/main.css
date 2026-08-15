@@ -17065,22 +17065,50 @@ dd-modal:has(.tool_header) {
 /**
 * THESAURUS PICKER PANE
 *
-* The picker surface: an area_thesaurus rendered INLINE inside the caller component's
-* own wrapper (component_portal's tree view builds the .thesaurus_pane node).
+* The picker surface: an area_thesaurus rendered inside the caller component's own
+* wrapper (component_portal's tree view builds the .thesaurus_pane node).
 *
-* The layout rule that matters: the caller MUST stay visible. A centred modal covered
-* the component being filled in, which is why the picked term had to be echoed back in
-* a tray — remove the occlusion and the component itself is the feedback. So the pane is
-* bounded in height and sits in the flow, never over it.
+* IT OVERLAYS, IT DOES NOT SIT IN THE FLOW. Four things follow from that, and each
+* was a defect while the pane was an in-flow block:
+*
+*  1. RESIZING IT MUST NOT RESIZE THE COMPONENT. An in-flow pane made the caller's
+*     height track the pane's, so dragging the picker taller stretched the portal
+*     underneath it. Absolute positioning takes the pane out of the height
+*     calculation entirely — the component keeps its own size whatever the operator
+*     does to the tree.
+*  2. IT MUST PAINT OVER SIBLINGS. The next portal down is ordinary content and was
+*     drawing on top of the tree. z-index puts the pane above component content
+*     while staying below the global modal/menu layers (10000+).
+*  3. IT MUST BE WIDE. A thesaurus carries long terms and deep nested branches;
+*     the column of a portal cell is nowhere near enough. Half the viewport is the
+*     working default, and the operator can still drag it.
+*  4. IT MUST BE TALL. oh115's thesaurus is small, but an install can hold a branch
+*     with 50, 100 or more children, and a short box turns browsing into scrolling
+*     through a slot.
+*
+* The caller wrapper is the positioning context, so the pane opens anchored to the
+* component it belongs to rather than floating free of it.
 */
+.wrapper_component:has(> .thesaurus_pane) {
+  position: relative;
+}
 .thesaurus_pane {
-  max-height: 22rem;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 9000;
+  width: 50vw;
+  min-width: 24rem;
+  max-width: 96vw;
+  height: 60vh;
+  min-height: 16rem;
+  max-height: 88vh;
   overflow: auto;
-  margin-top: 0.4rem;
+  resize: both;
+  background-color: var(--color_white);
   border: 1px solid var(--color_grey_9);
   border-radius: 2px;
-  background-color: var(--color_white);
-  resize: vertical;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 .thesaurus_pane.hide {
   display: none;
@@ -17088,6 +17116,9 @@ dd-modal:has(.tool_header) {
 .thesaurus_pane > .area_thesaurus,
 .thesaurus_pane > .area_ontology {
   padding: 0.3rem;
+}
+.thesaurus_pane .thesaurus_pane_error {
+  padding: 0.6rem;
 }
 /**
 * area_ontology

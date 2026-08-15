@@ -2573,8 +2573,21 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 
 	// close. The area stays built so re-opening is instant and the tree keeps its state
 		if (!pane.classList.contains('hide')) {
-			pane.classList.add('hide')
+			close_thesaurus_pane(self, pane)
 			return false
+		}
+
+	// (!) THE TWO INPUT PATHS ARE EXCLUSIVE WHILE THE TREE IS OPEN. The
+	// autocomplete input and the tree occupy the SAME space in the component, and
+	// the autocomplete's datalist/settings panel paints over the tree — two live
+	// pickers fighting for one surface. The ontology declaration is untouched
+	// (`show_autocomplete` still says the component HAS that input); this is a
+	// runtime exclusion for as long as the tree is showing, and closing the pane
+	// gives the input straight back.
+		if (self.autocomplete_active===true && self.autocomplete) {
+			self.autocomplete.destroy(true, true, true)
+			self.autocomplete_active	= false
+			self.autocomplete			= null
 		}
 
 	// open.
@@ -2586,6 +2599,27 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 	// rest of the wrapper's life. Asking the instance whether it is still alive is
 	// self-healing whoever destroyed it.
 		pane.classList.remove('hide')
+
+	// ESC CLOSES THE PICKER, and closes it FIRST. The page-level Escape
+	// deactivates the component and its autocomplete but knows nothing about this
+	// pane, so the tree stayed open over a component that had already stepped
+	// back. Capture phase + stopPropagation: while the tree is open Escape means
+	// "close the tree" and nothing else — a second Escape then reaches the
+	// ordinary handlers with the component in its normal state.
+	// Registered BEFORE the build, so a pane left open on a FAILED build (which
+	// shows its reason rather than hiding) is closable too.
+		self.thesaurus_pane_escape = (event) => {
+			if (event.key!=='Escape' && event.key!=='Esc') {
+				return
+			}
+			if (pane.classList.contains('hide')) {
+				return
+			}
+			event.stopPropagation()
+			close_thesaurus_pane(self, pane)
+		}
+		document.addEventListener('keydown', self.thesaurus_pane_escape, true)
+
 		const area_alive = self.thesaurus_area
 			&& self.thesaurus_area.status!=='destroyed'
 			&& pane.firstChild!==null
@@ -2605,9 +2639,35 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 			self.picker.sync_linked()
 		}
 
-
 	return true
 }//end toggle_thesaurus_pane
+
+
+
+/**
+* CLOSE_THESAURUS_PANE
+* Hide the pane and drop the listeners it owns while open.
+*
+* The AREA is deliberately kept built: reopening is then instant and the tree
+* keeps its expansion, scroll and search state. What must not survive is the
+* document-level Escape listener — one per open, and this surface can be opened
+* many times over a record's life.
+*
+* @param {Object} self - The `component_portal` instance (module-private function).
+* @param {HTMLElement} pane - The `.thesaurus_pane` node.
+* @returns {boolean} Always false — "the pane is not open".
+*/
+const close_thesaurus_pane = function(self, pane) {
+
+	pane.classList.add('hide')
+
+	if (typeof self.thesaurus_pane_escape==='function') {
+		document.removeEventListener('keydown', self.thesaurus_pane_escape, true)
+		self.thesaurus_pane_escape = null
+	}
+
+	return false
+}//end close_thesaurus_pane
 
 
 
