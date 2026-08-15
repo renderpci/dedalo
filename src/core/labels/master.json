@@ -184,6 +184,7 @@
 	"error_install_state_conflict": "The install step cannot run in the current state",
 	"error_install_step_failed": "The install step could not be completed",
 	"error_install_unknown_step": "Unknown install step",
+	"error_internal_invariant": "The server detected an internal contract violation; contact the administrator with the request id",
 	"error_internal_module_poisoned": "The server hit an internal fault and will restart; try again in a moment",
 	"error_internal_unexpected": "An unexpected error occurred; try again or contact the administrator",
 	"error_invalid_date_format": "Error: Date format is invalid",

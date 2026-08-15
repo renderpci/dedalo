@@ -1247,6 +1247,16 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	'internal.invariant': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_internal_invariant',
+		message: 'The server detected an internal contract violation',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+		reason: 'Engine invariant / uncovered-scope throws (P3 burn-down): the fail-loud typed form of a former `throw new Error(...)`. Coordinates carry the module + input; the sentence stays server-side.',
+	},
 	'internal.module_poisoned': {
 		category: 'internal',
 		status: 500,
