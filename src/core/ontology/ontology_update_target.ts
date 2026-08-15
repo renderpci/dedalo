@@ -125,7 +125,7 @@ export async function stageOntologyFiles(
 				targetDir: stagingDir,
 			});
 			messages.push(downloaded.msg);
-			if (downloaded.result !== true) {
+			if (downloaded.ok !== true) {
 				return {
 					errors: [...downloaded.errors],
 					msg: `Error. Download failed for ${expectedBasename}`,

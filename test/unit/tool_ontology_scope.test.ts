@@ -67,7 +67,7 @@ describe('setRecordsInDdOntology — no whole-section default', () => {
 			sectionTipo: POPULATED_SECTION,
 			userId: -1,
 		});
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.total).toBe(0);
 		expect(response.processed_count).toBe(0);
 		expect(response.errors.join(' ')).toMatch(/scope|sqo|section_id/i);

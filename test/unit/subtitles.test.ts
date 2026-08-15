@@ -27,11 +27,11 @@ const CUE_TC_LINE = /^\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}$/;
 describe('buildSubtitlesText', () => {
 	test('mandatory vars: empty sourceText / maxCharLine fail with the PHP message', () => {
 		const noText = buildSubtitlesText({ sourceText: '', maxCharLine: 144 });
-		expect(noText.result).toBe(false);
+		expect(noText.data).toBe(false);
 		expect(noText.msg).toContain("Var 'sourceText' is mandatory!");
 
 		const noMax = buildSubtitlesText({ sourceText: 'hello', maxCharLine: 0 });
-		expect(noMax.result).toBe(false);
+		expect(noMax.data).toBe(false);
 		expect(noMax.msg).toContain("Var 'maxCharLine' is mandatory!");
 	});
 
@@ -40,8 +40,8 @@ describe('buildSubtitlesText', () => {
 			'[TC_00:00:00.000_TC]Hello world this is a test.<p>[TC_00:00:05.000_TC]Second segment text here.';
 		const built = buildSubtitlesText({ sourceText, maxCharLine: 144, total_ms: 10000 });
 		expect(built.msg).toBe('OK. Request done [build_subtitles_text]');
-		expect(typeof built.result).toBe('string');
-		const vtt = built.result as string;
+		expect(typeof built.data).toBe('string');
+		const vtt = built.data as string;
 
 		expect(vtt.startsWith('WEBVTT\n\n')).toBe(true);
 		const cues = vtt
@@ -69,7 +69,7 @@ describe('buildSubtitlesText', () => {
 			'<p>[TC_00:00:13.450_TC]My name is a very long name indeed for a test transcript.' +
 			'<p>[TC_00:01:25.627_TC]Closing remarks at the end.';
 		const built = buildSubtitlesText({ sourceText, maxCharLine: 144, total_ms: 95000 });
-		const vtt = built.result as string;
+		const vtt = built.data as string;
 		const tcLines = vtt.split('\n').filter((line) => line.includes(' --> '));
 		expect(tcLines.length).toBeGreaterThanOrEqual(3);
 		for (const line of tcLines) {
@@ -85,7 +85,7 @@ describe('buildSubtitlesText', () => {
 		const words = Array.from({ length: 30 }, (_, i) => `word${i}`).join(' ');
 		const sourceText = `[TC_00:00:00.000_TC]${words}<p>[TC_00:01:00.000_TC]end.`;
 		const built = buildSubtitlesText({ sourceText, maxCharLine: 40, total_ms: 65000 });
-		const vtt = built.result as string;
+		const vtt = built.data as string;
 		const tcLines = vtt.split('\n').filter((line) => line.includes(' --> '));
 		// 30 words ≫ 40 chars per line → several cues before the 'end.' one
 		expect(tcLines.length).toBeGreaterThan(3);
@@ -100,7 +100,7 @@ describe('buildSubtitlesText', () => {
 		const text = 'aaaa bbbb cccc dddd eeee ffff gggg hhhh';
 		const sourceText = `[TC_00:00:00.000_TC]${text}<p>[TC_00:00:10.000_TC]end.`;
 		const built = buildSubtitlesText({ sourceText, maxCharLine: 60, total_ms: 15000 });
-		const vtt = built.result as string;
+		const vtt = built.data as string;
 		const firstCue = vtt.slice('WEBVTT\n\n'.length).split('\n\n')[0] as string;
 		const lines = firstCue.split('\n');
 		// number, tc line, then TWO text lines

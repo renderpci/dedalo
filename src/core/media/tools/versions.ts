@@ -187,7 +187,7 @@ export async function buildVersionCore(
 	}
 	if (spec.model === 'component_pdf') {
 		// pdf 'web' = copy; the covers (jpg + every configured alternate) ride along.
-		// A cover this host cannot encode travels in `errors` beside a `result:true`,
+		// A cover this host cannot encode travels in `errors` beside a SUCCESS,
 		// exactly like an image twin — the copy landed, and telling the operator the
 		// build failed would be a lie about what is on disk.
 		const built = [copyToQuality(spec, identity, quality, source, 'pdf', pathOpts)];
@@ -492,7 +492,8 @@ export async function conformHeadersCore(
 }
 
 export interface RotateVersionResult {
-	result: boolean;
+	/** true when every file of the tier rotated; false with the reasons in `errors`. */
+	ok: boolean;
 	errors: string[];
 }
 
@@ -501,7 +502,7 @@ export interface RotateVersionResult {
  * component_image::rotate, rotation_mode 'expanded'). image-only; rotates every
  * on-disk file of the requested quality (there may be more than one extension)
  * by `degrees`. The original tier is never mutated (Original law). Returns
- * result=false with the collected per-file errors on any failure.
+ * ok=false with the collected per-file errors on any failure.
  */
 export async function rotateVersionCore(
 	spec: MediaTypeSpec,
@@ -523,11 +524,11 @@ export async function rotateVersionCore(
 			file_exist: true,
 		}));
 	if (entries.length === 0) {
-		return { result: false, errors: [`rotate: no file found for quality '${quality}'`] };
+		return { ok: false, errors: [`rotate: no file found for quality '${quality}'`] };
 	}
 	const rotation = await applyRotationCore(spec, identity, pathOpts, entries, {
 		degrees: Number(degrees),
 		mode: 'expanded',
 	});
-	return { result: rotation.errors.length === 0, errors: rotation.errors };
+	return { ok: rotation.errors.length === 0, errors: rotation.errors };
 }

@@ -26,6 +26,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import {
 	isDispatchEnabled,
@@ -119,12 +120,23 @@ function setScheduler(action: unknown) {
 	);
 }
 
+/** The DedaloError a set_scheduler call rejected with. */
+async function schedulerRefusal(action: unknown): Promise<DedaloError> {
+	try {
+		await setScheduler(action);
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error(`expected set_scheduler '${String(action)}' to refuse, it answered`);
+}
+
 describe('diffusion dispatch verbs', () => {
 	test('pause and resume flip the shared flag', async () => {
 		try {
-			expect((await setScheduler('pause')).result).toBe(true);
+			expect((await setScheduler('pause')).data).toBe(true);
 			expect(isSchedulerPaused()).toBe(true);
-			expect((await setScheduler('resume')).result).toBe(true);
+			expect((await setScheduler('resume')).data).toBe(true);
 			expect(isSchedulerPaused()).toBe(false);
 		} finally {
 			resumeScheduler(); // never leak a paused scheduler to sibling suites
@@ -132,9 +144,7 @@ describe('diffusion dispatch verbs', () => {
 	});
 
 	test('an unknown verb is refused, and refusal costs no database', async () => {
-		const body = await setScheduler('bogus');
-		expect(body.result).toBe(false);
-		expect(body.errors).toContain('invalid_action');
+		expect((await schedulerRefusal('bogus')).code).toBe('diffusion.invalid_action');
 	});
 
 	test('the retired daemon verbs are not smuggled back in as scheduler actions', async () => {
@@ -142,9 +152,7 @@ describe('diffusion dispatch verbs', () => {
 		// (diffusion_server_control.test.ts). They must not reappear here either:
 		// there is still no process to start or stop.
 		for (const action of ['start', 'stop', 'restart', 'start_server', 'restart_server']) {
-			const body = await setScheduler(action);
-			expect(body.result).toBe(false);
-			expect(body.errors).toContain('invalid_action');
+			expect((await schedulerRefusal(action)).code).toBe('diffusion.invalid_action');
 		}
 	});
 

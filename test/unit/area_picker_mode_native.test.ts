@@ -238,6 +238,8 @@ async function purgeScratch(): Promise<void> {
 }
 
 interface AreaReadBody {
+	ok?: boolean;
+	error?: { code: string; message: string };
 	msg?: string;
 	errors?: string[];
 	result?: {
@@ -335,7 +337,7 @@ beforeAll(async () => {
 		},
 	]);
 	const provisioned = await ensureHierarchy(hierarchyId, provisioner.userId);
-	if (!provisioned.result) {
+	if (!provisioned.ok) {
 		throw new Error(
 			`area picker gate: the scratch thesaurus did not provision (${provisioned.msg}; ${provisioned.errors.join('; ')}) — every case below would be vacuous.`,
 		);
@@ -467,6 +469,7 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 			tipo: 'dd197',
 		});
 		expect(status).toBe(400);
+		expect(body.error?.code).toBe('area.picker_caller_invalid');
 		expect(String(body.msg ?? '')).toContain(PICKER_CALLER_UNKNOWN_MESSAGE);
 	});
 
@@ -597,6 +600,7 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 	])('%s is refused 400, named', async (_label, caller, message) => {
 		const { status, body } = await readTree(superuser, caller);
 		expect(status).toBe(400);
+		expect(body.error?.code).toBe('area.picker_caller_invalid');
 		expect(body.msg).toBe(message);
 	});
 });
@@ -635,6 +639,7 @@ describe.if(DB_READY)('the picker read — narrowing to the caller’s own targe
 		try {
 			const { status, body } = await readTree(superuser, callerAddress);
 			expect(status).toBe(409);
+			expect(body.error?.code).toBe('resource.conflict');
 			expect(body.msg).toBe(PICKER_NO_HIERARCHY_MESSAGE);
 		} finally {
 			await updateMatrixKeyData(
@@ -656,7 +661,12 @@ describe.if(DB_READY)('the picker read — narrowing to the caller’s own targe
 		expect(outsider).toBeDefined();
 		const { status, body } = await readTree(outsider?.principal as Principal, callerAddress);
 		expect(status).toBe(403);
-		expect(body.errors).toEqual(['not_authorized']);
+		// Envelope v2 (P1 sweep): the machine channel is the CODE the client
+		// dispatches its no-permission page on — `perm.denied`, whose message is
+		// operator-disclosure so it can name no section.
+		expect(body.ok).toBe(false);
+		expect(body.error?.code).toBe('perm.denied');
+		expect(body.errors).toEqual(['perm.denied']);
 		const serialized = JSON.stringify(body);
 		expect(serialized).not.toContain(TERMS);
 		expect(serialized).not.toContain(TLD);

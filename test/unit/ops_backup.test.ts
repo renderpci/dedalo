@@ -87,7 +87,7 @@ describe('initBackupSequence verification (S2-35)', () => {
 			pgDumpBin: fakePgDump,
 			fastFailWindowMs: 5000,
 		});
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(response.msg).toContain('fe_sendauth'); // pg_dump's own words surfaced
 		// The zero-byte artifact was removed → nothing restorable is listed.
 		const leftover = readdirSync(backupDir).filter((name) => name.endsWith('.backup'));
@@ -110,7 +110,7 @@ describe('initBackupSequence verification (S2-35)', () => {
 			pgDumpBin: fakePgDump,
 			fastFailWindowMs: 5000,
 		});
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(response.file_path).toBeDefined();
 		expect(existsSync(response.file_path as string)).toBe(true);
 		// The response carries the pfile handle the copied make_backup widget

@@ -28,7 +28,18 @@ import type { WidgetModule, WidgetResponse } from './support.ts';
  */
 async function unitTestCreateTestRecord(): Promise<WidgetResponse> {
 	await resetTestSection();
-	return { result: true, msg: 'OK. Request done unit_test::create_test_record', errors: [] };
+	return { data: true, msg: 'OK. Request done unit_test::create_test_record' };
+}
+
+/**
+ * One long-process JOB FRAME — the payload the media-jobs record publishes and
+ * the client's SSE reader renders. A frame, NOT an envelope
+ * (engineering/ERRORS_SPEC.md §5): its `result`/`msg`/`errors` keys are the
+ * stream contract the area_maintenance client already reads, and the converter
+ * never touches them.
+ */
+function longProcessFrame(finished: boolean, msg: string): Record<string, unknown> {
+	return { result: finished, msg, errors: [] };
 }
 
 /**
@@ -75,7 +86,7 @@ async function unitTestLongProcessStream(
 			});
 			for (let i = 1; i <= iterations; i++) {
 				if (signal.aborted) {
-					return { result: false, msg: `Stopped at iteration ${i}/${iterations}`, errors: [] };
+					return longProcessFrame(false, `Stopped at iteration ${i}/${iterations}`);
 				}
 				await new Promise((resolve) => setTimeout(resolve, updateRate));
 				onData({
@@ -85,23 +96,17 @@ async function unitTestLongProcessStream(
 					is_running: i < iterations,
 				});
 			}
-			return {
-				result: true,
-				msg: `OK. Long process finished (${iterations} iterations)`,
-				errors: [],
-			};
+			return longProcessFrame(true, `OK. Long process finished (${iterations} iterations)`);
 		},
 		{ userId: principal.userId },
 	);
 
 	return {
-		result: true,
+		data: true,
 		msg: `OK. Long process started (${iterations} iterations)`,
-		errors: [],
 		// legacy pfile poll handle the area_maintenance client speaks (basename).
-		pid: process.pid,
-		pfile: `${record.id}.json`,
-	} as unknown as WidgetResponse;
+		extend: { pid: process.pid, pfile: `${record.id}.json` },
+	};
 }
 
 export const widget: WidgetModule = {

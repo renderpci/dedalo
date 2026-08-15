@@ -123,7 +123,7 @@ describe('downloadRemoteOntologyFile hardening', () => {
 					expectedBasename: 'dd.copy.gz',
 					targetDir: dir,
 				});
-				expect(out.result).toBe(true);
+				expect(out.ok).toBe(true);
 				expect(existsSync(join(dir, 'dd.copy.gz'))).toBe(true);
 			},
 		);
@@ -136,7 +136,7 @@ describe('downloadRemoteOntologyFile hardening', () => {
 			expectedBasename: 'dd.copy.gz',
 			targetDir: dir,
 		});
-		expect(out.result).toBe(false);
+		expect(out.ok).toBe(false);
 		expect(out.errors[0]).toContain('origin mismatch');
 	});
 
@@ -147,7 +147,7 @@ describe('downloadRemoteOntologyFile hardening', () => {
 			expectedBasename: 'dd.copy.gz',
 			targetDir: dir,
 		});
-		expect(out.result).toBe(false);
+		expect(out.ok).toBe(false);
 		expect(out.errors[0]).toContain('basename mismatch');
 	});
 
@@ -161,7 +161,7 @@ describe('downloadRemoteOntologyFile hardening', () => {
 					expectedBasename: 'dd.copy.gz',
 					targetDir: dir,
 				});
-				expect(out.result).toBe(false);
+				expect(out.ok).toBe(false);
 			},
 		);
 	});
@@ -189,7 +189,7 @@ describe('downloadRemoteOntologyFile hardening', () => {
 				expectedBasename: 'dd.copy.gz',
 				targetDir: dir,
 			});
-			expect(out.result).toBe(false);
+			expect(out.ok).toBe(false);
 			expect(out.msg).toContain('size cap');
 		} finally {
 			raw.stop(true);
@@ -206,7 +206,7 @@ describe('downloadRemoteOntologyFile hardening', () => {
 					expectedBasename: 'dd.copy.gz',
 					targetDir: dir,
 				});
-				expect(out.result).toBe(false);
+				expect(out.ok).toBe(false);
 				expect(out.errors).toContain('empty data');
 			},
 		);
@@ -235,8 +235,8 @@ describe('buildOntologyUpdateInfo (manifest from a local IO dir)', () => {
 			'http://master.example/dedalo/install/import/ontology/9.9',
 		);
 		expect(manifest.msg).toBe('OK. request done');
-		expect((manifest.result.info as { version: string }).version).toBe('9.9.0');
-		expect(manifest.result.files).toEqual([
+		expect((manifest.data.info as { version: string }).version).toBe('9.9.0');
+		expect(manifest.data.files).toEqual([
 			{
 				tld: 'es',
 				section_tipo: 'es0',
@@ -263,7 +263,7 @@ describe('saveSimpleSchemaFile (additions-only diff, PHP bytes)', () => {
 			{ dd6: ['a', 'b', 'c'], es0: [], zz0: ['q'] },
 			dir,
 		);
-		expect(out.result).toBe(true);
+		expect(out.ok).toBe(true);
 		expect(out.msg).toBe('OK. Request successfully processed');
 		const written = JSON.parse(readFileSync(out.filepath as string, 'utf8'));
 		expect(written).toEqual([
@@ -288,7 +288,7 @@ describe('updateOntology refusals', () => {
 			},
 			-1,
 		);
-		expect(out.result).toBe(false);
+		expect(out.ok).toBe(false);
 		expect(out.errors).toContain('unknown ontology server code: zz');
 	});
 });
@@ -337,7 +337,7 @@ describe('checkRemoteServer posts a JSON body (TS API wire)', () => {
 		});
 		expect(contentType).toContain('application/json');
 		expect(probe?.code).toBe(200);
-		expect((probe?.result as { result?: unknown })?.result).toBe(true);
+		expect((probe?.data as { result?: unknown })?.result).toBe(true);
 	});
 });
 
@@ -393,7 +393,7 @@ describe('importFromCopyFile on the scratch database', () => {
 			matrixTable: 'matrix_ontology',
 			conn: scratch,
 		});
-		expect(out.result).toBe(true);
+		expect(out.ok).toBe(true);
 		expect(out.msg).toStartWith('OK. Request done successfully [import_from_copy_file] dd.copy.gz');
 		const after = await scratchCount('matrix_ontology', ` WHERE section_tipo = 'dd0'`);
 		expect(after).toBeGreaterThan(0);
@@ -404,7 +404,7 @@ describe('importFromCopyFile on the scratch database', () => {
 			matrixTable: 'matrix_ontology',
 			conn: scratch,
 		});
-		expect(again.result).toBe(true);
+		expect(again.ok).toBe(true);
 		expect(await scratchCount('matrix_ontology', ` WHERE section_tipo = 'dd0'`)).toBe(after);
 		// the seed had rows too — replace must not be smaller than fresh-load
 		expect(after).toBeGreaterThanOrEqual(before > 0 ? 1 : 0);
@@ -430,7 +430,7 @@ describe('importFromCopyFile on the scratch database', () => {
 			matrixTable: 'matrix_ontology',
 			conn: scratch,
 		});
-		expect(out.result).toBe(false);
+		expect(out.ok).toBe(false);
 		expect(out.msg).toBe('Error. Failed to copy data from file');
 		// the scoped DELETE was rolled back with the failed COPY
 		expect(await scratchCount('matrix_ontology', ` WHERE section_tipo = 'dd0'`)).toBe(before);
@@ -449,7 +449,7 @@ describe('importFromCopyFile on the scratch database', () => {
 			matrixTable: 'matrix_ontology',
 			conn: scratch,
 		});
-		expect(out.result).toBe(true);
+		expect(out.ok).toBe(true);
 		expect(out.msg).toBe('OK. Empty export, nothing to import [import_from_copy_file] zz.copy.gz');
 		expect(await scratchCount('matrix_ontology')).toBe(before);
 	});
@@ -466,7 +466,7 @@ describe('importFromCopyFile on the scratch database', () => {
 			deleteTable: true,
 			conn: scratch,
 		});
-		expect(out.result).toBe(true);
+		expect(out.ok).toBe(true);
 		expect(await scratchCount('matrix_dd')).toBeGreaterThan(0);
 	}, 60000);
 });

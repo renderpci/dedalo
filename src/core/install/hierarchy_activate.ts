@@ -120,8 +120,8 @@ export async function activateHierarchy(
 	});
 	outcome.applied = ensured.applied;
 	outcome.errors.push(...ensured.errors);
-	outcome.result = ensured.result;
-	if (!ensured.result && ensured.errors.length === 0) {
+	outcome.result = ensured.ok;
+	if (!ensured.ok && ensured.errors.length === 0) {
 		outcome.errors.push(ensured.msg);
 	}
 	return outcome;

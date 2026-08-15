@@ -337,8 +337,7 @@ describe('dd_ts_api.get_node_data envelope', () => {
 			},
 			SUPERUSER,
 		);
-		expect(response.msg).toBe('OK. get_node_data request done successfully');
-		expect(response.errors).toHaveLength(0);
-		expect((response.result as { ts_id?: string } | null)?.ts_id).toBe(`${TREE_TIPO}_${MID}`);
+		expect(response.warnings).toBeUndefined();
+		expect((response.data as { ts_id?: string } | null)?.ts_id).toBe(`${TREE_TIPO}_${MID}`);
 	});
 });

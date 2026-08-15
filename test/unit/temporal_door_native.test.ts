@@ -355,9 +355,12 @@ describe('WC-059 — add_new_element creates the TARGET, never the host', () => 
 			tsContext as never,
 		);
 		expect(response.status).toBe(400);
-		// Envelope v2: a caller refusal (request.invalid) — the temporal door's
-		// named sentence is operator-disclosure until its sweep gives it a code.
-		expect((response.body as { error: { code: string } }).error.code).toBe('request.invalid');
+		// Envelope v2 (P1 sweep): the door names the fault — an invalid request
+		// SOURCE. The target tipo itself stays log-only (operator disclosure), so
+		// the refusal cannot confirm which sections are consultation-only.
+		expect((response.body as { error: { code: string } }).error.code).toBe(
+			'request.invalid_source',
+		);
 	});
 
 	test('an empty target section is refused', async () => {

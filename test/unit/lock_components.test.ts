@@ -47,17 +47,17 @@ afterAll(async () => {
 describe('component edit-locks (TS-native model)', () => {
 	test('focus acquires; the SAME user re-focusing renews without conflict', async () => {
 		const first = await updateLockComponentsState({ ...TRIPLE, action: 'focus', ...USER_A });
-		expect(first.result).toBe(true);
+		expect(first.applied).toBe(true);
 		expect(first.in_use).toBe(false);
 
 		const again = await updateLockComponentsState({ ...TRIPLE, action: 'focus', ...USER_A });
-		expect(again.result).toBe(true);
+		expect(again.applied).toBe(true);
 		expect(again.in_use).toBe(false);
 	});
 
 	test('ANOTHER user focusing the same triple gets in_use with the holder name', async () => {
 		const conflict = await updateLockComponentsState({ ...TRIPLE, action: 'focus', ...USER_B });
-		expect(conflict.result).toBe(false);
+		expect(conflict.applied).toBe(false);
 		expect(conflict.in_use).toBe(true);
 		expect(conflict.full_username).toBe('Debug user');
 
@@ -74,10 +74,10 @@ describe('component edit-locks (TS-native model)', () => {
 			action: 'focus',
 			...USER_A,
 		});
-		expect(second.result).toBe(true);
+		expect(second.applied).toBe(true);
 		// …so the first component is free for USER_B now.
 		const acquire = await updateLockComponentsState({ ...TRIPLE, action: 'focus', ...USER_B });
-		expect(acquire.result).toBe(true);
+		expect(acquire.applied).toBe(true);
 		expect(acquire.in_use).toBe(false);
 	});
 
@@ -95,7 +95,7 @@ describe('component edit-locks (TS-native model)', () => {
 			action: 'delete_user_section_locks',
 			...USER_B,
 		});
-		expect(cleared.result).toBe(true);
+		expect(cleared.applied).toBe(true);
 		const free = await getLockStatus({ ...TRIPLE, user_id: USER_A.user_id });
 		expect(free.in_use).toBe(false);
 	});
@@ -109,7 +109,7 @@ describe('component edit-locks (TS-native model)', () => {
 			[TRIPLE.section_tipo, TRIPLE.section_id, TRIPLE.component_tipo],
 		);
 		const takeover = await updateLockComponentsState({ ...TRIPLE, action: 'focus', ...USER_B });
-		expect(takeover.result).toBe(true);
+		expect(takeover.applied).toBe(true);
 		expect(takeover.in_use).toBe(false);
 		// cleanup for the next test
 		await updateLockComponentsState({ ...TRIPLE, action: 'blur', ...USER_B });
@@ -131,10 +131,14 @@ describe('component edit-locks (TS-native model)', () => {
 		expect(blocked.full_username).toBe('PHP user');
 	});
 
-	test('an unknown action is refused', async () => {
-		const refused = await updateLockComponentsState({ ...TRIPLE, action: 'hijack', ...USER_A });
-		expect(refused.result).toBe(false);
-		expect(refused.msg).toContain('not valid');
+	test('an unknown action is refused with the coded caller error', async () => {
+		// ERRORS_SPEC §4: a malformed lock event is a THROWN registered code, and
+		// the refused action rides in `details` (the code declares the key).
+		const refused = updateLockComponentsState({ ...TRIPLE, action: 'hijack', ...USER_A });
+		await expect(refused).rejects.toMatchObject({
+			code: 'request.unknown_action',
+			details: { action: 'hijack' },
+		});
 	});
 
 	test('forceUnlockAllComponents releases only the reader; other users untouched (§10)', async () => {

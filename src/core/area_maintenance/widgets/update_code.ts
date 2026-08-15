@@ -13,7 +13,13 @@
 
 import { config } from '../../../config/config.ts';
 import { readEnv } from '../../../config/env.ts';
-import { engineDenied, gated, type WidgetModule, type WidgetResponse } from './support.ts';
+import {
+	engineDenied,
+	fromOutcome,
+	gated,
+	type WidgetModule,
+	type WidgetResponse,
+} from './support.ts';
 
 /**
  * update_code panel (PHP get_value bytes).
@@ -36,18 +42,18 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
 			msg: probe.msg,
 			errors: probe.errors,
 			response_code: probe.code,
-			result: probe.result,
+			// The REMOTE's own decoded body; `result` is the panel key the client
+			// reads (the probe's own outcome field is `data` since the P1 sweep).
+			result: probe.data,
 		});
 	}
 	return {
-		result: {
+		data: {
 			servers,
 			dedalo_source_version_local_dir:
 				(readEnv('DEDALO_SOURCE_VERSION_LOCAL_DIR') as string | undefined) ?? null,
 			is_a_code_server: config.update.isCodeServer,
 		},
-		msg: 'OK. Request done successfully',
-		errors: [],
 	};
 }
 
@@ -63,7 +69,10 @@ async function updateCodeGetValue(): Promise<WidgetResponse> {
  */
 async function updateCodeOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { updateCode } = await import('../../update/code_update.ts');
-	return (await updateCode(options)) as unknown as WidgetResponse;
+	// core/update/** still carries the legacy `result` discriminator (its own
+	// sweep); bind to it EXPLICITLY so a later rename is a compile error here.
+	const outcome = await updateCode(options);
+	return fromOutcome({ ...outcome, ok: outcome.result });
 }
 
 /**
@@ -78,7 +87,8 @@ async function buildVersionOwned(options: Record<string, unknown>): Promise<Widg
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
 	const version = typeof options.version === 'string' ? options.version : '';
 	const ref = typeof options.ref === 'string' ? options.ref : undefined;
-	return (await buildVersionFromGit({ version, ref })) as unknown as WidgetResponse;
+	const outcome = await buildVersionFromGit({ version, ref });
+	return fromOutcome({ ...outcome, ok: outcome.result });
 }
 
 export const widget: WidgetModule = {

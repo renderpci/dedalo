@@ -148,7 +148,8 @@ export interface OntologyState {
 }
 
 export interface OntologyWriteResult {
-	result: boolean;
+	/** INTERNAL outcome discriminator (never a wire body). */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	state: OntologyState;
@@ -484,7 +485,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 	if (tld === null) {
 		const state = await inspectOntology(rawTld);
 		return {
-			result: false,
+			ok: false,
 			msg: `'${rawTld}' is not a valid TLD`,
 			errors: [`invalid tld '${rawTld}'`],
 			state,
@@ -501,7 +502,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 			// Misfiled records are reported, never rebuilt: `deleteTldNodes(tld)` below scopes
 			// the wipe to THIS tld, so writing a foreign node would plant a row this rebuild
 			// could never take back. A misfiled record does not block the tld's own rebuild —
-			// it only keeps the result honest (result=false while the source stays wrong).
+			// it only keeps the outcome honest (ok=false while the source stays wrong).
 			for (const item of foreign) errors.push(foreignError(item, tld));
 			await deleteTldNodes(tld);
 			for (const node of parsed.values()) {
@@ -515,7 +516,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 		errors.push(String(error));
 		const state = await inspectOntology(tld);
 		return {
-			result: false,
+			ok: false,
 			msg: `Rebuild of '${tld}' failed and was rolled back`,
 			errors,
 			state,
@@ -526,7 +527,7 @@ export async function rebuildOntology(rawTld: string, userId = -1): Promise<Onto
 	const state = await inspectOntology(tld);
 	const converged = rebuildConverged(state);
 	return {
-		result: converged,
+		ok: converged,
 		msg: converged
 			? `Ontology '${tld}' rebuilt${tldlessNote(state)}`
 			: state.foreignNodes > 0

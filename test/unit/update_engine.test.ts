@@ -11,6 +11,7 @@ import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { readEnv } from '../../src/config/env.ts';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import {
@@ -230,15 +231,26 @@ describe('widget open mode (mocked gate; engine short-circuits on the empty cata
 		}));
 		setServerState({ maintenance_mode: true });
 		try {
-			const out = (await dispatchWidgetRequest(
-				SUPERUSER,
-				{ model: 'update_data_version', action: 'update_data_version' },
-				{ updates_checked: {} },
-			)) as unknown as Record<string, unknown>;
 			// live catalog is empty → the engine's no-descriptor refusal, not the
-			// coexisting bespoke denial (proves the OPEN branch ran)
-			expect(out.result).toBe(false);
-			expect(out.msg).toBe('Unable to get proper update version. Nothing to update');
+			// coexisting bespoke denial (proves the OPEN branch ran). Since the P1
+			// error sweep that refusal is a THROW of maintenance.action_failed whose
+			// PUBLIC sentence is the engine's own.
+			let thrown: unknown;
+			try {
+				await dispatchWidgetRequest(
+					SUPERUSER,
+					{ model: 'update_data_version', action: 'update_data_version' },
+					{ updates_checked: {} },
+				);
+			} catch (error) {
+				thrown = error;
+			}
+			expect(thrown).toBeInstanceOf(DedaloError);
+			const error = thrown as DedaloError;
+			expect(error.code).toBe('maintenance.action_failed');
+			expect(error.publicMessage).toContain(
+				'Unable to get proper update version. Nothing to update',
+			);
 		} finally {
 			setServerState({ maintenance_mode: false });
 			mock.module('../../src/core/update/ownership.ts', () => REAL_OWNERSHIP);

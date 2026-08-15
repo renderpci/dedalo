@@ -5,7 +5,8 @@
  *   1. validates all identifiers at the §7.6 chokepoint (tipos, lang),
  *   2. resolves the component's model/column/translatability from the ontology,
  *   3. dispatches to the per-model fragment builder,
- * and returns a ConformedFilter tree whose leaves carry BuilderResults.
+ * and returns a ConformedFilter tree whose leaves carry BuilderResults
+ * (`fragment` — never an envelope `result`).
  *
  * PHP reference: search::parse_sqo/conform_filter (class.search.php:733/:809)
  * and the per-component resolve_query_object_sql traits.
@@ -71,7 +72,8 @@ export interface JoinFragment {
 
 export type ConformedFilter =
 	| { kind: 'group'; op: string; items: ConformedFilter[] }
-	| { kind: 'leaf'; result: BuilderResult; joins?: JoinFragment[] };
+	/** `fragment` is the leaf's BuilderResult — the SQL it contributes, `false` when it contributes nothing. */
+	| { kind: 'leaf'; fragment: BuilderResult; joins?: JoinFragment[] };
 
 /**
  * Build the PHP build_sql_join chain for a multi-hop path: per hop, a
@@ -255,7 +257,7 @@ async function conformLeaf(
 	const path = leaf.path ?? [];
 	const lastStep = path[path.length - 1];
 	if (lastStep === undefined) {
-		return { kind: 'leaf', result: false };
+		return { kind: 'leaf', fragment: false };
 	}
 
 	// §7.6 chokepoint — every identifier that will be interpolated.
@@ -313,7 +315,7 @@ async function conformLeaf(
 
 	const componentTipo = lastStep.component_tipo;
 	if (componentTipo === undefined) {
-		return { kind: 'leaf', result: false };
+		return { kind: 'leaf', fragment: false };
 	}
 
 	// RELATION LEAVES — filter records whose `relation` column holds a locator
@@ -347,7 +349,7 @@ async function conformLeaf(
 			const legacy = parseLegacyFunctionLeaf(leaf as { use_function?: unknown; q?: unknown });
 			if (legacy === null) {
 				// malformed flat key — contributes nothing (the legacy contract)
-				return { kind: 'leaf', result: false };
+				return { kind: 'leaf', fragment: false };
 			}
 			locators = [legacy];
 		}
@@ -370,7 +372,9 @@ async function conformLeaf(
 				`(SELECT r.section_tipo, r.section_id FROM matrix_relation_index r WHERE ${conditions.join(' OR ')})`,
 			tokenValues,
 		);
-		return joins.length > 0 ? { kind: 'leaf', result, joins } : { kind: 'leaf', result };
+		return joins.length > 0
+			? { kind: 'leaf', fragment: result, joins }
+			: { kind: 'leaf', fragment: result };
 	}
 
 	// Ontology resolution. PHP ontology_utils::check_active_tld:271 allowlists
@@ -480,7 +484,9 @@ async function conformLeaf(
 			`search conform: model '${model}' declares no searchBuilder family and is not a relation model — unsearchable through conform (ledgered, never silently narrowed)`,
 		);
 	}
-	return joins.length > 0 ? { kind: 'leaf', result, joins } : { kind: 'leaf', result };
+	return joins.length > 0
+		? { kind: 'leaf', fragment: result, joins }
+		: { kind: 'leaf', fragment: result };
 }
 
 /** Recursively conform a filter node ($and/$or trees with leaves). */

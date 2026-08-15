@@ -302,7 +302,7 @@ describe('tool_media_versions core', () => {
 			await makeImage('/image/1.5MB/rsc29_rsc170_10.jpg', '400x300');
 			const origBefore = await getDimensions(`${ROOT}/image/original/rsc29_rsc170_10.jpg`);
 			const outcome = await rotateVersionCore(image, id10, pathOpts, '1.5MB', 90);
-			expect(outcome.result).toBe(true);
+			expect(outcome.ok).toBe(true);
 			expect(outcome.errors).toEqual([]);
 			// the named tier swapped W/H; the original is untouched (Original law).
 			const webAfter = await getDimensions(`${ROOT}/image/1.5MB/rsc29_rsc170_10.jpg`);

@@ -61,6 +61,17 @@ export function currentPrincipal(): Principal | undefined {
 	return requestContextStore.getStore()?.principal;
 }
 
+/**
+ * The current request's correlation id — the envelope's `request_id`. Empty
+ * outside any request scope (a direct resolver call in a unit test), exactly
+ * like the language accessors falling back to their defaults. Read by leaf
+ * modules that build an `ok(...)` envelope but are called without the API
+ * context (section/read_facade.ts, area/read.ts, section/record/temporal.ts).
+ */
+export function currentRequestId(): string {
+	return requestContextStore.getStore()?.requestId ?? '';
+}
+
 /** The current request's session, or undefined outside any request scope. */
 export function currentSession(): Session | null | undefined {
 	return requestContextStore.getStore()?.session;

@@ -74,7 +74,8 @@ function timestampName(now: Date, forced: boolean): string {
 }
 
 export interface BackupResponse {
-	result: boolean;
+	/** Did the sequence start (or legitimately skip)? An INTERNAL outcome — never a wire body. */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	pid?: number | null;
@@ -143,7 +144,7 @@ export async function initBackupSequence(
 	overrides: BackupOverrides = {},
 ): Promise<BackupResponse> {
 	const response: BackupResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed initBackupSequence',
 		errors: [],
 	};
@@ -160,7 +161,7 @@ export async function initBackupSequence(
 		const newest = newestBackupMtimeMs(backupDir);
 		const hours = Math.round(Date.now() / 3600000 - Math.round(newest / 1000) / 3600);
 		if (newest > 0 && hours < BACKUP_TIME_RANGE_HOURS) {
-			response.result = true;
+			response.ok = true;
 			response.msg = ` Skipped backup. A recent backup (about ${hours} hours early) already exists. It is not necessary to build another one`;
 			return response;
 		}
@@ -174,7 +175,7 @@ export async function initBackupSequence(
 	}_dbv${version.join('-')}.custom.backup`;
 	const filePath = join(backupDir, fileName);
 	if (existsSync(filePath)) {
-		response.result = true;
+		response.ok = true;
 		response.msg = ` Skipped backup. A recent backup already exists ('${filePath}'). It is not necessary to build another one`;
 		return response;
 	}
@@ -292,7 +293,7 @@ export async function initBackupSequence(
 			// Fast SUCCESS (tiny DB / test dump): the artifact is already verified.
 			writeProcessRecord(child.pid, 'done', `OK. Backup done: ${fileName}`, [], startedAt);
 		}
-		response.result = true;
+		response.ok = true;
 		response.pid = child.pid;
 		response.file_path = filePath;
 		response.pfile = pfileName;

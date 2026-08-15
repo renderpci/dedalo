@@ -7,7 +7,7 @@
 import { MENU_ROOT_MODEL_ORDER } from '../../concepts/area.ts';
 import { sql } from '../../db/postgres.ts';
 import { getModelByTipo } from '../../ontology/resolver.ts';
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { failAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * Top-level area tipos (PHP area::get_ar_root_area_tipos) — never skippable.
@@ -36,21 +36,15 @@ async function menuSkipTiposGetValue(): Promise<WidgetResponse> {
 		);
 		const { config } = await import('../../../config/config.ts');
 		return {
-			result: {
+			data: {
 				areas: await getAllAreas(),
 				skip_tipos: getEffectiveMenuSkipTipos(config.menu.skipTipos),
 				writable: isStateWritable(),
 			},
-			msg: 'OK. Request done successfully',
-			errors: [],
 		};
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return {
-			result: false,
-			msg: `Error building menu_skip_tipos value: ${message}`,
-			errors: [message],
-		};
+		// The reason travels as `cause` (log / debug block), never on the wire.
+		failAction('Error building the menu_skip_tipos panel value', { cause: error });
 	}
 }
 
@@ -72,11 +66,7 @@ async function menuSkipTiposSave(options: Record<string, unknown>): Promise<Widg
 	);
 	const { setServerState } = await import('../../resolve/server_state.ts');
 	setServerState({ menu_skip_tipos: tipos });
-	return {
-		result: { tipos, invalid, removed },
-		msg: menuSkipTiposMessage(removed, invalid),
-		errors: [],
-	};
+	return { data: { tipos, invalid, removed }, msg: menuSkipTiposMessage(removed, invalid) };
 }
 
 /**

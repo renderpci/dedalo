@@ -524,7 +524,7 @@ function assertTierIsEncodable(quality: string, profile: AvSourceProfile): void 
  * shows "Processing" the moment it gets a job id, so a refusal that can be known
  * now must be raised now — an accepted job that dies two seconds later is the
  * shape of the bug this replaces. Throws `AvBuildRefused`; the tool handler
- * turns that into `result:false` + msg.
+ * turns that into the refusal envelope.
  */
 export async function submitAvVersionBuild(
 	spec: MediaTypeSpec,

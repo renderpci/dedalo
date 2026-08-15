@@ -33,7 +33,8 @@ import { mapTldToTargetSectionTipo, safeTld } from './tld.ts';
 export const ONTOLOGY_MAIN_SECTIONS: ReadonlySet<string> = new Set(['hierarchy1', 'ontology35']);
 
 export interface OntologyDeleteOutcome {
-	result: boolean;
+	/** INTERNAL outcome discriminator (never a wire body). */
+	ok: boolean;
 	deletedNodes: number;
 	deletedRecords: number;
 	errors: string[];
@@ -78,7 +79,7 @@ export async function deleteOntologyByTld(
 	skip?: RegistryRef,
 ): Promise<OntologyDeleteOutcome> {
 	const outcome: OntologyDeleteOutcome = {
-		result: false,
+		ok: false,
 		deletedNodes: 0,
 		deletedRecords: 0,
 		errors: [],
@@ -129,7 +130,7 @@ export async function deleteOntologyByTld(
 		}
 	}
 
-	outcome.result = true;
+	outcome.ok = true;
 	return outcome;
 }
 
@@ -146,7 +147,7 @@ export async function deleteOntologyMain(
 	const tld = await tldFromRegistryRecord(sectionTipo, sectionId);
 	if (tld === null) {
 		return {
-			result: false,
+			ok: false,
 			deletedNodes: 0,
 			deletedRecords: 0,
 			errors: [`empty or unsafe tld for '${sectionTipo}/${sectionId}' — cascade refused`],
@@ -154,7 +155,7 @@ export async function deleteOntologyMain(
 	}
 
 	const outcome = await deleteOntologyByTld(tld, deleteRecord, { sectionTipo, sectionId });
-	if (!outcome.result) return outcome;
+	if (!outcome.ok) return outcome;
 
 	// The registry record itself — the one thing the by-tld sweep never touches.
 	await deleteRecord(sectionTipo, sectionId);

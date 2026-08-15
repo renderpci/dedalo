@@ -325,7 +325,7 @@ beforeAll(async () => {
 		},
 	]);
 	const provisioned = await ensureHierarchy(hierarchyId, provisioner.userId);
-	if (!provisioned.result) {
+	if (!provisioned.ok) {
 		throw new Error(
 			`relation insert gate: the scratch thesaurus did not provision (${provisioned.msg}; ${provisioned.errors.join('; ')}) — the selectability cases below would be vacuous.`,
 		);

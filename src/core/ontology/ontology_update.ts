@@ -16,7 +16,7 @@
  * validated BEFORE the first destructive statement; a per-table recovery
  * snapshot is taken before import and AUTO-RESTORED on failure; each file's
  * DELETE+COPY is one transaction. PHP's per-file partial success
- * (result:true with errors) is replaced by all-or-nothing semantics.
+ * (ok:true with errors) is replaced by all-or-nothing semantics.
  * TS-N/A steps (PHP session wipe, static JS lang-file regen, backend
  * activity row): the TS engine has no static session caches or generated
  * lang files — UI labels are repo catalogs (WC-033) and in-process caches
@@ -126,7 +126,7 @@ export function saveSimpleSchemaFile(
 	oldSchema: Record<string, string[]>,
 	newSchema: Record<string, string[]>,
 	dirPath: string = join(privateDir, 'backups', 'ontology', 'changes'),
-): { result: boolean; msg: string; errors: string[]; filepath?: string } {
+): { ok: boolean; msg: string; errors: string[]; filepath?: string } {
 	const changes: { tipo: string; children_added: string[] }[] = [];
 	for (const [tipo, children] of Object.entries(newSchema)) {
 		const before = new Set(oldSchema[tipo] ?? []);
@@ -139,7 +139,7 @@ export function saveSimpleSchemaFile(
 		mkdirSync(dirPath, { recursive: true, mode: 0o750 });
 	} catch {
 		return {
-			result: false,
+			ok: false,
 			msg: `Error on read or create directory. Permission denied (${dirPath})`,
 			errors: [`unable to create ${dirPath}`],
 		};
@@ -149,12 +149,12 @@ export function saveSimpleSchemaFile(
 		writeFileSync(filepath, JSON.stringify(changes));
 	} catch {
 		return {
-			result: false,
+			ok: false,
 			msg: `Error on read or create file of simple schema changes. Permission denied (${filepath})`,
 			errors: [`unable to write ${filepath}`],
 		};
 	}
-	return { result: true, msg: 'OK. Request successfully processed', errors: [], filepath };
+	return { ok: true, msg: 'OK. Request successfully processed', errors: [], filepath };
 }
 
 /** Snapshot one table's rows (whole or tipo-scoped) to a plain `.copy` file. */
@@ -237,7 +237,7 @@ export async function updateOntology(
 ): Promise<OntologyIoResponse> {
 	const { conn, catalog } = resolveUpdateDeps(deps);
 	const response: OntologyIoResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed [update_ontology::update_ontology]',
 		errors: [],
 	};
@@ -343,7 +343,7 @@ export async function updateOntology(
 					conn,
 				});
 				messages.push(imported.msg);
-				if (imported.result !== true) {
+				if (imported.ok !== true) {
 					response.errors.push(...imported.errors);
 					await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
 					response.msg = restoreFailureMessage(provisioned, response.errors);
@@ -376,7 +376,7 @@ export async function updateOntology(
 				conn,
 			});
 			messages.push(imported.msg);
-			if (imported.result !== true) {
+			if (imported.ok !== true) {
 				response.errors.push(...imported.errors);
 				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
 				response.msg = restoreFailureMessage(provisioned, response.errors);
@@ -392,7 +392,7 @@ export async function updateOntology(
 				// FATAL and ROLLED BACK, exactly like a failed import above. Continuing
 				// would run the dd_ontology re-derive below over rows that still
 				// declare the export's tld — projecting the whole ontology into the OLD
-				// namespace and finishing `result: true`. A warning here was the worst
+				// namespace and finishing `ok: true`. A warning here was the worst
 				// of both: the damage done, and the panel reporting success.
 				response.errors.push(`ontology7 normalization failed for ${file.sectionTipo}`);
 				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
@@ -419,7 +419,7 @@ export async function updateOntology(
 				userId,
 			});
 			messages.push(rebuilt.msg);
-			if (rebuilt.result !== true) response.errors.push(...rebuilt.errors);
+			if (rebuilt.ok !== true) response.errors.push(...rebuilt.errors);
 		}
 
 		const optimizeErrors = await optimizeTables(OPTIMIZE_TABLES, conn);
@@ -433,8 +433,8 @@ export async function updateOntology(
 		// schema-changes file — the ONE hard-fail tail step (PHP parity)
 		const newSchema = await getSimpleSchemaOfSections();
 		const schemaSaved = saveSimpleSchemaFile(oldSchema, newSchema, deps.changesDir);
-		if (!schemaSaved.result) {
-			response.result = false;
+		if (!schemaSaved.ok) {
+			response.ok = false;
 			response.msg = `Error saving simple_schema_file: ${schemaSaved.msg}`;
 			response.errors.push(...schemaSaved.errors);
 			return response;
@@ -451,7 +451,7 @@ export async function updateOntology(
 			properties: (rootRow as { properties?: unknown } | null)?.properties ?? null,
 		};
 
-		response.result = true;
+		response.ok = true;
 		response.msg = `${response.errors.length === 0 ? 'OK. Request done successfully' : 'Warning! Request done with errors'} ${messages.join('\n')}`;
 		return response;
 	} catch (error) {
@@ -511,7 +511,7 @@ export async function restoreSnapshots(
 						conn,
 					},
 		);
-		if (restored.result !== true) {
+		if (restored.ok !== true) {
 			errors.push(
 				`RESTORE FAILED for ${file.tld}: ${restored.errors.join('; ')} — MANUAL RESTORE REQUIRED from ${snapshot}`,
 			);

@@ -1,8 +1,9 @@
 /**
  * core/update/preconditions.ts + the update_data_version EXECUTE refactored
- * onto it (UPDATE_PROCESS Phase 0). The refusal envelopes are PHP WIRE BYTES
- * (widget_request_differential pins the superuser refusal against the live
- * oracle) — every assertion here is exact-string on purpose.
+ * onto it (UPDATE_PROCESS Phase 0). Since the P1 error sweep the refusals are
+ * TYPED THROWS (engineering/ERRORS_SPEC.md §4), so what is pinned here is the
+ * registered CODE plus the operator sentence each refusal carries — the
+ * sentences themselves are still exact-string on purpose.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -10,9 +11,32 @@ import { mkdirSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readEnv } from '../../src/config/env.ts';
 import { dispatchWidgetRequest } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { setServerState } from '../../src/core/resolve/server_state.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { checkUpdatePreconditions } from '../../src/core/update/preconditions.ts';
+
+/** The DedaloError a thunk threw (fails the test when it threw nothing typed). */
+function thrownBy(run: () => unknown): DedaloError {
+	try {
+		run();
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a DedaloError, nothing was thrown');
+}
+
+/** The same, for an async call. */
+async function rejectedBy(run: () => Promise<unknown>): Promise<DedaloError> {
+	try {
+		await run();
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected a DedaloError, nothing was thrown');
+}
 
 const STATE_PATH = readEnv('DEDALO_TS_STATE_PATH');
 if (STATE_PATH === undefined) {
@@ -34,32 +58,25 @@ afterAll(() => {
 describe('checkUpdatePreconditions — required checks (PHP refusal bytes)', () => {
 	test('non-superuser refused first, PHP order', () => {
 		setServerState({ maintenance_mode: false }); // must not matter: superuser first
-		const out = checkUpdatePreconditions(PLAIN_ADMIN);
-		expect(out.ok).toBe(false);
-		expect(out.refusal).toEqual({
-			result: false,
-			msg: 'Error. Only Dédalo superuser can do this action',
-			errors: [],
-		});
-		expect(out.warnings).toEqual([]);
+		const error = thrownBy(() => checkUpdatePreconditions(PLAIN_ADMIN));
+		expect(error.code).toBe('perm.developer_required');
+		expect(error.message).toBe('Error. Only Dédalo superuser can do this action');
 	});
 
 	test('superuser without maintenance mode refused', () => {
 		setServerState({ maintenance_mode: false });
-		const out = checkUpdatePreconditions(SUPERUSER);
-		expect(out.ok).toBe(false);
-		expect(out.refusal).toEqual({
-			result: false,
-			msg: 'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
-			errors: [],
-		});
+		const error = thrownBy(() => checkUpdatePreconditions(SUPERUSER));
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(error.publicMessage).toBe(
+			'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
+		);
 	});
 
 	test('superuser + maintenance mode passes (backupWarn off → no warnings)', () => {
 		setServerState({ maintenance_mode: true });
 		try {
 			const out = checkUpdatePreconditions(SUPERUSER, { backupWarn: false });
-			expect(out).toEqual({ ok: true, refusal: null, warnings: [] });
+			expect(out).toEqual({ warnings: [] });
 		} finally {
 			setServerState({ maintenance_mode: false });
 		}
@@ -83,7 +100,6 @@ describe('checkUpdatePreconditions — recent-backup warning (never refuses)', (
 
 	test('no backup dir / no *.backup files → warns, still ok', () => {
 		const out = passWithDir(join(scratch, 'absent'));
-		expect(out.ok).toBe(true);
 		expect(out.warnings).toEqual([
 			'Warning. No database backup found — make a backup before updating',
 		]);
@@ -95,7 +111,6 @@ describe('checkUpdatePreconditions — recent-backup warning (never refuses)', (
 		writeFileSync(join(dir, 'note.txt'), 'not a backup');
 		writeFileSync(join(dir, 'db.custom.backup'), 'x');
 		const out = passWithDir(dir);
-		expect(out.ok).toBe(true);
 		expect(out.warnings).toEqual([]);
 	});
 
@@ -107,14 +122,13 @@ describe('checkUpdatePreconditions — recent-backup warning (never refuses)', (
 		const tenHoursAgo = (Date.now() - 10 * 3600000) / 1000;
 		utimesSync(file, tenHoursAgo, tenHoursAgo);
 		const out = passWithDir(dir);
-		expect(out.ok).toBe(true);
 		expect(out.warnings).toEqual([
 			'Warning. Newest database backup is about 10 hours old — make a fresh backup before updating',
 		]);
 	});
 });
 
-describe('update_data_version EXECUTE through the widget dispatch (bytes frozen)', () => {
+describe('update_data_version EXECUTE through the widget dispatch (typed refusals)', () => {
 	function run(principal: Principal) {
 		return dispatchWidgetRequest(
 			principal,
@@ -123,23 +137,19 @@ describe('update_data_version EXECUTE through the widget dispatch (bytes frozen)
 		) as unknown as Promise<Record<string, unknown>>;
 	}
 
-	test('non-superuser admin → superuser refusal bytes', async () => {
-		const out = await run(PLAIN_ADMIN);
-		expect(out).toEqual({
-			result: false,
-			msg: 'Error. Only Dédalo superuser can do this action',
-			errors: [],
-		});
+	test('non-superuser admin → the superuser refusal', async () => {
+		const error = await rejectedBy(() => run(PLAIN_ADMIN));
+		expect(error.code).toBe('perm.developer_required');
+		expect(error.message).toBe('Error. Only Dédalo superuser can do this action');
 	});
 
-	test('superuser, maintenance off → maintenance refusal bytes', async () => {
+	test('superuser, maintenance off → the maintenance-mode refusal', async () => {
 		setServerState({ maintenance_mode: false });
-		const out = await run(SUPERUSER);
-		expect(out).toEqual({
-			result: false,
-			msg: 'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
-			errors: [],
-		});
+		const error = await rejectedBy(() => run(SUPERUSER));
+		expect(error.code).toBe('maintenance.action_refused');
+		expect(error.publicMessage).toBe(
+			'Error. Update data is not allowed if Dédalo is not in maintenance_mode',
+		);
 	});
 
 	test('the frozen whenClosed branch keeps the bespoke engine_denied bytes', async () => {
@@ -156,12 +166,13 @@ describe('update_data_version EXECUTE through the widget dispatch (bytes frozen)
 		expect(whenClosed).toBeDefined();
 		setServerState({ maintenance_mode: true });
 		try {
-			const out = await (whenClosed as NonNullable<typeof whenClosed>)({}, SUPERUSER);
-			expect(out).toEqual({
-				result: false,
-				msg: 'Error. Data migrations are not runnable on this engine: the migration catalog (updates.php) belongs to the PHP install. Run the update from the PHP maintenance dashboard.',
-				errors: ['engine_denied: update_data_version'],
-			});
+			const error = await rejectedBy(() =>
+				(whenClosed as NonNullable<typeof whenClosed>)({}, SUPERUSER),
+			);
+			expect(error.code).toBe('maintenance.widget_unavailable');
+			expect(error.publicMessage).toBe(
+				"Error. 'update_data_version.update_data_version' is not runnable on this engine: the migration catalog (updates.php) belongs to the PHP install. Run it from the PHP maintenance dashboard.",
+			);
 		} finally {
 			setServerState({ maintenance_mode: false });
 		}

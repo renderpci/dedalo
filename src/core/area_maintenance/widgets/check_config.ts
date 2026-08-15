@@ -8,7 +8,12 @@
 
 import { sql } from '../../db/postgres.ts';
 import { probeSchemaHealth } from '../../db/schema_probe.ts';
-import type { WidgetHandler, WidgetModule, WidgetResponse } from './support.ts';
+import {
+	refuseAction,
+	type WidgetHandler,
+	type WidgetModule,
+	type WidgetResponse,
+} from './support.ts';
 
 /** One catalog credential placeholder rule, as `CATALOG_PLACEHOLDERS` carries it. */
 export interface CredentialPlaceholder {
@@ -295,10 +300,8 @@ async function computeCheckConfig(): Promise<{
 async function checkConfigGetValue(): Promise<WidgetResponse> {
 	const { payload, errors } = await computeCheckConfig();
 	return {
-		result: payload,
-		msg:
-			errors.length === 0 ? 'OK. Request done successfully' : 'Warning. Request done with errors',
-		errors,
+		data: payload,
+		...(errors.length === 0 ? {} : { msg: 'Warning. Request done with errors', errors }),
 	};
 }
 
@@ -326,16 +329,11 @@ function checkConfigSetState(flag: 'maintenance_mode' | 'recovery_mode'): Widget
 	return async (options) => {
 		const value = options.value;
 		if (typeof value !== 'boolean') {
-			return { result: false, msg: 'Error. Request failed', errors: [] };
+			refuseAction(`Error. Request failed. ${flag} value is not a boolean`, { flag });
 		}
 		const { setServerState } = await import('../../resolve/server_state.ts');
 		const state = setServerState({ [flag]: value });
-		return {
-			result: true,
-			msg: 'OK. Request done successfully',
-			errors: [],
-			...({ state } as Record<string, unknown>),
-		} as WidgetResponse;
+		return { data: true, extend: { state } };
 	};
 }
 
@@ -345,16 +343,11 @@ async function checkConfigSetNotification(
 ): Promise<WidgetResponse> {
 	const value = options.value;
 	if (typeof value !== 'string' && typeof value !== 'boolean') {
-		return { result: false, msg: 'Error. Request failed. value is not string or bool', errors: [] };
+		refuseAction('Error. Request failed. value is not string or bool');
 	}
 	const { setServerState } = await import('../../resolve/server_state.ts');
 	const state = setServerState({ notification: value });
-	return {
-		result: true,
-		msg: 'OK. Request done successfully',
-		errors: [],
-		...({ state } as Record<string, unknown>),
-	} as WidgetResponse;
+	return { data: true, extend: { state } };
 }
 
 export const widget: WidgetModule = {

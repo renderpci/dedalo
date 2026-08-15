@@ -93,7 +93,7 @@ describe('rebuildOntology', () => {
 	test('builds every parsed node + the main node, and becomes in sync', async () => {
 		const outcome = await rebuildOntology(TLD, USER_ID);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(outcome.state.inSync).toBe(true);
 		expect(outcome.state.mainNodeOk).toBe(true);
 		expect(await storedTerm('zzo1')).toBe('First');
@@ -104,7 +104,7 @@ describe('rebuildOntology', () => {
 		await rebuildOntology(TLD, USER_ID);
 		const again = await rebuildOntology(TLD, USER_ID);
 
-		expect(again.result).toBe(true);
+		expect(again.ok).toBe(true);
 		expect(again.state.inSync).toBe(true);
 		expect(again.state.storedNodes).toBe(3); // zzo0 (main) + zzo1 + zzo2
 		expect(await storedTerm('zzo1')).toBe('First');
@@ -188,7 +188,7 @@ describe('rebuildOntology', () => {
 
 		const outcome = await rebuildOntology(TLD, USER_ID);
 
-		expect(outcome.result).toBe(true);
+		expect(outcome.ok).toBe(true);
 		expect(outcome.state.inSync).toBe(true);
 		expect(await storedTerm('zzo1')).toBe('First');
 		// The new rebuild uses a transaction, NOT the old fragile dd_ontology_bk protocol.

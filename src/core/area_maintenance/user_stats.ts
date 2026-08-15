@@ -327,8 +327,14 @@ interface DayGroup {
 	publish: Map<string, number>;
 }
 
+/**
+ * The aggregate-rebuild OUTCOME — an INTERNAL shape (never a wire body):
+ * `ok` says whether the run completed, `value` carries what it produced
+ * (the updated-day list, `0` for "already updated", `[]` for "no activity").
+ */
 export interface UpdateStatsResponse {
-	result: unknown;
+	ok: boolean;
+	value: unknown;
 	msg: string;
 	errors: string[];
 	[extra: string]: unknown;
@@ -351,7 +357,8 @@ export async function updateUserActivityStats(
 	pageRows: number = AGGREGATE_PAGE_ROWS,
 ): Promise<UpdateStatsResponse> {
 	const response: UpdateStatsResponse = {
-		result: false,
+		ok: false,
+		value: false,
 		msg: 'Error. Request failed. ',
 		errors: [],
 	};
@@ -383,7 +390,8 @@ export async function updateUserActivityStats(
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
 	if (lastAggregated !== null && lastAggregated.getTime() >= yesterday.getTime()) {
-		response.result = 0;
+		response.ok = true;
+		response.value = 0;
 		response.msg = 'Stats are already updated';
 		return response;
 	}
@@ -413,8 +421,9 @@ export async function updateUserActivityStats(
 	for (const [day, list] of byDay) dayGroups.set(day, foldTallies(list));
 
 	if (rowCount === 0) {
+		response.ok = true;
 		response.msg = 'No activity records found';
-		response.result = [];
+		response.value = [];
 		return response;
 	}
 
@@ -460,7 +469,8 @@ export async function updateUserActivityStats(
 		updatedDays.push({ user: userId, date: day });
 	}
 
-	response.result = updatedDays;
+	response.ok = true;
+	response.value = updatedDays;
 	response.msg =
 		response.errors.length === 0 ? 'OK. Request done.' : 'Warning! Request done with errors';
 	return response;

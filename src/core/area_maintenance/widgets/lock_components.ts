@@ -6,8 +6,9 @@
  * the API handler through dispatchLockComponentsActions below.
  */
 
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { Principal } from '../../security/permissions.ts';
-import type { WidgetModule } from './support.ts';
+import type { WidgetModule, WidgetResponse } from './support.ts';
 
 /**
  * dd_area_maintenance_api.lock_components_actions — the lock_components widget's
@@ -21,21 +22,24 @@ import type { WidgetModule } from './support.ts';
 export async function dispatchLockComponentsActions(
 	principal: Principal,
 	options: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+): Promise<WidgetResponse> {
 	if (!principal.isGlobalAdmin) {
-		return {
-			result: false,
-			msg: 'Error. maintenance widgets are an admin surface',
-			errors: ['unauthorized'],
-		};
+		throw new DedaloError('perm.denied', {
+			message: 'maintenance widgets are an admin surface',
+		});
 	}
 	const fnAction = typeof options.fn_action === 'string' ? options.fn_action : '';
 	const { getActiveLockUsers, forceUnlockAllComponents, forceUnlockAllUsers } = await import(
 		'../../section/locks.ts'
 	);
 	switch (fnAction) {
-		case 'get_active_users':
-			return getActiveLockUsers();
+		case 'get_active_users': {
+			// `ar_user_actions` is a TOP-LEVEL key: render_lock_components.js:261
+			// hands the refresh response straight to print_active_users, which reads
+			// it there (the eager catalog value nests it under `active_users`).
+			const active = await getActiveLockUsers();
+			return { data: active.result, extend: { ar_user_actions: active.ar_user_actions } };
+		}
 		case 'force_unlock_all_components': {
 			const rawUser = options.user_id;
 			const hasUser = rawUser !== null && rawUser !== undefined && String(rawUser) !== '';
@@ -43,17 +47,15 @@ export async function dispatchLockComponentsActions(
 				? await forceUnlockAllComponents(Number(rawUser))
 				: await forceUnlockAllUsers();
 			return {
-				result: true,
+				data: true,
 				msg: `OK. ${freed} lock(s) released${hasUser ? ` for user ${String(rawUser)}` : ' (all users)'}`,
-				freed,
+				extend: { freed },
 			};
 		}
 		default:
-			return {
-				result: false,
-				msg: `Error. Invalid fn_action: ${fnAction}`,
-				errors: ['invalid_fn_action'],
-			};
+			throw new DedaloError('maintenance.invalid_fn_action', {
+				coordinates: { fn_action: fnAction },
+			});
 	}
 }
 

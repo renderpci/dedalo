@@ -129,7 +129,8 @@ export interface EnsureOptions {
 }
 
 export interface EnsureResult {
-	result: boolean;
+	/** Did the hierarchy end up usable? (An INTERNAL outcome, never a wire body.) */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 	/** The state AFTER the writes — what the client re-renders its checklist from. */
@@ -580,7 +581,7 @@ export async function ensureHierarchy(
 	const applied: string[] = [];
 	const errors: string[] = [];
 	const fail = async (msg: string): Promise<EnsureResult> => ({
-		result: false,
+		ok: false,
 		msg,
 		errors: [...errors, msg],
 		state: await inspectHierarchy(sectionId),
@@ -653,7 +654,7 @@ export async function ensureHierarchy(
 		// "already generated" is the precondition firing on a PARTIAL ontology (e.g. the
 		// node records exist but a dd_ontology node was purged). Surface it — a rebuild
 		// is the honest fix, and silently proceeding would leave a half-built hierarchy.
-		if (!provision.result) {
+		if (!provision.ok) {
 			return fail(
 				provision.msg.includes('already generated')
 					? `the ontology of '${tld}' is INCOMPLETE (${ontology.detail}) — use Rebuild`
@@ -714,7 +715,7 @@ export async function ensureHierarchy(
 
 	const state = await inspectHierarchy(sectionId);
 	return {
-		result: state.usable && errors.length === 0,
+		ok: state.usable && errors.length === 0,
 		msg: state.usable
 			? applied.length === 0
 				? 'Already consistent — nothing to do'
@@ -741,7 +742,7 @@ export async function rebuildHierarchy(
 	const tld = safeTld(literal(row, HIERARCHY_TLD).trim().toLowerCase());
 	if (row === null || tld === null) {
 		return {
-			result: false,
+			ok: false,
 			msg: 'cannot rebuild: the hierarchy record has no valid TLD',
 			errors: ['invalid tld'],
 			state: await inspectHierarchy(sectionId),
@@ -749,9 +750,9 @@ export async function rebuildHierarchy(
 		};
 	}
 	const teardown = await deleteOntologyByTld(tld, deleteRecord);
-	if (!teardown.result) {
+	if (!teardown.ok) {
 		return {
-			result: false,
+			ok: false,
 			msg: `teardown of '${tld}' failed — nothing was rebuilt`,
 			errors: teardown.errors,
 			state: await inspectHierarchy(sectionId),

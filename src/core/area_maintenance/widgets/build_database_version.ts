@@ -8,7 +8,7 @@
  */
 
 import type { WidgetModule, WidgetResponse } from './support.ts';
-import { engineDenied, gated } from './support.ts';
+import { engineDenied, fromOutcome, gated } from './support.ts';
 
 /*
  * COVERAGE-EXEMPT, all three functions in this file (coverage plan §5.2; reason
@@ -20,12 +20,12 @@ import { engineDenied, gated } from './support.ts';
  */
 async function buildRecoveryOwned(): Promise<WidgetResponse> {
 	const { buildRecoveryVersionFile } = await import('../../ontology/recovery_file.ts');
-	return (await buildRecoveryVersionFile()) as unknown as WidgetResponse;
+	return fromOutcome(await buildRecoveryVersionFile());
 }
 
 async function restoreRecoveryOwned(): Promise<WidgetResponse> {
 	const { restoreDdOntologyRecoveryFromFile } = await import('../../ontology/recovery_file.ts');
-	return (await restoreDdOntologyRecoveryFromFile()) as unknown as WidgetResponse;
+	return fromOutcome(await restoreDdOntologyRecoveryFromFile());
 }
 
 /**
@@ -42,13 +42,11 @@ async function buildDatabaseVersionGetValue(): Promise<WidgetResponse> {
 	// dump is built from (hard-coded there; kept in parity here).
 	const targetDb = 'dedalo7_install';
 	return {
-		result: {
+		data: {
 			source_db: sourceDb,
 			target_db: targetDb,
 			target_file: `/install/db/${targetDb}.pgsql.gz`,
 		},
-		msg: 'ok',
-		errors: [],
 	};
 }
 

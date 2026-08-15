@@ -34,6 +34,7 @@ import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { allComponentModels } from '../../src/core/components/registry.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
 import { getComponentFilterTipo } from '../../src/core/ontology/resolver.ts';
 import { applyAddNewElement, deletePortalLocator } from '../../src/core/relations/save.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
@@ -699,12 +700,21 @@ describe('deletePortalLocator permission gate (PHP assert_section_permission …
 	test('a level-0 non-admin is refused and nothing is removed', async () => {
 		const host = track(HOST_SECTION, await createSectionRecord(HOST_SECTION, SCRATCH_USER));
 		await seedPortal(host, [link(1, 101), link(2, 102)]);
-		const response = await deletePortalLocator(
-			projectlessNonAdmin, // no profile ⇒ level 0 on numisdata3
-			{ tipo: PORTAL, section_tipo: HOST_SECTION, section_id: host },
-			{ locator: link(1, 101), ar_properties: ['section_tipo', 'section_id'] },
-		);
-		expect(response.errors).toEqual(['insufficient permissions']);
+		// The refusal is a THROW now (ERRORS_SPEC §4) — asserted by code, and the
+		// refused section rides as a LOG-ONLY coordinate.
+		let refusal: DedaloError | null = null;
+		try {
+			await deletePortalLocator(
+				projectlessNonAdmin, // no profile ⇒ level 0 on numisdata3
+				{ tipo: PORTAL, section_tipo: HOST_SECTION, section_id: host },
+				{ locator: link(1, 101), ar_properties: ['section_tipo', 'section_id'] },
+			);
+		} catch (error) {
+			refusal = error as DedaloError;
+		}
+		expect(refusal).toBeInstanceOf(DedaloError);
+		expect(refusal?.code).toBe('perm.denied');
+		expect(refusal?.spec.status).toBe(403);
 		const rows = (await sql.unsafe(
 			`SELECT relation->$3 AS items FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[HOST_SECTION, host, PORTAL],
@@ -722,8 +732,7 @@ describe('deletePortalLocator permission gate (PHP assert_section_permission …
 			{ tipo: PORTAL, section_tipo: HOST_SECTION, section_id: host },
 			{ locator: link(1, 101), ar_properties: ['section_tipo', 'section_id'] },
 		);
-		expect(response.errors).toEqual([]);
-		expect(response.result).toBe(1);
+		expect(response.removed).toBe(1);
 		const rows = (await sql.unsafe(
 			`SELECT relation->$3 AS items FROM ${TABLE} WHERE section_tipo = $1 AND section_id = $2`,
 			[HOST_SECTION, host, PORTAL],

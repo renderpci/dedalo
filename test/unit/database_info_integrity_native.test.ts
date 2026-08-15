@@ -123,9 +123,9 @@ interface IntegrityResult {
 }
 
 interface Report {
-	result: IntegrityResult;
-	msg: string;
-	errors: string[];
+	data: IntegrityResult;
+	msg?: string;
+	errors?: string[];
 }
 
 async function runReport(): Promise<Report> {
@@ -134,10 +134,11 @@ async function runReport(): Promise<Report> {
 		throw new Error('database_info widget exposes no relation_integrity_report action');
 	}
 	const response = (await action({}, ADMIN)) as unknown as Report;
-	// The store-missing early return would land here with result === false; that
-	// is a broken suite database, not a passing test.
-	if (response.result === undefined || typeof response.result !== 'object') {
-		throw new Error(`relation_integrity_report returned no result: ${JSON.stringify(response)}`);
+	// A missing store THROWS (maintenance.store_missing) — that is a broken
+	// suite database, not a passing test — so anything that gets here must
+	// carry the report payload.
+	if (response.data === undefined || typeof response.data !== 'object') {
+		throw new Error(`relation_integrity_report returned no data: ${JSON.stringify(response)}`);
 	}
 	return response;
 }
@@ -296,11 +297,11 @@ afterAll(async () => {
 test('a reference to a missing record is counted as dangling for its target section', () => {
 	// The section was absent from the store before the seed (beforeAll asserts
 	// zero index rows for it), so the bucket that appears is entirely this file's.
-	expect(before.result.dangling_by_target_section[TARGET_TIPO]).toBeUndefined();
-	expect(Object.hasOwn(after.result.dangling_by_target_section, TARGET_TIPO)).toBe(true);
+	expect(before.data.dangling_by_target_section[TARGET_TIPO]).toBeUndefined();
+	expect(Object.hasOwn(after.data.dangling_by_target_section, TARGET_TIPO)).toBe(true);
 	// Two distinct missing targets, referenced by three index rows: the count is
 	// over DISTINCT target_section_id, so 2 — a dropped DISTINCT reads 3.
-	expect(after.result.dangling_by_target_section[TARGET_TIPO]).toBe(2);
+	expect(after.data.dangling_by_target_section[TARGET_TIPO]).toBe(2);
 });
 
 test('a reference to a live record is not counted, though it shares the target section', () => {
@@ -308,9 +309,9 @@ test('a reference to a live record is not counted, though it shares the target s
 	// may be counted. Each wrong probe lands on a different number:
 	//   1 → the anti-join was reversed (only the live target counted)
 	//   3 → the target table stopped being consulted, or the DISTINCT was dropped
-	expect(after.result.dangling_by_target_section[TARGET_TIPO]).not.toBe(1);
-	expect(after.result.dangling_by_target_section[TARGET_TIPO]).not.toBe(3);
-	expect(after.result.dangling_by_target_section[TARGET_TIPO]).toBe(2);
+	expect(after.data.dangling_by_target_section[TARGET_TIPO]).not.toBe(1);
+	expect(after.data.dangling_by_target_section[TARGET_TIPO]).not.toBe(3);
+	expect(after.data.dangling_by_target_section[TARGET_TIPO]).toBe(2);
 });
 
 test('the dangling probe keys on (section_tipo, section_id), not on the id alone', () => {
@@ -318,20 +319,20 @@ test('the dangling probe keys on (section_tipo, section_id), not on the id alone
 	// test3, not under test2. An anti-join that dropped its `t.section_tipo = $1`
 	// half resolves it and the bucket never appears.
 	const delta =
-		(after.result.dangling_by_target_section[COLLISION_TIPO] ?? 0) -
-		(before.result.dangling_by_target_section[COLLISION_TIPO] ?? 0);
+		(after.data.dangling_by_target_section[COLLISION_TIPO] ?? 0) -
+		(before.data.dangling_by_target_section[COLLISION_TIPO] ?? 0);
 	expect(delta).toBe(1);
-	expect(Object.hasOwn(after.result.dangling_by_target_section, COLLISION_TIPO)).toBe(true);
+	expect(Object.hasOwn(after.data.dangling_by_target_section, COLLISION_TIPO)).toBe(true);
 });
 
 test('the dangling total is exactly the sum of the reported per-section buckets', () => {
 	// The total is a whole-database aggregate other agents move, so it is pinned
 	// as an INVARIANT against the map rather than as a delta: a bucket that never
 	// reached the total (or a total counting sections the map omits) reddens here.
-	const sum = Object.values(after.result.dangling_by_target_section).reduce((a, b) => a + b, 0);
-	expect(after.result.dangling_targets_total).toBe(sum);
+	const sum = Object.values(after.data.dangling_by_target_section).reduce((a, b) => a + b, 0);
+	expect(after.data.dangling_targets_total).toBe(sum);
 	// Every reported bucket is positive — the `if (n > 0)` omission rule.
-	for (const n of Object.values(after.result.dangling_by_target_section)) {
+	for (const n of Object.values(after.data.dangling_by_target_section)) {
 		expect(n).toBeGreaterThan(0);
 	}
 	expect(sum).toBeGreaterThanOrEqual(3);
@@ -341,9 +342,9 @@ test('a target section that resolves to no matrix table is reported unverifiable
 	expect(before.errors).not.toContain(UNVERIFIABLE_LINE);
 	expect(after.errors).toContain(UNVERIFIABLE_LINE);
 	// Exactly ONE line for the tipo — the loop pushes once and `continue`s.
-	expect(after.errors.filter((line) => line === UNVERIFIABLE_LINE)).toHaveLength(1);
+	expect((after.errors ?? []).filter((line) => line === UNVERIFIABLE_LINE)).toHaveLength(1);
 	// …and it is never probed, so it can never appear as a dangling bucket.
-	expect(Object.hasOwn(after.result.dangling_by_target_section, BOGUS_TIPO)).toBe(false);
+	expect(Object.hasOwn(after.data.dangling_by_target_section, BOGUS_TIPO)).toBe(false);
 	// Weak on its own (see the header: `errors` is never empty in
 	// dedalo_mib_v7_test), but it is the envelope the panel reads.
 	expect(after.msg).toBe('Warning. Request done with errors');
@@ -353,19 +354,19 @@ test('a non-numeric section_id is counted as a skipped locator for its source ta
 	// Attributed, not merely differenced: the foreign contribution is measured
 	// immediately after each report run and subtracted.
 	const mineBefore =
-		(before.result.non_numeric_locators_by_table.matrix_test ?? 0) - foreignNonNumericBefore;
+		(before.data.non_numeric_locators_by_table.matrix_test ?? 0) - foreignNonNumericBefore;
 	const mineAfter =
-		(after.result.non_numeric_locators_by_table.matrix_test ?? 0) - foreignNonNumericAfter;
+		(after.data.non_numeric_locators_by_table.matrix_test ?? 0) - foreignNonNumericAfter;
 	expect(mineBefore).toBe(0);
 	expect(mineAfter).toBe(1);
-	expect(Object.hasOwn(after.result.non_numeric_locators_by_table, 'matrix_test')).toBe(true);
+	expect(Object.hasOwn(after.data.non_numeric_locators_by_table, 'matrix_test')).toBe(true);
 	// `matrix` carries the corpus's real records and zero non-numeric locators,
 	// so it pins the omission rule on this loop too.
-	expect(Object.hasOwn(after.result.non_numeric_locators_by_table, 'matrix')).toBe(false);
+	expect(Object.hasOwn(after.data.non_numeric_locators_by_table, 'matrix')).toBe(false);
 });
 
 test('the report keeps its wire shape and its aggregate keys', () => {
-	expect(Object.keys(after.result).sort()).toEqual([
+	expect(Object.keys(after.data).sort()).toEqual([
 		'dangling_by_target_section',
 		'dangling_targets_total',
 		'non_numeric_locators_by_table',
@@ -374,9 +375,9 @@ test('the report keeps its wire shape and its aggregate keys', () => {
 	]);
 	// store_rows / target_sections are whole-table aggregates every other agent
 	// moves, so they are pinned as types and floors only, never as deltas.
-	expect(typeof after.result.store_rows).toBe('number');
-	expect(after.result.store_rows).toBeGreaterThan(0);
-	expect(typeof after.result.target_sections).toBe('number');
-	expect(after.result.target_sections).toBeGreaterThan(0);
+	expect(typeof after.data.store_rows).toBe('number');
+	expect(after.data.store_rows).toBeGreaterThan(0);
+	expect(typeof after.data.target_sections).toBe('number');
+	expect(after.data.target_sections).toBeGreaterThan(0);
 	expect(Array.isArray(after.errors)).toBe(true);
 });

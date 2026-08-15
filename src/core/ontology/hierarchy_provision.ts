@@ -86,7 +86,8 @@ export interface GenerateVirtualSectionOptions {
 }
 
 export interface GenerateVirtualSectionResponse {
-	result: boolean;
+	/** INTERNAL outcome discriminator (never a wire body). */
+	ok: boolean;
 	msg: string;
 	errors: string[];
 }
@@ -130,7 +131,7 @@ export async function generateVirtualSection(
 	const sectionTipo = options.section_tipo;
 	const sectionId = Number(options.section_id);
 	const response: GenerateVirtualSectionResponse = {
-		result: false,
+		ok: false,
 		msg: 'Error. Request failed ',
 		errors: [],
 	};
@@ -255,13 +256,13 @@ export async function generateVirtualSection(
 		// ontology-derived caches with rows that no longer exist. Drop them, or
 		// the next request resolves a phantom hierarchy.
 		await clearOntologyDerivedCaches();
-		response.result = false;
+		response.ok = false;
 		response.msg = 'Error. Hierarchy provisioning failed and was rolled back';
 		response.errors.push(String(error));
 		return response;
 	}
 
-	response.result = true;
+	response.ok = true;
 	response.msg =
 		response.errors.length === 0 ? 'Request done successfully' : 'Request done with errors';
 	return response;

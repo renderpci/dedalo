@@ -17,6 +17,7 @@
 import { existsSync, realpathSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { staticAssetResponse } from '../api/static_asset.ts';
+import { DedaloError, toErrorEnvelope } from '../errors/index.ts';
 import { CLIENT_LIBS, isDevMode, libRoot } from './registry.ts';
 
 /** URL prefix every registered lib is served at. */
@@ -60,8 +61,14 @@ const SERVABLE_EXTENSIONS: ReadonlySet<string> = new Set([
 
 /** 404 without leaking whether the target exists. */
 function notFound(): Response {
-	return new Response(JSON.stringify({ result: false, msg: 'Not found' }), {
-		status: 404,
+	// Converter-made body (ERRORS_SPEC §4): this is a STATIC route, so it never
+	// entered the dispatch chokepoint and has no correlation id to reuse — the
+	// envelope gets a fresh one rather than a fake constant.
+	const { status, body } = toErrorEnvelope(new DedaloError('resource.not_found'), {
+		requestId: crypto.randomUUID(),
+	});
+	return new Response(JSON.stringify(body), {
+		status,
 		headers: { 'Content-Type': 'application/json' },
 	});
 }

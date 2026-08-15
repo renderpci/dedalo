@@ -248,10 +248,10 @@ export async function portalUnlink(
 		{ tipo: fieldTipo, section_tipo: sectionTipo, section_id: sectionId },
 		{ locator: stored as Record<string, unknown> },
 	);
-	if (outcome.errors.length > 0) {
-		throw new ToolError('invalid_request', outcome.errors.join('; '));
-	}
-	return { unlinked: outcome.result !== false };
+	// A refusal (missing address, level < 2) now THROWS out of deletePortalLocator
+	// as a typed DedaloError — the MCP envelope converts it, so the former
+	// `errors[]` re-wrap is gone with the legacy shape.
+	return { unlinked: outcome.removed > 0 };
 }
 
 /**

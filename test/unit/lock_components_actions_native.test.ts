@@ -24,9 +24,24 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchLockComponentsActions } from '../../src/core/area_maintenance/widgets/lock_components.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
 import { updateLockComponentsState } from '../../src/core/section/locks.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+
+/** The DedaloError a lock_components action rejected with. */
+async function refusedAction(
+	principal: Principal,
+	options: Record<string, unknown>,
+): Promise<DedaloError> {
+	try {
+		await dispatchLockComponentsActions(principal, options);
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error('expected the lock_components action to refuse, it answered');
+}
 
 const LOCK_TABLE = 'dedalo_ts_component_locks';
 
@@ -53,7 +68,7 @@ async function seedLock(userId: number, sectionId: number, componentTipo = COMPO
 		full_username: `scratch user ${userId}`,
 	});
 	// A seed that did not acquire would make every downstream assertion vacuous.
-	expect(res.result).toBe(true);
+	expect(res.applied).toBe(true);
 }
 
 /** Live row count for one synthetic user (never a table-global count). */
@@ -91,34 +106,27 @@ describe('dispatchLockComponentsActions', () => {
 	// PURE tier — the switch default returns before any query is issued.
 	// ---------------------------------------------------------------------
 
-	test('missing fn_action is refused with the empty-name message', async () => {
-		const res = await dispatchLockComponentsActions(ADMIN, {});
-		expect(res).toEqual({
-			result: false,
-			msg: 'Error. Invalid fn_action: ',
-			errors: ['invalid_fn_action'],
-		});
+	test('missing fn_action is refused with the invalid-action code', async () => {
+		const error = await refusedAction(ADMIN, {});
+		expect(error.code).toBe('maintenance.invalid_fn_action');
+		// The offending name is LOG-ONLY (operator disclosure) — it never
+		// reaches the wire, so it is asserted on `coordinates`.
+		expect(error.coordinates?.fn_action).toBe('');
 	});
 
-	test('unknown fn_action is refused and named verbatim', async () => {
-		const res = await dispatchLockComponentsActions(ADMIN, { fn_action: 'delete_all' });
-		expect(res).toEqual({
-			result: false,
-			msg: 'Error. Invalid fn_action: delete_all',
-			errors: ['invalid_fn_action'],
-		});
+	test('unknown fn_action is refused and named in the log coordinates', async () => {
+		const error = await refusedAction(ADMIN, { fn_action: 'delete_all' });
+		expect(error.code).toBe('maintenance.invalid_fn_action');
+		expect(error.coordinates?.fn_action).toBe('delete_all');
 	});
 
 	test('non-string fn_action degrades to the empty name, never to a dispatch', async () => {
 		// `typeof options.fn_action === 'string' ? … : ''` — a numeric/objecty
 		// fn_action must not reach the unlock branch.
 		for (const bad of [123, null, { fn_action: 'get_active_users' }, ['get_active_users']]) {
-			const res = await dispatchLockComponentsActions(ADMIN, { fn_action: bad });
-			expect(res).toEqual({
-				result: false,
-				msg: 'Error. Invalid fn_action: ',
-				errors: ['invalid_fn_action'],
-			});
+			const error = await refusedAction(ADMIN, { fn_action: bad });
+			expect(error.code).toBe('maintenance.invalid_fn_action');
+			expect(error.coordinates?.fn_action).toBe('');
 		}
 	});
 
@@ -132,26 +140,17 @@ describe('dispatchLockComponentsActions', () => {
 		expect(await lockCount(USER_A)).toBe(1);
 		expect(await lockCount(USER_B)).toBe(1);
 
-		const res = await dispatchLockComponentsActions(NON_ADMIN, {
-			fn_action: 'force_unlock_all_components',
-		});
-		expect(res).toEqual({
-			result: false,
-			msg: 'Error. maintenance widgets are an admin surface',
-			errors: ['unauthorized'],
-		});
+		const error = await refusedAction(NON_ADMIN, { fn_action: 'force_unlock_all_components' });
+		expect(error.code).toBe('perm.denied');
+		expect(error.message).toBe('maintenance widgets are an admin surface');
 
 		// The load-bearing half: the refusal must not have released anything.
 		expect(await lockCount(USER_A)).toBe(1);
 		expect(await lockCount(USER_B)).toBe(1);
 
 		// The same refusal covers the read action.
-		const readRes = await dispatchLockComponentsActions(NON_ADMIN, {
-			fn_action: 'get_active_users',
-		});
-		expect(readRes.result).toBe(false);
-		expect(readRes.errors).toEqual(['unauthorized']);
-		expect(readRes.ar_user_actions).toBeUndefined();
+		const readError = await refusedAction(NON_ADMIN, { fn_action: 'get_active_users' });
+		expect(readError.code).toBe('perm.denied');
 
 		await sweepScratchLocks();
 	});
@@ -167,15 +166,18 @@ describe('dispatchLockComponentsActions', () => {
 		// value): a throw yields an EMPTY list. Its label lookups read the
 		// request data lang from the ALS store, so the call is made inside a
 		// request scope — outside one the case would silently degrade.
-		const res = (await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
+		const res = await runWithRequestLangs({ applicationLang: 'lg-eng', dataLang: 'lg-eng' }, () =>
 			dispatchLockComponentsActions(ADMIN, { fn_action: 'get_active_users' }),
-		)) as { result: boolean; ar_user_actions: Record<string, unknown>[] };
+		);
+		// `ar_user_actions` is a TOP-LEVEL extension key (the client reads it
+		// there); `data` carries the read's own boolean outcome.
+		const rows = res.extend?.ar_user_actions as Record<string, unknown>[];
 
-		expect(res.result).toBe(true);
-		expect(Array.isArray(res.ar_user_actions)).toBe(true);
+		expect(res.data).toBe(true);
+		expect(Array.isArray(rows)).toBe(true);
 		// Membership only — the legacy PHP registry and other live locks may add
 		// rows; a table-global assertion would be order-dependent.
-		const mine = res.ar_user_actions.filter((entry) => entry.user_id === USER_C);
+		const mine = rows.filter((entry) => entry.user_id === USER_C);
 		expect(mine.length).toBe(1);
 		const entry = mine[0] as Record<string, unknown>;
 		expect(entry.full_username).toBe(`scratch user ${USER_C}`);
@@ -204,13 +206,13 @@ describe('dispatchLockComponentsActions', () => {
 		expect(await lockCount(USER_B)).toBe(1);
 
 		// The client sends user_id as a string; Number() is what makes it match.
-		const res = (await dispatchLockComponentsActions(ADMIN, {
+		const res = await dispatchLockComponentsActions(ADMIN, {
 			fn_action: 'force_unlock_all_components',
 			user_id: String(USER_A),
-		})) as { result: boolean; msg: string; freed: number };
+		});
 
-		expect(res.result).toBe(true);
-		expect(res.freed).toBe(1);
+		expect(res.data).toBe(true);
+		expect(res.extend?.freed).toBe(1);
 		expect(res.msg).toBe(`OK. 1 lock(s) released for user ${USER_A}`);
 
 		expect(await lockCount(USER_A)).toBe(0);
@@ -226,12 +228,12 @@ describe('dispatchLockComponentsActions', () => {
 		await seedLock(USER_A, 990003, 'test79');
 		expect(await lockCount(USER_A)).toBe(3);
 
-		const res = (await dispatchLockComponentsActions(ADMIN, {
+		const res = await dispatchLockComponentsActions(ADMIN, {
 			fn_action: 'force_unlock_all_components',
 			user_id: USER_A, // numeric form, same path
-		})) as { result: boolean; msg: string; freed: number };
+		});
 
-		expect(res.freed).toBe(3);
+		expect(res.extend?.freed).toBe(3);
 		expect(res.msg).toBe(`OK. 3 lock(s) released for user ${USER_A}`);
 		expect(await lockCount(USER_A)).toBe(0);
 
@@ -241,13 +243,13 @@ describe('dispatchLockComponentsActions', () => {
 	test('an unknown user frees nothing and still reports success', async () => {
 		await seedLock(USER_B, 990002);
 
-		const res = (await dispatchLockComponentsActions(ADMIN, {
+		const res = await dispatchLockComponentsActions(ADMIN, {
 			fn_action: 'force_unlock_all_components',
 			user_id: '999424999',
-		})) as { result: boolean; msg: string; freed: number };
+		});
 
-		expect(res.result).toBe(true);
-		expect(res.freed).toBe(0);
+		expect(res.data).toBe(true);
+		expect(res.extend?.freed).toBe(0);
 		expect(res.msg).toBe('OK. 0 lock(s) released for user 999424999');
 		expect(await lockCount(USER_B)).toBe(1);
 
@@ -276,15 +278,12 @@ describe('dispatchLockComponentsActions', () => {
 			expect(await lockCount(USER_A)).toBe(1);
 			expect(await lockCount(USER_B)).toBe(1);
 
-			const res = (await dispatchLockComponentsActions(ADMIN, options)) as {
-				result: boolean;
-				msg: string;
-				freed: number;
-			};
+			const res = await dispatchLockComponentsActions(ADMIN, options);
+			const freed = res.extend?.freed as number;
 
-			expect(res.result).toBe(true);
-			expect(res.freed).toBeGreaterThanOrEqual(2);
-			expect(res.msg).toBe(`OK. ${res.freed} lock(s) released (all users)`);
+			expect(res.data).toBe(true);
+			expect(freed).toBeGreaterThanOrEqual(2);
+			expect(res.msg).toBe(`OK. ${freed} lock(s) released (all users)`);
 			expect(res.msg).toContain('(all users)');
 			expect(res.msg).not.toContain('for user');
 

@@ -59,14 +59,21 @@ describe('the abort arm the order shares a loop with', () => {
 		expect(planConsolidation(undefined, 5)).toBe('error');
 	});
 
-	test("the caller RETURNS on 'error' rather than continuing", async () => {
+	test("the caller ABORTS on 'error' rather than continuing", async () => {
 		const source = await Bun.file(SOURCE_FILE).text();
 		const arm = source.slice(source.indexOf("if (plan === 'error')"));
 		expect(arm).not.toBe('');
-		const head = arm.slice(0, 200);
-		expect(head).toContain('errors.push(');
-		expect(head).toContain('return {');
-		expect(head).not.toContain('continue;');
+		// EXACTLY the error arm — up to the next verdict test, so the 'noop' arm's
+		// own (legitimate) `continue` cannot be mistaken for this one's.
+		const errorArm = arm.slice(0, arm.indexOf("if (plan === 'noop')"));
+		expect(errorArm).not.toBe('');
+		// Since the P1 error sweep the arm THROWS the typed refusal (failAction →
+		// maintenance.action_failed) instead of returning a hand-built body. Either
+		// way it must LEAVE the loop: a `continue` here would consolidate the rest
+		// of the selection after refusing one table.
+		expect(errorArm).toContain('failAction(');
+		expect(errorArm).toContain('It is not possible to consolidate the table');
+		expect(errorArm).not.toContain('continue;');
 	});
 });
 

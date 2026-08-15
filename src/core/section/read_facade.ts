@@ -18,15 +18,52 @@
  */
 
 import type { ApiResult } from '../api/response.ts';
-import { denied, notAuthorized } from '../api/response.ts';
 import { isTemporalSource, type Rqo } from '../concepts/rqo.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
+import { type ApiNotice, DedaloError, ok, specOf } from '../errors/index.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
+import { currentRequestId } from '../security/request_context.ts';
 import { readSection } from './read.ts';
+
+/**
+ * PHP's empty component shell — the 200 answer for "there is nothing to show
+ * here" (non-edit relation_list, a record outside the caller's scope, a
+ * level-0 component, a get_data with no id). It is a SUCCESS, never a refusal:
+ * a 403 would tell the caller the record/component exists.
+ */
+function emptyShell(): ApiResult {
+	return {
+		status: 200,
+		body: ok({ context: [], data: [] }, { requestId: currentRequestId() }),
+	};
+}
+
+/**
+ * A cell model the relation_list cannot render is a NON-FATAL coded fact, not a
+ * failure (ERRORS_SPEC §3): the panel still answers with every cell it could
+ * resolve. The models themselves go to the operator log — engine.uncovered_scope
+ * declares no details_keys, so naming them on the wire is not available to it,
+ * and inventing one would be a wire change no client asked for (nothing reads
+ * this list today).
+ */
+function uncoveredCellNotices(unresolved: readonly string[]): ApiNotice[] | undefined {
+	if (unresolved.length === 0) return undefined;
+	console.warn(`[read_facade] unresolved relation_list cell models: ${unresolved.join(', ')}`);
+	return [
+		{
+			code: 'engine.uncovered_scope',
+			label_key: specOf('engine.uncovered_scope').label_key,
+			retryable: false,
+		},
+	];
+}
 
 /** Route a permission-gated dd_core_api read RQO to its read strategy. */
 export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<ApiResult> {
 	const source = rqo.source ?? {};
+	// The correlation id of the request in scope (dispatchRqo opens the ALS) —
+	// this facade is called without the API context, ERRORS_SPEC §3.
+	const requestId = currentRequestId();
 
 	// Relation list (source.action 'get_relation_list'): the Referencias
 	// panel — every record pointing AT the host. PHP only answers in
@@ -37,15 +74,17 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		const hostSectionTipo = String(source.section_tipo ?? '');
 		const hostSectionId = source.section_id;
 		if (hostSectionTipo === '' || hostSectionId === undefined || hostSectionId === null) {
-			return denied(400, 'get_relation_list: source.section_tipo/section_id are required');
+			throw new DedaloError('request.invalid_source', {
+				coordinates: { action: 'get_relation_list' },
+			});
 		}
 		const hostLevel = await getPermissions(principal, hostSectionTipo, hostSectionTipo);
 		if (hostLevel < 1) {
-			return notAuthorized('Insufficient permissions to read');
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: hostSectionTipo } });
 		}
 		if ((source.mode ?? 'list') !== 'edit') {
 			// PHP relation_list_json: non-edit modes return the empty shell.
-			return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+			return emptyShell();
 		}
 		const { buildRelationList } = await import('../resolve/relation_list.ts');
 		const sqoOptions = (rqo.sqo ?? {}) as {
@@ -77,16 +116,13 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			// is not enough — the scan spans 'all' owning sections.
 			principal,
 		});
-		const body: Record<string, unknown> = {
-			result: { context: relationList.context, data: relationList.data },
-			msg: 'OK. Request done successfully',
+		return {
+			status: 200,
+			body: ok(
+				{ context: relationList.context, data: relationList.data },
+				{ requestId, notices: uncoveredCellNotices(relationList.unresolved) },
+			),
 		};
-		if (relationList.unresolved.length > 0) {
-			body.errors = relationList.unresolved.map(
-				(model) => `unresolved relation_list cell model: ${model}`,
-			);
-		}
-		return { status: 200, body };
 	}
 
 	// Related-sections read (source.action 'related_search' + sqo.mode
@@ -119,13 +155,17 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 				(typeof locator.section_id === 'number' || typeof locator.section_id === 'string'),
 		);
 		if (locators.length === 0) {
-			return denied(400, 'related_search: sqo.filter_by_locators is required');
+			throw new DedaloError('request.invalid_source', {
+				coordinates: { action: 'related_search' },
+			});
 		}
 		// Host-read gate: read access to every host record's section (mirrors
 		// the count-mode 'related' gate in the handler).
 		for (const locator of locators) {
 			if ((await getPermissions(principal, locator.section_tipo, locator.section_tipo)) < 1) {
-				return notAuthorized('Insufficient permissions to read');
+				throw new DedaloError('perm.denied', {
+					coordinates: { section_tipo: locator.section_tipo },
+				});
 			}
 		}
 		const rawSectionTipos = Array.isArray(sqoOptions.section_tipo)
@@ -148,7 +188,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			// get_relation_list above — the scan spans 'all' owning sections.
 			principal,
 		});
-		return { status: 200, body: { result, msg: 'OK. Request done successfully' } };
+		return { status: 200, body: ok(result, { requestId }) };
 	}
 
 	// Time Machine read (sqo.mode 'tm'): the record-history listing is now
@@ -167,9 +207,10 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// was never consulted (WC-2026-08-14-tm-scope-server-owned).
 		const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
 		if (scope.mixed) {
-			return notAuthorized(
-				'Time machine reads spanning several sections are not authorized: one section grant cannot cover another',
-			);
+			throw new DedaloError('perm.denied', {
+				message:
+					'Time machine reads spanning several sections are not authorized: one section grant cannot cover another',
+			});
 		}
 		// Unscoped (the bare dd15 browse) shows EVERY section's history at once, so
 		// no per-section grant can authorize it — global admin only. Gating dd15
@@ -177,7 +218,10 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// so canAccessTimeMachineList fails closed for everyone but an admin.
 		const gateTipo = scope.sectionTipo ?? 'dd15';
 		if (!(await canAccessTimeMachineList(principal, gateTipo))) {
-			return notAuthorized('Insufficient permissions for the time machine of this section');
+			throw new DedaloError('perm.denied', {
+				message: 'Insufficient permissions for the time machine of this section',
+				coordinates: { section_tipo: gateTipo },
+			});
 		}
 		// The per-ddo permission FLOOR needs the same scope, but it is published by
 		// readSection itself (read.ts) so direct callers and tests get it too —
@@ -231,7 +275,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		// Emit the component's structure context (buildGetDataContext), same as
 		// the get_data path, so the search filter builds + renders.
 		const context = await buildGetDataContext(rqo, resolved, principal);
-		return { status: 200, body: { result: { context, data: resolved }, msg: 'OK' } };
+		return { status: 200, body: ok({ context, data: resolved }, { requestId }) };
 	}
 
 	// Component-source SEARCH read (PHP routes on source.action alone —
@@ -301,7 +345,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 			if (wireSectionId.kind === 'record') {
 				const { principalCanAccessRecord } = await import('../security/record_scope.ts');
 				if (!(await principalCanAccessRecord(source.section_tipo, wireSectionId.id, principal))) {
-					return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+					return emptyShell();
 				}
 			}
 		}
@@ -317,7 +361,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		if (typeof source.section_tipo === 'string' && typeof source.tipo === 'string') {
 			const { ddoIsAuthorized } = await import('../security/permissions.ts');
 			if (!(await ddoIsAuthorized(principal, source.section_tipo, source.tipo))) {
-				return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+				return emptyShell();
 			}
 		}
 		const { readComponentData, buildGetDataContext } = await import('./read.ts');
@@ -328,7 +372,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		const componentContext = await buildGetDataContext(rqo, componentData, principal);
 		return {
 			status: 200,
-			body: { result: { context: componentContext, data: componentData }, msg: 'OK' },
+			body: ok({ context: componentContext, data: componentData }, { requestId }),
 		};
 	}
 
@@ -341,7 +385,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 		(source.action === 'get_data' || (source.model ?? '').startsWith('component_')) &&
 		(source.section_id === undefined || source.section_id === null)
 	) {
-		return { status: 200, body: { result: { context: [], data: [] }, msg: 'OK' } };
+		return emptyShell();
 	}
 
 	// Release the reader's own stale edit locks on a section list read
@@ -358,5 +402,5 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 	// Pass the principal so the per-record projects filter applies
 	// (non-admins never over-see records on a gated section, §7.4).
 	const result = await readSection(rqo, principal);
-	return { status: 200, body: { result, msg: 'OK' } };
+	return { status: 200, body: ok(result, { requestId }) };
 }

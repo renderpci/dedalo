@@ -1,8 +1,9 @@
 /**
  * PASSWORD RESET — self-service "forgot password" recovery (TS port of the
- * frozen-PHP core/password_reset/class.password_reset.php; the wire shapes and
- * error codes below are the contract the copied client consumes —
- * client/dedalo/core/login/js/render_login.js reset handlers).
+ * frozen-PHP core/password_reset/class.password_reset.php). Every refusal is a
+ * registered `password_reset.*` code thrown for the dispatch converter
+ * (ERRORS_SPEC §4); the client keys its recovery on that code / label_key —
+ * client/dedalo/core/login/js/render_login.js reset handlers.
  *
  * Flow: an unauthenticated user requests a one-time 8-digit code from the login
  * screen; the code is emailed (core/mailer) to the address on the user record
@@ -40,6 +41,7 @@
 import { readNumber } from '../../config/readers.ts';
 import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { sql } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 import { cleanEmail, isValidEmail, sendMail } from '../mailer/mailer.ts';
 import { normalizeTiming } from './auth.ts';
 import {
@@ -64,16 +66,20 @@ const ACTIVE_ACCOUNT_COMPONENT = 'dd131';
 /** Minimum new-password length (mirrors the login strlen<8 guard). */
 const MIN_PASSWORD_LENGTH = 8;
 
+/**
+ * Step 1's answer — ALWAYS this shape, whatever the identifier resolved to
+ * (anti-enumeration). Both fields are top-level EXTENSION KEYS on the envelope:
+ * the login screen reads `reset_id` to drive step 2 and `msg` as its fallback
+ * notice.
+ */
 export interface RequestResetResponse {
-	result: true;
 	msg: string;
 	reset_id: string;
 }
 
+/** Step 2's answer. A refusal is a THROWN `password_reset.*` code, never a body. */
 export interface ConfirmResetResponse {
-	result: boolean;
 	msg: string;
-	errors: string[];
 }
 
 /** Opaque, non-secret correlation token: 32 lowercase hex characters. */
@@ -204,7 +210,6 @@ export async function requestPasswordReset(
 	// path; it only becomes meaningful when an entry is actually stored below.
 	const resetId = generateResetId();
 	const response: RequestResetResponse = {
-		result: true,
 		msg: 'If an account matches, a recovery code has been sent to its email address.',
 		reset_id: resetId,
 	};
@@ -271,10 +276,10 @@ export async function requestPasswordReset(
 		bodyText: buildEmailBody(code, Math.ceil(ttlSeconds / 60)),
 	})
 		.then((mailResult) => {
-			if (!mailResult.result) {
+			if (!mailResult.ok) {
 				// Logged, never surfaced (anti-enumeration). The mailer already logged
 				// the transport detail; never log the code or the address value here.
-				console.error('[password_reset] mailer failed:', mailResult.errors.join(', '));
+				console.error('[password_reset] mailer failed:', mailResult.code ?? 'unknown');
 			}
 		})
 		.catch((error) => console.error('[password_reset] mailer threw:', error));
@@ -325,15 +330,16 @@ async function sendPasswordChangedNotice(userId: number): Promise<void> {
 		subject: 'Your Dédalo password was changed',
 		bodyText: buildPasswordChangedBody(),
 	});
-	if (!mailResult.result) {
-		console.error('[password_reset] notice email failed:', mailResult.errors.join(', '));
+	if (!mailResult.ok) {
+		console.error('[password_reset] notice email failed:', mailResult.code ?? 'unknown');
 	}
 }
 
 /**
  * Step 2: verify the code against the stored hash and, on success, write the
- * new password. Failure responses are deliberately generic; the only specific
- * error is 'weak_password' (the user's own input, does not consume an attempt).
+ * new password. Every failure THROWS a generic `password_reset.*` code; the only
+ * specific one is `weak_password` (the user's own input — it does not consume an
+ * attempt).
  */
 export async function confirmPasswordReset(
 	resetId: string,
@@ -341,42 +347,43 @@ export async function confirmPasswordReset(
 	newPassword: string,
 	clientIp: string,
 ): Promise<ConfirmResetResponse> {
-	const invalidOrExpired: ConfirmResetResponse = {
-		result: false,
-		msg: 'Invalid or expired code.',
-		errors: ['invalid_or_expired'],
+	// The two generic refusals, as throws: the registry owns the sentence (the
+	// codes are operator-disclosure, so nothing per-attempt reaches the wire) and
+	// the client dispatches on `error.code` / `label_key`.
+	// (Explicitly annotated so TypeScript treats each call as never-returning and
+	// narrows the code below it.)
+	const invalidOrExpired: () => never = () => {
+		throw new DedaloError('password_reset.invalid_or_expired');
 	};
-	const tooManyAttempts: ConfirmResetResponse = {
-		result: false,
-		msg: 'Too many attempts. Please request a new code.',
-		errors: ['too_many_attempts'],
+	const tooManyAttempts: () => never = () => {
+		throw new DedaloError('password_reset.too_many_attempts');
 	};
 
 	if (!isValidResetId(resetId)) {
-		return invalidOrExpired;
+		invalidOrExpired();
 	}
 
 	// Verify throttle (per reset_id + trusted IP).
 	const throttleKey = buildThrottleKey('pwreset_verify', resetId, clientIp);
 	if (isThrottled(throttleKey)) {
-		return tooManyAttempts;
+		tooManyAttempts();
 	}
 
 	// Missing or expired → generic invalid_or_expired (cleaning up any residue).
 	const entry = loadPasswordReset(resetId);
 	if (entry === null || entry.expires < Math.floor(Date.now() / 1000)) {
 		deletePasswordReset(resetId);
-		return invalidOrExpired;
+		invalidOrExpired();
 	}
 
 	// Validate the new password BEFORE consuming a verify attempt: a weak
 	// password is the user's own input problem, not a wrong-code guess.
 	if (newPassword.length < MIN_PASSWORD_LENGTH) {
-		return {
-			result: false,
-			msg: `Password too short. Use at least ${MIN_PASSWORD_LENGTH} characters.`,
-			errors: ['weak_password'],
-		};
+		// The minimum is engine policy, not caller data: it rides as a log-only
+		// coordinate; the client renders the code's label.
+		throw new DedaloError('password_reset.weak_password', {
+			coordinates: { min_length: MIN_PASSWORD_LENGTH },
+		});
 	}
 
 	const maxAttempts = readNumber('DEDALO_PWRESET_MAX_ATTEMPTS');
@@ -388,9 +395,9 @@ export async function confirmPasswordReset(
 		const attempts = incrementPasswordResetAttempts(resetId);
 		if (attempts >= maxAttempts) {
 			deletePasswordReset(resetId);
-			return tooManyAttempts;
+			tooManyAttempts();
 		}
-		return invalidOrExpired;
+		invalidOrExpired();
 	}
 
 	// Correct code: write the new password and burn the code.
@@ -399,11 +406,7 @@ export async function confirmPasswordReset(
 	clearAttempts(throttleKey);
 
 	if (!saved) {
-		return {
-			result: false,
-			msg: 'Could not update the password. Please try again later.',
-			errors: ['reset_failed'],
-		};
+		throw new DedaloError('password_reset.failed', { coordinates: { user_id: entry.userId } });
 	}
 
 	console.warn(`[password_reset] password reset completed for user_id=${entry.userId}`);
@@ -416,9 +419,5 @@ export async function confirmPasswordReset(
 	// Notify the account owner so an unauthorized reset is noticed. Best-effort.
 	await sendPasswordChangedNotice(entry.userId);
 
-	return {
-		result: true,
-		msg: 'Your password has been updated. You can now log in.',
-		errors: [],
-	};
+	return { msg: 'Your password has been updated. You can now log in.' };
 }

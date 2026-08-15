@@ -16,6 +16,7 @@ import {
 	dispatchGetWidgetValue,
 	dispatchWidgetRequest,
 } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { login } from '../../src/core/security/auth.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -38,6 +39,21 @@ function call(widget: string, action: string, options: Record<string, unknown> =
 	return dispatchWidgetRequest(ADMIN, { model: widget, action }, options) as unknown as Promise<
 		Record<string, unknown>
 	>;
+}
+
+/** The DedaloError a widget action rejected with (fails when it answered instead). */
+async function refusedCall(
+	widget: string,
+	action: string,
+	options: Record<string, unknown> = {},
+): Promise<DedaloError> {
+	try {
+		await call(widget, action, options);
+	} catch (error) {
+		expect(error).toBeInstanceOf(DedaloError);
+		return error as DedaloError;
+	}
+	throw new Error(`expected ${widget}.${action} to refuse, it answered`);
 }
 
 afterAll(() => {
@@ -66,20 +82,20 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 
 	test('state flags round-trip through the widget handlers', async () => {
 		const on = await call('check_config', 'set_maintenance_mode', { value: true });
-		expect(on.result).toBe(true);
+		expect(on.data).toBe(true);
 		expect(getServerState().maintenance_mode).toBe(true);
 
 		const note = await call('check_config', 'set_notification', { value: 'Upgrading tonight' });
-		expect(note.result).toBe(true);
+		expect(note.data).toBe(true);
 		expect(getServerState().notification).toBe('Upgrading tonight');
 
 		const off = await call('check_config', 'set_maintenance_mode', { value: false });
-		expect(off.result).toBe(true);
+		expect(off.data).toBe(true);
 		expect(getServerState().maintenance_mode).toBe(false);
 
 		// PHP contract: non-bool maintenance value refuses
-		const bad = await call('check_config', 'set_maintenance_mode', { value: 'yes' });
-		expect(bad.result).toBe(false);
+		const bad = await refusedCall('check_config', 'set_maintenance_mode', { value: 'yes' });
+		expect(bad.code).toBe('maintenance.action_refused');
 	});
 
 	// Gated at collection time (loud skip, S2-40) — needs the real root credentials.
@@ -111,7 +127,7 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		const body = (await dispatchGetWidgetValue(ADMIN, {
 			model: 'check_config',
 		})) as unknown as Record<string, unknown>;
-		const result = body.result as {
+		const result = body.data as {
 			db_status: Record<string, boolean>;
 			config_sources: { name: string; required: boolean; exists: boolean }[];
 			state: { maintenance_mode: boolean };
@@ -202,10 +218,7 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		const body = (await dispatchGetWidgetValue(ADMIN, {
 			model: 'runtime_info',
 		})) as unknown as Record<string, unknown>;
-		const info = (body.result as { info?: Record<string, unknown> }).info as Record<
-			string,
-			unknown
-		>;
+		const info = (body.data as { info?: Record<string, unknown> }).info as Record<string, unknown>;
 		expect(info.engine).toBe('bun');
 		expect(String(info.version)).toBe(Bun.version);
 		expect(Number(info.memory_rss)).toBeGreaterThan(0);
@@ -214,7 +227,7 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		// families rather than a hand-maintained cache list — a second list beside
 		// the hub's is exactly how the UI-label dictionary went unflushed.
 		const caches = await call('runtime_info', 'clear_cache_files');
-		expect((caches.result as { cleared: string[] }).cleared).toEqual(['ontology_derived', 'tools']);
+		expect((caches.data as { cleared: string[] }).cleared).toEqual(['ontology_derived', 'tools']);
 
 		// …and the hub only covers a cache that REGISTERED with it. The UI-label
 		// dictionary is the one that proved this: it was cached, the panel said
@@ -226,7 +239,7 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		expect(isOntologyCacheClearerRegistered(clearLabelsCache)).toBe(true);
 
 		const sessions = await call('runtime_info', 'clear_session_files');
-		expect(typeof (sessions.result as { pruned: number }).pruned).toBe('number');
+		expect(typeof (sessions.data as { pruned: number }).pruned).toBe('number');
 	});
 
 	test('config_areas: runtime deny list edits the LIVE menu (guarded areas protected)', async () => {
@@ -243,7 +256,7 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 				areas_deny: [victim?.tipo, 'dd88', 'zz_not_a_tipo'],
 				areas_allow: [],
 			});
-			const prepared = guarded.result as {
+			const prepared = guarded.data as {
 				areas_deny: string[];
 				invalid: string[];
 				removed_guarded: string[];
@@ -268,15 +281,15 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 			const panel = (await dispatchGetWidgetValue(ADMIN, {
 				model: 'config_areas',
 			})) as unknown as {
-				result?: {
+				data?: {
 					areas_deny?: string[];
 					writable?: boolean;
 					areas?: { tipo: string; label: string; denied: boolean; allowed: boolean }[];
 				};
 			};
-			expect(panel.result?.areas_deny).toEqual([victim?.tipo as string]);
-			expect(panel.result?.writable).toBe(true);
-			const deniedNode = panel.result?.areas?.find((area) => area.tipo === victim?.tipo);
+			expect(panel.data?.areas_deny).toEqual([victim?.tipo as string]);
+			expect(panel.data?.writable).toBe(true);
+			const deniedNode = panel.data?.areas?.find((area) => area.tipo === victim?.tipo);
 			expect(deniedNode).toBeDefined();
 			expect(deniedNode?.denied).toBe(true);
 			expect(typeof deniedNode?.label).toBe('string');
@@ -291,9 +304,9 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 		const catalog = (await dispatchGetWidgetValue(ADMIN, {
 			model: 'menu_skip_tipos',
 		})) as unknown as {
-			result?: { areas?: { tipo: string; model: string }[]; skip_tipos?: string[] };
+			data?: { areas?: { tipo: string; model: string }[]; skip_tipos?: string[] };
 		};
-		const areas = catalog.result?.areas ?? [];
+		const areas = catalog.data?.areas ?? [];
 		const grouper = areas.find((area) => area.model === 'area');
 		const rootArea = areas.find((area) => area.model === 'area_activity');
 		expect(grouper).toBeDefined();
@@ -304,7 +317,7 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 				tipos: [grouper?.tipo, rootArea?.tipo, 'zz_bogus'],
 			});
 			// …and reflects `result.tipos` back into its chips (render_menu_skip_tipos.js)
-			const result = saved.result as { tipos: string[]; invalid: string[]; removed: string[] };
+			const result = saved.data as { tipos: string[]; invalid: string[]; removed: string[] };
 			expect(result.tipos).toEqual([grouper?.tipo as string]);
 			expect(result.invalid).toEqual(['zz_bogus']);
 			expect(result.removed).toEqual([rootArea?.tipo as string]);
@@ -321,11 +334,11 @@ describe('TS-native server state (check_config) + runtime panel (runtime_info)',
 			const panel = (await dispatchGetWidgetValue(ADMIN, {
 				model: 'menu_skip_tipos',
 			})) as unknown as {
-				result?: { skip_tipos?: string[]; areas?: { tipo: string }[]; writable?: boolean };
+				data?: { skip_tipos?: string[]; areas?: { tipo: string }[]; writable?: boolean };
 			};
-			expect(panel.result?.skip_tipos).toEqual([grouper?.tipo as string]);
-			expect(panel.result?.writable).toBe(true);
-			expect(panel.result?.areas?.some((area) => area.tipo === grouper?.tipo)).toBe(true);
+			expect(panel.data?.skip_tipos).toEqual([grouper?.tipo as string]);
+			expect(panel.data?.writable).toBe(true);
+			expect(panel.data?.areas?.some((area) => area.tipo === grouper?.tipo)).toBe(true);
 		} finally {
 			setServerState({ menu_skip_tipos: null });
 		}
