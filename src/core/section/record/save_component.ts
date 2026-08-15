@@ -845,6 +845,18 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 			// Dedup scope is the NEW array only: PHP resets its locator lookup map on the
 			// first element of the call (:1150-53), so an element is compared against the
 			// ones already accepted in THIS set_data, never against the stored data.
+			// (!) THE RE-PERSIST BASELINE. `items` here is what the component holds
+			// BEFORE this replace, and it is handed to every element as
+			// `storedItems`. A set_data replays the WHOLE array through the insert
+			// door — the CSV import and the raw-export round trip both do — so
+			// without this baseline the constraint gates would re-judge locators
+			// that were legitimately linked long ago and DROP the ones whose world
+			// has since moved (target hierarchy deactivated, saving principal
+			// lacking read on a colleague's section, `is_indexable` cleared). The
+			// element vanishes and the save still reports success. Captured before
+			// the loop because `validatedItems` is the growing NEW array, which is
+			// a different question (the dedup scope, see above).
+			const storedItemsBaseline = items.slice();
 			if (column === 'relation') {
 				const { validateRelationInsert } = await import('../../relations/save.ts');
 				const validatedItems: unknown[] = [];
@@ -860,6 +872,7 @@ async function applySaveComponentData(request: SaveRequest): Promise<SaveResult>
 						translatable,
 						lang: effectiveLang,
 						existingItems: validatedItems,
+						storedItems: storedItemsBaseline,
 						pairing: dataframePairing,
 					});
 					if (safeElement !== null) validatedItems.push(safeElement);
