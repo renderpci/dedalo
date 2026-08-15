@@ -226,8 +226,9 @@ Both share ONE ranking engine (`rankLocatorsByColumns`). The keys ride the parse
 
 ### data_limit
 
-- **Values:** integer. Default: unset (no limit).
-- **Effect:** maximum number of linked records allowed. When the current entry count reaches `data_limit`, the client (`data_limit_reached()`) blocks the add/link action and alerts the user (label `exceeded_limit`). A soft client-side cap, useful for "exactly one author" style fields without dropping to a single-value select.
+- **Values:** integer. Default: unset (no limit). A literal `0` is a real answer — "nothing may be linked" — and is honoured as one; it is not the same as unset.
+- **Effect:** maximum number of linked records the component may hold. The client blocks the add/link action once the count is reached (label `exceeded_limit`), and **the save re-resolves the same limit and refuses the insert that would exceed it** — so the cap holds for every door, not only for the supported browser. Useful for "exactly one author" style fields without dropping to a single-value select.
+- In the [term picker](#tree-view-the-term-picker) it is the only count that binds: the picker is handed the **remaining** capacity (this limit minus what the component already holds), and a batch of picks is evaluated against it as a batch, so several individually-legal picks cannot collectively break it.
 
 ### draggable_to
 
@@ -258,9 +259,57 @@ Views are selected from `context.view` (default `default`) and dispatched by the
 | `text` | yes | yes | Plain joined text of the resolved values, no chrome. (Registered for both edit and list.) |
 | `mini` | — | yes | Minimal inline view, used by the service autocomplete / tight layouts. |
 | `mosaic` | yes | — | Grid layout of linked records (visual / media-heavy targets). |
-| `tree` | yes | — | Picks target records from a thesaurus / hierarchy tree; links with `type` forced to `dd151`. |
+| `tree` | yes | — | Opens the target thesaurus as a **term picker** — see [below](#tree-view-the-term-picker). The tree renders a link affordance per term instead of navigating; the client stamps **no** relation `type` (the server fills it from the component's own model). |
 | `indexation` | yes | — | Specialised thesaurus indexation view (uses `config_relation` `tag_id`, `top_locator` from `tool_indexation`). One row per target record, not per locator — see [below](#indexation-view-rows-are-terms-not-tags). |
 | `content` | yes | — | Renders the linked records' content inline. |
+
+### `tree` view: the term picker
+
+Declaring `properties.view: "tree"` on a relation component turns its target thesaurus
+into a picker. It is generic: the same declaration works on `component_portal` and on
+every model that shares its client — `component_dataframe`,
+[component_relation_children](component_relation_children.md),
+[component_relation_index](component_relation_index.md),
+[component_relation_related](component_relation_related.md),
+[component_relation_parent](component_relation_parent.md) — and on
+`component_relation_model`, whose target is an ontology tree rather than a thesaurus.
+
+**The handshake is a caller, not a mode.** When the picker opens, the request names the
+component that will receive the terms — `{section_tipo, section_id, tipo}` — and the
+server derives everything else from it: whether this is a picker at all (the caller's
+resolved view is `tree`, its model stores relations, and you hold edit permission on
+it), which hierarchies open (the caller's own target sections), and how many terms may
+still be linked (`data_limit` minus what the component already holds). Nothing about the
+picker is asserted by the browser. The full contract — the emitted fields, the two
+refusals — is documented once under
+[area_thesaurus](../areas/area_thesaurus.md#the-term-picker-relation-mode).
+
+**What the request config does and does not control.** The `sqo` names the target
+section(s), and that is its whole role here:
+
+| Question | Answered by |
+| --- | --- |
+| Which thesaurus opens? | the caller's `sqo.section_tipo` |
+| Which terms are in the tree? | the thesaurus itself — **not** the request config |
+| How many terms does the tree show? | unbounded: a thesaurus is browsed, not paged. `sqo_config.limit` is the [autocomplete](#service_autocomplete) dropdown's size, a different surface |
+| How is a tree node rendered? | the thesaurus's own term rendering — **not** the caller's `ddo_map`, which governs how a *linked* value is displayed back in this component |
+| Is a given term linkable? | the **term**, through its thesaurus's own selectable flag |
+| How many terms may be linked? | [`data_limit`](#data_limit) — the only count that binds the picker |
+
+!!! note "A picker view adds an input path and removes none"
+    The tree view declares its own toolbar (the tree button on, add/link/list/fullscreen
+    off) as part of the view registration, so it is composed once with the component's
+    other constraints instead of being written during render. It deliberately cannot
+    switch off `show_autocomplete`, `read_only` or `permissions`: a component whose
+    `source.mode` is `autocomplete` keeps its autocomplete input while gaining the
+    picker, and no view may widen or narrow what the server granted.
+
+!!! warning "Not every `view: "tree"` target is a thesaurus"
+    The picker opens a hierarchy. A component declaring `view: "tree"` whose target
+    section is an ordinary section has no tree to show, and the read now says so
+    (`409`, "no active hierarchy is configured for this component target") instead of
+    rendering an empty panel. If you see that refusal, the declaration is the defect —
+    check the target before adding the view.
 
 ### `indexation` view: rows are terms, not tags
 
