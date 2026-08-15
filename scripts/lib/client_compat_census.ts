@@ -65,6 +65,179 @@ export const COMPAT_READ = /\.(msg|errors|result)\b/g;
 /** A line naming the client's own state object is never a wire read. */
 const LINE_EXCLUSION = /page_globals/;
 
+/**
+ * ONE exempted read: the expression, the file it lives in, and WHY it is not a
+ * compat read (see "WHAT IS NOT COUNTED" above). `pattern` is blanked out of
+ * the code line before the count, so any OTHER `.msg`/`.errors`/`.result` on
+ * the same line still counts.
+ */
+export interface NonEnvelopeRead {
+	/** Repo-relative file (exact match) the exemption applies to. */
+	readonly file: string;
+	/** The exempt expression(s), matched on the code line. MUST be global. */
+	readonly pattern: RegExp;
+	/** Why it is not an envelope read — the shape, and who writes it. */
+	readonly reason: string;
+}
+
+/** The named non-envelope reads. Data + reason; the tripwire prints and re-checks them. */
+export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
+	{
+		file: 'client/dedalo/core/common/js/data_manager.js',
+		pattern: /\b(?:event\.target|DBOpenRequest)\.result\b/g,
+		reason: 'IDBRequest.result — the browser IndexedDB API, not an API body.',
+	},
+	{
+		file: 'client/dedalo/core/page/js/page.js',
+		pattern: /\bapi_response\.environment\??\.result\b/g,
+		reason:
+			"`environment` is a handler EXTENSION KEY whose VALUE is the PHP-parity block {result,msg,errors} (src/core/resolve/environment.ts buildEnvironment); `.result` there is that block's payload key.",
+	},
+	{
+		file: 'client/dedalo/core/area_thesaurus/js/render_area_thesaurus.js',
+		pattern: /\bdata\.ts_search\.result\b/g,
+		reason:
+			'`ts_search` is a nested payload block {result,msg,errors,total,found} inside the area data (src/core/ts_object/search.ts searchThesaurus).',
+	},
+	{
+		file: 'client/dedalo/core/area_graph/js/render_area_graph.js',
+		pattern: /\bdata\.ts_search\.result\b/g,
+		reason: 'The same nested `ts_search` block as render_area_thesaurus.js.',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/lock_components/js/render_lock_components.js',
+		pattern: /\bactive_users\??\.result\b/g,
+		reason:
+			'The eager widget value nests the lock map as `active_users` = {result, ar_user_actions} (src/core/area_maintenance/widgets/lock_components.ts).',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/update_ontology/js/render_update_ontology.js',
+		pattern: /\bcurrent_server\.(?:result|msg)\b/g,
+		reason:
+			"One row of the widget payload's `servers[]`: the probe writes `msg`/`errors`/`response_code`/`result` per server (src/core/area_maintenance/widgets/update_ontology.ts).",
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/render_diffusion_server_control.js',
+		pattern: /\bjob\.msg\b/g,
+		reason:
+			'A diffusion JOB ROW field (src/core/area_maintenance/widgets/diffusion_server_control.ts: `msg: row.totals?.msg`).',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/live_diffusion_server_control.js',
+		pattern: /\bjob\.msg\b/g,
+		reason: 'The same job-row field, on the live (SSE) layer.',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/error_reports/js/render_error_reports.js',
+		pattern: /\bitem\.msg\b/g,
+		reason:
+			"One entry of a stored report's `js_errors[]` — the captured browser-error shape {type,msg,source,line} (error_capture.js → src/core/error_report/store.ts).",
+	},
+	{
+		file: 'client/dedalo/core/common/js/error_capture.js',
+		pattern: /\b(?:el|entry)\.msg\b/g,
+		reason:
+			'The captured JS-error entry the client buffers in window.dedalo_js_errors and posts to the report intake; never an API response.',
+	},
+	{
+		file: 'client/dedalo/core/common/js/render_common.js',
+		pattern: /\b(?:data|item)\.msg\b/g,
+		reason:
+			'`data.msg` is the SSE job-progress payload (src/core/tools/background.ts onData({msg,…})); `item.msg` is a component-data RecursionError {type,msg,info} (src/core/relations/parent.ts).',
+	},
+	{
+		file: 'client/dedalo/core/common/js/ui.js',
+		pattern: /\bvalue\.msg\b/g,
+		reason:
+			'One entry of the ontology-authored `properties.state_of_component` map ({icon,msg}) in the component context.',
+	},
+	{
+		file: 'client/dedalo/core/common/js/utils/notifications.js',
+		pattern: /\boptions\.msg\b/g,
+		reason:
+			"The client's own 'notification' event payload (event_manager.publish('notification', {msg,…})), not a wire body.",
+	},
+	{
+		file: 'client/dedalo/core/page/js/render_page.js',
+		pattern: /\b(?:dedalo_notification|self\.last_dedalo_notification)\.msg\b/g,
+		reason:
+			'`dedalo_notification` is an extension key whose VALUE is {msg,class_name} (the maintenance notice set by check_config).',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/js/render_area_maintenance.js',
+		pattern: /\br\.errors\b/g,
+		reason:
+			'`errors` INSIDE the register_tools widget payload (src/core/area_maintenance/widgets/register_tools.ts: data {datalist, errors, registry_state}).',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/register_tools/js/render_register_tools.js',
+		pattern: /\b(?:value|item)\.errors\b|\bget_label\.errors\b/g,
+		reason:
+			"`value.errors` is the widget payload's own findings list, `item.errors` a per-tool report row, and `get_label.errors` a UI LABEL key (master.json), never a wire read.",
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/counters_status/js/render_counters_status.js',
+		pattern: /\bvalue\.errors\b/g,
+		reason:
+			'`errors` inside the widget payload (src/core/area_maintenance/widgets/counters_status.ts: data {datalist, errors}).',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/system_info/js/render_system_info.js',
+		pattern: /\bvalue\.errors\b/g,
+		reason:
+			'`errors` inside the widget payload (src/core/area_maintenance/widgets/system_info.ts: data {requeriments_list, system_list, errors}).',
+	},
+	{
+		file: 'client/dedalo/core/area_maintenance/widgets/sequences_status/js/render_sequences_status.js',
+		pattern: /\bvalue\.msg\b/g,
+		reason:
+			'The eager widget value IS the PHP-parity report block {result,msg,values} (src/core/area_maintenance/widgets/sequences_status.ts checkSequences).',
+	},
+	{
+		file: 'client/dedalo/core/installer/js/render_installer.js',
+		pattern: /\binit_test\.(?:result|msg|errors)\b|\bitem\.errors\b/g,
+		reason:
+			'`init_test` is a CONTEXT PROPERTY block {result,errors,msg[]} (src/core/install/init_test.ts); `item.errors` is one row of the register_tools report.',
+	},
+	{
+		file: 'client/dedalo/core/page/js/job_tray.js',
+		pattern: /\b(?:row|fresh|entry\.row)\.errors\b/g,
+		reason:
+			'ActivityRow.errors — a job row inside the `jobs` extension key (src/core/api/activity.ts).',
+	},
+	{
+		file: 'client/dedalo/core/component_portal/js/view_line_edit_portal.js',
+		pattern: /\bself\.data\.errors\b/g,
+		reason:
+			'Component DATA carries per-record RecursionError findings (src/core/relations/parent.ts getParentsRecursive).',
+	},
+	{
+		file: 'client/dedalo/core/services/service_upload/js/dropped_files.js',
+		pattern: /\bstate\.errors\b/g,
+		reason:
+			"The drop traversal's own skipped-entry list, published as the returned array's non-enumerable `errors`; it never crosses the wire.",
+	},
+	{
+		file: 'client/dedalo/core/services/service_upload/js/render_edit_service_upload_queue.js',
+		pattern: /\bfiles\.errors\b/g,
+		reason: 'The dropped_files diagnostics above, read by the drop handler.',
+	},
+];
+
+/** The exemptions that apply to one file (empty for a file with none). */
+function exemptionsFor(file: string): NonEnvelopeRead[] {
+	return NON_ENVELOPE_READS.filter((entry) => entry.file === file);
+}
+
+/** Blank the exempt expressions on a line, preserving its length (offsets stay honest). */
+function blankExempt(line: string, exemptions: readonly NonEnvelopeRead[]): string {
+	let out = line;
+	for (const { pattern } of exemptions) {
+		out = out.replace(new RegExp(pattern.source, 'g'), (match) => ' '.repeat(match.length));
+	}
+	return out;
+}
+
 export interface FileCompatReads {
 	/** Repo-relative, forward slashes. */
 	file: string;
@@ -74,16 +247,25 @@ export interface FileCompatReads {
 	byKey: Record<(typeof COMPAT_KEYS)[number], number>;
 }
 
-/** Count the compat reads in one source text. Pure; exported so it can be self-tested. */
-export function countCompatReads(source: string): {
+/**
+ * Count the compat reads in one source text. Pure; exported so it can be
+ * self-tested. `file` (repo-relative) selects the NON_ENVELOPE_READS
+ * exemptions; omit it and NOTHING is exempt.
+ */
+export function countCompatReads(
+	source: string,
+	file = '',
+): {
 	reads: number;
 	byKey: FileCompatReads['byKey'];
 } {
 	const code = stripComments(source, { blankStrings: true });
+	const exemptions = exemptionsFor(file);
 	const byKey: FileCompatReads['byKey'] = { msg: 0, errors: 0, result: 0 };
 	let reads = 0;
-	for (const line of code.split('\n')) {
-		if (LINE_EXCLUSION.test(line)) continue;
+	for (const rawLine of code.split('\n')) {
+		if (LINE_EXCLUSION.test(rawLine)) continue;
+		const line = exemptions.length === 0 ? rawLine : blankExempt(rawLine, exemptions);
 		for (const match of line.matchAll(COMPAT_READ)) {
 			const key = match[1] as (typeof COMPAT_KEYS)[number];
 			byKey[key]++;
@@ -139,7 +321,7 @@ export function discoverFiles(): string[] {
 export function census(): FileCompatReads[] {
 	return discoverFiles().map((file) => {
 		const source = readFileSync(join(REPO_ROOT, file), 'utf8');
-		return { file, ...countCompatReads(source) };
+		return { file, ...countCompatReads(source, file) };
 	});
 }
 

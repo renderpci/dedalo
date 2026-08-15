@@ -47,8 +47,9 @@
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
 	import {render_list_component_av} from '../../component_av/js/render_list_component_av.js'
 	import {render_search_component_av} from '../../component_av/js/render_search_component_av.js'
-	import {request_failed} from '../../common/js/api_error.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -512,7 +513,7 @@ export const open_av_player = async function(options) {
 * Static helper (not a prototype method) called by dd_grid_indexation to extract
 * and download a time-range clip from a media file. The server-side
 * dd_component_av_api 'download_fragment' action runs FFmpeg (or equivalent)
-* to produce the clip; the resulting file URL is returned in api_response.result.
+* to produce the clip; the resulting file URL is the response payload.
 *
 * Flow:
 *  1. Adds a 'loading' CSS class to the optional button_caller element.
@@ -622,7 +623,7 @@ export const download_av_fragment = async function(options) {
 			}else{
 
 				// success case — build a friendly filename from quality + original basename
-				const url		= api_response.result;
+				const url		= response_data(api_response);
 				const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
 				download_file({
@@ -681,19 +682,21 @@ component_av.prototype.get_media_streams = function() {
 				console.log('))) get_media_streams api_response:', api_response);
 			}
 
-			if (api_response.result===false) {
+			const streams_data = response_data(api_response)
+			if (request_failed(api_response) || streams_data===false) {
 
 				// error case
 
-				const msg = api_response.msg || 'Error on get_media_streams'
-				console.error(msg)
+				console.error(request_failed(api_response)
+					? error_text(api_response.error)
+					: 'Error on get_media_streams')
 
 				resolve(null)
 
 			}else{
 
 				// success case — extract streams array; default to [] if absent
-				const media_streams	= api_response.result?.streams || []
+				const media_streams	= streams_data?.streams || []
 
 				resolve(media_streams)
 			}
@@ -721,7 +724,7 @@ component_av.prototype.get_media_streams = function() {
 *     If it is undefined at runtime, the guard evaluates as false and the debug
 *     log is silently skipped.
 *
-* @returns {Promise<boolean>} api_response.result — true on success, false on error
+* @returns {Promise<boolean>} the response payload — true on success, false on error
 */
 component_av.prototype.create_posterframe = async function() {
 
@@ -750,7 +753,7 @@ component_av.prototype.create_posterframe = async function() {
 		}
 
 
-	return api_response.result
+	return response_data(api_response)
 }//end create_posterframe
 
 
@@ -767,7 +770,7 @@ component_av.prototype.create_posterframe = async function() {
 * (!) SHOW_DEVELOPER is not declared in the global pragma at the top of this file —
 *     see the same note in create_posterframe above.
 *
-* @returns {Promise<boolean>} api_response.result — true on success, false on error
+* @returns {Promise<boolean>} the response payload — true on success, false on error
 */
 component_av.prototype.delete_posterframe = async function() {
 
@@ -794,7 +797,7 @@ component_av.prototype.delete_posterframe = async function() {
 		}
 
 
-	return api_response.result
+	return response_data(api_response)
 }//end delete_posterframe
 
 

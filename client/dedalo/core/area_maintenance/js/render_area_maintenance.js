@@ -61,7 +61,7 @@
 	import {render_tree_data, format_label} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {widget_common} from '../../widgets/widget_common/js/widget_common.js'
-	import {request_failed, response_data} from '../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
 
 
@@ -1102,7 +1102,7 @@ const build_map_view = function(self, widgets, opts={}) {
 					retries	: 1,
 					timeout	: 60 * 1000
 				})
-				return api_response ? api_response.result : null
+				return api_response ? response_data(api_response) : null
 			} catch (err) {
 				console.warn('[area_maintenance] map health probe failed:', id, err)
 				return null
@@ -1122,7 +1122,7 @@ const build_map_view = function(self, widgets, opts={}) {
 					retries	: 1,
 					timeout	: 60 * 1000
 				})
-				return api_response ? api_response.result : null
+				return api_response ? response_data(api_response) : null
 			} catch (err) {
 				console.warn('[area_maintenance] map action probe failed:', model, action, err)
 				return null
@@ -1598,12 +1598,13 @@ const render_widget = async (item, self) => {
 *   2. FAILURE block — on `ok:false` the coded `error` is resolved by the ONE
 *      text resolver (`error_text`: label in the admin's language → the
 *      registry's English message → the code) and nothing else is printed.
-*   3. Error block (SUCCESS only) — rendered when `api_response.errors` is a
-*      non-empty array: a PARTIAL refusal the action reports beside its result
-*      (skipped rows, per-item failures). Each entry is a TEXT node.
-*   4. Message block — `api_response.msg` while a handler still sends one as an
-*      extension key, then the payload's `data.summary`, then a plain "OK".
-*      Envelope v2 has no prose channel on a success, and the old
+*   3. Error block (SUCCESS only) — rendered when the widget's `errors`
+*      EXTENSION KEY (read through response_extension) is a non-empty array: a
+*      PARTIAL refusal the action reports beside its result (skipped rows,
+*      per-item failures). Each entry is a TEXT node.
+*   4. Message block — the widget's `msg` extension key (response_extension,
+*      success only), then the payload's `data.summary`, then a plain "OK".
+*      Envelope v2 has no prose channel on a FAILURE, and the old
 *      `'Unknown API response error'` fallback made every swept handler's
 *      success read as a failure.
 *   5. Tree view — the full `api_response` object rendered by `render_tree_data` into
@@ -1617,8 +1618,8 @@ const render_widget = async (item, self) => {
 * @param {HTMLElement} container - The DOM node to populate; its existing children
 *   are removed before rendering
 * @param {Object} api_response - The API response object from `data_manager.request()`
-* @param {string|string[]} [api_response.msg] - Human-readable result message(s)
-* @param {string[]} [api_response.errors]     - Array of error message strings
+* @param {string|string[]} [api_response.msg] - the widget's own operator sentence (extension key)
+* @param {string[]} [api_response.errors]     - the widget's per-item findings (extension key)
 * @returns {HTMLElement} The same `container` element, now populated
 */
 export const print_response = (container, api_response) => {
@@ -1660,7 +1661,8 @@ export const print_response = (container, api_response) => {
 			// errors (SUCCESS only) — a partial refusal the action reports BESIDE
 			// its result (skipped rows, per-item failures), never the whole outcome.
 			// Server text NEVER reaches an HTML sink: one text node per line.
-				if (api_response.errors && api_response.errors.length) {
+				const action_errors = response_extension(api_response, 'errors')
+				if (action_errors && action_errors.length) {
 					const errors_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'api_response error',
@@ -1668,23 +1670,24 @@ export const print_response = (container, api_response) => {
 					})
 					append_text_lines(
 						errors_node,
-						api_response.errors.map((item) => typeof item==='string' ? item : error_text(item))
+						action_errors.map((item) => typeof item==='string' ? item : error_text(item))
 					)
 				}
 
-			// msg / summary. Envelope v2 has NO prose channel on a SUCCESS: the
-			// account of what the action did is `data.summary` where the handler
-			// composes one. `msg` survives ONLY as an extension key of a handler
-			// the call-site sweep has not reached yet (REMOVAL:
-			// client_error_contract_tripwire census 0), so it is read first and
-			// the payload summary is its successor. When neither exists the action
-			// simply worked — say so, never 'Unknown API response error', which
-			// told an administrator that a successful action had failed.
+			// msg / summary. Envelope v2 has NO prose channel on a FAILURE — that is
+			// `error` — but a maintenance widget OWNS a top-level `msg` extension key
+			// on its success bodies (ERRORS_SPEC §3.0; src/core/api/handlers/
+			// dd_area_maintenance_api.ts lifts WidgetResponse.msg into `extend`), so
+			// it is read through response_extension() — success only, never the
+			// compat mirror — and `data.summary` is its successor where a handler
+			// composes one. When neither exists the action simply worked — say so,
+			// never 'Unknown API response error', which told an administrator that a
+			// successful action had failed.
 				const api_data		= response_data(api_response)
 				const summary		= (api_data && typeof api_data==='object' && typeof api_data.summary==='string' && api_data.summary.length)
 					? api_data.summary
 					: null
-				const api_msg_source	= api_response.msg || summary
+				const api_msg_source	= response_extension(api_response, 'msg') || summary
 				const api_msg_lines		= api_msg_source
 					? (Array.isArray(api_msg_source)
 						? api_msg_source

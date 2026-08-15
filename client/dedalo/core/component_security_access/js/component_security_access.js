@@ -72,6 +72,7 @@
 	import {render_edit_component_security_access} from './render_edit_component_security_access.js'
 	import {render_list_component_security_access} from './render_list_component_security_access.js'
 	import {render_search_component_security_access} from './render_search_component_security_access.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -621,7 +622,7 @@ component_security_access.prototype.get_changes_data = async function(filename) 
 	}
 
 
-	return api_response.result
+	return response_data(api_response)
 }//end get_changes_data
 
 

@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
@@ -213,10 +213,10 @@ const add_action_button = function(o) {
 		try {
 			const api_response = await o.run()
 
-			// SUCCESS is a truthy `result` (the TS widget_request returns
-			// result:{cleared:[…]} / {pruned:N} on success and result:false on
-			// failure — NOT the boolean `true` the PHP-era check assumed).
-			const ok = !!(api_response && !request_failed(api_response) && api_response.result)
+			// SUCCESS is a truthy PAYLOAD (the TS widget_request returns
+			// {cleared:[…]} / {pruned:N} on success and `false` on a refusal —
+			// NOT the boolean `true` the PHP-era check assumed).
+			const ok = !!(api_response && !request_failed(api_response) && response_data(api_response))
 
 			// run the success refresh FIRST (it only updates the data panel, leaving
 			// body_response untouched) so the message printed below survives.
@@ -235,7 +235,7 @@ const add_action_button = function(o) {
 					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'error',
-						text_content	: (api_response && api_response.msg) ? String(api_response.msg) : ('Error: failed ' + o.label),
+						text_content	: String(response_extension(api_response, 'msg') || ('Error: failed ' + o.label)),
 						parent			: o.body_response
 					})
 				}
@@ -246,7 +246,7 @@ const add_action_button = function(o) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'ok',
-				text_content	: api_response.msg ? String(api_response.msg) : ('OK. ' + o.label),
+				text_content	: String(response_extension(api_response, 'msg') || ('OK. ' + o.label)),
 				parent			: o.body_response
 			})
 		} finally {

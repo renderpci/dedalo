@@ -39,6 +39,7 @@
 import {ui} from '../../../../common/js/ui.js'
 import {event_manager} from '../../../../common/js/event_manager.js'
 import {data_manager} from '../../../../common/js/data_manager.js'
+import {response_data} from '../../../../common/js/api_error.js'
 
 
 
@@ -246,8 +247,9 @@ const get_content_data_edit = async function(self) {
 				}
 			}
 			const api_response = await data_manager.request({ body: rqo })
-			if (api_response?.result) {
-				self.value = api_response.result
+			const value = response_data(api_response)
+			if (value) {
+				self.value = value
 			}
 		} catch (e) {
 			if (SHOW_DEBUG_GLOBAL) {

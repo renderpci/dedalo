@@ -53,7 +53,7 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
-	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
+	import {ApiError, CLIENT_ERROR, request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {handle_api_error, handle_api_notices} from '../../common/js/error_dispatch.js'
 	import {error_text, render_error_modal} from '../../common/js/render_api_error.js'
 	import {init_session_expiry} from '../../common/js/session_expiry.js'
@@ -338,7 +338,7 @@ page.prototype.init = async function(options) {
 										const lock_modal = render_error_modal(
 											new ApiError({
 												code		: 'record.in_use',
-												message		: api_response.msg,
+												message		: response_extension(api_response, 'msg'),
 												severity	: 'warning'
 											}),
 											{header: get_label.warning || 'Warning'}
@@ -552,28 +552,14 @@ page.prototype.init = async function(options) {
 
 /**
 * SET_PAGE_ERROR
-* THE page-level failure slot. `page_globals.page_error` (one ApiError) is the
-* single source; the legacy `page_globals.api_errors` entry is kept next to it
-* for the readers still on the array (common.prototype.render fallback,
-* render_menu_tree's stale-page reload guard).
-* COMPAT REMOVAL: when the client_error_contract_tripwire census reaches 0.
+* THE page-level failure slot: `page_globals.page_error`, ONE ApiError, which
+* common.prototype.render reads to draw the page panel.
 * @param {ApiError} api_error
-* @param {string} legacy_type - the legacy discriminator ('start_error', …)
 * @return bool always false, so callers can `return set_page_error(…)`
 */
-const set_page_error = function(api_error, legacy_type) {
+const set_page_error = function(api_error) {
 
 	page_globals.page_error = api_error
-
-	// COMPAT v1 (REMOVAL: census 0)
-	if (!Array.isArray(page_globals.api_errors)) {
-		page_globals.api_errors = []
-	}
-	page_globals.api_errors.push({
-		error	: legacy_type,
-		msg		: error_text(api_error),
-		trace	: api_error.code + (api_error.request_id ? ' · ' + api_error.request_id : '')
-	})
 
 	return false
 }//end set_page_error
@@ -593,7 +579,7 @@ const set_page_error = function(api_error, legacy_type) {
 *    `get_label`, `DEDALO_ENVIRONMENT`, etc.) into the window scope.
 * 4. Validates the response at three levels: missing result, missing environment,
 *    and missing DEDALO_ENVIRONMENT global — each pushes a descriptive entry to
-*    `page_globals.page_error` (+ the COMPAT api_errors entry) and returns false so
+*    `page_globals.page_error` and returns false so
 *    the caller can render an error page.
 * 5. Sets `self.context` and `self.data` from the validated response.
 *
@@ -679,15 +665,15 @@ page.prototype.build = async function(autoload=false) {
 						}
 
 						// policy `perm.denied` → no_access_page: sets page_globals.page_error
-						// (+ the COMPAT api_errors entry) with the label in the user's
-						// language, so common.prototype.render draws the no-access panel.
+						// with the label in the user's language, so
+						// common.prototype.render draws the no-access panel.
 						await handle_api_error(api_response.error, {scope:'page build'})
 
 						return false
 					}
 
 				// error generic case starting the page
-				// start_data. THE payload accessor (v2 `data`, COMPAT `result`)
+				// start_data. THE payload accessor (the envelope's `data`)
 				const start_data = response_data(api_response)
 
 				if (request_failed(api_response) || !start_data) {
@@ -704,8 +690,7 @@ page.prototype.build = async function(autoload=false) {
 							: new ApiError({
 								code	: CLIENT_ERROR.BAD_RESPONSE,
 								message	: 'Error: Unable to start page. Check that the server is running and configuration files are correct [1]'
-							}),
-						'start_error'
+							})
 					)
 				}
 
@@ -716,8 +701,7 @@ page.prototype.build = async function(autoload=false) {
 						new ApiError({
 							code	: CLIENT_ERROR.BAD_RESPONSE,
 							message	: 'Error: Unable to start page: environment is unavailable. Check that the server is running and configuration files are correct [2]'
-						}),
-						'start_error'
+						})
 					)
 				}
 				// fix API environment vars to window (page_globals, plain_vars, get_label)
@@ -764,8 +748,7 @@ page.prototype.build = async function(autoload=false) {
 						new ApiError({
 							code	: CLIENT_ERROR.BAD_RESPONSE,
 							message	: 'Error: The environment is not available. Check that the server is running and configuration files are correct [3]'
-						}),
-						'start_error'
+						})
 					)
 				}
 
@@ -783,16 +766,15 @@ page.prototype.build = async function(autoload=false) {
 	// check page context is valid. If not, return special error node
 		if (!self.context) {
 
-			// api_errors.
-			// It's important to set instance as api_errors because this
-			// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+			// page_error.
+			// It's important to set the page error because this generates a
+			// temporal wrapper. Once solved the problem, (usually a not login scenario)
 			// the instance could be built and rendered again replacing the temporal wrapper
 				set_page_error(
 					new ApiError({
 						code	: CLIENT_ERROR.BAD_RESPONSE,
 						message	: 'Invalid context. ' + (page_globals.request_message ?? '')
-					}),
-					'invalid_context'
+					})
 				)
 
 			return false

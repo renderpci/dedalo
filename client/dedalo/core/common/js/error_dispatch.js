@@ -20,11 +20,6 @@
 * envelope's `notices[]` go through `handle_api_notice` / `handle_api_notices`,
 * the same policy table at severity 'warning' and never a page-level action —
 * the request succeeded, so nothing may take the page away from the user.
-*
-* COMPAT (REMOVAL CONDITION: client_error_contract_tripwire census = 0):
-* page.js / common.js still read `page_globals.api_errors[]` (legacy
-* `{error, msg, trace}` entries) to draw the page panel, so the page-level
-* actions ALSO push the legacy shape next to the new `page_globals.page_error`.
 */
 
 // imports
@@ -62,24 +57,14 @@ const globals = () => (typeof page_globals!=='undefined' && page_globals && type
 
 /**
 * SET_PAGE_ERROR
-* The single page-level error slot + the legacy api_errors entry (COMPAT).
+* THE single page-level error slot: one ApiError, read by
+* common.prototype.render to draw the page panel.
 * @param {ApiError} api_error
-* @param {string} legacy_type - the legacy discriminator page.js/render_common expect
-* @param {string} msg
 */
-const set_page_error = (api_error, legacy_type, msg) => {
+const set_page_error = (api_error) => {
 	const pg = globals()
 	if (!pg) return
 	pg.page_error = api_error
-	// COMPAT: legacy page panel input (REMOVAL: census 0)
-	if (!Array.isArray(pg.api_errors)) {
-		pg.api_errors = []
-	}
-	pg.api_errors.push({
-		error	: legacy_type,
-		msg		: msg,
-		trace	: api_error.code + (api_error.request_id ? ' · ' + api_error.request_id : '')
-	})
 }//end set_page_error
 
 
@@ -177,9 +162,7 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 		}
 
 		case 'no_access_page': {
-			const labels	= (typeof get_label!=='undefined' && get_label) ? get_label : {}
-			const msg		= (entry.label && labels[entry.label]) || error_text(api_error)
-			set_page_error(api_error, 'not_authorized', msg)
+			set_page_error(api_error)
 			if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
 				ctx.wrapper.appendChild(render_error_panel(api_error))
 			}
@@ -187,7 +170,7 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 		}
 
 		case 'page_panel': {
-			set_page_error(api_error, 'invalid_page_element', error_text(api_error))
+			set_page_error(api_error)
 			if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
 				ctx.wrapper.appendChild(render_error_panel(api_error))
 			}

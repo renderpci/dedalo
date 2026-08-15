@@ -10,7 +10,7 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {common} from '../../common/js/common.js'
 	import {get_tld_from_tipo,get_section_id_from_tipo} from '../../common/js/utils/index.js'
-	import {request_failed} from '../../common/js/api_error.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
 	import {
 		render_inspector,
 		render_section_info,
@@ -412,13 +412,14 @@ inspector.prototype.get_raw_record = async function () {
 	}
 
 	// error case
-	if (request_failed(api_response) || api_response.result===false) {
+	const raw_data = response_data(api_response)
+	if (request_failed(api_response) || !raw_data) {
 		console.error('----> ERROR tool register read_raw api_response:', api_response);
 		return false
 	}
 
 	// Get record from data
-	const data = api_response.result[0] || null;
+	const data = raw_data[0] || null;
 	if (!data) {
 		console.error('----> ERROR tool register read_raw empty data. api_response:', api_response);
 		return false

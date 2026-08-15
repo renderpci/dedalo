@@ -44,7 +44,7 @@
 	// The ONE error model: a terminal frame's failure is read through
 	// normalize_stream_error and SHOWN through error_text. The dispatch (relogin,
 	// toast) is job_follow's — routing it twice would double every notice.
-	import {normalize_stream_error} from '../../common/js/api_error.js'
+	import {normalize_stream_error, response_data} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
 
 
@@ -461,7 +461,7 @@ const read_activity = async function() {
 			if (SHOW_DEVELOPER===true) {
 				dd_console('-> get_activity API response:', 'DEBUG', response)
 			}
-			resolve((response && response.result===true && Array.isArray(response.jobs))
+			resolve((response_data(response)===true && Array.isArray(response.jobs))
 				? response.jobs
 				: null)
 		})

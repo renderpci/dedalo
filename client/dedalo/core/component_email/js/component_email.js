@@ -35,6 +35,7 @@
 	import {render_edit_component_email} from '../../component_email/js/render_edit_component_email.js'
 	import {render_list_component_email} from '../../component_email/js/render_list_component_email.js'
 	import {render_search_component_email} from '../../component_email/js/render_search_component_email.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -242,7 +243,7 @@ component_email.prototype.get_ar_emails = async function() {
 		})
 
 	// get the result of the datum
-		const search_datum	= api_response.result
+		const search_datum	= response_data(api_response)
 		const data = search_datum.data.filter(el => el.tipo === self.tipo)
 
 	// check if the data is empty
@@ -288,8 +289,8 @@ component_email.prototype.get_ar_emails = async function() {
 					// check if the part_two is longer to be processed, else the part two will be the final string
 					if(part_two.length > max_characters){
 						// recursion
-						const result = get_ar_emails(part_two)
-						ar_emails.push(...result)
+						const parts = get_ar_emails(part_two)
+						ar_emails.push(...parts)
 					}else{
 						ar_emails.push(part_two)
 					}//end if(part_two.length > max_characters)

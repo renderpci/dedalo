@@ -90,10 +90,10 @@ export const is_filter_empty = function(filter_obj) {
 
 				// if the filter has an operator, recursion to get next level
 				if(is_empty_q === null){
-					const result = check_deep_filter(filter)
+					const deep_state = check_deep_filter(filter)
 
 					// store the result of the recursion
-					ar_empty.push(...result)
+					ar_empty.push(...deep_state)
 
 				}else{
 					// store the state of the q

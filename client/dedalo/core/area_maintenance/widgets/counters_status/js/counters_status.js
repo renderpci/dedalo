@@ -6,8 +6,9 @@
 
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
@@ -230,12 +231,13 @@ counters_status.prototype.modify_counter = async function(options) {
 			console.log('modify_counter api_response:', api_response);
 		}
 
-		if (request_failed(api_response)===false && api_response.result===true) {
+		if (request_failed(api_response)===false && response_data(api_response)===true) {
 
 			// success
 
-			// SEC-XSS-011: api_response.msg may contain DB / counter text; textContent avoids HTML parsing.
-			body_response.textContent = api_response.msg
+			// SEC-XSS-011: the widget's `msg` extension key may contain DB / counter
+			// text; textContent avoids HTML parsing.
+			body_response.textContent = response_extension(api_response, 'msg')
 
 			// update datalist value
 			self.value.datalist = api_response.datalist
@@ -256,11 +258,16 @@ counters_status.prototype.modify_counter = async function(options) {
 			// error
 			console.error('counters_status modify_counter failed:', api_response)
 
-			// SEC-XSS-011
-			body_response.textContent = api_response.msg || 'Unknown error'
+			// SEC-XSS-011. A refused counter is an ok:true body carrying data:false +
+			// the widget's own sentence; a real failure has the coded error instead.
+			body_response.textContent = request_failed(api_response)
+				? error_text(api_response.error)
+				: (response_extension(api_response, 'msg') || 'Unknown error')
 
 			// ONE error model: policy + renderer decide the surface (never alert() with server text)
-			await handle_api_error(api_response.error, {wrapper: body_response})
+			if (request_failed(api_response)) {
+				await handle_api_error(api_response.error, {wrapper: body_response})
+			}
 		}
 
 

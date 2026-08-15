@@ -7,9 +7,9 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {ApiError, is_api_error, request_failed, normalize_stream_error} from '../../common/js/api_error.js'
+	import {request_failed, normalize_stream_error} from '../../common/js/api_error.js'
 	import {handle_api_error} from '../../common/js/error_dispatch.js'
-	import {render_error_panel, render_error_inline} from '../../common/js/render_api_error.js'
+	import {render_error_inline} from '../../common/js/render_api_error.js'
 
 
 
@@ -20,7 +20,6 @@
 *
 * Exports:
 *  - render_components_list      Build a draggable component picker for a section.
-*  - render_server_response_error  Thin wrapper over render_api_error.render_error_panel.
 *  - render_stream               Create a live-updating SSE progress panel.
 *  - render_error                Render Dédalo standard inline error blocks.
 *  - render_lang_behavior_check  Render the "search in all langs" toggle for translatable components.
@@ -315,47 +314,6 @@ const toggle_section_group_label_siblings = function (e) {
 
 
 /**
-* RENDER_SERVER_RESPONSE_ERROR
-* THIN WRAPPER over the ONE error panel (`render_api_error.render_error_panel`).
-* Kept as an export because callers across the client still name it; it does no
-* rendering of its own — and, unlike the switch it replaces, it never writes
-* server text through `inner_html`.
-*
-* Accepts either shape:
-*   - an ApiError (the new page-level model, `page_globals.page_error`);
-*   - COMPAT v1: the legacy `page_globals.api_errors` array of
-*     `{error, msg, trace}` descriptors (REMOVAL: census 0). The FIRST entry is
-*     rendered — a page has ONE fatal error — with its legacy discriminator used
-*     as the code so the panel keeps picking the right affordance
-*     (`not_logged` → Reload, `not_authorized` → no-access, else Home).
-*
-* @param {ApiError|Array|Object} errors
-* @returns {HTMLElement} Detached error container ready to be appended to the page.
-*/
-export const render_server_response_error = function(errors) {
-
-	// already the new model
-		if (is_api_error(errors)) {
-			return render_error_panel(errors)
-		}
-
-	// COMPAT v1: legacy descriptor array (REMOVAL: census 0)
-		const item = Array.isArray(errors)
-			? (errors[0] || {})
-			: (errors || {})
-
-		const trace		= item.trace ? ' (' + item.trace + ')' : ''
-		const detail	= item.dedalo_last_error ? ' — ' + item.dedalo_last_error : ''
-
-		return render_error_panel(new ApiError({
-			code	: item.error || 'server.unspecified',
-			message	: (item.msg || 'Unknown error') + trace + detail
-		}))
-}//end render_server_response_error
-
-
-
-/**
 * RENDER_STREAM
 * Build a live-updating SSE progress panel and return handle functions so the
 * caller's stream reader can drive it.
@@ -579,8 +537,8 @@ export const render_stream = function(options) {
 						// so the user never sees a blank or stale "running" message.
 
 						// A failed run ends with a coded frame; normalize_stream_error
-						// reads both the v2 `{is_running:false, error:{code,…}}` shape
-						// and the COMPAT `errors:[…]` one.
+						// reads the v2 `{is_running:false, error:{code,…}}` shape (and the
+						// BARE agent-SSE error body).
 						const api_error = normalize_stream_error(sse_response)
 
 						info_node.msg_node.textContent = api_error

@@ -7,6 +7,7 @@
 	import { ui } from '../../common/js/ui.js'
 	import { is_filter_empty } from '../../search/js/search_utils.js'
 	import { data_manager } from '../../common/js/data_manager.js'
+	import {response_data} from '../../common/js/api_error.js'
 	import {
 		clone,
 		open_records_in_window,
@@ -695,12 +696,13 @@ const open_related_data = async function( options ){
 		body : rqo
 	})
 
-	if (!api_response?.result) {
+	const raw_data = response_data(api_response)
+	if (!raw_data) {
 		console.error('Failed api response:', api_response);
 		return false
 	}
 	// locators
-		const value = flatten_read_raw_result(api_response.result)
+		const value = flatten_read_raw_result(raw_data)
 
 	// section tipo
 	// get the target section tipos in the data

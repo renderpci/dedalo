@@ -10,6 +10,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_area} from './render_area.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -175,7 +176,8 @@ area.prototype.build = async function(autoload=true) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error!!!!, area without context:", api_response);
 					return false
 				}
@@ -188,7 +190,7 @@ area.prototype.build = async function(autoload=true) {
 				)
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = datum
 
 			// set context and data to current instance
 				// context is only set when it's empty the origin context,

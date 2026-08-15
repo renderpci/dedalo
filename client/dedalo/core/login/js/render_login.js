@@ -67,7 +67,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
-	import {request_failed} from '../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
 
 
@@ -561,7 +561,7 @@ const get_content_data = function(self) {
 					// Even on result!==false, the API may include soft errors
 					// (e.g. dd_init.test warnings about dirs/vars). These do NOT
 					// prevent login but pause the flow to let the user acknowledge.
-					const message	= api_response.msg
+					const message	= response_extension(api_response, 'msg')
 					const msg_type	= 'ok';
 					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
@@ -570,10 +570,8 @@ const get_content_data = function(self) {
 					// errors handle
 					// If errors found in API response (many vars and directories are checked in 'dd_init.test' on login)
 					// the login sequence is stopped to warn the user of problems
-					// v2 carries non-fatal coded facts in `notices`; COMPAT v1 put
-					// them in `errors` next to a truthy `result` (REMOVAL: census 0).
-					const soft_notices = (api_response.notices?.length ? api_response.notices : null)
-						|| (api_response.errors?.length ? api_response.errors : null)
+					// v2 carries non-fatal coded facts in `notices`.
+					const soft_notices = api_response.notices?.length ? api_response.notices : null
 					if (soft_notices) {
 						const msg = soft_notices
 							.map((item) => typeof item==='string' ? item : error_text(item))
@@ -818,7 +816,7 @@ const get_content_data = function(self) {
 			self.reset_id = (api_response && api_response.reset_id) ? api_response.reset_id : null
 			ui.show_message(
 				messages_container,
-				(get_label.recovery_code_sent || (api_response && api_response.msg) || 'If an account matches, a recovery code has been sent.'),
+				(get_label.recovery_code_sent || response_extension(api_response, 'msg') || 'If an account matches, a recovery code has been sent.'),
 				'ok',
 				'component_message',
 				true
@@ -868,7 +866,7 @@ const get_content_data = function(self) {
 			self.status = 'rendered'
 			reset_confirm_button.classList.remove('white')
 
-			if (api_response && api_response.result===true) {
+			if (response_data(api_response)===true) {
 				ui.show_message(messages_container, (get_label.password_updated || 'Your password has been updated. You can now log in.'), 'ok', 'component_message', true)
 				// clear sensitive fields and return to login
 				reset_code.value					= ''

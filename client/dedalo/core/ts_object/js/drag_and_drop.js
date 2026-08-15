@@ -33,6 +33,7 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {find_up_tag} from '../../common/js/utils/util.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -257,7 +258,7 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 				}
 
 				// new_section_id . Generated as response by the trigger add_child
-				const new_section_id = response?.result
+				const new_section_id = response_data(response)
 				if(!new_section_id){
 					console.error('[ts_object.onDrop] add_child did not return a new section ID.');
 					return false;

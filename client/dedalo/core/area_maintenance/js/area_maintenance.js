@@ -45,6 +45,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_area_maintenance, build_form} from './render_area_maintenance.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -211,13 +212,14 @@ area_maintenance.prototype.build = async function(autoload=true) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context.length){
+				const datum = response_data(api_response)
+				if(!datum.context.length){
 					console.error("Error!!!!, area_maintenance without context:", api_response);
 					return false
 				}
 
 			// set the result to the datum
-				self.datum	= api_response.result
+				self.datum	= datum
 
 			// set context and data to current instance
 			// set Context
@@ -378,7 +380,7 @@ area_maintenance.prototype.get_value = async function () {
 		console.log(`))) get_value ${this.id} api_response:`, api_response);
 	}
 
-	const result = api_response?.result
+	const result = response_data(api_response)
 
 
 	return result

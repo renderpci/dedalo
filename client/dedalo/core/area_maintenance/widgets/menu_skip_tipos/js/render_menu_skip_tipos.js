@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {request_failed, response_data} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
@@ -265,7 +265,7 @@ const get_content_data = function(self) {
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'response_node',
-					text_content	: (api_response && api_response.msg) ? String(api_response.msg) : 'OK',
+					text_content	: String(response_extension(api_response, 'msg') || 'OK'),
 					parent			: body_response
 				})
 				// reflect what the server actually persisted (strips invalid / area_root + dedupes)

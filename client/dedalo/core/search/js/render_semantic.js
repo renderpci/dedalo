@@ -32,6 +32,7 @@
 // import
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -64,7 +65,7 @@ export const get_embed_groups = function(section_tipo) {
 		}
 	})
 	.then(function(api_response){
-		const groups = api_response?.result?.groups
+		const groups = response_data(api_response)?.groups
 		return Array.isArray(groups) ? groups : []
 	})
 	.catch(function(){

@@ -33,6 +33,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {render_list_dd_grid} from '../../dd_grid/js/render_list_dd_grid.js'
+	import {response_data, request_failed} from '../../common/js/api_error.js'
 
 
 
@@ -147,7 +148,7 @@ dd_grid.prototype.build	= async function(autoload=false) {
 			const api_response = await data_manager.request({
 				body : self.rqo
 			})
-			self.data = api_response.result || null
+			self.data = response_data(api_response) || null
 		}
 
 	// status update
@@ -198,13 +199,13 @@ dd_grid.prototype.get_total = async function() {
 	})
 
 	// API error case
-		if ( api_count_response.result===false || api_count_response.errors?.length ) {
-			console.error('Error on count total : api_count_response:', api_count_response);
+		if ( request_failed(api_count_response) ) {
+			console.error('Error on count total : api_count_response:', api_count_response.error);
 			return
 		}
 
 	// set result
-		self.rqo.sqo.total = api_count_response.result.total
+		self.rqo.sqo.total = response_data(api_count_response).total
 
 
 	return self.rqo.sqo.total

@@ -964,7 +964,7 @@ export const render_input_element_time = (i, current_value, self) => {
 *        'time'   → self.parse_string_time(input_value)
 *        'period' → self.parse_string_period(input_value)
 *        default  → self.parse_string_date(input_value)
-*      Each parser returns { result: dd_date|{}, error?: [{msg, type}] }.
+*      Each parser returns { data: dd_date|{}, error?: [{text, type}] }.
 *   2. If the response is null (self is falsy) or missing, logs and returns false.
 *   3. If response.error is set (an ApiError from the parser), hands it to
 *      handle_api_error — the `validation.*` policy renders it inline in the
@@ -1046,7 +1046,7 @@ export const change_handler = function(options) {
 		const value	= data.entries || []
 
 	// new value. New parsed value
-		const result = response.result || {}
+		const result = response.data || {}
 		const new_value = (Object.keys(result).length === 0 && result.constructor === Object)
 			? null // empty object case
 			: result

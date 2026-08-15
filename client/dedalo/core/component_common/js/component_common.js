@@ -54,7 +54,7 @@
 	import { events_subscription } from './events_subscription.js'
 	import { ui } from '../../common/js/ui.js'
 	import { set_element_css } from '../../page/js/css.js'
-	import { request_failed, normalize_transport_error } from '../../common/js/api_error.js'
+	import {request_failed, normalize_transport_error, response_data} from '../../common/js/api_error.js'
 	import { handle_api_error } from '../../common/js/error_dispatch.js'
 
 
@@ -389,7 +389,8 @@ const do_build = async (self, autoload) => {
 					return false
 				}
 				// server: bad build component context
-				if(!api_response.result.context?.length){
+				const datum = response_data(api_response)
+				if(!datum.context?.length){
 					console.error("Error!!!!, component without context:", api_response, rqo);
 					return false
 				}
@@ -401,7 +402,7 @@ const do_build = async (self, autoload) => {
 
 			// Context
 				if(!self.context){
-					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
+					const context = datum.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 					if (!context) {
 						console.error("context not found in api_response:", api_response);
 					}else{
@@ -410,7 +411,7 @@ const do_build = async (self, autoload) => {
 				}
 
 			// data
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
+				const data = datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
 				}
@@ -419,11 +420,11 @@ const do_build = async (self, autoload) => {
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
 				if(!self.standalone){
 					// update shared datum
-					await self.update_datum(api_response.result)
+					await self.update_datum(datum)
 				}else{
 					// set 'private' datum
-					self.datum.context	= api_response.result.context
-					self.datum.data		= api_response.result.data
+					self.datum.context	= datum.context
+					self.datum.data		= datum.data
 				}
 
 			// rqo. build again rqo with updated request_config if exists
@@ -732,14 +733,11 @@ component_common.prototype.save = async function(new_changed_data) {
 
 
 	// Process Result
-	// (!) `.result` ON PURPOSE, not response_data(): during the compat window the
-	// server sends the payload TWICE (`data` + the `result` mirror), and JSON.parse
-	// makes them two SEPARATE object graphs. change_value() feeds
-	// `api_response.result` to update_datum, so reading `data` here would hand the
-	// instance a different copy than the datum holds and the next save would ship
-	// stale entries. ONE accessor per flow — this flow is on `result` until the
-	// compat mirror is deleted (P4), when this becomes response_data().
-		const result = api_response.result
+	// (!) ONE accessor per flow: this flow — save() here, change_value() below —
+	// reads the payload through response_data() everywhere, so the instance and
+	// the datum always hold the SAME object graph and the next save cannot ship
+	// stale entries.
+		const result = response_data(api_response)
 
 		if (request_failed(api_response)) {
 
@@ -1315,7 +1313,8 @@ component_common.prototype.change_value = async function(options) {
 			const api_response = await self.save(changed_data)
 
 			// fix instance changed_data
-			if (api_response && api_response.result) {
+			const saved_datum = response_data(api_response)
+			if (saved_datum) {
 
 				// reset component changed_data to empty array
 				self.data.changed_data = []
@@ -1325,7 +1324,7 @@ component_common.prototype.change_value = async function(options) {
 				// containing coordinates value
 				// @see component_geolocation tch244
 				if(!self.standalone){
-					await self.update_datum(api_response.result)
+					await self.update_datum(saved_datum)
 				}
 			}
 

@@ -48,6 +48,7 @@
 	import {render_edit_component_input_text} from '../../component_input_text/js/render_edit_component_input_text.js'
 	import {render_list_component_input_text} from '../../component_input_text/js/render_list_component_input_text.js'
 	import {render_search_component_input_text} from '../../component_input_text/js/render_search_component_input_text.js'
+	import {response_data} from '../../common/js/api_error.js'
 
 
 
@@ -293,13 +294,14 @@ component_input_text.prototype.find_equal = async function(value) {
 		}
 
 	// check api_response
-		if (!api_response || !api_response.result) {
+		const found_datum = response_data(api_response)
+		if (!found_datum) {
 			console.error('Error on find_equal: invalid api_response', api_response);
 			return null
 		}
 
 	// data
-		const data = api_response.result.data || []
+		const data = found_datum.data || []
 
 	// record data results from search
 	// The 'sections' envelope is ALWAYS emitted (one item, tipo = the caller tipo,

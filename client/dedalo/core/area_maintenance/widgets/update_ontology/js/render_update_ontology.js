@@ -43,7 +43,7 @@
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {event_manager} from '../../../../common/js/event_manager.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
 
 
@@ -345,7 +345,7 @@ const get_content_data_edit = async function(self) {
 							console.log('))) get_ontology_update_info:', server_ontology_api_response)
 						}
 
-						const result = server_ontology_api_response?.result
+						const result = response_data(server_ontology_api_response)
 						if(request_failed(server_ontology_api_response) || !result){
 							if (request_failed(server_ontology_api_response)) {
 								// ONE error model: policy + renderer decide the surface
@@ -354,9 +354,7 @@ const get_content_data_edit = async function(self) {
 								ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
-									text_content	: server_ontology_api_response.msg
-										? String(server_ontology_api_response.msg)
-										: 'Could not reach the master server.',
+									text_content	: String(response_extension(server_ontology_api_response, 'msg') || 'Could not reach the master server.'),
 									parent			: body_response
 								})
 							}
@@ -390,7 +388,7 @@ const get_content_data_edit = async function(self) {
 						})
 
 					// fail case
-						if(request_failed(api_response) || !api_response?.result){
+						if(request_failed(api_response) || !response_data(api_response)){
 							if (request_failed(api_response)) {
 								// ONE error model: policy + renderer decide the surface
 								await handle_api_error(api_response.error, {wrapper: body_response})
@@ -398,7 +396,7 @@ const get_content_data_edit = async function(self) {
 								ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error',
-									text_content	: api_response.msg ? String(api_response.msg) : 'The ontology import failed.',
+									text_content	: String(response_extension(api_response, 'msg') || 'The ontology import failed.'),
 									parent			: body_response
 								})
 							}
@@ -425,7 +423,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// non-fatal import errors
-						const errors = (api_response.errors || []).filter(Boolean)
+						const errors = (response_extension(api_response, 'errors') || []).filter(Boolean)
 						if (errors.length>0) {
 							body_response.appendChild(
 								build_details('Import warnings ('+errors.length+')', errors.join('\n'), { open:true, pre_class:'warning' })
@@ -433,9 +431,10 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// collapsible import log (the per-file messages)
-						if (api_response.msg) {
+						const import_log = response_extension(api_response, 'msg')
+						if (import_log) {
 							body_response.appendChild(
-								build_details('Import log', api_response.msg, { open:true, pre_class:'log' })
+								build_details('Import log', import_log, { open:true, pre_class:'log' })
 							)
 						}
 
@@ -510,7 +509,9 @@ export const render_servers_list = function (value, env_key='ONTOLOGY_SERVERS') 
 	for (let i = 0; i < server_len; i++) {
 
 		const current_server	= servers[i]
-		const reachable			= current_server.response_code === 200 && !!current_server.result?.result
+		// `current_server.result` is the REMOTE's decoded body (a nested probe key,
+		// not our envelope): its own payload says whether it answered ready.
+		const reachable			= current_server.response_code === 200 && !!response_data(current_server.result)
 
 		// row = clickable <label> wrapping the radio, meta and pill
 			const server_row = ui.create_dom_element({

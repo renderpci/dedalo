@@ -306,8 +306,8 @@ component_date.prototype.date_to_string = function (date) {
 * @returns {Object} Response bag:
 *   ```
 *   {
-*     result : { year?, month?, day? },  // validated dd_date (fields omitted when absent)
-*     error? : [{ msg: string, type: 'full'|'day'|'month' }, …]
+*     data : { year?, month?, day? },  // validated dd_date (fields omitted when absent)
+*     error? : [{ text: string, type: 'full'|'day'|'month' }, …]
 *   }
 *   ```
 *   `error` is only present when at least one validation failure occurred.
@@ -427,7 +427,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 		if(string_date.length >1 && !dd_date.year){
 			const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 				error.push({
-					msg	 : error_msg +'. '+ string_date +': '+ date_obj.day,
+					text : error_msg +'. '+ string_date +': '+ date_obj.day,
 					type : 'full'
 				})
 		}
@@ -436,7 +436,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 			const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 			const error_msg_day	= get_label.day || 'day'
 			error.push({
-				msg	 : error_msg +'. '+ error_msg_day +': '+ date_obj.day,
+				text : error_msg +'. '+ error_msg_day +': '+ date_obj.day,
 				type : 'day'
 			})
 		}
@@ -445,14 +445,14 @@ component_date.prototype.parse_string_date = function(string_date) {
 			const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 			const error_msg_month = get_label.month || 'month'
 			error.push({
-				msg	 : error_msg +'. '+ error_msg_month +': '+ date_obj.month,
+				text : error_msg +'. '+ error_msg_month +': '+ date_obj.month,
 				type : 'month'
 			})
 		}
 
 	// response
 		const response = {
-			result	: dd_date
+			data	: dd_date
 		}
 		if (error.length>0) {
 			// ONE typed error, exactly like a server refusal: the client's own
@@ -461,7 +461,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 			// get_label, so error_text must keep them verbatim.
 			response.error = new ApiError({
 				code		: 'validation.invalid_date_format',
-				message		: error.map((item) => item.msg).join(' · '),
+				message		: error.map((item) => item.text).join(' · '),
 				details		: {fields: error.map((item) => item.type).join(', ')},
 				severity	: 'warning',
 				source		: 'client'
@@ -719,7 +719,7 @@ component_date.prototype.date_time_to_string = function(time) {
 *   - second must be in [0, 59].
 *
 * Special empty-clear case: when the string is empty (or splits into all-null
-* tokens), the method returns `{ result: {} }` with no error — this signals
+* tokens), the method returns `{ data: {} }` with no error — this signals
 * the caller to delete the existing time value.  This is distinct from the
 * "non-empty but unparseable" case which does push a `'full'`-type error.
 *
@@ -727,12 +727,12 @@ component_date.prototype.date_time_to_string = function(time) {
 * @returns {Object} Response bag:
 *   ```
 *   {
-*     result : { hour?, minute?, second? },  // dd_date with time fields only
-*     error? : [{ msg: string, type: 'full'|'hour'|'minute'|'second' }, …]
+*     data : { hour?, minute?, second? },  // dd_date with time fields only
+*     error? : [{ text: string, type: 'full'|'hour'|'minute'|'second' }, …]
 *   }
 *   ```
 *   `error` is only present when at least one validation failure occurred.
-*   An empty `result` object (all fields absent) indicates a clear-value intent.
+*   An empty `data` object (all fields absent) indicates a clear-value intent.
 */
 component_date.prototype.parse_string_time = function(string_time) {
 
@@ -762,7 +762,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 	if(string_time.length >1 && (hour===null && minute===null && second===null)){
 		const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 		error.push({
-			msg		: error_msg +'. '+ string_time,
+			text		: error_msg +'. '+ string_time,
 			type	: 'full'
 		})
 	}
@@ -770,7 +770,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 	if(hour===null && minute===null && second===null){
 		// response
 		const response = {
-			result : {}
+			data : {}
 		}
 		return response
 	}
@@ -781,7 +781,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
 		const error_msg_hour	= get_label.hour || 'hour'
 		error.push({
-			msg		: error_msg +'. '+ error_msg_hour +': '+ hour,
+			text		: error_msg +'. '+ error_msg_hour +': '+ hour,
 			type	: 'hour'
 		})
 		dd_date.hour = null
@@ -793,7 +793,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
 		const error_msg_minute	= get_label.minute || 'minute'
 		error.push({
-			msg		: error_msg +'. '+ error_msg_minute +': '+ minute,
+			text		: error_msg +'. '+ error_msg_minute +': '+ minute,
 			type	: 'minute'
 		})
 		dd_date.minute = null
@@ -805,7 +805,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 		const error_msg			= get_label.error_invalid_date_format || 'Error: Date format is invalid'
 		const error_msg_second	= get_label.second || 'second'
 		error.push({
-			msg		: error_msg +'. '+ error_msg_second +': '+ second,
+			text		: error_msg +'. '+ error_msg_second +': '+ second,
 			type	: 'second'
 		})
 		dd_date.second = null
@@ -813,7 +813,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 
 	// response
 		const response = {
-			result : dd_date
+			data : dd_date
 		}
 		if (error.length>0) {
 			// ONE typed error, exactly like a server refusal: the client's own
@@ -822,7 +822,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 			// get_label, so error_text must keep them verbatim.
 			response.error = new ApiError({
 				code		: 'validation.invalid_date_format',
-				message		: error.map((item) => item.msg).join(' · '),
+				message		: error.map((item) => item.text).join(' · '),
 				details		: {fields: error.map((item) => item.type).join(', ')},
 				severity	: 'warning',
 				source		: 'client'
@@ -859,7 +859,7 @@ component_date.prototype.parse_string_time = function(string_time) {
 * @returns {Object} Response bag:
 *   ```
 *   {
-*     result : { year?, month?, day? },  // parsed period dd_date
+*     data : { year?, month?, day? },  // parsed period dd_date
 *     error? : []                         // currently always empty (no active checks)
 *   }
 *   ```
@@ -923,7 +923,7 @@ component_date.prototype.parse_string_period = function(values) {
 
 	// response
 		const response = {
-			result : dd_date
+			data : dd_date
 		}
 		if (error.length>0) {
 			// ONE typed error, exactly like a server refusal: the client's own
@@ -932,7 +932,7 @@ component_date.prototype.parse_string_period = function(values) {
 			// get_label, so error_text must keep them verbatim.
 			response.error = new ApiError({
 				code		: 'validation.invalid_date_format',
-				message		: error.map((item) => item.msg).join(' · '),
+				message		: error.map((item) => item.text).join(' · '),
 				details		: {fields: error.map((item) => item.type).join(', ')},
 				severity	: 'warning',
 				source		: 'client'

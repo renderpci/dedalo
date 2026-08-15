@@ -126,6 +126,7 @@
 	import {render_relation_list} from './render_relation_list.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {clone, open_records_in_window} from '../../common/js/utils/index.js'
+	import {response_data, request_failed} from '../../common/js/api_error.js'
 
 
 
@@ -328,7 +329,7 @@ relation_list.prototype.build = async function(autoload=true){
 			// console.log("RELATION_LIST api_response:", self.id, api_response);
 
 			// set the result to the datum
-				self.datum = api_response.result
+				self.datum = response_data(api_response)
 		}
 
 	// total
@@ -361,8 +362,8 @@ relation_list.prototype.build = async function(autoload=true){
 				use_worker	: true
 			})
 			.then(function(response){
-				if(response.result !== false){
-					return response.result.total
+				if(!request_failed(response)){
+					return response_data(response).total
 				}
 			})
 		}
@@ -414,7 +415,8 @@ relation_list.prototype.get_related_records = async function(section_tipo) {
 		})
 
 	// check response
-		if (!api_response.result) {
+		const datum = response_data(api_response)
+		if (!datum) {
 			console.error('invalid response from API:', api_response);
 			return false
 		}
@@ -422,7 +424,7 @@ relation_list.prototype.get_related_records = async function(section_tipo) {
 	// ar_section_id. Array of section_id used for filter q
 	// Filter entries whose component_tipo is 'id' — these are the row-start sentinels
 	// in the flat data array and carry the numeric section_id for each record.
-		const ar_section_id = api_response.result.data
+		const ar_section_id = datum.data
 			.filter(el => el.component_tipo==='id')
 			.map(el => el.section_id)
 

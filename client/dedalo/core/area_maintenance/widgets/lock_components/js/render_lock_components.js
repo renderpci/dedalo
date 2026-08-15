@@ -7,8 +7,9 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {request_failed} from '../../../../common/js/api_error.js'
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {handle_api_error} from '../../../../common/js/error_dispatch.js'
+	import {error_text} from '../../../../common/js/render_api_error.js'
 
 
 
@@ -222,7 +223,7 @@ const get_content_data_edit = async function(self) {
 						timeout : 3600 * 1000 // 1 hour waiting response
 					})
 
-					if (api_response.result) {
+					if (response_data(api_response)) {
 						print_active_users(api_response)
 					}
 			} finally {
@@ -337,12 +338,14 @@ const get_content_data_edit = async function(self) {
 						timeout : 3600 * 1000 // 1 hour waiting response
 					})
 
-					// SEC-XSS-008: textContent prevents any HTML parsing of api_response.msg
-					// embedded inside the JSON string.
+					// SEC-XSS-008: textContent prevents any HTML parsing of the widget's
+					// sentence embedded inside the JSON string.
 					info_node.textContent = JSON.stringify({
 						action	: 'force_unlock_all_components',
-						result	: api_response.result,
-						msg		: api_response.msg
+						result	: response_data(api_response) ?? null,
+						msg		: request_failed(api_response)
+							? error_text(api_response.error)
+							: (response_extension(api_response, 'msg') || null)
 					}, null, 2)
 
 					// ONE error model: policy + renderer decide the surface

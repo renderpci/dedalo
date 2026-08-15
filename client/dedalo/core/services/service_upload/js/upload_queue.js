@@ -5,6 +5,8 @@
 // imports
 	import { data_manager } from '../../../common/js/data_manager.js'
 	import { create_connection_pool, create_transfer, validate_file } from './upload_transport.js'
+	import { request_failed, response_data } from '../../../common/js/api_error.js'
+	import { error_text } from '../../../common/js/render_api_error.js'
 
 
 
@@ -216,41 +218,23 @@ const define_preview_pointers = function(entry) {
 
 /**
 * ERROR_TEXT_FROM
-* The most specific failure text the server offered.
+* The failure sentence for a queue row: the ONE coded error, resolved by the
+* ONE renderer (label in the curator's language → registry English → code).
 *
-* (!) `errors[]` FIRST, then `msg`. The upload endpoint answers a rejection with
-* `{result:false, msg:'Upload rejected', errors:['File signature (jpeg) does not
-* match declared extension']}` — reading `msg` first would replace the actual
-* diagnosis with a generic sentence, and the ingest path currently shows the
-* specific one. If this order flips, every rejected upload starts reading
-* "Upload rejected" and the curator has nothing to act on.
+* The upload endpoint is converter-made, so the REAL diagnosis (bad magic
+* bytes, path escape, oversize part) is `error.message` under `error.code` —
+* the transport already normalised every terminal path into one ApiError
+* (upload_transport.js api_error_from), including its own aborts and
+* unparseable bodies.
 *
 * @param {Object|null} api_response
 * @returns {string}
 */
 const error_text_from = function(api_response) {
 
-	if (api_response) {
-		if (Array.isArray(api_response.errors) && api_response.errors.length > 0) {
-			const text = api_response.errors
-				.map(function(item){
-					return typeof item === 'string' ? item : JSON.stringify(item)
-				})
-				.filter(Boolean)
-				.join(' ')
-			if (text !== '') {
-				return text
-			}
-		}
-		if (typeof api_response.msg === 'string' && api_response.msg !== '') {
-			return api_response.msg
-		}
-		if (typeof api_response.error === 'string' && api_response.error !== '') {
-			return api_response.error
-		}
-	}
-
-	return 'Upload failed'
+	return request_failed(api_response)
+		? error_text(api_response.error)
+		: 'Upload failed'
 }//end error_text_from
 
 
@@ -513,7 +497,7 @@ upload_queue.prototype.add = function(file) {
 			// resolve labels (it has no DOM and no get_label), so it hands the
 			// renderer both halves joined — a renderer that wants the label can
 			// still read `error_code`.
-			error				: verdict.valid ? null : (verdict.code + (verdict.msg || '')),
+			error				: verdict.valid ? null : (verdict.code + (verdict.detail || '')),
 			error_code			: verdict.valid ? null : verdict.code,
 			url					: null,
 			thumbnail_url		: null,
@@ -784,7 +768,7 @@ upload_queue.prototype.finish = function(entry, transfer, api_response) {
 		return
 	}
 
-	if (api_response && api_response.result === true) {
+	if (api_response && !request_failed(api_response) && response_data(api_response) === true) {
 		entry.status	= 'done'
 		entry.progress	= 100
 		entry.error		= null
@@ -1093,8 +1077,8 @@ upload_queue.prototype.delete_remote_file = async function(entry) {
 		const response = await data_manager.request({
 			body : rqo
 		})
-		if (response && response.result === false) {
-			console.error('upload_queue delete_uploaded_file refused:', response.msg)
+		if (request_failed(response)) {
+			console.error('upload_queue delete_uploaded_file refused:', response.error)
 		}
 	} catch (error) {
 		console.error('upload_queue delete_uploaded_file failed:', error)
