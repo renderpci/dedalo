@@ -397,14 +397,17 @@ describe("gate 7 — the 'section_list' batch kind", () => {
 describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', () => {
 	test('an action absent from backgroundRunnable is refused a fork', async () => {
 		resetBackgroundJobs();
-		const response = await dispatchToolRequest(
-			SUPERUSER,
-			-1,
-			{ model: TEMPLATE, action: 'status' }, // permission null → gate 7 passes
-			{ background_running: true },
+		// Envelope v2: the refusal THROWS the registered code (the chokepoint
+		// converts it); the legacy `errors:['background_not_allowed']` token is gone.
+		const error = await refusal(
+			dispatchToolRequest(
+				SUPERUSER,
+				-1,
+				{ model: TEMPLATE, action: 'status' }, // permission null → gate 7 passes
+				{ background_running: true },
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('background_not_allowed');
+		expect(error.code).toBe('tool.background_not_allowed');
 		expect(listBackgroundJobs(TEMPLATE, -1, true)).toHaveLength(0);
 	});
 
@@ -479,7 +482,9 @@ describe('reserved framework actions sit between gate 4 and gate 5', () => {
 			{ model: SCRATCH_ACTIVE, action: 'get_background_jobs' },
 			{},
 		);
-		expect(response.result).toEqual([]);
-		expect(response.msg).toBe('ok');
+		// Envelope v2 (`ok(data)`): `data` is the job list; `result` is only the
+		// bounded compat mirror and there is no `msg` prose channel.
+		expect(response.ok).toBe(true);
+		expect(response.data).toEqual([]);
 	});
 });

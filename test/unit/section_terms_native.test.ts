@@ -31,6 +31,7 @@ import {
 	normalizeTermLocators,
 } from '../../src/core/api/handlers/section_terms.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { getPermissions, type Principal } from '../../src/core/security/permissions.ts';
 import { getTermByLocator, getTermTipos } from '../../src/core/ts_object/term_resolver.ts';
 
@@ -303,30 +304,38 @@ async function callTerms(
 	return { status: outcome.status, body: outcome.body as Record<string, unknown> };
 }
 
-describe('get_section_terms — bad locators envelope (credless)', () => {
-	const expected = {
-		result: false,
-		msg: 'Error. Invalid or empty locators',
-		errors: ['bad_locators'],
-	};
+/**
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): the PHP `{result:false,
+ * msg:'Error. Invalid or empty locators', errors:['bad_locators']}` body is now
+ * a THROWN `section.bad_locators` (400) — the exact code the parity reconciler
+ * maps the frozen PHP body to (test/parity/normalize.ts FROZEN_ERROR_BODIES).
+ */
+describe('get_section_terms — bad locators refusal (credless)', () => {
+	async function refusalOf(rqoExtras: Record<string, unknown>): Promise<DedaloError> {
+		const outcome = await callTerms(rqoExtras).then(
+			(value) => ({ threw: false as const, value }),
+			(error: unknown) => ({ threw: true as const, error }),
+		);
+		if (!outcome.threw) {
+			throw new Error(`expected a refusal, got ${JSON.stringify(outcome.value)}`);
+		}
+		if (!(outcome.error instanceof DedaloError)) throw outcome.error;
+		return outcome.error;
+	}
 
-	test('missing locators → 200 + the handled error envelope', async () => {
-		const { status, body } = await callTerms({});
-		expect(status).toBe(200);
-		expect(body).toEqual(expected);
+	test('missing locators → the registered refusal', async () => {
+		const refusal = await refusalOf({});
+		expect(refusal.code).toBe('section.bad_locators');
+		expect(refusal.spec.status).toBe(400);
 	});
 
-	test('empty locators array → 200 + the handled error envelope', async () => {
-		const { status, body } = await callTerms({ locators: [] });
-		expect(status).toBe(200);
-		expect(body).toEqual(expected);
+	test('empty locators array → the registered refusal', async () => {
+		expect((await refusalOf({ locators: [] })).code).toBe('section.bad_locators');
 	});
 
-	test('a non-array locators value → 200 + the handled error envelope', async () => {
+	test('a non-array locators value → the registered refusal', async () => {
 		for (const locators of ['x', 42, null, { section_tipo: 'test3', section_id: 1 }]) {
-			const { status, body } = await callTerms({ locators });
-			expect(status).toBe(200);
-			expect(body).toEqual(expected);
+			expect((await refusalOf({ locators })).code).toBe('section.bad_locators');
 		}
 	});
 });
@@ -355,13 +364,13 @@ describe('get_section_terms — policy branches (DB, read-only)', () => {
 
 		const denied = await callTerms({ locators, lang: 'lg-spa' }, NO_GRANT);
 		expect(denied.status).toBe(200);
-		expect(denied.body.result).toEqual({});
+		expect(denied.body.data).toEqual({});
 
 		// Same locators, same request shape, admin principal: the batch is good,
 		// so the empty map above is the permission gate and not a broken fixture.
 		const allowed = await callTerms({ locators, lang: 'lg-spa' }, ADMIN);
 		expect(allowed.status).toBe(200);
-		const terms = allowed.body.result as Record<string, unknown>;
+		const terms = allowed.body.data as Record<string, unknown>;
 		expect(Object.keys(terms)).toEqual(['test3_1']);
 		expect(typeof terms.test3_1).toBe('string');
 	});
@@ -374,12 +383,11 @@ describe('get_section_terms — policy branches (DB, read-only)', () => {
 			ADMIN,
 		);
 		expect(status).toBe(200);
-		const terms = body.result as Record<string, unknown>;
+		const terms = body.data as Record<string, unknown>;
 		// The skip is the term gate, not the permission gate (asserted above),
 		// and the same-request control proves the request itself resolved.
 		expect(Object.keys(terms)).toEqual(['test3_1']);
 		expect('test61_1' in terms).toBe(false);
-		expect(body.msg).toBe('OK. Request done successfully');
-		expect(body.errors).toEqual([]);
+		expect(body.ok).toBe(true);
 	});
 });

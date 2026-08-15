@@ -12,6 +12,8 @@ import { config } from '../../src/config/config.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { CATEGORY_STATUS, specOf } from '../../src/core/errors/registry.ts';
+import { adoptErrorEnvelopeV2 } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 function adminContext(): ApiRequestContext {
@@ -104,14 +106,20 @@ describe.if(hasPhpCredentials())('get_section_terms differential', () => {
 		expect(ts.body.result).toEqual(php.result as Record<string, unknown>);
 	});
 
-	test('bad locators → same error envelope (HTTP 200, bad_locators)', async () => {
+	test('bad locators → the SAME refusal, restated as envelope v2 (section.bad_locators, 400)', async () => {
 		if (!hasPhpCredentials()) return;
 		const ts = await tsTerms({ locators: [] });
 		const php = await phpTerms({ locators: [] });
-		expect(ts.status).toBe(200);
-		expect(ts.body.result).toBe(false);
-		expect(php.result).toBe(false);
-		expect(ts.body.errors).toEqual(php.errors as unknown[]);
-		expect(ts.body.msg).toBe(php.msg as string);
+		// The frozen PHP body is projected through the parity reconciler
+		// (FROZEN_ERROR_BODIES → registry code); TS answers the registry status
+		// (envelope v2: ok:false ⇒ status ∉ 2xx — ERRORS_SPEC §3).
+		const adopted = adoptErrorEnvelopeV2(php);
+		expect(adopted.matched).toBe(true);
+		expect(adopted.kind).toBe('error');
+		expect(ts.status).toBe(CATEGORY_STATUS[specOf('section.bad_locators').category]);
+		expect(ts.body.ok).toBe(false);
+		expect((ts.body.error as { code: string }).code).toBe(
+			(adopted.projection as { error: { code: string } }).error.code,
+		);
 	});
 });

@@ -22,7 +22,9 @@ import {
 	type WireSectionId,
 } from '../../concepts/section_id.ts';
 import { getSectionTipos } from '../../concepts/sqo.ts';
+import { ok } from '../../errors/convert.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
+import { specOf } from '../../errors/registry.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
 import { routeSectionRead } from '../../section/read_facade.ts';
 import {
@@ -43,7 +45,7 @@ import {
 	type ApiRequestContext,
 	requirePrincipal,
 } from '../handler_context.ts';
-import { type ApiResult, denied, notAuthorized } from '../response.ts';
+import type { ApiResult } from '../response.ts';
 import { normalizeTermLocators } from './section_terms.ts';
 
 /** PHP safe_tipo grammar (shared/core_functions.php:2296). */
@@ -82,7 +84,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (source.section_tipo !== undefined && source.tipo !== undefined) {
 			const level = await getPermissions(principal, source.section_tipo, source.tipo);
 			if (level < 1) {
-				return notAuthorized('Insufficient permissions to read');
+				throw new DedaloError('perm.denied', {
+					coordinates: { section_tipo: source.section_tipo, tipo: source.tipo },
+				});
 			}
 		}
 		// Gate B: every SQO target section, self-keyed.
@@ -90,7 +94,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
 				const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 				if (level < 1) {
-					return notAuthorized('Insufficient permissions to read');
+					throw new DedaloError('perm.denied', {
+						coordinates: { section_tipo: targetSectionTipo },
+					});
 				}
 			}
 		}
@@ -121,7 +127,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			source.section_id === undefined ||
 			source.section_id === null
 		) {
-			return denied(400, 'save: source.tipo/section_tipo/section_id are required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'save: source.tipo/section_tipo/section_id are required',
+			});
 		}
 		// TEMPORAL instance (WC-059): a tool's throwaway editable clone addresses
 		// NO record — its section_id is a client sentinel, not an address. Resolve
@@ -131,7 +139,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// — nothing is written (same reasoning as the search_<n> branch).
 		if (isTemporalSource(source)) {
 			if (!Array.isArray(dataPayload.changed_data)) {
-				return denied(400, 'save: data.changed_data must be an array');
+				throw new DedaloError('request.invalid_data', {
+					message: 'save: data.changed_data must be an array',
+				});
 			}
 			// A read grant is enough BECAUSE nothing is persisted — with one
 			// exception: `add_new_element` really creates a record in the target
@@ -144,12 +154,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			);
 			const temporalLevel = await getPermissions(principal, source.section_tipo, source.tipo);
 			if (temporalLevel < (temporalCreates ? 2 : 1)) {
-				return denied(
-					403,
-					temporalCreates
-						? "You don't have enough permissions to edit this component"
-						: "You don't have enough permissions to read this component",
-				);
+				throw new DedaloError('perm.denied', {
+					coordinates: {
+						section_tipo: source.section_tipo,
+						tipo: source.tipo,
+						required: temporalCreates ? 2 : 1,
+					},
+				});
 			}
 			const { resolveTemporalSave } = await import('../../section/record/temporal.ts');
 			return await resolveTemporalSave(rqo, principal);
@@ -173,11 +184,21 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				'rqo.dd_core_api.save.section_id',
 			);
 		} catch (error) {
-			return denied(400, `save: ${error instanceof Error ? error.message : String(error)}`);
+			// The classifier's own message names the offending value — LOG-ONLY
+			// (coordinates + cause); the wire carries the registry sentence.
+			throw new DedaloError('section_id.not_an_address', {
+				cause: error,
+				coordinates: {
+					section_tipo: source.section_tipo,
+					section_id: JSON.stringify(source.section_id ?? null),
+				},
+			});
 		}
 		if (wireId.kind === 'absent') {
 			// '' lands here (the required-guard above only catches undefined/null).
-			return denied(400, 'save: source.tipo/section_tipo/section_id are required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'save: source.tipo/section_tipo/section_id are required',
+			});
 		}
 		// Consultation-only sections (Activity dd542, Time Machine dd15, …) are
 		// read-only regardless of any component-level grant (PHP dd_core_api:1330
@@ -188,7 +209,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// The write ENGINE (saveComponentData) enforces the same rule for
 		// MCP/agent doors.
 		if (isConsultationOnlySection(source.section_tipo) && wireId.kind === 'record') {
-			return notAuthorized(`Illegal save to read-only section '${source.section_tipo}'`);
+			throw new DedaloError('perm.denied', {
+				message: `Illegal save to read-only section '${source.section_tipo}'`,
+				coordinates: { section_tipo: source.section_tipo },
+			});
 		}
 		// SEARCH-MODE relation link (portal/relation link_record + unlink_record):
 		// the picker lands on a CLIENT-MINTED synthetic id ('search_<n>', search.js
@@ -228,7 +252,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const level =
 			ownRecordLevel ?? (await getPermissions(principal, source.section_tipo, source.tipo));
 		if (level < 2) {
-			return notAuthorized("You don't have enough permissions to edit this component");
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: source.section_tipo, tipo: source.tipo, required: 2 },
+			});
 		}
 		// Per-record scope gate (PHP assert_record_in_user_scope): a level-2 user
 		// may only edit records inside their projects filter — the level gate
@@ -237,11 +263,15 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		if (!principal.isGlobalAdmin) {
 			const { isRecordInScope } = await import('../../security/record_scope.ts');
 			if (!(await isRecordInScope(source.section_tipo, sectionId, principal))) {
-				return notAuthorized('Record is out of the user scope');
+				throw new DedaloError('perm.out_of_scope', {
+					coordinates: { section_tipo: source.section_tipo, section_id: sectionId },
+				});
 			}
 		}
 		if (!Array.isArray(dataPayload.changed_data)) {
-			return denied(400, 'save: data.changed_data must be an array');
+			throw new DedaloError('request.invalid_data', {
+				message: 'save: data.changed_data must be an array',
+			});
 		}
 
 		const outcome = await saveComponentData({
@@ -260,7 +290,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				).caller_dataframe ?? null,
 		});
 		if (!outcome.ok) {
-			return denied(400, `save failed: ${outcome.message}`);
+			throw new DedaloError('record.save_failed', {
+				message: `save failed: ${outcome.message}`,
+				coordinates: {
+					section_tipo: source.section_tipo,
+					section_id: sectionId,
+					tipo: source.tipo,
+				},
+			});
 		}
 		// Server-side observers (PHP propagate_to_observers) fire INSIDE the
 		// saveComponentData chokepoint (post-commit — every save door
@@ -526,14 +563,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const createdSectionId = outcome.created_section_id;
 		return {
 			status: 200,
-			body: {
-				result: {
+			body: ok(
+				{
 					context: savedContext,
 					data: savedData,
 					...(createdSectionId !== undefined ? { created_section_id: createdSectionId } : {}),
 				},
-				msg: 'OK',
-			},
+				{ requestId: context.requestId },
+			),
 		};
 	},
 	read_raw: async (rqo, context) => {
@@ -547,16 +584,22 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			type?: string;
 		};
 		if (options.section_tipo === undefined) {
-			return denied(400, 'read_raw: options.section_tipo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'read_raw: options.section_tipo is required',
+			});
 		}
 		if (options.tipo === undefined) {
-			return denied(400, 'read_raw: options.tipo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'read_raw: options.tipo is required',
+			});
 		}
 		const targets = rqo.sqo !== undefined ? getSectionTipos(rqo.sqo) : [options.section_tipo];
 		for (const targetSectionTipo of targets) {
 			const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 			if (level < 1) {
-				return notAuthorized('Insufficient permissions to read');
+				throw new DedaloError('perm.denied', {
+					coordinates: { section_tipo: targetSectionTipo },
+				});
 			}
 		}
 		const { readRaw } = await import('./read_raw.ts');
@@ -572,7 +615,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		);
 		return {
 			status: 200,
-			body: { result: outcome.result, table: outcome.table, msg: 'OK. Request done' },
+			// `table` is an owned top-level extension key (the client + the raw view
+			// read it by name); the raw rows are the payload.
+			body: ok(outcome.result, { requestId: context.requestId, extend: { table: outcome.table } }),
 		};
 	},
 	create: async (rqo, context) => {
@@ -583,14 +628,18 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const source = rqo.source ?? {};
 		const sectionTipo = source.section_tipo;
 		if (sectionTipo === undefined) {
-			return denied(400, 'create: source.section_tipo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'create: source.section_tipo is required',
+			});
 		}
 		// WC-059: a temporal instance addresses no record, so a record-lifecycle
 		// action on one is nonsense. Refusing is cheaper than reasoning about it,
 		// and it keeps "every record-addressing door consults isTemporalSource"
 		// literally true (temporal_instance_tripwire).
 		if (isTemporalSource(source)) {
-			return denied(400, 'temporal instances cannot create records');
+			throw new DedaloError('request.invalid_source', {
+				message: 'create: temporal instances cannot create records',
+			});
 		}
 		await refuseAreaWrite(sectionTipo, source.model);
 		// getSectionPermissions caps consultation-only sections at read (1), so a
@@ -598,10 +647,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// createSectionRecord engine backstops the same rule for other doors.
 		const level = await getSectionPermissions(principal, sectionTipo);
 		if (level < 2) {
-			return denied(
-				403,
-				`You don't have enough permissions to create a record in this section (${sectionTipo})`,
-			);
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: sectionTipo, required: 2, operation: 'create' },
+			});
 		}
 		const { createSectionRecord } = await import('../../section/record/create_record.ts');
 		const sectionId = await createSectionRecord(sectionTipo, principal.userId);
@@ -629,7 +677,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				},
 			});
 		}
-		return { status: 200, body: { result: sectionId, msg: 'OK. Request done' } };
+		return { status: 200, body: ok(sectionId, { requestId: context.requestId }) };
 	},
 	duplicate: async (rqo, context) => {
 		// Clone a record into a NEW one (PHP dd_core_api::duplicate). WRITE
@@ -642,24 +690,29 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const source = rqo.source ?? {};
 		const sectionTipo = source.section_tipo;
 		if (sectionTipo === undefined) {
-			return denied(400, 'duplicate: source.section_tipo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'duplicate: source.section_tipo is required',
+			});
 		}
 		if (source.section_id === undefined || source.section_id === null) {
-			return denied(400, 'duplicate: source.section_id is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'duplicate: source.section_id is required',
+			});
 		}
 		// WC-059 — see the create door.
 		if (isTemporalSource(source)) {
-			return denied(400, 'temporal instances cannot duplicate records');
+			throw new DedaloError('request.invalid_source', {
+				message: 'duplicate: temporal instances cannot duplicate records',
+			});
 		}
 		await refuseAreaWrite(sectionTipo, source.model);
 		// Consultation-only sections cap at read (1) → duplicate refused here; the
 		// duplicateSectionRecord engine backstops the same rule for other doors.
 		const level = await getSectionPermissions(principal, sectionTipo);
 		if (level < 2) {
-			return denied(
-				403,
-				`You don't have enough permissions to write to the section (${sectionTipo})`,
-			);
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: sectionTipo, required: 2, operation: 'duplicate' },
+			});
 		}
 		// Coerce at the door (counted, deprecable string form) instead of the blind
 		// Number() that minted NaN for junk (WC-2026-08-10-section-id-int-canonical).
@@ -669,14 +722,22 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		try {
 			sourceSectionId = coerceSectionId(source.section_id, 'rqo.dd_core_api.duplicate.section_id');
 		} catch (error) {
-			return denied(400, `duplicate: ${error instanceof Error ? error.message : String(error)}`);
+			throw new DedaloError('section_id.not_an_address', {
+				cause: error,
+				coordinates: {
+					section_tipo: sectionTipo,
+					section_id: JSON.stringify(source.section_id ?? null),
+				},
+			});
 		}
 		if (!principal.isGlobalAdmin) {
 			// Per-record scope gate: the source must be visible under the
 			// caller's projects filter (PHP assert_record_in_user_scope).
 			const { isRecordInScope } = await import('../../security/record_scope.ts');
 			if (!(await isRecordInScope(sectionTipo, sourceSectionId, principal))) {
-				return notAuthorized('Record is out of the user scope');
+				throw new DedaloError('perm.out_of_scope', {
+					coordinates: { section_tipo: sectionTipo, section_id: sourceSectionId },
+				});
 			}
 		}
 		const { duplicateSectionRecord } = await import('../../section/record/duplicate_record.ts');
@@ -685,7 +746,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			sourceSectionId,
 			principal.userId,
 		);
-		return { status: 200, body: { result: newSectionId, msg: 'OK. Request done' } };
+		return { status: 200, body: ok(newSectionId, { requestId: context.requestId }) };
 	},
 	delete: async (rqo, context) => {
 		// Delete a section record (PHP dd_core_api::delete): delete_record
@@ -708,28 +769,38 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			(rqo.options as { delete_with_children?: boolean } | undefined)?.delete_with_children ===
 			true;
 		if (sectionTipo === undefined) {
-			return denied(400, 'delete: source.section_tipo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'delete: source.section_tipo is required',
+			});
 		}
 		// WC-059 — see the create door.
 		if (isTemporalSource(rqo.source)) {
-			return denied(400, 'temporal instances cannot delete records');
+			throw new DedaloError('request.invalid_source', {
+				message: 'delete: temporal instances cannot delete records',
+			});
 		}
 		await refuseAreaWrite(sectionTipo, (rqo.source as { model?: string })?.model);
 		if (deleteMode !== 'delete_record' && deleteMode !== 'delete_data') {
-			return denied(400, `delete: unknown delete_mode '${deleteMode}'`);
+			throw new DedaloError('request.invalid_options', {
+				// Public disclosure: the sentence states the CLOSED set, never the
+				// rejected value (which is caller data).
+				publicMessage: "source.delete_mode must be 'delete_record' or 'delete_data'",
+				message: `delete: unknown delete_mode '${deleteMode}'`,
+			});
 		}
 		const hasSqo = rqo.sqo !== undefined && rqo.sqo !== null;
 		if ((source.section_id === undefined || source.section_id === null) && !hasSqo) {
-			return denied(400, 'delete: source.section_id or rqo.sqo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'delete: source.section_id or rqo.sqo is required',
+			});
 		}
 		// Consultation-only sections cap at read (1) → delete refused here; the
 		// delete engines backstop the same rule for other doors.
 		const level = await getSectionPermissions(principal, sectionTipo);
 		if (level < 2) {
-			return denied(
-				403,
-				`You don't have enough permissions to delete this section (${sectionTipo})`,
-			);
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: sectionTipo, required: 2, operation: 'delete' },
+			});
 		}
 		const { deleteSectionRecord, deleteSectionData } = await import(
 			'../../section/record/delete_record.ts'
@@ -747,7 +818,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			try {
 				targetId = coerceSectionId(source.section_id, 'rqo.dd_core_api.delete.section_id');
 			} catch (error) {
-				return denied(400, `delete: ${error instanceof Error ? error.message : String(error)}`);
+				throw new DedaloError('section_id.not_an_address', {
+					cause: error,
+					coordinates: {
+						section_tipo: sectionTipo,
+						section_id: JSON.stringify(source.section_id ?? null),
+					},
+				});
 			}
 			// Per-record scope gate (PHP assert_record_in_user_scope): a level-2
 			// user may only delete records inside their projects filter — the
@@ -756,13 +833,18 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			if (!principal.isGlobalAdmin) {
 				const { isRecordInScope } = await import('../../security/record_scope.ts');
 				if (!(await isRecordInScope(sectionTipo, targetId, principal))) {
-					return notAuthorized('Record is out of the user scope');
+					throw new DedaloError('perm.out_of_scope', {
+						coordinates: { section_tipo: sectionTipo, section_id: targetId },
+					});
 				}
 			}
 			targets = [targetId];
 		} else {
 			if (!principal.isGlobalAdmin) {
-				return notAuthorized('delete: sqo-based multi-delete requires global admin');
+				throw new DedaloError('perm.denied', {
+					message: 'delete: sqo-based multi-delete requires global admin',
+					coordinates: { section_tipo: sectionTipo, operation: 'delete_multi' },
+				});
 			}
 			const { sanitizeClientSqo } = await import('../../concepts/sqo.ts');
 			const { buildSearchSql } = await import('../../search/sql_assembler.ts');
@@ -793,7 +875,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			);
 			if (ONTOLOGY_MAIN_SECTIONS.has(sectionTipo) && deleteMode === 'delete_record') {
 				if (!principal.isGlobalAdmin) {
-					return notAuthorized('delete: ontology-main cascade requires global admin');
+					throw new DedaloError('perm.denied', {
+						message: 'delete: ontology-main cascade requires global admin',
+						coordinates: { section_tipo: sectionTipo, operation: 'delete_ontology_main' },
+					});
 				}
 				const { deleteSectionRecord: cascadeDelete } = await import(
 					'../../section/record/delete_record.ts'
@@ -806,11 +891,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 						cascadeDelete(st, id, principal.userId),
 					);
 					if (!cascade.ok) {
-						return denied(400, `delete: ontology cascade failed (${cascade.errors.join('; ')})`);
+						throw new DedaloError('record.delete_failed', {
+							message: `delete: ontology cascade failed (${cascade.errors.join('; ')})`,
+							coordinates: { section_tipo: sectionTipo, section_id: targetId },
+						});
 					}
 					cascaded.push(targetId);
 				}
-				return { status: 200, body: { result: cascaded, msg: 'OK. Request done' } };
+				return { status: 200, body: ok(cascaded, { requestId: context.requestId }) };
 			}
 		}
 		// Children-exist refusal (PHP sections::delete :535-593): a delete_record
@@ -825,7 +913,8 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			const { getChildrenTipo } = await import('../../relations/children.ts');
 			relationChildrenTipo = await getChildrenTipo(sectionTipo);
 		}
-		const skippedErrors: string[] = [];
+		/** Parents kept because they still have children (the notice's `not_deleted`). */
+		const skippedIds: number[] = [];
 		for (const targetId of targets) {
 			if (relationChildrenTipo !== null) {
 				// PHP reads component_relation_children->get_data() — the COMPUTED
@@ -836,9 +925,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				const children = await getChildren(targetId, sectionTipo, relationChildrenTipo);
 				if (children.length > 0) {
 					const childIds = children.map((child) => child.section_id).join(',');
-					skippedErrors.push(
-						`skipped record deletion because it has children : ${targetId} [${childIds}]`,
+					console.warn(
+						`[delete] skipped record deletion because it has children : ${targetId} [${childIds}]`,
 					);
+					skippedIds.push(targetId);
 					continue;
 				}
 			}
@@ -879,9 +969,21 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// PHP keeps msg 'OK. Request done' even when records were skipped (its
 		// :681 errors check tests an undefined local — always false); the skip
 		// reasons travel in `errors` (PHP response->errors passthrough).
-		const deleteBody: Record<string, unknown> = { result: deleted, msg: 'OK. Request done' };
-		if (skippedErrors.length > 0) deleteBody.errors = skippedErrors;
-		return { status: 200, body: deleteBody };
+		// The skipped parents are a NON-FATAL CODED FACT, not a failure: what was
+		// deleted really was deleted and stays the payload. `record.delete_children_refused`
+		// carries the refused ids as its one declared detail (ERRORS_SPEC §3 notices).
+		const notices =
+			skippedIds.length === 0
+				? undefined
+				: [
+						{
+							code: 'record.delete_children_refused' as const,
+							label_key: specOf('record.delete_children_refused').label_key,
+							retryable: specOf('record.delete_children_refused').retryable,
+							details: { not_deleted: skippedIds.join(',') },
+						},
+					];
+		return { status: 200, body: ok(deleted, { requestId: context.requestId, notices }) };
 	},
 	count: async (rqo, context) => {
 		// Record total for a search (PHP dd_core_api::count :1592): the SQO
@@ -889,7 +991,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// ACL as read apply.
 		const principal = requirePrincipal(context);
 		if (rqo.sqo === undefined) {
-			return denied(400, 'count: rqo.sqo is required');
+			throw new DedaloError('request.invalid_source', { message: 'count: rqo.sqo is required' });
 		}
 
 		// Inverse-reference count (mode 'related', relation_list paginator):
@@ -908,7 +1010,9 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				if (typeof locator.section_tipo !== 'string') continue;
 				const level = await getPermissions(principal, locator.section_tipo, locator.section_tipo);
 				if (level < 1) {
-					return notAuthorized('Insufficient permissions to read');
+					throw new DedaloError('perm.denied', {
+						coordinates: { section_tipo: locator.section_tipo },
+					});
 				}
 			}
 			const sectionTipos = Array.isArray(sqoRelated.section_tipo)
@@ -952,13 +1056,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 					result = { total: scoped.length };
 				}
 			}
-			return { status: 200, body: { result, msg: 'OK' } };
+			return { status: 200, body: ok(result, { requestId: context.requestId }) };
 		}
 
 		for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
 			const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 			if (level < 1) {
-				return notAuthorized('Insufficient permissions to read');
+				throw new DedaloError('perm.denied', { coordinates: { section_tipo: targetSectionTipo } });
 			}
 		}
 		// The read STRATEGY owns counting: the default matrix source runs the
@@ -970,7 +1074,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const sqo = sanitizeClientSqo(structuredClone(rqo.sqo) as Record<string, unknown>);
 		const readSource = await pickReadSource((rqo.sqo as { mode?: string }).mode);
 		const total = await readSource.count(sqo, principal);
-		return { status: 200, body: { result: { total }, msg: 'OK' } };
+		return { status: 200, body: ok({ total }, { requestId: context.requestId }) };
 	},
 	start: async (rqo, context) => {
 		// The client's first boot call (PHP dd_core_api::start): environment
@@ -994,21 +1098,19 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				const { buildInstallContext } = await import('../../install/context.ts');
 				return {
 					status: 200,
-					body: {
-						result: { context: [buildInstallContext()], data: [] },
-						environment: await buildEnv(null, null),
-						msg: 'OK',
-					},
+					body: ok(
+						{ context: [buildInstallContext()], data: [] },
+						{ requestId: context.requestId, extend: { environment: await buildEnv(null, null) } },
+					),
 				};
 			}
 			const { buildLoginContext } = await import('./login_context.ts');
 			return {
 				status: 200,
-				body: {
-					result: { context: [await buildLoginContext()], data: [] },
-					environment: await buildEnv(null, null),
-					msg: 'OK',
-				},
+				body: ok(
+					{ context: [await buildLoginContext()], data: [] },
+					{ requestId: context.requestId, extend: { environment: await buildEnv(null, null) } },
+				),
 			};
 		}
 		const { buildStructureContext } = await import('../../resolve/structure_context.ts');
@@ -1041,7 +1143,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			const { getUserTools, buildToolElementContext } = await import('../../tools/registry.ts');
 			const authorizedTools = await getUserTools(context.session.userId, principal.isGlobalAdmin);
 			if (!authorizedTools.some((tool) => tool.name === toolParam)) {
-				return notAuthorized('Tool not authorized for current user');
+				throw new DedaloError('tool.not_authorized', { coordinates: { tool: toolParam } });
 			}
 			const toolElementContext = await buildToolElementContext(toolParam);
 			const toolStartContext: unknown[] = [];
@@ -1060,11 +1162,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			if (toolElementContext !== null) toolStartContext.push(toolElementContext);
 			return {
 				status: 200,
-				body: {
-					result: { context: toolStartContext, data: [] },
-					environment: await buildEnv(context.session, principal),
-					msg: 'OK',
-				},
+				body: ok(
+					{ context: toolStartContext, data: [] },
+					{
+						requestId: context.requestId,
+						extend: { environment: await buildEnv(context.session, principal) },
+					},
+				),
 			};
 		}
 
@@ -1137,13 +1241,18 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			}
 			// A section_tool whose rerouted tipo is still not a real section is an
 			// ERROR in PHP too — section::get_instance returns false and start
-			// fatals on ->set_lang (:430-434), answering result:false (numisdata625,
-			// pinned in section_tool_start_differential). Refuse loudly with the
-			// same envelope instead of emitting a bogus entry.
+			// fatals on ->set_lang (:430-434), answering a refusal (numisdata625,
+			// pinned in section_tool_start_differential). Refuse loudly with a
+			// registered code instead of emitting a bogus entry.
 			if ((await getModelByTipo(pageTipo)) !== 'section') {
 				const message = `start: section_tool ${sectionToolTipo} has no buildable target section (config.target_section_tipo)`;
-				console.warn(message);
-				return { status: 200, body: { result: false, msg: message, errors: [message] } };
+				// A state refusal, not a caller fault: the ontology names a target that
+				// is not a section. `resource.conflict` is the public-disclosure state
+				// code, so the operator sentence still reaches the panel.
+				throw new DedaloError('resource.conflict', {
+					publicMessage: message,
+					coordinates: { section_tool_tipo: sectionToolTipo, tipo: pageTipo },
+				});
 			}
 		}
 
@@ -1228,11 +1337,10 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		return {
 			status: 200,
-			body: {
-				result: { context: startContext, data: [] },
-				environment,
-				msg: 'OK',
-			},
+			body: ok(
+				{ context: startContext, data: [] },
+				{ requestId: context.requestId, extend: { environment } },
+			),
 		};
 	},
 	get_element_context: async (rqo, context) => {
@@ -1264,18 +1372,20 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				principal.isGlobalAdmin,
 			);
 			if (!authorized.some((tool) => tool.name === toolName)) {
-				return notAuthorized('Tool not authorized for current user');
+				throw new DedaloError('tool.not_authorized', { coordinates: { tool: toolName } });
 			}
 			const toolContext = await buildToolElementContext(toolName);
 			return {
 				status: 200,
-				body: { result: toolContext !== null ? [toolContext] : [], msg: 'OK' },
+				body: ok(toolContext !== null ? [toolContext] : [], { requestId: context.requestId }),
 			};
 		}
 
 		const tipo = source.tipo;
 		if (tipo === undefined) {
-			return denied(400, 'get_element_context: source.tipo is required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'get_element_context: source.tipo is required',
+			});
 		}
 		const sectionTipo = source.section_tipo ?? tipo;
 		const mode = source.mode ?? 'list';
@@ -1300,15 +1410,15 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			model !== null &&
 			(model === 'section' || model.startsWith('component_') || isAreaModel(model));
 		if (!isCoveredModel) {
-			return denied(
-				400,
-				`get_element_context: model '${model}' not implemented (section/component/area only)`,
-			);
+			throw new DedaloError('request.invalid_model', {
+				message: `get_element_context: model '${model}' not implemented (section/component/area only)`,
+				coordinates: { tipo, model: model ?? 'null' },
+			});
 		}
 		// Read gate: level >= 1 on (section_tipo, tipo) — PHP assert_section_permission.
 		const permissions = await getPermissions(principal, sectionTipo, tipo);
 		if (permissions < 1) {
-			return notAuthorized('Insufficient permissions to read');
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: sectionTipo, tipo } });
 		}
 		const entry = await buildStructureContext({
 			tipo,
@@ -1319,7 +1429,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		});
 		return {
 			status: 200,
-			body: { result: entry !== null ? [entry] : [], msg: 'OK' },
+			body: ok(entry !== null ? [entry] : [], { requestId: context.requestId }),
 		};
 	},
 	get_section_elements_context: async (rqo, context) => {
@@ -1335,7 +1445,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			principal,
 			(rqo.options ?? {}) as Record<string, unknown>,
 		);
-		return { status: 200, body: { result, msg: 'OK. Request done' } };
+		return { status: 200, body: ok(result, { requestId: context.requestId }) };
 	},
 	get_section_terms: async (rqo, context) => {
 		// Batch-resolve the section_map display term for a set of records (PHP
@@ -1347,15 +1457,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 
 		const rawLocators = (rqo as { locators?: unknown }).locators;
 		if (!Array.isArray(rawLocators) || rawLocators.length === 0) {
-			// PHP returns this as a handled response envelope, not an HTTP error.
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: 'Error. Invalid or empty locators',
-					errors: ['bad_locators'],
-				},
-			};
+			throw new DedaloError('section.bad_locators');
 		}
 		// Validate + dedup + cap the batch (pure; handlers/section_terms.ts).
 		const locatorEntries = normalizeTermLocators(rawLocators);
@@ -1383,10 +1485,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			);
 		}
 
-		return {
-			status: 200,
-			body: { result: terms, msg: 'OK. Request done successfully', errors: [] },
-		};
+		return { status: 200, body: ok(terms, { requestId: context.requestId }) };
 	},
 	// get_matrix_ontology_locator: DELETED at the DEC-16 re-sync (2026-07-11)
 	// together with the PHP endpoint and matrix_ontology_locator_differential —
@@ -1407,29 +1506,19 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		};
 		const sectionTipo = source.section_tipo ?? source.tipo;
 		if (!source.section_tipo || !source.tipo || !source.section_id) {
-			// PHP appends the trigger detail to the base failure msg (HTTP 200).
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: 'Error. Request failed Trigger Error: (get_indexation_grid) Empty source properties (section_tipo, section_id, tipo are mandatory)',
-					errors: ['invalid rqo source'],
-				},
-			};
+			throw new DedaloError('request.invalid_source', {
+				message:
+					'get_indexation_grid: empty source properties (section_tipo, section_id, tipo are mandatory)',
+			});
 		}
-		// SEC: read permission on the term's section. PHP throws
-		// permission_exception → dd_manager:458 converts to HTTP 200
-		// result:false 'permissions_denied' — mirror that (client contract).
+		// SEC: read permission on the term's section. PHP threw
+		// permission_exception → dd_manager:458 answered 'permissions_denied';
+		// envelope v2 restates that as the registered `perm.denied` (403).
 		const level = await getPermissions(principal, sectionTipo as string, sectionTipo as string);
 		if (level < 1) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: `Error. Insufficient permissions on section ${sectionTipo} (required: 1, have: ${level})`,
-					errors: ['permissions_denied'],
-				},
-			};
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: sectionTipo as string, required: 1, have: level },
+			});
 		}
 		// The grid host is the THESAURUS TERM record: coerce at the door
 		// (counted, deprecable RQO-body string form — the client still sends the
@@ -1443,14 +1532,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				'rqo.dd_core_api.get_indexation_grid.section_id',
 			);
 		} catch (error) {
-			return {
-				status: 200,
-				body: {
-					result: false,
-					msg: `Error. Request failed Trigger Error: (get_indexation_grid) ${error instanceof Error ? error.message : String(error)}`,
-					errors: ['invalid rqo source'],
+			// Same code the frozen PHP body maps to (test/parity/normalize.ts
+			// FROZEN_ERROR_BODIES): a non-address section_id IS an invalid source.
+			// The coercer's own message is LOG-ONLY (cause + coordinates).
+			throw new DedaloError('request.invalid_source', {
+				cause: error,
+				coordinates: {
+					section_tipo: sectionTipo as string,
+					section_id: JSON.stringify(source.section_id ?? null),
 				},
-			};
+			});
 		}
 		const { buildIndexationGrid } = await import('../../section/indexation_grid.ts');
 		const grid = await buildIndexationGrid(
@@ -1462,10 +1553,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			},
 			principal,
 		);
-		return {
-			status: 200,
-			body: { result: grid, msg: 'OK. Request done successfully', errors: [] },
-		};
+		return { status: 200, body: ok(grid, { requestId: context.requestId }) };
 	},
 	get_activity_metric: async (rqo, context) => {
 		// On-demand activity dataset for the area dashboard's timeline range
@@ -1477,23 +1565,30 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const options = (rqo.options ?? {}) as { area_tipo?: unknown; range_days?: unknown };
 		const areaTipo = options.area_tipo;
 		if (typeof areaTipo !== 'string' || !SAFE_TIPO.test(areaTipo)) {
-			return denied(400, 'get_activity_metric: invalid area_tipo');
+			throw new DedaloError('request.invalid_tipo', {
+				message: 'get_activity_metric: invalid area_tipo',
+			});
 		}
 		const { getModelByTipo } = await import('../../ontology/resolver.ts');
 		if (!isAreaModel((await getModelByTipo(areaTipo)) ?? '')) {
-			return denied(400, 'get_activity_metric: not an area');
+			throw new DedaloError('request.invalid_model', {
+				message: 'get_activity_metric: not an area',
+				coordinates: { tipo: areaTipo },
+			});
 		}
 		const rangeDays = Number(options.range_days);
 		const { ACTIVITY_RANGE_DAYS, getAreaActivityMetric } = await import('../../area/dashboard.ts');
 		if (!ACTIVITY_RANGE_DAYS.has(rangeDays)) {
-			return denied(400, 'get_activity_metric: unsupported range_days');
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: `options.range_days must be one of ${[...ACTIVITY_RANGE_DAYS].join(', ')}`,
+			});
 		}
 		// SEC: same permission boundary as the dashboard payload it extends.
 		if ((await getPermissions(principal, areaTipo, areaTipo)) < 1) {
-			return notAuthorized('Insufficient permissions to read');
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: areaTipo } });
 		}
 		const data = await getAreaActivityMetric(areaTipo, rangeDays);
-		return { status: 200, body: { result: true, data, msg: 'OK. Request done' } };
+		return { status: 200, body: ok(data, { requestId: context.requestId }) };
 	},
 	get_ip_country: async (rqo, context) => {
 		// Server-side IP→country resolution for the Activity (dd542) IP list view.
@@ -1506,17 +1601,15 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const options = (rqo.options ?? {}) as { ip?: unknown };
 		const ip = options.ip;
 		if (typeof ip !== 'string' || ip.length === 0 || ip.length > 64) {
-			return denied(400, 'get_ip_country: invalid ip');
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.ip must be a non-empty address of at most 64 characters',
+			});
 		}
 		const { resolveCountry } = await import('../../geoip/reader.ts');
 		const resolved = resolveCountry(ip);
 		return {
 			status: 200,
-			body: {
-				result: true,
-				data: { country_code: resolved?.country_code ?? null },
-				msg: 'OK. Request done',
-			},
+			body: ok({ country_code: resolved?.country_code ?? null }, { requestId: context.requestId }),
 		};
 	},
 	get_environment: async (_rqo, context) => {
@@ -1562,7 +1655,9 @@ async function resolveNonRecordSave(
 	principal: Principal,
 ): Promise<ApiResult> {
 	if (!Array.isArray(dataPayload.changed_data)) {
-		return denied(400, 'save: data.changed_data must be an array');
+		throw new DedaloError('request.invalid_data', {
+			message: 'save: data.changed_data must be an array',
+		});
 	}
 	const { getColumnNameByModel: columnOf, getModelByTipo: modelOf } = await import(
 		'../../ontology/resolver.ts'
@@ -1575,7 +1670,9 @@ async function resolveNonRecordSave(
 			source.tipo as string,
 		);
 		if (searchLevel < 1) {
-			return notAuthorized("You don't have enough permissions to search this component");
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: source.section_tipo ?? '', tipo: source.tipo ?? '' },
+			});
 		}
 		const { currentChipsFromPayload, mergeRelationChips, resolveRelationEcho } = await import(
 			'../../section/record/resolve_echo.ts'
@@ -1586,10 +1683,13 @@ async function resolveNonRecordSave(
 		);
 		return await resolveRelationEcho({ rqo, principal, picked, mode: 'search' });
 	}
-	return denied(
-		400,
-		`save: section_id ${JSON.stringify(source.section_id)} addresses no record in '${source.section_tipo}'`,
-	);
+	throw new DedaloError('section_id.not_an_address', {
+		message: `save: section_id ${JSON.stringify(source.section_id)} addresses no record in '${source.section_tipo}'`,
+		coordinates: {
+			section_tipo: source.section_tipo ?? '',
+			section_id: JSON.stringify(source.section_id ?? null),
+		},
+	});
 }
 
 async function logReadActivity(
@@ -1629,10 +1729,12 @@ async function logReadActivity(
 		// section_id echoed only for a section EDIT load (PHP :3647), read from the
 		// response's first entry, falling back to the request source.
 		if (model === 'section' && mode === 'edit') {
+			// Envelope v2: the payload is `data` (the compat `result` mirror is a
+			// bounded fossil — ERRORS_SPEC §3.1 — never read here).
 			const body = result.body as
-				| { result?: { data?: { section_id?: unknown; entries?: { section_id?: unknown }[] }[] } }
+				| { data?: { data?: { section_id?: unknown; entries?: { section_id?: unknown }[] }[] } }
 				| undefined;
-			const firstItem = body?.result?.data?.[0];
+			const firstItem = body?.data?.data?.[0];
 			const sectionId =
 				firstItem?.entries?.[0]?.section_id ?? firstItem?.section_id ?? source.section_id ?? null;
 			// Canonical emission (WC-2026-08-10-section-id-int-canonical): the value
@@ -1705,9 +1807,9 @@ async function readMenu(
 	};
 	return {
 		status: 200,
-		body: {
-			result: { context: menuContext !== null ? [menuContext] : [], data: [dataItem] },
-			msg: 'OK',
-		},
+		body: ok(
+			{ context: menuContext !== null ? [menuContext] : [], data: [dataItem] },
+			{ requestId: context.requestId },
+		),
 	};
 }

@@ -19,6 +19,8 @@
  * URL: GET /dedalo/core/api/v1/environment  (+ the direct twin /api/v1/environment)
  */
 
+import { toErrorEnvelope } from '../errors/convert.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { buildEnvironment } from '../resolve/environment.ts';
 import { resolvePrincipal } from '../security/permissions.ts';
 import { getSession, SESSION_COOKIE, type Session } from '../security/session_store.ts';
@@ -38,12 +40,19 @@ function readSessionFromCookie(request: Request): Session | null {
  * Handle GET /…/environment. Returns the client environment payload
  * ({page_globals, plain_vars, get_label}) pretty-printed for a human diagnostic.
  */
-export async function handleEnvironmentView(request: Request): Promise<Response> {
-	// Session gate — fail-closed 404 (never reveal the endpoint to the unauthenticated).
+export async function handleEnvironmentView(
+	request: Request,
+	// server.ts routes by path + method only and does not thread its per-request
+	// id here yet; a fresh one keeps `request_id` present and unique per response.
+	requestId: string = crypto.randomUUID(),
+): Promise<Response> {
+	// Session gate — fail-closed 404 (never reveal the endpoint to the
+	// unauthenticated). Converter-made, like every other refusal body.
 	const session = readSessionFromCookie(request);
 	if (session === null) {
-		return new Response(JSON.stringify({ result: false, msg: 'Not found' }), {
-			status: 404,
+		const converted = toErrorEnvelope(new DedaloError('resource.not_found'), { requestId });
+		return new Response(JSON.stringify(converted.body), {
+			status: converted.status,
 			headers: { 'Content-Type': 'application/json' },
 		});
 	}

@@ -19,8 +19,9 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { config } from '../../src/config/config.ts';
 import { type ApiRequestContext, dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { CATEGORY_STATUS, specOf } from '../../src/core/errors/registry.ts';
 import { runWithRequestLangs } from '../../src/core/resolve/request_lang.ts';
-import { normalizeSectionIdTypes } from './normalize.ts';
+import { adoptErrorEnvelopeV2, normalizeSectionIdTypes } from './normalize.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 function adminContext(): ApiRequestContext {
@@ -132,7 +133,7 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 		expect(json).toContain('caption section rsc205');
 	});
 
-	test('empty/invalid source → PHP error envelope at HTTP 200', async () => {
+	test('empty/invalid source → the SAME refusal, restated as envelope v2 (request.invalid_source, 400)', async () => {
 		if (!hasPhpCredentials()) return;
 		const rqo = {
 			action: 'get_indexation_grid',
@@ -143,17 +144,23 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 		};
 		const ts = await tsGrid(rqo);
 		const php = await client.call(rqo);
-		expect(ts.status).toBe(200);
-		expect(ts.body.result).toBe(false);
-		expect(php.body.result).toBe(false);
-		expect(ts.body.errors).toEqual(php.body.errors as never);
-		expect(ts.body.msg).toBe(php.body.msg as never);
+		// The frozen PHP body is projected through the parity reconciler
+		// (FROZEN_ERROR_BODIES → registry code); TS answers the registry status
+		// (envelope v2: ok:false ⇒ status ∉ 2xx — ERRORS_SPEC §3).
+		const adopted = adoptErrorEnvelopeV2(php.body);
+		expect(adopted.matched).toBe(true);
+		expect(adopted.kind).toBe('error');
+		expect(ts.status).toBe(CATEGORY_STATUS[specOf('request.invalid_source').category]);
+		expect(ts.body.ok).toBe(false);
+		expect((ts.body.error as { code: string }).code).toBe(
+			(adopted.projection as { error: { code: string } }).error.code,
+		);
 	});
 
-	test('no-permission answers 200 result:false permissions_denied (white-box)', async () => {
-		// The client treats a falsy result as "no grid" — a thrown 4xx would
-		// surface as a data_manager error instead (same contract as the other
-		// dd_core_api reads; PHP permission_exception → dd_manager:458).
+	test('no-permission answers the registered perm.denied (403, white-box)', async () => {
+		// PHP permission_exception → dd_manager:458 'permissions_denied' at 200;
+		// envelope v2 restates it as the registered `perm.denied` at the registry
+		// status (the client's error policy keys on the code, not on a falsy result).
 		const nonAdmin: ApiRequestContext = {
 			requestId: 'test',
 			clientIp: '127.0.0.1',
@@ -172,8 +179,8 @@ describe.if(hasPhpCredentials())('get_indexation_grid differential', () => {
 			{ applicationLang: 'lg-spa', dataLang: 'lg-spa' },
 			() => dispatchRqo(gridRqo('cont1', '10', ['rsc205']) as unknown as Rqo, nonAdmin),
 		);
-		expect(outcome.status).toBe(200);
-		expect(outcome.body.result).toBe(false);
-		expect(outcome.body.errors).toEqual(['permissions_denied']);
+		expect(outcome.status).toBe(CATEGORY_STATUS[specOf('perm.denied').category]);
+		expect(outcome.body.ok).toBe(false);
+		expect((outcome.body.error as { code: string }).code).toBe('perm.denied');
 	});
 });

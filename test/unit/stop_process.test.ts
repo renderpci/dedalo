@@ -6,16 +6,33 @@
  * The handler derives the job id from the pfile basename, gates on ownership
  * (same rule as the status stream — no existence oracle for foreign job ids),
  * and aborts the job's controller so the tool handler winds down cooperatively.
+ *
+ * ENVELOPE v2 (engineering/ERRORS_SPEC.md §4): a refusal is a THROWN registry
+ * code — `request.invalid_options` for an unusable pfile, and ONE
+ * `resource.not_found` for unknown / terminal / FOREIGN alike, which is what
+ * keeps a guessable job id from being an existence oracle.
  */
 
 import { describe, expect, test } from 'bun:test';
 import { stopUtilsProcess } from '../../src/core/api/process_status.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { mediaJobs } from '../../src/core/media/jobs.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 
 const rqoWith = (options: Record<string, unknown>): Rqo =>
 	({ dd_api: 'dd_utils_api', action: 'stop_process', options }) as unknown as Rqo;
+
+/** The DedaloError a synchronous call threw, or a loud failure if it did not. */
+function refusalOf(call: () => unknown): DedaloError {
+	try {
+		const value = call();
+		throw new Error(`expected a refusal, got ${JSON.stringify(value)}`);
+	} catch (error) {
+		if (!(error instanceof DedaloError)) throw error;
+		return error;
+	}
+}
 
 describe('dd_utils_api stop_process', () => {
 	test('registered in the utils action registry', async () => {
@@ -26,17 +43,26 @@ describe('dd_utils_api stop_process', () => {
 	test('invalid or traversal pfile fails closed', async () => {
 		const principal = await resolvePrincipal(-1);
 		for (const pfile of ['', '../../etc/passwd', 'a/b.json', 'UPPER!bad.json']) {
-			const res = stopUtilsProcess(rqoWith({ pid: 1, pfile }), principal);
-			expect(res.status).toBe(200);
-			expect((res.body as { result: boolean }).result).toBe(false);
+			const refusal = refusalOf(() =>
+				stopUtilsProcess(rqoWith({ pid: 1, pfile }), principal, 'stop-test'),
+			);
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(refusal.spec.status).toBe(400);
 		}
 	});
 
 	test('unknown job answers "not running" (no existence oracle)', async () => {
 		const principal = await resolvePrincipal(-1);
-		const res = stopUtilsProcess(rqoWith({ pid: 1, pfile: 'tool_x_run_99999_1.json' }), principal);
-		expect((res.body as { result: boolean }).result).toBe(false);
-		expect(String((res.body as { msg: string }).msg)).toContain('not running');
+		const refusal = refusalOf(() =>
+			stopUtilsProcess(
+				rqoWith({ pid: 1, pfile: 'tool_x_run_99999_1.json' }),
+				principal,
+				'stop-test',
+			),
+		);
+		// ONE code for unknown / terminal / foreign — the whole point of the shape.
+		expect(refusal.code).toBe('resource.not_found');
+		expect(refusal.spec.status).toBe(404);
 	});
 
 	test('stops a LIVE job: the worker signal aborts and the job ends stopped', async () => {
@@ -61,8 +87,10 @@ describe('dd_utils_api stop_process', () => {
 		const res = stopUtilsProcess(
 			rqoWith({ pid: process.pid, pfile: `${record.id}.json` }),
 			principal,
+			'stop-test',
 		);
-		expect((res.body as { result: boolean }).result).toBe(true);
+		expect((res.body as { ok: boolean; data: boolean }).ok).toBe(true);
+		expect((res.body as { data: boolean }).data).toBe(true);
 
 		// The job must reach a terminal state with the signal observed.
 		const deadline = Date.now() + 5_000;

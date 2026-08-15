@@ -22,13 +22,18 @@
  * sends automatically on a top-level navigation.
  *
  * URL:      GET /dedalo/core/api/v1/raw?section_tipo=<tipo>&section_id=<int>
- * Response: pretty-printed { result, table, msg } — the same body shape as
- *           dd_core_api::read_raw with type:'section', so it stays parity-testable.
+ * Response: pretty-printed envelope v2 — `ok(rows, {extend:{table}})`, the same
+ *           body the dd_core_api::read_raw action returns with type:'section',
+ *           so it stays parity-testable. A refusal is the converter's failure
+ *           envelope (ERRORS_SPEC §4: this route builds no body of its own).
  */
 
 import { config } from '../../config/config.ts';
 import { readRaw } from '../api/handlers/read_raw.ts';
 import { isValidTipo } from '../concepts/ontology.ts';
+import { ok, toErrorEnvelope } from '../errors/convert.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
+import type { ErrorCode } from '../errors/registry.ts';
 import { resolvePrincipal } from '../security/permissions.ts';
 import { getSession, SESSION_COOKIE, type Session } from '../security/session_store.ts';
 
@@ -50,10 +55,15 @@ function readSessionFromCookie(request: Request): Session | null {
 	return token !== undefined ? getSession(token) : null;
 }
 
-/** Fail-closed JSON refusal — generic message, no existence/permission leak. */
-function refuse(status: number, msg: string): Response {
-	return new Response(JSON.stringify({ result: false, msg }), {
-		status,
+/**
+ * Fail-closed JSON refusal — the CONVERTER builds it (registry status, no
+ * existence/permission leak; `perm.denied`'s disclosure is `operator`, so no
+ * refusal here can name what it refused).
+ */
+function refuse(code: ErrorCode, requestId: string): Response {
+	const converted = toErrorEnvelope(new DedaloError(code), { requestId });
+	return new Response(JSON.stringify(converted.body), {
+		status: converted.status,
 		headers: { 'Content-Type': 'application/json' },
 	});
 }
@@ -62,11 +72,17 @@ function refuse(status: number, msg: string): Response {
  * Handle GET /…/raw. Returns a Response; the caller (server.ts) only routes by
  * path + method. All authorization and validation lives here.
  */
-export async function handleRawView(request: Request, url: URL): Promise<Response> {
+export async function handleRawView(
+	request: Request,
+	url: URL,
+	// server.ts routes by path + method only and does not thread its per-request
+	// id here yet; a fresh one keeps `request_id` present and unique per response.
+	requestId: string = crypto.randomUUID(),
+): Promise<Response> {
 	// Gate 1 — authenticated. 404 (not 401): never reveal the endpoint exists.
 	const session = readSessionFromCookie(request);
 	if (session === null) {
-		return refuse(404, 'Not found');
+		return refuse('resource.not_found', requestId);
 	}
 
 	// Gate 2 — administrator level. Server-authoritative: re-resolve the flag from
@@ -75,17 +91,17 @@ export async function handleRawView(request: Request, url: URL): Promise<Respons
 	const principal = await resolvePrincipal(session.userId);
 	if (!principal.isGlobalAdmin) {
 		console.warn(`[raw_view] denied: user ${session.userId} is not a global admin`);
-		return refuse(403, 'Forbidden');
+		return refuse('perm.denied', requestId);
 	}
 
 	// Gate 3 — strict identifier validation (§7.6 chokepoint) BEFORE any SQL.
 	const sectionTipo = url.searchParams.get('section_tipo') ?? '';
 	if (!isValidTipo(sectionTipo)) {
-		return refuse(404, 'Not found');
+		return refuse('resource.not_found', requestId);
 	}
 	const sectionId = Number(url.searchParams.get('section_id') ?? '');
 	if (!Number.isInteger(sectionId) || sectionId <= 0) {
-		return refuse(404, 'Not found');
+		return refuse('resource.not_found', requestId);
 	}
 
 	// Gate 4 — sensitive-section denylist. Overrides admin/superuser; refused
@@ -94,7 +110,7 @@ export async function handleRawView(request: Request, url: URL): Promise<Respons
 		console.warn(
 			`[raw_view] denied: admin ${session.userId} attempted raw read of sensitive section ${sectionTipo}`,
 		);
-		return refuse(403, 'Not available for this section');
+		return refuse('perm.denied', requestId);
 	}
 
 	// Server-built read_raw: action/type/model are FIXED here, not client-controllable.
@@ -115,7 +131,7 @@ export async function handleRawView(request: Request, url: URL): Promise<Respons
 	);
 
 	// Always pretty-print — this endpoint exists for human inspection.
-	const body = { result: outcome.result, table: outcome.table, msg: 'OK. Request done' };
+	const body = ok(outcome.result, { requestId, extend: { table: outcome.table } });
 	return new Response(JSON.stringify(body, null, 2), {
 		status: 200,
 		headers: { 'Content-Type': 'application/json' },
