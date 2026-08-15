@@ -643,6 +643,30 @@
 				opacity: 0.4;
 			}
 		}
+
+		// PICKER STATES (relation mode).
+		// A NON-SELECTABLE term has no control at all — it is never rendered, so there is
+		// no state for it here. These two cover the terms that DO accept a link: one
+		// already linked, and one blocked because the caller has no remaining capacity.
+		// Both stay visible and dimmed with a title naming the reason, so the operator
+		// sees why an arrow that exists is not acting.
+		&.disabled {
+			opacity: 0.35;
+			cursor: not-allowed;
+			pointer-events: none;
+		}
+
+		// already a locator of the caller. Shown, not hidden: the operator must be able to
+		// see what is already linked while browsing, and a second click on it is a no-op
+		// with a named title rather than a duplicate.
+		&.linked {
+			opacity: 1;
+			cursor: default;
+
+			.button.arrow_link {
+				background-color: @color_grey_9;
+			}
+		}
 	}//end .ts_object_related
 
 	// loading_spinner

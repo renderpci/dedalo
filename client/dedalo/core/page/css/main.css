@@ -17300,6 +17300,33 @@ dd-modal:has(.tool_header) {
   padding-top: 3px;
 }
 /**
+* THESAURUS PICKER PANE
+*
+* The picker surface: an area_thesaurus rendered INLINE inside the caller component's
+* own wrapper (component_portal's tree view builds the .thesaurus_pane node).
+*
+* The layout rule that matters: the caller MUST stay visible. A centred modal covered
+* the component being filled in, which is why the picked term had to be echoed back in
+* a tray — remove the occlusion and the component itself is the feedback. So the pane is
+* bounded in height and sits in the flow, never over it.
+*/
+.thesaurus_pane {
+  max-height: 22rem;
+  overflow: auto;
+  margin-top: 0.4rem;
+  border: 1px solid var(--color_grey_9);
+  border-radius: 2px;
+  background-color: var(--color_white);
+  resize: vertical;
+}
+.thesaurus_pane.hide {
+  display: none;
+}
+.thesaurus_pane > .area_thesaurus,
+.thesaurus_pane > .area_ontology {
+  padding: 0.3rem;
+}
+/**
 * area_ontology
 *
 * Only use to set general ontology styles, not dynamic rows
@@ -18803,6 +18830,18 @@ body.inspector_resizing {
 }
 .wrap_ts_object .ts_object_related .ts_object_related_icon:active {
   opacity: 0.4;
+}
+.wrap_ts_object .ts_object_related.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.wrap_ts_object .ts_object_related.linked {
+  opacity: 1;
+  cursor: default;
+}
+.wrap_ts_object .ts_object_related.linked .button.arrow_link {
+  background-color: var(--color_grey_9);
 }
 .wrap_ts_object .loading_spinner {
   position: relative;
