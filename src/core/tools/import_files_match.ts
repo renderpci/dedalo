@@ -29,7 +29,7 @@ export function basenamesMatch(storedValue: string, uploadedFullName: string): b
  */
 export type FileProcessor = (
 	input: Record<string, unknown>,
-) => Promise<{ result: boolean; msg: string }>;
+) => Promise<{ ok: boolean; message: string }>;
 
 const FILE_PROCESSORS = new Map<string, FileProcessor>();
 

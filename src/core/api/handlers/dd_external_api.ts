@@ -62,12 +62,12 @@ import type {
 	ExternalServiceModel,
 	FieldsMapEntry,
 } from '../../../external/api/index.ts';
-import { type ApiNotice, ok, specOf } from '../../errors/index.ts';
+import { type ApiNotice, DedaloError, ok, specOf } from '../../errors/index.ts';
 import { getModelByTipo, getNode, getPropertiesByTipo } from '../../ontology/resolver.ts';
 import { engineOf } from '../../relations/request_config/engine_select.ts';
 import { getPermissions } from '../../security/permissions.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
-import { type ApiResult, denied, notAuthorized } from '../response.ts';
+import type { ApiResult } from '../response.ts';
 
 /** The relation type the client stamps on a fabricated external record_data. */
 const EXTERNAL_RECORD_DATA_TYPE = 'dd687';
@@ -94,6 +94,11 @@ export interface ResolvedSearchTarget {
 	readonly model: ExternalServiceModel;
 }
 
+/** A caller-authored paging value the handler refuses (public: the sentence names the field). */
+function invalidOption(sentence: string): DedaloError {
+	return new DedaloError('request.invalid_options', { publicMessage: sentence });
+}
+
 export const externalApiActions: Record<string, ActionHandler> = {
 	/**
 	 * dd_external_api::search — terms in, the client's own record_data shape out.
@@ -108,18 +113,28 @@ export const externalApiActions: Record<string, ActionHandler> = {
 		const callerTipo = typeof source.tipo === 'string' ? source.tipo : '';
 		const callerSectionTipo = typeof source.section_tipo === 'string' ? source.section_tipo : '';
 		if (callerTipo === '' || callerSectionTipo === '') {
-			return denied(400, 'Error. source.tipo and source.section_tipo are required');
+			throw new DedaloError('request.invalid_source', {
+				message: 'source.tipo and source.section_tipo are required',
+			});
 		}
 
 		// The caller component must EXIST and the actor must be able to read it.
 		// Without this, an authenticated actor could name any component in the
 		// ontology and drive the engine's outbound socket through a binding they
 		// are not authorized to see.
+		// Existence is decided BEFORE permission: a 403 on an unknown tipo would
+		// answer "does this node exist?" — the 400 (same code as a missing source)
+		// is the non-disclosing answer; the tipo itself stays LOG-ONLY.
 		if ((await getNode(callerTipo)) === null) {
-			return denied(400, 'Error. Unknown source tipo');
+			throw new DedaloError('request.invalid_source', {
+				message: 'unknown source tipo',
+				coordinates: { tipo: callerTipo },
+			});
 		}
 		if ((await getPermissions(principal, callerSectionTipo, callerTipo)) < 1) {
-			return notAuthorized('Error. Not authorized on this component');
+			throw new DedaloError('perm.denied', {
+				coordinates: { tipo: callerTipo, section_tipo: callerSectionTipo },
+			});
 		}
 
 		const options = (rqo.options ?? {}) as {
@@ -134,15 +149,16 @@ export const externalApiActions: Record<string, ActionHandler> = {
 		// "silently narrow scope" failure with a friendly face.
 		const limit = readInteger(options.limit);
 		const offset = readInteger(options.offset);
+		// `request.invalid_options` is public-disclosure: the sentence names the
+		// caller's own field, which is the whole value of a 400.
 		if (options.limit !== undefined && options.limit !== null && limit === undefined) {
-			return denied(400, 'Error. limit must be an integer');
+			throw invalidOption('limit must be an integer');
 		}
 		if (options.offset !== undefined && options.offset !== null && offset === undefined) {
-			return denied(400, 'Error. offset must be an integer');
+			throw invalidOption('offset must be an integer');
 		}
-		if (limit !== undefined && limit <= 0) return denied(400, 'Error. limit must be positive');
-		if (offset !== undefined && offset < 0)
-			return denied(400, 'Error. offset must not be negative');
+		if (limit !== undefined && limit <= 0) throw invalidOption('limit must be positive');
+		if (offset !== undefined && offset < 0) throw invalidOption('offset must not be negative');
 
 		let target: ResolvedSearchTarget;
 		try {

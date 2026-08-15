@@ -26,9 +26,8 @@
  * envelope (envelope v2, engineering/ERRORS_SPEC.md §4): every gate here
  * REFUSES BY THROWING a registered `tool.*` / `perm.*` / `request.*` code
  * (converted by the dispatch chokepoint), and a tool action returns
- * `ok(data, {requestId, extend?})` — or, until the tools sweep lands, a legacy
- * `{result,msg,errors}` body the dispatcher's legacy_body_adapter brings onto
- * the envelope (TRANSITIONAL — deleted at P1 exit).
+ * `ok(data, {requestId, extend?})` — a body without `ok` is a bug the
+ * dispatcher refuses (the P1-era legacy_body_adapter is DELETED).
  */
 
 import { DedaloError } from '../errors/dedalo_error.ts';

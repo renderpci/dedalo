@@ -28,6 +28,7 @@ import {
 } from '../concepts/section.ts';
 import { classifyWireSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
+import { isErrorInDomain } from '../errors/dedalo_error.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
 import { THESAURUS_SECTION } from '../ontology/ontology_tipos.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
@@ -646,7 +647,7 @@ export async function resolveComponentContextPermission(
 				sectionTipo,
 				'permissions.component_context.search',
 			).catch((error: unknown) => {
-				if (error instanceof TypeError) return { kind: 'absent' } as const;
+				if (isErrorInDomain(error, 'section_id')) return { kind: 'absent' } as const;
 				throw error;
 			});
 			if (wireSectionId.kind === 'synthetic' || wireSectionId.kind === 'external-ref') return 2;

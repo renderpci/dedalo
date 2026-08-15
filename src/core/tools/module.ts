@@ -20,26 +20,14 @@ import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 
 /**
- * TRANSITIONAL — a not-yet-swept tool body (`{result, msg, errors, …}`), the
- * PHP shape. The dispatcher's legacy_body_adapter brings it onto the envelope;
- * this alias is deleted with that adapter at P1 exit.
- */
-export interface LegacyToolResponse {
-	result: unknown;
-	msg: string;
-	errors?: string[];
-	[key: string]: unknown;
-}
-
-/**
  * The response every tool action returns. It REPLACES the API envelope
  * wholesale (PHP: the tool's return value is the response body) — so it IS the
  * API envelope v2 (engineering/ERRORS_SPEC.md §3): `ok(data, {requestId,
  * extend?})` on success, with a tool's extra fields (streaming bodies, `pid`,
  * `job_id`, …) as extension keys; a failure is a THROWN DedaloError, never a
- * body. Until the tools sweep lands, the legacy shape is still accepted.
+ * body (a non-envelope body is refused by the dispatcher as a bug).
  */
-export type ToolResponse = ApiEnvelope | LegacyToolResponse;
+export type ToolResponse = ApiEnvelope;
 
 /**
  * The per-request context handed to a tool action handler. `options` are the

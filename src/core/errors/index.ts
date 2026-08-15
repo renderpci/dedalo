@@ -10,6 +10,7 @@ export {
 	type ErrorEnvelopeContext,
 	type ErrorEnvelopeResult,
 	type ErrorSurface,
+	type FailureRecord,
 	type OkEnvelopeContext,
 	ok,
 	type StreamErrorFrame,
@@ -17,6 +18,7 @@ export {
 	toDedaloError,
 	toErrorBody,
 	toErrorEnvelope,
+	toFailureRecord,
 	toStreamFrame,
 	toStructuredErr,
 } from './convert.ts';

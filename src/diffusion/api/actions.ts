@@ -25,7 +25,7 @@
 
 import { readEnv } from '../../config/env.ts';
 import { incrementCounter } from '../../core/api/counters.ts';
-import type { ApiResult } from '../../core/api/response.ts';
+import { type ApiResult, streamResult } from '../../core/api/response.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
 import { sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import { DedaloError, type ErrorCode, ok } from '../../core/errors/index.ts';
@@ -212,12 +212,7 @@ export function buildJobFollowStream(
 
 /** ApiResult carrying an SSE stream (server.ts turns it into the raw Response). */
 function sseResult(stream: ReadableStream<Uint8Array>): ApiResult {
-	return {
-		status: 200,
-		body: {},
-		stream,
-		streamHeaders: sseResponseHeaders(),
-	};
+	return streamResult(stream, sseResponseHeaders());
 }
 
 /* ── follow_queue: the admin queue stream (WC-067) ────────────────────────── */

@@ -14,7 +14,7 @@
  * through diffusion/api/actions.ts.
  */
 
-import { DedaloError } from '../../errors/dedalo_error.ts';
+import { DedaloError, ok } from '../../errors/index.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 
 /** dd_diffusion_api action handlers, keyed by action (registered in dispatch.ts). */
@@ -97,8 +97,10 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 			});
 		}
 		const { validateElementPlan } = await import('../../../diffusion/plan/compile.ts');
+		// The validation report IS the data (`{result: plan|null, errors, warnings,
+		// degradations}` — a compile that fails is a REPORT here, not a refusal).
 		const validation = await validateElementPlan(elementTipo);
-		return { status: 200, body: validation as unknown as Record<string, unknown> };
+		return { status: 200, body: ok(validation, { requestId: context.requestId }) };
 	},
 	rebuild_media_index: async (_rqo, context) => {
 		// Full media-marker resync (PHP dd_diffusion_api::rebuild_media_index):
@@ -113,10 +115,8 @@ export const diffusionApiActions: Record<string, ActionHandler> = {
 		}
 		const { rebuildMediaIndex } = await import('../../diffusion_bridge/diffusion_delete.ts');
 		// rebuildMediaIndex ANSWERS with a report and THROWS on failure (envelope
-		// v2, core-modules P1 sweep): the success flag this legacy body still
-		// carries is therefore a constant. The rest of this handler is the
-		// api-handlers sweep's; this line only keeps the wire byte-identical.
+		// v2): the report is the data.
 		const report = await rebuildMediaIndex();
-		return { status: 200, body: { result: true, ...report } as unknown as Record<string, unknown> };
+		return { status: 200, body: ok(report, { requestId: context.requestId }) };
 	},
 };

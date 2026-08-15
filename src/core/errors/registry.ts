@@ -354,6 +354,60 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 	},
 
+	// ── client-minted codes ─────────────────────────────────────────────────
+	// The browser mints these itself (`new ApiError({code})` / the CORE_POLICY
+	// table in client/dedalo/core/common/js/error_policy.js) — the registry is
+	// still the ONE vocabulary (error_taxonomy_tripwire: every code string in
+	// client/ resolves here or is `client.*`), so they carry a `reason`.
+	'record.in_use': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_record_in_use',
+		message: 'The record is being edited by another user',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		reason:
+			'Client-minted (page.js) from the lock outcome — section/locks.ts answers ' +
+			'`ok:true, in_use:true` (a lock is not a failure); the CORE_POLICY routes it to a modal.',
+	},
+	'lock.update_state': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_lock_update_state',
+		message: 'The lock keep-alive could not be updated',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: true,
+		reason:
+			'CORE_POLICY key only (action silent): the lock keep-alive poll is background ' +
+			'chatter the client never surfaces. No server path throws it.',
+	},
+	'validation.invalid_date_format': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_validation_invalid_date_format',
+		message: 'The date format is invalid',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		reason:
+			'Client-minted (component_date.js) for browser-side date validation before any ' +
+			'request leaves; the `validation.*` CORE_POLICY entry renders it inline.',
+	},
+	'request.invalid_context': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_request_invalid_context',
+		message: 'The page context could not be built',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+		reason:
+			'CORE_POLICY key (action page_panel) reserved for the page builder — a start/read ' +
+			'whose context cannot be built. No server path throws it yet.',
+	},
+
 	// ── record ──────────────────────────────────────────────────────────────
 	'record.delete_children_refused': {
 		category: 'conflict',
@@ -384,15 +438,6 @@ export const ERROR_REGISTRY = {
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: false,
-	},
-	'search.external_failed': {
-		category: 'unavailable',
-		status: 503,
-		label_key: 'external_search_failed',
-		message: 'The external search could not be completed',
-		severity: 'warn',
-		disclosure: 'operator',
-		retryable: true,
 	},
 
 	// ── tree ────────────────────────────────────────────────────────────────
@@ -452,6 +497,11 @@ export const ERROR_REGISTRY = {
 		severity: 'warn',
 		disclosure: 'operator',
 		retryable: false,
+		reason:
+			'Registered by WC-2026-08-15-tool-response-envelope-v2 for the tools/security.ts ' +
+			'permission-target refusal; that gate still answers a PermissionCheck token that ' +
+			'dispatch.ts maps through LEGACY_TOKEN_MAP (request.invalid). The P3 tools sweep ' +
+			'throws this code at the source.',
 	},
 	'tool.background_not_allowed': {
 		category: 'caller',
@@ -826,6 +876,35 @@ export const ERROR_REGISTRY = {
 	},
 
 	// ── site builder ────────────────────────────────────────────────────────
+	// ── rag (dd_rag_api — src/ai/rag/api.ts) ──────────────────────────────
+	'rag.disabled': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_rag_disabled',
+		message: 'RAG is disabled',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'rag.media_disabled': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_rag_media_disabled',
+		message: 'RAG media is disabled',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'rag.generation_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_rag_generation_failed',
+		message: 'The grounded answer could not be generated',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
+
 	'site_builder.unconfigured': {
 		category: 'unavailable',
 		status: 503,
@@ -1009,6 +1088,31 @@ export const ERROR_REGISTRY = {
 	},
 	// The scheduler claimed the job but the runner process never started (a
 	// deployment fault: interpreter path, cwd) — failed, never re-queued.
+	// The persisted OUTCOME of a job the user stopped (runner.ts / queue.ts
+	// finishJob 'cancelled'): a job result is `{ok:false, error}` like any
+	// failure record, and the cancellation is the coded fact — never a status
+	// on the HTTP wire (the cancel action itself answers ok:true).
+	'diffusion.cancelled': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_diffusion_cancelled',
+		message: 'Process cancelled by user',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// The sweeper's verdict on a running job whose heartbeat went stale past
+	// its attempt budget (queue.ts sweepStaleJobs): the runner is gone.
+	'diffusion.runner_lost': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_diffusion_runner_lost',
+		message: 'The diffusion runner was lost (heartbeat stale) after the attempt budget',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['attempts'],
+	},
 	'diffusion.runner_spawn_failed': {
 		category: 'unavailable',
 		status: 503,
@@ -1275,15 +1379,6 @@ export const ERROR_REGISTRY = {
 		status: 500,
 		label_key: 'error_media_operation_failed',
 		message: 'The media operation failed',
-		severity: 'error',
-		disclosure: 'public',
-		retryable: false,
-	},
-	'ontology.io_failed': {
-		category: 'internal',
-		status: 500,
-		label_key: 'error_ontology_io_failed',
-		message: 'The ontology operation failed',
 		severity: 'error',
 		disclosure: 'public',
 		retryable: false,

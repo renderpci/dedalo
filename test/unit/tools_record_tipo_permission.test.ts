@@ -19,6 +19,7 @@
  */
 
 import { afterAll, afterEach, describe, expect, mock, test } from 'bun:test';
+import { ok } from '../../src/core/errors/convert.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import * as realPermissions from '../../src/core/security/permissions.ts';
 import * as realRecordScope from '../../src/core/security/record_scope.ts';
@@ -47,7 +48,7 @@ function spec(minLevel = 2): ToolActionSpec {
 	return {
 		permission: 'record_tipo',
 		minLevel,
-		handler: async () => ({ result: true, msg: 'OK', errors: [] }),
+		handler: async () => ok(true, { requestId: 'tools-record-tipo-permission-test' }),
 	};
 }
 

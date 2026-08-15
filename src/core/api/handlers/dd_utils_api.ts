@@ -194,16 +194,21 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			body: ok(true, { requestId: context.requestId, extend: { ...outcome } }),
 		};
 	},
-	get_dedalo_files: async (_rqo, _context) => {
+	get_dedalo_files: async (_rqo, context) => {
 		// The service-worker pre-cache manifest (PHP dd_utils_api::
 		// get_dedalo_files). Authenticated read — the auth gate already ran
 		// (not in NO_LOGIN_ACTIONS, matching PHP); CSRF-exempt like PHP (the
-		// SW calls without the page's token). Body carries result +
-		// dedalo_version + msg — the exact shape sw.js/worker_cache.js read.
+		// SW calls without the page's token). `data` is the manifest;
+		// `dedalo_version` (the SW cache key) rides as an extension key —
+		// sw.js / worker_cache.js read `response_data()` + `dedalo_version`.
 		const { buildDedaloFilesResponse } = await import('../dedalo_files.ts');
+		const manifest = buildDedaloFilesResponse();
 		return {
 			status: 200,
-			body: buildDedaloFilesResponse() as unknown as Record<string, unknown>,
+			body: ok(manifest.result, {
+				requestId: context.requestId,
+				extend: { dedalo_version: manifest.dedalo_version },
+			}),
 		};
 	},
 	get_job_events: async (rqo, context) => {

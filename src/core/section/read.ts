@@ -35,6 +35,7 @@ import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/
 import { mergeSessionSqo, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { type MatrixRecord, readMatrixRecord } from '../db/matrix.ts';
 import { runWithRecordMemo } from '../db/record_memo.ts';
+import { isErrorInDomain } from '../errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -684,7 +685,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		sectionTipo,
 		'rqo.section.read',
 	).catch((error: unknown) => {
-		if (error instanceof TypeError) {
+		if (isErrorInDomain(error, 'section_id')) {
 			console.warn(`[section/read] unusable section_id served as no-record: ${error.message}`);
 			return { kind: 'absent' } as const;
 		}

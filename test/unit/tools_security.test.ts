@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { ok } from '../../src/core/errors/convert.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { ToolActionSpec, ToolServerModule } from '../../src/core/tools/module.ts';
 import { assertActionPermission, resolveAction } from '../../src/core/tools/security.ts';
@@ -13,7 +14,7 @@ import { assertActionPermission, resolveAction } from '../../src/core/tools/secu
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const PLAIN_USER: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 
-const noopHandler = async () => ({ result: true, msg: 'OK' });
+const noopHandler = async () => ok(true, { requestId: 'tools-security-test' });
 function spec(partial: Partial<ToolActionSpec>): ToolActionSpec {
 	return { permission: null, handler: noopHandler, ...partial };
 }

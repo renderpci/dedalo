@@ -115,11 +115,11 @@ export function logDyingBackgroundJobs(): void {
 
 /**
  * Did a finished job's captured response REFUSE? Envelope v2 says `ok:false`
- * (which a handler reaches only by throwing, so in practice never here), and an
- * unswept tool can still answer the legacy `result:false` body.
+ * (which a handler reaches only by throwing — the executor's catch converts it
+ * into the captured response, so this is the terminal-state read).
  */
 function jobRefused(response: ToolResponse | undefined): boolean {
-	return response?.ok === false || response?.result === false;
+	return response?.ok === false;
 }
 
 /** Journal one terminal transition (audit S2-16: terminal states must be observable). */

@@ -157,10 +157,10 @@ describe('named-processor allowlist (SEC-053 collapse)', () => {
 		expect(getFileProcessor('a b')).toBeNull();
 	});
 	test('a registered processor is retrievable; bad names throw on register', () => {
-		registerFileProcessor('test_noop', async () => ({ result: true, msg: 'ok' }));
+		registerFileProcessor('test_noop', async () => ({ ok: true, message: 'ok' }));
 		expect(getFileProcessor('test_noop')).not.toBeNull();
 		expect(() =>
-			registerFileProcessor('bad name', async () => ({ result: true, msg: '' })),
+			registerFileProcessor('bad name', async () => ({ ok: true, message: '' })),
 		).toThrow();
 	});
 });

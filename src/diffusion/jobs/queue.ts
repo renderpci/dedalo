@@ -20,6 +20,7 @@
  */
 
 import { sql, withTransaction } from '../../core/db/postgres.ts';
+import { DedaloError, type FailureRecord, toFailureRecord } from '../../core/errors/index.ts';
 import type { DiffusionJobState } from './schema.ts';
 import { DIFFUSION_JOBS_TABLE, ensureDiffusionJobTables } from './schema.ts';
 
@@ -275,18 +276,39 @@ export async function checkpointJob(
 	);
 }
 
+/**
+ * The persisted job OUTCOME (`result` column; the follow stream's terminal
+ * chunk copies it as `result`): a success record `{ok:true, msg, tables?,
+ * errors?, …}` (per-record diagnostic lines in `errors` — a completed job is
+ * not a failure) or a converter-made FailureRecord `{ok:false, error, msg}`
+ * (`diffusion.cancelled` / `diffusion.run_failed` / `diffusion.runner_lost` /
+ * `diffusion.runner_spawn_failed` / a typed compile failure).
+ */
+export type DiffusionJobResult =
+	| ({ ok: true; msg: string } & Record<string, unknown>)
+	| (FailureRecord & { msg: string });
+
+/** A FailureRecord with the `msg` line the client renders (converter-made error, reader-facing extras). */
+export function failedJobResult(
+	error: unknown,
+	msg: string,
+	extend: Record<string, unknown> = {},
+): DiffusionJobResult {
+	return { ...toFailureRecord(error, extend), msg };
+}
+
 /** Terminal transition (runner side): completed | failed | cancelled. */
 export async function finishJob(
 	jobId: string,
 	state: Extract<DiffusionJobState, 'completed' | 'failed' | 'cancelled'>,
-	result: Record<string, unknown>,
+	result: DiffusionJobResult,
 ): Promise<void> {
 	await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
 		 SET state = $2, result = $3::jsonb, finished_at = now(),
 		     totals = totals || jsonb_build_object('msg', $4::text)
 		 WHERE job_id = $1`,
-		[jobId, state, result, String((result as { msg?: unknown }).msg ?? '')],
+		[jobId, state, result, result.msg],
 	);
 	await notifyProgress(jobId);
 }
@@ -316,10 +338,11 @@ export async function requestCancel(
 	if (job !== null) {
 		// A QUEUED job has no runner to honor the flag — finalize it here.
 		if (job.state === 'queued') {
-			await finishJob(job.job_id, 'cancelled', {
-				result: false,
-				msg: 'Process cancelled by user',
-			});
+			await finishJob(
+				job.job_id,
+				'cancelled',
+				failedJobResult(new DedaloError('diffusion.cancelled'), 'Process cancelled by user'),
+			);
 		} else {
 			await notifyProgress(job.job_id);
 		}
@@ -580,6 +603,12 @@ export async function sweepStaleJobs(staleAfterSeconds: number): Promise<{
 	failed: string[];
 }> {
 	await ensureDiffusionJobTables();
+	// The failure RECORD (`{ok:false, error:{code:'diffusion.runner_lost',…}}`)
+	// is converter-made in TS and bound as jsonb (`$N::text::jsonb` — the Bun.sql
+	// bind rule: a bare `::jsonb` on a string param double-encodes it as a jsonb
+	// STRING scalar); only the attempt-count `msg` line is composed in SQL (the
+	// count is known only inside the UPDATE).
+	const runnerLost = JSON.stringify(toFailureRecord(new DedaloError('diffusion.runner_lost')));
 	const swept = (await sql.unsafe(
 		`UPDATE "${DIFFUSION_JOBS_TABLE}"
 		 SET state = CASE WHEN attempt < max_attempts THEN 'queued' ELSE 'failed' END,
@@ -587,7 +616,7 @@ export async function sweepStaleJobs(staleAfterSeconds: number): Promise<{
 		     heartbeat_at = NULL,
 		     finished_at = CASE WHEN attempt < max_attempts THEN finished_at ELSE now() END,
 		     result = CASE WHEN attempt < max_attempts THEN result ELSE
-		         jsonb_build_object('result', false,
+		         $2::text::jsonb || jsonb_build_object(
 		             'msg', 'Interrupted after ' || attempt || ' attempts (runner lost)') END,
 		     totals = CASE WHEN attempt < max_attempts THEN totals ELSE
 		         totals || jsonb_build_object(
@@ -595,7 +624,7 @@ export async function sweepStaleJobs(staleAfterSeconds: number): Promise<{
 		 WHERE state = 'running'
 		   AND (heartbeat_at IS NULL OR heartbeat_at < now() - make_interval(secs => $1))
 		 RETURNING job_id, state`,
-		[staleAfterSeconds],
+		[staleAfterSeconds, runnerLost],
 	)) as { job_id: string; state: string }[];
 	const requeued: string[] = [];
 	const failed: string[] = [];

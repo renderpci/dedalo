@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { ok } from '../../src/core/errors/convert.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { mediaJobs } from '../../src/core/media/jobs.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
@@ -1066,7 +1067,7 @@ describe('model actions are admin-gated and catalog-bound', () => {
 		const calls: Parameters<ScheduleRepair>[] = [];
 		const stubSchedule: ScheduleRepair = (...args) => {
 			calls.push(args);
-			return { result: true, msg: 'OK. Background process started', errors: [] };
+			return ok(true, { requestId: 'tool-transcription-test' });
 		};
 
 		const accepted = await repairModelAction(
@@ -1305,7 +1306,7 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 		const calls: Parameters<ScheduleRepair>[] = [];
 		const stubSchedule: ScheduleRepair = (...args) => {
 			calls.push(args);
-			return { result: true, msg: 'OK. Background process started', errors: [] };
+			return ok(true, { requestId: 'tool-transcription-test' });
 		};
 		const KNOWN = 'onnx-community/whisper-large-v3-turbo';
 		const admin = { isGlobalAdmin: true } as unknown as ToolActionContext['principal'];
@@ -1490,9 +1491,7 @@ describe('a cancelled repair job does not lock the model out', () => {
 		mediaJobs.stop(record.id);
 
 		const schedule: ScheduleRepair = () => ({
-			result: true,
-			msg: 'OK. Background process started',
-			errors: [],
+			...ok(true, { requestId: 'tool-transcription-test' }),
 			job_id: record.id,
 			background_job_id: record.id,
 		});
@@ -1528,9 +1527,7 @@ describe('a cancelled repair job does not lock the model out', () => {
 			return true;
 		});
 		const schedule: ScheduleRepair = () => ({
-			result: true,
-			msg: 'OK. Background process started',
-			errors: [],
+			...ok(true, { requestId: 'tool-transcription-test' }),
 			job_id: record.id,
 			background_job_id: record.id,
 		});

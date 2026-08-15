@@ -26,7 +26,7 @@ async function callBoth(rqo: Record<string, unknown>) {
 	// WC-2026-08-10-section-id-int-canonical: address keys compared by VALUE on BOTH sides (fixtures keep the PHP-era numeric strings).
 	const phpBody = normalizeSectionIdTypes((await php.call(structuredClone(rqo))).body);
 	const tsBody = normalizeSectionIdTypes(
-		(await dispatchRqo(structuredClone(rqo) as never, tsContext)).body,
+		(await dispatchRqo(structuredClone(rqo) as never, tsContext)).body as Record<string, unknown>,
 	);
 	return { phpBody, tsBody };
 }

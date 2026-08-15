@@ -31,6 +31,7 @@ import {
 	hydrateExternalSearchDdos,
 } from '../../src/core/api/handlers/dd_external_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { toErrorEnvelope } from '../../src/core/errors/convert.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
 import type { FieldsMapEntry } from '../../src/external/api/index.ts';
 
@@ -278,8 +279,20 @@ async function search(
 ): Promise<{ status: number; body: Record<string, unknown> }> {
 	const handler = externalApiActions.search;
 	if (handler === undefined) throw new Error('dd_external_api has no search action');
-	const result = await handler(rqo as unknown as Rqo, contextFor(principal));
-	return { status: result.status, body: result.body as Record<string, unknown> };
+	// The handler THROWS to refuse; the dispatch catch is the converter door —
+	// mirrored here so the pinned status/code are the wire's.
+	try {
+		const result = await handler(rqo as unknown as Rqo, contextFor(principal));
+		return { status: result.status, body: result.body as Record<string, unknown> };
+	} catch (error) {
+		const converted = toErrorEnvelope(error, { requestId: 'external-search-action-test' });
+		return { status: converted.status, body: converted.body as Record<string, unknown> };
+	}
+}
+
+/** `error.code` of a refusal body. */
+function codeOf(body: Record<string, unknown>): string | undefined {
+	return (body.error as { code?: string } | undefined)?.code;
 }
 
 describe('search refuses a caller it cannot identify', () => {
@@ -292,7 +305,7 @@ describe('search refuses a caller it cannot identify', () => {
 	])('%s → 400', async (_name, rqo) => {
 		const { status, body } = await search(rqo);
 		expect(status).toBe(400);
-		expect(body.msg).toBe('Error. source.tipo and source.section_tipo are required');
+		expect(codeOf(body)).toBe('request.invalid_source');
 	});
 });
 
@@ -308,7 +321,11 @@ describe('existence is decided BEFORE permission', () => {
 			NON_ADMIN,
 		);
 		expect(status).toBe(400);
-		expect(body.msg).toBe('Error. Unknown source tipo');
+		// the SAME code as a missing source: the tipo's existence is not disclosed
+		expect(codeOf(body)).toBe('request.invalid_source');
+		// the tipo is LOG-ONLY (coordinates): outside the debug block it never reaches the wire
+		const { debug: _debug, ...wireError } = body.error as Record<string, unknown>;
+		expect(JSON.stringify(wireError)).not.toContain('no_such_component_999');
 	});
 
 	test('a known component the actor cannot read → 403', async () => {
@@ -317,7 +334,7 @@ describe('existence is decided BEFORE permission', () => {
 			NON_ADMIN,
 		);
 		expect(status).toBe(403);
-		expect(body.msg).toBe('Error. Not authorized on this component');
+		expect(codeOf(body)).toBe('perm.denied');
 	});
 
 	/**
@@ -337,13 +354,13 @@ describe('existence is decided BEFORE permission', () => {
 
 describe('an unreadable paging value is REFUSED, never quietly defaulted', () => {
 	test.each([
-		['limit', 'twenty', 'Error. limit must be an integer'],
-		['offset', 'x', 'Error. offset must be an integer'],
-		['limit', 1.5, 'Error. limit must be an integer'],
+		['limit', 'twenty', 'limit must be an integer'],
+		['offset', 'x', 'offset must be an integer'],
+		['limit', 1.5, 'limit must be an integer'],
 		['offset', null as unknown as number, null],
-		['limit', 0, 'Error. limit must be positive'],
-		['limit', -1, 'Error. limit must be positive'],
-		['offset', -1, 'Error. offset must not be negative'],
+		['limit', 0, 'limit must be positive'],
+		['limit', -1, 'limit must be positive'],
+		['offset', -1, 'offset must not be negative'],
 	])('%s: %p', async (key, value, msg) => {
 		const { status, body } = await search({
 			source: { tipo: 'test61', section_tipo: 'test3' },
@@ -355,7 +372,9 @@ describe('an unreadable paging value is REFUSED, never quietly defaulted', () =>
 			return;
 		}
 		expect(status).toBe(400);
-		expect(body.msg).toBe(msg);
+		// request.invalid_options is public-disclosure: the sentence names the field
+		expect(codeOf(body)).toBe('request.invalid_options');
+		expect((body.error as { message: string }).message).toBe(msg);
 	});
 
 	test('a numeric STRING and an absent value both pass', async () => {

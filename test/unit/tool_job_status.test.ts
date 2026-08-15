@@ -34,6 +34,7 @@ const {
 	BACKGROUND_JOBS_ACTION,
 } = await import('../../src/core/tools/job_status.ts');
 
+import { ok } from '../../src/core/errors/convert.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { LoadedTool } from '../../src/core/tools/loader.ts';
@@ -135,7 +136,7 @@ function makeLoaded(name: string, result: unknown): LoadedTool {
 		apiActions: {
 			long_job: {
 				permission: null,
-				handler: async () => ({ result, msg: 'done', errors: [] }),
+				handler: async () => ok(result, { requestId: 'tool-job-status-test' }),
 			},
 		},
 		backgroundRunnable: ['long_job'],

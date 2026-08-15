@@ -3,6 +3,7 @@
  * api/dispatch.ts; dispatch keeps registry assembly + gates + envelope).
  */
 
+import { ok } from '../../errors/convert.ts';
 import type { Session } from '../../security/session_store.ts';
 import { type ActionHandler, requirePrincipal } from '../handler_context.ts';
 
@@ -31,7 +32,7 @@ export const toolsApiActions: Record<string, ActionHandler> = {
 			const requested = new Set(options.ar_requested_tools);
 			tools = tools.filter((tool) => requested.has(tool.name));
 		}
-		return { status: 200, body: { result: tools, msg: 'OK' } };
+		return { status: 200, body: ok(tools, { requestId: context.requestId }) };
 	},
 	tool_request: async (rqo, context) => {
 		// Per-tool action dispatch (PHP dd_tools_api::tool_request) — all

@@ -493,7 +493,7 @@ describe('dd_core_api read_raw — the caller-side permission door', () => {
 			contextFor(ACL_NON_ADMIN_USER_ID, 'zzacl_reader', nonAdmin) as never,
 		);
 		expect(result.status).toBe(200);
-		const body = result.body as { result: unknown[]; table: string };
+		const body = result.body as unknown as { result: unknown[]; table: string };
 		expect(body.table).toBe(TABLE);
 		expect(body.result).toEqual([[{ lang: 'lg-eng', value: VALUE_A }], null]);
 		expect(JSON.stringify(body.result)).not.toContain(SECRET);

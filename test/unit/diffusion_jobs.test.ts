@@ -16,12 +16,14 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/index.ts';
 import type { DiffusionJobSpec } from '../../src/diffusion/jobs/queue.ts';
 import {
 	claimNextQueuedJob,
 	countQueuedJobs,
 	deleteJobsForTests,
 	enqueueDiffusionJob,
+	failedJobResult,
 	finishJob,
 	getJobByClientProcessId,
 	getJobById,
@@ -135,12 +137,12 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		row = await getJobById(jobId);
 		expect(row?.errors).toEqual(['record 4 failed']);
 
-		await finishJob(jobId, 'completed', { result: true, msg: 'OK. Request done', tables: [] });
+		await finishJob(jobId, 'completed', { ok: true, msg: 'OK. Request done', tables: [] });
 		row = await getJobById(jobId);
 		expect(row?.state).toBe('completed');
 		expect(row?.finished_at).not.toBeNull();
 		expect(row?.totals.msg).toBe('OK. Request done');
-		expect(row?.result).toEqual({ result: true, msg: 'OK. Request done', tables: [] });
+		expect(row?.result).toEqual({ ok: true, msg: 'OK. Request done', tables: [] });
 	});
 
 	test('cancel is owner-scoped; a queued job finalizes immediately', async () => {
@@ -204,6 +206,9 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		const failedRow = await getJobById(victim.job.job_id);
 		expect(failedRow?.state).toBe('failed');
 		expect(String(failedRow?.result?.msg)).toContain('Interrupted after 3 attempts');
+		// The persisted outcome is a converter-made FAILURE RECORD, not a bare msg.
+		expect(failedRow?.result?.ok).toBe(false);
+		expect((failedRow?.result?.error as { code?: string })?.code).toBe('diffusion.runner_lost');
 	});
 
 	test('lookups are owner-scoped (admin scope = null sees all)', async () => {
@@ -227,7 +232,7 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 		});
 		createdJobIds.push(job.job.job_id);
 		expect(await countQueuedJobs()).toBeGreaterThanOrEqual(1);
-		await finishJob(job.job.job_id, 'completed', { result: true, msg: 'done' });
+		await finishJob(job.job.job_id, 'completed', { ok: true, msg: 'done' });
 		// The row is no longer queued (other suites may still have queued rows, so
 		// assert on THIS job's state rather than a global count).
 		expect((await getJobById(job.job.job_id))?.state).toBe('completed');
@@ -240,7 +245,11 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 			spec: spec('jobtest6', 'jobsec1'),
 		});
 		createdJobIds.push(job.job.job_id);
-		await finishJob(job.job.job_id, 'failed', { result: false, msg: 'boom' });
+		await finishJob(
+			job.job.job_id,
+			'failed',
+			failedJobResult(new DedaloError('diffusion.run_failed'), 'boom'),
+		);
 
 		const requeued = await requeueTerminalJob(job.job.job_id);
 		expect(requeued).not.toBeNull();
@@ -273,7 +282,7 @@ describe('diffusion job queue (durable, Postgres-backed)', () => {
 			spec: spec('jobtest8', 'jobsec1'),
 		});
 		createdJobIds.push(job.job.job_id);
-		await finishJob(job.job.job_id, 'completed', { result: true, msg: 'done' });
+		await finishJob(job.job.job_id, 'completed', { ok: true, msg: 'done' });
 
 		// Not yet aged: a 24h purge leaves it.
 		await purgeTerminalJobs(24);

@@ -6,6 +6,7 @@
  *   ok(data, ctx)                   → the ok:true envelope
  *   toStructuredErr(error)          → MCP structured error
  *   toStreamFrame(error)            → SSE terminal frame
+ *   toFailureRecord(error, extend)  → a persisted failure outcome (job rows)
  *
  * Disclosure ladder (engineering/ERRORS_SPEC.md §2): `error.message` is the
  * registry English, or `publicMessage` only when the code's disclosure is
@@ -232,6 +233,25 @@ export function toStructuredErr(error: unknown): StructuredErrV2 {
 			...(body.details === undefined ? {} : { details: body.details }),
 		},
 	};
+}
+
+export interface FailureRecord {
+	ok: false;
+	error: ApiErrorBody;
+	/** The reader-facing extension keys (a job result's `msg`, `tables`, …). */
+	[extension: string]: unknown;
+}
+
+/**
+ * A PERSISTED failure outcome — a diffusion job row's `result`, a report
+ * entry: `{ok:false, error}` (the envelope's error body, no request identity)
+ * plus the extension keys its reader needs. `extend` is spread FIRST, so
+ * `ok`/`error` can never be overridden (the same rule as every surface here).
+ * The success twin is a plain `{ok:true, …}` literal at the site — a success
+ * carries no error body, so there is nothing for the converter to make.
+ */
+export function toFailureRecord(error: unknown, extend?: EnvelopeExtension): FailureRecord {
+	return { ...extend, ok: false, error: toErrorBody(toDedaloError(error)) };
 }
 
 export interface StreamErrorFrame {

@@ -347,13 +347,13 @@ async function fileProcessor(ctx: ToolActionContext): Promise<ToolResponse> {
 	// The processor answers with its own internal outcome object; a false one is a
 	// failed operation, not a body.
 	const outcome = await processor(ctx.options);
-	if (!outcome.result) {
+	if (!outcome.ok) {
 		throw new DedaloError('tool.action_failed', {
 			coordinates: { tool: 'tool_import_files', file_processor: name },
-			message: outcome.msg,
+			message: outcome.message,
 		});
 	}
-	return ok(outcome.result, { requestId: toolRequestId(ctx) });
+	return ok(outcome.ok, { requestId: toolRequestId(ctx) });
 }
 
 /**

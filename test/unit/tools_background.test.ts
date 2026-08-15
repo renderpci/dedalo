@@ -12,6 +12,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ok } from '../../src/core/errors/convert.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import type { LoadedTool } from '../../src/core/tools/loader.ts';
@@ -45,7 +46,7 @@ function makeLoaded(backgroundRunnable: readonly string[] | undefined): {
 		permission: null,
 		handler: async () => {
 			ran.value = true;
-			return { result: true, msg: 'done' };
+			return ok(true, { requestId: 'tools-background-test' });
 		},
 	};
 	const module: ToolServerModule = {
@@ -114,7 +115,8 @@ describe('background executor', () => {
 		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
 		const frame = mediaJobs.frame(response.background_job_id as string);
 		expect(frame?.is_running).toBe(false);
+		// the terminal frame's data IS the handler's envelope (ok:true, data mirrored as result)
+		expect((frame?.data as { ok?: unknown })?.ok).toBe(true);
 		expect((frame?.data as { result?: unknown })?.result).toBe(true);
-		expect((frame?.data as { msg?: string })?.msg).toBe('done');
 	});
 });

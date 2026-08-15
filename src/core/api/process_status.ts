@@ -39,7 +39,7 @@ import {
 	SSE_HEADERS,
 	terminalStream,
 } from './job_stream.ts';
-import type { ApiResult } from './response.ts';
+import { type ApiResult, streamResult } from './response.ts';
 
 /**
  * Reduce the client-supplied pfile (PHP: a filename relative to the process
@@ -140,7 +140,7 @@ export function getUtilsProcessStatus(rqo: Rqo, principal: Principal): ApiResult
 			cancelled = true;
 		},
 	});
-	return { status: 200, body: {}, stream, streamHeaders: { ...SSE_HEADERS } };
+	return streamResult(stream, { ...SSE_HEADERS });
 }
 
 /**

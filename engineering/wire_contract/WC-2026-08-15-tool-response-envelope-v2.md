@@ -95,13 +95,12 @@ envelope shape of a tool body) · `error_throw_ratchet.test.ts` (no new untyped
 the per-tool native gates (`tool_hierarchy` / `tool_ontology_parser` extension
 keys, `tool_error_report.test.ts`, `job_status` gates).
 
-Transitional: `LegacyToolResponse` and `src/core/api/legacy_body_adapter.ts`
-still accept an unswept `{result, msg, errors}` tool body and bring it onto the
-envelope (a legacy `result:false` becomes a THROW of
-`LEGACY_TOKEN_MAP[errors[0]]`, logged as `sweep pending`). Both are DELETED at
-P1 exit, together with the `denied` / `notAuthorized` / `notLogged` throwing
-shells in `response.ts`, whose call-site count
-`authorization_denial_native.test.ts` freezes shrink-only.
+~~Transitional: `LegacyToolResponse` and `src/core/api/legacy_body_adapter.ts`~~
+**DELETED at P1 exit (2026-08-15):** the adapter, `LegacyToolResponse`,
+`LegacyApiBody` and the `denied` / `notAuthorized` / `notLogged` shells are
+gone; `ToolResponse = ApiEnvelope`, and a tool body without `ok` is refused by
+the dispatcher as `internal.unexpected` (guards: `error_taxonomy_tripwire`,
+`dispatch_error_native`, `authorization_denial_native`).
 
 **Re-harvest: NOT NEEDED.** No tool body is in the frozen store's root
 `result:false` set — `FROZEN_ERROR_BODIES` in `test/parity/normalize.ts` holds

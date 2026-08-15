@@ -35,6 +35,8 @@
  * keys and are excluded from the contraction gate.
  */
 
+import { SectionIdRefused } from '../errors/families.ts';
+
 /** A validated matrix record address. The brand exists only at type level. */
 export type SectionId = number & { readonly __brand: 'SectionId' };
 
@@ -57,9 +59,9 @@ export function isSectionId(value: unknown): value is SectionId {
  */
 export function asSectionId(value: unknown): SectionId {
 	if (isSectionId(value)) return value;
-	throw new TypeError(
-		`section_id must be a safe integer, got ${typeof value} ${JSON.stringify(value)}`,
-	);
+	throw new SectionIdRefused('section_id.not_an_address', {
+		message: `section_id must be a safe integer, got ${typeof value} ${JSON.stringify(value)}`,
+	});
 }
 
 /** True when a STRING is convertible to a record address under the shared rule. */
@@ -127,7 +129,8 @@ function noteCoercion(value: string, source: string): void {
  *                                 counter + sampled WARN tagged
  *                                 [section_id-string-coercion] (the access-log
  *                                 cross-check greps for this tag).
- * - anything else               → TypeError. Leading-zero strings land here BY
+ * - anything else               → SectionIdRefused (`section_id.not_an_address`).
+ *                                 Leading-zero strings land here BY
  *                                 DESIGN: a padded id is an external remote id
  *                                 or corruption, never an address — the caller
  *                                 must classify by tipo first
@@ -139,9 +142,10 @@ export function coerceSectionId(value: unknown, source: string): SectionId {
 		noteCoercion(value, source);
 		return Number(value) as SectionId;
 	}
-	throw new TypeError(
-		`section_id at door '${source}' is not a record address: ${typeof value} ${JSON.stringify(value)}`,
-	);
+	throw new SectionIdRefused('section_id.not_an_address', {
+		message: `section_id at door '${source}' is not a record address: ${typeof value} ${JSON.stringify(value)}`,
+		coordinates: { source },
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -175,7 +179,9 @@ export type WireSectionId =
  *   synthetic    any other non-numeric string ('search_1', 'tmp_export_2',
  *                'self') — NaN-branch parity: these took the "not a number"
  *                branch before and must keep doing so.
- *   TypeError    numeric-shaped strings that are NOT addresses on a
+ *   SectionIdRefused (`section_id.numeric_shaped` / `section_id.unusable_type`
+ *                — catch sites say isErrorInDomain(e, 'section_id'))
+ *                numeric-shaped strings that are NOT addresses on a
  *                NON-external tipo: leading zeros ('007'), out-of-safe-range
  *                digits — loud, never guessed (WC-noted divergence: the NaN
  *                era silently read Number('007') === 7).
@@ -197,9 +203,10 @@ export async function classifyWireSectionId(
 		return { kind: 'record', id: asSectionId(raw) };
 	}
 	if (typeof raw !== 'string') {
-		throw new TypeError(
-			`section_id at door '${source}' has unusable type ${typeof raw}: ${JSON.stringify(raw)}`,
-		);
+		throw new SectionIdRefused('section_id.unusable_type', {
+			message: `section_id at door '${source}' has unusable type ${typeof raw}: ${JSON.stringify(raw)}`,
+			coordinates: { source },
+		});
 	}
 	if (isConvertibleSectionIdString(raw)) {
 		return { kind: 'record', id: coerceSectionId(raw, source) };
@@ -226,10 +233,12 @@ async function classifyNonConvertibleString(
 	// Numeric-SHAPED but not convertible = padded or out-of-range digits on a
 	// matrix tipo: corruption or a mis-tipoed external ref. Loud.
 	if (/^-?[0-9]+$/.test(raw)) {
-		throw new TypeError(
-			`section_id at door '${source}' is numeric-shaped but not a record address ` +
+		throw new SectionIdRefused('section_id.numeric_shaped', {
+			message:
+				`section_id at door '${source}' is numeric-shaped but not a record address ` +
 				`('${raw}': leading zeros or beyond safe-integer range) on non-external tipo '${sectionTipo}'`,
-		);
+			coordinates: { source, section_tipo: sectionTipo },
+		});
 	}
 	return { kind: 'synthetic', token: raw };
 }

@@ -13,26 +13,21 @@
  *     src/core/errors/convert.ts — `extend` carries its extension keys;
  *   - FAILS by THROWING `new DedaloError(code, {…})` — the dispatch catch is
  *     the ONE converter door (`toErrorEnvelope`), so no handler builds a
- *     failure body. Nothing here builds one either: the three names below are
- *     TRANSITIONAL throwing shells (typed `never`) kept only so the unswept
- *     call sites compile and already refuse through the converter; they are
- *     deleted with legacy_body_adapter.ts at P1 exit.
+ *     failure body. Nothing here builds one either: this module exports the
+ *     ApiResult SHAPE and no FAILURE-body builder (the P1-era throwing shells
+ *     `denied`/`notAuthorized`/`notLogged` and the legacy_body_adapter are
+ *     DELETED — a body without `ok` is a bug the dispatcher refuses loudly;
+ *     error_taxonomy_tripwire + authorization_denial_native pin the export set).
  */
 
-import { DedaloError } from '../errors/dedalo_error.ts';
+import { ok } from '../errors/convert.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
-import { legacyCodeFor } from './legacy_body_adapter.ts';
-
-/**
- * TRANSITIONAL — a not-yet-swept handler body (`{result, msg, errors, …}`).
- * The dispatcher passes it through legacy_body_adapter.ts; deleted with it.
- */
-export type LegacyApiBody = Record<string, unknown>;
+import { currentRequestContext } from '../security/request_context.ts';
 
 export interface ApiResult {
 	status: number;
-	/** Envelope v2 (converter-made) — or, until the sweep completes, a legacy body. */
-	body: ApiEnvelope | LegacyApiBody;
+	/** Envelope v2 — converter-made (`ok(...)`), or the dispatch catch's failure body. */
+	body: ApiEnvelope;
 	/** Set-Cookie value for session issuance (login). */
 	setSessionToken?: string;
 	/** Emit an expiring Set-Cookie that clears the session cookie (logout/quit). */
@@ -66,30 +61,22 @@ export interface ApiResult {
 }
 
 /**
- * TRANSITIONAL throwing shell — DELETED AT P1 EXIT (with legacy_body_adapter.ts).
- * Was the PHP "denied JSON output" builder; now it THROWS the code the message
- * token or status maps to (`legacyCodeFor`), so every unswept `return denied(…)`
- * site already refuses through the converter with the registry status. The
- * sweep replaces each call with an explicit `throw new DedaloError(code, …)`.
+ * A STREAMED result (SSE: diffusion follow, job events, process status).
+ * server.ts writes `stream` with `streamHeaders` and NEVER serializes `body`;
+ * the body is still an envelope (`ok(null)`, request-scoped id) so ApiResult
+ * stays ONE shape and the dispatcher's envelope check needs no stream carve-out
+ * beyond `stream !== undefined`. The dispatch gates (auth/CSRF/allowlist) ran
+ * in front — that is the whole point of threading streams through ApiResult.
  */
-export function denied(status: number, message: string): never {
-	throw new DedaloError(legacyCodeFor(message, status), { publicMessage: message });
-}
-
-/**
- * TRANSITIONAL throwing shell — DELETED AT P1 EXIT. The authorization refusal
- * (WC-2026-08-12-authorization-denial-token) is `perm.denied`; the default
- * message names nothing because it is shown to the REFUSED user.
- */
-export function notAuthorized(message = 'Insufficient permissions'): never {
-	throw new DedaloError('perm.denied', { publicMessage: message });
-}
-
-/**
- * TRANSITIONAL throwing shell — DELETED AT P1 EXIT. The authentication
- * refusal (WC-051) is `auth.not_logged`, the code the client's re-login
- * recovery keys on.
- */
-export function notLogged(message = 'Authentication required'): never {
-	throw new DedaloError('auth.not_logged', { publicMessage: message });
+export function streamResult(
+	stream: ReadableStream<Uint8Array>,
+	streamHeaders?: Record<string, string>,
+): ApiResult {
+	const result: ApiResult = {
+		status: 200,
+		body: ok(null, { requestId: currentRequestContext()?.requestId ?? '' }),
+		stream,
+	};
+	if (streamHeaders !== undefined) result.streamHeaders = streamHeaders;
+	return result;
 }

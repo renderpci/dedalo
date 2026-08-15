@@ -105,7 +105,7 @@ export function progressDataFromJob(job: DiffusionJobRow): ProgressData {
 		const typed = result as {
 			diffusion_data?: unknown;
 			consolidated_files?: unknown;
-			result?: boolean;
+			ok?: boolean;
 			msg?: string;
 			errors?: string[];
 			diffusion_class?: string;
@@ -113,7 +113,7 @@ export function progressDataFromJob(job: DiffusionJobRow): ProgressData {
 		if (typed.diffusion_data !== undefined) {
 			data.diffusion_data = typed.diffusion_data;
 			data.last_update_record_response = {
-				result: typed.result ?? false,
+				result: typed.ok === true,
 				msg: [typed.msg ?? ''],
 				errors: typed.errors ?? [],
 				class: typed.diffusion_class ?? 'diffusion_rdf',

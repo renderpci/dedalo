@@ -23,9 +23,10 @@
  * returning `ok(data, …)` and fails by throwing. The ONE catch below turns
  * any throw into `{status, body}` via toErrorEnvelope (registry status,
  * ok:false ⇒ non-2xx, Retry-After threaded on the ApiResult) and reports it
- * through logError. Bodies a not-yet-swept handler still returns in the
- * legacy `{result,msg,errors}` shape go through legacy_body_adapter.ts
- * (TRANSITIONAL — deleted at P1 exit).
+ * through logError. A handler body that is NOT an envelope (no `ok` key —
+ * the PHP `{result,msg,errors}` fossil) is a BUG, refused loudly as
+ * `internal.unexpected` naming the action (the P1-era legacy_body_adapter
+ * that used to translate it is DELETED; error_taxonomy_tripwire guards).
  */
 
 import { ragApiActions } from '../../ai/rag/api.ts';
@@ -59,7 +60,6 @@ import { mcpApiActions } from './handlers/dd_mcp_api.ts';
 import { toolsApiActions } from './handlers/dd_tools_api.ts';
 import { tsApiActions } from './handlers/dd_ts_api.ts';
 import { utilsApiActions } from './handlers/dd_utils_api.ts';
-import { adaptLegacyBody } from './legacy_body_adapter.ts';
 import type { ApiResult } from './response.ts';
 
 export type { ApiRequestContext } from './handler_context.ts';
@@ -167,6 +167,22 @@ const ACTION_REGISTRY: Record<string, Record<string, ActionHandler>> = {
 	// action refuses unless DEDALO_AGENT_HTTP_ENABLED=true — see the handler).
 	dd_mcp_api: mcpApiActions,
 };
+
+/**
+ * TEST SEAM (error_taxonomy_tripwire's runtime leg): every registered
+ * (class, action) pair, so the gate can force a throw through each and prove
+ * the wire is converter-made — the registry itself stays private.
+ */
+export function listRegisteredActions(): readonly { apiClass: string; action: string }[] {
+	return Object.entries(ACTION_REGISTRY).flatMap(([apiClass, table]) =>
+		Object.keys(table).map((action) => ({ apiClass, action })),
+	);
+}
+
+/** TEST SEAM (same gate): the live handler table of a class, to swap a probe handler in and out. */
+export function actionTableFor(apiClass: string): Record<string, ActionHandler> | undefined {
+	return classTableFor(apiClass);
+}
 
 /**
  * Dispatch one RQO through all gates, then emit the structured access-log
@@ -454,11 +470,23 @@ async function runGatesAndHandler(rqo: Rqo, context: ApiRequestContext): Promise
 				() => handler(rqo, context),
 			),
 	);
-	// Envelope bodies pass through; legacy bodies are adapted (a legacy failure
-	// THROWS here, into the executeRqo catch — the wire stays converter-made).
-	return adaptLegacyBody(result, {
-		requestId: context.requestId,
-		apiClass: String(apiClass),
-		action: String(action),
+	assertEnvelopeBody(result, String(apiClass), String(action));
+	return result;
+}
+
+/**
+ * The one-producer law (ERRORS_SPEC §4): a handler returns `ok(...)` or
+ * throws. A body without `ok` (a streamed result carries no serialized body
+ * and is exempt) is a handler BUG — refused as `internal.unexpected` through
+ * the executeRqo catch, coordinates naming the action, so it can never reach
+ * the wire half-shaped and silently "work".
+ */
+function assertEnvelopeBody(result: ApiResult, apiClass: string, action: string): void {
+	if (result.stream !== undefined) return;
+	const body: unknown = result.body;
+	if (typeof body === 'object' && body !== null && Object.hasOwn(body, 'ok')) return;
+	throw new DedaloError('internal.unexpected', {
+		message: `handler ${apiClass}::${action} returned a non-envelope body (no \`ok\` key)`,
+		coordinates: { api_class: apiClass, action },
 	});
 }

@@ -157,11 +157,11 @@ HTTP 403
   `perm.out_of_scope`, `perm.section_not_writable`, `perm.developer_required`
   and `perm.superuser_required` are separate codes for the refusals that ARE
   distinguishable to the client.
-- **`denied()` is DELETED**, and `notAuthorized()` is now a throwing shell
-  (`: never`) kept only so unswept sites compile — both go at P1 exit with the
-  legacy body adapter. The ratchet in `authorization_denial_native.test.ts`
-  changes accordingly: it froze "no `denied(403` anywhere"; it now freezes the
-  shells' call-site count SHRINK-ONLY, to 0.
+- **`denied()` / `notAuthorized()` / `notLogged()` are DELETED** (P1 exit,
+  2026-08-15, with the legacy body adapter): every refusal is `throw new
+  DedaloError('perm.denied', …)`. `authorization_denial_native.test.ts` pins
+  response.ts's export set (no builder, no shell), and
+  `error_taxonomy_tripwire.test.ts` refuses any builder call in the tree.
 - The `environment` extension key on the refused `start` SURVIVES, and is now
   one of the two NAMED exceptions to "an extension key on a failure is
   exceptional" (the other is the CSRF gate's `action`) — see ERRORS_SPEC §3.0.

@@ -16,10 +16,10 @@
  *     label `no_access_page`), made by the ONE converter: `error.code` is the
  *     machine channel; the compat mirror is `errors:['perm.denied']`; the
  *     message names nothing (it is shown to the REFUSED user).
- *  2. THE SOURCE RATCHET — response.ts BUILDS NO BODY (every helper THROWS),
- *     and the transitional throwing shells (`denied(`/`notAuthorized(`/
- *     `notLogged(`) may only DISAPPEAR: the count is frozen at today's
- *     measurement and the P1-exit gate sets it to 0 and deletes the shells.
+ *  2. THE SOURCE LAW — response.ts BUILDS NO FAILURE BODY and exports no
+ *     throwing shell: its export set is pinned (`ApiResult` + `streamResult`),
+ *     so `denied(`/`notAuthorized(`/`notLogged(` cannot come back (P1 exit
+ *     deleted them; error_taxonomy_tripwire scans the whole tree for callers).
  *  3. THE LIVE REFUSAL — through the real gate chain with real grants: 403 +
  *     `perm.denied`, and the environment (labels) rides the refusal as an
  *     extension key, because `start` has no other source of labels.
@@ -30,10 +30,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { Glob } from 'bun';
+import { join } from 'node:path';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
-import { notAuthorized } from '../../src/core/api/response.ts';
+import * as responseModule from '../../src/core/api/response.ts';
 import { toErrorEnvelope } from '../../src/core/errors/convert.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
@@ -55,26 +54,16 @@ const ADMIN_ONLY_AREA = 'dd88';
 const GRANTED_SECTION = 'test3';
 
 /**
- * THE SHELL RATCHET (shrink-only). Measured 2026-08-15 at the P1 chokepoint
- * landing, over src/ + tools/ minus response.ts itself, comments and string
- * contents stripped: `denied(` 60 + `notAuthorized(` 39 + `notLogged(` 7.
- * The call-site sweep lowers it; the P1-exit gate sets it to 0 and deletes
- * the shells from response.ts. It may NEVER be raised.
+ * THE EXPORT SET of response.ts — the ApiResult shape and the streamed-result
+ * constructor, nothing else. The P1-era throwing shells (`denied`,
+ * `notAuthorized`, `notLogged`, 106 call sites at the chokepoint landing)
+ * were swept and deleted at P1 exit; a new runtime export here is a new body
+ * builder and must be argued for in this list.
  */
-const SHELL_CALL_SITES_MAX = 106;
+const RESPONSE_RUNTIME_EXPORTS = ['streamResult'];
 
 function read(file: string): string {
 	return readFileSync(join(REPO_ROOT, file), 'utf-8');
-}
-
-function thrownBy(fn: () => never): DedaloError {
-	try {
-		fn();
-	} catch (error) {
-		if (error instanceof DedaloError) return error;
-		throw error;
-	}
-	throw new Error('expected a throw');
 }
 
 describe('perm.denied — the envelope', () => {
@@ -104,48 +93,27 @@ describe('perm.denied — the envelope', () => {
 		expect(body.error.message).toBe('Insufficient permissions');
 	});
 
-	test('the transitional notAuthorized shell THROWS perm.denied (it builds no body)', () => {
-		const error = thrownBy(() => notAuthorized('Insufficient permissions to read'));
-		expect(error.code).toBe('perm.denied');
-		expect(error.publicMessage).toBe('Insufficient permissions to read');
-	});
-
 	test('the label is defined in the master catalog', () => {
 		const master = JSON.parse(read('src/core/labels/master.json')) as Record<string, string>;
 		expect(master.no_access_page).toBe("You don't have permission to access this page");
 	});
 });
 
-describe('the ratchet: response.ts builds no body; the shells only disappear', () => {
-	test('response.ts contains no failure-body literal (result:false / errors:) — every helper throws', () => {
+describe('the source law: response.ts builds no failure body and exports no shell', () => {
+	test('response.ts contains no failure-body literal (result:false / ok:false / errors: / msg:)', () => {
 		const source = stripComments(read('src/core/api/response.ts'));
 		expect(source).not.toMatch(/result:\s*false/);
+		expect(source).not.toMatch(/ok:\s*false/);
 		expect(source).not.toMatch(/errors:\s*\[/);
 		expect(source).not.toMatch(/msg:/);
-		// and every exported function is typed `never` (a throw, not a builder)
-		for (const match of source.matchAll(/export function (\w+)\([^)]*\):\s*(\w+)/g)) {
-			expect({ helper: match[1], returns: match[2] }).toEqual({
-				helper: match[1],
-				returns: 'never',
-			});
-		}
 	});
 
-	test(`shell call sites in src/ + tools/ ≤ ${SHELL_CALL_SITES_MAX} (shrink-only; P1 exit sets 0)`, () => {
-		let total = 0;
-		const perFile: Record<string, number> = {};
-		for (const dir of ['src', 'tools']) {
-			for (const match of new Glob('**/*.ts').scanSync({ cwd: join(REPO_ROOT, dir) })) {
-				if (match.endsWith('.test.ts')) continue;
-				const file = relative(REPO_ROOT, join(REPO_ROOT, dir, match));
-				if (file === 'src/core/api/response.ts') continue;
-				const source = stripComments(read(file), { blankStrings: true });
-				const count = (source.match(/\b(denied|notAuthorized|notLogged)\(/g) ?? []).length;
-				if (count > 0) perFile[file] = count;
-				total += count;
-			}
+	test('the runtime export set is exactly the pinned list (no denied/notAuthorized/notLogged, no builder)', () => {
+		const runtimeExports = Object.keys(responseModule).sort();
+		expect(runtimeExports).toEqual([...RESPONSE_RUNTIME_EXPORTS].sort());
+		for (const shell of ['denied', 'notAuthorized', 'notLogged']) {
+			expect(shell in responseModule).toBe(false);
 		}
-		expect(total, JSON.stringify(perFile, null, 1)).toBeLessThanOrEqual(SHELL_CALL_SITES_MAX);
 	});
 });
 

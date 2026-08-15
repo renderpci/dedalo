@@ -1618,8 +1618,11 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		const { buildEnvironment } = await import('../../resolve/environment.ts');
 		// Seeded once by dispatchRqo; null for the unauthenticated environment read.
 		const principal = context.principal ?? null;
+		// buildEnvironment answers the `{result:{page_globals, plain_vars,
+		// get_label}, …}` block that ALSO rides `start` as its `environment`
+		// extension key; here its `result` is the data.
 		const environment = await buildEnvironment(context.session, principal);
-		return { status: 200, body: environment };
+		return { status: 200, body: ok(environment.result, { requestId: context.requestId }) };
 	},
 };
 

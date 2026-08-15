@@ -30,6 +30,7 @@ import { readString } from '../../config/readers.ts';
 import type { ApiResult } from '../../core/api/response.ts';
 import { isValidTipo } from '../../core/concepts/ontology.ts';
 import type { Rqo } from '../../core/concepts/rqo.ts';
+import { DedaloError, ok } from '../../core/errors/index.ts';
 import {
 	getPermissions,
 	type Principal,
@@ -61,6 +62,7 @@ import type { Candidate } from './types.ts';
 
 /** The slice of the request context the RAG handlers read (structural). */
 interface RagApiContext {
+	requestId: string;
 	session: { userId: number } | null;
 	principal?: Principal;
 }
@@ -102,12 +104,27 @@ function optionGroup(options: Record<string, unknown> | undefined): string | und
 	return /^[a-z0-9][a-z0-9_-]{0,39}$/.test(trimmed) ? trimmed : undefined;
 }
 
-function envelope(result: unknown, msg: string, errors: string[] = []): ApiResult {
-	return { status: 200, body: { result, msg, errors } };
+/**
+ * The ok envelope. `msg` is the RAG outcome token the client/tests read
+ * (`ok` | `agent_context` | `no_grounded_context` | RESTRICTED_MSG) — an
+ * extension key, never a failure signal (a refusal is a THROW below).
+ */
+function envelope(data: unknown, msg: string, context: RagApiContext): ApiResult {
+	return { status: 200, body: ok(data, { requestId: context.requestId, extend: { msg } }) };
 }
 
-const disabled = (): ApiResult => envelope(false, 'RAG is disabled', ['rag_disabled']);
-const badRequest = (msg: string, code: string): ApiResult => envelope(false, msg, [code]);
+/** The master kill-switch refusal (every action declines first). */
+const disabled = (): never => {
+	throw new DedaloError('rag.disabled');
+};
+/** A caller-authored option the handler refuses (public: the sentence names the field). */
+const badRequest = (sentence: string): never => {
+	throw new DedaloError('request.invalid_options', { publicMessage: sentence });
+};
+/** No principal on the context — the dispatch auth gate guarantees one; this is the backstop. */
+const noPrincipal = (): never => {
+	throw new DedaloError('auth.not_logged');
+};
 
 /** Resolve the caller's authorization identity (session guaranteed by dispatch). */
 async function resolveCaller(context: RagApiContext): Promise<Principal | null> {
@@ -120,9 +137,9 @@ async function resolveCaller(context: RagApiContext): Promise<Principal | null> 
 async function recordSearch(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
-	if (query === '') return badRequest('Missing query', 'missing_query');
+	if (query === '') return badRequest('Missing query');
 	const hits = await semanticSearch(
 		principal,
 		query,
@@ -130,16 +147,16 @@ async function recordSearch(rqo: Rqo, context: RagApiContext): Promise<ApiResult
 		optionScope(rqo.options),
 		optionGroup(rqo.options),
 	);
-	return envelope(hits, 'ok');
+	return envelope(hits, 'ok', context);
 }
 
 /** retrieve / get_agent_context (shared passage-shape response). */
 async function passageSearch(rqo: Rqo, context: RagApiContext, msg: string): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
-	if (query === '') return badRequest('Missing query', 'missing_query');
+	if (query === '') return badRequest('Missing query');
 	const passages = await retrievePassages(
 		principal,
 		query,
@@ -147,19 +164,19 @@ async function passageSearch(rqo: Rqo, context: RagApiContext, msg: string): Pro
 		optionScope(rqo.options),
 		optionGroup(rqo.options),
 	);
-	return envelope(passages, msg);
+	return envelope(passages, msg, context);
 }
 
 /** similar_to (records similar to a seed). */
 async function similarToAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const sectionTipo = optionString(rqo.options, 'section_tipo');
 	const sectionIdRaw = rqo.options?.section_id;
 	const sectionId = typeof sectionIdRaw === 'number' ? sectionIdRaw : Number(sectionIdRaw);
 	if (sectionTipo === '' || !Number.isFinite(sectionId) || sectionId < 1) {
-		return badRequest('Missing or invalid seed (section_tipo, section_id)', 'missing_seed');
+		return badRequest('Missing or invalid seed (section_tipo, section_id)');
 	}
 	const hits: RagSearchHit[] = await similarTo(
 		principal,
@@ -169,7 +186,7 @@ async function similarToAction(rqo: Rqo, context: RagApiContext): Promise<ApiRes
 		optionScope(rqo.options),
 		optionGroup(rqo.options),
 	);
-	return envelope(hits, 'ok');
+	return envelope(hits, 'ok', context);
 }
 
 /**
@@ -184,27 +201,27 @@ async function similarToAction(rqo: Rqo, context: RagApiContext): Promise<ApiRes
 async function embedGroupsAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const sectionTipo = optionString(rqo.options, 'section_tipo');
 	if (sectionTipo === '' || !isValidTipo(sectionTipo)) {
-		return envelope({ groups: [] }, 'ok');
+		return envelope({ groups: [] }, 'ok', context);
 	}
 	// Per-section read permission — denial is indistinguishable from "not opted in".
 	if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 1) {
-		return envelope({ groups: [] }, 'ok');
+		return envelope({ groups: [] }, 'ok', context);
 	}
 	const ragConfig = new RagConfig(defaultOntologyPort());
 	const groups = await ragConfig.getEmbedGroups(sectionTipo);
-	return envelope({ groups: groups.map((g) => g.id) }, 'ok');
+	return envelope({ groups: groups.map((g) => g.id) }, 'ok', context);
 }
 
 /** ask — grounded Q&A with citations (or a refusal when no context is found). */
 async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 	if (!isRagEnabled()) return disabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
-	if (query === '') return badRequest('Missing query', 'missing_query');
+	if (query === '') return badRequest('Missing query');
 
 	const env = defaultRagEnv();
 	const cfg = askRuntimeConfigFromEnv(env);
@@ -237,17 +254,19 @@ async function askAction(rqo: Rqo, context: RagApiContext): Promise<ApiResult> {
 			: result.restricted
 				? RESTRICTED_MSG
 				: 'no_grounded_context';
-		return envelope(result, status);
-	} catch {
-		// An LLM transport/protocol failure maps to generation_failed (never a
-		// fabricated answer).
-		return envelope(false, 'Generation failed', ['generation_failed']);
+		return envelope(result, status, context);
+	} catch (error) {
+		// An LLM transport/protocol failure is `rag.generation_failed` (never a
+		// fabricated answer); the raw error is LOG-ONLY cause.
+		throw new DedaloError('rag.generation_failed', { cause: error });
 	}
 }
 
 // ─────────────────────────────── multimodal (images) ───────────────────────────────
 
-const mediaDisabled = (): ApiResult => envelope(false, 'RAG media is disabled', ['media_disabled']);
+const mediaDisabled = (): never => {
+	throw new DedaloError('rag.media_disabled');
+};
 
 function readSeed(options: Record<string, unknown> | undefined): {
 	sectionTipo: string;
@@ -297,10 +316,9 @@ async function similarObjectsAction(rqo: Rqo, context: RagApiContext): Promise<A
 	const stack = buildMediaStack();
 	if (stack === null) return mediaDisabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const seed = readSeed(rqo.options);
-	if (seed === null)
-		return badRequest('Missing or invalid seed (section_tipo, section_id)', 'missing_seed');
+	if (seed === null) return badRequest('Missing or invalid seed (section_tipo, section_id)');
 
 	const ragConfig = new RagConfig(defaultOntologyPort());
 	const scope = optionScope(rqo.options) ?? (await ragConfig.getCompareScope(seed.sectionTipo));
@@ -324,7 +342,7 @@ async function similarObjectsAction(rqo: Rqo, context: RagApiContext): Promise<A
 		topK: clampTopK(rqo.options?.limit),
 		minSimilarity: nearDup,
 	});
-	return envelope(hits.map(shapeObject), 'ok');
+	return envelope(hits.map(shapeObject), 'ok', context);
 }
 
 /** search_by_text_image — a text query into the image space (joint tower). */
@@ -333,14 +351,14 @@ async function searchByTextImageAction(rqo: Rqo, context: RagApiContext): Promis
 	const stack = buildMediaStack();
 	if (stack === null) return mediaDisabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const query = optionString(rqo.options, 'query');
-	if (query === '') return badRequest('Missing query', 'missing_query');
+	if (query === '') return badRequest('Missing query');
 	const hits = await stack.objectRetrieval.searchByTextImage(principal, query, {
 		sectionTipos: optionScope(rqo.options) ?? [],
 		topK: clampTopK(rqo.options?.limit),
 	});
-	return envelope(hits.map(shapeObject), 'ok');
+	return envelope(hits.map(shapeObject), 'ok', context);
 }
 
 /** characterize_object — neighbour-aggregated typology/period proposals (no LLM). */
@@ -349,10 +367,9 @@ async function characterizeObjectAction(rqo: Rqo, context: RagApiContext): Promi
 	const stack = buildMediaStack();
 	if (stack === null) return mediaDisabled();
 	const principal = await resolveCaller(context);
-	if (principal === null) return badRequest('Authentication required', 'no_principal');
+	if (principal === null) return noPrincipal();
 	const seed = readSeed(rqo.options);
-	if (seed === null)
-		return badRequest('Missing or invalid seed (section_tipo, section_id)', 'missing_seed');
+	if (seed === null) return badRequest('Missing or invalid seed (section_tipo, section_id)');
 
 	// The SAME bug the rsc92 picker fix killed in core/resolve/component_data.ts (2026-07-09):
 	// 'APPLICATION_LANGS' is not a key this engine has — nothing sets it, the installer never
@@ -372,7 +389,7 @@ async function characterizeObjectAction(rqo: Rqo, context: RagApiContext): Promi
 	const result = await characterizer.characterize(principal, seed, {
 		topK: stack.cfg.characterizeTopK,
 	});
-	return envelope(result, 'ok');
+	return envelope(result, 'ok', context);
 }
 
 /**

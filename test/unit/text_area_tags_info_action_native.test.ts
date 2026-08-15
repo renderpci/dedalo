@@ -268,7 +268,10 @@ describe('get_tags_info — resolved payload', () => {
 			contextFor(ADMIN),
 		);
 		expect(result.status).toBe(200);
-		const body = result.body as { data: { tags_index: unknown[] }; unknown_types: string[] };
+		const body = result.body as unknown as {
+			data: { tags_index: unknown[] };
+			unknown_types: string[];
+		};
 		expect(body.unknown_types).toEqual([]);
 		expect(body.data.tags_index).toEqual([
 			{
@@ -293,7 +296,10 @@ describe('get_tags_info — resolved payload', () => {
 		);
 		// Never silently narrow: the unresolvable type is NAMED — as the owned
 		// top-level `unknown_types` key now that the prose channel is gone.
-		const body = result.body as { data: { tags_index?: unknown[] }; unknown_types: string[] };
+		const body = result.body as unknown as {
+			data: { tags_index?: unknown[] };
+			unknown_types: string[];
+		};
 		expect(body.unknown_types).toEqual(['not_a_type']);
 		expect(body.data.tags_index).toHaveLength(1); // the known type still resolved
 	});
@@ -303,7 +309,7 @@ describe('get_tags_info — resolved payload', () => {
 			rqoOf(hostSource(), { ar_type: ['zzz_one', 'index', 'zzz_two'] }),
 			contextFor(ADMIN),
 		);
-		expect((result.body as { unknown_types: string[] }).unknown_types).toEqual([
+		expect((result.body as unknown as { unknown_types: string[] }).unknown_types).toEqual([
 			'zzz_one',
 			'zzz_two',
 		]);

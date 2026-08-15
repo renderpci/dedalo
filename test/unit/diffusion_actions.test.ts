@@ -124,7 +124,7 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 		}
 		const final = chunks[chunks.length - 1];
 		expect(final?.is_running).toBe(false);
-		expect(final?.result?.result).toBe(true);
+		expect(final?.result?.ok).toBe(true);
 		expect(final?.data.counter).toBe(4);
 		expect(final?.data.total).toBe(4);
 

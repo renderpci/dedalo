@@ -3,8 +3,9 @@
 Status: **P0 landed** (foundation) — **P1 chokepoints landed 2026-08-15**
 (§4: dispatch / response.ts / server.ts / tools dispatch / rqo schema on
 envelope v2; the call-site sweep and the client half land in the same series).
-§5 landed with P2 (MCP / streams / external fold-in, 2026-08-15); §6-8 are
-headed stubs filled by P1-exit/P3/P4. Gates: `test/unit/error_registry_native.test.ts`,
+§5 landed with P2 (MCP / streams / external fold-in, 2026-08-15); §7
+(enforcement) and §9 (add-a-code) landed at P1 exit (2026-08-15 — adapter and
+shells DELETED); §6 and §8 are headed stubs filled by P3/P4. Gates: `test/unit/error_registry_native.test.ts`,
 `error_envelope_native.test.ts`, `error_converter_native.test.ts`,
 `dispatch_error_native.test.ts`, `authorization_denial_native.test.ts`,
 `session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`,
@@ -205,21 +206,18 @@ route. Consequences:
 - **`logError` severity `info`** prints the line only (no stack): an expected
   refusal (expired session) is traffic, not a fault.
 
-**The transitional adapter (DELETED at P1 exit).**
-`src/core/api/legacy_body_adapter.ts` bridges the chokepoint and the handler
-bodies the call-site sweep has not converted yet: a body carrying `ok` passes
-through; a legacy `result === false` body becomes a THROW of
-`LEGACY_TOKEN_MAP[errors[0]]` (a non-2xx legacy status that disagrees with
-the token's status wins — `unauthorized`@401 is `auth.not_logged`; else the
-status default; else `request.invalid`) with the legacy `msg` as
-`publicMessage` (wire only for public-disclosure codes) and the rest of the
-body as extension keys; a legacy success becomes `ok(result | data,
-{extend})`. Every conversion is logged (`[dispatch] LEGACY … sweep pending`).
-The three names in `response.ts` (`denied` / `notAuthorized` / `notLogged`)
-are throwing shells (`: never`) kept only so unswept sites compile;
-`authorization_denial_native.test.ts` freezes their call-site count
-shrink-only, and the P1-exit gate (wire_envelope tripwire) sets it to 0 and
-deletes shells + adapter + `LegacyApiBody` / `LegacyToolResponse` together.
+**The transitional adapter — DELETED (P1 exit, 2026-08-15).**
+`src/core/api/legacy_body_adapter.ts` and the three throwing shells in
+`response.ts` (`denied` / `notAuthorized` / `notLogged`), `LegacyApiBody` and
+`LegacyToolResponse` are gone: `ApiResult.body` IS `ApiEnvelope`,
+`ToolResponse = ApiEnvelope`. A handler that returns a body without `ok` is a
+BUG, not a compat case — `dispatch.ts` refuses it through its own catch as
+`internal.unexpected` (coordinates name `<class>::<action>`), so a half-shaped
+body can never reach the wire and "work". Streamed results go through
+`streamResult(stream, headers)` (response.ts — the ONE non-failure helper it
+exports; its body is `ok(null)` and is never serialized). Guards:
+`error_taxonomy_tripwire` A1 (no builder call anywhere), `dispatch_error_native`
+(the refusal), `authorization_denial_native` (response.ts's export set).
 
 **Pattern for a handler (the sweep target):**
 
@@ -358,12 +356,49 @@ Gates: `test/unit/mcp_registry.test.ts`, `mcp_fields_write.test.ts`,
 (P1) — `test/parity/normalize.ts adoptErrorEnvelopeV2` total table; (P4) compat
 removal.
 
-## 7. Write-path propagation (P3)
+## 7. Enforcement — the gates (P1 exit, 2026-08-15)
+
+Every rule above is tripwired or it does not exist (CLAUDE.md "invariants are
+tripwired or deleted"). Rows in `engineering/TRIPWIRES.md` + `scripts/verify.ts`:
+
+| gate | what it holds |
+|---|---|
+| `test/unit/error_registry_native.test.ts` | the REGISTRY is coherent: grammar, every code has a `master.json` label, label `{params}` ≡ `details_keys`, status↔category (named exemptions), `external.<kind>` totality + retryable/label agreement with the component state map, every former MCP HINT key mapped and hinted, LEGACY_TOKEN_MAP targets exist |
+| `test/unit/error_envelope_native.test.ts`, `error_converter_native.test.ts` | the envelope shapes and the converter's disclosure ladder (publicMessage only for `public`, details filtered to `details_keys`, `debug` only under the flag, poison latch inside `toDedaloError`) |
+| `test/unit/dispatch_error_native.test.ts` | the chokepoint: registry status, `ok:false ⇒ non-2xx`, Retry-After, csrf_token on both outcomes, Gate 1 ≡ Gate 1c-disabled, a NON-envelope handler body refused as `internal.unexpected`, server.ts's three doors |
+| `test/unit/error_taxonomy_tripwire.test.ts` | the TREE only speaks through the registry: (A) zero builder calls / `result:false` literals / stray `debug` keys / builtin `instanceof` outside convert.ts+process_health.ts / raw exception text on a wire key in the 8 former passthrough files; (B) shrink-only ratchets on hand-built `ok:false` failure literals and prose `errors:[…]`; (C) every code referenced or `reason`ed, every client code string resolves; (D) runtime: every registered `(class,action)` converts a throw; (E) anti-vacuity |
+| `test/unit/error_throw_ratchet.test.ts` | untyped `throw new Error(` per file may only shrink (`engineering/error_throw_baseline.json`); ZERO_TIER dirs must reach 0 at P3 exit (`ZERO_TIER_ENFORCED`, still `false` — the zero-tier count is not 0 yet) |
+| `test/unit/client_error_contract_tripwire.test.ts` | the client half: one transport (`api_transport.fetch_api`, no status allowlist), no fourth fetch wrapper, the compat-read census (`engineering/client_compat_read_baseline.json`, shrink-only) — flips to "compat ABSENT" when the census reaches 0 (P4) |
+| `test/unit/authorization_denial_native.test.ts`, `session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`, `security_fail_closed.test.ts`, `install_gate.test.ts` | the named refusals (`perm.denied` + environment extension on `start`, `auth.not_logged`, `auth.csrf_failed` + fresh token, install window) — and response.ts's export set (`streamResult` only) |
+| `test/unit/labels_tripwire.test.ts` | every `label_key` ships in `master.json` (the code and its label land in one commit) |
+| `test/unit/tools_dispatch.test.ts`, `dd_mcp_api.test.ts`, `agent_stream_protocol.test.ts`, `diffusion_queue_stream_tripwire.test.ts`, `external_search_action_native.test.ts` | the non-envelope surfaces (§5) — tool responses ARE the envelope, MCP structured errors, SSE frames, external degradation as notices |
+
+Left for later phases, on record: `ZERO_TIER_ENFORCED` (P3), the compat block +
+census flip (P4), `matrix_write_failure_native` / `save_component_failure_native`
+(P3, §8).
+
+## 8. Write-path propagation (P3)
 
 (P3) — `matrix_write.ts`, `section/record/**`, `relations/save.ts` +
 `*_write_failure_native` gates; CONVENTIONS §1 amendment.
 
-## 8. Add-a-code checklist (P1)
+## 9. Add-a-code checklist
 
-(P1) — the checklist once the tripwires (`error_taxonomy_tripwire`,
-`error_throw_ratchet`, `client_error_contract_tripwire`) exist.
+1. Register the row in `ERROR_REGISTRY` (`src/core/errors/registry.ts`):
+   category (→ status), `label_key` (default `error_<code>`; reuse a
+   pre-existing key only when it says the same thing), registry English
+   `message` (never interpolates caller data), severity, disclosure,
+   retryable, `details_keys` iff the label has `{params}`, `hint` for a
+   model-facing code, `reason` ONLY when no engine path throws it (a
+   client-minted or reserved code).
+2. Add the label to `src/core/labels/master.json` (sorted) — same commit.
+3. If it replaces an old wire token, add the token to `LEGACY_TOKEN_MAP`.
+4. `throw new DedaloError('<code>', {…})` at the site — `coordinates` for
+   log-only identifiers, `publicMessage` only for a public-disclosure code,
+   `extend` only for a NAMED extension key.
+5. If the browser needs a non-default action, add the code (or its
+   `<domain>.*`) to `CORE_POLICY` in `client/dedalo/core/common/js/error_policy.js`.
+6. Run `bun test test/unit/error_registry_native.test.ts
+   test/unit/error_taxonomy_tripwire.test.ts test/unit/labels_tripwire.test.ts`
+   — an orphan, a missing label, a mismatched placeholder or an unresolved
+   client string is red.

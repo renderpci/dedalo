@@ -181,8 +181,8 @@ addressed by locator rather than by position. Default mode emits none of them, w
 keeps the frozen differentials byte-identical.
 
 **7. The two empty trees are two different facts.** Every candidate dropped by a permission
-check → `notAuthorized()` (403) with the GENERIC message, naming no section (`response.ts`
-refuses a `denied(403, …)` for exactly this reason). Dropped by the data-driven skips (no
+check → a thrown `perm.denied` (403) with the GENERIC registry message, naming no section
+(the code's disclosure is `operator`, so a site's sentence never reaches the wire). Dropped by the data-driven skips (no
 active hierarchy, or none of them among the caller's targets) → `409 read: no active
 hierarchy is configured for this component target`, which the client renders as "this picker
 has no thesaurus" rather than as a permission error. The two causes are counted separately at

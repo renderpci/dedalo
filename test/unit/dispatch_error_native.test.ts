@@ -13,10 +13,10 @@
  *  - `csrf_token` is appended on success AND failure for a session;
  *  - Gate 1 (unregistered pair) and Gate 1c-disabled (error-report intake off)
  *    answer BYTE-IDENTICAL bodies minus request_id — a probe cannot tell them apart;
- *  - the TRANSITIONAL legacy_body_adapter: a not-yet-swept `{result:false,
- *    errors:['not_authorized']}` becomes perm.denied 403; a legacy success
- *    becomes ok/data with its extra keys as extension keys; `{result:true,
- *    data}` keeps `data`;
+ *  - the one-producer law at the dispatcher: a handler body WITHOUT `ok` (the
+ *    PHP `{result,msg,errors}` fossil — the deleted legacy_body_adapter used
+ *    to translate it) is a BUG and is refused as internal.unexpected 500, an
+ *    envelope body passes through, a streamed result is exempt;
  *  - server.ts: malformed JSON → request.malformed_body; a body failing the RQO
  *    schema → request.invalid_rqo with `details.issue_paths` (paths, never the
  *    raw zod issues); an unknown route → resource.not_found, JSON;
@@ -28,7 +28,9 @@ import { logApiAccess } from '../../src/core/api/access_log.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { utilsApiActions } from '../../src/core/api/handlers/dd_utils_api.ts';
 import { getProcessPoison, resetProcessPoisonForTests } from '../../src/core/api/process_health.ts';
+import { streamResult } from '../../src/core/api/response.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
+import { ok } from '../../src/core/errors/convert.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
 import { apiEnvelopeSchema } from '../../src/core/errors/schema.ts';
@@ -179,7 +181,7 @@ describe('registry status + envelope on the dispatch surface', () => {
 		expect(failed.body.csrf_token).toBe(context.session?.csrfToken);
 		const succeeded = await withProbe(
 			'__zz_csrf_ok_probe__',
-			async () => ({ status: 200, body: { result: { fine: true }, msg: 'OK' } }),
+			async () => ({ status: 200, body: ok({ fine: true }, { requestId: REQUEST_ID }) }),
 			(rqo) => dispatchRqo(rqo, context),
 		);
 		expect(succeeded.status).toBe(200);
@@ -212,75 +214,57 @@ describe('Gate 1 and Gate 1c-disabled are indistinguishable', () => {
 	});
 });
 
-describe('the TRANSITIONAL legacy body adapter (deleted at P1 exit)', () => {
-	test('a legacy {result:false, errors:[not_authorized]} becomes perm.denied 403', async () => {
+describe('the one-producer law at the dispatcher (legacy_body_adapter DELETED)', () => {
+	test('a handler body without `ok` is a BUG: internal.unexpected 500, action named in the log coordinates', async () => {
 		const result = await withProbe(
-			'__zz_legacy_fail_probe__',
-			async () => ({
-				status: 200,
-				body: { result: false, msg: 'no way', errors: ['not_authorized'], environment: { x: 1 } },
-			}),
+			'__zz_legacy_body_probe__',
+			async () =>
+				({
+					status: 200,
+					body: { result: false, msg: 'no way', errors: ['not_authorized'] },
+				}) as never,
 			(rqo) => dispatchRqo(rqo, authedContext()),
 		);
-		expect(result.status).toBe(403);
+		expect(result.status).toBe(500);
 		const body = result.body as Body;
 		expect(body.ok).toBe(false);
-		expect(body.error?.code).toBe('perm.denied');
-		expect(body.errors).toEqual(['perm.denied']);
-		// the rest of the legacy body rides as extension keys
-		expect(body.environment).toEqual({ x: 1 });
-		// operator disclosure: the legacy prose does not reach the wire
+		expect(body.error?.code).toBe('internal.unexpected');
+		// the fossil body never reaches the wire, translated or otherwise
 		expect(JSON.stringify(body)).not.toContain('no way');
+		expect(body.errors).toEqual(['internal.unexpected']);
+		expect(apiEnvelopeSchema.safeParse(body).success).toBe(true);
 	});
 
-	test('a legacy status wins over a disagreeing token (install engine: unauthorized@401 = not logged)', async () => {
-		const result = await withProbe(
-			'__zz_legacy_401_probe__',
-			async () => ({ status: 401, body: { result: false, msg: 'x', errors: ['unauthorized'] } }),
-			(rqo) => dispatchRqo(rqo, authedContext()),
-		);
-		expect(result.status).toBe(401);
-		expect((result.body as Body).error?.code).toBe('auth.not_logged');
-	});
-
-	test('a legacy success becomes ok/data with its extra keys as extension keys', async () => {
+	test('a legacy SUCCESS body is refused the same way (no silent adaptation)', async () => {
 		const result = await withProbe(
 			'__zz_legacy_ok_probe__',
-			async () => ({
-				status: 200,
-				body: { result: { rows: [1] }, msg: 'OK', total: 3, errors: [] },
-			}),
+			async () => ({ status: 200, body: { result: { rows: [1] }, msg: 'OK' } }) as never,
 			(rqo) => dispatchRqo(rqo, authedContext()),
 		);
-		expect(result.status).toBe(200);
-		expect(result.body.ok).toBe(true);
-		expect(result.body.data).toEqual({ rows: [1] });
-		expect(result.body.result).toEqual({ rows: [1] });
-		expect(result.body.total).toBe(3);
-		expect(result.body.msg).toBe('OK');
-		expect(result.body.errors).toBeUndefined();
-		expect(apiEnvelopeSchema.safeParse(result.body).success).toBe(true);
-	});
-
-	test('a legacy {result:true, data} keeps data as the envelope data', async () => {
-		const result = await withProbe(
-			'__zz_legacy_data_probe__',
-			async () => ({ status: 200, body: { result: true, data: { b: 2 }, mcp_session_id: 'm' } }),
-			(rqo) => dispatchRqo(rqo, authedContext()),
-		);
-		expect(result.body.data).toEqual({ b: 2 });
-		expect(result.body.mcp_session_id).toBe('m');
+		expect(result.status).toBe(500);
+		expect((result.body as Body).error?.code).toBe('internal.unexpected');
 	});
 
 	test('an envelope body passes through untouched', async () => {
-		const envelope = { ok: true, request_id: REQUEST_ID, data: 7, result: 7 };
 		const result = await withProbe(
 			'__zz_envelope_probe__',
-			async () => ({ status: 200, body: { ...envelope } }),
+			async () => ({ status: 200, body: ok(7, { requestId: REQUEST_ID }) }),
 			(rqo) => dispatchRqo(rqo, authedContext()),
 		);
+		expect(result.status).toBe(200);
 		expect(result.body.data).toBe(7);
 		expect(result.body.ok).toBe(true);
+	});
+
+	test('a streamed result is exempt (its body is never serialized)', async () => {
+		const result = await withProbe(
+			'__zz_stream_probe__',
+			async () =>
+				streamResult(new ReadableStream<Uint8Array>(), { 'Content-Type': 'text/event-stream' }),
+			(rqo) => dispatchRqo(rqo, authedContext()),
+		);
+		expect(result.status).toBe(200);
+		expect(result.stream).toBeDefined();
 	});
 });
 

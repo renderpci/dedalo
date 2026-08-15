@@ -15,10 +15,11 @@
 
 import { hostname } from 'node:os';
 import { readString } from '../../config/readers.ts';
-import { DedaloError, logError, toStreamFrame } from '../../core/errors/index.ts';
+import { DedaloError, logError, toErrorBody } from '../../core/errors/index.ts';
 import {
 	claimNextQueuedJob,
 	countRunningJobs,
+	failedJobResult,
 	finishJob,
 	purgeTerminalJobs,
 	recordRunnerPid,
@@ -185,9 +186,9 @@ function spawnRunner(jobId: string): void {
 			coordinates: { job: jobId },
 		});
 		logError(typed, { subsystem: 'diffusion scheduler' });
-		const frame = toStreamFrame(typed);
-		finishJob(jobId, 'failed', { ...frame, msg: frame.error.message }).catch((failError) =>
-			console.error('[diffusion scheduler] releasing the unspawned job failed:', failError),
+		finishJob(jobId, 'failed', failedJobResult(typed, toErrorBody(typed).message)).catch(
+			(failError) =>
+				console.error('[diffusion scheduler] releasing the unspawned job failed:', failError),
 		);
 		return;
 	}

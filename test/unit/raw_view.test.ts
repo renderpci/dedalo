@@ -157,7 +157,7 @@ describe('raw record data view (dedicated GET, fail-closed)', () => {
 			csrfCandidate: session?.csrfToken ?? null,
 			principal,
 		});
-		const dispatchedBody = dispatched.body as { data: unknown[]; table: string | null };
+		const dispatchedBody = dispatched.body as unknown as { data: unknown[]; table: string | null };
 		expect(body.data).toEqual(dispatchedBody.data);
 		// `table` is the owned top-level extension key on BOTH doors.
 		expect(body.table).toBe(dispatchedBody.table);

@@ -20,7 +20,7 @@
 import type { ApiResult } from '../api/response.ts';
 import { isTemporalSource, type Rqo } from '../concepts/rqo.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
-import { type ApiNotice, DedaloError, ok, specOf } from '../errors/index.ts';
+import { type ApiNotice, DedaloError, isErrorInDomain, ok, specOf } from '../errors/index.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
 import { currentRequestId } from '../security/request_context.ts';
 import { readSection } from './read.ts';
@@ -339,7 +339,7 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 				source.section_tipo,
 				'rqo.get_data.record_scope_gate',
 			).catch((error: unknown) => {
-				if (error instanceof TypeError) return { kind: 'absent' } as const;
+				if (isErrorInDomain(error, 'section_id')) return { kind: 'absent' } as const;
 				throw error;
 			});
 			if (wireSectionId.kind === 'record') {

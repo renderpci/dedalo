@@ -26,7 +26,7 @@
 import type { Rqo } from '../concepts/rqo.ts';
 import { type JobRecord, type JobStatusFrame, mediaJobs } from '../media/jobs.ts';
 import type { Principal } from '../security/permissions.ts';
-import type { ApiResult } from './response.ts';
+import { type ApiResult, streamResult } from './response.ts';
 
 /** Old-engine SSE framing: pad to keep intermediary proxies flushing eagerly. */
 const SSE_PAD_LENGTH = 16384;
@@ -53,17 +53,15 @@ export const SSE_HEADERS: Record<string, string> = {
  * SSE frame, never as a JSON envelope the stream reader cannot parse.
  */
 export function terminalStream(frame: Record<string, unknown>): ApiResult {
-	return {
-		status: 200,
-		body: {},
-		stream: new ReadableStream<Uint8Array>({
+	return streamResult(
+		new ReadableStream<Uint8Array>({
 			start(controller) {
 				controller.enqueue(encodeSseChunk(frame));
 				controller.close();
 			},
 		}),
-		streamHeaders: { ...SSE_HEADERS },
-	};
+		{ ...SSE_HEADERS },
+	);
 }
 
 /** Job id chars as minted by MediaJobManager/backup.ts — nothing path-like. */
@@ -195,5 +193,5 @@ export function getJobEvents(rqo: Rqo, principal: Principal): ApiResult {
 		},
 	});
 
-	return { status: 200, body: {}, stream, streamHeaders: { ...SSE_HEADERS } };
+	return streamResult(stream, { ...SSE_HEADERS });
 }

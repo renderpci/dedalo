@@ -100,7 +100,7 @@ const OBJECTS = [
 	},
 ];
 
-type Ctx = { session: { userId: number } | null; principal?: Principal };
+type Ctx = { requestId: string; session: { userId: number } | null; principal?: Principal };
 const rqo = (options: Record<string, unknown>) => ({ options }) as never;
 
 // ─────────────────────────── preconditions (loud skips) ───────────────────────────
