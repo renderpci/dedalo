@@ -373,14 +373,52 @@ tripwired or deleted"). Rows in `engineering/TRIPWIRES.md` + `scripts/verify.ts`
 | `test/unit/labels_tripwire.test.ts` | every `label_key` ships in `master.json` (the code and its label land in one commit) |
 | `test/unit/tools_dispatch.test.ts`, `dd_mcp_api.test.ts`, `agent_stream_protocol.test.ts`, `diffusion_queue_stream_tripwire.test.ts`, `external_search_action_native.test.ts` | the non-envelope surfaces (§5) — tool responses ARE the envelope, MCP structured errors, SSE frames, external degradation as notices |
 
-Left for later phases, on record: `ZERO_TIER_ENFORCED` (P3), the compat block +
-census flip (P4), `matrix_write_failure_native` / `save_component_failure_native`
-(P3, §8).
+Left for later phases, on record: `ZERO_TIER_ENFORCED` (P3 exit, when every
+zero-tier prefix is at 0 — the write path and DB layer are, §8), the compat
+block + census flip (P4). `matrix_write_failure_native` /
+`save_component_failure_native` landed with §8.
 
-## 8. Write-path propagation (P3)
+## 8. Write-path propagation (P3 — landed 2026-08-15)
 
-(P3) — `matrix_write.ts`, `section/record/**`, `relations/save.ts` +
-`*_write_failure_native` gates; CONVENTIONS §1 amendment.
+The write path (`src/core/db/**`, `src/core/section/record/**`,
+`src/core/section_record/**`, `src/core/relations/save.ts`) holds ZERO untyped
+throws. The classification, applied site by site:
+
+- **caller faults → registered codes.** Consultation-only backstops in
+  create/duplicate/delete throw `perm.denied` (the same code the API door
+  throws first); a non-positive section_id is `section_id.not_an_address`; a
+  tipo with no matrix table is `section.no_matrix_table`; a missing source
+  record (duplicate, setRecordMetadata) is `resource.not_found`; an unknown
+  `changed_data` action or a non-object insert value is `request.invalid_data`;
+  a write addressed to a derived (external) component is
+  `record.external_write_refused` (`ExternalWriteRefused` is a thin
+  `DedaloError` family — `instanceof` still works, the code is the wire
+  identity); a save whose UPDATE matched 0 rows (the record was deleted
+  concurrently — `assertRecordStillExists`) is `resource.conflict`.
+- **integrity / contract violations → `internal.invariant`** with `message` =
+  the former sentence (module + input, log-only) and `coordinates`
+  (table / tipo / section_id / column / key): the json_codec guards, the
+  matrix_write identifier and tipo-grammar gates, the FOR UPDATE / advisory-lock
+  outside-a-transaction guards, the expired-handle guard (S2-14), the counter
+  "insert returned no section_id" guards, the empty-payload guards, the
+  observer cascade in-transaction refusals (B6), the immutable subscription
+  index, the unported `dato_default.method`.
+- **Nothing is absorbed.** No throw was wrapped into an `ok:false`; every
+  failure between "persist X" and COMMIT still propagates out of
+  `withTransaction` and rolls the transaction back. `toErrorEnvelope` runs
+  only at the chokepoint, never inside a transaction (convert.ts imports
+  nothing from `src/core/db/`).
+
+Gates: `test/unit/matrix_write_failure_native.test.ts` (a forced integrity
+failure inside `withTransaction` on a scratch record → the DedaloError reaches
+the caller, the earlier write in the same tx is rolled back, no row / no
+counter row survives a failed create; the converter keeps the sentence
+server-side and has no tx dependency) and
+`test/unit/save_component_failure_native.test.ts` (the same through
+`saveComponentData` on a scratch twin: an allocated item id, a materialised
+row and the audit row all roll back; caller faults are typed and write
+nothing; an anti-vacuity control proves the same insert with a JSON-safe value
+does move them).
 
 ## 9. Add-a-code checklist
 

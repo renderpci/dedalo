@@ -34,6 +34,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { recordPoolWait } from '../api/counters.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 
 /**
  * Operations posture (audit S2-32/S2-37, config catalog `config.ops` — all
@@ -315,12 +316,13 @@ function activeExecutor(): SQL {
 	const handle = transactionStore.getStore();
 	if (handle === undefined) return pool;
 	if (handle.expired) {
-		throw new Error(
-			'postgres: ambient transaction handle has EXPIRED — a continuation leaked past ' +
+		throw new DedaloError('internal.invariant', {
+			message:
+				'postgres: ambient transaction handle has EXPIRED — a continuation leaked past ' +
 				'withTransaction (unawaited promise/timer started inside the callback) tried to ' +
 				'query after COMMIT/ROLLBACK. The query was NOT sent. Await every async operation ' +
 				'inside the transaction callback (S2-14).',
-		);
+		});
 	}
 	return handle.executor;
 }
@@ -530,9 +532,11 @@ export async function acquireNodeLock(
 	sectionId: number | string,
 ): Promise<void> {
 	if (!isInTransaction()) {
-		throw new Error(
-			'acquireNodeLock: called outside a transaction; the lock would be ineffective (call inside withTransaction)',
-		);
+		throw new DedaloError('internal.invariant', {
+			message:
+				'acquireNodeLock: called outside a transaction; the lock would be ineffective (call inside withTransaction)',
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 	const lockKey = `${sectionTipo}_${sectionId}`;
 	await sql.unsafe('SELECT pg_advisory_xact_lock(hashtext($1))', [lockKey]);

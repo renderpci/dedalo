@@ -1876,6 +1876,34 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 	},
+	// --- write paths (P3) ---
+	// The record write doors (section/record/**, section_record/**): the
+	// caller-addressable refusals that used to be bare `throw new Error(`.
+	// Engine invariants on the same paths (json_codec, matrix_write identifier
+	// gates, tx guards, lost-update guards) are `internal.invariant`.
+	'record.external_write_refused': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_record_external_write_refused',
+		// A write addressed to a component whose value is DERIVED from a
+		// third-party service at read time (WC-2026-08-06-external-write-refusal):
+		// the local record has no slot for it and the remote is never written to.
+		message: 'Write refused: the component value is derived from an external service',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'section.no_matrix_table': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_section_no_matrix_table',
+		// The tipo names no section with a matrix table (not a section, an
+		// external section, or an unprovisioned one) — nothing can be written.
+		message: 'The section has no matrix table',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;

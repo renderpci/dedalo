@@ -41,6 +41,7 @@ import {
 	updateMatrixKeysData,
 	updateMatrixRecord,
 } from '../db/matrix_write.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { auditDateItem, auditUserLocator } from '../section/record/create_record.ts';
 import { fireRagRecordEvent, fireSaveEvent } from './save_event.ts';
 
@@ -103,7 +104,14 @@ export async function persistRecordKeys(
 	audit: AuditStamp,
 ): Promise<void> {
 	if (savePath.length === 0) {
-		throw new Error('persistRecordKeys: empty savePath');
+		throw new DedaloError('internal.invariant', {
+			message: 'persistRecordKeys: empty savePath',
+			coordinates: {
+				table: target.table,
+				section_tipo: target.sectionTipo,
+				section_id: target.sectionId,
+			},
+		});
 	}
 
 	// 4. COMPONENT_IMAGE SVG ENVELOPE (PHP component_image::save :119-133 →
@@ -149,9 +157,15 @@ function assertRecordStillExists(
 	caller: string,
 ): void {
 	if (affected === 0) {
-		throw new Error(
-			`${caller}: record ${target.sectionTipo}/${target.sectionId} not found in ${target.table} — it was deleted concurrently (or never existed); the write did not land`,
-		);
+		throw new DedaloError('resource.conflict', {
+			message: `${caller}: record ${target.sectionTipo}/${target.sectionId} not found in ${target.table} — it was deleted concurrently (or never existed); the write did not land`,
+			coordinates: {
+				table: target.table,
+				section_tipo: target.sectionTipo,
+				section_id: target.sectionId,
+				caller,
+			},
+		});
 	}
 }
 
@@ -210,7 +224,14 @@ export async function persistRecordColumns(
 	}
 
 	if (Object.keys(values).length === 0) {
-		throw new Error('persistRecordColumns: empty columns payload');
+		throw new DedaloError('internal.invariant', {
+			message: 'persistRecordColumns: empty columns payload',
+			coordinates: {
+				table: target.table,
+				section_tipo: target.sectionTipo,
+				section_id: target.sectionId,
+			},
+		});
 	}
 
 	const result = await updateMatrixRecord(

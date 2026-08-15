@@ -45,6 +45,7 @@ import {
 	getSectionPermissions,
 	type Principal,
 } from '../../src/core/security/permissions.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // The superuser (user_id -1) resolves to level 3 WITHOUT any DB read — the ideal
 // probe for the cap: the raw level is the maximum, so a capped value proves the
@@ -75,22 +76,30 @@ describe('consultation-only sections are read-only for every door', () => {
 		expect(await getSectionPermissions(SUPERUSER, 'oh1')).toBe(3);
 	});
 
+	// The engine backstops throw the TYPED refusal the API door throws
+	// (`perm.denied`, ERRORS_SPEC §4); the sentence stays the log message.
+	async function expectConsultationRefusal(run: Promise<unknown>): Promise<void> {
+		const refusal = await refusalOf(run);
+		expect(refusal.code).toBe('perm.denied');
+		expect(refusal.message).toMatch(/consultation-only/);
+	}
+
 	test('createSectionRecord refuses a consultation-only section before any DB access', async () => {
 		for (const sectionTipo of CONSULTATION_ONLY_SECTIONS) {
-			expect(createSectionRecord(sectionTipo, 1)).rejects.toThrow(/consultation-only/);
+			await expectConsultationRefusal(createSectionRecord(sectionTipo, 1));
 		}
 	});
 
 	test('duplicateSectionRecord refuses a consultation-only section', async () => {
 		for (const sectionTipo of CONSULTATION_ONLY_SECTIONS) {
-			expect(duplicateSectionRecord(sectionTipo, 1, 1)).rejects.toThrow(/consultation-only/);
+			await expectConsultationRefusal(duplicateSectionRecord(sectionTipo, 1, 1));
 		}
 	});
 
 	test('deleteSectionRecord / deleteSectionData refuse a consultation-only section', async () => {
 		for (const sectionTipo of CONSULTATION_ONLY_SECTIONS) {
-			expect(deleteSectionRecord(sectionTipo, 1, 1)).rejects.toThrow(/consultation-only/);
-			expect(deleteSectionData(sectionTipo, 1, 1)).rejects.toThrow(/consultation-only/);
+			await expectConsultationRefusal(deleteSectionRecord(sectionTipo, 1, 1));
+			await expectConsultationRefusal(deleteSectionData(sectionTipo, 1, 1));
 		}
 	});
 

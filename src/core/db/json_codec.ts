@@ -34,6 +34,8 @@
  * class.matrix_db_manager.php update() (values bound as JSON text params).
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
+
 /**
  * Branded type for pre-encoded JSON text that must pass through UNTOUCHED
  * (e.g. the raw ::text of a column we read and did not modify). Passing raw
@@ -67,23 +69,33 @@ function assertJsonSafe(value: unknown, path: string): void {
 			return;
 		case 'number':
 			if (!Number.isFinite(value)) {
-				throw new Error(`json_codec: non-finite number at ${path} (NaN/Infinity are not JSON)`);
+				throw new DedaloError('internal.invariant', {
+					message: `json_codec: non-finite number at ${path} (NaN/Infinity are not JSON)`,
+					coordinates: { path },
+				});
 			}
 			return;
 		case 'undefined':
-			throw new Error(
-				`json_codec: undefined at ${path} — JSON.stringify would silently drop it; use null or omit the key explicitly`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `json_codec: undefined at ${path} — JSON.stringify would silently drop it; use null or omit the key explicitly`,
+				coordinates: { path },
+			});
 		case 'function':
 		case 'symbol':
 		case 'bigint':
-			throw new Error(`json_codec: unencodable ${typeof value} at ${path}`);
+			throw new DedaloError('internal.invariant', {
+				message: `json_codec: unencodable ${typeof value} at ${path}`,
+				coordinates: { path },
+			});
 		case 'object': {
 			if (Array.isArray(value)) {
 				value.forEach((item, index) => {
 					// Sparse/undefined array slots become null silently — reject.
 					if (item === undefined) {
-						throw new Error(`json_codec: undefined array item at ${path}[${index}]`);
+						throw new DedaloError('internal.invariant', {
+							message: `json_codec: undefined array item at ${path}[${index}]`,
+							coordinates: { path },
+						});
 					}
 					assertJsonSafe(item, `${path}[${index}]`);
 				});
@@ -91,9 +103,10 @@ function assertJsonSafe(value: unknown, path: string): void {
 			}
 			for (const [key, entry] of Object.entries(value)) {
 				if (entry === undefined) {
-					throw new Error(
-						`json_codec: undefined property at ${path}.${key} — JSON.stringify would silently drop the key`,
-					);
+					throw new DedaloError('internal.invariant', {
+						message: `json_codec: undefined property at ${path}.${key} — JSON.stringify would silently drop the key`,
+						coordinates: { path },
+					});
 				}
 				assertJsonSafe(entry, `${path}.${key}`);
 			}
@@ -109,9 +122,10 @@ function assertJsonSafe(value: unknown, path: string): void {
  */
 export function encodeForJsonb(value: unknown): RawJsonText {
 	if (value === undefined) {
-		throw new Error(
-			"json_codec: cannot encode undefined — use null for SQL NULL via the write API's null handling",
-		);
+		throw new DedaloError('internal.invariant', {
+			message:
+				"json_codec: cannot encode undefined — use null for SQL NULL via the write API's null handling",
+		});
 	}
 	assertJsonSafe(value, '$');
 	return JSON.stringify(value) as RawJsonText;

@@ -35,6 +35,7 @@
 import { isTemporalSource, type RqoSource } from '../../concepts/rqo.ts';
 import { encodeForJsonb } from '../../db/json_codec.ts';
 import { sql } from '../../db/postgres.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 
 export const TEMPORAL_SCRATCH_TABLE = 'dedalo_ts_temporal_scratch';
 
@@ -115,7 +116,10 @@ export function temporalScratchAddress(
 function tableOrThrow(table: string | undefined): string {
 	const name = table ?? TEMPORAL_SCRATCH_TABLE;
 	if (!TABLE_NAME_PATTERN.test(name)) {
-		throw new Error(`temporal_store: invalid table name '${name}'`);
+		throw new DedaloError('internal.invariant', {
+			message: `temporal_store: invalid table name '${name}'`,
+			coordinates: { table: name },
+		});
 	}
 	return name;
 }

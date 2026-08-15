@@ -30,6 +30,7 @@
  *    layer's readDdOntologyRow is an uncached raw-row probe for the parser.
  */
 
+import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	clearOntologyDerivedCaches,
 	registerOntologyCacheClearer,
@@ -290,12 +291,18 @@ export async function searchDdOntology(
 	let paramIndex = 1;
 	for (const [column, raw] of entries) {
 		if (!COLUMNS.includes(column as DdOntologyColumn)) {
-			throw new Error(`searchDdOntology: invalid column '${column}'`);
+			throw new DedaloError('internal.invariant', {
+				message: `searchDdOntology: invalid column '${column}'`,
+				coordinates: { column },
+			});
 		}
 		if (raw !== null && typeof raw === 'object' && 'operator' in (raw as object)) {
 			const opValue = raw as { operator: string; value: unknown };
 			if (!ALLOWED_OPS.has(opValue.operator)) {
-				throw new Error(`searchDdOntology: invalid operator '${opValue.operator}'`);
+				throw new DedaloError('internal.invariant', {
+					message: `searchDdOntology: invalid operator '${opValue.operator}'`,
+					coordinates: { column, operator: opValue.operator },
+				});
 			}
 			let paramValue = opValue.value;
 			if (BOOLEAN_COLUMNS.has(column) && typeof paramValue === 'boolean') {
@@ -420,12 +427,17 @@ function assertSafeTlds(tlds: readonly string[]): string[] {
 	const safe = tlds.map((tld) => {
 		const value = safeTld(tld);
 		if (value === null) {
-			throw new Error(`dd_ontology backup: refusing unsafe tld '${tld}'`);
+			throw new DedaloError('internal.invariant', {
+				message: `dd_ontology backup: refusing unsafe tld '${tld}'`,
+				coordinates: { tld },
+			});
 		}
 		return value;
 	});
 	if (safe.length === 0) {
-		throw new Error('dd_ontology backup: empty tld list');
+		throw new DedaloError('internal.invariant', {
+			message: 'dd_ontology backup: empty tld list',
+		});
 	}
 	return safe;
 }
