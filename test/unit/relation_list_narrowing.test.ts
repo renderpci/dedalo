@@ -66,8 +66,8 @@ async function tsCall(rqo: Record<string, unknown>): Promise<Record<string, unkn
 			principal,
 		} as never,
 	);
-	const body = result.body as { result?: { data?: Record<string, unknown>[] } };
-	return body.result?.data ?? [];
+	const body = result.body as { data?: { data?: Record<string, unknown>[] } };
+	return body.data?.data ?? [];
 }
 
 let dbReady = false;

@@ -31,14 +31,14 @@
  *      `get_widget_data` RQO whose `source` carries the CALLER's coordinates
  *      (a widget's own `tipo` is always null) and `options.widget_name` the
  *      widget's own name.
- *   2. THE ANSWER LANDS, AND THE MODE RIDES WITH IT. `api_response.result` →
+ *   2. THE ANSWER LANDS, AND THE MODE RIDES WITH IT. `response_data(api_response)` →
  *      `self.value`; `source.mode` is the widget's own `self.mode`, which the
  *      Terms button has just flipped to 'edit' (and back to 'list' on collapse —
- *      the round-trip that re-renders the button). A falsy `result` must leave
+ *      the round-trip that re-renders the button). A failed answer must leave
  *      the previous value alone.
  *   3. AN UNRESOLVABLE TIPO FAILS LOUD. Before, the string branch was the only
  *      one that could fire and it would have POSTed `{tipo:undefined,…}`, which
- *      earns a `result:false` envelope and an empty widget — a silent failure.
+ *      earns an `ok:false` envelope and an empty widget — a silent failure.
  *      Pinned: no request, exactly one console.error, lifecycle still reaches
  *      'built'. Also pinned in the other direction: `section_id === 0` is a
  *      LEGAL coordinate (the guard tests null/undefined, not falsiness), and a
@@ -416,7 +416,7 @@ let original_request: unknown;
 
 /** Every RQO the client posted, and the answer the next one gets. */
 const api_calls: Record<string, unknown>[] = [];
-let api_response: unknown = { result: null };
+let api_response: unknown = { ok: true, request_id: 'zzwidget', data: null };
 /** console.error calls captured while a test runs (fail-loud is pin 3). */
 let console_errors: unknown[][] = [];
 let original_console_error: typeof console.error;
@@ -503,7 +503,7 @@ afterAll(async () => {
 
 beforeEach(() => {
 	api_calls.length = 0;
-	api_response = { result: null };
+	api_response = { ok: true, request_id: 'zzwidget', data: null };
 	console_errors = [];
 	original_console_error = console.error;
 	console.error = (...args: unknown[]) => {
@@ -569,7 +569,7 @@ describe('widget_common.build — the component_info on-demand widget load', () 
 	test('an object caller issues the get_widget_data RQO with the CALLER coordinates', async () => {
 		const caller = make_component_info();
 		const widget = await make_descriptors_widget({ caller: caller, mode: 'edit' });
-		api_response = { result: DESCRIPTORS_ENTRIES };
+		api_response = { ok: true, request_id: 'zzwidget', data: DESCRIPTORS_ENTRIES };
 
 		const built = await widget.build(true);
 
@@ -596,7 +596,7 @@ describe('widget_common.build — the component_info on-demand widget load', () 
 	test('the result lands in self.value and the mode rides from the widget', async () => {
 		const caller = make_component_info();
 		const widget = await make_descriptors_widget({ caller: caller, mode: 'edit' });
-		api_response = { result: DESCRIPTORS_ENTRIES };
+		api_response = { ok: true, request_id: 'zzwidget', data: DESCRIPTORS_ENTRIES };
 
 		await widget.build(true);
 
@@ -612,24 +612,28 @@ describe('widget_common.build — the component_info on-demand widget load', () 
 		// 'list' and refreshes, the server answers [] (descriptors.ts:23) and the
 		// list renderer paints the button again.
 		const collapsing = await make_descriptors_widget({ caller: caller, mode: 'list' });
-		api_response = { result: [] };
+		api_response = { ok: true, request_id: 'zzwidget', data: [] };
 		await collapsing.build(true);
 		expect((api_calls[1] as { source: { mode: string } }).source.mode).toBe('list');
 
-		// A falsy result must not blank a value already on screen.
+		// A failed answer (ok:false, no data) must not blank a value already on screen.
 		const keeper = await make_descriptors_widget({
 			caller: caller,
 			mode: 'edit',
 			value: DESCRIPTORS_ENTRIES,
 		});
-		api_response = { result: false };
+		api_response = {
+			ok: false,
+			request_id: 'zzwidget',
+			error: { code: 'internal.unexpected', category: 'internal', message: 'x', label_key: 'k', retryable: false },
+		};
 		await keeper.build(true);
 		expect(keeper.value).toEqual(DESCRIPTORS_ENTRIES);
 	});
 
 	test('an unresolvable tipo fails loud: no request, one console.error', async () => {
 		// The caller IS a component_info but carries no tipo. Sending empty
-		// coordinates earns a result:false envelope and an empty widget — the
+		// coordinates earns an ok:false envelope and an empty widget — the
 		// silent failure this path is not allowed to have any more.
 		const widget = await make_descriptors_widget({
 			caller: { model: 'component_info', tipo: null, section_tipo: SECTION_TIPO, section_id: 1 },
@@ -660,7 +664,7 @@ describe('widget_common.build — the component_info on-demand widget load', () 
 			section_id: 0,
 			mode: 'edit',
 		});
-		api_response = { result: DESCRIPTORS_ENTRIES };
+		api_response = { ok: true, request_id: 'zzwidget', data: DESCRIPTORS_ENTRIES };
 		await widget.build(true);
 		expect(api_calls.length).toBe(1);
 		expect((api_calls[0] as { source: { section_id: number } }).source.section_id).toBe(0);

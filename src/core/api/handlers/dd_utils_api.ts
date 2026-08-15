@@ -624,7 +624,7 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			context.clientIp,
 		);
 		// `data: true` — render_login.js gates the success branch on
-		// `api_response.result===true`, and the compat block mirrors `data`.
+		// `response_data(api_response)===true`.
 		return {
 			status: 200,
 			body: ok(true, { requestId: context.requestId, extend: { ...outcome } }),

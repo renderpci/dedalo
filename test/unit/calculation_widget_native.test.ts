@@ -138,8 +138,8 @@ async function stateOf(id: number): Promise<Record<string, unknown>> {
 async function readEntries(id: number): Promise<unknown> {
 	const context = await rootContext();
 	const response = (await dispatchRqo(structuredClone(readRqo(id)) as never, context as never))
-		.body as { result?: { data?: { entries?: unknown }[] } };
-	return (response.result?.data ?? []).slice(1).map((item) => item.entries);
+		.body as { data?: { data?: { entries?: unknown }[] } };
+	return (response.data?.data ?? []).slice(1).map((item) => item.entries);
 }
 
 beforeAll(async () => {

@@ -299,9 +299,9 @@ function readRqo(
 
 async function tsData(rqo: Record<string, unknown>): Promise<Record<string, unknown>[]> {
 	const response = (await dispatchRqo(structuredClone(rqo) as never, tsContext as never)).body as {
-		result?: { data?: unknown[] };
+		data?: { data?: unknown[] };
 	};
-	return (response.result?.data ?? []).slice(1) as Record<string, unknown>[];
+	return (response.data?.data ?? []).slice(1) as Record<string, unknown>[];
 }
 
 async function tsEntries(rqo: Record<string, unknown>): Promise<unknown[]> {

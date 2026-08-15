@@ -103,7 +103,7 @@ beforeAll(async () => {
 			principal,
 		} as never,
 	);
-	result = (dispatched.body as { result?: unknown }).result;
+	result = (dispatched.body as { data?: unknown }).data;
 }, 60000);
 
 afterAll(async () => {

@@ -83,16 +83,14 @@ function addRqo(clientLimit: number, total: number): Rqo {
 
 /** WC-081: the address of the record the save created (absent when none was). */
 function createdSectionIdOf(body: unknown): unknown {
-	const result = (body as { result?: unknown }).result as { created_section_id?: unknown } | false;
-	return result === false ? undefined : result?.created_section_id;
+	const envelope = body as { ok?: boolean; data?: { created_section_id?: unknown } };
+	return envelope.ok === false ? undefined : envelope.data?.created_section_id;
 }
 
 function mainItemOf(body: unknown) {
-	const result = (body as { result?: unknown }).result as
-		| { data?: Record<string, unknown>[] }
-		| false;
-	expect(result).not.toBe(false);
-	return (result as { data: Record<string, unknown>[] }).data.find(
+	const envelope = body as { ok?: boolean; data?: { data?: Record<string, unknown>[] } };
+	expect(envelope.ok).toBe(true);
+	return (envelope.data as { data: Record<string, unknown>[] }).data.find(
 		(item) => item.tipo === PORTAL && String(item.section_id) === String(HOST_ID),
 	) as
 		| {

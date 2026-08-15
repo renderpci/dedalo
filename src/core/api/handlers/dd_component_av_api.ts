@@ -98,7 +98,7 @@ async function posterframeAction(
 /**
  * dd_component_av_api::get_media_streams — ffprobe the AV file at a quality (PHP
  * asserts section READ, level 1). Result is the {streams:[...]} object (or null
- * when no file exists at that quality); the client reads api_response.result.streams.
+ * when no file exists at that quality); the client reads `response_data(api_response).streams`.
  */
 async function mediaStreamsAction(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const resolved = await resolveMediaActionContext(rqo, context, 1, 'component_av');

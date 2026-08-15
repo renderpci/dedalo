@@ -13,11 +13,11 @@
  * ONE converter door (`ok` / `toErrorEnvelope`), never by hand.
  *
  * `file_data` stays a TOP-LEVEL EXTENSION KEY and `data` carries the boolean
- * outcome, mirroring PHP's `result:true`: the upload client reads
+ * outcome (PHP answered `result:true`): the upload client reads
  * `api_response.file_data` at top level and gates every part on
- * `api_response.result !== true` (upload_transport.js :803, :970, :998), so the
- * compat mirror of `data` has to BE `true` — a payload object there would fail
- * that strict check and hang every transfer.
+ * `response_data(api_response) !== true` (upload_transport.js), so `data` has
+ * to BE `true` — a payload object there would fail that strict check and hang
+ * every transfer.
  */
 
 import { DedaloError, ok, toErrorEnvelope } from '../../errors/index.ts';

@@ -221,7 +221,9 @@ const shown_messages: { text: string; type: string }[] = [];
 
 const upload_response = () =>
 	JSON.stringify({
-		result: true,
+		ok: true,
+		request_id: 'zzque',
+		data: true,
 		file_data: { tmp_name: 'a.jpg', key_dir: 'image', extension: 'jpg', thumbnail_url: '/t/a.jpg' },
 	});
 
@@ -366,8 +368,8 @@ beforeAll(async () => {
 		});
 		// list_uploaded_files answers a listing; everything else a bare ok.
 		return options.body.action === 'list_uploaded_files'
-			? { result: [], msg: 'ok' }
-			: { result: true, msg: 'ok' };
+			? { ok: true, request_id: 'zzque', data: [] }
+			: { ok: true, request_id: 'zzque', data: true };
 	};
 });
 

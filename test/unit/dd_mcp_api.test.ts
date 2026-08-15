@@ -114,7 +114,7 @@ describe('dd_mcp_api gates', () => {
 			contextFor(admin, 'wrong-token') as never,
 		);
 		expect(badCsrf.status).toBe(403);
-		expect((badCsrf.body as { errors?: string[] }).errors).toContain('auth.csrf_failed');
+		expect((badCsrf.body as { error?: { code?: string } }).error?.code).toBe('auth.csrf_failed');
 	});
 });
 

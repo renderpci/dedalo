@@ -217,7 +217,7 @@ beforeAll(async () => {
 		} as unknown as Rqo,
 		context as never,
 	);
-	createdRecordId = Number((createResult.body as { result?: unknown }).result ?? 0);
+	createdRecordId = Number((createResult.body as { data?: unknown }).data ?? 0);
 	newRow = await activityRowBySectionId(SECTION, '3', createdRecordId);
 
 	// LOG IN, denied (WC-040). An unknown username needs no fixture user and

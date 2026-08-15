@@ -178,8 +178,8 @@ beforeAll(async () => {
 						principal,
 					} as never,
 				)
-			).body as { result?: { data?: unknown[] } }
-		).result?.data ?? []
+			).body as { data?: { data?: unknown[] } }
+		).data?.data ?? []
 	).slice(1) as Record<string, unknown>[];
 }, 60000);
 

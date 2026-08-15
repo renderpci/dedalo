@@ -384,7 +384,7 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			const { getDatalist } = await import('../../relations/datalist.ts');
 			const { getNode } = await import('../../ontology/resolver.ts');
 			const node = await getNode(componentTipo);
-			const echoed = ((echo.body as { result?: { data?: unknown[] } }).result?.data ??
+			const echoed = ((echo.body as { data?: { data?: unknown[] } }).data?.data ??
 				[]) as Record<string, unknown>[];
 			const main = echoed.find(
 				(entry) => entry.tipo === componentTipo && entry.section_tipo === sectionTipo,
@@ -401,8 +401,12 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		// WC-081: the persisted door stamps the same key — a temporal portal's add
 		// button is the same button, and it must be able to open the same record.
 		if (createdSectionId !== null) {
-			const echoResult = (echo.body as { result?: Record<string, unknown> }).result;
-			if (echoResult !== undefined) echoResult.created_section_id = createdSectionId;
+			// The echo is an ok() envelope: the address rides INSIDE `data` (the
+			// payload), exactly where dd_core_api.ts's persisted save puts it.
+			const echoData = (echo.body as { ok?: boolean; data?: Record<string, unknown> }).data;
+			if (echoData !== undefined && echoData !== null && typeof echoData === 'object') {
+				echoData.created_section_id = createdSectionId;
+			}
 		}
 		return echo;
 	}
