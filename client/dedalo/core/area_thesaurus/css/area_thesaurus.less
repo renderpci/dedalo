@@ -245,46 +245,28 @@
 /**
 * THESAURUS PICKER PANE
 *
-* The picker surface: an area_thesaurus rendered inside the caller component's own
-* wrapper (component_portal's tree view builds the .thesaurus_pane node).
+* The picker surface: an area_thesaurus mounted on document.body — OUTSIDE the
+* caller component's DOM.
 *
-* IT OVERLAYS, IT DOES NOT SIT IN THE FLOW. Four things follow from that, and each
-* was a defect while the pane was an in-flow block:
+* That placement is the design, not a detail. tool_indexation, the working
+* reference, renders its thesaurus into its own `left_container`, a SIBLING of the
+* pane holding the components; the area is never a descendant of one. While this
+* pane lived inside the portal's wrapper it inherited every behaviour the portal
+* has — its drag events bubbled into the portal's dragover, it fought the
+* autocomplete for the same box, its height drove the component's, and it shared
+* the component's stacking context.
 *
-*  1. RESIZING IT MUST NOT RESIZE THE COMPONENT. An in-flow pane made the caller's
-*     height track the pane's, so dragging the picker taller stretched the portal
-*     underneath it. Absolute positioning takes the pane out of the height
-*     calculation entirely — the component keeps its own size whatever the operator
-*     does to the tree.
-*  2. IT MUST PAINT OVER SIBLINGS. The next portal down is ordinary content and was
-*     drawing on top of the tree. z-index puts the pane above component content
-*     while staying below the global modal/menu layers (10000+).
-*  3. IT MUST BE WIDE. A thesaurus carries long terms and deep nested branches;
-*     the column of a portal cell is nowhere near enough. Half the viewport is the
-*     working default, and the operator can still drag it.
-*  4. IT MUST BE TALL. oh115's thesaurus is small, but an install can hold a branch
-*     with 50, 100 or more children, and a short box turns browsing into scrolling
-*     through a slot.
+* Being a body child, it is `position: fixed` and placed from the caller's viewport
+* rectangle by position_thesaurus_pane (anchored under the component, or above it
+* when there is no room below).
 *
-* The caller wrapper is the positioning context, so the pane opens anchored to the
-* component it belongs to rather than floating free of it.
+* Wide and tall on purpose: a thesaurus carries long terms and deep nested
+* branches, and a branch can hold 50, 100 or more children.
 */
-.wrapper_component {
-	// the anchor for the absolutely-positioned pane below. Scoped to the wrapper
-	// that can hold one; a bare `position:relative` on every component would
-	// change stacking for the whole edit form.
-	&:has(> .thesaurus_pane) {
-		position: relative;
-	}
-}
-
 .thesaurus_pane {
 
-	position: absolute;
-	// under the component's own toolbar, not over it
-	top: 100%;
-	left: 0;
-	z-index: 9000; // above component content (<= 999), below the global layers
+	position: fixed;
+	z-index: 9000; // above component content (<= 999), below the global layers (10000+)
 
 	width: 50vw;
 	min-width: 24rem;
@@ -294,7 +276,7 @@
 	max-height: 88vh;
 
 	overflow: auto;
-	resize: both; // the operator decides; the component keeps its own size
+	resize: both; // the component keeps its own size whatever happens here
 	background-color: @color_white;
 	border: 1px solid @color_grey_9;
 	border-radius: 2px;

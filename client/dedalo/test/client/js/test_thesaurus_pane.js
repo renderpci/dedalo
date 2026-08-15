@@ -40,6 +40,7 @@
 
 // imports
 	import {component_portal} from '../../../core/component_portal/js/component_portal.js'
+	import {buttons} from '../../../core/component_portal/js/buttons.js'
 
 
 
@@ -65,37 +66,123 @@
 		self.picker			= null
 		self.thesaurus_area	= options.thesaurus_area ?? null
 
-		// the wrapper the tree view builds
+		// the component wrapper. The pane is NOT inside it — toggle_thesaurus_pane
+		// creates it on document.body, which is the point of the design.
 		self.node = document.createElement('div')
-		if (options.with_pane!==false) {
+		document.body.appendChild(self.node)
+
+		self.thesaurus_pane = null
+		if (options.with_pane===true) {
 			const pane = document.createElement('div')
 			pane.classList.add('thesaurus_pane','hide')
 			if (options.pane_child===true) {
 				pane.appendChild(document.createElement('span'))
 			}
-			self.node.appendChild(pane)
+			document.body.appendChild(pane)
+			self.thesaurus_pane = pane
 		}
 
 		return self
 	}
 
-	const pane_of = (portal) => portal.node.querySelector('.thesaurus_pane')
+	const pane_of = (portal) => portal.thesaurus_pane
 
 
 
 describe('THESAURUS PANE (the inline picker surface)', function() {
 
 	// ─────────────────────────────────────────────────────────────────────────
-	describe('a component with no pane refuses, by name', function() {
+	describe('the pane is created OUTSIDE the component DOM', function() {
 
-		it('toggle on a non-tree view returns false and builds nothing', async function() {
-			const portal = make_portal({ with_pane:false })
+		it('the pane is a body child, never a descendant of the component', async function() {
+			// THE load-bearing assertion of this whole surface. Inside the component
+			// wrapper the area inherited the portal's drag handling (its dragover
+			// claimed the filter's field drags and died on a `tmp.data` only the
+			// portal's own dragstart writes), the autocomplete's box, the component's
+			// height and its stacking context. tool_indexation — the working
+			// reference — renders its thesaurus into a SIBLING container for exactly
+			// this reason.
+			const portal = make_portal({ id:'pane_outside_dom' })
 
-			const result = await portal.toggle_thesaurus_pane()
+			await portal.toggle_thesaurus_pane()
 
-			assert.equal(result, false)
-			assert.equal(portal.node.querySelector('.thesaurus_pane'), null)
-			assert.equal(portal.ar_instances.length, 0, 'nothing may be instantiated')
+			const pane = portal.thesaurus_pane
+			assert.notEqual(pane, null, 'a pane was created')
+			assert.equal(pane.parentNode, document.body, 'it hangs off body')
+			assert.equal(portal.node.contains(pane), false,
+				'it must NOT be inside the component wrapper')
+		})
+
+		it('destroying the component removes its body-level pane', async function() {
+			const portal = make_portal({ id:'pane_destroy_cleanup' })
+			await portal.toggle_thesaurus_pane()
+			const pane = portal.thesaurus_pane
+			assert.equal(pane.parentNode, document.body)
+
+			await portal.destroy(true, true, true)
+
+			assert.equal(pane.parentNode, null,
+				'the generic destroy only removes self.node; this pane is not inside it')
+		})
+	})
+
+
+	// ─────────────────────────────────────────────────────────────────────────
+	describe('the tree button reaches the PANE, and the browse window declares nothing', function() {
+
+		it('a tree-view portal button opens the pane, not the separate window', async function() {
+			// The button used to look for a `.thesaurus_pane` INSIDE the wrapper. The
+			// pane is created on demand on document.body, so that query found nothing
+			// and every click took the separate-window fallback — a window that then
+			// declared the caller, was granted relation mode, and had no picker wired.
+			const portal = make_portal({ id:'pane_button_route' })
+			portal.context.view = 'tree'
+			let toggled = 0
+			let windowed = 0
+			portal.toggle_thesaurus_pane	= async () => { toggled++; return true }
+			portal.open_ontology_window		= () => { windowed++; return null }
+
+			const button = buttons.render_button_tree_selector(portal)
+			button.dispatchEvent(new MouseEvent('mousedown', { bubbles:true }))
+			await new Promise(resolve => setTimeout(resolve, 0))
+
+			assert.equal(toggled, 1, 'the pane is the picker surface')
+			assert.equal(windowed, 0, 'the separate window is not the picker surface')
+		})
+
+		it('a NON-tree portal button keeps the browse window', async function() {
+			const portal = make_portal({ id:'pane_button_browse' })
+			portal.context.view = 'default'
+			let toggled = 0
+			let windowed = 0
+			portal.toggle_thesaurus_pane	= async () => { toggled++; return true }
+			portal.open_ontology_window		= () => { windowed++; return null }
+
+			const button = buttons.render_button_tree_selector(portal)
+			button.dispatchEvent(new MouseEvent('mousedown', { bubbles:true }))
+			await new Promise(resolve => setTimeout(resolve, 0))
+
+			assert.equal(toggled, 0)
+			assert.equal(windowed, 1, 'six shipped nodes declare button_tree without a tree view')
+		})
+
+		it('the browse window carries NO picker_caller', function() {
+			// A separately-opened area page has nothing that calls attach_picker. A
+			// caller declared there makes the server grant relation mode to a tree with
+			// no picker: every node reports "No picker is attached to this tree".
+			const portal = make_portal({ id:'pane_window_no_caller' })
+			let opened_url = null
+			const original = window.open
+			window.open = (url) => { opened_url = String(url); return null }
+			try {
+				portal.open_ontology_window(null, null)
+			} finally {
+				window.open = original
+			}
+
+			assert.notEqual(opened_url, null, 'a window was requested')
+			assert.equal(opened_url.includes('picker_caller'), false,
+				'the browse window must not declare a caller it cannot wire')
 		})
 	})
 
@@ -110,7 +197,8 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 			// the seam the catch exists to protect — the mount into the pane. What is
 			// asserted is the CATCH's contract, which is the part that regressed:
 			// stay open, and say why.
-			const portal = make_portal({ id:'pane_failed_build' })
+			// with_pane so the node exists before the fault is injected into it
+			const portal = make_portal({ id:'pane_failed_build', with_pane:true })
 			const pane = pane_of(portal)
 			pane.appendChild = () => { throw new Error('injected mount failure') }
 
@@ -127,9 +215,9 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 			// picker_caller refuses without {section_tipo, section_id, tipo}; the
 			// surface must not silently do nothing.
 			const portal = make_portal({ id:'pane_no_record', section_id:null })
-			const pane = pane_of(portal)
 
 			const result = await portal.toggle_thesaurus_pane()
+			const pane = pane_of(portal)
 
 			assert.equal(result, false)
 			assert.equal(pane.classList.contains('hide'), false)
@@ -145,6 +233,7 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 			// through ar_instances while this pane node survived.
 			const portal = make_portal({
 				id				: 'pane_destroyed_area',
+				with_pane		: true,
 				pane_child		: true,
 				thesaurus_area	: { status:'destroyed' }
 			})
@@ -167,6 +256,7 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 			let synced = 0
 			const portal = make_portal({
 				id				: 'pane_live_area',
+				with_pane		: true,
 				pane_child		: true,
 				thesaurus_area	: { status:'built' }
 			})
@@ -183,30 +273,46 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 			assert.equal(portal.ar_instances.length, 0, 'no second instance was built')
 		})
 
-		it('opening the tree turns the AUTOCOMPLETE off: they share one space', async function() {
-			// the two input paths overlap in the component, and the autocomplete's
-			// datalist/settings panel paints over the tree. The ontology declaration
-			// is untouched; this is a runtime exclusion while the tree shows.
-			let destroyed = 0
+		it('the AUTOCOMPLETE is HIDDEN while the tree is open, and restored on close', async function() {
+			// The two input paths overlap in the component and the autocomplete's
+			// datalist/settings panel paints over the tree, so one of them must step
+			// aside. It must be HIDDEN, never destroyed: activate_autocomplete's fast
+			// path is `autocomplete_active===true → show()`, so a teardown leaves the
+			// component with no autocomplete on the next activation. The ontology
+			// declaration is untouched; this is a runtime exclusion, and it is
+			// REVERSIBLE.
+			let hidden = 0
+			let shown = 0
 			const portal = make_portal({
 				id				: 'pane_autocomplete_off',
+				with_pane		: true,
 				pane_child		: true,
 				thesaurus_area	: { status:'built' }
 			})
 			portal.picker				= { sync_linked: () => true }
 			portal.autocomplete_active	= true
-			portal.autocomplete			= { destroy: () => { destroyed++; return true } }
+			portal.autocomplete			= {
+				hide: () => { hidden++; return true },
+				show: () => { shown++;  return true }
+			}
 
-			await portal.toggle_thesaurus_pane()
+			await portal.toggle_thesaurus_pane() // open
 
-			assert.equal(destroyed, 1, 'the autocomplete service is torn down')
-			assert.equal(portal.autocomplete_active, false)
-			assert.equal(portal.autocomplete, null)
+			assert.equal(hidden, 1, 'the input steps aside for the tree')
+			assert.equal(shown, 0)
+			assert.equal(portal.autocomplete_active, true,
+				'the service stays ACTIVE: destroying it breaks the next activation')
+			assert.notEqual(portal.autocomplete, null, 'the instance survives')
+
+			await portal.toggle_thesaurus_pane() // close
+
+			assert.equal(shown, 1, 'closing the tree gives the input straight back')
 		})
 
 		it('ESC closes the pane, and stops there', async function() {
 			const portal = make_portal({
 				id				: 'pane_escape',
+				with_pane		: true,
 				pane_child		: true,
 				thesaurus_area	: { status:'built' }
 			})
@@ -231,6 +337,7 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 		it('the ESC listener is dropped on close: one open must not leak one listener', async function() {
 			const portal = make_portal({
 				id				: 'pane_escape_cleanup',
+				with_pane		: true,
 				pane_child		: true,
 				thesaurus_area	: { status:'built' }
 			})
@@ -244,9 +351,38 @@ describe('THESAURUS PANE (the inline picker surface)', function() {
 				+ ' remove its own document listener')
 		})
 
+		it('opening a SECOND picker closes the first: they would share one area', async function() {
+			// The area instance key is (model, tipo, section_tipo, section_id, mode,
+			// lang) — none of which varies between two callers on one record — so two
+			// open panes resolve the SAME area and the second steals the first's tree
+			// and linker. `id_variant` cannot be the fix: it CASCADES into every
+			// section_record and component built under the area (section.js:1191),
+			// which is what made the search panel's components build wrong.
+			const first = make_portal({
+				id:'pane_first',  with_pane:true, pane_child:true, thesaurus_area:{ status:'built' }
+			})
+			const second = make_portal({
+				id:'pane_second', with_pane:true, pane_child:true, thesaurus_area:{ status:'built' }
+			})
+			first.picker	= { sync_linked: () => true }
+			second.picker	= { sync_linked: () => true }
+
+			await first.toggle_thesaurus_pane()
+			assert.equal(pane_of(first).classList.contains('hide'), false)
+
+			await second.toggle_thesaurus_pane()
+
+			assert.equal(pane_of(second).classList.contains('hide'), false, 'the second opens')
+			assert.equal(pane_of(first).classList.contains('hide'), true,
+				'the first must be closed, not left sharing the area')
+			assert.equal(first.thesaurus_pane_escape, null,
+				'the closed picker also released its document listener')
+		})
+
 		it('toggling a live pane closes it without destroying the tree', async function() {
 			const portal = make_portal({
 				id				: 'pane_toggle_close',
+				with_pane		: true,
 				pane_child		: true,
 				thesaurus_area	: { status:'built' }
 			})

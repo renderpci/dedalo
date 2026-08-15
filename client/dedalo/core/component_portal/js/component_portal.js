@@ -193,7 +193,31 @@ export const component_portal = function() {
 	// life-cycle
 	component_portal.prototype.render				= common.prototype.render
 	component_portal.prototype.refresh				= common.prototype.refresh
-	component_portal.prototype.destroy				= common.prototype.destroy
+	/**
+	* DESTROY
+	* The generic destroy, plus the ONE thing this component owns outside its own
+	* DOM: the thesaurus pane.
+	*
+	* The pane is appended to document.body (it must not be a descendant of the
+	* component — see toggle_thesaurus_pane), so the generic teardown, which only
+	* removes `self.node`, cannot reach it. Without this every portal that ever
+	* opened a picker would leave a detached pane and its listeners behind.
+	*
+	* @param {...*} args - forwarded verbatim to common.prototype.destroy.
+	* @returns {Promise<*>} whatever the generic destroy returns.
+	*/
+	component_portal.prototype.destroy = async function(...args) {
+
+		const self = this
+
+		if (self.thesaurus_pane) {
+			close_thesaurus_pane(self)
+			self.thesaurus_pane.remove()
+			self.thesaurus_pane = null
+		}
+
+		return common.prototype.destroy.apply(self, args)
+	}
 
 	// change data
 	component_portal.prototype.save					= component_common.prototype.save
@@ -2554,60 +2578,75 @@ const picker_caller = function(self) {
 *
 * @returns {Promise<boolean>} true when the pane is open after the call.
 */
+/**
+* OPEN_PICKER_OWNER
+* The portal whose thesaurus pane is currently open, or null.
+*
+* ONE PICKER AT A TIME, PER PAGE. Two open panes would resolve the SAME
+* area_thesaurus instance — the instance key is (model, tipo, section_tipo,
+* section_id, mode, lang) and none of those varies between two callers on one
+* record — so the second picker would steal the first's tree, linker and
+* selection state.
+*
+* The obvious key part, `id_variant`, is NOT usable: it CASCADES (section.js:1191
+* forwards `options.id_variant || self.id_variant` to every section_record, and
+* those to every component), so keying the area with it re-keys every instance
+* inside the thesaurus — including the search panel's own components, which is
+* what made them build wrong. A single-open rule costs the operator nothing (a
+* picker is a focused act) and keeps every instance on its canonical key.
+*/
+let open_picker_owner = null
+
+
 component_portal.prototype.toggle_thesaurus_pane = async function() {
 
 	const self = this
 
-	const wrapper = self.node
-	const pane = wrapper
-		? wrapper.querySelector('.thesaurus_pane')
-		: null
-	if (!pane) {
-		// the pane belongs to the tree view; any other view has no picker surface
-		console.error(
-			'(!) [component_portal.toggle_thesaurus_pane] refused: this component has no'
-			+ ' thesaurus pane. Only the tree view builds one. component:', self.tipo
-		);
-		return false
-	}
-
-	// close. The area stays built so re-opening is instant and the tree keeps its state
-		if (!pane.classList.contains('hide')) {
-			close_thesaurus_pane(self, pane)
+	// close, when it is already open
+		if (self.thesaurus_pane && !self.thesaurus_pane.classList.contains('hide')) {
+			close_thesaurus_pane(self)
 			return false
 		}
 
-	// (!) THE TWO INPUT PATHS ARE EXCLUSIVE WHILE THE TREE IS OPEN. The
-	// autocomplete input and the tree occupy the SAME space in the component, and
-	// the autocomplete's datalist/settings panel paints over the tree — two live
-	// pickers fighting for one surface. The ontology declaration is untouched
-	// (`show_autocomplete` still says the component HAS that input); this is a
-	// runtime exclusion for as long as the tree is showing, and closing the pane
-	// gives the input straight back.
-		if (self.autocomplete_active===true && self.autocomplete) {
-			self.autocomplete.destroy(true, true, true)
-			self.autocomplete_active	= false
-			self.autocomplete			= null
+	// ONE PICKER AT A TIME. Any other open pane is closed first — two would resolve
+	// the SAME area_thesaurus instance (see open_picker_owner).
+		if (open_picker_owner && open_picker_owner!==self) {
+			close_thesaurus_pane(open_picker_owner)
 		}
 
-	// open.
-	// (!) THE LIVENESS TEST IS THE INSTANCE, NOT A FLAG. The area is registered in
-	// self.ar_instances, so the component's OWN refresh() — which every successful
-	// pick triggers — destroys it through do_delete_dependencies while this pane
-	// node survives. A "built once" boolean then reported a tree that no longer
-	// exists: search, the toggle, Ctrl+M and every area handler were dead for the
-	// rest of the wrapper's life. Asking the instance whether it is still alive is
-	// self-healing whoever destroyed it.
-		pane.classList.remove('hide')
+	// (!) THE TWO INPUT PATHS ARE EXCLUSIVE WHILE THE TREE IS OPEN — HIDDEN, NOT
+	// DESTROYED. `activate_autocomplete`'s fast path is
+	// `autocomplete_active===true → self.autocomplete.show()`, so tearing the
+	// instance down leaves the component with no autocomplete on the next
+	// activation. `hide()` is the reversible pair the service already uses
+	// internally, so the input goes away for exactly as long as the tree is up and
+	// comes straight back on close. The ontology declaration is untouched:
+	// `show_autocomplete` still says the component HAS that input.
+		if (self.autocomplete_active===true && typeof self.autocomplete?.hide==='function') {
+			self.autocomplete.hide()
+		}
 
-	// ESC CLOSES THE PICKER, and closes it FIRST. The page-level Escape
-	// deactivates the component and its autocomplete but knows nothing about this
-	// pane, so the tree stayed open over a component that had already stepped
-	// back. Capture phase + stopPropagation: while the tree is open Escape means
-	// "close the tree" and nothing else — a second Escape then reaches the
-	// ordinary handlers with the component in its normal state.
-	// Registered BEFORE the build, so a pane left open on a FAILED build (which
-	// shows its reason rather than hiding) is closable too.
+	// pane. Created OUTSIDE the component DOM, on document.body.
+	// (!) THIS IS THE WHOLE FIX. tool_indexation renders the thesaurus into its own
+	// left_container, a SIBLING of the components — the area is never a descendant
+	// of one. While this pane lived inside the portal's wrapper it inherited every
+	// behaviour the portal has: its drag events bubbled into the portal's dragover
+	// (which claimed them, then died on a `tmp.data` that only the portal's own
+	// dragstart writes), it fought the autocomplete for the same box, its height
+	// drove the component's, and it shared the component's stacking context. None of
+	// those are portal bugs — the portal is right; the pane was in the wrong place.
+		if (!self.thesaurus_pane) {
+			self.thesaurus_pane = document.createElement('div')
+			self.thesaurus_pane.classList.add('thesaurus_pane','hide')
+			document.body.appendChild(self.thesaurus_pane)
+		}
+		const pane = self.thesaurus_pane
+		pane.classList.remove('hide')
+		position_thesaurus_pane(self, pane)
+
+	// ESC closes the picker, and closes it FIRST. Registered BEFORE the build so a
+	// pane left open on a FAILED build (which shows its reason rather than hiding)
+	// is closable too.
 		self.thesaurus_pane_escape = (event) => {
 			if (event.key!=='Escape' && event.key!=='Esc') {
 				return
@@ -2616,28 +2655,36 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 				return
 			}
 			event.stopPropagation()
-			close_thesaurus_pane(self, pane)
+			close_thesaurus_pane(self)
 		}
 		document.addEventListener('keydown', self.thesaurus_pane_escape, true)
 
+	// reposition while the page moves under it
+		self.thesaurus_pane_reposition = () => position_thesaurus_pane(self, pane)
+		window.addEventListener('resize', self.thesaurus_pane_reposition)
+		window.addEventListener('scroll', self.thesaurus_pane_reposition, true)
+
+		open_picker_owner = self
+
+	// area. Rebuilt whenever the instance is gone: it is registered in
+	// self.ar_instances, so the component's own refresh() — which every successful
+	// pick triggers — destroys it while this pane node survives.
 		const area_alive = self.thesaurus_area
 			&& self.thesaurus_area.status!=='destroyed'
 			&& pane.firstChild!==null
 		if (!area_alive) {
-			// stale remains of a destroyed area, if any
 			pane.replaceChildren()
 			const built = await build_thesaurus_pane(self, pane)
 			if (built!==true) {
-				// (!) THE PANE STAYS OPEN ON FAILURE. build_thesaurus_pane rendered the
-				// named reason into it (403 / 409 / generic); hiding the pane here
-				// would throw that message away and leave the button looking inert,
-				// which is the failure mode the refusal split exists to prevent.
+				// the pane stays OPEN: build_thesaurus_pane rendered the named reason
+				// into it, and hiding it would throw that message away.
 				return false
 			}
 		} else if (self.picker) {
-			// re-opening a live tree: the caller's locators may have changed underneath
+			// re-opening a live tree: the caller locators may have changed underneath
 			self.picker.sync_linked()
 		}
+
 
 	return true
 }//end toggle_thesaurus_pane
@@ -2645,25 +2692,85 @@ component_portal.prototype.toggle_thesaurus_pane = async function() {
 
 
 /**
-* CLOSE_THESAURUS_PANE
-* Hide the pane and drop the listeners it owns while open.
+* POSITION_THESAURUS_PANE
+* Place the pane beside the component it belongs to.
 *
-* The AREA is deliberately kept built: reopening is then instant and the tree
-* keeps its expansion, scroll and search state. What must not survive is the
-* document-level Escape listener — one per open, and this surface can be opened
-* many times over a record's life.
+* The pane is a `position:fixed` child of document.body — deliberately NOT a
+* descendant of the component — so it is positioned from the caller wrapper's
+* viewport rectangle rather than by CSS containment. Anchored under the component
+* when there is room below, above it otherwise, and clamped to the viewport so it
+* is never opened partly off-screen.
 *
 * @param {Object} self - The `component_portal` instance (module-private function).
-* @param {HTMLElement} pane - The `.thesaurus_pane` node.
+* @param {HTMLElement} pane - The pane node.
+* @returns {boolean}
+*/
+const position_thesaurus_pane = function(self, pane) {
+
+	const anchor = self.node
+	if (!anchor) {
+		return false
+	}
+
+	const rect		= anchor.getBoundingClientRect()
+	const margin	= 8
+	const width		= pane.offsetWidth || (window.innerWidth * 0.5)
+	const height	= pane.offsetHeight || (window.innerHeight * 0.6)
+
+	// below the component when it fits, above it otherwise
+	const space_below	= window.innerHeight - rect.bottom - margin
+	const top			= space_below >= height || space_below >= rect.top
+		? Math.min(rect.bottom + margin, window.innerHeight - height - margin)
+		: Math.max(margin, rect.top - height - margin)
+
+	const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin))
+
+	pane.style.top	= `${Math.max(margin, top)}px`
+	pane.style.left	= `${left}px`
+
+	return true
+}//end position_thesaurus_pane
+
+
+
+/**
+* CLOSE_THESAURUS_PANE
+* Hide the pane and release everything it owns while open.
+*
+* The AREA is deliberately kept built: reopening is then instant and the tree keeps
+* its expansion, scroll and search state. What must NOT survive are the three
+* document/window listeners, one set per open, on a surface an operator opens many
+* times over a record's life.
+*
+* @param {Object} self - The `component_portal` instance (module-private function).
 * @returns {boolean} Always false — "the pane is not open".
 */
-const close_thesaurus_pane = function(self, pane) {
+const close_thesaurus_pane = function(self) {
 
-	pane.classList.add('hide')
+	const pane = self.thesaurus_pane
+	if (pane) {
+		pane.classList.add('hide')
+	}
+
+	if (open_picker_owner===self) {
+		open_picker_owner = null
+	}
+
+	// the autocomplete gets its space back. Only when it was ACTIVE before the tree
+	// opened — reviving an input the operator never activated would be a surprise,
+	// and the component's own activation path owns that decision.
+	if (self.autocomplete_active===true && typeof self.autocomplete?.show==='function') {
+		self.autocomplete.show()
+	}
 
 	if (typeof self.thesaurus_pane_escape==='function') {
 		document.removeEventListener('keydown', self.thesaurus_pane_escape, true)
 		self.thesaurus_pane_escape = null
+	}
+	if (typeof self.thesaurus_pane_reposition==='function') {
+		window.removeEventListener('resize', self.thesaurus_pane_reposition)
+		window.removeEventListener('scroll', self.thesaurus_pane_reposition, true)
+		self.thesaurus_pane_reposition = null
 	}
 
 	return false
@@ -2718,9 +2825,15 @@ const build_thesaurus_pane = async function(self, pane) {
 				mode			: 'list',
 				lang			: self.lang,
 				caller			: self,
-				// id_variant keys the area per component, so two tree portals on one
-				// record never share one instance (instances.js key_order carries it)
-				id_variant		: 'picker_' + self.id,
+				// (!) NO id_variant. It is tempting — it would key the area per
+				// component — but `id_variant` CASCADES: section.js:1191 forwards
+				// `options.id_variant || self.id_variant` to every section_record it
+				// builds, and those forward it to every component. Keying the area
+				// that way therefore re-keyed every instance INSIDE the thesaurus,
+				// including the search panel's own components, which then built
+				// against variant keys nothing else looks them up by — the "the
+				// filter's components are created badly" defect. One picker at a time
+				// per page is enforced instead (see toggle_thesaurus_pane).
 				config			: {
 					picker_caller : caller_declaration
 				}
@@ -2782,21 +2895,20 @@ const build_thesaurus_pane = async function(self, pane) {
 * This path survives for the ontology-navigation callers (which open the area to LOOK at
 * a tipo, not to pick a term) and as the escape hatch when the in-page host refuses.
 *
-* The opened window publishes the pick on `link_terms_<caller_id>` through the one
-* publisher (thesaurus_picker.publish_link_terms, which resolves `window.opener` for a
-* linker that lives in another window); that event is handled by `link_terms_handler`
-* registered in `init()`.
-*
 * Routing logic:
 *  - If the portal's `section_tipo` has `section_id === '0'` (i.e. an ontology node),
 *    the ontology area (`tipo: 'dd5'`) is opened with optional `search_tipos` to
 *    highlight specific nodes.
 *  - Otherwise, the thesaurus area (`tipo: 'dd100'`) is opened.
-*  - In BOTH cases the window carries `picker_caller` — and nothing else about the
-*    picker.
+*  - The window carries NO caller declaration. It is a BROWSE surface: nothing in a
+*    separately-opened area page calls attach_picker, so a caller sent here would make
+*    the server grant relation mode to a tree with no picker wired onto it — every
+*    node then reports "No picker is attached to this tree" and no term can be picked.
+*    The picker surface is the pane (toggle_thesaurus_pane); this window is what a
+*    non-tree caller, or a failed pane, opens to LOOK.
 *
-* (!) `thesaurus_mode`, `hierarchy_sections` and `hierarchy_terms` are NOT sent, and are
-* not to be re-added. The server derives the mode from the caller ddo and the hierarchy
+* (!) `thesaurus_mode`, `hierarchy_sections`, `hierarchy_terms` AND `picker_caller` are
+* NOT sent, and are not to be re-added. The server derives the mode from the caller ddo and the hierarchy
 * narrowing from that same caller's resolved sqo targets; a second declaration channel
 * would be a fork that can disagree with the write path, and the client's
 * `hierarchy_terms` shape (fixed_filter entries) was never the shape the area read
@@ -2835,15 +2947,9 @@ component_portal.prototype.open_ontology_window = function (retired_mode, search
 		// menu
 		url_vars.menu = false
 
-		// picker_caller. The ONE declaration the area read receives from here.
-		// area_thesaurus.init reads it and generate_rqo folds it into
-		// rqo.source.caller BEFORE the boot read, so the server derives mode and
-		// narrowing on the first and only request. Absent when this component names no
-		// record (picker_caller reports why): the area then opens as a plain browse.
-		const caller_declaration = picker_caller(self)
-		if (caller_declaration) {
-			url_vars.picker_caller = JSON.stringify(caller_declaration)
-		}
+		// (!) NO picker_caller. This window is BROWSE-ONLY (see the header). Sending
+		// the declaration here made the server grant relation mode to an area page in
+		// which nothing wires a picker — a tree of "No picker is attached" errors.
 
 		if (is_ontology) {
 
