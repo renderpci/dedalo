@@ -2348,7 +2348,7 @@ const render_set_root_password_block = function(self) {
 			// check again mismatch retype
 				if(input_new_pw_retype.value!==input_new_pw.value) {
 					set_message(
-						{ result: false, msg: 'Error. Password do not match!' },
+						{ valid: false, message: 'Error. Password do not match!' },
 						input_new_pw_retype
 					)
 					return false

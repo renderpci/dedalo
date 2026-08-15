@@ -171,12 +171,12 @@ describe('tool_dev_template exemplar — the seams a scaffolded tool copies', ()
 			context({}, { background: true, publishProgress: (data: object) => frames.push(data) }),
 		);
 		expect(frames.length).toBeGreaterThan(0);
-		expect(response.result).toMatchObject({ ran_in_background: true, aborted: false });
+		expect(response.data).toMatchObject({ ran_in_background: true, aborted: false });
 	});
 
 	test('long_job runs foreground with no publishProgress (the seam is optional)', async () => {
 		const response = await tool.apiActions.long_job!.handler(context({}));
-		expect(response.result).toMatchObject({ started: true, ran_in_background: false });
+		expect(response.data).toMatchObject({ started: true, ran_in_background: false });
 	});
 
 	test('long_job honours an aborted signal at the loop boundary', async () => {
@@ -185,7 +185,7 @@ describe('tool_dev_template exemplar — the seams a scaffolded tool copies', ()
 		const response = await tool.apiActions.long_job!.handler(
 			context({}, { background: true, signal: controller.signal }),
 		);
-		expect(response.result).toMatchObject({ aborted: true, steps_done: 0 });
+		expect(response.data).toMatchObject({ aborted: true, steps_done: 0 });
 	});
 
 	test('the demo handlers return envelope v2 (ok/data), never a legacy body', async () => {

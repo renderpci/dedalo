@@ -150,8 +150,8 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 		const spec = loaded.module.apiActions.long_job;
 		if (spec === undefined) throw new Error('spec missing');
 		const started = scheduleBackground(loaded, 'long_job', spec, {}, SUPERUSER, -1);
-		expect(started.result).toBe(true); // the compat mirror of `data`
 		expect(started.ok).toBe(true);
+		expect(started.data).toBe(true); // the started flag lives in `data`
 		const jobId = started.background_job_id as string;
 		await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -165,7 +165,7 @@ describe('background tool-job status through the tool dispatch (S2-16)', () => {
 		const job = response.job as Record<string, unknown>;
 		expect(job.status).toBe('done');
 		expect(job.tool).toBe('tool_time_machine');
-		expect((job.response as Record<string, unknown>).result).toEqual({ imported: 42 });
+		expect((job.response as Record<string, unknown>).data).toEqual({ imported: 42 });
 	});
 
 	test('a job is NOT visible through a different tool name (scope, no oracle)', async () => {
@@ -262,7 +262,7 @@ describe('background job LIST through the tool dispatch', () => {
 			{ model: 'tool_time_machine', action: BACKGROUND_JOBS_ACTION },
 			{ action: 'long_job' },
 		);
-		const jobs = response.result as Record<string, unknown>[];
+		const jobs = response.data as Record<string, unknown>[];
 		expect(jobs).toHaveLength(1);
 		// Exactly what the client needs to re-attach: the id it lost.
 		expect(jobs[0]?.id).toBe(started.job_id as string);
@@ -280,14 +280,14 @@ describe('background job LIST through the tool dispatch', () => {
 		scheduleBackground(loaded, 'long_job', spec, {}, SUPERUSER, 7);
 
 		const stranger: Principal = { userId: 8, isGlobalAdmin: false, isDeveloper: false };
-		expect(backgroundJobsResponse('tool_time_machine', stranger, 8, {}).result).toEqual([]);
+		expect(backgroundJobsResponse('tool_time_machine', stranger, 8, {}).data).toEqual([]);
 
 		const owner: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 		expect(
-			(backgroundJobsResponse('tool_time_machine', owner, 7, {}).result as unknown[]).length,
+			(backgroundJobsResponse('tool_time_machine', owner, 7, {}).data as unknown[]).length,
 		).toBe(1);
 		expect(
-			(backgroundJobsResponse('tool_time_machine', SUPERUSER, -1, {}).result as unknown[]).length,
+			(backgroundJobsResponse('tool_time_machine', SUPERUSER, -1, {}).data as unknown[]).length,
 		).toBe(1);
 	});
 
@@ -300,10 +300,10 @@ describe('background job LIST through the tool dispatch', () => {
 		scheduleBackground(loaded, 'long_job', spec, {}, owner, 7);
 
 		// A different tool never sees it.
-		expect(backgroundJobsResponse('tool_export', owner, 7, {}).result).toEqual([]);
+		expect(backgroundJobsResponse('tool_export', owner, 7, {}).data).toEqual([]);
 		// A different action of the same tool never sees it.
 		expect(
-			backgroundJobsResponse('tool_time_machine', owner, 7, { action: 'other_job' }).result,
+			backgroundJobsResponse('tool_time_machine', owner, 7, { action: 'other_job' }).data,
 		).toEqual([]);
 	});
 });

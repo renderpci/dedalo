@@ -52,7 +52,7 @@ describe('area_ontology is superuser-only', () => {
 			context as never,
 		);
 		expect(result.status).toBe(200);
-		expect((result.body.result as { data?: unknown[] }).data).toBeDefined();
+		expect((result.body.data as { data?: unknown[] }).data).toBeDefined();
 	});
 
 	test('a non-superuser is refused area_ontology (403)', async () => {
@@ -63,7 +63,7 @@ describe('area_ontology is superuser-only', () => {
 			context as never,
 		);
 		expect(result.status).toBe(403);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
 	});
 });
 
@@ -73,7 +73,7 @@ describe('model-vs-tipo validation on area reads', () => {
 		const context = contextFor(-1, 'root', true, principal);
 		const result = await dispatchRqo(readRqo('area_ontology', 'dd917') as never, context as never);
 		expect(result.status).toBe(400);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
 	});
 
 	test('area_root with an area_ontology tipo (dd5) is refused (400)', async () => {
@@ -84,7 +84,7 @@ describe('model-vs-tipo validation on area reads', () => {
 			context as never,
 		);
 		expect(result.status).toBe(400);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
 	});
 });
 
@@ -102,7 +102,7 @@ describe('area-write refusal (areas hold no data)', () => {
 		};
 		const result = await dispatchRqo(rqo as never, context as never);
 		expect(result.status).toBe(400);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
 	});
 
 	test('create addressed at an area is refused', async () => {
@@ -115,7 +115,7 @@ describe('area-write refusal (areas hold no data)', () => {
 		};
 		const result = await dispatchRqo(rqo as never, context as never);
 		expect(result.status).toBe(400);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
 	});
 
 	test('delete addressed at an area is refused', async () => {
@@ -128,7 +128,7 @@ describe('area-write refusal (areas hold no data)', () => {
 		};
 		const result = await dispatchRqo(rqo as never, context as never);
 		expect(result.status).toBe(400);
-		expect(result.body.result).toBe(false);
+		expect(result.body.ok).toBe(false);
 	});
 });
 

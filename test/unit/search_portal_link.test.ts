@@ -74,15 +74,14 @@ describe('search-mode portal link on a read-only section (Activity dd542)', () =
 			from_component_tipo: WHO_PORTAL,
 		};
 		const { body } = await dispatchRqo(linkRqo('search_99', locator), ctx);
-		const result = (body as { result?: unknown }).result as
-			| { context?: unknown[]; data?: Record<string, unknown>[] }
-			| false;
-
-		// The old bug returned result:false with a Throwable; the fix returns an
-		// echo envelope (context + data), never touching the read-only matrix.
-		expect(result).not.toBe(false);
-		// biome-ignore lint/complexity/useOptionalChain: result is `false | {context?}`; `?.` only short-circuits null/undefined, so result?.context is a TYPE ERROR on the false arm. The && is doing narrowing, not just guarding.
-		expect(Array.isArray(result && result.context)).toBe(true);
+		// The old bug answered a FAILURE envelope with a Throwable; the fix returns
+		// an echo payload (context + data), never touching the read-only matrix.
+		expect((body as { ok?: boolean }).ok).toBe(true);
+		const result = (body as { data?: unknown }).data as {
+			context?: unknown[];
+			data?: Record<string, unknown>[];
+		};
+		expect(Array.isArray(result.context)).toBe(true);
 		expect((result as { context: unknown[] }).context.length).toBeGreaterThan(0);
 
 		// The Who component item carries the picked locator + the count the client's
@@ -111,10 +110,8 @@ describe('search-mode portal link on a read-only section (Activity dd542)', () =
 		};
 		rqo.data.changed_data = [{ action: 'delete', value: { section_tipo: USERS, section_id: 1 } }];
 		const { body } = await dispatchRqo(rqo as unknown as Rqo, ctx);
-		const result = (body as { result?: unknown }).result as
-			| { data?: Record<string, unknown>[] }
-			| false;
-		expect(result).not.toBe(false);
+		expect((body as { ok?: boolean }).ok).toBe(true);
+		const result = (body as { data?: unknown }).data as { data?: Record<string, unknown>[] };
 		const mainItem = (result as { data: Record<string, unknown>[] }).data.find(
 			(item) => item.tipo === WHO_PORTAL,
 		) as { pagination?: { total?: number } } | undefined;

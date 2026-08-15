@@ -4,7 +4,7 @@
  *  1. buildSystemInfo() emits the client-critical shape (max_size_bytes numeric,
  *     upload_service_chunk_files number|false) — the fields service_upload.js reads.
  *  2. Over the real HTTP layer, the action requires a session + CSRF (it is NOT in
- *     NO_LOGIN_ACTIONS / CSRF_EXEMPT_ACTIONS) and returns result = the payload.
+ *     NO_LOGIN_ACTIONS / CSRF_EXEMPT_ACTIONS) and returns data = the payload.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -45,15 +45,16 @@ describe('dd_utils_api.get_system_info (R0)', () => {
 		expect(typeof info.pdf_ocr_engine).toBe('boolean');
 	});
 
-	test('authenticated call returns the payload as result', async () => {
+	test('authenticated call returns the payload as data', async () => {
 		const token = createSession(-1, 'root', true);
 		const cookie = `dedalo_ts_session=${token}`;
 		const csrf = getSession(token)?.csrfToken as string;
 		const res = await handleRequest(apiRequest(RQO, cookie, csrf), context);
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { result: { max_size_bytes?: number }; msg: string };
-		expect(body.result).toBeDefined();
-		expect(typeof body.result.max_size_bytes).toBe('number');
+		const body = (await res.json()) as { ok: boolean; data: { max_size_bytes?: number } };
+		expect(body.ok).toBe(true);
+		expect(body.data).toBeDefined();
+		expect(typeof body.data.max_size_bytes).toBe('number');
 	});
 
 	test('unauthenticated call is refused (not in NO_LOGIN_ACTIONS)', async () => {

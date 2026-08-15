@@ -159,7 +159,8 @@ describe('component save round-trip (Phase 5d gate)', () => {
 			contextBadCsrf,
 		);
 		expect(deniedByCsrf.status).toBe(403);
-		expect(deniedByCsrf.body.msg).toContain('CSRF');
+		expect(deniedByCsrf.body.ok).toBe(false);
+		expect((deniedByCsrf.body.error as { code: string }).code).toBe('auth.csrf_failed');
 	});
 
 	test('insert allocates fresh ids from the meta counter; concurrent inserts never collide', async () => {

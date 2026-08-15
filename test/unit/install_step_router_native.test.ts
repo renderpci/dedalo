@@ -11,8 +11,9 @@
  *
  * P1 error sweep: a refusing arm THROWS a registered code (the dispatch catch
  * converts it), and a returning arm answers envelope v2 — the step's own value
- * in `data` (mirrored to `result` by the compat block) with `msg`/`dirs`/the
- * db-probe booleans as extension keys.
+ * in `data`, with `msg`/`dirs`/the db-probe booleans as extension keys. The
+ * compat mirror (`result`) was DELETED on 2026-08-16
+ * (WC-2026-08-16-error-envelope-compat-removal): `data` is the only channel.
  *
  * Scratch namespace: zzi. No DB writes; the one filesystem-touching arm
  * (check_directories) runs in a CHILD process pointed at a scratch private/
@@ -91,7 +92,7 @@ describe('runInstallStep — test_db_connection', () => {
 		const r = await runInstallStep(stepRqo({ action: 'test_db_connection' }), anonContext());
 		expect(r.status).toBe(200);
 		// A PROBE ANSWER is an ok:true envelope: the four booleans + msg ride as
-		// extension keys, and `result` mirrors `data` for the wizard client.
+		// extension keys, and the verdict is `data` — the whole body, exactly.
 		expect(r.body).toEqual({
 			can_connect: false,
 			db_exists: false,
@@ -100,7 +101,6 @@ describe('runInstallStep — test_db_connection', () => {
 			ok: true,
 			request_id: 'zzi-install-router',
 			data: false,
-			result: false,
 		});
 	});
 });
@@ -163,17 +163,17 @@ describe('runInstallStep — check_directories', () => {
 	test.if(scratchConfirmed)('reports one row per managed directory', () => {
 		const body = childResult.plain as {
 			ok: boolean;
-			result: boolean;
+			data: boolean;
 			dirs: unknown[];
 			msg: string;
 		};
 		expect(Array.isArray(body.dirs)).toBe(true);
 		expect(body.dirs.length).toBeGreaterThan(0);
-		// The ENVELOPE succeeded (the check ran); the check's own verdict is the
-		// compat mirror of `data`. Nothing exists under the scratch root, so the
-		// pre-flight must say so.
+		// The ENVELOPE succeeded (the check ran); the check's own verdict is
+		// `data`. Nothing exists under the scratch root, so the pre-flight must
+		// say so.
 		expect(body.ok).toBe(true);
-		expect(body.result).toBe(false);
+		expect(body.data).toBe(false);
 		expect(body.msg).toBe('One or more directories need attention');
 	});
 

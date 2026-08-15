@@ -226,10 +226,10 @@ export function scheduleBackground(
 	job.id = record.id;
 	jobs.set(record.id, job);
 
-	// Envelope v2: `data` is the started flag (the client's
-	// `api_response.result===true && api_response.job_id` re-attach test reads it
-	// through the compat mirror), and the four handles ride as EXTENSION KEYS —
-	// ERRORS_SPEC §3.0 names pid/pfile/job_id in the closed legacy set.
+	// Envelope v2: `data` is the started flag (a client re-attaches on a
+	// successful body carrying `job_id` — job_follow.js), and the four handles
+	// ride as EXTENSION KEYS — ERRORS_SPEC §3.0 names pid/pfile/job_id in the
+	// closed legacy set.
 	return ok(true, {
 		requestId: currentRequestId(),
 		extend: {

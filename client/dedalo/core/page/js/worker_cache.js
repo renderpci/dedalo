@@ -243,7 +243,7 @@ const api_request = async (options) => {
 	)
 	if (api_error) {
 		console.error('[worker_cache] API request failed:', api_error.code, api_error.message, api_error)
-		return {ok:false, result:false, error:api_error}
+		return {ok:false, error:api_error}
 	}
 	return json
 }//end api_request

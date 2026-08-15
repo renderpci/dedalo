@@ -14,8 +14,11 @@
  *
  *  1. THE ENVELOPE — the refusal is `perm.denied` (403, category permission,
  *     label `no_access_page`), made by the ONE converter: `error.code` is the
- *     machine channel; the compat mirror is `errors:['perm.denied']`; the
- *     message names nothing (it is shown to the REFUSED user).
+ *     machine channel — the PHP-era compat mirror (`result:false`,
+ *     `errors:[code]`, `msg`) is DELETED
+ *     (WC-2026-08-16-error-envelope-compat-removal), and no body may carry a
+ *     top-level `result`; the message names nothing (it is shown to the
+ *     REFUSED user).
  *  2. THE SOURCE LAW — response.ts BUILDS NO FAILURE BODY and exports no
  *     throwing shell: its export set is pinned (`ApiResult` + `streamResult`),
  *     so `denied(`/`notAuthorized(`/`notLogged(` cannot come back (P1 exit
@@ -67,7 +70,7 @@ function read(file: string): string {
 }
 
 describe('perm.denied — the envelope', () => {
-	test('403 + error.code perm.denied; compat mirror errors:[code], result:false', () => {
+	test('403 + error.code perm.denied; no compat mirror (`result` is refused)', () => {
 		const { status, body } = toErrorEnvelope(new DedaloError('perm.denied'), {
 			requestId: 'zzden',
 		});
@@ -76,9 +79,9 @@ describe('perm.denied — the envelope', () => {
 		expect(body.error.code).toBe('perm.denied');
 		expect(body.error.category).toBe('permission');
 		expect(body.error.label_key).toBe('no_access_page');
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['perm.denied']);
-		expect(body.msg).toBe('Insufficient permissions');
+		expect(body.error.message).toBe('Insufficient permissions');
+		// The retired mirror: the converter writes no top-level `result`.
+		expect('result' in body).toBe(false);
 	});
 
 	test('the message names nothing — it is shown to the REFUSED user (disclosure operator)', () => {
@@ -156,7 +159,7 @@ describe.if(DB_READY)('the live refusal (dispatch, real grants)', () => {
 		expect(refused.status).toBe(403);
 		expect(refused.body.ok).toBe(false);
 		expect((refused.body.error as { code: string }).code).toBe('perm.denied');
-		expect(refused.body.errors).toEqual(['perm.denied']);
+		expect('result' in refused.body).toBe(false);
 		expect(refused.body.request_id).toBe('zzden');
 	});
 
@@ -169,7 +172,7 @@ describe.if(DB_READY)('the live refusal (dispatch, real grants)', () => {
 		// whatever interface language the operator chose.
 		expect(labels?.no_access_page).toBeDefined();
 		// …and it carries no context/data for the element that was refused.
-		expect(refused.body.result).toBe(false);
+		expect('result' in refused.body).toBe(false);
 		expect('data' in refused.body).toBe(false);
 	});
 
@@ -177,7 +180,7 @@ describe.if(DB_READY)('the live refusal (dispatch, real grants)', () => {
 		const allowed = await dispatchRqo(startRqo(ADMIN_ONLY_AREA) as never, adminContext as never);
 		expect(allowed.status).toBe(200);
 		expect(allowed.body.ok).toBe(true);
-		expect(allowed.body.errors).toBeUndefined();
+		expect('result' in allowed.body).toBe(false);
 	});
 
 	test('a section the non-admin DOES hold is not refused either', async () => {

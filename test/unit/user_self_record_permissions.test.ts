@@ -163,7 +163,10 @@ describe('dd_core_api::save honours the table (the WRITE gate, end to end)', () 
 			contextFor(-1, 'root', true, p) as never,
 		);
 		expect(result.status).toBe(403);
-		expect(result.body.result).toBe(false);
+		expect((result.body as { ok: boolean; error: { code: string } }).ok).toBe(false);
+		expect((result.body as { ok: boolean; error: { code: string } }).error.code).toBe(
+			'perm.denied',
+		);
 	});
 
 	test('the same flag on ANOTHER user record is NOT blocked by this rule', async () => {

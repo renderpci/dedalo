@@ -115,7 +115,7 @@ async function insertRaw(idKey: number, targetId: number): Promise<void> {
 		]) as unknown as Rqo,
 		tsContext as never,
 	);
-	if (dispatched.status !== 200 || (dispatched.body as { result?: unknown }).result === false) {
+	if (dispatched.status !== 200 || dispatched.body.ok === false) {
 		throw new Error(`frame save failed: ${JSON.stringify(dispatched.body)}`);
 	}
 }
@@ -254,7 +254,7 @@ describe('dataframe READ contract — get_data is PAIRED, not the whole slot', (
 			},
 		} as unknown as Parameters<typeof routeSectionRead>[0];
 		const result = await routeSectionRead(rqo, principal as never);
-		return ((result.body as { result?: { data?: unknown[] } }).result?.data ?? []) as Record<
+		return ((result.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
 			string,
 			unknown
 		>[];
@@ -321,7 +321,7 @@ describe('dataframe save REFUSES an unusable pairing instead of writing garbage'
 
 		const dispatched = await dispatchRqo(rqo as unknown as Rqo, tsContext as never);
 		// Refused — never a 500, and never a silent success.
-		expect((dispatched.body as { result?: unknown }).result).toBe(false);
+		expect(dispatched.body.ok).toBe(false);
 		expect(JSON.stringify(await storedFrames())).toBe(before);
 	});
 });

@@ -226,7 +226,7 @@ export const create_connection_pool = function(max_concurrent) {
 *     (carries key_dir / tmp_name / total_chunks).
 *   @param {Array<string>} options.files_chunked - Server-side temp names indexed
 *     by chunk_index.
-* @returns {Promise<Object>} The API response `{result, msg, file_data?}`.
+* @returns {Promise<Object>} The API response `{ok, data, file_data?}`.
 */
 export const join_chunked_files = async function(options) {
 
@@ -332,10 +332,9 @@ const current_csrf_token = function() {
 * TO_TEXT
 * Coerces an unknown value into something safe to place in a STRING slot.
 *
-* The server's error bodies are `{result:false, msg, errors:[...]}` and
-* the entries of `errors` are strings today — but an object that reaches a
-* message slot renders as the useless "[object Object]" in the UI, which is
-* indistinguishable from a bug. Stringify anything that is not already a string.
+* A message slot takes a STRING. An object that reaches one renders as the
+* useless "[object Object]" in the UI, which is indistinguishable from a bug,
+* so stringify anything that is not already a string.
 *
 * @param {*} value
 * @returns {string}
@@ -449,8 +448,8 @@ const slice = function(file, start, end) {
 *     All three were a ReferenceError at runtime, so the CHUNKED path had no
 *     working failure mode at all: a rejected chunk threw inside a handler and
 *     the transfer hung. This module never uses reject for a transfer outcome;
-*     a failure is a RESOLVED `{result:false, msg}` value, because a rejection
-*     the caller cannot render is indistinguishable from a crash.
+*     a failure is a RESOLVED `{ok:false, error:ApiError}` value, because a
+*     rejection the caller cannot render is indistinguishable from a crash.
 *
 * Progress is BYTE-WEIGHTED: `sum(bytes_of_each_chunk_done) / total_bytes`. The
 * legacy code averaged the per-chunk PERCENTAGES, which is only correct when all
@@ -977,7 +976,13 @@ export const create_transfer = function(options) {
 			}
 
 			if (aborted) {
-				settle({ result:false, msg:'Upload aborted' }, 'aborted')
+				settle({
+					ok		: false,
+					error	: new ApiError({
+						code	: CLIENT_ERROR.ABORTED,
+						message	: 'Upload aborted'
+					})
+				}, 'aborted')
 				return
 			}
 
@@ -1094,8 +1099,11 @@ export const create_transfer = function(options) {
 				runner().catch(function(error){
 					console.error('upload_transport unexpected error:', error)
 					settle({
-						result	: false,
-						msg		: 'Unexpected upload error. ' + to_text(error && error.message)
+						ok		: false,
+						error	: new ApiError({
+							code	: CLIENT_ERROR.BAD_RESPONSE,
+							message	: 'Unexpected upload error. ' + to_text(error && error.message)
+						})
 					}, 'error')
 				})
 			})
@@ -1125,8 +1133,11 @@ export const create_transfer = function(options) {
 			// that races a completion cannot overwrite the real outcome.
 			if (settle) {
 				settle({
-					result	: false,
-					msg		: 'User aborts upload'
+					ok		: false,
+					error	: new ApiError({
+						code	: CLIENT_ERROR.ABORTED,
+						message	: 'User aborts upload'
+					})
 				}, 'aborted')
 			} else {
 				transfer_status = 'aborted'

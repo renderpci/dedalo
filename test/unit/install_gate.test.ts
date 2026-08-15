@@ -44,7 +44,7 @@ describe('install window gate (P1)', () => {
 		// installable tld data files, environment-dependent) are the handler's
 		// concern, exercised against a fresh temp DB in install_e2e.
 		expect(res.status).toBe(200);
-		const result = res.body.result as { model: string; properties: Record<string, unknown> }[];
+		const result = res.body.data as { model: string; properties: Record<string, unknown> }[];
 		expect(Array.isArray(result)).toBe(true);
 		expect(result[0]?.model).toBe('installer');
 		expect((result[0]?.properties as Record<string, unknown>).needs_config).toBe(true);
@@ -84,7 +84,7 @@ describe('install window gate (P1)', () => {
 		// the auth gate would answer.
 		expect(res.status).toBe(503);
 		expect(res.body.ok).toBe(false);
-		expect(res.body.result).toBe(false);
+		expect('result' in res.body).toBe(false);
 		expect((res.body.error as { code: string }).code).toBe('engine.uncovered_scope');
 	});
 
@@ -153,10 +153,10 @@ describe('install window gate (P1)', () => {
 		);
 		// A mismatched entity is the ANSWER to the poll, not an engine failure: the
 		// envelope succeeds (200) and carries `active` as an extension key — NOT
-		// absent (the {} bug) — with the verdict on `data`/`result`.
+		// absent (the {} bug) — with the verdict on `data`.
 		expect(res.status).toBe(200);
 		expect(typeof res.body.active).toBe('boolean');
-		expect(res.body.result).toBe(false);
+		expect(res.body.data).toBe(false);
 		expect(res.body.ok).toBe(true);
 	});
 
@@ -167,7 +167,7 @@ describe('install window gate (P1)', () => {
 	test('start resumes the wizard while an install is in progress (configured, not sealed)', async () => {
 		setServerState({ install_status: 'configured' });
 		const res = await dispatchRqo({ action: 'start', dd_api: 'dd_core_api' } as Rqo, anon());
-		const ctx = (res.body.result as { context?: { model?: string }[] })?.context ?? [];
+		const ctx = (res.body.data as { context?: { model?: string }[] })?.context ?? [];
 		expect(ctx[0]?.model).toBe('installer');
 	});
 
@@ -177,7 +177,7 @@ describe('install window gate (P1)', () => {
 		expect(isSealed()).toBe(true);
 		expect(installInProgress()).toBe(false);
 		const sealed = await dispatchRqo({ action: 'start', dd_api: 'dd_core_api' } as Rqo, anon());
-		expect((sealed.body.result as { context?: { model?: string }[] })?.context?.[0]?.model).toBe(
+		expect((sealed.body.data as { context?: { model?: string }[] })?.context?.[0]?.model).toBe(
 			'login',
 		);
 		// An existing (PHP-provisioned) deployment never ran the TS installer →

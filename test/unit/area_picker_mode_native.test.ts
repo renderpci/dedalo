@@ -240,9 +240,7 @@ async function purgeScratch(): Promise<void> {
 interface AreaReadBody {
 	ok?: boolean;
 	error?: { code: string; message: string };
-	msg?: string;
-	errors?: string[];
-	result?: {
+	data?: {
 		context?: {
 			thesaurus_mode?: string;
 			picker?: { selection_limit: number | null; remaining: number | null; targets: string[] };
@@ -298,7 +296,7 @@ async function readTree(
 	return { status: dispatched.status, body: dispatched.body as AreaReadBody };
 }
 
-const hierarchies = (body: AreaReadBody) => body.result?.data?.[0]?.value ?? [];
+const hierarchies = (body: AreaReadBody) => body.data?.data?.[0]?.value ?? [];
 const scratchHierarchy = (body: AreaReadBody) =>
 	hierarchies(body).find((entry) => entry.target_section_tipo === TERMS);
 const callerAddress = { section_tipo: HOST, section_id: String(HOST_ID), tipo: PICKER_CALLER };
@@ -443,15 +441,15 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 		const served = hierarchies(body);
 		expect(served.length).toBeGreaterThan(1);
 		expect(served.some((entry) => entry.target_section_tipo === TERMS)).toBe(true);
-		expect(body.result?.context?.[0]?.thesaurus_mode).toBe('default');
-		expect(body.result?.context?.[0]?.picker).toBeUndefined();
+		expect(body.data?.context?.[0]?.thesaurus_mode).toBe('default');
+		expect(body.data?.context?.[0]?.picker).toBeUndefined();
 		expect(served.every((entry) => entry.root_terms_selectable === undefined)).toBe(true);
 	});
 
 	test("a caller declaring view:'tree' with EDIT grants relation mode", async () => {
 		const { status, body } = await readTree(superuser, callerAddress);
 		expect(status).toBe(200);
-		expect(body.result?.context?.[0]?.thesaurus_mode).toBe('relation');
+		expect(body.data?.context?.[0]?.thesaurus_mode).toBe('relation');
 	});
 
 	test('a FORGED caller pair is refused: tipo must really live under section_tipo', async () => {
@@ -470,7 +468,7 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 		});
 		expect(status).toBe(400);
 		expect(body.error?.code).toBe('area.picker_caller_invalid');
-		expect(String(body.msg ?? '')).toContain(PICKER_CALLER_UNKNOWN_MESSAGE);
+		expect(String(body.error?.message ?? '')).toContain(PICKER_CALLER_UNKNOWN_MESSAGE);
 	});
 
 	test("the caller's view is read from its SECTION's ddo_map, not only its own node", async () => {
@@ -546,7 +544,7 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 		// picker session may add. The write chokepoint re-resolves both from the
 		// same module, so the affordance and the persistence are one value.
 		const { body } = await readTree(superuser, callerAddress);
-		const picker = body.result?.context?.[0]?.picker;
+		const picker = body.data?.context?.[0]?.picker;
 		expect(picker?.selection_limit).toBe(3);
 		expect(picker?.remaining).toBe(3);
 		expect(picker?.targets.length).toBeGreaterThan(0);
@@ -559,8 +557,8 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 			tipo: PLAIN_CALLER,
 		});
 		expect(status).toBe(200);
-		expect(body.result?.context?.[0]?.thesaurus_mode).toBe('default');
-		expect(body.result?.context?.[0]?.picker).toBeUndefined();
+		expect(body.data?.context?.[0]?.thesaurus_mode).toBe('default');
+		expect(body.data?.context?.[0]?.picker).toBeUndefined();
 	});
 
 	test('READ-only on the caller is not enough — the same identity gets both answers', async () => {
@@ -576,8 +574,8 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 		});
 		expect(edit.status).toBe(200);
 		expect(readOnly.status).toBe(200);
-		expect(edit.body.result?.context?.[0]?.thesaurus_mode).toBe('relation');
-		expect(readOnly.body.result?.context?.[0]?.thesaurus_mode).toBe('default');
+		expect(edit.body.data?.context?.[0]?.thesaurus_mode).toBe('relation');
+		expect(readOnly.body.data?.context?.[0]?.thesaurus_mode).toBe('default');
 	});
 
 	test.each([
@@ -601,7 +599,7 @@ describe.if(DB_READY)('the picker read — mode and constraint are DERIVED from 
 		const { status, body } = await readTree(superuser, caller);
 		expect(status).toBe(400);
 		expect(body.error?.code).toBe('area.picker_caller_invalid');
-		expect(body.msg).toBe(message);
+		expect(body.error?.message).toBe(message);
 	});
 });
 
@@ -640,7 +638,7 @@ describe.if(DB_READY)('the picker read — narrowing to the caller’s own targe
 			const { status, body } = await readTree(superuser, callerAddress);
 			expect(status).toBe(409);
 			expect(body.error?.code).toBe('resource.conflict');
-			expect(body.msg).toBe(PICKER_NO_HIERARCHY_MESSAGE);
+			expect(body.error?.message).toBe(PICKER_NO_HIERARCHY_MESSAGE);
 		} finally {
 			await updateMatrixKeyData(
 				'matrix_hierarchy_main',
@@ -666,7 +664,7 @@ describe.if(DB_READY)('the picker read — narrowing to the caller’s own targe
 		// operator-disclosure so it can name no section.
 		expect(body.ok).toBe(false);
 		expect(body.error?.code).toBe('perm.denied');
-		expect(body.errors).toEqual(['perm.denied']);
+		expect('result' in body).toBe(false);
 		const serialized = JSON.stringify(body);
 		expect(serialized).not.toContain(TERMS);
 		expect(serialized).not.toContain(TLD);

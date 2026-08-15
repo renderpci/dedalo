@@ -209,14 +209,14 @@ const get_content_data = function(self) {
 * RENDER_RESPONSE
 * Paints one run_check / run_fix outcome and caches it on the instance.
 *
-* (!) A FAILED scan does not throw. The server answers `{result:false, msg, errors}`
-* — and on a large database that is the EXPECTED failure: the scan walks every
+* (!) A FAILED scan does not throw. The server answers `{ok:false, error}` —
+* and on a large database that is the EXPECTED failure: the scan walks every
 * matrix% table, and a batch that exceeds the server's per-statement timeout is
-* cancelled, which surfaces here as result:false. Treating that as a report
+* cancelled, which surfaces here as a failed envelope. Treating that as a report
 * (an empty payload object) would print five dashes and read exactly like a
 * completed scan that found nothing — the "clean database we never looked at"
-* the not-run state exists to prevent. So a falsy `result` paints as an error and
-* `self.value` is left alone.
+* the not-run state exists to prevent. So a failed envelope, or a `data` that is
+* not a report object, paints as an error and `self.value` is left alone.
 *
 * @param {Object} self - widget instance (receives the cached report in self.value)
 * @param {HTMLElement} container - the summary div

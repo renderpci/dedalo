@@ -25,7 +25,8 @@
  * Runs with a fake XMLHttpRequest/FormData: no network, no DOM, no server.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { join } from 'node:path';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Fake browser surface
@@ -46,8 +47,29 @@ type Behaviour = (
 	body?: string;
 };
 
+/**
+ * THE UPLOAD DOOR'S SUCCESS BODY — envelope v2
+ * (src/core/media/ingest/upload_endpoint.ts: `ok(true, {extend:{file_data}})`).
+ * The transport accepts a part ONLY when `response_data(body) === true`
+ * (api_error.js: the payload is `data`, never the retired `result` mirror), so
+ * the fake server must answer the real shape or every assertion below is a
+ * study of the failure path.
+ */
+function ok_body(extension: Record<string, unknown> = {}): string {
+	return JSON.stringify({ ok: true, request_id: 'zzupl', data: true, ...extension });
+}
+
+/** The failure twin: `toErrorEnvelope` — one `error` object, no compat mirror. */
+function err_body(code: string, message: string): string {
+	return JSON.stringify({
+		ok: false,
+		request_id: 'zzupl',
+		error: { code, category: 'caller', message, label_key: 'error', retryable: false },
+	});
+}
+
 const sent: SentRequest[] = [];
-let behaviour: Behaviour = () => ({ status: 200, body: JSON.stringify({ result: true }) });
+let behaviour: Behaviour = () => ({ status: 200, body: ok_body() });
 /** Every fake XHR created, so a test can assert on abort/release behaviour. */
 const created: FakeXHR[] = [];
 
@@ -152,6 +174,21 @@ beforeAll(async () => {
 	globals.page_globals = { csrf_token: 'TOK' };
 	(globals.window as Record<string, unknown>).page_globals = globals.page_globals;
 
+	// `data_manager.js` reaches the error RENDERER (render_api_error.js), which
+	// imports `common/js/ui.js`, which imports `core/tools_common/js/tool_common.js`
+	// — a SERVING seam that maps to src/core/tools/client and has no such relative
+	// path on disk, so nothing here is importable without masking it. Same reason,
+	// same shape as client_upload_queue_render.test.ts.
+	mock.module(
+		join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'ui.js'),
+		() => ({
+			ui: {
+				create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+				show_message: () => {},
+			},
+		}),
+	);
+
 	// Imported AFTER the stubs so nothing binds a real browser global.
 	transport = await import(
 		'../../client/dedalo/core/services/service_upload/js/upload_transport.js'
@@ -160,8 +197,9 @@ beforeAll(async () => {
 	original_request = data_manager.request;
 	// The join is a JSON RQO, not multipart; stub it so no fetch is attempted.
 	data_manager.request = async () => ({
-		result: true,
-		msg: 'ok',
+		ok: true,
+		request_id: 'zzupl',
+		data: true,
 		file_data: { tmp_name: 'a.jpg', complete: true },
 	});
 });
@@ -186,8 +224,7 @@ const ok_chunk = (record: SentRequest) => {
 	const index = Number(record.fields.find((f) => f[0] === 'chunk_index')?.[1] ?? 0);
 	return {
 		status: 200,
-		body: JSON.stringify({
-			result: true,
+		body: ok_body({
 			file_data: { chunked: true, chunk_index: index, total_chunks: 3, tmp_name: 'a.jpg' },
 		}),
 	};
@@ -236,7 +273,7 @@ describe('upload_transport wire contract', () => {
 	test('single-shot: exact field order incl. tipo, and no Content-Range', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		const handle = transport.create_transfer({
 			file: make_file(10),
@@ -265,7 +302,7 @@ describe('upload_transport wire contract', () => {
 	test('X-File-Name is URI-encoded and the CSRF token is read at SEND time', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		// Rotate the token AFTER the transfer is created: the header must carry the
 		// new one. A token captured at init is stale by the time a queued part is
@@ -309,7 +346,7 @@ describe('upload_transport wire contract', () => {
 	test('upload_id: single-shot carries it too', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		const handle = transport.create_transfer({
 			file: make_file(10),
@@ -323,7 +360,7 @@ describe('upload_transport wire contract', () => {
 	test('upload_id: differs between two transfers of the same name', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		// The exact residue the explicit id closes: two SIMULTANEOUS transfers of
 		// the same raw name into the same key_dir, which only a queue makes
@@ -354,7 +391,7 @@ describe('upload_transport wire contract', () => {
 				? { kind: 'error' }
 				: {
 						status: 200,
-						body: JSON.stringify({ result: true, file_data: { complete: true } }),
+						body: ok_body({ file_data: { complete: true } }),
 					};
 		});
 		// The retry back-off is a hard-coded 5s; collapse every timer for this test
@@ -362,7 +399,7 @@ describe('upload_transport wire contract', () => {
 		const real_set_timeout = globalThis.setTimeout;
 		globalThis.setTimeout = ((fn: () => void, delay?: number) =>
 			real_set_timeout(fn, Math.min(delay ?? 0, 1))) as typeof globalThis.setTimeout;
-		let response: { result?: boolean };
+		let response: { ok?: boolean };
 		try {
 			const handle = transport.create_transfer({
 				file: make_file(10),
@@ -371,7 +408,7 @@ describe('upload_transport wire contract', () => {
 				max_retry: 1,
 			});
 			response = await handle.start();
-			expect(response.result).toBe(true);
+			expect(response.ok).toBe(true);
 			expect(sent.length).toBe(2);
 			const ids = sent.map((r) => r.fields.find((f) => f[0] === 'upload_id')?.[1]);
 			expect(ids[0]).toBe(ids[1]);
@@ -404,8 +441,8 @@ describe('upload_transport settlement law', () => {
 			max_retry: 0,
 		});
 		const response = await handle.start();
-		expect(response.result).toBe(false);
-		expect(typeof response.msg).toBe('string');
+		expect(response.ok).toBe(false);
+		expect(typeof response.error.message).toBe('string');
 		expect(handle.status()).toBe('error');
 	});
 
@@ -419,18 +456,22 @@ describe('upload_transport settlement law', () => {
 			pool: transport.create_connection_pool(2),
 		});
 		const response = await handle.start();
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(handle.status()).toBe('error');
 	});
 
-	test('the server errors[] array wins over the generic msg', async () => {
+	test("the server's own diagnosis survives a non-2xx refusal", async () => {
+		// Envelope v2: the refusal carries ONE machine channel (`error.code`) and
+		// one sentence (`error.message`) — the retired `msg`/`errors[]` pair is
+		// gone. The upload door refuses on a magic-byte mismatch WITH a 400, so
+		// the non-2xx branch (not only the 2xx-with-ok:false one) must read the
+		// envelope instead of minting a generic transport message.
 		reset(() => ({
 			status: 400,
-			body: JSON.stringify({
-				result: false,
-				msg: 'Upload rejected',
-				errors: ['File signature (jpeg) does not match declared extension'],
-			}),
+			body: err_body(
+				'media.upload_rejected',
+				'File signature (jpeg) does not match declared extension',
+			),
 		}));
 		const handle = transport.create_transfer({
 			file: make_file(10),
@@ -438,10 +479,10 @@ describe('upload_transport settlement law', () => {
 			chunk_size_mb: 0,
 		});
 		const response = await handle.start();
-		expect(response.msg).toBe('File signature (jpeg) does not match declared extension');
-		// handleMediaUpload returns errors[] WITH a 400, so the non-2xx branch must
-		// forward the array — not only the 200-with-result:false branch.
-		expect(response.errors).toEqual(['File signature (jpeg) does not match declared extension']);
+		expect(response.ok).toBe(false);
+		expect(response.error.code).toBe('media.upload_rejected');
+		expect(response.error.message).toBe('File signature (jpeg) does not match declared extension');
+		expect(response.error.status).toBe(400);
 	});
 
 	test('a failed chunk cancels its siblings instead of orphaning staging blobs', async () => {
@@ -461,10 +502,10 @@ describe('upload_transport settlement law', () => {
 			callbacks: { on_progress: (p: { percent: number }) => percents.push(p.percent) },
 		});
 		const response = await handle.start();
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		// Not "User aborts upload": a fail-fast cancellation must keep the SERVER's
 		// diagnosis, which is why `cancelled` is a flag distinct from `aborted`.
-		expect(response.msg).not.toBe('User aborts upload');
+		expect(response.error.message).not.toBe('User aborts upload');
 		expect(handle.status()).toBe('error');
 		// Every survivor is cancelled. Each one that completed instead would make
 		// receiveUpload write a `<i>-<tmp>.blob` that only joinChunkedUpload deletes
@@ -492,7 +533,7 @@ describe('upload_transport settlement law', () => {
 		expect(pool.in_flight()).toBe(1);
 		handle.abort();
 		const response = await promise;
-		expect(response.result).toBe(false);
+		expect(response.ok).toBe(false);
 		expect(handle.status()).toBe('aborted');
 		// One tick: the slot is released when the part's promise settles, which is
 		// a microtask after abort() resolved the caller-facing promise.
@@ -505,7 +546,7 @@ describe('upload_transport settlement law', () => {
 	test('single-shot transfers go through the pool', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		const pool = transport.create_connection_pool(2);
 		let max_open = 0;
@@ -535,7 +576,7 @@ describe('upload_transport settlement law', () => {
 	test('status is queued until a part reaches the wire', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		const pool = transport.create_connection_pool(1);
 		const blocker = transport.create_transfer({
@@ -560,7 +601,7 @@ describe('upload_transport settlement law', () => {
 	test('terminal callbacks fire once, with the same response as the promise', async () => {
 		reset(() => ({
 			status: 200,
-			body: JSON.stringify({ result: true, file_data: { complete: true } }),
+			body: ok_body({ file_data: { complete: true } }),
 		}));
 		const done: unknown[] = [];
 		const errors: unknown[] = [];
@@ -591,7 +632,7 @@ describe('upload_transport settlement law', () => {
 			callbacks: { on_progress: (p: { percent: number }) => percents.push(p.percent) },
 		});
 		const response = await handle.start();
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		// Byte-weighting can only ever yield 0 with no bytes; a progress-driven
 		// queue row would leave a successful upload stuck at 0%.
 		expect(percents[percents.length - 1]).toBe(100);

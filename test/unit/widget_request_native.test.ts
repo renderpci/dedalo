@@ -103,16 +103,20 @@ async function tsCall(
 	return result.body;
 }
 
-// Envelope v2 (ERRORS_SPEC §3): the machine channel is `error.code`; the compat
-// mirror `errors:[code]` carries the same value during the window. Legacy tokens
-// map through LEGACY_TOKEN_MAP (unauthorized → perm.denied, unauthorized_method →
-// tool.method_not_allowed); the widget-name refusal rides the transitional
-// adapter's status default (request.invalid) until the maintenance sweep codes it.
+// Envelope v2 (ERRORS_SPEC §3): the machine channel is `error.code`, and it is
+// the ONLY one — the compat mirror (`result`/`msg`/`errors:[code]`) was removed
+// on 2026-08-16. Legacy tokens map through LEGACY_TOKEN_MAP (unauthorized →
+// perm.denied, unauthorized_method → tool.method_not_allowed); the widget-name
+// refusal rides the transitional adapter's status default (request.invalid)
+// until the maintenance sweep codes it.
 describe('widget_request dispatch gates (envelope v2)', () => {
 	test('non-admin is refused with perm.denied', async () => {
 		const nonAdmin = await tsCall(WIDGET_RQO, false);
+		expect(nonAdmin.ok).toBe(false);
 		expect((nonAdmin.error as { code: string }).code).toBe('perm.denied');
-		expect((nonAdmin.errors as string[])[0]).toBe('perm.denied');
+		// One machine channel: the retired mirror is not on the failure body.
+		expect('result' in nonAdmin).toBe(false);
+		expect(nonAdmin.errors).toBeUndefined();
 	});
 
 	test('unknown widget id is refused (caller fault)', async () => {
@@ -137,7 +141,7 @@ describe('widget_request dispatch gates (envelope v2)', () => {
 			...WIDGET_RQO,
 			source: { typo: 'source', model: 'database_info', action: 'get_value' },
 		});
-		expect(denied.result).toBe(false);
+		expect(denied.ok).toBe(false);
 		expect((denied.error as { code: string }).code).toBe('tool.method_not_allowed');
 	});
 });
@@ -167,7 +171,7 @@ describe('counters_status.get_value (datalist shape + audit consistency)', () =>
 			// envelope v2: a plain OK carries no `msg` extension key (the
 			// boilerplate sentence is dropped by the P1 sweep).
 			expect(body.msg).toBeUndefined();
-			const result = body.result as { datalist?: Record<string, unknown>[]; errors?: string[] };
+			const result = body.data as { datalist?: Record<string, unknown>[]; errors?: string[] };
 
 			// every item carries EXACTLY the differential-pinned key set
 			expect((result.datalist?.length ?? 0) > 0).toBe(true);
@@ -231,7 +235,7 @@ describe('database_info compute (get_widget_value catalog read)', () => {
 			options: {},
 			source: { typo: 'source', model: 'database_info' },
 		});
-		const result = body.result as {
+		const result = body.data as {
 			tables?: string[];
 			indexes?: Record<string, Record<string, unknown>[]>;
 			info?: { server?: unknown; host?: unknown };
@@ -364,9 +368,9 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 			...WIDGET_RQO,
 			options: { section_tipo: 'test3', counter_action: 'fix' },
 			source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
-		})) as { result?: unknown; msg?: string; datalist?: Record<string, unknown>[] };
+		})) as { data?: unknown; msg?: string; datalist?: Record<string, unknown>[] };
 		// TS-side surviving contract, verbatim from the differential
-		expect(fixed.result).toBe(true);
+		expect(fixed.data).toBe(true);
 		expect(fixed.msg).toBe('OK. fix counter successfully test3');
 
 		const maxRows = (await sql.unsafe(
@@ -397,8 +401,8 @@ describe('counters_status.modify_counter (fix + reset, scratch-only)', () => {
 				...WIDGET_RQO,
 				options: { section_tipo: 'zztc2', counter_action: 'reset' },
 				source: { typo: 'source', model: 'counters_status', action: 'modify_counter' },
-			})) as { result?: unknown; msg?: string };
-			expect(reset.result).toBe(true);
+			})) as { data?: unknown; msg?: string };
+			expect(reset.data).toBe(true);
 			// msg from the same PHP template the fix variant pinned (softened:
 			// the reset wording itself was never differential-compared)
 			expect(reset.msg).toBe('OK. reset counter successfully zztc2');
@@ -595,8 +599,8 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 		}
 	});
 
-	test('envelope: result true, OK msg, one updated-days batch per user', () => {
-		expect(body.result).toBe(true);
+	test('envelope: data true, OK msg, one updated-days batch per user', () => {
+		expect(body.data).toBe(true);
 		expect(body.msg).toBe('OK. Request done.');
 		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 		expect(body.updated_days).toEqual([
@@ -683,7 +687,7 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			options: {},
 			source: { typo: 'source', model: 'add_hierarchy' },
 		});
-		const result = body.result as {
+		const result = body.data as {
 			hierarchies?: { tld: string }[];
 			installed_hierarchies?: { tld: string }[];
 			hierarchy_typologies?: unknown[];
@@ -724,7 +728,7 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			options: { hierarchies: [] },
 			source: { typo: 'source', model: 'add_hierarchy', action: 'install_hierarchies' },
 		});
-		expect(body.result).toBe(true);
+		expect(body.data).toBe(true);
 		expect(String(body.msg)).toContain('Imported 0');
 		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
@@ -735,7 +739,7 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			options: { hierarchies: [] },
 			source: { typo: 'source', model: 'add_hierarchy', action: 'reset_hierarchies' },
 		});
-		expect(body.result).toBe(true);
+		expect(body.data).toBe(true);
 		expect(String(body.msg)).toContain('Reset 0');
 		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});

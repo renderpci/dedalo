@@ -1027,6 +1027,56 @@
           },
           {
             "lang": "lg-eng",
+            "name": "done",
+            "value": "Done"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "done",
+            "value": "Hecho"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "done",
+            "value": "Fet"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "done",
+            "value": "Eginda"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "done",
+            "value": "Terminé"
+          },
+          {
+            "lang": "lg-por",
+            "name": "done",
+            "value": "Concluído"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "done",
+            "value": "Fertig"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "done",
+            "value": "Fatto"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "done",
+            "value": "Done"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "done",
+            "value": "Done"
+          },
+          {
+            "lang": "lg-eng",
             "name": "filter_placeholder",
             "value": "Search by TLD or name…"
           },

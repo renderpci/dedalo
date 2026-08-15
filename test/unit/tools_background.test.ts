@@ -89,7 +89,8 @@ describe('background executor', () => {
 	test('schedules an allowed action and runs it to completion', async () => {
 		const { loaded, spec, ran } = makeLoaded(['long_job']);
 		const response = scheduleBackground(loaded, 'long_job', spec, {}, PRINCIPAL, -1);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		expect(response.data).toBe(true);
 		const jobId = response.background_job_id as string;
 		expect(typeof jobId).toBe('string');
 		// The handler runs on the next microtasks; let it settle.
@@ -111,12 +112,13 @@ describe('background executor', () => {
 
 		await new Promise((r) => setTimeout(r, 20));
 		// The job's final payload IS the tool's response — this is where the client
-		// reads its report from (render_final_report reads frame.data.result).
+		// reads its report from (render_final_report: `response_data(batch_report)`,
+		// i.e. frame.data.data).
 		const { mediaJobs } = await import('../../src/core/media/jobs.ts');
 		const frame = mediaJobs.frame(response.background_job_id as string);
 		expect(frame?.is_running).toBe(false);
-		// the terminal frame's data IS the handler's envelope (ok:true, data mirrored as result)
+		// the terminal frame's data IS the handler's envelope (ok:true + data)
 		expect((frame?.data as { ok?: unknown })?.ok).toBe(true);
-		expect((frame?.data as { result?: unknown })?.result).toBe(true);
+		expect((frame?.data as { data?: unknown })?.data).toBe(true);
 	});
 });

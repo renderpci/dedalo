@@ -129,8 +129,8 @@ export const errorReportApiActions: Record<string, ActionHandler> = {
 					screenshot: report.screenshot ?? null,
 				},
 			});
-			// `report_id` ALSO rides at the top level: the relaying installation
-			// reads `body.result === true` + `body.report_id`
+			// `report_id` ALSO rides at the top level as an extension key: the
+			// relaying installation reads `body.ok === true` + `body.report_id`
 			// (tools/tool_error_report/server/index.ts).
 			return {
 				status: 200,

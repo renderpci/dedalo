@@ -250,7 +250,8 @@ describe('dd_diffusion_api end-to-end (stub runner)', () => {
 			{ requestId: 'test', clientIp: '127.0.0.1', session: null, csrfCandidate: null },
 		);
 		expect(denied.status).toBe(401);
-		expect(denied.body.result).toBe(false);
+		expect(denied.body.ok).toBe(false);
+		expect((denied.body.error as { code: string }).code).toBe('auth.not_logged');
 	});
 
 	test('crash recovery: SIGKILLed runner is swept back to queued with its checkpoint', async () => {

@@ -102,7 +102,7 @@ const read = (src: Record<string, unknown>) =>
 	);
 
 const itemOf = (response: { body: unknown }, tipo: string) =>
-	((response.body as { result?: { data?: Record<string, unknown>[] } }).result?.data ?? []).find(
+	((response.body as { data?: { data?: Record<string, unknown>[] } }).data?.data ?? []).find(
 		(entry) => entry.tipo === tipo,
 	);
 
@@ -202,7 +202,7 @@ describe('WC-079 door — isolation through the door', () => {
 describe('WC-079 door — a temporal element ships no component toolbar', () => {
 	testIfDb('the temporal context carries tools: []', async () => {
 		const response = await read(source({ tipo: LITERAL, temporal_scope: SCOPE }));
-		const context = (response.body as { result?: { context?: Record<string, unknown>[] } }).result
+		const context = (response.body as { data?: { context?: Record<string, unknown>[] } }).data
 			?.context;
 		const entry = (context ?? []).find((c) => c.tipo === LITERAL);
 		expect(entry, 'the component context must be present to assert on it').toBeDefined();
@@ -220,7 +220,7 @@ describe('WC-079 door — a temporal element ships no component toolbar', () => 
 			mode: 'edit',
 			lang: 'lg-eng',
 		});
-		const context = (response.body as { result?: { context?: Record<string, unknown>[] } }).result
+		const context = (response.body as { data?: { context?: Record<string, unknown>[] } }).data
 			?.context;
 		const entry = (context ?? []).find((c) => c.tipo === LITERAL);
 		expect(entry).toBeDefined();

@@ -45,13 +45,14 @@ function contextFor(rawToken: string): ApiRequestContext {
 }
 
 describe('quit action', () => {
-	test('returns result:true and signals the cookie clear', async () => {
+	test('returns data:true and signals the cookie clear', async () => {
 		const result = await dispatchRqo(
 			{ dd_api: 'dd_utils_api', action: 'quit', options: {} } as Rqo,
 			contextFor(token),
 		);
 		expect(result.status).toBe(200);
-		expect(result.body.result).toBe(true);
+		expect(result.body.ok).toBe(true);
+		expect(result.body.data).toBe(true);
 		expect(result.clearSessionCookie).toBe(true);
 	});
 
@@ -72,7 +73,13 @@ describe('quit action', () => {
 			...ctx,
 			session: getSession(token),
 		});
-		expect(after.body.result).not.toBe(true);
+		// get_environment is a NO_LOGIN action, so the honest pin is the identity it
+		// answers with: the dead token resolves to nobody, i.e. the ANONYMOUS
+		// environment (the retired compat `result` made this assertion vacuous —
+		// `result` was the payload OBJECT, never `true`).
+		const pageGlobals = (after.body.data as { page_globals?: { is_logged?: boolean } })
+			.page_globals;
+		expect(pageGlobals?.is_logged).toBe(false);
 	});
 
 	test('requires a session — anonymous quit is rejected', async () => {

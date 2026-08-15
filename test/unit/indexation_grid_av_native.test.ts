@@ -94,12 +94,12 @@ function gridRqo(target: string[]): Record<string, unknown> {
 
 async function tsGrid(rqo: Record<string, unknown>): Promise<{
 	status: number;
-	result: unknown;
+	data: unknown;
 }> {
 	const outcome = await runWithRequestLangs({ applicationLang: 'lg-spa', dataLang: 'lg-spa' }, () =>
 		dispatchRqo(structuredClone(rqo) as unknown as Rqo, adminContext()),
 	);
-	return { status: outcome.status, result: (outcome.body as { result?: unknown }).result };
+	return { status: outcome.status, data: outcome.body.data };
 }
 
 /** Remove every scratch row (idempotent — also pre-cleans crashed runs). */
@@ -253,7 +253,7 @@ afterAll(async () => {
 
 describe('indexation grid av + media branches (TS-native, oracle-captured goldens)', () => {
 	test('av-format: seeded oh1/rsc167 chain renders the 11-column layout DEEP-EQUAL to the golden', async () => {
-		const { status, result } = await tsGrid(gridRqo(['rsc167']));
+		const { status, data } = await tsGrid(gridRqo(['rsc167']));
 		expect(status).toBe(200);
 
 		// Fixture integrity floors — every piece the ledger row named must be IN
@@ -285,11 +285,11 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 		}
 
 		// full projection equality (the whole grid IS the projection)
-		expect(result).toEqual(avGolden as never);
+		expect(data).toEqual(avGolden as never);
 	});
 
 	test('media: seeded numisdata5/rsc170 chain renders the rsc29 thumb URL DEEP-EQUAL to the golden', async () => {
-		const { status, result } = await tsGrid(gridRqo(['numisdata5']));
+		const { status, data } = await tsGrid(gridRqo(['numisdata5']));
 		expect(status).toBe(200);
 
 		// Fixture integrity floors — the media branch's whole point is the
@@ -298,12 +298,12 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 		expect(goldenJson).toContain('/dedalo/media/image/thumb/');
 		expect(goldenJson).toContain(`rsc29_rsc170_${SCRATCH_RSC170_ID}.jpg`);
 
-		expect(result).toEqual(mediaGolden as never);
+		expect(data).toEqual(mediaGolden as never);
 	});
 
 	test('after revert the term grid is empty again for both target sections', async () => {
 		await sweepScratch();
-		expect((await tsGrid(gridRqo(['rsc167']))).result).toEqual([]);
-		expect((await tsGrid(gridRqo(['numisdata5']))).result).toEqual([]);
+		expect((await tsGrid(gridRqo(['rsc167']))).data).toEqual([]);
+		expect((await tsGrid(gridRqo(['numisdata5']))).data).toEqual([]);
 	});
 });

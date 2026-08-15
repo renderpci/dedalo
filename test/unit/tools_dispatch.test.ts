@@ -335,7 +335,7 @@ describe('gate 7 — the permission gate, BEFORE the background fork', () => {
 			{ model: TEMPLATE, action: 'read_demo' },
 			{ section_tipo: 'test3', tipo: 'test65' },
 		);
-		expect(response.result).toEqual({ section_tipo: 'test3', tipo: 'test65', read: true });
+		expect(response.data).toEqual({ section_tipo: 'test3', tipo: 'test65', read: true });
 	});
 });
 
@@ -358,7 +358,7 @@ describe("gate 7 — the 'section_list' batch kind", () => {
 		const response = await dispatchToolRequest(SUPERUSER, -1, BATCH, {
 			items: [{ section_tipo: 'test3' }, { section_tipo: 'test3' }],
 		});
-		expect(response.result).toEqual({ batch: 2, gated: true });
+		expect(response.data).toEqual({ batch: 2, gated: true });
 	});
 
 	test('an EMPTY batch is a denial, not a vacuous pass', async () => {
@@ -419,7 +419,8 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 			{ model: TEMPLATE, action: 'long_job' },
 			{ background_running: true, section_tipo: 'test3' },
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		expect(response.data).toBe(true);
 		const jobId = response.job_id as string;
 		expect(typeof jobId).toBe('string');
 		expect(response.background_job_id).toBe(jobId);
@@ -429,7 +430,7 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 		const job = getBackgroundJob(jobId);
 		expect(job?.status).toBe('done');
 		// The handler saw background:true — it really ran under the executor.
-		expect((job?.result?.result as { ran_in_background?: boolean })?.ran_in_background).toBe(true);
+		expect((job?.result?.data as { ran_in_background?: boolean })?.ran_in_background).toBe(true);
 	});
 
 	test('without background_running the same action runs synchronously', async () => {
@@ -439,7 +440,7 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 			{ model: TEMPLATE, action: 'long_job' },
 			{ section_tipo: 'test3' },
 		);
-		expect(response.result).toMatchObject({ started: true, ran_in_background: false });
+		expect(response.data).toMatchObject({ started: true, ran_in_background: false });
 		expect(response.job_id).toBeUndefined();
 	});
 
@@ -451,7 +452,7 @@ describe('gate 8 — execute, or fork behind the backgroundRunnable allowlist', 
 			{ model: TEMPLATE, action: 'long_job' },
 			{ background_running: 'true', section_tipo: 'test3' },
 		);
-		expect(response.result).toMatchObject({ started: true, ran_in_background: false });
+		expect(response.data).toMatchObject({ started: true, ran_in_background: false });
 		expect(listBackgroundJobs(TEMPLATE, -1, true)).toHaveLength(0);
 	});
 });

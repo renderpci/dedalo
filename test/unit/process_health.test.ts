@@ -110,7 +110,8 @@ describe('process poison latch (TDZ hardening)', () => {
 			expect(res.status).toBe(500);
 			expect(res.body.ok).toBe(false);
 			expect((res.body.error as { code: string }).code).toBe('internal.module_poisoned');
-			expect(res.body.result).toBe(false);
+			// …with NO retired compat mirror (WC-2026-08-16-error-envelope-compat-removal).
+			expect('result' in res.body).toBe(false);
 			// …AND the process-global latch is set, naming the TDZ shape (the action
 			// is on the logError line + the access log, keyed by request_id).
 			const poison = getProcessPoison();
@@ -134,7 +135,7 @@ describe('process poison latch (TDZ hardening)', () => {
 			);
 			expect(res.status).toBe(500);
 			expect((res.body.error as { code: string }).code).toBe('internal.unexpected');
-			expect(res.body.result).toBe(false);
+			expect(res.body.ok).toBe(false);
 			// A routine exception must never trigger a watchdog restart.
 			expect(getProcessPoison().poisoned).toBe(false);
 		} finally {

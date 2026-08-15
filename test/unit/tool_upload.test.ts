@@ -17,6 +17,7 @@ import { type Principal, resolvePrincipal } from '../../src/core/security/permis
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolResponse } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const OWNER_ID = 987661;
 const OTHER_ID = 987662;
@@ -140,13 +141,12 @@ describe('tool_upload module', () => {
 describe('get_job_status ownership (guessable ids are not the boundary)', () => {
 	test('missing / unknown job ids answer without an existence oracle', async () => {
 		const principal = await resolvePrincipal(-1);
-		const missing = await callJobStatus('', principal, OWNER_ID);
-		expect(missing.result).toBe(false);
-		expect(missing.errors).toEqual(['invalid_request']);
+		// A refusal is a THROW carrying the registered code (ERRORS_SPEC §4).
+		const missing = await refusalOf(callJobStatus('', principal, OWNER_ID));
+		expect(missing.code).toBe('request.invalid');
 
-		const unknown = await callJobStatus('test_report_job_1_999999', principal, OWNER_ID);
-		expect(unknown.result).toBe(false);
-		expect(unknown.errors).toEqual(['job_not_found']);
+		const unknown = await refusalOf(callJobStatus('test_report_job_1_999999', principal, OWNER_ID));
+		expect(unknown.code).toBe('tool.job_not_found');
 	});
 
 	test('the OWNER reads the frame; another user gets the not-found answer', async () => {
@@ -159,19 +159,20 @@ describe('get_job_status ownership (guessable ids are not the boundary)', () => 
 		const other: Principal = { ...principal, userId: OTHER_ID, isGlobalAdmin: false };
 
 		const mine = await callJobStatus(jobId, owner, OWNER_ID);
-		expect(mine.result).toBe(true);
+		expect(mine.ok).toBe(true);
 		expect(mine.data).toEqual({ secret_report: 'another users import report' });
 
-		const theirs = await callJobStatus(jobId, other, OTHER_ID);
-		expect(theirs.result).toBe(false);
-		expect(theirs.errors).toEqual(['job_not_found']);
-		// The refusal must be indistinguishable from a non-existent job — and it
-		// must carry NO fragment of the payload.
-		expect(theirs.data).toBeUndefined();
+		const theirs = await refusalOf(callJobStatus(jobId, other, OTHER_ID));
+		// The refusal must be indistinguishable from a non-existent job (the SAME
+		// code the unknown id got above) — and it must carry NO fragment of the
+		// payload: a throw has no `data` at all, and the id it names is log-only
+		// coordinates, never wired.
+		expect(theirs.code).toBe('tool.job_not_found');
+		expect(theirs.details).toBeUndefined();
 
 		// A global admin may read any job (the documented carve-out).
 		const admin = await callJobStatus(jobId, { ...principal, isGlobalAdmin: true }, OTHER_ID);
-		expect(admin.result).toBe(true);
+		expect(admin.ok).toBe(true);
 	});
 
 	test('an UNOWNED job (the AV transcodes) stays readable — the path this action exists for', async () => {
@@ -183,7 +184,7 @@ describe('get_job_status ownership (guessable ids are not the boundary)', () => 
 			{ ...principal, userId: OTHER_ID, isGlobalAdmin: false },
 			OTHER_ID,
 		);
-		expect(res.result).toBe(true);
+		expect(res.ok).toBe(true);
 		expect(res.is_running).toBe(false);
 	});
 });

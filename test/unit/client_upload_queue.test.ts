@@ -30,7 +30,8 @@
  * process and a leaked XMLHttpRequest stub breaks every later file.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { join } from 'node:path';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Fake browser surface
@@ -39,9 +40,30 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 /** What the fake server should do with a request. */
 type Behaviour = (index: number) => { kind?: 'error' | 'hang'; status?: number; body?: string };
 
+/**
+ * THE UPLOAD DOOR'S SUCCESS BODY — envelope v2
+ * (src/core/media/ingest/upload_endpoint.ts: `ok(true, {extend:{file_data}})`).
+ * `upload_transport` accepts a part ONLY when `response_data(body) === true`
+ * (api_error.js: the payload is `data`; the `result` mirror is retired), so the
+ * fake server must answer the real shape or every queue assertion below would
+ * be a study of the failure path.
+ */
+function ok_body(extension: Record<string, unknown> = {}): string {
+	return JSON.stringify({ ok: true, request_id: 'zzque', data: true, ...extension });
+}
+
+/** The failure twin: `toErrorEnvelope` — one `error` object, no compat mirror. */
+function err_body(code: string, message: string): string {
+	return JSON.stringify({
+		ok: false,
+		request_id: 'zzque',
+		error: { code, category: 'caller', message, label_key: 'error', retryable: false },
+	});
+}
+
 let behaviour: Behaviour = () => ({
 	status: 200,
-	body: JSON.stringify({ result: true, file_data: { tmp_name: 'staged', complete: true } }),
+	body: ok_body({ file_data: { tmp_name: 'staged', complete: true } }),
 });
 const created: FakeXHR[] = [];
 let sent_count = 0;
@@ -202,6 +224,21 @@ beforeAll(async () => {
 	globals.page_globals = { csrf_token: 'TOK' };
 	(globals.window as Record<string, unknown>).page_globals = globals.page_globals;
 
+	// `data_manager.js` reaches the error RENDERER (render_api_error.js), which
+	// imports `common/js/ui.js`, which imports `core/tools_common/js/tool_common.js`
+	// — a SERVING seam that maps to src/core/tools/client and has no such relative
+	// path on disk, so nothing here is importable without masking it. Same reason,
+	// same shape as client_upload_queue_render.test.ts.
+	mock.module(
+		join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core', 'common', 'js', 'ui.js'),
+		() => ({
+			ui: {
+				create_dom_element: () => ({ classList: { add() {}, remove() {} }, addEventListener() {} }),
+				show_message: () => {},
+			},
+		}),
+	);
+
 	// Imported AFTER the stubs so nothing binds a real browser global.
 	queue_module = await import(
 		'../../client/dedalo/core/services/service_upload/js/upload_queue.js'
@@ -216,7 +253,7 @@ beforeAll(async () => {
 			action: options.body.action,
 			options: options.body.options as Record<string, unknown>,
 		});
-		return { result: true, msg: 'ok' };
+		return { ok: true, request_id: 'zzque', data: true };
 	};
 });
 
@@ -236,8 +273,7 @@ function reset(next?: Behaviour) {
 		next ??
 		(() => ({
 			status: 200,
-			body: JSON.stringify({
-				result: true,
+			body: ok_body({
 				file_data: { tmp_name: 'staged.jpg', key_dir: 'image', extension: 'jpg' },
 			}),
 		}));
@@ -481,14 +517,16 @@ describe('upload_queue — statuses and lifecycle', () => {
 		).toBe(true);
 	});
 
-	test('a server refusal keeps the errors[] diagnosis, not the generic msg', async () => {
+	test("a server refusal keeps the envelope's own diagnosis, not a generic message", async () => {
+		// Envelope v2: the refusal carries ONE sentence (`error.message`) under one
+		// machine code, and the row shows THAT — `error_text_from` reads the
+		// ApiError the transport normalised, never a retired `msg`/`errors[]` pair.
 		reset(() => ({
 			status: 400,
-			body: JSON.stringify({
-				result: false,
-				msg: 'Upload rejected',
-				errors: ['File signature (jpeg) does not match declared extension'],
-			}),
+			body: err_body(
+				'media.upload_rejected',
+				'File signature (jpeg) does not match declared extension',
+			),
 		}));
 		const queue = make_queue();
 		const entry = queue.add(make_file('a.jpg'));
@@ -555,7 +593,7 @@ describe('upload_queue — statuses and lifecycle', () => {
 	test('deleting an absent file is a successful no-op (WC-078)', async () => {
 		reset();
 		const previous = data_manager.request;
-		data_manager.request = async () => ({ result: true, msg: 'OK. Request done' });
+		data_manager.request = async () => ({ ok: true, request_id: 'zzque', data: true });
 		const queue = make_queue();
 		const staged = queue.add_staged({ name: 'gone.jpg', url: '/u/gone.jpg' });
 		const removed = await queue.remove(staged.id, { delete_remote: true });

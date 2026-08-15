@@ -205,6 +205,13 @@ describe('tool_transcription module', () => {
 
 const stubPrincipal: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 
+/** The envelope v2 failure body (ERRORS_SPEC §3) — what the wire really carries. */
+interface WireFailure {
+	ok: false;
+	request_id: string;
+	error: { code: string; message: string; label_key: string; category: string };
+}
+
 /**
  * The REAL envelope a failing poll puts on the wire, harvested once.
  *
@@ -212,11 +219,12 @@ const stubPrincipal: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper:
  * DEDALO_MEDIA_EXPORT_BASE (unset on a dev box, where the URL builder refuses
  * first). `config` freezes at import, so overlay it in a child — same pattern as
  * media_export_base.test.ts. The uri stays loopback, so the SSRF guard answers
- * `{result:false,…}` with no network call. Memoized: the client-coupling test
- * feeds this exact object to the browser poller.
+ * with a refusal (`ok:false` + the registered code) and no network call.
+ * Memoized: the client-coupling test feeds this exact object to the browser
+ * poller (through the same normalization data_manager applies).
  */
-let failureEnvelope: { result: unknown; msg: string; errors: string[] } | null = null;
-function liveFailureEnvelope(): { result: unknown; msg: string; errors: string[] } {
+let failureEnvelope: WireFailure | null = null;
+function liveFailureEnvelope(): WireFailure {
 	if (failureEnvelope !== null) return failureEnvelope;
 	const script = [
 		"const {getLoadedTool}=await import('./src/core/tools/loader.ts');",
@@ -245,7 +253,7 @@ function liveFailureEnvelope(): { result: unknown; msg: string; errors: string[]
 		},
 	);
 	const line = probe.stdout.toString().trim().split('\n').pop() ?? '{}';
-	failureEnvelope = JSON.parse(line) as { result: unknown; msg: string; errors: string[] };
+	failureEnvelope = JSON.parse(line) as WireFailure;
 	return failureEnvelope;
 }
 
@@ -293,9 +301,9 @@ describe('check_server_transcriber_status handler', () => {
  *     answering "Transcriber config (uri/key) is not defined";
  *  2. the poll called ensureAudioQuality, i.e. a level-1 READ action could fire
  *     an ffmpeg transcode and write a media file (PHP only builds the URL);
- *  3. an unreachable/blocked transcriber came back as `msg:'OK. Request done'`
- *     with `errors:[]` — a dead ASR server read as success (and the client maps
- *     a status-less response to its `default:` "Process done" branch).
+ *  3. an unreachable/blocked transcriber came back as a SUCCESS envelope with
+ *     no status — a dead ASR server read as success (and the client maps a
+ *     status-less payload to its `default:` "Process done" branch).
  * The seeded uri is loopback, so the SSRF guard trips: no network is touched.
  */
 describe('check_server_transcriber_status against a configured transcriber', () => {
@@ -364,21 +372,22 @@ describe('check_server_transcriber_status against a configured transcriber', () 
 	 */
 	test('a provider failure is reported as a failure, never as OK', () => {
 		const response = liveFailureEnvelope();
-		// Envelope v2 + the compat mirror: `ok:false` is the fact, `errors[0]` the
-		// registered code (the raw 'invalid transcriber URL' sentence is now
-		// LOG-only — the code's disclosure is 'operator').
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['tool.dependency_unavailable']);
+		// Envelope v2: `ok:false` is the fact and `error.code` the registered code
+		// (the raw 'invalid transcriber URL' sentence is LOG-only — the code's
+		// disclosure is 'operator'). The retired `result`/`errors` mirror is gone.
+		expect(response.ok).toBe(false);
+		expect('result' in response).toBe(false);
+		expect(response.error.code).toBe('tool.dependency_unavailable');
 	});
 });
 
 /**
  * CLIENT half of the outage-honesty contract (audit 2026-07-28).
  *
- * The server now answers a dead/blocked ASR server with `{result:false,…}`, but
- * the browser is what the user reads: `get_server_status()` in
- * tools/tool_transcription/js/render_tool_transcription.js switches on
- * `response.result.status`, and a status-less envelope used to fall through to
+ * The server now answers a dead/blocked ASR server with an `ok:false` envelope,
+ * but the browser is what the user reads: `get_server_status()` in
+ * tools/tool_transcription/js/render_tool_transcription.js switches on the
+ * payload's `status`, and a status-less envelope used to fall through to
  * `case 3: default:` — rendering "Process done" AND deleting the stored pid.
  * A dead transcriber therefore looked like a finished transcription and threw
  * away the only handle to the running job.
@@ -463,6 +472,64 @@ function panelIsError(panel: StubPanel): boolean {
 }
 
 let getServerStatus: (options: unknown) => void;
+
+/**
+ * The envelope accessors the poller reads. They arrive by `import` in the
+ * browser (core/common/js/api_error.js, render_api_error.js), and the harness
+ * strips the import block — so they are installed as globals, exactly the way
+ * `data_manager` / `ui` already are.
+ *
+ * `request_failed` / `response_data` / `normalize_api_error` are the REAL,
+ * dependency-free client source. `error_text` cannot be imported (its module
+ * pulls ui.js → tool_common.js, which does not resolve off the HTTP root), so
+ * it is the documented equivalent of render_api_error.js's chain WITH AN EMPTY
+ * LABEL CATALOGUE — which is precisely the state of this harness: no labels
+ * loaded ⇒ `message`, else the code.
+ */
+interface ClientEnvelopeHelpers {
+	request_failed: (response: unknown) => boolean;
+	response_data: (response: unknown) => unknown;
+	normalize_api_error: (response: unknown, body: unknown) => unknown;
+}
+let clientHelpers: ClientEnvelopeHelpers;
+
+async function installClientEnvelopeHelpers(): Promise<void> {
+	clientHelpers = (await import(
+		'../../client/dedalo/core/common/js/api_error.js'
+	)) as unknown as ClientEnvelopeHelpers;
+	// biome-ignore lint/suspicious/noExplicitAny: browser globals the client module reads free.
+	const g = globalThis as any;
+	g.request_failed = clientHelpers.request_failed;
+	g.response_data = clientHelpers.response_data;
+	g.error_text = (error: { message?: string; code?: string } | null) =>
+		typeof error?.message === 'string' && error.message.length > 0
+			? error.message
+			: String(error?.code ?? '');
+}
+
+/**
+ * A failure envelope as the POLLER receives it: data_manager parses the wire
+ * body and replaces `error` with the normalized ApiError before resolving
+ * (data_manager.request step 9), so the client-side gate must be fed that, not
+ * the raw JSON.
+ */
+function clientFailure(body: WireFailure): Record<string, unknown> {
+	return { ...body, error: clientHelpers.normalize_api_error(null, body) };
+}
+
+/** The same, minted from a code + message (no live harvest needed). */
+function refusedEnvelope(code: string, message: string): Record<string, unknown> {
+	return clientFailure({
+		ok: false,
+		request_id: 'client-poll-test',
+		error: {
+			code,
+			message,
+			label_key: `error_${code.replace(/\W/g, '_')}`,
+			category: 'unavailable',
+		},
+	});
+}
 
 async function loadClientPoller(): Promise<(options: unknown) => void> {
 	const raw = await Bun.file(CLIENT_SOURCE).text();
@@ -557,15 +624,14 @@ async function drivePoll(response: unknown, storedPid: number | null = 4321) {
 
 describe('client poll honesty (render_tool_transcription.get_server_status)', () => {
 	beforeAll(async () => {
+		await installClientEnvelopeHelpers();
 		getServerStatus = await loadClientPoller();
 	});
 
-	test('a {result:false} envelope is NOT rendered as a finished transcription', async () => {
-		const run = await drivePoll({
-			result: false,
-			msg: 'invalid transcriber URL',
-			errors: ['invalid transcriber URL'],
-		});
+	test('an ok:false envelope is NOT rendered as a finished transcription', async () => {
+		const run = await drivePoll(
+			refusedEnvelope('tool.dependency_unavailable', 'invalid transcriber URL'),
+		);
 		// the whole point: the user must not read "Process done"
 		expect(panelText(run.status_panel)).not.toBe('Process done');
 		expect(panelText(run.status_panel)).toContain('invalid transcriber URL');
@@ -581,7 +647,13 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('a status-less / malformed envelope is treated as a failure, not as done', async () => {
-		for (const response of [undefined, null, {}, { result: null }, { result: 'unexpected' }]) {
+		for (const response of [
+			undefined,
+			null,
+			{},
+			{ ok: true, data: null },
+			{ ok: true, data: 'unexpected' },
+		]) {
 			const run = await drivePoll(response);
 			expect(panelText(run.status_panel)).not.toBe('Process done');
 			expect(panelIsError(run.status_panel)).toBe(true);
@@ -591,12 +663,14 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('the failure branch does not re-enable the button (a job may still be running)', async () => {
-		const run = await drivePoll({ result: false, msg: 'transcriber HTTP 502' });
+		const run = await drivePoll(
+			refusedEnvelope('tool.dependency_unavailable', 'transcriber HTTP 502'),
+		);
 		expect(run.button.classList.contains('disable')).toBe(true);
 	});
 
 	test('status 2 still re-polls and keeps the pid, and the trigger spins', async () => {
-		const run = await drivePoll({ result: { status: 2 }, msg: 'OK. Request done' });
+		const run = await drivePoll({ ok: true, data: { status: 2 } });
 		expect(panelText(run.status_panel)).toBe('Processing');
 		expect(panelIsError(run.status_panel)).toBe(false);
 		expect(run.deleted).toEqual([]);
@@ -607,7 +681,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('status 3 still clears the pid and refreshes the component, and stops the spinner', async () => {
-		const run = await drivePoll({ result: { status: 3 }, msg: 'OK. Request done' });
+		const run = await drivePoll({ ok: true, data: { status: 3 } });
 		expect(panelText(run.status_panel)).toBe('Process done');
 		// A finished run reports as `success`, never as `info`: the panel paints
 		// severity, and an outcome sharing the neutral grey of "the model is
@@ -619,7 +693,7 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	});
 
 	test('status 1 still clears the stale pid, reads Inactive and stops the spinner', async () => {
-		const run = await drivePoll({ result: { status: 1 }, msg: 'OK. Request done' });
+		const run = await drivePoll({ ok: true, data: { status: 1 } });
 		expect(panelText(run.status_panel)).toBe('Inactive');
 		expect(run.deleted).toEqual(['transcriber_process_rsc167_1']);
 		expect(run.scheduled).toEqual([]);
@@ -634,16 +708,16 @@ describe('client poll honesty (render_tool_transcription.get_server_status)', ()
 	 */
 	test('the real server failure envelope renders as a failure in the browser', async () => {
 		const envelope = liveFailureEnvelope();
-		expect(envelope.result).toBe(false); // the harvest actually ran
-		const run = await drivePoll(envelope);
-		expect(panelText(run.status_panel)).toContain(envelope.msg);
+		expect(envelope.ok).toBe(false); // the harvest actually ran
+		const run = await drivePoll(clientFailure(envelope));
+		expect(panelText(run.status_panel)).toContain(envelope.error.message);
 		expect(panelIsError(run.status_panel)).toBe(true);
 		expect(run.deleted).toEqual([]);
 		expect(run.scheduled).toEqual([]);
 	});
 
 	test('no stored pid → the poll never calls the server at all', async () => {
-		const run = await drivePoll({ result: { status: 3 } }, null);
+		const run = await drivePoll({ ok: true, data: { status: 3 } }, null);
 		expect(run.requests).toEqual([]);
 		expect(run.status_panel.shown).toEqual([]);
 	});
@@ -1333,7 +1407,7 @@ describe('backgroundRepairModel — deletes only what fails, restores only what 
 
 		// Released: the model is repairable again.
 		const third = await request();
-		expect(third.result).toBe(true);
+		expect(third.data).toBe(true);
 		releaseModelRepairLock(KNOWN);
 	});
 });
@@ -1365,7 +1439,7 @@ describe('model sources report a real state, and a download cannot claim a broke
 			principal: admin,
 			userId: 1,
 		} as unknown as ToolActionContext);
-		const result = response.result as {
+		const result = response.data as {
 			diarization: {
 				installed: boolean;
 				state: string;

@@ -130,7 +130,7 @@ const rawExport = async (
 			},
 		}),
 	);
-	const result = response.result as { columns: ProtocolLine[]; rows: ProtocolLine[] };
+	const result = response.data as { columns: ProtocolLine[]; rows: ProtocolLine[] };
 	expect(Array.isArray(result?.columns)).toBe(true);
 	return result;
 };

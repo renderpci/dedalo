@@ -11,8 +11,9 @@
  * machine channel; nothing matched. Then WC-051 gave it the token `not_logged`.
  * Envelope v2 makes that structural: the machine channel is `error.code`, the
  * code is `auth.not_logged` (LEGACY_TOKEN_MAP: not_logged → auth.not_logged),
- * the compat mirror `errors:[code]` carries the same value during the window,
- * and `msg` (compat) is the registry English — never the code.
+ * and the human sentence rides `error.message` — never the code. The PHP-era
+ * compat mirror (`result`/`msg`/`errors`) was removed on 2026-08-16
+ * (WC-2026-08-16-error-envelope-compat-removal); its ABSENCE is pinned below.
  *
  * `auth.maintenance` (a demoted non-root session while maintenance is on) is
  * the SIBLING at the same 401: the client relogin policy keys on both codes.
@@ -47,9 +48,6 @@ describe('the server answers an expired/absent session with the code the client 
 			ok: boolean;
 			request_id: string;
 			error: { code: string; category: string; message: string; label_key: string };
-			result: unknown;
-			msg: string;
-			errors: string[];
 		};
 		expect(body.ok).toBe(false);
 		expect(body.request_id).toBe(context.requestId);
@@ -57,11 +55,11 @@ describe('the server answers an expired/absent session with the code the client 
 		expect(body.error.code).toBe('auth.not_logged');
 		expect(body.error.category).toBe('auth');
 		expect(body.error.label_key).toBe(ERROR_REGISTRY['auth.not_logged'].label_key);
-		// The compat mirror during the window: errors[0] IS the code, never prose.
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['auth.not_logged']);
+		// The retired compat mirror is GONE — no second spelling of the answer.
+		expect('result' in body).toBe(false);
+		expect('errors' in body).toBe(false);
+		expect('msg' in body).toBe(false);
 		// The human message stays where humans read it, and is NOT the code.
-		expect(body.msg).toBe('Authentication required');
 		expect(body.error.message).toBe('Authentication required');
 	});
 

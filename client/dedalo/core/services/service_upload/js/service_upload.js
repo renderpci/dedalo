@@ -460,8 +460,8 @@ const get_system_info = async function() {
 *   @param {number}  [options.max_size_bytes]  - Maximum allowed size in bytes; falsy = no cap.
 *   @param {string|null} [options.tipo]        - Ontology tipo of the owning component.
 *   @param {number|false} [options.max_concurrent] - Max simultaneous XHR connections; falsy = unlimited.
-* @returns {Promise<Object>} API response object. On success `{result:true, file_data:{…}}`;
-*   on ANY failure (validation, transport, abort, server refusal) `{result:false, msg:string}`.
+* @returns {Promise<Object>} API response object. On success the envelope `{ok:true, data, file_data:{…}}`;
+*   on ANY failure (validation, transport, abort, server refusal) `{ok:false, error:ApiError}`.
 *   (!) It ALWAYS returns — see defect D1 in upload_transport.js.
 */
 export const upload = async function(options) {
@@ -589,7 +589,7 @@ export const upload = async function(options) {
 * so that the owning component can trigger server-side post-processing
 * (e.g. component_av media pipeline, tool_import_dedalo_csv row processing).
 *
-* On upload failure returns `{ result: false, msg: <string> }` without publishing
+* On upload failure returns `{ ok:false, error:ApiError }` without publishing
 * the done event, so callers can surface the error independently.
 *
 * @param {Object} options - Upload options.

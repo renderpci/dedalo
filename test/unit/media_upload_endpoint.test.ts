@@ -89,26 +89,18 @@ describe('media upload endpoint (fail-closed auth/CSRF)', () => {
 		expect(res.status).toBe(403);
 		// The rejection body KEY SET is contractual and had no coverage. Envelope
 		// v2 (engineering/ERRORS_SPEC.md §3): `error.code` is the machine-readable
-		// carrier, `errors[]`/`msg`/`result` the bounded compat mirror
-		// `upload_transport.js` still reads. Asserting the key set — not just the
-		// presence of `error` — is what stops an undeclared key (the Dropzone-only
-		// `error` STRING removed with service_dropzone,
-		// WC-2026-08-03-service-dropzone-folded-into-service-upload) coming back.
+		// carrier and `error.message` the sentence; the PHP-era compat mirror
+		// (`result`/`msg`/`errors`) was REMOVED on 2026-08-16
+		// (WC-2026-08-16-error-envelope-compat-removal). Asserting the key set —
+		// not just the presence of `error` — is what stops an undeclared key (the
+		// Dropzone-only `error` STRING removed with service_dropzone,
+		// WC-2026-08-03-service-dropzone-folded-into-service-upload) coming back,
+		// and pins that the retired mirror does not grow back.
 		const body = (await res.json()) as Record<string, unknown>;
-		expect(Object.keys(body).sort()).toEqual([
-			'error',
-			'errors',
-			'msg',
-			'ok',
-			'request_id',
-			'result',
-		]);
+		expect(Object.keys(body).sort()).toEqual(['error', 'ok', 'request_id']);
 		expect(body.ok).toBe(false);
 		expect((body.error as ApiError).code).toBe('auth.csrf_failed');
-		// The compat mirror still carries one machine-readable token and a sentence.
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['auth.csrf_failed']);
-		expect(body.msg).toBe('CSRF validation failed');
+		expect((body.error as ApiError).message).toBe('CSRF validation failed');
 	});
 
 	test.if(HAVE_MAGICK)('valid session + CSRF stages the file and returns file_data', async () => {
@@ -124,16 +116,13 @@ describe('media upload endpoint (fail-closed auth/CSRF)', () => {
 		const body = (await res.json()) as {
 			ok: boolean;
 			data: boolean;
-			result: boolean;
 			file_data: Record<string, unknown>;
 		};
 		expect(body.ok).toBe(true);
 		// `data` is the boolean outcome and `file_data` a TOP-LEVEL extension key:
-		// upload_transport.js gates every part on `api_response.result !== true`
-		// (:803) and reads `api_response.file_data` (:970), so the compat mirror of
-		// `data` has to be exactly `true`.
+		// upload_transport.js gates every part on the outcome flag and reads
+		// `api_response.file_data`, so `data` has to be exactly `true`.
 		expect(body.data).toBe(true);
-		expect(body.result).toBe(true);
 		expect(body.file_data.complete).toBe(true);
 		expect(body.file_data.extension).toBe('jpg');
 		expect(body.file_data.tmp_name).toBe('shot.jpg');
@@ -192,10 +181,10 @@ describe('chunked upload contract through the real server (the browser flow)', (
 			);
 			expect(joinRes.status).toBe(200);
 			const joinBody = (await joinRes.json()) as {
-				result: boolean;
+				data: boolean;
 				file_data: Record<string, unknown>;
 			};
-			expect(joinBody.result).toBe(true);
+			expect(joinBody.data).toBe(true);
 			expect(joinBody.file_data.tmp_name).toBe('c.jpg');
 			expect(joinBody.file_data.extension).toBe('jpg');
 			expect(joinBody.file_data.complete).toBe(true);
@@ -369,23 +358,13 @@ describe('join verification reaches past the first 8192 bytes', () => {
 		// (WC-2026-08-03-service-dropzone-folded-into-service-upload); asserting
 		// the key set — not just the presence of the error object — is what stops
 		// it, or any other undeclared key, being reintroduced.
-		expect(Object.keys(body).sort()).toEqual([
-			'error',
-			'errors',
-			'msg',
-			'ok',
-			'request_id',
-			'result',
-		]);
+		expect(Object.keys(body).sort()).toEqual(['error', 'ok', 'request_id']);
 		expect(body.ok).toBe(false);
 		expect((body.error as ApiError).code).toBe('media.upload_rejected');
 		// The VALIDATOR'S OWN SENTENCE still reaches the curator: the code is
-		// public-disclosure, so the refusal reason rides `error.message` (and the
-		// compat `msg`) instead of a raw exception string in `errors[]`.
+		// public-disclosure, so the refusal reason rides `error.message` instead of
+		// a raw exception string.
 		expect((body.error as ApiError).message).toContain('verification failed');
-		expect(String(body.msg)).toContain('verification failed');
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['media.upload_rejected']);
 		expect(existsSync(resolve(stagingDir(UPLOAD_USER, 'kd_corrupt'), 'hostile.jpg'))).toBe(false);
 	});
 

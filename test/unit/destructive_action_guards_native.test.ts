@@ -195,7 +195,7 @@ describe('add_hierarchy — install vs reset differ ONLY by the options object',
 		const calls: unknown[][] = [];
 		const fn = (async (...args: unknown[]) => {
 			calls.push(args);
-			return { result: true, msg: 'OK', errors: [], responses: [] };
+			return { ok: true, msg: 'OK', errors: [], responses: [] };
 		}) as unknown as HierarchiesImporter;
 		return { fn, calls };
 	}
@@ -242,7 +242,7 @@ describe('dataframe_control — the fix flag separates a read from a destructive
 		const calls: unknown[][] = [];
 		const fn = (async (...args: unknown[]) => {
 			calls.push(args);
-			return { result: {}, msg: 'OK', errors: [] };
+			return { data: {}, msg: 'OK', errors: [] };
 		}) as unknown as DataframeScan;
 		return { fn, calls };
 	}

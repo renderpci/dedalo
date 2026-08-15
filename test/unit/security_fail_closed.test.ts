@@ -56,7 +56,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 				authedContext(),
 			);
 			expect(res.status).toBe(400);
-			expect(res.body.result).toBe(false);
+			expect(res.body.ok).toBe(false);
 		}
 	});
 
@@ -66,15 +66,24 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 			anonymousContext(),
 		);
 		expect(unknownClass.status).toBe(400);
-		expect(unknownClass.body.result).toBe(false);
+		expect(unknownClass.body.ok).toBe(false);
 
 		const unknownAction = await dispatchRqo(
 			{ action: 'drop_all_tables', dd_api: 'dd_core_api' } as Rqo,
 			anonymousContext(),
 		);
 		expect(unknownAction.status).toBe(400);
-		// Identical message — no oracle for which part was wrong.
-		expect(unknownAction.body.msg).toBe(unknownClass.body.msg);
+		// Identical refusal — no oracle for which part was wrong. (`details.action`
+		// echoes the CALLER'S OWN action name, so it is not part of the answer.)
+		const errorOf = (body: Record<string, unknown>) => {
+			const { code, category, message } = body.error as {
+				code: string;
+				category: string;
+				message: string;
+			};
+			return { code, category, message };
+		};
+		expect(errorOf(unknownAction.body)).toEqual(errorOf(unknownClass.body));
 	});
 
 	test('inherited Object.prototype keys are NOT dispatchable actions (API-01)', async () => {
@@ -95,9 +104,24 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 				authedContext(), // fully authenticated: prove Gate 1 rejects BEFORE the handler
 			);
 			expect(res.status).toBe(400);
-			expect(res.body.result).toBe(false);
+			expect(res.body.ok).toBe(false);
 			// Same shape as any unregistered action — no distinct 500 / stack.
-			expect(res.body.msg).toBe(unknownAction.body.msg);
+			// (`details.action` echoes the caller's own key, so compare the answer.)
+			const { code, category, message } = res.body.error as {
+				code: string;
+				category: string;
+				message: string;
+			};
+			const reference = unknownAction.body.error as {
+				code: string;
+				category: string;
+				message: string;
+			};
+			expect({ code, category, message }).toEqual({
+				code: reference.code,
+				category: reference.category,
+				message: reference.message,
+			});
 		}
 		// An inherited key in the CLASS (dd_api) position is equally rejected.
 		const inheritedClass = await dispatchRqo(
@@ -105,7 +129,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 			anonymousContext(),
 		);
 		expect(inheritedClass.status).toBe(400);
-		expect(inheritedClass.body.result).toBe(false);
+		expect(inheritedClass.body.ok).toBe(false);
 	});
 
 	test('maintenance mode is enforced PER REQUEST — a pre-maintenance non-root session is refused (AUTH-05)', async () => {
@@ -168,7 +192,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 			anonymousContext(),
 		);
 		expect(environment.status).toBe(200);
-		const result = environment.body.result as {
+		const result = environment.body.data as {
 			page_globals: {
 				is_logged: boolean;
 				dedalo_db_name: unknown;
@@ -332,7 +356,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 			context,
 		);
 		expect(denied.status).toBe(403);
-		expect(denied.body.result).toBe(false);
+		expect(denied.body.ok).toBe(false);
 	});
 
 	test('superuser passes the read gate (level 3 everywhere)', async () => {
@@ -379,7 +403,7 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 			context,
 		);
 		expect(ok.status).toBe(200);
-		const result = ok.body.result as { data: unknown[] };
+		const result = ok.body.data as { data: unknown[] };
 		expect(result.data.length).toBeGreaterThan(0);
 	});
 });
