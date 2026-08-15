@@ -27,6 +27,27 @@
 			min-height: 4.5rem;
 			padding: 0.5rem;
 		}
+
+		// LOAD-TIME HEIGHT RESERVATION.
+		// The page renders its elements in parallel, each behind a spinner
+		// placeholder (ui.load_item_with_spinner). The menu placeholder is pinned
+		// to the menu's own height (menu.less); every OTHER page element is the
+		// main body (section, area, tool), which will fill the viewport below the
+		// menu. Reserving that height up front keeps the document taller than the
+		// viewport from the first paint, so the scrollbar never appears/disappears
+		// and neither the menu nor the body spinner shifts when a node swaps in.
+		>.container_placeholder:not(.menu_placeholder) {
+			min-height: calc(100vh - var(--menu_heigth));
+			margin-top: 0px;
+			align-items: flex-start;
+			padding-top: 1rem;
+
+			// the spinner is absolutely positioned and centres itself on the box;
+			// in a viewport-tall box it must stay on the label's line instead.
+			>.spinner {
+				top: 0.85rem;
+			}
+		}
 	}
 
 	>.bubbles_notification_container {
