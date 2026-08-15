@@ -33,6 +33,7 @@ import {
 	type OntologyExportIo,
 	runExportOntologies,
 } from '../../tools/tool_ontology_parser/server/tool_ontology_parser.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 function makeContext(options: Record<string, unknown>, isDeveloper = true): ToolActionContext {
 	return {
@@ -135,25 +136,21 @@ describe('setOntologyIoPath', () => {
 describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 	test('non-developer callers are refused before any IO', async () => {
 		const calls: string[] = [];
-		const response = await runExportOntologies(
-			makeContext({ selected_ontologies: ['dd'] }, false),
-			makeIo(calls),
+		const refusal = await refusalOf(
+			runExportOntologies(makeContext({ selected_ontologies: ['dd'] }, false), makeIo(calls)),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['unauthorized']);
+		expect(refusal.code).toBe('perm.developer_required');
 		expect(calls).toEqual([]);
 	});
 
 	test('empty or non-array selected_ontologies is rejected before any IO', async () => {
 		const calls: string[] = [];
 		for (const bad of [undefined, null, [], 'dd', 42]) {
-			const response = await runExportOntologies(
-				makeContext({ selected_ontologies: bad }),
-				makeIo(calls),
+			const refusal = await refusalOf(
+				runExportOntologies(makeContext({ selected_ontologies: bad }), makeIo(calls)),
 			);
-			expect(response.result).toBe(false);
-			expect(response.msg).toBe('Error. Invalid or empty selected_ontologies parameter');
-			expect(response.errors).toEqual(['selected_ontologies must be a non-empty array']);
+			expect(refusal.code).toBe('request.invalid_options');
+			expect(refusal.publicMessage).toBe('selected_ontologies must be a non-empty array');
 		}
 		expect(calls).toEqual([]);
 	});
@@ -181,12 +178,12 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 		expect(calls[1]).toBe('export_ontology_info');
 		expect(calls[calls.length - 2]).toBe('export_private_lists_to_file');
 		expect(calls[calls.length - 1]).toBe('export_llm_map');
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		const report = response.data as { summary: string; ar_msg: string[] };
 		// Summary names the count + the target I/O directory (absolute, env-derived).
-		expect(response.msg).toContain('Exported 2 ontologies to ');
-		expect(response.errors).toEqual([]);
+		expect(report.summary).toContain('Exported 2 ontologies to ');
 		// ar_msg: one line per TLD + private lists + llm map
-		expect(response.ar_msg).toEqual([
+		expect(report.ar_msg).toEqual([
 			'OK. Request done: aa0',
 			'OK. Request done: bb0',
 			'OK. Request done',
@@ -221,61 +218,70 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 		// unbounded would reach tlds.length, strictly sequential would stay at 1.
 		expect(maxInFlight).toBeGreaterThan(1);
 		expect(maxInFlight).toBeLessThan(tlds.length);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
+		const parallelReport = response.data as { summary: string; ar_msg: string[] };
 		// done counts every success.
-		expect(response.msg).toContain(`Exported ${tlds.length} ontologies to `);
+		expect(parallelReport.summary).toContain(`Exported ${tlds.length} ontologies to `);
 		// ar_msg per-TLD lines are in INPUT order despite the reversed completion.
-		expect((response.ar_msg as string[]).slice(0, tlds.length)).toEqual(
+		expect(parallelReport.ar_msg.slice(0, tlds.length)).toEqual(
 			tlds.map((tld) => `OK. Request done: ${tld}0`),
 		);
 	});
 
 	test('updateOntologyInfo failure HARD-aborts before any file is written', async () => {
 		const calls: string[] = [];
-		const response = await runExportOntologies(
-			makeContext({ selected_ontologies: ['dd'] }),
-			makeIo(calls, {
-				updateOntologyInfo: async (userId) => {
-					calls.push(`update_ontology_info:${userId}`);
-					return false;
-				},
-			}),
+		const refusal = await refusalOf(
+			runExportOntologies(
+				makeContext({ selected_ontologies: ['dd'] }),
+				makeIo(calls, {
+					updateOntologyInfo: async (userId) => {
+						calls.push(`update_ontology_info:${userId}`);
+						return false;
+					},
+				}),
+			),
 		);
 		expect(calls).toEqual(['update_ontology_info:77']);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Unable to update ontology information in dd1 (ontology40_1)');
-		expect(response.errors).toEqual(['unable to update_ontology_info']);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain(
+			'Unable to update ontology information in dd1 (ontology40_1)',
+		);
+		expect(refusal.extend?.errors).toEqual(['unable to update_ontology_info']);
 	});
 
 	test('exportOntologyInfo failure HARD-aborts before the per-TLD loop', async () => {
 		const calls: string[] = [];
-		const response = await runExportOntologies(
-			makeContext({ selected_ontologies: ['dd'] }),
-			makeIo(calls, {
-				exportOntologyInfo: async () => {
-					calls.push('export_ontology_info');
-					return fail('Error. Request failed', ['disk full']);
-				},
-			}),
+		const refusal = await refusalOf(
+			runExportOntologies(
+				makeContext({ selected_ontologies: ['dd'] }),
+				makeIo(calls, {
+					exportOntologyInfo: async () => {
+						calls.push('export_ontology_info');
+						return fail('Error. Request failed', ['disk full']);
+					},
+				}),
+			),
 		);
 		expect(calls).toEqual(['update_ontology_info:77', 'export_ontology_info']);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Unable to export the ontology information JSON file');
-		expect(response.errors).toEqual(['unable to export ontology info JSON file']);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain('Unable to export the ontology information JSON file');
+		expect(refusal.extend?.errors).toEqual(['unable to export ontology info JSON file']);
 	});
 
 	test('a per-TLD SOFT failure continues the loop; private lists + LLM map still run', async () => {
 		const calls: string[] = [];
-		const response = await runExportOntologies(
-			makeContext({ selected_ontologies: ['aa', 'bb', 'cc'] }),
-			makeIo(calls, {
-				exportToFile: async (tld) => {
-					calls.push(`export_to_file:${tld}`);
-					return tld === 'bb'
-						? fail(`Error. Request failed: ${tld}`, [`Invalid tld: ${tld}`])
-						: ok(`OK. Request done: ${tld}0`);
-				},
-			}),
+		const refusal = await refusalOf(
+			runExportOntologies(
+				makeContext({ selected_ontologies: ['aa', 'bb', 'cc'] }),
+				makeIo(calls, {
+					exportToFile: async (tld) => {
+						calls.push(`export_to_file:${tld}`);
+						return tld === 'bb'
+							? fail(`Error. Request failed: ${tld}`, [`Invalid tld: ${tld}`])
+							: ok(`OK. Request done: ${tld}0`);
+					},
+				}),
+			),
 		);
 		expect(calls).toEqual([
 			'update_ontology_info:77',
@@ -286,10 +292,10 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 			'export_private_lists_to_file',
 			'export_llm_map',
 		]);
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Errors found. Export Ontologies request failed.');
-		expect(response.errors).toEqual(['Invalid tld: bb']);
-		expect(response.ar_msg).toEqual([
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain('Errors found. Export Ontologies request failed.');
+		expect(refusal.extend?.errors).toEqual(['Invalid tld: bb']);
+		expect(refusal.extend?.ar_msg).toEqual([
 			'OK. Request done: aa0',
 			'Error. Request failed: bb',
 			'OK. Request done: cc0',
@@ -300,14 +306,16 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 
 	test('a THROWN step (COPY file not created) aborts everything — PHP outer catch', async () => {
 		const calls: string[] = [];
-		const response = await runExportOntologies(
-			makeContext({ selected_ontologies: ['aa', 'bb'] }),
-			makeIo(calls, {
-				exportToFile: async (tld) => {
-					calls.push(`export_to_file:${tld}`);
-					throw new Error(`Error Processing Request. File /io/${tld}.copy.gz not created!`);
-				},
-			}),
+		const refusal = await refusalOf(
+			runExportOntologies(
+				makeContext({ selected_ontologies: ['aa', 'bb'] }),
+				makeIo(calls, {
+					exportToFile: async (tld) => {
+						calls.push(`export_to_file:${tld}`);
+						throw new Error(`Error Processing Request. File /io/${tld}.copy.gz not created!`);
+					},
+				}),
+			),
 		);
 		// Under bounded-parallel step 3 the in-flight exports (aa AND bb) may both
 		// launch, but a thrown export still aborts: the remaining sequential steps
@@ -316,25 +324,29 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 		expect(calls).toContain('export_to_file:aa');
 		expect(calls).not.toContain('export_private_lists_to_file');
 		expect(calls).not.toContain('export_llm_map');
-		expect(response.result).toBe(false);
-		expect(response.msg).toBe('Error. Error Processing Request. File /io/aa.copy.gz not created!');
-		expect(response.errors).toEqual(['Error Processing Request. File /io/aa.copy.gz not created!']);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.message).toContain('File /io/aa.copy.gz not created!');
+		expect(refusal.extend?.errors).toEqual([
+			'Error Processing Request. File /io/aa.copy.gz not created!',
+		]);
 	});
 
 	test('private-lists and LLM-map failures are merged but never abort', async () => {
 		const calls: string[] = [];
-		const response = await runExportOntologies(
-			makeContext({ selected_ontologies: ['aa'] }),
-			makeIo(calls, {
-				exportPrivateListsToFile: async () => {
-					calls.push('export_private_lists_to_file');
-					return fail('Error. Request failed', ['private lists failed']);
-				},
-				exportLlmMap: async () => {
-					calls.push('export_llm_map');
-					return fail('Error. Request failed', ['llm map failed']);
-				},
-			}),
+		const refusal = await refusalOf(
+			runExportOntologies(
+				makeContext({ selected_ontologies: ['aa'] }),
+				makeIo(calls, {
+					exportPrivateListsToFile: async () => {
+						calls.push('export_private_lists_to_file');
+						return fail('Error. Request failed', ['private lists failed']);
+					},
+					exportLlmMap: async () => {
+						calls.push('export_llm_map');
+						return fail('Error. Request failed', ['llm map failed']);
+					},
+				}),
+			),
 		);
 		expect(calls).toEqual([
 			'update_ontology_info:77',
@@ -343,8 +355,8 @@ describe('runExportOntologies ordering/abort semantics (PHP :301-409)', () => {
 			'export_private_lists_to_file',
 			'export_llm_map',
 		]);
-		expect(response.result).toBe(false);
-		expect(response.errors).toEqual(['private lists failed', 'llm map failed']);
+		expect(refusal.code).toBe('tool.action_failed');
+		expect(refusal.extend?.errors).toEqual(['private lists failed', 'llm map failed']);
 	});
 });
 

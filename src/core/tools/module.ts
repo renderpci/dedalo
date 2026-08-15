@@ -17,6 +17,7 @@
 
 import type { ApiEnvelope } from '../errors/schema.ts';
 import type { Principal } from '../security/permissions.ts';
+import { currentRequestContext } from '../security/request_context.ts';
 
 /**
  * TRANSITIONAL — a not-yet-swept tool body (`{result, msg, errors, …}`), the
@@ -73,6 +74,23 @@ export interface ToolActionContext {
 	 * the job outlives the request, so there is no live socket to ask.
 	 */
 	clientIp?: string;
+	/**
+	 * The request id the tool's envelope carries (`ok(data, {requestId})`).
+	 * OPTIONAL because a background job outlives the request that started it —
+	 * read it through `toolRequestId(context)`, never directly, so a handler
+	 * running under the executor degrades to '' instead of crashing.
+	 */
+	requestId?: string;
+}
+
+/**
+ * The request id for a tool handler's envelope: the explicitly threaded one,
+ * else the request-scoped identity context (foreground calls run inside
+ * dispatchRqo's `runWithRequestContext`), else '' (background executor — the
+ * job has no live request).
+ */
+export function toolRequestId(context: ToolActionContext): string {
+	return context.requestId ?? currentRequestContext()?.requestId ?? '';
 }
 
 /**

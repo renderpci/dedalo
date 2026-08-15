@@ -665,8 +665,11 @@ describe('tool_identify::cluster — the background tier', () => {
 		const jobId = response.background_job_id as string;
 		await new Promise((resolve) => setTimeout(resolve, 30));
 		const job = getBackgroundJob(jobId);
-		expect(job?.status).toBe('done');
-		expect((job?.result as { errors?: string[] })?.errors).toEqual(['invalid_request']);
+		// The handler REFUSES BY THROWING now (ERRORS_SPEC §4), so the terminal
+		// state is 'error' with the refusal's sentence on the job record — which is
+		// what get_background_job_status serves to the poller.
+		expect(job?.status).toBe('error');
+		expect(job?.error).toContain('section_tipo is required');
 	});
 
 	test('an action outside the allowlist is refused a fork', () => {

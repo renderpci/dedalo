@@ -143,7 +143,7 @@ async function pollWithEngine(engine: string): Promise<{
 			},
 		},
 		{
-			gate: async () => null,
+			gate: async () => {},
 			transcriberConfig: async () => ({ uri: 'https://asr.example.org/api', key: 'k' }),
 			mediaContext: async () => ({
 				spec: AV_SPEC,

@@ -32,6 +32,7 @@
 import { SQL } from 'bun';
 import { readEnv } from '../../../config/env.ts';
 import { readString } from '../../../config/readers.ts';
+import type { ErrorCode } from '../../../core/errors/index.ts';
 
 /** Rows/mutation results from `.unsafe()` carry MySQL metadata on the array. */
 export interface MariadbExecResult {
@@ -177,7 +178,21 @@ const MSG_DATABASE_NOT_READY = 'Database is NOT ready (missing or engine unreach
  * (tests / process shutdown). Holds no request identity: a target database
  * name is install state, never per-user/lang/session.
  */
-const probeStatusMemo = new Map<string, { at: number; status: { result: boolean; msg: string } }>();
+const probeStatusMemo = new Map<string, { at: number; status: TargetDatabaseStatus }>();
+
+/**
+ * A target database's reachability verdict — a NESTED PAYLOAD the maintenance
+ * widget renders, not an API envelope. It carries `ok` + the registered code
+ * (`diffusion.connection_failed`) rather than the retired `{result,msg}` pair,
+ * so a reader branches on a code instead of on prose
+ * (engineering/ERRORS_SPEC.md §1: one code per failure, never a sentence).
+ */
+export interface TargetDatabaseStatus {
+	ok: boolean;
+	/** Present only when `ok` is false. */
+	code?: ErrorCode;
+	message: string;
+}
 
 /**
  * NON-EVICTING, NON-THROWING reachability verdict for one target database —
@@ -189,18 +204,16 @@ const probeStatusMemo = new Map<string, { at: number; status: { result: boolean;
  * accordion panel must not tear down the pool a live publication run is using.
  * A panel read observes; it never mutates write-path state.
  *
- * Best-effort BY ORACLE CONTRACT: PHP logged a WARNING and returned
- * result:false so the panel still rendered (:991-996). Memoized per database
- * for PROBE_STATUS_TTL_MS so N accordion panels cost ONE round-trip.
+ * Best-effort BY ORACLE CONTRACT: PHP logged a WARNING and returned a NEGATIVE
+ * verdict so the panel still rendered (:991-996). Memoized per database for
+ * PROBE_STATUS_TTL_MS so N accordion panels cost ONE round-trip.
  */
-export async function getTargetDatabaseStatus(
-	database: string,
-): Promise<{ result: boolean; msg: string }> {
+export async function getTargetDatabaseStatus(database: string): Promise<TargetDatabaseStatus> {
 	const cached = probeStatusMemo.get(database);
 	if (cached !== undefined && Date.now() - cached.at < PROBE_STATUS_TTL_MS) {
 		return cached.status;
 	}
-	let status: { result: boolean; msg: string };
+	let status: TargetDatabaseStatus;
 	try {
 		const pool = getTargetPool(database);
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -217,9 +230,13 @@ export async function getTargetDatabaseStatus(
 		} finally {
 			if (timer !== undefined) clearTimeout(timer);
 		}
-		status = { result: true, msg: MSG_DATABASE_READY };
+		status = { ok: true, message: MSG_DATABASE_READY };
 	} catch (error) {
-		status = { result: false, msg: MSG_DATABASE_NOT_READY };
+		status = {
+			ok: false,
+			code: 'diffusion.connection_failed',
+			message: MSG_DATABASE_NOT_READY,
+		};
 		console.warn(`[diffusion] target database probe failed [${database}]`, error);
 	}
 	probeStatusMemo.set(database, { at: Date.now(), status });
@@ -240,9 +257,13 @@ export async function probeAdhocMariadbConnection(creds: {
 	database: string;
 	username: string;
 	password: string;
-}): Promise<{ result: boolean; msg: string }> {
+}): Promise<TargetDatabaseStatus> {
 	if (creds.database === '' || creds.username === '') {
-		return { result: false, msg: 'MariaDB database and user are required' };
+		return {
+			ok: false,
+			code: 'diffusion.connection_failed',
+			message: 'MariaDB database and user are required',
+		};
 	}
 	const common = {
 		adapter: 'mariadb' as const,
@@ -258,10 +279,14 @@ export async function probeAdhocMariadbConnection(creds: {
 	const probe = new SQL(options);
 	try {
 		await probe.unsafe('SELECT 1', []);
-		return { result: true, msg: `Connected to MariaDB '${creds.database}' — OK` };
+		return { ok: true, message: `Connected to MariaDB '${creds.database}' — OK` };
 	} catch (error) {
 		const detail = (error as MariadbErrorLike)?.message ?? String(error);
-		return { result: false, msg: `MariaDB connection failed: ${detail}` };
+		return {
+			ok: false,
+			code: 'diffusion.connection_failed',
+			message: `MariaDB connection failed: ${detail}`,
+		};
 	} finally {
 		await probe.close().catch(() => {});
 	}

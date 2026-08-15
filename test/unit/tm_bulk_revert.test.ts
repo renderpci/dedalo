@@ -22,6 +22,7 @@ import {
 	toolTimeMachineBulkRevert,
 } from '../../tools/tool_time_machine/server/bulk_revert.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 const REAL_RECORD_SCOPE = { ...realRecordScope };
@@ -161,20 +162,20 @@ describe('bulk_revert_process — DB drive', () => {
 	});
 
 	test('an unknown bulk_process_id is a loud not_found, never a silent success', async () => {
-		const response = await toolTimeMachineBulkRevert(
-			contextOf({ section_tipo: SECTION_TIPO, bulk_process_id: 987654321 }),
+		const refusal = await refusalOf(
+			toolTimeMachineBulkRevert(
+				contextOf({ section_tipo: SECTION_TIPO, bulk_process_id: 987654321 }),
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('not_found');
+		expect(refusal.code).toBe('tool.target_not_found');
 	});
 
 	test('a missing/invalid bulk_process_id is refused', async () => {
 		for (const bad of [{}, { bulk_process_id: 0 }, { bulk_process_id: 'x' }]) {
-			const response = await toolTimeMachineBulkRevert(
-				contextOf({ section_tipo: SECTION_TIPO, ...bad }),
+			const refusal = await refusalOf(
+				toolTimeMachineBulkRevert(contextOf({ section_tipo: SECTION_TIPO, ...bad })),
 			);
-			expect(response.result).toBe(false);
-			expect(response.errors).toContain('invalid_request');
+			expect(refusal.code).toBe('request.invalid_options');
 		}
 	});
 
@@ -191,10 +192,11 @@ describe('bulk_revert_process — DB drive', () => {
 			const response = await toolTimeMachineBulkRevert(
 				contextOf({ section_tipo: SECTION_TIPO, bulk_process_id: BATCH_BULK_ID }),
 			);
-			expect(response.counter).toBe(0);
-			expect((response.errors ?? []).some((error) => error.startsWith('permissions_denied:'))).toBe(
-				true,
-			);
+			const skipped = response.data as { counter: number; skipped: string[] };
+			expect(skipped.counter).toBe(0);
+			// The per-row refusals are PAYLOAD now (`data.skipped`), never the
+			// envelope's failure channel — the batch itself did not fail.
+			expect(skipped.skipped.some((error) => error.startsWith('permissions_denied:'))).toBe(true);
 			expect(await liveValues()).toEqual(before);
 		} finally {
 			mock.module('../../src/core/security/record_scope.ts', () => REAL_RECORD_SCOPE);
@@ -209,9 +211,10 @@ describe('bulk_revert_process — DB drive', () => {
 				bulk_revert_process_label: 'gate revert',
 			}),
 		);
-		expect(response.result).toBe(true);
-		expect(response.counter).toBe(IDS.length);
-		const newBulkId = response.bulk_process_id as number | null;
+		expect(response.ok).toBe(true);
+		const batch = response.data as { counter: number; bulk_process_id: number | null };
+		expect(batch.counter).toBe(IDS.length);
+		const newBulkId = batch.bulk_process_id;
 		if (typeof newBulkId === 'number') mintedBulkIds.push(newBulkId);
 
 		const values = await liveValues();

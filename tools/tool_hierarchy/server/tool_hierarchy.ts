@@ -25,6 +25,7 @@
  * this handler runs (PHP security::assert_section_permission).
  */
 
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { clearOntologyDerivedCaches } from '../../../src/core/ontology/cache_invalidation.ts';
 import {
 	ensureHierarchy,
@@ -32,7 +33,20 @@ import {
 	rebuildHierarchy,
 } from '../../../src/core/ontology/hierarchy_state.ts';
 import { deleteSectionRecord } from '../../../src/core/section/record/delete_record.ts';
-import type { ToolActionContext, ToolResponse } from '../../../src/core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../../src/core/tools/module.ts';
+
+/** Neither action can address a hierarchy without its record — a caller fault. */
+function missingTarget(action: string): DedaloError {
+	return new DedaloError('request.invalid_options', {
+		coordinates: { action },
+		message: `Missing section_id or section_tipo [${action}]`,
+		publicMessage: 'section_tipo and a positive section_id are required',
+	});
+}
 
 /** The caller's hierarchy1 record, or null when the options are unusable. */
 function targetOf(context: ToolActionContext): { sectionTipo: string; sectionId: number } | null {
@@ -47,20 +61,11 @@ function targetOf(context: ToolActionContext): { sectionTipo: string; sectionId:
 /** READ: the invariant checklist the client renders as the status panel. */
 export async function toolHierarchyInspect(context: ToolActionContext): Promise<ToolResponse> {
 	const target = targetOf(context);
-	if (target === null) {
-		return {
-			result: false,
-			msg: 'Error. Request failed [inspect_hierarchy]',
-			errors: ['Missing section_id or section_tipo.'],
-		};
-	}
+	if (target === null) throw missingTarget('inspect_hierarchy');
+	// `usable` inside the state IS the verdict the panel renders — the legacy
+	// body's 'Hierarchy is ready/incomplete' msg only restated it.
 	const state = await inspectHierarchy(target.sectionId);
-	return {
-		result: true,
-		msg: state.usable ? 'Hierarchy is ready' : 'Hierarchy is incomplete',
-		errors: [],
-		state,
-	};
+	return ok({ state }, { requestId: toolRequestId(context) });
 }
 
 /** WRITE: converge to the invariant (force_to_create → tear the ontology down first). */
@@ -68,13 +73,7 @@ export async function toolHierarchyGenerateVirtualSection(
 	context: ToolActionContext,
 ): Promise<ToolResponse> {
 	const target = targetOf(context);
-	if (target === null) {
-		return {
-			result: false,
-			msg: 'Error. Request failed [generate_virtual_section]',
-			errors: ['Missing section_id or section_tipo.'],
-		};
-	}
+	if (target === null) throw missingTarget('generate_virtual_section');
 	const forceToCreate = context.options.force_to_create === true;
 
 	const outcome = forceToCreate
@@ -86,11 +85,19 @@ export async function toolHierarchyGenerateVirtualSection(
 	// The menu/tree read ontology-derived caches; a provisioned tld must show up now.
 	await clearOntologyDerivedCaches();
 
-	return {
-		result: outcome.result,
-		msg: outcome.msg,
-		errors: outcome.errors,
-		state: outcome.state,
-		applied: outcome.applied,
-	};
+	if (!outcome.result) {
+		// A NAMED failure extension key (ERRORS_SPEC §3.0, the `start`/`environment`
+		// precedent): the refused client re-renders its checklist from `state`, and
+		// without it the panel can only print a sentence. `errors` is the per-check
+		// detail behind that same panel.
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { section_tipo: target.sectionTipo, section_id: target.sectionId },
+			message: outcome.msg,
+			extend: { state: outcome.state, errors: outcome.errors },
+		});
+	}
+	return ok(
+		{ state: outcome.state, applied: outcome.applied, summary: outcome.msg },
+		{ requestId: toolRequestId(context) },
+	);
 }

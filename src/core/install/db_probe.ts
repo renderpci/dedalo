@@ -50,5 +50,9 @@ export async function testDiffusionConnection(
 ): Promise<DiffusionProbeResult> {
 	// Reach MariaDB ONLY through the diffusion facade (boundary_seam rule).
 	const { probeDiffusionConnection } = await import('../../diffusion/api/info.ts');
-	return probeDiffusionConnection(diffusionConnFromOptions(o));
+	// The facade now answers `{ok, code?, message}` (P1 error sweep). The install
+	// wizard's own `{result,msg}` step contract is untouched here — it is the
+	// install sweep's to retire; this is the one-line adapter between them.
+	const status = await probeDiffusionConnection(diffusionConnFromOptions(o));
+	return { result: status.ok, msg: status.message };
 }

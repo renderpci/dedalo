@@ -13,6 +13,7 @@ import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import { isSafeRemoteUrl } from '../../tools/tool_import_rdf/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 describe('tool_import_rdf module', () => {
 	test('loads with get_rdf_data only, gated at READ level, not backgroundRunnable', async () => {
@@ -49,14 +50,16 @@ describe('tool_import_rdf module', () => {
 
 	test('an empty ar_values is refused before any fetch', async () => {
 		const loaded = await getLoadedTool('tool_import_rdf');
-		const res = await mustGet(loaded!.module.apiActions.get_rdf_data, 'get_rdf_data').handler({
-			principal: await resolvePrincipal(-1),
-			userId: -1,
-			background: false,
-			options: { ar_values: [] },
-		});
-		expect(res.result).toBe(false);
-		expect(res.msg).toContain('Missing ar_values');
+		const refusal = await refusalOf(
+			mustGet(loaded!.module.apiActions.get_rdf_data, 'get_rdf_data').handler({
+				principal: await resolvePrincipal(-1),
+				userId: -1,
+				background: false,
+				options: { ar_values: [] },
+			}),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toContain('Missing ar_values');
 	});
 
 	test('an unsafe URI is reported per-value, never dereferenced', async () => {
@@ -69,11 +72,14 @@ describe('tool_import_rdf module', () => {
 			// declarative 'section' gate is what protects the real wire.
 			options: { ar_values: ['http://169.254.169.254/latest/meta-data'] },
 		});
-		expect(res.result).toEqual([]);
+		const data = res.data as { rdf: unknown[]; errors: string[] };
+		expect(data.rdf).toEqual([]);
 		// Message shape from the SHARED ssrf guard (2026-07-28 audit centralized
 		// it; the per-tool 'SEC-072: refused unsafe RDF URI' wording is gone —
 		// the refusal itself and the empty result are what this test protects).
-		expect(res.errors).toEqual([
+		// The per-URI refusals are PAYLOAD now (`data.errors`), never the
+		// envelope's failure channel.
+		expect(data.errors).toEqual([
 			'http://169.254.169.254/latest/meta-data.rdf: ssrf: refused private/reserved address 169.254.169.254',
 		]);
 	});

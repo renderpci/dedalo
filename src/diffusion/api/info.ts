@@ -8,12 +8,15 @@
  *   panel per node. Node shape per diffusion_utils::get_section_diffusion_nodes:
  *   { tipo, model, label, parents[], children[] } with per-child related
  *   info. The old Bun engine additionally stamped per-node readiness; we stamp
- *   `connection_status` as the PHP object contract
- *   (diffusion_utils::get_connection_status :971, WC-065): a REAL reachability
- *   verdict `{result, msg}` for elements whose target is a MariaDB database,
- *   and `null` for every other format — the client then omits the row entirely
- *   (render_tool_diffusion.js:594-611). A failed probe is a rendered
- *   `result:false`, never a thrown panel.
+ *   `connection_status` (diffusion_utils::get_connection_status :971, WC-065):
+ *   a REAL reachability verdict for elements whose target is a MariaDB
+ *   database, and `null` for every other format — the client then omits the row
+ *   entirely (render_tool_diffusion.js:594-611). A failed probe is a RENDERED
+ *   negative verdict, never a thrown panel.
+ *
+ *   ITS SHAPE IS NOW `{ok, code?, message}` (P1 error sweep), not the PHP-era
+ *   `{result, msg}`: it is a NESTED PAYLOAD, not an envelope, and a widget must
+ *   branch on a registered code rather than on prose.
  * - get_engine_advisory ........ PHP dd_diffusion_api::get_engine_advisory
  *   (:1779): the client reads the body TOP-LEVEL ({state,title,checks,...},
  *   tool_diffusion.js:476-487). Natively there is no separate engine process
@@ -31,7 +34,7 @@ import {
 	getDatabaseNameForElement,
 	termLabelOf,
 } from '../plan/virtual_tree.ts';
-import { getTargetDatabaseStatus } from '../targets/mariadb/db.ts';
+import { getTargetDatabaseStatus, type TargetDatabaseStatus } from '../targets/mariadb/db.ts';
 import { WRITER_REGISTRY } from '../writers/registry.ts';
 
 /** One child field descriptor (PHP get_section_diffusion_nodes children map). */
@@ -45,13 +48,12 @@ interface DiffusionNodeChild {
 }
 
 /**
- * Target-database readiness for one panel — the EXACT object the client reads
- * (`.result` → css class, `.msg` → text). PHP get_connection_status :971.
+ * Target-database readiness for one panel — the object the client reads
+ * (`.ok` → css class, `.message` → text, `.code` → the registered reason).
+ * ONE definition: the prober's own (targets/mariadb/db.ts), re-exported here
+ * because this module is the panel's door.
  */
-export interface DiffusionConnectionStatus {
-	result: boolean;
-	msg: string;
-}
+export type DiffusionConnectionStatus = TargetDatabaseStatus;
 
 /** One accordion panel descriptor for the tool. */
 export interface SectionDiffusionNode {
@@ -134,6 +136,11 @@ function elementOf(
  *
  * The prober is injectable so the shape gate runs without MariaDB.
  */
+/** The one negative verdict this module renders (never a throw — see above). */
+function databaseNotReady(): DiffusionConnectionStatus {
+	return { ok: false, code: 'diffusion.connection_failed', message: MSG_DATABASE_NOT_READY };
+}
+
 export async function connectionStatusForElement(
 	type: string | null,
 	database: string | null,
@@ -145,10 +152,10 @@ export async function connectionStatusForElement(
 		console.warn(
 			`[diffusion] no target database resolved for connection_status [node ${nodeTipo}, type ${type}]`,
 		);
-		return { result: false, msg: MSG_DATABASE_NOT_READY };
+		return databaseNotReady();
 	}
 	// Inside the try: requireSqlIdentifier THROWS on a label that cannot yield a
-	// valid identifier, and that must degrade to a rendered result:false too.
+	// valid identifier, and that must degrade to a rendered negative verdict too.
 	try {
 		return await probe(requireSqlIdentifier(database, 'database'));
 	} catch (error) {
@@ -156,7 +163,7 @@ export async function connectionStatusForElement(
 			`[diffusion] connection_status probe failed [node ${nodeTipo}, database ${database}]`,
 			error,
 		);
-		return { result: false, msg: MSG_DATABASE_NOT_READY };
+		return databaseNotReady();
 	}
 }
 
@@ -242,7 +249,8 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
  */
 export function buildEngineAdvisory(isAdmin: boolean): Record<string, unknown> {
 	return {
-		result: true,
+		// No `result` key: `state` IS the verdict, and an envelope-shaped field
+		// inside a nested payload is exactly what the P1 sweep removes.
 		state: 'ok',
 		is_admin: isAdmin,
 		title: 'Diffusion ready (native engine)',
@@ -269,7 +277,7 @@ export async function probeDiffusionConnection(creds: {
 	database: string;
 	username: string;
 	password: string;
-}): Promise<{ result: boolean; msg: string }> {
+}): Promise<TargetDatabaseStatus> {
 	const { probeAdhocMariadbConnection } = await import('../targets/mariadb/db.ts');
 	return probeAdhocMariadbConnection(creds);
 }

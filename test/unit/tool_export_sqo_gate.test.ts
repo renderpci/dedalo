@@ -17,6 +17,7 @@ import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
 import { toolExportGetExportGrid } from '../../tools/tool_export/server/tool_export.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
@@ -55,37 +56,39 @@ describe('tool_export module surface', () => {
 
 describe('get_export_grid — sqo section targets are gated', () => {
 	test('an sqo naming a section the caller cannot read is refused', async () => {
-		const response = await toolExportGetExportGrid(
-			contextOf(
-				baseOptions({ section_tipo: ['test3'], limit: 1, offset: 0 }),
-				// A principal with no grants at all: dd774 read on 'test3' is 0.
-				NO_ACCESS,
+		const refusal = await refusalOf(
+			toolExportGetExportGrid(
+				contextOf(
+					baseOptions({ section_tipo: ['test3'], limit: 1, offset: 0 }),
+					// A principal with no grants at all: dd774 read on 'test3' is 0.
+					NO_ACCESS,
+				),
 			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized');
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('a non-string sqo section entry is refused (fail closed)', async () => {
-		const response = await toolExportGetExportGrid(
-			contextOf(baseOptions({ section_tipo: [{ evil: true }], limit: 1, offset: 0 })),
+		const refusal = await refusalOf(
+			toolExportGetExportGrid(
+				contextOf(baseOptions({ section_tipo: [{ evil: true }], limit: 1, offset: 0 })),
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('unauthorized');
+		expect(refusal.code).toBe('perm.denied');
 	});
 
 	test('an authorized caller still gets the grid (the gate is not a blanket deny)', async () => {
 		const response = await toolExportGetExportGrid(
 			contextOf(baseOptions({ section_tipo: ['test3'], limit: 0, offset: 0 })),
 		);
-		expect(response.result).not.toBe(false);
-		const grid = response.result as { columns?: unknown[]; rows?: unknown[] };
+		expect(response.ok).toBe(true);
+		const grid = response.data as { columns?: unknown[]; rows?: unknown[] };
 		expect(Array.isArray(grid.columns)).toBe(true);
 		expect((grid.columns ?? []).length).toBeGreaterThan(0);
 	});
 
 	test('no sqo at all keeps working (the engine defaults to options.section_tipo)', async () => {
 		const response = await toolExportGetExportGrid(contextOf(baseOptions(undefined)));
-		expect(response.result).not.toBe(false);
+		expect(response.ok).toBe(true);
 	});
 });

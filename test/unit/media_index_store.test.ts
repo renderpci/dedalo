@@ -174,7 +174,7 @@ describe('media_index marker store (S2-31 native port)', () => {
 			[{ database_name: 'web_db', table_name: 't', section_tipo: 'rsc167' }],
 			async () => [1, 2], // DB truth: 1 stays, 2 is new, 999 is gone
 		);
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		expect(result.markers).toBe(2);
 		expect(await fileExists(join(base, 'pub/rsc167_1'))).toBe(true);
 		expect(await fileExists(join(base, 'pub/rsc167_2'))).toBe(true);
@@ -188,7 +188,7 @@ describe('media_index marker store (S2-31 native port)', () => {
 			[{ database_name: 'web_db', table_name: 't', section_tipo: 'rsc167' }],
 			async () => [1],
 		);
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		expect(await fileExists(join(base, 'dbs/web_db/stale_table'))).toBe(false);
 		expect(await fileExists(join(base, 'pub/oh21_5'))).toBe(false); // union pruned too
 		expect(await fileExists(join(base, 'pub/rsc167_1'))).toBe(true);
@@ -203,7 +203,7 @@ describe('media_index marker store (S2-31 native port)', () => {
 				throw missingTable;
 			},
 		);
-		expect(cleared.result).toBe(true);
+		expect(cleared.ok).toBe(true);
 		expect(await fileExists(join(base, 'pub/rsc167_1'))).toBe(false); // nothing published there
 
 		await applyTableState('web_db', 'flaky', 'rsc167', [2], []);
@@ -213,7 +213,7 @@ describe('media_index marker store (S2-31 native port)', () => {
 				throw new Error('connection refused');
 			},
 		);
-		expect(failed.result).toBe(false);
+		expect(failed.ok).toBe(false);
 		expect(failed.errors).toEqual(['web_db.flaky: connection refused']);
 		// fail-closed for CHANGES, not deletions: existing markers survive
 		expect(await fileExists(join(base, 'pub/rsc167_2'))).toBe(true);
@@ -222,7 +222,7 @@ describe('media_index marker store (S2-31 native port)', () => {
 	test('empty targets array clears the store (no publication targets in the ontology)', async () => {
 		await applyTableState('web_db', 't', 'rsc167', [1], []);
 		const result = await rebuildMediaIndexStore([], async () => []);
-		expect(result.result).toBe(true);
+		expect(result.ok).toBe(true);
 		expect(result.markers).toBe(0);
 		expect(await fileExists(join(base, 'pub/rsc167_1'))).toBe(false);
 	});

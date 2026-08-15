@@ -65,6 +65,7 @@ import {
 } from '../../../src/core/ai/model_store.ts';
 import type { MediaTypeSpec } from '../../../src/core/concepts/media.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
+import { DedaloError, LEGACY_TOKEN_MAP, ok } from '../../../src/core/errors/index.ts';
 import { probeFormat } from '../../../src/core/media/engine/ffmpeg.ts';
 import { mediaJobs } from '../../../src/core/media/jobs.ts';
 import {
@@ -92,10 +93,11 @@ import { getAlpha2FromCode } from '../../../src/core/resolve/lang_names.ts';
 import { scheduleBackground } from '../../../src/core/tools/background.ts';
 import { getToolConfig } from '../../../src/core/tools/config.ts';
 import { getLoadedTool } from '../../../src/core/tools/loader.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { assertActionPermission } from '../../../src/core/tools/security.ts';
 import {
@@ -117,8 +119,28 @@ export interface MediaDdo {
 /** The background poll action name (PHP babel_transcriber BACKGROUND_RUNNABLE). */
 const BACKGROUND_POLL_ACTION = 'check_background_transcriber_status';
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: message, errors: [message] };
+/**
+ * The unreachable handler a synthetic ToolActionSpec needs when a gate is run
+ * imperatively (assertActionPermission takes a whole spec). It is never called;
+ * calling it is an engine invariant break, so it throws.
+ */
+async function unreachableHandler(): Promise<ToolResponse> {
+	throw new DedaloError('internal.unexpected', {
+		message: 'tool_transcription: the synthetic permission-gate handler was invoked',
+	});
+}
+
+/**
+ * A gate refusal from `assertActionPermission`, as the registered code the
+ * dispatch chokepoint converts. security.ts still answers with a legacy token
+ * (its own sweep is separate), so the token is mapped here exactly as
+ * src/core/tools/dispatch.ts maps it.
+ */
+function permissionRefusal(check: { msg: string; errors: string[] }, action: string): DedaloError {
+	return new DedaloError(LEGACY_TOKEN_MAP[check.errors[0] ?? ''] ?? 'perm.denied', {
+		coordinates: { tool: 'tool_transcription', action },
+		message: check.msg,
+	});
 }
 
 /** PHP empty() for required-parameter checks. */
@@ -144,25 +166,18 @@ function readMediaDdo(options: Record<string, unknown>): MediaDdo {
 }
 
 /** PHP in-method gate: level `minLevel` on the ddo section + record-in-scope. */
-async function gateRecord(
-	ddo: MediaDdo,
-	ctx: ToolActionContext,
-	minLevel: number,
-): Promise<ToolResponse | null> {
+async function gateRecord(ddo: MediaDdo, ctx: ToolActionContext, minLevel: number): Promise<void> {
 	const check = await assertActionPermission(
-		{ permission: 'record', minLevel, handler: async () => fail('unreachable') },
+		{ permission: 'record', minLevel, handler: unreachableHandler },
 		{ section_tipo: ddo.section_tipo, section_id: ddo.section_id },
 		ctx.principal,
 	);
-	return check.ok ? null : fail(check.msg);
+	if (!check.ok) throw permissionRefusal(check, `record gate (level ${minLevel})`);
 }
 
 /** PHP in-method gate: WRITE level 2 on the media_ddo section + record-in-scope. */
-async function gateRecordWrite(
-	ddo: MediaDdo,
-	ctx: ToolActionContext,
-): Promise<ToolResponse | null> {
-	return gateRecord(ddo, ctx, 2);
+async function gateRecordWrite(ddo: MediaDdo, ctx: ToolActionContext): Promise<void> {
+	await gateRecord(ddo, ctx, 2);
 }
 
 /**
@@ -242,7 +257,7 @@ export function statusPollAvUrl(engine: string, audioRelativePath: string): stri
  */
 export interface StatusPollSeams {
 	/** PHP's in-method READ gate (level 1) on the media_ddo record. */
-	readonly gate?: (ddo: MediaDdo, ctx: ToolActionContext) => Promise<ToolResponse | null>;
+	readonly gate?: (ddo: MediaDdo, ctx: ToolActionContext) => Promise<void>;
 	/** The transcriber's uri/key entry for this engine, or null when unconfigured. */
 	readonly transcriberConfig?: (engine: string) => Promise<{ uri: string; key: string } | null>;
 	/** Media spec/identity/path options for the polled component_av record. */
@@ -259,43 +274,31 @@ async function defaultTranscriberConfig(
 }
 
 async function createTranscribableAudioFile(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const ddo = readMediaDdo(ctx.options);
-		const denied = await gateRecordWrite(ddo, ctx);
-		if (denied !== null) return denied;
+	const ddo = readMediaDdo(ctx.options);
+	await gateRecordWrite(ddo, ctx);
 
-		const { spec, identity, pathOpts } = await resolveMediaToolContext({
-			component_tipo: ddo.component_tipo,
-			section_tipo: ddo.section_tipo,
-			section_id: ddo.section_id,
-		});
-		const relativePath = await ensureTranscribableAudio(spec, identity, pathOpts);
-		return { result: clientMediaUrl(relativePath), msg: 'OK: file was created', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+	const { spec, identity, pathOpts } = await resolveMediaToolContext({
+		component_tipo: ddo.component_tipo,
+		section_tipo: ddo.section_tipo,
+		section_id: ddo.section_id,
+	});
+	const relativePath = await ensureTranscribableAudio(spec, identity, pathOpts);
+	return ok(clientMediaUrl(relativePath), { requestId: toolRequestId(ctx) });
 }
 
 async function deleteTranscribableAudioFile(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const ddo = readMediaDdo(ctx.options);
-		const denied = await gateRecordWrite(ddo, ctx);
-		if (denied !== null) return denied;
+	const ddo = readMediaDdo(ctx.options);
+	await gateRecordWrite(ddo, ctx);
 
-		const { spec, identity, pathOpts } = await resolveMediaToolContext({
-			component_tipo: ddo.component_tipo,
-			section_tipo: ddo.section_tipo,
-			section_id: ddo.section_id,
-		});
-		const deleted = deleteTranscribableAudio(spec, identity, pathOpts);
-		return {
-			result: true,
-			msg: deleted ? 'Ok: file was deleted' : 'OK. File not exist in server, nothing to delete',
-			errors: [],
-		};
-	} catch (error) {
-		return fail((error as Error).message);
-	}
+	const { spec, identity, pathOpts } = await resolveMediaToolContext({
+		component_tipo: ddo.component_tipo,
+		section_tipo: ddo.section_tipo,
+		section_id: ddo.section_id,
+	});
+	// `deleted` says whether a file was actually there — a FACT of the payload
+	// (the legacy body carried it only inside its `msg` prose).
+	const deleted = deleteTranscribableAudio(spec, identity, pathOpts);
+	return ok({ deleted }, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -306,123 +309,134 @@ async function deleteTranscribableAudioFile(ctx: ToolActionContext): Promise<Too
  * check_background_transcriber_status → process_file).
  */
 async function automaticTranscription(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const o = ctx.options;
-		const transcriptionDdo = (o.transcription_ddo ?? {}) as MediaDdo;
-		const mediaDdo = (o.media_ddo ?? {}) as MediaDdo;
-		const sourceLang = String(o.source_lang ?? '');
-		const engine = String(o.transcriber_engine ?? 'babel_transcriber');
-		const quality = String(o.transcriber_quality ?? '');
-		if (
-			sourceLang === '' ||
-			quality === '' ||
-			!mediaDdo.component_tipo ||
-			!transcriptionDdo.section_tipo
-		) {
-			return fail(
+	const o = ctx.options;
+	const transcriptionDdo = (o.transcription_ddo ?? {}) as MediaDdo;
+	const mediaDdo = (o.media_ddo ?? {}) as MediaDdo;
+	const sourceLang = String(o.source_lang ?? '');
+	const engine = String(o.transcriber_engine ?? 'babel_transcriber');
+	const quality = String(o.transcriber_quality ?? '');
+	if (
+		sourceLang === '' ||
+		quality === '' ||
+		!mediaDdo.component_tipo ||
+		!transcriptionDdo.section_tipo
+	) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage:
 				'Missing required parameters: source_lang, transcriber_quality, media_ddo, transcription_ddo',
-			);
-		}
-
-		// WRITE gate on the transcription target (PHP assert_section_permission 2 + scope).
-		const denied = await gateRecordWrite(transcriptionDdo, ctx);
-		if (denied !== null) return denied;
-
-		// TOOLS-06 (2026-07-28 audit): ALSO gate READ on the media SOURCE.
-		// Transcription reads the audio CONTENT of media_ddo — without this a
-		// caller who can write their OWN transcription target could transcribe the
-		// restricted audio of ANY AV record (one they cannot read) into a record
-		// they control. Read level 1 + record-in-scope on the source media record.
-		const mediaDenied = await gateRecord(mediaDdo, ctx, 1);
-		if (mediaDenied !== null) return mediaDenied;
-
-		const { provider, error: providerError } = resolveTranscriberProvider(engine);
-		if (provider === null) return fail(providerError ?? 'unknown transcriber engine');
-		// Config entry is looked up by the ORIGINAL engine name; the POSTed
-		// engine field uses the mapped one ('local' → babel) — PHP does both.
-		const cfg = resolveTranscriberConfig(await getToolConfig('tool_transcription'), engine);
-		if (cfg === null) return fail(`Transcriber config (uri/key) is not defined for '${engine}'`);
-		const mappedEngine = mapTranscriberEngine(engine);
-
-		const { spec, identity, pathOpts } = await resolveMediaToolContext({
-			component_tipo: mediaDdo.component_tipo,
-			section_tipo: mediaDdo.section_tipo,
-			section_id: mediaDdo.section_id,
 		});
-
-		// Two ways to hand a recogniser the audio, and the choice is not cosmetic:
-		//  - an EXTERNAL service fetches a public URL (and so needs one to exist);
-		//  - the institution's OWN box is POSTed the bytes of the speech-optimised
-		//    WAV, so the recording is never published anywhere. That WAV is a
-		//    throwaway derivative, deleted by the completion poll.
-		const isLocalEngine = engine === LOCAL_ASR_ENGINE;
-		const audioRel = isLocalEngine
-			? await ensureTranscribableAudio(spec, identity, pathOpts)
-			: await ensureAudioQuality(spec, identity, pathOpts);
-		const audioPath = isLocalEngine
-			? absoluteFromRelative(audioRel, pathOpts.mediaRoot)
-			: undefined;
-		// An on-premise engine never receives a URL; asking for one would throw
-		// when DEDALO_MEDIA_EXPORT_BASE is unset, which is the normal state of an
-		// install that publishes nothing.
-		const audioUrl = isLocalEngine ? '' : externalMediaUrl(audioRel);
-
-		const result = await provider({
-			uri: cfg.uri,
-			key: cfg.key,
-			engine: mappedEngine,
-			quality,
-			audioUrl,
-			audioPath,
-			langTld2: getAlpha2FromCode(sourceLang) ?? '',
-			userId: ctx.userId,
-			entityName: config.entity,
-		});
-		if (result.result === false) return fail(result.msg);
-
-		// Detach the completion poll (PHP exec_background_check_transcription).
-		// EVERYTHING the poll needs — principal, user, lang, target ddo, the
-		// exact submitted av_url — is captured HERE at enqueue time; the
-		// detached handler never reads ALS (isolation Rule 6).
-		const loaded = await getLoadedTool('tool_transcription');
-		if (loaded !== undefined) {
-			scheduleBackground(
-				loaded,
-				BACKGROUND_POLL_ACTION,
-				{ permission: null, handler: backgroundTranscriberPoll },
-				{
-					key: cfg.key,
-					url: cfg.uri,
-					lang: sourceLang,
-					av_url: audioUrl,
-					// The throwaway WAV the on-premise engine was fed. The poll
-					// deletes it when the job ends, whichever way it ends — this
-					// file is a copy of an interview and must not linger.
-					cleanup_path: audioPath,
-					engine: mappedEngine,
-					user_id: ctx.userId,
-					entity_name: config.entity,
-					transcription_ddo: {
-						component_tipo: String(transcriptionDdo.component_tipo ?? ''),
-						section_tipo: String(transcriptionDdo.section_tipo ?? ''),
-						section_id: Number(transcriptionDdo.section_id ?? 0),
-					},
-					pid: result.result.pid,
-				},
-				ctx.principal,
-				ctx.userId,
-			);
-		} else {
-			console.error(
-				'[tool_transcription] could not schedule the background completion poll (module not loaded); the client can still poll check_server_transcriber_status',
-			);
-		}
-
-		// WC-007: truthful success msg (PHP leaves its initial error msg on success).
-		return { result: result.result, msg: 'OK. Transcription job submitted', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
 	}
+
+	// WRITE gate on the transcription target (PHP assert_section_permission 2 + scope).
+	await gateRecordWrite(transcriptionDdo, ctx);
+
+	// TOOLS-06 (2026-07-28 audit): ALSO gate READ on the media SOURCE.
+	// Transcription reads the audio CONTENT of media_ddo — without this a
+	// caller who can write their OWN transcription target could transcribe the
+	// restricted audio of ANY AV record (one they cannot read) into a record
+	// they control. Read level 1 + record-in-scope on the source media record.
+	await gateRecord(mediaDdo, ctx, 1);
+
+	const { provider, error: providerError } = resolveTranscriberProvider(engine);
+	if (provider === null) {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: providerError ?? 'unknown transcriber engine',
+			coordinates: { engine },
+		});
+	}
+	// Config entry is looked up by the ORIGINAL engine name; the POSTed
+	// engine field uses the mapped one ('local' → babel) — PHP does both.
+	const cfg = resolveTranscriberConfig(await getToolConfig('tool_transcription'), engine);
+	if (cfg === null) {
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { engine },
+			message: `Transcriber config (uri/key) is not defined for '${engine}'`,
+		});
+	}
+	const mappedEngine = mapTranscriberEngine(engine);
+
+	const { spec, identity, pathOpts } = await resolveMediaToolContext({
+		component_tipo: mediaDdo.component_tipo,
+		section_tipo: mediaDdo.section_tipo,
+		section_id: mediaDdo.section_id,
+	});
+
+	// Two ways to hand a recogniser the audio, and the choice is not cosmetic:
+	//  - an EXTERNAL service fetches a public URL (and so needs one to exist);
+	//  - the institution's OWN box is POSTed the bytes of the speech-optimised
+	//    WAV, so the recording is never published anywhere. That WAV is a
+	//    throwaway derivative, deleted by the completion poll.
+	const isLocalEngine = engine === LOCAL_ASR_ENGINE;
+	const audioRel = isLocalEngine
+		? await ensureTranscribableAudio(spec, identity, pathOpts)
+		: await ensureAudioQuality(spec, identity, pathOpts);
+	const audioPath = isLocalEngine ? absoluteFromRelative(audioRel, pathOpts.mediaRoot) : undefined;
+	// An on-premise engine never receives a URL; asking for one would throw
+	// when DEDALO_MEDIA_EXPORT_BASE is unset, which is the normal state of an
+	// install that publishes nothing.
+	const audioUrl = isLocalEngine ? '' : externalMediaUrl(audioRel);
+
+	const result = await provider({
+		uri: cfg.uri,
+		key: cfg.key,
+		engine: mappedEngine,
+		quality,
+		audioUrl,
+		audioPath,
+		langTld2: getAlpha2FromCode(sourceLang) ?? '',
+		userId: ctx.userId,
+		entityName: config.entity,
+	});
+	// The submit seam still answers with its own internal `{result:false, msg}`
+	// outcome (src/core/tools/transcription_asr.ts — a different sweep): an
+	// unreachable/blocked ASR server is a dependency failure, not a caller fault.
+	if (result.result === false) {
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { engine: mappedEngine },
+			message: result.msg,
+		});
+	}
+
+	// Detach the completion poll (PHP exec_background_check_transcription).
+	// EVERYTHING the poll needs — principal, user, lang, target ddo, the
+	// exact submitted av_url — is captured HERE at enqueue time; the
+	// detached handler never reads ALS (isolation Rule 6).
+	const loaded = await getLoadedTool('tool_transcription');
+	if (loaded !== undefined) {
+		scheduleBackground(
+			loaded,
+			BACKGROUND_POLL_ACTION,
+			{ permission: null, handler: backgroundTranscriberPoll },
+			{
+				key: cfg.key,
+				url: cfg.uri,
+				lang: sourceLang,
+				av_url: audioUrl,
+				// The throwaway WAV the on-premise engine was fed. The poll
+				// deletes it when the job ends, whichever way it ends — this
+				// file is a copy of an interview and must not linger.
+				cleanup_path: audioPath,
+				engine: mappedEngine,
+				user_id: ctx.userId,
+				entity_name: config.entity,
+				transcription_ddo: {
+					component_tipo: String(transcriptionDdo.component_tipo ?? ''),
+					section_tipo: String(transcriptionDdo.section_tipo ?? ''),
+					section_id: Number(transcriptionDdo.section_id ?? 0),
+				},
+				pid: result.result.pid,
+			},
+			ctx.principal,
+			ctx.userId,
+		);
+	} else {
+		console.error(
+			'[tool_transcription] could not schedule the background completion poll (module not loaded); the client can still poll check_server_transcriber_status',
+		);
+	}
+
+	// WC-007: the legacy body's success msg is dropped — `ok` IS the success.
+	return ok(result.result, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -469,7 +483,15 @@ async function backgroundTranscriberPoll(ctx: ToolActionContext): Promise<ToolRe
 		}
 	}
 
-	return { result: outcome.result, msg: outcome.msg, errors: outcome.result ? [] : [outcome.msg] };
+	// A BACKGROUND job: a refusal here is the job's terminal state (background.ts
+	// records `error` on the job record), not a wire body.
+	if (outcome.result === false) {
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { action: BACKGROUND_POLL_ACTION },
+			message: outcome.msg,
+		});
+	}
+	return ok(outcome.result, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -489,91 +511,98 @@ export async function checkServerTranscriberStatus(
 	const ddo = readMediaDdo(ctx.options);
 	if (!phpEmpty(ddo.section_tipo)) {
 		const gate = seams.gate ?? ((target, context) => gateRecord(target, context, 1));
-		const denied = await gate(ddo, ctx);
-		if (denied !== null) return denied;
+		await gate(ddo, ctx);
 	}
 
-	try {
-		const rawDdo = ctx.options.media_ddo ?? null;
-		const engine = String(ctx.options.transcriber_engine ?? '');
-		const pid = ctx.options.pid;
+	const rawDdo = ctx.options.media_ddo ?? null;
+	const engine = String(ctx.options.transcriber_engine ?? '');
+	const pid = ctx.options.pid;
 
-		const missing: string[] = [];
-		if (rawDdo === null) missing.push('media_ddo');
-		if (phpEmpty(engine)) missing.push('transcriber_engine');
-		if (phpEmpty(pid)) missing.push('pid');
-		if (missing.length > 0) {
-			return fail(`Missing required parameters: ${missing.join(', ')}`);
-		}
-
-		const cfg = await (seams.transcriberConfig ?? defaultTranscriberConfig)(engine);
-		if (cfg === null) return fail(`Transcriber config (uri/key) is not defined for '${engine}'`);
-
-		const { provider, error: providerError } = (
-			seams.statusProvider ?? resolveTranscriberStatusProvider
-		)(engine);
-		if (provider === null) {
-			return {
-				result: false,
-				msg: providerError ?? `Sorry. '${engine}' is not implemented yet`,
-				errors: ['transcriber not implemented'],
-			};
-		}
-
-		// Rebuild av_url EXACTLY as automatic_transcription submitted it (same
-		// context resolution, same URL builder) — an EXTERNAL transcriber backend
-		// identifies the job by this URL, so it must match byte-for-byte. The
-		// on-premise engine was submitted no URL at all (audioUrl '') and must be
-		// polled with none: see statusPollAvUrl.
-		const { spec, identity, pathOpts } = await (seams.mediaContext ?? resolveMediaToolContext)({
-			component_tipo: ddo.component_tipo,
-			section_tipo: ddo.section_tipo,
-			section_id: ddo.section_id,
+	const missing: string[] = [];
+	if (rawDdo === null) missing.push('media_ddo');
+	if (phpEmpty(engine)) missing.push('transcriber_engine');
+	if (phpEmpty(pid)) missing.push('pid');
+	if (missing.length > 0) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: `Missing required parameters: ${missing.join(', ')}`,
 		});
-		if (spec.model !== 'component_av') {
-			return fail(
-				`check_server_transcriber_status: '${String(ddo.component_tipo)}' is not component_av`,
-			);
-		}
-		// PURE path build (PHP: $component->get_url('audio')) — a READ-gated poll
-		// must NEVER transcode. Only automatic_transcription ENSURES the audio
-		// quality, and that action is WRITE-gated.
-		const audioRel = buildMediaLocation(
-			spec,
-			identity,
-			'audio',
-			spec.defaultExtension,
-			pathOpts,
-		).relativePath;
-
-		const result = await provider({
-			uri: cfg.uri,
-			key: cfg.key,
-			avUrl: statusPollAvUrl(engine, audioRel),
-			engine: mapTranscriberEngine(engine),
-			userId: ctx.userId,
-			entityName: config.entity,
-			pid: pid as string | number,
-			deleteResult: false,
-		});
-
-		// The transcriber is EXTERNAL: an unreachable server, an HTTP error or a
-		// blocked (SSRF) URI comes back as the provider's `{result:false, msg}`
-		// envelope, NOT as a thrown error. Report it as a FAILURE — WC-007 rewrites
-		// the msg on the SUCCESS branch only; a down ASR server must never read OK.
-		if (result === null || result === undefined) {
-			return fail('Transcriber server returned no status');
-		}
-		if (typeof result === 'object' && (result as { result?: unknown }).result === false) {
-			const detail = String((result as { msg?: unknown }).msg ?? 'transcriber request failed');
-			return fail(detail);
-		}
-
-		// WC-007: truthful success msg (PHP leaves its initial error msg on success).
-		return { result, msg: 'OK. Request done [check_server_transcriber_status]', errors: [] };
-	} catch (error) {
-		return fail((error as Error).message);
 	}
+
+	const cfg = await (seams.transcriberConfig ?? defaultTranscriberConfig)(engine);
+	if (cfg === null) {
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { engine },
+			message: `Transcriber config (uri/key) is not defined for '${engine}'`,
+		});
+	}
+
+	const { provider, error: providerError } = (
+		seams.statusProvider ?? resolveTranscriberStatusProvider
+	)(engine);
+	if (provider === null) {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: providerError ?? `Sorry. '${engine}' is not implemented yet`,
+			coordinates: { engine },
+		});
+	}
+
+	// Rebuild av_url EXACTLY as automatic_transcription submitted it (same
+	// context resolution, same URL builder) — an EXTERNAL transcriber backend
+	// identifies the job by this URL, so it must match byte-for-byte. The
+	// on-premise engine was submitted no URL at all (audioUrl '') and must be
+	// polled with none: see statusPollAvUrl.
+	const { spec, identity, pathOpts } = await (seams.mediaContext ?? resolveMediaToolContext)({
+		component_tipo: ddo.component_tipo,
+		section_tipo: ddo.section_tipo,
+		section_id: ddo.section_id,
+	});
+	if (spec.model !== 'component_av') {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `'${String(ddo.component_tipo)}' is not component_av`,
+			coordinates: { tipo: String(ddo.component_tipo ?? ''), model: spec.model },
+		});
+	}
+	// PURE path build (PHP: $component->get_url('audio')) — a READ-gated poll
+	// must NEVER transcode. Only automatic_transcription ENSURES the audio
+	// quality, and that action is WRITE-gated.
+	const audioRel = buildMediaLocation(
+		spec,
+		identity,
+		'audio',
+		spec.defaultExtension,
+		pathOpts,
+	).relativePath;
+
+	const result = await provider({
+		uri: cfg.uri,
+		key: cfg.key,
+		avUrl: statusPollAvUrl(engine, audioRel),
+		engine: mapTranscriberEngine(engine),
+		userId: ctx.userId,
+		entityName: config.entity,
+		pid: pid as string | number,
+		deleteResult: false,
+	});
+
+	// The transcriber is EXTERNAL: an unreachable server, an HTTP error or a
+	// blocked (SSRF) URI comes back as the provider's `{result:false, msg}`
+	// envelope, NOT as a thrown error. Report it as a FAILURE — WC-007 rewrites
+	// the msg on the SUCCESS branch only; a down ASR server must never read OK.
+	if (result === null || result === undefined) {
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { engine },
+			message: 'Transcriber server returned no status',
+		});
+	}
+	if (typeof result === 'object' && (result as { result?: unknown }).result === false) {
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { engine },
+			message: String((result as { msg?: unknown }).msg ?? 'transcriber request failed'),
+		});
+	}
+
+	// WC-007: the legacy body's success msg is dropped — `ok` IS the success.
+	return ok(result, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -648,107 +677,109 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
 	// assert_tipo_permission(section, component, 2) + record-in-scope.
 	if (!phpEmpty(o.section_tipo) && !phpEmpty(o.component_tipo)) {
 		const tipoGate = await assertActionPermission(
-			{ permission: 'tipo', minLevel: 2, handler: async () => fail('unreachable') },
+			{ permission: 'tipo', minLevel: 2, handler: unreachableHandler },
 			{ section_tipo: sectionTipo, tipo: componentTipo },
 			ctx.principal,
 		);
-		if (!tipoGate.ok) return fail(tipoGate.msg);
+		if (!tipoGate.ok) throw permissionRefusal(tipoGate, 'build_subtitles_file (tipo)');
 		if (!phpEmpty(o.section_id)) {
 			const scopeGate = await assertActionPermission(
-				{ permission: 'record', minLevel: 2, handler: async () => fail('unreachable') },
+				{ permission: 'record', minLevel: 2, handler: unreachableHandler },
 				{ section_tipo: sectionTipo, section_id: sectionId },
 				ctx.principal,
 			);
-			if (!scopeGate.ok) return fail(scopeGate.msg);
+			if (!scopeGate.ok) throw permissionRefusal(scopeGate, 'build_subtitles_file (record)');
 		}
 	}
 
-	try {
-		const lang = String(o.lang ?? '');
-		const key = Number(o.key ?? 0); // fixed component dato key, default 0
-		const maxCharline = Number(o.max_charline ?? 0);
+	const lang = String(o.lang ?? '');
+	const key = Number(o.key ?? 0); // fixed component dato key, default 0
+	const maxCharline = Number(o.max_charline ?? 0);
 
-		const missing: string[] = [];
-		if (phpEmpty(o.component_tipo)) missing.push('component_tipo');
-		if (phpEmpty(o.section_tipo)) missing.push('section_tipo');
-		if (phpEmpty(o.section_id)) missing.push('section_id');
-		if (phpEmpty(o.lang)) missing.push('lang');
-		if (phpEmpty(o.max_charline)) missing.push('max_charline');
-		if (missing.length > 0) {
-			return fail(`Missing required parameters: ${missing.join(', ')}`);
-		}
-
-		// Read the transcription text (PHP get_data_lang(lang)[key]->value).
-		const model = await getModelByTipo(componentTipo);
-		if (model === null) return fail(`Failed to instantiate text component: ${componentTipo}`);
-		const table = await getMatrixTableFromTipo(sectionTipo);
-		const record = table !== null ? await readMatrixRecord(table, sectionTipo, sectionId) : null;
-		const items = record !== null ? (readComponentItems(record, componentTipo, model) ?? []) : [];
-		const langItems = filterItemsByLang(items, lang);
-		const rawValue = (langItems[key] as { value?: unknown } | undefined)?.value;
-		const sourceText = String(rawValue ?? '').trim();
-		if (sourceText === '') {
-			return { result: false, msg: 'Warning. Empty component value!', errors: ['empty value'] };
-		}
-
-		// Resolve the related AV component (the ontology 'related' pairing —
-		// PHP get_related_component_av_tipo).
-		const avTipo = await relatedTipoByModel(componentTipo, 'component_av');
-		if (avTipo === null) {
-			return fail(
-				`Failed to instantiate AV component: no component_av related to ${componentTipo}`,
-			);
-		}
-
-		// AV duration → total_ms (PHP get_duration * 1000, rounded).
-		const {
-			spec: avSpec,
-			identity: avIdentity,
-			pathOpts: avPathOpts,
-			items: avItems,
-		} = await resolveMediaToolContext({
-			component_tipo: avTipo,
-			section_tipo: sectionTipo,
-			section_id: sectionId,
+	const missing: string[] = [];
+	if (phpEmpty(o.component_tipo)) missing.push('component_tipo');
+	if (phpEmpty(o.section_tipo)) missing.push('section_tipo');
+	if (phpEmpty(o.section_id)) missing.push('section_id');
+	if (phpEmpty(o.lang)) missing.push('lang');
+	if (phpEmpty(o.max_charline)) missing.push('max_charline');
+	if (missing.length > 0) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: `Missing required parameters: ${missing.join(', ')}`,
 		});
-		const duration = await resolveAvDuration(avSpec, avIdentity, avPathOpts, avItems);
-		const totalMs = Math.round(duration * 1000);
-
-		const subtitles = buildSubtitlesText({
-			sourceText,
-			maxCharLine: maxCharline,
-			total_ms: totalMs,
-		});
-		if (subtitles.result === false) {
-			return {
-				result: false,
-				msg: `Error: ${subtitles.msg}`,
-				errors: ['unable to build subtitles'],
-			};
-		}
-
-		// Target path/url — the ONE shared subtitles grammar (media/path.ts).
-		const vttPath = subtitlesPath(avIdentity, lang, avPathOpts.mediaRoot);
-		const targetFolder = dirname(vttPath);
-		if (!existsSync(targetFolder)) {
-			// PHP semantics: the dir must already exist — do NOT create it.
-			return {
-				result: false,
-				msg: 'Error: subtitles dir does not exist!',
-				errors: [`subtitles dir not found: ${targetFolder}`],
-			};
-		}
-		writeFileSync(vttPath, subtitles.result);
-
-		return {
-			result: true,
-			url: subtitlesUrl(avIdentity, lang),
-			msg: 'OK. Request done successfully',
-			errors: [],
-		};
-	} catch (error) {
-		return fail((error as Error).message);
 	}
+
+	// Read the transcription text (PHP get_data_lang(lang)[key]->value).
+	const model = await getModelByTipo(componentTipo);
+	if (model === null) {
+		throw new DedaloError('request.invalid_tipo', { coordinates: { tipo: componentTipo } });
+	}
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	const record = table !== null ? await readMatrixRecord(table, sectionTipo, sectionId) : null;
+	const items = record !== null ? (readComponentItems(record, componentTipo, model) ?? []) : [];
+	const langItems = filterItemsByLang(items, lang);
+	const rawValue = (langItems[key] as { value?: unknown } | undefined)?.value;
+	const sourceText = String(rawValue ?? '').trim();
+	if (sourceText === '') {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: 'The transcription component is empty; there is nothing to subtitle',
+			coordinates: { tipo: componentTipo, section_tipo: sectionTipo, section_id: sectionId },
+		});
+	}
+
+	// Resolve the related AV component (the ontology 'related' pairing —
+	// PHP get_related_component_av_tipo).
+	const avTipo = await relatedTipoByModel(componentTipo, 'component_av');
+	if (avTipo === null) {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `No component_av is related to '${componentTipo}'`,
+			coordinates: { tipo: componentTipo },
+		});
+	}
+
+	// AV duration → total_ms (PHP get_duration * 1000, rounded).
+	const {
+		spec: avSpec,
+		identity: avIdentity,
+		pathOpts: avPathOpts,
+		items: avItems,
+	} = await resolveMediaToolContext({
+		component_tipo: avTipo,
+		section_tipo: sectionTipo,
+		section_id: sectionId,
+	});
+	const duration = await resolveAvDuration(avSpec, avIdentity, avPathOpts, avItems);
+	const totalMs = Math.round(duration * 1000);
+
+	const subtitles = buildSubtitlesText({
+		sourceText,
+		maxCharLine: maxCharline,
+		total_ms: totalMs,
+	});
+	if (subtitles.result === false) {
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { tipo: componentTipo, section_id: sectionId },
+			message: `Unable to build subtitles: ${subtitles.msg}`,
+		});
+	}
+
+	// Target path/url — the ONE shared subtitles grammar (media/path.ts).
+	const vttPath = subtitlesPath(avIdentity, lang, avPathOpts.mediaRoot);
+	const targetFolder = dirname(vttPath);
+	if (!existsSync(targetFolder)) {
+		// PHP semantics: the dir must already exist — do NOT create it. The path
+		// is a server-side location: LOG-only (coordinates), never on the wire.
+		throw new DedaloError('tool.action_failed', {
+			coordinates: { subtitles_dir: targetFolder },
+			message: `The subtitles dir does not exist: ${targetFolder}`,
+		});
+	}
+	writeFileSync(vttPath, subtitles.result);
+
+	// `url` stays a TOP-LEVEL extension key: the client reads response.url.
+	return ok(true, {
+		requestId: toolRequestId(ctx),
+		extend: { url: subtitlesUrl(avIdentity, lang) },
+	});
 }
 
 /**
@@ -768,7 +799,7 @@ async function buildSubtitlesFile(ctx: ToolActionContext): Promise<ToolResponse>
  * No record is addressed and nothing is written; the answer is install
  * configuration the logged-in user's own browser is about to act on.
  */
-async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
+async function getModelSources(ctx: ToolActionContext): Promise<ToolResponse> {
 	// The facts that hold whatever the catalog does: they come from config and the
 	// filesystem, never from the database.
 	const base = {
@@ -777,11 +808,9 @@ async function getModelSources(_ctx: ToolActionContext): Promise<ToolResponse> {
 		store_ready: modelStoreAvailable(),
 	};
 
-	return {
-		result: buildModelSourcesPayload(await readTranscriberCatalog(), base),
-		msg: 'OK',
-		errors: [],
-	};
+	return ok(buildModelSourcesPayload(await readTranscriberCatalog(), base), {
+		requestId: toolRequestId(ctx),
+	});
 }
 
 /**
@@ -956,7 +985,9 @@ const BACKGROUND_DOWNLOAD_ACTION = 'background_download_model';
  */
 async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
 	if (ctx.principal?.isGlobalAdmin !== true) {
-		return fail('Only a global administrator can download models');
+		throw new DedaloError('perm.denied', {
+			coordinates: { tool: 'tool_transcription', action: 'download_model' },
+		});
 	}
 
 	const model = String(ctx.options.model ?? '');
@@ -965,7 +996,10 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	// file set (no tokenizer; the preprocessor config is mandatory).
 	const entry = await findCatalogModel(model);
 	if (entry === null) {
-		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `Unknown model: '${model}' is not in the transcriber catalog`,
+			coordinates: { model },
+		});
 	}
 	// SAME guard as repair, and the same reason: two `curl -C -` runs over one
 	// target interleave their resumes. One button, one poll that says nothing for
@@ -973,7 +1007,7 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	// BEFORE the state is read, because a model another job is actively writing
 	// has no settled state to short-circuit on.
 	const busy = modelJobInFlight(entry.name);
-	if (busy !== null) return fail(busyMessage(entry.name, busy));
+	if (busy !== null) refuseBusyModel(entry.name, busy);
 
 	// STATE-AWARE short-circuit. `modelInstalled` (the old size > 0 test) called a
 	// truncated or corrupted install "already installed", so the client — which
@@ -983,17 +1017,20 @@ async function downloadModelAction(ctx: ToolActionContext): Promise<ToolResponse
 	// model is already installed; a broken one is told what actually fixes it.
 	const state = modelState(entry.name, entry.dtype, entry.kind).state;
 	if (isRunnableState(state)) {
-		return { result: true, msg: 'OK. Model already installed', errors: [] };
+		return ok({ already_installed: true, state }, { requestId: toolRequestId(ctx) });
 	}
 	if (state !== 'missing') {
-		return fail(
-			`Model '${model}' is on disk but ${state}: downloading it again cannot fix that — repair it instead`,
-		);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `Model '${model}' is on disk but ${state}: downloading it again cannot fix that — repair it instead`,
+			coordinates: { model, state },
+		});
 	}
 
 	const loaded = await getLoadedTool('tool_transcription');
 	if (loaded === undefined) {
-		return fail('tool module not loaded — cannot schedule the download');
+		throw new DedaloError('tool.no_server_module', {
+			coordinates: { tool: 'tool_transcription', action: 'download_model' },
+		});
 	}
 	return scheduleModelJob({
 		action: BACKGROUND_DOWNLOAD_ACTION,
@@ -1033,10 +1070,15 @@ async function runModelDownload(
 	const report = await downloadModel(model, dtype, { quiet: true, kind, ...fileOptions });
 	if (report.ok) {
 		console.log(`[tool_transcription] model '${model}' installed (${report.files.length} files)`);
-		return { result: true, msg: `OK. Model installed: ${model}`, errors: [] };
+		return ok({ model, files: report.files.length }, { requestId: '' });
 	}
 	console.error(`[tool_transcription] model download FAILED for '${model}':`, report.errors);
-	return { result: false, msg: report.errors.join('; '), errors: report.errors };
+	// BACKGROUND job: the throw IS the job's terminal state (background.ts keeps
+	// `error` on the record, which get_background_job_status serves).
+	throw new DedaloError('tool.action_failed', {
+		coordinates: { model, action: 'download_model' },
+		message: report.errors.join('; '),
+	});
 }
 
 /**
@@ -1063,12 +1105,17 @@ const BACKGROUND_REPAIR_ACTION = 'background_repair_model';
  */
 async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> {
 	if (ctx.principal?.isGlobalAdmin !== true) {
-		return fail('Only a global administrator can verify models');
+		throw new DedaloError('perm.denied', {
+			coordinates: { tool: 'tool_transcription', action: 'verify_model' },
+		});
 	}
 	const model = String(ctx.options.model ?? '');
 	const entry = await findCatalogModel(model);
 	if (entry === null) {
-		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `Unknown model: '${model}' is not in the transcriber catalog`,
+			coordinates: { model },
+		});
 	}
 
 	const store = modelStoreRoot();
@@ -1102,18 +1149,26 @@ async function verifyModelAction(ctx: ToolActionContext): Promise<ToolResponse> 
 
 	const after = modelState(entry.name, entry.dtype, entry.kind);
 	if (unreachable > 0 && checked === 0) {
-		return fail(`Could not reach the model hub to verify '${model}'`);
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { model },
+			message: `Could not reach the model hub to verify '${model}'`,
+		});
 	}
 	// Partial unreachability must be VISIBLE, not swallowed into a plain "OK": an
 	// admin who reads only "ready" cannot tell a flaky hub (some files unchecked,
 	// try again) from a store that predates the manifest entirely (CONVENTIONS §1
 	// — nothing is silently dropped).
+	// Partial unreachability is part of the PAYLOAD (CONVENTIONS §1: never
+	// swallowed into a plain OK), so it travels in `data`, not in a msg string.
 	if (unreachable > 0) {
 		const note = `${unreachable} file(s) could not be reached and remain unchecked`;
 		console.warn(`[tool_transcription] verify '${model}': ${note}`);
-		return { result: true, msg: `OK. Verified: ${after.state} (${note})`, errors: [] };
+		return ok(
+			{ state: after.state, checked, unreachable, note },
+			{ requestId: toolRequestId(ctx) },
+		);
 	}
-	return { result: true, msg: `OK. Verified: ${after.state}`, errors: [] };
+	return ok({ state: after.state, checked, unreachable: 0 }, { requestId: toolRequestId(ctx) });
 }
 
 /**
@@ -1176,8 +1231,17 @@ function modelJobInFlight(model: string): ModelJobClaim | null {
 	return claim;
 }
 
-function busyMessage(model: string, claim: ModelJobClaim): string {
-	return `A ${claim.action} of '${model}' is already running; wait for it to finish`;
+/**
+ * The model is already claimed by a live job — a CONFLICT, not a caller fault.
+ * The sentence names the running action, which is safe to show, so the code's
+ * disclosure carries it (`tool.unsupported_target` is the public-facing half of
+ * the pair; the conflict status is what the client keys on).
+ */
+function refuseBusyModel(model: string, claim: ModelJobClaim): never {
+	throw new DedaloError('resource.conflict', {
+		coordinates: { model, running_action: claim.action },
+		message: `A ${claim.action} of '${model}' is already running; wait for it to finish`,
+	});
 }
 
 /**
@@ -1205,21 +1269,28 @@ export async function repairModelAction(
 	schedule: ScheduleRepair = scheduleBackground,
 ): Promise<ToolResponse> {
 	if (ctx.principal?.isGlobalAdmin !== true) {
-		return fail('Only a global administrator can repair models');
+		throw new DedaloError('perm.denied', {
+			coordinates: { tool: 'tool_transcription', action: 'repair_model' },
+		});
 	}
 	const model = String(ctx.options.model ?? '');
 	const entry = await findCatalogModel(model);
 	if (entry === null) {
-		return fail(`Unknown model: '${model}' is not in the transcriber catalog`);
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: `Unknown model: '${model}' is not in the transcriber catalog`,
+			coordinates: { model },
+		});
 	}
 	// SERVER-side, because a disabled button is not a guard: the action is on the
 	// wire and two tabs reach it independently.
 	const busy = modelJobInFlight(entry.name);
-	if (busy !== null) return fail(busyMessage(entry.name, busy));
+	if (busy !== null) refuseBusyModel(entry.name, busy);
 
 	const loaded = await getLoadedTool('tool_transcription');
 	if (loaded === undefined) {
-		return fail('tool module not loaded — cannot schedule the repair');
+		throw new DedaloError('tool.no_server_module', {
+			coordinates: { tool: 'tool_transcription', action: 'repair_model' },
+		});
 	}
 	return scheduleModelJob({
 		action: BACKGROUND_REPAIR_ACTION,
@@ -1254,7 +1325,7 @@ async function scheduleModelJob(input: {
 }): Promise<ToolResponse> {
 	const { entry, ctx } = input;
 	const busy = modelJobInFlight(entry.name);
-	if (busy !== null) return fail(busyMessage(entry.name, busy));
+	if (busy !== null) refuseBusyModel(entry.name, busy);
 
 	const scheduled = input.schedule(
 		input.loaded,
@@ -1264,20 +1335,27 @@ async function scheduleModelJob(input: {
 		ctx.principal,
 		ctx.userId,
 	);
-	if (scheduled.result === false) return scheduled;
+	// scheduleBackground still answers a refusal with the legacy body (its own
+	// file is swept separately); the only refusal it produces is "not in
+	// BACKGROUND_RUNNABLE", which is that registered code.
+	if (scheduled.result === false) {
+		throw new DedaloError('tool.background_not_allowed', {
+			coordinates: { tool: 'tool_transcription', action: input.action },
+		});
+	}
 	modelJobsInFlight.set(entry.name, {
 		action: input.label,
 		jobId: typeof scheduled.job_id === 'string' ? scheduled.job_id : undefined,
 	});
-	// The job handle, so the client can learn that the job FAILED instead of
-	// polling the store for half an hour and then saying nothing.
-	return {
-		result: true,
-		msg: input.okMsg,
-		errors: [],
-		job_id: scheduled.job_id,
-		background_job_id: scheduled.background_job_id,
-	};
+	// The job handle rides as EXTENSION KEYS (the client reads them by name), so
+	// it can learn that the job FAILED instead of polling the store forever.
+	return ok(true, {
+		requestId: toolRequestId(ctx),
+		extend: {
+			job_id: scheduled.job_id,
+			background_job_id: scheduled.background_job_id,
+		},
+	});
 }
 
 /**
@@ -1410,9 +1488,10 @@ function repairVerdict(input: {
 	});
 
 	if (download.ok && isRunnableState(after.state) && stillFailing.length === 0) {
-		const msg = `OK. Model repaired: ${model} — ${plan.targets.length} file(s) re-fetched and re-checked (weights, config and ${input.common.length} common file(s)); state: ${after.state}`;
-		console.log(`[tool_transcription] ${msg}`);
-		return { result: true, msg, errors: [] };
+		console.log(
+			`[tool_transcription] OK. Model repaired: ${model} — ${plan.targets.length} file(s) re-fetched and re-checked (weights, config and ${input.common.length} common file(s)); state: ${after.state}`,
+		);
+		return ok({ model, state: after.state, repaired: plan.targets.length }, { requestId: '' });
 	}
 
 	const errors = [...download.errors];
@@ -1421,7 +1500,11 @@ function repairVerdict(input: {
 	}
 	if (errors.length === 0) errors.push(`state after repair: ${after.state}`);
 	console.error(`[tool_transcription] model repair FAILED for '${model}':`, errors);
-	return { result: false, msg: errors.join('; '), errors };
+	// BACKGROUND job — the throw is the terminal state (see runModelDownload).
+	throw new DedaloError('tool.action_failed', {
+		coordinates: { model, action: 'repair_model' },
+		message: errors.join('; '),
+	});
 }
 
 /**
@@ -1469,13 +1552,20 @@ async function runModelRepair(
 				: "Re-import the tools registry so the catalog declares the model's dtype, or seed the store directly.";
 		const msg = `Repair refused for '${model}': ${remedy}, so ${plan.refused.join(', ')} cannot be named to fetch back. Deleting them would destroy what cannot be restored. ${advice}`;
 		console.error(`[tool_transcription] ${msg}`);
-		return { result: false, msg, errors: [msg] };
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: msg,
+			coordinates: { model, refused: plan.refused.join(', ') },
+		});
 	}
 
 	if (plan.targets.length === 0) {
-		const msg = `OK. Nothing to repair: '${model}' passes every check (weights, config and ${common.length} common file(s))`;
-		console.log(`[tool_transcription] ${msg}`);
-		return { result: true, msg, errors: [] };
+		console.log(
+			`[tool_transcription] OK. Nothing to repair: '${model}' passes every check (weights, config and ${common.length} common file(s))`,
+		);
+		return ok(
+			{ model, repaired: 0, state: modelState(model, dtype, kind).state },
+			{ requestId: '' },
+		);
 	}
 
 	console.log(

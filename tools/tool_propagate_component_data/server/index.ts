@@ -31,6 +31,7 @@ import type { MatrixJsonbColumn } from '../../../src/core/db/matrix.ts';
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import { recordTimeMachine } from '../../../src/core/db/time_machine.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { termByTipo } from '../../../src/core/ontology/labels.ts';
 import {
 	getColumnNameByModel,
@@ -44,10 +45,11 @@ import { createSectionRecord } from '../../../src/core/section/record/create_rec
 import { persistRecordKeys } from '../../../src/core/section_record/index.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 import { applyPropagation, COMPONENTS_WITH_RELATIONS, type PropagateAction } from './propagate.ts';
 
@@ -74,8 +76,14 @@ const COMPONENTS_MONOVALUE: ReadonlySet<string> = new Set([
 	'component_text_area',
 ]);
 
-function fail(message: string, errors: string[] = [message]): ToolResponse {
-	return { result: false, msg: `Error. ${message}`, errors };
+/**
+ * A caller-fault refusal. `message` AND `publicMessage`: the action is
+ * backgroundRunnable, so the executor records `error.message` on the job record
+ * (the one place a curator reads why a detached batch stopped), while the wire
+ * gets the same sentence through the code's public disclosure.
+ */
+function invalidRequest(message: string): DedaloError {
+	return new DedaloError('request.invalid_options', { message, publicMessage: message });
 }
 
 /** Best-effort bulk-process record + label (audit anchor; never fatal). */
@@ -119,26 +127,38 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 	const propagateValue = options.propagate_data_value ?? null;
 
 	if (sectionTipo === '' || componentTipo === '' || !VALID_ACTIONS.has(action) || sqoRaw == null) {
-		return fail(
+		throw invalidRequest(
 			'Missing/invalid parameters: section_tipo, component_tipo, action(replace|delete|add), sqo',
-			['invalid_request'],
 		);
 	}
 
 	// Tipo-pair WRITE gate (PHP assert_tipo_permission(section_tipo, component_tipo, 2)).
 	if ((await getPermissions(principal, sectionTipo, componentTipo)) < 2) {
-		return fail('insufficient permissions on the target component', ['unauthorized']);
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: sectionTipo, tipo: componentTipo },
+			message: 'insufficient permissions on the target component',
+		});
 	}
 
 	const model = await getModelByTipo(componentTipo);
-	if (model === null) return fail(`unknown component tipo: ${componentTipo}`, ['invalid model']);
+	if (model === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			coordinates: { tipo: componentTipo },
+			message: `unknown component tipo: ${componentTipo}`,
+		});
+	}
 	const withRelations = COMPONENTS_WITH_RELATIONS.has(model);
 	if (action === 'add' && COMPONENTS_MONOVALUE.has(model)) {
-		return fail(`'add' is not allowed on mono-value model '${model}'`, ['invalid_request']);
+		throw invalidRequest(`'add' is not allowed on mono-value model '${model}'`);
 	}
 	const translatable = await getTranslatableByTipo(componentTipo);
 	const column = getColumnNameByModel(model);
-	if (column === null) return fail(`no matrix column for model '${model}'`, ['invalid model']);
+	if (column === null) {
+		throw new DedaloError('request.invalid_model', {
+			coordinates: { model, tipo: componentTipo },
+			message: `no matrix column for model '${model}'`,
+		});
+	}
 
 	// Target set: the SQO search with NO limit (PHP forces limit/offset 0 = all).
 	const sqo = sanitizeClientSqo(structuredClone(sqoRaw) as Record<string, unknown>);
@@ -153,7 +173,12 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 	// Count-drift ceiling: a live result larger than the client total means the
 	// SQO widened — abort rather than touch unexpected records (PHP :row_count>total).
 	if (total >= 0 && rows.length > total) {
-		return fail(`count drift: ${rows.length} live > ${total} expected; aborting`, ['count_drift']);
+		// The selection GREW under the caller: a conflict, not a bad request — the
+		// client re-counts and asks again.
+		throw new DedaloError('resource.conflict', {
+			coordinates: { section_tipo: sectionTipo, live: rows.length, expected: total },
+			message: `count drift: ${rows.length} live > ${total} expected; aborting`,
+		});
 	}
 
 	const sectionLabel = await termByTipo(sectionTipo, config.menu.applicationLang);
@@ -268,18 +293,22 @@ async function propagateComponentData(ctx: ToolActionContext): Promise<ToolRespo
 		}
 	}
 
-	return {
-		result: true,
-		msg: `${stopped ? 'STOPPED.' : 'OK.'} ${action} data of '${componentTipo}' in section '${sectionLabel}' ${errors.length === 0 ? 'successfully' : 'done with warnings'}. ${counter} of ${rows.length} record(s) processed.`,
-		errors,
-		action,
-		section_label: sectionLabel,
-		total,
-		counter,
-		records: rows.length,
-		stopped,
-		bulk_process_id: bulkProcessId,
-	};
+	// The batch NEVER fails as a whole: per-record failures are payload
+	// (`errors`), and the human summary the client renders travels with them.
+	return ok(
+		{
+			summary: `${stopped ? 'STOPPED.' : 'OK.'} ${action} data of '${componentTipo}' in section '${sectionLabel}' ${errors.length === 0 ? 'successfully' : 'done with warnings'}. ${counter} of ${rows.length} record(s) processed.`,
+			errors,
+			action,
+			section_label: sectionLabel,
+			total,
+			counter,
+			records: rows.length,
+			stopped,
+			bulk_process_id: bulkProcessId,
+		},
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 export const tool: ToolServerModule = {

@@ -179,7 +179,7 @@ describe('gate 1 — options must be an object', () => {
 			{ model: TEMPLATE, action: 'status' },
 			undefined,
 		);
-		expect(none.result).toEqual({ ok: true, tool: TEMPLATE });
+		expect(none.data).toEqual({ tool: TEMPLATE });
 	});
 });
 
@@ -241,7 +241,7 @@ describe('gate 4 — the tool must be authorized for the caller', () => {
 			{ model: TEMPLATE, action: 'status' },
 			{},
 		);
-		expect(response.result).toEqual({ ok: true, tool: TEMPLATE });
+		expect(response.data).toEqual({ tool: TEMPLATE });
 	});
 });
 

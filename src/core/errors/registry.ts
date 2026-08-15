@@ -1062,6 +1062,58 @@ export const ERROR_REGISTRY = {
 		retryable: false,
 		reason: 'Parity table classification (test/parity/normalize.ts) — never thrown by the engine.',
 	},
+
+	// --- tools/servers + diffusion (P1 sweep) -------------------------------
+	// The four codes the tool server modules and the diffusion facade needed
+	// that no earlier domain covered. Deliberately GENERIC and reusable: a tool
+	// refuses because its target cannot be processed, because a thing it needs
+	// is not there, because a service it depends on is down, or because the
+	// operation it performed failed.
+	'tool.unsupported_target': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_tool_unsupported_target',
+		message: 'The tool cannot operate on this target',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'tool.target_not_found': {
+		category: 'not_found',
+		status: 404,
+		label_key: 'error_tool_target_not_found',
+		message: 'The tool target does not exist',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'tool.dependency_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_tool_dependency_unavailable',
+		message: 'A service this tool depends on is unavailable',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	'tool.action_failed': {
+		category: 'internal',
+		status: 500,
+		label_key: 'error_tool_action_failed',
+		message: 'The tool action could not be completed',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'diffusion.connection_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_diffusion_connection_failed',
+		message: 'The diffusion target database could not be reached',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: true,
+	},
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;

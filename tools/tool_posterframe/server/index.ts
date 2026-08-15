@@ -15,6 +15,7 @@
 
 import { config } from '../../../src/config/config.ts';
 import { mediaTypeOf } from '../../../src/core/concepts/media.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { resolveMediaPathOptions } from '../../../src/core/media/ontology_path.ts';
 import type { MediaIdentity } from '../../../src/core/media/path.ts';
 import { resolveMediaToolContext } from '../../../src/core/media/tool_support.ts';
@@ -30,10 +31,11 @@ import { findInverseReferences } from '../../../src/core/search/search_related.t
 import { saveComponentData } from '../../../src/core/section/record/save_component.ts';
 import { getPermissions } from '../../../src/core/security/permissions.ts';
 import { isRecordInScope } from '../../../src/core/security/record_scope.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
 /** The caller-supplied portal host locator (`options.item_value`). */
@@ -48,8 +50,12 @@ interface ItemValue {
 	section_tipo?: string;
 }
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: `Error. ${message}`, errors: [message] };
+/** A posterframe step that could not complete — operator-facing, never the wire. */
+function posterframeFailed(reason: string): DedaloError {
+	return new DedaloError('tool.action_failed', {
+		coordinates: { tool: 'tool_posterframe' },
+		message: reason,
+	});
 }
 
 /**
@@ -67,160 +73,165 @@ async function portalTiposInSection(sectionTipo: string): Promise<string[]> {
  * the portal WRITE gate is imperative here (PHP asserts level 2 on the portal).
  */
 async function createIdentifyingImage(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const itemValue = (ctx.options.item_value ?? {}) as ItemValue;
-		const currentTime = String(ctx.options.current_time ?? '');
-		const portalComponentTipo = String(itemValue.component_portal ?? '');
-		const imageComponentTipo = String(itemValue.component_image ?? '');
-		const hostSectionTipo = String(itemValue.section_tipo ?? '');
-		const hostSectionId = Number(itemValue.section_id);
-		if (portalComponentTipo === '' || imageComponentTipo === '' || hostSectionTipo === '') {
-			return fail(
+	const itemValue = (ctx.options.item_value ?? {}) as ItemValue;
+	const currentTime = String(ctx.options.current_time ?? '');
+	const portalComponentTipo = String(itemValue.component_portal ?? '');
+	const imageComponentTipo = String(itemValue.component_image ?? '');
+	const hostSectionTipo = String(itemValue.section_tipo ?? '');
+	const hostSectionId = Number(itemValue.section_id);
+	if (portalComponentTipo === '' || imageComponentTipo === '' || hostSectionTipo === '') {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage:
 				'Missing required parameters: item_value.component_portal/component_image/section_tipo',
-			);
-		}
-
-		// Portal WRITE gate (PHP assert_tipo_permission(portal, level 2)).
-		const portalLevel = await getPermissions(ctx.principal, hostSectionTipo, portalComponentTipo);
-		if (portalLevel < 2) return fail('insufficient permissions on the portal target');
-		// Per-record gate on the portal HOST record (PHP SEC-024 §9.4:
-		// assert_record_in_user_scope(item_value->section_tipo, item_value->section_id)).
-		// The declarative record/1 gate covered the AV SOURCE record only, and the
-		// host locator is caller-supplied — without this a user could create a portal
-		// element on a record outside their projects scope.
-		if (
-			!ctx.principal.isGlobalAdmin &&
-			Number.isInteger(hostSectionId) &&
-			hostSectionId > 0 &&
-			!(await isRecordInScope(hostSectionTipo, hostSectionId, ctx.principal))
-		) {
-			return fail('record is out of the user scope');
-		}
-
-		// AV source context (declarative record/1 gate already ran on options.section_tipo/section_id).
-		const avContext = await resolveMediaToolContext(ctx.options);
-		if (avContext.spec.model !== 'component_av')
-			return fail('source component is not component_av');
-
-		// Resolve the portal's target section, then create + persist a new record
-		// through the portal (PHP add_new_element + Save).
-		const portalTargetSectionTipo = await getMainRelatedSectionTipo(portalComponentTipo);
-		if (portalTargetSectionTipo === null) return fail('portal has no target section');
-		const saveResult = (await saveComponentData({
-			componentTipo: portalComponentTipo,
-			sectionTipo: hostSectionTipo,
-			sectionId: hostSectionId,
-			lang: 'lg-nolan',
-			changedData: [{ action: 'add_new_element', id: null, value: portalTargetSectionTipo }],
-			userId: ctx.userId,
-		})) as { ok: boolean; message: string; created_section_id?: number };
-		if (!saveResult.ok || saveResult.created_section_id == null) {
-			return fail(`unable to create portal record element: ${saveResult.message}`);
-		}
-		const newSectionId = saveResult.created_section_id;
-
-		// Build the IMAGE target context on the new record.
-		const imageSpec = mediaTypeOf('component_image');
-		if (imageSpec === null) return fail('component_image media spec unavailable');
-		const translatable = await getTranslatableByTipo(imageComponentTipo);
-		const imageIdentity: MediaIdentity = {
-			componentTipo: imageComponentTipo,
-			sectionTipo: portalTargetSectionTipo,
-			sectionId: newSectionId,
-			lang: translatable ? config.menu.dataLang : null,
-		};
-		const imagePathOpts = await resolveMediaPathOptions(
-			imageComponentTipo,
-			portalTargetSectionTipo,
-		);
-
-		const outcome = await createIdentifyingImageCore(
-			{ spec: avContext.spec, identity: avContext.identity, pathOpts: avContext.pathOpts },
-			{ spec: imageSpec, identity: imageIdentity, pathOpts: imagePathOpts },
-			currentTime,
-		);
-		if (!outcome.created) return fail('posterframe could not be created (no video stream?)');
-
-		// RECORD what was written. createIdentifyingImageCore only touches the DISK
-		// (frame extraction + derivative regeneration) and RETURNS the files_info
-		// scan; persisting it is a separate call. Returning it to the client is not
-		// the same thing — without this the freshly created portal record has an
-		// empty `media` key, tool_media_versions reports "Files info data is unsync",
-		// and an image has no read-time rescan to repair it (component_av does).
-		// Same defect the importer had; the two shipped it independently, which is
-		// why the ingest→persist pairing now has a gate.
-		//
-		// The record was created moments ago through the portal, so there are no
-		// existing items — persistUploadedMedia mints the first one.
-		{
-			const { persistUploadedMedia } = await import(
-				'../../../src/core/media/tools/files_info_persist.ts'
-			);
-			const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
-			// Derived from the path actually written, not guessed: the extension is
-			// whatever the frame extractor produced.
-			const writtenName = outcome.posterframePath?.split('/').pop() ?? '';
-			const posterName = writtenName !== '' ? writtenName : buildMediaIdentifier(imageIdentity);
-			await persistUploadedMedia({
-				sectionTipo: imageIdentity.sectionTipo,
-				sectionId: imageIdentity.sectionId,
-				componentTipo: imageIdentity.componentTipo,
-				lang: imageIdentity.lang,
-				filesInfo: outcome.filesInfo,
-				originalFileName: posterName,
-				originalNormalizedName: posterName,
-			});
-		}
-
-		return {
-			result: true,
-			msg: 'OK. Posterframe created successfully',
-			errors: [],
-			section_id: newSectionId,
-			files_info: outcome.filesInfo,
-		};
-	} catch (error) {
-		return fail((error as Error).message);
+		});
 	}
+
+	// Portal WRITE gate (PHP assert_tipo_permission(portal, level 2)).
+	const portalLevel = await getPermissions(ctx.principal, hostSectionTipo, portalComponentTipo);
+	if (portalLevel < 2) {
+		throw new DedaloError('perm.denied', {
+			coordinates: { tool: 'tool_posterframe', tipo: portalComponentTipo },
+		});
+	}
+	// Per-record gate on the portal HOST record (PHP SEC-024 §9.4:
+	// assert_record_in_user_scope(item_value->section_tipo, item_value->section_id)).
+	// The declarative record/1 gate covered the AV SOURCE record only, and the
+	// host locator is caller-supplied — without this a user could create a portal
+	// element on a record outside their projects scope.
+	if (
+		!ctx.principal.isGlobalAdmin &&
+		Number.isInteger(hostSectionId) &&
+		hostSectionId > 0 &&
+		!(await isRecordInScope(hostSectionTipo, hostSectionId, ctx.principal))
+	) {
+		throw new DedaloError('perm.out_of_scope', {
+			coordinates: { section_tipo: hostSectionTipo, section_id: hostSectionId },
+		});
+	}
+
+	// AV source context (declarative record/1 gate already ran on options.section_tipo/section_id).
+	const avContext = await resolveMediaToolContext(ctx.options);
+	if (avContext.spec.model !== 'component_av') {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: 'The source component is not a component_av',
+			coordinates: { model: avContext.spec.model },
+		});
+	}
+
+	// Resolve the portal's target section, then create + persist a new record
+	// through the portal (PHP add_new_element + Save).
+	const portalTargetSectionTipo = await getMainRelatedSectionTipo(portalComponentTipo);
+	if (portalTargetSectionTipo === null) {
+		throw new DedaloError('tool.unsupported_target', {
+			publicMessage: 'The portal has no target section',
+			coordinates: { tipo: portalComponentTipo },
+		});
+	}
+	const saveResult = (await saveComponentData({
+		componentTipo: portalComponentTipo,
+		sectionTipo: hostSectionTipo,
+		sectionId: hostSectionId,
+		lang: 'lg-nolan',
+		changedData: [{ action: 'add_new_element', id: null, value: portalTargetSectionTipo }],
+		userId: ctx.userId,
+	})) as { ok: boolean; message: string; created_section_id?: number };
+	if (!saveResult.ok || saveResult.created_section_id == null) {
+		throw new DedaloError('record.save_failed', {
+			coordinates: { tipo: portalComponentTipo, section_tipo: hostSectionTipo },
+			message: `unable to create portal record element: ${saveResult.message}`,
+		});
+	}
+	const newSectionId = saveResult.created_section_id;
+
+	// Build the IMAGE target context on the new record.
+	const imageSpec = mediaTypeOf('component_image');
+	if (imageSpec === null) throw posterframeFailed('component_image media spec unavailable');
+	const translatable = await getTranslatableByTipo(imageComponentTipo);
+	const imageIdentity: MediaIdentity = {
+		componentTipo: imageComponentTipo,
+		sectionTipo: portalTargetSectionTipo,
+		sectionId: newSectionId,
+		lang: translatable ? config.menu.dataLang : null,
+	};
+	const imagePathOpts = await resolveMediaPathOptions(imageComponentTipo, portalTargetSectionTipo);
+
+	const outcome = await createIdentifyingImageCore(
+		{ spec: avContext.spec, identity: avContext.identity, pathOpts: avContext.pathOpts },
+		{ spec: imageSpec, identity: imageIdentity, pathOpts: imagePathOpts },
+		currentTime,
+	);
+	if (!outcome.created) {
+		throw posterframeFailed('posterframe could not be created (no video stream?)');
+	}
+
+	// RECORD what was written. createIdentifyingImageCore only touches the DISK
+	// (frame extraction + derivative regeneration) and RETURNS the files_info
+	// scan; persisting it is a separate call. Returning it to the client is not
+	// the same thing — without this the freshly created portal record has an
+	// empty `media` key, tool_media_versions reports "Files info data is unsync",
+	// and an image has no read-time rescan to repair it (component_av does).
+	// Same defect the importer had; the two shipped it independently, which is
+	// why the ingest→persist pairing now has a gate.
+	//
+	// The record was created moments ago through the portal, so there are no
+	// existing items — persistUploadedMedia mints the first one.
+	{
+		const { persistUploadedMedia } = await import(
+			'../../../src/core/media/tools/files_info_persist.ts'
+		);
+		const { buildMediaIdentifier } = await import('../../../src/core/media/path.ts');
+		// Derived from the path actually written, not guessed: the extension is
+		// whatever the frame extractor produced.
+		const writtenName = outcome.posterframePath?.split('/').pop() ?? '';
+		const posterName = writtenName !== '' ? writtenName : buildMediaIdentifier(imageIdentity);
+		await persistUploadedMedia({
+			sectionTipo: imageIdentity.sectionTipo,
+			sectionId: imageIdentity.sectionId,
+			componentTipo: imageIdentity.componentTipo,
+			lang: imageIdentity.lang,
+			filesInfo: outcome.filesInfo,
+			originalFileName: posterName,
+			originalNormalizedName: posterName,
+		});
+	}
+
+	return ok(
+		{ section_id: newSectionId, files_info: outcome.filesInfo },
+		{ requestId: toolRequestId(ctx) },
+	);
 }
 
 /** get_ar_identifying_image — descriptors for records inversely referencing this one. */
 async function getArIdentifyingImage(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		const sectionTipo = String(ctx.options.section_tipo ?? '');
-		const sectionId = Number(ctx.options.section_id);
-		if (sectionTipo === '' || !Number.isInteger(sectionId) || sectionId <= 0) {
-			return fail('section_tipo and a positive section_id are required');
-		}
-
-		const rawHits = await findInverseReferences(
-			[{ section_tipo: sectionTipo, section_id: sectionId }],
-			{
-				order: 'section_id',
-			},
-		);
-		// TOOLS-08 (2026-07-28 audit): scope the inverse-reference hits to the
-		// caller's projects filter — the THIRD door of the AUTHZ-05 class the prior
-		// audit's R4 fix wired into relation_list.ts / dd_core_api.ts but not here.
-		// Without it, a non-admin enumerates the existence of records (in other
-		// tenants' projects) that reference the target. Global admins are unscoped.
-		const { scopeInverseReferenceHits } = await import(
-			'../../../src/core/security/record_scope.ts'
-		);
-		const hits = await scopeInverseReferenceHits(rawHits, ctx.principal);
-		const descriptors: Record<string, unknown>[] = [];
-		for (const hit of hits) {
-			const descriptor = await identifyingImageFromSection(hit.section_tipo, hit.section_id);
-			if (descriptor !== null) descriptors.push(descriptor);
-		}
-		return {
-			result: descriptors.length > 0 ? descriptors : false,
-			msg: 'OK. Request done',
-			errors: [],
-		};
-	} catch (error) {
-		return fail((error as Error).message);
+	const sectionTipo = String(ctx.options.section_tipo ?? '');
+	const sectionId = Number(ctx.options.section_id);
+	if (sectionTipo === '' || !Number.isInteger(sectionId) || sectionId <= 0) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'section_tipo and a positive section_id are required',
+		});
 	}
+
+	const rawHits = await findInverseReferences(
+		[{ section_tipo: sectionTipo, section_id: sectionId }],
+		{
+			order: 'section_id',
+		},
+	);
+	// TOOLS-08 (2026-07-28 audit): scope the inverse-reference hits to the
+	// caller's projects filter — the THIRD door of the AUTHZ-05 class the prior
+	// audit's R4 fix wired into relation_list.ts / dd_core_api.ts but not here.
+	// Without it, a non-admin enumerates the existence of records (in other
+	// tenants' projects) that reference the target. Global admins are unscoped.
+	const { scopeInverseReferenceHits } = await import('../../../src/core/security/record_scope.ts');
+	const hits = await scopeInverseReferenceHits(rawHits, ctx.principal);
+	const descriptors: Record<string, unknown>[] = [];
+	for (const hit of hits) {
+		const descriptor = await identifyingImageFromSection(hit.section_tipo, hit.section_id);
+		if (descriptor !== null) descriptors.push(descriptor);
+	}
+	// An EMPTY selection is an empty ARRAY, not `false` (the legacy body's
+	// "nothing found" sentinel): the client iterates `.length`.
+	return ok(descriptors, { requestId: toolRequestId(ctx) });
 }
 
 /** First portal in the section whose ontology properties declare an identifying_image. */

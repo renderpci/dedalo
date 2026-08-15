@@ -76,18 +76,18 @@ describe('tool_upload module', () => {
 
 	test('process_uploaded_file fails cleanly (never throws) on an unusable payload', async () => {
 		const loaded = await getLoadedTool('tool_upload');
-		const res = await mustGet(
-			loaded!.module.apiActions.process_uploaded_file,
-			'process_uploaded_file',
-		).handler({
-			principal: await resolvePrincipal(-1),
-			userId: -1,
-			background: false,
-			options: {},
-		});
-		expect(res.result).toBe(false);
-		expect(Array.isArray(res.errors)).toBe(true);
-		expect((res.errors as string[]).length).toBeGreaterThan(0);
+		// An unusable payload is REFUSED, not half-run: the media-context resolve
+		// still throws untyped (tool_support.ts is a different sweep), so it
+		// reaches the chokepoint as internal.unexpected instead of a body the
+		// handler dresses up as a result.
+		expect(
+			mustGet(loaded!.module.apiActions.process_uploaded_file, 'process_uploaded_file').handler({
+				principal: await resolvePrincipal(-1),
+				userId: -1,
+				background: false,
+				options: {},
+			}),
+		).rejects.toThrow();
 	});
 
 	/**
@@ -115,25 +115,25 @@ describe('tool_upload module', () => {
 		};
 		const principal = await resolvePrincipal(-1);
 
-		const refused = await upload.handler({
-			principal,
-			userId: -1,
-			background: false,
-			options: { ...options, quality: 'not_a_tier' },
-		});
-		expect(refused.result).toBe(false);
-		expect(String(refused.msg)).toContain("Unknown media quality 'not_a_tier'");
+		const refused = await upload
+			.handler({
+				principal,
+				userId: -1,
+				background: false,
+				options: { ...options, quality: 'not_a_tier' },
+			})
+			.then(() => null)
+			.catch((error: unknown) => error as Error);
+		expect(String(refused?.message)).toContain("Unknown media quality 'not_a_tier'");
 
 		// Same payload WITHOUT the quality: it must fail somewhere else entirely,
 		// so the assertion above cannot pass for an unrelated reason.
-		const noQuality = await upload.handler({
-			principal,
-			userId: -1,
-			background: false,
-			options,
-		});
-		expect(noQuality.result).toBe(false);
-		expect(String(noQuality.msg)).not.toContain('media quality');
+		const noQuality = await upload
+			.handler({ principal, userId: -1, background: false, options })
+			.then(() => null)
+			.catch((error: unknown) => error as Error);
+		expect(noQuality).not.toBeNull();
+		expect(String(noQuality?.message)).not.toContain('media quality');
 	});
 });
 

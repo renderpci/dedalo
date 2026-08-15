@@ -91,9 +91,9 @@ describe('media-versions panel ↔ engine contract', () => {
 		const response = (await getFilesInfo({
 			options: { tipo: 'test94', section_tipo: 'test3', section_id: 1 },
 			userId: -1,
-		} as never)) as unknown as { result: unknown; files_info_db: unknown };
-		expect(Array.isArray(response.result)).toBe(true);
-		expect(Array.isArray(response.files_info_db)).toBe(true);
+		} as never)) as unknown as { data: { files_info: unknown; files_info_db: unknown } };
+		expect(Array.isArray(response.data.files_info)).toBe(true);
+		expect(Array.isArray(response.data.files_info_db)).toBe(true);
 	});
 
 	/**
@@ -204,14 +204,15 @@ describe('media-versions panel ↔ engine contract', () => {
 			expect(source).toMatch(/options\.extension\b/);
 		});
 
-		test('a twin the host cannot write reaches the operator: errors + msg', () => {
+		test('a twin the host cannot write reaches the operator: errors + summary', () => {
 			const body = buildVersionBody();
-			// The tier BUILT, so `result` stays true — a result:false would tell the
-			// operator nothing was produced when the tier and its jpg were. The refusal
-			// therefore has to travel in the two fields the panel actually renders.
+			// The tier BUILT, so the envelope stays ok:true — a THROW here would tell
+			// the operator nothing was produced when the tier and its jpg were. The
+			// refusal therefore travels in the PAYLOAD the panel renders.
 			expect(body).toMatch(/errors:\s*built\.errors/);
 			expect(body).toMatch(/built\.errors\.length/);
-			expect(body).toMatch(/result:\s*true/);
+			expect(body).toMatch(/return ok\(/);
+			expect(body).not.toMatch(/result:\s*false/);
 		});
 	});
 

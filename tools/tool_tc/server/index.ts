@@ -36,6 +36,7 @@
  */
 
 import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
+import { DedaloError, ok } from '../../../src/core/errors/index.ts';
 import { replaceTimecodes } from '../../../src/core/media/tools/timecode.ts';
 import {
 	getMatrixTableFromTipo,
@@ -47,113 +48,124 @@ import {
 	isLangSlicedModel,
 	saveComponentData,
 } from '../../../src/core/section/record/save_component.ts';
-import type {
-	ToolActionContext,
-	ToolResponse,
-	ToolServerModule,
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	type ToolServerModule,
+	toolRequestId,
 } from '../../../src/core/tools/module.ts';
 
 /** PHP DEDALO_DATA_NOLAN — the structural no-language token. */
 const NOLAN = 'lg-nolan';
 
 async function changeAllTimecodes(ctx: ToolActionContext): Promise<ToolResponse> {
-	try {
-		// SAME ORDER as the record_tipo gate (src/core/tools/security.ts): reading these
-		// two aliases in the opposite order authorized one component and rewrote another.
-		const componentTipo = String(ctx.options.tipo ?? ctx.options.component_tipo ?? '');
-		const sectionTipo = String(ctx.options.section_tipo ?? '');
-		const sectionId = Number(ctx.options.section_id);
-		// PHP `empty($lang)` (:127): a bulk rewrite must name the slice it rewrites.
-		// Defaulting to lg-nolan silently addressed a DIFFERENT slice than the caller
-		// meant — and, since the save writes the slice back whole, could move data.
-		const lang = String(ctx.options.lang ?? '');
-		const offsetSeconds = Number(ctx.options.offset_seconds ?? 0);
-		if (
-			componentTipo === '' ||
-			sectionTipo === '' ||
-			!Number.isInteger(sectionId) ||
-			sectionId <= 0 ||
-			lang === ''
-		) {
-			return fail('component_tipo, section_tipo, a positive section_id and lang are required');
-		}
-		if (!Number.isFinite(offsetSeconds)) return fail('offset_seconds must be a number');
-
-		const model = await getModelByTipo(componentTipo);
-		const table = await getMatrixTableFromTipo(sectionTipo);
-		if (model === null || table === null) return fail('component or section not found');
-		const record = await readMatrixRecord(table, sectionTipo, sectionId);
-		if (record === null) return fail('record not found');
-		const storedItems = (readComponentItems(record, componentTipo, model) ?? []) as {
-			id?: number | string;
-			lang?: string;
-			value?: unknown;
-		}[];
-
-		// PHP get_data_lang (:1297-1333): supports_translation === false returns the
-		// FULL array; otherwise the lang slice, RE-INDEXED by array_values. The slice
-		// predicate is the WRITE engine's own (isLangSlicedModel + the effective-lang
-		// rule) rather than a second copy: read and write must address the same slice,
-		// or the save would relocate the items it just read.
-		const langSliced = isLangSlicedModel(model);
-		const translatable = await getTranslatableByTipo(componentTipo);
-		const effectiveLang = translatable || model === 'component_iri' ? lang : NOLAN;
-		const slice = langSliced ? filterItemsByLang(storedItems, effectiveLang) : storedItems;
-
-		// Optional single-key filter (PHP `is_null($key) || $key == $raw_key`), else
-		// every element of the slice. The rebuilt slice always carries EVERY element
-		// — filtered-out ones keep their original text (PHP clones them verbatim into
-		// $new_data), because the write replaces the slice whole.
-		const keyFilter = ctx.options.key;
-		const changesByKey: Record<string, Record<string, string>> = {};
-		const newSlice: unknown[] = [];
-		let changedCount = 0;
-		for (let rawKey = 0; rawKey < slice.length; rawKey++) {
-			const item = slice[rawKey] as { value?: unknown } | undefined;
-			if (item === undefined) continue; // noUncheckedIndexedAccess: sparse slot
-			if (keyFilter != null && String(keyFilter) !== String(rawKey)) {
-				newSlice.push(item);
-				continue;
-			}
-			const rawValue = typeof item.value === 'string' ? item.value : '';
-			const { text, changes } = replaceTimecodes(rawValue, offsetSeconds);
-			changesByKey[String(rawKey)] = changes;
-			if (text !== rawValue && item !== null && typeof item === 'object') {
-				newSlice.push({ ...item, value: text });
-				changedCount += 1;
-			} else {
-				newSlice.push(item);
-			}
-		}
-
-		if (changedCount > 0) {
-			// ONE save for the whole set (PHP set_data_lang + save): 'set_data' is the
-			// write engine's bulk-replace, LANG-SLICED for the translation-supporting
-			// literal classes exactly like set_data_lang — sibling languages survive,
-			// and the data write + TM row land in a single transaction.
-			const saved = await saveComponentData({
-				componentTipo,
-				sectionTipo,
-				sectionId,
-				lang,
-				changedData: [{ action: 'set_data', value: newSlice }],
-				userId: ctx.userId,
-			});
-			if (!saved.ok) return fail(saved.message);
-		}
-
-		return {
-			result: changesByKey,
-			msg: `ok. ${changedCount} item(s) updated`,
-			errors: [],
-		};
-	} catch (error) {
-		return fail((error as Error).message);
+	// SAME ORDER as the record_tipo gate (src/core/tools/security.ts): reading these
+	// two aliases in the opposite order authorized one component and rewrote another.
+	const componentTipo = String(ctx.options.tipo ?? ctx.options.component_tipo ?? '');
+	const sectionTipo = String(ctx.options.section_tipo ?? '');
+	const sectionId = Number(ctx.options.section_id);
+	// PHP `empty($lang)` (:127): a bulk rewrite must name the slice it rewrites.
+	// Defaulting to lg-nolan silently addressed a DIFFERENT slice than the caller
+	// meant — and, since the save writes the slice back whole, could move data.
+	const lang = String(ctx.options.lang ?? '');
+	const offsetSeconds = Number(ctx.options.offset_seconds ?? 0);
+	if (
+		componentTipo === '' ||
+		sectionTipo === '' ||
+		!Number.isInteger(sectionId) ||
+		sectionId <= 0 ||
+		lang === ''
+	) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'component_tipo, section_tipo, a positive section_id and lang are required',
+		});
 	}
-}
+	if (!Number.isFinite(offsetSeconds)) {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'offset_seconds must be a number',
+		});
+	}
 
-function fail(message: string): ToolResponse {
-	return { result: false, msg: message, errors: [message] };
+	const model = await getModelByTipo(componentTipo);
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (model === null || table === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			coordinates: { tipo: componentTipo, section_tipo: sectionTipo },
+		});
+	}
+	const record = await readMatrixRecord(table, sectionTipo, sectionId);
+	if (record === null) {
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+			message: 'record not found',
+		});
+	}
+	const storedItems = (readComponentItems(record, componentTipo, model) ?? []) as {
+		id?: number | string;
+		lang?: string;
+		value?: unknown;
+	}[];
+
+	// PHP get_data_lang (:1297-1333): supports_translation === false returns the
+	// FULL array; otherwise the lang slice, RE-INDEXED by array_values. The slice
+	// predicate is the WRITE engine's own (isLangSlicedModel + the effective-lang
+	// rule) rather than a second copy: read and write must address the same slice,
+	// or the save would relocate the items it just read.
+	const langSliced = isLangSlicedModel(model);
+	const translatable = await getTranslatableByTipo(componentTipo);
+	const effectiveLang = translatable || model === 'component_iri' ? lang : NOLAN;
+	const slice = langSliced ? filterItemsByLang(storedItems, effectiveLang) : storedItems;
+
+	// Optional single-key filter (PHP `is_null($key) || $key == $raw_key`), else
+	// every element of the slice. The rebuilt slice always carries EVERY element
+	// — filtered-out ones keep their original text (PHP clones them verbatim into
+	// $new_data), because the write replaces the slice whole.
+	const keyFilter = ctx.options.key;
+	const changesByKey: Record<string, Record<string, string>> = {};
+	const newSlice: unknown[] = [];
+	let changedCount = 0;
+	for (let rawKey = 0; rawKey < slice.length; rawKey++) {
+		const item = slice[rawKey] as { value?: unknown } | undefined;
+		if (item === undefined) continue; // noUncheckedIndexedAccess: sparse slot
+		if (keyFilter != null && String(keyFilter) !== String(rawKey)) {
+			newSlice.push(item);
+			continue;
+		}
+		const rawValue = typeof item.value === 'string' ? item.value : '';
+		const { text, changes } = replaceTimecodes(rawValue, offsetSeconds);
+		changesByKey[String(rawKey)] = changes;
+		if (text !== rawValue && item !== null && typeof item === 'object') {
+			newSlice.push({ ...item, value: text });
+			changedCount += 1;
+		} else {
+			newSlice.push(item);
+		}
+	}
+
+	if (changedCount > 0) {
+		// ONE save for the whole set (PHP set_data_lang + save): 'set_data' is the
+		// write engine's bulk-replace, LANG-SLICED for the translation-supporting
+		// literal classes exactly like set_data_lang — sibling languages survive,
+		// and the data write + TM row land in a single transaction.
+		const saved = await saveComponentData({
+			componentTipo,
+			sectionTipo,
+			sectionId,
+			lang,
+			changedData: [{ action: 'set_data', value: newSlice }],
+			userId: ctx.userId,
+		});
+		if (!saved.ok) {
+			throw new DedaloError('record.save_failed', {
+				coordinates: { tipo: componentTipo, section_tipo: sectionTipo, section_id: sectionId },
+				message: saved.message,
+			});
+		}
+	}
+
+	// `changed` was only ever legible inside the legacy `msg` prose; it is a
+	// fact of the payload, so it travels with the per-key change map.
+	return ok({ changes: changesByKey, changed: changedCount }, { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {

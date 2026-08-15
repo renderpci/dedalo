@@ -43,6 +43,7 @@ import {
 	sweepTermChain,
 	type TermSeedHandle,
 } from '../helpers/observer_term_seed.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SECTION = 'oh1';
 const TABLE = 'matrix';
@@ -192,7 +193,7 @@ describe('apply_value restores the paired dataframe frames', () => {
 				matrix_id: tmRowId,
 			}),
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
 	});
 
@@ -255,18 +256,20 @@ describe('apply_value refuses a frameless snapshot that would delete live frames
 	});
 
 	test('nothing is written — main AND frames stay exactly as they were', async () => {
-		const response = await toolTimeMachineApplyValue(
-			await context({
-				section_tipo: SECTION,
-				section_id: recordId,
-				tipo: MAIN,
-				lang: 'lg-nolan',
-				matrix_id: tmRowId,
-			}),
+		const refusal = await refusalOf(
+			toolTimeMachineApplyValue(
+				await context({
+					section_tipo: SECTION,
+					section_id: recordId,
+					tipo: MAIN,
+					lang: 'lg-nolan',
+					matrix_id: tmRowId,
+				}),
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('uncovered_scope');
-		expect(response.msg).toContain(SLOT);
+		expect(refusal.code).toBe('engine.uncovered_scope');
+		// The slot tipo names the refusal in the LOG line (operator disclosure).
+		expect(refusal.message).toContain(SLOT);
 		// The whole restore is refused, not partially applied.
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_B);
 		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B);
@@ -299,7 +302,7 @@ describe('apply_value applies a frameless snapshot when the slot is already empt
 				matrix_id: tmRowId,
 			}),
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
 		expect(await storedKey(recordId, SLOT)).toBeUndefined();
 	});
@@ -339,7 +342,7 @@ describe('apply_value drops a frame naming a tipo that is not a live slot', () =
 				matrix_id: tmRowId,
 			}),
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 		// Not in the main column (the strip), not in the slot, not in a key of
 		// its own — inert, exactly as PHP left it.
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
@@ -402,17 +405,18 @@ describe('apply_value refuses to restore a dataframe SLOT row', () => {
 	});
 
 	test('a slot restore is denied instead of silently emptying the slot', async () => {
-		const response = await toolTimeMachineApplyValue(
-			await context({
-				section_tipo: SECTION,
-				section_id: recordId,
-				tipo: SLOT,
-				lang: 'lg-nolan',
-				matrix_id: tmRowId,
-			}),
+		const refusal = await refusalOf(
+			toolTimeMachineApplyValue(
+				await context({
+					section_tipo: SECTION,
+					section_id: recordId,
+					tipo: SLOT,
+					lang: 'lg-nolan',
+					matrix_id: tmRowId,
+				}),
+			),
 		);
-		expect(response.result).toBe(false);
-		expect(response.errors).toContain('uncovered_scope');
+		expect(refusal.code).toBe('engine.uncovered_scope');
 		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B);
 	});
 });
@@ -454,11 +458,10 @@ describe('bulk_revert_process restores the paired frames too', () => {
 		const response = await toolTimeMachineBulkRevert(
 			await context({ section_tipo: SECTION, bulk_process_id: BATCH }),
 		);
-		expect(response.result).toBe(true);
-		expect(response.errors).toEqual([]);
-		if (typeof response.bulk_process_id === 'number') {
-			mintedBulkIds.push(response.bulk_process_id);
-		}
+		expect(response.ok).toBe(true);
+		const batch = response.data as { skipped: string[]; bulk_process_id?: unknown };
+		expect(batch.skipped).toEqual([]);
+		if (typeof batch.bulk_process_id === 'number') mintedBulkIds.push(batch.bulk_process_id);
 		// PHP's bulk_revert fed the raw snapshot to set_data, which writes frame
 		// locators into the MAIN column and leaves the slot at today's values.
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_A_STORED);
@@ -503,11 +506,11 @@ describe('bulk_revert_process refuses a frameless pre-batch state too', () => {
 		const response = await toolTimeMachineBulkRevert(
 			await context({ section_tipo: SECTION, bulk_process_id: BATCH }),
 		);
-		if (typeof response.bulk_process_id === 'number') {
-			mintedBulkIds.push(response.bulk_process_id);
+		const skippedBatch = response.data as { skipped: string[]; bulk_process_id?: unknown };
+		if (typeof skippedBatch.bulk_process_id === 'number') {
+			mintedBulkIds.push(skippedBatch.bulk_process_id);
 		}
-		const errors = response.errors ?? [];
-		expect(errors.some((error) => error.includes(`${MAIN}#${recordId}`))).toBe(true);
+		expect(skippedBatch.skipped.some((error) => error.includes(`${MAIN}#${recordId}`))).toBe(true);
 		expect(await storedKey(recordId, MAIN)).toEqual(MAIN_B);
 		expect(await storedKey(recordId, SLOT)).toEqual(FRAMES_B);
 	});
@@ -654,7 +657,7 @@ describe('apply_value fires the observer cascade', () => {
 				matrix_id: tmRowId,
 			}),
 		);
-		expect(response.result).toBe(true);
+		expect(response.ok).toBe(true);
 
 		const bag = ((await termMirror()) ?? []) as { section_tipo?: string; section_id?: string }[];
 		expect(

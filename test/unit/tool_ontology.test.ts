@@ -17,6 +17,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { getLoadedTool } from '../../src/core/tools/loader.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const DEVELOPER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const PLAIN_USER: Principal = { userId: 99, isGlobalAdmin: false, isDeveloper: false };
@@ -41,33 +42,39 @@ describe('tool_ontology module', () => {
 
 	test('the handler refuses a non-developer even when the dispatch gate is bypassed', async () => {
 		const loaded = await getLoadedTool('tool_ontology');
-		const res = await mustGet(
+		const spec = mustGet(
 			loaded!.module.apiActions.set_records_in_dd_ontology,
 			'set_records_in_dd_ontology',
-		).handler(ctx(PLAIN_USER, { section_tipo: 'test0', section_id: 1 }));
-		expect(res.result).toBe(false);
-		expect(res.errors).toContain('unauthorized');
+		);
+		const refusal = await refusalOf(
+			spec.handler(ctx(PLAIN_USER, { section_tipo: 'test0', section_id: 1 })),
+		);
 		// The refusal happens BEFORE the section_tipo is even looked at.
-		expect(String(res.msg)).toContain('developer');
+		expect(refusal.code).toBe('perm.developer_required');
 	});
 
 	test('a developer with no section_tipo is refused before any write', async () => {
 		const loaded = await getLoadedTool('tool_ontology');
-		const res = await mustGet(
+		const spec = mustGet(
 			loaded!.module.apiActions.set_records_in_dd_ontology,
 			'set_records_in_dd_ontology',
-		).handler(ctx(DEVELOPER, { section_id: 1 }));
-		expect(res.result).toBe(false);
-		expect(res.errors).toContain('section_tipo is required');
+		);
+		const refusal = await refusalOf(spec.handler(ctx(DEVELOPER, { section_id: 1 })));
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(refusal.publicMessage).toBe('section_tipo is required');
 	});
 
 	test('an unresolvable section_tipo fails closed (no matrix table → nothing processed)', async () => {
 		const loaded = await getLoadedTool('tool_ontology');
-		const res = await mustGet(
+		const spec = mustGet(
 			loaded!.module.apiActions.set_records_in_dd_ontology,
 			'set_records_in_dd_ontology',
-		).handler(ctx(DEVELOPER, { section_tipo: 'no_such_section_9999', section_id: 1 }));
-		expect(res.result).toBe(false);
-		expect((res.errors ?? []).join(' ')).toContain('no matrix table');
+		);
+		const refusal = await refusalOf(
+			spec.handler(ctx(DEVELOPER, { section_tipo: 'no_such_section_9999', section_id: 1 })),
+		);
+		expect(refusal.code).toBe('tool.action_failed');
+		// The ontology write's per-check detail rides the LOG-only message.
+		expect(refusal.message).toContain('no matrix table');
 	});
 });

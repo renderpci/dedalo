@@ -48,12 +48,17 @@
 
 import { getSectionTipos, sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import { sql } from '../../core/db/postgres.ts';
+import { DedaloError, ok } from '../../core/errors/index.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
 import { buildSearchSql } from '../../core/search/sql_assembler.ts';
 import { getDataframeChildTipos } from '../../core/section/list_definitions/section_list.ts';
 import { getPermissions } from '../../core/security/permissions.ts';
-import type { ToolActionContext, ToolResponse } from '../../core/tools/module.ts';
+import {
+	type ToolActionContext,
+	type ToolResponse,
+	toolRequestId,
+} from '../../core/tools/module.ts';
 import { loadExportRecord, prefetchExportRecords } from '../resolve/resolver.ts';
 import type { ExportRun, ExportSegment, GridAtom } from './atoms.ts';
 import {
@@ -518,7 +523,9 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	const { options } = context;
 	const sectionTipo = String(options.section_tipo ?? options.tipo ?? '');
 	if (sectionTipo === '') {
-		return { result: false, msg: 'Error. Missing section_tipo', errors: ['invalid_request'] };
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'options.section_tipo is required',
+		});
 	}
 	// PHP validates both against fixed sets and FALLS BACK (never errors).
 	const rawFormat = String(options.data_format ?? 'value');
@@ -565,18 +572,22 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 			sqo as unknown as Parameters<typeof getSectionTipos>[0],
 		)) {
 			if ((await getPermissions(context.principal, targetSectionTipo, targetSectionTipo)) < 1) {
-				return { result: false, msg: 'Insufficient permissions to read', errors: ['unauthorized'] };
+				throw new DedaloError('perm.denied', {
+					coordinates: { tool: 'tool_export', section_tipo: targetSectionTipo },
+				});
 			}
 		}
 		for (const ddo of exportDdos) {
 			for (const seg of ddo.path ?? []) {
 				if (typeof seg.section_tipo === 'string' && typeof seg.component_tipo === 'string') {
 					if ((await getPermissions(context.principal, seg.section_tipo, seg.component_tipo)) < 1) {
-						return {
-							result: false,
-							msg: 'Insufficient permissions to read',
-							errors: ['unauthorized'],
-						};
+						throw new DedaloError('perm.denied', {
+							coordinates: {
+								tool: 'tool_export',
+								section_tipo: seg.section_tipo,
+								tipo: seg.component_tipo,
+							},
+						});
 					}
 				}
 			}
@@ -779,33 +790,35 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 	if (wantStream) {
 		// NDJSON protocol (PHP stream_export_grid) through the outcome.stream
 		// seam (S2-34): bytes leave as each line is produced.
-		return {
-			result: true,
-			msg: 'OK. Request done',
-			errors: [],
-			stream: ndjsonStream(protocolLines(), 'diffusion/export'),
-			streamContentType: 'application/x-ndjson; charset=utf-8',
-		};
+		// `stream` / `streamContentType` are EXTENSION KEYS (ERRORS_SPEC §3): the
+		// dd_tools_api handler reads them off the top level to hand the bytes to
+		// the outcome.stream seam, so they must not live inside `data`.
+		return ok(null, {
+			requestId: toolRequestId(context),
+			extend: {
+				stream: ndjsonStream(protocolLines(), 'diffusion/export'),
+				streamContentType: 'application/x-ndjson; charset=utf-8',
+			},
+		});
 	}
 
 	// Buffered form: drain the SAME generator; columns/rows fill as it runs.
 	for await (const line of protocolLines()) {
 		void line;
 	}
-	const response: ToolResponse = {
-		result: {
+	// `unresolved` (cell models the resolver had no atom for) is a NON-FATAL fact
+	// about the payload, so it travels INSIDE `data` — the legacy body smuggled it
+	// through `errors[]` on an otherwise successful response.
+	return ok(
+		{
 			meta,
 			columns,
 			rows,
 			end: endLineOut,
+			...(unresolved.length === 0 ? {} : { unresolved }),
 		},
-		msg: 'OK. Request done',
-		errors: [],
-	};
-	if (unresolved.length > 0) {
-		response.errors = unresolved.map((model) => `unresolved export cell model: ${model}`);
-	}
-	return response;
+		{ requestId: toolRequestId(context) },
+	);
 }
 
 /**

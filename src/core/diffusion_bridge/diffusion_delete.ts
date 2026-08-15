@@ -159,7 +159,7 @@ export function resetNativeDiffusionSqlDeleteForTests(): void {
 export interface NativeMediaIndexOps {
 	rebuild(
 		targets: { database_name: string; table_name: string; section_tipo: string }[],
-	): Promise<{ result: boolean; msg: string; markers: number; errors?: string[] }>;
+	): Promise<{ ok: boolean; message: string; markers: number; errors?: string[] }>;
 	getStatus(): Promise<{
 		enabled: boolean;
 		base: string | null;
@@ -746,8 +746,10 @@ export async function rebuildMediaIndex(): Promise<RebuildMediaIndexResponse> {
 		}
 
 		const native = await nativeMediaIndexOps.rebuild(targets);
-		response.result = native.result;
-		response.msg = native.msg;
+		// The native rebuild reports `{ok, message}` (P1 error sweep); this
+		// response object is still the legacy widget body — the bridge's own sweep.
+		response.result = native.ok;
+		response.msg = native.message;
 		response.markers = native.markers;
 		if (native.errors !== undefined && native.errors.length > 0) {
 			response.errors.push(...native.errors);
