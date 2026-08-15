@@ -962,6 +962,12 @@ service_autocomplete.prototype.external_engine = async function(options) {
 	// re-login recovery on 401 and the error reporting. A hand-rolled
 	// XMLHttpRequest bypasses all four.
 		const api_response = await data_manager.request({
+			// notices: this widget OWNS the degradation message. A down/blocked/
+			// disabled source answers `ok:true` + `notices:[external.<kind>]` +
+			// `source_status` (ERRORS_SPEC §5.4), and `render_search_notice` puts
+			// the chip inside the datalist where the empty result is — the generic
+			// page toast would say the same thing a second time, out of context.
+			notices	: 'caller',
 			body : {
 				dd_api	: 'dd_external_api',
 				action	: 'search',

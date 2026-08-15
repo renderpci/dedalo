@@ -16,6 +16,11 @@
 * how many requests failed at once, resolved for all of them by the single
 * 'login_successful' event.
 *
+* Also owns the NOTICE half of the contract (ERRORS_SPEC §3): a SUCCESS
+* envelope's `notices[]` go through `handle_api_notice` / `handle_api_notices`,
+* the same policy table at severity 'warning' and never a page-level action —
+* the request succeeded, so nothing may take the page away from the user.
+*
 * COMPAT (REMOVAL CONDITION: client_error_contract_tripwire census = 0):
 * page.js / common.js still read `page_globals.api_errors[]` (legacy
 * `{error, msg, trace}` entries) to draw the page panel, so the page-level
@@ -24,7 +29,7 @@
 
 // imports
 	import {event_manager} from './event_manager.js'
-	import {is_api_error} from './api_error.js'
+	import {ApiError, is_api_error} from './api_error.js'
 	import {resolve_error_policy} from './error_policy.js'
 	import {
 		error_text,
@@ -214,6 +219,128 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 			return {recovered:false, action}
 	}
 }//end handle_api_error
+
+
+
+/**
+* HANDLE_API_NOTICE
+* The notice half of the contract (ERRORS_SPEC §3): a SUCCESS envelope may
+* carry `notices:[{code, label_key, retryable, details}]` — a coded fact that is
+* NOT a failure (a refused child delete, a degraded external source, a login
+* soft warning). The request succeeded; something the caller should know did
+* not go the obvious way.
+*
+* A notice is dispatched through the SAME policy table an ApiError is, so a
+* tool/area silences or re-routes its own domain with `register_error_policy`
+* (e.g. `external.*` → `silent`, because the autocomplete chip already renders
+* the degradation from `source_status`). The default for a code with no entry
+* of its own is the `'*'` row — a toast — at severity `warning`: a notice is
+* never red.
+*
+* The notice is turned into an ApiError-shaped object (same fields, same
+* renderer) rather than a second model: `error_text` resolves `label_key` +
+* `details` exactly as it does for a failure, and every surface (toast, inline,
+* modal) keeps working unchanged.
+*
+* @param {Object} notice - {code, label_key?, retryable?, details?}
+* @param {Object} [ctx] - {wrapper?:HTMLElement, request_id?:string, silent?:bool}
+* @return Promise<{recovered:boolean, action:string}>
+*/
+export const handle_api_notice = async (notice, ctx = {}) => {
+
+	const api_error = api_error_from_notice(notice, ctx)
+	if (!api_error) {
+		console.warn('handle_api_notice: not a notice', notice)
+		return {recovered:false, action:'silent'}
+	}
+
+	const entry		= resolve_error_policy(api_error)
+	// A notice never re-logs-in, never takes over the page and never blocks:
+	// those actions belong to a FAILED request. Anything the table answers with
+	// that is not a showable surface degrades to a toast.
+	const showable	= ['toast', 'modal', 'inline', 'silent']
+	const action	= ctx.silent===true
+		? 'silent'
+		: (showable.includes(entry.action) ? entry.action : 'toast')
+
+	if (typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
+		console.warn(`handle_api_notice [${api_error.code}] → ${action}`, notice, ctx)
+	}
+
+	switch (action) {
+
+		case 'modal':
+			render_error_modal(api_error)
+			return {recovered:false, action}
+
+		case 'inline':
+			if (ctx.wrapper) {
+				render_error_inline(ctx.wrapper, api_error)
+				return {recovered:false, action}
+			}
+			deduped_toast(api_error, {severity:'warning'})
+			return {recovered:false, action:'toast'}
+
+		case 'toast':
+			deduped_toast(api_error, {severity: entry.severity || 'warning'})
+			return {recovered:false, action}
+
+		case 'silent':
+		default:
+			return {recovered:false, action:'silent'}
+	}
+}//end handle_api_notice
+
+
+
+/**
+* API_ERROR_FROM_NOTICE
+* Builds the ApiError-shaped carrier a notice renders through. Exported because
+* a caller that renders the notice in its OWN wrapper (section.js delete) needs
+* the same text resolution without going through the policy table.
+* @param {Object} notice
+* @param {Object} [ctx] - {request_id?:string}
+* @return ApiError|null
+*/
+export const api_error_from_notice = (notice, ctx = {}) => {
+
+	if (!notice || typeof notice!=='object' || typeof notice.code!=='string' || !notice.code.length) {
+		return null
+	}
+
+	return new ApiError({
+		code		: notice.code,
+		label_key	: typeof notice.label_key==='string' ? notice.label_key : null,
+		details		: notice.details,
+		retryable	: notice.retryable===true,
+		request_id	: typeof ctx.request_id==='string' ? ctx.request_id : null,
+		severity	: 'warning',
+		transport	: false,
+		source		: 'envelope',
+		raw			: notice
+	})
+}//end api_error_from_notice
+
+
+
+/**
+* HANDLE_API_NOTICES
+* The page-level subscriber body: dispatch every notice of one envelope.
+* @param {Object} payload - {notices:Array, api_response:Object}
+* @return Promise<Array>
+*/
+export const handle_api_notices = async (payload = {}) => {
+
+	const notices = Array.isArray(payload.notices) ? payload.notices : []
+	const ctx = {request_id: payload.api_response?.request_id}
+
+	const outcomes = []
+	for (const notice of notices) {
+		outcomes.push(await handle_api_notice(notice, ctx))
+	}
+
+	return outcomes
+}//end handle_api_notices
 
 
 

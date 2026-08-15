@@ -52,6 +52,11 @@ export const CORE_POLICY = Object.freeze({
 	'request.invalid_context'	: {action:'page_panel'},
 	// conflicts the user must see
 	'record.in_use'				: {action:'modal'},
+	// NOTICE code (a SUCCESS carries it): the record stayed because a child
+	// refused to go. Inline next to the list that still shows it when the caller
+	// gives a wrapper (section.js delete); the page subscriber has none, so the
+	// generic path degrades to a warning toast — the label carries the ids.
+	'record.delete_children_refused' : {action:'inline', severity:'warning'},
 	// caller-data faults belong next to the field
 	'validation.*'				: {action:'inline'},
 	// transport

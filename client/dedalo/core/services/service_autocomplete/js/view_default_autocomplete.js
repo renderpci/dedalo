@@ -33,6 +33,7 @@
 	// the ONE label-key resolver for an external source_status. Shared with
 	// component_external so a state never gets two different words.
 	import {source_status_label} from '../../../component_external/js/external_render.js'
+	import {request_failed, response_data} from '../../../common/js/api_error.js'
 
 
 
@@ -646,7 +647,12 @@ export const render_search_notice = function(self, api_response) {
 	// through the normal error path. Only the ENGINE's own typed source_status
 	// is ever rendered for it, and a dedalo engine never sends one.
 		const is_external	= !!(self && self.search_engine && self.search_engine!=='dedalo')
-		const succeeded		= !!(api_response && api_response.result!==false)
+		// Envelope v2: a DEGRADED external search is a SUCCESS (`ok:true` + a
+		// `notices[]` entry + the `source_status` extension key) — the request was
+		// well-formed, the SOURCE is what is down (ERRORS_SPEC §5.4). So "failed"
+		// is `request_failed()`, never `result===false`, which a degraded search
+		// no longer sets.
+		const succeeded		= !!api_response && !request_failed(api_response)
 		const status		= (api_response && api_response.source_status)
 			? api_response.source_status
 			: (succeeded
@@ -677,6 +683,19 @@ export const render_search_notice = function(self, api_response) {
 		if (status.service) {
 			title_parts.push(status.service)
 		}
+		// the code IS the diagnostic an operator quotes: the failure's `error.code`,
+		// and — on a degraded success — the notice codes.
+		if (api_response && api_response.error && typeof api_response.error.code==='string') {
+			title_parts.push(api_response.error.code)
+		}
+		if (api_response && Array.isArray(api_response.notices)) {
+			for (const notice of api_response.notices) {
+				if (typeof notice?.code==='string') {
+					title_parts.push(notice.code)
+				}
+			}
+		}
+		// COMPAT v1 token array (REMOVAL: client_error_contract_tripwire census 0)
 		if (api_response && Array.isArray(api_response.errors)) {
 			title_parts.push(api_response.errors.join(' · '))
 		}
@@ -719,9 +738,11 @@ export const execute_search_render = async function(self, options) {
 	const search_input	= options.search_input
 
 	try {
-		// api_response. Get from cache if exists
+		// api_response. Get from cache if exists. A cache hit is replayed as a
+		// plain SUCCESS envelope: only clean, non-degraded answers are ever
+		// cached (see the cache-write guard below), so it carries no notice.
 			const api_response = q.length && self.search_cache[q]
-				? { result : self.search_cache[q] }
+				? { ok : true, data : self.search_cache[q], result : self.search_cache[q] }
 				: await self.autocomplete_search()
 
 		// a newer search superseded this one: drop the stale response
@@ -734,20 +755,29 @@ export const execute_search_render = async function(self, options) {
 		// dead (or CSP-blocked) external source was indistinguishable from a
 		// search that found nothing. The notice reads the typed state the engine
 		// sends and renders its LABEL KEY.
-			if (!api_response || api_response.result===false) {
+			if (!api_response || request_failed(api_response)) {
 				await render_datalist(self, null)
 				render_search_notice(self, api_response)
 				return
 			}
 
 		// cache result. Add if not already exists (bounded to avoid unbounded growth
-		// over a long typing session; once full, new queries simply skip the cache)
-			if (!self.search_cache[q] && Object.keys(self.search_cache).length < 100) {
-				self.search_cache[q] = api_response.result
+		// over a long typing session; once full, new queries simply skip the cache).
+		//
+		// NEVER CACHE A DEGRADED ANSWER. A degraded external search now succeeds
+		// (`ok:true` + `notices[]` + a `source_status` whose state is never 'ok' —
+		// the field is omitted entirely on a clean answer, ERRORS_SPEC §5.4), so the
+		// old `result!==false` guard no longer keeps it out: without this the empty
+		// list a down source returned would be pinned to `q` for the rest of the
+		// typing session, and the source coming back up would never be noticed.
+			const degraded = (Array.isArray(api_response.notices) && api_response.notices.length > 0)
+				|| (!!api_response.source_status && api_response.source_status.state !== 'ok')
+			if (!degraded && !self.search_cache[q] && Object.keys(self.search_cache).length < 100) {
+				self.search_cache[q] = response_data(api_response)
 			}
 
 		// render datalist (call API and render the response result)
-			await render_datalist(self, api_response.result)
+			await render_datalist(self, response_data(api_response))
 
 		// notice. A successful response may still carry a state worth saying —
 		// today the local 'empty_query' one, which never leaves the browser.
@@ -804,8 +834,8 @@ export const run_search = async function(self) {
 			return
 		}
 
-		const result = (api_response && api_response.result !== false)
-			? api_response.result
+		const result = (api_response && !request_failed(api_response))
+			? response_data(api_response)
 			: null
 
 		await render_datalist(self, result)

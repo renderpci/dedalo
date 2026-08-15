@@ -24,8 +24,11 @@
 *   - `blind_criteria`, `restricted_criteria` and `more_available` (the engine's
 *     own anti-over-claim signals — this tool renders ALL THREE, never silently;
 *     `restricted_criteria` is what makes a partial score say it is partial),
-*   - the clean declines (`no_profile` | `invalid_profile` | `forbidden` |
-*     `missing_seed`), which arrive as HTTP 200 with `result:false`.
+*   - the clean declines, which arrive as envelope-v2 failures carrying ONE
+*     registered code (`identify.no_profile` | `identify.invalid_profile` |
+*     `identify.missing_seed` | `perm.denied`, ERRORS_SPEC §3). They are still
+*     ANSWERS the panel renders, not engine faults — the code is what changed,
+*     never the meaning.
 *
 * Record titles come from the EXISTING batched, ACL-checked
 * `get_section_terms` endpoint via `fetch_section_terms` — no new endpoint,
@@ -73,6 +76,12 @@
 	// data_manager: raw API access. This tool has no server module, so it talks
 	// to the already-registered dd_identify_api class directly.
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	// api_error: THE client error model (envelope v2). `request_failed` is the one
+	// failure test on a data_manager envelope, `response_data` the one payload
+	// accessor, and every decline this tool stores — decided by the server or by
+	// the client itself — is an ApiError, so the render reads ONE shape and
+	// dispatches on ONE field (`code`).
+	import {ApiError, CLIENT_ERROR, is_api_error, request_failed, response_data} from '../../../core/common/js/api_error.js'
 	// get_instance: the client's ONE component instance factory. Accepting a
 	// proposal writes through a real component instance, never a bespoke call.
 	import {get_instance} from '../../../core/common/js/instances.js'
@@ -111,10 +120,10 @@
 *                   or null when the tool was opened without a saved record
 *   limit         - how many scored candidates to ask for (server clamps [1,50])
 *   report        - the last successful result object from find_matches, or null
-*   decline       - {code, msg} of the last clean decline, or null
+*   decline       - ApiError of the last clean decline, or null
 *   labels        - map `${section_tipo}_${section_id}` → record title
 *   proposals     - the last successful get_proposals result object, or null
-*   proposals_decline - {code, msg} of the last proposals decline, or null
+*   proposals_decline - ApiError of the last proposals decline, or null
 *   vision        - whether the NEXT proposals run asks the vision model too.
 *                   Starts FALSE, always: that source costs money and may send
 *                   the record's photograph off the host, so it is a decision
@@ -126,15 +135,15 @@
 *   accepted      - how many proposals were written this session (drives the
 *                   caller refresh on close: this tool now writes)
 *   clusters      - the last successful cluster report, or null
-*   clusters_decline  - {code, msg} of the last clustering decline, or null
+*   clusters_decline  - ApiError of the last clustering decline, or null
 *   cluster_cap   - how many records one foreground run compares (shown in the
 *                   UI: a grouping cannot be read without knowing its bound)
-*   type_link_decline - {code, msg} of the last resolve_type_link decline. The
+*   type_link_decline - ApiError of the last resolve_type_link decline. The
 *                   two that matter are ANSWERS about the collection, not
-*                   errors: 'no_type_section' (no canonical Types exist here) and
-*                   'no_link_component' (the profile does not reveal which
-*                   component is the Type link) — both mean promotion is not
-*                   offered at all.
+*                   errors: 'identify.no_type_section' (no canonical Types exist
+*                   here) and 'identify.no_link_component' (the profile does not
+*                   reveal which component is the Type link) — both mean
+*                   promotion is not offered at all.
 *   promoted      - how many members were attached to a Type this session
 *                   (counted with `accepted` for the caller refresh on close)
 */
@@ -173,6 +182,77 @@ export const tool_identify = function () {
 
 
 /**
+* LOCAL_DECLINE
+* The ApiError for a refusal the CLIENT decides, so that a decline the panel
+* invented and a decline the server threw are the SAME object with the same
+* fields — one shape for the render, one field to dispatch on (`code`).
+*
+* `identify.missing_seed` is deliberately the server's own registered code: the
+* panel opened without a saved record is exactly the situation the engine
+* refuses with, and answering it with a private client token would fork the
+* vocabulary the render (and any future policy entry) reads.
+*
+* @param {string} code - a registry code (`identify.missing_seed`) or a client one
+* @param {Object} [fields] - {label_key, message, raw}
+* @returns {ApiError}
+*/
+const local_decline = function(code, fields={}) {
+
+	return new ApiError({
+		code		: code,
+		label_key	: fields.label_key ?? null,
+		message		: fields.message ?? null,
+		// not a transport failure and not an envelope we parsed: the client is
+		// the author, which is exactly what source 'client' means.
+		source		: 'client',
+		transport	: false,
+		raw			: fields.raw ?? null
+	})
+}//end local_decline
+
+
+
+/**
+* UNUSABLE_ANSWER
+* A 2xx envelope whose payload is not the object this call is defined to return.
+* Never swallowed as "no results": a shape the client cannot read is a failure
+* of its own, and saying so is the difference between a bug report and a curator
+* believing the collection has nothing to show.
+*
+* @param {Object} api_response
+* @returns {ApiError}
+*/
+const unusable_answer = function(api_response) {
+
+	return local_decline(CLIENT_ERROR.BAD_RESPONSE, {raw: api_response})
+}//end unusable_answer
+
+
+
+/**
+* THROWN_DECLINE
+* Safety net for a rejection escaping data_manager (it resolves on failure, so
+* this is a genuine client-side throw). An ApiError passes through untouched;
+* anything else becomes `client.bad_response` with its own text kept for the log.
+*
+* @param {*} error
+* @returns {ApiError}
+*/
+const thrown_decline = function(error) {
+
+	if (is_api_error(error)) {
+		return error
+	}
+
+	return local_decline(CLIENT_ERROR.BAD_RESPONSE, {
+		message	: String(error && error.message ? error.message : error),
+		raw		: error
+	})
+}//end thrown_decline
+
+
+
+/**
 * COMMON FUNCTIONS
 * wire_tool performs the standard prototype assignments in one call:
 *   render  <- tool_common.prototype.render
@@ -205,8 +285,8 @@ tool_identify.prototype.tool_request = tool_common.prototype.tool_request
 * record there rather than on `section_id`.
 *
 * A null seed is not an error state here: it is reported as the honest
-* `missing_seed` decline by the render, which reads better than the generic
-* tool error view.
+* `identify.missing_seed` decline by the render — the SAME registered code the
+* server throws for it — which reads better than the generic tool error view.
 *
 * @param {Object} options - initialisation options forwarded from open_tool
 *   options.lang {string} active UI language code (e.g. 'lg-spa')
@@ -310,11 +390,12 @@ tool_identify.prototype.build = async function(autoload=false) {
 * sent from here.
 *
 * Result handling has exactly three outcomes, kept apart on purpose:
-*   - success   → self.report is the result object, self.decline null
-*   - DECLINE   → HTTP 200 with `result:false` and `errors:[code]`. These are
-*                 ANSWERS, not failures ('no_profile' above all), so the code
-*                 and the server's own message are both kept for the render.
-*   - transport → self.decline.code = 'failed'
+*   - success   → self.report is the payload object, self.decline null
+*   - DECLINE   → an envelope-v2 failure carrying ONE registered code. These are
+*                 ANSWERS, not engine faults ('identify.no_profile' above all),
+*                 so the whole ApiError is kept: the render needs the code to
+*                 choose its tone and the message to quote the server verbatim.
+*   - transport → self.decline is the transport ApiError (`client.*`)
 *
 * @returns {Promise<boolean>} true when self.report was filled
 */
@@ -327,9 +408,9 @@ tool_identify.prototype.find_matches = async function() {
 		self.report		= null
 		self.decline	= null
 
-	// no saved record to compare — the same decline code the server uses
+	// no saved record to compare — the same registered code the server uses
 		if (!self.seed) {
-			self.decline = { code : 'missing_seed', msg : null }
+			self.decline = local_decline('identify.missing_seed', {label_key:'error_identify_missing_seed'})
 			return false
 		}
 
@@ -353,18 +434,18 @@ tool_identify.prototype.find_matches = async function() {
 			console.log('-> tool_identify find_matches API response:', api_response);
 		}
 
-		const result = api_response ? api_response.result : null
+		// clean decline: an envelope-v2 failure. data_manager has already turned
+		// it into the ApiError under `error` — the tool never reads tokens.
+		if (request_failed(api_response)) {
+			self.decline = api_response.error
+			return false
+		}
 
-		// clean decline (result:false) or an unusable envelope
+		const result = response_data(api_response)
+
+		// a 2xx answer that is not the report object
 		if (!result || typeof result!=='object') {
-			const errors	= (api_response && Array.isArray(api_response.errors)) ? api_response.errors : []
-			const code		= (typeof errors[0]==='string' && errors[0].length>0)
-				? errors[0]
-				: 'failed'
-			self.decline = {
-				code	: code,
-				msg		: (api_response && typeof api_response.msg==='string') ? api_response.msg : null
-			}
+			self.decline = unusable_answer(api_response)
 			return false
 		}
 
@@ -374,7 +455,7 @@ tool_identify.prototype.find_matches = async function() {
 
 	} catch (error) {
 		console.error('Error on tool_identify find_matches:', error);
-		self.decline = { code : 'failed', msg : String(error && error.message ? error.message : error) }
+		self.decline = thrown_decline(error)
 		return false
 	}
 }//end find_matches
@@ -407,9 +488,9 @@ tool_identify.prototype.get_proposals = async function() {
 		self.proposals			= null
 		self.proposals_decline	= null
 
-	// no saved record to propose for — the same decline code the server uses
+	// no saved record to propose for — the same registered code the server uses
 		if (!self.seed) {
-			self.proposals_decline = { code : 'missing_seed', msg : null }
+			self.proposals_decline = local_decline('identify.missing_seed', {label_key:'error_identify_missing_seed'})
 			return false
 		}
 
@@ -434,18 +515,18 @@ tool_identify.prototype.get_proposals = async function() {
 			console.log('-> tool_identify get_proposals API response:', api_response);
 		}
 
-		const result = api_response ? api_response.result : null
+		// clean decline: an envelope-v2 failure. data_manager has already turned
+		// it into the ApiError under `error` — the tool never reads tokens.
+		if (request_failed(api_response)) {
+			self.proposals_decline = api_response.error
+			return false
+		}
 
-		// clean decline (result:false) or an unusable envelope
+		const result = response_data(api_response)
+
+		// a 2xx answer that is not the report object
 		if (!result || typeof result!=='object') {
-			const errors	= (api_response && Array.isArray(api_response.errors)) ? api_response.errors : []
-			const code		= (typeof errors[0]==='string' && errors[0].length>0)
-				? errors[0]
-				: 'failed'
-			self.proposals_decline = {
-				code	: code,
-				msg		: (api_response && typeof api_response.msg==='string') ? api_response.msg : null
-			}
+			self.proposals_decline = unusable_answer(api_response)
 			return false
 		}
 
@@ -455,7 +536,7 @@ tool_identify.prototype.get_proposals = async function() {
 
 	} catch (error) {
 		console.error('Error on tool_identify get_proposals:', error);
-		self.proposals_decline = { code : 'failed', msg : String(error && error.message ? error.message : error) }
+		self.proposals_decline = thrown_decline(error)
 		return false
 	}
 }//end get_proposals
@@ -716,7 +797,7 @@ tool_identify.prototype.cluster = async function(options={}) {
 	// clustering needs a section to cluster WITHIN. Without a seed there is no
 	// section, which is the same honest decline the rest of the tool uses.
 		if (!self.seed) {
-			self.clusters_decline = { code : 'missing_seed', msg : null }
+			self.clusters_decline = local_decline('identify.missing_seed', {label_key:'error_identify_missing_seed'})
 			return false
 		}
 
@@ -748,17 +829,17 @@ tool_identify.prototype.cluster = async function(options={}) {
 			console.log('-> tool_identify cluster API response:', api_response);
 		}
 
-		const result = api_response ? api_response.result : null
+		// clean decline: an envelope-v2 failure (the tool's own server module
+		// throws `request.invalid_options` for a pool it cannot build).
+		if (request_failed(api_response)) {
+			self.clusters_decline = api_response.error
+			return false
+		}
+
+		const result = response_data(api_response)
 
 		if (!result || typeof result!=='object') {
-			const errors	= (api_response && Array.isArray(api_response.errors)) ? api_response.errors : []
-			const code		= (typeof errors[0]==='string' && errors[0].length>0)
-				? errors[0]
-				: 'failed'
-			self.clusters_decline = {
-				code	: code,
-				msg		: (api_response && typeof api_response.msg==='string') ? api_response.msg : null
-			}
+			self.clusters_decline = unusable_answer(api_response)
 			return false
 		}
 
@@ -768,7 +849,7 @@ tool_identify.prototype.cluster = async function(options={}) {
 
 	} catch (error) {
 		console.error('Error on tool_identify cluster:', error);
-		self.clusters_decline = { code : 'failed', msg : String(error && error.message ? error.message : error) }
+		self.clusters_decline = thrown_decline(error)
 		return false
 	}
 }//end cluster
@@ -793,7 +874,8 @@ tool_identify.prototype.cluster = async function(options={}) {
 * case it should be.
 *
 * Declines are the panel's content, not an error state — above all
-* `no_type_section` ("this collection keeps no Types") and `no_link_component`
+* `identify.no_type_section` ("this collection keeps no Types") and
+* `identify.no_link_component`
 * ("the profile does not say which component is the Type link"), both of which
 * mean the promotion controls must NOT be offered.
 *
@@ -809,7 +891,7 @@ tool_identify.prototype.resolve_type_link = async function(records, check_type_i
 	self.type_link_decline = null
 
 	if (!self.seed) {
-		self.type_link_decline = { code : 'missing_seed', msg : null }
+		self.type_link_decline = local_decline('identify.missing_seed', {label_key:'error_identify_missing_seed'})
 		return null
 	}
 
@@ -833,17 +915,18 @@ tool_identify.prototype.resolve_type_link = async function(records, check_type_i
 			console.log('-> tool_identify resolve_type_link API response:', api_response);
 		}
 
-		const result = api_response ? api_response.result : null
+		// clean decline: an envelope-v2 failure. `identify.no_type_section` and
+		// `identify.no_link_component` arrive here and are ANSWERS about the
+		// collection — the panel renders them and hides the promotion controls.
+		if (request_failed(api_response)) {
+			self.type_link_decline = api_response.error
+			return null
+		}
+
+		const result = response_data(api_response)
 
 		if (!result || typeof result!=='object') {
-			const errors	= (api_response && Array.isArray(api_response.errors)) ? api_response.errors : []
-			const code		= (typeof errors[0]==='string' && errors[0].length>0)
-				? errors[0]
-				: 'failed'
-			self.type_link_decline = {
-				code	: code,
-				msg		: (api_response && typeof api_response.msg==='string') ? api_response.msg : null
-			}
+			self.type_link_decline = unusable_answer(api_response)
 			return null
 		}
 
@@ -851,7 +934,7 @@ tool_identify.prototype.resolve_type_link = async function(records, check_type_i
 
 	} catch (error) {
 		console.error('Error on tool_identify resolve_type_link:', error);
-		self.type_link_decline = { code : 'failed', msg : String(error && error.message ? error.message : error) }
+		self.type_link_decline = thrown_decline(error)
 		return null
 	}
 }//end resolve_type_link

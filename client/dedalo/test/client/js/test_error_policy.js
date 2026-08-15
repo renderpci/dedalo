@@ -30,7 +30,13 @@ import {
 	register_error_policy,
 	unregister_error_policy
 } from '../../../core/common/js/error_policy.js'
-import {handle_api_error, reset_error_dispatch_state} from '../../../core/common/js/error_dispatch.js'
+import {
+	handle_api_error,
+	handle_api_notice,
+	handle_api_notices,
+	api_error_from_notice,
+	reset_error_dispatch_state
+} from '../../../core/common/js/error_dispatch.js'
 import {ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 
@@ -240,6 +246,126 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 
 	it('csrf_retry is a no-op here (data_manager already resent once)', async function() {
 		assert.deepEqual(await handle_api_error(new ApiError({code: 'auth.csrf_failed'})), {recovered: false, action: 'csrf_retry'})
+	})
+})
+
+
+
+describe('API_NOTICES — a SUCCESS envelope\'s coded facts', function() {
+
+	// WHY. A notice is NOT a failure: the request succeeded and something the
+	// caller should know did not go the obvious way (a child refused a delete,
+	// an external source is degraded). The rules that must hold, or a notice
+	// becomes either invisible or a fake error:
+	//   - it resolves through the SAME policy table (one table, not two);
+	//   - it can never take the page away — a page-level action degrades to a
+	//     toast, because the request the user made actually worked;
+	//   - its severity is 'warning', never 'error' (no red for a success);
+	//   - `label_key` + `details` resolve exactly as a failure's do.
+
+	const with_notifications = async (fn) => {
+		const seen	= []
+		const token	= event_manager.subscribe('notification', (payload) => seen.push(payload))
+		try {
+			await fn(seen)
+		} finally {
+			event_manager.unsubscribe(token)
+		}
+		return seen
+	}
+
+	let original_debug
+	beforeEach(function() {
+		reset_error_dispatch_state()
+		original_debug		= window.SHOW_DEBUG
+		window.SHOW_DEBUG	= false
+	})
+	afterEach(function() {
+		window.SHOW_DEBUG = original_debug
+	})
+
+	it('builds an ApiError-shaped carrier: code, label_key, details, severity warning', function() {
+		const api_error = api_error_from_notice({
+			code		: 'record.delete_children_refused',
+			label_key	: 'error_record_delete_children_refused',
+			retryable	: false,
+			details		: {not_deleted: '12,13'}
+		}, {request_id: 'rq-1'})
+		assert.equal(api_error.code, 'record.delete_children_refused')
+		assert.equal(api_error.label_key, 'error_record_delete_children_refused')
+		assert.equal(api_error.details.not_deleted, '12,13')
+		assert.equal(api_error.severity, 'warning')
+		assert.equal(api_error.request_id, 'rq-1')
+		assert.isFalse(api_error.transport)
+	})
+
+	it('rejects a shapeless notice instead of rendering nothing silently', async function() {
+		assert.isNull(api_error_from_notice({}))
+		assert.deepEqual(await handle_api_notice(null), {recovered: false, action: 'silent'})
+	})
+
+	it('the delete notice renders INLINE in the caller\'s wrapper', async function() {
+		const wrapper = document.createElement('div')
+		document.body.appendChild(wrapper)
+		try {
+			const outcome = await handle_api_notice({
+				code	: 'record.delete_children_refused',
+				details	: {not_deleted: '12,13'}
+			}, {wrapper})
+			assert.equal(outcome.action, 'inline')
+			assert.isNotNull(wrapper.querySelector('.component_message'))
+		} finally {
+			wrapper.remove()
+		}
+	})
+
+	it('the same notice degrades to a WARNING toast when no wrapper is given', async function() {
+		const seen = await with_notifications(async () => {
+			const outcome = await handle_api_notice({code: 'record.delete_children_refused', details: {not_deleted: '9'}})
+			assert.equal(outcome.action, 'toast')
+		})
+		assert.equal(seen.length, 1)
+		assert.equal(seen[0].type, 'warning')
+	})
+
+	it('a page-level policy row can never fire for a notice: the request SUCCEEDED', async function() {
+		// `perm.*` resolves to no_access_page for a FAILURE; as a notice it may
+		// only speak, never replace the page.
+		const seen = await with_notifications(async () => {
+			const outcome = await handle_api_notice({code: 'perm.something'})
+			assert.equal(outcome.action, 'toast')
+		})
+		assert.equal(seen.length, 1)
+		assert.equal(seen[0].type, 'warning')
+	})
+
+	it('ctx.silent suppresses it entirely', async function() {
+		const seen = await with_notifications(async () => {
+			const outcome = await handle_api_notice({code: 'record.delete_children_refused'}, {silent: true})
+			assert.equal(outcome.action, 'silent')
+		})
+		assert.equal(seen.length, 0)
+	})
+
+	it('handle_api_notices dispatches every notice of one envelope', async function() {
+		const outcomes = await handle_api_notices({
+			notices		: [{code: 'external.unavailable'}, {code: 'external.disabled'}],
+			api_response: {request_id: 'rq-2'}
+		})
+		assert.equal(outcomes.length, 2)
+	})
+
+	it('a registered domain can silence its own notices (the widget renders them itself)', async function() {
+		register_error_policy({'test_notice.*': {action: 'silent'}})
+		try {
+			const seen = await with_notifications(async () => {
+				const outcome = await handle_api_notice({code: 'test_notice.degraded'})
+				assert.equal(outcome.action, 'silent')
+			})
+			assert.equal(seen.length, 0)
+		} finally {
+			unregister_error_policy(['test_notice.*'])
+		}
 	})
 })
 

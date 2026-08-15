@@ -61,6 +61,8 @@
 	import {render_tree_data, format_label} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {widget_common} from '../../widgets/widget_common/js/widget_common.js'
+	import {request_failed, response_data} from '../../common/js/api_error.js'
+	import {error_text} from '../../common/js/render_api_error.js'
 
 
 
@@ -1593,18 +1595,24 @@ const render_widget = async (item, self) => {
 * The container is first emptied; then three optional sections are inserted in order:
 *   1. An "eraser" button (class `button reset eraser`) that clears the container again
 *      on mouseup, allowing the admin to dismiss the result without re-running the action.
-*   2. Error block — rendered only when `api_response.errors` is a non-empty array;
-*      each error string is rendered as a TEXT node, separated by `<br>` elements.
-*   3. Message block — rendered from `api_response.msg` as TEXT. Accepts either a
-*      string (line breaks become `<br>` elements) or an array of strings.
-*      Falls back to `'Unknown API response error'` when `msg` is absent or falsy.
-*   4. Tree view — the full `api_response` object rendered by `render_tree_data` into
+*   2. FAILURE block — on `ok:false` the coded `error` is resolved by the ONE
+*      text resolver (`error_text`: label in the admin's language → the
+*      registry's English message → the code) and nothing else is printed.
+*   3. Error block (SUCCESS only) — rendered when `api_response.errors` is a
+*      non-empty array: a PARTIAL refusal the action reports beside its result
+*      (skipped rows, per-item failures). Each entry is a TEXT node.
+*   4. Message block — `api_response.msg` while a handler still sends one as an
+*      extension key, then the payload's `data.summary`, then a plain "OK".
+*      Envelope v2 has no prose channel on a success, and the old
+*      `'Unknown API response error'` fallback made every swept handler's
+*      success read as a failure.
+*   5. Tree view — the full `api_response` object rendered by `render_tree_data` into
 *      a `<div class="pre">` for structured inspection.
 *
-* (!) `api_response` comes from the Dédalo worker bridge: its shape is:
-*   `{ result, msg, errors, … }` where `errors` is always an array (possibly empty).
-*   The function does not guard against a null `api_response`; callers must ensure
-*   the argument is a valid object.
+* (!) `api_response` is a data_manager envelope: `{ok, request_id, data,
+*   notices?, …extension keys}` on a success, `{ok:false, error}` (with `error`
+*   an ApiError) on a failure. The function does not guard against a null
+*   `api_response`; callers must ensure the argument is a valid object.
 *
 * @param {HTMLElement} container - The DOM node to populate; its existing children
 *   are removed before rendering
@@ -1634,29 +1642,61 @@ export const print_response = (container, api_response) => {
 			}
 		})
 
-	// errors
-	// Server text NEVER reaches an HTML sink: one text node per line, <br> between.
-		if (api_response.errors && api_response.errors.length) {
-			const errors_node = ui.create_dom_element({
+	// FAILURE. Envelope v2 says so with `ok:false` + a coded `error`; the ONE
+	// text resolver turns it into the admin's language. Nothing else is printed
+	// for a failure: the compat `errors:[code]` would only repeat the code and
+	// `msg` only repeats the message.
+		if (request_failed(api_response)===true) {
+
+			const error_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'api_response error',
 				parent			: container
 			})
-			append_text_lines(errors_node, api_response.errors)
-		}
+			append_text_lines(error_node, String(error_text(api_response.error)).split(/\\n|\n/))
 
-	// msg
-		const api_msg_lines = (api_response && api_response.msg)
-			? (Array.isArray(api_response.msg)
-				? api_response.msg
-				: String(api_response.msg).split(/\\n|\n/))
-			: ['Unknown API response error']
-		const msg_node = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'api_response',
-			parent			: container
-		})
-		append_text_lines(msg_node, api_msg_lines)
+		}else{
+
+			// errors (SUCCESS only) — a partial refusal the action reports BESIDE
+			// its result (skipped rows, per-item failures), never the whole outcome.
+			// Server text NEVER reaches an HTML sink: one text node per line.
+				if (api_response.errors && api_response.errors.length) {
+					const errors_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'api_response error',
+						parent			: container
+					})
+					append_text_lines(
+						errors_node,
+						api_response.errors.map((item) => typeof item==='string' ? item : error_text(item))
+					)
+				}
+
+			// msg / summary. Envelope v2 has NO prose channel on a SUCCESS: the
+			// account of what the action did is `data.summary` where the handler
+			// composes one. `msg` survives ONLY as an extension key of a handler
+			// the call-site sweep has not reached yet (REMOVAL:
+			// client_error_contract_tripwire census 0), so it is read first and
+			// the payload summary is its successor. When neither exists the action
+			// simply worked — say so, never 'Unknown API response error', which
+			// told an administrator that a successful action had failed.
+				const api_data		= response_data(api_response)
+				const summary		= (api_data && typeof api_data==='object' && typeof api_data.summary==='string' && api_data.summary.length)
+					? api_data.summary
+					: null
+				const api_msg_source	= api_response.msg || summary
+				const api_msg_lines		= api_msg_source
+					? (Array.isArray(api_msg_source)
+						? api_msg_source
+						: String(api_msg_source).split(/\\n|\n/))
+					: [(typeof get_label!=='undefined' && get_label && get_label.ok) || 'OK']
+				const msg_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'api_response',
+					parent			: container
+				})
+				append_text_lines(msg_node, api_msg_lines)
+		}
 
 	// JSON response result
 		const result = ui.create_dom_element({

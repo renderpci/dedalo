@@ -162,6 +162,36 @@ executor `handle_api_error(api_error, ctx) → {recovered}` in
 panel, modal — labels first, `SHOW_DEBUG` suffix `[code · request_id]`) in
 `render_api_error.js`.
 
+### Notices: a success that has something to say
+
+A **success** envelope may carry `notices: [{code, label_key, retryable,
+details}]` — a coded fact that is not a failure. The request worked and
+something the user should know did not go the obvious way: a record kept
+because one of its children refused to be deleted
+(`record.delete_children_refused`, `details.not_deleted` = the refused ids), an
+external source that answered nothing because it is down or switched off
+(`external.<kind>`), a partial write that cleaned some languages and not
+others.
+
+`data_manager.request` publishes them once, generically, as the `api_notices`
+event `{notices, api_response}`. `page.js` subscribes to it at init, so a
+notice is never lost just because the caller forgot to look for one:
+
+- `handle_api_notice(notice, ctx)` (`error_dispatch.js`) resolves the notice
+  through the **same** policy table an `ApiError` goes through, at severity
+  `warning`.
+- A page-level action can never fire for a notice: `relogin`,
+  `no_access_page`, `page_panel` and `csrf_retry` all degrade to a toast. The
+  request the user made succeeded, so nothing may take the page away.
+- A caller that renders the notice **itself** — next to the record it could not
+  delete, or inside the autocomplete datalist where the empty result is — asks
+  for ownership with `data_manager.request({…, notices: 'caller'})`, which
+  suppresses the page-level publish so the message is not said twice, and
+  reads `api_response.notices` directly.
+- A tool or area may register its own domain
+  (`register_error_policy({'my_domain.*': {action: 'silent'}})`) when its
+  widget already shows the fact.
+
 ### Retry, timeout and the health probe
 
 `fetch_api` (`core/common/js/api_transport.js`) is the **only** place that

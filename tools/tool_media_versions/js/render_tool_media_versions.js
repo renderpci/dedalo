@@ -9,9 +9,9 @@
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {format_elapsed} from '../../../core/common/js/job_follow.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
-	import {render_error_toast} from '../../../core/common/js/render_api_error.js'
+	import {error_text, render_error_inline, render_error_toast} from '../../../core/common/js/render_api_error.js'
 	import {bytes_format, download_file, open_window} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 
@@ -297,7 +297,7 @@ const render_sync_data = function(self) {
 				self.sync_files()
 				.then(async function(response){
 					report_side_effects(self, response)
-					if (response.result===true) {
+					if (action_succeeded(response)) {
 						self.refresh({
 							build_autoload	: false,
 							destroy			: false
@@ -1036,7 +1036,7 @@ const render_file_versions = function(quality, self) {
 					self.delete_version(quality, extension)
 					.then(async function(response){
 						report_side_effects(self, response)
-						if (response.result===true) {
+						if (action_succeeded(response)) {
 							// destroy:false — see the note in render_build_version: a
 							// destroying refresh nulls main_element.context and the
 							// re-render throws before it can repaint.
@@ -1126,7 +1126,7 @@ const render_file_delete = function(quality, self) {
 				// The full response now (see tool_media_versions.js delete_quality):
 				// a successful delete can still have taken companion files with it.
 				report_side_effects(self, response)
-				if (response && response.result===true) {
+				if (action_succeeded(response)) {
 					// self.main_element_quality = quality
 					self.refresh({
 						build_autoload	: false,
@@ -1195,6 +1195,33 @@ const THUMB_QUALITY = 'thumb'
 
 
 /**
+* ACTION_SUCCEEDED
+* Did the action really run?
+*
+* Envelope v2 answers with `ok:true`; the compat block mirrors the payload into
+* `result`, so the old `result===true` test now compares an OBJECT to `true` and
+* is false for every successful action. `create_3d_posterframe` below is the one
+* caller that is NOT an envelope — it synthesises `{result:true, msg}` in the
+* browser — so that shape is honoured explicitly, not by accident.
+*
+* @param {Object|false} response - an API envelope, or the synthesised shape
+* @returns {boolean}
+*/
+const action_succeeded = (response) => {
+
+	if (!response || request_failed(response)) {
+		return false
+	}
+	if (response.ok===true) {
+		return true
+	}
+	// client-synthesised (create_3d_posterframe) — no envelope behind it
+	return response.result===true
+}//end action_succeeded
+
+
+
+/**
 * REPORT_SIDE_EFFECTS
 * Put the server's own account of a SUCCESSFUL action in front of the operator.
 *
@@ -1218,29 +1245,55 @@ const THUMB_QUALITY = 'thumb'
 */
 const report_side_effects = function(self, response) {
 
-	if (!response || response.result!==true) {
+	// ENVELOPE v2. The account lives in the PAYLOAD — there is no prose `msg` on a
+	// success any more, and `result` is now the compat MIRROR of `data` (an object,
+	// so the old `result!==true` test rejected every successful action and this
+	// whole report went silent). `response_data` is the ONE accessor: `data`, then
+	// the mirror while it lasts, `false` on a failure envelope.
+	if (!response || request_failed(response)) {
+		return false
+	}
+	const data = response_data(response)
+	if (!data || typeof data!=='object') {
 		return false
 	}
 
 	// The TRIGGER is structured data (errors / retired), never a string match on
-	// msg — a sentence that changes wording must not silently stop being shown.
-	const errors	= Array.isArray(response.errors) ? response.errors : []
-	const retired	= Array.isArray(response.retired) ? response.retired : []
+	// the sentence — wording that changes must not silently stop being shown.
+	// Both lists are payload keys of every mutating action of this tool
+	// (tools/tool_media_versions/server/media_versions.ts:385-396, :423-434).
+	const errors	= Array.isArray(data.errors) ? data.errors : []
+	const retired	= Array.isArray(data.retired) ? data.retired : []
 	if (errors.length===0 && retired.length===0) {
 		return false
 	}
 
-	// The server's `msg` already composes the whole account (withRetiredTwins /
-	// withRebuildFailure build it); fall back to the raw lists if it is absent.
-	const message = response.msg || [...errors, ...retired].join('; ')
-	const wrapper = self.node?.content_data || self.node
+	// `data.summary` ALREADY composes the whole account — withRebuildFailure
+	// (media_versions.ts:338-343) appends the errors and withRetiredTwins the
+	// retired twins to the sentence — so the entries are printed once, as the
+	// summary, and only fall back to a per-item list when the server sent none.
+	// A coded entry resolves through the ONE renderer, a bare string prints as-is.
+	const item_line	= (entry) => typeof entry==='string' ? entry : error_text(entry)
+	const summary	= (typeof data.summary==='string' && data.summary.length>0)
+		? data.summary
+		: null
+	const wrapper	= self.node?.content_data || self.node
+	const severity	= errors.length>0 ? 'error' : 'warning'
 	if (wrapper) {
-		ui.show_message(wrapper, message, errors.length>0 ? 'error' : 'warning')
+		if (summary!==null) {
+			// ui.show_message writes the text through `text_content` — never a sink
+			ui.show_message(wrapper, summary, severity)
+		}else{
+			// no sentence: each item on its own line, through the ONE renderer
+			for (const entry of [...errors, ...retired]) {
+				render_error_inline(wrapper, entry)
+			}
+		}
 	}else{
 		// no node to host the banner — the ONE renderer's toast surface, text-only
 		render_error_toast({
-			message		: message,
-			severity	: errors.length>0 ? 'error' : 'warning'
+			message		: summary ?? [...errors, ...retired].map(item_line).join('; '),
+			severity	: severity
 		})
 	}
 
@@ -1546,7 +1599,7 @@ const render_build_version = function(quality, self) {
 			const response	= is_3d_posterframe
 				? await create_3d_posterframe(self)
 				: await self.build_version(quality)
-			const accepted	= response && response.result===true
+			const accepted	= action_succeeded(response)
 			// A build that SUCCEEDED can still have failed to write a configured
 			// format (the twin channel) — the server says so, and this is where the
 			// operator hears it.
@@ -1798,9 +1851,13 @@ const render_specific_actions = {
 			})
 			button_conform_headers.addEventListener('click', async function(){
 				self.node.classList.add('loading')
-				// exec conform_headers
-				const result = await self.conform_headers(quality)
-				if (result===true) {
+				// exec conform_headers. The method resolves the WHOLE envelope now:
+				// the payload is `{summary, errors, files_info}`, never the bare
+				// `true` this branch used to compare against — which is why the
+				// panel stopped repainting after a remux.
+				const response = await self.conform_headers(quality)
+				report_side_effects(self, response)
+				if (action_succeeded(response)) {
 					self.main_element_quality = quality
 					// destroy:false — see render_build_version.
 					self.refresh({
@@ -1855,9 +1912,10 @@ const render_specific_actions = {
 						e.stopPropagation()
 
 						self.node.classList.add('loading')
-						// exec rotate
-						const result = await self.rotate(quality, -90)
-						if (result===true) {
+						// exec rotate (see the conform_headers note: the whole envelope)
+						const response = await self.rotate(quality, -90)
+						report_side_effects(self, response)
+						if (action_succeeded(response)) {
 							self.main_element.quality = quality
 							self.main_element.refresh()
 						}
@@ -1875,9 +1933,10 @@ const render_specific_actions = {
 						e.stopPropagation()
 
 						self.node.classList.add('loading')
-						// exec rotate
-						const result = await self.rotate(quality, 90)
-						if (result===true) {
+						// exec rotate (see the conform_headers note: the whole envelope)
+						const response = await self.rotate(quality, 90)
+						report_side_effects(self, response)
+						if (action_succeeded(response)) {
 							self.main_element.quality = quality
 							self.main_element.refresh()
 						}

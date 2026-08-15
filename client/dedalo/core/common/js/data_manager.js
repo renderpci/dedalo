@@ -31,6 +31,9 @@
 * the resolved object carries `error` = an `ApiError` (`request_failed(api_response)`
 * is THE test), and the transport publishes `'api_error'` (the ApiError) on the
 * event bus. The payload of a success is `response_data(api_response)`.
+* A SUCCESS may also carry `notices[]` (non-fatal coded facts, ERRORS_SPEC §3):
+* they are published once as `'api_notices'` and rendered by the page's
+* `handle_api_notice` subscriber unless a caller reads them itself.
 *
 * Main exports: `data_manager` (namespace object), `check_server_health`,
 * `render_msg_to_inspector`, `download_url`, `download_data`.
@@ -177,7 +180,9 @@ const client_failure = (api_error) => ({
 *     COMPAT-publish `'api_response_errors'` with `[code]`, toast TRANSPORT
 *     failures (the user must learn the network is down even when no caller
 *     handles the failure), resolve the envelope.
-* 10. Success: write-through to IndexedDB on idle when cached; resolve the envelope.
+* 10. Success: alias the COMPAT `result` mirror onto `data` (ONE object graph),
+*     publish `'api_notices'` when the envelope carries any, write through to
+*     IndexedDB on idle when cached; resolve the envelope.
 *
 * @param {Object} options - Request configuration
 * @param {string} [options.url] - Override the default API URL
@@ -194,6 +199,10 @@ const client_failure = (api_error) => ({
 * @param {number} [options.base_delay=500] - Base exponential-backoff delay in ms
 * @param {number} [options.timeout=5000] - Per-attempt timeout in ms
 * @param {Object} [options.cache_handler] - IndexedDB cache descriptor `{handler:'localdb', id:string}`
+* @param {string} [options.notices='page'] - Who renders a SUCCESS envelope's
+*   `notices[]`: 'page' publishes `'api_notices'` (the page subscriber toasts them
+*   through the policy table); 'caller' publishes NOTHING, because the caller
+*   renders the notice in its own wrapper and a second toast would duplicate it.
 * @param {boolean} [options._csrf_retried] - Internal flag; prevents recursive CSRF retry
 * @returns {Promise<Object>} The API envelope. Always an object; on failure it
 *   carries `error` (an ApiError) — test with `request_failed(api_response)`.
@@ -215,13 +224,14 @@ data_manager.request = async function(options) {
 		signal		: null,
 		retries		: 5, // default request retries int
 		base_delay	: 500, // default base delay in ms
-		timeout		: 5000 // default timeout in ms
+		timeout		: 5000, // default timeout in ms
+		notices		: 'page' // 'page' = publish 'api_notices' (default); 'caller' = the caller renders them itself
 	};
 
 	const merged_options = { ...default_options, ...options };
 
 	// vars from options applying defaults
-	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, signal, retries, base_delay, timeout } = merged_options;
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, signal, retries, base_delay, timeout, notices } = merged_options;
 
 	// SEC-008: attach the CSRF token captured from the previous API response
 	// (or `null` on the very first call). The server requires the
@@ -419,6 +429,29 @@ data_manager.request = async function(options) {
 		}
 
 		return envelope;
+	}
+
+	// COMPAT v1 (REMOVAL: client_error_contract_tripwire census 0 — the P4 commit
+	// that deletes the server's ERROR_ENVELOPE_COMPAT block and every `.result` /
+	// `.msg` / `.errors` read in client/**): the converter emits `result` as a
+	// MIRROR of `data`, and JSON.parse turns the mirror into a SECOND object
+	// graph — so a caller reading `response_data()` and one reading `.result`
+	// desync as soon as either mutates. Alias them to ONE object. api_transport
+	// already does this at the parse point for every surface; repeated here so
+	// the guarantee holds for any body that reaches this return by another road.
+	if (json && typeof json === 'object' && !Array.isArray(json) && json.ok === true && json.data !== undefined) {
+		json.result = json.data;
+	}
+
+	// notices[] (ERRORS_SPEC §3): a SUCCESS may carry non-fatal coded facts —
+	// a refused child delete, a degraded external source, a login soft warning.
+	// They are published once, generically; error_dispatch.handle_api_notice
+	// resolves each through the SAME policy table an ApiError goes through, so a
+	// tool/area can silence or re-route its own domain with register_error_policy.
+	// Callers that want to render a notice next to their own widget read
+	// `api_response.notices` themselves — this event is the page-level default.
+	if (notices !== 'caller' && json && Array.isArray(json.notices) && json.notices.length > 0) {
+		event_manager.publish('api_notices', {notices: json.notices, api_response: json});
 	}
 
 	// cache_handler. Only cache successful envelopes

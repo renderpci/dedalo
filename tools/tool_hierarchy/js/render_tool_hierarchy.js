@@ -41,8 +41,9 @@
 // imports
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {is_api_error, request_failed} from '../../../core/common/js/api_error.js'
+	import {is_api_error, request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {pause, append_text_lines} from '../../../core/common/js/utils/index.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
@@ -354,23 +355,52 @@ const get_content_data = async function(self) {
 					return
 				}
 
+				// payload (envelope v2)
+				// The SUCCESS payload is `{state, applied, summary}` — tools/tool_hierarchy/
+				// server/tool_hierarchy.ts:99-102. `response_data` is the ONE accessor
+				// (`data`, then the compat `result` mirror); on a FAILURE it is `false`,
+				// so the object literal below keeps every read total.
+					const api_response_data = response_data(api_response) || {}
+
 				// failure
 				// ONE error model: a failed call carries an ApiError, and the dispatcher
 				// owns both the policy and the surface (render_error_inline writes TEXT
-				// into this wrapper). Server msg/errors NEVER reach an HTML sink.
+				// into this wrapper). Server text NEVER reaches an HTML sink.
 					const failed = request_failed(api_response)
 					if (failed) {
 						console.error('generate_virtual_section failed:', api_response.error)
 						messages_container.classList.add('error')
 						await handle_api_error(api_response.error, {wrapper: messages_container})
+
+						// errors — a NAMED extension key on the FAILURE envelope, at its TOP
+						// level, beside `state` (ERRORS_SPEC §3.0; thrown as DedaloError
+						// `extend` in tool_hierarchy.ts:93-97). It is the per-CHECK detail
+						// behind the one sentence the dispatcher just printed: without it
+						// the panel can only say the run was refused, never which invariant
+						// refused it. NOT inside `error.details`, so it is read from here.
+							if (api_response.errors?.length) {
+								append_text_lines(
+									ui.create_dom_element({
+										element_type	: 'div',
+										class_name		: 'error',
+										parent			: messages_container
+									}),
+									// bare string prints as-is; a coded entry resolves through
+									// the ONE renderer
+									api_response.errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
+								)
+							}
 					}else{
 
-						// messages
-						// The server returns a msg string or array; each entry is its own
-						// TEXT node and the client supplies the <br> elements between them.
-							const msg_lines = Array.isArray(api_response.msg)
-								? api_response.msg
-								: (api_response.msg ? [api_response.msg] : [])
+						// summary
+						// Envelope v2 has NO prose `msg` on a success: the run sentence is
+						// `data.summary` (the server's `outcome.msg`). Rendered as one line
+						// per entry — each its own TEXT node, with the client supplying the
+						// <br> elements between them.
+							const summary		= api_response_data.summary
+							const msg_lines		= Array.isArray(summary)
+								? summary
+								: (summary ? [summary] : [])
 							if (msg_lines.length) {
 								append_text_lines(
 									ui.create_dom_element({
@@ -383,16 +413,17 @@ const get_content_data = async function(self) {
 							}
 
 						// errors
-						// A SUCCESSFUL run can still report per-step problems (the server
-						// accumulates them next to result:true); render them below the message.
-							if (api_response.errors?.length) {
+						// A success carries none today (the server's per-check list rides on
+						// the REFUSAL, above) — read anyway, because a payload that grows one
+						// must not need a client change to be seen.
+							if (api_response_data.errors?.length) {
 								append_text_lines(
 									ui.create_dom_element({
 										element_type	: 'div',
 										class_name		: 'error',
 										parent			: messages_container
 									}),
-									api_response.errors
+									api_response_data.errors.map(entry => typeof entry==='string' ? entry : error_text(entry))
 								)
 							}
 					}
@@ -402,13 +433,13 @@ const get_content_data = async function(self) {
 				// the action is idempotent, and saying "nothing to do" out loud is the
 				// point: it tells the operator the button worked AND that the hierarchy
 				// was already sound, two things the old UI could not distinguish).
-					if (api_response.applied?.length) {
+					if (api_response_data.applied?.length) {
 						const applied_list = ui.create_dom_element({
 							element_type	: 'ul',
 							class_name		: 'applied',
 							parent			: messages_container
 						})
-						for (const line of api_response.applied) {
+						for (const line of api_response_data.applied) {
 							ui.create_dom_element({
 								element_type	: 'li',
 								text_content	: String(line),
@@ -421,8 +452,13 @@ const get_content_data = async function(self) {
 				// Repaint the checklist from the state the SERVER returned with the write —
 				// no second round-trip, and no chance of the panel disagreeing with what
 				// just happened.
-					if (api_response.state) {
-						paint_status(self, status_container, api_response.state)
+				// (!) TWO PLACES, on purpose: `state` is PAYLOAD on a success and a named
+				// TOP-LEVEL extension key on the refusal (tool_hierarchy.ts:96), which is
+				// exactly the case the checklist matters most in — a refused Generate must
+				// still show WHICH invariant is unmet.
+					const state = api_response_data.state ?? api_response.state
+					if (state) {
+						paint_status(self, status_container, state)
 					}
 
 				// reload section (caller)
@@ -577,8 +613,12 @@ export const render_status_panel = async function(self, container) {
 
 	try {
 		const api_response = await self.inspect_hierarchy()
-		if (api_response?.state) {
-			paint_status(self, container, api_response.state)
+		// envelope v2: inspect answers `ok({state})` — the checklist is PAYLOAD
+		// (tools/tool_hierarchy/server/tool_hierarchy.ts:68), so it is read through
+		// the ONE accessor, not off the envelope's top level.
+		const state = response_data(api_response)?.state
+		if (state) {
+			paint_status(self, container, state)
 			return
 		}
 		// no state: say so in the panel, and let the dispatcher say WHY (the server

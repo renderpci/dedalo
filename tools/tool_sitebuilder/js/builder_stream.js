@@ -124,16 +124,21 @@ export async function builder_stream(opts) {
 		}
 		if (data_lines.length === 0) return
 
-		// The engine emits `event: error` only if the pass-through itself dies.
+		// TWO writers can emit `event: error` on this one stream: the engine when the
+		// pass-through itself dies (`site_builder.stream_lost`,
+		// tools/tool_sitebuilder/server/index.ts) and the DAEMON when it cannot replay
+		// a session backlog (`replay_failed`, publication/site_builder/src/sessions/
+		// sse.ts — an isolated subsystem, so its token is outside the engine registry).
 		if (event_name === 'error') {
 			terminal = true
 			let payload = null
 			try { payload = JSON.parse(data_lines.join('\n')) } catch(e) { /* ignore */ }
-			// The frame's data IS the error body ({code, message}); wrapping it as
-			// `{error:…}` is what normalize_stream_error reads. An unparseable frame
-			// has nothing to say beyond "the stream broke" → client.bad_response.
+			// The frame's data IS the error body ({code, message}); normalize_stream_error
+			// takes it as it came — it recognises the bare body and the older
+			// `{is_running:false, error:{…}}` wrapper alike. An unparseable frame has
+			// nothing to say beyond "the stream broke" → client.bad_response.
 			on_error(
-				normalize_stream_error({error: payload})
+				normalize_stream_error(payload)
 				|| normalize_transport_error(new Error('unparseable stream error frame'))
 			)
 			return

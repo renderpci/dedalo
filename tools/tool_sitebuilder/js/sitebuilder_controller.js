@@ -6,7 +6,10 @@
 
 // imports
 	import { builder_stream } from './builder_stream.js'
-	import { render_markdown } from './markdown.js'
+	// markdown.render: the module's ONE export is the `markdown` namespace object
+	// (markdown.js has never exported a bare `render_markdown`, so the old named
+	// import was a hard ES-module load error that took the whole controller down).
+	import { markdown } from './markdown.js'
 	import { request_failed } from '../../../core/common/js/api_error.js'
 	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
 	import { error_text } from '../../../core/common/js/render_api_error.js'
@@ -20,18 +23,24 @@
 // while the operator is reading the chat log. The core codes are untouched: a
 // mid-run auth.not_logged still raises the relogin overlay.
 //
-// COMPAT: the daemon pass-through emits the v1 underscore tokens on the SSE
-// `event: error` frame (tools/tool_sitebuilder/server/index.ts), which never
-// pass through the envelope's legacy adapter and so keep no dot to match
-// `site_builder.*`. REMOVAL: when that frame carries a registry code.
+// The six `site_builder_*` UNDERSCORE aliases are GONE: the engine proxy refuses
+// by throwing the registered dotted codes (tools/tool_sitebuilder/server/index.ts
+// siteBuilderFailure / siteBuilderRejected), and its own terminal stream frame
+// now names `site_builder.stream_lost` (same file, sessionStream's pull catch) —
+// so every one of them matches `site_builder.*` on the dot.
+//
+// ONE non-registry token still reaches this client, and it is NOT a site_builder
+// one: the DAEMON's own SSE writer emits `event: error` with
+// `{code:'replay_failed'}` (publication/site_builder/src/sessions/sse.ts) when it
+// cannot replay a session's backlog, and the engine relays that stream
+// byte-for-byte. The daemon is outside the engine's registry by design (an
+// isolated subsystem), so the token has no dot to match on and needs its own row
+// — without it a lost backlog would toast in a corner instead of appearing in the
+// pane the operator is reading. REMOVAL: when the daemon frame carries a
+// registered code.
 register_error_policy({
-	'site_builder.*'			: {action:'inline'},
-	'site_builder_stream_lost'	: {action:'inline'},
-	'site_builder_unconfigured'	: {action:'inline'},
-	'site_builder_unreachable'	: {action:'inline'},
-	'site_builder_auth'			: {action:'inline'},
-	'site_builder_rejected'		: {action:'inline'},
-	'site_builder_failed'		: {action:'inline'}
+	'site_builder.*'	: {action:'inline'},
+	'replay_failed'		: {action:'inline'}
 })
 
 
@@ -633,7 +642,7 @@ sitebuilder_controller.prototype.append_agent_text = function(text) {
 		self.chat_log.appendChild(block)
 	}
 	block.dataset.raw += text
-	block.innerHTML = render_markdown(block.dataset.raw)
+	block.innerHTML = markdown.render(block.dataset.raw)
 	self.chat_log.scrollTop = self.chat_log.scrollHeight
 }//end append_agent_text
 

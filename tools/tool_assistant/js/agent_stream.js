@@ -29,7 +29,11 @@
  *   event: iteration    data: {n, max}
  *   event: final        data: {answer, stop, change_plan, history,
  *                              transcript_summary, usage, turns, model}
- *   event: error        data: {code, message, hint}             (terminal)
+ *   event: error        data: {code, category, message, label_key, retryable,
+ *                              details?, hint?}                    (terminal)
+ *                       The DATA is the error BODY itself — the event name
+ *                       already says terminal, so there is no `is_running:false`
+ *                       wrapper (ERRORS_SPEC §5.3, dd_mcp_api agentErrorFrame).
  *   `: ping` comment heartbeats are ignored. Unknown events are no-ops.
  *
  * Content negotiation: when the server refuses BEFORE the stream opens
@@ -51,23 +55,48 @@
 
 
 /**
- * ERROR_FRAME_BODY
- * The `event: error` payload as an envelope-v2 error object: `hint` is the one
- * field the wire carries that the error model has no column for, so it moves
- * into `details` (where a renderer may read it) instead of being dropped.
+ * LIFT_HINT
+ * `hint` is the one field the wire carries that the error model has no column
+ * for, so it moves into `details` — the ONE place an ApiError keeps per-code
+ * scalars, and where a renderer may read it — instead of being dropped.
  *
- * @param {Object|null} data - the parsed frame payload {code, message, hint}
+ * @param {Object} body - an envelope-v2 error body
+ * @returns {Object}
+ */
+const lift_hint = function(body) {
+
+	return (typeof body.hint === 'string' && body.hint.length)
+		? {...body, details: {...(body.details || {}), hint: body.hint}}
+		: body
+}//end lift_hint
+
+
+
+/**
+ * ERROR_FRAME
+ * The `event: error` payload, hint lifted, SHAPE PRESERVED.
+ *
+ * Two shapes reach here and both stay legal: today's BARE body (`{code,
+ * category, message, label_key, retryable, details?, hint?}` — the event name
+ * already says terminal, so the server sends no wrapper) and the older
+ * `toStreamFrame` wrapper `{is_running:false, error:{…}}`. This function does
+ * not choose between them: it lifts the hint wherever it sits and hands the
+ * frame to `normalize_stream_error`, which is THE place that decides.
+ *
+ * @param {Object|null} data - the parsed frame payload
  * @returns {Object|null}
  */
-const error_frame_body = function(data) {
+const error_frame = function(data) {
 
 	if (!data || typeof data !== 'object') {
 		return null
 	}
-	return (typeof data.hint === 'string' && data.hint.length)
-		? {...data, details: {...(data.details || {}), hint: data.hint}}
-		: data
-}//end error_frame_body
+	// COMPAT: the wrapped frame carries the body one level down
+	if (data.error && typeof data.error === 'object') {
+		return {...data, error: lift_hint(data.error)}
+	}
+	return lift_hint(data)
+}//end error_frame
 
 
 
@@ -180,12 +209,12 @@ export async function agent_stream(opts) {
 			case 'tool_use'		: on_tool_use(data); break
 			case 'tool_result'	: on_tool_result(data); break
 			case 'final'		: terminal = true; on_final(data); break
-			// the frame's data IS the error body ({code, message, hint}); wrapping it
-			// as `{error:…}` is what normalize_stream_error reads. The server's
-			// `hint` rides in `details` — the ONE place an ApiError carries per-code
-			// scalars — so the transcript can still show it.
+			// the frame goes to normalize_stream_error AS IT CAME: that one function
+			// recognises the bare v2 body AND the older {is_running:false, error:{…}}
+			// wrapper, so this client keeps working against either server without a
+			// shape test of its own. `hint` has been lifted into `details` first.
 			case 'error'		: terminal = true; on_error(
-									normalize_stream_error({error: error_frame_body(data)})
+									normalize_stream_error(error_frame(data))
 									|| normalize_transport_error(new Error('unparseable stream error frame'))
 								); break
 			default				: break // unknown events are no-ops (forward compat)

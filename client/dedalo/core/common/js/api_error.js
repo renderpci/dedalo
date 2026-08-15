@@ -374,6 +374,14 @@ export const normalize_transport_error = (error, flags = {}) => {
 * SSE / NDJSON frames are not envelopes: a failing run ends with a frame
 *   v2      {is_running:false, error:{code, message, label_key, details, request_id}}
 *   COMPAT  {…, data:{errors:[…]}} or {…, errors:[…]}   (REMOVAL: census 0)
+*   v2 BARE {code, category, message, label_key, retryable, details?, hint?}
+*
+* The BARE shape is a frame whose event NAME already says "terminal", so the
+* server sends the error BODY itself with no wrapper (ERRORS_SPEC §5.3 — the
+* agent SSE `event: error`, src/core/api/handlers/dd_mcp_api.ts agentErrorFrame).
+* It is recognised LAST, and only when there is a string `code` and neither an
+* `error` key nor `is_running`, so a wrapped frame can never fall into it.
+*
 * @param {*} frame - one parsed stream message
 * @return ApiError|null
 */
@@ -400,6 +408,13 @@ export const normalize_stream_error = (frame) => {
 	if (errors) {
 		const api_error = normalize_api_error(null, {result:false, msg:frame.data?.msg ?? frame.msg, errors:errors}, {source:'stream'})
 		return api_error
+	}
+
+	// v2 BARE body: the frame IS the error body. Guarded on `code` being a string
+	// AND on the absence of both wrapper keys, so this branch can only ever catch
+	// what the branches above already refused.
+	if (typeof frame.code==='string' && frame.code.length && frame.error===undefined && frame.is_running===undefined) {
+		return normalize_api_error(null, {ok:false, error:frame, request_id:frame.request_id}, {source:'stream'})
 	}
 
 	return null

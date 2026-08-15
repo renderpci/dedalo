@@ -7,7 +7,7 @@
 // import needed modules
 	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {request_failed} from '../../../core/common/js/api_error.js'
+	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {create_job_follower_group} from '../../../core/common/js/job_follow.js'
@@ -451,19 +451,26 @@ tool_media_versions.prototype.get_files_info = async function() {
 					dd_console("-> get_files_info API response:",'DEBUG',response);
 				}
 
+				// Envelope v2: BOTH sides of the comparison are payload fields
+				// (`ok({files_info, files_info_db})` —
+				// tools/tool_media_versions/server/media_versions.ts getFilesInfo).
+				// They used to be read off the body's top level, where nothing lives
+				// any more: the panel then listed no file at all.
+				const api_data = response_data(response)
+
 				// files_info_db: what the RECORD stores, read by the server in the same
 				// breath as the disk scan below. Refreshed HERE, next to the disk side,
 				// because the two are only meaningful compared against each other (the
 				// unsync warning). Taking the DB side from self.main_element.data
 				// instead — a cache that only a full component reload updates — is what
 				// made every delete raise a warning that a page reload cleared.
-				if (Array.isArray(response?.files_info_db)) {
-					self.files_info_db = response.files_info_db
+				if (Array.isArray(api_data?.files_info_db)) {
+					self.files_info_db = api_data.files_info_db
 				}
 
 				// always resolve an array so callers never receive undefined
-				const result = Array.isArray(response?.result)
-					? response.result // array of objects
+				const result = Array.isArray(api_data?.files_info)
+					? api_data.files_info // array of objects
 					: []
 
 				resolve(result)
@@ -748,11 +755,12 @@ tool_media_versions.prototype.get_record_jobs = async function() {
 * Uses a 1-hour timeout because large video files can take a long time to
 * re-mux even without re-encoding.
 *
-* Dispatches to: class.tool_media_versions.php::conform_headers()
+* Dispatches to: tools/tool_media_versions/server/media_versions.ts conformHeaders
 *
 * @param {string} quality - Quality key whose headers should be re-written.
-* @returns {Promise<Array>|false} Resolves with the server result array,
-*   or false when the user cancelled the confirm dialog.
+* @returns {Promise<Object>|false} Resolves with the whole API envelope
+*   (payload `{summary, errors, files_info}`), or false when the user cancelled
+*   the confirm dialog.
 */
 tool_media_versions.prototype.conform_headers = async function(quality) {
 
@@ -793,9 +801,12 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 					dd_console("-> conform_headers API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				// Envelope v2: the WHOLE envelope is resolved, as sync_files and
+				// delete_version already do. The payload is
+				// `{summary, errors, files_info}` — never the bare `true` the caller
+				// used to compare against, so the caller now asks `action_succeeded`
+				// and puts `summary` in front of the operator.
+				resolve(response)
 			})
 		})
 }//end conform_headers
@@ -821,8 +832,9 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 *
 * @param {string} quality - Quality key of the file to rotate.
 * @param {string|number} degrees - Rotation angle; typically -90 (left) or 90 (right).
-* @returns {Promise<Array>|false} Resolves with the server result array,
-*   or false when the user cancelled the confirm dialog.
+* @returns {Promise<Object>|false} Resolves with the whole API envelope
+*   (payload `{summary, errors, files_info}`), or false when the user cancelled
+*   the confirm dialog.
 */
 tool_media_versions.prototype.rotate = async function(quality, degrees) {
 
@@ -864,9 +876,11 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 					dd_console("-> rotate API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
-
-				resolve(result)
+				// Envelope v2: resolve the WHOLE envelope (see conform_headers). The
+				// payload is `{summary, errors, files_info}`; a rotation that changed
+				// no file is a THROWN `tool.action_failed`, so a successful envelope
+				// really means the file turned.
+				resolve(response)
 			})
 		})
 }//end rotate

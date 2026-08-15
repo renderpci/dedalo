@@ -17,6 +17,9 @@
 	// not the failure that stopped the job.
 	import {is_api_error, normalize_stream_error, request_failed} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	// The ONE error text resolver: label_key → English message → code. Used for
+	// the coded `connection_status` verdict below (a payload, not an envelope).
+	import {error_text} from '../../../core/common/js/render_api_error.js'
 
 
 
@@ -620,13 +623,28 @@ export const render_publication_items = function(self) {
 							})
 							// WC-2026-08-15-diffusion-connection-status-ok-message: the
 							// verdict is `{ok, code?, message}` (never the retired
-							// `{result,msg}` pair).
-							const class_status = node.connection_status.ok===true
+							// `{result,msg}` pair). It is a NESTED PAYLOAD, not an
+							// envelope: `ok` is the verdict and `code` (present only on
+							// a negative one) is the registered reason.
+							const connection_status	= node.connection_status
+							const class_status		= connection_status.ok===true
 								? 'success'
 								: 'fail'
+							// A coded verdict goes through the ONE error renderer so the
+							// admin reads it in their language; `label_key` follows the
+							// registry convention (ERRORS_SPEC §2.3: `error_` + code with
+							// `.` → `_`), and `error_text` falls back to the server's
+							// English `message` when that key is not in the catalog.
+							const status_text = typeof connection_status.code==='string' && connection_status.code.length
+								? error_text({
+									code		: connection_status.code,
+									label_key	: 'error_' + connection_status.code.replace(/\./g, '_'),
+									message		: connection_status.message
+								})
+								: connection_status.message
 							ui.create_dom_element({
 								element_type	: 'div',
-								text_content	: node.connection_status.message,
+								text_content	: status_text,
 								class_name		: 'value ' + class_status,
 								parent			: publication_items_grid
 							})

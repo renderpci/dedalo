@@ -72,7 +72,7 @@
 	import {render_solved_section} from './render_solved_section.js'
 	import {render_common_section} from './render_common_section.js'
 	import {request_failed} from '../../common/js/api_error.js'
-	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {handle_api_error, handle_api_notice} from '../../common/js/error_dispatch.js'
 
 
 
@@ -1460,7 +1460,10 @@ section.prototype.delete_section = async function (options) {
 			}
 		}
 		const api_response = await data_manager.request({
-			body : rqo
+			body	: rqo,
+			// this method renders the delete notices itself, next to the record
+			// it could not remove — the page-level toast would say it twice.
+			notices	: 'caller'
 		})
 
 		// manage errors
@@ -1469,6 +1472,22 @@ section.prototype.delete_section = async function (options) {
 		if (request_failed(api_response)) {
 			console.error('delete_section api_response error:', api_response.error);
 			await handle_api_error(api_response.error, {wrapper: self.node});
+		}
+
+		// notices. A delete SUCCEEDS with a coded, non-fatal fact when the server
+		// kept a record because one of its children refused to go
+		// (`record.delete_children_refused`, `details.not_deleted` = the refused
+		// ids, comma-joined). What was deleted really was deleted, so this is not
+		// a failure — it is the sentence the old alert used to show, rendered
+		// through the one error renderer (label + placeholders, never innerHTML)
+		// inside the section's own wrapper.
+		if (Array.isArray(api_response?.notices) && api_response.notices.length>0) {
+			for (const notice of api_response.notices) {
+				await handle_api_notice(notice, {
+					wrapper		: self.node,
+					request_id	: api_response.request_id
+				})
+			}
 		}
 
 		if (api_response?.result && api_response.result.length>0) {

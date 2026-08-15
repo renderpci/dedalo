@@ -54,7 +54,7 @@
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
-	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {handle_api_error, handle_api_notices} from '../../common/js/error_dispatch.js'
 	import {error_text, render_error_modal} from '../../common/js/render_api_error.js'
 	import {init_session_expiry} from '../../common/js/session_expiry.js'
 	import {prune_orphan_rules,get_inserted_rules} from '../../page/js/css.js'
@@ -234,6 +234,7 @@ page.prototype.scroll_component_into_view = function(component) {
 *   'quit'                 → calls delete_cache to clear local storage
 *   'change_lang'          → calls delete_cache so stale translations are dropped
 *   'api_error'            → hands the ApiError to the policy (relogin, no-access, toast)
+*   'api_notices'          → hands a SUCCESS envelope's notices[] to the same policy
 *
 * After subscribing, `add_events()` attaches global window/document listeners and
 * `set_custom_css()` applies OS-specific body classes.
@@ -508,6 +509,21 @@ page.prototype.init = async function(options) {
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('api_error', api_error_handler)
+			)
+
+		// event api_notices
+			// The NOTICE channel (ERRORS_SPEC §3): a SUCCESSFUL call may carry
+			// `notices[]` — coded, non-fatal facts (children refused on a delete, a
+			// degraded external source, a login soft warning). Subscribed ONCE here
+			// so no tool has to remember to look: the policy table decides per code
+			// (default toast/warning; a widget that renders the fact itself registers
+			// its domain as `silent`). Callers that want the notice next to their own
+			// wrapper read `api_response.notices` and call handle_api_notice directly.
+			const api_notices_handler = (payload) => {
+				handle_api_notices(payload)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('api_notices', api_notices_handler)
 			)
 
 		// session expiry warning

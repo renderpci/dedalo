@@ -8,6 +8,10 @@
 	import { data_manager } from '../../../core/common/js/data_manager.js'
 	import { agent_stream } from './agent_stream.js'
 	import { handle_api_error } from '../../../core/common/js/error_dispatch.js'
+	// api_error: the ONE client error model (envelope v2). `request_failed` is the
+	// failure test on a data_manager envelope and `response_data` the payload
+	// accessor — this tool never reads `.msg` / `.errors` / `.result`.
+	import { ApiError, CLIENT_ERROR, request_failed, response_data } from '../../../core/common/js/api_error.js'
 	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { chat_render } from './chat_render.js'
 	import { client_context } from './client_context.js'
@@ -486,20 +490,47 @@ export const assistant_controller = class assistant_controller {
 				}
 			})
 		} catch(e) {
-			api_response = { result: false, msg: e.message }
+			// data_manager RESOLVES on a failed call, so a rejection here is a genuine
+			// client-side throw. It still becomes an ApiError: one model, one shape.
+			api_response = {
+				ok		: false,
+				error	: new ApiError({
+					code	: CLIENT_ERROR.BAD_RESPONSE,
+					message	: (e && e.message) ? e.message : String(e),
+					raw		: e
+				})
+			}
 		}
 
-		const envelope = api_response ? api_response.data : null
-
-		if (!api_response || api_response.result === false || !envelope || envelope.ok === false) {
-			const error = envelope && envelope.error ? envelope.error : { code: 'apply_failed', message: (api_response && api_response.msg) || 'Apply failed' }
-			this._chat_render.add_apply_report({ error: error })
-			this._history = this._history.concat([{ role: 'user', text: '[Applying the plan failed: ' + (error.code || 'error') + ']' }])
+		// FAILURE. A plan refused as a WHOLE throws server-side — `mcp.write_disabled`,
+		// `mcp.plan_hash_mismatch`, `request.invalid`, `perm.*` (ERRORS_SPEC §5.2,
+		// src/core/api/handlers/dd_mcp_api.ts agent_apply) — so it arrives as an
+		// envelope-v2 failure with data_manager's ApiError under `error`. There is no
+		// `msg` to read and no hand-rolled `apply_failed` body any more.
+		if (request_failed(api_response)) {
+			const api_error = api_response.error
+			// the transcript keeps the sentence: it is the record of what this turn
+			// did, and it must survive a toast being dismissed. The ACTION is the
+			// dispatcher's — a session that died mid-apply raises the relogin overlay,
+			// everything else deduped-toasts.
+			this._chat_render.add_apply_report({
+				error : {
+					code	: api_error.code,
+					message	: error_text(api_error),
+					...(api_error.details && api_error.details.hint ? { hint: api_error.details.hint } : {})
+				}
+			})
+			await handle_api_error(api_error, {scope:'tool_assistant'})
+			this._history = this._history.concat([{ role: 'user', text: '[Applying the plan failed: ' + api_error.code + ']' }])
 			this._persist()
 			return
 		}
 
-		const report = envelope.data || {}
+		// SUCCESS. `data` is the MCP structured envelope `{ok:true, data:{applied,
+		// skipped, created, failed?}}`: a plan that RAN and stopped on one op is a
+		// REPORT, never a failure, and `failed` is rendered inside the card.
+		const envelope	= response_data(api_response)
+		const report	= (envelope && envelope.data) ? envelope.data : {}
 		this._chat_render.add_apply_report(report)
 		const applied_n	= Array.isArray(report.applied) ? report.applied.length : 0
 		const failed	= report.failed ? 1 : 0

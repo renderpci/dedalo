@@ -79,6 +79,32 @@ const parse_body = async (response) => {
 
 
 /**
+* ALIAS_COMPAT_MIRROR
+* COMPAT v1 (REMOVAL: the P4 commit that deletes the server's
+* ERROR_ENVELOPE_COMPAT block and every `.result` / `.msg` / `.errors` read in
+* client/**, when client_error_contract_tripwire's census reaches 0).
+*
+* The converter emits `result` as a MIRROR of `data`. JSON.parse gives the two
+* keys two independent object graphs, so a caller that mutates what
+* `response_data()` returned and a caller that reads `.result` see different
+* things (and vice versa). Aliasing them to the SAME object here — once, at the
+* single parse point every client surface goes through (page, cache Worker,
+* module Service Worker) — makes the mirror an alias instead of a copy, so the
+* desync cannot exist while the compat window lasts.
+*
+* Success only: on a failure `result` is the literal `false`, not a mirror.
+* @param {*} json - the parsed body (mutated in place)
+* @return void
+*/
+const alias_compat_mirror = (json) => {
+	if (json && typeof json==='object' && !Array.isArray(json) && json.ok===true && json.data!==undefined) {
+		json.result = json.data
+	}
+}//end alias_compat_mirror
+
+
+
+/**
 * RETRY_AFTER_MS
 * `Retry-After` as milliseconds (seconds or HTTP-date), or null.
 */
@@ -148,6 +174,7 @@ export const fetch_api = async (url, init = {}, options = {}) => {
 			settled = true
 			clearTimeout(timeout_id); clearTimeout(health_id)
 			const {json}	= await parse_body(response)
+			alias_compat_mirror(json)
 			let api_error	= normalize_api_error(response, json)
 			if (!api_error && json===null) {
 				// a 2xx that is not JSON is not an answer the client can use

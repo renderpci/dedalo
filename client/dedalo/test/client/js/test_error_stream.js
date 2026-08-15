@@ -178,6 +178,29 @@ describe('ERROR_STREAM — read_stream frames', function() {
 		assert.isTrue(compat._compat)
 	})
 
+	it('a BARE v2 error body (the agent SSE `event: error` data) normalises to its code', function() {
+		// ERRORS_SPEC §5.3: the event NAME already says terminal, so the agent stream
+		// sends the error BODY itself — no `is_running:false`, no nested `error`
+		// (src/core/api/handlers/dd_mcp_api.ts agentErrorFrame).
+		const bare = normalize_stream_error({
+			code		: 'ai.provider_failed',
+			category	: 'unavailable',
+			message		: 'The model provider failed',
+			label_key	: 'error_ai_provider_failed',
+			retryable	: true,
+			details		: {hint: 'Retry; the provider may be transient'}
+		})
+		assert.equal(bare.code, 'ai.provider_failed')
+		assert.equal(bare.source, 'stream')
+		assert.equal(bare.label_key, 'error_ai_provider_failed')
+		assert.isTrue(bare.retryable)
+		assert.equal(bare.details.hint, 'Retry; the provider may be transient')
+		assert.isUndefined(bare._compat, 'a v2 body is never a compat error')
+		// the wrapper shapes still win, and a progress frame is still not an error
+		assert.isNull(normalize_stream_error({is_running: true, data: {msg: 'working'}}))
+		assert.isNull(normalize_stream_error({is_running: false}))
+	})
+
 	it('read_stream registers and release_stream_reader forgets the reader (connection is the resource)', async function() {
 		const before = page_globals.stream_readers.length
 		await read_all(sse_stream(['{"is_running":false}']))
