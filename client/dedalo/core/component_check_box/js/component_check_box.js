@@ -105,7 +105,6 @@ export const component_check_box = function(){
 
 	// render
 	component_check_box.prototype.list				= render_list_component_check_box.prototype.list
-	component_check_box.prototype.tm				= render_list_component_check_box.prototype.list
 	component_check_box.prototype.edit				= render_edit_component_check_box.prototype.edit
 	component_check_box.prototype.search			= render_search_component_check_box.prototype.search
 

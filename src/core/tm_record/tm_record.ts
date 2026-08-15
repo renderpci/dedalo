@@ -41,7 +41,7 @@ import { assertMatrixTable, MATRIX_JSONB_COLUMNS, readMatrixRecord } from '../db
 import { sql } from '../db/postgres.ts';
 import type { TimeMachineRow } from '../db/time_machine.ts';
 import { TIME_MACHINE_SECTION_TIPO } from '../db/time_machine.ts';
-import { termByTipo } from '../ontology/labels.ts';
+import { ontologyTermLabel } from '../ontology/labels.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -203,6 +203,16 @@ async function tmNoteValue(tmRowId: number): Promise<unknown[]> {
 }
 
 /**
+ * A NULL bulk_process_id is the number 0, not null: the client renders the
+ * Process cell straight from this value. The coercion used to live in the TM
+ * emitter's own dd1371 case; with every cell resolving from the virtual record
+ * it has to live here (caught by tm_emit_row_context_native).
+ */
+function bulkProcessValue(stored: number | null | undefined): number {
+	return stored ?? 0;
+}
+
+/**
  * Reconstruct the virtual dd15 section record for one TM row. `lang` selects
  * the term-label language for the dd577/dd1772 fields (PHP uses the fixed data
  * lang; the caller passes the request lang for list rendering parity).
@@ -244,16 +254,26 @@ export async function buildTmSectionRecord(
 		}
 	}
 
-	// --- who / when / where / what ---
+	// --- id / who / when / where / what ---
+	// dd1573 "Id" is the TM ROW's own PK — distinct from dd1212 "Section id", the
+	// CALLER record's id. It was never injected, so the column could be filtered
+	// and sorted but never rendered; now that every cell resolves from this record
+	// (WC-2026-08-14-tm-cells-obey-list-emit-policy) it has to be here to exist.
+	await injectTmField(record, TM_COLUMN_MATRIX_ID, [{ id: 1, value: Number(row.id) }]);
 	await injectTmField(record, TM_COLUMN_SECTION_ID, [{ id: 1, value: Number(row.section_id) }]);
 	await injectTmField(record, TM_COLUMN_TIMESTAMP, [
 		{ id: 1, start: ddDateFromTimestamp(row.timestamp) },
 	]);
+	// What (dd577) and Where (dd1772) are both ONTOLOGY TIPOS stored as values, so
+	// both render «term» [tipo] — the tipo is what makes the label unambiguous when
+	// two nodes share a term. Only dd577 used to get the suffix, and only because
+	// the emitter special-cased it; dd1772 rendered a bare term. One helper now
+	// serves both (and the dd542 activity twin, dd546, which does the same thing).
 	await injectTmField(record, TM_COLUMN_TIPO, [
-		{ id: 1, lang: 'lg-nolan', value: await termByTipo(row.tipo, lang) },
+		{ id: 1, lang: 'lg-nolan', value: await ontologyTermLabel(row.tipo, lang) },
 	]);
 	await injectTmField(record, TM_COLUMN_SECTION_TIPO, [
-		{ id: 1, lang: 'lg-nolan', value: await termByTipo(row.section_tipo, lang) },
+		{ id: 1, lang: 'lg-nolan', value: await ontologyTermLabel(row.section_tipo, lang) },
 	]);
 
 	// user locator (PHP reuses the SAME object for dd578 and dd200 — from_component_tipo stays dd578).
@@ -269,7 +289,9 @@ export async function buildTmSectionRecord(
 	await injectTmField(record, TM_COLUMN_USER_ID, [userLocator]);
 	await injectTmField(record, CREATED_BY_USER, [userLocator]);
 
-	await injectTmField(record, TM_COLUMN_BULK_PROCESS_ID, [{ id: 1, value: row.bulk_process_id }]);
+	await injectTmField(record, TM_COLUMN_BULK_PROCESS_ID, [
+		{ id: 1, value: bulkProcessValue(row.bulk_process_id) },
+	]);
 
 	// annotation (rsc329): the rsc832/rsc835 notes lookup (PHP tm_record :690-755).
 	await injectTmField(record, TM_NOTES_TEXT, await tmNoteValue(row.id));

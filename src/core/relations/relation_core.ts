@@ -26,6 +26,7 @@ import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../ontology/resolver.ts';
 import { buildDataItem, type DataItem, type EmissionContext } from '../resolve/component_data.ts';
+import { isTimeMachineRead } from '../section/list_definitions/tm_scope_context.ts';
 import { loadRecordCached } from '../section/record_loader.ts';
 import type { EmitDdoFn } from './registry.ts';
 
@@ -364,7 +365,7 @@ export async function expandPortal(
 		return resolved;
 	};
 	const limit =
-		portalMode === 'list' || portalMode === 'tm'
+		portalMode === 'list'
 			? (portalDdo.limit ??
 				options.cellLimit ??
 				(storedModel === 'component_autocomplete_hi' ? locators.length : PORTAL_LIST_LIMIT))
@@ -510,9 +511,7 @@ export async function expandPortal(
 		// request_config precedence, class.common.php:2603-2681). depth<4 is
 		// the pragmatic cycle guard.
 		const allowNestedOwnConfig =
-			depth < 4 &&
-			(portalMode === 'edit' ||
-				((portalMode === 'list' || portalMode === 'tm') && options.ownConfig === true));
+			depth < 4 && (portalMode === 'edit' || (portalMode === 'list' && options.ownConfig === true));
 		for (const childDdo of childDdos) {
 			// PHP get_subdatum groups child ddos BY section_tipo and expands only
 			// the ones compatible with the current locator's target (numisdata97
@@ -596,10 +595,16 @@ export async function expandPortal(
 		// with it (portalCellEmitsDdinfo): PHP emits dd_info per vwp ddo, and
 		// USER-DEFINED thesauri live in the generic `matrix` table (`tch555`'s
 		// `tchi1`), so the table check alone loses their edit-cell breadcrumb.
+		// The TM check is the READ's data source, not the cell's render mode:
+		// dd15 cells now emit mode 'list' like every other list cell
+		// (WC-2026-08-14-tm-ddo-mode-retired), so `portalMode !== 'tm'` stopped
+		// being able to see a Time Machine cell. This is one of the two sites where
+		// 'tm' was a real branch rather than a synonym of 'list'; the suppression
+		// itself is unchanged and still oracle-verified.
 		if (
 			options.ownConfig === true &&
 			storedModel === 'component_autocomplete_hi' &&
-			portalMode !== 'tm'
+			!isTimeMachineRead()
 		) {
 			const { buildDdInfoChain, isThesaurusTarget } = await import('../resolve/dd_info.ts');
 			if (

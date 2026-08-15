@@ -45,7 +45,6 @@ export const generic_suites_green = [
 	'test_open_related_data',         // the "open relationships" dialog's SQO scoping — the edit-mode found-set offset used to skip the single pinned row, so read_raw returned nothing and no window opened; backend-free (data_manager.request patched on the shared singleton)
 	'test_ui_render_edit_modal',      // the per-cell edit modal's caller chain — the surface that makes component tools reachable from a section LIST (WC-059 sibling work); backend-free (fake instance pre-registered in the shared registry)
 	'test_service_autocomplete',
-	'test_service_time_machine',
 	'test_components_lifecycle',     // green after component_iri label-dataframe port (dd560 request_config + context) + external search fix
 	'test_components_render',        // same — component_iri list/text + component_external search now render
 	'test_others_lifecycle',         // green after list_uploaded_files port (dispatch.ts); 'installer' element excluded — get_install_context 404s once install_status is sealed (permanent on this box), which can never reach 'rendered' (see test_others_lifecycle.js get_elelemnts comment)

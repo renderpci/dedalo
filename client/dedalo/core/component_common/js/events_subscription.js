@@ -22,12 +22,12 @@
 *     CSS class on the wrapper node via ui.hilite(). The evaluation is deferred through
 *     dd_request_idle_callback so it does not block the render paint.
 *
-*   sync_data_{id_base}_{lang}     (all modes except 'tm')
+*   sync_data_{id_base}_{lang}     (not for a Time Machine view)
 *     Fired by component_common.change_value() after a successful save to propagate the
 *     new datum to every other rendered copy of the same component (same section_tipo +
 *     section_id + component_tipo + lang). Sibling instances that share id_base but hold
 *     a separate DOM node call update_data_value() to absorb the change, then re-render.
-*     The time-machine service (service_time_machine) is explicitly excluded from this
+*     A time-machine list (a dd15 section instance) is explicitly excluded from this
 *     sync path to prevent it from overwriting historical snapshots with live edits.
 *
 * Tokens returned by event_manager.subscribe() are stored in self.events_tokens so that
@@ -54,13 +54,14 @@
 *
 * Events registered:
 *   - 'render_{self.id}'           — search-mode hilite toggle (deferred, idle)
-*   - 'sync_data_{id_base}_{lang}' — cross-DOM datum sync (skipped in 'tm' mode)
+*   - 'sync_data_{id_base}_{lang}' — cross-DOM datum sync (skipped for a Time
+*     Machine view: dd15 cells and the tool's data_source='tm' preview)
 *
 * @param {Object} self - The component instance being initialised. Expected properties:
 *   {string}        self.id              - Unique component DOM id (tipo+section+id).
 *   {string}        self.id_base         - id without language suffix (section_tipo + '_' + section_id + '_' + component_tipo).
 *   {string}        self.lang            - Active language code (e.g. 'lg-spa').
-*   {string}        self.mode            - Component render mode: 'edit', 'search', 'list', 'tm', etc.
+*   {string}        self.mode            - Component render mode: 'edit', 'search', 'list', etc.
 *   {Object|null}   self.caller          - Parent instance that created this component, or null.
 *   {HTMLElement}   self.node            - Wrapper DOM node; may be null before first render.
 *   {Object}        self.data            - Component datum object; may include entries and q_operator.
@@ -118,9 +119,13 @@ export const events_subscription = function(self) {
 
 	// update value
 	// Keeps sibling DOM copies of the same component in sync after a save.
-	// Not registered in 'tm' mode because the time-machine view is read-only
-	// and its data must not be overwritten by live edits published on this channel.
-		if (self.mode!=='tm') {
+	// Not registered for a Time Machine view: it is read-only and its historical
+	// data must not be overwritten by live edits published on this channel. The
+	// render mode 'tm' is retired (WC-2026-08-14-tm-ddo-mode-retired), so the test
+	// is now what the instance actually IS — a cell of the dd15 virtual section,
+	// or the tool's preview pane (data_source 'tm', which renders from an EDIT
+	// template and so was never excluded by the old mode check at all).
+		if (self.data_source!=='tm' && self.section_tipo!=='dd15') {
 
 			const sync_data_handler = (options) => {
 
@@ -141,18 +146,16 @@ export const events_subscription = function(self) {
 						return
 					}
 
-				// service_time_machine case
-				// The time-machine service may host sibling component instances that share
-				// the same id_base. Allowing sync_data to reach them would overwrite the
-				// historical snapshot being displayed with the current live value.
-				// Guard both direct parent and grandparent to cover nested tm structures.
+				// TIME MACHINE case
+				// A history list hosts sibling component instances that share the same
+				// id_base. Allowing sync_data to reach them would overwrite the
+				// historical snapshot on screen with the current live value.
+				// The test is the SECTION, not a service model: the list is an ordinary
+				// dd15 `section` instance now (WC-2026-08-14-tm-scope-server-owned).
+				// Guard both direct parent and grandparent to cover nested structures.
 					if (self.caller) {
-						const callers_avoid_update = [
-							'service_time_machine'
-						]
-						if (callers_avoid_update.includes(self.caller.model) ||
-							(self.caller.caller && callers_avoid_update.includes(self.caller.caller.model))
-							) {
+						const is_tm_host = (instance) => instance && instance.section_tipo==='dd15'
+						if (is_tm_host(self.caller) || is_tm_host(self.caller.caller)) {
 							return
 						}
 					}
@@ -192,7 +195,7 @@ export const events_subscription = function(self) {
 			self.events_tokens.push(
 				event_manager.subscribe('sync_data_'+id_base_lang, sync_data_handler)
 			)
-		}//end if (self.mode!=='tm')
+		}//end if (not a time machine view)
 
 
 	return true

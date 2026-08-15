@@ -62,7 +62,7 @@ export const view_text_list_geolocation = function() {
 * CSS classes applied to the wrapper:
 *   'wrapper_component' — standard Dédalo component wrapper marker
 *   self.model          — component model identifier ('component_geolocation')
-*   self.mode           — current render mode (e.g. 'list', 'tm')
+*   self.mode           — current render mode (e.g. 'list')
 *   'view_<self.view>'  — current view variant (e.g. 'view_text')
 *
 * The dispatcher (render_list_component_geolocation.list) calls this as render(self, options),

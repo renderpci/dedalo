@@ -169,6 +169,49 @@ so it is never harvested; in fixture mode it asserts the store is present.
    adjudicated fixture change from then on is a deliberate contract edit and
    belongs in `engineering/wire_contract/`.
 
+## ADDENDUM 2026-08-14 — the five TM differentials are RETIRED (unrunnable, not merely stale)
+
+`tm_read_differential`, `tm_bare_list_differential`,
+`tm_component_history_differential`, `tm_component_value_differential` and
+`tm_relation_filter_differential` are retired into TS-native twins. They are not
+"red pending adjudication": they are **structurally unrunnable** in any current
+environment, and were already failing 7–10 assertions on a clean tree before the
+Time Machine unification touched anything.
+
+WHY, precisely — the fixtures and the suite database drifted apart:
+
+- the TM fixtures were harvested 2026-07-11 against a **live shared DB**. Their
+  rows exist ONLY in `dedalo7_mdcat` (`matrix_id` 51071497/96/95/94, caller
+  `rsc1242`/578) — verified absent from every other local database;
+- the pinned `private/backups/db/2026-07-11_102750.….custom.backup` is GONE
+  (only `2026-07-16_161254/161317.dedalo7ts` survive, and `dedalo7ts` maxes at
+  TM id 63217);
+- `test/preload/test_database.ts` hard-points the WHOLE SUITE at `<app db>_test`
+  and deliberately refuses to fall back to a real database (written after a gate
+  deleted `test218` out of a live install);
+- `scripts/test_db_setup.ts` builds that database "from files vendored in this
+  repo, **never by copying a live database**" — install seed + canonical test3 +
+  the numisdata definitions.
+
+A synthetic install database can never contain harvested rows from a live one.
+Per each fixture's own `drift_policy` string this adjudicates as DATA-side, not
+an engine regression: the engine was never consulted, the rows are absent.
+
+Replacement TS-native twins (all credless, all green):
+
+| Retired gate | Surviving contract | Twin |
+|---|---|---|
+| tm_read_differential | envelope extras (matrix_id/timestamp/caller/user), per-cell item shapes, int addresses | `test/unit/tm_emit_row_context_native.test.ts` |
+| tm_bare_list_differential | dd15 default column set + structure-context shape | `test/unit/tm_emit_row_context_native.test.ts` (context half) + `test/unit/tm_sort_policy.test.ts` |
+| tm_component_history_differential | per-component history rows, newest-first, select-family label resolution | `test/unit/tm_emit_row_context_native.test.ts` (history surface) |
+| tm_component_value_differential | the snapshot VALUE a cell resolves to, incl. list rendering | `test/unit/tm_emit_hooks_native.test.ts` (truncation, tag resolution, DOS-01 cap, the audit-lang rule) |
+| tm_relation_filter_differential | the dd578 relation-filter surface behaviour | `test/unit/tm_filter.test.ts` (the conformer, exhaustively) |
+
+Contract changes adopted at the same time — the reason the frozen PHP bytes are
+now the fossil rather than the target — are ledgered in
+`WC-2026-08-14-tm-cells-obey-list-emit-policy` and
+`WC-2026-08-14-tm-ddo-mode-retired`.
+
 ## DEC-14b re-expression punch list (audited 2026-07-10)
 
 Per-gate audit of what each of the 23 exempt gates asserts vs existing

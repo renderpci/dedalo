@@ -184,12 +184,14 @@ describe('component_filter_records — the edit datalist', () => {
 		return { ddoMode: mode } as unknown as EmitHookContext;
 	}
 
-	test('list / tm omit the key entirely (PHP get_list_value branch)', async () => {
-		for (const mode of ['list', 'tm']) {
-			const item = { tipo: FILTER_RECORDS } as unknown as DataItem;
-			await filterRecordsEmitHook.decorateItem?.(item, contextFor(mode));
-			expect('datalist' in item).toBe(false);
-		}
+	test('list omits the key entirely (PHP get_list_value branch)', async () => {
+		// 'tm' used to be asserted alongside 'list' here. The ddo/display mode is
+		// retired (WC-2026-08-14-tm-ddo-mode-retired): a Time Machine cell IS a
+		// list cell and reaches this hook as 'list', so the pair collapsed into
+		// one case rather than one of them silently going unchecked.
+		const item = { tipo: FILTER_RECORDS } as unknown as DataItem;
+		await filterRecordsEmitHook.decorateItem?.(item, contextFor('list'));
+		expect('datalist' in item).toBe(false);
 	});
 
 	test('edit / search ALWAYS carry the key — the client render is unguarded', async () => {

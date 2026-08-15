@@ -72,7 +72,7 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 					model			: 'component_input_text',
 					tipo			: 'test52',
 					section_tipo	: 'test3',
-					mode			: 'tm',
+					mode			: 'list',
 					lang			: 'lg-eng'
 				},
 				component_input_text
@@ -144,7 +144,6 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 				'service_autocomplete',
 				'service_ckeditor', // @todo: Unify service model using prototypes
 				// 'service_subtitles', // not finished
-				'service_time_machine',
 				'service_tmp_section',
 				'service_upload',
 			];

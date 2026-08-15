@@ -18,7 +18,7 @@
 * This module is responsible solely for dispatching to the correct view
 * implementation based on `self.context.view`. It is not a standalone class —
 * its `list` prototype method is assigned to `component_filter.prototype.list`
-* (and also to `component_filter.prototype.tm`) in component_filter.js.
+* in component_filter.js.
 *
 * Supported views (resolved from `context.view`):
 *   - 'default' — standard list wrapper built by ui.component.build_wrapper_list;
@@ -49,8 +49,7 @@ export const render_list_component_filter = function() {
 * view module's static `render(self, options)` method. Each view returns a
 * Promise that resolves to an HTMLElement ready to be inserted into the DOM.
 *
-* Called as `component_filter.prototype.list` and also aliased as
-* `component_filter.prototype.tm` (time-machine mode reuses the list renderer).
+* Called as `component_filter.prototype.list` (Time Machine cells are list cells).
 *
 * @param {Object} options - Render options forwarded verbatim to each view's
 *   render() function. Content varies by view; most views accept `render_level`.

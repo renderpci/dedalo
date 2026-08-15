@@ -16,7 +16,7 @@
 *
 * The 'mini' view is selected when context.view === 'mini' in
 * render_list_component_section_id.prototype.list, which is shared by both
-* component_section_id.prototype.list and component_section_id.prototype.tm.
+* component_section_id.prototype.list.
 *
 * Typical use-case: a datalist dropdown shows each matching record as a small chip
 * containing only the section id value (e.g. "42"), with no label or toolbar chrome.

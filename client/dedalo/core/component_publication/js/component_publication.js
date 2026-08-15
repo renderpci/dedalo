@@ -111,7 +111,6 @@ export const component_publication = function(){
 
 	// render
 	component_publication.prototype.list				= render_list_component_publication.prototype.list
-	component_publication.prototype.tm					= render_list_component_publication.prototype.list // Time Machine reuses list render
 	component_publication.prototype.search				= render_search_component_publication.prototype.search
 	component_publication.prototype.edit				= render_edit_component_publication.prototype.edit
 

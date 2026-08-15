@@ -79,7 +79,7 @@
 *   @var {string|null} tipo                  - Ontology tipo of this component, e.g. 'oh24'.
 *   @var {string|null} section_tipo          - Ontology tipo of the host section, e.g. 'oh1'.
 *   @var {string|number|null} section_id     - Record id within the host section.
-*   @var {string|null} mode                  - Render mode: 'edit'|'list'|'tm'|'search'.
+*   @var {string|null} mode                  - Render mode: 'edit'|'list'|'search'.
 *   @var {string|null} lang                  - Active language tag, always 'lg-nolan' for portals
 *                                              (portals are non-translatable).
 *   @var {string|null} section_lang          - Language of the parent section UI.
@@ -200,7 +200,6 @@ export const component_portal = function() {
 
 	// render
 	component_portal.prototype.list					= render_list_component_portal.prototype.list
-	component_portal.prototype.tm					= render_list_component_portal.prototype.list
 	component_portal.prototype.edit					= render_edit_component_portal.prototype.edit
 	component_portal.prototype.search				= render_search_component_portal.prototype.search
 
@@ -233,7 +232,7 @@ export const component_portal = function() {
 * @param {string} options.tipo                     - Ontology tipo of this component.
 * @param {string} options.section_tipo             - Ontology tipo of the host section.
 * @param {string|number} options.section_id        - Host record identifier.
-* @param {string} options.mode                     - Render mode: 'edit'|'list'|'tm'|'search'.
+* @param {string} options.mode                     - Render mode: 'edit'|'list'|'search'.
 * @param {string} options.lang                     - Active language tag.
 * @param {object|null} [options.columns_map]       - Pre-built columns map; if supplied it is
 *                                                    used as-is and rebuilt from context otherwise.
@@ -726,9 +725,11 @@ component_portal.prototype.build = async function(autoload=false) {
 		init_events_subscription(self)
 
 	// mode cases
-		if (self.mode==='edit' || self.mode==='tm') {
-			// Pagination state is only meaningful in edit / tm mode.
-			// In list and search modes the paginator is not shown.
+		if (self.mode==='edit') {
+			// Pagination state is only meaningful in edit mode.
+			// In list and search modes the paginator is not shown — and a Time Machine
+			// cell IS a list cell now (WC-2026-08-14-tm-ddo-mode-retired), so it takes
+			// the list branch, which is what a one-row history cell should do anyway.
 
 			// pagination. update element pagination vars when are used
 			// Sync local offset/total from the data.pagination object that the

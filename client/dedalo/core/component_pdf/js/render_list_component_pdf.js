@@ -16,7 +16,7 @@
 * Constructor for the list-mode render object of component_pdf.
 *
 * This module provides the `list` prototype method that component_pdf.prototype.list
-* and component_pdf.prototype.tm are both assigned to (see component_pdf.js).
+* is assigned to (see component_pdf.js).
 * It dispatches to the appropriate view module based on the context view value:
 *   - 'mini'    → view_mini_pdf     (compact thumbnail for autocomplete / inline results)
 *   - 'text'    → view_text_list_pdf (span-based fallback with a generic PDF icon)
@@ -40,9 +40,9 @@ export const render_list_component_pdf = function() {
 * to its static `render(self, options)` method. Falls through to 'default' for
 * any unrecognised view value.
 *
-* This method is assigned to both component_pdf.prototype.list and
-* component_pdf.prototype.tm so that thesaurus-mode renders share the same
-* view dispatch as the regular record list (see component_pdf.js).
+* This method is assigned to component_pdf.prototype.list, so thesaurus-mode
+* renders share the same view dispatch as the regular record list
+* (see component_pdf.js).
 *
 * View routing:
 *   - 'mini'    → compact thumbnail, used in autocomplete dropdowns and relation chips

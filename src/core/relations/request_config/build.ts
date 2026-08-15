@@ -205,8 +205,7 @@ async function buildStrategyRequestConfig(
 		}
 	}
 
-	const listLikeMode =
-		context.mode === 'list' || context.mode === 'tm' || context.mode === 'list_thesaurus';
+	const listLikeMode = context.mode === 'list' || context.mode === 'list_thesaurus';
 	// PHP :274 — a SECTION with a DIRECT source.request_config skips the
 	// section_list swap (isset semantics: any non-null value).
 	const ownConfig = (sourceProperties as { source?: { request_config?: unknown } } | null)?.source
@@ -301,7 +300,7 @@ export async function getElementColumnsMap(
 	mode: string,
 ): Promise<unknown[] | null> {
 	let properties = ownProperties as { source?: { columns_map?: unknown[] } } | null;
-	if (mode === 'list' || mode === 'tm') {
+	if (mode === 'list') {
 		const sectionListTipo = await findSectionListChild(ownerTipo);
 		if (sectionListTipo !== null) {
 			const node = await getNode(sectionListTipo);

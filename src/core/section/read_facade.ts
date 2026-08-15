@@ -158,13 +158,30 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 	// read grant) that must gate BEFORE the read. Gate B in the handler already
 	// required level >= 1 on every SQO target section.
 	if ((rqo.sqo as { mode?: string } | undefined)?.mode === 'tm') {
-		const tmSectionTipo = source.section_tipo ?? source.tipo;
-		if (typeof tmSectionTipo === 'string') {
-			const { canAccessTimeMachineList } = await import('./list_definitions/time_machine_list.ts');
-			if (!(await canAccessTimeMachineList(principal, tmSectionTipo))) {
-				return notAuthorized('Insufficient permissions for the time machine of this section');
-			}
+		const { canAccessTimeMachineList, resolveTimeMachineScopeSection } = await import(
+			'./list_definitions/time_machine_list.ts'
+		);
+		// The SCOPE — the caller section whose history this reads — comes from the
+		// SQO, not from source.section_tipo: the client pins that to 'dd15', so the
+		// gate used to evaluate dd15 against itself and the §7.4 per-section grant
+		// was never consulted (WC-2026-08-14-tm-scope-server-owned).
+		const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
+		if (scope.mixed) {
+			return notAuthorized(
+				'Time machine reads spanning several sections are not authorized: one section grant cannot cover another',
+			);
 		}
+		// Unscoped (the bare dd15 browse) shows EVERY section's history at once, so
+		// no per-section grant can authorize it — global admin only. Gating dd15
+		// against itself is exactly that: it declares no time_machine_list child,
+		// so canAccessTimeMachineList fails closed for everyone but an admin.
+		const gateTipo = scope.sectionTipo ?? 'dd15';
+		if (!(await canAccessTimeMachineList(principal, gateTipo))) {
+			return notAuthorized('Insufficient permissions for the time machine of this section');
+		}
+		// The per-ddo permission FLOOR needs the same scope, but it is published by
+		// readSection itself (read.ts) so direct callers and tests get it too —
+		// this gate only decides admission.
 		// fall through to the generic readSection below (routes to the TM source)
 	}
 

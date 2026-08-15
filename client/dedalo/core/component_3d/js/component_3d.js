@@ -68,7 +68,7 @@
 * @var {string}          tipo         - Ontology tipo of this component, e.g. 'dd732'.
 * @var {string}          section_tipo - Ontology tipo of the parent section, e.g. 'oh1'.
 * @var {number|string}   section_id   - Record identifier of the parent section row.
-* @var {string}          mode         - Current rendering mode: 'edit' | 'list' | 'search' | 'tm'.
+* @var {string}          mode         - Current rendering mode: 'edit' | 'list' | 'search'.
 * @var {string}          lang         - Active UI language code, e.g. 'lg-nolan'.
 * @var {string}          section_lang - Language of the section (may differ from UI lang).
 * @var {Object}          context      - Server context object (structure metadata, features, view).
@@ -129,7 +129,6 @@ export const component_3d = function(){
 
 	// render
 	component_3d.prototype.list					= render_list_component_3d.prototype.list
-	component_3d.prototype.tm					= render_list_component_3d.prototype.list
 	component_3d.prototype.edit					= render_edit_component_3d.prototype.edit
 	component_3d.prototype.search				= render_search_component_3d.prototype.search
 

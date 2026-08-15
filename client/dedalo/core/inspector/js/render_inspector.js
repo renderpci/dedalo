@@ -1754,7 +1754,7 @@ const render_relation_list = function(self) {
 * RENDER_TIME_MACHINE_LIST
 * Builds the collapsible "Latest changes" block in the inspector.  When the user
 * opens (exposes) the block, load_time_machine_list() is called via
-* dd_request_idle_callback to lazily load the service_time_machine instance that
+* dd_request_idle_callback to lazily load the tm_list instance that
 * renders a mini grid of recent component-value changes across the whole section.
 *
 * The time_machine_list_body element pointer is stored as
@@ -1836,13 +1836,13 @@ export const render_time_machine_list = function(self) {
 
 /**
 * LOAD_TIME_MACHINE_LIST
-* Lazily instantiates and renders the service_time_machine for the entire
+* Lazily instantiates and renders the tm_list for the entire
 * section (all components, all users) in a compact 'mini' view.
 *
 * Render contract:
 *   - Returns null immediately when the container is collapsed ('hide' class present)
 *     to avoid redundant API calls on background refreshes.
-*   - Destroys the previous service_time_machine instance (if any) before creating a
+*   - Destroys the previous tm_list instance (if any) before creating a
 *     new one, to avoid accumulating orphaned instances across pagination.
 *   - Guards against inspector destruction during the await: if self.status becomes
 *     'destroyed' while the get_instance promise resolves, the freshly-created
@@ -1855,7 +1855,7 @@ export const render_time_machine_list = function(self) {
 *
 * ddo_map note: dd1574 is the generic time-machine value ontology item.
 *   model is set to 'dd_grid' (rather than the real component model) to allow
-*   identification and special rendering by service_time_machine.
+*   identification and special rendering by tm_list.
 *
 * @param {Object} self - Inspector instance. Must have self.time_machine_list_container,
 *   self.caller (section), and self.section_tipo populated.
@@ -1878,56 +1878,77 @@ export const load_time_machine_list = async function(self) {
 	// even if user close and re-open the time_machine_list inspector tab
 
 	// destroy previous service to avoid instance leaks across pagination events
-		if (self.service_time_machine) {
-			await self.service_time_machine.destroy(
+		if (self.tm_list) {
+			await self.tm_list.destroy(
 				true, // delete_self
 				true // delete_dependencies
 			)
 		}
 
-	// create and render a service_time_machine instance
-		const service_time_machine = await get_instance({
-			model			: 'service_time_machine',
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			view			: 'mini',
-			id_variant		: self.section_tipo + '_tm_list',
+	// The record-history list is an ordinary dd15 `section` instance — the same
+	// machinery the section list uses everywhere else
+	// (WC-2026-08-14-tm-scope-server-owned). It sends NO ddo_map: the SERVER
+	// derives the columns from the named surface, so this panel cannot widen its
+	// own list and cannot drift from what the tool shows.
+		const tm_list = await get_instance({
+			model			: 'section',
+			tipo			: 'dd15',
+			section_tipo	: 'dd15',
+			mode			: 'list',
+			// (!) the RECORD IDENTITY is part of the key: get_instance returns a
+			// cached instance IGNORING fresh options, so a key without the
+			// section_id would keep serving the PREVIOUS record's history after
+			// paginating the section (the old service carried section_id in its
+			// options for exactly this reason).
+			id_variant		: self.caller.section_tipo + '_' + self.caller.section_id + '_tm_list',
 			caller			: self,
 			caller_tipo		: self.caller.section_tipo,
-			config			: {
-				id					: 'section_history',
-				model				: 'dd_grid', // used to create the filter
-				tipo				: self.caller.section_tipo, // used to create the filter
-				template_columns	: '1fr 1fr 1fr 2fr',
-				ignore_columns		: [
-					'matrix_id', // matrix_id dd1573,
-					'bulk_process_id' // bulk_process_id dd1573
-				],
-				ddo_map				: [{
-					tipo			: 'dd1574', // 'dd1574' generic tm info ontology item 'Value'
-					type			: 'dd_grid',
-					typo			: 'ddo',
-					model			: 'dd_grid', // (!) changed to dd_grid to allow identification
-					section_tipo	: self.section_tipo,
-					parent			: self.section_tipo,
-					debug_label		: 'Value',
-					mode			: 'list',
-					view			: 'mini'
-				}]
-			}
+			// An embedded side panel: no toolbar, no search, and no synthetic Id
+			// column — this block never had one.
+			buttons			: false,
+			filter			: false,
+			// EMBEDDED reads never touch the dd15 SESSION SQO. All four TM surfaces
+			// share callerTipo 'dd15', so a saving read here would persist its
+			// one-record filter into the session and the standalone dd15 browse
+			// would merge it back — showing "only a few records" with no error.
+			session_save	: false,
+			request_config	: [{
+				api_engine	: 'dedalo',
+				type		: 'main',
+				// (!) sqo.mode 'tm' is the ROW SOURCE — it routes the read to
+				// matrix_time_machine. Never 'list': that returns the section's LIVE
+				// records instead of its history, silently.
+				sqo			: {
+					id			: 'section_history',
+					mode		: 'tm',
+					section_tipo: [self.caller.section_tipo],
+					limit		: 10,
+					offset		: 0,
+					order		: [{ direction : 'DESC', path : [{ component_tipo : 'id' }] }],
+					skip_projects_filter : true,
+					filter_by_locators : [{
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id
+					}]
+				},
+				show		: {}
+			}],
 		})
+		// names WHICH block this is; the server maps it to columns. `source_add` is
+		// the sanctioned way to extend the request source (common.js create_source);
+		// a bare instance option is never forwarded onto the wire.
+		tm_list.source_add		= { tm_surface : 'inspector_record' }
+		tm_list.tm_no_id_column	= true
+		// the compact inspector shape (orange date line over the value), not the
+		// full-width section grid — see section/css/view_tm_list_section.less
+		tm_list.tm_view				= 'mini'
+		tm_list.tm_template_columns	= '1fr 1.5fr 2fr'
 
-		// check if inspector is destroyed after await
-		if (self.status === 'destroyed' || !self.caller) {
-			if (service_time_machine) service_time_machine.destroy(true, true)
-			return null
-		}
+		await tm_list.build(true)
+		const time_machine_list_wrap = await tm_list.render()
 
-		await service_time_machine.build(true)
-		const time_machine_list_wrap = await service_time_machine.render()
-
-	// set new service_time_machine
-		self.service_time_machine = service_time_machine
+	// set new tm_list
+		self.tm_list = tm_list
 
 	// remove previous node if a pointer exists
 		if (container.time_machine_list_wrap) {
@@ -2017,7 +2038,7 @@ const render_component_history = function(self) {
 * LOAD_COMPONENT_HISTORY
 * Asynchronously initializes and renders the time machine history and annotation
 * notes for a specific component.  Combines two ddo_map entries:
-*   1. The selected component itself (mode:'tm') — shows its raw value at each
+*   1. The selected component itself (a LIST cell of dd15) — its value at each
 *      historical record.
 *   2. An annotation component (rsc329 in section_tipo rsc832) — a text_area that
 *      stores user notes attached to each time-machine entry.
@@ -2054,6 +2075,13 @@ export const load_component_history = async function(self, component) {
 				container.replaceChildren()
 				delete container.component_history_wrap
 			}
+			// destroy the previous list too: record navigation lands here first
+			// (update_section_info resets actived_component), and the stale
+			// instance would otherwise stay registered until the next activation
+			if (self.component_history_list) {
+				await self.component_history_list.destroy(true, true)
+				self.component_history_list = null
+			}
 			return null
 		}
 
@@ -2073,65 +2101,68 @@ export const load_component_history = async function(self, component) {
 	// set as loading
 		container.classList.add('loading')
 
-	// create and render a component_history instance (service_time_machine)
-	// (!) Note that load_component_history is called on each section pagination, whereby must be generated
-	// even if user close and re-open the component_history inspector tab
-		const service_time_machine	= await get_instance({
-			model			: 'service_time_machine',
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			view			: 'history',
-			id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
-			caller			: self,
-			caller_tipo		: component.tipo,
-			config			: {
-				id					: 'component_history_' + component.tipo,
-				model				: component.model,
-				tipo				: component.tipo,
-				lang				: component.lang,
-				// template_columns	: '1fr 1fr 2fr 2fr',
-				ignore_columns		: [
-					'bulk_process_id',
-					'matrix_id',
-					'where'
-				],
-				ddo_map				: [
-					{ 	// selected component
-						typo			: 'ddo',
-						type			: 'component',
-						model			: component.model,
-						tipo			: component.tipo,
-						section_tipo	: self.section_tipo,
-						parent			: self.section_tipo,
-						label			: component.label,
-						mode			: 'tm',
-						fixed_mode		: true, // preserves mode across section_record
-						view			: 'text'
-					},
-					{	// notes component
-						typo			: 'ddo',
-						type			: 'component',
-						model			: 'component_text_area',
-						tipo			: 'rsc329',
-						section_tipo	: 'rsc832',
-						parent			: self.section_tipo,
-						label			: 'Annotation',
-						mode			: 'tm',
-						fixed_mode		: true, // preserves mode across section_record
-						view			: 'note'
-					}
-				]
-			}
-		})
-
-		// check if inspector is destroyed after await
-		if (self.status === 'destroyed' || !self.caller) {
-			if (service_time_machine) service_time_machine.destroy(true, true)
-			return null
+	// destroy previous list to avoid instance leaks across navigation events
+		if (self.component_history_list) {
+			await self.component_history_list.destroy(
+				true, // delete_self
+				true // delete_dependencies
+			)
+			self.component_history_list = null
 		}
 
-		await service_time_machine.build(true)
-		const history_node = await service_time_machine.render()
+	// The component-history list is an ordinary dd15 `section` instance
+	// (WC-2026-08-14-tm-scope-server-owned) — same machinery as the tool's list
+	// and the section list, no private list service.
+	// (!) load_component_history is called on each section pagination, so it must
+	// be generated even if the user closed and re-opened the inspector tab.
+		const tm_list	= await get_instance({
+			model			: 'section',
+			tipo			: 'dd15',
+			section_tipo	: 'dd15',
+			mode			: 'list',
+			// record identity in the key — see the record-history note above
+			id_variant		: component.tipo +'_'+ self.caller.section_tipo +'_'+ self.caller.section_id + '_tm_list',
+			caller			: self,
+			caller_tipo		: component.tipo,
+			buttons			: false,
+			filter			: false,
+			session_save	: false,
+			request_config	: [{
+				api_engine	: 'dedalo',
+				type		: 'main',
+				sqo			: {
+					id			: 'component_history_' + component.tipo,
+					mode		: 'tm',
+					// (!) the RECORD being inspected — self.caller, not self: the
+					// inspector's own section_tipo/section_id are its panel identity,
+					// not the row whose history this is. The deleted service read the
+					// same two values off its caller.
+					section_tipo: [self.caller.section_tipo],
+					limit		: 10,
+					offset		: 0,
+					order		: [{ direction : 'DESC', path : [{ component_tipo : 'id' }] }],
+					skip_projects_filter : true,
+					filter_by_locators : [{
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
+						tipo			: component.tipo,
+						lang			: component.lang
+					}]
+				},
+				show		: {}
+			}],
+		})
+		tm_list.source_add		= { tm_surface : 'inspector_component' }
+		tm_list.tm_no_id_column	= true
+		// no header row: every row here is the SAME component, so a repeated
+		// column header is noise in a 300px panel
+		tm_list.tm_view				= 'history'
+
+		await tm_list.build(true)
+		const history_node = await tm_list.render()
+
+	// keep the pointer so the next load can destroy this instance
+		self.component_history_list = tm_list
 
 	// Replace previous content with the new node
 		if (container) {

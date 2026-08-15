@@ -98,7 +98,6 @@ export const component_iri = function() {
 
 	// render
 	component_iri.prototype.list				= render_list_component_iri.prototype.list
-	component_iri.prototype.tm					= render_list_component_iri.prototype.list
 	component_iri.prototype.edit				= render_edit_component_iri.prototype.edit
 	component_iri.prototype.search				= render_search_component_iri.prototype.search
 

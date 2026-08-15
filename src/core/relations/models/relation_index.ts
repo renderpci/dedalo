@@ -105,7 +105,7 @@ export const relationIndexResolver: RelationModelResolver = {
 		// mode; TS routes list/tm cells AND the edit read through it. Remaining
 		// modes (search rows carry no real record to invert) keep the generic
 		// portal fallback.
-		if (context.ddoMode !== 'list' && context.ddoMode !== 'tm' && context.ddoMode !== 'edit') {
+		if (context.ddoMode !== 'list' && context.ddoMode !== 'edit') {
 			await portalResolver.emitDdoItems(context);
 			return;
 		}
@@ -140,7 +140,7 @@ async function emitOwnConfigIndexData(
 	// The page limit mirrors expandPortal's mode chains EXACTLY, then is pinned
 	// onto the delegated ddo so the pre-fetched page and the portal slice agree.
 	let limit: number;
-	if (ddoMode === 'list' || ddoMode === 'tm') {
+	if (ddoMode === 'list') {
 		const { resolveListCellMap } = await import('../../section/list_definitions/section_list.ts');
 		limit = ddo.limit ?? (await resolveListCellMap(ddo.tipo)).cellLimit ?? PORTAL_LIST_LIMIT;
 	} else {
@@ -211,8 +211,7 @@ async function emitRelationIndexData(
 	};
 	// list/tm keep the pinned 1-locator cell page; the edit read pages at the
 	// component's edit limit (PHP get_data_paginated pagination->limit).
-	const limit =
-		ddoMode === 'list' || ddoMode === 'tm' ? PORTAL_LIST_LIMIT : (ddo.limit ?? config.editLimit);
+	const limit = ddoMode === 'list' ? PORTAL_LIST_LIMIT : (ddo.limit ?? config.editLimit);
 	const page = await findInverseReferenceLocators([filter], {
 		limit,
 		offset: 0,

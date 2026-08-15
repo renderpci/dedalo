@@ -69,7 +69,7 @@ export const view_default_list_section_record = function() {
 * Conditional row-hilite:
 *   Row-highlight (mouse-enter/leave) is attached only when BOTH conditions hold:
 *     1. `options.add_hilite_row` is true (default).
-*     2. The immediate caller model is 'section' OR 'service_time_machine'.
+*     2. The immediate caller model is 'section' (a time-machine list is one).
 *   This guards against activating highlights inside deeply nested portal rows,
 *   which would interfere with the outer section's own highlight.
 *
@@ -112,7 +112,7 @@ view_default_list_section_record.render = async function(self, options) {
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') {
+			if (add_hilite_row===true && self.caller.model==='section') {
 				when_in_dom(wrapper, function(){
 					hilite_row(wrapper)
 				})

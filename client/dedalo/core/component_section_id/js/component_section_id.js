@@ -64,7 +64,7 @@
 * - `section_tipo` – ontology tipo of the owning section, e.g. `'dd153'`.
 * - `section_id`   – integer id of the current record; also the value this component
 *                    surfaces. Populated by `component_common.prototype.init()`.
-* - `mode`         – render mode: `'edit'`, `'list'`, `'tm'`, or `'search'`.
+* - `mode`         – render mode: `'edit'`, `'list'`, or `'search'`.
 * - `lang`         – always `'lg-nolan'` (non-translatable component).
 * - `section_lang` – active language of the owning section; unused here (no translations).
 * - `context`      – structure context object loaded from the ontology; holds `view`,
@@ -124,7 +124,6 @@ export const component_section_id = function(){
 
 	// render
 	component_section_id.prototype.list					= render_list_component_section_id.prototype.list
-	component_section_id.prototype.tm					= render_list_component_section_id.prototype.list // TM mode reuses the list renderer; data source differs (historical snapshot)
 	component_section_id.prototype.edit					= render_edit_component_section_id.prototype.edit
 	component_section_id.prototype.search				= render_search_component_section_id.prototype.search
 

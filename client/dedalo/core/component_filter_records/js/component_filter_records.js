@@ -57,7 +57,7 @@ export const component_filter_records = function(){
 	this.tipo			= null // ontology tipo of this component instance, e.g. 'dd987'
 	this.section_tipo	= null // ontology tipo of the parent section, e.g. 'dd128'
 	this.section_id		= null // record identifier within the parent section
-	this.mode			= null // rendering mode: 'edit' | 'list' | 'search' | 'tm'
+	this.mode			= null // rendering mode: 'edit' | 'list' | 'search'
 	this.lang			= null // active UI language code, e.g. 'lg-nolan'
 
 	this.section_lang	= null // language code of the section's primary text content
@@ -97,9 +97,8 @@ export const component_filter_records = function(){
 	component_filter_records.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_filter_records.prototype.build_rqo			= common.prototype.build_rqo
 
-	// render — one method per mode; 'tm' reuses the list renderer
+	// render — one method per mode (a Time Machine cell is a list cell)
 	component_filter_records.prototype.list					= render_list_component_filter_records.prototype.list
-	component_filter_records.prototype.tm					= render_list_component_filter_records.prototype.list
 	component_filter_records.prototype.edit					= render_edit_component_filter_records.prototype.edit
 	component_filter_records.prototype.search				= render_search_component_filter_records.prototype.search
 

@@ -26,7 +26,7 @@
 *                  rich text or read-only contexts, joins entries with fields_separator)
 *
 * component_publication assigns this module's `list` prototype method to both
-* `component_publication.prototype.list` and `component_publication.prototype.tm`,
+* `component_publication.prototype.list`,
 * so time-machine diff rows reuse the same rendering path without duplication.
 *
 * The constructor is never called directly; it exists solely as a prototype
@@ -48,7 +48,7 @@ export const render_list_component_publication = function() {
 * (`self`) and any caller-supplied `options`.
 *
 * Called by `common.prototype.render` via `component_publication.prototype.list`
-* (and `prototype.tm`). The returned wrapper is appended to the section's list row
+*. The returned wrapper is appended to the section's list row
 * by the calling render orchestrator.
 *
 * View selection:

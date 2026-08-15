@@ -57,7 +57,7 @@ export const component_select = function(){
 	this.tipo         // {string} component structure tipo, e.g. 'dd745'
 	this.section_tipo // {string} parent section tipo, e.g. 'oh1'
 	this.section_id   // {number|string} current record's section_id
-	this.mode         // {string} rendering mode: 'edit' | 'list' | 'tm' | 'search'
+	this.mode         // {string} rendering mode: 'edit' | 'list' | 'search'
 	this.lang         // {string} active language code, e.g. 'lg-eng'
 
 	this.section_lang // {string} section-level language (may differ from component lang)
@@ -106,7 +106,6 @@ export const component_select = function(){
 
 	// render — delegates to the matching render_* sub-module
 	component_select.prototype.list					= render_list_component_select.prototype.list
-	component_select.prototype.tm					= render_list_component_select.prototype.list // tm reuses the list renderer
 	component_select.prototype.edit					= render_edit_component_select.prototype.edit
 	component_select.prototype.search				= render_search_component_select.prototype.search
 

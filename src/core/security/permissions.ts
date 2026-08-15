@@ -21,7 +21,11 @@
  */
 
 import { readString } from '../../config/readers.ts';
-import { AUDIT_TIPOS, isConsultationOnlySection } from '../concepts/section.ts';
+import {
+	AUDIT_TIPOS,
+	isConsultationOnlySection,
+	TIME_MACHINE_SECTION_TIPO,
+} from '../concepts/section.ts';
 import { classifyWireSectionId } from '../concepts/section_id.ts';
 import { sql } from '../db/postgres.ts';
 import { createDataCache } from '../ontology/cache_factory.ts';
@@ -70,7 +74,6 @@ const PROFILE_SELECT_COMPONENT = 'dd1725';
 const GLOBAL_ADMIN_COMPONENT = 'dd244';
 const DEVELOPER_COMPONENT = 'dd515';
 const AREA_MAINTENANCE = 'dd88';
-const TIME_MACHINE_SECTION = 'dd15';
 const TOOLS_REGISTER_SECTION = 'dd1324';
 const TEMP_PRESET_SECTION = 'dd655';
 const INVERSE_RELATIONS_COMPONENT = 'dd1596';
@@ -377,6 +380,39 @@ export async function getGrantedTipos(userId: number): Promise<Set<string>> {
 }
 
 /**
+ * The dd15 READ FLOOR (WC-2026-08-14-tm-permission-floor).
+ *
+ * Time Machine columns are consultation-only, and the level derives from the
+ * §7.4 `time_machine_list` grant on the CALLER SECTION — not from global-admin
+ * status. The old wrapper rule (`isGlobalAdmin ? 1 : 0`) contradicted
+ * canAccessTimeMachineList, which exists precisely to grant per-section history
+ * to non-admins; the contradiction was invisible only because the TM read never
+ * ran dd15 columns through the per-ddo authz loop (buildTmContext hardcoded
+ * permissions:1). It does now.
+ *
+ * The scoped section arrives through the request-scoped TM scope rather than a
+ * parameter — see tm_scope_context.ts. Its ABSENCE is meaningful: the unscoped
+ * browse shows every section's history at once, so no per-section grant can
+ * authorize it and it stays global-admin only.
+ *
+ * Never above 1: reverts go through tool_time_machine, never inline edit.
+ */
+async function timeMachineReadFloor(principal: Principal): Promise<number> {
+	if (principal.isGlobalAdmin) return 1;
+	const { currentTimeMachineScopeSection } = await import(
+		'../section/list_definitions/tm_scope_context.ts'
+	);
+	const scopedSection = currentTimeMachineScopeSection();
+	if (scopedSection === undefined || scopedSection === TIME_MACHINE_SECTION_TIPO) return 0;
+	// Dynamic import breaks the cycle: time_machine_list.ts imports THIS module.
+	// No recursion — that call resolves against the caller section, not dd15.
+	const { canAccessTimeMachineList } = await import(
+		'../section/list_definitions/time_machine_list.ts'
+	);
+	return (await canAccessTimeMachineList(principal, scopedSection)) ? 1 : 0;
+}
+
+/**
  * get_permissions(parentTipo, tipo) → 0-3 for a principal. Reproduces the PHP
  * decision order exactly (wrapper common::get_permissions + core
  * security::get_security_permissions), first match wins.
@@ -386,10 +422,8 @@ export async function getPermissions(
 	parentTipo: string,
 	tipo: string,
 ): Promise<number> {
-	// Wrapper rule: time machine is admin-only (stricter than the core rule).
-	if (parentTipo === TIME_MACHINE_SECTION) {
-		return principal.isGlobalAdmin ? 1 : 0;
-	}
+	// Time machine (dd15) has its own floor — see timeMachineReadFloor.
+	if (parentTipo === TIME_MACHINE_SECTION_TIPO) return timeMachineReadFloor(principal);
 	if (parentTipo === '' || tipo === '') return 0;
 
 	// Core resolver order.

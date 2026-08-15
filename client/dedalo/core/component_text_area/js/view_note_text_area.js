@@ -14,11 +14,11 @@
 * turns green when at least one annotation entry already exists.
 *
 * Caller chain expected by this view:
-*   self          — component_text_area instance rendered in 'tm'/'list' mode with view 'note'
+*   self          — component_text_area instance rendered in 'list' mode with view 'note'
 *   self.caller   — the section_record (or section) row that holds this component; its
 *                   .locator.user_id identifies the change owner and its .ar_instances
 *                   array contains the resolved 'dd578' (who/author) component
-*   self.caller.caller — the service_time_machine (or list container) that owns the row,
+*   self.caller.caller — the time-machine list (a dd15 section) that owns the row,
 *                        whose .refresh() method is invoked on modal close to update the
 *                        icon colour without reloading the full page
 *
@@ -90,7 +90,7 @@ export const view_note_text_area = function() {
 *     This is intentional legacy behaviour: alert() blocks until dismissed, preventing any
 *     accidental downstream actions in the same click handler.
 *
-* @param {Object} self    - component_text_area instance (view 'note', mode 'tm' or 'list')
+* @param {Object} self    - component_text_area instance (view 'note', mode 'list')
 * @param {Object} options - render options (currently unused but forwarded for signature parity)
 * @returns {Promise<HTMLElement>} wrapper div containing the note icon button
 */
@@ -143,7 +143,7 @@ view_note_text_area.render = async function(self, options) {
 
 			// refresh service. Only refresh if a new history note record needs to be created
 				// When parent_section_id already exists the row is not new, so we don't
-				// need to force a service_time_machine refresh on modal close.
+				// need to force a time-machine list refresh on modal close.
 				const refresh_service = self.data.parent_section_id ? false : true
 
 			// parent_section_id. Get existing or create a new one
@@ -241,7 +241,7 @@ view_note_text_area.render = async function(self, options) {
 					body		: content,
 					footer		: footer,
 					on_close	: () => {
-						// service_time_machine refresh, forces to update tag color (green|grey)
+						// time-machine list refresh, forces to update tag color (green|grey)
 						self.caller.caller.refresh()
 					}
 				})

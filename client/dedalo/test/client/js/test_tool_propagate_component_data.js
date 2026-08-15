@@ -116,8 +116,11 @@ describe('TOOL_PROPAGATE_COMPONENT_DATA — section resolution (layer 2)', funct
 		assert.ok(resolution.reason.length > 0, 'a refusal must carry a user-facing reason')
 	})
 
-	it('REFUSES a mode outside the allowlist (tm)', function() {
-		const {tool} = make({mode:'tm'})
+	it('REFUSES a mode outside the allowlist (search)', function() {
+		// 'tm' used to be the example here; the render mode is retired
+		// (WC-2026-08-14-tm-ddo-mode-retired), so the case now uses a mode that
+		// still exists but is still outside the propagate allowlist.
+		const {tool} = make({mode:'search'})
 		assert.strictEqual(resolve_propagate_section(tool).section, null)
 	})
 

@@ -79,7 +79,7 @@ export const view_text_list_component_external = function() {
 * The class-name string encodes three runtime values for CSS targeting:
 *   - `wrapper_component` — common Dédalo component root class.
 *   - `self.model`        — always `'component_external'` for this component.
-*   - `self.mode`         — current render mode, e.g. `'list'` or `'tm'`.
+*   - `self.mode`         — current render mode, e.g. `'list'`.
 *   - `view_${self.view}` — the active view name (`'text'` or `'line'`).
 *
 * @param {Object} self    - the `component_external` instance being rendered;

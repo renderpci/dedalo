@@ -57,7 +57,7 @@ export const view_text_list_radio_button = function() {
 * CSS classes applied to the wrapper:
 *   'wrapper_component' — standard Dédalo component wrapper marker
 *   self.model          — component model identifier ('component_radio_button')
-*   self.mode           — current render mode (e.g. 'list', 'tm')
+*   self.mode           — current render mode (e.g. 'list')
 *   'view_<self.view>'  — current view variant (e.g. 'view_text')
 *
 * Data contract (from self):

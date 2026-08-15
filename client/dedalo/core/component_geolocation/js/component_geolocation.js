@@ -338,7 +338,7 @@ export const component_geolocation = function(){
 	this.section_tipo
 	/** @type {number|string} Record identifier of the current section. */
 	this.section_id
-	/** @type {string} Render mode: 'edit' | 'list' | 'search' | 'tm'. */
+	/** @type {string} Render mode: 'edit' | 'list' | 'search'. */
 	this.mode
 	/** @type {string} Active data language code (e.g. 'lg-spa'). */
 	this.lang
@@ -419,7 +419,6 @@ export const component_geolocation = function(){
 	// render
 	component_geolocation.prototype.list				= render_list_component_geolocation.prototype.list
 	// (!) tm mode reuses the list render — no separate time-machine view for geolocation.
-	component_geolocation.prototype.tm					= render_list_component_geolocation.prototype.list
 	component_geolocation.prototype.edit				= render_edit_component_geolocation.prototype.edit
 	component_geolocation.prototype.search				= render_search_component_geolocation.prototype.search
 

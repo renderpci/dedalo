@@ -136,10 +136,9 @@ export const component_security_access = function() {
 	component_security_access.prototype.set_changed_data	= component_common.prototype.set_changed_data
 	component_security_access.prototype.build_dd_request	= common.prototype.build_dd_request
 
-	// render — 'tm' reuses the list renderer because the permission matrix is displayed
+	// render — a Time Machine cell reuses the list renderer because the permission matrix is displayed
 	// identically in Time Machine view (values shown read-only; no tree interaction)
 	component_security_access.prototype.list				= render_list_component_security_access.prototype.list
-	component_security_access.prototype.tm					= render_list_component_security_access.prototype.list
 	component_security_access.prototype.edit				= render_edit_component_security_access.prototype.edit
 	component_security_access.prototype.search				= render_search_component_security_access.prototype.search
 

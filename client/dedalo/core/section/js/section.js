@@ -152,7 +152,6 @@ export const section = function() {
 	section.prototype.edit				= render_edit_section.edit
 	section.prototype.list				= render_list_section.list
 	section.prototype.list_portal		= render_list_section.list
-	section.prototype.tm				= render_list_section.list
 	section.prototype.activity			= render_list_section.list
 	section.prototype.list_header		= render_list_section.list_header
 	section.prototype.solved			= render_solved_section.solved
@@ -688,10 +687,12 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo build
 			const action	= 'search'
-			// add_show is true for TM mode to include the source language data in the response
+			// add_show is true for a TIME MACHINE read, to include the source language
+			// data in the response. The test is sqo.mode — the ROW SOURCE — not the
+			// render mode, which is retired (WC-2026-08-14-tm-ddo-mode-retired).
 			const add_show	= (self.add_show)
 				? self.add_show
-				: (self.mode==='tm') ? true	: false
+				: (self.rqo?.sqo?.mode==='tm' || self.request_config_object?.sqo?.mode==='tm') ? true : false
 			self.rqo = self.rqo || await self.build_rqo_show(
 				self.request_config_object, // object request_config_object
 				action,  // string action like 'search'
@@ -711,7 +712,10 @@ section.prototype.build = async function(autoload=false) {
 				// and the context is loaded / updated
 				self.rqo.sqo = self.context.sqo_session
 
-				// dd15 is the Thesaurus section; it always uses TM search mode
+				// dd15 is the TIME MACHINE section: its rows come from
+				// matrix_time_machine, so the SQO row source is always 'tm'. (This is
+				// sqo.mode — a row source — and is unaffected by the retirement of the
+				// 'tm' RENDER mode, WC-2026-08-14-tm-ddo-mode-retired.)
 				if( self.tipo==='dd15' ){
 					self.rqo.sqo.mode = 'tm'
 					self.request_config_object.sqo.mode = 'tm'
@@ -721,7 +725,7 @@ section.prototype.build = async function(autoload=false) {
 		await generate_rqo()
 
 	// filter search
-		if (self.filter===null && self.mode!=='tm') {
+		if (self.filter===null) {
 			// keyed, registered instance (no longer a bare `new search()`).
 			// id_variant disambiguates section searches from area searches that
 			// could otherwise share section_tipo/mode/lang.
@@ -776,7 +780,10 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 
-				// dd15 is the Thesaurus section; it always uses TM search mode
+				// dd15 is the TIME MACHINE section: its rows come from
+				// matrix_time_machine, so the SQO row source is always 'tm'. (This is
+				// sqo.mode — a row source — and is unaffected by the retirement of the
+				// 'tm' RENDER mode, WC-2026-08-14-tm-ddo-mode-retired.)
 				if( self.tipo==='dd15' ){
 					self.rqo.sqo.mode = 'tm'
 				}
@@ -2245,7 +2252,9 @@ section.prototype.focus_first_input = function() {
 * instance and cause silent render failures.
 *
 * The set of valid modes is: 'edit', 'list', 'list_thesaurus', 'indexation_list',
-* 'solved', 'tm'.
+* 'solved'. ('tm' was retired — a Time Machine list is an ordinary LIST whose
+* rows come from a different source, selected by sqo.mode. See
+* WC-2026-08-14-tm-ddo-mode-retired.)
 * 'list_thesaurus' is a server-side-only mode alias that the build method
 * normalises to 'list' after the API response is received; it is listed here
 * because sections can be initialised with it before build runs.
@@ -2270,7 +2279,7 @@ function validate_mode(mode) {
 	// opened from an indexation-grid button rebuilds its section caller — i.e.
 	// on EVERY such open, where it used to raise a blocking alert() in dev mode
 	// and freeze the tool window.
-	const valid_modes = new Set(['edit', 'list', 'list_thesaurus', 'indexation_list', 'solved', 'tm'])
+	const valid_modes = new Set(['edit', 'list', 'list_thesaurus', 'indexation_list', 'solved'])
 	const default_mode = 'list';
 
 	if (!mode) {

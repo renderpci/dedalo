@@ -16,7 +16,7 @@
 * View router for component_select in list and time-machine (tm) modes.
 *
 * Acts as the prototype host for the `list` method that is assigned to
-* component_select.prototype.list and component_select.prototype.tm in
+* component_select.prototype.list in
 * component_select.js. The constructor itself is never instantiated; it is
 * used purely so that the prototype method can be declared and later copied
 * onto the component class.
@@ -41,7 +41,7 @@ export const render_list_component_select = function() {
 * delegates rendering entirely to that module's static `render` function.
 * Falls through to 'default' for any unrecognised view string.
 *
-* Called via component_select.prototype.list and component_select.prototype.tm
+* Called via component_select.prototype.list
 * (both point to this method — see component_select.js prototype assignments).
 *
 * @param {Object} options - Render options forwarded verbatim to the view module

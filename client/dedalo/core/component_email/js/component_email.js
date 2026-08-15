@@ -93,7 +93,6 @@ export const component_email = function(){
 
 	// render
 	component_email.prototype.list				= render_list_component_email.prototype.list
-	component_email.prototype.tm				= render_list_component_email.prototype.list // TM view reuses the standard list renderer
 	component_email.prototype.edit				= render_edit_component_email.prototype.edit
 	component_email.prototype.search			= render_search_component_email.prototype.search
 

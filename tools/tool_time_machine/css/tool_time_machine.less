@@ -85,7 +85,12 @@
 		}//end .tool_bar
 
 		// time_machine container (list)
-		.service_time_machine {
+		// The list is a dd15 `section` instance
+		// (WC-2026-08-14-tm-scope-server-owned) — it no longer carries the
+		// .service_time_machine class of the deleted private list service. The
+		// wrapper's view class comes from the CONTEXT (dd15 declares none, so it
+		// renders `view_null`), which is why this keys on the section instead.
+		.wrapper_section.dd15 {
 			// display: grid;
 			height: 100%;
 			grid-column-start: 1;

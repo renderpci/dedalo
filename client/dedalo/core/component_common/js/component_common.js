@@ -96,7 +96,7 @@ export const component_common = function(){
 * @param {string} options.section_tipo - Ontology tipo of the parent section, e.g. 'oh1'
 * @param {string|number} options.section_id - Record identifier within the section
 * @param {string|null} [options.matrix_id] - Time-machine matrix row id (list_tm mode only)
-* @param {string} options.mode - Render mode: 'edit', 'list', 'search', 'tm', etc.
+* @param {string} options.mode - Render mode: 'edit', 'list', 'search', etc.
 * @param {string} options.lang - Active language tag, e.g. 'lg-nolan'
 * @param {string|null} [options.column_id] - Column id when rendering as a grid column
 * @param {string} [options.type='component'] - Instance type classifier

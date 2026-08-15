@@ -39,7 +39,7 @@
 *   - `element_info_container`   — DOM node for component/section metadata panel
 *   - `component_history_container` — DOM node for the per-component history list
 *   - `selection_info_node`      — DOM node showing the selected element's label
-*   - `service_time_machine`     — live service_time_machine instance (set by render_inspector)
+*   - `tm_list`     — the record-history list, a dd15 `section` instance (set by render_inspector)
 *   - `last_docu_type`           — last ontology target used (for window coherence)
 *
 * Lifecycle: init → build → render (delegated to render_inspector.prototype.edit)
@@ -102,7 +102,7 @@ export const inspector = function() {
 * The duplicated-init guard (`this.is_init`) is shared with common.init() pattern
 * and will log a console error + optionally alert (SHOW_DEBUG) on re-entry.
 *
-* (!) `self.service_time_machine` on line 103 is a bare expression with no assignment;
+* (!) `self.tm_list` on line 103 is a bare expression with no assignment;
 * it appears to be a placeholder / dead statement rather than an intentional initialisation.
 * The property is actually set later by render_inspector via load_time_machine_list.
 *
@@ -147,8 +147,8 @@ inspector.prototype.init = async function(options) {
 
 	self.last_docu_type = null
 
-	// fix active service_time_machine
-	self.service_time_machine
+	// fix active tm_list
+	self.tm_list
 
 	// events
 

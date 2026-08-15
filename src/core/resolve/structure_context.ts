@@ -30,12 +30,9 @@ import { publishApiConfig } from '../../external/api/index.ts';
 import { getComponentModel } from '../components/registry.ts';
 import { isAreaModel } from '../concepts/area.ts';
 import {
-	ACTIVITY_SECTION_TIPO,
-	ACTIVITY_WHEN_TIPO,
 	isConsultationOnlySection,
 	isGrouperModel,
-	TIME_MACHINE_SECTION_TIPO,
-	TIME_MACHINE_SORTABLE_TIPOS,
+	logSectionColumnIsSortable,
 } from '../concepts/section.ts';
 import { resolveDataTipo } from '../ontology/alias.ts';
 import { createOntologyCache } from '../ontology/cache_factory.ts';
@@ -216,22 +213,14 @@ const NOTES_TEXT_TIPO = 'rsc329';
 function resolveSortable(model: string, tipo: string, sectionTipo: string): boolean {
 	if (!model.startsWith('component_')) return false;
 	if (tipo === NOTES_TEXT_TIPO) return false;
-	// Activity (dd542, append-only log): only the When column sorts, and its
-	// order path maps to section_id (order_path.ts — WC-044). Any other
-	// component sort is an unindexable full-table jsonb sort over the
-	// biggest table in the system.
-	if (sectionTipo === ACTIVITY_SECTION_TIPO && tipo !== ACTIVITY_WHEN_TIPO) return false;
-	// Time Machine (dd15, append-only log): only the columns whose sort an index
-	// actually serves (TIME_MACHINE_SORTABLE_TIPOS — the measurements live there).
-	// dd15 header sorts DO map 1:1 to real flat columns (read_tm.ts
-	// TM_ORDER_COLUMN), so this is not the dd542 jsonb-sort problem; it is the
-	// (col, id DESC) index direction mismatch, which costs seconds to minutes on
-	// the wrong column. Columns outside TM_ORDER_COLUMN entirely (the section's
-	// own components in the record-snapshot list) also land here — they threw
-	// "uncovered scope" on click before.
-	if (sectionTipo === TIME_MACHINE_SECTION_TIPO && !TIME_MACHINE_SORTABLE_TIPOS.has(tipo)) {
-		return false;
-	}
+	// APPEND-ONLY LOGS (dd542 Activity, dd15 Time Machine): only the columns an
+	// index actually serves may advertise a sort. The two have DIFFERENT causes —
+	// dd542's values are jsonb (WC-044), dd15's are physical columns whose sort
+	// loses to index DIRECTION (WC-053) — and both, with their measurements, are
+	// declared in ONE place: concepts/section.ts LOG_SECTION_POLICY. Columns
+	// outside dd15's TM_ORDER_COLUMN entirely (the section's own components in
+	// the record-snapshot list) land here too; they used to THROW on click.
+	if (!logSectionColumnIsSortable(sectionTipo, tipo)) return false;
 	return getComponentModel(model)?.sortable ?? true;
 }
 
@@ -443,7 +432,7 @@ async function resolveSourceProperties(
 	model: string,
 	ownProperties: unknown,
 ): Promise<unknown> {
-	if (mode !== 'list' && mode !== 'tm' && mode !== 'list_thesaurus') return ownProperties;
+	if (mode !== 'list' && mode !== 'list_thesaurus') return ownProperties;
 	if (model !== 'section') return ownProperties;
 	// Sections with a direct request_config skip the section_list swap (PHP
 	// :274, isset semantics: any non-null value).

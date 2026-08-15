@@ -28,7 +28,7 @@
 *   tipo         {string}          - ontology tipo key of this component, e.g. 'rsc855'
 *   section_tipo {string}          - ontology tipo of the parent section, e.g. 'oh1'
 *   section_id   {string|number}   - numeric record identifier for the parent section
-*   mode         {string}          - current rendering mode: 'edit' | 'list' | 'search' | 'tm'
+*   mode         {string}          - current rendering mode: 'edit' | 'list' | 'search'
 *   lang         {string}          - active data language code, e.g. 'lg-nolan'
 *   section_lang {string}          - active section language code, e.g. 'lg-eng'
 *   context      {Object}          - server-supplied structure context (properties, features, tools)
@@ -112,7 +112,6 @@ export const component_svg = function(){
 	// render
 	// (!) tm reuses the list renderer — SVG components have no dedicated TM view.
 	component_svg.prototype.list				= render_list_component_svg.prototype.list
-	component_svg.prototype.tm					= render_list_component_svg.prototype.list
 	component_svg.prototype.edit				= render_edit_component_svg.prototype.edit
 	component_svg.prototype.search				= render_search_component_svg.prototype.search
 

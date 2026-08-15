@@ -67,7 +67,7 @@ export const section_record = function() {
 	this.section_tipo	= null
 	/** @var {string|number|null} section_id - Record identifier within the section (DB row id) */
 	this.section_id		= null
-	/** @var {string|null} mode - Render mode: 'edit', 'list', 'search', 'tm', etc. */
+	/** @var {string|null} mode - Render mode: 'edit', 'list', 'search', etc. */
 	this.mode			= null
 	/** @var {string|null} lang - Active language tag, e.g. 'lg-eng' */
 	this.lang			= null
@@ -163,7 +163,7 @@ export const section_record = function() {
 * @param {string} options.tipo - Ontology tipo of the owning section or component
 * @param {string} options.section_tipo - Section ontology tipo (e.g. 'oh1')
 * @param {string|number} options.section_id - Record row identifier
-* @param {string} options.mode - Render mode ('edit', 'list', 'search', 'tm', etc.)
+* @param {string} options.mode - Render mode ('edit', 'list', 'search', etc.)
 * @param {string} options.lang - Active language tag (e.g. 'lg-eng')
 * @param {string|null} [options.id_variant] - Deduplication suffix for instance key
 * @param {Object} options.context - Record-level context (view, request_config, fields_separator, etc.)

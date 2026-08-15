@@ -70,7 +70,7 @@ export const render_tool_propagate_component_data = function() {
 *   'list' — literally the search the user is looking at, when the tool is opened
 *            from the per-cell edit modal (component_common activate_edit_in_list)
 *
-* 'tm' is a time-machine query and 'solved' is not a user search; propagating
+* 'solved' is not a user search; propagating
 * against either would write a set the user never chose. 'list_thesaurus' needs no
 * entry — section.js normalises it to 'list' on build, before any cell is
 * clickable. A future mode is refused by default, which is the point of a list.
