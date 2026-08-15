@@ -35,6 +35,8 @@
  * favor of isAreaModel() / areaBehaviorOf() so the taxonomy has ONE home.
  */
 
+import { canonicalizeStoredSectionId, isSectionId } from './section_id.ts';
+
 /** How an area model resolves its `read` payload. */
 export type AreaBehavior = 'dashboard' | 'tree' | 'maintenance';
 
@@ -127,6 +129,113 @@ export const DASHBOARD_CHILD_EXCLUDE_MODELS: ReadonlySet<string> = new Set([
 	...AREA_CHILD_EXCLUDE_MODELS,
 	'section_tool',
 ]);
+
+// --- the relation-mode picker contract (spec engineering/AREA_SPEC.md §5) ----
+
+/**
+ * How a tree area serves its terms.
+ *
+ * `default` browses: a term click navigates into the term. `relation` is the
+ * PICKER: the tree is open so that a term can be LINKED back into the
+ * component that opened it, and a term click publishes the pick instead of
+ * navigating.
+ *
+ * RELATION MODE IS GRANTED, NEVER DECLARED. The request names its CALLER (see
+ * {@link PickerCaller}) and the server derives the mode from that caller's
+ * resolved ontology view, model and the principal's edit grant — a client
+ * string never selects it. PHP folded a `thesaurus_mode` URL var straight onto
+ * the page context, which let any request open relation mode on any thesaurus
+ * with no caller that ever declared the picker view.
+ */
+export type ThesaurusMode = 'default' | 'relation';
+
+/**
+ * The ontology `properties.view` value with which a relation component declares
+ * that its target opens as a picker (resolved through the ordinary structure
+ * context, so a ddo_map-injected view counts exactly the same).
+ */
+export const PICKER_CALLER_VIEW = 'tree';
+
+/**
+ * The grant a caller needs before relation mode is granted: EDIT. A picker
+ * exists to write a locator into the caller, so read-level access to it buys a
+ * browsable tree and nothing more.
+ */
+export const PICKER_CALLER_MIN_PERMISSIONS = 2;
+
+/**
+ * The caller a picker read declares: the component instance the picked term
+ * will be linked INTO. It is an ADDRESS, nothing else — every conclusion (mode,
+ * target sections, selection cap) is derived from it server-side.
+ */
+export interface PickerCaller {
+	/** The section the caller component lives in. */
+	section_tipo: string;
+	/** The record the caller component sits on — capacity is a fact of the record. */
+	section_id: number;
+	/** The caller component's own tipo. */
+	tipo: string;
+}
+
+/**
+ * Shape-validate `rqo.source.caller`. Returns the caller, or null when the
+ * value is not one — the read refuses with
+ * {@link PICKER_CALLER_MALFORMED_MESSAGE} rather than guessing.
+ *
+ * `section_id` arrives URL-shaped (a string) from the picker window and int-
+ * shaped from the programmatic host, so it is canonicalized with the ONE
+ * write-side rule (concepts/section_id.ts) and then required to BE an address:
+ * a caller that names no record cannot be asked how many locators it holds, and
+ * counting zero for it would hand back a too-generous capacity.
+ */
+export function parsePickerCaller(raw: unknown): PickerCaller | null {
+	if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+	const candidate = raw as { section_tipo?: unknown; section_id?: unknown; tipo?: unknown };
+	if (typeof candidate.tipo !== 'string' || candidate.tipo === '') return null;
+	if (typeof candidate.section_tipo !== 'string' || candidate.section_tipo === '') return null;
+	const sectionId = canonicalizeStoredSectionId(candidate.section_id);
+	if (!isSectionId(sectionId)) return null;
+	return {
+		section_tipo: candidate.section_tipo,
+		section_id: sectionId,
+		tipo: candidate.tipo,
+	};
+}
+
+/** `rqo.source.caller` is present but is not a caller address. */
+export const PICKER_CALLER_MALFORMED_MESSAGE = 'read: source.caller is malformed';
+
+/** The caller addresses an element the ontology does not define. */
+export const PICKER_CALLER_UNKNOWN_MESSAGE =
+	'read: source.caller names an element the ontology does not define';
+
+/** The caller's section holds no records, so the caller addresses nothing. */
+export const PICKER_CALLER_SECTIONLESS_MESSAGE =
+	'read: source.caller.section_tipo is not a record-bearing section';
+
+/**
+ * The picker opened, every candidate hierarchy survived the ACL, and there was
+ * still nothing to show: the target declares no ACTIVE hierarchy (or none of
+ * them is one of this caller's targets). NOT an authorization refusal — the
+ * two are different facts and the client renders them differently ("this
+ * picker has no thesaurus" vs "you may not see it").
+ */
+export const PICKER_NO_HIERARCHY_MESSAGE =
+	'read: no active hierarchy is configured for this component target';
+
+/**
+ * One root term's link affordance, emitted per node in relation mode. The
+ * answer is the TERM's own (ts_object isIndexable via
+ * relations/picker_constraint.ts isTermSelectable) — the client renders it and
+ * re-derives nothing, and a `false` node still renders visible and navigable,
+ * only without a link control.
+ */
+export interface PickerTermSelectability {
+	section_tipo: string;
+	/** Echoed exactly as the root-term locator carries it. */
+	section_id: unknown;
+	selectable: boolean;
+}
 
 // --- area tipo constants (core/base/dd_tipos.php + resolved-by-model) --------
 export const AREA_ROOT_TIPO = 'dd242';

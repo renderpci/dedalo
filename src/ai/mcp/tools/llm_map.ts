@@ -5,13 +5,23 @@
  * database:
  *
  *   [{ tipo, label: {lg-eng: …, lg-spa: …},
- *      fields: [{tipo, label, type, target?}] }, …]
+ *      fields: [{tipo, label, type, target_sections?}] }, …]
  *
  * It REUSES the live MCP discovery machinery (SIMPLIFIED_TYPE_MAP,
  * sectionFieldNodes, linkTargetSections — PHP agent_view_builder::
- * section_label_map semantics: EXCLUDED_MODELS filtering, simplified types,
- * best-effort single link target), so the exported map exactly reflects what
- * the agent can address at query time.
+ * section_label_map semantics: EXCLUDED_MODELS filtering, simplified types),
+ * so the exported map exactly reflects what the agent can address at query
+ * time — including describeSection's `target_sections` key, one vocabulary
+ * for one fact.
+ *
+ * DELIBERATE DIVERGENCE from PHP export_llm_map: PHP emitted `target`, a
+ * SINGLE tipo (the first of the resolved list). A link component's targets are
+ * declared by its request_config sqo and are routinely plural — a
+ * `hierarchy_types` source expands to every ACTIVE hierarchy of the typology —
+ * so the first-only form told the agent a multi-target field linked to exactly
+ * one section. That is a silent narrowing of what the ontology declared, and
+ * the key is RENAMED (not merely re-typed) so a consumer written against the
+ * PHP shape fails loudly instead of reading an array as a tipo string.
  *
  * This module lives NEXT TO discovery.ts (src/ai) rather than in
  * core/ontology because the dependency direction is ai → core; the core-side
@@ -33,15 +43,20 @@ import {
 	sectionFieldNodes,
 } from './discovery.ts';
 
-/** One field entry of the LLM map (PHP export_llm_map field shape). */
+/** One field entry of the LLM map. */
 export interface LlmMapField {
 	tipo: string;
 	/** Multilingual term object (all languages at once, PHP get_term_data). */
 	label: Record<string, string>;
 	/** Simplified type: text | html | number | date | geo | link | media | misc. */
 	type: string;
-	/** Best-effort link target hint — only one target listed (PHP parity). */
-	target?: string;
+	/**
+	 * EVERY section this link field may address, in the request_config's own
+	 * order — same key, same meaning and same omit-when-empty rule as
+	 * discovery.ts describeSection (SectionMapField.target_sections). Absent for
+	 * scalar fields and for a link field that resolves no target at all.
+	 */
+	target_sections?: string[];
 }
 
 /** One section entry of the LLM map. */
@@ -93,10 +108,13 @@ export async function buildLlmMap(
 					type: SIMPLIFIED_TYPE_MAP[model] ?? 'text',
 				};
 				if (LINK_TARGET_MODELS.has(model)) {
-					// Best-effort; only one target listed (PHP first_target_section_tipo).
-					const target = (await targetSections(node.tipo, sectionNode.tipo, lang))[0];
-					if (target !== undefined) {
-						field.target = target;
+					// ALL resolved targets, never `[0]`: the caller's request_config sqo
+					// is the declaration of what this field addresses, and the engine
+					// never re-scopes it. Empty stays absent (a component with no
+					// resolvable target declares nothing, which is not "links to []").
+					const targets = await targetSections(node.tipo, sectionNode.tipo, lang);
+					if (targets.length > 0) {
+						field.target_sections = targets;
 					}
 				}
 				fields.push(field);
