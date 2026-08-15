@@ -39,7 +39,9 @@
  */
 
 import { readEnv } from '../../config/env.ts';
-import { err, type StructuredErr } from '../mcp/envelope.ts';
+import { toStructuredErr } from '../../core/errors/convert.ts';
+import { DedaloError } from '../../core/errors/dedalo_error.ts';
+import type { StructuredErr } from '../mcp/envelope.ts';
 import type { RecordEgressClass } from '../rag/ask.ts';
 import { askRuntimeConfigFromEnv, buildEgressPolicy } from '../rag/ask_config.ts';
 
@@ -137,6 +139,15 @@ export function collectSectionTipos(input: unknown, out: Set<string> = new Set()
 }
 
 /**
+ * The coded refusal envelope (`mcp.egress_restricted`, registry hint attached):
+ * the sentence names the tool and the section for the model — public
+ * disclosure, the section tipo is what the model itself addressed.
+ */
+function egressRefusal(publicMessage: string): StructuredErr {
+	return toStructuredErr(new DedaloError('mcp.egress_restricted', { publicMessage }));
+}
+
+/**
  * Pre-execution gate for a registry tool call. Returns null (allowed) or the
  * coded refusal envelope that becomes the tool's is_error result — the
  * handler NEVER runs on a refusal. Fail-closed: a gated tool that names NO
@@ -153,10 +164,7 @@ export async function gateAgentToolCall(
 
 	const sectionTipos = collectSectionTipos(input);
 	if (sectionTipos.size === 0) {
-		return err(
-			'egress_restricted',
-			`${toolName}: cannot classify the addressed section for external egress`,
-		);
+		return egressRefusal(`${toolName}: cannot classify the addressed section for external egress`);
 	}
 	const sectionId = Number(input.section_id ?? 0);
 	const addressedId = Number.isFinite(sectionId) ? sectionId : 0;
@@ -166,8 +174,7 @@ export async function gateAgentToolCall(
 		const id = sectionTipo === input.section_tipo ? addressedId : 0;
 		const klass = await egress.policy(sectionTipo, id);
 		if (klass === 'restricted') {
-			return err(
-				'egress_restricted',
+			return egressRefusal(
 				`${toolName}: section ${sectionTipo} is restricted from external model providers`,
 			);
 		}
@@ -199,8 +206,7 @@ export async function gateAgentToolResult(
 	for (const sectionTipo of collectSectionTipos(envelope)) {
 		const klass = await egress.policy(sectionTipo, 0);
 		if (klass === 'restricted') {
-			return err(
-				'egress_restricted',
+			return egressRefusal(
 				`${toolName}: the result references section ${sectionTipo}, which is restricted from external model providers`,
 			);
 		}

@@ -140,10 +140,10 @@ The stream is a sequence of named events. The response headers are `Content-Type
 | `thinking` | `{state:"start"\|"stop"}` | the model began/finished a thinking block (indicator only; no reasoning text) |
 | `text` | `{delta}` | a chunk of the visible answer — concatenate to build the answer |
 | `tool_use` | `{id, name, summary}` | the loop is running a tool (e.g. `dedalo_search_records`), with a human summary |
-| `tool_result` | `{id, name, ok, code}` | that tool finished; `ok:false` carries an error `code` (e.g. `egress_restricted`) |
+| `tool_result` | `{id, name, ok, code}` | that tool finished; `ok:false` carries the registry error `code` (e.g. `mcp.egress_restricted`) |
 | `iteration` | `{n, max}` | a new model turn began (progress) |
 | `final` | see below | the terminal success frame |
-| `error` | `{code, message, hint}` | terminal failure (transport, model, config) |
+| `error` | `{code, category, message, label_key, retryable, details?, hint?}` | terminal failure — the envelope error body itself (`ai.provider_failed` for a provider/transport fault, a catalog code, …); `hint` is the registry's next move |
 
 Comment lines beginning `:` (e.g. `: ping`) are heartbeats — ignore them.
 
@@ -170,7 +170,7 @@ The **`final`** frame carries everything you need to render the turn and continu
 
 #### Validation refuses *before* the stream opens
 
-If the request is invalid (missing question, unknown model, images on a non-vision model, master switch off), the server answers with a **plain JSON** `{"result":false,"msg":…}` and HTTP 400 — *not* an SSE stream. Branch on the response `Content-Type`: `text/event-stream` ⇒ consume events; anything else ⇒ parse the JSON error. The browser client does exactly this, which also lets it fall back to the non-streaming `agent_chat` transparently.
+If the request is invalid (missing question, unknown model, images on a non-vision model, master switch off), the server answers with a **plain JSON** failure envelope `{"ok":false,"request_id":…,"error":{"code":"ai.model_unknown","message":"Unknown model \"x\" — pick one from agent_models",…}}` and the code's HTTP status (400 for `request.invalid` / `ai.model_unknown` / `ai.model_no_vision`, 503 for `ai.models_unconfigured` / `ai.model_catalog_invalid`) — *not* an SSE stream. Branch on the response `Content-Type`: `text/event-stream` ⇒ consume events; anything else ⇒ parse the JSON error. The browser client does exactly this, which also lets it fall back to the non-streaming `agent_chat` transparently.
 
 ### A browser / Node SSE consumer
 
@@ -258,8 +258,8 @@ The server recomputes the hash (so what runs is byte-for-byte what was confirmed
 
 ```json
 {
-  "result": true,
-  "msg": "ok",
+  "ok": true,
+  "request_id": "…",
   "data": {
     "ok": true,
     "data": {
@@ -271,7 +271,7 @@ The server recomputes the hash (so what runs is byte-for-byte what was confirmed
 }
 ```
 
-`created` maps a create-op's `op_id` to the new record's `section_id`. On a partial failure `data.data.failed` carries `{op_id, error:{code,message,hint}}`; on a hash mismatch the whole call fails with `plan_hash_mismatch` (re-propose, never edit a confirmed plan in place). Ops execute stop-on-first-error; `find_or_create` match keys make retries idempotent.
+`created` maps a create-op's `op_id` to the new record's `section_id`. On a partial failure `data.data.failed` carries `{op_id, error:{ok:false, error:{code,message,hint?}}}`; a plan refused as a whole (hash mismatch, write opt-in off, a permission wall) is a failure envelope `{"ok":false,"error":{"code":"mcp.plan_hash_mismatch",…}}` with the code's HTTP status (re-propose, never edit a confirmed plan in place). Ops execute stop-on-first-error; `find_or_create` match keys make retries idempotent.
 
 ### Non-streaming variant
 

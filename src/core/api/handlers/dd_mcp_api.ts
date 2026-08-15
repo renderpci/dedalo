@@ -16,9 +16,13 @@
  *                       rqo.options; allowlisted methods only (initialize,
  *                       notifications/initialized, tools/list, tools/call).
  *                       `initialize` mints an `mcp_session_id`; every other
- *                       method REQUIRES it and a stale/missing id returns the
- *                       LITERAL `result:false, msg:'No valid MCP session ID
- *                       provided'` that client's auto-recovery keys on.
+ *                       method REQUIRES it and a stale/missing id throws
+ *                       `mcp.session_invalid`, whose registry message is the
+ *                       LITERAL 'No valid MCP session ID provided' the
+ *                       client's auto-recovery keys on. A JSON-RPC-level
+ *                       failure (method not allowed, unknown tool) keeps the
+ *                       JSON-RPC numeric code and carries the envelope-v2
+ *                       error body in `error.data`.
  *   agent_models      — the client-safe model catalog projection (id, label,
  *                       egress class, vision) + whether write mode is
  *                       available to THIS principal. Never exposes endpoints,
@@ -32,10 +36,13 @@
  *                       chat): frames `start`/`thinking`/`text`/`tool_use`/
  *                       `tool_result`/`iteration`/`final`/`error` + `: ping`
  *                       heartbeats. Validation failures BEFORE the stream
- *                       opens return the normal JSON denied() (the client
- *                       branches on content-type). The response never rotates
- *                       the CSRF token. v1 limitation: a client abort stops
- *                       delivery, not the in-flight loop.
+ *                       opens are normal JSON failure envelopes (thrown, the
+ *                       dispatch chokepoint converts; the client branches on
+ *                       content-type). The terminal `error` frame's data is
+ *                       the envelope-v2 error body (+ registry `hint`) —
+ *                       engineering/ERRORS_SPEC.md §5. The response never
+ *                       rotates the CSRF token. v1 limitation: a client abort
+ *                       stops delivery, not the in-flight loop.
  *   agent_apply       — execute a confirmed change plan (hash-rechecked,
  *                       every gate re-validated) — the endpoint the plan
  *                       confirm card confirms into.
@@ -86,7 +93,7 @@ import {
 	resolveProvider,
 } from '../../../ai/agent/model_catalog.ts';
 import { type AgentUiContext, buildSystemPrompt } from '../../../ai/agent/system_prompt.ts';
-import { asToolResult } from '../../../ai/mcp/envelope.ts';
+import { asToolResult, ok as structuredOk } from '../../../ai/mcp/envelope.ts';
 import {
 	getToolSpec,
 	type RegistryGates,
@@ -95,11 +102,19 @@ import {
 	toAgentToolDefinition,
 } from '../../../ai/mcp/registry.ts';
 import { readEnv } from '../../../config/env.ts';
-import { DedaloError } from '../../errors/dedalo_error.ts';
+import {
+	type ApiErrorBody,
+	DedaloError,
+	isDedaloError,
+	logError,
+	ok,
+	toDedaloError,
+	toErrorBody,
+	toStreamFrame,
+} from '../../errors/index.ts';
 import type { Session } from '../../security/session_store.ts';
 import type { ActionHandler, ApiRequestContext } from '../handler_context.ts';
 import { requirePrincipal } from '../handler_context.ts';
-import { denied } from '../response.ts';
 
 // The literal stale-session message js/mcp_client.js matches on —
 // 'No valid MCP session ID provided' — is the REGISTRY message of
@@ -134,9 +149,15 @@ function requestGates(context: ApiRequestContext): RegistryGates {
 	return { allowWrite, writableSections };
 }
 
-/** Fail-closed master switch for the whole class. */
-function agentHttpEnabled(): boolean {
-	return readEnv('DEDALO_AGENT_HTTP_ENABLED') === 'true';
+/**
+ * Fail-closed master switch for the whole class: with DEDALO_AGENT_HTTP_ENABLED
+ * off every action answers exactly like an unregistered one (Gate 1's
+ * `request.unknown_action` + `details.action`), so a probe cannot learn the
+ * assistant exists.
+ */
+function requireAgentHttp(action: string): void {
+	if (readEnv('DEDALO_AGENT_HTTP_ENABLED') === 'true') return;
+	throw new DedaloError('request.unknown_action', { details: { action } });
 }
 
 // ---------------------------------------------------------------------------
@@ -285,7 +306,8 @@ function parseAgentChatOptions(
 /**
  * Resolve the conversation setup shared by agent_chat and agent_chat_stream:
  * catalog model + provider, effective mode, egress posture, system prompt,
- * and the runAgent options. Throws ModelCatalogError for catalog problems.
+ * and the runAgent options. Throws ModelCatalogError (a public `ai.*` code)
+ * for catalog problems — the dispatch chokepoint converts it.
  */
 function buildAgentRun(
 	parsed: ParsedChatOptions,
@@ -298,7 +320,7 @@ function buildAgentRun(
 } {
 	const { model, provider } = resolveProvider(parsed.modelId);
 	if (parsed.images !== undefined && parsed.images.length > 0 && !model.vision) {
-		throw new ModelCatalogError(`model "${model.id}" does not accept images`);
+		throw new ModelCatalogError('ai.model_no_vision', `model "${model.id}" does not accept images`);
 	}
 	const mode = parsed.modeRequested === 'write' && gates.allowWrite === true ? 'write' : 'read';
 	const external = model.egress === 'external';
@@ -318,20 +340,37 @@ function buildAgentRun(
 }
 
 /**
- * Translate a setup/run failure into a client-safe message.
+ * Classify a failure of the RUNNING agent loop for the stream's terminal frame.
  *
- * A ModelCatalogError is deliberate operator feedback (a misconfigured
- * DEDALO_AGENT_MODELS, an unknown model id, images on a non-vision model) and
- * goes out verbatim. Anything else is a provider/transport error whose text
- * carries config internals — the Anthropic provider names the env KEY it
- * wanted; the OpenAI-compatible one embeds up to 300 chars of the upstream
- * body. Those are logged server-side and answered generically, matching the
- * central sanitizer in dispatch.ts.
+ * A DedaloError (a catalog refusal, a typed engine failure) passes through —
+ * its code decides what the client renders. Anything else is a
+ * provider/transport error whose text carries config internals — the
+ * Anthropic provider names the env KEY it wanted; the OpenAI-compatible one
+ * embeds up to 300 chars of the upstream body — so it becomes
+ * `ai.provider_failed` with the original as log-only `cause`. Logged here
+ * (the stream has no dispatch catch to do it), never echoed.
  */
-function agentErrorMessage(error: unknown, where: string): string {
-	if (error instanceof ModelCatalogError) return error.message;
-	console.error(`[dd_mcp_api] ${where}:`, error);
-	return 'The assistant is not available right now (see server logs).';
+function agentRunError(error: unknown, requestId: string): DedaloError {
+	const typed = isDedaloError(error)
+		? error
+		: new DedaloError('ai.provider_failed', {
+				cause: error,
+				message: toDedaloError(error).message,
+			});
+	logError(typed, { subsystem: 'dd_mcp_api::agent_chat_stream', requestId });
+	return typed;
+}
+
+/**
+ * The agent stream's terminal `event: error` DATA: the envelope-v2 error body
+ * (`code`, `message`, `label_key`, `retryable`, `details?`) plus the registry
+ * `hint` — the same object `toStreamFrame` wraps; the SSE event name already
+ * says "terminal", so the frame is the body itself (ERRORS_SPEC §5).
+ */
+function agentErrorFrame(typed: DedaloError): ApiErrorBody & { hint?: string } {
+	const body = toStreamFrame(typed).error;
+	const hint = typed.spec.hint;
+	return hint === undefined ? body : { ...body, hint };
 }
 
 /** Bounded display/audit projection of the run transcript (never provider-raw). */
@@ -357,17 +396,26 @@ function rpcResult(id: unknown, result: unknown): Record<string, unknown> {
 	return { jsonrpc: '2.0', id: id ?? null, result };
 }
 
-/** Build a JSON-RPC 2.0 error body. */
-function rpcError(id: unknown, code: number, message: string): Record<string, unknown> {
-	return { jsonrpc: '2.0', id: id ?? null, error: { code, message } };
+/**
+ * Build a JSON-RPC 2.0 error body. The JSON-RPC layer keeps ITS numeric codes
+ * (-32601 method not found, -32602 invalid params for a caller-category
+ * failure, -32603 otherwise); the envelope-v2 error body rides in `error.data`
+ * so the client has the registry code and label beside the RPC number.
+ */
+function rpcError(id: unknown, rpcCode: number, error: DedaloError): Record<string, unknown> {
+	const data = toErrorBody(error);
+	return { jsonrpc: '2.0', id: id ?? null, error: { code: rpcCode, message: data.message, data } };
+}
+
+/** JSON-RPC number for a typed failure: caller faults are invalid params, the rest internal. */
+function rpcCodeFor(error: DedaloError): number {
+	return error.spec.category === 'caller' ? -32602 : -32603;
 }
 
 export const mcpApiActions: Record<string, ActionHandler> = {
 	/** The mcp_client.js JSON-RPC bridge (contract documented in the header). */
 	mcp_proxy: async (rqo, context) => {
-		if (!agentHttpEnabled()) {
-			return denied(400, 'Undefined or unauthorized method (action)');
-		}
+		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const session = context.session as Session;
 		const envelope = (rqo.options ?? {}) as {
@@ -378,12 +426,12 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		};
 		const method = typeof envelope.method === 'string' ? envelope.method : '';
 		if (!ALLOWED_METHODS.has(method)) {
+			const refused = new DedaloError('request.invalid', {
+				publicMessage: `Method not allowed: ${method}`,
+			});
 			return {
 				status: 200,
-				body: {
-					result: true,
-					data: rpcError(envelope.id, -32601, `Method not allowed: ${method}`),
-				},
+				body: ok(rpcError(envelope.id, -32601, refused), { requestId: context.requestId }),
 			};
 		}
 
@@ -392,15 +440,15 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		if (method === 'initialize') {
 			return {
 				status: 200,
-				body: {
-					result: true,
-					mcp_session_id: expectedId,
-					data: rpcResult(envelope.id, {
+				body: ok(
+					rpcResult(envelope.id, {
 						protocolVersion: '2025-03-26',
 						capabilities: { tools: {} },
 						serverInfo: { name: 'dedalo-core', version: '0.0.1' },
 					}),
-				},
+					// mcp_session_id is the one extension key the client reads by name.
+					{ requestId: context.requestId, extend: { mcp_session_id: expectedId } },
+				),
 			};
 		}
 		const sentId = (rqo as { mcp_session_id?: unknown }).mcp_session_id;
@@ -413,7 +461,7 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 
 		if (method === 'notifications/initialized') {
 			// Fire-and-forget acknowledgement (no JSON-RPC id, no result body).
-			return { status: 200, body: { result: true, data: {} } };
+			return { status: 200, body: ok({}, { requestId: context.requestId }) };
 		}
 
 		const gates = requestGates(context);
@@ -429,7 +477,7 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 			});
 			return {
 				status: 200,
-				body: { result: true, data: rpcResult(envelope.id, { tools }) },
+				body: ok(rpcResult(envelope.id, { tools }), { requestId: context.requestId }),
 			};
 		}
 
@@ -440,65 +488,54 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		// A write tool on a read-only surface is refused by runTool with a coded
 		// envelope; an unknown tool is a JSON-RPC error (the client throws it).
 		if (spec === undefined) {
+			const refused = new DedaloError('request.invalid', {
+				publicMessage: `Unknown tool: ${toolName}`,
+			});
 			return {
 				status: 200,
-				body: {
-					result: true,
-					data: rpcError(envelope.id, -32602, `Unknown tool: ${toolName}`),
-				},
+				body: ok(rpcError(envelope.id, rpcCodeFor(refused), refused), {
+					requestId: context.requestId,
+				}),
 			};
 		}
 		const structured = await runTool(spec, principal, params.arguments ?? {}, gates);
 		return {
 			status: 200,
-			body: { result: true, data: rpcResult(envelope.id, asToolResult(structured)) },
+			body: ok(rpcResult(envelope.id, asToolResult(structured)), {
+				requestId: context.requestId,
+			}),
 		};
 	},
 
 	/** The client-safe model catalog + write availability for THIS principal. */
-	agent_models: async (_rqo, context) => {
-		if (!agentHttpEnabled()) {
-			return denied(400, 'Undefined or unauthorized method (action)');
-		}
+	agent_models: async (rqo, context) => {
+		requireAgentHttp(rqo.action);
 		requirePrincipal(context);
 		const gates = requestGates(context);
-		try {
-			return {
-				status: 200,
-				body: {
-					result: true,
-					data: {
-						models: publicModelList(),
-						write_allowed: gates.allowWrite === true,
-					},
-				},
-			};
-		} catch (error) {
-			// A broken catalog disables the assistant with a clear operator message.
-			return denied(400, agentErrorMessage(error, 'agent_models'));
-		}
+		// A broken catalog THROWS ModelCatalogError (public `ai.*` code): the
+		// assistant is disabled with the operator's own sentence on the wire.
+		return {
+			status: 200,
+			body: ok(
+				{ models: publicModelList(), write_allowed: gates.allowWrite === true },
+				{ requestId: context.requestId },
+			),
+		};
 	},
 
 	/** Run the agent loop as the logged-in user (vision-capable, never writes). */
 	agent_chat: async (rqo, context) => {
-		if (!agentHttpEnabled()) {
-			return denied(400, 'Undefined or unauthorized method (action)');
-		}
+		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const parsed = parseAgentChatOptions((rqo.options ?? {}) as Record<string, unknown>);
 		if (!parsed.ok) {
-			return denied(400, `agent_chat: ${parsed.message}`);
+			throw new DedaloError('request.invalid', { publicMessage: `agent_chat: ${parsed.message}` });
 		}
 		const gates = requestGates(context);
 
 		const { runAgent } = await import('../../../ai/agent/loop.ts');
-		let setup: ReturnType<typeof buildAgentRun>;
-		try {
-			setup = buildAgentRun(parsed.value, gates);
-		} catch (error) {
-			// Catalog/config problems fail closed with a clear operator message.
-			return denied(400, agentErrorMessage(error, 'agent_chat'));
-		}
+		// Catalog/config problems throw a public `ai.*` code — dispatch converts.
+		const setup = buildAgentRun(parsed.value, gates);
 		const run = await runAgent(
 			principal,
 			parsed.value.images !== undefined
@@ -509,9 +546,8 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 		);
 		return {
 			status: 200,
-			body: {
-				result: true,
-				data: {
+			body: ok(
+				{
 					answer: run.answer,
 					stop: run.stop,
 					change_plan: run.change_plan ?? null,
@@ -520,34 +556,31 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 					usage: run.usage,
 					history: run.history,
 				},
-			},
+				{ requestId: context.requestId },
+			),
 		};
 	},
 
 	/**
 	 * The SSE twin of agent_chat — the new tool_assistant chat surface.
-	 * Validation failures BEFORE the stream opens return normal JSON denied()
-	 * (the client branches on the response content-type).
+	 * Validation failures BEFORE the stream opens are thrown (normal JSON
+	 * failure envelopes; the client branches on the response content-type).
 	 */
 	agent_chat_stream: async (rqo, context) => {
-		if (!agentHttpEnabled()) {
-			return denied(400, 'Undefined or unauthorized method (action)');
-		}
+		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const parsed = parseAgentChatOptions((rqo.options ?? {}) as Record<string, unknown>);
 		if (!parsed.ok) {
-			return denied(400, `agent_chat_stream: ${parsed.message}`);
+			throw new DedaloError('request.invalid', {
+				publicMessage: `agent_chat_stream: ${parsed.message}`,
+			});
 		}
 		const gates = requestGates(context);
 
 		const { runAgent } = await import('../../../ai/agent/loop.ts');
-		let setup: ReturnType<typeof buildAgentRun>;
-		try {
-			setup = buildAgentRun(parsed.value, gates);
-		} catch (error) {
-			return denied(400, agentErrorMessage(error, 'agent_chat_stream'));
-		}
+		const setup = buildAgentRun(parsed.value, gates);
 		const { model, provider, mode, runOptions } = setup;
+		const requestId = context.requestId;
 		const parsedValue = parsed.value;
 
 		const encoder = new TextEncoder();
@@ -633,11 +666,7 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 							model: model.id,
 						});
 					} catch (error) {
-						send('error', {
-							code: 'agent_failed',
-							message: agentErrorMessage(error, 'agent_chat_stream run'),
-							hint: 'Retry; if it persists, check the server model configuration.',
-						});
+						send('error', agentErrorFrame(agentRunError(error, requestId)));
 					} finally {
 						clearInterval(heartbeat);
 						closed = true;
@@ -653,7 +682,8 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 
 		return {
 			status: 200,
-			body: { result: true },
+			// The stream is the body; the JSON envelope is never sent (streamHeaders win).
+			body: ok(null, { requestId: context.requestId }),
 			stream,
 			streamHeaders: {
 				'Content-Type': 'text/event-stream; charset=utf-8',
@@ -665,29 +695,21 @@ export const mcpApiActions: Record<string, ActionHandler> = {
 
 	/** Execute a HUMAN-CONFIRMED change plan (hash recheck + full re-validation). */
 	agent_apply: async (rqo, context) => {
-		if (!agentHttpEnabled()) {
-			return denied(400, 'Undefined or unauthorized method (action)');
-		}
+		requireAgentHttp(rqo.action);
 		const principal = requirePrincipal(context);
 		const options = (rqo.options ?? {}) as { plan?: unknown; plan_hash?: unknown };
 		if (typeof options.plan_hash !== 'string' || options.plan === undefined) {
-			return denied(400, 'agent_apply: plan and plan_hash are required');
+			throw new DedaloError('request.invalid', {
+				publicMessage: 'agent_apply: plan and plan_hash are required',
+			});
 		}
 		const gates = requestGates(context);
-		const { applyChangePlanEnveloped } = await import('../../../ai/agent/change_plan.ts');
-		const envelope = await applyChangePlanEnveloped(
-			principal,
-			options.plan,
-			options.plan_hash,
-			gates,
-		);
-		return {
-			status: 200,
-			body: {
-				result: envelope.ok,
-				msg: envelope.ok ? 'ok' : envelope.error.message,
-				data: envelope,
-			},
-		};
+		const { applyChangePlan } = await import('../../../ai/agent/change_plan.ts');
+		// A plan refused as a WHOLE (write opt-in, hash, validation) THROWS — the
+		// failure envelope carries its code; a plan that ran and stopped on an
+		// op is a REPORT (applied/failed/skipped) and rides as `data`, wrapped
+		// as the MCP structured envelope the plan-confirm card reads.
+		const report = await applyChangePlan(principal, options.plan, options.plan_hash, gates);
+		return { status: 200, body: ok(structuredOk(report), { requestId: context.requestId }) };
 	},
 };

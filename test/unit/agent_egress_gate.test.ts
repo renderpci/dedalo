@@ -48,13 +48,13 @@ describe('gateAgentToolCall (pre-execution)', () => {
 			section_id: 42,
 		});
 		expect(refusal).not.toBeNull();
-		expect(refusal?.error.code).toBe('egress_restricted');
+		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 		expect(refusal?.error.hint).toContain('local');
 	});
 
 	test('fail-closed: a gated tool with no classifiable section is refused', async () => {
 		const refusal = await gateAgentToolCall(ALLOW_ALL, 'dedalo_search_records', {});
-		expect(refusal?.error.code).toBe('egress_restricted');
+		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 	});
 
 	test('structure tools pass regardless of policy', async () => {
@@ -101,7 +101,7 @@ describe('gateAgentToolCall (pre-execution)', () => {
 				],
 			},
 		});
-		expect(refusal?.error.code).toBe('egress_restricted');
+		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 		expect(refusal?.error.message).toContain('secret7');
 	});
 
@@ -114,7 +114,7 @@ describe('gateAgentToolCall (pre-execution)', () => {
 			section_tipo: 'oh1',
 			raw_sqo: { section_tipo: 'oh1', filter: { q: 'x', path: [{ section_tipo: 'memory9' }] } },
 		});
-		expect(refusal?.error.code).toBe('egress_restricted');
+		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 	});
 
 	test('a filter path within PUBLIC sections still passes', async () => {
@@ -156,7 +156,7 @@ describe('gateAgentToolResult (post-execution — portal-resolved labels)', () =
 			},
 		};
 		const refusal = await gateAgentToolResult(selective, 'dedalo_read_record', envelope);
-		expect(refusal?.error.code).toBe('egress_restricted');
+		expect(refusal?.error.code).toBe('mcp.egress_restricted');
 		expect(refusal?.error.message).toContain('secret7');
 	});
 
@@ -265,7 +265,7 @@ describe('loop integration — external conversations get NO restricted record c
 		const envelope = JSON.parse(result.content) as { error: { code: string } };
 		// The refusal is the GATE's envelope — had the handler run, a superuser
 		// read of a real record would have returned ok:true data instead.
-		expect(envelope.error.code).toBe('egress_restricted');
+		expect(envelope.error.code).toBe('mcp.egress_restricted');
 		expect(run.stop).toBe('end_turn');
 	});
 

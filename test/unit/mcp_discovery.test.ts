@@ -141,7 +141,10 @@ describe('MCP discovery tools (live ontology)', () => {
 			resolvePath(SUPERUSER, {
 				path: [HOST_SECTION, PORTAL_FIELD, TEXT_SECTION, TEXT_COMPONENT],
 			}),
-		).rejects.toThrow(/does not link/);
+		).rejects.toMatchObject({
+			code: 'request.invalid',
+			publicMessage: expect.stringMatching(/does not link/),
+		});
 	});
 });
 
@@ -262,7 +265,7 @@ describe('MCP search upgrade (live DB)', () => {
 			},
 		});
 		expect(smuggled.ok).toBe(false);
-		if (!smuggled.ok) expect(smuggled.error.code).toBe('invalid_tipo');
+		if (!smuggled.ok) expect(smuggled.error.code).toBe('request.invalid_tipo');
 
 		// A section_tipo smuggled INSIDE raw_sqo is ignored: the search stays on
 		// the validated argument.

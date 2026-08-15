@@ -37,7 +37,7 @@ Every assistant setting lives in `../private/.env` and is read once at boot. All
 
 | Key | Default | Effect |
 |---|---|---|
-| `DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT` | `false` | Whether **external**-egress conversations may receive record content at all. `false` (default) = external models get discovery/structure tools and can converse, but every record-content tool call is refused with `egress_restricted`. See [the egress gate](privacy_and_security.md#the-egress-gate). |
+| `DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT` | `false` | Whether **external**-egress conversations may receive record content at all. `false` (default) = external models get discovery/structure tools and can converse, but every record-content tool call is refused with `mcp.egress_restricted`. See [the egress gate](privacy_and_security.md#the-egress-gate). |
 | `DEDALO_RAG_EXTERNAL_PROVIDER_FORBIDDEN_SECTIONS` | *(unset = none)* | Comma-separated section `tipo`s that may **never** reach an external provider, even when the default above is `true`. **Shared with the [RAG subsystem](../rag.md)** — one data classification, both surfaces. |
 
 ### Prompt

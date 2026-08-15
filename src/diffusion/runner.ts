@@ -30,6 +30,7 @@ import '../core/components/registry.ts';
 import { readString } from '../config/readers.ts';
 import { closeDatabasePool } from '../core/db/postgres.ts';
 import { logDiffusionActivity } from '../core/diffusion_bridge/diffusion_delete.ts';
+import { DedaloError, isDedaloError, logError, toStreamFrame } from '../core/errors/index.ts';
 import type { DiffusionJobRow } from './jobs/queue.ts';
 import {
 	checkpointJob,
@@ -305,9 +306,21 @@ async function runJob(jobId: string): Promise<void> {
 			await runPublicationJob(job);
 		}
 	} catch (error) {
+		// The persisted job `result` IS the follow-stream's terminal frame
+		// (progressDataFromJob copies it): a converter-made stream frame
+		// (`is_running:false, error:{code,…}`) plus the `msg` line the report
+		// model reads. A typed failure (a PlanCompileError — public, its cause
+		// list is the message) keeps its code; anything else is
+		// `diffusion.run_failed` with the raw error as LOG-ONLY cause
+		// (engineering/ERRORS_SPEC.md §5).
+		const typed = isDedaloError(error)
+			? error
+			: new DedaloError('diffusion.run_failed', { cause: error, coordinates: { job: jobId } });
+		logError(typed, { subsystem: 'diffusion runner' });
+		const frame = toStreamFrame(typed);
 		await finishJob(jobId, 'failed', {
-			result: false,
-			msg: `Error. Diffusion run failed: ${error instanceof Error ? error.message : String(error)}`,
+			...frame,
+			msg: `Error. Diffusion run failed: ${frame.error.message}`,
 		});
 	} finally {
 		clearInterval(heartbeat);

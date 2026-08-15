@@ -20,6 +20,7 @@
 import { z } from 'zod';
 import { compareLocators, type Locator } from '../../../core/concepts/locator.ts';
 import { readMatrixRecord } from '../../../core/db/matrix.ts';
+import { DedaloError } from '../../../core/errors/dedalo_error.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -29,7 +30,6 @@ import {
 import { deletePortalLocator } from '../../../core/relations/save.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
-import { ToolError } from '../envelope.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
 import { resolveFieldReference } from './discovery.ts';
 import { searchRecords } from './search.ts';
@@ -46,9 +46,10 @@ async function assertWritePermission(
 	const { getPermissions } = await import('../../../core/security/permissions.ts');
 	const level = await getPermissions(principal, sectionTipo, tipo);
 	if (level < 2) {
-		throw new Error(
-			`Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
-		);
+		throw new DedaloError('perm.denied', {
+			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
+			coordinates: { section_tipo: sectionTipo, tipo, level },
+		});
 	}
 }
 
@@ -60,7 +61,10 @@ async function assertRecordInScope(
 ): Promise<void> {
 	const { principalCanAccessRecord } = await import('../../../core/security/record_scope.ts');
 	if (!(await principalCanAccessRecord(sectionTipo, sectionId, principal))) {
-		throw new Error(`Record is out of the user scope (${sectionTipo}/${sectionId})`);
+		throw new DedaloError('perm.out_of_scope', {
+			message: `Record is out of the user scope (${sectionTipo}/${sectionId})`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 }
 
@@ -89,10 +93,9 @@ function conformLocatorValue(
 	const sectionTipo = raw.section_tipo;
 	const sectionId = Number(raw.section_id);
 	if (typeof sectionTipo !== 'string' || !Number.isInteger(sectionId) || sectionId <= 0) {
-		throw new ToolError(
-			'invalid_request',
-			`A link field takes a locator value {section_tipo, section_id}; got ${JSON.stringify(value)}.`,
-		);
+		throw new DedaloError('request.invalid', {
+			publicMessage: `A link field takes a locator value {section_tipo, section_id}; got ${JSON.stringify(value)}.`,
+		});
 	}
 	return {
 		section_tipo: assertValidTipo(sectionTipo, 'mcp.set_field.locator.section_tipo'),
@@ -144,7 +147,9 @@ export async function setField(
 				: [{ action: 'insert', id: null, value: locator }];
 	} else {
 		if (input.value === null || input.value === undefined) {
-			throw new ToolError('invalid_request', 'set_field needs a value (use remove to clear).');
+			throw new DedaloError('request.invalid', {
+				publicMessage: 'set_field needs a value (use remove to clear).',
+			});
 		}
 		const item: Record<string, unknown> =
 			typeof input.value === 'object' ? { ...(input.value as object) } : { value: input.value };
@@ -178,7 +183,7 @@ export async function setField(
 		userId: principal.userId,
 	});
 	if (!outcome.ok) {
-		throw new ToolError('invalid_request', outcome.message ?? 'save failed');
+		throw new DedaloError('request.invalid', { publicMessage: outcome.message ?? 'save failed' });
 	}
 	return { section_tipo: sectionTipo, section_id: sectionId, tipo: fieldTipo, data: outcome.data };
 }
@@ -237,10 +242,9 @@ export async function portalUnlink(
 		compareLocators(item as Locator, target as Locator, ['section_tipo', 'section_id']),
 	);
 	if (stored === undefined) {
-		throw new ToolError(
-			'not_found',
-			`No locator to (${targetSection}/${targetId}) on ${fieldTipo}.`,
-		);
+		throw new DedaloError('resource.not_found', {
+			publicMessage: `No locator to (${targetSection}/${targetId}) on ${fieldTipo}.`,
+		});
 	}
 
 	const outcome = await deletePortalLocator(
@@ -271,7 +275,9 @@ export async function findOrCreate(
 ): Promise<{ section_tipo: string; section_id: number; created: boolean }> {
 	const sectionTipo = assertValidTipo(input.section_tipo, 'mcp.find_or_create.section_tipo');
 	if (input.match.length === 0) {
-		throw new ToolError('invalid_request', 'find_or_create needs at least one match field.');
+		throw new DedaloError('request.invalid', {
+			publicMessage: 'find_or_create needs at least one match field.',
+		});
 	}
 
 	const found = await searchRecords(principal, {
@@ -292,8 +298,11 @@ export async function findOrCreate(
 		return { section_tipo: hit.section_tipo, section_id: hit.section_id, created: false };
 	}
 	if (hits.length > 1) {
-		throw new ToolError('ambiguous_match', `${hits.length} records match in '${sectionTipo}'.`, {
-			candidates: hits,
+		throw new DedaloError('mcp.ambiguous_match', {
+			publicMessage: `${hits.length} records match in '${sectionTipo}'.`,
+			extend: {
+				candidates: hits,
+			},
 		});
 	}
 

@@ -3,7 +3,8 @@
 Status: **P0 landed** (foundation) — **P1 chokepoints landed 2026-08-15**
 (§4: dispatch / response.ts / server.ts / tools dispatch / rqo schema on
 envelope v2; the call-site sweep and the client half land in the same series).
-§5-8 are headed stubs filled by P1-exit/P2. Gates: `test/unit/error_registry_native.test.ts`,
+§5 landed with P2 (MCP / streams / external fold-in, 2026-08-15); §6-8 are
+headed stubs filled by P1-exit/P3/P4. Gates: `test/unit/error_registry_native.test.ts`,
 `error_envelope_native.test.ts`, `error_converter_native.test.ts`,
 `dispatch_error_native.test.ts`, `authorization_denial_native.test.ts`,
 `session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`,
@@ -235,28 +236,122 @@ throw new DedaloError('request.invalid_options', { publicMessage: 'options.limit
 `master.json`, sorted); if it replaces an old token, add the token to
 `LEGACY_TOKEN_MAP`; throw it. Nothing in dispatch/server changes.
 
-## 5. Non-envelope surfaces (P2 — stub)
+## 5. Non-envelope surfaces (P2 — MCP / streams / external landed 2026-08-15)
 
 Surfaces whose wire is not the JSON envelope, all fed by the SAME converter
-family (`toStructuredErr`, `toStreamFrame`) and untouched by P1 except that
-their bodies now ride the dispatch chokepoint like any other:
+family — the one-producer law of §4 holds here too: nothing but
+`toStructuredErr` / `toStreamFrame` / `toErrorBody` writes an `error` object.
+Gates: `test/unit/mcp_registry.test.ts`, `mcp_fields_write.test.ts`,
+`agent_change_plan.test.ts`, `agent_egress_gate.test.ts`, `dd_mcp_api.test.ts`,
+`agent_stream_protocol.test.ts`, `external_search_native.test.ts`,
+`external_search_action_native.test.ts`, `error_registry_native.test.ts`
+(former-HINT-key totality), `diffusion_queue_stream_tripwire.test.ts`.
 
-- **MCP** (`src/ai/mcp/envelope.ts` `wrapError` → `toStructuredErr`; the regex
-  table over engine prose is deleted; HINTS → registry `hint`).
-  `dd_mcp_api` today: `{result:true, data:<json-rpc>}` bodies ride the legacy
-  adapter (data stays `data`); the stale-session refusal is already the typed
-  `mcp.session_invalid` (its registry message is the literal an MCP client's
-  recovery matches on); the catalog refusals (`Unknown model …`, `does not
-  accept images`) need public-disclosure codes so the operator sentence
-  reaches the wire again.
-- **Streams** (`dd_mcp_api` agent stream, `diffusion/runner.ts`,
-  `jobs/scheduler.ts`, `tools/job_status.ts`): terminal frame
-  `{is_running:false, error:{…}}` via `toStreamFrame` — a frame, not an envelope.
-- **Install wizard**, **error-report receiver** (WC-017 mimicry restated as
-  code identity — today the handler's `denied(400, 'Undefined or unauthorized
-  method (action)')` maps through `LEGACY_TOKEN_MAP` to `request.unknown_action`
-  but without Gate 1's `details.action`), **`ExternalServiceError`** re-home,
-  **identify `decline`** → throws.
+### 5.1 MCP structured errors (`src/ai/mcp/envelope.ts`)
+
+- The MCP failure shape is `toStructuredErr(error)`:
+  `{ ok:false, error:{ code, message, hint?, details? }, …extend }`.
+  `code` is a registry ErrorCode (`error.code = z.enum(ERROR_CODES)` on every
+  surface); `hint` is the registry `hint` (the former envelope.ts `HINTS`
+  table is DELETED — the registry is the one home; `MCP_HINT_CODES` freezes
+  the former keys → codes and `error_registry_native` asserts every mapped code
+  carries a hint); `details` the code's declared scalars.
+- **Tools THROW `DedaloError`s** (`ToolError` and the `wrapError` regex table
+  over engine prose are DELETED). The MCP-native codes are **public
+  disclosure**: `mcp.*` (`label_ambiguous`, `ambiguous_match`,
+  `media_too_large`, `media_path_disabled`, `plan_hash_mismatch`,
+  `egress_restricted`, `write_disabled`), `request.invalid`, `resource.not_found`
+  — the tool authors the sentence FOR the model as `publicMessage` ("No section
+  matches 'x'", "Filter op 'y' needs a non-empty value") and it IS the wire
+  message; the same reasoning as `resource.conflict`: the caller's own input
+  echoed back is the whole value of a 400/404. `perm.*` stay operator (registry
+  message + hint); which plan op failed rides as `extend.op_id`.
+- **A payload the model needs that is not a scalar** (`candidates` of an
+  ambiguous label/match) goes in the throw's `extend` and lands at TOP LEVEL
+  beside `error` (spread first — `ok`/`error` can never be overridden), the
+  same rule as the HTTP failure envelope's extension keys.
+- `runTool` (`src/ai/mcp/registry.ts`) is the one catch: input re-validation
+  → `request.invalid`, write on a read-only surface → `mcp.write_disabled`,
+  off-allowlist section → `perm.section_not_writable`, then the handler; the
+  catch is `toStructuredErr`. `identifier_gate.ts` throws
+  `request.invalid_tipo` / `request.invalid` (typed at the source — no prose
+  matching anywhere).
+- The agent loop's is_error tool result content and a change plan's
+  `report.failed.error` are the same structured error.
+
+### 5.2 `dd_mcp_api` — the JSON-RPC bridge and the agent surface
+
+- Every action's body is `ok(data)` or a throw (the dispatch chokepoint
+  converts). Master switch off ⇒ `request.unknown_action` + `details.action`
+  (Gate 1's own shape — a probe cannot learn the assistant exists). Option
+  validation ⇒ `request.invalid` (public; the sentence names the field).
+- **JSON-RPC layer keeps ITS numeric codes** and carries the envelope error
+  body in `error.data`: `-32601` method not allowed, `-32602` for a
+  caller-category failure (unknown tool), `-32603` otherwise. The HTTP
+  envelope around a JSON-RPC error is `ok:true` (the RPC frame is the payload).
+  `mcp_session_id` is the one extension key (`initialize`). The stale-session
+  refusal is the typed `mcp.session_invalid` — its registry message is the
+  literal an MCP client's recovery matches on.
+- **Model catalog:** `ModelCatalogError` is a `DedaloError` subclass with the
+  public `ai.*` codes (`ai.model_catalog_invalid` 503, `ai.models_unconfigured`
+  503, `ai.model_unknown` 400, `ai.model_no_vision` 400) — the operator's own
+  sentence reaches the wire again; nothing special-cases the class.
+- **`agent_apply`:** a plan refused as a WHOLE throws (`mcp.write_disabled`,
+  `mcp.plan_hash_mismatch`, `request.invalid`, `perm.*`); a plan that ran and
+  stopped on an op is a REPORT — `data` = the MCP structured envelope
+  `{ok:true, data:{applied, skipped, created, failed?}}` the plan-confirm card
+  reads.
+
+### 5.3 Stream frames — a frame, not an envelope
+
+- `toStreamFrame(error)` = `{ is_running:false, error:{…} }` (`error` = the
+  envelope error body). Frames are never `result:false/msg/errors`.
+- **Agent SSE** (`agent_chat_stream`): the terminal `event: error` DATA is the
+  error body itself plus the registry `hint` (`{code, category, message,
+  label_key, retryable, details?, hint?}`) — the event name already says
+  terminal, and `tools/tool_assistant/js/agent_stream.js` normalises exactly
+  that object. A provider/transport failure mid-run is `ai.provider_failed`
+  (503, retryable, hint "Retry; …") with the raw error as log-only `cause`;
+  a typed failure keeps its code. Logged with `logError` at the stream (there
+  is no dispatch catch past the headers).
+- **Diffusion** (`diffusion/runner.ts`, `jobs/scheduler.ts`): the persisted job
+  `result` of a failed job IS the follow stream's terminal frame
+  (`progressDataFromJob` copies it): `{...toStreamFrame(typed), msg}` where
+  `msg` keeps the report model's `Error. Diffusion run failed: <wire message>`
+  grammar (`tools/tool_diffusion/js/report_model.js` splits it into causes).
+  A `PlanCompileError` is `diffusion.plan_compile_failed` (public — the
+  compiler's `\n- ` cause list is the message, so the report's cause list
+  survives); anything else the run did not type is `diffusion.run_failed`
+  (internal; the cause is log-only, `debug.exception` under
+  DEDALO_DEBUG_API_ERRORS); a runner that never spawned is
+  `diffusion.runner_spawn_failed` (503, never re-queued). `tools/job_status.ts`
+  is the remaining stream door (own sweep).
+
+### 5.4 External services — degradation is `ok:true` + notices
+
+- `ExternalServiceError` (`src/external/errors.ts`) is a `DedaloError`
+  subclass, code `external.<kind>` (the registry is total over
+  `ExternalErrorKind`; `retryable` and `label_key` are tripwired equal to the
+  component_external state map). `kind`, `service`, `origin`, `status`,
+  `sectionTipo`, `remoteId`, `retryAfterMs`, `detail` stay on the instance;
+  `Error.message` keeps the log grammar (`formatExternalError`:
+  `[external:<service>] <kind> origin=… status=… section=… id=… <detail>`);
+  origin/status/section/id are the LOG-ONLY `coordinates`. The subclasses
+  `ExternalServiceNotRegisteredError` (`external.not_registered`) and
+  `ExternalSearchUnsupportedError` (`external.bad_config` + `reason`) stay —
+  the totality tripwire asserts them as THROWS. `transport.ts` throws
+  `external.too_large` at the byte ceiling directly.
+- `logExternalError` = `logError(error, {subsystem: 'external:<service>'})`
+  (registry severity: `warn` for the expected degradations, `error` for the
+  contract/config faults).
+- **`dd_external_api::search` degradation** (`searchDegraded`): `ok:true`,
+  `data:{context:[], data:[]}`, ONE notice `{code:'external.<kind>', label_key,
+  retryable, details:{service, reason?}}` — the source is degraded, the request
+  was not wrong (§3: degradation is never an error). During the compat window
+  the same `source_status` object the record path emits rides as an extension
+  key (the autocomplete chip renders from it today); removal condition: the
+  widget reads `notices[]`. Supersedes WC-2026-08-06's failure shape by WC
+  entry.
 
 ## 6. Compat window & fixture reconciliation (P1/P4)
 

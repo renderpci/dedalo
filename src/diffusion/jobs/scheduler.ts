@@ -15,6 +15,7 @@
 
 import { hostname } from 'node:os';
 import { readString } from '../../config/readers.ts';
+import { DedaloError, logError, toStreamFrame } from '../../core/errors/index.ts';
 import {
 	claimNextQueuedJob,
 	countRunningJobs,
@@ -179,10 +180,13 @@ function spawnRunner(jobId: string): void {
 		// spent runner budget. Fail it here — the one place that knows the runner
 		// never started. Failed (not requeued): a spawn error is a deployment
 		// fault, and requeueing would hot-loop the whole queue against it.
-		console.error(`[diffusion scheduler] runner spawn failed for job ${jobId}:`, error);
-		finishJob(jobId, 'failed', {
-			msg: `Runner process could not be started: ${error instanceof Error ? error.message : String(error)}`,
-		}).catch((failError) =>
+		const typed = new DedaloError('diffusion.runner_spawn_failed', {
+			cause: error,
+			coordinates: { job: jobId },
+		});
+		logError(typed, { subsystem: 'diffusion scheduler' });
+		const frame = toStreamFrame(typed);
+		finishJob(jobId, 'failed', { ...frame, msg: frame.error.message }).catch((failError) =>
 			console.error('[diffusion scheduler] releasing the unspawned job failed:', failError),
 		);
 		return;

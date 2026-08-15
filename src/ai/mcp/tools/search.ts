@@ -17,6 +17,7 @@ import { z } from 'zod';
 import type { Sqo, SqoFilterLeaf, SqoFilterNode } from '../../../core/concepts/sqo.ts';
 import { sanitizeClientSqo } from '../../../core/concepts/sqo.ts';
 import { sql } from '../../../core/db/postgres.ts';
+import { DedaloError } from '../../../core/errors/dedalo_error.ts';
 import { getOrderedSubtree, type OntologySubtreeNode } from '../../../core/ontology/resolver.ts';
 import {
 	assertValidLang,
@@ -25,7 +26,7 @@ import {
 } from '../../../core/search/identifier_gate.ts';
 import { buildSearchSql } from '../../../core/search/sql_assembler.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
-import { buildPagination, Page, ToolError } from '../envelope.ts';
+import { buildPagination, Page } from '../envelope.ts';
 import { pickUnambiguous, resolveFieldCandidates } from '../label_resolution.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
 
@@ -75,16 +76,17 @@ function resolveRuleField(
 	fieldNodes: OntologySubtreeNode[],
 ): string {
 	if (rule.field === undefined) {
-		throw new ToolError('invalid_request', 'A filter rule needs `field` or `path`.');
+		throw new DedaloError('request.invalid', {
+			publicMessage: 'A filter rule needs `field` or `path`.',
+		});
 	}
 	const candidates = resolveFieldCandidates(rule.field, fieldNodes);
 	const picked = pickUnambiguous(candidates);
 	if (picked === null) {
-		throw new ToolError(
-			candidates.length === 0 ? 'not_found' : 'label_ambiguous',
-			`Filter field '${rule.field}' of section '${sectionTipo}' ${candidates.length === 0 ? 'does not exist' : 'is ambiguous'}.`,
-			candidates.length === 0 ? undefined : { candidates: candidates.slice(0, 10) },
-		);
+		throw new DedaloError(candidates.length === 0 ? 'resource.not_found' : 'mcp.label_ambiguous', {
+			publicMessage: `Filter field '${rule.field}' of section '${sectionTipo}' ${candidates.length === 0 ? 'does not exist' : 'is ambiguous'}.`,
+			extend: candidates.length === 0 ? undefined : { candidates: candidates.slice(0, 10) },
+		});
 	}
 	return picked.tipo;
 }
@@ -112,7 +114,9 @@ function ruleToLeaf(
 			break;
 	}
 	if ((op === 'contains' || op === 'eq') && (rule.value === undefined || rule.value === '')) {
-		throw new ToolError('invalid_request', `Filter op '${op}' needs a non-empty value.`);
+		throw new DedaloError('request.invalid', {
+			publicMessage: `Filter op '${op}' needs a non-empty value.`,
+		});
 	}
 	const path =
 		rule.path !== undefined && rule.path.length > 0
@@ -232,10 +236,9 @@ async function buildGatedSqo(input: {
 	if (input.raw_sqo !== undefined) {
 		const parsed = rawSqoSchema.safeParse(input.raw_sqo);
 		if (!parsed.success) {
-			throw new ToolError(
-				'invalid_request',
-				`raw_sqo accepts only {filter, order, limit, offset, full_count}: ${parsed.error.message}`,
-			);
+			throw new DedaloError('request.invalid', {
+				publicMessage: `raw_sqo accepts only {filter, order, limit, offset, full_count}: ${parsed.error.message}`,
+			});
 		}
 		candidate = { ...parsed.data };
 	}

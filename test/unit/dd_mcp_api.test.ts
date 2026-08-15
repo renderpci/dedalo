@@ -189,9 +189,15 @@ describe('mcp_proxy JSON-RPC round-trip', () => {
 			proxyRqo({ jsonrpc: '2.0', id: 9, method: 'resources/list', params: {} }, mcpSessionId),
 			contextFor(admin) as never,
 		);
-		const body = result.body as { ok: boolean; data: { error?: { code: number } } };
-		expect(body.ok).toBe(true); // envelope v2: {result:true, data} → ok/data
+		const body = result.body as {
+			ok: boolean;
+			data: { error?: { code: number; data?: { code: string; label_key: string } } };
+		};
+		expect(body.ok).toBe(true); // the JSON-RPC layer is the payload; the HTTP envelope is fine
 		expect(body.data.error?.code).toBe(-32601);
+		// the envelope-v2 error body rides in JSON-RPC `error.data`
+		expect(body.data.error?.data?.code).toBe('request.invalid');
+		expect(body.data.error?.data?.label_key).toBe('error_request_invalid');
 	});
 
 	test('per-request principal: the gated user sees fewer records than admin', async () => {
@@ -291,17 +297,18 @@ describe('agent_apply', () => {
 				} as unknown as Rqo,
 				contextFor(user) as never,
 			);
-			// user 16 has no write grants: the validation wall answers first.
+			// user 16 has no write grants: the validation wall answers first — a
+			// plan refused as a WHOLE is a THROWN failure (envelope v2, registry
+			// status); the perm code is the wire identity, `op_id` an extension key.
 			const body = result.body as {
 				ok: boolean;
 				result: unknown;
-				data: { error?: { code: string } };
+				error?: { code: string };
 			};
-			// Envelope v2 over the (P2-pending) MCP bridge: the refusal is ok:false
-			// and the structured MCP envelope still rides as the `data` extension key.
+			expect(result.status).toBe(403);
 			expect(body.ok).toBe(false);
 			expect(body.result).toBe(false);
-			expect(body.data.error?.code).toBe('permission_denied');
+			expect(body.error?.code).toBe('perm.denied');
 		} finally {
 			process.env.DEDALO_AGENT_ALLOW_WRITE = '';
 		}

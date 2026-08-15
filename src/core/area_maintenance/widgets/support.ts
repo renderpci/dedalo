@@ -258,19 +258,23 @@ export function fromEnvelope(envelope: ApiEnvelope): WidgetResponse {
 		// a contract slip — re-raise it typed rather than serve it as `data`.
 		throw new DedaloError(envelope.error.code, { message: envelope.error.message });
 	}
+	const { data, msg, errors } = envelope;
+	return {
+		data,
+		...(typeof msg === 'string' ? { msg } : {}),
+		...(Array.isArray(errors) && errors.length > 0 ? { errors: errors.map(String) } : {}),
+		...envelopeExtension(envelope),
+	};
+}
+
+/** The envelope's non-reserved keys as the widget `extend` (absent when there are none). */
+function envelopeExtension(envelope: ApiEnvelope): Pick<WidgetResponse, 'extend'> {
 	const reserved = new Set(ENVELOPE_RESERVED_KEYS);
 	const extend: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(envelope)) {
 		if (!reserved.has(key)) extend[key] = value;
 	}
-	const msg = typeof envelope.msg === 'string' ? envelope.msg : undefined;
-	const errors = Array.isArray(envelope.errors) ? envelope.errors.map(String) : [];
-	return {
-		data: envelope.data,
-		...(msg === undefined ? {} : { msg }),
-		...(errors.length === 0 ? {} : { errors }),
-		...(Object.keys(extend).length === 0 ? {} : { extend }),
-	};
+	return Object.keys(extend).length === 0 ? {} : { extend };
 }
 
 // (callDiffusionEngine — the old-engine unix-socket RPC with the

@@ -26,8 +26,8 @@ import type {
 	AgentTranscriptEntry,
 } from '../../src/ai/agent/llm_provider.ts';
 import { runAgent } from '../../src/ai/agent/loop.ts';
-import { ToolError } from '../../src/ai/mcp/envelope.ts';
 import { sql } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -223,7 +223,7 @@ describe('validate + hash + apply (live scratch writes)', () => {
 		(mutated.ops[1] as unknown as { args: { value: string } }).args.value = 'evil';
 		await expect(
 			applyChangePlan(SUPERUSER, mutated, validated.plan_hash, { allowWrite: true }),
-		).rejects.toMatchObject({ code: 'plan_hash_mismatch' });
+		).rejects.toMatchObject({ code: 'mcp.plan_hash_mismatch' });
 	});
 
 	test('apply chains {ref} through the registry handlers; report is precise', async () => {
@@ -304,7 +304,7 @@ describe('validate + hash + apply (live scratch writes)', () => {
 		const base = planFixture(`mcp-walls-${process.pid}`);
 		// Read-only surface refuses plans outright.
 		await expect(validateChangePlan(SUPERUSER, base, {})).rejects.toMatchObject({
-			code: 'permission_denied',
+			code: 'mcp.write_disabled',
 		});
 		// Off-allowlist section.
 		await expect(
@@ -312,19 +312,19 @@ describe('validate + hash + apply (live scratch writes)', () => {
 				allowWrite: true,
 				writableSections: new Set(['oh1']),
 			}),
-		).rejects.toMatchObject({ code: 'section_not_writable' });
+		).rejects.toMatchObject({ code: 'perm.section_not_writable' });
 		// A denied user fails the permission dry-run before anything else runs.
 		await expect(
 			validateChangePlan({ userId: 999999, isGlobalAdmin: false, isDeveloper: false }, base, {
 				allowWrite: true,
 			}),
-		).rejects.toMatchObject({ code: 'permission_denied' });
+		).rejects.toMatchObject({ code: 'perm.denied' });
 		// Forward ref (op2 references op1 BEFORE it) is rejected.
 		const forward = structuredClone(base);
 		forward.ops.reverse();
 		await expect(
 			validateChangePlan(SUPERUSER, forward, { allowWrite: true }),
-		).rejects.toMatchObject({ code: 'invalid_request' });
+		).rejects.toMatchObject({ code: 'request.invalid' });
 		// Field labels are STAMPED to tipos in the validated plan.
 		const validated = await validateChangePlan(SUPERUSER, base, { allowWrite: true });
 		expect((validated.ops[1] as unknown as { args: { field: string } }).args.field).toBe(
@@ -372,10 +372,10 @@ describe('validate + hash + apply (live scratch writes)', () => {
 			);
 			throw new Error('expected a wall');
 		} catch (error) {
-			expect(error).toBeInstanceOf(ToolError);
+			expect(error).toBeInstanceOf(DedaloError);
 			// Either the permission dry-run or the scope gate stops it — both walls
 			// are correct; what matters is that it NEVER validates.
-			expect(['permission_denied', 'out_of_scope']).toContain((error as ToolError).code);
+			expect(['perm.denied', 'perm.out_of_scope']).toContain((error as DedaloError).code);
 		}
 	});
 });

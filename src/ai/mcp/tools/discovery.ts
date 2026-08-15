@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 import { isValidTipo } from '../../../core/concepts/ontology.ts';
+import { DedaloError } from '../../../core/errors/dedalo_error.ts';
 import { labelByTipo, resolveLabel } from '../../../core/ontology/labels.ts';
 import {
 	getMatrixTableFromTipo,
@@ -31,7 +32,6 @@ import {
 } from '../../../core/relations/request_config/explicit.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
-import { ToolError } from '../envelope.ts';
 import {
 	type LabelCandidate,
 	pickUnambiguous,
@@ -159,10 +159,15 @@ export async function resolveSectionReference(reference: string): Promise<string
 	const picked = pickUnambiguous(candidates);
 	if (picked !== null) return assertValidTipo(picked.tipo, 'mcp.resolve.section');
 	if (candidates.length === 0) {
-		throw new ToolError('not_found', `No section matches '${reference}'.`);
+		throw new DedaloError('resource.not_found', {
+			publicMessage: `No section matches '${reference}'.`,
+		});
 	}
-	throw new ToolError('label_ambiguous', `Several sections match '${reference}'.`, {
-		candidates: candidates.slice(0, 10),
+	throw new DedaloError('mcp.label_ambiguous', {
+		publicMessage: `Several sections match '${reference}'.`,
+		extend: {
+			candidates: candidates.slice(0, 10),
+		},
 	});
 }
 
@@ -216,13 +221,15 @@ export async function resolveFieldReference(
 	const picked = pickUnambiguous(candidates);
 	if (picked !== null) return assertValidTipo(picked.tipo, 'mcp.resolve.field');
 	if (candidates.length === 0) {
-		throw new ToolError(
-			'not_found',
-			`Field '${reference}' does not exist in section '${sectionTipo}'.`,
-		);
+		throw new DedaloError('resource.not_found', {
+			publicMessage: `Field '${reference}' does not exist in section '${sectionTipo}'.`,
+		});
 	}
-	throw new ToolError('label_ambiguous', `Several fields match '${reference}'.`, {
-		candidates: candidates.slice(0, 10),
+	throw new DedaloError('mcp.label_ambiguous', {
+		publicMessage: `Several fields match '${reference}'.`,
+		extend: {
+			candidates: candidates.slice(0, 10),
+		},
 	});
 }
 
@@ -265,12 +272,16 @@ export async function describeSection(
 }> {
 	const sectionTipo = await resolveSectionReference(input.section);
 	if ((await getModelByTipo(sectionTipo)) !== 'section') {
-		throw new ToolError('not_found', `'${sectionTipo}' is not a section.`);
+		throw new DedaloError('resource.not_found', {
+			publicMessage: `'${sectionTipo}' is not a section.`,
+		});
 	}
 	const { getPermissions } = await import('../../../core/security/permissions.ts');
 	if ((await getPermissions(principal, sectionTipo, sectionTipo)) < 1) {
 		// Same shape as an unknown section — existence is never confirmed.
-		throw new ToolError('not_found', `No section matches '${input.section}'.`);
+		throw new DedaloError('resource.not_found', {
+			publicMessage: `No section matches '${input.section}'.`,
+		});
 	}
 	const lang = input.lang ?? 'lg-eng';
 	const fields: SectionMapField[] = [];
@@ -334,7 +345,9 @@ export async function resolvePath(
 	input: { path: string[] },
 ): Promise<{ path: { section_tipo: string; component_tipo: string }[] }> {
 	if (input.path.length < 2) {
-		throw new ToolError('invalid_request', 'A path needs at least [section, field].');
+		throw new DedaloError('request.invalid', {
+			publicMessage: 'A path needs at least [section, field].',
+		});
 	}
 	const steps: { section_tipo: string; component_tipo: string }[] = [];
 	let sectionTipo = await resolveSectionReference(input.path[0] as string);
@@ -345,10 +358,12 @@ export async function resolvePath(
 		const candidates = resolveFieldCandidates(fieldReference, nodes);
 		const picked = pickUnambiguous(candidates);
 		if (picked === null) {
-			throw new ToolError(
-				candidates.length === 0 ? 'not_found' : 'label_ambiguous',
-				`Field '${fieldReference}' of section '${sectionTipo}' ${candidates.length === 0 ? 'does not exist' : 'is ambiguous'}.`,
-				candidates.length === 0 ? undefined : { candidates: candidates.slice(0, 10) },
+			throw new DedaloError(
+				candidates.length === 0 ? 'resource.not_found' : 'mcp.label_ambiguous',
+				{
+					publicMessage: `Field '${fieldReference}' of section '${sectionTipo}' ${candidates.length === 0 ? 'does not exist' : 'is ambiguous'}.`,
+					extend: candidates.length === 0 ? undefined : { candidates: candidates.slice(0, 10) },
+				},
 			);
 		}
 		const componentTipo = assertValidTipo(picked.tipo, 'mcp.resolve_path.component');
@@ -361,10 +376,9 @@ export async function resolvePath(
 		const nextSection = await resolveSectionReference(nextReference);
 		const targets = await linkTargetSections(componentTipo, sectionTipo, 'lg-eng');
 		if (!targets.includes(nextSection)) {
-			throw new ToolError(
-				'invalid_request',
-				`Field '${componentTipo}' does not link to section '${nextSection}' (targets: ${targets.join(', ') || 'none'}).`,
-			);
+			throw new DedaloError('request.invalid', {
+				publicMessage: `Field '${componentTipo}' does not link to section '${nextSection}' (targets: ${targets.join(', ') || 'none'}).`,
+			});
 		}
 		sectionTipo = nextSection;
 		index += 1;

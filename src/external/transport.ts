@@ -55,7 +55,7 @@ import type { SafeUrlResult } from '../core/security/ssrf_guard.ts';
 import { assertPublicUrl } from '../core/security/ssrf_guard.ts';
 import { checkBreaker, recordFailure, recordSuccess, releaseProbe } from './breaker.ts';
 import type { ExternalRequestSpec, ExternalServiceModel } from './descriptor_types.ts';
-import { ExternalServiceError, originOf } from './errors.ts';
+import { type ExternalErrorFields, ExternalServiceError, originOf } from './errors.ts';
 import { externalSettings } from './settings.ts';
 
 /** Base of the exponential backoff; the actual wait is uniform in [0, base·2^n). */
@@ -312,8 +312,17 @@ function attachCredential(model: ExternalServiceModel, url: URL, headers: Header
 // Step 6 — the guarded read
 // ---------------------------------------------------------------------------
 
-/** Read a response body with a hard, STREAMED ceiling. Never truncates into a value. */
-async function readCapped(response: Response, maxBytes: number): Promise<string> {
+/**
+ * Read a response body with a hard, STREAMED ceiling. Never truncates into a
+ * value. The ceiling breach THROWS `external.too_large` directly (typed at
+ * the point of knowledge; the caller adds no wrapping); any other stream
+ * failure is the caller's `transport`.
+ */
+async function readCapped(
+	response: Response,
+	maxBytes: number,
+	coordinates: Omit<ExternalErrorFields, 'kind'>,
+): Promise<string> {
 	const reader = response.body?.getReader();
 	if (reader === undefined) return '';
 	const chunks: Uint8Array[] = [];
@@ -325,7 +334,11 @@ async function readCapped(response: Response, maxBytes: number): Promise<string>
 		total += value.byteLength;
 		if (total > maxBytes) {
 			await reader.cancel();
-			throw new RangeError(`response exceeds ${maxBytes} bytes`);
+			throw new ExternalServiceError({
+				...coordinates,
+				kind: 'too_large',
+				detail: `response exceeds ${maxBytes} bytes`,
+			});
 		}
 		chunks.push(value);
 	}
@@ -445,11 +458,9 @@ async function attempt(
 		}
 		let text: string;
 		try {
-			text = await readCapped(response, externalSettings().maxBytes);
+			text = await readCapped(response, externalSettings().maxBytes, coordinates);
 		} catch (error) {
-			if (error instanceof RangeError) {
-				throw new ExternalServiceError({ ...coordinates, kind: 'too_large', cause: error });
-			}
+			if (error instanceof ExternalServiceError) throw error; // too_large, already typed
 			throw new ExternalServiceError({
 				...coordinates,
 				kind: 'transport',

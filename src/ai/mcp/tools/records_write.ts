@@ -15,6 +15,7 @@
  */
 
 import { z } from 'zod';
+import { DedaloError } from '../../../core/errors/dedalo_error.ts';
 import { assertValidTipo } from '../../../core/search/identifier_gate.ts';
 import type { Principal } from '../../../core/security/permissions.ts';
 import { defineTool, type ToolSpec } from '../tool_spec.ts';
@@ -28,9 +29,10 @@ async function assertWritePermission(
 	const { getPermissions } = await import('../../../core/security/permissions.ts');
 	const level = await getPermissions(principal, sectionTipo, tipo);
 	if (level < 2) {
-		throw new Error(
-			`Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
-		);
+		throw new DedaloError('perm.denied', {
+			message: `Insufficient permissions to write (${sectionTipo}/${tipo}): level ${level} < 2`,
+			coordinates: { section_tipo: sectionTipo, tipo, level },
+		});
 	}
 }
 
@@ -50,7 +52,10 @@ async function assertRecordInScope(
 ): Promise<void> {
 	const { principalCanAccessRecord } = await import('../../../core/security/record_scope.ts');
 	if (!(await principalCanAccessRecord(sectionTipo, sectionId, principal))) {
-		throw new Error(`Record is out of the user scope (${sectionTipo}/${sectionId})`);
+		throw new DedaloError('perm.out_of_scope', {
+			message: `Record is out of the user scope (${sectionTipo}/${sectionId})`,
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+		});
 	}
 }
 

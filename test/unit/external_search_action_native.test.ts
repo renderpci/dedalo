@@ -369,20 +369,25 @@ describe('an unreadable paging value is REFUSED, never quietly defaulted', () =>
 	});
 });
 
-describe('an unresolvable target is a 200 envelope a search box can act on', () => {
+describe('an unresolvable target is DEGRADATION: ok:true + a coded notice a search box can act on', () => {
 	/**
-	 * NOT a 4xx: `data_manager.request` discards a non-ok body, so everything
-	 * the server said about WHY would be replaced by the generic network error
-	 * this action exists to remove (WC-2026-08-06-external-search-request).
+	 * NOT a 4xx and NOT ok:false: the request was well-formed and authorized;
+	 * the SOURCE is what is degraded (ERRORS_SPEC §3 — external degradation is
+	 * `ok:true + notices[]`). `data_manager.request` discards a non-ok body, so
+	 * everything the server said about WHY would be replaced by the generic
+	 * network error this action exists to remove (WC-2026-08-06-external-search-request).
 	 */
-	test('bad_config → 200, errors, and a source_status the client can localize', async () => {
+	test('bad_config → 200, ok:true, empty data, notice external.bad_config + a source_status the client can localize', async () => {
 		const { status, body } = await search({
 			source: { tipo: 'test61', section_tipo: 'test3' },
 			options: { q: 'burnett' },
 		});
 		expect(status).toBe(200);
-		expect(body.result).toBe(false);
-		expect(body.errors).toEqual(['external_bad_config']);
+		expect(body.ok).toBe(true);
+		expect(body.data).toEqual({ context: [], data: [] });
+		const notices = body.notices as { code: string; details?: { service?: string } }[];
+		expect(notices.map((notice) => notice.code)).toEqual(['external.bad_config']);
+		expect(notices[0]?.details?.service).toBe('unknown');
 		const sourceStatus = body.source_status as {
 			state: string;
 			label_key: string;

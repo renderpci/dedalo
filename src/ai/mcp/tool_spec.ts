@@ -36,7 +36,7 @@ export interface ToolSpec {
 	annotations: ToolAnnotations;
 	inputShape: z.ZodRawShape;
 	/**
-	 * The pure ACL-gated handler: throws plain engine errors (wrapError turns
+	 * The pure ACL-gated handler: throws DedaloErrors (toStructuredErr turns
 	 * them into coded envelopes at the surface — see registry.runTool).
 	 */
 	handler: (principal: Principal, input: Record<string, unknown>) => Promise<unknown>;

@@ -209,14 +209,21 @@ export interface StructuredErrV2 {
 		hint?: string;
 		details?: Record<string, ErrorDetailScalar>;
 	};
+	/** The throw's `extend` keys (a tool's model-facing payload — e.g. `candidates`). */
+	[extension: string]: unknown;
 }
 
-/** MCP structured error — carries the registry hint for the model. */
+/**
+ * MCP structured error — carries the registry hint for the model. The throw's
+ * `extend` keys ride at top level beside `error` (the same rule as the HTTP
+ * failure envelope: spread FIRST, so `ok`/`error` can never be overridden).
+ */
 export function toStructuredErr(error: unknown): StructuredErrV2 {
 	const typed = toDedaloError(error);
 	const body = toErrorBody(typed);
 	const hint = typed.spec.hint;
 	return {
+		...typed.extend,
 		ok: false,
 		error: {
 			code: body.code,
