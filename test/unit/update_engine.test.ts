@@ -23,6 +23,7 @@ import {
 } from '../../src/core/update/catalog.ts';
 import { updateVersion } from '../../src/core/update/engine.ts';
 import * as realOwnership from '../../src/core/update/ownership.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const STATE_PATH = readEnv('DEDALO_TS_STATE_PATH');
 if (STATE_PATH === undefined) {
@@ -192,7 +193,9 @@ describe('engine step semantics (fixture catalog, injected writer)', () => {
 		const withComponents = {
 			'701': { ...FIXTURE, componentsUpdate: ['component_date'] },
 		};
-		expect(
+		// The uncovered-scope refusal is REGISTERED (`engine.uncovered_scope`);
+		// the ledgered sentence stays the LOG-only message.
+		const refusal = await refusalOf(
 			updateVersion(
 				{ components_update_0: true },
 				{
@@ -203,7 +206,9 @@ describe('engine step semantics (fixture catalog, injected writer)', () => {
 					writeVersionRow: async () => {},
 				},
 			),
-		).rejects.toThrow('components_update steps are not supported');
+		);
+		expect(refusal.code).toBe('engine.uncovered_scope');
+		expect(refusal.message).toMatch(/components_update steps are not supported/);
 	});
 
 	test('no matching descriptor: PHP nothing-to-update bytes', async () => {

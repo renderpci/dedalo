@@ -41,13 +41,27 @@ import {
 import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
-import { ok } from '../errors/index.ts';
+import { DedaloError, ok } from '../errors/index.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
 import { currentRequestContext } from '../security/request_context.ts';
 import { downloadReleaseArchive } from './code_download.ts';
 import { engineOwnsInstall } from './ownership.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
 import { compareVersionArrays, DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
+
+/**
+ * A code-update SHAPE refusal (the archive's contents, the swap's filesystem).
+ * `publicSentence` is what the operator running the update is told — a vetted
+ * fact about the archive or the backup dir; `detail` is the same sentence
+ * enriched with the offending entry name for the LOG only, so an extracted
+ * path never reaches the wire.
+ */
+function refuseArchive(publicSentence: string, detail = publicSentence): never {
+	throw new DedaloError('update.refused', {
+		message: detail,
+		publicMessage: publicSentence,
+	});
+}
 
 const ARCHIVE_ROOT_PREFIX = 'dedalo_code/';
 const MAX_ARCHIVE_ENTRIES = 50_000;
@@ -150,9 +164,13 @@ export async function extractArchive(zipPath: string, destDir: string): Promise<
 		stderr: 'pipe',
 	});
 	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
-	if (exitCode !== 0) throw new Error(`unzip failed: ${stderr.trim()}`);
+	// The unzip stderr can name absolute paths — log-only `message`, registry
+	// English on the wire (no publicMessage).
+	if (exitCode !== 0) {
+		throw new DedaloError('update.failed', { message: `unzip failed: ${stderr.trim()}` });
+	}
 	const codeRoot = join(destDir, 'dedalo_code');
-	if (!existsSync(codeRoot)) throw new Error("archive missing the required 'dedalo_code/' root");
+	if (!existsSync(codeRoot)) refuseArchive("archive missing the required 'dedalo_code/' root");
 	// Post-extraction belt: reject any symlink or escaping path, cap total size.
 	const destResolved = resolve(destDir);
 	let entries = 0;
@@ -162,25 +180,37 @@ export async function extractArchive(zipPath: string, destDir: string): Promise<
 			const full = join(dir, name);
 			const stat = lstatSync(full);
 			if (stat.isSymbolicLink()) {
-				throw new Error(`extracted a symlink entry: ${relative(destDir, full)}`);
+				refuseArchive(
+					'the archive contains a symlink entry',
+					`extracted a symlink entry: ${relative(destDir, full)}`,
+				);
 			}
 			if (!resolve(full).startsWith(destResolved + sep)) {
-				throw new Error(`extracted entry escapes the extraction dir: ${name}`);
+				refuseArchive(
+					'an archive entry escapes the extraction directory',
+					`extracted entry escapes the extraction dir: ${name}`,
+				);
 			}
 			entries += 1;
-			if (entries > MAX_ARCHIVE_ENTRIES) throw new Error('archive exceeds the entry-count cap');
+			if (entries > MAX_ARCHIVE_ENTRIES) refuseArchive('archive exceeds the entry-count cap');
 			if (stat.isDirectory()) walk(full);
 			else if (stat.isFile()) {
 				bytes += stat.size;
-				if (bytes > MAX_EXTRACTED_TOTAL_BYTES) throw new Error('archive exceeds the size cap');
-			} else throw new Error(`non-regular extracted entry: ${name}`);
+				if (bytes > MAX_EXTRACTED_TOTAL_BYTES) refuseArchive('archive exceeds the size cap');
+			} else {
+				refuseArchive(
+					'the archive contains a non-regular entry',
+					`non-regular extracted entry: ${name}`,
+				);
+			}
 		}
 	};
 	walk(destDir);
 	// A real Dédalo TS tree carries these — a cheap structural sanity gate.
 	for (const marker of ['package.json', join('src', 'server.ts'), '.bun-version']) {
-		if (!existsSync(join(codeRoot, marker)))
-			throw new Error(`archive is not a Dédalo tree (missing ${marker})`);
+		if (!existsSync(join(codeRoot, marker))) {
+			refuseArchive(`archive is not a Dédalo tree (missing ${marker})`);
+		}
 	}
 	return codeRoot;
 }
@@ -209,7 +239,7 @@ export function assertLinearUpgrade(
 function renameSwap(codeRoot: string, targetRoot: string, backupDir: string): void {
 	// Same-device assert so the renames are atomic (a cross-device rename throws).
 	if (statSync(targetRoot).dev !== statSync(resolve(backupDir, '..')).dev) {
-		throw new Error('backup dir is on a different filesystem — rename swap would not be atomic');
+		refuseArchive('backup dir is on a different filesystem — rename swap would not be atomic');
 	}
 	// Carry the preserved runtime entries into the new tree before the swap.
 	for (const name of PRESERVE_ROOT_ENTRIES) {

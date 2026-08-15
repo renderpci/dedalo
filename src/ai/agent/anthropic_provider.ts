@@ -22,6 +22,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import type {
 	AgentAssistantTurn,
 	AgentLlmProvider,
@@ -55,9 +56,10 @@ export class AnthropicProvider implements AgentLlmProvider {
 		const keyName = options.apiKeyEnvKey ?? 'ANTHROPIC_API_KEY';
 		const apiKey = readEnv(keyName);
 		if (apiKey === undefined || apiKey === '') {
-			throw new Error(
-				`AnthropicProvider requires ${keyName} (private/.env or process env). The agent fails closed without credentials.`,
-			);
+			throw new DedaloError('ai.provider_failed', {
+				message: `AnthropicProvider requires ${keyName} (private/.env or process env). The agent fails closed without credentials.`,
+				coordinates: { env_key: keyName },
+			});
 		}
 		this.client = new Anthropic({ apiKey });
 		this.model = options.model ?? readString('AGENT_MODEL');

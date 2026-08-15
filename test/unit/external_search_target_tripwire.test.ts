@@ -39,6 +39,7 @@ import {
 	selectExternalSearchTarget,
 } from '../../src/core/api/handlers/dd_external_api.ts';
 import { getNode } from '../../src/core/ontology/resolver.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 /** The predicate the production path derives from the descriptor facet. */
 const isExternal = async (tipo: string): Promise<boolean> => tipo.startsWith('zenon');
@@ -115,9 +116,13 @@ describe('every render mode is asked, because a component declares per mode', ()
 	});
 
 	test('a component with no external item in ANY mode is refused by name', async () => {
-		await expect(
+		// A registered refusal (`external.bad_config`): the ontology names no
+		// engine. The naming sentence stays the LOG-only `message`.
+		const refusal = await refusalOf(
 			selectExternalSearchTarget('rsc999', [[DEDALO_ITEM], [DEDALO_ITEM]], isExternal),
-		).rejects.toThrow(/declares no external api_engine/);
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/declares no external api_engine/);
 	});
 
 	test('the same ddo declared in two modes is counted once', async () => {
@@ -141,10 +146,13 @@ describe('ambiguity is REFUSED, never resolved by picking one', () => {
 			api_engine: 'wikidata',
 			show: { ddo_map: [{ tipo: 'zenon90', section_tipo: 'zenon50' }] },
 		};
-		const promise = selectExternalSearchTarget('rsc368', [[AUTOCOMPLETE_ITEM, second]], isExternal);
-		await expect(promise).rejects.toThrow(/zenon1/);
-		await expect(promise).rejects.toThrow(/zenon50/);
-		await expect(promise).rejects.toThrow(/cannot choose/);
+		const refusal = await refusalOf(
+			selectExternalSearchTarget('rsc368', [[AUTOCOMPLETE_ITEM, second]], isExternal),
+		);
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/zenon1/);
+		expect(refusal.message).toMatch(/zenon50/);
+		expect(refusal.message).toMatch(/cannot choose/);
 	});
 
 	test('an external item whose ddos name no section is refused, not defaulted', async () => {
@@ -152,9 +160,9 @@ describe('ambiguity is REFUSED, never resolved by picking one', () => {
 			api_engine: 'zenon',
 			show: { ddo_map: [{ tipo: 'zenon3' }] },
 		};
-		await expect(selectExternalSearchTarget('rsc368', [[nameless]], isExternal)).rejects.toThrow(
-			/names no external target section/,
-		);
+		const refusal = await refusalOf(selectExternalSearchTarget('rsc368', [[nameless]], isExternal));
+		expect(refusal.code).toBe('external.bad_config');
+		expect(refusal.message).toMatch(/names no external target section/);
 	});
 });
 

@@ -9,6 +9,7 @@
  * File-format writers (rdf/xml/markdown/csv/json) register here in P3.
  */
 
+import { DedaloError } from '../../core/errors/index.ts';
 import { csvWriter } from './csv.ts';
 import { jsonWriter } from './json.ts';
 import { mariadbSqlWriter } from './mariadb_sql.ts';
@@ -17,15 +18,19 @@ import { rdfWriter } from './rdf.ts';
 import type { DiffusionWriter } from './types.ts';
 import { xmlWriter } from './xml.ts';
 
-/** Thrown by getDiffusionWriter for a format no writer serves. */
-export class UnknownDiffusionFormatError extends Error {
+/**
+ * Thrown by getDiffusionWriter for a format no writer serves. A thin
+ * DedaloError family with a fixed code; the known-format list stays log-only.
+ */
+export class UnknownDiffusionFormatError extends DedaloError {
 	readonly format: string;
 
 	constructor(format: string) {
 		const knownFormats = [...WRITER_REGISTRY.keys()].join(', ');
-		super(
-			`No diffusion writer registered for format '${format}' (known formats: ${knownFormats}). Check the element ontology properties->diffusion->type.`,
-		);
+		super('diffusion.unknown_format', {
+			message: `No diffusion writer registered for format '${format}' (known formats: ${knownFormats}). Check the element ontology properties->diffusion->type.`,
+			coordinates: { format },
+		});
 		this.name = 'UnknownDiffusionFormatError';
 		this.format = format;
 	}

@@ -19,6 +19,7 @@ import {
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { parseEnvFile } from '../../config/env.ts';
+import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
@@ -88,7 +89,10 @@ function assignedKeys(lines: readonly string[]): Set<string> {
  */
 export function envQuote(value: string): string {
 	if (/[\r\n\0]/.test(value)) {
-		throw new Error('install: configuration value contains an illegal control character');
+		throw new DedaloError('install.invalid_input', {
+			message: 'install: configuration value contains an illegal control character',
+			publicMessage: 'A submitted configuration value contains an illegal control character',
+		});
 	}
 	if (value === '') return '""';
 	if (/[\s"'#=]/.test(value)) return `"${value.replace(/"/g, '\\"')}"`;

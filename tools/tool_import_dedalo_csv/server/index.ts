@@ -51,6 +51,17 @@ function invalidRequest(message: string): DedaloError {
 }
 
 /**
+ * MEDIA_PATH unset. An OPERATOR fact (the import dir hangs off the media root),
+ * not a caller one — registry English on the wire, the sentence in the log.
+ */
+function mediaRootMissing(): DedaloError {
+	return new DedaloError('tool.dependency_unavailable', {
+		coordinates: { tool: 'tool_import_dedalo_csv' },
+		message: 'media root is not configured',
+	});
+}
+
+/**
  * Parse CSV text OFF the serving event loop (audit S3-42): a fresh worker per
  * call (startup is milliseconds against multi-second parses; no idle thread
  * lingers) running the identical pure parser — see csv_worker.ts.
@@ -93,11 +104,14 @@ function analyzeCsvOffLoop(text: string, delimiter?: string): Promise<CsvAnalysi
 /** The per-user CSV import dir (PHP DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH/<user>). */
 function importDir(userId: number): string {
 	const root = config.media.rootPath;
-	if (root === null || root === '') throw new Error('media root is not configured');
+	if (root === null || root === '') throw mediaRootMissing();
 	const dir = resolve(root, 'import/files', String(userId));
 	const base = resolve(root, 'import/files');
-	if (dir !== base && !dir.startsWith(base + sep))
-		throw new Error('import dir escapes the import root');
+	if (dir !== base && !dir.startsWith(base + sep)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'import dir escapes the import root',
+		});
+	}
 	mkdirSync(dir, { recursive: true, mode: 0o775 });
 	return dir;
 }
@@ -105,7 +119,7 @@ function importDir(userId: number): string {
 /** Confine a user-supplied file name inside the import dir (no traversal). */
 function safeImportFile(dir: string, fileName: string): string {
 	const target = resolve(dir, fileName);
-	if (target !== dir && !target.startsWith(dir + sep)) throw new Error('invalid file name');
+	if (target !== dir && !target.startsWith(dir + sep)) throw invalidRequest('invalid file name');
 	return target;
 }
 
@@ -247,10 +261,14 @@ async function processUploadedFile(ctx: ToolActionContext): Promise<ToolResponse
 	const tmpName = sanitizeSegment(rawTmpName);
 	const fileName = String(fileData.file_name ?? tmpName);
 	const root = config.media.rootPath;
-	if (root === null) throw new Error('media root is not configured');
+	if (root === null) throw mediaRootMissing();
 	const staged = resolve(root, config.media.upload.tmpSubdir, String(ctx.userId), keyDir, tmpName);
 	const stagingBase = resolve(root, config.media.upload.tmpSubdir);
-	if (!staged.startsWith(stagingBase + sep)) throw new Error('staged path escapes the upload root');
+	if (!staged.startsWith(stagingBase + sep)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'staged path escapes the upload root',
+		});
+	}
 	if (!existsSync(staged)) {
 		throw new DedaloError('tool.target_not_found', {
 			coordinates: { tool: 'tool_import_dedalo_csv' },
@@ -387,9 +405,14 @@ async function createBulkProcessRecord(
 /** Read + parse one staged CSV, or throw with a caller-facing message. */
 async function readCsvRows(userId: number, fileName: string): Promise<string[][]> {
 	const target = safeImportFile(importDir(userId), fileName);
-	if (!existsSync(target)) throw new Error(`File not found: ${fileName}`);
+	if (!existsSync(target)) {
+		throw new DedaloError('tool.target_not_found', {
+			coordinates: { tool: 'tool_import_dedalo_csv' },
+			message: `File not found: ${fileName}`,
+		});
+	}
 	const rows = await parseCsvOffLoop(await Bun.file(target).text());
-	if (rows[0] === undefined || rows.length < 2) throw new Error('CSV has no data rows');
+	if (rows[0] === undefined || rows.length < 2) throw invalidRequest('CSV has no data rows');
 	return rows;
 }
 
@@ -427,7 +450,8 @@ async function validateImport(ctx: ToolActionContext): Promise<ToolResponse> {
 		const fileName = String(current.file ?? '');
 		const sectionTipo = String(current.section_tipo ?? '');
 		try {
-			if (fileName === '' || sectionTipo === '') throw new Error('Missing file or section_tipo');
+			if (fileName === '' || sectionTipo === '')
+				throw invalidRequest('Missing file or section_tipo');
 			const rows = await readCsvRows(ctx.userId, fileName);
 			const header = rows[0] as string[];
 
@@ -531,7 +555,8 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 		const fileName = String(current.file ?? '');
 		const sectionTipo = String(current.section_tipo ?? '');
 		try {
-			if (fileName === '' || sectionTipo === '') throw new Error('Missing file or section_tipo');
+			if (fileName === '' || sectionTipo === '')
+				throw invalidRequest('Missing file or section_tipo');
 
 			publish({
 				phase: 'reading',
@@ -557,7 +582,7 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 				: [];
 			const columns = await resolveMappedColumns(header, columnsMap, errors);
 			if (!columns.some((column) => column !== null && column.model !== 'component_section_id')) {
-				throw new Error('No column is mapped for import');
+				throw invalidRequest('No column is mapped for import');
 			}
 
 			const bulkProcessId = await createBulkProcessRecord(

@@ -20,6 +20,7 @@
 // The ONE transcript formatter, shared verbatim with the browser engine (plain
 // ESM, no build step — see segmentsToTcText).
 import { segments_to_html as segmentsToHtml } from '../../../tools/tool_transcription/transcribers/lib/paragraphs.js';
+import { DedaloError } from '../errors/index.ts';
 import { localAsrProvider, localAsrStatusProvider } from './transcription_local_asr.ts';
 
 /**
@@ -284,9 +285,10 @@ export function buildTranscriberStatusBody(req: TranscriberStatusRequest): URLSe
 		// answered about a job that did not exist and the client polled a handle
 		// that could never complete. Thrown, not enveloped — see
 		// babelTranscriberStatusProvider.
-		throw new Error(
-			`buildTranscriberStatusBody: engine '${req.engine}' keys its job by av_url, but none was supplied — the poll cannot identify the job`,
-		);
+		throw new DedaloError('request.invalid_data', {
+			message: `buildTranscriberStatusBody: engine '${req.engine}' keys its job by av_url, but none was supplied — the poll cannot identify the job`,
+			coordinates: { engine: req.engine },
+		});
 	}
 	// Field ORDER is kept exactly as PHP sent it (key, url, av_url, engine, …).
 	const fields: Record<string, string> = { key: req.key, url: req.uri };

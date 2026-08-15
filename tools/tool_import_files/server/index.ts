@@ -85,6 +85,14 @@ function invalidRequest(message: string): DedaloError {
 	return new DedaloError('request.invalid_options', { message, publicMessage: message });
 }
 
+/** A role write the save layer refused. The engine sentence stays log-only. */
+function saveRefused(message: string, tipo: string): DedaloError {
+	return new DedaloError('record.save_failed', {
+		coordinates: { tool: 'tool_import_files', tipo },
+		message,
+	});
+}
+
 /** A locator as READ from a stored `relation` jsonb bag. The union is stored-
  * legacy passthrough: an install not yet swept by
  * scripts/migrate_section_id_locators.ts still holds the PHP string form
@@ -166,7 +174,12 @@ async function matchFromSource(
 	filenameTipo: string,
 ): Promise<(number | string)[]> {
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) throw new Error('no matrix table for source section');
+	if (table === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			message: 'no matrix table for source section',
+			coordinates: { section_tipo: sectionTipo },
+		});
+	}
 	const record = await readMatrixRecord(table, sectionTipo, sectionId);
 	const relationColumn = (record?.columns.relation ?? {}) as Record<string, Locator[]>;
 
@@ -518,7 +531,7 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 					userId,
 				});
 				if (!save.ok) {
-					throw new Error(`target_filename save failed on '${tipo}': ${save.message}`);
+					throw saveRefused(`target_filename save failed on '${tipo}': ${save.message}`, tipo);
 				}
 				break;
 			}
@@ -547,7 +560,7 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 					userId,
 				});
 				if (!save.ok) {
-					throw new Error(`target_date save failed on '${tipo}': ${save.message}`);
+					throw saveRefused(`target_date save failed on '${tipo}': ${save.message}`, tipo);
 				}
 				break;
 			}
@@ -604,7 +617,7 @@ export async function setComponentsData(options: SetComponentsDataOptions): Prom
 						userId,
 					});
 					if (!save.ok) {
-						throw new Error(`input_component save failed on '${tipo}': ${save.message}`);
+						throw saveRefused(`input_component save failed on '${tipo}': ${save.message}`, tipo);
 					}
 				}
 				break;
@@ -1036,9 +1049,10 @@ async function importFiles(ctx: ToolActionContext): Promise<ToolResponse> {
 					portalDdo.target_section_tipo ??
 					(await portalTargetSectionTipo(portalTipo, portalSectionTipo));
 				if (portalTarget == null || portalTarget === '') {
-					throw new Error(
-						`cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
-					);
+					throw new DedaloError('tool.unsupported_target', {
+						coordinates: { tool: 'tool_import_files', tipo: portalTipo },
+						message: `cannot resolve the portal target section for '${portalTipo}' (no target_section_tipo and no resolvable request_config)`,
+					});
 				}
 				// Create + link the media record through the portal — the
 				// add_new_element relation hook (relations/save.ts) inside the

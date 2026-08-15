@@ -29,6 +29,7 @@
  */
 
 import { readString } from '../../config/readers.ts';
+import { DedaloError } from '../../core/errors/index.ts';
 import type { PublicationPlan, SectionPlan } from '../plan/types.ts';
 import type { ProjectedRow } from '../project/lang_ladder.ts';
 import type { MariadbExecResult } from '../targets/mariadb/db.ts';
@@ -255,10 +256,12 @@ export const mariadbSqlWriter: DiffusionWriter = {
 	format: 'sql',
 	async open(plan: PublicationPlan): Promise<WriterSession> {
 		if (plan.target.kind !== 'table') {
-			throw new Error(
-				`mariadb_sql writer requires a 'table' target, got '${plan.target.kind}' ` +
+			throw new DedaloError('diffusion.invalid_target', {
+				message:
+					`mariadb_sql writer requires a 'table' target, got '${plan.target.kind}' ` +
 					`(element ${plan.elementTipo})`,
-			);
+				coordinates: { target_kind: plan.target.kind, element_tipo: plan.elementTipo },
+			});
 		}
 		// Loud config gate: unreachable/ungranted database fails the run HERE.
 		await probeTargetDatabase(plan.target.database);

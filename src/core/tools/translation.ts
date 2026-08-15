@@ -336,9 +336,10 @@ export async function translateAndWrite(input: {
 		if (lockedRecord === null) {
 			// Impossible under the row lock we hold — report it rather than
 			// inventing an empty merge base out of it.
-			throw new Error(
-				`translateAndWrite: ${table}/${input.sectionTipo}/${input.sectionId} vanished between FOR UPDATE and the locked re-read`,
-			);
+			throw new DedaloError('internal.invariant', {
+				message: `translateAndWrite: ${table}/${input.sectionTipo}/${input.sectionId} vanished between FOR UPDATE and the locked re-read`,
+				coordinates: { section_tipo: input.sectionTipo, section_id: input.sectionId },
+			});
 		}
 		const currentItems = readComponentItems(lockedRecord, input.componentTipo, input.model) ?? [];
 

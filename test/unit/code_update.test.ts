@@ -22,6 +22,7 @@ import {
 	updateCode,
 } from '../../src/core/update/code_update.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 // Capture the REAL modules ONCE at top level; mock.restore() does NOT revert
 // mock.module, so afterAll re-installs them — a per-test `await import()` would
@@ -169,7 +170,11 @@ describe('archive hardening', () => {
 			stderr: 'ignore',
 		});
 		await child.exited;
-		expect(extractArchive(zipPath, join(ROOT, 'nomark', 'q'))).rejects.toThrow('not a Dédalo tree');
+		// A registered refusal (`update.refused`); the marker sentence is both the
+		// log message and the operator-facing publicMessage.
+		const refusal = await refusalOf(extractArchive(zipPath, join(ROOT, 'nomark', 'q')));
+		expect(refusal.code).toBe('update.refused');
+		expect(refusal.message).toMatch(/not a Dédalo tree/);
 	});
 });
 

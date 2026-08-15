@@ -205,9 +205,11 @@ function clientMediaUrl(relativePath: string): string {
 function externalMediaUrl(relativePath: string): string {
 	const base = config.media.exportBase;
 	if (base === undefined || base === '') {
-		throw new Error(
-			'DEDALO_MEDIA_EXPORT_BASE is not set: an external transcriber cannot fetch a relative media URL. Set it to the public media base (e.g. https://host/dedalo/media) in ../private/.env.',
-		);
+		throw new DedaloError('tool.dependency_unavailable', {
+			coordinates: { tool: 'tool_transcription' },
+			message:
+				'DEDALO_MEDIA_EXPORT_BASE is not set: an external transcriber cannot fetch a relative media URL. Set it to the public media base (e.g. https://host/dedalo/media) in ../private/.env.',
+		});
 	}
 	return `${base}${relativePath}`;
 }

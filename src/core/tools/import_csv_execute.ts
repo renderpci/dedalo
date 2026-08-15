@@ -20,6 +20,7 @@ import { AUDIT_TIPOS } from '../concepts/section.ts';
 import { DATAFRAME_RELATION_TYPE } from '../concepts/subdatum.ts';
 import { readExistingSectionIds, readMatrixRecord } from '../db/matrix.ts';
 import { withTransaction } from '../db/postgres.ts';
+import { DedaloError } from '../errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -51,7 +52,10 @@ import type { ImportFileReport, ImportProgressFrame, ImportRowIssue } from './im
 async function saveOrRefuse(request: Parameters<typeof saveComponentData>[0]): Promise<void> {
 	const outcome = await saveComponentData(request);
 	if (outcome.ok === false) {
-		throw new Error(`save refused for '${request.componentTipo}': ${outcome.message}`);
+		throw new DedaloError('record.save_failed', {
+			message: `save refused for '${request.componentTipo}': ${outcome.message}`,
+			coordinates: { tipo: request.componentTipo },
+		});
 	}
 }
 
@@ -225,7 +229,12 @@ export async function executeCsvImport(request: CsvExecuteRequest): Promise<Impo
 
 	// ONE existence query for the whole file (see the header).
 	const table = await getMatrixTableFromTipo(sectionTipo);
-	if (table === null) throw new Error(`no matrix table for section '${sectionTipo}'`);
+	if (table === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			message: `no matrix table for section '${sectionTipo}'`,
+			coordinates: { section_tipo: sectionTipo },
+		});
+	}
 	const candidateIds = plan
 		.map((record) => record.sectionId)
 		.filter((id): id is number => id !== null && id > 0);

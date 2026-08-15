@@ -383,18 +383,25 @@ export async function selectExternalSearchTarget(
 		}
 	}
 	if (!sawExternalItem) {
-		throw new Error(`component ${callerTipo} declares no external api_engine`);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} declares no external api_engine`,
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	const targets = [
 		...new Set(externalDdos.map((entry) => entry.section).filter((s) => s !== null)),
 	];
 	if (targets.length === 0) {
-		throw new Error(`component ${callerTipo} external config names no external target section`);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config names no external target section`,
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	if (targets.length > 1) {
-		throw new Error(
-			`component ${callerTipo} external config names ${targets.length} target sections (${targets.join(', ')}) — the search cannot choose`,
-		);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config names ${targets.length} target sections (${targets.join(', ')}) — the search cannot choose`,
+			coordinates: { tipo: callerTipo, targets: targets.join(', ') },
+		});
 	}
 	return { targetSectionTipo: targets[0] as string, externalDdos };
 }
@@ -453,9 +460,10 @@ export async function hydrateExternalSearchDdos(
 		}
 	}
 	if (ddos.length === 0) {
-		throw new Error(
-			`component ${callerTipo} external config shows no external field with a fields_map`,
-		);
+		throw new DedaloError('external.bad_config', {
+			message: `component ${callerTipo} external config shows no external field with a fields_map`,
+			coordinates: { tipo: callerTipo },
+		});
 	}
 	return { ddos, context, remoteFields };
 }
@@ -523,7 +531,10 @@ export async function resolveExternalSearchTarget(
 	const { getExternalServiceForSection } = await import('../../../external/api/index.ts');
 	const resolved = await getExternalServiceForSection(targetSectionTipo);
 	if (resolved === null) {
-		throw new Error(`target section ${targetSectionTipo} carries no api_config`);
+		throw new DedaloError('external.bad_config', {
+			message: `target section ${targetSectionTipo} carries no api_config`,
+			coordinates: { section_tipo: targetSectionTipo },
+		});
 	}
 	return { targetSectionTipo, ddos, remoteFields, context, callerTipo, model: resolved.model };
 }

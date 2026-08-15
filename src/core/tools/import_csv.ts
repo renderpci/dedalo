@@ -8,6 +8,7 @@
  * (import_csv_execute.ts) is a pure "apply the plan" step.
  */
 
+import { DedaloError } from '../errors/index.ts';
 import { type ConformResult, conformImportData, unwrapDedaloData } from './import_data.ts';
 
 /**
@@ -99,9 +100,12 @@ export function analyzeCsv(text: string, delimiter?: string): CsvAnalysis | null
 	// it, and a 200 MB+ file is either a mistake or an availability attack.
 	const MAX_CSV_BYTES = 64 * 1024 * 1024;
 	if (text.length > MAX_CSV_BYTES) {
-		throw new Error(
-			`CSV exceeds the ${Math.round(MAX_CSV_BYTES / 1024 / 1024)} MB import-analysis limit`,
-		);
+		const sentence = `CSV exceeds the ${Math.round(MAX_CSV_BYTES / 1024 / 1024)} MB import-analysis limit`;
+		// Public: the sentence is the ceiling itself — no caller data, no path.
+		throw new DedaloError('request.invalid_options', {
+			message: sentence,
+			publicMessage: sentence,
+		});
 	}
 	const rows = parseCsv(text, delimiter);
 	const header = rows[0];

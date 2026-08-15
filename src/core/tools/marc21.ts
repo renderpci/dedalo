@@ -11,6 +11,8 @@
  * by the subfield separator, each starting with a 1-char code.
  */
 
+import { DedaloError } from '../errors/index.ts';
+
 const FIELD_TERMINATOR = 0x1e;
 const SUBFIELD_DELIMITER = 0x1f;
 const RECORD_TERMINATOR = 0x1d;
@@ -52,11 +54,17 @@ const decoder = new TextDecoder('utf-8');
 
 /** Parse one ISO 2709 record into its leader + fields. Throws on a malformed record. */
 export function parseMarcRecord(bytes: Uint8Array): MarcRecord {
-	if (bytes.length < 24) throw new Error('MARC record shorter than the 24-byte leader');
+	if (bytes.length < 24) {
+		throw new DedaloError('request.invalid_data', {
+			message: 'MARC record shorter than the 24-byte leader',
+		});
+	}
 	const leader = decoder.decode(bytes.subarray(0, 24));
 	const baseAddress = Number.parseInt(leader.slice(12, 17), 10);
 	if (!Number.isFinite(baseAddress) || baseAddress <= 24 || baseAddress > bytes.length) {
-		throw new Error('MARC leader has an invalid base address of data');
+		throw new DedaloError('request.invalid_data', {
+			message: 'MARC leader has an invalid base address of data',
+		});
 	}
 
 	// Directory: 24 .. baseAddress-1, 12 bytes per entry, ends at a field terminator.
