@@ -8191,28 +8191,6 @@ body:has(.assistant_container.standalone.show) {
   background-color: var(--fg_muted);
   transition: background-color var(--transition-fast), opacity 0.2s linear;
 }
-.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_prev_icon,
-.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_next_icon {
-  -webkit-mask-image: url('../../themes/default/icons/chevron_light.svg');
-  mask-image: url('../../themes/default/icons/chevron_light.svg');
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-}
-.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_first_icon,
-.inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn.paginator_last_icon {
-  -webkit-mask-image: url('../../themes/default/icons/chevron_double_light.svg');
-  mask-image: url('../../themes/default/icons/chevron_double_light.svg');
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  mask-size: contain;
-  -webkit-mask-size: contain;
-}
 .inspector > .inspector_content_data > .paginator_container .nav_buttons > .btn:hover:not(.inactive) {
   background-color: var(--color_orange_dedalo);
 }
@@ -8529,6 +8507,9 @@ body:has(.assistant_container.standalone.show) {
 .inspector .nav_buttons {
   padding-bottom: 0.5em;
 }
+.inspector .tm_view_history .paginator {
+  padding-bottom: 0.5rem;
+}
 .inspector .displayed_records {
   display: none;
 }
@@ -8608,17 +8589,15 @@ body:has(.assistant_container.standalone.show) {
   height: 2em;
   width: 2em;
   opacity: 1;
-  -webkit-mask-image: url('../../themes/default/icons/forward.svg');
-  mask-image: url('../../themes/default/icons/forward.svg');
+  -webkit-mask-image: url('../../themes/default/icons/chevron_double_light.svg');
+  mask-image: url('../../themes/default/icons/chevron_double_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
   transform: scaleX(-1);
-  mask-size: 70%;
-  -webkit-mask-size: 70%;
-  mask-repeat: no-repeat;
-  -webkit-mask-repeat: no-repeat;
 }
 .paginator > .content_data .btn.paginator_first_icon:hover {
   opacity: 1 !important;
@@ -8657,8 +8636,8 @@ body:has(.assistant_container.standalone.show) {
   height: 2em;
   width: 2em;
   opacity: 1;
-  -webkit-mask-image: url('../../themes/default/icons/play.svg');
-  mask-image: url('../../themes/default/icons/play.svg');
+  -webkit-mask-image: url('../../themes/default/icons/chevron_light.svg');
+  mask-image: url('../../themes/default/icons/chevron_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -8704,8 +8683,8 @@ body:has(.assistant_container.standalone.show) {
   height: 2em;
   width: 2em;
   opacity: 1;
-  -webkit-mask-image: url('../../themes/default/icons/play.svg');
-  mask-image: url('../../themes/default/icons/play.svg');
+  -webkit-mask-image: url('../../themes/default/icons/chevron_light.svg');
+  mask-image: url('../../themes/default/icons/chevron_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -8750,16 +8729,14 @@ body:has(.assistant_container.standalone.show) {
   height: 2em;
   width: 2em;
   opacity: 1;
-  -webkit-mask-image: url('../../themes/default/icons/forward.svg');
-  mask-image: url('../../themes/default/icons/forward.svg');
+  -webkit-mask-image: url('../../themes/default/icons/chevron_double_light.svg');
+  mask-image: url('../../themes/default/icons/chevron_double_light.svg');
   -webkit-mask-size: contain;
   mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  mask-size: 70%;
-  -webkit-mask-size: 70%;
-  mask-repeat: no-repeat;
-  -webkit-mask-repeat: no-repeat;
 }
 .paginator > .content_data .btn.paginator_last_icon:hover {
   opacity: 1 !important;
