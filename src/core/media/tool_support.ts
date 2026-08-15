@@ -7,6 +7,7 @@
 
 import { isMediaModel, type MediaTypeSpec, mediaTypeOf } from '../concepts/media.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	getMatrixTableFromTipo,
 	getModelByTipo,
@@ -73,11 +74,17 @@ export async function resolveMediaToolContext(
 		!Number.isInteger(sectionId) ||
 		sectionId <= 0
 	) {
-		throw new Error('media tool: tipo, section_tipo and a positive section_id are required');
+		throw new DedaloError('request.invalid_source', {
+			message: 'media tool: tipo, section_tipo and a positive section_id are required',
+			coordinates: { component_tipo: componentTipo, section_tipo: sectionTipo },
+		});
 	}
 	const model = await getModelByTipo(componentTipo);
 	if (model === null || !isMediaModel(model)) {
-		throw new Error(`media tool: '${componentTipo}' is not a media component`);
+		throw new DedaloError('request.invalid_model', {
+			message: `media tool: '${componentTipo}' is not a media component`,
+			coordinates: { component_tipo: componentTipo, model: String(model) },
+		});
 	}
 	const spec = mediaTypeOf(model);
 	if (spec === null) {

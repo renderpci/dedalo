@@ -34,6 +34,7 @@ import { buildVersionCore } from '../../src/core/media/tools/versions.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const ROOT = `${tmpdir()}/dedalo_av_build_version_${process.pid}`;
 // The job-manager test seam (jobs.ts processesDir): without it these real
@@ -185,6 +186,11 @@ describe('av build_version builds the quality that was asked for', () => {
 			await expect(
 				submitAvVersionBuild(av, identity, pathOpts, av.originalQuality),
 			).rejects.toThrow(AvBuildRefused);
+			// AvBuildRefused IS a DedaloError family (errors/families.ts pattern):
+			// the pre-flight refusal converts to the registered 400 the panel renders.
+			expect(
+				(await refusalOf(submitAvVersionBuild(av, identity, pathOpts, av.originalQuality))).code,
+			).toBe('media.av_build_refused');
 		},
 		60_000,
 	);

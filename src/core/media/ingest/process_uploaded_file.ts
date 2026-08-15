@@ -30,6 +30,7 @@ import {
 	type MediaTypeSpec,
 	mediaTypeOf,
 } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 // The av encoder lives in ../av_versions.ts — ONE encoder for ingest and for the
 // media-versions tool's per-quality build (see that module's header).
 import { submitAvTranscode } from '../av_versions.ts';
@@ -493,6 +494,11 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 /** Resolve a media spec from a model name (convenience for callers). */
 export function requireMediaSpec(model: string): MediaTypeSpec {
 	const spec = mediaTypeOf(model);
-	if (spec === null) throw new Error(`Not a media model: ${model}`);
+	if (spec === null) {
+		throw new DedaloError('request.invalid_model', {
+			message: `Not a media model: ${model}`,
+			coordinates: { model },
+		});
+	}
 	return spec;
 }

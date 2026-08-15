@@ -1734,6 +1734,148 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+
+	// --- media (P3) ---------------------------------------------------------
+	// The media subsystem (src/core/media/**, src/core/concepts/media.ts) speaks
+	// to three callers: the browser upload/versions/posterframe panels, the media
+	// tools, and the MCP agent. Its refusals are overwhelmingly CALLER FACTS —
+	// "that quality is not on this type's ladder", "that extension is not
+	// allowed", "there is no master to build from" — so they get codes here while
+	// the genuine engine invariants (an ffmpeg that reported success and wrote
+	// nothing, a probe line with the wrong field count) stay untyped under the
+	// throw ratchet. Every message below is registry-owned English: the throwing
+	// site keeps its own sentence as the LOG `message`, and only passes it as
+	// `publicMessage` when it carries no path and no raw caller string.
+	'media.invalid_quality': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_invalid_quality',
+		message: 'Invalid media quality',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	'media.invalid_extension': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_invalid_extension',
+		message: 'Invalid media file extension',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// section_id / lang / path segment of a media identifier — the grammar
+	// path.ts builds every media file name from.
+	'media.invalid_identifier': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_invalid_identifier',
+		message: 'Invalid media identifier',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// A confinement guard tripped (a staged name, a segment or a resolved path
+	// that leaves its root). Disclosure `operator`: the sentence names filesystem
+	// paths and must never reach the wire.
+	'media.invalid_path': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_invalid_path',
+		message: 'Invalid media path',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'media.invalid_timecode': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_invalid_timecode',
+		message: 'Invalid media timecode range',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// "not for this component model / not for this tier / this host writes other
+	// formats here" — the caller asked for something this media type cannot do.
+	'media.unsupported_operation': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_unsupported_operation',
+		message: 'This media operation is not supported for this component',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// Category `caller` (400), NOT `limit`: the same reading as
+	// `identify.image_too_large` / `mcp.media_too_large` — the request is wrong,
+	// not rate-limited, and a retry with the same bytes can never succeed.
+	'media.too_large': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_too_large',
+		message: 'The file is larger than the allowed maximum',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// The file the caller named is not on this box (no master to build from, no
+	// staged parts for this upload, no source to cut a fragment out of).
+	'media.file_not_found': {
+		category: 'not_found',
+		status: 404,
+		label_key: 'error_media_file_not_found',
+		message: 'The media file was not found',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
+	// A staged transfer whose state refuses the request AS IT STANDS: another
+	// join is assembling it, or the staged name is ambiguous. Retryable — the
+	// competing operation finishes.
+	'media.upload_conflict': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_media_upload_conflict',
+		message: 'The upload conflicts with another staged transfer',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: true,
+	},
+	// MEDIA_PATH absent where a media path is required. Operator-actionable,
+	// never the caller's fault.
+	'media.not_configured': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_media_not_configured',
+		message: 'Media storage is not configured on this server',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// A media binary / shipped asset this host does not have (rsvg-convert, an
+	// ImageMagick coder for the requested format, the ICC profile, the watermark
+	// file). Operator installs it; the caller can only wait.
+	'media.engine_unavailable': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_media_engine_unavailable',
+		message: 'This media conversion is not available on this server',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	// Every refusal knowable BEFORE an av build job id exists (av_versions.ts
+	// AvBuildRefused). Public: the panel renders the operator-facing reason.
+	'media.av_build_refused': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_media_av_build_refused',
+		message: 'The version build was refused',
+		severity: 'warn',
+		disclosure: 'public',
+		retryable: false,
+	},
 } as const satisfies Record<string, ErrorSpec>;
 
 export type ErrorCode = keyof typeof ERROR_REGISTRY;

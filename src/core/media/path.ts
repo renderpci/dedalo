@@ -25,6 +25,7 @@ import {
 	type MediaTypeSpec,
 	mediaTypeOf,
 } from '../concepts/media.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 import { assertValidTipo } from '../search/identifier_gate.ts';
 
 /** A media component instance's identity (the identifier inputs). */
@@ -90,16 +91,20 @@ export function buildMediaIdentifier(identity: MediaIdentity): string {
 	const componentTipo = assertValidTipo(identity.componentTipo, 'media identifier component_tipo');
 	const sectionTipo = assertValidTipo(identity.sectionTipo, 'media identifier section_tipo');
 	if (!Number.isInteger(identity.sectionId) || identity.sectionId <= 0) {
-		throw new Error(
-			`Invalid media section_id '${identity.sectionId}' (must be a positive integer)`,
-		);
+		throw new DedaloError('media.invalid_identifier', {
+			message: `Invalid media section_id '${identity.sectionId}' (must be a positive integer)`,
+			coordinates: { section_tipo: sectionTipo, component_tipo: componentTipo },
+		});
 	}
 	let id = `${componentTipo}_${sectionTipo}_${identity.sectionId}`;
 	if (identity.lang !== null && identity.lang !== '') {
 		// lang is a controlled 'lg-*' code; the gate lives in the section read layer,
 		// here we only guard the charset so it can't inject a path separator.
 		if (!/^lg-[a-z0-9_]+$/.test(identity.lang)) {
-			throw new Error(`Invalid media identifier lang '${identity.lang}'`);
+			throw new DedaloError('media.invalid_identifier', {
+				message: `Invalid media identifier lang '${identity.lang}'`,
+				coordinates: { section_tipo: sectionTipo, component_tipo: componentTipo },
+			});
 		}
 		id += `_${identity.lang}`;
 	}
@@ -135,7 +140,10 @@ export function buildMediaLocation(
 	const identifier = buildMediaIdentifier(identity);
 	const cleanExtension = String(extension).replace(/^\./, '');
 	if (!/^[A-Za-z0-9]+$/.test(cleanExtension)) {
-		throw new Error(`Invalid media extension '${extension}'`);
+		throw new DedaloError('media.invalid_extension', {
+			message: `Invalid media extension '${extension}'`,
+			coordinates: { model: spec.model },
+		});
 	}
 	const bucket =
 		opts.additionalPathOverride != null && opts.additionalPathOverride !== ''
@@ -182,12 +190,18 @@ export function buildMediaSegmentLocation(
 	opts: MediaPathOptions,
 ): MediaLocation {
 	if (!MEDIA_SEGMENTS.has(segment)) {
-		throw new Error(`Invalid media segment '${segment}' for ${spec.model}`);
+		throw new DedaloError('media.invalid_identifier', {
+			message: `Invalid media segment '${segment}' for ${spec.model}`,
+			coordinates: { model: spec.model },
+		});
 	}
 	const identifier = buildMediaIdentifier(identity);
 	const cleanExtension = String(extension).replace(/^\./, '');
 	if (!/^[A-Za-z0-9]+$/.test(cleanExtension)) {
-		throw new Error(`Invalid media extension '${extension}'`);
+		throw new DedaloError('media.invalid_extension', {
+			message: `Invalid media extension '${extension}'`,
+			coordinates: { model: spec.model },
+		});
 	}
 	const bucket =
 		opts.additionalPathOverride != null && opts.additionalPathOverride !== ''
@@ -229,7 +243,9 @@ export function posterframeLocation(
 export function requireMediaRoot(override?: string): string {
 	const root = override ?? config.media.rootPath;
 	if (root === null || root === undefined || root === '') {
-		throw new Error('MEDIA_PATH is not configured (config.media.rootPath is null)');
+		throw new DedaloError('media.not_configured', {
+			message: 'MEDIA_PATH is not configured (config.media.rootPath is null)',
+		});
 	}
 	return resolve(root);
 }
@@ -245,7 +261,12 @@ export function assertInsideMediaRoot(absolutePath: string, mediaRoot?: string):
 	const root = requireMediaRoot(mediaRoot);
 	const normalized = resolve(absolutePath);
 	if (normalized !== root && !normalized.startsWith(root + sep)) {
-		throw new Error('Media path escapes the media root (traversal blocked)');
+		// Disclosure `operator`: the wire says only "Invalid media path" — the
+		// resolved path stays in the log, where a traversal attempt belongs.
+		throw new DedaloError('media.invalid_path', {
+			message: 'Media path escapes the media root (traversal blocked)',
+			coordinates: { path: normalized },
+		});
 	}
 	return normalized;
 }
@@ -278,7 +299,9 @@ export function subtitlesRelativePath(identity: MediaIdentity, lang: string): st
 	const spec = mediaTypeOf('component_av');
 	if (spec === null) throw new Error('component_av media spec is not registered');
 	if (!/^lg-[a-z0-9_]+$/.test(lang)) {
-		throw new Error(`Invalid subtitles lang '${lang}'`);
+		throw new DedaloError('media.invalid_identifier', {
+			message: `Invalid subtitles lang '${lang}'`,
+		});
 	}
 	const identifier = buildMediaIdentifier(identity);
 	const { subtitlesFolder, subtitlesExtension } = config.media.avExtras;

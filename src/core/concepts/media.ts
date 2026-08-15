@@ -16,6 +16,7 @@
  */
 
 import { config, type MediaTypeConfig } from '../../config/config.ts';
+import { DedaloError } from '../errors/dedalo_error.ts';
 
 /** The five media component model names (PHP get_media_components, sorted). */
 export type MediaModel =
@@ -553,11 +554,19 @@ export const AUDIO_TR_QUALITY = 'audio_tr';
  * must never reach a filesystem path). Returns the quality unchanged on pass.
  */
 export function assertValidQuality(spec: MediaTypeSpec, quality: unknown): string {
+	// The rejected value is RAW caller data, so it stays in the log-only
+	// `message`/`coordinates`; the wire gets the registry's English (ERRORS_SPEC §2.2).
 	if (typeof quality !== 'string' || quality === '') {
-		throw new Error(`Invalid media quality (empty) for ${spec.model}`);
+		throw new DedaloError('media.invalid_quality', {
+			message: `Invalid media quality (empty) for ${spec.model}`,
+			coordinates: { model: spec.model },
+		});
 	}
 	if (quality === '.' || quality === '..' || !QUALITY_CHARSET.test(quality)) {
-		throw new Error(`Invalid media quality '${quality}' for ${spec.model} (charset)`);
+		throw new DedaloError('media.invalid_quality', {
+			message: `Invalid media quality '${quality}' for ${spec.model} (charset)`,
+			coordinates: { model: spec.model },
+		});
 	}
 	// The thumb tier is a valid quality dir for the types that build one, even
 	// though it is appended beyond the base ladder (PHP get_files_info :1347).
@@ -567,9 +576,10 @@ export function assertValidQuality(spec: MediaTypeSpec, quality: unknown): strin
 	// lives OUTSIDE the display ladder (never surfaced by get_files_info).
 	const isAudioTr = spec.model === 'component_av' && quality === AUDIO_TR_QUALITY;
 	if (!isThumb && !isAudioTr && !spec.qualities.includes(quality)) {
-		throw new Error(
-			`Unknown media quality '${quality}' for ${spec.model} (not in ladder [${spec.qualities.join(', ')}])`,
-		);
+		throw new DedaloError('media.invalid_quality', {
+			message: `Unknown media quality '${quality}' for ${spec.model} (not in ladder [${spec.qualities.join(', ')}])`,
+			coordinates: { model: spec.model },
+		});
 	}
 	return quality;
 }
@@ -590,14 +600,20 @@ export function assertValidQuality(spec: MediaTypeSpec, quality: unknown): strin
 export function assertIngestableQuality(spec: MediaTypeSpec, quality: unknown): string {
 	const validated = assertValidQuality(spec, quality);
 	if (spec.hasThumb && validated === config.media.thumb.quality) {
-		throw new Error(
-			`Cannot upload into the '${validated}' tier: it is a generated thumbnail, rebuilt from the ${spec.defaultQuality} file`,
-		);
+		// PUBLIC sentence: every value in it (`validated` passed the ladder above,
+		// `defaultQuality` is spec data) is ENGINE data, never a raw caller string.
+		const reason = `Cannot upload into the '${validated}' tier: it is a generated thumbnail, rebuilt from the ${spec.defaultQuality} file`;
+		throw new DedaloError('media.upload_rejected', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 	if (validated === AUDIO_TR_QUALITY) {
-		throw new Error(
-			`Cannot upload into the '${validated}' tier: it is a generated transcription derivative`,
-		);
+		const reason = `Cannot upload into the '${validated}' tier: it is a generated transcription derivative`;
+		throw new DedaloError('media.upload_rejected', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 	return validated;
 }
@@ -642,20 +658,28 @@ export function assertNormalizedExtensionForTier(
 			retouched.length === 0
 				? ''
 				: ` — or into ${retouched.map((value) => `'${value}'`).join(' / ')} if this file IS the human-retouched master`;
-		throw new Error(
-			`Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into '${spec.originalQuality}' instead${alternative}.`,
-		);
+		// PUBLIC: the caller reaches this only through `assertAllowedExtension`
+		// (process_uploaded_file.ts), so `extension` is one of the type's allowlist
+		// values and `quality` one of its tiers — engine data, not a raw string.
+		const reason = `Cannot upload a '.${extension}' file into the '${quality}' tier: it holds normalized ${normalized.map((value) => `.${value}`).join(' / ')} files, so the upload would be shadowed by them. Upload into '${spec.originalQuality}' instead${alternative}.`;
+		throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 	}
 }
 
 /** Validate an extension against the type's upload allowlist. Throws. */
 export function assertAllowedExtension(spec: MediaTypeSpec, extension: unknown): string {
 	if (typeof extension !== 'string' || extension === '') {
-		throw new Error(`Invalid media extension (empty) for ${spec.model}`);
+		throw new DedaloError('media.invalid_extension', {
+			message: `Invalid media extension (empty) for ${spec.model}`,
+			coordinates: { model: spec.model },
+		});
 	}
 	const normalized = extension.toLowerCase().replace(/^\./, '');
 	if (!spec.allowedExtensions.includes(normalized)) {
-		throw new Error(`Extension '${extension}' not allowed for ${spec.model}`);
+		throw new DedaloError('media.invalid_extension', {
+			message: `Extension '${extension}' not allowed for ${spec.model}`,
+			coordinates: { model: spec.model },
+		});
 	}
 	return normalized;
 }

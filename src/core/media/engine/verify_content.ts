@@ -74,6 +74,7 @@
  */
 
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { sniffAndValidate, sniffBytes } from './mime.ts';
 
 /** Bytes fed to the signature sniffer (the historic SEC-066 head bound). */
@@ -269,7 +270,10 @@ function readAt(fd: number, position: number, length: number): Uint8Array {
 }
 
 function reject(message: string): never {
-	throw new Error(`File content verification failed: ${message} — rejected`);
+	// PUBLIC: `message` is one of this module's own policy sentences (never the
+	// file's bytes, a path or client text).
+	const reason = `File content verification failed: ${message} — rejected`;
+	throw new DedaloError('media.upload_rejected', { message: reason, publicMessage: reason });
 }
 
 function u32le(bytes: Uint8Array, offset: number): number {

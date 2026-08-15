@@ -117,6 +117,11 @@ describe('tool_posterframe core', () => {
 		await expect(createIdentifyingImageCore(avCtx(), avCtx(), '0')).rejects.toThrow(
 			/component_image/,
 		);
+		// One registered caller fact for the whole "wrong model here" family
+		// (ERRORS_SPEC §1) — a 400 with the sentence, not an untyped throw.
+		expect((await refusalOf(createIdentifyingImageCore(imageCtx(), imageCtx(), '0'))).code).toBe(
+			'media.unsupported_operation',
+		);
 	});
 });
 
@@ -211,6 +216,9 @@ describe('component_av posterframe (the tool_posterframe primary path)', () => {
 
 	test('rejects an unsupported model', async () => {
 		await expect(deletePosterframe(imageCtx())).rejects.toThrow(/component_av or component_3d/);
+		expect((await refusalOf(deletePosterframe(imageCtx()))).code).toBe(
+			'media.unsupported_operation',
+		);
 	});
 });
 

@@ -11,6 +11,7 @@
  */
 
 import { config } from '../../../config/config.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { runBinary } from './spawn.ts';
 
 export interface PdfExtractOptions {
@@ -51,9 +52,11 @@ const OCR_LANG_PATTERN = /^[a-z]{3}(_[a-z]+)?(\+[a-z]{3}(_[a-z]+)?)*$/;
 /** OCR argv (PHP :1003-1006): in-place PDF/A, lossless images, forced OCR. */
 export function buildOcrArgv(source: string, target: string, lang: string): string[] {
 	if (!OCR_LANG_PATTERN.test(lang)) {
-		throw new Error(
-			`ocr: invalid language code '${lang}' (expected Tesseract codes like 'eng' or 'eng+spa')`,
-		);
+		throw new DedaloError('request.invalid_options', {
+			message: `ocr: invalid language code '${lang}' (expected Tesseract codes like 'eng' or 'eng+spa')`,
+			publicMessage:
+				"ocr: invalid language code (expected Tesseract codes like 'eng' or 'eng+spa')",
+		});
 	}
 	return [
 		config.media.binaries.ocrmypdf,

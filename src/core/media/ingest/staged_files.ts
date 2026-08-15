@@ -22,6 +22,7 @@
 
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { sanitizeSegment, stagingDir } from './add_file.ts';
 import { forgetStagedDisplayName } from './staged_name_record.ts';
 import { cancelStagedUpload, sweepStagedOrphans, UPLOAD_DIR_PREFIX } from './staging_gc.ts';
@@ -240,9 +241,11 @@ export function resolveStagedName(
 		return legacy; // no staging dir → the caller reports "staged file not found"
 	}
 	if (candidates.length > 0) {
-		throw new Error(
-			`'${clientName}': the staged name is ambiguous (${candidates.length} collision-suffixed candidates) because the client did not forward file_data.tmp_name`,
-		);
+		throw new DedaloError('media.upload_conflict', {
+			message: `'${clientName}': the staged name is ambiguous (${candidates.length} collision-suffixed candidates) because the client did not forward file_data.tmp_name`,
+			publicMessage:
+				'The staged name is ambiguous: several collision-suffixed candidates match it. The client must forward file_data.tmp_name.',
+		});
 	}
 	return legacy;
 }

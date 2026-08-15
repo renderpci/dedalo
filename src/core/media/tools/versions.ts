@@ -14,6 +14,7 @@ import {
 	type MediaTypeSpec,
 	NO_ALTERNATE_BUILDER_REASON,
 } from '../../concepts/media.ts';
+import { DedaloError } from '../../errors/dedalo_error.ts';
 import { submitAvVersionBuild } from '../av_versions.ts';
 import { conformHeader } from '../engine/ffmpeg.ts';
 import { moveToDeleted } from '../file_ops.ts';
@@ -119,9 +120,13 @@ export async function buildVersionCore(
 	assertValidQuality(spec, quality);
 	const target = assertBuildableTargetExtension(spec, quality, targetExtension);
 	if (spec.masterQualities.includes(quality)) {
-		throw new Error(
-			`build_version: '${quality}' is a MASTER tier, not a derivative — a master is uploaded, never generated. Upload the file into '${quality}' instead.`,
-		);
+		// PUBLIC: `quality` reached here through `assertValidQuality`, so it is one
+		// of the type's own tiers — engine data, not a raw caller string.
+		const reason = `build_version: '${quality}' is a MASTER tier, not a derivative — a master is uploaded, never generated. Upload the file into '${quality}' instead.`;
+		throw new DedaloError('media.unsupported_operation', {
+			message: reason,
+			publicMessage: reason,
+		});
 	}
 	const thumbQuality = config.media.thumb.quality;
 
@@ -155,7 +160,12 @@ export async function buildVersionCore(
 	}
 
 	const source = resolveMasterSource(spec, identity, pathOpts, sourceExtension);
-	if (source === null) throw new Error('build_version: master not found');
+	if (source === null) {
+		throw new DedaloError('media.file_not_found', {
+			message: 'build_version: master not found',
+			publicMessage: 'build_version: master not found',
+		});
+	}
 
 	if (spec.model === 'component_image') {
 		// ONE FILE when the caller named a target extension (recovering a single
@@ -171,9 +181,11 @@ export async function buildVersionCore(
 			// builds nothing (and would retire the twin). Say so, rather than return
 			// an empty success the panel renders as "done".
 			if (alternates.created.length === 0 && alternates.errors.length === 0) {
-				throw new Error(
-					`build_version: nothing to accompany — '${quality}' holds no .${spec.defaultExtension} file, and a .${target} version is a companion of it. Build the '${quality}' version itself first.`,
-				);
+				const reason = `build_version: nothing to accompany — '${quality}' holds no .${spec.defaultExtension} file, and a .${target} version is a companion of it. Build the '${quality}' version itself first.`;
+				throw new DedaloError('media.unsupported_operation', {
+					message: reason,
+					publicMessage: reason,
+				});
 			}
 			return { built: alternates.created, jobId: null, errors: alternates.errors };
 		}
@@ -231,21 +243,26 @@ function assertBuildableTargetExtension(
 	const target = targetExtension.toLowerCase().replace(/^\./, '');
 	if (spec.hasThumb && quality === config.media.thumb.quality) {
 		if (target !== config.media.thumb.extension) {
-			throw new Error(
-				`build_version: the '${quality}' tier is scanned with the '${config.media.thumb.extension}' extension alone, so a '.${target}' file there could never be indexed`,
-			);
+			const reason = `build_version: the '${quality}' tier is scanned with the '${config.media.thumb.extension}' extension alone, so a '.${target}' file there could never be indexed`;
+			throw new DedaloError('media.unsupported_operation', {
+				message: reason,
+				publicMessage: reason,
+			});
 		}
 		return target;
 	}
 	const buildable = [spec.defaultExtension, ...spec.alternateExtensions];
 	if (!buildable.includes(target)) {
 		const reason = NO_ALTERNATE_BUILDER_REASON[spec.model];
-		throw new Error(
+		const sentence =
 			`build_version: cannot build a '.${target}' version of ${spec.model} — this engine writes ${buildable.map((value) => `.${value}`).join(' / ')} here` +
-				(reason === null
-					? `. Add it to ${spec.alternateExtensionsConfigKey} to have it built.`
-					: `, and it has NO alternate-extension builder at all: ${reason}`),
-		);
+			(reason === null
+				? `. Add it to ${spec.alternateExtensionsConfigKey} to have it built.`
+				: `, and it has NO alternate-extension builder at all: ${reason}`);
+		throw new DedaloError('media.unsupported_operation', {
+			message: sentence,
+			publicMessage: sentence,
+		});
 	}
 	return target;
 }
@@ -481,12 +498,20 @@ export async function conformHeadersCore(
 	rawExtension?: string | null,
 ): Promise<boolean> {
 	if (spec.model !== 'component_av') {
-		throw new Error('conform_headers: only supported for component_av');
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'conform_headers: only supported for component_av',
+			publicMessage: 'conform_headers: only supported for component_av',
+		});
 	}
 	assertValidQuality(spec, quality);
 	const extension = rawExtension ?? spec.defaultExtension;
 	const source = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
-	if (!existsSync(source)) throw new Error('conform_headers: file does not exist');
+	if (!existsSync(source)) {
+		throw new DedaloError('media.file_not_found', {
+			message: 'conform_headers: file does not exist',
+			publicMessage: 'conform_headers: file does not exist',
+		});
+	}
 	await conformHeader(source);
 	return true;
 }
@@ -513,7 +538,10 @@ export async function rotateVersionCore(
 	context: ScanContext = {},
 ): Promise<RotateVersionResult> {
 	if (spec.model !== 'component_image') {
-		throw new Error('rotate: only supported for component_image');
+		throw new DedaloError('media.unsupported_operation', {
+			message: 'rotate: only supported for component_image',
+			publicMessage: 'rotate: only supported for component_image',
+		});
 	}
 	assertValidQuality(spec, quality);
 	const entries = scanFilesInfo(spec, identity, pathOpts, context)
