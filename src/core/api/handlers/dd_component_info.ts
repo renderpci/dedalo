@@ -54,7 +54,7 @@ export const componentInfoApiActions: Record<string, ActionHandler> = {
 		const { principalCanAccessRecord } = await import('../../security/record_scope.ts');
 		if (!(await principalCanAccessRecord(sectionTipo, Number(sectionId), principal))) {
 			throw new DedaloError('perm.denied', {
-				coordinates: { section_tipo: sectionTipo, section_id: String(sectionId), tipo },
+				coordinates: { section_tipo: sectionTipo, section_id: Number(sectionId), tipo },
 			});
 		}
 
