@@ -5451,8 +5451,7 @@ dd-modal .header.mini .wrapper_tool {
   display: none;
 }
 dd-modal .header_custom {
-  position: absolute;
-  width: 100%;
+  height: 100%;
   padding: 0.5rem;
   display: flex;
   align-items: center;
@@ -5499,9 +5498,6 @@ dd-modal .body .block {
 }
 dd-modal .body .block.user_name_info div {
   display: contents;
-}
-dd-modal .iframe_container {
-  padding-top: 17px;
 }
 dd-modal .iframe_container > iframe {
   height: calc(100vh - 8rem);
