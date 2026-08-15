@@ -384,8 +384,10 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 			const { getDatalist } = await import('../../relations/datalist.ts');
 			const { getNode } = await import('../../ontology/resolver.ts');
 			const node = await getNode(componentTipo);
-			const echoed = ((echo.body as { data?: { data?: unknown[] } }).data?.data ??
-				[]) as Record<string, unknown>[];
+			const echoed = ((echo.body as { data?: { data?: unknown[] } }).data?.data ?? []) as Record<
+				string,
+				unknown
+			>[];
 			const main = echoed.find(
 				(entry) => entry.tipo === componentTipo && entry.section_tipo === sectionTipo,
 			);

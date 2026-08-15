@@ -625,7 +625,13 @@ describe('widget_common.build — the component_info on-demand widget load', () 
 		api_response = {
 			ok: false,
 			request_id: 'zzwidget',
-			error: { code: 'internal.unexpected', category: 'internal', message: 'x', label_key: 'k', retryable: false },
+			error: {
+				code: 'internal.unexpected',
+				category: 'internal',
+				message: 'x',
+				label_key: 'k',
+				retryable: false,
+			},
 		};
 		await keeper.build(true);
 		expect(keeper.value).toEqual(DESCRIPTORS_ENTRIES);
